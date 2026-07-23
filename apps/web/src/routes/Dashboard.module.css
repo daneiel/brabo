@@ -1,0 +1,49 @@
+.topbar {
+  height: 60px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.title {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 17px;
+  color: var(--text-primary);
+  flex-shrink: 0;
+}
+
+.search {
+  width: 260px;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.content {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.summary {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 16px;
+}
+
+.empty {
+  padding: 60px 20px;
+  text-align: center;
+  color: var(--text-muted);
+}

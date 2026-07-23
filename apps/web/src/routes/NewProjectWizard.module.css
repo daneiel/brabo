@@ -1,0 +1,160 @@
+.stepper {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.stepCircle {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  background: var(--surface-2);
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.stepCircle.done,
+.stepCircle.current {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.stepLine {
+  flex: 1;
+  height: 2px;
+  background: var(--border);
+}
+
+.stepLine.done {
+  background: var(--accent);
+}
+
+.providerGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.providerOption {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--surface-1);
+  cursor: pointer;
+  text-align: left;
+}
+
+.providerOption.selected {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.providerLabel {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.providerDesc {
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.fieldLabel {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.slugPreview {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: var(--code-bg);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+}
+
+.radioRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.branchPills {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.pill {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  background: var(--surface-2);
+  border-radius: var(--radius-full);
+  padding: 3px 9px;
+  color: var(--text-secondary);
+}
+
+.agentList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.agentRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 4px;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.agentCounter {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.stepLabel {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.footerActions {
+  display: flex;
+  gap: 8px;
+}
