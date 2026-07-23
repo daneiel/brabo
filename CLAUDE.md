@@ -6,13 +6,19 @@ repositório, Gitflow, agentes de IA especializados (Criativo, PO, Arquiteto,
 Devs, Infra, QA, SecOps, Psicólogo, Anamnese), controle de custos de token
 e pipeline de aprovação de ações com autoridade final do usuário.
 
-## Escopo da FASE 1 (MVP — não implemente nada além disso)
+## Escopo da FASE 1 (MVP — concluída)
 1. Workspaces, projetos, usuários e IAM (RBAC por projeto)
 2. Sessões com event log imutável (event sourcing das interações)
 3. Chat com roteador de LLM (Ollama + APIs por credencial do usuário)
 4. Metering de tokens: consumo por sessão/agente, budget, alertas 70/90/100%
 5. Pipeline de ações propostas + permissions.json por projeto
 6. Motor de sessões em Elixir/OTP com supervisão e evento de término
+
+## Escopo da FASE 2 (não implemente nada além disso)
+1. Abstração de git provider (GitProvider) + LocalGitProvider,
+   GithubProvider e GitlabProvider via API, e provisionamento de
+   repositório por projeto (endpoint/use-case que cria o repositório
+   usando o provider configurado)
 
 ## Stack (decidida — não proponha alternativas)
 - `apps/api`: NestJS 11 + Drizzle ORM + PostgreSQL 16 + pgvector

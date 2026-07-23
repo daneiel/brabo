@@ -47,3 +47,7 @@ export interface ChatErrorChunk {
 }
 
 export type ChatStreamChunk = ChatTextDeltaChunk | ChatUsageChunk | ChatErrorChunk;
+
+// --- Git ---
+
+export type GitProviderName = "local" | "github" | "gitlab";
