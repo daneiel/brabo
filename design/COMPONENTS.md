@@ -1,0 +1,233 @@
+# Componentes — catálogo extraído do claude.ai/design
+
+Fonte: projeto claude.ai/design `1c960ca8-5e00-4558-8ced-80dfbdf01027`
+("Brabo Design System"), arquivos `Brabo Design System.dc.html` (seções
+"Componentes base" e "Componentes de produto") + os 5 arquivos de tela
+(`Brabo App/Project/Session/Approvals/Settings.dc.html`), extraídos via
+`DesignSync` em 2026-07-23. Esses `.dc.html` usam a sintaxe de template do
+canvas do claude.ai/design (`sc-for`, `sc-if`, `{{ }}`, atributos
+`style-hover`/`style-focus`) — não são código executável, e não foram
+copiados verbatim pro repo (conteúdo grande, sem valor extra sobre esta
+extração curada; o projeto original permanece acessível via
+`DesignSync(get_file)` se for preciso reconferir algum detalhe). Este
+arquivo é a base pra implementação real em React/TSX — todo valor de cor/
+espaçamento referencia os tokens de `tokens.css`, nunca hex cru.
+
+Convenção geral confirmada em todas as telas: ícones outline (stroke 1.6,
+grid 24px, `currentColor`), botões com 3 variantes (primary/secondary/
+ghost) × 4 estados (default/hover/focus/disabled), `:hover`/`:focus` real
+via CSS (o `style-hover` do mockup não existe em CSS/React — precisa de
+CSS Modules ou styled approach equivalente, nunca inline-only).
+
+## Botões (base)
+
+- **primary**: bg `var(--accent)`, texto `var(--on-accent)`, border
+  `var(--accent)`, radius 8px, padding `9px 16px`, `font-weight:600`,
+  `font-size:13px` Archivo. Hover: bg/border `var(--accent-hover)`. Focus:
+  outline 2px `var(--accent)` offset 2px. Disabled: bg `var(--surface-2)`,
+  texto `var(--text-muted)`, opacity .6, `cursor:not-allowed`.
+- **secondary**: bg `var(--surface-2)`, texto `var(--text-primary)`,
+  border `var(--border)`. Hover: border `var(--border-strong)`. Disabled:
+  bg transparent, opacity .5.
+- **ghost**: bg transparent, texto `var(--text-secondary)`, sem border.
+  Hover: bg `var(--surface-2)`, texto `var(--text-primary)`.
+
+## AgentCard
+
+Avatar geométrico (ícone SVG outline distinto por agente, não foto/letra)
+40–44px, `border-radius:10px`, bg `color-mix(in srgb, <cor-do-status> 18%,
+var(--surface-2))`, border `color-mix(in srgb, <cor> 40-50%, transparent)`.
+Nome (Space Grotesk 600, 14-15px) + badge de status (pílula, `font-family:
+IBM Plex Mono`, 10px, com dot 6px):
+| status | cor | animação |
+|---|---|---|
+| trabalhando | `var(--success)` | `bpulse` (pulso, 1.4s infinite) |
+| aguardando | `var(--warning)` | nenhuma |
+| ocioso | `var(--text-muted)` | nenhuma |
+| falhou | `var(--danger)` | nenhuma |
+
+Subtítulo: papel/especialidade (12px, `var(--text-muted)`). Rodapé
+separado por `border-top`: ícone de "model" (capacete/caixa) + nome do
+modelo vinculado + provider (`claude-sonnet-4 · API` / `llama3.1:8b ·
+Ollama`), 11px mono. No painel do time de agentes (tela Project), cada
+card também tem um toggle de autonomia manual/auto (pill de 2 botões).
+
+**Roster fixo dos 9 agentes** (CLAUDE.md): Psicólogo, Anamnese, Criativo,
+Arquiteto, PO, Dev Backend, Dev Frontend, Infra, QA, SecOps — cada um com
+uma cor de acento própria usada no avatar/nome ao longo de toda a UI
+(consistente entre chat e overview): Psicólogo `#9C7BE0`, Anamnese
+`var(--success)` `#37B3A4`, Criativo `var(--warning)` `#E0982F`, Arquiteto
+`var(--accent)` `#D6633A`, PO `#9C7BE0`, Dev Backend `var(--success)`
+`#37B3A4`, Dev Frontend `#5EBEB1`, Infra `var(--warning)` `#E0982F`, QA
+`var(--danger)` `#E05A3E`, SecOps `#8AA6AE`.
+
+## TokenMeter
+
+Card `var(--surface-1)`, border `var(--border)`, radius 12px, padding
+20px (variante compacta nos ProjectCards: menor, radius 8px, padding
+10-12px, sem o texto de economia extra).
+- Linha superior: `"{usado} / {limite} tokens"` (mono 12-13px, secondary)
+  + percentual à direita (mono, bold, cor conforme threshold).
+- Barra: altura 6-10px, bg `var(--surface-0)`/`var(--surface-2)`, radius
+  full, preenchimento `linear-gradient(90deg, var(--success), var(--warning))`
+  (a 100% some o `--danger` na composição real — ver variante "alerta"
+  abaixo) — largura = percentual.
+- **Thresholds de cor** (confirmados nos mockups Project/Settings):
+  `< 70%` → verde (`var(--success)` domina, sem aviso); `70–89%` → aviso,
+  cor do percentual e possivelmente do texto em `var(--warning)`;
+  `>= 90%` → `var(--danger)`, ícone de alerta piscando (`balert`,
+  `opacity 1↔.5`, 1.6s) e borda do card em
+  `color-mix(in srgb, var(--danger) 45%, var(--border))`; nesse caso o
+  gradiente da barra ganha um terceiro estágio pro vermelho
+  (`success→warning→danger`) com marcadores verticais finos em 70%/90%.
+  Rótulo textual no card de alerta: `"{pct}% do limite mensal"`.
+- Marcadores 70/90/100 abaixo da barra (texto 9px mono, `text-muted`,
+  posicionados via `left:70%/90%/100%`).
+- Rodapé: custo do ciclo (`"R$ X · US$ Y"`, mono 15-16px bold) à esquerda,
+  economia por compressão à direita (mono bold, `var(--success)`,
+  `"−R$ X"`). Variante expandida (Design System base) ainda mostra um
+  badge extra abaixo: `"{pct}% de tokens poupados este ciclo"` com ícone
+  de seta-pra-cima, fundo `color-mix(var(--success) 12%)`.
+- **Variante "ao vivo"** (topbar da sessão de chat): mais compacta (220px,
+  padding 7-12px), com indicador `"ao vivo"` (dot pulsante verde) + texto
+  `"falta {N}"` em `var(--warning)` à direita, sem os marcadores de
+  threshold nem o rodapé de economia (só `"{usado}/{limite}"` +
+  `"R$ custo"` numa linha compacta).
+
+## EventItem / ActivityFeed
+
+Linha: ícone 26x26px `border-radius:7px` colorido por tipo (`bg:
+color-mix(<cor> 15-16%, transparent)`, `color:<cor>`), texto (13px,
+`<b>{agente}</b> {ação}` com trechos técnicos em mono `text-secondary`),
+tempo relativo à direita (11px mono, `text-muted`, `white-space:nowrap`).
+Hover de linha: `background: var(--surface-2)`. Borda entre itens:
+`border-top: 1px solid var(--border)`.
+Cores por tipo de evento: commit → `text-secondary`; PR/pull request →
+`var(--accent)`; hypothesis (psicólogo) → `#9C7BE0`; session (encerramento
+anormal) → `var(--danger)`; permission (concedida/negada) → `var(--success)`
+(negada usa `var(--danger)` via um flag `bad` separado do tipo).
+No feed da tela Project: filtro por agente (select) + chips de tipo
+(pílulas clicáveis, selecionado = bg `var(--accent)`/texto `on-accent`).
+Estado vazio: ícone de relógio + texto explicativo centralizado.
+
+## ApprovalCard
+
+Card `var(--surface-1)`, border `var(--border)` (ou
+`color-mix(var(--danger) 32%, var(--border))` quando urgência = crítica),
+radius 12px.
+- Header: ícone por tipo de ação (diff→ícone "diff", terminal→ícone
+  "terminal", PR→ícone "pr"), `<b>{agente}</b> {ação}` (ex.: "propõe
+  alteração" / "quer executar comando" / "abriu pull request"), meta
+  (modelo · contexto) à direita ou abaixo, badge de urgência opcional
+  (fila de Aprovações: crítico/alta/normal, pílula com dot pulsante só no
+  crítico).
+- Corpo por variante:
+  - **diff**: bloco `var(--code-bg)`, linhas com número (opacity .6),
+    sinal `+`/`-` colorido (`var(--success)`/`var(--danger)`), fundo de
+    linha `--diff-add`(`#0E2E24`)/`--diff-del`(`#331A16`) quando expandido;
+    na fila de Aprovações é colapsável (header clicável com chevron que
+    gira 90°, mostra nome do arquivo + contagem `+N −N`).
+  - **comando/terminal**: uma linha mono `$ {comando}` sobre
+    `var(--code-bg)`; no chat, o output real do comando some junto (bloco
+    separado "terminal · output", com badge opcional `rtk −N%` quando
+    houver compressão real).
+  - **PR**: título (Space Grotesk 600), `{branch-origem} → {branch-destino}`
+    (pílulas mono) + status, resumo (texto secundário).
+- Ações (estado pendente): 3 botões lado a lado — **Aprovar** (flex:1,
+  bg `var(--success)`, texto branco), **Negar** (flex:1, ghost com borda
+  `color-mix(var(--danger) 45%)`, texto `var(--danger)`), **Sempre
+  permitir** (secondary, não flex — largura de conteúdo). Abaixo, no chat:
+  nota fixa (ícone de alerta + mono 11px, `text-muted`):
+  `"'Sempre permitir' grava a regra em .brabo/permissions.json"`.
+- Estado decidido: some os botões, mostra uma linha com dot colorido +
+  texto (`"Aprovado · comando em execução"` verde / `"Negado"` vermelho /
+  `"Sempre permitido · gravado em permissions.json"` accent).
+- Fila de Aprovações também tem seleção em lote: checkbox por card (canto
+  superior esquerdo do header) + barra de ação flutuante quando há seleção
+  (`"{N} selecionadas"` + botão "Aprovar selecionados").
+
+## ModelPicker
+
+Dropdown/lista (largura ~300-440px conforme o contexto: standalone no
+Design System, inline nas linhas da tabela de Configurações, ou dropdown
+no topbar da sessão), fundo `var(--surface-1)`, border `var(--border-strong)`
+quando aberto, `box-shadow: var(--shadow)`.
+- Cabeçalho de grupo (sticky): `var(--surface-2)`, mono 9-10px uppercase
+  `letter-spacing:.08em`, `text-muted` — dois grupos fixos: **"Local ·
+  Ollama"** e **"Cloud · por provedor"** (ou "Cloud" sozinho na variante
+  base).
+- Cada opção: radio custom (círculo 13-16px, ring `var(--border-strong)`
+  ou `var(--accent)` quando selecionado, dot interno preenchido só quando
+  selecionado) + nome do modelo (mono 12-13px) + (cloud) `· {provider}`
+  em `text-muted` + badge de custo à direita (`"grátis"` em
+  `var(--success)` pros locais; `"R$ X · US$ Y"` em `text-secondary`/
+  `text-muted` pros cloud), fundo do botão inteiro realçado
+  (`color-mix(var(--accent) 10%, transparent)`) quando é o selecionado
+  atual. Hover: `background: var(--surface-2)`.
+- Trigger (fechado): botão com ícone de modelo + nome atual + (variante
+  topbar) chevron; no contexto de tabela (Configurações), o trigger some
+  a origem do binding (badge separado, ver Settings abaixo) e mostra só
+  modelo+provider abreviado+chevron.
+
+## NotificationBell (não estava no Design System base — extraído da tela
+App)
+
+Botão 38x38px, radius 8px, `var(--surface-1)`/`var(--border)`, badge de
+contagem (pílula `var(--accent)`, mono 9px, `border: 2px solid
+var(--surface-0)` pra "recortar" do fundo) no canto superior direito.
+Dropdown (380px, `max-height:70vh` com scroll): header sticky "Notificações"
++ link "marcar lidas" (accent). Agrupado por projeto: cabeçalho de grupo
+(`var(--surface-2)`, dot do projeto + nome + contagem de eventos), lista de
+eventos (mesmo visual do EventItem, ícone+texto+tempo).
+
+## Cards genéricos (Design System base — Cards / Tabela densa / Inputs /
+Tabs / Toasts / Modal)
+
+- **ProjectCard** (dashboard): header (ícone do provider 34px + nome
+  Space Grotesk 600 15px + provider label mono 11px muted + badge de
+  não-lidos opcional), fileira de avatares de agente sobrepostos
+  (`margin-left:-6px`, `box-shadow: 0 0 0 2px var(--surface-1)` pra
+  separar), `TokenMeter` compacto, rodapé com dot de atividade + texto
+  (última atividade, 12px, truncado).
+- **Tabela densa** (permissões/membros/modelos/matriz): grid via
+  `display:grid;grid-template-columns:...` (não `<table>`), header
+  `var(--surface-2)` mono 10px uppercase, linhas com `border-top` +
+  hover `var(--surface-1)`, colunas separadas por `border-left`.
+- **Inputs/selects**: fundo `var(--surface-0)`/`var(--surface-1)`, border
+  `var(--border)`, radius 8px, padding `8-11px 12-13px`. Focus:
+  `border-color: var(--accent)` + `box-shadow: 0 0 0 3px color-mix(in srgb,
+  var(--accent) 22%, transparent)`. Select custom com chevron SVG
+  posicionado absoluto (nunca a seta nativa do browser — `appearance:none`).
+- **Tabs**: sem fundo, `border-bottom:2px solid transparent`, ativo =
+  `border-color: var(--accent)` + `color: var(--text-primary)` +
+  `font-weight:600`; inativo = `color: var(--text-muted)`,
+  `font-weight:500`. Badge de contagem opcional ao lado do label (pílula
+  accent, mesmo padrão de badge de não-lidos).
+- **Toast**: fixo `bottom:24px;right:24px`, `border-left:3px solid <cor>`,
+  dot colorido, título (Space Grotesk 600 13px) + mensagem (mono 11px
+  secondary), botão de fechar (X ghost). Animação de entrada `btoast`
+  (sobe 8px + fade).
+- **Modal**: overlay `rgba(3,10,14,.62-.66)` + `backdrop-filter: blur(2-3px)`,
+  card centralizado `var(--surface-1)`, `border: 1px solid
+  var(--border-strong)`, radius 12-14px, `box-shadow: var(--shadow)`,
+  animação de entrada (fade+scale, `bpop`/`btoast`). Header com ícone +
+  título + botão fechar (X). Clique no overlay fecha; clique no card
+  propaga `stopPropagation` (não fecha).
+
+## Wizard "Novo projeto" (tela App, modal)
+
+4 passos com stepper (círculos numerados conectados por linha,
+preenchido/atual/pendente com cores diferentes — accent no atual e nos já
+completos, `surface-2`/`text-muted` no pendente):
+1. **Provider**: grid 2x2 de opções (GitHub/GitLab/Bitbucket/Local),
+   ícone + label + descrição, seleção = borda+fundo accent.
+2. **Nome**: input de texto + preview do slug calculado
+   (`repo: brabo/{slug}`, mono, em bloco `var(--code-bg)`).
+3. **Branches** *(cosmético — sem contraparte no backend, ver plano)*:
+   escolha de política (Gitflow/Trunk-based/Personalizada, radio custom)
+   + preview da lista de branches resultante (pílulas mono).
+4. **Agentes** *(cosmético — sem contraparte no backend)*: lista de
+   agentes com checkbox, contador de selecionados.
+Rodapé: botão Voltar (condicional) + `"passo N de 4"` + botão
+Continuar/Criar projeto (opacity reduzida quando o passo não pode
+avançar).
