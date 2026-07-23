@@ -5,6 +5,11 @@ defmodule EngineWeb.Router do
     plug :accepts, ["json"]
   end
 
+  pipeline :internal do
+    plug :accepts, ["json"]
+    plug EngineWeb.Plugs.VerifyApiToken
+  end
+
   scope "/", EngineWeb do
     pipe_through :api
 
@@ -13,5 +18,11 @@ defmodule EngineWeb.Router do
 
   scope "/api", EngineWeb do
     pipe_through :api
+  end
+
+  scope "/internal", EngineWeb do
+    pipe_through :internal
+
+    post "/sessions", SessionCommandController, :create
   end
 end

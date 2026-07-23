@@ -1,8 +1,8 @@
-defmodule Engine.Outbox.PollerTest do
+defmodule Engine.Outbox.DrainTest do
   use Engine.DataCase, async: true
   use Oban.Testing, repo: Engine.Repo, prefix: "engine"
 
-  alias Engine.Outbox.{Event, Poller}
+  alias Engine.Outbox.{Event, Drain}
 
   defp insert_outbox_event!(attrs) do
     defaults = %{
@@ -18,7 +18,7 @@ defmodule Engine.Outbox.PollerTest do
     |> Repo.insert!()
   end
 
-  test "linha session nao-processada vira processada e enfileira o job" do
+  test "session.created não é mais roteado (só SessionLifecycleWorker por herança do catch-all, sem PsychologistWorker)" do
     row =
       insert_outbox_event!(%{
         aggregate_type: "session",
@@ -26,7 +26,7 @@ defmodule Engine.Outbox.PollerTest do
         payload: %{"projectId" => "project-1"}
       })
 
-    Poller.run_once()
+    Drain.run_once()
 
     reloaded = Repo.get!(Event, row.id)
     assert reloaded.processed_at != nil
@@ -39,6 +39,25 @@ defmodule Engine.Outbox.PollerTest do
         "payload" => %{"projectId" => "project-1"}
       }
     )
+
+    refute_enqueued(worker: Engine.Workers.PsychologistWorker)
+  end
+
+  test "session.closed enfileira SessionLifecycleWorker E PsychologistWorker (fan-out)" do
+    row =
+      insert_outbox_event!(%{
+        aggregate_type: "session",
+        event_type: "session.closed",
+        payload: %{"projectId" => "project-1"}
+      })
+
+    Drain.run_once()
+
+    reloaded = Repo.get!(Event, row.id)
+    assert reloaded.processed_at != nil
+
+    assert_enqueued(worker: Engine.Workers.SessionLifecycleWorker, args: %{"aggregate_id" => row.aggregate_id})
+    assert_enqueued(worker: Engine.Workers.PsychologistWorker, args: %{"aggregate_id" => row.aggregate_id})
   end
 
   test "linha de outro aggregate_type e ignorada (nao processa, nao enfileira)" do
@@ -49,10 +68,11 @@ defmodule Engine.Outbox.PollerTest do
         payload: %{}
       })
 
-    Poller.run_once()
+    Drain.run_once()
 
     reloaded = Repo.get!(Event, row.id)
     assert reloaded.processed_at == nil
     refute_enqueued(worker: Engine.Workers.SessionLifecycleWorker)
+    refute_enqueued(worker: Engine.Workers.PsychologistWorker)
   end
 end

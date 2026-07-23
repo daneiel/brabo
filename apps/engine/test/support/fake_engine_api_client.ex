@@ -7,9 +7,18 @@ defmodule Engine.Sessions.FakeEngineApiClient do
   @behaviour Engine.Sessions.EngineApiClient
 
   @impl true
-  def report_termination(project_id, session_id, reason) do
+  def report_termination(project_id, session_id, reason, to) do
     if pid = Application.get_env(:engine, :test_pid) do
-      send(pid, {:termination_reported, project_id, session_id, reason})
+      send(pid, {:termination_reported, project_id, session_id, reason, to})
+    end
+
+    :ok
+  end
+
+  @impl true
+  def append_event(project_id, session_id, event) do
+    if pid = Application.get_env(:engine, :test_pid) do
+      send(pid, {:event_appended, project_id, session_id, event})
     end
 
     :ok

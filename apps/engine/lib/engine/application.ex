@@ -7,33 +7,47 @@ defmodule Engine.Application do
 
   @impl true
   def start(_type, _args) do
-    children =
-      [
-        EngineWeb.Telemetry,
-        Engine.Repo,
-        {DNSCluster, query: Application.get_env(:engine, :dns_cluster_query) || :ignore},
-        {Phoenix.PubSub, name: Engine.PubSub},
-        {Task.Supervisor, name: Engine.TaskSupervisor},
-        {Oban, Application.fetch_env!(:engine, Oban)},
-        {Registry, keys: :unique, name: Engine.Sessions.Registry},
-        Engine.Sessions.Monitor,
-        Engine.Sessions.SessionSupervisor
-      ] ++ outbox_poller_children() ++ [EngineWeb.Endpoint]
+    children = [
+      EngineWeb.Telemetry,
+      Engine.Repo,
+      {DNSCluster, query: Application.get_env(:engine, :dns_cluster_query) || :ignore},
+      {Phoenix.PubSub, name: Engine.PubSub},
+      {Task.Supervisor, name: Engine.TaskSupervisor},
+      {Oban, Application.fetch_env!(:engine, Oban)},
+      {Engine.Auth.JwksStrategy, should_start: jwks_strategy_should_start?()},
+      {Registry, keys: :unique, name: Engine.Sessions.Registry},
+      Engine.Sessions.Monitor,
+      Engine.Sessions.SessionSupervisor,
+      # Reidrata sessões sobreviventes de um boot anterior ANTES do
+      # Endpoint subir — nunca aceitar heartbeat de alguém reconectando
+      # antes da sessão existir de novo.
+      {Engine.Sessions.Rehydrator, []},
+      EngineWeb.Endpoint
+    ]
 
     # See https://elixir.hexdocs.pm/Supervisor.html
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: Engine.Supervisor]
-    Supervisor.start_link(children, opts)
+    result = Supervisor.start_link(children, opts)
+
+    if match?({:ok, _}, result) and outbox_drain_should_start?() do
+      {:ok, _job} = Engine.Workers.OutboxDrainWorker.kickoff()
+    end
+
+    result
   end
 
-  # Desligável em teste (config :engine, start_outbox_poller?: false) —
-  # os testes chamam Engine.Outbox.Poller.run_once/0 direto, sem timer.
-  defp outbox_poller_children do
-    if Application.get_env(:engine, :start_outbox_poller?, true) do
-      [Engine.Outbox.Poller]
-    else
-      []
-    end
+  # Desligado em teste (config :engine, jwks_strategy_should_start?: false)
+  # — evita bater no Keycloak de verdade durante a suite.
+  defp jwks_strategy_should_start? do
+    Application.get_env(:engine, :jwks_strategy_should_start?, true)
+  end
+
+  # Desligável em teste (config :engine, start_outbox_drain?: false) — os
+  # testes chamam Engine.Outbox.Drain.run_once/0 direto, sem depender do
+  # job Oban recorrente.
+  defp outbox_drain_should_start? do
+    Application.get_env(:engine, :start_outbox_drain?, true)
   end
 
   # Tell Phoenix to update the endpoint configuration

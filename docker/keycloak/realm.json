@@ -26,6 +26,18 @@
       "serviceAccountsEnabled": true,
       "clientAuthenticatorType": "client-secret",
       "secret": "engine-service-dev-secret-change-me"
+    },
+    {
+      "clientId": "api-service",
+      "name": "API Service",
+      "enabled": true,
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "api-service-dev-secret-change-me"
     }
   ],
   "roles": {

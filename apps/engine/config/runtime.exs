@@ -23,15 +23,19 @@ end
 config :engine, EngineWeb.Endpoint,
   http: [port: String.to_integer(System.get_env("PORT", "4000"))]
 
-# Comunicação engine -> api (só usada quando um processo de sessão morre
-# por causa inesperada, ver Engine.Sessions.Monitor/EngineApiClient).
+# Comunicação engine -> api (evento de término e psychologist.hypothesis,
+# ver Engine.Sessions.Monitor/EngineApiClient), e engine <- api (comando
+# síncrono de criar sessão, ver EngineWeb.Plugs.VerifyApiToken).
 config :engine,
   keycloak_url: System.get_env("KEYCLOAK_URL", "http://localhost:8080"),
   keycloak_realm: System.get_env("KEYCLOAK_REALM", "brabo-dev"),
   engine_keycloak_client_id: System.get_env("ENGINE_KEYCLOAK_CLIENT_ID", "engine-service"),
   engine_keycloak_client_secret:
     System.get_env("ENGINE_KEYCLOAK_CLIENT_SECRET", "engine-service-dev-secret-change-me"),
-  api_url: System.get_env("API_URL", "http://localhost:3000")
+  api_url: System.get_env("API_URL", "http://localhost:3000"),
+  api_keycloak_client_id: System.get_env("API_KEYCLOAK_CLIENT_ID", "api-service"),
+  session_heartbeat_timeout_ms:
+    String.to_integer(System.get_env("SESSION_HEARTBEAT_TIMEOUT_MS", "30000"))
 
 if config_env() == :prod do
   database_url =
