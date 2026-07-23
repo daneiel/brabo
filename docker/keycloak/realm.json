@@ -14,6 +14,18 @@
       "webOrigins": ["http://localhost:5173"],
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": true
+    },
+    {
+      "clientId": "engine-service",
+      "name": "Engine Service",
+      "enabled": true,
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "engine-service-dev-secret-change-me"
     }
   ],
   "roles": {
