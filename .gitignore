@@ -1,0 +1,13 @@
+node_modules/
+.pnpm-store/
+dist/
+coverage/
+.env
+.env.local
+
+# Elixir (apps/engine tem seu próprio .gitignore mais específico)
+apps/engine/_build/
+apps/engine/deps/
+
+.DS_Store
+.idea/

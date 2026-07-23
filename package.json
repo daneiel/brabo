@@ -1,0 +1,21 @@
+{
+  "name": "brabo",
+  "private": true,
+  "version": "0.0.1",
+  "packageManager": "pnpm@11.3.0",
+  "scripts": {
+    "dev": "docker compose -f docker/docker-compose.yml --env-file .env up",
+    "dev:build": "docker compose -f docker/docker-compose.yml --env-file .env up --build",
+    "dev:down": "docker compose -f docker/docker-compose.yml --env-file .env down",
+    "dev:api": "pnpm --filter api start:dev",
+    "dev:web": "pnpm --filter web dev",
+    "build": "pnpm --filter api build && pnpm --filter web build",
+    "test": "pnpm --filter api test && pnpm --filter web test",
+    "db:generate": "pnpm --filter api db:generate",
+    "db:migrate": "pnpm --filter api db:migrate",
+    "engine:setup": "cd apps/engine && mix deps.get && mix ecto.create && mix ecto.migrate",
+    "engine:dev": "cd apps/engine && mix phx.server",
+    "engine:test": "cd apps/engine && mix test",
+    "engine:migrate": "cd apps/engine && mix ecto.migrate"
+  }
+}
