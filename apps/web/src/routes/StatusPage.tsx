@@ -16,11 +16,34 @@ function StatusRow({
       ? 'error'
       : (data?.status ?? 'error');
 
+  const statusColor: Record<typeof status, string> = {
+    ok: 'var(--success)',
+    error: 'var(--danger)',
+    checking: 'var(--text-muted)',
+  };
+
   return (
-    <tr>
-      <td>{label}</td>
-      <td data-status={status}>{status}</td>
-      <td>{data?.timestamp ?? '—'}</td>
+    <tr style={{ borderTop: '1px solid var(--border)' }}>
+      <td style={{ padding: 'var(--space-2) var(--space-3)' }}>{label}</td>
+      <td
+        style={{
+          padding: 'var(--space-2) var(--space-3)',
+          fontFamily: 'var(--font-mono)',
+          color: statusColor[status],
+        }}
+      >
+        {status}
+      </td>
+      <td
+        style={{
+          padding: 'var(--space-2) var(--space-3)',
+          fontFamily: 'var(--font-mono)',
+          color: 'var(--text-muted)',
+          fontSize: '0.85em',
+        }}
+      >
+        {data?.timestamp ?? '—'}
+      </td>
     </tr>
   );
 }
@@ -39,14 +62,45 @@ export function StatusPage() {
   const engineHealth = useHealthQuery('engine', ENGINE_URL);
 
   return (
-    <main style={{ fontFamily: 'sans-serif', padding: '2rem' }}>
-      <h1>Brabo — status da plataforma</h1>
-      <table cellPadding={8}>
+    <main
+      style={{
+        padding: 'var(--space-5)',
+        maxWidth: 720,
+        margin: '0 auto',
+      }}
+    >
+      <h1 style={{ fontSize: 28, marginBottom: 'var(--space-4)' }}>
+        Brabo — status da plataforma
+      </h1>
+      <table
+        style={{
+          width: '100%',
+          borderCollapse: 'collapse',
+          background: 'var(--surface-1)',
+          border: '1px solid var(--border)',
+          borderRadius: 'var(--radius-lg)',
+          overflow: 'hidden',
+        }}
+      >
         <thead>
-          <tr>
-            <th>Serviço</th>
-            <th>Status</th>
-            <th>Último check</th>
+          <tr
+            style={{
+              background: 'var(--surface-2)',
+              fontFamily: 'var(--font-mono)',
+              fontSize: 12,
+              color: 'var(--text-secondary)',
+              textAlign: 'left',
+            }}
+          >
+            <th style={{ padding: 'var(--space-2) var(--space-3)' }}>
+              Serviço
+            </th>
+            <th style={{ padding: 'var(--space-2) var(--space-3)' }}>
+              Status
+            </th>
+            <th style={{ padding: 'var(--space-2) var(--space-3)' }}>
+              Último check
+            </th>
           </tr>
         </thead>
         <tbody>
