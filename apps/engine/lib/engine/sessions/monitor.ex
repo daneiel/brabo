@@ -10,6 +10,8 @@ defmodule Engine.Sessions.Monitor do
 
   use GenServer
 
+  alias Engine.Sessions.SessionState
+
   @name __MODULE__
 
   def start_link(_opts) do
@@ -58,6 +60,7 @@ defmodule Engine.Sessions.Monitor do
   def handle_info({:DOWN, ref, :process, pid, reason}, state) do
     case Map.fetch(state.by_pid, pid) do
       {:ok, %{ref: ^ref} = entry} ->
+        SessionState.delete(entry.session_id)
         maybe_report(entry, reason)
 
         state = %{
@@ -74,12 +77,16 @@ defmodule Engine.Sessions.Monitor do
   end
 
   # :normal precedido de expect_stop -> api já sabe, sem callback.
-  # :killed, crash, ou :normal SEM expect_stop (defensivo) -> reporta.
+  # :killed, crash, heartbeat_timeout, ou :normal SEM expect_stop
+  # (defensivo) -> reporta, com o destino de transição que cada causa
+  # implica.
   defp maybe_report(%{expect_stop: true}, :normal), do: :ok
 
   defp maybe_report(entry, reason) do
+    {reason_string, to} = classify(reason)
+
     Task.Supervisor.start_child(Engine.TaskSupervisor, fn ->
-      client().report_termination(entry.project_id, entry.session_id, format_reason(reason))
+      client().report_termination(entry.project_id, entry.session_id, reason_string, to)
     end)
   end
 
@@ -87,8 +94,16 @@ defmodule Engine.Sessions.Monitor do
     Application.get_env(:engine, :engine_api_client, Engine.Sessions.EngineApiClient.Live)
   end
 
-  defp format_reason(:normal), do: "normal"
-  defp format_reason(:killed), do: "killed"
-  defp format_reason({error, _stacktrace}) when is_exception(error), do: Exception.message(error)
-  defp format_reason(other), do: inspect(other)
+  # heartbeat_timeout é um jeito normal de uma sessão terminar (ninguém
+  # do outro lado) — não é uma falha do engine, então vira "closed" (via
+  # o hop implícito active->closing que a api resolve do lado dela), não
+  # "closed_abnormally" como as outras causas.
+  defp classify({:shutdown, :heartbeat_timeout}), do: {"heartbeat_timeout", "closed"}
+  defp classify(:normal), do: {"normal", "closed_abnormally"}
+  defp classify(:killed), do: {"killed", "closed_abnormally"}
+
+  defp classify({error, _stacktrace}) when is_exception(error),
+    do: {Exception.message(error), "closed_abnormally"}
+
+  defp classify(other), do: {inspect(other), "closed_abnormally"}
 end

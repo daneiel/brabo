@@ -5,12 +5,14 @@ defmodule Engine.Workers.SessionLifecycleWorkerTest do
   alias Engine.Workers.SessionLifecycleWorker
 
   setup do
+    Engine.GlobalSessionTestLock.acquire()
     Application.put_env(:engine, :engine_api_client, Engine.Sessions.FakeEngineApiClient)
     Application.put_env(:engine, :test_pid, self())
 
     on_exit(fn ->
       Application.delete_env(:engine, :engine_api_client)
       Application.delete_env(:engine, :test_pid)
+      Engine.GlobalSessionTestLock.release()
     end)
 
     :ok
@@ -18,7 +20,10 @@ defmodule Engine.Workers.SessionLifecycleWorkerTest do
 
   defp unique_id, do: "session-#{System.unique_integer([:positive])}"
 
-  test "session.created sobe e registra um processo vivo" do
+  # session.created NÃO é mais tratado por este worker — a criação virou
+  # um comando HTTP síncrono da api (ver EngineWeb.SessionCommandController).
+  # Confirma o catch-all: um event_type desconhecido/não tratado não falha.
+  test "session.created (não mais suportado aqui) cai no catch-all sem falhar e sem criar processo" do
     session_id = unique_id()
 
     :ok =
@@ -28,8 +33,7 @@ defmodule Engine.Workers.SessionLifecycleWorkerTest do
         "payload" => %{"projectId" => "project-1"}
       })
 
-    assert [{pid, _}] = Registry.lookup(Engine.Sessions.Registry, session_id)
-    assert Process.alive?(pid)
+    assert Registry.lookup(Engine.Sessions.Registry, session_id) == []
   end
 
   test "session.closed para uma sessao rodando sem disparar callback" do
@@ -44,7 +48,7 @@ defmodule Engine.Workers.SessionLifecycleWorkerTest do
       })
 
     refute Process.alive?(pid)
-    refute_receive {:termination_reported, _, _, _}, 200
+    refute_receive {:termination_reported, _, _, _, _}, 200
   end
 
   test "session.closed para session_id nunca iniciado e um no-op" do
