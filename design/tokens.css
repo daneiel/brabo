@@ -1,0 +1,112 @@
+/*
+ * Brabo Design System — tokens.
+ * Fonte: projeto claude.ai/design "Brabo Design System"
+ * (arquivo "Brabo Design System.dc.html"). Extraído em 2026-07-23.
+ *
+ * Dark é o tema primário (valores em :root). [data-theme="light"] no
+ * <html> (ou em qualquer ancestral) troca para o tema claro.
+ *
+ * Sempre referencie os tokens semânticos (--surface-*, --text-*,
+ * --accent etc.) na UI — nunca a paleta bruta (--terracota-*,
+ * --teal-*, --petroleo-*, --areia-*) diretamente.
+ *
+ * As 3 famílias (Space Grotesk/Archivo/IBM Plex Mono) são carregadas
+ * via <link> no <head> do HTML que consome este arquivo (ver
+ * apps/web/index.html) — não via @import aqui, para não bloquear o
+ * parse do CSS no carregamento da fonte.
+ */
+
+:root {
+  /* Paleta base — 7 tons por matriz */
+  --terracota-100: #f6dace;
+  --terracota-200: #e9b49e;
+  --terracota-300: #da8d6c;
+  --terracota-400: #c4552d; /* base */
+  --terracota-500: #a5451f;
+  --terracota-600: #7e3316;
+  --terracota-700: #55220f;
+
+  --teal-100: #cbeee9;
+  --teal-200: #95d7ce;
+  --teal-300: #5ebeb1;
+  --teal-400: #2a9d8f; /* base */
+  --teal-500: #217e73;
+  --teal-600: #185e56;
+  --teal-700: #0e3d38;
+
+  --petroleo-100: #dce9ee;
+  --petroleo-200: #a9c6d0;
+  --petroleo-300: #5e8c9c;
+  --petroleo-400: #2e6072;
+  --petroleo-500: #123f4e;
+  --petroleo-600: #0a2e3d; /* base */
+  --petroleo-700: #061b24;
+
+  --areia-000: #ffffff;
+  --areia-050: #f5ede0; /* off-white */
+  --areia-200: #e8c9a0; /* areia */
+  --areia-300: #c8b99f;
+  --areia-400: #9a8b72;
+  --areia-600: #5e5443;
+  --areia-700: #2e2820;
+
+  /* Tokens semânticos — tema dark (primário) */
+  --surface-0: var(--petroleo-700);
+  --surface-1: var(--petroleo-600);
+  --surface-2: var(--petroleo-500);
+  --text-primary: var(--areia-050);
+  --text-secondary: #aec6ce;
+  --text-muted: #6e8a94;
+  --accent: #d6633a;
+  --accent-hover: #e37b4e;
+  --on-accent: #f7eee2;
+  --success: #37b3a4;
+  --warning: #e0982f;
+  --danger: #e05a3e;
+  --border: #1c4a5a;
+  --border-strong: #2e6072;
+  --code-bg: #03141b;
+  --shadow:
+    0 1px 2px rgba(0, 0, 0, 0.4),
+    0 8px 24px rgba(0, 0, 0, 0.35);
+
+  /* Tipografia */
+  --font-heading: 'Space Grotesk', sans-serif;
+  --font-body: 'Archivo', sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+
+  /* Espaçamento — escala base 8px, meio-passo 4px */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 16px;
+  --space-4: 24px;
+  --space-5: 32px;
+  --space-6: 48px;
+
+  /* Radius — 8px padrão, 12px contêineres, full para pílulas */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 9999px;
+}
+
+[data-theme='light'] {
+  --surface-0: var(--areia-050);
+  --surface-1: #fcf8f1;
+  --surface-2: #ecddc7;
+  --text-primary: var(--petroleo-600);
+  --text-secondary: #3c5a66;
+  --text-muted: #80939a;
+  --accent: #c4552d;
+  --accent-hover: #a5451f;
+  --on-accent: #f7eee2;
+  --success: #217e73;
+  --warning: #b5701c;
+  --danger: #b33a26;
+  --border: #dec9aa;
+  --border-strong: #c6af8c;
+  --code-bg: #efe4d2;
+  --shadow:
+    0 1px 2px rgba(10, 46, 61, 0.08),
+    0 10px 28px rgba(10, 46, 61, 0.1);
+}
