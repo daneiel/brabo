@@ -42,7 +42,8 @@ defmodule Engine.Sessions.SessionLifecycleTest do
 
     SessionServer.stop(pid)
 
-    assert_receive {:termination_reported, "project-1", ^session_id, "normal", "closed_abnormally"}
+    assert_receive {:termination_reported, "project-1", ^session_id, "normal",
+                    "closed_abnormally"}
   end
 
   test ":killed dispara callback com motivo killed (closed_abnormally) e limpa session_states" do
@@ -52,7 +53,9 @@ defmodule Engine.Sessions.SessionLifecycleTest do
 
     Process.exit(pid, :kill)
 
-    assert_receive {:termination_reported, "project-1", ^session_id, "killed", "closed_abnormally"}
+    assert_receive {:termination_reported, "project-1", ^session_id, "killed",
+                    "closed_abnormally"}
+
     refute SessionState.list_non_terminal() |> Enum.any?(&(&1.session_id == session_id))
   end
 
@@ -73,8 +76,9 @@ defmodule Engine.Sessions.SessionLifecycleTest do
     session_id = unique_id()
     {:ok, _pid} = SessionSupervisor.start_session(session_id, "project-1")
 
-    assert_receive {:termination_reported, "project-1", ^session_id, "heartbeat_timeout", "closed"},
-                    300
+    assert_receive {:termination_reported, "project-1", ^session_id, "heartbeat_timeout",
+                    "closed"},
+                   300
   end
 
   test "heartbeat reseta o timer e evita o timeout" do

@@ -39,4 +39,23 @@ CREATE TABLE IF NOT EXISTS public.session_events (
 )
 """)
 
+# Mesmo motivo dos fixtures acima — project_repositories também é
+# gerenciada pela api (Drizzle, schema "public"). Enum git_provider
+# simplificado pra text (Engine.Projects.ProjectRepository só lê a
+# string, não valida o enum).
+Engine.Repo.query!("""
+CREATE TABLE IF NOT EXISTS public.project_repositories (
+  id uuid PRIMARY KEY,
+  project_id uuid NOT NULL,
+  provider text NOT NULL,
+  external_id text NOT NULL,
+  url text NOT NULL,
+  default_branch text NOT NULL DEFAULT 'main',
+  visibility text NOT NULL,
+  provisioned_by uuid NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+)
+""")
+
 Ecto.Adapters.SQL.Sandbox.checkin(Engine.Repo)

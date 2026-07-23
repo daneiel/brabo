@@ -24,5 +24,6 @@ defmodule EngineWeb.Router do
     pipe_through :internal
 
     post "/sessions", SessionCommandController, :create
+    post "/actions/execute", ActionCommandController, :execute
   end
 end
