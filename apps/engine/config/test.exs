@@ -13,6 +13,12 @@ config :engine, Engine.Repo,
   pool: Ecto.Adapters.SQL.Sandbox,
   pool_size: System.schedulers_online() * 2
 
+# Gate de testabilidade: o poller de outbox usa timer próprio
+# (Process.send_after), indesejável em testes determinísticos — os
+# testes chamam Engine.Outbox.Poller.run_once/0 diretamente.
+config :engine, start_outbox_poller?: false
+config :engine, Oban, testing: :manual
+
 # We don't run a server during test. If one is required,
 # you can enable the server option below.
 config :engine, EngineWeb.Endpoint,
