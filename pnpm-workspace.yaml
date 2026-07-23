@@ -6,3 +6,5 @@ allowBuilds:
   '@swc/core': true
   esbuild: true
   unrs-resolver: true
+minimumReleaseAgeExclude:
+  - '@anthropic-ai/sdk@0.113.0'
