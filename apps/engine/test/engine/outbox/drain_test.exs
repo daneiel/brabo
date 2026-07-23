@@ -56,8 +56,15 @@ defmodule Engine.Outbox.DrainTest do
     reloaded = Repo.get!(Event, row.id)
     assert reloaded.processed_at != nil
 
-    assert_enqueued(worker: Engine.Workers.SessionLifecycleWorker, args: %{"aggregate_id" => row.aggregate_id})
-    assert_enqueued(worker: Engine.Workers.PsychologistWorker, args: %{"aggregate_id" => row.aggregate_id})
+    assert_enqueued(
+      worker: Engine.Workers.SessionLifecycleWorker,
+      args: %{"aggregate_id" => row.aggregate_id}
+    )
+
+    assert_enqueued(
+      worker: Engine.Workers.PsychologistWorker,
+      args: %{"aggregate_id" => row.aggregate_id}
+    )
   end
 
   test "linha de outro aggregate_type e ignorada (nao processa, nao enfileira)" do

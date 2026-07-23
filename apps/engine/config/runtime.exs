@@ -35,7 +35,14 @@ config :engine,
   api_url: System.get_env("API_URL", "http://localhost:3000"),
   api_keycloak_client_id: System.get_env("API_KEYCLOAK_CLIENT_ID", "api-service"),
   session_heartbeat_timeout_ms:
-    String.to_integer(System.get_env("SESSION_HEARTBEAT_TIMEOUT_MS", "30000"))
+    String.to_integer(System.get_env("SESSION_HEARTBEAT_TIMEOUT_MS", "30000")),
+  # Diretório compartilhado com a api (mesmo path, mesmo volume Docker) —
+  # permissions.json mora em <root>/<project_id>/permissions.json; o
+  # executor de terminal faz o checkout do working tree no mesmo lugar.
+  project_workspaces_root:
+    System.get_env("PROJECT_WORKSPACES_ROOT", "/tmp/brabo-project-workspaces"),
+  terminal_action_timeout_ms:
+    String.to_integer(System.get_env("TERMINAL_ACTION_TIMEOUT_MS", "15000"))
 
 if config_env() == :prod do
   database_url =

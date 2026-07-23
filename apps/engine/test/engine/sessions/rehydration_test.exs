@@ -44,8 +44,9 @@ defmodule Engine.Sessions.RehydrationTest do
 
     Rehydrator.run()
 
-    assert_receive {:termination_reported, "project-1", ^session_id, "heartbeat_timeout", "closed"},
-                    300
+    assert_receive {:termination_reported, "project-1", ^session_id, "heartbeat_timeout",
+                    "closed"},
+                   300
   end
 
   test "run/0 é idempotente com o Registry (start_session já checa antes de criar)" do

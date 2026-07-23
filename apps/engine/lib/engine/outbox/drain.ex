@@ -40,8 +40,9 @@ defmodule Engine.Outbox.Drain do
   end
 
   # Ponto de roteamento explícito — extensível pra futuros handlers.
-  defp handlers_for(event_type) when event_type in ["session.closed", "session.closed_abnormally"],
-    do: [Engine.Workers.SessionLifecycleWorker, Engine.Workers.PsychologistWorker]
+  defp handlers_for(event_type)
+       when event_type in ["session.closed", "session.closed_abnormally"],
+       do: [Engine.Workers.SessionLifecycleWorker, Engine.Workers.PsychologistWorker]
 
   defp handlers_for(_), do: [Engine.Workers.SessionLifecycleWorker]
 end
