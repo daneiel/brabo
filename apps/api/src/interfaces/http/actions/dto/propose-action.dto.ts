@@ -7,10 +7,10 @@ import {
 } from 'class-validator';
 import { ActorDto } from '../../shared/dto/actor.dto';
 
-export class AppendSessionEventDto {
+export class ProposeActionDto {
   @IsString()
   @IsNotEmpty()
-  type!: string;
+  actionType!: string;
 
   @ValidateNested()
   @Type(() => ActorDto)
