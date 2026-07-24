@@ -10,30 +10,50 @@ e pipeline de aprovação de ações com autoridade final do usuário.
 - FASE 1 (MVP) — CONCLUÍDA: IAM/RBAC, sessões com event log imutável,
   chat com roteador de LLM (Ollama + APIs), metering/budget de tokens,
   pipeline de proposed_actions + permissions.json, motor Elixir/OTP com
-  supervisão e evento de término. Não refatore o que está pronto sem
-  pedido explícito; a Fase 2 CONSOME essas fundações.
+  supervisão e evento de término.
+- FASE 2 — CONCLUÍDA: GitProvider (Local/GitHub/GitLab) com suite de
+  contrato e capabilities, credenciais de git criptografadas,
+  provisionamento com bootstrap de Gitflow idempotente e retomável via
+  pipeline de proposed_actions, wizard de novo projeto com progresso
+  ao vivo.
+- Não refatore o que está pronto sem pedido explícito; a Fase 3
+  CONSOME essas fundações.
 
-## Escopo da FASE 2 (ativa — não implemente nada além disso)
-1. Interface GitProvider em packages/shared com tipos normalizados
-   (nunca vazar o shape da API do provider para o domínio): createRepo,
-   getRepo, createBranch, protectBranch, commitFiles, listBranches,
-   openPullRequest, mergePullRequest. Cada provider expõe capabilities;
-   o domínio degrada quando uma operação não é suportada.
-2. Implementações: LocalGitProvider (completo), GithubProvider (Octokit)
-   e GitlabProvider (REST). Bitbucket e GenericGitProvider ficam para
-   fase futura — não criar stubs.
-3. Credenciais de git do usuário em user_credentials (mesma envelope
-   encryption da Fase 1), com teste de conexão no cadastro.
-4. Provisionamento por projeto: use-case que cria o repositório com o
-   provider configurado e executa o bootstrap de Gitflow IDEMPOTENTE:
-   branches dev/qa/rc/main, proteções (onde o provider suportar),
-   template de PR e docs/branching-policy.md. Rodar duas vezes não
-   duplica nem falha — cada passo verifica o estado antes de agir.
-5. Toda operação mutante de repo passa pelo pipeline de proposed_actions
-   (types git_*); o bootstrap inicial é auto_approved, mas registrado
-   no event log.
-6. Wizard de novo projeto na web ligado ao fluxo real, com progresso do
-   bootstrap exibido ao vivo a partir do event log.
+## Escopo da FASE 3 (ativa — não implemente nada além disso)
+
+### 3a — Harness de agentes (fundação; implementar ANTES de qualquer agente)
+1. Cinco behaviours Elixir no apps/engine, com contratos explícitos:
+   PromptAssembler (prompt em camadas ordenadas com orçamento de tokens
+   por camada e corte determinístico), ToolLoop (loop de tool use via
+   roteador de LLM da api, streaming, limite de iterações),
+   ContextManager (compactação acima de X% via modelo barato com binding
+   scope "context-manager", evento context.compacted com antes/depois em
+   tokens, itens pinned preservados), InstructionFiles (AGENTS.md do
+   workspace + arquivo de agente do banco, merge com precedência
+   documentada), Hooks (pre_tool_use, post_tool_use, session_start,
+   session_end; terminal e proposed_actions plugam como hooks).
+2. O engine NUNCA fala com provider de LLM direto: toda chamada passa
+   pelo endpoint da api (metering e budget obrigatórios).
+3. Ferramentas iniciais do ToolLoop: read_file, write_file (via
+   proposed_action fora de whitelist de paths), terminal (via pipeline),
+   search_workspace, emit_artifact (artefato tipado no event log).
+4. EchoAgent de validação exercitando o ciclo completo.
+
+### 3b — Agentes de produto (só após 3a verde)
+5. Handoffs explícitos: tabela handoffs {from_agent, to_agent,
+   artifact_id, status}; agente só inicia com handoff recebido — agentes
+   NUNCA conversam livremente entre si.
+6. Criativo: ideação com o usuário; emite artefatos business_rule ao
+   longo da conversa e product_brief quando o usuário confirmar
+   prontidão; a cada rodada provoca "o que falta para começar?".
+7. PO: backlog em tabelas próprias (epics, stories, tasks) com RF/RNF,
+   regra de negócio vinculada, DoD e DoR obrigatórios — story sem
+   DoD/DoR não sai de draft (validação no domínio, não só no prompt).
+8. Arquiteto: ADRs commitados em docs/adr/ do repo DO PROJETO via
+   pipeline git (PR), e artefato module_map (módulos, stacks,
+   dependências); valida que toda story referencia módulo existente.
+9. UI: tab Backlog (épicos → histórias → tarefas com DoD/DoR),
+   artefatos do Arquiteto na visão geral, divisores de handoff no chat.
 
 ## Stack (decidida — não proponha alternativas)
 - `apps/api`: NestJS 11 + Drizzle ORM + PostgreSQL 16 + pgvector
@@ -52,10 +72,11 @@ e pipeline de aprovação de ações com autoridade final do usuário.
   created → active → closing → closed | closed_abnormally
 - Toda ação com efeito externo (git, terminal, gasto) nasce como
   proposed_action e respeita permissions.json; deny sempre vence allow.
+- Agentes rodam SEMPRE dentro de um Harness; nenhuma chamada de LLM ou
+  ferramenta fora dele.
 - Testes: vitest (api/web), ExUnit (engine). Nenhuma feature sem teste do
-  caminho feliz + 1 caso de falha. Providers de git validados por uma
-  suite de contrato ÚNICA, rodada contra LocalGitProvider real (tmp dir)
-  e contra os remotos mockados.
+  caminho feliz + 1 caso de falha. Providers de git validados pela suite
+  de contrato única.
 - UI: fidelidade estrita ao design system em design/ (tokens, tipografia
   Space Grotesk/Archivo/IBM Plex Mono, dark mode primário).
 - Segredos de usuário (API keys de LLM e tokens de git) criptografados
@@ -64,9 +85,8 @@ e pipeline de aprovação de ações com autoridade final do usuário.
 
 ## O que NÃO fazer
 - Não usar Redis (filas ficam no Postgres via Oban)
-- Não implementar agentes de produto/execução (fase 3+): harness,
-  Criativo, PO, Arquiteto, devs, infra, QA, secops, Psicólogo real,
-  Anamnese
-- Não implementar Bitbucket nem GenericGitProvider nesta fase
+- Não implementar agentes de execução (fase 4): devs, infra, QA, secops,
+  Psicólogo real, Anamnese, instanciação dinâmica por module_map
+- Não implementar Bitbucket nem GenericGitProvider
 - Não instalar libs sem justificar no plano
-- Não refatorar código da Fase 1 fora do necessário para a Fase 2
+- Não refatorar código das Fases 1–2 fora do necessário para a Fase 3
