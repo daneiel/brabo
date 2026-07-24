@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { approveAction, approveAlwaysAction, denyAction, getProjectPermissions, setProjectPermissions } from '../lib/api-client';
-import { useBacklog, useLatestSession, usePendingActions, useSessionEvents } from '../lib/hooks';
+import { useBacklog, useInfraArtifacts, useLatestSession, usePendingActions, useSessionEvents } from '../lib/hooks';
 import type {
   CoverageMatrixRow,
   PermissionListName,
@@ -32,6 +32,7 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
   const actionsQuery = usePendingActions(projectId, latestSession?.id);
   const eventsQuery = useSessionEvents(projectId, latestSession?.id);
   const { data: epics } = useBacklog(projectId);
+  const { data: infraArtifacts } = useInfraArtifacts(projectId);
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState('');
@@ -77,6 +78,40 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
             resumo: payload.resumo,
             itens: payload.itens,
             coverageMatrix: payload.coverageMatrix as CoverageMatrixRow[] | undefined,
+          };
+        }
+        const payload = e.payload as SecOpsVerdictPayload;
+        return {
+          seq: e.seq,
+          gate: 'secops' as const,
+          veredito: payload.veredito,
+          resumo: payload.resumo,
+          itens: payload.itens,
+        };
+      });
+  }
+
+  // PRs de infra (Fase 4a — InfraAgent), mesmo espírito de prActionFor/
+  // verdictsFor mas chaveado por `prActionId` direto (o artefato de infra
+  // já guarda o id da proposed_action, sem busca por payload).
+  function infraPrActionFor(prActionId: string) {
+    return allActions.find((a) => a.id === prActionId);
+  }
+
+  function infraVerdictsFor(prActionId: string): GateVerdict[] {
+    return events
+      .filter((e) => e.type === 'artifact.qa_verdict' || e.type === 'artifact.secops_verdict')
+      .filter((e) => (e.payload as { prActionId?: string }).prActionId === prActionId)
+      .sort((a, b) => a.seq - b.seq)
+      .map((e) => {
+        if (e.type === 'artifact.qa_verdict') {
+          const payload = e.payload as QaVerdictPayload;
+          return {
+            seq: e.seq,
+            gate: 'qa' as const,
+            veredito: payload.veredito,
+            resumo: payload.resumo,
+            itens: payload.itens,
           };
         }
         const payload = e.payload as SecOpsVerdictPayload;
@@ -234,6 +269,32 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
                 task={task}
                 prAction={prActionFor(task.id)}
                 verdicts={verdictsFor(task.id)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className={styles.section}>
+        <div className={styles.sectionHeader}>
+          <div>
+            <div className={styles.title}>PRs de infra em revisão</div>
+            <div className={styles.subtitle}>
+              {(infraArtifacts ?? []).length} PR(s) de infra passando pelos gates de QA/SecOps
+            </div>
+          </div>
+        </div>
+
+        {(infraArtifacts ?? []).length === 0 ? (
+          <div className={styles.clean}>Nenhuma PR de infra em revisão ainda.</div>
+        ) : (
+          <div className={styles.queue}>
+            {(infraArtifacts ?? []).map((artifact) => (
+              <PrGateTimeline
+                key={artifact.id}
+                task={artifact}
+                prAction={infraPrActionFor(artifact.prActionId)}
+                verdicts={infraVerdictsFor(artifact.prActionId)}
               />
             ))}
           </div>

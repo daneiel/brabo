@@ -31,6 +31,9 @@ defmodule Engine.Application do
       Engine.Agents.CriativoSupervisor,
       Engine.Agents.PoSupervisor,
       Engine.Agents.ArquitetoSupervisor,
+      # InfraAgent (Fase 4a — fechamento) — mesma família session-scoped dos
+      # demais, ativado por handoff aceito do Arquiteto.
+      Engine.Infra.InfraAgentSupervisor,
       # Dev agents de execução (Fase 4a) — um por {project, agent_id}.
       Engine.Dev.DevAgentSupervisor,
       # Gates de PR (Fase 4a) — um QAAgent + um SecOpsAgent por projeto.

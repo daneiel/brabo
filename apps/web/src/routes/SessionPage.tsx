@@ -113,6 +113,13 @@ export function SessionPage({ projectId, sessionId }: SessionPageProps) {
         queryClient.invalidateQueries({ queryKey: ['session-handoffs', projectId, sessionId] });
         queryClient.invalidateQueries({ queryKey: ['session-budget', projectId, sessionId] });
       },
+      // Fase 4a — painel do time ao vivo: qualquer evento persistido
+      // (Dev/QA/SecOps/Infra) antecipa o refetch do polling — reaproveita o
+      // parsing/cache já existente (useSessionEvents), só antecipa quando o
+      // dado muda em vez de esperar o intervalo do poll.
+      onEvent: () => {
+        queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
+      },
     });
     return disconnect;
   }, [session?.status, sessionId, projectId, queryClient]);

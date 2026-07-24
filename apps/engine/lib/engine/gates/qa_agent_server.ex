@@ -167,6 +167,8 @@ defmodule Engine.Gates.QaAgentServer do
   end
 
   defp emit(project_id, session_id, type, payload) do
+    Engine.Sessions.LiveBroadcast.event_appended(session_id, type, "qa", payload)
+
     EngineApiClient.append_event(project_id, session_id, %{
       type: type,
       actorKind: "agent",

@@ -305,6 +305,22 @@ export interface Task {
   updatedAt: string;
 }
 
+// Artefato de infra (Fase 4a — InfraAgent): PR de Dockerfiles/compose/CI
+// gated pelos MESMOS QA/SecOps do dev, sem task/story por trás.
+export interface InfraArtifact {
+  id: string;
+  projectId: string;
+  sessionId: string;
+  title: string;
+  prActionId: string;
+  gateStatus: PrGateStatus;
+  gateCorrectionCount: number;
+  blocked: boolean;
+  blockedReason: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface CoverageMatrixRow {
   rule: string;
   tests: string[];

@@ -179,6 +179,44 @@ defmodule Engine.Sessions.EngineApiClient do
               {:ok, map()} | {:error, term()}
 
   @doc """
+  Contexto inicial do InfraAgent (Fase 4a): module_map vigente + ADRs
+  `infraRelevant` do projeto. Mirror de `get_dev_context`, sem task/story.
+  """
+  @callback get_infra_context(project_id :: String.t(), session_id :: String.t()) ::
+              {:ok, map()} | {:error, term()}
+
+  @doc """
+  Parecer de um gate de PR DE INFRA (Fase 4a — InfraAgent): mesma forma de
+  `record_gate_verdict`, mas chaveado por `pr_action_id` (id da
+  proposed_action `open_infra_pr`) em vez de `task_id` — o artefato de
+  infra não tem task por trás.
+  """
+  @callback record_infra_gate_verdict(
+              project_id :: String.t(),
+              session_id :: String.t(),
+              pr_action_id :: String.t(),
+              gate :: String.t(),
+              veredito :: String.t(),
+              resumo :: String.t(),
+              itens :: [String.t()],
+              max_corrections :: integer() | nil
+            ) ::
+              {:ok, map()} | {:error, term()}
+
+  @doc """
+  Lê de volta title+files do payload da proposed_action `open_infra_pr` já
+  proposta (Fase 4a) — o `Engine.Infra.InfraGateRunner` usa isso pra rodar
+  hadolint/gitleaks/semgrep sobre os arquivos SEM worktree (a PR de infra
+  não tem um).
+  """
+  @callback get_infra_pr_files(
+              project_id :: String.t(),
+              session_id :: String.t(),
+              pr_action_id :: String.t()
+            ) ::
+              {:ok, map()} | {:error, term()}
+
+  @doc """
   Um turno de LLM pro harness (ToolLoop/ContextManager) — o engine nunca
   fala com provider direto. `messages`/`tools` no formato do contrato
   compartilhado; retorna `{:ok, %{"message" => ..., "usage" => ..., "error"
@@ -277,6 +315,34 @@ defmodule Engine.Sessions.EngineApiClient do
           project_id,
           session_id,
           task_id,
+          gate,
+          veredito,
+          resumo,
+          itens,
+          max_corrections
+        )
+
+  def get_infra_context(project_id, session_id),
+    do: impl().get_infra_context(project_id, session_id)
+
+  def get_infra_pr_files(project_id, session_id, pr_action_id),
+    do: impl().get_infra_pr_files(project_id, session_id, pr_action_id)
+
+  def record_infra_gate_verdict(
+        project_id,
+        session_id,
+        pr_action_id,
+        gate,
+        veredito,
+        resumo,
+        itens,
+        max_corrections \\ nil
+      ),
+      do:
+        impl().record_infra_gate_verdict(
+          project_id,
+          session_id,
+          pr_action_id,
           gate,
           veredito,
           resumo,
@@ -468,6 +534,64 @@ defmodule Engine.Sessions.EngineApiClient.Live do
       {:error, reason} ->
         {:error, reason}
     end
+  end
+
+  @impl true
+  def get_infra_context(project_id, session_id) do
+    url =
+      api_url() <>
+        "/internal/sessions/#{session_id}/infra-context?projectId=#{project_id}"
+
+    case Req.get(url, headers: [{"authorization", "Bearer #{token()}"}]) do
+      {:ok, %Req.Response{status: status, body: body}} when status in 200..299 ->
+        {:ok, body}
+
+      {:ok, %Req.Response{status: status, body: resp}} ->
+        {:error, {status, resp}}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  @impl true
+  def get_infra_pr_files(project_id, session_id, pr_action_id) do
+    url =
+      api_url() <>
+        "/internal/sessions/#{session_id}/infra-artifacts/#{pr_action_id}/files?projectId=#{project_id}"
+
+    case Req.get(url, headers: [{"authorization", "Bearer #{token()}"}]) do
+      {:ok, %Req.Response{status: status, body: body}} when status in 200..299 ->
+        {:ok, body}
+
+      {:ok, %Req.Response{status: status, body: resp}} ->
+        {:error, {status, resp}}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  @impl true
+  def record_infra_gate_verdict(
+        project_id,
+        session_id,
+        pr_action_id,
+        gate,
+        veredito,
+        resumo,
+        itens,
+        max_corrections
+      ) do
+    post_returning("/internal/sessions/#{session_id}/infra-gates/verdict", %{
+      projectId: project_id,
+      prActionId: pr_action_id,
+      gate: gate,
+      veredito: veredito,
+      resumo: resumo,
+      itens: itens,
+      maxCorrections: max_corrections
+    })
   end
 
   @impl true

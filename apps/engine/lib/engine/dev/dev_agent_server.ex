@@ -426,5 +426,7 @@ defmodule Engine.Dev.DevAgentServer do
       actorId: state.agent_id,
       payload: payload
     })
+
+    Engine.Sessions.LiveBroadcast.event_appended(state.session_id, type, state.agent_id, payload)
   end
 end

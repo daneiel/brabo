@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { getArchitecture, getCoverage, listActions, listBacklog, listHandoffs, listProjects, listSessionEvents, listSessions, listWorkspaces } from './api-client';
+import { getArchitecture, getCoverage, listActions, listBacklog, listHandoffs, listInfraArtifacts, listProjects, listSessionEvents, listSessions, listWorkspaces } from './api-client';
 import { classifyEvent } from './activity';
 import { formatRelativeTime } from './time';
 
@@ -115,6 +115,17 @@ export function useArchitecture(projectId: string | undefined, intervalMs = 4000
   return useQuery({
     queryKey: ['architecture', projectId],
     queryFn: () => getArchitecture(projectId!),
+    enabled: !!projectId,
+    refetchInterval: intervalMs,
+  });
+}
+
+// Artefatos de infra do projeto (Fase 4a — InfraAgent) — PRs de infra
+// passando pelos mesmos gates de QA/SecOps do dev.
+export function useInfraArtifacts(projectId: string | undefined, intervalMs = 3000) {
+  return useQuery({
+    queryKey: ['infra-artifacts', projectId],
+    queryFn: () => listInfraArtifacts(projectId!),
     enabled: !!projectId,
     refetchInterval: intervalMs,
   });
