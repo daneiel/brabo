@@ -1,7 +1,9 @@
 import type { Project } from '../../domain/iam/project.entity';
-import type { ProjectMember } from '../../domain/iam/project-member.entity';
+import type {
+  ProjectMember,
+  ProjectMemberWithUser,
+} from '../../domain/iam/project-member.entity';
 import type { Role } from '../../domain/iam/role';
-import type { PermissionsConfig } from '../../domain/actions/permission-resolver';
 
 export interface ProjectInput {
   name: string;
@@ -13,6 +15,7 @@ export abstract class ProjectRepository {
     input: ProjectInput & { workspaceId: string; createdBy: string },
   ): Promise<Project>;
   abstract findById(id: string): Promise<Project | null>;
+  abstract listForWorkspace(workspaceId: string): Promise<Project[]>;
   abstract update(
     id: string,
     input: Partial<ProjectInput>,
@@ -27,8 +30,6 @@ export abstract class ProjectRepository {
     projectId: string,
     userId: string,
   ): Promise<Role | null>;
-  abstract updatePermissions(
-    projectId: string,
-    permissions: PermissionsConfig,
-  ): Promise<Project | null>;
+  abstract listMembers(projectId: string): Promise<ProjectMemberWithUser[]>;
+  abstract removeMember(projectId: string, userId: string): Promise<void>;
 }

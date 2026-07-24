@@ -23,6 +23,27 @@ end
 config :engine, EngineWeb.Endpoint,
   http: [port: String.to_integer(System.get_env("PORT", "4000"))]
 
+# Comunicação engine -> api (evento de término e psychologist.hypothesis,
+# ver Engine.Sessions.Monitor/EngineApiClient), e engine <- api (comando
+# síncrono de criar sessão, ver EngineWeb.Plugs.VerifyApiToken).
+config :engine,
+  keycloak_url: System.get_env("KEYCLOAK_URL", "http://localhost:8080"),
+  keycloak_realm: System.get_env("KEYCLOAK_REALM", "brabo-dev"),
+  engine_keycloak_client_id: System.get_env("ENGINE_KEYCLOAK_CLIENT_ID", "engine-service"),
+  engine_keycloak_client_secret:
+    System.get_env("ENGINE_KEYCLOAK_CLIENT_SECRET", "engine-service-dev-secret-change-me"),
+  api_url: System.get_env("API_URL", "http://localhost:3000"),
+  api_keycloak_client_id: System.get_env("API_KEYCLOAK_CLIENT_ID", "api-service"),
+  session_heartbeat_timeout_ms:
+    String.to_integer(System.get_env("SESSION_HEARTBEAT_TIMEOUT_MS", "30000")),
+  # Diretório compartilhado com a api (mesmo path, mesmo volume Docker) —
+  # permissions.json mora em <root>/<project_id>/permissions.json; o
+  # executor de terminal faz o checkout do working tree no mesmo lugar.
+  project_workspaces_root:
+    System.get_env("PROJECT_WORKSPACES_ROOT", "/tmp/brabo-project-workspaces"),
+  terminal_action_timeout_ms:
+    String.to_integer(System.get_env("TERMINAL_ACTION_TIMEOUT_MS", "15000"))
+
 if config_env() == :prod do
   database_url =
     System.get_env("DATABASE_URL") ||

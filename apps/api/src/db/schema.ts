@@ -15,7 +15,7 @@ import {
   check,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
-import type { PermissionsConfig } from '../domain/actions/permission-resolver';
+import type { TerminalExecutionResult } from '../domain/actions/terminal-execution-result';
 
 // --- Enums ---
 
@@ -57,21 +57,44 @@ export const modelBindingScopeEnum = pgEnum('model_binding_scope', [
 
 export const budgetPolicyEnum = pgEnum('budget_policy', ['block', 'allow']);
 
+// pending → approved | denied; approved/auto_approved → executed | failed
+// (ver domain/actions/action-state-machine.ts). "denied" cobre tanto
+// recusa manual quanto deny automático da política.
 export const actionStatusEnum = pgEnum('action_status', [
-  'proposed',
+  'pending',
   'approved',
-  'rejected',
+  'denied',
   'auto_approved',
+  'executed',
+  'failed',
 ]);
 
-// Só a coluna resolved_policy usa enum de Postgres — é escalar. O mesmo
-// vocabulário dentro de projects.permissions (jsonb) é um union type TS
-// (domain/actions/permission-resolver.ts), não um enum de banco: Postgres
-// não valida elementos de um jsonb.
+// Vocabulário compartilhado por resolved_policy (escalar) e por
+// agent_autonomy.mode — o mesmo enum, já que os dois participam da mesma
+// decisão em domain/actions/decide.ts.
 export const permissionPolicyEnum = pgEnum('permission_policy', [
   'auto_approve',
   'require_approval',
   'deny',
+]);
+
+export const gitProviderEnum = pgEnum('git_provider', [
+  'local',
+  'github',
+  'gitlab',
+]);
+
+// user_credentials guarda tanto chaves de LLM quanto tokens de git do
+// usuário (github/gitlab) — enum dedicado em vez de alargar llm_provider
+// (que também serve models/token_usage, LLM-only de verdade) ou
+// reaproveitar git_provider (que tem 'local', sem sentido pra uma
+// credencial). Ver docs/adr/0004-git-credential-registration.md.
+export const credentialProviderEnum = pgEnum('credential_provider', [
+  'ollama',
+  'anthropic',
+  'openai',
+  'github',
+  'gitlab',
 ]);
 
 // --- Identidade ---
@@ -135,10 +158,8 @@ export const projects = pgTable(
     createdBy: uuid('created_by')
       .notNull()
       .references(() => users.id),
-    permissions: jsonb('permissions')
-      .$type<PermissionsConfig>()
-      .notNull()
-      .default({ rules: [] }),
+    // Permissões não vivem mais no banco — permissions.json físico na raiz
+    // do workspace do projeto (ver infrastructure/filesystem/fs-permissions-file-store.ts).
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -213,17 +234,25 @@ export const sessionEvents = pgTable(
 
 // --- Transactional outbox (sem consumidor ainda) ---
 
-export const outboxEvents = pgTable('outbox_events', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  aggregateType: text('aggregate_type').notNull(),
-  aggregateId: uuid('aggregate_id').notNull(),
-  eventType: text('event_type').notNull(),
-  payload: jsonb('payload').notNull().default({}),
-  createdAt: timestamp('created_at', { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-  processedAt: timestamp('processed_at', { withTimezone: true }),
-});
+export const outboxEvents = pgTable(
+  'outbox_events',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    aggregateType: text('aggregate_type').notNull(),
+    aggregateId: uuid('aggregate_id').notNull(),
+    eventType: text('event_type').notNull(),
+    payload: jsonb('payload').notNull().default({}),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    processedAt: timestamp('processed_at', { withTimezone: true }),
+  },
+  (table) => [
+    index('outbox_events_unprocessed_idx')
+      .on(table.createdAt)
+      .where(sql`${table.processedAt} is null`),
+  ],
+);
 
 // --- LLM: registro de modelos, binding em cascata, credenciais, metering, budget ---
 
@@ -294,7 +323,7 @@ export const userCredentials = pgTable(
     userId: uuid('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
-    provider: llmProviderEnum('provider').notNull(),
+    provider: credentialProviderEnum('provider').notNull(),
     wrappedDek: text('wrapped_dek').notNull(),
     dekIv: text('dek_iv').notNull(),
     dekAuthTag: text('dek_auth_tag').notNull(),
@@ -386,15 +415,20 @@ export const proposedActions = pgTable(
     // sessão (contraste deliberado com session_events.seq): não há
     // requisito de negócio de "sem gaps" pra ações propostas.
     seq: bigserial('seq', { mode: 'number' }).notNull(),
+    // 'terminal' | 'git_commit' | 'git_push' | 'pr_open' | 'spend' —
+    // validado na borda (DTO), não como enum de banco (mesmo tratamento já
+    // dado a session_events.type).
     actionType: text('action_type').notNull(),
     payload: jsonb('payload').notNull().default({}),
-    status: actionStatusEnum('status').notNull().default('proposed'),
+    status: actionStatusEnum('status').notNull().default('pending'),
     resolvedPolicy: permissionPolicyEnum('resolved_policy').notNull(),
     actorKind: actorKindEnum('actor_kind').notNull(), // quem propôs
     actorId: text('actor_id').notNull(),
     decidedBy: uuid('decided_by').references(() => users.id),
     decidedAt: timestamp('decided_at', { withTimezone: true }),
     rejectionReason: text('rejection_reason'),
+    // Preenchido só depois de executed/failed.
+    executionResult: jsonb('execution_result').$type<TerminalExecutionResult>(),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -405,4 +439,101 @@ export const proposedActions = pgTable(
   (table) => [
     index('proposed_actions_session_seq_idx').on(table.sessionId, table.seq),
   ],
+);
+
+// Modo de autonomia de um agente pra um tipo de ação, por projeto — segundo
+// estágio de domain/actions/decide.ts. Sem linha, decide() não usa este
+// estágio pra nada (nem promove nem nega).
+export const agentAutonomy = pgTable(
+  'agent_autonomy',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    agentId: text('agent_id').notNull(),
+    actionType: text('action_type').notNull(),
+    mode: permissionPolicyEnum('mode').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [unique().on(table.projectId, table.agentId, table.actionType)],
+);
+
+// --- Git providers (Fase 2): conexão OAuth + repositório provisionado ---
+
+// Só existe pra 'github'/'gitlab' — 'local' nunca tem linha aqui (não
+// reforçado por constraint, pra não complicar o enum compartilhado com
+// project_repositories). O envelope (mesmas 6 colunas de user_credentials,
+// via EncryptionService) cifra um JSON {accessToken, refreshToken}, não
+// uma string simples — GitLab emite refresh_token, GitHub OAuth App
+// clássico normalmente não (fica null dentro do JSON).
+export const projectGitConnections = pgTable(
+  'project_git_connections',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    provider: gitProviderEnum('provider').notNull(),
+    wrappedDek: text('wrapped_dek').notNull(),
+    dekIv: text('dek_iv').notNull(),
+    dekAuthTag: text('dek_auth_tag').notNull(),
+    encryptedApiKey: text('encrypted_api_key').notNull(),
+    apiKeyIv: text('api_key_iv').notNull(),
+    apiKeyAuthTag: text('api_key_auth_tag').notNull(),
+    // null = token não expira (GitHub OAuth App clássico).
+    accessTokenExpiresAt: timestamp('access_token_expires_at', {
+      withTimezone: true,
+    }),
+    accountLogin: text('account_login'),
+    accountMetadata: jsonb('account_metadata')
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
+    connectedBy: uuid('connected_by')
+      .notNull()
+      .references(() => users.id),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [unique().on(table.projectId, table.provider)],
+);
+
+// Tabela separada de project_git_connections: ciclo de vida diferente
+// (uma conexão OAuth pode ser desconectada/reconectada sem apagar o fato
+// histórico de que o projeto já teve um repo provisionado; 'local' nunca
+// tem linha na tabela de conexão mas precisa de uma linha aqui).
+export const projectRepositories = pgTable(
+  'project_repositories',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    provider: gitProviderEnum('provider').notNull(),
+    // "owner/repo" (github), "namespace/path" (gitlab), path absoluto (local)
+    externalId: text('external_id').notNull(),
+    url: text('url').notNull(),
+    defaultBranch: text('default_branch').notNull().default('main'),
+    visibility: text('visibility').notNull(), // 'public' | 'private'
+    provisionedBy: uuid('provisioned_by')
+      .notNull()
+      .references(() => users.id),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [unique().on(table.projectId)],
 );

@@ -14,6 +14,30 @@
       "webOrigins": ["http://localhost:5173"],
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": true
+    },
+    {
+      "clientId": "engine-service",
+      "name": "Engine Service",
+      "enabled": true,
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "engine-service-dev-secret-change-me"
+    },
+    {
+      "clientId": "api-service",
+      "name": "API Service",
+      "enabled": true,
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "api-service-dev-secret-change-me"
     }
   ],
   "roles": {
@@ -22,5 +46,19 @@
       { "name": "admin" },
       { "name": "member" }
     ]
-  }
+  },
+  "users": [
+    {
+      "username": "admin",
+      "email": "admin@brabo.dev",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Administrador",
+      "lastName": "Demo",
+      "credentials": [
+        { "type": "password", "value": "admin123", "temporary": false }
+      ],
+      "realmRoles": ["admin"]
+    }
+  ]
 }

@@ -13,6 +13,17 @@ config :engine, Engine.Repo,
   pool: Ecto.Adapters.SQL.Sandbox,
   pool_size: System.schedulers_online() * 2
 
+# Gate de testabilidade: o drain da outbox roda como job Oban
+# auto-reagendado, indesejável em testes determinísticos — os testes
+# chamam Engine.Outbox.Drain.run_once/0 diretamente.
+config :engine, start_outbox_drain?: false
+config :engine, Oban, testing: :manual
+
+# Não bater no Keycloak de verdade durante a suite — testes que precisam
+# validar um token de verdade usam Engine.Auth.ApiTokenVerifier
+# diretamente com uma estratégia própria, não a supervisionada.
+config :engine, jwks_strategy_should_start?: false
+
 # We don't run a server during test. If one is required,
 # you can enable the server option below.
 config :engine, EngineWeb.Endpoint,

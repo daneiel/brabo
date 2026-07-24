@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { FilesystemModule } from '../../../infrastructure/filesystem/filesystem.module';
 import { SyncUserUseCase } from './sync-user.use-case';
 import { CreateWorkspaceUseCase } from './create-workspace.use-case';
 import { ListWorkspacesForUserUseCase } from './list-workspaces-for-user.use-case';
@@ -11,9 +12,12 @@ import { GetProjectUseCase } from './get-project.use-case';
 import { UpdateProjectUseCase } from './update-project.use-case';
 import { DeleteProjectUseCase } from './delete-project.use-case';
 import { AddProjectMemberUseCase } from './add-project-member.use-case';
+import { RemoveProjectMemberUseCase } from './remove-project-member.use-case';
 import { ResolveEffectiveRoleUseCase } from './resolve-effective-role.use-case';
 import { GetProjectPermissionsUseCase } from './get-project-permissions.use-case';
 import { SetProjectPermissionsUseCase } from './set-project-permissions.use-case';
+import { ListProjectsForWorkspaceUseCase } from './list-projects-for-workspace.use-case';
+import { ListProjectMembersUseCase } from './list-project-members.use-case';
 
 const USE_CASES = [
   SyncUserUseCase,
@@ -28,12 +32,16 @@ const USE_CASES = [
   UpdateProjectUseCase,
   DeleteProjectUseCase,
   AddProjectMemberUseCase,
+  RemoveProjectMemberUseCase,
   ResolveEffectiveRoleUseCase,
   GetProjectPermissionsUseCase,
   SetProjectPermissionsUseCase,
+  ListProjectsForWorkspaceUseCase,
+  ListProjectMembersUseCase,
 ];
 
 @Module({
+  imports: [FilesystemModule],
   providers: USE_CASES,
   exports: USE_CASES,
 })

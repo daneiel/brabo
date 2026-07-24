@@ -58,6 +58,29 @@ services:
       KEYCLOAK_URL: ${KEYCLOAK_URL:-http://keycloak:8080}
       KEYCLOAK_ISSUER_URL: ${KEYCLOAK_ISSUER_URL:-http://localhost:8080}
       KEYCLOAK_REALM: ${KEYCLOAK_REALM:-brabo-dev}
+      ENGINE_KEYCLOAK_CLIENT_ID: ${ENGINE_KEYCLOAK_CLIENT_ID:-engine-service}
+      # Git providers (Fase 2): OAuth Apps do GitHub/GitLab + provisionamento
+      # de repositório local. GIT_OAUTH_STATE_SECRET é separado de
+      # CREDENTIALS_MASTER_KEY de propósito — domínios de segurança
+      # diferentes (HMAC de curta duração vs. derivação AES de longa
+      # duração), rotação independente.
+      GITHUB_OAUTH_CLIENT_ID: ${GITHUB_OAUTH_CLIENT_ID:-}
+      GITHUB_OAUTH_CLIENT_SECRET: ${GITHUB_OAUTH_CLIENT_SECRET:-}
+      GITLAB_OAUTH_CLIENT_ID: ${GITLAB_OAUTH_CLIENT_ID:-}
+      GITLAB_OAUTH_CLIENT_SECRET: ${GITLAB_OAUTH_CLIENT_SECRET:-}
+      API_PUBLIC_URL: ${API_PUBLIC_URL:-http://localhost:3000}
+      GIT_OAUTH_STATE_SECRET: ${GIT_OAUTH_STATE_SECRET:-dev-oauth-state-secret-change-me}
+      GIT_LOCAL_REPOS_ROOT: /data/git-repos
+      # Comando síncrono api -> engine (criar sessão supervisionada na
+      # ativação) — client credentials do Keycloak, simétrico à direção
+      # engine -> api que já existe.
+      ENGINE_URL: ${ENGINE_URL:-http://engine:4000}
+      API_KEYCLOAK_CLIENT_ID: ${API_KEYCLOAK_CLIENT_ID:-api-service}
+      API_KEYCLOAK_CLIENT_SECRET: ${API_KEYCLOAK_CLIENT_SECRET:-api-service-dev-secret-change-me}
+      # Pipeline de ações propostas (Fase 1 item 5): raiz compartilhada com
+      # o engine (mesmo path, mesmo volume) onde mora o permissions.json
+      # de cada projeto.
+      PROJECT_WORKSPACES_ROOT: /data/project-workspaces
     ports:
       - "${API_PORT:-3000}:3000"
     volumes:
@@ -65,6 +88,8 @@ services:
       - api_root_node_modules:/workspace/node_modules
       - api_app_node_modules:/workspace/apps/api/node_modules
       - api_shared_node_modules:/workspace/packages/shared/node_modules
+      - git_local_repos:/data/git-repos
+      - project_workspaces:/data/project-workspaces
     depends_on:
       postgres:
         condition: service_healthy
@@ -80,6 +105,26 @@ services:
       PORT: 4000
       DATABASE_URL: ${DATABASE_URL:-postgres://brabo:brabo@postgres:5432/brabo}
       MIX_ENV: dev
+      # config/test.exs (usado por `mix test`) monta a conexão a partir
+      # destas variáveis, não de DATABASE_URL — sem isso o Postgrex tenta
+      # localhost de dentro do container e nunca alcança o serviço postgres.
+      POSTGRES_USER: ${POSTGRES_USER:-brabo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-brabo}
+      POSTGRES_HOST: postgres
+      KEYCLOAK_URL: ${KEYCLOAK_URL:-http://keycloak:8080}
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM:-brabo-dev}
+      ENGINE_KEYCLOAK_CLIENT_ID: ${ENGINE_KEYCLOAK_CLIENT_ID:-engine-service}
+      ENGINE_KEYCLOAK_CLIENT_SECRET: ${ENGINE_KEYCLOAK_CLIENT_SECRET:-engine-service-dev-secret-change-me}
+      API_URL: ${API_URL:-http://api:3000}
+      # A api chama o engine com um token client-credentials deste client
+      # — o engine só precisa saber QUAL client esperar, nunca o secret.
+      API_KEYCLOAK_CLIENT_ID: ${API_KEYCLOAK_CLIENT_ID:-api-service}
+      SESSION_HEARTBEAT_TIMEOUT_MS: ${SESSION_HEARTBEAT_TIMEOUT_MS:-30000}
+      # Pipeline de ações propostas (Fase 1 item 5): mesma raiz de
+      # workspaces que a api usa — Engine.Actions.Workspace faz o
+      # checkout do bare repo (montado abaixo, read-only) ali dentro.
+      PROJECT_WORKSPACES_ROOT: /data/project-workspaces
+      TERMINAL_ACTION_TIMEOUT_MS: ${TERMINAL_ACTION_TIMEOUT_MS:-15000}
     ports:
       - "${ENGINE_PORT:-4000}:4000"
     volumes:
@@ -88,9 +133,13 @@ services:
       - engine_deps:/workspace/apps/engine/deps
       - engine_mix:/root/.mix
       - engine_hex:/root/.hex
+      - git_local_repos:/data/git-repos:ro
+      - project_workspaces:/data/project-workspaces
     depends_on:
       postgres:
         condition: service_healthy
+      keycloak:
+        condition: service_started
 
   web:
     build:
@@ -100,6 +149,12 @@ services:
     environment:
       VITE_API_URL: ${VITE_API_URL:-http://localhost:3000}
       VITE_ENGINE_URL: ${VITE_ENGINE_URL:-http://localhost:4000}
+      # Login via Keycloak (client público brabo-web, PKCE) — mesmo
+      # KEYCLOAK_ISSUER_URL usado pela api pra bater com o claim "iss"
+      # do token, já que o browser roda fora da rede do compose.
+      VITE_KEYCLOAK_URL: ${KEYCLOAK_ISSUER_URL:-http://localhost:8080}
+      VITE_KEYCLOAK_REALM: ${KEYCLOAK_REALM:-brabo-dev}
+      VITE_KEYCLOAK_CLIENT_ID: brabo-web
     ports:
       - "${WEB_PORT:-5173}:5173"
     volumes:
@@ -114,6 +169,7 @@ services:
 volumes:
   pgdata:
   ollama_data:
+  git_local_repos:
   api_root_node_modules:
   api_app_node_modules:
   api_shared_node_modules:
@@ -124,3 +180,4 @@ volumes:
   engine_deps:
   engine_mix:
   engine_hex:
+  project_workspaces:
