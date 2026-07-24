@@ -15,7 +15,7 @@ defmodule Engine.Agents.PoServer do
   use GenServer, restart: :temporary
 
   alias Engine.Harness.{ContextBuilder, PromptAssembler, ContextManager}
-  alias Engine.Harness.Tools.{CreateEpic, CreateStory, CreateTask}
+  alias Engine.Harness.Tools.{CreateEpic, CreateStory, CreateTask, OfferHandoff}
   alias Engine.Sessions.EngineApiClient
 
   @agent "po"
@@ -55,7 +55,12 @@ defmodule Engine.Agents.PoServer do
        project_id: project_id,
        agent: @agent,
        messages: [system_msg | history],
-       tool_specs: [CreateEpic.spec(), CreateStory.spec(), CreateTask.spec()]
+       tool_specs: [
+         CreateEpic.spec(),
+         CreateStory.spec(),
+         CreateTask.spec(),
+         OfferHandoff.spec()
+       ]
      }}
   end
 
@@ -148,6 +153,7 @@ defmodule Engine.Agents.PoServer do
   defp run_tool("create_epic", args, state), do: CreateEpic.run(args, state)
   defp run_tool("create_story", args, state), do: CreateStory.run(args, state)
   defp run_tool("create_task", args, state), do: CreateTask.run(args, state)
+  defp run_tool("offer_handoff", args, state), do: OfferHandoff.run(args, state)
   defp run_tool(name, _args, _state), do: {:error, "ferramenta desconhecida: #{name}"}
 
   # --- Kickoff: monta a instrução a partir do brief + regras do event log ---
@@ -188,7 +194,8 @@ defmodule Engine.Agents.PoServer do
     crie 1+ épico(s) com create_epic e histórias COMPLETAS com create_story — cada história
     precisa de RF, DoD, DoR e `business_rule_ids` apontando para os ids das regras que a
     originaram (assim ela vira 'ready'). Adicione tarefas com create_task quando fizer sentido.
-    Cubra TODAS as regras com ao menos uma história.
+    Cubra TODAS as regras com ao menos uma história. Quando o backlog estiver pronto, ofereça
+    um handoff ao arquiteto com offer_handoff(to_agent: "arquiteto").
 
     PRODUCT BRIEF:
     #{summary}

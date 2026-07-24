@@ -2,6 +2,7 @@ import { getToken } from './keycloak';
 import type {
   AgentAutonomyRule,
   ActionType,
+  Architecture,
   Budget,
   BudgetPolicy,
   CoverageReport,
@@ -192,6 +193,8 @@ export const listBacklog = (projectId: string) =>
   get<Epic[]>(`/projects/${projectId}/backlog`);
 export const getCoverage = (projectId: string) =>
   get<CoverageReport>(`/projects/${projectId}/coverage`);
+export const getArchitecture = (projectId: string) =>
+  get<Architecture>(`/projects/${projectId}/architecture`);
 
 // --- Proposed actions ---
 

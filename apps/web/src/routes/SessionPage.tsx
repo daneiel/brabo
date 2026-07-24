@@ -80,11 +80,20 @@ export function SessionPage({ projectId, sessionId }: SessionPageProps) {
     );
   const criativoActive = useMemo(() => activeFor('criativo'), [events]);
   const poActive = useMemo(() => activeFor('po'), [events]);
-  // O agente que recebe as mensagens do composer (PO tem precedência quando ativo).
-  const activeAgent = poActive ? 'po' : criativoActive ? 'criativo' : null;
-  // Handoff oferecido ao PO ainda não aceito → oferece o botão de aceitar.
-  const offeredPoHandoff = handoffs.find(
-    (h) => h.toAgent === 'po' && h.status === 'offered',
+  const arquitetoActive = useMemo(() => activeFor('arquiteto'), [events]);
+  // O agente que recebe as mensagens do composer (o mais avançado do fluxo
+  // ativo tem precedência).
+  const activeAgent = arquitetoActive
+    ? 'arquiteto'
+    : poActive
+      ? 'po'
+      : criativoActive
+        ? 'criativo'
+        : null;
+  // Primeiro handoff oferecido ainda não aceito → botão de aceitar (qualquer
+  // agente: po, arquiteto…).
+  const offeredHandoff = handoffs.find(
+    (h) => h.status === 'offered' && !activeFor(h.toAgent),
   );
 
   // Canal Phoenix: recebe os deltas do Criativo (streaming token-a-token) e o
@@ -353,9 +362,9 @@ export function SessionPage({ projectId, sessionId }: SessionPageProps) {
             Iniciar ideação
           </Button>
         )}
-        {isActive && offeredPoHandoff && !poActive && (
-          <Button variant="success" onClick={() => handleAcceptHandoff(offeredPoHandoff.id)}>
-            Aceitar handoff e iniciar PO
+        {isActive && offeredHandoff && (
+          <Button variant="success" onClick={() => handleAcceptHandoff(offeredHandoff.id)}>
+            Aceitar handoff e iniciar {offeredHandoff.toAgent}
           </Button>
         )}
         <Button variant="ghost" onClick={handleClose} disabled={!session || session.status === 'closed'}>

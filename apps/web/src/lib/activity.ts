@@ -78,13 +78,38 @@ export function classifyEvent(event: SessionEvent): ActivityDisplay {
         ? `${actorLabel} registrou uma regra de negócio`
         : artifactKind === 'product_brief'
           ? `${actorLabel} consolidou o product brief`
-          : `${actorLabel} emitiu um artefato (${artifactKind})`;
+          : artifactKind === 'module_map'
+            ? `${actorLabel} definiu o mapa de módulos`
+            : artifactKind === 'insight'
+              ? `${actorLabel} registrou um insight de arquitetura`
+              : `${actorLabel} emitiu um artefato (${artifactKind})`;
     return {
       kind: 'hypothesis',
       icon: HypothesisIcon,
       color: '#9C7BE0',
       bad: false,
       text: label,
+    };
+  }
+  if (type === 'backlog.story_demoted') {
+    return {
+      kind: 'generic',
+      icon: StackIcon,
+      color: 'var(--danger)',
+      bad: true,
+      text: `história rebaixada a draft (módulo removido do module_map)`,
+    };
+  }
+  if (type.startsWith('adr.')) {
+    return {
+      kind: 'pr',
+      icon: PrIcon,
+      color: type.includes('failed') ? 'var(--danger)' : 'var(--accent)',
+      bad: type.includes('failed'),
+      text:
+        type === 'adr.pr_opened'
+          ? `PR de ADR aberta no repositório`
+          : `falha ao abrir a PR de ADR`,
     };
   }
   if (type.startsWith('backlog.')) {

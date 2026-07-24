@@ -82,6 +82,26 @@ defmodule Engine.Sessions.FakeEngineApiClient do
     reply(:fake_task, %{"id" => "tk-#{unique()}"})
   end
 
+  @impl true
+  def create_module_map(_project_id, _session_id, modules) do
+    notify({:module_map_created, modules})
+
+    case Process.get(:fake_module_map_error) do
+      nil -> reply(:fake_module_map, %{"id" => "mm-#{unique()}", "version" => 1})
+      reason -> {:error, reason}
+    end
+  end
+
+  @impl true
+  def assign_story_modules(_project_id, _session_id, fields) do
+    notify({:story_modules_assigned, fields})
+
+    case Process.get(:fake_assign_error) do
+      nil -> reply(:fake_story, %{"id" => Map.get(fields, :storyId)})
+      reason -> {:error, reason}
+    end
+  end
+
   defp reply(key, default), do: {:ok, Process.get(key, default)}
   defp unique, do: System.unique_integer([:positive])
 
