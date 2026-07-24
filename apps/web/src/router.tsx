@@ -25,12 +25,32 @@ const projectRoute = createRoute({
   },
 });
 
+// Fase 4b — Psicólogo: `highlightEvent` vem dos chips de evidência da
+// seção Insights e faz o log de eventos da sessão rolar até o evento e
+// destacá-lo.
+interface SessionSearch {
+  highlightEvent?: string;
+}
+
 const sessionRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/projects/$projectId/sessions/$sessionId',
+  validateSearch: (search: Record<string, unknown>): SessionSearch => ({
+    highlightEvent:
+      typeof search.highlightEvent === 'string'
+        ? search.highlightEvent
+        : undefined,
+  }),
   component: () => {
     const { projectId, sessionId } = sessionRoute.useParams();
-    return <SessionPage projectId={projectId} sessionId={sessionId} />;
+    const { highlightEvent } = sessionRoute.useSearch();
+    return (
+      <SessionPage
+        projectId={projectId}
+        sessionId={sessionId}
+        highlightEvent={highlightEvent}
+      />
+    );
   },
 });
 

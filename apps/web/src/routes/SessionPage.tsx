@@ -29,6 +29,7 @@ import { useToast } from '../components/ui/ToastProvider';
 import { TokenMeter } from '../components/TokenMeter';
 import { ModelPicker } from '../components/ModelPicker';
 import { ApprovalCard } from '../components/ApprovalCard';
+import { ActivityFeed } from '../components/ActivityFeed';
 import { Button } from '../components/ui/Button';
 import { LayoutSidebarIcon, ModelIcon, UserIcon } from '../components/ui/icons';
 import styles from './SessionPage.module.css';
@@ -36,6 +37,8 @@ import styles from './SessionPage.module.css';
 interface SessionPageProps {
   projectId: string;
   sessionId: string;
+  /** Evidência do Psicólogo (Fase 4b) — abre o log e rola até o evento. */
+  highlightEvent?: string;
 }
 
 interface TimelineEntry {
@@ -43,12 +46,19 @@ interface TimelineEntry {
   node: ReactNode;
 }
 
-export function SessionPage({ projectId, sessionId }: SessionPageProps) {
+export function SessionPage({
+  projectId,
+  sessionId,
+  highlightEvent,
+}: SessionPageProps) {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const user = currentUser();
 
   const [asideOpen, setAsideOpen] = useState(true);
+  // Log completo de eventos — fechado por padrão, mas abre sozinho quando
+  // a navegação traz um `highlightEvent` (chip de evidência do Psicólogo).
+  const [logOpen, setLogOpen] = useState(!!highlightEvent);
   const [draft, setDraft] = useState('');
   const [streaming, setStreaming] = useState(false);
   const [streamingText, setStreamingText] = useState('');
@@ -67,6 +77,16 @@ export function SessionPage({ projectId, sessionId }: SessionPageProps) {
   const events = eventsQuery.data?.items ?? [];
   const actionsQuery = usePendingActions(projectId, sessionId, 3000);
   const actions = actionsQuery.data?.items ?? [];
+
+  // Navegação de evidência (Fase 4b): rola até o evento assim que ele
+  // existir no DOM — depende do log estar aberto E dos eventos já terem
+  // chegado pelo poll, daí a dependência em `events.length`.
+  useEffect(() => {
+    if (!highlightEvent || !logOpen) return;
+    document
+      .getElementById(`event-${highlightEvent}`)
+      ?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }, [highlightEvent, logOpen, events.length]);
 
   const handoffsQuery = useHandoffs(projectId, sessionId, 3000);
   const handoffs = handoffsQuery.data ?? [];
@@ -461,13 +481,33 @@ export function SessionPage({ projectId, sessionId }: SessionPageProps) {
           )}
         </div>
 
-        {asideOpen && <ContextAside actions={actionsQuery.data?.items ?? []} events={events} />}
+        {asideOpen && (
+          <ContextAside
+            actions={actionsQuery.data?.items ?? []}
+            events={events}
+            logOpen={logOpen}
+            onToggleLog={() => setLogOpen((open) => !open)}
+            highlightEvent={highlightEvent}
+          />
+        )}
       </div>
     </div>
   );
 }
 
-function ContextAside({ actions, events }: { actions: ProposedAction[]; events: SessionEvent[] }) {
+function ContextAside({
+  actions,
+  events,
+  logOpen,
+  onToggleLog,
+  highlightEvent,
+}: {
+  actions: ProposedAction[];
+  events: SessionEvent[];
+  logOpen: boolean;
+  onToggleLog: () => void;
+  highlightEvent?: string;
+}) {
   const prActions = actions.filter((a) => a.actionType === 'pr_open');
   const businessRules = events.filter((e) => e.type === 'artifact.business_rule');
   const filesTouched = actions
@@ -528,6 +568,22 @@ function ContextAside({ actions, events }: { actions: ProposedAction[]; events: 
               </span>
             </div>
           ))
+        )}
+      </div>
+
+      {/* Log completo de eventos — o alvo da navegação de evidência do
+          Psicólogo (Fase 4b). Colapsável pra não competir com o chat. */}
+      <div className={styles.asideSection}>
+        <button
+          type="button"
+          className={styles.asideHeader}
+          onClick={onToggleLog}
+          style={{ cursor: 'pointer', background: 'none', border: 'none', padding: 0, width: '100%', textAlign: 'left' }}
+        >
+          Log de eventos ({events.length}) {logOpen ? '−' : '+'}
+        </button>
+        {logOpen && (
+          <ActivityFeed events={events} highlightEventId={highlightEvent} />
         )}
       </div>
     </aside>

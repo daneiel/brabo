@@ -217,6 +217,35 @@ defmodule Engine.Sessions.EngineApiClient do
               {:ok, map()} | {:error, term()}
 
   @doc """
+  Contexto do Psicólogo (Fase 4b): `alreadyAnalyzed` (idempotência),
+  `sessionStatus`/`terminationReason` (causa de término), regras de
+  negócio do projeto e hipóteses anteriores não descartadas. O log
+  completo de eventos da sessão o worker lê direto do Postgres
+  (`Engine.SessionEvents.Event.list/1`), não passa por aqui.
+  """
+  @callback get_psychologist_context(
+              project_id :: String.t(),
+              session_id :: String.t()
+            ) ::
+              {:ok, map()} | {:error, term()}
+
+  @doc """
+  Registra o lote de hipóteses do Psicólogo (Fase 4b). A api valida que
+  TODA evidência aponta pra um event id real da sessão e rejeita o lote
+  inteiro (4xx) se qualquer uma falhar — o erro vira o próximo
+  tool-result pro modelo corrigir, dentro do teto de max_iterations.
+  """
+  @callback propose_hypotheses(
+              project_id :: String.t(),
+              session_id :: String.t(),
+              tier :: String.t(),
+              triggered_by :: String.t(),
+              event_count :: integer(),
+              hypotheses :: [map()]
+            ) ::
+              {:ok, map()} | {:error, term()}
+
+  @doc """
   Um turno de LLM pro harness (ToolLoop/ContextManager) — o engine nunca
   fala com provider direto. `messages`/`tools` no formato do contrato
   compartilhado; retorna `{:ok, %{"message" => ..., "usage" => ..., "error"
@@ -327,6 +356,20 @@ defmodule Engine.Sessions.EngineApiClient do
 
   def get_infra_pr_files(project_id, session_id, pr_action_id),
     do: impl().get_infra_pr_files(project_id, session_id, pr_action_id)
+
+  def get_psychologist_context(project_id, session_id),
+    do: impl().get_psychologist_context(project_id, session_id)
+
+  def propose_hypotheses(project_id, session_id, tier, triggered_by, event_count, hypotheses),
+    do:
+      impl().propose_hypotheses(
+        project_id,
+        session_id,
+        tier,
+        triggered_by,
+        event_count,
+        hypotheses
+      )
 
   def record_infra_gate_verdict(
         project_id,
@@ -570,6 +613,35 @@ defmodule Engine.Sessions.EngineApiClient.Live do
       {:error, reason} ->
         {:error, reason}
     end
+  end
+
+  @impl true
+  def get_psychologist_context(project_id, session_id) do
+    url =
+      api_url() <>
+        "/internal/sessions/#{session_id}/psychologist-context?projectId=#{project_id}"
+
+    case Req.get(url, headers: [{"authorization", "Bearer #{token()}"}]) do
+      {:ok, %Req.Response{status: status, body: body}} when status in 200..299 ->
+        {:ok, body}
+
+      {:ok, %Req.Response{status: status, body: resp}} ->
+        {:error, {status, resp}}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  @impl true
+  def propose_hypotheses(project_id, session_id, tier, triggered_by, event_count, hypotheses) do
+    post_returning("/internal/sessions/#{session_id}/hypotheses", %{
+      projectId: project_id,
+      tier: tier,
+      triggeredBy: triggered_by,
+      eventCount: event_count,
+      hypotheses: hypotheses
+    })
   end
 
   @impl true

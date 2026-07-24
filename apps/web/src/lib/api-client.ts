@@ -4,6 +4,7 @@ import type {
   ActionType,
   Architecture,
 InfraArtifact,
+PsychologistHypothesis,
   Budget,
   BudgetPolicy,
   CoverageReport,
@@ -199,6 +200,23 @@ export const getArchitecture = (projectId: string) =>
   get<Architecture>(`/projects/${projectId}/architecture`);
 export const listInfraArtifacts = (projectId: string) =>
   get<InfraArtifact[]>(`/projects/${projectId}/infra-artifacts`);
+
+// --- Psicólogo (Fase 4b) ---
+
+export const listHypotheses = (projectId: string) =>
+  get<PsychologistHypothesis[]>(`/projects/${projectId}/hypotheses`);
+export const acceptHypothesis = (projectId: string, hypothesisId: string) =>
+  post<PsychologistHypothesis>(
+    `/projects/${projectId}/hypotheses/${hypothesisId}/accept`,
+  );
+export const dismissHypothesis = (projectId: string, hypothesisId: string) =>
+  post<PsychologistHypothesis>(
+    `/projects/${projectId}/hypotheses/${hypothesisId}/dismiss`,
+  );
+export const reanalyzeSession = (projectId: string, sessionId: string) =>
+  post<{ ok: true }>(
+    `/projects/${projectId}/sessions/${sessionId}/psychologist/reanalyze`,
+  );
 
 // --- Execução (Fase 4a) ---
 
