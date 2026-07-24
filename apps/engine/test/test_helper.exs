@@ -74,6 +74,17 @@ CREATE TABLE IF NOT EXISTS public.projects (
 )
 """)
 
+# sessions: lida pela Anamnese (Fase 4b) — pra achar a sessão do projeto
+# onde narrar a rodada, e pra filtrar a janela de eventos por projeto
+# (session_events não carrega project_id). Só as colunas que o engine lê.
+Engine.Repo.query!("""
+CREATE TABLE IF NOT EXISTS public.sessions (
+  id uuid PRIMARY KEY,
+  project_id uuid NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+)
+""")
+
 Engine.Repo.query!("""
 CREATE TABLE IF NOT EXISTS public.agent_instructions (
   id uuid PRIMARY KEY,

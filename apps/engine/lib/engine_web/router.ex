@@ -41,5 +41,9 @@ defmodule EngineWeb.Router do
     post "/sessions/:sessionId/psychologist/reanalyze",
          PsychologistCommandController,
          :reanalyze
+
+    post "/projects/:projectId/agents/:agent/instructions/invalidate",
+         InstructionCommandController,
+         :invalidate
   end
 end

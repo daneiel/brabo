@@ -5,6 +5,8 @@ import type {
   Architecture,
 InfraArtifact,
 PsychologistHypothesis,
+  ProficiencyProfile,
+  AgentInstructionVersion,
   Budget,
   BudgetPolicy,
   CoverageReport,
@@ -213,6 +215,29 @@ export const dismissHypothesis = (projectId: string, hypothesisId: string) =>
   post<PsychologistHypothesis>(
     `/projects/${projectId}/hypotheses/${hypothesisId}/dismiss`,
   );
+// --- Anamnese (Fase 4b) ---
+
+export const listProficiency = (projectId: string) =>
+  get<ProficiencyProfile[]>(`/projects/${projectId}/proficiency`);
+export const deleteMyProficiency = (projectId: string) =>
+  del<{ deleted: number; optedOut: true }>(
+    `/projects/${projectId}/proficiency/me`,
+  );
+export const optInProficiency = (projectId: string) =>
+  post<{ optedOut: false }>(`/projects/${projectId}/proficiency/me/opt-in`);
+export const listInstructionVersions = (projectId: string, agent: string) =>
+  get<AgentInstructionVersion[]>(
+    `/projects/${projectId}/agents/${agent}/instruction-versions`,
+  );
+export const rollbackInstruction = (
+  projectId: string,
+  agent: string,
+  version: number,
+) =>
+  post<{ agent: string; restoredFrom: number; toVersion: number }>(
+    `/projects/${projectId}/agents/${agent}/instruction-versions/${version}/rollback`,
+  );
+
 export const reanalyzeSession = (projectId: string, sessionId: string) =>
   post<{ ok: true }>(
     `/projects/${projectId}/sessions/${sessionId}/psychologist/reanalyze`,

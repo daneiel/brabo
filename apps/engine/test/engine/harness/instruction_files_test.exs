@@ -85,4 +85,42 @@ defmodule Engine.Harness.InstructionFilesTest do
     :ok = InstructionFiles.invalidate(project_id, agent)
     assert InstructionFiles.load(project_id, agent).merged =~ "conteudo-v2"
   end
+
+  # Fase 4b: a chave do cache é {project_id, agent, root} e a root varia —
+  # nil pro workspace compartilhado, o path do worktree pros dev agents.
+  # Um patch/rollback precisa limpar TODAS, senão o dev segue servindo a
+  # instrução velha do worktree dele.
+  test "invalidate_all limpa o cache do agente em TODAS as raízes" do
+    project_id = Ecto.UUID.generate()
+    agent = "dev-api"
+    worktree = Path.join(System.tmp_dir!(), "wt-#{System.unique_integer([:positive])}")
+    File.mkdir_p!(worktree)
+    on_exit(fn -> File.rm_rf!(worktree) end)
+
+    Repo.query!(
+      "INSERT INTO public.agent_instructions (id, project_id, agent, content, version) VALUES ($1, $2, $3, $4, $5)",
+      [
+        Ecto.UUID.dump!(Ecto.UUID.generate()),
+        Ecto.UUID.dump!(project_id),
+        agent,
+        "conteudo-v1",
+        1
+      ]
+    )
+
+    # Popula o cache nas DUAS raízes.
+    assert InstructionFiles.load(project_id, agent).merged =~ "conteudo-v1"
+    assert InstructionFiles.load(project_id, agent, root: worktree).merged =~ "conteudo-v1"
+
+    Repo.query!(
+      "UPDATE public.agent_instructions SET content = $1 WHERE project_id = $2 AND agent = $3",
+      ["conteudo-v2", Ecto.UUID.dump!(project_id), agent]
+    )
+
+    # Invalidar só a raiz default deixaria a do worktree velha.
+    :ok = InstructionFiles.invalidate_all(project_id, agent)
+
+    assert InstructionFiles.load(project_id, agent).merged =~ "conteudo-v2"
+    assert InstructionFiles.load(project_id, agent, root: worktree).merged =~ "conteudo-v2"
+  end
 end

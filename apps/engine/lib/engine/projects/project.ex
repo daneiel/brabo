@@ -7,6 +7,7 @@ defmodule Engine.Projects.Project do
   """
 
   use Ecto.Schema
+  import Ecto.Query
 
   alias Engine.Repo
 
@@ -22,5 +23,13 @@ defmodule Engine.Projects.Project do
   """
   def get(project_id) do
     Repo.get(__MODULE__, project_id)
+  end
+
+  @doc """
+  Ids de todos os projetos — usado pelo tick periódico da Anamnese
+  (Fase 4b) pra fazer fan-out de uma rodada por projeto.
+  """
+  def list_ids do
+    Repo.all(from(p in __MODULE__, select: p.id))
   end
 end

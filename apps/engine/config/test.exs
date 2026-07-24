@@ -17,6 +17,7 @@ config :engine, Engine.Repo,
 # auto-reagendado, indesejável em testes determinísticos — os testes
 # chamam Engine.Outbox.Drain.run_once/0 diretamente.
 config :engine, start_outbox_drain?: false
+config :engine, start_anamnese?: false
 config :engine, Oban, testing: :manual
 
 # Não bater no Keycloak de verdade durante a suite — testes que precisam

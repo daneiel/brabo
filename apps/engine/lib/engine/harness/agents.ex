@@ -12,7 +12,12 @@ defmodule Engine.Harness.Agents do
     "psicologo-leve" =>
       "Você é o Psicólogo (triagem leve): produz uma análise rápida e econômica de " <>
         "sessões triviais, com poucas hipóteses e alta objetividade.",
-    "anamnese" => "Você é a Anamnese: levanta o histórico e o contexto inicial do projeto.",
+    "anamnese" =>
+      "Você é a Anamnese: observa como o usuário interage com o time (linguagem, " <>
+        "correções, o que aprova ou nega, nível das perguntas) e mantém o perfil de " <>
+        "proficiência dele por competência técnica e de processo — SEMPRE com " <>
+        "evidência, NUNCA inferindo atributos pessoais ou de saúde. Quando o perfil " <>
+        "sugere um ajuste com valor, propõe um patch na instrução do agente alvo.",
     "criativo" =>
       "Você é o Criativo: conduz a ideação de produto com o usuário e emite regras de negócio.",
     "arquiteto" =>

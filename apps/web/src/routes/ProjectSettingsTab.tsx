@@ -1,7 +1,12 @@
 import { useState, type CSSProperties } from 'react';
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from '@tanstack/react-router';
 import {
   addProjectMember,
+  deleteMyProficiency,
+  listInstructionVersions,
+  optInProficiency,
+  rollbackInstruction,
   deleteCredential,
   getAgentModelBinding,
   listCredentials,
@@ -12,7 +17,13 @@ import {
   upsertCredential,
 } from '../lib/api-client';
 import { AGENT_LIST } from '../lib/agents';
-import type { Model, ModelBindingScope, Role } from '../lib/api-types';
+import { useLatestSession, useProficiency } from '../lib/hooks';
+import type {
+  Model,
+  ModelBindingScope,
+  ProficiencyLevel,
+  Role,
+} from '../lib/api-types';
 import { Table, type TableColumn } from '../components/ui/Table';
 import { Badge, type BadgeTone } from '../components/ui/Badge';
 import { Select } from '../components/ui/Select';
@@ -46,6 +57,12 @@ const MATRIX_ROWS: { label: string; minRole: Role }[] = [
   { label: 'Editar permissions.json', minRole: 'maintainer' },
 ];
 
+const LEVEL_TONE: Record<ProficiencyLevel, BadgeTone> = {
+  iniciante: 'muted',
+  intermediario: 'warning',
+  avancado: 'success',
+};
+
 const CREDENTIAL_PROVIDERS: { id: 'anthropic' | 'openai'; label: string }[] = [
   { id: 'anthropic', label: 'Anthropic' },
   { id: 'openai', label: 'OpenAI' },
@@ -60,6 +77,8 @@ export function ProjectSettingsTab({ projectId }: ProjectSettingsTabProps) {
     <div>
       <ModelsSection projectId={projectId} />
       <MembersSection projectId={projectId} />
+      <ProficiencySection projectId={projectId} />
+      <InstructionVersionsSection projectId={projectId} />
       <MatrixSection />
       <CredentialsSection />
     </div>
@@ -336,6 +355,231 @@ function CredentialsSection() {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+/**
+ * Perfil de proficiência (Fase 4b — Anamnese): competência, nível e "os
+ * porquês" com evidências clicáveis que navegam até o evento na sessão.
+ * O usuário pode apagar o PRÓPRIO perfil — o que também registra o
+ * opt-out (senão a rodada seguinte re-derivaria tudo).
+ */
+function ProficiencySection({ projectId }: { projectId: string }) {
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+  const navigate = useNavigate();
+  const { data: profiles } = useProficiency(projectId);
+  const { latest: latestSession } = useLatestSession(projectId);
+
+  const all = profiles ?? [];
+  const byUser = new Map<string, typeof all>();
+  for (const p of all) {
+    byUser.set(p.userId, [...(byUser.get(p.userId) ?? []), p]);
+  }
+
+  async function handleDelete() {
+    try {
+      await deleteMyProficiency(projectId);
+      await queryClient.invalidateQueries({ queryKey: ['proficiency', projectId] });
+      showToast({
+        title: 'Perfil apagado',
+        message: 'A Anamnese não vai mais te perfilar até você reativar.',
+        tone: 'success',
+      });
+    } catch {
+      showToast({ title: 'Erro', message: 'Não foi possível apagar o perfil', tone: 'danger' });
+    }
+  }
+
+  async function handleOptIn() {
+    try {
+      await optInProficiency(projectId);
+      showToast({ title: 'Reativado', message: 'A Anamnese voltará a perfilar você.', tone: 'success' });
+    } catch {
+      showToast({ title: 'Erro', message: 'Não foi possível reativar', tone: 'danger' });
+    }
+  }
+
+  function goToEvidence(eventId: string) {
+    if (!latestSession) return;
+    navigate({
+      to: '/projects/$projectId/sessions/$sessionId',
+      params: { projectId, sessionId: latestSession.id },
+      search: { highlightEvent: eventId },
+    });
+  }
+
+  return (
+    <div className={styles.section}>
+      <div className={styles.title}>Perfil de proficiência</div>
+      <div className={styles.subtitle} style={{ marginBottom: 12 }}>
+        Derivado pela Anamnese a partir das suas interações. Só competências
+        técnicas e de processo — nunca características pessoais.
+      </div>
+
+      {all.length === 0 ? (
+        <div className={styles.subtitle}>
+          Nada ainda — a Anamnese roda periodicamente sobre o log do projeto.
+        </div>
+      ) : (
+        [...byUser.entries()].map(([userId, group]) => (
+          <div key={userId} className={styles.profileGroup}>
+            <div className={styles.profileUser}>{userId}</div>
+            {group.map((profile) => (
+              <div key={profile.id}>
+                <div className={styles.profileRow}>
+                  <span className={styles.profileCompetency}>
+                    {profile.competency}
+                  </span>
+                  <Badge tone={LEVEL_TONE[profile.level] ?? 'muted'}>
+                    {profile.level}
+                  </Badge>
+                  <span className={styles.profileWhy}>{profile.rationale}</span>
+                </div>
+                <div className={styles.evidenceChips}>
+                  {profile.evidenceEventIds.map((eventId) => (
+                    <button
+                      key={eventId}
+                      type="button"
+                      className={styles.evidenceChip}
+                      onClick={() => goToEvidence(eventId)}
+                    >
+                      {eventId.slice(-8)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        ))
+      )}
+
+      <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+        <Button variant="danger" onClick={handleDelete}>
+          Apagar meu perfil
+        </Button>
+        <Button variant="ghost" onClick={handleOptIn}>
+          Voltar a ser perfilado
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Histórico de versões por arquivo de agente (Fase 4b), com diff de cada
+ * versão contra a anterior e rollback de um clique. Rollback é operação
+ * PRA FRENTE: grava uma versão nova com o conteúdo antigo.
+ */
+function InstructionVersionsSection({ projectId }: { projectId: string }) {
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+  const [expanded, setExpanded] = useState<string | null>(null);
+
+  const versionQueries = useQueries({
+    queries: AGENT_LIST.map((agent) => ({
+      queryKey: ['instruction-versions', projectId, agent.key],
+      queryFn: () => listInstructionVersions(projectId, agent.key),
+    })),
+  });
+
+  async function handleRollback(agent: string, version: number) {
+    try {
+      await rollbackInstruction(projectId, agent, version);
+      await queryClient.invalidateQueries({
+        queryKey: ['instruction-versions', projectId, agent],
+      });
+      showToast({
+        title: 'Revertido',
+        message: `${agent} voltou ao conteúdo da v${version}.`,
+        tone: 'success',
+      });
+    } catch {
+      showToast({ title: 'Erro', message: 'Não foi possível reverter', tone: 'danger' });
+    }
+  }
+
+  const withHistory = AGENT_LIST.map((agent, index) => ({
+    agent,
+    versions: versionQueries[index]?.data ?? [],
+  })).filter((entry) => entry.versions.length > 0);
+
+  return (
+    <div className={styles.section}>
+      <div className={styles.title}>Histórico de instruções</div>
+      <div className={styles.subtitle} style={{ marginBottom: 12 }}>
+        Cada patch aprovado vira uma versão. Reverter grava uma versão nova
+        com o conteúdo antigo — nada é apagado.
+      </div>
+
+      {withHistory.length === 0 ? (
+        <div className={styles.subtitle}>
+          Nenhum agente teve a instrução alterada ainda.
+        </div>
+      ) : (
+        withHistory.map(({ agent, versions }) => (
+          <div key={agent.key} className={styles.agentBlock}>
+            <div className={styles.profileUser}>{agent.name}</div>
+            {versions.map((version) => {
+              const key = `${agent.key}:${version.version}`;
+              const open = expanded === key;
+              return (
+                <div key={version.id}>
+                  <div className={styles.versionRow}>
+                    <span className={styles.versionNo}>v{version.version}</span>
+                    {version.isCurrent && <Badge tone="success">atual</Badge>}
+                    {version.sourceHypothesisId && (
+                      <Badge tone="accent">
+                        hipótese {version.sourceHypothesisId.slice(-8)}
+                      </Badge>
+                    )}
+                    <span className={styles.versionNote}>
+                      {version.note ?? '—'}
+                    </span>
+                    <button
+                      type="button"
+                      className={styles.evidenceChip}
+                      onClick={() => setExpanded(open ? null : key)}
+                    >
+                      {open ? 'ocultar diff' : `diff +${version.diff.additions} −${version.diff.deletions}`}
+                    </button>
+                    {!version.isCurrent && (
+                      <Button
+                        variant="secondary"
+                        onClick={() => handleRollback(agent.key, version.version)}
+                      >
+                        Reverter
+                      </Button>
+                    )}
+                  </div>
+                  {open && (
+                    <div className={styles.versionDiff}>
+                      {version.diff.lines.map((line, i) => (
+                        <div
+                          key={i}
+                          className={[
+                            styles.diffLine,
+                            line.kind === 'add' && styles.add,
+                            line.kind === 'del' && styles.del,
+                          ]
+                            .filter(Boolean)
+                            .join(' ')}
+                        >
+                          <span>
+                            {line.kind === 'add' ? '+' : line.kind === 'del' ? '-' : ' '}
+                          </span>
+                          <span>{line.content}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ))
+      )}
     </div>
   );
 }

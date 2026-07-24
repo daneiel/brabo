@@ -236,6 +236,40 @@ defmodule Engine.Sessions.FakeEngineApiClient do
     })
   end
 
+  @impl true
+  def get_anamnese_context(project_id) do
+    notify({:anamnese_context_fetched, project_id})
+
+    reply(:fake_anamnese_context, %{
+      "competencyCatalog" => ["git", "agile"],
+      "members" => [],
+      "queuedHypotheses" => [],
+      "currentProfiles" => [],
+      "instructions" => [],
+      "windowFrom" => nil
+    })
+  end
+
+  @impl true
+  def record_proficiency(_project_id, _session_id, payload) do
+    notify({:proficiency_recorded, payload})
+
+    case Process.get(:fake_record_proficiency_error) do
+      nil -> reply(:fake_proficiency_result, %{"runId" => "run-1", "profiles" => []})
+      reason -> {:error, reason}
+    end
+  end
+
+  @impl true
+  def propose_instruction_patch(_project_id, _session_id, payload) do
+    notify({:instruction_patch_proposed, payload})
+
+    case Process.get(:fake_instruction_patch_error) do
+      nil -> reply(:fake_instruction_patch, %{"id" => "act-1", "status" => "pending"})
+      reason -> {:error, reason}
+    end
+  end
+
   defp reply(key, default), do: {:ok, Process.get(key, default)}
   defp unique, do: System.unique_integer([:positive])
 

@@ -27,4 +27,24 @@ defmodule Engine.SessionEvents.Event do
   def list(session_id) do
     Repo.all(from(e in __MODULE__, where: e.session_id == ^session_id, order_by: e.seq))
   end
+
+  @doc """
+  Janela de tempo do PROJETO inteiro (Fase 4b — a Anamnese analisa
+  "janelas do event log"). Junta em sessions pra filtrar por projeto, já
+  que session_events não carrega project_id. `limit` protege contra
+  janelas patológicas.
+  """
+  def list_for_project_window(project_id, from_time, to_time, limit \\ 500) do
+    Repo.all(
+      from(e in __MODULE__,
+        join: s in Engine.Sessions.ProjectSession,
+        on: e.session_id == s.id,
+        where:
+          s.project_id == type(^project_id, :binary_id) and
+            e.created_at >= ^from_time and e.created_at < ^to_time,
+        order_by: e.created_at,
+        limit: ^limit
+      )
+    )
+  end
 end

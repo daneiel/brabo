@@ -19,6 +19,7 @@ defmodule Engine.Harness.InstructionFiles do
 
   @callback load(project_id :: String.t(), agent :: String.t(), opts :: keyword()) :: map()
   @callback invalidate(project_id :: String.t(), agent :: String.t(), opts :: keyword()) :: :ok
+  @callback invalidate_all(project_id :: String.t(), agent :: String.t()) :: :ok
 
   @doc """
   `opts[:root]` sobrescreve a raiz onde os AGENTS.md são lidos (default o
@@ -29,6 +30,13 @@ defmodule Engine.Harness.InstructionFiles do
 
   @doc "Mesmo `opts[:root]` de `load/3` — invalida o cache daquela raiz específica."
   def invalidate(project_id, agent, opts \\ []), do: impl().invalidate(project_id, agent, opts)
+
+  @doc """
+  Invalida o cache do agente em TODAS as raízes (Fase 4b) — é o que um
+  patch de instrução aprovado ou um rollback precisam, já que os dev
+  agents cacheiam sob a raiz do próprio worktree.
+  """
+  def invalidate_all(project_id, agent), do: impl().invalidate_all(project_id, agent)
 
   defp impl do
     Application.get_env(
@@ -77,6 +85,11 @@ defmodule Engine.Harness.InstructionFiles.Live do
   @impl true
   def invalidate(project_id, agent, opts \\ []) do
     Cache.delete({project_id, agent, Keyword.get(opts, :root)})
+  end
+
+  @impl true
+  def invalidate_all(project_id, agent) do
+    Cache.delete_agent(project_id, agent)
   end
 
   defp build(project_id, agent, root) do
