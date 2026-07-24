@@ -13,11 +13,33 @@ export type LLMProviderName = "ollama" | "anthropic" | "openai";
 
 export type ModelCategory = "local" | "cloud";
 
-export type ChatRole = "user" | "assistant" | "system";
+export type ChatRole = "user" | "assistant" | "system" | "tool";
+
+// Tool call que o modelo pediu (Fase 3a — ToolLoop). `arguments` já
+// desserializado; o engine despacha para a ferramenta registrada por `name`.
+export interface ToolCall {
+  id: string;
+  name: string;
+  arguments: Record<string, unknown>;
+}
+
+// Definição de uma ferramenta oferecida ao modelo. `parameters` é um JSON
+// Schema (o Ollama repassa isso no campo `tools`).
+export interface ToolDef {
+  name: string;
+  description: string;
+  parameters: Record<string, unknown>;
+}
 
 export interface ChatMessage {
   role: ChatRole;
   content: string;
+  /** Só em mensagens `assistant` que pediram ferramentas. */
+  toolCalls?: ToolCall[];
+  /** Só em mensagens `tool` (resultado): a qual tool call responde. */
+  toolCallId?: string;
+  /** Nome da ferramenta em mensagens `tool`. */
+  name?: string;
 }
 
 export interface ChatOptions {
@@ -27,6 +49,8 @@ export interface ChatOptions {
   apiKey?: string;
   /** Override do host do Ollama (senão usa OLLAMA_HOST/default do provider). */
   host?: string;
+  /** Ferramentas oferecidas ao modelo (tool calling). */
+  tools?: ToolDef[];
 }
 
 export interface ChatTextDeltaChunk {
@@ -46,7 +70,18 @@ export interface ChatErrorChunk {
   message: string;
 }
 
-export type ChatStreamChunk = ChatTextDeltaChunk | ChatUsageChunk | ChatErrorChunk;
+// Ferramentas pedidas pelo modelo — no Ollama vêm na mensagem final (não
+// streamado), então é um chunk único, não incremental.
+export interface ChatToolCallsChunk {
+  type: "tool_calls";
+  toolCalls: ToolCall[];
+}
+
+export type ChatStreamChunk =
+  | ChatTextDeltaChunk
+  | ChatUsageChunk
+  | ChatErrorChunk
+  | ChatToolCallsChunk;
 
 // --- Git ---
 
@@ -55,10 +90,10 @@ export type GitProviderName = "local" | "github" | "gitlab";
 // --- Git Provider Contract (Fase 2) ---
 //
 // Contrato normalizado, independente de provider — nenhum tipo aqui pode
-// vazar o shape de Octokit/Gitbeaker. `GitProviderContract` é deliberadamente
-// um tipo separado da `GitProvider` (abstract class de DI do Nest em
-// apps/api, que hoje só tem `createRepository`) — ver docs/adr/0001. Só
-// `LocalGitProvider` implementa este contrato por enquanto.
+// vazar o shape de Octokit/Gitbeaker. Os 3 providers (Local/Github/Gitlab)
+// implementam o contrato por completo — ver docs/adr/0001 (histórico da
+// decisão de shape) e docs/adr/0005 (a 9ª operação, `getFileContent`,
+// acrescentada na sessão do bootstrap de Gitflow).
 
 export interface GitProviderCapabilities {
   readonly protectBranch: boolean;
@@ -151,6 +186,13 @@ export interface MergePullRequestInput {
   accessToken?: string;
 }
 
+export interface GetFileContentInput {
+  externalId: string;
+  branch: string;
+  path: string;
+  accessToken?: string;
+}
+
 export interface GitProviderContract {
   readonly name: GitProviderName;
   readonly capabilities: GitProviderCapabilities;
@@ -162,4 +204,18 @@ export interface GitProviderContract {
   listBranches(input: ListBranchesInput): Promise<GitBranch[]>;
   openPullRequest(input: OpenPullRequestInput): Promise<GitPullRequest>;
   mergePullRequest(input: MergePullRequestInput): Promise<GitPullRequest>;
+  /** `null` se o arquivo não existe naquela branch (ou a branch não existe). */
+  getFileContent(input: GetFileContentInput): Promise<string | null>;
 }
+
+// --- Credenciais de git do usuário (Fase 2, sessão 2) ---
+//
+// Só github/gitlab têm token de usuário (PAT) — 'local' não precisa de
+// credencial nenhuma. Ver docs/adr/0004-git-credential-registration.md.
+
+export type GitCredentialProviderName = Extract<GitProviderName, "github" | "gitlab">;
+
+// user_credentials guarda tanto chaves de LLM quanto tokens de git do
+// usuário, sob o mesmo mecanismo de envelope encryption — ver
+// docs/adr/0004-git-credential-registration.md.
+export type CredentialProviderName = LLMProviderName | GitCredentialProviderName;

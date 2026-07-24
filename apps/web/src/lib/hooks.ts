@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { listActions, listProjects, listSessionEvents, listSessions, listWorkspaces } from './api-client';
+import { listActions, listHandoffs, listProjects, listSessionEvents, listSessions, listWorkspaces } from './api-client';
 import { classifyEvent } from './activity';
 import { formatRelativeTime } from './time';
 
@@ -74,6 +74,16 @@ export function usePendingActions(projectId: string | undefined, sessionId: stri
   return useQuery({
     queryKey: ['session-actions', projectId, sessionId],
     queryFn: () => listActions(projectId!, sessionId!, { limit: 200 }),
+    enabled: !!projectId && !!sessionId,
+    refetchInterval: intervalMs,
+  });
+}
+
+// Handoffs entre agentes da sessão (Fase 3b) — poll de 3s, como os eventos.
+export function useHandoffs(projectId: string | undefined, sessionId: string | undefined, intervalMs = 3000) {
+  return useQuery({
+    queryKey: ['session-handoffs', projectId, sessionId],
+    queryFn: () => listHandoffs(projectId!, sessionId!),
     enabled: !!projectId && !!sessionId,
     refetchInterval: intervalMs,
   });

@@ -79,3 +79,17 @@ ainda.
   `provider.capabilities.*` pra decidir a asserção certa — então não
   precisa mudar quando Github/Gitlab entrarem, só o harness que a
   invoca muda.
+
+## Atualização (Fase 2, sessão 3 — bootstrap de Gitflow)
+
+A "dívida explícita" da seção anterior foi paga: `GithubProvider` e
+`GitlabProvider` já implementavam `GitProviderContract` por completo
+desde a sessão de credenciais de git (com suite de contrato mockada
+passando nos 3 providers). Nesta sessão, `GitProviderRegistry.get()`
+passou a retornar `GitProviderContract` em vez da `GitProvider` legada
+— `createRepository`/`CreateRepositoryInput`/`CreateRepositoryResult`
+foram removidos (confirmado por grep: `ProvisionRepositoryUseCase` era
+o único consumidor). O contrato também ganhou uma 9ª operação,
+`getFileContent`, necessária pro bootstrap verificar "arquivo já
+commitado com mesmo conteúdo" antes de recommitar — ver
+docs/adr/0005-repo-bootstrap-idempotent-steps.md.

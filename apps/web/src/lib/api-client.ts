@@ -4,6 +4,7 @@ import type {
   ActionType,
   Budget,
   BudgetPolicy,
+  Handoff,
   ModelBindingScope,
   ModelsByCategory,
   Page,
@@ -13,6 +14,8 @@ import type {
   ProjectMemberWithUser,
   ProposedAction,
   ProvisionedRepository,
+  ProvisionRepositoryResult,
+  RepoBootstrapStatus,
   ResolvedBinding,
   Role,
   Session,
@@ -114,9 +117,21 @@ export const provisionRepository = (
   projectId: string,
   provider: 'local' | 'github' | 'gitlab',
   input: { name: string; visibility: 'public' | 'private'; namespace?: string },
-) => post<ProvisionedRepository>(`/projects/${projectId}/git/${provider}/repository`, input);
+) =>
+  post<ProvisionRepositoryResult>(
+    `/projects/${projectId}/git/${provider}/repository`,
+    input,
+  );
 export const getRepository = (projectId: string) =>
   get<ProvisionedRepository | null>(`/projects/${projectId}/git/repository`);
+export const getBootstrapStatus = (projectId: string) =>
+  get<RepoBootstrapStatus>(`/projects/${projectId}/git/bootstrap`);
+// Cadastra um PAT de git do usuário — o backend TESTA a conexão antes de
+// persistir (422 = token inválido); nunca reexibe o token.
+export const registerGitCredential = (input: {
+  provider: 'github' | 'gitlab';
+  token: string;
+}) => post<UserCredentialMetadata>('/users/me/git-credentials', input);
 
 // --- Sessions ---
 
@@ -139,6 +154,27 @@ export const listSessionEvents = (
   get<Page<SessionEvent>>(
     `/projects/${projectId}/sessions/${sessionId}/events${qs(opts)}`,
   );
+
+// --- Agentes conversacionais / handoffs (Fase 3b) ---
+
+export const startAgent = (projectId: string, sessionId: string, agent: string) =>
+  post<{ agent: string; status: string }>(
+    `/projects/${projectId}/sessions/${sessionId}/agents/${agent}/start`,
+  );
+export const sendAgentMessage = (
+  projectId: string,
+  sessionId: string,
+  agent: string,
+  text: string,
+) =>
+  post<{ ok: true }>(
+    `/projects/${projectId}/sessions/${sessionId}/agents/${agent}/message`,
+    { text },
+  );
+export const confirmReadiness = (projectId: string, sessionId: string) =>
+  post<{ ok: true }>(`/projects/${projectId}/sessions/${sessionId}/readiness`);
+export const listHandoffs = (projectId: string, sessionId: string) =>
+  get<Handoff[]>(`/projects/${projectId}/sessions/${sessionId}/handoffs`);
 
 // --- Proposed actions ---
 

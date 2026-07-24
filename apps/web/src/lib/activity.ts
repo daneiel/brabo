@@ -70,6 +70,31 @@ export function classifyEvent(event: SessionEvent): ActivityDisplay {
       text: `${actorLabel} abriu pull request${payloadField(payload, 'title') ? `: ${payloadField(payload, 'title')}` : ''}`,
     };
   }
+  if (type.startsWith('artifact.')) {
+    const artifactKind = type.slice('artifact.'.length);
+    const label =
+      artifactKind === 'business_rule'
+        ? `${actorLabel} registrou uma regra de negócio`
+        : artifactKind === 'product_brief'
+          ? `${actorLabel} consolidou o product brief`
+          : `${actorLabel} emitiu um artefato (${artifactKind})`;
+    return {
+      kind: 'hypothesis',
+      icon: HypothesisIcon,
+      color: '#9C7BE0',
+      bad: false,
+      text: label,
+    };
+  }
+  if (type.startsWith('handoff.')) {
+    return {
+      kind: 'generic',
+      icon: PrIcon,
+      color: 'var(--accent)',
+      bad: false,
+      text: `${actorLabel} ofereceu um handoff para ${payloadField(payload, 'toAgent') ?? 'outro agente'}`,
+    };
+  }
   if (type.startsWith('hypothesis')) {
     return {
       kind: 'hypothesis',

@@ -166,9 +166,13 @@ export interface ResolvedBinding {
   origin: ModelBindingScope;
 }
 
+// user_credentials guarda tanto chaves de LLM quanto tokens de git do
+// usuário (github/gitlab) — o endpoint de listagem mistura os dois.
+export type CredentialProviderName = LLMProviderName | 'github' | 'gitlab';
+
 export interface UserCredentialMetadata {
   id: string;
-  provider: 'anthropic' | 'openai';
+  provider: CredentialProviderName;
   createdAt: string;
   updatedAt: string;
 }
@@ -200,6 +204,38 @@ export interface ProvisionedRepository {
   updatedAt: string;
 }
 
+// --- Bootstrap de Gitflow — espelha
+// apps/api/src/domain/git/repo-bootstrap.entity.ts +
+// get-repo-bootstrap-status.use-case.ts. A ordem aqui NÃO é a de execução
+// (ver BOOTSTRAP_STEPS em lib/bootstrap.ts pra ordem real). ---
+export type BootstrapStepName =
+  | 'commit_pr_template'
+  | 'commit_branching_policy'
+  | 'create_dev_branch'
+  | 'create_qa_branch'
+  | 'create_rc_branch'
+  | 'protect_branches';
+
+export type BootstrapStepStatus = 'pending' | 'running' | 'done' | 'failed';
+
+export type ProvisioningStatus =
+  | 'provisioning'
+  | 'provisioned'
+  | 'provision_failed';
+
+export interface RepoBootstrapStatus {
+  status: ProvisioningStatus | null;
+  sessionId: string | null;
+  failedStep: BootstrapStepName | null;
+  lastError: string | null;
+  attempts: number;
+}
+
+export interface ProvisionRepositoryResult {
+  repository: ProvisionedRepository;
+  bootstrap: { step: BootstrapStepName; status: BootstrapStepStatus };
+}
+
 // --- Chat SSE — espelha ChatSseEvent de
 // apps/api/src/application/use-cases/llm/send-chat-message.use-case.ts ---
 export type ChatSseEvent =
@@ -213,3 +249,33 @@ export type ChatSseEvent =
     }
   | { type: 'error'; message: string }
   | { type: 'metering_failed'; message: string };
+
+// --- Agentes conversacionais / handoffs (Fase 3b) ---
+
+export type HandoffStatus = 'offered' | 'accepted' | 'completed' | 'rejected';
+
+export interface Handoff {
+  id: string;
+  sessionId: string;
+  projectId: string;
+  fromAgent: string;
+  toAgent: string;
+  artifactId: string | null;
+  status: HandoffStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Payload do session_event `artifact.business_rule` emitido pelo Criativo.
+export interface BusinessRulePayload {
+  title: string;
+  description: string;
+  origin: unknown[];
+}
+
+// Payload do session_event `artifact.product_brief`.
+export interface ProductBriefPayload {
+  title: string;
+  summary: string;
+  rules: unknown[];
+}

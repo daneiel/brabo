@@ -1,8 +1,10 @@
 import { createRootRoute, createRoute, createRouter } from '@tanstack/react-router';
+import type { GitProviderName } from './lib/api-types';
 import { Shell } from './routes/Shell';
 import { Dashboard } from './routes/Dashboard';
 import { ProjectPage } from './routes/ProjectPage';
 import { SessionPage } from './routes/SessionPage';
+import { ProvisioningPage } from './routes/ProvisioningPage';
 import { GitErrorPage } from './routes/GitErrorPage';
 import { StatusPage } from './routes/StatusPage';
 
@@ -32,6 +34,27 @@ const sessionRoute = createRoute({
   },
 });
 
+const GIT_PROVIDERS: GitProviderName[] = ['local', 'github', 'gitlab'];
+
+interface ProvisioningSearch {
+  provider: GitProviderName;
+}
+
+const provisioningRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/projects/$projectId/provisioning',
+  validateSearch: (search: Record<string, unknown>): ProvisioningSearch => ({
+    provider: GIT_PROVIDERS.includes(search.provider as GitProviderName)
+      ? (search.provider as GitProviderName)
+      : 'local',
+  }),
+  component: () => {
+    const { projectId } = provisioningRoute.useParams();
+    const { provider } = provisioningRoute.useSearch();
+    return <ProvisioningPage projectId={projectId} provider={provider} />;
+  },
+});
+
 interface GitErrorSearch {
   projectId?: string;
   provider?: string;
@@ -56,7 +79,14 @@ const statusRoute = createRoute({
   component: StatusPage,
 });
 
-const routeTree = rootRoute.addChildren([indexRoute, projectRoute, sessionRoute, gitErrorRoute, statusRoute]);
+const routeTree = rootRoute.addChildren([
+  indexRoute,
+  projectRoute,
+  sessionRoute,
+  provisioningRoute,
+  gitErrorRoute,
+  statusRoute,
+]);
 
 export const router = createRouter({ routeTree });
 

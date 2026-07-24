@@ -16,8 +16,14 @@ defmodule Engine.Application do
       {Oban, Application.fetch_env!(:engine, Oban)},
       {Engine.Auth.JwksStrategy, should_start: jwks_strategy_should_start?()},
       {Registry, keys: :unique, name: Engine.Sessions.Registry},
+      # Dono da tabela ETS que cacheia o merge de instruções do harness
+      # (Engine.Harness.InstructionFiles) — só detém a tabela, sem lógica.
+      Engine.Harness.InstructionFiles.Cache,
       Engine.Sessions.Monitor,
       Engine.Sessions.SessionSupervisor,
+      # Agentes conversacionais por sessão (Fase 3b) — um CriativoServer por
+      # sessão em ideação, iniciado por comando do usuário via a api.
+      Engine.Agents.CriativoSupervisor,
       # Reidrata sessões sobreviventes de um boot anterior ANTES do
       # Endpoint subir — nunca aceitar heartbeat de alguém reconectando
       # antes da sessão existir de novo.
