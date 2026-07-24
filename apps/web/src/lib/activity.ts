@@ -7,6 +7,7 @@ import {
   PermissionIcon,
   PrIcon,
   SessionIcon,
+  StackIcon,
   TerminalIcon,
 } from '../components/ui/icons';
 
@@ -84,6 +85,24 @@ export function classifyEvent(event: SessionEvent): ActivityDisplay {
       color: '#9C7BE0',
       bad: false,
       text: label,
+    };
+  }
+  if (type.startsWith('backlog.')) {
+    const what = type.slice('backlog.'.length).replace('_created', '');
+    const label =
+      what === 'epic'
+        ? 'criou um épico'
+        : what === 'story'
+          ? 'criou uma história'
+          : what === 'task'
+            ? 'criou uma tarefa'
+            : 'atualizou o backlog';
+    return {
+      kind: 'generic',
+      icon: StackIcon,
+      color: 'var(--accent)',
+      bad: false,
+      text: `${actorLabel} ${label}`,
     };
   }
   if (type.startsWith('handoff.')) {

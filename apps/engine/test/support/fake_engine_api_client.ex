@@ -58,6 +58,34 @@ defmodule Engine.Sessions.FakeEngineApiClient do
   end
 
   @impl true
+  def create_epic(_project_id, _session_id, fields) do
+    notify({:epic_created, fields})
+    reply(:fake_epic, %{"id" => "ep-#{unique()}", "title" => Map.get(fields, :title)})
+  end
+
+  @impl true
+  def create_story(_project_id, _session_id, fields) do
+    notify({:story_created, fields})
+    # Erro scriptável (ex.: business_rule_id inválido) via :fake_story_error.
+    case Process.get(:fake_story_error) do
+      nil ->
+        reply(:fake_story, %{"id" => "st-#{unique()}", "status" => "ready"})
+
+      reason ->
+        {:error, reason}
+    end
+  end
+
+  @impl true
+  def create_task(_project_id, _session_id, fields) do
+    notify({:task_created, fields})
+    reply(:fake_task, %{"id" => "tk-#{unique()}"})
+  end
+
+  defp reply(key, default), do: {:ok, Process.get(key, default)}
+  defp unique, do: System.unique_integer([:positive])
+
+  @impl true
   def llm_turn_stream(_project_id, _session_id, agent, messages, tools, on_delta) do
     notify({:llm_turn_stream, agent, messages, tools})
 

@@ -4,6 +4,8 @@ import type {
   ActionType,
   Budget,
   BudgetPolicy,
+  CoverageReport,
+  Epic,
   Handoff,
   ModelBindingScope,
   ModelsByCategory,
@@ -175,6 +177,21 @@ export const confirmReadiness = (projectId: string, sessionId: string) =>
   post<{ ok: true }>(`/projects/${projectId}/sessions/${sessionId}/readiness`);
 export const listHandoffs = (projectId: string, sessionId: string) =>
   get<Handoff[]>(`/projects/${projectId}/sessions/${sessionId}/handoffs`);
+export const acceptHandoff = (
+  projectId: string,
+  sessionId: string,
+  handoffId: string,
+) =>
+  post<Handoff>(
+    `/projects/${projectId}/sessions/${sessionId}/handoffs/${handoffId}/accept`,
+  );
+
+// --- Backlog (Fase 3b) ---
+
+export const listBacklog = (projectId: string) =>
+  get<Epic[]>(`/projects/${projectId}/backlog`);
+export const getCoverage = (projectId: string) =>
+  get<CoverageReport>(`/projects/${projectId}/coverage`);
 
 // --- Proposed actions ---
 

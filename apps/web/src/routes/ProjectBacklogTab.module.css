@@ -1,0 +1,197 @@
+.wrapper {
+  display: flex;
+  gap: var(--space-4);
+  align-items: flex-start;
+}
+
+.tree {
+  flex: 1;
+  min-width: 0;
+}
+
+.traceability {
+  width: 300px;
+  flex-shrink: 0;
+}
+
+.sectionLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+.empty {
+  font-size: 13px;
+  color: var(--text-muted);
+  padding: 12px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+}
+
+/* --- Árvore --- */
+
+.epic {
+  margin-bottom: 10px;
+}
+
+.epicHeader,
+.storyHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  color: var(--text-primary);
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+}
+
+.epicHeader {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+}
+
+.epicHeader:hover,
+.storyHeader:hover {
+  background: var(--surface-2);
+}
+
+.chevron {
+  display: inline-flex;
+  color: var(--text-muted);
+  transition: transform 0.12s ease;
+}
+
+.chevronOpen {
+  transform: rotate(90deg);
+}
+
+.epicTitle {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.storyTitle {
+  font-size: 13px;
+  flex: 1;
+}
+
+.count {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.stories {
+  margin: 6px 0 0 22px;
+  border-left: 1px solid var(--border);
+  padding-left: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.storyBody {
+  margin: 2px 0 8px 30px;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.description {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.field {
+  display: flex;
+  gap: 8px;
+}
+
+.fieldLabel {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  min-width: 34px;
+  padding-top: 2px;
+}
+
+.fieldItems {
+  margin: 0;
+  padding-left: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ruleRefs {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+
+.tasks {
+  margin: 0;
+  padding-left: 16px;
+  list-style: none;
+}
+
+.task {
+  position: relative;
+  padding: 2px 0 2px 14px;
+  color: var(--text-secondary);
+}
+
+.task::before {
+  content: '▸';
+  position: absolute;
+  left: 0;
+  color: var(--text-muted);
+}
+
+/* --- Rastreabilidade --- */
+
+.ruleCard {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.uncovered {
+  border-color: color-mix(in srgb, var(--danger) 32%, var(--border));
+  background: color-mix(in srgb, var(--danger) 6%, var(--surface-1));
+}
+
+.ruleTitle {
+  font-family: var(--font-heading);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.ruleMeta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--success);
+}

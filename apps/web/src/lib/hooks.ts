@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { listActions, listHandoffs, listProjects, listSessionEvents, listSessions, listWorkspaces } from './api-client';
+import { getCoverage, listActions, listBacklog, listHandoffs, listProjects, listSessionEvents, listSessions, listWorkspaces } from './api-client';
 import { classifyEvent } from './activity';
 import { formatRelativeTime } from './time';
 
@@ -85,6 +85,27 @@ export function useHandoffs(projectId: string | undefined, sessionId: string | u
     queryKey: ['session-handoffs', projectId, sessionId],
     queryFn: () => listHandoffs(projectId!, sessionId!),
     enabled: !!projectId && !!sessionId,
+    refetchInterval: intervalMs,
+  });
+}
+
+// Backlog do projeto (árvore épico→história→tarefa) — poll pra refletir o PO
+// gerando em tempo real.
+export function useBacklog(projectId: string | undefined, intervalMs = 4000) {
+  return useQuery({
+    queryKey: ['backlog', projectId],
+    queryFn: () => listBacklog(projectId!),
+    enabled: !!projectId,
+    refetchInterval: intervalMs,
+  });
+}
+
+// Rastreabilidade regra→stories do projeto.
+export function useCoverage(projectId: string | undefined, intervalMs = 4000) {
+  return useQuery({
+    queryKey: ['coverage', projectId],
+    queryFn: () => getCoverage(projectId!),
+    enabled: !!projectId,
     refetchInterval: intervalMs,
   });
 }

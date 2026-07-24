@@ -8,19 +8,30 @@ defmodule EngineWeb.AgentCommandController do
 
   use EngineWeb, :controller
 
-  alias Engine.Agents.{CriativoSupervisor, CriativoServer}
+  alias Engine.Agents.{CriativoSupervisor, CriativoServer, PoSupervisor, PoServer}
 
   def start(conn, %{"sessionId" => session_id, "projectId" => project_id, "agent" => "criativo"}) do
     {:ok, _pid} = CriativoSupervisor.start_agent(session_id, project_id)
     send_resp(conn, 201, "")
   end
 
+  def start(conn, %{"sessionId" => session_id, "projectId" => project_id, "agent" => "po"}) do
+    # Ativado pelo handoff aceito; num start FRESCO dispara o kickoff (gera o
+    # backlog a partir do brief) — restart/reativação não regeram.
+    {:ok, _pid, origin} = PoSupervisor.start_agent(session_id, project_id)
+    if origin == :started, do: PoServer.kickoff(session_id)
+    send_resp(conn, 201, "")
+  end
+
   def start(conn, %{"agent" => agent}) do
-    # Só o Criativo é conversacional nesta fase; os demais agentes (PO,
-    # Arquiteto…) chegam em sessões posteriores da 3b.
     conn
     |> put_status(422)
     |> json(%{error: "agente não suportado como conversacional: #{agent}"})
+  end
+
+  def message(conn, %{"sessionId" => session_id, "agent" => "po", "text" => text}) do
+    :ok = PoServer.user_message(session_id, text)
+    send_resp(conn, 202, "")
   end
 
   def message(conn, %{"sessionId" => session_id, "text" => text}) do

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  acceptHandoff,
   approveAction,
   approveAlwaysAction,
   confirmReadiness,
@@ -17,7 +18,7 @@ import {
 } from '../lib/api-client';
 import { streamChatMessage } from '../lib/chat-stream';
 import { connectSessionHeartbeat } from '../lib/session-channel';
-import { useSessionEvents, usePendingActions } from '../lib/hooks';
+import { useSessionEvents, usePendingActions, useHandoffs } from '../lib/hooks';
 import { currentUser } from '../lib/keycloak';
 import type {
   BusinessRulePayload,
@@ -67,15 +68,23 @@ export function SessionPage({ projectId, sessionId }: SessionPageProps) {
   const actionsQuery = usePendingActions(projectId, sessionId, 3000);
   const actions = actionsQuery.data?.items ?? [];
 
-  // O Criativo está ativo se houve um agent.activated pra ele nesta sessão.
-  const criativoActive = useMemo(
-    () =>
-      events.some(
-        (e) =>
-          e.type === 'agent.activated' &&
-          (e.payload as { agent?: string })?.agent === 'criativo',
-      ),
-    [events],
+  const handoffsQuery = useHandoffs(projectId, sessionId, 3000);
+  const handoffs = handoffsQuery.data ?? [];
+
+  // Um agente está ativo se houve um agent.activated pra ele nesta sessão.
+  const activeFor = (agent: string) =>
+    events.some(
+      (e) =>
+        e.type === 'agent.activated' &&
+        (e.payload as { agent?: string })?.agent === agent,
+    );
+  const criativoActive = useMemo(() => activeFor('criativo'), [events]);
+  const poActive = useMemo(() => activeFor('po'), [events]);
+  // O agente que recebe as mensagens do composer (PO tem precedência quando ativo).
+  const activeAgent = poActive ? 'po' : criativoActive ? 'criativo' : null;
+  // Handoff oferecido ao PO ainda não aceito → oferece o botão de aceitar.
+  const offeredPoHandoff = handoffs.find(
+    (h) => h.toAgent === 'po' && h.status === 'offered',
   );
 
   // Canal Phoenix: recebe os deltas do Criativo (streaming token-a-token) e o
@@ -240,6 +249,16 @@ export function SessionPage({ projectId, sessionId }: SessionPageProps) {
     }
   }
 
+  async function handleAcceptHandoff(handoffId: string) {
+    try {
+      await acceptHandoff(projectId, sessionId, handoffId);
+      await queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
+      queryClient.invalidateQueries({ queryKey: ['session-handoffs', projectId, sessionId] });
+    } catch {
+      showToast({ title: 'Erro', message: 'Não foi possível aceitar o handoff', tone: 'danger' });
+    }
+  }
+
   async function handleSend() {
     const text = draft.trim();
     if (!text || streaming || session?.status !== 'active') return;
@@ -249,11 +268,12 @@ export function SessionPage({ projectId, sessionId }: SessionPageProps) {
     setStreaming(true);
     setStreamingText('');
 
-    // Sessão com o Criativo ativo: o turno roda no engine (harness); os deltas
-    // e o fim chegam pelo canal Phoenix. Senão, chat humano stateless via SSE.
-    if (criativoActive) {
+    // Sessão com um agente ativo (Criativo ou PO): o turno roda no engine
+    // (harness); os deltas e o fim chegam pelo canal Phoenix. Senão, chat
+    // humano stateless via SSE.
+    if (activeAgent) {
       try {
-        await sendAgentMessage(projectId, sessionId, 'criativo', text);
+        await sendAgentMessage(projectId, sessionId, activeAgent, text);
       } catch {
         setStreaming(false);
         setOptimisticUser(null);
@@ -331,6 +351,11 @@ export function SessionPage({ projectId, sessionId }: SessionPageProps) {
         {isActive && !criativoActive && (
           <Button variant="secondary" onClick={handleStartIdeation}>
             Iniciar ideação
+          </Button>
+        )}
+        {isActive && offeredPoHandoff && !poActive && (
+          <Button variant="success" onClick={() => handleAcceptHandoff(offeredPoHandoff.id)}>
+            Aceitar handoff e iniciar PO
           </Button>
         )}
         <Button variant="ghost" onClick={handleClose} disabled={!session || session.status === 'closed'}>

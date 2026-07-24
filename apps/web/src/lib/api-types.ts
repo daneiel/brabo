@@ -279,3 +279,57 @@ export interface ProductBriefPayload {
   summary: string;
   rules: unknown[];
 }
+
+// --- Backlog (Fase 3b — PO) ---
+
+export type StoryStatus = 'draft' | 'ready' | 'in_progress' | 'done';
+
+export interface Task {
+  id: string;
+  storyId: string;
+  title: string;
+  description: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Story {
+  id: string;
+  epicId: string;
+  projectId: string;
+  sessionId: string;
+  title: string;
+  description: string;
+  rf: string[];
+  rnf: string[];
+  businessRuleIds: string[];
+  dod: string[];
+  dor: string[];
+  status: StoryStatus;
+  createdAt: string;
+  updatedAt: string;
+  tasks: Task[];
+}
+
+export interface Epic {
+  id: string;
+  projectId: string;
+  sessionId: string;
+  title: string;
+  description: string;
+  createdAt: string;
+  updatedAt: string;
+  stories: Story[];
+}
+
+export interface RuleCoverage {
+  ruleId: string;
+  title: string;
+  coveredByStoryIds: string[];
+  covered: boolean;
+}
+
+export interface CoverageReport {
+  rules: RuleCoverage[];
+  uncoveredCount: number;
+}
