@@ -333,3 +333,42 @@ export interface CoverageReport {
   rules: RuleCoverage[];
   uncoveredCount: number;
 }
+
+// --- Arquitetura (Fase 3b — Arquiteto) ---
+
+export interface Module {
+  name: string;
+  stack: string;
+  responsibility: string;
+  dependsOn: string[];
+}
+
+export interface ModuleMap {
+  id: string;
+  projectId: string;
+  sessionId: string;
+  modules: Module[];
+  version: number;
+  createdAt: string;
+}
+
+export interface AdrRef {
+  actionId: string;
+  title: string;
+  status: string;
+  pullRequestUrl: string | null;
+}
+
+export interface ArchitecturePendency {
+  storyId: string;
+  title: string;
+  status: StoryStatus;
+  reason: 'no_module' | 'missing_module';
+  missing: string[];
+}
+
+export interface Architecture {
+  moduleMap: ModuleMap | null;
+  adrs: AdrRef[];
+  pendencies: ArchitecturePendency[];
+}

@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { getCoverage, listActions, listBacklog, listHandoffs, listProjects, listSessionEvents, listSessions, listWorkspaces } from './api-client';
+import { getArchitecture, getCoverage, listActions, listBacklog, listHandoffs, listProjects, listSessionEvents, listSessions, listWorkspaces } from './api-client';
 import { classifyEvent } from './activity';
 import { formatRelativeTime } from './time';
 
@@ -105,6 +105,16 @@ export function useCoverage(projectId: string | undefined, intervalMs = 4000) {
   return useQuery({
     queryKey: ['coverage', projectId],
     queryFn: () => getCoverage(projectId!),
+    enabled: !!projectId,
+    refetchInterval: intervalMs,
+  });
+}
+
+// Arquitetura do projeto (module_map + ADRs + pendências de validação cruzada).
+export function useArchitecture(projectId: string | undefined, intervalMs = 4000) {
+  return useQuery({
+    queryKey: ['architecture', projectId],
+    queryFn: () => getArchitecture(projectId!),
     enabled: !!projectId,
     refetchInterval: intervalMs,
   });

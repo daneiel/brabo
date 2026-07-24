@@ -26,6 +26,7 @@ defmodule Engine.Application do
       # PoServer por sessão, ativado pelo handoff aceito.
       Engine.Agents.CriativoSupervisor,
       Engine.Agents.PoSupervisor,
+      Engine.Agents.ArquitetoSupervisor,
       # Reidrata sessões sobreviventes de um boot anterior ANTES do
       # Endpoint subir — nunca aceitar heartbeat de alguém reconectando
       # antes da sessão existir de novo.
