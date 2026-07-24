@@ -19,6 +19,18 @@ defmodule Engine.Gates.FakeGateDispatcher do
     :ok
   end
 
+  @impl true
+  def run_infra_qa(project_id, session_id, pr_action_id) do
+    notify({:infra_gate_dispatch, :qa, project_id, session_id, pr_action_id})
+    :ok
+  end
+
+  @impl true
+  def run_infra_secops(project_id, session_id, pr_action_id) do
+    notify({:infra_gate_dispatch, :secops, project_id, session_id, pr_action_id})
+    :ok
+  end
+
   defp notify(msg) do
     if pid = Application.get_env(:engine, :test_pid), do: send(pid, msg)
     :ok

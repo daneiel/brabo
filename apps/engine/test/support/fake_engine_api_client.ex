@@ -172,6 +172,39 @@ defmodule Engine.Sessions.FakeEngineApiClient do
     )
   end
 
+  @impl true
+  def get_infra_context(_project_id, _session_id) do
+    notify({:infra_context_fetched})
+    reply(:fake_infra_context, %{"moduleMap" => nil, "adrs" => []})
+  end
+
+  @impl true
+  def get_infra_pr_files(_project_id, _session_id, pr_action_id) do
+    notify({:infra_pr_files_fetched, pr_action_id})
+    reply(:fake_infra_pr_files, %{"title" => "infra", "files" => []})
+  end
+
+  @impl true
+  def record_infra_gate_verdict(
+        _project_id,
+        _session_id,
+        pr_action_id,
+        gate,
+        veredito,
+        resumo,
+        itens,
+        max_corrections
+      ) do
+    notify(
+      {:infra_gate_verdict_recorded, pr_action_id, gate, veredito, resumo, itens, max_corrections}
+    )
+
+    reply(:fake_infra_gate_verdict_response, %{
+      "nextAction" => "done",
+      "artifact" => %{"id" => pr_action_id}
+    })
+  end
+
   defp reply(key, default), do: {:ok, Process.get(key, default)}
   defp unique, do: System.unique_integer([:positive])
 

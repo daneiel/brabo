@@ -66,6 +66,8 @@ defmodule Engine.Agents.PoServer do
 
   @impl true
   def handle_cast(:kickoff, state) do
+    broadcast(state, "agent.status", %{status: "working"})
+
     state =
       state
       |> append(user_msg(kickoff_instruction(state)))
@@ -73,11 +75,14 @@ defmodule Engine.Agents.PoServer do
       |> run_turn(@max_iterations)
 
     broadcast(state, "agent.done", %{})
+    broadcast(state, "agent.status", %{status: "idle"})
     {:noreply, state}
   end
 
   @impl true
   def handle_call({:user_message, text}, _from, state) do
+    broadcast(state, "agent.status", %{status: "working"})
+
     state =
       state
       |> append(user_msg(text))
@@ -85,6 +90,7 @@ defmodule Engine.Agents.PoServer do
       |> run_turn(@max_iterations)
 
     broadcast(state, "agent.done", %{})
+    broadcast(state, "agent.status", %{status: "idle"})
     {:reply, :ok, state}
   end
 

@@ -75,6 +75,19 @@ export function classifyEvent(event: SessionEvent): ActivityDisplay {
         : `${actorLabel} atualizou o gate da PR`,
     };
   }
+  if (type === 'infra.gate_changed') {
+    const gate = payloadField(payload, 'gate');
+    const veredito = payloadField(payload, 'veredito');
+    return {
+      kind: 'pr',
+      icon: PrIcon,
+      color: veredito === 'changes_requested' ? 'var(--danger)' : 'var(--accent)',
+      bad: veredito === 'changes_requested',
+      text: gate
+        ? `PR de infra · gate ${gate}: ${veredito === 'approved' ? 'aprovado' : veredito === 'changes_requested' ? 'mudanças solicitadas' : 'atualizado'}`
+        : `${actorLabel} atualizou o gate da PR de infra`,
+    };
+  }
   if (type.startsWith('pr.') || type.startsWith('pr_open')) {
     return {
       kind: 'pr',
@@ -88,12 +101,15 @@ export function classifyEvent(event: SessionEvent): ActivityDisplay {
     const gateLabel = type === 'artifact.qa_verdict' ? 'QA' : 'SecOps';
     const veredito = payloadField(payload, 'veredito');
     const approved = veredito === 'approved';
+    // Parecer de gate de PR de infra (InfraGateRunner) tem `prActionId` no
+    // payload em vez de `taskId` (o dev) — só o texto deixa claro a origem.
+    const isInfra = payloadField(payload, 'prActionId') !== undefined;
     return {
       kind: 'hypothesis',
       icon: HypothesisIcon,
       color: approved ? 'var(--success)' : 'var(--danger)',
       bad: !approved,
-      text: `${gateLabel}: ${approved ? 'aprovado' : 'mudanças solicitadas'}`,
+      text: `${gateLabel}${isInfra ? ' (PR de infra)' : ''}: ${approved ? 'aprovado' : 'mudanças solicitadas'}`,
     };
   }
   if (type.startsWith('artifact.')) {
@@ -178,6 +194,29 @@ export function classifyEvent(event: SessionEvent): ActivityDisplay {
           : `falha ao abrir a PR de ADR`,
     };
   }
+  if (type === 'infra.artifact_blocked') {
+    return {
+      kind: 'commit',
+      icon: CommitIcon,
+      color: 'var(--danger)',
+      bad: true,
+      text: `PR de infra bloqueada: ${payloadField(payload, 'reason') ?? 'ciclo de correção esgotado'}`,
+    };
+  }
+  if (type.startsWith('infra.')) {
+    return {
+      kind: 'pr',
+      icon: PrIcon,
+      color: type.includes('failed') ? 'var(--danger)' : 'var(--accent)',
+      bad: type.includes('failed'),
+      text:
+        type === 'infra.pr_opened'
+          ? `PR de infra aberta no repositório${payloadField(payload, 'title') ? `: ${payloadField(payload, 'title')}` : ''}`
+          : type === 'infra.pr_failed'
+            ? 'falha ao abrir a PR de infra'
+            : `infra · ${type}`,
+    };
+  }
   if (type.startsWith('backlog.')) {
     const what = type.slice('backlog.'.length).replace('_created', '');
     const label =
@@ -194,6 +233,15 @@ export function classifyEvent(event: SessionEvent): ActivityDisplay {
       color: 'var(--accent)',
       bad: false,
       text: `${actorLabel} ${label}`,
+    };
+  }
+  if (type === 'architecture.readiness_confirmed') {
+    return {
+      kind: 'session',
+      icon: StackIcon,
+      color: 'var(--accent)',
+      bad: false,
+      text: 'usuário confirmou a arquitetura pronta — handoff para o InfraAgent oferecido',
     };
   }
   if (type.startsWith('handoff.')) {

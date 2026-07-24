@@ -31,6 +31,10 @@ defmodule EngineWeb.Router do
     post "/sessions/:sessionId/agent/message", AgentCommandController, :message
     post "/sessions/:sessionId/agent/readiness", AgentCommandController, :readiness
 
+    post "/sessions/:sessionId/agent/offer-infra-handoff",
+         AgentCommandController,
+         :offer_infra_handoff
+
     post "/sessions/:sessionId/execution/start", ExecutionCommandController, :start
     post "/sessions/:sessionId/execution/parallelize", ExecutionCommandController, :parallelize
   end

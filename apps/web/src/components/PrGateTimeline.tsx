@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type {
   CoverageMatrixRow,
   ProposedAction,
-  Task,
+  PrGateStatus,
 } from '../lib/api-types';
 import { Badge } from './ui/Badge';
 import { Table, type TableColumn } from './ui/Table';
@@ -18,8 +18,18 @@ export interface GateVerdict {
   coverageMatrix?: CoverageMatrixRow[];
 }
 
+// Só os campos que o componente realmente usa — assim tanto `Task` quanto
+// `InfraArtifact` (PR de infra, Fase 4a — sem story/worktree por trás)
+// satisfazem estruturalmente, sem acoplar o componente ao domínio de backlog.
+export interface GateSubject {
+  title: string;
+  blocked: boolean;
+  blockedReason: string | null;
+  gateStatus: PrGateStatus | null;
+}
+
 interface PrGateTimelineProps {
-  task: Task;
+  task: GateSubject;
   prAction?: ProposedAction;
   verdicts: GateVerdict[];
 }
@@ -39,7 +49,7 @@ function lastGate(verdicts: GateVerdict[]): 'qa' | 'secops' | null {
 
 function stepState(
   step: (typeof STEPS)[number]['key'],
-  task: Task,
+  task: GateSubject,
   verdicts: GateVerdict[],
 ): GateStepState {
   if (step === 'dev') return 'done';

@@ -3,6 +3,7 @@ import type {
   AgentAutonomyRule,
   ActionType,
   Architecture,
+InfraArtifact,
   Budget,
   BudgetPolicy,
   CoverageReport,
@@ -196,6 +197,8 @@ export const getCoverage = (projectId: string) =>
   get<CoverageReport>(`/projects/${projectId}/coverage`);
 export const getArchitecture = (projectId: string) =>
   get<Architecture>(`/projects/${projectId}/architecture`);
+export const listInfraArtifacts = (projectId: string) =>
+  get<InfraArtifact[]>(`/projects/${projectId}/infra-artifacts`);
 
 // --- Execução (Fase 4a) ---
 

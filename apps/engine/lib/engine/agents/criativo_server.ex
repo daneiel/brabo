@@ -64,6 +64,8 @@ defmodule Engine.Agents.CriativoServer do
 
   @impl true
   def handle_call({:user_message, text}, _from, state) do
+    broadcast(state, "agent.status", %{status: "working"})
+
     state =
       state
       |> append(user_msg(text))
@@ -71,11 +73,13 @@ defmodule Engine.Agents.CriativoServer do
       |> run_turn()
 
     broadcast(state, "agent.done", %{})
+    broadcast(state, "agent.status", %{status: "idle"})
     {:reply, :ok, state}
   end
 
   @impl true
   def handle_call(:confirm_readiness, _from, state) do
+    broadcast(state, "agent.status", %{status: "working"})
     # Turno dedicado: o modelo consolida as regras num resumo executivo. O
     # servidor então emite o product_brief (server-emitted, fora da whitelist
     # de tool) e oferece o handoff ao PO.
@@ -97,6 +101,7 @@ defmodule Engine.Agents.CriativoServer do
       EngineApiClient.create_handoff(state.project_id, state.session_id, @agent, "po", brief_id)
 
     broadcast(state, "agent.done", %{})
+    broadcast(state, "agent.status", %{status: "idle"})
     {:reply, :ok, state}
   end
 

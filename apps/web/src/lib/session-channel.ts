@@ -9,6 +9,14 @@ export interface SessionChannelHandlers {
   onAgentDelta?: (text: string) => void;
   // Fim de um turno do agente — hora de reconciliar com o event log.
   onAgentDone?: () => void;
+  // Working/idle nos limites de turno dos agentes conversacionais
+  // (criativo/po/arquiteto/infra) — Fase 4a, painel do time ao vivo.
+  onAgentStatus?: (payload: { status: 'working' | 'idle' }) => void;
+  // Qualquer session_event recém-persistido (Dev/QA/SecOps/Infra, Fase 4a) —
+  // broadcastado ao lado do append_event no engine. Usado só como GATILHO
+  // pra antecipar o refetch do polling (nunca substitui o parsing/cache do
+  // GET .../events já existente).
+  onEvent?: (payload: { type: string; actorId: string; payload: unknown }) => void;
 }
 
 /**
@@ -39,6 +47,27 @@ export function connectSessionHeartbeat(
   }
   if (handlers.onAgentDone) {
     channel.on('agent.done', () => handlers.onAgentDone!());
+  }
+  if (handlers.onAgentStatus) {
+    channel.on('agent.status', (payload: { status?: string }) => {
+      if (payload?.status === 'working' || payload?.status === 'idle') {
+        handlers.onAgentStatus!({ status: payload.status });
+      }
+    });
+  }
+  if (handlers.onEvent) {
+    channel.on(
+      'event.appended',
+      (payload: { type?: string; actorId?: string; payload?: unknown }) => {
+        if (typeof payload?.type === 'string') {
+          handlers.onEvent!({
+            type: payload.type,
+            actorId: payload.actorId ?? '',
+            payload: payload.payload,
+          });
+        }
+      },
+    );
   }
 
   const interval = setInterval(() => {

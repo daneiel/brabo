@@ -1,20 +1,37 @@
-import { useQueryClient } from '@tanstack/react-query';
-import { AGENT_LIST } from '../lib/agents';
+import { useEffect } from 'react';
+import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   useArchitecture,
   useBacklog,
+  useHandoffs,
   useLatestSession,
   usePendingActions,
   useSessionEvents,
 } from '../lib/hooks';
-import { activateExecution, acceptParallelization } from '../lib/api-client';
-import { AgentCard, type AgentStatus } from '../components/AgentCard';
+import {
+  activateExecution,
+  acceptParallelization,
+  getAgentModelBinding,
+  listAgentAutonomy,
+  listModels,
+} from '../lib/api-client';
+import { deriveAgentRoster } from '../lib/agent-status';
+import { connectSessionHeartbeat } from '../lib/session-channel';
+import { AgentCard } from '../components/AgentCard';
 import { ActivityFeed } from '../components/ActivityFeed';
 import { Badge, type BadgeTone } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { useToast } from '../components/ui/ToastProvider';
 import type { Architecture, ProposedAction, SessionEvent } from '../lib/api-types';
 import styles from './ProjectOverviewTab.module.css';
+
+// actionType representativo pra resumir a autonomia (auto_approve vira "auto"
+// no AgentCard) — só os agentes com uma ação central seedável têm isso;
+// os demais não mostram o toggle (AgentCard exige model+onChange juntos).
+const AUTONOMY_ACTION_TYPE: Record<string, string> = { infra: 'open_infra_pr' };
+function autonomyActionTypeFor(agentId: string): string {
+  return AUTONOMY_ACTION_TYPE[agentId] ?? (agentId.startsWith('dev-') ? 'pr_open' : '');
+}
 
 // tokensSpentMicros é custo em micro-USD (mesma unidade de budgets/token_usage).
 function formatMicros(micros: number): string {
@@ -26,32 +43,84 @@ interface ProjectOverviewTabProps {
 }
 
 export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
+  const queryClient = useQueryClient();
   const { latest: latestSession } = useLatestSession(projectId);
-  const eventsQuery = useSessionEvents(projectId, latestSession?.id);
+  const sessionId = latestSession?.id;
+  const eventsQuery = useSessionEvents(projectId, sessionId);
   const events = eventsQuery.data?.items ?? [];
-  const actionsQuery = usePendingActions(projectId, latestSession?.id);
+  const actionsQuery = usePendingActions(projectId, sessionId);
   const actions = actionsQuery.data?.items ?? [];
   const { data: architecture } = useArchitecture(projectId);
+  const handoffsQuery = useHandoffs(projectId, sessionId);
+  const handoffs = handoffsQuery.data ?? [];
 
-  const status: AgentStatus = latestSession?.status === 'active' ? 'trabalhando' : 'ocioso';
-  const workingCount = status === 'trabalhando' ? AGENT_LIST.length : 0;
+  const executionActivated = events.some((e) => e.type === 'execution.activated');
+  const roster = deriveAgentRoster(events, architecture?.moduleMap, executionActivated, handoffs);
+
+  const { data: modelsByCategory } = useQuery({ queryKey: ['models'], queryFn: listModels });
+  const allModels = modelsByCategory
+    ? [...Object.values(modelsByCategory.local).flat(), ...Object.values(modelsByCategory.cloud).flat()]
+    : [];
+  const bindingQueries = useQueries({
+    queries: roster.map((r) => ({
+      queryKey: ['agent-binding', projectId, r.id],
+      queryFn: () => getAgentModelBinding(projectId, r.id),
+    })),
+  });
+  const { data: autonomyRules } = useQuery({
+    queryKey: ['agent-autonomy', projectId],
+    queryFn: () => listAgentAutonomy(projectId),
+  });
+
+  // Fase 4a — painel do time ao vivo: qualquer evento persistido (Dev/QA/
+  // SecOps/Infra) ou `agent.status` (Criativo/PO/Arquiteto/Infra) antecipa
+  // o refetch do polling — mesmo princípio de SessionPage.tsx.
+  useEffect(() => {
+    if (!sessionId || latestSession?.status !== 'active') return;
+    const disconnect = connectSessionHeartbeat(sessionId, {
+      onEvent: () => {
+        queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
+      },
+      onAgentStatus: () => {
+        queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
+      },
+    });
+    return disconnect;
+  }, [sessionId, latestSession?.status, projectId, queryClient]);
+
+  const workingCount = roster.filter((r) => r.status === 'trabalhando').length;
+  const waitingCount = roster.filter((r) => r.status === 'aguardando').length;
 
   return (
     <div className={styles.layout}>
       <div className={styles.main}>
         <div className={styles.sectionHeader}>Time de agentes</div>
         <div className={styles.sectionSub}>
-          {AGENT_LIST.length} agentes · {workingCount} trabalhando · 0 aguardando
+          {roster.length} agentes · {workingCount} trabalhando · {waitingCount} aguardando
         </div>
         <div className={styles.grid}>
-          {AGENT_LIST.map((agent) => (
-            <AgentCard key={agent.key} agent={agent} status={status} />
-          ))}
+          {roster.map((r, i) => {
+            const modelId = bindingQueries[i]?.data?.modelId;
+            const model = allModels.find((m) => m.id === modelId);
+            const autonomyType = autonomyActionTypeFor(r.id);
+            const rule = autonomyType
+              ? autonomyRules?.find((a) => a.agentId === r.id && a.actionType === autonomyType)
+              : undefined;
+            return (
+              <AgentCard
+                key={r.id}
+                agent={r.def}
+                status={r.status}
+                model={model ? { name: model.displayName, provider: model.provider } : undefined}
+                autonomy={rule ? (rule.mode === 'auto_approve' ? 'auto' : 'manual') : undefined}
+              />
+            );
+          })}
         </div>
 
         <ExecutionSection
           projectId={projectId}
-          sessionId={latestSession?.id}
+          sessionId={sessionId}
           hasModuleMap={!!architecture?.moduleMap}
           events={events}
           actions={actions}

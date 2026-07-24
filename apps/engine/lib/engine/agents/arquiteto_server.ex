@@ -35,6 +35,9 @@ defmodule Engine.Agents.ArquitetoServer do
   def user_message(session_id, text),
     do: GenServer.call(via(session_id), {:user_message, text}, 180_000)
 
+  def offer_infra_handoff(session_id),
+    do: GenServer.call(via(session_id), :offer_infra_handoff, 180_000)
+
   # --- Callbacks ---
 
   @impl true
@@ -64,6 +67,8 @@ defmodule Engine.Agents.ArquitetoServer do
 
   @impl true
   def handle_cast(:kickoff, state) do
+    broadcast(state, "agent.status", %{status: "working"})
+
     state =
       state
       |> append(user_msg(kickoff_instruction(state)))
@@ -71,11 +76,14 @@ defmodule Engine.Agents.ArquitetoServer do
       |> run_turn(@max_iterations)
 
     broadcast(state, "agent.done", %{})
+    broadcast(state, "agent.status", %{status: "idle"})
     {:noreply, state}
   end
 
   @impl true
   def handle_call({:user_message, text}, _from, state) do
+    broadcast(state, "agent.status", %{status: "working"})
+
     state =
       state
       |> append(user_msg(text))
@@ -83,6 +91,36 @@ defmodule Engine.Agents.ArquitetoServer do
       |> run_turn(@max_iterations)
 
     broadcast(state, "agent.done", %{})
+    broadcast(state, "agent.status", %{status: "idle"})
+    {:reply, :ok, state}
+  end
+
+  # O usuário confirmou que a arquitetura está pronta (Fase 4a — fechamento):
+  # roda um turno de fechamento (sem ferramenta nova esperada) e OFERECE o
+  # handoff ao InfraAgent — mirror de `confirm_readiness` do Criativo (que
+  # oferece ao PO), mas server-side/explícito, não inferido pelo modelo.
+  @impl true
+  def handle_call(:offer_infra_handoff, _from, state) do
+    broadcast(state, "agent.status", %{status: "working"})
+
+    instruction =
+      user_msg(
+        "O usuário confirmou que a arquitetura está pronta. Finalize " <>
+          "quaisquer considerações pendentes — o handoff para o InfraAgent " <>
+          "será oferecido em seguida."
+      )
+
+    state =
+      state
+      |> append(instruction)
+      |> compact()
+      |> run_turn(@max_iterations)
+
+    {:ok, _handoff} =
+      EngineApiClient.create_handoff(state.project_id, state.session_id, @agent, "infra", nil)
+
+    broadcast(state, "agent.done", %{})
+    broadcast(state, "agent.status", %{status: "idle"})
     {:reply, :ok, state}
   end
 
