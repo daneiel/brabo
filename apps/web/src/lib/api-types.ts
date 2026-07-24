@@ -305,6 +305,37 @@ export interface Task {
   updatedAt: string;
 }
 
+// --- Psicólogo (Fase 4b) ---
+
+export type HypothesisStatus = 'proposed' | 'accepted' | 'dismissed';
+
+export interface HypothesisTerminationAnalysis {
+  causa: string;
+  estadoDaSessao: string;
+  analise: string;
+}
+
+export interface PsychologistHypothesis {
+  id: string;
+  projectId: string;
+  // Sessão ANALISADA — pode não ser a sessão aberta agora; é pra ela que
+  // a navegação de evidência aponta.
+  sessionId: string;
+  analysisId: string;
+  agenteAlvo: string;
+  observacao: string;
+  hipotese: string;
+  sugestao: string;
+  confiancaPercent: number;
+  evidenceEventIds: string[];
+  terminationAnalysis: HypothesisTerminationAnalysis | null;
+  status: HypothesisStatus;
+  decidedBy: string | null;
+  decidedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // Artefato de infra (Fase 4a — InfraAgent): PR de Dockerfiles/compose/CI
 // gated pelos MESMOS QA/SecOps do dev, sem task/story por trás.
 export interface InfraArtifact {

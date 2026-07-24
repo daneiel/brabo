@@ -253,13 +253,37 @@ export function classifyEvent(event: SessionEvent): ActivityDisplay {
       text: `${actorLabel} ofereceu um handoff para ${payloadField(payload, 'toAgent') ?? 'outro agente'}`,
     };
   }
-  if (type.startsWith('hypothesis')) {
+  // Psicólogo (Fase 4b). Os tipos reais são `psychologist.*` — o antigo
+  // branch `startsWith('hypothesis')` nunca batia em nada.
+  if (type === 'psychologist.analysis_failed') {
+    return {
+      kind: 'hypothesis',
+      icon: HypothesisIcon,
+      color: 'var(--danger)',
+      bad: true,
+      text: `análise do Psicólogo não concluiu: ${payloadField(payload, 'reason') ?? 'motivo não informado'}`,
+    };
+  }
+  if (type.startsWith('psychologist.')) {
+    const alvo = payloadField(payload, 'agenteAlvo');
+    const text =
+      type === 'psychologist.hypothesis_proposed'
+        ? `nova hipótese sobre ${alvo ?? 'um agente'}`
+        : type === 'psychologist.hypothesis_accepted'
+          ? `hipótese sobre ${alvo ?? 'um agente'} aceita`
+          : type === 'psychologist.hypothesis_dismissed'
+            ? `hipótese sobre ${alvo ?? 'um agente'} descartada`
+            : type === 'psychologist.hypothesis_accepted_for_anamnese'
+              ? `hipótese encaminhada para a Anamnese`
+              : type === 'psychologist.analysis_completed'
+                ? `análise do Psicólogo concluída (${payloadField(payload, 'tier') ?? 'triagem'})`
+                : `${actorLabel} · ${type}`;
     return {
       kind: 'hypothesis',
       icon: HypothesisIcon,
       color: '#9C7BE0',
       bad: false,
-      text: `${actorLabel} registrou uma hipótese`,
+      text,
     };
   }
   if (type.includes('closed_abnormally')) {

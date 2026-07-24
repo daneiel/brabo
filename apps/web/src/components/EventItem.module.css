@@ -15,6 +15,12 @@
   background: var(--surface-2);
 }
 
+/* Alvo da navegação de evidência do Psicólogo (Fase 4b). */
+.row.highlighted {
+  background: color-mix(in srgb, #9c7be0 14%, transparent);
+  box-shadow: inset 2px 0 0 #9c7be0;
+}
+
 .icon {
   width: 26px;
   height: 26px;

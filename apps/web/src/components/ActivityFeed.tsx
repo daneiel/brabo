@@ -19,9 +19,15 @@ const KIND_LABEL: Record<ActivityKind, string> = {
 interface ActivityFeedProps {
   events: SessionEvent[];
   agentOptions?: { id: string; label: string }[];
+  /** Evento a destacar (navegação de evidência do Psicólogo, Fase 4b). */
+  highlightEventId?: string;
 }
 
-export function ActivityFeed({ events, agentOptions = [] }: ActivityFeedProps) {
+export function ActivityFeed({
+  events,
+  agentOptions = [],
+  highlightEventId,
+}: ActivityFeedProps) {
   const [agentFilter, setAgentFilter] = useState<string>('');
   const [kindFilter, setKindFilter] = useState<ActivityKind | null>(null);
 
@@ -76,7 +82,11 @@ export function ActivityFeed({ events, agentOptions = [] }: ActivityFeedProps) {
       ) : (
         <div className={styles.list}>
           {filtered.map((event) => (
-            <EventItem key={event.id} event={event} />
+            <EventItem
+              key={event.id}
+              event={event}
+              highlighted={event.id === highlightEventId}
+            />
           ))}
         </div>
       )}

@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { getArchitecture, getCoverage, listActions, listBacklog, listHandoffs, listInfraArtifacts, listProjects, listSessionEvents, listSessions, listWorkspaces } from './api-client';
+import { getArchitecture, getCoverage, listActions, listBacklog, listHandoffs, listHypotheses, listInfraArtifacts, listProjects, listSessionEvents, listSessions, listWorkspaces } from './api-client';
 import { classifyEvent } from './activity';
 import { formatRelativeTime } from './time';
 
@@ -126,6 +126,18 @@ export function useInfraArtifacts(projectId: string | undefined, intervalMs = 30
   return useQuery({
     queryKey: ['infra-artifacts', projectId],
     queryFn: () => listInfraArtifacts(projectId!),
+    enabled: !!projectId,
+    refetchInterval: intervalMs,
+  });
+}
+
+// Hipóteses do Psicólogo (Fase 4b) — escopo de PROJETO, não de sessão:
+// acumulam a cada sessão encerrada. Poll mais lento que os demais, já que
+// só mudam quando uma sessão fecha ou o usuário aceita/descarta.
+export function useHypotheses(projectId: string | undefined, intervalMs = 8000) {
+  return useQuery({
+    queryKey: ['hypotheses', projectId],
+    queryFn: () => listHypotheses(projectId!),
     enabled: !!projectId,
     refetchInterval: intervalMs,
   });

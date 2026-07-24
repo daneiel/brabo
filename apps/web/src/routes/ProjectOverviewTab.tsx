@@ -4,6 +4,7 @@ import {
   useArchitecture,
   useBacklog,
   useHandoffs,
+  useHypotheses,
   useLatestSession,
   usePendingActions,
   useSessionEvents,
@@ -11,6 +12,8 @@ import {
 import {
   activateExecution,
   acceptParallelization,
+  acceptHypothesis,
+  dismissHypothesis,
   getAgentModelBinding,
   listAgentAutonomy,
   listModels,
@@ -19,6 +22,7 @@ import { deriveAgentRoster } from '../lib/agent-status';
 import { connectSessionHeartbeat } from '../lib/session-channel';
 import { AgentCard } from '../components/AgentCard';
 import { ActivityFeed } from '../components/ActivityFeed';
+import { HypothesisCard } from '../components/HypothesisCard';
 import { Badge, type BadgeTone } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { useToast } from '../components/ui/ToastProvider';
@@ -127,6 +131,8 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
         />
 
         <ArchitectureSection architecture={architecture} />
+
+        <InsightsSection projectId={projectId} />
       </div>
 
       <aside className={styles.aside}>
@@ -426,6 +432,83 @@ function ArchitectureSection({ architecture }: { architecture?: Architecture }) 
               </ul>
             </>
           )}
+        </>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Seção Insights (Fase 4b) — hipóteses do Psicólogo agrupadas por agente
+ * alvo, com confiança, evidências navegáveis e ações aceitar/descartar.
+ * Escopo de PROJETO (não da sessão aberta): hipóteses acumulam a cada
+ * sessão encerrada, e a navegação de evidência leva à sessão ANALISADA.
+ */
+function InsightsSection({ projectId }: { projectId: string }) {
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+  const { data: hypotheses } = useHypotheses(projectId);
+
+  const all = hypotheses ?? [];
+  const pending = all.filter((h) => h.status === 'proposed');
+
+  // Agrupa por agente alvo preservando a ordem de chegada dos grupos.
+  const byAgent = new Map<string, typeof all>();
+  for (const h of all) {
+    byAgent.set(h.agenteAlvo, [...(byAgent.get(h.agenteAlvo) ?? []), h]);
+  }
+
+  async function decide(
+    hypothesisId: string,
+    action: 'accept' | 'dismiss',
+  ) {
+    try {
+      if (action === 'accept') {
+        await acceptHypothesis(projectId, hypothesisId);
+      } else {
+        await dismissHypothesis(projectId, hypothesisId);
+      }
+      await queryClient.invalidateQueries({ queryKey: ['hypotheses', projectId] });
+    } catch {
+      showToast({
+        title: 'Erro',
+        message: `Não foi possível ${action === 'accept' ? 'aceitar' : 'descartar'} a hipótese`,
+        tone: 'danger',
+      });
+    }
+  }
+
+  return (
+    <div className={styles.arch}>
+      <div className={styles.sectionHeader}>Insights</div>
+      {all.length === 0 ? (
+        <div className={styles.sectionSub}>
+          Sem hipóteses ainda — o Psicólogo analisa cada sessão encerrada.
+        </div>
+      ) : (
+        <>
+          <div className={styles.sectionSub}>
+            {all.length} hipótese(s) · {pending.length} aguardando decisão
+          </div>
+          {[...byAgent.entries()].map(([agenteAlvo, group]) => (
+            <div key={agenteAlvo}>
+              <div className={styles.archLabel}>
+                {agenteAlvo}
+                <Badge tone="muted">{group.length}</Badge>
+              </div>
+              <div className={styles.moduleGrid}>
+                {group.map((hypothesis) => (
+                  <HypothesisCard
+                    key={hypothesis.id}
+                    hypothesis={hypothesis}
+                    projectId={projectId}
+                    onAccept={() => decide(hypothesis.id, 'accept')}
+                    onDismiss={() => decide(hypothesis.id, 'dismiss')}
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
         </>
       )}
     </div>

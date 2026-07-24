@@ -185,6 +185,37 @@ defmodule Engine.Sessions.FakeEngineApiClient do
   end
 
   @impl true
+  def get_psychologist_context(_project_id, session_id) do
+    notify({:psychologist_context_fetched, session_id})
+
+    reply(:fake_psychologist_context, %{
+      "alreadyAnalyzed" => false,
+      "sessionStatus" => "closed",
+      "terminationReason" => nil,
+      "businessRules" => [],
+      "priorHypotheses" => []
+    })
+  end
+
+  @impl true
+  def propose_hypotheses(_project_id, _session_id, tier, triggered_by, event_count, hypotheses) do
+    notify({:hypotheses_proposed, tier, triggered_by, event_count, hypotheses})
+
+    # Erro scriptável (ex.: evidência inválida rejeitada pela api) via
+    # :fake_propose_hypotheses_error — mesmo idioma de :fake_story_error.
+    case Process.get(:fake_propose_hypotheses_error) do
+      nil ->
+        reply(:fake_propose_hypotheses, %{
+          "analysisId" => "analysis-1",
+          "hypotheses" => hypotheses
+        })
+
+      reason ->
+        {:error, reason}
+    end
+  end
+
+  @impl true
   def record_infra_gate_verdict(
         _project_id,
         _session_id,

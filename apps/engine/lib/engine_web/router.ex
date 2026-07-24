@@ -37,5 +37,9 @@ defmodule EngineWeb.Router do
 
     post "/sessions/:sessionId/execution/start", ExecutionCommandController, :start
     post "/sessions/:sessionId/execution/parallelize", ExecutionCommandController, :parallelize
+
+    post "/sessions/:sessionId/psychologist/reanalyze",
+         PsychologistCommandController,
+         :reanalyze
   end
 end

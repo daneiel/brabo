@@ -16,6 +16,7 @@ import {
 // a UI (chat, overview do projeto, feed de atividade). Ver design/COMPONENTS.md.
 export type AgentKey =
   | 'psicologo'
+  | 'psicologo-leve'
   | 'anamnese'
   | 'criativo'
   | 'arquiteto'
@@ -40,6 +41,16 @@ export const AGENTS: Record<AgentKey, AgentDef> = {
     name: 'Psicólogo',
     role: 'Anamnese emocional do time',
     color: '#9C7BE0',
+    icon: HypothesisIcon,
+  },
+  // Tier barato da triagem do Psicólogo (Fase 4b) — entra no roster pra
+  // aparecer na tabela de bindings de modelo (ProjectSettingsTab), já que
+  // é o binding dele que torna a análise leve realmente mais barata.
+  'psicologo-leve': {
+    key: 'psicologo-leve',
+    name: 'Psicólogo (leve)',
+    role: 'Triagem econômica de sessões simples',
+    color: '#B9A5E8',
     icon: HypothesisIcon,
   },
   anamnese: {
