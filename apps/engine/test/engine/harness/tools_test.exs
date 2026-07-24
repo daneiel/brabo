@@ -16,14 +16,20 @@ defmodule Engine.Harness.ToolsTest do
       )
 
     project_id = "proj-#{System.unique_integer([:positive])}"
-    File.mkdir_p!(Workspace.workspace_dir(project_id))
 
+    # A env PRECISA ser setada antes de Workspace.workspace_dir/1, que a
+    # lê com fetch_env! — antes, este setup dependia de outro teste ter
+    # vazado :project_workspaces_root, e quebrava quando rodava depois de
+    # um que limpa (ex.: os workers do Psicólogo/Anamnese).
     Application.put_env(:engine, :project_workspaces_root, root)
     Application.put_env(:engine, :engine_api_client, Engine.Sessions.FakeEngineApiClient)
     Application.put_env(:engine, :test_pid, self())
 
+    File.mkdir_p!(Workspace.workspace_dir(project_id))
+
     on_exit(fn ->
       File.rm_rf!(root)
+      Application.delete_env(:engine, :project_workspaces_root)
       Application.delete_env(:engine, :engine_api_client)
       Application.delete_env(:engine, :test_pid)
     end)

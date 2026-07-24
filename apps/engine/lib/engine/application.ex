@@ -58,6 +58,10 @@ defmodule Engine.Application do
       {:ok, _job} = Engine.Workers.OutboxDrainWorker.kickoff()
     end
 
+    if match?({:ok, _}, result) and anamnese_should_start?() do
+      {:ok, _anamnese} = Engine.Workers.AnamneseSchedulerWorker.kickoff()
+    end
+
     result
   end
 
@@ -72,6 +76,12 @@ defmodule Engine.Application do
   # job Oban recorrente.
   defp outbox_drain_should_start? do
     Application.get_env(:engine, :start_outbox_drain?, true)
+  end
+
+  # Desligável em teste (config :engine, start_anamnese?: false) — a
+  # suite dispara AnamneseWorker.perform/1 direto, sem o tick periódico.
+  defp anamnese_should_start? do
+    Application.get_env(:engine, :start_anamnese?, true)
   end
 
   # Tell Phoenix to update the endpoint configuration

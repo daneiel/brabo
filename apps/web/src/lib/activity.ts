@@ -3,6 +3,7 @@ import type { SessionEvent } from './api-types';
 import {
   BranchIcon,
   CommitIcon,
+  DiffIcon,
   HypothesisIcon,
   PermissionIcon,
   PrIcon,
@@ -233,6 +234,55 @@ export function classifyEvent(event: SessionEvent): ActivityDisplay {
       color: 'var(--accent)',
       bad: false,
       text: `${actorLabel} ${label}`,
+    };
+  }
+  // Anamnese / patches de instrução (Fase 4b).
+  if (type === 'instruction.patched' || type === 'instruction.rolled_back') {
+    const agent = payloadField(payload, 'agent') ?? 'um agente';
+    const to = payloadField(payload, 'toVersion');
+    const restored = payloadField(payload, 'restoredFrom');
+    return {
+      kind: 'generic',
+      icon: DiffIcon,
+      color: 'var(--accent)',
+      bad: false,
+      text:
+        type === 'instruction.patched'
+          ? `instrução de ${agent} atualizada${to ? ` (v${to})` : ''}`
+          : `instrução de ${agent} revertida para a v${restored ?? '?'}`,
+    };
+  }
+  if (type === 'instruction.patch_failed') {
+    return {
+      kind: 'generic',
+      icon: DiffIcon,
+      color: 'var(--danger)',
+      bad: true,
+      text: `falha ao aplicar patch de instrução: ${payloadField(payload, 'reason') ?? 'motivo não informado'}`,
+    };
+  }
+  if (type === 'anamnese.run_failed') {
+    return {
+      kind: 'hypothesis',
+      icon: HypothesisIcon,
+      color: 'var(--danger)',
+      bad: true,
+      text: `rodada da Anamnese não concluiu: ${payloadField(payload, 'reason') ?? 'motivo não informado'}`,
+    };
+  }
+  if (type.startsWith('anamnese.')) {
+    const competency = payloadField(payload, 'competency');
+    return {
+      kind: 'hypothesis',
+      icon: HypothesisIcon,
+      color: '#9C7BE0',
+      bad: false,
+      text:
+        type === 'anamnese.profile_updated'
+          ? `perfil de proficiência atualizado${competency ? `: ${competency} = ${payloadField(payload, 'level') ?? '?'}` : ''}`
+          : type === 'anamnese.run_completed'
+            ? 'rodada da Anamnese concluída'
+            : `anamnese · ${type}`,
     };
   }
   if (type === 'architecture.readiness_confirmed') {

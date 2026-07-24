@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { getArchitecture, getCoverage, listActions, listBacklog, listHandoffs, listHypotheses, listInfraArtifacts, listProjects, listSessionEvents, listSessions, listWorkspaces } from './api-client';
+import { getArchitecture, getCoverage, listActions, listBacklog, listHandoffs, listHypotheses, listInfraArtifacts, listProficiency, listProjects, listSessionEvents, listSessions, listWorkspaces } from './api-client';
 import { classifyEvent } from './activity';
 import { formatRelativeTime } from './time';
 
@@ -126,6 +126,17 @@ export function useInfraArtifacts(projectId: string | undefined, intervalMs = 30
   return useQuery({
     queryKey: ['infra-artifacts', projectId],
     queryFn: () => listInfraArtifacts(projectId!),
+    enabled: !!projectId,
+    refetchInterval: intervalMs,
+  });
+}
+
+// Perfil de proficiência do projeto (Fase 4b — Anamnese). Muda devagar
+// (só quando uma rodada periódica conclui), daí o poll lento.
+export function useProficiency(projectId: string | undefined, intervalMs = 15000) {
+  return useQuery({
+    queryKey: ['proficiency', projectId],
+    queryFn: () => listProficiency(projectId!),
     enabled: !!projectId,
     refetchInterval: intervalMs,
   });

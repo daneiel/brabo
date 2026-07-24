@@ -92,12 +92,17 @@ export interface Page<T> {
   nextCursor: number | null;
 }
 
+// NOTA: o backend tem 12 ActionTypes; esta união cobre os que a UI
+// renderiza de forma dedicada (os demais caem no fallback genérico do
+// ApprovalCard). Dívida pré-existente — `instruction_patch` entrou
+// porque tem renderização própria (diff + badge de origem).
 export type ActionType =
   | 'terminal'
   | 'git_commit'
   | 'git_push'
   | 'pr_open'
-  | 'spend';
+  | 'spend'
+  | 'instruction_patch';
 
 export type ActionStatus =
   | 'pending'
@@ -334,6 +339,46 @@ export interface PsychologistHypothesis {
   decidedAt: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+// --- Anamnese (Fase 4b) ---
+
+export type ProficiencyLevel = 'iniciante' | 'intermediario' | 'avancado';
+
+export interface ProficiencyProfile {
+  id: string;
+  projectId: string;
+  userId: string;
+  competency: string;
+  level: ProficiencyLevel;
+  // "os porquês" do nível.
+  rationale: string;
+  evidenceEventIds: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type DiffLineKind = 'add' | 'del' | 'ctx';
+
+export interface DiffLine {
+  kind: DiffLineKind;
+  content: string;
+  lineNo?: number;
+}
+
+export interface AgentInstructionVersion {
+  id: string;
+  version: number;
+  content: string;
+  createdBy: string | null;
+  sourceActionId: string | null;
+  // Hipótese do Psicólogo que originou — rastreabilidade
+  // hipótese→patch→versão.
+  sourceHypothesisId: string | null;
+  note: string | null;
+  createdAt: string;
+  isCurrent: boolean;
+  diff: { lines: DiffLine[]; additions: number; deletions: number };
 }
 
 // Artefato de infra (Fase 4a — InfraAgent): PR de Dockerfiles/compose/CI

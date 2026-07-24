@@ -246,6 +246,38 @@ defmodule Engine.Sessions.EngineApiClient do
               {:ok, map()} | {:error, term()}
 
   @doc """
+  Contexto da rodada da Anamnese (Fase 4b): catálogo de competências
+  permitidas, membros elegíveis (já sem quem optou por sair), hipóteses
+  aceitas na fila, perfis atuais e a janela a analisar. A janela de
+  eventos em si o worker lê direto do Postgres.
+  """
+  @callback get_anamnese_context(project_id :: String.t()) ::
+              {:ok, map()} | {:error, term()}
+
+  @doc """
+  Registra os perfis de proficiência da rodada (Fase 4b). A api valida
+  contra o catálogo permitido (guarda-corpo: nada de atributo sensível) e
+  contra evidência real; rejeição volta como tool-result pro modelo.
+  """
+  @callback record_proficiency(
+              project_id :: String.t(),
+              session_id :: String.t(),
+              payload :: map()
+            ) ::
+              {:ok, map()} | {:error, term()}
+
+  @doc """
+  Propõe um patch de instrução (Fase 4b). A api calcula o diff e recusa
+  repropor um patch já negado antes.
+  """
+  @callback propose_instruction_patch(
+              project_id :: String.t(),
+              session_id :: String.t(),
+              payload :: map()
+            ) ::
+              {:ok, map()} | {:error, term()}
+
+  @doc """
   Um turno de LLM pro harness (ToolLoop/ContextManager) — o engine nunca
   fala com provider direto. `messages`/`tools` no formato do contrato
   compartilhado; retorna `{:ok, %{"message" => ..., "usage" => ..., "error"
@@ -359,6 +391,15 @@ defmodule Engine.Sessions.EngineApiClient do
 
   def get_psychologist_context(project_id, session_id),
     do: impl().get_psychologist_context(project_id, session_id)
+
+  def get_anamnese_context(project_id),
+    do: impl().get_anamnese_context(project_id)
+
+  def record_proficiency(project_id, session_id, payload),
+    do: impl().record_proficiency(project_id, session_id, payload)
+
+  def propose_instruction_patch(project_id, session_id, payload),
+    do: impl().propose_instruction_patch(project_id, session_id, payload)
 
   def propose_hypotheses(project_id, session_id, tier, triggered_by, event_count, hypotheses),
     do:
@@ -631,6 +672,41 @@ defmodule Engine.Sessions.EngineApiClient.Live do
       {:error, reason} ->
         {:error, reason}
     end
+  end
+
+  @impl true
+  def get_anamnese_context(project_id) do
+    # O endpoint mora sob /sessions só pela convenção do
+    # EngineServiceGuard; o contexto é do PROJETO, então o segmento de
+    # sessão é irrelevante aqui.
+    url = api_url() <> "/internal/sessions/_/anamnese-context?projectId=#{project_id}"
+
+    case Req.get(url, headers: [{"authorization", "Bearer #{token()}"}]) do
+      {:ok, %Req.Response{status: status, body: body}} when status in 200..299 ->
+        {:ok, body}
+
+      {:ok, %Req.Response{status: status, body: resp}} ->
+        {:error, {status, resp}}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  @impl true
+  def record_proficiency(project_id, session_id, payload) do
+    post_returning(
+      "/internal/sessions/#{session_id}/proficiency",
+      Map.put(payload, :projectId, project_id)
+    )
+  end
+
+  @impl true
+  def propose_instruction_patch(project_id, session_id, payload) do
+    post_returning(
+      "/internal/sessions/#{session_id}/instruction-patches",
+      Map.put(payload, :projectId, project_id)
+    )
   end
 
   @impl true
