@@ -13,11 +13,33 @@ export type LLMProviderName = "ollama" | "anthropic" | "openai";
 
 export type ModelCategory = "local" | "cloud";
 
-export type ChatRole = "user" | "assistant" | "system";
+export type ChatRole = "user" | "assistant" | "system" | "tool";
+
+// Tool call que o modelo pediu (Fase 3a — ToolLoop). `arguments` já
+// desserializado; o engine despacha para a ferramenta registrada por `name`.
+export interface ToolCall {
+  id: string;
+  name: string;
+  arguments: Record<string, unknown>;
+}
+
+// Definição de uma ferramenta oferecida ao modelo. `parameters` é um JSON
+// Schema (o Ollama repassa isso no campo `tools`).
+export interface ToolDef {
+  name: string;
+  description: string;
+  parameters: Record<string, unknown>;
+}
 
 export interface ChatMessage {
   role: ChatRole;
   content: string;
+  /** Só em mensagens `assistant` que pediram ferramentas. */
+  toolCalls?: ToolCall[];
+  /** Só em mensagens `tool` (resultado): a qual tool call responde. */
+  toolCallId?: string;
+  /** Nome da ferramenta em mensagens `tool`. */
+  name?: string;
 }
 
 export interface ChatOptions {
@@ -27,6 +49,8 @@ export interface ChatOptions {
   apiKey?: string;
   /** Override do host do Ollama (senão usa OLLAMA_HOST/default do provider). */
   host?: string;
+  /** Ferramentas oferecidas ao modelo (tool calling). */
+  tools?: ToolDef[];
 }
 
 export interface ChatTextDeltaChunk {
@@ -46,7 +70,18 @@ export interface ChatErrorChunk {
   message: string;
 }
 
-export type ChatStreamChunk = ChatTextDeltaChunk | ChatUsageChunk | ChatErrorChunk;
+// Ferramentas pedidas pelo modelo — no Ollama vêm na mensagem final (não
+// streamado), então é um chunk único, não incremental.
+export interface ChatToolCallsChunk {
+  type: "tool_calls";
+  toolCalls: ToolCall[];
+}
+
+export type ChatStreamChunk =
+  | ChatTextDeltaChunk
+  | ChatUsageChunk
+  | ChatErrorChunk
+  | ChatToolCallsChunk;
 
 // --- Git ---
 
