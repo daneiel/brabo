@@ -1,0 +1,175 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  background: var(--surface-1);
+  border-radius: var(--radius-md);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+}
+
+.title {
+  font-size: 14px;
+  color: var(--text-primary);
+  flex: 1;
+}
+
+.prLink {
+  font-size: 12px;
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.prLink:hover {
+  text-decoration: underline;
+}
+
+.steps {
+  display: flex;
+  align-items: center;
+}
+
+.stepWrap {
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+.stepWrap:last-child {
+  flex: 0 0 auto;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.marker {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--text-muted);
+  background: var(--surface-2);
+}
+
+.step.done .marker {
+  color: var(--on-accent);
+  background: var(--success);
+}
+
+.step.current .marker {
+  color: var(--on-accent);
+  background: var(--accent);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.step.blocked .marker {
+  color: var(--on-accent);
+  background: var(--danger);
+}
+
+.stepLabel {
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.step.current .stepLabel {
+  color: var(--accent);
+}
+
+.step.blocked .stepLabel {
+  color: var(--danger);
+}
+
+.connector {
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+  margin: 0 8px;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.blockedReason {
+  padding: 8px 12px;
+  border: 1px solid color-mix(in srgb, var(--danger) 32%, var(--border));
+  background: color-mix(in srgb, var(--danger) 6%, var(--surface-1));
+  border-radius: var(--radius-md);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--danger);
+}
+
+.verdicts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.verdictCard {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.verdictHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: var(--text-primary);
+}
+
+.verdictSummary {
+  font-size: 12px;
+  color: var(--text-secondary);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.verdictBody {
+  padding: 0 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.itemList {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}

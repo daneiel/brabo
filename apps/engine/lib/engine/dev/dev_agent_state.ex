@@ -22,6 +22,7 @@ defmodule Engine.Dev.DevAgentState do
     field :worktree_path, :string
     field :status, :string, default: "working"
     field :task_budget_micros, :integer
+    field :max_gate_corrections, :integer
 
     timestamps(type: :utc_datetime_usec)
   end
@@ -34,7 +35,8 @@ defmodule Engine.Dev.DevAgentState do
     :task_id,
     :worktree_path,
     :status,
-    :task_budget_micros
+    :task_budget_micros,
+    :max_gate_corrections
   ]
 
   def upsert!(attrs) do
@@ -50,6 +52,7 @@ defmodule Engine.Dev.DevAgentState do
            :worktree_path,
            :status,
            :task_budget_micros,
+           :max_gate_corrections,
            :updated_at
          ]},
       conflict_target: [:project_id, :agent_id]
@@ -65,4 +68,19 @@ defmodule Engine.Dev.DevAgentState do
   end
 
   def list_all, do: Repo.all(__MODULE__)
+
+  @doc """
+  Acha o estado do dev agent que está (ou esteve) trabalhando em `task_id`
+  (Fase 4a — gates de QA/SecOps precisam do worktree/branch da task pra
+  rodar suite/scanners, sem serem eles mesmos o processo que a reivindicou).
+  `nil` se nenhum agente tem essa task registrada.
+  """
+  def find_by_task_id(project_id, task_id) do
+    Repo.one(
+      from(s in __MODULE__,
+        where: s.project_id == ^project_id and s.task_id == ^task_id,
+        limit: 1
+      )
+    )
+  end
 end

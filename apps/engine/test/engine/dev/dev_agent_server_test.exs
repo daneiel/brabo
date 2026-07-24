@@ -7,23 +7,29 @@ defmodule Engine.Dev.DevAgentServerTest do
   use Engine.DataCase, async: false
 
   alias Engine.Dev.{DevAgentServer, DevAgentState, FakeWorktreeManager}
+  alias Engine.Gates.FakeGateDispatcher
   alias Engine.Sessions.FakeEngineApiClient
 
   setup do
     Application.put_env(:engine, :engine_api_client, FakeEngineApiClient)
     Application.put_env(:engine, :worktree_manager, FakeWorktreeManager)
+    Application.put_env(:engine, :gate_dispatcher, FakeGateDispatcher)
     Application.put_env(:engine, :test_pid, self())
 
     on_exit(fn ->
       Application.delete_env(:engine, :engine_api_client)
       Application.delete_env(:engine, :worktree_manager)
+      Application.delete_env(:engine, :gate_dispatcher)
       Application.delete_env(:engine, :test_pid)
       Application.delete_env(:engine, :tool_loop_max_iterations)
     end)
 
     project_id = Ecto.UUID.generate()
     session_id = Ecto.UUID.generate()
-    {:ok, state} = DevAgentServer.init({project_id, "dev-api", "api", session_id, nil})
+
+    {:ok, state} =
+      DevAgentServer.init({project_id, "dev-api", "api", session_id, nil, nil})
+
     %{state: state, project_id: project_id, session_id: session_id}
   end
 
@@ -98,6 +104,8 @@ defmodule Engine.Dev.DevAgentServerTest do
     assert pr_payload.title =~ "Cadastro"
     assert pr_payload.body =~ "Definition of Done"
     assert_received {:task_marked, "task-abc12345", "in_review", "dev-api"}
+    assert_received {:gate_opened, "task-abc12345", "dev-api"}
+    assert_received {:gate_dispatch, :qa, _, "task-abc12345"}
     refute_received {:task_blocked, _, _, _, _}
 
     assert new_state.task_id == "task-abc12345"
@@ -178,5 +186,81 @@ defmodule Engine.Dev.DevAgentServerTest do
     refute_received {:propose_action, "pr_open", _, _}
     refute_received {:task_marked, _, "in_review", _}
     assert_received {:task_blocked, "task-apressada", _, _, "dev-api"}
+  end
+
+  describe "correct/3 (devolução de gate — mesma branch/worktree, sem nova PR)" do
+    setup %{state: state} do
+      # Simula que o dev já passou por run_task antes (worktree/branch/task_id
+      # já setados) — correct/3 reaproveita, nunca chama worktree_manager().
+      original_worktree = "/tmp/brabo-fake-existing-worktree"
+
+      state = %{
+        state
+        | task_id: "task-abc12345",
+          worktree: original_worktree,
+          branch: "feature/task-abc12345"
+      }
+
+      Process.put(:fake_dev_context, %{
+        "task" => %{"id" => "task-abc12345", "title" => "Cadastro", "description" => ""},
+        "story" => %{
+          "id" => "st-1",
+          "title" => "Cadastro",
+          "description" => "",
+          "rf" => [],
+          "rnf" => [],
+          "dod" => [],
+          "dor" => []
+        },
+        "businessRules" => [],
+        "adrs" => []
+      })
+
+      %{state: state, original_worktree: original_worktree}
+    end
+
+    test "report_done na correção: só commit+push (SEM nova PR), dispara o gate de volta", %{
+      state: state,
+      original_worktree: original_worktree
+    } do
+      Process.put(:fake_propose_action, terminal_ok())
+
+      Process.put(:fake_llm_turns, [
+        FakeEngineApiClient.tool_call_response("terminal", %{"command" => "npm test"}),
+        FakeEngineApiClient.tool_call_response("report_done", %{"summary" => "corrigido"})
+      ])
+
+      findings = %{gate: "qa", reason: "regra sem teste", diagnosis: "regra X sem cobertura"}
+
+      assert {:noreply, new_state} = DevAgentServer.handle_cast({:correct, findings}, state)
+
+      # worktree NUNCA foi recriado — prova que correct/3 não chama
+      # worktree_manager().create/3 (run_task chamaria e geraria um path novo).
+      assert new_state.worktree == original_worktree
+
+      assert_received {:propose_action, "git_commit", _, commit_payload}
+      assert commit_payload.message == "corrigido"
+      assert_received {:propose_action, "git_push", _, _}
+      refute_received {:propose_action, "pr_open", _, _}
+
+      assert_received {:gate_dispatch, :qa, _, "task-abc12345"}
+    end
+
+    test "report_blocked na correção: bloqueia igual ao fluxo original", %{state: state} do
+      Process.put(:fake_llm_turns, [
+        FakeEngineApiClient.tool_call_response("report_blocked", %{
+          "reason" => "não consegui corrigir",
+          "diagnosis" => "o teste ainda falha por outro motivo"
+        })
+      ])
+
+      findings = %{gate: "secops", reason: "segredo encontrado", diagnosis: "arquivo x linha y"}
+
+      assert {:noreply, _new_state} = DevAgentServer.handle_cast({:correct, findings}, state)
+
+      assert_received {:task_blocked, "task-abc12345", "não consegui corrigir", _, "dev-api"}
+      refute_received {:propose_action, "pr_open", _, _}
+      refute_received {:gate_dispatch, _, _, _}
+    end
   end
 end

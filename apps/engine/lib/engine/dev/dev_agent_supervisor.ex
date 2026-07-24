@@ -1,9 +1,10 @@
 defmodule Engine.Dev.DevAgentSupervisor do
   @moduledoc """
   DynamicSupervisor dos dev agents (Fase 4a), um por {project_id, agent_id}.
-  Idempotente; `start_agent/4,5` sinaliza `:started` (start fresco → o chamador
-  dispara `:work`) vs `:existing`. `task_budget_micros` (opcional) é o teto de
-  tokens por task, configurado na ativação da execução.
+  Idempotente; `start_agent/4..6` sinaliza `:started` (start fresco → o
+  chamador dispara `:work`) vs `:existing`. `task_budget_micros` (teto de
+  tokens por task) e `max_gate_corrections` (teto de correções dev↔gate) são
+  opcionais, configurados na ativação da execução.
   """
 
   use DynamicSupervisor
@@ -15,13 +16,22 @@ defmodule Engine.Dev.DevAgentSupervisor do
   @impl true
   def init(:ok), do: DynamicSupervisor.init(strategy: :one_for_one)
 
-  def start_agent(project_id, agent_id, module, session_id, task_budget_micros \\ nil) do
+  def start_agent(
+        project_id,
+        agent_id,
+        module,
+        session_id,
+        task_budget_micros \\ nil,
+        max_gate_corrections \\ nil
+      ) do
     case Registry.lookup(Engine.Dev.Registry, {project_id, agent_id}) do
       [{pid, _}] ->
         {:ok, pid, :existing}
 
       [] ->
-        spec = {DevAgentServer, {project_id, agent_id, module, session_id, task_budget_micros}}
+        spec =
+          {DevAgentServer,
+           {project_id, agent_id, module, session_id, task_budget_micros, max_gate_corrections}}
 
         case DynamicSupervisor.start_child(__MODULE__, spec) do
           {:ok, pid} -> {:ok, pid, :started}

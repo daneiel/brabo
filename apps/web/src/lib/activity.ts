@@ -62,6 +62,19 @@ export function classifyEvent(event: SessionEvent): ActivityDisplay {
       text: `${actorLabel} enviou alterações para ${payloadField(payload, 'branch') ?? 'branch'}`,
     };
   }
+  if (type === 'pr.gate_changed') {
+    const gate = payloadField(payload, 'gate');
+    const veredito = payloadField(payload, 'veredito');
+    return {
+      kind: 'pr',
+      icon: PrIcon,
+      color: veredito === 'changes_requested' ? 'var(--danger)' : 'var(--accent)',
+      bad: veredito === 'changes_requested',
+      text: gate
+        ? `gate ${gate}: ${veredito === 'approved' ? 'aprovado' : veredito === 'changes_requested' ? 'mudanças solicitadas' : 'atualizado'}`
+        : `${actorLabel} atualizou o gate da PR`,
+    };
+  }
   if (type.startsWith('pr.') || type.startsWith('pr_open')) {
     return {
       kind: 'pr',
@@ -69,6 +82,18 @@ export function classifyEvent(event: SessionEvent): ActivityDisplay {
       color: 'var(--accent)',
       bad: false,
       text: `${actorLabel} abriu pull request${payloadField(payload, 'title') ? `: ${payloadField(payload, 'title')}` : ''}`,
+    };
+  }
+  if (type === 'artifact.qa_verdict' || type === 'artifact.secops_verdict') {
+    const gateLabel = type === 'artifact.qa_verdict' ? 'QA' : 'SecOps';
+    const veredito = payloadField(payload, 'veredito');
+    const approved = veredito === 'approved';
+    return {
+      kind: 'hypothesis',
+      icon: HypothesisIcon,
+      color: approved ? 'var(--success)' : 'var(--danger)',
+      bad: !approved,
+      text: `${gateLabel}: ${approved ? 'aprovado' : 'mudanças solicitadas'}`,
     };
   }
   if (type.startsWith('artifact.')) {

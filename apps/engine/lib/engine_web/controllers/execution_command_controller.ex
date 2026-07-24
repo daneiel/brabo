@@ -14,6 +14,7 @@ defmodule EngineWeb.ExecutionCommandController do
         %{"sessionId" => session_id, "projectId" => project_id, "modules" => modules} = params
       ) do
     task_budget_micros = Map.get(params, "taskBudgetMicros")
+    max_gate_corrections = Map.get(params, "maxGateCorrections")
 
     Enum.each(modules, fn module ->
       agent_id = Naming.dev_agent_id(module)
@@ -24,7 +25,8 @@ defmodule EngineWeb.ExecutionCommandController do
           agent_id,
           module,
           session_id,
-          task_budget_micros
+          task_budget_micros,
+          max_gate_corrections
         )
 
       if origin == :started, do: DevAgentServer.work(project_id, agent_id)

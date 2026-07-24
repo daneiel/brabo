@@ -17,6 +17,7 @@ defmodule Engine.Dev.DevAgentServer do
 
   alias Engine.Dev.{ContextBuilder, DevAgentState, Tools}
   alias Engine.Dev.Hooks.Termination
+  alias Engine.Gates.Dispatcher
   alias Engine.Harness.ToolLoop
   alias Engine.Harness.Hooks
   alias Engine.Harness.Hooks.{ActionPipeline, EventLog}
@@ -26,10 +27,12 @@ defmodule Engine.Dev.DevAgentServer do
   defp worktree_manager,
     do: Application.get_env(:engine, :worktree_manager, Engine.Dev.WorktreeManager)
 
-  def start_link({project_id, agent_id, module, session_id, task_budget_micros}) do
+  def start_link(
+        {project_id, agent_id, module, session_id, task_budget_micros, max_gate_corrections}
+      ) do
     GenServer.start_link(
       __MODULE__,
-      {project_id, agent_id, module, session_id, task_budget_micros},
+      {project_id, agent_id, module, session_id, task_budget_micros, max_gate_corrections},
       name: via(project_id, agent_id)
     )
   end
@@ -40,17 +43,26 @@ defmodule Engine.Dev.DevAgentServer do
   @doc "Dispara o ciclo de trabalho (chamado num start FRESCO, não em rehydration)."
   def work(project_id, agent_id), do: GenServer.cast(via(project_id, agent_id), :work)
 
+  @doc """
+  Devolução pro dev (Fase 4a — gates): um gate (QA/SecOps) reprovou e o dev
+  corrige NO MESMO worktree/branch — distinto de `work/2`, que reivindica
+  uma task NOVA. `findings` é `%{gate:, reason:, diagnosis:}`.
+  """
+  def correct(project_id, agent_id, findings),
+    do: GenServer.cast(via(project_id, agent_id), {:correct, findings})
+
   # --- Callbacks ---
 
   @impl true
-  def init({project_id, agent_id, module, session_id, task_budget_micros}) do
+  def init({project_id, agent_id, module, session_id, task_budget_micros, max_gate_corrections}) do
     DevAgentState.upsert!(%{
       project_id: project_id,
       agent_id: agent_id,
       module: module,
       session_id: session_id,
       status: "working",
-      task_budget_micros: task_budget_micros
+      task_budget_micros: task_budget_micros,
+      max_gate_corrections: max_gate_corrections
     })
 
     {:ok,
@@ -62,7 +74,8 @@ defmodule Engine.Dev.DevAgentServer do
        task_id: nil,
        worktree: nil,
        branch: nil,
-       task_budget_micros: task_budget_micros
+       task_budget_micros: task_budget_micros,
+       max_gate_corrections: max_gate_corrections
      }}
   end
 
@@ -82,6 +95,18 @@ defmodule Engine.Dev.DevAgentServer do
 
       {:ok, task} ->
         {:noreply, run_task(state, task)}
+
+      {:error, reason} ->
+        emit(state, "dev.error", %{agentId: state.agent_id, reason: inspect(reason)})
+        {:noreply, state}
+    end
+  end
+
+  @impl true
+  def handle_cast({:correct, findings}, state) do
+    case ContextBuilder.fetch(state.project_id, state.session_id, state.task_id) do
+      {:ok, dev_context} ->
+        {:noreply, implement_correction(state, dev_context, findings)}
 
       {:error, reason} ->
         emit(state, "dev.error", %{agentId: state.agent_id, reason: inspect(reason)})
@@ -169,6 +194,92 @@ defmodule Engine.Dev.DevAgentServer do
     }
   end
 
+  # --- Correção pedida por um gate (mesmo worktree/branch — sem novo claim) ---
+
+  defp implement_correction(
+         state,
+         %{
+           task: task,
+           story: story,
+           business_rules_units: business_rules_units,
+           task_state_units: task_state_units
+         },
+         findings
+       ) do
+    ctx = %{
+      project_id: state.project_id,
+      session_id: state.session_id,
+      agent: state.agent_id,
+      workspace_root: state.worktree,
+      tools: Tools.registry(),
+      hooks: dev_hooks(),
+      token_budget_micros: state.task_budget_micros,
+      business_rules_units: business_rules_units,
+      task_state_units: task_state_units,
+      messages: [initial_message(task, story), correction_message(findings)],
+      context_window: 128_000
+    }
+
+    ctx
+    |> ToolLoop.run()
+    |> handle_correction_outcome(state, findings)
+  end
+
+  defp correction_message(findings) do
+    %{
+      "role" => "user",
+      "content" =>
+        "O gate \"#{findings.gate}\" pediu correção nesta PR (mesma branch, mesmo worktree). " <>
+          "Motivo: #{findings.reason}. Diagnóstico: #{findings.diagnosis}. Corrija o " <>
+          "necessário, rode a suite de novo via `terminal`, e só sinalize conclusão com " <>
+          "`report_done` depois de vê-la passar (exit 0). Se ainda não conseguir, use " <>
+          "`report_blocked`.",
+      :pinned => true
+    }
+  end
+
+  defp handle_correction_outcome(
+         {:halted, {"report_done", %{summary: summary}}, _ctx},
+         state,
+         findings
+       ) do
+    # A PR já existe (mesma branch) — só commit+push, sem propose_pr de novo.
+    propose_commit(state, summary)
+    propose_push(state)
+    trigger_gate_recheck(state, findings.gate)
+    state
+  end
+
+  defp handle_correction_outcome(
+         {:halted, {"report_blocked", %{reason: reason, diagnosis: diagnosis}}, _ctx},
+         state,
+         _findings
+       ) do
+    block_task(state, reason, diagnosis)
+  end
+
+  defp handle_correction_outcome({:limit_reached, ctx}, state, _findings) do
+    block_task(state, "limite de iterações atingido (correção)", last_terminal_output(ctx))
+  end
+
+  defp handle_correction_outcome({:budget_exceeded, ctx}, state, _findings) do
+    block_task(
+      state,
+      "orçamento de tokens excedido (correção)",
+      "gasto: #{ctx.tokens_spent_micros} micro-USD (teto: #{ctx.token_budget_micros})"
+    )
+  end
+
+  defp handle_correction_outcome({:ok, _ctx}, state, _findings) do
+    block_task(state, "parou sem concluir nem reportar bloqueio (correção)", "")
+  end
+
+  defp trigger_gate_recheck(state, "qa"),
+    do: :ok = Dispatcher.run_qa(state.project_id, state.task_id)
+
+  defp trigger_gate_recheck(state, "secops"),
+    do: :ok = Dispatcher.run_secops(state.project_id, state.task_id)
+
   defp handle_outcome({:halted, {"report_done", %{summary: summary}}, _ctx}, state, task, story) do
     propose_commit(state, summary)
     propose_push(state)
@@ -182,6 +293,11 @@ defmodule Engine.Dev.DevAgentServer do
         "in_review",
         state.agent_id
       )
+
+    _ =
+      EngineApiClient.open_gate(state.project_id, state.session_id, state.task_id, state.agent_id)
+
+    :ok = Dispatcher.run_qa(state.project_id, state.task_id)
 
     state
   end

@@ -16,7 +16,8 @@ defmodule Engine.Dev.DevRehydrator do
         s.agent_id,
         s.module,
         s.session_id,
-        s.task_budget_micros
+        s.task_budget_micros,
+        s.max_gate_corrections
       )
     end)
   end

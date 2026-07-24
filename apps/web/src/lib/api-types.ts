@@ -286,6 +286,10 @@ export type StoryStatus = 'draft' | 'ready' | 'in_progress' | 'done';
 
 export type TaskStatus = 'todo' | 'in_progress' | 'in_review' | 'done';
 
+// --- Gates de PR (Fase 4a — QA/SecOps) ---
+
+export type PrGateStatus = 'awaiting_qa' | 'awaiting_secops' | 'awaiting_user';
+
 export interface Task {
   id: string;
   storyId: string;
@@ -295,8 +299,33 @@ export interface Task {
   assignedTo: string | null;
   blocked: boolean;
   blockedReason: string | null;
+  gateStatus: PrGateStatus | null;
+  gateCorrectionCount: number;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface CoverageMatrixRow {
+  rule: string;
+  tests: string[];
+  covered: boolean;
+}
+
+// Payload do session_event `artifact.qa_verdict` (QAAgent).
+export interface QaVerdictPayload {
+  taskId: string;
+  veredito: 'approved' | 'changes_requested';
+  resumo: string;
+  itens: string[];
+  coverageMatrix: CoverageMatrixRow[];
+}
+
+// Payload do session_event `artifact.secops_verdict` (SecOpsAgent).
+export interface SecOpsVerdictPayload {
+  taskId: string;
+  veredito: 'approved' | 'changes_requested';
+  resumo: string;
+  itens: string[];
 }
 
 export interface Story {
