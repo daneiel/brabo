@@ -122,6 +122,35 @@ defmodule Engine.Sessions.FakeEngineApiClient do
     {:ok, %{"id" => task_id, "status" => status}}
   end
 
+  @impl true
+  def mark_task_blocked(_project_id, _session_id, task_id, reason, diagnosis, agent_id) do
+    notify({:task_blocked, task_id, reason, diagnosis, agent_id})
+    {:ok, %{"id" => task_id, "blocked" => true}}
+  end
+
+  @impl true
+  def get_dev_context(_project_id, _session_id, task_id) do
+    notify({:dev_context_fetched, task_id})
+
+    reply(
+      :fake_dev_context,
+      %{
+        "task" => %{"id" => task_id, "title" => "task", "description" => ""},
+        "story" => %{
+          "id" => "st-1",
+          "title" => "story",
+          "description" => "",
+          "rf" => [],
+          "rnf" => [],
+          "dod" => [],
+          "dor" => []
+        },
+        "businessRules" => [],
+        "adrs" => []
+      }
+    )
+  end
+
   defp reply(key, default), do: {:ok, Process.get(key, default)}
   defp unique, do: System.unique_integer([:positive])
 

@@ -11,7 +11,13 @@ defmodule Engine.Dev.DevRehydrator do
   def run do
     DevAgentState.list_all()
     |> Enum.each(fn s ->
-      DevAgentSupervisor.start_agent(s.project_id, s.agent_id, s.module, s.session_id)
+      DevAgentSupervisor.start_agent(
+        s.project_id,
+        s.agent_id,
+        s.module,
+        s.session_id,
+        s.task_budget_micros
+      )
     end)
   end
 

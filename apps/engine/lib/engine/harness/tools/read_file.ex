@@ -4,6 +4,7 @@ defmodule Engine.Harness.Tools.ReadFile do
   @behaviour Engine.Harness.Tool
 
   alias Engine.Harness.WorkspaceFiles
+  alias Engine.Actions.Workspace
 
   @impl true
   def spec do
@@ -25,7 +26,7 @@ defmodule Engine.Harness.Tools.ReadFile do
 
   @impl true
   def run(%{"path" => path}, ctx) do
-    case WorkspaceFiles.read_file(ctx.project_id, path) do
+    case WorkspaceFiles.read_file(root(ctx), path) do
       {:ok, content} -> {:ok, content}
       {:error, :traversal} -> {:error, "caminho fora do workspace: #{path}"}
       {:error, reason} -> {:error, "falha ao ler #{path}: #{inspect(reason)}"}
@@ -33,4 +34,6 @@ defmodule Engine.Harness.Tools.ReadFile do
   end
 
   def run(_args, _ctx), do: {:error, "read_file exige o argumento `path`"}
+
+  defp root(ctx), do: ctx[:workspace_root] || Workspace.workspace_dir(ctx.project_id)
 end

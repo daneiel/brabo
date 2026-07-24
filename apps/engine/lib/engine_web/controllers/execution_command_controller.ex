@@ -9,12 +9,23 @@ defmodule EngineWeb.ExecutionCommandController do
 
   alias Engine.Dev.{DevAgentSupervisor, DevAgentServer, Naming}
 
-  def start(conn, %{"sessionId" => session_id, "projectId" => project_id, "modules" => modules}) do
+  def start(
+        conn,
+        %{"sessionId" => session_id, "projectId" => project_id, "modules" => modules} = params
+      ) do
+    task_budget_micros = Map.get(params, "taskBudgetMicros")
+
     Enum.each(modules, fn module ->
       agent_id = Naming.dev_agent_id(module)
 
       {:ok, _pid, origin} =
-        DevAgentSupervisor.start_agent(project_id, agent_id, module, session_id)
+        DevAgentSupervisor.start_agent(
+          project_id,
+          agent_id,
+          module,
+          session_id,
+          task_budget_micros
+        )
 
       if origin == :started, do: DevAgentServer.work(project_id, agent_id)
     end)

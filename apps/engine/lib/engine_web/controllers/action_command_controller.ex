@@ -7,8 +7,8 @@ defmodule EngineWeb.ActionCommandController do
   # snake_case interno direto pro Jason (mesmo cuidado já levado com
   # PsychologistWorker: atom snake_case vira string snake_case no JSON,
   # não camelCase, e o DTO da api espera camelCase).
-  def execute(conn, %{"projectId" => project_id, "command" => command}) do
-    result = TerminalExecutor.run(project_id, command)
+  def execute(conn, %{"projectId" => project_id, "command" => command} = params) do
+    result = TerminalExecutor.run(project_id, command, cwd: Map.get(params, "cwd"))
 
     json(conn, %{
       stdout: result.stdout,

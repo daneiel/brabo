@@ -91,6 +91,15 @@ export function classifyEvent(event: SessionEvent): ActivityDisplay {
       text: label,
     };
   }
+  if (type === 'dev.blocked') {
+    return {
+      kind: 'commit',
+      icon: CommitIcon,
+      color: 'var(--danger)',
+      bad: true,
+      text: `${actorLabel} bloqueou a task: ${payloadField(payload, 'reason') ?? 'sem motivo informado'}`,
+    };
+  }
   if (type.startsWith('dev.')) {
     return {
       kind: 'commit',

@@ -17,11 +17,18 @@ defmodule Engine.Harness.InstructionFiles do
   `merged` é a concatenação nessa ordem com um cabeçalho por fonte.
   """
 
-  @callback load(project_id :: String.t(), agent :: String.t()) :: map()
-  @callback invalidate(project_id :: String.t(), agent :: String.t()) :: :ok
+  @callback load(project_id :: String.t(), agent :: String.t(), opts :: keyword()) :: map()
+  @callback invalidate(project_id :: String.t(), agent :: String.t(), opts :: keyword()) :: :ok
 
-  def load(project_id, agent), do: impl().load(project_id, agent)
-  def invalidate(project_id, agent), do: impl().invalidate(project_id, agent)
+  @doc """
+  `opts[:root]` sobrescreve a raiz onde os AGENTS.md são lidos (default o
+  workspace compartilhado do projeto) — usado pelo DevAgent pra ler o AGENTS.md
+  do WORKTREE (branch/commit certos), não do clone compartilhado.
+  """
+  def load(project_id, agent, opts \\ []), do: impl().load(project_id, agent, opts)
+
+  @doc "Mesmo `opts[:root]` de `load/3` — invalida o cache daquela raiz específica."
+  def invalidate(project_id, agent, opts \\ []), do: impl().invalidate(project_id, agent, opts)
 
   defp impl do
     Application.get_env(
@@ -52,30 +59,31 @@ defmodule Engine.Harness.InstructionFiles.Live do
   @agents_filename "AGENTS.md"
 
   @impl true
-  def load(project_id, agent) do
-    key = {project_id, agent}
+  def load(project_id, agent, opts \\ []) do
+    root = Keyword.get(opts, :root)
+    key = {project_id, agent, root}
 
     case Cache.get(key) do
       {:ok, cached} ->
         cached
 
       :miss ->
-        result = build(project_id, agent)
+        result = build(project_id, agent, root)
         Cache.put(key, result)
         result
     end
   end
 
   @impl true
-  def invalidate(project_id, agent) do
-    Cache.delete({project_id, agent})
+  def invalidate(project_id, agent, opts \\ []) do
+    Cache.delete({project_id, agent, Keyword.get(opts, :root)})
   end
 
-  defp build(project_id, agent) do
+  defp build(project_id, agent, root) do
     # Ordem crescente de precedência: raiz (priority 0) primeiro, banco
     # (priority alta) por último. Desempate estável por path.
     sources =
-      (db_source(project_id, agent) ++ file_sources(project_id))
+      (db_source(project_id, agent) ++ file_sources(root || Workspace.workspace_dir(project_id)))
       |> Enum.sort_by(fn s -> {s.priority, source_path(s)} end)
 
     %{sources: sources, merged: merge(sources)}
@@ -91,9 +99,7 @@ defmodule Engine.Harness.InstructionFiles.Live do
     end
   end
 
-  defp file_sources(project_id) do
-    root = Workspace.workspace_dir(project_id)
-
+  defp file_sources(root) do
     collect(root, root, 0)
     |> Enum.map(fn {path, depth} ->
       %{

@@ -19,9 +19,23 @@ defmodule Engine.Actions.TerminalExecutor do
 
   @bytes_per_token 4
 
-  def run(project_id, command, timeout_ms \\ nil) do
-    timeout = timeout_ms || Application.fetch_env!(:engine, :terminal_action_timeout_ms)
+  @doc """
+  `opts[:cwd]` sobrescreve o diretório de execução (ex.: o worktree de um dev
+  agent) — sem ele, roda no workspace compartilhado do projeto (comportamento
+  de sempre). `opts[:timeout_ms]` sobrescreve o timeout default.
+  """
+  def run(project_id, command, opts \\ []) do
+    timeout =
+      Keyword.get(opts, :timeout_ms) ||
+        Application.fetch_env!(:engine, :terminal_action_timeout_ms)
 
+    case Keyword.get(opts, :cwd) do
+      nil -> run_in_project_workspace(project_id, command, timeout)
+      cwd -> execute(cwd, command, timeout)
+    end
+  end
+
+  defp run_in_project_workspace(project_id, command, timeout) do
     case ProjectRepository.get_local_repo_path(project_id) do
       {:ok, bare_repo_path, default_branch} ->
         dir = Workspace.ensure!(project_id, bare_repo_path, default_branch)

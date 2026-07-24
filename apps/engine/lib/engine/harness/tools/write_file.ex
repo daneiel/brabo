@@ -9,6 +9,7 @@ defmodule Engine.Harness.Tools.WriteFile do
   @behaviour Engine.Harness.Tool
 
   alias Engine.Harness.WorkspaceFiles
+  alias Engine.Actions.Workspace
 
   @impl true
   def spec do
@@ -32,7 +33,7 @@ defmodule Engine.Harness.Tools.WriteFile do
 
   @impl true
   def run(%{"path" => path, "content" => content}, ctx) do
-    case WorkspaceFiles.write_file(ctx.project_id, path, content) do
+    case WorkspaceFiles.write_file(root(ctx), path, content) do
       {:ok, _abs} -> {:ok, "escrito: #{path}"}
       {:error, :traversal} -> {:error, "caminho fora do workspace: #{path}"}
       {:error, reason} -> {:error, "falha ao escrever #{path}: #{inspect(reason)}"}
@@ -40,4 +41,6 @@ defmodule Engine.Harness.Tools.WriteFile do
   end
 
   def run(_args, _ctx), do: {:error, "write_file exige `path` e `content`"}
+
+  defp root(ctx), do: ctx[:workspace_root] || Workspace.workspace_dir(ctx.project_id)
 end
