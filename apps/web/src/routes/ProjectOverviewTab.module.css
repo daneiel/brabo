@@ -152,3 +152,25 @@
   font-size: 10.5px;
   color: var(--danger);
 }
+
+/* --- Fase 4a: execução --- */
+
+.execIntro {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.suggestion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  margin: 8px 0;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--border));
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface-1));
+  border-radius: var(--radius-md);
+  font-size: 13px;
+}

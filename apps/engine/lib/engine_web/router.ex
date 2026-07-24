@@ -25,9 +25,13 @@ defmodule EngineWeb.Router do
 
     post "/sessions", SessionCommandController, :create
     post "/actions/execute", ActionCommandController, :execute
+    post "/actions/execute-git", ActionCommandController, :execute_git
 
     post "/sessions/:sessionId/agent/start", AgentCommandController, :start
     post "/sessions/:sessionId/agent/message", AgentCommandController, :message
     post "/sessions/:sessionId/agent/readiness", AgentCommandController, :readiness
+
+    post "/sessions/:sessionId/execution/start", ExecutionCommandController, :start
+    post "/sessions/:sessionId/execution/parallelize", ExecutionCommandController, :parallelize
   end
 end

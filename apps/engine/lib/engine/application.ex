@@ -16,6 +16,8 @@ defmodule Engine.Application do
       {Oban, Application.fetch_env!(:engine, Oban)},
       {Engine.Auth.JwksStrategy, should_start: jwks_strategy_should_start?()},
       {Registry, keys: :unique, name: Engine.Sessions.Registry},
+      # Dev agents (Fase 4a) — chave {project_id, agent_id}.
+      {Registry, keys: :unique, name: Engine.Dev.Registry},
       # Dono da tabela ETS que cacheia o merge de instruções do harness
       # (Engine.Harness.InstructionFiles) — só detém a tabela, sem lógica.
       Engine.Harness.InstructionFiles.Cache,
@@ -27,10 +29,14 @@ defmodule Engine.Application do
       Engine.Agents.CriativoSupervisor,
       Engine.Agents.PoSupervisor,
       Engine.Agents.ArquitetoSupervisor,
+      # Dev agents de execução (Fase 4a) — um por {project, agent_id}.
+      Engine.Dev.DevAgentSupervisor,
       # Reidrata sessões sobreviventes de um boot anterior ANTES do
       # Endpoint subir — nunca aceitar heartbeat de alguém reconectando
       # antes da sessão existir de novo.
       {Engine.Sessions.Rehydrator, []},
+      # Reidrata os dev agents sobreviventes (depois do DevAgentSupervisor).
+      {Engine.Dev.DevRehydrator, []},
       EngineWeb.Endpoint
     ]
 
@@ -40,6 +46,7 @@ defmodule Engine.Application do
     result = Supervisor.start_link(children, opts)
 
     if match?({:ok, _}, result) and outbox_drain_should_start?() do
+      {:ok, _cleanup} = Engine.Workers.WorktreeCleanupWorker.kickoff()
       {:ok, _job} = Engine.Workers.OutboxDrainWorker.kickoff()
     end
 

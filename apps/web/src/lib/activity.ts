@@ -91,6 +91,38 @@ export function classifyEvent(event: SessionEvent): ActivityDisplay {
       text: label,
     };
   }
+  if (type.startsWith('dev.')) {
+    return {
+      kind: 'commit',
+      icon: CommitIcon,
+      color: type.includes('error') ? 'var(--danger)' : 'var(--text-secondary)',
+      bad: type.includes('error'),
+      text:
+        type === 'dev.working'
+          ? `${actorLabel} está implementando (${payloadField(payload, 'branch') ?? 'branch'})`
+          : type === 'dev.started'
+            ? `${actorLabel} começou a trabalhar`
+            : type === 'dev.idle'
+              ? `${actorLabel} sem tarefa disponível`
+              : `${actorLabel} · ${type}`,
+    };
+  }
+  if (type.startsWith('execution.')) {
+    return {
+      kind: 'session',
+      icon: StackIcon,
+      color: 'var(--accent)',
+      bad: false,
+      text:
+        type === 'execution.activated'
+          ? 'execução ativada'
+          : type === 'execution.parallelization_suggested'
+            ? `sugestão: dev extra para ${payloadField(payload, 'module') ?? 'um módulo'}`
+            : type === 'execution.parallelization_accepted'
+              ? `dev extra aceito para ${payloadField(payload, 'module') ?? 'um módulo'}`
+              : `execução · ${type}`,
+    };
+  }
   if (type === 'backlog.story_demoted') {
     return {
       kind: 'generic',

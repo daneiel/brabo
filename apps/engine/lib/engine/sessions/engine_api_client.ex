@@ -100,6 +100,27 @@ defmodule Engine.Sessions.EngineApiClient do
               {:ok, map()} | {:error, term()}
 
   @doc """
+  Ciclo de task dos dev agents (Fase 4a). `claim_task` pega a próxima task
+  pegável do módulo (atômico na api) — retorna `{:ok, task_map}` ou `{:ok, nil}`
+  se não há. `mark_task` atualiza o status.
+  """
+  @callback claim_task(
+              project_id :: String.t(),
+              session_id :: String.t(),
+              module :: String.t(),
+              agent_id :: String.t()
+            ) ::
+              {:ok, map() | nil} | {:error, term()}
+  @callback mark_task(
+              project_id :: String.t(),
+              session_id :: String.t(),
+              task_id :: String.t(),
+              status :: String.t(),
+              agent_id :: String.t()
+            ) ::
+              {:ok, map()} | {:error, term()}
+
+  @doc """
   Um turno de LLM pro harness (ToolLoop/ContextManager) — o engine nunca
   fala com provider direto. `messages`/`tools` no formato do contrato
   compartilhado; retorna `{:ok, %{"message" => ..., "usage" => ..., "error"
@@ -167,6 +188,12 @@ defmodule Engine.Sessions.EngineApiClient do
 
   def assign_story_modules(project_id, session_id, fields),
     do: impl().assign_story_modules(project_id, session_id, fields)
+
+  def claim_task(project_id, session_id, module, agent_id),
+    do: impl().claim_task(project_id, session_id, module, agent_id)
+
+  def mark_task(project_id, session_id, task_id, status, agent_id),
+    do: impl().mark_task(project_id, session_id, task_id, status, agent_id)
 
   defp impl,
     do: Application.get_env(:engine, :engine_api_client, Engine.Sessions.EngineApiClient.Live)
@@ -275,6 +302,25 @@ defmodule Engine.Sessions.EngineApiClient.Live do
       "/internal/sessions/#{session_id}/story-modules",
       Map.put(fields, :projectId, project_id)
     )
+  end
+
+  @impl true
+  def claim_task(project_id, session_id, module, agent_id) do
+    # `null` (sem task pegável) volta como {:ok, nil} — não é erro.
+    post_returning("/internal/sessions/#{session_id}/tasks/claim", %{
+      projectId: project_id,
+      module: module,
+      agentId: agent_id
+    })
+  end
+
+  @impl true
+  def mark_task(project_id, session_id, task_id, status, agent_id) do
+    post_returning("/internal/sessions/#{session_id}/tasks/#{task_id}/status", %{
+      projectId: project_id,
+      agentId: agent_id,
+      status: status
+    })
   end
 
   @impl true

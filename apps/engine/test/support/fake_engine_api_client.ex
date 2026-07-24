@@ -102,6 +102,26 @@ defmodule Engine.Sessions.FakeEngineApiClient do
     end
   end
 
+  @impl true
+  def claim_task(_project_id, _session_id, module, agent_id) do
+    notify({:task_claimed, module, agent_id})
+    # Fila de tasks scriptada por :fake_tasks (pop); esgotada → nil.
+    case Process.get(:fake_tasks, []) do
+      [task | rest] ->
+        Process.put(:fake_tasks, rest)
+        {:ok, task}
+
+      [] ->
+        {:ok, nil}
+    end
+  end
+
+  @impl true
+  def mark_task(_project_id, _session_id, task_id, status, agent_id) do
+    notify({:task_marked, task_id, status, agent_id})
+    {:ok, %{"id" => task_id, "status" => status}}
+  end
+
   defp reply(key, default), do: {:ok, Process.get(key, default)}
   defp unique, do: System.unique_integer([:positive])
 

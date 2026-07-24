@@ -284,11 +284,15 @@ export interface ProductBriefPayload {
 
 export type StoryStatus = 'draft' | 'ready' | 'in_progress' | 'done';
 
+export type TaskStatus = 'todo' | 'in_progress' | 'done';
+
 export interface Task {
   id: string;
   storyId: string;
   title: string;
   description: string;
+  status: TaskStatus;
+  assignedTo: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -371,4 +375,11 @@ export interface Architecture {
   moduleMap: ModuleMap | null;
   adrs: AdrRef[];
   pendencies: ArchitecturePendency[];
+}
+
+// --- Execução (Fase 4a — dev agents) ---
+
+export interface ExecutionActivation {
+  sessionId: string;
+  modules: string[];
 }
