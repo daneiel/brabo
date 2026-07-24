@@ -163,3 +163,15 @@ export interface GitProviderContract {
   openPullRequest(input: OpenPullRequestInput): Promise<GitPullRequest>;
   mergePullRequest(input: MergePullRequestInput): Promise<GitPullRequest>;
 }
+
+// --- Credenciais de git do usuário (Fase 2, sessão 2) ---
+//
+// Só github/gitlab têm token de usuário (PAT) — 'local' não precisa de
+// credencial nenhuma. Ver docs/adr/0004-git-credential-registration.md.
+
+export type GitCredentialProviderName = Extract<GitProviderName, "github" | "gitlab">;
+
+// user_credentials guarda tanto chaves de LLM quanto tokens de git do
+// usuário, sob o mesmo mecanismo de envelope encryption — ver
+// docs/adr/0004-git-credential-registration.md.
+export type CredentialProviderName = LLMProviderName | GitCredentialProviderName;
