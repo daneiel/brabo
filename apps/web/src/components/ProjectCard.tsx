@@ -1,8 +1,9 @@
 import type { CSSProperties } from 'react';
-import type { GitProviderName } from '../lib/api-types';
+import type { GitProviderName, ProvisioningStatus } from '../lib/api-types';
 import type { AgentDef } from '../lib/agents';
 import { TokenMeter } from './TokenMeter';
 import { Badge } from './ui/Badge';
+import type { BadgeTone } from './ui/Badge';
 import { GitHubIcon, GitLabIcon, LocalRepoIcon } from './ui/icons';
 import styles from './ProjectCard.module.css';
 
@@ -18,9 +19,18 @@ const PROVIDER_LABEL: Record<GitProviderName, string> = {
   local: 'Repositório local',
 };
 
+const PROVISIONING_BADGE: Record<
+  Exclude<ProvisioningStatus, 'provisioned'>,
+  { tone: BadgeTone; label: string; pulse?: boolean }
+> = {
+  provisioning: { tone: 'warning', label: 'Provisionando', pulse: true },
+  provision_failed: { tone: 'danger', label: 'Falha' },
+};
+
 interface ProjectCardProps {
   name: string;
   provider: GitProviderName;
+  provisioningStatus?: ProvisioningStatus | null;
   agents: AgentDef[];
   tokensUsed: number;
   tokensLimit: number;
@@ -34,6 +44,7 @@ interface ProjectCardProps {
 export function ProjectCard({
   name,
   provider,
+  provisioningStatus,
   agents,
   tokensUsed,
   tokensLimit,
@@ -44,6 +55,10 @@ export function ProjectCard({
   onClick,
 }: ProjectCardProps) {
   const ProviderIcon = PROVIDER_ICON[provider];
+  const provisioningBadge =
+    provisioningStatus && provisioningStatus !== 'provisioned'
+      ? PROVISIONING_BADGE[provisioningStatus]
+      : null;
 
   return (
     <button type="button" className={styles.card} onClick={onClick}>
@@ -55,6 +70,16 @@ export function ProjectCard({
           <div className={styles.name}>{name}</div>
           <div className={styles.providerLabel}>{PROVIDER_LABEL[provider]}</div>
         </div>
+        {provisioningBadge && (
+          <Badge
+            tone={provisioningBadge.tone}
+            dot
+            pulse={provisioningBadge.pulse}
+            className={styles.unreadBadge}
+          >
+            {provisioningBadge.label}
+          </Badge>
+        )}
         {!!unreadCount && (
           <Badge tone="accent" className={styles.unreadBadge}>
             {unreadCount}

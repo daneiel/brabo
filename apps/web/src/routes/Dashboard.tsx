@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
-import { getProjectBudget, getRepository } from '../lib/api-client';
+import { getBootstrapStatus, getProjectBudget, getRepository } from '../lib/api-client';
 import { useCurrentWorkspace, useProjectLastActivity, useProjects } from '../lib/hooks';
 import { useProjectsUnread, useNotificationGroups } from '../lib/notifications';
 import { setLastSeenSeq } from '../lib/read-state';
@@ -25,19 +25,38 @@ function ProjectCardContainer({ project }: { project: Project }) {
     queryKey: ['budget', project.id],
     queryFn: () => getProjectBudget(project.id),
   });
+  const { data: bootstrap } = useQuery({
+    queryKey: ['bootstrap', project.id],
+    queryFn: () => getBootstrapStatus(project.id),
+    // Segue pollando enquanto provisiona pra o badge do card atualizar
+    // sozinho; para quando converge ou falha.
+    refetchInterval: (query) =>
+      query.state.data?.status === 'provisioning' ? 3000 : false,
+  });
+  const provisioningStatus = bootstrap?.status ?? null;
+  const provider = repository?.provider ?? 'local';
   const lastActivityText = useProjectLastActivity(project.id);
 
   return (
     <ProjectCard
       name={project.name}
-      provider={repository?.provider ?? 'local'}
+      provider={provider}
+      provisioningStatus={provisioningStatus}
       agents={AGENT_LIST}
       tokensUsed={budget ? budget.spentMicros / 1_000_000 : 0}
       tokensLimit={budget ? budget.limitMicros / 1_000_000 : 0}
       costBRL={0}
       costUSD={budget ? budget.spentMicros / 1_000_000 : 0}
       lastActivityText={lastActivityText}
-      onClick={() => navigate({ to: '/projects/$projectId', params: { projectId: project.id } })}
+      onClick={() =>
+        provisioningStatus === 'provision_failed'
+          ? navigate({
+              to: '/projects/$projectId/provisioning',
+              params: { projectId: project.id },
+              search: { provider },
+            })
+          : navigate({ to: '/projects/$projectId', params: { projectId: project.id } })
+      }
     />
   );
 }

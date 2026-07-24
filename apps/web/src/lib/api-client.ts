@@ -13,6 +13,8 @@ import type {
   ProjectMemberWithUser,
   ProposedAction,
   ProvisionedRepository,
+  ProvisionRepositoryResult,
+  RepoBootstrapStatus,
   ResolvedBinding,
   Role,
   Session,
@@ -114,9 +116,21 @@ export const provisionRepository = (
   projectId: string,
   provider: 'local' | 'github' | 'gitlab',
   input: { name: string; visibility: 'public' | 'private'; namespace?: string },
-) => post<ProvisionedRepository>(`/projects/${projectId}/git/${provider}/repository`, input);
+) =>
+  post<ProvisionRepositoryResult>(
+    `/projects/${projectId}/git/${provider}/repository`,
+    input,
+  );
 export const getRepository = (projectId: string) =>
   get<ProvisionedRepository | null>(`/projects/${projectId}/git/repository`);
+export const getBootstrapStatus = (projectId: string) =>
+  get<RepoBootstrapStatus>(`/projects/${projectId}/git/bootstrap`);
+// Cadastra um PAT de git do usuário — o backend TESTA a conexão antes de
+// persistir (422 = token inválido); nunca reexibe o token.
+export const registerGitCredential = (input: {
+  provider: 'github' | 'gitlab';
+  token: string;
+}) => post<UserCredentialMetadata>('/users/me/git-credentials', input);
 
 // --- Sessions ---
 
