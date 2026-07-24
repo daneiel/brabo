@@ -149,6 +149,36 @@ defmodule Engine.Sessions.EngineApiClient do
               {:ok, map()} | {:error, term()}
 
   @doc """
+  Abre o fluxo de gates de uma PR (Fase 4a) — o `DevAgentServer` chama logo
+  depois de `pr_open` executar com sucesso.
+  """
+  @callback open_gate(
+              project_id :: String.t(),
+              session_id :: String.t(),
+              task_id :: String.t(),
+              agent_id :: String.t()
+            ) ::
+              {:ok, map()} | {:error, term()}
+
+  @doc """
+  Parecer de um gate de PR (Fase 4a — QA/SecOps): retorna `{:ok, %{"nextAction"
+  => "correct"|"run_secops"|"done"|"blocked", "task" => task_map}}` — o
+  chamador (QaAgentServer/SecOpsAgentServer) decide o próximo passo a partir
+  de `nextAction`. `max_corrections` opcional (nil usa o default da api).
+  """
+  @callback record_gate_verdict(
+              project_id :: String.t(),
+              session_id :: String.t(),
+              task_id :: String.t(),
+              gate :: String.t(),
+              veredito :: String.t(),
+              resumo :: String.t(),
+              itens :: [String.t()],
+              max_corrections :: integer() | nil
+            ) ::
+              {:ok, map()} | {:error, term()}
+
+  @doc """
   Um turno de LLM pro harness (ToolLoop/ContextManager) — o engine nunca
   fala com provider direto. `messages`/`tools` no formato do contrato
   compartilhado; retorna `{:ok, %{"message" => ..., "usage" => ..., "error"
@@ -228,6 +258,31 @@ defmodule Engine.Sessions.EngineApiClient do
 
   def mark_task_blocked(project_id, session_id, task_id, reason, diagnosis, agent_id),
     do: impl().mark_task_blocked(project_id, session_id, task_id, reason, diagnosis, agent_id)
+
+  def open_gate(project_id, session_id, task_id, agent_id),
+    do: impl().open_gate(project_id, session_id, task_id, agent_id)
+
+  def record_gate_verdict(
+        project_id,
+        session_id,
+        task_id,
+        gate,
+        veredito,
+        resumo,
+        itens,
+        max_corrections \\ nil
+      ),
+      do:
+        impl().record_gate_verdict(
+          project_id,
+          session_id,
+          task_id,
+          gate,
+          veredito,
+          resumo,
+          itens,
+          max_corrections
+        )
 
   defp impl,
     do: Application.get_env(:engine, :engine_api_client, Engine.Sessions.EngineApiClient.Live)
@@ -364,6 +419,36 @@ defmodule Engine.Sessions.EngineApiClient.Live do
       agentId: agent_id,
       reason: reason,
       diagnosis: diagnosis
+    })
+  end
+
+  @impl true
+  def open_gate(project_id, session_id, task_id, agent_id) do
+    post_returning("/internal/sessions/#{session_id}/tasks/#{task_id}/gate/open", %{
+      projectId: project_id,
+      agentId: agent_id
+    })
+  end
+
+  @impl true
+  def record_gate_verdict(
+        project_id,
+        session_id,
+        task_id,
+        gate,
+        veredito,
+        resumo,
+        itens,
+        max_corrections
+      ) do
+    post_returning("/internal/sessions/#{session_id}/gates/verdict", %{
+      projectId: project_id,
+      taskId: task_id,
+      gate: gate,
+      veredito: veredito,
+      resumo: resumo,
+      itens: itens,
+      maxCorrections: max_corrections
     })
   end
 

@@ -11,11 +11,13 @@ defmodule Engine.Dev.ContextBuilder do
   alias Engine.Sessions.EngineApiClient
 
   @doc """
-  Busca o contexto da task na api e devolve `{:ok, %{task:, story:,
+  Busca o contexto da task na api e devolve `{:ok, %{task:, story:, adrs:,
   business_rules_units:, task_state_units:}}` — os dois últimos já no formato
   `%{id, content}` que `Engine.Harness.ContextBuilder`/`PromptAssembler`
-  consomem; `task`/`story` (mapas string-key crus da api) ficam disponíveis
-  pro `DevAgentServer` montar a mensagem inicial e o corpo do PR (título/DoD).
+  consomem; `task`/`story`/`adrs` (mapas string-key crus da api) ficam
+  disponíveis pro `DevAgentServer` montar a mensagem inicial e o corpo do PR
+  (título/DoD), e pro `SecOpsAgentServer` filtrar os ADRs
+  `securityRelevant` pro checklist do parecer.
   """
   def fetch(project_id, session_id, task_id) do
     case EngineApiClient.get_dev_context(project_id, session_id, task_id) do
@@ -31,6 +33,7 @@ defmodule Engine.Dev.ContextBuilder do
     %{
       task: task,
       story: story,
+      adrs: adrs,
       business_rules_units: business_rules_units(rules),
       task_state_units: task_state_units(task, story, adrs)
     }

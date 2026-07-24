@@ -18,6 +18,8 @@ defmodule Engine.Application do
       {Registry, keys: :unique, name: Engine.Sessions.Registry},
       # Dev agents (Fase 4a) — chave {project_id, agent_id}.
       {Registry, keys: :unique, name: Engine.Dev.Registry},
+      # Gates de PR (Fase 4a) — chave {project_id, "qa"|"secops"}.
+      {Registry, keys: :unique, name: Engine.Gates.Registry},
       # Dono da tabela ETS que cacheia o merge de instruções do harness
       # (Engine.Harness.InstructionFiles) — só detém a tabela, sem lógica.
       Engine.Harness.InstructionFiles.Cache,
@@ -31,6 +33,9 @@ defmodule Engine.Application do
       Engine.Agents.ArquitetoSupervisor,
       # Dev agents de execução (Fase 4a) — um por {project, agent_id}.
       Engine.Dev.DevAgentSupervisor,
+      # Gates de PR (Fase 4a) — um QAAgent + um SecOpsAgent por projeto.
+      Engine.Gates.QaAgentSupervisor,
+      Engine.Gates.SecOpsAgentSupervisor,
       # Reidrata sessões sobreviventes de um boot anterior ANTES do
       # Endpoint subir — nunca aceitar heartbeat de alguém reconectando
       # antes da sessão existir de novo.
