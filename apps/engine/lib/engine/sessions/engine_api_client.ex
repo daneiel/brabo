@@ -69,6 +69,19 @@ defmodule Engine.Sessions.EngineApiClient do
               {:ok, map()} | {:error, term()}
 
   @doc """
+  Ferramentas do PO (create_epic/create_story/create_task) — criam linhas de
+  backlog na api (nunca SQL direto). `fields` é o corpo camelCase da linha;
+  retornam `{:ok, %{"id" => ...}}` (a story também traz `"status"`) ou
+  `{:error, term}` (ex.: business_rule_id inválido → 4xx da api).
+  """
+  @callback create_epic(project_id :: String.t(), session_id :: String.t(), fields :: map()) ::
+              {:ok, map()} | {:error, term()}
+  @callback create_story(project_id :: String.t(), session_id :: String.t(), fields :: map()) ::
+              {:ok, map()} | {:error, term()}
+  @callback create_task(project_id :: String.t(), session_id :: String.t(), fields :: map()) ::
+              {:ok, map()} | {:error, term()}
+
+  @doc """
   Um turno de LLM pro harness (ToolLoop/ContextManager) — o engine nunca
   fala com provider direto. `messages`/`tools` no formato do contrato
   compartilhado; retorna `{:ok, %{"message" => ..., "usage" => ..., "error"
@@ -121,6 +134,15 @@ defmodule Engine.Sessions.EngineApiClient do
 
   def create_handoff(project_id, session_id, from_agent, to_agent, artifact_id),
     do: impl().create_handoff(project_id, session_id, from_agent, to_agent, artifact_id)
+
+  def create_epic(project_id, session_id, fields),
+    do: impl().create_epic(project_id, session_id, fields)
+
+  def create_story(project_id, session_id, fields),
+    do: impl().create_story(project_id, session_id, fields)
+
+  def create_task(project_id, session_id, fields),
+    do: impl().create_task(project_id, session_id, fields)
 
   defp impl,
     do: Application.get_env(:engine, :engine_api_client, Engine.Sessions.EngineApiClient.Live)
@@ -189,6 +211,30 @@ defmodule Engine.Sessions.EngineApiClient.Live do
       toAgent: to_agent,
       artifactId: artifact_id
     })
+  end
+
+  @impl true
+  def create_epic(project_id, session_id, fields) do
+    post_returning(
+      "/internal/sessions/#{session_id}/epics",
+      Map.put(fields, :projectId, project_id)
+    )
+  end
+
+  @impl true
+  def create_story(project_id, session_id, fields) do
+    post_returning(
+      "/internal/sessions/#{session_id}/stories",
+      Map.put(fields, :projectId, project_id)
+    )
+  end
+
+  @impl true
+  def create_task(project_id, session_id, fields) do
+    post_returning(
+      "/internal/sessions/#{session_id}/tasks",
+      Map.put(fields, :projectId, project_id)
+    )
   end
 
   @impl true

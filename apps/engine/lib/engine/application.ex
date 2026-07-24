@@ -22,8 +22,10 @@ defmodule Engine.Application do
       Engine.Sessions.Monitor,
       Engine.Sessions.SessionSupervisor,
       # Agentes conversacionais por sessão (Fase 3b) — um CriativoServer por
-      # sessão em ideação, iniciado por comando do usuário via a api.
+      # sessão em ideação, iniciado por comando do usuário via a api; um
+      # PoServer por sessão, ativado pelo handoff aceito.
       Engine.Agents.CriativoSupervisor,
+      Engine.Agents.PoSupervisor,
       # Reidrata sessões sobreviventes de um boot anterior ANTES do
       # Endpoint subir — nunca aceitar heartbeat de alguém reconectando
       # antes da sessão existir de novo.
