@@ -12,48 +12,61 @@ e pipeline de aprovação de ações com autoridade final do usuário.
   pipeline de proposed_actions + permissions.json, motor Elixir/OTP com
   supervisão e evento de término.
 - FASE 2 — CONCLUÍDA: GitProvider (Local/GitHub/GitLab) com suite de
-  contrato e capabilities, credenciais de git criptografadas,
-  provisionamento com bootstrap de Gitflow idempotente e retomável via
-  pipeline de proposed_actions, wizard de novo projeto com progresso
+  contrato e capabilities, credenciais criptografadas, bootstrap de
+  Gitflow idempotente e retomável via pipeline, wizard com progresso
   ao vivo.
-- Não refatore o que está pronto sem pedido explícito; a Fase 3
+- FASE 3 — CONCLUÍDA: Harness (PromptAssembler, ToolLoop,
+  ContextManager, InstructionFiles, Hooks) com ferramentas e EchoAgent;
+  handoffs explícitos; agentes Criativo (business_rules +
+  product_brief), PO (backlog com DoD/DoR validados no domínio e
+  rastreabilidade regra→story) e Arquiteto (ADRs via PR + module_map
+  com validação cruzada de stories).
+- Não refatore o que está pronto sem pedido explícito; a Fase 4
   CONSOME essas fundações.
 
-## Escopo da FASE 3 (ativa — não implemente nada além disso)
+## Escopo da FASE 4 (ativa — não implemente nada além disso)
 
-### 3a — Harness de agentes (fundação; implementar ANTES de qualquer agente)
-1. Cinco behaviours Elixir no apps/engine, com contratos explícitos:
-   PromptAssembler (prompt em camadas ordenadas com orçamento de tokens
-   por camada e corte determinístico), ToolLoop (loop de tool use via
-   roteador de LLM da api, streaming, limite de iterações),
-   ContextManager (compactação acima de X% via modelo barato com binding
-   scope "context-manager", evento context.compacted com antes/depois em
-   tokens, itens pinned preservados), InstructionFiles (AGENTS.md do
-   workspace + arquivo de agente do banco, merge com precedência
-   documentada), Hooks (pre_tool_use, post_tool_use, session_start,
-   session_end; terminal e proposed_actions plugam como hooks).
-2. O engine NUNCA fala com provider de LLM direto: toda chamada passa
-   pelo endpoint da api (metering e budget obrigatórios).
-3. Ferramentas iniciais do ToolLoop: read_file, write_file (via
-   proposed_action fora de whitelist de paths), terminal (via pipeline),
-   search_workspace, emit_artifact (artefato tipado no event log).
-4. EchoAgent de validação exercitando o ciclo completo.
+### 4a — Agentes de execução (dev, QA, SecOps, Infra)
+1. Instanciação dinâmica: ao ativar a fase de execução de um projeto,
+   criar um subagente dev por módulo do module_map (dev-<modulo>),
+   cada um como processo supervisionado próprio com harness e
+   instruções próprias. Paralelização adicional é SUGERIDA via
+   notificação com aprovação de um clique — nunca criada sozinha.
+2. Isolamento git: cada dev em git worktree próprio, branch feature/*
+   conforme taxonomia; commits com identidade "dev-<modulo>[bot]" e
+   usuário como co-author. Commit/push/PR via pipeline respeitando
+   autonomia por agente.
+3. Ciclo de tarefa do dev: pega task ready (respeitando DoR) →
+   implementa no worktree → roda testes via ferramenta terminal (rtk
+   quando disponível) → abre PR referenciando a story → atualiza o
+   backlog.
+4. QA: gate de PR — roda a suite, produz matriz regra→teste como
+   artefato, aprova ou devolve com parecer estruturado no event log e
+   comentário na PR.
+5. SecOps: gate após o QA — checklist derivado dos ADRs + scanners do
+   container (semgrep, gitleaks); parecer estruturado, mesmo fluxo.
+6. Infra: lê module_map e ADRs de infraestrutura e propõe via PRs os
+   artefatos (Dockerfiles, compose, manifests, pipelines) — sempre
+   propondo, nunca aplicando em ambiente.
+7. UI: painel do time com status ao vivo real (ocioso/trabalhando/
+   aguardando aprovação, tarefa atual, branch) via canais Phoenix.
 
-### 3b — Agentes de produto (só após 3a verde)
-5. Handoffs explícitos: tabela handoffs {from_agent, to_agent,
-   artifact_id, status}; agente só inicia com handoff recebido — agentes
-   NUNCA conversam livremente entre si.
-6. Criativo: ideação com o usuário; emite artefatos business_rule ao
-   longo da conversa e product_brief quando o usuário confirmar
-   prontidão; a cada rodada provoca "o que falta para começar?".
-7. PO: backlog em tabelas próprias (epics, stories, tasks) com RF/RNF,
-   regra de negócio vinculada, DoD e DoR obrigatórios — story sem
-   DoD/DoR não sai de draft (validação no domínio, não só no prompt).
-8. Arquiteto: ADRs commitados em docs/adr/ do repo DO PROJETO via
-   pipeline git (PR), e artefato module_map (módulos, stacks,
-   dependências); valida que toda story referencia módulo existente.
-9. UI: tab Backlog (épicos → histórias → tarefas com DoD/DoR),
-   artefatos do Arquiteto na visão geral, divisores de handoff no chat.
+### 4b — Psicólogo real e Anamnese (só após 4a verde)
+8. Psicólogo: consumer de session.closed (qualquer causa); lê event
+   log + regras de negócio + hipóteses anteriores e produz via LLM
+   hipóteses {agente_alvo, observação, hipótese, sugestão, evidência
+   (refs a event ids), confiança}; análise adicional de causa em
+   términos anormais; idempotente por sessão.
+9. Anamnese: jobs periódicos sobre o event log mantêm
+   proficiency_profile por usuário e competência com evidências;
+   propõe patches nos arquivos de agente como proposed_action de tipo
+   instruction_patch (usuário vê o diff e aprova/nega); patches
+   versionados com rollback de um clique.
+10. Loop fechado: hipótese do Psicólogo aceita pelo usuário vira input
+    priorizado da Anamnese.
+11. UI: seção Insights (hipóteses com evidência navegável), perfil de
+    proficiência com os porquês, histórico de versões por arquivo de
+    agente com diff e rollback.
 
 ## Stack (decidida — não proponha alternativas)
 - `apps/api`: NestJS 11 + Drizzle ORM + PostgreSQL 16 + pgvector
@@ -74,6 +87,10 @@ e pipeline de aprovação de ações com autoridade final do usuário.
   proposed_action e respeita permissions.json; deny sempre vence allow.
 - Agentes rodam SEMPRE dentro de um Harness; nenhuma chamada de LLM ou
   ferramenta fora dele.
+- Merge em branch protegida (dev/qa/rc/main) é SEMPRE manual do
+  usuário — sem opção de automatizar, garantido por teste.
+- Commits de agentes usam identidade "<agente>[bot]" com o usuário
+  como co-author.
 - Testes: vitest (api/web), ExUnit (engine). Nenhuma feature sem teste do
   caminho feliz + 1 caso de falha. Providers de git validados pela suite
   de contrato única.
@@ -85,8 +102,7 @@ e pipeline de aprovação de ações com autoridade final do usuário.
 
 ## O que NÃO fazer
 - Não usar Redis (filas ficam no Postgres via Oban)
-- Não implementar agentes de execução (fase 4): devs, infra, QA, secops,
-  Psicólogo real, Anamnese, instanciação dinâmica por module_map
+- Não implementar deploy em produção/Kubernetes (fase 5)
 - Não implementar Bitbucket nem GenericGitProvider
 - Não instalar libs sem justificar no plano
-- Não refatorar código das Fases 1–2 fora do necessário para a Fase 3
+- Não refatorar código das Fases 1–3 fora do necessário para a Fase 4
