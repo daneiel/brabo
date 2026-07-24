@@ -4,6 +4,7 @@ import type {
   ActionType,
   Budget,
   BudgetPolicy,
+  Handoff,
   ModelBindingScope,
   ModelsByCategory,
   Page,
@@ -153,6 +154,27 @@ export const listSessionEvents = (
   get<Page<SessionEvent>>(
     `/projects/${projectId}/sessions/${sessionId}/events${qs(opts)}`,
   );
+
+// --- Agentes conversacionais / handoffs (Fase 3b) ---
+
+export const startAgent = (projectId: string, sessionId: string, agent: string) =>
+  post<{ agent: string; status: string }>(
+    `/projects/${projectId}/sessions/${sessionId}/agents/${agent}/start`,
+  );
+export const sendAgentMessage = (
+  projectId: string,
+  sessionId: string,
+  agent: string,
+  text: string,
+) =>
+  post<{ ok: true }>(
+    `/projects/${projectId}/sessions/${sessionId}/agents/${agent}/message`,
+    { text },
+  );
+export const confirmReadiness = (projectId: string, sessionId: string) =>
+  post<{ ok: true }>(`/projects/${projectId}/sessions/${sessionId}/readiness`);
+export const listHandoffs = (projectId: string, sessionId: string) =>
+  get<Handoff[]>(`/projects/${projectId}/sessions/${sessionId}/handoffs`);
 
 // --- Proposed actions ---
 

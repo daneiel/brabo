@@ -3,19 +3,27 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   approveAction,
   approveAlwaysAction,
+  confirmReadiness,
   denyAction,
   getProject,
   getSession,
   getSessionBudget,
   getSessionModelBinding,
   listModels,
+  sendAgentMessage,
   setSessionModelBinding,
+  startAgent,
   transitionSession,
 } from '../lib/api-client';
 import { streamChatMessage } from '../lib/chat-stream';
+import { connectSessionHeartbeat } from '../lib/session-channel';
 import { useSessionEvents, usePendingActions } from '../lib/hooks';
 import { currentUser } from '../lib/keycloak';
-import type { ProposedAction } from '../lib/api-types';
+import type {
+  BusinessRulePayload,
+  ProposedAction,
+  SessionEvent,
+} from '../lib/api-types';
 import { useToast } from '../components/ui/ToastProvider';
 import { TokenMeter } from '../components/TokenMeter';
 import { ModelPicker } from '../components/ModelPicker';
@@ -59,6 +67,38 @@ export function SessionPage({ projectId, sessionId }: SessionPageProps) {
   const actionsQuery = usePendingActions(projectId, sessionId, 3000);
   const actions = actionsQuery.data?.items ?? [];
 
+  // O Criativo está ativo se houve um agent.activated pra ele nesta sessão.
+  const criativoActive = useMemo(
+    () =>
+      events.some(
+        (e) =>
+          e.type === 'agent.activated' &&
+          (e.payload as { agent?: string })?.agent === 'criativo',
+      ),
+    [events],
+  );
+
+  // Canal Phoenix: recebe os deltas do Criativo (streaming token-a-token) e o
+  // fim do turno. A persistência (agent.response + artefatos) chega pelo poll.
+  useEffect(() => {
+    if (session?.status !== 'active') return;
+    const disconnect = connectSessionHeartbeat(sessionId, {
+      onAgentDelta: (text) => {
+        setStreaming(true);
+        setStreamingText((t) => t + text);
+      },
+      onAgentDone: () => {
+        setStreaming(false);
+        setStreamingText('');
+        setOptimisticUser(null);
+        queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
+        queryClient.invalidateQueries({ queryKey: ['session-handoffs', projectId, sessionId] });
+        queryClient.invalidateQueries({ queryKey: ['session-budget', projectId, sessionId] });
+      },
+    });
+    return disconnect;
+  }, [session?.status, sessionId, projectId, queryClient]);
+
   const { data: modelsByCategory } = useQuery({ queryKey: ['models'], queryFn: listModels });
   const { data: resolvedBinding } = useQuery({
     queryKey: ['session-model-binding', projectId, sessionId],
@@ -100,9 +140,26 @@ export function SessionPage({ projectId, sessionId }: SessionPageProps) {
             </div>
           ),
         });
+      } else if (event.type === 'handoff.offered') {
+        const payload = event.payload as { toAgent?: string };
+        items.push({
+          seq: event.seq,
+          node: (
+            <div className={styles.handoffDivider} key={event.id}>
+              <span className={styles.handoffPill}>
+                handoff → {payload?.toAgent ?? 'PO'}
+              </span>
+            </div>
+          ),
+        });
       } else if (event.type === 'agent.response') {
-        const payload = event.payload as { text?: unknown };
-        const text = typeof payload?.text === 'string' ? payload.text : '';
+        const payload = event.payload as { content?: unknown; text?: unknown };
+        const text =
+          typeof payload?.content === 'string'
+            ? payload.content
+            : typeof payload?.text === 'string'
+              ? payload.text
+              : '';
         items.push({
           seq: event.seq,
           node: (
@@ -162,6 +219,27 @@ export function SessionPage({ projectId, sessionId }: SessionPageProps) {
     queryClient.invalidateQueries({ queryKey: ['sessions', projectId] });
   }
 
+  async function handleStartIdeation() {
+    try {
+      await startAgent(projectId, sessionId, 'criativo');
+      await queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
+    } catch {
+      showToast({ title: 'Erro', message: 'Não foi possível iniciar a ideação', tone: 'danger' });
+    }
+  }
+
+  async function handleReadiness() {
+    try {
+      setStreaming(true);
+      setStreamingText('');
+      await confirmReadiness(projectId, sessionId);
+      // O product_brief + handoff chegam via o canal (agent.done) + poll.
+    } catch {
+      setStreaming(false);
+      showToast({ title: 'Erro', message: 'Não foi possível confirmar prontidão', tone: 'danger' });
+    }
+  }
+
   async function handleSend() {
     const text = draft.trim();
     if (!text || streaming || session?.status !== 'active') return;
@@ -170,6 +248,20 @@ export function SessionPage({ projectId, sessionId }: SessionPageProps) {
     setOptimisticUser(text);
     setStreaming(true);
     setStreamingText('');
+
+    // Sessão com o Criativo ativo: o turno roda no engine (harness); os deltas
+    // e o fim chegam pelo canal Phoenix. Senão, chat humano stateless via SSE.
+    if (criativoActive) {
+      try {
+        await sendAgentMessage(projectId, sessionId, 'criativo', text);
+      } catch {
+        setStreaming(false);
+        setOptimisticUser(null);
+        showToast({ title: 'Erro', message: 'Não foi possível enviar a mensagem', tone: 'danger' });
+      }
+      return;
+    }
+
     const controller = new AbortController();
     abortRef.current = controller;
 
@@ -235,6 +327,11 @@ export function SessionPage({ projectId, sessionId }: SessionPageProps) {
             costBRL={0}
             costUSD={budget.spentMicros / 1_000_000}
           />
+        )}
+        {isActive && !criativoActive && (
+          <Button variant="secondary" onClick={handleStartIdeation}>
+            Iniciar ideação
+          </Button>
         )}
         <Button variant="ghost" onClick={handleClose} disabled={!session || session.status === 'closed'}>
           Encerrar
@@ -303,6 +400,11 @@ export function SessionPage({ projectId, sessionId }: SessionPageProps) {
               <Button onClick={handleSend} disabled={streaming || !draft.trim()}>
                 Enviar
               </Button>
+              {criativoActive && (
+                <Button variant="success" onClick={handleReadiness} disabled={streaming}>
+                  Estou pronto para produzir
+                </Button>
+              )}
             </div>
           ) : (
             <div className={styles.activatePrompt}>
@@ -318,14 +420,15 @@ export function SessionPage({ projectId, sessionId }: SessionPageProps) {
           )}
         </div>
 
-        {asideOpen && <ContextAside actions={actionsQuery.data?.items ?? []} />}
+        {asideOpen && <ContextAside actions={actionsQuery.data?.items ?? []} events={events} />}
       </div>
     </div>
   );
 }
 
-function ContextAside({ actions }: { actions: ProposedAction[] }) {
+function ContextAside({ actions, events }: { actions: ProposedAction[]; events: SessionEvent[] }) {
   const prActions = actions.filter((a) => a.actionType === 'pr_open');
+  const businessRules = events.filter((e) => e.type === 'artifact.business_rule');
   const filesTouched = actions
     .filter((a) => a.actionType === 'git_commit' || a.actionType === 'git_push')
     .flatMap((a) => {
@@ -335,6 +438,26 @@ function ContextAside({ actions }: { actions: ProposedAction[] }) {
 
   return (
     <aside className={styles.aside}>
+      <div className={styles.asideSection}>
+        <div className={styles.asideHeader}>Regras de negócio</div>
+        {businessRules.length === 0 ? (
+          <div className={styles.asideEmpty}>Nada ainda.</div>
+        ) : (
+          businessRules.map((e) => {
+            const rule = e.payload as BusinessRulePayload;
+            return (
+              <div key={e.id} className={styles.ruleCard}>
+                <div className={styles.ruleTitle}>{rule.title}</div>
+                <div className={styles.ruleDescription}>{rule.description}</div>
+                <div className={styles.ruleOrigin}>
+                  origem: {Array.isArray(rule.origin) ? rule.origin.length : 0} ref(s)
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
       <div className={styles.asideSection}>
         <div className={styles.asideHeader}>Artefatos gerados</div>
         {prActions.length === 0 ? (
@@ -346,11 +469,6 @@ function ContextAside({ actions }: { actions: ProposedAction[] }) {
             </div>
           ))
         )}
-      </div>
-
-      <div className={styles.asideSection}>
-        <div className={styles.asideHeader}>Decisões registradas</div>
-        <div className={styles.asideEmpty}>Nada ainda.</div>
       </div>
 
       <div className={styles.asideSection}>

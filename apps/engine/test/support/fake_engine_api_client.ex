@@ -32,6 +32,58 @@ defmodule Engine.Sessions.FakeEngineApiClient do
   end
 
   @impl true
+  def append_event_returning(project_id, session_id, event) do
+    notify({:event_appended, project_id, session_id, event})
+    id = "evt-#{System.unique_integer([:positive])}"
+    {:ok, %{"id" => id, "seq" => 0, "type" => Map.get(event, :type)}}
+  end
+
+  @impl true
+  def list_events(_project_id, _session_id) do
+    {:ok, Process.get(:fake_events, [])}
+  end
+
+  @impl true
+  def create_handoff(project_id, session_id, from_agent, to_agent, artifact_id) do
+    notify({:handoff_created, project_id, session_id, from_agent, to_agent, artifact_id})
+
+    {:ok,
+     Process.get(:fake_handoff, %{
+       "id" => "ho-1",
+       "fromAgent" => from_agent,
+       "toAgent" => to_agent,
+       "artifactId" => artifact_id,
+       "status" => "offered"
+     })}
+  end
+
+  @impl true
+  def llm_turn_stream(_project_id, _session_id, agent, messages, tools, on_delta) do
+    notify({:llm_turn_stream, agent, messages, tools})
+
+    # Deltas scriptados (opcional) — rebroadcastados pelo on_delta.
+    for delta <- Process.get(:fake_deltas, []), do: on_delta.(delta)
+
+    resp =
+      cond do
+        r = Process.get(:fake_llm_always) ->
+          r
+
+        true ->
+          case Process.get(:fake_llm_turns, []) do
+            [r | rest] ->
+              Process.put(:fake_llm_turns, rest)
+              r
+
+            [] ->
+              final_response()
+          end
+      end
+
+    {:ok, resp}
+  end
+
+  @impl true
   def llm_turn(_project_id, _session_id, agent, messages, tools) do
     notify({:llm_turn, agent, messages, tools})
 

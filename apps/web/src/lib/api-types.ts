@@ -249,3 +249,33 @@ export type ChatSseEvent =
     }
   | { type: 'error'; message: string }
   | { type: 'metering_failed'; message: string };
+
+// --- Agentes conversacionais / handoffs (Fase 3b) ---
+
+export type HandoffStatus = 'offered' | 'accepted' | 'completed' | 'rejected';
+
+export interface Handoff {
+  id: string;
+  sessionId: string;
+  projectId: string;
+  fromAgent: string;
+  toAgent: string;
+  artifactId: string | null;
+  status: HandoffStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Payload do session_event `artifact.business_rule` emitido pelo Criativo.
+export interface BusinessRulePayload {
+  title: string;
+  description: string;
+  origin: unknown[];
+}
+
+// Payload do session_event `artifact.product_brief`.
+export interface ProductBriefPayload {
+  title: string;
+  summary: string;
+  rules: unknown[];
+}
