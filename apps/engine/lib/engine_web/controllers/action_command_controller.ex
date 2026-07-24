@@ -1,7 +1,7 @@
 defmodule EngineWeb.ActionCommandController do
   use EngineWeb, :controller
 
-  alias Engine.Actions.TerminalExecutor
+  alias Engine.Actions.{TerminalExecutor, GitExecutor}
 
   # Chaves de resposta em camelCase explícito — nunca repassa o mapa
   # snake_case interno direto pro Jason (mesmo cuidado já levado com
@@ -20,5 +20,20 @@ defmodule EngineWeb.ActionCommandController do
       compressedBytes: result.compressed_bytes,
       estimatedTokensCompressed: result.estimated_tokens_compressed
     })
+  end
+
+  # Fase 4a: git_commit/git_push no worktree do dev agent (a api roteia pra cá).
+  def execute_git(conn, %{"type" => "git_commit", "payload" => payload}) do
+    case GitExecutor.commit(payload) do
+      {:ok, %{sha: sha, branch: branch}} -> json(conn, %{sha: sha, branch: branch})
+      {:error, out} -> conn |> put_status(422) |> json(%{error: to_string(out)})
+    end
+  end
+
+  def execute_git(conn, %{"type" => "git_push", "payload" => payload}) do
+    case GitExecutor.push(payload) do
+      {:ok, %{branch: branch}} -> json(conn, %{branch: branch})
+      {:error, out} -> conn |> put_status(422) |> json(%{error: to_string(out)})
+    end
   end
 end

@@ -7,6 +7,7 @@ import type {
   BudgetPolicy,
   CoverageReport,
   Epic,
+  ExecutionActivation,
   Handoff,
   ModelBindingScope,
   ModelsByCategory,
@@ -195,6 +196,20 @@ export const getCoverage = (projectId: string) =>
   get<CoverageReport>(`/projects/${projectId}/coverage`);
 export const getArchitecture = (projectId: string) =>
   get<Architecture>(`/projects/${projectId}/architecture`);
+
+// --- Execução (Fase 4a) ---
+
+export const activateExecution = (projectId: string) =>
+  post<ExecutionActivation>(`/projects/${projectId}/execution/activate`);
+export const acceptParallelization = (
+  projectId: string,
+  sessionId: string,
+  module: string,
+) =>
+  post<{ ok: true }>(
+    `/projects/${projectId}/sessions/${sessionId}/execution/parallelize`,
+    { module },
+  );
 
 // --- Proposed actions ---
 
