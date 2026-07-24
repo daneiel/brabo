@@ -166,9 +166,13 @@ export interface ResolvedBinding {
   origin: ModelBindingScope;
 }
 
+// user_credentials guarda tanto chaves de LLM quanto tokens de git do
+// usuário (github/gitlab) — o endpoint de listagem mistura os dois.
+export type CredentialProviderName = LLMProviderName | 'github' | 'gitlab';
+
 export interface UserCredentialMetadata {
   id: string;
-  provider: 'anthropic' | 'openai';
+  provider: CredentialProviderName;
   createdAt: string;
   updatedAt: string;
 }
@@ -198,6 +202,38 @@ export interface ProvisionedRepository {
   provisionedBy: string;
   createdAt: string;
   updatedAt: string;
+}
+
+// --- Bootstrap de Gitflow — espelha
+// apps/api/src/domain/git/repo-bootstrap.entity.ts +
+// get-repo-bootstrap-status.use-case.ts. A ordem aqui NÃO é a de execução
+// (ver BOOTSTRAP_STEPS em lib/bootstrap.ts pra ordem real). ---
+export type BootstrapStepName =
+  | 'commit_pr_template'
+  | 'commit_branching_policy'
+  | 'create_dev_branch'
+  | 'create_qa_branch'
+  | 'create_rc_branch'
+  | 'protect_branches';
+
+export type BootstrapStepStatus = 'pending' | 'running' | 'done' | 'failed';
+
+export type ProvisioningStatus =
+  | 'provisioning'
+  | 'provisioned'
+  | 'provision_failed';
+
+export interface RepoBootstrapStatus {
+  status: ProvisioningStatus | null;
+  sessionId: string | null;
+  failedStep: BootstrapStepName | null;
+  lastError: string | null;
+  attempts: number;
+}
+
+export interface ProvisionRepositoryResult {
+  repository: ProvisionedRepository;
+  bootstrap: { step: BootstrapStepName; status: BootstrapStepStatus };
 }
 
 // --- Chat SSE — espelha ChatSseEvent de
