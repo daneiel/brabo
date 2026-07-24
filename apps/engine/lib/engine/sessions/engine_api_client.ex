@@ -121,6 +121,34 @@ defmodule Engine.Sessions.EngineApiClient do
               {:ok, map()} | {:error, term()}
 
   @doc """
+  Contexto rico da task (Fase 4a) — story completa, regras de negócio e ADRs
+  do projeto. Alimenta as camadas `regras_negocio`/`estado_tarefa` do
+  DevAgent (`Engine.Dev.ContextBuilder`).
+  """
+  @callback get_dev_context(
+              project_id :: String.t(),
+              session_id :: String.t(),
+              task_id :: String.t()
+            ) ::
+              {:ok, map()} | {:error, term()}
+
+  @doc """
+  Devolve a task pra `ready` com diagnóstico (Fase 4a) — o `DevAgentServer`
+  chama quando não consegue concluir (bloqueio explícito, limite de
+  iterações, ou orçamento de tokens excedido). Nunca deixa a task presa em
+  `in_progress` sem desfecho.
+  """
+  @callback mark_task_blocked(
+              project_id :: String.t(),
+              session_id :: String.t(),
+              task_id :: String.t(),
+              reason :: String.t(),
+              diagnosis :: String.t(),
+              agent_id :: String.t()
+            ) ::
+              {:ok, map()} | {:error, term()}
+
+  @doc """
   Um turno de LLM pro harness (ToolLoop/ContextManager) — o engine nunca
   fala com provider direto. `messages`/`tools` no formato do contrato
   compartilhado; retorna `{:ok, %{"message" => ..., "usage" => ..., "error"
@@ -194,6 +222,12 @@ defmodule Engine.Sessions.EngineApiClient do
 
   def mark_task(project_id, session_id, task_id, status, agent_id),
     do: impl().mark_task(project_id, session_id, task_id, status, agent_id)
+
+  def get_dev_context(project_id, session_id, task_id),
+    do: impl().get_dev_context(project_id, session_id, task_id)
+
+  def mark_task_blocked(project_id, session_id, task_id, reason, diagnosis, agent_id),
+    do: impl().mark_task_blocked(project_id, session_id, task_id, reason, diagnosis, agent_id)
 
   defp impl,
     do: Application.get_env(:engine, :engine_api_client, Engine.Sessions.EngineApiClient.Live)
@@ -321,6 +355,34 @@ defmodule Engine.Sessions.EngineApiClient.Live do
       agentId: agent_id,
       status: status
     })
+  end
+
+  @impl true
+  def mark_task_blocked(project_id, session_id, task_id, reason, diagnosis, agent_id) do
+    post_returning("/internal/sessions/#{session_id}/tasks/#{task_id}/block", %{
+      projectId: project_id,
+      agentId: agent_id,
+      reason: reason,
+      diagnosis: diagnosis
+    })
+  end
+
+  @impl true
+  def get_dev_context(project_id, session_id, task_id) do
+    url =
+      api_url() <>
+        "/internal/sessions/#{session_id}/dev-context?projectId=#{project_id}&taskId=#{task_id}"
+
+    case Req.get(url, headers: [{"authorization", "Bearer #{token()}"}]) do
+      {:ok, %Req.Response{status: status, body: body}} when status in 200..299 ->
+        {:ok, body}
+
+      {:ok, %Req.Response{status: status, body: resp}} ->
+        {:error, {status, resp}}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
   end
 
   @impl true

@@ -1,6 +1,12 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { AGENT_LIST } from '../lib/agents';
-import { useArchitecture, useLatestSession, usePendingActions, useSessionEvents } from '../lib/hooks';
+import {
+  useArchitecture,
+  useBacklog,
+  useLatestSession,
+  usePendingActions,
+  useSessionEvents,
+} from '../lib/hooks';
 import { activateExecution, acceptParallelization } from '../lib/api-client';
 import { AgentCard, type AgentStatus } from '../components/AgentCard';
 import { ActivityFeed } from '../components/ActivityFeed';
@@ -9,6 +15,11 @@ import { Button } from '../components/ui/Button';
 import { useToast } from '../components/ui/ToastProvider';
 import type { Architecture, ProposedAction, SessionEvent } from '../lib/api-types';
 import styles from './ProjectOverviewTab.module.css';
+
+// tokensSpentMicros é custo em micro-USD (mesma unidade de budgets/token_usage).
+function formatMicros(micros: number): string {
+  return `US$ ${(micros / 1_000_000).toFixed(4)}`;
+}
 
 interface ProjectOverviewTabProps {
   projectId: string;
@@ -73,11 +84,21 @@ function ExecutionSection({
 }) {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
+  const { data: epics } = useBacklog(projectId);
 
   const activated = events.some((e) => e.type === 'execution.activated');
 
-  // Dev agents a partir do event log (dev.started/dev.working).
-  const agents = new Map<string, { module: string; branch?: string; taskId?: string }>();
+  // Dev agents a partir do event log: módulo/branch/task (dev.started/
+  // dev.working) + iteração/custo ao vivo do ÚLTIMO agent.response do agente
+  // (emitido pelo ToolLoop a cada turno de LLM).
+  interface AgentProgress {
+    module: string;
+    branch?: string;
+    taskId?: string;
+    iteration?: number;
+    tokensSpentMicros?: number;
+  }
+  const agents = new Map<string, AgentProgress>();
   for (const e of events) {
     const p = e.payload as { agentId?: string; module?: string; branch?: string; taskId?: string };
     if (e.type === 'dev.started' && p.agentId) {
@@ -85,12 +106,29 @@ function ExecutionSection({
     }
     if (e.type === 'dev.working' && p.agentId) {
       agents.set(p.agentId, {
+        ...agents.get(p.agentId),
         module: agents.get(p.agentId)?.module ?? '',
         branch: p.branch,
         taskId: p.taskId,
       });
     }
+    if (e.type === 'agent.response' && agents.has(e.actor.id)) {
+      const rp = e.payload as { iteration?: number; tokensSpentMicros?: number };
+      agents.set(e.actor.id, {
+        ...(agents.get(e.actor.id) as AgentProgress),
+        iteration: rp.iteration,
+        tokensSpentMicros: rp.tokensSpentMicros,
+      });
+    }
   }
+
+  const blockedTasks = (epics ?? []).flatMap((epic) =>
+    epic.stories.flatMap((story) =>
+      story.tasks
+        .filter((t) => t.blocked)
+        .map((t) => ({ id: t.id, title: t.title, storyTitle: story.title, blockedReason: t.blockedReason })),
+    ),
+  );
 
   // Sugestões de paralelização ainda não aceitas.
   const acceptedModules = new Set(
@@ -157,9 +195,35 @@ function ExecutionSection({
                   <div className={styles.moduleName}>{agentId}</div>
                   <div className={styles.moduleStack}>módulo: {a.module}</div>
                   {a.branch && <div className={styles.depChip}>{a.branch}</div>}
+                  {a.iteration !== undefined && (
+                    <div className={styles.moduleResp}>
+                      iteração {a.iteration} · {formatMicros(a.tokensSpentMicros ?? 0)}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
+          )}
+
+          {blockedTasks.length > 0 && (
+            <>
+              <div className={styles.archLabel}>
+                Tasks bloqueadas
+                <Badge tone="danger">{blockedTasks.length}</Badge>
+              </div>
+              <ul className={styles.pendList}>
+                {blockedTasks.map((t) => (
+                  <li key={t.id} className={styles.pendItem}>
+                    <span className={styles.pendTitle}>
+                      {t.title} <span className={styles.moduleStack}>({t.storyTitle})</span>
+                    </span>
+                    <span className={styles.pendReason}>
+                      {t.blockedReason ?? 'sem diagnóstico'}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </>
           )}
 
           {suggestions.map((module) => (

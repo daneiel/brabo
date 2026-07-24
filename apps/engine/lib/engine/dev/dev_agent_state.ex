@@ -21,18 +21,37 @@ defmodule Engine.Dev.DevAgentState do
     field :task_id, :string
     field :worktree_path, :string
     field :status, :string, default: "working"
+    field :task_budget_micros, :integer
 
     timestamps(type: :utc_datetime_usec)
   end
 
-  @fields [:project_id, :agent_id, :module, :session_id, :task_id, :worktree_path, :status]
+  @fields [
+    :project_id,
+    :agent_id,
+    :module,
+    :session_id,
+    :task_id,
+    :worktree_path,
+    :status,
+    :task_budget_micros
+  ]
 
   def upsert!(attrs) do
     %__MODULE__{}
     |> cast(attrs, @fields)
     |> Repo.insert!(
       on_conflict:
-        {:replace, [:module, :session_id, :task_id, :worktree_path, :status, :updated_at]},
+        {:replace,
+         [
+           :module,
+           :session_id,
+           :task_id,
+           :worktree_path,
+           :status,
+           :task_budget_micros,
+           :updated_at
+         ]},
       conflict_target: [:project_id, :agent_id]
     )
   end

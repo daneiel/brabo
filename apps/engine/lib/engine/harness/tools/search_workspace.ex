@@ -4,6 +4,7 @@ defmodule Engine.Harness.Tools.SearchWorkspace do
   @behaviour Engine.Harness.Tool
 
   alias Engine.Harness.WorkspaceFiles
+  alias Engine.Actions.Workspace
 
   @impl true
   def spec do
@@ -25,7 +26,7 @@ defmodule Engine.Harness.Tools.SearchWorkspace do
 
   @impl true
   def run(%{"query" => query}, ctx) do
-    hits = WorkspaceFiles.search(ctx.project_id, query)
+    hits = WorkspaceFiles.search(root(ctx), query)
 
     if hits == [] do
       {:ok, "nenhum resultado para \"#{query}\""}
@@ -36,4 +37,6 @@ defmodule Engine.Harness.Tools.SearchWorkspace do
   end
 
   def run(_args, _ctx), do: {:error, "search_workspace exige o argumento `query`"}
+
+  defp root(ctx), do: ctx[:workspace_root] || Workspace.workspace_dir(ctx.project_id)
 end

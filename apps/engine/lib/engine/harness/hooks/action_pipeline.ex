@@ -21,7 +21,10 @@ defmodule Engine.Harness.Hooks.ActionPipeline do
 
   @impl true
   def call(%{tool: "terminal", args: args} = ctx) do
-    payload = %{command: Map.get(args, "command", "")}
+    payload =
+      %{command: Map.get(args, "command", "")}
+      |> maybe_put_cwd(ctx[:workspace_root])
+
     propose(ctx, "terminal", payload, &terminal_result/1)
   end
 
@@ -37,6 +40,9 @@ defmodule Engine.Harness.Hooks.ActionPipeline do
   end
 
   def call(ctx), do: {:cont, ctx}
+
+  defp maybe_put_cwd(payload, nil), do: payload
+  defp maybe_put_cwd(payload, cwd), do: Map.put(payload, :cwd, cwd)
 
   defp propose(ctx, action_type, payload, result_fun) do
     actor = %{kind: "agent", id: ctx.agent}

@@ -284,7 +284,7 @@ export interface ProductBriefPayload {
 
 export type StoryStatus = 'draft' | 'ready' | 'in_progress' | 'done';
 
-export type TaskStatus = 'todo' | 'in_progress' | 'done';
+export type TaskStatus = 'todo' | 'in_progress' | 'in_review' | 'done';
 
 export interface Task {
   id: string;
@@ -293,6 +293,8 @@ export interface Task {
   description: string;
   status: TaskStatus;
   assignedTo: string | null;
+  blocked: boolean;
+  blockedReason: string | null;
   createdAt: string;
   updatedAt: string;
 }

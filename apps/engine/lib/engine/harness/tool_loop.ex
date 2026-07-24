@@ -1,14 +1,22 @@
 defmodule Engine.Harness.ToolLoop do
   @moduledoc """
-  Contrato do loop de tool use do harness (Fase 3a). Cada turno: chama o
+  Contrato do loop de tool use do harness (Fase 3a/4a). Cada turno: chama o
   endpoint de LLM da api (nunca provider direto), parseia tool calls, despacha
   pras ferramentas registradas, injeta os resultados como mensagens `tool` e
-  repete — com limite de iterações e término GRACIOSO (evento
-  `toolloop.limit_reached`, nunca loop infinito). Impl de referência em
-  `.Default`. Trocável via `Application.get_env(:engine, :tool_loop, ...)`.
+  repete — com limite de iterações, teto de tokens OPCIONAL e término
+  GRACIOSO em qualquer um dos dois (`toolloop.limit_reached`/
+  `toolloop.budget_exceeded`, nunca loop infinito nem gasto sem teto). Um hook
+  `:post_tool_use` pode sinalizar `{:halt, reason}` (ex.: o DevAgent concluindo
+  ou se bloqueando) — o loop para ali com `{:halted, reason, ctx}`. Impl de
+  referência em `.Default`. Trocável via `Application.get_env(:engine,
+  :tool_loop, ...)`.
   """
 
-  @callback run(ctx :: map()) :: {:ok, map()} | {:limit_reached, map()}
+  @callback run(ctx :: map()) ::
+              {:ok, map()}
+              | {:limit_reached, map()}
+              | {:budget_exceeded, map()}
+              | {:halted, term(), map()}
 
   def run(ctx), do: impl().run(ctx)
 
@@ -23,11 +31,21 @@ defmodule Engine.Harness.ToolLoop.Default do
   (ContextManager), chama `EngineApiClient.llm_turn/5`, e despacha as tool
   calls: ferramentas de pipeline (terminal, write_file fora da whitelist) têm
   o resultado produzido pelo hook `:pre_tool_use`; as diretas rodam sua
-  `run/2`. `:post_tool_use` grava o resultado no event log.
+  `run/2`. `:post_tool_use` grava o resultado no event log e pode `{:halt,
+  reason}` pra terminar o loop AGORA (ex.: DevAgent sinalizando conclusão).
 
   Mensagens internas são maps com chaves string (formato de fio) + a chave
   atom `:pinned` (removida antes de enviar). O ToolLoop narra o event log
-  (`agent.response`, `tool.call`, e via hooks `tool.result`).
+  (`agent.response` — com `iteration`/`tokensSpentMicros` acumulados —,
+  `tool.call`, e via hooks `tool.result`).
+
+  `ctx` aceita, opcionalmente: `:tools` (registry de ferramentas — default
+  `Engine.Harness.Tools.registry/0`), `:hooks` (default `default_hooks/0`),
+  `:workspace_root` (raiz de arquivos/AGENTS.md — default o workspace
+  compartilhado do projeto), `:token_budget_micros` (teto de custo por
+  execução — default `nil`, sem teto), `:business_rules_units`/
+  `:task_state_units` (unidades pras camadas de mesmo nome do
+  `ContextBuilder` — default `[]`, usado pelo DevAgent).
   """
 
   @behaviour Engine.Harness.ToolLoop
@@ -42,23 +60,39 @@ defmodule Engine.Harness.ToolLoop.Default do
   end
 
   defp init(ctx) do
+    ctx =
+      ctx
+      |> Map.put_new(:iteration, 0)
+      |> Map.put_new(:max_iterations, default_max_iterations())
+      |> Map.put_new(:tokens_spent_micros, 0)
+      |> Map.put_new(:token_budget_micros, nil)
+      |> Map.put_new(:hooks, default_hooks())
+      |> Map.put_new(:tools, Tools.registry())
+
     system_msg = %{
       "role" => "system",
-      "content" => system_prompt(ctx.project_id, ctx.agent),
+      "content" => system_prompt(ctx),
       :pinned => true
     }
 
     ctx
     |> Map.put(:messages, [system_msg | Map.get(ctx, :messages, [])])
-    |> Map.put_new(:iteration, 0)
-    |> Map.put_new(:max_iterations, default_max_iterations())
-    |> Map.put_new(:hooks, default_hooks())
-    |> Map.put(:tool_specs, Tools.specs())
+    |> Map.put(:tool_specs, Tools.specs(ctx.tools))
   end
 
   defp loop(%{iteration: iteration, max_iterations: max} = ctx) when iteration >= max do
     emit(ctx, "toolloop.limit_reached", %{iteration: iteration, max_iterations: max})
     {:limit_reached, ctx}
+  end
+
+  defp loop(%{token_budget_micros: budget, tokens_spent_micros: spent} = ctx)
+       when is_integer(budget) and spent >= budget do
+    emit(ctx, "toolloop.budget_exceeded", %{
+      tokens_spent_micros: spent,
+      token_budget_micros: budget
+    })
+
+    {:budget_exceeded, ctx}
   end
 
   defp loop(ctx) do
@@ -67,11 +101,15 @@ defmodule Engine.Harness.ToolLoop.Default do
 
     case EngineApiClient.llm_turn(ctx.project_id, ctx.session_id, ctx.agent, wire, ctx.tool_specs) do
       {:ok, %{"message" => message} = resp} ->
+        cost = get_in(resp, ["usage", "costMicros"]) || 0
         ctx = append(ctx, Map.put(message, :pinned, false))
+        ctx = Map.update!(ctx, :tokens_spent_micros, &(&1 + cost))
 
         emit(ctx, "agent.response", %{
           content: Map.get(message, "content", ""),
-          error: Map.get(resp, "error")
+          error: Map.get(resp, "error"),
+          iteration: ctx.iteration,
+          tokensSpentMicros: ctx.tokens_spent_micros
         })
 
         case Map.get(message, "toolCalls") || [] do
@@ -79,13 +117,24 @@ defmodule Engine.Harness.ToolLoop.Default do
             {:ok, ctx}
 
           tool_calls ->
-            ctx = Enum.reduce(tool_calls, ctx, &dispatch/2)
-            loop(%{ctx | iteration: ctx.iteration + 1})
+            case Enum.reduce_while(tool_calls, {:cont, ctx}, &dispatch_or_halt/2) do
+              {:halted, reason, ctx} -> {:halted, reason, ctx}
+              {:cont, ctx} -> loop(%{ctx | iteration: ctx.iteration + 1})
+            end
         end
 
       {:error, reason} ->
         emit(ctx, "agent.response", %{error: inspect(reason)})
         {:ok, ctx}
+    end
+  end
+
+  defp dispatch_or_halt(tool_call, {:cont, ctx}) do
+    {ctx, halt} = dispatch(tool_call, ctx)
+
+    case halt do
+      {:halt, reason} -> {:halt, {:halted, reason, ctx}}
+      :cont -> {:cont, {:cont, ctx}}
     end
   end
 
@@ -105,12 +154,18 @@ defmodule Engine.Harness.ToolLoop.Default do
         {:ok, _cont} -> run_direct(name, args, ctx)
       end
 
-    _ =
-      Hooks.run(
-        ctx.hooks,
-        :post_tool_use,
-        ctx |> Map.put(:tool, name) |> Map.put(:result, result) |> Map.put(:result_ok?, ok?)
-      )
+    post_ctx =
+      ctx
+      |> Map.put(:tool, name)
+      |> Map.put(:args, args)
+      |> Map.put(:result, result)
+      |> Map.put(:result_ok?, ok?)
+
+    halt =
+      case Hooks.run(ctx.hooks, :post_tool_use, post_ctx) do
+        {:halt, reason} -> {:halt, reason}
+        {:ok, _cont} -> :cont
+      end
 
     tool_msg = %{
       "role" => "tool",
@@ -120,11 +175,11 @@ defmodule Engine.Harness.ToolLoop.Default do
       :pinned => false
     }
 
-    append(ctx, tool_msg)
+    {append(ctx, tool_msg), halt}
   end
 
   defp run_direct(name, args, ctx) do
-    case Tools.find(name) do
+    case Tools.find(name, ctx.tools) do
       nil ->
         {"ferramenta desconhecida: #{name}", false}
 
@@ -136,9 +191,13 @@ defmodule Engine.Harness.ToolLoop.Default do
     end
   end
 
-  defp system_prompt(project_id, agent) do
-    project_id
-    |> ContextBuilder.build_layers(agent)
+  defp system_prompt(ctx) do
+    ctx.project_id
+    |> ContextBuilder.build_layers(ctx.agent,
+      workspace_root: ctx[:workspace_root],
+      business_rules_units: Map.get(ctx, :business_rules_units, []),
+      task_state_units: Map.get(ctx, :task_state_units, [])
+    )
     |> PromptAssembler.assemble()
     |> PromptAssembler.Default.render()
   end

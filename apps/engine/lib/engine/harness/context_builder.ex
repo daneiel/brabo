@@ -7,24 +7,31 @@ defmodule Engine.Harness.ContextBuilder do
   Ordem fixa das 5 camadas (do enunciado): identidade → instruction_files →
   contexto_projeto → regras_negocio → estado_tarefa.
 
-  As camadas `:regras_negocio` e `:estado_tarefa` saem VAZIAS por ora — não há
-  fonte ainda (business_rule é emitido pelo Criativo na Fase 3b; o estado da
-  tarefa vem do ToolLoop/agentes). O algoritmo de corte já as trata (vazio =
-  0 tokens); os testes exercitam o corte com unidades sintéticas.
+  As camadas `:regras_negocio` e `:estado_tarefa` saem VAZIAS por padrão — só o
+  DevAgent (Fase 4a) tem fonte hoje (regras/estado da task, via
+  `opts[:business_rules_units]`/`opts[:task_state_units]`, unidades já no
+  formato `%{id, content}` consumido pelo assembler). O algoritmo de corte já
+  trata lista vazia (0 tokens); os testes exercitam o corte com unidades
+  sintéticas.
   """
 
   alias Engine.Harness.Agents
   alias Engine.Harness.InstructionFiles
   alias Engine.Harness.ProjectContext
 
-  @doc "Lista ordenada de camadas pra (projeto, agente)."
-  def build_layers(project_id, agent) do
+  @doc """
+  Lista ordenada de camadas pra (projeto, agente). `opts[:workspace_root]`
+  sobrescreve a raiz do AGENTS.md lido (default o workspace compartilhado do
+  projeto — ver `InstructionFiles.load/3`); `opts[:business_rules_units]`/
+  `opts[:task_state_units]` alimentam as camadas hoje vazias por padrão.
+  """
+  def build_layers(project_id, agent, opts \\ []) do
     [
       identity_layer(agent),
-      instruction_files_layer(project_id, agent),
+      instruction_files_layer(project_id, agent, opts[:workspace_root]),
       project_context_layer(project_id),
-      business_rules_layer(),
-      task_state_layer()
+      business_rules_layer(Keyword.get(opts, :business_rules_units, [])),
+      task_state_layer(Keyword.get(opts, :task_state_units, []))
     ]
   end
 
@@ -37,8 +44,8 @@ defmodule Engine.Harness.ContextBuilder do
     }
   end
 
-  defp instruction_files_layer(project_id, agent) do
-    %{sources: sources} = InstructionFiles.load(project_id, agent)
+  defp instruction_files_layer(project_id, agent, workspace_root) do
+    %{sources: sources} = InstructionFiles.load(project_id, agent, root: workspace_root)
 
     # `sources` já vem em ordem de descarte (menor precedência na cabeça);
     # cada fonte vira uma unidade cortável inteira.
@@ -59,14 +66,12 @@ defmodule Engine.Harness.ContextBuilder do
     }
   end
 
-  # Vazias por ora (sem fonte até a Fase 3b) — presentes na ordenação com o
-  # orçamento; o assembler lida com lista vazia sem corte.
-  defp business_rules_layer do
-    %{id: :regras_negocio, kind: :units, cut: :drop_whole_units, units: []}
+  defp business_rules_layer(units) do
+    %{id: :regras_negocio, kind: :units, cut: :drop_whole_units, units: units}
   end
 
-  defp task_state_layer do
-    %{id: :estado_tarefa, kind: :units, cut: :drop_whole_units, units: []}
+  defp task_state_layer(units) do
+    %{id: :estado_tarefa, kind: :units, cut: :drop_whole_units, units: units}
   end
 
   defp unit_id(%{origin: :db}), do: :db
