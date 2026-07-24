@@ -58,4 +58,32 @@ CREATE TABLE IF NOT EXISTS public.project_repositories (
 )
 """)
 
+# Mesmo motivo dos fixtures acima — projects e agent_instructions são
+# gerenciadas pela api (Drizzle, schema "public"). O harness lê projects
+# (nome/slug pra camada de contexto) e agent_instructions (arquivo de agente
+# do banco pro InstructionFiles). Só as colunas que o engine lê.
+Engine.Repo.query!("""
+CREATE TABLE IF NOT EXISTS public.projects (
+  id uuid PRIMARY KEY,
+  workspace_id uuid,
+  name text NOT NULL,
+  slug text NOT NULL,
+  created_by uuid,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+)
+""")
+
+Engine.Repo.query!("""
+CREATE TABLE IF NOT EXISTS public.agent_instructions (
+  id uuid PRIMARY KEY,
+  project_id uuid NOT NULL,
+  agent text NOT NULL,
+  content text NOT NULL,
+  version integer NOT NULL DEFAULT 1,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+)
+""")
+
 Ecto.Adapters.SQL.Sandbox.checkin(Engine.Repo)
