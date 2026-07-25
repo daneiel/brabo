@@ -128,7 +128,8 @@ defmodule Engine.Sessions.EngineApiClient do
   @callback get_dev_context(
               project_id :: String.t(),
               session_id :: String.t(),
-              task_id :: String.t()
+              task_id :: String.t(),
+              module :: String.t() | nil
             ) ::
               {:ok, map()} | {:error, term()}
 
@@ -352,8 +353,8 @@ defmodule Engine.Sessions.EngineApiClient do
   def mark_task(project_id, session_id, task_id, status, agent_id),
     do: impl().mark_task(project_id, session_id, task_id, status, agent_id)
 
-  def get_dev_context(project_id, session_id, task_id),
-    do: impl().get_dev_context(project_id, session_id, task_id)
+  def get_dev_context(project_id, session_id, task_id, module \\ nil),
+    do: impl().get_dev_context(project_id, session_id, task_id, module)
 
   def mark_task_blocked(project_id, session_id, task_id, reason, diagnosis, agent_id),
     do: impl().mark_task_blocked(project_id, session_id, task_id, reason, diagnosis, agent_id)
@@ -603,10 +604,16 @@ defmodule Engine.Sessions.EngineApiClient.Live do
   end
 
   @impl true
-  def get_dev_context(project_id, session_id, task_id) do
+  def get_dev_context(project_id, session_id, task_id, module \\ nil) do
+    # `module` filtra os ADRs pro módulo do dev (ADR sem módulo é transversal
+    # e entra sempre). Nulo = sem filtro — é o caso dos gates QA/SecOps, que
+    # reusam este contexto e querem o acervo inteiro.
+    module_query = if module, do: "&module=#{URI.encode_www_form(module)}", else: ""
+
     url =
       api_url() <>
-        "/internal/sessions/#{session_id}/dev-context?projectId=#{project_id}&taskId=#{task_id}"
+        "/internal/sessions/#{session_id}/dev-context?projectId=#{project_id}&taskId=#{task_id}" <>
+        module_query
 
     case Req.get(url, headers: [{"authorization", "Bearer #{token()}"}]) do
       {:ok, %Req.Response{status: status, body: body}} when status in 200..299 ->
@@ -816,13 +823,26 @@ defmodule Engine.Sessions.EngineApiClient.Live do
 
   @impl true
   def llm_turn(project_id, session_id, agent, messages, tools) do
-    post_returning("/internal/sessions/#{session_id}/llm-turn", %{
-      projectId: project_id,
-      agentId: agent,
-      messages: messages,
-      tools: tools
-    })
+    # Timeout generoso e configurável: um turno de LLM não é uma chamada de
+    # API comum. Com modelo local (Ollama), o PRIMEIRO turno ainda carrega
+    # vários GB de pesos na memória antes de gerar o primeiro token — no
+    # default do Req isso estoura, o ToolLoop recebe {:error, :timeout} e a
+    # task é bloqueada com "parou sem concluir", sem o operador entender por
+    # quê. Ver DEFAULT_LLM_TURN_TIMEOUT_MS / LLM_TURN_TIMEOUT_MS.
+    post_returning(
+      "/internal/sessions/#{session_id}/llm-turn",
+      %{
+        projectId: project_id,
+        agentId: agent,
+        messages: messages,
+        tools: tools
+      },
+      receive_timeout: llm_turn_timeout_ms()
+    )
   end
+
+  defp llm_turn_timeout_ms,
+    do: Application.get_env(:engine, :llm_turn_timeout_ms, 300_000)
 
   @impl true
   def propose_action(project_id, session_id, action_type, actor, payload) do
@@ -843,10 +863,13 @@ defmodule Engine.Sessions.EngineApiClient.Live do
 
   # Igual `post/2` mas devolve o corpo da resposta (llm_turn/propose_action
   # precisam do JSON de volta, não só do :ok).
-  defp post_returning(path, body) do
-    case Req.post(api_url() <> path,
-           json: body,
-           headers: [{"authorization", "Bearer #{token()}"}]
+  defp post_returning(path, body, opts \\ []) do
+    case Req.post(
+           [
+             url: api_url() <> path,
+             json: body,
+             headers: [{"authorization", "Bearer #{token()}"}]
+           ] ++ opts
          ) do
       {:ok, %Req.Response{status: status, body: resp}} when status in 200..299 ->
         {:ok, resp}

@@ -29,6 +29,17 @@ RUN apk add --no-cache python3 py3-pip \
   && (pip install --no-cache-dir --break-system-packages semgrep \
       || echo "[build] semgrep nao instalado -- SecOpsAgent detecta a ausencia em runtime")
 
+# Node (dev): a suite de testes do PROJETO GERIDO roda aqui dentro — o
+# `terminal` do DevAgent executa via Engine.Actions.TerminalExecutor, no
+# worktree, dentro deste container. Sem o toolchain do projeto, `npm test`
+# nunca dá exit 0 e o ReportDone jamais deixa abrir PR.
+#
+# LIMITAÇÃO CONHECIDA: isto não escala pra stacks arbitrárias — hoje o engine
+# precisa ter instalado o toolchain de todo projeto que ele gerencia. A saída
+# real é um sandbox por projeto (container/imagem própria por module_map),
+# fora do escopo da Fase 4a.
+RUN apk add --no-cache nodejs npm
+
 WORKDIR /workspace/apps/engine
 
 CMD ["sh", "-c", "mix local.hex --force && mix local.rebar --force && mix deps.get && mix ecto.create && mix ecto.migrate && mix phx.server"]

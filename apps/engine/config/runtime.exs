@@ -45,6 +45,10 @@ config :engine,
     String.to_integer(System.get_env("TERMINAL_ACTION_TIMEOUT_MS", "15000")),
   # Harness — ToolLoop / ContextManager (Fase 3a, sessão 2).
   tool_loop_max_iterations: String.to_integer(System.get_env("TOOL_LOOP_MAX_ITERATIONS", "8")),
+  # Um turno de LLM não é uma chamada de API comum: com modelo local o
+  # PRIMEIRO turno ainda carrega os pesos na memória antes do primeiro token.
+  # No default do Req isso estoura e a task morre bloqueada sem diagnóstico.
+  llm_turn_timeout_ms: String.to_integer(System.get_env("LLM_TURN_TIMEOUT_MS", "300000")),
   # % do limite do modelo a partir do qual o ContextManager compacta.
   context_compaction_threshold:
     String.to_float(System.get_env("CONTEXT_COMPACTION_THRESHOLD", "0.7")),

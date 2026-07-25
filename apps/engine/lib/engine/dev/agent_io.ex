@@ -17,6 +17,7 @@ defmodule Engine.Dev.AgentIo do
   """
 
   alias Engine.Dev.DevAgentState
+  alias Engine.Harness.ArtifactSchemas
   alias Engine.Sessions.EngineApiClient
 
   @doc "Nome registrado do agente — a chave do Registry é {project_id, agent_id}."
@@ -94,6 +95,17 @@ defmodule Engine.Dev.AgentIo do
       diagnosis: diagnosis
     })
 
+    # Artefato do desfecho, além do evento de narrativa acima: é o registro
+    # durável e validado (`Engine.Harness.ArtifactSchemas`) que o usuário lê pra
+    # decidir se desbloqueia a task. Emitido pelo servidor — o modelo não
+    # escolhe declarar que desistiu.
+    emit_artifact(state, "task_blocked", %{
+      taskId: state.task_id,
+      agentId: state.agent_id,
+      reason: reason,
+      diagnosis: diagnosis
+    })
+
     _ =
       EngineApiClient.mark_task_blocked(
         state.project_id,
@@ -128,6 +140,29 @@ defmodule Engine.Dev.AgentIo do
       # subir um agente REAL onde havia um Noop (e vice-versa).
       impl: state.impl
     })
+  end
+
+  @doc """
+  Emite um artefato (`session_event` `artifact.<tipo>`) validado contra
+  `Engine.Harness.ArtifactSchemas`. Payload inválido NÃO derruba o agente: o
+  bloqueio da task (o efeito que importa) já aconteceu, e perder o artefato não
+  pode virar um crash que deixa a task sem dono.
+  """
+  def emit_artifact(state, type, payload) do
+    case ArtifactSchemas.validate(type, stringify_keys(payload)) do
+      :ok ->
+        emit(state, "artifact.#{type}", payload)
+
+      {:error, reason} ->
+        emit(state, "dev.error", %{
+          agentId: state.agent_id,
+          reason: "artefato #{type} inválido: #{inspect(reason)}"
+        })
+    end
+  end
+
+  defp stringify_keys(map) do
+    Map.new(map, fn {k, v} -> {to_string(k), v} end)
   end
 
   def emit(state, type, payload) do

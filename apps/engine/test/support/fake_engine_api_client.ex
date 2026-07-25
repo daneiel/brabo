@@ -150,8 +150,8 @@ defmodule Engine.Sessions.FakeEngineApiClient do
   end
 
   @impl true
-  def get_dev_context(_project_id, _session_id, task_id) do
-    notify({:dev_context_fetched, task_id})
+  def get_dev_context(_project_id, _session_id, task_id, module \\ nil) do
+    notify({:dev_context_fetched, task_id, module})
 
     reply(
       :fake_dev_context,

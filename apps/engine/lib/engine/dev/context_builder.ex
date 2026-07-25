@@ -11,6 +11,10 @@ defmodule Engine.Dev.ContextBuilder do
   alias Engine.Sessions.EngineApiClient
 
   @doc """
+  `module` (opcional) filtra os ADRs pro módulo do dev — ADR sem módulo
+  declarado é transversal e entra sempre. Nulo = acervo inteiro, que é o que os
+  gates QA/SecOps querem ao reusar este contexto.
+
   Busca o contexto da task na api e devolve `{:ok, %{task:, story:, adrs:,
   business_rules_units:, task_state_units:}}` — os dois últimos já no formato
   `%{id, content}` que `Engine.Harness.ContextBuilder`/`PromptAssembler`
@@ -19,8 +23,8 @@ defmodule Engine.Dev.ContextBuilder do
   (título/DoD), e pro `SecOpsAgentServer` filtrar os ADRs
   `securityRelevant` pro checklist do parecer.
   """
-  def fetch(project_id, session_id, task_id) do
-    case EngineApiClient.get_dev_context(project_id, session_id, task_id) do
+  def fetch(project_id, session_id, task_id, module \\ nil) do
+    case EngineApiClient.get_dev_context(project_id, session_id, task_id, module) do
       {:ok, ctx} -> {:ok, build(ctx)}
       {:error, reason} -> {:error, reason}
     end
@@ -57,7 +61,13 @@ defmodule Engine.Dev.ContextBuilder do
         %{id: {:adr, i}, content: "ADR: #{adr["title"]}\n#{adr["content"]}"}
       end)
 
-    [story_unit, task_unit | adr_units]
+    # ORDEM IMPORTA: `PromptAssembler.fit_units/3` descarta pela CABEÇA quando o
+    # teto da camada estoura. Os ADRs vêm primeiro justamente por serem os mais
+    # descartáveis; a story (RF/RNF/DoD) e a task ficam por último porque são o
+    # que o dev precisa pra implementar — sem elas o prompt não serve pra nada.
+    # (Antes era `[story, task | adrs]`, que sacrificava a story e preservava os
+    # ADRs — exatamente o contrário do desejado.)
+    adr_units ++ [story_unit, task_unit]
   end
 
   defp story_content(story) do
