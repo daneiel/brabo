@@ -5,9 +5,23 @@ defmodule EngineWeb.ExecutionCommandControllerTest do
   # está sob teste é a decisão do controller, não o pipeline de auth.
   use EngineWeb.ConnCase, async: false
 
-  alias Engine.Dev.{DevAgentState, DevAgentSupervisor, FakeWorktreeManager}
+  alias Engine.Dev.{
+    DevAgentServer,
+    DevAgentState,
+    DevAgentSupervisor,
+    FakeWorktreeManager,
+    NoopDevAgentServer
+  }
+
   alias Engine.Sessions.FakeEngineApiClient
   alias EngineWeb.ExecutionCommandController
+
+  defp server_module(project_id, agent_id) do
+    [{pid, _}] = Registry.lookup(Engine.Dev.Registry, {project_id, agent_id})
+    {:dictionary, dict} = Process.info(pid, :dictionary)
+    {mod, :init, 1} = Keyword.fetch!(dict, :"$initial_call")
+    mod
+  end
 
   setup do
     Application.put_env(:engine, :engine_api_client, FakeEngineApiClient)
@@ -21,6 +35,77 @@ defmodule EngineWeb.ExecutionCommandControllerTest do
     end)
 
     %{project_id: Ecto.UUID.generate(), session_id: Ecto.UUID.generate()}
+  end
+
+  test "start sobe um dev agent REAL por módulo por padrão", %{
+    conn: conn,
+    project_id: project_id,
+    session_id: session_id
+  } do
+    Process.put(:fake_tasks, [])
+
+    conn =
+      ExecutionCommandController.start(conn, %{
+        "sessionId" => session_id,
+        "projectId" => project_id,
+        "modules" => ["api", "web"]
+      })
+
+    assert conn.status == 201
+    assert server_module(project_id, "dev-api") == DevAgentServer
+    assert server_module(project_id, "dev-web") == DevAgentServer
+    assert DevAgentState.get(project_id, "dev-api").impl == "real"
+  end
+
+  test "start com impl=noop sobe NoopDevAgents e dispara o ciclo deles", %{
+    conn: conn,
+    project_id: project_id,
+    session_id: session_id
+  } do
+    conn =
+      ExecutionCommandController.start(conn, %{
+        "sessionId" => session_id,
+        "projectId" => project_id,
+        "modules" => ["api", "web"],
+        "impl" => "noop"
+      })
+
+    assert conn.status == 201
+    assert server_module(project_id, "dev-api") == NoopDevAgentServer
+    assert server_module(project_id, "dev-web") == NoopDevAgentServer
+    assert DevAgentState.get(project_id, "dev-api").impl == "noop"
+
+    # E o ciclo de cada um foi disparado (o :work é um cast; os agentes rodam
+    # em processos próprios, então o claim é a evidência de que rodou). O
+    # ciclo completo até a PR é coberto em NoopDevAgentServerTest, onde os
+    # callbacks rodam no processo do teste e o fake pode ser scriptado.
+    assert_receive {:task_claimed, "api", "dev-api"}, 2_000
+    assert_receive {:task_claimed, "web", "dev-web"}, 2_000
+  end
+
+  test "parallelize herda o MODO do agente base (não sobe um agente real com LLM)", %{
+    conn: conn,
+    project_id: project_id,
+    session_id: session_id
+  } do
+    Process.put(:fake_tasks, [])
+
+    {:ok, _pid, :started} =
+      DevAgentSupervisor.start_agent(project_id, "dev-api", "api", session_id, 123_456, 1, :noop)
+
+    conn =
+      ExecutionCommandController.parallelize(conn, %{
+        "sessionId" => session_id,
+        "projectId" => project_id,
+        "module" => "api"
+      })
+
+    assert conn.status == 202
+    assert DevAgentState.get(project_id, "dev-api-2").impl == "noop"
+
+    assert server_module(project_id, "dev-api-2") == NoopDevAgentServer,
+           "aceitar a paralelização de uma execução Noop subiu um agente REAL — " <>
+             "um clique passaria a gastar token sem o usuário pedir"
   end
 
   test "parallelize herda os tetos do agente base do módulo", %{
