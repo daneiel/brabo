@@ -120,9 +120,15 @@ defmodule Engine.Dev.DevAgentServer do
     task_id = Map.get(task, "id")
     slug = "task-" <> String.slice(to_string(task_id), 0, 8)
 
+    # task_id entra no state ANTES de montar o worktree: se a criação
+    # falhar, a task já foi reivindicada (está `in_progress` na api) e
+    # block_task precisa saber qual devolver — senão ela fica órfã, sem
+    # dono vivo e invisível pro claim (que só pega `todo`).
+    state = %{state | task_id: task_id}
+
     case worktree_manager().create(state.project_id, state.agent_id, slug) do
       {:ok, %{path: path, branch: branch}} ->
-        state = %{state | task_id: task_id, worktree: path, branch: branch}
+        state = %{state | worktree: path, branch: branch}
         persist(state)
 
         emit(state, "dev.working", %{
@@ -141,7 +147,7 @@ defmodule Engine.Dev.DevAgentServer do
 
       {:error, reason} ->
         emit(state, "dev.error", %{agentId: state.agent_id, reason: inspect(reason)})
-        state
+        block_task(state, "falha ao preparar o worktree", inspect(reason))
     end
   end
 
@@ -415,7 +421,12 @@ defmodule Engine.Dev.DevAgentServer do
       task_id: state.task_id,
       worktree_path: state.worktree,
       status: "working",
-      task_budget_micros: state.task_budget_micros
+      task_budget_micros: state.task_budget_micros,
+      # OBRIGATÓRIO mesmo quando nil: a coluna está na lista de :replace do
+      # on_conflict, então omitir aqui APAGA o teto gravado no init — e os
+      # gates leem esse campo do banco (qa/secops_agent_server), caindo no
+      # DEFAULT_MAX_GATE_CORRECTIONS da api sem o usuário pedir.
+      max_gate_corrections: state.max_gate_corrections
     })
   end
 

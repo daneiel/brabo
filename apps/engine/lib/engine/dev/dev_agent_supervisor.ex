@@ -34,8 +34,14 @@ defmodule Engine.Dev.DevAgentSupervisor do
            {project_id, agent_id, module, session_id, task_budget_micros, max_gate_corrections}}
 
         case DynamicSupervisor.start_child(__MODULE__, spec) do
-          {:ok, pid} -> {:ok, pid, :started}
-          {:error, {:already_started, pid}} -> {:ok, pid, :existing}
+          {:ok, pid} ->
+            # Mesmo idioma do SessionSupervisor: quem sobe o processo é quem
+            # o registra no Monitor (que apaga a linha durável no :DOWN).
+            :ok = Engine.Dev.Monitor.watch(pid, project_id, agent_id)
+            {:ok, pid, :started}
+
+          {:error, {:already_started, pid}} ->
+            {:ok, pid, :existing}
         end
     end
   end

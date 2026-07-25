@@ -69,6 +69,10 @@ defmodule Engine.Dev.DevAgentState do
 
   def list_all, do: Repo.all(__MODULE__)
 
+  @doc "Estado durável de um agente específico, ou nil."
+  def get(project_id, agent_id),
+    do: Repo.get_by(__MODULE__, project_id: project_id, agent_id: agent_id)
+
   @doc """
   Acha o estado do dev agent que está (ou esteve) trabalhando em `task_id`
   (Fase 4a — gates de QA/SecOps precisam do worktree/branch da task pra

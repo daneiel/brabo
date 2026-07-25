@@ -10,6 +10,8 @@ defmodule Engine.Sessions.Monitor do
 
   use GenServer
 
+  require Logger
+
   alias Engine.Sessions.SessionState
 
   @name __MODULE__
@@ -60,7 +62,7 @@ defmodule Engine.Sessions.Monitor do
   def handle_info({:DOWN, ref, :process, pid, reason}, state) do
     case Map.fetch(state.by_pid, pid) do
       {:ok, %{ref: ^ref} = entry} ->
-        SessionState.delete(entry.session_id)
+        safe_delete(entry.session_id)
         maybe_report(entry, reason)
 
         state = %{
@@ -74,6 +76,21 @@ defmodule Engine.Sessions.Monitor do
       _ ->
         {:noreply, state}
     end
+  end
+
+  # Este Monitor é um SINGLETON: se ele morre, o engine perde de uma vez o
+  # monitoramento de todas as sessões vivas (os monitores morrem com ele) e
+  # nenhum término posterior vira callback pra api. Uma indisponibilidade do
+  # banco não pode ter esse efeito — o :DOWN já foi consumido de qualquer
+  # forma, então registra e segue.
+  defp safe_delete(session_id) do
+    SessionState.delete(session_id)
+  rescue
+    e ->
+      Logger.warning("Monitor: falha ao apagar session_state #{session_id}: #{inspect(e)}")
+  catch
+    :exit, reason ->
+      Logger.warning("Monitor: falha ao apagar session_state #{session_id}: #{inspect(reason)}")
   end
 
   # :normal precedido de expect_stop -> api já sabe, sem callback.

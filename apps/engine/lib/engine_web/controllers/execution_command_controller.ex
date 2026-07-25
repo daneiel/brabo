@@ -7,7 +7,7 @@ defmodule EngineWeb.ExecutionCommandController do
 
   use EngineWeb, :controller
 
-  alias Engine.Dev.{DevAgentSupervisor, DevAgentServer, Naming}
+  alias Engine.Dev.{DevAgentServer, DevAgentState, DevAgentSupervisor, Naming}
 
   def start(
         conn,
@@ -40,9 +40,33 @@ defmodule EngineWeb.ExecutionCommandController do
         "projectId" => project_id,
         "module" => module
       }) do
-    agent_id = Naming.extra_agent_id(module)
-    {:ok, _pid, origin} = DevAgentSupervisor.start_agent(project_id, agent_id, module, session_id)
-    if origin == :started, do: DevAgentServer.work(project_id, agent_id)
-    send_resp(conn, 202, "")
+    # O subagente extra HERDA os tetos do agente base do módulo. Passar os
+    # defaults (nil) daria a ele gasto ILIMITADO — a guarda de orçamento do
+    # ToolLoop é `when is_integer(budget)` —, e o aceite de um clique não
+    # pode criar um agente sem teto. A api não serve de fonte aqui: ela não
+    # persiste o orçamento escolhido na ativação, então o estado durável do
+    # engine é o único lugar que conhece um valor customizado.
+    case DevAgentState.get(project_id, Naming.dev_agent_id(module)) do
+      nil ->
+        conn
+        |> put_status(409)
+        |> json(%{error: "sem agente base pro módulo #{module}: nada de que herdar o teto"})
+
+      base ->
+        agent_id = Naming.extra_agent_id(module)
+
+        {:ok, _pid, origin} =
+          DevAgentSupervisor.start_agent(
+            project_id,
+            agent_id,
+            module,
+            session_id,
+            base.task_budget_micros,
+            base.max_gate_corrections
+          )
+
+        if origin == :started, do: DevAgentServer.work(project_id, agent_id)
+        send_resp(conn, 202, "")
+    end
   end
 end

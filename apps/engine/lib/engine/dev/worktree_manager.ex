@@ -16,8 +16,8 @@ defmodule Engine.Dev.WorktreeManager do
   Retorna `{:ok, %{path, branch}}` ou `{:error, reason}`.
   """
   def create(project_id, agent_id, task_slug) do
-    with {:ok, bare, default_branch} <- ProjectRepository.get_local_repo_path(project_id) do
-      work_dir = Workspace.ensure!(project_id, bare, default_branch)
+    with {:ok, bare, default_branch} <- ProjectRepository.get_local_repo_path(project_id),
+         {:ok, work_dir} <- Workspace.ensure(project_id, bare, default_branch) do
       add_worktree(work_dir, agent_id, task_slug)
     end
   end
