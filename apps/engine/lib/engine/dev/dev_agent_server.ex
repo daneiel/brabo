@@ -15,7 +15,7 @@ defmodule Engine.Dev.DevAgentServer do
 
   use GenServer, restart: :temporary
 
-  alias Engine.Dev.{ContextBuilder, DevAgentState, Tools}
+  alias Engine.Dev.{AgentIo, ContextBuilder, Tools}
   alias Engine.Dev.Hooks.Termination
   alias Engine.Gates.Dispatcher
   alias Engine.Harness.ToolLoop
@@ -23,9 +23,9 @@ defmodule Engine.Dev.DevAgentServer do
   alias Engine.Harness.Hooks.{ActionPipeline, EventLog}
   alias Engine.Sessions.EngineApiClient
 
-  # WorktreeManager trocável em teste (sem git/banco de repo real).
-  defp worktree_manager,
-    do: Application.get_env(:engine, :worktree_manager, Engine.Dev.WorktreeManager)
+  # Marca da implementação no estado durável: a reidratação sobe o server
+  # certo a partir dela (ver Engine.Dev.DevRehydrator).
+  @impl_tag "real"
 
   def start_link(
         {project_id, agent_id, module, session_id, task_budget_micros, max_gate_corrections}
@@ -37,8 +37,7 @@ defmodule Engine.Dev.DevAgentServer do
     )
   end
 
-  def via(project_id, agent_id),
-    do: {:via, Registry, {Engine.Dev.Registry, {project_id, agent_id}}}
+  defdelegate via(project_id, agent_id), to: AgentIo
 
   @doc "Dispara o ciclo de trabalho (chamado num start FRESCO, não em rehydration)."
   def work(project_id, agent_id), do: GenServer.cast(via(project_id, agent_id), :work)
@@ -55,49 +54,38 @@ defmodule Engine.Dev.DevAgentServer do
 
   @impl true
   def init({project_id, agent_id, module, session_id, task_budget_micros, max_gate_corrections}) do
-    DevAgentState.upsert!(%{
+    state = %{
       project_id: project_id,
       agent_id: agent_id,
       module: module,
       session_id: session_id,
-      status: "working",
+      task_id: nil,
+      worktree: nil,
+      branch: nil,
+      impl: @impl_tag,
       task_budget_micros: task_budget_micros,
       max_gate_corrections: max_gate_corrections
-    })
+    }
 
-    {:ok,
-     %{
-       project_id: project_id,
-       agent_id: agent_id,
-       module: module,
-       session_id: session_id,
-       task_id: nil,
-       worktree: nil,
-       branch: nil,
-       task_budget_micros: task_budget_micros,
-       max_gate_corrections: max_gate_corrections
-     }}
+    AgentIo.persist(state)
+
+    {:ok, state}
   end
 
   @impl true
   def handle_cast(:work, state) do
-    emit(state, "dev.started", %{agentId: state.agent_id, module: state.module})
+    AgentIo.emit(state, "dev.started", %{agentId: state.agent_id, module: state.module})
 
-    case EngineApiClient.claim_task(
-           state.project_id,
-           state.session_id,
-           state.module,
-           state.agent_id
-         ) do
+    case AgentIo.claim_task(state) do
       {:ok, nil} ->
-        emit(state, "dev.idle", %{agentId: state.agent_id, reason: "sem task pegável"})
+        AgentIo.emit(state, "dev.idle", %{agentId: state.agent_id, reason: "sem task pegável"})
         {:noreply, state}
 
       {:ok, task} ->
         {:noreply, run_task(state, task)}
 
       {:error, reason} ->
-        emit(state, "dev.error", %{agentId: state.agent_id, reason: inspect(reason)})
+        AgentIo.emit(state, "dev.error", %{agentId: state.agent_id, reason: inspect(reason)})
         {:noreply, state}
     end
   end
@@ -109,7 +97,7 @@ defmodule Engine.Dev.DevAgentServer do
         {:noreply, implement_correction(state, dev_context, findings)}
 
       {:error, reason} ->
-        emit(state, "dev.error", %{agentId: state.agent_id, reason: inspect(reason)})
+        AgentIo.emit(state, "dev.error", %{agentId: state.agent_id, reason: inspect(reason)})
         {:noreply, state}
     end
   end
@@ -126,12 +114,12 @@ defmodule Engine.Dev.DevAgentServer do
     # dono vivo e invisível pro claim (que só pega `todo`).
     state = %{state | task_id: task_id}
 
-    case worktree_manager().create(state.project_id, state.agent_id, slug) do
+    case AgentIo.worktree_manager().create(state.project_id, state.agent_id, slug) do
       {:ok, %{path: path, branch: branch}} ->
         state = %{state | worktree: path, branch: branch}
-        persist(state)
+        AgentIo.persist(state)
 
-        emit(state, "dev.working", %{
+        AgentIo.emit(state, "dev.working", %{
           agentId: state.agent_id,
           taskId: task_id,
           branch: branch
@@ -142,12 +130,12 @@ defmodule Engine.Dev.DevAgentServer do
             implement(state, dev_context)
 
           {:error, reason} ->
-            block_task(state, "falha ao montar contexto da task", inspect(reason))
+            AgentIo.block_task(state, "falha ao montar contexto da task", inspect(reason))
         end
 
       {:error, reason} ->
-        emit(state, "dev.error", %{agentId: state.agent_id, reason: inspect(reason)})
-        block_task(state, "falha ao preparar o worktree", inspect(reason))
+        AgentIo.emit(state, "dev.error", %{agentId: state.agent_id, reason: inspect(reason)})
+        AgentIo.block_task(state, "falha ao preparar o worktree", inspect(reason))
     end
   end
 
@@ -250,8 +238,8 @@ defmodule Engine.Dev.DevAgentServer do
          findings
        ) do
     # A PR já existe (mesma branch) — só commit+push, sem propose_pr de novo.
-    propose_commit(state, summary)
-    propose_push(state)
+    AgentIo.propose_commit(state, summary)
+    AgentIo.propose_push(state)
     trigger_gate_recheck(state, findings.gate)
     state
   end
@@ -261,15 +249,15 @@ defmodule Engine.Dev.DevAgentServer do
          state,
          _findings
        ) do
-    block_task(state, reason, diagnosis)
+    AgentIo.block_task(state, reason, diagnosis)
   end
 
   defp handle_correction_outcome({:limit_reached, ctx}, state, _findings) do
-    block_task(state, "limite de iterações atingido (correção)", last_terminal_output(ctx))
+    AgentIo.block_task(state, "limite de iterações atingido (correção)", last_terminal_output(ctx))
   end
 
   defp handle_correction_outcome({:budget_exceeded, ctx}, state, _findings) do
-    block_task(
+    AgentIo.block_task(
       state,
       "orçamento de tokens excedido (correção)",
       "gasto: #{ctx.tokens_spent_micros} micro-USD (teto: #{ctx.token_budget_micros})"
@@ -277,7 +265,7 @@ defmodule Engine.Dev.DevAgentServer do
   end
 
   defp handle_correction_outcome({:ok, _ctx}, state, _findings) do
-    block_task(state, "parou sem concluir nem reportar bloqueio (correção)", "")
+    AgentIo.block_task(state, "parou sem concluir nem reportar bloqueio (correção)", "")
   end
 
   defp trigger_gate_recheck(state, "qa"),
@@ -287,8 +275,8 @@ defmodule Engine.Dev.DevAgentServer do
     do: :ok = Dispatcher.run_secops(state.project_id, state.task_id)
 
   defp handle_outcome({:halted, {"report_done", %{summary: summary}}, _ctx}, state, task, story) do
-    propose_commit(state, summary)
-    propose_push(state)
+    AgentIo.propose_commit(state, summary)
+    AgentIo.propose_push(state)
     propose_pr(state, task, story)
 
     _ =
@@ -314,15 +302,15 @@ defmodule Engine.Dev.DevAgentServer do
          _task,
          _story
        ) do
-    block_task(state, reason, diagnosis)
+    AgentIo.block_task(state, reason, diagnosis)
   end
 
   defp handle_outcome({:limit_reached, ctx}, state, _task, _story) do
-    block_task(state, "limite de iterações atingido", last_terminal_output(ctx))
+    AgentIo.block_task(state, "limite de iterações atingido", last_terminal_output(ctx))
   end
 
   defp handle_outcome({:budget_exceeded, ctx}, state, _task, _story) do
-    block_task(
+    AgentIo.block_task(
       state,
       "orçamento de tokens excedido",
       "gasto: #{ctx.tokens_spent_micros} micro-USD (teto: #{ctx.token_budget_micros})"
@@ -330,7 +318,7 @@ defmodule Engine.Dev.DevAgentServer do
   end
 
   defp handle_outcome({:ok, _ctx}, state, _task, _story) do
-    block_task(state, "parou sem concluir nem reportar bloqueio", "")
+    AgentIo.block_task(state, "parou sem concluir nem reportar bloqueio", "")
   end
 
   defp last_terminal_output(ctx) do
@@ -344,51 +332,12 @@ defmodule Engine.Dev.DevAgentServer do
     end
   end
 
-  defp block_task(state, reason, diagnosis) do
-    emit(state, "dev.blocked", %{
-      agentId: state.agent_id,
-      taskId: state.task_id,
-      reason: reason,
-      diagnosis: diagnosis
-    })
-
-    _ =
-      EngineApiClient.mark_task_blocked(
-        state.project_id,
-        state.session_id,
-        state.task_id,
-        reason,
-        diagnosis,
-        state.agent_id
-      )
-
-    state
-  end
-
-  defp propose_commit(state, summary) do
-    message = if summary == "", do: "#{state.agent_id}: #{state.task_id}", else: summary
-
-    propose(state, "git_commit", %{
-      worktree: state.worktree,
-      branch: state.branch,
-      message: message,
-      author: "#{state.agent_id}[bot]",
-      authorEmail: "#{state.agent_id}-bot@brabo.dev",
-      coAuthor: "Brabo User <user@brabo.dev>"
-    })
-  end
-
-  defp propose_push(state) do
-    propose(state, "git_push", %{worktree: state.worktree, branch: state.branch})
-  end
-
   defp propose_pr(state, task, story) do
-    propose(state, "pr_open", %{
-      sourceBranch: state.branch,
-      title: "#{story["title"]} — #{task["title"]}",
-      body: pr_body(task, story),
-      storyTaskId: state.task_id
-    })
+    AgentIo.propose_pr(
+      state,
+      "#{story["title"]} — #{task["title"]}",
+      pr_body(task, story)
+    )
   end
 
   defp pr_body(task, story) do
@@ -401,43 +350,4 @@ defmodule Engine.Dev.DevAgentServer do
     "Task: #{task["title"]}\n#{task["description"]}\n\n## Definition of Done\n#{checklist}"
   end
 
-  defp propose(state, type, payload) do
-    actor = %{kind: "agent", id: state.agent_id}
-
-    case EngineApiClient.propose_action(state.project_id, state.session_id, type, actor, payload) do
-      {:ok, _action} -> :ok
-      {:error, reason} -> emit(state, "dev.error", %{action: type, reason: inspect(reason)})
-    end
-  end
-
-  # --- Helpers ---
-
-  defp persist(state) do
-    DevAgentState.upsert!(%{
-      project_id: state.project_id,
-      agent_id: state.agent_id,
-      module: state.module,
-      session_id: state.session_id,
-      task_id: state.task_id,
-      worktree_path: state.worktree,
-      status: "working",
-      task_budget_micros: state.task_budget_micros,
-      # OBRIGATÓRIO mesmo quando nil: a coluna está na lista de :replace do
-      # on_conflict, então omitir aqui APAGA o teto gravado no init — e os
-      # gates leem esse campo do banco (qa/secops_agent_server), caindo no
-      # DEFAULT_MAX_GATE_CORRECTIONS da api sem o usuário pedir.
-      max_gate_corrections: state.max_gate_corrections
-    })
-  end
-
-  defp emit(state, type, payload) do
-    EngineApiClient.append_event(state.project_id, state.session_id, %{
-      type: type,
-      actorKind: "agent",
-      actorId: state.agent_id,
-      payload: payload
-    })
-
-    Engine.Sessions.LiveBroadcast.event_appended(state.session_id, type, state.agent_id, payload)
-  end
 end

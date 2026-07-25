@@ -23,6 +23,9 @@ defmodule Engine.Dev.DevAgentState do
     field :status, :string, default: "working"
     field :task_budget_micros, :integer
     field :max_gate_corrections, :integer
+    # "real" (ToolLoop + LLM) | "noop" (smoke test da infra, sem LLM) — a
+    # reidratação escolhe o módulo a subir a partir daqui.
+    field :impl, :string, default: "real"
 
     timestamps(type: :utc_datetime_usec)
   end
@@ -36,7 +39,8 @@ defmodule Engine.Dev.DevAgentState do
     :worktree_path,
     :status,
     :task_budget_micros,
-    :max_gate_corrections
+    :max_gate_corrections,
+    :impl
   ]
 
   def upsert!(attrs) do
@@ -53,6 +57,7 @@ defmodule Engine.Dev.DevAgentState do
            :status,
            :task_budget_micros,
            :max_gate_corrections,
+           :impl,
            :updated_at
          ]},
       conflict_target: [:project_id, :agent_id]

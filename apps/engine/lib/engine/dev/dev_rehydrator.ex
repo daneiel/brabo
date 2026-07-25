@@ -4,6 +4,9 @@ defmodule Engine.Dev.DevRehydrator do
   `dev_agent_states` (mesmo idioma do Engine.Sessions.Rehydrator). Rehydration
   NÃO redispara o ciclo `:work` — o agente volta vivo com seu estado; um novo
   ciclo é decisão de quem reativa a execução.
+
+  O modo (`impl`) vem da linha durável: um NoopDevAgent tem que voltar Noop
+  depois de um restart do nó, não virar agente real.
   """
 
   alias Engine.Dev.{DevAgentState, DevAgentSupervisor}
@@ -17,7 +20,8 @@ defmodule Engine.Dev.DevRehydrator do
         s.module,
         s.session_id,
         s.task_budget_micros,
-        s.max_gate_corrections
+        s.max_gate_corrections,
+        s.impl
       )
     end)
   end
