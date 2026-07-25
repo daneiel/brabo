@@ -35,6 +35,9 @@ defmodule Engine.Application do
       # demais, ativado por handoff aceito do Arquiteto.
       Engine.Infra.InfraAgentSupervisor,
       # Dev agents de execução (Fase 4a) — um por {project, agent_id}.
+      # O Monitor sobe ANTES do supervisor: start_agent/6 registra o pid
+      # nele, então ele precisa estar vivo quando o primeiro agente nasce.
+      Engine.Dev.Monitor,
       Engine.Dev.DevAgentSupervisor,
       # Gates de PR (Fase 4a) — um QAAgent + um SecOpsAgent por projeto.
       Engine.Gates.QaAgentSupervisor,

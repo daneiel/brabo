@@ -111,6 +111,49 @@ defmodule Engine.Dev.DevAgentServerTest do
     assert new_state.task_id == "task-abc12345"
   end
 
+  test "persist não apaga os tetos gravados no init", %{
+    project_id: project_id,
+    session_id: session_id
+  } do
+    # A coluna max_gate_corrections está na lista de :replace do on_conflict:
+    # omiti-la no upsert do persist/1 a zerava no primeiro ciclo de task, e os
+    # gates (que leem o campo do banco) caíam no default da api.
+    {:ok, state} =
+      DevAgentServer.init({project_id, "dev-web", "web", session_id, 500_000, 1})
+
+    Process.put(:fake_tasks, [%{"id" => "task-tetos123", "title" => "T"}])
+    Application.put_env(:engine, :tool_loop_max_iterations, 1)
+
+    Process.put(
+      :fake_llm_always,
+      FakeEngineApiClient.tool_call_response("search_workspace", %{"query" => "x"})
+    )
+
+    assert {:noreply, _} = DevAgentServer.handle_cast(:work, state)
+
+    row = DevAgentState.get(project_id, "dev-web")
+    assert row.task_id == "task-tetos123"
+    assert row.max_gate_corrections == 1
+    assert row.task_budget_micros == 500_000
+  end
+
+  test "falha ao montar o worktree: devolve a task em vez de deixá-la órfã", %{
+    state: state
+  } do
+    # A task já foi reivindicada (in_progress na api) quando o worktree é
+    # montado. Se a criação falhar e ninguém devolver a task, ela fica sem
+    # dono vivo e invisível pro claim, que só pega `todo`.
+    Process.put(:fake_tasks, [%{"id" => "task-semwt12", "title" => "T"}])
+    Process.put(:fake_worktree_error, "could not lock config file .git/config")
+
+    assert {:noreply, new_state} = DevAgentServer.handle_cast(:work, state)
+
+    assert_received {:event_appended, _, _, %{type: "dev.error"}}
+    assert_received {:task_blocked, "task-semwt12", "falha ao preparar o worktree", _, "dev-api"}
+    refute_received {:propose_action, _, _, _}
+    assert new_state.task_id == "task-semwt12"
+  end
+
   test "task impossível: limite de iterações → blocked, sem PR", %{state: state} do
     Application.put_env(:engine, :tool_loop_max_iterations, 2)
     Process.put(:fake_tasks, [%{"id" => "task-impossivel", "title" => "Tarefa impossível"}])

@@ -1,5 +1,8 @@
 defmodule Engine.Harness.WorkspaceFilesTest do
-  use ExUnit.Case, async: true
+  # async: false — o setup muta Application.env GLOBAL
+  # (:project_workspaces_root) e apaga a raiz no on_exit; ver a nota em
+  # workspace_test.exs.
+  use ExUnit.Case, async: false
 
   alias Engine.Harness.WorkspaceFiles
   alias Engine.Actions.Workspace
