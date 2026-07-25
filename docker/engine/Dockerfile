@@ -10,6 +10,10 @@ RUN apk add --no-cache build-base inotify-tools git
 # no build, segue sem o binário — Engine.Actions.GitleaksDetector detecta a
 # ausência (System.find_executable/1) e o SecOpsAgent pula o scanner (registra
 # no resumo do parecer), nunca quebra o gate (ver docs/adr/0013).
+#
+# A versão é LOAD-BEARING: o detector usa o subcomando `gitleaks dir` (varre a
+# árvore de trabalho), que só existe a partir do 8.19 — abaixo disso o scan
+# falha e o gate roda sem verificação de segredo. Ver docs/adr/0020.
 ARG GITLEAKS_VERSION=8.21.2
 RUN apk add --no-cache --virtual .gitleaks-build curl tar \
   && (curl -fsSL -o /tmp/gitleaks.tar.gz \

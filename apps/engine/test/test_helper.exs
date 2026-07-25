@@ -1,4 +1,11 @@
-ExUnit.start()
+# Testes marcados `@tag :gitleaks` rodam o BINÁRIO de verdade (não um Fake) —
+# são a regressão do "varre a árvore, não o histórico" do ADR 0020. Dentro do
+# container do engine o gitleaks existe e eles rodam; numa máquina sem o
+# binário são excluídos, mesma disciplina de detecção opcional do
+# Engine.Actions.GitleaksDetector (ausência nunca quebra nada).
+gitleaks_exclusions = if System.find_executable("gitleaks"), do: [], else: [:gitleaks]
+
+ExUnit.start(exclude: gitleaks_exclusions)
 Ecto.Adapters.SQL.Sandbox.mode(Engine.Repo, :manual)
 
 # outbox_events é gerenciada pela api (Drizzle, schema "public") — o banco

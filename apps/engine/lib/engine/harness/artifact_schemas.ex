@@ -22,8 +22,30 @@ defmodule Engine.Harness.ArtifactSchemas do
     # iterações, orçamento estourado, ou parou sem sinalizar). Emitido pelo
     # SERVIDOR (`Engine.Dev.AgentIo.block_task/3`), nunca por tool call: é o
     # registro do desfecho, não algo que o modelo escolhe declarar.
-    "task_blocked" => ["taskId", "agentId", "reason", "diagnosis"]
+    "task_blocked" => ["taskId", "agentId", "reason", "diagnosis"],
+    # Fase 4a — pareceres dos gates de PR (QA e SecOps). Server-emitted como o
+    # task_blocked: o SecOps é determinístico (nem tem LLM), e o parecer do QA
+    # nasce da tool `emit_qa_verdict`, que é enforçada à parte — em nenhum dos
+    # dois o modelo escolhe emitir o artefato. `coverageMatrix` (só do QA) é
+    # opcional de propósito: um parecer sem matriz ainda é um parecer válido,
+    # e perdê-lo por validação seria pior do que registrá-lo incompleto. O
+    # SUJEITO do parecer não entra nas chaves obrigatórias porque varia entre
+    # os dois consumidores — ver `check_extra/2`.
+    "qa_verdict" => ["veredito", "resumo", "itens"],
+    "secops_verdict" => ["veredito", "resumo", "itens"]
   }
+
+  # Pareceres de gate. Os vereditos possíveis são os mesmos da máquina de
+  # estados da api (`pr-gate-state-machine.ts`) — um veredito fora disso faria
+  # o `RecordGateVerdictUseCase` estourar, então é melhor recusar o artefato.
+  @gate_verdict_types ["qa_verdict", "secops_verdict"]
+  @gate_verdicts ["approved", "changes_requested"]
+
+  # Um parecer é sobre UMA task de dev (`taskId`) ou sobre UMA PR de infra
+  # (`prActionId`, ver `Engine.Infra.InfraGateRunner`) — nunca sobre as duas,
+  # nunca sobre nenhuma. Mesmo tipo de artefato, sujeitos diferentes: a UI já
+  # trata os dois estruturalmente (`GateSubject` em PrGateTimeline.tsx).
+  @gate_subject_keys ["taskId", "prActionId"]
 
   # Tipos que o modelo pode emitir via a ferramenta emit_artifact.
   @tool_emittable ["note", "business_rule"]
@@ -67,5 +89,25 @@ defmodule Engine.Harness.ArtifactSchemas do
     end
   end
 
+  defp check_extra(type, payload) when type in @gate_verdict_types do
+    with :ok <- check_gate_subject(payload) do
+      check_gate_verdict(payload)
+    end
+  end
+
   defp check_extra(_type, _payload), do: :ok
+
+  defp check_gate_subject(payload) do
+    case Enum.filter(@gate_subject_keys, &Map.has_key?(payload, &1)) do
+      [_only_one] -> :ok
+      keys -> {:error, {:sujeito_invalido, keys}}
+    end
+  end
+
+  defp check_gate_verdict(payload) do
+    case Map.get(payload, "veredito") do
+      veredito when veredito in @gate_verdicts -> :ok
+      other -> {:error, {:veredito_invalido, other}}
+    end
+  end
 end

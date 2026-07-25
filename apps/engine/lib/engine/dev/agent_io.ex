@@ -17,7 +17,7 @@ defmodule Engine.Dev.AgentIo do
   """
 
   alias Engine.Dev.DevAgentState
-  alias Engine.Harness.ArtifactSchemas
+  alias Engine.Harness.ArtifactEmitter
   alias Engine.Sessions.EngineApiClient
 
   @doc "Nome registrado do agente — a chave do Registry é {project_id, agent_id}."
@@ -149,30 +149,10 @@ defmodule Engine.Dev.AgentIo do
   pode virar um crash que deixa a task sem dono.
   """
   def emit_artifact(state, type, payload) do
-    case ArtifactSchemas.validate(type, stringify_keys(payload)) do
-      :ok ->
-        emit(state, "artifact.#{type}", payload)
-
-      {:error, reason} ->
-        emit(state, "dev.error", %{
-          agentId: state.agent_id,
-          reason: "artefato #{type} inválido: #{inspect(reason)}"
-        })
-    end
-  end
-
-  defp stringify_keys(map) do
-    Map.new(map, fn {k, v} -> {to_string(k), v} end)
+    ArtifactEmitter.emit(state.project_id, state.session_id, state.agent_id, type, payload)
   end
 
   def emit(state, type, payload) do
-    EngineApiClient.append_event(state.project_id, state.session_id, %{
-      type: type,
-      actorKind: "agent",
-      actorId: state.agent_id,
-      payload: payload
-    })
-
-    Engine.Sessions.LiveBroadcast.event_appended(state.session_id, type, state.agent_id, payload)
+    ArtifactEmitter.append(state.project_id, state.session_id, state.agent_id, type, payload)
   end
 end

@@ -230,15 +230,26 @@ defmodule Engine.Dev.DevAgentServer do
     |> handle_correction_outcome(state, findings)
   end
 
+  # O parecer PREVALECE sobre o enunciado da task, e isso precisa estar dito.
+  # A task original continua no contexto (é ela que define o que implementar),
+  # então quando o gate contradiz uma instrução dela — o caso clássico é o
+  # SecOps mandando tirar um segredo que a task pediu pra usar — o agente
+  # obedecia ao enunciado e repunha o problema a cada volta, até estourar o
+  # teto de correções. Visto na execução do critério de aceite (ADR 0020): três
+  # correções seguidas devolvendo o mesmo achado do gitleaks.
   defp correction_message(findings) do
     %{
       "role" => "user",
       "content" =>
         "O gate \"#{findings.gate}\" pediu correção nesta PR (mesma branch, mesmo worktree). " <>
-          "Motivo: #{findings.reason}. Diagnóstico: #{findings.diagnosis}. Corrija o " <>
-          "necessário, rode a suite de novo via `terminal`, e só sinalize conclusão com " <>
-          "`report_done` depois de vê-la passar (exit 0). Se ainda não conseguir, use " <>
-          "`report_blocked`.",
+          "Motivo: #{findings.reason}. Diagnóstico: #{findings.diagnosis}.\n\n" <>
+          "Este parecer PREVALECE sobre o enunciado da task: onde os dois se " <>
+          "contradisserem, siga o parecer. Se o achado for sobre algo que a task pediu " <>
+          "explicitamente, corrija mesmo assim — repetir o que o gate acabou de reprovar " <>
+          "só esgota o ciclo de correções e bloqueia a task.\n\n" <>
+          "Corrija o necessário, rode a suite de novo via `terminal`, e só sinalize " <>
+          "conclusão com `report_done` depois de vê-la passar (exit 0). Se ainda não " <>
+          "conseguir, use `report_blocked`.",
       :pinned => true
     }
   end

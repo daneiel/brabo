@@ -38,10 +38,29 @@ defmodule Engine.Actions.SemgrepDetector.Live do
     _ -> {:error, :scan_failed}
   end
 
+  # Ruleset NOMEADO, não `--config auto`: o `auto` exige telemetria ligada
+  # ("Cannot create auto config when metrics are off") e mandar o perfil do
+  # código do usuário pro semgrep.dev não é aceitável num gate de segurança.
+  # Com um pacote nomeado o scan roda com `--metrics=off`.
+  #
+  # As regras ainda vêm do registry pela REDE na primeira execução (ficam em
+  # cache depois): sem rede o semgrep sai com erro, o que aqui vira
+  # `{:error, :scan_failed}` e o gate registra "pulado" no resumo do parecer,
+  # nunca trava. O teto de tempo fica no `Engine.Gates.Scanner`, que chama isto.
+  @args [
+    "--config",
+    "p/security-audit",
+    "--json",
+    "--quiet",
+    "--metrics=off",
+    # Dependências e histórico não são código desta PR, e são o grosso do
+    # tempo de varredura numa árvore de projeto real.
+    "--exclude=node_modules",
+    "--exclude=.git"
+  ]
+
   defp run(worktree_path) do
-    case System.cmd("semgrep", ["--config", "auto", "--json", "--quiet", worktree_path],
-           stderr_to_stdout: false
-         ) do
+    case System.cmd("semgrep", @args ++ [worktree_path], stderr_to_stdout: false) do
       {output, exit_code} when exit_code in [0, 1] -> parse(output)
       {_output, _exit} -> {:error, :scan_failed}
     end

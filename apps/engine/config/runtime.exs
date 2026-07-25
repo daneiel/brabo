@@ -43,6 +43,12 @@ config :engine,
     System.get_env("PROJECT_WORKSPACES_ROOT", "/tmp/brabo-project-workspaces"),
   terminal_action_timeout_ms:
     String.to_integer(System.get_env("TERMINAL_ACTION_TIMEOUT_MS", "15000")),
+  # Teto por scanner de segurança (gitleaks/semgrep) nos gates de SecOps.
+  # Bem mais folgado que o terminal: o semgrep varre a árvore inteira e pode
+  # baixar regras da rede (`--config auto`). Sem esse teto, um scanner
+  # pendurado congela o gate do projeto (ver Engine.Gates.Scanner).
+  secops_scan_timeout_ms:
+    String.to_integer(System.get_env("SECOPS_SCAN_TIMEOUT_MS", "180000")),
   # Harness — ToolLoop / ContextManager (Fase 3a, sessão 2).
   tool_loop_max_iterations: String.to_integer(System.get_env("TOOL_LOOP_MAX_ITERATIONS", "8")),
   # Um turno de LLM não é uma chamada de API comum: com modelo local o
@@ -53,7 +59,14 @@ config :engine,
   context_compaction_threshold:
     String.to_float(System.get_env("CONTEXT_COMPACTION_THRESHOLD", "0.7")),
   # Janela de contexto assumida quando o modelo não informa uma.
-  default_context_window: String.to_integer(System.get_env("DEFAULT_CONTEXT_WINDOW", "8192"))
+  default_context_window: String.to_integer(System.get_env("DEFAULT_CONTEXT_WINDOW", "8192")),
+  # Agentes de fundo (Psicólogo via outbox, Anamnese periódica) competem por
+  # turnos de LLM com os agentes de execução. Com provider local de um modelo
+  # só, essa disputa derruba a conexão do dev no meio do ciclo. Desligáveis por
+  # ambiente pra rodar o critério de aceite numa máquina apertada — default
+  # ligado, sem mudança de comportamento.
+  start_outbox_drain?: System.get_env("START_OUTBOX_DRAIN", "true") == "true",
+  start_anamnese?: System.get_env("START_ANAMNESE", "true") == "true"
 
 if config_env() == :prod do
   database_url =
