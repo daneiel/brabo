@@ -17,8 +17,10 @@ import {
   getAgentModelBinding,
   listAgentAutonomy,
   listModels,
+  unblockTask,
 } from '../lib/api-client';
 import { deriveAgentRoster } from '../lib/agent-status';
+import { deriveExecutionProgress, formatMicros } from '../lib/execution';
 import { connectSessionHeartbeat } from '../lib/session-channel';
 import { AgentCard } from '../components/AgentCard';
 import { ActivityFeed } from '../components/ActivityFeed';
@@ -35,11 +37,6 @@ import styles from './ProjectOverviewTab.module.css';
 const AUTONOMY_ACTION_TYPE: Record<string, string> = { infra: 'open_infra_pr' };
 function autonomyActionTypeFor(agentId: string): string {
   return AUTONOMY_ACTION_TYPE[agentId] ?? (agentId.startsWith('dev-') ? 'pr_open' : '');
-}
-
-// tokensSpentMicros é custo em micro-USD (mesma unidade de budgets/token_usage).
-function formatMicros(micros: number): string {
-  return `US$ ${(micros / 1_000_000).toFixed(4)}`;
 }
 
 interface ProjectOverviewTabProps {
@@ -84,6 +81,9 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
     const disconnect = connectSessionHeartbeat(sessionId, {
       onEvent: () => {
         queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
+        // O backlog também: tasks bloqueadas vêm dele, não do event log —
+        // sem isto o destaque de blocked só aparece no poll de 4s.
+        queryClient.invalidateQueries({ queryKey: ['backlog', projectId] });
       },
       onAgentStatus: () => {
         queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
@@ -165,37 +165,9 @@ function ExecutionSection({
 
   // Dev agents a partir do event log: módulo/branch/task (dev.started/
   // dev.working) + iteração/custo ao vivo do ÚLTIMO agent.response do agente
-  // (emitido pelo ToolLoop a cada turno de LLM).
-  interface AgentProgress {
-    module: string;
-    branch?: string;
-    taskId?: string;
-    iteration?: number;
-    tokensSpentMicros?: number;
-  }
-  const agents = new Map<string, AgentProgress>();
-  for (const e of events) {
-    const p = e.payload as { agentId?: string; module?: string; branch?: string; taskId?: string };
-    if (e.type === 'dev.started' && p.agentId) {
-      agents.set(p.agentId, { module: p.module ?? '', ...agents.get(p.agentId) });
-    }
-    if (e.type === 'dev.working' && p.agentId) {
-      agents.set(p.agentId, {
-        ...agents.get(p.agentId),
-        module: agents.get(p.agentId)?.module ?? '',
-        branch: p.branch,
-        taskId: p.taskId,
-      });
-    }
-    if (e.type === 'agent.response' && agents.has(e.actor.id)) {
-      const rp = e.payload as { iteration?: number; tokensSpentMicros?: number };
-      agents.set(e.actor.id, {
-        ...(agents.get(e.actor.id) as AgentProgress),
-        iteration: rp.iteration,
-        tokensSpentMicros: rp.tokensSpentMicros,
-      });
-    }
-  }
+  // (emitido pelo ToolLoop a cada turno de LLM). A redução é pura e vive em
+  // lib/execution.ts, testada lá.
+  const agents = deriveExecutionProgress(events);
 
   const blockedTasks = (epics ?? []).flatMap((epic) =>
     epic.stories.flatMap((story) =>
@@ -234,6 +206,20 @@ function ExecutionSection({
     }
   }
 
+  async function handleUnblock(taskId: string) {
+    if (!sessionId) return;
+    try {
+      await unblockTask(projectId, sessionId, taskId);
+      await queryClient.invalidateQueries({ queryKey: ['backlog', projectId] });
+    } catch {
+      showToast({
+        title: 'Erro',
+        message: 'Não foi possível desbloquear a task',
+        tone: 'danger',
+      });
+    }
+  }
+
   async function handleAccept(module: string) {
     if (!sessionId) return;
     try {
@@ -269,10 +255,13 @@ function ExecutionSection({
                 <div key={agentId} className={styles.moduleCard}>
                   <div className={styles.moduleName}>{agentId}</div>
                   <div className={styles.moduleStack}>módulo: {a.module}</div>
+                  {a.taskTitle && (
+                    <div className={styles.moduleResp}>task: {a.taskTitle}</div>
+                  )}
                   {a.branch && <div className={styles.depChip}>{a.branch}</div>}
                   {a.iteration !== undefined && (
                     <div className={styles.moduleResp}>
-                      iteração {a.iteration} · {formatMicros(a.tokensSpentMicros ?? 0)}
+                      iteração {a.iteration} · custo {formatMicros(a.tokensSpentMicros ?? 0)}
                     </div>
                   )}
                 </div>
@@ -295,6 +284,9 @@ function ExecutionSection({
                     <span className={styles.pendReason}>
                       {t.blockedReason ?? 'sem diagnóstico'}
                     </span>
+                    <Button variant="secondary" onClick={() => handleUnblock(t.id)}>
+                      Desbloquear
+                    </Button>
                   </li>
                 ))}
               </ul>

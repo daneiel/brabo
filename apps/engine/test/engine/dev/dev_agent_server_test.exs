@@ -94,7 +94,7 @@ defmodule Engine.Dev.DevAgentServerTest do
     assert {:noreply, new_state} = DevAgentServer.handle_cast(:work, state)
 
     assert_received {:task_claimed, "api", "dev-api"}
-    assert_received {:dev_context_fetched, "task-abc12345"}
+    assert_received {:dev_context_fetched, "task-abc12345", "api"}
     assert_received {:propose_action, "terminal", _, %{command: "npm test"}}
     assert_received {:propose_action, "git_commit", _, commit_payload}
     assert commit_payload.author == "dev-api[bot]"
@@ -177,6 +177,66 @@ defmodule Engine.Dev.DevAgentServerTest do
     refute_received {:task_marked, _, "in_review", _}
 
     assert new_state.task_id == "task-impossivel"
+  end
+
+  test "suite vermelha até o limite de iterações: blocked com a saída do teste que falhou", %{
+    state: state
+  } do
+    # O caminho que o enunciado descreve — "se após N iterações não conseguir".
+    # O agente insiste em rodar a suite e ela sempre falha; o diagnóstico
+    # precisa carregar a saída do ÚLTIMO terminal, senão o usuário recebe um
+    # bloqueio sem nada pra agir em cima.
+    Application.put_env(:engine, :tool_loop_max_iterations, 2)
+    Process.put(:fake_tasks, [%{"id" => "task-vermelha", "title" => "Suite quebrada"}])
+
+    Process.put(:fake_propose_action, %{
+      "id" => "pa-red",
+      "status" => "executed",
+      "executionResult" => %{
+        "exitCode" => 1,
+        "stdout" => "FAIL src/cadastro.spec.ts > e-mail único\nexpected 201, got 500"
+      }
+    })
+
+    Process.put(
+      :fake_llm_always,
+      FakeEngineApiClient.tool_call_response("terminal", %{"command" => "pnpm test"})
+    )
+
+    assert {:noreply, _} = DevAgentServer.handle_cast(:work, state)
+
+    assert_received {:task_blocked, "task-vermelha", "limite de iterações atingido", diagnosis,
+                     "dev-api"}
+
+    assert diagnosis =~ "expected 201, got 500",
+           "o diagnóstico não carregou a saída da suite que falhou: #{inspect(diagnosis)}"
+
+    # E o principal: PR vermelha NUNCA é aberta.
+    refute_received {:propose_action, "pr_open", _, _}
+    refute_received {:task_marked, _, "in_review", _}
+  end
+
+  test "bloqueio grava o artefato task_blocked (não só o evento de narrativa)", %{state: state} do
+    Application.put_env(:engine, :tool_loop_max_iterations, 1)
+    Process.put(:fake_tasks, [%{"id" => "task-artefato", "title" => "Tarefa impossível"}])
+
+    Process.put(
+      :fake_llm_always,
+      FakeEngineApiClient.tool_call_response("search_workspace", %{"query" => "x"})
+    )
+
+    assert {:noreply, _} = DevAgentServer.handle_cast(:work, state)
+
+    assert_received {:event_appended, _, _, %{type: "artifact.task_blocked", payload: payload}}
+
+    assert payload.taskId == "task-artefato"
+    assert payload.agentId == "dev-api"
+    assert payload.reason == "limite de iterações atingido"
+    assert is_binary(payload.diagnosis)
+
+    # Nenhum erro de validação de artefato foi emitido.
+    refute_received {:event_appended, _, _,
+                     %{type: "dev.error", payload: %{reason: "artefato" <> _}}}
   end
 
   test "orçamento de tokens excedido → blocked com diagnóstico de custo, sem PR", %{state: state} do

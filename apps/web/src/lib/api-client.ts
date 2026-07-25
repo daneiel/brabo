@@ -256,6 +256,17 @@ export const acceptParallelization = (
     `/projects/${projectId}/sessions/${sessionId}/execution/parallelize`,
     { module },
   );
+// Libera uma task que o dev agent devolveu bloqueada, depois de o usuário ler
+// o diagnóstico. Enquanto `blocked`, ela é excluída do claim atômico — sem
+// isto uma task impossível ficaria parada pra sempre.
+export const unblockTask = (
+  projectId: string,
+  sessionId: string,
+  taskId: string,
+) =>
+  post<{ ok: true }>(
+    `/projects/${projectId}/sessions/${sessionId}/tasks/${taskId}/unblock`,
+  );
 
 // --- Proposed actions ---
 

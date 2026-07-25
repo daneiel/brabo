@@ -125,7 +125,11 @@ defmodule Engine.Harness.ToolLoop.Default do
 
       {:error, reason} ->
         emit(ctx, "agent.response", %{error: inspect(reason)})
-        {:ok, ctx}
+        # Guarda o erro no ctx: sem isso o chamador só vê `{:ok, ctx}` e não
+        # distingue "o modelo parou sem sinalizar" de "o provider falhou" —
+        # a task era bloqueada com diagnóstico VAZIO, sem nada pro operador
+        # agir em cima.
+        {:ok, Map.put(ctx, :last_error, inspect(reason))}
     end
   end
 

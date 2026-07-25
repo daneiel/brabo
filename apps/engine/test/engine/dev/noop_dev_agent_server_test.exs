@@ -92,7 +92,7 @@ defmodule Engine.Dev.NoopDevAgentServerTest do
     refute_received {:llm_turn, _, _, _}
     refute_received {:llm_turn_stream, _, _, _}
     # E nem monta o contexto rico da task, que é insumo de prompt.
-    refute_received {:dev_context_fetched, _}
+    refute_received {:dev_context_fetched, _, _}
   end
 
   test "falha no worktree devolve a task em vez de deixá-la órfã", %{state: state} do

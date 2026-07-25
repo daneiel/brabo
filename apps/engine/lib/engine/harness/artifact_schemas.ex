@@ -17,7 +17,12 @@ defmodule Engine.Harness.ArtifactSchemas do
   @schemas %{
     "note" => ["title", "body"],
     "business_rule" => ["title", "description", "origin"],
-    "product_brief" => ["title", "summary", "rules"]
+    "product_brief" => ["title", "summary", "rules"],
+    # Fase 4a — o DevAgent desistiu da task (suite não fecha, limite de
+    # iterações, orçamento estourado, ou parou sem sinalizar). Emitido pelo
+    # SERVIDOR (`Engine.Dev.AgentIo.block_task/3`), nunca por tool call: é o
+    # registro do desfecho, não algo que o modelo escolhe declarar.
+    "task_blocked" => ["taskId", "agentId", "reason", "diagnosis"]
   }
 
   # Tipos que o modelo pode emitir via a ferramenta emit_artifact.

@@ -17,13 +17,17 @@ defmodule Engine.Harness.Tools.ProposeAdr do
       description:
         "Propõe um ADR (Architecture Decision Record) a ser commitado no repo do projeto " <>
           "via PR, sujeito à aprovação do usuário. `slug` vira docs/adr/<slug>.md e a branch " <>
-          "feature/adr-<slug>. `content` é o markdown do ADR.",
+          "feature/adr-<slug>. `content` é o markdown do ADR. `modules` lista os módulos do " <>
+          "module_map a que a decisão se aplica — os dev agents desses módulos recebem o ADR " <>
+          "no contexto. Omita (ou deixe vazio) quando a decisão for transversal ao projeto: " <>
+          "aí ela vale pra todos os módulos.",
       parameters: %{
         "type" => "object",
         "properties" => %{
           "title" => %{"type" => "string"},
           "slug" => %{"type" => "string"},
-          "content" => %{"type" => "string"}
+          "content" => %{"type" => "string"},
+          "modules" => %{"type" => "array", "items" => %{"type" => "string"}}
         },
         "required" => ["title", "slug", "content"]
       }
@@ -34,9 +38,17 @@ defmodule Engine.Harness.Tools.ProposeAdr do
   def category, do: :pipeline
 
   @impl true
-  def run(%{"title" => title, "slug" => slug, "content" => content}, ctx) do
+  def run(%{"title" => title, "slug" => slug, "content" => content} = args, ctx) do
     actor = %{kind: "agent", id: ctx.agent}
-    payload = %{title: title, slug: slug, content: content}
+
+    payload = %{
+      title: title,
+      slug: slug,
+      content: content,
+      # Vínculo ADR↔módulo (Fase 4a): lista vazia = decisão transversal, entra
+      # no contexto de todos os dev agents.
+      modules: Map.get(args, "modules", [])
+    }
 
     case EngineApiClient.propose_action(
            ctx.project_id,

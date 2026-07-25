@@ -92,7 +92,7 @@ defmodule Engine.Dev.DevAgentServer do
 
   @impl true
   def handle_cast({:correct, findings}, state) do
-    case ContextBuilder.fetch(state.project_id, state.session_id, state.task_id) do
+    case ContextBuilder.fetch(state.project_id, state.session_id, state.task_id, state.module) do
       {:ok, dev_context} ->
         {:noreply, implement_correction(state, dev_context, findings)}
 
@@ -122,10 +122,13 @@ defmodule Engine.Dev.DevAgentServer do
         AgentIo.emit(state, "dev.working", %{
           agentId: state.agent_id,
           taskId: task_id,
+          # O título viaja no evento porque é o que o painel mostra: sem ele a
+          # UI só tem a branch (`task-<8 hex do uuid>`), que não diz nada.
+          taskTitle: Map.get(task, "title"),
           branch: branch
         })
 
-        case ContextBuilder.fetch(state.project_id, state.session_id, task_id) do
+        case ContextBuilder.fetch(state.project_id, state.session_id, task_id, state.module) do
           {:ok, dev_context} ->
             implement(state, dev_context)
 
@@ -183,7 +186,15 @@ defmodule Engine.Dev.DevAgentServer do
         "Implemente a task \"#{task["title"]}\" da story \"#{story["title"]}\". " <>
           "Rode a suite de testes do projeto via `terminal` e só sinalize conclusão com " <>
           "`report_done` depois de vê-la passar (exit 0). Se não conseguir concluir, " <>
-          "use `report_blocked` com o diagnóstico do que foi tentado e por que falhou.",
+          "use `report_blocked` com o diagnóstico do que foi tentado e por que falhou.\n\n" <>
+          # Instrução explícita porque modelos menores tendem a DESCREVER a
+          # solução (ou imprimir a tool call como JSON no texto) em vez de
+          # chamar a ferramenta — o loop então termina sem desfecho e a task é
+          # bloqueada sem o modelo ter feito nada.
+          "IMPORTANTE: aja apenas por chamadas de ferramenta. Não escreva código " <>
+          "nem JSON na sua resposta em texto, e não explique o que pretende fazer — " <>
+          "chame `write_file` para criar cada arquivo e `terminal` para rodar a suite. " <>
+          "Toda resposta sua deve conter pelo menos uma chamada de ferramenta.",
       :pinned => true
     }
   end
@@ -253,7 +264,11 @@ defmodule Engine.Dev.DevAgentServer do
   end
 
   defp handle_correction_outcome({:limit_reached, ctx}, state, _findings) do
-    AgentIo.block_task(state, "limite de iterações atingido (correção)", last_terminal_output(ctx))
+    AgentIo.block_task(
+      state,
+      "limite de iterações atingido (correção)",
+      last_terminal_output(ctx)
+    )
   end
 
   defp handle_correction_outcome({:budget_exceeded, ctx}, state, _findings) do
@@ -264,8 +279,12 @@ defmodule Engine.Dev.DevAgentServer do
     )
   end
 
-  defp handle_correction_outcome({:ok, _ctx}, state, _findings) do
-    AgentIo.block_task(state, "parou sem concluir nem reportar bloqueio (correção)", "")
+  defp handle_correction_outcome({:ok, ctx}, state, _findings) do
+    AgentIo.block_task(
+      state,
+      "parou sem concluir nem reportar bloqueio (correção)",
+      stop_diagnosis(ctx)
+    )
   end
 
   defp trigger_gate_recheck(state, "qa"),
@@ -317,8 +336,16 @@ defmodule Engine.Dev.DevAgentServer do
     )
   end
 
-  defp handle_outcome({:ok, _ctx}, state, _task, _story) do
-    AgentIo.block_task(state, "parou sem concluir nem reportar bloqueio", "")
+  defp handle_outcome({:ok, ctx}, state, _task, _story) do
+    AgentIo.block_task(state, "parou sem concluir nem reportar bloqueio", stop_diagnosis(ctx))
+  end
+
+  # Distingue falha de provider (timeout, 5xx) de "o modelo simplesmente parou".
+  defp stop_diagnosis(ctx) do
+    case Map.get(ctx, :last_error) do
+      nil -> "o modelo encerrou o turno sem chamar report_done nem report_blocked"
+      error -> "falha na chamada ao modelo: #{error}"
+    end
   end
 
   defp last_terminal_output(ctx) do
@@ -349,5 +376,4 @@ defmodule Engine.Dev.DevAgentServer do
 
     "Task: #{task["title"]}\n#{task["description"]}\n\n## Definition of Done\n#{checklist}"
   end
-
 end
