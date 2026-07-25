@@ -107,11 +107,32 @@ defmodule Engine.Gates.QaAgentServerTest do
     assert {:noreply, _} = QaAgentServer.handle_cast({:run, "task-abc12345"}, state)
 
     # emit_qa_verdict recusou (result_ok? false) -> o hook não terminou o loop
-    # por halt -> a fila de turnos esgota -> {:ok, ctx} -> QaAgentServer trata
-    # como changes_requested genérico. Nunca emite um veredito "approved".
+    # por halt -> a fila de turnos esgota -> {:ok, ctx}. Nunca emite um
+    # veredito "approved".
     refute_received {:event_appended, _, _,
                      %{type: "artifact.qa_verdict", payload: %{veredito: "approved"}}}
+  end
 
-    assert_received {:gate_verdict_recorded, "task-abc12345", "qa", "changes_requested", _, _, _}
+  test "QA que não conclui bloqueia a task, sem parecer e sem queimar volta do teto", %{
+    state: state
+  } do
+    # Nenhum turno scriptado: o loop esgota sem emit_qa_verdict.
+    Process.put(:fake_llm_turns, [])
+
+    assert {:noreply, _} = QaAgentServer.handle_cast({:run, "task-abc12345"}, state)
+
+    # Não há achado nenhum sobre o código do dev — registrar um parecer
+    # `changes_requested` (o comportamento anterior) devolvia pro dev sem nada
+    # pra corrigir E gastava uma das K correções.
+    refute_received {:gate_verdict_recorded, _, _, _, _, _, _}
+    refute_received {:event_appended, _, _, %{type: "artifact.qa_verdict"}}
+
+    assert_received {:task_blocked, "task-abc12345", "QA não concluiu o parecer", diagnosis, "qa"}
+    assert diagnosis =~ "emit_qa_verdict"
+
+    # O bloqueio também vira artefato validado, como o do DevAgent — é o que o
+    # usuário lê pra decidir se desbloqueia.
+    assert_received {:event_appended, _, _,
+                     %{type: "artifact.task_blocked", payload: %{agentId: "qa"}}}
   end
 end

@@ -14,10 +14,30 @@ end
 
 defmodule Engine.Actions.GitleaksDetector.Live do
   @moduledoc """
-  `gitleaks detect --source <worktree>` — escreve o relatório num arquivo
-  temporário (o gitleaks não suporta imprimir JSON puro em stdout de forma
-  confiável entre versões), lê e apaga em seguida. Exit `1` = achou
+  `gitleaks dir <worktree>` — varre a ÁRVORE DE TRABALHO. Escreve o relatório
+  num arquivo temporário (o gitleaks não suporta imprimir JSON puro em stdout
+  de forma confiável entre versões), lê e apaga em seguida. Exit `1` = achou
   segredos (não é falha); só um exit diferente de 0/1 é erro real.
+
+  ## Por que `dir` e não `detect`
+
+  `gitleaks detect` varre o LOG DE COMMITS, não a árvore. Isso tornava o
+  critério de aceite dos gates literalmente inalcançável: o dev commita um
+  segredo, o SecOps reprova, o dev remove o segredo num commit NOVO — e o
+  segredo continua no commit anterior da branch. O SecOps reprovava de novo a
+  cada volta até estourar o teto de correções e a task virar `blocked`.
+  Comprovado no container: com o segredo já removido da árvore, `detect`
+  reportava 1 achado e `dir`, 0.
+
+  Consequência aceita: varre a árvore inteira do worktree (superset do diff —
+  ver `Engine.Gates.Diff`), então um segredo pré-existente na branch base
+  reprova toda PR. É o comportamento correto pra um gate, mas é mais amplo do
+  que o "sobre o diff" do ADR 0013.
+
+  O subcomando `dir` existe desde o gitleaks 8.19 — daí o pin
+  `GITLEAKS_VERSION` no `docker/engine/Dockerfile` ser load-bearing. Binário
+  antigo demais devolve exit fora de `[0, 1]` e cai no `{:error,
+  :scan_failed}`, que o `SecOpsAgentServer` trata como "pulado".
   """
 
   @behaviour Engine.Actions.GitleaksDetector
@@ -44,8 +64,7 @@ defmodule Engine.Actions.GitleaksDetector.Live do
       System.cmd(
         "gitleaks",
         [
-          "detect",
-          "--source",
+          "dir",
           worktree_path,
           "--report-format",
           "json",
@@ -58,7 +77,7 @@ defmodule Engine.Actions.GitleaksDetector.Live do
 
     outcome =
       case result do
-        {_output, exit_code} when exit_code in [0, 1] -> parse(report_path)
+        {_output, exit_code} when exit_code in [0, 1] -> parse(report_path, worktree_path)
         {_output, _exit} -> {:error, :scan_failed}
       end
 
@@ -66,29 +85,46 @@ defmodule Engine.Actions.GitleaksDetector.Live do
     outcome
   end
 
-  defp parse(report_path) do
+  defp parse(report_path, worktree_path) do
     case File.read(report_path) do
-      {:ok, content} -> parse_content(content)
+      {:ok, content} -> parse_content(content, worktree_path)
       {:error, :enoent} -> {:ok, []}
       {:error, reason} -> {:error, reason}
     end
   end
 
-  defp parse_content(content) do
+  defp parse_content(content, worktree_path) do
     case Jason.decode(content) do
-      {:ok, findings} when is_list(findings) -> {:ok, Enum.map(findings, &format/1)}
-      {:ok, _} -> {:ok, []}
-      _ -> {:error, :invalid_output}
+      {:ok, findings} when is_list(findings) ->
+        {:ok, Enum.map(findings, &format(&1, worktree_path))}
+
+      {:ok, _} ->
+        {:ok, []}
+
+      _ ->
+        {:error, :invalid_output}
     end
   end
 
-  defp format(finding) do
+  defp format(finding, worktree_path) do
     %{
       tool: "gitleaks",
-      path: finding["File"],
+      path: relative_path(finding["File"], worktree_path),
       line: finding["StartLine"],
       message: finding["Description"] || finding["RuleID"] || "segredo detectado"
     }
+  end
+
+  # `gitleaks dir` reporta caminho ABSOLUTO (o `detect` reportava relativo).
+  # O parecer vai pro usuário e pro prompt de correção do dev: o caminho
+  # precisa ser o do repositório, não o do worktree dentro do container.
+  defp relative_path(nil, _worktree_path), do: nil
+
+  defp relative_path(path, worktree_path) do
+    case Path.relative_to(path, worktree_path) do
+      ^path -> path
+      relative -> relative
+    end
   end
 end
 

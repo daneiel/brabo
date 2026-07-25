@@ -14,7 +14,8 @@ defmodule Engine.Infra.InfraGateRunner do
   """
 
   alias Engine.Infra.InfraAgentServer
-  alias Engine.Gates.Dispatcher
+  alias Engine.Gates.{Dispatcher, Scanner}
+  alias Engine.Harness.ArtifactEmitter
   alias Engine.Sessions.EngineApiClient
 
   defp hadolint,
@@ -36,7 +37,7 @@ defmodule Engine.Infra.InfraGateRunner do
       resumo = build_resumo("hadolint", skipped_notes, findings)
       itens = Enum.map(findings, &format_item/1)
 
-      emit(project_id, session_id, "artifact.qa_verdict", pr_action_id, veredito, resumo, itens)
+      emit(project_id, session_id, "qa_verdict", pr_action_id, veredito, resumo, itens)
       apply_verdict(project_id, session_id, pr_action_id, "qa", veredito, resumo, itens)
     else
       _ -> :ok
@@ -50,8 +51,8 @@ defmodule Engine.Infra.InfraGateRunner do
       dir = write_temp_dir(files)
 
       try do
-        {semgrep_findings, semgrep_note} = run_scanner(semgrep(), dir, "semgrep")
-        {gitleaks_findings, gitleaks_note} = run_scanner(gitleaks(), dir, "gitleaks")
+        {semgrep_findings, semgrep_note} = Scanner.run(semgrep(), dir, "semgrep")
+        {gitleaks_findings, gitleaks_note} = Scanner.run(gitleaks(), dir, "gitleaks")
         findings = semgrep_findings ++ gitleaks_findings
         skipped_notes = Enum.filter([semgrep_note, gitleaks_note], & &1)
 
@@ -59,15 +60,7 @@ defmodule Engine.Infra.InfraGateRunner do
         resumo = build_resumo("scanners", skipped_notes, findings)
         itens = Enum.map(findings, &format_item/1)
 
-        emit(
-          project_id,
-          session_id,
-          "artifact.secops_verdict",
-          pr_action_id,
-          veredito,
-          resumo,
-          itens
-        )
+        emit(project_id, session_id, "secops_verdict", pr_action_id, veredito, resumo, itens)
 
         apply_verdict(project_id, session_id, pr_action_id, "secops", veredito, resumo, itens)
       after
@@ -114,18 +107,6 @@ defmodule Engine.Infra.InfraGateRunner do
     |> Path.basename()
     |> String.downcase()
     |> String.contains?("dockerfile")
-  end
-
-  defp run_scanner(detector, dir, name) do
-    if detector.available?() do
-      case detector.scan(dir) do
-        {:ok, findings} -> {findings, nil}
-        {:error, reason} -> {[], "#{name} falhou (#{inspect(reason)}), pulado"}
-        :unavailable -> {[], "#{name} indisponível, pulado"}
-      end
-    else
-      {[], "#{name} indisponível, pulado"}
-    end
   end
 
   defp write_temp_dir(files) do
@@ -185,16 +166,15 @@ defmodule Engine.Infra.InfraGateRunner do
     end
   end
 
+  # Mesmos tipos de artefato dos gates de dev (`qa_verdict`/`secops_verdict`),
+  # com `prActionId` no lugar de `taskId` como sujeito — o schema aceita os
+  # dois, um de cada vez (ver `Engine.Harness.ArtifactSchemas`).
   defp emit(project_id, session_id, type, pr_action_id, veredito, resumo, itens) do
-    payload = %{prActionId: pr_action_id, veredito: veredito, resumo: resumo, itens: itens}
-
-    EngineApiClient.append_event(project_id, session_id, %{
-      type: type,
-      actorKind: "agent",
-      actorId: "infra-gate",
-      payload: payload
+    ArtifactEmitter.emit(project_id, session_id, "infra-gate", type, %{
+      prActionId: pr_action_id,
+      veredito: veredito,
+      resumo: resumo,
+      itens: itens
     })
-
-    Engine.Sessions.LiveBroadcast.event_appended(session_id, type, "infra-gate", payload)
   end
 end

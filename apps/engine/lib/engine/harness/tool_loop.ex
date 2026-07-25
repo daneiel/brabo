@@ -50,7 +50,14 @@ defmodule Engine.Harness.ToolLoop.Default do
 
   @behaviour Engine.Harness.ToolLoop
 
-  alias Engine.Harness.{ContextBuilder, PromptAssembler, ContextManager, Tools, Hooks}
+  alias Engine.Harness.{
+    ContextBuilder,
+    PromptAssembler,
+    ContextManager,
+    Tools,
+    Hooks,
+    ToolCallRecovery
+  }
   alias Engine.Harness.Hooks.{ActionPipeline, EventLog}
   alias Engine.Sessions.EngineApiClient
 
@@ -104,6 +111,12 @@ defmodule Engine.Harness.ToolLoop.Default do
         cost = get_in(resp, ["usage", "costMicros"]) || 0
         ctx = append(ctx, Map.put(message, :pinned, false))
         ctx = Map.update!(ctx, :tokens_spent_micros, &(&1 + cost))
+        # A api devolve 200 com `error` no CORPO quando o provider falha — só
+        # o transporte quebrado vira `{:error, _}` lá embaixo. Sem guardar
+        # este caso, `last_error` fica nil e quem consome o `{:ok, ctx}`
+        # diagnostica "o modelo parou sem sinalizar" para uma falha de
+        # infraestrutura. Mesma armadilha do ADR 0019, outro caminho.
+        ctx = registra_erro(ctx, Map.get(resp, "error"))
 
         emit(ctx, "agent.response", %{
           content: Map.get(message, "content", ""),
@@ -112,7 +125,10 @@ defmodule Engine.Harness.ToolLoop.Default do
           tokensSpentMicros: ctx.tokens_spent_micros
         })
 
-        case Map.get(message, "toolCalls") || [] do
+        # `toolCalls` vazio não significa necessariamente "o modelo parou":
+        # modelo local pequeno costuma descrever a chamada em TEXTO em vez de
+        # usar o protocolo nativo. Recupera antes de desistir (ADR 0020).
+        case tool_calls(message, ctx) do
           [] ->
             {:ok, ctx}
 
@@ -132,6 +148,19 @@ defmodule Engine.Harness.ToolLoop.Default do
         {:ok, Map.put(ctx, :last_error, inspect(reason))}
     end
   end
+
+  defp registra_erro(ctx, nil), do: ctx
+  defp registra_erro(ctx, ""), do: ctx
+  defp registra_erro(ctx, error), do: Map.put(ctx, :last_error, to_string(error))
+
+  defp tool_calls(message, ctx) do
+    case Map.get(message, "toolCalls") || [] do
+      [] -> ToolCallRecovery.from_content(Map.get(message, "content", ""), tool_names(ctx))
+      nativas -> nativas
+    end
+  end
+
+  defp tool_names(ctx), do: Enum.map(ctx.tool_specs, & &1.name)
 
   defp dispatch_or_halt(tool_call, {:cont, ctx}) do
     {ctx, halt} = dispatch(tool_call, ctx)

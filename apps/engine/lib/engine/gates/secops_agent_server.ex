@@ -18,7 +18,8 @@ defmodule Engine.Gates.SecOpsAgentServer do
   use GenServer, restart: :temporary
 
   alias Engine.Dev.{ContextBuilder, DevAgentServer, DevAgentState}
-  alias Engine.Gates.Diff
+  alias Engine.Gates.{Diff, Scanner}
+  alias Engine.Harness.ArtifactEmitter
   alias Engine.Sessions.EngineApiClient
 
   defp semgrep,
@@ -61,8 +62,8 @@ defmodule Engine.Gates.SecOpsAgentServer do
           "diff indisponível (#{inspect(reason)})."
       end
 
-    {semgrep_findings, semgrep_note} = run_scanner(semgrep(), worktree, "semgrep")
-    {gitleaks_findings, gitleaks_note} = run_scanner(gitleaks(), worktree, "gitleaks")
+    {semgrep_findings, semgrep_note} = Scanner.run(semgrep(), worktree, "semgrep")
+    {gitleaks_findings, gitleaks_note} = Scanner.run(gitleaks(), worktree, "gitleaks")
     findings = semgrep_findings ++ gitleaks_findings
     skipped_notes = Enum.filter([semgrep_note, gitleaks_note], & &1)
 
@@ -72,7 +73,9 @@ defmodule Engine.Gates.SecOpsAgentServer do
     resumo = build_resumo(diff_note, skipped_notes, security_adrs, findings)
     itens = Enum.map(findings, &format_item/1)
 
-    emit(project_id, dev_state.session_id, "artifact.secops_verdict", %{
+    # Parecer como ARTEFATO validado (`Engine.Harness.ArtifactSchemas`), não
+    # como evento cru — ver ADR 0020.
+    ArtifactEmitter.emit(project_id, dev_state.session_id, "secops", "secops_verdict", %{
       taskId: task_id,
       veredito: veredito,
       resumo: resumo,
@@ -80,18 +83,6 @@ defmodule Engine.Gates.SecOpsAgentServer do
     })
 
     apply_verdict(project_id, dev_state, task_id, veredito, resumo, itens)
-  end
-
-  defp run_scanner(detector, worktree, name) do
-    if detector.available?() do
-      case detector.scan(worktree) do
-        {:ok, findings} -> {findings, nil}
-        {:error, reason} -> {[], "#{name} falhou (#{inspect(reason)}), pulado"}
-        :unavailable -> {[], "#{name} indisponível, pulado"}
-      end
-    else
-      {[], "#{name} indisponível, pulado"}
-    end
   end
 
   defp security_relevant_adrs(project_id, session_id, task_id) do
@@ -154,14 +145,4 @@ defmodule Engine.Gates.SecOpsAgentServer do
     end
   end
 
-  defp emit(project_id, session_id, type, payload) do
-    Engine.Sessions.LiveBroadcast.event_appended(session_id, type, "secops", payload)
-
-    EngineApiClient.append_event(project_id, session_id, %{
-      type: type,
-      actorKind: "agent",
-      actorId: "secops",
-      payload: payload
-    })
-  end
 end

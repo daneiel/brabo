@@ -153,4 +153,28 @@ defmodule Engine.Harness.ToolLoopTest do
     tool_msg = Enum.find(out.messages, &(&1["role"] == "tool"))
     assert tool_msg["content"] =~ "ferramenta desconhecida: read_file"
   end
+
+  test "falha do provider NO CORPO da resposta vira ctx.last_error", %{ctx: ctx} do
+    # A api devolve 200 com `error` no corpo quando o provider morre; só o
+    # transporte quebrado vira {:error, _}. Sem registrar este caso, quem
+    # consome o {:ok, ctx} diagnostica "o modelo parou sem sinalizar" pra uma
+    # falha de infraestrutura — foi exatamente o que um gate de QA reportou
+    # errado numa execução real do critério de aceite (ADR 0020).
+    Process.put(:fake_llm_turns, [
+      %{
+        "message" => %{"role" => "assistant", "content" => ""},
+        "error" => "Falha ao conectar no Ollama: fetch failed"
+      }
+    ])
+
+    assert {:ok, out} = ToolLoop.run(ctx)
+    assert out.last_error =~ "Falha ao conectar no Ollama"
+  end
+
+  test "resposta sem erro não inventa last_error", %{ctx: ctx} do
+    Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("tudo pronto")])
+
+    assert {:ok, out} = ToolLoop.run(ctx)
+    refute Map.has_key?(out, :last_error)
+  end
 end
