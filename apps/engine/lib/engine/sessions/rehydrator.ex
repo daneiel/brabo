@@ -13,11 +13,18 @@ defmodule Engine.Sessions.Rehydrator do
   reconciliar com a api antes.
   """
 
+  alias Engine.Readiness
   alias Engine.Sessions.{SessionState, SessionSupervisor}
 
   def run do
     SessionState.list_non_terminal()
     |> Enum.each(fn s -> SessionSupervisor.start_session(s.session_id, s.project_id) end)
+
+    # O readiness probe do Kubernetes só libera tráfego depois disto: aceitar
+    # heartbeat de alguém reconectando antes da sessão existir de novo é
+    # exatamente o que a ordem da árvore de supervisão evita, e o probe
+    # precisa de um sinal para afirmar o mesmo.
+    Readiness.mark(:sessions)
   end
 
   @doc "Idioma de boot task: roda o trabalho e retorna :ignore — não vira processo persistente."

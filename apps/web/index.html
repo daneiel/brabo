@@ -11,6 +11,14 @@
       rel="stylesheet"
     />
     <title>Brabo</title>
+    <!--
+      Configuração de runtime: o entrypoint do nginx gera este arquivo a partir
+      das variáveis de ambiente do container, para que a MESMA imagem sirva
+      qualquer ambiente (ver src/lib/runtime-config.ts). Precisa ser síncrono e
+      vir antes do bundle. Em `pnpm dev:web` o arquivo não existe e o 404 é
+      inofensivo: a app cai no fallback das VITE_*.
+    -->
+    <script src="/config.js"></script>
   </head>
   <body>
     <div id="root"></div>

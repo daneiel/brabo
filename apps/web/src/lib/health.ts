@@ -1,8 +1,8 @@
 import type { HealthStatus } from '@brabo/shared';
+import { runtimeConfig } from './runtime-config';
 
-export const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
-export const ENGINE_URL =
-  import.meta.env.VITE_ENGINE_URL ?? 'http://localhost:4000';
+export const API_URL = runtimeConfig.apiUrl;
+export const ENGINE_URL = runtimeConfig.engineUrl;
 
 export async function fetchHealth(baseUrl: string): Promise<HealthStatus> {
   const response = await fetch(`${baseUrl}/health`);

@@ -10,6 +10,7 @@ defmodule Engine.Dev.DevRehydrator do
   """
 
   alias Engine.Dev.{DevAgentState, DevAgentSupervisor}
+  alias Engine.Readiness
 
   def run do
     DevAgentState.list_all()
@@ -24,6 +25,8 @@ defmodule Engine.Dev.DevRehydrator do
         s.impl
       )
     end)
+
+    Readiness.mark(:dev_agents)
   end
 
   def start_link(_opts) do

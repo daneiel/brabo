@@ -66,6 +66,10 @@ defmodule Engine.MixProject do
       {:postgrex, ">= 0.0.0"},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
+      # Só o agregador + scrape/1; a rota /metrics é do router que já existe.
+      # PromEx traria plug e servidor HTTP próprios mais um uploader de
+      # dashboards do Grafana — que é o item 5 da Fase 5, sessão seguinte.
+      {:telemetry_metrics_prometheus_core, "~> 1.2"},
       {:gettext, "~> 1.0"},
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.2.0"},

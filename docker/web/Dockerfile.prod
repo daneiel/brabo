@@ -54,6 +54,17 @@ FROM nginx:1.27.5-alpine AS runtime
 # substituídos em RUNTIME pelo entrypoint (diferente das VITE_*, que não podem).
 ENV CSP_CONNECT_SRC="http://localhost:3000 http://localhost:4000 ws://localhost:4000 http://localhost:8080"
 
+# Configuração de runtime da SPA: o entrypoint gera /config.js a partir destas,
+# e é isto que permite promover a MESMA imagem entre ambientes em vez de
+# rebuildar por ambiente (as VITE_* são compile-time — ADR 0024, limitação 1).
+# Os defaults reproduzem o comportamento anterior, então a imagem continua
+# subindo sem nenhuma variável definida.
+ENV API_URL="http://localhost:3000" \
+    ENGINE_URL="http://localhost:4000" \
+    KEYCLOAK_URL="http://localhost:8080" \
+    KEYCLOAK_REALM="brabo-dev" \
+    KEYCLOAK_CLIENT_ID="brabo-web"
+
 # Fora de /etc/nginx de propósito: com rootfs read-only o entrypoint não pode
 # escrever lá, então o template mora aqui e o resultado vai pra /tmp.
 # `apk upgrade` antes de tudo: a tag da base é pinada (bom pra
