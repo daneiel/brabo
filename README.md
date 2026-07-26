@@ -109,6 +109,12 @@ do volume de dados.
 - Nas imagens de produção esses mesmos endpoints são o `HEALTHCHECK` do
   container; o web serve um `/healthz` estático do próprio nginx.
 
+Para Kubernetes as probes são **três**, porque as perguntas são diferentes
+(ver ADR 0025): `/live` responde sem tocar o banco — um liveness ligado ao
+Postgres reiniciaria todas as réplicas ao mesmo tempo num banco lento —,
+`/health` continua sendo o readiness da api, e `/ready` no engine só libera
+tráfego depois que a reidratação de sessões terminou.
+
 ## Imagens de produção
 
 Separadas das de desenvolvimento: `docker/<app>/Dockerfile.prod`. São
@@ -156,13 +162,40 @@ compose.prod — em produção real vêm de um cofre.
 > imagem do web é específica do ambiente e mudar a URL da api exige
 > rebuild, não restart. Ver ADR 0024.
 
+## Deploy em Kubernetes
+
+Manifests em `deploy/k8s/`, com **Kustomize** (base + overlays `local`,
+`staging` e `prod`) — a escolha e o porquê estão no
+[ADR 0025](docs/adr/0025-fase5-deploy-kubernetes-kustomize.md). Operadores de
+terceiros (External Secrets, CloudNativePG, Prometheus, prometheus-adapter)
+vêm por Helm, instalados pelo bootstrap com versão pinada.
+
+```bash
+make deploy-local     # sobe cluster k3d, instala tudo e roda o smoke
+make hpa-test         # enche a fila do Oban e prova que o HPA do engine escala
+make k8s-validate     # monta e valida os overlays (não precisa de cluster)
+make k8s-down         # remove o cluster
+```
+
+O cluster local expõe os serviços nas **mesmas portas do
+`docker-compose.prod.yml`** (3000/4000/8080/8088), então o realm de
+desenvolvimento e os defaults do smoke continuam valendo. Passo a passo e
+diagnóstico em [docs/runbooks/deploy-local.md](docs/runbooks/deploy-local.md).
+
+O engine escala por **profundidade da fila do Oban**: o `/metrics` expõe
+`oban_queue_depth{queue,state}` e o HPA consome `state="available"` via
+prometheus-adapter. O filtro por estado não é detalhe — três workers do engine
+se auto-reagendam, então a tabela `oban_jobs` nunca está vazia e um HPA sem
+filtro escalaria ao máximo num sistema ocioso.
+
 ## CI
 
 `.github/workflows/ci.yml` roda em push para `feature/**` e em PR para
-`dev`: lint em modo verificação, testes de api/web/engine, build das três
-imagens com cache, trivy nas imagens, gitleaks no repositório e o teste de
-fumaça. A configuração alvo da proteção da branch `dev` está no ADR 0024
-(aplicá-la é manual, e hoje o plano do repositório não permite).
+`dev`: lint em modo verificação, testes de api/web/engine, validação dos
+manifests de Kubernetes (`kustomize build` + `kubeconform` + shellcheck),
+build das três imagens com cache, trivy nas imagens, gitleaks no repositório
+e o teste de fumaça. A configuração alvo da proteção da branch `dev` está no
+ADR 0024 (aplicá-la é manual, e hoje o plano do repositório não permite).
 
 ## Frontend (`apps/web`)
 

@@ -62,8 +62,19 @@ defmodule Engine.Sessions.Monitor do
   def handle_info({:DOWN, ref, :process, pid, reason}, state) do
     case Map.fetch(state.by_pid, pid) do
       {:ok, %{ref: ^ref} = entry} ->
-        safe_delete(entry.session_id)
-        maybe_report(entry, reason)
+        # Nó descendo (SIGTERM, rollout, scale-down do HPA) não é término de
+        # sessão: a linha PRECISA sobreviver, é dela que a reidratação do
+        # próximo boot parte. O Engine.Dev.Monitor já fazia essa distinção;
+        # aqui ela faltava, e o efeito era o oposto do desejado — como a
+        # ordem de shutdown da árvore derruba o SessionSupervisor ANTES deste
+        # Monitor, ele ficava vivo para processar cada :DOWN, apagar toda
+        # sessão ativa e ainda reportá-la à api como closed_abnormally. Um
+        # rollout marcava como anormal exatamente as sessões que estavam
+        # saudáveis.
+        unless node_shutdown?(reason) do
+          safe_delete(entry.session_id)
+          maybe_report(entry, reason)
+        end
 
         state = %{
           state
@@ -123,4 +134,14 @@ defmodule Engine.Sessions.Monitor do
     do: {Exception.message(error), "closed_abnormally"}
 
   defp classify(other), do: {inspect(other), "closed_abnormally"}
+
+  # `:shutdown` puro é o supervisor derrubando o filho porque o NÓ está
+  # parando. `{:shutdown, :heartbeat_timeout}` é o oposto: a sessão terminou
+  # sozinha e a linha tem que sair, senão ela reidrata para sempre. Por isso
+  # não dá pra copiar o `forget?({:shutdown, _})` do Engine.Dev.Monitor
+  # literalmente — lá não existe uma causa de término que viaje dentro de
+  # `:shutdown`.
+  defp node_shutdown?(:shutdown), do: true
+  defp node_shutdown?({:shutdown, :shutdown}), do: true
+  defp node_shutdown?(_), do: false
 end

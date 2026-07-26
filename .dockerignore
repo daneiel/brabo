@@ -31,6 +31,10 @@ coverage
 # Não entra em imagem de produção
 spike
 docs
+# Manifests de Kubernetes: descrevem COMO a imagem roda, nunca são lidos por
+# ela. Mandá-los para o daemon só engorda o contexto e invalida cache de build
+# a cada ajuste de manifesto.
+deploy
 # design/: só os .md são documentação. design/tokens.css é INPUT DE BUILD do web
 # (apps/web/src/index.css faz `@import '../../../design/tokens.css'`) — excluir a
 # pasta inteira quebra o `vite build` da imagem de produção.

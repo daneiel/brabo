@@ -33,6 +33,9 @@ env:
   GITLEAKS_VERSION: '8.30.1'
   HADOLINT_VERSION: '2.12.0'
   YAMLLINT_VERSION: '1.38.0'
+  # Manifests de Kubernetes (Fase 5, sessão 2).
+  KUSTOMIZE_VERSION: '5.8.1'
+  KUBECONFORM_VERSION: '0.7.0'
 
 jobs:
   lint:
@@ -251,6 +254,63 @@ jobs:
 
       - name: gitleaks detect
         run: gitleaks detect --source . --redact --verbose --exit-code 1
+
+  manifests:
+    name: Manifests de Kubernetes
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar kustomize e kubeconform
+        run: |
+          set -euxo pipefail
+          curl -fsSL -o /tmp/kustomize.tar.gz \
+            "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv${KUSTOMIZE_VERSION}/kustomize_v${KUSTOMIZE_VERSION}_linux_amd64.tar.gz"
+          sudo tar -xzf /tmp/kustomize.tar.gz -C /usr/local/bin kustomize
+          curl -fsSL -o /tmp/kubeconform.tar.gz \
+            "https://github.com/yannh/kubeconform/releases/download/v${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz"
+          sudo tar -xzf /tmp/kubeconform.tar.gz -C /usr/local/bin kubeconform
+          sudo chmod 0755 /usr/local/bin/kustomize /usr/local/bin/kubeconform
+
+      # Dois níveis, que pegam coisas diferentes: `kustomize build` acha patch
+      # sem alvo e conflito de ID; `kubeconform` acha campo com nome errado,
+      # tipo errado e apiVersion inexistente. O segundo é o que separa "o YAML
+      # monta" de "a API aceitaria" — sem ele, um `maxUnavailble` passaria.
+      - name: Montar e validar os overlays
+        run: bash deploy/k8s/validate.sh
+
+      # O overlay local é o único exercitado de verdade (`make deploy-local`), e
+      # o que o smoke assume dele são as portas. Se alguém mudar um NodePort
+      # sem mudar o mapeamento do bootstrap, o cluster sobe e o smoke falha por
+      # um motivo que não parece ter relação. Barato afirmar aqui.
+      - name: Portas do overlay local batem com as do compose de produção
+        run: |
+          set -euo pipefail
+          out="$(kustomize build deploy/k8s/overlays/local)"
+          for port in 30300 30400 30080 30088; do
+            grep -q "nodePort: ${port}" <<<"${out}" \
+              || { echo "NodePort ${port} sumiu do overlay local"; exit 1; }
+          done
+
+      # O nome da métrica e os rótulos são referenciados por STRING em três
+      # lugares que não se enxergam: o HPA, a regra do prometheus-adapter e o
+      # smoke. Renomear a métrica no engine compila, passa na suite, e o único
+      # sintoma é o HPA parar em `<unknown>` sem escalar.
+      - name: HPA do engine referencia a métrica que o engine expõe
+        run: |
+          set -euo pipefail
+          grep -q 'name: oban_queue_depth' deploy/k8s/base/engine/hpa.yaml
+          grep -q 'state: available' deploy/k8s/base/engine/hpa.yaml
+          grep -q 'oban_queue_depth' deploy/k8s/helm/prometheus-adapter-values.yaml
+          grep -q 'by (queue, state)' deploy/k8s/helm/prometheus-adapter-values.yaml
+          grep -rq 'oban_queue_depth' apps/engine/test/engine_web/controllers/metrics_controller_test.exs
+
+      - name: shellcheck nos scripts de deploy
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
+          shellcheck -S warning deploy/k8s/*.sh docker/smoke.sh
 
   images:
     name: Build, scan e smoke das imagens de produção

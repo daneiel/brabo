@@ -20,6 +20,11 @@ config :engine, start_outbox_drain?: false
 config :engine, start_anamnese?: false
 config :engine, Oban, testing: :manual
 
+# O poller roda fora da Sandbox do Ecto: cada ciclo viraria um aviso de
+# ownership a cada 10s durante a suite inteira. Os testes chamam
+# `Engine.Telemetry.ObanQueueDepth.measure/0` direto.
+config :engine, :poll_oban_queue_depth, false
+
 # Não bater no Keycloak de verdade durante a suite — testes que precisam
 # validar um token de verdade usam Engine.Auth.ApiTokenVerifier
 # diretamente com uma estratégia própria, não a supervisionada.

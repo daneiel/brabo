@@ -1,6 +1,7 @@
 import { Socket } from 'phoenix';
+import { runtimeConfig } from './runtime-config';
 
-const ENGINE_URL = import.meta.env.VITE_ENGINE_URL ?? 'http://localhost:4000';
+const ENGINE_URL = runtimeConfig.engineUrl;
 const PING_INTERVAL_MS = 10_000;
 
 export interface SessionChannelHandlers {

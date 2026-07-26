@@ -1,4 +1,5 @@
 import { getToken } from './keycloak';
+import { runtimeConfig } from './runtime-config';
 import type {
   AgentAutonomyRule,
   AgentTokenUsage,
@@ -35,7 +36,7 @@ import type {
   WorkspaceWithRole,
 } from './api-types';
 
-export const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+export const API_URL = runtimeConfig.apiUrl;
 
 export class ApiError extends Error {
   readonly status: number;

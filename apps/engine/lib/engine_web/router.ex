@@ -13,7 +13,15 @@ defmodule EngineWeb.Router do
   scope "/", EngineWeb do
     pipe_through :api
 
+    # /health é o original (imagem e docker/smoke.sh dependem dele).
+    # /live e /ready existem porque as perguntas são diferentes — ver o
+    # moduledoc do HealthController.
     get "/health", HealthController, :check
+    get "/live", HealthController, :live
+    get "/ready", HealthController, :ready
+
+    # Sem auth de propósito; o alcance é restringido por NetworkPolicy.
+    get "/metrics", MetricsController, :index
   end
 
   scope "/api", EngineWeb do
