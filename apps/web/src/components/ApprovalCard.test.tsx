@@ -119,4 +119,102 @@ describe('ApprovalCard', () => {
     fireEvent.click(screen.getByRole('checkbox'));
     expect(onToggleSelect).toHaveBeenCalledTimes(1);
   });
+
+  describe('instruction_patch (Fase 4b)', () => {
+    function patchAction(payload: Record<string, unknown> = {}) {
+      return makeAction({
+        actionType: 'instruction_patch',
+        payload: {
+          agent: 'dev-api',
+          fromVersion: 2,
+          rationale: 'usuário é sênior em NestJS',
+          hypothesisId: '01JEVHYP000000000000A1B2C3',
+          files: [
+            {
+              path: 'dev-api.md',
+              additions: 1,
+              deletions: 1,
+              lines: [
+                { kind: 'del', lineNo: 2, content: 'Explique cada conceito.' },
+                { kind: 'add', lineNo: 2, content: 'Assuma familiaridade.' },
+              ],
+            },
+          ],
+          ...payload,
+        },
+      });
+    }
+
+    it('mostra o badge da hipótese de origem (rastreabilidade do loop)', () => {
+      render(
+        <ApprovalCard
+          action={patchAction()}
+          onApprove={vi.fn()}
+          onDeny={vi.fn()}
+          onAlwaysAllow={vi.fn()}
+        />,
+      );
+
+      expect(screen.getByText(/origem: hipótese/)).toBeTruthy();
+      expect(screen.getByText(/A1B2C3/)).toBeTruthy();
+    });
+
+    it('sem hipótese de origem, o badge não aparece', () => {
+      render(
+        <ApprovalCard
+          action={patchAction({ hypothesisId: null })}
+          onApprove={vi.fn()}
+          onDeny={vi.fn()}
+          onAlwaysAllow={vi.fn()}
+        />,
+      );
+
+      expect(screen.queryByText(/origem: hipótese/)).toBeNull();
+    });
+
+    it('mostra a transição de versão e o diff', () => {
+      render(
+        <ApprovalCard
+          action={patchAction()}
+          onApprove={vi.fn()}
+          onDeny={vi.fn()}
+          onAlwaysAllow={vi.fn()}
+        />,
+      );
+
+      expect(screen.getByText('v2 → v3')).toBeTruthy();
+      expect(screen.getByText('Explique cada conceito.')).toBeTruthy();
+      expect(screen.getByText('Assuma familiaridade.')).toBeTruthy();
+    });
+
+    it('renderiza TODOS os arquivos do patch, não só o primeiro', () => {
+      render(
+        <ApprovalCard
+          action={patchAction({
+            files: [
+              {
+                path: 'dev-api.md',
+                additions: 1,
+                deletions: 0,
+                lines: [{ kind: 'add', lineNo: 1, content: 'primeiro arquivo' }],
+              },
+              {
+                path: 'po.md',
+                additions: 1,
+                deletions: 0,
+                lines: [{ kind: 'add', lineNo: 1, content: 'segundo arquivo' }],
+              },
+            ],
+          })}
+          onApprove={vi.fn()}
+          onDeny={vi.fn()}
+          onAlwaysAllow={vi.fn()}
+        />,
+      );
+
+      expect(screen.getByText('primeiro arquivo')).toBeTruthy();
+      expect(screen.getByText('segundo arquivo')).toBeTruthy();
+      expect(screen.getByText('po.md')).toBeTruthy();
+    });
+  });
 });
