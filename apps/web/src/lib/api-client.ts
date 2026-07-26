@@ -4,8 +4,9 @@ import type {
   AgentTokenUsage,
   ActionType,
   Architecture,
-InfraArtifact,
-PsychologistHypothesis,
+  InfraArtifact,
+  PsychologistHypothesis,
+  PsychologistAnalysis,
   ProficiencyProfile,
   AgentInstructionVersion,
   Budget,
@@ -165,6 +166,17 @@ export const listSessionEvents = (
   get<Page<SessionEvent>>(
     `/projects/${projectId}/sessions/${sessionId}/events${qs(opts)}`,
   );
+// Um evento pelo id — a listagem é paginada (últimos N) e o feed esconde
+// ruído de máquina, então evidência de hipótese precisa deste caminho pra
+// ser navegável de verdade.
+export const getSessionEvent = (
+  projectId: string,
+  sessionId: string,
+  eventId: string,
+) =>
+  get<SessionEvent>(
+    `/projects/${projectId}/sessions/${sessionId}/events/${eventId}`,
+  );
 
 // --- Agentes conversacionais / handoffs (Fase 3b) ---
 
@@ -218,6 +230,8 @@ export const dismissHypothesis = (projectId: string, hypothesisId: string) =>
   post<PsychologistHypothesis>(
     `/projects/${projectId}/hypotheses/${hypothesisId}/dismiss`,
   );
+export const listPsychologistAnalyses = (projectId: string) =>
+  get<PsychologistAnalysis[]>(`/projects/${projectId}/psychologist/analyses`);
 // --- Anamnese (Fase 4b) ---
 
 export const listProficiency = (projectId: string) =>

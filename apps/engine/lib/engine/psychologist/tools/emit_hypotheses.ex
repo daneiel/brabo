@@ -89,6 +89,7 @@ defmodule Engine.Psychologist.Tools.EmitHypotheses do
            to_string(ctx.tier),
            ctx.triggered_by,
            ctx.event_count,
+           to_string(ctx.cause),
            hypotheses
          ) do
       {:ok, _result} ->

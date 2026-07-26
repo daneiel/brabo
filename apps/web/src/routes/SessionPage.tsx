@@ -18,7 +18,7 @@ import {
 } from '../lib/api-client';
 import { streamChatMessage } from '../lib/chat-stream';
 import { connectSessionHeartbeat } from '../lib/session-channel';
-import { useSessionEvents, usePendingActions, useHandoffs } from '../lib/hooks';
+import { useSessionEvents, useSessionEvent, usePendingActions, useHandoffs } from '../lib/hooks';
 import { currentUser } from '../lib/keycloak';
 import type {
   BusinessRulePayload,
@@ -30,6 +30,7 @@ import { TokenMeter } from '../components/TokenMeter';
 import { ModelPicker } from '../components/ModelPicker';
 import { ApprovalCard } from '../components/ApprovalCard';
 import { ActivityFeed } from '../components/ActivityFeed';
+import { EventItem } from '../components/EventItem';
 import { Button } from '../components/ui/Button';
 import { LayoutSidebarIcon, ModelIcon, UserIcon } from '../components/ui/icons';
 import styles from './SessionPage.module.css';
@@ -75,6 +76,12 @@ export function SessionPage({
 
   const eventsQuery = useSessionEvents(projectId, sessionId, 3000);
   const events = eventsQuery.data?.items ?? [];
+
+  // O evento CITADO buscado pelo id. A listagem traz só os últimos 200 e o
+  // feed corta ruído de máquina, então sem esta busca o chip de evidência
+  // podia navegar pra um log onde o evento simplesmente não aparece.
+  const citedEventQuery = useSessionEvent(projectId, sessionId, highlightEvent);
+  const citedEvent = citedEventQuery.data;
   const actionsQuery = usePendingActions(projectId, sessionId, 3000);
   const actions = actionsQuery.data?.items ?? [];
 
@@ -488,6 +495,8 @@ export function SessionPage({
             logOpen={logOpen}
             onToggleLog={() => setLogOpen((open) => !open)}
             highlightEvent={highlightEvent}
+            citedEvent={citedEvent}
+            citedEventMissing={citedEventQuery.isError}
           />
         )}
       </div>
@@ -501,12 +510,16 @@ function ContextAside({
   logOpen,
   onToggleLog,
   highlightEvent,
+  citedEvent,
+  citedEventMissing,
 }: {
   actions: ProposedAction[];
   events: SessionEvent[];
   logOpen: boolean;
   onToggleLog: () => void;
   highlightEvent?: string;
+  citedEvent?: SessionEvent;
+  citedEventMissing?: boolean;
 }) {
   const prActions = actions.filter((a) => a.actionType === 'pr_open');
   const businessRules = events.filter((e) => e.type === 'artifact.business_rule');
@@ -583,7 +596,24 @@ function ContextAside({
           Log de eventos ({events.length}) {logOpen ? '−' : '+'}
         </button>
         {logOpen && (
-          <ActivityFeed events={events} highlightEventId={highlightEvent} />
+          <>
+            {/* Evento citado FIXADO no topo: garante que a evidência chega
+                no evento independente de paginação e dos filtros do feed. */}
+            {highlightEvent && citedEvent && (
+              <div className={styles.citedEvent}>
+                <div className={styles.citedEventLabel}>
+                  Evento citado pela hipótese
+                </div>
+                <EventItem event={citedEvent} highlighted />
+              </div>
+            )}
+            {highlightEvent && citedEventMissing && (
+              <div className={styles.asideEmpty}>
+                O evento citado não foi encontrado nesta sessão.
+              </div>
+            )}
+            <ActivityFeed events={events} highlightEventId={highlightEvent} />
+          </>
         )}
       </div>
     </aside>

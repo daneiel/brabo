@@ -24,8 +24,28 @@ defmodule Engine.SessionEvents.Event do
     field :created_at, :utc_datetime
   end
 
-  def list(session_id) do
-    Repo.all(from(e in __MODULE__, where: e.session_id == ^session_id, order_by: e.seq))
+  @doc """
+  Quantos eventos a sessão tem. COUNT no banco em vez de
+  `length(list(session_id))` — quem só precisa do número (a triagem do
+  Psicólogo) não carrega o log inteiro pra memória.
+  """
+  def count(session_id) do
+    Repo.aggregate(from(e in __MODULE__, where: e.session_id == ^session_id), :count, :id)
+  end
+
+  @doc """
+  Os `limit` eventos mais recentes da sessão, devolvidos em ordem de seq
+  CRESCENTE (a query desce por seq pra pegar a cauda, o resultado volta
+  cronológico pra ser lido como log).
+  """
+  def list_recent(session_id, limit) do
+    from(e in __MODULE__,
+      where: e.session_id == ^session_id,
+      order_by: [desc: e.seq],
+      limit: ^limit
+    )
+    |> Repo.all()
+    |> Enum.reverse()
   end
 
   @doc """

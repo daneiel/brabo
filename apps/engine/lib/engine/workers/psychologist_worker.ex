@@ -17,12 +17,17 @@ defmodule Engine.Workers.PsychologistWorker do
   "retentar uma que falhou" (permitido, inclusive pelo max_attempts do
   Oban). Reprocessamento explícito (`triggeredBy: "manual"`) sempre roda
   e supersede a anterior (sem apagar).
+
+  **Kill pós-restart**: quem devolve um job morto em `executing` para
+  `available` é o `Oban.Plugins.Lifeline` (ver `config/config.exs`) — sem
+  ele o job ficaria órfão para sempre e a retentativa aqui nunca
+  aconteceria.
   """
 
   use Oban.Worker, queue: :default, max_attempts: 5
 
   alias Engine.Harness.Hooks
-  alias Engine.Harness.Hooks.{ActionPipeline, EventLog}
+  alias Engine.Harness.Hooks.EventLog
   alias Engine.Harness.ToolLoop
   alias Engine.Psychologist.{ContextBuilder, TerminationClassifier, Tools, Triage}
   alias Engine.Psychologist.Hooks.Termination
@@ -46,16 +51,26 @@ defmodule Engine.Workers.PsychologistWorker do
       {:ok, context} ->
         analyze(project_id, session_id, triggered_by, context)
 
-      {:error, _reason} ->
-        # Contexto indisponível (api fora, sessão sumiu): deixa o Oban
-        # retentar em vez de gravar uma análise pela metade.
-        :ok
+      {:error, reason} ->
+        # Contexto indisponível (api fora, sessão sumiu): PRECISA ser
+        # `{:error, _}` — `:ok` marcaria o job `completed` e a análise
+        # sumiria em silêncio, deixando o `max_attempts: 5` como peso
+        # morto neste branch (só socorreria exceção levantada).
+        #
+        # Sem narrar `analysis_failed` aqui de propósito: o caminho de
+        # narração é a própria api, que é justamente quem está fora.
+        # Quem registra o desfecho enquanto isso é a linha do job.
+        {:error, reason}
     end
   end
 
   defp analyze(project_id, session_id, triggered_by, context) do
-    event_count = length(context.events)
+    event_count = context.event_count
     tier = Triage.decide(event_count)
+
+    # O tier decide o teto, então os eventos só são lidos DEPOIS da
+    # triagem — ver ContextBuilder.
+    events = ContextBuilder.recent_events(session_id, Triage.max_prompt_events(tier))
 
     cause =
       TerminationClassifier.classify(
@@ -64,7 +79,7 @@ defmodule Engine.Workers.PsychologistWorker do
       )
 
     project_id
-    |> build_ctx(session_id, triggered_by, tier, event_count, cause, context)
+    |> build_ctx(session_id, triggered_by, tier, event_count, cause, context, events)
     |> ToolLoop.run()
     |> handle_outcome(project_id, session_id, tier)
   end
@@ -82,7 +97,19 @@ defmodule Engine.Workers.PsychologistWorker do
 
   defp reason_for({:limit_reached, _ctx}), do: "limite de iterações"
   defp reason_for({:budget_exceeded, _ctx}), do: "orçamento excedido"
-  defp reason_for({:ok, _ctx}), do: "encerrou sem emitir hipóteses"
+
+  # `{:ok, ctx}` com `:last_error` é falha de INFRAESTRUTURA (provider fora,
+  # timeout, erro no corpo da resposta — ver ToolLoop), não o modelo
+  # desistindo. Sem olhar `last_error` o operador recebia "encerrou sem
+  # emitir hipóteses" para um provider caído, sem nada em que agir — mesma
+  # armadilha já fechada no QA (`QaAgentServer`) e no Dev (`DevAgentServer`).
+  defp reason_for({:ok, ctx}) do
+    case Map.get(ctx, :last_error) do
+      nil -> "encerrou sem emitir hipóteses"
+      error -> "falha no provider: #{error}"
+    end
+  end
+
   defp reason_for(_other), do: "desfecho inesperado"
 
   defp emit_failure(project_id, session_id, tier, reason) do
@@ -94,32 +121,38 @@ defmodule Engine.Workers.PsychologistWorker do
     })
   end
 
-  defp build_ctx(project_id, session_id, triggered_by, tier, event_count, cause, context) do
+  defp build_ctx(project_id, session_id, triggered_by, tier, event_count, cause, context, events) do
     %{
       project_id: project_id,
       session_id: session_id,
       agent: Triage.agent_for(tier),
       tools: Tools.registry(),
       hooks: psychologist_hooks(),
-      messages: [initial_message(cause, context)],
+      messages: [initial_message(cause, context, events, event_count)],
       context_window: 128_000,
       max_iterations: Triage.max_iterations(tier),
       token_budget_micros: Triage.token_budget_micros(tier),
       # Lidos pelo EmitHypotheses na hora de chamar a api.
       tier: tier,
       triggered_by: triggered_by,
-      event_count: event_count
+      event_count: event_count,
+      # A api valida `terminationAnalysis` a partir DESTA causa, não do
+      # status terminal — ver TerminationClassifier.abnormal?/1.
+      cause: cause
     }
   end
 
+  # Sem `:pre_tool_use` aqui: o registry do Psicólogo tem uma tool só,
+  # `emit_hypotheses`, que é `:direct` (o Psicólogo é read-only, nunca
+  # propõe ação com efeito externo). O ActionPipeline registrado antes era
+  # no-op permanente.
   defp psychologist_hooks do
     Hooks.new()
-    |> Hooks.register(:pre_tool_use, ActionPipeline)
     |> Hooks.register(:post_tool_use, EventLog)
     |> Hooks.register(:post_tool_use, Termination)
   end
 
-  defp initial_message(cause, context) do
+  defp initial_message(cause, context, events, event_count) do
     %{
       "role" => "user",
       "content" => """
@@ -137,11 +170,24 @@ defmodule Engine.Workers.PsychologistWorker do
       HIPÓTESES ANTERIORES (não descartadas):
       #{format_prior_hypotheses(context.prior_hypotheses)}
 
-      LOG DE EVENTOS DA SESSÃO:
-      #{format_events(context.events)}
+      LOG DE EVENTOS DA SESSÃO:#{omission_note(events, event_count)}
+      #{format_events(events)}
       """,
       :pinned => true
     }
+  end
+
+  # O corte tem que ser VISÍVEL pro modelo: ele só pode citar ids que vê, e
+  # sem essa nota ele concluiria que a sessão inteira cabe no que leu.
+  defp omission_note(events, event_count) do
+    omitidos = event_count - length(events)
+
+    if omitidos > 0 do
+      " (só os #{length(events)} mais recentes de #{event_count};" <>
+        " #{omitidos} evento(s) mais antigo(s) omitido(s) — cite apenas ids presentes abaixo)"
+    else
+      ""
+    end
   end
 
   defp termination_instruction(:normal), do: ""
@@ -173,7 +219,21 @@ defmodule Engine.Workers.PsychologistWorker do
 
   defp format_events(events) do
     Enum.map_join(events, "\n", fn e ->
-      "#{e.id} | seq=#{e.seq} | #{e.type} | ator=#{e.actor_id} | #{inspect(e.payload)}"
+      "#{e.id} | seq=#{e.seq} | #{e.type} | ator=#{e.actor_id} | #{format_payload(e.payload)}"
     end)
+  end
+
+  # Payload de `agent.response`/`tool.result` carrega turno de LLM inteiro —
+  # sem corte, meia dúzia deles come a janela sozinha. O id fica intacto (é
+  # o que a evidência cita); só o payload é truncado.
+  defp format_payload(payload) do
+    texto = inspect(payload)
+    teto = Triage.max_payload_chars()
+
+    if String.length(texto) > teto do
+      String.slice(texto, 0, teto) <> "… (payload truncado)"
+    else
+      texto
+    end
   end
 end

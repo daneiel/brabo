@@ -350,6 +350,29 @@ export interface PsychologistHypothesis {
   updatedAt: string;
 }
 
+export type PsychologistAnalysisTier = 'leve' | 'pesada';
+
+/**
+ * Uma análise current do Psicólogo, com o CUSTO real somado do metering.
+ * É o que torna "custos distintos entre triagem leve e pesada" visível na
+ * seção Insights — o custo é por sessão analisada (token_usage grava por
+ * sessão + ator), então numa sessão reanalisada é o acumulado.
+ */
+export interface PsychologistAnalysis {
+  id: string;
+  projectId: string;
+  sessionId: string;
+  tier: PsychologistAnalysisTier;
+  triggeredBy: 'auto' | 'manual';
+  supersedes: string | null;
+  superseded: boolean;
+  supersededAt: string | null;
+  eventCountAtAnalysis: number;
+  costMicros: number;
+  hypothesisCount: number;
+  createdAt: string;
+}
+
 // --- Anamnese (Fase 4b) ---
 
 export type ProficiencyLevel = 'iniciante' | 'intermediario' | 'avancado';

@@ -21,7 +21,8 @@ defmodule Engine.Psychologist.Tools.EmitHypothesesTest do
       agent: "psicologo",
       tier: :pesada,
       triggered_by: "auto",
-      event_count: 42
+      event_count: 42,
+      cause: :crash
     }
 
     %{ctx: ctx}
@@ -38,11 +39,13 @@ defmodule Engine.Psychologist.Tools.EmitHypothesesTest do
     }
   end
 
-  test "sucesso: repassa tier/triggered_by/event_count e confirma o registro", %{ctx: ctx} do
+  test "sucesso: repassa tier/triggered_by/event_count/causa e confirma o registro", %{ctx: ctx} do
     assert {:ok, msg} = EmitHypotheses.run(%{"hypotheses" => [hypothesis()]}, ctx)
     assert msg =~ "1 hipótese(s) registrada(s)"
 
-    assert_received {:hypotheses_proposed, "pesada", "auto", 42, [_h]}
+    # A causa vai no lote: é ela que a api usa pra exigir terminationAnalysis,
+    # em vez de olhar o status terminal da sessão.
+    assert_received {:hypotheses_proposed, "pesada", "auto", 42, "crash", [_h]}
   end
 
   test "evidência inválida: a mensagem da api volta como {:error, ...} pro modelo corrigir",
@@ -85,6 +88,6 @@ defmodule Engine.Psychologist.Tools.EmitHypothesesTest do
                %{ctx | tier: :leve, agent: "psicologo-leve"}
              )
 
-    assert_received {:hypotheses_proposed, "leve", "auto", 42, _}
+    assert_received {:hypotheses_proposed, "leve", "auto", 42, "crash", _}
   end
 end

@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { Link } from '@tanstack/react-router';
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   useArchitecture,
@@ -6,6 +7,7 @@ import {
   useHandoffs,
   useHypotheses,
   useLatestSession,
+  usePsychologistAnalyses,
   usePendingActions,
   useSessionEvents,
   useSessionTokenUsage,
@@ -18,6 +20,7 @@ import {
   getAgentModelBinding,
   listAgentAutonomy,
   listModels,
+  reanalyzeSession,
   setAgentAutonomy,
   unblockTask,
 } from '../lib/api-client';
@@ -502,9 +505,11 @@ function InsightsSection({ projectId }: { projectId: string }) {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const { data: hypotheses } = useHypotheses(projectId);
+  const { data: analyses } = usePsychologistAnalyses(projectId);
 
   const all = hypotheses ?? [];
   const pending = all.filter((h) => h.status === 'proposed');
+  const runs = analyses ?? [];
 
   // Agrupa por agente alvo preservando a ordem de chegada dos grupos.
   const byAgent = new Map<string, typeof all>();
@@ -532,6 +537,25 @@ function InsightsSection({ projectId }: { projectId: string }) {
     }
   }
 
+  // Reprocessamento explícito: substitui a análise anterior (que fica
+  // `superseded`, nunca apagada). Gasta orçamento de verdade, daí o aviso
+  // no título e o papel `maintainer` exigido pela api.
+  async function reanalyze(sessionId: string) {
+    try {
+      await reanalyzeSession(projectId, sessionId);
+      showToast({
+        title: 'Reanálise enfileirada',
+        message: 'O Psicólogo vai analisar esta sessão de novo.',
+      });
+    } catch {
+      showToast({
+        title: 'Erro',
+        message: 'Não foi possível enfileirar a reanálise',
+        tone: 'danger',
+      });
+    }
+  }
+
   return (
     <div className={styles.arch}>
       <div className={styles.sectionHeader}>Insights</div>
@@ -544,6 +568,43 @@ function InsightsSection({ projectId }: { projectId: string }) {
           <div className={styles.sectionSub}>
             {all.length} hipótese(s) · {pending.length} aguardando decisão
           </div>
+
+          {/* Faixa de análises: é aqui que o custo distinto entre triagem
+              leve e pesada fica visível — some do metering por sessão. */}
+          {runs.length > 0 && (
+            <div className={styles.analysisStrip}>
+              {runs.map((run) => (
+                <div key={run.id} className={styles.analysisRow}>
+                  <Badge tone={run.tier === 'pesada' ? 'accent' : 'muted'}>
+                    triagem {run.tier}
+                  </Badge>
+                  <Link
+                    to="/projects/$projectId/sessions/$sessionId"
+                    params={{ projectId, sessionId: run.sessionId }}
+                    className={styles.analysisSession}
+                  >
+                    sessão {run.sessionId.slice(0, 8)}
+                  </Link>
+                  <span className={styles.analysisMeta}>
+                    {run.eventCountAtAnalysis} evento(s) · {run.hypothesisCount}{' '}
+                    hipótese(s)
+                  </span>
+                  <span className={styles.analysisCost}>
+                    {formatMicros(run.costMicros)}
+                  </span>
+                  <button
+                    type="button"
+                    className={styles.analysisReanalyze}
+                    onClick={() => reanalyze(run.sessionId)}
+                    title="Roda a análise de novo e gasta orçamento; a anterior fica no histórico"
+                  >
+                    Reanalisar
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
           {[...byAgent.entries()].map(([agenteAlvo, group]) => (
             <div key={agenteAlvo}>
               <div className={styles.archLabel}>
