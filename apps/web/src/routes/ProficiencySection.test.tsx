@@ -20,6 +20,8 @@ const PERFIL: ProficiencyProfile = {
   id: 'prof-1',
   projectId: 'project-1',
   userId: 'user-1',
+  userName: 'Dani',
+  userEmail: 'dani@brabo.dev',
   competency: 'nestjs',
   level: 'avancado',
   rationale: 'corrigiu o dev-api duas vezes no mesmo detalhe de DI',
@@ -90,6 +92,13 @@ describe('ProficiencySection', () => {
     expect(
       screen.getByText('corrigiu o dev-api duas vezes no mesmo detalhe de DI'),
     ).toBeTruthy();
+  });
+
+  it('identifica a pessoa por e-mail, não pelo UUID', () => {
+    renderTab();
+
+    expect(screen.getByText('dani@brabo.dev')).toBeTruthy();
+    expect(screen.queryByText('user-1')).toBeNull();
   });
 
   it('chip de evidência RESOLVE a sessão do evento antes de navegar', async () => {

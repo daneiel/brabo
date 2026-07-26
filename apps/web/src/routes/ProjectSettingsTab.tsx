@@ -24,6 +24,7 @@ import type {
   Model,
   ModelBindingScope,
   ProficiencyLevel,
+  ProficiencyProfile,
   Role,
 } from '../lib/api-types';
 import { Table, type TableColumn } from '../components/ui/Table';
@@ -469,7 +470,7 @@ function ProficiencySection({ projectId }: { projectId: string }) {
       ) : (
         [...byUser.entries()].map(([userId, group]) => (
           <div key={userId} className={styles.profileGroup}>
-            <div className={styles.profileUser}>{userId}</div>
+            <div className={styles.profileUser}>{identidadeDe(group)}</div>
             {group.map((profile) => (
               <div key={profile.id}>
                 <div className={styles.profileRow}>
@@ -673,3 +674,12 @@ function InstructionVersionsSection({ projectId }: { projectId: string }) {
     </div>
   );
 }
+
+// E-mail é como o resto do app identifica pessoa; o `userId` é UUID e ninguém
+// se reconhece nele. Fallback pro nome e, em último caso, pro id — o perfil
+// sobrevive à remoção do membro, e aí não há e-mail pra mostrar.
+function identidadeDe(group: ProficiencyProfile[]): string {
+  const primeiro = group[0];
+  return primeiro?.userEmail ?? primeiro?.userName ?? primeiro?.userId ?? '—';
+}
+
