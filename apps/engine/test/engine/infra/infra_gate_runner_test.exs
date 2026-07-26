@@ -79,10 +79,10 @@ defmodule Engine.Infra.InfraGateRunnerTest do
     assert_received {:infra_gate_dispatch, :secops, "proj-1", "sess-1", "pa-1"}
   end
 
-  test "run_qa: sem Dockerfile entre os arquivos, aprova sem rodar hadolint" do
+  test "run_qa: PR só com YAML válido aprova (sem Dockerfile pra hadolint)" do
     Process.put(:fake_infra_pr_files, %{
       "title" => "infra",
-      "files" => [%{"path" => "docker-compose.yml", "content" => "services: {}"}]
+      "files" => [%{"path" => "docker-compose.yml", "content" => "services: {}\n"}]
     })
 
     Process.put(:fake_infra_gate_verdict_response, %{"nextAction" => "run_secops"})
@@ -90,6 +90,26 @@ defmodule Engine.Infra.InfraGateRunnerTest do
     InfraGateRunner.run_qa("proj-1", "sess-1", "pa-1")
 
     assert_received {:infra_gate_verdict_recorded, "pa-1", "qa", "approved", _, [], _}
+  end
+
+  test "run_qa: PR sem NENHUM arquivo reconhecível é devolvida, não aprovada" do
+    # Regressão da execução do critério de aceite (ADR 0021): o modelo produziu
+    # `files` malformados — os paths eram blobs de JSON —, nenhum Dockerfile
+    # nem YAML foi reconhecido, e o gate aprovou com "nenhum Dockerfile
+    # encontrado na PR". Invalidável não é o mesmo que válido.
+    Process.put(:fake_infra_pr_files, %{
+      "title" => "infra",
+      "files" => [%{"path" => "{\"API\": \"alpine\"}", "content" => "{}"}]
+    })
+
+    Process.put(:fake_infra_gate_verdict_response, %{"nextAction" => "correct"})
+
+    InfraGateRunner.run_qa("proj-1", "sess-1", "pa-1")
+
+    assert_received {:infra_gate_verdict_recorded, "pa-1", "qa", "changes_requested", _resumo,
+                     [item], _}
+
+    assert item =~ "nenhum Dockerfile nem YAML"
   end
 
   test "run_secops: segredo achado pelo gitleaks vira changes_requested, pede correção ao InfraAgent" do

@@ -44,19 +44,45 @@ function conversationalStatus(events: SessionEvent[], actorId: string): AgentSta
   return status === 'working' ? 'trabalhando' : 'ocioso';
 }
 
-// Dev agents não emitem agent.status (Fase 4a não estendeu isso pra eles) —
-// aproxima via o último evento próprio: bloqueado é `falhou`, qualquer
-// atividade de implementação é `trabalhando`, default `trabalhando` enquanto
-// a execução está ativa (o dev fica em loop claim→implementa→PR).
+// Dev agents não emitem agent.status — aproxima via o último evento próprio.
+//
+// A versão anterior devolvia `trabalhando` para TUDO que não fosse bloqueio,
+// inclusive quando o log dizia `dev.idle` e inclusive sem nenhum evento do
+// agente: um dev parado aparecia trabalhando para sempre. `dev.idle` (emitido
+// quando não há task pegável) e o silêncio total agora dizem a verdade.
+const DEV_STATUS_EVENTS = [
+  'dev.started',
+  'dev.working',
+  'dev.idle',
+  'dev.blocked',
+  'agent.response',
+  'backlog.task_blocked',
+];
+
 function devStatus(events: SessionEvent[], agentId: string): AgentStatus {
   const last = lastEventFor(
     events,
-    (e) =>
-      e.actor.id === agentId &&
-      ['dev.started', 'dev.working', 'agent.response', 'backlog.task_blocked'].includes(e.type),
+    (e) => e.actor.id === agentId && DEV_STATUS_EVENTS.includes(e.type),
   );
-  if (last?.type === 'backlog.task_blocked') return 'falhou';
-  return 'trabalhando';
+
+  if (!last) return 'ocioso';
+
+  switch (last.type) {
+    case 'backlog.task_blocked':
+    case 'dev.blocked':
+      return 'falhou';
+    case 'dev.idle':
+      return 'ocioso';
+    default:
+      return 'trabalhando';
+  }
+}
+
+// Um agente com ação pendente de aprovação está BLOQUEADO esperando o humano,
+// não trabalhando — é o estado `aguardando` do design, que antes nenhum
+// caminho produzia (o contador do header era sempre 0).
+function awaitingApproval(pendingActionAgentIds: Set<string>, agentId: string): boolean {
+  return pendingActionAgentIds.has(agentId);
 }
 
 // QA/SecOps são singletons por projeto — o `gateStatus` do parecer MAIS
@@ -86,7 +112,10 @@ export function deriveAgentRoster(
   moduleMap: ModuleMap | null | undefined,
   executionActivated: boolean,
   handoffs: Handoff[],
+  pendingActionAgentIds: ReadonlySet<string> = new Set(),
 ): RosterEntry[] {
+  const pendentes = new Set(pendingActionAgentIds);
+
   const roster: RosterEntry[] = [
     { id: 'criativo', def: AGENTS.criativo, status: conversationalStatus(events, 'criativo') },
     { id: 'po', def: AGENTS.po, status: conversationalStatus(events, 'po') },
@@ -113,5 +142,12 @@ export function deriveAgentRoster(
     roster.push({ id: 'infra', def: AGENTS.infra, status: conversationalStatus(events, 'infra') });
   }
 
-  return roster;
+  // Aplicado por último e sobrepondo: esperar aprovação humana é o estado mais
+  // informativo que um agente pode ter no painel. `falhou` continua vencendo —
+  // uma task bloqueada é o que o usuário precisa ver primeiro.
+  return roster.map((entry) =>
+    entry.status !== 'falhou' && awaitingApproval(pendentes, entry.id)
+      ? { ...entry, status: 'aguardando' }
+      : entry,
+  );
 }

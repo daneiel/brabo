@@ -10,6 +10,13 @@ defmodule Engine.Actions.HadolintDetector do
   Diferente dos outros dois (que rodam contra um WORKTREE de arquivos já no
   disco), o hadolint aqui roda contra CONTEÚDO direto — o InfraAgent gera o
   Dockerfile como texto (igual ADR), nunca toca um worktree.
+
+  Cada achado carrega `:level` (`"error" | "warning" | "info" | "style"`), e
+  isso é load-bearing: o gate de infra é de validação SINTÁTICA, então só
+  `error` reprova. Um Dockerfile perfeitamente razoável (`FROM node:24-alpine`
+  + `RUN apk add --no-cache git`) já colhe `warning` DL3018 ("pin versions"),
+  e reprovar por isso significaria que nenhum Dockerfile gerado por LLM passa
+  — o InfraAgent entraria em loop de correção até estourar o teto. Ver ADR 0021.
   """
 
   @callback available?() :: boolean()
@@ -69,6 +76,7 @@ defmodule Engine.Actions.HadolintDetector.Live do
       tool: "hadolint",
       path: "Dockerfile",
       line: finding["line"],
+      level: finding["level"] || "error",
       message: "[#{finding["code"]}] #{finding["message"]}"
     }
   end

@@ -184,6 +184,15 @@ export interface UserCredentialMetadata {
 
 export type BudgetPolicy = 'block' | 'allow';
 
+// Custo por AGENTE numa sessão (Fase 4a — painel do time). Espelha
+// AgentTokenUsage do port da api.
+export interface AgentTokenUsage {
+  actorId: string;
+  costMicros: number;
+  inputTokens: number;
+  outputTokens: number;
+}
+
 export interface Budget {
   id: string;
   projectId: string | null;

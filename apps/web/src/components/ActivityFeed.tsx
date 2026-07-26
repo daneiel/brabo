@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { SessionEvent } from '../lib/api-types';
-import { classifyEvent, type ActivityKind } from '../lib/activity';
+import { classifyEvent, isMachineEvent, type ActivityKind } from '../lib/activity';
 import { EventItem } from './EventItem';
 import { Select } from './ui/Select';
 import { ClockIcon } from './ui/icons';
@@ -39,6 +39,8 @@ export function ActivityFeed({
 
   const filtered = useMemo(() => {
     return events.filter((event) => {
+      // Ruído de máquina fica fora do feed — ver isMachineEvent.
+      if (isMachineEvent(event)) return false;
       if (agentFilter && event.actor.id !== agentFilter) return false;
       if (kindFilter && classifyEvent(event).kind !== kindFilter) return false;
       return true;

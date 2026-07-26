@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 import type { AgentDef } from '../lib/agents';
-import { ModelIcon } from './ui/icons';
+import { BranchIcon, ModelIcon } from './ui/icons';
 import styles from './AgentCard.module.css';
 
 export type AgentStatus = 'trabalhando' | 'aguardando' | 'ocioso' | 'falhou';
@@ -27,9 +27,25 @@ interface AgentCardProps {
   model?: { name: string; provider: string };
   autonomy?: AutonomyMode;
   onAutonomyChange?: (mode: AutonomyMode) => void;
+  /** Task/atividade corrente — o que o agente está fazendo AGORA. */
+  activity?: { label: string; branch?: string };
+  /** Custo acumulado do agente NESTA sessão, em micro-USD. */
+  tokensMicros?: number;
 }
 
-export function AgentCard({ agent, status, model, autonomy, onAutonomyChange }: AgentCardProps) {
+function formatMicros(micros: number): string {
+  return `US$ ${(micros / 1_000_000).toFixed(4)}`;
+}
+
+export function AgentCard({
+  agent,
+  status,
+  model,
+  autonomy,
+  onAutonomyChange,
+  activity,
+  tokensMicros,
+}: AgentCardProps) {
   const Icon = agent.icon;
   const style = { ['--agent-color' as string]: agent.color } as CSSProperties;
   const statusStyle = { ['--status-color' as string]: STATUS_COLOR[status] } as CSSProperties;
@@ -50,12 +66,33 @@ export function AgentCard({ agent, status, model, autonomy, onAutonomyChange }: 
         </div>
       </div>
 
-      {model && (
-        <div className={styles.footer}>
-          <span className={styles.modelIcon}>
-            <ModelIcon size={13} />
+      {activity && (
+        <div className={styles.activity}>
+          <span className={styles.activityLabel} title={activity.label}>
+            {activity.label}
           </span>
-          {model.name} · {model.provider}
+          {activity.branch && (
+            <span className={styles.branch}>
+              <BranchIcon size={11} />
+              {activity.branch}
+            </span>
+          )}
+        </div>
+      )}
+
+      {(model || tokensMicros !== undefined) && (
+        <div className={styles.footer}>
+          {model && (
+            <span className={styles.model}>
+              <span className={styles.modelIcon}>
+                <ModelIcon size={13} />
+              </span>
+              {model.name} · {model.provider}
+            </span>
+          )}
+          {tokensMicros !== undefined && (
+            <span className={styles.tokens}>{formatMicros(tokensMicros)}</span>
+          )}
         </div>
       )}
 

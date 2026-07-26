@@ -8,6 +8,7 @@ import {
   useLatestSession,
   usePendingActions,
   useSessionEvents,
+  useSessionTokenUsage,
 } from '../lib/hooks';
 import {
   activateExecution,
@@ -17,26 +18,35 @@ import {
   getAgentModelBinding,
   listAgentAutonomy,
   listModels,
+  setAgentAutonomy,
   unblockTask,
 } from '../lib/api-client';
 import { deriveAgentRoster } from '../lib/agent-status';
 import { deriveExecutionProgress, formatMicros } from '../lib/execution';
 import { connectSessionHeartbeat } from '../lib/session-channel';
-import { AgentCard } from '../components/AgentCard';
+import { AgentCard, type AutonomyMode } from '../components/AgentCard';
 import { ActivityFeed } from '../components/ActivityFeed';
 import { HypothesisCard } from '../components/HypothesisCard';
 import { Badge, type BadgeTone } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { useToast } from '../components/ui/ToastProvider';
-import type { Architecture, ProposedAction, SessionEvent } from '../lib/api-types';
+import type { ActionType, Architecture, ProposedAction, SessionEvent } from '../lib/api-types';
 import styles from './ProjectOverviewTab.module.css';
 
-// actionType representativo pra resumir a autonomia (auto_approve vira "auto"
-// no AgentCard) — só os agentes com uma ação central seedável têm isso;
-// os demais não mostram o toggle (AgentCard exige model+onChange juntos).
-const AUTONOMY_ACTION_TYPE: Record<string, string> = { infra: 'open_infra_pr' };
+// actionType representativo de cada agente, pra resumir a autonomia num
+// toggle só (auto_approve vira "auto"). TODO agente precisa de uma entrada:
+// antes só `infra` e `dev-*` tinham, então criativo/po/arquiteto/qa/secops
+// nunca recebiam a prop e o card saía sem o controle que o design pede.
+const AUTONOMY_ACTION_TYPE: Record<string, string> = {
+  infra: 'open_infra_pr',
+  criativo: 'write_file',
+  po: 'write_file',
+  arquiteto: 'open_adr_pr',
+  qa: 'terminal',
+  secops: 'terminal',
+};
 function autonomyActionTypeFor(agentId: string): string {
-  return AUTONOMY_ACTION_TYPE[agentId] ?? (agentId.startsWith('dev-') ? 'pr_open' : '');
+  return AUTONOMY_ACTION_TYPE[agentId] ?? (agentId.startsWith('dev-') ? 'pr_open' : 'terminal');
 }
 
 interface ProjectOverviewTabProps {
@@ -45,6 +55,7 @@ interface ProjectOverviewTabProps {
 
 export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
   const queryClient = useQueryClient();
+  const { showToast } = useToast();
   const { latest: latestSession } = useLatestSession(projectId);
   const sessionId = latestSession?.id;
   const eventsQuery = useSessionEvents(projectId, sessionId);
@@ -56,7 +67,23 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
   const handoffs = handoffsQuery.data ?? [];
 
   const executionActivated = events.some((e) => e.type === 'execution.activated');
-  const roster = deriveAgentRoster(events, architecture?.moduleMap, executionActivated, handoffs);
+  // Agentes com ação pendente de aprovação entram como `aguardando` — antes
+  // esse estado era inalcançável e o contador do header ficava sempre em 0.
+  const pendingActionAgentIds = new Set(
+    actions.filter((a) => a.status === 'pending').map((a) => a.actor.id),
+  );
+  const roster = deriveAgentRoster(
+    events,
+    architecture?.moduleMap,
+    executionActivated,
+    handoffs,
+    pendingActionAgentIds,
+  );
+  // A task/branch corrente por agente já era derivada aqui perto, mas só
+  // alimentava a ExecutionSection — o mesmo dev aparecia duas vezes na tela,
+  // uma com o dado e outra sem.
+  const progressByAgent = deriveExecutionProgress(events);
+  const { data: tokenUsage } = useSessionTokenUsage(projectId, sessionId);
 
   const { data: modelsByCategory } = useQuery({ queryKey: ['models'], queryFn: listModels });
   const allModels = modelsByCategory
@@ -92,6 +119,29 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
     return disconnect;
   }, [sessionId, latestSession?.status, projectId, queryClient]);
 
+  // `setAgentAutonomy` existia no api-client desde a Fase 4a e nunca tinha
+  // sido chamado de lugar nenhum — o toggle do design nunca renderizou.
+  async function handleAutonomyChange(
+    agentId: string,
+    actionType: string,
+    mode: AutonomyMode,
+  ) {
+    try {
+      await setAgentAutonomy(projectId, {
+        agentId,
+        actionType: actionType as ActionType,
+        mode: mode === 'auto' ? 'auto_approve' : 'require_approval',
+      });
+      await queryClient.invalidateQueries({ queryKey: ['agent-autonomy', projectId] });
+    } catch {
+      showToast({
+        title: 'Não foi possível mudar a autonomia',
+        message: `${agentId} · ${actionType}`,
+        tone: 'danger',
+      });
+    }
+  }
+
   const workingCount = roster.filter((r) => r.status === 'trabalhando').length;
   const waitingCount = roster.filter((r) => r.status === 'aguardando').length;
 
@@ -107,16 +157,28 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
             const modelId = bindingQueries[i]?.data?.modelId;
             const model = allModels.find((m) => m.id === modelId);
             const autonomyType = autonomyActionTypeFor(r.id);
-            const rule = autonomyType
-              ? autonomyRules?.find((a) => a.agentId === r.id && a.actionType === autonomyType)
-              : undefined;
+            const rule = autonomyRules?.find(
+              (a) => a.agentId === r.id && a.actionType === autonomyType,
+            );
+            const progress = progressByAgent.get(r.id);
+            const custo = tokenUsage?.find((u) => u.actorId === r.id)?.costMicros;
             return (
               <AgentCard
                 key={r.id}
                 agent={r.def}
                 status={r.status}
                 model={model ? { name: model.displayName, provider: model.provider } : undefined}
-                autonomy={rule ? (rule.mode === 'auto_approve' ? 'auto' : 'manual') : undefined}
+                // Sem regra gravada o default do domínio é require_approval —
+                // "manual". Mostrar o toggle sempre é o que o design pede, e
+                // é o que torna a autonomia AJUSTÁVEL daqui.
+                autonomy={rule?.mode === 'auto_approve' ? 'auto' : 'manual'}
+                onAutonomyChange={(mode) => handleAutonomyChange(r.id, autonomyType, mode)}
+                activity={
+                  progress?.taskTitle
+                    ? { label: progress.taskTitle, branch: progress.branch }
+                    : undefined
+                }
+                tokensMicros={custo}
               />
             );
           })}
