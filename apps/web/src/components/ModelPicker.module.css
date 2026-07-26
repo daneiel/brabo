@@ -33,11 +33,12 @@
 }
 
 .dropdown {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
+  /* `fixed`, não `absolute`: o picker vive dentro de uma Table com
+     `overflow: hidden`, que recortava o dropdown — nas últimas linhas ele
+     desaparecia por completo. `top`/`left`/`max-height` vêm do componente,
+     calculados a partir do retângulo do gatilho. */
+  position: fixed;
   width: 320px;
-  max-height: 360px;
   overflow-y: auto;
   background: var(--surface-1);
   border: 1px solid var(--border-strong);

@@ -381,6 +381,10 @@ export interface ProficiencyProfile {
   id: string;
   projectId: string;
   userId: string;
+  // Identidade humana de quem o perfil descreve — null quando a pessoa já não
+  // é membro (o perfil sobrevive à remoção). A UI mostra e-mail, não UUID.
+  userName: string | null;
+  userEmail: string | null;
   competency: string;
   level: ProficiencyLevel;
   // "os porquês" do nível.

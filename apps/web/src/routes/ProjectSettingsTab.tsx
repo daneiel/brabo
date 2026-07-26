@@ -4,8 +4,10 @@ import { useNavigate } from '@tanstack/react-router';
 import {
   addProjectMember,
   deleteMyProficiency,
-  listInstructionVersions,
+  getProjectEvent,
+  listProjectInstructionVersions,
   optInProficiency,
+  runAnamnese,
   rollbackInstruction,
   deleteCredential,
   getAgentModelBinding,
@@ -17,11 +19,12 @@ import {
   upsertCredential,
 } from '../lib/api-client';
 import { AGENT_LIST } from '../lib/agents';
-import { useLatestSession, useProficiency } from '../lib/hooks';
+import { useProficiency } from '../lib/hooks';
 import type {
   Model,
   ModelBindingScope,
   ProficiencyLevel,
+  ProficiencyProfile,
   Role,
 } from '../lib/api-types';
 import { Table, type TableColumn } from '../components/ui/Table';
@@ -29,6 +32,7 @@ import { Badge, type BadgeTone } from '../components/ui/Badge';
 import { Select } from '../components/ui/Select';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
+import { Modal } from '../components/ui/Modal';
 import { ModelPicker } from '../components/ModelPicker';
 import { TrashIcon } from '../components/ui/icons';
 import { useToast } from '../components/ui/ToastProvider';
@@ -370,7 +374,8 @@ function ProficiencySection({ projectId }: { projectId: string }) {
   const { showToast } = useToast();
   const navigate = useNavigate();
   const { data: profiles } = useProficiency(projectId);
-  const { latest: latestSession } = useLatestSession(projectId);
+  const [confirmandoDelete, setConfirmandoDelete] = useState(false);
+  const [emVoo, setEmVoo] = useState(false);
 
   const all = profiles ?? [];
   const byUser = new Map<string, typeof all>();
@@ -379,6 +384,8 @@ function ProficiencySection({ projectId }: { projectId: string }) {
   }
 
   async function handleDelete() {
+    setConfirmandoDelete(false);
+    setEmVoo(true);
     try {
       await deleteMyProficiency(projectId);
       await queryClient.invalidateQueries({ queryKey: ['proficiency', projectId] });
@@ -389,25 +396,63 @@ function ProficiencySection({ projectId }: { projectId: string }) {
       });
     } catch {
       showToast({ title: 'Erro', message: 'Não foi possível apagar o perfil', tone: 'danger' });
+    } finally {
+      setEmVoo(false);
     }
   }
 
   async function handleOptIn() {
+    setEmVoo(true);
     try {
       await optInProficiency(projectId);
+      // Sem invalidar, a lista só voltava a aparecer no poll seguinte.
+      await queryClient.invalidateQueries({ queryKey: ['proficiency', projectId] });
       showToast({ title: 'Reativado', message: 'A Anamnese voltará a perfilar você.', tone: 'success' });
     } catch {
       showToast({ title: 'Erro', message: 'Não foi possível reativar', tone: 'danger' });
+    } finally {
+      setEmVoo(false);
     }
   }
 
-  function goToEvidence(eventId: string) {
-    if (!latestSession) return;
-    navigate({
-      to: '/projects/$projectId/sessions/$sessionId',
-      params: { projectId, sessionId: latestSession.id },
-      search: { highlightEvent: eventId },
-    });
+  async function handleRunNow() {
+    setEmVoo(true);
+    try {
+      await runAnamnese(projectId);
+      showToast({
+        title: 'Rodada enfileirada',
+        message: 'A Anamnese vai analisar a janela agora.',
+        tone: 'success',
+      });
+    } catch {
+      showToast({
+        title: 'Erro',
+        message: 'Não foi possível enfileirar a rodada',
+        tone: 'danger',
+      });
+    } finally {
+      setEmVoo(false);
+    }
+  }
+
+  // A janela da Anamnese é de PROJETO e atravessa várias sessões, então a
+  // sessão do evento precisa ser RESOLVIDA — usar a sessão mais recente caía
+  // em "evento não encontrado nesta sessão" para toda evidência antiga.
+  async function goToEvidence(eventId: string) {
+    try {
+      const event = await getProjectEvent(projectId, eventId);
+      navigate({
+        to: '/projects/$projectId/sessions/$sessionId',
+        params: { projectId, sessionId: event.sessionId },
+        search: { highlightEvent: eventId },
+      });
+    } catch {
+      showToast({
+        title: 'Evidência indisponível',
+        message: 'O evento citado não foi encontrado neste projeto.',
+        tone: 'danger',
+      });
+    }
   }
 
   return (
@@ -425,7 +470,7 @@ function ProficiencySection({ projectId }: { projectId: string }) {
       ) : (
         [...byUser.entries()].map(([userId, group]) => (
           <div key={userId} className={styles.profileGroup}>
-            <div className={styles.profileUser}>{userId}</div>
+            <div className={styles.profileUser}>{identidadeDe(group)}</div>
             {group.map((profile) => (
               <div key={profile.id}>
                 <div className={styles.profileRow}>
@@ -456,13 +501,42 @@ function ProficiencySection({ projectId }: { projectId: string }) {
       )}
 
       <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
-        <Button variant="danger" onClick={handleDelete}>
+        <Button
+          variant="danger"
+          disabled={emVoo}
+          onClick={() => setConfirmandoDelete(true)}
+        >
           Apagar meu perfil
         </Button>
-        <Button variant="ghost" onClick={handleOptIn}>
+        <Button variant="ghost" disabled={emVoo} onClick={handleOptIn}>
           Voltar a ser perfilado
         </Button>
+        <Button variant="secondary" disabled={emVoo} onClick={handleRunNow}>
+          Rodar agora
+        </Button>
       </div>
+
+      {/* Apagar é irreversível (e grava opt-out) — um clique cru era demais
+          para uma ação que não tem como desfazer o que foi apagado. */}
+      {confirmandoDelete && (
+        <Modal
+          title="Apagar meu perfil de proficiência?"
+          onClose={() => setConfirmandoDelete(false)}
+        >
+          <div className={styles.subtitle}>
+            As linhas do seu perfil são apagadas de verdade, e a Anamnese para
+            de te perfilar até você reativar. O que já foi apagado não volta.
+          </div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+            <Button variant="danger" onClick={handleDelete}>
+              Apagar
+            </Button>
+            <Button variant="ghost" onClick={() => setConfirmandoDelete(false)}>
+              Cancelar
+            </Button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
@@ -477,18 +551,25 @@ function InstructionVersionsSection({ projectId }: { projectId: string }) {
   const { showToast } = useToast();
   const [expanded, setExpanded] = useState<string | null>(null);
 
-  const versionQueries = useQueries({
-    queries: AGENT_LIST.map((agent) => ({
-      queryKey: ['instruction-versions', projectId, agent.key],
-      queryFn: () => listInstructionVersions(projectId, agent.key),
-    })),
+  // Pergunta ao backend QUEM tem histórico, em vez de adivinhar pelo roster
+  // estático: os dev agents são instanciados por módulo (`dev-api`), não
+  // existem em AGENT_LIST, e eram justamente os invisíveis aqui.
+  const { data: historico } = useQuery({
+    queryKey: ['instruction-versions', projectId],
+    queryFn: () => listProjectInstructionVersions(projectId),
+    refetchInterval: 15000,
   });
 
+  // Um clique é o que o enunciado pede — mas revertendo DUAS vezes por duplo
+  // clique nascem duas versões. `revertendo` desabilita enquanto voa.
+  const [revertendo, setRevertendo] = useState<string | null>(null);
+
   async function handleRollback(agent: string, version: number) {
+    setRevertendo(`${agent}:${version}`);
     try {
       await rollbackInstruction(projectId, agent, version);
       await queryClient.invalidateQueries({
-        queryKey: ['instruction-versions', projectId, agent],
+        queryKey: ['instruction-versions', projectId],
       });
       showToast({
         title: 'Revertido',
@@ -497,13 +578,20 @@ function InstructionVersionsSection({ projectId }: { projectId: string }) {
       });
     } catch {
       showToast({ title: 'Erro', message: 'Não foi possível reverter', tone: 'danger' });
+    } finally {
+      setRevertendo(null);
     }
   }
 
-  const withHistory = AGENT_LIST.map((agent, index) => ({
-    agent,
-    versions: versionQueries[index]?.data ?? [],
-  })).filter((entry) => entry.versions.length > 0);
+  const withHistory = (historico ?? []).map((entry) => ({
+    // `label` do roster quando o slug é conhecido; senão o próprio slug
+    // (`dev-api` e afins não estão no roster e não podem virar "undefined").
+    agent: {
+      key: entry.agent,
+      label: AGENT_LIST.find((a) => a.key === entry.agent)?.name ?? entry.agent,
+    },
+    versions: entry.versions,
+  }));
 
   return (
     <div className={styles.section}>
@@ -520,7 +608,7 @@ function InstructionVersionsSection({ projectId }: { projectId: string }) {
       ) : (
         withHistory.map(({ agent, versions }) => (
           <div key={agent.key} className={styles.agentBlock}>
-            <div className={styles.profileUser}>{agent.name}</div>
+            <div className={styles.profileUser}>{agent.label}</div>
             {versions.map((version) => {
               const key = `${agent.key}:${version.version}`;
               const open = expanded === key;
@@ -547,9 +635,12 @@ function InstructionVersionsSection({ projectId }: { projectId: string }) {
                     {!version.isCurrent && (
                       <Button
                         variant="secondary"
+                        disabled={revertendo !== null}
                         onClick={() => handleRollback(agent.key, version.version)}
                       >
-                        Reverter
+                        {revertendo === `${agent.key}:${version.version}`
+                          ? 'Revertendo…'
+                          : 'Reverter'}
                       </Button>
                     )}
                   </div>
@@ -566,7 +657,7 @@ function InstructionVersionsSection({ projectId }: { projectId: string }) {
                             .filter(Boolean)
                             .join(' ')}
                         >
-                          <span>
+                          <span className={styles.diffSign}>
                             {line.kind === 'add' ? '+' : line.kind === 'del' ? '-' : ' '}
                           </span>
                           <span>{line.content}</span>
@@ -583,3 +674,12 @@ function InstructionVersionsSection({ projectId }: { projectId: string }) {
     </div>
   );
 }
+
+// E-mail é como o resto do app identifica pessoa; o `userId` é UUID e ninguém
+// se reconhece nele. Fallback pro nome e, em último caso, pro id — o perfil
+// sobrevive à remoção do membro, e aí não há e-mail pra mostrar.
+function identidadeDe(group: ProficiencyProfile[]): string {
+  const primeiro = group[0];
+  return primeiro?.userEmail ?? primeiro?.userName ?? primeiro?.userId ?? '—';
+}
+

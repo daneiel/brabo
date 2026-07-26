@@ -42,6 +42,8 @@ defmodule EngineWeb.Router do
          PsychologistCommandController,
          :reanalyze
 
+    post "/projects/:projectId/anamnese/run", AnamneseCommandController, :run
+
     post "/projects/:projectId/agents/:agent/instructions/invalidate",
          InstructionCommandController,
          :invalidate

@@ -153,3 +153,87 @@ describe('classifyEvent — Psicólogo (Fase 4b)', () => {
     expect(c.text).toContain('psychologist.algo_novo');
   });
 });
+
+describe('classifyEvent — Anamnese e patches de instrução (Fase 4b)', () => {
+  it('patch aplicado nomeia o agente e as versões', () => {
+    const c = classifyEvent(
+      ev('instruction.patched', 'action-executor', {
+        agent: 'dev-api',
+        fromVersion: 2,
+        toVersion: 3,
+      }),
+    );
+
+    expect(c.bad).toBe(false);
+    expect(c.text).toContain('dev-api');
+    // As versões chegam como NÚMERO no payload; lidas só como string, sumiam
+    // e a narração saía sem versão nenhuma.
+    expect(c.text).toContain('v3');
+  });
+
+  it('rollback nomeia a versão restaurada (não "v?")', () => {
+    const c = classifyEvent(
+      ev('instruction.rolled_back', 'action-executor', {
+        agent: 'dev-api',
+        toVersion: 3,
+        restoredFrom: 1,
+      }),
+    );
+
+    expect(c.text).toContain('v1');
+    expect(c.text).not.toContain('v?');
+  });
+
+  it('rollback se distingue de patch no texto', () => {
+    const patched = classifyEvent(
+      classifyInput('instruction.patched', { agent: 'po' }),
+    ).text;
+    const rolled = classifyEvent(
+      classifyInput('instruction.rolled_back', { agent: 'po' }),
+    ).text;
+
+    expect(patched).not.toEqual(rolled);
+  });
+
+  it('patch que falhou é marcado como ruim e carrega o motivo', () => {
+    const c = classifyEvent(
+      ev('instruction.patch_failed', 'action-executor', {
+        agent: 'dev-api',
+        reason: 'engine fora do ar',
+      }),
+    );
+
+    expect(c.bad).toBe(true);
+    expect(c.text).toContain('engine fora do ar');
+  });
+
+  it('rodada da Anamnese que falhou é marcada como ruim', () => {
+    const c = classifyEvent(
+      ev('anamnese.run_failed', 'anamnese', { reason: 'falha no provider: timeout' }),
+    );
+
+    expect(c.bad).toBe(true);
+    expect(c.text).toContain('timeout');
+  });
+
+  it('evento anamnese.* desconhecido não quebra a narração', () => {
+    const c = classifyEvent(ev('anamnese.algo_novo', 'anamnese', {}));
+
+    expect(typeof c.text).toBe('string');
+    expect(c.text.length).toBeGreaterThan(0);
+  });
+
+  it('não usa cor crua — o feed é tokenizado', () => {
+    for (const type of [
+      'anamnese.profile_updated',
+      'anamnese.run_completed',
+      'instruction.patched',
+    ]) {
+      expect(classifyEvent(ev(type, 'anamnese', {})).color).toMatch(/^var\(--/);
+    }
+  });
+});
+
+function classifyInput(type: string, payload: Record<string, unknown>) {
+  return ev(type, 'action-executor', payload);
+}

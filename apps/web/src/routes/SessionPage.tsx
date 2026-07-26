@@ -602,7 +602,7 @@ function ContextAside({
             {highlightEvent && citedEvent && (
               <div className={styles.citedEvent}>
                 <div className={styles.citedEventLabel}>
-                  Evento citado pela hipótese
+                  Evento citado
                 </div>
                 <EventItem event={citedEvent} highlighted />
               </div>

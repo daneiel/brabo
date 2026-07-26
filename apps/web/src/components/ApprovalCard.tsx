@@ -81,6 +81,7 @@ export function ApprovalCard({
   const actorLabel = actor?.name ?? action.actor.id;
   const Icon = ACTION_ICON[action.actionType];
   const isPending = action.status === 'pending';
+  const podeSemprePermitir = action.actionType !== 'instruction_patch';
   const isCritical = urgency === 'critico';
 
   const payload = action.payload;
@@ -131,11 +132,16 @@ export function ApprovalCard({
             <Button variant="danger" onClick={() => onDeny()}>
               Negar
             </Button>
-            <Button variant="secondary" onClick={onAlwaysAllow}>
-              Sempre permitir
-            </Button>
+            {/* Patch de instrução NUNCA é auto-aprovável (teto em decide.ts):
+                gravar a regra em permissions.json não muda nada, então o botão
+                prometia um efeito que não existe. */}
+            {podeSemprePermitir && (
+              <Button variant="secondary" onClick={onAlwaysAllow}>
+                Sempre permitir
+              </Button>
+            )}
           </div>
-          {variant === 'chat' && (
+          {variant === 'chat' && podeSemprePermitir && (
             <span className={styles.note}>
               <AlertIcon size={12} />
               &quot;Sempre permitir&quot; grava a regra em .brabo/permissions.json
@@ -239,8 +245,10 @@ function ApprovalBody({ actionType, payload, executionResult, expandedFile, onTo
     const rationale = readString(payload, 'rationale');
     const hypothesisId = readString(payload, 'hypothesisId');
     const fromVersion = payload.fromVersion;
-    const files = readFiles(payload);
-    const file = files?.[0];
+    // TODOS os arquivos, não só o primeiro: o payload de patch traz um por
+    // arquivo de instrução, e o branch de git_commit já loopava — aqui um
+    // segundo arquivo ficava invisível na hora de aprovar.
+    const files = readFiles(payload) ?? [];
 
     return (
       <div className={styles.body}>
@@ -262,24 +270,31 @@ function ApprovalBody({ actionType, payload, executionResult, expandedFile, onTo
           </div>
         )}
         {rationale && <div className={styles.prSummary}>{rationale}</div>}
-        {file?.lines && (
-          <div className={styles.diffLines}>
-            {file.lines.map((line, index) => (
-              <div
-                key={index}
-                className={[styles.diffLine, line.kind === 'add' && styles.add, line.kind === 'del' && styles.del]
-                  .filter(Boolean)
-                  .join(' ')}
-              >
-                <span className={styles.lineNo}>{line.lineNo ?? ''}</span>
-                <span className={[styles.sign, line.kind === 'add' && styles.add, line.kind === 'del' && styles.del].filter(Boolean).join(' ')}>
-                  {line.kind === 'add' ? '+' : line.kind === 'del' ? '-' : ''}
-                </span>
-                <span>{line.content}</span>
+        {files.map((file) => (
+          <div key={file.path}>
+            {files.length > 1 && (
+              <div className={styles.prSummary}>{file.path}</div>
+            )}
+            {file.lines && (
+              <div className={styles.diffLines}>
+                {file.lines.map((line, index) => (
+                  <div
+                    key={index}
+                    className={[styles.diffLine, line.kind === 'add' && styles.add, line.kind === 'del' && styles.del]
+                      .filter(Boolean)
+                      .join(' ')}
+                  >
+                    <span className={styles.lineNo}>{line.lineNo ?? ''}</span>
+                    <span className={[styles.sign, line.kind === 'add' && styles.add, line.kind === 'del' && styles.del].filter(Boolean).join(' ')}>
+                      {line.kind === 'add' ? '+' : line.kind === 'del' ? '-' : ''}
+                    </span>
+                    <span>{line.content}</span>
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
           </div>
-        )}
+        ))}
       </div>
     );
   }
