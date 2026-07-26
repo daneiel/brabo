@@ -220,6 +220,38 @@ esta não tinha nenhum) e dois que guardavam garantias sem cobertura: o teto de
 trava de merge, que tem quatro testes — e o `ExecuteInstructionPatchUseCase`,
 único executor sem spec, passado como `undefined as never` nos testes vizinhos.
 
+### A janela era truncada pra segundo — e a rodada era pulada em silêncio
+
+Isto só apareceu rodando o `demo:anamnese` de verdade, e era a causa REAL do
+"perfil não vem" que eu havia atribuído a flakiness do 7B local. `token_usage`
+pro ator `anamnese` estava em ZERO: o modelo nunca era chamado.
+
+`session_events.created_at` estava declarado `:utc_datetime` no schema Ecto
+(precisão de SEGUNDO) contra uma coluna `timestamptz(6)`. O Ecto trunca o
+parâmetro na comparação, então `created_at < window_to` virava
+`< 15:39:32` em vez de `< 15:39:32.931` e **descartava tudo que aconteceu no
+segundo corrente**. Medido no banco: 0 eventos na janela truncada contra 9 sem
+truncar, com o primeiro evento em `15:39:32.363`.
+
+Como o script faz tudo em menos de um segundo, a janela ficava vazia SEMPRE.
+Em produção o tick de 15 min quase sempre escapa (os eventos já são de segundos
+anteriores), e é por isso que passou pela auditoria — que chegou a registrar
+isso como "menor, hedged". Não era menor.
+
+Duas mudanças:
+
+- `:utc_datetime_usec` no campo, alinhando com a coluna. O teste de regressão
+  (`event_window_test.exs` — a janela por projeto não tinha nenhum) foi
+  verificado FALHANDO sem a correção: um teste que passaria de qualquer jeito
+  não provaria nada.
+- A rodada pulada passou a deixar rastro (`Logger.info` com as contagens e o
+  limiar). Deliberadamente NÃO é evento no log: um tick a cada 15 min por
+  projeto viraria ruído. Mas o silêncio total foi exatamente o que escondeu
+  isto — uma rodada que não faz nada e não diz nada é indiagnosticável.
+
+Com a correção, o `demo:anamnese` passou INTEIRO: `critério de aceite da Fase 4b
+(sessão 2) ATENDIDO`.
+
 ### A passada visual achou três coisas que teste nenhum pegaria
 
 O `demo:*` prova dado; ele não prova que a tela mostra o dado. Abrindo a UI no

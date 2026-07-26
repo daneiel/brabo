@@ -18,6 +18,8 @@ defmodule Engine.Workers.AnamneseWorker do
 
   use Oban.Worker, queue: :default, max_attempts: 3
 
+  require Logger
+
   alias Engine.Anamnese.{ContextBuilder, Tools, Triage}
   alias Engine.Anamnese.Hooks.Termination
   alias Engine.Harness.Hooks
@@ -57,6 +59,16 @@ defmodule Engine.Workers.AnamneseWorker do
     if Triage.should_run?(event_count, queued_count, decision_count) do
       analyze(project_id, session_id, context, event_count)
     else
+      # Pular é legítimo e frequente (um tick a cada 15 min por projeto), então
+      # NÃO vira evento no log — seria ruído. Mas precisa deixar rastro: uma
+      # rodada pulada sem nada narrado é indiagnosticável, e foi exatamente o
+      # que escondeu a janela truncada.
+      Logger.info(
+        "anamnese: rodada pulada em #{project_id} — " <>
+          "#{event_count} evento(s), #{decision_count} decisão(ões), " <>
+          "#{queued_count} hipótese(s) na fila (mínimo #{Triage.min_events()})"
+      )
+
       :ok
     end
   end

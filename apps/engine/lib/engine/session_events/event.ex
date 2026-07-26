@@ -21,7 +21,13 @@ defmodule Engine.SessionEvents.Event do
     field :actor_kind, :string
     field :actor_id, :string
     field :payload, :map, default: %{}
-    field :created_at, :utc_datetime
+    # `:utc_datetime_usec`, não `:utc_datetime`: a coluna é timestamptz(6) e a
+    # api grava com microssegundos. Declarando precisão de SEGUNDO, o Ecto
+    # truncava o parâmetro nas comparações de janela — então
+    # `created_at < window_to` descartava tudo que aconteceu no segundo
+    # corrente. Numa rodada disparada logo após a atividade, isso esvaziava a
+    # janela inteira e a Anamnese era pulada em silêncio.
+    field :created_at, :utc_datetime_usec
   end
 
   @doc """
