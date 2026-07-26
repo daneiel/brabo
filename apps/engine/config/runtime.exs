@@ -47,8 +47,7 @@ config :engine,
   # Bem mais folgado que o terminal: o semgrep varre a árvore inteira e pode
   # baixar regras da rede (`--config auto`). Sem esse teto, um scanner
   # pendurado congela o gate do projeto (ver Engine.Gates.Scanner).
-  secops_scan_timeout_ms:
-    String.to_integer(System.get_env("SECOPS_SCAN_TIMEOUT_MS", "180000")),
+  secops_scan_timeout_ms: String.to_integer(System.get_env("SECOPS_SCAN_TIMEOUT_MS", "180000")),
   # Harness — ToolLoop / ContextManager (Fase 3a, sessão 2).
   tool_loop_max_iterations: String.to_integer(System.get_env("TOOL_LOOP_MAX_ITERATIONS", "8")),
   # Um turno de LLM não é uma chamada de API comum: com modelo local o
@@ -100,10 +99,8 @@ config :engine,
   anamnese_initial_window_days:
     String.to_integer(System.get_env("ANAMNESE_INITIAL_WINDOW_DAYS", "30")),
   anamnese_min_events: String.to_integer(System.get_env("ANAMNESE_MIN_EVENTS", "10")),
-  anamnese_max_iterations:
-    String.to_integer(System.get_env("ANAMNESE_MAX_ITERATIONS", "6")),
-  anamnese_budget_micros:
-    String.to_integer(System.get_env("ANAMNESE_BUDGET_MICROS", "200000")),
+  anamnese_max_iterations: String.to_integer(System.get_env("ANAMNESE_MAX_ITERATIONS", "6")),
+  anamnese_budget_micros: String.to_integer(System.get_env("ANAMNESE_BUDGET_MICROS", "200000")),
   anamnese_max_prompt_events:
     String.to_integer(System.get_env("ANAMNESE_MAX_PROMPT_EVENTS", "500")),
   anamnese_max_payload_chars:
@@ -141,6 +138,21 @@ if config_env() == :prod do
 
   host = System.get_env("PHX_HOST") || "example.com"
 
+  # Em :prod o default do Phoenix pra `check_origin` é comparar a origem do
+  # websocket com o `url: [host: ...]` abaixo — ou seja, com PHX_HOST. O painel
+  # do time ao vivo (Fase 4a item 7) fala por canal Phoenix a partir do web, que
+  # é servido de OUTRA origem (nginx em outra porta/host), então o handshake é
+  # recusado e o painel fica mudo sem erro visível no servidor.
+  #
+  # WEB_ORIGIN é a mesma variável que a api já usa pro CORS: lista de origens
+  # separada por vírgula. Sem ela, mantém o default estrito do Phoenix.
+  check_origin =
+    case System.get_env("WEB_ORIGIN") do
+      nil -> true
+      "" -> true
+      origins -> origins |> String.split(",", trim: true) |> Enum.map(&String.trim/1)
+    end
+
   config :engine, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
   config :engine, EngineWeb.Endpoint,
@@ -152,6 +164,7 @@ if config_env() == :prod do
       # for details about using IPv6 vs IPv4 and loopback vs public addresses.
       ip: {0, 0, 0, 0, 0, 0, 0, 0}
     ],
+    check_origin: check_origin,
     secret_key_base: secret_key_base
 
   # ## SSL Support

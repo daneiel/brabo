@@ -53,7 +53,9 @@ defmodule Engine.Harness.ToolCallRecoveryTest do
   end
 
   test "texto sem tool call nenhuma: lista vazia (o loop encerra como antes)" do
-    assert [] = ToolCallRecovery.from_content("Terminei a análise, está tudo certo.", @ferramentas)
+    assert [] =
+             ToolCallRecovery.from_content("Terminei a análise, está tudo certo.", @ferramentas)
+
     assert [] = ToolCallRecovery.from_content("", @ferramentas)
     assert [] = ToolCallRecovery.from_content(nil, @ferramentas)
   end

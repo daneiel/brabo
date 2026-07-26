@@ -16,57 +16,42 @@ e pipeline de aprovação de ações com autoridade final do usuário.
   Gitflow idempotente e retomável via pipeline, wizard com progresso
   ao vivo.
 - FASE 3 — CONCLUÍDA: Harness (PromptAssembler, ToolLoop,
-  ContextManager, InstructionFiles, Hooks) com ferramentas e EchoAgent;
-  handoffs explícitos; agentes Criativo (business_rules +
-  product_brief), PO (backlog com DoD/DoR validados no domínio e
-  rastreabilidade regra→story) e Arquiteto (ADRs via PR + module_map
-  com validação cruzada de stories).
-- Não refatore o que está pronto sem pedido explícito; a Fase 4
-  CONSOME essas fundações.
+  ContextManager, InstructionFiles, Hooks), handoffs explícitos,
+  agentes Criativo, PO e Arquiteto com artefatos e validações no
+  domínio.
+- FASE 4 — CONCLUÍDA: agentes de execução (devs dinâmicos por módulo
+  em worktrees isolados, QA e SecOps como gates de PR, Infra
+  propositivo), trava de merge protegido, painel do time ao vivo;
+  Psicólogo real com hipóteses evidenciadas e Anamnese com
+  proficiency_profile, instruction_patches versionados com rollback e
+  loop fechado com o Psicólogo.
+- Não refatore o que está pronto sem pedido explícito; a Fase 5
+  PREPARA essas fundações para produção.
 
-## Escopo da FASE 4 (ativa — não implemente nada além disso)
-
-### 4a — Agentes de execução (dev, QA, SecOps, Infra)
-1. Instanciação dinâmica: ao ativar a fase de execução de um projeto,
-   criar um subagente dev por módulo do module_map (dev-<modulo>),
-   cada um como processo supervisionado próprio com harness e
-   instruções próprias. Paralelização adicional é SUGERIDA via
-   notificação com aprovação de um clique — nunca criada sozinha.
-2. Isolamento git: cada dev em git worktree próprio, branch feature/*
-   conforme taxonomia; commits com identidade "dev-<modulo>[bot]" e
-   usuário como co-author. Commit/push/PR via pipeline respeitando
-   autonomia por agente.
-3. Ciclo de tarefa do dev: pega task ready (respeitando DoR) →
-   implementa no worktree → roda testes via ferramenta terminal (rtk
-   quando disponível) → abre PR referenciando a story → atualiza o
-   backlog.
-4. QA: gate de PR — roda a suite, produz matriz regra→teste como
-   artefato, aprova ou devolve com parecer estruturado no event log e
-   comentário na PR.
-5. SecOps: gate após o QA — checklist derivado dos ADRs + scanners do
-   container (semgrep, gitleaks); parecer estruturado, mesmo fluxo.
-6. Infra: lê module_map e ADRs de infraestrutura e propõe via PRs os
-   artefatos (Dockerfiles, compose, manifests, pipelines) — sempre
-   propondo, nunca aplicando em ambiente.
-7. UI: painel do time com status ao vivo real (ocioso/trabalhando/
-   aguardando aprovação, tarefa atual, branch) via canais Phoenix.
-
-### 4b — Psicólogo real e Anamnese (só após 4a verde)
-8. Psicólogo: consumer de session.closed (qualquer causa); lê event
-   log + regras de negócio + hipóteses anteriores e produz via LLM
-   hipóteses {agente_alvo, observação, hipótese, sugestão, evidência
-   (refs a event ids), confiança}; análise adicional de causa em
-   términos anormais; idempotente por sessão.
-9. Anamnese: jobs periódicos sobre o event log mantêm
-   proficiency_profile por usuário e competência com evidências;
-   propõe patches nos arquivos de agente como proposed_action de tipo
-   instruction_patch (usuário vê o diff e aprova/nega); patches
-   versionados com rollback de um clique.
-10. Loop fechado: hipótese do Psicólogo aceita pelo usuário vira input
-    priorizado da Anamnese.
-11. UI: seção Insights (hipóteses com evidência navegável), perfil de
-    proficiência com os porquês, histórico de versões por arquivo de
-    agente com diff e rollback.
+## Escopo da FASE 5 (ativa — não implemente nada além disso)
+1. Imagens de produção multi-stage para api, engine e web (web via
+   nginx com config SPA); rtk, semgrep, gitleaks e hadolint na imagem
+   do engine; imagens non-root, read-only fs onde possível.
+2. CI do próprio Brabo: pipeline (GitHub Actions) com lint, testes,
+   build das imagens, scan de imagem e de segredos; obrigatório verde
+   para merge em dev.
+3. Deploy Kubernetes: chart Helm OU Kustomize base+overlays (escolher
+   e registrar em ADR) cobrindo api/engine/web/Keycloak, Postgres
+   externo configurável, HPA do engine por profundidade de fila do
+   Oban (métrica exposta), PDBs, NetworkPolicies (web→api→db;
+   engine→api→db), secrets via External Secrets ou sealed-secrets.
+4. Graceful shutdown do engine: preStop drena sessões ativas
+   (transição closing com causa node_shutdown) antes do SIGTERM;
+   rollout NUNCA gera sessão órfã.
+5. Observabilidade: OpenTelemetry em api e engine com trace por sessão
+   (uma sessão = uma trace raiz atravessando api↔engine), métricas
+   Prometheus (tokens/min e custo/hora por projeto, fila Oban, sessões
+   ativas, taxa de aprovação de ações, tasks blocked) e dashboards
+   Grafana provisionados como código.
+6. Backup e restore: pg_dump agendado com retenção, runbook de restore
+   TESTADO em docs/runbooks/.
+7. Hardening da api: rate limit, headers de segurança na web, CORS
+   estrito, auditoria de dependências no CI.
 
 ## Stack (decidida — não proponha alternativas)
 - `apps/api`: NestJS 11 + Drizzle ORM + PostgreSQL 16 + pgvector
@@ -74,6 +59,7 @@ e pipeline de aprovação de ações com autoridade final do usuário.
 - `apps/web`: React 19 + Vite + TanStack Query/Router
 - Monorepo pnpm (TS) com apps/engine Elixir ao lado; Docker Compose para dev
 - Auth: Keycloak (OIDC) em container; autorização RBAC no domínio da api
+- Deploy: Kubernetes (k3d/kind em validação local)
 
 ## Convenções
 - Branches permanentes: dev, qa, rc, main. Trabalhe SEMPRE em branch
@@ -102,7 +88,7 @@ e pipeline de aprovação de ações com autoridade final do usuário.
 
 ## O que NÃO fazer
 - Não usar Redis (filas ficam no Postgres via Oban)
-- Não implementar deploy em produção/Kubernetes (fase 5)
-- Não implementar Bitbucket nem GenericGitProvider
+- Não implementar Bitbucket nem GenericGitProvider (backlog futuro)
+- Não adicionar features de produto nesta fase — só produção
 - Não instalar libs sem justificar no plano
-- Não refatorar código das Fases 1–3 fora do necessário para a Fase 4
+- Não refatorar código das Fases 1–4 fora do necessário para a Fase 5

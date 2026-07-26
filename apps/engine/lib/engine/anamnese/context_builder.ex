@@ -39,7 +39,9 @@ defmodule Engine.Anamnese.ContextBuilder do
     window_to = DateTime.utc_now()
     window_from = parse_window_from(Map.get(ctx, "windowFrom"), window_to)
 
-    total = Engine.SessionEvents.Event.count_for_project_window(project_id, window_from, window_to)
+    total =
+      Engine.SessionEvents.Event.count_for_project_window(project_id, window_from, window_to)
+
     events = list_events(project_id, window_from, window_to)
 
     %{

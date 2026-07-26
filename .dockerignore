@@ -1,0 +1,61 @@
+# Contexto de build enviado ao daemon. Os dois builds usam a RAIZ do repo como
+# contexto (o monorepo pnpm precisa do lockfile e do packages/shared), então sem
+# este arquivo iam ~830M por build: 543M de node_modules, 220M de .pnpm-store,
+# mais .git e o .env com segredos.
+#
+# Regra de ouro: nada aqui pode ser necessário DENTRO de um Dockerfile. Cada
+# imagem instala suas próprias dependências a partir do lockfile.
+
+# Dependências — reinstaladas no estágio de build a partir do lockfile
+node_modules
+**/node_modules
+.pnpm-store
+
+# Artefatos de build — regerados dentro da imagem
+**/dist
+apps/engine/_build
+apps/engine/deps
+coverage
+**/*.tsbuildinfo
+
+# Segredos e config local. `.env.example` FICA: é a referência das variáveis.
+.env
+.env.*
+!.env.example
+
+# Histórico e metadados de VCS/CI
+.git
+.github
+.gitignore
+
+# Não entra em imagem de produção
+spike
+docs
+# design/: só os .md são documentação. design/tokens.css é INPUT DE BUILD do web
+# (apps/web/src/index.css faz `@import '../../../design/tokens.css'`) — excluir a
+# pasta inteira quebra o `vite build` da imagem de produção.
+design/*.md
+.design-sync
+.claude
+
+# Testes: a imagem de produção não roda suite (o CI roda, fora da imagem)
+**/*.spec.ts
+**/*.test.ts
+**/*.test.tsx
+apps/api/test
+apps/engine/test
+apps/api/scripts
+
+# Docker: o Dockerfile não se copia; evita invalidar cache ao editar compose.
+# Exceção: docker/web/ tem a config do nginx e o entrypoint que a imagem de
+# produção do web COPIA do contexto — sem a exceção o build dela quebra.
+docker
+!docker/web
+Dockerfile*
+docker-compose*.yml
+
+# Ruído de editor/SO
+.DS_Store
+.idea
+.vscode
+*.log
