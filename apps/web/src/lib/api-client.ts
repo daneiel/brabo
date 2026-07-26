@@ -1,5 +1,6 @@
 import { getToken } from './keycloak';
 import { runtimeConfig } from './runtime-config';
+import { logger, newTraceContext } from './logger';
 import type {
   AgentAutonomyRule,
   AgentTokenUsage,
@@ -41,29 +42,52 @@ export const API_URL = runtimeConfig.apiUrl;
 export class ApiError extends Error {
   readonly status: number;
   readonly body: unknown;
+  /**
+   * `trace_id` da requisição que falhou (Fase 5, item 6).
+   *
+   * Carregado no erro para que a UI possa exibi-lo: é o que transforma "deu
+   * erro" num relato acionável — com o id, quem investiga vai direto ao span no
+   * Grafana em vez de procurar por horário.
+   */
+  readonly traceId?: string;
 
-  constructor(status: number, body: unknown) {
+  constructor(status: number, body: unknown, traceId?: string) {
     super(`api error ${status}`);
     this.name = 'ApiError';
     this.status = status;
     this.body = body;
+    this.traceId = traceId;
   }
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const token = await getToken();
+  // Uma trace por requisição, gerada aqui (Fase 5, item 6). A api adota este
+  // `traceparent` como parent — é o propagador W3C padrão — então a ação do
+  // usuário e o trabalho de servidor que ela dispara ficam na mesma árvore.
+  const traceCtx = newTraceContext();
+
   const res = await fetch(`${API_URL}${path}`, {
     ...init,
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
+      traceparent: traceCtx.traceparent,
       ...init?.headers,
     },
   });
 
   if (!res.ok) {
     const body = await res.json().catch(() => null);
-    throw new ApiError(res.status, body);
+    // Loga com o trace_id ANTES de levantar: é este id que leva do erro na tela
+    // ao span de servidor no Grafana. Sem ele, um 500 no browser e o span que o
+    // causou são dois fatos sem relação.
+    logger.errorWithTrace('requisição à api falhou', traceCtx.traceId, {
+      path,
+      status: res.status,
+      method: (init?.method ?? 'GET').toUpperCase(),
+    });
+    throw new ApiError(res.status, body, traceCtx.traceId);
   }
   if (res.status === 204) return undefined as T;
   return (await res.json()) as T;

@@ -24,13 +24,13 @@ defmodule Engine.Sessions.SessionSupervisor do
   `pid` devolvido pode ser remoto. Quem precisa saber se a sessão é LOCAL (o
   drain de shutdown) compara `node(pid)`.
   """
-  def start_session(session_id, project_id) do
+  def start_session(session_id, project_id, trace_parent \\ nil) do
     case SessionServer.whereis(session_id) do
       pid when is_pid(pid) ->
         {:ok, pid}
 
       nil ->
-        spec = {SessionServer, {session_id, project_id}}
+        spec = {SessionServer, {session_id, project_id, trace_parent}}
 
         case DynamicSupervisor.start_child(__MODULE__, spec) do
           {:ok, pid} ->

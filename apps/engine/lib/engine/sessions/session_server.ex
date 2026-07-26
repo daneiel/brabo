@@ -12,7 +12,13 @@ defmodule Engine.Sessions.SessionServer do
   alias Engine.Sessions.SessionState
 
   def start_link({session_id, project_id}) do
-    GenServer.start_link(__MODULE__, {session_id, project_id}, name: via(session_id))
+    start_link({session_id, project_id, nil})
+  end
+
+  def start_link({session_id, project_id, trace_parent}) do
+    GenServer.start_link(__MODULE__, {session_id, project_id, trace_parent},
+      name: via(session_id)
+    )
   end
 
   @doc """
@@ -51,8 +57,10 @@ defmodule Engine.Sessions.SessionServer do
   end
 
   @impl true
-  def init({session_id, project_id}) do
-    SessionState.upsert_active!(session_id, project_id)
+  def init({session_id, project_id}), do: init({session_id, project_id, nil})
+
+  def init({session_id, project_id, trace_parent}) do
+    SessionState.upsert_active!(session_id, project_id, trace_parent)
     heartbeat_ref = schedule_heartbeat_timeout()
 
     {:ok,

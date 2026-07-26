@@ -306,6 +306,45 @@ jobs:
           grep -q 'by (queue, state)' deploy/k8s/helm/prometheus-adapter-values.yaml
           grep -rq 'oban_queue_depth' apps/engine/test/engine_web/controllers/metrics_controller_test.exs
 
+      # Nome de métrica, de campo de log e de datasource são referenciados por
+      # STRING em lugares que não se enxergam: dashboards, alertas, runbook e o
+      # código. Divergir compila, passa na suite, e o único sintoma é painel
+      # vazio ou link de correlação que deixou de aparecer.
+      - name: Contratos de observabilidade batem entre código e dashboards
+        run: |
+          set -euo pipefail
+
+          # Dashboards e alertas são JSON/YAML válidos.
+          for f in deploy/k8s/observability/dashboards/*.json; do
+            python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$f"
+          done
+          python3 -c "import yaml,sys; yaml.safe_load(open(sys.argv[1]))" \
+            deploy/k8s/observability/alerts/brabo-alerts.yaml
+
+          # Toda métrica citada nos dashboards existe no código.
+          for metric in \
+            brabo_llm_cost_micros_total brabo_llm_tokens_total \
+            brabo_llm_call_duration_seconds brabo_sessions_active \
+            brabo_tasks_blocked brabo_proposed_actions_decided_total; do
+            grep -rq "${metric%_bucket}" apps/api/src/infrastructure/observability/brabo-metrics.ts \
+              || { echo "métrica ${metric} está nos dashboards e não no código"; exit 1; }
+          done
+          grep -rq "oban_queue_depth" apps/engine/lib/engine_web/telemetry.ex
+          grep -rq "brabo_engine_sessions_hosted\|:sessions, :hosted" apps/engine/lib/engine_web/telemetry.ex
+
+          # `trace_id` com underscore nos TRÊS serviços — é o que o Alloy extrai
+          # e o derivedFields do Loki procura.
+          grep -q "trace_id" apps/api/src/infrastructure/observability/logger.config.ts
+          grep -q '"trace_id"' apps/engine/lib/engine/telemetry/json_log_formatter.ex
+          grep -q "trace_id" apps/web/src/lib/logger.ts
+          grep -q "matcherRegex: trace_id" deploy/k8s/helm/grafana-values.yaml
+          grep -q "trace_id" deploy/k8s/helm/alloy-values.yaml
+
+          # A NetworkPolicy de OTLP existe: sem ela a instrumentação exporta
+          # para o vazio, em silêncio.
+          grep -q "allow-otlp-egress" deploy/k8s/base/common/netpol-observability.yaml
+          grep -q "netpol-observability" deploy/k8s/base/kustomization.yaml
+
       - name: shellcheck nos scripts de deploy
         run: |
           set -euo pipefail

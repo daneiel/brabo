@@ -7,6 +7,10 @@ defmodule Engine.Application do
 
   @impl true
   def start(_type, _args) do
+    # ANTES da árvore: as instrumentações automáticas anexam handlers de
+    # :telemetry, e handler anexado depois do evento não produz span.
+    Engine.Telemetry.Otel.setup()
+
     children = [
       EngineWeb.Telemetry,
       Engine.Repo,

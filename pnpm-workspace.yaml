@@ -6,6 +6,11 @@ allowBuilds:
   '@swc/core': true
   esbuild: true
   msw: true
+  # false de propósito: o protobufjs entra como dependência transitiva do
+  # exporter OTLP, e o exporter que usamos é o de HTTP/JSON — não precisa da
+  # geração de código dele. Não rodar postinstall de dependência transitiva é a
+  # mesma disciplina de pin e checksum do resto da Fase 5.
+  protobufjs: false
   unrs-resolver: true
 minimumReleaseAgeExclude:
   - '@anthropic-ai/sdk@0.113.0'

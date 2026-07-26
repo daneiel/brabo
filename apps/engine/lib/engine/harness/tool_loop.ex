@@ -61,10 +61,24 @@ defmodule Engine.Harness.ToolLoop.Default do
 
   alias Engine.Harness.Hooks.{ActionPipeline, EventLog}
   alias Engine.Sessions.EngineApiClient
+  alias Engine.Telemetry.Span
 
   @impl true
   def run(ctx) do
-    ctx |> init() |> loop()
+    # Span raiz do turno do agente, pendurada na TRACE DA SESSÃO (Fase 5): o
+    # `traceparent` vem de `sessions.trace_parent`, então este turno aparece na
+    # mesma árvore do `session.create`, junto com tudo o que o agente fizer
+    # daqui para baixo — tool call, chamada de LLM, gate.
+    Span.with_session(
+      session_traceparent(ctx),
+      "agent.turn",
+      %{
+        "brabo.agent" => Map.get(ctx, :agent),
+        "brabo.session_id" => Map.get(ctx, :session_id),
+        "brabo.project_id" => Map.get(ctx, :project_id)
+      },
+      fn -> ctx |> init() |> loop() end
+    )
   end
 
   defp init(ctx) do
@@ -161,6 +175,18 @@ defmodule Engine.Harness.ToolLoop.Default do
     end
   end
 
+  # O traceparent vem do estado da sessão, não do ctx: threadá-lo por todos os
+  # agent servers que constroem ctx seria mudança em seis módulos para carregar
+  # um valor que já está gravado e é imutável.
+  defp session_traceparent(ctx) do
+    case Map.get(ctx, :session_id) do
+      nil -> nil
+      session_id -> Engine.Sessions.SessionState.traceparent(session_id)
+    end
+  rescue
+    _ -> nil
+  end
+
   defp tool_names(ctx), do: Enum.map(ctx.tool_specs, & &1.name)
 
   defp dispatch_or_halt(tool_call, {:cont, ctx}) do
@@ -177,6 +203,12 @@ defmodule Engine.Harness.ToolLoop.Default do
     args = Map.get(tool_call, "arguments", %{})
     id = Map.get(tool_call, "id")
 
+    Span.with_span("tool.call", %{"brabo.tool" => name}, fn ->
+      do_dispatch(tool_call, ctx, name, args, id)
+    end)
+  end
+
+  defp do_dispatch(_tool_call, ctx, name, args, id) do
     emit(ctx, "tool.call", %{tool: name, args: args})
 
     hook_ctx = ctx |> Map.put(:tool, name) |> Map.put(:args, args)

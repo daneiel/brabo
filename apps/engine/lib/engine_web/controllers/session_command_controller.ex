@@ -9,7 +9,7 @@ defmodule EngineWeb.SessionCommandController do
 
   alias Engine.Readiness
 
-  def create(conn, %{"sessionId" => session_id, "projectId" => project_id}) do
+  def create(conn, %{"sessionId" => session_id, "projectId" => project_id} = params) do
     # "Para de aceitar novas sessões" (Fase 5, item 4a). O readiness já tirou o
     # pod dos Endpoints, mas isso não é instantâneo: o kube-proxy leva alguns
     # segundos para propagar, e nessa janela a api ainda pode acertar este pod.
@@ -22,7 +22,15 @@ defmodule EngineWeb.SessionCommandController do
       |> put_status(:service_unavailable)
       |> json(%{error: "engine em desligamento", retryable: true})
     else
-      {:ok, _pid} = Engine.Sessions.SessionSupervisor.start_session(session_id, project_id)
+      # `traceParent` é opcional: uma api mais antiga (rolling deploy) não o
+      # manda, e a sessão simplesmente não fica vinculada a uma trace.
+      {:ok, _pid} =
+        Engine.Sessions.SessionSupervisor.start_session(
+          session_id,
+          project_id,
+          Map.get(params, "traceParent")
+        )
+
       send_resp(conn, 201, "")
     end
   end

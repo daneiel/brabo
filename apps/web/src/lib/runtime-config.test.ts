@@ -19,6 +19,7 @@ describe('readRuntimeConfig', () => {
       keycloakUrl: 'https://auth.brabo.example',
       keycloakRealm: 'brabo-prod',
       keycloakClientId: 'brabo-web-prod',
+      logLevel: 'warn',
     });
 
     expect(config).toEqual({
@@ -27,6 +28,7 @@ describe('readRuntimeConfig', () => {
       keycloakUrl: 'https://auth.brabo.example',
       keycloakRealm: 'brabo-prod',
       keycloakClientId: 'brabo-web-prod',
+      logLevel: 'warn',
     });
   });
 
@@ -38,6 +40,7 @@ describe('readRuntimeConfig', () => {
     expect(config.keycloakUrl).toBe('http://localhost:8080');
     expect(config.keycloakRealm).toBe('brabo-dev');
     expect(config.keycloakClientId).toBe('brabo-web');
+    expect(config.logLevel).toBe('info');
   });
 
   it('trata string vazia como ausente, não como valor', () => {

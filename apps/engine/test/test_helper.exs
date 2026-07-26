@@ -34,10 +34,19 @@ CREATE TABLE IF NOT EXISTS public.outbox_events (
   aggregate_id uuid NOT NULL,
   event_type text NOT NULL,
   payload jsonb NOT NULL DEFAULT '{}',
+  metadata jsonb NOT NULL DEFAULT '{}',
   created_at timestamptz NOT NULL DEFAULT now(),
   processed_at timestamptz
 )
 """)
+
+# `CREATE TABLE IF NOT EXISTS` não acrescenta coluna numa tabela que já existe,
+# e o banco de teste do engine sobrevive entre execuções: sem este ALTER
+# idempotente, quem já tinha rodado a suite antes da Fase 5 veria erro de coluna
+# inexistente em vez de um fixture atualizado.
+Engine.Repo.query!(
+  "ALTER TABLE public.outbox_events ADD COLUMN IF NOT EXISTS metadata jsonb NOT NULL DEFAULT '{}'"
+)
 
 # Mesmo motivo do fixture de outbox_events acima — session_events também é
 # gerenciada pela api (Drizzle, schema "public") e não existe no banco de

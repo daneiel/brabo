@@ -19,5 +19,9 @@ config :engine, EngineWeb.Endpoint,
 # Do not print debug messages in production
 config :logger, level: :info
 
+# Log JSON com trace_id (Fase 5, item 6). Só em :prod — em desenvolvimento o
+# formato legível vale mais que o parseável, e a suite não deve virar JSON.
+config :logger, :default_handler, formatter: {Engine.Telemetry.JsonLogFormatter, %{}}
+
 # Runtime production configuration, including reading
 # of environment variables, is done on config/runtime.exs.

@@ -29,6 +29,8 @@ export interface RuntimeConfig {
   keycloakUrl: string;
   keycloakRealm: string;
   keycloakClientId: string;
+  /** Nível mínimo do logger JSON (Fase 5, item 6). */
+  logLevel: string;
 }
 
 declare global {
@@ -88,6 +90,7 @@ export function readRuntimeConfig(
       import.meta.env.VITE_KEYCLOAK_CLIENT_ID,
       'brabo-web',
     ),
+    logLevel: pick(source.logLevel, import.meta.env.VITE_LOG_LEVEL, 'info'),
   };
 }
 

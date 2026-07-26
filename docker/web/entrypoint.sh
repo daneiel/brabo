@@ -40,7 +40,8 @@ window.__BRABO_CONFIG__ = {
   engineUrl: "$(js_escape "${ENGINE_URL:-}")",
   keycloakUrl: "$(js_escape "${KEYCLOAK_URL:-}")",
   keycloakRealm: "$(js_escape "${KEYCLOAK_REALM:-}")",
-  keycloakClientId: "$(js_escape "${KEYCLOAK_CLIENT_ID:-}")"
+  keycloakClientId: "$(js_escape "${KEYCLOAK_CLIENT_ID:-}")",
+  logLevel: "$(js_escape "${LOG_LEVEL:-}")"
 };
 EOF
 

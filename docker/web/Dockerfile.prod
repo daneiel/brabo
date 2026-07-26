@@ -63,7 +63,8 @@ ENV API_URL="http://localhost:3000" \
     ENGINE_URL="http://localhost:4000" \
     KEYCLOAK_URL="http://localhost:8080" \
     KEYCLOAK_REALM="brabo-dev" \
-    KEYCLOAK_CLIENT_ID="brabo-web"
+    KEYCLOAK_CLIENT_ID="brabo-web" \
+    LOG_LEVEL="info"
 
 # Fora de /etc/nginx de propósito: com rootfs read-only o entrypoint não pode
 # escrever lá, então o template mora aqui e o resultado vai pra /tmp.
