@@ -13,8 +13,8 @@ import type { ProficiencyProfile } from '../lib/api-types';
  */
 const navigate = vi.fn();
 const getProjectEvent = vi.fn();
-const deleteMyProficiency = vi.fn(() => Promise.resolve({}));
-const runAnamnese = vi.fn(() => Promise.resolve({ ok: true }));
+const deleteMyProficiency = vi.fn((_projectId: string) => Promise.resolve({}));
+const runAnamnese = vi.fn((_projectId: string) => Promise.resolve({ ok: true }));
 
 const PERFIL: ProficiencyProfile = {
   id: 'prof-1',
@@ -37,11 +37,12 @@ vi.mock('../lib/hooks', () => ({
 }));
 
 vi.mock('../lib/api-client', () => ({
-  getProjectEvent: (...args: unknown[]) => getProjectEvent(...args),
-  deleteMyProficiency: (...args: unknown[]) => deleteMyProficiency(...args),
-  runAnamnese: (...args: unknown[]) => runAnamnese(...args),
+  getProjectEvent: (projectId: string, eventId: string) =>
+    getProjectEvent(projectId, eventId),
+  deleteMyProficiency: (projectId: string) => deleteMyProficiency(projectId),
+  runAnamnese: (projectId: string) => runAnamnese(projectId),
   optInProficiency: () => Promise.resolve({}),
-  listInstructionVersions: () => Promise.resolve([]),
+  listProjectInstructionVersions: () => Promise.resolve([]),
   rollbackInstruction: () => Promise.resolve({}),
   addProjectMember: () => Promise.resolve({}),
   removeProjectMember: () => Promise.resolve({}),

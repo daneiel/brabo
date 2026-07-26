@@ -55,10 +55,17 @@ export function isMachineEvent(event: SessionEvent): boolean {
   return EVENTOS_DE_MAQUINA.has(event.type);
 }
 
+// Aceita number além de string: `toVersion`/`restoredFrom` chegam como número
+// e, aceitando só string, sumiam em silêncio — a narração do patch saía sem a
+// versão e a do rollback saía "revertida para a v?". Quem chama isto quer um
+// campo PRA EXIBIR, e um número é exibível.
 function payloadField(payload: unknown, key: string): string | undefined {
   if (payload && typeof payload === 'object' && key in payload) {
     const value = (payload as Record<string, unknown>)[key];
     if (typeof value === 'string') return value;
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return String(value);
+    }
   }
   return undefined;
 }

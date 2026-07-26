@@ -166,6 +166,22 @@ describe('classifyEvent — Anamnese e patches de instrução (Fase 4b)', () => 
 
     expect(c.bad).toBe(false);
     expect(c.text).toContain('dev-api');
+    // As versões chegam como NÚMERO no payload; lidas só como string, sumiam
+    // e a narração saía sem versão nenhuma.
+    expect(c.text).toContain('v3');
+  });
+
+  it('rollback nomeia a versão restaurada (não "v?")', () => {
+    const c = classifyEvent(
+      ev('instruction.rolled_back', 'action-executor', {
+        agent: 'dev-api',
+        toVersion: 3,
+        restoredFrom: 1,
+      }),
+    );
+
+    expect(c.text).toContain('v1');
+    expect(c.text).not.toContain('v?');
   });
 
   it('rollback se distingue de patch no texto', () => {

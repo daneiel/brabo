@@ -145,6 +145,22 @@ describe('ApprovalCard', () => {
       });
     }
 
+    it('não oferece "Sempre permitir" — a permissão seria inerte', () => {
+      // O teto do decide.ts força require_approval sempre, então gravar a
+      // regra em permissions.json não mudaria nada: o botão prometia efeito.
+      render(
+        <ApprovalCard
+          action={patchAction()}
+          onApprove={vi.fn()}
+          onDeny={vi.fn()}
+          onAlwaysAllow={vi.fn()}
+        />,
+      );
+
+      expect(screen.getByRole('button', { name: 'Aprovar' })).toBeTruthy();
+      expect(screen.queryByRole('button', { name: 'Sempre permitir' })).toBeNull();
+    });
+
     it('mostra o badge da hipótese de origem (rastreabilidade do loop)', () => {
       render(
         <ApprovalCard

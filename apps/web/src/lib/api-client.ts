@@ -250,6 +250,13 @@ export const deleteMyProficiency = (projectId: string) =>
   );
 export const optInProficiency = (projectId: string) =>
   post<{ optedOut: false }>(`/projects/${projectId}/proficiency/me/opt-in`);
+// Histórico de TODOS os agentes que têm versão no projeto. A UI não pode
+// adivinhar os slugs: dev agent é instanciado por módulo (`dev-api`) e não
+// está no roster estático.
+export const listProjectInstructionVersions = (projectId: string) =>
+  get<{ agent: string; versions: AgentInstructionVersion[] }[]>(
+    `/projects/${projectId}/instruction-versions`,
+  );
 export const listInstructionVersions = (projectId: string, agent: string) =>
   get<AgentInstructionVersion[]>(
     `/projects/${projectId}/agents/${agent}/instruction-versions`,

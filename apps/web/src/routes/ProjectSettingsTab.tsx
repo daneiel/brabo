@@ -5,7 +5,7 @@ import {
   addProjectMember,
   deleteMyProficiency,
   getProjectEvent,
-  listInstructionVersions,
+  listProjectInstructionVersions,
   optInProficiency,
   runAnamnese,
   rollbackInstruction,
@@ -550,11 +550,13 @@ function InstructionVersionsSection({ projectId }: { projectId: string }) {
   const { showToast } = useToast();
   const [expanded, setExpanded] = useState<string | null>(null);
 
-  const versionQueries = useQueries({
-    queries: AGENT_LIST.map((agent) => ({
-      queryKey: ['instruction-versions', projectId, agent.key],
-      queryFn: () => listInstructionVersions(projectId, agent.key),
-    })),
+  // Pergunta ao backend QUEM tem histórico, em vez de adivinhar pelo roster
+  // estático: os dev agents são instanciados por módulo (`dev-api`), não
+  // existem em AGENT_LIST, e eram justamente os invisíveis aqui.
+  const { data: historico } = useQuery({
+    queryKey: ['instruction-versions', projectId],
+    queryFn: () => listProjectInstructionVersions(projectId),
+    refetchInterval: 15000,
   });
 
   // Um clique é o que o enunciado pede — mas revertendo DUAS vezes por duplo
@@ -566,7 +568,7 @@ function InstructionVersionsSection({ projectId }: { projectId: string }) {
     try {
       await rollbackInstruction(projectId, agent, version);
       await queryClient.invalidateQueries({
-        queryKey: ['instruction-versions', projectId, agent],
+        queryKey: ['instruction-versions', projectId],
       });
       showToast({
         title: 'Revertido',
@@ -580,10 +582,15 @@ function InstructionVersionsSection({ projectId }: { projectId: string }) {
     }
   }
 
-  const withHistory = AGENT_LIST.map((agent, index) => ({
-    agent,
-    versions: versionQueries[index]?.data ?? [],
-  })).filter((entry) => entry.versions.length > 0);
+  const withHistory = (historico ?? []).map((entry) => ({
+    // `label` do roster quando o slug é conhecido; senão o próprio slug
+    // (`dev-api` e afins não estão no roster e não podem virar "undefined").
+    agent: {
+      key: entry.agent,
+      label: AGENT_LIST.find((a) => a.key === entry.agent)?.name ?? entry.agent,
+    },
+    versions: entry.versions,
+  }));
 
   return (
     <div className={styles.section}>
@@ -600,7 +607,7 @@ function InstructionVersionsSection({ projectId }: { projectId: string }) {
       ) : (
         withHistory.map(({ agent, versions }) => (
           <div key={agent.key} className={styles.agentBlock}>
-            <div className={styles.profileUser}>{agent.name}</div>
+            <div className={styles.profileUser}>{agent.label}</div>
             {versions.map((version) => {
               const key = `${agent.key}:${version.version}`;
               const open = expanded === key;

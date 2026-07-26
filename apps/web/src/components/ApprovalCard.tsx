@@ -81,6 +81,7 @@ export function ApprovalCard({
   const actorLabel = actor?.name ?? action.actor.id;
   const Icon = ACTION_ICON[action.actionType];
   const isPending = action.status === 'pending';
+  const podeSemprePermitir = action.actionType !== 'instruction_patch';
   const isCritical = urgency === 'critico';
 
   const payload = action.payload;
@@ -131,11 +132,16 @@ export function ApprovalCard({
             <Button variant="danger" onClick={() => onDeny()}>
               Negar
             </Button>
-            <Button variant="secondary" onClick={onAlwaysAllow}>
-              Sempre permitir
-            </Button>
+            {/* Patch de instrução NUNCA é auto-aprovável (teto em decide.ts):
+                gravar a regra em permissions.json não muda nada, então o botão
+                prometia um efeito que não existe. */}
+            {podeSemprePermitir && (
+              <Button variant="secondary" onClick={onAlwaysAllow}>
+                Sempre permitir
+              </Button>
+            )}
           </div>
-          {variant === 'chat' && (
+          {variant === 'chat' && podeSemprePermitir && (
             <span className={styles.note}>
               <AlertIcon size={12} />
               &quot;Sempre permitir&quot; grava a regra em .brabo/permissions.json

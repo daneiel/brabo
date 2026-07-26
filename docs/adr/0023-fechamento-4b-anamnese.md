@@ -220,6 +220,38 @@ esta não tinha nenhum) e dois que guardavam garantias sem cobertura: o teto de
 trava de merge, que tem quatro testes — e o `ExecuteInstructionPatchUseCase`,
 único executor sem spec, passado como `undefined as never` nos testes vizinhos.
 
+### A passada visual achou três coisas que teste nenhum pegaria
+
+O `demo:*` prova dado; ele não prova que a tela mostra o dado. Abrindo a UI no
+projeto-cobaia:
+
+1. **O histórico de instruções era invisível pros agentes que existem.** A
+   seção fazia fan-out sobre `AGENT_LIST` (roster estático, com
+   `dev-backend`/`dev-frontend`), mas a Fase 4a instancia um dev agent POR
+   MÓDULO (`dev-api`, `dev-web`). Com 3 versões de `dev-api` no banco, a tela
+   dizia "Nenhum agente teve a instrução alterada ainda" — ou seja o item 5 do
+   enunciado (histórico com diff e rollback) estava morto justamente pros
+   agentes que a Anamnese patcheia. Novo `GET
+   /projects/:projectId/instruction-versions` devolve quem TEM histórico, e a
+   UI parou de adivinhar slug.
+2. **As narrações de patch e rollback perdiam a versão.** `payloadField` só
+   devolvia `string`, e `toVersion`/`restoredFrom` chegam como número — então o
+   feed dizia "instrução de dev-api atualizada" (sem a versão) e "revertida
+   para a **v?**". Passou a aceitar número.
+3. **"Sempre permitir" aparecia num `instruction_patch`.** O teto do
+   `decide.ts` força `require_approval` sempre, então gravar a regra em
+   `permissions.json` não muda nada: o botão prometia um efeito inexistente.
+   Escondido para esse tipo.
+
+Verificado na tela, além disso: nível/porquês/chips do perfil; chip de
+evidência resolvendo a sessão CERTA (foi pra sessão que contém o evento, não
+pra mais recente) com o evento fixado no topo do log; badge `hipótese <id>` na
+versão e no card de aprovação; diff com os tokens novos nos dois lugares; e —
+fechando o que o ADR 0022 afirmou sem verificar — a faixa de análises do
+Psicólogo com custo divergindo de verdade (pesada US$ 0,0068 vs leve US$
+0,0001) e um chip de evidência apontando pra um `agent.response`, o tipo que o
+feed esconde, chegando no evento.
+
 ## Escopo & assunções
 
 Fora deste fechamento: sincronizar a união `ActionType` do web com os 12 tipos
