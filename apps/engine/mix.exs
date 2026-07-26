@@ -77,7 +77,24 @@ defmodule Engine.MixProject do
       {:oban, "~> 2.23"},
       {:req, "~> 0.5"},
       {:joken, "~> 2.6"},
-      {:joken_jwks, "~> 1.6"}
+      {:joken_jwks, "~> 1.6"},
+      # OpenTelemetry (Fase 5, item 3). Justificativa por pacote:
+      #   opentelemetry_api      — API de span, o que o código de domínio usa
+      #   opentelemetry          — SDK, o que amostra e agrega
+      #   opentelemetry_exporter — exporta OTLP para o Collector
+      #   opentelemetry_ecto     — span por query, sem tocar repositório
+      #   opentelemetry_oban     — propaga contexto do insert do job para a
+      #                            execução dele, que é o elo assíncrono da
+      #                            trace de uma sessão
+      #   opentelemetry_bandit / _phoenix — span por requisição HTTP recebida,
+      #                            e é por ela que o contexto vindo da api entra
+      {:opentelemetry_api, "~> 1.4"},
+      {:opentelemetry, "~> 1.5"},
+      {:opentelemetry_exporter, "~> 1.8"},
+      {:opentelemetry_ecto, "~> 1.2"},
+      {:opentelemetry_oban, "~> 1.1"},
+      {:opentelemetry_bandit, "~> 0.2"},
+      {:opentelemetry_phoenix, "~> 2.0"}
     ]
   end
 

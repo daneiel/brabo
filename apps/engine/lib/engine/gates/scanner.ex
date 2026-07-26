@@ -22,11 +22,24 @@ defmodule Engine.Gates.Scanner do
   `nil` quando o scanner rodou, e uma frase pro resumo do parecer quando não.
   """
   def run(detector, path, name) do
-    if detector.available?() do
-      run_with_timeout(detector, path, name)
-    else
-      {[], "#{name} indisponível, pulado"}
-    end
+    # Span por scanner (Fase 5, item 3): é aqui que se vê qual detector custou o
+    # tempo do gate, e qual foi PULADO por indisponibilidade — que é a diferença
+    # entre um gate que aprovou e um gate que não verificou nada (ADR 0020/0021).
+    Engine.Telemetry.Span.with_span("gate.scanner", %{"brabo.scanner" => name}, fn ->
+      if detector.available?() do
+        {findings, skip} = run_with_timeout(detector, path, name)
+
+        Engine.Telemetry.Span.set_attributes(%{
+          "brabo.scanner.findings" => length(findings),
+          "brabo.scanner.skipped" => skip != nil
+        })
+
+        {findings, skip}
+      else
+        Engine.Telemetry.Span.set_attributes(%{"brabo.scanner.skipped" => true})
+        {[], "#{name} indisponível, pulado"}
+      end
+    end)
   end
 
   defp run_with_timeout(detector, path, name) do

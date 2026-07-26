@@ -12,10 +12,39 @@ defmodule Engine.Sessions.SessionServer do
   alias Engine.Sessions.SessionState
 
   def start_link({session_id, project_id}) do
-    GenServer.start_link(__MODULE__, {session_id, project_id}, name: via(session_id))
+    start_link({session_id, project_id, nil})
   end
 
-  def via(session_id), do: {:via, Registry, {Engine.Sessions.Registry, session_id}}
+  def start_link({session_id, project_id, trace_parent}) do
+    GenServer.start_link(__MODULE__, {session_id, project_id, trace_parent},
+      name: via(session_id)
+    )
+  end
+
+  @doc """
+  Nome do processo, registrado em `:global` — não num `Registry` local (Fase 5).
+
+  Enquanto o engine era uma réplica só, `Registry` e "único no cluster" eram a
+  mesma coisa. Com o HPA da Fase 5 deixaram de ser, e o efeito era destrutivo:
+  o `Rehydrator` recria no boot um SessionServer para TODA linha de
+  `session_states`, que é uma tabela global. Com N réplicas, cada sessão passava
+  a existir N vezes; o websocket do browser chega em UMA (o Service balanceia),
+  e as outras N-1 cópias nunca recebiam `ping` — estouravam o heartbeat e
+  mandavam a api fechar uma sessão que estava viva em outro pod.
+
+  `:global` resolve os dois lados de uma vez: `start_session/2` passa a
+  deduplicar entre nós, e `heartbeat/1` alcança o dono onde quer que ele
+  esteja, então o websocket pode cair em qualquer réplica.
+  """
+  def via(session_id), do: {:global, {:brabo_session, session_id}}
+
+  @doc "pid do dono da sessão em qualquer nó do cluster, ou nil."
+  def whereis(session_id) do
+    case :global.whereis_name({:brabo_session, session_id}) do
+      :undefined -> nil
+      pid -> pid
+    end
+  end
 
   def stop(pid), do: GenServer.stop(pid, :normal)
 
@@ -28,8 +57,10 @@ defmodule Engine.Sessions.SessionServer do
   end
 
   @impl true
-  def init({session_id, project_id}) do
-    SessionState.upsert_active!(session_id, project_id)
+  def init({session_id, project_id}), do: init({session_id, project_id, nil})
+
+  def init({session_id, project_id, trace_parent}) do
+    SessionState.upsert_active!(session_id, project_id, trace_parent)
     heartbeat_ref = schedule_heartbeat_timeout()
 
     {:ok,

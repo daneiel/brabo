@@ -47,6 +47,11 @@ defmodule EngineWeb.Telemetry do
         tags: [:queue, :state],
         description: "Jobs do Oban por fila e estado. O HPA do engine consome state=available."
       ),
+      last_value([:brabo, :engine, :sessions, :hosted],
+        event_name: Engine.Telemetry.SessionsHosted.event(),
+        measurement: :count,
+        description: "Sessões hospedadas por esta réplica do engine"
+      ),
       last_value([:vm, :memory, :total],
         unit: {:byte, :kilobyte},
         description: "Memória total da VM Erlang"
@@ -129,7 +134,10 @@ defmodule EngineWeb.Telemetry do
     # poller default da própria aplicação :telemetry_poller — não se repetem
     # aqui.
     if Application.get_env(:engine, :poll_oban_queue_depth, true) do
-      [{Engine.Telemetry.ObanQueueDepth, :measure, []}]
+      [
+        {Engine.Telemetry.ObanQueueDepth, :measure, []},
+        {Engine.Telemetry.SessionsHosted, :measure, []}
+      ]
     else
       []
     end

@@ -848,17 +848,50 @@ defmodule Engine.Sessions.EngineApiClient.Live do
     # default do Req isso estoura, o ToolLoop recebe {:error, :timeout} e a
     # task é bloqueada com "parou sem concluir", sem o operador entender por
     # quê. Ver DEFAULT_LLM_TURN_TIMEOUT_MS / LLM_TURN_TIMEOUT_MS.
-    post_returning(
-      "/internal/sessions/#{session_id}/llm-turn",
+    Engine.Telemetry.Span.with_span(
+      "llm.turn",
       %{
-        projectId: project_id,
-        agentId: agent,
-        messages: messages,
-        tools: tools
+        "brabo.agent" => agent,
+        "brabo.session_id" => session_id,
+        "brabo.llm.messages" => length(messages),
+        "brabo.llm.tools" => length(tools)
       },
-      receive_timeout: llm_turn_timeout_ms()
+      fn ->
+        result =
+          post_returning(
+            "/internal/sessions/#{session_id}/llm-turn",
+            %{
+              projectId: project_id,
+              agentId: agent,
+              messages: messages,
+              tools: tools
+            },
+            receive_timeout: llm_turn_timeout_ms()
+          )
+
+        # A api responde 200 com `error` no CORPO quando o provider falha (não
+        # um status de erro). Sem registrar isso como atributo, um turno que
+        # falhou apareceria no Tempo indistinguível de um que deu certo.
+        annotate_llm_turn(result)
+        result
+      end
     )
   end
+
+  defp annotate_llm_turn({:ok, %{"usage" => %{"costMicros" => cost}} = resp}) do
+    Engine.Telemetry.Span.set_attributes(%{
+      "brabo.llm.cost_micros" => cost,
+      "brabo.llm.error" => Map.get(resp, "error") || false
+    })
+  end
+
+  defp annotate_llm_turn({:ok, resp}) when is_map(resp) do
+    Engine.Telemetry.Span.set_attributes(%{
+      "brabo.llm.error" => Map.get(resp, "error") || false
+    })
+  end
+
+  defp annotate_llm_turn(_), do: :ok
 
   defp llm_turn_timeout_ms,
     do: Application.get_env(:engine, :llm_turn_timeout_ms, 300_000)
@@ -871,6 +904,20 @@ defmodule Engine.Sessions.EngineApiClient.Live do
       actor: actor,
       payload: payload
     })
+  end
+
+  # Acrescenta o `traceparent` do contexto ativo (Fase 5, item 3).
+  #
+  # `post_returning/3` é o funil ÚNICO de todo POST engine -> api, então
+  # injetar aqui cobre append_event, report_termination, llm_turn, os verdicts
+  # dos gates e tudo o mais de uma vez. Sem isso, cada chamada do engine
+  # apareceria no Tempo como trace própria e a árvore da sessão ficaria partida
+  # exatamente na fronteira entre os dois serviços.
+  defp trace_headers(headers) do
+    case Engine.Telemetry.Span.current_traceparent() do
+      nil -> headers
+      tp -> [{"traceparent", tp} | headers]
+    end
   end
 
   defp post(path, body) do
@@ -887,7 +934,7 @@ defmodule Engine.Sessions.EngineApiClient.Live do
            [
              url: api_url() <> path,
              json: body,
-             headers: [{"authorization", "Bearer #{token()}"}]
+             headers: trace_headers([{"authorization", "Bearer #{token()}"}])
            ] ++ opts
          ) do
       {:ok, %Req.Response{status: status, body: resp}} when status in 200..299 ->

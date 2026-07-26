@@ -15,13 +15,17 @@ defmodule Engine.Workers.SessionLifecycleWorker do
   @impl true
   def perform(%Oban.Job{args: %{"event_type" => event_type, "aggregate_id" => session_id}})
       when event_type in ["session.closed", "session.closed_abnormally"] do
-    case Registry.lookup(Engine.Sessions.Registry, session_id) do
-      [{pid, _}] ->
+    # Busca em `:global`: o job do Oban pode ser executado por qualquer réplica,
+    # e não necessariamente pela que hospeda a sessão. Com lookup local, um job
+    # sorteado para o nó "errado" não achava o processo e retornava :ok — a
+    # sessão seguia rodando depois de a api já a ter encerrado.
+    case SessionServer.whereis(session_id) do
+      pid when is_pid(pid) ->
         :ok = Monitor.expect_stop(session_id)
         SessionServer.stop(pid)
         :ok
 
-      [] ->
+      nil ->
         :ok
     end
   end

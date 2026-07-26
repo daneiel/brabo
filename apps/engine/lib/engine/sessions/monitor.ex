@@ -113,7 +113,14 @@ defmodule Engine.Sessions.Monitor do
   defp maybe_report(entry, reason) do
     {reason_string, to} = classify(reason)
 
+    # O contexto do OTel vive no dicionário do PROCESSO, e a task nasce com o
+    # dicionário vazio: sem capturar aqui e reanexar lá dentro, o relato de
+    # término viraria uma trace órfã — justamente o span que se procura quando
+    # uma sessão morreu de forma estranha.
+    otel_ctx = Engine.Telemetry.Span.capture()
+
     Task.Supervisor.start_child(Engine.TaskSupervisor, fn ->
+      Engine.Telemetry.Span.attach(otel_ctx)
       client().report_termination(entry.project_id, entry.session_id, reason_string, to)
     end)
   end
