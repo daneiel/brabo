@@ -7,11 +7,11 @@ config :engine, EngineWeb.Endpoint,
   force_ssl: [
     rewrite_on: [:x_forwarded_proto],
     exclude: [
-      # As probes do kubelet e o scrape do Prometheus chegam pelo IP DO POD,
-      # não por localhost — a exclusão por host não os cobre. Sem estes paths
-      # aqui, /live e /ready respondem 301 para https:// e o pod nunca fica
-      # Ready. Nenhum deles carrega dado sensível nem aceita escrita.
-      paths: ["/health", "/live", "/ready", "/metrics"],
+      # Probes, scrape e o tráfego interno api->engine. A lista de caminhos
+      # exatos do `paths:` não serve para `/internal/*` (são mais de vinte
+      # rotas e a comparação é exata), então a decisão vira uma função — ver
+      # EngineWeb.ForceSslExclusions para o porquê de cada exclusão.
+      conn: {EngineWeb.ForceSslExclusions, :exclude?, []},
       hosts: ["localhost", "127.0.0.1"]
     ]
   ]

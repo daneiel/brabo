@@ -7,8 +7,23 @@ defmodule EngineWeb.SessionCommandController do
 
   use EngineWeb, :controller
 
+  alias Engine.Readiness
+
   def create(conn, %{"sessionId" => session_id, "projectId" => project_id}) do
-    {:ok, _pid} = Engine.Sessions.SessionSupervisor.start_session(session_id, project_id)
-    send_resp(conn, 201, "")
+    # "Para de aceitar novas sessões" (Fase 5, item 4a). O readiness já tirou o
+    # pod dos Endpoints, mas isso não é instantâneo: o kube-proxy leva alguns
+    # segundos para propagar, e nessa janela a api ainda pode acertar este pod.
+    # Recusar aqui com 503 faz a api falhar a ativação em vez de criar uma
+    # sessão numa réplica que está indo embora — e `TransitionSessionUseCase`
+    # chama o engine ANTES de persistir `active`, então a sessão simplesmente
+    # não é ativada, em vez de nascer órfã.
+    if Readiness.shutting_down?() do
+      conn
+      |> put_status(:service_unavailable)
+      |> json(%{error: "engine em desligamento", retryable: true})
+    else
+      {:ok, _pid} = Engine.Sessions.SessionSupervisor.start_session(session_id, project_id)
+      send_resp(conn, 201, "")
+    end
   end
 end

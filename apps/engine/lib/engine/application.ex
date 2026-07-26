@@ -59,6 +59,8 @@ defmodule Engine.Application do
     if match?({:ok, _}, result) and outbox_drain_should_start?() do
       {:ok, _cleanup} = Engine.Workers.WorktreeCleanupWorker.kickoff()
       {:ok, _job} = Engine.Workers.OutboxDrainWorker.kickoff()
+      # Readota sessões cuja réplica sumiu sem preStop (kill -9, OOMKill).
+      {:ok, _adoption} = Engine.Workers.SessionAdoptionWorker.kickoff()
     end
 
     if match?({:ok, _}, result) and anamnese_should_start?() do

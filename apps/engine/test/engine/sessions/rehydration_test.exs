@@ -27,7 +27,7 @@ defmodule Engine.Sessions.RehydrationTest do
 
     Rehydrator.run()
 
-    assert [{pid, _}] = Registry.lookup(Engine.Sessions.Registry, session_id)
+    assert pid = SessionServer.whereis(session_id)
     assert Process.alive?(pid)
 
     # limpa pra não vazar pro próximo teste
@@ -54,11 +54,11 @@ defmodule Engine.Sessions.RehydrationTest do
     SessionState.upsert_active!(session_id, "project-1")
 
     Rehydrator.run()
-    assert [{pid, _}] = Registry.lookup(Engine.Sessions.Registry, session_id)
+    assert pid = SessionServer.whereis(session_id)
 
     # Rodar de novo não deveria criar um segundo processo pro mesmo id.
     Rehydrator.run()
-    assert [{^pid, _}] = Registry.lookup(Engine.Sessions.Registry, session_id)
+    assert ^pid = SessionServer.whereis(session_id)
 
     :ok = Monitor.expect_stop(session_id)
     SessionServer.stop(pid)

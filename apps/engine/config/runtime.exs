@@ -36,6 +36,12 @@ config :engine,
   api_keycloak_client_id: System.get_env("API_KEYCLOAK_CLIENT_ID", "api-service"),
   session_heartbeat_timeout_ms:
     String.to_integer(System.get_env("SESSION_HEARTBEAT_TIMEOUT_MS", "30000")),
+  # Quanto o drain do preStop espera para que outra réplica adote as sessões
+  # deste nó antes de encerrá-las com causa node_shutdown. Precisa caber
+  # FOLGADAMENTE dentro do terminationGracePeriodSeconds do Deployment (90s),
+  # porque depois dele ainda há o teardown do BEAM.
+  shutdown_drain_timeout_ms:
+    String.to_integer(System.get_env("SHUTDOWN_DRAIN_TIMEOUT_MS", "45000")),
   # Diretório compartilhado com a api (mesmo path, mesmo volume Docker) —
   # permissions.json mora em <root>/<project_id>/permissions.json; o
   # executor de terminal faz o checkout do working tree no mesmo lugar.

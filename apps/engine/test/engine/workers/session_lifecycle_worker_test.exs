@@ -33,7 +33,7 @@ defmodule Engine.Workers.SessionLifecycleWorkerTest do
         "payload" => %{"projectId" => "project-1"}
       })
 
-    assert Registry.lookup(Engine.Sessions.Registry, session_id) == []
+    refute Engine.Sessions.SessionServer.whereis(session_id)
   end
 
   test "session.closed para uma sessao rodando sem disparar callback" do

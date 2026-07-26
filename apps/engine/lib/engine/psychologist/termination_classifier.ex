@@ -23,7 +23,7 @@ defmodule Engine.Psychologist.TerminationClassifier do
   quando não há motivo reportado (fecho gracioso/humano deixa null).
   """
 
-  @type cause :: :normal | :timeout | :kill | :crash | :unknown
+  @type cause :: :normal | :timeout | :kill | :crash | :node_shutdown | :unknown
 
   @doc """
   Motivos que `Monitor.classify/1` produz, e onde cada um cai:
@@ -39,6 +39,10 @@ defmodule Engine.Psychologist.TerminationClassifier do
   def classify(reason, status) when is_binary(reason) do
     cond do
       String.contains?(reason, "heartbeat_timeout") -> :timeout
+      # ANTES do catch-all de `closed_abnormally`, senão o drain de shutdown
+      # apareceria como `:crash` e o Psicólogo levantaria hipótese sobre um
+      # defeito que não existe.
+      String.contains?(reason, "node_shutdown") -> :node_shutdown
       reason =~ ~r/kill/i -> :kill
       reason == "normal" and status == "closed_abnormally" -> :unknown
       status == "closed_abnormally" -> :crash
@@ -66,5 +70,9 @@ defmodule Engine.Psychologist.TerminationClassifier do
   def label(:timeout), do: "timeout de heartbeat (ninguém reconectou)"
   def label(:kill), do: "processo morto externamente (kill)"
   def label(:crash), do: "crash (exceção no processo da sessão)"
+
+  def label(:node_shutdown),
+    do: "réplica do engine desligada (rollout ou scale-down), sessão não adotada"
+
   def label(:unknown), do: "parada inesperada, sem causa identificada"
 end

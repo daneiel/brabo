@@ -34,6 +34,11 @@ config :engine, Oban,
   repo: Engine.Repo,
   prefix: "engine",
   queues: [default: 10],
+  # Explícito, e maior que o default de 15s: o drain do preStop (Fase 5) já
+  # consumiu parte do terminationGracePeriodSeconds antes de o SIGTERM chegar,
+  # e um job cortado no meio só volta depois do `rescue_after` do Lifeline
+  # (5 min). Dar 25s ao Oban aumenta a chance de o job terminar sozinho.
+  shutdown_grace_period: :timer.seconds(25),
   plugins: [
     Oban.Plugins.Pruner,
     {Oban.Plugins.Lifeline, rescue_after: :timer.minutes(5)}
