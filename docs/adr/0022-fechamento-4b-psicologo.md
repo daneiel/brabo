@@ -256,6 +256,41 @@ nenhum: ganhou botão na faixa de análises. E o comentário do
   double-accept, `ListPsychologistAnalysesUseCase` (leve < pesada),
   `GetSessionEventUseCase` e a exigência de término guiada por `cause`.
 
+## Verificação executada
+
+O critério de aceite RODOU nesta stack (Ollama local, sem provider pago) e
+passou nos três casos: análise current por sessão, tier esperado, hipótese em
+cada uma, TODAS as evidências resolvendo pelo endpoint por id na própria
+sessão, `terminationAnalysis` nas duas anormais, custo da leve
+(US$ 0,000087) abaixo do da pesada (US$ 0,002086), e reanálise
+superseding com `superseded_at` datado.
+
+Duas coisas só apareceram rodando, e ambas viraram default/documentação no
+script:
+
+- **`llama3.1:8b` não chama a tool.** Gastou as iterações do tier e nunca
+  emitiu `emit_hypotheses`; o desfecho saiu como "encerrou sem emitir
+  hipóteses" e NÃO como "falha no provider" — o que, de passagem, é a
+  distinção da decisão 4 funcionando: o modelo respondeu, só não usou a
+  tool. Nesta stack só o `qwen2.5-coder:7b` sustenta tool call com argumento
+  estruturado (mesmo motivo de ele rodar os dev agents), daí a cópia no
+  Ollama pra dar dois PREÇOS ao mesmo modelo capaz.
+- **O teto de 4 iterações do tier leve é apertado pra 7B local.** Na primeira
+  rodada a sessão de kill morreu em "limite de iterações" depois de duas
+  tentativas com `evidenceEventIds` vazio e duas citando um event id
+  INVENTADO (`01KYE4B4W25GJ8R6H9Z3FJ8DQX`), cada uma corretamente rejeitada
+  com a mensagem da api voltando pro modelo. Ou seja: o guarda-corpo de
+  evidência pegou uma alucinação de id em produção, exatamente como
+  desenhado. A resposta certa é subir o teto por ambiente (os knobs agora
+  estão no compose), nunca afrouxar a validação.
+
+**O kill pós-restart foi verificado à mão e funciona.** Job
+`Engine.Workers.PsychologistWorker` em `executing`, `docker kill` no
+container do engine, o job ficou órfão em `executing` sem desfecho, engine de
+volta, e ~6 minutos depois (rescue_after de 5 min + intervalo do Lifeline) a
+análise CONCLUIU, com `supersedes` apontando pra anterior. Sem o Lifeline
+esse job não sairia de `executing` nunca.
+
 ## Escopo & assunções
 
 Fora deste fechamento: `SELECT ... FOR UPDATE` em `findCurrentBySession`
