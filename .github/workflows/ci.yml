@@ -67,7 +67,24 @@ jobs:
           elixir-version: ${{ env.ELIXIR_VERSION }}
           otp-version: ${{ env.OTP_VERSION }}
 
-      # Mesma disciplina: `--check-formatted`, não `mix format`.
+      - uses: actions/cache@v4
+        with:
+          path: apps/engine/deps
+          key: ${{ runner.os }}-mix-deps-${{ env.ELIXIR_VERSION }}-${{ hashFiles('apps/engine/mix.lock') }}
+          restore-keys: ${{ runner.os }}-mix-deps-${{ env.ELIXIR_VERSION }}-
+
+      # `mix format` NÃO é standalone aqui: o .formatter.exs faz
+      # `import_deps: [:ecto, :ecto_sql, :phoenix]` para conhecer as macros
+      # dessas libs, e sem as deps baixadas ele falha com "Unknown dependency".
+      - name: mix deps.get
+        working-directory: apps/engine
+        run: mix deps.get
+
+      # Mesma disciplina do eslint: `--check-formatted`, não `mix format`.
+      #
+      # A versão do Elixir aqui É load-bearing: as regras do formatador mudam
+      # entre versões, então este check só é estável porque bate com o
+      # ELIXIR_VERSION pinado nos Dockerfiles. Ver ADR 0024, decisão 10.
       - name: mix format --check-formatted
         working-directory: apps/engine
         run: mix format --check-formatted
@@ -292,10 +309,14 @@ jobs:
           done
 
       - name: Trivy na api
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: brabo-api:prod
           format: table
+          # Binário do trivy pinado na mesma versão usada pra validar
+          # localmente o .trivyignore.yaml — o banco de vulnerabilidade é
+          # sempre baixado fresco, mas a versão da ferramenta não varia.
+          version: v0.58.1
           scanners: vuln
           severity: HIGH,CRITICAL
           ignore-unfixed: true
@@ -305,10 +326,14 @@ jobs:
           exit-code: '1'
 
       - name: Trivy no engine
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: brabo-engine:prod
           format: table
+          # Binário do trivy pinado na mesma versão usada pra validar
+          # localmente o .trivyignore.yaml — o banco de vulnerabilidade é
+          # sempre baixado fresco, mas a versão da ferramenta não varia.
+          version: v0.58.1
           scanners: vuln
           severity: HIGH,CRITICAL
           ignore-unfixed: true
@@ -318,10 +343,14 @@ jobs:
           exit-code: '1'
 
       - name: Trivy no web
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: brabo-web:prod
           format: table
+          # Binário do trivy pinado na mesma versão usada pra validar
+          # localmente o .trivyignore.yaml — o banco de vulnerabilidade é
+          # sempre baixado fresco, mas a versão da ferramenta não varia.
+          version: v0.58.1
           scanners: vuln
           severity: HIGH,CRITICAL
           ignore-unfixed: true
