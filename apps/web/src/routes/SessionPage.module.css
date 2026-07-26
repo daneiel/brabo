@@ -312,3 +312,23 @@
   padding: 4px 12px;
   white-space: nowrap;
 }
+
+/* Evento citado por uma hipótese do Psicólogo, fixado no topo do log
+   (Fase 4b) — a garantia de que a evidência CHEGA no evento, independente
+   da janela de paginação e dos filtros do feed. */
+.citedEvent {
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  padding: 8px;
+  margin-bottom: 12px;
+}
+
+.citedEventLabel {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}

@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { getArchitecture, getCoverage, listActions, listBacklog, listHandoffs, listHypotheses, listInfraArtifacts, listProficiency, listProjects, listSessionEvents, listSessions, listWorkspaces, getSessionTokenUsage } from './api-client';
+import { getArchitecture, getCoverage, getSessionEvent, listActions, listBacklog, listHandoffs, listHypotheses, listInfraArtifacts, listProficiency, listProjects, listPsychologistAnalyses, listSessionEvents, listSessions, listWorkspaces, getSessionTokenUsage } from './api-client';
 import { classifyEvent } from './activity';
 import { formatRelativeTime } from './time';
 
@@ -172,5 +172,38 @@ export function useHypotheses(projectId: string | undefined, intervalMs = 8000) 
     queryFn: () => listHypotheses(projectId!),
     enabled: !!projectId,
     refetchInterval: intervalMs,
+  });
+}
+
+// Análises current do Psicólogo com tier e custo — mesma cadência das
+// hipóteses (mudam juntas: uma análise nova traz hipóteses novas).
+export function usePsychologistAnalyses(
+  projectId: string | undefined,
+  intervalMs = 8000,
+) {
+  return useQuery({
+    queryKey: ['psychologist-analyses', projectId],
+    queryFn: () => listPsychologistAnalyses(projectId!),
+    enabled: !!projectId,
+    refetchInterval: intervalMs,
+  });
+}
+
+// UM evento pelo id. Existe pro chip de evidência de uma hipótese chegar no
+// evento citado mesmo quando ele está fora da janela dos últimos 200 OU é
+// um tipo que o feed esconde como ruído de máquina (`agent.response`,
+// `tool.call`, `tool.result` — justamente o que o Psicólogo mais cita).
+// Sem refetchInterval: evento é imutável, não tem por que repolar.
+export function useSessionEvent(
+  projectId: string | undefined,
+  sessionId: string | undefined,
+  eventId: string | undefined,
+) {
+  return useQuery({
+    queryKey: ['session-event', projectId, sessionId, eventId],
+    queryFn: () => getSessionEvent(projectId!, sessionId!, eventId!),
+    enabled: !!projectId && !!sessionId && !!eventId,
+    staleTime: Infinity,
+    retry: false,
   });
 }

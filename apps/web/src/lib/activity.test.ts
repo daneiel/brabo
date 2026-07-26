@@ -89,3 +89,67 @@ describe('classifyEvent — fase de execução (Fase 4a)', () => {
     expect(c.text).toContain('xpto.aconteceu');
   });
 });
+
+describe('classifyEvent — Psicólogo (Fase 4b)', () => {
+  it('hipótese proposta nomeia o agente alvo', () => {
+    const c = classifyEvent(
+      ev('psychologist.hypothesis_proposed', 'psicologo', {
+        agenteAlvo: 'dev-api',
+      }),
+    );
+
+    expect(c.kind).toBe('hypothesis');
+    expect(c.text).toContain('dev-api');
+    expect(c.bad).toBe(false);
+  });
+
+  it('aceite e descarte se distinguem no texto', () => {
+    expect(
+      classifyEvent(
+        ev('psychologist.hypothesis_accepted', 'user', { agenteAlvo: 'qa' }),
+      ).text,
+    ).toContain('aceita');
+
+    expect(
+      classifyEvent(
+        ev('psychologist.hypothesis_dismissed', 'user', { agenteAlvo: 'qa' }),
+      ).text,
+    ).toContain('descartada');
+  });
+
+  it('encaminhamento pra Anamnese é narrado como tal', () => {
+    expect(
+      classifyEvent(
+        ev('psychologist.hypothesis_accepted_for_anamnese', 'user', {}),
+      ).text,
+    ).toContain('Anamnese');
+  });
+
+  it('análise concluída informa a triagem usada', () => {
+    expect(
+      classifyEvent(
+        ev('psychologist.analysis_completed', 'psicologo-leve', {
+          tier: 'leve',
+        }),
+      ).text,
+    ).toContain('leve');
+  });
+
+  it('análise falha é marcada como ruim e carrega o motivo', () => {
+    const c = classifyEvent(
+      ev('psychologist.analysis_failed', 'psicologo', {
+        reason: 'orçamento excedido',
+      }),
+    );
+
+    expect(c.bad).toBe(true);
+    expect(c.text).toContain('orçamento excedido');
+  });
+
+  it('tipo psychologist.* desconhecido não quebra a narração', () => {
+    const c = classifyEvent(ev('psychologist.algo_novo', 'psicologo', {}));
+
+    expect(c.kind).toBe('hypothesis');
+    expect(c.text).toContain('psychologist.algo_novo');
+  });
+});

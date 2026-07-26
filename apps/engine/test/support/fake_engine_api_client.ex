@@ -198,19 +198,34 @@ defmodule Engine.Sessions.FakeEngineApiClient do
   end
 
   @impl true
-  def propose_hypotheses(_project_id, _session_id, tier, triggered_by, event_count, hypotheses) do
-    notify({:hypotheses_proposed, tier, triggered_by, event_count, hypotheses})
+  def propose_hypotheses(
+        _project_id,
+        _session_id,
+        tier,
+        triggered_by,
+        event_count,
+        cause,
+        hypotheses
+      ) do
+    notify({:hypotheses_proposed, tier, triggered_by, event_count, cause, hypotheses})
 
     # Erro scriptável (ex.: evidência inválida rejeitada pela api) via
     # :fake_propose_hypotheses_error — mesmo idioma de :fake_story_error.
-    case Process.get(:fake_propose_hypotheses_error) do
-      nil ->
+    # `_once` rejeita só a PRIMEIRA chamada, pro teste do ciclo de correção
+    # (rejeita, modelo corrige, segunda passa).
+    case {Process.get(:fake_propose_hypotheses_error),
+          Process.get(:fake_propose_hypotheses_error_once)} do
+      {nil, nil} ->
         reply(:fake_propose_hypotheses, %{
           "analysisId" => "analysis-1",
           "hypotheses" => hypotheses
         })
 
-      reason ->
+      {nil, reason} ->
+        Process.delete(:fake_propose_hypotheses_error_once)
+        {:error, reason}
+
+      {reason, _} ->
         {:error, reason}
     end
   end
@@ -270,7 +285,15 @@ defmodule Engine.Sessions.FakeEngineApiClient do
     end
   end
 
-  defp reply(key, default), do: {:ok, Process.get(key, default)}
+  # Um valor scriptado já em forma de `{:error, _}` passa direto — assim um
+  # teste consegue simular "a api está fora" no MESMO idioma dos scripts de
+  # sucesso, sem uma chave separada por endpoint.
+  defp reply(key, default) do
+    case Process.get(key, default) do
+      {:error, _reason} = erro -> erro
+      valor -> {:ok, valor}
+    end
+  end
   defp unique, do: System.unique_integer([:positive])
 
   @impl true
@@ -304,6 +327,12 @@ defmodule Engine.Sessions.FakeEngineApiClient do
     notify({:llm_turn, agent, messages, tools})
 
     cond do
+      # Transporte quebrado (provider fora/timeout) — o ToolLoop guarda isso
+      # em `:last_error`, e é o que distingue "falhou a infra" de "o modelo
+      # parou sozinho" pra quem consome o desfecho.
+      reason = Process.get(:fake_llm_turn_error) ->
+        {:error, reason}
+
       resp = Process.get(:fake_llm_always) ->
         {:ok, resp}
 

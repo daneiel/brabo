@@ -220,9 +220,9 @@ defmodule Engine.Sessions.EngineApiClient do
   @doc """
   Contexto do Psicólogo (Fase 4b): `alreadyAnalyzed` (idempotência),
   `sessionStatus`/`terminationReason` (causa de término), regras de
-  negócio do projeto e hipóteses anteriores não descartadas. O log
-  completo de eventos da sessão o worker lê direto do Postgres
-  (`Engine.SessionEvents.Event.list/1`), não passa por aqui.
+  negócio do projeto e hipóteses anteriores não descartadas. Os eventos da
+  sessão o worker lê direto do Postgres (`Engine.SessionEvents.Event.count/1`
+  pra triagem, `list_recent/2` pro prompt), não passam por aqui.
   """
   @callback get_psychologist_context(
               project_id :: String.t(),
@@ -242,6 +242,7 @@ defmodule Engine.Sessions.EngineApiClient do
               tier :: String.t(),
               triggered_by :: String.t(),
               event_count :: integer(),
+              cause :: String.t(),
               hypotheses :: [map()]
             ) ::
               {:ok, map()} | {:error, term()}
@@ -402,16 +403,25 @@ defmodule Engine.Sessions.EngineApiClient do
   def propose_instruction_patch(project_id, session_id, payload),
     do: impl().propose_instruction_patch(project_id, session_id, payload)
 
-  def propose_hypotheses(project_id, session_id, tier, triggered_by, event_count, hypotheses),
-    do:
-      impl().propose_hypotheses(
+  def propose_hypotheses(
         project_id,
         session_id,
         tier,
         triggered_by,
         event_count,
+        cause,
         hypotheses
-      )
+      ),
+      do:
+        impl().propose_hypotheses(
+          project_id,
+          session_id,
+          tier,
+          triggered_by,
+          event_count,
+          cause,
+          hypotheses
+        )
 
   def record_infra_gate_verdict(
         project_id,
@@ -717,12 +727,21 @@ defmodule Engine.Sessions.EngineApiClient.Live do
   end
 
   @impl true
-  def propose_hypotheses(project_id, session_id, tier, triggered_by, event_count, hypotheses) do
+  def propose_hypotheses(
+        project_id,
+        session_id,
+        tier,
+        triggered_by,
+        event_count,
+        cause,
+        hypotheses
+      ) do
     post_returning("/internal/sessions/#{session_id}/hypotheses", %{
       projectId: project_id,
       tier: tier,
       triggeredBy: triggered_by,
       eventCount: event_count,
+      cause: cause,
       hypotheses: hypotheses
     })
   end

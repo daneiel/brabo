@@ -66,7 +66,32 @@ config :engine,
   # ambiente pra rodar o critério de aceite numa máquina apertada — default
   # ligado, sem mudança de comportamento.
   start_outbox_drain?: System.get_env("START_OUTBOX_DRAIN", "true") == "true",
-  start_anamnese?: System.get_env("START_ANAMNESE", "true") == "true"
+  start_anamnese?: System.get_env("START_ANAMNESE", "true") == "true",
+  # Triagem de custo do Psicólogo (Fase 4b) — abaixo do limiar a sessão é
+  # analisada pelo agente `psicologo-leve` (modelo barato, tetos menores).
+  # Os defaults são os valores do ADR 0015; ficam aqui, e não como atributo
+  # de módulo, pra o operador poder apertar o custo por ambiente sem
+  # recompilar — mesmo tratamento dos outros knobs do harness acima.
+  psychologist_triage_threshold:
+    String.to_integer(System.get_env("PSYCHOLOGIST_TRIAGE_THRESHOLD", "20")),
+  psychologist_max_iterations_leve:
+    String.to_integer(System.get_env("PSYCHOLOGIST_MAX_ITERATIONS_LEVE", "4")),
+  psychologist_max_iterations_pesada:
+    String.to_integer(System.get_env("PSYCHOLOGIST_MAX_ITERATIONS_PESADA", "8")),
+  psychologist_budget_micros_leve:
+    String.to_integer(System.get_env("PSYCHOLOGIST_BUDGET_MICROS_LEVE", "50000")),
+  psychologist_budget_micros_pesada:
+    String.to_integer(System.get_env("PSYCHOLOGIST_BUDGET_MICROS_PESADA", "300000")),
+  # Teto de eventos e de tamanho de payload que entram no prompt. O log vai
+  # numa mensagem pinned (que o ContextManager nunca compacta, pra não
+  # perder os ids que a evidência cita), então quem protege a janela é este
+  # corte — ver Engine.Psychologist.Triage.max_prompt_events/1.
+  psychologist_max_prompt_events_leve:
+    String.to_integer(System.get_env("PSYCHOLOGIST_MAX_PROMPT_EVENTS_LEVE", "50")),
+  psychologist_max_prompt_events_pesada:
+    String.to_integer(System.get_env("PSYCHOLOGIST_MAX_PROMPT_EVENTS_PESADA", "400")),
+  psychologist_max_payload_chars:
+    String.to_integer(System.get_env("PSYCHOLOGIST_MAX_PAYLOAD_CHARS", "600"))
 
 if config_env() == :prod do
   database_url =

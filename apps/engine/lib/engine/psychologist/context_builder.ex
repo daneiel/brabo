@@ -3,9 +3,15 @@ defmodule Engine.Psychologist.ContextBuilder do
   Monta o contexto da análise do Psicólogo (Fase 4b): o contexto da api
   (`get_psychologist_context` — idempotência, status/motivo de término,
   regras de negócio do projeto, hipóteses anteriores não descartadas)
-  mais o log COMPLETO de eventos da sessão, lido direto do Postgres
-  (`Engine.SessionEvents.Event.list/1`, read-only) — mais barato que uma
-  ida HTTP e é o que o worker stub já fazia.
+  mais o event log da sessão, lido direto do Postgres (read-only) — mais
+  barato que uma ida HTTP.
+
+  **Contagem e leitura são separadas de propósito.** `fetch/2` traz só o
+  `event_count` (COUNT, não carrega linha), porque é ele que decide a
+  triagem; só depois, já sabendo o tier, o worker chama
+  `recent_events/2` com o teto daquele tier. Carregar o log inteiro pra
+  contar era desperdício em sessão longa — e o log inteiro nunca cabe no
+  prompt de qualquer jeito (ver `Engine.Psychologist.Triage`).
   """
 
   alias Engine.Sessions.EngineApiClient
@@ -16,7 +22,7 @@ defmodule Engine.Psychologist.ContextBuilder do
           termination_reason: String.t() | nil,
           business_rules: [map()],
           prior_hypotheses: [map()],
-          events: [map()]
+          event_count: non_neg_integer()
         }
 
   @spec fetch(String.t(), String.t()) :: {:ok, t()} | {:error, term()}
@@ -27,20 +33,17 @@ defmodule Engine.Psychologist.ContextBuilder do
     end
   end
 
-  defp build(ctx, session_id) do
-    %{
-      already_analyzed: Map.get(ctx, "alreadyAnalyzed", false),
-      session_status: Map.get(ctx, "sessionStatus", "closed"),
-      termination_reason: Map.get(ctx, "terminationReason"),
-      business_rules: Map.get(ctx, "businessRules", []),
-      prior_hypotheses: Map.get(ctx, "priorHypotheses", []),
-      events: list_events(session_id)
-    }
-  end
+  @doc """
+  Os `limit` eventos MAIS RECENTES da sessão, em ordem de seq crescente.
 
-  defp list_events(session_id) do
+  A cauda é o que importa pra análise comportamental: é onde está o estado
+  da sessão no momento do término (justamente o que a seção de término
+  precisa descrever). Mesmo raciocínio do `latest: true` do feed da UI.
+  """
+  @spec recent_events(String.t(), pos_integer()) :: [map()]
+  def recent_events(session_id, limit) do
     session_id
-    |> Engine.SessionEvents.Event.list()
+    |> Engine.SessionEvents.Event.list_recent(limit)
     |> Enum.map(fn event ->
       %{
         id: event.id,
@@ -50,5 +53,16 @@ defmodule Engine.Psychologist.ContextBuilder do
         payload: event.payload
       }
     end)
+  end
+
+  defp build(ctx, session_id) do
+    %{
+      already_analyzed: Map.get(ctx, "alreadyAnalyzed", false),
+      session_status: Map.get(ctx, "sessionStatus", "closed"),
+      termination_reason: Map.get(ctx, "terminationReason"),
+      business_rules: Map.get(ctx, "businessRules", []),
+      prior_hypotheses: Map.get(ctx, "priorHypotheses", []),
+      event_count: Engine.SessionEvents.Event.count(session_id)
+    }
   end
 end
