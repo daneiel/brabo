@@ -22,7 +22,8 @@ defmodule Engine.Anamnese.ToolsTest do
       window_from: ~U[2026-07-01 00:00:00Z],
       window_to: ~U[2026-07-24 00:00:00Z],
       event_count: 42,
-      queued_ids: ["queue-1"]
+      # Ids de HIPÓTESE — é o que o patch pode referenciar.
+      queued_hypothesis_ids: ["hyp-7"]
     }
 
     %{ctx: ctx}
@@ -45,7 +46,7 @@ defmodule Engine.Anamnese.ToolsTest do
 
       assert_received {:proficiency_recorded, payload}
       assert payload.eventCount == 42
-      assert payload.consumedQueueIds == ["queue-1"]
+      refute Map.has_key?(payload, :consumedQueueIds)
       assert payload.windowFrom == "2026-07-01T00:00:00Z"
     end
 

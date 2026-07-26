@@ -66,6 +66,11 @@
   --border: #1c4a5a;
   --border-strong: #2e6072;
   --code-bg: #03141b;
+  /* Fundo de linha de diff — especificado em COMPONENTS.md desde sempre, mas
+     nunca definido aqui: o ApprovalCard caía no fallback hard-coded e o
+     histórico de versões inventou cor de texto no lugar. */
+  --diff-add: #0e2e24;
+  --diff-del: #331a16;
   --shadow:
     0 1px 2px rgba(0, 0, 0, 0.4),
     0 8px 24px rgba(0, 0, 0, 0.35);
@@ -106,6 +111,9 @@
   --border: #dec9aa;
   --border-strong: #c6af8c;
   --code-bg: #efe4d2;
+  /* Mesma função no tema claro (o par do spec é calibrado pro escuro). */
+  --diff-add: #d6ead9;
+  --diff-del: #f4d9d2;
   --shadow:
     0 1px 2px rgba(10, 46, 61, 0.08),
     0 10px 28px rgba(10, 46, 61, 0.1);

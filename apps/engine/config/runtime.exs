@@ -91,7 +91,23 @@ config :engine,
   psychologist_max_prompt_events_pesada:
     String.to_integer(System.get_env("PSYCHOLOGIST_MAX_PROMPT_EVENTS_PESADA", "400")),
   psychologist_max_payload_chars:
-    String.to_integer(System.get_env("PSYCHOLOGIST_MAX_PAYLOAD_CHARS", "600"))
+    String.to_integer(System.get_env("PSYCHOLOGIST_MAX_PAYLOAD_CHARS", "600")),
+  # Anamnese (Fase 4b) — mesma racional dos knobs do Psicólogo acima: teto de
+  # custo é coisa que o operador aperta por ambiente, não constante de código.
+  # O tick é global e faz fan-out por projeto (ver AnamneseSchedulerWorker).
+  anamnese_interval_seconds:
+    String.to_integer(System.get_env("ANAMNESE_INTERVAL_SECONDS", "900")),
+  anamnese_initial_window_days:
+    String.to_integer(System.get_env("ANAMNESE_INITIAL_WINDOW_DAYS", "30")),
+  anamnese_min_events: String.to_integer(System.get_env("ANAMNESE_MIN_EVENTS", "10")),
+  anamnese_max_iterations:
+    String.to_integer(System.get_env("ANAMNESE_MAX_ITERATIONS", "6")),
+  anamnese_budget_micros:
+    String.to_integer(System.get_env("ANAMNESE_BUDGET_MICROS", "200000")),
+  anamnese_max_prompt_events:
+    String.to_integer(System.get_env("ANAMNESE_MAX_PROMPT_EVENTS", "500")),
+  anamnese_max_payload_chars:
+    String.to_integer(System.get_env("ANAMNESE_MAX_PAYLOAD_CHARS", "600"))
 
 if config_env() == :prod do
   database_url =

@@ -21,7 +21,7 @@ defmodule Engine.Workers.AnamneseWorker do
   alias Engine.Anamnese.{ContextBuilder, Tools, Triage}
   alias Engine.Anamnese.Hooks.Termination
   alias Engine.Harness.Hooks
-  alias Engine.Harness.Hooks.{ActionPipeline, EventLog}
+  alias Engine.Harness.Hooks.EventLog
   alias Engine.Harness.ToolLoop
   alias Engine.Sessions.EngineApiClient
 
@@ -30,10 +30,16 @@ defmodule Engine.Workers.AnamneseWorker do
     session_id = Map.get(args, "session_id")
 
     case ContextBuilder.fetch(project_id) do
-      {:ok, context} -> maybe_analyze(project_id, session_id, context)
-      # Contexto indisponível: deixa o Oban retentar em vez de gravar
-      # rodada pela metade.
-      {:error, _reason} -> :ok
+      {:ok, context} ->
+        maybe_analyze(project_id, session_id, context)
+
+      {:error, reason} ->
+        # PRECISA ser `{:error, _}`: `:ok` marcaria o job `completed` e a
+        # rodada do projeto sumiria em silêncio até o próximo tick, deixando o
+        # `max_attempts: 3` como peso morto neste branch. Sem narrar
+        # `anamnese.run_failed` aqui de propósito — o caminho de narração é a
+        # própria api, que é justamente quem está fora.
+        {:error, reason}
     end
   end
 
@@ -43,10 +49,12 @@ defmodule Engine.Workers.AnamneseWorker do
   defp maybe_analyze(_project_id, nil, _context), do: :ok
 
   defp maybe_analyze(project_id, session_id, context) do
-    event_count = length(context.events)
+    # Contagem REAL da janela, não o tamanho do recorte que vai no prompt.
+    event_count = context.total_event_count
     queued_count = length(context.queued_hypotheses)
+    decision_count = length(context.decisions)
 
-    if Triage.should_run?(event_count, queued_count) do
+    if Triage.should_run?(event_count, queued_count, decision_count) do
       analyze(project_id, session_id, context, event_count)
     else
       :ok
@@ -70,7 +78,19 @@ defmodule Engine.Workers.AnamneseWorker do
 
   defp reason_for({:limit_reached, _ctx}), do: "limite de iterações"
   defp reason_for({:budget_exceeded, _ctx}), do: "orçamento excedido"
-  defp reason_for({:ok, _ctx}), do: "encerrou sem emitir perfis"
+
+  # `{:ok, ctx}` com `:last_error` é falha de INFRAESTRUTURA (provider fora,
+  # timeout, erro no corpo da resposta), não o modelo desistindo. Sem olhar
+  # isso, um provider caído era narrado como "encerrou sem emitir perfis" e o
+  # operador não tinha nada em que agir — mesma armadilha já fechada no QA, no
+  # Dev e no Psicólogo.
+  defp reason_for({:ok, ctx}) do
+    case Map.get(ctx, :last_error) do
+      nil -> "encerrou sem emitir perfis"
+      error -> "falha no provider: #{error}"
+    end
+  end
+
   defp reason_for(_other), do: "desfecho inesperado"
 
   defp emit_failure(project_id, session_id, reason) do
@@ -97,13 +117,22 @@ defmodule Engine.Workers.AnamneseWorker do
       window_from: context.window_from,
       window_to: context.window_to,
       event_count: event_count,
-      queued_ids: Enum.map(context.queued_hypotheses, & &1["queueId"])
+      # Ids das HIPÓTESES (não das linhas da fila): é o `hypothesisId` que o
+      # prompt oferece ao modelo e que o patch precisa carregar. A linha da
+      # fila é consumida pela api a partir dele, quando o patch nasce — o
+      # engine não mexe mais em id de fila.
+      queued_hypothesis_ids:
+        context.queued_hypotheses
+        |> Enum.map(& &1["hypothesisId"])
+        |> Enum.reject(&is_nil/1)
     }
   end
 
+  # Sem `:pre_tool_use`: as duas tools da Anamnese são `:direct` e nenhuma se
+  # chama `terminal`/`write_file`, que é tudo que o ActionPipeline reconhece —
+  # registrá-lo era no-op permanente (mesmo caso já removido no Psicólogo).
   defp anamnese_hooks do
     Hooks.new()
-    |> Hooks.register(:pre_tool_use, ActionPipeline)
     |> Hooks.register(:post_tool_use, EventLog)
     |> Hooks.register(:post_tool_use, Termination)
   end
@@ -136,8 +165,8 @@ defmodule Engine.Workers.AnamneseWorker do
       #{format_profiles(context.current_profiles)}
 
       #{format_instructions(context.instructions)}
-
-      JANELA DO LOG (#{DateTime.to_iso8601(context.window_from)} → #{DateTime.to_iso8601(context.window_to)}):
+      #{format_decisions(context.decisions)}
+      JANELA DO LOG (#{DateTime.to_iso8601(context.window_from)} → #{DateTime.to_iso8601(context.window_to)})#{omission_note(context)}:
       #{format_events(context.events)}
       """,
       :pinned => true
@@ -190,11 +219,62 @@ defmodule Engine.Workers.AnamneseWorker do
     """
   end
 
+  # As decisões NÃO estão no event log (moram em proposed_actions), e o motivo
+  # de uma negação é o sinal mais rico da janela: diz o que a pessoa achou
+  # errado, com as palavras dela.
+  defp format_decisions([]), do: ""
+
+  defp format_decisions(decisions) do
+    """
+
+    DECISÕES DO USUÁRIO NA JANELA (o que aprovou e negou — e por quê):
+    #{Enum.map_join(decisions, "\n", &format_decision/1)}
+    """
+  end
+
+  defp format_decision(d) do
+    base = "- #{d["decidedAt"]} | #{d["decidedBy"]} | #{d["status"]} #{d["actionType"]}"
+
+    case d["rejectionReason"] do
+      nil -> base
+      "" -> base
+      motivo -> base <> " — motivo: #{motivo}"
+    end
+  end
+
+  # O corte tem que ser VISÍVEL pro modelo: ele só pode citar ids que vê, e
+  # sem a nota concluiria que a janela inteira cabe no que leu.
+  defp omission_note(context) do
+    omitidos = context.total_event_count - length(context.events)
+
+    if omitidos > 0 do
+      " — só os #{length(context.events)} mais recentes de #{context.total_event_count};" <>
+        " #{omitidos} evento(s) mais antigo(s) omitido(s), cite apenas ids presentes abaixo"
+    else
+      ""
+    end
+  end
+
   defp format_events([]), do: "(nenhum evento na janela)"
 
   defp format_events(events) do
     Enum.map_join(events, "\n", fn e ->
-      "#{e.id} | #{e.type} | #{e.actor_kind}:#{e.actor_id} | #{inspect(e.payload)}"
+      "#{DateTime.to_iso8601(e.created_at)} | #{e.id} | #{e.type} | " <>
+        "#{e.actor_kind}:#{e.actor_id} | #{format_payload(e.payload)}"
     end)
+  end
+
+  # Payload de `agent.response`/`tool.result` carrega turno de LLM inteiro —
+  # sem corte, meia dúzia deles come a janela de contexto sozinha. O id fica
+  # intacto (é o que a evidência cita); só o payload é truncado.
+  defp format_payload(payload) do
+    texto = inspect(payload)
+    teto = Triage.max_payload_chars()
+
+    if String.length(texto) > teto do
+      String.slice(texto, 0, teto) <> "… (payload truncado)"
+    else
+      texto
+    end
   end
 end

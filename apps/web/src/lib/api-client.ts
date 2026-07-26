@@ -234,6 +234,14 @@ export const listPsychologistAnalyses = (projectId: string) =>
   get<PsychologistAnalysis[]>(`/projects/${projectId}/psychologist/analyses`);
 // --- Anamnese (Fase 4b) ---
 
+// Um evento pelo id resolvendo a SESSÃO dele. A janela da Anamnese é de
+// projeto, então a evidência de um perfil pode ser de qualquer sessão — sem
+// resolver, o chip navegava pra sessão mais recente e não achava o evento.
+export const getProjectEvent = (projectId: string, eventId: string) =>
+  get<SessionEvent>(`/projects/${projectId}/events/${eventId}`);
+export const runAnamnese = (projectId: string) =>
+  post<{ ok: true }>(`/projects/${projectId}/anamnese/run`);
+
 export const listProficiency = (projectId: string) =>
   get<ProficiencyProfile[]>(`/projects/${projectId}/proficiency`);
 export const deleteMyProficiency = (projectId: string) =>

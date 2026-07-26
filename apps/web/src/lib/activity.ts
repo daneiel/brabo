@@ -154,7 +154,7 @@ export function classifyEvent(event: SessionEvent): ActivityDisplay {
     return {
       kind: 'hypothesis',
       icon: HypothesisIcon,
-      color: '#9C7BE0',
+      color: 'var(--accent)',
       bad: false,
       text: label,
     };
@@ -342,7 +342,7 @@ export function classifyEvent(event: SessionEvent): ActivityDisplay {
     return {
       kind: 'hypothesis',
       icon: HypothesisIcon,
-      color: '#9C7BE0',
+      color: 'var(--accent)',
       bad: false,
       text:
         type === 'anamnese.profile_updated'
@@ -407,7 +407,7 @@ export function classifyEvent(event: SessionEvent): ActivityDisplay {
     return {
       kind: 'hypothesis',
       icon: HypothesisIcon,
-      color: '#9C7BE0',
+      color: 'var(--accent)',
       bad: false,
       text,
     };

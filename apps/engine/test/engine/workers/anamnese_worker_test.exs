@@ -104,7 +104,11 @@ defmodule Engine.Workers.AnamneseWorkerTest do
 
     assert_received {:llm_turn, "anamnese", _messages, _tools}
     assert_received {:proficiency_recorded, payload}
-    assert payload.consumedQueueIds == ["queue-1"]
+
+    # A fila NÃO é consumida por aqui: quem consome é a api, quando o patch
+    # que referencia a hipótese nasce. Uma rodada que lê a hipótese e não
+    # gera patch tem que deixá-la pendente pra próxima.
+    refute Map.has_key?(payload, :consumedQueueIds)
   end
 
   test "a hipótese da fila entra no prompt como input priorizado", %{

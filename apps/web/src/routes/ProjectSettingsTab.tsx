@@ -4,8 +4,10 @@ import { useNavigate } from '@tanstack/react-router';
 import {
   addProjectMember,
   deleteMyProficiency,
+  getProjectEvent,
   listInstructionVersions,
   optInProficiency,
+  runAnamnese,
   rollbackInstruction,
   deleteCredential,
   getAgentModelBinding,
@@ -17,7 +19,7 @@ import {
   upsertCredential,
 } from '../lib/api-client';
 import { AGENT_LIST } from '../lib/agents';
-import { useLatestSession, useProficiency } from '../lib/hooks';
+import { useProficiency } from '../lib/hooks';
 import type {
   Model,
   ModelBindingScope,
@@ -29,6 +31,7 @@ import { Badge, type BadgeTone } from '../components/ui/Badge';
 import { Select } from '../components/ui/Select';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
+import { Modal } from '../components/ui/Modal';
 import { ModelPicker } from '../components/ModelPicker';
 import { TrashIcon } from '../components/ui/icons';
 import { useToast } from '../components/ui/ToastProvider';
@@ -370,7 +373,8 @@ function ProficiencySection({ projectId }: { projectId: string }) {
   const { showToast } = useToast();
   const navigate = useNavigate();
   const { data: profiles } = useProficiency(projectId);
-  const { latest: latestSession } = useLatestSession(projectId);
+  const [confirmandoDelete, setConfirmandoDelete] = useState(false);
+  const [emVoo, setEmVoo] = useState(false);
 
   const all = profiles ?? [];
   const byUser = new Map<string, typeof all>();
@@ -379,6 +383,8 @@ function ProficiencySection({ projectId }: { projectId: string }) {
   }
 
   async function handleDelete() {
+    setConfirmandoDelete(false);
+    setEmVoo(true);
     try {
       await deleteMyProficiency(projectId);
       await queryClient.invalidateQueries({ queryKey: ['proficiency', projectId] });
@@ -389,25 +395,63 @@ function ProficiencySection({ projectId }: { projectId: string }) {
       });
     } catch {
       showToast({ title: 'Erro', message: 'Não foi possível apagar o perfil', tone: 'danger' });
+    } finally {
+      setEmVoo(false);
     }
   }
 
   async function handleOptIn() {
+    setEmVoo(true);
     try {
       await optInProficiency(projectId);
+      // Sem invalidar, a lista só voltava a aparecer no poll seguinte.
+      await queryClient.invalidateQueries({ queryKey: ['proficiency', projectId] });
       showToast({ title: 'Reativado', message: 'A Anamnese voltará a perfilar você.', tone: 'success' });
     } catch {
       showToast({ title: 'Erro', message: 'Não foi possível reativar', tone: 'danger' });
+    } finally {
+      setEmVoo(false);
     }
   }
 
-  function goToEvidence(eventId: string) {
-    if (!latestSession) return;
-    navigate({
-      to: '/projects/$projectId/sessions/$sessionId',
-      params: { projectId, sessionId: latestSession.id },
-      search: { highlightEvent: eventId },
-    });
+  async function handleRunNow() {
+    setEmVoo(true);
+    try {
+      await runAnamnese(projectId);
+      showToast({
+        title: 'Rodada enfileirada',
+        message: 'A Anamnese vai analisar a janela agora.',
+        tone: 'success',
+      });
+    } catch {
+      showToast({
+        title: 'Erro',
+        message: 'Não foi possível enfileirar a rodada',
+        tone: 'danger',
+      });
+    } finally {
+      setEmVoo(false);
+    }
+  }
+
+  // A janela da Anamnese é de PROJETO e atravessa várias sessões, então a
+  // sessão do evento precisa ser RESOLVIDA — usar a sessão mais recente caía
+  // em "evento não encontrado nesta sessão" para toda evidência antiga.
+  async function goToEvidence(eventId: string) {
+    try {
+      const event = await getProjectEvent(projectId, eventId);
+      navigate({
+        to: '/projects/$projectId/sessions/$sessionId',
+        params: { projectId, sessionId: event.sessionId },
+        search: { highlightEvent: eventId },
+      });
+    } catch {
+      showToast({
+        title: 'Evidência indisponível',
+        message: 'O evento citado não foi encontrado neste projeto.',
+        tone: 'danger',
+      });
+    }
   }
 
   return (
@@ -456,13 +500,42 @@ function ProficiencySection({ projectId }: { projectId: string }) {
       )}
 
       <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
-        <Button variant="danger" onClick={handleDelete}>
+        <Button
+          variant="danger"
+          disabled={emVoo}
+          onClick={() => setConfirmandoDelete(true)}
+        >
           Apagar meu perfil
         </Button>
-        <Button variant="ghost" onClick={handleOptIn}>
+        <Button variant="ghost" disabled={emVoo} onClick={handleOptIn}>
           Voltar a ser perfilado
         </Button>
+        <Button variant="secondary" disabled={emVoo} onClick={handleRunNow}>
+          Rodar agora
+        </Button>
       </div>
+
+      {/* Apagar é irreversível (e grava opt-out) — um clique cru era demais
+          para uma ação que não tem como desfazer o que foi apagado. */}
+      {confirmandoDelete && (
+        <Modal
+          title="Apagar meu perfil de proficiência?"
+          onClose={() => setConfirmandoDelete(false)}
+        >
+          <div className={styles.subtitle}>
+            As linhas do seu perfil são apagadas de verdade, e a Anamnese para
+            de te perfilar até você reativar. O que já foi apagado não volta.
+          </div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+            <Button variant="danger" onClick={handleDelete}>
+              Apagar
+            </Button>
+            <Button variant="ghost" onClick={() => setConfirmandoDelete(false)}>
+              Cancelar
+            </Button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
@@ -484,7 +557,12 @@ function InstructionVersionsSection({ projectId }: { projectId: string }) {
     })),
   });
 
+  // Um clique é o que o enunciado pede — mas revertendo DUAS vezes por duplo
+  // clique nascem duas versões. `revertendo` desabilita enquanto voa.
+  const [revertendo, setRevertendo] = useState<string | null>(null);
+
   async function handleRollback(agent: string, version: number) {
+    setRevertendo(`${agent}:${version}`);
     try {
       await rollbackInstruction(projectId, agent, version);
       await queryClient.invalidateQueries({
@@ -497,6 +575,8 @@ function InstructionVersionsSection({ projectId }: { projectId: string }) {
       });
     } catch {
       showToast({ title: 'Erro', message: 'Não foi possível reverter', tone: 'danger' });
+    } finally {
+      setRevertendo(null);
     }
   }
 
@@ -547,9 +627,12 @@ function InstructionVersionsSection({ projectId }: { projectId: string }) {
                     {!version.isCurrent && (
                       <Button
                         variant="secondary"
+                        disabled={revertendo !== null}
                         onClick={() => handleRollback(agent.key, version.version)}
                       >
-                        Reverter
+                        {revertendo === `${agent.key}:${version.version}`
+                          ? 'Revertendo…'
+                          : 'Reverter'}
                       </Button>
                     )}
                   </div>
@@ -566,7 +649,7 @@ function InstructionVersionsSection({ projectId }: { projectId: string }) {
                             .filter(Boolean)
                             .join(' ')}
                         >
-                          <span>
+                          <span className={styles.diffSign}>
                             {line.kind === 'add' ? '+' : line.kind === 'del' ? '-' : ' '}
                           </span>
                           <span>{line.content}</span>

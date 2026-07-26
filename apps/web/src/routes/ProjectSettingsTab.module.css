@@ -247,11 +247,22 @@
   word-break: break-word;
 }
 
+/* Mesmo idioma visual do diff do ApprovalCard (fundo tokenizado, sinal
+   colorido) — antes o mesmo patch tinha duas aparências dependendo de onde
+   você olhasse. Ver design/COMPONENTS.md. */
 .diffLine.add {
+  background: var(--diff-add);
+}
+
+.diffLine.add .diffSign {
   color: var(--success);
 }
 
 .diffLine.del {
+  background: var(--diff-del);
+}
+
+.diffLine.del .diffSign {
   color: var(--danger);
 }
 

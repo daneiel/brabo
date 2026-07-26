@@ -71,12 +71,15 @@ defmodule Engine.Anamnese.Tools.EmitProficiency do
 
   @impl true
   def run(%{"profiles" => profiles}, ctx) when is_list(profiles) do
+    # Sem `consumedQueueIds`: quem consome a fila é a api, quando o patch que
+    # referencia a hipótese é PROPOSTO. Mandar os ids daqui queimava a
+    # hipótese aceita mesmo numa rodada que não gerou patch nenhum — o loop
+    # fechado morria em silêncio e nada re-enfileirava.
     payload = %{
       windowFrom: DateTime.to_iso8601(ctx.window_from),
       windowTo: DateTime.to_iso8601(ctx.window_to),
       eventCount: ctx.event_count,
-      profiles: profiles,
-      consumedQueueIds: ctx.queued_ids
+      profiles: profiles
     }
 
     case EngineApiClient.record_proficiency(ctx.project_id, ctx.session_id, payload) do

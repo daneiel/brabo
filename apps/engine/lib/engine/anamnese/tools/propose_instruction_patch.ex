@@ -63,13 +63,46 @@ defmodule Engine.Anamnese.Tools.ProposeInstructionPatch do
         } = args,
         ctx
       ) do
-    payload = %{
-      agent: agent,
-      proposedContent: content,
-      rationale: rationale,
-      hypothesisId: Map.get(args, "hypothesisId")
-    }
+    hypothesis_id = Map.get(args, "hypothesisId")
 
+    with :ok <- validate_hypothesis(hypothesis_id, ctx) do
+      payload = %{
+        agent: agent,
+        proposedContent: content,
+        rationale: rationale,
+        hypothesisId: hypothesis_id
+      }
+
+      propose(agent, payload, ctx)
+    end
+  end
+
+  def run(_args, _ctx),
+    do: {:error, "propose_instruction_patch exige `agent`, `proposedContent` e `rationale`"}
+
+  # O `hypothesisId` só pode ser um dos que ENTRARAM nesta rodada pela fila.
+  # Sem esta checagem um id inventado atravessava até
+  # `agent_instruction_versions.source_hypothesis_id` e a rastreabilidade
+  # hipótese->patch->versão apontava pra nada. A api revalida contra o
+  # projeto; aqui a mensagem volta pro modelo corrigir no turno seguinte.
+  defp validate_hypothesis(nil, _ctx), do: :ok
+
+  defp validate_hypothesis(hypothesis_id, ctx) do
+    queued = Map.get(ctx, :queued_hypothesis_ids, [])
+
+    if hypothesis_id in queued do
+      :ok
+    else
+      {:error,
+       "hypothesisId #{inspect(hypothesis_id)} não está entre as hipóteses aceitas desta " <>
+         "rodada (#{format_queued(queued)}) — omita o campo ou use um id recebido no contexto"}
+    end
+  end
+
+  defp format_queued([]), do: "nenhuma"
+  defp format_queued(ids), do: Enum.join(ids, ", ")
+
+  defp propose(agent, payload, ctx) do
     case EngineApiClient.propose_instruction_patch(
            ctx.project_id,
            ctx.session_id,
@@ -87,7 +120,4 @@ defmodule Engine.Anamnese.Tools.ProposeInstructionPatch do
         {:error, "patch recusado: #{Engine.Anamnese.Tools.describe(reason)}"}
     end
   end
-
-  def run(_args, _ctx),
-    do: {:error, "propose_instruction_patch exige `agent`, `proposedContent` e `rationale`"}
 end

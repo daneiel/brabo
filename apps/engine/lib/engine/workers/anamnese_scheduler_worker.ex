@@ -17,16 +17,18 @@ defmodule Engine.Workers.AnamneseSchedulerWorker do
 
   use Oban.Worker, queue: :default, max_attempts: 3
 
-  # 15 min: a Anamnese analisa tendência de comportamento, não precisa
-  # de latência baixa — e cada rodada custa LLM.
-  @interval_seconds 900
+  # 15 min por default: a Anamnese analisa tendência de comportamento, não
+  # precisa de latência baixa — e cada rodada custa LLM. Configurável por
+  # ambiente (ANAMNESE_INTERVAL_SECONDS), como os outros tetos da Anamnese.
+  defp interval_seconds,
+    do: Application.get_env(:engine, :anamnese_interval_seconds, 900)
 
   @impl true
   def perform(_job) do
     enqueue_projects()
 
     %{}
-    |> new(schedule_in: @interval_seconds)
+    |> new(schedule_in: interval_seconds())
     |> Oban.insert()
 
     :ok
@@ -35,7 +37,9 @@ defmodule Engine.Workers.AnamneseSchedulerWorker do
   @doc "Chamado uma vez no boot (ver Engine.Application)."
   def kickoff do
     %{}
-    |> new(unique: [period: @interval_seconds * 2, states: [:available, :scheduled, :retryable]])
+    |> new(
+      unique: [period: interval_seconds() * 2, states: [:available, :scheduled, :retryable]]
+    )
     |> Oban.insert()
   end
 
@@ -50,7 +54,7 @@ defmodule Engine.Workers.AnamneseSchedulerWorker do
           %{project_id: project_id, session_id: session_id}
           |> Engine.Workers.AnamneseWorker.new(
             unique: [
-              period: @interval_seconds,
+              period: interval_seconds(),
               keys: [:project_id],
               states: [:available, :scheduled, :retryable]
             ]
