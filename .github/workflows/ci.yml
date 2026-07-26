@@ -313,10 +313,10 @@ jobs:
         with:
           image-ref: brabo-api:prod
           format: table
-          # Binário do trivy pinado na mesma versão usada pra validar
-          # localmente o .trivyignore.yaml — o banco de vulnerabilidade é
-          # sempre baixado fresco, mas a versão da ferramenta não varia.
-          version: v0.58.1
+          # Versão do binário do trivy pinada — a mesma usada pra validar o
+          # .trivyignore.yaml localmente. É o default da action nesta tag; sem
+          # pin explícito, atualizar a action mudaria o scanner em silêncio.
+          version: v0.70.0
           scanners: vuln
           severity: HIGH,CRITICAL
           ignore-unfixed: true
@@ -330,10 +330,10 @@ jobs:
         with:
           image-ref: brabo-engine:prod
           format: table
-          # Binário do trivy pinado na mesma versão usada pra validar
-          # localmente o .trivyignore.yaml — o banco de vulnerabilidade é
-          # sempre baixado fresco, mas a versão da ferramenta não varia.
-          version: v0.58.1
+          # Versão do binário do trivy pinada — a mesma usada pra validar o
+          # .trivyignore.yaml localmente. É o default da action nesta tag; sem
+          # pin explícito, atualizar a action mudaria o scanner em silêncio.
+          version: v0.70.0
           scanners: vuln
           severity: HIGH,CRITICAL
           ignore-unfixed: true
@@ -347,10 +347,10 @@ jobs:
         with:
           image-ref: brabo-web:prod
           format: table
-          # Binário do trivy pinado na mesma versão usada pra validar
-          # localmente o .trivyignore.yaml — o banco de vulnerabilidade é
-          # sempre baixado fresco, mas a versão da ferramenta não varia.
-          version: v0.58.1
+          # Versão do binário do trivy pinada — a mesma usada pra validar o
+          # .trivyignore.yaml localmente. É o default da action nesta tag; sem
+          # pin explícito, atualizar a action mudaria o scanner em silêncio.
+          version: v0.70.0
           scanners: vuln
           severity: HIGH,CRITICAL
           ignore-unfixed: true
