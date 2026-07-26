@@ -1,0 +1,52 @@
+# Configuração do gitleaks para o REPOSITÓRIO (Fase 5).
+#
+# Não confundir com o gitleaks que o gate de SecOps roda sobre o código do
+# projeto gerido (Engine.Actions.GitleaksDetector) — aquele varre outra árvore
+# e não usa este arquivo.
+#
+# Regra desta allowlist: cada entrada é escopada por REGRA (`targetRules`) E por
+# CAMINHO EXATO, nunca por padrão amplo. Uma allowlist larga transforma o
+# scanner num no-op — o mesmo modo de falha que os ADRs 0020/0021 registram nos
+# gates. Um segredo de verdade em qualquer outro arquivo continua quebrando o
+# CI, e um segredo de OUTRA regra nestes mesmos arquivos também.
+
+[extend]
+# Herda o conjunto completo de regras default; a allowlist só subtrai.
+useDefault = true
+
+[[allowlists]]
+description = """
+PATs do GitHub SINTÉTICOS que existem PARA SEREM ENCONTRADOS: são os fixtures
+das regressões que provam que o detector e o gate de SecOps não aprovam vazio
+(ADR 0020). O teste planta o segredo numa árvore temporária e exige que o
+gitleaks o reporte; a demo planta na PR e exige que o gate devolva. Removê-los
+apagaria justamente a prova de que o scanner funciona — nenhum dos dois é
+credencial de coisa alguma.
+"""
+targetRules = ["github-pat"]
+paths = [
+  '''apps/engine/test/engine/actions/gitleaks_detector_test\.exs''',
+  '''apps/api/scripts/demo-pr-gates\.ts''',
+]
+
+[[allowlists]]
+description = """
+`secret_key_base` de DESENVOLVIMENTO e de TESTE gerados pelo scaffold do
+Phoenix. Em produção o valor vem de SECRET_KEY_BASE no ambiente e o
+config/runtime.exs LEVANTA se a variável faltar — estes dois nunca assinam
+nada fora de localhost. Trocá-los por env vars em dev/test só moveria o
+problema e quebraria `mix test` sem configuração extra.
+"""
+targetRules = ["generic-api-key"]
+paths = [
+  '''apps/engine/config/dev\.exs''',
+  '''apps/engine/config/test\.exs''',
+]
+
+[[allowlists]]
+description = """
+Badge do CircleCI que veio no README boilerplate do NestJS, com o placeholder
+literal `abc123def456` apontando pro repositório nestjs/nest.
+"""
+targetRules = ["generic-api-key"]
+paths = ['''apps/api/README\.md''']

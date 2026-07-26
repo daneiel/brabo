@@ -58,6 +58,7 @@ defmodule Engine.Harness.ToolLoop.Default do
     Hooks,
     ToolCallRecovery
   }
+
   alias Engine.Harness.Hooks.{ActionPipeline, EventLog}
   alias Engine.Sessions.EngineApiClient
 

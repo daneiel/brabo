@@ -144,5 +144,4 @@ defmodule Engine.Gates.SecOpsAgentServer do
         :ok
     end
   end
-
 end

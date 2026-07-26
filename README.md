@@ -49,7 +49,9 @@ packages/
   shared/   Tipos TS compartilhados entre api e web (import type only)
 design/     Design system (tokens.css, COMPONENTS.md, SCREENS.md — fonte
             de verdade de UI, ver CLAUDE.md)
-docker/     docker-compose.yml, Dockerfiles de dev, realm do Keycloak
+docker/     docker-compose.yml (dev) e docker-compose.prod.yml, Dockerfiles
+            de dev e Dockerfile.prod de cada app, nginx.conf do web,
+            smoke.sh, realm do Keycloak
 spike/      Spikes técnicos descartáveis (fora do monorepo pnpm/mix)
 ```
 
@@ -62,6 +64,17 @@ pnpm engine:dev      # mix phx.server (fora do Docker)
 pnpm engine:test     # mix test
 pnpm engine:migrate  # mix ecto.migrate
 ```
+
+> **Elixir 1.17.3 / OTP 27.1.2** é a versão do projeto — a mesma nos
+> Dockerfiles e no CI. O `mix format` de versões mais novas produz saída
+> diferente, então rodar o formatador de um host com Elixir mais recente
+> deixa o `mix format --check-formatted` do CI vermelho. Se o seu host
+> tiver outra versão, formate pelo container:
+>
+> ```bash
+> docker run --rm -v "$PWD/apps/engine:/app" -w /app \
+>   hexpm/elixir:1.17.3-erlang-27.1.2-alpine-3.20.3 mix format
+> ```
 
 ## Banco de dados
 
@@ -93,6 +106,63 @@ do volume de dados.
 - A web renderiza `/status` como uma página que consulta os dois
   endpoints acima (TanStack Query, poll a cada 5s) e mostra o resultado
   numa tabela.
+- Nas imagens de produção esses mesmos endpoints são o `HEALTHCHECK` do
+  container; o web serve um `/healthz` estático do próprio nginx.
+
+## Imagens de produção
+
+Separadas das de desenvolvimento: `docker/<app>/Dockerfile.prod`. São
+multi-stage, rodam **non-root** com rootfs read-only, e não dependem de
+bind mount — a api roda `node main.js` sobre o `dist`, o engine roda um
+`mix release` (sem Mix, sem código-fonte) e o web é servido por nginx.
+
+```bash
+# sobe o sistema com as imagens de produção e valida
+docker compose -f docker/docker-compose.prod.yml up -d --build --wait
+bash docker/smoke.sh
+docker compose -f docker/docker-compose.prod.yml down -v
+```
+
+O `smoke.sh` sobe o stack, confere que as três imagens rodam non-root,
+faz login (password grant), cria workspace → projeto → sessão e checa o
+health do engine e do web. É o mesmo script que o CI roda.
+
+Para rodar ao lado do stack de desenvolvimento (que ocupa 3000/4000/8080),
+sobrescreva as portas: `API_PORT`, `ENGINE_PORT`, `KEYCLOAK_PORT`,
+`WEB_PORT`, e as `VITE_*`/`KEYCLOAK_ISSUER_URL` correspondentes.
+
+### Volumes graváveis (api e engine compartilham)
+
+| caminho | conteúdo |
+|---|---|
+| `/data/project-workspaces` | working tree por projeto, worktrees por agente em `.worktrees/<agent_id>`, `permissions.json` |
+| `/data/git-repos` | bare repos locais (destino do `git push` do dev agent) |
+
+**Os dois caminhos precisam ser idênticos nos dois containers.** A api
+persiste o path absoluto do bare repo no banco e o engine o usa
+literalmente; montar em lugares diferentes quebra o push com
+`remote unpack failed`.
+
+### Variáveis obrigatórias em produção
+
+O engine **levanta no boot** sem `DATABASE_URL` ou `SECRET_KEY_BASE`, e
+não escuta HTTP sem `PHX_SERVER=true`. `WEB_ORIGIN` precisa listar a
+origem do web, senão o websocket dos canais (painel do time ao vivo) é
+recusado. Na api, `CREDENTIALS_MASTER_KEY`, `GIT_OAUTH_STATE_SECRET` e
+`API_KEYCLOAK_CLIENT_SECRET` têm default de desenvolvimento **só** no
+compose.prod — em produção real vêm de um cofre.
+
+> As `VITE_*` são **compile-time**: o Vite as inlina no bundle, então a
+> imagem do web é específica do ambiente e mudar a URL da api exige
+> rebuild, não restart. Ver ADR 0024.
+
+## CI
+
+`.github/workflows/ci.yml` roda em push para `feature/**` e em PR para
+`dev`: lint em modo verificação, testes de api/web/engine, build das três
+imagens com cache, trivy nas imagens, gitleaks no repositório e o teste de
+fumaça. A configuração alvo da proteção da branch `dev` está no ADR 0024
+(aplicá-la é manual, e hoje o plano do repositório não permite).
 
 ## Frontend (`apps/web`)
 

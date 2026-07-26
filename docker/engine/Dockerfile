@@ -20,7 +20,11 @@ RUN apk add --no-cache build-base inotify-tools git
 # virtual antes dele ser removido. SEM HADOLINT O GATE DE QA DE INFRA APROVA
 # QUALQUER DOCKERFILE: `InfraGateRunner.lint_dockerfiles/1` trata a ausência
 # como "pulado", não acha nada, e o veredito sai `approved` (ver ADR 0021).
-ARG GITLEAKS_VERSION=8.21.2
+# Mantido igual ao Dockerfile.prod: dev e produção rodando versões diferentes
+# do scanner significa gate se comportando diferente nos dois lugares. Subiu de
+# 8.21.2 para 8.30.1 na Fase 5 porque o binário do 8.21.2 carrega 15 CVEs de Go
+# stdlib (ver .trivyignore.yaml). As regressões `--only gitleaks` passam nos dois.
+ARG GITLEAKS_VERSION=8.30.1
 ARG HADOLINT_VERSION=2.12.0
 RUN apk add --no-cache --virtual .binaries-build curl tar \
   && (curl -fsSL -o /tmp/gitleaks.tar.gz \

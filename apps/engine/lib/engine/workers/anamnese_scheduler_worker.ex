@@ -37,9 +37,7 @@ defmodule Engine.Workers.AnamneseSchedulerWorker do
   @doc "Chamado uma vez no boot (ver Engine.Application)."
   def kickoff do
     %{}
-    |> new(
-      unique: [period: interval_seconds() * 2, states: [:available, :scheduled, :retryable]]
-    )
+    |> new(unique: [period: interval_seconds() * 2, states: [:available, :scheduled, :retryable]])
     |> Oban.insert()
   end
 

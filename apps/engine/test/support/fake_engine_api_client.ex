@@ -294,6 +294,7 @@ defmodule Engine.Sessions.FakeEngineApiClient do
       valor -> {:ok, valor}
     end
   end
+
   defp unique, do: System.unique_integer([:positive])
 
   @impl true

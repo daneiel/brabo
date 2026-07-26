@@ -10,7 +10,28 @@ defmodule Engine.MixProject do
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
       deps: deps(),
-      listeners: [Phoenix.CodeReloader]
+      releases: releases(),
+      # O CodeReloader é ferramenta de DEV. Declarado sem guarda, ele ia junto
+      # pro release de produção — onde não há código pra recarregar.
+      listeners: listeners(Mix.env())
+    ]
+  end
+
+  defp listeners(:prod), do: []
+  defp listeners(_), do: [Phoenix.CodeReloader]
+
+  # `mix release` (Fase 5): a imagem de produção roda o release, não o Mix —
+  # `mix phx.server`/`mix ecto.migrate` não existem lá dentro. Daí o
+  # `Engine.Release`, que expõe migrate/0 via `bin/engine eval`.
+  defp releases do
+    [
+      engine: [
+        include_executables_for: [:unix],
+        # ERTS embarcado: o estágio final não precisa de Erlang instalado,
+        # só das libs de sistema. É o que permite runtime enxuto.
+        include_erts: true,
+        strip_beams: true
+      ]
     ]
   end
 

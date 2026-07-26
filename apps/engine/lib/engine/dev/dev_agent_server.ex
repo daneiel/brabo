@@ -182,15 +182,15 @@ defmodule Engine.Dev.DevAgentServer do
   defp initial_message(task, story) do
     %{
       "role" => "user",
+      # Instrução explícita porque modelos menores tendem a DESCREVER a
+      # solução (ou imprimir a tool call como JSON no texto) em vez de
+      # chamar a ferramenta — o loop então termina sem desfecho e a task é
+      # bloqueada sem o modelo ter feito nada.
       "content" =>
         "Implemente a task \"#{task["title"]}\" da story \"#{story["title"]}\". " <>
           "Rode a suite de testes do projeto via `terminal` e só sinalize conclusão com " <>
           "`report_done` depois de vê-la passar (exit 0). Se não conseguir concluir, " <>
           "use `report_blocked` com o diagnóstico do que foi tentado e por que falhou.\n\n" <>
-          # Instrução explícita porque modelos menores tendem a DESCREVER a
-          # solução (ou imprimir a tool call como JSON no texto) em vez de
-          # chamar a ferramenta — o loop então termina sem desfecho e a task é
-          # bloqueada sem o modelo ter feito nada.
           "IMPORTANTE: aja apenas por chamadas de ferramenta. Não escreva código " <>
           "nem JSON na sua resposta em texto, e não explique o que pretende fazer — " <>
           "chame `write_file` para criar cada arquivo e `terminal` para rodar a suite. " <>

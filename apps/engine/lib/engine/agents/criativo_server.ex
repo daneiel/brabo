@@ -17,7 +17,14 @@ defmodule Engine.Agents.CriativoServer do
 
   use GenServer, restart: :temporary
 
-  alias Engine.Harness.{ContextBuilder, PromptAssembler, ContextManager, ArtifactSchemas, ToolCallRecovery}
+  alias Engine.Harness.{
+    ContextBuilder,
+    PromptAssembler,
+    ContextManager,
+    ArtifactSchemas,
+    ToolCallRecovery
+  }
+
   alias Engine.Harness.Tools.EmitArtifact
   alias Engine.Sessions.{EngineApiClient, LiveBroadcast}
 

@@ -96,7 +96,9 @@ defmodule Engine.Harness.ArtifactSchemasTest do
                  "veredito" => "approved",
                  "resumo" => "suite verde",
                  "itens" => [],
-                 "coverageMatrix" => [%{"rule" => "RF1", "tests" => ["a.test.js"], "covered" => true}]
+                 "coverageMatrix" => [
+                   %{"rule" => "RF1", "tests" => ["a.test.js"], "covered" => true}
+                 ]
                })
     end
 
