@@ -29,6 +29,32 @@ export interface ActivityDisplay {
   text: string;
 }
 
+/**
+ * Eventos de MÁQUINA — existem pro sistema derivar estado, não pro humano ler.
+ *
+ * `agent.status` passou a ser persistido no ADR 0021 (o painel precisa dele pra
+ * saber quem está trabalhando), e sem esta lista ele vira ruído no feed: dois
+ * "infra · agent.status" por turno, sem informação nenhuma. `tool.call`/
+ * `tool.result`/`agent.response` são o mesmo caso — internos do ciclo do
+ * agente, já visíveis na tela da sessão.
+ *
+ * Achado rodando o feed contra o event log REAL: 116 de 193 eventos caíam no
+ * fallback genérico, quase todos destes tipos.
+ */
+const EVENTOS_DE_MAQUINA = new Set([
+  'agent.status',
+  'agent.response',
+  'agent.delta',
+  'tool.call',
+  'tool.result',
+  'context.compacted',
+]);
+
+/** Se o feed deve ESCONDER o evento (ruído de máquina, não narrativa). */
+export function isMachineEvent(event: SessionEvent): boolean {
+  return EVENTOS_DE_MAQUINA.has(event.type);
+}
+
 function payloadField(payload: unknown, key: string): string | undefined {
   if (payload && typeof payload === 'object' && key in payload) {
     const value = (payload as Record<string, unknown>)[key];
@@ -174,6 +200,47 @@ export function classifyEvent(event: SessionEvent): ActivityDisplay {
               : `execução · ${type}`,
     };
   }
+  // A fase de execução narrada de verdade (Fase 4a): claim, bloqueio e
+  // desbloqueio de task caíam no genérico "atualizou o backlog", sem dizer
+  // QUAL task — justamente os eventos que o painel existe pra mostrar.
+  if (type === 'backlog.task_claimed') {
+    return {
+      kind: 'commit',
+      icon: CommitIcon,
+      color: 'var(--accent)',
+      bad: false,
+      text: `pegou a task "${payloadField(payload, 'title') ?? 'sem título'}"${
+        payloadField(payload, 'module') ? ` (${payloadField(payload, 'module')})` : ''
+      }`,
+    };
+  }
+  if (type === 'backlog.task_blocked') {
+    return {
+      kind: 'commit',
+      icon: CommitIcon,
+      color: 'var(--danger)',
+      bad: true,
+      text: `task bloqueada: ${payloadField(payload, 'reason') ?? 'sem motivo registrado'}`,
+    };
+  }
+  if (type === 'backlog.task_unblocked') {
+    return {
+      kind: 'commit',
+      icon: CommitIcon,
+      color: 'var(--success)',
+      bad: false,
+      text: `task desbloqueada`,
+    };
+  }
+  if (type === 'backlog.task_status_changed') {
+    return {
+      kind: 'commit',
+      icon: CommitIcon,
+      color: 'var(--text-muted)',
+      bad: false,
+      text: `task → ${payloadField(payload, 'status') ?? 'novo status'}`,
+    };
+  }
   if (type === 'backlog.story_demoted') {
     return {
       kind: 'generic',
@@ -294,6 +361,15 @@ export function classifyEvent(event: SessionEvent): ActivityDisplay {
       text: 'usuário confirmou a arquitetura pronta — handoff para o InfraAgent oferecido',
     };
   }
+  if (type === 'agent.activated') {
+    return {
+      kind: 'session',
+      icon: SessionIcon,
+      color: 'var(--accent)',
+      bad: false,
+      text: `${actorLabel} entrou na sessão`,
+    };
+  }
   if (type.startsWith('handoff.')) {
     return {
       kind: 'generic',
@@ -355,6 +431,31 @@ export function classifyEvent(event: SessionEvent): ActivityDisplay {
       text: granted
         ? `${actorLabel} concedeu permissão${payloadField(payload, 'pattern') ? ` para ${payloadField(payload, 'pattern')}` : ''}`
         : `${actorLabel} negou permissão`,
+    };
+  }
+  // Ações git executadas viram `action.<kind>` (execute-git-action.use-case).
+  // Sem estes ramos a PR de um dev — o evento central da fase de execução —
+  // era narrada como "executou um comando", junto de qualquer terminal.
+  if (type === 'action.pr_open') {
+    return {
+      kind: 'pr',
+      icon: PrIcon,
+      color: 'var(--accent)',
+      bad: false,
+      text: `${actorLabel} abriu PR${
+        payloadField(payload, 'sourceBranch') ? ` de ${payloadField(payload, 'sourceBranch')}` : ''
+      }`,
+    };
+  }
+  if (type === 'action.git_commit' || type === 'action.git_push') {
+    return {
+      kind: 'commit',
+      icon: CommitIcon,
+      color: 'var(--text-secondary)',
+      bad: false,
+      text: `${actorLabel} ${type === 'action.git_commit' ? 'commitou' : 'publicou'}${
+        payloadField(payload, 'branch') ? ` em ${payloadField(payload, 'branch')}` : ''
+      }`,
     };
   }
   if (type.startsWith('action.') || type.startsWith('terminal')) {

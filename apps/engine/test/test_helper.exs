@@ -1,11 +1,21 @@
-# Testes marcados `@tag :gitleaks` rodam o BINÁRIO de verdade (não um Fake) —
-# são a regressão do "varre a árvore, não o histórico" do ADR 0020. Dentro do
-# container do engine o gitleaks existe e eles rodam; numa máquina sem o
-# binário são excluídos, mesma disciplina de detecção opcional do
-# Engine.Actions.GitleaksDetector (ausência nunca quebra nada).
-gitleaks_exclusions = if System.find_executable("gitleaks"), do: [], else: [:gitleaks]
+# Testes marcados com a tag de um binário rodam o BINÁRIO de verdade (não um
+# Fake). São as regressões dos gates que já aprovaram vazio: `:gitleaks`
+# (varria o histórico em vez da árvore, ADR 0020) e `:hadolint`/`:yamllint`
+# (o gate de QA de infra aprovava qualquer arquivo, ADR 0021). Dentro do
+# container do engine os três existem e os testes rodam; numa máquina sem eles
+# são excluídos, mesma disciplina de detecção opcional dos detectors
+# (ausência nunca quebra nada).
+binary_exclusions =
+  Enum.reject(
+    [
+      if(System.find_executable("gitleaks"), do: nil, else: :gitleaks),
+      if(System.find_executable("hadolint"), do: nil, else: :hadolint),
+      if(System.find_executable("yamllint"), do: nil, else: :yamllint)
+    ],
+    &is_nil/1
+  )
 
-ExUnit.start(exclude: gitleaks_exclusions)
+ExUnit.start(exclude: binary_exclusions)
 Ecto.Adapters.SQL.Sandbox.mode(Engine.Repo, :manual)
 
 # outbox_events é gerenciada pela api (Drizzle, schema "public") — o banco

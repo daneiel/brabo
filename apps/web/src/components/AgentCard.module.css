@@ -86,6 +86,55 @@
   display: flex;
 }
 
+.model {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Empurra o custo pra direita quando há modelo, e o mantém à esquerda quando
+   é o único conteúdo do rodapé. */
+.tokens {
+  margin-left: auto;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* Task/atividade corrente: fica ENTRE o cabeçalho e o rodapé, com o título
+   truncado numa linha — nome de task é livre e não pode quebrar o card. */
+.activity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.activityLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.branch {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  padding: 2px 8px;
+}
+
 .autonomy {
   display: inline-flex;
   border-radius: var(--radius-full);

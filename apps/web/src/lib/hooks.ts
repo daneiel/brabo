@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { getArchitecture, getCoverage, listActions, listBacklog, listHandoffs, listHypotheses, listInfraArtifacts, listProficiency, listProjects, listSessionEvents, listSessions, listWorkspaces } from './api-client';
+import { getArchitecture, getCoverage, listActions, listBacklog, listHandoffs, listHypotheses, listInfraArtifacts, listProficiency, listProjects, listSessionEvents, listSessions, listWorkspaces, getSessionTokenUsage } from './api-client';
 import { classifyEvent } from './activity';
 import { formatRelativeTime } from './time';
 
@@ -45,9 +45,30 @@ export function useLatestSession(projectId: string | undefined) {
 export function useSessionEvents(projectId: string | undefined, sessionId: string | undefined, intervalMs = 3000) {
   return useQuery({
     queryKey: ['session-events', projectId, sessionId],
-    queryFn: () => listSessionEvents(projectId!, sessionId!, { limit: 200 }),
+    // `latest`: os ÚLTIMOS 200, não os primeiros. Todo consumidor deste hook
+    // (painel do time, seção de execução, feed, tab de Aprovações) deriva
+    // estado ATUAL — com os primeiros 200 tudo congelava no começo da sessão
+    // assim que ela passava desse tamanho, o que uma execução real faz fácil
+    // (ver ADR 0021).
+    queryFn: () =>
+      listSessionEvents(projectId!, sessionId!, { limit: 200, latest: true }),
     enabled: !!projectId && !!sessionId,
     refetchInterval: intervalMs,
+  });
+}
+
+// Custo por agente na sessão — alimenta os tokens de cada AgentCard no painel
+// do time. Cadência mais lenta que os eventos: é número de exibição, não
+// gatilho de decisão.
+export function useSessionTokenUsage(
+  projectId: string | undefined,
+  sessionId: string | undefined,
+) {
+  return useQuery({
+    queryKey: ['session-token-usage', projectId, sessionId],
+    queryFn: () => getSessionTokenUsage(projectId!, sessionId!),
+    enabled: !!projectId && !!sessionId,
+    refetchInterval: 5000,
   });
 }
 

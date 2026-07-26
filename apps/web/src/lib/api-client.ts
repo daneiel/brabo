@@ -1,6 +1,7 @@
 import { getToken } from './keycloak';
 import type {
   AgentAutonomyRule,
+  AgentTokenUsage,
   ActionType,
   Architecture,
 InfraArtifact,
@@ -73,7 +74,9 @@ const put = <T>(path: string, body: unknown) =>
   request<T>(path, { method: 'PUT', body: JSON.stringify(body) });
 const del = <T>(path: string) => request<T>(path, { method: 'DELETE' });
 
-function qs(params: Record<string, string | number | undefined>): string {
+function qs(
+  params: Record<string, string | number | boolean | undefined>,
+): string {
   const entries = Object.entries(params).filter(([, v]) => v !== undefined);
   if (entries.length === 0) return '';
   return '?' + new URLSearchParams(entries.map(([k, v]) => [k, String(v)])).toString();
@@ -157,7 +160,7 @@ export const transitionSession = (
 export const listSessionEvents = (
   projectId: string,
   sessionId: string,
-  opts: { afterSeq?: number; limit?: number } = {},
+  opts: { afterSeq?: number; limit?: number; latest?: boolean } = {},
 ) =>
   get<Page<SessionEvent>>(
     `/projects/${projectId}/sessions/${sessionId}/events${qs(opts)}`,
@@ -359,6 +362,10 @@ export const setProjectBudget = (
 ) => put<Budget>(`/projects/${projectId}/budget`, input);
 export const getSessionBudget = (projectId: string, sessionId: string) =>
   get<Budget | null>(`/projects/${projectId}/sessions/${sessionId}/budget`);
+export const getSessionTokenUsage = (projectId: string, sessionId: string) =>
+  get<AgentTokenUsage[]>(
+    `/projects/${projectId}/sessions/${sessionId}/token-usage`,
+  );
 export const setSessionBudget = (
   projectId: string,
   sessionId: string,

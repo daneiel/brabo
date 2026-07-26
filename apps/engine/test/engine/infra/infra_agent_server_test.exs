@@ -86,6 +86,55 @@ defmodule Engine.Infra.InfraAgentServerTest do
     assert_received {:infra_gate_dispatch, :qa, _project_id, _session_id, "pa-infra-1"}
   end
 
+  test "tool call escrita em TEXTO é recuperada — o InfraAgent não tem ToolLoop", %{
+    state: state
+  } do
+    # Achado da execução do critério de aceite (ADR 0021): o modelo local
+    # descreveu `propose_infra_pr` num bloco de texto em vez de usar o
+    # protocolo nativo. O ToolLoop já recuperava isso desde o ADR 0020, mas os
+    # agentes conversacionais têm loop PRÓPRIO e ficaram de fora — o turno
+    # terminava com resposta vazia e o agente ia pra ocioso sem propor nada.
+    Process.put(:fake_infra_context, %{"moduleMap" => nil, "adrs" => []})
+
+    Process.put(:fake_propose_action, %{
+      "id" => "pa-infra-txt",
+      "status" => "executed",
+      "executionResult" => %{"pullRequestUrl" => "local://repo/pull/9"}
+    })
+
+    texto = """
+    ```json
+    {"name": "propose_infra_pr", "arguments": {"title": "infra setup", "files": [{"path": "Dockerfile", "content": "FROM node:24-alpine"}]}}
+    ```
+    """
+
+    Process.put(:fake_llm_turns, [
+      %{
+        "message" => %{"role" => "assistant", "content" => texto},
+        "usage" => %{"estimated" => true},
+        "error" => nil
+      },
+      FakeEngineApiClient.final_response("pronto")
+    ])
+
+    assert {:noreply, _} = InfraAgentServer.handle_cast(:kickoff, state)
+
+    assert_received {:propose_action, "open_infra_pr", %{kind: "agent", id: "infra"},
+                     %{title: "infra setup"}}
+  end
+
+  test "texto que NÃO é tool call não vira chamada nenhuma", %{state: state} do
+    Process.put(:fake_infra_context, %{"moduleMap" => nil, "adrs" => []})
+
+    Process.put(:fake_llm_turns, [
+      FakeEngineApiClient.final_response("Ainda estou analisando os módulos.")
+    ])
+
+    assert {:noreply, _} = InfraAgentServer.handle_cast(:kickoff, state)
+
+    refute_received {:propose_action, "open_infra_pr", _, _}
+  end
+
   test "hadolint indisponível não quebra o turno — o modelo segue e propõe a PR mesmo assim", %{
     state: state
   } do

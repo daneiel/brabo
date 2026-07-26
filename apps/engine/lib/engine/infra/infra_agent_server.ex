@@ -15,9 +15,9 @@ defmodule Engine.Infra.InfraAgentServer do
 
   use GenServer, restart: :temporary
 
-  alias Engine.Harness.{ContextBuilder, PromptAssembler, ContextManager}
+  alias Engine.Harness.{ContextBuilder, PromptAssembler, ContextManager, ToolCallRecovery}
   alias Engine.Infra.Tools.{ValidateInfraFile, ProposeInfraPr}
-  alias Engine.Sessions.EngineApiClient
+  alias Engine.Sessions.{EngineApiClient, LiveBroadcast}
 
   @agent "infra"
   @max_iterations 14
@@ -139,7 +139,7 @@ defmodule Engine.Infra.InfraAgentServer do
         state = append(state, assistant_msg(content))
         if content != "", do: emit_response(state, content)
 
-        case tool_calls(message) do
+        case tool_calls(message, state.tool_specs) do
           [] ->
             state
 
@@ -274,7 +274,22 @@ defmodule Engine.Infra.InfraAgentServer do
 
   defp to_wire(message), do: Map.delete(message, :pinned)
 
-  defp tool_calls(message), do: Map.get(message, "toolCalls") || []
+  # Modelo local costuma descrever a chamada em TEXTO em vez de usar o
+  # protocolo nativo. O ToolLoop já recuperava isso (ADR 0020), mas os agentes
+  # conversacionais têm loop PRÓPRIO e ficaram de fora — o InfraAgent morria
+  # com resposta vazia tendo escrito o `propose_infra_pr` certo em texto.
+  defp tool_calls(message, tool_specs) do
+    case Map.get(message, "toolCalls") || [] do
+      [] ->
+        ToolCallRecovery.from_content(
+          Map.get(message, "content", ""),
+          Enum.map(tool_specs, & &1.name)
+        )
+
+      nativas ->
+        nativas
+    end
+  end
 
   defp emit_response(state, content),
     do: emit(state, "agent.response", %{content: content})
@@ -288,6 +303,13 @@ defmodule Engine.Infra.InfraAgentServer do
     })
 
     Engine.Sessions.LiveBroadcast.event_appended(state.session_id, type, @agent, payload)
+  end
+
+  # `agent.status` PRECISA ser persistido, não só broadcastado: o painel do
+  # time deriva o roster do event log buscado por HTTP (ver
+  # Engine.Sessions.LiveBroadcast.agent_status/4 e o ADR 0021).
+  defp broadcast(state, "agent.status", %{status: status}) do
+    LiveBroadcast.agent_status(state.project_id, state.session_id, @agent, status)
   end
 
   defp broadcast(state, event, payload) do
