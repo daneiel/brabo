@@ -104,7 +104,10 @@ degraus de baixo **desatualizados** — a correção existe em `main` e não em
 
 Por isso toda correção alta gera **retropropagação**: `main → qa → dev`,
 em cadeia e na ordem. Enquanto ela não completa, os degraus afetados ficam
-travados. O mecanismo do gate está na sessão do item 7 desta fase.
+travados — ver [O backmerge gate](#o-backmerge-gate).
+
+A cadeia inteira de um hotfix são **três PRs**: o hotfix mais os dois
+backmerges.
 
 ## Famílias de PR
 
@@ -122,14 +125,24 @@ tivemos neste trimestre?" sem arqueologia de git.
 
 ## Push direto é bloqueado
 
-Nenhuma das quatro permanentes aceita push direto. Toda mudança entra por PR.
-
-Duas exceções, ambas de robô e ambas documentadas:
+Nenhuma das três permanentes aceita push direto. Toda mudança entra por PR.
+É a **porta única** — e ela tem exatamente duas exceções, ambas de robô, ambas
+escritas aqui porque exceção que não está documentada vira precedente:
 
 | exceção | quem | por quê |
 |---|---|---|
-| tags `v*` | bot de release | versão nasce de workflow, nunca da mão |
-| `.release/gate.json` | bot do gate | o gate precisa se escrever ao travar |
+| tags `v*` | `brabo-release[bot]` | versão nasce de workflow, nunca da mão |
+| `.release/gate.json` em `main` | `brabo-release[bot]` | o gate precisa se escrever ao travar e ao destravar |
+
+A segunda é a mais desconfortável das duas, então vale dizer por que ela existe
+em vez de o gate entrar por PR: o gate trava as branches, e um PR para abrir a
+trava seria barrado pelo próprio gate. A alternativa — guardar o estado fora do
+repositório — trocaria uma exceção visível no histórico por um estado invisível
+em algum painel. O commit do bot fica no `git log`, com data e conteúdo.
+
+O `tag-release` reconhece esse commit **pelo conteúdo** (mexe só em
+`.release/`), nunca pelo autor ou pela mensagem: quem escreve é verificável,
+quem *diz* que escreveu não é.
 
 A configuração exata está em [Rulesets](../reference/rulesets.md), e aplicá-la
 é passo manual — o repositório versiona a fonte, o GitHub recebe a aplicação.
@@ -353,6 +366,37 @@ arquivo, a árvore mudaria e a verificação reprovaria — que é exatamente o 
 que a âncora existe para pegar. Igualdade de árvore é mais forte que igualdade
 de commit: ela olha o conteúdo, não a identidade.
 
+### Os dois caminhos da `main`
+
+`main` recebe merge de dois jeitos, e eles pedem versões diferentes. A
+distinção sai do **segundo pai** do merge commit — o lado que entrou:
+
+| segundo pai | caminho | versão |
+|---|---|---|
+| é o commit de uma `-qa.N` | promoção | a do ciclo, **com âncora** |
+| qualquer outro | hotfix | última final **+ PATCH**, sem âncora |
+
+O hotfix nasce de `main` e nunca passa por `qa`. Exigir âncora dele seria
+exigir o impossível — e a tag PATCH precisa nascer, porque é ela que os PRs de
+retropropagação citam.
+
+Uma `-dev.N` de segundo pai **não** conta como promoção: um merge de `dev`
+direto em `main` pula `qa`, e a final sairia carimbando código que ninguém
+validou.
+
+Casos que falham ruidosamente em vez de adivinhar:
+
+| situação | por quê |
+|---|---|
+| merge em `main` com um pai só | squash apaga o lado que entrou; sem ele o caminho é indeterminável |
+| hotfix sem nenhuma final publicada | PATCH é incremento sobre algo lançado |
+
+E dois casos que **não geram tag nenhuma**, de propósito: o commit do gate
+(mexe só em `.release/`) e a retropropagação `main → qa`/`dev`, que traz
+conteúdo que já está em `main`. Sem essa segunda saída, o backmerge carimbaria
+uma `-qa.N` num commit que nunca foi promovido de `dev` — uma tag dizendo
+"isto passou por qa" sobre algo que não passou.
+
 ### Não há deploy
 
 Os workflows **terminam na tag**. Não há ambiente, não há GitHub Environments,
@@ -368,6 +412,94 @@ Para olhar com os próprios olhos o que uma tag carimbou:
 ```bash
 make deploy-local TAG=v0.2.0-qa.1
 ```
+
+## O backmerge gate
+
+O `hotfix` resolve o incidente e cria um problema novo: a correção está em
+`main` e não está em `qa` nem em `dev`. Se alguém promover `dev → qa → main`
+antes de a correção descer, o release **desfaz o hotfix** — sem conflito, sem
+aviso, meses depois, e ninguém vai ligar o bug de volta àquele merge.
+
+O gate fecha esse buraco travando os degraus de baixo até a correção descer.
+
+### O estado
+
+O gate mora em `.release/gate.json`, na `main`:
+
+```json
+{
+  "versao": 1,
+  "locked": ["qa", "dev"],
+  "awaiting": "v0.2.1",
+  "order": ["qa", "dev"],
+  "historico": [
+    { "tag": "v0.2.1", "sha": "…", "em": "…", "prs": { "qa": 60, "dev": 61 } }
+  ]
+}
+```
+
+| campo | o quê |
+|---|---|
+| `locked` | branches que não aceitam merge nenhum |
+| `awaiting` | a tag do hotfix mais recente — `null` quando limpo |
+| `order` | a ordem em que as travas saem: sempre de cima para baixo |
+| `historico` | todos os hotfixes desta rodada; zera quando a cadeia fecha |
+
+Ele é lido **sempre da `main`**, nunca da branch do PR: os PRs de
+retropropagação carregam uma cópia do arquivo junto, e ler essa cópia daria o
+estado velho justamente durante a cadeia em que ele muda a cada merge.
+
+### O que acontece no merge de um hotfix
+
+Tudo no mesmo workflow (`tag-release`), nesta ordem — e a ordem importa, porque
+os PRs precisam citar a tag:
+
+1. a tag **PATCH** nasce normalmente (`v0.2.0` + hotfix → `v0.2.1`);
+2. os **dois PRs de retropropagação** são abertos: `main → qa` e `main → dev`;
+3. `.release/gate.json` é escrito em `main` travando `qa` e `dev`.
+
+### Acúmulo sai de graça
+
+Um segundo hotfix durante gate ativo **não abre PR novo e não cria fila
+paralela**. Os PRs `main → qa` e `main → dev` já estão abertos e carregam o que
+`main` tiver — inclusive o hotfix novo. O gate só acrescenta a entrada no
+`historico` e reafirma a trava. Uma branch já destravada **volta a travar**,
+porque agora há conteúdo novo para descer.
+
+### O check, em todo PR
+
+| situação | veredito |
+|---|---|
+| `locked` vazio | ✓ passa |
+| `main` → primeiro degrau ainda travado | ✓ é a retropropagação da vez |
+| `main` → degrau fora de ordem | ✗ "destrave `qa` antes de `dev`" |
+| qualquer PR para branch travada | ✗ com o link do PR que resolve |
+| `hotfix/` → `main` | ✓ `main` nunca é travada |
+
+`bugfix/` para `dev` durante gate ativo é **barrado**. A tentação é achar que
+"é correção, então pode passar": não pode. Ela nasce de `dev`, não carrega o
+hotfix, não resolve a trava, e ainda empilha trabalho por cima do buraco.
+
+### A ordem não é burocracia
+
+Destravar `dev` antes de `qa` deixaria o degrau do meio sem a correção — que é
+exatamente o buraco que o gate existe para fechar. A última destrava limpa o
+`awaiting` e zera o histórico.
+
+### A trava é conferida, não só declarada
+
+`locked` é o **registro da intenção**; a verdade é a contenção. Antes de
+avaliar, o check pergunta ao git se o commit do hotfix **já está** em cada
+branch travada, e deixa cair as travas que a realidade já satisfez.
+
+Isso não é zelo: é o conserto de uma armadilha real. Os PRs de retropropagação
+levam o `gate.json` para `qa` e `dev`; meses depois, uma promoção `qa → main`
+pode subir aquela cópia velha de volta. Sem a conferência, uma trava fantasma
+reapareceria em `main` sem nenhum hotfix por trás — e nada a destravaria,
+porque não há retropropagação pendente. O repositório ficaria parado para
+sempre.
+
+**Não conseguir verificar mantém a trava.** Desconhecido não é permissão.
 
 ## O que a política não resolve
 

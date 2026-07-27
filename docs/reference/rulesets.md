@@ -114,6 +114,7 @@ workflow):
 | `Política de branches` | `pr-police.yml` |
 | `Escada de aprovação` | `approval-ladder.yml` |
 | `Check de promoção` | `promotion-check.yml` |
+| `Backmerge gate` | `backmerge-gate.yml` |
 | `Lint` | `ci.yml` |
 | `Testes TS (api + web)` | `ci.yml` |
 | `Testes do engine (ExUnit)` | `ci.yml` |
@@ -156,13 +157,45 @@ workflow):
 
 ### Bypass
 
-**Vazio.** Nem o owner. A exceção que existe é a de **tags**, no ruleset
-abaixo, e ela é do bot — não de pessoa.
+| quem | modo | para quê |
+|---|---|---|
+| o ator do `BRABO_BOT_TOKEN` | `Always` | escrever `.release/gate.json` em `main` |
 
-> **TODO(humano):** o item 7 da FASE 6 prevê o bot do gate escrevendo
-> `.release/gate.json` direto em permanente. Quando esse workflow existir, ele
-> entra aqui como bypass **por app**, restrito a esse caminho. Enquanto não
-> existe, o bypass fica vazio.
+**Nenhuma pessoa tem bypass** — nem o owner. Este é do bot, e existe por um
+motivo que não tem contorno: o gate trava as branches, e um PR para abrir a
+trava seria barrado pelo próprio gate. O commit fica no `git log`, com data e
+conteúdo, e o `tag-release` o reconhece pelo que ele mexe (`.release/` e nada
+mais), não por quem diz ser.
+
+> **Aviso sobre o alcance do bypass.** Rulesets do GitHub concedem bypass ao
+> **ator**, não a um caminho: quem pode escrever `.release/gate.json` em `main`
+> pode, tecnicamente, escrever qualquer coisa. Não há como restringir por path
+> na interface. O que limita de fato é o workflow — ele só escreve aquele
+> arquivo — e o histórico, onde qualquer outro commit direto salta aos olhos.
+> Registrado como o que é: uma limitação da ferramenta, não uma decisão.
+
+### O segredo `BRABO_BOT_TOKEN`
+
+PAT clássico com escopos `repo` + `workflow`, em **Settings → Secrets and
+variables → Actions**:
+
+```bash
+gh secret set BRABO_BOT_TOKEN --body '<token>'
+```
+
+Ele não é conveniência. Duas coisas dependem dele, e as duas falham em
+silêncio sem ele:
+
+| o quê | por quê |
+|---|---|
+| a tag disparar a `Release` | **tag criada com `GITHUB_TOKEN` não dispara workflow** |
+| os PRs de retropropagação nascerem com checks | **PR aberto com `GITHUB_TOKEN` não dispara workflow** |
+
+É a regra do GitHub contra recursão, e ela já cobrou: a Release da `v0.2.0`
+nunca publicou por isso. O segundo caso é pior — um PR de retropropagação sem
+check nunca ficaria verde, e a cadeia travaria para sempre. Por isso o job da
+trava **falha ruidosamente** quando o segredo não existe, em vez de seguir e
+deixar o repositório num beco.
 
 ## Ruleset 2 — tags de versão
 
