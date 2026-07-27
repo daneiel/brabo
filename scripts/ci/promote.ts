@@ -13,11 +13,13 @@ import {
   CicloVazioError,
   classificar,
   explicarParInvalido,
+  extrairNumerosDePr,
   lerPar,
   lerVersaoFinal,
   maiorImpacto,
   parEhAdjacente,
   proximaVersao,
+  semTrafegoDaEsteira,
   type PrClassificado,
   type PrDoCiclo,
 } from './version.ts';
@@ -138,16 +140,18 @@ async function principal(): Promise<void> {
   // promoção `qa->main` o conteúdo já passou por `dev`, então o ciclo é o
   // mesmo — o que muda é só o carimbo.
   const range = ultimaFinal ? `${ultimaFinal}..origin/dev` : 'origin/dev';
-  const assuntos = execFileSync('git', ['log', '--no-merges', '--pretty=format:%s', range], {
+  // COM os merges: o número do PR só aparece no assunto do merge commit quando
+  // o merge não é squash, e `--no-merges` escondia justamente essa linha.
+  // Mesma causa do ciclo vazio no `tag-release`. Ver `extrairNumerosDePr`.
+  const assuntos = execFileSync('git', ['log', '--pretty=format:%s', range], {
     encoding: 'utf8',
   })
     .split('\n')
     .filter(Boolean);
 
-  // O squash carimba `(#NN)` no fim do assunto — é daí que sai o número.
-  const numeros = [...new Set(assuntos.flatMap((a) => [...a.matchAll(/\(#(\d+)\)\s*$/g)].map((m) => Number(m[1]))))];
+  const numeros = extrairNumerosDePr(assuntos);
 
-  const prs: PrDoCiclo[] = [];
+  const todosOsPrs: PrDoCiclo[] = [];
   for (const numero of numeros) {
     try {
       const json = execFileSync(
@@ -156,16 +160,24 @@ async function principal(): Promise<void> {
         { encoding: 'utf8' },
       );
       const { titulo, branch } = JSON.parse(json) as { titulo: string; branch: string };
-      prs.push({ numero, titulo, branch });
+      todosOsPrs.push({ numero, titulo, branch });
     } catch {
       // PR que não resolve entra como patch, com o assunto do commit. Melhor
       // subestimar o impacto e seguir do que travar a promoção — e o corpo do
       // PR mostra a função vazia, então dá para ver.
       const assunto = assuntos.find((a) => a.includes(`(#${numero})`)) ?? `PR #${numero}`;
-      prs.push({ numero, titulo: assunto, branch: '' });
+      todosOsPrs.push({ numero, titulo: assunto, branch: '' });
       console.log(`::warning::não consegui ler o PR #${numero} pela API; entrou como patch`);
     }
   }
+
+  // Promoção e retropropagação não são trabalho do ciclo — o que carregam já
+  // foi contado, ou já foi lançado.
+  const prs = semTrafegoDaEsteira(todosOsPrs);
+  console.log(
+    `[promote] ciclo desde ${ultimaFinal ?? 'o início'}: ` +
+      (prs.length > 0 ? prs.map((p) => `#${p.numero} (${p.branch})`).join(', ') : 'vazio'),
+  );
 
   // --- 4. a versão.
   let versao: string;
