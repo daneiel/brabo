@@ -2,6 +2,7 @@ packages:
   - apps/api
   - apps/web
   - packages/*
+  - website
 allowBuilds:
   '@swc/core': true
   esbuild: true
