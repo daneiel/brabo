@@ -58,8 +58,15 @@ jobs:
               echo "::notice::branch permanente '$b' não existe no remoto"
           done
           # De fork, o head não é alcançável por nome — só por refs/pull/N/head.
+          #
+          # O destino PRECISA do sufixo `/head`: `refs/remotes/pull/N` sozinho
+          # colide com o `refs/remotes/pull/N/merge` que o checkout já criou, e
+          # o git recusa o refstore inteiro com "some local refs could not be
+          # updated" — que derrubava o job antes de chegar na avaliação.
+          n='${{ github.event.pull_request.number }}'
           git fetch --no-tags --quiet origin \
-            "refs/pull/${{ github.event.pull_request.number }}/head:refs/remotes/pull/${{ github.event.pull_request.number }}"
+            "+refs/pull/$n/head:refs/remotes/pull/$n/head" \
+            || echo "::notice::não consegui buscar o head do PR — a checagem de origem sairá como NÃO VERIFICADA, nunca como aprovada"
 
       - name: Avaliar o PR
         id: policia
