@@ -7,6 +7,21 @@ packages:
   # este último é o que faz o Node 24 executar os `.ts` de scripts/ci/ direto,
   # sem build. Os `.mjs` ao lado não são afetados: `.mjs` é ESM sempre.
   - scripts
+# O `@nestjs/swagger@11.4.6` (Fase 7b) fixa `js-yaml` em `5.2.1` EXATO — não é
+# faixa, é pino. E a 5.2.1 carrega a GHSA-pm4m-ph32-ghv5 (HIGH): tempo de
+# parsing exponencial em flow collections, negação de serviço. Não existe
+# versão do `@nestjs/swagger` que aponte para a corrigida — a 11.4.6 é a última
+# publicada —, então o Trivy reprovaria o scan da imagem de produção enquanto o
+# upstream não se mexesse.
+#
+# O override é escopado à 5.2.1: a `4.x`, que dez outras transitivas usam, fica
+# intocada. A 5.2.2 é patch da mesma linha (só o fix do parser), e o
+# `@nestjs/swagger` usa o `js-yaml` apenas para serializar o documento em YAML.
+#
+# Some quando o upstream soltar uma versão que já aponte para a 5.2.2 ou acima.
+overrides:
+  js-yaml@5.2.1: 5.2.2
+
 allowBuilds:
   '@swc/core': true
   esbuild: true
