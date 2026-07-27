@@ -34,6 +34,12 @@ const SECOES = [
   ['test', 'Testes'],
   ['build', 'Build'],
   ['ci', 'CI'],
+  // `revert` NÃO é opcional nesta lista. Sem ele, um par plantar/reverter
+  // aparece pela metade: o changelog mostra o commit que introduziu algo e
+  // silencia o que o desfez. Aconteceu de verdade com o commit que plantou
+  // uma CVE para provar o gate de auditoria — publicado sozinho, ele descreve
+  // um repositório que nunca existiu.
+  ['revert', 'Revertidos'],
   ['chore', 'Manutenção'],
 ];
 
