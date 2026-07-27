@@ -1,0 +1,97 @@
+name: Bug
+description: Algo não funciona como deveria, com passos para reproduzir
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Antes de continuar: se o sintoma é **agente respondendo vazio,
+        truncado ou lentíssimo**, quase sempre é ambiente de inferência
+        (contexto truncado, modelo sem GPU, memória). Confira
+        [essa seção do runbook](https://github.com/daneiel/brabo/blob/dev/docs/runbook.md#ambiente-de-inferencia)
+        antes de abrir.
+
+  - type: checkboxes
+    id: duplicadas
+    attributes:
+      label: Verificação
+      options:
+        - label: Procurei nas issues existentes, incluindo as fechadas, e não achei esta
+          required: true
+
+  - type: input
+    id: versao
+    attributes:
+      label: Versão
+      description: A tag, ou o valor de `BRABO_VERSION`. Se estiver rodando de uma branch, o SHA do commit.
+      placeholder: v0.1.0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: ambiente
+    attributes:
+      label: Como está rodando
+      options:
+        - Compose de desenvolvimento (pnpm dev)
+        - Compose de produção (docker-compose.prod.yml)
+        - Kubernetes (make deploy-local)
+        - Kubernetes (staging ou produção)
+        - Outro
+    validations:
+      required: true
+
+  - type: dropdown
+    id: componente
+    attributes:
+      label: Onde aparece
+      options:
+        - api
+        - engine
+        - web
+        - Agente ou harness
+        - Deploy / infraestrutura
+        - Não sei
+    validations:
+      required: true
+
+  - type: textarea
+    id: passos
+    attributes:
+      label: Passos para reproduzir
+      description: Numerados. Se depender de um estado específico (projeto conectado ao GitHub, orçamento estourado), diga qual.
+      placeholder: |
+        1. Criar projeto com provider Local
+        2. Abrir sessão e mandar "..."
+        3. Aprovar a ação proposta
+    validations:
+      required: true
+
+  - type: textarea
+    id: esperado
+    attributes:
+      label: O que você esperava
+    validations:
+      required: true
+
+  - type: textarea
+    id: obtido
+    attributes:
+      label: O que aconteceu
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: |
+        `docker compose logs api engine`, ou `kubectl -n brabo logs`.
+        **Revise antes de colar** — não inclua token, chave de API nem `DATABASE_URL`.
+      render: shell
+
+  - type: input
+    id: modelo
+    attributes:
+      label: Modelo de LLM em uso
+      description: Se o bug envolve um agente. Ex.- `llama3.2:1b` no Ollama, ou o modelo de API.

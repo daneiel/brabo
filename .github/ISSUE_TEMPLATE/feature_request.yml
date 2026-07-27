@@ -1,0 +1,68 @@
+name: Funcionalidade
+description: Uma ideia ou pedido de mudança de comportamento
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Antes de escrever: vale conferir a seção
+        [o que provavelmente não aceito](https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md#o-que-provavelmente-não-aceito)
+        do CONTRIBUTING e o [índice de ADRs](https://github.com/daneiel/brabo/blob/dev/docs/adr/index.md).
+        Várias decisões (stack, ausência de Redis, pipeline de aprovação) já
+        estão tomadas com motivo registrado.
+
+  - type: checkboxes
+    id: duplicadas
+    attributes:
+      label: Verificação
+      options:
+        - label: Procurei nas issues existentes, incluindo as fechadas
+          required: true
+
+  - type: textarea
+    id: problema
+    attributes:
+      label: Que problema isso resolve
+      description: Descreva a **situação**, não a solução. Qual é o atrito hoje, e para quem?
+      placeholder: |
+        Hoje, quando ..., preciso ... porque ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposta
+    attributes:
+      label: O que você propõe
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternativas
+    attributes:
+      label: Alternativas que você considerou
+      description: Inclusive "não fazer nada" — às vezes é a resposta certa, e saber por que você a descartou ajuda.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: disposicao
+    attributes:
+      label: Você implementaria?
+      description: Separa ideia de contribuição. As duas são bem-vindas — a resposta só muda como a issue é priorizada.
+      options:
+        - "Sim, quero implementar se houver alinhamento"
+        - "Sim, com orientação sobre por onde começar"
+        - "Não, é uma sugestão"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: quebra
+    attributes:
+      label: Isto quebra comportamento existente?
+      options:
+        - "Não"
+        - "Sim"
+        - "Não sei"
+    validations:
+      required: true

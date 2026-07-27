@@ -1,0 +1,5 @@
+# TODO(humano): preencha o handle do Buy Me a Coffee e descomente a linha
+# abaixo. Deixei comentada de propósito: um handle errado renderiza um botão
+# "Sponsor" que leva a uma página inexistente, o que é pior que botão nenhum.
+#
+# buy_me_a_coffee: <seu-handle>
