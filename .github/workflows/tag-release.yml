@@ -1,0 +1,74 @@
+name: tag-release
+
+# Carimba a tag do estágio a cada merge numa permanente.
+# Fonte da política: docs/explanation/branching-policy.md
+#
+# NENHUM JOB DE DEPLOY. A tag é o produto final deste workflow e o registro do
+# que ESTARIA em cada estágio — vale mesmo sem ambiente. Quando houver deploy,
+# ele será um workflow próprio disparado pela tag, não um passo escondido aqui
+# atrás de uma variável desligada: passo que nunca roda é passo que apodrece.
+#
+# `push` e não `pull_request`: a tag nasce do commit que ENTROU na permanente,
+# depois do merge. É o único workflow do repositório que reage a push, e é por
+# isso que ele existe separado do `ci.yml`.
+on:
+  push:
+    branches:
+      - dev
+      - qa
+      - main
+
+permissions:
+  contents: write # criar tag
+
+concurrency:
+  # Sem cancelamento: cada merge precisa da sua tag. Cancelar o anterior
+  # deixaria um commit sem carimbo, e o N passaria a mentir.
+  group: tag-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  carimbar:
+    name: Tag do estágio
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # O cálculo lê TODAS as tags e o histórico desde a última final.
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.11.1
+
+      - name: Calcular a tag
+        id: calculo
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ github.ref_name }}
+          SHA: ${{ github.sha }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: node scripts/ci/tag-release.ts
+
+      - name: Criar a tag
+        if: steps.calculo.outputs.tag != ''
+        env:
+          TAG: ${{ steps.calculo.outputs.tag }}
+          MENSAGEM: ${{ steps.calculo.outputs.mensagem }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          git config user.name  'brabo-release[bot]'
+          git config user.email 'brabo-release[bot]@users.noreply.github.com'
+          git tag -a "$TAG" "$SHA" -m "$MENSAGEM"
+          git push origin "$TAG"
+          echo "::notice::tag $TAG criada em ${SHA::8}"
+          {
+            echo "### tag-release"
+            echo
+            echo "Tag **\`$TAG\`** criada em \`${SHA::8}\`."
+            echo
+            echo "$MENSAGEM"
+          } >> "$GITHUB_STEP_SUMMARY"

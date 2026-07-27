@@ -1,0 +1,66 @@
+name: approval-ladder
+
+# Exige as aprovações certas para cada degrau da escada.
+# Fonte da política: docs/explanation/branching-policy.md
+# A lógica vive em scripts/ci/approval-ladder.ts, testada por vitest.
+#
+# O pr-police diz se o PR está no LUGAR certo; este diz se ele tem as
+# APROVAÇÕES certas. Os dois não conversam de propósito: este NÃO lê a label
+# que o pr-police escreve. Se lesse, quem pudesse editar label mudaria o regime
+# de aprovação, e haveria corrida entre os dois workflows.
+#
+# `pull_request` e NÃO `pull_request_target`, ao contrário do pr-police: aqui o
+# job só LÊ reviews e não escreve label nenhuma, então o token read-only de um
+# PR de fork basta. Menos permissão, menos superfície.
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+  pull_request_review:
+    types: [submitted, edited, dismissed]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: approval-ladder-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  escada:
+    name: Escada de aprovação
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # ATENÇÃO: sem `if:` neste job, nunca. Status check é indexado por
+      # (sha, nome do check). Um job que se pule deixa o veredito antigo colado
+      # no sha, e a proteção de branch aceita — buraco silencioso.
+      #
+      # `synchronize` está nos gatilhos porque push novo INVALIDA os reviews
+      # anteriores: sem ele, uma aprovação de commit velho seguiria valendo.
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.11.1
+
+      - name: Avaliar a escada
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          PR_NUMERO: ${{ github.event.pull_request.number }}
+          PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_AUTOR: ${{ github.event.pull_request.user.login }}
+          # O modo e os aprovadores são VARIÁVEIS de repositório — trocar de
+          # solo para community é mudar isto aqui, sem tocar em código.
+          APPROVAL_MODE: ${{ vars.APPROVAL_MODE || 'solo' }}
+          OWNER_HANDLE: ${{ vars.OWNER_HANDLE }}
+          APROVADORES_DEVS: ${{ vars.APROVADORES_DEVS }}
+          APROVADORES_QUALIDADE: ${{ vars.APROVADORES_QUALIDADE }}
+          APROVADORES_PO: ${{ vars.APROVADORES_PO }}
+          APROVADORES_GESTAO: ${{ vars.APROVADORES_GESTAO }}
+        run: node scripts/ci/approval-ladder.ts

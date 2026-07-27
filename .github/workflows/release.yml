@@ -4,10 +4,17 @@ name: Release
 # publicar uma versão é do usuário, e uma tag é o registro explícito dessa
 # decisão. O CLAUDE.md já trata merge em branch protegida como ato manual; a
 # release segue a mesma regra.
+# SÓ tag FINAL. O padrão `v[0-9]+.[0-9]+.[0-9]+` não casa com sufixo de
+# pré-lançamento, então `v0.2.0-qa.1` e `v0.2.0-dev.3` não disparam nada.
+#
+# Antes era `v*`, e isso quebraria assim que a esteira da FASE 6 começasse a
+# carimbar: as tags de estágio nascem a cada merge, e cada uma dispararia uma
+# tentativa de publicar release — falhando na conferência de versão, porque
+# `0.2.0-qa.1` nunca vai bater com o `0.2.0` declarado nos arquivos.
 on:
   push:
     tags:
-      - 'v*'
+      - 'v[0-9]+.[0-9]+.[0-9]+'
 
 permissions:
   contents: write # criar a GitHub Release
@@ -51,12 +58,18 @@ jobs:
           versao="${GITHUB_REF_NAME#v}"
           echo "tag: ${GITHUB_REF_NAME} -> versão ${versao}"
 
-          erros=0
+          # AVISO, não reprovação: desde a FASE 6 a versão é CALCULADA e vive
+          # na tag. Ninguém pode commitar direto numa permanente para bumpar
+          # `package.json`, então exigir que os arquivos acompanhem obrigaria a
+          # um PR de bump por ciclo — cerimônia que o cálculo automático existe
+          # para eliminar. Os arquivos viram metadado, e a divergência fica
+          # visível no log em vez de travar a publicação.
+          divergentes=0
           conferir() {
             local arquivo="$1" encontrado="$2"
             if [ "${encontrado}" != "${versao}" ]; then
-              echo "::error file=${arquivo}::declara ${encontrado}, mas a tag é ${versao}"
-              erros=$((erros + 1))
+              echo "::warning file=${arquivo}::declara ${encontrado}, mas a tag é ${versao}"
+              divergentes=$((divergentes + 1))
             else
               echo "ok: ${arquivo} = ${encontrado}"
             fi
@@ -67,7 +80,9 @@ jobs:
           conferir apps/web/package.json  "$(node -p "require('./apps/web/package.json').version")"
           conferir apps/engine/mix.exs    "$(grep -oP 'version:\s*"\K[^"]+' apps/engine/mix.exs | head -1)"
 
-          [ "${erros}" -eq 0 ] || exit 1
+          if [ "${divergentes}" -gt 0 ]; then
+            echo "::notice::${divergentes} arquivo(s) com versão diferente da tag — a fonte de verdade é a TAG."
+          fi
 
       - name: Gerar o changelog desta versão
         run: |

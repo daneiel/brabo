@@ -60,6 +60,7 @@ const sidebars: SidebarsConfig = {
         'reference/git-providers',
         'reference/internal-api',
         'reference/scripts',
+        'reference/rulesets',
         'security-surface',
       ],
     },
@@ -67,7 +68,7 @@ const sidebars: SidebarsConfig = {
       type: 'category',
       label: '💡 Explicação',
       collapsed: false,
-      items: ['explanation/documentation-workflow'],
+      items: ['explanation/documentation-workflow', 'explanation/branching-policy'],
     },
     {
       type: 'category',

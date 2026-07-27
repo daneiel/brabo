@@ -6,16 +6,30 @@ name: CI
 # Este workflow é o que a proteção da branch `dev` deve exigir — a configuração
 # está documentada em docs/adr/0024, e aplicá-la é passo MANUAL do usuário nas
 # settings do GitHub (hoje bloqueado pelo plano do repo, ver o ADR).
+# Só `pull_request`, sem `push`.
+#
+# Antes, `push` na branch de trabalho e `pull_request` para a permanente
+# disparavam os DOIS — todo job rodava duas vezes por PR, incluindo os ~5,5 min
+# do build de imagens: 11 minutos gastos para produzir o mesmo veredito duas
+# vezes.
+#
+# Nada se perde em cobertura: a política exige PR para toda mudança, e PR em
+# rascunho já dispara `opened` e `synchronize`. Quem quer CI antes de pedir
+# review abre o PR como rascunho.
+#
+# O gatilho cobre a escada inteira (dev, qa, main). Enquanto filtrava só `dev`,
+# um PR de promoção não rodava CI nenhum — e exigir estes checks nas
+# permanentes travaria o PR para sempre, porque o check exigido nunca
+# apareceria.
 on:
-  push:
-    branches:
-      - 'feature/**'
   pull_request:
     branches:
       - dev
+      - qa
+      - main
 
-# Push seguido de push na mesma branch cancela a execução anterior: o que
-# importa é o resultado do HEAD.
+# Push seguido de push no mesmo PR cancela a execução anterior: o que importa
+# é o resultado do HEAD.
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -146,6 +160,16 @@ jobs:
 
       - name: Testes do web
         run: pnpm --filter web test
+
+      # Os scripts de CI são lógica pura, sem banco — mas rodam no mesmo job
+      # porque compartilham o `pnpm install` acima.
+      - name: Testes dos scripts de CI
+        run: pnpm --filter @brabo/scripts test
+
+      # O Node executa os `.ts` de scripts/ci/ por type stripping, que APAGA os
+      # tipos sem verificá-los. Sem este passo, a anotação seria enfeite.
+      - name: Typecheck dos scripts de CI
+        run: pnpm --filter @brabo/scripts typecheck
 
   test-engine:
     name: Testes do engine (ExUnit)

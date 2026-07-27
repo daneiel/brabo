@@ -3,6 +3,10 @@ packages:
   - apps/web
   - packages/*
   - website
+  # scripts/ é pacote do workspace só para carregar vitest e `type: module` —
+  # este último é o que faz o Node 24 executar os `.ts` de scripts/ci/ direto,
+  # sem build. Os `.mjs` ao lado não são afetados: `.mjs` é ESM sempre.
+  - scripts
 allowBuilds:
   '@swc/core': true
   esbuild: true

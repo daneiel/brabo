@@ -1,0 +1,50 @@
+name: promotion-check
+
+# Confere o ESTADO do repositório num PR de promoção.
+# Fonte da política: docs/explanation/branching-policy.md
+#
+# Workflow separado do `pr-police` de propósito: aquele valida a FORMA do PR
+# (nome, origem, destino) e este valida o ESTADO (range, tag do degrau de
+# baixo, método de merge). Juntos, um check reprovaria por dois motivos sem
+# relação, e quem lesse o veredito teria que adivinhar qual.
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, edited]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: promotion-check-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  conferir:
+    name: Check de promoção
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # Sem `if:` no JOB — check required indexado por sha que não roda deixa
+      # veredito velho colado. O filtro de "é promoção?" acontece DENTRO, com
+      # saída explícita, para que o check sempre exista e sempre se pronuncie.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Conferir a promoção
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_MESMO_REPO: ${{ github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          for b in dev qa main; do
+            git fetch --no-tags --quiet origin "+refs/heads/$b:refs/remotes/origin/$b" || \
+              echo "::notice::branch permanente '$b' não existe no remoto"
+          done
+          git fetch --tags --quiet origin || true
+          node scripts/ci/promotion-check.ts
