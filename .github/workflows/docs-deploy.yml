@@ -1,13 +1,16 @@
 name: Documentação
 
-# Duas coisas diferentes num arquivo só:
-#   - em PR, BUILD sem deploy — pega link quebrado e erro de MDX antes do merge
-#   - em push na main, build + deploy — doc publicada acompanha release
+# Build + deploy, só no merge em `main`.
+#
+# Este workflow JÁ TEVE gatilho de `pull_request`, para pegar link quebrado
+# antes do merge. Era build duplicado: o `docs-check.yml` roda `pnpm docs:build`
+# em TODO PR — sem filtro de path — e é ele que está na lista de checks
+# required. Dois builds do mesmo site por PR, com o mesmo veredito.
+#
+# A validação de PR mora lá; aqui mora a publicação. Um propósito por gatilho.
 on:
   push:
     branches: [main]
-    paths: ['docs/**', 'website/**', '.github/workflows/docs-deploy.yml']
-  pull_request:
     paths: ['docs/**', 'website/**', '.github/workflows/docs-deploy.yml']
 
 permissions:
@@ -51,14 +54,12 @@ jobs:
       - run: pnpm docs:build
 
       - name: Publicar artefato
-        if: github.event_name == 'push'
         uses: actions/upload-pages-artifact@v3
         with:
           path: website/build
 
   deploy:
     name: Publicar no GitHub Pages
-    if: github.event_name == 'push'
     needs: build
     runs-on: ubuntu-latest
 

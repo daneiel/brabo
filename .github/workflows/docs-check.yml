@@ -59,8 +59,21 @@ jobs:
           PR_LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
         run: node scripts/docs/drift.mjs "origin/${{ github.base_ref }}...HEAD"
 
+      - name: Cache do Rspack
+        uses: actions/cache@v4
+        with:
+          path: website/node_modules/.cache
+          key: rspack-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('docs/**') }}
+          restore-keys: |
+            rspack-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+            rspack-${{ runner.os }}-
+
       # onBrokenLinks / onBrokenAnchors / onBrokenMarkdownLinks são 'throw':
       # link quebrado e MDX inválido reprovam aqui, não viram 404 em produção.
+      #
+      # Este é o ÚNICO build de site em PR. O `docs-deploy.yml` fazia o mesmo e
+      # perdeu o gatilho de `pull_request`: mesmo comando, mesmo veredito, duas
+      # vezes. Ao mexer aqui, lembre que a publicação depende deste build passar.
       - name: Build do site
         run: pnpm docs:build
 
