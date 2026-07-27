@@ -17,3 +17,6 @@ ds-bundle/
 .design-sync/learnings/
 .design-sync/node_modules
 apps/web/types/
+
+# Artefato do workflow de promoção (gerado por scripts/ci/promote.ts)
+corpo-da-promocao.md

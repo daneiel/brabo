@@ -148,6 +148,10 @@ rules:
     watch:
       - ".github/workflows/pr-police.yml"
       - ".github/workflows/approval-ladder.yml"
+      - ".github/workflows/promote.yml"
+      - ".github/workflows/promotion-check.yml"
+      - ".github/workflows/tag-release.yml"
+      - ".github/workflows/release.yml"
       - "scripts/ci/**"
     docs:
       - "docs/explanation/branching-policy.md"

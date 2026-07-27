@@ -261,22 +261,96 @@ vereditos diferentes.
 > esta seção passa a ser a fonte. As duas servem; a que não serve é o critério
 > não existir em lugar nenhum quando o primeiro contribuidor externo aparecer.
 
+## Promoção
+
+Código sobe de degrau por **PR de promoção**, aberto pelo workflow `promote`
+(`workflow_dispatch`, entrada: o par da esteira).
+
+O workflow **não mergeia nada** — ele calcula e abre o PR. O merge continua
+sendo ato manual, como toda entrada em permanente.
+
+| passo | o quê |
+|---|---|
+| 1 | **quem dispara** — em `APPROVAL_MODE=solo`, só o `OWNER_HANDLE`. Outro ator falha nomeando quem pode |
+| 2 | **par adjacente** — `dev→qa` e `qa→main`. `dev→main` é recusado com o caminho em etapas |
+| 3 | **versão do ciclo** — calculada dos PRs mergeados desde a última tag final |
+| 4 | **PR aberto** — corpo listando cada PR, sua função, seu impacto e a versão proposta |
+
+### O check de promoção
+
+Um PR de promoção passa por um check próprio, separado do `pr-police`. Aquele
+valida a **forma** (nome, origem, destino); este valida o **estado**:
+
+| conferência | por quê |
+|---|---|
+| **range limpo** | o head do PR é o tip da branch de origem. Se alguém empurrou algo depois de o PR abrir, o que seria promovido não é o que está lá |
+| **degrau anterior carimbado** | o commit tem a tag do estágio de baixo. Promover sem ela é promover algo que nunca passou por lá |
+| **merge commit possível** | promoção é `--no-ff`. Squash achataria os commits do degrau de baixo, e a tag do estágio passaria a apontar para um commit que não existe mais |
+
+Verificação que **não pôde ser feita** conta como reprovada, nunca como
+aprovada — uma ref que não resolve é ignorância, não permissão.
+
 ## Versionamento
 
-Toda tag nasce de workflow, no formato
-`vX.Y.Z-dev.N` / `-qa.N` / final.
+Toda tag nasce de workflow, no formato `vX.Y.Z-dev.N` / `-qa.N` / final.
 
-A versão do ciclo sai do **maior impacto** entre os PRs mergeados —
-`breaking` leva a MAJOR, `feature` a MINOR, o resto a PATCH. O `N` incrementa a
-cada reprovação dentro do mesmo ciclo, o que torna visível quantas voltas um
-release deu antes de passar.
+**A versão vive na TAG, não nos arquivos.** Ninguém pode commitar direto numa
+permanente para bumpar `package.json`, então exigir que os quatro arquivos de
+versão acompanhem obrigaria a um PR de bump por ciclo — cerimônia que o cálculo
+automático existe para eliminar. O `release.yml` confere os arquivos como
+**aviso** e só dispara em tag final.
 
-A tag final **precisa apontar para o mesmo commit da última `-qa.N`**. Se não
-apontar, algo entrou entre a validação e a publicação, e o workflow falha
-ruidosamente em vez de publicar. Com a saída do degrau `rc`, `qa` é o último
-ponto de verificação antes de produção, e a âncora passou a ser ele.
+### A versão do ciclo
 
-Os mecanismos disso são os itens 4 e 5 da FASE 6, ainda não implementados.
+Sai do **maior impacto** entre os PRs mergeados desde a última final:
+
+| função da branch | impacto |
+|---|---|
+| `breaking/` | MAJOR |
+| `feature/` | MINOR |
+| todo o resto | PATCH |
+
+Um `breaking` no meio de dez `docs` faz o ciclo inteiro ser MAJOR. E é a
+**função da branch** que decide, não a label de família: `breaking/x` e
+`docs/y` são ambos da família `trabalho`.
+
+Ciclo **vazio** — nenhum PR desde a última final — falha com mensagem em vez de
+gerar tag. Tag nova apontando para o mesmo commit da anterior faz o histórico
+de versões mentir.
+
+### O `N`
+
+`N` é quantas tags daquela versão já existem naquele estágio, mais um.
+
+Não há estado guardado em lugar nenhum: **as próprias tags são o contador**. É
+o que faz "promoveu, reprovou, corrigiu, repromoveu" virar `-qa.2` sem ninguém
+anotar a reprovação — e o número passa a dizer quantas voltas o ciclo deu antes
+de passar.
+
+### A âncora da tag final
+
+A tag final **só nasce no commit da última `-qa.N`** daquela versão. Se o
+commit de `main` for outro, o workflow falha ruidosamente em vez de publicar.
+
+É a verificação que impede publicar algo diferente do que foi validado. Sem
+ela, um commit que entrasse em `main` entre a validação e a publicação sairia
+com o carimbo de aprovado.
+
+### Não há deploy
+
+Os workflows **terminam na tag**. Não há ambiente, não há GitHub Environments,
+não há passo de deploy — nem desligado. A tag é o registro do que *estaria* em
+cada estágio, e vale por si.
+
+Um passo de deploy que nunca roda é um passo que apodrece: ninguém o testa,
+ninguém percebe quando quebra, e no dia em que for ligado estará errado. Quando
+houver ambiente, o deploy será um workflow próprio disparado **pela tag**.
+
+Para olhar com os próprios olhos o que uma tag carimbou:
+
+```bash
+make deploy-local TAG=v0.2.0-qa.1
+```
 
 ## O que a política não resolve
 

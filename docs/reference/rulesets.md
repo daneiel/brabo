@@ -113,6 +113,7 @@ workflow):
 |---|---|
 | `Política de branches` | `pr-police.yml` |
 | `Escada de aprovação` | `approval-ladder.yml` |
+| `Check de promoção` | `promotion-check.yml` |
 | `Lint` | `ci.yml` |
 | `Testes TS (api + web)` | `ci.yml` |
 | `Testes do engine (ExUnit)` | `ci.yml` |
@@ -158,6 +159,9 @@ abaixo, e ela é do bot — não de pessoa.
 | **Restrict creations** | ✅ |
 | **Restrict updates** | ✅ |
 | **Restrict deletions** | ✅ |
+
+O padrão `v*` cobre as três formas que a esteira cria: `-dev.N`, `-qa.N` e a
+final. Só o `tag-release` pode criá-las.
 
 ### Bypass
 
