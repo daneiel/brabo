@@ -25,10 +25,17 @@ e pipeline de aprovação de ações com autoridade final do usuário.
   Psicólogo real com hipóteses evidenciadas e Anamnese com
   proficiency_profile, instruction_patches versionados com rollback e
   loop fechado com o Psicólogo.
-- Não refatore o que está pronto sem pedido explícito; a Fase 5
-  PREPARA essas fundações para produção.
+- FASE 5 — CONCLUÍDA: imagens de produção non-root e CI (ADR 0024);
+  deploy Kubernetes com Kustomize, HPA por fila do Oban, NetworkPolicies
+  e secrets via ESO (ADR 0025); graceful shutdown com handoff de sessão,
+  OpenTelemetry ponta a ponta, métricas e dashboards (ADR 0026); backup
+  agendado com restore TESTADO (`make test-restore`), runbooks
+  operacionais, hardening da api (rate limit, CORS estrito, helmet,
+  auditoria de dependências) e superfície exposta verificada por teste
+  (ADR 0027).
+- Não refatore o que está pronto sem pedido explícito.
 
-## Escopo da FASE 5 (ativa — não implemente nada além disso)
+## Escopo da FASE 5 (CONCLUÍDA — mantido como registro do que foi entregue)
 1. Imagens de produção multi-stage para api, engine e web (web via
    nginx com config SPA); rtk, semgrep, gitleaks e hadolint na imagem
    do engine; imagens non-root, read-only fs onde possível.

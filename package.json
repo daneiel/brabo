@@ -1,7 +1,7 @@
 {
   "name": "brabo",
   "private": true,
-  "version": "0.0.1",
+  "version": "0.1.0",
   "packageManager": "pnpm@11.3.0",
   "scripts": {
     "dev": "docker compose -f docker/docker-compose.yml --env-file .env up",

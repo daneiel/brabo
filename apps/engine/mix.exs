@@ -94,7 +94,15 @@ defmodule Engine.MixProject do
       {:opentelemetry_ecto, "~> 1.2"},
       {:opentelemetry_oban, "~> 1.1"},
       {:opentelemetry_bandit, "~> 0.2"},
-      {:opentelemetry_phoenix, "~> 2.0"}
+      {:opentelemetry_phoenix, "~> 2.0"},
+      # Auditoria de dependências no CI (Fase 5, item 7).
+      #
+      # `mix hex.audit`, que vem com o Hex, reporta pacote APOSENTADO (retired)
+      # — não vulnerabilidade. Sozinho, o gate do engine seria decorativo:
+      # nenhuma CVE reprovaria o build. O mix_audit lê a base de advisories de
+      # segurança do Elixir e é o que de fato detecta CVE em dependência.
+      # Os dois rodam no job `audit`; são perguntas diferentes.
+      {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false}
     ]
   end
 
