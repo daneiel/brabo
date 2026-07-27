@@ -17,10 +17,11 @@ Fonte: os `package.json` de cada pacote e o `Makefile` da raiz.
 
 | comando | executa |
 |---|---|
-| `pnpm dev` | `docker compose -f docker/docker-compose.yml --env-file .env up` |
-| `pnpm dev:build` | `docker compose -f docker/docker-compose.yml --env-file .env up --build` |
+| `pnpm dev` | `node scripts/dev/preflight.mjs && docker compose -f docker/docker-compose.yml --env-file .env up` |
+| `pnpm dev:build` | `node scripts/dev/preflight.mjs && docker compose -f docker/docker-compose.yml --env-file .env up --build` |
 | `pnpm dev:down` | `docker compose -f docker/docker-compose.yml --env-file .env down` |
-| `pnpm dev:gpu` | `docker compose -f docker/docker-compose.yml -f docker/docker-compose.gpu.yml --env-file .env up` |
+| `pnpm dev:gpu` | `node scripts/dev/preflight.mjs && docker compose -f docker/docker-compose.yml -f docker/docker-compose.gpu.yml --env-file .env up` |
+| `pnpm dev:preflight` | `node scripts/dev/preflight.mjs` |
 | `pnpm dev:api` | `pnpm --filter api start:dev` |
 | `pnpm dev:web` | `pnpm --filter web dev` |
 | `pnpm build` | `pnpm --filter api build && pnpm --filter web build` |
@@ -114,4 +115,4 @@ Fonte: os `package.json` de cada pacote e o `Makefile` da raiz.
 
 ---
 
-69 comandos no total. Alvo do Makefile sem anotação `## descrição` não aparece aqui — anote na fonte.
+70 comandos no total. Alvo do Makefile sem anotação `## descrição` não aparece aqui — anote na fonte.

@@ -63,6 +63,19 @@ Ao fim: web em <http://localhost:8088>, api em `:3000`, engine em `:4000`,
 Keycloak em `:8080` — **as mesmas portas do `docker-compose.prod.yml`**, de
 propósito (ADR 0025, decisão 10). Login `admin` / `admin123`.
 
+> **Isto ocupa as portas do `pnpm dev`.** Manter as portas iguais é o que faz o
+> `smoke.sh` e o realm valerem nos dois modos, e o preço é que eles não
+> coexistem: com o cluster de pé, o `pnpm dev` não publica a porta do `api` e a
+> **5173 nunca abre**. Repare que o web muda de porta entre os modos — 8088
+> aqui, 5173 lá. Para voltar ao desenvolvimento:
+>
+> ```bash
+> make k8s-down && pnpm dev
+> ```
+>
+> `pnpm dev:preflight` diz em qual modo você está, sem adivinhação. Os dois
+> estão na [Primeiros passos](getting-started.md#os-dois-modos-locais-não-coexistem).
+
 Outros alvos:
 
 ```bash
