@@ -22,7 +22,7 @@ defmodule EngineWeb.ForceSslExclusions do
   `x-forwarded-proto: https` — então `force_ssl` aqui não protege nada e
   **quebra tudo**: a ativação de sessão virava um 301 para `https://localhost`.
   A proteção dessas rotas é outra: token de client credentials
-  (`VerifyApiToken`), NetworkPolicy, e bloqueio na borda pelo Ingress de
+  (`VerifyServiceToken`), NetworkPolicy, e bloqueio na borda pelo Ingress de
   produção.
 
   Este defeito viveu desde a sessão 2 sem ninguém ver, porque nenhum smoke

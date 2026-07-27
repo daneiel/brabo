@@ -18,7 +18,6 @@ defmodule Engine.Application do
       {Phoenix.PubSub, name: Engine.PubSub},
       {Task.Supervisor, name: Engine.TaskSupervisor},
       {Oban, Application.fetch_env!(:engine, Oban)},
-      {Engine.Auth.JwksStrategy, should_start: jwks_strategy_should_start?()},
       {Registry, keys: :unique, name: Engine.Sessions.Registry},
       # Dev agents (Fase 4a) — chave {project_id, agent_id}.
       {Registry, keys: :unique, name: Engine.Dev.Registry},
@@ -74,11 +73,6 @@ defmodule Engine.Application do
     result
   end
 
-  # Desligado em teste (config :engine, jwks_strategy_should_start?: false)
-  # — evita bater no Keycloak de verdade durante a suite.
-  defp jwks_strategy_should_start? do
-    Application.get_env(:engine, :jwks_strategy_should_start?, true)
-  end
 
   # Desligável em teste (config :engine, start_outbox_drain?: false) — os
   # testes chamam Engine.Outbox.Drain.run_once/0 direto, sem depender do

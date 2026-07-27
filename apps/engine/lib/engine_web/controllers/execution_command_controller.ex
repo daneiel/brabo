@@ -2,7 +2,7 @@ defmodule EngineWeb.ExecutionCommandController do
   @moduledoc """
   Comandos síncronos da api pra fase de execução (Fase 4a): subir os
   DevAgentServers (um por módulo) e aceitar a paralelização (subagente extra).
-  Guardado por VerifyApiToken.
+  Guardado por VerifyServiceToken.
   """
 
   use EngineWeb, :controller

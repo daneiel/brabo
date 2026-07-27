@@ -3,7 +3,7 @@ defmodule EngineWeb.MetricsController do
   Endpoint de scrape do Prometheus (Fase 5, item 3).
 
   Fica fora do pipeline `:internal` porque o Prometheus não carrega token do
-  Keycloak — quem restringe o acesso é a NetworkPolicy, que só libera a porta
+  segredo de serviço — quem restringe o acesso é a NetworkPolicy, que só libera a porta
   4000 deste path para o namespace de monitoramento. Servir métrica sem
   autenticação numa rede sem política seria vazamento de topologia; com a
   política, o alcance é o mesmo de um `ClusterRole` de scrape.
