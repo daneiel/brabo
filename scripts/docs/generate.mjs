@@ -79,7 +79,6 @@ function escrever(rel, conteudo) {
   console.log(`  ${atual === null ? 'criado   ' : 'atualizado'} ${rel}`);
 }
 
-/** Substitui o conteúdo entre os marcadores, preservando o resto do arquivo. */
 /** O documento sem o bloco gerado `id` — o que a PROSA de fato diz. */
 function semBlocoGerado(doc, id) {
   const i = doc.indexOf(`<!-- BEGIN:GENERATED:${id} -->`);
@@ -87,6 +86,7 @@ function semBlocoGerado(doc, id) {
   return i === -1 || f === -1 ? doc : doc.slice(0, i) + doc.slice(f);
 }
 
+/** Substitui o conteúdo entre os marcadores, preservando o resto do arquivo. */
 function escreverBloco(rel, id, corpo) {
   const inicio = `<!-- BEGIN:GENERATED:${id} -->`;
   const fim = `<!-- END:GENERATED:${id} -->`;
@@ -285,7 +285,34 @@ const PREFIXOS_DE_EVENTO = [
   'infra', 'pr', 'architecture', 'llm', 'tool', 'event',
 ];
 
-// ----------------------------------------------------------- 4. índice de ADR
+
+// ------------------------------------------- 4. documento OpenAPI da api
+
+/**
+ * Exporta o OpenAPI da api para `docs/reference/api/openapi.json`.
+ *
+ * O JSON vem pelo STDOUT de `apps/api/src/scripts/export-openapi.ts` e quem
+ * grava é o `escrever()` daqui. Essa divisão é o que dá o `--check` de graça:
+ * mudou um `@ApiProperty` e ninguém regerou, o arquivo commitado difere e o
+ * `docs-check.yml` reprova. Se o script da api gravasse sozinho, o modo check
+ * teria de reimplementar a comparação — e passaria a MEXER no working tree,
+ * que é justamente o que ele promete não fazer.
+ *
+ * Sobe o `AppModule` inteiro, mas **não precisa de Postgres**: o `Pool` do
+ * `pg` é preguiçoso e nada consulta o banco de forma bloqueante no boot. É
+ * isso que permite este passo rodar no `docs-check.yml`, que não tem service
+ * container.
+ */
+function gerarOpenapi() {
+  const json = execFileSync(
+    'pnpm',
+    ['--filter', 'api', 'exec', 'ts-node', 'src/scripts/export-openapi.ts'],
+    { cwd: RAIZ, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 },
+  );
+  escrever('docs/reference/api/openapi.json', json);
+}
+
+// ----------------------------------------------------------- 5. índice de ADR
 
 /**
  * NÃO gera o índice: ele tem uma linha curada por ADR, que nenhum script
@@ -375,6 +402,7 @@ console.log(CHECAR ? '[docs:generate] verificando…' : '[docs:generate] gerando
 gerarScripts();
 gerarEnv();
 gerarEventos();
+gerarOpenapi();
 verificarIndiceAdr();
 verificarContagensDeAdr();
 
