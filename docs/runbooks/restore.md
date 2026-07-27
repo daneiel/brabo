@@ -142,16 +142,16 @@ kubectl -n brabo rollout restart deployment/api deployment/engine
 Saída:
 
 ```
-[restore]   ok    dump íntegro (107980 bytes)
+[restore]   ok    dump íntegro (108127 bytes)
 [restore] restaurando em brabo_restore_test
 [restore]   ok    pg_restore concluído
 [restore]   ok    35 tabelas restauradas, idênticas à origem
 [restore]   ok    users: 2 linhas (janela 2–2)
 [restore]   ok    projects: 2 linhas (janela 2–2)
 [restore]   ok    sessions: 2 linhas (janela 2–2)
-[restore]   ok    session_events: 3 linhas (janela 3–3)
+[restore]   ok    session_events: 7 linhas (janela 7–7)
 [restore]   ok    proposed_actions: 0 linhas (janela 0–0)
-[restore]   ok    event log íntegro: 3 eventos em 1 sessões, seq densa a partir de 1
+[restore]   ok    event log íntegro: 7 eventos em 2 sessões, seq densa a partir de 1
 [restore] RESTORE VALIDADO — todas as verificações passaram
 ```
 
@@ -170,3 +170,7 @@ dump representativo antes de prometer RTO a alguém.
 3. **Contagem fixa de tabelas envelhece.** A validação comparava com um número
    escrito no script, que ficou desatualizado na mesma sessão. Agora compara a
    LISTA de tabelas contra a origem e diz qual falta.
+4. **A imagem de backup carregava 48 CVEs HIGH/CRITICAL** vindas do `mc` (Go
+   congelado desde setembro/2025) e do `gosu` da base `postgres:16-alpine`.
+   Trocada por `alpine` + `postgresql16-client` + `aws-cli`, tudo do apk e
+   portanto patchável: 48 → 0. Ver a decisão 1b do ADR 0027.

@@ -16,10 +16,37 @@ versionamento.
 
 ### 1. Retenção do backup por CONTAGEM, não por idade
 
-`mc rm --older-than 7d` (ou uma regra de lifecycle no bucket) apaga backup bom
-quando o CronJob passa dias sem rodar — exatamente a situação em que ele mais
-importa. Manter os N mais recentes degrada bem: sem execução nova, nada é
-apagado. `BACKUP_KEEP_DAILY=7` e `BACKUP_KEEP_WEEKLY=4`.
+Apagar por idade (`--older-than 7d`, ou uma regra de lifecycle no bucket) apaga
+backup bom quando o CronJob passa dias sem rodar — exatamente a situação em que
+ele mais importa. Manter os N mais recentes degrada bem: sem execução nova, nada
+é apagado. `BACKUP_KEEP_DAILY=7` e `BACKUP_KEEP_WEEKLY=4`.
+
+### 1b. Imagem de backup: Alpine + `aws-cli` do apk, não `postgres:16-alpine` + `mc`
+
+A primeira versão usava `postgres:16-alpine` com o `mc` (cliente do MinIO),
+justificado por ser um binário estático único, sem arrastar runtime Python. O
+trivy do CI reprovou com **48 achados HIGH/CRITICAL corrigíveis**, e nenhum
+corrigível por nós:
+
+- 33 do binário do `mc`: Go estático, com CVEs da stdlib embutida. O último
+  release do mc é de setembro/2025 — o projeto parou, e sem release novo não há
+  patch;
+- 15 do `gosu`, que a imagem `postgres` traz para trocar de usuário no
+  entrypoint — recurso que esta imagem nem usa, porque roda direto como non-root.
+
+Os dois casos cabiam no `.trivyignore.yaml`, mas a convenção daquele arquivo
+exige `expired_at` justamente para a dívida reaparecer e ser paga. Aqui ela
+**nunca poderia ser paga**: o resultado seria um gate permanentemente vermelho
+numa imagem que carrega credencial de leitura do banco inteiro.
+
+Trocamos por `alpine` + `postgresql16-client` + `aws-cli` + `jq`, todos do apk e
+portanto atualizados pelo `apk upgrade` a cada rebuild. **Medido: 48 → 0.** O
+runtime Python que era o argumento contra o aws-cli custa alguns MB; o scan
+mostrou que o custo real estava do outro lado.
+
+A tag da base fica presa à MAJOR do Postgres (`postgresql16-client` existe no
+Alpine 3.20): subir uma sem a outra reintroduz o "server version mismatch" da
+decisão 4.
 
 ### 2. Métrica de backup vem de uma TABELA, não de um Pushgateway
 
