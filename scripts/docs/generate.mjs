@@ -291,6 +291,70 @@ function verificarIndiceAdr() {
   }
 }
 
+/**
+ * As contagens de ADR escritas em prosa.
+ *
+ * Elas não são geráveis — moram no meio de frases — mas são VERIFICÁVEIS, e
+ * é essa a diferença que o ADR 0029 chama de `gerar > verificar > lembrar`.
+ * Sem isto elas envelhecem em silêncio: encontradas no site com "28 deles" e
+ * "as 29 decisões" quando já eram 30, e "o próximo é 0030" com o 0030 pronto.
+ *
+ * Padrão que não casa também REPROVA. Um check cuja regex parou de encontrar
+ * a frase é pior que check nenhum: ele fica verde para sempre dizendo que
+ * conferiu algo que não olhou.
+ */
+function verificarContagensDeAdr() {
+  const numeros = arquivos('docs/adr/[0-9]*.md')
+    .map((f) => Number(f.replace('docs/adr/', '').slice(0, 4)))
+    .filter((n) => Number.isFinite(n));
+
+  const total = String(numeros.length);
+  const proximo = String(Math.max(...numeros) + 1).padStart(4, '0');
+
+  const afericoes = [
+    {
+      arquivo: 'docs/adr/index.md',
+      padrao: /o próximo é \*\*(\d{4})\*\*/,
+      esperado: proximo,
+      oque: 'o próximo número de ADR',
+    },
+    {
+      arquivo: 'docs/architecture.md',
+      padrao: /\[ADRs\]\([^)]*\) — (\d+) deles/,
+      esperado: total,
+      oque: 'a contagem de ADRs',
+    },
+    {
+      arquivo: 'README.md',
+      padrao: /as (\d+) decisões e o porquê/,
+      esperado: total,
+      oque: 'a contagem de ADRs',
+    },
+  ];
+
+  let problemas = 0;
+  for (const { arquivo, padrao, esperado, oque } of afericoes) {
+    const achado = padrao.exec(ler(arquivo));
+
+    if (achado === null) {
+      problemas++;
+      console.log(
+        `  CEGO      ${arquivo} — não achei ${oque}. A frase mudou, e o check\n` +
+          `            deixou de conferir. Ajuste o padrão em generate.mjs.`,
+      );
+      continue;
+    }
+
+    if (achado[1] !== esperado) {
+      problemas++;
+      console.log(`  DESATUAL. ${arquivo} — ${oque}: diz ${achado[1]}, são ${esperado}.`);
+    }
+  }
+
+  if (problemas > 0) pendencias.push('contagens de ADR');
+  else console.log(`  ok        contagens de ADR (${total} ADRs, próximo ${proximo})`);
+}
+
 // ------------------------------------------------------------------- main
 
 console.log(CHECAR ? '[docs:generate] verificando…' : '[docs:generate] gerando…');
@@ -298,6 +362,7 @@ gerarScripts();
 gerarEnv();
 gerarEventos();
 verificarIndiceAdr();
+verificarContagensDeAdr();
 
 if (CHECAR && pendencias.length > 0) {
   console.error(

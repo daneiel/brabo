@@ -30,6 +30,25 @@ Três níveis, em ordem decrescente de confiabilidade:
 O último nível é o mais fraco, e por isso é o último recurso. Um aviso que
 ninguém lê não protege nada.
 
+### Número em prosa é caso de *verificar*
+
+Um número no meio de uma frase — "os 30 ADRs", "o próximo é `0031`" — não é
+gerável: ele mora dentro do texto, e substituí-lo por um placeholder tornaria a
+prosa ilegível na fonte. Mas é **verificável**, e é aí que ele deve morar.
+
+Sem isso, ele envelhece calado. Foi o que aconteceu: o site publicado dizia
+"28 deles" e "as 29 decisões" quando já eram 30, e "o próximo é 0030" com o
+0030 pronto. Nada quebrou, nenhum check reclamou — só ficou errado.
+
+O `generate.mjs` agora confere essas afirmações contra a realidade do
+diretório. E **padrão que não casa também reprova**: um check cuja regex parou
+de encontrar a frase é pior que check nenhum, porque fica verde para sempre
+dizendo que conferiu algo que não olhou. Quando a frase mudar, o CI diz `CEGO`
+e pede o ajuste do padrão.
+
+Acrescentar uma afirmação nova à conferência é uma entrada na lista
+`afericoes` de `verificarContagensDeAdr`: arquivo, padrão, valor esperado.
+
 ## As peças
 
 ```mermaid
