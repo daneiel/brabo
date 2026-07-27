@@ -80,6 +80,13 @@ function escrever(rel, conteudo) {
 }
 
 /** Substitui o conteúdo entre os marcadores, preservando o resto do arquivo. */
+/** O documento sem o bloco gerado `id` — o que a PROSA de fato diz. */
+function semBlocoGerado(doc, id) {
+  const i = doc.indexOf(`<!-- BEGIN:GENERATED:${id} -->`);
+  const f = doc.indexOf(`<!-- END:GENERATED:${id} -->`);
+  return i === -1 || f === -1 ? doc : doc.slice(0, i) + doc.slice(f);
+}
+
 function escreverBloco(rel, id, corpo) {
   const inicio = `<!-- BEGIN:GENERATED:${id} -->`;
   const fim = `<!-- END:GENERATED:${id} -->`;
@@ -200,7 +207,13 @@ function gerarEnv() {
     ['web', arquivos('apps/web/src/**/*.ts*'), /import\.meta\.env\.(VITE_[A-Z_0-9]+)/g],
   ];
 
-  const citados = nomesCitados(ler('docs/reference/configuration.md'));
+  // Sem `semBlocoGerado` o check se auto-satisfaz: a variável nova entra no
+  // inventário com a marca de lacuna, e na execução SEGUINTE o próprio nome
+  // dentro do bloco conta como citação — a lacuna some sem ninguém escrever
+  // uma linha de prosa.
+  const citados = nomesCitados(
+    semBlocoGerado(ler('docs/reference/configuration.md'), 'env-inventario'),
+  );
   let corpo = '';
   let total = 0;
   let naoDocumentadas = 0;
@@ -246,7 +259,8 @@ function gerarEventos() {
     }
   }
 
-  const doc = ler('docs/reference/events.md');
+  // Mesmo cuidado do inventário de env: o bloco gerado não pode se citar.
+  const doc = semBlocoGerado(ler('docs/reference/events.md'), 'eventos-inventario');
   const ordenados = [...achados.keys()].sort();
   const faltando = ordenados.filter((t) => !doc.includes(`\`${t}\``));
 

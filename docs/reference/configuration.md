@@ -46,10 +46,11 @@ produção.
 | `GIT_OAUTH_STATE_SECRET` 🔒 | `dev-oauth-state-secret-change-me` | assina o `state` do OAuth; fraco = CSRF no fluxo de conexão de git |
 | `WEB_ORIGIN` 🔒 | `http://localhost:5173` | **em produção a api recusa subir** se estiver ausente ou for `*`. CORS é estrito por ambiente |
 
-### Auth first-party (Fase 7a)
+### Auth first-party
 
-O auth no domínio da api. Decisões em
-[ADR 0031](../adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.md).
+O auth no domínio da api, que desde o corte é também o único emissor. Decisões
+em [ADR 0031](../adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.md) e
+[ADR 0032](../adr/0032-corte-do-keycloak-e-sessao-em-cookie.md).
 
 | variável | default | o que faz |
 |---|---|---|
@@ -66,6 +67,7 @@ O auth no domínio da api. Decisões em
 | `AUTH_LOCKOUT_IP_THRESHOLDS` | `20:30,30:120` | escada do balde de IP, mais permissiva e com teto curto |
 | `AUTH_EMAIL_TOKEN_TTL_MS` | `172800000` | verificação de e-mail, 48 h |
 | `AUTH_RESET_TOKEN_TTL_MS` | `3600000` | reset de senha, 1 h |
+| `AUTH_SET_PASSWORD_TTL_MS` | `604800000` | definição da primeira senha (usuário migrado), 7 dias — mais longo que o reset porque quem recebe não pediu |
 | `AUTH_IP_ATTEMPT_THRESHOLD` | `60` | teto de tentativas por IP nas rotas de auth |
 | `AUTH_MAIL_LOG_TOKENS` | `false` | **só em dev**: imprime o token de verificação/reset no log |
 
@@ -78,6 +80,19 @@ O auth no domínio da api. Decisões em
 > **Rotacionar `AUTH_TOKEN_PEPPER` desloga todo mundo** e invalida os tokens de
 > verificação e reset em aberto. Diferente das chaves, o pepper **não** tem
 > `_PREVIOUS`. Ver o [runbook](../runbook.md).
+
+### Seed de desenvolvimento
+
+Consumidas por `pnpm --filter api seed`, não pela api em execução. Sem IdP
+externo, é daqui que sai a credencial para entrar na web local e para o smoke.
+
+| variável | default | o que faz |
+|---|---|---|
+| `BRABO_SEED_PASSWORD` | `senha de dev do brabo` | senha dos usuários semeados (`owner@brabo.dev`, `dev@brabo.dev`), criados com e-mail **já verificado** |
+| `BRABO_FORCE_SEED` | — | destrava o seed com `NODE_ENV=production`, onde ele **recusa rodar** por default. Não defina em ambiente real: a conta nasce com senha conhecida e verificada |
+
+> O seed é idempotente e **não mexe na senha** de quem já existe. Rodar de novo
+> depois de alguém ter trocado a própria senha não a reverte.
 
 ### Rate limit
 
@@ -95,16 +110,20 @@ Janela deslizante em Postgres — não há Redis
 > guard protege contra abuso, não contra acesso indevido — quem faz isso é o
 > guard de autenticação, que roda antes.
 
-### Keycloak
+### Tráfego interno 🔒
 
-| variável | default |
-|---|---|
-| `KEYCLOAK_URL` | `http://localhost:8080` |
-| `KEYCLOAK_REALM` | `brabo-dev` |
-| `KEYCLOAK_ISSUER_URL` | derivado de `KEYCLOAK_URL` + realm |
-| `API_KEYCLOAK_CLIENT_ID` | `api-service` |
-| `API_KEYCLOAK_CLIENT_SECRET` | — |
-| `ENGINE_KEYCLOAK_CLIENT_ID` | `engine-service` — a api valida o token do engine contra este client |
+O segredo compartilhado que autentica api ↔ engine. **A mesma variável nos dois
+lados** — cada um envia o atual e aceita ambos, e é isso que torna a rotação
+possível sem downtime ([RN-035](../business-rules.md#rn-035)).
+
+| variável | default | o que faz |
+|---|---|---|
+| `BRABO_SERVICE_TOKEN` | `dev-service-token-change-me` | vai no cabeçalho `X-Brabo-Service-Token` e é o que o `EngineServiceGuard` compara em tempo constante |
+| `BRABO_SERVICE_TOKEN_PREVIOUS` | — | aceito **só na verificação**, durante a rotação |
+
+> Defini-la só de um lado não quebra o boot de ninguém: o sintoma é `403` no
+> `/internal/*` e `401` nas chamadas da api para o engine. Procedimento no
+> [runbook](../runbook.md#rotacao-das-chaves-do-auth).
 
 ### Git
 
@@ -199,15 +218,12 @@ Janela deslizante em Postgres — não há Redis
 | `START_OUTBOX_DRAIN` | `true` | — |
 | `START_ANAMNESE` | `true` | desligar impede **novos** enfileiramentos, **não limpa a fila**. Jobs acumulados rodam no boot seguinte — a fila precisa ser purgada. Ver [ambiente de inferência](../runbook.md#ambiente-de-inferencia) |
 
-### Keycloak e observabilidade
+### Tráfego interno e observabilidade
 
 | variável | default |
 |---|---|
-| `KEYCLOAK_URL` | `http://localhost:8080` |
-| `KEYCLOAK_REALM` | `brabo-dev` |
-| `ENGINE_KEYCLOAK_CLIENT_ID` | `engine-service` |
-| `ENGINE_KEYCLOAK_CLIENT_SECRET` 🔒 | `engine-service-dev-secret-change-me` |
-| `API_KEYCLOAK_CLIENT_ID` | `api-service` |
+| `BRABO_SERVICE_TOKEN` 🔒 | `dev-service-token-change-me` — **o mesmo valor da api** |
+| `BRABO_SERVICE_TOKEN_PREVIOUS` 🔒 | — aceito só na verificação, durante a rotação |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | — o exporter do Elixir fala **HTTP/protobuf na 4318**, não gRPC na 4317 |
 | `WEB_ORIGIN` | — |
 | `PROJECT_WORKSPACES_ROOT` | `/tmp/brabo-project-workspaces` — **igual ao da api, no mesmo volume** |
@@ -234,9 +250,6 @@ reescrito no boot. As `VITE_*` são o fallback de desenvolvimento.
 |---|---|
 | `VITE_API_URL` | endereço da api |
 | `VITE_ENGINE_URL` | endereço do engine (canal Phoenix) |
-| `VITE_KEYCLOAK_URL` | — |
-| `VITE_KEYCLOAK_REALM` | — |
-| `VITE_KEYCLOAK_CLIENT_ID` | — |
 | `VITE_LOG_LEVEL` | — |
 
 Página em branco depois do deploy é quase sempre `/config.js` apontando para
@@ -285,12 +298,10 @@ que uma variável nova não fique documentada em lugar nenhum sem ninguém notar
 
 > ⚠️ Bloco gerado por `pnpm docs:generate`. Não edite à mão — o próximo build sobrescreve.
 
-Inventário extraído do código: **98 variáveis** lidas em tempo de execução. Todas têm descrição nas tabelas acima.
+Inventário extraído do código: **91 variáveis** lidas em tempo de execução. Todas têm descrição nas tabelas acima.
 
-**api** — 44 variáveis
+**api** — 43 variáveis
 
-- `API_KEYCLOAK_CLIENT_ID` <sub>(apps/api/src/infrastructure/http-clients/api-to-engine-client.ts)</sub>
-- `API_KEYCLOAK_CLIENT_SECRET` <sub>(apps/api/src/infrastructure/http-clients/api-to-engine-client.ts)</sub>
 - `API_PUBLIC_URL` <sub>(apps/api/src/application/use-cases/git/start-git-oauth.use-case.ts)</sub>
 - `AUTH_ACCESS_TOKEN_TTL_MS` <sub>(apps/api/src/infrastructure/security/ed25519-access-token-issuer.ts)</sub>
 - `AUTH_EMAIL_TOKEN_TTL_MS` <sub>(apps/api/src/application/use-cases/auth/auth-config.ts)</sub>
@@ -306,11 +317,15 @@ Inventário extraído do código: **98 variáveis** lidas em tempo de execução
 - `AUTH_REFRESH_TOKEN_TTL_MS` <sub>(apps/api/src/application/use-cases/auth/auth-config.ts)</sub>
 - `AUTH_REGISTRATION_ENABLED` <sub>(apps/api/src/application/use-cases/auth/auth-config.ts)</sub>
 - `AUTH_RESET_TOKEN_TTL_MS` <sub>(apps/api/src/application/use-cases/auth/auth-config.ts)</sub>
+- `AUTH_SET_PASSWORD_TTL_MS` <sub>(apps/api/src/application/use-cases/auth/auth-config.ts)</sub>
 - `AUTH_TOKEN_PEPPER` <sub>(apps/api/src/infrastructure/security/auth-key-material.ts)</sub>
+- `BRABO_FORCE_SEED` <sub>(apps/api/src/scripts/provisionar-usuario.ts)</sub>
+- `BRABO_SEED_PASSWORD` <sub>(apps/api/src/db/seed.ts)</sub>
+- `BRABO_SERVICE_TOKEN` <sub>(apps/api/src/infrastructure/security/service-token.ts)</sub>
+- `BRABO_SERVICE_TOKEN_PREVIOUS` <sub>(apps/api/src/infrastructure/security/service-token.ts)</sub>
 - `CREDENTIALS_MASTER_KEY` <sub>(apps/api/src/infrastructure/security/envelope-encryption.service.ts)</sub>
 - `CREDENTIALS_MASTER_KEY_PREVIOUS` <sub>(apps/api/src/infrastructure/security/envelope-encryption.service.ts)</sub>
 - `DATABASE_URL` <sub>(apps/api/src/db/migrate.ts)</sub>
-- `ENGINE_KEYCLOAK_CLIENT_ID` <sub>(apps/api/src/interfaces/http/auth/engine-service.guard.ts)</sub>
 - `ENGINE_URL` <sub>(apps/api/src/infrastructure/http-clients/api-to-engine-client.ts)</sub>
 - `GIT_LOCAL_REPOS_ROOT` <sub>(apps/api/src/infrastructure/git/local-git-provider.ts)</sub>
 - `GIT_OAUTH_STATE_SECRET` <sub>(apps/api/src/application/use-cases/git/handle-git-oauth-callback.use-case.ts)</sub>
@@ -318,9 +333,6 @@ Inventário extraído do código: **98 variáveis** lidas em tempo de execução
 - `GITHUB_OAUTH_CLIENT_SECRET` <sub>(apps/api/src/infrastructure/git/github-oauth-client.ts)</sub>
 - `GITLAB_OAUTH_CLIENT_ID` <sub>(apps/api/src/infrastructure/git/gitlab-oauth-client.ts)</sub>
 - `GITLAB_OAUTH_CLIENT_SECRET` <sub>(apps/api/src/infrastructure/git/gitlab-oauth-client.ts)</sub>
-- `KEYCLOAK_ISSUER_URL` <sub>(apps/api/src/infrastructure/http-clients/keycloak-token-verifier.ts)</sub>
-- `KEYCLOAK_REALM` <sub>(apps/api/src/infrastructure/http-clients/api-to-engine-client.ts)</sub>
-- `KEYCLOAK_URL` <sub>(apps/api/src/infrastructure/http-clients/api-to-engine-client.ts)</sub>
 - `LOG_LEVEL` <sub>(apps/api/src/infrastructure/observability/logger.config.ts)</sub>
 - `METRICS_GAUGE_INTERVAL_MS` <sub>(apps/api/src/infrastructure/observability/domain-gauges.collector.ts)</sub>
 - `MIGRATIONS_FOLDER` <sub>(apps/api/src/db/migrate.ts)</sub>
@@ -334,7 +346,7 @@ Inventário extraído do código: **98 variáveis** lidas em tempo de execução
 - `RATE_LIMIT_WINDOW_MS` <sub>(apps/api/src/infrastructure/observability/domain-gauges.collector.ts)</sub>
 - `WEB_ORIGIN` <sub>(apps/api/src/infrastructure/security/cors-origins.ts)</sub>
 
-**engine** — 48 variáveis
+**engine** — 45 variáveis
 
 - `ANAMNESE_BUDGET_MICROS` <sub>(apps/engine/config/runtime.exs)</sub>
 - `ANAMNESE_INITIAL_WINDOW_DAYS` <sub>(apps/engine/config/runtime.exs)</sub>
@@ -343,17 +355,14 @@ Inventário extraído do código: **98 variáveis** lidas em tempo de execução
 - `ANAMNESE_MAX_PAYLOAD_CHARS` <sub>(apps/engine/config/runtime.exs)</sub>
 - `ANAMNESE_MAX_PROMPT_EVENTS` <sub>(apps/engine/config/runtime.exs)</sub>
 - `ANAMNESE_MIN_EVENTS` <sub>(apps/engine/config/runtime.exs)</sub>
-- `API_KEYCLOAK_CLIENT_ID` <sub>(apps/engine/config/runtime.exs)</sub>
 - `API_URL` <sub>(apps/engine/config/runtime.exs)</sub>
+- `BRABO_SERVICE_TOKEN` <sub>(apps/engine/config/runtime.exs)</sub>
+- `BRABO_SERVICE_TOKEN_PREVIOUS` <sub>(apps/engine/config/runtime.exs)</sub>
 - `CONTEXT_COMPACTION_THRESHOLD` <sub>(apps/engine/config/runtime.exs)</sub>
 - `DATABASE_URL` <sub>(apps/engine/config/dev.exs)</sub>
 - `DEFAULT_CONTEXT_WINDOW` <sub>(apps/engine/config/runtime.exs)</sub>
 - `DNS_CLUSTER_QUERY` <sub>(apps/engine/config/runtime.exs)</sub>
 - `ECTO_IPV6` <sub>(apps/engine/config/runtime.exs)</sub>
-- `ENGINE_KEYCLOAK_CLIENT_ID` <sub>(apps/engine/config/runtime.exs)</sub>
-- `ENGINE_KEYCLOAK_CLIENT_SECRET` <sub>(apps/engine/config/runtime.exs)</sub>
-- `KEYCLOAK_REALM` <sub>(apps/engine/config/runtime.exs)</sub>
-- `KEYCLOAK_URL` <sub>(apps/engine/config/runtime.exs)</sub>
 - `LLM_TURN_TIMEOUT_MS` <sub>(apps/engine/config/runtime.exs)</sub>
 - `MIX_TEST_PARTITION` <sub>(apps/engine/config/test.exs)</sub>
 - `OTEL_EXPORTER_OTLP_ENDPOINT` <sub>(apps/engine/lib/engine/telemetry/otel.ex)</sub>
@@ -385,13 +394,10 @@ Inventário extraído do código: **98 variáveis** lidas em tempo de execução
 - `TOOL_LOOP_MAX_ITERATIONS` <sub>(apps/engine/config/runtime.exs)</sub>
 - `WEB_ORIGIN` <sub>(apps/engine/config/runtime.exs)</sub>
 
-**web** — 6 variáveis
+**web** — 3 variáveis
 
 - `VITE_API_URL` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
 - `VITE_ENGINE_URL` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
-- `VITE_KEYCLOAK_CLIENT_ID` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
-- `VITE_KEYCLOAK_REALM` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
-- `VITE_KEYCLOAK_URL` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
 - `VITE_LOG_LEVEL` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
 <!-- END:GENERATED:env-inventario -->
 

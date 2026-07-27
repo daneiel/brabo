@@ -398,10 +398,11 @@ falhou. `skip` é sucesso, não erro.
 
 ## Autenticação
 
-Regras do auth first-party (Fase 7a). Todas valem no domínio da api,
-independentes do emissor de token — o Keycloak ainda emite os tokens de acesso
-nesta fase, e nada aqui depende disso.
-Decisões em [ADR 0031](adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.md).
+Regras do auth first-party. Todas valem no domínio da api, que desde a 7.2 é
+também o **emissor** dos tokens de acesso — o Keycloak saiu num corte atômico,
+sem período de coexistência.
+Decisões em [ADR 0031](adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.md)
+e [ADR 0032](adr/0032-corte-do-keycloak-e-sessao-em-cookie.md).
 
 ### RN-030 — Reapresentar um refresh já usado revoga a família inteira {#rn-030}
 
@@ -459,10 +460,18 @@ registro e no pedido de reset, endereço conhecido e desconhecido devolvem 202.
 - **Borda:** a checagem de bloqueio por e-mail roda **depois** do argon2, não
   antes. Sair mais cedo é a otimização que qualquer revisor sugeriria, e é
   exatamente o vazamento — o teste fica vermelho se alguém a introduzir.
+- **Borda:** o usuário MIGRADO do Keycloak (existe em `users`, sem linha em
+  `auth_credentials`) também recebe o 401 uniforme — e o link de "definir
+  senha" é disparado em silêncio. Responder `password_pending` confirmaria que
+  o endereço existe **e** que é conta legada. Por isso `findByEmail` é um LEFT
+  JOIN numa consulta só: duas consultas encadeadas fariam esse ramo pagar uma
+  ida a mais ao banco, e o relógio revelaria o que o corpo esconde.
 - **Por quê:** o que se afirma é "nenhum ramo pula o trabalho caro e nenhum
   produz resposta distinguível", **não** tempo constante. Ver as consequências
   no ADR.
-- **Origem:** [ADR 0031](adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.md)
+- **Origem:** [ADR 0031](adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.md),
+  borda do migrado em
+  [ADR 0032](adr/0032-corte-do-keycloak-e-sessao-em-cookie.md)
 
 ### RN-033 — Token de verificação e de reset vale uma vez só {#rn-033}
 
@@ -481,6 +490,45 @@ Concluir um reset revoga **todas** as sessões do usuário e não emite tokens.
   conta, sem segundo passo.
 - **Origem:** [ADR 0031](adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.md)
 
+### RN-034 — A sessão da web vive em cookie httpOnly, com CSRF {#rn-034}
+
+O refresh token vai num cookie `brabo_refresh` (`httpOnly`, `SameSite=Strict`,
+`Path=/auth`, `Secure` em produção) e **não** aparece no corpo de nenhuma
+resposta. O access token, de 15 minutos, fica em memória no cliente e viaja no
+`Authorization: Bearer`.
+
+`/auth/refresh` e `/auth/logout` exigem `X-CSRF-Token` igual ao cookie
+`brabo_csrf`, comparado em tempo constante.
+
+- **Onde:** `apps/api/src/interfaces/http/auth/session-cookies.ts:53` +
+  `interfaces/http/auth/auth.controller.ts`
+- **Teste:** `test/interfaces/session-cookies.spec.ts`
+- **Borda:** falha de CSRF é **403**, não 401. Com 401 o cliente tentaria
+  renovar a sessão e entraria em laço — a credencial está boa, quem está errada
+  é a requisição.
+- **Por quê:** devolver o refresh também no corpo anularia o `httpOnly` —
+  bastaria um XSS ler a resposta do login, e levaria a sessão longa em vez dos
+  15 minutos do access.
+- **Origem:** [ADR 0032](adr/0032-corte-do-keycloak-e-sessao-em-cookie.md)
+
+### RN-035 — O tráfego interno engine ↔ api exige o segredo de serviço {#rn-035}
+
+As 26 rotas `/internal/*` são `@ServiceRoute()`: ficam fora do JWT de usuário e
+fora do rate limit. Quem autentica é o `EngineServiceGuard`, comparando
+`X-Brabo-Service-Token` com `BRABO_SERVICE_TOKEN` em tempo constante. O mesmo
+segredo vale nos dois sentidos, e `BRABO_SERVICE_TOKEN_PREVIOUS` é aceito só na
+verificação, para a rotação não ter janela de indisponibilidade.
+
+- **Onde:** `apps/api/src/interfaces/http/auth/engine-service.guard.ts:44` +
+  `infrastructure/security/service-token.ts` +
+  `apps/engine/lib/engine_web/plugs/verify_service_token.ex`
+- **Teste:** `apps/engine/test/engine_web/plugs/verify_service_token_test.exs`
+  e `test/interfaces/route-surface.spec.ts`
+- **Borda:** a isenção de rate limit vem do METADADO da rota, não do guard. O
+  `RateLimitGuard` é `APP_GUARD` e roda antes de qualquer guard de controller —
+  quando ele decide, o `EngineServiceGuard` ainda não rodou.
+- **Origem:** [ADR 0032](adr/0032-corte-do-keycloak-e-sessao-em-cookie.md)
+
 ---
 
 ## Quando dá errado
@@ -496,6 +544,7 @@ Concluir um reset revoga **todas** as sessões do usuário e não emite tokens.
 | Rate limit indisponível | a requisição **passa**: o guard protege contra abuso, não contra acesso indevido |
 | Credencial errada, conta inexistente ou conta bloqueada | **a mesma** resposta 401, com o mesmo custo de argon2 (RN-032) |
 | Refresh já usado reapresentado | família revogada e evento de segurança; o usuário legítimo também é deslogado (RN-030) |
+| Tráfego interno sem o segredo de serviço | 403 na api, 401 no engine — nunca alcança o controller (RN-035) |
 
 > **TODO(humano):** as RNs acima foram extraídas do código e dos testes. Falta
 > confirmar se existe regra de negócio **não implementada** que deveria estar

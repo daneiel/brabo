@@ -43,6 +43,17 @@ e pipeline de aprovação de ações com autoridade final do usuário.
   (v0.1.0 → v0.2.0) e a cadeia de hotfix validada por execução real.
 - FASE 7 — ATIVA: auth first-party no domínio da api (substituindo o
   Keycloak) e referência completa de rotas gerada a partir do OpenAPI.
+  - 7a (itens 1–3) — CONCLUÍDA: módulo auth em paralelo ao Keycloak —
+    argon2id, access token Ed25519, rotação de refresh com revogação
+    de família no reuso, lockout progressivo, tokens de conta e
+    MailSender log-only (ADR 0031, RN-030..033).
+  - 7.2 (itens 4–5) — CONCLUÍDA: o corte atômico — emissor próprio no
+    guard sem tocar no RBAC, /internal/* fora do JWT com service
+    token, sessão da web em cookie httpOnly com CSRF, migração dos
+    usuários e remoção do Keycloak do compose, do k8s e das docs
+    (ADR 0032, RN-034/035).
+  - 7b (itens 6–8) — PENDENTE: OpenAPI em todos os controllers e
+    docs/reference/api/ gerado no Docusaurus.
 - Não refatore o que está pronto sem pedido explícito.
 
 ## Escopo da FASE 7 (ativa — auth first-party + referência de rotas)

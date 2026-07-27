@@ -16,7 +16,7 @@ que ficam abertas. Decisões em
 | valor | o que significa |
 |---|---|
 | `public` | `@Public()` — sem token. Cada uma justificada abaixo |
-| `engine-service` | `EngineServiceGuard`: token válido E `clientId = engine-service`. É a superfície interna api↔engine |
+| `engine-service` | `EngineServiceGuard`: `X-Brabo-Service-Token` igual ao segredo compartilhado. É a superfície interna api↔engine, fora do JWT |
 | `role:<papel>` | autenticada e restrita pelo RBAC do domínio (`@RequireRole`) |
 | `jwt` | autenticada, sem papel exigido na rota — o escopo vem do próprio recurso |
 
@@ -31,13 +31,14 @@ literalmente para forçar a conversa.
 
 **`GET /live`** — liveness. Não toca no banco de propósito: responde enquanto o
 processo estiver vivo. Exigir token aqui faria o kubelet reiniciar o pod ao
-primeiro problema no Keycloak, transformando degradação em queda total.
+primeiro problema no caminho de autenticação, transformando degradação em queda
+total.
 
 **`GET /health`** — readiness, com `select 1`. Mesmo raciocínio: é o kubelet
 quem chama, e ele não carrega token. Revela apenas se o banco responde.
 
-**`GET /metrics`** — scrape do Prometheus, que também não carrega token do
-Keycloak. Exposição controlada por REDE, não por auth: a NetworkPolicy só
+**`GET /metrics`** — scrape do Prometheus, que também não carrega token nenhum.
+Exposição controlada por REDE, não por auth: a NetworkPolicy só
 libera o namespace `monitoring`, e o Ingress de produção bloqueia o caminho.
 Sem `@Public()` o alvo apareceria como `down` com todo o resto verde.
 
@@ -46,13 +47,15 @@ O browser do usuário chega aqui vindo do provider, sem sessão da api. Não é
 irrestrita: o parâmetro `state` é validado por HMAC
 (`GIT_OAUTH_STATE_SECRET`), e sem `state` válido a chamada é recusada.
 
-### Auth first-party (Fase 7a)
+### Auth first-party
 
 As sete rotas de `/auth/*` mais o JWKS. **Todas precisam ser públicas pela
-mesma razão estrutural:** o `JwtAuthGuard` global ainda verifica token do
-Keycloak nesta fase, então exigir token numa rota de auth pediria uma
-credencial do sistema antigo para entrar no novo. A 7.2 revisita o `logout`,
-que é a única que poderia passar a ser autenticada depois da troca de emissor.
+mesma razão estrutural:** são o caminho por onde se OBTÉM um access token, e o
+`JwtAuthGuard` global exige um. Uma rota de auth atrás do guard pediria a
+credencial que ela mesma emite. O `logout` é a única que poderia ser
+autenticada, e não é de propósito: ele já carrega a credencial que lhe
+interessa — o refresh no cookie, com o par de CSRF — e deslogar precisa
+funcionar mesmo com o access token expirado.
 
 > **O que protege estas rotas não é o rate limit.** O `RateLimitGuard` libera
 > rota `@Public()` — de propósito, para não estrangular `/health` até o kubelet
@@ -95,8 +98,12 @@ o componente `d` da JWK, travado por teste.
   a nada — candidata a remoção. Ficou registrada aqui em vez de removida por
   ser decisão de produto, fora do escopo desta sessão.
 - **As rotas `engine-service` não são "internas" por convenção de nome.** O que
-  as protege é o `EngineServiceGuard` verificando o `clientId` do token, mais a
-  NetworkPolicy. O prefixo `/internal` é sinalização para humanos.
+  as protege é o `EngineServiceGuard` comparando o `X-Brabo-Service-Token` com
+  o segredo compartilhado em tempo constante, mais a NetworkPolicy. O prefixo
+  `/internal` é sinalização para humanos. Elas ficam **fora do JWT** por
+  `@ServiceRoute()`: o token de usuário não serve aqui e o de serviço não serve
+  em nenhuma outra rota — os dois mecanismos nunca se sobrepõem
+  ([RN-035](business-rules.md#rn-035)).
 - **`jwt` sem papel não significa sem autorização.** Em `/users/me/*` o escopo é
   o próprio usuário; em `GET /workspaces` a listagem já é filtrada pela
   associação de quem chamou.

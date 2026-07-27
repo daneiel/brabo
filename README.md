@@ -50,22 +50,21 @@ pnpm install
 pnpm dev
 ```
 
-`pnpm dev` sobe o Docker Compose (Postgres 16 + pgvector, Keycloak, api, engine,
-web) com hot reload. Na primeira subida a api e o engine aplicam as próprias
-migrações.
+`pnpm dev` sobe o Docker Compose (Postgres 16 + pgvector, api, engine, web)
+com hot reload. Na primeira subida a api e o engine aplicam as próprias
+migrações. `pnpm --filter api seed` cria os usuários de demonstração.
 
 | serviço | endereço | nota |
 |---|---|---|
-| Web | <http://localhost:5173> | login `admin` / `admin123`, realm `brabo-dev` |
+| Web | <http://localhost:5173> | login `owner@brabo.dev` / `senha de dev do brabo` (do seed) |
 | API | <http://localhost:3000> | `GET /health` |
 | Engine | <http://localhost:4000> | `GET /health` |
-| Keycloak | <http://localhost:8080> | `admin`/`admin` — console do Keycloak, não o usuário de demo |
 
 `pnpm dev:down` derruba tudo. `pnpm dev:build` força rebuild.
 
-> **`pnpm dev` e `make deploy-local` não coexistem.** Os dois publicam api,
-> engine e Keycloak nas mesmas portas — de propósito (ADR 0025), para o smoke
-> test e o realm valerem nos dois. Com o cluster local de pé, a **5173 não
+> **`pnpm dev` e `make deploy-local` não coexistem.** Os dois publicam api e
+> engine nas mesmas portas — de propósito (ADR 0025), para o smoke test valer
+> nos dois. Com o cluster local de pé, a **5173 não
 > abre**, e o web fica em <http://localhost:8088>. `pnpm dev:preflight` diz em
 > qual modo você está; `make k8s-down` volta para este. Detalhes em
 > [Primeiros passos](docs/getting-started.md#os-dois-modos-locais-não-coexistem).
@@ -122,7 +121,7 @@ merge em `main`, e por isso fica um ciclo de promoção atrás do que está em
 | [Artefatos](docs/reference/artifacts.md) | os seis schemas e quem pode emitir cada um |
 | [Providers de git](docs/reference/git-providers.md) | o contrato de dez operações e as capabilities |
 | [API interna](docs/reference/internal-api.md) | o contrato api ↔ engine |
-| [ADRs](docs/adr/index.md) | as 31 decisões e o porquê de cada uma |
+| [ADRs](docs/adr/index.md) | as 32 decisões e o porquê de cada uma |
 | [Segurança](SECURITY.md) | como reportar uma vulnerabilidade |
 | [Como contribuir](CONTRIBUTING.md) | fluxo, Definition of Done, o que é aceito |
 | [Onde pedir ajuda](SUPPORT.md) | qual canal para cada tipo de assunto |
@@ -135,7 +134,7 @@ merge em `main`, e por isso fica um ciclo de promoção atrás do que está em
 | `apps/api` | NestJS 11 + Drizzle ORM + PostgreSQL 16 + pgvector |
 | `apps/engine` | Elixir/OTP + Phoenix (canais) + Oban (filas no Postgres) |
 | `apps/web` | React 19 + Vite + TanStack Query/Router |
-| auth | Keycloak (OIDC); RBAC no domínio da api |
+| auth | first-party na api (argon2id + access JWT Ed25519 + refresh opaco com rotação); RBAC no domínio da api |
 | deploy | Kubernetes via Kustomize; Docker Compose para desenvolvimento |
 
 Sem Redis: as filas moram no Postgres via Oban, e o rate limit é uma janela
@@ -151,7 +150,7 @@ apps/
 packages/
   shared/   tipos TS compartilhados (import type only)
 design/     design system — fonte de verdade de UI
-docker/     compose de dev e prod, Dockerfiles, smoke.sh, realm do Keycloak
+docker/     compose de dev e prod, Dockerfiles, smoke.sh
 deploy/k8s/ base + overlays local/staging/prod (Kustomize)
 docs/       esta documentação, incluindo os ADRs
 ```
@@ -283,8 +282,10 @@ o job reprovou, e voltou a passar depois do revert.
 
 ## Frontend
 
-Autenticação por Keycloak. Depois do login o app opera sobre o primeiro
-workspace do usuário:
+Login próprio (`/login`, `/register`, `/forgot-password`, `/set-password`):
+o access token vive em memória e o refresh num cookie httpOnly, então a sessão
+sobrevive ao reload sem passar por `localStorage`. Depois do login o app opera
+sobre o primeiro workspace do usuário:
 
 - **Dashboard** (`/`) — grid de projetos e o wizard "Novo projeto"
 - **Projeto** (`/projects/:id`) — Visão geral (time de agentes + feed de

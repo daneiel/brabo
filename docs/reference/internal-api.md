@@ -25,25 +25,31 @@ resposta imediata, vai por HTTP.
 
 ## Autenticação
 
-Nenhuma das duas pontas confia em rede privada. Ambas usam **client credentials
-do Keycloak**:
+Nenhuma das duas pontas confia em rede privada. Ambas apresentam o **mesmo
+service token** — um segredo compartilhado por env, rotacionável, no cabeçalho
+`X-Brabo-Service-Token`:
 
-| chamador | client | verificado por |
+| chamador | verificado por | comparação |
 |---|---|---|
-| engine → api | `engine-service` | `EngineServiceGuard` — token válido **e** `clientId = engine-service` |
-| api → engine | `api-service` | `VerifyApiToken` |
+| engine → api | `EngineServiceGuard` | `comparaEmTempoConstante` |
+| api → engine | `EngineWeb.Plugs.VerifyServiceToken` | `Plug.Crypto.secure_compare/2` |
 
-> **O auth first-party da Fase 7a não muda nada aqui.** As rotas de `/auth/*`
-> são a superfície de USUÁRIO; o tráfego api ↔ engine continua usando os
-> service accounts do Keycloak descritos acima, sem alteração. A troca por um
-> service token próprio (segredo compartilhado por env, rotacionável) é a
-> 7.4, e virá com a remoção do Keycloak. Enquanto isso, o `request.clientId`
-> populado pelo `JwtAuthGuard` segue sendo o que distingue o engine de um
-> usuário comum.
+> **Este tráfego não passa pelo JWT.** As rotas `/internal/*` são anotadas com
+> `@ServiceRoute()`, o que as tira do `JwtAuthGuard` e as isenta do
+> `RateLimitGuard` (que roda antes do guard de controller, então a isenção
+> precisa vir do metadado). Um access token de usuário, mesmo de um `owner`,
+> não abre nenhuma delas; e o service token não abre nenhuma outra rota. Ver
+> [RN-035](../business-rules.md#rn-035).
+
+> **Rotação sem downtime.** `BRABO_SERVICE_TOKEN` é o valor enviado;
+> `BRABO_SERVICE_TOKEN_PREVIOUS` é aceito **só na verificação**. Como os dois
+> lados enviam o atual e aceitam ambos, a rotação é a mesma dança em três
+> etapas do `AUTH_JWT_SECRET`, descrita no
+> [runbook](../runbook.md#rotacao-das-chaves-do-auth).
 
 > As rotas `/internal/*` **não são internas por convenção de nome.** O prefixo é
-> legibilidade; o que as protege é o guard verificando o `clientId` do token. Um
-> JWT de usuário comum, mesmo de um `owner`, é recusado nelas. A classificação
+> legibilidade; o que as protege é o guard verificando o service token. A
+> classificação
 > completa está em
 > [`docs/security-surface.md`](../security-surface.md), e um teste de tabela
 > reprova rota nova sem classificação.
