@@ -1,0 +1,110 @@
+---
+id: adr-index
+title: Decisões arquiteturais (ADR)
+sidebar_label: Índice de ADRs
+sidebar_position: 0
+description: Os 28 registros de decisão arquitetural do Brabo, agrupados por fase, com o que cada um decidiu.
+keywords: [ADR, decisão arquitetural, arquitetura, histórico]
+---
+
+# Decisões arquiteturais
+
+Um ADR registra **por que** algo foi decidido, no momento em que foi decidido.
+Eles são **imutáveis**: nenhum ADR é editado depois de aceito. Quando uma
+decisão muda, nasce um ADR novo que substitui o anterior — foi o que aconteceu
+com o [0018](0018-noop-dev-agent-modo-de-execucao.md), que registra a
+substituição do NoopDevAgent decidida no [0011](0011-infra-dev-agents-worktrees-merge-lock.md).
+
+Consequência prática: **um ADR pode descrever um estado que não é mais o
+atual.** Para o estado atual, use [Regras de negócio](../business-rules.md),
+[Arquitetura](../architecture.md) e o [Runbook](../runbook.md). Para o
+raciocínio, venha aqui.
+
+Todos os 28 estão com status **aceito**.
+
+## Fase 2 — Git
+
+O contrato que faz Local, GitHub e GitLab serem intercambiáveis.
+
+| # | decisão |
+|---|---|
+| [0001](0001-git-provider-contract-shape.md) | Formato do contrato normalizado do GitProvider: nove operações e `capabilities` declaradas, validadas por uma suite de contrato única |
+| [0002](0002-git-error-normalization.md) | Normalização de erros: seis classes específicas, **sem** classe-base comum — a abstração foi considerada e rejeitada por não pagar o próprio custo ainda |
+| [0003](0003-git-provider-retry-policy.md) | Retry automático **só em leituras, nunca em mutações**, com Full Jitter e 4 tentativas |
+| [0004](0004-git-credential-registration.md) | Cadastro de credenciais de git: enum dedicado no banco, união com os providers de LLM apenas no tipo |
+| [0005](0005-repo-bootstrap-idempotent-steps.md) | Bootstrap de Gitflow em seis passos idempotentes e retomáveis; `skip` é sucesso |
+
+## Fase 3 — Harness e primeiros agentes
+
+O invólucro que torna o comportamento do agente reproduzível.
+
+| # | decisão |
+|---|---|
+| [0006](0006-prompt-assembler-context-harness.md) | Montagem **determinística** de contexto: camadas ordenadas, orçamento por camada, corte previsível |
+| [0007](0007-toolloop-tools-context-manager.md) | ToolLoop, catálogo de ferramentas e ContextManager — o laço com LLM de verdade |
+| [0008](0008-agente-criativo-conversacional-handoffs.md) | Criativo conversacional (o chat deixa de ser echo stateless) e a fundação de handoffs |
+| [0009](0009-agente-po-backlog-rastreabilidade.md) | PO, backlog em três níveis e rastreabilidade regra → história → task; a prontidão vira validação de domínio |
+| [0010](0010-agente-arquiteto-adr-pr-module-map.md) | Arquiteto: ADRs por PR real, `module_map` e validação cruzada |
+
+## Fase 4a — Execução e gates
+
+Onde o sistema passa a mexer em código de verdade — e onde nascem os limites.
+
+| # | decisão |
+|---|---|
+| [0011](0011-infra-dev-agents-worktrees-merge-lock.md) | Worktrees por dev agent, executores git e a **trava de merge**: branch protegida nunca é auto-aprovável |
+| [0012](0012-dev-agent-real-toolloop-orcamento-bloqueio.md) | DevAgent real: ToolLoop no worktree, orçamento por task, `ReportDone` exigindo suite verde, bloqueio com diagnóstico |
+| [0013](0013-gates-qa-secops-pr.md) | Gates de QA e SecOps com máquina de estados de ordem imutável |
+| [0014](0014-infra-agent-painel-phoenix.md) | InfraAgent **propositivo** (propõe por PR, nunca aplica) e painel do time ao vivo por canais Phoenix |
+| [0017](0017-lock-de-workspace-e-monitor-de-dev-agents.md) | Lock de inicialização do workspace, Monitor de dev agents e **herança do teto** de correções pelo subagente |
+| [0018](0018-noop-dev-agent-modo-de-execucao.md) | O NoopDevAgent deixa de ser andaime e vira **modo de execução permanente** |
+| [0019](0019-destravar-dev-agent-adr-por-modulo-orcamento-projeto.md) | Destrava do DevAgent real: escrita, terminal, ADR por módulo e orçamento por projeto |
+| [0020](0020-destravar-gates-qa-secops.md) | Destrava dos gates: gitleaks na **árvore de trabalho** (não só no diff), pareceres validados como artefato, recuperação de tool call em texto |
+| [0021](0021-fechamento-4a-infra-e-painel.md) | Fechamento da 4a: gate de infra que valida de verdade, e painel que diz a verdade |
+
+> **Critério de aceite em aberto.** O [0020](0020-destravar-gates-qa-secops.md)
+> registra explicitamente que o demo de gates é **"FECHADO, mas NÃO
+> DETERMINÍSTICO"** — depende do julgamento de um modelo 7B local e não serve
+> como teste de regressão. O [0021](0021-fechamento-4a-infra-e-painel.md) tem
+> uma seção "Estado do critério de aceite: NÃO FECHADO". Os dois são honestos
+> de propósito; não os leia como concluídos.
+
+## Fase 4b — Psicólogo e Anamnese
+
+O loop que faz o time melhorar.
+
+| # | decisão |
+|---|---|
+| [0015](0015-psicologo-real-toolloop-hipoteses-evidencia.md) | Psicólogo real: hipóteses com **evidência apontando para eventos reais**, e triagem leve/pesada por custo |
+| [0016](0016-anamnese-proficiencia-patches-instrucao.md) | Anamnese: catálogo **fechado** de competências, patches de instrução versionados com rollback, e o teto de que patch nunca é auto-aprovável |
+| [0022](0022-fechamento-4b-psicologo.md) | Evidência que chega, custo que aparece, análise que sobrevive ao kill; causa de término como classificação determinística |
+| [0023](0023-fechamento-4b-anamnese.md) | Catálogo que funciona, dedup que distingue **quem** negou, e fila que sobrevive à rodada |
+
+## Fase 5 — Produção
+
+| # | decisão |
+|---|---|
+| [0024](0024-fase5-imagens-producao-ci.md) | Imagens de produção multi-stage e non-root, `compose.prod`, CI com scan e teste de fumaça |
+| [0025](0025-fase5-deploy-kubernetes-kustomize.md) | **Kustomize** base+overlays (não Helm), HPA do engine por profundidade da fila do Oban, overlay local |
+| [0026](0026-fase5-observabilidade-e-graceful-shutdown.md) | Graceful shutdown com drain, registro de sessão em `:global`, OpenTelemetry com trace por sessão, métricas e dashboards como código |
+| [0027](0027-fase5-backup-hardening-release.md) | Backup/restore testado, rate limit em Postgres (sem Redis), superfície HTTP classificada e release versionado |
+| [0028](0028-protecao-de-branch-divergencia-entre-providers.md) | Proteção de branch diverge entre GitHub e GitLab — e por isso **não é o portão**; o portão é o domínio |
+
+## A convenção
+
+- **Um arquivo por decisão**, em `docs/adr/NNNN-titulo-curto.md`, com
+  numeração sequencial de 4 dígitos. **Sem reuso de número**, nem quando um ADR
+  é superado — o próximo é **0029**.
+- **Três seções, só elas:** **Contexto** (o problema ou a força que motivou),
+  **Decisão** (o que foi decidido), **Consequências** (os trade-offs aceitos e
+  o que fica para depois).
+- **Sem template de terceiros** — nada de Nygard, MADR ou variantes. As três
+  seções bastam.
+- **Em pt-BR**, como o resto do projeto.
+- **ADR aceito não é editado.** Um superado por decisão posterior continua como
+  está; o ADR novo referencia o antigo e explica o que mudou.
+
+O que dá valor a estes ADRs é registrarem o que **não** funcionou: o 0020
+documenta nove execuções falhas seguidas, e o 0027 registra uma justificativa
+que foi revista dentro da mesma sessão que a produziu. Consequência ruim
+omitida é a parte que faz falta seis meses depois.
