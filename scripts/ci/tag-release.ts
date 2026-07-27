@@ -107,7 +107,23 @@ async function principal(): Promise<void> {
       }
     }
 
-    const ancora = verificarAncora(versao, tags, shaPorTag, sha);
+    // Árvore e pais: sem eles a âncora não consegue validar uma promoção por
+    // merge commit, que é o caso NORMAL — `--no-ff` cria um commit novo, e o
+    // sha de `main` nunca vai ser o de `qa`.
+    const treePorTag: Record<string, string> = {};
+    for (const t of tags) {
+      try {
+        treePorTag[t] = git('rev-parse', `${t}^{tree}`);
+      } catch {
+        // Tag que não resolve fica de fora; a ausência vira reprovação.
+      }
+    }
+
+    const ancora = verificarAncora(versao, tags, shaPorTag, sha, {
+      treeDoCommit: git('rev-parse', `${sha}^{tree}`),
+      treePorTag,
+      paisDoCommit: git('rev-list', '--parents', '-n1', sha).split(/\s+/).slice(1),
+    });
     if (!ancora.ok) {
       const titulo = `a tag final ${versao} NÃO pode ser criada`;
       console.error(`[tag-release] ${titulo}`);
