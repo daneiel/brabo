@@ -155,6 +155,28 @@ workflow):
 > acrescentar job novo ao CI, ou ele entra nesta lista, ou fica de fora de
 > propósito e alguém escreve por quê.
 
+> **E um check required que não RE-roda cola um veredito velho.** É o outro
+> lado da lição acima, e custou um PR reprovado por engano.
+>
+> Os default do `pull_request` são `opened`, `reopened` e `synchronize` — nada
+> ali cobre **mudar a base**. E mudar a base é rotina: o GitHub abre o PR
+> contra a branch padrão, o autor corrige para `dev` em seguida. No PR #71 o
+> `Drift, gerados e build` correu na primeira meia dúzia de segundos, contra
+> `origin/main...HEAD`, e reprovou por sete arquivos que já tinham sido
+> revisados e mesclados no #70. O retarget não o reexecutou; o vermelho ficou.
+>
+> O critério para saber quem precisa de `edited` é **de que o check depende**:
+>
+> | o check depende de… | precisa de `edited`? | quem |
+> |---|---|---|
+> | só o HEAD | não | `ci.yml` — testa o commit, e a base não muda o resultado |
+> | a BASE, ou o CORPO do PR | **sim** | `pr-police`, `approval-ladder`, `promotion-check`, `backmerge-gate`, `docs-check` |
+>
+> No `docs-check` são as duas coisas: o drift compara um range que começa na
+> base, e lê o corpo atrás da linha `docs-not-needed:`. Sem `edited`, o escape
+> hatch documentado logo abaixo era inalcançável — escrever a justificativa no
+> corpo não reavaliava nada, e só um commit de mentira destravava o PR.
+
 **`claude-review` fica de fora desta lista de propósito**, e este é o "alguém
 escreve por quê": revisão de LLM é opinativa e custa token, então ela informa o
 PR sem poder travá-lo. Como não é required, o job pode ser pulado sem deixar PR

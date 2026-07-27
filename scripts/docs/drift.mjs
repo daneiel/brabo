@@ -126,7 +126,14 @@ if (process.env.GITHUB_STEP_SUMMARY) {
 }
 
 if (bloqueios.length > 0 && !dispensado) {
-  console.error(
+  // stdout, não stderr, e isso não é preferência: o relatório acima sai num
+  // `console.log` só, e o runner do Actions intercala os dois descritores por
+  // linha ao montar o log. O veredito aparecia NO MEIO da lista de itens —
+  // depois do cabeçalho "Vale revisar" e antes dos itens dele —, dando a
+  // impressão de que reprovou por um aviso. Um descritor só, uma ordem só.
+  //
+  // Quem reprova o passo é o código de saída, não o descritor.
+  console.log(
     '\n[drift] o PR toca código cuja documentação é obrigatória e não a atualizou.\n' +
       '        Atualize os documentos acima, ou justifique com a label `docs-not-needed`\n' +
       '        ou a linha `docs-not-needed: <motivo>` no corpo do PR.',
