@@ -20,8 +20,12 @@
  * "Avançado" aqui é "contém mais trabalho ainda não validado": `dev` é onde
  * tudo entra primeiro, `main` é o que está no ar. O índice nesta lista é o que
  * define tanto a adjacência da promoção quanto o que conta como contaminação.
+ *
+ * Três degraus, não quatro: `rc` foi removida da escada. Quem corrige o que
+ * aparece em homologação abre `bugfix/` a partir de `dev` e sobe pela escada
+ * como qualquer trabalho — não há mais correção que nasce no meio.
  */
-export const ESCADA = ['dev', 'qa', 'rc', 'main'] as const;
+export const ESCADA = ['dev', 'qa', 'main'] as const;
 export type Permanente = (typeof ESCADA)[number];
 
 /** Funções que nascem de `dev` e voltam para `dev`. */
@@ -36,9 +40,14 @@ export const FUNCOES_DE_TRABALHO = [
   'test',
 ] as const;
 
-/** Correções que nascem no degrau em que o problema apareceu. */
+/**
+ * Correção que nasce no degrau em que o problema apareceu.
+ *
+ * Só `hotfix` desde que a escada passou a ter três degraus: `rcfix` existia
+ * para a preprod, e sem `rc` ele ficaria sem origem. Problema achado em
+ * homologação vira `bugfix/` a partir de `dev`, que é o caminho normal.
+ */
 export const FUNCOES_DE_CORRECAO_ALTA = {
-  rcfix: 'rc',
   hotfix: 'main',
 } as const satisfies Record<string, Permanente>;
 
@@ -149,9 +158,8 @@ export function ehAutorBot(autor?: string, tipoDoAutor?: string): boolean {
  * o que se checa é se o head contém o tip de alguma permanente **estritamente
  * mais avançada** que a origem declarada:
  *
- *   hotfix (main) → não pode conter rc, qa nem dev
- *   rcfix  (rc)   → não pode conter qa nem dev
- *   trabalho (dev)→ dev é o topo: nada a verificar
+ *   hotfix (main)  → não pode conter qa nem dev
+ *   trabalho (dev) → dev é o topo: nada a verificar
  *
  * Trabalho não tem verificação de propósito. Uma `feature` que nasceu de `main`
  * por engano não introduz nada estranho em `dev` — a política só precisa pegar
@@ -159,7 +167,7 @@ export function ehAutorBot(autor?: string, tipoDoAutor?: string): boolean {
  *
  * "Estritamente mais avançada" é dinâmico, não a ordem fixa: `Q` só conta se
  * tiver commits que a origem não tem. Sem isso, logo depois de cada promoção
- * (quando `qa` vira ancestral de `rc`) todo `rcfix` legítimo viraria falso
+ * (quando `qa` vira ancestral de `main`) todo `hotfix` legítimo viraria falso
  * positivo.
  */
 export function verificarContaminacao(
@@ -196,6 +204,7 @@ const LISTA_DE_FUNCOES = TODAS_AS_FUNCOES.join(', ');
 const SUGESTAO_POR_ENGANO: Record<string, string> = {
   fix: 'Correção comum é `bugfix`; incidente em produção é `hotfix`.',
   hotfixes: 'O singular: `hotfix`.',
+  rcfix: 'A escada não tem mais `rc`. Correção achada em homologação é `bugfix`.',
   feat: 'O nome completo: `feature`.',
   ci: 'Mudança de CI, tooling ou manutenção é `chore`.',
   build: 'Mudança de build é `chore`.',
@@ -379,12 +388,9 @@ export function avaliarPr(entrada: EntradaPr): Veredito {
       observado: `\`${head}\` contém o tip de ${lista} — logo não nasceu de \`${origem}\``,
       regra: `\`${funcao}/\` nasce de \`${origem}\`, e não pode carregar commits que só existem em degraus acima.`,
       porque:
-        origem === 'main'
-          ? 'Hotfix vai direto para produção. Nascendo de outro degrau, o merge ' +
-            'leva junto tudo que ainda está em desenvolvimento — um deploy de ' +
-            'emergência vira um release inteiro não revisado.'
-          : 'Rcfix corrige o que foi achado na preprod. Nascendo de um degrau ' +
-            'acima, carrega junto o que ainda não chegou lá.',
+        'Hotfix vai direto para produção. Nascendo de outro degrau, o merge ' +
+        'leva junto tudo que ainda está em desenvolvimento — um deploy de ' +
+        'emergência vira um release inteiro não revisado.',
       conserto:
         `git fetch origin ${origem}\n` +
         `            git checkout -b ${head}-limpa origin/${origem}\n` +

@@ -51,7 +51,7 @@ jobs:
       - name: Buscar as permanentes e o head do PR
         run: |
           set -euo pipefail
-          for b in dev qa rc main; do
+          for b in dev qa main; do
             # Permanente que ainda não existe não é erro — o script trata a
             # ausência como "não verificado", nunca como aprovado.
             git fetch --no-tags --quiet origin "+refs/heads/$b:refs/remotes/origin/$b" || \

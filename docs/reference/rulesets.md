@@ -3,7 +3,7 @@ id: rulesets
 title: Rulesets do repositório
 sidebar_label: Rulesets
 sidebar_position: 8
-description: A configuração exata dos rulesets das quatro branches permanentes e das tags, para aplicação manual — o repositório versiona a fonte, o GitHub recebe a aplicação.
+description: A configuração exata dos rulesets das três branches permanentes e das tags, para aplicação manual — o repositório versiona a fonte, o GitHub recebe a aplicação.
 keywords: [rulesets, proteção de branch, required checks, tags, release]
 ---
 
@@ -20,29 +20,31 @@ A política que estas regras aplicam está em
 > aplicado ainda. Enquanto isso, tudo aqui é intenção declarada, não proteção
 > real.
 
-## Pré-requisito: as quatro branches precisam existir
+## Pré-requisito: as três branches precisam existir
 
-A escada tem quatro degraus, e um ruleset não pode mirar o que não existe.
+A escada tem três degraus, e um ruleset não pode mirar o que não existe.
 
 ```bash
 git fetch origin
 git push origin origin/dev:refs/heads/qa
-git push origin origin/dev:refs/heads/rc
 ```
 
-`dev` e `main` já existem. `qa` e `rc` nascem de `dev` — a escada começa vazia
-e é preenchida por promoções.
+`dev` e `main` já existem. `qa` nasce de `dev` — a escada começa vazia e é
+preenchida por promoções.
 
-## Ruleset 1 — as quatro permanentes
+> A branch `rc` foi **removida** da escada. Se ela ainda existir no remoto de
+> um clone antigo, apague: `git push origin --delete rc`. Branch permanente que
+> não está na escada é convite a PR mirando um degrau que não existe mais.
+
+## Ruleset 1 — as três permanentes
 
 **Nome:** `permanentes`
 **Enforcement:** `Active`
-**Target:** Branch → `Include by pattern`, quatro entradas: `dev`, `qa`, `rc`,
-`main`
+**Target:** Branch → `Include by pattern`, três entradas: `dev`, `qa`, `main`
 
-> Um ruleset só para as quatro, e não quatro rulesets: a exigência é idêntica
-> em todas. O que difere entre degraus é **quem aprova**, e isso é decidido
-> pelo `approval-ladder` a partir do destino, não pela proteção.
+> Um ruleset só para as três, e não três rulesets: a exigência é idêntica em
+> todas. O que difere entre degraus é **quem aprova**, e isso é decidido pelo
+> `approval-ladder` a partir do destino, não pela proteção.
 
 ### Regras a marcar
 
@@ -77,10 +79,9 @@ que a migração não passa por Settings → Rules.
 | variáveis | `APPROVAL_MODE=solo`, `OWNER_HANDLE` | `APPROVAL_MODE=community`, `APROVADORES_*` |
 | `dev` | 1 do owner | 1 × devs |
 | `qa` | 1 do owner | 2 × devs |
-| `rc` | 1 do owner | 1 × qualidade + 1 × devs |
 | `main` | 1 do owner | 1 × PO + 1 × gestão |
 | PR do próprio owner | passa sem review | segue a escada como qualquer um |
-| pessoas distintas | suspensa | vale em `rc` e `main` |
+| pessoas distintas | suspensa | vale em `main` |
 
 **Required approvals fica em 0 nos dois casos, e isso é deliberado.** O GitHub
 só sabe contar: ele não distingue `dev` de `main`, não sabe de papéis, e não
@@ -97,11 +98,10 @@ gh variable set APPROVAL_MODE --body solo
 gh variable set OWNER_HANDLE  --body daneiel
 
 # community — preencher as listas ANTES de virar a chave
-gh variable set APROVADORES_DEVS      --body "ana,bruno,carla"
-gh variable set APROVADORES_QUALIDADE --body "quim"
-gh variable set APROVADORES_PO        --body "paula"
-gh variable set APROVADORES_GESTAO    --body "gustavo"
-gh variable set APPROVAL_MODE         --body community
+gh variable set APROVADORES_DEVS   --body "ana,bruno,carla"
+gh variable set APROVADORES_PO     --body "paula"
+gh variable set APROVADORES_GESTAO --body "gustavo"
+gh variable set APPROVAL_MODE      --body community
 ```
 
 ### Checks obrigatórios
@@ -130,9 +130,10 @@ workflow):
 > guarda, o gatilho seria ovo e galinha. Os dois usam `pull_request`.
 
 > **Um check required que nunca roda trava o PR para sempre.** É por isso que o
-> gatilho do `ci.yml` cobre as quatro permanentes e toda a taxonomia de
-> prefixos — antes da FASE 6 ele só disparava em PR para `dev`, e exigir estes
-> checks numa promoção `dev→qa` produziria um PR eternamente pendente. Ao
+> gatilho do `ci.yml` cobre as três permanentes — antes da FASE 6 ele só
+> disparava em PR para `dev`, e exigir estes checks numa promoção `dev→qa`
+> produziria um PR eternamente pendente. O gatilho de `push` foi removido: com
+> `pull_request` cobrindo tudo, ele só duplicava execução. Ao
 > acrescentar job novo ao CI, ou ele entra nesta lista, ou fica de fora de
 > propósito e alguém escreve por quê.
 
@@ -166,7 +167,7 @@ abaixo, e ela é do bot — não de pessoa.
 
 Esta é a exceção de push que a política prevê: **versão nasce de workflow,
 nunca da mão**. Uma tag criada manualmente não passa pela verificação de que a
-final aponta para o mesmo commit da última `-rc.N`, e é justamente essa
+final aponta para o mesmo commit da última `-qa.N`, e é justamente essa
 verificação que impede publicar algo diferente do que foi validado.
 
 ## Como aplicar
@@ -195,7 +196,7 @@ se a label não existir — o que deixaria o PR sem classificação em silêncio
 gh label create trabalho        --color 0E8A16 --description "PR de trabalho: prefixo da taxonomia para dev"
 gh label create promocao        --color 1D76DB --description "Promoção entre degraus adjacentes, subindo"
 gh label create retropropagacao --color 5319E7 --description "Retropropagação entre degraus adjacentes, descendo"
-gh label create correcao-alta   --color D93F0B --description "rcfix ou hotfix: correção que nasce alta na escada"
+gh label create correcao-alta   --color D93F0B --description "hotfix: correção que nasce alta na escada"
 ```
 
 Sem `|| true` de propósito: se o comando falhar, você precisa ver.

@@ -107,10 +107,12 @@ describe('taxonomia', () => {
     expect(v.familia).toBe('trabalho');
   });
 
-  it('aceita rcfix mirando rc, família correcao-alta', () => {
-    const v = avaliarPr(pr({ head: 'rcfix/x', base: 'rc', ancestralidade: escadaEsticada('rc') }));
-    expect(v.ok).toBe(true);
-    expect(v.familia).toBe('correcao-alta');
+  it('REJEITA rcfix — saiu da taxonomia junto com o degrau `rc`', () => {
+    const v = avaliarPr(pr({ head: 'rcfix/x', base: 'qa' }));
+    expect(v.ok).toBe(false);
+    expect(v.violacoes[0]!.codigo).toBe('FUNCAO-DESCONHECIDA');
+    // A mensagem tem que ENSINAR o caminho novo, não só recusar.
+    expect(v.violacoes[0]!.conserto).toContain('bugfix');
   });
 
   it('aceita hotfix mirando main, família correcao-alta', () => {
@@ -152,12 +154,7 @@ describe('destino', () => {
     expect(d.conserto).toContain('gh pr edit');
   });
 
-  it.each(['dev', 'qa', 'main'])('reprova rcfix/x mirando %s', (base) => {
-    const v = avaliarPr(pr({ head: 'rcfix/x', base, ancestralidade: escadaEsticada('rc') }));
-    expect(v.ok).toBe(false);
-  });
-
-  it.each(['dev', 'qa', 'rc'])('reprova hotfix/x mirando %s', (base) => {
+  it.each(['dev', 'qa'])('reprova hotfix/x mirando %s', (base) => {
     const v = avaliarPr(pr({ head: 'hotfix/x', base, ancestralidade: escadaEsticada('main') }));
     expect(v.ok).toBe(false);
   });
@@ -168,8 +165,7 @@ describe('destino', () => {
 describe('escada', () => {
   it.each([
     ['dev', 'qa'],
-    ['qa', 'rc'],
-    ['rc', 'main'],
+    ['qa', 'main'],
   ])('aceita a promoção %s → %s', (head, base) => {
     const v = avaliarPr({ head, base });
     expect(v.ok).toBe(true);
@@ -177,8 +173,7 @@ describe('escada', () => {
   });
 
   it.each([
-    ['main', 'rc'],
-    ['rc', 'qa'],
+    ['main', 'qa'],
     ['qa', 'dev'],
   ])('aceita a retropropagação %s → %s', (head, base) => {
     const v = avaliarPr({ head, base });
@@ -186,25 +181,20 @@ describe('escada', () => {
     expect(v.familia).toBe('retropropagacao');
   });
 
-  it.each([
-    ['dev', 'rc', 'qa'],
-    ['dev', 'main', 'qa'],
-    ['qa', 'main', 'rc'],
-  ])('reprova a promoção %s → %s por pular %s', (head, base, pulado) => {
+  it.each([['dev', 'main', 'qa']])(
+    'reprova a promoção %s → %s por pular %s',
+    (head, base, pulado) => {
     const v = avaliarPr({ head, base });
     expect(v.ok).toBe(false);
     expect(v.violacoes[0]!.codigo).toBe('PROMOCAO-NAO-ADJACENTE');
     expect(v.violacoes[0]!.observado).toContain(pulado);
     // O conserto tem que dizer o caminho em etapas, não só "é proibido".
-    expect(v.violacoes[0]!.conserto).toContain('etapas');
-  });
+      expect(v.violacoes[0]!.conserto).toContain('etapas');
+    },
+  );
 
-  it.each([
-    ['main', 'dev'],
-    ['rc', 'dev'],
-    ['main', 'qa'],
-  ])('reprova a retropropagação %s → %s por pular degrau', (head, base) => {
-    expect(avaliarPr({ head, base }).ok).toBe(false);
+  it('reprova a retropropagação main → dev por pular degrau', () => {
+    expect(avaliarPr({ head: 'main', base: 'dev' }).ok).toBe(false);
   });
 
   it('reprova permanente mirando ela mesma', () => {
@@ -218,7 +208,7 @@ describe('escada', () => {
   it('não aplica o regex de nome a PR entre permanentes', () => {
     // `main` não tem barra: se a ordem de avaliação estiver invertida, todo PR
     // de promoção recebe "use funcao/descritivo", que é uma mensagem absurda.
-    const v = avaliarPr({ head: 'rc', base: 'main' });
+    const v = avaliarPr({ head: 'qa', base: 'main' });
     expect(v.ok).toBe(true);
     expect(v.violacoes).toHaveLength(0);
   });
@@ -233,13 +223,15 @@ describe('escada', () => {
 // ------------------------------------------------------------- 5. contaminação
 
 describe('contaminação de origem', () => {
-  it('reprova rcfix nascido de dev', () => {
-    const v = avaliarPr(pr({ head: 'rcfix/x', base: 'rc', ancestralidade: escadaEsticada('dev') }));
+  it('reprova hotfix nascido de qa', () => {
+    const v = avaliarPr(
+      pr({ head: 'hotfix/x', base: 'main', ancestralidade: escadaEsticada('qa') }),
+    );
     expect(v.ok).toBe(false);
     const c = v.violacoes.find((x) => x.codigo === 'ORIGEM-CONTAMINADA')!;
-    expect(c.observado).toContain('`dev`');
+    expect(c.observado).toContain('`qa`');
     expect(c.conserto).toContain('git checkout -b');
-    expect(c.conserto).toContain('origin/rc');
+    expect(c.conserto).toContain('origin/main');
   });
 
   it('reprova hotfix nascido de dev', () => {
@@ -249,13 +241,6 @@ describe('contaminação de origem', () => {
     expect(v.ok).toBe(false);
     const c = v.violacoes.find((x) => x.codigo === 'ORIGEM-CONTAMINADA')!;
     expect(c.porque).toContain('produção');
-  });
-
-  it('reprova hotfix nascido de rc', () => {
-    const v = avaliarPr(
-      pr({ head: 'hotfix/x', base: 'main', ancestralidade: escadaEsticada('rc') }),
-    );
-    expect(v.ok).toBe(false);
   });
 
   it('aceita feature nascida de main — contaminação só conta para BAIXO', () => {
@@ -276,14 +261,14 @@ describe('contaminação de origem', () => {
     expect(avaliarPr(pr({ head: 'hotfix/x', base: 'main', ancestralidade: a })).ok).toBe(true);
   });
 
-  it('aceita rcfix quando qa é ancestral de rc — regressão do falso positivo pós-promoção', () => {
-    // Logo depois de `qa → rc`, o tip de qa está DENTRO de rc. Um rcfix
+  it('aceita hotfix quando qa é ancestral de main — regressão do falso positivo pós-promoção', () => {
+    // Logo depois de `qa → main`, o tip de qa está DENTRO de main. Um hotfix
     // legítimo contém o tip de qa, e sem o teste dinâmico de "mais avançada"
     // isso viraria contaminação.
-    const a = escadaEsticada('rc');
+    const a = escadaEsticada('main');
     a.headContem.qa = true;
-    a.contida.qa = { ...a.contida.qa, rc: true };
-    expect(avaliarPr(pr({ head: 'rcfix/x', base: 'rc', ancestralidade: a })).ok).toBe(true);
+    a.contida.qa = { ...a.contida.qa, main: true };
+    expect(avaliarPr(pr({ head: 'hotfix/x', base: 'main', ancestralidade: a })).ok).toBe(true);
   });
 
   it('avisa em vez de reprovar quando a ancestralidade não pôde ser medida', () => {
@@ -301,9 +286,9 @@ describe('contaminação de origem', () => {
   it('permanente inexistente entra como não verificada, nunca como aprovada', () => {
     // `qa` e `rc` ainda não existiam no remoto: a medida não existe. Tratar
     // ausência como `false` faria toda checagem passar em silêncio.
-    const r = verificarContaminacao('main', { headContem: { dev: true }, contida: {} });
+    const r = verificarContaminacao('main', { headContem: {}, contida: {} });
     expect(r.naoVerificado).toContain('qa');
-    expect(r.naoVerificado).toContain('rc');
+    expect(r.naoVerificado).toContain('dev');
   });
 });
 

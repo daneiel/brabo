@@ -6,33 +6,30 @@ name: CI
 # Este workflow é o que a proteção da branch `dev` deve exigir — a configuração
 # está documentada em docs/adr/0024, e aplicá-la é passo MANUAL do usuário nas
 # settings do GitHub (hoje bloqueado pelo plano do repo, ver o ADR).
-# O gatilho cobre a ESCADA INTEIRA de propósito (FASE 6). Enquanto o
-# `pull_request` filtrava só `dev`, um PR de promoção (`dev→qa`, `qa→rc`,
-# `rc→main`) não rodava CI nenhum — e exigir estes checks nas quatro
+# Só `pull_request`, sem `push`.
+#
+# Antes, `push` na branch de trabalho e `pull_request` para a permanente
+# disparavam os DOIS — todo job rodava duas vezes por PR, incluindo os ~5,5 min
+# do build de imagens: 11 minutos gastos para produzir o mesmo veredito duas
+# vezes.
+#
+# Nada se perde em cobertura: a política exige PR para toda mudança, e PR em
+# rascunho já dispara `opened` e `synchronize`. Quem quer CI antes de pedir
+# review abre o PR como rascunho.
+#
+# O gatilho cobre a escada inteira (dev, qa, main). Enquanto filtrava só `dev`,
+# um PR de promoção não rodava CI nenhum — e exigir estes checks nas
 # permanentes travaria o PR para sempre, porque o check exigido nunca
-# apareceria. O `push` cobre a taxonomia toda, não só `feature/**`.
+# apareceria.
 on:
-  push:
-    branches:
-      - 'breaking/**'
-      - 'feature/**'
-      - 'bugfix/**'
-      - 'perf/**'
-      - 'refactor/**'
-      - 'chore/**'
-      - 'docs/**'
-      - 'test/**'
-      - 'rcfix/**'
-      - 'hotfix/**'
   pull_request:
     branches:
       - dev
       - qa
-      - rc
       - main
 
-# Push seguido de push na mesma branch cancela a execução anterior: o que
-# importa é o resultado do HEAD.
+# Push seguido de push no mesmo PR cancela a execução anterior: o que importa
+# é o resultado do HEAD.
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
