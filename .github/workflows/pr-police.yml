@@ -1,0 +1,107 @@
+name: pr-police
+
+# Aplica a política de branches em todo PR.
+# Fonte da política: docs/explanation/branching-policy.md
+# A lógica vive em scripts/ci/pr-police.ts, testada por vitest — este workflow
+# é fino de propósito: ele coleta dados e chama o script.
+#
+# `pull_request_target` e não `pull_request`: o repositório é público e vai
+# receber PR de fork, e em `pull_request` vindo de fork o GITHUB_TOKEN é
+# read-only — `gh pr edit --add-label` FALHA. Com `_target` o workflow e o
+# token vêm da branch base.
+#
+# Isso é seguro AQUI porque o job nunca executa código do head: faz checkout da
+# BASE, roda o script da BASE, e do head só lê SHA e nome de ref. Não há
+# `pnpm install`, não há build, não há script do autor do PR.
+on:
+  pull_request_target:
+    types: [opened, edited, reopened, synchronize, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: pr-police-${{ github.event.number }}
+  cancel-in-progress: true
+
+jobs:
+  policiar:
+    name: Política de branches
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # ATENÇÃO: sem `if:` neste job, nunca. Status check é indexado por
+      # (sha, nome do check), e trocar a base de um PR NÃO gera sha novo. Um
+      # job que se pule deixa o PASS antigo colado no sha, e a proteção de
+      # branch aceita — buraco silencioso.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          # A verificação de contaminação é ancestralidade: com checkout raso
+          # o merge-base não existe e a checagem viraria "não verificado".
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Buscar as permanentes e o head do PR
+        run: |
+          set -euo pipefail
+          for b in dev qa rc main; do
+            # Permanente que ainda não existe não é erro — o script trata a
+            # ausência como "não verificado", nunca como aprovado.
+            git fetch --no-tags --quiet origin "+refs/heads/$b:refs/remotes/origin/$b" || \
+              echo "::notice::branch permanente '$b' não existe no remoto"
+          done
+          # De fork, o head não é alcançável por nome — só por refs/pull/N/head.
+          git fetch --no-tags --quiet origin \
+            "refs/pull/${{ github.event.number }}/head:refs/remotes/pull/${{ github.event.number }}"
+
+      - name: Avaliar o PR
+        id: policia
+        # Dados por env, NUNCA interpolados em `run:`: título e nome de branch
+        # de fork são texto controlado por terceiro.
+        env:
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_AUTOR: ${{ github.event.pull_request.user.login }}
+          PR_AUTOR_TIPO: ${{ github.event.pull_request.user.type }}
+          PR_MESMO_REPO: ${{ github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name }}
+        run: node scripts/ci/pr-police.ts
+        continue-on-error: true
+
+      # A label é para humano ler. A DECISÃO nunca vem dela: o approval-ladder
+      # (item 3 da Fase 6) importa a mesma função pura e recalcula a família.
+      # Ler a label criaria corrida entre workflows e um vetor de burla — quem
+      # pode editar label mudaria o regime de aprovação.
+      - name: Aplicar a label de família
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FAMILIA: ${{ steps.policia.outputs.familia }}
+          PR: ${{ github.event.number }}
+        run: |
+          set -euo pipefail
+          todas=(trabalho promocao retropropagacao correcao-alta)
+
+          # Label obsoleta engana mais que label nenhuma: um `promocao` velho
+          # num PR que trocou de base é pior que ausência.
+          remover=()
+          for f in "${todas[@]}"; do
+            [ "$f" = "${FAMILIA:-}" ] || remover+=(--remove-label "$f")
+          done
+
+          if [ -n "${FAMILIA:-}" ]; then
+            gh pr edit "$PR" --add-label "$FAMILIA" "${remover[@]}"
+            echo "família aplicada: $FAMILIA"
+          else
+            gh pr edit "$PR" "${remover[@]}"
+            echo "sem família — PR reprovado ou isento"
+          fi
+
+      # O veredito reprova o check aqui, depois de a label ter sido acertada.
+      - name: Veredito
+        if: steps.policia.outcome == 'failure'
+        run: |
+          echo "::error::PR reprovado pela política de branches. O que fazer está no log do passo 'Avaliar o PR' e no resumo desta execução."
+          exit 1

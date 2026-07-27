@@ -133,6 +133,7 @@ function gerarScripts() {
     ['api', 'apps/api/package.json'],
     ['web', 'apps/web/package.json'],
     ['website', 'website/package.json'],
+    ['scripts', 'scripts/package.json'],
   ];
 
   let out = `---

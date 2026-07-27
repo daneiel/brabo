@@ -90,6 +90,13 @@ Fonte: os `package.json` de cada pacote e o `Makefile` da raiz.
 | `pnpm --filter website write-heading-ids` | `docusaurus write-heading-ids` |
 | `pnpm --filter website typecheck` | `tsc` |
 
+## scripts — `scripts/package.json`
+
+| comando | executa |
+|---|---|
+| `pnpm --filter scripts test` | `vitest run` |
+| `pnpm --filter scripts typecheck` | `tsc --noEmit` |
+
 ## Makefile
 
 | alvo | faz |
@@ -107,4 +114,4 @@ Fonte: os `package.json` de cada pacote e o `Makefile` da raiz.
 
 ---
 
-67 comandos no total. Alvo do Makefile sem anotação `## descrição` não aparece aqui — anote na fonte.
+69 comandos no total. Alvo do Makefile sem anotação `## descrição` não aparece aqui — anote na fonte.

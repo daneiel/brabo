@@ -140,6 +140,20 @@ rules:
 
   # -------------------------------------------------------------------- ADR
 
+  # A política de branches é executada por workflow. Mudar o mecanismo sem
+  # mudar a fonte faz a doc descrever um sistema que não existe — e aqui isso é
+  # pior que o normal, porque a política é o que as pessoas leem quando o CI as
+  # reprova.
+  - id: politica-de-branches
+    watch:
+      - ".github/workflows/pr-police.yml"
+      - "scripts/ci/**"
+    docs:
+      - "docs/explanation/branching-policy.md"
+      - "docs/reference/rulesets.md"
+    severity: block
+    note: "Regra nova no pr-police exige a regra escrita na política."
+
   - id: adr-trigger
     watch:
       - "docker/**"
