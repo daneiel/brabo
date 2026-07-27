@@ -130,6 +130,22 @@ workflow):
 > Como a padrão é `main` e ela só avança pela escada que o próprio check
 > guarda, o gatilho seria ovo e galinha. Os dois usam `pull_request`.
 
+> **De onde o GitHub lê cada workflow — três famílias, três respostas.** Isto
+> custou três descobertas separadas nesta fase, e não está óbvio em lugar
+> nenhum:
+>
+> | gatilho | lê o workflow de | consequência aqui |
+> |---|---|---|
+> | `pull_request`, `push` | a **branch do evento** | funciona desde o primeiro PR |
+> | `pull_request_target` | a **branch padrão** | não rodava: `main` está atrás |
+> | `workflow_dispatch` | a **branch padrão** | nem aparece na lista de workflows |
+>
+> Os dois últimos criam um ovo-e-galinha quando a padrão está desatualizada: o
+> workflow que faz a esteira andar precisa já estar na `main` para poder ser
+> disparado. A saída foi rodar o script do `promote` à mão na primeira
+> promoção — o mesmo script, só o gatilho manual. Depois que a `main` recebe os
+> workflows, o dispatch funciona para sempre.
+
 > **Um check required que nunca roda trava o PR para sempre.** É por isso que o
 > gatilho do `ci.yml` cobre as três permanentes — antes da FASE 6 ele só
 > disparava em PR para `dev`, e exigir estes checks numa promoção `dev→qa`

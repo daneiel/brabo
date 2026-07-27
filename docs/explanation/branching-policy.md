@@ -290,6 +290,13 @@ valida a **forma** (nome, origem, destino); este valida o **estado**:
 Verificação que **não pôde ser feita** conta como reprovada, nunca como
 aprovada — uma ref que não resolve é ignorância, não permissão.
 
+A exceção é a leitura da **configuração de merge**: o token do workflow
+legitimamente não tem permissão para lê-la, e travar toda promoção por isso
+seria pior que a falha que se quer evitar. Ali a impossibilidade vira **aviso**,
+e a garantia de verdade fica no `tag-release`: depois do merge, ele confere que
+o commit tem **dois pais**. Isso não depende de permissão nenhuma, e olha o
+fato consumado em vez da intenção declarada.
+
 ## Versionamento
 
 Toda tag nasce de workflow, no formato `vX.Y.Z-dev.N` / `-qa.N` / final.
