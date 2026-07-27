@@ -31,6 +31,10 @@ coverage
 # Não entra em imagem de produção
 spike
 docs
+# website/: o site de documentação (Docusaurus). Nenhum Dockerfile o lê, e o
+# `website/build` sozinho passa de 2 MB com o índice de busca. Mandar isso ao
+# daemon a cada build das quatro imagens é transferência pura.
+website
 # Manifests de Kubernetes: descrevem COMO a imagem roda, nunca são lidos por
 # ela. Mandá-los para o daemon só engorda o contexto e invalida cache de build
 # a cada ajuste de manifesto.
@@ -59,6 +63,8 @@ docker
 !docker/backup
 Dockerfile*
 docker-compose*.yml
+# O bake DESCREVE os builds; nenhuma imagem o lê de dentro.
+docker-bake.hcl
 
 # Ruído de editor/SO
 .DS_Store
