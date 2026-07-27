@@ -17,11 +17,13 @@
 import type { Permanente } from './pr-police.ts';
 import {
   CicloVazioError,
+  extrairNumerosDePr,
   identificarCaminho,
   lerVersaoFinal,
   montarTag,
   proximaVersao,
   proximoN,
+  semTrafegoDaEsteira,
   SemFinalError,
   verificarAncora,
   versaoDeHotfix,
@@ -178,16 +180,17 @@ async function principal(): Promise<void> {
   const range = ultimaFinal ? `${ultimaFinal}..origin/dev` : 'origin/dev';
   let assuntos: string[] = [];
   try {
-    assuntos = git('log', '--no-merges', '--pretty=format:%s', range).split('\n').filter(Boolean);
+    // COM os merges. O `--no-merges` que estava aqui escondia exatamente a
+    // linha que cita o número num PR mergeado por merge commit — e aí o ciclo
+    // inteiro parecia vazio. Ver `extrairNumerosDePr`.
+    assuntos = git('log', '--pretty=format:%s', range).split('\n').filter(Boolean);
   } catch {
     assuntos = [];
   }
 
-  const numeros = [
-    ...new Set(assuntos.flatMap((a) => [...a.matchAll(/\(#(\d+)\)\s*$/g)].map((m) => Number(m[1])))),
-  ];
+  const numeros = extrairNumerosDePr(assuntos);
 
-  const prs: PrDoCiclo[] = numeros.map((numero) => {
+  const todosOsPrs: PrDoCiclo[] = numeros.map((numero) => {
     try {
       const json = execFileSync(
         'gh',
@@ -200,6 +203,18 @@ async function principal(): Promise<void> {
       return { numero, titulo: `PR #${numero}`, branch: '' };
     }
   });
+
+  // Promoção e retropropagação não são trabalho do ciclo: o que elas carregam
+  // já foi contado, ou já foi lançado.
+  const prs = semTrafegoDaEsteira(todosOsPrs);
+  const descartados = todosOsPrs.length - prs.length;
+  if (descartados > 0) {
+    console.log(`[tag-release] ${descartados} PR(s) de esteira fora do ciclo.`);
+  }
+  console.log(
+    `[tag-release] ciclo desde ${ultimaFinal ?? 'o início'}: ` +
+      (prs.length > 0 ? prs.map((p) => `#${p.numero} (${p.branch})`).join(', ') : 'vazio'),
+  );
 
   let versao: string;
   try {

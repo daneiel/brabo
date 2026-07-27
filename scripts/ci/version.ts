@@ -95,6 +95,45 @@ export function lerTagDeEstagio(tag: string): TagDeEstagio | null {
 
 // ------------------------------------------------------- classificar o ciclo
 
+/**
+ * Os números de PR de uma lista de assuntos de commit.
+ *
+ * Precisa entender OS DOIS estilos de merge, porque os dois acontecem neste
+ * repositório e o número do PR cai em lugares diferentes:
+ *
+ *   squash        `feat(x): faz coisa (#53)`
+ *   merge commit  `Merge pull request #56 from daneiel/feature/x`
+ *
+ * Ler só o primeiro foi um bug real: o #56 entrou por merge commit, o
+ * `--no-merges` do range escondeu a única linha que citava o número, e o ciclo
+ * inteiro pareceu vazio — nenhuma tag nasceu do merge.
+ */
+export function extrairNumerosDePr(assuntos: string[]): number[] {
+  const numeros = new Set<number>();
+
+  for (const assunto of assuntos) {
+    const merge = /^Merge pull request #(\d+)\b/.exec(assunto.trim());
+    if (merge) {
+      numeros.add(Number(merge[1]));
+      continue;
+    }
+    for (const m of assunto.matchAll(/\(#(\d+)\)\s*$/g)) numeros.add(Number(m[1]));
+  }
+
+  return [...numeros];
+}
+
+/**
+ * Tira do ciclo os PRs que não são trabalho: promoção e retropropagação.
+ *
+ * Eles nascem de uma permanente, e o conteúdo que carregam já foi contado —
+ * ou já foi lançado. Contá-los faria um backmerge de hotfix, sozinho, gerar um
+ * ciclo novo: uma tag `-dev.N` sobre uma versão que não mudou nada.
+ */
+export function semTrafegoDaEsteira(prs: PrDoCiclo[]): PrDoCiclo[] {
+  return prs.filter((pr) => !(ESCADA as readonly string[]).includes(pr.branch));
+}
+
 export function classificar(prs: PrDoCiclo[]): PrClassificado[] {
   return prs.map((pr) => {
     const funcao = pr.branch.includes('/') ? pr.branch.slice(0, pr.branch.indexOf('/')) : pr.branch;
