@@ -25,17 +25,31 @@ resposta imediata, vai por HTTP.
 
 ## Autenticação
 
-Nenhuma das duas pontas confia em rede privada. Ambas usam **client credentials
-do Keycloak**:
+Nenhuma das duas pontas confia em rede privada. Ambas apresentam o **mesmo
+service token** — um segredo compartilhado por env, rotacionável, no cabeçalho
+`X-Brabo-Service-Token`:
 
-| chamador | client | verificado por |
+| chamador | verificado por | comparação |
 |---|---|---|
-| engine → api | `engine-service` | `EngineServiceGuard` — token válido **e** `clientId = engine-service` |
-| api → engine | `api-service` | `VerifyApiToken` |
+| engine → api | `EngineServiceGuard` | `comparaEmTempoConstante` |
+| api → engine | `EngineWeb.Plugs.VerifyServiceToken` | `Plug.Crypto.secure_compare/2` |
+
+> **Este tráfego não passa pelo JWT.** As rotas `/internal/*` são anotadas com
+> `@ServiceRoute()`, o que as tira do `JwtAuthGuard` e as isenta do
+> `RateLimitGuard` (que roda antes do guard de controller, então a isenção
+> precisa vir do metadado). Um access token de usuário, mesmo de um `owner`,
+> não abre nenhuma delas; e o service token não abre nenhuma outra rota. Ver
+> [RN-035](../business-rules.md#rn-035).
+
+> **Rotação sem downtime.** `BRABO_SERVICE_TOKEN` é o valor enviado;
+> `BRABO_SERVICE_TOKEN_PREVIOUS` é aceito **só na verificação**. Como os dois
+> lados enviam o atual e aceitam ambos, a rotação é a mesma dança em três
+> etapas do `AUTH_JWT_SECRET`, descrita no
+> [runbook](../runbook.md#rotacao-das-chaves-do-auth).
 
 > As rotas `/internal/*` **não são internas por convenção de nome.** O prefixo é
-> legibilidade; o que as protege é o guard verificando o `clientId` do token. Um
-> JWT de usuário comum, mesmo de um `owner`, é recusado nelas. A classificação
+> legibilidade; o que as protege é o guard verificando o service token. A
+> classificação
 > completa está em
 > [`docs/security-surface.md`](../security-surface.md), e um teste de tabela
 > reprova rota nova sem classificação.
@@ -123,7 +137,7 @@ válida nem perfilar uma competência fora do catálogo, ainda que o modelo peç
 
 ## api → engine
 
-Onze rotas de comando, mais as de saúde. Sob `/internal` com `VerifyApiToken`:
+Onze rotas de comando, mais as de saúde. Sob `/internal` com `VerifyServiceToken`:
 
 | método | caminho | o que dispara |
 |---|---|---|
@@ -179,17 +193,22 @@ dela é uma métrica de banco, consultável por SQL, e serve de sinal para o HPA
 
 ## Onde o contrato vive
 
-Não há OpenAPI nem Protobuf. O contrato é:
+Desde a Fase 7b existe **OpenAPI** para o sentido engine → api: as 26 rotas
+abaixo estão na [referência gerada](api/brabo-api), sob a tag `internal`, com
+corpo de request, corpo de response e códigos de erro. O documento sai do
+código por `pnpm docs:generate` e o `docs:check` reprova quando ele
+desatualiza.
 
 | lado | fonte |
 |---|---|
-| rotas da api | `apps/api/src/interfaces/http/**`, classificadas em [`security-surface.md`](../security-surface.md) |
+| rotas da api | o [OpenAPI gerado](api/brabo-api) (contrato) e [`security-surface.md`](../security-surface.md) (exposição) |
 | rotas do engine | `apps/engine/lib/engine_web/router.ex` |
 | tipos compartilhados | `packages/shared/src/index.ts` (só api ↔ web) |
 | cliente do engine | `apps/engine/lib/engine/sessions/engine_api_client.ex` |
 
-> **TODO(humano):** o `engine_api_client.ex` é o arquivo mais alterado do
-> engine (15 mudanças) e é onde o contrato realmente se materializa — sem
-> nenhuma checagem automática de que ele bate com as rotas da api. Uma mudança
-> de assinatura só aparece em runtime. Gerar tipos a partir das rotas, ou ao
-> menos um teste de contrato entre as duas pontas, fecharia essa lacuna.
+> **TODO(humano):** a referência gerada dá às duas pontas a mesma fonte para
+> conferir, mas **não fecha a lacuna**: continua não havendo checagem
+> automática de que o `engine_api_client.ex` bate com as rotas da api. Ele é o
+> arquivo mais alterado do engine, e uma mudança de assinatura ainda só aparece
+> em runtime. O que fecharia de verdade é gerar o cliente Elixir a partir do
+> `openapi.json`, ou um teste de contrato entre as duas pontas.

@@ -25,10 +25,9 @@ config :engine, Oban, testing: :manual
 # `Engine.Telemetry.ObanQueueDepth.measure/0` direto.
 config :engine, :poll_oban_queue_depth, false
 
-# Não bater no Keycloak de verdade durante a suite — testes que precisam
-# validar um token de verdade usam Engine.Auth.ApiTokenVerifier
-# diretamente com uma estratégia própria, não a supervisionada.
-config :engine, jwks_strategy_should_start?: false
+# Segredo fixo do tráfego interno na suite. O plug compara com este valor;
+# testes que exercitam rotação sobrescrevem via Application.put_env.
+config :engine, service_token: "service-token-de-teste"
 
 # We don't run a server during test. If one is required,
 # you can enable the server option below.

@@ -1,0 +1,69 @@
+---
+id: internal-sessions-controller-infra-context
+title: "Monta o contexto inicial do InfraAgent"
+description: "O module_map vigente mais as ADRs relevantes de infraestrutura."
+sidebar_label: "Monta o contexto inicial do InfraAgent"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "get api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Monta o contexto inicial do InfraAgent"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/internal/sessions/{sessionId}/infra-context"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+O module_map vigente mais as ADRs relevantes de infraestrutura.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./internal-sessions-controller-infra-context.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./internal-sessions-controller-infra-context.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./internal-sessions-controller-infra-context.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

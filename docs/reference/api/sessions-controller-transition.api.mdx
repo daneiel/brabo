@@ -1,0 +1,69 @@
+---
+id: sessions-controller-transition
+title: "Move a sessão para outro estado"
+description: "A transição é validada pela máquina de estados do domínio, não pelo cliente: created → active → closing → closed | closed_abnormally. Salto inválido é 409."
+sidebar_label: "Move a sessão para outro estado"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "post api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Move a sessão para outro estado"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/projects/{projectId}/sessions/{sessionId}/transition"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+A transição é validada pela máquina de estados do domínio, não pelo cliente: created → active → closing → closed | closed_abnormally. Salto inválido é 409.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./sessions-controller-transition.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./sessions-controller-transition.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./sessions-controller-transition.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

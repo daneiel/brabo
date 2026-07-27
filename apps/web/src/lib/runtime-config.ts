@@ -4,7 +4,7 @@
  * ## O problema que isto resolve
  *
  * O Vite **inlina** `import.meta.env.VITE_*` no bundle em tempo de build. Com
- * as URLs de api, engine e Keycloak vindo dali, a imagem do web fica assada
+ * as URLs de api e engine vindo dali, a imagem do web fica assada
  * para um ambiente: mudar o endereço da api exige rebuild, não restart, e cada
  * ambiente precisa da sua própria imagem. Isso quebra a premissa básica de
  * qualquer deploy sério — promover o MESMO artefato que passou no CI de
@@ -26,9 +26,6 @@
 export interface RuntimeConfig {
   apiUrl: string;
   engineUrl: string;
-  keycloakUrl: string;
-  keycloakRealm: string;
-  keycloakClientId: string;
   /** Nível mínimo do logger JSON (Fase 5, item 6). */
   logLevel: string;
 }
@@ -74,21 +71,6 @@ export function readRuntimeConfig(
       source.engineUrl,
       import.meta.env.VITE_ENGINE_URL,
       'http://localhost:4000',
-    ),
-    keycloakUrl: pick(
-      source.keycloakUrl,
-      import.meta.env.VITE_KEYCLOAK_URL,
-      'http://localhost:8080',
-    ),
-    keycloakRealm: pick(
-      source.keycloakRealm,
-      import.meta.env.VITE_KEYCLOAK_REALM,
-      'brabo-dev',
-    ),
-    keycloakClientId: pick(
-      source.keycloakClientId,
-      import.meta.env.VITE_KEYCLOAK_CLIENT_ID,
-      'brabo-web',
     ),
     logLevel: pick(source.logLevel, import.meta.env.VITE_LOG_LEVEL, 'info'),
   };

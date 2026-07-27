@@ -25,15 +25,12 @@ config :engine, EngineWeb.Endpoint,
 
 # Comunicação engine -> api (evento de término e psychologist.hypothesis,
 # ver Engine.Sessions.Monitor/EngineApiClient), e engine <- api (comando
-# síncrono de criar sessão, ver EngineWeb.Plugs.VerifyApiToken).
+# síncrono de criar sessão, ver EngineWeb.Plugs.VerifyServiceToken). Desde a
+# Fase 7a os dois sentidos usam o MESMO segredo compartilhado.
 config :engine,
-  keycloak_url: System.get_env("KEYCLOAK_URL", "http://localhost:8080"),
-  keycloak_realm: System.get_env("KEYCLOAK_REALM", "brabo-dev"),
-  engine_keycloak_client_id: System.get_env("ENGINE_KEYCLOAK_CLIENT_ID", "engine-service"),
-  engine_keycloak_client_secret:
-    System.get_env("ENGINE_KEYCLOAK_CLIENT_SECRET", "engine-service-dev-secret-change-me"),
+  service_token: System.get_env("BRABO_SERVICE_TOKEN", "dev-service-token-change-me"),
+  service_token_previous: System.get_env("BRABO_SERVICE_TOKEN_PREVIOUS"),
   api_url: System.get_env("API_URL", "http://localhost:3000"),
-  api_keycloak_client_id: System.get_env("API_KEYCLOAK_CLIENT_ID", "api-service"),
   session_heartbeat_timeout_ms:
     String.to_integer(System.get_env("SESSION_HEARTBEAT_TIMEOUT_MS", "30000")),
   # Quanto o drain do preStop espera para que outra réplica adote as sessões

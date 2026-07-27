@@ -47,8 +47,48 @@ const config: Config = {
     format: 'detect',
   },
 
+  plugins: [
+    [
+      // Referência da API gerada do OpenAPI (Fase 7b, itens 7 e 8).
+      //
+      // `outputDir` aponta para `../docs`, e não para `website/docs`: a fonte
+      // única de verdade do Markdown é `docs/` na raiz, e `website/docs/`
+      // NUNCA existe.
+      //
+      // A spec fica um nível ACIMA do `outputDir`: o `clean-api-docs` apaga o
+      // diretório inteiro antes de regerar, e deixar a entrada lá dentro faria
+      // a segunda execução falhar com ENOENT.
+      //
+      // Quem escreve os `.mdx` é `pnpm docs:generate`, nunca a mão. O
+      // `docs:check` compara o hash de cada arquivo com o manifesto.
+      'docusaurus-plugin-openapi-docs',
+      {
+        id: 'api',
+        docsPluginId: 'default',
+        config: {
+          brabo: {
+            specPath: '../docs/reference/openapi.json',
+            outputDir: '../docs/reference/api',
+            // Uma página por rota, agrupadas por tag — é o que dá a "seção por
+            // domínio" que o escopo pede.
+            sidebarOptions: {
+              groupPathsBy: 'tag',
+              categoryLinkSource: 'tag',
+            },
+            downloadUrl:
+              'https://github.com/daneiel/brabo/blob/main/docs/reference/openapi.json',
+          },
+        },
+      },
+    ],
+  ],
+
   themes: [
     '@docusaurus/theme-mermaid',
+    // O tema é o que renderiza os `.mdx` gerados: sem ele os componentes
+    // `<ApiTabs>`/`<SchemaTabs>` que o plugin emite não existem e o build
+    // quebra.
+    'docusaurus-theme-openapi-docs',
     [
       // Busca local: sem Algolia, sem chamada externa, sem conta em serviço de
       // terceiro. `hashed` põe o hash do índice no nome do arquivo pra não

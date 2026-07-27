@@ -12,7 +12,7 @@ keywords: [arquitetura, code map, invariantes, harness, event log]
 Este documento é o mapa para quem vai **mexer** no código. Ele diz por onde
 começar a ler, o que cada fronteira promete, e o que já se sabe que está torto.
 
-Decisões e o porquê delas ficam nos [ADRs](adr/index.md) — 30 deles, vários
+Decisões e o porquê delas ficam nos [ADRs](adr/index.md) — 33 deles, vários
 registrando defeito real encontrado em execução. Aqui não repetimos a
 argumentação: apontamos.
 
@@ -43,7 +43,6 @@ graph TB
   end
 
   subgraph externo[" "]
-    K["Keycloak<br/>OIDC"]
     P[("PostgreSQL 16<br/>estado + event log + fila")]
     L["LLM<br/>Ollama · Anthropic · OpenAI"]
     G["GitHub / GitLab<br/>ou repo local"]
@@ -52,10 +51,8 @@ graph TB
   B -->|"HTTPS"| W
   B -->|"REST + SSE"| A
   B -->|"WebSocket (canais)"| E
-  B -->|"login"| K
   A -->|"SQL"| P
   A -->|"HTTP interno<br/>comando síncrono"| E
-  A -->|"valida token"| K
   A -->|"turno de LLM"| L
   A -->|"git"| G
   E -->|"Ecto + Oban"| P
@@ -213,11 +210,23 @@ um problema de infraestrutura.
 
 ## Assuntos transversais
 
-**Autenticação.** Keycloak (OIDC). `JwtAuthGuard` é global; rota aberta exige
-`@Public()` explícito. Chamadas do engine usam client credentials e passam pelo
-`EngineServiceGuard`, que confere o `clientId`. A superfície inteira — 110
-rotas — está classificada em [`security-surface.md`](security-surface.md), e um
-teste de tabela reprova rota nova sem classificação.
+**Autenticação.** First-party, no domínio da api — não há IdP externo. Senhas
+com argon2id, access token EdDSA de 15 min e refresh opaco com rotação
+obrigatória; a sessão da web vive num cookie `httpOnly` com CSRF por
+double-submit. O `JwtAuthGuard` é global e **lê** o usuário pelo `sub` do
+token (que é o `users.id`); rota aberta exige `@Public()` explícito.
+
+Nenhuma decisão de RBAC lê claim de token: papel vem de `request.user.id` e de
+linhas no banco. É por isso que a matriz de permissões atravessou a troca de
+emissor sem mudar. Decisões em
+[ADR 0031](adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.md) e
+[ADR 0032](adr/0032-corte-do-keycloak-e-sessao-em-cookie.md).
+
+Chamadas do engine não passam pelo JWT: as rotas `/internal/*` são
+`@ServiceRoute()` e o `EngineServiceGuard` compara um segredo compartilhado
+(`BRABO_SERVICE_TOKEN`) em tempo constante. A superfície inteira está
+classificada em [`security-surface.md`](security-surface.md), e um teste de
+tabela reprova rota nova sem classificação.
 
 **Autorização.** RBAC no domínio, com papel efetivo resolvido a partir do
 projeto (com fallback para o workspace). `@RequireRole` nas rotas.

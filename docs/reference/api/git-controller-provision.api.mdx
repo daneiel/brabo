@@ -1,0 +1,69 @@
+---
+id: git-controller-provision
+title: "Cria o repositório e dispara o bootstrap de Gitflow"
+description: "A resposta volta assim que o repositório existe; o bootstrap (branches permanentes, proteções, templates) continua em segundo plano e é IDEMPOTENTE E RETOMÁVEL. Acompanhe por `GET /projects/:id/git/bootstrap`."
+sidebar_label: "Cria o repositório e dispara o bootstrap de Gitflow"
+hide_title: true
+hide_table_of_contents: true
+api: eJzdWV9vG8cR/yqD64tNnEhKdp2GaYrSshJIbUxBlOMgouAb7g7Jte52T7t7tB2aQPtSoO/5AkYeDD/4ychLXvlN8kna2T3+kxQ5BZo+FLAlcu92Znb+/OY3q1kiyQmrSq+MTjpJFyy50jiPMDW5R0DnVAGXFYEBS6Vxyi8+WGWAXirn6TMwMDTGO2+xhDtDi1pMyEFJtkBN2pNLobTG0+Lt4kf+4qkoc/Tk7oIw2itdIVABjsaVlgbKHLUBgsU7OHx08NVx7/Tg8ekBHMDJwWnvq8Xfvz74axO6whQl6glBaSxkXx6cQqu05jkJ71odJVtj5Vsrs7JmkiamJIt8yEOZdJIvld832luT52SfldZMlWMHpEmJFgvyZF3SOZslGgtKOkkt/FAmaWLpslKWZNLxtqI0Uey3Ev0kSRMnJlRg0pkl/lXJG523So+T+TzdlDVVkuyvFkW6KpLOWZIbgXmSJmPlJ9UwfshxmJyn17SdR9nk/EMjX7GQq6rY96Q9P8KyzJUIzmk9d5wGs+sHMUN2ADvIsiu9IsdP45muHjdN6CUWZc5LYkLiwlS8dTvVHpuCQF7JKm1g6Z9mMk8TjstQ5cq/ulFL7ZmyGuZKBOPUFD2xS9YWLBfnaTDXlSg+YjOKgq7Z27Nj1Oo7XLxd/GDAVDC2VWma0CuUV9KkVwtEoxMEGkOaI5TknMEcJHE1FWBprJy3pgIEYUmSFgrzJqfKRrDOooe3HMHxVj4YerzM3JOo2dhXj7xJ5vMoxZVGuxiovfYu/9o+UvJfywO70v/xd5W83fvt3aP9+9+22+32ycFxr3942js57PHX9i7HcF2Lv1LK8Unv6OA0StiUEqvwlrS6peDWeuqHc17zZDXmH7Ps0/b9P9z7ZO/B7rUUO5QfLYjK5rdLn3hfuk6rFe1qClO0OJ1bqzqcs9YRVrl/GND6dnEFKn3Nzi6UJl+890ogGxwi4g1UDiGTNM1SyC4xA4KMt2cgTGE2W8JvUdorECf58GaJN6TGk/6T7jK5VqkhLKEn2fW3S9lr7z3YaX+ys3fvdLfdafO/Zrvd/jZJk5GxBfqkk0j0tONVESysSvkbyL0CF0om6Va72mg3GwkaE+lqJmwF5apLNx2zeZib4IjkGpBOahgKwJQmq7Z8HY56WtIWn5AEXyo/ys0LKNGaqgk98BaHmE/MLezh5799D/ifUwTM894odP3b8ct5Km9LWWGKQvlnpX225DoBZ8NiJEhKj5+VJldi7dVnkqb10/XaJV5bsmK9FHiVWAolt10b1+XO08R59JW7teBIy7hiK63jJ2k0n2GEKie5rWX50tU8DE5a6dvMEXTOPKKHS9dvpcf5VTEbfWUzdW5vgVsiQyu8325fT7fjujJA6eniTR57eLXRjAErx3gV4Or+TQ20TwV4c0E6jb+AXpbKogz8gKmzRl9ZXGnAWtS9G6zBknJQ2lUjJRSrrbGfobXedv/GQwTsVToS8pW5e59ef/kEPUGuCuVDVVSuWrzhJmOq8P3wONIPR6KyAZfPZsmQ0HKbPDtnVulxzMSYux4HoSA/MUyoeWQI7NlPkk6yrrTZCormoeJmSziat7ZC68hOI+c+X+vvM/mINbe0omYkHPh6Ka0/fLHExqOnp8mKEXM3DHlPdqoE7YQobaQ/luovxAYE6j0hjEhZU/Vvdh5aHJqdfr37NOxmFzE/Olkz7INlPaxY/gbt3Wx0q461xUUj4ZyzFSMTrKuTO6iH7vHhDS24e3zIzTe80oRTIw2QlqVR2oOkqcmnBEf93uMUHOZTA8bBZYXeGpBGVAVpj9K4gaaXTPuUxyIknTAFmIpfy2puuMO+yuCONMoxJPf7B0x2JUGxeOetEuiAwAy0wDwforjgR71u5SdpGBwtSWVJKKPxbnOgB/p3v4NuxZKViGyaF3uAQpBzdSEt3kFVwNHTU2g0DuSjfpeF7v4eCqUrb1yjkQKWllw8BlAx0BmrNFZ9FyhsBx6GvIA/BoF/yprQBTHBKUG5+IlJBcKIf4StoT80X1Ce71xo80K3nr+4cE2OctaM1lkaWXITaDT04gfTaKwt7NQfo+GmRGHCuadqSqCrAoQxF4og42Ts6fxVNtB3siHH7VktlRnTMfrJ5y2sfPjWx4L6ytPnffawz+4Cy9ICAUu0JAI6CGNLM+CuqUlPqgJX03sTsuNe/xSCvNZSCzOyjeXcjE3lM8iJCjC1mQNNPNuP4xIOafE2tNvsm539/skXsQYyUOOKAdKsDhfPI5wdRY81Gl2wxtfj0uIdmKFVYwy0Fpv/9t8+Slx5VRjteB40tRe3YgtUKE8DHdKyCSe0emrZ788Xb8L+qlAyaNoAXklgTTVkIZamZoyAMMJi8T5XONBKe1IWA2FQWuSV45AhOHKOrc5pzCy3wCY8KUDkEZY5tlI5DgOEmqgPMdDCaGGsDRwXJFlbDREYxBcfSsbZJeB+BpUj4HgtftKcg2KCBbuDCpgaE/zXdcF9DrIWm8m8rdXIINiF4KqS7GjxXigCLBX8/I/vgfRYcfBCWhfQaIyMDfz86Olpo9EZaMq5Um+O7Q1Al0UsYHJlSXKkixKtV/kEJdv4ZJnyktatRAf7hnadkpLVLuv+wFrGnIGOcG2gRGl5izTwmJw/6ncgm8GgJg77RtIg6XAVDcmmMEgKcg7HYTFSF3hdfzg75+dkrbEbT+cxG1+DWHyQamzgNaMgc8XXA/16Z2cn/OcXsvvtdgavY1GtOUFIDgPZ18j9m5HlWDEcWiMxOCh7MVGecuV8qK+RsUMlHxv9dLlMMkuBtOdjCixKhk4njJ6QYPkei+HiHV8IcG9EWBqzy8a42wjGBlNZEYzV9nu8HZcwKw0U6II49jlTDU4E1l9SbuDkYXc/sJ+6US612aBrKfM+y7Tcnd0W44BGw1SNBluh3OL9lHLm6xgvOji3TbWS8Wn0sR7lyocmQi5UObvZW9RORcSQtCrD1eHSlXKu+bX6WvZekG3XJMdUkJvQhplIjS05p6bhOBv1JYndNInQqSUVvBImLWg0JOVqSBZl3R2Vlsp5pcdVOGajwYG1DJo7Bap80ykpONITjD5EoPoeaJiby4pQYgcKckUN4mn9JaZ9OtDxKw8QpgmLf0JsKSMSE4YwJutkceWpINql3CNqtJU0oujggZYKx3rxwXklzLIQ11SQF46QwYHzMlffYc09j43z7LMO3Gu3IbDyEJwf+X53kz4SPGi3awbJt1kocaAftMGlIdBqXNnFmykp14QT4xGyPx+Hqf7OXa4YjkKMtp2qxVsTIa7RUAHhXaNRV+BlRQPNg55FyGIDa2ShsdwU5DR6wmykA894TDIjgWo3d5vt+gIMBc/kzOu4eRaoN4jcvlV47e67xn/8hWn1Klubra/Z/n9v2GtG7emlb5U5Xxutr6viXHC2vJhwSZp0Ni8peJyIS+ur8dV0cJ4mEx4vOmfJbDZER09sPp/z8mVFfOHIM8MUrcIhk+azWSKV488y6Ywwd3RLNO6c1MPmXfilIywnBc1jwhTziuLN6QW92vrLAF/x/28VR1/Nz+fpcnLhw8fH+zV3P2Uh6+3X7njZ6rijKwSV/tZ3Nyc+5pFhJo9/XyiMDNcByMnPP4OpJpw83hDz2izJUY8rHPO7USZXHRfzxlB2ZbLbvJLZdsZsFt8IdGU+X/kmTnl8mzD/F/MjjQg=
+sidebar_class_name: "post api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Cria o repositório e dispara o bootstrap de Gitflow"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/projects/{projectId}/git/{provider}/repository"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+A resposta volta assim que o repositório existe; o bootstrap (branches permanentes, proteções, templates) continua em segundo plano e é IDEMPOTENTE E RETOMÁVEL. Acompanhe por `GET /projects/:id/git/bootstrap`.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./git-controller-provision.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./git-controller-provision.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./git-controller-provision.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

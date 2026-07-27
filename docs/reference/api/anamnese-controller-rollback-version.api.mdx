@@ -1,0 +1,69 @@
+---
+id: anamnese-controller-rollback-version
+title: "Restaura uma versão anterior da instrução de um agente"
+description: "O histórico é imutável: restaurar não apaga nada, CRIA uma versão nova com o conteúdo antigo. Exige `maintainer` porque muda o comportamento do agente daí em diante — mesmo calibre do patch."
+sidebar_label: "Restaura uma versão anterior da instrução de um agente"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "post api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Restaura uma versão anterior da instrução de um agente"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/projects/{projectId}/agents/{agent}/instruction-versions/{version}/rollback"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+O histórico é imutável: restaurar não apaga nada, CRIA uma versão nova com o conteúdo antigo. Exige `maintainer` porque muda o comportamento do agente daí em diante — mesmo calibre do patch.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./anamnese-controller-rollback-version.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./anamnese-controller-rollback-version.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./anamnese-controller-rollback-version.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

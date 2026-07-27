@@ -1,0 +1,69 @@
+---
+id: internal-sessions-controller-report
+title: "Reporta que o processo da sessão terminou no engine"
+description: "Só chega aqui o término que a api NÃO provocou — crash, kill, `heartbeat_timeout`, encerramento defensivo. Parada planejada pela própria api não passa por aqui: o engine já soube dela pelo outbox, e reportar de volta seria eco."
+sidebar_label: "Reporta que o processo da sessão terminou no engine"
+hide_title: true
+hide_table_of_contents: true
+api: eJzlWV9v20YS/yoD9iURKJm21bhWr3fnuGnP6SV2LafpNTLKETmSNiZ36d2lYscRUOCAAvd66BcIClzhhzwF99JXfpN8krvZJWXaVoIWuLcL0JQiucOZ3/z7zeQiSMkkWhRWKBkMgmH1FpIZTRHwtBSgwFaXOhdSwWlJgICFgMfV3/eh0GquElXCux9+gkSjmYVwIrIshHhGqO2Y0H5vRU6qtHEIJBPSGnOSVkFKE5JGzFUPDlBjilBkKOm5u6IModDV20IL/zlZ/aygQGMQCqWdXgNQQHIqJMHz6jUYVY4JUneSMgWqtGN1FgKBpkJpixpSgrnKLIIhlkuJ6gVhoArSyJbvpcEg2JOWtMRsSMYIJc2uklarLCP9vZcThEGBbIQlbYLBs4tAYk7BIDD+xF4ahIGm01JoSoOB1SWFgWBYC7SzIAxMMqMcg8FFYM8Ld9BqIafBYnHsD5Kx91V6zm/clJMoaUlafoRFkYnEKb723LDfLm6LVuPnlDiVNZtpBRl+WmjF99ngm1qEwUTpHG0wCMpSsC10hnmR8SvR+sPd/ndRFEUHh/sPHxztR82f9WARBlatEkeyzIPBsyDJlPF3+IrS5cX3OJb8ySw7D47bn7v9OLwRqHEtNPbhWF2CJQ5UzAZgxFSKiUgQRgEZq0ow7HuZKiDjYsCY6mc1CnowJI4WjaCrSwcqYKps9bqbIXA8GZqWBHMxx0/BEEghp2V1mbu3UAPa6pKTxMd5CApSjUJCjjJFiG+ZEfcgTjShpTQGghgTK+YUAyubc5BOlHZhztlG0mrUICkjwwamlAjWG1KXGCHIUiYI6TIXNGXozWyytsfO0YR1kNxy0BLwWzl7C/Ad2D/c+/LBI2iJD31yljmkAqeyemusSJRLU8oEe6P6pfqZtVi0E+NZKwpd7ByHgRXWKXLoMq1OwSPvUtbgc6uCxcLLMYWSxofzRrTO/7uuavA/yxaxMk1upsUnX3+1+Wjrb99sPP74aPt+dPDtXw53buH35K97n7Pn6uBznvlgMv7m5KsD6v75b5XyZPhk53CvLeWmsl+XlAOOtSjhusbGoi3NB5PdaxOEgQ/uOtl/X/4vj15X61H1+rQUEjlTOJNTZYDOiqx6kwiLA6i/De9+/Cd4Ee6y/v7ymlJ4Bbc06MGRRmmEC1kQcl69zkSK4OMtJehH2w4DSWd2SKctEGSZj0m30e5v3NT9QFdvz0SuIDZ0GrusnZO0kKkplyE95w4GSamN0gOI/4QTS3pIp5/112OwGl+CLVPunYUSho/313st7+/YD3t/I9q41422uhtbR+v9QbQ52NjorX+y9V276qdoqcv5z3LLIv39cjfXB9F2L4r675frcb8mdpl8S7GyzLKVAsKAH+GYX/J98SbKRDKZiVSBqd6C5ACpA6XuD8I42OxVaTm8WR/fp8+HP/1IWTFXDeVIlecidWlG1Xxfw51bxdZTJ0pDoLOEXAC+++Ffd3sQ8ydjoBwmlMxq+jQrc5TMcprMBBTcbrhLeds0JnSAui6A77UqiKJufzzZ3phsfry1Nd7sp3gPNxPa3thOI4qov7V5rxtFk+jeFmI0xu1oY7zVdeXiw1DEToPCaRDD081dV/gKlKBRvOxB9Y+6R1BNKxtDhLQkNP8GTUnJ9AykgiPKixVdxHGUdiu5qoTLSnWVru1UaYd3KyRXhcV1OFudqu5Rh3U7umpQ/Si63ZN2lS6uqoovpv1o8/aLXApEQmDVCUnA0pC0TFIgFRPS7keqIFF5gdqKbIZLYf1VwhyuITiUrAsaBlYb1oXOhOEuSR5aww+EPXfM1ng1uk6NYPDsmCmqxalxwNdMmeHIyc4U0+dCGc+Q7SwYBGvNO2s1OTZrF0uavFhr4cy+4vLnKPXxlRpD7tG+DY8JNell42b061thffFFUyoePj1il/mQn1lbuK513ZhlSmAhviIOFkfSZ4SpE1mz+m+79zWOVbf2SPfInWakmEYcXtH1B01CXaPXH2zbnjKv5LkNXVvByRas6cRz7ToKnYqwc7C3grDtHOxxrLhXenCkHFNMCyWkhZTmKpsTPBzuPw7BYDZXoAyclmi1glQlJRcbLpwjyS1WcIfNXfglKnekWUFc06wu4xnDndS1JoLh8IHjwgR5dWm1SNAAgRrJBLNsjMkJP9rfKe0sdAVAUyo0JUJJvNsbyZH86CPYKVmySDyF5Jv7gElCxtSpUV0y8Xz49Ag6nQfp58MdFrr+MeRCllaZTicELDQZbwZQPpIxf1Jp8dIF3gDuu9iBPziBf4x7sAPJDOcERfXr2E0DbopwR798cARrvReUZd0TqV7ItecvTkyPIyHuee00TTSZGXQ6zIo7nSsNB/WlV1wVmPh5es4MRZY5JEqdCIKYA3ZfZufxSN6Jx+y372upcQjxAdrZZ2tYWvdriDkNhaXPhoywje8C1RMBcuVNiCtnwmVnxOxFkuTG4emMsdiD+GB/eARO3lrzFR5KWrczNeX5HTKiHFSt5kgS0JmY+ls4puoXzGYK4m+7u8PDL3yexCCmJWbc+BrjvD2J0ROPWKezA1pZ72BGSI21mKKt3mqBvf/it4uOfnlUEyWNyomnLV8Z274FyoWlkXRh2YNDWj7VjDsvCfh8mTMxqC4BjeHqU2pHJbUqx8ptC+aKNx8wwbx6kwkcyaYh8ZZDyCQrDbvsqmFlNK3eWJFjD57kkGTCZQj7NhWG3QAuJ2ojRjJRMlHalXHOFK3LMYJqFh4KSlNWr7VQn0JpCNhf1a+SY5C7P8NBOcyVcvjtGAefgfiq2HZi8IwADHfPCTNjcmuUdz/+1JARqufNTseNm6niGO10BiNJGWfqat+uKIaxrwU8JWu61ZVG8kkT8iktLfMjI471VUjy5sY0ef9Aa645I+lLOq9+Uu2mXgWPydiHwwHEFzCqG/yuSmkUDMBT8BBGQU7G4NTd9HwVXtUXz475OWmtdOvpwkfjK0iqt6mYKnjFVZCn6Fcj+arb7br/+IW4H0Uxjw7Xe7kLDgXxN8jzAleWA8HlUKsUHUDxi5mwlAljXX5NlB6L9LGST5vblLoVmWUzE8wLLp0mUXJGCcu3mI956aCJt24IjTLrrIyhGuSwxprOCqE5K1TJA1FKMhGYtQaa5vgmH8emzKYKcjROHGNeUOYCQTRE9vD+zm7oSWeboPBWr4aKZfZZ5gqGAZ2OKjsd1kKY6s2cMuBVGmdK7mJblUsZ2x5jOcmEWxbWDN7BbFsjWkot3lgbFy4/zjl/9fla9oaTrdES8H7Csj2ZSk5UaZkiTTUzlLkzp5VfKTFMs+Uk2GxqcoROJ6VMjIm3mL47CpkKY92eiM3sdNweh4tmN0eRtUEJwZCcoccQgTurtAjjTJ2WhCkOICeT10U8rH/4sA9H0v+0jhozo/Ytxc0JgMDjOGlcIuVEG96Jyrra8hbWAzyS7fVNk4iHS5T4xkPk4sBxmYmXyIZKBQfKWMZsAJtRBI6aO+f8m4wj+MucJ7gXRe7W3gEgJJjiSN6LwITO0WJa6ur1nITpwaGyCPGfD0puwHfucsawF7y39VxUvyhf4jod4Sq86XTqDDwtaSR5Y6cRYt/AOrFrLKucXC+vVCsceCfMRNQTqKi33ovqXRImPEox9+PmmaNjkTVP9CsrF8uulCsmKaq166lHP1UyZr4G32RrF1cbq/+zHXxNxS2d2bUiQyHd8kFnjk27WaI1b4TNqp0Hu0F77d4eKI7DYMbDyOBZcHExRkNPdLZY8O3TkvS5HzPmqIWfYJ9dBKkwfJ0Ggwlm5uY823bOncN6AL0L71O+GS4ks/k5ZiX5neQJnV/7t4LF8SJshg5Wwj/frSn1EUu5On9ri7kImxM7SUKF/eC77TmN6R3PTfW/M+Qq5TMaX/DsgS+8rsqZ7oYvd+8iyFBOS5zyu14mJwPn2PV56sTNU/UFW7USjdWjVQMR/83mrTx6ceGntsVi+b5/9N4Ty7nOv81OOl4sFv8BkuKjrQ==
+sidebar_class_name: "post api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Reporta que o processo da sessão terminou no engine"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/internal/sessions/{sessionId}/termination"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Só chega aqui o término que a api NÃO provocou — crash, kill, `heartbeat_timeout`, encerramento defensivo. Parada planejada pela própria api não passa por aqui: o engine já soube dela pelo outbox, e reportar de volta seria eco.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./internal-sessions-controller-report.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./internal-sessions-controller-report.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./internal-sessions-controller-report.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

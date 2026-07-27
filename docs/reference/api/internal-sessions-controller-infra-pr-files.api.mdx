@@ -1,0 +1,69 @@
+---
+id: internal-sessions-controller-infra-pr-files
+title: "Devolve os arquivos de uma PR de infra para os gates lerem"
+description: "O conteúdo sai do payload da própria `proposed_action`: artefato de infra nunca toca um worktree, igual às ADRs."
+sidebar_label: "Devolve os arquivos de uma PR de infra para os gates lerem"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "get api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Devolve os arquivos de uma PR de infra para os gates lerem"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/internal/sessions/{sessionId}/infra-artifacts/{prActionId}/files"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+O conteúdo sai do payload da própria `proposed_action`: artefato de infra nunca toca um worktree, igual às ADRs.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./internal-sessions-controller-infra-pr-files.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./internal-sessions-controller-infra-pr-files.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./internal-sessions-controller-infra-pr-files.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

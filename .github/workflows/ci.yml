@@ -158,6 +158,15 @@ jobs:
       - name: Testes da api
         run: pnpm --filter api test
 
+      # O vitest transpila por SWC, que APAGA os tipos sem verificá-los — o
+      # mesmo motivo do typecheck dos scripts de CI, logo abaixo. Aqui isso
+      # importa mais do que parece: os DTOs de resposta da Fase 7b provam por
+      # TIPO que espelham a entidade de domínio (`Wire<T>` + `MesmasChaves`),
+      # e sem este passo essa prova só rodaria no job de imagens, 20 minutos
+      # depois e num lugar que ninguém lê.
+      - name: Typecheck da api
+        run: pnpm --filter api typecheck
+
       - name: Testes do web
         run: pnpm --filter web test
 

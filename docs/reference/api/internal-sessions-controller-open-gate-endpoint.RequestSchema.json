@@ -1,0 +1,1 @@
+{"title":"Body","body":{"required":true,"content":{"application/json":{"schema":{"type":"object","properties":{"projectId":{"type":"string","format":"uuid","example":"01JC4Z0000PROJETO0000000001"},"agentId":{"type":"string","example":"dev-api"}},"required":["projectId","agentId"],"title":"OpenGateInternalDto"}}}}}

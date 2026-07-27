@@ -18,7 +18,7 @@ conferir logo abaixo dela.
 |---|---|
 | Docker e Docker Compose | tudo sobe em container |
 | Node 20+ e **pnpm** | o monorepo é pnpm; `npm install` não funciona |
-| ~6 GiB de RAM livre | Postgres, Keycloak, três apps e, se quiser agente de verdade, o Ollama |
+| ~6 GiB de RAM livre | Postgres, três apps e, se quiser agente de verdade, o Ollama |
 
 Elixir **não** é obrigatório: o engine roda no container. Você só precisa dele
 no host se for rodar `pnpm engine:dev` fora do Docker — e aí precisa da versão
@@ -38,9 +38,8 @@ pnpm dev
 O `.env.example` já vem com tudo apontando para os containers — na primeira
 subida você não precisa editar nada.
 
-`pnpm dev` sobe Postgres 16 + pgvector, Keycloak, api, engine e web, e aplica
-as migrações dos dois lados. A primeira vez baixa imagens e leva alguns
-minutos.
+`pnpm dev` sobe Postgres 16 + pgvector, api, engine e web, e aplica as
+migrações dos dois lados. A primeira vez baixa imagens e leva alguns minutos.
 
 ### Os dois modos locais não coexistem
 
@@ -52,10 +51,9 @@ portas**:
 | **desenvolvimento** | `pnpm dev` | <http://localhost:5173> | compose + Vite, com hot reload |
 | **validação** | `make deploy-local` | <http://localhost:8088> | k3d com as imagens de produção |
 
-Os dois publicam api em `:3000`, engine em `:4000` e Keycloak em `:8080`. Isso é
-**deliberado** (ADR 0025, decisão 10): mantendo as portas, o `docker/smoke.sh` e
-o realm de desenvolvimento valem nos dois sem tradução. O preço é que só um
-roda por vez.
+Os dois publicam api em `:3000` e engine em `:4000`. Isso é **deliberado**
+(ADR 0025, decisão 10): mantendo as portas, o `docker/smoke.sh` vale nos dois
+sem tradução. O preço é que só um roda por vez.
 
 Com o cluster de pé, o `pnpm dev` não consegue publicar a porta do `api`; como
 o serviço `web` depende dele, a **5173 nunca abre**. Um `preflight` roda antes
@@ -72,25 +70,39 @@ Para saber em qual você está sem adivinhar: `pnpm dev:preflight`.
 
 | sintoma | causa |
 |---|---|
-| porta ocupada | quase sempre é o cluster local ainda de pé — veja acima. Se não for, mude `API_PORT`, `ENGINE_PORT`, `WEB_PORT` ou `OLLAMA_PORT` no `.env`. A do Keycloak (8080) é fixa no compose de desenvolvimento |
-| Keycloak em restart | costuma ser memória; ele é o container mais pesado do compose |
+| porta ocupada | quase sempre é o cluster local ainda de pé — veja acima. Se não for, mude `API_PORT`, `ENGINE_PORT`, `WEB_PORT` ou `OLLAMA_PORT` no `.env` |
 | api sobe e cai | veja `docker compose logs api` — quase sempre é a migração |
 
 ## 2. Entrar
 
-Abra <http://localhost:5173> e faça login com **`admin` / `admin123`** (realm
-`brabo-dev`).
+O login é da própria api — não há mais IdP externo
+([ADR 0032](adr/0032-corte-do-keycloak-e-sessao-em-cookie.md)). Semeie um
+usuário pronto:
 
-Esse usuário já é dono de um workspace chamado **Demo**, pronto para criar
+```bash
+pnpm --filter api seed
+```
+
+Ele cria `owner@brabo.dev` (owner) e `dev@brabo.dev` (developer), os dois já
+com e-mail verificado e a senha `senha de dev do brabo` — sobrescrevível por
+`BRABO_SEED_PASSWORD`. Junto vem o workspace **Acme Corp**, pronto para criar
 projeto.
 
-> Não confunda com <http://localhost:8080>, que é o console de administração do
-> Keycloak (`admin`/`admin`). São credenciais e propósitos diferentes.
+Abra <http://localhost:5173> e entre com essas credenciais.
 
-**Se o login redirecionar em laço:** o `VITE_KEYCLOAK_URL` precisa ser o
-endereço que o **browser** alcança (`localhost:8080`), não o nome do container.
-É a confusão mais comum, porque a api usa o nome do container para a mesma
-coisa.
+> **Por que semear em vez de se cadastrar pela tela?** O cadastro funciona, mas
+> o login exige e-mail verificado e o `MailSender` é log-only nesta fase — o
+> link de verificação sai no log da api e, por default, **sem o token**. Para
+> percorrer o fluxo de cadastro de verdade, ligue `AUTH_MAIL_LOG_TOKENS=true`
+> no `.env` e pegue o link em `docker compose logs api`. É inconveniente de
+> propósito: token de verificação em log de aplicação é credencial em texto
+> claro.
+
+**Se o login devolver 401 com a senha certa:** confira que o seed rodou contra
+o **mesmo** banco que a api está usando — `DATABASE_URL` do `.env`. A resposta
+é a mesma para senha errada, e-mail inexistente e conta bloqueada, de propósito
+([RN-032](business-rules.md#rn-032)), então ela não distingue os casos para
+você.
 
 ## 3. Configurar um modelo
 

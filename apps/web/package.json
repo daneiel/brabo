@@ -15,7 +15,6 @@
     "@brabo/shared": "workspace:*",
     "@tanstack/react-query": "^5.101.4",
     "@tanstack/react-router": "^1.170.18",
-    "keycloak-js": "^26.2.4",
     "phoenix": "^1.8.9",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"

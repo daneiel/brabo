@@ -2,6 +2,114 @@
 
 Gerado dos conventional commits por `scripts/changelog.mjs`.
 
+## Unreleased
+
+### ⚠ Mudanças incompatíveis
+
+- **auth**: o Keycloak saiu. A api passa a ser o **emissor** dos tokens de
+  acesso, num corte **atômico** — não há período de coexistência, e um token
+  do emissor antigo não é aceito em rota nenhuma. Todo mundo é deslogado no
+  deploy. Decisões e o porquê do corte sem transição em
+  [ADR 0032](docs/adr/0032-corte-do-keycloak-e-sessao-em-cookie.md)
+- **auth**: usuários existentes **não têm senha** — hash do Keycloak não migra.
+  Rode `pnpm --filter api migrate:keycloak-users` no release para emitir os
+  links de definição de senha. Enquanto o usuário não define uma, o login
+  responde o **mesmo 401** de sempre, indistinguível de senha errada
+  ([RN-032](docs/business-rules.md#rn-032)). Procedimento no
+  [runbook](docs/runbook.md#migracao-dos-usuarios-do-keycloak)
+- **api**: `POST /auth/login` deixa de devolver `refreshToken` no corpo. A
+  resposta passa a ser `{ accessToken, expiresIn }` mais dois cookies —
+  `brabo_refresh` (httpOnly) e `brabo_csrf`. `/auth/refresh` e `/auth/logout`
+  passam a exigir o cabeçalho `X-CSRF-Token` igual ao segundo
+  ([RN-034](docs/business-rules.md#rn-034)). Cliente que lia o refresh do corpo
+  quebra
+- **api,engine**: o tráfego interno `/internal/*` sai do JWT. Passa a exigir
+  `X-Brabo-Service-Token` igual ao segredo compartilhado
+  `BRABO_SERVICE_TOKEN`, obrigatório **nas duas cargas**
+  ([RN-035](docs/business-rules.md#rn-035)). Token de usuário não abre mais
+  essas rotas, e o service token não abre nenhuma outra
+- **config**: saem todas as `KEYCLOAK_*`, `*_KEYCLOAK_CLIENT_*` e
+  `VITE_KEYCLOAK_*`; entram `BRABO_SERVICE_TOKEN(_PREVIOUS)` e
+  `AUTH_SET_PASSWORD_TTL_MS`. O serviço `keycloak` sai do compose de dev e de
+  prod, e `deploy/k8s/base/keycloak/` deixa de existir junto com o
+  `ExternalSecret` `keycloak-secrets`
+
+### Novidades
+
+- **api**: módulo de auth first-party — registro, login, logout, refresh,
+  verificação de e-mail e reset de senha, em `/auth/*`. Senhas com argon2id;
+  access token EdDSA de 15 min com chave derivada por scrypt e JWKS público em
+  `/.well-known/jwks.json`; refresh opaco com rotação obrigatória, em que
+  reapresentar um token já usado revoga a família inteira
+  ([RN-030](docs/business-rules.md#rn-030))
+- **api**: lockout progressivo por e-mail e por IP, em janela deslizante no
+  Postgres, sem Redis ([RN-031](docs/business-rules.md#rn-031))
+- **api**: respostas de login, registro e pedido de reset não distinguem conta
+  existente de inexistente ([RN-032](docs/business-rules.md#rn-032))
+- **api**: tokens de verificação e reset de uso único, com hash em repouso e
+  expiração ([RN-033](docs/business-rules.md#rn-033))
+- **web**: login próprio em `/login`, `/register`, `/forgot-password` e
+  `/set-password`, seguindo o design system. O access token vive em memória e o
+  refresh no cookie httpOnly, então a sessão sobrevive ao reload sem
+  `localStorage`. O refresh é single-flight: sem isso, dois 401 simultâneos
+  disparariam duas rotações e a segunda revogaria a família por reuso
+- **api**: `BRABO_SERVICE_TOKEN_PREVIOUS` e `AUTH_JWT_SECRET_PREVIOUS` aceitos
+  só na verificação, o que permite rotacionar os dois segredos sem downtime
+  ([runbook](docs/runbook.md#rotacao-das-chaves-do-auth))
+
+- **docs**: referência completa da API em `docs/reference/api/`, gerada do
+  OpenAPI — 118 páginas, uma por rota, agrupadas por domínio, com corpo de
+  request, corpo de response e códigos de erro. A visão geral sai do
+  `info.description` do documento, então é gerada de fonte única
+  ([ADR 0033](docs/adr/0033-referencia-de-api-gerada-do-openapi.md))
+- **api**: Swagger UI em `/docs` e `/docs-json`, montada apenas quando
+  `NODE_ENV !== 'production'`
+- **api**: o teste de tabela de rotas passa a exigir os metadados de OpenAPI —
+  rota nova sem summary, sem resposta com corpo descrito ou sem tag da lista
+  fechada reprova. É o mecanismo anti-drift que o docmap não tem: ele dispara
+  quando um arquivo muda, mas não enxerga rota nova que nasceu sem documentação
+- **docs**: `pnpm docs:check` reprova quando o `openapi.json` ou os MDX gerados
+  saem de dia — alterar um DTO sem regerar quebra o check
+
+### Correções
+
+- **api**: `PUT /projects/:id/agent-autonomy` e
+  `DELETE /projects/:id/members/:userId` devolviam **200 com corpo vazio**, e o
+  cliente da web caía em `res.json()` lançando `SyntaxError`. Os dois passam a
+  responder **204**
+- **api**: `POST /auth/register` e `POST /auth/request-password-reset`
+  documentavam 200 enquanto devolvem 202 — o `@nestjs/swagger` ignora
+  `@HttpCode` quando há qualquer `@ApiResponse`
+- **api**: o `@ApiBearerAuth` de classe no controller de git vazava para o
+  callback de OAuth, que é público
+
+### Manutenção
+
+- **api**: `pnpm --filter api typecheck` entra no CI. O vitest transpila por
+  SWC e não verifica tipo nenhum, e os DTOs de resposta provam POR TIPO que
+  espelham a entidade de domínio
+- **api**: `users.keycloak_sub` passa a aceitar `NULL` (conta criada pelo auth
+  first-party não tem sub) e `users.email` ganha índice único em `lower(email)`.
+  A coluna **fica**: é a única evidência de procedência das contas migradas, e
+  apagá-la no mesmo release destruiria o que o script de migração usa
+- **api**: superfície pública passa de 4 para 12 rotas, cada uma justificada em
+  [`docs/security-surface.md`](docs/security-surface.md)
+- **api**: `JwtAuthGuard` deixa de fazer upsert de usuário por requisição —
+  agora é uma leitura por `id`, com 401 quando não existe. Somem
+  `SyncUserUseCase`, `upsertFromKeycloak` e `KeycloakTokenVerifier`
+- **api**: o RBAC da Fase 1 fica **intocado** — nenhuma decisão de autorização
+  lia claim de token. A matriz `(papel efetivo × papel exigido)` ganhou spec
+  próprio de `RolesGuard` para provar isso
+- **engine**: `Engine.Auth.ApiTokenVerifier` e `JwksStrategy` removidos, e com
+  eles as dependências `joken`, `joken_jwks`, `jose` e `tesla`.
+  `EngineWeb.Plugs.VerifyApiToken` vira `VerifyServiceToken`, preservando o
+  contrato de 401 + JSON + `halt()`
+- **web**: `keycloak-js` sai das dependências junto com `src/lib/keycloak.ts` e
+  os três campos `VITE_KEYCLOAK_*` de `runtime-config.ts`
+- **deploy**: o seed passa a criar `owner@brabo.dev` já verificado com a senha
+  de `BRABO_SEED_PASSWORD` — sem IdP externo não haveria credencial pronta para
+  o smoke nem para entrar na web local
+
 ## v0.1.0 — 2026-07-27
 
 ### Novidades

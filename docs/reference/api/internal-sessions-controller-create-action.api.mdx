@@ -1,0 +1,69 @@
+---
+id: internal-sessions-controller-create-action
+title: "Propõe uma ação com efeito externo em nome de um agente"
+description: "A porta ÚNICA pela qual um agente toca git, terminal ou gasto. O `permissions.json` decide na criação, e `deny` vence qualquer autonomia concedida ao agente."
+sidebar_label: "Propõe uma ação com efeito externo em nome de um agente"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "post api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Propõe uma ação com efeito externo em nome de um agente"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/internal/sessions/{sessionId}/actions"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+A porta ÚNICA pela qual um agente toca git, terminal ou gasto. O `permissions.json` decide na criação, e `deny` vence qualquer autonomia concedida ao agente.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./internal-sessions-controller-create-action.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./internal-sessions-controller-create-action.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./internal-sessions-controller-create-action.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      
