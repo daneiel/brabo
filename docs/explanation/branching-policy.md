@@ -336,12 +336,22 @@ de passar.
 
 ### A âncora da tag final
 
-A tag final **só nasce no commit da última `-qa.N`** daquela versão. Se o
-commit de `main` for outro, o workflow falha ruidosamente em vez de publicar.
+A tag final só nasce se o que está em `main` for **exatamente** o que passou
+por `qa`. Se não for, o workflow falha ruidosamente em vez de publicar.
 
-É a verificação que impede publicar algo diferente do que foi validado. Sem
-ela, um commit que entrasse em `main` entre a validação e a publicação sairia
-com o carimbo de aprovado.
+Como promoção é `--no-ff`, o merge **cria um commit novo** — o sha de `main`
+nunca vai ser o sha de `qa`. Comparar shas seria uma verificação impossível de
+passar. O que se compara são duas coisas, e juntas elas são mais fortes:
+
+| conferência | o que garante |
+|---|---|
+| a `-qa.N` é **pai** do commit de `main` | foi ela que entrou, não um ancestral qualquer |
+| a **árvore** é idêntica | o conteúdo é byte a byte o que foi validado |
+
+A segunda é a que realmente importa. Se o outro lado do merge trouxesse um
+arquivo, a árvore mudaria e a verificação reprovaria — que é exatamente o caso
+que a âncora existe para pegar. Igualdade de árvore é mais forte que igualdade
+de commit: ela olha o conteúdo, não a identidade.
 
 ### Não há deploy
 

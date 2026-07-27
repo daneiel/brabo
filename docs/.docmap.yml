@@ -155,9 +155,24 @@ rules:
       - "scripts/ci/**"
     docs:
       - "docs/explanation/branching-policy.md"
-      - "docs/reference/rulesets.md"
     severity: block
-    note: "Regra nova no pr-police exige a regra escrita na política."
+    note: "Regra nova no mecanismo exige a regra escrita na política."
+
+  # SEPARADA da regra acima de propósito. O rulesets.md documenta a
+  # configuração do GitHub e a lista de checks required — ele fica velho quando
+  # muda NOME DE JOB ou gatilho, não quando muda a lógica interna de um script.
+  #
+  # Estavam juntas, e o drift check cobrou o rulesets.md duas vezes por
+  # mudanças que não tinham nada a ver com ele. Regra que cobra o que não faz
+  # sentido ensina a usar o escape hatch por reflexo, e aí ele para de
+  # significar alguma coisa.
+  - id: checks-e-rulesets
+    watch:
+      - ".github/workflows/*.yml"
+    docs:
+      - "docs/reference/rulesets.md"
+    severity: warn
+    note: "Nome de job ou gatilho novo muda a lista de checks required."
 
   - id: adr-trigger
     watch:
