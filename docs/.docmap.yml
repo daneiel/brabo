@@ -152,7 +152,11 @@ rules:
       - ".github/workflows/promotion-check.yml"
       - ".github/workflows/tag-release.yml"
       - ".github/workflows/release.yml"
+      - ".github/workflows/backmerge-gate.yml"
       - "scripts/ci/**"
+      # `.release/gate.json` NÃO entra aqui: ele só existe depois do primeiro
+      # hotfix, e glob que não casa com nada reprova o docs:check. O estado do
+      # gate é dado, não fonte — a doc dele acompanha `scripts/ci/gate.ts`.
     docs:
       - "docs/explanation/branching-policy.md"
     severity: block

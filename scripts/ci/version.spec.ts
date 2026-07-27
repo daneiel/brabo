@@ -3,6 +3,7 @@ import {
   CicloVazioError,
   classificar,
   explicarParInvalido,
+  identificarCaminho,
   lerPar,
   lerTagDeEstagio,
   lerVersaoFinal,
@@ -11,7 +12,9 @@ import {
   parEhAdjacente,
   proximaVersao,
   proximoN,
+  SemFinalError,
   verificarAncora,
+  versaoDeHotfix,
   type PrDoCiclo,
 } from './version.ts';
 
@@ -213,7 +216,64 @@ describe('âncora da tag final', () => {
   });
 });
 
-// ------------------------------------------------------------ 6. o par
+// ------------------------------------------- 6. os dois caminhos da `main`
+
+describe('caminhos da main', () => {
+  const tags = ['v0.2.0', 'v0.2.0-qa.1', 'v0.2.0-qa.2', 'v0.2.0-dev.1'];
+  const shaPorTag = {
+    'v0.2.0': 'f1f1f1f1',
+    'v0.2.0-qa.1': 'aaaa1111',
+    'v0.2.0-qa.2': 'bbbb2222',
+    'v0.2.0-dev.1': 'dddd0000',
+  };
+
+  it('promoção: a `-qa.N` é pai do merge', () => {
+    const c = identificarCaminho(['f1f1f1f1', 'bbbb2222'], tags, shaPorTag);
+    expect(c.caminho).toBe('promocao');
+    expect(c.tagDeQa).toBe('v0.2.0-qa.2');
+  });
+
+  it('hotfix: nenhum pai é `-qa.N`', () => {
+    const c = identificarCaminho(['f1f1f1f1', '99999999'], tags, shaPorTag);
+    expect(c.caminho).toBe('hotfix');
+    expect(c.tagDeQa).toBeNull();
+    expect(c.motivo).toContain('não passou por `qa`');
+  });
+
+  it('uma `-dev.N` de pai NÃO conta como promoção', () => {
+    // Um merge de `dev` direto em `main` pula `qa`. Se isso passasse por
+    // promoção, a final sairia carimbando código que ninguém validou.
+    expect(identificarCaminho(['f1f1f1f1', 'dddd0000'], tags, shaPorTag).caminho).toBe(
+      'hotfix',
+    );
+  });
+
+  it('tag `-qa.N` que não resolve não vira promoção por descuido', () => {
+    const c = identificarCaminho(['f1f1f1f1', 'bbbb2222'], tags, {
+      'v0.2.0': 'f1f1f1f1',
+    });
+    expect(c.caminho).toBe('hotfix');
+  });
+
+  it('hotfix soma PATCH sobre a última final', () => {
+    expect(versaoDeHotfix('v0.2.0')).toBe('v0.2.1');
+    expect(versaoDeHotfix('v1.4.9')).toBe('v1.4.10');
+  });
+
+  it('hotfix sem nenhuma final publicada é ERRO, não v0.0.1', () => {
+    expect(() => versaoDeHotfix(null)).toThrow(SemFinalError);
+    expect(() => versaoDeHotfix(null)).toThrow(/nunca saiu/);
+  });
+
+  it('dois hotfixes seguidos andam de um em um', () => {
+    const primeiro = versaoDeHotfix('v0.2.0');
+    expect(primeiro).toBe('v0.2.1');
+    // O segundo já vê o primeiro como última final.
+    expect(versaoDeHotfix(primeiro)).toBe('v0.2.2');
+  });
+});
+
+// ------------------------------------------------------------ 7. o par
 
 describe('par da esteira', () => {
   it('aceita as duas promoções adjacentes', () => {
