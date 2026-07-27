@@ -1228,11 +1228,30 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto inexistente ou invisível para quem chamou."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Devolve um projeto pelo id",
         "tags": [
-          "Projects"
+          "projetos"
         ]
       },
       "patch": {
@@ -1259,14 +1278,37 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto inexistente ou invisível para quem chamou."
+          },
+          "409": {
+            "description": "Já existe projeto com este slug no workspace."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Altera nome ou slug do projeto",
         "tags": [
-          "Projects"
+          "projetos"
         ]
       },
       "delete": {
+        "description": "Leva junto as sessões, o event log e as ações propostas dele.",
         "operationId": "ProjectsController_remove",
         "parameters": [
           {
@@ -1280,16 +1322,36 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto inexistente ou invisível para quem chamou."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Remove o projeto",
         "tags": [
-          "Projects"
+          "projetos"
         ]
       }
     },
     "/projects/{projectId}/agent-autonomy": {
       "get": {
+        "description": "Só as regras explicitamente gravadas. Agente sem linha aqui cai no padrão do `permissions.json` do projeto.",
         "operationId": "AgentAutonomyController_list",
         "parameters": [
           {
@@ -1303,14 +1365,37 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AgentAutonomyRuleResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto inexistente."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Lista a autonomia concedida a cada agente",
         "tags": [
-          "AgentAutonomy"
+          "ações"
         ]
       },
       "put": {
+        "description": "Upsert por (agente, tipo). NÃO sobrepõe o `permissions.json`: um padrão em `deny` continua bloqueado por mais autonomia que se conceda aqui.",
         "operationId": "AgentAutonomyController_set",
         "parameters": [
           {
@@ -1333,12 +1418,24 @@
           }
         },
         "responses": {
-          "200": {
+          "204": {
             "description": ""
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto inexistente."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Define a autonomia de um agente para um tipo de ação",
         "tags": [
-          "AgentAutonomy"
+          "ações"
         ]
       }
     },
@@ -1943,6 +2040,7 @@
     },
     "/projects/{projectId}/members": {
       "get": {
+        "description": "Inclui quem herda acesso do workspace, não só quem foi associado aqui.",
         "operationId": "ProjectsController_listMembers",
         "parameters": [
           {
@@ -1956,14 +2054,37 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProjectMemberComUsuarioResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto inexistente ou invisível para quem chamou."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Lista os membros do projeto com o papel efetivo",
         "tags": [
-          "Projects"
+          "projetos"
         ]
       },
       "post": {
+        "description": "O papel EFETIVO é o maior entre este e o que a pessoa já tem no workspace — associar alguém como `viewer` aqui não rebaixa um `owner` do workspace.",
         "operationId": "ProjectsController_addMember",
         "parameters": [
           {
@@ -1987,16 +2108,36 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectMemberResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto inexistente ou invisível para quem chamou."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Associa um usuário ao projeto",
         "tags": [
-          "Projects"
+          "projetos"
         ]
       }
     },
     "/projects/{projectId}/members/{userId}": {
       "delete": {
+        "description": "Remove só a associação de PROJETO. Quem tem papel no workspace continua enxergando o projeto por herança.",
         "operationId": "ProjectsController_removeMember",
         "parameters": [
           {
@@ -2017,12 +2158,24 @@
           }
         ],
         "responses": {
-          "200": {
+          "204": {
             "description": ""
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto inexistente ou invisível para quem chamou."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Desassocia um usuário do projeto",
         "tags": [
-          "Projects"
+          "projetos"
         ]
       }
     },
@@ -2082,6 +2235,7 @@
     },
     "/projects/{projectId}/permissions": {
       "get": {
+        "description": "É o arquivo físico na raiz do workspace do projeto, não uma coluna do banco.",
         "operationId": "ProjectsController_getPermissions",
         "parameters": [
           {
@@ -2095,14 +2249,34 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PermissionsFileResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto inexistente ou invisível para quem chamou."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Lê o permissions.json do projeto",
         "tags": [
-          "Projects"
+          "projetos"
         ]
       },
       "put": {
+        "description": "Substitui as três listas de uma vez. `deny` continua vencendo `allow` na avaliação — não há como liberar por aqui algo que esteja negado.",
         "operationId": "ProjectsController_setPermissions",
         "parameters": [
           {
@@ -2126,11 +2300,30 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PermissionsFileResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto inexistente ou invisível para quem chamou."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reescreve o permissions.json do projeto",
         "tags": [
-          "Projects"
+          "projetos"
         ]
       }
     },
@@ -2241,14 +2434,37 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SessionResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto ou sessão inexistente."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Lista as sessões do projeto",
         "tags": [
-          "Sessions"
+          "sessões"
         ]
       },
       "post": {
+        "description": "A sessão nasce em `created` e é o contêiner de tudo o que os agentes fazem: o event log, as ações propostas e o orçamento de tokens penduram nela.",
         "operationId": "SessionsController_create",
         "parameters": [
           {
@@ -2262,11 +2478,30 @@
         ],
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto ou sessão inexistente."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Abre uma sessão no projeto",
         "tags": [
-          "Sessions"
+          "sessões"
         ]
       }
     },
@@ -2293,16 +2528,36 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto ou sessão inexistente."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Devolve uma sessão pelo id",
         "tags": [
-          "Sessions"
+          "sessões"
         ]
       }
     },
     "/projects/{projectId}/sessions/{sessionId}/actions": {
       "get": {
+        "description": "Ordenadas por `seq`; use o `nextCursor` como `afterSeq`.",
         "operationId": "ActionsController_list",
         "parameters": [
           {
@@ -2323,31 +2578,53 @@
           },
           {
             "name": "afterSeq",
-            "required": true,
+            "required": false,
             "in": "query",
             "schema": {
+              "example": 6,
               "type": "string"
             }
           },
           {
             "name": "limit",
-            "required": true,
+            "required": false,
             "in": "query",
             "schema": {
+              "example": 50,
               "type": "string"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeAcoesResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto, sessão ou ação inexistente."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Pagina as ações propostas na sessão",
         "tags": [
-          "Actions"
+          "ações"
         ]
       },
       "post": {
+        "description": "A ação é avaliada contra o `permissions.json` do projeto na criação. O `resolvedPolicy` da resposta diz o que a política decidiu: `auto_approve` já sai executável, `require_approval` espera decisão humana e `deny` nasce recusada. Não existe caminho que execute sem passar por aqui.",
         "operationId": "ActionsController_propose",
         "parameters": [
           {
@@ -2379,16 +2656,36 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProposedActionResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto, sessão ou ação inexistente."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Propõe uma ação com efeito externo",
         "tags": [
-          "Actions"
+          "ações"
         ]
       }
     },
     "/projects/{projectId}/sessions/{sessionId}/actions/{actionId}/approve": {
       "post": {
+        "description": "Vale só para esta ação. A decisão fica no event log com o id de quem decidiu.",
         "operationId": "ActionsController_approve",
         "parameters": [
           {
@@ -2418,16 +2715,39 @@
         ],
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProposedActionResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto, sessão ou ação inexistente."
+          },
+          "409": {
+            "description": "A ação já foi decidida ou executada."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Aprova a ação, uma vez",
         "tags": [
-          "Actions"
+          "ações"
         ]
       }
     },
     "/projects/{projectId}/sessions/{sessionId}/actions/{actionId}/approve_always": {
       "post": {
+        "description": "Além de liberar esta ação, acrescenta o padrão correspondente ao `allow` do projeto — as próximas iguais saem `auto_approved` sem perguntar. Um padrão que já esteja em `deny` continua bloqueado.",
         "operationId": "ActionsController_approveAlways",
         "parameters": [
           {
@@ -2457,16 +2777,39 @@
         ],
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProposedActionResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto, sessão ou ação inexistente."
+          },
+          "409": {
+            "description": "A ação já foi decidida ou executada."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Aprova a ação e grava o padrão no permissions.json",
         "tags": [
-          "Actions"
+          "ações"
         ]
       }
     },
     "/projects/{projectId}/sessions/{sessionId}/actions/{actionId}/deny": {
       "post": {
+        "description": "O motivo, se vier, fica no event log junto com a decisão.",
         "operationId": "ActionsController_deny",
         "parameters": [
           {
@@ -2506,11 +2849,33 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProposedActionResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto, sessão ou ação inexistente."
+          },
+          "409": {
+            "description": "A ação já foi decidida ou executada."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Recusa a ação",
         "tags": [
-          "Actions"
+          "ações"
         ]
       }
     },
@@ -2730,6 +3095,7 @@
     },
     "/projects/{projectId}/sessions/{sessionId}/events": {
       "get": {
+        "description": "O log é IMUTÁVEL e ordenado por `seq`. A paginação normal é incremental: passe o `nextCursor` da resposta anterior como `afterSeq`. `latest=true` faz o caminho oposto — traz a CAUDA e ignora `afterSeq`, para uma tela que abre no fim em vez de reconstruir a sessão inteira desde o começo (ADR 0021).",
         "operationId": "SessionsController_listEvents",
         "parameters": [
           {
@@ -2750,39 +3116,64 @@
           },
           {
             "name": "afterSeq",
-            "required": true,
+            "required": false,
             "in": "query",
+            "description": "Devolve os eventos com `seq` maior que este.",
             "schema": {
+              "example": 40,
               "type": "string"
             }
           },
           {
             "name": "limit",
-            "required": true,
+            "required": false,
             "in": "query",
             "schema": {
+              "example": 50,
               "type": "string"
             }
           },
           {
             "name": "latest",
-            "required": true,
+            "required": false,
             "in": "query",
+            "description": "Traz a cauda do log; ignora `afterSeq`.",
             "schema": {
+              "example": "true",
               "type": "string"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeEventosResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto ou sessão inexistente."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Pagina o event log da sessão",
         "tags": [
-          "Sessions"
+          "sessões"
         ]
       },
       "post": {
+        "description": "Append-only: o `seq` é atribuído pelo servidor e nada no log é atualizado ou removido depois. Não há endpoint de edição, de propósito.",
         "operationId": "SessionsController_appendEvent",
         "parameters": [
           {
@@ -2814,16 +3205,36 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionEventResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto ou sessão inexistente."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Anexa um evento ao log da sessão",
         "tags": [
-          "Sessions"
+          "sessões"
         ]
       }
     },
     "/projects/{projectId}/sessions/{sessionId}/events/{eventId}": {
       "get": {
+        "description": "Existe para a evidência das hipóteses do Psicólogo chegar no evento citado sem depender da página em que ele caiu nem dos filtros do feed.",
         "operationId": "SessionsController_getEvent",
         "parameters": [
           {
@@ -2853,11 +3264,30 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionEventResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto ou sessão inexistente."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Devolve um evento do log pelo id",
         "tags": [
-          "Sessions"
+          "sessões"
         ]
       }
     },
@@ -3168,6 +3598,7 @@
     },
     "/projects/{projectId}/sessions/{sessionId}/transition": {
       "post": {
+        "description": "A transição é validada pela máquina de estados do domínio, não pelo cliente: created → active → closing → closed | closed_abnormally. Salto inválido é 409.",
         "operationId": "SessionsController_transition",
         "parameters": [
           {
@@ -3198,12 +3629,34 @@
           }
         },
         "responses": {
-          "201": {
-            "description": ""
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto ou sessão inexistente."
+          },
+          "409": {
+            "description": "Transição não permitida a partir do estado atual."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Move a sessão para outro estado",
         "tags": [
-          "Sessions"
+          "sessões"
         ]
       }
     },
@@ -3292,18 +3745,42 @@
     },
     "/workspaces": {
       "get": {
+        "description": "Já filtrada pela associação — não existe listagem global. Cada item traz o papel do próprio chamador.",
         "operationId": "WorkspacesController_list",
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorkspaceComPapelResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no workspace."
+          },
+          "404": {
+            "description": "Workspace inexistente ou invisível para quem chamou."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Lista os workspaces de quem chamou",
         "tags": [
-          "Workspaces"
+          "workspaces"
         ]
       },
       "post": {
+        "description": "Não exige papel: quem cria vira `owner`. É o único ponto de entrada de quem ainda não pertence a workspace nenhum.",
         "operationId": "WorkspacesController_create",
         "parameters": [],
         "requestBody": {
@@ -3318,11 +3795,33 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no workspace."
+          },
+          "404": {
+            "description": "Workspace inexistente ou invisível para quem chamou."
+          },
+          "409": {
+            "description": "Já existe workspace com este slug."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cria um workspace",
         "tags": [
-          "Workspaces"
+          "workspaces"
         ]
       }
     },
@@ -3341,11 +3840,30 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no workspace."
+          },
+          "404": {
+            "description": "Workspace inexistente ou invisível para quem chamou."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Devolve um workspace pelo id",
         "tags": [
-          "Workspaces"
+          "workspaces"
         ]
       },
       "patch": {
@@ -3372,14 +3890,37 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no workspace."
+          },
+          "404": {
+            "description": "Workspace inexistente ou invisível para quem chamou."
+          },
+          "409": {
+            "description": "Já existe workspace com este slug."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Altera nome ou slug do workspace",
         "tags": [
-          "Workspaces"
+          "workspaces"
         ]
       },
       "delete": {
+        "description": "Exige `owner`. Leva junto projetos, sessões e o histórico deles.",
         "operationId": "WorkspacesController_remove",
         "parameters": [
           {
@@ -3393,16 +3934,36 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no workspace."
+          },
+          "404": {
+            "description": "Workspace inexistente ou invisível para quem chamou."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Remove o workspace",
         "tags": [
-          "Workspaces"
+          "workspaces"
         ]
       }
     },
     "/workspaces/{workspaceId}/members": {
       "post": {
+        "description": "Só `owner` mexe no quadro de membros. O papel aqui é herdado por TODOS os projetos do workspace.",
         "operationId": "WorkspacesController_addMember",
         "parameters": [
           {
@@ -3426,11 +3987,30 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceMemberResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no workspace."
+          },
+          "404": {
+            "description": "Workspace inexistente ou invisível para quem chamou."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Associa um usuário ao workspace",
         "tags": [
-          "Workspaces"
+          "workspaces"
         ]
       }
     },
@@ -3503,11 +4083,33 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProjectResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no workspace."
+          },
+          "404": {
+            "description": "Workspace inexistente ou invisível para quem chamou."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Lista os projetos do workspace",
         "tags": [
-          "Workspaces"
+          "workspaces"
         ]
       },
       "post": {
@@ -3534,11 +4136,33 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no workspace."
+          },
+          "404": {
+            "description": "Workspace inexistente ou invisível para quem chamou."
+          },
+          "409": {
+            "description": "Já existe projeto com este slug no workspace."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cria um projeto dentro do workspace",
         "tags": [
-          "Workspaces"
+          "workspaces"
         ]
       }
     }
@@ -3586,13 +4210,150 @@
         "type": "object",
         "properties": {}
       },
+      "ActorDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "user",
+              "agent",
+              "system"
+            ],
+            "example": "agent",
+            "description": "Natureza de quem agiu."
+          },
+          "id": {
+            "type": "string",
+            "example": "dev-api",
+            "description": "Id do usuário quando `kind=user`; o slug do agente quando `kind=agent`."
+          }
+        },
+        "required": [
+          "kind",
+          "id"
+        ]
+      },
+      "ActorResponseDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "user",
+              "agent",
+              "system"
+            ],
+            "example": "agent",
+            "description": "Natureza de quem agiu."
+          },
+          "id": {
+            "type": "string",
+            "example": "dev-api",
+            "description": "Id do usuário quando `kind=user`; o slug do agente quando `kind=agent`."
+          }
+        },
+        "required": [
+          "kind",
+          "id"
+        ]
+      },
       "AddMemberDto": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "3f1b2c8e-5a4d-4b7e-9c10-2d6f8a1b4c33",
+            "description": "Id do usuário a associar."
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "viewer",
+              "developer",
+              "maintainer",
+              "owner"
+            ],
+            "example": "developer",
+            "description": "Papel nesta associação. O papel EFETIVO de alguém num projeto é o maior entre este e o que ele tem no workspace."
+          }
+        },
+        "required": [
+          "userId",
+          "role"
+        ]
+      },
+      "AgentAutonomyRuleResponseDto": {
+        "type": "object",
+        "properties": {
+          "agentId": {
+            "type": "string",
+            "example": "dev-api",
+            "description": "Slug do agente."
+          },
+          "actionType": {
+            "type": "string",
+            "enum": [
+              "terminal",
+              "git_commit",
+              "git_push",
+              "pr_open",
+              "spend",
+              "git_repo_create",
+              "git_branch_create",
+              "git_branch_protect",
+              "write_file",
+              "open_adr_pr",
+              "git_merge",
+              "open_infra_pr",
+              "instruction_patch"
+            ],
+            "example": "terminal"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "auto_approve",
+              "require_approval",
+              "deny"
+            ],
+            "example": "auto_approve",
+            "description": "Autonomia concedida. Não sobrepõe o `permissions.json`: um `deny` de lá continua vencendo."
+          }
+        },
+        "required": [
+          "agentId",
+          "actionType",
+          "mode"
+        ]
       },
       "AppendSessionEventDto": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "type": {
+            "type": "string",
+            "example": "chat.message",
+            "description": "Tipo do evento. O inventário completo está em `docs/reference/events.md`."
+          },
+          "actor": {
+            "$ref": "#/components/schemas/ActorDto"
+          },
+          "payload": {
+            "type": "object",
+            "additionalProperties": true,
+            "example": {
+              "role": "user",
+              "content": "Quero um checkout novo."
+            },
+            "description": "Forma livre, específica de cada `type`."
+          }
+        },
+        "required": [
+          "type",
+          "actor",
+          "payload"
+        ]
       },
       "AppendSessionEventInternalDto": {
         "type": "object",
@@ -3628,7 +4389,23 @@
       },
       "CreateProjectDto": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Checkout",
+            "minLength": 2
+          },
+          "slug": {
+            "type": "string",
+            "example": "checkout",
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+            "description": "kebab-case. Único dentro do workspace."
+          }
+        },
+        "required": [
+          "name",
+          "slug"
+        ]
       },
       "CreateStoryInternalDto": {
         "type": "object",
@@ -3640,11 +4417,33 @@
       },
       "CreateWorkspaceDto": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Acme Corp",
+            "minLength": 2
+          },
+          "slug": {
+            "type": "string",
+            "example": "acme-corp",
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+            "description": "kebab-case. Único no sistema e visível na URL."
+          }
+        },
+        "required": [
+          "name",
+          "slug"
+        ]
       },
       "DenyActionDto": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "reason": {
+            "type": "string",
+            "example": "O comando apagaria o diretório de trabalho.",
+            "description": "Fica no event log junto com a negativa. Opcional, mas recomendado."
+          }
+        }
       },
       "JwksResponseDto": {
         "type": "object",
@@ -3686,9 +4485,390 @@
         "type": "object",
         "properties": {}
       },
+      "PaginaDeAcoesResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProposedActionResponseDto"
+            }
+          },
+          "nextCursor": {
+            "type": "object",
+            "example": 7,
+            "nullable": true,
+            "description": "Passe como `afterSeq` na próxima página; `null` é fim da lista."
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ]
+      },
+      "PaginaDeEventosResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SessionEventResponseDto"
+            }
+          },
+          "nextCursor": {
+            "type": "object",
+            "example": 41,
+            "nullable": true,
+            "description": "Passe como `afterSeq` para a próxima página. `null` significa fim do log."
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ]
+      },
+      "PermissionsFileResponseDto": {
+        "type": "object",
+        "properties": {
+          "allow": {
+            "example": [
+              "Terminal(pnpm test:*)",
+              "Terminal(pnpm lint)"
+            ],
+            "description": "Padrões aprovados automaticamente.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "deny": {
+            "example": [
+              "Terminal(rm -rf *)",
+              "Terminal(git push --force*)"
+            ],
+            "description": "Padrões proibidos. `deny` vence `allow` e vence a autonomia do agente — não há combinação de configuração que libere o que está aqui.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "ask": {
+            "example": [
+              "Terminal(pnpm add *)"
+            ],
+            "description": "Padrões que sempre pedem decisão humana.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "allow",
+          "deny",
+          "ask"
+        ]
+      },
+      "ProjectMemberComUsuarioResponseDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "example": "01JC4Z0000USUARIO0000000002"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "viewer",
+              "developer",
+              "maintainer",
+              "owner"
+            ],
+            "example": "maintainer",
+            "description": "Papel EFETIVO: o maior entre o do projeto e o herdado do workspace. Quem é `owner` do workspace não é rebaixado por uma associação de projeto menor."
+          },
+          "name": {
+            "type": "object",
+            "example": "Dev Sênior",
+            "nullable": true
+          },
+          "email": {
+            "type": "string",
+            "example": "dev@brabo.dev"
+          }
+        },
+        "required": [
+          "userId",
+          "role",
+          "name",
+          "email"
+        ]
+      },
+      "ProjectMemberResponseDto": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "example": "01JC4Z0000PROJETO0000000001"
+          },
+          "userId": {
+            "type": "string",
+            "example": "01JC4Z0000USUARIO0000000002"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "viewer",
+              "developer",
+              "maintainer",
+              "owner"
+            ],
+            "example": "maintainer",
+            "description": "Hierarquia linear: owner > maintainer > developer > viewer. Cada papel inclui as permissões dos seguintes."
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-07-22T08:05:00.000Z",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "projectId",
+          "userId",
+          "role",
+          "createdAt"
+        ]
+      },
+      "ProjectResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01JC4Z0000PROJETO0000000001"
+          },
+          "workspaceId": {
+            "type": "string",
+            "example": "01JC4Z0000WORKSPACE00000001"
+          },
+          "name": {
+            "type": "string",
+            "example": "Checkout"
+          },
+          "slug": {
+            "type": "string",
+            "example": "checkout",
+            "description": "Único dentro do workspace."
+          },
+          "createdBy": {
+            "type": "string",
+            "example": "01JC4Z0000USUARIO0000000001"
+          },
+          "taskBudgetMicros": {
+            "type": "object",
+            "example": 500000,
+            "nullable": true,
+            "description": "Teto de tokens por task dos dev agents, em micro-USD. `null` usa o padrão do domínio."
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-07-21T11:00:00.000Z",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "example": "2026-07-21T11:00:00.000Z",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "workspaceId",
+          "name",
+          "slug",
+          "createdBy",
+          "taskBudgetMicros",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
       "ProposeActionDto": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "actionType": {
+            "type": "string",
+            "enum": [
+              "terminal",
+              "git_commit",
+              "git_push",
+              "pr_open",
+              "spend",
+              "git_repo_create",
+              "git_branch_create",
+              "git_branch_protect",
+              "write_file",
+              "open_adr_pr",
+              "git_merge",
+              "open_infra_pr",
+              "instruction_patch"
+            ],
+            "example": "terminal",
+            "description": "Tipo da ação. Cada tipo tem papel mínimo próprio: `git_push`, `git_merge` e `git_branch_protect` exigem `maintainer`, o resto `developer`."
+          },
+          "actor": {
+            "description": "Quem está propondo.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ActorDto"
+              }
+            ]
+          },
+          "payload": {
+            "type": "object",
+            "additionalProperties": true,
+            "example": {
+              "command": "pnpm test"
+            },
+            "description": "Parâmetros da ação, com forma específica do `actionType`."
+          }
+        },
+        "required": [
+          "actionType",
+          "actor",
+          "payload"
+        ]
+      },
+      "ProposedActionResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01JC4Z8QK3M7YV2N5T9B0PXHRC",
+            "description": "ULID da ação."
+          },
+          "projectId": {
+            "type": "string",
+            "example": "01JC4Z0000PROJETO0000000001"
+          },
+          "sessionId": {
+            "type": "string",
+            "example": "01JC4Z8QK3M7YV2N5T9B0PXHRA"
+          },
+          "seq": {
+            "type": "number",
+            "example": 7,
+            "description": "Ordem da ação dentro da sessão; serve de cursor na listagem."
+          },
+          "actionType": {
+            "type": "string",
+            "enum": [
+              "terminal",
+              "git_commit",
+              "git_push",
+              "pr_open",
+              "spend",
+              "git_repo_create",
+              "git_branch_create",
+              "git_branch_protect",
+              "write_file",
+              "open_adr_pr",
+              "git_merge",
+              "open_infra_pr",
+              "instruction_patch"
+            ],
+            "example": "terminal",
+            "description": "O que a ação faria. `git_push` e `git_merge` exigem `maintainer`."
+          },
+          "payload": {
+            "type": "object",
+            "additionalProperties": true,
+            "example": {
+              "command": "pnpm test"
+            },
+            "description": "Parâmetros da ação, específicos do `actionType`."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "approved",
+              "denied",
+              "auto_approved",
+              "executed",
+              "failed"
+            ],
+            "example": "pending",
+            "description": "Estado no pipeline. `auto_approved` é distinto de `approved` de propósito: o log precisa distinguir o que uma pessoa decidiu do que a política liberou."
+          },
+          "resolvedPolicy": {
+            "type": "string",
+            "enum": [
+              "auto_approve",
+              "require_approval",
+              "deny"
+            ],
+            "example": "require_approval",
+            "description": "O que o `permissions.json` decidiu para esta ação. `deny` SEMPRE vence `allow` — nem a autonomia do agente reverte."
+          },
+          "actor": {
+            "description": "Quem propôs.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ActorResponseDto"
+              }
+            ]
+          },
+          "decidedBy": {
+            "type": "object",
+            "example": null,
+            "nullable": true,
+            "description": "Id do usuário que aprovou ou negou. Nunca um agente."
+          },
+          "decidedAt": {
+            "type": "object",
+            "example": null,
+            "format": "date-time",
+            "nullable": true
+          },
+          "rejectionReason": {
+            "type": "object",
+            "example": null,
+            "nullable": true
+          },
+          "executionResult": {
+            "type": "object",
+            "additionalProperties": true,
+            "nullable": true,
+            "example": null,
+            "description": "Resultado da execução, com forma específica de cada `actionType` — saída e código de saída no terminal, número e URL do PR nos tipos de git. `null` enquanto a ação não foi executada."
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-07-27T14:33:10.900Z",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "example": "2026-07-27T14:33:10.900Z",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "projectId",
+          "sessionId",
+          "seq",
+          "actionType",
+          "payload",
+          "status",
+          "resolvedPolicy",
+          "actor",
+          "decidedBy",
+          "decidedAt",
+          "rejectionReason",
+          "executionResult",
+          "createdAt",
+          "updatedAt"
+        ]
       },
       "ProposeHypothesesInternalDto": {
         "type": "object",
@@ -3806,9 +4986,176 @@
           "expiresIn"
         ]
       },
+      "SessionEventResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01JC4Z8QK3M7YV2N5T9B0PXHRB",
+            "description": "ULID do evento."
+          },
+          "sessionId": {
+            "type": "string",
+            "example": "01JC4Z8QK3M7YV2N5T9B0PXHRA"
+          },
+          "seq": {
+            "type": "number",
+            "example": 41,
+            "description": "Ordem dentro da sessão. Monotônico e sem buracos."
+          },
+          "type": {
+            "type": "string",
+            "example": "chat.message",
+            "description": "Tipo do evento. O inventário completo está em `docs/reference/events.md`."
+          },
+          "actor": {
+            "$ref": "#/components/schemas/ActorResponseDto"
+          },
+          "payload": {
+            "type": "object",
+            "additionalProperties": true,
+            "example": {
+              "role": "assistant",
+              "content": "Vou abrir o épico primeiro."
+            },
+            "description": "Forma livre, específica de cada `type`. Ver a referência de eventos."
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-07-27T14:30:58.512Z",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "sessionId",
+          "seq",
+          "type",
+          "actor",
+          "payload",
+          "createdAt"
+        ]
+      },
+      "SessionResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01JC4Z8QK3M7YV2N5T9B0PXHRA",
+            "description": "ULID da sessão."
+          },
+          "projectId": {
+            "type": "string",
+            "example": "01JC4Z0000PROJETO0000000001"
+          },
+          "createdBy": {
+            "type": "string",
+            "example": "01JC4Z0000USUARIO0000000001",
+            "description": "Quem abriu a sessão."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "created",
+              "active",
+              "closing",
+              "closed",
+              "closed_abnormally"
+            ],
+            "example": "active",
+            "description": "Máquina de estados explícita: created → active → closing → closed | closed_abnormally. Transição inválida responde 409."
+          },
+          "nextSeq": {
+            "type": "number",
+            "example": 42,
+            "description": "Próximo `seq` do event log. Serve de cursor: `?afterSeq=41` traz tudo depois do 41."
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-07-27T14:03:22.187Z",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "example": "2026-07-27T14:31:09.004Z",
+            "format": "date-time"
+          },
+          "closedAt": {
+            "type": "object",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "description": "Preenchido só nos estados terminais."
+          },
+          "terminationReason": {
+            "type": "object",
+            "example": null,
+            "nullable": true,
+            "description": "Motivo reportado pelo engine ao terminar (heartbeat_timeout, killed, exceção…). `null` em fechamento humano ou sessão ainda viva."
+          },
+          "traceParent": {
+            "type": "object",
+            "example": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
+            "nullable": true,
+            "description": "`traceparent` W3C da span raiz. É por ele que a sessão inteira se recupera no Tempo."
+          }
+        },
+        "required": [
+          "id",
+          "projectId",
+          "createdBy",
+          "status",
+          "nextSeq",
+          "createdAt",
+          "updatedAt",
+          "closedAt",
+          "terminationReason",
+          "traceParent"
+        ]
+      },
       "SetAgentAutonomyDto": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "agentId": {
+            "type": "string",
+            "example": "dev-api",
+            "description": "Slug do agente."
+          },
+          "actionType": {
+            "type": "string",
+            "enum": [
+              "terminal",
+              "git_commit",
+              "git_push",
+              "pr_open",
+              "spend",
+              "git_repo_create",
+              "git_branch_create",
+              "git_branch_protect",
+              "write_file",
+              "open_adr_pr",
+              "git_merge",
+              "open_infra_pr",
+              "instruction_patch"
+            ],
+            "example": "terminal"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "auto_approve",
+              "require_approval",
+              "deny"
+            ],
+            "example": "auto_approve",
+            "description": "Autonomia deste agente para este tipo. NÃO sobrepõe o `permissions.json`: um padrão em `deny` continua bloqueado por mais autonomia que o agente tenha."
+          }
+        },
+        "required": [
+          "agentId",
+          "actionType",
+          "mode"
+        ]
       },
       "SetModelBindingDto": {
         "type": "object",
@@ -3816,7 +5163,45 @@
       },
       "SetProjectPermissionsDto": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "allow": {
+            "example": [
+              "Terminal(pnpm test:*)",
+              "Terminal(pnpm lint)"
+            ],
+            "description": "Padrões aprovados automaticamente.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "deny": {
+            "example": [
+              "Terminal(rm -rf *)",
+              "Terminal(git push --force*)"
+            ],
+            "description": "Padrões proibidos. `deny` vence `allow` e vence a autonomia do agente.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "ask": {
+            "example": [
+              "Terminal(pnpm add *)"
+            ],
+            "description": "Padrões que sempre pedem decisão humana.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "allow",
+          "deny",
+          "ask"
+        ]
       },
       "StreamLlmTurnDto": {
         "type": "object",
@@ -3824,15 +5209,55 @@
       },
       "TransitionSessionDto": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "created",
+              "active",
+              "closing",
+              "closed",
+              "closed_abnormally"
+            ],
+            "example": "closing",
+            "description": "Estado de destino. A máquina de estados recusa salto inválido com 409 — de `created` só se vai para `active`, e de um terminal não se volta."
+          }
+        },
+        "required": [
+          "status"
+        ]
       },
       "UpdateProjectDto": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Checkout",
+            "minLength": 2
+          },
+          "slug": {
+            "type": "string",
+            "example": "checkout",
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+            "description": "kebab-case. Único dentro do workspace."
+          }
+        }
       },
       "UpdateWorkspaceDto": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Acme Corp",
+            "minLength": 2
+          },
+          "slug": {
+            "type": "string",
+            "example": "acme-corp",
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+            "description": "kebab-case. Único no sistema e visível na URL."
+          }
+        }
       },
       "UpsertBudgetDto": {
         "type": "object",
@@ -3852,6 +5277,104 @@
         },
         "required": [
           "token"
+        ]
+      },
+      "WorkspaceComPapelResponseDto": {
+        "type": "object",
+        "properties": {
+          "workspace": {
+            "$ref": "#/components/schemas/WorkspaceResponseDto"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "viewer",
+              "developer",
+              "maintainer",
+              "owner"
+            ],
+            "example": "maintainer",
+            "description": "Papel de QUEM CHAMOU neste workspace."
+          }
+        },
+        "required": [
+          "workspace",
+          "role"
+        ]
+      },
+      "WorkspaceMemberResponseDto": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "example": "01JC4Z0000WORKSPACE00000001"
+          },
+          "userId": {
+            "type": "string",
+            "example": "01JC4Z0000USUARIO0000000002"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "viewer",
+              "developer",
+              "maintainer",
+              "owner"
+            ],
+            "example": "maintainer",
+            "description": "Hierarquia linear: owner > maintainer > developer > viewer. Cada papel inclui as permissões dos seguintes."
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-07-22T08:00:00.000Z",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "workspaceId",
+          "userId",
+          "role",
+          "createdAt"
+        ]
+      },
+      "WorkspaceResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01JC4Z0000WORKSPACE00000001"
+          },
+          "name": {
+            "type": "string",
+            "example": "Acme Corp"
+          },
+          "slug": {
+            "type": "string",
+            "example": "acme-corp",
+            "description": "Único no sistema; é ele que aparece na URL."
+          },
+          "createdBy": {
+            "type": "string",
+            "example": "01JC4Z0000USUARIO0000000001"
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-07-20T09:12:00.000Z",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "example": "2026-07-20T09:12:00.000Z",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "createdBy",
+          "createdAt",
+          "updatedAt"
         ]
       }
     }
