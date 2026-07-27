@@ -17,7 +17,8 @@
  * CI.
  */
 import { execFileSync } from 'node:child_process';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { RAIZ } from './docmap.mjs';
 
@@ -77,6 +78,13 @@ function escrever(rel, conteudo) {
   }
   writeFileSync(join(RAIZ, rel), conteudo);
   console.log(`  ${atual === null ? 'criado   ' : 'atualizado'} ${rel}`);
+}
+
+/** O documento sem o bloco gerado `id` — o que a PROSA de fato diz. */
+function semBlocoGerado(doc, id) {
+  const i = doc.indexOf(`<!-- BEGIN:GENERATED:${id} -->`);
+  const f = doc.indexOf(`<!-- END:GENERATED:${id} -->`);
+  return i === -1 || f === -1 ? doc : doc.slice(0, i) + doc.slice(f);
 }
 
 /** Substitui o conteúdo entre os marcadores, preservando o resto do arquivo. */
@@ -200,7 +208,13 @@ function gerarEnv() {
     ['web', arquivos('apps/web/src/**/*.ts*'), /import\.meta\.env\.(VITE_[A-Z_0-9]+)/g],
   ];
 
-  const citados = nomesCitados(ler('docs/reference/configuration.md'));
+  // Sem `semBlocoGerado` o check se auto-satisfaz: a variável nova entra no
+  // inventário com a marca de lacuna, e na execução SEGUINTE o próprio nome
+  // dentro do bloco conta como citação — a lacuna some sem ninguém escrever
+  // uma linha de prosa.
+  const citados = nomesCitados(
+    semBlocoGerado(ler('docs/reference/configuration.md'), 'env-inventario'),
+  );
   let corpo = '';
   let total = 0;
   let naoDocumentadas = 0;
@@ -246,7 +260,8 @@ function gerarEventos() {
     }
   }
 
-  const doc = ler('docs/reference/events.md');
+  // Mesmo cuidado do inventário de env: o bloco gerado não pode se citar.
+  const doc = semBlocoGerado(ler('docs/reference/events.md'), 'eventos-inventario');
   const ordenados = [...achados.keys()].sort();
   const faltando = ordenados.filter((t) => !doc.includes(`\`${t}\``));
 
@@ -271,7 +286,114 @@ const PREFIXOS_DE_EVENTO = [
   'infra', 'pr', 'architecture', 'llm', 'tool', 'event',
 ];
 
-// ----------------------------------------------------------- 4. índice de ADR
+
+// ------------------------------------------- 4. documento OpenAPI da api
+
+/**
+ * Exporta o OpenAPI da api para `docs/reference/api/openapi.json`.
+ *
+ * O JSON vem pelo STDOUT de `apps/api/src/scripts/export-openapi.ts` e quem
+ * grava é o `escrever()` daqui. Essa divisão é o que dá o `--check` de graça:
+ * mudou um `@ApiProperty` e ninguém regerou, o arquivo commitado difere e o
+ * `docs-check.yml` reprova. Se o script da api gravasse sozinho, o modo check
+ * teria de reimplementar a comparação — e passaria a MEXER no working tree,
+ * que é justamente o que ele promete não fazer.
+ *
+ * Sobe o `AppModule` inteiro, mas **não precisa de Postgres**: o `Pool` do
+ * `pg` é preguiçoso e nada consulta o banco de forma bloqueante no boot. É
+ * isso que permite este passo rodar no `docs-check.yml`, que não tem service
+ * container.
+ */
+function gerarOpenapi() {
+  const json = execFileSync(
+    'pnpm',
+    ['--filter', 'api', 'exec', 'ts-node', 'src/scripts/export-openapi.ts'],
+    { cwd: RAIZ, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 },
+  );
+  escrever(SPEC, json);
+}
+
+/**
+ * Onde mora cada peça da referência.
+ *
+ * A spec fica FORA de `DIR_API` de propósito: o `clean-api-docs` do plugin
+ * apaga aquele diretório inteiro antes de regerar, e um gerador que apaga a
+ * própria entrada é armadilha — a primeira execução funciona e a segunda
+ * falha com ENOENT.
+ */
+const SPEC = 'docs/reference/openapi.json';
+const DIR_API = 'docs/reference/api';
+const MANIFESTO = `${DIR_API}/.openapi-manifest.json`;
+
+function sha256(texto) {
+  return createHash('sha256').update(texto).digest('hex');
+}
+
+/** {arquivo: sha256} de tudo que o plugin escreve, exceto o próprio manifesto. */
+function hashesDaReferencia() {
+  const ignorar = new Set(['.openapi-manifest.json']);
+  const arquivos = readdirSync(join(RAIZ, DIR_API))
+    .filter((nome) => !ignorar.has(nome))
+    .sort();
+
+  const hashes = {};
+  for (const nome of arquivos) {
+    hashes[nome] = sha256(ler(`${DIR_API}/${nome}`));
+  }
+  return hashes;
+}
+
+/**
+ * Materializa `docs/reference/api/` a partir do `openapi.json`.
+ *
+ * ## Por que um manifesto em vez de regerar no `--check`
+ *
+ * O modo check NÃO ESCREVE — é a promessa dele. Então não dá para rodar o
+ * `gen-api-docs` e comparar: ele escreveria no working tree. A saída é um
+ * manifesto com o sha256 de cada arquivo gerado mais o do `openapi.json` que
+ * os produziu, e ele mesmo passa pelo `escrever()`.
+ *
+ * Em check, os hashes são recalculados DO DISCO e comparados com o commitado.
+ * Isso pega as quatro derivas que importam:
+ *
+ *   - `.mdx` editado à mão            → hash do arquivo diverge
+ *   - `.mdx` velho para spec nova     → `openapiSha256` diverge
+ *   - rota nova sem o gerado commitado → arquivo some da lista
+ *   - rota removida com gerado órfão   → arquivo sobra na lista
+ *
+ * Rodar o Docusaurus no check custaria minutos para dizer a mesma coisa.
+ *
+ * ## `clean` antes de `gen`
+ *
+ * Sem limpar, uma rota removida deixaria o `.mdx` dela para trás e o
+ * diretório acumularia órfãos que ninguém nota.
+ */
+function gerarReferenciaApi() {
+  if (!CHECAR) {
+    for (const comando of ['clean-api-docs', 'gen-api-docs']) {
+      execFileSync(
+        'pnpm',
+        ['--filter', 'website', 'exec', 'docusaurus', comando, 'all'],
+        { cwd: RAIZ, encoding: 'utf8', stdio: 'pipe' },
+      );
+    }
+  }
+
+  const conteudo =
+    JSON.stringify(
+      {
+        _: 'Gerado por `pnpm docs:generate`. Não edite — é a trava do que está em docs/reference/api/.',
+        openapiSha256: sha256(ler(SPEC)),
+        arquivos: hashesDaReferencia(),
+      },
+      null,
+      2,
+    ) + '\n';
+
+  escrever(MANIFESTO, conteudo);
+}
+
+// ----------------------------------------------------------- 5. índice de ADR
 
 /**
  * NÃO gera o índice: ele tem uma linha curada por ADR, que nenhum script
@@ -361,6 +483,8 @@ console.log(CHECAR ? '[docs:generate] verificando…' : '[docs:generate] gerando
 gerarScripts();
 gerarEnv();
 gerarEventos();
+gerarOpenapi();
+gerarReferenciaApi();
 verificarIndiceAdr();
 verificarContagensDeAdr();
 

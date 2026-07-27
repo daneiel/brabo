@@ -22,8 +22,8 @@ defmodule EngineWeb.RouteSurfaceTest do
 
   ## As rotas sem autenticação
 
-  Quatro, e todas chamadas por infraestrutura que não carrega token do
-  Keycloak: as três probes (kubelet) e o `/metrics` (Prometheus). A exposição
+  Quatro, e todas chamadas por infraestrutura que não carrega o segredo de
+  serviço: as três probes (kubelet) e o `/metrics` (Prometheus). A exposição
   delas é contida por REDE — a NetworkPolicy só libera o namespace
   `monitoring`, e o Ingress de produção bloqueia `/metrics` e `/internal`.
   Justificativa completa em `docs/security-surface.md`.
@@ -84,7 +84,7 @@ defmodule EngineWeb.RouteSurfaceTest do
     #{Enum.map_join(vazadas, "\n", fn {v, c} -> "  #{v} #{c}" end)}
 
     Ou a rota entrou no escopo errado do router (fora do `scope "/internal"`,
-    que é quem passa pelo VerifyApiToken), ou ela é intencionalmente pública —
+    que é quem passa pelo VerifyServiceToken), ou ela é intencionalmente pública —
     e nesse caso precisa de justificativa em docs/security-surface.md e de uma
     linha em @sem_auth.
     """
@@ -106,7 +106,7 @@ defmodule EngineWeb.RouteSurfaceTest do
     """
   end
 
-  test "as rotas /internal continuam sob o VerifyApiToken", %{conn: conn} do
+  test "as rotas /internal continuam sob o VerifyServiceToken", %{conn: conn} do
     # Redundante com o primeiro teste por construção, e de propósito: se um dia
     # alguém acrescentar `/internal/...` à lista de exceções, esta asserção
     # ainda reprova. É a superfície de comando api→engine; ela não tem caso de
@@ -120,5 +120,39 @@ defmodule EngineWeb.RouteSurfaceTest do
       assert resposta.status == 401,
              "#{verbo} #{caminho} respondeu #{resposta.status} sem token; esperado 401"
     end
+  end
+
+  test "as rotas /internal ACEITAM o token de serviço válido", %{conn: conn} do
+    # A contraprova dos testes acima, e ela faltava.
+    #
+    # Até a Fase 7a, "recusa sem token" passava em parte por acidente: com o
+    # JWKS desligado na suite, o verificador não conseguia buscar signers e
+    # TUDO falhava fechado em 401 — inclusive uma requisição legítima. Um
+    # pipeline que recusasse o mundo inteiro passaria nos três testes anteriores
+    # e deixaria o engine inalcançável pela api.
+    #
+    # Aqui só se afirma "não é 401": o que vier depois (400 por corpo vazio,
+    # 404, 500) é assunto do controller, e prender este teste ao status exato
+    # de cada um o transformaria num teste de todos os controllers.
+    token = Application.fetch_env!(:engine, :service_token)
+
+    internas = Enum.filter(rotas(), fn {_v, c} -> String.starts_with?(c, "/internal") end)
+
+    recusadas =
+      Enum.filter(internas, fn {verbo, caminho} ->
+        conn
+        |> put_req_header("x-brabo-service-token", token)
+        |> requisitar(verbo, concretizar(caminho))
+        |> Map.get(:status) == 401
+      end)
+
+    assert recusadas == [], """
+    Rota(s) /internal recusando o token de serviço VÁLIDO:
+
+    #{Enum.map_join(recusadas, "\n", fn {v, c} -> "  #{v} #{c}" end)}
+
+    O engine ficaria inalcançável pela api. Confira o segredo em config/test.exs
+    e o cabeçalho que o VerifyServiceToken espera.
+    """
   end
 end

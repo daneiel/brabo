@@ -2,7 +2,7 @@ defmodule EngineWeb.AgentCommandController do
   @moduledoc """
   Comandos síncronos da api pros agentes conversacionais (Fase 3b): iniciar o
   Criativo, rotear uma mensagem do usuário, e sinalizar a confirmação de
-  prontidão. Guardado pelo plug VerifyApiToken (client api-service), igual ao
+  prontidão. Guardado pelo plug VerifyServiceToken (segredo compartilhado), igual ao
   SessionCommandController.
   """
 

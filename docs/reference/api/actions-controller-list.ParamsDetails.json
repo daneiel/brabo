@@ -1,0 +1,1 @@
+{"parameters":[{"name":"projectId","required":true,"in":"path","schema":{"type":"string"}},{"name":"sessionId","required":true,"in":"path","schema":{"type":"string"}},{"name":"afterSeq","required":false,"in":"query","schema":{"example":6,"type":"string"}},{"name":"limit","required":false,"in":"query","schema":{"example":50,"type":"string"}}]}

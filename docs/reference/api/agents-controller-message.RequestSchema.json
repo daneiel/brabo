@@ -1,0 +1,1 @@
+{"title":"Body","body":{"required":true,"content":{"application/json":{"schema":{"type":"object","properties":{"text":{"type":"string","example":"Quero permitir cupom de desconto no checkout.","minLength":1,"maxLength":10000,"description":"Mensagem do usuário para o agente ativo da sessão."}},"required":["text"],"title":"SendAgentMessageDto"}}}}}

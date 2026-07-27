@@ -1,0 +1,69 @@
+---
+id: internal-sessions-controller-llm-turn-stream
+title: "Executa um turno de LLM com a resposta em stream"
+description: "Mesma semântica do `llm-turn`, entregue quadro a quadro. O `done` traz o `usage` — sem ele o turno teria saído sem contabilidade."
+sidebar_label: "Executa um turno de LLM com a resposta em stream"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "post api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Executa um turno de LLM com a resposta em stream"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/internal/sessions/{sessionId}/llm-turn-stream"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Mesma semântica do `llm-turn`, entregue quadro a quadro. O `done` traz o `usage` — sem ele o turno teria saído sem contabilidade.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./internal-sessions-controller-llm-turn-stream.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./internal-sessions-controller-llm-turn-stream.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./internal-sessions-controller-llm-turn-stream.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

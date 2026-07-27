@@ -53,9 +53,12 @@ Fonte: os `package.json` de cada pacote e o `Makefile` da raiz.
 | `pnpm --filter api start:prod` | `node dist/main` |
 | `pnpm --filter api lint` | `eslint "{src,apps,libs,test}/**/*.ts" --fix` |
 | `pnpm --filter api test` | `vitest run` |
+| `pnpm --filter api typecheck` | `tsc -p tsconfig.build.json --noEmit` |
 | `pnpm --filter api test:watch` | `vitest` |
 | `pnpm --filter api test:cov` | `vitest run --coverage` |
 | `pnpm --filter api seed` | `ts-node src/db/seed.ts` |
+| `pnpm --filter api migrate:keycloak-users` | `ts-node src/scripts/migrate-keycloak-users.ts` |
+| `pnpm --filter api openapi:export` | `ts-node src/scripts/export-openapi.ts` |
 | `pnpm --filter api demo:repo-bootstrap` | `ts-node scripts/demo-repo-bootstrap.ts` |
 | `pnpm --filter api demo:noop-execution` | `ts-node scripts/demo-noop-execution.ts` |
 | `pnpm --filter api demo:dev-agent-real` | `ts-node scripts/demo-dev-agent-real.ts` |
@@ -115,4 +118,4 @@ Fonte: os `package.json` de cada pacote e o `Makefile` da raiz.
 
 ---
 
-70 comandos no total. Alvo do Makefile sem anotação `## descrição` não aparece aqui — anote na fonte.
+73 comandos no total. Alvo do Makefile sem anotação `## descrição` não aparece aqui — anote na fonte.

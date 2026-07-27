@@ -32,6 +32,8 @@
     "@docusaurus/tsconfig": "3.10.2",
     "@docusaurus/types": "3.10.2",
     "@types/react": "^19.0.0",
+    "docusaurus-plugin-openapi-docs": "5.1.2",
+    "docusaurus-theme-openapi-docs": "5.1.2",
     "typescript": "~6.0.2"
   },
   "browserslist": {

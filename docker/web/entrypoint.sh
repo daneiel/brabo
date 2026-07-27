@@ -21,7 +21,6 @@ envsubst '${CSP_CONNECT_SRC}' < "$TEMPLATE" > "$RENDERED"
 # Configuração de runtime da SPA.
 #
 # O Vite inlina `import.meta.env.VITE_*` no bundle em tempo de BUILD, o que
-# assava as URLs de api/engine/Keycloak na imagem: uma imagem por ambiente, sem
 # promoção do mesmo artefato entre eles (dívida registrada no ADR 0024). Este
 # arquivo é lido por src/lib/runtime-config.ts, que mantém as VITE_* como
 # fallback para `pnpm dev:web`, onde não há nginx.
@@ -38,9 +37,6 @@ cat > /tmp/nginx/config.js <<EOF
 window.__BRABO_CONFIG__ = {
   apiUrl: "$(js_escape "${API_URL:-}")",
   engineUrl: "$(js_escape "${ENGINE_URL:-}")",
-  keycloakUrl: "$(js_escape "${KEYCLOAK_URL:-}")",
-  keycloakRealm: "$(js_escape "${KEYCLOAK_REALM:-}")",
-  keycloakClientId: "$(js_escape "${KEYCLOAK_CLIENT_ID:-}")",
   logLevel: "$(js_escape "${LOG_LEVEL:-}")"
 };
 EOF

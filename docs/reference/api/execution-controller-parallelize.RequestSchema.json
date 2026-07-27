@@ -1,0 +1,1 @@
+{"title":"Body","body":{"required":true,"content":{"application/json":{"schema":{"type":"object","properties":{"module":{"type":"string","example":"api","description":"Nome do módulo, como ele aparece no `module_map`. Sobe um dev agent dedicado a ele, em worktree isolado."}},"required":["module"],"title":"AcceptParallelizationDto"}}}}}

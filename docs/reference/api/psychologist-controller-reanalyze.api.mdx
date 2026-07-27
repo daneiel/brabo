@@ -1,0 +1,69 @@
+---
+id: psychologist-controller-reanalyze
+title: "Dispara uma reanálise da sessão"
+description: "Exige `maintainer`, e não `developer`, porque roda o ToolLoop de novo e GASTA orçamento de verdade — diferente de aceitar ou descartar, que só movem estado local. A análise anterior é marcada como superseded."
+sidebar_label: "Dispara uma reanálise da sessão"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "post api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Dispara uma reanálise da sessão"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/projects/{projectId}/sessions/{sessionId}/psychologist/reanalyze"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Exige `maintainer`, e não `developer`, porque roda o ToolLoop de novo e GASTA orçamento de verdade — diferente de aceitar ou descartar, que só movem estado local. A análise anterior é marcada como superseded.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./psychologist-controller-reanalyze.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./psychologist-controller-reanalyze.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./psychologist-controller-reanalyze.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

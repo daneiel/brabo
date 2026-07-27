@@ -16,18 +16,12 @@ describe('readRuntimeConfig', () => {
     const config = readRuntimeConfig({
       apiUrl: 'https://api.brabo.example',
       engineUrl: 'https://engine.brabo.example',
-      keycloakUrl: 'https://auth.brabo.example',
-      keycloakRealm: 'brabo-prod',
-      keycloakClientId: 'brabo-web-prod',
       logLevel: 'warn',
     });
 
     expect(config).toEqual({
       apiUrl: 'https://api.brabo.example',
       engineUrl: 'https://engine.brabo.example',
-      keycloakUrl: 'https://auth.brabo.example',
-      keycloakRealm: 'brabo-prod',
-      keycloakClientId: 'brabo-web-prod',
       logLevel: 'warn',
     });
   });
@@ -37,17 +31,13 @@ describe('readRuntimeConfig', () => {
 
     expect(config.apiUrl).toBe('http://localhost:3000');
     expect(config.engineUrl).toBe('http://localhost:4000');
-    expect(config.keycloakUrl).toBe('http://localhost:8080');
-    expect(config.keycloakRealm).toBe('brabo-dev');
-    expect(config.keycloakClientId).toBe('brabo-web');
     expect(config.logLevel).toBe('info');
   });
 
   it('trata string vazia como ausente, não como valor', () => {
-    const config = readRuntimeConfig({ apiUrl: '', keycloakRealm: '   ' });
+    const config = readRuntimeConfig({ apiUrl: '', engineUrl: '   ' });
 
     expect(config.apiUrl).toBe('http://localhost:3000');
-    expect(config.keycloakRealm).toBe('brabo-dev');
   });
 
   it('resolve cada chave de forma independente', () => {
