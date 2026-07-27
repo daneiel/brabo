@@ -42,11 +42,37 @@ subida você não precisa editar nada.
 as migrações dos dois lados. A primeira vez baixa imagens e leva alguns
 minutos.
 
+### Os dois modos locais não coexistem
+
+Há duas formas de rodar o Brabo na sua máquina, e elas **disputam as mesmas
+portas**:
+
+| modo | sobe com | web em | o que é |
+|---|---|---|---|
+| **desenvolvimento** | `pnpm dev` | <http://localhost:5173> | compose + Vite, com hot reload |
+| **validação** | `make deploy-local` | <http://localhost:8088> | k3d com as imagens de produção |
+
+Os dois publicam api em `:3000`, engine em `:4000` e Keycloak em `:8080`. Isso é
+**deliberado** (ADR 0025, decisão 10): mantendo as portas, o `docker/smoke.sh` e
+o realm de desenvolvimento valem nos dois sem tradução. O preço é que só um
+roda por vez.
+
+Com o cluster de pé, o `pnpm dev` não consegue publicar a porta do `api`; como
+o serviço `web` depende dele, a **5173 nunca abre**. Um `preflight` roda antes
+do compose e diz exatamente isso, em vez do `port is already allocated` do
+Docker:
+
+```bash
+make k8s-down && pnpm dev     # do modo validação para o de desenvolvimento
+```
+
+Para saber em qual você está sem adivinhar: `pnpm dev:preflight`.
+
 **Se não subir:**
 
 | sintoma | causa |
 |---|---|
-| porta ocupada | outro stack rodando. Mude `API_PORT`, `ENGINE_PORT`, `WEB_PORT` ou `OLLAMA_PORT` no `.env`. A do Keycloak (8080) é fixa no compose de desenvolvimento |
+| porta ocupada | quase sempre é o cluster local ainda de pé — veja acima. Se não for, mude `API_PORT`, `ENGINE_PORT`, `WEB_PORT` ou `OLLAMA_PORT` no `.env`. A do Keycloak (8080) é fixa no compose de desenvolvimento |
 | Keycloak em restart | costuma ser memória; ele é o container mais pesado do compose |
 | api sobe e cai | veja `docker compose logs api` — quase sempre é a migração |
 

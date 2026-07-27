@@ -63,6 +63,13 @@ migrações.
 
 `pnpm dev:down` derruba tudo. `pnpm dev:build` força rebuild.
 
+> **`pnpm dev` e `make deploy-local` não coexistem.** Os dois publicam api,
+> engine e Keycloak nas mesmas portas — de propósito (ADR 0025), para o smoke
+> test e o realm valerem nos dois. Com o cluster local de pé, a **5173 não
+> abre**, e o web fica em <http://localhost:8088>. `pnpm dev:preflight` diz em
+> qual modo você está; `make k8s-down` volta para este. Detalhes em
+> [Primeiros passos](docs/getting-started.md#os-dois-modos-locais-não-coexistem).
+
 > Os containers de `api` e `web` rodam como root em desenvolvimento e escrevem
 > `node_modules` e `apps/api/dist` no bind mount. Para buildar no host depois,
 > use `docker compose exec api sh` ou rode uma vez
@@ -115,7 +122,7 @@ merge em `main`, e por isso fica um ciclo de promoção atrás do que está em
 | [Artefatos](docs/reference/artifacts.md) | os seis schemas e quem pode emitir cada um |
 | [Providers de git](docs/reference/git-providers.md) | o contrato de dez operações e as capabilities |
 | [API interna](docs/reference/internal-api.md) | o contrato api ↔ engine |
-| [ADRs](docs/adr/index.md) | as 29 decisões e o porquê de cada uma |
+| [ADRs](docs/adr/index.md) | as 30 decisões e o porquê de cada uma |
 | [Segurança](SECURITY.md) | como reportar uma vulnerabilidade |
 | [Como contribuir](CONTRIBUTING.md) | fluxo, Definition of Done, o que é aceito |
 | [Onde pedir ajuda](SUPPORT.md) | qual canal para cada tipo de assunto |
