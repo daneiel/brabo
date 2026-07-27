@@ -288,11 +288,6 @@
             "description": "Projeto inexistente."
           }
         },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
         "summary": "Recebe o retorno do OAuth e redireciona para a web",
         "tags": [
           "git"
@@ -5242,8 +5237,8 @@
           }
         },
         "responses": {
-          "200": {
-            "description": "",
+          "201": {
+            "description": "Devolve 201, e não 200, porque o handler é `@Post` sem `@HttpCode` — é o default do Nest. Documentado como está em vez de mudado: a semântica é discutível, o comportamento não tem defeito, e o teste de tabela reprova qualquer divergência entre os dois.",
             "content": {
               "application/json": {
                 "schema": {
