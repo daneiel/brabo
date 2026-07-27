@@ -44,3 +44,38 @@
   pointer-events: none;
   display: flex;
 }
+
+/* Rótulo, erro e apoio — Fase 7a, com as telas de auth. */
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.label {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.erro {
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--danger);
+}
+
+.hint {
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.invalid {
+  border-color: var(--danger);
+}
+
+.invalid:focus {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 22%, transparent);
+}

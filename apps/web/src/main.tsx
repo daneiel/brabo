@@ -9,7 +9,7 @@ import {
 import { RouterProvider } from '@tanstack/react-router';
 import './index.css';
 import { router } from './router';
-import { initKeycloak } from './lib/keycloak';
+import { restaurarSessao } from './lib/auth';
 import { ToastProvider } from './components/ui/ToastProvider';
 import { logger } from './lib/logger';
 import { ApiError } from './lib/api-client';
@@ -56,13 +56,19 @@ window.addEventListener('unhandledrejection', (event) =>
   logFailure('unhandledrejection', event.reason),
 );
 
-// `login-required` redireciona o browser inteiro pro Keycloak quando não
-// autenticado — nesse caso a promise nunca resolve com `true` aqui (a
-// navegação já saiu desta página), então só renderizamos quando de fato
-// autenticado.
-initKeycloak().then((authenticated) => {
-  if (!authenticated) return;
-
+/**
+ * Tenta reconstruir a sessão ANTES do primeiro render (Fase 7a — o corte).
+ *
+ * O access token vive em memória e some no reload; quem sobrevive é o cookie
+ * `httpOnly` do refresh, e `restaurarSessao()` é o que o troca por um token
+ * novo. Sem esperar por ele, o `beforeLoad` das rotas protegidas veria "sem
+ * sessão" no primeiro tique e jogaria o usuário para o login a cada F5 —
+ * mesmo com a sessão inteiramente válida.
+ *
+ * O resultado é ignorado de propósito: quem decide para onde ir é o router.
+ * Aqui só se garante que a resposta já chegou.
+ */
+void restaurarSessao().finally(() => {
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
       <QueryClientProvider client={queryClient}>
