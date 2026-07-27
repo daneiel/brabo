@@ -42,15 +42,15 @@ Mecanizar a política de branches e versionamento (fonte:
 docs/explanation/branching-policy.md — se ainda não existir, criá-lo a
 partir da apresentação da política é o PRIMEIRO entregável) no
 repositório do Brabo:
-1. Rulesets nas 4 permanentes: sem push direto, PR obrigatório, sem
+1. Rulesets nas 3 permanentes (dev, qa, main): sem push direto, PR obrigatório, sem
    force-push/delete, checks required; tags só via bot de release.
    Configuração versionada em docs/reference/rulesets.md (aplicação
    manual do usuário).
 2. Workflow pr-police (required, lógica em script testável): regex
    ^.{0,15}/\S{0,32}$, prefixo na lista fechada (breaking, feature,
-   bugfix, perf, refactor, chore, docs, test, rcfix, hotfix), origem
-   por merge-base (trabalho:dev · rcfix:rc · hotfix:main), destino
-   coerente, promoção só em par adjacente (dev→qa→rc→main, sem pular),
+   bugfix, perf, refactor, chore, docs, test, hotfix), origem por
+   contaminação (trabalho:dev · hotfix:main), destino
+   coerente, promoção só em par adjacente (dev→qa→main, sem pular),
    label de família (trabalho|promocao|retropropagacao|correcao-alta).
 3. Workflow approval-ladder (required, reroda a cada review), com DOIS
    modos controlados por variável de repositório APPROVAL_MODE:
@@ -62,9 +62,9 @@ repositório do Brabo:
       SUSPENSA e documentada como suspensa.
     - community (futuro, implementado e testado desde já, ativado só
       por config): a escada completa por destino — dev: 1 dev · qa: 2
-      devs · rc: 1 qualidade + 1 dev · main: 1 PO + 1 gestor; pessoas
-      distintas em rc e main. Papéis são LISTAS DE HANDLES em variáveis
-      de repositório (APROVADORES_DEVS, _QUALIDADE, _PO, _GESTAO), NÃO
+      devs · main: 1 PO + 1 gestor; pessoas distintas em main. Papéis
+      são LISTAS DE HANDLES em variáveis de repositório
+      (APROVADORES_DEVS, _PO, _GESTAO), NÃO
       times do GitHub: times só existem em organização, este repo é de
       usuário, e o GITHUB_TOKEN não lê membership de time nem em org.
       Com listas, community é ativável hoje e o flip é demonstrável.
@@ -78,9 +78,9 @@ repositório do Brabo:
    escopo; check de promoção confere range limpo, tag do degrau
    anterior e merge --no-ff.
 5. Versionamento calculado, nunca manual: tags v X.Y.Z-dev.N/-qa.N/
-   -rc.N/final criadas por workflow no merge; N incrementa por
-   reprovação no ciclo; tag final DEVE apontar para o commit da última
-   -rc.N (verificação com falha ruidosa). A tag é o registro do que
+   final criadas por workflow no merge; N incrementa por reprovação no
+   ciclo; tag final DEVE apontar para o commit da última -qa.N
+   (verificação com falha ruidosa). A tag é o registro do que
    ESTARIA em cada ambiente — vale mesmo sem deploy.
 6. Deploy DESLIGADO por ora (variável DEPLOY_ENABLED=false): o
    workflow de tag termina na tag; o passo de deploy existe no
@@ -91,8 +91,8 @@ repositório do Brabo:
    environments.md como "quando houver ambientes". Ligar deploy no
    futuro = criar environments + flipar a variável, sem mudar código.
 7. Backmerge gate: .release/gate.json (locked[], awaiting, order[],
-   acúmulo) escrito por workflow no merge de hotfix (trava rc,qa,dev)
-   e rcfix (trava qa,dev) — única exceção de escrita direta, pelo bot,
+   acúmulo) escrito por workflow no merge de hotfix (trava qa,dev) —
+   única exceção de escrita direta, pelo bot,
    documentada; PRs de retropropagação abertos automaticamente em
    cadeia; check required em todo PR consulta o gate; destrava por
    branch NA ORDEM; última destrava limpa awaiting.
@@ -124,10 +124,10 @@ repositório do Brabo:
   (scripts/ci/, vitest)
 
 ## Convenções
-- Branches permanentes: dev, qa, rc, main — um branch, um ambiente.
+- Branches permanentes: dev, qa, main — um branch, um ambiente.
   Trabalho nasce de dev com a taxonomia da política (breaking/,
-  feature/, bugfix/, perf/, refactor/, chore/, docs/, test/); rcfix/
-  nasce de rc; hotfix/ nasce de main. Formato funcao/descritivo,
+  feature/, bugfix/, perf/, refactor/, chore/, docs/, test/);
+  hotfix/ nasce de main. Formato funcao/descritivo,
   regex ^.{0,15}/\S{0,32}$. Commits em conventional commits, pt-BR.
 - Toda mudança entra por PR — push direto em permanente é bloqueado;
   única exceção de push: tags (bot de release) e .release/gate.json
@@ -141,7 +141,7 @@ repositório do Brabo:
   proposed_action e respeita permissions.json; deny sempre vence allow.
 - Agentes rodam SEMPRE dentro de um Harness; nenhuma chamada de LLM ou
   ferramenta fora dele.
-- Merge em branch protegida (dev/qa/rc/main) é SEMPRE manual do
+- Merge em branch protegida (dev/qa/main) é SEMPRE manual do
   usuário — sem opção de automatizar, garantido por teste.
 - Commits de agentes usam identidade "<agente>[bot]" com o usuário
   como co-author.

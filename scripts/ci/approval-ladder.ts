@@ -21,7 +21,8 @@ import { ESCADA, type Permanente } from './pr-police.ts';
 export const MODOS = ['solo', 'community'] as const;
 export type Modo = (typeof MODOS)[number];
 
-export const PAPEIS = ['devs', 'qualidade', 'po', 'gestao'] as const;
+// `qualidade` saiu junto com o degrau `rc`, que era o único a exigi-lo.
+export const PAPEIS = ['devs', 'po', 'gestao'] as const;
 export type Papel = (typeof PAPEIS)[number];
 
 export interface Exigencia {
@@ -36,10 +37,6 @@ export interface Exigencia {
 export const ESCADA_DE_APROVACAO: Record<Permanente, Exigencia[]> = {
   dev: [{ papel: 'devs', quantidade: 1 }],
   qa: [{ papel: 'devs', quantidade: 2 }],
-  rc: [
-    { papel: 'qualidade', quantidade: 1 },
-    { papel: 'devs', quantidade: 1 },
-  ],
   main: [
     { papel: 'po', quantidade: 1 },
     { papel: 'gestao', quantidade: 1 },
@@ -47,16 +44,17 @@ export const ESCADA_DE_APROVACAO: Record<Permanente, Exigencia[]> = {
 };
 
 /**
- * Degraus em que a exigência de PESSOAS DISTINTAS vale. Em `dev` e `qa` a
- * distinção é automática (cada pessoa tem um review só), mas em `rc` e `main`
- * as vagas são de papéis diferentes — e quem está em duas listas poderia
- * preencher as duas sozinho se ninguém checasse.
+ * Degraus em que a exigência de PESSOAS DISTINTAS vale de verdade.
+ *
+ * Em `dev` e `qa` a distinção é automática: as vagas são do mesmo papel e cada
+ * pessoa tem um review só. Em `main` as vagas são de papéis diferentes (`po` e
+ * `gestao`) — e quem estiver nas duas listas preencheria as duas sozinho se
+ * ninguém checasse. Só ali a regra tem efeito observável.
  */
-export const DESTINOS_COM_PESSOAS_DISTINTAS: readonly Permanente[] = ['rc', 'main'];
+export const DESTINOS_COM_PESSOAS_DISTINTAS: readonly Permanente[] = ['main'];
 
 export const NOME_DA_VARIAVEL_POR_PAPEL: Record<Papel, string> = {
   devs: 'APROVADORES_DEVS',
-  qualidade: 'APROVADORES_QUALIDADE',
   po: 'APROVADORES_PO',
   gestao: 'APROVADORES_GESTAO',
 };
@@ -465,7 +463,6 @@ async function principal(): Promise<void> {
     owner: process.env.OWNER_HANDLE,
     aprovadores: {
       devs: listaDaVariavel(process.env.APROVADORES_DEVS),
-      qualidade: listaDaVariavel(process.env.APROVADORES_QUALIDADE),
       po: listaDaVariavel(process.env.APROVADORES_PO),
       gestao: listaDaVariavel(process.env.APROVADORES_GESTAO),
     },

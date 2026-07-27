@@ -31,7 +31,6 @@ function solo(over: Partial<EntradaEscada> = {}): EntradaEscada {
 /** Time de exemplo do modo community, com papéis SEM sobreposição. */
 const TIMES = {
   devs: ['ana', 'bruno', 'carla'],
-  qualidade: ['quim'],
   po: ['paula'],
   gestao: ['gustavo'],
 };
@@ -91,7 +90,7 @@ describe('modo solo', () => {
   });
 
   it('vale para qualquer degrau — solo não escala por destino', () => {
-    for (const destino of ['dev', 'qa', 'rc', 'main']) {
+    for (const destino of ['dev', 'qa', 'main']) {
       expect(avaliarEscada(solo({ destino, reviews: [aprovou(OWNER)] })).ok).toBe(true);
       expect(avaliarEscada(solo({ destino })).ok).toBe(false);
     }
@@ -115,21 +114,6 @@ describe('modo community — os quatro degraus', () => {
       community({ destino: 'qa', reviews: [aprovou('ana'), aprovou('bruno')] }),
     );
     expect(dois.ok).toBe(true);
-  });
-
-  it('rc exige 1 qualidade + 1 dev', () => {
-    expect(
-      avaliarEscada(community({ destino: 'rc', reviews: [aprovou('quim')] })).ok,
-    ).toBe(false);
-    expect(
-      avaliarEscada(community({ destino: 'rc', reviews: [aprovou('ana')] })).ok,
-    ).toBe(false);
-
-    const v = avaliarEscada(
-      community({ destino: 'rc', reviews: [aprovou('quim'), aprovou('ana')] }),
-    );
-    expect(v.ok).toBe(true);
-    expect(v.preenchidas.map((p) => p.papel).sort()).toEqual(['devs', 'qualidade']);
   });
 
   it('main exige 1 po + 1 gestao — dois devs não servem', () => {
@@ -160,52 +144,44 @@ describe('modo community — os quatro degraus', () => {
 
 // ------------------------------------------------- 3. sobreposição de papéis
 
-describe('pessoas distintas em rc e main', () => {
-  // `quim` acumula qualidade E devs. Contar por papel isoladamente aprovaria
-  // o PR com UMA aprovação só — que é exatamente o que a regra impede.
-  const ACUMULA = { ...TIMES, devs: ['ana', 'quim'], qualidade: ['quim'] };
+describe('pessoas distintas em main', () => {
+  // `paula` acumula po E gestao. Contar por papel isoladamente aprovaria o PR
+  // com UMA aprovação só — que é exatamente o que a regra impede.
+  const ACUMULA = { ...TIMES, po: ['paula'], gestao: ['paula', 'gustavo'] };
 
-  it('rc: quem acumula qualidade e devs NÃO preenche as duas vagas sozinho', () => {
+  it('quem acumula po e gestao NÃO preenche as duas vagas sozinho', () => {
     const v = avaliarEscada(
-      community({ destino: 'rc', aprovadores: ACUMULA, reviews: [aprovou('quim')] }),
+      community({ destino: 'main', aprovadores: ACUMULA, reviews: [aprovou('paula')] }),
     );
     expect(v.ok).toBe(false);
     expect(v.preenchidas).toHaveLength(1);
     expect(v.faltando.join(' ')).toContain('DIFERENTE');
   });
 
-  it('rc: com uma segunda pessoa, fecha', () => {
+  it('com uma segunda pessoa, fecha', () => {
     const v = avaliarEscada(
       community({
-        destino: 'rc',
+        destino: 'main',
         aprovadores: ACUMULA,
-        reviews: [aprovou('quim'), aprovou('ana')],
+        reviews: [aprovou('paula'), aprovou('gustavo')],
       }),
     );
     expect(v.ok).toBe(true);
     expect(new Set(v.preenchidas.map((p) => p.quem)).size).toBe(2);
   });
 
-  it('main: quem acumula po e gestao não preenche as duas vagas sozinho', () => {
-    const acumulaTopo = { ...TIMES, po: ['paula'], gestao: ['paula'] };
-    const v = avaliarEscada(
-      community({ destino: 'main', aprovadores: acumulaTopo, reviews: [aprovou('paula')] }),
-    );
-    expect(v.ok).toBe(false);
-  });
-
   it('o emparelhamento acha a atribuição certa mesmo quando a gulosa erraria', () => {
-    // `quim` é o ÚNICO de qualidade, mas também é dev. Uma atribuição gulosa
-    // que desse a vaga de dev a ele deixaria qualidade descoberta.
+    // `paula` é a ÚNICA de po, mas também está em gestao. Uma atribuição
+    // gulosa que desse a vaga de gestao a ela deixaria po descoberta.
     const atribuicao = emparelhar(
-      ['devs', 'qualidade'],
-      ['quim', 'ana'],
+      ['gestao', 'po'],
+      ['paula', 'gustavo'],
       (pessoa, papel) =>
-        papel === 'devs' ? ['ana', 'quim'].includes(pessoa) : pessoa === 'quim',
+        papel === 'gestao' ? ['paula', 'gustavo'].includes(pessoa) : pessoa === 'paula',
     );
     expect(atribuicao).toHaveLength(2);
-    expect(atribuicao.find((v) => v.papel === 'qualidade')!.quem).toBe('quim');
-    expect(atribuicao.find((v) => v.papel === 'devs')!.quem).toBe('ana');
+    expect(atribuicao.find((v) => v.papel === 'po')!.quem).toBe('paula');
+    expect(atribuicao.find((v) => v.papel === 'gestao')!.quem).toBe('gustavo');
   });
 });
 
@@ -273,7 +249,7 @@ describe('troca de modo é só configuração', () => {
   it('a MESMA entrada dá vereditos diferentes em solo e community', () => {
     const reviews = [aprovou('ana')];
     const comum = {
-      destino: 'rc',
+      destino: 'qa',
       autorDoPr: 'contribuidor',
       shaDoUltimoCommit: SHA,
       reviews,
@@ -286,10 +262,10 @@ describe('troca de modo é só configuração', () => {
     expect(emSolo.ok).toBe(false);
     expect(emSolo.faltando.join(' ')).toContain(OWNER);
 
-    // Em community, `ana` é dev — mas `rc` também exige qualidade.
+    // Em community, `ana` é dev — mas `qa` exige DOIS devs.
     const emCommunity = avaliarEscada({ ...comum, modo: 'community' });
     expect(emCommunity.ok).toBe(false);
-    expect(emCommunity.faltando.join(' ')).toContain('qualidade');
+    expect(emCommunity.faltando.join(' ')).toContain('devs');
 
     // Nada além do campo `modo` mudou entre as duas chamadas.
     expect(emSolo.modo).toBe('solo');
@@ -316,16 +292,16 @@ describe('troca de modo é só configuração', () => {
 describe('resumo legível', () => {
   it('mostra o modo ativo, quem aprovou em qual papel e o que falta', () => {
     const entrada = community({
-      destino: 'rc',
-      reviews: [aprovou('quim')],
+      destino: 'main',
+      reviews: [aprovou('paula')],
     });
     const texto = formatarEscada(entrada, avaliarEscada(entrada));
 
     expect(texto).toContain('modo: community');
-    expect(texto).toContain('quim');
-    expect(texto).toContain('qualidade');
+    expect(texto).toContain('paula');
+    expect(texto).toContain('po');
     expect(texto).toContain('AGUARDANDO APROVAÇÃO');
-    expect(texto).toContain('devs');
+    expect(texto).toContain('gestao');
   });
 
   it('lista quem aprovou sem preencher vaga, em vez de ignorar', () => {

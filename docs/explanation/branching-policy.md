@@ -31,16 +31,13 @@ Duas consequências que assumimos de propósito:
 
 ## A escada
 
-Quatro branches permanentes, **uma por ambiente**. Código sobe um degrau por
-vez.
+Três branches permanentes, **uma por ambiente**. Código sobe um degrau por vez.
 
 ```mermaid
 flowchart LR
   D[dev<br/>desenvolvimento] -->|promoção| Q[qa<br/>homologação]
-  Q -->|promoção| R[rc<br/>preprod]
-  R -->|promoção| M[main<br/>produção]
-  M -.->|retropropagação| R
-  R -.->|retropropagação| Q
+  Q -->|promoção| M[main<br/>produção]
+  M -.->|retropropagação| Q
   Q -.->|retropropagação| D
 ```
 
@@ -48,8 +45,13 @@ flowchart LR
 |---|---|---|
 | `dev` | desenvolvimento | integrado, testado por CI |
 | `qa` | homologação | em validação funcional |
-| `rc` | preprod | candidato a release |
 | `main` | produção | o que está no ar |
+
+Havia um quarto degrau, `rc` (preprod), entre `qa` e `main`. Foi removido: com
+um mantenedor e um ciclo curto, o degrau a mais custava uma promoção inteira e
+um ambiente para separar "validado" de "quase pronto" — distinção que não
+estava pagando o próprio custo. `qa` passa a ser o único portão antes de
+produção.
 
 **Não se pula degrau.** `dev → main` não existe, nem em emergência —
 emergência tem caminho próprio (`hotfix`, abaixo), e ele também respeita a
@@ -84,8 +86,11 @@ O regex sozinho não basta: a função precisa estar na **lista fechada**.
 | `chore` | `dev` | `dev` | manutenção, tooling, CI |
 | `docs` | `dev` | `dev` | documentação |
 | `test` | `dev` | `dev` | cobertura |
-| `rcfix` | `rc` | `rc` | correção achada na preprod |
 | `hotfix` | `main` | `main` | incidente em produção |
+
+Correção achada em **homologação** não tem prefixo próprio: vira `bugfix/` a
+partir de `dev` e sobe pela escada. Existia um `rcfix/` para a preprod, e ele
+saiu junto com o degrau `rc` — prefixo sem branch de origem é armadilha.
 
 A origem não é sugestão — é **verificada por merge-base**. Um `hotfix` que
 nasceu de `dev` carrega junto tudo que está em `dev` e ainda não foi validado;
@@ -93,11 +98,11 @@ levar isso para produção com pressa de incidente é como o desastre acontece.
 
 ### Correção que nasce alta volta para baixo
 
-`rcfix` e `hotfix` entram direto no degrau em que o problema apareceu. Isso
-deixa os degraus de baixo **desatualizados** — a correção existe em `main` e
-não em `dev`.
+`hotfix` entra direto no degrau em que o problema apareceu. Isso deixa os
+degraus de baixo **desatualizados** — a correção existe em `main` e não em
+`dev`.
 
-Por isso toda correção alta gera **retropropagação**: `main → rc → qa → dev`,
+Por isso toda correção alta gera **retropropagação**: `main → qa → dev`,
 em cadeia e na ordem. Enquanto ela não completa, os degraus afetados ficam
 travados. O mecanismo do gate está na sessão do item 7 desta fase.
 
@@ -108,9 +113,9 @@ Todo PR recebe um rótulo de família, aplicado automaticamente:
 | família | quando | exemplo |
 |---|---|---|
 | `trabalho` | função de trabalho → `dev` | `feature/pr-police` → `dev` |
-| `correcao-alta` | `rcfix` → `rc`, `hotfix` → `main` | `hotfix/vaza-token` → `main` |
+| `correcao-alta` | `hotfix` → `main` | `hotfix/vaza-token` → `main` |
 | `promocao` | degrau adjacente, subindo | `dev` → `qa` |
-| `retropropagacao` | degrau adjacente, descendo | `main` → `rc` |
+| `retropropagacao` | degrau adjacente, descendo | `main` → `qa` |
 
 O rótulo não é decoração: ele é o que permite responder "quantos hotfixes
 tivemos neste trimestre?" sem arqueologia de git.
@@ -175,19 +180,19 @@ de propósito: com um mantenedor, ela é aritmeticamente impossível.
 |---|---|
 | `dev` | 1 × devs |
 | `qa` | 2 × devs |
-| `rc` | 1 × qualidade **+** 1 × devs |
 | `main` | 1 × PO **+** 1 × gestão |
 
-Em `rc` e `main`, **pessoas distintas** — a exigência volta a valer.
+Em `main`, **pessoas distintas** — a exigência volta a valer. Em `dev` e `qa` a
+distinção é automática: as vagas são do mesmo papel e cada pessoa tem um review
+só.
 
 Os papéis são **listas de handles** em variáveis de repositório, não times do
 GitHub:
 
 ```
-APROVADORES_DEVS       = ana,bruno,carla
-APROVADORES_QUALIDADE  = quim
-APROVADORES_PO         = paula
-APROVADORES_GESTAO     = gustavo
+APROVADORES_DEVS    = ana,bruno,carla
+APROVADORES_PO      = paula
+APROVADORES_GESTAO  = gustavo
 ```
 
 Times seriam o caminho óbvio e **não funcionam aqui**: eles só existem dentro de
@@ -202,15 +207,14 @@ regra de pessoas distintas não mudam.
 
 #### Por que "pessoas distintas" precisa de mais que contar
 
-Em `rc`, quem estiver **nas duas listas** (`qualidade` e `devs`) poderia
-satisfazer as duas vagas sozinho, se o check apenas contasse aprovações por
-papel. O check resolve isso como um problema de **atribuição**: existe uma
-distribuição de aprovadores distintos que preencha todas as vagas?
+Em `main`, quem estiver **nas duas listas** (`po` e `gestao`) poderia satisfazer
+as duas vagas sozinho, se o check apenas contasse aprovações por papel. O check
+resolve isso como um problema de **atribuição**: existe uma distribuição de
+aprovadores distintos que preencha todas as vagas?
 
-Isso também evita o erro oposto. Se `quim` é o único de `qualidade` mas também
-está em `devs`, dar a vaga de `devs` a ele deixaria `qualidade` descoberta —
-mesmo havendo outra pessoa que serviria. A atribuição correta existe, e o check
-a encontra.
+Isso também evita o erro oposto. Se `paula` é a única de `po` mas também está em
+`gestao`, dar a vaga de `gestao` a ela deixaria `po` descoberta — mesmo havendo
+outra pessoa que serviria. A atribuição correta existe, e o check a encontra.
 
 ### Regras comuns aos dois modos
 
@@ -225,17 +229,17 @@ Pré-requisitos, antes de trocar qualquer variável:
 
 1. **Cada papel com gente de verdade.** `main` exige PO **e** gestão; se as duas
    listas apontarem para a mesma pessoa, nenhum PR para `main` fecha — a regra
-   de pessoas distintas não tem como ser satisfeita.
+   de pessoas distintas não tem como ser satisfeita. `qa` exige **dois** devs
+   distintos: uma lista com um nome só trava a promoção.
 2. **Critério de quem entra em cada lista** definido e escrito — quem entra,
    quem sai, e com base em quê.
 
 Passo a passo da troca:
 
 ```bash
-gh variable set APROVADORES_DEVS      --body "ana,bruno,carla"
-gh variable set APROVADORES_QUALIDADE --body "quim"
-gh variable set APROVADORES_PO        --body "paula"
-gh variable set APROVADORES_GESTAO    --body "gustavo"
+gh variable set APROVADORES_DEVS   --body "ana,bruno,carla"
+gh variable set APROVADORES_PO     --body "paula"
+gh variable set APROVADORES_GESTAO --body "gustavo"
 
 # por último: com as listas vazias, community reprova tudo
 gh variable set APPROVAL_MODE --body community
@@ -260,16 +264,17 @@ vereditos diferentes.
 ## Versionamento
 
 Toda tag nasce de workflow, no formato
-`vX.Y.Z-dev.N` / `-qa.N` / `-rc.N` / final.
+`vX.Y.Z-dev.N` / `-qa.N` / final.
 
 A versão do ciclo sai do **maior impacto** entre os PRs mergeados —
 `breaking` leva a MAJOR, `feature` a MINOR, o resto a PATCH. O `N` incrementa a
 cada reprovação dentro do mesmo ciclo, o que torna visível quantas voltas um
 release deu antes de passar.
 
-A tag final **precisa apontar para o mesmo commit da última `-rc.N`**. Se não
+A tag final **precisa apontar para o mesmo commit da última `-qa.N`**. Se não
 apontar, algo entrou entre a validação e a publicação, e o workflow falha
-ruidosamente em vez de publicar.
+ruidosamente em vez de publicar. Com a saída do degrau `rc`, `qa` é o último
+ponto de verificação antes de produção, e a âncora passou a ser ele.
 
 Os mecanismos disso são os itens 4 e 5 da FASE 6, ainda não implementados.
 
