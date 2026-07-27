@@ -1,0 +1,69 @@
+---
+id: internal-sessions-controller-story
+title: "Cria uma história com RF, RNF, DoD, DoR e regras cobertas"
+description: "O `businessRuleIds` é o que alimenta a cobertura regra→história. Cada id tem de referenciar um evento `artifact.business_rule` que EXISTE — a validação recusa id inventado."
+sidebar_label: "Cria uma história com RF, RNF, DoD, DoR e regras cobertas"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "post api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Cria uma história com RF, RNF, DoD, DoR e regras cobertas"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/internal/sessions/{sessionId}/stories"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+O `businessRuleIds` é o que alimenta a cobertura regra→história. Cada id tem de referenciar um evento `artifact.business_rule` que EXISTE — a validação recusa id inventado.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./internal-sessions-controller-story.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./internal-sessions-controller-story.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./internal-sessions-controller-story.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

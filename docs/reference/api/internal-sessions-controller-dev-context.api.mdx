@@ -1,0 +1,69 @@
+---
+id: internal-sessions-controller-dev-context
+title: "Monta o contexto completo de uma tarefa para o dev agent"
+description: "Uma chamada com tudo o que o prompt precisa: a história inteira, as regras de negócio resolvidas e as ADRs aplicáveis. `module` restringe as ADRs às do módulo daquele dev; ADR sem módulo declarado é TRANSVERSAL e entra sempre. Omitir `module` traz o acervo inteiro, que é o que os gates de QA e SecOps querem ao reusar este mesmo contexto."
+sidebar_label: "Monta o contexto completo de uma tarefa para o dev agent"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "get api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Monta o contexto completo de uma tarefa para o dev agent"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/internal/sessions/{sessionId}/dev-context"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Uma chamada com tudo o que o prompt precisa: a história inteira, as regras de negócio resolvidas e as ADRs aplicáveis. `module` restringe as ADRs às do módulo daquele dev; ADR sem módulo declarado é TRANSVERSAL e entra sempre. Omitir `module` traz o acervo inteiro, que é o que os gates de QA e SecOps querem ao reusar este mesmo contexto.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./internal-sessions-controller-dev-context.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./internal-sessions-controller-dev-context.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./internal-sessions-controller-dev-context.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

@@ -76,8 +76,6 @@ defmodule Engine.MixProject do
       {:bandit, "~> 1.5"},
       {:oban, "~> 2.23"},
       {:req, "~> 0.5"},
-      {:joken, "~> 2.6"},
-      {:joken_jwks, "~> 1.6"},
       # OpenTelemetry (Fase 5, item 3). Justificativa por pacote:
       #   opentelemetry_api      — API de span, o que o código de domínio usa
       #   opentelemetry          — SDK, o que amostra e agrega

@@ -1,0 +1,69 @@
+---
+id: health-controller-check
+title: "Readiness — o processo consegue atender de verdade"
+description: "Faz um `select 1`. Revela apenas se o banco responde; nada de topologia ou versão. Pública porque quem chama é o kubelet, que não carrega token."
+sidebar_label: "Readiness — o processo consegue atender de verdade"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "get api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Readiness — o processo consegue atender de verdade"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/health"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Faz um `select 1`. Revela apenas se o banco responde; nada de topologia ou versão. Pública porque quem chama é o kubelet, que não carrega token.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./health-controller-check.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./health-controller-check.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./health-controller-check.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

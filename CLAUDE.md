@@ -41,88 +41,74 @@ e pipeline de aprovação de ações com autoridade final do usuário.
   retropropagação automática, rulesets versionados em
   docs/reference/rulesets.md. Esteira exercitada de ponta a ponta
   (v0.1.0 → v0.2.0) e a cadeia de hotfix validada por execução real.
+- FASE 7 — ATIVA: auth first-party no domínio da api (substituindo o
+  Keycloak) e referência completa de rotas gerada a partir do OpenAPI.
+  - 7a (itens 1–3) — CONCLUÍDA: módulo auth em paralelo ao Keycloak —
+    argon2id, access token Ed25519, rotação de refresh com revogação
+    de família no reuso, lockout progressivo, tokens de conta e
+    MailSender log-only (ADR 0031, RN-030..033).
+  - 7.2 (itens 4–5) — CONCLUÍDA: o corte atômico — emissor próprio no
+    guard sem tocar no RBAC, /internal/* fora do JWT com service
+    token, sessão da web em cookie httpOnly com CSRF, migração dos
+    usuários e remoção do Keycloak do compose, do k8s e das docs
+    (ADR 0032, RN-034/035).
+  - 7b (itens 6–8) — CONCLUÍDA: OpenAPI em todos os 23 controllers,
+    DTOs de resposta travados por tipo contra a entidade de domínio
+    (Wire<T> + MesmasChaves), teste de tabela exigindo summary,
+    resposta com corpo e tag da lista fechada, e docs/reference/api/
+    gerado pelo docusaurus-plugin-openapi-docs com manifesto de hashes
+    no docs:check (ADR 0033).
 - Não refatore o que está pronto sem pedido explícito.
 
-## Escopo da FASE 6 (CONCLUÍDA — CI/CD da política de branches)
-Mecanizar a política de branches e versionamento (fonte:
-docs/explanation/branching-policy.md — se ainda não existir, criá-lo a
-partir da apresentação da política é o PRIMEIRO entregável) no
-repositório do Brabo:
-1. Rulesets nas 3 permanentes (dev, qa, main): sem push direto, PR obrigatório, sem
-   force-push/delete, checks required; tags só via bot de release.
-   Configuração versionada em docs/reference/rulesets.md (aplicação
-   manual do usuário).
-2. Workflow pr-police (required, lógica em script testável): regex
-   ^.{0,15}/\S{0,32}$, prefixo na lista fechada (breaking, feature,
-   bugfix, perf, refactor, chore, docs, test, hotfix), origem por
-   contaminação (trabalho:dev · hotfix:main), destino
-   coerente, promoção só em par adjacente (dev→qa→main, sem pular),
-   label de família (trabalho|promocao|retropropagacao|correcao-alta).
-3. Workflow approval-ladder (required, reroda a cada review), com DOIS
-   modos controlados por variável de repositório APPROVAL_MODE:
-    - solo (ATIVO agora): todo PR de terceiro exige 1 aprovação do
-      OWNER (@handle, em variável); PR de autoria do próprio owner
-      passa no check sem review (BDFL não se auto-aprova via GitHub —
-      o merge manual dele É a aprovação; registrar essa semântica no
-      branching-policy.md). A exigência de pessoas distintas fica
-      SUSPENSA e documentada como suspensa.
-    - community (futuro, implementado e testado desde já, ativado só
-      por config): a escada completa por destino — dev: 1 dev · qa: 2
-      devs · main: 1 PO + 1 gestor; pessoas distintas em main. Papéis
-      são LISTAS DE HANDLES em variáveis de repositório
-      (APROVADORES_DEVS, _PO, _GESTAO), NÃO
-      times do GitHub: times só existem em organização, este repo é de
-      usuário, e o GITHUB_TOKEN não lê membership de time nem em org.
-      Com listas, community é ativável hoje e o flip é demonstrável.
-      Regras comuns aos dois modos: só reviews APPROVED no último commit
-      contam; o resumo do check mostra o modo ativo, quem aprovou e o que
-      falta. A troca solo→community é APENAS mudar variáveis — com teste
-      provando os dois modos.
-4. Workflow promote (dispatch restrito ao time de release): calcula a
-   versão do ciclo pelo maior impacto dos PRs mergeados (breaking→
-   MAJOR, feature→MINOR, senão PATCH), abre PR de promoção listando o
-   escopo; check de promoção confere range limpo, tag do degrau
-   anterior e merge --no-ff.
-5. Versionamento calculado, nunca manual: tags v X.Y.Z-dev.N/-qa.N/
-   final criadas por workflow no merge; N incrementa por reprovação no
-   ciclo; tag final DEVE apontar para o commit da última -qa.N
-   (verificação com falha ruidosa). A tag é o registro do que
-   ESTARIA em cada ambiente — vale mesmo sem deploy.
-6. SEM deploy e SEM ambiente: os workflows terminam na TAG, que é o
-   registro do que ESTARIA em cada estágio. Não existe passo de deploy
-   nem variável DEPLOY_ENABLED — passo que nunca roda apodrece: ninguém
-   o testa, ninguém percebe quando quebra, e no dia de ligar estará
-   errado. Quando houver ambiente, o deploy será workflow PRÓPRIO
-   disparado pela tag. Validação local por
-   make deploy-local TAG=vX.Y.Z-qa.N (Fase 5), documentada no runbook.
-   GitHub Environments NÃO são criados.
-7. Backmerge gate: .release/gate.json (locked[], awaiting, order[],
-   acúmulo) escrito por workflow no merge de hotfix (trava qa,dev) —
-   única exceção de escrita direta, pelo bot,
-   documentada; PRs de retropropagação abertos automaticamente em
-   cadeia; check required em todo PR consulta o gate; destrava por
-   branch NA ORDEM; última destrava limpa awaiting.
-8. Fechamento: ADR "política de branches mecanizada" mapeando
-   regra→mecanismo→o que entra no template do bootstrap de Gitflow do
-   produto (fase futura); docs/.docmap.yml atualizado (workflows de
-   release → branching-policy.md e reference/).
-9. Decisões da política registradas no branching-policy.md: responsável
-   de release = owner (único autorizado a disparar promote enquanto
-   APPROVAL_MODE=solo); plantão de hotfix = owner (a questão reabre na
-   migração para community, onde o fallback deve ser exceção documentada
-   no mapa de exigências, nunca burla). O documento deve conter a seção
-   "Migração para modo community": pré-requisitos (listas de aprovadores
-   preenchidas por papel, critério de quem entra em cada uma) e o passo
-   a passo da troca de variáveis. O GOVERNANCE.md citado antes como
-   fonte do critério NÃO existe — foi cortado no escopo da FASE DOC; ou
-   ele é escrito, ou o critério mora no branching-policy.md.
+## Escopo da FASE 7 (ativa — auth first-party + referência de rotas)
+
+### 7a — Substituir o Keycloak por auth no domínio da api
+1. Módulo auth first-party: registro (email+senha), login, logout,
+   refresh. Senhas com argon2id (parâmetros documentados); tokens:
+   access JWT curto (15min, assinado com chave em env via envelope da
+   Fase 1) + refresh opaco em tabela com ROTAÇÃO obrigatória (reuso de
+   refresh já rotacionado = revogação da família inteira + evento de
+   segurança no log).
+2. Proteções: lockout progressivo por usuário e IP (janela no
+   Postgres, sem Redis), comparações em tempo constante, enumeração de
+   e-mail bloqueada (mesma resposta para usuário inexistente), senha
+   com política mínima verificada no domínio.
+3. Fluxos de conta: verificação de e-mail e reset de senha por token
+   de uso único com expiração — envio de e-mail atrás de interface
+   MailSender com implementação log-only por ora (SMTP real é config
+   futura, não bloqueia a fase).
+4. Migração: usuários existentes do Keycloak importados (id, email,
+   roles do RBAC preservados); senhas NÃO migram — fluxo de "definir
+   nova senha" no primeiro login pós-migração. Guard JWT da api
+   troca de emissor sem mudar o contrato dos controllers (RBAC da
+   Fase 1 intocado). HTTP interno engine↔api passa a service token
+   próprio (segredo compartilhado via env, rotacionável).
+5. Remoção do Keycloak: containers (compose dev e prod), manifests
+   k8s, realm e docs; a web troca o fluxo OIDC por login próprio
+   seguindo o design system. ADR registrando o subconjunto
+   implementado e o backlog consciente (MFA, OIDC social, federação).
+
+### 7b — Referência completa de rotas no Docusaurus (gerada, nunca à mão)
+6. OpenAPI como fonte: @nestjs/swagger em TODOS os controllers —
+   summary (objetivo), tags por domínio, DTOs de request/response
+   tipados com exemplos, códigos de erro; o teste de tabela de rotas
+   da Fase 5 passa a exigir também metadados OpenAPI (rota sem
+   summary/DTO quebra o teste).
+7. Geração: pnpm docs:generate exporta o openapi.json e materializa
+   docs/reference/api/ via docusaurus-plugin-openapi-docs (uma página
+   por tag, sidebar própria); entra no docmap como generated: true
+   com severity block; docs:check falha se o gerado divergir.
+8. Rotas de auth novas nascem já documentadas (7a e 7b na mesma
+   entrega de superfície).
 
 ## Stack (decidida — não proponha alternativas)
 - `apps/api`: NestJS 11 + Drizzle ORM + PostgreSQL 16 + pgvector
 - `apps/engine`: Elixir/OTP + Phoenix (canais) + Oban (filas no Postgres)
 - `apps/web`: React 19 + Vite + TanStack Query/Router
 - Monorepo pnpm (TS) com apps/engine Elixir ao lado; Docker Compose para dev
-- Auth: Keycloak (OIDC) em container; autorização RBAC no domínio da api
+- Auth: first-party no domínio da api (argon2id + access JWT curto +
+  refresh opaco com rotação) — substitui o Keycloak na Fase 7;
+  autorização RBAC no domínio da api (inalterada desde a Fase 1)
 - Deploy: Kubernetes (k3d/kind em validação local)
 - Docs: Docusaurus 3.x em website/ lendo de docs/; Mermaid para
   diagramas; busca local
@@ -192,10 +178,14 @@ repositório do Brabo:
 ## O que NÃO fazer
 - Não usar Redis (filas ficam no Postgres via Oban)
 - Não implementar Bitbucket nem GenericGitProvider (backlog futuro)
-- Não alterar comportamento de runtime do produto nesta fase — a FASE
-  6 é CI/CD do repositório; o que ela ensina ao produto vira ADR para
-  fase futura, não código agora
 - Não versionar à mão: toda tag nasce de workflow
 - Não instalar libs sem justificar no plano
 - Não refatorar código das fases concluídas fora do necessário para a
-  Fase 6
+  Fase 7
+
+## O que NÃO fazer (adições da FASE 7)
+- Não implementar MFA, login social, OIDC provider ou federação —
+  backlog registrado no ADR
+- Não migrar senhas do Keycloak (inviável e indesejável): fluxo de
+  redefinição
+- Não escrever docs/reference/api/ à mão — só via geração

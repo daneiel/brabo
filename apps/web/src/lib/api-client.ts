@@ -1,4 +1,4 @@
-import { getToken } from './keycloak';
+import { renovarSessao, tokenAtual } from './auth';
 import { runtimeConfig } from './runtime-config';
 import { logger, newTraceContext } from './logger';
 import type {
@@ -60,22 +60,52 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Uma tentativa: monta os cabeçalhos com o token que houver agora.
+ *
+ * O access token vem de `auth.ts` (memória, 15 min). Se não houver nenhum, a
+ * chamada segue sem `Authorization` e a api responde 401 — que é o gatilho do
+ * caminho de renovação abaixo, e não um caso de erro.
+ */
+function tentar(
+  path: string,
+  traceparent: string,
+  init?: RequestInit,
+): Promise<Response> {
+  const token = tokenAtual();
+
+  return fetch(`${API_URL}${path}`, {
+    ...init,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      traceparent,
+      ...init?.headers,
+    },
+  });
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const token = await getToken();
   // Uma trace por requisição, gerada aqui (Fase 5, item 6). A api adota este
   // `traceparent` como parent — é o propagador W3C padrão — então a ação do
   // usuário e o trabalho de servidor que ela dispara ficam na mesma árvore.
   const traceCtx = newTraceContext();
 
-  const res = await fetch(`${API_URL}${path}`, {
-    ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-      traceparent: traceCtx.traceparent,
-      ...init?.headers,
-    },
-  });
+  let res = await tentar(path, traceCtx.traceparent, init);
+
+  // 401 → renova UMA vez e repete. A renovação é single-flight (ver auth.ts):
+  // várias chamadas que levem 401 ao mesmo tempo compartilham a mesma
+  // promessa, e é isso que impede o refresh de ser apresentado duas vezes —
+  // que o servidor leria como reuso de token e puniria revogando a família.
+  //
+  // Uma tentativa só, de propósito: se o token novo também levar 401, o
+  // problema não é a validade da sessão, e repetir viraria laço.
+  if (res.status === 401) {
+    const novo = await renovarSessao();
+    if (novo) {
+      res = await tentar(path, traceCtx.traceparent, init);
+    }
+  }
 
   if (!res.ok) {
     const body = await res.json().catch(() => null);

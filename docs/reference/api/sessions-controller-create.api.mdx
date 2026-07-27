@@ -1,0 +1,69 @@
+---
+id: sessions-controller-create
+title: "Abre uma sessão no projeto"
+description: "A sessão nasce em `created` e é o contêiner de tudo o que os agentes fazem: o event log, as ações propostas e o orçamento de tokens penduram nela."
+sidebar_label: "Abre uma sessão no projeto"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "post api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Abre uma sessão no projeto"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/projects/{projectId}/sessions"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+A sessão nasce em `created` e é o contêiner de tudo o que os agentes fazem: o event log, as ações propostas e o orçamento de tokens penduram nela.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./sessions-controller-create.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./sessions-controller-create.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./sessions-controller-create.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

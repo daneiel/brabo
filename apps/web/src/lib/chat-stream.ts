@@ -1,4 +1,4 @@
-import { getToken } from './keycloak';
+import { renovarSessao, tokenAtual } from './auth';
 import { API_URL } from './api-client';
 import type { ChatSseEvent } from './api-types';
 
@@ -14,7 +14,10 @@ export async function* streamChatMessage(
   text: string,
   signal?: AbortSignal,
 ): AsyncGenerator<ChatSseEvent> {
-  const token = await getToken();
+  // Garante um token antes de abrir o stream. Diferente das chamadas normais,
+  // aqui não dá para "tentar e renovar no 401": a resposta é um corpo em
+  // streaming e reabrir no meio perderia os frames já entregues.
+  const token = tokenAtual() ?? (await renovarSessao());
   const res = await fetch(
     `${API_URL}/projects/${projectId}/sessions/${sessionId}/chat`,
     {

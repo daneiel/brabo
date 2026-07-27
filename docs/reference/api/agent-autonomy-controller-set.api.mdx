@@ -1,0 +1,69 @@
+---
+id: agent-autonomy-controller-set
+title: "Define a autonomia de um agente para um tipo de ação"
+description: "Upsert por (agente, tipo). NÃO sobrepõe o `permissions.json`: um padrão em `deny` continua bloqueado por mais autonomia que se conceda aqui."
+sidebar_label: "Define a autonomia de um agente para um tipo de ação"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "put api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Define a autonomia de um agente para um tipo de ação"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"put"}
+  path={"/projects/{projectId}/agent-autonomy"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Upsert por (agente, tipo). NÃO sobrepõe o `permissions.json`: um padrão em `deny` continua bloqueado por mais autonomia que se conceda aqui.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./agent-autonomy-controller-set.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./agent-autonomy-controller-set.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./agent-autonomy-controller-set.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

@@ -1,0 +1,69 @@
+---
+id: anamnese-controller-event
+title: "Devolve um evento do projeto pelo id, resolvendo a sessão"
+description: "Diferente da rota de evento por sessão: aqui a sessão não é conhecida. É o que faz o chip de evidência do perfil chegar no evento certo, já que a janela da Anamnese atravessa várias sessões."
+sidebar_label: "Devolve um evento do projeto pelo id, resolvendo a sessão"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "get api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Devolve um evento do projeto pelo id, resolvendo a sessão"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/projects/{projectId}/events/{eventId}"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Diferente da rota de evento por sessão: aqui a sessão não é conhecida. É o que faz o chip de evidência do perfil chegar no evento certo, já que a janela da Anamnese atravessa várias sessões.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./anamnese-controller-event.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./anamnese-controller-event.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./anamnese-controller-event.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

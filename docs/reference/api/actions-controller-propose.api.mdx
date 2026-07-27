@@ -1,0 +1,69 @@
+---
+id: actions-controller-propose
+title: "Propõe uma ação com efeito externo"
+description: "A ação é avaliada contra o `permissions.json` do projeto na criação. O `resolvedPolicy` da resposta diz o que a política decidiu: `auto_approve` já sai executável, `require_approval` espera decisão humana e `deny` nasce recusada. Não existe caminho que execute sem passar por aqui."
+sidebar_label: "Propõe uma ação com efeito externo"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "post api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Propõe uma ação com efeito externo"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/projects/{projectId}/sessions/{sessionId}/actions"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+A ação é avaliada contra o `permissions.json` do projeto na criação. O `resolvedPolicy` da resposta diz o que a política decidiu: `auto_approve` já sai executável, `require_approval` espera decisão humana e `deny` nasce recusada. Não existe caminho que execute sem passar por aqui.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./actions-controller-propose.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./actions-controller-propose.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./actions-controller-propose.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

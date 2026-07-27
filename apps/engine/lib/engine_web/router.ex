@@ -7,7 +7,7 @@ defmodule EngineWeb.Router do
 
   pipeline :internal do
     plug :accepts, ["json"]
-    plug EngineWeb.Plugs.VerifyApiToken
+    plug EngineWeb.Plugs.VerifyServiceToken
   end
 
   scope "/", EngineWeb do

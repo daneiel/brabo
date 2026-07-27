@@ -73,6 +73,26 @@ rules:
     severity: block
     note: "Rota nova sem classificação já quebra route-surface.spec.ts; a doc é a fonte dele."
 
+  # SEPARADA de `superficie-http` pelo mesmo critério que separa
+  # `checks-e-rulesets` de `politica-de-branches`: aquela cobra a
+  # CLASSIFICAÇÃO de exposição de uma rota; esta cobra o CONTRATO gerado.
+  # Mexer num @ApiProperty não muda a classificação de ninguém, e cobrar as
+  # duas coisas pela mesma mudança ensina a usar o escape hatch por reflexo.
+  #
+  # O `docs:` aponta para os ARQUIVOS, não para o diretório: o docmap valida
+  # com existsSync e um diretório passaria trivialmente.
+  - id: referencia-openapi
+    watch:
+      - "apps/api/src/**/*.controller.ts"
+      - "apps/api/src/**/*.dto.ts"
+      - "apps/api/src/infrastructure/openapi/**"
+    docs:
+      - "docs/reference/openapi.json"
+      - "docs/reference/api/.openapi-manifest.json"
+    generated: true
+    severity: block
+    note: "Rode `pnpm docs:generate`. O openapi.json e os MDX saem do código, nunca da mão."
+
   - id: contrato-web
     watch:
       - "apps/web/src/lib/api-client.ts"

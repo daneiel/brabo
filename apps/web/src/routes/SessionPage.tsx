@@ -19,7 +19,7 @@ import {
 import { streamChatMessage } from '../lib/chat-stream';
 import { connectSessionHeartbeat } from '../lib/session-channel';
 import { useSessionEvents, useSessionEvent, usePendingActions, useHandoffs } from '../lib/hooks';
-import { currentUser } from '../lib/keycloak';
+import { emailDaSessao } from '../lib/auth';
 import type {
   BusinessRulePayload,
   ProposedAction,
@@ -54,7 +54,10 @@ export function SessionPage({
 }: SessionPageProps) {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
-  const user = currentUser();
+  // O access token carrega o e-mail; o nome não vem mais em claim nenhuma
+  // (Fase 7a). Para o rótulo de autoria da própria mensagem, o e-mail serve —
+  // e o fallback cobre o instante entre o boot e a primeira renovação.
+  const user = { name: emailDaSessao() };
 
   const [asideOpen, setAsideOpen] = useState(true);
   // Log completo de eventos — fechado por padrão, mas abre sozinho quando

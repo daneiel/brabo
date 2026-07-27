@@ -1,5 +1,5 @@
-import { Link, Outlet, useRouterState } from '@tanstack/react-router';
-import { currentUser, logout } from '../lib/keycloak';
+import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
+import { emailDaSessao, sair } from '../lib/auth';
 import { useCurrentWorkspace, useProjects } from '../lib/hooks';
 import { useProjectsUnread } from '../lib/notifications';
 import { Badge } from '../components/ui/Badge';
@@ -7,11 +7,11 @@ import { BrandIcon } from '../components/ui/icons';
 import styles from './Shell.module.css';
 
 export function Shell() {
+  const navigate = useNavigate();
   const { data: workspace } = useCurrentWorkspace();
   const { data: projects } = useProjects(workspace?.id);
   const unread = useProjectsUnread(projects);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const user = currentUser();
 
   return (
     <div className={styles.layout}>
@@ -46,8 +46,8 @@ export function Shell() {
         </nav>
 
         <div className={styles.footer}>
-          <span className={styles.userName}>{user.name ?? user.email}</span>
-          <button type="button" className={styles.logout} onClick={() => logout()}>
+          <span className={styles.userName}>{emailDaSessao() ?? 'conta'}</span>
+          <button type="button" className={styles.logout} onClick={() => void sair().then(() => navigate({ to: '/login' }))}>
             sair
           </button>
         </div>
