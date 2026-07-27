@@ -122,6 +122,13 @@ workflow):
 | `Build, scan e smoke das imagens de produção` | `ci.yml` |
 | `Drift, gerados e build` | `docs-check.yml` |
 
+> **`pull_request_target` exige o workflow na branch PADRÃO.** Não basta estar
+> na branch base do PR. Isso foi medido, não suposto: com `pull_request_target`
+> o `pr-police` teve **zero execuções**, enquanto `approval-ladder` e
+> `docs-check` — que usam `pull_request` — rodaram normalmente do mesmo commit.
+> Como a padrão é `main` e ela só avança pela escada que o próprio check
+> guarda, o gatilho seria ovo e galinha. Os dois usam `pull_request`.
+
 > **Um check required que nunca roda trava o PR para sempre.** É por isso que o
 > gatilho do `ci.yml` cobre as quatro permanentes e toda a taxonomia de
 > prefixos — antes da FASE 6 ele só disparava em PR para `dev`, e exigir estes
