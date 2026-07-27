@@ -127,6 +127,42 @@ desligado.
 Mover um arquivo sem corrigir quem aponta para ele derruba o CI em vez de virar
 404 em produção. É o mecanismo mais barato do conjunto inteiro.
 
+### `api-render-check.mjs` — build verde não é página que renderiza
+
+Esta peça existe por uma lição paga caro: **as 117 páginas de operação da
+referência de API subiram mortas nas releases `v1.0.0` e `v1.0.1`**, e nenhum
+check viu.
+
+O config do Docusaurus não declarava `docItemComponent: '@theme/ApiItem'`, então
+o Docusaurus usava o `@theme/DocItem` padrão. O `ApiItem` é o único lugar do
+`docusaurus-theme-openapi-docs` que monta o `<Provider>` do redux, e o
+`@theme/ApiExplorer/MethodEndpoint` que cada `.api.mdx` importa lê esse store com
+`useSelector`. Sem o wrapper, contexto nulo — e o error boundary trocava a página
+inteira por *"Esta página deu erro."*.
+
+O modo de falha é o que interessa aqui, porque ele derrota todas as outras peças
+deste mecanismo:
+
+| etapa | resultado |
+|---|---|
+| MDX compila | ✅ os componentes de tema existem e resolvem |
+| SSR renderiza | ✅ o HTML servido tem o conteúdo da rota |
+| `pnpm docs:build` | ✅ **verde** |
+| hidratação no navegador | ❌ a página é apagada |
+
+Ou seja: **"o build passou" nunca foi prova de que a página funciona.** O
+`api-render-check.mjs` roda depois do `docs:build` e afirma, em cada página de
+operação, a marca estrutural que só o `ApiItem` produz
+(`openapi-left-panel__container` / `openapi-right-panel__container`, conferidas na
+fonte do tema, não escolhidas por palpite).
+
+Ele pega **esta classe** de regressão, não toda falha de hidratação — pegar todas
+exigiria navegador headless, e essa dependência não se paga para o risco que
+sobra. Se outra escapar, é aí que essa conversa começa.
+
+Do mesmo episódio saiu a regra `site-e-publicacao` do mapa: `website/**` não
+aparecia em regra nenhuma, e mexer no config do site não cobrava documentação.
+
 ## Rodando na sua máquina
 
 ```bash
@@ -135,6 +171,10 @@ pnpm docs:generate   # regenera
 pnpm docs:drift      # simula o check do PR (origin/dev...HEAD)
 pnpm docs:build      # o build que o CI roda
 pnpm docs:start      # servidor local, com hot reload
+
+# a referência de API renderiza? precisa do build acima, e não entra no
+# docs:check porque aquele não constrói o site
+node scripts/docs/api-render-check.mjs
 ```
 
 Ou, se estiver no Claude Code, `/sync-docs` faz o ciclo completo e entrega um
