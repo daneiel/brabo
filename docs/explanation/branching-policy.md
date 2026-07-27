@@ -169,16 +169,48 @@ eternamente vermelho.
 A exigência de **pessoas distintas fica suspensa** neste modo, e está suspensa
 de propósito: com um mantenedor, ela é aritmeticamente impossível.
 
-### Modo `community` — quando houver time
+### Modo `community` — quando houver gente
 
 | destino | exigência |
 |---|---|
-| `dev` | 1 dev |
-| `qa` | 2 devs |
-| `rc` | 1 qualidade + 1 dev |
-| `main` | 1 PO + 1 gestor |
+| `dev` | 1 × devs |
+| `qa` | 2 × devs |
+| `rc` | 1 × qualidade **+** 1 × devs |
+| `main` | 1 × PO **+** 1 × gestão |
 
 Em `rc` e `main`, **pessoas distintas** — a exigência volta a valer.
+
+Os papéis são **listas de handles** em variáveis de repositório, não times do
+GitHub:
+
+```
+APROVADORES_DEVS       = ana,bruno,carla
+APROVADORES_QUALIDADE  = quim
+APROVADORES_PO         = paula
+APROVADORES_GESTAO     = gustavo
+```
+
+Times seriam o caminho óbvio e **não funcionam aqui**: eles só existem dentro de
+uma organização, este repositório pertence a um usuário, e o `GITHUB_TOKEN` não
+lê membership de time nem em org — precisaria de um PAT com `read:org`. Com
+listas, o modo `community` é ativável hoje e a troca é mesmo só de variável.
+
+O custo honesto: manter as listas é trabalho manual, e uma pessoa que sai do
+projeto continua aprovando até alguém editar a variável. Se o projeto virar uma
+org com times de verdade, trocar a fonte é mudar uma função — a escada e a
+regra de pessoas distintas não mudam.
+
+#### Por que "pessoas distintas" precisa de mais que contar
+
+Em `rc`, quem estiver **nas duas listas** (`qualidade` e `devs`) poderia
+satisfazer as duas vagas sozinho, se o check apenas contasse aprovações por
+papel. O check resolve isso como um problema de **atribuição**: existe uma
+distribuição de aprovadores distintos que preencha todas as vagas?
+
+Isso também evita o erro oposto. Se `quim` é o único de `qualidade` mas também
+está em `devs`, dar a vaga de `devs` a ele deixaria `qualidade` descoberta —
+mesmo havendo outra pessoa que serviria. A atribuição correta existe, e o check
+a encontra.
 
 ### Regras comuns aos dois modos
 
@@ -191,33 +223,39 @@ Em `rc` e `main`, **pessoas distintas** — a exigência volta a valer.
 
 Pré-requisitos, antes de trocar qualquer variável:
 
-1. **Times criados e populados** no GitHub, com pelo menos: devs, qualidade,
-   PO, gestão, release.
-2. **Critério de quem vira administrador** definido e escrito — quem entra num
-   time, quem tira, e com base em quê.
+1. **Cada papel com gente de verdade.** `main` exige PO **e** gestão; se as duas
+   listas apontarem para a mesma pessoa, nenhum PR para `main` fecha — a regra
+   de pessoas distintas não tem como ser satisfeita.
+2. **Critério de quem entra em cada lista** definido e escrito — quem entra,
+   quem sai, e com base em quê.
 
 Passo a passo da troca:
 
-```
+```bash
+gh variable set APROVADORES_DEVS      --body "ana,bruno,carla"
+gh variable set APROVADORES_QUALIDADE --body "quim"
+gh variable set APROVADORES_PO        --body "paula"
+gh variable set APROVADORES_GESTAO    --body "gustavo"
+
+# por último: com as listas vazias, community reprova tudo
 gh variable set APPROVAL_MODE --body community
-gh variable set TIME_DEVS      --body <org>/<slug>
-gh variable set TIME_QUALIDADE --body <org>/<slug>
-gh variable set TIME_PO        --body <org>/<slug>
-gh variable set TIME_GESTAO    --body <org>/<slug>
-gh variable set TIME_RELEASE   --body <org>/<slug>
 ```
 
-Depois: reabrir um PR de teste em cada destino e conferir que o resumo do check
-mostra a exigência nova. **Nenhum deploy, nenhum merge, nenhuma alteração de
-código** — a troca é de configuração.
+A ordem importa. Com `APPROVAL_MODE=community` e as listas ainda vazias, todo
+PR fica vermelho dizendo qual variável está faltando — correto, mas
+desnecessariamente ruidoso. Preencha primeiro.
 
-> **TODO(humano):** o critério de quem vira administrador deveria estar
-> alinhado ao `GOVERNANCE.md`, mas **ele não existe** — foi cortado do escopo
-> da FASE DOC junto com o `CODE_OF_CONDUCT.md` (que depois voltou). Ou o
-> `GOVERNANCE.md` é escrito antes da migração, ou o critério mora aqui e esta
-> seção passa a ser a fonte. As duas opções servem; a que não serve é o
-> critério não existir em lugar nenhum quando o primeiro contribuidor externo
-> aparecer.
+Para voltar: `gh variable set APPROVAL_MODE --body solo`.
+
+**Nenhum deploy, nenhum merge, nenhuma alteração de código** — a troca é de
+configuração, e há teste que roda a mesma entrada nos dois modos afirmando
+vereditos diferentes.
+
+> **TODO(humano):** o critério de quem entra em cada lista deveria estar
+> alinhado a um `GOVERNANCE.md`, mas **ele não existe** — foi cortado do escopo
+> da FASE DOC. Ou ele é escrito antes da migração, ou o critério mora aqui e
+> esta seção passa a ser a fonte. As duas servem; a que não serve é o critério
+> não existir em lugar nenhum quando o primeiro contribuidor externo aparecer.
 
 ## Versionamento
 

@@ -147,6 +147,7 @@ rules:
   - id: politica-de-branches
     watch:
       - ".github/workflows/pr-police.yml"
+      - ".github/workflows/approval-ladder.yml"
       - "scripts/ci/**"
     docs:
       - "docs/explanation/branching-policy.md"

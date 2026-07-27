@@ -5,16 +5,22 @@ name: pr-police
 # A lógica vive em scripts/ci/pr-police.ts, testada por vitest — este workflow
 # é fino de propósito: ele coleta dados e chama o script.
 #
-# `pull_request_target` e não `pull_request`: o repositório é público e vai
-# receber PR de fork, e em `pull_request` vindo de fork o GITHUB_TOKEN é
-# read-only — `gh pr edit --add-label` FALHA. Com `_target` o workflow e o
-# token vêm da branch base.
+# `pull_request` e NÃO `pull_request_target`, apesar de o segundo ser o que
+# permite escrever label em PR de fork.
 #
-# Isso é seguro AQUI porque o job nunca executa código do head: faz checkout da
-# BASE, roda o script da BASE, e do head só lê SHA e nome de ref. Não há
-# `pnpm install`, não há build, não há script do autor do PR.
+# Motivo, medido e não suposto: `pull_request_target` só dispara se o workflow
+# existir na BRANCH PADRÃO. A padrão aqui é `main`, que está 65 commits atrás e
+# só avança pela escada que este próprio workflow deveria guardar — ovo e
+# galinha. Com `_target`, o pr-police NUNCA rodou: zero execuções, enquanto
+# `approval-ladder` e `docs-check`, que usam `pull_request`, rodaram normalmente
+# do mesmo commit.
+#
+# O que se perde: em PR de FORK o GITHUB_TOKEN é read-only e `gh pr edit
+# --add-label` falha. A VALIDAÇÃO continua rodando e continua sendo o portão —
+# só o rótulo, que é cosmético, deixa de ser escrito. Um check que nunca roda é
+# muito pior que um rótulo que às vezes falta.
 on:
-  pull_request_target:
+  pull_request:
     types: [opened, edited, reopened, synchronize, ready_for_review]
 
 permissions:
@@ -22,7 +28,7 @@ permissions:
   pull-requests: write
 
 concurrency:
-  group: pr-police-${{ github.event.number }}
+  group: pr-police-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
@@ -37,7 +43,6 @@ jobs:
       # branch aceita — buraco silencioso.
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.base.sha }}
           # A verificação de contaminação é ancestralidade: com checkout raso
           # o merge-base não existe e a checagem viraria "não verificado".
           fetch-depth: 0
@@ -53,8 +58,15 @@ jobs:
               echo "::notice::branch permanente '$b' não existe no remoto"
           done
           # De fork, o head não é alcançável por nome — só por refs/pull/N/head.
+          #
+          # O destino PRECISA do sufixo `/head`: `refs/remotes/pull/N` sozinho
+          # colide com o `refs/remotes/pull/N/merge` que o checkout já criou, e
+          # o git recusa o refstore inteiro com "some local refs could not be
+          # updated" — que derrubava o job antes de chegar na avaliação.
+          n='${{ github.event.pull_request.number }}'
           git fetch --no-tags --quiet origin \
-            "refs/pull/${{ github.event.number }}/head:refs/remotes/pull/${{ github.event.number }}"
+            "+refs/pull/$n/head:refs/remotes/pull/$n/head" \
+            || echo "::notice::não consegui buscar o head do PR — a checagem de origem sairá como NÃO VERIFICADA, nunca como aprovada"
 
       - name: Avaliar o PR
         id: policia
@@ -79,7 +91,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           FAMILIA: ${{ steps.policia.outputs.familia }}
-          PR: ${{ github.event.number }}
+          PR: ${{ github.event.pull_request.number }}
+        # Em PR de fork o token é read-only e o `gh pr edit` falha. O rótulo é
+        # cosmético — quem decide é o check —, então aqui avisa e segue.
+        continue-on-error: true
         run: |
           set -euo pipefail
           todas=(trabalho promocao retropropagacao correcao-alta)
