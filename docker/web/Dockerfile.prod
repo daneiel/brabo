@@ -5,7 +5,6 @@
 # Estágio 1: build do bundle.
 #
 # ATENÇÃO — as VITE_* são COMPILE-TIME. O Vite substitui `import.meta.env.VITE_*`
-# literalmente no bundle, então as URLs de api/engine/Keycloak ficam ASSADAS na
 # imagem: é uma imagem por ambiente, não a mesma imagem promovida entre eles.
 # Registrado como limitação no ADR 0024 (a saída é injeção em runtime, fora do
 # escopo desta sessão).
@@ -14,15 +13,9 @@ FROM node:24.11.1-alpine3.21 AS build
 
 ARG VITE_API_URL=http://localhost:3000
 ARG VITE_ENGINE_URL=http://localhost:4000
-ARG VITE_KEYCLOAK_URL=http://localhost:8080
-ARG VITE_KEYCLOAK_REALM=brabo-dev
-ARG VITE_KEYCLOAK_CLIENT_ID=brabo-web
 
 ENV VITE_API_URL=$VITE_API_URL \
-    VITE_ENGINE_URL=$VITE_ENGINE_URL \
-    VITE_KEYCLOAK_URL=$VITE_KEYCLOAK_URL \
-    VITE_KEYCLOAK_REALM=$VITE_KEYCLOAK_REALM \
-    VITE_KEYCLOAK_CLIENT_ID=$VITE_KEYCLOAK_CLIENT_ID
+    VITE_ENGINE_URL=$VITE_ENGINE_URL
 
 RUN corepack enable && corepack prepare pnpm@11.3.0 --activate
 
@@ -61,9 +54,6 @@ ENV CSP_CONNECT_SRC="http://localhost:3000 http://localhost:4000 ws://localhost:
 # subindo sem nenhuma variável definida.
 ENV API_URL="http://localhost:3000" \
     ENGINE_URL="http://localhost:4000" \
-    KEYCLOAK_URL="http://localhost:8080" \
-    KEYCLOAK_REALM="brabo-dev" \
-    KEYCLOAK_CLIENT_ID="brabo-web" \
     LOG_LEVEL="info"
 
 # Fora de /etc/nginx de propósito: com rootfs read-only o entrypoint não pode
