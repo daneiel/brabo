@@ -102,11 +102,17 @@ O loop que faz o time melhorar.
 |---|---|
 | [0030](0030-politica-de-branches-mecanizada.md) | Política de branches mecanizada: regra → mecanismo, lógica em script testável, gate de retropropagação, e o custo de reintroduzir cada corte |
 
+## Fase 7 — Auth first-party
+
+| # | decisão |
+|---|---|
+| [0031](0031-auth-first-party-argon2id-e-rotacao-de-refresh.md) | Auth no domínio da api: argon2id com parâmetros fixos, access token EdDSA de chave derivada, rotação de refresh com revogação de família por reuso, lockout com chave no e-mail (e não no id) e a invariante única que fecha a enumeração |
+
 ## A convenção
 
 - **Um arquivo por decisão**, em `docs/adr/NNNN-titulo-curto.md`, com
   numeração sequencial de 4 dígitos. **Sem reuso de número**, nem quando um ADR
-  é superado — o próximo é **0031**.
+  é superado — o próximo é **0032**.
 - **Três seções, só elas:** **Contexto** (o problema ou a força que motivou),
   **Decisão** (o que foi decidido), **Consequências** (os trade-offs aceitos e
   o que fica para depois).

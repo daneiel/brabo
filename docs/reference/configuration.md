@@ -46,6 +46,39 @@ produção.
 | `GIT_OAUTH_STATE_SECRET` 🔒 | `dev-oauth-state-secret-change-me` | assina o `state` do OAuth; fraco = CSRF no fluxo de conexão de git |
 | `WEB_ORIGIN` 🔒 | `http://localhost:5173` | **em produção a api recusa subir** se estiver ausente ou for `*`. CORS é estrito por ambiente |
 
+### Auth first-party (Fase 7a)
+
+O auth no domínio da api. Decisões em
+[ADR 0031](../adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.md).
+
+| variável | default | o que faz |
+|---|---|---|
+| `AUTH_JWT_SECRET` | `dev-auth-jwt-secret-change-me` | passphrase de onde o par Ed25519 do access token é **derivado** por scrypt — nenhuma chave privada é commitada |
+| `AUTH_JWT_SECRET_PREVIOUS` | — | aceita **só na verificação**, durante a rotação; entra no JWKS e nunca assina |
+| `AUTH_TOKEN_PEPPER` | `AUTH_JWT_SECRET` | chave HMAC do hash dos tokens opacos e da chave do balde de lockout |
+| `AUTH_ACCESS_TOKEN_TTL_MS` | `900000` | 15 min |
+| `AUTH_REFRESH_TOKEN_TTL_MS` | `1209600000` | 14 dias |
+| `AUTH_REFRESH_ABSOLUTE_TTL_MS` | `2592000000` | teto absoluto da família, contado do login — sem ele a rotação dá sessão eterna |
+| `AUTH_REGISTRATION_ENABLED` | `true` | qualquer valor diferente de `"false"` mantém o cadastro aberto |
+| `AUTH_LOCKOUT_ENABLED` | `true` | mesma convenção |
+| `AUTH_LOCKOUT_WINDOW_MS` | `900000` | janela deslizante da contagem |
+| `AUTH_LOCKOUT_THRESHOLDS` | `5:30,8:300,12:900` | escada do balde de e-mail, `falhas:segundos` |
+| `AUTH_LOCKOUT_IP_THRESHOLDS` | `20:30,30:120` | escada do balde de IP, mais permissiva e com teto curto |
+| `AUTH_EMAIL_TOKEN_TTL_MS` | `172800000` | verificação de e-mail, 48 h |
+| `AUTH_RESET_TOKEN_TTL_MS` | `3600000` | reset de senha, 1 h |
+| `AUTH_IP_ATTEMPT_THRESHOLD` | `60` | teto de tentativas por IP nas rotas de auth |
+| `AUTH_MAIL_LOG_TOKENS` | `false` | **só em dev**: imprime o token de verificação/reset no log |
+
+> **O teto da escada de e-mail é igual à janela de propósito.** Com janela
+> deslizante, quem insiste empurra a janela junto e fica bloqueado enquanto
+> insistir; quem parou volta com a janela limpa. Um teto **maior** que a janela
+> criaria um bloqueio que ela não consegue representar, e exigiria uma coluna
+> `locked_until` persistente com fila de destrava. Não mexa em um sem o outro.
+
+> **Rotacionar `AUTH_TOKEN_PEPPER` desloga todo mundo** e invalida os tokens de
+> verificação e reset em aberto. Diferente das chaves, o pepper **não** tem
+> `_PREVIOUS`. Ver o [runbook](../runbook.md).
+
 ### Rate limit
 
 Janela deslizante em Postgres — não há Redis
@@ -252,13 +285,28 @@ que uma variável nova não fique documentada em lugar nenhum sem ninguém notar
 
 > ⚠️ Bloco gerado por `pnpm docs:generate`. Não edite à mão — o próximo build sobrescreve.
 
-Inventário extraído do código: **83 variáveis** lidas em tempo de execução. Todas têm descrição nas tabelas acima.
+Inventário extraído do código: **98 variáveis** lidas em tempo de execução. Todas têm descrição nas tabelas acima.
 
-**api** — 29 variáveis
+**api** — 44 variáveis
 
 - `API_KEYCLOAK_CLIENT_ID` <sub>(apps/api/src/infrastructure/http-clients/api-to-engine-client.ts)</sub>
 - `API_KEYCLOAK_CLIENT_SECRET` <sub>(apps/api/src/infrastructure/http-clients/api-to-engine-client.ts)</sub>
 - `API_PUBLIC_URL` <sub>(apps/api/src/application/use-cases/git/start-git-oauth.use-case.ts)</sub>
+- `AUTH_ACCESS_TOKEN_TTL_MS` <sub>(apps/api/src/infrastructure/security/ed25519-access-token-issuer.ts)</sub>
+- `AUTH_EMAIL_TOKEN_TTL_MS` <sub>(apps/api/src/application/use-cases/auth/auth-config.ts)</sub>
+- `AUTH_IP_ATTEMPT_THRESHOLD` <sub>(apps/api/src/application/use-cases/auth/auth-config.ts)</sub>
+- `AUTH_JWT_SECRET` <sub>(apps/api/src/infrastructure/security/auth-key-material.ts)</sub>
+- `AUTH_JWT_SECRET_PREVIOUS` <sub>(apps/api/src/infrastructure/security/auth-key-material.ts)</sub>
+- `AUTH_LOCKOUT_ENABLED` <sub>(apps/api/src/infrastructure/persistence/drizzle/drizzle-login-throttle.ts)</sub>
+- `AUTH_LOCKOUT_IP_THRESHOLDS` <sub>(apps/api/src/infrastructure/persistence/drizzle/drizzle-login-throttle.ts)</sub>
+- `AUTH_LOCKOUT_THRESHOLDS` <sub>(apps/api/src/infrastructure/persistence/drizzle/drizzle-login-throttle.ts)</sub>
+- `AUTH_LOCKOUT_WINDOW_MS` <sub>(apps/api/src/infrastructure/persistence/drizzle/drizzle-login-throttle.ts)</sub>
+- `AUTH_MAIL_LOG_TOKENS` <sub>(apps/api/src/infrastructure/mail/log-mail-sender.ts)</sub>
+- `AUTH_REFRESH_ABSOLUTE_TTL_MS` <sub>(apps/api/src/application/use-cases/auth/auth-config.ts)</sub>
+- `AUTH_REFRESH_TOKEN_TTL_MS` <sub>(apps/api/src/application/use-cases/auth/auth-config.ts)</sub>
+- `AUTH_REGISTRATION_ENABLED` <sub>(apps/api/src/application/use-cases/auth/auth-config.ts)</sub>
+- `AUTH_RESET_TOKEN_TTL_MS` <sub>(apps/api/src/application/use-cases/auth/auth-config.ts)</sub>
+- `AUTH_TOKEN_PEPPER` <sub>(apps/api/src/infrastructure/security/auth-key-material.ts)</sub>
 - `CREDENTIALS_MASTER_KEY` <sub>(apps/api/src/infrastructure/security/envelope-encryption.service.ts)</sub>
 - `CREDENTIALS_MASTER_KEY_PREVIOUS` <sub>(apps/api/src/infrastructure/security/envelope-encryption.service.ts)</sub>
 - `DATABASE_URL` <sub>(apps/api/src/db/migrate.ts)</sub>

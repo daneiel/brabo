@@ -12,7 +12,7 @@ keywords: [arquitetura, code map, invariantes, harness, event log]
 Este documento é o mapa para quem vai **mexer** no código. Ele diz por onde
 começar a ler, o que cada fronteira promete, e o que já se sabe que está torto.
 
-Decisões e o porquê delas ficam nos [ADRs](adr/index.md) — 30 deles, vários
+Decisões e o porquê delas ficam nos [ADRs](adr/index.md) — 31 deles, vários
 registrando defeito real encontrado em execução. Aqui não repetimos a
 argumentação: apontamos.
 
@@ -213,11 +213,19 @@ um problema de infraestrutura.
 
 ## Assuntos transversais
 
-**Autenticação.** Keycloak (OIDC). `JwtAuthGuard` é global; rota aberta exige
-`@Public()` explícito. Chamadas do engine usam client credentials e passam pelo
-`EngineServiceGuard`, que confere o `clientId`. A superfície inteira — 110
-rotas — está classificada em [`security-surface.md`](security-surface.md), e um
-teste de tabela reprova rota nova sem classificação.
+**Autenticação.** Em transição (Fase 7a). O emissor **ainda é o Keycloak**
+(OIDC): o `JwtAuthGuard` é global e rota aberta exige `@Public()` explícito.
+Ao lado dele já existe o **auth first-party** no domínio da api — argon2id,
+access token EdDSA de 15 min e refresh opaco com rotação —, exposto em
+`/auth/*` e ainda sem consumidor no guard. A troca de emissor é uma linha no
+`AuthHttpModule` (o `useClass` do `TokenVerifier`) e acontece na 7.2; nenhum
+controller muda, e o RBAC não é tocado. Decisões em
+[ADR 0031](adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.md).
+
+Chamadas do engine usam client credentials e passam pelo `EngineServiceGuard`,
+que confere o `clientId`. A superfície inteira está classificada em
+[`security-surface.md`](security-surface.md), e um teste de tabela reprova rota
+nova sem classificação.
 
 **Autorização.** RBAC no domínio, com papel efetivo resolvido a partir do
 projeto (com fallback para o workspace). `@RequireRole` nas rotas.
