@@ -50,6 +50,9 @@
               }
             }
           },
+          "400": {
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
+          },
           "401": {
             "description": "Credenciais inválidas."
           },
@@ -169,6 +172,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
           }
         },
         "summary": "Pede o link de redefinição de senha",
@@ -1898,6 +1904,12 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -1935,11 +1947,17 @@
               }
             }
           },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
           "404": {
             "description": "Projeto inexistente ou invisível para quem chamou."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -1985,6 +2003,12 @@
               }
             }
           },
+          "400": {
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
@@ -1993,6 +2017,9 @@
           },
           "409": {
             "description": "Já existe projeto com este slug no workspace."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -2029,11 +2056,17 @@
               }
             }
           },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
           "404": {
             "description": "Projeto inexistente ou invisível para quem chamou."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -2075,11 +2108,17 @@
               }
             }
           },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
           "404": {
             "description": "Projeto inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -2119,11 +2158,20 @@
           "204": {
             "description": "Regra gravada. Sem corpo."
           },
+          "400": {
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
           "404": {
             "description": "Projeto inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -2171,11 +2219,17 @@
               }
             }
           },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no escopo."
           },
           "404": {
             "description": "Escopo inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -2231,11 +2285,20 @@
               }
             }
           },
+          "400": {
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no escopo."
           },
           "404": {
             "description": "Escopo inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -2286,11 +2349,17 @@
               }
             }
           },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
           "404": {
             "description": "Projeto, evento ou versão inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -2351,11 +2420,17 @@
           "400": {
             "description": "Versão não é inteiro positivo."
           },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
           "404": {
             "description": "Projeto, evento ou versão inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -2394,11 +2469,17 @@
               }
             }
           },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
           "404": {
             "description": "Projeto, evento ou versão inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -2437,11 +2518,17 @@
               }
             }
           },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
           "404": {
             "description": "Projeto inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -2483,11 +2570,17 @@
               }
             }
           },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
           "404": {
             "description": "Projeto inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -2526,11 +2619,17 @@
               }
             }
           },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
           "404": {
             "description": "Projeto ou sessão inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -2577,11 +2676,20 @@
               }
             }
           },
+          "400": {
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
           "404": {
             "description": "Projeto ou sessão inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -2620,11 +2728,17 @@
               }
             }
           },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
           "404": {
             "description": "Projeto inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -2671,11 +2785,17 @@
               }
             }
           },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
           "404": {
             "description": "Projeto, evento ou versão inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -2724,6 +2844,12 @@
               }
             }
           },
+          "400": {
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
@@ -2732,6 +2858,9 @@
           },
           "409": {
             "description": "Sem module_map vigente, ou execução já ativa."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -2785,11 +2914,17 @@
           "400": {
             "description": "Provider fora de `github`/`gitlab`."
           },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
           "404": {
             "description": "Projeto inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -2854,11 +2989,17 @@
           "400": {
             "description": "Provider inválido, ou credencial ausente."
           },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
           "404": {
             "description": "Projeto inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -2897,11 +3038,17 @@
               }
             }
           },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
           "404": {
             "description": "Projeto inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -2939,11 +3086,17 @@
               }
             }
           },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
           "404": {
             "description": "Projeto inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -2985,11 +3138,17 @@
               }
             }
           },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
           "404": {
             "description": "Projeto, sessão ou hipótese inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -3036,6 +3195,9 @@
               }
             }
           },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
@@ -3044,6 +3206,9 @@
           },
           "409": {
             "description": "A hipótese já foi decidida."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -3090,6 +3255,9 @@
               }
             }
           },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
@@ -3098,6 +3266,9 @@
           },
           "409": {
             "description": "A hipótese já foi decidida."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -3139,11 +3310,17 @@
               }
             }
           },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
           "404": {
             "description": "Projeto inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -3185,11 +3362,17 @@
               }
             }
           },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
           "404": {
             "description": "Projeto, evento ou versão inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -3231,11 +3414,17 @@
               }
             }
           },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
           "404": {
             "description": "Projeto inexistente ou invisível para quem chamou."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -3282,11 +3471,20 @@
               }
             }
           },
+          "400": {
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
           "404": {
             "description": "Projeto inexistente ou invisível para quem chamou."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -3326,11 +3524,17 @@
           "204": {
             "description": "Associação removida. Sem corpo."
           },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
           "404": {
             "description": "Projeto inexistente ou invisível para quem chamou."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -3369,11 +3573,17 @@
               }
             }
           },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no escopo."
           },
           "404": {
             "description": "Escopo inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -3419,11 +3629,20 @@
               }
             }
           },
+          "400": {
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no escopo."
           },
           "404": {
             "description": "Escopo inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -3462,11 +3681,17 @@
               }
             }
           },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
           "404": {
             "description": "Projeto inexistente ou invisível para quem chamou."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -3513,11 +3738,20 @@
               }
             }
           },
+          "400": {
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
           "404": {
             "description": "Projeto inexistente ou invisível para quem chamou."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -3559,11 +3793,17 @@
               }
             }
           },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
           "404": {
             "description": "Projeto, evento ou versão inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -3602,11 +3842,17 @@
               }
             }
           },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
           "404": {
             "description": "Projeto, evento ou versão inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -3645,11 +3891,17 @@
               }
             }
           },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
           "404": {
             "description": "Projeto, evento ou versão inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -3691,11 +3943,17 @@
               }
             }
           },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
           "404": {
             "description": "Projeto, sessão ou hipótese inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -3736,11 +3994,17 @@
               }
             }
           },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
           "404": {
             "description": "Projeto ou sessão inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -3777,11 +4041,17 @@
               }
             }
           },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
           "404": {
             "description": "Projeto ou sessão inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -3827,11 +4097,17 @@
               }
             }
           },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
           "404": {
             "description": "Projeto ou sessão inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -3896,11 +4172,17 @@
               }
             }
           },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
           "404": {
             "description": "Projeto, sessão ou ação inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -3955,11 +4237,20 @@
               }
             }
           },
+          "400": {
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
           "404": {
             "description": "Projeto, sessão ou ação inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -4014,6 +4305,9 @@
               }
             }
           },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
@@ -4022,6 +4316,9 @@
           },
           "409": {
             "description": "A ação já foi decidida ou executada."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -4076,6 +4373,9 @@
               }
             }
           },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
@@ -4084,6 +4384,9 @@
           },
           "409": {
             "description": "A ação já foi decidida ou executada."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -4148,6 +4451,12 @@
               }
             }
           },
+          "400": {
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
@@ -4156,6 +4465,9 @@
           },
           "409": {
             "description": "A ação já foi decidida ou executada."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -4222,6 +4534,12 @@
               }
             }
           },
+          "400": {
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
@@ -4230,6 +4548,9 @@
           },
           "409": {
             "description": "O agente não está ativo nesta sessão."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -4286,6 +4607,9 @@
               }
             }
           },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
@@ -4294,6 +4618,9 @@
           },
           "409": {
             "description": "Agente sem handoff aceito, ou já ativo na sessão."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -4340,11 +4667,17 @@
               }
             }
           },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
           "404": {
             "description": "Projeto, sessão ou handoff inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -4383,11 +4716,17 @@
               }
             }
           },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
           "404": {
             "description": "Projeto ou sessão inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -4434,11 +4773,20 @@
               }
             }
           },
+          "400": {
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
           "404": {
             "description": "Projeto ou sessão inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -4495,11 +4843,20 @@
               }
             }
           },
+          "400": {
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
           "404": {
             "description": "Projeto ou sessão inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -4575,11 +4932,17 @@
               }
             }
           },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
           "404": {
             "description": "Projeto ou sessão inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -4634,11 +4997,20 @@
               }
             }
           },
+          "400": {
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
           "404": {
             "description": "Projeto ou sessão inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -4693,11 +5065,17 @@
               }
             }
           },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
           "404": {
             "description": "Projeto ou sessão inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -4754,11 +5132,20 @@
               }
             }
           },
+          "400": {
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
           "404": {
             "description": "Projeto, sessão ou tarefa inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -4807,11 +5194,17 @@
               }
             }
           },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
           "404": {
             "description": "Projeto, sessão ou handoff inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -4866,6 +5259,9 @@
               }
             }
           },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
@@ -4874,6 +5270,9 @@
           },
           "409": {
             "description": "O handoff não está em `offered`."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -4920,11 +5319,17 @@
               }
             }
           },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no escopo."
           },
           "404": {
             "description": "Escopo inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -4979,11 +5384,20 @@
               }
             }
           },
+          "400": {
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no escopo."
           },
           "404": {
             "description": "Escopo inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -5030,11 +5444,17 @@
               }
             }
           },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
           "404": {
             "description": "Projeto, sessão ou hipótese inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -5081,11 +5501,17 @@
               }
             }
           },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
           "404": {
             "description": "Projeto, sessão ou handoff inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -5140,11 +5566,17 @@
               }
             }
           },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
           "404": {
             "description": "Projeto, sessão ou tarefa inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -5186,11 +5618,17 @@
               }
             }
           },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
           "404": {
             "description": "Projeto ou sessão inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -5247,6 +5685,12 @@
               }
             }
           },
+          "400": {
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no projeto."
           },
@@ -5255,6 +5699,9 @@
           },
           "409": {
             "description": "Transição não permitida a partir do estado atual."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -5286,6 +5733,12 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -5322,6 +5775,15 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -5360,6 +5822,12 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -5401,6 +5869,12 @@
           },
           "400": {
             "description": "O provider recusou o token."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -5433,11 +5907,17 @@
               }
             }
           },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no workspace."
           },
           "404": {
             "description": "Workspace inexistente ou invisível para quem chamou."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -5475,6 +5955,12 @@
               }
             }
           },
+          "400": {
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no workspace."
           },
@@ -5483,6 +5969,9 @@
           },
           "409": {
             "description": "Já existe workspace com este slug."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -5520,11 +6009,17 @@
               }
             }
           },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no workspace."
           },
           "404": {
             "description": "Workspace inexistente ou invisível para quem chamou."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -5570,6 +6065,12 @@
               }
             }
           },
+          "400": {
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no workspace."
           },
@@ -5578,6 +6079,9 @@
           },
           "409": {
             "description": "Já existe workspace com este slug."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -5614,11 +6118,17 @@
               }
             }
           },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no workspace."
           },
           "404": {
             "description": "Workspace inexistente ou invisível para quem chamou."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -5667,11 +6177,20 @@
               }
             }
           },
+          "400": {
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no workspace."
           },
           "404": {
             "description": "Workspace inexistente ou invisível para quem chamou."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -5710,11 +6229,17 @@
               }
             }
           },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no escopo."
           },
           "404": {
             "description": "Escopo inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -5761,11 +6286,20 @@
               }
             }
           },
+          "400": {
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no escopo."
           },
           "404": {
             "description": "Escopo inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -5806,11 +6340,17 @@
               }
             }
           },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no workspace."
           },
           "404": {
             "description": "Workspace inexistente ou invisível para quem chamou."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
@@ -5856,6 +6396,12 @@
               }
             }
           },
+          "400": {
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
           "403": {
             "description": "Papel insuficiente no workspace."
           },
@@ -5864,6 +6410,9 @@
           },
           "409": {
             "description": "Já existe projeto com este slug no workspace."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
           }
         },
         "security": [
