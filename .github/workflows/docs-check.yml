@@ -7,6 +7,28 @@ name: Guardião da documentação
 #   4. o site constrói sem link quebrado? (minutos — fica por último)
 on:
   pull_request:
+    # `edited` junto dos três default, pelo mesmo motivo que o
+    # `promotion-check.yml` registra: check required indexado por sha que não
+    # roda deixa veredito velho colado.
+    #
+    # Este workflow é SENSÍVEL À BASE, e é isso que o separa do `ci.yml`. O
+    # drift compara um RANGE (`origin/<base>...HEAD`) e lê o CORPO do PR atrás
+    # da linha `docs-not-needed:`. Sem `edited`:
+    #
+    #   - retargetar o PR (o GitHub abre contra o default e o autor corrige
+    #     depois) deixa no lugar um veredito calculado contra a base errada —
+    #     que foi o que aconteceu no #71, reprovando por arquivos que já
+    #     tinham sido revisados e mesclados noutro PR;
+    #   - o escape hatch fica inalcançável sem um commit de mentira: escrever
+    #     `docs-not-needed:` no corpo não reavaliava nada.
+    #
+    # O `ci.yml` não precisa disto: o que ele testa é o HEAD, e o resultado
+    # dele não muda com a base.
+    #
+    # O preço é o `docs:build` (minutos) reexecutar quando alguém só mexe no
+    # texto do PR. O `concurrency` acima já cancela a execução anterior, e o
+    # veredito correto vale o custo.
+    types: [opened, reopened, synchronize, edited]
   schedule:
     # Segunda, 06:00 UTC — só o check de links externos.
     - cron: '0 6 * * 1'
