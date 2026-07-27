@@ -102,7 +102,7 @@ Fonte: os `package.json` de cada pacote e o `Makefile` da raiz.
 | alvo | faz |
 |---|---|
 | `make help` | Lista os alvos disponíveis |
-| `make deploy-local` | Sobe o cluster local, instala tudo e roda o smoke test |
+| `make deploy-local` | Sobe o cluster local, instala tudo e roda o smoke test (TAG=vX.Y.Z-qa.N opcional) |
 | `make deploy-local-clean` | Igual ao deploy-local, mas sem reconstruir as imagens |
 | `make smoke-k8s` | Roda só o smoke contra o cluster já de pé |
 | `make hpa-test` | Enche a fila do Oban e prova que o HPA do engine escala |

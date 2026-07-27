@@ -76,6 +76,20 @@ make k8s-down         # remove o cluster
 Variáveis: `BRABO_SKIP_BUILD=1` (usa as imagens do daemon), `BRABO_KEEP_CLUSTER=1`
 (reaproveita o cluster), `BRABO_CLUSTER_TOOL=kind`.
 
+### Validar uma tag da esteira
+
+```bash
+make deploy-local TAG=v0.2.0-qa.1
+```
+
+A esteira da FASE 6 **não faz deploy** — ela termina na tag. `TAG=` é como se
+olha, no cluster local, o que aquela tag carimbou: o bootstrap faz checkout
+destacado da tag e constrói as imagens daquele commit.
+
+Ele **recusa** rodar com a árvore suja, em vez de adivinhar o que fazer com o
+seu trabalho em andamento. Ao terminar você fica em HEAD destacado; o comando
+para voltar aparece no log.
+
 ### k3d é o padrão mesmo com kind instalado
 
 Não é preferência. O k3s traz controlador de NetworkPolicy embutido; o

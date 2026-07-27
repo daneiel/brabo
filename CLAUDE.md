@@ -82,14 +82,14 @@ repositório do Brabo:
    ciclo; tag final DEVE apontar para o commit da última -qa.N
    (verificação com falha ruidosa). A tag é o registro do que
    ESTARIA em cada ambiente — vale mesmo sem deploy.
-6. Deploy DESLIGADO por ora (variável DEPLOY_ENABLED=false): o
-   workflow de tag termina na tag; o passo de deploy existe no
-   workflow, testado a seco, mas só executa com a variável ligada.
-   Validação local por make deploy-local (Fase 5) consumindo uma tag
-   como referência. GitHub Environments NÃO são criados agora; a
-   configuração futura fica documentada em docs/reference/
-   environments.md como "quando houver ambientes". Ligar deploy no
-   futuro = criar environments + flipar a variável, sem mudar código.
+6. SEM deploy e SEM ambiente: os workflows terminam na TAG, que é o
+   registro do que ESTARIA em cada estágio. Não existe passo de deploy
+   nem variável DEPLOY_ENABLED — passo que nunca roda apodrece: ninguém
+   o testa, ninguém percebe quando quebra, e no dia de ligar estará
+   errado. Quando houver ambiente, o deploy será workflow PRÓPRIO
+   disparado pela tag. Validação local por
+   make deploy-local TAG=vX.Y.Z-qa.N (Fase 5), documentada no runbook.
+   GitHub Environments NÃO são criados.
 7. Backmerge gate: .release/gate.json (locked[], awaiting, order[],
    acúmulo) escrito por workflow no merge de hotfix (trava qa,dev) —
    única exceção de escrita direta, pelo bot,
