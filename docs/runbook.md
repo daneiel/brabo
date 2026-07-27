@@ -22,6 +22,7 @@ arquivo. Comece pela triagem.
 | sessão `active` sem processo, ou presa em `closing` | [Quando a sessão escapa](#quando-a-sessao-escapa) |
 | perdi dados / quero verificar o backup | [Restore](#restore) |
 | credencial de LLM ou git parou de decriptar | [Rotação da chave mestra](#rotacao-da-chave-mestra) |
+| todo mundo deslogado de uma vez, ou conta travada no login | [Rotação das chaves do auth](#rotacao-das-chaves-do-auth) |
 | custo por hora disparou | [Incidente de custo](#incidente-de-custo) |
 | painel vazio, sem trace, sem log | [Observabilidade](#observabilidade) |
 | agente respondendo vazio, truncado ou lentíssimo | [Ambiente de inferência](#ambiente-de-inferencia) |
@@ -518,6 +519,69 @@ dump representativo antes de prometer RTO a alguém.
    portanto patchável: 48 → 0. Ver a decisão 1b do ADR 0027.
 
 ---
+
+## Rotação das chaves do auth {#rotacao-das-chaves-do-auth}
+
+Decisões em
+[ADR 0031](adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.md).
+
+O auth first-party tem **dois** segredos, com consequências bem diferentes ao
+serem trocados. Confundir os dois é o erro caro aqui.
+
+### `AUTH_JWT_SECRET` — rotação sem downtime
+
+Dela é derivado o par Ed25519 que assina o access token. A rotação é a mesma
+dança em três etapas da chave mestra (abaixo):
+
+1. `AUTH_JWT_SECRET_PREVIOUS` recebe o valor antigo; `AUTH_JWT_SECRET` recebe o
+   novo. Reinicie a api.
+2. As duas chaves aparecem no `/.well-known/jwks.json` e as duas verificam;
+   só a nova **assina**. A api emite um `WARN` no boot enquanto isso durar.
+3. Passados 15 minutos (o TTL do access token), nenhum token da chave antiga
+   sobrevive. **Remova `AUTH_JWT_SECRET_PREVIOUS`** e reinicie.
+
+Ninguém é deslogado: os refresh tokens não dependem desta chave.
+
+### `AUTH_TOKEN_PEPPER` — logout global, sem meio-termo
+
+É a chave HMAC do hash dos refresh tokens e dos tokens de conta. Trocá-la
+invalida, de uma vez:
+
+- **todos** os refresh tokens em circulação — todo mundo é deslogado;
+- **todos** os links de verificação de e-mail e de reset de senha em aberto.
+
+Não existe `AUTH_TOKEN_PEPPER_PREVIOUS`, e é decisão consciente: aceitar dupla
+verificação em todo refresh, para sempre, por um cenário que roda uma vez a
+cada nunca, não paga. Se for preciso trocar — suspeita de vazamento do banco,
+por exemplo — avise antes: o sintoma para o usuário é ser deslogado sem motivo
+aparente e ver o link de reset "expirado".
+
+> A api **não** falha ao subir com um pepper novo. Ela simplesmente não
+> reconhece nenhum token antigo. Se o suporte relatar "todo mundo deslogado ao
+> mesmo tempo", esta variável é o primeiro lugar a olhar.
+
+### Conta travada por lockout
+
+O bloqueio é curto (30 s a 15 min) e se resolve sozinho: a janela deslizante
+drena. **Não existe endpoint de destrava**, de propósito — ver
+[RN-031](business-rules.md#rn-031). Se for preciso destravar alguém agora:
+
+```sql
+-- A chave é um HMAC do e-mail, não o e-mail. Encontre pelo evento recente:
+select subject_key, count(*), max(occurred_at)
+  from auth_events
+ where kind in ('login_failure', 'login_blocked_user')
+   and occurred_at > now() - interval '30 minutes'
+ group by subject_key order by 3 desc;
+
+delete from auth_lockout_hits where bucket_key = '<subject_key>';
+```
+
+Um reset de senha bem-sucedido também destrava a conta.
+
+> **A trilha nunca é apagada.** `auth_lockout_hits` é contador efêmero;
+> `auth_events` é append-only e sobrevive a tudo, inclusive à remoção do
+> usuário (não há chave estrangeira, de propósito).
 
 ## Rotação da chave mestra {#rotacao-da-chave-mestra}
 

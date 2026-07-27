@@ -2,6 +2,34 @@
 
 Gerado dos conventional commits por `scripts/changelog.mjs`.
 
+## Unreleased
+
+### Novidades
+
+- **api**: módulo de auth first-party — registro, login, logout, refresh,
+  verificação de e-mail e reset de senha, em `/auth/*`. Senhas com argon2id;
+  access token EdDSA de 15 min com chave derivada por scrypt e JWKS público em
+  `/.well-known/jwks.json`; refresh opaco com rotação obrigatória, em que
+  reapresentar um token já usado revoga a família inteira
+  ([RN-030](docs/business-rules.md#rn-030))
+- **api**: lockout progressivo por e-mail e por IP, em janela deslizante no
+  Postgres, sem Redis ([RN-031](docs/business-rules.md#rn-031))
+- **api**: respostas de login, registro e pedido de reset não distinguem conta
+  existente de inexistente ([RN-032](docs/business-rules.md#rn-032))
+- **api**: tokens de verificação e reset de uso único, com hash em repouso e
+  expiração ([RN-033](docs/business-rules.md#rn-033))
+
+### Manutenção
+
+- **api**: `users.keycloak_sub` passa a aceitar `NULL` (conta criada pelo auth
+  first-party não tem sub) e `users.email` ganha índice único em `lower(email)`
+- **api**: superfície pública passa de 4 para 12 rotas, cada uma justificada em
+  [`docs/security-surface.md`](docs/security-surface.md)
+
+> O Keycloak **continua sendo o emissor** dos tokens de acesso nesta entrega: o
+> `JwtAuthGuard` não foi tocado, e o RBAC da Fase 1 segue intacto. A troca de
+> emissor é a 7.2.
+
 ## v0.1.0 — 2026-07-27
 
 ### Novidades

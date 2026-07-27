@@ -396,6 +396,93 @@ falhou. `skip` é sucesso, não erro.
 
 ---
 
+## Autenticação
+
+Regras do auth first-party (Fase 7a). Todas valem no domínio da api,
+independentes do emissor de token — o Keycloak ainda emite os tokens de acesso
+nesta fase, e nada aqui depende disso.
+Decisões em [ADR 0031](adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.md).
+
+### RN-030 — Reapresentar um refresh já usado revoga a família inteira {#rn-030}
+
+Cada refresh consome o token apresentado e emite um filho com o **mesmo**
+`family_id` e o mesmo `family_started_at`. Apresentar um token que já foi
+consumido é a assinatura de um roubo — alguém está usando uma cópia — e a
+resposta é revogar todos os tokens vivos daquela família, com evento de
+segurança.
+
+O usuário legítimo é deslogado junto. Isso é o comportamento correto, não um
+defeito: do lado do servidor, um duplo-submit do cliente e um replay de ladrão
+são idênticos.
+
+- **Onde:** `apps/api/src/domain/auth/refresh-token.ts:50` +
+  `application/use-cases/auth/refresh.use-case.ts:95`
+- **Teste:** `test/application/use-cases/auth/rotacao-e-reuso.spec.ts`
+- **Borda:** quem apresenta um token de família **já revogada** é vítima a
+  jusante, não novo roubo: registra `refresh_revoked` e **não** dispara segunda
+  cascata. Sem essa distinção, cada aba do usuário legítimo geraria um alarme
+  falso durante o incidente.
+- **Origem:** [ADR 0031](adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.md)
+
+### RN-031 — Falha de login é contada por e-mail e por IP, e o bloqueio escala {#rn-031}
+
+Janela deslizante de 15 minutos no Postgres, sem Redis. Dois baldes por
+tentativa e o mais restritivo vence: e-mail (5 falhas → 30s, 8 → 5min, 12 →
+15min) e IP (20 → 30s, 30 → 2min). Um login bem-sucedido limpa o balde do
+e-mail; o de IP drena só por tempo.
+
+A chave do balde é o **e-mail normalizado**, nunca o id do usuário. Com id, o
+balde só existiria depois de encontrar a conta, e o próprio lockout viraria
+oráculo de existência.
+
+- **Onde:** `apps/api/src/domain/auth/lockout-policy.ts:97` +
+  `infrastructure/persistence/drizzle/drizzle-login-throttle.ts:74`
+- **Teste:** `test/application/use-cases/auth/lockout.spec.ts`
+- **Borda:** enquanto bloqueado, a tentativa **não** é registrada. Se fosse, um
+  atacante manteria a conta da vítima travada para sempre só continuando a
+  tentar — o lockout viraria negação de serviço contra quem ele protege.
+- **Por quê:** o balde de IP não pode ser limpo no sucesso; quem tem uma conta
+  válida zeraria a janela à vontade e pulverizaria palpites sem limite.
+- **Origem:** [ADR 0031](adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.md)
+
+### RN-032 — Nenhuma resposta distingue conta existente de inexistente {#rn-032}
+
+Qualquer resposta diferente da falha uniforme só é alcançável **depois** de uma
+verificação de senha bem-sucedida. No login, e-mail inexistente, senha errada e
+conta bloqueada devolvem o mesmo 401 e gastam o mesmo tempo — o ramo sem conta
+verifica contra um hash dummy gerado com **os mesmos parâmetros** do real. No
+registro e no pedido de reset, endereço conhecido e desconhecido devolvem 202.
+
+- **Onde:** `apps/api/src/application/use-cases/auth/login.use-case.ts:78` +
+  `register.use-case.ts:74`
+- **Teste:** `test/application/use-cases/auth/enumeracao.spec.ts`
+- **Borda:** a checagem de bloqueio por e-mail roda **depois** do argon2, não
+  antes. Sair mais cedo é a otimização que qualquer revisor sugeriria, e é
+  exatamente o vazamento — o teste fica vermelho se alguém a introduzir.
+- **Por quê:** o que se afirma é "nenhum ramo pula o trabalho caro e nenhum
+  produz resposta distinguível", **não** tempo constante. Ver as consequências
+  no ADR.
+- **Origem:** [ADR 0031](adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.md)
+
+### RN-033 — Token de verificação e de reset vale uma vez só {#rn-033}
+
+Consumo por UPDATE condicional com `returning`: o próprio UPDATE é a guarda.
+Zero linhas cobre inexistente, de outro propósito, já consumido, invalidado e
+expirado — todos com a mesma resposta. Pedir um link novo invalida o anterior.
+Concluir um reset revoga **todas** as sessões do usuário e não emite tokens.
+
+- **Onde:** `apps/api/src/infrastructure/persistence/drizzle/account-token.repository.ts:76`
+- **Teste:** `test/application/use-cases/auth/tokens-de-conta.spec.ts`
+- **Borda:** dois envios simultâneos não passam os dois. A corrida é o caso
+  **normal**, não a exceção: scanner de e-mail corporativo abre todo link de
+  toda mensagem, então o robô costuma consumir o token antes do humano clicar.
+- **Por quê:** o reset não emite sessão de propósito — logar direto a partir de
+  um link recebido por e-mail faria comprometer o e-mail equivaler a tomar a
+  conta, sem segundo passo.
+- **Origem:** [ADR 0031](adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.md)
+
+---
+
 ## Quando dá errado
 
 | situação | o que o sistema faz |
@@ -407,6 +494,8 @@ falhou. `skip` é sucesso, não erro.
 | Duas decisões concorrentes na mesma hipótese | conflito explícito (RN-022) |
 | Réplica do engine cai | sessão é adotada por outra ou encerra como `closed_abnormally / node_shutdown` — nunca fica órfã |
 | Rate limit indisponível | a requisição **passa**: o guard protege contra abuso, não contra acesso indevido |
+| Credencial errada, conta inexistente ou conta bloqueada | **a mesma** resposta 401, com o mesmo custo de argon2 (RN-032) |
+| Refresh já usado reapresentado | família revogada e evento de segurança; o usuário legítimo também é deslogado (RN-030) |
 
 > **TODO(humano):** as RNs acima foram extraídas do código e dos testes. Falta
 > confirmar se existe regra de negócio **não implementada** que deveria estar

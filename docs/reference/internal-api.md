@@ -33,6 +33,14 @@ do Keycloak**:
 | engine → api | `engine-service` | `EngineServiceGuard` — token válido **e** `clientId = engine-service` |
 | api → engine | `api-service` | `VerifyApiToken` |
 
+> **O auth first-party da Fase 7a não muda nada aqui.** As rotas de `/auth/*`
+> são a superfície de USUÁRIO; o tráfego api ↔ engine continua usando os
+> service accounts do Keycloak descritos acima, sem alteração. A troca por um
+> service token próprio (segredo compartilhado por env, rotacionável) é a
+> 7.4, e virá com a remoção do Keycloak. Enquanto isso, o `request.clientId`
+> populado pelo `JwtAuthGuard` segue sendo o que distingue o engine de um
+> usuário comum.
+
 > As rotas `/internal/*` **não são internas por convenção de nome.** O prefixo é
 > legibilidade; o que as protege é o guard verificando o `clientId` do token. Um
 > JWT de usuário comum, mesmo de um `owner`, é recusado nelas. A classificação
