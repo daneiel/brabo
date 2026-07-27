@@ -20,7 +20,14 @@ que ficam abertas. Decisões em
 | `role:<papel>` | autenticada e restrita pelo RBAC do domínio (`@RequireRole`) |
 | `jwt` | autenticada, sem papel exigido na rota — o escopo vem do próprio recurso |
 
-## As quatro rotas públicas
+## As doze rotas públicas
+
+Eram quatro até a Fase 6. A Fase 7a acrescentou oito de uma vez — o auth
+first-party — e cada uma está justificada abaixo. Abrir mais alguma continua
+exigindo mexer na asserção de `route-surface.spec.ts`, que lista as públicas
+literalmente para forçar a conversa.
+
+### Infraestrutura
 
 **`GET /live`** — liveness. Não toca no banco de propósito: responde enquanto o
 processo estiver vivo. Exigir token aqui faria o kubelet reiniciar o pod ao
@@ -38,6 +45,48 @@ Sem `@Public()` o alvo apareceria como `down` com todo o resto verde.
 O browser do usuário chega aqui vindo do provider, sem sessão da api. Não é
 irrestrita: o parâmetro `state` é validado por HMAC
 (`GIT_OAUTH_STATE_SECRET`), e sem `state` válido a chamada é recusada.
+
+### Auth first-party (Fase 7a)
+
+As sete rotas de `/auth/*` mais o JWKS. **Todas precisam ser públicas pela
+mesma razão estrutural:** o `JwtAuthGuard` global ainda verifica token do
+Keycloak nesta fase, então exigir token numa rota de auth pediria uma
+credencial do sistema antigo para entrar no novo. A 7.2 revisita o `logout`,
+que é a única que poderia passar a ser autenticada depois da troca de emissor.
+
+> **O que protege estas rotas não é o rate limit.** O `RateLimitGuard` libera
+> rota `@Public()` — de propósito, para não estrangular `/health` até o kubelet
+> reiniciar o pod. Quem segura esta superfície é o **lockout progressivo** por
+> e-mail e por IP, dentro dos casos de uso. Não é reforço opcional: é a única
+> defesa que existe aqui. Ver
+> [RN-030](business-rules.md#rn-030) e [RN-031](business-rules.md#rn-031).
+
+**`POST /auth/register`** — cadastro. Responde `202` tanto para endereço novo
+quanto para já cadastrado; no segundo caso nada é criado e o dono do endereço
+recebe um aviso. Um `409 Conflict`, que é o que o bom senso REST pediria,
+entregaria a lista de usuários a quem tiver uma wordlist.
+
+**`POST /auth/login`** — autenticação. E-mail inexistente, senha errada e conta
+bloqueada devolvem a **mesma** resposta 401, e gastam o **mesmo** tempo (o ramo
+sem conta verifica contra um hash dummy de parâmetros idênticos).
+
+**`POST /auth/refresh`** — rotação. O próprio refresh token é a credencial, e
+por isso a rota não pode exigir outra.
+
+**`POST /auth/logout`** — revoga a família do token apresentado. Sempre `204`,
+inclusive para token desconhecido: responder 401 aqui seria um oráculo de
+validade de token.
+
+**`POST /auth/verify-email`**, **`POST /auth/request-password-reset`**,
+**`POST /auth/reset-password`** — fluxos de conta. Quem chega neles ainda não
+tem sessão, por definição. A credencial é o token de uso único que veio por
+e-mail; link inválido, expirado e já usado têm resposta idêntica.
+
+**`GET /.well-known/jwks.json`** — a metade **pública** do par Ed25519 que
+assina os access tokens. Mesmo raciocínio de `/metrics`: quem consome não tem
+token, e exigir um seria pedir credencial para poder validar credencial.
+Publicar chave pública é o propósito do formato — o que não pode sair daqui é
+o componente `d` da JWK, travado por teste.
 
 ## Notas
 
@@ -58,6 +107,14 @@ irrestrita: o parâmetro `state` é validado por HMAC
 
 | método | caminho | classificação |
 |---|---|---|
+| GET | `/.well-known/jwks.json` | public |
+| POST | `/auth/login` | public |
+| POST | `/auth/logout` | public |
+| POST | `/auth/refresh` | public |
+| POST | `/auth/register` | public |
+| POST | `/auth/request-password-reset` | public |
+| POST | `/auth/reset-password` | public |
+| POST | `/auth/verify-email` | public |
 | GET | `/git/oauth/:provider/callback` | public |
 | GET | `/health` | public |
 | GET | `/live` | public |
