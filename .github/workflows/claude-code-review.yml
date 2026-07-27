@@ -12,11 +12,20 @@ on:
 
 jobs:
   claude-review:
-    # Optional: Filter by PR author
-    # if: |
-    #   github.event.pull_request.user.login == 'external-contributor' ||
-    #   github.event.pull_request.user.login == 'new-developer' ||
-    #   github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR'
+    # PR de promoção (dev→qa, qa→main) é aberto pelo `github-actions[bot]` e
+    # NÃO é revisado, por dois motivos independentes:
+    #
+    # 1. O action se recusa a rodar com ator não-humano ("Workflow initiated by
+    #    non-human actor"). Sem este `if`, o check falha em TODA promoção — foi
+    #    o que aconteceu nos PRs #64 e #65 do ciclo v0.3.1.
+    # 2. Mesmo que rodasse, seria revisão repetida: a promoção só carrega
+    #    commits que já passaram por um PR para `dev`, onde este mesmo workflow
+    #    já revisou. Revisar de novo em cada degrau é a mesma diff três vezes.
+    #
+    # Pular é seguro porque `claude-review` NÃO é check required
+    # (docs/reference/rulesets.md, "Checks obrigatórios") — job pulado aqui não
+    # deixa PR de promoção pendente para sempre.
+    if: github.event.pull_request.user.login != 'github-actions[bot]'
 
     runs-on: ubuntu-latest
     permissions:

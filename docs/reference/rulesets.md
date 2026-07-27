@@ -155,6 +155,15 @@ workflow):
 > acrescentar job novo ao CI, ou ele entra nesta lista, ou fica de fora de
 > propósito e alguém escreve por quê.
 
+**`claude-review` fica de fora desta lista de propósito**, e este é o "alguém
+escreve por quê": revisão de LLM é opinativa e custa token, então ela informa o
+PR sem poder travá-lo. Como não é required, o job pode ser pulado sem deixar PR
+pendente — e é pulado em PR de promoção, que o `github-actions[bot]` abre. O
+action se recusa a rodar com ator não-humano (*"Workflow initiated by non-human
+actor"*), e mesmo que rodasse seria a mesma diff revisada de novo: a promoção
+só carrega commits já revisados no PR para `dev`. Sem esse `if`, o check falha
+em toda promoção — foi o que aconteceu nos PRs #64 e #65 do ciclo `v0.3.1`.
+
 ### Bypass
 
 | quem | modo | para quê |
