@@ -7,20 +7,68 @@ packages:
   # este último é o que faz o Node 24 executar os `.ts` de scripts/ci/ direto,
   # sem build. Os `.mjs` ao lado não são afetados: `.mjs` é ESM sempre.
   - scripts
-# O `@nestjs/swagger@11.4.6` (Fase 7b) fixa `js-yaml` em `5.2.1` EXATO — não é
-# faixa, é pino. E a 5.2.1 carrega a GHSA-pm4m-ph32-ghv5 (HIGH): tempo de
-# parsing exponencial em flow collections, negação de serviço. Não existe
-# versão do `@nestjs/swagger` que aponte para a corrigida — a 11.4.6 é a última
-# publicada —, então o Trivy reprovaria o scan da imagem de produção enquanto o
-# upstream não se mexesse.
+
+# Overrides de SEGURANÇA — cada linha fecha um alerta do Dependabot sobre uma
+# dependência TRANSITIVA, onde subir o pai não resolve porque o pai não tem
+# versão nova.
 #
-# O override é escopado à 5.2.1: a `4.x`, que dez outras transitivas usam, fica
-# intocada. A 5.2.2 é patch da mesma linha (só o fix do parser), e o
-# `@nestjs/swagger` usa o `js-yaml` apenas para serializar o documento em YAML.
+# Duas disciplinas aqui:
 #
-# Some quando o upstream soltar uma versão que já aponte para a 5.2.2 ou acima.
+#   1. a chave é a FAIXA VULNERÁVEL do aviso, não a versão que está instalada
+#      hoje. Fixar `js-yaml@5.2.1` fecharia o buraco de hoje e abriria de novo,
+#      em silêncio, no dia em que uma transitiva pedisse 5.2.0;
+#   2. a faixa é presa à LINHA MAIOR afetada. `lodash@<4.18.0` não toca a 5.x
+#      de ninguém, e `yaml@>=1.0.0 <1.10.3` não arrasta a 2.9.0 que o
+#      workspace usa de propósito.
+#
+# Cada entrada some quando o pai apontar para uma versão corrigida sozinho —
+# `pnpm audit` reprovando é o sinal de que ainda são necessárias, e o
+# `pnpm why` mostra se ainda há quem peça a antiga.
 overrides:
-  js-yaml@5.2.1: 5.2.2
+  # HIGH · GHSA-pm4m-ph32-ghv5 — parsing exponencial em flow collections (DoS).
+  # Entra por `@nestjs/swagger@11.4.6`, que fixa `js-yaml` em 5.2.1 EXATO — não
+  # é faixa, é pino — e é a última versão publicada, então não há bump de
+  # upstream que resolva. Esta é a ÚNICA destas que chega na imagem de produção
+  # da api (o Trivy reprovava o scan por ela); as outras são todas de build.
+  #
+  # A 5.2.2 é patch da mesma linha, só o fix do parser, e o `@nestjs/swagger`
+  # usa a lib apenas para serializar o documento em YAML — caminho que a api
+  # nem exerce, porque o export é JSON.
+  #
+  # Entrou primeiro no #70 como `js-yaml@5.2.1: 5.2.2`; virou faixa aqui pelo
+  # motivo explicado na disciplina 1 acima.
+  js-yaml@>=5.0.0 <5.2.2: 5.2.2
+  # HIGH · GHSA-52cp-r559-cp3m (mais duas moderadas na mesma linha). Entra por
+  # `openapi-to-postmanv2`, do subárvore de geração de snippets do
+  # docusaurus-theme-openapi-docs. A 4.3.0 já estava na árvore.
+  js-yaml@>=4.0.0 <4.3.0: 4.3.0
+  # HIGH · GHSA-r5fr-rjxr-66jc. A versão corrigida que o aviso cita (4.17.24)
+  # NÃO existe no registry — a linha 4.17 parou na 4.17.23 e a correção saiu na
+  # 4.18.0. Daí o alvo ser a 4.18.1, que o `@nestjs/swagger` já traz.
+  lodash@<4.18.0: 4.18.1
+  # HIGH · GHSA-5c6j-r48x-rmvq e moderada GHSA-qj8w-gfj5-8c6v. Entra pelos
+  # plugins de webpack do Docusaurus. A 7.x pede Node >= 20; o CI roda 24.
+  serialize-javascript@<7.0.5: 7.0.7
+  # MODERATE · GHSA-48c2-rrv3-qjmp. Patch dentro da 1.x — não confundir com o
+  # `yaml` 2.9.0 que o workspace usa direto, fora da faixa.
+  yaml@>=1.0.0 <1.10.3: 1.10.3
+  # MODERATE · GHSA-w5hq-g745-h8pq. Entra por `postman-collection` e por
+  # `sockjs` (o dev-server do webpack), os dois com `require('uuid').v4`.
+  #
+  # O alvo é a 11.1.1 EXATA, e isso é load-bearing: a uuid virou ESM-only na
+  # 14 (`type: module`, sem `main`), e `^11.1.1` deixaria a porta aberta para o
+  # resolvedor escolher algo assim mais tarde. A 11.1.1 ainda é dual — conferi
+  # instalando-a num diretório à parte e chamando `require('uuid').v4()`, que
+  # devolve um uuid.
+  uuid@<11.1.1: 11.1.1
+  # MODERATE · GHSA-67mh-4wv8-2f99 — o dev-server do esbuild aceita requisição
+  # de qualquer origem. Entra por `@esbuild-kit/core-utils`, que o drizzle-kit
+  # ainda arrasta (e a 0.31.10 já é a última publicada).
+  #
+  # O caminho não é explorável aqui: o `esbuild --serve` nunca sobe, o
+  # drizzle-kit só usa a lib para transpilar `drizzle.config.ts`. Mesmo assim
+  # vale fechar — o alerta some e a 0.25.12 já estava na árvore por outro pai.
+  esbuild@<0.24.3: 0.25.12
 
 allowBuilds:
   '@swc/core': true
