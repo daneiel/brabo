@@ -381,7 +381,10 @@ jobs:
         run: |
           set -euo pipefail
           out="$(kustomize build deploy/k8s/overlays/local)"
-          for port in 30300 30400 30080 30088; do
+          # 30080 saiu com o Keycloak (Fase 7.2): era a porta dele, e nenhum
+          # serviço a ocupa desde então. Manter a asserção reprovaria para
+          # sempre uma remoção que já foi feita de propósito.
+          for port in 30300 30400 30088; do
             grep -q "nodePort: ${port}" <<<"${out}" \
               || { echo "NodePort ${port} sumiu do overlay local"; exit 1; }
           done
