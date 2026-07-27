@@ -104,6 +104,13 @@ o componente `d` da JWK, travado por teste.
   `@ServiceRoute()`: o token de usuário não serve aqui e o de serviço não serve
   em nenhuma outra rota — os dois mecanismos nunca se sobrepõem
   ([RN-035](business-rules.md#rn-035)).
+- **`/docs` e `/docs-json` NÃO estão na tabela, e isso é uma lacuna
+  conhecida.** O Swagger UI é montado por `SwaggerModule.setup()` no nível do
+  Express, não como controller, e o teste enumera por `DiscoveryService` — ele
+  estruturalmente não as vê. As duas só existem com `NODE_ENV !== 'production'`
+  (`main.ts`), são públicas, e servem o mesmo documento que a
+  [referência gerada](reference/api/brabo-api) publica. Registrado aqui em vez
+  de omitido: o que o teste não alcança precisa estar na prosa.
 - **`jwt` sem papel não significa sem autorização.** Em `/users/me/*` o escopo é
   o próprio usuário; em `GET /workspaces` a listagem já é filtrada pela
   associação de quem chamou.

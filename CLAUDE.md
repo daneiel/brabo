@@ -52,8 +52,12 @@ e pipeline de aprovação de ações com autoridade final do usuário.
     token, sessão da web em cookie httpOnly com CSRF, migração dos
     usuários e remoção do Keycloak do compose, do k8s e das docs
     (ADR 0032, RN-034/035).
-  - 7b (itens 6–8) — PENDENTE: OpenAPI em todos os controllers e
-    docs/reference/api/ gerado no Docusaurus.
+  - 7b (itens 6–8) — CONCLUÍDA: OpenAPI em todos os 23 controllers,
+    DTOs de resposta travados por tipo contra a entidade de domínio
+    (Wire<T> + MesmasChaves), teste de tabela exigindo summary,
+    resposta com corpo e tag da lista fechada, e docs/reference/api/
+    gerado pelo docusaurus-plugin-openapi-docs com manifesto de hashes
+    no docs:check (ADR 0033).
 - Não refatore o que está pronto sem pedido explícito.
 
 ## Escopo da FASE 7 (ativa — auth first-party + referência de rotas)

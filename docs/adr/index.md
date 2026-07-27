@@ -113,12 +113,13 @@ O loop que faz o time melhorar.
 | # | decisão |
 |---|---|
 | [0032](0032-corte-do-keycloak-e-sessao-em-cookie.md) | O corte atômico do Keycloak: emissor próprio no guard sem tocar no RBAC, `/internal/*` fora do JWT com segredo compartilhado, sessão da web em cookie httpOnly com CSRF, e o usuário migrado indistinguível de um e-mail que não existe |
+| [0033](0033-referencia-de-api-gerada-do-openapi.md) | A referência de API sai do código: DTOs de resposta que espelham a entidade por tipo, o teste de tabela cobrando summary e resposta de verdade (a sintetizada pelo Swagger não conta), e um manifesto de hashes no lugar de regerar no `--check` |
 
 ## A convenção
 
 - **Um arquivo por decisão**, em `docs/adr/NNNN-titulo-curto.md`, com
   numeração sequencial de 4 dígitos. **Sem reuso de número**, nem quando um ADR
-  é superado — o próximo é **0033**.
+  é superado — o próximo é **0034**.
 - **Três seções, só elas:** **Contexto** (o problema ou a força que motivou),
   **Decisão** (o que foi decidido), **Consequências** (os trade-offs aceitos e
   o que fica para depois).
