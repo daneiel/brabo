@@ -1,0 +1,3859 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/": {
+      "get": {
+        "operationId": "AppController_getHello",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "App"
+        ]
+      }
+    },
+    "/.well-known/jwks.json": {
+      "get": {
+        "description": "Uma chave em operação normal; duas durante uma rotação de AUTH_JWT_SECRET.",
+        "operationId": "JwksController_jwks",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JwksResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Chaves públicas de verificação do access token",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "description": "E-mail inexistente, senha errada e conta bloqueada devolvem exatamente a mesma resposta 401 — mesmo corpo, mesmo status.",
+        "operationId": "AuthController_login_",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessaoResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Credenciais inválidas."
+          },
+          "403": {
+            "description": "E-mail ainda não verificado."
+          }
+        },
+        "summary": "Autentica e emite o par access + refresh",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "description": "Sempre 204, inclusive para token desconhecido — responder 401 aqui seria um oráculo de validade de token.",
+        "operationId": "AuthController_logout_",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Revoga a família do refresh apresentado",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "description": "O refresh apresentado é consumido. Reapresentar um token já rotacionado revoga a FAMÍLIA inteira e registra evento de segurança — inclusive quando a causa foi um duplo-submit do cliente.",
+        "operationId": "AuthController_refresh_",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessaoResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refresh inválido, expirado ou já usado."
+          }
+        },
+        "summary": "Rotaciona o refresh e emite um par novo",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/register": {
+      "post": {
+        "description": "Responde 202 tanto para endereço novo quanto para endereço já cadastrado — a resposta não revela se a conta existe. No segundo caso nada é criado e o dono do endereço recebe um aviso.",
+        "operationId": "AuthController_register",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AceiteResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Senha fora da política mínima."
+          },
+          "403": {
+            "description": "Cadastro fechado (AUTH_REGISTRATION_ENABLED=false)."
+          }
+        },
+        "summary": "Cria uma conta e envia o e-mail de verificação",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/request-password-reset": {
+      "post": {
+        "description": "Responde 202 para endereço conhecido e desconhecido. É também o caminho de quem foi importado do Keycloak e ainda não definiu senha.",
+        "operationId": "AuthController_requestPasswordReset",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestPasswordResetDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AceiteResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Pede o link de redefinição de senha",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/reset-password": {
+      "post": {
+        "description": "Revoga TODAS as sessões do usuário. Não emite tokens: quem redefine a senha é mandado para o login, para comprometer o e-mail não equivaler a tomar a conta em um passo só.",
+        "operationId": "AuthController_resetPassword",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "400": {
+            "description": "Link inválido/expirado, ou senha fora da política."
+          }
+        },
+        "summary": "Define a senha nova a partir do token",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/verify-email": {
+      "post": {
+        "operationId": "AuthController_verifyEmail",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyEmailDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "400": {
+            "description": "Link inválido, expirado ou já usado — os três com a mesma resposta."
+          }
+        },
+        "summary": "Confirma o e-mail com o token de uso único",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/git/oauth/{provider}/callback": {
+      "get": {
+        "operationId": "GitController_callback",
+        "parameters": [
+          {
+            "name": "provider",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "code",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Git"
+        ]
+      }
+    },
+    "/health": {
+      "get": {
+        "operationId": "HealthController_check",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/internal/sessions/{sessionId}/actions": {
+      "post": {
+        "operationId": "InternalSessionsController_createAction",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateActionInternalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "InternalSessions"
+        ]
+      }
+    },
+    "/internal/sessions/{sessionId}/anamnese-context": {
+      "get": {
+        "operationId": "InternalSessionsController_anamneseContext",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "InternalSessions"
+        ]
+      }
+    },
+    "/internal/sessions/{sessionId}/dev-context": {
+      "get": {
+        "operationId": "InternalSessionsController_devContext",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "taskId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "module",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "InternalSessions"
+        ]
+      }
+    },
+    "/internal/sessions/{sessionId}/epics": {
+      "post": {
+        "operationId": "InternalSessionsController_epic",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateEpicInternalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "InternalSessions"
+        ]
+      }
+    },
+    "/internal/sessions/{sessionId}/events": {
+      "get": {
+        "operationId": "InternalSessionsController_listEvents",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "afterSeq",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "InternalSessions"
+        ]
+      },
+      "post": {
+        "operationId": "InternalSessionsController_appendEvent",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AppendSessionEventInternalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "InternalSessions"
+        ]
+      }
+    },
+    "/internal/sessions/{sessionId}/gates/verdict": {
+      "post": {
+        "operationId": "InternalSessionsController_gateVerdict",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecordGateVerdictInternalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "InternalSessions"
+        ]
+      }
+    },
+    "/internal/sessions/{sessionId}/handoffs": {
+      "post": {
+        "operationId": "InternalSessionsController_handoff",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateHandoffInternalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "InternalSessions"
+        ]
+      }
+    },
+    "/internal/sessions/{sessionId}/hypotheses": {
+      "post": {
+        "operationId": "InternalSessionsController_hypotheses",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProposeHypothesesInternalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "InternalSessions"
+        ]
+      }
+    },
+    "/internal/sessions/{sessionId}/infra-artifacts/{prActionId}/files": {
+      "get": {
+        "operationId": "InternalSessionsController_infraPrFiles",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "prActionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "InternalSessions"
+        ]
+      }
+    },
+    "/internal/sessions/{sessionId}/infra-context": {
+      "get": {
+        "operationId": "InternalSessionsController_infraContext",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "InternalSessions"
+        ]
+      }
+    },
+    "/internal/sessions/{sessionId}/infra-gates/verdict": {
+      "post": {
+        "operationId": "InternalSessionsController_infraGateVerdict",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecordInfraGateVerdictInternalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "InternalSessions"
+        ]
+      }
+    },
+    "/internal/sessions/{sessionId}/instruction-patches": {
+      "post": {
+        "operationId": "InternalSessionsController_instructionPatch",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProposeInstructionPatchInternalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "InternalSessions"
+        ]
+      }
+    },
+    "/internal/sessions/{sessionId}/llm-turn": {
+      "post": {
+        "operationId": "InternalSessionsController_llmTurn",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunLlmTurnDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "InternalSessions"
+        ]
+      }
+    },
+    "/internal/sessions/{sessionId}/llm-turn-stream": {
+      "post": {
+        "operationId": "InternalSessionsController_llmTurnStream",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StreamLlmTurnDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "InternalSessions"
+        ]
+      }
+    },
+    "/internal/sessions/{sessionId}/module-map": {
+      "post": {
+        "operationId": "InternalSessionsController_moduleMap",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateModuleMapInternalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "InternalSessions"
+        ]
+      }
+    },
+    "/internal/sessions/{sessionId}/proficiency": {
+      "post": {
+        "operationId": "InternalSessionsController_proficiency",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecordProficiencyInternalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "InternalSessions"
+        ]
+      }
+    },
+    "/internal/sessions/{sessionId}/psychologist-context": {
+      "get": {
+        "operationId": "InternalSessionsController_psychologistContext",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "InternalSessions"
+        ]
+      }
+    },
+    "/internal/sessions/{sessionId}/stories": {
+      "post": {
+        "operationId": "InternalSessionsController_story",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateStoryInternalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "InternalSessions"
+        ]
+      }
+    },
+    "/internal/sessions/{sessionId}/story-modules": {
+      "post": {
+        "operationId": "InternalSessionsController_storyModules",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignStoryModulesInternalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "InternalSessions"
+        ]
+      }
+    },
+    "/internal/sessions/{sessionId}/tasks": {
+      "post": {
+        "operationId": "InternalSessionsController_task",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTaskInternalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "InternalSessions"
+        ]
+      }
+    },
+    "/internal/sessions/{sessionId}/tasks/{taskId}/block": {
+      "post": {
+        "operationId": "InternalSessionsController_blockTask",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "taskId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BlockTaskInternalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "InternalSessions"
+        ]
+      }
+    },
+    "/internal/sessions/{sessionId}/tasks/{taskId}/gate/open": {
+      "post": {
+        "operationId": "InternalSessionsController_openGateEndpoint",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "taskId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OpenGateInternalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "InternalSessions"
+        ]
+      }
+    },
+    "/internal/sessions/{sessionId}/tasks/{taskId}/status": {
+      "post": {
+        "operationId": "InternalSessionsController_markTaskStatus",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "taskId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MarkTaskInternalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "InternalSessions"
+        ]
+      }
+    },
+    "/internal/sessions/{sessionId}/tasks/claim": {
+      "post": {
+        "operationId": "InternalSessionsController_claimTask",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClaimTaskInternalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "InternalSessions"
+        ]
+      }
+    },
+    "/internal/sessions/{sessionId}/termination": {
+      "post": {
+        "operationId": "InternalSessionsController_report",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportSessionTerminationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "InternalSessions"
+        ]
+      }
+    },
+    "/live": {
+      "get": {
+        "operationId": "HealthController_live",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/metrics": {
+      "get": {
+        "operationId": "MetricsController_scrape",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Metrics"
+        ]
+      }
+    },
+    "/models": {
+      "get": {
+        "operationId": "ModelsController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Models"
+        ]
+      }
+    },
+    "/projects/{projectId}": {
+      "get": {
+        "operationId": "ProjectsController_get",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Projects"
+        ]
+      },
+      "patch": {
+        "operationId": "ProjectsController_update",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProjectDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Projects"
+        ]
+      },
+      "delete": {
+        "operationId": "ProjectsController_remove",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Projects"
+        ]
+      }
+    },
+    "/projects/{projectId}/agent-autonomy": {
+      "get": {
+        "operationId": "AgentAutonomyController_list",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "AgentAutonomy"
+        ]
+      },
+      "put": {
+        "operationId": "AgentAutonomyController_set",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetAgentAutonomyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "AgentAutonomy"
+        ]
+      }
+    },
+    "/projects/{projectId}/agent-bindings/{agentSlug}": {
+      "get": {
+        "operationId": "ModelBindingsController_getAgentBinding",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "agentSlug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "ModelBindings"
+        ]
+      },
+      "put": {
+        "operationId": "ModelBindingsController_setAgentBinding",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "agentSlug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetModelBindingDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "ModelBindings"
+        ]
+      }
+    },
+    "/projects/{projectId}/agents/{agent}/instruction-versions": {
+      "get": {
+        "operationId": "AnamneseController_versions",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "agent",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Anamnese"
+        ]
+      }
+    },
+    "/projects/{projectId}/agents/{agent}/instruction-versions/{version}/rollback": {
+      "post": {
+        "operationId": "AnamneseController_rollbackVersion",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "agent",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Anamnese"
+        ]
+      }
+    },
+    "/projects/{projectId}/anamnese/run": {
+      "post": {
+        "operationId": "AnamneseController_run",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Anamnese"
+        ]
+      }
+    },
+    "/projects/{projectId}/architecture": {
+      "get": {
+        "operationId": "BacklogController_architecture",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Backlog"
+        ]
+      }
+    },
+    "/projects/{projectId}/backlog": {
+      "get": {
+        "operationId": "BacklogController_backlog",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Backlog"
+        ]
+      }
+    },
+    "/projects/{projectId}/budget": {
+      "get": {
+        "operationId": "BudgetsController_getProjectBudget",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Budgets"
+        ]
+      },
+      "put": {
+        "operationId": "BudgetsController_setProjectBudget",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpsertBudgetDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Budgets"
+        ]
+      }
+    },
+    "/projects/{projectId}/coverage": {
+      "get": {
+        "operationId": "BacklogController_coverage",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Backlog"
+        ]
+      }
+    },
+    "/projects/{projectId}/events/{eventId}": {
+      "get": {
+        "operationId": "AnamneseController_event",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Anamnese"
+        ]
+      }
+    },
+    "/projects/{projectId}/execution/activate": {
+      "post": {
+        "operationId": "ExecutionController_activate",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActivateExecutionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Execution"
+        ]
+      }
+    },
+    "/projects/{projectId}/git/{provider}/connect": {
+      "get": {
+        "operationId": "GitController_connect",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "provider",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Git"
+        ]
+      }
+    },
+    "/projects/{projectId}/git/{provider}/repository": {
+      "post": {
+        "operationId": "GitController_provision",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "provider",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProvisionRepositoryDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Git"
+        ]
+      }
+    },
+    "/projects/{projectId}/git/bootstrap": {
+      "get": {
+        "operationId": "GitController_getBootstrap",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Git"
+        ]
+      }
+    },
+    "/projects/{projectId}/git/repository": {
+      "get": {
+        "operationId": "GitController_get",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Git"
+        ]
+      }
+    },
+    "/projects/{projectId}/hypotheses": {
+      "get": {
+        "operationId": "PsychologistController_hypotheses",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Psychologist"
+        ]
+      }
+    },
+    "/projects/{projectId}/hypotheses/{hypothesisId}/accept": {
+      "post": {
+        "operationId": "PsychologistController_accept",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "hypothesisId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Psychologist"
+        ]
+      }
+    },
+    "/projects/{projectId}/hypotheses/{hypothesisId}/dismiss": {
+      "post": {
+        "operationId": "PsychologistController_dismiss",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "hypothesisId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Psychologist"
+        ]
+      }
+    },
+    "/projects/{projectId}/infra-artifacts": {
+      "get": {
+        "operationId": "BacklogController_infraArtifacts",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Backlog"
+        ]
+      }
+    },
+    "/projects/{projectId}/instruction-versions": {
+      "get": {
+        "operationId": "AnamneseController_allVersions",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Anamnese"
+        ]
+      }
+    },
+    "/projects/{projectId}/members": {
+      "get": {
+        "operationId": "ProjectsController_listMembers",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Projects"
+        ]
+      },
+      "post": {
+        "operationId": "ProjectsController_addMember",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddMemberDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Projects"
+        ]
+      }
+    },
+    "/projects/{projectId}/members/{userId}": {
+      "delete": {
+        "operationId": "ProjectsController_removeMember",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Projects"
+        ]
+      }
+    },
+    "/projects/{projectId}/model-binding": {
+      "get": {
+        "operationId": "ModelBindingsController_getProjectBinding",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "ModelBindings"
+        ]
+      },
+      "put": {
+        "operationId": "ModelBindingsController_setProjectBinding",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetModelBindingDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "ModelBindings"
+        ]
+      }
+    },
+    "/projects/{projectId}/permissions": {
+      "get": {
+        "operationId": "ProjectsController_getPermissions",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Projects"
+        ]
+      },
+      "put": {
+        "operationId": "ProjectsController_setPermissions",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetProjectPermissionsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Projects"
+        ]
+      }
+    },
+    "/projects/{projectId}/proficiency": {
+      "get": {
+        "operationId": "AnamneseController_proficiency",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Anamnese"
+        ]
+      }
+    },
+    "/projects/{projectId}/proficiency/me": {
+      "delete": {
+        "operationId": "AnamneseController_deleteMine",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Anamnese"
+        ]
+      }
+    },
+    "/projects/{projectId}/proficiency/me/opt-in": {
+      "post": {
+        "operationId": "AnamneseController_optInMine",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Anamnese"
+        ]
+      }
+    },
+    "/projects/{projectId}/psychologist/analyses": {
+      "get": {
+        "operationId": "PsychologistController_analyses",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Psychologist"
+        ]
+      }
+    },
+    "/projects/{projectId}/sessions": {
+      "get": {
+        "operationId": "SessionsController_list",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Sessions"
+        ]
+      },
+      "post": {
+        "operationId": "SessionsController_create",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Sessions"
+        ]
+      }
+    },
+    "/projects/{projectId}/sessions/{sessionId}": {
+      "get": {
+        "operationId": "SessionsController_get",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Sessions"
+        ]
+      }
+    },
+    "/projects/{projectId}/sessions/{sessionId}/actions": {
+      "get": {
+        "operationId": "ActionsController_list",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "afterSeq",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Actions"
+        ]
+      },
+      "post": {
+        "operationId": "ActionsController_propose",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProposeActionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Actions"
+        ]
+      }
+    },
+    "/projects/{projectId}/sessions/{sessionId}/actions/{actionId}/approve": {
+      "post": {
+        "operationId": "ActionsController_approve",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "actionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Actions"
+        ]
+      }
+    },
+    "/projects/{projectId}/sessions/{sessionId}/actions/{actionId}/approve_always": {
+      "post": {
+        "operationId": "ActionsController_approveAlways",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "actionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Actions"
+        ]
+      }
+    },
+    "/projects/{projectId}/sessions/{sessionId}/actions/{actionId}/deny": {
+      "post": {
+        "operationId": "ActionsController_deny",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "actionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DenyActionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Actions"
+        ]
+      }
+    },
+    "/projects/{projectId}/sessions/{sessionId}/agents/{agent}/message": {
+      "post": {
+        "operationId": "AgentsController_message",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "agent",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendAgentMessageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Agents"
+        ]
+      }
+    },
+    "/projects/{projectId}/sessions/{sessionId}/agents/{agent}/start": {
+      "post": {
+        "operationId": "AgentsController_start",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "agent",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Agents"
+        ]
+      }
+    },
+    "/projects/{projectId}/sessions/{sessionId}/agents/arquiteto/handoff-infra": {
+      "post": {
+        "operationId": "AgentsController_handoffInfra",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Agents"
+        ]
+      }
+    },
+    "/projects/{projectId}/sessions/{sessionId}/budget": {
+      "get": {
+        "operationId": "BudgetsController_getSessionBudget",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Budgets"
+        ]
+      },
+      "put": {
+        "operationId": "BudgetsController_setSessionBudget",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpsertBudgetDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Budgets"
+        ]
+      }
+    },
+    "/projects/{projectId}/sessions/{sessionId}/chat": {
+      "post": {
+        "operationId": "ChatController_chat",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendChatMessageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Chat"
+        ]
+      }
+    },
+    "/projects/{projectId}/sessions/{sessionId}/events": {
+      "get": {
+        "operationId": "SessionsController_listEvents",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "afterSeq",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "latest",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Sessions"
+        ]
+      },
+      "post": {
+        "operationId": "SessionsController_appendEvent",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AppendSessionEventDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Sessions"
+        ]
+      }
+    },
+    "/projects/{projectId}/sessions/{sessionId}/events/{eventId}": {
+      "get": {
+        "operationId": "SessionsController_getEvent",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Sessions"
+        ]
+      }
+    },
+    "/projects/{projectId}/sessions/{sessionId}/execution/parallelize": {
+      "post": {
+        "operationId": "ExecutionController_parallelize",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcceptParallelizationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Execution"
+        ]
+      }
+    },
+    "/projects/{projectId}/sessions/{sessionId}/handoffs": {
+      "get": {
+        "operationId": "AgentsController_handoffs",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Agents"
+        ]
+      }
+    },
+    "/projects/{projectId}/sessions/{sessionId}/handoffs/{handoffId}/accept": {
+      "post": {
+        "operationId": "AgentsController_accept",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "handoffId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Agents"
+        ]
+      }
+    },
+    "/projects/{projectId}/sessions/{sessionId}/model-binding": {
+      "get": {
+        "operationId": "ModelBindingsController_getSessionBinding",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "ModelBindings"
+        ]
+      },
+      "put": {
+        "operationId": "ModelBindingsController_setSessionBinding",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetModelBindingDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "ModelBindings"
+        ]
+      }
+    },
+    "/projects/{projectId}/sessions/{sessionId}/psychologist/reanalyze": {
+      "post": {
+        "operationId": "PsychologistController_reanalyze",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Psychologist"
+        ]
+      }
+    },
+    "/projects/{projectId}/sessions/{sessionId}/readiness": {
+      "post": {
+        "operationId": "AgentsController_readiness",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Agents"
+        ]
+      }
+    },
+    "/projects/{projectId}/sessions/{sessionId}/tasks/{taskId}/unblock": {
+      "post": {
+        "operationId": "ExecutionController_unblock",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "taskId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Execution"
+        ]
+      }
+    },
+    "/projects/{projectId}/sessions/{sessionId}/token-usage": {
+      "get": {
+        "operationId": "BudgetsController_getSessionTokenUsage",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Budgets"
+        ]
+      }
+    },
+    "/projects/{projectId}/sessions/{sessionId}/transition": {
+      "post": {
+        "operationId": "SessionsController_transition",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransitionSessionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Sessions"
+        ]
+      }
+    },
+    "/users/me/credentials": {
+      "get": {
+        "operationId": "CredentialsController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Credentials"
+        ]
+      },
+      "post": {
+        "operationId": "CredentialsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpsertCredentialDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Credentials"
+        ]
+      }
+    },
+    "/users/me/credentials/{provider}": {
+      "delete": {
+        "operationId": "CredentialsController_remove",
+        "parameters": [
+          {
+            "name": "provider",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Credentials"
+        ]
+      }
+    },
+    "/users/me/git-credentials": {
+      "post": {
+        "operationId": "GitCredentialsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterGitCredentialDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "GitCredentials"
+        ]
+      }
+    },
+    "/workspaces": {
+      "get": {
+        "operationId": "WorkspacesController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Workspaces"
+        ]
+      },
+      "post": {
+        "operationId": "WorkspacesController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateWorkspaceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Workspaces"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}": {
+      "get": {
+        "operationId": "WorkspacesController_get",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Workspaces"
+        ]
+      },
+      "patch": {
+        "operationId": "WorkspacesController_update",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateWorkspaceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Workspaces"
+        ]
+      },
+      "delete": {
+        "operationId": "WorkspacesController_remove",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Workspaces"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/members": {
+      "post": {
+        "operationId": "WorkspacesController_addMember",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddMemberDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Workspaces"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/model-binding": {
+      "get": {
+        "operationId": "ModelBindingsController_getWorkspaceBinding",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "ModelBindings"
+        ]
+      },
+      "put": {
+        "operationId": "ModelBindingsController_setWorkspaceBinding",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetModelBindingDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "ModelBindings"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/projects": {
+      "get": {
+        "operationId": "WorkspacesController_listProjects",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Workspaces"
+        ]
+      },
+      "post": {
+        "operationId": "WorkspacesController_createProjectInWorkspace",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProjectDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Workspaces"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Brabo API",
+    "description": "A API do Brabo. Todo endpoint devolve JSON, salvo os quatro documentados\nexplicitamente com outro `content-type` (dois de SSE, o de métricas e o\ncallback de OAuth, que redireciona).\n\n## Autenticação\n\nO access token é um JWT **EdDSA de 15 minutos**, apresentado em\n`Authorization: Bearer <token>`. A chave pública fica em\n`GET /.well-known/jwks.json`.\n\nO refresh **não** é um JWT: é um token opaco que vive num cookie `httpOnly`\n(`brabo_refresh`, `Path=/auth`, `SameSite=Strict`) e nunca aparece no corpo\nde nenhuma resposta. `POST /auth/refresh` e `POST /auth/logout` leem o cookie\ne exigem o cabeçalho `X-CSRF-Token` igual ao cookie `brabo_csrf`.\n\n**A rotação é obrigatória.** Cada refresh consome o token apresentado e emite\noutro. Reapresentar um já consumido é assinatura de roubo e revoga a família\ninteira — inclusive a sessão legítima. Um cliente que dispare dois refresh\nconcorrentes derruba o próprio usuário; use uma única chamada em voo.\n\nAs rotas `/internal/*` são a superfície api ↔ engine e ficam **fora do JWT**:\nelas exigem o cabeçalho `X-Brabo-Service-Token` com o segredo compartilhado.\nUm token de usuário não abre nenhuma delas.\n\n## Erros\n\nFormato padrão do NestJS: `{ \"statusCode\": number, \"message\": string | string[], \"error\": string }`.\n\n| código | quando |\n|---|---|\n| `400` | corpo inválido — o `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova |\n| `401` | sem token, token expirado ou credencial inválida |\n| `403` | autenticado mas sem o papel exigido pelo RBAC, ou service token errado |\n| `404` | recurso inexistente **ou** invisível para quem chamou |\n| `409` | conflito de estado — transição de sessão inválida, recurso já existente |\n| `429` | rate limit ou lockout progressivo |\n\nAs rotas de auth respondem de forma **deliberadamente indistinguível** entre\ne-mail inexistente, senha errada e conta bloqueada: mesmo corpo, mesmo status,\nmesmo tempo. É o que fecha a enumeração de contas, e não é defeito de\ndiagnóstico.\n\n## Rate limit\n\nJanela deslizante no Postgres: 300 requisições por usuário e 600 por IP a cada\n60 s, configuráveis. Rota `@Public()` e rota de serviço são **isentas** — o que\nsegura `/auth/*` é o lockout progressivo, não o rate limit.",
+    "version": "0.1.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      },
+      "service-token": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Brabo-Service-Token"
+      }
+    },
+    "schemas": {
+      "AcceptParallelizationDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "AceiteResponseDto": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "Se o endereço estiver disponível, enviamos um e-mail.",
+            "description": "Mensagem genérica, idêntica para endereço conhecido e desconhecido — ver a nota de enumeração na referência."
+          }
+        },
+        "required": [
+          "message"
+        ]
+      },
+      "ActivateExecutionDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "AddMemberDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "AppendSessionEventDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "AppendSessionEventInternalDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "AssignStoryModulesInternalDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "BlockTaskInternalDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "ClaimTaskInternalDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "CreateActionInternalDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "CreateEpicInternalDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "CreateHandoffInternalDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "CreateModuleMapInternalDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "CreateProjectDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "CreateStoryInternalDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "CreateTaskInternalDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "CreateWorkspaceDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "DenyActionDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "JwksResponseDto": {
+        "type": "object",
+        "properties": {
+          "keys": {
+            "description": "Chaves públicas Ed25519 ativas. Durante uma rotação, duas.",
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "required": [
+          "keys"
+        ]
+      },
+      "LoginDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "fulano@brabo.dev"
+          },
+          "senha": {
+            "type": "string",
+            "example": "cavalo bateria grampo correto"
+          }
+        },
+        "required": [
+          "email",
+          "senha"
+        ]
+      },
+      "MarkTaskInternalDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "OpenGateInternalDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "ProposeActionDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "ProposeHypothesesInternalDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "ProposeInstructionPatchInternalDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "ProvisionRepositoryDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "RecordGateVerdictInternalDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "RecordInfraGateVerdictInternalDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "RecordProficiencyInternalDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "RegisterDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "fulano@brabo.dev",
+            "description": "E-mail da conta."
+          },
+          "senha": {
+            "type": "string",
+            "example": "cavalo bateria grampo correto",
+            "minLength": 12,
+            "description": "Senha. Mínimo de 12 caracteres; não há exigência de maiúscula, dígito ou símbolo."
+          },
+          "nome": {
+            "type": "string",
+            "example": "Fulano de Tal"
+          }
+        },
+        "required": [
+          "email",
+          "senha"
+        ]
+      },
+      "RegisterGitCredentialDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "ReportSessionTerminationDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "RequestPasswordResetDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "fulano@brabo.dev"
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "ResetPasswordDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "Token de uso único recebido por e-mail."
+          },
+          "novaSenha": {
+            "type": "string",
+            "example": "outra frase bem comprida",
+            "minLength": 12
+          }
+        },
+        "required": [
+          "token",
+          "novaSenha"
+        ]
+      },
+      "RunLlmTurnDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "SendAgentMessageDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "SendChatMessageDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "SessaoResponseDto": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "JWT EdDSA de vida curta."
+          },
+          "expiresIn": {
+            "type": "number",
+            "example": 900,
+            "description": "Segundos até o access token expirar."
+          }
+        },
+        "required": [
+          "accessToken",
+          "expiresIn"
+        ]
+      },
+      "SetAgentAutonomyDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "SetModelBindingDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "SetProjectPermissionsDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "StreamLlmTurnDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "TransitionSessionDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "UpdateProjectDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "UpdateWorkspaceDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "UpsertBudgetDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "UpsertCredentialDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "VerifyEmailDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "Token de uso único recebido por e-mail."
+          }
+        },
+        "required": [
+          "token"
+        ]
+      }
+    }
+  }
+}
