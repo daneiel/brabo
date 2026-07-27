@@ -358,6 +358,18 @@ que carregam já foi contado ou já foi lançado. Sem essa exclusão, um backmer
 de hotfix sozinho geraria um ciclo novo: uma tag `-dev.N` sobre uma versão que
 não mudou nada.
 
+Duas peças fazem essa descoberta e **têm que concordar**: o `tag-release`, que
+carimba no merge, e o `promote`, que calcula a versão do PR de promoção. Se
+divergirem, o PR de promoção anuncia uma versão e a tag sai com outra. As duas
+usam a mesma função — a duplicação da lógica já custou uma promoção reprovada
+com "ciclo vazio" logo depois de o `tag-release` ter carimbado `-dev.2`.
+
+> **O `promote` roda com o código da branch PADRÃO.** É `workflow_dispatch`
+> (ver a tabela de gatilhos em [Rulesets](../reference/rulesets.md)), então
+> corrigir o cálculo em `dev` **não** conserta o dispatch enquanto a correção
+> não chegar em `main`. Até lá, a saída é a mesma já documentada: rodar
+> `node scripts/ci/promote.ts` à mão, com o mesmo script.
+
 ### O `N`
 
 `N` é quantas tags daquela versão já existem naquele estágio, mais um.
