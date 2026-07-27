@@ -1,0 +1,69 @@
+---
+id: auth-controller-logout
+title: "Revoga a família do refresh apresentado"
+description: "Sempre 204, inclusive para token desconhecido — responder 401 aqui seria um oráculo de validade de token."
+sidebar_label: "Revoga a família do refresh apresentado"
+hide_title: true
+hide_table_of_contents: true
+api: eJy9Vs1uFEkSfpVQzgVK5XbDMCNt785qDcus8ErYcptlJApR0ZnR3YmzMsqZWQ2MbWlOI+19XgBxQBw4ob3Mtd5knmQ3sqrbBnHeg9tVUZnx88Xfd6EMRR1smyx7NVNzatpAcHd6rwTrteui3RC0GBASn5EHOc5+Tdoahj9++Q0CxZa9oQD3pncAzzsLkYJF6Brg0L/VnWMwBBt01qAhec6qJqpU3FJAMf3IqJk66NL6AfsU2DkKLxyvuEsvVKnEfkOJQlSzZ89LNdiMFNXsQt2d3pN/X8YRY/+OgbymENDgBI4iaOYzS1FciOOB/ONs03KcqKurUiVciRWFXVqr56VqKK1ZvGs5puxLWquZ2pfv+4OLqlSRwmbnXiTdBZvezPWamsHJBWGgIE8xC9VsKyrHhx85NJjUTB0+PVWlSm9aObROqVVXg36raS8jJ2rG79jaf9IbVSorUa8JTVbpMZv4ae9+wAXvzcfbp/m2RGn9krMam5yczOfg4PiRKr9A8kCkYBjykQmcshFYTcvWJzC0YbchOJwfPS4hotswcITzDlNgMKy7hnxCw7Hy9Lp1VtuEIiLQ3AB3cqzW7BP5tCdB1XDLsM05ms8flpCLp+k/pGA1RiDgymt0boH6TD4dSdWUcN4RBDI2kLbs8fak8pX/5hs46ESz1di/79+xCI8AtaYYx4LuP0ilHj49haJ4aP4+PxCld76DxvoucSyKErANFIcwgJrK12KSg/05l+4M7ucEwl+ywr/WEzgAvUbpm/73hbMaYSk/+eo/Hp7C/uQVObd35vmV33/56ixOXkb29WTwLtAyUFxDUfj+HRfFtYez8XFwnFvUnOPeSI/6rhnrG2qpmiPv3tSVv1UvJG8vRq11CfUxpvUPuX7lbY4NzW2iH+aCcKpvg+jyGgFbDKQJPIPm0HLlDYEnv+4aHNo+JpxAfXw0P4WhH7ZWgD4TD21SgyNqgEc3K09Ar+1qEOGC+vfo1gz1T3sP5ic/DsVag1116AB5F9wQj45hOSBWFAcQOA0JFoR4EewKU/8pWJz8D78HaHCHqmYfuSHgEcXPcgvU2ESVz2U5gRPafQ2C+8v+bb7fNTL8+g+AMVqPqQsoRRO4W4iSQBteISAssek/OouVtz6RDZgH5vVYxd0UcrTqPybb4ASeNKCdzR0iuTU2Shog98QYROU1e80hyCnplBC6BQJDG/pPbbAMXez6t8Hyn6GLBJKv/ncvNajX2Agc1MCGOeN3EDN8Eep9cTN4dPtFPQxGhNi1FJb9R20JsLXwx6+/AfmVleTlsm6gKJYsCLDUaFHMKk9OOvXruf3KRKqHWQCRVoGMZLppMSTr1mjExyfNbvnsIgOf/VuE65I0Ynbb9w9DkJlT+WGuMrRoglwxDI8ppsP5DOoLqFRMmLr4gA1VaiZdtKBQQqUaihFXWRhTsH4Fl+PDs+fynULgcOPr1VCNl6D7T8auGC5lCnrDcFn5y729vfwnB+p702kNl0NTgfWb/q3bblOG+l95UcpkObYyDgMbzADVr9Y2kbMx5f5aclhY85j9062YTF0C+SRhamxa/nxbJ2wW/YcGArWBNwhbZ+6IM5FGkMsRa3rd2iBdwR3oQIa8tuh27l5f/1au43bMGoYGY1YnmLfkciGI/ZYcw8n9gwel6Bw32tZayLa2Ou+JziBrNApC9Fqik5YoCu6KQrywsf+4ITdwk/OOmlzb3O10/GnA2C+dTXmJUMxdLjCngD7aYWLcIAO74Mqdcen5a/Oj7rtZd8BEQh1skngc6zPuErSBV4FitJsczo3+MiQwrXeMqRHJUsoTisKQswsSpjJsR+uNjcn6VZfDLApJbJChudegdTdBKSGSX+OAIYJsVp8QFo7PO0KDM2goNuMQL8eXoezLyg+viZqWJ9D/G4aVsiS9lhFGvmso4A6prDqWsiPGaWtoSQPAlTcWV77/FJPVvG3Ekx1KIjhEGQ5Sl87+jBKoZzjmmASzGXw7nUKg887m5PyHIrQcrnue4PvpNIseHQOCRoOV/34KscyJtqsu9G83ZOMETjgh1H877mQB37otHSNZGLIdNrZ/P3K/orB5wseiGDvwvKPKR1rJWK+HBVbUebF8LcnlgATfKAdhtsIGBwI1ndyZTFWpMnQ6qdmFEDBZng1mKjeStZMv14aMqu3aurGmvmRoF2qkT/9/+j6S0ESv037r0Hqhql1w4tTAk0ceXaqRKT8v1Vp49OyZurhYYKQnwV1difi8o/Bm4M8bDBYXwkufPb+6wcCFUairq/8Cv4SmoA==
+sidebar_class_name: "post api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Revoga a família do refresh apresentado"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/auth/logout"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Sempre 204, inclusive para token desconhecido — responder 401 aqui seria um oráculo de validade de token.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./auth-controller-logout.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./auth-controller-logout.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./auth-controller-logout.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

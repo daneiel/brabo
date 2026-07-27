@@ -1,0 +1,69 @@
+---
+id: backlog-controller-coverage
+title: "Calcula a cobertura regra de negócio → histórias"
+description: "Cruza as regras do projeto com o `businessRuleIds` das histórias. Regra sem história nenhuma é uma DESCOBERTA — pendência do PO, não erro."
+sidebar_label: "Calcula a cobertura regra de negócio → histórias"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "get api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Calcula a cobertura regra de negócio → histórias"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/projects/{projectId}/coverage"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Cruza as regras do projeto com o `businessRuleIds` das histórias. Regra sem história nenhuma é uma DESCOBERTA — pendência do PO, não erro.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./backlog-controller-coverage.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./backlog-controller-coverage.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./backlog-controller-coverage.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

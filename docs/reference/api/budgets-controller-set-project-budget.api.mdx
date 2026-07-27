@@ -1,0 +1,69 @@
+---
+id: budgets-controller-set-project-budget
+title: "Define o teto de gasto do projeto"
+description: "O limite entra em DÓLARES e é convertido para micro-USD. Com `policy=block` a chamada que estouraria o teto é RECUSADA, não apenas registrada."
+sidebar_label: "Define o teto de gasto do projeto"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "put api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Define o teto de gasto do projeto"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"put"}
+  path={"/projects/{projectId}/budget"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+O limite entra em DÓLARES e é convertido para micro-USD. Com `policy=block` a chamada que estouraria o teto é RECUSADA, não apenas registrada.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./budgets-controller-set-project-budget.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./budgets-controller-set-project-budget.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./budgets-controller-set-project-budget.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

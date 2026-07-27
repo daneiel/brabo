@@ -1,0 +1,69 @@
+---
+id: projects-controller-set-permissions
+title: "Reescreve o permissions.json do projeto"
+description: "Substitui as três listas de uma vez. `deny` continua vencendo `allow` na avaliação — não há como liberar por aqui algo que esteja negado."
+sidebar_label: "Reescreve o permissions.json do projeto"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "put api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Reescreve o permissions.json do projeto"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"put"}
+  path={"/projects/{projectId}/permissions"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Substitui as três listas de uma vez. `deny` continua vencendo `allow` na avaliação — não há como liberar por aqui algo que esteja negado.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./projects-controller-set-permissions.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./projects-controller-set-permissions.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./projects-controller-set-permissions.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

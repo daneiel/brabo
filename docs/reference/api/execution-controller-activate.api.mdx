@@ -1,0 +1,69 @@
+---
+id: execution-controller-activate
+title: "Ativa a fase de execução e sobe um dev agent por módulo"
+description: "Exige `maintainer`, e não `developer`, porque as ações de git dos dev agents herdam o papel de QUEM ATIVOU na avaliação de IAM — ativar como developer daria agentes incapazes de abrir PR. Cada módulo do `module_map` ganha um agente em worktree isolado."
+sidebar_label: "Ativa a fase de execução e sobe um dev agent por módulo"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "post api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Ativa a fase de execução e sobe um dev agent por módulo"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/projects/{projectId}/execution/activate"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Exige `maintainer`, e não `developer`, porque as ações de git dos dev agents herdam o papel de QUEM ATIVOU na avaliação de IAM — ativar como developer daria agentes incapazes de abrir PR. Cada módulo do `module_map` ganha um agente em worktree isolado.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./execution-controller-activate.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./execution-controller-activate.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./execution-controller-activate.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

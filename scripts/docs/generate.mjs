@@ -17,7 +17,8 @@
  * CI.
  */
 import { execFileSync } from 'node:child_process';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { RAIZ } from './docmap.mjs';
 
@@ -309,7 +310,87 @@ function gerarOpenapi() {
     ['--filter', 'api', 'exec', 'ts-node', 'src/scripts/export-openapi.ts'],
     { cwd: RAIZ, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 },
   );
-  escrever('docs/reference/api/openapi.json', json);
+  escrever(SPEC, json);
+}
+
+/**
+ * Onde mora cada peça da referência.
+ *
+ * A spec fica FORA de `DIR_API` de propósito: o `clean-api-docs` do plugin
+ * apaga aquele diretório inteiro antes de regerar, e um gerador que apaga a
+ * própria entrada é armadilha — a primeira execução funciona e a segunda
+ * falha com ENOENT.
+ */
+const SPEC = 'docs/reference/openapi.json';
+const DIR_API = 'docs/reference/api';
+const MANIFESTO = `${DIR_API}/.openapi-manifest.json`;
+
+function sha256(texto) {
+  return createHash('sha256').update(texto).digest('hex');
+}
+
+/** {arquivo: sha256} de tudo que o plugin escreve, exceto o próprio manifesto. */
+function hashesDaReferencia() {
+  const ignorar = new Set(['.openapi-manifest.json']);
+  const arquivos = readdirSync(join(RAIZ, DIR_API))
+    .filter((nome) => !ignorar.has(nome))
+    .sort();
+
+  const hashes = {};
+  for (const nome of arquivos) {
+    hashes[nome] = sha256(ler(`${DIR_API}/${nome}`));
+  }
+  return hashes;
+}
+
+/**
+ * Materializa `docs/reference/api/` a partir do `openapi.json`.
+ *
+ * ## Por que um manifesto em vez de regerar no `--check`
+ *
+ * O modo check NÃO ESCREVE — é a promessa dele. Então não dá para rodar o
+ * `gen-api-docs` e comparar: ele escreveria no working tree. A saída é um
+ * manifesto com o sha256 de cada arquivo gerado mais o do `openapi.json` que
+ * os produziu, e ele mesmo passa pelo `escrever()`.
+ *
+ * Em check, os hashes são recalculados DO DISCO e comparados com o commitado.
+ * Isso pega as quatro derivas que importam:
+ *
+ *   - `.mdx` editado à mão            → hash do arquivo diverge
+ *   - `.mdx` velho para spec nova     → `openapiSha256` diverge
+ *   - rota nova sem o gerado commitado → arquivo some da lista
+ *   - rota removida com gerado órfão   → arquivo sobra na lista
+ *
+ * Rodar o Docusaurus no check custaria minutos para dizer a mesma coisa.
+ *
+ * ## `clean` antes de `gen`
+ *
+ * Sem limpar, uma rota removida deixaria o `.mdx` dela para trás e o
+ * diretório acumularia órfãos que ninguém nota.
+ */
+function gerarReferenciaApi() {
+  if (!CHECAR) {
+    for (const comando of ['clean-api-docs', 'gen-api-docs']) {
+      execFileSync(
+        'pnpm',
+        ['--filter', 'website', 'exec', 'docusaurus', comando, 'all'],
+        { cwd: RAIZ, encoding: 'utf8', stdio: 'pipe' },
+      );
+    }
+  }
+
+  const conteudo =
+    JSON.stringify(
+      {
+        _: 'Gerado por `pnpm docs:generate`. Não edite — é a trava do que está em docs/reference/api/.',
+        openapiSha256: sha256(ler(SPEC)),
+        arquivos: hashesDaReferencia(),
+      },
+      null,
+      2,
+    ) + '\n';
+
+  escrever(MANIFESTO, conteudo);
 }
 
 // ----------------------------------------------------------- 5. índice de ADR
@@ -403,6 +484,7 @@ gerarScripts();
 gerarEnv();
 gerarEventos();
 gerarOpenapi();
+gerarReferenciaApi();
 verificarIndiceAdr();
 verificarContagensDeAdr();
 

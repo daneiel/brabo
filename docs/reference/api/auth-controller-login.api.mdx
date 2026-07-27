@@ -1,0 +1,69 @@
+---
+id: auth-controller-login
+title: "Autentica e emite o par access + refresh"
+description: "E-mail inexistente, senha errada e conta bloqueada devolvem exatamente a mesma resposta 401 — mesmo corpo, mesmo status."
+sidebar_label: "Autentica e emite o par access + refresh"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "post api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Autentica e emite o par access + refresh"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/auth/login"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+E-mail inexistente, senha errada e conta bloqueada devolvem exatamente a mesma resposta 401 — mesmo corpo, mesmo status.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./auth-controller-login.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./auth-controller-login.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./auth-controller-login.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

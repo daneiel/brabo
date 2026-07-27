@@ -1,0 +1,69 @@
+---
+id: internal-sessions-controller-anamnese-context
+title: "Monta o contexto de uma rodada da Anamnese"
+description: "Tudo numa chamada, espelhando o contexto do Psicólogo. Os membros já vêm SEM quem optou por não ser perfilado, e as decisões do usuário na janela vêm por aqui porque não estão no event log. Os eventos em si o engine lê direto do Postgres — trafegá-los por HTTP seria mais caro sem ser mais correto."
+sidebar_label: "Monta o contexto de uma rodada da Anamnese"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "get api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Monta o contexto de uma rodada da Anamnese"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/internal/sessions/{sessionId}/anamnese-context"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Tudo numa chamada, espelhando o contexto do Psicólogo. Os membros já vêm SEM quem optou por não ser perfilado, e as decisões do usuário na janela vêm por aqui porque não estão no event log. Os eventos em si o engine lê direto do Postgres — trafegá-los por HTTP seria mais caro sem ser mais correto.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./internal-sessions-controller-anamnese-context.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./internal-sessions-controller-anamnese-context.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./internal-sessions-controller-anamnese-context.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

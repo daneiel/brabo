@@ -1,0 +1,1 @@
+{"title":"Body","body":{"required":true,"content":{"application/json":{"schema":{"type":"object","properties":{"name":{"type":"string","example":"Acme Corp","minLength":2},"slug":{"type":"string","example":"acme-corp","pattern":"^[a-z0-9]+(-[a-z0-9]+)*$","description":"kebab-case. Único no sistema e visível na URL."}},"required":["name","slug"],"title":"CreateWorkspaceDto"}}}}}

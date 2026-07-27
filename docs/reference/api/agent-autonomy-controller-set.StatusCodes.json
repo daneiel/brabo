@@ -1,0 +1,1 @@
+{"responses":{"204":{"description":"Regra gravada. Sem corpo."},"403":{"description":"Papel insuficiente no projeto."},"404":{"description":"Projeto inexistente."}}}

@@ -1,0 +1,69 @@
+---
+id: anamnese-controller-delete-mine
+title: "Apaga o próprio perfil e registra o opt-out"
+description: "Só o PRÓPRIO perfil, nunca o de outro. O opt-out vem junto porque sem ele a rodada seguinte re-derivaria tudo e o apagar seria cosmético. É `viewer` de propósito: a perfilagem cobre todos os membros, então exigir `developer` deixaria um viewer perfilado sem poder apagar o que é dele."
+sidebar_label: "Apaga o próprio perfil e registra o opt-out"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "delete api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Apaga o próprio perfil e registra o opt-out"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"delete"}
+  path={"/projects/{projectId}/proficiency/me"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Só o PRÓPRIO perfil, nunca o de outro. O opt-out vem junto porque sem ele a rodada seguinte re-derivaria tudo e o apagar seria cosmético. É `viewer` de propósito: a perfilagem cobre todos os membros, então exigir `developer` deixaria um viewer perfilado sem poder apagar o que é dele.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./anamnese-controller-delete-mine.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./anamnese-controller-delete-mine.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./anamnese-controller-delete-mine.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

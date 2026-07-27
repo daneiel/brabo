@@ -1,4 +1,36 @@
-import type { SidebarsConfig } from '@docusaurus/plugin-content-docs';
+import type {
+  SidebarsConfig,
+  SidebarItemConfig,
+} from '@docusaurus/plugin-content-docs';
+// O default export do arquivo gerado JÁ é o array de itens
+// (`export default sidebar.apisidebar`), não um objeto de sidebars.
+import apiSidebar from '../docs/reference/api/sidebar';
+
+/**
+ * A sidebar da referência de API, com os ids corrigidos.
+ *
+ * O `docusaurus-plugin-openapi-docs` deriva os ids do `outputDir` supondo que
+ * ele esteja DENTRO do site. Aqui ele aponta para `../docs`, porque a fonte
+ * única do Markdown é `docs/` na raiz — e o plugin acaba emitindo
+ * `docs/reference/api/x` onde o id de verdade é `reference/api/x`.
+ *
+ * A correção mora aqui, e não numa reescrita do arquivo gerado, por dois
+ * motivos: arquivo gerado se reescreve sozinho na próxima geração, e o
+ * `docs:check` compara o hash dele com o que o plugin produz — mutá-lo faria
+ * o check acusar deriva a cada rodada.
+ */
+function corrigirIds(itens: SidebarItemConfig[]): SidebarItemConfig[] {
+  return itens.map((item) => {
+    if (typeof item === 'string') return item.replace(/^docs\//, '');
+    if (item.type === 'doc') {
+      return { ...item, id: item.id.replace(/^docs\//, '') };
+    }
+    if (item.type === 'category') {
+      return { ...item, items: corrigirIds(item.items) };
+    }
+    return item;
+  });
+}
 
 /**
  * Escrito à mão, organizado por Diátaxis — tutorial, how-to, referência e
@@ -62,6 +94,14 @@ const sidebars: SidebarsConfig = {
         'reference/scripts',
         'reference/rulesets',
         'security-surface',
+        {
+          type: 'category',
+          label: 'Referência da API',
+          collapsed: true,
+          // Gerada do OpenAPI por `pnpm docs:generate` — uma página por rota,
+          // agrupadas por tag. Nunca editada à mão.
+          items: corrigirIds(apiSidebar as SidebarItemConfig[]),
+        },
       ],
     },
     {

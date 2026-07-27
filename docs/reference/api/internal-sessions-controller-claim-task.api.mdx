@@ -1,0 +1,69 @@
+---
+id: internal-sessions-controller-claim-task
+title: "Reivindica atomicamente a próxima tarefa pegável do módulo"
+description: "ATÔMICO de propósito: com vários dev agents no mesmo módulo, duas reivindicações concorrentes não podem devolver a mesma tarefa. Sem tarefa disponível, devolve vazio em vez de erro."
+sidebar_label: "Reivindica atomicamente a próxima tarefa pegável do módulo"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "post api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Reivindica atomicamente a próxima tarefa pegável do módulo"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/internal/sessions/{sessionId}/tasks/claim"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+ATÔMICO de propósito: com vários dev agents no mesmo módulo, duas reivindicações concorrentes não podem devolver a mesma tarefa. Sem tarefa disponível, devolve vazio em vez de erro.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./internal-sessions-controller-claim-task.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./internal-sessions-controller-claim-task.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./internal-sessions-controller-claim-task.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

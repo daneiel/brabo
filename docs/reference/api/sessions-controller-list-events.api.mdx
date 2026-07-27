@@ -1,0 +1,69 @@
+---
+id: sessions-controller-list-events
+title: "Pagina o event log da sessão"
+description: "O log é IMUTÁVEL e ordenado por `seq`. A paginação normal é incremental: passe o `nextCursor` da resposta anterior como `afterSeq`. `latest=true` faz o caminho oposto — traz a CAUDA e ignora `afterSeq`, para uma tela que abre no fim em vez de reconstruir a sessão inteira desde o começo (ADR 0021)."
+sidebar_label: "Pagina o event log da sessão"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "get api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Pagina o event log da sessão"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/projects/{projectId}/sessions/{sessionId}/events"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+O log é IMUTÁVEL e ordenado por `seq`. A paginação normal é incremental: passe o `nextCursor` da resposta anterior como `afterSeq`. `latest=true` faz o caminho oposto — traz a CAUDA e ignora `afterSeq`, para uma tela que abre no fim em vez de reconstruir a sessão inteira desde o começo (ADR 0021).
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./sessions-controller-list-events.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./sessions-controller-list-events.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./sessions-controller-list-events.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

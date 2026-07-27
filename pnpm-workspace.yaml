@@ -28,5 +28,18 @@ allowBuilds:
   # compila nada, e chamada de rede em `pnpm install` é exatamente o que a
   # disciplina de build da Fase 5 recusa.
   '@scarf/scarf': false
+  # false pelo mesmo critério: os dois entram como transitivas do
+  # docusaurus-theme-openapi-docs (Fase 7b).
+  #
+  # O postinstall do `postman-code-generators` roda um `npm install` DENTRO de
+  # cada subdiretório de gerador — instalação aninhada, com rede, no meio do
+  # nosso `pnpm install`. É exatamente o que a disciplina de build da Fase 5
+  # recusa. O preço é não ter os snippets de código gerados por linguagem na
+  # página da rota; o `curl` continua, porque é o tema que o monta.
+  postman-code-generators: false
+  # O `@parcel/watcher` compila binding nativo para observar arquivos, e só é
+  # usado em modo watch. O build de produção e o `docusaurus gen-api-docs` não
+  # dependem dele.
+  '@parcel/watcher': false
 minimumReleaseAgeExclude:
   - '@anthropic-ai/sdk@0.113.0'
