@@ -113,6 +113,7 @@ sequenceDiagram
 | [Segurança](SECURITY.md) | como reportar uma vulnerabilidade |
 | [Como contribuir](CONTRIBUTING.md) | fluxo, Definition of Done, o que é aceito |
 | [Onde pedir ajuda](SUPPORT.md) | qual canal para cada tipo de assunto |
+| [Código de conduta](CODE_OF_CONDUCT.md) | Contributor Covenant 2.1 |
 
 ## Stack
 

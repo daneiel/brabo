@@ -11,6 +11,7 @@ rápido.
 | **erro ou lacuna na documentação** | [issue de documentação](https://github.com/daneiel/brabo/issues/new/choose) |
 | **falha de segurança** | [SECURITY.md](SECURITY.md) — **nunca** issue pública |
 | **quer contribuir com código** | [CONTRIBUTING.md](CONTRIBUTING.md) |
+| **comportamento inaceitável de alguém** | [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) — o contato está lá |
 
 > **TODO(humano):** o GitHub Discussions está **desabilitado** neste
 > repositório. Dúvida de uso é o caso que mais se beneficia dele — não vira
