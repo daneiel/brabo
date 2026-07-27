@@ -14,14 +14,17 @@ backport para versões anteriores.
 
 **Não abra issue pública para falha de segurança.**
 
-Use o canal privado do GitHub: **Security → Report a vulnerability**
-([Private vulnerability reporting][pvr]), que cria um aviso visível apenas para
-os mantenedores.
+Mande um e-mail para **daneoliveira.s@gmail.com** com o assunto começando em
+`[SEGURANÇA]`.
 
-> **TODO(humano):** se o Private vulnerability reporting não estiver habilitado
-> nas configurações do repositório, habilite-o ou coloque aqui um e-mail de
-> contato. Sem um dos dois, não existe canal privado — e a orientação acima
-> não tem para onde apontar.
+> **Por que e-mail e não o canal do GitHub.** O *Private vulnerability
+> reporting* do GitHub é o caminho preferido — ele cria um aviso visível só
+> para os mantenedores, sem sair da plataforma. Mas ele **só existe em
+> repositório público**, e este é privado: a API responde 404, não 403.
+>
+> Quando o repositório for aberto, habilite em *Settings → Security → Private
+> vulnerability reporting* e troque esta seção pelo link
+> [Report a vulnerability][pvr]. O e-mail continua valendo como alternativa.
 
 O que ajuda no relato: o que você observou, como reproduzir, e o impacto que
 enxerga. Prova de conceito é bem-vinda; exploração contra instalação de

@@ -196,3 +196,9 @@ que espanta mais gente do que protege.
 
 **Nunca abra issue pública para falha de segurança.** O canal está em
 [SECURITY.md](SECURITY.md).
+
+## Código de conduta
+
+Participar deste projeto — issue, PR, review — implica concordar com o
+[Código de Conduta](CODE_OF_CONDUCT.md) (Contributor Covenant 2.1). O contato
+para reportar comportamento inaceitável está lá.
