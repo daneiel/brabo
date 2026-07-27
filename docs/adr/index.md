@@ -20,7 +20,7 @@ atual.** Para o estado atual, use [Regras de negócio](../business-rules.md),
 [Arquitetura](../architecture.md) e o [Runbook](../runbook.md). Para o
 raciocínio, venha aqui.
 
-Todos os 28 estão com status **aceito**.
+Todos os 29 estão com status **aceito**.
 
 ## Fase 2 — Git
 
@@ -90,11 +90,17 @@ O loop que faz o time melhorar.
 | [0027](0027-fase5-backup-hardening-release.md) | Backup/restore testado, rate limit em Postgres (sem Redis), superfície HTTP classificada e release versionado |
 | [0028](0028-protecao-de-branch-divergencia-entre-providers.md) | Proteção de branch diverge entre GitHub e GitLab — e por isso **não é o portão**; o portão é o domínio |
 
+## Documentação
+
+| # | decisão |
+|---|---|
+| [0029](0029-sincronizacao-continua-da-documentacao.md) | Sincronização contínua da documentação: **gerar > verificar > lembrar**, mapa de responsabilidade validado no CI, e escape hatch obrigatório |
+
 ## A convenção
 
 - **Um arquivo por decisão**, em `docs/adr/NNNN-titulo-curto.md`, com
   numeração sequencial de 4 dígitos. **Sem reuso de número**, nem quando um ADR
-  é superado — o próximo é **0029**.
+  é superado — o próximo é **0030**.
 - **Três seções, só elas:** **Contexto** (o problema ou a força que motivou),
   **Decisão** (o que foi decidido), **Consequências** (os trade-offs aceitos e
   o que fica para depois).
