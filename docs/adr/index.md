@@ -96,6 +96,12 @@ O loop que faz o time melhorar.
 |---|---|
 | [0029](0029-sincronizacao-continua-da-documentacao.md) | Sincronização contínua da documentação: **gerar > verificar > lembrar**, mapa de responsabilidade validado no CI, e escape hatch obrigatório |
 
+## Política de branches
+
+| # | decisão |
+|---|---|
+| [0030](0030-politica-de-branches-mecanizada.md) | Política de branches mecanizada: regra → mecanismo, lógica em script testável, gate de retropropagação, e o custo de reintroduzir cada corte |
+
 ## A convenção
 
 - **Um arquivo por decisão**, em `docs/adr/NNNN-titulo-curto.md`, com

@@ -3,6 +3,8 @@ import {
   CicloVazioError,
   classificar,
   explicarParInvalido,
+  extrairNumerosDePr,
+  identificarCaminho,
   lerPar,
   lerTagDeEstagio,
   lerVersaoFinal,
@@ -11,7 +13,10 @@ import {
   parEhAdjacente,
   proximaVersao,
   proximoN,
+  semTrafegoDaEsteira,
+  SemFinalError,
   verificarAncora,
+  versaoDeHotfix,
   type PrDoCiclo,
 } from './version.ts';
 
@@ -213,7 +218,120 @@ describe('âncora da tag final', () => {
   });
 });
 
-// ------------------------------------------------------------ 6. o par
+// -------------------------------------- 5b. de onde saem os PRs do ciclo
+
+describe('descobrir os PRs do ciclo', () => {
+  it('lê o número de um SQUASH merge', () => {
+    expect(extrairNumerosDePr(['fix(ci): âncora impossível (#53)'])).toEqual([53]);
+  });
+
+  it('lê o número de um MERGE COMMIT', () => {
+    // O bug real: `--no-merges` escondia esta linha, que é a única que cita o
+    // número quando o PR entra por merge commit. O ciclo do #56 pareceu vazio
+    // e nenhuma tag nasceu do merge.
+    expect(
+      extrairNumerosDePr(['Merge pull request #56 from daneiel/feature/fase6-backmerge-gate']),
+    ).toEqual([56]);
+  });
+
+  it('lê os dois estilos misturados, sem repetir', () => {
+    expect(
+      extrairNumerosDePr([
+        'Merge pull request #56 from daneiel/feature/x',
+        'feat(ci): backmerge gate',
+        'fix(web): dropdown (#53)',
+        'Merge pull request #56 from daneiel/feature/x',
+      ]),
+    ).toEqual([56, 53]);
+  });
+
+  it('ignora assunto sem número', () => {
+    expect(extrairNumerosDePr(['chore: nada', "Merge branch 'main' into dev"])).toEqual([]);
+  });
+
+  it('não confunde `#53` no meio do texto com o número do PR', () => {
+    expect(extrairNumerosDePr(['fix: resolve o caso do #53 sem quebrar nada'])).toEqual([]);
+  });
+
+  it('promoção e retropropagação saem do ciclo', () => {
+    // Contá-las faria um backmerge de hotfix, sozinho, gerar um ciclo novo —
+    // uma tag `-dev.N` sobre uma versão que não mudou nada.
+    const prs = [pr(56, 'feature/x'), pr(60, 'main'), pr(61, 'dev'), pr(62, 'qa')];
+    expect(semTrafegoDaEsteira(prs).map((p) => p.numero)).toEqual([56]);
+  });
+
+  it('um ciclo só de esteira é ciclo VAZIO', () => {
+    const so = semTrafegoDaEsteira([pr(60, 'main'), pr(61, 'dev')]);
+    expect(() => proximaVersao('v0.2.0', so)).toThrow(CicloVazioError);
+  });
+
+  it('ponta a ponta: merge commit de feature vira MINOR', () => {
+    const numeros = extrairNumerosDePr([
+      'Merge pull request #56 from daneiel/feature/fase6-backmerge-gate',
+    ]);
+    const prs = semTrafegoDaEsteira(numeros.map((n) => pr(n, 'feature/fase6-backmerge-gate')));
+    expect(proximaVersao('v0.2.0', prs)).toBe('v0.3.0');
+  });
+});
+
+// ------------------------------------------- 6. os dois caminhos da `main`
+
+describe('caminhos da main', () => {
+  const tags = ['v0.2.0', 'v0.2.0-qa.1', 'v0.2.0-qa.2', 'v0.2.0-dev.1'];
+  const shaPorTag = {
+    'v0.2.0': 'f1f1f1f1',
+    'v0.2.0-qa.1': 'aaaa1111',
+    'v0.2.0-qa.2': 'bbbb2222',
+    'v0.2.0-dev.1': 'dddd0000',
+  };
+
+  it('promoção: a `-qa.N` é pai do merge', () => {
+    const c = identificarCaminho(['f1f1f1f1', 'bbbb2222'], tags, shaPorTag);
+    expect(c.caminho).toBe('promocao');
+    expect(c.tagDeQa).toBe('v0.2.0-qa.2');
+  });
+
+  it('hotfix: nenhum pai é `-qa.N`', () => {
+    const c = identificarCaminho(['f1f1f1f1', '99999999'], tags, shaPorTag);
+    expect(c.caminho).toBe('hotfix');
+    expect(c.tagDeQa).toBeNull();
+    expect(c.motivo).toContain('não passou por `qa`');
+  });
+
+  it('uma `-dev.N` de pai NÃO conta como promoção', () => {
+    // Um merge de `dev` direto em `main` pula `qa`. Se isso passasse por
+    // promoção, a final sairia carimbando código que ninguém validou.
+    expect(identificarCaminho(['f1f1f1f1', 'dddd0000'], tags, shaPorTag).caminho).toBe(
+      'hotfix',
+    );
+  });
+
+  it('tag `-qa.N` que não resolve não vira promoção por descuido', () => {
+    const c = identificarCaminho(['f1f1f1f1', 'bbbb2222'], tags, {
+      'v0.2.0': 'f1f1f1f1',
+    });
+    expect(c.caminho).toBe('hotfix');
+  });
+
+  it('hotfix soma PATCH sobre a última final', () => {
+    expect(versaoDeHotfix('v0.2.0')).toBe('v0.2.1');
+    expect(versaoDeHotfix('v1.4.9')).toBe('v1.4.10');
+  });
+
+  it('hotfix sem nenhuma final publicada é ERRO, não v0.0.1', () => {
+    expect(() => versaoDeHotfix(null)).toThrow(SemFinalError);
+    expect(() => versaoDeHotfix(null)).toThrow(/nunca saiu/);
+  });
+
+  it('dois hotfixes seguidos andam de um em um', () => {
+    const primeiro = versaoDeHotfix('v0.2.0');
+    expect(primeiro).toBe('v0.2.1');
+    // O segundo já vê o primeiro como última final.
+    expect(versaoDeHotfix(primeiro)).toBe('v0.2.2');
+  });
+});
+
+// ------------------------------------------------------------ 7. o par
 
 describe('par da esteira', () => {
   it('aceita as duas promoções adjacentes', () => {
