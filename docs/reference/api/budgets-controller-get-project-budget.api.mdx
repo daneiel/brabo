@@ -1,0 +1,69 @@
+---
+id: budgets-controller-get-project-budget
+title: "Lê o orçamento do projeto e o quanto já foi gasto"
+description: "Valores em micro-USD. Exige `maintainer` — é informação de custo."
+sidebar_label: "Lê o orçamento do projeto e o quanto já foi gasto"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "get api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Lê o orçamento do projeto e o quanto já foi gasto"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/projects/{projectId}/budget"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Valores em micro-USD. Exige `maintainer` — é informação de custo.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./budgets-controller-get-project-budget.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./budgets-controller-get-project-budget.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./budgets-controller-get-project-budget.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

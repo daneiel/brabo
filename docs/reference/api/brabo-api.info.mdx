@@ -1,0 +1,161 @@
+---
+id: brabo-api
+title: "Brabo API"
+description: "A API do Brabo. Todo endpoint devolve JSON, salvo os quatro documentados"
+sidebar_label: Introduction
+sidebar_position: 0
+hide_title: true
+custom_edit_url: null
+---
+
+import ApiLogo from "@theme/ApiLogo";
+import Heading from "@theme/Heading";
+import SchemaTabs from "@theme/SchemaTabs";
+import TabItem from "@theme/TabItem";
+import Export from "@theme/ApiExplorer/Export";
+
+<span
+  className={"theme-doc-version-badge badge badge--secondary"}
+  children={"Version: 0.1.0"}
+>
+</span>
+
+<Export
+  url={"https://github.com/daneiel/brabo/blob/main/docs/reference/openapi.json"}
+>
+  
+</Export>
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Brabo API"}
+>
+</Heading>
+
+
+
+A API do Brabo. Todo endpoint devolve JSON, salvo os quatro documentados
+explicitamente com outro `content-type` (dois de SSE, o de métricas e o
+callback de OAuth, que redireciona).
+
+## Autenticação
+
+O access token é um JWT **EdDSA de 15 minutos**, apresentado em
+`Authorization: Bearer <token>`. A chave pública fica em
+`GET /.well-known/jwks.json`.
+
+O refresh **não** é um JWT: é um token opaco que vive num cookie `httpOnly`
+(`brabo_refresh`, `Path=/auth`, `SameSite=Strict`) e nunca aparece no corpo
+de nenhuma resposta. `POST /auth/refresh` e `POST /auth/logout` leem o cookie
+e exigem o cabeçalho `X-CSRF-Token` igual ao cookie `brabo_csrf`.
+
+**A rotação é obrigatória.** Cada refresh consome o token apresentado e emite
+outro. Reapresentar um já consumido é assinatura de roubo e revoga a família
+inteira — inclusive a sessão legítima. Um cliente que dispare dois refresh
+concorrentes derruba o próprio usuário; use uma única chamada em voo.
+
+As rotas `/internal/*` são a superfície api ↔ engine e ficam **fora do JWT**:
+elas exigem o cabeçalho `X-Brabo-Service-Token` com o segredo compartilhado.
+Um token de usuário não abre nenhuma delas.
+
+## Erros
+
+Formato padrão do NestJS: `{ "statusCode": number, "message": string | string[], "error": string }`.
+
+| código | quando |
+|---|---|
+| `400` | corpo inválido — o `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova |
+| `401` | sem token, token expirado ou credencial inválida |
+| `403` | autenticado mas sem o papel exigido pelo RBAC, ou service token errado |
+| `404` | recurso inexistente **ou** invisível para quem chamou |
+| `409` | conflito de estado — transição de sessão inválida, recurso já existente |
+| `429` | rate limit ou lockout progressivo |
+
+As rotas de auth respondem de forma **deliberadamente indistinguível** entre
+e-mail inexistente, senha errada e conta bloqueada: mesmo corpo, mesmo status,
+mesmo tempo. É o que fecha a enumeração de contas, e não é defeito de
+diagnóstico.
+
+## Rate limit
+
+Janela deslizante no Postgres: 300 requisições por usuário e 600 por IP a cada
+60 s, configuráveis. Rota `@Public()` e rota de serviço são **isentas** — o que
+segura `/auth/*` é o lockout progressivo, não o rate limit.
+
+<div
+  style={{"marginBottom":"2rem"}}
+>
+  <Heading
+    id={"authentication"}
+    as={"h2"}
+    className={"openapi-tabs__heading"}
+    children={"Authentication"}
+  >
+  </Heading><SchemaTabs
+    className={"openapi-tabs__security-schemes"}
+  >
+    <TabItem
+      label={"HTTP: Bearer Auth"}
+      value={"bearer"}
+    >
+      
+      
+      
+      
+      <div>
+        <table>
+          <tbody>
+            <tr>
+              <th>
+                Security Scheme Type:
+              </th><td>
+                http
+              </td>
+            </tr><tr>
+              <th>
+                HTTP Authorization Scheme:
+              </th><td>
+                bearer
+              </td>
+            </tr><tr>
+              <th>
+                Bearer format:
+              </th><td>
+                JWT
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </TabItem><TabItem
+      label={"API Key: service-token"}
+      value={"service-token"}
+    >
+      
+      
+      
+      
+      <div>
+        <table>
+          <tbody>
+            <tr>
+              <th>
+                Security Scheme Type:
+              </th><td>
+                apiKey
+              </td>
+            </tr><tr>
+              <th>
+                Header parameter name:
+              </th><td>
+                X-Brabo-Service-Token
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </TabItem>
+  </SchemaTabs>
+</div>
+      

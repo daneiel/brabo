@@ -1,0 +1,69 @@
+---
+id: agents-controller-readiness
+title: "Confirma que o levantamento com o Criativo terminou"
+description: "É o botão que dispara o `product_brief` e o handoff para o PO. Registra `readiness.confirmed` no event log."
+sidebar_label: "Confirma que o levantamento com o Criativo terminou"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "post api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Confirma que o levantamento com o Criativo terminou"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/projects/{projectId}/sessions/{sessionId}/readiness"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+É o botão que dispara o `product_brief` e o handoff para o PO. Registra `readiness.confirmed` no event log.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./agents-controller-readiness.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./agents-controller-readiness.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./agents-controller-readiness.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

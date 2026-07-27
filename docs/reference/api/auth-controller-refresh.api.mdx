@@ -1,0 +1,69 @@
+---
+id: auth-controller-refresh
+title: "Rotaciona o refresh e emite um par novo"
+description: "O refresh apresentado é consumido. Reapresentar um token já rotacionado revoga a FAMÍLIA inteira e registra evento de segurança — inclusive quando a causa foi um duplo-submit do cliente."
+sidebar_label: "Rotaciona o refresh e emite um par novo"
+hide_title: true
+hide_table_of_contents: true
+api: eJzdV82O29YVfpUDZmMTlEZO3ABRm6KyYxfjtp7ByG4CDI3w6N4j6XrIezj3R/ZkRkBXBbroLi9gZGF44ZXRTbZ8kzxJey4pzYztJ+jCY+qSPD/f+fk+XmaavHKmDYZtNs2OwNHSkV8Dto482YCaoXsHiq2PjdE8hhPa33MQGwh8RhZedm/AcUBl2Mo7jja8QkB4PPtb9++/Hs7A2EDGIRA4Whkf5HJDNjBoAk+r6NB2bxF++8fPYKyqozcbgvOIVjMgKIweYclGfOrY1jzycdGYAJpB1YZsoHFWZNySQ0nnUGfTbBbD+iHb4Liuyf04ZPdjVmQtOmwokPPZ9PRFkTnyLVtPPpteZl9OJvLfbXCyIlNsA9kg97Bta6OSp4OXXh64zLxaU4NyFS5ayqYZL16SCuLNSVzB9OZRKfL+mQB342EfnLGrrPjI7ZPvn8Ej/d18JjhtjEZQ0QUcZ9sio9etceQPb5qxsVmQy+QmNm1N2fSbyeRjo3NaRavZA4buHTD0EQ21TFbRjbPtVnA5j8aRzqant+K+6fxFkQUTxFU2J++RTwYwvwucbbdi5v7k3qeIngzNZuyme1MbzcXgWzNwTD0VPWruIwm48imKGNbisqGwZilyyz5hjGGdTbMDuX8wVDorMk9us6+yJxWdCRdzqVRfjAWhI7cvnyQxHBXDxWN2DYa+FFmxw3kdQis1EPtG0Sh8VE5szV/oIisyI6muCXUyaTG5+GH0wOGCR/Ph7R5USdPYJSczA6LpOZgdH37SGTM5lfZPj4zhGWsGsrplYwNo2nC9IXgyP3pagMd6w8BeBio4Bs0qNv18+9LSa2lmE1COCBQ3wFEeq4aOH0lSFdzRbLz04Xz+qIA0uU33Ljij0AMBl1ZhXS9QncmtI5m+As6jjLw2jtJyuDsubWm/+AJmUSwbhd3b7heWw6Pbfdi9k1mX/s/z/QTc+x00xsbAPs+LW2uKmtJW4pKd+SkN5hQepALCH5LBP1ZjmIFa44ag7X5dyPzCUv6kV//86BkcjF9RXY/OLL+yBy9fnfmxzHY17qPbLcc8t90vnOfXEU6Hyz5wblFxynsjO8zGBhTzmSGopGuObH1RlfZOtZC67ZZSVUB1jGH9bWpg+TXHhuYm0LdzQThUd0FsWYWALTpSBJZBsWu5tJrAkl3HBiFtMh9wDNXx0fwZ3BqICujWcc0rjqGCmqgBHsIsLQG9Nqv+CBfUvcV6zVD9MHo4P3ncN2sFZhWxBuR9cn0+yrtlj1iezxIppAILQrxwZoWh++AMjv+H30PUuEdVOIYbAh5QvFVboMYEKm1qy09JSFbFnqPEE3pvLIboUJrGcVxwYp6BlZbYdO9rg6Xd0dJt2kHw5L1EXdOqex9Mg2N43uyIJtVWGy9lgDQTQxKlVWwVOydPyaQ4FxcIDK3rPrTOMEQfuzfO8O8hegKpV/erlR5Ua2wEDmpgw5zwm/kEn4fqQMJ0FuuDvIIUF4KPLbll914ZAmwN/PbPn4HsykjxUls3kOdLFgRYejTPp6WlWib187X9zEaq+l0g/OxIiJabFl0w9VrWcmmf71pe0z4zsCm+hbtuSS1ud3P/yDnZOaXt9ypDi9rJK5rhKfnwZD6F6hLKzAcM0T9kTWU2hZ7XCiizRjhmlQ57zoSr4eL0hdwn59jduLvtu/EKVPdBmxXD1U5WXJX2ajQapX/yQHV/Mqngqh+qa1pKzcFQ/R1ro9NmOTayDh0LG3MD1au1CVQbH9J8LdktjH7K9vvdMemqALJB0lTYtLI6vWK7JiX2AzaL7l0DjlrHG4RdMPckGE8DyMUtfu45UjnSZJXBeh/u9etfyeu4W7OaoUGfzAnmLdWpEcR/SzXDyYPZw0JsDoy28+aSr53N+2LTCY16QYheS3YyEnnOMc8lCuO79xuqQSSWTEqTepvj3sY3PcZ2WZte/pFPUy4wB4fWm35jJGHYj+E+uWLvXGb+2v1g+8tk22EgqI2oQ45QszrjGKB1vHLkvdmkdG7MlyaBad2vTqupkZOltCfkuabaLMihHtjRWG18MHYVU5p5LoV1sjRHDZr6JigFeLJr7DEU6St0irCo+TwSapxCQ74Zlngx/Ojbviht/zNQ0/IYun9BTylLUmtZYWRjQw73SCXTvhCOGLatpiX1AJdWG1zZ7oMPRvFuEE/2KMnBE5TlIH1Zm59QErUMx+yDYDaFryYTSFowFec/5KFldz3zBF9PJuno8DipdY2l/XoCvkiFNqvoujcbMn4MJxwQqj8dRyHgO3dlYqQKfbXdxnRvuV9xeW7Shvd5PkzgeaTS9t8KUPUElleJWD5X5KJHgm+0g3whiBrsBdRkfG88GWQ9KpH1IsCEPBtMUm4Qaye7DxuxNbDVwEhCPi06sLzhjwXa5fX3wv/Dl9WgawO9DgdtjcaK+o2ulkR77T1oc/lo6NX3iyJbizifnmaXlwv09NzV260cn0dyF70m36AzuBCte/piW+yU8vT0MjujC5G5SlErAn+DdeyV9UefXtubXwMibrLt9r9QBWya
+sidebar_class_name: "post api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Rotaciona o refresh e emite um par novo"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/auth/refresh"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+O refresh apresentado é consumido. Reapresentar um token já rotacionado revoga a FAMÍLIA inteira e registra evento de segurança — inclusive quando a causa foi um duplo-submit do cliente.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./auth-controller-refresh.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./auth-controller-refresh.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./auth-controller-refresh.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

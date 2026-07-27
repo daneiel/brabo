@@ -1,0 +1,1 @@
+{"responses":{"201":{"description":"","content":{"application/json":{"schema":{"type":"object","properties":{"optedOut":{"type":"boolean","example":false}},"required":["optedOut"],"title":"PerfilOptInResponseDto"}}}},"403":{"description":"Papel insuficiente no projeto."},"404":{"description":"Projeto, evento ou versão inexistente."}}}

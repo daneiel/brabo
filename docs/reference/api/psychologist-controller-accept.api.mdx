@@ -1,0 +1,69 @@
+---
+id: psychologist-controller-accept
+title: "Aceita uma hipótese"
+description: "Move `proposed` → `accepted`. NÃO é uma `proposed_action`: o Psicólogo é só leitura e nada aqui tem efeito externo."
+sidebar_label: "Aceita uma hipótese"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "post api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Aceita uma hipótese"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/projects/{projectId}/hypotheses/{hypothesisId}/accept"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Move `proposed` → `accepted`. NÃO é uma `proposed_action`: o Psicólogo é só leitura e nada aqui tem efeito externo.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./psychologist-controller-accept.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./psychologist-controller-accept.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./psychologist-controller-accept.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

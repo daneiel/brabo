@@ -1,0 +1,69 @@
+---
+id: model-bindings-controller-get-agent-binding
+title: "Resolve qual modelo um agente usa, e de onde ele veio"
+description: "Cascata agente → projeto → workspace, SEM sessão: é a configuração do agente no projeto, não a de uma conversa específica."
+sidebar_label: "Resolve qual modelo um agente usa, e de onde ele veio"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "get api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Resolve qual modelo um agente usa, e de onde ele veio"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/projects/{projectId}/agent-bindings/{agentSlug}"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Cascata agente → projeto → workspace, SEM sessão: é a configuração do agente no projeto, não a de uma conversa específica.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./model-bindings-controller-get-agent-binding.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./model-bindings-controller-get-agent-binding.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./model-bindings-controller-get-agent-binding.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

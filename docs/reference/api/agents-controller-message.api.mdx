@@ -1,0 +1,69 @@
+---
+id: agents-controller-message
+title: "Envia uma mensagem ao agente ativo"
+description: "A resposta é só o aceite. O que o agente responde chega pelo event log da sessão e pelo SSE de chat — não por esta chamada."
+sidebar_label: "Envia uma mensagem ao agente ativo"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "post api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Envia uma mensagem ao agente ativo"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/projects/{projectId}/sessions/{sessionId}/agents/{agent}/message"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+A resposta é só o aceite. O que o agente responde chega pelo event log da sessão e pelo SSE de chat — não por esta chamada.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./agents-controller-message.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./agents-controller-message.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./agents-controller-message.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

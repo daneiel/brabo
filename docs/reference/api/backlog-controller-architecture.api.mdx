@@ -1,0 +1,69 @@
+---
+id: backlog-controller-architecture
+title: "Devolve o module_map vigente, as ADRs e as pendências"
+description: "O mapa vigente é o de maior `version` (o histórico é imutável). As pendências são a validação cruzada história↔mapa: história sem módulo, ou apontando um módulo que não existe."
+sidebar_label: "Devolve o module_map vigente, as ADRs e as pendências"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "get api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Devolve o module_map vigente, as ADRs e as pendências"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/projects/{projectId}/architecture"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+O mapa vigente é o de maior `version` (o histórico é imutável). As pendências são a validação cruzada história↔mapa: história sem módulo, ou apontando um módulo que não existe.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./backlog-controller-architecture.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./backlog-controller-architecture.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./backlog-controller-architecture.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

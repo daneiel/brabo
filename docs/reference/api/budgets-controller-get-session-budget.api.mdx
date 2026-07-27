@@ -1,0 +1,69 @@
+---
+id: budgets-controller-get-session-budget
+title: "Lê o orçamento da sessão e o gasto acumulado"
+description: "É o que alimenta o medidor de tokens ao vivo da tela de sessão."
+sidebar_label: "Lê o orçamento da sessão e o gasto acumulado"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "get api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Lê o orçamento da sessão e o gasto acumulado"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/projects/{projectId}/sessions/{sessionId}/budget"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+É o que alimenta o medidor de tokens ao vivo da tela de sessão.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./budgets-controller-get-session-budget.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./budgets-controller-get-session-budget.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./budgets-controller-get-session-budget.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

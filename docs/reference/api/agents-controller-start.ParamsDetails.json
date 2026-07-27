@@ -1,0 +1,1 @@
+{"parameters":[{"name":"projectId","required":true,"in":"path","schema":{"type":"string"}},{"name":"sessionId","required":true,"in":"path","schema":{"type":"string"}},{"name":"agent","required":true,"in":"path","description":"Slug do agente.","schema":{"example":"criativo","type":"string"}}]}

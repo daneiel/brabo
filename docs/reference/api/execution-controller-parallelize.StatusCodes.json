@@ -1,0 +1,1 @@
+{"responses":{"201":{"description":"","content":{"application/json":{"schema":{"type":"object","properties":{"ok":{"type":"boolean","example":true,"description":"Sempre `true`; falha vira erro HTTP."}},"required":["ok"],"title":"OkResponseDto"}}}},"403":{"description":"Papel insuficiente no projeto."},"404":{"description":"Projeto, sessão ou tarefa inexistente."}}}

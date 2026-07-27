@@ -1,0 +1,1 @@
+{"responses":{"204":{"description":"Associação removida. Sem corpo."},"403":{"description":"Papel insuficiente no projeto."},"404":{"description":"Projeto inexistente ou invisível para quem chamou."}}}

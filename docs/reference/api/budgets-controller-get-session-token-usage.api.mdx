@@ -1,0 +1,69 @@
+---
+id: budgets-controller-get-session-token-usage
+title: "Quebra o gasto da sessão por agente"
+description: "O dado sempre esteve em `token_usage`, mas sem agregação nem rota o painel do time não tinha como mostrar o custo por card. Mesmo papel exigido do orçamento da sessão."
+sidebar_label: "Quebra o gasto da sessão por agente"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "get api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Quebra o gasto da sessão por agente"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/projects/{projectId}/sessions/{sessionId}/token-usage"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+O dado sempre esteve em `token_usage`, mas sem agregação nem rota o painel do time não tinha como mostrar o custo por card. Mesmo papel exigido do orçamento da sessão.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./budgets-controller-get-session-token-usage.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./budgets-controller-get-session-token-usage.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./budgets-controller-get-session-token-usage.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

@@ -1,0 +1,69 @@
+---
+id: agents-controller-handoff-infra
+title: "Confirma que a arquitetura está pronta e oferece o handoff ao Infra"
+description: "Endpoint dedicado em vez de reaproveitar `readiness`, que é do Criativo: são dois marcos diferentes da sessão e confundi-los tornaria o event log ambíguo."
+sidebar_label: "Confirma que a arquitetura está pronta e oferece o handoff ao Infra"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "post api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Confirma que a arquitetura está pronta e oferece o handoff ao Infra"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/projects/{projectId}/sessions/{sessionId}/agents/arquiteto/handoff-infra"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Endpoint dedicado em vez de reaproveitar `readiness`, que é do Criativo: são dois marcos diferentes da sessão e confundi-los tornaria o event log ambíguo.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./agents-controller-handoff-infra.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./agents-controller-handoff-infra.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./agents-controller-handoff-infra.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

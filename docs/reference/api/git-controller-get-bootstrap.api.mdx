@@ -1,0 +1,69 @@
+---
+id: git-controller-get-bootstrap
+title: "Devolve o estado do bootstrap de Gitflow"
+description: "Em que passo está, se falhou e onde, e quantas tentativas houve. O detalhe passo a passo vem dos eventos `bootstrap.step_*` da sessão dedicada."
+sidebar_label: "Devolve o estado do bootstrap de Gitflow"
+hide_title: true
+hide_table_of_contents: true
+api: eJzNWM1yG8cRfpWu9UXaWoKQJTsxEqcCUbQiuSLRBG0pIVjcxkwDGHF2ejkzC0mmUJVTqnL3C6h8cDlVOqly8RVv4idJenbxQ0m2rzlIXMzO9HR/3f11915lmoLypo6GXTbIDiu4bAhqDIGBQly9LiAQTNHOuQECdpoKILhs0EUMEMlFjGaBAebcLKgHj0FTRDtfC8Hu74Iq0ByAFuQiBygnzDFEj3UvRKrP8xI0QqAQVt8zaNJGocZeVmRck0fR74HOBtl9Ew/YRc/Wkj+fUby7lpMVWY0eK4rkQzY4vcocVpQNstrzM1Lxgc6KzNNlYzzpbBB9Q0VmxOoa4zwrsqDmVGE2uMriy1oOhuiNm2XL5ZkcDDW7QEHef9zvy5/r2GVFptgJIvIO69oalfTefxZkw9X7F/BEFBPFvVgZTSs+RIxNeF+RIiPXVNngVPYvTDDs2mVPqF9mRTZFY0lnZ0VGL7CqbWf97lbXWIsTedMCcN2GUl6Xyb2awTVOYetY2IjBShwIjkJMq88oci9bFpn4rvPS+wZu9enfenhw5++//+rL23/93d+++fjRJyef3e0fPf3L8fA3tRt10XHv8N6Dg+G9IWiGbRjBECJZBJ3UmnmSsLOrf8NvRJ2ckcCBil1EDwxqTurCmhABGRZm0drXgjuKVP+aZxRXlYnntT+PVNUWI6W4SIsTj07NjZud12yNEo8pTxjpXNOie7tdu8T3lrzaLtWeI6m1UArXvC44vovmssgshnjoPftfddEvHMYoFsXduHRNNSG/e/bWuz77qmOKBX1LAXb8Bc9Wr2HKpuUQzT04tASrH8FoqmqWVQICT5Gr1esF2QF4qikaDy5RRJMSDDgxlgjT1IAin8JxuZvqp+uM2g3Saw7dhWbH0rMiiyamsD2mmjdUM0rijjtKuBc5Wy7lyjv92+/zwhHWZMG40EyNMsksx9cy507/zgeOtRvAOHphQoKjtSuQaryJLxPFTQg9+WxweiYkFXEmzJfNTBTdK4pzFtKcUSIZoblBtt/xYdi/2jDjcn9m4v5kh0oD+UXLo2fbK0dCYC1HrS/uWE0g6paK7uEL9hXGbJA9fHKSFeuQmcdYt2zhF0bRXuQLcjshhbX5kiQzEjPPCXUS2VH50727Hie8N+pOn6TTgopxU05iOn+lfTA8epC9G5FDWRXqSFt6cMKagZyu2bgImhZsFwQPR48fFRDQLlgI5LLB6Bk0q6Zq4zWMHb2QEDQxUSKB4gq4kW1lVwj2xKgSbmg2QXhpNDosQKobVKsfozcKgxTVsVNo7QTVhbx6PGzivEhR7UkbT0pY92Zv7Mbuo49g2Ihko3D1w+p7lsXHgEpRCJCwlBRqKnj45ATy/FDfGw1F6K1PoDKuiRzyvACsPYXWDKBq7Eq5kr35NtWrAdxNDoQ/JoF/KoVa1RylCqx+mqSsm8p/6ej9wxPY7z0na/cuHD93+8+eX4SelLyy12rnaeopzCHPJXHzfKvhoHtsFecaVZvNC7MgcE0FivnCEJQSNY+dfVmO3Y1yIn4776SWBZRHGOef72MT068RVjQykT4fCcKxvAnUVTKs0ZNK6afY1zx2msCRmzcVQirwIWIPyqPHoxNI8vbXtwBdW7Y84yaWYIkqKRhJzbEjoBdm1i7hhFY/SN8E5dO9g9HxF22wlmBmDVqpLGvjWntU8NMWsTwfgufYOlgQ4ok3M4yrt95g73/4HaDGDaqKXeCKgDsUr/kWqDKRxi6FZQ+OafPWC+7CmnK+qYxON2EIxmFsfCqjnpsJJw5e8AwBYYrV6o01OHbGRTIe4ed/fAfGKdsEcdm2gbM0W72JpsIefF2Bsi3viW+1CeIGSDnRGTF2ip1i72WXZIr3zUSovfart7U3DE1oVq+94T9AEwjEX6ufnMSgmmMlcFAFC+aE3zAk+AKU+6Kmd2j38xKSXgihqclPV2+UIcDawM///A7IzYw4L4V1BXk+ZUGAJUbzfDB2ZCVTP+zbDzBS2XIBBJp50uLpqkYfjZ1LoRu7r9chr2ljWVvVcOK3ISmtSVjnvRSnIM8trzLUqH0qhAyPKMSHowGUVzDuat0BaxpnA2hLdAHjrKIQcJYW264FXnUPp2fynqT67bxdttH4CtTqrTYzhlfrvvDV2L3a29tL/2RDeaffL+FVm1Rg3GL12kpASXAwlN+gNToxy5EROvSsMQFUPp+bSNJopfyasp8Y/Yjdk/Uy6bIAclHMVFjVQp1BsZuTEvkRq8nqx0r6As8LhLUyt0SZQB3IRYc1vaiNl6zgBpQnTU4ZtBt1t8dvy3Fc06xmqDAkcYK51HIJBLm/JstwfHd4UIjMrqKtb/PprrXMOyLTSxkN10o65Dk3eS5amLB6syDb9qKXDVUptrnZyPisxdhNrYmpiFBIWS4wR48umJYxNG3ScGNcsblccn57fSf74yTbYySwpjJR7LGsLriJm2baLJI5O/mlSWCat9TptEx4BFMJT8hzTdZMyKPuqqNx2oRo3KxJZua5ONYLae5VaOwuKDJzujm2GCJIZXURYWL5siHUOICKQtWReNH9aMO+GLv2p3Rw3IPVv7oGcUpqLhQmfTp53CCVRAeZaV3Htpqm1AI8dtrgzK3ehmgUrxPxeIOSLDxE1w4dwZpvsWvujjhEwWwAt/t9SI1ocs5/KEDNfpvzBJ/2+2npwREgyMg7dp/2IRTJ0WbWeOl9TejBMUeE8s9HjRTgGzclY8QLrbf9wqx+4Jbi8twkhg953mXgZUNjF2gmtF62BSwvU2H5kJOLFgneCQcZw6UbbBuofu9Wr99Nu6hk2pUGTIpnhamV65q1e10rxetA3R3XRO/7Jk4tP3+3Q7vaztH/lx8kuk410ou4X1s0TvrZxlvRvO2xT9ffHGTkGOx+f5DOvMi2jfZZkc05RDlydTXBQF97u1zK8mVD/mXbfi/Qm3YUO73KtAnyrLPBFG14d0bexe7GcTcB3YRf0nrddDvpuBdoG2o/ZFzQy2sfTpZny2LdjIsS7fuhUlTHnZPvffRY7k4h9w9lDpDw2+n33xkakvQPanV11e5IBXa53CjZDhDLs+Vy+V/eDMwF
+sidebar_class_name: "get api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Devolve o estado do bootstrap de Gitflow"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/projects/{projectId}/git/bootstrap"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Em que passo está, se falhou e onde, e quantas tentativas houve. O detalhe passo a passo vem dos eventos `bootstrap.step_*` da sessão dedicada.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./git-controller-get-bootstrap.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./git-controller-get-bootstrap.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./git-controller-get-bootstrap.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      
