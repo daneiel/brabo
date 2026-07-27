@@ -95,6 +95,45 @@ export function lerTagDeEstagio(tag: string): TagDeEstagio | null {
 
 // ------------------------------------------------------- classificar o ciclo
 
+/**
+ * Os números de PR de uma lista de assuntos de commit.
+ *
+ * Precisa entender OS DOIS estilos de merge, porque os dois acontecem neste
+ * repositório e o número do PR cai em lugares diferentes:
+ *
+ *   squash        `feat(x): faz coisa (#53)`
+ *   merge commit  `Merge pull request #56 from daneiel/feature/x`
+ *
+ * Ler só o primeiro foi um bug real: o #56 entrou por merge commit, o
+ * `--no-merges` do range escondeu a única linha que citava o número, e o ciclo
+ * inteiro pareceu vazio — nenhuma tag nasceu do merge.
+ */
+export function extrairNumerosDePr(assuntos: string[]): number[] {
+  const numeros = new Set<number>();
+
+  for (const assunto of assuntos) {
+    const merge = /^Merge pull request #(\d+)\b/.exec(assunto.trim());
+    if (merge) {
+      numeros.add(Number(merge[1]));
+      continue;
+    }
+    for (const m of assunto.matchAll(/\(#(\d+)\)\s*$/g)) numeros.add(Number(m[1]));
+  }
+
+  return [...numeros];
+}
+
+/**
+ * Tira do ciclo os PRs que não são trabalho: promoção e retropropagação.
+ *
+ * Eles nascem de uma permanente, e o conteúdo que carregam já foi contado —
+ * ou já foi lançado. Contá-los faria um backmerge de hotfix, sozinho, gerar um
+ * ciclo novo: uma tag `-dev.N` sobre uma versão que não mudou nada.
+ */
+export function semTrafegoDaEsteira(prs: PrDoCiclo[]): PrDoCiclo[] {
+  return prs.filter((pr) => !(ESCADA as readonly string[]).includes(pr.branch));
+}
+
 export function classificar(prs: PrDoCiclo[]): PrClassificado[] {
   return prs.map((pr) => {
     const funcao = pr.branch.includes('/') ? pr.branch.slice(0, pr.branch.indexOf('/')) : pr.branch;
@@ -292,6 +331,77 @@ export function verificarAncora(
       `\`${ultima.tag}\` (${shaDaUltima.slice(0, 8)}), e não recebi a árvore nem\n` +
       `  os pais para verificar a promoção por merge commit.`,
   };
+}
+
+// ------------------------------------------------------- os dois caminhos da main
+
+export type CaminhoDaMain = 'promocao' | 'hotfix';
+
+export interface CaminhoIdentificado {
+  caminho: CaminhoDaMain;
+  /** A `-qa.N` que entrou, quando é promoção. */
+  tagDeQa: string | null;
+  motivo: string;
+}
+
+/**
+ * `main` recebe merge por DOIS caminhos, e eles pedem versões diferentes.
+ *
+ * A distinção sai do SEGUNDO PAI do merge commit — o lado que entrou:
+ *
+ *   é o commit de uma `-qa.N`  → promoção: a versão do ciclo, com âncora
+ *   qualquer outro             → hotfix:   última final + PATCH, sem âncora
+ *
+ * O hotfix nasce de `main` e nunca passa por `qa`, então exigir âncora dele
+ * seria exigir o impossível: a tag PATCH tem que nascer normalmente, e é
+ * justamente ela que o gate de retropropagação usa como referência.
+ *
+ * Um merge sem segundo pai não é classificável — quem chama trata como erro,
+ * porque adivinhar aqui carimbaria versão errada em produção.
+ */
+export function identificarCaminho(
+  paisDoCommit: string[],
+  tags: string[],
+  shaPorTag: Record<string, string>,
+): CaminhoIdentificado {
+  const deQa = tags.filter((t) => lerTagDeEstagio(t)?.estagio === 'qa');
+
+  for (const t of deQa) {
+    const sha = shaPorTag[t];
+    if (sha !== undefined && paisDoCommit.includes(sha)) {
+      return {
+        caminho: 'promocao',
+        tagDeQa: t,
+        motivo: `\`${t}\` (${sha.slice(0, 8)}) é pai do merge — veio de \`qa\`.`,
+      };
+    }
+  }
+
+  return {
+    caminho: 'hotfix',
+    tagDeQa: null,
+    motivo:
+      'nenhuma tag `-qa.N` é pai deste merge — o que entrou não passou por `qa`.\n' +
+      '  Caminho de hotfix: a versão é a última final mais PATCH.',
+  };
+}
+
+export class SemFinalError extends Error {
+  constructor() {
+    super(
+      'hotfix sem nenhuma versão final publicada.\n' +
+        '  PATCH é incremento sobre algo lançado; não existe correção urgente de\n' +
+        '  uma versão que nunca saiu. Promova pela escada em vez de corrigir.',
+    );
+    this.name = 'SemFinalError';
+  }
+}
+
+/** A versão de um hotfix: a última final com o PATCH incrementado. */
+export function versaoDeHotfix(ultimaFinal: string | null): string {
+  const v = ultimaFinal ? lerVersaoFinal(ultimaFinal) : null;
+  if (v === null) throw new SemFinalError();
+  return escreverVersao({ major: v.major, minor: v.minor, patch: v.patch + 1 });
 }
 
 // -------------------------------------------------------------- a promoção

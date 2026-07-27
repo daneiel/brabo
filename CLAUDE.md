@@ -35,9 +35,15 @@ e pipeline de aprovação de ações com autoridade final do usuário.
   métricas, scripts), docs/.docmap.yml + drift check (docs:check) no
   CI, camada de comunidade, licenciamento MIT verificado e o mecanismo
   documentado em docs/explanation/documentation-workflow.md.
+- FASE 6 — CONCLUÍDA: política de branches mecanizada (ADR 0030) —
+  pr-police, approval-ladder com os dois modos, promote/tag-release
+  com versão calculada e âncora por árvore, backmerge gate com
+  retropropagação automática, rulesets versionados em
+  docs/reference/rulesets.md. Esteira exercitada de ponta a ponta
+  (v0.1.0 → v0.2.0) e a cadeia de hotfix validada por execução real.
 - Não refatore o que está pronto sem pedido explícito.
 
-## Escopo da FASE 6 (ativa — CI/CD da política de branches)
+## Escopo da FASE 6 (CONCLUÍDA — CI/CD da política de branches)
 Mecanizar a política de branches e versionamento (fonte:
 docs/explanation/branching-policy.md — se ainda não existir, criá-lo a
 partir da apresentação da política é o PRIMEIRO entregável) no

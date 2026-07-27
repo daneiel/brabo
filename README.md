@@ -8,6 +8,7 @@ A autoridade final continua sendo sua — por construção, não por convenção
 [![CI](https://github.com/daneiel/brabo/actions/workflows/ci.yml/badge.svg)](https://github.com/daneiel/brabo/actions/workflows/ci.yml)
 [![Licença: MIT](https://img.shields.io/badge/licença-MIT-blue.svg)](LICENSE)
 [![Versão](https://img.shields.io/badge/versão-v0.1.0-informational.svg)](CHANGELOG.md)
+[![Documentação](https://img.shields.io/badge/docs-daneiel.github.io/brabo-8A2BE2.svg)](https://daneiel.github.io/brabo/)
 
 </div>
 
@@ -94,6 +95,11 @@ sequenceDiagram
 ```
 
 ## Documentação
+
+**📖 [daneiel.github.io/brabo](https://daneiel.github.io/brabo/)** — a mesma
+documentação abaixo, navegável e com busca. O site lê de `docs/`, publica no
+merge em `main`, e por isso fica um ciclo de promoção atrás do que está em
+`dev`: para o estado mais recente, leia os arquivos aqui.
 
 | documento | para |
 |---|---|
