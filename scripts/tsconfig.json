@@ -1,0 +1,26 @@
+{
+  // O Node 24 executa os `.ts` de ci/ por type stripping — ele APAGA os tipos,
+  // não os verifica. Sem este typecheck no CI, a anotação seria enfeite.
+  //
+  // `erasableSyntaxOnly` é o que garante que o código continua executável pelo
+  // Node: ele reprova `enum`, `namespace` e parameter property, que o type
+  // stripping não sabe remover.
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2023"],
+    "types": ["node"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "erasableSyntaxOnly": true,
+    "verbatimModuleSyntax": true,
+    // O Node exige a extensão real no import relativo (`./pr-police.ts`), e o
+    // tsc só aceita isso com esta flag — que por sua vez exige `noEmit`. Como
+    // aqui nada é emitido (o Node executa o `.ts` direto), o par se encaixa.
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "skipLibCheck": true
+  },
+  "include": ["ci/**/*.ts", "*.config.ts"]
+}
