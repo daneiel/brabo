@@ -4,7 +4,7 @@
  * ## O problema que isto resolve
  *
  * O Vite **inlina** `import.meta.env.VITE_*` no bundle em tempo de build. Com
- * as URLs de api, engine e Keycloak vindo dali, a imagem do web fica assada
+ * as URLs de api e engine vindo dali, a imagem do web fica assada
  * para um ambiente: mudar o endereço da api exige rebuild, não restart, e cada
  * ambiente precisa da sua própria imagem. Isso quebra a premissa básica de
  * qualquer deploy sério — promover o MESMO artefato que passou no CI de

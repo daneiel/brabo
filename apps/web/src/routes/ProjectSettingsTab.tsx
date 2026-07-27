@@ -243,7 +243,7 @@ function MembersSection({ projectId }: { projectId: string }) {
   return (
     <div className={styles.section}>
       <div className={styles.title}>Membros e papéis</div>
-      <div className={styles.subtitle}>Adicione membros pelo ID de usuário (sincronizado via Keycloak no primeiro login).</div>
+      <div className={styles.subtitle}>Adicione membros pelo ID de usuário.</div>
 
       <div className={styles.inviteBar}>
         <div className={styles.inviteInput}>

@@ -35,7 +35,7 @@ describe('readRuntimeConfig', () => {
   });
 
   it('trata string vazia como ausente, não como valor', () => {
-    const config = readRuntimeConfig({ apiUrl: '', keycloakRealm: '   ' });
+    const config = readRuntimeConfig({ apiUrl: '', engineUrl: '   ' });
 
     expect(config.apiUrl).toBe('http://localhost:3000');
   });
