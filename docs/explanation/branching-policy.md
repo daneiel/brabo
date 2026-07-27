@@ -338,6 +338,26 @@ Ciclo **vazio** — nenhum PR desde a última final — falha com mensagem em ve
 gerar tag. Tag nova apontando para o mesmo commit da anterior faz o histórico
 de versões mentir.
 
+#### De onde saem os PRs do ciclo
+
+Do `git log` entre a última final e `dev`, lendo o número do PR no assunto do
+commit. Os **dois estilos de merge** precisam ser entendidos, porque o número
+cai em lugares diferentes:
+
+| estilo | assunto |
+|---|---|
+| squash | `feat(ci): faz coisa (#53)` |
+| merge commit | `Merge pull request #56 from daneiel/feature/x` |
+
+Ler só o primeiro foi um bug real: o `--no-merges` do range escondia
+exatamente a linha que cita o número num merge commit, e o ciclo inteiro
+parecia vazio — o merge do #56 em `dev` não gerou tag nenhuma.
+
+**Promoção e retropropagação não contam.** Elas nascem de uma permanente, e o
+que carregam já foi contado ou já foi lançado. Sem essa exclusão, um backmerge
+de hotfix sozinho geraria um ciclo novo: uma tag `-dev.N` sobre uma versão que
+não mudou nada.
+
 ### O `N`
 
 `N` é quantas tags daquela versão já existem naquele estágio, mais um.

@@ -3,6 +3,7 @@ import {
   CicloVazioError,
   classificar,
   explicarParInvalido,
+  extrairNumerosDePr,
   identificarCaminho,
   lerPar,
   lerTagDeEstagio,
@@ -12,6 +13,7 @@ import {
   parEhAdjacente,
   proximaVersao,
   proximoN,
+  semTrafegoDaEsteira,
   SemFinalError,
   verificarAncora,
   versaoDeHotfix,
@@ -213,6 +215,62 @@ describe('âncora da tag final', () => {
     const r = verificarAncora('v0.2.0', tags, { ...shas, 'v0.2.0-qa.2': undefined as never }, 'x');
     expect(r.ok).toBe(false);
     expect(r.motivo).toContain('impossível');
+  });
+});
+
+// -------------------------------------- 5b. de onde saem os PRs do ciclo
+
+describe('descobrir os PRs do ciclo', () => {
+  it('lê o número de um SQUASH merge', () => {
+    expect(extrairNumerosDePr(['fix(ci): âncora impossível (#53)'])).toEqual([53]);
+  });
+
+  it('lê o número de um MERGE COMMIT', () => {
+    // O bug real: `--no-merges` escondia esta linha, que é a única que cita o
+    // número quando o PR entra por merge commit. O ciclo do #56 pareceu vazio
+    // e nenhuma tag nasceu do merge.
+    expect(
+      extrairNumerosDePr(['Merge pull request #56 from daneiel/feature/fase6-backmerge-gate']),
+    ).toEqual([56]);
+  });
+
+  it('lê os dois estilos misturados, sem repetir', () => {
+    expect(
+      extrairNumerosDePr([
+        'Merge pull request #56 from daneiel/feature/x',
+        'feat(ci): backmerge gate',
+        'fix(web): dropdown (#53)',
+        'Merge pull request #56 from daneiel/feature/x',
+      ]),
+    ).toEqual([56, 53]);
+  });
+
+  it('ignora assunto sem número', () => {
+    expect(extrairNumerosDePr(['chore: nada', "Merge branch 'main' into dev"])).toEqual([]);
+  });
+
+  it('não confunde `#53` no meio do texto com o número do PR', () => {
+    expect(extrairNumerosDePr(['fix: resolve o caso do #53 sem quebrar nada'])).toEqual([]);
+  });
+
+  it('promoção e retropropagação saem do ciclo', () => {
+    // Contá-las faria um backmerge de hotfix, sozinho, gerar um ciclo novo —
+    // uma tag `-dev.N` sobre uma versão que não mudou nada.
+    const prs = [pr(56, 'feature/x'), pr(60, 'main'), pr(61, 'dev'), pr(62, 'qa')];
+    expect(semTrafegoDaEsteira(prs).map((p) => p.numero)).toEqual([56]);
+  });
+
+  it('um ciclo só de esteira é ciclo VAZIO', () => {
+    const so = semTrafegoDaEsteira([pr(60, 'main'), pr(61, 'dev')]);
+    expect(() => proximaVersao('v0.2.0', so)).toThrow(CicloVazioError);
+  });
+
+  it('ponta a ponta: merge commit de feature vira MINOR', () => {
+    const numeros = extrairNumerosDePr([
+      'Merge pull request #56 from daneiel/feature/fase6-backmerge-gate',
+    ]);
+    const prs = semTrafegoDaEsteira(numeros.map((n) => pr(n, 'feature/fase6-backmerge-gate')));
+    expect(proximaVersao('v0.2.0', prs)).toBe('v0.3.0');
   });
 });
 
