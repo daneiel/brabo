@@ -51,10 +51,12 @@ apps/engine/test
 apps/api/scripts
 
 # Docker: o Dockerfile não se copia; evita invalidar cache ao editar compose.
-# Exceção: docker/web/ tem a config do nginx e o entrypoint que a imagem de
-# produção do web COPIA do contexto — sem a exceção o build dela quebra.
+# Exceções: docker/web/ tem a config do nginx e o entrypoint, e docker/backup/
+# tem os dois scripts — as duas imagens COPIAM esses arquivos do contexto, e
+# sem a exceção o build quebra com "not found" num COPY.
 docker
 !docker/web
+!docker/backup
 Dockerfile*
 docker-compose*.yml
 

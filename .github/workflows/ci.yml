@@ -99,7 +99,8 @@ jobs:
           curl -fsSL -o /tmp/hadolint \
             "https://github.com/hadolint/hadolint/releases/download/v${HADOLINT_VERSION}/hadolint-Linux-x86_64"
           chmod +x /tmp/hadolint
-          /tmp/hadolint docker/api/Dockerfile.prod docker/engine/Dockerfile.prod docker/web/Dockerfile.prod
+          /tmp/hadolint docker/api/Dockerfile.prod docker/engine/Dockerfile.prod \
+            docker/web/Dockerfile.prod docker/backup/Dockerfile.prod
 
   test-ts:
     name: Testes TS (api + web)
@@ -232,6 +233,65 @@ jobs:
             exit 1
           fi
           echo "ok: nenhum teste excluído"
+
+  audit:
+    name: Auditoria de dependências
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Job próprio, e não um passo do `lint`, porque a natureza da falha é
+    # diferente: lint reprova o QUE ESCREVEMOS, auditoria reprova o que
+    # IMPORTAMOS. Separado, dá para ver num relance se a PR quebrou por código
+    # nosso ou porque uma CVE foi publicada num pacote de terceiro entre ontem
+    # e hoje — que acontece sem ninguém tocar no repo.
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # `--audit-level critical`: o gate é para CRÍTICA, como definido no
+      # escopo da fase. HIGH e abaixo aparecem no log sem reprovar — reprovar
+      # em `moderate` num monorepo com esta árvore de dependências
+      # transformaria o CI num bloqueio permanente por coisa que ninguém pode
+      # resolver hoje, e a reação seria desligar o gate inteiro.
+      - name: pnpm audit (workspace)
+        run: pnpm audit --audit-level critical
+
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          otp-version: ${{ env.OTP_VERSION }}
+
+      - uses: actions/cache@v4
+        with:
+          path: apps/engine/deps
+          key: ${{ runner.os }}-mix-deps-${{ env.ELIXIR_VERSION }}-${{ hashFiles('apps/engine/mix.lock') }}
+          restore-keys: ${{ runner.os }}-mix-deps-${{ env.ELIXIR_VERSION }}-
+
+      - name: mix deps.get
+        working-directory: apps/engine
+        run: mix deps.get
+
+      # Os dois respondem perguntas DIFERENTES e por isso os dois rodam:
+      #   hex.audit    -> este pacote foi APOSENTADO pelo autor?
+      #   deps.audit   -> este pacote tem CVE publicada? (mix_audit)
+      # Só o primeiro, que foi o pedido original, deixaria o gate do engine sem
+      # detectar vulnerabilidade nenhuma.
+      - name: mix hex.audit (pacotes aposentados)
+        working-directory: apps/engine
+        run: mix hex.audit
+
+      - name: mix deps.audit (CVEs)
+        working-directory: apps/engine
+        run: mix deps.audit
 
   secrets-scan:
     name: Gitleaks no repositório
@@ -393,12 +453,25 @@ jobs:
           cache-from: type=gha,scope=web
           cache-to: type=gha,scope=web,mode=max
 
+      # Quarta imagem (Fase 5, item 6). Entra nos MESMOS gates das outras três:
+      # non-root, trivy e hadolint. Ela carrega credencial de leitura do banco
+      # inteiro — é a última que deveria ficar de fora do scan.
+      - name: Build do backup
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/backup/Dockerfile.prod
+          tags: brabo-backup:prod
+          load: true
+          cache-from: type=gha,scope=backup
+          cache-to: type=gha,scope=backup,mode=max
+
       # Critério de aceite explícito da sessão. Checado aqui além do smoke.sh
       # porque é barato e falha com mensagem direta.
       - name: Nenhuma imagem pode rodar como root
         run: |
           set -euo pipefail
-          for img in brabo-api:prod brabo-engine:prod brabo-web:prod; do
+          for img in brabo-api:prod brabo-engine:prod brabo-web:prod brabo-backup:prod; do
             user="$(docker inspect --format '{{.Config.User}}' "$img")"
             if [ -z "$user" ] || [ "$user" = "root" ] || [ "$user" = "0" ]; then
               echo "::error::$img roda como root (Config.User='$user')"
@@ -455,6 +528,18 @@ jobs:
           ignore-unfixed: true
           # CVEs aceitas conscientemente, cada uma com justificativa e data de
           # expiração — ver o cabeçalho do arquivo.
+          trivyignores: .trivyignore.yaml
+          exit-code: '1'
+
+      - name: Trivy no backup
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: brabo-backup:prod
+          format: table
+          version: v0.70.0
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
           trivyignores: .trivyignore.yaml
           exit-code: '1'
 
