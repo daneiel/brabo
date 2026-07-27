@@ -1,20 +1,6 @@
 {
   "openapi": "3.0.0",
   "paths": {
-    "/": {
-      "get": {
-        "operationId": "AppController_getHello",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "App"
-        ]
-      }
-    },
     "/.well-known/jwks.json": {
       "get": {
         "description": "Uma chave em operação normal; duas durante uma rotação de AUTH_JWT_SECRET.",
@@ -244,6 +230,7 @@
     },
     "/git/oauth/{provider}/callback": {
       "get": {
+        "description": "Pública porque quem chega é o BROWSER do usuário vindo do provider, sem sessão da api. Não é irrestrita: o `state` é verificado por HMAC e sem ele válido a chamada é recusada. Nunca responde JSON — sempre redireciona, porque um corpo de erro cru numa navegação de browser seria péssima experiência.",
         "operationId": "GitController_callback",
         "parameters": [
           {
@@ -251,6 +238,10 @@
             "required": true,
             "in": "path",
             "schema": {
+              "enum": [
+                "github",
+                "gitlab"
+              ],
               "type": "string"
             }
           },
@@ -272,26 +263,66 @@
           }
         ],
         "responses": {
-          "200": {
-            "description": ""
+          "302": {
+            "description": "Sucesso vai para `WEB_ORIGIN/projects/:id?git=connected`; falha vai para `WEB_ORIGIN/git-error`. O erro NÃO vaza o motivo na URL.",
+            "headers": {
+              "Location": {
+                "description": "Destino na web.",
+                "schema": {
+                  "type": "string",
+                  "example": "http://localhost:5173/projects/01JC…?git=connected"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto inexistente."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Recebe o retorno do OAuth e redireciona para a web",
         "tags": [
-          "Git"
+          "git"
         ]
       }
     },
     "/health": {
       "get": {
+        "description": "Faz um `select 1`. Revela apenas se o banco responde; nada de topologia ou versão. Pública porque quem chama é o kubelet, que não carrega token.",
         "operationId": "HealthController_check",
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthStatusResponseDto"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "O banco não respondeu. O corpo traz a mensagem em `details`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthStatusResponseDto"
+                }
+              }
+            }
           }
         },
+        "summary": "Readiness — o processo consegue atender de verdade",
         "tags": [
-          "Health"
+          "infraestrutura"
         ]
       }
     },
@@ -1173,43 +1204,105 @@
     },
     "/live": {
       "get": {
+        "description": "NÃO toca o banco, de propósito. Se tocasse, um Postgres lento reiniciaria TODAS as réplicas ao mesmo tempo e transformaria degradação em queda total. Quem tira o pod do balanceamento é o `/health`.",
         "operationId": "HealthController_live",
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthStatusResponseDto"
+                }
+              }
+            }
           }
         },
+        "summary": "Liveness — o processo ainda atende requisição",
         "tags": [
-          "Health"
+          "infraestrutura"
         ]
       }
     },
     "/metrics": {
       "get": {
+        "description": "Não é JSON: é `text/plain` no formato de exposição. Pública por necessidade (o scraper não carrega token) e restringida por REDE — o Ingress de produção bloqueia este caminho na borda e a NetworkPolicy só libera o namespace de monitoramento.",
         "operationId": "MetricsController_scrape",
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Métricas no formato de exposição.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "# HELP oban_queue_depth Profundidade da fila do Oban\n# TYPE oban_queue_depth gauge\noban_queue_depth{queue=\"default\",state=\"available\"} 0\n"
+              }
+            }
           }
         },
+        "summary": "Expõe as métricas no formato de exposição do Prometheus",
         "tags": [
-          "Metrics"
+          "infraestrutura"
         ]
       }
     },
     "/models": {
       "get": {
+        "description": "Categoria `local` são os do Ollama, que não gastam dinheiro; `cloud` são os de API paga. Modelo inativo não aparece aqui, mas continua nos custos históricos.",
         "operationId": "ModelsController_list",
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "local": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/components/schemas/ModelResponseDto"
+                        }
+                      }
+                    },
+                    "cloud": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/components/schemas/ModelResponseDto"
+                        }
+                      }
+                    }
+                  },
+                  "example": {
+                    "local": {
+                      "ollama": []
+                    },
+                    "cloud": {
+                      "anthropic": [],
+                      "openai": []
+                    }
+                  }
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Lista os modelos disponíveis, agrupados por categoria e provider",
         "tags": [
-          "Models"
+          "llm"
         ]
       }
     },
@@ -1441,6 +1534,7 @@
     },
     "/projects/{projectId}/agent-bindings/{agentSlug}": {
       "get": {
+        "description": "Cascata agente → projeto → workspace, SEM sessão: é a configuração do agente no projeto, não a de uma conversa específica.",
         "operationId": "ModelBindingsController_getAgentBinding",
         "parameters": [
           {
@@ -1456,20 +1550,41 @@
             "required": true,
             "in": "path",
             "schema": {
+              "example": "dev-api",
               "type": "string"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResolvedBindingResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no escopo."
+          },
+          "404": {
+            "description": "Escopo inexistente."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Resolve qual modelo um agente usa, e de onde ele veio",
         "tags": [
-          "ModelBindings"
+          "llm"
         ]
       },
       "put": {
+        "description": "Vale para todas as sessões que não tenham binding próprio. É como se dá um modelo barato ao Psicólogo e um caro ao Arquiteto no mesmo projeto.",
         "operationId": "ModelBindingsController_setAgentBinding",
         "parameters": [
           {
@@ -1485,6 +1600,7 @@
             "required": true,
             "in": "path",
             "schema": {
+              "example": "dev-api",
               "type": "string"
             }
           }
@@ -1501,11 +1617,30 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelBindingResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no escopo."
+          },
+          "404": {
+            "description": "Escopo inexistente."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Fixa o modelo de um agente no projeto",
         "tags": [
-          "ModelBindings"
+          "llm"
         ]
       }
     },
@@ -1763,6 +1898,7 @@
     },
     "/projects/{projectId}/budget": {
       "get": {
+        "description": "Valores em micro-USD. Exige `maintainer` — é informação de custo.",
         "operationId": "BudgetsController_getProjectBudget",
         "parameters": [
           {
@@ -1776,14 +1912,34 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto ou sessão inexistente."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Lê o orçamento do projeto e o quanto já foi gasto",
         "tags": [
-          "Budgets"
+          "llm"
         ]
       },
       "put": {
+        "description": "O limite entra em DÓLARES e é convertido para micro-USD. Com `policy=block` a chamada que estouraria o teto é RECUSADA, não apenas registrada.",
         "operationId": "BudgetsController_setProjectBudget",
         "parameters": [
           {
@@ -1807,11 +1963,30 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto ou sessão inexistente."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Define o teto de gasto do projeto",
         "tags": [
-          "Budgets"
+          "llm"
         ]
       }
     },
@@ -1967,6 +2142,7 @@
     },
     "/projects/{projectId}/git/{provider}/connect": {
       "get": {
+        "description": "Não redireciona: devolve a URL para o cliente decidir quando mandar o browser. O `state` vai assinado por HMAC, e é o que impede o callback de ser forjado.",
         "operationId": "GitController_connect",
         "parameters": [
           {
@@ -1982,22 +2158,49 @@
             "required": true,
             "in": "path",
             "schema": {
+              "enum": [
+                "github",
+                "gitlab"
+              ],
               "type": "string"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GitAuthorizeUrlResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Provider fora de `github`/`gitlab`."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto inexistente."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Começa o OAuth com o provider de git",
         "tags": [
-          "Git"
+          "git"
         ]
       }
     },
     "/projects/{projectId}/git/{provider}/repository": {
       "post": {
+        "description": "A resposta volta assim que o repositório existe; o bootstrap (branches permanentes, proteções, templates) continua em segundo plano e é IDEMPOTENTE E RETOMÁVEL. Acompanhe por `GET /projects/:id/git/bootstrap`.",
         "operationId": "GitController_provision",
         "parameters": [
           {
@@ -2013,6 +2216,11 @@
             "required": true,
             "in": "path",
             "schema": {
+              "enum": [
+                "local",
+                "github",
+                "gitlab"
+              ],
               "type": "string"
             }
           }
@@ -2029,16 +2237,39 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProvisionRepositoryResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Provider inválido, ou credencial ausente."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto inexistente."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cria o repositório e dispara o bootstrap de Gitflow",
         "tags": [
-          "Git"
+          "git"
         ]
       }
     },
     "/projects/{projectId}/git/bootstrap": {
       "get": {
+        "description": "Em que passo está, se falhou e onde, e quantas tentativas houve. O detalhe passo a passo vem dos eventos `bootstrap.step_*` da sessão dedicada.",
         "operationId": "GitController_getBootstrap",
         "parameters": [
           {
@@ -2052,11 +2283,30 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RepoBootstrapStatusResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto inexistente."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Devolve o estado do bootstrap de Gitflow",
         "tags": [
-          "Git"
+          "git"
         ]
       }
     },
@@ -2075,11 +2325,30 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProvisionedRepositoryResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto inexistente."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Devolve o repositório provisionado do projeto",
         "tags": [
-          "Git"
+          "git"
         ]
       }
     },
@@ -2472,6 +2741,7 @@
     },
     "/projects/{projectId}/model-binding": {
       "get": {
+        "description": "O binding CRU deste escopo — `null` se o projeto só herda do workspace.",
         "operationId": "ModelBindingsController_getProjectBinding",
         "parameters": [
           {
@@ -2485,11 +2755,30 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelBindingResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no escopo."
+          },
+          "404": {
+            "description": "Escopo inexistente."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Lê o binding de modelo do projeto",
         "tags": [
-          "ModelBindings"
+          "llm"
         ]
       },
       "put": {
@@ -2516,11 +2805,30 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelBindingResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no escopo."
+          },
+          "404": {
+            "description": "Escopo inexistente."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Define o modelo do projeto",
         "tags": [
-          "ModelBindings"
+          "llm"
         ]
       }
     },
@@ -3447,6 +3755,7 @@
     },
     "/projects/{projectId}/sessions/{sessionId}/budget": {
       "get": {
+        "description": "É o que alimenta o medidor de tokens ao vivo da tela de sessão.",
         "operationId": "BudgetsController_getSessionBudget",
         "parameters": [
           {
@@ -3460,14 +3769,34 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto ou sessão inexistente."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Lê o orçamento da sessão e o gasto acumulado",
         "tags": [
-          "Budgets"
+          "llm"
         ]
       },
       "put": {
+        "description": "Mesma conversão de dólar para micro-USD do orçamento de projeto.",
         "operationId": "BudgetsController_setSessionBudget",
         "parameters": [
           {
@@ -3491,16 +3820,36 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto ou sessão inexistente."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Define o teto de gasto da sessão",
         "tags": [
-          "Budgets"
+          "llm"
         ]
       }
     },
     "/projects/{projectId}/sessions/{sessionId}/chat": {
       "post": {
+        "description": "Server-Sent Events. Os quadros `delta` trazem o texto incremental e o `done` fecha com a contabilidade de tokens e custo. Um quadro `metering_failed` significa que a RESPOSTA saiu mas o custo não foi contabilizado — a falha aparece em vez de sumir. Se o orçamento estiver estourado com `policy=block`, o stream traz `error` e nenhum `delta`.",
         "operationId": "ChatController_chat",
         "parameters": [
           {
@@ -3531,12 +3880,31 @@
           }
         },
         "responses": {
-          "201": {
-            "description": ""
+          "200": {
+            "description": "Stream de quadros até `done` ou `error`.",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatSseEventResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto ou sessão inexistente."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Conversa com o modelo da sessão, com a resposta em stream",
         "tags": [
-          "Chat"
+          "llm"
         ]
       }
     },
@@ -3916,6 +4284,7 @@
     },
     "/projects/{projectId}/sessions/{sessionId}/model-binding": {
       "get": {
+        "description": "Devolve o binding RESOLVIDO pela cascata, não o binding cru da sessão: uma sessão sem binding próprio usa o do projeto, e responder `null` aqui seria a resposta errada para a pergunta certa. O campo `origin` diz de qual escopo o valor veio.",
         "operationId": "ModelBindingsController_getSessionBinding",
         "parameters": [
           {
@@ -3937,14 +4306,34 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResolvedBindingResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no escopo."
+          },
+          "404": {
+            "description": "Escopo inexistente."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Resolve qual modelo a sessão usa, e de onde ele veio",
         "tags": [
-          "ModelBindings"
+          "llm"
         ]
       },
       "put": {
+        "description": "Vence tudo o mais na cascata enquanto a sessão viver.",
         "operationId": "ModelBindingsController_setSessionBinding",
         "parameters": [
           {
@@ -3976,11 +4365,30 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelBindingResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no escopo."
+          },
+          "404": {
+            "description": "Escopo inexistente."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Fixa o modelo desta sessão",
         "tags": [
-          "ModelBindings"
+          "llm"
         ]
       }
     },
@@ -4147,6 +4555,7 @@
     },
     "/projects/{projectId}/sessions/{sessionId}/token-usage": {
       "get": {
+        "description": "O dado sempre esteve em `token_usage`, mas sem agregação nem rota o painel do time não tinha como mostrar o custo por card. Mesmo papel exigido do orçamento da sessão.",
         "operationId": "BudgetsController_getSessionTokenUsage",
         "parameters": [
           {
@@ -4160,11 +4569,33 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AgentTokenUsageResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto ou sessão inexistente."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Quebra o gasto da sessão por agente",
         "tags": [
-          "Budgets"
+          "llm"
         ]
       }
     },
@@ -4234,18 +4665,36 @@
     },
     "/users/me/credentials": {
       "get": {
+        "description": "Sem papel exigido: credencial é sobre quem chamou, não sobre workspace ou projeto. Cobre chaves de LLM e tokens de git na mesma listagem.",
         "operationId": "CredentialsController_list",
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserCredentialResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Lista as credenciais do próprio usuário",
         "tags": [
-          "Credentials"
+          "credenciais"
         ]
       },
       "post": {
+        "description": "Upsert por (usuário, provider). A chave é cifrada por envelope encryption antes de tocar o banco e a resposta traz só a PROJEÇÃO — nunca o segredo, nem cifrado.",
         "operationId": "CredentialsController_create",
         "parameters": [],
         "requestBody": {
@@ -4260,16 +4709,30 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserCredentialResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Registra ou substitui a chave de API de um provider",
         "tags": [
-          "Credentials"
+          "credenciais"
         ]
       }
     },
     "/users/me/credentials/{provider}": {
       "delete": {
+        "description": "Idempotente: apagar o que não existe também responde `{ ok: true }`.",
         "operationId": "CredentialsController_remove",
         "parameters": [
           {
@@ -4277,22 +4740,37 @@
             "required": true,
             "in": "path",
             "schema": {
+              "example": "anthropic",
               "type": "string"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Remove a credencial de um provider",
         "tags": [
-          "Credentials"
+          "credenciais"
         ]
       }
     },
     "/users/me/git-credentials": {
       "post": {
+        "description": "Caminho próprio, e não o de `users/me/credentials`, por causa do teste: o token é validado contra o provider ANTES de ser persistido, para não guardar uma credencial que só falharia no primeiro push. A leitura e a remoção reaproveitam as rotas de `users/me/credentials` — é a mesma tabela.",
         "operationId": "GitCredentialsController_create",
         "parameters": [],
         "requestBody": {
@@ -4307,11 +4785,27 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserCredentialResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "O provider recusou o token."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Registra um token de git depois de TESTAR a conexão",
         "tags": [
-          "GitCredentials"
+          "credenciais"
         ]
       }
     },
@@ -4588,6 +5082,7 @@
     },
     "/workspaces/{workspaceId}/model-binding": {
       "get": {
+        "description": "O binding CRU deste escopo. É a raiz da cascata.",
         "operationId": "ModelBindingsController_getWorkspaceBinding",
         "parameters": [
           {
@@ -4601,14 +5096,34 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelBindingResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no escopo."
+          },
+          "404": {
+            "description": "Escopo inexistente."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Lê o binding de modelo do workspace",
         "tags": [
-          "ModelBindings"
+          "llm"
         ]
       },
       "put": {
+        "description": "Vale para todos os projetos que não tenham binding próprio.",
         "operationId": "ModelBindingsController_setWorkspaceBinding",
         "parameters": [
           {
@@ -4632,11 +5147,30 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelBindingResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no escopo."
+          },
+          "404": {
+            "description": "Escopo inexistente."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Define o modelo default do workspace",
         "tags": [
-          "ModelBindings"
+          "llm"
         ]
       }
     },
@@ -5011,6 +5545,35 @@
           "versions"
         ]
       },
+      "AgentTokenUsageResponseDto": {
+        "type": "object",
+        "properties": {
+          "actorId": {
+            "type": "string",
+            "example": "dev-api",
+            "description": "Slug do agente, ou id do usuário."
+          },
+          "costMicros": {
+            "type": "number",
+            "example": 3400000,
+            "description": "Custo em micro-USD."
+          },
+          "inputTokens": {
+            "type": "number",
+            "example": 128000
+          },
+          "outputTokens": {
+            "type": "number",
+            "example": 14200
+          }
+        },
+        "required": [
+          "actorId",
+          "costMicros",
+          "inputTokens",
+          "outputTokens"
+        ]
+      },
       "AnaliseDeTerminoResponseDto": {
         "type": "object",
         "properties": {
@@ -5148,6 +5711,121 @@
       "BlockTaskInternalDto": {
         "type": "object",
         "properties": {}
+      },
+      "BudgetResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01JC4Z0000ORCAMENTO000000001"
+          },
+          "projectId": {
+            "type": "object",
+            "example": "01JC4Z0000PROJETO0000000001",
+            "nullable": true,
+            "description": "Preenchido no orçamento de projeto; `null` no de sessão."
+          },
+          "sessionId": {
+            "type": "object",
+            "example": null,
+            "nullable": true,
+            "description": "O oposto do acima."
+          },
+          "limitMicros": {
+            "type": "number",
+            "example": 50000000,
+            "description": "Teto em micro-USD (50 USD)."
+          },
+          "spentMicros": {
+            "type": "number",
+            "example": 12400000,
+            "description": "Gasto acumulado, em micro-USD."
+          },
+          "policy": {
+            "type": "string",
+            "enum": [
+              "block",
+              "allow"
+            ],
+            "example": "block",
+            "description": "`block` recusa a chamada ao estourar o teto; `allow` deixa passar e só avisa."
+          },
+          "lastThresholdNotified": {
+            "type": "number",
+            "example": 70,
+            "description": "Maior limiar (70/90/100) já notificado. É ele, e não o gasto anterior, que serve de piso — usar o gasto faria o mesmo aviso disparar de novo a cada chamada depois de cruzado."
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-07-12T08:00:00.000Z",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "example": "2026-07-27T15:00:00.000Z",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "projectId",
+          "sessionId",
+          "limitMicros",
+          "spentMicros",
+          "policy",
+          "lastThresholdNotified",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "ChatSseEventResponseDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "delta",
+              "done",
+              "error",
+              "metering_failed"
+            ],
+            "example": "delta",
+            "description": "`delta` traz `text` incremental; `done` fecha com a contabilidade; `error` aborta; `metering_failed` significa que a RESPOSTA saiu mas o custo não foi contabilizado — o quadro existe para essa falha não passar despercebida."
+          },
+          "text": {
+            "type": "string",
+            "example": "Vou abrir o épico",
+            "description": "Só em `delta`."
+          },
+          "inputTokens": {
+            "type": "number",
+            "example": 1820,
+            "description": "Só em `done`."
+          },
+          "outputTokens": {
+            "type": "number",
+            "example": 340,
+            "description": "Só em `done`."
+          },
+          "costMicros": {
+            "type": "number",
+            "example": 52700,
+            "description": "Só em `done`, micro-USD."
+          },
+          "estimated": {
+            "type": "boolean",
+            "example": false,
+            "description": "Só em `done`. `true` quando o provider não devolveu contagem e o custo foi ESTIMADO — o número vale menos e a UI precisa poder dizer isso."
+          },
+          "message": {
+            "type": "string",
+            "example": "orçamento da sessão esgotado",
+            "description": "Só em `error` e `metering_failed`."
+          }
+        },
+        "required": [
+          "type"
+        ]
       },
       "ClaimTaskInternalDto": {
         "type": "object",
@@ -5349,6 +6027,19 @@
           "modules"
         ]
       },
+      "GitAuthorizeUrlResponseDto": {
+        "type": "object",
+        "properties": {
+          "authorizeUrl": {
+            "type": "string",
+            "example": "https://github.com/login/oauth/authorize?client_id=…&state=…&redirect_uri=…",
+            "description": "Para onde mandar o browser. O `state` é assinado por HMAC com `GIT_OAUTH_STATE_SECRET` — é isso que impede o callback de ser forjado."
+          }
+        },
+        "required": [
+          "authorizeUrl"
+        ]
+      },
       "HandoffResponseDto": {
         "type": "object",
         "properties": {
@@ -5412,6 +6103,42 @@
           "status",
           "createdAt",
           "updatedAt"
+        ]
+      },
+      "HealthStatusResponseDto": {
+        "type": "object",
+        "properties": {
+          "service": {
+            "type": "string",
+            "enum": [
+              "api",
+              "engine"
+            ],
+            "example": "api"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "error"
+            ],
+            "example": "ok"
+          },
+          "timestamp": {
+            "type": "string",
+            "example": "2026-07-27T15:40:00.000Z",
+            "format": "date-time"
+          },
+          "details": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Só quando `status=error`, com a mensagem da falha. Em resposta saudável não há detalhe nenhum, de propósito: liveness não é lugar de expor topologia."
+          }
+        },
+        "required": [
+          "service",
+          "status",
+          "timestamp"
         ]
       },
       "HypothesisResponseDto": {
@@ -5705,6 +6432,126 @@
         "type": "object",
         "properties": {}
       },
+      "ModelBindingResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01JC4Z0000BINDING00000000001"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "workspace",
+              "project",
+              "agent",
+              "session"
+            ],
+            "example": "project"
+          },
+          "scopeId": {
+            "type": "string",
+            "example": "01JC4Z0000PROJETO0000000001",
+            "description": "Id do workspace, projeto, agente ou sessão a que o binding se prende."
+          },
+          "modelId": {
+            "type": "string",
+            "example": "01JC4Z0000MODELO00000000001"
+          },
+          "createdBy": {
+            "type": "string",
+            "example": "01JC4Z0000USUARIO0000000001"
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-07-11T09:00:00.000Z",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "example": "2026-07-11T09:00:00.000Z",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "scope",
+          "scopeId",
+          "modelId",
+          "createdBy",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "ModelResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01JC4Z0000MODELO00000000001"
+          },
+          "provider": {
+            "type": "string",
+            "enum": [
+              "ollama",
+              "anthropic",
+              "openai"
+            ],
+            "example": "anthropic"
+          },
+          "name": {
+            "type": "string",
+            "example": "claude-opus-4-8",
+            "description": "Identificador no provider."
+          },
+          "displayName": {
+            "type": "string",
+            "example": "Claude Opus 4.8"
+          },
+          "inputPricePerMillionMicros": {
+            "type": "number",
+            "example": 15000000,
+            "description": "Preço por milhão de tokens de ENTRADA, em micro-USD."
+          },
+          "outputPricePerMillionMicros": {
+            "type": "number",
+            "example": 75000000,
+            "description": "Preço por milhão de tokens de SAÍDA, em micro-USD."
+          },
+          "contextWindow": {
+            "type": "object",
+            "example": 200000,
+            "nullable": true
+          },
+          "isActive": {
+            "type": "boolean",
+            "example": true,
+            "description": "Modelo desativado some da seleção mas continua nos custos históricos."
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-07-01T00:00:00.000Z",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "example": "2026-07-01T00:00:00.000Z",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "provider",
+          "name",
+          "displayName",
+          "inputPricePerMillionMicros",
+          "outputPricePerMillionMicros",
+          "contextWindow",
+          "isActive",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
       "ModuleMapResponseDto": {
         "type": "object",
         "properties": {
@@ -5836,6 +6683,37 @@
         "required": [
           "items",
           "nextCursor"
+        ]
+      },
+      "PassoDeBootstrapResponseDto": {
+        "type": "object",
+        "properties": {
+          "step": {
+            "type": "string",
+            "enum": [
+              "commit_pr_template",
+              "commit_branching_policy",
+              "create_dev_branch",
+              "create_qa_branch",
+              "create_rc_branch",
+              "protect_branches"
+            ],
+            "example": "create_dev_branch"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "running",
+              "done",
+              "failed"
+            ],
+            "example": "running"
+          }
+        },
+        "required": [
+          "step",
+          "status"
         ]
       },
       "PerfilApagadoResponseDto": {
@@ -6299,9 +7177,122 @@
         "type": "object",
         "properties": {}
       },
+      "ProvisionedRepositoryResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01JC4Z0000REPOSITORIO000001"
+          },
+          "projectId": {
+            "type": "string",
+            "example": "01JC4Z0000PROJETO0000000001"
+          },
+          "provider": {
+            "type": "string",
+            "enum": [
+              "local",
+              "github",
+              "gitlab"
+            ],
+            "example": "github"
+          },
+          "externalId": {
+            "type": "string",
+            "example": "904837261",
+            "description": "Id do repositório no provider."
+          },
+          "url": {
+            "type": "string",
+            "example": "https://github.com/acme/checkout"
+          },
+          "defaultBranch": {
+            "type": "string",
+            "example": "main",
+            "description": "A política do projeto usa `dev`, `qa` e `main` como permanentes."
+          },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "public",
+              "private"
+            ],
+            "example": "private"
+          },
+          "provisionedBy": {
+            "type": "string",
+            "example": "01JC4Z0000USUARIO0000000001"
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-07-23T10:00:00.000Z",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "example": "2026-07-23T10:00:00.000Z",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "projectId",
+          "provider",
+          "externalId",
+          "url",
+          "defaultBranch",
+          "visibility",
+          "provisionedBy",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
       "ProvisionRepositoryDto": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "checkout",
+            "description": "Nome do repositório no provider."
+          },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "public",
+              "private"
+            ],
+            "example": "private"
+          },
+          "namespace": {
+            "type": "string",
+            "example": "acme",
+            "description": "Organização ou grupo. Omitido, o repositório nasce na conta pessoal de quem registrou a credencial."
+          }
+        },
+        "required": [
+          "name",
+          "visibility"
+        ]
+      },
+      "ProvisionRepositoryResponseDto": {
+        "type": "object",
+        "properties": {
+          "repository": {
+            "$ref": "#/components/schemas/ProvisionedRepositoryResponseDto"
+          },
+          "bootstrap": {
+            "description": "Onde o bootstrap de Gitflow parou. O trabalho continua em segundo plano — acompanhe por `GET /projects/:id/git/bootstrap`.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PassoDeBootstrapResponseDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "repository",
+          "bootstrap"
+        ]
       },
       "PsychologistAnalysisResponseDto": {
         "type": "object",
@@ -6426,7 +7417,77 @@
       },
       "RegisterGitCredentialDto": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "provider": {
+            "type": "string",
+            "enum": [
+              "github",
+              "gitlab"
+            ],
+            "example": "github"
+          },
+          "token": {
+            "type": "string",
+            "example": "ghp_…",
+            "description": "Personal access token. É TESTADO contra o provider antes de ser persistido — token inválido responde erro em vez de ser guardado para falhar depois. Cifrado por envelope encryption e nunca devolvido."
+          }
+        },
+        "required": [
+          "provider",
+          "token"
+        ]
+      },
+      "RepoBootstrapStatusResponseDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "provisioning",
+              "ready",
+              "failed"
+            ],
+            "example": "provisioning",
+            "nullable": true,
+            "description": "`null` quando nunca houve provisionamento neste projeto."
+          },
+          "sessionId": {
+            "type": "object",
+            "example": "01JC4Z8QK3M7YV2N5T9B0PXHRA",
+            "nullable": true,
+            "description": "Sessão DEDICADA do bootstrap. A tela de progresso lê os eventos `bootstrap.step_*` dela para montar o checklist ao vivo."
+          },
+          "failedStep": {
+            "type": "string",
+            "enum": [
+              "commit_pr_template",
+              "commit_branching_policy",
+              "create_dev_branch",
+              "create_qa_branch",
+              "create_rc_branch",
+              "protect_branches"
+            ],
+            "example": null,
+            "nullable": true
+          },
+          "lastError": {
+            "type": "object",
+            "example": null,
+            "nullable": true
+          },
+          "attempts": {
+            "type": "number",
+            "example": 1,
+            "description": "Quantas vezes o bootstrap já foi tentado. Ele é idempotente e retomável: repetir não duplica o que já deu certo."
+          }
+        },
+        "required": [
+          "status",
+          "sessionId",
+          "failedStep",
+          "lastError",
+          "attempts"
+        ]
       },
       "ReportSessionTerminationDto": {
         "type": "object",
@@ -6460,6 +7521,30 @@
         "required": [
           "token",
           "novaSenha"
+        ]
+      },
+      "ResolvedBindingResponseDto": {
+        "type": "object",
+        "properties": {
+          "modelId": {
+            "type": "string",
+            "example": "01JC4Z0000MODELO00000000001"
+          },
+          "origin": {
+            "type": "string",
+            "enum": [
+              "workspace",
+              "project",
+              "agent",
+              "session"
+            ],
+            "example": "project",
+            "description": "De qual escopo o valor veio. A cascata é sessão → agente → projeto → workspace, e expor a ORIGEM é o que permite a UI dizer \"herdado do projeto\" em vez de mostrar um valor sem procedência."
+          }
+        },
+        "required": [
+          "modelId",
+          "origin"
         ]
       },
       "RollbackResponseDto": {
@@ -6545,7 +7630,16 @@
       },
       "SendChatMessageDto": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "text": {
+            "type": "string",
+            "example": "Resuma o que já decidimos sobre o checkout.",
+            "description": "A mensagem do usuário. A resposta volta como stream SSE."
+          }
+        },
+        "required": [
+          "text"
+        ]
       },
       "SessaoResponseDto": {
         "type": "object",
@@ -6738,7 +7832,17 @@
       },
       "SetModelBindingDto": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "modelId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "9b1c2d3e-4f50-4a61-8b72-0c3d4e5f6a7b",
+            "description": "Modelo a prender neste escopo. Deve existir em `GET /models`."
+          }
+        },
+        "required": [
+          "modelId"
+        ]
       },
       "SetProjectPermissionsDto": {
         "type": "object",
@@ -7084,11 +8188,79 @@
       },
       "UpsertBudgetDto": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "limitUsd": {
+            "type": "number",
+            "example": 50,
+            "minimum": 0,
+            "description": "Teto em DÓLARES — é o único lugar do contrato que fala em dólar, porque é o que uma pessoa digita. A api converte para micro-USD, e as respostas voltam em micro-USD."
+          },
+          "policy": {
+            "type": "string",
+            "enum": [
+              "block",
+              "allow"
+            ],
+            "example": "block",
+            "description": "`block` recusa a chamada ao estourar o teto; `allow` deixa passar e apenas avisa."
+          }
+        },
+        "required": [
+          "limitUsd",
+          "policy"
+        ]
       },
       "UpsertCredentialDto": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "provider": {
+            "type": "string",
+            "enum": [
+              "anthropic",
+              "openai"
+            ],
+            "example": "anthropic"
+          },
+          "apiKey": {
+            "type": "string",
+            "example": "sk-ant-api03-…",
+            "description": "A chave em texto plano. É cifrada por envelope encryption antes de tocar o banco e NUNCA volta em resposta nenhuma — nem cifrada."
+          }
+        },
+        "required": [
+          "provider",
+          "apiKey"
+        ]
+      },
+      "UserCredentialResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01JC4Z0000CREDENCIAL00000001"
+          },
+          "provider": {
+            "type": "object",
+            "example": "anthropic",
+            "description": "Cobre chaves de LLM e tokens de git (`github`, `gitlab`)."
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-07-10T10:00:00.000Z",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "example": "2026-07-10T10:00:00.000Z",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "provider",
+          "createdAt",
+          "updatedAt"
+        ]
       },
       "VerifyEmailDto": {
         "type": "object",
