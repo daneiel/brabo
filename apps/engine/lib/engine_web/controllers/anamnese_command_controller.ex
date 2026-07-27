@@ -12,7 +12,7 @@ defmodule EngineWeb.AnamneseCommandController do
   recente do projeto): projeto sem sessão não tem log pra analisar, e a
   rodada é um no-op silencioso — igual ao caminho periódico.
 
-  Guardado pelo plug VerifyApiToken, como os demais command controllers.
+  Guardado pelo plug VerifyServiceToken, como os demais command controllers.
   """
 
   use EngineWeb, :controller

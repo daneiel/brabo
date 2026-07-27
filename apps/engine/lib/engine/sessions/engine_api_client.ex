@@ -451,14 +451,19 @@ end
 
 defmodule Engine.Sessions.EngineApiClient.Live do
   @moduledoc """
-  Cliente HTTP real: busca um token client-credentials no Keycloak
-  (cacheado em :persistent_term — escrita rara o suficiente pra não
-  justificar outro processo supervisionado) e chama os endpoints
-  internos da api (POST .../termination, POST .../events).
+  Cliente HTTP real: chama os endpoints internos da api
+  (POST .../termination, POST .../events) autenticado pelo segredo
+  compartilhado `BRABO_SERVICE_TOKEN`.
+
+  Até a Fase 7a isto buscava um token client-credentials no Keycloak e o
+  cacheava em `:persistent_term` até expirar. Removido o Keycloak, o valor é
+  uma variável de ambiente — ler env por chamada custa menos do que a
+  invalidação que o cache exigia, e some um caminho de rede que podia falhar
+  no meio de qualquer operação.
   """
 
   @behaviour Engine.Sessions.EngineApiClient
-  @cache_key {__MODULE__, :token}
+  @cabecalho_service_token "x-brabo-service-token"
 
   @impl true
   def report_termination(project_id, session_id, reason, to) do
@@ -491,7 +496,7 @@ defmodule Engine.Sessions.EngineApiClient.Live do
       api_url() <>
         "/internal/sessions/#{session_id}/events?projectId=#{project_id}&limit=200"
 
-    case Req.get(url, headers: [{"authorization", "Bearer #{token()}"}]) do
+    case Req.get(url, headers: auth_headers()) do
       {:ok, %Req.Response{status: status, body: %{"items" => items}}}
       when status in 200..299 ->
         {:ok, items}
@@ -625,7 +630,7 @@ defmodule Engine.Sessions.EngineApiClient.Live do
         "/internal/sessions/#{session_id}/dev-context?projectId=#{project_id}&taskId=#{task_id}" <>
         module_query
 
-    case Req.get(url, headers: [{"authorization", "Bearer #{token()}"}]) do
+    case Req.get(url, headers: auth_headers()) do
       {:ok, %Req.Response{status: status, body: body}} when status in 200..299 ->
         {:ok, body}
 
@@ -643,7 +648,7 @@ defmodule Engine.Sessions.EngineApiClient.Live do
       api_url() <>
         "/internal/sessions/#{session_id}/infra-context?projectId=#{project_id}"
 
-    case Req.get(url, headers: [{"authorization", "Bearer #{token()}"}]) do
+    case Req.get(url, headers: auth_headers()) do
       {:ok, %Req.Response{status: status, body: body}} when status in 200..299 ->
         {:ok, body}
 
@@ -661,7 +666,7 @@ defmodule Engine.Sessions.EngineApiClient.Live do
       api_url() <>
         "/internal/sessions/#{session_id}/infra-artifacts/#{pr_action_id}/files?projectId=#{project_id}"
 
-    case Req.get(url, headers: [{"authorization", "Bearer #{token()}"}]) do
+    case Req.get(url, headers: auth_headers()) do
       {:ok, %Req.Response{status: status, body: body}} when status in 200..299 ->
         {:ok, body}
 
@@ -679,7 +684,7 @@ defmodule Engine.Sessions.EngineApiClient.Live do
       api_url() <>
         "/internal/sessions/#{session_id}/psychologist-context?projectId=#{project_id}"
 
-    case Req.get(url, headers: [{"authorization", "Bearer #{token()}"}]) do
+    case Req.get(url, headers: auth_headers()) do
       {:ok, %Req.Response{status: status, body: body}} when status in 200..299 ->
         {:ok, body}
 
@@ -698,7 +703,7 @@ defmodule Engine.Sessions.EngineApiClient.Live do
     # sessão é irrelevante aqui.
     url = api_url() <> "/internal/sessions/_/anamnese-context?projectId=#{project_id}"
 
-    case Req.get(url, headers: [{"authorization", "Bearer #{token()}"}]) do
+    case Req.get(url, headers: auth_headers()) do
       {:ok, %Req.Response{status: status, body: body}} when status in 200..299 ->
         {:ok, body}
 
@@ -782,7 +787,7 @@ defmodule Engine.Sessions.EngineApiClient.Live do
     result =
       Req.post(api_url() <> "/internal/sessions/#{session_id}/llm-turn-stream",
         json: body,
-        headers: [{"authorization", "Bearer #{token()}"}],
+        headers: auth_headers(),
         into: into
       )
 
@@ -934,7 +939,7 @@ defmodule Engine.Sessions.EngineApiClient.Live do
            [
              url: api_url() <> path,
              json: body,
-             headers: trace_headers([{"authorization", "Bearer #{token()}"}])
+             headers: trace_headers(auth_headers())
            ] ++ opts
          ) do
       {:ok, %Req.Response{status: status, body: resp}} when status in 200..299 ->
@@ -948,31 +953,12 @@ defmodule Engine.Sessions.EngineApiClient.Live do
     end
   end
 
-  defp token do
-    case :persistent_term.get(@cache_key, nil) do
-      {token, exp} -> if System.system_time(:second) < exp, do: token, else: fetch_and_cache()
-      nil -> fetch_and_cache()
-    end
-  end
+  # Um lugar só monta o cabeçalho de auth. Antes eram oito literais iguais
+  # espalhados pelos GETs, pelo stream e pelo funil de POST — e um deles
+  # esquecido numa troca de mecanismo é uma rota que passa a falhar sozinha.
+  defp auth_headers, do: [{@cabecalho_service_token, service_token()}]
 
-  defp fetch_and_cache do
-    %Req.Response{status: 200, body: %{"access_token" => token, "expires_in" => ttl}} =
-      Req.post!(
-        "#{keycloak_url()}/realms/#{realm()}/protocol/openid-connect/token",
-        form: [
-          grant_type: "client_credentials",
-          client_id: client_id(),
-          client_secret: client_secret()
-        ]
-      )
-
-    :persistent_term.put(@cache_key, {token, System.system_time(:second) + ttl - 5})
-    token
-  end
+  defp service_token, do: Application.fetch_env!(:engine, :service_token)
 
   defp api_url, do: Application.fetch_env!(:engine, :api_url)
-  defp keycloak_url, do: Application.fetch_env!(:engine, :keycloak_url)
-  defp realm, do: Application.fetch_env!(:engine, :keycloak_realm)
-  defp client_id, do: Application.fetch_env!(:engine, :engine_keycloak_client_id)
-  defp client_secret, do: Application.fetch_env!(:engine, :engine_keycloak_client_secret)
 end

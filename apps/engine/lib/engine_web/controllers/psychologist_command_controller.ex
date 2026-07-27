@@ -4,7 +4,7 @@ defmodule EngineWeb.PsychologistCommandController do
   dispara, o engine enfileira o job com `triggeredBy: "manual"` (que
   sempre roda, independente de já haver análise current pra sessão; a
   anterior vira `superseded`, sem ser apagada). Guardado pelo plug
-  VerifyApiToken, igual aos demais command controllers.
+  VerifyServiceToken, igual aos demais command controllers.
 
   Sem outbox: é um gatilho direto e síncrono, mesmo padrão de
   `ExecutionCommandController`/`AgentCommandController`.
