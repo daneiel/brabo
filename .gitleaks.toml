@@ -50,3 +50,32 @@ literal `abc123def456` apontando pro repositório nestjs/nest.
 """
 targetRules = ["generic-api-key"]
 paths = ['''apps/api/README\.md''']
+
+[[allowlists]]
+description = """
+A referência de API GERADA (Fase 7b). Duas formas de conteúdo com entropia alta
+disparam `generic-api-key`, e nenhuma das duas é segredo:
+
+  1. o campo `api:` do front-matter de cada `*.api.mdx` — o objeto da operação
+     que o docusaurus-plugin-openapi-docs embute comprimido em base64;
+  2. os sha256 de `.openapi-manifest.json`, que é justamente a trava que prova
+     que os arquivos gerados não foram editados à mão.
+
+Escopado por REGRA e por este ÚNICO diretório, que é 100% gerado por
+`pnpm docs:generate` a partir de `docs/reference/openapi.json`. Um segredo só
+chegaria aqui se já estivesse num `@ApiProperty` do código-fonte — e o
+código-fonte continua sendo varrido normalmente. A allowlist não abre buraco:
+ela dispensa a saída de um gerador cuja ENTRADA segue coberta.
+"""
+targetRules = ["generic-api-key"]
+paths = ['''docs/reference/api/.*''']
+
+[[allowlists]]
+description = """
+A lista de senhas PROIBIDAS do domínio (`PROIBIDAS` em password-policy.ts).
+São exatamente as senhas que o sistema RECUSA — o oposto de uma credencial.
+Cada entrada precisa ter no mínimo 12 caracteres para ser alcançável pela
+checagem, e é esse comprimento que dá a elas a entropia que o scanner morde.
+"""
+targetRules = ["generic-api-key"]
+paths = ['''apps/api/src/domain/auth/password-policy\.ts''']

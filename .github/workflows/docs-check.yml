@@ -7,6 +7,28 @@ name: Guardião da documentação
 #   4. o site constrói sem link quebrado? (minutos — fica por último)
 on:
   pull_request:
+    # `edited` junto dos três default, pelo mesmo motivo que o
+    # `promotion-check.yml` registra: check required indexado por sha que não
+    # roda deixa veredito velho colado.
+    #
+    # Este workflow é SENSÍVEL À BASE, e é isso que o separa do `ci.yml`. O
+    # drift compara um RANGE (`origin/<base>...HEAD`) e lê o CORPO do PR atrás
+    # da linha `docs-not-needed:`. Sem `edited`:
+    #
+    #   - retargetar o PR (o GitHub abre contra o default e o autor corrige
+    #     depois) deixa no lugar um veredito calculado contra a base errada —
+    #     que foi o que aconteceu no #71, reprovando por arquivos que já
+    #     tinham sido revisados e mesclados noutro PR;
+    #   - o escape hatch fica inalcançável sem um commit de mentira: escrever
+    #     `docs-not-needed:` no corpo não reavaliava nada.
+    #
+    # O `ci.yml` não precisa disto: o que ele testa é o HEAD, e o resultado
+    # dele não muda com a base.
+    #
+    # O preço é o `docs:build` (minutos) reexecutar quando alguém só mexe no
+    # texto do PR. O `concurrency` acima já cancela a execução anterior, e o
+    # veredito correto vale o custo.
+    types: [opened, reopened, synchronize, edited]
   schedule:
     # Segunda, 06:00 UTC — só o check de links externos.
     - cron: '0 6 * * 1'
@@ -53,11 +75,67 @@ jobs:
             exit 1
           }
 
+      # O drift NÃO se aplica a PR entre permanentes — promoção (dev→qa,
+      # qa→main) e retropropagação (main→qa, qa→dev). Não é conveniência: um PR
+      # desses não tem AUTORIA. Ele carrega commits que já passaram por um PR
+      # para `dev`, onde este mesmo drift já rodou sobre exatamente aqueles
+      # arquivos. Cobrar de novo é cobrar a mesma dívida em cada degrau.
+      #
+      # E não é só redundante, é INSATISFAZÍVEL, o que é pior:
+      #
+      #   - o escape hatch não atravessa o degrau. O #70 dispensou a regra
+      #     `config-e-inferencia` com `docs-not-needed:` no corpo DELE; o corpo
+      #     do PR de promoção é gerado pelo `promote`, então a justificativa não
+      #     vem junto e a regra torna a bloquear. Foi exatamente isso que
+      #     reprovou o #72 (`v1.0.1`), por `docker/**` do #70;
+      #   - e não há como satisfazer: o `promotion-check` exige range limpo — o
+      #     head tem que ser o tip da origem —, então commitar doc no PR de
+      #     promoção reprova o OUTRO check required. Sobraria pôr a label em
+      #     toda promoção, que é ensinar a usar o escape hatch por reflexo até
+      #     ele não significar mais nada.
+      #
+      # O filtro fica DENTRO do passo, e o passo se pronuncia: pular o JOB
+      # deixaria `Drift, gerados e build` — que é required — sem veredito para o
+      # sha, e PR de promoção travado para sempre. Os outros passos continuam
+      # rodando: docmap, gerados e build do site dependem só do HEAD, e valem em
+      # qualquer degrau.
       - name: Drift check
         env:
           PR_BODY: ${{ github.event.pull_request.body }}
           PR_LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
-        run: node scripts/docs/drift.mjs "origin/${{ github.base_ref }}...HEAD"
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          BASE_REF: ${{ github.base_ref }}
+          # Head chamado `main` vindo de FORK não é promoção — é branch de
+          # trabalho de terceiro, e essa passa pelo drift como qualquer outra.
+          # Mesma ressalva que o `pr-police` faz ao classificar a família.
+          MESMO_REPO: ${{ github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name }}
+        run: |
+          set -euo pipefail
+
+          entre_permanentes=false
+          if [ "$MESMO_REPO" = 'true' ]; then
+            case "$HEAD_REF" in
+              dev | qa | main) entre_permanentes=true ;;
+            esac
+          fi
+
+          if [ "$entre_permanentes" = true ]; then
+            # `echo` linha a linha, e não string multilinha: dentro de um bloco
+            # YAML a indentação vira conteúdo, e quatro espaços a mais fariam o
+            # resumo do check virar um bloco de código no Markdown.
+            {
+              echo '### Drift check da documentação'
+              echo
+              echo "\`$HEAD_REF\` → \`$BASE_REF\` é PR entre branches permanentes: o drift não se aplica."
+              echo
+              echo "A documentação destes commits foi cobrada no PR para \`dev\`, um a um."
+              echo 'Um PR de promoção ou de retropropagação não tem autoria própria —'
+              echo 'não há doc nova a exigir dele.'
+            } | tee -a "${GITHUB_STEP_SUMMARY:-/dev/null}"
+            exit 0
+          fi
+
+          node scripts/docs/drift.mjs "origin/$BASE_REF...HEAD"
 
       - name: Cache do Rspack
         uses: actions/cache@v4

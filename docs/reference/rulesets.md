@@ -155,6 +155,28 @@ workflow):
 > acrescentar job novo ao CI, ou ele entra nesta lista, ou fica de fora de
 > propósito e alguém escreve por quê.
 
+> **E um check required que não RE-roda cola um veredito velho.** É o outro
+> lado da lição acima, e custou um PR reprovado por engano.
+>
+> Os default do `pull_request` são `opened`, `reopened` e `synchronize` — nada
+> ali cobre **mudar a base**. E mudar a base é rotina: o GitHub abre o PR
+> contra a branch padrão, o autor corrige para `dev` em seguida. No PR #71 o
+> `Drift, gerados e build` correu na primeira meia dúzia de segundos, contra
+> `origin/main...HEAD`, e reprovou por sete arquivos que já tinham sido
+> revisados e mesclados no #70. O retarget não o reexecutou; o vermelho ficou.
+>
+> O critério para saber quem precisa de `edited` é **de que o check depende**:
+>
+> | o check depende de… | precisa de `edited`? | quem |
+> |---|---|---|
+> | só o HEAD | não | `ci.yml` — testa o commit, e a base não muda o resultado |
+> | a BASE, ou o CORPO do PR | **sim** | `pr-police`, `approval-ladder`, `promotion-check`, `backmerge-gate`, `docs-check` |
+>
+> No `docs-check` são as duas coisas: o drift compara um range que começa na
+> base, e lê o corpo atrás da linha `docs-not-needed:`. Sem `edited`, o escape
+> hatch documentado logo abaixo era inalcançável — escrever a justificativa no
+> corpo não reavaliava nada, e só um commit de mentira destravava o PR.
+
 **`claude-review` fica de fora desta lista de propósito**, e este é o "alguém
 escreve por quê": revisão de LLM é opinativa e custa token, então ela informa o
 PR sem poder travá-lo. Como não é required, o job pode ser pulado sem deixar PR
@@ -163,6 +185,37 @@ action se recusa a rodar com ator não-humano (*"Workflow initiated by non-human
 actor"*), e mesmo que rodasse seria a mesma diff revisada de novo: a promoção
 só carrega commits já revisados no PR para `dev`. Sem esse `if`, o check falha
 em toda promoção — foi o que aconteceu nos PRs #64 e #65 do ciclo `v0.3.1`.
+
+### O que um PR entre permanentes não pode satisfazer
+
+`Drift, gerados e build` **é** required, então ele roda em todo PR — mas o passo
+do **drift** se declara inaplicável quando o head é uma permanente do próprio
+repositório (promoção `dev→qa`, `qa→main`; retropropagação `main→qa`, `qa→dev`).
+Os outros passos do job — docmap, gerados e build do site — continuam rodando:
+dependem só do HEAD, e valem em qualquer degrau.
+
+O motivo é o mesmo do `claude-review`, com um agravante. Redundância, primeiro:
+um PR entre permanentes não tem **autoria**, ele empacota commits cujo drift já
+foi cobrado no PR para `dev`, arquivo por arquivo. Cobrar de novo é cobrar a
+mesma dívida em cada degrau. Mas, diferente da revisão de LLM, aqui a exigência
+era **insatisfazível** — e foi ela que reprovou o #72, promoção do ciclo
+`v1.0.1`, por arquivos `docker/**` que vieram do #70:
+
+| a saída aparente | por que não existe |
+|---|---|
+| atualizar a doc no PR de promoção | o `promotion-check` exige **range limpo** — o head tem que ser o tip da origem. Commitar ali reprova o outro check required |
+| repetir o `docs-not-needed:` do PR original | o corpo do PR de promoção é gerado pelo `promote`; a justificativa do #70 não atravessa o degrau |
+| pôr a label em toda promoção | é ensinar a usar o escape hatch por reflexo, até ele não significar mais nada — o oposto do que o `.docmap.yml` pede |
+
+O filtro fica **dentro** do passo, não num `if:` do job, pelo mesmo princípio
+que o `promotion-check` registra: check required indexado por sha que não roda
+deixa PR pendente para sempre. O passo roda, decide que não se aplica, e escreve
+isso no resumo — em vez de sumir.
+
+> **Head chamado `main` vindo de fork não é promoção.** É branch de trabalho de
+> terceiro, e passa pelo drift como qualquer outra. Por isso a condição casa o
+> nome **e** exige mesmo repositório — a mesma ressalva que o `pr-police` faz ao
+> classificar a família do PR.
 
 ### Bypass
 
