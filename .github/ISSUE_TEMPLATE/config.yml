@@ -1,11 +1,8 @@
 blank_issues_enabled: false
 contact_links:
-  # Aponta para o SECURITY.md, não para /security/advisories/new: o Private
-  # vulnerability reporting só existe em repositório público, e um link que dá
-  # 404 no meio de um relato de vulnerabilidade é pior que nenhum link.
   - name: Falha de segurança
-    url: https://github.com/daneiel/brabo/blob/dev/SECURITY.md
-    about: Nunca abra issue pública para vulnerabilidade — o canal privado está aqui.
+    url: https://github.com/daneiel/brabo/security/advisories/new
+    about: Nunca abra issue pública para vulnerabilidade — use o canal privado.
   - name: Documentação
     url: https://github.com/daneiel/brabo/blob/dev/docs/intro.md
     about: Arquitetura, regras de negócio, runbook e referência antes de perguntar.
