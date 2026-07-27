@@ -37,3 +37,199 @@
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 14px;
 }
+
+/* --- Fase 3b: seção de arquitetura --- */
+
+.arch {
+  margin-top: 28px;
+}
+
+.archLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin: 16px 0 10px;
+}
+
+.moduleGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+}
+
+.moduleCard {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px;
+}
+
+.moduleName {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.moduleStack {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--accent);
+  margin: 2px 0 6px;
+}
+
+.moduleResp {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.deps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.depChip {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-secondary);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  padding: 2px 8px;
+}
+
+.adrList,
+.pendList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.adrItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.adrLink {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.adrLink:hover {
+  text-decoration: underline;
+}
+
+.pendItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  border: 1px solid color-mix(in srgb, var(--danger) 32%, var(--border));
+  background: color-mix(in srgb, var(--danger) 6%, var(--surface-1));
+  border-radius: var(--radius-md);
+}
+
+.pendTitle {
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.pendReason {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--danger);
+}
+
+/* --- Fase 4a: execução --- */
+
+.execIntro {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.suggestion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  margin: 8px 0;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--border));
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface-1));
+  border-radius: var(--radius-md);
+  font-size: 13px;
+}
+
+/* Faixa de análises do Psicólogo (Fase 4b) — tier + custo por sessão
+   analisada. É o que torna "custos distintos entre triagem leve e pesada"
+   visível na UI, e a entrada pro reprocessamento explícito. */
+.analysisStrip {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 10px 0 18px;
+}
+
+.analysisRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 8px 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.analysisSession {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.analysisSession:hover {
+  text-decoration: underline;
+}
+
+.analysisMeta {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.analysisCost {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+.analysisReanalyze {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  background: none;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-full);
+  padding: 3px 10px;
+  cursor: pointer;
+}
+
+.analysisReanalyze:hover {
+  color: var(--text-primary);
+  border-color: var(--accent);
+}

@@ -32,10 +32,308 @@ defmodule Engine.Sessions.FakeEngineApiClient do
   end
 
   @impl true
+  def append_event_returning(project_id, session_id, event) do
+    notify({:event_appended, project_id, session_id, event})
+    id = "evt-#{System.unique_integer([:positive])}"
+    {:ok, %{"id" => id, "seq" => 0, "type" => Map.get(event, :type)}}
+  end
+
+  @impl true
+  def list_events(_project_id, _session_id) do
+    {:ok, Process.get(:fake_events, [])}
+  end
+
+  @impl true
+  def create_handoff(project_id, session_id, from_agent, to_agent, artifact_id) do
+    notify({:handoff_created, project_id, session_id, from_agent, to_agent, artifact_id})
+
+    {:ok,
+     Process.get(:fake_handoff, %{
+       "id" => "ho-1",
+       "fromAgent" => from_agent,
+       "toAgent" => to_agent,
+       "artifactId" => artifact_id,
+       "status" => "offered"
+     })}
+  end
+
+  @impl true
+  def create_epic(_project_id, _session_id, fields) do
+    notify({:epic_created, fields})
+    reply(:fake_epic, %{"id" => "ep-#{unique()}", "title" => Map.get(fields, :title)})
+  end
+
+  @impl true
+  def create_story(_project_id, _session_id, fields) do
+    notify({:story_created, fields})
+    # Erro scriptável (ex.: business_rule_id inválido) via :fake_story_error.
+    case Process.get(:fake_story_error) do
+      nil ->
+        reply(:fake_story, %{"id" => "st-#{unique()}", "status" => "ready"})
+
+      reason ->
+        {:error, reason}
+    end
+  end
+
+  @impl true
+  def create_task(_project_id, _session_id, fields) do
+    notify({:task_created, fields})
+    reply(:fake_task, %{"id" => "tk-#{unique()}"})
+  end
+
+  @impl true
+  def create_module_map(_project_id, _session_id, modules) do
+    notify({:module_map_created, modules})
+
+    case Process.get(:fake_module_map_error) do
+      nil -> reply(:fake_module_map, %{"id" => "mm-#{unique()}", "version" => 1})
+      reason -> {:error, reason}
+    end
+  end
+
+  @impl true
+  def assign_story_modules(_project_id, _session_id, fields) do
+    notify({:story_modules_assigned, fields})
+
+    case Process.get(:fake_assign_error) do
+      nil -> reply(:fake_story, %{"id" => Map.get(fields, :storyId)})
+      reason -> {:error, reason}
+    end
+  end
+
+  @impl true
+  def claim_task(_project_id, _session_id, module, agent_id) do
+    notify({:task_claimed, module, agent_id})
+    # Fila de tasks scriptada por :fake_tasks (pop); esgotada → nil.
+    case Process.get(:fake_tasks, []) do
+      [task | rest] ->
+        Process.put(:fake_tasks, rest)
+        {:ok, task}
+
+      [] ->
+        {:ok, nil}
+    end
+  end
+
+  @impl true
+  def mark_task(_project_id, _session_id, task_id, status, agent_id) do
+    notify({:task_marked, task_id, status, agent_id})
+    {:ok, %{"id" => task_id, "status" => status}}
+  end
+
+  @impl true
+  def mark_task_blocked(_project_id, _session_id, task_id, reason, diagnosis, agent_id) do
+    notify({:task_blocked, task_id, reason, diagnosis, agent_id})
+    {:ok, %{"id" => task_id, "blocked" => true}}
+  end
+
+  @impl true
+  def open_gate(_project_id, _session_id, task_id, agent_id) do
+    notify({:gate_opened, task_id, agent_id})
+    {:ok, %{"id" => task_id, "gateStatus" => "awaiting_qa"}}
+  end
+
+  @impl true
+  def record_gate_verdict(
+        _project_id,
+        _session_id,
+        task_id,
+        gate,
+        veredito,
+        resumo,
+        itens,
+        max_corrections
+      ) do
+    notify({:gate_verdict_recorded, task_id, gate, veredito, resumo, itens, max_corrections})
+    reply(:fake_gate_verdict_response, %{"nextAction" => "done", "task" => %{"id" => task_id}})
+  end
+
+  @impl true
+  def get_dev_context(_project_id, _session_id, task_id, module \\ nil) do
+    notify({:dev_context_fetched, task_id, module})
+
+    reply(
+      :fake_dev_context,
+      %{
+        "task" => %{"id" => task_id, "title" => "task", "description" => ""},
+        "story" => %{
+          "id" => "st-1",
+          "title" => "story",
+          "description" => "",
+          "rf" => [],
+          "rnf" => [],
+          "dod" => [],
+          "dor" => []
+        },
+        "businessRules" => [],
+        "adrs" => []
+      }
+    )
+  end
+
+  @impl true
+  def get_infra_context(_project_id, _session_id) do
+    notify({:infra_context_fetched})
+    reply(:fake_infra_context, %{"moduleMap" => nil, "adrs" => []})
+  end
+
+  @impl true
+  def get_infra_pr_files(_project_id, _session_id, pr_action_id) do
+    notify({:infra_pr_files_fetched, pr_action_id})
+    reply(:fake_infra_pr_files, %{"title" => "infra", "files" => []})
+  end
+
+  @impl true
+  def get_psychologist_context(_project_id, session_id) do
+    notify({:psychologist_context_fetched, session_id})
+
+    reply(:fake_psychologist_context, %{
+      "alreadyAnalyzed" => false,
+      "sessionStatus" => "closed",
+      "terminationReason" => nil,
+      "businessRules" => [],
+      "priorHypotheses" => []
+    })
+  end
+
+  @impl true
+  def propose_hypotheses(
+        _project_id,
+        _session_id,
+        tier,
+        triggered_by,
+        event_count,
+        cause,
+        hypotheses
+      ) do
+    notify({:hypotheses_proposed, tier, triggered_by, event_count, cause, hypotheses})
+
+    # Erro scriptável (ex.: evidência inválida rejeitada pela api) via
+    # :fake_propose_hypotheses_error — mesmo idioma de :fake_story_error.
+    # `_once` rejeita só a PRIMEIRA chamada, pro teste do ciclo de correção
+    # (rejeita, modelo corrige, segunda passa).
+    case {Process.get(:fake_propose_hypotheses_error),
+          Process.get(:fake_propose_hypotheses_error_once)} do
+      {nil, nil} ->
+        reply(:fake_propose_hypotheses, %{
+          "analysisId" => "analysis-1",
+          "hypotheses" => hypotheses
+        })
+
+      {nil, reason} ->
+        Process.delete(:fake_propose_hypotheses_error_once)
+        {:error, reason}
+
+      {reason, _} ->
+        {:error, reason}
+    end
+  end
+
+  @impl true
+  def record_infra_gate_verdict(
+        _project_id,
+        _session_id,
+        pr_action_id,
+        gate,
+        veredito,
+        resumo,
+        itens,
+        max_corrections
+      ) do
+    notify(
+      {:infra_gate_verdict_recorded, pr_action_id, gate, veredito, resumo, itens, max_corrections}
+    )
+
+    reply(:fake_infra_gate_verdict_response, %{
+      "nextAction" => "done",
+      "artifact" => %{"id" => pr_action_id}
+    })
+  end
+
+  @impl true
+  def get_anamnese_context(project_id) do
+    notify({:anamnese_context_fetched, project_id})
+
+    reply(:fake_anamnese_context, %{
+      "competencyCatalog" => ["git", "agile"],
+      "members" => [],
+      "queuedHypotheses" => [],
+      "currentProfiles" => [],
+      "instructions" => [],
+      "windowFrom" => nil
+    })
+  end
+
+  @impl true
+  def record_proficiency(_project_id, _session_id, payload) do
+    notify({:proficiency_recorded, payload})
+
+    case Process.get(:fake_record_proficiency_error) do
+      nil -> reply(:fake_proficiency_result, %{"runId" => "run-1", "profiles" => []})
+      reason -> {:error, reason}
+    end
+  end
+
+  @impl true
+  def propose_instruction_patch(_project_id, _session_id, payload) do
+    notify({:instruction_patch_proposed, payload})
+
+    case Process.get(:fake_instruction_patch_error) do
+      nil -> reply(:fake_instruction_patch, %{"id" => "act-1", "status" => "pending"})
+      reason -> {:error, reason}
+    end
+  end
+
+  # Um valor scriptado já em forma de `{:error, _}` passa direto — assim um
+  # teste consegue simular "a api está fora" no MESMO idioma dos scripts de
+  # sucesso, sem uma chave separada por endpoint.
+  defp reply(key, default) do
+    case Process.get(key, default) do
+      {:error, _reason} = erro -> erro
+      valor -> {:ok, valor}
+    end
+  end
+
+  defp unique, do: System.unique_integer([:positive])
+
+  @impl true
+  def llm_turn_stream(_project_id, _session_id, agent, messages, tools, on_delta) do
+    notify({:llm_turn_stream, agent, messages, tools})
+
+    # Deltas scriptados (opcional) — rebroadcastados pelo on_delta.
+    for delta <- Process.get(:fake_deltas, []), do: on_delta.(delta)
+
+    resp =
+      cond do
+        r = Process.get(:fake_llm_always) ->
+          r
+
+        true ->
+          case Process.get(:fake_llm_turns, []) do
+            [r | rest] ->
+              Process.put(:fake_llm_turns, rest)
+              r
+
+            [] ->
+              final_response()
+          end
+      end
+
+    {:ok, resp}
+  end
+
+  @impl true
   def llm_turn(_project_id, _session_id, agent, messages, tools) do
     notify({:llm_turn, agent, messages, tools})
 
     cond do
+      # Transporte quebrado (provider fora/timeout) — o ToolLoop guarda isso
+      # em `:last_error`, e é o que distingue "falhou a infra" de "o modelo
+      # parou sozinho" pra quem consome o desfecho.
+      reason = Process.get(:fake_llm_turn_error) ->
+        {:error, reason}
+
       resp = Process.get(:fake_llm_always) ->
         {:ok, resp}
 

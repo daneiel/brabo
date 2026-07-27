@@ -13,7 +13,15 @@ defmodule EngineWeb.Router do
   scope "/", EngineWeb do
     pipe_through :api
 
+    # /health é o original (imagem e docker/smoke.sh dependem dele).
+    # /live e /ready existem porque as perguntas são diferentes — ver o
+    # moduledoc do HealthController.
     get "/health", HealthController, :check
+    get "/live", HealthController, :live
+    get "/ready", HealthController, :ready
+
+    # Sem auth de propósito; o alcance é restringido por NetworkPolicy.
+    get "/metrics", MetricsController, :index
   end
 
   scope "/api", EngineWeb do
@@ -25,5 +33,27 @@ defmodule EngineWeb.Router do
 
     post "/sessions", SessionCommandController, :create
     post "/actions/execute", ActionCommandController, :execute
+    post "/actions/execute-git", ActionCommandController, :execute_git
+
+    post "/sessions/:sessionId/agent/start", AgentCommandController, :start
+    post "/sessions/:sessionId/agent/message", AgentCommandController, :message
+    post "/sessions/:sessionId/agent/readiness", AgentCommandController, :readiness
+
+    post "/sessions/:sessionId/agent/offer-infra-handoff",
+         AgentCommandController,
+         :offer_infra_handoff
+
+    post "/sessions/:sessionId/execution/start", ExecutionCommandController, :start
+    post "/sessions/:sessionId/execution/parallelize", ExecutionCommandController, :parallelize
+
+    post "/sessions/:sessionId/psychologist/reanalyze",
+         PsychologistCommandController,
+         :reanalyze
+
+    post "/projects/:projectId/anamnese/run", AnamneseCommandController, :run
+
+    post "/projects/:projectId/agents/:agent/instructions/invalidate",
+         InstructionCommandController,
+         :invalidate
   end
 end

@@ -186,6 +186,13 @@ export interface MergePullRequestInput {
   accessToken?: string;
 }
 
+export interface CommentOnPullRequestInput {
+  externalId: string;
+  pullRequestId: string;
+  body: string;
+  accessToken?: string;
+}
+
 export interface GetFileContentInput {
   externalId: string;
   branch: string;
@@ -206,6 +213,9 @@ export interface GitProviderContract {
   mergePullRequest(input: MergePullRequestInput): Promise<GitPullRequest>;
   /** `null` se o arquivo não existe naquela branch (ou a branch não existe). */
   getFileContent(input: GetFileContentInput): Promise<string | null>;
+  // 10ª operação (Fase 4a — gates de PR): comenta o parecer de QA/SecOps na
+  // PR. Respeita `capabilities.pullRequests` como as demais operações de PR.
+  commentOnPullRequest(input: CommentOnPullRequestInput): Promise<void>;
 }
 
 // --- Credenciais de git do usuário (Fase 2, sessão 2) ---

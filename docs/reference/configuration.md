@@ -1,0 +1,356 @@
+---
+id: configuration
+title: Configuração
+sidebar_label: Configuração
+sidebar_position: 1
+description: Todas as variáveis de ambiente da api, do engine e da web, com default e o que quebra quando estão erradas.
+keywords: [configuração, variáveis de ambiente, env, deploy]
+---
+
+# Configuração
+
+Toda a configuração é por **variável de ambiente**. Não há arquivo de config da
+aplicação — o que existe é o `permissions.json`, que é política de projeto, não
+configuração de processo.
+
+Os defaults abaixo foram extraídos do código, não de documentação anterior. A
+coluna **quando dá errado** é a parte que economiza tempo: quase toda variável
+tem um default que funciona em desenvolvimento e um modo de falha específico em
+produção.
+
+> **Defaults de desenvolvimento são inseguros de propósito.** Valores como
+> `dev-master-key-change-me` existem para o `pnpm dev` subir sem cerimônia. Em
+> produção eles precisam ser trocados — e três deles a api **recusa** subir sem
+> trocar (marcados com 🔒).
+
+## api
+
+### Essenciais
+
+| variável | default | quando dá errado |
+|---|---|---|
+| `DATABASE_URL` | `postgres://brabo:brabo@localhost:5432/brabo` | sem ela nada sobe |
+| `PORT` | `3000` | — |
+| `NODE_ENV` | — | `production` liga as validações estritas de CORS e chave |
+| `API_PUBLIC_URL` | `http://localhost:3000` | usada nos callbacks de OAuth de git; errada = callback quebrado |
+| `ENGINE_URL` | `http://localhost:4000` | comandos síncronos api→engine falham |
+| `BRABO_VERSION` | `dev` | aparece no `/health` e nas métricas; a imagem de release injeta a tag |
+| `MIGRATIONS_FOLDER` | `./src/db/migrations` | — |
+
+### Segurança 🔒
+
+| variável | default | quando dá errado |
+|---|---|---|
+| `CREDENTIALS_MASTER_KEY` 🔒 | `dev-master-key-change-me` | embrulha os DEKs. Trocar sem re-embrulhar torna **toda** credencial ilegível, sem erro no boot — a falha aparece no primeiro uso. Ver [rotação](../runbook.md#rotacao-da-chave-mestra) |
+| `CREDENTIALS_MASTER_KEY_PREVIOUS` | — | só durante a rotação. Presente = a api tenta a chave anterior quando a atual falha |
+| `GIT_OAUTH_STATE_SECRET` 🔒 | `dev-oauth-state-secret-change-me` | assina o `state` do OAuth; fraco = CSRF no fluxo de conexão de git |
+| `WEB_ORIGIN` 🔒 | `http://localhost:5173` | **em produção a api recusa subir** se estiver ausente ou for `*`. CORS é estrito por ambiente |
+
+### Rate limit
+
+Janela deslizante em Postgres — não há Redis
+([ADR 0027](../adr/0027-fase5-backup-hardening-release.md)).
+
+| variável | default | o que faz |
+|---|---|---|
+| `RATE_LIMIT_ENABLED` | `true` | qualquer valor diferente de `"false"` mantém ligado |
+| `RATE_LIMIT_WINDOW_MS` | `60000` | tamanho da janela |
+| `RATE_LIMIT_USER` | `300` | requisições por usuário por janela |
+| `RATE_LIMIT_IP` | `600` | requisições por IP por janela |
+
+> Se a tabela de rate limit estiver indisponível, a requisição **passa**. O
+> guard protege contra abuso, não contra acesso indevido — quem faz isso é o
+> guard de autenticação, que roda antes.
+
+### Keycloak
+
+| variável | default |
+|---|---|
+| `KEYCLOAK_URL` | `http://localhost:8080` |
+| `KEYCLOAK_REALM` | `brabo-dev` |
+| `KEYCLOAK_ISSUER_URL` | derivado de `KEYCLOAK_URL` + realm |
+| `API_KEYCLOAK_CLIENT_ID` | `api-service` |
+| `API_KEYCLOAK_CLIENT_SECRET` | — |
+| `ENGINE_KEYCLOAK_CLIENT_ID` | `engine-service` — a api valida o token do engine contra este client |
+
+### Git
+
+| variável | default | nota |
+|---|---|---|
+| `GIT_LOCAL_REPOS_ROOT` | `/tmp/brabo-git-repos` | provider Local. Em `/tmp` os repos somem no reboot |
+| `PROJECT_WORKSPACES_ROOT` | `/tmp/brabo-project-workspaces` | worktrees dos agentes. **Precisa ser o mesmo caminho no engine**, e o mesmo volume |
+| `GITHUB_OAUTH_CLIENT_ID` / `_SECRET` | vazio | vazio = conexão GitHub por OAuth indisponível (PAT continua) |
+| `GITLAB_OAUTH_CLIENT_ID` / `_SECRET` | vazio | idem |
+
+### LLM
+
+| variável | default | nota |
+|---|---|---|
+| `OLLAMA_HOST` | `http://localhost:11434` | — |
+| `OLLAMA_REQUEST_TIMEOUT_MS` | — | sem valor, o timeout é o do runtime. Modelo grande em prompt longo estoura em silêncio; ver [ambiente de inferência](../runbook.md#ambiente-de-inferencia) |
+
+### Observabilidade
+
+| variável | default | nota |
+|---|---|---|
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | — | **ausente desliga a instrumentação inteira, de propósito**. É a primeira coisa a conferir quando não há trace |
+| `OTEL_SERVICE_NAME` | `brabo-api` | — |
+| `OTEL_DIAG_LOG` | — | `1` liga o log de diagnóstico do próprio OTel |
+| `LOG_LEVEL` | — | — |
+| `METRICS_GAUGE_INTERVAL_MS` | `15000` | período de coleta dos gauges de domínio |
+
+---
+
+## engine
+
+### Essenciais
+
+| variável | default | quando dá errado |
+|---|---|---|
+| `DATABASE_URL` | `ecto://brabo:brabo@localhost:5432/brabo` | note o esquema `ecto://`, não `postgres://` |
+| `POSTGRES_HOST` / `_USER` / `_PASSWORD` | `localhost` / `brabo` / `brabo` | usados quando a `DATABASE_URL` não é montada |
+| `POOL_SIZE` | — | pool esgotado trava o Oban e a fila para de ser consumida |
+| `PORT` | `4000` | — |
+| `PHX_HOST` / `PHX_SERVER` | — | `PHX_SERVER=true` é o que faz o release servir HTTP |
+| `SECRET_KEY_BASE` 🔒 | — | obrigatória no release |
+| `API_URL` | `http://localhost:3000` | o engine chama a api de volta por aqui |
+| `ECTO_IPV6` | — | — |
+| `SKIP_MIGRATIONS` | — | usada pelo Job de migração |
+
+### Cluster e shutdown
+
+| variável | default | nota |
+|---|---|---|
+| `DNS_CLUSTER_QUERY` | — | o Service headless que forma o cluster Erlang. **Sem ele cada réplica é uma ilha** e todo rollout drena tudo |
+| `SHUTDOWN_DRAIN_TIMEOUT_MS` | `45000` | janela do `preStop`. Sobe **junto** com `terminationGracePeriodSeconds`, nunca sozinha |
+| `SESSION_HEARTBEAT_TIMEOUT_MS` | `30000` | — |
+| `RELEASE_NAME` / `RELEASE_NODE` | — | identidade do nó na distribuição |
+
+### Harness
+
+| variável | default | nota |
+|---|---|---|
+| `TOOL_LOOP_MAX_ITERATIONS` | `8` | teto de voltas do laço de ferramenta. Esgotado, o agente encerra com artefato de bloqueio |
+| `DEFAULT_CONTEXT_WINDOW` | `8192` | usado quando o modelo não declara a janela |
+| `CONTEXT_COMPACTION_THRESHOLD` | `0.7` | fração da janela que dispara compactação |
+| `LLM_TURN_TIMEOUT_MS` | `300000` | 5 min por turno |
+| `TERMINAL_ACTION_TIMEOUT_MS` | `15000` | teto de um comando de terminal |
+| `SECOPS_SCAN_TIMEOUT_MS` | `180000` | 3 min para o scanner do SecOps |
+
+### Psicólogo
+
+| variável | default | nota |
+|---|---|---|
+| `PSYCHOLOGIST_TRIAGE_THRESHOLD` | `20` | eventos na sessão que separam análise **leve** de **pesada** |
+| `PSYCHOLOGIST_MAX_ITERATIONS_LEVE` / `_PESADA` | `4` / `8` | — |
+| `PSYCHOLOGIST_BUDGET_MICROS_LEVE` / `_PESADA` | `50000` / `300000` | USD 0,05 e USD 0,30 por análise |
+| `PSYCHOLOGIST_MAX_PROMPT_EVENTS_LEVE` / `_PESADA` | `50` / `400` | quantos eventos entram no prompt |
+| `PSYCHOLOGIST_MAX_PAYLOAD_CHARS` | `600` | truncagem do payload de cada evento |
+
+### Anamnese
+
+| variável | default | nota |
+|---|---|---|
+| `ANAMNESE_INTERVAL_SECONDS` | `900` | 15 min entre execuções |
+| `ANAMNESE_MIN_EVENTS` | `10` | abaixo disso não roda — evita perfilar com ruído |
+| `ANAMNESE_INITIAL_WINDOW_DAYS` | `30` | janela da primeira execução |
+| `ANAMNESE_MAX_ITERATIONS` | `6` | — |
+| `ANAMNESE_BUDGET_MICROS` | `200000` | USD 0,20 por execução |
+| `ANAMNESE_MAX_PROMPT_EVENTS` | `500` | — |
+| `ANAMNESE_MAX_PAYLOAD_CHARS` | `600` | — |
+
+### Guards de carga
+
+| variável | default | nota |
+|---|---|---|
+| `START_OUTBOX_DRAIN` | `true` | — |
+| `START_ANAMNESE` | `true` | desligar impede **novos** enfileiramentos, **não limpa a fila**. Jobs acumulados rodam no boot seguinte — a fila precisa ser purgada. Ver [ambiente de inferência](../runbook.md#ambiente-de-inferencia) |
+
+### Keycloak e observabilidade
+
+| variável | default |
+|---|---|
+| `KEYCLOAK_URL` | `http://localhost:8080` |
+| `KEYCLOAK_REALM` | `brabo-dev` |
+| `ENGINE_KEYCLOAK_CLIENT_ID` | `engine-service` |
+| `ENGINE_KEYCLOAK_CLIENT_SECRET` 🔒 | `engine-service-dev-secret-change-me` |
+| `API_KEYCLOAK_CLIENT_ID` | `api-service` |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | — o exporter do Elixir fala **HTTP/protobuf na 4318**, não gRPC na 4317 |
+| `WEB_ORIGIN` | — |
+| `PROJECT_WORKSPACES_ROOT` | `/tmp/brabo-project-workspaces` — **igual ao da api, no mesmo volume** |
+
+> `SOME_APP_SSL_CERT_PATH`, `SOME_APP_SSL_KEY_PATH` e `MIX_TEST_PARTITION` são
+> restos do scaffold do Phoenix e da configuração de teste. Não configure.
+
+---
+
+## web
+
+A web é estática, servida por nginx. Ela lê a configuração de **duas** fontes,
+e a distinção importa:
+
+| fonte | quando | como |
+|---|---|---|
+| `import.meta.env.VITE_*` | **build** | assado no bundle. Mudar exige rebuild |
+| `window.__BRABO_CONFIG__` | **runtime** | servido em `/config.js`, gerado pelo entrypoint do container |
+
+É por isso que a mesma imagem serve todos os ambientes: o `/config.js` é
+reescrito no boot. As `VITE_*` são o fallback de desenvolvimento.
+
+| variável | serve para |
+|---|---|
+| `VITE_API_URL` | endereço da api |
+| `VITE_ENGINE_URL` | endereço do engine (canal Phoenix) |
+| `VITE_KEYCLOAK_URL` | — |
+| `VITE_KEYCLOAK_REALM` | — |
+| `VITE_KEYCLOAK_CLIENT_ID` | — |
+| `VITE_LOG_LEVEL` | — |
+
+Página em branco depois do deploy é quase sempre `/config.js` apontando para
+`localhost` — o smoke de deploy verifica exatamente isso.
+
+---
+
+## Backup
+
+Consumidas pelo CronJob, não pelos apps. Detalhes em
+[Restore](../runbook.md#restore).
+
+| variável | default | nota |
+|---|---|---|
+| `BACKUP_S3_ENDPOINT` / `BACKUP_S3_BUCKET` | — | destino S3-compatível |
+| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | — | credencial do bucket |
+| `BACKUP_KEEP_DAILY` | `7` | retenção por **contagem**, não por idade |
+| `BACKUP_KEEP_WEEKLY` | `4` | — |
+| `RESTORE_DB` | — | nome da database de destino do restore |
+| `RESTORE_PREFIX` | `daily/` | `weekly/` para restaurar de uma cópia semanal |
+| `RESTORE_ADMIN_URL` | — | conexão com permissão de `CREATEDB`; em produção é separada da `DATABASE_URL` |
+
+## Inferência local (containers)
+
+Estas não são lidas pelo nosso código — são do container `ollama`, e estão
+aqui porque são a causa mais frequente de agente com comportamento estranho.
+A tabela de sintomas está em
+[ambiente de inferência](../runbook.md#ambiente-de-inferencia).
+
+| variável | por quê |
+|---|---|
+| `OLLAMA_CONTEXT_LENGTH` | o default de 4096 trunca **em silêncio** um prompt montado para 128k |
+| `OLLAMA_MAX_LOADED_MODELS` | com `OLLAMA_KEEP_ALIVE` alto, os modelos acumulam até estourar a memória |
+| `OLLAMA_KEEP_ALIVE` | quanto tempo o modelo fica residente |
+| `DEMO_QA_MODEL` | aponta o gate de QA para um modelo de API — o binding por agente vence o do projeto |
+
+---
+
+## Inventário completo
+
+As tabelas acima explicam **o que cada variável faz**. Esta seção é o
+**inventário**: extraído do código a cada `pnpm docs:generate`, ele existe para
+que uma variável nova não fique documentada em lugar nenhum sem ninguém notar.
+
+<!-- BEGIN:GENERATED:env-inventario -->
+
+> ⚠️ Bloco gerado por `pnpm docs:generate`. Não edite à mão — o próximo build sobrescreve.
+
+Inventário extraído do código: **83 variáveis** lidas em tempo de execução. Todas têm descrição nas tabelas acima.
+
+**api** — 29 variáveis
+
+- `API_KEYCLOAK_CLIENT_ID` <sub>(apps/api/src/infrastructure/http-clients/api-to-engine-client.ts)</sub>
+- `API_KEYCLOAK_CLIENT_SECRET` <sub>(apps/api/src/infrastructure/http-clients/api-to-engine-client.ts)</sub>
+- `API_PUBLIC_URL` <sub>(apps/api/src/application/use-cases/git/start-git-oauth.use-case.ts)</sub>
+- `CREDENTIALS_MASTER_KEY` <sub>(apps/api/src/infrastructure/security/envelope-encryption.service.ts)</sub>
+- `CREDENTIALS_MASTER_KEY_PREVIOUS` <sub>(apps/api/src/infrastructure/security/envelope-encryption.service.ts)</sub>
+- `DATABASE_URL` <sub>(apps/api/src/db/migrate.ts)</sub>
+- `ENGINE_KEYCLOAK_CLIENT_ID` <sub>(apps/api/src/interfaces/http/auth/engine-service.guard.ts)</sub>
+- `ENGINE_URL` <sub>(apps/api/src/infrastructure/http-clients/api-to-engine-client.ts)</sub>
+- `GIT_LOCAL_REPOS_ROOT` <sub>(apps/api/src/infrastructure/git/local-git-provider.ts)</sub>
+- `GIT_OAUTH_STATE_SECRET` <sub>(apps/api/src/application/use-cases/git/handle-git-oauth-callback.use-case.ts)</sub>
+- `GITHUB_OAUTH_CLIENT_ID` <sub>(apps/api/src/infrastructure/git/github-oauth-client.ts)</sub>
+- `GITHUB_OAUTH_CLIENT_SECRET` <sub>(apps/api/src/infrastructure/git/github-oauth-client.ts)</sub>
+- `GITLAB_OAUTH_CLIENT_ID` <sub>(apps/api/src/infrastructure/git/gitlab-oauth-client.ts)</sub>
+- `GITLAB_OAUTH_CLIENT_SECRET` <sub>(apps/api/src/infrastructure/git/gitlab-oauth-client.ts)</sub>
+- `KEYCLOAK_ISSUER_URL` <sub>(apps/api/src/infrastructure/http-clients/keycloak-token-verifier.ts)</sub>
+- `KEYCLOAK_REALM` <sub>(apps/api/src/infrastructure/http-clients/api-to-engine-client.ts)</sub>
+- `KEYCLOAK_URL` <sub>(apps/api/src/infrastructure/http-clients/api-to-engine-client.ts)</sub>
+- `LOG_LEVEL` <sub>(apps/api/src/infrastructure/observability/logger.config.ts)</sub>
+- `METRICS_GAUGE_INTERVAL_MS` <sub>(apps/api/src/infrastructure/observability/domain-gauges.collector.ts)</sub>
+- `MIGRATIONS_FOLDER` <sub>(apps/api/src/db/migrate.ts)</sub>
+- `NODE_ENV` <sub>(apps/api/src/infrastructure/observability/logger.config.ts)</sub>
+- `OLLAMA_HOST` <sub>(apps/api/src/infrastructure/llm/ollama-provider.ts)</sub>
+- `OLLAMA_REQUEST_TIMEOUT_MS` <sub>(apps/api/src/infrastructure/llm/ollama-provider.ts)</sub>
+- `PROJECT_WORKSPACES_ROOT` <sub>(apps/api/src/infrastructure/filesystem/fs-permissions-file-store.ts)</sub>
+- `RATE_LIMIT_ENABLED` <sub>(apps/api/src/interfaces/http/shared/rate-limit.guard.ts)</sub>
+- `RATE_LIMIT_IP` <sub>(apps/api/src/interfaces/http/shared/rate-limit.guard.ts)</sub>
+- `RATE_LIMIT_USER` <sub>(apps/api/src/interfaces/http/shared/rate-limit.guard.ts)</sub>
+- `RATE_LIMIT_WINDOW_MS` <sub>(apps/api/src/infrastructure/observability/domain-gauges.collector.ts)</sub>
+- `WEB_ORIGIN` <sub>(apps/api/src/infrastructure/security/cors-origins.ts)</sub>
+
+**engine** — 48 variáveis
+
+- `ANAMNESE_BUDGET_MICROS` <sub>(apps/engine/config/runtime.exs)</sub>
+- `ANAMNESE_INITIAL_WINDOW_DAYS` <sub>(apps/engine/config/runtime.exs)</sub>
+- `ANAMNESE_INTERVAL_SECONDS` <sub>(apps/engine/config/runtime.exs)</sub>
+- `ANAMNESE_MAX_ITERATIONS` <sub>(apps/engine/config/runtime.exs)</sub>
+- `ANAMNESE_MAX_PAYLOAD_CHARS` <sub>(apps/engine/config/runtime.exs)</sub>
+- `ANAMNESE_MAX_PROMPT_EVENTS` <sub>(apps/engine/config/runtime.exs)</sub>
+- `ANAMNESE_MIN_EVENTS` <sub>(apps/engine/config/runtime.exs)</sub>
+- `API_KEYCLOAK_CLIENT_ID` <sub>(apps/engine/config/runtime.exs)</sub>
+- `API_URL` <sub>(apps/engine/config/runtime.exs)</sub>
+- `CONTEXT_COMPACTION_THRESHOLD` <sub>(apps/engine/config/runtime.exs)</sub>
+- `DATABASE_URL` <sub>(apps/engine/config/dev.exs)</sub>
+- `DEFAULT_CONTEXT_WINDOW` <sub>(apps/engine/config/runtime.exs)</sub>
+- `DNS_CLUSTER_QUERY` <sub>(apps/engine/config/runtime.exs)</sub>
+- `ECTO_IPV6` <sub>(apps/engine/config/runtime.exs)</sub>
+- `ENGINE_KEYCLOAK_CLIENT_ID` <sub>(apps/engine/config/runtime.exs)</sub>
+- `ENGINE_KEYCLOAK_CLIENT_SECRET` <sub>(apps/engine/config/runtime.exs)</sub>
+- `KEYCLOAK_REALM` <sub>(apps/engine/config/runtime.exs)</sub>
+- `KEYCLOAK_URL` <sub>(apps/engine/config/runtime.exs)</sub>
+- `LLM_TURN_TIMEOUT_MS` <sub>(apps/engine/config/runtime.exs)</sub>
+- `MIX_TEST_PARTITION` <sub>(apps/engine/config/test.exs)</sub>
+- `OTEL_EXPORTER_OTLP_ENDPOINT` <sub>(apps/engine/lib/engine/telemetry/otel.ex)</sub>
+- `PHX_HOST` <sub>(apps/engine/config/runtime.exs)</sub>
+- `PHX_SERVER` <sub>(apps/engine/config/runtime.exs)</sub>
+- `POOL_SIZE` <sub>(apps/engine/config/runtime.exs)</sub>
+- `PORT` <sub>(apps/engine/config/runtime.exs)</sub>
+- `POSTGRES_HOST` <sub>(apps/engine/config/test.exs)</sub>
+- `POSTGRES_PASSWORD` <sub>(apps/engine/config/test.exs)</sub>
+- `POSTGRES_USER` <sub>(apps/engine/config/test.exs)</sub>
+- `PROJECT_WORKSPACES_ROOT` <sub>(apps/engine/config/runtime.exs)</sub>
+- `PSYCHOLOGIST_BUDGET_MICROS_LEVE` <sub>(apps/engine/config/runtime.exs)</sub>
+- `PSYCHOLOGIST_BUDGET_MICROS_PESADA` <sub>(apps/engine/config/runtime.exs)</sub>
+- `PSYCHOLOGIST_MAX_ITERATIONS_LEVE` <sub>(apps/engine/config/runtime.exs)</sub>
+- `PSYCHOLOGIST_MAX_ITERATIONS_PESADA` <sub>(apps/engine/config/runtime.exs)</sub>
+- `PSYCHOLOGIST_MAX_PAYLOAD_CHARS` <sub>(apps/engine/config/runtime.exs)</sub>
+- `PSYCHOLOGIST_MAX_PROMPT_EVENTS_LEVE` <sub>(apps/engine/config/runtime.exs)</sub>
+- `PSYCHOLOGIST_MAX_PROMPT_EVENTS_PESADA` <sub>(apps/engine/config/runtime.exs)</sub>
+- `PSYCHOLOGIST_TRIAGE_THRESHOLD` <sub>(apps/engine/config/runtime.exs)</sub>
+- `SECOPS_SCAN_TIMEOUT_MS` <sub>(apps/engine/config/runtime.exs)</sub>
+- `SECRET_KEY_BASE` <sub>(apps/engine/config/runtime.exs)</sub>
+- `SESSION_HEARTBEAT_TIMEOUT_MS` <sub>(apps/engine/config/runtime.exs)</sub>
+- `SHUTDOWN_DRAIN_TIMEOUT_MS` <sub>(apps/engine/config/runtime.exs)</sub>
+- `SOME_APP_SSL_CERT_PATH` <sub>(apps/engine/config/runtime.exs)</sub>
+- `SOME_APP_SSL_KEY_PATH` <sub>(apps/engine/config/runtime.exs)</sub>
+- `START_ANAMNESE` <sub>(apps/engine/config/runtime.exs)</sub>
+- `START_OUTBOX_DRAIN` <sub>(apps/engine/config/runtime.exs)</sub>
+- `TERMINAL_ACTION_TIMEOUT_MS` <sub>(apps/engine/config/runtime.exs)</sub>
+- `TOOL_LOOP_MAX_ITERATIONS` <sub>(apps/engine/config/runtime.exs)</sub>
+- `WEB_ORIGIN` <sub>(apps/engine/config/runtime.exs)</sub>
+
+**web** — 6 variáveis
+
+- `VITE_API_URL` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
+- `VITE_ENGINE_URL` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
+- `VITE_KEYCLOAK_CLIENT_ID` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
+- `VITE_KEYCLOAK_REALM` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
+- `VITE_KEYCLOAK_URL` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
+- `VITE_LOG_LEVEL` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
+<!-- END:GENERATED:env-inventario -->
+
+---
+
+> **TODO(humano):** não há validação de schema das variáveis no boot (tipo
+> `zod`/`envalid` na api ou `NimbleOptions` no engine). Hoje um valor numérico
+> inválido vira `NaN` silenciosamente e um typo em nome de variável cai no
+> default sem aviso. As únicas exceções são as marcadas 🔒, que falham
+> explicitamente em produção.

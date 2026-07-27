@@ -20,12 +20,29 @@ config :engine,
 # nome com nada da api).
 config :engine, Engine.Repo, migration_default_prefix: "engine"
 
+# Lifeline é o que faz "kill do engine gera análise pós-restart" (Fase 4b)
+# ser verdade. Com o Oban.Engines.Basic, um job SIGKILLado enquanto estava
+# `executing` não volta sozinho: o nó morreu sem marcar desfecho, então a
+# linha fica órfã em `executing` para sempre e o max_attempts do worker
+# nunca é exercido. O Lifeline devolve órfãos para `available` depois de
+# `rescue_after`, e aí a retentativa normal acontece.
+#
+# Vale para TODOS os workers de propósito (Psicólogo, Anamnese, drain do
+# outbox) — a orfandade é do mecanismo, não de um worker.
 config :engine, Oban,
   engine: Oban.Engines.Basic,
   repo: Engine.Repo,
   prefix: "engine",
   queues: [default: 10],
-  plugins: [Oban.Plugins.Pruner]
+  # Explícito, e maior que o default de 15s: o drain do preStop (Fase 5) já
+  # consumiu parte do terminationGracePeriodSeconds antes de o SIGTERM chegar,
+  # e um job cortado no meio só volta depois do `rescue_after` do Lifeline
+  # (5 min). Dar 25s ao Oban aumenta a chance de o job terminar sozinho.
+  shutdown_grace_period: :timer.seconds(25),
+  plugins: [
+    Oban.Plugins.Pruner,
+    {Oban.Plugins.Lifeline, rescue_after: :timer.minutes(5)}
+  ]
 
 # Configure the endpoint
 config :engine, EngineWeb.Endpoint,

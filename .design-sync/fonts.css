@@ -1,0 +1,16 @@
+/*
+ * Fontes do design system, para o bundle sincronizado — NÃO é usada pela app.
+ *
+ * As três famílias (Space Grotesk, Archivo, IBM Plex Mono) são carregadas pela
+ * app por um `<link>` em `apps/web/index.html`, não por `@font-face` em CSS. O
+ * bundle sincronizado não tem index.html: sem este arquivo o `styles.css`
+ * referenciaria `var(--font-body)` sem nunca declarar as famílias, e TODO design
+ * construído com este DS sairia em fonte de fallback — sem nada downstream
+ * pegando o erro.
+ *
+ * `@import` remoto é deliberado, não fontes empacotadas: é exatamente como a app
+ * carrega hoje, então o que o agente de design renderiza bate com produção. Os
+ * pesos são os mesmos do index.html — divergir faria um peso existir no preview
+ * e faltar na app.
+ */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');

@@ -11,3 +11,12 @@ apps/engine/deps/
 
 .DS_Store
 .idea/
+.ds-sync/
+ds-bundle/
+.design-sync/.cache/
+.design-sync/learnings/
+.design-sync/node_modules
+apps/web/types/
+
+# Artefato do workflow de promoção (gerado por scripts/ci/promote.ts)
+corpo-da-promocao.md

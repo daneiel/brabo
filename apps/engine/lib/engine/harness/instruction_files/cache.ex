@@ -47,4 +47,16 @@ defmodule Engine.Harness.InstructionFiles.Cache do
     :ets.delete(@table, key)
     :ok
   end
+
+  @doc """
+  Descarta TODAS as entradas de um agente, qualquer que seja a `root`
+  (Fase 4b). A chave é `{project_id, agent, root}` e a root varia — nil
+  pro workspace compartilhado, o path do worktree pros dev agents — então
+  invalidar só uma chave deixaria o dev servindo a instrução velha depois
+  de um patch/rollback.
+  """
+  def delete_agent(project_id, agent) do
+    :ets.match_delete(@table, {{project_id, agent, :_}, :_})
+    :ok
+  end
 end

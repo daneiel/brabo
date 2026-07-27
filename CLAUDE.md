@@ -12,48 +12,104 @@ e pipeline de aprovação de ações com autoridade final do usuário.
   pipeline de proposed_actions + permissions.json, motor Elixir/OTP com
   supervisão e evento de término.
 - FASE 2 — CONCLUÍDA: GitProvider (Local/GitHub/GitLab) com suite de
-  contrato e capabilities, credenciais de git criptografadas,
-  provisionamento com bootstrap de Gitflow idempotente e retomável via
-  pipeline de proposed_actions, wizard de novo projeto com progresso
+  contrato e capabilities, credenciais criptografadas, bootstrap de
+  Gitflow idempotente e retomável via pipeline, wizard com progresso
   ao vivo.
-- Não refatore o que está pronto sem pedido explícito; a Fase 3
-  CONSOME essas fundações.
+- FASE 3 — CONCLUÍDA: Harness (PromptAssembler, ToolLoop,
+  ContextManager, InstructionFiles, Hooks), handoffs explícitos,
+  agentes Criativo, PO e Arquiteto com artefatos e validações no
+  domínio.
+- FASE 4 — CONCLUÍDA: agentes de execução (devs dinâmicos por módulo
+  em worktrees isolados, QA e SecOps como gates de PR, Infra
+  propositivo), trava de merge protegido, painel do time ao vivo;
+  Psicólogo real e Anamnese com loop fechado. Gates validados por
+  execução real (ADR 0020).
+- FASE 5 — CONCLUÍDA: imagens de produção non-root e CI (ADR 0024),
+  Kubernetes com Kustomize, HPA por fila do Oban, NetworkPolicies e
+  ESO (ADR 0025), graceful shutdown + OpenTelemetry + dashboards
+  (ADR 0026), backup com restore testado, runbooks e hardening
+  (ADR 0027).
+- FASE DOC — CONCLUÍDA: docs/ como fonte única com Diátaxis, site
+  Docusaurus em website/ lendo de docs/, referências geradas (eventos,
+  artefatos, proposed_actions, permissions.json, env vars, rotas,
+  métricas, scripts), docs/.docmap.yml + drift check (docs:check) no
+  CI, camada de comunidade, licenciamento MIT verificado e o mecanismo
+  documentado em docs/explanation/documentation-workflow.md.
+- Não refatore o que está pronto sem pedido explícito.
 
-## Escopo da FASE 3 (ativa — não implemente nada além disso)
-
-### 3a — Harness de agentes (fundação; implementar ANTES de qualquer agente)
-1. Cinco behaviours Elixir no apps/engine, com contratos explícitos:
-   PromptAssembler (prompt em camadas ordenadas com orçamento de tokens
-   por camada e corte determinístico), ToolLoop (loop de tool use via
-   roteador de LLM da api, streaming, limite de iterações),
-   ContextManager (compactação acima de X% via modelo barato com binding
-   scope "context-manager", evento context.compacted com antes/depois em
-   tokens, itens pinned preservados), InstructionFiles (AGENTS.md do
-   workspace + arquivo de agente do banco, merge com precedência
-   documentada), Hooks (pre_tool_use, post_tool_use, session_start,
-   session_end; terminal e proposed_actions plugam como hooks).
-2. O engine NUNCA fala com provider de LLM direto: toda chamada passa
-   pelo endpoint da api (metering e budget obrigatórios).
-3. Ferramentas iniciais do ToolLoop: read_file, write_file (via
-   proposed_action fora de whitelist de paths), terminal (via pipeline),
-   search_workspace, emit_artifact (artefato tipado no event log).
-4. EchoAgent de validação exercitando o ciclo completo.
-
-### 3b — Agentes de produto (só após 3a verde)
-5. Handoffs explícitos: tabela handoffs {from_agent, to_agent,
-   artifact_id, status}; agente só inicia com handoff recebido — agentes
-   NUNCA conversam livremente entre si.
-6. Criativo: ideação com o usuário; emite artefatos business_rule ao
-   longo da conversa e product_brief quando o usuário confirmar
-   prontidão; a cada rodada provoca "o que falta para começar?".
-7. PO: backlog em tabelas próprias (epics, stories, tasks) com RF/RNF,
-   regra de negócio vinculada, DoD e DoR obrigatórios — story sem
-   DoD/DoR não sai de draft (validação no domínio, não só no prompt).
-8. Arquiteto: ADRs commitados em docs/adr/ do repo DO PROJETO via
-   pipeline git (PR), e artefato module_map (módulos, stacks,
-   dependências); valida que toda story referencia módulo existente.
-9. UI: tab Backlog (épicos → histórias → tarefas com DoD/DoR),
-   artefatos do Arquiteto na visão geral, divisores de handoff no chat.
+## Escopo da FASE 6 (ativa — CI/CD da política de branches)
+Mecanizar a política de branches e versionamento (fonte:
+docs/explanation/branching-policy.md — se ainda não existir, criá-lo a
+partir da apresentação da política é o PRIMEIRO entregável) no
+repositório do Brabo:
+1. Rulesets nas 3 permanentes (dev, qa, main): sem push direto, PR obrigatório, sem
+   force-push/delete, checks required; tags só via bot de release.
+   Configuração versionada em docs/reference/rulesets.md (aplicação
+   manual do usuário).
+2. Workflow pr-police (required, lógica em script testável): regex
+   ^.{0,15}/\S{0,32}$, prefixo na lista fechada (breaking, feature,
+   bugfix, perf, refactor, chore, docs, test, hotfix), origem por
+   contaminação (trabalho:dev · hotfix:main), destino
+   coerente, promoção só em par adjacente (dev→qa→main, sem pular),
+   label de família (trabalho|promocao|retropropagacao|correcao-alta).
+3. Workflow approval-ladder (required, reroda a cada review), com DOIS
+   modos controlados por variável de repositório APPROVAL_MODE:
+    - solo (ATIVO agora): todo PR de terceiro exige 1 aprovação do
+      OWNER (@handle, em variável); PR de autoria do próprio owner
+      passa no check sem review (BDFL não se auto-aprova via GitHub —
+      o merge manual dele É a aprovação; registrar essa semântica no
+      branching-policy.md). A exigência de pessoas distintas fica
+      SUSPENSA e documentada como suspensa.
+    - community (futuro, implementado e testado desde já, ativado só
+      por config): a escada completa por destino — dev: 1 dev · qa: 2
+      devs · main: 1 PO + 1 gestor; pessoas distintas em main. Papéis
+      são LISTAS DE HANDLES em variáveis de repositório
+      (APROVADORES_DEVS, _PO, _GESTAO), NÃO
+      times do GitHub: times só existem em organização, este repo é de
+      usuário, e o GITHUB_TOKEN não lê membership de time nem em org.
+      Com listas, community é ativável hoje e o flip é demonstrável.
+      Regras comuns aos dois modos: só reviews APPROVED no último commit
+      contam; o resumo do check mostra o modo ativo, quem aprovou e o que
+      falta. A troca solo→community é APENAS mudar variáveis — com teste
+      provando os dois modos.
+4. Workflow promote (dispatch restrito ao time de release): calcula a
+   versão do ciclo pelo maior impacto dos PRs mergeados (breaking→
+   MAJOR, feature→MINOR, senão PATCH), abre PR de promoção listando o
+   escopo; check de promoção confere range limpo, tag do degrau
+   anterior e merge --no-ff.
+5. Versionamento calculado, nunca manual: tags v X.Y.Z-dev.N/-qa.N/
+   final criadas por workflow no merge; N incrementa por reprovação no
+   ciclo; tag final DEVE apontar para o commit da última -qa.N
+   (verificação com falha ruidosa). A tag é o registro do que
+   ESTARIA em cada ambiente — vale mesmo sem deploy.
+6. SEM deploy e SEM ambiente: os workflows terminam na TAG, que é o
+   registro do que ESTARIA em cada estágio. Não existe passo de deploy
+   nem variável DEPLOY_ENABLED — passo que nunca roda apodrece: ninguém
+   o testa, ninguém percebe quando quebra, e no dia de ligar estará
+   errado. Quando houver ambiente, o deploy será workflow PRÓPRIO
+   disparado pela tag. Validação local por
+   make deploy-local TAG=vX.Y.Z-qa.N (Fase 5), documentada no runbook.
+   GitHub Environments NÃO são criados.
+7. Backmerge gate: .release/gate.json (locked[], awaiting, order[],
+   acúmulo) escrito por workflow no merge de hotfix (trava qa,dev) —
+   única exceção de escrita direta, pelo bot,
+   documentada; PRs de retropropagação abertos automaticamente em
+   cadeia; check required em todo PR consulta o gate; destrava por
+   branch NA ORDEM; última destrava limpa awaiting.
+8. Fechamento: ADR "política de branches mecanizada" mapeando
+   regra→mecanismo→o que entra no template do bootstrap de Gitflow do
+   produto (fase futura); docs/.docmap.yml atualizado (workflows de
+   release → branching-policy.md e reference/).
+9. Decisões da política registradas no branching-policy.md: responsável
+   de release = owner (único autorizado a disparar promote enquanto
+   APPROVAL_MODE=solo); plantão de hotfix = owner (a questão reabre na
+   migração para community, onde o fallback deve ser exceção documentada
+   no mapa de exigências, nunca burla). O documento deve conter a seção
+   "Migração para modo community": pré-requisitos (listas de aprovadores
+   preenchidas por papel, critério de quem entra em cada uma) e o passo
+   a passo da troca de variáveis. O GOVERNANCE.md citado antes como
+   fonte do critério NÃO existe — foi cortado no escopo da FASE DOC; ou
+   ele é escrito, ou o critério mora no branching-policy.md.
 
 ## Stack (decidida — não proponha alternativas)
 - `apps/api`: NestJS 11 + Drizzle ORM + PostgreSQL 16 + pgvector
@@ -61,10 +117,21 @@ e pipeline de aprovação de ações com autoridade final do usuário.
 - `apps/web`: React 19 + Vite + TanStack Query/Router
 - Monorepo pnpm (TS) com apps/engine Elixir ao lado; Docker Compose para dev
 - Auth: Keycloak (OIDC) em container; autorização RBAC no domínio da api
+- Deploy: Kubernetes (k3d/kind em validação local)
+- Docs: Docusaurus 3.x em website/ lendo de docs/; Mermaid para
+  diagramas; busca local
+- CI/CD de release: GitHub Actions com lógica em scripts testáveis
+  (scripts/ci/, vitest)
 
 ## Convenções
-- Branches permanentes: dev, qa, rc, main. Trabalhe SEMPRE em branch
-  feature/* a partir de dev. Commits em conventional commits, pt-BR.
+- Branches permanentes: dev, qa, main — um branch, um ambiente.
+  Trabalho nasce de dev com a taxonomia da política (breaking/,
+  feature/, bugfix/, perf/, refactor/, chore/, docs/, test/);
+  hotfix/ nasce de main. Formato funcao/descritivo,
+  regex ^.{0,15}/\S{0,32}$. Commits em conventional commits, pt-BR.
+- Toda mudança entra por PR — push direto em permanente é bloqueado;
+  única exceção de push: tags (bot de release) e .release/gate.json
+  (bot do gate).
 - Comunicação api ↔ engine: eventos via Postgres (transactional outbox na
   api, Oban no engine) + HTTP interno para comandos síncronos.
 - Todo evento de domínio é imutável: nunca UPDATE em tabelas de eventos.
@@ -74,19 +141,55 @@ e pipeline de aprovação de ações com autoridade final do usuário.
   proposed_action e respeita permissions.json; deny sempre vence allow.
 - Agentes rodam SEMPRE dentro de um Harness; nenhuma chamada de LLM ou
   ferramenta fora dele.
-- Testes: vitest (api/web), ExUnit (engine). Nenhuma feature sem teste do
-  caminho feliz + 1 caso de falha. Providers de git validados pela suite
-  de contrato única.
+- Merge em branch protegida (dev/qa/main) é SEMPRE manual do
+  usuário — sem opção de automatizar, garantido por teste.
+- Commits de agentes usam identidade "<agente>[bot]" com o usuário
+  como co-author.
+- Todo desfecho de falha de agente registra a ORIGEM da falha
+  (infra | modelo | código | política) — nunca diagnóstico por
+  eliminação (lição do ADR 0020).
+- Testes: vitest (api/web/scripts de CI), ExUnit (engine). Nenhuma
+  feature sem teste do caminho feliz + 1 caso de falha. Providers de
+  git validados pela suite de contrato única.
 - UI: fidelidade estrita ao design system em design/ (tokens, tipografia
   Space Grotesk/Archivo/IBM Plex Mono, dark mode primário).
 - Segredos de usuário (API keys de LLM e tokens de git) criptografados
   com envelope encryption; nunca em plaintext no banco ou em logs.
 - Decisões arquiteturais relevantes registradas em docs/adr/.
 
+## Documentação é parte da definição de pronto (permanente)
+- Ao alterar código, consulte docs/.docmap.yml e atualize os docs
+  mapeados NA MESMA mudança, mostrando o diff da doc junto com o do
+  código. Não pergunte se deve fazer — faça.
+- Fonte de verdade do Markdown: docs/ na raiz. NUNCA crie website/docs/
+  — o site lê de docs/ via path.
+- Arquivos generated: true no docmap são gerados por pnpm docs:generate
+  — nunca editados à mão (o próximo build sobrescreve). Se o gerador
+  marcar algo como "sem descrição acima", é lacuna real: escreva a
+  descrição na prosa.
+- Mudança de comportamento observável → entrada em CHANGELOG.md
+  (Unreleased).
+- Mudança estrutural (fronteira de camada, banco, modelo de
+  consistência, dependência pesada) → ADR novo com o próximo número.
+  ADR aceito NUNCA é editado: o novo referencia o antigo.
+- Regra de negócio nova → RN-XXX em docs/business-rules.md com
+  arquivo:linha e o teste que a cobre.
+- Antes de finalizar: pnpm docs:check e pnpm docs:build verdes (glob
+  morto, gerado fora de dia e link quebrado reprovam).
+- Nunca inventar conteúdo de doc: sem informação suficiente, use
+  > **TODO(humano):** <pergunta específica>.
+- Diagramas em Mermaid no próprio Markdown. Nunca imagem de diagrama.
+- O mecanismo inteiro está explicado em
+  docs/explanation/documentation-workflow.md — leia antes de desligar
+  qualquer peça dele.
+
 ## O que NÃO fazer
 - Não usar Redis (filas ficam no Postgres via Oban)
-- Não implementar agentes de execução (fase 4): devs, infra, QA, secops,
-  Psicólogo real, Anamnese, instanciação dinâmica por module_map
-- Não implementar Bitbucket nem GenericGitProvider
+- Não implementar Bitbucket nem GenericGitProvider (backlog futuro)
+- Não alterar comportamento de runtime do produto nesta fase — a FASE
+  6 é CI/CD do repositório; o que ela ensina ao produto vira ADR para
+  fase futura, não código agora
+- Não versionar à mão: toda tag nasce de workflow
 - Não instalar libs sem justificar no plano
-- Não refatorar código das Fases 1–2 fora do necessário para a Fase 3
+- Não refatorar código das fases concluídas fora do necessário para a
+  Fase 6

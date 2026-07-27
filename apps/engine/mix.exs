@@ -10,7 +10,28 @@ defmodule Engine.MixProject do
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
       deps: deps(),
-      listeners: [Phoenix.CodeReloader]
+      releases: releases(),
+      # O CodeReloader é ferramenta de DEV. Declarado sem guarda, ele ia junto
+      # pro release de produção — onde não há código pra recarregar.
+      listeners: listeners(Mix.env())
+    ]
+  end
+
+  defp listeners(:prod), do: []
+  defp listeners(_), do: [Phoenix.CodeReloader]
+
+  # `mix release` (Fase 5): a imagem de produção roda o release, não o Mix —
+  # `mix phx.server`/`mix ecto.migrate` não existem lá dentro. Daí o
+  # `Engine.Release`, que expõe migrate/0 via `bin/engine eval`.
+  defp releases do
+    [
+      engine: [
+        include_executables_for: [:unix],
+        # ERTS embarcado: o estágio final não precisa de Erlang instalado,
+        # só das libs de sistema. É o que permite runtime enxuto.
+        include_erts: true,
+        strip_beams: true
+      ]
     ]
   end
 
@@ -45,6 +66,10 @@ defmodule Engine.MixProject do
       {:postgrex, ">= 0.0.0"},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
+      # Só o agregador + scrape/1; a rota /metrics é do router que já existe.
+      # PromEx traria plug e servidor HTTP próprios mais um uploader de
+      # dashboards do Grafana — que é o item 5 da Fase 5, sessão seguinte.
+      {:telemetry_metrics_prometheus_core, "~> 1.2"},
       {:gettext, "~> 1.0"},
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.2.0"},
@@ -52,7 +77,32 @@ defmodule Engine.MixProject do
       {:oban, "~> 2.23"},
       {:req, "~> 0.5"},
       {:joken, "~> 2.6"},
-      {:joken_jwks, "~> 1.6"}
+      {:joken_jwks, "~> 1.6"},
+      # OpenTelemetry (Fase 5, item 3). Justificativa por pacote:
+      #   opentelemetry_api      — API de span, o que o código de domínio usa
+      #   opentelemetry          — SDK, o que amostra e agrega
+      #   opentelemetry_exporter — exporta OTLP para o Collector
+      #   opentelemetry_ecto     — span por query, sem tocar repositório
+      #   opentelemetry_oban     — propaga contexto do insert do job para a
+      #                            execução dele, que é o elo assíncrono da
+      #                            trace de uma sessão
+      #   opentelemetry_bandit / _phoenix — span por requisição HTTP recebida,
+      #                            e é por ela que o contexto vindo da api entra
+      {:opentelemetry_api, "~> 1.4"},
+      {:opentelemetry, "~> 1.5"},
+      {:opentelemetry_exporter, "~> 1.8"},
+      {:opentelemetry_ecto, "~> 1.2"},
+      {:opentelemetry_oban, "~> 1.1"},
+      {:opentelemetry_bandit, "~> 0.2"},
+      {:opentelemetry_phoenix, "~> 2.0"},
+      # Auditoria de dependências no CI (Fase 5, item 7).
+      #
+      # `mix hex.audit`, que vem com o Hex, reporta pacote APOSENTADO (retired)
+      # — não vulnerabilidade. Sozinho, o gate do engine seria decorativo:
+      # nenhuma CVE reprovaria o build. O mix_audit lê a base de advisories de
+      # segurança do Elixir e é o que de fato detecta CVE em dependência.
+      # Os dois rodam no job `audit`; são perguntas diferentes.
+      {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false}
     ]
   end
 

@@ -1,0 +1,177 @@
+# Alertas provisionados como código (Fase 5, item 5).
+#
+# DESVIO REGISTRADO: o enunciado pede "alertas Prometheus". Estão implementados
+# como regras unificadas do GRAFANA, por escolha explícita — ver ADR 0026. A
+# contrapartida aceita é que estes alertas deixam de ser avaliados se o Grafana
+# cair, o que não aconteceria com regras carregadas pelo Prometheus.
+#
+# Não há Alertmanager nem receiver configurado: os alertas ficam visíveis no
+# painel de alertas do Grafana. Rotear para algum destino é decisão de operação,
+# não de código.
+apiVersion: 1
+groups:
+  - orgId: 1
+    name: brabo
+    folder: Brabo
+    interval: 1m
+    rules:
+      # ---------------------------------------------------------------------
+      - uid: brabo-fila-sem-consumo
+        title: Fila do Oban crescendo sem consumo
+        condition: alerta
+        for: 10m
+        annotations:
+          summary: >-
+            Há trabalho esperando na fila do Oban e nada saindo dela por 10
+            minutos. Suspeitos, nesta ordem: nenhuma réplica do engine Ready,
+            pool do Postgres esgotado, ou worker travado num job.
+        labels:
+          severity: critical
+        data:
+          - refId: backlog
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: brabo-prometheus
+            model:
+              # `min_over_time`: o alerta é sobre backlog PERSISTENTE. Um pico
+              # instantâneo é trabalho normal chegando, não fila travada.
+              expr: min_over_time(oban_queue_depth{state="available"}[10m])
+              instant: true
+              refId: backlog
+          - refId: alerta
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: backlog
+              conditions:
+                - evaluator: { type: gt, params: [20] }
+
+      # ---------------------------------------------------------------------
+      - uid: brabo-sessao-presa-em-closing
+        title: Sessão presa em closing
+        condition: alerta
+        for: 15m
+        annotations:
+          summary: >-
+            Sessão em `closing` há mais de 15 minutos. `closing` é um estado de
+            passagem: ou o engine terminou de drenar e move para `closed`, ou
+            alguém precisa olhar. Sessão parada aqui não fecha sozinha.
+        labels:
+          severity: warning
+        data:
+          - refId: presas
+            relativeTimeRange: { from: 900, to: 0 }
+            datasourceUid: brabo-prometheus
+            model:
+              expr: min_over_time(brabo_sessions_closing[15m])
+              instant: true
+              refId: presas
+          - refId: alerta
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: presas
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+
+      # ---------------------------------------------------------------------
+      - uid: brabo-custo-hora-acima-do-limite
+        title: Custo por hora acima do limite
+        condition: alerta
+        for: 5m
+        annotations:
+          summary: >-
+            Gasto de LLM projetado acima de USD 5/hora em algum projeto. O
+            orçamento por projeto do domínio continua sendo o controle rígido;
+            este alerta existe para avisar ANTES de o teto ser atingido.
+        labels:
+          severity: warning
+        data:
+          - refId: custo
+            relativeTimeRange: { from: 3600, to: 0 }
+            datasourceUid: brabo-prometheus
+            model:
+              # cost_micros é micro-dólar: /1e6 dá dólar, *3600 projeta a hora.
+              expr: >-
+                max(sum by (project) (rate(brabo_llm_cost_micros_total[10m])) * 3600 / 1000000)
+              instant: true
+              refId: custo
+          - refId: alerta
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: custo
+              conditions:
+                - evaluator: { type: gt, params: [5] }
+
+      # ---------------------------------------------------------------------
+      - uid: brabo-backup-atrasado
+        title: Backup do Postgres atrasado
+        condition: alerta
+        # Sem `for`: a idade do backup já é uma média de 24h por natureza, e
+        # esperar mais 5 minutos para avisar que faz 26 horas que não há backup
+        # não acrescenta informação nenhuma.
+        for: 0m
+        annotations:
+          summary: >-
+            O último backup bem-sucedido tem mais de 26 horas (a cadência é
+            diária, às 03:17 UTC, mais margem). Ou o CronJob não rodou, ou
+            rodou e falhou — `brabo_backup_last_status` distingue os dois.
+            Investigue com `kubectl -n brabo get cronjob brabo-backup` e
+            `select * from backup_runs order by finished_at desc limit 5`.
+            Restaurar sem backup recente é o pior lugar para descobrir isto.
+        labels:
+          severity: critical
+        data:
+          - refId: idade
+            relativeTimeRange: { from: 3600, to: 0 }
+            datasourceUid: brabo-prometheus
+            model:
+              # A métrica já vem calculada da api. Não é `time() - timestamp`
+              # aqui de propósito: aquele cálculo dispara igual quando nunca
+              # houve backup (gauge em 0 = epoch) e quando o backup atrasou, e
+              # as duas situações pedem ações diferentes. A api publica -1 no
+              # caso "nunca houve", que a condição abaixo trata à parte.
+              expr: brabo_backup_age_seconds
+              instant: true
+              refId: idade
+          - refId: alerta
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: idade
+              conditions:
+                # 26h = 93600s. O -1 de "nunca houve backup" NÃO dispara este
+                # alerta — num ambiente recém-criado ele soaria no primeiro dia
+                # sem nada quebrado. Quem cobre aquele caso é o alerta abaixo.
+                - evaluator: { type: gt, params: [93600] }
+
+      # ---------------------------------------------------------------------
+      - uid: brabo-backup-falhou
+        title: Última execução do backup falhou
+        condition: alerta
+        for: 0m
+        annotations:
+          summary: >-
+            O CronJob de backup rodou e terminou em erro. Diferente do alerta
+            de atraso: aqui ainda pode existir um backup bom de ontem, e é
+            justamente por isso que a falha passaria despercebida por dias.
+            A causa fica em `backup_runs.error_message`.
+        labels:
+          severity: warning
+        data:
+          - refId: status
+            relativeTimeRange: { from: 3600, to: 0 }
+            datasourceUid: brabo-prometheus
+            model:
+              # 1 = ok, 0 = falhou, -1 = nunca rodou. A condição pega só o 0:
+              # "nunca rodou" não é falha de execução.
+              expr: brabo_backup_last_status
+              instant: true
+              refId: status
+          - refId: alerta
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: status
+              conditions:
+                - evaluator: { type: within_range, params: [-0.5, 0.5] }

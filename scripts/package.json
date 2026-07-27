@@ -1,0 +1,20 @@
+{
+  "name": "@brabo/scripts",
+  "private": true,
+  "license": "MIT",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "typescript": "^5.7.3",
+    "vitest": "^4.1.10"
+  },
+  "dependencies": {
+    "picomatch": "^4.0.5",
+    "yaml": "^2.9.0"
+  }
+}

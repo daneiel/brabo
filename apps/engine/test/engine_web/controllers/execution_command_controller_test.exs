@@ -1,0 +1,151 @@
+defmodule EngineWeb.ExecutionCommandControllerTest do
+  # async: false — mexe nos processos globais (DevAgentSupervisor, Monitor) e
+  # precisa do sandbox compartilhado, já que os agentes rodam em processos
+  # próprios. As actions são chamadas DIRETO (sem passar pelo router): o que
+  # está sob teste é a decisão do controller, não o pipeline de auth.
+  use EngineWeb.ConnCase, async: false
+
+  alias Engine.Dev.{
+    DevAgentServer,
+    DevAgentState,
+    DevAgentSupervisor,
+    FakeWorktreeManager,
+    NoopDevAgentServer
+  }
+
+  alias Engine.Sessions.FakeEngineApiClient
+  alias EngineWeb.ExecutionCommandController
+
+  defp server_module(project_id, agent_id) do
+    [{pid, _}] = Registry.lookup(Engine.Dev.Registry, {project_id, agent_id})
+    {:dictionary, dict} = Process.info(pid, :dictionary)
+    {mod, :init, 1} = Keyword.fetch!(dict, :"$initial_call")
+    mod
+  end
+
+  setup do
+    Application.put_env(:engine, :engine_api_client, FakeEngineApiClient)
+    Application.put_env(:engine, :worktree_manager, FakeWorktreeManager)
+    Application.put_env(:engine, :test_pid, self())
+
+    on_exit(fn ->
+      Application.delete_env(:engine, :engine_api_client)
+      Application.delete_env(:engine, :worktree_manager)
+      Application.delete_env(:engine, :test_pid)
+    end)
+
+    %{project_id: Ecto.UUID.generate(), session_id: Ecto.UUID.generate()}
+  end
+
+  test "start sobe um dev agent REAL por módulo por padrão", %{
+    conn: conn,
+    project_id: project_id,
+    session_id: session_id
+  } do
+    Process.put(:fake_tasks, [])
+
+    conn =
+      ExecutionCommandController.start(conn, %{
+        "sessionId" => session_id,
+        "projectId" => project_id,
+        "modules" => ["api", "web"]
+      })
+
+    assert conn.status == 201
+    assert server_module(project_id, "dev-api") == DevAgentServer
+    assert server_module(project_id, "dev-web") == DevAgentServer
+    assert DevAgentState.get(project_id, "dev-api").impl == "real"
+  end
+
+  test "start com impl=noop sobe NoopDevAgents e dispara o ciclo deles", %{
+    conn: conn,
+    project_id: project_id,
+    session_id: session_id
+  } do
+    conn =
+      ExecutionCommandController.start(conn, %{
+        "sessionId" => session_id,
+        "projectId" => project_id,
+        "modules" => ["api", "web"],
+        "impl" => "noop"
+      })
+
+    assert conn.status == 201
+    assert server_module(project_id, "dev-api") == NoopDevAgentServer
+    assert server_module(project_id, "dev-web") == NoopDevAgentServer
+    assert DevAgentState.get(project_id, "dev-api").impl == "noop"
+
+    # E o ciclo de cada um foi disparado (o :work é um cast; os agentes rodam
+    # em processos próprios, então o claim é a evidência de que rodou). O
+    # ciclo completo até a PR é coberto em NoopDevAgentServerTest, onde os
+    # callbacks rodam no processo do teste e o fake pode ser scriptado.
+    assert_receive {:task_claimed, "api", "dev-api"}, 2_000
+    assert_receive {:task_claimed, "web", "dev-web"}, 2_000
+  end
+
+  test "parallelize herda o MODO do agente base (não sobe um agente real com LLM)", %{
+    conn: conn,
+    project_id: project_id,
+    session_id: session_id
+  } do
+    Process.put(:fake_tasks, [])
+
+    {:ok, _pid, :started} =
+      DevAgentSupervisor.start_agent(project_id, "dev-api", "api", session_id, 123_456, 1, :noop)
+
+    conn =
+      ExecutionCommandController.parallelize(conn, %{
+        "sessionId" => session_id,
+        "projectId" => project_id,
+        "module" => "api"
+      })
+
+    assert conn.status == 202
+    assert DevAgentState.get(project_id, "dev-api-2").impl == "noop"
+
+    assert server_module(project_id, "dev-api-2") == NoopDevAgentServer,
+           "aceitar a paralelização de uma execução Noop subiu um agente REAL — " <>
+             "um clique passaria a gastar token sem o usuário pedir"
+  end
+
+  test "parallelize herda os tetos do agente base do módulo", %{
+    conn: conn,
+    project_id: project_id,
+    session_id: session_id
+  } do
+    # O aceite de um clique não pode criar um agente sem teto: a guarda de
+    # orçamento do ToolLoop é `when is_integer(budget)`, então nil = ilimitado.
+    {:ok, _pid, :started} =
+      DevAgentSupervisor.start_agent(project_id, "dev-api", "api", session_id, 123_456, 1)
+
+    conn =
+      ExecutionCommandController.parallelize(conn, %{
+        "sessionId" => session_id,
+        "projectId" => project_id,
+        "module" => "api"
+      })
+
+    assert conn.status == 202
+
+    extra = DevAgentState.get(project_id, "dev-api-2")
+    assert extra, "o subagente extra não subiu"
+    assert extra.task_budget_micros == 123_456
+    assert extra.max_gate_corrections == 1
+  end
+
+  test "parallelize sem agente base: 409 e nenhum agente criado", %{
+    conn: conn,
+    project_id: project_id,
+    session_id: session_id
+  } do
+    conn =
+      ExecutionCommandController.parallelize(conn, %{
+        "sessionId" => session_id,
+        "projectId" => project_id,
+        "module" => "web"
+      })
+
+    assert conn.status == 409
+    refute DevAgentState.get(project_id, "dev-web-2")
+  end
+end

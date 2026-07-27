@@ -28,7 +28,17 @@ defmodule Engine.Outbox.Drain do
   defp enqueue_and_mark(row) do
     for worker <- handlers_for(row.event_type) do
       {:ok, _job} =
-        %{event_type: row.event_type, aggregate_id: row.aggregate_id, payload: row.payload}
+        %{
+          event_type: row.event_type,
+          aggregate_id: row.aggregate_id,
+          payload: row.payload,
+          # Propaga o `traceparent` que a api gravou no metadado do evento
+          # (Fase 5). Sem isto o trabalho assíncrono disparado por um evento
+          # nasceria numa trace própria, e a sessão apareceria no Tempo
+          # partida em pedaços sem relação entre si — que é exatamente o que
+          # "uma sessão = uma trace" existe para evitar.
+          traceparent: traceparent(row)
+        }
         |> worker.new()
         |> Oban.insert()
     end
@@ -38,6 +48,11 @@ defmodule Engine.Outbox.Drain do
       set: [processed_at: DateTime.utc_now()]
     )
   end
+
+  # `metadata` pode vir vazio: eventos gravados antes da Fase 5, ou por um
+  # caminho que rodou fora de um contexto de trace ativo.
+  defp traceparent(%{metadata: %{"traceparent" => tp}}) when is_binary(tp), do: tp
+  defp traceparent(_), do: nil
 
   # Ponto de roteamento explícito — extensível pra futuros handlers.
   defp handlers_for(event_type)

@@ -1,0 +1,5 @@
+# Reviewer requerido em tudo. Um mantenedor com direito de merge.
+# CODEOWNERS só vira exigência de fato com "Require review from Code Owners"
+# ligado na proteção da branch — hoje o plano do repositório não permite
+# (ver ADR 0024 e ADR 0028).
+* @daneiel

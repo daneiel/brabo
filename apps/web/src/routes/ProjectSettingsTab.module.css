@@ -141,3 +141,136 @@
 .credentialInput {
   width: 260px;
 }
+
+/* --- Anamnese (Fase 4b) --- */
+
+.profileGroup {
+  border-top: 1px solid var(--border);
+  padding: 12px 0;
+}
+
+.profileGroup:first-of-type {
+  border-top: none;
+}
+
+.profileUser {
+  font-size: 13px;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.profileRow {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 6px 0;
+}
+
+.profileCompetency {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-primary);
+  min-width: 140px;
+}
+
+.profileWhy {
+  flex: 1;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.evidenceChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.evidenceChip {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.evidenceChip:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.versionRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-top: 1px solid var(--border);
+}
+
+.versionRow:first-of-type {
+  border-top: none;
+}
+
+.versionNo {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-primary);
+  min-width: 44px;
+}
+
+.versionNote {
+  flex: 1;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+}
+
+.versionDiff {
+  margin: 4px 0 10px 54px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+  max-height: 320px;
+  overflow: auto;
+}
+
+.diffLine {
+  display: flex;
+  gap: 8px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Mesmo idioma visual do diff do ApprovalCard (fundo tokenizado, sinal
+   colorido) — antes o mesmo patch tinha duas aparências dependendo de onde
+   você olhasse. Ver design/COMPONENTS.md. */
+.diffLine.add {
+  background: var(--diff-add);
+}
+
+.diffLine.add .diffSign {
+  color: var(--success);
+}
+
+.diffLine.del {
+  background: var(--diff-del);
+}
+
+.diffLine.del .diffSign {
+  color: var(--danger);
+}
+
+.agentBlock {
+  border-top: 1px solid var(--border);
+  padding: 12px 0;
+}
+
+.agentBlock:first-of-type {
+  border-top: none;
+}

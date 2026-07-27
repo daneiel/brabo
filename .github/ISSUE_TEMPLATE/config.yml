@@ -1,0 +1,22 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Falha de segurança
+    url: https://github.com/daneiel/brabo/security/advisories/new
+    about: Nunca abra issue pública para vulnerabilidade — use o canal privado.
+  - name: Documentação
+    url: https://github.com/daneiel/brabo/blob/dev/docs/intro.md
+    about: Arquitetura, regras de negócio, runbook e referência antes de perguntar.
+  - name: Como contribuir
+    url: https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md
+    about: Fluxo, Definition of Done, e o que é aceito ou não.
+
+# TODO(humano): Discussions está desabilitado. Ao habilitar
+# (Settings → Features → Discussions), descomente o bloco abaixo, remova
+# question.yml e ajuste a primeira linha da tabela do SUPPORT.md.
+#
+#  - name: Dúvida de uso
+#    url: https://github.com/daneiel/brabo/discussions
+#    about: Pergunta sobre como usar — não vira issue.
+#
+# TODO(humano): se o Buy Me a Coffee for configurado, some um contact_link
+# apontando para lá, além do .github/FUNDING.yml.

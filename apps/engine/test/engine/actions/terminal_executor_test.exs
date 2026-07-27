@@ -116,7 +116,7 @@ defmodule Engine.Actions.TerminalExecutorTest do
     project_id = unique_project_id()
     insert_project_repository!(project_id, bare)
 
-    result = TerminalExecutor.run(project_id, "sleep 5", 100)
+    result = TerminalExecutor.run(project_id, "sleep 5", timeout_ms: 100)
 
     assert result.timed_out == true
     assert result.exit_code == nil

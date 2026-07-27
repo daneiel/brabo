@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { SessionEvent } from '../lib/api-types';
-import { classifyEvent, type ActivityKind } from '../lib/activity';
+import { classifyEvent, isMachineEvent, type ActivityKind } from '../lib/activity';
 import { EventItem } from './EventItem';
 import { Select } from './ui/Select';
 import { ClockIcon } from './ui/icons';
@@ -19,9 +19,15 @@ const KIND_LABEL: Record<ActivityKind, string> = {
 interface ActivityFeedProps {
   events: SessionEvent[];
   agentOptions?: { id: string; label: string }[];
+  /** Evento a destacar (navegação de evidência do Psicólogo, Fase 4b). */
+  highlightEventId?: string;
 }
 
-export function ActivityFeed({ events, agentOptions = [] }: ActivityFeedProps) {
+export function ActivityFeed({
+  events,
+  agentOptions = [],
+  highlightEventId,
+}: ActivityFeedProps) {
   const [agentFilter, setAgentFilter] = useState<string>('');
   const [kindFilter, setKindFilter] = useState<ActivityKind | null>(null);
 
@@ -33,11 +39,18 @@ export function ActivityFeed({ events, agentOptions = [] }: ActivityFeedProps) {
 
   const filtered = useMemo(() => {
     return events.filter((event) => {
+      // O evento CITADO por uma hipótese nunca é escondido: a evidência do
+      // Psicólogo aponta com frequência pra `agent.response`/`tool.result`,
+      // que são exatamente o ruído de máquina que o feed corta — e um
+      // destaque invisível é uma navegação que não chega em nada.
+      if (highlightEventId && event.id === highlightEventId) return true;
+      // Ruído de máquina fica fora do feed — ver isMachineEvent.
+      if (isMachineEvent(event)) return false;
       if (agentFilter && event.actor.id !== agentFilter) return false;
       if (kindFilter && classifyEvent(event).kind !== kindFilter) return false;
       return true;
     });
-  }, [events, agentFilter, kindFilter]);
+  }, [events, agentFilter, kindFilter, highlightEventId]);
 
   return (
     <div className={styles.wrapper}>
@@ -76,7 +89,11 @@ export function ActivityFeed({ events, agentOptions = [] }: ActivityFeedProps) {
       ) : (
         <div className={styles.list}>
           {filtered.map((event) => (
-            <EventItem key={event.id} event={event} />
+            <EventItem
+              key={event.id}
+              event={event}
+              highlighted={event.id === highlightEventId}
+            />
           ))}
         </div>
       )}

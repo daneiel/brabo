@@ -21,10 +21,71 @@ defmodule Engine.SessionEvents.Event do
     field :actor_kind, :string
     field :actor_id, :string
     field :payload, :map, default: %{}
-    field :created_at, :utc_datetime
+    # `:utc_datetime_usec`, não `:utc_datetime`: a coluna é timestamptz(6) e a
+    # api grava com microssegundos. Declarando precisão de SEGUNDO, o Ecto
+    # truncava o parâmetro nas comparações de janela — então
+    # `created_at < window_to` descartava tudo que aconteceu no segundo
+    # corrente. Numa rodada disparada logo após a atividade, isso esvaziava a
+    # janela inteira e a Anamnese era pulada em silêncio.
+    field :created_at, :utc_datetime_usec
   end
 
-  def list(session_id) do
-    Repo.all(from(e in __MODULE__, where: e.session_id == ^session_id, order_by: e.seq))
+  @doc """
+  Quantos eventos a sessão tem. COUNT no banco em vez de
+  `length(list(session_id))` — quem só precisa do número (a triagem do
+  Psicólogo) não carrega o log inteiro pra memória.
+  """
+  def count(session_id) do
+    Repo.aggregate(from(e in __MODULE__, where: e.session_id == ^session_id), :count, :id)
+  end
+
+  @doc """
+  Os `limit` eventos mais recentes da sessão, devolvidos em ordem de seq
+  CRESCENTE (a query desce por seq pra pegar a cauda, o resultado volta
+  cronológico pra ser lido como log).
+  """
+  def list_recent(session_id, limit) do
+    from(e in __MODULE__,
+      where: e.session_id == ^session_id,
+      order_by: [desc: e.seq],
+      limit: ^limit
+    )
+    |> Repo.all()
+    |> Enum.reverse()
+  end
+
+  @doc """
+  Janela de tempo do PROJETO inteiro (Fase 4b — a Anamnese analisa
+  "janelas do event log"). Junta em sessions pra filtrar por projeto, já
+  que session_events não carrega project_id. `limit` protege contra
+  janelas patológicas.
+  """
+  def list_for_project_window(project_id, from_time, to_time, limit \\ 500) do
+    Repo.all(
+      from(e in project_window_query(project_id, from_time, to_time),
+        order_by: [desc: e.created_at],
+        limit: ^limit
+      )
+    )
+    |> Enum.reverse()
+  end
+
+  @doc """
+  Quantos eventos a janela do projeto tem, sem carregar linha — o número REAL,
+  que pode ser maior que o recorte que entra no prompt (ver
+  `Engine.Anamnese.Triage.max_prompt_events/0`).
+  """
+  def count_for_project_window(project_id, from_time, to_time) do
+    Repo.aggregate(project_window_query(project_id, from_time, to_time), :count, :id)
+  end
+
+  defp project_window_query(project_id, from_time, to_time) do
+    from(e in __MODULE__,
+      join: s in Engine.Sessions.ProjectSession,
+      on: e.session_id == s.id,
+      where:
+        s.project_id == type(^project_id, :binary_id) and
+          e.created_at >= ^from_time and e.created_at < ^to_time
+    )
   end
 end

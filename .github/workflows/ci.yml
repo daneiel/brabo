@@ -1,0 +1,548 @@
+name: CI
+
+# Fase 5, item 4. Antes disto o repo não tinha CI de verdade: os dois workflows
+# ao lado são helpers do Claude e nenhum roda teste.
+#
+# Este workflow é o que a proteção da branch `dev` deve exigir — a configuração
+# está documentada em docs/adr/0024, e aplicá-la é passo MANUAL do usuário nas
+# settings do GitHub (hoje bloqueado pelo plano do repo, ver o ADR).
+# Só `pull_request`, sem `push`.
+#
+# Antes, `push` na branch de trabalho e `pull_request` para a permanente
+# disparavam os DOIS — todo job rodava duas vezes por PR, incluindo os ~5,5 min
+# do build de imagens: 11 minutos gastos para produzir o mesmo veredito duas
+# vezes.
+#
+# Nada se perde em cobertura: a política exige PR para toda mudança, e PR em
+# rascunho já dispara `opened` e `synchronize`. Quem quer CI antes de pedir
+# review abre o PR como rascunho.
+#
+# O gatilho cobre a escada inteira (dev, qa, main). Enquanto filtrava só `dev`,
+# um PR de promoção não rodava CI nenhum — e exigir estes checks nas
+# permanentes travaria o PR para sempre, porque o check exigido nunca
+# apareceria.
+on:
+  pull_request:
+    branches:
+      - dev
+      - qa
+      - main
+
+# Push seguido de push no mesmo PR cancela a execução anterior: o que importa
+# é o resultado do HEAD.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '24.11.1'
+  PNPM_VERSION: '11.3.0'
+  ELIXIR_VERSION: '1.17.3'
+  OTP_VERSION: '27.1.2'
+  # Mesmas versões pinadas do docker/engine/Dockerfile.prod. Divergir daqui
+  # significa testar contra um scanner diferente do que roda em produção.
+  GITLEAKS_VERSION: '8.30.1'
+  HADOLINT_VERSION: '2.12.0'
+  YAMLLINT_VERSION: '1.38.0'
+  # Manifests de Kubernetes (Fase 5, sessão 2).
+  KUSTOMIZE_VERSION: '5.8.1'
+  KUBECONFORM_VERSION: '0.7.0'
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # `eslint` direto, SEM o script `lint` do package.json: ele roda com
+      # `--fix`, que num CI "conserta" o arquivo e sai verde sem ninguém ver o
+      # problema. Aqui o modo é verificação.
+      - name: ESLint (api, modo verificação)
+        run: pnpm --filter api exec eslint "src/**/*.ts" --max-warnings 0
+
+      - name: Oxlint (web)
+        run: pnpm --filter web lint
+
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          otp-version: ${{ env.OTP_VERSION }}
+
+      - uses: actions/cache@v4
+        with:
+          path: apps/engine/deps
+          key: ${{ runner.os }}-mix-deps-${{ env.ELIXIR_VERSION }}-${{ hashFiles('apps/engine/mix.lock') }}
+          restore-keys: ${{ runner.os }}-mix-deps-${{ env.ELIXIR_VERSION }}-
+
+      # `mix format` NÃO é standalone aqui: o .formatter.exs faz
+      # `import_deps: [:ecto, :ecto_sql, :phoenix]` para conhecer as macros
+      # dessas libs, e sem as deps baixadas ele falha com "Unknown dependency".
+      - name: mix deps.get
+        working-directory: apps/engine
+        run: mix deps.get
+
+      # Mesma disciplina do eslint: `--check-formatted`, não `mix format`.
+      #
+      # A versão do Elixir aqui É load-bearing: as regras do formatador mudam
+      # entre versões, então este check só é estável porque bate com o
+      # ELIXIR_VERSION pinado nos Dockerfiles. Ver ADR 0024, decisão 10.
+      - name: mix format --check-formatted
+        working-directory: apps/engine
+        run: mix format --check-formatted
+
+      # Os Dockerfiles de produção passam pelo mesmo linter que o gate de QA de
+      # infra usa nos artefatos que o agente propõe (ADR 0021).
+      - name: Hadolint nos Dockerfiles de produção
+        run: |
+          curl -fsSL -o /tmp/hadolint \
+            "https://github.com/hadolint/hadolint/releases/download/v${HADOLINT_VERSION}/hadolint-Linux-x86_64"
+          chmod +x /tmp/hadolint
+          /tmp/hadolint docker/api/Dockerfile.prod docker/engine/Dockerfile.prod \
+            docker/web/Dockerfile.prod docker/backup/Dockerfile.prod
+
+  test-ts:
+    name: Testes TS (api + web)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        # pgvector, não `postgres:16` puro: as migrations criam a extensão e um
+        # Postgres sem ela falha na primeira migration.
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: brabo
+          POSTGRES_PASSWORD: brabo
+          POSTGRES_DB: brabo
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U brabo -d brabo"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      # O globalSetup do vitest cria a brabo_test e aplica as migrations
+      # sozinho — só precisa de um Postgres onde possa CREATE DATABASE.
+      DATABASE_URL: postgres://brabo:brabo@localhost:5432/brabo
+      TEST_DATABASE_URL: postgres://brabo:brabo@localhost:5432/brabo_test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Testes da api
+        run: pnpm --filter api test
+
+      - name: Testes do web
+        run: pnpm --filter web test
+
+      # Os scripts de CI são lógica pura, sem banco — mas rodam no mesmo job
+      # porque compartilham o `pnpm install` acima.
+      - name: Testes dos scripts de CI
+        run: pnpm --filter @brabo/scripts test
+
+      # O Node executa os `.ts` de scripts/ci/ por type stripping, que APAGA os
+      # tipos sem verificá-los. Sem este passo, a anotação seria enfeite.
+      - name: Typecheck dos scripts de CI
+        run: pnpm --filter @brabo/scripts typecheck
+
+  test-engine:
+    name: Testes do engine (ExUnit)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: brabo
+          POSTGRES_PASSWORD: brabo
+          POSTGRES_DB: brabo
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U brabo -d brabo"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      POSTGRES_USER: brabo
+      POSTGRES_PASSWORD: brabo
+      POSTGRES_HOST: localhost
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          otp-version: ${{ env.OTP_VERSION }}
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            apps/engine/deps
+            apps/engine/_build
+          key: ${{ runner.os }}-mix-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-${{ hashFiles('apps/engine/mix.lock') }}
+          restore-keys: ${{ runner.os }}-mix-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-
+
+      # ---------------------------------------------------------------------
+      # ESTE PASSO É O QUE IMPEDE UM FALSO-VERDE.
+      #
+      # test_helper.exs exclui as tags :gitleaks/:hadolint/:yamllint quando o
+      # binário não existe na máquina. Esses três módulos são exatamente as
+      # REGRESSÕES que provam que os gates não aprovam vazio (ADR 0020: o
+      # gitleaks varria o histórico em vez da árvore; ADR 0021: o gate de QA de
+      # infra aprovava qualquer Dockerfile). Num runner pelado eles somem em
+      # silêncio e o CI fica verde sem nunca testar os gates de segurança.
+      #
+      # Versões idênticas às do Dockerfile.prod do engine.
+      # ---------------------------------------------------------------------
+      - name: Instalar os binários dos gates (gitleaks, hadolint, yamllint)
+        run: |
+          set -euxo pipefail
+          curl -fsSL -o /tmp/gitleaks.tar.gz \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          sudo tar -xzf /tmp/gitleaks.tar.gz -C /usr/local/bin gitleaks
+          sudo chmod 0755 /usr/local/bin/gitleaks
+          sudo curl -fsSL -o /usr/local/bin/hadolint \
+            "https://github.com/hadolint/hadolint/releases/download/v${HADOLINT_VERSION}/hadolint-Linux-x86_64"
+          sudo chmod 0755 /usr/local/bin/hadolint
+          pipx install "yamllint==${YAMLLINT_VERSION}"
+          gitleaks version && hadolint --version && yamllint --version
+
+      - name: mix deps.get
+        working-directory: apps/engine
+        run: mix deps.get
+
+      - name: Compilar com --warnings-as-errors
+        working-directory: apps/engine
+        run: mix compile --warnings-as-errors
+
+      - name: mix test
+        working-directory: apps/engine
+        run: mix test 2>&1 | tee /tmp/mix-test.log
+
+      # Guarda do falso-verde: se qualquer teste foi EXCLUÍDO, algum binário do
+      # passo acima não chegou e os gates não foram exercitados. Falhar aqui é
+      # a diferença entre "verde" e "verde de verdade".
+      - name: Nenhum teste pode ter sido excluído
+        run: |
+          if grep -qE '[1-9][0-9]* excluded' /tmp/mix-test.log; then
+            echo "::error::testes excluídos — os binários dos gates não estavam disponíveis:"
+            grep -E 'excluded' /tmp/mix-test.log
+            exit 1
+          fi
+          echo "ok: nenhum teste excluído"
+
+  audit:
+    name: Auditoria de dependências
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Job próprio, e não um passo do `lint`, porque a natureza da falha é
+    # diferente: lint reprova o QUE ESCREVEMOS, auditoria reprova o que
+    # IMPORTAMOS. Separado, dá para ver num relance se a PR quebrou por código
+    # nosso ou porque uma CVE foi publicada num pacote de terceiro entre ontem
+    # e hoje — que acontece sem ninguém tocar no repo.
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # `--audit-level critical`: o gate é para CRÍTICA, como definido no
+      # escopo da fase. HIGH e abaixo aparecem no log sem reprovar — reprovar
+      # em `moderate` num monorepo com esta árvore de dependências
+      # transformaria o CI num bloqueio permanente por coisa que ninguém pode
+      # resolver hoje, e a reação seria desligar o gate inteiro.
+      - name: pnpm audit (workspace)
+        run: pnpm audit --audit-level critical
+
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          otp-version: ${{ env.OTP_VERSION }}
+
+      - uses: actions/cache@v4
+        with:
+          path: apps/engine/deps
+          key: ${{ runner.os }}-mix-deps-${{ env.ELIXIR_VERSION }}-${{ hashFiles('apps/engine/mix.lock') }}
+          restore-keys: ${{ runner.os }}-mix-deps-${{ env.ELIXIR_VERSION }}-
+
+      - name: mix deps.get
+        working-directory: apps/engine
+        run: mix deps.get
+
+      # Os dois respondem perguntas DIFERENTES e por isso os dois rodam:
+      #   hex.audit    -> este pacote foi APOSENTADO pelo autor?
+      #   deps.audit   -> este pacote tem CVE publicada? (mix_audit)
+      # Só o primeiro, que foi o pedido original, deixaria o gate do engine sem
+      # detectar vulnerabilidade nenhuma.
+      - name: mix hex.audit (pacotes aposentados)
+        working-directory: apps/engine
+        run: mix hex.audit
+
+      - name: mix deps.audit (CVEs)
+        working-directory: apps/engine
+        run: mix deps.audit
+
+  secrets-scan:
+    name: Gitleaks no repositório
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Histórico completo: um segredo removido no último commit continua
+          # recuperável e precisa ser encontrado.
+          fetch-depth: 0
+
+      - name: Instalar gitleaks
+        run: |
+          set -euxo pipefail
+          curl -fsSL -o /tmp/gitleaks.tar.gz \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          sudo tar -xzf /tmp/gitleaks.tar.gz -C /usr/local/bin gitleaks
+          sudo chmod 0755 /usr/local/bin/gitleaks
+
+      - name: gitleaks detect
+        run: gitleaks detect --source . --redact --verbose --exit-code 1
+
+  manifests:
+    name: Manifests de Kubernetes
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar kustomize e kubeconform
+        run: |
+          set -euxo pipefail
+          curl -fsSL -o /tmp/kustomize.tar.gz \
+            "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv${KUSTOMIZE_VERSION}/kustomize_v${KUSTOMIZE_VERSION}_linux_amd64.tar.gz"
+          sudo tar -xzf /tmp/kustomize.tar.gz -C /usr/local/bin kustomize
+          curl -fsSL -o /tmp/kubeconform.tar.gz \
+            "https://github.com/yannh/kubeconform/releases/download/v${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz"
+          sudo tar -xzf /tmp/kubeconform.tar.gz -C /usr/local/bin kubeconform
+          sudo chmod 0755 /usr/local/bin/kustomize /usr/local/bin/kubeconform
+
+      # Dois níveis, que pegam coisas diferentes: `kustomize build` acha patch
+      # sem alvo e conflito de ID; `kubeconform` acha campo com nome errado,
+      # tipo errado e apiVersion inexistente. O segundo é o que separa "o YAML
+      # monta" de "a API aceitaria" — sem ele, um `maxUnavailble` passaria.
+      - name: Montar e validar os overlays
+        run: bash deploy/k8s/validate.sh
+
+      # O overlay local é o único exercitado de verdade (`make deploy-local`), e
+      # o que o smoke assume dele são as portas. Se alguém mudar um NodePort
+      # sem mudar o mapeamento do bootstrap, o cluster sobe e o smoke falha por
+      # um motivo que não parece ter relação. Barato afirmar aqui.
+      - name: Portas do overlay local batem com as do compose de produção
+        run: |
+          set -euo pipefail
+          out="$(kustomize build deploy/k8s/overlays/local)"
+          for port in 30300 30400 30080 30088; do
+            grep -q "nodePort: ${port}" <<<"${out}" \
+              || { echo "NodePort ${port} sumiu do overlay local"; exit 1; }
+          done
+
+      # O nome da métrica e os rótulos são referenciados por STRING em três
+      # lugares que não se enxergam: o HPA, a regra do prometheus-adapter e o
+      # smoke. Renomear a métrica no engine compila, passa na suite, e o único
+      # sintoma é o HPA parar em `<unknown>` sem escalar.
+      - name: HPA do engine referencia a métrica que o engine expõe
+        run: |
+          set -euo pipefail
+          grep -q 'name: oban_queue_depth' deploy/k8s/base/engine/hpa.yaml
+          grep -q 'state: available' deploy/k8s/base/engine/hpa.yaml
+          grep -q 'oban_queue_depth' deploy/k8s/helm/prometheus-adapter-values.yaml
+          grep -q 'by (queue, state)' deploy/k8s/helm/prometheus-adapter-values.yaml
+          grep -rq 'oban_queue_depth' apps/engine/test/engine_web/controllers/metrics_controller_test.exs
+
+      # Nome de métrica, de campo de log e de datasource são referenciados por
+      # STRING em lugares que não se enxergam: dashboards, alertas, runbook e o
+      # código. Divergir compila, passa na suite, e o único sintoma é painel
+      # vazio ou link de correlação que deixou de aparecer.
+      - name: Contratos de observabilidade batem entre código e dashboards
+        run: |
+          set -euo pipefail
+
+          # Dashboards e alertas são JSON/YAML válidos.
+          for f in deploy/k8s/observability/dashboards/*.json; do
+            python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$f"
+          done
+          python3 -c "import yaml,sys; yaml.safe_load(open(sys.argv[1]))" \
+            deploy/k8s/observability/alerts/brabo-alerts.yaml
+
+          # Toda métrica citada nos dashboards existe no código.
+          for metric in \
+            brabo_llm_cost_micros_total brabo_llm_tokens_total \
+            brabo_llm_call_duration_seconds brabo_sessions_active \
+            brabo_tasks_blocked brabo_proposed_actions_decided_total; do
+            grep -rq "${metric%_bucket}" apps/api/src/infrastructure/observability/brabo-metrics.ts \
+              || { echo "métrica ${metric} está nos dashboards e não no código"; exit 1; }
+          done
+          grep -rq "oban_queue_depth" apps/engine/lib/engine_web/telemetry.ex
+          grep -rq "brabo_engine_sessions_hosted\|:sessions, :hosted" apps/engine/lib/engine_web/telemetry.ex
+
+          # `trace_id` com underscore nos TRÊS serviços — é o que o Alloy extrai
+          # e o derivedFields do Loki procura.
+          grep -q "trace_id" apps/api/src/infrastructure/observability/logger.config.ts
+          grep -q '"trace_id"' apps/engine/lib/engine/telemetry/json_log_formatter.ex
+          grep -q "trace_id" apps/web/src/lib/logger.ts
+          grep -q "matcherRegex: trace_id" deploy/k8s/helm/grafana-values.yaml
+          grep -q "trace_id" deploy/k8s/helm/alloy-values.yaml
+
+          # A NetworkPolicy de OTLP existe: sem ela a instrumentação exporta
+          # para o vazio, em silêncio.
+          grep -q "allow-otlp-egress" deploy/k8s/base/common/netpol-observability.yaml
+          grep -q "netpol-observability" deploy/k8s/base/kustomization.yaml
+
+      - name: shellcheck nos scripts de deploy
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
+          shellcheck -S warning deploy/k8s/*.sh docker/smoke.sh
+
+  images:
+    name: Build, scan e smoke das imagens de produção
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    # Build, scan e smoke no MESMO job de propósito: as quatro imagens somam
+    # ~1,7 GB, e passá-las entre jobs por artifact custaria mais tempo de
+    # upload/download do que o build inteiro. Aqui elas ficam no daemon local.
+    #
+    # O paralelismo vem do `bake`, não de uma matriz de jobs — cada job da
+    # matriz teria seu próprio daemon, e aí as imagens precisariam trafegar.
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      # Os quatro alvos em PARALELO num builder só. Em sequência somavam ~6
+      # dos 8 minutos do job (api 130s, engine 160s, web 49s, backup 20s).
+      # Medido localmente com cache frio: 201s em sequência, 111s em paralelo.
+      # No runner o ganho é menor — 2 vCPUs não sobrepõem `tsc` com `mix
+      # compile` —, mas as esperas de rede de pnpm/mix/pip/apk sobrepõem bem.
+      #
+      # O que cada alvo constrói, com que cache e com que tag está no
+      # docker-bake.hcl da raiz, que também é o que se roda na mão.
+      - name: Build das quatro imagens (em paralelo)
+        uses: docker/bake-action@v6
+        with:
+          files: docker-bake.hcl
+          targets: default
+          load: true
+
+      # Critério de aceite explícito da sessão. Checado aqui além do smoke.sh
+      # porque é barato e falha com mensagem direta.
+      - name: Nenhuma imagem pode rodar como root
+        run: |
+          set -euo pipefail
+          for img in brabo-api:prod brabo-engine:prod brabo-web:prod brabo-backup:prod; do
+            user="$(docker inspect --format '{{.Config.User}}' "$img")"
+            if [ -z "$user" ] || [ "$user" = "root" ] || [ "$user" = "0" ]; then
+              echo "::error::$img roda como root (Config.User='$user')"
+              exit 1
+            fi
+            echo "ok: $img -> $user"
+          done
+
+      - name: Trivy na api
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: brabo-api:prod
+          format: table
+          # Versão do binário do trivy pinada — a mesma usada pra validar o
+          # .trivyignore.yaml localmente. É o default da action nesta tag; sem
+          # pin explícito, atualizar a action mudaria o scanner em silêncio.
+          version: v0.70.0
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          # CVEs aceitas conscientemente, cada uma com justificativa e data de
+          # expiração — ver o cabeçalho do arquivo.
+          trivyignores: .trivyignore.yaml
+          exit-code: '1'
+
+      - name: Trivy no engine
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: brabo-engine:prod
+          format: table
+          # Versão do binário do trivy pinada — a mesma usada pra validar o
+          # .trivyignore.yaml localmente. É o default da action nesta tag; sem
+          # pin explícito, atualizar a action mudaria o scanner em silêncio.
+          version: v0.70.0
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          # CVEs aceitas conscientemente, cada uma com justificativa e data de
+          # expiração — ver o cabeçalho do arquivo.
+          trivyignores: .trivyignore.yaml
+          exit-code: '1'
+
+      - name: Trivy no web
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: brabo-web:prod
+          format: table
+          # Versão do binário do trivy pinada — a mesma usada pra validar o
+          # .trivyignore.yaml localmente. É o default da action nesta tag; sem
+          # pin explícito, atualizar a action mudaria o scanner em silêncio.
+          version: v0.70.0
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          # CVEs aceitas conscientemente, cada uma com justificativa e data de
+          # expiração — ver o cabeçalho do arquivo.
+          trivyignores: .trivyignore.yaml
+          exit-code: '1'
+
+      - name: Trivy no backup
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: brabo-backup:prod
+          format: table
+          version: v0.70.0
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          trivyignores: .trivyignore.yaml
+          exit-code: '1'
+
+      # SMOKE_NO_BUILD: as imagens já estão no daemon, construídas com cache
+      # acima — o compose reusaria a tag e reconstruiria à toa.
+      - name: Teste de fumaça (compose.prod)
+        run: SMOKE_NO_BUILD=1 bash docker/smoke.sh

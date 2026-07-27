@@ -10,6 +10,8 @@ defmodule Engine.Sessions.Monitor do
 
   use GenServer
 
+  require Logger
+
   alias Engine.Sessions.SessionState
 
   @name __MODULE__
@@ -60,8 +62,19 @@ defmodule Engine.Sessions.Monitor do
   def handle_info({:DOWN, ref, :process, pid, reason}, state) do
     case Map.fetch(state.by_pid, pid) do
       {:ok, %{ref: ^ref} = entry} ->
-        SessionState.delete(entry.session_id)
-        maybe_report(entry, reason)
+        # Nó descendo (SIGTERM, rollout, scale-down do HPA) não é término de
+        # sessão: a linha PRECISA sobreviver, é dela que a reidratação do
+        # próximo boot parte. O Engine.Dev.Monitor já fazia essa distinção;
+        # aqui ela faltava, e o efeito era o oposto do desejado — como a
+        # ordem de shutdown da árvore derruba o SessionSupervisor ANTES deste
+        # Monitor, ele ficava vivo para processar cada :DOWN, apagar toda
+        # sessão ativa e ainda reportá-la à api como closed_abnormally. Um
+        # rollout marcava como anormal exatamente as sessões que estavam
+        # saudáveis.
+        unless node_shutdown?(reason) do
+          safe_delete(entry.session_id)
+          maybe_report(entry, reason)
+        end
 
         state = %{
           state
@@ -76,6 +89,21 @@ defmodule Engine.Sessions.Monitor do
     end
   end
 
+  # Este Monitor é um SINGLETON: se ele morre, o engine perde de uma vez o
+  # monitoramento de todas as sessões vivas (os monitores morrem com ele) e
+  # nenhum término posterior vira callback pra api. Uma indisponibilidade do
+  # banco não pode ter esse efeito — o :DOWN já foi consumido de qualquer
+  # forma, então registra e segue.
+  defp safe_delete(session_id) do
+    SessionState.delete(session_id)
+  rescue
+    e ->
+      Logger.warning("Monitor: falha ao apagar session_state #{session_id}: #{inspect(e)}")
+  catch
+    :exit, reason ->
+      Logger.warning("Monitor: falha ao apagar session_state #{session_id}: #{inspect(reason)}")
+  end
+
   # :normal precedido de expect_stop -> api já sabe, sem callback.
   # :killed, crash, heartbeat_timeout, ou :normal SEM expect_stop
   # (defensivo) -> reporta, com o destino de transição que cada causa
@@ -85,7 +113,14 @@ defmodule Engine.Sessions.Monitor do
   defp maybe_report(entry, reason) do
     {reason_string, to} = classify(reason)
 
+    # O contexto do OTel vive no dicionário do PROCESSO, e a task nasce com o
+    # dicionário vazio: sem capturar aqui e reanexar lá dentro, o relato de
+    # término viraria uma trace órfã — justamente o span que se procura quando
+    # uma sessão morreu de forma estranha.
+    otel_ctx = Engine.Telemetry.Span.capture()
+
     Task.Supervisor.start_child(Engine.TaskSupervisor, fn ->
+      Engine.Telemetry.Span.attach(otel_ctx)
       client().report_termination(entry.project_id, entry.session_id, reason_string, to)
     end)
   end
@@ -106,4 +141,14 @@ defmodule Engine.Sessions.Monitor do
     do: {Exception.message(error), "closed_abnormally"}
 
   defp classify(other), do: {inspect(other), "closed_abnormally"}
+
+  # `:shutdown` puro é o supervisor derrubando o filho porque o NÓ está
+  # parando. `{:shutdown, :heartbeat_timeout}` é o oposto: a sessão terminou
+  # sozinha e a linha tem que sair, senão ela reidrata para sempre. Por isso
+  # não dá pra copiar o `forget?({:shutdown, _})` do Engine.Dev.Monitor
+  # literalmente — lá não existe uma causa de término que viaje dentro de
+  # `:shutdown`.
+  defp node_shutdown?(:shutdown), do: true
+  defp node_shutdown?({:shutdown, :shutdown}), do: true
+  defp node_shutdown?(_), do: false
 end

@@ -8,22 +8,48 @@ defmodule Engine.Actions.Workspace do
   init + remote add + fetch + checkout dentro do diretório, só na primeira
   vez (sem auto-pull depois — "por ora", ver plano).
 
-  Limitação conhecida: duas execuções concorrentes pro MESMO projeto,
-  ambas vendo o working tree ainda inexistente, podem corromper o
-  checkout (sem lock de inicialização) — aceitável pra este incremento,
-  não é um requisito do critério de aceite.
+  A inicialização é SERIALIZADA por projeto (`:global.trans`): na ativação
+  da execução, N dev agents do mesmo projeto chamam `ensure!/3` em paralelo
+  e todos veem o working tree ainda inexistente. Sem o lock, os `git init`/
+  `fetch` colidem no mesmo diretório ("could not lock config file",
+  "cannot copy .../hooks/*.sample: Arquivo existe") e derrubam todos os
+  agentes menos um — o que quebrava o critério de aceite de dois devs em
+  paralelo. Ver `ensure/3` pro caminho sem exceção.
   """
+
+  @doc """
+  Versão que não levanta: devolve `{:ok, dir}` ou `{:error, mensagem}`.
+  Preferida por quem roda dentro de um processo supervisionado (dev agents)
+  — uma falha de git aqui não deve derrubar o agente e deixar a task que
+  ele já reivindicou órfã em `in_progress`.
+  """
+  def ensure(project_id, bare_repo_path, default_branch \\ "main") do
+    {:ok, ensure!(project_id, bare_repo_path, default_branch)}
+  rescue
+    e -> {:error, Exception.message(e)}
+  end
 
   def ensure!(project_id, bare_repo_path, default_branch \\ "main") do
     dir = workspace_dir(project_id)
     File.mkdir_p!(dir)
 
-    unless File.dir?(Path.join(dir, ".git")) do
-      init_from_bare!(dir, bare_repo_path, default_branch)
-    end
+    if git_dir?(dir) do
+      dir
+    else
+      # O lock é por projeto: dois projetos diferentes inicializam em
+      # paralelo normalmente. Recheca dentro da seção crítica — quem
+      # esperou o lock encontra o working tree já pronto e não refaz nada.
+      :global.trans({{__MODULE__, project_id}, self()}, fn ->
+        unless git_dir?(dir) do
+          init_from_bare!(dir, bare_repo_path, default_branch)
+        end
+      end)
 
-    dir
+      dir
+    end
   end
+
+  defp git_dir?(dir), do: File.dir?(Path.join(dir, ".git"))
 
   def workspace_dir(project_id) do
     Path.join(Application.fetch_env!(:engine, :project_workspaces_root), project_id)

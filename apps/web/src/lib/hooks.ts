@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { listActions, listProjects, listSessionEvents, listSessions, listWorkspaces } from './api-client';
+import { getArchitecture, getCoverage, getSessionEvent, listActions, listBacklog, listHandoffs, listHypotheses, listInfraArtifacts, listProficiency, listProjects, listPsychologistAnalyses, listSessionEvents, listSessions, listWorkspaces, getSessionTokenUsage } from './api-client';
 import { classifyEvent } from './activity';
 import { formatRelativeTime } from './time';
 
@@ -45,9 +45,30 @@ export function useLatestSession(projectId: string | undefined) {
 export function useSessionEvents(projectId: string | undefined, sessionId: string | undefined, intervalMs = 3000) {
   return useQuery({
     queryKey: ['session-events', projectId, sessionId],
-    queryFn: () => listSessionEvents(projectId!, sessionId!, { limit: 200 }),
+    // `latest`: os ÚLTIMOS 200, não os primeiros. Todo consumidor deste hook
+    // (painel do time, seção de execução, feed, tab de Aprovações) deriva
+    // estado ATUAL — com os primeiros 200 tudo congelava no começo da sessão
+    // assim que ela passava desse tamanho, o que uma execução real faz fácil
+    // (ver ADR 0021).
+    queryFn: () =>
+      listSessionEvents(projectId!, sessionId!, { limit: 200, latest: true }),
     enabled: !!projectId && !!sessionId,
     refetchInterval: intervalMs,
+  });
+}
+
+// Custo por agente na sessão — alimenta os tokens de cada AgentCard no painel
+// do time. Cadência mais lenta que os eventos: é número de exibição, não
+// gatilho de decisão.
+export function useSessionTokenUsage(
+  projectId: string | undefined,
+  sessionId: string | undefined,
+) {
+  return useQuery({
+    queryKey: ['session-token-usage', projectId, sessionId],
+    queryFn: () => getSessionTokenUsage(projectId!, sessionId!),
+    enabled: !!projectId && !!sessionId,
+    refetchInterval: 5000,
   });
 }
 
@@ -76,5 +97,113 @@ export function usePendingActions(projectId: string | undefined, sessionId: stri
     queryFn: () => listActions(projectId!, sessionId!, { limit: 200 }),
     enabled: !!projectId && !!sessionId,
     refetchInterval: intervalMs,
+  });
+}
+
+// Handoffs entre agentes da sessão (Fase 3b) — poll de 3s, como os eventos.
+export function useHandoffs(projectId: string | undefined, sessionId: string | undefined, intervalMs = 3000) {
+  return useQuery({
+    queryKey: ['session-handoffs', projectId, sessionId],
+    queryFn: () => listHandoffs(projectId!, sessionId!),
+    enabled: !!projectId && !!sessionId,
+    refetchInterval: intervalMs,
+  });
+}
+
+// Backlog do projeto (árvore épico→história→tarefa) — poll pra refletir o PO
+// gerando em tempo real.
+export function useBacklog(projectId: string | undefined, intervalMs = 4000) {
+  return useQuery({
+    queryKey: ['backlog', projectId],
+    queryFn: () => listBacklog(projectId!),
+    enabled: !!projectId,
+    refetchInterval: intervalMs,
+  });
+}
+
+// Rastreabilidade regra→stories do projeto.
+export function useCoverage(projectId: string | undefined, intervalMs = 4000) {
+  return useQuery({
+    queryKey: ['coverage', projectId],
+    queryFn: () => getCoverage(projectId!),
+    enabled: !!projectId,
+    refetchInterval: intervalMs,
+  });
+}
+
+// Arquitetura do projeto (module_map + ADRs + pendências de validação cruzada).
+export function useArchitecture(projectId: string | undefined, intervalMs = 4000) {
+  return useQuery({
+    queryKey: ['architecture', projectId],
+    queryFn: () => getArchitecture(projectId!),
+    enabled: !!projectId,
+    refetchInterval: intervalMs,
+  });
+}
+
+// Artefatos de infra do projeto (Fase 4a — InfraAgent) — PRs de infra
+// passando pelos mesmos gates de QA/SecOps do dev.
+export function useInfraArtifacts(projectId: string | undefined, intervalMs = 3000) {
+  return useQuery({
+    queryKey: ['infra-artifacts', projectId],
+    queryFn: () => listInfraArtifacts(projectId!),
+    enabled: !!projectId,
+    refetchInterval: intervalMs,
+  });
+}
+
+// Perfil de proficiência do projeto (Fase 4b — Anamnese). Muda devagar
+// (só quando uma rodada periódica conclui), daí o poll lento.
+export function useProficiency(projectId: string | undefined, intervalMs = 15000) {
+  return useQuery({
+    queryKey: ['proficiency', projectId],
+    queryFn: () => listProficiency(projectId!),
+    enabled: !!projectId,
+    refetchInterval: intervalMs,
+  });
+}
+
+// Hipóteses do Psicólogo (Fase 4b) — escopo de PROJETO, não de sessão:
+// acumulam a cada sessão encerrada. Poll mais lento que os demais, já que
+// só mudam quando uma sessão fecha ou o usuário aceita/descarta.
+export function useHypotheses(projectId: string | undefined, intervalMs = 8000) {
+  return useQuery({
+    queryKey: ['hypotheses', projectId],
+    queryFn: () => listHypotheses(projectId!),
+    enabled: !!projectId,
+    refetchInterval: intervalMs,
+  });
+}
+
+// Análises current do Psicólogo com tier e custo — mesma cadência das
+// hipóteses (mudam juntas: uma análise nova traz hipóteses novas).
+export function usePsychologistAnalyses(
+  projectId: string | undefined,
+  intervalMs = 8000,
+) {
+  return useQuery({
+    queryKey: ['psychologist-analyses', projectId],
+    queryFn: () => listPsychologistAnalyses(projectId!),
+    enabled: !!projectId,
+    refetchInterval: intervalMs,
+  });
+}
+
+// UM evento pelo id. Existe pro chip de evidência de uma hipótese chegar no
+// evento citado mesmo quando ele está fora da janela dos últimos 200 OU é
+// um tipo que o feed esconde como ruído de máquina (`agent.response`,
+// `tool.call`, `tool.result` — justamente o que o Psicólogo mais cita).
+// Sem refetchInterval: evento é imutável, não tem por que repolar.
+export function useSessionEvent(
+  projectId: string | undefined,
+  sessionId: string | undefined,
+  eventId: string | undefined,
+) {
+  return useQuery({
+    queryKey: ['session-event', projectId, sessionId, eventId],
+    queryFn: () => getSessionEvent(projectId!, sessionId!, eventId!),
+    enabled: !!projectId && !!sessionId && !!eventId,
+    staleTime: Infinity,
+    retry: false,
   });
 }

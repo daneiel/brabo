@@ -92,12 +92,17 @@ export interface Page<T> {
   nextCursor: number | null;
 }
 
+// NOTA: o backend tem 12 ActionTypes; esta união cobre os que a UI
+// renderiza de forma dedicada (os demais caem no fallback genérico do
+// ApprovalCard). Dívida pré-existente — `instruction_patch` entrou
+// porque tem renderização própria (diff + badge de origem).
 export type ActionType =
   | 'terminal'
   | 'git_commit'
   | 'git_push'
   | 'pr_open'
-  | 'spend';
+  | 'spend'
+  | 'instruction_patch';
 
 export type ActionStatus =
   | 'pending'
@@ -179,6 +184,15 @@ export interface UserCredentialMetadata {
 
 export type BudgetPolicy = 'block' | 'allow';
 
+// Custo por AGENTE numa sessão (Fase 4a — painel do time). Espelha
+// AgentTokenUsage do port da api.
+export interface AgentTokenUsage {
+  actorId: string;
+  costMicros: number;
+  inputTokens: number;
+  outputTokens: number;
+}
+
 export interface Budget {
   id: string;
   projectId: string | null;
@@ -249,3 +263,282 @@ export type ChatSseEvent =
     }
   | { type: 'error'; message: string }
   | { type: 'metering_failed'; message: string };
+
+// --- Agentes conversacionais / handoffs (Fase 3b) ---
+
+export type HandoffStatus = 'offered' | 'accepted' | 'completed' | 'rejected';
+
+export interface Handoff {
+  id: string;
+  sessionId: string;
+  projectId: string;
+  fromAgent: string;
+  toAgent: string;
+  artifactId: string | null;
+  status: HandoffStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Payload do session_event `artifact.business_rule` emitido pelo Criativo.
+export interface BusinessRulePayload {
+  title: string;
+  description: string;
+  origin: unknown[];
+}
+
+// Payload do session_event `artifact.product_brief`.
+export interface ProductBriefPayload {
+  title: string;
+  summary: string;
+  rules: unknown[];
+}
+
+// --- Backlog (Fase 3b — PO) ---
+
+export type StoryStatus = 'draft' | 'ready' | 'in_progress' | 'done';
+
+export type TaskStatus = 'todo' | 'in_progress' | 'in_review' | 'done';
+
+// --- Gates de PR (Fase 4a — QA/SecOps) ---
+
+export type PrGateStatus = 'awaiting_qa' | 'awaiting_secops' | 'awaiting_user';
+
+export interface Task {
+  id: string;
+  storyId: string;
+  title: string;
+  description: string;
+  status: TaskStatus;
+  assignedTo: string | null;
+  blocked: boolean;
+  blockedReason: string | null;
+  gateStatus: PrGateStatus | null;
+  gateCorrectionCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// --- Psicólogo (Fase 4b) ---
+
+export type HypothesisStatus = 'proposed' | 'accepted' | 'dismissed';
+
+export interface HypothesisTerminationAnalysis {
+  causa: string;
+  estadoDaSessao: string;
+  analise: string;
+}
+
+export interface PsychologistHypothesis {
+  id: string;
+  projectId: string;
+  // Sessão ANALISADA — pode não ser a sessão aberta agora; é pra ela que
+  // a navegação de evidência aponta.
+  sessionId: string;
+  analysisId: string;
+  agenteAlvo: string;
+  observacao: string;
+  hipotese: string;
+  sugestao: string;
+  confiancaPercent: number;
+  evidenceEventIds: string[];
+  terminationAnalysis: HypothesisTerminationAnalysis | null;
+  status: HypothesisStatus;
+  decidedBy: string | null;
+  decidedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type PsychologistAnalysisTier = 'leve' | 'pesada';
+
+/**
+ * Uma análise current do Psicólogo, com o CUSTO real somado do metering.
+ * É o que torna "custos distintos entre triagem leve e pesada" visível na
+ * seção Insights — o custo é por sessão analisada (token_usage grava por
+ * sessão + ator), então numa sessão reanalisada é o acumulado.
+ */
+export interface PsychologistAnalysis {
+  id: string;
+  projectId: string;
+  sessionId: string;
+  tier: PsychologistAnalysisTier;
+  triggeredBy: 'auto' | 'manual';
+  supersedes: string | null;
+  superseded: boolean;
+  supersededAt: string | null;
+  eventCountAtAnalysis: number;
+  costMicros: number;
+  hypothesisCount: number;
+  createdAt: string;
+}
+
+// --- Anamnese (Fase 4b) ---
+
+export type ProficiencyLevel = 'iniciante' | 'intermediario' | 'avancado';
+
+export interface ProficiencyProfile {
+  id: string;
+  projectId: string;
+  userId: string;
+  // Identidade humana de quem o perfil descreve — null quando a pessoa já não
+  // é membro (o perfil sobrevive à remoção). A UI mostra e-mail, não UUID.
+  userName: string | null;
+  userEmail: string | null;
+  competency: string;
+  level: ProficiencyLevel;
+  // "os porquês" do nível.
+  rationale: string;
+  evidenceEventIds: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type DiffLineKind = 'add' | 'del' | 'ctx';
+
+export interface DiffLine {
+  kind: DiffLineKind;
+  content: string;
+  lineNo?: number;
+}
+
+export interface AgentInstructionVersion {
+  id: string;
+  version: number;
+  content: string;
+  createdBy: string | null;
+  sourceActionId: string | null;
+  // Hipótese do Psicólogo que originou — rastreabilidade
+  // hipótese→patch→versão.
+  sourceHypothesisId: string | null;
+  note: string | null;
+  createdAt: string;
+  isCurrent: boolean;
+  diff: { lines: DiffLine[]; additions: number; deletions: number };
+}
+
+// Artefato de infra (Fase 4a — InfraAgent): PR de Dockerfiles/compose/CI
+// gated pelos MESMOS QA/SecOps do dev, sem task/story por trás.
+export interface InfraArtifact {
+  id: string;
+  projectId: string;
+  sessionId: string;
+  title: string;
+  prActionId: string;
+  gateStatus: PrGateStatus;
+  gateCorrectionCount: number;
+  blocked: boolean;
+  blockedReason: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CoverageMatrixRow {
+  rule: string;
+  tests: string[];
+  covered: boolean;
+}
+
+// Payload do session_event `artifact.qa_verdict` (QAAgent).
+export interface QaVerdictPayload {
+  taskId: string;
+  veredito: 'approved' | 'changes_requested';
+  resumo: string;
+  itens: string[];
+  coverageMatrix: CoverageMatrixRow[];
+}
+
+// Payload do session_event `artifact.secops_verdict` (SecOpsAgent).
+export interface SecOpsVerdictPayload {
+  taskId: string;
+  veredito: 'approved' | 'changes_requested';
+  resumo: string;
+  itens: string[];
+}
+
+export interface Story {
+  id: string;
+  epicId: string;
+  projectId: string;
+  sessionId: string;
+  title: string;
+  description: string;
+  rf: string[];
+  rnf: string[];
+  businessRuleIds: string[];
+  dod: string[];
+  dor: string[];
+  status: StoryStatus;
+  createdAt: string;
+  updatedAt: string;
+  tasks: Task[];
+}
+
+export interface Epic {
+  id: string;
+  projectId: string;
+  sessionId: string;
+  title: string;
+  description: string;
+  createdAt: string;
+  updatedAt: string;
+  stories: Story[];
+}
+
+export interface RuleCoverage {
+  ruleId: string;
+  title: string;
+  coveredByStoryIds: string[];
+  covered: boolean;
+}
+
+export interface CoverageReport {
+  rules: RuleCoverage[];
+  uncoveredCount: number;
+}
+
+// --- Arquitetura (Fase 3b — Arquiteto) ---
+
+export interface Module {
+  name: string;
+  stack: string;
+  responsibility: string;
+  dependsOn: string[];
+}
+
+export interface ModuleMap {
+  id: string;
+  projectId: string;
+  sessionId: string;
+  modules: Module[];
+  version: number;
+  createdAt: string;
+}
+
+export interface AdrRef {
+  actionId: string;
+  title: string;
+  status: string;
+  pullRequestUrl: string | null;
+}
+
+export interface ArchitecturePendency {
+  storyId: string;
+  title: string;
+  status: StoryStatus;
+  reason: 'no_module' | 'missing_module';
+  missing: string[];
+}
+
+export interface Architecture {
+  moduleMap: ModuleMap | null;
+  adrs: AdrRef[];
+  pendencies: ArchitecturePendency[];
+}
+
+// --- Execução (Fase 4a — dev agents) ---
+
+export interface ExecutionActivation {
+  sessionId: string;
+  modules: string[];
+}

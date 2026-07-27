@@ -1,4 +1,21 @@
-ExUnit.start()
+# Testes marcados com a tag de um binário rodam o BINÁRIO de verdade (não um
+# Fake). São as regressões dos gates que já aprovaram vazio: `:gitleaks`
+# (varria o histórico em vez da árvore, ADR 0020) e `:hadolint`/`:yamllint`
+# (o gate de QA de infra aprovava qualquer arquivo, ADR 0021). Dentro do
+# container do engine os três existem e os testes rodam; numa máquina sem eles
+# são excluídos, mesma disciplina de detecção opcional dos detectors
+# (ausência nunca quebra nada).
+binary_exclusions =
+  Enum.reject(
+    [
+      if(System.find_executable("gitleaks"), do: nil, else: :gitleaks),
+      if(System.find_executable("hadolint"), do: nil, else: :hadolint),
+      if(System.find_executable("yamllint"), do: nil, else: :yamllint)
+    ],
+    &is_nil/1
+  )
+
+ExUnit.start(exclude: binary_exclusions)
 Ecto.Adapters.SQL.Sandbox.mode(Engine.Repo, :manual)
 
 # outbox_events é gerenciada pela api (Drizzle, schema "public") — o banco
@@ -17,10 +34,19 @@ CREATE TABLE IF NOT EXISTS public.outbox_events (
   aggregate_id uuid NOT NULL,
   event_type text NOT NULL,
   payload jsonb NOT NULL DEFAULT '{}',
+  metadata jsonb NOT NULL DEFAULT '{}',
   created_at timestamptz NOT NULL DEFAULT now(),
   processed_at timestamptz
 )
 """)
+
+# `CREATE TABLE IF NOT EXISTS` não acrescenta coluna numa tabela que já existe,
+# e o banco de teste do engine sobrevive entre execuções: sem este ALTER
+# idempotente, quem já tinha rodado a suite antes da Fase 5 veria erro de coluna
+# inexistente em vez de um fixture atualizado.
+Engine.Repo.query!(
+  "ALTER TABLE public.outbox_events ADD COLUMN IF NOT EXISTS metadata jsonb NOT NULL DEFAULT '{}'"
+)
 
 # Mesmo motivo do fixture de outbox_events acima — session_events também é
 # gerenciada pela api (Drizzle, schema "public") e não existe no banco de
@@ -71,6 +97,17 @@ CREATE TABLE IF NOT EXISTS public.projects (
   created_by uuid,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
+)
+""")
+
+# sessions: lida pela Anamnese (Fase 4b) — pra achar a sessão do projeto
+# onde narrar a rodada, e pra filtrar a janela de eventos por projeto
+# (session_events não carrega project_id). Só as colunas que o engine lê.
+Engine.Repo.query!("""
+CREATE TABLE IF NOT EXISTS public.sessions (
+  id uuid PRIMARY KEY,
+  project_id uuid NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
 )
 """)
 

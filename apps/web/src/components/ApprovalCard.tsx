@@ -1,6 +1,7 @@
 import { useState, type CSSProperties } from 'react';
 import type { ActionType, ProposedAction } from '../lib/api-types';
 import { AGENTS } from '../lib/agents';
+import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { AlertIcon, ChevronRightIcon, DiffIcon, PrIcon, TerminalIcon } from './ui/icons';
 import styles from './ApprovalCard.module.css';
@@ -19,6 +20,7 @@ const ACTION_VERB: Record<ActionType, string> = {
   git_push: 'quer enviar alterações',
   pr_open: 'abriu pull request',
   spend: 'solicita gasto extra',
+  instruction_patch: 'propõe ajustar a instrução de um agente',
 };
 
 const ACTION_ICON: Record<ActionType, typeof DiffIcon> = {
@@ -27,6 +29,7 @@ const ACTION_ICON: Record<ActionType, typeof DiffIcon> = {
   git_push: DiffIcon,
   pr_open: PrIcon,
   spend: AlertIcon,
+  instruction_patch: DiffIcon,
 };
 
 interface DiffFile {
@@ -78,6 +81,7 @@ export function ApprovalCard({
   const actorLabel = actor?.name ?? action.actor.id;
   const Icon = ACTION_ICON[action.actionType];
   const isPending = action.status === 'pending';
+  const podeSemprePermitir = action.actionType !== 'instruction_patch';
   const isCritical = urgency === 'critico';
 
   const payload = action.payload;
@@ -128,11 +132,16 @@ export function ApprovalCard({
             <Button variant="danger" onClick={() => onDeny()}>
               Negar
             </Button>
-            <Button variant="secondary" onClick={onAlwaysAllow}>
-              Sempre permitir
-            </Button>
+            {/* Patch de instrução NUNCA é auto-aprovável (teto em decide.ts):
+                gravar a regra em permissions.json não muda nada, então o botão
+                prometia um efeito que não existe. */}
+            {podeSemprePermitir && (
+              <Button variant="secondary" onClick={onAlwaysAllow}>
+                Sempre permitir
+              </Button>
+            )}
           </div>
-          {variant === 'chat' && (
+          {variant === 'chat' && podeSemprePermitir && (
             <span className={styles.note}>
               <AlertIcon size={12} />
               &quot;Sempre permitir&quot; grava a regra em .brabo/permissions.json
@@ -227,6 +236,65 @@ function ApprovalBody({ actionType, payload, executionResult, expandedFile, onTo
           <span className={styles.branchPill}>{target}</span>
         </div>
         {summary && <div className={styles.prSummary}>{summary}</div>}
+      </div>
+    );
+  }
+
+  if (actionType === 'instruction_patch') {
+    const agent = readString(payload, 'agent') ?? '?';
+    const rationale = readString(payload, 'rationale');
+    const hypothesisId = readString(payload, 'hypothesisId');
+    const fromVersion = payload.fromVersion;
+    // TODOS os arquivos, não só o primeiro: o payload de patch traz um por
+    // arquivo de instrução, e o branch de git_commit já loopava — aqui um
+    // segundo arquivo ficava invisível na hora de aprovar.
+    const files = readFiles(payload) ?? [];
+
+    return (
+      <div className={styles.body}>
+        <div className={styles.prTitle}>
+          {agent}
+          {typeof fromVersion === 'number' && (
+            <span className={styles.branchPill} style={{ marginLeft: 8 }}>
+              v{fromVersion} → v{fromVersion + 1}
+            </span>
+          )}
+        </div>
+        {/* Badge de origem: qual hipótese aceita do Psicólogo gerou este
+            patch (rastreabilidade hipótese→patch→versão). */}
+        {hypothesisId && (
+          <div className={styles.prSummary}>
+            <Badge tone="accent">
+              origem: hipótese {hypothesisId.slice(-8)}
+            </Badge>
+          </div>
+        )}
+        {rationale && <div className={styles.prSummary}>{rationale}</div>}
+        {files.map((file) => (
+          <div key={file.path}>
+            {files.length > 1 && (
+              <div className={styles.prSummary}>{file.path}</div>
+            )}
+            {file.lines && (
+              <div className={styles.diffLines}>
+                {file.lines.map((line, index) => (
+                  <div
+                    key={index}
+                    className={[styles.diffLine, line.kind === 'add' && styles.add, line.kind === 'del' && styles.del]
+                      .filter(Boolean)
+                      .join(' ')}
+                  >
+                    <span className={styles.lineNo}>{line.lineNo ?? ''}</span>
+                    <span className={[styles.sign, line.kind === 'add' && styles.add, line.kind === 'del' && styles.del].filter(Boolean).join(' ')}>
+                      {line.kind === 'add' ? '+' : line.kind === 'del' ? '-' : ''}
+                    </span>
+                    <span>{line.content}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
       </div>
     );
   }

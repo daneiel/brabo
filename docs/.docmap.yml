@@ -1,0 +1,171 @@
+# Mapa: mudança de código → documentação que precisa ser revisada.
+#
+# Consumido pelo drift check do CI (.github/workflows/docs-check.yml) e pelo
+# slash command /sync-docs. Todo glob é validado contra os arquivos versionados
+# por `node scripts/docs/docmap.mjs` — glob que não casa com nada é REGRA
+# MORTA: nunca dispara e finge cobertura que não existe. O CI reprova nesse
+# caso.
+#
+# severity: block → reprova o PR
+# severity: warn  → comenta no PR listando o que revisar
+# generated: true → os docs saem de `pnpm docs:generate`, não da mão
+#
+# Escape hatch: label `docs-not-needed` no PR, ou uma linha
+# `docs-not-needed: <motivo>` no corpo. Sem saída, a regra vira algo a burlar.
+version: 1
+
+rules:
+  # ---------------------------------------------------------------- domínio
+
+  - id: dominio-e-regras
+    watch:
+      - "apps/api/src/domain/**"
+      - "apps/api/src/db/migrations/**"
+    docs: ["docs/business-rules.md"]
+    severity: block
+    note: "RN alterada exige arquivo:linha atualizado e o teste que a cobre."
+
+  - id: pipeline-de-acoes
+    watch:
+      - "apps/api/src/domain/actions/**"
+      - "apps/api/src/application/use-cases/actions/**"
+    docs: ["docs/reference/permissions.md", "docs/business-rules.md"]
+    severity: block
+    note: "deny > allow e os dois tetos são o coração do sistema."
+
+  # ------------------------------------------------------------------ dados
+
+  # O arquivo mais alterado do repositório até a v0.1.0 (23 mudanças) e o que
+  # menos tinha cobertura de doc: as constraints do schema SÃO regra de
+  # negócio (budgets_scope_check, unique(session_id, seq)).
+  - id: schema-e-migrations
+    watch:
+      - "apps/api/src/db/schema.ts"
+      - "apps/api/src/db/migrations/**"
+      - "apps/engine/priv/repo/migrations/**"
+    docs: ["docs/architecture.md", "docs/business-rules.md"]
+    severity: warn
+    note: "Constraint nova costuma ser RN. Tabela nova muda o diagrama de dados."
+
+  # -------------------------------------------------------- contratos e API
+
+  - id: eventos-e-artefatos
+    watch:
+      - "apps/engine/lib/engine/harness/artifact_schemas.ex"
+      - "apps/api/src/domain/sessions/**"
+    docs: ["docs/reference/events.md", "docs/reference/artifacts.md"]
+    severity: block
+
+  # O engine_api_client.ex é onde o contrato api↔engine se materializa, e não
+  # há checagem automática de que ele bate com as rotas da api.
+  - id: contrato-api-engine
+    watch:
+      - "apps/engine/lib/engine/sessions/engine_api_client.ex"
+      - "apps/api/src/interfaces/http/internal/**"
+      - "apps/engine/lib/engine_web/router.ex"
+    docs: ["docs/reference/internal-api.md"]
+    severity: block
+
+  - id: superficie-http
+    watch:
+      - "apps/api/src/interfaces/http/**"
+    docs: ["docs/security-surface.md", "docs/reference/internal-api.md"]
+    severity: block
+    note: "Rota nova sem classificação já quebra route-surface.spec.ts; a doc é a fonte dele."
+
+  - id: contrato-web
+    watch:
+      - "apps/web/src/lib/api-client.ts"
+      - "apps/web/src/lib/api-types.ts"
+      - "packages/shared/src/**"
+    docs: ["docs/architecture.md"]
+    severity: warn
+
+  - id: git-providers
+    watch:
+      - "apps/api/src/infrastructure/git/**"
+      - "apps/api/src/domain/git/**"
+      - "packages/shared/src/**"
+    docs: ["docs/reference/git-providers.md"]
+    severity: warn
+
+  # ---------------------------------------------------------------- agentes
+
+  - id: harness-e-gates
+    watch:
+      - "apps/engine/lib/engine/harness/**"
+      - "apps/engine/lib/engine/gates/**"
+    docs: ["docs/architecture.md", "docs/glossary.md"]
+    severity: warn
+    note: "Atualizar só se mudou contrato de behaviour ou fluxo de gate."
+
+  # -------------------------------------------------------- infra e operação
+
+  - id: boot-e-supervisao
+    watch:
+      - "apps/engine/lib/engine/application.ex"
+      - "apps/api/src/app.module.ts"
+      - "apps/api/src/main.ts"
+    docs: ["docs/architecture.md"]
+    severity: warn
+    note: "Árvore de supervisão e ordem dos guards são fronteiras arquiteturais."
+
+  - id: config-e-inferencia
+    watch:
+      - "docker/docker-compose*.yml"
+      - ".env.example"
+      - "docker/**"
+    docs: ["docs/reference/configuration.md", "docs/runbook.md"]
+    generated: true
+    severity: block
+    note: "Vars do ambiente de inferência (ADR 0020) vivem no runbook."
+
+  - id: deploy-e-runbook
+    watch:
+      - "deploy/k8s/**"
+      - "Makefile"
+    docs: ["docs/runbook.md"]
+    severity: warn
+
+  - id: scripts
+    watch:
+      - "package.json"
+      - "apps/api/package.json"
+      - "apps/web/package.json"
+      - "Makefile"
+      - "scripts/**"
+    docs: ["docs/reference/scripts.md", "README.md"]
+    generated: true
+    severity: warn
+
+  # -------------------------------------------------------------------- ADR
+
+  # A política de branches é executada por workflow. Mudar o mecanismo sem
+  # mudar a fonte faz a doc descrever um sistema que não existe — e aqui isso é
+  # pior que o normal, porque a política é o que as pessoas leem quando o CI as
+  # reprova.
+  - id: politica-de-branches
+    watch:
+      - ".github/workflows/pr-police.yml"
+      - ".github/workflows/approval-ladder.yml"
+      - ".github/workflows/promote.yml"
+      - ".github/workflows/promotion-check.yml"
+      - ".github/workflows/tag-release.yml"
+      - ".github/workflows/release.yml"
+      - "scripts/ci/**"
+    docs:
+      - "docs/explanation/branching-policy.md"
+      - "docs/reference/rulesets.md"
+    severity: block
+    note: "Regra nova no pr-police exige a regra escrita na política."
+
+  - id: adr-trigger
+    watch:
+      - "docker/**"
+      - "deploy/k8s/**"
+      - "apps/engine/mix.exs"
+      - "package.json"
+      - ".github/workflows/**"
+    requires_adr: true
+    severity: warn
+    note: "Mudança estrutural? Provavelmente merece um ADR."

@@ -178,11 +178,11 @@
 }
 
 .diffLine.add {
-  background: var(--diff-add, #0e2e24);
+  background: var(--diff-add);
 }
 
 .diffLine.del {
-  background: var(--diff-del, #331a16);
+  background: var(--diff-del);
 }
 
 .lineNo {

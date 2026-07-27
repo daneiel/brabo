@@ -1,0 +1,48 @@
+name: Documentação
+description: Algo errado, faltando ou confuso na documentação
+labels: ["documentation", "needs-triage"]
+body:
+  - type: input
+    id: pagina
+    attributes:
+      label: Qual página
+      description: O caminho no repositório, a URL do site, ou os dois.
+      placeholder: docs/runbook.md — seção "Restore"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: tipo
+    attributes:
+      label: O que está acontecendo
+      options:
+        - "Está errado — a doc diz uma coisa e o sistema faz outra"
+        - "Está faltando — não existe doc para isto"
+        - "Está confuso — li e continuei sem saber o que fazer"
+        - "Exemplo não funciona — copiei o comando e deu erro"
+        - "Link quebrado"
+    validations:
+      required: true
+
+  - type: textarea
+    id: detalhe
+    attributes:
+      label: Detalhe
+      description: Se a doc está errada, diga o que o sistema realmente faz. Se está faltando, diga o que você estava tentando fazer quando procurou.
+    validations:
+      required: true
+
+  - type: textarea
+    id: sugestao
+    attributes:
+      label: Sugestão de texto
+      description: Opcional. Se você já sabe o que deveria estar escrito, escreva aqui — vira PR mais rápido.
+
+  - type: markdown
+    attributes:
+      value: |
+        **Atenção:** arquivos marcados `generated: true` no
+        [`docs/.docmap.yml`](https://github.com/daneiel/brabo/blob/dev/docs/.docmap.yml)
+        são gerados por `pnpm docs:generate` — o conserto é no gerador ou na
+        fonte, nunca no arquivo. Se for um deles, mencione: muda quem
+        arruma.

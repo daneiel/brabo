@@ -1,9 +1,22 @@
 import { getToken } from './keycloak';
+import { runtimeConfig } from './runtime-config';
+import { logger, newTraceContext } from './logger';
 import type {
   AgentAutonomyRule,
+  AgentTokenUsage,
   ActionType,
+  Architecture,
+  InfraArtifact,
+  PsychologistHypothesis,
+  PsychologistAnalysis,
+  ProficiencyProfile,
+  AgentInstructionVersion,
   Budget,
   BudgetPolicy,
+  CoverageReport,
+  Epic,
+  ExecutionActivation,
+  Handoff,
   ModelBindingScope,
   ModelsByCategory,
   Page,
@@ -24,34 +37,57 @@ import type {
   WorkspaceWithRole,
 } from './api-types';
 
-export const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+export const API_URL = runtimeConfig.apiUrl;
 
 export class ApiError extends Error {
   readonly status: number;
   readonly body: unknown;
+  /**
+   * `trace_id` da requisição que falhou (Fase 5, item 6).
+   *
+   * Carregado no erro para que a UI possa exibi-lo: é o que transforma "deu
+   * erro" num relato acionável — com o id, quem investiga vai direto ao span no
+   * Grafana em vez de procurar por horário.
+   */
+  readonly traceId?: string;
 
-  constructor(status: number, body: unknown) {
+  constructor(status: number, body: unknown, traceId?: string) {
     super(`api error ${status}`);
     this.name = 'ApiError';
     this.status = status;
     this.body = body;
+    this.traceId = traceId;
   }
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const token = await getToken();
+  // Uma trace por requisição, gerada aqui (Fase 5, item 6). A api adota este
+  // `traceparent` como parent — é o propagador W3C padrão — então a ação do
+  // usuário e o trabalho de servidor que ela dispara ficam na mesma árvore.
+  const traceCtx = newTraceContext();
+
   const res = await fetch(`${API_URL}${path}`, {
     ...init,
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
+      traceparent: traceCtx.traceparent,
       ...init?.headers,
     },
   });
 
   if (!res.ok) {
     const body = await res.json().catch(() => null);
-    throw new ApiError(res.status, body);
+    // Loga com o trace_id ANTES de levantar: é este id que leva do erro na tela
+    // ao span de servidor no Grafana. Sem ele, um 500 no browser e o span que o
+    // causou são dois fatos sem relação.
+    logger.errorWithTrace('requisição à api falhou', traceCtx.traceId, {
+      path,
+      status: res.status,
+      method: (init?.method ?? 'GET').toUpperCase(),
+    });
+    throw new ApiError(res.status, body, traceCtx.traceId);
   }
   if (res.status === 204) return undefined as T;
   return (await res.json()) as T;
@@ -64,7 +100,9 @@ const put = <T>(path: string, body: unknown) =>
   request<T>(path, { method: 'PUT', body: JSON.stringify(body) });
 const del = <T>(path: string) => request<T>(path, { method: 'DELETE' });
 
-function qs(params: Record<string, string | number | undefined>): string {
+function qs(
+  params: Record<string, string | number | boolean | undefined>,
+): string {
   const entries = Object.entries(params).filter(([, v]) => v !== undefined);
   if (entries.length === 0) return '';
   return '?' + new URLSearchParams(entries.map(([k, v]) => [k, String(v)])).toString();
@@ -148,10 +186,143 @@ export const transitionSession = (
 export const listSessionEvents = (
   projectId: string,
   sessionId: string,
-  opts: { afterSeq?: number; limit?: number } = {},
+  opts: { afterSeq?: number; limit?: number; latest?: boolean } = {},
 ) =>
   get<Page<SessionEvent>>(
     `/projects/${projectId}/sessions/${sessionId}/events${qs(opts)}`,
+  );
+// Um evento pelo id — a listagem é paginada (últimos N) e o feed esconde
+// ruído de máquina, então evidência de hipótese precisa deste caminho pra
+// ser navegável de verdade.
+export const getSessionEvent = (
+  projectId: string,
+  sessionId: string,
+  eventId: string,
+) =>
+  get<SessionEvent>(
+    `/projects/${projectId}/sessions/${sessionId}/events/${eventId}`,
+  );
+
+// --- Agentes conversacionais / handoffs (Fase 3b) ---
+
+export const startAgent = (projectId: string, sessionId: string, agent: string) =>
+  post<{ agent: string; status: string }>(
+    `/projects/${projectId}/sessions/${sessionId}/agents/${agent}/start`,
+  );
+export const sendAgentMessage = (
+  projectId: string,
+  sessionId: string,
+  agent: string,
+  text: string,
+) =>
+  post<{ ok: true }>(
+    `/projects/${projectId}/sessions/${sessionId}/agents/${agent}/message`,
+    { text },
+  );
+export const confirmReadiness = (projectId: string, sessionId: string) =>
+  post<{ ok: true }>(`/projects/${projectId}/sessions/${sessionId}/readiness`);
+export const listHandoffs = (projectId: string, sessionId: string) =>
+  get<Handoff[]>(`/projects/${projectId}/sessions/${sessionId}/handoffs`);
+export const acceptHandoff = (
+  projectId: string,
+  sessionId: string,
+  handoffId: string,
+) =>
+  post<Handoff>(
+    `/projects/${projectId}/sessions/${sessionId}/handoffs/${handoffId}/accept`,
+  );
+
+// --- Backlog (Fase 3b) ---
+
+export const listBacklog = (projectId: string) =>
+  get<Epic[]>(`/projects/${projectId}/backlog`);
+export const getCoverage = (projectId: string) =>
+  get<CoverageReport>(`/projects/${projectId}/coverage`);
+export const getArchitecture = (projectId: string) =>
+  get<Architecture>(`/projects/${projectId}/architecture`);
+export const listInfraArtifacts = (projectId: string) =>
+  get<InfraArtifact[]>(`/projects/${projectId}/infra-artifacts`);
+
+// --- Psicólogo (Fase 4b) ---
+
+export const listHypotheses = (projectId: string) =>
+  get<PsychologistHypothesis[]>(`/projects/${projectId}/hypotheses`);
+export const acceptHypothesis = (projectId: string, hypothesisId: string) =>
+  post<PsychologistHypothesis>(
+    `/projects/${projectId}/hypotheses/${hypothesisId}/accept`,
+  );
+export const dismissHypothesis = (projectId: string, hypothesisId: string) =>
+  post<PsychologistHypothesis>(
+    `/projects/${projectId}/hypotheses/${hypothesisId}/dismiss`,
+  );
+export const listPsychologistAnalyses = (projectId: string) =>
+  get<PsychologistAnalysis[]>(`/projects/${projectId}/psychologist/analyses`);
+// --- Anamnese (Fase 4b) ---
+
+// Um evento pelo id resolvendo a SESSÃO dele. A janela da Anamnese é de
+// projeto, então a evidência de um perfil pode ser de qualquer sessão — sem
+// resolver, o chip navegava pra sessão mais recente e não achava o evento.
+export const getProjectEvent = (projectId: string, eventId: string) =>
+  get<SessionEvent>(`/projects/${projectId}/events/${eventId}`);
+export const runAnamnese = (projectId: string) =>
+  post<{ ok: true }>(`/projects/${projectId}/anamnese/run`);
+
+export const listProficiency = (projectId: string) =>
+  get<ProficiencyProfile[]>(`/projects/${projectId}/proficiency`);
+export const deleteMyProficiency = (projectId: string) =>
+  del<{ deleted: number; optedOut: true }>(
+    `/projects/${projectId}/proficiency/me`,
+  );
+export const optInProficiency = (projectId: string) =>
+  post<{ optedOut: false }>(`/projects/${projectId}/proficiency/me/opt-in`);
+// Histórico de TODOS os agentes que têm versão no projeto. A UI não pode
+// adivinhar os slugs: dev agent é instanciado por módulo (`dev-api`) e não
+// está no roster estático.
+export const listProjectInstructionVersions = (projectId: string) =>
+  get<{ agent: string; versions: AgentInstructionVersion[] }[]>(
+    `/projects/${projectId}/instruction-versions`,
+  );
+export const listInstructionVersions = (projectId: string, agent: string) =>
+  get<AgentInstructionVersion[]>(
+    `/projects/${projectId}/agents/${agent}/instruction-versions`,
+  );
+export const rollbackInstruction = (
+  projectId: string,
+  agent: string,
+  version: number,
+) =>
+  post<{ agent: string; restoredFrom: number; toVersion: number }>(
+    `/projects/${projectId}/agents/${agent}/instruction-versions/${version}/rollback`,
+  );
+
+export const reanalyzeSession = (projectId: string, sessionId: string) =>
+  post<{ ok: true }>(
+    `/projects/${projectId}/sessions/${sessionId}/psychologist/reanalyze`,
+  );
+
+// --- Execução (Fase 4a) ---
+
+export const activateExecution = (projectId: string) =>
+  post<ExecutionActivation>(`/projects/${projectId}/execution/activate`);
+export const acceptParallelization = (
+  projectId: string,
+  sessionId: string,
+  module: string,
+) =>
+  post<{ ok: true }>(
+    `/projects/${projectId}/sessions/${sessionId}/execution/parallelize`,
+    { module },
+  );
+// Libera uma task que o dev agent devolveu bloqueada, depois de o usuário ler
+// o diagnóstico. Enquanto `blocked`, ela é excluída do claim atômico — sem
+// isto uma task impossível ficaria parada pra sempre.
+export const unblockTask = (
+  projectId: string,
+  sessionId: string,
+  taskId: string,
+) =>
+  post<{ ok: true }>(
+    `/projects/${projectId}/sessions/${sessionId}/tasks/${taskId}/unblock`,
   );
 
 // --- Proposed actions ---
@@ -245,6 +416,10 @@ export const setProjectBudget = (
 ) => put<Budget>(`/projects/${projectId}/budget`, input);
 export const getSessionBudget = (projectId: string, sessionId: string) =>
   get<Budget | null>(`/projects/${projectId}/sessions/${sessionId}/budget`);
+export const getSessionTokenUsage = (projectId: string, sessionId: string) =>
+  get<AgentTokenUsage[]>(
+    `/projects/${projectId}/sessions/${sessionId}/token-usage`,
+  );
 export const setSessionBudget = (
   projectId: string,
   sessionId: string,

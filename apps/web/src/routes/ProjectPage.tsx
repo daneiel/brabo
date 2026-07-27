@@ -9,12 +9,13 @@ import { GitHubIcon, GitLabIcon, LocalRepoIcon } from '../components/ui/icons';
 import { ProjectOverviewTab } from './ProjectOverviewTab';
 import { ProjectSessionsTab } from './ProjectSessionsTab';
 import { ProjectApprovalsTab } from './ProjectApprovalsTab';
+import { ProjectBacklogTab } from './ProjectBacklogTab';
 import { ProjectSettingsTab } from './ProjectSettingsTab';
 import styles from './ProjectPage.module.css';
 
 const PROVIDER_ICON = { github: GitHubIcon, gitlab: GitLabIcon, local: LocalRepoIcon } as const;
 
-type TabKey = 'overview' | 'sessions' | 'approvals' | 'settings';
+type TabKey = 'overview' | 'sessions' | 'backlog' | 'approvals' | 'settings';
 
 interface ProjectPageProps {
   projectId: string;
@@ -77,6 +78,7 @@ export function ProjectPage({ projectId }: ProjectPageProps) {
           items={[
             { key: 'overview', label: 'Visão geral' },
             { key: 'sessions', label: 'Sessões' },
+            { key: 'backlog', label: 'Backlog' },
             { key: 'approvals', label: 'Aprovações', count: pendingCount || undefined },
             { key: 'settings', label: 'Configurações' },
           ]}
@@ -86,6 +88,7 @@ export function ProjectPage({ projectId }: ProjectPageProps) {
       <div className={styles.body}>
         {tab === 'overview' && <ProjectOverviewTab projectId={projectId} />}
         {tab === 'sessions' && <ProjectSessionsTab projectId={projectId} />}
+        {tab === 'backlog' && <ProjectBacklogTab projectId={projectId} />}
         {tab === 'approvals' && <ProjectApprovalsTab projectId={projectId} />}
         {tab === 'settings' && <ProjectSettingsTab projectId={projectId} />}
       </div>

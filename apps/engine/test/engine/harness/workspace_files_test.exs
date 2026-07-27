@@ -1,5 +1,8 @@
 defmodule Engine.Harness.WorkspaceFilesTest do
-  use ExUnit.Case, async: true
+  # async: false — o setup muta Application.env GLOBAL
+  # (:project_workspaces_root) e apaga a raiz no on_exit; ver a nota em
+  # workspace_test.exs.
+  use ExUnit.Case, async: false
 
   alias Engine.Harness.WorkspaceFiles
   alias Engine.Actions.Workspace
@@ -19,25 +22,29 @@ defmodule Engine.Harness.WorkspaceFilesTest do
   end
 
   test "read_file lê dentro do workspace", %{project_id: pid} do
-    path = Path.join(Workspace.workspace_dir(pid), "a.txt")
+    dir = Workspace.workspace_dir(pid)
+    path = Path.join(dir, "a.txt")
     File.write!(path, "conteúdo")
-    assert {:ok, "conteúdo"} = WorkspaceFiles.read_file(pid, "a.txt")
+    assert {:ok, "conteúdo"} = WorkspaceFiles.read_file(dir, "a.txt")
   end
 
   test "path traversal com ../ é bloqueado", %{project_id: pid} do
-    assert {:error, :traversal} = WorkspaceFiles.read_file(pid, "../../etc/passwd")
-    assert {:error, :traversal} = WorkspaceFiles.safe_path(pid, "../fora.txt")
+    dir = Workspace.workspace_dir(pid)
+    assert {:error, :traversal} = WorkspaceFiles.read_file(dir, "../../etc/passwd")
+    assert {:error, :traversal} = WorkspaceFiles.safe_path(dir, "../fora.txt")
   end
 
   test "path absoluto fora do workspace é bloqueado", %{project_id: pid} do
-    assert {:error, :traversal} = WorkspaceFiles.read_file(pid, "/etc/passwd")
-    assert {:error, :traversal} = WorkspaceFiles.write_file(pid, "/tmp/evil", "x")
+    dir = Workspace.workspace_dir(pid)
+    assert {:error, :traversal} = WorkspaceFiles.read_file(dir, "/etc/passwd")
+    assert {:error, :traversal} = WorkspaceFiles.write_file(dir, "/tmp/evil", "x")
   end
 
   test "write_file escreve dentro do workspace (cria subdiretório)", %{project_id: pid} do
-    assert {:ok, abs} = WorkspaceFiles.write_file(pid, "scratch/n.txt", "oi")
+    dir = Workspace.workspace_dir(pid)
+    assert {:ok, abs} = WorkspaceFiles.write_file(dir, "scratch/n.txt", "oi")
     assert File.read!(abs) == "oi"
-    assert String.starts_with?(abs, Workspace.workspace_dir(pid) <> "/")
+    assert String.starts_with?(abs, dir <> "/")
   end
 
   test "search acha por nome e por conteúdo", %{project_id: pid} do
@@ -46,10 +53,10 @@ defmodule Engine.Harness.WorkspaceFilesTest do
     File.mkdir_p!(Path.join(dir, "sub"))
     File.write!(Path.join(dir, "sub/outro.txt"), "tem PALAVRA aqui")
 
-    by_name = WorkspaceFiles.search(pid, "alvo")
+    by_name = WorkspaceFiles.search(dir, "alvo")
     assert Enum.any?(by_name, &(&1.path == "alvo.md"))
 
-    by_content = WorkspaceFiles.search(pid, "palavra")
+    by_content = WorkspaceFiles.search(dir, "palavra")
     assert Enum.any?(by_content, &(&1.path == "sub/outro.txt"))
   end
 end

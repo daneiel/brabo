@@ -1,0 +1,73 @@
+# Contexto de build enviado ao daemon. Os dois builds usam a RAIZ do repo como
+# contexto (o monorepo pnpm precisa do lockfile e do packages/shared), então sem
+# este arquivo iam ~830M por build: 543M de node_modules, 220M de .pnpm-store,
+# mais .git e o .env com segredos.
+#
+# Regra de ouro: nada aqui pode ser necessário DENTRO de um Dockerfile. Cada
+# imagem instala suas próprias dependências a partir do lockfile.
+
+# Dependências — reinstaladas no estágio de build a partir do lockfile
+node_modules
+**/node_modules
+.pnpm-store
+
+# Artefatos de build — regerados dentro da imagem
+**/dist
+apps/engine/_build
+apps/engine/deps
+coverage
+**/*.tsbuildinfo
+
+# Segredos e config local. `.env.example` FICA: é a referência das variáveis.
+.env
+.env.*
+!.env.example
+
+# Histórico e metadados de VCS/CI
+.git
+.github
+.gitignore
+
+# Não entra em imagem de produção
+spike
+docs
+# website/: o site de documentação (Docusaurus). Nenhum Dockerfile o lê, e o
+# `website/build` sozinho passa de 2 MB com o índice de busca. Mandar isso ao
+# daemon a cada build das quatro imagens é transferência pura.
+website
+# Manifests de Kubernetes: descrevem COMO a imagem roda, nunca são lidos por
+# ela. Mandá-los para o daemon só engorda o contexto e invalida cache de build
+# a cada ajuste de manifesto.
+deploy
+# design/: só os .md são documentação. design/tokens.css é INPUT DE BUILD do web
+# (apps/web/src/index.css faz `@import '../../../design/tokens.css'`) — excluir a
+# pasta inteira quebra o `vite build` da imagem de produção.
+design/*.md
+.design-sync
+.claude
+
+# Testes: a imagem de produção não roda suite (o CI roda, fora da imagem)
+**/*.spec.ts
+**/*.test.ts
+**/*.test.tsx
+apps/api/test
+apps/engine/test
+apps/api/scripts
+
+# Docker: o Dockerfile não se copia; evita invalidar cache ao editar compose.
+# Exceções: docker/web/ tem a config do nginx e o entrypoint, e docker/backup/
+# tem os dois scripts — as duas imagens COPIAM esses arquivos do contexto, e
+# sem a exceção o build quebra com "not found" num COPY.
+docker
+!docker/web
+!docker/backup
+Dockerfile*
+docker-compose*.yml
+# O bake DESCREVE os builds; nenhuma imagem o lê de dentro.
+docker-bake.hcl
+
+# Ruído de editor/SO
+.DS_Store
+.idea
+.vscode
+*.log

@@ -1,9 +1,16 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { approveAction, approveAlwaysAction, denyAction, getProjectPermissions, setProjectPermissions } from '../lib/api-client';
-import { useLatestSession, usePendingActions } from '../lib/hooks';
-import type { PermissionListName } from '../lib/api-types';
+import { useBacklog, useInfraArtifacts, useLatestSession, usePendingActions, useSessionEvents } from '../lib/hooks';
+import type {
+  CoverageMatrixRow,
+  PermissionListName,
+  QaVerdictPayload,
+  SecOpsVerdictPayload,
+  Task,
+} from '../lib/api-types';
 import { ApprovalCard } from '../components/ApprovalCard';
+import { PrGateTimeline, type GateVerdict } from '../components/PrGateTimeline';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Table, type TableColumn } from '../components/ui/Table';
@@ -23,9 +30,100 @@ interface ProjectApprovalsTabProps {
 export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
   const { latest: latestSession } = useLatestSession(projectId);
   const actionsQuery = usePendingActions(projectId, latestSession?.id);
+  const eventsQuery = useSessionEvents(projectId, latestSession?.id);
+  const { data: epics } = useBacklog(projectId);
+  const { data: infraArtifacts } = useInfraArtifacts(projectId);
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState('');
+
+  const allActions = actionsQuery.data?.items ?? [];
+  const events = eventsQuery.data?.items ?? [];
+
+  // Tasks que já entraram no fluxo de gate (Fase 4a) — bloqueadas ou com
+  // gateStatus setado (mesmo já tendo chegado a awaiting_user).
+  const gateTasks: Task[] = (epics ?? []).flatMap((epic) =>
+    epic.stories.flatMap((story) =>
+      story.tasks.filter((t) => t.gateStatus !== null || t.blocked),
+    ),
+  );
+
+  function prActionFor(taskId: string) {
+    return allActions
+      .filter(
+        (a) =>
+          a.actionType === 'pr_open' &&
+          (a.payload as { storyTaskId?: string }).storyTaskId === taskId,
+      )
+      .sort((a, b) => b.seq - a.seq)[0];
+  }
+
+  function verdictsFor(taskId: string): GateVerdict[] {
+    return events
+      .filter(
+        (e) => e.type === 'artifact.qa_verdict' || e.type === 'artifact.secops_verdict',
+      )
+      .filter((e) => {
+        const payload = e.payload as { taskId?: string };
+        return payload.taskId === taskId;
+      })
+      .sort((a, b) => a.seq - b.seq)
+      .map((e) => {
+        if (e.type === 'artifact.qa_verdict') {
+          const payload = e.payload as QaVerdictPayload;
+          return {
+            seq: e.seq,
+            gate: 'qa' as const,
+            veredito: payload.veredito,
+            resumo: payload.resumo,
+            itens: payload.itens,
+            coverageMatrix: payload.coverageMatrix as CoverageMatrixRow[] | undefined,
+          };
+        }
+        const payload = e.payload as SecOpsVerdictPayload;
+        return {
+          seq: e.seq,
+          gate: 'secops' as const,
+          veredito: payload.veredito,
+          resumo: payload.resumo,
+          itens: payload.itens,
+        };
+      });
+  }
+
+  // PRs de infra (Fase 4a — InfraAgent), mesmo espírito de prActionFor/
+  // verdictsFor mas chaveado por `prActionId` direto (o artefato de infra
+  // já guarda o id da proposed_action, sem busca por payload).
+  function infraPrActionFor(prActionId: string) {
+    return allActions.find((a) => a.id === prActionId);
+  }
+
+  function infraVerdictsFor(prActionId: string): GateVerdict[] {
+    return events
+      .filter((e) => e.type === 'artifact.qa_verdict' || e.type === 'artifact.secops_verdict')
+      .filter((e) => (e.payload as { prActionId?: string }).prActionId === prActionId)
+      .sort((a, b) => a.seq - b.seq)
+      .map((e) => {
+        if (e.type === 'artifact.qa_verdict') {
+          const payload = e.payload as QaVerdictPayload;
+          return {
+            seq: e.seq,
+            gate: 'qa' as const,
+            veredito: payload.veredito,
+            resumo: payload.resumo,
+            itens: payload.itens,
+          };
+        }
+        const payload = e.payload as SecOpsVerdictPayload;
+        return {
+          seq: e.seq,
+          gate: 'secops' as const,
+          veredito: payload.veredito,
+          resumo: payload.resumo,
+          itens: payload.itens,
+        };
+      });
+  }
 
   const permissionsQuery = useQuery({
     queryKey: ['permissions', projectId],
@@ -145,6 +243,58 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
                 onApprove={() => handleApprove(action.id)}
                 onDeny={() => handleDeny(action.id)}
                 onAlwaysAllow={() => handleAlwaysAllow(action.id)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className={styles.section}>
+        <div className={styles.sectionHeader}>
+          <div>
+            <div className={styles.title}>PRs em revisão</div>
+            <div className={styles.subtitle}>
+              {gateTasks.length} PR(s) de dev agents passando pelos gates de QA/SecOps
+            </div>
+          </div>
+        </div>
+
+        {gateTasks.length === 0 ? (
+          <div className={styles.clean}>Nenhuma PR de dev agent em revisão ainda.</div>
+        ) : (
+          <div className={styles.queue}>
+            {gateTasks.map((task) => (
+              <PrGateTimeline
+                key={task.id}
+                task={task}
+                prAction={prActionFor(task.id)}
+                verdicts={verdictsFor(task.id)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className={styles.section}>
+        <div className={styles.sectionHeader}>
+          <div>
+            <div className={styles.title}>PRs de infra em revisão</div>
+            <div className={styles.subtitle}>
+              {(infraArtifacts ?? []).length} PR(s) de infra passando pelos gates de QA/SecOps
+            </div>
+          </div>
+        </div>
+
+        {(infraArtifacts ?? []).length === 0 ? (
+          <div className={styles.clean}>Nenhuma PR de infra em revisão ainda.</div>
+        ) : (
+          <div className={styles.queue}>
+            {(infraArtifacts ?? []).map((artifact) => (
+              <PrGateTimeline
+                key={artifact.id}
+                task={artifact}
+                prAction={infraPrActionFor(artifact.prActionId)}
+                verdicts={infraVerdictsFor(artifact.prActionId)}
               />
             ))}
           </div>

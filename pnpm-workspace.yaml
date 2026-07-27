@@ -2,10 +2,25 @@ packages:
   - apps/api
   - apps/web
   - packages/*
+  - website
+  # scripts/ é pacote do workspace só para carregar vitest e `type: module` —
+  # este último é o que faz o Node 24 executar os `.ts` de scripts/ci/ direto,
+  # sem build. Os `.mjs` ao lado não são afetados: `.mjs` é ESM sempre.
+  - scripts
 allowBuilds:
   '@swc/core': true
   esbuild: true
   msw: true
+  # false de propósito: o protobufjs entra como dependência transitiva do
+  # exporter OTLP, e o exporter que usamos é o de HTTP/JSON — não precisa da
+  # geração de código dele. Não rodar postinstall de dependência transitiva é a
+  # mesma disciplina de pin e checksum do resto da Fase 5.
+  protobufjs: false
+  # false pelo mesmo critério: o core-js entra como transitiva do Docusaurus e
+  # o postinstall dele só imprime pedido de financiamento — não gera nem
+  # compila nada. Declarado explicitamente porque o pnpm reprova build
+  # ignorado que ninguém decidiu.
+  core-js: false
   unrs-resolver: true
 minimumReleaseAgeExclude:
   - '@anthropic-ai/sdk@0.113.0'

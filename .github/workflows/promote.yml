@@ -1,0 +1,114 @@
+name: promote
+
+# Dispara a promoção de um degrau para o próximo.
+# Fonte da política: docs/explanation/branching-policy.md
+#
+# O workflow NÃO mergeia nada: ele calcula a versão do ciclo e abre o PR de
+# promoção. O merge continua sendo ato manual do humano, como toda entrada em
+# branch permanente.
+on:
+  workflow_dispatch:
+    inputs:
+      par:
+        description: 'Par da esteira a promover'
+        required: true
+        type: choice
+        options:
+          - dev->qa
+          - qa->main
+          # `dev->main` NÃO está aqui de propósito, mas o script valida o par
+          # mesmo assim: um dispatch pela API não passa pelo `choice`.
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: promote
+  cancel-in-progress: false
+
+jobs:
+  promover:
+    name: Abrir PR de promoção
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # PRIMEIRO passo do job, antes de qualquer checkout: quem dispara é
+      # restrito. `workflow_dispatch` já exige permissão de escrita no repo,
+      # mas isso não é a mesma coisa que ser o responsável de release — e a
+      # política nomeia um responsável.
+      - name: Quem pode disparar
+        env:
+          ATOR: ${{ github.actor }}
+          MODO: ${{ vars.APPROVAL_MODE || 'solo' }}
+          OWNER: ${{ vars.OWNER_HANDLE }}
+        run: |
+          set -euo pipefail
+          if [ "$MODO" != "solo" ]; then
+            echo "::notice::APPROVAL_MODE=$MODO — a restrição de dispatch por owner vale no modo solo."
+            exit 0
+          fi
+          if [ -z "${OWNER:-}" ]; then
+            echo "::error::OWNER_HANDLE não está definido. Sem ele não há como saber quem é o responsável de release."
+            exit 1
+          fi
+          if [ "$ATOR" != "$OWNER" ]; then
+            echo "::error::'$ATOR' não pode disparar a promoção."
+            {
+              echo "### promote: dispatch recusado"
+              echo
+              echo "\`$ATOR\` disparou, mas em \`APPROVAL_MODE=solo\` o responsável de"
+              echo "release é **\`$OWNER\`** — o único autorizado a promover."
+              echo
+              echo "A política está em \`docs/explanation/branching-policy.md\`, seção"
+              echo "\"Papéis\". Para mudar quem promove, mude a variável"
+              echo "\`OWNER_HANDLE\`, não este workflow."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          echo "ator autorizado: $ATOR"
+
+      - uses: actions/checkout@v4
+        with:
+          # O cálculo da versão lê TODAS as tags e o histórico desde a última
+          # final. Com checkout raso não há tag nenhuma e a versão sairia
+          # errada — em silêncio.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.11.1
+
+      - name: Validar o par e calcular a versão
+        id: calculo
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PAR: ${{ inputs.par }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: node scripts/ci/promote.ts
+
+      - name: Abrir o PR de promoção
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DE: ${{ steps.calculo.outputs.de }}
+          PARA: ${{ steps.calculo.outputs.para }}
+          VERSAO: ${{ steps.calculo.outputs.versao }}
+        run: |
+          set -euo pipefail
+
+          # PR de promoção já aberto: atualizar em vez de duplicar. Dois PRs
+          # para o mesmo par disputariam o mesmo merge.
+          existente="$(gh pr list --base "$PARA" --head "$DE" --state open --json number --jq '.[0].number // empty')"
+
+          if [ -n "$existente" ]; then
+            gh pr edit "$existente" --title "promoção: $DE → $PARA ($VERSAO)" --body-file corpo-da-promocao.md
+            echo "PR #$existente atualizado: $(gh pr view "$existente" --json url --jq .url)"
+          else
+            gh pr create \
+              --base "$PARA" --head "$DE" \
+              --title "promoção: $DE → $PARA ($VERSAO)" \
+              --body-file corpo-da-promocao.md
+            echo "PR aberto: $(gh pr list --base "$PARA" --head "$DE" --state open --json url --jq '.[0].url')"
+          fi

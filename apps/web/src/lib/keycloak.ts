@@ -1,4 +1,5 @@
 import Keycloak from 'keycloak-js';
+import { runtimeConfig } from './runtime-config';
 
 /**
  * Client público (brabo-web) — authorization code + PKCE, mesmo padrão
@@ -9,9 +10,9 @@ import Keycloak from 'keycloak-js';
  * pro browser, nunca passa por aqui).
  */
 export const keycloak = new Keycloak({
-  url: import.meta.env.VITE_KEYCLOAK_URL ?? 'http://localhost:8080',
-  realm: import.meta.env.VITE_KEYCLOAK_REALM ?? 'brabo-dev',
-  clientId: import.meta.env.VITE_KEYCLOAK_CLIENT_ID ?? 'brabo-web',
+  url: runtimeConfig.keycloakUrl,
+  realm: runtimeConfig.keycloakRealm,
+  clientId: runtimeConfig.keycloakClientId,
 });
 
 let initPromise: Promise<boolean> | null = null;
