@@ -73,7 +73,6 @@ defmodule Engine.Application do
     result
   end
 
-
   # Desligável em teste (config :engine, start_outbox_drain?: false) — os
   # testes chamam Engine.Outbox.Drain.run_once/0 direto, sem depender do
   # job Oban recorrente.
