@@ -1,0 +1,138 @@
+---
+id: artifacts
+title: Artefatos
+sidebar_label: Artefatos
+sidebar_position: 4
+description: Os seis schemas de artefato validados no engine, quem pode emitir cada um, e por que a maioria não é emitível pelo modelo.
+keywords: [artefato, schema, emit_artifact, qa_verdict, business_rule]
+---
+
+# Artefatos
+
+Um artefato é a saída **estruturada e validada** de um agente. Concretamente:
+um evento `artifact.<tipo>` no log, com o payload validado contra um schema
+fechado antes de ser gravado.
+
+Não há tabela de artefatos. A validação acontece num lugar só —
+`Engine.Harness.ArtifactSchemas` — e campo obrigatório faltando **reprova a
+emissão**, em vez de gravar um artefato pela metade.
+
+## Quem pode emitir o quê
+
+Esta é a distinção mais importante da página, e é fácil passar batido:
+
+| origem | significa |
+|---|---|
+| **ferramenta** | o modelo decide emitir, chamando `emit_artifact` |
+| **servidor** | o código emite quando o desfecho acontece; o modelo não escolhe |
+
+**Só dois tipos são emitíveis por ferramenta:** `note` e `business_rule`. Todo o
+resto é emitido pelo servidor.
+
+O motivo é o mesmo em todos os casos: quando o artefato é o **registro de um
+desfecho**, deixar o modelo escolher emiti-lo significa deixar que ele omita. Um
+DevAgent que desiste não deveria poder decidir não registrar que desistiu.
+
+## Os schemas
+
+### `note` — ferramenta
+
+| campo | obrigatório |
+|---|---|
+| `title` | ✅ |
+| `body` | ✅ |
+
+### `business_rule` — ferramenta
+
+| campo | obrigatório |
+|---|---|
+| `title` | ✅ |
+| `description` | ✅ |
+| `origin` | ✅ — **lista não vazia** |
+
+`origin` referencia os eventos da conversa que originaram a regra. Lista vazia
+reprova: é a rastreabilidade da regra até onde ela foi dita, e sem ela a regra
+vira afirmação sem procedência.
+
+### `product_brief` — servidor
+
+| campo | obrigatório |
+|---|---|
+| `title` | ✅ |
+| `summary` | ✅ |
+| `rules` | ✅ |
+
+Validável, mas **não** emitível por ferramenta. O servidor do Criativo o emite
+apenas depois que você confirma a prontidão — nunca por uma tool call do
+modelo.
+
+### `task_blocked` — servidor
+
+| campo | obrigatório |
+|---|---|
+| `taskId` | ✅ |
+| `agentId` | ✅ |
+| `reason` | ✅ |
+| `diagnosis` | ✅ |
+
+Emitido quando o DevAgent desiste da task: suite que não fecha, teto de
+iterações, orçamento estourado, ou parada sem sinalizar. É o registro do
+desfecho.
+
+### `qa_verdict` e `secops_verdict` — servidor
+
+| campo | obrigatório |
+|---|---|
+| `veredito` | ✅ — `approved` ou `changes_requested`, nada mais |
+| `resumo` | ✅ |
+| `itens` | ✅ |
+| `taskId` **ou** `prActionId` | ✅ — exatamente um |
+| `coverageMatrix` | opcional, só no QA |
+
+Três validações extras vivem aqui:
+
+**O veredito é fechado** nos mesmos dois valores da máquina de estados de gate
+da api. Um valor fora disso faria o caso de uso estourar mais adiante — recusar
+o artefato na emissão é o lugar certo de falhar.
+
+**O sujeito é exclusivo.** Um parecer é sobre **uma** task de dev (`taskId`) ou
+sobre **uma** PR de infra (`prActionId`) — nunca sobre as duas, nunca sobre
+nenhuma. Mesmo tipo de artefato, consumidores diferentes.
+
+**A `coverageMatrix` é opcional de propósito.** Um parecer de QA sem matriz de
+cobertura ainda é um parecer válido; perdê-lo inteiro por causa de um campo
+ausente seria pior do que registrá-lo incompleto.
+
+O SecOps é determinístico — não tem LLM. O parecer do QA nasce da ferramenta
+`emit_qa_verdict`, que é enforçada à parte. Em nenhum dos dois o modelo escolhe
+emitir.
+
+## Artefatos que não passam por aqui
+
+Dois tipos de evento `artifact.*` existem no log sem estar neste registro,
+porque são emitidos pela **api**, não pelo engine:
+
+| evento | origem |
+|---|---|
+| `artifact.module_map` | o Arquiteto, via caso de uso na api |
+| `artifact.insight` | análise, via caso de uso na api |
+
+Eles têm as próprias validações no domínio da api. A assimetria é histórica, e
+está anotada como
+[dívida técnica](../architecture.md#divida-tecnica): idealmente todo
+`artifact.*` passaria por um registro só.
+
+## Quando a validação falha
+
+| erro | causa |
+|---|---|
+| `{:unknown_type, tipo}` | tipo fora dos seis |
+| `{:missing_keys, [...]}` | campos obrigatórios ausentes, todos nomeados |
+| `:origem_invalida` | `business_rule.origin` vazia ou não é lista |
+| `{:sujeito_invalido, chaves}` | parecer com os dois sujeitos, ou com nenhum |
+| `{:veredito_invalido, valor}` | veredito fora de `approved` / `changes_requested` |
+| `:invalid_payload` | payload não é um map |
+
+A falha volta para o agente como resultado da ferramenta. Um modelo que emite
+um artefato malformado recebe o erro e pode corrigir — dentro do teto de
+iterações do ToolLoop.
