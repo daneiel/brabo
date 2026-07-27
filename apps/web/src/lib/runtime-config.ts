@@ -26,9 +26,6 @@
 export interface RuntimeConfig {
   apiUrl: string;
   engineUrl: string;
-  keycloakUrl: string;
-  keycloakRealm: string;
-  keycloakClientId: string;
   /** Nível mínimo do logger JSON (Fase 5, item 6). */
   logLevel: string;
 }
@@ -74,21 +71,6 @@ export function readRuntimeConfig(
       source.engineUrl,
       import.meta.env.VITE_ENGINE_URL,
       'http://localhost:4000',
-    ),
-    keycloakUrl: pick(
-      source.keycloakUrl,
-      import.meta.env.VITE_KEYCLOAK_URL,
-      'http://localhost:8080',
-    ),
-    keycloakRealm: pick(
-      source.keycloakRealm,
-      import.meta.env.VITE_KEYCLOAK_REALM,
-      'brabo-dev',
-    ),
-    keycloakClientId: pick(
-      source.keycloakClientId,
-      import.meta.env.VITE_KEYCLOAK_CLIENT_ID,
-      'brabo-web',
     ),
     logLevel: pick(source.logLevel, import.meta.env.VITE_LOG_LEVEL, 'info'),
   };
