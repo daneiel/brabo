@@ -1511,6 +1511,7 @@
     },
     "/projects/{projectId}/agents/{agent}/instruction-versions": {
       "get": {
+        "description": "Mais recente primeiro, cada uma já com o diff contra a anterior calculado no servidor.",
         "operationId": "AnamneseController_versions",
         "parameters": [
           {
@@ -1526,22 +1527,46 @@
             "required": true,
             "in": "path",
             "schema": {
+              "example": "dev-api",
               "type": "string"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InstructionVersionResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto, evento ou versão inexistente."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Lista as versões de instrução de um agente",
         "tags": [
-          "Anamnese"
+          "anamnese"
         ]
       }
     },
     "/projects/{projectId}/agents/{agent}/instruction-versions/{version}/rollback": {
       "post": {
+        "description": "O histórico é imutável: restaurar não apaga nada, CRIA uma versão nova com o conteúdo antigo. Exige `maintainer` porque muda o comportamento do agente daí em diante — mesmo calibre do patch.",
         "operationId": "AnamneseController_rollbackVersion",
         "parameters": [
           {
@@ -1557,6 +1582,7 @@
             "required": true,
             "in": "path",
             "schema": {
+              "example": "dev-api",
               "type": "string"
             }
           },
@@ -1564,23 +1590,48 @@
             "name": "version",
             "required": true,
             "in": "path",
+            "description": "Versão a restaurar.",
             "schema": {
+              "example": 2,
               "type": "string"
             }
           }
         ],
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RollbackResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Versão não é inteiro positivo."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto, evento ou versão inexistente."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Restaura uma versão anterior da instrução de um agente",
         "tags": [
-          "Anamnese"
+          "anamnese"
         ]
       }
     },
     "/projects/{projectId}/anamnese/run": {
       "post": {
+        "description": "Exige `maintainer` pelo mesmo motivo da reanálise do Psicólogo: roda o ToolLoop e gasta orçamento de verdade.",
         "operationId": "AnamneseController_run",
         "parameters": [
           {
@@ -1594,16 +1645,36 @@
         ],
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto, evento ou versão inexistente."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Roda a Anamnese agora, sem esperar o tick",
         "tags": [
-          "Anamnese"
+          "anamnese"
         ]
       }
     },
     "/projects/{projectId}/architecture": {
       "get": {
+        "description": "O mapa vigente é o de maior `version` (o histórico é imutável). As pendências são a validação cruzada história↔mapa: história sem módulo, ou apontando um módulo que não existe.",
         "operationId": "BacklogController_architecture",
         "parameters": [
           {
@@ -1617,16 +1688,36 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArchitectureResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto inexistente."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Devolve o module_map vigente, as ADRs e as pendências",
         "tags": [
-          "Backlog"
+          "backlog"
         ]
       }
     },
     "/projects/{projectId}/backlog": {
       "get": {
+        "description": "Aninhada e completa, numa chamada só. É LEITURA: quem escreve backlog são os agentes, pelas rotas `/internal/*`.",
         "operationId": "BacklogController_backlog",
         "parameters": [
           {
@@ -1640,11 +1731,33 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EpicComHistoriasResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto inexistente."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Devolve a árvore épico → história → tarefa",
         "tags": [
-          "Backlog"
+          "backlog"
         ]
       }
     },
@@ -1704,6 +1817,7 @@
     },
     "/projects/{projectId}/coverage": {
       "get": {
+        "description": "Cruza as regras do projeto com o `businessRuleIds` das histórias. Regra sem história nenhuma é uma DESCOBERTA — pendência do PO, não erro.",
         "operationId": "BacklogController_coverage",
         "parameters": [
           {
@@ -1717,16 +1831,36 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoverageReportResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto inexistente."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Calcula a cobertura regra de negócio → histórias",
         "tags": [
-          "Backlog"
+          "backlog"
         ]
       }
     },
     "/projects/{projectId}/events/{eventId}": {
       "get": {
+        "description": "Diferente da rota de evento por sessão: aqui a sessão não é conhecida. É o que faz o chip de evidência do perfil chegar no evento certo, já que a janela da Anamnese atravessa várias sessões.",
         "operationId": "AnamneseController_event",
         "parameters": [
           {
@@ -1748,16 +1882,36 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionEventResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto, evento ou versão inexistente."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Devolve um evento do projeto pelo id, resolvendo a sessão",
         "tags": [
-          "Anamnese"
+          "anamnese"
         ]
       }
     },
     "/projects/{projectId}/execution/activate": {
       "post": {
+        "description": "Exige `maintainer`, e não `developer`, porque as ações de git dos dev agents herdam o papel de QUEM ATIVOU na avaliação de IAM — ativar como developer daria agentes incapazes de abrir PR. Cada módulo do `module_map` ganha um agente em worktree isolado.",
         "operationId": "ExecutionController_activate",
         "parameters": [
           {
@@ -1781,11 +1935,33 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecucaoAtivadaResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto, sessão ou tarefa inexistente."
+          },
+          "409": {
+            "description": "Sem module_map vigente, ou execução já ativa."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Ativa a fase de execução e sobe um dev agent por módulo",
         "tags": [
-          "Execution"
+          "execução"
         ]
       }
     },
@@ -1909,6 +2085,7 @@
     },
     "/projects/{projectId}/hypotheses": {
       "get": {
+        "description": "Cada hipótese cita os eventos que a sustentam (`evidenceEventIds`) — é o que a torna auditável em vez de acreditada.",
         "operationId": "PsychologistController_hypotheses",
         "parameters": [
           {
@@ -1922,16 +2099,39 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/HypothesisResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto, sessão ou hipótese inexistente."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Lista as hipóteses do Psicólogo sobre os agentes",
         "tags": [
-          "Psychologist"
+          "psicólogo"
         ]
       }
     },
     "/projects/{projectId}/hypotheses/{hypothesisId}/accept": {
       "post": {
+        "description": "Move `proposed` → `accepted`. NÃO é uma `proposed_action`: o Psicólogo é só leitura e nada aqui tem efeito externo.",
         "operationId": "PsychologistController_accept",
         "parameters": [
           {
@@ -1953,16 +2153,39 @@
         ],
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HypothesisResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto, sessão ou hipótese inexistente."
+          },
+          "409": {
+            "description": "A hipótese já foi decidida."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Aceita uma hipótese",
         "tags": [
-          "Psychologist"
+          "psicólogo"
         ]
       }
     },
     "/projects/{projectId}/hypotheses/{hypothesisId}/dismiss": {
       "post": {
+        "description": "Move `proposed` → `dismissed`. Mesmo raciocínio do aceite.",
         "operationId": "PsychologistController_dismiss",
         "parameters": [
           {
@@ -1984,16 +2207,39 @@
         ],
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HypothesisResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto, sessão ou hipótese inexistente."
+          },
+          "409": {
+            "description": "A hipótese já foi decidida."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Descarta uma hipótese",
         "tags": [
-          "Psychologist"
+          "psicólogo"
         ]
       }
     },
     "/projects/{projectId}/infra-artifacts": {
       "get": {
+        "description": "Artefatos do InfraAgent (Dockerfile, compose, CI). Passam pelos MESMOS gates de QA e SecOps das PRs de dev, sem task nem worktree por trás.",
         "operationId": "BacklogController_infraArtifacts",
         "parameters": [
           {
@@ -2007,16 +2253,39 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InfraArtifactResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto inexistente."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Lista as PRs de infra e o estágio de gate de cada uma",
         "tags": [
-          "Backlog"
+          "backlog"
         ]
       }
     },
     "/projects/{projectId}/instruction-versions": {
       "get": {
+        "description": "Parte de quem TEM versão no projeto, não de um roster estático — é o que faz os dev agents por módulo (`dev-api`) aparecerem.",
         "operationId": "AnamneseController_allVersions",
         "parameters": [
           {
@@ -2030,11 +2299,33 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AgenteComVersoesResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto, evento ou versão inexistente."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Lista o histórico de instruções de todos os agentes do projeto",
         "tags": [
-          "Anamnese"
+          "anamnese"
         ]
       }
     },
@@ -2329,6 +2620,7 @@
     },
     "/projects/{projectId}/proficiency": {
       "get": {
+        "description": "O PRÓPRIO perfil por default; a visão agregada do time só para quem administra o projeto. Perfil de competência é dado sobre a pessoa, e o default menos surpreendente é ela ver o dela.",
         "operationId": "AnamneseController_proficiency",
         "parameters": [
           {
@@ -2342,16 +2634,39 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProficiencyProfileResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto, evento ou versão inexistente."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Devolve o perfil de proficiência",
         "tags": [
-          "Anamnese"
+          "anamnese"
         ]
       }
     },
     "/projects/{projectId}/proficiency/me": {
       "delete": {
+        "description": "Só o PRÓPRIO perfil, nunca o de outro. O opt-out vem junto porque sem ele a rodada seguinte re-derivaria tudo e o apagar seria cosmético. É `viewer` de propósito: a perfilagem cobre todos os membros, então exigir `developer` deixaria um viewer perfilado sem poder apagar o que é dele.",
         "operationId": "AnamneseController_deleteMine",
         "parameters": [
           {
@@ -2365,16 +2680,36 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PerfilApagadoResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto, evento ou versão inexistente."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Apaga o próprio perfil e registra o opt-out",
         "tags": [
-          "Anamnese"
+          "anamnese"
         ]
       }
     },
     "/projects/{projectId}/proficiency/me/opt-in": {
       "post": {
+        "description": "Desfaz o opt-out. Os perfis voltam a ser derivados na próxima rodada.",
         "operationId": "AnamneseController_optInMine",
         "parameters": [
           {
@@ -2388,16 +2723,36 @@
         ],
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PerfilOptInResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto, evento ou versão inexistente."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Volta a permitir o perfilamento do próprio usuário",
         "tags": [
-          "Anamnese"
+          "anamnese"
         ]
       }
     },
     "/projects/{projectId}/psychologist/analyses": {
       "get": {
+        "description": "O `costMicros` sai somado do `token_usage` da rodada. É o que torna a diferença de custo entre triagem leve e pesada VISÍVEL, em vez de apenas afirmada — os dois tiers usam modelos genuinamente diferentes.",
         "operationId": "PsychologistController_analyses",
         "parameters": [
           {
@@ -2411,11 +2766,33 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PsychologistAnalysisResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto, sessão ou hipótese inexistente."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Lista as rodadas de análise com tier e custo real",
         "tags": [
-          "Psychologist"
+          "psicólogo"
         ]
       }
     },
@@ -2881,6 +3258,7 @@
     },
     "/projects/{projectId}/sessions/{sessionId}/agents/{agent}/message": {
       "post": {
+        "description": "A resposta é só o aceite. O que o agente responde chega pelo event log da sessão e pelo SSE de chat — não por esta chamada.",
         "operationId": "AgentsController_message",
         "parameters": [
           {
@@ -2903,7 +3281,9 @@
             "name": "agent",
             "required": true,
             "in": "path",
+            "description": "Slug do agente ativo.",
             "schema": {
+              "example": "po",
               "type": "string"
             }
           }
@@ -2920,16 +3300,39 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto, sessão ou handoff inexistente."
+          },
+          "409": {
+            "description": "O agente não está ativo nesta sessão."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Envia uma mensagem ao agente ativo",
         "tags": [
-          "Agents"
+          "agentes"
         ]
       }
     },
     "/projects/{projectId}/sessions/{sessionId}/agents/{agent}/start": {
       "post": {
+        "description": "Só o Criativo pode ser iniciado por comando direto. Todos os outros exigem um handoff ACEITO apontando para eles — a regra está no domínio, não aqui, e tentar furá-la responde 409.",
         "operationId": "AgentsController_start",
         "parameters": [
           {
@@ -2952,23 +3355,48 @@
             "name": "agent",
             "required": true,
             "in": "path",
+            "description": "Slug do agente.",
             "schema": {
+              "example": "criativo",
               "type": "string"
             }
           }
         ],
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgenteAtivadoResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto, sessão ou handoff inexistente."
+          },
+          "409": {
+            "description": "Agente sem handoff aceito, ou já ativo na sessão."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Sobe um agente na sessão",
         "tags": [
-          "Agents"
+          "agentes"
         ]
       }
     },
     "/projects/{projectId}/sessions/{sessionId}/agents/arquiteto/handoff-infra": {
       "post": {
+        "description": "Endpoint dedicado em vez de reaproveitar `readiness`, que é do Criativo: são dois marcos diferentes da sessão e confundi-los tornaria o event log ambíguo.",
         "operationId": "AgentsController_handoffInfra",
         "parameters": [
           {
@@ -2990,11 +3418,30 @@
         ],
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto, sessão ou handoff inexistente."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Confirma que a arquitetura está pronta e oferece o handoff ao Infra",
         "tags": [
-          "Agents"
+          "agentes"
         ]
       }
     },
@@ -3293,6 +3740,7 @@
     },
     "/projects/{projectId}/sessions/{sessionId}/execution/parallelize": {
       "post": {
+        "description": "Sobe mais um agente, em worktree próprio, para o módulo indicado.",
         "operationId": "ExecutionController_parallelize",
         "parameters": [
           {
@@ -3324,11 +3772,30 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto, sessão ou tarefa inexistente."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Aceita paralelizar um módulo com um dev agent dedicado",
         "tags": [
-          "Execution"
+          "execução"
         ]
       }
     },
@@ -3355,16 +3822,39 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/HandoffResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto, sessão ou handoff inexistente."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Lista os handoffs entre agentes da sessão",
         "tags": [
-          "Agents"
+          "agentes"
         ]
       }
     },
     "/projects/{projectId}/sessions/{sessionId}/handoffs/{handoffId}/accept": {
       "post": {
+        "description": "Uma coisa só: passar para `accepted` E subir o agente destino. É o caminho normal de ativação de todo agente que não seja o Criativo.",
         "operationId": "AgentsController_accept",
         "parameters": [
           {
@@ -3394,11 +3884,33 @@
         ],
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandoffResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto, sessão ou handoff inexistente."
+          },
+          "409": {
+            "description": "O handoff não está em `offered`."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Aceita um handoff e ativa o agente de destino",
         "tags": [
-          "Agents"
+          "agentes"
         ]
       }
     },
@@ -3474,6 +3986,7 @@
     },
     "/projects/{projectId}/sessions/{sessionId}/psychologist/reanalyze": {
       "post": {
+        "description": "Exige `maintainer`, e não `developer`, porque roda o ToolLoop de novo e GASTA orçamento de verdade — diferente de aceitar ou descartar, que só movem estado local. A análise anterior é marcada como superseded.",
         "operationId": "PsychologistController_reanalyze",
         "parameters": [
           {
@@ -3495,16 +4008,36 @@
         ],
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto, sessão ou hipótese inexistente."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Dispara uma reanálise da sessão",
         "tags": [
-          "Psychologist"
+          "psicólogo"
         ]
       }
     },
     "/projects/{projectId}/sessions/{sessionId}/readiness": {
       "post": {
+        "description": "É o botão que dispara o `product_brief` e o handoff para o PO. Registra `readiness.confirmed` no event log.",
         "operationId": "AgentsController_readiness",
         "parameters": [
           {
@@ -3526,16 +4059,36 @@
         ],
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto, sessão ou handoff inexistente."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Confirma que o levantamento com o Criativo terminou",
         "tags": [
-          "Agents"
+          "agentes"
         ]
       }
     },
     "/projects/{projectId}/sessions/{sessionId}/tasks/{taskId}/unblock": {
       "post": {
+        "description": "Zera o contador de correções de gate e devolve a tarefa ao agente. É a saída humana do teto de correções — não existe destrave automático.",
         "operationId": "ExecutionController_unblock",
         "parameters": [
           {
@@ -3565,11 +4118,30 @@
         ],
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto, sessão ou tarefa inexistente."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Destrava uma tarefa bloqueada",
         "tags": [
-          "Execution"
+          "execução"
         ]
       }
     },
@@ -4191,7 +4763,16 @@
     "schemas": {
       "AcceptParallelizationDto": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "module": {
+            "type": "string",
+            "example": "api",
+            "description": "Nome do módulo, como ele aparece no `module_map`. Sobe um dev agent dedicado a ele, em worktree isolado."
+          }
+        },
+        "required": [
+          "module"
+        ]
       },
       "AceiteResponseDto": {
         "type": "object",
@@ -4208,7 +4789,38 @@
       },
       "ActivateExecutionDto": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "taskBudgetMicros": {
+            "type": "number",
+            "example": 500000,
+            "description": "Orçamento por task em micro-USD. Omitido usa o default do domínio (DEFAULT_TASK_BUDGET_MICROS)."
+          },
+          "maxGateCorrections": {
+            "type": "number",
+            "example": 3,
+            "description": "Quantas idas e voltas dev↔gate antes da task virar `blocked`. É o que impede um agente de gastar orçamento em loop de correção."
+          },
+          "devAgentImpl": {
+            "type": "string",
+            "enum": [
+              "real",
+              "noop"
+            ],
+            "example": "real",
+            "description": "`noop` sobe os dev agents SEM LLM, para exercitar a infraestrutura de execução de ponta a ponta sem gastar token. Omitido usa `real`."
+          },
+          "terminalAllowPatterns": {
+            "example": [
+              "Terminal(pnpm test:*)",
+              "Terminal(pnpm lint)"
+            ],
+            "description": "Padrões liberados no `permissions.json` para os dev agents rodarem a suite. `deny` continua vencendo o que estiver aqui.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
       },
       "ActorDto": {
         "type": "object",
@@ -4284,6 +4896,36 @@
           "role"
         ]
       },
+      "AdrRefResponseDto": {
+        "type": "object",
+        "properties": {
+          "actionId": {
+            "type": "string",
+            "example": "01JC4Z8QK3M7YV2N5T9B0PXHRC",
+            "description": "Id da `proposed_action` `open_adr_pr` que abriu a ADR."
+          },
+          "title": {
+            "type": "string",
+            "example": "0007 — Fila no Postgres em vez de Redis"
+          },
+          "status": {
+            "type": "string",
+            "example": "executed"
+          },
+          "pullRequestUrl": {
+            "type": "object",
+            "example": "https://github.com/daneiel/brabo/pull/42",
+            "nullable": true,
+            "description": "`null` enquanto a PR não foi aberta de fato."
+          }
+        },
+        "required": [
+          "actionId",
+          "title",
+          "status",
+          "pullRequestUrl"
+        ]
+      },
       "AgentAutonomyRuleResponseDto": {
         "type": "object",
         "properties": {
@@ -4328,6 +4970,70 @@
           "mode"
         ]
       },
+      "AgenteAtivadoResponseDto": {
+        "type": "object",
+        "properties": {
+          "agent": {
+            "type": "string",
+            "example": "po",
+            "description": "Slug do agente ativado."
+          },
+          "status": {
+            "type": "string",
+            "example": "active",
+            "enum": [
+              "active"
+            ]
+          }
+        },
+        "required": [
+          "agent",
+          "status"
+        ]
+      },
+      "AgenteComVersoesResponseDto": {
+        "type": "object",
+        "properties": {
+          "agent": {
+            "type": "string",
+            "example": "dev-api",
+            "description": "Slug real, incluindo os dev agents por módulo. A listagem NÃO parte de um roster estático — se partisse, os agentes que existem de verdade não apareceriam."
+          },
+          "versions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InstructionVersionResponseDto"
+            }
+          }
+        },
+        "required": [
+          "agent",
+          "versions"
+        ]
+      },
+      "AnaliseDeTerminoResponseDto": {
+        "type": "object",
+        "properties": {
+          "causa": {
+            "type": "string",
+            "example": "heartbeat_timeout",
+            "description": "A ORIGEM da falha, nunca deduzida por eliminação (lição do ADR 0020)."
+          },
+          "estadoDaSessao": {
+            "type": "string",
+            "example": "closed_abnormally"
+          },
+          "analise": {
+            "type": "string",
+            "example": "O agente parou de responder depois de um tool call de 90 s."
+          }
+        },
+        "required": [
+          "causa",
+          "estadoDaSessao",
+          "analise"
+        ]
+      },
       "AppendSessionEventDto": {
         "type": "object",
         "properties": {
@@ -4359,6 +5065,82 @@
         "type": "object",
         "properties": {}
       },
+      "ArchitecturePendencyResponseDto": {
+        "type": "object",
+        "properties": {
+          "storyId": {
+            "type": "string",
+            "example": "01JC4Z0000HISTORIA000000001"
+          },
+          "title": {
+            "type": "string",
+            "example": "Adicionar item ao carrinho"
+          },
+          "status": {
+            "type": "string",
+            "example": "ready"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "no_module",
+              "missing_module"
+            ],
+            "example": "missing_module",
+            "description": "`no_module`: a história não aponta módulo nenhum. `missing_module`: aponta um que não existe no mapa vigente."
+          },
+          "missing": {
+            "example": [
+              "pagamentos"
+            ],
+            "description": "Os módulos citados que não existem. Vazio quando `no_module`.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "storyId",
+          "title",
+          "status",
+          "reason",
+          "missing"
+        ]
+      },
+      "ArchitectureResponseDto": {
+        "type": "object",
+        "properties": {
+          "moduleMap": {
+            "nullable": true,
+            "description": "`null` enquanto o Arquiteto não escreveu o primeiro mapa.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ModuleMapResponseDto"
+              }
+            ]
+          },
+          "adrs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdrRefResponseDto"
+            }
+          },
+          "pendencies": {
+            "description": "Validação cruzada história↔mapa. Lista vazia é o estado saudável.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ArchitecturePendencyResponseDto"
+            }
+          }
+        },
+        "required": [
+          "moduleMap",
+          "adrs",
+          "pendencies"
+        ]
+      },
       "AssignStoryModulesInternalDto": {
         "type": "object",
         "properties": {}
@@ -4370,6 +5152,26 @@
       "ClaimTaskInternalDto": {
         "type": "object",
         "properties": {}
+      },
+      "CoverageReportResponseDto": {
+        "type": "object",
+        "properties": {
+          "rules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RuleCoverageResponseDto"
+            }
+          },
+          "uncoveredCount": {
+            "type": "number",
+            "example": 2,
+            "description": "Quantas regras não têm história nenhuma. Cada uma é uma descoberta."
+          }
+        },
+        "required": [
+          "rules",
+          "uncoveredCount"
+        ]
       },
       "CreateActionInternalDto": {
         "type": "object",
@@ -4445,6 +5247,428 @@
           }
         }
       },
+      "DiffLineResponseDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "add",
+              "del",
+              "ctx"
+            ],
+            "example": "add"
+          },
+          "content": {
+            "type": "string",
+            "example": "Sempre rode a suíte antes de abrir a PR."
+          },
+          "lineNo": {
+            "type": "number",
+            "example": 42
+          }
+        },
+        "required": [
+          "kind",
+          "content"
+        ]
+      },
+      "EpicComHistoriasResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01JC4Z0000EPICO000000000001"
+          },
+          "projectId": {
+            "type": "string",
+            "example": "01JC4Z0000PROJETO0000000001"
+          },
+          "sessionId": {
+            "type": "string",
+            "example": "01JC4Z8QK3M7YV2N5T9B0PXHRA"
+          },
+          "title": {
+            "type": "string",
+            "example": "Carrinho de compras"
+          },
+          "description": {
+            "type": "string",
+            "example": "Tudo que o comprador faz antes de pagar."
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-07-25T08:30:00.000Z",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "example": "2026-07-25T08:30:00.000Z",
+            "format": "date-time"
+          },
+          "stories": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StoryComTarefasResponseDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "projectId",
+          "sessionId",
+          "title",
+          "description",
+          "createdAt",
+          "updatedAt",
+          "stories"
+        ]
+      },
+      "ExecucaoAtivadaResponseDto": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "example": "01JC4Z8QK3M7YV2N5T9B0PXHRA",
+            "description": "Sessão de execução criada."
+          },
+          "modules": {
+            "example": [
+              "api",
+              "web"
+            ],
+            "description": "Módulos do `module_map` que ganharam dev agent. Um agente por módulo, cada um em worktree isolado.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "sessionId",
+          "modules"
+        ]
+      },
+      "HandoffResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01JC4Z0000HANDOFF00000000001"
+          },
+          "sessionId": {
+            "type": "string",
+            "example": "01JC4Z8QK3M7YV2N5T9B0PXHRA"
+          },
+          "projectId": {
+            "type": "string",
+            "example": "01JC4Z0000PROJETO0000000001"
+          },
+          "fromAgent": {
+            "type": "string",
+            "example": "criativo",
+            "description": "Slug do agente que passou a bola."
+          },
+          "toAgent": {
+            "type": "string",
+            "example": "po",
+            "description": "Slug do agente que recebe."
+          },
+          "artifactId": {
+            "type": "object",
+            "example": "01JC4Z0000ARTEFATO000000001",
+            "nullable": true,
+            "description": "Artefato que motivou o handoff (product_brief, module_map…)."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "offered",
+              "accepted",
+              "completed",
+              "rejected"
+            ],
+            "example": "offered",
+            "description": "Este campo é MUTÁVEL — é o estado corrente. Cada transição também vira um evento `handoff.*` imutável no log, que é onde fica o histórico."
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-07-24T10:00:00.000Z",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "example": "2026-07-24T10:05:00.000Z",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "sessionId",
+          "projectId",
+          "fromAgent",
+          "toAgent",
+          "artifactId",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "HypothesisResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01JC4Z0000HIPOTESE000000001"
+          },
+          "projectId": {
+            "type": "string",
+            "example": "01JC4Z0000PROJETO0000000001"
+          },
+          "sessionId": {
+            "type": "string",
+            "example": "01JC4Z8QK3M7YV2N5T9B0PXHRA"
+          },
+          "analysisId": {
+            "type": "string",
+            "example": "01JC4Z0000ANALISE0000000001",
+            "description": "A rodada de análise que gerou esta hipótese."
+          },
+          "agenteAlvo": {
+            "type": "string",
+            "example": "dev-api",
+            "description": "Sobre qual agente é a hipótese."
+          },
+          "observacao": {
+            "type": "string",
+            "example": "O agente reabriu a mesma tarefa três vezes."
+          },
+          "hipotese": {
+            "type": "string",
+            "example": "As instruções não dizem quando considerar a tarefa pronta."
+          },
+          "sugestao": {
+            "type": "string",
+            "example": "Acrescentar um critério de pronto explícito à instrução."
+          },
+          "confiancaPercent": {
+            "type": "number",
+            "example": 72,
+            "minimum": 0,
+            "maximum": 100,
+            "description": "Confiança declarada pelo próprio modelo. Não é medida, é auto-relato."
+          },
+          "evidenceEventIds": {
+            "example": [
+              "01JC4Z8QK3M7YV2N5T9B0PXHRB"
+            ],
+            "description": "Eventos do log que sustentam a hipótese. É por eles que a evidência é auditável em vez de acreditada.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "terminationAnalysis": {
+            "nullable": true,
+            "description": "Presente só nas hipóteses sobre sessão terminada de forma anormal.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AnaliseDeTerminoResponseDto"
+              }
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "proposed",
+              "accepted",
+              "dismissed"
+            ],
+            "example": "proposed"
+          },
+          "decidedBy": {
+            "type": "object",
+            "example": null,
+            "nullable": true
+          },
+          "decidedAt": {
+            "type": "object",
+            "example": null,
+            "format": "date-time",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-07-26T18:00:00.000Z",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "example": "2026-07-26T18:00:00.000Z",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "projectId",
+          "sessionId",
+          "analysisId",
+          "agenteAlvo",
+          "observacao",
+          "hipotese",
+          "sugestao",
+          "confiancaPercent",
+          "evidenceEventIds",
+          "terminationAnalysis",
+          "status",
+          "decidedBy",
+          "decidedAt",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "InfraArtifactResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01JC4Z0000INFRAARTEFATO00001"
+          },
+          "projectId": {
+            "type": "string",
+            "example": "01JC4Z0000PROJETO0000000001"
+          },
+          "sessionId": {
+            "type": "string",
+            "example": "01JC4Z8QK3M7YV2N5T9B0PXHRA"
+          },
+          "title": {
+            "type": "string",
+            "example": "Dockerfile de produção da api"
+          },
+          "prActionId": {
+            "type": "string",
+            "example": "01JC4Z8QK3M7YV2N5T9B0PXHRD",
+            "description": "Id da `proposed_action` `open_infra_pr` que abriu a PR. É o que o engine conhece de volta — não existe id de artefato à parte."
+          },
+          "gateStatus": {
+            "type": "string",
+            "enum": [
+              "awaiting_qa",
+              "awaiting_secops",
+              "awaiting_user"
+            ],
+            "example": "awaiting_qa",
+            "description": "Passa pelos MESMOS gates de QA e SecOps das PRs de dev."
+          },
+          "gateCorrectionCount": {
+            "type": "number",
+            "example": 0
+          },
+          "blocked": {
+            "type": "boolean",
+            "example": false
+          },
+          "blockedReason": {
+            "type": "object",
+            "example": null,
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-07-26T09:00:00.000Z",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "example": "2026-07-26T09:20:00.000Z",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "projectId",
+          "sessionId",
+          "title",
+          "prActionId",
+          "gateStatus",
+          "gateCorrectionCount",
+          "blocked",
+          "blockedReason",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "InstructionVersionResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01JC4Z0000VERSAO00000000001"
+          },
+          "version": {
+            "type": "number",
+            "example": 4
+          },
+          "content": {
+            "type": "string",
+            "example": "# dev-api\n\nSempre rode a suíte antes de abrir a PR."
+          },
+          "createdBy": {
+            "type": "object",
+            "example": null,
+            "nullable": true
+          },
+          "sourceActionId": {
+            "type": "object",
+            "example": null,
+            "nullable": true,
+            "description": "A `proposed_action` de patch que produziu esta versão, se houve uma."
+          },
+          "sourceHypothesisId": {
+            "type": "object",
+            "example": "01JC4Z0000HIPOTESE000000001",
+            "nullable": true,
+            "description": "A hipótese do Psicólogo que motivou o patch — o loop fechado."
+          },
+          "note": {
+            "type": "object",
+            "example": "Critério de pronto explícito",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-07-26T14:00:00.000Z",
+            "format": "date-time"
+          },
+          "isCurrent": {
+            "type": "boolean",
+            "example": true,
+            "description": "Se esta é a versão em vigor."
+          },
+          "diff": {
+            "description": "Diff desta versão contra a anterior, calculado no servidor para a UI não precisar de um differ próprio. A mais antiga é diffada contra vazio, então aparece como tudo-adição.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TextDiffResponseDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "content",
+          "createdBy",
+          "sourceActionId",
+          "sourceHypothesisId",
+          "note",
+          "createdAt",
+          "isCurrent",
+          "diff"
+        ]
+      },
       "JwksResponseDto": {
         "type": "object",
         "properties": {
@@ -4480,6 +5704,93 @@
       "MarkTaskInternalDto": {
         "type": "object",
         "properties": {}
+      },
+      "ModuleMapResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01JC4Z0000MODULEMAP00000001"
+          },
+          "projectId": {
+            "type": "string",
+            "example": "01JC4Z0000PROJETO0000000001"
+          },
+          "sessionId": {
+            "type": "string",
+            "example": "01JC4Z8QK3M7YV2N5T9B0PXHRA"
+          },
+          "modules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ModuleNodeResponseDto"
+            }
+          },
+          "version": {
+            "type": "number",
+            "example": 3,
+            "description": "O histórico é imutável: cada mapa novo é uma versão a mais, e o vigente é o de maior `version`."
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-07-24T16:00:00.000Z",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "projectId",
+          "sessionId",
+          "modules",
+          "version",
+          "createdAt"
+        ]
+      },
+      "ModuleNodeResponseDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "api"
+          },
+          "stack": {
+            "type": "string",
+            "example": "NestJS + Drizzle"
+          },
+          "responsibility": {
+            "type": "string",
+            "example": "Regras de negócio e superfície HTTP."
+          },
+          "dependsOn": {
+            "example": [
+              "db"
+            ],
+            "description": "Nomes de outros módulos. Um ciclo aqui faz o mapa ser REJEITADO na escrita.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "name",
+          "stack",
+          "responsibility",
+          "dependsOn"
+        ]
+      },
+      "OkResponseDto": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "example": true,
+            "description": "Sempre `true`; falha vira erro HTTP."
+          }
+        },
+        "required": [
+          "ok"
+        ]
       },
       "OpenGateInternalDto": {
         "type": "object",
@@ -4527,6 +5838,37 @@
           "nextCursor"
         ]
       },
+      "PerfilApagadoResponseDto": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "number",
+            "example": 2,
+            "description": "Quantos perfis foram apagados."
+          },
+          "optedOut": {
+            "type": "boolean",
+            "example": true,
+            "description": "Sempre `true`: apagar SEM registrar o opt-out seria cosmético, porque a rodada seguinte re-derivaria tudo."
+          }
+        },
+        "required": [
+          "deleted",
+          "optedOut"
+        ]
+      },
+      "PerfilOptInResponseDto": {
+        "type": "object",
+        "properties": {
+          "optedOut": {
+            "type": "boolean",
+            "example": false
+          }
+        },
+        "required": [
+          "optedOut"
+        ]
+      },
       "PermissionsFileResponseDto": {
         "type": "object",
         "properties": {
@@ -4567,6 +5909,85 @@
           "allow",
           "deny",
           "ask"
+        ]
+      },
+      "ProficiencyProfileResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01JC4Z0000PERFIL00000000001"
+          },
+          "projectId": {
+            "type": "string",
+            "example": "01JC4Z0000PROJETO0000000001"
+          },
+          "userId": {
+            "type": "string",
+            "example": "01JC4Z0000USUARIO0000000002"
+          },
+          "competency": {
+            "type": "string",
+            "example": "TypeScript"
+          },
+          "level": {
+            "type": "string",
+            "enum": [
+              "iniciante",
+              "intermediario",
+              "avancado"
+            ],
+            "example": "avancado"
+          },
+          "rationale": {
+            "type": "string",
+            "example": "Corrigiu três erros de tipagem genérica sem ajuda.",
+            "description": "Os \"porquês\" do nível. Sem isto o perfil seria um veredito sem apelo."
+          },
+          "evidenceEventIds": {
+            "example": [
+              "01JC4Z8QK3M7YV2N5T9B0PXHRB"
+            ],
+            "description": "Eventos do log que sustentam o nível.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-07-26T12:00:00.000Z",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "example": "2026-07-26T12:00:00.000Z",
+            "format": "date-time"
+          },
+          "userName": {
+            "type": "object",
+            "example": "Dev Sênior",
+            "nullable": true
+          },
+          "userEmail": {
+            "type": "object",
+            "example": "dev@brabo.dev",
+            "nullable": true,
+            "description": "`null` quando quem tem perfil já não é membro do projeto — o perfil sobrevive à remoção do membro."
+          }
+        },
+        "required": [
+          "id",
+          "projectId",
+          "userId",
+          "competency",
+          "level",
+          "rationale",
+          "evidenceEventIds",
+          "createdAt",
+          "updatedAt",
+          "userName",
+          "userEmail"
         ]
       },
       "ProjectMemberComUsuarioResponseDto": {
@@ -4882,6 +6303,91 @@
         "type": "object",
         "properties": {}
       },
+      "PsychologistAnalysisResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01JC4Z0000ANALISE0000000001"
+          },
+          "projectId": {
+            "type": "string",
+            "example": "01JC4Z0000PROJETO0000000001"
+          },
+          "sessionId": {
+            "type": "string",
+            "example": "01JC4Z8QK3M7YV2N5T9B0PXHRA"
+          },
+          "tier": {
+            "type": "string",
+            "enum": [
+              "leve",
+              "pesada"
+            ],
+            "example": "leve",
+            "description": "Tier da triagem. Os dois usam modelos GENUINAMENTE diferentes — é isso que faz o custo divergir de verdade em vez de na etiqueta."
+          },
+          "triggeredBy": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "manual"
+            ],
+            "example": "auto",
+            "description": "`manual` é a reanálise pedida por gente."
+          },
+          "supersedes": {
+            "type": "object",
+            "example": null,
+            "nullable": true,
+            "description": "Id da análise que esta substitui."
+          },
+          "superseded": {
+            "type": "boolean",
+            "example": false
+          },
+          "supersededAt": {
+            "type": "object",
+            "example": null,
+            "format": "date-time",
+            "nullable": true
+          },
+          "eventCountAtAnalysis": {
+            "type": "number",
+            "example": 128,
+            "description": "Tamanho do log no momento da análise — o recorte que ela enxergou."
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-07-26T18:00:00.000Z",
+            "format": "date-time"
+          },
+          "costMicros": {
+            "type": "number",
+            "example": 4200,
+            "description": "Custo real em micro-USD, somado do `token_usage` da rodada. Só há linha aqui para run CONCLUÍDO: run que falhou não grava, de propósito."
+          },
+          "hypothesisCount": {
+            "type": "number",
+            "example": 3,
+            "description": "Quantas hipóteses a rodada rendeu."
+          }
+        },
+        "required": [
+          "id",
+          "projectId",
+          "sessionId",
+          "tier",
+          "triggeredBy",
+          "supersedes",
+          "superseded",
+          "supersededAt",
+          "eventCountAtAnalysis",
+          "createdAt",
+          "costMicros",
+          "hypothesisCount"
+        ]
+      },
       "RecordGateVerdictInternalDto": {
         "type": "object",
         "properties": {}
@@ -4956,13 +6462,86 @@
           "novaSenha"
         ]
       },
+      "RollbackResponseDto": {
+        "type": "object",
+        "properties": {
+          "agent": {
+            "type": "string",
+            "example": "dev-api"
+          },
+          "restoredFrom": {
+            "type": "number",
+            "example": 2,
+            "description": "A versão cujo conteúdo foi restaurado."
+          },
+          "toVersion": {
+            "type": "number",
+            "example": 5,
+            "description": "A versão NOVA que o rollback criou. O histórico é imutável: restaurar não apaga nada, acrescenta."
+          },
+          "cacheInvalidated": {
+            "type": "boolean",
+            "example": true,
+            "description": "Se o cache de instruções do engine foi invalidado com sucesso."
+          }
+        },
+        "required": [
+          "agent",
+          "restoredFrom",
+          "toVersion",
+          "cacheInvalidated"
+        ]
+      },
+      "RuleCoverageResponseDto": {
+        "type": "object",
+        "properties": {
+          "ruleId": {
+            "type": "string",
+            "example": "RN-014"
+          },
+          "title": {
+            "type": "string",
+            "example": "Carrinho aceita no máximo 50 itens"
+          },
+          "coveredByStoryIds": {
+            "example": [
+              "01JC4Z0000HISTORIA000000001"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "covered": {
+            "type": "boolean",
+            "example": true
+          }
+        },
+        "required": [
+          "ruleId",
+          "title",
+          "coveredByStoryIds",
+          "covered"
+        ]
+      },
       "RunLlmTurnDto": {
         "type": "object",
         "properties": {}
       },
       "SendAgentMessageDto": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "text": {
+            "type": "string",
+            "example": "Quero permitir cupom de desconto no checkout.",
+            "minLength": 1,
+            "maxLength": 10000,
+            "description": "Mensagem do usuário para o agente ativo da sessão."
+          }
+        },
+        "required": [
+          "text"
+        ]
       },
       "SendChatMessageDto": {
         "type": "object",
@@ -5203,9 +6782,253 @@
           "ask"
         ]
       },
+      "StoryComTarefasResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01JC4Z0000HISTORIA000000001"
+          },
+          "epicId": {
+            "type": "string",
+            "example": "01JC4Z0000EPICO000000000001"
+          },
+          "projectId": {
+            "type": "string",
+            "example": "01JC4Z0000PROJETO0000000001"
+          },
+          "sessionId": {
+            "type": "string",
+            "example": "01JC4Z8QK3M7YV2N5T9B0PXHRA"
+          },
+          "title": {
+            "type": "string",
+            "example": "Adicionar item ao carrinho"
+          },
+          "description": {
+            "type": "string",
+            "example": "Como comprador, quero juntar itens antes de pagar."
+          },
+          "rf": {
+            "example": [
+              "O carrinho aceita até 50 itens"
+            ],
+            "description": "Requisitos funcionais.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "rnf": {
+            "example": [
+              "A resposta fica abaixo de 200 ms no p95"
+            ],
+            "description": "Requisitos não funcionais.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "businessRuleIds": {
+            "example": [
+              "RN-014"
+            ],
+            "description": "Regras de negócio cobertas. É por aqui que a cobertura regra→história é calculada em `GET /projects/:id/coverage`.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "dod": {
+            "example": [
+              "Testes de unidade verdes"
+            ],
+            "description": "Definition of done.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "dor": {
+            "example": [
+              "Módulo definido"
+            ],
+            "description": "Definition of ready.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "moduleIds": {
+            "example": [
+              "api"
+            ],
+            "description": "Módulos do `module_map` que a história toca. História sem módulo, ou com módulo inexistente, vira pendência de arquitetura.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "ready",
+              "in_progress",
+              "done"
+            ],
+            "example": "ready"
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-07-25T09:00:00.000Z",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "example": "2026-07-25T09:40:00.000Z",
+            "format": "date-time"
+          },
+          "tasks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TaskResponseDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "epicId",
+          "projectId",
+          "sessionId",
+          "title",
+          "description",
+          "rf",
+          "rnf",
+          "businessRuleIds",
+          "dod",
+          "dor",
+          "moduleIds",
+          "status",
+          "createdAt",
+          "updatedAt",
+          "tasks"
+        ]
+      },
       "StreamLlmTurnDto": {
         "type": "object",
         "properties": {}
+      },
+      "TaskResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01JC4Z0000TAREFA00000000001"
+          },
+          "storyId": {
+            "type": "string",
+            "example": "01JC4Z0000HISTORIA000000001"
+          },
+          "title": {
+            "type": "string",
+            "example": "Endpoint POST /carrinho/itens"
+          },
+          "description": {
+            "type": "string",
+            "example": "Aceita SKU e quantidade; valida estoque."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "todo",
+              "in_progress",
+              "in_review",
+              "done"
+            ],
+            "example": "in_progress"
+          },
+          "assignedTo": {
+            "type": "object",
+            "example": "dev-api",
+            "nullable": true,
+            "description": "Slug do dev agent que reivindicou a tarefa."
+          },
+          "blocked": {
+            "type": "boolean",
+            "example": false,
+            "description": "Tarefa travada esperando decisão ou dependência."
+          },
+          "blockedReason": {
+            "type": "object",
+            "example": null,
+            "nullable": true
+          },
+          "gateStatus": {
+            "type": "string",
+            "enum": [
+              "awaiting_qa",
+              "awaiting_secops",
+              "awaiting_user"
+            ],
+            "example": null,
+            "nullable": true,
+            "description": "Onde a PR da tarefa está na esteira de gates: QA, depois SecOps, depois o usuário. `null` enquanto não há PR aberta."
+          },
+          "gateCorrectionCount": {
+            "type": "number",
+            "example": 0,
+            "description": "Quantas rodadas de correção os gates já pediram."
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-07-25T10:00:00.000Z",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "example": "2026-07-25T12:30:00.000Z",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "storyId",
+          "title",
+          "description",
+          "status",
+          "assignedTo",
+          "blocked",
+          "blockedReason",
+          "gateStatus",
+          "gateCorrectionCount",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "TextDiffResponseDto": {
+        "type": "object",
+        "properties": {
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DiffLineResponseDto"
+            }
+          },
+          "additions": {
+            "type": "number",
+            "example": 3
+          },
+          "deletions": {
+            "type": "number",
+            "example": 1
+          }
+        },
+        "required": [
+          "lines",
+          "additions",
+          "deletions"
+        ]
       },
       "TransitionSessionDto": {
         "type": "object",
