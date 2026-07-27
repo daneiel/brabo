@@ -155,12 +155,18 @@ async function principal(): Promise<void> {
   }
 
   // --- 3. merge commit habilitado.
-  let permiteMergeCommit: boolean | null = null;
+  //
+  // TRÊS estados, não dois. `gh api` SUCEDE devolvendo vazio quando o token
+  // não tem permissão de ler metadado administrativo do repositório — e o
+  // GITHUB_TOKEN com `contents: read` é exatamente esse caso. Comparar direto
+  // com 'true' transformaria "não consegui ler" em "está desabilitado", que é
+  // um falso negativo: reprova promoção legítima e ensina a ignorar o check.
+  let permiteMergeCommit: boolean | null;
   try {
-    permiteMergeCommit =
-      execFileSync('gh', ['api', `repos/${repo}`, '--jq', '.allow_merge_commit'], {
-        encoding: 'utf8',
-      }).trim() === 'true';
+    const bruto = execFileSync('gh', ['api', `repos/${repo}`, '--jq', '.allow_merge_commit'], {
+      encoding: 'utf8',
+    }).trim();
+    permiteMergeCommit = bruto === 'true' ? true : bruto === 'false' ? false : null;
   } catch {
     permiteMergeCommit = null;
   }
@@ -183,9 +189,17 @@ async function principal(): Promise<void> {
               '      mais. Habilite em Settings → General → Pull Requests.',
           }
         : {
+            // AVISO, não reprovação. O token do workflow legitimamente não lê
+            // esse campo, e travar toda promoção por causa disso seria pior
+            // que a falha que se quer evitar. A garantia de verdade é o
+            // `tag-release`, que confere os DOIS PAIS do commit depois do
+            // merge — aquilo não depende de permissão nenhuma.
             nome: 'merge --no-ff possível',
-            ok: false,
-            detalhe: 'não consegui ler a configuração do repositório — verificação impossível, e por isso reprovada.',
+            ok: true,
+            detalhe:
+              'não consegui ler a configuração (o token não tem permissão) — AVISO.\n' +
+              '      Use "Create a merge commit", nunca squash. O `tag-release`\n' +
+              '      confere os dois pais depois do merge e falha se for squash.',
           },
   );
 

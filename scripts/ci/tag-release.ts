@@ -130,6 +130,29 @@ async function principal(): Promise<void> {
     return;
   }
 
+  // --- qa e main só recebem PROMOÇÃO, e promoção é `--no-ff`.
+  //
+  // Esta é a verificação que VALE: o `promotion-check` só consegue olhar a
+  // configuração do repositório, e nem sempre tem permissão para isso. Aqui se
+  // olha o fato consumado — um commit de promoção tem DOIS pais. Se tiver um
+  // só, alguém usou squash e os commits do degrau de baixo foram achatados:
+  // a tag apontaria para um commit que não existe mais lá embaixo.
+  if (branch === 'qa') {
+    const pais = git('rev-list', '--parents', '-n1', sha).split(/\s+/).length - 1;
+    if (pais < 2) {
+      const titulo = `o merge em \`qa\` não é merge commit (${pais} pai)`;
+      console.error(`[tag-release] ${titulo}`);
+      console.error(
+        '  Promoção precisa de `--no-ff`. Com squash, os commits que vieram de\n' +
+          '  `dev` são achatados num só, e a tag `-dev.N` passa a apontar para um\n' +
+          '  commit que não está mais no histórico de `qa`.\n' +
+          '  Desfaça o merge e refaça com "Create a merge commit".',
+      );
+      console.log(`::error title=tag-release::${titulo}`);
+      process.exit(1);
+    }
+  }
+
   // --- dev e qa: o carimbo do estágio.
   const estagio = branch as Estagio;
   const n = proximoN(tags, versao, estagio);
