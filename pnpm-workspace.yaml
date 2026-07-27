@@ -22,5 +22,11 @@ allowBuilds:
   # ignorado que ninguém decidiu.
   core-js: false
   unrs-resolver: true
+  # false pelo mesmo critério dos dois acima: o @scarf/scarf entra como
+  # transitiva do @nestjs/swagger (Fase 7) e o postinstall dele só reporta
+  # telemetria de instalação para um servidor de terceiros. Não gera nem
+  # compila nada, e chamada de rede em `pnpm install` é exatamente o que a
+  # disciplina de build da Fase 5 recusa.
+  '@scarf/scarf': false
 minimumReleaseAgeExclude:
   - '@anthropic-ai/sdk@0.113.0'
