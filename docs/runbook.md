@@ -50,8 +50,8 @@ Obrigatórios no PATH: `docker`, `kubectl`, `kustomize`, `jq`, `openssl`.
 `~/.local/bin`, com versão pinada e checksum conferido. Garanta que esse
 diretório esteja no PATH.
 
-Recursos: o stack completo (Postgres, Keycloak, Prometheus, dois operadores e
-os três apps) pede em torno de **4 GiB** livres.
+Recursos: o stack completo (Postgres, Prometheus, dois operadores e os três
+apps) pede em torno de **4 GiB** livres.
 
 ### Subir
 
@@ -60,12 +60,14 @@ make deploy-local           # constrói as imagens, sobe o cluster, instala, val
 make deploy-local-clean     # o mesmo, sem reconstruir as imagens
 ```
 
-Ao fim: web em <http://localhost:8088>, api em `:3000`, engine em `:4000`,
-Keycloak em `:8080` — **as mesmas portas do `docker-compose.prod.yml`**, de
-propósito (ADR 0025, decisão 10). Login `admin` / `admin123`.
+Ao fim: web em <http://localhost:8088>, api em `:3000`, engine em `:4000` —
+**as mesmas portas do `docker-compose.prod.yml`**, de propósito (ADR 0025,
+decisão 10). O bootstrap roda o seed, que cria `owner@brabo.dev` já verificado
+com a senha de `BRABO_SMOKE_PASSWORD` (default `senha de dev do brabo`) — é
+com ela que se entra no login próprio da web.
 
 > **Isto ocupa as portas do `pnpm dev`.** Manter as portas iguais é o que faz o
-> `smoke.sh` e o realm valerem nos dois modos, e o preço é que eles não
+> `smoke.sh` valer nos dois modos, e o preço é que eles não
 > coexistem: com o cluster de pé, o `pnpm dev` não publica a porta do `api` e a
 > **5173 nunca abre**. Repare que o web muda de porta entre os modos — 8088
 > aqui, 5173 lá. Para voltar ao desenvolvimento:
@@ -117,10 +119,11 @@ escopo. O smoke avisa quando o cluster não faz enforcement.
 1. Todos os pods **Ready** — não só `Running`. Um pod cujo readiness falha fica
    `Running` para sempre sem receber tráfego.
 2. Nenhum container com `runAsUser: 0`.
-3. Login por password grant no Keycloak.
+3. Login em `POST /auth/login` com o usuário do seed — exercita argon2id,
+   emissão do access token e os cookies de sessão.
 4. `workspace → projeto → sessão`. Este passo atravessa as NetworkPolicies
-   inteiras: criar sessão faz a api pedir token client-credentials ao Keycloak
-   **e** chamar o engine por HTTP interno.
+   inteiras: criar sessão faz a api chamar o engine por HTTP interno, com o
+   service token.
 5. Probes distintas (`/live` e `/ready` do engine, `/live` da api) e o
    `/config.js` do web apontando para as URLs do cluster.
 6. `oban_queue_depth` com os rótulos `queue` e `state` em `/metrics`.
@@ -129,20 +132,30 @@ escopo. O smoke avisa quando o cluster não faz enforcement.
 
 ### Diagnóstico do deploy {#diagnostico-do-deploy}
 
-#### Pods presos em `Init:CrashLoopBackOff` (Keycloak)
+#### `403` no `/internal/*`, ou `401` nas chamadas da api para o engine
+
+Os dois sintomas têm a mesma causa: o service token não bate entre os lados
+(a api recusa com `403`, o plug do engine com `401`). Confira que as duas
+cargas leem o **mesmo** valor:
 
 ```bash
-kubectl -n brabo logs keycloak-0 -c render-realm
+kubectl -n brabo get secret brabo-secrets -o jsonpath='{.data.BRABO_SERVICE_TOKEN}' | base64 -d | sha256sum
+kubectl -n brabo exec deploy/engine -- sh -c 'printf %s "$BRABO_SERVICE_TOKEN" | sha256sum'
 ```
 
-O initContainer falha de propósito se sobrar marcador não substituído no realm
-— um realm importado pela metade sobe verde e só quebra no login. Verifique se
-o Secret `keycloak-secrets` foi materializado:
+Comparar o hash em vez do valor evita imprimir o segredo no terminal. Se
+divergirem, o pod do engine está com uma versão antiga do Secret: `kubectl -n
+brabo rollout restart deploy/engine`. Se baterem, o cabeçalho não está
+chegando: confira `BRABO_SERVICE_TOKEN` definido nas **duas** cargas — o engine
+tem um default de desenvolvimento (`dev-service-token-change-me`), então
+esquecer a variável só nele produz exatamente este sintoma, sem erro no boot —
+e que nenhum proxy no caminho esteja removendo cabeçalhos desconhecidos.
 
-```bash
-kubectl -n brabo get externalsecret
-kubectl -n brabo describe externalsecret keycloak-secrets
-```
+#### Login devolvendo `401` para todo mundo depois de um deploy
+
+Quase sempre é `AUTH_JWT_SECRET` novo sem a etapa de coexistência: o access
+token some junto, mas o sintoma aparece no refresh. O procedimento correto está
+em [Rotação das chaves do auth](#rotacao-das-chaves-do-auth).
 
 #### `ExternalSecret` não fica Ready
 
@@ -202,11 +215,11 @@ Deve listar os outros pods. Lista vazia com mais de uma réplica é defeito.
 
 ### Segredos: fallback para sealed-secrets
 
-O padrão é External Secrets Operator. Onde ele não for viável, substitua os
-dois `ExternalSecret` de `deploy/k8s/base/common/externalsecrets.yaml` por
-`SealedSecret`, **mantendo os mesmos nomes de Secret (`brabo-secrets`,
-`keycloak-secrets`) e as mesmas chaves** — nada mais no deploy precisa mudar,
-porque tudo consome via `secretRef`.
+O padrão é External Secrets Operator. Onde ele não for viável, substitua o
+`ExternalSecret` de `deploy/k8s/base/common/externalsecrets.yaml` por
+`SealedSecret`, **mantendo o mesmo nome de Secret (`brabo-secrets`) e as mesmas
+chaves** — nada mais no deploy precisa mudar, porque tudo consome via
+`secretRef`.
 
 ```bash
 kubectl create secret generic brabo-secrets \
@@ -225,9 +238,6 @@ versionado. Um Secret plano **nunca** pode.
   significa "um NÓ", não "um pod". Num cluster real esta configuração colocaria
   api e engine em nós diferentes e o `git push` do dev agent falharia com
   `remote unpack failed`.
-- **Keycloak em `start-dev`**, sem rootfs read-only (a augmentação do Quarkus
-  escreve no filesystem no boot). Herdado do
-  [ADR 0024](adr/0024-fase5-imagens-producao-ci.md), limitação 4.
 - **Sem pgvector** no Postgres do CloudNativePG. Hoje nenhuma migration cria a
   extensão e nenhuma coluna `vector` existe.
 
@@ -450,8 +460,12 @@ kubectl -n brabo rollout restart deployment/api deployment/engine
   outra.** O dump traz os DEKs embrulhados, não as chaves. Restaurar num
   ambiente com master key diferente devolve o banco íntegro e as credenciais de
   LLM e git inúteis. Ver [Rotação da chave mestra](#rotacao-da-chave-mestra).
-- **Keycloak** tem banco próprio e não entra neste backup: usuários e realm são
-  recriados pelo import do realm.
+- **Nada de usuários fica de fora.** Desde o corte do Keycloak
+  ([ADR 0032](adr/0032-corte-do-keycloak-e-sessao-em-cookie.md)) não existe
+  banco de IdP separado: identidades, credenciais argon2id, refresh tokens e o
+  event log do auth vivem no mesmo Postgres e entram neste dump. O que **não**
+  sobrevive é a leitura deles se `AUTH_TOKEN_PEPPER` for outro — mesmo
+  raciocínio da master key acima.
 - **PVCs** (`/data/git-repos`, worktrees dos agentes) não são copiados. Os
   repositórios de verdade vivem no GitHub/GitLab; o que se perde é cache de
   trabalho em andamento.
@@ -523,10 +537,11 @@ dump representativo antes de prometer RTO a alguém.
 ## Rotação das chaves do auth {#rotacao-das-chaves-do-auth}
 
 Decisões em
-[ADR 0031](adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.md).
+[ADR 0031](adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.md) e
+[ADR 0032](adr/0032-corte-do-keycloak-e-sessao-em-cookie.md).
 
-O auth first-party tem **dois** segredos, com consequências bem diferentes ao
-serem trocados. Confundir os dois é o erro caro aqui.
+O auth first-party tem **três** segredos, com consequências bem diferentes ao
+serem trocados. Confundir os dois primeiros é o erro caro aqui.
 
 ### `AUTH_JWT_SECRET` — rotação sem downtime
 
@@ -559,6 +574,78 @@ aparente e ver o link de reset "expirado".
 > A api **não** falha ao subir com um pepper novo. Ela simplesmente não
 > reconhece nenhum token antigo. Se o suporte relatar "todo mundo deslogado ao
 > mesmo tempo", esta variável é o primeiro lugar a olhar.
+
+### `BRABO_SERVICE_TOKEN` — rotação sem downtime, nos dois lados
+
+É o segredo compartilhado que autentica o tráfego api ↔ engine
+([RN-035](business-rules.md#rn-035)). Não tem nada a ver com sessão de usuário:
+trocá-lo errado não desloga ninguém, derruba a comunicação interna.
+
+A dança é a mesma do `AUTH_JWT_SECRET`, com a diferença de que ela roda nas
+**duas** cargas — e a ordem importa, porque cada lado envia o atual e aceita
+ambos:
+
+1. `BRABO_SERVICE_TOKEN_PREVIOUS` recebe o valor antigo em **api e engine**;
+   `BRABO_SERVICE_TOKEN` recebe o novo nos dois. Reinicie os dois.
+2. Enquanto os dois estiverem de pé com a variável nova, o tráfego funciona em
+   qualquer combinação de pods velhos e novos — é isso que torna o rollout
+   seguro no meio do caminho.
+3. Concluído o rollout dos dois Deployments, **remova
+   `BRABO_SERVICE_TOKEN_PREVIOUS`** e reinicie.
+
+Pular a etapa 1 e trocar só o valor atual produz `403`/`401` durante toda a
+janela em que sobrar um pod antigo de qualquer lado — o sintoma do
+[diagnóstico acima](#diagnostico-do-deploy).
+
+```bash
+# gere um valor com entropia suficiente; ele nunca precisa ser digitado
+openssl rand -base64 48
+```
+
+### Migração dos usuários do Keycloak {#migracao-dos-usuarios-do-keycloak}
+
+Roda **uma vez**, no release do corte. Senhas não migram — é inviável e
+indesejável ([ADR 0032](adr/0032-corte-do-keycloak-e-sessao-em-cookie.md)): o
+que o script faz é emitir, para cada usuário que veio do Keycloak e ainda não
+tem credencial, um token de **definição de senha** de uso único.
+
+Ele **não conecta no Keycloak**. Desde a Fase 1 a api já mantinha a linha em
+`users` e os vínculos de RBAC no próprio banco; o Keycloak era só o emissor.
+
+```bash
+pnpm --filter api migrate:keycloak-users
+```
+
+Ele imprime uma linha por usuário — `emitido <email> — expira em <ISO>` ou
+`pulado <email> — já tem link válido em aberto` — e o total ao fim.
+
+É idempotente em duas camadas: pula quem já tem linha em `auth_credentials` e
+pula quem já tem um token `set_initial_password` vivo — senão a segunda
+execução invalidaria (por supersede) os links já enviados.
+
+> **O `MailSender` é log-only, e por default NÃO imprime o token.** Log de
+> aplicação vai para o Loki e fica retido por semanas; um token de definição de
+> senha ali é credencial de takeover em texto claro. O que sai é tipo,
+> destinatário e expiração.
+>
+> Sem SMTP configurado, a única forma de extrair os links é ligar
+> `AUTH_MAIL_LOG_TOKENS=true` na api, rodar o script, e **desligar em
+> seguida** — a api emite um `WARN` no boot enquanto a variável estiver ligada,
+> justamente para ela não sobreviver a um ambiente copiado:
+>
+> ```bash
+> kubectl -n brabo logs deploy/api | grep set_initial_password
+> ```
+>
+> Enquanto os links estiverem vivos, trate esse log como segredo: quem o lê
+> pode definir a senha daquelas contas.
+
+Um usuário migrado que tentar logar antes de definir a senha recebe **o mesmo
+401 de sempre**, indistinguível de senha errada ou e-mail inexistente
+([RN-032](business-rules.md#rn-032)) — e, em silêncio, um novo e-mail de
+definição de senha, sob o mesmo throttle do reset. Não há resposta que
+confirme "esta conta é legada": seria o sinal de enumeração mais valioso do
+sistema.
 
 ### Conta travada por lockout
 
