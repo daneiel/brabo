@@ -175,6 +175,21 @@ export interface Ancora {
 }
 
 /**
+ * O que a âncora precisa saber além do sha, para funcionar com merge commit.
+ *
+ * Sem isto a verificação é impossível de passar: promoção é `--no-ff`, o merge
+ * CRIA um commit novo, e o sha de `main` nunca vai ser o sha de `qa`.
+ */
+export interface ContextoDaAncora {
+  /** A árvore do commit de `main` — é o que diz se o CONTEÚDO é o mesmo. */
+  treeDoCommit: string;
+  /** A árvore de cada tag, para comparar com a da última `-qa.N`. */
+  treePorTag: Record<string, string>;
+  /** Os pais do commit de `main`. */
+  paisDoCommit: string[];
+}
+
+/**
  * A tag final SÓ pode nascer no commit da última `-qa.N` daquela versão.
  *
  * É a verificação que impede publicar algo diferente do que foi validado. Sem
@@ -186,6 +201,7 @@ export function verificarAncora(
   tags: string[],
   shaPorTag: Record<string, string>,
   shaDoCommit: string,
+  contexto?: ContextoDaAncora,
 ): Ancora {
   const doEstagio = tags
     .map((t) => ({ tag: t, lida: lerTagDeEstagio(t) }))
@@ -212,19 +228,70 @@ export function verificarAncora(
     };
   }
 
-  if (shaDaUltima !== shaDoCommit) {
+  // Caso 1: o mesmo commit. Acontece num fast-forward.
+  if (shaDaUltima === shaDoCommit) return { ok: true, tagEsperada: ultima.tag };
+
+  // Caso 2: MERGE COMMIT — o normal, porque promoção é `--no-ff`.
+  //
+  // Aqui os shas NUNCA vão bater: o merge cria um commit novo. O que precisa
+  // valer são duas coisas, e juntas elas são mais fortes que igualdade de sha:
+  //
+  //   a) a `-qa.N` é PAI direto do commit — foi ela que entrou, não um
+  //      ancestral qualquer que passou por perto;
+  //   b) a ÁRVORE é idêntica — o conteúdo publicado é byte a byte o que foi
+  //      validado, mesmo o merge tendo dois lados.
+  //
+  // (b) é o que realmente importa: se o outro lado do merge trouxesse um
+  // arquivo, a árvore mudaria e a verificação reprovaria — que é exatamente o
+  // caso que a âncora existe para pegar.
+  if (contexto) {
+    const ehPai = contexto.paisDoCommit.includes(shaDaUltima);
+    const treeDaUltima = contexto.treePorTag[ultima.tag];
+
+    if (treeDaUltima === undefined) {
+      return {
+        ok: false,
+        tagEsperada: ultima.tag,
+        motivo: `não consegui resolver a árvore de \`${ultima.tag}\` — verificação impossível, e por isso reprovada.`,
+      };
+    }
+
+    if (ehPai && treeDaUltima === contexto.treeDoCommit) {
+      return { ok: true, tagEsperada: ultima.tag };
+    }
+
+    if (!ehPai) {
+      return {
+        ok: false,
+        tagEsperada: ultima.tag,
+        motivo:
+          `\`${ultima.tag}\` (${shaDaUltima.slice(0, 8)}) NÃO é pai do commit de ` +
+          `\`main\` (${shaDoCommit.slice(0, 8)}).\n` +
+          `  A promoção não trouxe esse commit direto: algo entrou no meio do\n` +
+          `  caminho, e a final carimbaria como aprovado um estado que ninguém\n` +
+          `  validou.`,
+      };
+    }
+
     return {
       ok: false,
       tagEsperada: ultima.tag,
       motivo:
-        `o commit de \`main\` (${shaDoCommit.slice(0, 8)}) NÃO é o de ` +
-        `\`${ultima.tag}\` (${shaDaUltima.slice(0, 8)}).\n` +
-        `  Algo entrou entre a validação em \`qa\` e a publicação. A tag final\n` +
-        `  carimbaria como aprovado um código que ninguém aprovou.`,
+        `a árvore de \`main\` (${contexto.treeDoCommit.slice(0, 8)}) difere da de ` +
+        `\`${ultima.tag}\` (${treeDaUltima.slice(0, 8)}).\n` +
+        `  O merge trouxe conteúdo do outro lado, então o que seria publicado\n` +
+        `  NÃO é o que passou por \`qa\`.`,
     };
   }
 
-  return { ok: true, tagEsperada: ultima.tag };
+  return {
+    ok: false,
+    tagEsperada: ultima.tag,
+    motivo:
+      `o commit de \`main\` (${shaDoCommit.slice(0, 8)}) NÃO é o de ` +
+      `\`${ultima.tag}\` (${shaDaUltima.slice(0, 8)}), e não recebi a árvore nem\n` +
+      `  os pais para verificar a promoção por merge commit.`,
+  };
 }
 
 // -------------------------------------------------------------- a promoção

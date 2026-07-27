@@ -143,18 +143,55 @@ describe('âncora da tag final', () => {
     'v0.2.0-qa.2': 'dddd4444',
   };
 
-  it('aprova quando o commit é o da ÚLTIMA -qa.N', () => {
+  it('aprova quando o commit é o da ÚLTIMA -qa.N (fast-forward)', () => {
     const r = verificarAncora('v0.2.0', tags, shas, 'dddd4444');
     expect(r.ok).toBe(true);
     expect(r.tagEsperada).toBe('v0.2.0-qa.2');
   });
 
-  it('REPROVA commit divergente, dizendo os dois shas', () => {
+  // O caso NORMAL: promoção é `--no-ff`, então o sha de main nunca é o de qa.
+  const contexto = {
+    treeDoCommit: 'tree-igual',
+    treePorTag: { 'v0.2.0-qa.2': 'tree-igual', 'v0.2.0-qa.1': 'tree-antiga' },
+    paisDoCommit: ['mainvelha', 'dddd4444'],
+  };
+
+  it('aprova MERGE COMMIT: a -qa.N é pai e a árvore é idêntica', () => {
+    const r = verificarAncora('v0.2.0', tags, shas, 'merge999', contexto);
+    expect(r.ok).toBe(true);
+    expect(r.tagEsperada).toBe('v0.2.0-qa.2');
+  });
+
+  it('REPROVA merge cuja árvore difere — o outro lado trouxe conteúdo', () => {
+    const r = verificarAncora('v0.2.0', tags, shas, 'merge999', {
+      ...contexto,
+      treeDoCommit: 'tree-diferente',
+    });
+    expect(r.ok).toBe(false);
+    expect(r.motivo).toContain('árvore');
+    expect(r.motivo).toContain('NÃO é o que passou');
+  });
+
+  it('REPROVA merge em que a -qa.N não é pai — entrou algo no meio', () => {
+    const r = verificarAncora('v0.2.0', tags, shas, 'merge999', {
+      ...contexto,
+      paisDoCommit: ['mainvelha', 'outracoisa'],
+    });
+    expect(r.ok).toBe(false);
+    expect(r.motivo).toContain('NÃO é pai');
+  });
+
+  it('sem contexto, sha diferente reprova dizendo que faltou a árvore', () => {
+    const r = verificarAncora('v0.2.0', tags, shas, 'merge999');
+    expect(r.ok).toBe(false);
+    expect(r.motivo).toContain('não recebi a árvore');
+  });
+
+  it('REPROVA commit divergente sem contexto, dizendo os dois shas', () => {
     const r = verificarAncora('v0.2.0', tags, shas, 'eeee5555');
     expect(r.ok).toBe(false);
     expect(r.motivo).toContain('eeee5555');
     expect(r.motivo).toContain('dddd4444');
-    expect(r.motivo).toContain('ninguém aprovou');
   });
 
   it('REPROVA o commit de uma -qa ANTERIOR — vale a última, não qualquer uma', () => {
