@@ -1,6 +1,7 @@
 {
   "name": "brabo",
   "private": true,
+  "license": "MIT",
   "version": "0.1.0",
   "packageManager": "pnpm@11.3.0",
   "scripts": {
@@ -17,6 +18,18 @@
     "engine:setup": "cd apps/engine && mix deps.get && mix ecto.create && mix ecto.migrate",
     "engine:dev": "cd apps/engine && mix phx.server",
     "engine:test": "cd apps/engine && mix test",
-    "engine:migrate": "cd apps/engine && mix ecto.migrate"
+    "engine:migrate": "cd apps/engine && mix ecto.migrate",
+    "docs:start": "pnpm --filter website start",
+    "docs:build": "pnpm --filter website build",
+    "docs:serve": "pnpm --filter website serve",
+    "docs:clear": "pnpm --filter website clear",
+    "docs:generate": "node scripts/docs/generate.mjs",
+    "docs:check": "node scripts/docs/docmap.mjs && node scripts/docs/generate.mjs --check",
+    "docs:drift": "node scripts/docs/drift.mjs",
+    "docs:audit": "node scripts/docs/audit.mjs"
+  },
+  "devDependencies": {
+    "picomatch": "^4.0.5",
+    "yaml": "^2.9.0"
   }
 }

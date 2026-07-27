@@ -24,41 +24,39 @@ e pipeline de aprovação de ações com autoridade final do usuário.
   propositivo), trava de merge protegido, painel do time ao vivo;
   Psicólogo real com hipóteses evidenciadas e Anamnese com
   proficiency_profile, instruction_patches versionados com rollback e
-  loop fechado com o Psicólogo.
-- FASE 5 — CONCLUÍDA: imagens de produção non-root e CI (ADR 0024);
-  deploy Kubernetes com Kustomize, HPA por fila do Oban, NetworkPolicies
-  e secrets via ESO (ADR 0025); graceful shutdown com handoff de sessão,
-  OpenTelemetry ponta a ponta, métricas e dashboards (ADR 0026); backup
-  agendado com restore TESTADO (`make test-restore`), runbooks
-  operacionais, hardening da api (rate limit, CORS estrito, helmet,
-  auditoria de dependências) e superfície exposta verificada por teste
-  (ADR 0027).
+  loop fechado com o Psicólogo. Gates destravados e validados por
+  execução real (ADR 0020).
+- FASE 5 — CONCLUÍDA: imagens de produção non-root e CI (ADR 0024),
+  deploy Kubernetes com Kustomize, HPA por fila do Oban,
+  NetworkPolicies e ESO (ADR 0025), graceful shutdown + OpenTelemetry
+    + métricas e dashboards (ADR 0026), backup com restore testado,
+      runbooks e hardening da api (ADR 0027).
 - Não refatore o que está pronto sem pedido explícito.
 
-## Escopo da FASE 5 (CONCLUÍDA — mantido como registro do que foi entregue)
-1. Imagens de produção multi-stage para api, engine e web (web via
-   nginx com config SPA); rtk, semgrep, gitleaks e hadolint na imagem
-   do engine; imagens non-root, read-only fs onde possível.
-2. CI do próprio Brabo: pipeline (GitHub Actions) com lint, testes,
-   build das imagens, scan de imagem e de segredos; obrigatório verde
-   para merge em dev.
-3. Deploy Kubernetes: chart Helm OU Kustomize base+overlays (escolher
-   e registrar em ADR) cobrindo api/engine/web/Keycloak, Postgres
-   externo configurável, HPA do engine por profundidade de fila do
-   Oban (métrica exposta), PDBs, NetworkPolicies (web→api→db;
-   engine→api→db), secrets via External Secrets ou sealed-secrets.
-4. Graceful shutdown do engine: preStop drena sessões ativas
-   (transição closing com causa node_shutdown) antes do SIGTERM;
-   rollout NUNCA gera sessão órfã.
-5. Observabilidade: OpenTelemetry em api e engine com trace por sessão
-   (uma sessão = uma trace raiz atravessando api↔engine), métricas
-   Prometheus (tokens/min e custo/hora por projeto, fila Oban, sessões
-   ativas, taxa de aprovação de ações, tasks blocked) e dashboards
-   Grafana provisionados como código.
-6. Backup e restore: pg_dump agendado com retenção, runbook de restore
-   TESTADO em docs/runbooks/.
-7. Hardening da api: rate limit, headers de segurança na web, CORS
-   estrito, auditoria de dependências no CI.
+## Escopo da FASE DOC (ativa — somente documentação)
+Executar a missão de documentação (prompt dedicado) respeitando os
+pontos de parada dela. Regras desta fase:
+- NENHUMA mudança de comportamento de runtime. Bug encontrado durante
+  a recon vira issue, nunca fix embutido.
+- Código novo permitido: scripts de docs:generate, workflows de CI de
+  docs, scaffold do website/ (Docusaurus). Nada além.
+- docs/adr/ existentes (0001+) são fonte primária e INTOCÁVEIS: nunca
+  renumerar, reescrever ou "melhorar". A missão apenas gera o index
+  deles e, se reconstruir decisões pré-ADR-0001 do histórico git,
+  numera em sequência livre no fim.
+- Fonte de verdade do Markdown: docs/ na raiz; website/ apenas LÊ de
+  lá via path — nunca criar website/docs/.
+- Gerenciador de pacotes: pnpm em tudo (scripts docs:* na raiz
+  delegando para website/); nada de npm --prefix.
+- PRs de doc miram dev como qualquer PR; deploy do site de docs só em
+  push em main (doc publicada acompanha release).
+- Referências geradas obrigatórias além de env vars e scripts:
+  catálogo de tipos de evento do event log, schemas de artefato
+  (Engine.Harness.ArtifactSchemas), types de proposed_action e formato
+  do permissions.json.
+- A tabela de ambiente de inferência do ADR 0020 (GPU, contexto do
+  Ollama, residência de modelos, purga de fila Oban) é promovida a
+  docs/runbook.md.
 
 ## Stack (decidida — não proponha alternativas)
 - `apps/api`: NestJS 11 + Drizzle ORM + PostgreSQL 16 + pgvector
@@ -67,10 +65,13 @@ e pipeline de aprovação de ações com autoridade final do usuário.
 - Monorepo pnpm (TS) com apps/engine Elixir ao lado; Docker Compose para dev
 - Auth: Keycloak (OIDC) em container; autorização RBAC no domínio da api
 - Deploy: Kubernetes (k3d/kind em validação local)
+- Docs: Docusaurus 3.x em website/ lendo de docs/; Mermaid para
+  diagramas; busca local
 
 ## Convenções
 - Branches permanentes: dev, qa, rc, main. Trabalhe SEMPRE em branch
-  feature/* a partir de dev. Commits em conventional commits, pt-BR.
+  feature/* a partir de dev (doc-only usa docs/*). Commits em
+  conventional commits, pt-BR.
 - Comunicação api ↔ engine: eventos via Postgres (transactional outbox na
   api, Oban no engine) + HTTP interno para comandos síncronos.
 - Todo evento de domínio é imutável: nunca UPDATE em tabelas de eventos.
@@ -84,6 +85,9 @@ e pipeline de aprovação de ações com autoridade final do usuário.
   usuário — sem opção de automatizar, garantido por teste.
 - Commits de agentes usam identidade "<agente>[bot]" com o usuário
   como co-author.
+- Todo desfecho de falha de agente registra a ORIGEM da falha
+  (infra | modelo | código | política) — nunca diagnóstico por
+  eliminação (lição do ADR 0020).
 - Testes: vitest (api/web), ExUnit (engine). Nenhuma feature sem teste do
   caminho feliz + 1 caso de falha. Providers de git validados pela suite
   de contrato única.
@@ -93,9 +97,38 @@ e pipeline de aprovação de ações com autoridade final do usuário.
   com envelope encryption; nunca em plaintext no banco ou em logs.
 - Decisões arquiteturais relevantes registradas em docs/adr/.
 
+## Documentação é parte da definição de pronto (permanente)
+- Ao alterar código, consulte docs/.docmap.yml e atualize os docs
+  mapeados NA MESMA mudança, mostrando o diff da doc junto com o do
+  código. Não pergunte se deve fazer — faça.
+- Fonte de verdade do Markdown: docs/ na raiz. NUNCA crie website/docs/
+  — o site lê de docs/ via path.
+- Arquivos generated: true no docmap são gerados por pnpm docs:generate
+  — nunca editados à mão (o próximo build sobrescreve). Se o gerador
+  marcar algo como "sem descrição acima", é lacuna real: escreva a
+  descrição na prosa.
+- Mudança de comportamento observável → entrada em CHANGELOG.md
+  (Unreleased).
+- Mudança estrutural (fronteira de camada, banco, modelo de
+  consistência, dependência pesada) → ADR novo com o próximo número.
+  ADR aceito NUNCA é editado: o novo referencia o antigo.
+- Regra de negócio nova → RN-XXX em docs/business-rules.md com
+  arquivo:linha e o teste que a cobre.
+- Antes de finalizar: pnpm docs:check e pnpm docs:build verdes (glob
+  morto, gerado fora de dia e link quebrado reprovam).
+- Nunca inventar conteúdo de doc: sem informação suficiente, use
+  > **TODO(humano):** <pergunta específica>.
+- Diagramas em Mermaid no próprio Markdown. Nunca imagem de diagrama.
+- O mecanismo inteiro está explicado em
+  docs/explanation/documentation-workflow.md — leia antes de desligar
+  qualquer peça dele.
+
 ## O que NÃO fazer
 - Não usar Redis (filas ficam no Postgres via Oban)
 - Não implementar Bitbucket nem GenericGitProvider (backlog futuro)
-- Não adicionar features de produto nesta fase — só produção
-- Não instalar libs sem justificar no plano
-- Não refatorar código das Fases 1–4 fora do necessário para a Fase 5
+- Não adicionar features de produto nesta fase — só documentação e
+  seus mecanismos
+- Não alterar comportamento de runtime nesta fase
+- Não instalar libs sem justificar no plano (exceção pré-aprovada:
+  dependências do Docusaurus 3.x e do tooling de docs:generate)
+- Não refatorar código das Fases 1–5

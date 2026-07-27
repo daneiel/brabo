@@ -1,0 +1,78 @@
+name: Guardião da documentação
+
+# Roda em todo PR. Três perguntas, nesta ordem de custo:
+#   1. o mapa de responsabilidade está íntegro? (segundos)
+#   2. o que é gerado está em dia? (segundos)
+#   3. o PR atualizou a doc que deveria? (segundos)
+#   4. o site constrói sem link quebrado? (minutos — fica por último)
+on:
+  pull_request:
+  schedule:
+    # Segunda, 06:00 UTC — só o check de links externos.
+    - cron: '0 6 * * 1'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: docs-check-${{ github.head_ref }}
+  cancel-in-progress: true
+
+jobs:
+  guardiao:
+    name: Drift, gerados e build
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # O drift check compara com a branch base; sem histórico o range
+          # `origin/<base>...HEAD` não resolve.
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Glob que não casa com nada é regra morta: nunca dispara e finge
+      # cobertura. Falha rápido, antes de qualquer coisa cara.
+      - name: Integridade do .docmap.yml
+        run: node scripts/docs/docmap.mjs
+
+      # Se o gerado difere do commitado, alguém editou à mão ou esqueceu de
+      # rodar o gerador. Nos dois casos o repositório está mentindo.
+      - name: Gerados em dia
+        run: |
+          node scripts/docs/generate.mjs --check || {
+            echo '::error::Documentação gerada fora de dia. Rode `pnpm docs:generate` e commite.'
+            exit 1
+          }
+
+      - name: Drift check
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+        run: node scripts/docs/drift.mjs "origin/${{ github.base_ref }}...HEAD"
+
+      # onBrokenLinks / onBrokenAnchors / onBrokenMarkdownLinks são 'throw':
+      # link quebrado e MDX inválido reprovam aqui, não viram 404 em produção.
+      - name: Build do site
+        run: pnpm docs:build
+
+  # Links EXTERNOS não entram no PR: site de terceiro fora do ar não pode
+  # reprovar o trabalho de ninguém. Vira relatório semanal.
+  links-externos:
+    name: Links externos (semanal)
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: lycheeverse/lychee-action@v2
+        with:
+          args: --no-progress --exclude-mail --accept 200,206,429 './docs/**/*.md' './*.md'
+          fail: false

@@ -1,0 +1,66 @@
+/**
+ * Alinhado ao design system em `design/tokens.css`: paleta petróleo + areia,
+ * acento terracota, dark como modo primário. Os valores são COPIADOS, não
+ * importados — o `tokens.css` é do app React e traz muita coisa que o site de
+ * documentação não usa. Se a paleta mudar lá, atualize aqui.
+ */
+
+:root {
+  --ifm-color-primary: #c4552d;
+  --ifm-color-primary-dark: #b04d29;
+  --ifm-color-primary-darker: #a5451f;
+  --ifm-color-primary-darkest: #883a1a;
+  --ifm-color-primary-light: #d6633a;
+  --ifm-color-primary-lighter: #e37b4e;
+  --ifm-color-primary-lightest: #e98d66;
+
+  --ifm-background-color: #ffffff;
+  --ifm-font-color-base: #0a2e3d;
+  --ifm-heading-color: #061b24;
+
+  --ifm-code-font-size: 92%;
+  --ifm-code-background: #efe4d2;
+  --docusaurus-highlighted-code-line-bg: rgba(10, 46, 61, 0.1);
+}
+
+[data-theme='dark'] {
+  --ifm-color-primary: #d6633a;
+  --ifm-color-primary-dark: #c4552d;
+  --ifm-color-primary-darker: #b04d29;
+  --ifm-color-primary-darkest: #a5451f;
+  --ifm-color-primary-light: #e37b4e;
+  --ifm-color-primary-lighter: #e98d66;
+  --ifm-color-primary-lightest: #efa07e;
+
+  --ifm-background-color: #061b24;
+  --ifm-background-surface-color: #0a2e3d;
+  --ifm-font-color-base: #f5ede0;
+  --ifm-heading-color: #f5ede0;
+
+  --ifm-code-background: #03141b;
+  --docusaurus-highlighted-code-line-bg: rgba(245, 237, 224, 0.12);
+}
+
+/* Tabela é o formato dominante nesta documentação (env vars, rotas, eventos,
+   sintoma → causa). O default do Infima deixa as células apertadas demais pra
+   tabela de referência longa. */
+.markdown table th,
+.markdown table td {
+  padding: 0.6rem 0.75rem;
+  vertical-align: top;
+}
+
+/* Diagramas Mermaid renderizam no CLIENTE — sem altura mínima a página pula
+   quando eles aparecem. */
+.docusaurus-mermaid-container {
+  display: flex;
+  justify-content: center;
+  margin: 1.75rem 0;
+  min-height: 120px;
+}
+
+/* Os blocos `> **TODO(humano):**` marcam lacuna reconhecida. Destacá-los é
+   intencional: dívida de documentação visível é dívida que é paga. */
+.markdown blockquote {
+  border-left-color: var(--ifm-color-primary);
+}

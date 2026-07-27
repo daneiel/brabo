@@ -1,0 +1,60 @@
+name: Auditoria de documentação
+
+# Mensal. O drift check pega doc que ficou ERRADA num PR; isto pega doc que
+# ficou VELHA sem ninguém encostar — que é o modo de falha mais silencioso.
+#
+# UMA issue, sempre a mesma, atualizada a cada rodada. Abrir issue nova todo
+# mês transforma o mecanismo em spam, e spam é desligado.
+on:
+  schedule:
+    - cron: '0 7 1 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  auditar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # A auditoria pergunta "quando esta página mudou pela última vez?" —
+          # sem histórico completo, a resposta é sempre "hoje".
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Gerar relatório
+        id: relatorio
+        run: |
+          node scripts/docs/audit.mjs > /tmp/audit.md
+          cat /tmp/audit.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Abrir ou atualizar a issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TITULO="Auditoria de documentação"
+
+          EXISTENTE=$(gh issue list --label docs --state open \
+            --search "$TITULO in:title" --json number,title \
+            --jq "[.[] | select(.title == \"$TITULO\")] | first | .number // empty")
+
+          if [ -n "$EXISTENTE" ]; then
+            gh issue edit "$EXISTENTE" --body-file /tmp/audit.md
+            gh issue comment "$EXISTENTE" --body \
+              "Relatório atualizado em $(date -u +%Y-%m-%d). O corpo da issue tem o estado atual."
+            echo "Issue #$EXISTENTE atualizada."
+          else
+            gh issue create --title "$TITULO" --label docs --body-file /tmp/audit.md
+            echo "Issue criada."
+          fi

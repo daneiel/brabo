@@ -1,0 +1,80 @@
+name: Documentação
+
+# Duas coisas diferentes num arquivo só:
+#   - em PR, BUILD sem deploy — pega link quebrado e erro de MDX antes do merge
+#   - em push na main, build + deploy — doc publicada acompanha release
+on:
+  push:
+    branches: [main]
+    paths: ['docs/**', 'website/**', '.github/workflows/docs-deploy.yml']
+  pull_request:
+    paths: ['docs/**', 'website/**', '.github/workflows/docs-deploy.yml']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build do site
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # showLastUpdateTime/Author leem o git. Sem histórico completo toda
+          # página fica com a data do checkout, que é pior que nenhuma data.
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Cache do Rspack
+        uses: actions/cache@v4
+        with:
+          path: website/node_modules/.cache
+          key: rspack-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('docs/**') }}
+          restore-keys: |
+            rspack-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+            rspack-${{ runner.os }}-
+
+      # onBrokenLinks/onBrokenAnchors/onBrokenMarkdownLinks são 'throw':
+      # link quebrado reprova aqui, não vira 404 em produção.
+      - run: pnpm docs:build
+
+      - name: Publicar artefato
+        if: github.event_name == 'push'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: website/build
+
+  deploy:
+    name: Publicar no GitHub Pages
+    if: github.event_name == 'push'
+    needs: build
+    runs-on: ubuntu-latest
+
+    permissions:
+      pages: write
+      id-token: write
+
+    # Só um deploy por vez, e sem cancelar um que já começou a publicar.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

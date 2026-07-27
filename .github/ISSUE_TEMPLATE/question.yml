@@ -1,0 +1,34 @@
+name: Dúvida de uso
+description: Perguntas do tipo "como faço X?" ou "isto é esperado?"
+labels: ["question", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Este template existe porque o Discussions está desabilitado neste
+        repositório. Se for habilitado, dúvida de uso passa a ser lá.
+
+        Antes de perguntar, dois lugares que respondem a maior parte:
+        [Primeiros passos](https://github.com/daneiel/brabo/blob/dev/docs/getting-started.md)
+        para setup, e o
+        [Runbook](https://github.com/daneiel/brabo/blob/dev/docs/runbook.md)
+        para operação — os dois têm tabela de sintoma → causa.
+
+  - type: textarea
+    id: pergunta
+    attributes:
+      label: Sua pergunta
+    validations:
+      required: true
+
+  - type: textarea
+    id: tentativa
+    attributes:
+      label: O que você já tentou
+      description: E o que aconteceu. Ajuda a não sugerir o que você já descartou.
+
+  - type: input
+    id: versao
+    attributes:
+      label: Versão
+      placeholder: v0.1.0
