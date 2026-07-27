@@ -65,6 +65,45 @@ o owner não consegue aprovar o próprio PR pela interface, e o PR ficaria
 travado para sempre. A exigência real vive no `approval-ladder`, que é um check
 required — e check required não se burla.
 
+### As duas configurações, lado a lado
+
+O ruleset é o **mesmo** nos dois modos. O que muda é a variável — e é por isso
+que a migração não passa por Settings → Rules.
+
+| | `solo` (hoje) | `community` (futuro) |
+|---|---|---|
+| **Required approvals no ruleset** | **0** | **0** |
+| quem exige | o check `Escada de aprovação` | o mesmo check |
+| variáveis | `APPROVAL_MODE=solo`, `OWNER_HANDLE` | `APPROVAL_MODE=community`, `APROVADORES_*` |
+| `dev` | 1 do owner | 1 × devs |
+| `qa` | 1 do owner | 2 × devs |
+| `rc` | 1 do owner | 1 × qualidade + 1 × devs |
+| `main` | 1 do owner | 1 × PO + 1 × gestão |
+| PR do próprio owner | passa sem review | segue a escada como qualquer um |
+| pessoas distintas | suspensa | vale em `rc` e `main` |
+
+**Required approvals fica em 0 nos dois casos, e isso é deliberado.** O GitHub
+só sabe contar: ele não distingue `dev` de `main`, não sabe de papéis, e não
+sabe que no modo solo o PR do próprio owner passa sem review. Pôr `1` ali
+**quebraria o modo solo** — o owner não consegue aprovar o próprio PR pela
+interface, e todo PR dele ficaria travado para sempre. A exigência real vive no
+check, que é required e não se burla.
+
+Copy-paste para ativar cada modo:
+
+```bash
+# solo — o que vale hoje
+gh variable set APPROVAL_MODE --body solo
+gh variable set OWNER_HANDLE  --body daneiel
+
+# community — preencher as listas ANTES de virar a chave
+gh variable set APROVADORES_DEVS      --body "ana,bruno,carla"
+gh variable set APROVADORES_QUALIDADE --body "quim"
+gh variable set APROVADORES_PO        --body "paula"
+gh variable set APROVADORES_GESTAO    --body "gustavo"
+gh variable set APPROVAL_MODE         --body community
+```
+
 ### Checks obrigatórios
 
 Nome **exato**, como o GitHub o registra (é o `name:` do job, não o do
@@ -73,6 +112,7 @@ workflow):
 | check | workflow |
 |---|---|
 | `Política de branches` | `pr-police.yml` |
+| `Escada de aprovação` | `approval-ladder.yml` |
 | `Lint` | `ci.yml` |
 | `Testes TS (api + web)` | `ci.yml` |
 | `Testes do engine (ExUnit)` | `ci.yml` |

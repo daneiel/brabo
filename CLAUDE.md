@@ -61,10 +61,13 @@ repositório do Brabo:
       branching-policy.md). A exigência de pessoas distintas fica
       SUSPENSA e documentada como suspensa.
     - community (futuro, implementado e testado desde já, ativado só
-      por config): a escada completa por destino via times — dev: 1
-      dev · qa: 2 devs · rc: 1 qualidade + 1 dev · main: 1 PO + 1
-      gestor; pessoas distintas em rc e main; nomes dos times em
-      variáveis de repositório.
+      por config): a escada completa por destino — dev: 1 dev · qa: 2
+      devs · rc: 1 qualidade + 1 dev · main: 1 PO + 1 gestor; pessoas
+      distintas em rc e main. Papéis são LISTAS DE HANDLES em variáveis
+      de repositório (APROVADORES_DEVS, _QUALIDADE, _PO, _GESTAO), NÃO
+      times do GitHub: times só existem em organização, este repo é de
+      usuário, e o GITHUB_TOKEN não lê membership de time nem em org.
+      Com listas, community é ativável hoje e o flip é demonstrável.
       Regras comuns aos dois modos: só reviews APPROVED no último commit
       contam; o resumo do check mostra o modo ativo, quem aprovou e o que
       falta. A troca solo→community é APENAS mudar variáveis — com teste
@@ -77,12 +80,16 @@ repositório do Brabo:
 5. Versionamento calculado, nunca manual: tags v X.Y.Z-dev.N/-qa.N/
    -rc.N/final criadas por workflow no merge; N incrementa por
    reprovação no ciclo; tag final DEVE apontar para o commit da última
-   -rc.N (verificação com falha ruidosa).
-6. Deploy por branch: merge em permanente → deploy por TAG no overlay
-   Kustomize do ambiente (desenvolvimento|homologacao|preprod|
-   producao), reutilizando a Fase 5; GitHub Environments espelhando a
-   escada, producao com required reviewers (docs/reference/
-   environments.md, aplicação manual).
+   -rc.N (verificação com falha ruidosa). A tag é o registro do que
+   ESTARIA em cada ambiente — vale mesmo sem deploy.
+6. Deploy DESLIGADO por ora (variável DEPLOY_ENABLED=false): o
+   workflow de tag termina na tag; o passo de deploy existe no
+   workflow, testado a seco, mas só executa com a variável ligada.
+   Validação local por make deploy-local (Fase 5) consumindo uma tag
+   como referência. GitHub Environments NÃO são criados agora; a
+   configuração futura fica documentada em docs/reference/
+   environments.md como "quando houver ambientes". Ligar deploy no
+   futuro = criar environments + flipar a variável, sem mudar código.
 7. Backmerge gate: .release/gate.json (locked[], awaiting, order[],
    acúmulo) escrito por workflow no merge de hotfix (trava rc,qa,dev)
    e rcfix (trava qa,dev) — única exceção de escrita direta, pelo bot,
@@ -98,9 +105,11 @@ repositório do Brabo:
    APPROVAL_MODE=solo); plantão de hotfix = owner (a questão reabre na
    migração para community, onde o fallback deve ser exceção documentada
    no mapa de exigências, nunca burla). O documento deve conter a seção
-   "Migração para modo community": pré-requisitos (times criados e
-   populados, critério de quem vira administrador — alinhado ao
-   GOVERNANCE.md da FASE DOC) e o passo a passo da troca de variáveis.
+   "Migração para modo community": pré-requisitos (listas de aprovadores
+   preenchidas por papel, critério de quem entra em cada uma) e o passo
+   a passo da troca de variáveis. O GOVERNANCE.md citado antes como
+   fonte do critério NÃO existe — foi cortado no escopo da FASE DOC; ou
+   ele é escrito, ou o critério mora no branching-policy.md.
 
 ## Stack (decidida — não proponha alternativas)
 - `apps/api`: NestJS 11 + Drizzle ORM + PostgreSQL 16 + pgvector
