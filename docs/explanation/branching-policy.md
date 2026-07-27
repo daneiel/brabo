@@ -392,3 +392,9 @@ pode exercê-la e o que fica registrado depois —, nunca uma burla informal.
 > da apresentação original da política. Se a apresentação disser algo que aqui
 > não está — SLA de retropropagação, papéis nomeados, política de branch
 > obsoleta —, confira e complete.
+
+---
+
+<sub>Esteira exercitada de ponta a ponta em 2026-07-27: `v0.2.0-dev.1` → `-dev.2`
+→ `-qa.1` → `-qa.2` → final, com uma reprovação encenada entre os dois carimbos
+de `qa` para provar que o `N` conta sozinho.</sub>
