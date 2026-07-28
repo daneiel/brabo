@@ -6,6 +6,22 @@ import { themes as prismThemes } from 'prism-react-renderer';
 // o site publicado sai de `main` (ver CLAUDE.md).
 const EDIT_BRANCH = 'dev';
 
+// PUBLICAÇÃO POR DEGRAU. Cada permanente publica no seu próprio lugar dentro do
+// mesmo GitHub Pages: `main` na raiz, `qa` e `dev` em subdiretório. Quem decide
+// é o `docs-deploy.yml`, passando `DOCS_BASE_URL`.
+//
+// Não é preferência de estilo: o `baseUrl` entra em TODA URL de asset que o
+// Docusaurus emite. Um site servido de `/brabo/dev/` com `baseUrl: '/brabo/'`
+// carrega HTML e nada mais — CSS, JS e busca dão 404, e a página parece
+// "quebrada sem erro".
+//
+// O default é o de produção, então rodar `pnpm docs:build` sem variável nenhuma
+// continua produzindo exatamente o que sempre produziu.
+const BASE_URL = process.env.DOCS_BASE_URL ?? '/brabo/';
+
+// `main` é a documentação real; `dev` e `qa` são pré-visualização do degrau.
+const E_PRODUCAO = BASE_URL === '/brabo/';
+
 const config: Config = {
   title: 'Brabo',
   tagline:
@@ -13,10 +29,16 @@ const config: Config = {
   favicon: 'img/favicon.ico',
 
   url: 'https://daneiel.github.io',
-  baseUrl: '/brabo/',
+  baseUrl: BASE_URL,
   organizationName: 'daneiel',
   projectName: 'brabo',
   trailingSlash: false,
+
+  // `dev` e `qa` saem do índice de busca. São o MESMO conteúdo da produção em
+  // outro estágio de maturidade: indexados, competiriam com a documentação real
+  // nos resultados, e quem chegasse pelo Google leria a versão não validada sem
+  // perceber. A raiz continua indexável.
+  noIndex: !E_PRODUCAO,
 
   // Link quebrado é FALHA, não aviso. É o mecanismo mais barato que existe
   // contra documentação apodrecendo: mover um arquivo sem corrigir quem
@@ -100,6 +122,21 @@ const config: Config = {
         indexBlog: false,
         docsRouteBasePath: '/',
         highlightSearchTermsOnTargetPage: true,
+        // OBRIGATÓRIO junto do `noIndex` acima, e a interação não é óbvia: o
+        // plugin descarta toda página que tenha
+        // `<meta name="robots" content="noindex">` (`parse.js`, "Unlisted
+        // content"), que é exatamente o que o `noIndex` emite. Sem esta linha, os
+        // degraus `dev` e `qa` publicariam com a busca MORTA — índice de 666
+        // bytes, `documents: []`, e a caixa de busca respondendo "No results"
+        // para qualquer termo.
+        //
+        // Medido, não suposto: com `noIndex` e sem esta opção, 0 documentos
+        // indexados; a produção, que não tem `noIndex`, indexa 2318.
+        //
+        // As duas coisas não se contradizem: `noIndex` fala com buscador
+        // EXTERNO, esta opção fala com o índice LOCAL. Querer os degraus fora do
+        // Google não é querer os degraus sem busca.
+        forceIgnoreNoIndex: true,
       },
     ],
   ],

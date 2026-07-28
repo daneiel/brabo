@@ -126,15 +126,27 @@ tivemos neste trimestre?" sem arqueologia de git.
 ## Push direto é bloqueado
 
 Nenhuma das três permanentes aceita push direto. Toda mudança entra por PR.
-É a **porta única** — e ela tem exatamente duas exceções, ambas de robô, ambas
+É a **porta única** — e ela tem exatamente três exceções, todas de robô, todas
 escritas aqui porque exceção que não está documentada vira precedente:
 
 | exceção | quem | por quê |
 |---|---|---|
 | tags `v*` | `brabo-release[bot]` | versão nasce de workflow, nunca da mão |
 | `.release/gate.json` em `main` | `brabo-release[bot]` | o gate precisa se escrever ao travar e ao destravar |
+| a branch `gh-pages` | `github-actions[bot]` | publicar documentação por degrau exige árvore mutável ([ADR 0034](../adr/0034-documentacao-publicada-por-degrau.md)) |
 
-A segunda é a mais desconfortável das duas, então vale dizer por que ela existe
+**A terceira é a mais fácil de aceitar das três, e é importante dizer por quê,
+para que ela não sirva de precedente para as difíceis.** A `gh-pages` **não é
+branch de código**: nada nela é fonte, tudo é gerado a partir de `docs/` e
+`website/`, e apagá-la inteira não perde informação — o próximo push a
+reconstrói. Não há revisor possível para um site gerado, e um PR por publicação
+seria cerimônia sem leitor. O `git log` dela é o registro de cada publicação, com
+data e sha de origem.
+
+Ela também **não é permanente**, então não entra nos rulesets — e é por isso que
+o `GITHUB_TOKEN` basta, sem bypass e sem o `BRABO_BOT_TOKEN`.
+
+A segunda é a mais desconfortável das três, então vale dizer por que ela existe
 em vez de o gate entrar por PR: o gate trava as branches, e um PR para abrir a
 trava seria barrado pelo próprio gate. A alternativa — guardar o estado fora do
 repositório — trocaria uma exceção visível no histórico por um estado invisível
