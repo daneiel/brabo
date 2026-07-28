@@ -367,7 +367,13 @@ nasce e a Release não sai.
 
 A degradação é visível de propósito (há um aviso em toda execução), mas visível
 não é impedida: **`v0.2.0`, `v0.3.0`, `v0.3.1`, `v1.0.0`, `v1.0.1` e `v1.1.0`
-existem sem Release**. Só a `v0.1.0`, empurrada à mão, tem.
+existem sem Release** — seis ciclos inteiros em que o aviso apareceu e ninguém
+agiu sobre ele.
+
+Com o PAT configurado, a `v1.1.1` fechou a esteira sozinha: tag empurrada pelo
+token, `release.yml` disparado por ela, Release publicada. Antes dela, só a
+`v0.1.0` tinha Release, e por push manual. **O PAT não recupera as seis
+anteriores** — ele vale para tag nova.
 
 Isso separa dois problemas que é fácil confundir:
 

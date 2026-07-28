@@ -308,11 +308,15 @@ inteira, e ela pode conter mudança em `.github/workflows/**`. Sem esse escopo o
 push é recusado justamente no caso que mais importa — o de propagar uma correção
 de CI.
 
-> **Estado atual: o segredo NÃO está configurado.** `gh secret list` devolve só o
-> `CLAUDE_CODE_OAUTH_TOKEN`, e a conta é visível: a `v0.1.0` — empurrada à mão —
-> é a única tag com Release. **`v0.2.0`, `v0.3.0`, `v0.3.1`, `v1.0.0`, `v1.0.1` e
-> `v1.1.0` são tags órfãs.** O `tag-release` avisa em toda execução, e o aviso é
-> real, não ruído.
+> **Estado atual: configurado e exercitado.** Na `v1.1.1` a esteira fechou
+> sozinha pela primeira vez — o `tag-release` pulou o passo de aviso, empurrou a
+> tag com o PAT, e isso **disparou** o `release.yml`, que publicou a Release.
+> Tag empurrada com o `GITHUB_TOKEN` não dispararia; esse disparo é a prova de
+> que o token é válido e tem escopo de push.
+>
+> **Seis tags continuam órfãs** — `v0.2.0`, `v0.3.0`, `v0.3.1`, `v1.0.0`, `v1.0.1`
+> e `v1.1.0` —, do período em que o segredo não existia. O PAT não as recupera:
+> ele só vale para tag nova. Para essas, o procedimento é o de baixo.
 
 ### Republicar uma tag que ficou órfã
 
@@ -392,10 +396,14 @@ fonte, o GitHub recebe a aplicação.
 **Settings → Pages → Build and deployment → Source: `Deploy from a branch`**, com
 branch **`gh-pages`** e pasta **`/ (root)`**.
 
-Hoje `gh api repos/daneiel/brabo/pages` devolve `"build_type": "workflow"`, que é
-a configuração do `actions/deploy-pages`. Enquanto ela não mudar, o
-`docs-deploy.yml` commita na `gh-pages` e **o Pages não serve nada de lá** — a
-publicação fica no repositório sem chegar ao ar.
+**Já aplicado.** `gh api repos/daneiel/brabo/pages` devolve `"build_type":
+"legacy"` com `source.branch: "gh-pages"`, e os três degraus respondem no ar.
+
+O passo intermediário vale ficar registrado, porque ele confunde: enquanto o
+`build_type` era `"workflow"`, o `docs-deploy.yml` commitava na `gh-pages` **e o
+Pages não servia nada de lá** — a publicação ficava no repositório sem chegar ao
+ar, com o site antigo ainda respondendo pelo último artefato do
+`actions/deploy-pages`. Nada no CI fica vermelho nesse estado.
 
 Por que a troca é obrigatória e não preferência: o `actions/deploy-pages` publica
 **um artefato como o site inteiro** e não sabe atualizar parte de uma árvore, o

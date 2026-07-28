@@ -195,6 +195,26 @@ Três detalhes que não são óbvios e que já custaram um erro cada:
   volta. `keep_files: true` seria mais simples e estaria errado: nunca removeria
   nada, e página apagada do repositório ficaria publicada para sempre.
 
+### Publicar são DOIS workflows, e só um é nosso
+
+Isto engana quem vai procurar o deploy na aba Actions:
+
+| ordem | workflow | onde vive | o que faz |
+|---|---|---|---|
+| 1 | **`Documentação`** (`docs-deploy.yml`) | `.github/workflows/` | constrói o site e **commita na `gh-pages`** |
+| 2 | **`pages build and deployment`** | `dynamic/pages/` — **gerado pelo GitHub** | lê a `gh-pages` e **serve** |
+
+O segundo não está no repositório e não aparece na lista de workflows versionados;
+o GitHub o cria sozinho quando a fonte do Pages é uma branch. Nosso workflow
+termina no commit — ele **não** publica no Pages, apesar de o job dele ainda se
+chamar "Publicar no GitHub Pages".
+
+> **Consequência prática:** o site pode estar desatualizado com o `Documentação`
+> verde. Se o `build_type` do Pages não for `legacy`/`gh-pages`, o commit acontece
+> e ninguém serve — e nada no CI fica vermelho. A conferência é
+> `gh api repos/daneiel/brabo/pages`, registrada em
+> [Rulesets](../reference/rulesets.md).
+
 O desenho inteiro, com as alternativas descartadas, está no
 [ADR 0034](../adr/0034-documentacao-publicada-por-degrau.md).
 

@@ -17,12 +17,15 @@ name: Release
 # e recriar a tag, ou seja, reescrever o registro para consertar o efeito dele.
 #
 # Aconteceu, e não uma vez: `v0.2.0`, `v0.3.0`, `v0.3.1`, `v1.0.0`, `v1.0.1` e
-# `v1.1.0` existem sem Release. A causa é o `tag-release` cair no `GITHUB_TOKEN`
-# quando o `BRABO_BOT_TOKEN` não está configurado — tag empurrada com o token
+# `v1.1.0` existem sem Release. A causa era o `tag-release` cair no
+# `GITHUB_TOKEN` sem o `BRABO_BOT_TOKEN` configurado — tag empurrada com o token
 # padrão NÃO dispara workflow (regra do GitHub contra recursão), e o comentário
-# do `tag-release.yml` já registrava isso desde a `v0.2.0`. O PAT conserta o
-# automático; o `workflow_dispatch` abaixo conserta a RECUPERABILIDADE, que é
-# problema separado e continuaria aberto mesmo com o PAT no lugar.
+# do `tag-release.yml` já registrava isso desde a `v0.2.0`.
+#
+# O PAT foi configurado e a `v1.1.1` fechou a esteira sozinha, então o automático
+# está resolvido. As seis de cima NÃO: o PAT vale para tag nova, e recuperar
+# aquelas é justamente o que o `workflow_dispatch` abaixo existe para permitir.
+# São dois problemas, e o segundo continuaria aberto mesmo com o PAT no lugar.
 on:
   push:
     tags:
