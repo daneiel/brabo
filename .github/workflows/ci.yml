@@ -368,6 +368,41 @@ jobs:
           # recuperável e precisa ser encontrado.
           fetch-depth: 0
 
+      # `fetch-depth: 0` traz TODAS as refs, e o `gitleaks detect` varre todos os
+      # commits alcançáveis — não só o histórico do HEAD. Desde o ADR 0034 isso
+      # passou a incluir a `gh-pages`, que carrega o site CONSTRUÍDO.
+      #
+      # O efeito foi medido, não previsto: **112 achados `generic-api-key`** num
+      # único commit do bot de publicação, todos em `dev/assets/js/*.js` — nomes de
+      # arquivo de avatar dentro de bundle minificado, com entropia alta o
+      # suficiente para a regra morder. Reprovou o PR de promoção #78 (`v1.1.0`), o
+      # primeiro a ser varrido depois de a `gh-pages` nascer.
+      #
+      # A `gh-pages` NÃO é código-fonte: nada nela é escrito por pessoa, tudo é
+      # gerado de `docs/` e `website/`. Varrê-la procurando segredo é procurar no
+      # lugar errado, e o custo de não fazer nada seria pior que o ruído — check
+      # required vermelho por ruído ensina a ignorar check vermelho.
+      #
+      # A saída NÃO é allowlist de caminho no `.gitleaks.toml`: aquilo valeria para
+      # TODOS os commits, então um `dev/` que aparecesse no código-fonte um dia
+      # ficaria sem varredura, em silêncio. Tirar a ref do escopo é preciso —
+      # exclui exatamente os commits que não são fonte, e nada mais.
+      #
+      # Verificado por execução com o gitleaks 8.30.1, a mesma versão daqui:
+      # antes 133 commits e 112 achados (idêntico ao log do #78); depois 132
+      # commits e nenhum achado. E a prova de que não abriu buraco: um PAT do
+      # GitHub com entropia real, plantado num commit de `apps/api/src/`, continua
+      # sendo detectado.
+      - name: Tirar a gh-pages do escopo
+        run: |
+          set -euo pipefail
+          if git show-ref --quiet refs/remotes/origin/gh-pages; then
+            git update-ref -d refs/remotes/origin/gh-pages
+            echo "gh-pages fora do escopo — ela é site gerado, não fonte."
+          else
+            echo "gh-pages não existe neste clone; nada a excluir."
+          fi
+
       - name: Instalar gitleaks
         run: |
           set -euxo pipefail

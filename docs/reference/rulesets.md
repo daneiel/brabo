@@ -375,6 +375,23 @@ alternativas descartadas e a exceção de push que isto abre estão no
 > bot precisa empurrar nela — incluí-la travaria a própria publicação. É também
 > por isso que o `GITHUB_TOKEN` basta ali, sem bypass e sem o `BRABO_BOT_TOKEN`.
 
+> **E ela sai do escopo do Gitleaks, por um motivo que só apareceu depois.** O
+> `gitleaks detect` varre **todos os commits alcançáveis**, não só o histórico do
+> HEAD — e `fetch-depth: 0` traz todas as refs. Assim que a `gh-pages` nasceu, o
+> site construído entrou na varredura: **112 achados `generic-api-key`** num
+> commit só, todos em `dev/assets/js/*.js`, que são nomes de arquivo de avatar
+> dentro de bundle minificado com entropia alta demais para a regra. Reprovou o PR
+> de promoção **#78**, o primeiro varrido depois da estreia.
+>
+> O `ci.yml` passa a apagar `refs/remotes/origin/gh-pages` antes de varrer. **Não**
+> por allowlist de caminho no `.gitleaks.toml`: aquilo valeria para todos os
+> commits, e um `dev/` que aparecesse no código-fonte um dia ficaria sem varredura
+> em silêncio. Excluir a ref exclui exatamente os commits que não são fonte.
+>
+> Medido com o gitleaks 8.30.1, a versão do CI: 133 commits e 112 achados antes,
+> 132 e nenhum depois — e um PAT do GitHub de entropia real plantado em
+> `apps/api/src/` continua sendo detectado, que é a prova de que não abriu buraco.
+
 ## As labels de família precisam existir
 
 O `pr-police` aplica uma das quatro labels, e `gh pr edit --add-label` **falha**
