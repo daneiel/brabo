@@ -114,6 +114,25 @@ const config: Config = {
           // conteúdo que diverge.
           path: '../docs',
           routeBasePath: '/',
+          // O QUE LIGA O TEMA OPENAPI ÀS PÁGINAS GERADAS. Sem esta linha o
+          // Docusaurus aplica o default `@theme/DocItem`, e o `@theme/ApiItem`
+          // — o único lugar do tema que monta o `<Provider>` do redux
+          // (`createStoreWithState`) — nunca é montado. Os `.api.mdx` importam
+          // `@theme/ApiExplorer/MethodEndpoint`, que lê esse store com
+          // `useSelector`, então cada página de operação achava contexto nulo e
+          // morria na HIDRATAÇÃO com "Cannot destructure property 'store'".
+          //
+          // O modo de falha é traiçoeiro e é o motivo de isto ter passado por
+          // duas releases (v1.0.0 e v1.0.1) sem ninguém ver: o SSR renderiza
+          // certo, o HTML servido tem o conteúdo da rota, `docs:build` fica
+          // VERDE — e o error boundary só apaga a página no navegador. Build
+          // verde nunca provou que a página renderiza; quem prova agora é o
+          // `scripts/docs/api-render-check.mjs`.
+          //
+          // Vale para TODA página de doc, não só as de API: o `ApiItem` delega
+          // ao `DocItem` quando o front-matter não tem `api:`. É por isso que a
+          // verificação desta mudança inclui páginas não-API.
+          docItemComponent: '@theme/ApiItem',
           sidebarPath: './sidebars.ts',
           // Função, não string: com `path: '../docs'` o Docusaurus concatena
           // o caminho relativo ao siteDir e produziria `.../docs/../docs/x.md`,

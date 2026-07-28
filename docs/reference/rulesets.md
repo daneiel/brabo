@@ -124,6 +124,19 @@ workflow):
 | `Build, scan e smoke das imagens de produção` | `ci.yml` |
 | `Drift, gerados e build` | `docs-check.yml` |
 
+> **O nome do check é menor que o que ele guarda.** `Drift, gerados e build` são
+> três coisas no título e **cinco** gates no job: integridade do `.docmap.yml`,
+> gerados em dia, drift, build do site, e — desde que a referência de API subiu
+> quebrada em duas releases — **a referência de API renderiza**
+> (`scripts/docs/api-render-check.mjs`).
+>
+> Esse último existe porque build verde não é página que renderiza: o MDX
+> compila, o SSR escreve o conteúdo, `docs:build` passa, e a página morre na
+> hidratação no navegador. O mecanismo inteiro está em
+> `docs/explanation/documentation-workflow.md`. Ao acrescentar gate a este job,
+> o nome do check **não** muda — e é por isso que ele não precisa entrar de novo
+> na tabela acima, mas precisa estar escrito em algum lugar. É aqui.
+
 > **`pull_request_target` exige o workflow na branch PADRÃO.** Não basta estar
 > na branch base do PR. Isso foi medido, não suposto: com `pull_request_target`
 > o `pr-police` teve **zero execuções**, enquanto `approval-ladder` e

@@ -155,6 +155,22 @@ jobs:
       - name: Build do site
         run: pnpm docs:build
 
+      # BUILD VERDE NÃO É PÁGINA QUE RENDERIZA, e essa distinção custou duas
+      # releases. A referência de API subiu morta em v1.0.0 e v1.0.1: faltava
+      # `docItemComponent: '@theme/ApiItem'` no config, o `ApiItem` nunca era
+      # montado, e as 117 páginas de operação morriam na HIDRATAÇÃO com
+      # "Cannot destructure property 'store'". O passo acima ficou verde todas
+      # as vezes — o MDX compila, o SSR escreve o conteúdo, e o error boundary
+      # só apaga a página no navegador.
+      #
+      # Este passo afirma a marca estrutural que só o `ApiItem` produz. Precisa
+      # vir DEPOIS do build, porque é o build que ele inspeciona.
+      #
+      # Localmente: `pnpm docs:build && node scripts/docs/api-render-check.mjs`.
+      # Fora do `docs:check` de propósito — aquele não constrói o site.
+      - name: A referência de API renderiza
+        run: node scripts/docs/api-render-check.mjs
+
   # Links EXTERNOS não entram no PR: site de terceiro fora do ar não pode
   # reprovar o trabalho de ninguém. Vira relatório semanal.
   links-externos:
