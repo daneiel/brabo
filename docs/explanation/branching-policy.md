@@ -126,15 +126,27 @@ tivemos neste trimestre?" sem arqueologia de git.
 ## Push direto é bloqueado
 
 Nenhuma das três permanentes aceita push direto. Toda mudança entra por PR.
-É a **porta única** — e ela tem exatamente duas exceções, ambas de robô, ambas
+É a **porta única** — e ela tem exatamente três exceções, todas de robô, todas
 escritas aqui porque exceção que não está documentada vira precedente:
 
 | exceção | quem | por quê |
 |---|---|---|
 | tags `v*` | `brabo-release[bot]` | versão nasce de workflow, nunca da mão |
 | `.release/gate.json` em `main` | `brabo-release[bot]` | o gate precisa se escrever ao travar e ao destravar |
+| a branch `gh-pages` | `github-actions[bot]` | publicar documentação por degrau exige árvore mutável ([ADR 0034](../adr/0034-documentacao-publicada-por-degrau.md)) |
 
-A segunda é a mais desconfortável das duas, então vale dizer por que ela existe
+**A terceira é a mais fácil de aceitar das três, e é importante dizer por quê,
+para que ela não sirva de precedente para as difíceis.** A `gh-pages` **não é
+branch de código**: nada nela é fonte, tudo é gerado a partir de `docs/` e
+`website/`, e apagá-la inteira não perde informação — o próximo push a
+reconstrói. Não há revisor possível para um site gerado, e um PR por publicação
+seria cerimônia sem leitor. O `git log` dela é o registro de cada publicação, com
+data e sha de origem.
+
+Ela também **não é permanente**, então não entra nos rulesets — e é por isso que
+o `GITHUB_TOKEN` basta, sem bypass e sem o `BRABO_BOT_TOKEN`.
+
+A segunda é a mais desconfortável das três, então vale dizer por que ela existe
 em vez de o gate entrar por PR: o gate trava as branches, e um PR para abrir a
 trava seria barrado pelo próprio gate. A alternativa — guardar o estado fora do
 repositório — trocaria uma exceção visível no histórico por um estado invisível
@@ -319,6 +331,32 @@ permanente para bumpar `package.json`, então exigir que os quatro arquivos de
 versão acompanhem obrigaria a um PR de bump por ciclo — cerimônia que o cálculo
 automático existe para eliminar. O `release.yml` confere os arquivos como
 **aviso** e só dispara em tag final.
+
+### O que a tag final produz
+
+O `release.yml` é o fim da esteira, e o que ele entrega é deliberadamente
+modesto:
+
+| entrega | o quê |
+|---|---|
+| GitHub Release | com as notas geradas do CHANGELOG pela `scripts/changelog.mjs` |
+| conferência de versão | os quatro arquivos versionados, como **aviso** |
+| as quatro imagens de produção | construídas para provar que a tag é **construível** |
+
+**As imagens não são publicadas** — `push: false`. Publicar em registry ainda não
+está decidido (o overlay de produção aponta para `ghcr.io/OWNER/*`, um
+placeholder), e a decisão está registrada no
+[ADR 0027](../adr/0027-fase5-backup-hardening-release.md). Construir sem publicar
+não é meia-medida: é o que impede uma tag existir para um commit que não compila.
+
+Elas saem do mesmo `docker-bake.hcl` que o `ci.yml` usa, em paralelo. Antes eram
+quatro `docker build` em sequência — mesmo veredito, ~160s a mais por release.
+
+**Não existe passo de deploy, aqui nem em lugar nenhum.** A tag é o registro do
+que **estaria** em cada ambiente, e isso vale mesmo sem ambiente. Passo que nunca
+roda apodrece: ninguém o testa, ninguém percebe quando quebra, e no dia de ligar
+estará errado. Quando houver ambiente, o deploy será workflow **próprio**,
+disparado pela tag.
 
 ### A versão do ciclo
 

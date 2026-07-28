@@ -114,12 +114,13 @@ O loop que faz o time melhorar.
 |---|---|
 | [0032](0032-corte-do-keycloak-e-sessao-em-cookie.md) | O corte atômico do Keycloak: emissor próprio no guard sem tocar no RBAC, `/internal/*` fora do JWT com segredo compartilhado, sessão da web em cookie httpOnly com CSRF, e o usuário migrado indistinguível de um e-mail que não existe |
 | [0033](0033-referencia-de-api-gerada-do-openapi.md) | A referência de API sai do código: DTOs de resposta que espelham a entidade por tipo, o teste de tabela cobrando summary e resposta de verdade (a sintetizada pelo Swagger não conta), e um manifesto de hashes no lugar de regerar no `--check` |
+| [0034](0034-documentacao-publicada-por-degrau.md) | Documentação publicada por degrau em subdiretório do Pages: `baseUrl` por variável, `noIndex` fora da `main` com `forceIgnoreNoIndex` na busca local, e a terceira exceção de push direto |
 
 ## A convenção
 
 - **Um arquivo por decisão**, em `docs/adr/NNNN-titulo-curto.md`, com
   numeração sequencial de 4 dígitos. **Sem reuso de número**, nem quando um ADR
-  é superado — o próximo é **0034**.
+  é superado — o próximo é **0035**.
 - **Três seções, só elas:** **Contexto** (o problema ou a força que motivou),
   **Decisão** (o que foi decidido), **Consequências** (os trade-offs aceitos e
   o que fica para depois).

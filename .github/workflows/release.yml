@@ -95,27 +95,57 @@ jobs:
 
       - uses: docker/setup-buildx-action@v3
 
-      # As quatro imagens, cada uma com DUAS tags: a versão (legível, é o que
-      # se cita numa conversa) e o SHA do commit (imutável, é o que identifica
-      # o build sem ambiguidade quando uma tag é movida).
-      #
-      # `push: false`: publicar em registry ainda não está resolvido — o
-      # overlay de produção aponta para `ghcr.io/OWNER/*`, um placeholder. As
-      # imagens são construídas aqui para provar que a tag é construível; a
-      # publicação entra quando o registry for decidido (ver ADR 0027).
-      - name: Build das imagens taggeadas
+      # As duas tags de cada imagem, calculadas num passo só porque agora são
+      # entrada de uma action e não de um `run` — expressão de workflow não
+      # enxerga variável de shell.
+      - name: As duas tags desta release
+        id: versao
         run: |
           set -euo pipefail
-          versao="${GITHUB_REF_NAME#v}"
-          sha="${GITHUB_SHA::12}"
+          echo "versao=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          echo "sha=${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+
+      # As quatro imagens, cada uma com DUAS tags: a versão (legível, é o que
+      # se cita numa conversa) e o SHA do commit (imutável, é o que identifica
+      # o build sem ambiguidade quando uma tag é movida). O `TAG_EXTRA` do
+      # `docker-bake.hcl` existe exatamente para a segunda.
+      #
+      # BAKE, não quatro `docker build` em loop. O `ci.yml` já usa este mesmo
+      # bakefile desde a Fase 5, e o comentário no topo dele MEDE o motivo: em
+      # sequência os builds somavam ~359s (api 130, engine 160, web 49, backup
+      # 20); em paralelo num builder só, ~195s. O loop daqui pagava aquele preço
+      # a cada tag para chegar ao mesmo veredito.
+      #
+      # `push: false` continua valendo, e agora vem do `output = ["type=docker"]`
+      # do alvo `_comum`: publicar em registry ainda não está resolvido — o
+      # overlay de produção aponta para `ghcr.io/OWNER/*`, um placeholder. As
+      # imagens são construídas aqui para provar que a tag é CONSTRUÍVEL; a
+      # publicação entra quando o registry for decidido (ver ADR 0027).
+      #
+      # Sobre o cache `type=gha` que o bakefile declara: aqui ele é BÔNUS, não a
+      # razão da troca. O cache do Actions é escopado por branch, e quem popula
+      # aqueles escopos é o `ci.yml` em `pull_request` — cache escrito por PR não
+      # é legível de uma tag em `main`. O ganho garantido é o PARALELISMO; se o
+      # cache pegar, melhor.
+      - name: Build das imagens taggeadas
+        uses: docker/bake-action@v6
+        with:
+          files: docker-bake.hcl
+          targets: default
+          load: true
+        env:
+          TAG: ${{ steps.versao.outputs.versao }}
+          TAG_EXTRA: ${{ steps.versao.outputs.sha }}
+
+      - name: O que foi construído
+        run: |
+          set -euo pipefail
           for app in api engine web backup; do
-            docker build \
-              -f "docker/${app}/Dockerfile.prod" \
-              -t "brabo-${app}:${versao}" \
-              -t "brabo-${app}:${sha}" \
-              .
-            echo "construída: brabo-${app} -> ${versao}, ${sha}"
+            echo "construída: brabo-${app} -> ${TAG}, ${TAG_EXTRA}"
           done
+        env:
+          TAG: ${{ steps.versao.outputs.versao }}
+          TAG_EXTRA: ${{ steps.versao.outputs.sha }}
 
       - name: Publicar a GitHub Release
         env:

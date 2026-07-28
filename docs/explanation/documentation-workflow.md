@@ -127,6 +127,77 @@ desligado.
 Mover um arquivo sem corrigir quem aponta para ele derruba o CI em vez de virar
 404 em produção. É o mecanismo mais barato do conjunto inteiro.
 
+### `api-render-check.mjs` — build verde não é página que renderiza
+
+Esta peça existe por uma lição paga caro: **as 117 páginas de operação da
+referência de API subiram mortas nas releases `v1.0.0` e `v1.0.1`**, e nenhum
+check viu.
+
+O config do Docusaurus não declarava `docItemComponent: '@theme/ApiItem'`, então
+o Docusaurus usava o `@theme/DocItem` padrão. O `ApiItem` é o único lugar do
+`docusaurus-theme-openapi-docs` que monta o `<Provider>` do redux, e o
+`@theme/ApiExplorer/MethodEndpoint` que cada `.api.mdx` importa lê esse store com
+`useSelector`. Sem o wrapper, contexto nulo — e o error boundary trocava a página
+inteira por *"Esta página deu erro."*.
+
+O modo de falha é o que interessa aqui, porque ele derrota todas as outras peças
+deste mecanismo:
+
+| etapa | resultado |
+|---|---|
+| MDX compila | ✅ os componentes de tema existem e resolvem |
+| SSR renderiza | ✅ o HTML servido tem o conteúdo da rota |
+| `pnpm docs:build` | ✅ **verde** |
+| hidratação no navegador | ❌ a página é apagada |
+
+Ou seja: **"o build passou" nunca foi prova de que a página funciona.** O
+`api-render-check.mjs` roda depois do `docs:build` e afirma, em cada página de
+operação, a marca estrutural que só o `ApiItem` produz
+(`openapi-left-panel__container` / `openapi-right-panel__container`, conferidas na
+fonte do tema, não escolhidas por palpite).
+
+Ele pega **esta classe** de regressão, não toda falha de hidratação — pegar todas
+exigiria navegador headless, e essa dependência não se paga para o risco que
+sobra. Se outra escapar, é aí que essa conversa começa.
+
+Do mesmo episódio saiu a regra `site-e-publicacao` do mapa: `website/**` não
+aparecia em regra nenhuma, e mexer no config do site não cobrava documentação.
+
+### A publicação, um site por degrau
+
+Cada branch permanente publica no seu próprio lugar do mesmo GitHub Pages:
+
+| degrau | URL | indexado por buscador |
+|---|---|---|
+| `main` | `https://daneiel.github.io/brabo/` | ✅ |
+| `qa` | `https://daneiel.github.io/brabo/qa/` | ❌ |
+| `dev` | `https://daneiel.github.io/brabo/dev/` | ❌ |
+
+Isso fecha um vão da esteira: entre um merge em `dev` e a promoção final, ler a
+documentação daquele estado exigia clonar o repositório. O `docs-check` constrói o
+site em todo PR mas **descarta o build** — o veredito dele é "constrói sem link
+quebrado", nunca "está em algum lugar onde eu possa abrir". E foi justamente essa
+distância entre escrever e olhar que deixou a referência de API subir quebrada por
+duas releases.
+
+Três detalhes que não são óbvios e que já custaram um erro cada:
+
+- **`baseUrl` vem de `DOCS_BASE_URL`**, com o valor de produção como default. Ele
+  entra em toda URL de asset: um site em `/brabo/dev/` com `baseUrl: '/brabo/'`
+  carrega o HTML e nada mais, e a página fica *quebrada sem erro*.
+- **`noIndex` fora da `main` exige `forceIgnoreNoIndex` na busca.** O
+  `@easyops-cn/docusaurus-search-local` descarta toda página com
+  `<meta name="robots" content="noindex">`, então os dois recursos se anulavam: os
+  degraus publicariam com a busca morta, índice de 666 bytes, *"No results"* para
+  tudo. `noIndex` fala com buscador **externo**; `forceIgnoreNoIndex` fala com o
+  índice **local**.
+- **A `main` monta a árvore antes de publicar**, trazendo `/dev/` e `/qa/` de
+  volta. `keep_files: true` seria mais simples e estaria errado: nunca removeria
+  nada, e página apagada do repositório ficaria publicada para sempre.
+
+O desenho inteiro, com as alternativas descartadas, está no
+[ADR 0034](../adr/0034-documentacao-publicada-por-degrau.md).
+
 ## Rodando na sua máquina
 
 ```bash
@@ -135,6 +206,10 @@ pnpm docs:generate   # regenera
 pnpm docs:drift      # simula o check do PR (origin/dev...HEAD)
 pnpm docs:build      # o build que o CI roda
 pnpm docs:start      # servidor local, com hot reload
+
+# a referência de API renderiza? precisa do build acima, e não entra no
+# docs:check porque aquele não constrói o site
+node scripts/docs/api-render-check.mjs
 ```
 
 Ou, se estiver no Claude Code, `/sync-docs` faz o ciclo completo e entrega um

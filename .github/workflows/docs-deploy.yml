@@ -1,35 +1,71 @@
 name: Documentação
 
-# Build + deploy, só no merge em `main`.
+# Publica a documentação de CADA branch permanente no seu próprio lugar:
 #
-# Este workflow JÁ TEVE gatilho de `pull_request`, para pegar link quebrado
-# antes do merge. Era build duplicado: o `docs-check.yml` roda `pnpm docs:build`
-# em TODO PR — sem filtro de path — e é ele que está na lista de checks
-# required. Dois builds do mesmo site por PR, com o mesmo veredito.
+#   main → https://daneiel.github.io/brabo/       (a documentação real)
+#   qa   → https://daneiel.github.io/brabo/qa/
+#   dev  → https://daneiel.github.io/brabo/dev/
 #
-# A validação de PR mora lá; aqui mora a publicação. Um propósito por gatilho.
+# "POR BRANCH QUE PASSAR" SAI DE GRAÇA, e vale escrever por que: `push` numa
+# permanente só acontece por merge de PR, e o ruleset exige os 12 checks
+# required antes do merge. O gatilho de push É o "passou" — não existe caminho
+# em que este workflow publique código que não passou pela esteira.
+#
+# Este workflow JÁ TEVE gatilho de `pull_request`, para pegar link quebrado antes
+# do merge. Era build duplicado: o `docs-check.yml` roda `pnpm docs:build` em TODO
+# PR — sem filtro de path — e é ele que está na lista de checks required. A
+# validação de PR mora lá; aqui mora a publicação. Um propósito por gatilho.
 on:
   push:
-    branches: [main]
+    branches: [dev, qa, main]
     paths: ['docs/**', 'website/**', '.github/workflows/docs-deploy.yml']
 
+# `contents: write` porque a publicação agora é um COMMIT na `gh-pages`, não um
+# artefato. Ver o comentário do passo de publicação para o porquê da troca.
 permissions:
-  contents: read
+  contents: write
 
+# Um deploy por vez no repositório INTEIRO, não por branch: os três degraus
+# escrevem na mesma `gh-pages`, e dois pushes simultâneos disputariam o mesmo
+# ref. `cancel-in-progress: false` porque cancelar no meio de uma publicação
+# deixa a árvore pela metade.
 concurrency:
-  group: docs-${{ github.ref }}
-  cancel-in-progress: true
+  group: pages
+  cancel-in-progress: false
 
 jobs:
-  build:
-    name: Build do site
+  publicar:
+    name: Publicar no GitHub Pages
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
           # showLastUpdateTime/Author leem o git. Sem histórico completo toda
           # página fica com a data do checkout, que é pior que nenhuma data.
           fetch-depth: 0
+
+      # Um lugar só decide o destino do degrau, e os dois valores saem juntos
+      # daqui — `baseUrl` e subdiretório TÊM que concordar, e separá-los em dois
+      # lugares é como eles passam a divergir.
+      - name: Qual degrau, e para onde ele publica
+        id: degrau
+        run: |
+          set -euo pipefail
+          case "$GITHUB_REF_NAME" in
+            main) subdir=''   ; base='/brabo/'     ;;
+            qa)   subdir='qa' ; base='/brabo/qa/'  ;;
+            dev)  subdir='dev'; base='/brabo/dev/' ;;
+            *)
+              echo "::error::branch '$GITHUB_REF_NAME' não é permanente — este workflow só publica dev, qa e main."
+              exit 1
+              ;;
+          esac
+          {
+            echo "subdir=$subdir"
+            echo "base=$base"
+          } >> "$GITHUB_OUTPUT"
+          echo "degrau '$GITHUB_REF_NAME' → baseUrl '$base', subdiretório '${subdir:-(raiz)}'"
 
       - uses: pnpm/action-setup@v4
 
@@ -43,39 +79,102 @@ jobs:
       - name: Cache do Rspack
         uses: actions/cache@v4
         with:
+          # Chave por DEGRAU: o `baseUrl` entra no bundle, então o cache de
+          # `dev` não serve para `main`. Sem o degrau na key os três degraus se
+          # invalidariam em rodízio, e o cache viraria enfeite.
           path: website/node_modules/.cache
-          key: rspack-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('docs/**') }}
+          key: rspack-${{ runner.os }}-${{ github.ref_name }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('docs/**') }}
           restore-keys: |
-            rspack-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
-            rspack-${{ runner.os }}-
+            rspack-${{ runner.os }}-${{ github.ref_name }}-${{ hashFiles('pnpm-lock.yaml') }}-
+            rspack-${{ runner.os }}-${{ github.ref_name }}-
 
       # onBrokenLinks/onBrokenAnchors/onBrokenMarkdownLinks são 'throw':
       # link quebrado reprova aqui, não vira 404 em produção.
-      - run: pnpm docs:build
+      - name: Build do site
+        env:
+          DOCS_BASE_URL: ${{ steps.degrau.outputs.base }}
+        run: pnpm docs:build
 
-      - name: Publicar artefato
-        uses: actions/upload-pages-artifact@v3
+      # A referência de API construir não é a referência de API renderizar — a
+      # lição que custou as releases v1.0.0 e v1.0.1. O mesmo gate que roda em
+      # PR roda aqui, porque este é o passo que PUBLICA: se a página não
+      # renderiza, é melhor não publicar do que publicar quebrada.
+      - name: A referência de API renderiza
+        run: node scripts/docs/api-render-check.mjs
+
+      # SÓ NA MAIN, e este passo é a razão de o `keep_files: false` abaixo ser
+      # seguro.
+      #
+      # A `main` publica na RAIZ. Publicar na raiz apagando o que havia levaria
+      # `/dev/` e `/qa/` junto — cada deploy de produção derrubaria a
+      # documentação dos outros dois degraus até o próximo push deles.
+      #
+      # A saída NÃO é `keep_files: true`: aquilo nunca remove nada, e página
+      # apagada do repositório ficaria publicada para sempre — o problema de
+      # órfão que o gerador da referência de API já resolve com `clean-api-docs`.
+      #
+      # Então em vez de preservar por omissão, a árvore é MONTADA: trazemos
+      # `/dev/` e `/qa/` da `gh-pages` para dentro do build e publicamos o
+      # conjunto completo. Aí `keep_files: false` é exatamente o que se quer —
+      # o que não está na árvore nova não deveria estar publicado.
+      - name: Trazer /dev/ e /qa/ para dentro da árvore (só na main)
+        if: github.ref_name == 'main'
+        run: |
+          set -euo pipefail
+
+          if ! git ls-remote --exit-code --heads origin gh-pages >/dev/null 2>&1; then
+            echo "::notice::gh-pages ainda não existe — primeira publicação, nada a preservar."
+            exit 0
+          fi
+
+          git fetch --no-tags --depth=1 origin gh-pages
+
+          for degrau in dev qa; do
+            if git cat-file -e "FETCH_HEAD:$degrau" 2>/dev/null; then
+              git archive FETCH_HEAD "$degrau" | tar -x -C website/build
+              echo "preservado: /$degrau/ ($(find "website/build/$degrau" -type f | wc -l) arquivo(s))"
+            else
+              echo "/$degrau/ ainda não publicado — nada a preservar."
+            fi
+          done
+
+      # `peaceiris/actions-gh-pages` no lugar de `actions/deploy-pages`, e a
+      # troca é obrigatória, não preferência: o `deploy-pages` publica UM
+      # artefato como o site inteiro, e não sabe atualizar parte de uma árvore.
+      # Com ele, publicar `dev` num subdiretório significaria reconstruir os três
+      # degraus a cada push de qualquer um deles.
+      #
+      # O preço está declarado: a publicação passa a ser push direto na
+      # `gh-pages`, que é a TERCEIRA exceção à porta única de PR. Ela está
+      # documentada na política, ao lado das outras duas
+      # (docs/explanation/branching-policy.md, "Push direto é bloqueado") — e vale
+      # dizer que `gh-pages` não é branch de código: nada nela é fonte, tudo é
+      # gerado, e o `git log` dela é o registro de cada publicação.
+      #
+      # O `GITHUB_TOKEN` basta — `gh-pages` não está nos rulesets das
+      # permanentes. E push feito com ele NÃO dispara workflow, então não há laço.
+      - name: Publicar na gh-pages
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          path: website/build
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: website/build
+          destination_dir: ${{ steps.degrau.outputs.subdir }}
+          keep_files: false
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
+          commit_message: 'docs: publica ${{ github.ref_name }} (${{ github.sha }})'
 
-  deploy:
-    name: Publicar no GitHub Pages
-    needs: build
-    runs-on: ubuntu-latest
-
-    permissions:
-      pages: write
-      id-token: write
-
-    # Só um deploy por vez, e sem cancelar um que já começou a publicar.
-    concurrency:
-      group: pages
-      cancel-in-progress: false
-
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Onde ficou
+        run: |
+          set -euo pipefail
+          url="https://daneiel.github.io${{ steps.degrau.outputs.base }}"
+          {
+            echo "### Documentação publicada"
+            echo
+            echo "Degrau \`${GITHUB_REF_NAME}\` → $url"
+            echo
+            if [ "${GITHUB_REF_NAME}" != 'main' ]; then
+              echo "Fora do índice de busca (\`noIndex\`): é pré-visualização do degrau,"
+              echo "não a documentação de produção."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
