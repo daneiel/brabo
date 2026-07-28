@@ -1,10 +1,17 @@
 name: Guardião da documentação
 
-# Roda em todo PR. Três perguntas, nesta ordem de custo:
-#   1. o mapa de responsabilidade está íntegro? (segundos)
-#   2. o que é gerado está em dia? (segundos)
-#   3. o PR atualizou a doc que deveria? (segundos)
-#   4. o site constrói sem link quebrado? (minutos — fica por último)
+# Roda em todo PR. Cinco perguntas, nesta ordem de custo — medida, não estimada
+# (execuções 30313457222, 30313191242, 30312381170; job inteiro em 51-53s):
+#   1. o mapa de responsabilidade está íntegro? (0s)
+#   2. o que é gerado está em dia? (10s)
+#   3. o PR atualizou a doc que deveria? (0-1s)
+#   4. o site constrói sem link quebrado? (12s)
+#   5. a referência de API RENDERIZA? (0s — e ver o comentário do passo)
+#
+# O item 4 dizia "minutos" e custa 12s: com o cache do Rspack quente e o
+# `future.faster` do Docusaurus 3.10, ele não é nem o maior passo do job — o
+# `pnpm install` (12-16s) é. Este workflow também NÃO está no caminho crítico do
+# PR: termina em ~52s, contra ~5min do `ci.yml`.
 on:
   pull_request:
     # `edited` junto dos três default, pelo mesmo motivo que o
@@ -25,9 +32,9 @@ on:
     # O `ci.yml` não precisa disto: o que ele testa é o HEAD, e o resultado
     # dele não muda com a base.
     #
-    # O preço é o `docs:build` (minutos) reexecutar quando alguém só mexe no
-    # texto do PR. O `concurrency` acima já cancela a execução anterior, e o
-    # veredito correto vale o custo.
+    # O preço é o job inteiro (~52s, dos quais 12s de `docs:build`) reexecutar
+    # quando alguém só mexe no texto do PR. O `concurrency` acima já cancela a
+    # execução anterior, e o veredito correto vale o custo.
     types: [opened, reopened, synchronize, edited]
   schedule:
     # Segunda, 06:00 UTC — só o check de links externos.

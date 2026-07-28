@@ -109,20 +109,51 @@ gh variable set APPROVAL_MODE      --body community
 Nome **exato**, como o GitHub o registra (é o `name:` do job, não o do
 workflow):
 
-| check | workflow |
-|---|---|
-| `Política de branches` | `pr-police.yml` |
-| `Escada de aprovação` | `approval-ladder.yml` |
-| `Check de promoção` | `promotion-check.yml` |
-| `Backmerge gate` | `backmerge-gate.yml` |
-| `Lint` | `ci.yml` |
-| `Testes TS (api + web)` | `ci.yml` |
-| `Testes do engine (ExUnit)` | `ci.yml` |
-| `Auditoria de dependências` | `ci.yml` |
-| `Gitleaks no repositório` | `ci.yml` |
-| `Manifests de Kubernetes` | `ci.yml` |
-| `Build, scan e smoke das imagens de produção` | `ci.yml` |
-| `Drift, gerados e build` | `docs-check.yml` |
+A coluna de duração é **medida**, não estimada — três execuções reais, cache
+frio e quente. Ela existe para que "otimizar o CI" comece pelo número e não pelo
+palpite.
+
+| check | workflow | frio | quente |
+|---|---|---|---|
+| `Build, scan e smoke das imagens de produção` | `ci.yml` | **295s** | 109s |
+| `Testes TS (api + web)` | `ci.yml` | 159s | **159s** |
+| `Testes do engine (ExUnit)` | `ci.yml` | 124s | 39s |
+| `Auditoria de dependências` | `ci.yml` | 99s | 85s |
+| `Lint` | `ci.yml` | 66s | 69s |
+| `Drift, gerados e build` | `docs-check.yml` | 53s | 51s |
+| `Manifests de Kubernetes` | `ci.yml` | 14s | 13s |
+| `Gitleaks no repositório` | `ci.yml` | 5s | 7s |
+| `Política de branches` | `pr-police.yml` | 7s | 7s |
+| `Escada de aprovação` | `approval-ladder.yml` | 13s | 15s |
+| `Check de promoção` | `promotion-check.yml` | 9s | 9s |
+| `Backmerge gate` | `backmerge-gate.yml` | 7s | 7s |
+
+**O `ci.yml` já é 100% paralelo** — nenhum job dele tem `needs:`. Não existe
+grafo serial para desatar, e o veredito completo do PR custa o job mais LENTO,
+não a soma (que é ~12min de CPU). Quem quiser encurtar o PR tem dois alvos, e só
+dois:
+
+- **cache frio: o job de imagens**, onde 195s dos 295s são o `docker buildx bake`
+  — o maior item isolado de todo o CI, 3× o segundo. O bakefile já constrói as
+  quatro em paralelo com cache `type=gha` por imagem, e o comentário no topo dele
+  mede por que quebrar em matriz de jobs seria PIOR: 1,7 GB de imagens por
+  artifact custa mais que o build, e o smoke precisa das quatro no mesmo daemon;
+- **cache quente: `Testes TS`**, onde 91s dos 159s são `pnpm --filter api test`,
+  serializado por `fileParallelism: false` em `apps/api/vitest.config.ts` — os
+  specs compartilham a `brabo_test` e dão TRUNCATE entre testes. Paralelizar
+  exige banco ou schema por worker, não a flag.
+
+> **Dividir job para paralelizar tem dois custos que o número não mostra.** O
+> primeiro: o nome do job **é** o nome do check required, então dividir
+> `Testes TS (api + web)` em três apagaria um check required — que nunca mais
+> reporta e trava todo PR para sempre (é a mesma armadilha da nota mais abaixo).
+> Preservar o nome exigiria um job de fan-in com `needs:`, ou mexer em Settings.
+>
+> O segundo: **medido, o ganho não estava lá.** Cada job novo repaga `checkout` +
+> `setup-node` + `pnpm install` (~25s) e, no caso da api, o container de Postgres
+> (13s). Dividir os 159s dá ~150s, porque os 91s do teste da api continuam
+> inteiros e carregam o setup de qualquer jeito. **~7s** de ganho para gastar um
+> check required e um job a mais — não se paga. O que paga é atacar os 91s.
 
 > **`pull_request_target` exige o workflow na branch PADRÃO.** Não basta estar
 > na branch base do PR. Isso foi medido, não suposto: com `pull_request_target`
