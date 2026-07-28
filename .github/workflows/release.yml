@@ -11,10 +11,28 @@ name: Release
 # carimbar: as tags de estágio nascem a cada merge, e cada uma dispararia uma
 # tentativa de publicar release — falhando na conferência de versão, porque
 # `0.2.0-qa.1` nunca vai bater com o `0.2.0` declarado nos arquivos.
+#
+# E TEM SEGUNDA CHANCE, que é a lição de seis tags órfãs. Com só o gatilho de
+# `push: tags`, uma Release que não sai não sai mais: republicar exigiria apagar
+# e recriar a tag, ou seja, reescrever o registro para consertar o efeito dele.
+#
+# Aconteceu, e não uma vez: `v0.2.0`, `v0.3.0`, `v0.3.1`, `v1.0.0`, `v1.0.1` e
+# `v1.1.0` existem sem Release. A causa é o `tag-release` cair no `GITHUB_TOKEN`
+# quando o `BRABO_BOT_TOKEN` não está configurado — tag empurrada com o token
+# padrão NÃO dispara workflow (regra do GitHub contra recursão), e o comentário
+# do `tag-release.yml` já registrava isso desde a `v0.2.0`. O PAT conserta o
+# automático; o `workflow_dispatch` abaixo conserta a RECUPERABILIDADE, que é
+# problema separado e continuaria aberto mesmo com o PAT no lugar.
 on:
   push:
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag final a publicar (ex.: v1.1.0)'
+        required: true
+        type: string
 
 permissions:
   contents: write # criar a GitHub Release
@@ -29,12 +47,105 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
+      # PRIMEIRO passo, antes de qualquer checkout: quem republica é restrito,
+      # pela mesma razão e com a mesma lógica do `promote.yml`. `workflow_dispatch`
+      # já exige escrita no repo, mas isso não é a mesma coisa que ser o
+      # responsável de release — e a política nomeia um responsável.
+      #
+      # O gatilho de `push: tags` NÃO passa por aqui: ali quem "autorizou" foi a
+      # tag, que só nasce da esteira.
+      - name: Quem pode republicar
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          ATOR: ${{ github.actor }}
+          MODO: ${{ vars.APPROVAL_MODE || 'solo' }}
+          OWNER: ${{ vars.OWNER_HANDLE }}
+        run: |
+          set -euo pipefail
+          if [ "$MODO" != 'solo' ]; then
+            echo "::notice::APPROVAL_MODE=$MODO — a restrição de dispatch por owner vale no modo solo."
+            exit 0
+          fi
+          if [ -z "${OWNER:-}" ]; then
+            echo "::error::OWNER_HANDLE não está definido. Sem ele não há como saber quem é o responsável de release."
+            exit 1
+          fi
+          if [ "$ATOR" != "$OWNER" ]; then
+            echo "::error::'$ATOR' não pode republicar uma release."
+            exit 1
+          fi
+          echo "ator autorizado: $ATOR"
+
+      # DE ONDE VEM A TAG, e por que isto não é `github.ref_name` direto.
+      #
+      # No gatilho de `push: tags`, `GITHUB_REF_NAME` É a tag. Num
+      # `workflow_dispatch` ele é a BRANCH (a padrão, `main`) — usar o mesmo
+      # `${GITHUB_REF_NAME}` nos dois casos faria a republicação gerar uma Release
+      # chamada "main", com o changelog de `main`, e sem erro nenhum.
+      #
+      # Um lugar só resolve, valida e publica o resultado como output. Os passos
+      # seguintes leem daqui e nunca de `github.ref_name`.
+      - name: Qual tag publicar
+        id: alvo
+        env:
+          ENTRADA: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_EVENT_NAME}" = 'workflow_dispatch' ]; then
+            tag="$ENTRADA"
+          else
+            tag="${GITHUB_REF_NAME}"
+          fi
+
+          # A validação de formato existe porque o `workflow_dispatch` aceita
+          # texto livre — o filtro do gatilho de push não protege este caminho.
+          # Sufixo de pré-lançamento é recusado: `-qa.1` nunca bate com a versão
+          # declarada nos manifests, e a Release sairia de algo que ninguém
+          # validou como final.
+          if ! printf '%s' "$tag" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::'$tag' não é tag final. O formato é vX.Y.Z, sem sufixo -dev.N nem -qa.N."
+            exit 1
+          fi
+
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "tag a publicar: $tag"
+
       - uses: actions/checkout@v4
         with:
+          # O checkout é NA TAG, não no ref do evento. No push isso é o mesmo
+          # commit; num dispatch é a diferença entre publicar a versão pedida e
+          # publicar o topo da `main`.
+          ref: ${{ steps.alvo.outputs.tag }}
           # O changelog é gerado a partir do histórico: sem `fetch-depth: 0` o
           # checkout raso traz um commit só e a release sai com o changelog
           # vazio, sem erro nenhum.
           fetch-depth: 0
+
+      # RECUSA republicar sobre o que já existe, e isso é escolha, não limitação:
+      # uma Release publicada é registro, e sobrescrevê-la em silêncio apagaria as
+      # notas que alguém pode já ter lido ou linkado. Se a intenção for refazer,
+      # apagar a Release é ato deliberado seu, na interface.
+      #
+      # Falha rápido de propósito: descobrir a colisão aqui custa segundos, contra
+      # 20 minutos de build para bater no `gh release create` no fim. No gatilho de
+      # push isto nunca acontece; num dispatch, significa tag errada no input.
+      - name: A Release já existe?
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.alvo.outputs.tag }}
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "::error::a Release de $TAG já existe, e este workflow não sobrescreve."
+            {
+              echo "### Release já publicada"
+              echo
+              echo "\`$TAG\` já tem Release, e ela não é sobrescrita — nota publicada é"
+              echo "registro. Para refazer, apague a Release primeiro, na interface."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          echo "$TAG ainda não tem Release."
 
       - uses: pnpm/action-setup@v4
         with:
@@ -53,10 +164,12 @@ jobs:
       # aparece semanas depois, quando alguém tenta correlacionar um bug com
       # uma versão.
       - name: A tag bate com as versões declaradas?
+        env:
+          TAG: ${{ steps.alvo.outputs.tag }}
         run: |
           set -euo pipefail
-          versao="${GITHUB_REF_NAME#v}"
-          echo "tag: ${GITHUB_REF_NAME} -> versão ${versao}"
+          versao="${TAG#v}"
+          echo "tag: ${TAG} -> versão ${versao}"
 
           # AVISO, não reprovação: desde a FASE 6 a versão é CALCULADA e vive
           # na tag. Ninguém pode commitar direto numa permanente para bumpar
@@ -85,12 +198,14 @@ jobs:
           fi
 
       - name: Gerar o changelog desta versão
+        env:
+          TAG: ${{ steps.alvo.outputs.tag }}
         run: |
           set -euo pipefail
           # A tag anterior é a penúltima em ordem de versão — `HEAD^` daria o
           # commit anterior, que não é a mesma coisa.
           anterior="$(git tag --list 'v*' --sort=-v:refname | sed -n '2p')"
-          node scripts/changelog.mjs "${GITHUB_REF_NAME}" ${anterior:+"${anterior}"} --stdout \
+          node scripts/changelog.mjs "${TAG}" ${anterior:+"${anterior}"} --stdout \
             | tee RELEASE_NOTES.md
 
       - uses: docker/setup-buildx-action@v3
@@ -100,9 +215,11 @@ jobs:
       # enxerga variável de shell.
       - name: As duas tags desta release
         id: versao
+        env:
+          TAG: ${{ steps.alvo.outputs.tag }}
         run: |
           set -euo pipefail
-          echo "versao=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          echo "versao=${TAG#v}" >> "$GITHUB_OUTPUT"
           echo "sha=${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
 
       # As quatro imagens, cada uma com DUAS tags: a versão (legível, é o que
@@ -150,7 +267,8 @@ jobs:
       - name: Publicar a GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.alvo.outputs.tag }}
         run: |
-          gh release create "${GITHUB_REF_NAME}" \
-            --title "${GITHUB_REF_NAME}" \
+          gh release create "${TAG}" \
+            --title "${TAG}" \
             --notes-file RELEASE_NOTES.md

@@ -303,6 +303,44 @@ check nunca ficaria verde, e a cadeia travaria para sempre. Por isso o job da
 trava **falha ruidosamente** quando o segredo não existe, em vez de seguir e
 deixar o repositório num beco.
 
+O escopo `workflow` não é excesso: os PRs de retropropagação carregam a branch
+inteira, e ela pode conter mudança em `.github/workflows/**`. Sem esse escopo o
+push é recusado justamente no caso que mais importa — o de propagar uma correção
+de CI.
+
+> **Estado atual: o segredo NÃO está configurado.** `gh secret list` devolve só o
+> `CLAUDE_CODE_OAUTH_TOKEN`, e a conta é visível: a `v0.1.0` — empurrada à mão —
+> é a única tag com Release. **`v0.2.0`, `v0.3.0`, `v0.3.1`, `v1.0.0`, `v1.0.1` e
+> `v1.1.0` são tags órfãs.** O `tag-release` avisa em toda execução, e o aviso é
+> real, não ruído.
+
+### Republicar uma tag que ficou órfã
+
+O `release.yml` tem `workflow_dispatch` com input de tag, e ele existe por causa
+das seis acima. Só o gatilho de `push: tags` deixaria a falha **irreversível**:
+republicar exigiria apagar e recriar a tag, ou seja, reescrever o registro para
+consertar o efeito dele.
+
+```bash
+gh workflow run release.yml -f tag=v1.1.0
+```
+
+Três guardas, e cada uma existe por um modo de falha concreto:
+
+| guarda | contra o quê |
+|---|---|
+| só o `OWNER_HANDLE` dispara (modo `solo`) | mesma restrição do `promote`; o gatilho de push não passa por aqui, porque ali quem autorizou foi a tag |
+| o input tem que casar `^v[0-9]+\.[0-9]+\.[0-9]+$` | `workflow_dispatch` aceita texto livre. Sem isto, `-qa.1` publicaria uma Release de algo que ninguém validou como final |
+| recusa se a Release já existe | nota publicada é registro; sobrescrever em silêncio apagaria o que alguém já leu ou linkou |
+
+E o `checkout` é feito **na tag**, não no ref do evento. Num dispatch,
+`github.ref_name` é a branch padrão — sem esse cuidado, republicar geraria uma
+Release chamada `main`, com o changelog de `main`, sem erro nenhum.
+
+> **O dispatch só funciona depois que isto chegar na `main`.** É o ovo-e-galinha
+> da tabela de gatilhos acima: `workflow_dispatch` lê o workflow da branch
+> **padrão**. Enquanto a mudança estiver só em `dev`, o input nem aparece.
+
 ## Ruleset 2 — tags de versão
 
 **Nome:** `tags-de-release`

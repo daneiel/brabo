@@ -358,6 +358,30 @@ roda apodrece: ninguém o testa, ninguém percebe quando quebra, e no dia de lig
 estará errado. Quando houver ambiente, o deploy será workflow **próprio**,
 disparado pela tag.
 
+#### A Release depende do PAT, e a falta dele já custou seis
+
+O `release.yml` dispara em `push` de tag final. Mas **tag empurrada com o
+`GITHUB_TOKEN` não dispara workflow** — é a regra do GitHub contra recursão. O
+`tag-release` usa `secrets.BRABO_BOT_TOKEN || github.token`: sem o PAT, a tag
+nasce e a Release não sai.
+
+A degradação é visível de propósito (há um aviso em toda execução), mas visível
+não é impedida: **`v0.2.0`, `v0.3.0`, `v0.3.1`, `v1.0.0`, `v1.0.1` e `v1.1.0`
+existem sem Release**. Só a `v0.1.0`, empurrada à mão, tem.
+
+Isso separa dois problemas que é fácil confundir:
+
+| problema | conserto |
+|---|---|
+| a Release não sai **sozinha** | configurar o `BRABO_BOT_TOKEN` |
+| a Release que não saiu **não pode sair depois** | o `workflow_dispatch` do `release.yml` |
+
+O segundo continuaria aberto mesmo com o PAT no lugar: qualquer falha no
+workflow deixaria a tag órfã para sempre, porque republicar exigiria apagar e
+recriar a tag — reescrever o registro para consertar o efeito dele. Quem
+republica é o responsável de release, a mesma restrição do `promote`. O
+procedimento está em [Rulesets](../reference/rulesets.md#republicar-uma-tag-que-ficou-órfã).
+
 ### A versão do ciclo
 
 Sai do **maior impacto** entre os PRs mergeados desde a última final:
