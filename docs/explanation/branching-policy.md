@@ -320,6 +320,32 @@ versão acompanhem obrigaria a um PR de bump por ciclo — cerimônia que o cál
 automático existe para eliminar. O `release.yml` confere os arquivos como
 **aviso** e só dispara em tag final.
 
+### O que a tag final produz
+
+O `release.yml` é o fim da esteira, e o que ele entrega é deliberadamente
+modesto:
+
+| entrega | o quê |
+|---|---|
+| GitHub Release | com as notas geradas do CHANGELOG pela `scripts/changelog.mjs` |
+| conferência de versão | os quatro arquivos versionados, como **aviso** |
+| as quatro imagens de produção | construídas para provar que a tag é **construível** |
+
+**As imagens não são publicadas** — `push: false`. Publicar em registry ainda não
+está decidido (o overlay de produção aponta para `ghcr.io/OWNER/*`, um
+placeholder), e a decisão está registrada no
+[ADR 0027](../adr/0027-fase5-backup-hardening-release.md). Construir sem publicar
+não é meia-medida: é o que impede uma tag existir para um commit que não compila.
+
+Elas saem do mesmo `docker-bake.hcl` que o `ci.yml` usa, em paralelo. Antes eram
+quatro `docker build` em sequência — mesmo veredito, ~160s a mais por release.
+
+**Não existe passo de deploy, aqui nem em lugar nenhum.** A tag é o registro do
+que **estaria** em cada ambiente, e isso vale mesmo sem ambiente. Passo que nunca
+roda apodrece: ninguém o testa, ninguém percebe quando quebra, e no dia de ligar
+estará errado. Quando houver ambiente, o deploy será workflow **próprio**,
+disparado pela tag.
+
 ### A versão do ciclo
 
 Sai do **maior impacto** entre os PRs mergeados desde a última final:

@@ -84,11 +84,33 @@ jobs:
           elixir-version: ${{ env.ELIXIR_VERSION }}
           otp-version: ${{ env.OTP_VERSION }}
 
-      - uses: actions/cache@v4
+      # SÓ RESTAURA — quem ESCREVE o cache do Elixir é o `test-engine`, e essa
+      # assimetria é o ponto, não um detalhe.
+      #
+      # Antes eram duas entradas de cache mantidas em paralelo, sem reuso
+      # cruzado: `lint` e `audit` gravavam `${os}-mix-deps-…` com `deps` só, e o
+      # `test-engine` gravava `${os}-mix-…` com `deps` + `_build`. Duas cópias
+      # das mesmas deps, e o `_build` — que é o que pesa, e cuja ausência faz o
+      # `test-engine` variar de 39s a 124s — só existia numa delas.
+      #
+      # A saída ÓBVIA seria unificar a key e dar `_build` aos três. Ela está
+      # ERRADA, e o modo de falha é silencioso: no Actions o PRIMEIRO que grava
+      # uma key ganha, e gravação subsequente na mesma key é descartada. Como o
+      # `lint` (66s) termina antes do `test-engine` (124s) e NÃO compila nada, ele
+      # gravaria um `_build` vazio sob a key compartilhada — e o `test-engine`
+      # passaria a restaurar isso e recompilar do zero para sempre. Unificar
+      # deixaria o CI mais LENTO, com cache verde.
+      #
+      # Por isso `cache/restore`: mesma key e mesmos paths do escritor, zero
+      # gravação. Cache frio aqui degrada para o que já era o caminho frio —
+      # `mix deps.get` pela rede.
+      - uses: actions/cache/restore@v4
         with:
-          path: apps/engine/deps
-          key: ${{ runner.os }}-mix-deps-${{ env.ELIXIR_VERSION }}-${{ hashFiles('apps/engine/mix.lock') }}
-          restore-keys: ${{ runner.os }}-mix-deps-${{ env.ELIXIR_VERSION }}-
+          path: |
+            apps/engine/deps
+            apps/engine/_build
+          key: ${{ runner.os }}-mix-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-${{ hashFiles('apps/engine/mix.lock') }}
+          restore-keys: ${{ runner.os }}-mix-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-
 
       # `mix format` NÃO é standalone aqui: o .formatter.exs faz
       # `import_deps: [:ecto, :ecto_sql, :phoenix]` para conhecer as macros
@@ -210,6 +232,10 @@ jobs:
           elixir-version: ${{ env.ELIXIR_VERSION }}
           otp-version: ${{ env.OTP_VERSION }}
 
+      # O ESCRITOR do cache do Elixir — `lint` e `audit` só restauram desta key.
+      # Este é o único job que compila (`mix compile` + `mix test`), então é o
+      # único cujo `_build` vale ser guardado. O porquê de não distribuir a
+      # gravação está no comentário do `lint`.
       - uses: actions/cache@v4
         with:
           path: |
@@ -303,11 +329,16 @@ jobs:
           elixir-version: ${{ env.ELIXIR_VERSION }}
           otp-version: ${{ env.OTP_VERSION }}
 
-      - uses: actions/cache@v4
+      # Só restaura, pelo mesmo motivo detalhado no job `lint`: o escritor do
+      # cache do Elixir é o `test-engine`, e gravar daqui poria um `_build`
+      # vazio sob a key dele.
+      - uses: actions/cache/restore@v4
         with:
-          path: apps/engine/deps
-          key: ${{ runner.os }}-mix-deps-${{ env.ELIXIR_VERSION }}-${{ hashFiles('apps/engine/mix.lock') }}
-          restore-keys: ${{ runner.os }}-mix-deps-${{ env.ELIXIR_VERSION }}-
+          path: |
+            apps/engine/deps
+            apps/engine/_build
+          key: ${{ runner.os }}-mix-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-${{ hashFiles('apps/engine/mix.lock') }}
+          restore-keys: ${{ runner.os }}-mix-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-
 
       - name: mix deps.get
         working-directory: apps/engine
