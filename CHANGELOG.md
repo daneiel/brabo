@@ -71,6 +71,12 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - **docs**: `pnpm docs:check` reprova quando o `openapi.json` ou os MDX gerados
   saem de dia — alterar um DTO sem regerar quebra o check
 
+- **docs**: a documentação passa a ser publicada por **degrau**, no mesmo GitHub
+  Pages: `main` em `/brabo/` (inalterado), `qa` em `/brabo/qa/` e `dev` em
+  `/brabo/dev/`. Os dois degraus de baixo saem do índice dos buscadores, e a busca
+  local continua funcionando nos três
+  ([ADR 0034](docs/adr/0034-documentacao-publicada-por-degrau.md))
+
 ### Correções
 
 - **api**: `PUT /projects/:id/agent-autonomy` e

@@ -315,6 +315,35 @@ gh api repos/daneiel/brabo/rulesets --jq '.[] | "\(.name): \(.enforcement)"'
 > gere com `gh api repos/daneiel/brabo/rulesets/<id> > docs/reference/...` após
 > aplicar pela interface, e este documento passa a apontar para eles.
 
+## Settings → Pages: a fonte é a branch `gh-pages`
+
+Aplicação **manual**, pela mesma razão dos rulesets: o repositório versiona a
+fonte, o GitHub recebe a aplicação.
+
+**Settings → Pages → Build and deployment → Source: `Deploy from a branch`**, com
+branch **`gh-pages`** e pasta **`/ (root)`**.
+
+Hoje `gh api repos/daneiel/brabo/pages` devolve `"build_type": "workflow"`, que é
+a configuração do `actions/deploy-pages`. Enquanto ela não mudar, o
+`docs-deploy.yml` commita na `gh-pages` e **o Pages não serve nada de lá** — a
+publicação fica no repositório sem chegar ao ar.
+
+Por que a troca é obrigatória e não preferência: o `actions/deploy-pages` publica
+**um artefato como o site inteiro** e não sabe atualizar parte de uma árvore, o
+que é incompatível com um subdiretório por degrau. O desenho completo, as
+alternativas descartadas e a exceção de push que isto abre estão no
+[ADR 0034](../explanation/../adr/0034-documentacao-publicada-por-degrau.md).
+
+| degrau | URL | indexado |
+|---|---|---|
+| `main` | `https://daneiel.github.io/brabo/` | ✅ |
+| `qa` | `https://daneiel.github.io/brabo/qa/` | ❌ `noIndex` |
+| `dev` | `https://daneiel.github.io/brabo/dev/` | ❌ `noIndex` |
+
+> **A `gh-pages` NÃO entra no ruleset das permanentes.** Ela não é permanente, e o
+> bot precisa empurrar nela — incluí-la travaria a própria publicação. É também
+> por isso que o `GITHUB_TOKEN` basta ali, sem bypass e sem o `BRABO_BOT_TOKEN`.
+
 ## As labels de família precisam existir
 
 O `pr-police` aplica uma das quatro labels, e `gh pr edit --add-label` **falha**
