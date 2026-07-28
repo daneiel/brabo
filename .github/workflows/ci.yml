@@ -84,11 +84,33 @@ jobs:
           elixir-version: ${{ env.ELIXIR_VERSION }}
           otp-version: ${{ env.OTP_VERSION }}
 
-      - uses: actions/cache@v4
+      # SÓ RESTAURA — quem ESCREVE o cache do Elixir é o `test-engine`, e essa
+      # assimetria é o ponto, não um detalhe.
+      #
+      # Antes eram duas entradas de cache mantidas em paralelo, sem reuso
+      # cruzado: `lint` e `audit` gravavam `${os}-mix-deps-…` com `deps` só, e o
+      # `test-engine` gravava `${os}-mix-…` com `deps` + `_build`. Duas cópias
+      # das mesmas deps, e o `_build` — que é o que pesa, e cuja ausência faz o
+      # `test-engine` variar de 39s a 124s — só existia numa delas.
+      #
+      # A saída ÓBVIA seria unificar a key e dar `_build` aos três. Ela está
+      # ERRADA, e o modo de falha é silencioso: no Actions o PRIMEIRO que grava
+      # uma key ganha, e gravação subsequente na mesma key é descartada. Como o
+      # `lint` (66s) termina antes do `test-engine` (124s) e NÃO compila nada, ele
+      # gravaria um `_build` vazio sob a key compartilhada — e o `test-engine`
+      # passaria a restaurar isso e recompilar do zero para sempre. Unificar
+      # deixaria o CI mais LENTO, com cache verde.
+      #
+      # Por isso `cache/restore`: mesma key e mesmos paths do escritor, zero
+      # gravação. Cache frio aqui degrada para o que já era o caminho frio —
+      # `mix deps.get` pela rede.
+      - uses: actions/cache/restore@v4
         with:
-          path: apps/engine/deps
-          key: ${{ runner.os }}-mix-deps-${{ env.ELIXIR_VERSION }}-${{ hashFiles('apps/engine/mix.lock') }}
-          restore-keys: ${{ runner.os }}-mix-deps-${{ env.ELIXIR_VERSION }}-
+          path: |
+            apps/engine/deps
+            apps/engine/_build
+          key: ${{ runner.os }}-mix-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-${{ hashFiles('apps/engine/mix.lock') }}
+          restore-keys: ${{ runner.os }}-mix-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-
 
       # `mix format` NÃO é standalone aqui: o .formatter.exs faz
       # `import_deps: [:ecto, :ecto_sql, :phoenix]` para conhecer as macros
@@ -210,6 +232,10 @@ jobs:
           elixir-version: ${{ env.ELIXIR_VERSION }}
           otp-version: ${{ env.OTP_VERSION }}
 
+      # O ESCRITOR do cache do Elixir — `lint` e `audit` só restauram desta key.
+      # Este é o único job que compila (`mix compile` + `mix test`), então é o
+      # único cujo `_build` vale ser guardado. O porquê de não distribuir a
+      # gravação está no comentário do `lint`.
       - uses: actions/cache@v4
         with:
           path: |
@@ -303,11 +329,16 @@ jobs:
           elixir-version: ${{ env.ELIXIR_VERSION }}
           otp-version: ${{ env.OTP_VERSION }}
 
-      - uses: actions/cache@v4
+      # Só restaura, pelo mesmo motivo detalhado no job `lint`: o escritor do
+      # cache do Elixir é o `test-engine`, e gravar daqui poria um `_build`
+      # vazio sob a key dele.
+      - uses: actions/cache/restore@v4
         with:
-          path: apps/engine/deps
-          key: ${{ runner.os }}-mix-deps-${{ env.ELIXIR_VERSION }}-${{ hashFiles('apps/engine/mix.lock') }}
-          restore-keys: ${{ runner.os }}-mix-deps-${{ env.ELIXIR_VERSION }}-
+          path: |
+            apps/engine/deps
+            apps/engine/_build
+          key: ${{ runner.os }}-mix-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-${{ hashFiles('apps/engine/mix.lock') }}
+          restore-keys: ${{ runner.os }}-mix-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-
 
       - name: mix deps.get
         working-directory: apps/engine
@@ -336,6 +367,41 @@ jobs:
           # Histórico completo: um segredo removido no último commit continua
           # recuperável e precisa ser encontrado.
           fetch-depth: 0
+
+      # `fetch-depth: 0` traz TODAS as refs, e o `gitleaks detect` varre todos os
+      # commits alcançáveis — não só o histórico do HEAD. Desde o ADR 0034 isso
+      # passou a incluir a `gh-pages`, que carrega o site CONSTRUÍDO.
+      #
+      # O efeito foi medido, não previsto: **112 achados `generic-api-key`** num
+      # único commit do bot de publicação, todos em `dev/assets/js/*.js` — nomes de
+      # arquivo de avatar dentro de bundle minificado, com entropia alta o
+      # suficiente para a regra morder. Reprovou o PR de promoção #78 (`v1.1.0`), o
+      # primeiro a ser varrido depois de a `gh-pages` nascer.
+      #
+      # A `gh-pages` NÃO é código-fonte: nada nela é escrito por pessoa, tudo é
+      # gerado de `docs/` e `website/`. Varrê-la procurando segredo é procurar no
+      # lugar errado, e o custo de não fazer nada seria pior que o ruído — check
+      # required vermelho por ruído ensina a ignorar check vermelho.
+      #
+      # A saída NÃO é allowlist de caminho no `.gitleaks.toml`: aquilo valeria para
+      # TODOS os commits, então um `dev/` que aparecesse no código-fonte um dia
+      # ficaria sem varredura, em silêncio. Tirar a ref do escopo é preciso —
+      # exclui exatamente os commits que não são fonte, e nada mais.
+      #
+      # Verificado por execução com o gitleaks 8.30.1, a mesma versão daqui:
+      # antes 133 commits e 112 achados (idêntico ao log do #78); depois 132
+      # commits e nenhum achado. E a prova de que não abriu buraco: um PAT do
+      # GitHub com entropia real, plantado num commit de `apps/api/src/`, continua
+      # sendo detectado.
+      - name: Tirar a gh-pages do escopo
+        run: |
+          set -euo pipefail
+          if git show-ref --quiet refs/remotes/origin/gh-pages; then
+            git update-ref -d refs/remotes/origin/gh-pages
+            echo "gh-pages fora do escopo — ela é site gerado, não fonte."
+          else
+            echo "gh-pages não existe neste clone; nada a excluir."
+          fi
 
       - name: Instalar gitleaks
         run: |

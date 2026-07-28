@@ -71,6 +71,12 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - **docs**: `pnpm docs:check` reprova quando o `openapi.json` ou os MDX gerados
   saem de dia — alterar um DTO sem regerar quebra o check
 
+- **docs**: a documentação passa a ser publicada por **degrau**, no mesmo GitHub
+  Pages: `main` em `/brabo/` (inalterado), `qa` em `/brabo/qa/` e `dev` em
+  `/brabo/dev/`. Os dois degraus de baixo saem do índice dos buscadores, e a busca
+  local continua funcionando nos três
+  ([ADR 0034](docs/adr/0034-documentacao-publicada-por-degrau.md))
+
 ### Correções
 
 - **api**: `PUT /projects/:id/agent-autonomy` e
@@ -82,6 +88,15 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `@HttpCode` quando há qualquer `@ApiResponse`
 - **api**: o `@ApiBearerAuth` de classe no controller de git vazava para o
   callback de OAuth, que é público
+- **docs**: as **117 páginas de operação** da referência de API não
+  renderizavam no site publicado — todas mostravam "Esta página deu erro." em
+  vez do explorador. Faltava `docItemComponent: '@theme/ApiItem'` no config do
+  Docusaurus, então o wrapper que monta o store do redux nunca era montado e
+  cada página morria na hidratação. Estava assim desde que a referência nasceu:
+  saiu quebrada na `v1.0.0` e na `v1.0.1`. Junto entra
+  `scripts/docs/api-render-check.mjs`, que reprova o CI se a referência
+  construir sem renderizar — o build ficava verde durante todo o defeito, e era
+  essa lacuna que deixava passar
 
 ### Manutenção
 

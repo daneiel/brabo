@@ -109,20 +109,64 @@ gh variable set APPROVAL_MODE      --body community
 Nome **exato**, como o GitHub o registra (é o `name:` do job, não o do
 workflow):
 
-| check | workflow |
-|---|---|
-| `Política de branches` | `pr-police.yml` |
-| `Escada de aprovação` | `approval-ladder.yml` |
-| `Check de promoção` | `promotion-check.yml` |
-| `Backmerge gate` | `backmerge-gate.yml` |
-| `Lint` | `ci.yml` |
-| `Testes TS (api + web)` | `ci.yml` |
-| `Testes do engine (ExUnit)` | `ci.yml` |
-| `Auditoria de dependências` | `ci.yml` |
-| `Gitleaks no repositório` | `ci.yml` |
-| `Manifests de Kubernetes` | `ci.yml` |
-| `Build, scan e smoke das imagens de produção` | `ci.yml` |
-| `Drift, gerados e build` | `docs-check.yml` |
+A coluna de duração é **medida**, não estimada — três execuções reais, cache
+frio e quente. Ela existe para que "otimizar o CI" comece pelo número e não pelo
+palpite.
+
+| check | workflow | frio | quente |
+|---|---|---|---|
+| `Build, scan e smoke das imagens de produção` | `ci.yml` | **295s** | 109s |
+| `Testes TS (api + web)` | `ci.yml` | 159s | **159s** |
+| `Testes do engine (ExUnit)` | `ci.yml` | 124s | 39s |
+| `Auditoria de dependências` | `ci.yml` | 99s | 85s |
+| `Lint` | `ci.yml` | 66s | 69s |
+| `Drift, gerados e build` | `docs-check.yml` | 53s | 51s |
+| `Manifests de Kubernetes` | `ci.yml` | 14s | 13s |
+| `Gitleaks no repositório` | `ci.yml` | 5s | 7s |
+| `Política de branches` | `pr-police.yml` | 7s | 7s |
+| `Escada de aprovação` | `approval-ladder.yml` | 13s | 15s |
+| `Check de promoção` | `promotion-check.yml` | 9s | 9s |
+| `Backmerge gate` | `backmerge-gate.yml` | 7s | 7s |
+
+**O `ci.yml` já é 100% paralelo** — nenhum job dele tem `needs:`. Não existe
+grafo serial para desatar, e o veredito completo do PR custa o job mais LENTO,
+não a soma (que é ~12min de CPU). Quem quiser encurtar o PR tem dois alvos, e só
+dois:
+
+- **cache frio: o job de imagens**, onde 195s dos 295s são o `docker buildx bake`
+  — o maior item isolado de todo o CI, 3× o segundo. O bakefile já constrói as
+  quatro em paralelo com cache `type=gha` por imagem, e o comentário no topo dele
+  mede por que quebrar em matriz de jobs seria PIOR: 1,7 GB de imagens por
+  artifact custa mais que o build, e o smoke precisa das quatro no mesmo daemon;
+- **cache quente: `Testes TS`**, onde 91s dos 159s são `pnpm --filter api test`,
+  serializado por `fileParallelism: false` em `apps/api/vitest.config.ts` — os
+  specs compartilham a `brabo_test` e dão TRUNCATE entre testes. Paralelizar
+  exige banco ou schema por worker, não a flag.
+
+> **Dividir job para paralelizar tem dois custos que o número não mostra.** O
+> primeiro: o nome do job **é** o nome do check required, então dividir
+> `Testes TS (api + web)` em três apagaria um check required — que nunca mais
+> reporta e trava todo PR para sempre (é a mesma armadilha da nota mais abaixo).
+> Preservar o nome exigiria um job de fan-in com `needs:`, ou mexer em Settings.
+>
+> O segundo: **medido, o ganho não estava lá.** Cada job novo repaga `checkout` +
+> `setup-node` + `pnpm install` (~25s) e, no caso da api, o container de Postgres
+> (13s). Dividir os 159s dá ~150s, porque os 91s do teste da api continuam
+> inteiros e carregam o setup de qualquer jeito. **~7s** de ganho para gastar um
+> check required e um job a mais — não se paga. O que paga é atacar os 91s.
+
+> **O nome do check é menor que o que ele guarda.** `Drift, gerados e build` são
+> três coisas no título e **cinco** gates no job: integridade do `.docmap.yml`,
+> gerados em dia, drift, build do site, e — desde que a referência de API subiu
+> quebrada em duas releases — **a referência de API renderiza**
+> (`scripts/docs/api-render-check.mjs`).
+>
+> Esse último existe porque build verde não é página que renderiza: o MDX
+> compila, o SSR escreve o conteúdo, `docs:build` passa, e a página morre na
+> hidratação no navegador. O mecanismo inteiro está em
+> `docs/explanation/documentation-workflow.md`. Ao acrescentar gate a este job,
+> o nome do check **não** muda — e é por isso que ele não precisa entrar de novo
+> na tabela acima, mas precisa estar escrito em algum lugar. É aqui.
 
 > **`pull_request_target` exige o workflow na branch PADRÃO.** Não basta estar
 > na branch base do PR. Isso foi medido, não suposto: com `pull_request_target`
@@ -301,6 +345,52 @@ gh api repos/daneiel/brabo/rulesets --jq '.[] | "\(.name): \(.enforcement)"'
 > instalação — um arquivo fixo seria copiado errado. Se quiser versioná-los,
 > gere com `gh api repos/daneiel/brabo/rulesets/<id> > docs/reference/...` após
 > aplicar pela interface, e este documento passa a apontar para eles.
+
+## Settings → Pages: a fonte é a branch `gh-pages`
+
+Aplicação **manual**, pela mesma razão dos rulesets: o repositório versiona a
+fonte, o GitHub recebe a aplicação.
+
+**Settings → Pages → Build and deployment → Source: `Deploy from a branch`**, com
+branch **`gh-pages`** e pasta **`/ (root)`**.
+
+Hoje `gh api repos/daneiel/brabo/pages` devolve `"build_type": "workflow"`, que é
+a configuração do `actions/deploy-pages`. Enquanto ela não mudar, o
+`docs-deploy.yml` commita na `gh-pages` e **o Pages não serve nada de lá** — a
+publicação fica no repositório sem chegar ao ar.
+
+Por que a troca é obrigatória e não preferência: o `actions/deploy-pages` publica
+**um artefato como o site inteiro** e não sabe atualizar parte de uma árvore, o
+que é incompatível com um subdiretório por degrau. O desenho completo, as
+alternativas descartadas e a exceção de push que isto abre estão no
+[ADR 0034](../explanation/../adr/0034-documentacao-publicada-por-degrau.md).
+
+| degrau | URL | indexado |
+|---|---|---|
+| `main` | `https://daneiel.github.io/brabo/` | ✅ |
+| `qa` | `https://daneiel.github.io/brabo/qa/` | ❌ `noIndex` |
+| `dev` | `https://daneiel.github.io/brabo/dev/` | ❌ `noIndex` |
+
+> **A `gh-pages` NÃO entra no ruleset das permanentes.** Ela não é permanente, e o
+> bot precisa empurrar nela — incluí-la travaria a própria publicação. É também
+> por isso que o `GITHUB_TOKEN` basta ali, sem bypass e sem o `BRABO_BOT_TOKEN`.
+
+> **E ela sai do escopo do Gitleaks, por um motivo que só apareceu depois.** O
+> `gitleaks detect` varre **todos os commits alcançáveis**, não só o histórico do
+> HEAD — e `fetch-depth: 0` traz todas as refs. Assim que a `gh-pages` nasceu, o
+> site construído entrou na varredura: **112 achados `generic-api-key`** num
+> commit só, todos em `dev/assets/js/*.js`, que são nomes de arquivo de avatar
+> dentro de bundle minificado com entropia alta demais para a regra. Reprovou o PR
+> de promoção **#78**, o primeiro varrido depois da estreia.
+>
+> O `ci.yml` passa a apagar `refs/remotes/origin/gh-pages` antes de varrer. **Não**
+> por allowlist de caminho no `.gitleaks.toml`: aquilo valeria para todos os
+> commits, e um `dev/` que aparecesse no código-fonte um dia ficaria sem varredura
+> em silêncio. Excluir a ref exclui exatamente os commits que não são fonte.
+>
+> Medido com o gitleaks 8.30.1, a versão do CI: 133 commits e 112 achados antes,
+> 132 e nenhum depois — e um PAT do GitHub de entropia real plantado em
+> `apps/api/src/` continua sendo detectado, que é a prova de que não abriu buraco.
 
 ## As labels de família precisam existir
 

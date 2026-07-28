@@ -93,6 +93,27 @@ rules:
     severity: block
     note: "Rode `pnpm docs:generate`. O openapi.json e os MDX saem do código, nunca da mão."
 
+  # O SITE era ponto cego do mapa: `website/**` não aparecia em nenhuma regra, e
+  # mexer no config do Docusaurus não cobrava documentação nenhuma. Isso não é
+  # hipótese — foi por aí que passou o defeito que deixou as 117 páginas de
+  # operação da referência de API sem renderizar em duas releases: o config não
+  # declarava `docItemComponent: '@theme/ApiItem'`, o build ficou verde, e nada
+  # no mapa ligava aquela mudança a doc alguma.
+  #
+  # `warn`, não `block`: o `website/**` vai de ajuste de uma cor no
+  # `custom.css` a trocar o mecanismo de publicação. Bloquear os dois pelo mesmo
+  # motivo ensina a usar o escape hatch por reflexo, e aí ele para de significar
+  # alguma coisa. Quem reprova de verdade o comportamento do site é o
+  # `api-render-check.mjs` no `docs-check.yml`, que olha o build, não a prosa.
+  - id: site-e-publicacao
+    watch:
+      - "website/**"
+      - ".github/workflows/docs-deploy.yml"
+    docs:
+      - "docs/explanation/documentation-workflow.md"
+    severity: warn
+    note: "Config do site ou mecanismo de publicação mudou — o documento que explica o mecanismo precisa acompanhar."
+
   - id: contrato-web
     watch:
       - "apps/web/src/lib/api-client.ts"

@@ -1,10 +1,17 @@
 name: Guardião da documentação
 
-# Roda em todo PR. Três perguntas, nesta ordem de custo:
-#   1. o mapa de responsabilidade está íntegro? (segundos)
-#   2. o que é gerado está em dia? (segundos)
-#   3. o PR atualizou a doc que deveria? (segundos)
-#   4. o site constrói sem link quebrado? (minutos — fica por último)
+# Roda em todo PR. Cinco perguntas, nesta ordem de custo — medida, não estimada
+# (execuções 30313457222, 30313191242, 30312381170; job inteiro em 51-53s):
+#   1. o mapa de responsabilidade está íntegro? (0s)
+#   2. o que é gerado está em dia? (10s)
+#   3. o PR atualizou a doc que deveria? (0-1s)
+#   4. o site constrói sem link quebrado? (12s)
+#   5. a referência de API RENDERIZA? (0s — e ver o comentário do passo)
+#
+# O item 4 dizia "minutos" e custa 12s: com o cache do Rspack quente e o
+# `future.faster` do Docusaurus 3.10, ele não é nem o maior passo do job — o
+# `pnpm install` (12-16s) é. Este workflow também NÃO está no caminho crítico do
+# PR: termina em ~52s, contra ~5min do `ci.yml`.
 on:
   pull_request:
     # `edited` junto dos três default, pelo mesmo motivo que o
@@ -25,9 +32,9 @@ on:
     # O `ci.yml` não precisa disto: o que ele testa é o HEAD, e o resultado
     # dele não muda com a base.
     #
-    # O preço é o `docs:build` (minutos) reexecutar quando alguém só mexe no
-    # texto do PR. O `concurrency` acima já cancela a execução anterior, e o
-    # veredito correto vale o custo.
+    # O preço é o job inteiro (~52s, dos quais 12s de `docs:build`) reexecutar
+    # quando alguém só mexe no texto do PR. O `concurrency` acima já cancela a
+    # execução anterior, e o veredito correto vale o custo.
     types: [opened, reopened, synchronize, edited]
   schedule:
     # Segunda, 06:00 UTC — só o check de links externos.
@@ -154,6 +161,22 @@ jobs:
       # vezes. Ao mexer aqui, lembre que a publicação depende deste build passar.
       - name: Build do site
         run: pnpm docs:build
+
+      # BUILD VERDE NÃO É PÁGINA QUE RENDERIZA, e essa distinção custou duas
+      # releases. A referência de API subiu morta em v1.0.0 e v1.0.1: faltava
+      # `docItemComponent: '@theme/ApiItem'` no config, o `ApiItem` nunca era
+      # montado, e as 117 páginas de operação morriam na HIDRATAÇÃO com
+      # "Cannot destructure property 'store'". O passo acima ficou verde todas
+      # as vezes — o MDX compila, o SSR escreve o conteúdo, e o error boundary
+      # só apaga a página no navegador.
+      #
+      # Este passo afirma a marca estrutural que só o `ApiItem` produz. Precisa
+      # vir DEPOIS do build, porque é o build que ele inspeciona.
+      #
+      # Localmente: `pnpm docs:build && node scripts/docs/api-render-check.mjs`.
+      # Fora do `docs:check` de propósito — aquele não constrói o site.
+      - name: A referência de API renderiza
+        run: node scripts/docs/api-render-check.mjs
 
   # Links EXTERNOS não entram no PR: site de terceiro fora do ar não pode
   # reprovar o trabalho de ninguém. Vira relatório semanal.
