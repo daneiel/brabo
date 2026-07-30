@@ -1,6 +1,6 @@
 import { renovarSessao, tokenAtual } from './auth';
 import { runtimeConfig } from './runtime-config';
-import { logger, newTraceContext } from './logger';
+import { childSpan, logger, newTraceContext } from './logger';
 import type {
   AgentAutonomyRule,
   AgentTokenUsage,
@@ -90,21 +90,41 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   // `traceparent` como parent — é o propagador W3C padrão — então a ação do
   // usuário e o trabalho de servidor que ela dispara ficam na mesma árvore.
   const traceCtx = newTraceContext();
+  const metodo = (init?.method ?? 'GET').toUpperCase();
+  const inicio = performance.now();
 
-  let res = await tentar(path, traceCtx.traceparent, init);
+  let res: Response;
+  try {
+    res = await tentar(path, traceCtx.traceparent, init);
 
-  // 401 → renova UMA vez e repete. A renovação é single-flight (ver auth.ts):
-  // várias chamadas que levem 401 ao mesmo tempo compartilham a mesma
-  // promessa, e é isso que impede o refresh de ser apresentado duas vezes —
-  // que o servidor leria como reuso de token e puniria revogando a família.
-  //
-  // Uma tentativa só, de propósito: se o token novo também levar 401, o
-  // problema não é a validade da sessão, e repetir viraria laço.
-  if (res.status === 401) {
-    const novo = await renovarSessao();
-    if (novo) {
-      res = await tentar(path, traceCtx.traceparent, init);
+    // 401 → renova UMA vez e repete. A renovação é single-flight (ver auth.ts):
+    // várias chamadas que levem 401 ao mesmo tempo compartilham a mesma
+    // promessa, e é isso que impede o refresh de ser apresentado duas vezes —
+    // que o servidor leria como reuso de token e puniria revogando a família.
+    //
+    // Uma tentativa só, de propósito: se o token novo também levar 401, o
+    // problema não é a validade da sessão, e repetir viraria laço.
+    if (res.status === 401) {
+      const novo = await renovarSessao();
+      if (novo) {
+        // Span NOVA na mesma trace (ADR 0035): reusar o `traceparent` fazia as
+        // duas tentativas declararem o mesmo pai, e o Tempo as colapsava num nó
+        // só — escondendo justamente que houve refresh no meio.
+        res = await tentar(path, childSpan(traceCtx).traceparent, init);
+      }
     }
+  } catch (erro) {
+    // Falha de REDE (DNS, offline, CORS, api fora do ar): o `fetch` rejeita e
+    // esta função nunca chegava a logar nada. O erro subia para o
+    // `QueryCache.onError`, sem `trace_id` e sem rota — ou seja, o modo de falha
+    // mais comum em desenvolvimento era o menos diagnosticável.
+    logger.errorWithTrace('api inalcançável', traceCtx.traceId, {
+      path,
+      method: metodo,
+      duration_ms: Math.round(performance.now() - inicio),
+      erro: erro instanceof Error ? erro.message : String(erro),
+    });
+    throw erro;
   }
 
   if (!res.ok) {
@@ -115,7 +135,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     logger.errorWithTrace('requisição à api falhou', traceCtx.traceId, {
       path,
       status: res.status,
-      method: (init?.method ?? 'GET').toUpperCase(),
+      method: metodo,
+      duration_ms: Math.round(performance.now() - inicio),
     });
     throw new ApiError(res.status, body, traceCtx.traceId);
   }
