@@ -127,6 +127,17 @@ desligado.
 Mover um arquivo sem corrigir quem aponta para ele derruba o CI em vez de virar
 404 em produção. É o mecanismo mais barato do conjunto inteiro.
 
+### Página nova precisa entrar no `sidebars.ts` à mão
+
+O conteúdo do Markdown vive em `docs/`, mas o **roteamento** vive em
+`website/sidebars.ts` — e as seções enumeram os itens uma a uma, em vez de varrer
+diretório. Criar um arquivo em `docs/` e não acrescentá-lo lá produz uma página
+que existe, é servida por URL direta, e **não aparece na navegação**.
+
+O build **não** reprova nisso: página órfã não é link quebrado. É verificação
+visual, e é o único passo do mecanismo que não tem rede de segurança — depois de
+`pnpm docs:build`, abra a barra lateral e confirme que a página está lá.
+
 ### `api-render-check.mjs` — build verde não é página que renderiza
 
 Esta peça existe por uma lição paga caro: **as 117 páginas de operação da
@@ -278,3 +289,11 @@ existe leitura humana, e o `/sync-docs`.
 **Não escreve documentação.** Gera inventário e cobra revisão. O que uma
 variável faz quando está errada, por que um teto existe, o que investigar num
 incidente — isso continua sendo trabalho de escrever.
+
+**Não cobra o `README.md` nem o que nenhuma regra vigia.** O docmap é piso, não
+teto: em 2026-07-29 nenhuma regra olhava para o coração da observabilidade
+(`tracing.ts`, `infrastructure/observability/**`, `telemetry/**`,
+`lib/logger.ts`), e o `README.md` quase não é exigido por regra nenhuma. Entregar
+só o que o CI cobra é como as duas frases sobre `OTEL_EXPORTER_OTLP_ENDPOINT`
+ficaram erradas por meses. Ao mudar código, varra `docs/` procurando o que a
+mudança tornou falso — inclusive o que ninguém pediu para você olhar.

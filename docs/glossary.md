@@ -267,4 +267,16 @@ no cluster inteiro**; sem cluster Erlang formado, cada réplica vira uma ilha
 
 **Trace raiz** — uma sessão = uma trace, atravessando api ↔ engine. O
 `traceparent` fica persistido em `sessions.trace_parent`, e é por ele que se
-navega no Tempo.
+navega no Tempo. O `trace_id` nasce na **web** (o browser gera o `traceparent`) e
+existe mesmo sem coletor: exportar é decisão separada de instrumentar
+([ADR 0035](adr/0035-observabilidade-legivel-e-trace-sem-coletor.md)).
+
+**Caminho entre camadas** — a sequência de fronteiras que uma requisição atravessa
+na api (`interfaces` → `application` → `infrastructure`), com a duração de cada
+passo, emitida como **uma** linha de log por requisição. Vem de um
+`AsyncLocalStorage` alimentado pelo decorator `@Traced`, não de span — é o que faz
+funcionar sem coletor. Ver [observabilidade](explanation/observability.md).
+
+**Camada** — no caminho acima, o rótulo da fronteira: `interfaces`, `application`,
+`domain` ou `infrastructure`. Corresponde aos diretórios de `apps/api/src/` e à
+regra de dependência entre eles.

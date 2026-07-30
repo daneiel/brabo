@@ -50,6 +50,25 @@ export function newTraceContext(): TraceContext {
   return { traceId, spanId, traceparent: `00-${traceId}-${spanId}-01` };
 }
 
+/**
+ * Nova span DENTRO da mesma trace (ADR 0035).
+ *
+ * Existe para a retentativa depois do 401: o `api-client` reusava o MESMO
+ * `traceparent` nas duas tentativas, então a original e a retentativa chegavam à
+ * api declarando o mesmo `span_id` como pai. O Tempo desenha isso como um nó só,
+ * ambíguo — e o fato interessante (houve refresh no meio) desaparece.
+ *
+ * Mantém o `traceId`, troca o `spanId`.
+ */
+export function childSpan(pai: TraceContext): TraceContext {
+  const spanId = randomHex(8);
+  return {
+    traceId: pai.traceId,
+    spanId,
+    traceparent: `00-${pai.traceId}-${spanId}-01`,
+  };
+}
+
 function currentLevel(): LogLevel {
   const configured = runtimeConfig.logLevel as LogLevel | undefined;
   return configured && LEVELS.includes(configured) ? configured : 'info';

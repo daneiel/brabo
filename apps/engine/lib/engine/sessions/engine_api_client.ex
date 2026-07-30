@@ -496,7 +496,7 @@ defmodule Engine.Sessions.EngineApiClient.Live do
       api_url() <>
         "/internal/sessions/#{session_id}/events?projectId=#{project_id}&limit=200"
 
-    case Req.get(url, headers: auth_headers()) do
+    case Req.get(url, headers: headers()) do
       {:ok, %Req.Response{status: status, body: %{"items" => items}}}
       when status in 200..299 ->
         {:ok, items}
@@ -630,7 +630,7 @@ defmodule Engine.Sessions.EngineApiClient.Live do
         "/internal/sessions/#{session_id}/dev-context?projectId=#{project_id}&taskId=#{task_id}" <>
         module_query
 
-    case Req.get(url, headers: auth_headers()) do
+    case Req.get(url, headers: headers()) do
       {:ok, %Req.Response{status: status, body: body}} when status in 200..299 ->
         {:ok, body}
 
@@ -648,7 +648,7 @@ defmodule Engine.Sessions.EngineApiClient.Live do
       api_url() <>
         "/internal/sessions/#{session_id}/infra-context?projectId=#{project_id}"
 
-    case Req.get(url, headers: auth_headers()) do
+    case Req.get(url, headers: headers()) do
       {:ok, %Req.Response{status: status, body: body}} when status in 200..299 ->
         {:ok, body}
 
@@ -666,7 +666,7 @@ defmodule Engine.Sessions.EngineApiClient.Live do
       api_url() <>
         "/internal/sessions/#{session_id}/infra-artifacts/#{pr_action_id}/files?projectId=#{project_id}"
 
-    case Req.get(url, headers: auth_headers()) do
+    case Req.get(url, headers: headers()) do
       {:ok, %Req.Response{status: status, body: body}} when status in 200..299 ->
         {:ok, body}
 
@@ -684,7 +684,7 @@ defmodule Engine.Sessions.EngineApiClient.Live do
       api_url() <>
         "/internal/sessions/#{session_id}/psychologist-context?projectId=#{project_id}"
 
-    case Req.get(url, headers: auth_headers()) do
+    case Req.get(url, headers: headers()) do
       {:ok, %Req.Response{status: status, body: body}} when status in 200..299 ->
         {:ok, body}
 
@@ -703,7 +703,7 @@ defmodule Engine.Sessions.EngineApiClient.Live do
     # sessão é irrelevante aqui.
     url = api_url() <> "/internal/sessions/_/anamnese-context?projectId=#{project_id}"
 
-    case Req.get(url, headers: auth_headers()) do
+    case Req.get(url, headers: headers()) do
       {:ok, %Req.Response{status: status, body: body}} when status in 200..299 ->
         {:ok, body}
 
@@ -787,7 +787,7 @@ defmodule Engine.Sessions.EngineApiClient.Live do
     result =
       Req.post(api_url() <> "/internal/sessions/#{session_id}/llm-turn-stream",
         json: body,
-        headers: auth_headers(),
+        headers: headers(),
         into: into
       )
 
@@ -911,17 +911,30 @@ defmodule Engine.Sessions.EngineApiClient.Live do
     })
   end
 
-  # Acrescenta o `traceparent` do contexto ativo (Fase 5, item 3).
+  # O funil ÚNICO de headers de toda chamada engine -> api (ADR 0035).
   #
-  # `post_returning/3` é o funil ÚNICO de todo POST engine -> api, então
-  # injetar aqui cobre append_event, report_termination, llm_turn, os verdicts
-  # dos gates e tudo o mais de uma vez. Sem isso, cada chamada do engine
-  # apareceria no Tempo como trace própria e a árvore da sessão ficaria partida
-  # exatamente na fronteira entre os dois serviços.
-  defp trace_headers(headers) do
+  # `auth_headers/0` sozinho era o bug: ele já era um funil, mas só do token.
+  # O `traceparent` era injetado uma camada acima, dentro de `post_returning/3`,
+  # e por isso cobria apenas os POSTs. Ficavam de fora os seis `Req.get` (que
+  # incluem `list_events` e as leituras que montam o contexto do agente) e o
+  # `llm_turn_stream`, o turno de LLM em streaming — indiscutivelmente a chamada
+  # mais interessante do sistema. Toda a metade de LEITURA da conversa entre os
+  # dois serviços aparecia no Tempo como trace órfã.
+  #
+  # Agora é um só: quem chama a api usa `headers/0`, e `auth_headers/0` existe
+  # apenas para ser composta aqui.
+  # Pública (e `@doc false`) só para ser testável: `engine_api_client_headers_test.exs`
+  # afirma que o token sobrevive e que o traceparent aparece dentro de span. Não
+  # faz parte do contrato do módulo — o behaviour lá em cima é que faz.
+  @doc false
+  def headers, do: trace_headers(auth_headers())
+
+  # Acrescenta o `traceparent` do contexto ativo (Fase 5, item 3). O parâmetro se
+  # chama `base` e não `headers` para não sombrear a `headers/0` acima.
+  defp trace_headers(base) do
     case Engine.Telemetry.Span.current_traceparent() do
-      nil -> headers
-      tp -> [{"traceparent", tp} | headers]
+      nil -> base
+      tp -> [{"traceparent", tp} | base]
     end
   end
 
@@ -939,7 +952,7 @@ defmodule Engine.Sessions.EngineApiClient.Live do
            [
              url: api_url() <> path,
              json: body,
-             headers: trace_headers(auth_headers())
+             headers: headers()
            ] ++ opts
          ) do
       {:ok, %Req.Response{status: status, body: resp}} when status in 200..299 ->

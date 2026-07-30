@@ -38,6 +38,10 @@ defmodule EngineWeb.Endpoint do
 
   plug Plug.RequestId
   plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
+  # DEPOIS do RequestId, para a linha de acesso carregar o `request_id` na
+  # metadata. Ver o moduledoc: filtra as rotas de probe, que o `Plug.Logger` não
+  # filtraria.
+  plug EngineWeb.Plugs.AccessLog
 
   plug Plug.Parsers,
     parsers: [:urlencoded, :multipart, :json],
