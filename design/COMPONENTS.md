@@ -231,3 +231,96 @@ completos, `surface-2`/`text-muted` no pendente):
 Rodapé: botão Voltar (condicional) + `"passo N de 4"` + botão
 Continuar/Criar projeto (opacity reduzida quando o passo não pode
 avançar).
+
+## Alert (extraído do mockup de login — 2026-07-30)
+
+Bloco de aviso **no fluxo** da página, não flutuante. Não é `Toast`: aquele
+é transiente e vive fixo na viewport; este ocupa espaço e fica.
+
+Anatomia comum: `display:flex; align-items:flex-start; gap:10px;
+padding:10px 12px; radius 8px`, ícone 15px com `flex-shrink:0` e
+`margin-top:2px` (alinha com a primeira linha do texto, não com o topo da
+caixa), texto 12.5px `line-height:1.5` com `text-wrap:pretty`. `<strong>`
+dentro do texto puxa `var(--text-primary)` + `font-weight:600` — é o nome
+da ação que a pessoa precisa procurar.
+
+Duas formas, e a diferença é de posição:
+
+- **dentro de um card** (erro de formulário): fundo e borda tingidos pelo
+  tom — `color-mix(in srgb, var(--danger) 10%, transparent)` e
+  `color-mix(..., 40%, transparent)`, sem borda lateral. Precisa se separar
+  do card por cor. Texto em `var(--text-primary)`: é a informação da hora.
+- **fora do card** (aviso de contexto): fundo `var(--surface-1)`, borda
+  `1px var(--border)` e `border-left: 2px solid <cor do tom>`. Já está
+  sobre o fundo da página, então só precisa de um acento.
+
+4 tons — `danger` / `warning` / `success` / `accent`. O ícone default vem
+do tom: círculo com `!` no `danger` (**falha**), triângulo com `!` no
+`warning`/`accent` (**atenção**), check no `success`. Dois símbolos para duas
+coisas diferentes; com um só, seria preciso ler o texto para saber qual é.
+
+**O papel de acessibilidade NÃO é derivado do tom** — é escolhido por quem
+usa. `role="alert"` é live region assertiva (interrompe o leitor de tela) e
+serve para o resultado de uma ação que a pessoa acabou de disparar;
+`role="status"` é polida e serve para confirmação; o default é papel nenhum,
+para texto que já estava na tela quando ela abriu. Ver ADR 0036.
+
+## Botão com `loading`
+
+Estende o `primary`/`secondary` já especificado. Spinner 15px à esquerda do
+label, `gap:9px`: `border: 2px solid color-mix(in srgb, var(--on-accent)
+35%, transparent)`, `border-top-color: var(--on-accent)`, `radius 50%`,
+`animation: bspin .7s linear infinite`. O label troca (`Entrar` →
+`Autenticando…`).
+
+Três obrigações: o botão fica `disabled` (é o que impede duplo submit virar
+duas requisições); ganha `aria-busy="true"` (sem isso, quem usa leitor de
+tela só percebe que o botão desabilitou); e o spinner é `aria-hidden`, para
+não entrar no nome acessível. Em `prefers-reduced-motion` a animação para —
+o elemento **fica**, porque removê-lo mudaria o layout do botão.
+
+## Campo preenchido (segunda anatomia de input)
+
+O `Inputs/selects` acima segue valendo como default. Esta é a variante do
+mockup de login, e é **opt-in**: as telas fora de auth continuam no default.
+
+`background: var(--surface-2)`, `height: 42px`, `padding: 0 13px`,
+`font-size: 14px`. As três coisas vêm da mesma especificação e viajam
+juntas — metade dela dá um campo que não existe em lugar nenhum.
+
+O mockup usa `var(--code-bg)` (campo **afundado**); a implementação usa
+`var(--surface-2)` (campo **elevado**) — divergência registrada no ADR 0036.
+Sobre um card `var(--surface-1)`, o fundo default do campo é o MESMO do card,
+separados só por 1px de borda; o problema é real e as outras telas o têm.
+
+**Senha**: `var(--font-mono)` 13.5px `letter-spacing: .02em` (mono a 14px ao
+lado de Archivo a 14px lê como corpo maior). Placeholder em
+`var(--text-secondary)`, não `var(--text-muted)` — este dá 3.10:1 sobre
+`--surface-2` e reprova o AA.
+
+**Botão de revelar**: 32×32 absoluto, `right: 5px`, centrado vertical,
+radius 4px, `color: var(--text-muted)`; hover `var(--text-secondary)` +
+`background: var(--surface-2)`. O campo abre `padding-right: 44px`. Rótulo
+acessível diz a **ação** ("Mostrar senha"/"Esconder senha") e `aria-pressed`
+diz o estado — rótulo de estado deixaria a pessoa sem saber o que o botão faz.
+
+**Ação no rótulo** (o "Esqueci minha senha" ao lado de "Senha"): linha flex
+com `justify-content: space-between; align-items: baseline`. A ação é
+**irmã** do `<label>`, nunca filha — clique em qualquer lugar de um
+`<label>` ativa o campo associado.
+
+## Foco visível (regra geral, corrigida na Fase 7)
+
+`:focus-visible`, nunca `:focus`: este acende ao clicar com o mouse, o que
+não é o que a indicação de foco resolve.
+
+Campo: `border-color: var(--accent)` + `box-shadow: 0 0 0 3px color-mix(in
+srgb, var(--accent) 22%, transparent)` **mais** `outline: 2px solid
+transparent`. O outline transparente não é enfeite: em `forced-colors`
+(alto contraste do sistema) o `box-shadow` é descartado, e sem ele o campo
+focado fica sem indicador NENHUM. Um `@media (forced-colors: active)` pinta
+o outline com `Highlight`.
+
+Botão e link: `outline: 2px solid var(--accent); outline-offset: 2px`.
+Link de texto sobre `--surface-1` usa `var(--accent-hover)` em repouso —
+`var(--accent)` dá 3.88:1 e reprova o AA (ADR 0036).
