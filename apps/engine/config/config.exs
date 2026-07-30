@@ -56,9 +56,14 @@ config :engine, EngineWeb.Endpoint,
   live_view: [signing_salt: "F3rONsq2"]
 
 # Configure Elixir's Logger
+#
+# A lista de metadata cresceu no ADR 0035: `session_id` e `trace_id` são os dois
+# ids por onde se caça qualquer coisa neste sistema, e `layer` acompanha o caminho
+# entre camadas do lado da api. Sem estarem aqui, `Logger.metadata(session_id:)`
+# não aparece na saída da suite nem em `$metadata`.
 config :logger, :default_formatter,
   format: "$time $metadata[$level] $message\n",
-  metadata: [:request_id]
+  metadata: [:request_id, :session_id, :trace_id, :layer]
 
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason

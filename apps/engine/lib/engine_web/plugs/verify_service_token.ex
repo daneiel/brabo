@@ -24,6 +24,8 @@ defmodule EngineWeb.Plugs.VerifyServiceToken do
 
   import Plug.Conn
 
+  require Logger
+
   @cabecalho "x-brabo-service-token"
 
   def init(opts), do: opts
@@ -38,10 +40,31 @@ defmodule EngineWeb.Plugs.VerifyServiceToken do
   end
 
   defp recusar(conn) do
+    # A recusa não deixava linha nenhuma (ADR 0035). Consequência: token mal
+    # configurado num deploy e varredura contra `/internal` eram igualmente
+    # invisíveis — o sintoma de ambos é a api "não conseguir falar com o engine",
+    # sem nada no log dizendo que a porta respondeu 401.
+    #
+    # O token apresentado NÃO é logado, nem truncado: é segredo, e o CLAUDE.md
+    # proíbe. O que interessa é a rota e a origem.
+    Logger.warning(
+      "token de serviço recusado em #{conn.method} #{conn.request_path} " <>
+        "(origem #{origem(conn)})"
+    )
+
     conn
     |> put_resp_content_type("application/json")
     |> send_resp(401, Jason.encode!(%{error: "token de serviço inválido ou ausente"}))
     |> halt()
+  end
+
+  defp origem(conn) do
+    case get_req_header(conn, "x-forwarded-for") do
+      [valor | _] -> valor
+      [] -> conn.remote_ip |> :inet.ntoa() |> to_string()
+    end
+  rescue
+    _ -> "desconhecida"
   end
 
   # `Plug.Crypto.secure_compare/2` e não `==`: comparação byte a byte com saída

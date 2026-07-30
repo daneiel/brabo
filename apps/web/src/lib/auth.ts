@@ -1,3 +1,4 @@
+import { logger } from './logger';
 import { runtimeConfig } from './runtime-config';
 
 /**
@@ -59,6 +60,10 @@ export function emailDaSessao(): string | null {
     const claims = JSON.parse(json) as { email?: string };
     return claims.email ?? null;
   } catch {
+    // Token que a api emitiu e o browser não consegue decodificar é defeito de
+    // formato, não de uso — `debug` porque só interessa investigando, e a tela
+    // apenas deixa de mostrar o e-mail.
+    logger.debug('access token não decodificável');
     return null;
   }
 }
@@ -119,13 +124,24 @@ export function renovarSessao(): Promise<string | null> {
     try {
       const res = await postAuth('refresh');
       if (!res.ok) {
+        // Registrado a partir do ADR 0035. Este é o caminho pelo qual o usuário
+        // é deslogado, e era silencioso: "fui jogado para o login do nada" não
+        // deixava rastro nenhum, e a diferença entre refresh expirado (esperado)
+        // e família revogada por reuso (incidente de segurança) é justamente o
+        // status.
+        logger.warn('renovação de sessão recusada', { status: res.status });
         guardar(null);
         return null;
       }
       const dados = (await res.json()) as { accessToken: string };
       guardar(dados.accessToken);
       return dados.accessToken;
-    } catch {
+    } catch (erro) {
+      // Falha de rede na renovação: mesmo desfecho, causa completamente
+      // diferente da recusa acima.
+      logger.warn('renovação de sessão falhou por rede', {
+        erro: erro instanceof Error ? erro.message : String(erro),
+      });
       guardar(null);
       return null;
     } finally {

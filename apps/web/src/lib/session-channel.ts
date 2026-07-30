@@ -1,4 +1,5 @@
 import { Socket } from 'phoenix';
+import { logger } from './logger';
 import { runtimeConfig } from './runtime-config';
 
 const ENGINE_URL = runtimeConfig.engineUrl;
@@ -32,13 +33,38 @@ export function connectSessionHeartbeat(
 ): () => void {
   const wsUrl = ENGINE_URL.replace(/^http/, 'ws') + '/socket';
   const socket = new Socket(wsUrl);
+
+  // O ciclo de vida do socket não era observado (ADR 0035): `onError` e `onClose`
+  // nunca foram registrados, e a única linha era um `console.warn` cru — o último
+  // do app. Consequência: o painel ao vivo parar de atualizar era indistinguível
+  // de "não há nada acontecendo".
+  //
+  // Sem `trace_id` aqui, de propósito: o socket é longo e não corresponde a uma
+  // ação do usuário, e o canal do Phoenix não passa pelo `OpentelemetryBandit` —
+  // um id inventado aqui não teria par nenhum do lado do servidor. Quem
+  // correlaciona é o `sessionId`, que é o mesmo que o engine agora emite em
+  // `Logger.metadata(session_id:)`.
+  socket.onError((erro: unknown) =>
+    logger.warn('socket da sessão com erro', {
+      sessionId,
+      erro: String(erro),
+    }),
+  );
+  socket.onClose(() => logger.info('socket da sessão fechado', { sessionId }));
+
   socket.connect();
 
   const channel = socket.channel(`session:${sessionId}`, {});
   channel
     .join()
     .receive('error', (resp: unknown) =>
-      console.warn('não foi possível entrar no canal da sessão', resp),
+      logger.warn('não foi possível entrar no canal da sessão', {
+        sessionId,
+        resp,
+      }),
+    )
+    .receive('timeout', () =>
+      logger.warn('timeout ao entrar no canal da sessão', { sessionId }),
     );
 
   if (handlers.onAgentDelta) {

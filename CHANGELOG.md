@@ -76,6 +76,29 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `/brabo/dev/`. Os dois degraus de baixo saem do índice dos buscadores, e a busca
   local continua funcionando nos três
   ([ADR 0034](docs/adr/0034-documentacao-publicada-por-degrau.md))
+- **api,engine,web**: **trace correlacionado sem coletor.** Instrumentar e
+  exportar passaram a ser decisões separadas: span é sempre criada e o `trace_id`
+  sempre entra no log, e `OTEL_EXPORTER_OTLP_ENDPOINT` decide só se ela sai do
+  processo. Na prática, `pnpm dev` passa a ter as três streams de log marcadas
+  com o mesmo id — antes desenvolvimento era o único ambiente sem correlação
+  nenhuma, justo onde se lê log com os olhos
+  ([ADR 0035](docs/adr/0035-observabilidade-legivel-e-trace-sem-coletor.md))
+- **api**: **o caminho entre camadas no log.** Uma linha por requisição mostra
+  `interfaces → application → infrastructure` com a duração de cada passo, vinda
+  de um `AsyncLocalStorage` alimentado pelo decorator `@Traced`. Em produção sai
+  como o campo `path` numa linha de JSON; em desenvolvimento, como árvore
+  indentada. Nenhum controller foi tocado — a fronteira HTTP vem do
+  `ExecutionContext`
+- **api,engine**: **log legível em desenvolvimento.** `pino-pretty` em processo na
+  api (com a árvore de camadas) e `PrettyLogFormatter` novo no engine, onde
+  `dev.exs` jogava fora timestamp e toda a metadata e deixava `trace_id`,
+  `session_id` e `mfa` invisíveis. Produção segue com uma linha de JSON por
+  evento, que é o que o Alloy parseia
+- **engine**: log de acesso HTTP, que não existia — as 13 rotas `/internal` não
+  deixavam linha nenhuma, então "a api chamou?" não tinha resposta no log
+- **web**: `WEB_LOG_LEVEL` ligado no k8s. A encanação existia ponta a ponta e
+  faltava a variável, então `logger.debug` era código morto em todo ambiente
+  publicado
 
 ### Correções
 
@@ -97,6 +120,39 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `scripts/docs/api-render-check.mjs`, que reprova o CI se a referência
   construir sem renderizar — o build ficava verde durante todo o defeito, e era
   essa lacuna que deixava passar
+- **engine**: a correlação do trabalho assíncrono estava **morta**.
+  `Engine.Outbox.Event` não declarava a coluna `metadata`, então o struct não
+  tinha a chave, a cláusula que lê o `traceparent` era inalcançável, e **todo**
+  job do Oban nascia com `traceparent: nil`. Os dois workers também não liam o
+  argumento: agora abrem a span na trace da sessão e chamam
+  `Logger.metadata(session_id:)` — que não era chamado em lugar nenhum do engine,
+  e é por isso que o campo `session_id` do log sempre saiu ausente
+- **engine**: `traceparent` era injetado só nos POSTs para a api. Os seis
+  `Req.get` e o `llm_turn_stream` iam sem trace, então toda a metade de leitura
+  da conversa entre os serviços — incluindo o turno de LLM em streaming —
+  aparecia no Tempo como trace órfã. Agora há um funil único de headers
+- **engine**: o gate de telemetria estava invertido. Não havia config
+  `:opentelemetry` no projeto, então o SDK subia com o default apontando para
+  `localhost:4318` e o engine pagava por um batch condenado em dev **e em
+  `mix test`**; e o que o gate desligava era justamente a extração do
+  `traceparent` que chega
+- **web**: o chat não propagava trace. `chat-stream.ts` contorna o
+  `api-client.ts` e era o único caminho da web sem `traceparent` — o pior lugar
+  possível para a lacuna, porque é o turno de LLM
+- **web**: a retentativa depois do 401 reusava o mesmo `traceparent`, então as
+  duas tentativas chegavam à api declarando o mesmo `span_id` como pai e o Tempo
+  as colapsava num nó só
+- **web**: três silêncios em caminho crítico. `renovarSessao` falhava sem log (é
+  o caminho pelo qual o usuário é deslogado), falha de rede no `request<T>` subia
+  sem `trace_id` nem rota, e o socket da sessão nunca registrou `onError`/`onClose`
+- **api**: o `X-Brabo-Service-Token` não era redigido no log — se caísse num corpo
+  de erro logado, ia para o Loki em texto claro. Entraram junto `serviceToken`,
+  `privateKey`, `encryptedDek` e `dek`
+- **engine**: a recusa de token de serviço respondia 401 sem deixar linha, então
+  deploy mal configurado e varredura contra `/internal` eram igualmente invisíveis
+- **docs**: duas frases afirmavam o contrário do comportamento — a causa 1 de
+  "quando não há trace" no runbook (já falsa para o engine antes desta mudança) e
+  a nota de `OTEL_EXPORTER_OTLP_ENDPOINT` na referência de configuração
 
 ### Manutenção
 

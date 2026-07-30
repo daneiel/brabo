@@ -114,6 +114,16 @@ o componente `d` da JWK, travado por teste.
 - **`jwt` sem papel não significa sem autorização.** Em `/users/me/*` o escopo é
   o próprio usuário; em `GET /workspaces` a listagem já é filtrada pela
   associação de quem chamou.
+- **O `X-Brabo-Service-Token` passou a ser redigido no log** ([ADR
+  0035](adr/0035-observabilidade-legivel-e-trace-sem-coletor.md)). Ele é o bearer
+  de todo o tráfego api↔engine e **não** constava da lista de `redact` do pino: se
+  caísse num corpo de erro logado, iria para o Loki em texto claro e com retenção.
+  Entraram junto `serviceToken`, `privateKey`, `encryptedDek` e `dek`. A lista
+  completa está em `apps/api/src/infrastructure/observability/logger.config.ts`, e
+  há teste afirmando cada caminho — a lista é contrato, não conveniência.
+- **`allowedHeaders` do CORS é explícito**, e a lista precisa conter todo header
+  que a web manda: `Content-Type`, `Authorization`, `X-CSRF-Token` e `traceparent`.
+  Faltar um não quebra teste nenhum (teste não faz preflight) e quebra o browser.
 
 ## Tabela
 
