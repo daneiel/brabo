@@ -51,8 +51,12 @@ config :engine, EngineWeb.Endpoint,
 # Enable dev routes for dashboard and mailbox
 config :engine, dev_routes: true
 
-# Do not include metadata nor timestamps in development logs
-config :logger, :default_formatter, format: "[$level] $message\n"
+# Log legível, COM metadata (ADR 0035).
+#
+# Aqui havia `format: "[$level] $message\n"`, que jogava fora timestamp e toda a
+# metadata — e por isso `trace_id`, `session_id` e `mfa` eram invisíveis em
+# desenvolvimento, mesmo o formatter de produção sempre tendo sabido emiti-los.
+config :logger, :default_handler, formatter: {Engine.Telemetry.PrettyLogFormatter, %{}}
 
 # Instrumentação ligada, exportação desligada (ADR 0035).
 #
