@@ -51,7 +51,8 @@ quase todas as escolhas abaixo.
   herdada por `currentColor`. Decorativo ao lado de rótulo → `aria-hidden`;
   sozinho e significativo → `aria-label`.
 - **Agente é sempre um `AgentDef`** (`dev-backend`, `dev-frontend`, `qa`,
-  `secops`, `infra`, `po`, `arquiteto`, `criativo`, `anamnese`, `psicologo`).
+  `secops`, `infra`, `po`, `arquiteto`, `criativo`, `anamnese`, `psicologo`,
+  `psicologo-leve`).
   Nome, papel, ícone e cor saem dele. Não invente agente nem passe nome de
   modelo onde se espera chave de agente.
 - **Evento não se estiliza, se tipa.** `EventItem` e `ActivityFeed` derivam
