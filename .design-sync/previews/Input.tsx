@@ -40,6 +40,32 @@ export function Monoespacado() {
   );
 }
 
+/**
+ * `label`, `hint` e `error` — a forma que as telas de auth usam. Com qualquer
+ * um dos três o componente passa a desenhar o bloco inteiro do campo.
+ */
+export function ComRotulo() {
+  return (
+    <div style={coluna}>
+      <Input label="E-mail" type="email" autoComplete="username" defaultValue="daniel@brabo.dev" />
+      <Input
+        label="Senha nova"
+        type="password"
+        autoComplete="new-password"
+        defaultValue="cavalo-bateria-grampo-correto"
+        hint="Pelo menos 12 caracteres. Uma frase longa vale mais que símbolos."
+      />
+      <Input
+        label="Repita a senha"
+        type="password"
+        autoComplete="new-password"
+        defaultValue="cavalo-bateria-grampo"
+        error="As senhas não conferem."
+      />
+    </div>
+  );
+}
+
 /** Desabilitado e somente-leitura chegam por spread nos atributos de input. */
 export function Bloqueado() {
   return (

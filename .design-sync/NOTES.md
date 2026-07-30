@@ -36,6 +36,20 @@
   "skipped" em vez de falhar. `npm i -E typescript@6.0.2` (a mesma que o
   `apps/web` usa) faz o check rodar.
 
+- **`--node-modules` é o `node_modules` da RAIZ, não o de `apps/web`.** O pnpm
+  só cria o self-link do workspace (`node_modules/web -> ../apps/web`) na raiz;
+  `apps/web/node_modules` tem o `react` mas não tem `web/`, e o
+  `projectFor` do `lib/dts.mjs` morre com
+  `ENOENT ... apps/web/node_modules/web/package.json`. A raiz tem as duas
+  coisas (react 19.2.8, @types/react e o self-link), então é ela:
+
+  ```bash
+  node .ds-sync/resync.mjs --config .design-sync/config.json \
+    --node-modules node_modules --out ./ds-bundle \
+    --remote .design-sync/.cache/remote-sync.json
+  ```
+
+  Isto custou uma run inteira do driver em 2026-07-29.
 - **Os `.d.ts` do bundle vêm de declarações emitidas na hora.** `apps/web` é
   app, não lib: não tem `dist/` com `.d.ts`, e sem isso o conversor sintetiza
   `[key: string]: unknown` para os 57 componentes — contrato inútil para o
@@ -55,11 +69,43 @@
   `export function X(props: P)` mas não `export const X: (props: P) => JSX`,
   que é a forma de `icons.tsx` — todos caíam no catch-all. O corpo é idêntico
   para o set inteiro (eles compartilham uma assinatura), gerado por script.
-- **Ordem importa: feche a config ANTES de graduar.** As grades são keyadas por
-  fonte + config que afeta preview. Trocar `provider`, `overrides` ou `docsDir`
-  depois de graduar limpa TODAS as grades e obriga a reler os 57 sheets. Isto
-  aconteceu uma vez nesta sessão; custou uma rodada inteira de releitura.
-  Reagrupar (grupo/categoria) NÃO limpa — a grade é keyada pelo nome.
+- **Ordem importa: feche a config ANTES de graduar** — mas só o que entra na
+  chave. Lido de `lib/sync-hashes.mjs` (`configSlicesFor`/`sourceKeyFor`,
+  `keyRecipe: 7`), a grade é keyada por: `provider`, `storyImports`,
+  `extraEntries`, os bytes dos forks em `.design-sync/overrides/`, o
+  `overrides.<Nome>` do componente **menos** `cardMode`/`primaryStory`, o
+  `titleMap` e os bytes de `.design-sync/previews/<Nome>.tsx`. Trocar
+  `provider` ou `extraEntries` limpa TODAS as 57 grades (aconteceu uma vez, no
+  primeiro import, e custou uma releitura inteira).
+  **NÃO limpam**: `dtsPropsFor`, `docsDir`/`docsMap`, `cardMode`,
+  `primaryStory`, reagrupar por categoria. A nota antiga acusava `docsDir` —
+  estava errada, e o medo dela desencoraja corrigir doc à toa.
+
+## 2026-07-29 — re-sync da Fase 7a
+
+O que mudou no DS desde o primeiro import (`f340416`): **um** componente, o
+`Input`, no commit `8ee0270` das telas de auth. Ele ganhou `label`, `error` e
+`hint` (+35 linhas em `Input.module.css`), e é isso que explica todo o churn do
+build: `styleSha`, `bundleSha12` e os 57 `.jsx`/`.d.ts` se moveram — estes
+últimos só por causa do selo de versão, que virou `web@0.1.0` quando o
+`apps/web/package.json` saiu de `0.0.0` (o mesmo commit tirou o `keycloak-js`).
+`renderHashes` e `sourceKeys` **não** se moveram: nada re-renderizou diferente.
+
+Três coisas foram corrigidas junto:
+
+1. **`docs/Input.md` mentia.** A prosa dizia "o componente não renderiza rótulo
+   nem mensagem de erro — isso é do formulário que o contém". Virou falso com a
+   Fase 7a. Reescrito, e com o motivo do `useId()` (é o que faz `<label for>`
+   funcionar) explicado, porque é a única razão pra não montar o rótulo à mão.
+2. **`previews/Input.tsx` não exercitava a API nova** — daí o `renderHashes`
+   parado. Ganhou o export `ComRotulo`, portado de `LoginPage`/`SetPasswordPage`
+   (label + hint + error com borda `.invalid`). Regraduado do sheet: 5/5 `good`.
+3. **`ToastProvider` tinha contrato vazio** (`[key: string]: unknown`) desde o
+   primeiro import — a extração não pega props declaradas como type literal
+   inline (`({ children }: { children: ReactNode })`), mesma classe de falha dos
+   37 ícones. Resolvido com `dtsPropsFor.ToastProvider`. O `useToast` **está** no
+   bundle (o synth entry faz `export *` do módulo), então a doc dele já estava
+   certa; só o `.d.ts` estava pobre.
 
 ## Previews: o que descobri autorando
 
@@ -105,6 +151,23 @@ do escopo de um sync de design system.
 
 O que pode quebrar quando alguém rodar `/design-sync` de novo:
 
+0. **O driver NÃO detecta mudança de código do componente nesta shape — você
+   detecta.** No shape `package`, `sourceKeyFor` só recebe `srcSha` quando a
+   shape é `storybook` (veja a linha `...(shape === 'storybook' ? …)` em
+   `package-build.mjs`). Consequência: um componente cujo `.tsx` mudou é
+   reportado como `unchanged`, com a grade antiga carregada para a frente, e
+   nada pede recaptura. Em 2026-07-29 foi exatamente isso com o `Input` — o
+   `renderHashes` dele nem se moveu, porque o preview antigo não exercitava as
+   props novas. **Antes de confiar no veredito, faça o diff à mão** contra o
+   commit do último sync:
+
+   ```bash
+   git diff --stat <ultimo-sync>..HEAD -- apps/web/src/components
+   ```
+
+   E não passe esse diff por `| tail -N`: com 20+ arquivos o `--stat` corta as
+   PRIMEIRAS linhas, que é justo onde `components/` aparece em ordem
+   alfabética. Foi assim que o `Input` quase passou batido.
 1. **Esquecer de reemitir `apps/web/types/`.** A pasta é gitignorada, então em
    máquina nova ela não existe — e sem ela os 57 `.d.ts` voltam a ser
    `[key: string]: unknown` em silêncio. O build não falha; só entrega contrato
