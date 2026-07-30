@@ -44,7 +44,7 @@ produção.
 | `CREDENTIALS_MASTER_KEY` 🔒 | `dev-master-key-change-me` | embrulha os DEKs. Trocar sem re-embrulhar torna **toda** credencial ilegível, sem erro no boot — a falha aparece no primeiro uso. Ver [rotação](../runbook.md#rotacao-da-chave-mestra) |
 | `CREDENTIALS_MASTER_KEY_PREVIOUS` | — | só durante a rotação. Presente = a api tenta a chave anterior quando a atual falha |
 | `GIT_OAUTH_STATE_SECRET` 🔒 | `dev-oauth-state-secret-change-me` | assina o `state` do OAuth; fraco = CSRF no fluxo de conexão de git |
-| `WEB_ORIGIN` 🔒 | `http://localhost:5173` | **em produção a api recusa subir** se estiver ausente ou for `*`. CORS é estrito por ambiente |
+| `WEB_ORIGIN` 🔒 | `http://localhost:5173` | **em produção a api recusa subir** se estiver ausente ou for `*`. CORS é estrito por ambiente. **A porta faz parte do valor**: a web em `:5174` (Vite pulando de porta) é outra origem e é barrada — ver [ADR 0037](../adr/0037-cors-do-engine-e-a-porta-como-contrato.md) |
 
 ### Auth first-party
 
@@ -225,7 +225,7 @@ possível sem downtime ([RN-035](../business-rules.md#rn-035)).
 | `BRABO_SERVICE_TOKEN` 🔒 | `dev-service-token-change-me` — **o mesmo valor da api** |
 | `BRABO_SERVICE_TOKEN_PREVIOUS` 🔒 | — aceito só na verificação, durante a rotação |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | — o exporter do Elixir fala **HTTP/protobuf na 4318**, não gRPC na 4317. Ausente desliga só a exportação (`traces_exporter: :none`), não a instrumentação — ver ADR 0035 |
-| `WEB_ORIGIN` | — |
+| `WEB_ORIGIN` | — **a mesma variável da api**, e ela alimenta DUAS coisas aqui: o `check_origin` do socket Phoenix (o painel do time ao vivo) e o CORS HTTP das rotas de health, que o navegador precisa para ler `/health` ([ADR 0037](../adr/0037-cors-do-engine-e-a-porta-como-contrato.md)). Ausente em produção fecha o CORS e mantém o `check_origin` no default estrito do Phoenix — o engine **sobe** de qualquer forma, diferente da api |
 | `PROJECT_WORKSPACES_ROOT` | `/tmp/brabo-project-workspaces` — **igual ao da api, no mesmo volume** |
 
 > `SOME_APP_SSL_CERT_PATH`, `SOME_APP_SSL_KEY_PATH` e `MIX_TEST_PARTITION` são

@@ -124,6 +124,20 @@ o componente `d` da JWK, travado por teste.
 - **`allowedHeaders` do CORS é explícito**, e a lista precisa conter todo header
   que a web manda: `Content-Type`, `Authorization`, `X-CSRF-Token` e `traceparent`.
   Faltar um não quebra teste nenhum (teste não faz preflight) e quebra o browser.
+- **O engine tem CORS só nas rotas de health** ([ADR
+  0037](adr/0037-cors-do-engine-e-a-porta-como-contrato.md)). `/health`, `/live` e
+  `/ready` respondem `Access-Control-Allow-Origin` para as origens de
+  `WEB_ORIGIN`; **`/internal/*` e `/metrics` não**, e a exclusão é o ponto. As 13
+  rotas internas são server-to-server com segredo compartilhado
+  ([RN-035](business-rules.md#rn-035)); CORS ali não habilitaria nada — o cliente
+  HTTP da api ignora esses cabeçalhos — mas **anunciaria a um navegador que ele é
+  um cliente esperado daquele canal**. Há teste afirmando a ausência, e um sobre a
+  lista de caminhos ter exatamente três entradas, para mover a fronteira aparecer
+  no diff.
+- **Origem desconhecida recebe resposta, não `403`.** Nos dois serviços, o pedido
+  é atendido e sai sem o cabeçalho; quem barra a leitura é o navegador, que é de
+  quem a decisão é. Responder `403` quebraria todo cliente que não manda `Origin`
+  — probe do kubelet, `curl`, o `docker/smoke.sh`.
 
 ## Tabela
 
