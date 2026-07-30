@@ -71,9 +71,18 @@ COPY --from=build /repo/apps/web/dist /usr/share/nginx/html
 
 # Prova, no build, que o bundle veio e que o envsubst existe nesta base (o
 # entrypoint depende dele) — em vez de descobrir no boot do container.
+#
+# As fontes entram na conferência a partir do ADR 0036. Elas são auto-hospedadas
+# porque a CSP desta imagem (`font-src 'self'`) bloqueia CDN, e o modo de falha é
+# silencioso: sem os arquivos, as três famílias caem em fonte de sistema e só
+# quem abre a página publicada percebe. Contar os .woff2 é o que impede uma
+# imagem sem tipografia de subir — `test -d` sozinho passaria com a pasta vazia.
 RUN chmod 0755 /usr/local/bin/brabo-entrypoint.sh \
  && test -f /usr/share/nginx/html/index.html \
  && test -d /usr/share/nginx/html/assets \
+ && test -d /usr/share/nginx/html/fonts \
+ && [ "$(find /usr/share/nginx/html/fonts -name '*.woff2' | wc -l)" -eq 8 ] \
+ && ! grep -rq 'fonts.googleapis.com' /usr/share/nginx/html/index.html \
  && command -v envsubst >/dev/null
 
 # `nginx` (uid 101) já existe na imagem oficial — não criamos usuário novo.

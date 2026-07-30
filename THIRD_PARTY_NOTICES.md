@@ -15,7 +15,7 @@ documentação de projeto.
 |---|---|---|
 | Dependências npm/hex | **Não**, hoje | são resolvidas na instalação, não redistribuídas por nós |
 | **Conteúdo da imagem do engine** | **Sim, se a imagem for publicada** | o binário sai empacotado dentro dela |
-| Fontes do design system | Não | carregadas por CDN, não embutidas |
+| **Fontes do design system** | **Sim, se a imagem do web for publicada** | desde o ADR 0036 os `.woff2` são auto-hospedados e saem dentro da imagem |
 
 Hoje **nenhuma imagem é publicada em registry**. Enquanto isso for verdade, o
 que segue é informativo. No dia em que uma imagem for publicada, a seção 1 vira
@@ -145,12 +145,29 @@ como transitiva passa sem aviso.
 
 ## 5. Fontes e ícones
 
-O design system usa **Space Grotesk**, **Archivo** e **IBM Plex Mono**,
-carregadas do Google Fonts por CDN — **não são empacotadas**, então não há
-obrigação de atribuição hoje.
+O design system usa **Space Grotesk**, **Archivo** e **IBM Plex Mono**. Desde o
+[ADR 0036](docs/adr/0036-login-fiel-ao-design-e-fontes-auto-hospedadas.md) elas
+são **auto-hospedadas**: os `.woff2` estão versionados em
+`apps/web/public/fonts/` e saem dentro da imagem do web.
 
-As três são **SIL Open Font License 1.1**. Se um dia forem servidas do próprio
-domínio (por privacidade ou por funcionar offline), a OFL exige distribuir o
-texto da licença junto dos arquivos de fonte.
+Isto é a hipótese que a versão anterior desta seção previa — *"se um dia forem
+servidas do próprio domínio"*. A razão não foi privacidade: a CSP do nginx
+(`style-src 'self'`, `font-src 'self' data:`) **sempre** bloqueou o CDN, então em
+produção as três nunca carregaram e caíam em fonte de sistema.
 
-Nenhum código de terceiro vendorizado foi encontrado no repositório.
+**A obrigação da OFL está ativa**, e é atendida por
+`apps/web/public/fonts/LICENSE.txt`, que carrega o texto integral da licença e os
+três avisos de copyright, e é servido publicamente ao lado dos arquivos:
+
+| família | copyright | licença |
+|---|---|---|
+| Space Grotesk | 2020 The Space Grotesk Project Authors | OFL-1.1 |
+| Archivo | 2020 The Archivo Project Authors | OFL-1.1 |
+| IBM Plex Mono | © 2017 IBM Corp., Reserved Font Name "Plex" | OFL-1.1 |
+
+Subsets `latin` e `latin-ext`, em woff2, obtidos da API do Google Fonts. **Nenhum
+glifo foi modificado** — o que mantém o uso fora da cláusula de Reserved Font
+Name do IBM Plex.
+
+Fora das fontes, nenhum código de terceiro vendorizado foi encontrado no
+repositório.
