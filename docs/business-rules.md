@@ -417,7 +417,7 @@ defeito: do lado do servidor, um duplo-submit do cliente e um replay de ladrão
 são idênticos.
 
 - **Onde:** `apps/api/src/domain/auth/refresh-token.ts:50` +
-  `application/use-cases/auth/refresh.use-case.ts:95`
+  `application/use-cases/auth/refresh.use-case.ts:98`
 - **Teste:** `test/application/use-cases/auth/rotacao-e-reuso.spec.ts`
 - **Borda:** quem apresenta um token de família **já revogada** é vítima a
   jusante, não novo roubo: registra `refresh_revoked` e **não** dispara segunda
@@ -454,7 +454,7 @@ conta bloqueada devolvem o mesmo 401 e gastam o mesmo tempo — o ramo sem conta
 verifica contra um hash dummy gerado com **os mesmos parâmetros** do real. No
 registro e no pedido de reset, endereço conhecido e desconhecido devolvem 202.
 
-- **Onde:** `apps/api/src/application/use-cases/auth/login.use-case.ts:78` +
+- **Onde:** `apps/api/src/application/use-cases/auth/login.use-case.ts:79` +
   `register.use-case.ts:74`
 - **Teste:** `test/application/use-cases/auth/enumeracao.spec.ts`
 - **Borda:** a checagem de bloqueio por e-mail roda **depois** do argon2, não
