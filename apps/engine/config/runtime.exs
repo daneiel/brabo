@@ -37,6 +37,30 @@ if System.get_env("OTEL_EXPORTER_OTLP_ENDPOINT") in [nil, ""] do
   config :opentelemetry, traces_exporter: :none
 end
 
+# Origens de navegador aceitas, num lugar só (ADR 0037).
+#
+# `WEB_ORIGIN` é a MESMA variável que a api usa para o CORS dela. Ela alimenta
+# duas coisas aqui: o `EngineWeb.Plugs.Cors` das rotas de health, e o
+# `check_origin` do socket mais abaixo. Estavam separados, e o `check_origin` era
+# o único a ler a variável — foi assim que o CORS do `/health` ficou sem nenhuma
+# origem por dois ciclos inteiros sem ninguém notar.
+#
+# Em produção NÃO há default de desenvolvimento. A api levanta exceção no boot
+# nesse caso; aqui a lista fica vazia, o que fecha o acesso de navegador sem
+# derrubar o engine — CORS não é função dele (filas do Oban e canais seguem
+# funcionando), e um engine que não sobe por causa disso troca um painel de status
+# quebrado por um sistema parado.
+web_origins =
+  case System.get_env("WEB_ORIGIN") do
+    vazio when vazio in [nil, ""] ->
+      if config_env() == :prod, do: [], else: ["http://localhost:5173"]
+
+    origens ->
+      origens |> String.split(",", trim: true) |> Enum.map(&String.trim/1)
+  end
+
+config :engine, :web_origins, web_origins
+
 # Comunicação engine -> api (evento de término e psychologist.hypothesis,
 # ver Engine.Sessions.Monitor/EngineApiClient), e engine <- api (comando
 # síncrono de criar sessão, ver EngineWeb.Plugs.VerifyServiceToken). Desde a
@@ -161,14 +185,15 @@ if config_env() == :prod do
   # é servido de OUTRA origem (nginx em outra porta/host), então o handshake é
   # recusado e o painel fica mudo sem erro visível no servidor.
   #
-  # WEB_ORIGIN é a mesma variável que a api já usa pro CORS: lista de origens
-  # separada por vírgula. Sem ela, mantém o default estrito do Phoenix.
-  check_origin =
-    case System.get_env("WEB_ORIGIN") do
-      nil -> true
-      "" -> true
-      origins -> origins |> String.split(",", trim: true) |> Enum.map(&String.trim/1)
-    end
+  # A lista sai de `web_origins`, calculada uma vez no topo deste arquivo e
+  # compartilhada com o `EngineWeb.Plugs.Cors` — a duplicação da leitura de
+  # `WEB_ORIGIN` era o que permitia os dois divergirem (ADR 0037).
+  #
+  # Lista vazia significa `WEB_ORIGIN` ausente em produção: aí vale o default
+  # ESTRITO do Phoenix (`true`, que compara com o `PHX_HOST` abaixo), nunca `[]` —
+  # que o Phoenix leria como "nenhuma origem confere" e derrubaria o painel do
+  # time ao vivo em vez de só o CORS do health.
+  check_origin = if web_origins == [], do: true, else: web_origins
 
   config :engine, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 

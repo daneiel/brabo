@@ -26,6 +26,7 @@ arquivo. Comece pela triagem.
 | custo por hora disparou | [Incidente de custo](#incidente-de-custo) |
 | painel vazio, sem trace, sem log | [Observabilidade](#observabilidade) |
 | não sei que versão está rodando | [Que versão está no ar](#que-versao-esta-no-ar) |
+| `blocked by CORS policy` no console do navegador | [Erro de CORS](#erro-de-cors) |
 | agente respondendo vazio, truncado ou lentíssimo | [Ambiente de inferência](#ambiente-de-inferencia) |
 
 Duas coisas que valem antes de qualquer procedimento:
@@ -131,6 +132,64 @@ sem `TAG=` e build local caem todos aí.
 imagem de outra significa cache de bundle no navegador ou no nginx, não deploy
 errado — o bundle e a imagem saem do mesmo build. Recarregue ignorando cache
 antes de suspeitar do cluster.
+
+### Erro de CORS {#erro-de-cors}
+
+A mensagem do navegador nomeia o **destino** da chamada, nunca a causa. Leia
+primeiro a **origem** que ela cita, que é a informação útil
+([ADR 0037](adr/0037-cors-do-engine-e-a-porta-como-contrato.md)):
+
+```
+Access to fetch at 'http://localhost:3000/health' from origin
+'http://localhost:5174' has been blocked by CORS policy
+                     ^^^^ esta parte é o diagnóstico
+```
+
+**Se a origem não é a que você espera** (`:5174` em vez de `:5173`, host
+diferente, `https` em vez de `http`), o problema é a origem, não o CORS. Desde o
+ADR 0037 o Vite recusa subir em porta trocada, então isso só acontece se alguém
+passou `--port` ou se a web é servida por outro caminho. Conserte a origem, ou
+acrescente-a a `WEB_ORIGIN` — **nos dois serviços**, que leem a mesma variável.
+
+**Se a origem está certa**, confirme o que cada serviço responde. `curl` não faz
+CORS, então ele mostra o cabeçalho cru — que é exatamente o que o navegador olha:
+
+```bash
+# api — espera-se access-control-allow-origin + allow-credentials
+curl -sI http://localhost:3000/health -H "Origin: http://localhost:5173" \
+  | grep -i access-control
+
+# engine — espera-se access-control-allow-origin + vary: origin
+curl -sI http://localhost:4000/health -H "Origin: http://localhost:5173" \
+  | grep -i access-control
+
+# preflight, que é onde falta de allow-headers aparece
+curl -sI -X OPTIONS http://localhost:3000/auth/login \
+  -H "Origin: http://localhost:5173" \
+  -H "Access-Control-Request-Method: POST" \
+  -H "Access-Control-Request-Headers: content-type,x-csrf-token" \
+  | grep -i access-control
+```
+
+**Saída vazia é o achado**: o serviço não reconheceu a origem. `WEB_ORIGIN`
+errada, ausente, ou com a porta trocada.
+
+**Preflight sem o cabeçalho que a web manda** é o outro modo de falha, e o mais
+enganoso: a lista de `allowedHeaders` da api é explícita e **nenhum teste faz
+preflight**, então um cabeçalho novo no cliente passa no CI e quebra só no
+navegador. Hoje a lista é `Content-Type`, `Authorization`, `X-CSRF-Token`,
+`traceparent`.
+
+Três coisas que **não** são problema de CORS, por mais que pareçam:
+
+- **api ↔ engine**. CORS é mecanismo de navegador; ali quem chama é cliente HTTP
+  de servidor, que ignora esses cabeçalhos. Falha nesse caminho é service token
+  (`401`/`403`) — ver [rotação](#rotacao-das-chaves-do-auth).
+- **O canal Phoenix ficar mudo.** WebSocket não passa por CORS. Quem recusa é o
+  `check_origin` do endpoint, também alimentado por `WEB_ORIGIN`, e a recusa
+  aparece no log do engine — não no console do navegador como erro de CORS.
+- **`/metrics` do engine bloqueado no navegador.** É deliberado: métrica interna
+  não é legível por JavaScript de página. Use `curl`.
 
 ### k3d é o padrão mesmo com kind instalado
 

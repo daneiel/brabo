@@ -124,6 +124,26 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **engine**: o endpoint **não tinha CORS nenhum**. `GET /health` respondia 200 com
+  o corpo correto e sem um único cabeçalho `Access-Control-*`, então o navegador
+  descartava a resposta — a tela de status mostrava `engine: error` com o engine
+  saudável. Agora há CORS nas rotas de health (`/health`, `/live`, `/ready`), com
+  as origens de `WEB_ORIGIN`; **`/internal/*` e `/metrics` seguem sem**, e há teste
+  afirmando a ausência
+  ([ADR 0037](docs/adr/0037-cors-do-engine-e-a-porta-como-contrato.md))
+- **web**: `vite.config.ts` ganha `strictPort`. Sem ele, com 5173 ocupada o Vite
+  subia em **5174** avisando numa linha de log, e como a api aceita só a origem
+  exata, **toda** chamada era barrada — inclusive o `/auth/refresh`, o que faz a
+  tela parecer deslogada. O erro falava de CORS e não de porta, e a "correção"
+  natural (afrouxar o CORS) conserta 5174 e quebra 5173. Agora o Vite recusa subir
+  e diz que a porta está em uso
+- **engine**: `WEB_ORIGIN` era lida em dois lugares — o `check_origin` do socket
+  tinha a lista certa desde a Fase 4a, e o CORS HTTP não existia. Passa a ser
+  resolvida uma vez em `runtime.exs` e compartilhada pelos dois consumidores
+- **api,engine**: o CORS dos dois ganha `Access-Control-Max-Age: 600`. Toda chamada
+  da web é preflighted (`Authorization` e `traceparent` não são safelisted), então
+  sem cache de preflight cada requisição eram duas viagens
+
 - **web**: as **três fontes do design system não carregavam em produção**.
   `index.html` as puxava do Google Fonts, e a CSP da imagem do nginx
   (`style-src 'self'; font-src 'self' data:`) bloqueava a folha e os arquivos —
