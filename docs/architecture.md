@@ -12,7 +12,7 @@ keywords: [arquitetura, code map, invariantes, harness, event log]
 Este documento é o mapa para quem vai **mexer** no código. Ele diz por onde
 começar a ler, o que cada fronteira promete, e o que já se sabe que está torto.
 
-Decisões e o porquê delas ficam nos [ADRs](adr/index.md) — 36 deles, vários
+Decisões e o porquê delas ficam nos [ADRs](adr/index.md) — 37 deles, vários
 registrando defeito real encontrado em execução. Aqui não repetimos a
 argumentação: apontamos.
 
@@ -211,6 +211,26 @@ registrada como "o modelo parou sem sinalizar", e o sistema culpou o modelo por
 um problema de infraestrutura.
 
 ## Assuntos transversais
+
+**Origem cruzada.** A web é servida de uma origem própria e fala com **duas**
+outras, então CORS é fronteira arquitetural e não detalhe de configuração
+([ADR 0037](adr/0037-cors-do-engine-e-a-porta-como-contrato.md)). Quatro caminhos,
+e só três passam por CORS:
+
+| caminho | mecanismo |
+|---|---|
+| web → api, HTTP | CORS do Nest, origem exata de `WEB_ORIGIN` + `credentials` |
+| web → engine, HTTP (`/health`) | `EngineWeb.Plugs.Cors`, só as rotas de health |
+| web → engine, WebSocket | `check_origin` do endpoint Phoenix — **WebSocket não passa por CORS** |
+| api ↔ engine, HTTP | **CORS não se aplica**: cliente de servidor, não navegador |
+
+Uma única variável — `WEB_ORIGIN` — alimenta os três primeiros, nos dois
+serviços. A leitura duplicada dela foi como o CORS do engine ficou sem nenhuma
+origem enquanto o `check_origin` já tinha a lista certa; no engine ela agora é
+resolvida uma vez, em `runtime.exs`.
+
+E a **porta faz parte da origem**: a web em `:5174` é outro sistema aos olhos do
+navegador. É por isso que o `vite.config.ts` usa `strictPort`.
 
 **Autenticação.** First-party, no domínio da api — não há IdP externo. Senhas
 com argon2id, access token EdDSA de 15 min e refresh opaco com rotação
