@@ -51,10 +51,10 @@ ARG GITLEAKS_SHA256=551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f24
 ARG HADOLINT_VERSION=2.12.0
 ARG HADOLINT_SHA256=56de6d5e5ec427e17b74fa48d51271c7fc0d61244bf5c90e828aab8362d55010
 # actionlint (subagente Workflows da área de Infra, Fase 8c) — mesmo padrão
-# dos dois acima. Checksum conferido contra o `actionlint_1.7.7_checksums.txt`
+# dos dois acima. Checksum conferido contra o `actionlint_1.7.12_checksums.txt`
 # publicado no release, e por download+sha256sum independente do tarball.
-ARG ACTIONLINT_VERSION=1.7.7
-ARG ACTIONLINT_SHA256=023070a287cd8cccd71515fedc843f1985bf96c436b7effaecce67290e7e0757
+ARG ACTIONLINT_VERSION=1.7.12
+ARG ACTIONLINT_SHA256=8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
 ARG SEMGREP_VERSION=1.171.0
 ARG YAMLLINT_VERSION=1.38.0
 

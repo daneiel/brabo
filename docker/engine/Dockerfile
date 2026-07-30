@@ -33,7 +33,7 @@ RUN apk add --no-cache build-base inotify-tools git
 # não há binário offline equivalente pra `.gitlab-ci.yml` (gap documentado).
 ARG GITLEAKS_VERSION=8.30.1
 ARG HADOLINT_VERSION=2.12.0
-ARG ACTIONLINT_VERSION=1.7.7
+ARG ACTIONLINT_VERSION=1.7.12
 RUN apk add --no-cache --virtual .binaries-build curl tar \
   && (curl -fsSL -o /tmp/gitleaks.tar.gz \
         "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \

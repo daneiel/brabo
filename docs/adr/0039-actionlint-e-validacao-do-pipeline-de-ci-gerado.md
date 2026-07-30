@@ -24,11 +24,20 @@ quebrado sem nenhum sinal disso na PR.
 `docker/engine/Dockerfile` (best-effort, `|| echo`) e `docker/engine/
 Dockerfile.prod` (hard-fail, `ARG ACTIONLINT_SHA256` verificado com
 `sha256sum -c -`, entra no bloco de probe que prova todo binário dos gates
-presente e executável). Versão `1.7.7`, checksum conferido contra o
-`actionlint_1.7.7_checksums.txt` publicado no release do `rhysd/actionlint`
+presente e executável). Versão `1.7.12`, checksum conferido contra o
+`actionlint_1.7.12_checksums.txt` publicado no release do `rhysd/actionlint`
 e por download+`sha256sum` independente do tarball. Espelhado em
 `.github/workflows/ci.yml` (`env.ACTIONLINT_VERSION`, instalado no job
 `test-engine` — mesma paridade dev/prod/CI que gitleaks/hadolint já exigem).
+
+Nasceu pinado em `1.7.7` (Go 1.23.4) e subiu pra `1.7.12` (Go 1.26.1) ainda
+nesta entrega — o CI de imagem (`trivy`) reprovou o `1.7.7` por 15 CVEs de
+Go stdlib herdados do binário oficial (1 CRITICAL). A versão nova não zera
+a lista (o `rhysd/actionlint` mais recente ainda não empacota o patch de Go
+mais novo pra cada CVE), mas derruba a CRITICAL e 3 das HIGH — as 12 HIGH
+restantes ficam em `.trivyignore.yaml` com `expired_at`, mesmo padrão do
+gitleaks: binário de terceiro só baixado (não compilado), já no último
+release publicado, com data de expiração.
 
 `Engine.Actions.ActionlintDetector` (Live + Fake) é mirror exato de
 `Engine.Actions.HadolintDetector`: `System.find_executable/1`, degrada pra
