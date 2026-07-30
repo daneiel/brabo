@@ -3,7 +3,7 @@ id: artifacts
 title: Artefatos
 sidebar_label: Artefatos
 sidebar_position: 4
-description: Os seis schemas de artefato validados no engine, quem pode emitir cada um, e por que a maioria não é emitível pelo modelo.
+description: Os sete schemas de artefato validados no engine, quem pode emitir cada um, e por que a maioria não é emitível pelo modelo.
 keywords: [artefato, schema, emit_artifact, qa_verdict, business_rule]
 ---
 
@@ -107,6 +107,24 @@ O SecOps é determinístico — não tem LLM. O parecer do QA nasce da ferrament
 `emit_qa_verdict`, que é enforçada à parte. Em nenhum dos dois o modelo escolhe
 emitir.
 
+### `infra_delegation_files` — servidor
+
+| campo | obrigatório |
+|---|---|
+| `files` | ✅ — lista **não vazia** |
+| `summary` | ✅ |
+
+Resultado de UM delegado da área de Infra (Fase 8c, ADR 0038) — o próprio
+lead (Dockerfiles/compose) ou o subagente Workflows (pipeline de CI). O
+`InfraLeadServer` emite isto depois que cada delegado termina, só pra ter
+um `parecer_artifact_id` pra referenciar na tabela `delegations` — nunca
+visto de fora da área. O que a api enxerga é a PR consolidada, via
+`open_infra_pr` (mesmo mecanismo de sempre, intocado pela Fase 8c).
+
+`files` vazia reprova pela mesma razão de `nada_a_validar/1` em
+`InfraGateRunner` (ADR 0021): um delegado sem nenhum arquivo não terminou
+nada, e "vazio" nunca deve passar por "concluído".
+
 ## Artefatos que não passam por aqui
 
 Dois tipos de evento `artifact.*` existem no log sem estar neste registro,
@@ -126,7 +144,7 @@ está anotada como
 
 | erro | causa |
 |---|---|
-| `{:unknown_type, tipo}` | tipo fora dos seis |
+| `{:unknown_type, tipo}` | tipo fora dos sete |
 | `{:missing_keys, [...]}` | campos obrigatórios ausentes, todos nomeados |
 | `:origem_invalida` | `business_rule.origin` vazia ou não é lista |
 | `{:sujeito_invalido, chaves}` | parecer com os dois sujeitos, ou com nenhum |

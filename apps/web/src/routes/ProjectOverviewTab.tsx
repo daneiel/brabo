@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -24,7 +24,9 @@ import {
   setAgentAutonomy,
   unblockTask,
 } from '../lib/api-client';
-import { deriveAgentRoster } from '../lib/agent-status';
+import { deriveAgentRoster, subagentOutcomeLabel } from '../lib/agent-status';
+import { AREAS, areaFor } from '../lib/agents';
+import { ChevronDownIcon, ChevronRightIcon } from '../components/ui/icons';
 import { deriveExecutionProgress, formatMicros } from '../lib/execution';
 import { connectSessionHeartbeat } from '../lib/session-channel';
 import { AgentCard, type AutonomyMode } from '../components/AgentCard';
@@ -103,6 +105,44 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
     queryFn: () => listAgentAutonomy(projectId),
   });
 
+  // Áreas recolhidas no painel (Fase 8d) — vazio por padrão: a hierarquia
+  // fica visível de cara, o usuário recolhe se quiser menos ruído.
+  const [collapsedAreas, setCollapsedAreas] = useState<Set<string>>(new Set());
+  function toggleArea(areaKey: string) {
+    setCollapsedAreas((current) => {
+      const next = new Set(current);
+      if (next.has(areaKey)) next.delete(areaKey);
+      else next.add(areaKey);
+      return next;
+    });
+  }
+
+  // Agrupa a roster FLAT por área (Fase 8d, ADR 0038) sem mudar
+  // `deriveAgentRoster`: cada lead de área (`qa`/`infra`) vira o topo de um
+  // grupo com os membros presentes na MESMA roster (via `areaFor`); quem
+  // não tem área (Criativo/PO/Arquiteto/dev-*) continua solo. Preserva o
+  // índice original de cada entrada — `bindingQueries`/`tokenUsage` seguem
+  // indexados pela roster inteira, sem re-fetch nem reordenação de query.
+  const rosterGroups: (
+    | { kind: 'solo'; index: number }
+    | { kind: 'area'; areaKey: string; leadIndex: number; memberIndices: number[] }
+  )[] = [];
+  const jaAgrupado = new Set<number>();
+  roster.forEach((entry, index) => {
+    if (jaAgrupado.has(index)) return;
+    const area = AREAS[entry.id];
+    if (area && area.lead === entry.id) {
+      const memberIndices = roster
+        .map((r, i) => ({ r, i }))
+        .filter(({ r }) => (area.members as string[]).includes(r.id))
+        .map(({ i }) => i);
+      memberIndices.forEach((i) => jaAgrupado.add(i));
+      rosterGroups.push({ kind: 'area', areaKey: area.key, leadIndex: index, memberIndices });
+    } else if (!areaFor(entry.id)) {
+      rosterGroups.push({ kind: 'solo', index });
+    }
+  });
+
   // Fase 4a — painel do time ao vivo: qualquer evento persistido (Dev/QA/
   // SecOps/Infra) ou `agent.status` (Criativo/PO/Arquiteto/Infra) antecipa
   // o refetch do polling — mesmo princípio de SessionPage.tsx.
@@ -148,6 +188,59 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
   const workingCount = roster.filter((r) => r.status === 'trabalhando').length;
   const waitingCount = roster.filter((r) => r.status === 'aguardando').length;
 
+  // Card do LEAD (ou de um agente solo) — mesma renderização de sempre,
+  // com toggle de autonomia (é quem propõe ação/tem policy).
+  function renderLeadCard(index: number, badge?: string) {
+    const r = roster[index];
+    const modelId = bindingQueries[index]?.data?.modelId;
+    const model = allModels.find((m) => m.id === modelId);
+    const autonomyType = autonomyActionTypeFor(r.id);
+    const rule = autonomyRules?.find((a) => a.agentId === r.id && a.actionType === autonomyType);
+    const progress = progressByAgent.get(r.id);
+    const custo = tokenUsage?.find((u) => u.actorId === r.id)?.costMicros;
+    return (
+      <AgentCard
+        key={r.id}
+        agent={r.def}
+        status={r.status}
+        badge={badge}
+        model={model ? { name: model.displayName, provider: model.provider } : undefined}
+        // Sem regra gravada o default do domínio é require_approval —
+        // "manual". Mostrar o toggle sempre é o que o design pede, e
+        // é o que torna a autonomia AJUSTÁVEL daqui.
+        autonomy={rule?.mode === 'auto_approve' ? 'auto' : 'manual'}
+        onAutonomyChange={(mode) => handleAutonomyChange(r.id, autonomyType, mode)}
+        activity={
+          progress?.taskTitle ? { label: progress.taskTitle, branch: progress.branch } : undefined
+        }
+        tokensMicros={custo}
+      />
+    );
+  }
+
+  // Card de SUBAGENTE (Fase 8d) — compacto, sem toggle de autonomia (não
+  // propõe ação própria, não tem policy) e sem branch/task corrente (não
+  // trabalha em cima de uma) — a "atividade" aqui é o desfecho da
+  // delegação mais recente.
+  function renderMemberCard(index: number) {
+    const r = roster[index];
+    const modelId = bindingQueries[index]?.data?.modelId;
+    const model = allModels.find((m) => m.id === modelId);
+    const custo = tokenUsage?.find((u) => u.actorId === r.id)?.costMicros;
+    const outcome = subagentOutcomeLabel(events, r.id);
+    return (
+      <AgentCard
+        key={r.id}
+        agent={r.def}
+        status={r.status}
+        compact
+        model={model ? { name: model.displayName, provider: model.provider } : undefined}
+        activity={outcome ? { label: outcome } : undefined}
+        tokensMicros={custo}
+      />
+    );
+  }
+
   return (
     <div className={styles.layout}>
       <div className={styles.main}>
@@ -156,33 +249,33 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
           {roster.length} agentes · {workingCount} trabalhando · {waitingCount} aguardando
         </div>
         <div className={styles.grid}>
-          {roster.map((r, i) => {
-            const modelId = bindingQueries[i]?.data?.modelId;
-            const model = allModels.find((m) => m.id === modelId);
-            const autonomyType = autonomyActionTypeFor(r.id);
-            const rule = autonomyRules?.find(
-              (a) => a.agentId === r.id && a.actionType === autonomyType,
-            );
-            const progress = progressByAgent.get(r.id);
-            const custo = tokenUsage?.find((u) => u.actorId === r.id)?.costMicros;
+          {rosterGroups.map((group) => {
+            if (group.kind === 'solo') return renderLeadCard(group.index);
+
+            const area = AREAS[group.areaKey];
+            const collapsed = collapsedAreas.has(group.areaKey);
             return (
-              <AgentCard
-                key={r.id}
-                agent={r.def}
-                status={r.status}
-                model={model ? { name: model.displayName, provider: model.provider } : undefined}
-                // Sem regra gravada o default do domínio é require_approval —
-                // "manual". Mostrar o toggle sempre é o que o design pede, e
-                // é o que torna a autonomia AJUSTÁVEL daqui.
-                autonomy={rule?.mode === 'auto_approve' ? 'auto' : 'manual'}
-                onAutonomyChange={(mode) => handleAutonomyChange(r.id, autonomyType, mode)}
-                activity={
-                  progress?.taskTitle
-                    ? { label: progress.taskTitle, branch: progress.branch }
-                    : undefined
-                }
-                tokensMicros={custo}
-              />
+              <div key={group.areaKey} className={styles.areaGroup}>
+                {renderLeadCard(group.leadIndex, 'Lead')}
+                {group.memberIndices.length > 0 && (
+                  <div className={styles.areaMembers}>
+                    <button
+                      type="button"
+                      className={styles.areaToggle}
+                      onClick={() => toggleArea(group.areaKey)}
+                    >
+                      {collapsed ? <ChevronRightIcon size={13} /> : <ChevronDownIcon size={13} />}
+                      {area.label} · {group.memberIndices.length} subespecialidade
+                      {group.memberIndices.length > 1 ? 's' : ''}
+                    </button>
+                    {!collapsed && (
+                      <div className={styles.areaMembersList}>
+                        {group.memberIndices.map((i) => renderMemberCard(i))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             );
           })}
         </div>
@@ -203,7 +296,10 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
       <aside className={styles.aside}>
         <div className={styles.sectionHeader}>Atividade</div>
         <div className={styles.sectionSub}>{events.length} eventos</div>
-        <ActivityFeed events={events} />
+        <ActivityFeed
+          events={events}
+          agentOptions={roster.map((r) => ({ id: r.id, label: r.def.name }))}
+        />
       </aside>
     </div>
   );
@@ -511,10 +607,15 @@ function InsightsSection({ projectId }: { projectId: string }) {
   const pending = all.filter((h) => h.status === 'proposed');
   const runs = analyses ?? [];
 
-  // Agrupa por agente alvo preservando a ordem de chegada dos grupos.
+  // Agrupa por ÁREA quando o alvo é um subagente conhecido (Fase 8d, ADR
+  // 0038) — hipóteses de `qa-automacao` e `qa-performance-seguranca` caem
+  // no MESMO grupo "QA", em vez de duas seções soltas que escondem que são
+  // a mesma área. Alvo sem área (dev-api, po, ...) continua agrupado pelo
+  // próprio nome, como sempre. Preserva a ordem de chegada dos grupos.
   const byAgent = new Map<string, typeof all>();
   for (const h of all) {
-    byAgent.set(h.agenteAlvo, [...(byAgent.get(h.agenteAlvo) ?? []), h]);
+    const chave = areaFor(h.agenteAlvo)?.label ?? h.agenteAlvo;
+    byAgent.set(chave, [...(byAgent.get(chave) ?? []), h]);
   }
 
   async function decide(

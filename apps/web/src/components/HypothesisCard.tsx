@@ -1,5 +1,6 @@
 import { useNavigate } from '@tanstack/react-router';
 import type { PsychologistHypothesis } from '../lib/api-types';
+import { AGENTS } from '../lib/agents';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { HypothesisIcon } from './ui/icons';
@@ -48,6 +49,11 @@ export function HypothesisCard({
         ) : (
           <Badge tone="accent">proposta</Badge>
         )}
+        {/* Alvo ESPECÍFICO da hipótese — sempre visível no card, mesmo
+            quando `InsightsSection` agrupa por ÁREA (Fase 8d): sem isto,
+            um grupo "QA" esconderia se a hipótese mira a Automação ou a
+            Performance/Segurança. */}
+        <Badge tone="muted">{AGENTS[hypothesis.agenteAlvo as keyof typeof AGENTS]?.name ?? hypothesis.agenteAlvo}</Badge>
         <span className={styles.confidence}>
           {hypothesis.confiancaPercent}% de confiança
         </span>

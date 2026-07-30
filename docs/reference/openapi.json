@@ -435,6 +435,62 @@
         ]
       }
     },
+    "/internal/sessions/{sessionId}/delegations": {
+      "post": {
+        "description": "`completed` (com o parecer), `failed` (com a origem) ou `dispensed` (com a justificativa) — o lead nunca chama esta rota com um desfecho a meio caminho: cada delegação nasce aqui já resolvida.",
+        "operationId": "InternalSessionsController_recordDelegationOutcome",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecordDelegationInternalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DelegationResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Corpo inválido."
+          },
+          "403": {
+            "description": "Service token ausente ou diferente do compartilhado."
+          },
+          "404": {
+            "description": "Sessão, projeto ou recurso inexistente."
+          }
+        },
+        "security": [
+          {
+            "service-token": []
+          }
+        ],
+        "summary": "Registra o desfecho de uma delegação de área",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
     "/internal/sessions/{sessionId}/dev-context": {
       "get": {
         "description": "Uma chamada com tudo o que o prompt precisa: a história inteira, as regras de negócio resolvidas e as ADRs aplicáveis. `module` restringe as ADRs às do módulo daquele dev; ADR sem módulo declarado é TRANSVERSAL e entra sempre. Omitir `module` traz o acervo inteiro, que é o que os gates de QA e SecOps querem ao reusar este mesmo contexto.",
@@ -7160,8 +7216,19 @@
           },
           "diagnosis": {
             "type": "string",
+            "example": "Ciclo de correção esgotado sem exit 0.",
+            "description": "Diagnóstico em texto livre — detalhe humano do que aconteceu, não a origem estruturada da falha."
+          },
+          "origin": {
+            "type": "string",
+            "enum": [
+              "infra",
+              "modelo",
+              "codigo",
+              "politica"
+            ],
             "example": "infra",
-            "description": "A ORIGEM da falha: `infra`, `modelo`, `código` ou `política`. Nunca por eliminação — é a lição do ADR 0020."
+            "description": "A ORIGEM da falha: `infra`, `modelo`, `codigo` ou `politica`. Nunca por eliminação — é a lição do ADR 0020, retomada um nível acima pelo QA Lead no ADR 0038. Opcional: nem todo call site conhece a origem."
           }
         },
         "required": [
@@ -7602,6 +7669,99 @@
         "required": [
           "name",
           "slug"
+        ]
+      },
+      "DelegationResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "01JC4Z0000DELEGACAO00000001"
+          },
+          "projectId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "01JC4Z0000PROJETO0000000001"
+          },
+          "sessionId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "01JC4Z0000SESSAO000000000001"
+          },
+          "taskId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true,
+            "example": "01JC4Z0000TAREFA00000000001",
+            "description": "null quando a área não tem task de backlog por trás (Infra, Fase 8c)."
+          },
+          "area": {
+            "type": "string",
+            "example": "qa"
+          },
+          "leadAgent": {
+            "type": "string",
+            "example": "qa-lead"
+          },
+          "subagent": {
+            "type": "string",
+            "example": "qa-automacao"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "completed",
+              "failed",
+              "dispensed"
+            ],
+            "example": "completed"
+          },
+          "parecerArtifactId": {
+            "type": "object",
+            "nullable": true,
+            "example": "evt_01jc4z0000parecer000000001"
+          },
+          "failureOrigin": {
+            "type": "string",
+            "enum": [
+              "infra",
+              "modelo",
+              "codigo",
+              "politica"
+            ],
+            "nullable": true,
+            "example": null
+          },
+          "failureReason": {
+            "type": "object",
+            "nullable": true,
+            "example": null
+          },
+          "justification": {
+            "type": "object",
+            "nullable": true,
+            "example": null
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-07-30T12:00:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "projectId",
+          "sessionId",
+          "taskId",
+          "area",
+          "leadAgent",
+          "subagent",
+          "status",
+          "parecerArtifactId",
+          "failureOrigin",
+          "failureReason",
+          "justification",
+          "createdAt"
         ]
       },
       "DenyActionDto": {
@@ -8281,11 +8441,23 @@
             "items": {
               "$ref": "#/components/schemas/InfraContextAdrResponseDto"
             }
+          },
+          "gitProvider": {
+            "type": "string",
+            "enum": [
+              "local",
+              "github",
+              "gitlab"
+            ],
+            "nullable": true,
+            "example": "github",
+            "description": "null quando o projeto ainda não provisionou repositório. O subagente Workflows (Fase 8c) decide o formato do pipeline de CI por isto: \"gitlab\" gera .gitlab-ci.yml, qualquer outro valor gera GitHub Actions."
           }
         },
         "required": [
           "moduleMap",
-          "adrs"
+          "adrs",
+          "gitProvider"
         ]
       },
       "InfraGateVerdictResponseDto": {
@@ -9786,6 +9958,76 @@
           "priorHypotheses"
         ]
       },
+      "RecordDelegationInternalDto": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "01JC4Z0000PROJETO0000000001"
+          },
+          "area": {
+            "type": "string",
+            "example": "qa",
+            "description": "A área que delegou — \"qa\" (Fase 8b) ou \"infra\" (Fase 8c). Texto, não enum."
+          },
+          "taskId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "01JC4Z0000TASK00000000001",
+            "description": "A task de backlog por trás da delegação, quando existir. QA (Fase 8b) sempre manda; Infra (Fase 8c) nunca manda — a delegação é sobre a SESSÃO, não sobre uma task."
+          },
+          "leadAgent": {
+            "type": "string",
+            "example": "qa-lead"
+          },
+          "subagent": {
+            "type": "string",
+            "example": "qa-automacao"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "completed",
+              "failed",
+              "dispensed"
+            ],
+            "example": "completed"
+          },
+          "parecerArtifactId": {
+            "type": "string",
+            "example": "evt_01jc4z0000parecer000000001",
+            "description": "Id do session_event `artifact.qa_verdict` do PARECER DESTA subespecialidade — obrigatório quando `status` é \"completed\"."
+          },
+          "failureOrigin": {
+            "type": "string",
+            "enum": [
+              "infra",
+              "modelo",
+              "codigo",
+              "politica"
+            ],
+            "example": "infra",
+            "description": "A ORIGEM da falha (ADR 0020/0038), nunca por eliminação — obrigatório quando `status` é \"failed\"."
+          },
+          "failureReason": {
+            "type": "string",
+            "example": "limite de iterações atingido sem emit_perf_seguranca_verdict"
+          },
+          "justification": {
+            "type": "string",
+            "example": "story sem RNF de performance pertinente",
+            "description": "Por que o lead optou por NÃO delegar — obrigatório quando `status` é \"dispensed\". Nunca fica em branco: dispensa é decisão registrada, não silêncio (CLAUDE.md, Fase 8b item 2)."
+          }
+        },
+        "required": [
+          "projectId",
+          "area",
+          "leadAgent",
+          "subagent",
+          "status"
+        ]
+      },
       "RecordGateVerdictInternalDto": {
         "type": "object",
         "properties": {
@@ -10856,6 +11098,18 @@
             "example": null,
             "nullable": true
           },
+          "blockedOrigin": {
+            "type": "string",
+            "enum": [
+              "infra",
+              "modelo",
+              "codigo",
+              "politica"
+            ],
+            "example": null,
+            "nullable": true,
+            "description": "A ORIGEM do bloqueio (ADR 0020/0038), quando conhecida. `null` pra todo bloqueio da Fase 4a — só o QA Lead (Fase 8b) a preenche."
+          },
           "gateStatus": {
             "type": "string",
             "enum": [
@@ -10892,6 +11146,7 @@
           "assignedTo",
           "blocked",
           "blockedReason",
+          "blockedOrigin",
           "gateStatus",
           "gateCorrectionCount",
           "createdAt",

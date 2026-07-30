@@ -34,16 +34,17 @@ defmodule Engine.Application do
       Engine.Agents.CriativoSupervisor,
       Engine.Agents.PoSupervisor,
       Engine.Agents.ArquitetoSupervisor,
-      # InfraAgent (Fase 4a — fechamento) — mesma família session-scoped dos
-      # demais, ativado por handoff aceito do Arquiteto.
-      Engine.Infra.InfraAgentSupervisor,
+      # Infra Lead (Fase 4a; área — Fase 8c) — mesma família session-scoped
+      # dos demais, ativado por handoff aceito do Arquiteto.
+      Engine.Infra.InfraLeadSupervisor,
       # Dev agents de execução (Fase 4a) — um por {project, agent_id}.
       # O Monitor sobe ANTES do supervisor: start_agent/6 registra o pid
       # nele, então ele precisa estar vivo quando o primeiro agente nasce.
       Engine.Dev.Monitor,
       Engine.Dev.DevAgentSupervisor,
-      # Gates de PR (Fase 4a) — um QAAgent + um SecOpsAgent por projeto.
-      Engine.Gates.QaAgentSupervisor,
+      # Gates de PR (Fase 4a; QA virou área na Fase 8b) — um QA Lead + um
+      # SecOpsAgent por projeto.
+      Engine.Gates.QaLeadSupervisor,
       Engine.Gates.SecOpsAgentSupervisor,
       # Reidrata sessões sobreviventes de um boot anterior ANTES do
       # Endpoint subir — nunca aceitar heartbeat de alguém reconectando

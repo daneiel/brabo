@@ -138,6 +138,13 @@ defmodule Engine.Sessions.EngineApiClient do
   chama quando não consegue concluir (bloqueio explícito, limite de
   iterações, ou orçamento de tokens excedido). Nunca deixa a task presa em
   `in_progress` sem desfecho.
+
+  `origin` (Fase 8b, ADR 0020/0038): a ORIGEM da falha
+  (`infra`/`modelo`/`codigo`/`politica`), quando conhecida — nunca por
+  eliminação. Nasce `nil` de propósito: os ~18 pontos de chamada da Fase 4a
+  (`Engine.Dev.AgentIo.block_task/3` e afins) não foram retrofitados nesta
+  entrega, só o caminho novo do `QaLeadServer`, que sempre sabe a origem
+  porque a recebe do subagente que falhou.
   """
   @callback mark_task_blocked(
               project_id :: String.t(),
@@ -145,7 +152,8 @@ defmodule Engine.Sessions.EngineApiClient do
               task_id :: String.t(),
               reason :: String.t(),
               diagnosis :: String.t(),
-              agent_id :: String.t()
+              agent_id :: String.t(),
+              origin :: String.t() | nil
             ) ::
               {:ok, map()} | {:error, term()}
 
@@ -164,7 +172,7 @@ defmodule Engine.Sessions.EngineApiClient do
   @doc """
   Parecer de um gate de PR (Fase 4a — QA/SecOps): retorna `{:ok, %{"nextAction"
   => "correct"|"run_secops"|"done"|"blocked", "task" => task_map}}` — o
-  chamador (QaAgentServer/SecOpsAgentServer) decide o próximo passo a partir
+  chamador (QaLeadServer/SecOpsAgentServer) decide o próximo passo a partir
   de `nextAction`. `max_corrections` opcional (nil usa o default da api).
   """
   @callback record_gate_verdict(
@@ -178,6 +186,15 @@ defmodule Engine.Sessions.EngineApiClient do
               max_corrections :: integer() | nil
             ) ::
               {:ok, map()} | {:error, term()}
+
+  @doc """
+  Registra o desfecho de UMA delegação da área de QA (Fase 8b, ADR 0038) —
+  `completed` (com `parecerArtifactId`), `failed` (com `failureOrigin`) ou
+  `dispensed` (com `justification`). O `QaLeadServer` chama isto pra cada
+  subespecialidade, SEPARADO da chamada a `record_gate_verdict` — a api nunca
+  vê o consolidado como delegação, só o `qa_verdict` final.
+  """
+  @callback record_delegation(payload :: map()) :: {:ok, map()} | {:error, term()}
 
   @doc """
   Contexto inicial do InfraAgent (Fase 4a): module_map vigente + ADRs
@@ -357,8 +374,25 @@ defmodule Engine.Sessions.EngineApiClient do
   def get_dev_context(project_id, session_id, task_id, module \\ nil),
     do: impl().get_dev_context(project_id, session_id, task_id, module)
 
-  def mark_task_blocked(project_id, session_id, task_id, reason, diagnosis, agent_id),
-    do: impl().mark_task_blocked(project_id, session_id, task_id, reason, diagnosis, agent_id)
+  def mark_task_blocked(
+        project_id,
+        session_id,
+        task_id,
+        reason,
+        diagnosis,
+        agent_id,
+        origin \\ nil
+      ),
+      do:
+        impl().mark_task_blocked(
+          project_id,
+          session_id,
+          task_id,
+          reason,
+          diagnosis,
+          agent_id,
+          origin
+        )
 
   def open_gate(project_id, session_id, task_id, agent_id),
     do: impl().open_gate(project_id, session_id, task_id, agent_id)
@@ -384,6 +418,8 @@ defmodule Engine.Sessions.EngineApiClient do
           itens,
           max_corrections
         )
+
+  def record_delegation(payload), do: impl().record_delegation(payload)
 
   def get_infra_context(project_id, session_id),
     do: impl().get_infra_context(project_id, session_id)
@@ -579,12 +615,13 @@ defmodule Engine.Sessions.EngineApiClient.Live do
   end
 
   @impl true
-  def mark_task_blocked(project_id, session_id, task_id, reason, diagnosis, agent_id) do
+  def mark_task_blocked(project_id, session_id, task_id, reason, diagnosis, agent_id, origin) do
     post_returning("/internal/sessions/#{session_id}/tasks/#{task_id}/block", %{
       projectId: project_id,
       agentId: agent_id,
       reason: reason,
-      diagnosis: diagnosis
+      diagnosis: diagnosis,
+      origin: origin
     })
   end
 
@@ -615,6 +652,22 @@ defmodule Engine.Sessions.EngineApiClient.Live do
       resumo: resumo,
       itens: itens,
       maxCorrections: max_corrections
+    })
+  end
+
+  @impl true
+  def record_delegation(%{session_id: session_id} = payload) do
+    post_returning("/internal/sessions/#{session_id}/delegations", %{
+      projectId: payload.project_id,
+      taskId: Map.get(payload, :task_id),
+      area: payload.area,
+      leadAgent: payload.lead_agent,
+      subagent: payload.subagent,
+      status: payload.status,
+      parecerArtifactId: Map.get(payload, :parecer_artifact_id),
+      failureOrigin: Map.get(payload, :failure_origin),
+      failureReason: Map.get(payload, :failure_reason),
+      justification: Map.get(payload, :justification)
     })
   end
 

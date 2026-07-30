@@ -136,9 +136,10 @@ rules:
     watch:
       - "apps/engine/lib/engine/harness/**"
       - "apps/engine/lib/engine/gates/**"
+      - "apps/engine/lib/engine/infra/**"
     docs: ["docs/architecture.md", "docs/glossary.md"]
     severity: warn
-    note: "Atualizar só se mudou contrato de behaviour ou fluxo de gate."
+    note: "Atualizar só se mudou contrato de behaviour ou fluxo de gate. `infra/` (área de Infra, Fase 8c) entrou aqui de passagem — não tinha regra nenhuma até então."
 
   # -------------------------------------------------------- infra e operação
 

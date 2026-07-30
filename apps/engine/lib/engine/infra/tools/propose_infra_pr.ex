@@ -1,25 +1,30 @@
 defmodule Engine.Infra.Tools.ProposeInfraPr do
   @moduledoc """
-  Ferramenta do InfraAgent (Fase 4a): propõe a proposed_action `open_infra_pr`
-  — commita N arquivos (Dockerfiles/compose/CI) e abre PR real. Mirror de
-  `Engine.Harness.Tools.ProposeAdr`, generalizado pra vários arquivos.
-  `:pipeline` (passa pelo decide()/permissions da api). O InfraAgent tem
-  `agent_autonomy (infra, open_infra_pr) = auto_approve` seedado no accept do
-  handoff — então normalmente já vem `status: "executed"` com a PR aberta.
+  Spec da ferramenta `propose_infra_pr` — pro modelo do Infra Lead. Até a
+  Fase 8c, `run/2` chamava a api direto (`open_infra_pr`) assim que o
+  modelo terminava. Desde a Fase 8c, `Engine.Infra.InfraLeadServer.
+  dispatch_calls/2` INTERCEPTA esta tool ANTES de chegar em `run/2` — o
+  turno halts e devolve `{title, files}` pro servidor, que consolida com o
+  `WorkflowsAgent` e só então chama `propose_action(..., "open_infra_pr",
+  ...)` (a chamada que vivia aqui, agora em `InfraLeadServer.abrir_pr/3`) —
+  uma vez, com a UNIÃO dos arquivos dos dois delegados.
+
+  `spec/0` continua igual: o modelo não percebe diferença nenhuma. `run/2`
+  fica só como salvaguarda de behaviour (`@behaviour Engine.Harness.Tool`
+  exige as três callbacks) — NUNCA deveria ser chamado de verdade, porque o
+  servidor intercepta antes.
   """
 
   @behaviour Engine.Harness.Tool
-
-  alias Engine.Sessions.EngineApiClient
-  alias Engine.Gates.Dispatcher
 
   @impl true
   def spec do
     %{
       name: "propose_infra_pr",
       description:
-        "Propõe a PR de infra: commita os arquivos de infra (Dockerfiles/compose/CI) numa " <>
-          "branch e abre uma PR real no repo do projeto.",
+        "Propõe a PR de infra: commita os arquivos de infra (Dockerfiles/compose) numa " <>
+          "branch e abre uma PR real no repo do projeto, junto com o pipeline de CI que o " <>
+          "Workflows gera.",
       parameters: %{
         "type" => "object",
         "properties" => %{
@@ -42,33 +47,12 @@ defmodule Engine.Infra.Tools.ProposeInfraPr do
   end
 
   @impl true
-  def category, do: :pipeline
+  def category, do: :direct
 
   @impl true
-  def run(%{"title" => title, "files" => files}, ctx) do
-    actor = %{kind: "agent", id: ctx.agent}
-    payload = %{title: title, files: files}
-
-    case EngineApiClient.propose_action(
-           ctx.project_id,
-           ctx.session_id,
-           "open_infra_pr",
-           actor,
-           payload
-         ) do
-      {:ok, %{"id" => id, "status" => "executed"} = action} ->
-        url = get_in(action, ["executionResult", "pullRequestUrl"]) || "(sem url)"
-        Dispatcher.run_infra_qa(ctx.project_id, ctx.session_id, id)
-        {:ok, "PR de infra aberta: #{url} — gates de QA/SecOps disparados."}
-
-      {:ok, %{"id" => id, "status" => status}} ->
-        {:ok,
-         "PR de infra proposta (ação #{id}, status=#{status}) — aguardando aprovação do usuário."}
-
-      {:error, reason} ->
-        {:error, "falha ao propor PR de infra: #{inspect(reason)}"}
-    end
-  end
-
-  def run(_args, _ctx), do: {:error, "propose_infra_pr exige `title` e `files`"}
+  def run(_args, _ctx),
+    do:
+      {:error,
+       "propose_infra_pr é interceptada pelo InfraLeadServer antes de chegar aqui — " <>
+         "run/2 nunca deveria ser invocado"}
 end

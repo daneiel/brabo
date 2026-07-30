@@ -31,6 +31,10 @@ interface AgentCardProps {
   activity?: { label: string; branch?: string };
   /** Custo acumulado do agente NESTA sessão, em micro-USD. */
   tokensMicros?: number;
+  /** Selo curto ao lado do nome — hoje só "Lead" (área, Fase 8d). */
+  badge?: string;
+  /** Estilo reduzido pra card de subagente aninhado sob o lead da área. */
+  compact?: boolean;
 }
 
 function formatMicros(micros: number): string {
@@ -45,19 +49,24 @@ export function AgentCard({
   onAutonomyChange,
   activity,
   tokensMicros,
+  badge,
+  compact,
 }: AgentCardProps) {
   const Icon = agent.icon;
   const style = { ['--agent-color' as string]: agent.color } as CSSProperties;
   const statusStyle = { ['--status-color' as string]: STATUS_COLOR[status] } as CSSProperties;
 
   return (
-    <div className={styles.card} style={style}>
+    <div className={[styles.card, compact && styles.compact].filter(Boolean).join(' ')} style={style}>
       <div className={styles.top}>
         <div className={styles.avatar}>
-          <Icon size={20} />
+          <Icon size={compact ? 16 : 20} />
         </div>
         <div className={styles.info}>
-          <div className={styles.name}>{agent.name}</div>
+          <div className={styles.name}>
+            {agent.name}
+            {badge && <span className={styles.badge}>{badge}</span>}
+          </div>
           <div className={styles.role}>{agent.role}</div>
           <span className={styles.status} style={statusStyle}>
             <span className={[styles.statusDot, status === 'trabalhando' && styles.pulsing].filter(Boolean).join(' ')} />

@@ -12,7 +12,7 @@ keywords: [arquitetura, code map, invariantes, harness, event log]
 Este documento é o mapa para quem vai **mexer** no código. Ele diz por onde
 começar a ler, o que cada fronteira promete, e o que já se sabe que está torto.
 
-Decisões e o porquê delas ficam nos [ADRs](adr/index.md) — 37 deles, vários
+Decisões e o porquê delas ficam nos [ADRs](adr/index.md) — 39 deles, vários
 registrando defeito real encontrado em execução. Aqui não repetimos a
 argumentação: apontamos.
 
@@ -74,16 +74,16 @@ resposta imediata.
 
 ## Code map
 
-### `apps/api` — NestJS, 375 arquivos
+### `apps/api` — NestJS, 444 arquivos
 
 Quatro camadas, e a ordem importa:
 
 | diretório | o que é | comece por | a que **não** serve |
 |---|---|---|---|
-| `src/domain/` (64) | regra de negócio pura. Sem IO, sem framework | `actions/decide.ts` — o coração da aprovação | não sabe o que é HTTP, banco ou NestJS |
-| `src/application/` (157) | casos de uso. Orquestram domínio e portas | `use-cases/sessions/` | não contém regra; se tem `if` de negócio, está no lugar errado |
-| `src/infrastructure/` (59) | implementações das portas: Drizzle, clientes HTTP, cripto | `persistence/drizzle/` | não decide nada |
-| `src/interfaces/http/` (85) | controllers, guards, DTOs | `auth/jwt-auth.guard.ts` | não tem regra nem query |
+| `src/domain/` (72) | regra de negócio pura. Sem IO, sem framework | `actions/decide.ts` — o coração da aprovação | não sabe o que é HTTP, banco ou NestJS |
+| `src/application/` (177) | casos de uso. Orquestram domínio e portas | `use-cases/sessions/` | não contém regra; se tem `if` de negócio, está no lugar errado |
+| `src/infrastructure/` (76) | implementações das portas: Drizzle, clientes HTTP, cripto | `persistence/drizzle/` | não decide nada |
+| `src/interfaces/http/` (105) | controllers, guards, DTOs | `auth/jwt-auth.guard.ts` | não tem regra nem query |
 
 Símbolos para grepar quando estiver perdido: `decide(`, `assertTransition`,
 `@RequireRole`, `PROTECTED_BRANCHES`, `EncryptionService`.
@@ -94,15 +94,16 @@ OpenTelemetry não pega módulo já carregado, e um módulo separado é o que ga
 isso: TypeScript eleva todos os `require` para o topo, então uma chamada escrita
 entre imports rodaria tarde demais).
 
-### `apps/engine` — Elixir/OTP, 144 arquivos
+### `apps/engine` — Elixir/OTP, 155 arquivos
 
 | módulo | o que é | comece por |
 |---|---|---|
 | `harness/` (33) | montagem de contexto, ToolLoop, compactação. **Nenhuma chamada de LLM acontece fora daqui** | `harness/tool_loop/` |
 | `dev/` (15) | dev agents, worktrees, monitor | `dev/dev_agent_server.ex` |
-| `gates/` (10) | QA (com LLM) e SecOps (determinístico) | `gates/qa_agent_server.ex` |
+| `gates/` (14) | área de QA (Lead + subespecialidades Automação e Performance/Segurança, todas com LLM) e SecOps (determinístico) | `gates/qa_lead_server.ex` |
+| `infra/` (9) | área de Infra (Lead conversacional session-scoped + subespecialidade Workflows via ToolLoop — duas famílias arquiteturais na mesma área, ver RN-037) | `infra/infra_lead_server.ex` |
 | `sessions/` (9) | ciclo de vida da sessão, registro `:global` | `sessions/session_server.ex` |
-| `actions/` (8) | executores de terminal e git | `actions/git_executor.ex` |
+| `actions/` (9) | executores de terminal e git, detectors de lint/scanner | `actions/git_executor.ex` |
 | `agents/` (7) | Criativo, PO, Arquiteto | — |
 | `psychologist/` (6) · `anamnese/` (6) | análise e melhoria do time | — |
 
@@ -286,6 +287,34 @@ correlação em `pnpm dev`.
 chave mestra. Rotação sem downtime via `CREDENTIALS_MASTER_KEY_PREVIOUS` — ver
 o [runbook](runbook.md).
 
+**Hierarquia de agentes.** Desde a Fase 8b ([ADR 0038](adr/0038-hierarquia-de-agentes.md)),
+uma área pode ter um LEAD e subespecialidades — hoje "qa" (`qa-lead`,
+`qa-automacao`, `qa-performance-seguranca`) e "infra" (`infra` como lead,
+`infra-workflows` como subagente — Fase 8c, RN-037). O lead é o único ponto
+de contato externo: delegação interna nunca vira handoff, e nunca é visível
+fora da área. A primeira instância prova a garantia central do modelo —
+`QaLeadServer` consolida os pareceres das duas subespecialidades num
+`qa_verdict` só, e o contrato que a api já tinha (`RecordGateVerdictUseCase`,
+`nextGateStatus`) não mudou uma linha. A segunda mostra que o modelo não
+exige a mesma implementação interna: `InfraLeadServer` continua um GenServer
+conversacional session-scoped (mirror do `ArquitetoServer`, contato externo
+inalterado por pedido explícito do CLAUDE.md 8c), e delega ao `WorkflowsAgent`
+— que, sem usuário do outro lado, roda como `ToolLoop` bounded, igual aos
+subagentes de QA. O `delegations` genérico do 8b precisou de UM ajuste pra
+servir a segunda área: `task_id` virou nullable, porque Infra delega sobre a
+sessão, não sobre uma task de backlog.
+
+A Fase 8d fecha o ciclo do lado da `apps/web`, sem rota nova — tudo vem do
+mesmo `session_events` que o painel já busca (`useSessionEvents`).
+`apps/web/src/lib/agents.ts` ganha `AREAS`/`areaFor`: o registro que liga
+`AgentKey` de subagente (`qa-automacao`, `qa-performance-seguranca`,
+`infra-workflows`) à área do lead — é essa busca reversa que agrupa o
+painel do time (lead com badge "Lead" + subespecialidades recolhíveis),
+agrupa Insights por área, e narra `delegation.completed`/`failed`/
+`dispensed` no feed (`activity.ts`). `consolidated_verdict` (decisão #4 do
+ADR 0038) não virou artefato de verdade — QA e Infra reusam `qa_verdict`/
+`open_infra_pr`, ver o [fechamento do ADR](adr/0038-hierarquia-de-agentes.md#fechamento-fase-8d).
+
 ## Dados
 
 ```mermaid
@@ -297,6 +326,7 @@ erDiagram
   projects ||--o{ epics : ""
   epics ||--o{ stories : ""
   stories ||--o{ tasks : ""
+  tasks |o--o{ delegations : "área de QA (8b) / Infra (8c, task_id nullable)"
   projects ||--o{ budgets : limita
   sessions ||--o{ token_usage : mede
   projects ||--o{ agent_instructions : configura
@@ -305,10 +335,16 @@ erDiagram
   psychologist_analyses ||--o{ psychologist_hypotheses : produz
 ```
 
-35 tabelas no total. **As constraints são regra de negócio**: a unique
+36 tabelas no total. **As constraints são regra de negócio**: a unique
 `(session_id, seq)` do event log, o `check` que exige exatamente um escopo em
 `budgets` (projeto **ou** sessão, nunca os dois), os índices parciais que
-garantem idempotência das análises.
+garantem idempotência das análises — e, desde a Fase 8b, os três `check` de
+`delegations` que travam qual campo é obrigatório por `status`
+(`completed` → `parecerArtifactId`, `failed` → `failureOrigin`, `dispensed` →
+`justification`; ver [RN-036](business-rules.md#rn-036)). `delegations.
+task_id` nasceu `NOT NULL` e virou nullable na Fase 8c — a área de Infra
+delega sobre a sessão, sem task de backlog por trás de uma PR de infra (ver
+[RN-037](business-rules.md#rn-037)).
 
 **Migrations:** Drizzle na api (`src/db/migrations/`, aplicadas por um Job
 one-shot — réplicas **não** migram no boot, senão competem pela mesma

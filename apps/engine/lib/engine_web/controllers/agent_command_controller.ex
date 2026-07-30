@@ -17,7 +17,7 @@ defmodule EngineWeb.AgentCommandController do
     ArquitetoServer
   }
 
-  alias Engine.Infra.{InfraAgentSupervisor, InfraAgentServer}
+  alias Engine.Infra.{InfraLeadSupervisor, InfraLeadServer}
 
   def start(conn, %{"sessionId" => session_id, "projectId" => project_id, "agent" => "criativo"}) do
     {:ok, _pid} = CriativoSupervisor.start_agent(session_id, project_id)
@@ -40,8 +40,8 @@ defmodule EngineWeb.AgentCommandController do
 
   def start(conn, %{"sessionId" => session_id, "projectId" => project_id, "agent" => "infra"}) do
     # Ativado pelo handoff aceito do Arquiteto — kickoff só num start FRESCO.
-    {:ok, _pid, origin} = InfraAgentSupervisor.start_agent(session_id, project_id)
-    if origin == :started, do: InfraAgentServer.kickoff(session_id)
+    {:ok, _pid, origin} = InfraLeadSupervisor.start_agent(session_id, project_id)
+    if origin == :started, do: InfraLeadServer.kickoff(session_id)
     send_resp(conn, 201, "")
   end
 

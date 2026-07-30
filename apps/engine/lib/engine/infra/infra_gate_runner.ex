@@ -10,10 +10,11 @@ defmodule Engine.Infra.InfraGateRunner do
 
   Disparado via `Engine.Gates.Dispatcher.run_infra_qa/3`/`run_infra_secops/3`
   (fire-and-forget, `Task.start`). `changes_requested` devolve pro
-  `Engine.Infra.InfraAgentServer.correct/2` (mesma branch, sem PR nova).
+  `Engine.Infra.InfraLeadServer.correct/2` (mesma branch, sem PR nova — o
+  Lead reroda a área inteira, Fase 8c).
   """
 
-  alias Engine.Infra.InfraAgentServer
+  alias Engine.Infra.InfraLeadServer
   alias Engine.Gates.{Dispatcher, Scanner}
   alias Engine.Harness.ArtifactEmitter
   alias Engine.Sessions.EngineApiClient
@@ -240,7 +241,7 @@ defmodule Engine.Infra.InfraGateRunner do
 
     case result do
       {:ok, %{"nextAction" => "correct"}} ->
-        InfraAgentServer.correct(session_id, %{
+        InfraLeadServer.correct(session_id, %{
           gate: gate,
           reason: resumo,
           diagnosis: Enum.join(itens, "; ")

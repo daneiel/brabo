@@ -283,7 +283,7 @@ const PREFIXOS_DE_EVENTO = [
   'session', 'agent', 'action', 'artifact', 'chat', 'handoff', 'backlog',
   'bootstrap', 'permission', 'gate', 'budget', 'readiness', 'psychologist',
   'anamnese', 'instruction', 'execution', 'project', 'proposed_action',
-  'infra', 'pr', 'architecture', 'llm', 'tool', 'event',
+  'infra', 'pr', 'architecture', 'llm', 'tool', 'event', 'delegation',
 ];
 
 

@@ -1,7 +1,7 @@
 defmodule Engine.Workers.PsychologistWorkerTest do
   # DataCase — o ContextBuilder lê o event log direto do Postgres e o
   # ToolLoop real roda síncrono no processo de teste (mesmo padrão de
-  # Engine.Gates.QaAgentServerTest).
+  # Engine.Gates.QaAutomacaoAgentTest).
   use Engine.DataCase, async: false
 
   alias Engine.Sessions.FakeEngineApiClient

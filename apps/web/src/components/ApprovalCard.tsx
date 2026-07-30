@@ -241,7 +241,8 @@ function ApprovalBody({ actionType, payload, executionResult, expandedFile, onTo
   }
 
   if (actionType === 'instruction_patch') {
-    const agent = readString(payload, 'agent') ?? '?';
+    const agentId = readString(payload, 'agent') ?? '?';
+    const agent = AGENTS[agentId as keyof typeof AGENTS]?.name ?? agentId;
     const rationale = readString(payload, 'rationale');
     const hypothesisId = readString(payload, 'hypothesisId');
     const fromVersion = payload.fromVersion;

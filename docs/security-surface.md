@@ -138,6 +138,13 @@ o componente `d` da JWK, travado por teste.
   é atendido e sai sem o cabeçalho; quem barra a leitura é o navegador, que é de
   quem a decisão é. Responder `403` quebraria todo cliente que não manda `Origin`
   — probe do kubelet, `curl`, o `docker/smoke.sh`.
+- **`POST .../delegations` é engine-service como as demais rotas internas**
+  (Fase 8b QA, Fase 8c Infra — ADR 0038) — o lead de cada área registra o
+  desfecho de cada delegado (`completed`/`failed`/`dispensed`) SEPARADO da
+  chamada que a área usa pra reportar o resultado consolidado pra fora
+  (`gates/verdict` pro QA, `open_infra_pr` pro Infra). Session-scoped, não
+  task-scoped — `taskId` é opcional no corpo. Delegação nunca é visível como
+  handoff.
 
 ## Tabela
 
@@ -159,6 +166,7 @@ o componente `d` da JWK, travado por teste.
 | GET | `/metrics` | public |
 | POST | `/internal/sessions/:sessionId/actions` | engine-service |
 | GET | `/internal/sessions/:sessionId/anamnese-context` | engine-service |
+| POST | `/internal/sessions/:sessionId/delegations` | engine-service |
 | GET | `/internal/sessions/:sessionId/dev-context` | engine-service |
 | POST | `/internal/sessions/:sessionId/epics` | engine-service |
 | GET | `/internal/sessions/:sessionId/events` | engine-service |

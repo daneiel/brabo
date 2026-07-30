@@ -159,3 +159,78 @@ describe('deriveAgentRoster — status', () => {
     expect(statusOf(roster, 'dev-core')).toBe('falhou');
   });
 });
+
+describe('deriveAgentRoster — subagentes de área (Fase 8b/8c, no painel — Fase 8d)', () => {
+  const gateEvent = ev('pr.gate_changed', 'qa-agent', { gateStatus: 'awaiting_qa' });
+
+  it('subagente só entra na roster com pelo menos uma delegação registrada', () => {
+    const semDelegacao = deriveAgentRoster([gateEvent], moduleMap, true, []);
+    expect(semDelegacao.map((r) => r.id)).not.toContain('qa-automacao');
+
+    const comDelegacao = deriveAgentRoster(
+      [gateEvent, ev('delegation.completed', 'qa-lead', { subagent: 'qa-automacao', area: 'qa' })],
+      moduleMap,
+      true,
+      [],
+    );
+    expect(comDelegacao.map((r) => r.id)).toContain('qa-automacao');
+  });
+
+  it('só o subagente delegado aparece — a outra subespecialidade fica de fora', () => {
+    const roster = deriveAgentRoster(
+      [gateEvent, ev('delegation.completed', 'qa-lead', { subagent: 'qa-automacao', area: 'qa' })],
+      moduleMap,
+      true,
+      [],
+    );
+    expect(roster.map((r) => r.id)).not.toContain('qa-performance-seguranca');
+  });
+
+  it('delegação dispensada também conta como evidência — dispensa é decisão, não silêncio', () => {
+    const roster = deriveAgentRoster(
+      [
+        gateEvent,
+        ev('delegation.dispensed', 'qa-lead', {
+          subagent: 'qa-performance-seguranca',
+          area: 'qa',
+          justification: 'sem RNF de performance',
+        }),
+      ],
+      moduleMap,
+      true,
+      [],
+    );
+    expect(roster.map((r) => r.id)).toContain('qa-performance-seguranca');
+    expect(statusOf(roster, 'qa-performance-seguranca')).toBe('ocioso');
+  });
+
+  it('delegation.failed mais recente deixa o subagente em falhou', () => {
+    const roster = deriveAgentRoster(
+      [
+        gateEvent,
+        ev('delegation.completed', 'qa-lead', { subagent: 'qa-automacao', area: 'qa' }),
+        ev('delegation.failed', 'qa-lead', {
+          subagent: 'qa-automacao',
+          area: 'qa',
+          failureOrigin: 'modelo',
+        }),
+      ],
+      moduleMap,
+      true,
+      [],
+    );
+    expect(statusOf(roster, 'qa-automacao')).toBe('falhou');
+  });
+
+  it('infra-workflows entra sob o mesmo critério, associado à área infra', () => {
+    const roster = deriveAgentRoster(
+      [ev('delegation.completed', 'infra-lead', { subagent: 'infra-workflows', area: 'infra' })],
+      null,
+      false,
+      [handoffInfra],
+    );
+    expect(roster.map((r) => r.id)).toEqual(
+      expect.arrayContaining(['infra', 'infra-workflows']),
+    );
+  });
+});

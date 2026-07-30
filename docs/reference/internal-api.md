@@ -117,6 +117,13 @@ Um endpoint por agente, em vez de um genérico: cada um monta exatamente o que
 aquele papel precisa, e o Harness não fica filtrando no engine o que a api
 poderia não ter enviado.
 
+`/infra-context` ganhou `gitProvider` na Fase 8c (`null` sem repositório
+provisionado) — é como o subagente Workflows decide `.github/workflows/
+ci.yml` vs `.gitlab-ci.yml`, sem rota nova (mesmo padrão de "um GET por
+agente" — ver [RN-037](../business-rules.md#rn-037)). **Não** é
+`capabilities` do `GitProvider`: GitHub e GitLab têm as MESMAS capabilities
+(`{protectBranch: true, pullRequests: true}`) — só `provider.name` distingue.
+
 ### Backlog e arquitetura
 
 | método | caminho |
@@ -138,10 +145,22 @@ pegarem a mesma task.
 | POST | `/tasks/:taskId/gate/open` |
 | POST | `/gates/verdict` |
 | POST | `/infra-gates/verdict` |
+| POST | `/delegations` |
 
 A **máquina de estados de gate vive na api**, não no engine. O engine reporta o
 parecer; quem decide se a transição é legal — e recusa QA tentando pular para
 `awaiting_user` — é o domínio ([RN-014](../business-rules.md#rn-014)).
+
+`/delegations` é DIFERENTE dos outros três: não move a máquina de estados do
+gate — só registra o desfecho de um delegado de área (QA, Fase 8b; Infra,
+Fase 8c — [ADR 0038](../adr/0038-hierarquia-de-agentes.md)). O lead da área
+chama esta rota uma vez por delegado (`completed`/`failed`/`dispensed`),
+SEPARADO da chamada que a área usa pra reportar o resultado consolidado pra
+fora (`/gates/verdict` pro QA, `open_infra_pr` pro Infra) — ver
+[RN-036](../business-rules.md#rn-036)/[RN-037](../business-rules.md#rn-037).
+Session-scoped, não task-scoped: `taskId` vai no CORPO, opcional — QA sempre
+manda, Infra nunca manda (a delegação é sobre a sessão, sem task de backlog
+por trás de uma PR de infra).
 
 ### Psicólogo e Anamnese
 
