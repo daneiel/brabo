@@ -184,3 +184,48 @@ export const ServerIcon = (props: IconProps) =>
 
 export const LockIcon = (props: IconProps) =>
   base(['M6 11h12v9H6z', 'M8 11V7a4 4 0 1 1 8 0v4'], props);
+
+export const EyeIcon = (props: IconProps) =>
+  base(
+    ['M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z', 'M14.6 12a2.6 2.6 0 1 1-5.2 0 2.6 2.6 0 0 1 5.2 0z'],
+    props,
+  );
+
+export const EyeOffIcon = (props: IconProps) =>
+  base(
+    [
+      'M3 3l18 18',
+      'M10.6 5.7A9.9 9.9 0 0 1 12 5.5c6.4 0 10 6.5 10 6.5a17 17 0 0 1-2.8 3.6',
+      'M6.4 7.4A17 17 0 0 0 2 12s3.6 6.5 10 6.5c1 0 1.9-.1 2.7-.4',
+      'M9.6 9.8a2.6 2.6 0 0 0 3.5 3.6',
+    ],
+    props,
+  );
+
+/**
+ * A marca do Brabo: uma barra e dois chevrons, extraída do mock de login
+ * (`Brabo Login.dc.html`).
+ *
+ * Não confundir com o `BrandIcon` acima, que é outro desenho — o cubo isométrico
+ * usado no cabeçalho do app. Este é o do quadrado terracota das telas de auth.
+ *
+ * Foge do `base()` de propósito: os três traços têm espessuras diferentes (3.4 e
+ * 2.8) e o segundo chevron tem opacidade própria, e é isso que dá a sensação de
+ * profundidade. Um `stroke-width` único achataria o desenho.
+ */
+export const LogoMark = ({ size = 24, ...rest }: IconProps) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    {...rest}
+  >
+    <path d="M5.4 3.6v16.8" strokeWidth={3.4} />
+    <path d="M10.4 4.6l5.6 3.8-5.6 3.8" strokeWidth={2.8} />
+    <path d="M10.4 12l5.6 3.8-5.6 3.8" strokeWidth={2.8} opacity={0.58} />
+  </svg>
+);

@@ -21,9 +21,27 @@
   color: var(--text-muted);
 }
 
-.input:focus {
+/*
+ * `:focus-visible`, e com `outline` transparente (ADR 0036).
+ *
+ * Era `:focus` com `outline: none` acima e indicação SÓ por `box-shadow`. Dois
+ * problemas: `:focus` também acende ao clicar com o mouse, o que não é o que a
+ * indicação de foco existe para resolver; e em `forced-colors` (alto contraste do
+ * sistema) o `box-shadow` é descartado, deixando o campo focado sem indicador
+ * NENHUM. O `outline` transparente reserva o espaço e é o que o modo de alto
+ * contraste pinta.
+ */
+.input:focus-visible {
   border-color: var(--accent);
+  outline: 2px solid transparent;
+  outline-offset: 0;
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+@media (forced-colors: active) {
+  .input:focus-visible {
+    outline-color: Highlight;
+  }
 }
 
 .mono {
@@ -43,6 +61,52 @@
   color: var(--text-muted);
   pointer-events: none;
   display: flex;
+}
+
+/*
+ * Campo preenchido (ADR 0036). Um degrau ACIMA da superfície do card, não abaixo:
+ * sobre um card `--surface-1`, o fundo default do campo é o mesmo do card e só a
+ * borda de 1px os separa.
+ *
+ * (O mock afunda o campo com `--code-bg`; aqui ele sobe. É divergência
+ * deliberada, registrada no ADR.)
+ */
+.preenchido {
+  background: var(--surface-2);
+}
+
+/* Espaço para o botão de revelar, do mesmo jeito que `.withIcon` abre à esquerda. */
+.withToggle {
+  padding-right: 44px;
+}
+
+.toggle {
+  position: absolute;
+  right: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    color 0.12s,
+    background 0.12s;
+}
+
+.toggle:hover {
+  color: var(--text-secondary);
+  background: var(--surface-2);
+}
+
+.toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
 /* Rótulo, erro e apoio — Fase 7a, com as telas de auth. */

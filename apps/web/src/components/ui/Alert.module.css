@@ -1,0 +1,94 @@
+/*
+ * Anatomia do alerta (ADR 0036), tirada do mock de login.
+ *
+ * Duas formas convivem no mock e as duas estão aqui:
+ *
+ * - o erro de formulário, DENTRO do card: fundo e borda tingidos pelo tom, sem
+ *   borda lateral;
+ * - o aviso de migração, FORA do card: fundo de superfície e uma barra de 2px
+ *   na borda esquerda com a cor do tom.
+ *
+ * A diferença é intencional — o de dentro compete com o card e precisa se
+ * separar por cor; o de fora já está sobre o fundo da página e só precisa de um
+ * acento. Ambos usam `color-mix` sobre o token semântico, nunca a paleta bruta
+ * nem rgba literal, que é regra do `design/README.md`.
+ */
+.alerta {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--surface-1);
+}
+
+.icone {
+  flex-shrink: 0;
+  /* 2px para o ícone alinhar com a primeira linha do texto, não com o topo da
+     caixa — o mock faz o mesmo. */
+  margin-top: 2px;
+  display: grid;
+  place-items: center;
+}
+
+.texto {
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  /* Evita órfã de uma palavra na última linha. */
+  text-wrap: pretty;
+}
+
+/* O texto em negrito dentro do alerta puxa a cor primária: no mock é o nome da
+   ação que o usuário precisa procurar ("Esqueci minha senha"). */
+.texto strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.texto :is(p) {
+  margin: 0;
+}
+
+/* Erro de formulário: tingido, para se destacar do card que o contém. */
+.danger {
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+  border-color: color-mix(in srgb, var(--danger) 40%, transparent);
+  color: var(--text-primary);
+}
+
+.danger .icone {
+  color: var(--danger);
+}
+
+/* O texto do erro é primário, não secundário: é a informação principal da hora. */
+.danger .texto {
+  color: var(--text-primary);
+}
+
+/* Aviso: superfície com acento na borda esquerda. */
+.warning {
+  border-left: 2px solid var(--warning);
+}
+
+.warning .icone {
+  color: var(--warning);
+}
+
+.success {
+  border-left: 2px solid var(--success);
+}
+
+.success .icone {
+  color: var(--success);
+}
+
+.accent {
+  border-left: 2px solid var(--accent);
+}
+
+.accent .icone {
+  color: var(--accent);
+}
