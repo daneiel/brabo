@@ -23,6 +23,20 @@ end
 config :engine, EngineWeb.Endpoint,
   http: [port: String.to_integer(System.get_env("PORT", "4000"))]
 
+# Exportação de span: só com coletor (ADR 0035).
+#
+# Fora daqui nada desliga o exportador — o default do `otel_configuration` é
+# `{opentelemetry_exporter, %{}}`, que aponta para `localhost:4318`. Então em
+# qualquer ambiente sem `OTEL_EXPORTER_OTLP_ENDPOINT` (release mal configurado,
+# `mix phx.server` fora do compose) o engine gastaria um batch condenado a cada
+# ciclo. Instrumentação e contexto seguem ligados: o que se desliga é só a saída.
+#
+# Vale para todos os ambientes de propósito. Em dev e test a config de compilação
+# já pôs `:none`, e reafirmar aqui é inofensivo.
+if System.get_env("OTEL_EXPORTER_OTLP_ENDPOINT") in [nil, ""] do
+  config :opentelemetry, traces_exporter: :none
+end
+
 # Comunicação engine -> api (evento de término e psychologist.hypothesis,
 # ver Engine.Sessions.Monitor/EngineApiClient), e engine <- api (comando
 # síncrono de criar sessão, ver EngineWeb.Plugs.VerifyServiceToken). Desde a

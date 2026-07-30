@@ -1,13 +1,23 @@
 defmodule Engine.Telemetry.SpanTest do
   @moduledoc """
-  A camada de span do engine (Fase 5, item 3).
+  A camada de span do engine (Fase 5, item 3; texto corrigido no ADR 0035).
 
-  Sem SDK de OpenTelemetry configurado — que é o caso da suite, de propósito —
-  a API do OTel vira no-op. Isso torna os testes daqui menos sobre "a span foi
-  criada" e mais sobre a propriedade que realmente importa: **instrumentar não
+  O que se testa aqui é a propriedade que realmente importa: **instrumentar não
   pode mudar o comportamento nem o valor de retorno de nada**. Uma span que
   engole o retorno de uma função, ou que converte exceção em `nil`, seria um
   defeito muito pior que a ausência de trace.
+
+  ## Correção: o SDK está vivo na suite
+
+  Este texto afirmava que sem coletor configurado a API do OTel virava no-op.
+  Era falso — `:opentelemetry` é dependência normal e sobe com a aplicação, e o
+  que faltava era config, não SDK. Span manual sempre teve `trace_id` real aqui,
+  e `otel_test.exs`, ao lado, afirma exatamente isso. O que a suite não tem é
+  EXPORTAÇÃO (`config :opentelemetry, traces_exporter: :none`) e instrumentação
+  automática (`otel_auto_instrumentation: false`).
+
+  A distinção importa para quem escreve teste novo aqui: dá para afirmar sobre
+  `current_trace_id/0`, não dá para afirmar sobre span exportada.
   """
 
   use ExUnit.Case, async: true

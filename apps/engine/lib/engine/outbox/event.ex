@@ -17,6 +17,17 @@ defmodule Engine.Outbox.Event do
     field :aggregate_id, :binary_id
     field :event_type, :string
     field :payload, :map, default: %{}
+    # Metadado de TRANSPORTE, separado do payload de propósito (a api grava em
+    # `apps/api/src/infrastructure/persistence/drizzle/outbox.repository.ts`).
+    # Carrega o `traceparent` de quem gerou o evento.
+    #
+    # Faltar este campo aqui foi um bug silencioso da Fase 5 até o ADR 0035: a
+    # coluna existia no banco e a api gravava, mas sem a declaração o struct
+    # `%Event{}` não tinha a chave `:metadata` — então a primeira cláusula de
+    # `Engine.Outbox.Drain.traceparent/1` era INALCANÇÁVEL e todo job do Oban
+    # nascia com `traceparent: nil`. Nada falhava; a correlação do trabalho
+    # assíncrono simplesmente não existia.
+    field :metadata, :map, default: %{}
     field :created_at, :utc_datetime_usec
     field :processed_at, :utc_datetime_usec
   end

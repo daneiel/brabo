@@ -54,6 +54,16 @@ config :engine, dev_routes: true
 # Do not include metadata nor timestamps in development logs
 config :logger, :default_formatter, format: "[$level] $message\n"
 
+# Instrumentação ligada, exportação desligada (ADR 0035).
+#
+# Não há coletor em desenvolvimento, e o default do `otel_configuration` é um
+# exportador OTLP para `localhost:4318` — ou seja, sem esta linha o engine gasta
+# um batch condenado a cada ciclo. Com `:none`, o `otel_batch_processor` desabilita
+# a tabela de export na inicialização e descarta a span no `on_end`, então a span
+# continua sendo CRIADA (com `trace_id` real, que é o que correlaciona o log com
+# a api) e só não sai do processo.
+config :opentelemetry, traces_exporter: :none
+
 # Set a higher stacktrace during development. Avoid configuring such
 # in production as building large stacktraces may be expensive.
 config :phoenix, :stacktrace_depth, 20
