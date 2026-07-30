@@ -79,3 +79,24 @@ checagem, e é esse comprimento que dá a elas a entropia que o scanner morde.
 """
 targetRules = ["generic-api-key"]
 paths = ['''apps/api/src/domain/auth/password-policy\.ts''']
+
+[[allowlists]]
+description = """
+O trace id de EXEMPLO da especificação W3C Trace Context
+(`4bf92f3577b34da6a3ce929d0e0e4736`, o mesmo que aparece no texto da spec e nos
+exemplos de OpenAPI deste repo). O teste o usa como parent remoto para provar que
+o engine adota a trace que a api começou — é a asserção central da correlação
+entre os serviços.
+
+Um trace id não autentica nem autoriza nada: é um identificador de correlação
+que viaja em texto claro em todo header `traceparent`, por desenho. O que o
+scanner morde é a forma — 32 hex atribuídos a uma variável com `id` no nome têm
+entropia de chave de API.
+
+Escopado a um arquivo só: o valor aparece em outros testes de telemetria sem
+disparar a regra, porque lá não está numa atribuição. E o arquivo permanece no
+histórico mesmo depois de o código ser reescrito para derivar o id do
+traceparent — `gitleaks detect` varre commits, não a árvore de trabalho.
+"""
+targetRules = ["generic-api-key"]
+paths = ['''apps/engine/test/engine/telemetry/otel_test\.exs''']

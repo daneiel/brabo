@@ -497,7 +497,11 @@ jobs:
           # `trace_id` com underscore nos TRÊS serviços — é o que o Alloy extrai
           # e o derivedFields do Loki procura.
           grep -q "trace_id" apps/api/src/infrastructure/observability/logger.config.ts
-          grep -q '"trace_id"' apps/engine/lib/engine/telemetry/json_log_formatter.ex
+          # No engine o campo mora em `log_fields.ex` desde o ADR 0035: o
+          # `json_log_formatter.ex` passou a só serializar o mapa que esse módulo
+          # monta, e o `pretty_log_formatter.ex` consome o mesmo mapa. Apontar
+          # para o dono dos NOMES é mais estável que para um dos formatadores.
+          grep -q '"trace_id"' apps/engine/lib/engine/telemetry/log_fields.ex
           grep -q "trace_id" apps/web/src/lib/logger.ts
           grep -q "matcherRegex: trace_id" deploy/k8s/helm/grafana-values.yaml
           grep -q "trace_id" deploy/k8s/helm/alloy-values.yaml

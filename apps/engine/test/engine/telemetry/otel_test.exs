@@ -71,8 +71,18 @@ defmodule Engine.Telemetry.OtelTest do
     test "adota o traceparent remoto — o mesmo trace_id da api" do
       # A propriedade a que "o mesmo trace nos três apps" se reduz do lado do
       # engine: `with_session/4` pendura o trabalho na trace que a api começou.
-      trace_id_da_api = "4bf92f3577b34da6a3ce929d0e0e4736"
-      traceparent = "00-#{trace_id_da_api}-00f067aa0ba902b7-01"
+      #
+      # O trace id é DERIVADO do traceparent em vez de repetido numa constante,
+      # para os dois não poderem divergir. O valor é o exemplo canônico da
+      # especificação W3C Trace Context.
+      #
+      # A forma anterior (`trace_id_da_api = "<32 hex>"`) reprovou o gitleaks no
+      # CI como `generic-api-key`. Derivar evita repetir o padrão daqui para a
+      # frente, mas NÃO resolve por si: `gitleaks detect` varre commits, e a linha
+      # original segue no histórico. Quem resolve é a entrada de allowlist deste
+      # arquivo em `.gitleaks.toml`.
+      traceparent = "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+      [_versao, trace_id_da_api, _span_id, _flags] = String.split(traceparent, "-")
 
       Span.with_session(traceparent, "agent.turn", %{}, fn ->
         assert Span.current_trace_id() == trace_id_da_api
