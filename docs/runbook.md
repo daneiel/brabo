@@ -25,6 +25,7 @@ arquivo. Comece pela triagem.
 | todo mundo deslogado de uma vez, ou conta travada no login | [Rotação das chaves do auth](#rotacao-das-chaves-do-auth) |
 | custo por hora disparou | [Incidente de custo](#incidente-de-custo) |
 | painel vazio, sem trace, sem log | [Observabilidade](#observabilidade) |
+| não sei que versão está rodando | [Que versão está no ar](#que-versao-esta-no-ar) |
 | agente respondendo vazio, truncado ou lentíssimo | [Ambiente de inferência](#ambiente-de-inferencia) |
 
 Duas coisas que valem antes de qualquer procedimento:
@@ -105,6 +106,31 @@ destacado da tag e constrói as imagens daquele commit.
 Ele **recusa** rodar com a árvore suja, em vez de adivinhar o que fazer com o
 seu trabalho em andamento. Ao terminar você fica em HEAD destacado; o comando
 para voltar aparece no log.
+
+### Que versão está no ar {#que-versao-esta-no-ar}
+
+Três lugares dizem a mesma coisa, e a resposta é a versão **assada no artefato**
+— não uma configuração que alguém possa ter trocado por acidente ([ADR 0036](adr/0036-telas-de-auth-fieis-ao-design-e-fontes-auto-hospedadas.md)):
+
+1. **A tela de login**, no rodapé. É o caminho mais rápido e não precisa de
+   acesso ao cluster: abra `/login` e leia o primeiro item do rodapé.
+2. **A tag da imagem**, se você tem `kubectl`:
+
+   ```bash
+   kubectl -n brabo get deploy -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.spec.template.spec.containers[0].image}{"\n"}{end}'
+   ```
+
+3. **`service.version` nos spans** da api, no Tempo. É o único dos três que
+   liga uma requisição específica a um build.
+
+`dev` nos três não é falha: é o que uma imagem construída fora do `release.yml`
+reporta, porque não nasceu de tag nenhuma. `docker compose`, `make deploy-local`
+sem `TAG=` e build local caem todos aí.
+
+**Divergência entre os três é o achado.** O rodapé vindo de uma versão e a tag da
+imagem de outra significa cache de bundle no navegador ou no nginx, não deploy
+errado — o bundle e a imagem saem do mesmo build. Recarregue ignorando cache
+antes de suspeitar do cluster.
 
 ### k3d é o padrão mesmo com kind instalado
 

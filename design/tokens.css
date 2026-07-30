@@ -10,10 +10,18 @@
  * --accent etc.) na UI — nunca a paleta bruta (--terracota-*,
  * --teal-*, --petroleo-*, --areia-*) diretamente.
  *
- * As 3 famílias (Space Grotesk/Archivo/IBM Plex Mono) são carregadas
- * via <link> no <head> do HTML que consome este arquivo (ver
- * apps/web/index.html) — não via @import aqui, para não bloquear o
- * parse do CSS no carregamento da fonte.
+ * As 3 famílias (Space Grotesk/Archivo/IBM Plex Mono) NÃO são
+ * carregadas aqui: a carga é responsabilidade de quem consome este
+ * arquivo. Na web isso é @font-face em apps/web/src/index.css,
+ * apontando para os .woff2 auto-hospedados em public/fonts/.
+ *
+ * Eram um <link> para o Google Fonts até a Fase 7 — e não
+ * funcionavam em produção: a CSP da imagem do nginx é
+ * `style-src 'self'; font-src 'self' data:`, que bloqueia a folha e
+ * os arquivos. As três caíam em fonte de sistema, e como
+ * --font-heading e --font-body compartilham o fallback sans-serif, a
+ * distinção entre título e corpo simplesmente desaparecia. Ver o ADR
+ * 0036.
  */
 
 :root {

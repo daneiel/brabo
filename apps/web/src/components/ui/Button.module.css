@@ -92,6 +92,42 @@
   filter: brightness(1.08);
 }
 
+/*
+ * `width: 100%`, não `flex: 1` (ADR 0036).
+ *
+ * Era `flex: 1`, que só faz efeito se o PAI for flex ou grid — e nenhum dos
+ * containers que usam `fullWidth` é. Resultado: a prop existia, era passada em
+ * sete lugares, e não esticava nada. Os sete estão nas quatro telas de auth, o
+ * que torna a correção contida: nenhuma outra tela usa `fullWidth`.
+ */
 .fullWidth {
-  flex: 1;
+  width: 100%;
+}
+
+/*
+ * Spinner de `loading`. O mock desenha exatamente isto: um anel de 15px com o
+ * topo na cor do texto do botão, girando.
+ *
+ * `flex-shrink: 0` porque o botão é flex e o rótulo pode ser longo — sem isso o
+ * anel achata e vira uma lente.
+ */
+.spinner {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  border: 2px solid color-mix(in srgb, currentColor 35%, transparent);
+  border-top-color: currentColor;
+  border-radius: var(--radius-full);
+  animation: bspin 0.7s linear infinite;
+}
+
+/*
+ * Quem tem `prefers-reduced-motion` recebe o mesmo anel, parado. Remover o
+ * elemento tiraria a informação "há algo em curso"; deixar girando é o que a
+ * preferência pede para não fazer.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+  }
 }

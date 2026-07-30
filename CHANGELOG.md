@@ -36,6 +36,28 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **web**: as quatro telas de auth (`/login`, `/registrar`, `/esqueci-senha`,
+  `/definir-senha`) passam a seguir o design aprovado: cabeçalho de marca acima
+  do card, rodapé de página com a versão do artefato, campo com botão de mostrar
+  senha, botão com estado de carregamento e o aviso da conta migrada como alerta
+  próprio fora do card
+  ([ADR 0036](docs/adr/0036-telas-de-auth-fieis-ao-design-e-fontes-auto-hospedadas.md))
+- **web**: o erro de credencial passa a aparecer como alerta no topo do card, em
+  vez de sob o campo de senha, e o texto muda para **"E-mail ou senha
+  incorretos."**. A propriedade de anti-enumeração é a mesma: uma única mensagem
+  para conta inexistente, senha errada, conta bloqueada e conta migrada
+- **web**: `/status` **não exige mais sessão** — é para lá que o rodapé das telas
+  de auth aponta, e atrás do guard o clique voltava para o login. A página só
+  consulta os `/health`, que já eram públicos
+- **web**: o rodapé das telas de auth mostra a **versão da imagem**. Fora de um
+  release ela é `dev`, porque o build não nasceu de tag; o `release.yml` passa a
+  assar a tag no artefato via `VERSION` do `docker-bake.hcl`
+- **api**: `BRABO_VERSION` passa a ser **definida na imagem de release**, então o
+  `service.version` dos spans deixa de ser `dev` em todo ambiente
+- **web**: componente `Alert` no design system (4 tons, papel de acessibilidade
+  escolhido e não derivado do tom), `loading` no `Button`, e `preenchido` /
+  `revelavel` / `acaoNoLabel` no `Input`
+
 - **api**: módulo de auth first-party — registro, login, logout, refresh,
   verificação de e-mail e reset de senha, em `/auth/*`. Senhas com argon2id;
   access token EdDSA de 15 min com chave derivada por scrypt e JWKS público em
@@ -101,6 +123,29 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   publicado
 
 ### Correções
+
+- **web**: as **três fontes do design system não carregavam em produção**.
+  `index.html` as puxava do Google Fonts, e a CSP da imagem do nginx
+  (`style-src 'self'; font-src 'self' data:`) bloqueava a folha e os arquivos —
+  as três caíam em fonte de sistema, e como `--font-heading` e `--font-body`
+  compartilham o fallback `sans-serif`, a distinção entre título e corpo
+  desaparecia. Agora são auto-hospedadas em `public/fonts/`, com aviso de licença
+  OFL, teste de integridade e gate no `Dockerfile.prod`
+- **web**: `fullWidth` do `Button` **nunca funcionou** — era `flex: 1`, que só faz
+  efeito se o pai for flex ou grid, e nenhum dos sete usos tinha pai assim
+- **web**: foco de campo era `:focus` com indicação só por `box-shadow`, que é
+  descartado em `forced-colors` — o campo focado ficava sem indicador nenhum no
+  modo de alto contraste do sistema. Virou `:focus-visible` com `outline`
+  transparente que o modo pinta
+- **web**: três pares de cor reprovavam o 4.5:1 do WCAG AA — o texto de apoio do
+  campo (3.89:1, e valia para as cinco telas fora de auth), o link das telas de
+  auth (3.88:1) e o placeholder do campo preenchido (3.10:1). Os três passaram a
+  usar tokens que já existiam. O botão primário segue em 3.20:1: consertar exige
+  escurecer a cor da marca, e é decisão de design
+- **docs**: `configuration.md` afirmava que a imagem de release injetava
+  `BRABO_VERSION` e que ela aparecia no `/health`. As duas eram falsas — a
+  primeira virou verdade nesta entrega, a segunda foi corrigida no texto (o
+  `/health` não devolve versão de propósito)
 
 - **api**: `PUT /projects/:id/agent-autonomy` e
   `DELETE /projects/:id/members/:userId` devolviam **200 com corpo vazio**, e o

@@ -28,6 +28,25 @@ export interface RuntimeConfig {
   engineUrl: string;
   /** Nível mínimo do logger JSON (Fase 5, item 6). */
   logLevel: string;
+  /**
+   * Versão do artefato, mostrada no rodapé das telas de auth (ADR 0036).
+   *
+   * ## Por que esta é build-time e as URLs não são
+   *
+   * O ADR 0024 escolheu runtime para as URLs justamente para poder promover a
+   * MESMA imagem entre ambientes — e URL é propriedade do ambiente. Versão é
+   * propriedade do **artefato**: a imagem `brabo-web:1.1.2` não deve poder
+   * reportar outra coisa, ou o rodapé passa a ser um campo editável em vez de
+   * uma identidade. Então o valor real vem de `VITE_BRABO_VERSION`, inlinado no
+   * bundle pelo `Dockerfile.prod` a partir da tag do release.
+   *
+   * A precedência por `window` continua existindo porque a interface é uma só,
+   * mas ninguém a escreve para esta chave — nem o entrypoint do nginx.
+   *
+   * `'dev'` cobre `pnpm dev:web` e `docker compose`, que não passam pelo
+   * workflow de release e portanto não têm tag alguma para reportar.
+   */
+  version: string;
 }
 
 declare global {
@@ -73,6 +92,7 @@ export function readRuntimeConfig(
       'http://localhost:4000',
     ),
     logLevel: pick(source.logLevel, import.meta.env.VITE_LOG_LEVEL, 'info'),
+    version: pick(source.version, import.meta.env.VITE_BRABO_VERSION, 'dev'),
   };
 }
 
