@@ -33,6 +33,17 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
    * herdam o comportamento em vez de reimplementá-lo.
    */
   revelavel?: boolean;
+  /**
+   * Ação alinhada à direita do rótulo — no mock de login, o "Esqueci minha
+   * senha" ao lado de "Senha".
+   *
+   * O mock põe esse link DENTRO do `<label>`. Aqui ele é irmão, porque clicar em
+   * qualquer lugar de um `<label>` ativa o campo associado: dentro do rótulo, o
+   * clique no link também focaria o campo de senha, e alguns navegadores tratam
+   * o alvo do clique de forma diferente. Rótulo e ação lado a lado, num flex, dão
+   * o mesmo resultado visual sem o conflito.
+   */
+  acaoNoLabel?: ReactNode;
 }
 
 /**
@@ -52,6 +63,7 @@ export function Input({
   hint,
   preenchido,
   revelavel,
+  acaoNoLabel,
   className,
   id,
   type,
@@ -114,14 +126,23 @@ export function Input({
       campo
     );
 
-  if (!label && !error && !hint) return corpo;
+  if (!label && !error && !hint && !acaoNoLabel) return corpo;
+
+  const rotulo = label && (
+    <label className={styles.label} htmlFor={inputId}>
+      {label}
+    </label>
+  );
 
   return (
     <div className={styles.campo}>
-      {label && (
-        <label className={styles.label} htmlFor={inputId}>
-          {label}
-        </label>
+      {acaoNoLabel ? (
+        <div className={styles.linhaLabel}>
+          {rotulo}
+          {acaoNoLabel}
+        </div>
+      ) : (
+        rotulo
       )}
       {corpo}
       {error ? (

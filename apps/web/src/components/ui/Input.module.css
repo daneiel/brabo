@@ -49,10 +49,6 @@
   font-size: 12px;
 }
 
-.withIcon {
-  padding-left: 34px;
-}
-
 .icon {
   position: absolute;
   left: 11px;
@@ -64,18 +60,45 @@
 }
 
 /*
- * Campo preenchido (ADR 0036). Um degrau ACIMA da superfície do card, não abaixo:
- * sobre um card `--surface-1`, o fundo default do campo é o mesmo do card e só a
- * borda de 1px os separa.
+ * Campo preenchido (ADR 0036) — a segunda anatomia de campo do design system, a
+ * do mock de login.
  *
- * (O mock afunda o campo com `--code-bg`; aqui ele sobe. É divergência
+ * Não é só o fundo: naquele spec o campo é mais alto (42px) e o texto maior
+ * (14px) que o campo default. As três coisas vêm da mesma especificação e viajam
+ * juntas, porque metade dela dá um campo que não existe em lugar nenhum.
+ *
+ * O fundo é um degrau ACIMA da superfície do card, não abaixo: sobre um card
+ * `--surface-1`, o fundo default do campo é o MESMO do card, e só a borda de 1px
+ * os separa. (O mock afunda o campo com `--code-bg`; aqui ele sobe. É divergência
  * deliberada, registrada no ADR.)
  */
 .preenchido {
   background: var(--surface-2);
+  height: 42px;
+  padding: 0 13px;
+  font-size: 14px;
 }
 
-/* Espaço para o botão de revelar, do mesmo jeito que `.withIcon` abre à esquerda. */
+/*
+ * Senha no campo preenchido: mono, e um pouco menor que o texto normal — os
+ * pontos do mascaramento são largos, e 14px de mono ao lado de 14px de Archivo lê
+ * como um corpo maior. O espaçamento extra é o que separa os pontos.
+ */
+.preenchido.mono {
+  font-size: 13.5px;
+  letter-spacing: 0.02em;
+}
+
+/*
+ * As duas regras que abrem espaço lateral vêm DEPOIS de `.preenchido`, e a ordem
+ * é o que as faz funcionar: `.preenchido` usa o atalho `padding`, que reescreve os
+ * quatro lados. Antes dele, `padding-left` seria apagado no campo preenchido com
+ * ícone — e o texto passaria por baixo do ícone.
+ */
+.withIcon {
+  padding-left: 34px;
+}
+
 .withToggle {
   padding-right: 44px;
 }
@@ -121,6 +144,19 @@
   font-size: 12px;
   font-weight: 500;
   color: var(--text-secondary);
+  letter-spacing: 0.01em;
+}
+
+/*
+ * Rótulo e ação na mesma linha (`acaoNoLabel`). `baseline` e não `center`: a ação
+ * é menor que o rótulo, e alinhar pelo centro deixaria as duas linhas de base
+ * desencontradas por 1px — visível justamente onde o olho procura o alinhamento.
+ */
+.linhaLabel {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-2);
 }
 
 .erro {

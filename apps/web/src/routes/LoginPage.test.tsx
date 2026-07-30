@@ -50,7 +50,7 @@ describe('LoginPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Entrar' }));
 
     const alerta = await screen.findByRole('alert');
-    expect(alerta).toHaveTextContent('E-mail ou senha inválidos.');
+    expect(alerta).toHaveTextContent('E-mail ou senha incorretos.');
     // Nada que sugira que a conta existe, que está bloqueada, ou que é legada.
     expect(alerta).not.toHaveTextContent(/bloquead|não existe|migrad|senha antiga/i);
     expect(irPara).not.toHaveBeenCalled();
@@ -94,7 +94,7 @@ describe('LoginPage', () => {
     preencher();
     fireEvent.click(screen.getByRole('button', { name: 'Entrar' }));
 
-    const botao = await screen.findByRole('button', { name: 'Entrando…' });
+    const botao = await screen.findByRole('button', { name: 'Autenticando…' });
     expect(botao).toBeDisabled();
 
     liberar({ ok: true });

@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { Alert } from '../components/ui/Alert';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { AuthLayout } from './AuthLayout';
@@ -13,7 +14,7 @@ interface LoginPageProps {
 }
 
 /**
- * Login (Fase 7a — o corte).
+ * Login (Fase 7a — o corte; fidelidade visual no ADR 0036).
  *
  * ## A mensagem de erro é sempre a mesma, de propósito
  *
@@ -23,9 +24,27 @@ interface LoginPageProps {
  * cliente o oráculo de enumeração que o servidor fecha — e não conseguiria,
  * porque a informação não chega aqui.
  *
- * O texto sobre "confira seu e-mail" é FIXO e aparece junto com o erro: ele
+ * O texto sobre a migração é FIXO e vive fora do card, num alerta próprio: ele
  * cobre o usuário migrado sem afirmar nada sobre a conta. É derivado de nenhum
  * sinal do servidor, então não vaza.
+ *
+ * ## Por que os dois alertas são irmãos e nunca aninhados
+ *
+ * O erro de credencial usa `role="alert"` — live region assertiva, em que o
+ * leitor de tela interrompe para dizer que a tentativa falhou. O aviso de
+ * migração não usa papel nenhum: é texto que já estava na tela quando ela abriu.
+ *
+ * Se ele caísse DENTRO do `role="alert"`, o anúncio da falha passaria a incluir
+ * "a senha antiga não foi migrada" — exatamente a insinuação sobre a conta que o
+ * 401 uniforme existe para evitar. `LoginPage.test.tsx` guarda essa separação
+ * afirmando que o alerta não casa `/migrad|senha antiga/`.
+ *
+ * ## Sem `aria-invalid` nos campos
+ *
+ * Credencial recusada não é erro de campo: nem o e-mail nem a senha estão
+ * individualmente malformados, e a api não diz qual dos dois errou. Marcar os
+ * dois como inválidos afirmaria mais do que se sabe. O erro é do formulário, e é
+ * onde ele aparece.
  */
 export function LoginPage({ onEntrar, irPara }: LoginPageProps) {
   const [email, setEmail] = useState('');
@@ -46,7 +65,7 @@ export function LoginPage({ onEntrar, irPara }: LoginPageProps) {
       setErro(
         r.status === 403
           ? 'Confirme seu e-mail antes de entrar. Procure a mensagem de verificação.'
-          : 'E-mail ou senha inválidos.',
+          : 'E-mail ou senha incorretos.',
       );
     } catch {
       setErro('Não foi possível falar com o servidor. Tente de novo.');
@@ -56,52 +75,73 @@ export function LoginPage({ onEntrar, irPara }: LoginPageProps) {
   }
 
   return (
-    <AuthLayout titulo="Entrar">
+    <AuthLayout
+      titulo="Entrar"
+      subtitulo="Acesse seu workspace e retome as sessões em andamento."
+      irPara={irPara}
+      rodapeDoCartao={
+        <>
+          Não tem acesso?{' '}
+          <button
+            type="button"
+            className={styles.link}
+            onClick={() => irPara('/registrar')}
+          >
+            Criar uma conta
+          </button>
+        </>
+      }
+      abaixoDoCartao={
+        <Alert tone="warning">
+          Sua conta existia antes desta versão? Peça o link em{' '}
+          <strong>Esqueci minha senha</strong> — a senha antiga não foi migrada.
+        </Alert>
+      }
+    >
+      {erro && (
+        <Alert tone="danger" role="alert">
+          {erro}
+        </Alert>
+      )}
+
       <form className={styles.form} onSubmit={submeter}>
         <Input
           label="E-mail"
           type="email"
+          placeholder="voce@empresa.com"
           autoComplete="username"
           required
+          preenchido
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
         <Input
           label="Senha"
           type="password"
+          placeholder="••••••••••"
           autoComplete="current-password"
           required
+          preenchido
+          revelavel
+          mono
           value={senha}
           onChange={(e) => setSenha(e.target.value)}
-          error={erro}
+          acaoNoLabel={
+            <button
+              type="button"
+              className={`${styles.link} ${styles.linkPequeno}`}
+              onClick={() => irPara('/esqueci-senha')}
+            >
+              Esqueci minha senha
+            </button>
+          }
         />
         <div className={styles.acoes}>
-          <Button type="submit" fullWidth disabled={enviando}>
-            {enviando ? 'Entrando…' : 'Entrar'}
+          <Button type="submit" fullWidth loading={enviando}>
+            {enviando ? 'Autenticando…' : 'Entrar'}
           </Button>
         </div>
       </form>
-
-      <div className={styles.rodape}>
-        <button
-          type="button"
-          className={styles.link}
-          onClick={() => irPara('/esqueci-senha')}
-        >
-          Esqueci minha senha
-        </button>
-        <button
-          type="button"
-          className={styles.link}
-          onClick={() => irPara('/registrar')}
-        >
-          Criar uma conta
-        </button>
-        <span>
-          Sua conta existia antes desta versão? Peça o link em “Esqueci minha
-          senha” — a senha antiga não foi migrada.
-        </span>
-      </div>
     </AuthLayout>
   );
 }

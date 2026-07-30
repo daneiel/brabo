@@ -6,9 +6,11 @@ import styles from './Input.module.css';
 /**
  * O campo, nas duas props que o ADR 0036 acrescentou.
  *
- * **`preenchido` é opt-in de propósito.** O `Input` é usado por cinco telas fora
- * de auth, e o `design/COMPONENTS.md` especifica `--surface-0`/`--surface-1` para
- * campo. Trocar o default restilizaria essas cinco em silêncio — então a variante
+ * **`preenchido` é opt-in de propósito.** É a segunda anatomia de campo do design
+ * system — a do mock de login: fundo `--surface-2`, 42px de altura, 14px de
+ * texto. O `Input` é usado por cinco telas fora de auth, e o
+ * `design/COMPONENTS.md` especifica `--surface-0`/`--surface-1` e o campo mais
+ * baixo; trocar o default restilizaria essas cinco em silêncio — então a variante
  * é pedida, não herdada. (O default ainda deixa campo e card com o mesmo fundo
  * sobre `--surface-1`; é problema real das outras telas, e mudança própria.)
  *
@@ -73,6 +75,41 @@ describe('Input', () => {
       expect(botao).toHaveFocus();
       // `type="button"` para não submeter o formulário ao alternar.
       expect(botao).toHaveAttribute('type', 'button');
+    });
+  });
+
+  describe('acaoNoLabel', () => {
+    it('a ação NÃO fica dentro do <label>', () => {
+      // É o ponto do teste. O mock põe o "Esqueci minha senha" dentro do
+      // `<label>` da senha — e clique em qualquer lugar de um `<label>` ativa o
+      // campo associado, então ali o link também focaria o campo de senha.
+      render(
+        <Input
+          label="Senha"
+          type="password"
+          acaoNoLabel={<button type="button">Esqueci minha senha</button>}
+        />,
+      );
+      const acao = screen.getByRole('button', { name: 'Esqueci minha senha' });
+      expect(acao.closest('label')).toBeNull();
+    });
+
+    it('o rótulo continua ligado ao campo', () => {
+      render(
+        <Input
+          label="Senha"
+          type="password"
+          acaoNoLabel={<button type="button">Esqueci minha senha</button>}
+        />,
+      );
+      expect(screen.getByLabelText('Senha')).toBeInTheDocument();
+    });
+
+    it('renderiza a linha mesmo sem label, erro ou hint', () => {
+      // Sem esta guarda o `Input` cairia no retorno curto e a ação
+      // desapareceria sem erro nenhum.
+      render(<Input acaoNoLabel={<button type="button">Ajuda</button>} />);
+      expect(screen.getByRole('button', { name: 'Ajuda' })).toBeInTheDocument();
     });
   });
 

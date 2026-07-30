@@ -55,6 +55,15 @@ export const AlertIcon = (props: IconProps) =>
     props,
   );
 
+/*
+ * Erro, e o par do `AlertIcon` de propósito: no mock de login o triângulo marca
+ * ATENÇÃO (o aviso de migração, que não impede nada) e o círculo marca FALHA (a
+ * credencial recusada). Duas coisas diferentes com o mesmo símbolo obrigariam a
+ * ler o texto para saber qual é.
+ */
+export const AlertCircleIcon = (props: IconProps) =>
+  base(['M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z', 'M12 8v4M12 16h.01'], props);
+
 export const ClockIcon = (props: IconProps) =>
   base(['M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z', 'M12 7v5l3 2'], props);
 

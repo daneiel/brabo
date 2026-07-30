@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { AlertIcon, CheckIcon } from './icons';
+import { AlertCircleIcon, AlertIcon, CheckIcon } from './icons';
 import styles from './Alert.module.css';
 
 export type AlertTone = 'danger' | 'warning' | 'success' | 'accent';
@@ -8,8 +8,9 @@ interface AlertProps {
   tone?: AlertTone;
   children: ReactNode;
   /**
-   * Ícone próprio. Por default o tom escolhe: `success` recebe o check, os
-   * demais o triângulo de atenção.
+   * Ícone próprio. Por default o tom escolhe: `success` recebe o check, `danger`
+   * o círculo de falha, e `warning`/`accent` o triângulo de atenção — a mesma
+   * distinção que o mock faz entre "falhou" e "preste atenção".
    */
   icon?: ReactNode;
   /**
@@ -31,6 +32,12 @@ interface AlertProps {
    */
   role?: 'alert' | 'status';
   className?: string;
+}
+
+function IconeDoTom({ tone }: { tone: AlertTone }) {
+  if (tone === 'success') return <CheckIcon size={15} />;
+  if (tone === 'danger') return <AlertCircleIcon size={15} />;
+  return <AlertIcon size={15} />;
 }
 
 /**
@@ -58,7 +65,7 @@ export function Alert({
   return (
     <div className={classes} role={role}>
       <span className={styles.icone} aria-hidden="true">
-        {icon ?? (tone === 'success' ? <CheckIcon size={15} /> : <AlertIcon size={15} />)}
+        {icon ?? <IconeDoTom tone={tone} />}
       </span>
       <div className={styles.texto}>{children}</div>
     </div>
