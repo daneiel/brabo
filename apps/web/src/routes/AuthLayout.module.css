@@ -252,8 +252,18 @@
  * sobre um `<button>`, e o UA remove o outline default de botão estilizado em
  * boa parte dos casos — quem navega por Tab não tinha como saber onde estava.
  */
+/*
+ * `--accent-hover` em repouso, e não `--accent` como no mock.
+ *
+ * `--accent` sobre `--surface-1` dá 3.88:1 — reprova o 4.5:1 do AA, e estes links
+ * são pequenos (11.5px no "Esqueci minha senha"). `--accent-hover` dá 4.90:1 e é
+ * o MESMO matiz, só um degrau mais claro; nada de cor inventada. Como o hover
+ * perde a mudança de cor, ele ganha o sublinhado — que é indicador melhor de
+ * qualquer forma, porque não depende de enxergar cor. Ver
+ * `design-contraste.test.ts`.
+ */
 .link {
-  color: var(--accent);
+  color: var(--accent-hover);
   text-decoration: none;
   background: none;
   border: none;
@@ -265,7 +275,6 @@
 }
 
 .link:hover {
-  color: var(--accent-hover);
   text-decoration: underline;
 }
 
@@ -281,17 +290,4 @@
   outline: 2px solid var(--accent);
   outline-offset: 2px;
   border-radius: var(--radius-sm);
-}
-
-/*
- * Texto de apoio sob o formulário, dentro do card (ex.: a política de senha).
- * O `.aviso` de antes era caixa com fundo e borda; onde aquilo era alerta, agora
- * é o componente `Alert`, e o que sobra aqui é prosa.
- */
-.apoio {
-  font-family: var(--font-body);
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--text-muted);
-  margin: 0;
 }

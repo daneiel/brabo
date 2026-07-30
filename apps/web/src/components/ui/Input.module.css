@@ -90,6 +90,18 @@
 }
 
 /*
+ * Placeholder do campo preenchido em `--text-secondary`.
+ *
+ * O `--text-muted` do `.input::placeholder` genérico dá 3.10:1 sobre
+ * `--surface-2` — reprova o AA, e placeholder é texto como qualquer outro. Fica
+ * mais presente que no mock; a alternativa era não ter placeholder, e
+ * "voce@empresa.com" diz algo que o rótulo "E-mail" não diz.
+ */
+.preenchido::placeholder {
+  color: var(--text-secondary);
+}
+
+/*
  * As duas regras que abrem espaço lateral vêm DEPOIS de `.preenchido`, e a ordem
  * é o que as faz funcionar: `.preenchido` usa o atalho `padding`, que reescreve os
  * quatro lados. Antes dele, `padding-left` seria apagado no campo preenchido com
@@ -165,10 +177,19 @@
   color: var(--danger);
 }
 
+/*
+ * `--text-secondary` e não `--text-muted`, que era o valor até a Fase 7.
+ *
+ * O texto de apoio é TEXTO, e a 12px vale a exigência de 4.5:1 do WCAG AA.
+ * `--text-muted` sobre um card `--surface-1` dá 3.89:1 — reprova, e reprovava
+ * silenciosamente nas cinco telas fora de auth também. `--text-secondary` dá
+ * 8.00:1. O tom cinza continua distinguindo apoio de conteúdo; só deixa de
+ * distinguir por ilegibilidade. Guardado em `design-contraste.test.ts`.
+ */
 .hint {
   font-family: var(--font-body);
   font-size: 12px;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 .invalid {

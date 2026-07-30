@@ -34,7 +34,7 @@ produção.
 | `NODE_ENV` | — | `production` liga as validações estritas de CORS e chave |
 | `API_PUBLIC_URL` | `http://localhost:3000` | usada nos callbacks de OAuth de git; errada = callback quebrado |
 | `ENGINE_URL` | `http://localhost:4000` | comandos síncronos api→engine falham |
-| `BRABO_VERSION` | `dev` | aparece no `/health` e nas métricas; a imagem de release injeta a tag |
+| `BRABO_VERSION` | `dev` | vira `service.version` no recurso OpenTelemetry — é como se sabe qual build gerou um trace. A imagem de release injeta a tag via `ARG` do `docker-bake.hcl`; fora do release fica `dev`. **Não** aparece no `/health`, que não devolve versão de propósito (ver o `description` da rota) |
 | `MIGRATIONS_FOLDER` | `./src/db/migrations` | — |
 
 ### Segurança 🔒
@@ -251,9 +251,26 @@ reescrito no boot. As `VITE_*` são o fallback de desenvolvimento.
 | `VITE_API_URL` | endereço da api |
 | `VITE_ENGINE_URL` | endereço do engine (canal Phoenix) |
 | `VITE_LOG_LEVEL` | nível do logger JSON do browser (default `info`). Em cluster quem manda é a chave `WEB_LOG_LEVEL` do `brabo-config`, que o entrypoint escreve em `/config.js` — `VITE_*` só vale em build local |
+| `VITE_BRABO_VERSION` | versão mostrada no rodapé das telas de auth (default `dev`). **A única que é build-time por escolha, não por limitação** — ver abaixo |
 
 Página em branco depois do deploy é quase sempre `/config.js` apontando para
 `localhost` — o smoke de deploy verifica exatamente isso.
+
+### Por que a versão não passa pelo `/config.js`
+
+As URLs são propriedade do **ambiente**: a mesma imagem precisa falar com a api
+de staging e com a de produção, e é para isso que o `/config.js` existe (ADR
+0024). A versão é propriedade do **artefato** — a imagem `brabo-web:1.1.2` não
+deve poder reportar outra coisa. Se ela viesse do `/config.js`, o rodapé passaria
+a ser um campo editável em vez de uma identidade, e um ConfigMap errado faria a
+tela mentir sobre qual build está no ar.
+
+O caminho completo, do commit à tela: `release.yml` calcula `versao=${TAG#v}` →
+passa como `VERSION` para o `docker buildx bake` → o alvo `web` do
+`docker-bake.hcl` converte em `VITE_BRABO_VERSION` → o `ARG`/`ENV` do
+`docker/web/Dockerfile.prod` o expõe ao `pnpm build` → o Vite inlina em
+`import.meta.env` → `runtime-config.ts` o lê → `AuthLayout` o mostra. O mesmo
+`VERSION` alimenta o `BRABO_VERSION` da imagem da api (ADR 0036).
 
 ---
 
@@ -298,7 +315,7 @@ que uma variável nova não fique documentada em lugar nenhum sem ninguém notar
 
 > ⚠️ Bloco gerado por `pnpm docs:generate`. Não edite à mão — o próximo build sobrescreve.
 
-Inventário extraído do código: **91 variáveis** lidas em tempo de execução. Todas têm descrição nas tabelas acima.
+Inventário extraído do código: **92 variáveis** lidas em tempo de execução. Todas têm descrição nas tabelas acima.
 
 **api** — 43 variáveis
 
@@ -394,9 +411,10 @@ Inventário extraído do código: **91 variáveis** lidas em tempo de execução
 - `TOOL_LOOP_MAX_ITERATIONS` <sub>(apps/engine/config/runtime.exs)</sub>
 - `WEB_ORIGIN` <sub>(apps/engine/config/runtime.exs)</sub>
 
-**web** — 3 variáveis
+**web** — 4 variáveis
 
 - `VITE_API_URL` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
+- `VITE_BRABO_VERSION` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
 - `VITE_ENGINE_URL` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
 - `VITE_LOG_LEVEL` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
 <!-- END:GENERATED:env-inventario -->

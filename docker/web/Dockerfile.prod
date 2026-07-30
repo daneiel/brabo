@@ -14,8 +14,18 @@ FROM node:24.11.1-alpine3.21 AS build
 ARG VITE_API_URL=http://localhost:3000
 ARG VITE_ENGINE_URL=http://localhost:4000
 
+# A versão é compile-time DE PROPÓSITO, e é a única VITE_* que quer ser (ADR
+# 0036). Para as URLs, compile-time é a limitação que o `/config.js` resolve:
+# elas são propriedade do AMBIENTE, e a mesma imagem precisa poder falar com api
+# diferente em staging e produção. Versão é propriedade do ARTEFATO — assar
+# `brabo-web:1.1.2` com a string "1.1.2" é o que impede a imagem de reportar
+# outra coisa. O default "dev" é honesto: build fora do `release.yml` não nasceu
+# de tag nenhuma.
+ARG VITE_BRABO_VERSION=dev
+
 ENV VITE_API_URL=$VITE_API_URL \
-    VITE_ENGINE_URL=$VITE_ENGINE_URL
+    VITE_ENGINE_URL=$VITE_ENGINE_URL \
+    VITE_BRABO_VERSION=$VITE_BRABO_VERSION
 
 RUN corepack enable && corepack prepare pnpm@11.3.0 --activate
 
