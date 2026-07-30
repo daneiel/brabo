@@ -63,8 +63,8 @@ make deploy-local-clean     # o mesmo, sem reconstruir as imagens
 Ao fim: web em <http://localhost:8088>, api em `:3000`, engine em `:4000` —
 **as mesmas portas do `docker-compose.prod.yml`**, de propósito (ADR 0025,
 decisão 10). O bootstrap roda o seed, que cria `owner@brabo.dev` já verificado
-com a senha de `BRABO_SMOKE_PASSWORD` (default `senha de dev do brabo`) — é
-com ela que se entra no login próprio da web.
+com a senha de `BRABO_SMOKE_PASSWORD` (default `brabo12345678`) — é com ela
+que se entra no login próprio da web.
 
 > **Isto ocupa as portas do `pnpm dev`.** Manter as portas iguais é o que faz o
 > `smoke.sh` valer nos dois modos, e o preço é que eles não

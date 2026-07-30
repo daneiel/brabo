@@ -56,7 +56,7 @@ migrações. `pnpm --filter api seed` cria os usuários de demonstração.
 
 | serviço | endereço | nota |
 |---|---|---|
-| Web | <http://localhost:5173> | login `owner@brabo.dev` / `senha de dev do brabo` (do seed) |
+| Web | <http://localhost:5173> | login `owner@brabo.dev` / `brabo12345678` (do seed) |
 | API | <http://localhost:3000> | `GET /health` |
 | Engine | <http://localhost:4000> | `GET /health` |
 
