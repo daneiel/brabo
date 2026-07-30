@@ -12,7 +12,7 @@ keywords: [arquitetura, code map, invariantes, harness, event log]
 Este documento é o mapa para quem vai **mexer** no código. Ele diz por onde
 começar a ler, o que cada fronteira promete, e o que já se sabe que está torto.
 
-Decisões e o porquê delas ficam nos [ADRs](adr/index.md) — 34 deles, vários
+Decisões e o porquê delas ficam nos [ADRs](adr/index.md) — 35 deles, vários
 registrando defeito real encontrado em execução. Aqui não repetimos a
 argumentação: apontamos.
 
@@ -89,8 +89,10 @@ Símbolos para grepar quando estiver perdido: `decide(`, `assertTransition`,
 `@RequireRole`, `PROTECTED_BRANCHES`, `EncryptionService`.
 
 **Entrypoint:** `src/main.ts` — e a ordem dos `imports` nele é significativa
-(`./tracing` é o primeiro de propósito; a auto-instrumentação do OpenTelemetry
-não pega módulo já carregado).
+(`./tracing-boot` é o primeiro de propósito; a auto-instrumentação do
+OpenTelemetry não pega módulo já carregado, e um módulo separado é o que garante
+isso: TypeScript eleva todos os `require` para o topo, então uma chamada escrita
+entre imports rodaria tarde demais).
 
 ### `apps/engine` — Elixir/OTP, 144 arquivos
 
@@ -237,18 +239,28 @@ Erro de provider de git é normalizado por um contrato único
 ([ADR 0002](adr/0002-git-error-normalization.md)) — o chamador não sabe se
 falou com GitHub ou GitLab.
 
-**Log.** JSON estruturado nos três apps, com `trace_id` correlacionado. A api
-usa pino com redaction obrigatória de `apiKey`, `access_token` e
-`clientSecret`.
+**Log.** JSON de **uma linha** por evento em produção nos três apps, com
+`trace_id` correlacionado; legível para gente em desenvolvimento. A api usa pino
+com redaction obrigatória de `apiKey`, `access_token`, `clientSecret` e do token
+de serviço api↔engine. Cada linha diz de qual classe e método saiu, e uma linha por
+requisição mostra o **caminho entre camadas** com a duração de cada passo — ver
+[observabilidade](explanation/observability.md).
 
 **Transação.** O padrão é *unit of work*: gravar estado e publicar evento na
 **mesma** transação, via outbox. Publicar fora da transação criaria evento para
 estado que não persistiu.
 
-**Rastreamento.** OpenTelemetry ponta a ponta. Uma sessão é **uma trace raiz**:
-o `traceparent` é persistido em `sessions.trace_parent` e viaja no envelope do
-outbox, então trabalho assíncrono disparado por um evento continua na trace de
-quem o produziu.
+**Rastreamento.** OpenTelemetry ponta a ponta, e o `trace_id` nasce na **web**:
+o browser gera o `traceparent`, a api o adota como pai e o engine adota o da api.
+Uma sessão é **uma trace raiz** — o `traceparent` é persistido em
+`sessions.trace_parent` e viaja no envelope do outbox, então trabalho assíncrono
+disparado por um evento continua na trace de quem o produziu.
+
+Instrumentar e **exportar** são independentes
+([ADR 0035](adr/0035-observabilidade-legivel-e-trace-sem-coletor.md)): span é
+sempre criada e o `trace_id` sempre entra no log, inclusive sem coletor;
+`OTEL_EXPORTER_OTLP_ENDPOINT` decide apenas se ela sai do processo. É o que dá
+correlação em `pnpm dev`.
 
 **Segredos.** Envelope encryption: DEK aleatório por registro, embrulhado pela
 chave mestra. Rotação sem downtime via `CREDENTIALS_MASTER_KEY_PREVIOUS` — ver

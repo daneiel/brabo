@@ -972,12 +972,31 @@ por réplica).
    a métrica — a métrica é agregada por projeto e provider de propósito, para
    não criar uma série por sessão.
 
-### Quando não há trace nenhuma
+### Quando não há trace no Tempo {#quando-nao-ha-trace-no-tempo}
+
+O nome desta seção mudou junto com o comportamento (ADR 0035), e a distinção é o
+primeiro passo do diagnóstico: **span sempre é criada, em qualquer ambiente.** O
+que `OTEL_EXPORTER_OTLP_ENDPOINT` controla é a EXPORTAÇÃO. Então "não vejo trace
+no Grafana" e "não existe trace" são problemas diferentes.
+
+Antes de qualquer coisa, veja de que lado está a falha — o log responde sozinho:
+
+```bash
+kubectl -n brabo logs -l app.kubernetes.io/name=api --tail=20 | grep -o '"trace_id":"[^"]*"' | head
+```
+
+- **Tem `trace_id` no log, não tem trace no Tempo** → o problema é exportação:
+  siga de 1 a 4 abaixo.
+- **Não tem `trace_id` no log** → o problema é contexto, e é mais raro: ou o
+  `startTracing()` da api não rodou (ver `apps/api/src/tracing-boot.ts` — tem que
+  ser o primeiro import de `main.ts`), ou o `Engine.Telemetry.Otel.setup/0` não
+  foi chamado antes da árvore de supervisão.
 
 Na ordem, do mais provável ao menos:
 
-**1. A variável não está definida.** Sem `OTEL_EXPORTER_OTLP_ENDPOINT` a
-instrumentação é desligada de propósito, nos dois serviços.
+**1. A variável não está definida.** Sem `OTEL_EXPORTER_OTLP_ENDPOINT` a span é
+criada e descartada no fim, então há `trace_id` no log e nada no Tempo. Em
+desenvolvimento isso é o esperado (não há coletor); em cluster, é defeito.
 
 ```bash
 kubectl -n brabo exec deploy/api -- printenv OTEL_EXPORTER_OTLP_ENDPOINT

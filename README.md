@@ -112,16 +112,17 @@ merge em `main`, e por isso fica um ciclo de promoção atrás do que está em
 | [Introdução](docs/intro.md) | o panorama |
 | [Primeiros passos](docs/getting-started.md) | do clone ao primeiro turno de agente |
 | [Arquitetura](docs/architecture.md) | code map, fronteiras, invariantes, dívida técnica |
-| [Regras de negócio](docs/business-rules.md) | as 29 RNs, cada uma com `arquivo:linha` e o teste que a cobre |
+| [Regras de negócio](docs/business-rules.md) | as 35 RNs, cada uma com `arquivo:linha` e o teste que a cobre |
 | [Runbook](docs/runbook.md) | deploy, rollout, restore, rotação de chave, incidente de custo |
 | [Glossário](docs/glossary.md) | harness, gate, handoff, DEK, outbox, ciclo K |
+| [Observabilidade](docs/explanation/observability.md) | como se segue uma ação pelos três processos: trace, log e o caminho entre camadas |
 | [Configuração](docs/reference/configuration.md) | todas as variáveis de ambiente |
 | [Eventos](docs/reference/events.md) | os tipos do event log, broadcasts e spans |
 | [Permissões](docs/reference/permissions.md) | o formato do `permissions.json` e a ordem da decisão |
 | [Artefatos](docs/reference/artifacts.md) | os seis schemas e quem pode emitir cada um |
 | [Providers de git](docs/reference/git-providers.md) | o contrato de dez operações e as capabilities |
 | [API interna](docs/reference/internal-api.md) | o contrato api ↔ engine |
-| [ADRs](docs/adr/index.md) | as 34 decisões e o porquê de cada uma |
+| [ADRs](docs/adr/index.md) | as 35 decisões e o porquê de cada uma |
 | [Segurança](SECURITY.md) | como reportar uma vulnerabilidade |
 | [Como contribuir](CONTRIBUTING.md) | fluxo, Definition of Done, o que é aceito |
 | [Onde pedir ajuda](SUPPORT.md) | qual canal para cada tipo de assunto |
@@ -215,9 +216,26 @@ réplicas de uma vez num banco lento —, `/health` é o readiness da api, e
 `/ready` no engine só libera tráfego depois que a reidratação de sessões
 terminou.
 
-Uma sessão é uma **trace raiz** atravessando api e engine. Métricas Prometheus
-cobrem tokens/min e custo/hora por projeto, fila do Oban, sessões ativas e taxa
-de aprovação. Dashboards Grafana são provisionados como código.
+Uma sessão é uma **trace raiz** atravessando api e engine, e o `trace_id` nasce
+no browser — as três streams de log carregam o mesmo id. Isso vale **sem
+coletor**: instrumentar e exportar são decisões separadas, então `pnpm dev` tem
+correlação mesmo sem nada rodando em `monitoring`.
+
+O log é uma linha de JSON por evento em produção e legível para gente em
+desenvolvimento, onde cada requisição também rende uma linha com o **caminho
+entre camadas** e a duração de cada passo:
+
+```
+POST /projects/…/sessions — 34.1ms trace=4bf92f35
+  interfaces        SessionsController.create         0ms
+    ↳ application     CreateSessionUseCase.execute    31.2ms
+      ↳ infrastructure  DrizzleOutboxRepository.append  2.1ms
+```
+
+Métricas Prometheus cobrem tokens/min e custo/hora por projeto, fila do Oban,
+sessões ativas e taxa de aprovação. Dashboards Grafana são provisionados como
+código. O modelo inteiro está em
+[observabilidade](docs/explanation/observability.md).
 
 ## Produção
 

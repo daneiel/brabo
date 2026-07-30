@@ -47,6 +47,27 @@ service token** — um segredo compartilhado por env, rotacionável, no cabeçal
 > etapas do `AUTH_JWT_SECRET`, descrita no
 > [runbook](../runbook.md#rotacao-das-chaves-do-auth).
 
+## Correlação
+
+Toda chamada entre os dois serviços leva também o cabeçalho `traceparent` (W3C),
+e isso vale nos **dois sentidos e em todos os métodos** — GET, POST e o stream de
+SSE do turno de LLM. Cada lado tem um funil único que monta os cabeçalhos:
+
+| chamador | funil |
+|---|---|
+| api → engine | `HttpApiToEngineClient.buildHeaders()` |
+| engine → api | `EngineApiClient.headers/0` |
+
+Até o [ADR 0035](../adr/0035-observabilidade-legivel-e-trace-sem-coletor.md) o
+`traceparent` do lado do engine era injetado apenas nos POSTs, então as leituras
+(`list_events`, o contexto do agente) e o `llm_turn_stream` chegavam à api sem
+correlação — apareciam no Tempo como traces órfãs. Se você acrescentar uma chamada
+nova neste contrato, use o funil: é o que garante que ela não nasça órfã.
+
+> A recusa de service token é registrada em log dos dois lados, com rota e origem
+> — e **sem** o token apresentado. Um 401 aqui é indistinguível, sem log, de
+> "engine fora do ar", que era exatamente o sintoma antes.
+
 > As rotas `/internal/*` **não são internas por convenção de nome.** O prefixo é
 > legibilidade; o que as protege é o guard verificando o service token. A
 > classificação

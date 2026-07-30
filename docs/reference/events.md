@@ -177,6 +177,10 @@ Um evento de domínio quase sempre gera um `event.appended`; o inverso não vale
 Nomes de span OpenTelemetry. Uma sessão é uma **trace raiz** atravessando api e
 engine ([ADR 0026](../adr/0026-fase5-observabilidade-e-graceful-shutdown.md)).
 
+### Nomes de domínio
+
+Nomeados à mão, um por operação que interessa. São estes que se procura no Tempo:
+
 | span | onde |
 |---|---|
 | `session.create` | api — a raiz |
@@ -184,9 +188,27 @@ engine ([ADR 0026](../adr/0026-fase5-observabilidade-e-graceful-shutdown.md)).
 | `llm.turn` | engine — a chamada ao modelo |
 | `tool.call` | engine — a execução de uma ferramenta |
 | `gate.scanner` | engine — um scanner do SecOps, com o nome do scanner no atributo |
+| `outbox.session_lifecycle` | engine — job do Oban, pendurado na trace da sessão |
+| `outbox.psychologist` | engine — idem, a análise do Psicólogo |
+
+### Nomes derivados de código
+
+O decorator `@Traced` da api
+([ADR 0035](../adr/0035-observabilidade-legivel-e-trace-sem-coletor.md)) nomeia a
+span como **`Classe.metodo`** — por exemplo `TransitionSessionUseCase.execute`,
+`DrizzleOutboxRepository.append`. Não são enumeráveis aqui: nascem e morrem com o
+código, e a lista apodreceria na primeira renomeação.
+
+A distinção importa na hora de consultar: nome de domínio é estável e pode ir
+numa query salva ou num dashboard; nome derivado de código não.
+
+Os atributos que essas spans carregam — `brabo.layer`, `code.namespace`,
+`code.function` — servem para busca no Tempo e **não são contrato**, ao contrário
+de `trace_id`. Podem ser renomeados sem quebrar nada fora do Tempo.
 
 Como navegar de uma sessão até um `tool.call` está no
-[runbook](../runbook.md#observabilidade).
+[runbook](../runbook.md#observabilidade); o modelo inteiro está em
+[observabilidade](../explanation/observability.md).
 
 ---
 

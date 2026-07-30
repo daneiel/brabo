@@ -145,10 +145,10 @@ possível sem downtime ([RN-035](../business-rules.md#rn-035)).
 
 | variável | default | nota |
 |---|---|---|
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | — | **ausente desliga a instrumentação inteira, de propósito**. É a primeira coisa a conferir quando não há trace |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | — | **ausente desliga a EXPORTAÇÃO, não a instrumentação** (ADR 0035). Span continua sendo criada e o `trace_id` continua no log — é o que dá correlação em desenvolvimento, sem coletor. Sem ela, a span é descartada no fim em vez de sair do processo |
 | `OTEL_SERVICE_NAME` | `brabo-api` | — |
 | `OTEL_DIAG_LOG` | — | `1` liga o log de diagnóstico do próprio OTel |
-| `LOG_LEVEL` | — | — |
+| `LOG_LEVEL` | `info` em produção, `debug` fora | também decide o FORMATO junto com `NODE_ENV`: fora de produção o log sai legível (pino-pretty em processo, com a árvore de camadas); em produção, uma linha de JSON por evento |
 | `METRICS_GAUGE_INTERVAL_MS` | `15000` | período de coleta dos gauges de domínio |
 
 ---
@@ -224,7 +224,7 @@ possível sem downtime ([RN-035](../business-rules.md#rn-035)).
 |---|---|
 | `BRABO_SERVICE_TOKEN` 🔒 | `dev-service-token-change-me` — **o mesmo valor da api** |
 | `BRABO_SERVICE_TOKEN_PREVIOUS` 🔒 | — aceito só na verificação, durante a rotação |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | — o exporter do Elixir fala **HTTP/protobuf na 4318**, não gRPC na 4317 |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | — o exporter do Elixir fala **HTTP/protobuf na 4318**, não gRPC na 4317. Ausente desliga só a exportação (`traces_exporter: :none`), não a instrumentação — ver ADR 0035 |
 | `WEB_ORIGIN` | — |
 | `PROJECT_WORKSPACES_ROOT` | `/tmp/brabo-project-workspaces` — **igual ao da api, no mesmo volume** |
 
@@ -250,7 +250,7 @@ reescrito no boot. As `VITE_*` são o fallback de desenvolvimento.
 |---|---|
 | `VITE_API_URL` | endereço da api |
 | `VITE_ENGINE_URL` | endereço do engine (canal Phoenix) |
-| `VITE_LOG_LEVEL` | — |
+| `VITE_LOG_LEVEL` | nível do logger JSON do browser (default `info`). Em cluster quem manda é a chave `WEB_LOG_LEVEL` do `brabo-config`, que o entrypoint escreve em `/config.js` — `VITE_*` só vale em build local |
 
 Página em branco depois do deploy é quase sempre `/config.js` apontando para
 `localhost` — o smoke de deploy verifica exatamente isso.
@@ -365,7 +365,7 @@ Inventário extraído do código: **91 variáveis** lidas em tempo de execução
 - `ECTO_IPV6` <sub>(apps/engine/config/runtime.exs)</sub>
 - `LLM_TURN_TIMEOUT_MS` <sub>(apps/engine/config/runtime.exs)</sub>
 - `MIX_TEST_PARTITION` <sub>(apps/engine/config/test.exs)</sub>
-- `OTEL_EXPORTER_OTLP_ENDPOINT` <sub>(apps/engine/lib/engine/telemetry/otel.ex)</sub>
+- `OTEL_EXPORTER_OTLP_ENDPOINT` <sub>(apps/engine/config/runtime.exs)</sub>
 - `PHX_HOST` <sub>(apps/engine/config/runtime.exs)</sub>
 - `PHX_SERVER` <sub>(apps/engine/config/runtime.exs)</sub>
 - `POOL_SIZE` <sub>(apps/engine/config/runtime.exs)</sub>
