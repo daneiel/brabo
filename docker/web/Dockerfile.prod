@@ -87,6 +87,11 @@ COPY --from=build /repo/apps/web/dist /usr/share/nginx/html
 # silencioso: sem os arquivos, as três famílias caem em fonte de sistema e só
 # quem abre a página publicada percebe. Contar os .woff2 é o que impede uma
 # imagem sem tipografia de subir — `test -d` sozinho passaria com a pasta vazia.
+#
+# O `find | wc -l` faz o hadolint pedir `-o pipefail` (DL4006), e aqui ele não
+# acrescenta nada: se o `find` falhar, o `wc -l` imprime 0 e o `[ 0 -eq 8 ]`
+# reprova o build de qualquer forma. Suprimido com o motivo, não por hábito.
+# hadolint ignore=DL4006
 RUN chmod 0755 /usr/local/bin/brabo-entrypoint.sh \
  && test -f /usr/share/nginx/html/index.html \
  && test -d /usr/share/nginx/html/assets \
