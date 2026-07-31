@@ -252,12 +252,20 @@ Cada devolução de gate consome uma volta. Esgotado o teto, a task é
 **bloqueada** com motivo, em vez de girar para sempre. O subagente criado por
 paralelização **herda** o teto do agente base.
 
+Desde a Fase 8b o teto também vale para a ÁREA de QA, sem mudança de código:
+o `QaLeadServer` é o único chamador de `record_gate_verdict`, então uma
+rodada de gate — não importa quantas subespecialidades ele consultou por
+baixo — ainda consome exatamente UMA volta. Ver
+[RN-036](#rn-036).
+
 - **Onde:** `DEFAULT_MAX_GATE_CORRECTIONS = 3` em
   `apps/api/src/application/use-cases/execution/record-gate-verdict.use-case.ts:21`;
   aplicado em `activate-execution.use-case.ts:85` e, no engine, em
-  `qa_agent_server.ex:209` e `secops_agent_server.ex:132`
-- **Teste:** `apps/engine/test/engine/gates/qa_agent_server_test.exs` (cobre o
-  bloqueio **sem queimar correção**)
+  `qa_lead_server.ex:268` e `secops_agent_server.ex:142`
+- **Teste:** `apps/engine/test/engine/gates/qa_automacao_agent_test.exs` (a
+  subespecialidade devolve `{:blocked, ...}` sem chamar a api) e
+  `qa_lead_server_test.exs` (o Lead NUNCA chama `record_gate_verdict` nesse
+  caso — é o que impede a correção de ser queimada)
 - **Origem:** [ADR 0017](adr/0017-lock-de-workspace-e-monitor-de-dev-agents.md) §4
 
 ### RN-016 — O parecer do gate prevalece sobre o enunciado da task {#rn-016}
@@ -265,8 +273,110 @@ paralelização **herda** o teto do agente base.
 Se a descrição da task mandar uma coisa e o parecer do gate apontar outra, o
 parecer vence.
 
-- **Onde:** prompt do gate em `apps/engine/lib/engine/gates/qa_agent_server.ex`
+Desde a Fase 8b, "o parecer" pode vir de duas subespecialidades — a regra não
+muda: cada uma prevalece sobre a task DENTRO do que avalia (Automação sobre
+cobertura de teste; Performance/Segurança sobre RNF de performance e achado
+de código). O `QaLead.consolidar/1` não arbitra entre elas e a task: qualquer
+`changes_requested de qualquer uma` já reprova o todo (ver
+[RN-036](#rn-036)).
+
+- **Onde:** prompt de cada subespecialidade em
+  `apps/engine/lib/engine/gates/qa_automacao_agent.ex` e
+  `qa_performance_seguranca_agent.ex`
 - **Origem:** [ADR 0020](adr/0020-destravar-gates-qa-secops.md) §9
+
+### RN-036 — QA vira área: o Lead consolida sem mudar o contrato do gate {#rn-036}
+
+A subespecialidade de Automação (o `QAAgent` da Fase 4a) sempre delega;
+Performance/Segurança só quando a story tem RNF de performance pertinente
+(`Engine.Gates.QaLead.rnf_de_performance?/1` — heurística por palavra-chave,
+não NLP). A decisão de NÃO delegar é sempre registrada — uma delegação
+`dispensed` com justificativa, nunca silêncio.
+
+Consolidação: `approved` só se TODAS as delegações que rodaram tiverem
+aprovado; qualquer `changes_requested` reprova o todo, com `itens` da(s)
+subespecialidade(s) que pediu(ram) mudança, cada item prefixado com o rótulo
+de quem o levantou (`"[QA de Automação] ..."`) — é assim que se rastreia a
+origem SEM mudar `itens` de `string[]` pra outra forma. Falha de delegação
+(qualquer origem — `infra`, `modelo`, `codigo`, `politica`) NUNCA vira
+`changes_requested`: o Lead bloqueia a task com a origem real (RN-015).
+
+O `qa_verdict` que chega à api é o MESMO artefato e passa pela MESMA rota de
+sempre (`RecordGateVerdictUseCase`, `nextGateStatus`) — nenhum dos dois
+mudou. O que a api aprende sobre a área fica só nos eventos
+`delegation.completed`/`delegation.failed`/`delegation.dispensed`, que a
+subespecialidade e o Lead gravam à parte.
+
+- **Onde:** `apps/engine/lib/engine/gates/qa_lead.ex` (`consolidar/1`,
+  `rnf_de_performance?/1`), `qa_lead_server.ex` (a fiação);
+  `apps/api/src/application/use-cases/execution/record-delegation.use-case.ts`;
+  `apps/api/src/db/schema.ts` (tabela `delegations`, enum `failure_origin`)
+- **Teste:** `apps/engine/test/engine/gates/qa_lead_test.exs` (a árvore de
+  decisão pura), `qa_lead_server_test.exs` (a fiação: decisão → delegação →
+  registro → consolidação → a MESMA chamada de sempre), e — a prova de que o
+  contrato não mudou — `record-gate-verdict.use-case.spec.ts`,
+  `pr-gate-state-machine.spec.ts` e `record-infra-gate-verdict.use-case.spec.ts`
+  passam **sem nenhuma alteração**
+- **Origem:** [ADR 0038](adr/0038-hierarquia-de-agentes.md)
+
+Do lado da `apps/web` (Fase 8d): o painel do time agrupa `qa`/
+`qa-automacao`/`qa-performance-seguranca` como lead + subespecialidades
+recolhíveis, a timeline de PR expande o parecer consolidado nos internos
+(`ProjectApprovalsTab.tsx`, `PrGateTimeline.tsx`), e o feed narra
+`delegation.*` — ver `apps/web/src/lib/agents.ts` (`AREAS`/`areaFor`).
+
+---
+
+### RN-037 — Infra vira área: Workflows gera CI conforme o provider, Lead consolida numa PR só {#rn-037}
+
+Segunda instância do modelo do ADR 0038, depois da área de QA (RN-036) — com
+uma diferença estrutural: as duas delegações da área de Infra SEMPRE rodam
+(Dockerfiles/compose pelo próprio Lead — "delega pra si"; pipeline de CI pelo
+subagente Workflows), nunca uma é dispensada. `Workflows` decide o formato do
+pipeline pelo `gitProvider` do contexto (`GetInfraContextUseCase`, lido de
+`project_repositories.provider` — **não** por `capabilities` do
+`GitProvider`, que são as MESMAS pra GitHub e GitLab): `"gitlab"` gera
+`.gitlab-ci.yml`; qualquer outro valor (`"github"`, `"local"`, ou
+desconhecido) gera `.github/workflows/ci.yml`. Cada arquivo passa por
+`validate_infra_file` antes de terminar — hadolint pra Dockerfile,
+`actionlint` pra workflow do GitHub Actions ([ADR 0039](adr/0039-actionlint-e-validacao-do-pipeline-de-ci-gerado.md);
+`.gitlab-ci.yml` fica sem validação local, gap documentado, não meia-solução).
+
+Consolidação: os arquivos dos dois delegados se juntam por `path` (o do
+Workflows vence em colisão) numa PR SÓ — o mecanismo de propor a PR
+(`propose_infra_pr`) muda de "a tool chama a api direto" pra "a tool sinaliza
+pro Lead, que consolida e chama uma vez" — o `open_infra_pr` que a api recebe
+é o MESMO de sempre, byte a byte (`ExecuteInfraPrUseCase` intocado). Falha de
+qualquer delegado (origem `infra`/`modelo`/`codigo`/`politica`) NUNCA abre PR
+parcial — mesma regra do RN-036, um nível acima de novo.
+
+Cada delegado (mesmo o Lead, sobre si mesmo) é rastreado como uma linha de
+`delegations` — reaproveitada tal como o RN-036 deixou, com UMA correção: a
+coluna `task_id` virou NULLABLE (a área de Infra delega sobre a SESSÃO, sem
+task de backlog por trás de uma PR de infra), e a rota
+`POST /internal/sessions/:sessionId/delegations` deixou de ser aninhada sob
+`/tasks/:taskId` — `taskId` agora vai no corpo, opcional. Ciclo K e orçamento
+não têm coluna própria na área de Infra (o InfraAgent original nunca teve
+orçamento por task, e este trabalho não introduziu um).
+
+- **Onde:** `apps/engine/lib/engine/infra/infra_lead.ex` (`consolidar/2`),
+  `infra_lead_server.ex` (a fiação), `workflows_agent.ex`,
+  `tools/validate_infra_file.ex` (dispatch por extensão),
+  `apps/api/src/application/use-cases/execution/get-infra-context.use-case.ts`
+  (`gitProvider`), `record-delegation.use-case.ts` (`taskId` opcional)
+- **Teste:** `apps/engine/test/engine/infra/infra_lead_test.exs` (a mescla e
+  o bloqueio, puros), `infra_lead_server_test.exs` (a fiação: PR única com
+  os dois conjuntos de arquivo, duas delegações, `gitProvider: "gitlab"` →
+  `.gitlab-ci.yml`, falha do Workflows → sem PR), `workflows_agent_test.exs`
+  — e a prova de que o contrato de `ExecuteInfraPrUseCase`/`InfraGateRunner`
+  não mudou: `execute-infra-pr.use-case.spec.ts` e
+  `infra_gate_runner_test.exs` passam **sem nenhuma alteração**
+- **Origem:** [ADR 0038](adr/0038-hierarquia-de-agentes.md), [ADR 0039](adr/0039-actionlint-e-validacao-do-pipeline-de-ci-gerado.md)
+
+Do lado da `apps/web` (Fase 8d): o painel do time agrupa `infra`/
+`infra-workflows` do mesmo jeito que QA (RN-036), e o feed narra as
+delegações da área — mesmo registro `AREAS`/`areaFor` de
+`apps/web/src/lib/agents.ts`, sem código específico de Infra na UI.
 
 ---
 
@@ -417,7 +527,7 @@ defeito: do lado do servidor, um duplo-submit do cliente e um replay de ladrão
 são idênticos.
 
 - **Onde:** `apps/api/src/domain/auth/refresh-token.ts:50` +
-  `application/use-cases/auth/refresh.use-case.ts:95`
+  `application/use-cases/auth/refresh.use-case.ts:98`
 - **Teste:** `test/application/use-cases/auth/rotacao-e-reuso.spec.ts`
 - **Borda:** quem apresenta um token de família **já revogada** é vítima a
   jusante, não novo roubo: registra `refresh_revoked` e **não** dispara segunda
@@ -454,7 +564,7 @@ conta bloqueada devolvem o mesmo 401 e gastam o mesmo tempo — o ramo sem conta
 verifica contra um hash dummy gerado com **os mesmos parâmetros** do real. No
 registro e no pedido de reset, endereço conhecido e desconhecido devolvem 202.
 
-- **Onde:** `apps/api/src/application/use-cases/auth/login.use-case.ts:78` +
+- **Onde:** `apps/api/src/application/use-cases/auth/login.use-case.ts:79` +
   `register.use-case.ts:74`
 - **Teste:** `test/application/use-cases/auth/enumeracao.spec.ts`
 - **Borda:** a checagem de bloqueio por e-mail roda **depois** do argon2, não

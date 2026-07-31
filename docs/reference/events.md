@@ -98,6 +98,19 @@ Uma linha em `session_events`, append-only, com `seq` densa por sessão
 | `infra.gate_changed` | gate do Infra |
 | `infra.artifact_blocked` | artefato do Infra reprovado |
 
+### Delegação (Fase 8b, ADR 0038)
+
+| tipo | quando |
+|---|---|
+| `delegation.completed` | a subespecialidade concluiu; `payload.parecerArtifactId` referencia o `artifact.qa_verdict` INTERNO dela — nunca o que chega ao gate |
+| `delegation.failed` | a subespecialidade não concluiu; `payload.failureOrigin` é a ORIGEM (`infra`\|`modelo`\|`codigo`\|`politica`, nunca por eliminação — ADR 0020) |
+| `delegation.dispensed` | o lead decidiu NÃO delegar; `payload.justification` explica por quê — dispensa nunca é silêncio |
+
+Os três são emitidos pelo `QaLeadServer`, um por subespecialidade, SEPARADOS
+da chamada a `record_gate_verdict` — o `pr.gate_changed` acima continua sendo
+o único evento que descreve o gate em si; estes descrevem a área por trás
+dele.
+
 ### Artefatos
 
 | tipo | schema |
@@ -177,6 +190,10 @@ Um evento de domínio quase sempre gera um `event.appended`; o inverso não vale
 Nomes de span OpenTelemetry. Uma sessão é uma **trace raiz** atravessando api e
 engine ([ADR 0026](../adr/0026-fase5-observabilidade-e-graceful-shutdown.md)).
 
+### Nomes de domínio
+
+Nomeados à mão, um por operação que interessa. São estes que se procura no Tempo:
+
 | span | onde |
 |---|---|
 | `session.create` | api — a raiz |
@@ -184,9 +201,27 @@ engine ([ADR 0026](../adr/0026-fase5-observabilidade-e-graceful-shutdown.md)).
 | `llm.turn` | engine — a chamada ao modelo |
 | `tool.call` | engine — a execução de uma ferramenta |
 | `gate.scanner` | engine — um scanner do SecOps, com o nome do scanner no atributo |
+| `outbox.session_lifecycle` | engine — job do Oban, pendurado na trace da sessão |
+| `outbox.psychologist` | engine — idem, a análise do Psicólogo |
+
+### Nomes derivados de código
+
+O decorator `@Traced` da api
+([ADR 0035](../adr/0035-observabilidade-legivel-e-trace-sem-coletor.md)) nomeia a
+span como **`Classe.metodo`** — por exemplo `TransitionSessionUseCase.execute`,
+`DrizzleOutboxRepository.append`. Não são enumeráveis aqui: nascem e morrem com o
+código, e a lista apodreceria na primeira renomeação.
+
+A distinção importa na hora de consultar: nome de domínio é estável e pode ir
+numa query salva ou num dashboard; nome derivado de código não.
+
+Os atributos que essas spans carregam — `brabo.layer`, `code.namespace`,
+`code.function` — servem para busca no Tempo e **não são contrato**, ao contrário
+de `trace_id`. Podem ser renomeados sem quebrar nada fora do Tempo.
 
 Como navegar de uma sessão até um `tool.call` está no
-[runbook](../runbook.md#observabilidade).
+[runbook](../runbook.md#observabilidade); o modelo inteiro está em
+[observabilidade](../explanation/observability.md).
 
 ---
 
@@ -223,7 +258,7 @@ respeito.
 
 > ⚠️ Bloco gerado por `pnpm docs:generate`. Não edite à mão — o próximo build sobrescreve.
 
-Extraído dos pontos de emissão: **66 identificadores**, todos descritos acima.
+Extraído dos pontos de emissão: **69 identificadores**, todos descritos acima.
 
 - `action.failed` <sub>(apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts)</sub>
 - `agent.activated` <sub>(apps/api/src/application/use-cases/agents/activate-agent.use-case.ts)</sub>
@@ -258,6 +293,9 @@ Extraído dos pontos de emissão: **66 identificadores**, todos descritos acima.
 - `bootstrap.step_started` <sub>(apps/api/src/application/use-cases/git/provision-repository.use-case.ts)</sub>
 - `budget.threshold_crossed` <sub>(apps/api/src/application/use-cases/llm/record-llm-usage.use-case.ts)</sub>
 - `chat.message` <sub>(apps/api/src/application/use-cases/agents/send-agent-message.use-case.ts)</sub>
+- `delegation.completed` <sub>(apps/api/src/application/use-cases/execution/record-delegation.use-case.ts)</sub>
+- `delegation.dispensed` <sub>(apps/api/src/application/use-cases/execution/record-delegation.use-case.ts)</sub>
+- `delegation.failed` <sub>(apps/api/src/application/use-cases/execution/record-delegation.use-case.ts)</sub>
 - `event.appended` <sub>(apps/engine/lib/engine/sessions/live_broadcast.ex)</sub>
 - `execution.activated` <sub>(apps/api/src/application/use-cases/execution/activate-execution.use-case.ts)</sub>
 - `execution.parallelization_accepted` <sub>(apps/api/src/application/use-cases/execution/accept-parallelization.use-case.ts)</sub>

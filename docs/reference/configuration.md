@@ -34,7 +34,7 @@ produção.
 | `NODE_ENV` | — | `production` liga as validações estritas de CORS e chave |
 | `API_PUBLIC_URL` | `http://localhost:3000` | usada nos callbacks de OAuth de git; errada = callback quebrado |
 | `ENGINE_URL` | `http://localhost:4000` | comandos síncronos api→engine falham |
-| `BRABO_VERSION` | `dev` | aparece no `/health` e nas métricas; a imagem de release injeta a tag |
+| `BRABO_VERSION` | `dev` | vira `service.version` no recurso OpenTelemetry — é como se sabe qual build gerou um trace. A imagem de release injeta a tag via `ARG` do `docker-bake.hcl`; fora do release fica `dev`. **Não** aparece no `/health`, que não devolve versão de propósito (ver o `description` da rota) |
 | `MIGRATIONS_FOLDER` | `./src/db/migrations` | — |
 
 ### Segurança 🔒
@@ -44,7 +44,7 @@ produção.
 | `CREDENTIALS_MASTER_KEY` 🔒 | `dev-master-key-change-me` | embrulha os DEKs. Trocar sem re-embrulhar torna **toda** credencial ilegível, sem erro no boot — a falha aparece no primeiro uso. Ver [rotação](../runbook.md#rotacao-da-chave-mestra) |
 | `CREDENTIALS_MASTER_KEY_PREVIOUS` | — | só durante a rotação. Presente = a api tenta a chave anterior quando a atual falha |
 | `GIT_OAUTH_STATE_SECRET` 🔒 | `dev-oauth-state-secret-change-me` | assina o `state` do OAuth; fraco = CSRF no fluxo de conexão de git |
-| `WEB_ORIGIN` 🔒 | `http://localhost:5173` | **em produção a api recusa subir** se estiver ausente ou for `*`. CORS é estrito por ambiente |
+| `WEB_ORIGIN` 🔒 | `http://localhost:5173` | **em produção a api recusa subir** se estiver ausente ou for `*`. CORS é estrito por ambiente. **A porta faz parte do valor**: a web em `:5174` (Vite pulando de porta) é outra origem e é barrada — ver [ADR 0037](../adr/0037-cors-do-engine-e-a-porta-como-contrato.md) |
 
 ### Auth first-party
 
@@ -88,7 +88,7 @@ externo, é daqui que sai a credencial para entrar na web local e para o smoke.
 
 | variável | default | o que faz |
 |---|---|---|
-| `BRABO_SEED_PASSWORD` | `senha de dev do brabo` | senha dos usuários semeados (`owner@brabo.dev`, `dev@brabo.dev`), criados com e-mail **já verificado** |
+| `BRABO_SEED_PASSWORD` | `brabo12345678` | senha dos usuários semeados (`owner@brabo.dev`, `dev@brabo.dev`), criados com e-mail **já verificado** |
 | `BRABO_FORCE_SEED` | — | destrava o seed com `NODE_ENV=production`, onde ele **recusa rodar** por default. Não defina em ambiente real: a conta nasce com senha conhecida e verificada |
 
 > O seed é idempotente e **não mexe na senha** de quem já existe. Rodar de novo
@@ -145,10 +145,10 @@ possível sem downtime ([RN-035](../business-rules.md#rn-035)).
 
 | variável | default | nota |
 |---|---|---|
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | — | **ausente desliga a instrumentação inteira, de propósito**. É a primeira coisa a conferir quando não há trace |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | — | **ausente desliga a EXPORTAÇÃO, não a instrumentação** (ADR 0035). Span continua sendo criada e o `trace_id` continua no log — é o que dá correlação em desenvolvimento, sem coletor. Sem ela, a span é descartada no fim em vez de sair do processo |
 | `OTEL_SERVICE_NAME` | `brabo-api` | — |
 | `OTEL_DIAG_LOG` | — | `1` liga o log de diagnóstico do próprio OTel |
-| `LOG_LEVEL` | — | — |
+| `LOG_LEVEL` | `info` em produção, `debug` fora | também decide o FORMATO junto com `NODE_ENV`: fora de produção o log sai legível (pino-pretty em processo, com a árvore de camadas); em produção, uma linha de JSON por evento |
 | `METRICS_GAUGE_INTERVAL_MS` | `15000` | período de coleta dos gauges de domínio |
 
 ---
@@ -224,8 +224,8 @@ possível sem downtime ([RN-035](../business-rules.md#rn-035)).
 |---|---|
 | `BRABO_SERVICE_TOKEN` 🔒 | `dev-service-token-change-me` — **o mesmo valor da api** |
 | `BRABO_SERVICE_TOKEN_PREVIOUS` 🔒 | — aceito só na verificação, durante a rotação |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | — o exporter do Elixir fala **HTTP/protobuf na 4318**, não gRPC na 4317 |
-| `WEB_ORIGIN` | — |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | — o exporter do Elixir fala **HTTP/protobuf na 4318**, não gRPC na 4317. Ausente desliga só a exportação (`traces_exporter: :none`), não a instrumentação — ver ADR 0035 |
+| `WEB_ORIGIN` | — **a mesma variável da api**, e ela alimenta DUAS coisas aqui: o `check_origin` do socket Phoenix (o painel do time ao vivo) e o CORS HTTP das rotas de health, que o navegador precisa para ler `/health` ([ADR 0037](../adr/0037-cors-do-engine-e-a-porta-como-contrato.md)). Ausente em produção fecha o CORS e mantém o `check_origin` no default estrito do Phoenix — o engine **sobe** de qualquer forma, diferente da api |
 | `PROJECT_WORKSPACES_ROOT` | `/tmp/brabo-project-workspaces` — **igual ao da api, no mesmo volume** |
 
 > `SOME_APP_SSL_CERT_PATH`, `SOME_APP_SSL_KEY_PATH` e `MIX_TEST_PARTITION` são
@@ -250,10 +250,27 @@ reescrito no boot. As `VITE_*` são o fallback de desenvolvimento.
 |---|---|
 | `VITE_API_URL` | endereço da api |
 | `VITE_ENGINE_URL` | endereço do engine (canal Phoenix) |
-| `VITE_LOG_LEVEL` | — |
+| `VITE_LOG_LEVEL` | nível do logger JSON do browser (default `info`). Em cluster quem manda é a chave `WEB_LOG_LEVEL` do `brabo-config`, que o entrypoint escreve em `/config.js` — `VITE_*` só vale em build local |
+| `VITE_BRABO_VERSION` | versão mostrada no rodapé das telas de auth (default `dev`). **A única que é build-time por escolha, não por limitação** — ver abaixo |
 
 Página em branco depois do deploy é quase sempre `/config.js` apontando para
 `localhost` — o smoke de deploy verifica exatamente isso.
+
+### Por que a versão não passa pelo `/config.js`
+
+As URLs são propriedade do **ambiente**: a mesma imagem precisa falar com a api
+de staging e com a de produção, e é para isso que o `/config.js` existe (ADR
+0024). A versão é propriedade do **artefato** — a imagem `brabo-web:1.1.2` não
+deve poder reportar outra coisa. Se ela viesse do `/config.js`, o rodapé passaria
+a ser um campo editável em vez de uma identidade, e um ConfigMap errado faria a
+tela mentir sobre qual build está no ar.
+
+O caminho completo, do commit à tela: `release.yml` calcula `versao=${TAG#v}` →
+passa como `VERSION` para o `docker buildx bake` → o alvo `web` do
+`docker-bake.hcl` converte em `VITE_BRABO_VERSION` → o `ARG`/`ENV` do
+`docker/web/Dockerfile.prod` o expõe ao `pnpm build` → o Vite inlina em
+`import.meta.env` → `runtime-config.ts` o lê → `AuthLayout` o mostra. O mesmo
+`VERSION` alimenta o `BRABO_VERSION` da imagem da api (ADR 0036).
 
 ---
 
@@ -298,7 +315,7 @@ que uma variável nova não fique documentada em lugar nenhum sem ninguém notar
 
 > ⚠️ Bloco gerado por `pnpm docs:generate`. Não edite à mão — o próximo build sobrescreve.
 
-Inventário extraído do código: **91 variáveis** lidas em tempo de execução. Todas têm descrição nas tabelas acima.
+Inventário extraído do código: **92 variáveis** lidas em tempo de execução. Todas têm descrição nas tabelas acima.
 
 **api** — 43 variáveis
 
@@ -365,7 +382,7 @@ Inventário extraído do código: **91 variáveis** lidas em tempo de execução
 - `ECTO_IPV6` <sub>(apps/engine/config/runtime.exs)</sub>
 - `LLM_TURN_TIMEOUT_MS` <sub>(apps/engine/config/runtime.exs)</sub>
 - `MIX_TEST_PARTITION` <sub>(apps/engine/config/test.exs)</sub>
-- `OTEL_EXPORTER_OTLP_ENDPOINT` <sub>(apps/engine/lib/engine/telemetry/otel.ex)</sub>
+- `OTEL_EXPORTER_OTLP_ENDPOINT` <sub>(apps/engine/config/runtime.exs)</sub>
 - `PHX_HOST` <sub>(apps/engine/config/runtime.exs)</sub>
 - `PHX_SERVER` <sub>(apps/engine/config/runtime.exs)</sub>
 - `POOL_SIZE` <sub>(apps/engine/config/runtime.exs)</sub>
@@ -394,9 +411,10 @@ Inventário extraído do código: **91 variáveis** lidas em tempo de execução
 - `TOOL_LOOP_MAX_ITERATIONS` <sub>(apps/engine/config/runtime.exs)</sub>
 - `WEB_ORIGIN` <sub>(apps/engine/config/runtime.exs)</sub>
 
-**web** — 3 variáveis
+**web** — 4 variáveis
 
 - `VITE_API_URL` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
+- `VITE_BRABO_VERSION` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
 - `VITE_ENGINE_URL` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
 - `VITE_LOG_LEVEL` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
 <!-- END:GENERATED:env-inventario -->

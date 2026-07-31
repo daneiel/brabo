@@ -5,7 +5,7 @@ defmodule Engine.Workers.PsychologistWorker do
   `Engine.Outbox.Drain`.
 
   Roda o `ToolLoop` UMA vez por fechamento de sessão, montando o ctx do
-  mesmo jeito que `Engine.Gates.QaAgentServer` — mas sem GenServer:
+  mesmo jeito que `Engine.Gates.QaAutomacaoAgent` — mas sem GenServer:
   Psicólogo é one-shot e o próprio Oban já dá processo supervisionado
   com retentativa, então não há o que endereçar depois.
 
@@ -32,14 +32,32 @@ defmodule Engine.Workers.PsychologistWorker do
   alias Engine.Psychologist.{ContextBuilder, TerminationClassifier, Tools, Triage}
   alias Engine.Psychologist.Hooks.Termination
   alias Engine.Sessions.EngineApiClient
+  alias Engine.Telemetry.Span
 
   @impl true
   def perform(%Oban.Job{
-        args: %{
-          "aggregate_id" => session_id,
-          "payload" => %{"projectId" => project_id} = payload
-        }
+        args:
+          %{
+            "aggregate_id" => session_id,
+            "payload" => %{"projectId" => project_id} = payload
+          } = args
       }) do
+    # Ver o comentário equivalente no SessionLifecycleWorker: o `session_id` em
+    # toda linha, e a análise pendurada na trace da sessão que a originou. Aqui
+    # importa mais que em qualquer outro job — a análise do Psicólogo é o
+    # trabalho assíncrono mais caro do sistema, e era o mais difícil de
+    # correlacionar.
+    Logger.metadata(session_id: session_id)
+
+    Span.with_session(
+      args["traceparent"],
+      "outbox.psychologist",
+      %{"brabo.session_id" => session_id, "brabo.project_id" => project_id},
+      fn -> analisar_sessao(project_id, session_id, payload) end
+    )
+  end
+
+  defp analisar_sessao(project_id, session_id, payload) do
     triggered_by = Map.get(payload, "triggeredBy", "auto")
 
     case ContextBuilder.fetch(project_id, session_id) do
@@ -102,7 +120,7 @@ defmodule Engine.Workers.PsychologistWorker do
   # timeout, erro no corpo da resposta — ver ToolLoop), não o modelo
   # desistindo. Sem olhar `last_error` o operador recebia "encerrou sem
   # emitir hipóteses" para um provider caído, sem nada em que agir — mesma
-  # armadilha já fechada no QA (`QaAgentServer`) e no Dev (`DevAgentServer`).
+  # armadilha já fechada no QA (`QaAutomacaoAgent`) e no Dev (`DevAgentServer`).
   defp reason_for({:ok, ctx}) do
     case Map.get(ctx, :last_error) do
       nil -> "encerrou sem emitir hipóteses"

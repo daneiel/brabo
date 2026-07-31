@@ -84,7 +84,7 @@ pnpm --filter api seed
 ```
 
 Ele cria `owner@brabo.dev` (owner) e `dev@brabo.dev` (developer), os dois já
-com e-mail verificado e a senha `senha de dev do brabo` — sobrescrevível por
+com e-mail verificado e a senha `brabo12345678` — sobrescrevível por
 `BRABO_SEED_PASSWORD`. Junto vem o workspace **Acme Corp**, pronto para criar
 projeto.
 

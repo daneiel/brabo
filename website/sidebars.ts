@@ -108,7 +108,11 @@ const sidebars: SidebarsConfig = {
       type: 'category',
       label: '💡 Explicação',
       collapsed: false,
-      items: ['explanation/documentation-workflow', 'explanation/branching-policy'],
+      items: [
+        'explanation/documentation-workflow',
+        'explanation/branching-policy',
+        'explanation/observability',
+      ],
     },
     {
       type: 'category',

@@ -1,0 +1,69 @@
+---
+id: internal-sessions-controller-record-delegation-outcome
+title: "Registra o desfecho de uma delegação de área"
+description: "`completed` (com o parecer), `failed` (com a origem) ou `dispensed` (com a justificativa) — o lead nunca chama esta rota com um desfecho a meio caminho: cada delegação nasce aqui já resolvida."
+sidebar_label: "Registra o desfecho de uma delegação de área"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "post api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Registra o desfecho de uma delegação de área"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/internal/sessions/{sessionId}/delegations"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+`completed` (com o parecer), `failed` (com a origem) ou `dispensed` (com a justificativa) — o lead nunca chama esta rota com um desfecho a meio caminho: cada delegação nasce aqui já resolvida.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./internal-sessions-controller-record-delegation-outcome.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./internal-sessions-controller-record-delegation-outcome.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./internal-sessions-controller-record-delegation-outcome.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

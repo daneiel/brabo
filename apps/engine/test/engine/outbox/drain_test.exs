@@ -82,4 +82,76 @@ defmodule Engine.Outbox.DrainTest do
     refute_enqueued(worker: Engine.Workers.SessionLifecycleWorker)
     refute_enqueued(worker: Engine.Workers.PsychologistWorker)
   end
+
+  # A correlação do trabalho assíncrono (ADR 0035).
+  #
+  # Estava quebrada em silêncio desde a Fase 5: o schema `Engine.Outbox.Event`
+  # não declarava `metadata`, então `%Event{}` não tinha a chave, a primeira
+  # cláusula de `Drain.traceparent/1` era inalcançável, e TODO job nascia com
+  # `traceparent: nil`. Nada falhava — a api gravava a coluna, o drain "propagava"
+  # nil, e o Psicólogo aparecia no Tempo numa trace própria, desligada da sessão
+  # que o disparou.
+  describe "traceparent" do
+    test "o schema declara metadata — sem isso a propagação é inalcançável" do
+      # Teste de CONTRATO, não de comportamento: falha exatamente na regressão
+      # (alguém enxugando o schema) em vez de num efeito colateral distante.
+      assert :metadata in Event.__schema__(:fields)
+    end
+
+    test "chega no job quando a api gravou no metadado do evento" do
+      traceparent = "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+
+      row =
+        insert_outbox_event!(%{
+          aggregate_type: "session",
+          event_type: "session.closed",
+          payload: %{"projectId" => "project-1"},
+          metadata: %{"traceparent" => traceparent}
+        })
+
+      Drain.run_once()
+
+      assert_enqueued(
+        worker: Engine.Workers.PsychologistWorker,
+        args: %{"aggregate_id" => row.aggregate_id, "traceparent" => traceparent}
+      )
+
+      assert_enqueued(
+        worker: Engine.Workers.SessionLifecycleWorker,
+        args: %{"traceparent" => traceparent}
+      )
+    end
+
+    test "metadata vazio virou nil, sem levantar" do
+      # Evento gravado antes da Fase 5, ou por um caminho fora de contexto de
+      # trace. `with_session/4` trata nil como "abre trace própria".
+      row =
+        insert_outbox_event!(%{
+          aggregate_type: "session",
+          event_type: "session.closed",
+          payload: %{"projectId" => "project-1"},
+          metadata: %{}
+        })
+
+      Drain.run_once()
+
+      job = Enum.find(all_enqueued(), &(&1.args["aggregate_id"] == row.aggregate_id))
+      assert job.args["traceparent"] == nil
+    end
+
+    test "metadado com outra chave não é confundido com traceparent" do
+      row =
+        insert_outbox_event!(%{
+          aggregate_type: "session",
+          event_type: "session.closed",
+          payload: %{"projectId" => "project-1"},
+          metadata: %{"outro" => "campo"}
+        })
+
+      Drain.run_once()
+
+      job = Enum.find(all_enqueued(), &(&1.args["aggregate_id"] == row.aggregate_id))
+      assert job.args["traceparent"] == nil
+    end
+  end
 end

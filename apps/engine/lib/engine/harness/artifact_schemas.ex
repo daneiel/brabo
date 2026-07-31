@@ -32,7 +32,15 @@ defmodule Engine.Harness.ArtifactSchemas do
     # SUJEITO do parecer não entra nas chaves obrigatórias porque varia entre
     # os dois consumidores — ver `check_extra/2`.
     "qa_verdict" => ["veredito", "resumo", "itens"],
-    "secops_verdict" => ["veredito", "resumo", "itens"]
+    "secops_verdict" => ["veredito", "resumo", "itens"],
+    # Fase 8c — resultado de UM delegado da área de Infra (o próprio Lead,
+    # gerando Dockerfiles/compose; ou o Workflows, gerando o pipeline de CI).
+    # Server-emitted como `task_blocked`/`qa_verdict`: o `InfraLeadServer`
+    # emite depois que cada delegado termina, só pra ter um
+    # `parecer_artifact_id` pra referenciar em `delegations` — nunca visto
+    # de fora da área (o que a api vê é a PR consolidada, via
+    # `open_infra_pr`).
+    "infra_delegation_files" => ["files", "summary"]
   }
 
   # Pareceres de gate. Os vereditos possíveis são os mesmos da máquina de
@@ -92,6 +100,16 @@ defmodule Engine.Harness.ArtifactSchemas do
   defp check_extra(type, payload) when type in @gate_verdict_types do
     with :ok <- check_gate_subject(payload) do
       check_gate_verdict(payload)
+    end
+  end
+
+  # Um delegado de Infra sem NENHUM arquivo não terminou nada — mesma lição
+  # do `nada_a_validar/1` do `InfraGateRunner` (ADR 0021), aplicada um passo
+  # antes: nunca deixar "vazio" passar por "concluído".
+  defp check_extra("infra_delegation_files", payload) do
+    case Map.get(payload, "files") do
+      files when is_list(files) and files != [] -> :ok
+      _ -> {:error, :arquivos_vazios}
     end
   end
 

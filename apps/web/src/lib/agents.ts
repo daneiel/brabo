@@ -3,6 +3,8 @@ import {
   BulbIcon,
   ClockIcon,
   CodeIcon,
+  DeployIcon,
+  GaugeIcon,
   HypothesisIcon,
   LayoutSidebarIcon,
   LockIcon,
@@ -14,6 +16,11 @@ import {
 
 // Roster fixo dos agentes (CLAUDE.md) — cor e ícone consistentes em toda
 // a UI (chat, overview do projeto, feed de atividade). Ver design/COMPONENTS.md.
+//
+// `qa-automacao`/`qa-performance-seguranca`/`infra-workflows` (Fase 8d) são
+// SUBAGENTES de área (ADR 0038, Fases 8b/8c) — `qa`/`infra` continuam sendo
+// os LEADS (contato externo inalterado). Ver `AREAS`/`areaFor` abaixo pra a
+// relação entre eles.
 export type AgentKey =
   | 'psicologo'
   | 'psicologo-leve'
@@ -24,7 +31,10 @@ export type AgentKey =
   | 'dev-backend'
   | 'dev-frontend'
   | 'infra'
+  | 'infra-workflows'
   | 'qa'
+  | 'qa-automacao'
+  | 'qa-performance-seguranca'
   | 'secops';
 
 export interface AgentDef {
@@ -102,12 +112,38 @@ export const AGENTS: Record<AgentKey, AgentDef> = {
     color: 'var(--warning)',
     icon: ServerIcon,
   },
+  // Subagente da área de Infra (Fase 8c/8d) — gera o pipeline de CI,
+  // delegado pelo lead `infra`. Mesma cor do lead, de propósito: é a
+  // mesma área, só um ícone diferente pra distinguir o card no painel.
+  'infra-workflows': {
+    key: 'infra-workflows',
+    name: 'Workflows',
+    role: 'Pipeline de CI (GitHub Actions / GitLab CI)',
+    color: 'var(--warning)',
+    icon: DeployIcon,
+  },
   qa: {
     key: 'qa',
     name: 'QA',
     role: 'Verificação e testes',
     color: 'var(--danger)',
     icon: PermissionIcon,
+  },
+  // Subespecialidades da área de QA (Fase 8b/8d) — delegadas pelo lead
+  // `qa`. Mesma cor do lead, ícone próprio por papel.
+  'qa-automacao': {
+    key: 'qa-automacao',
+    name: 'QA de Automação',
+    role: 'Suite de testes e coverage_matrix',
+    color: 'var(--danger)',
+    icon: CodeIcon,
+  },
+  'qa-performance-seguranca': {
+    key: 'qa-performance-seguranca',
+    name: 'QA de Performance e Segurança',
+    role: 'RNFs de performance e apoio de segurança em nível de código',
+    color: 'var(--danger)',
+    icon: GaugeIcon,
   },
   secops: {
     key: 'secops',
@@ -119,3 +155,39 @@ export const AGENTS: Record<AgentKey, AgentDef> = {
 };
 
 export const AGENT_LIST: AgentDef[] = Object.values(AGENTS);
+
+/** Área da hierarquia de agentes (ADR 0038, Fases 8b/8c): um lead + subagentes. */
+export interface AreaDef {
+  key: string;
+  label: string;
+  lead: AgentKey;
+  members: AgentKey[];
+}
+
+export const AREAS: Record<string, AreaDef> = {
+  qa: {
+    key: 'qa',
+    label: 'QA',
+    lead: 'qa',
+    members: ['qa-automacao', 'qa-performance-seguranca'],
+  },
+  infra: {
+    key: 'infra',
+    label: 'Infra',
+    lead: 'infra',
+    members: ['infra-workflows'],
+  },
+};
+
+/**
+ * Área de um agente, se houver — pelo `AgentKey` do LEAD ou de um MEMBRO
+ * (`agentKey` aceita string solta porque `agenteAlvo`/`actor.id` no wire
+ * nunca são tipados como `AgentKey`, ver `api-types.ts`). `undefined` pra
+ * qualquer agente sem área (Criativo, PO, Arquiteto, dev-*, Psicólogo,
+ * Anamnese) — o chamador decide o fallback.
+ */
+export function areaFor(agentKey: string): AreaDef | undefined {
+  return Object.values(AREAS).find(
+    (area) => area.lead === agentKey || (area.members as string[]).includes(agentKey),
+  );
+}

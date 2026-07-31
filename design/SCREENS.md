@@ -158,3 +158,96 @@ write-only por provider (Anthropic/OpenAI): campo de API key (nunca
 preenchido de volta, só "Configurado em {data}" quando já existe uma
 credencial salva) + botão salvar/remover. Seguir o mesmo padrão visual
 de inputs/botões já documentado.
+
+## Auth — Login e telas irmãs (`Brabo Login.dc.html`)
+
+**Fonte diferente das cinco acima.** Este mockup foi criado no mesmo projeto
+de design (`1c960ca8-5e00-4558-8ced-80dfbdf01027`) mas **depois** da extração
+de 2026-07-23 — as telas de auth nasceram na Fase 7a sem mockup nenhum,
+porque até o corte era o Keycloak que servia essa superfície. Extraído em
+2026-07-30. Decisões e divergências no
+[ADR 0036](../docs/adr/0036-telas-de-auth-fieis-ao-design-e-fontes-auto-hospedadas.md).
+
+Quatro telas compartilham a moldura: `/login`, `/registrar`,
+`/esqueci-senha`, `/definir-senha`.
+
+### Moldura (vale para as quatro)
+
+Página `min-height:100vh` flex centrado, `position:relative;
+overflow:hidden`, fundo `var(--surface-0)`, padding vertical 32px / lateral
+24px. Duas camadas decorativas, ambas `aria-hidden`:
+
+- **grade**: `inset:0`, duas `linear-gradient` cruzadas de 1px em
+  `var(--border)`, `background-size:64px 64px`, `opacity:.22` — o papel
+  milimetrado que dá a leitura de ferramenta de engenharia;
+- **brilho**: elipse 900×520 em `top:-160px`, centrada,
+  `radial-gradient(closest-side, color-mix(in srgb, var(--success) 14%,
+  transparent), transparent)`, cortada pelo `overflow` da página.
+
+Container `max-width:412px`, entrada `bfade .4s ease both` (zerada em
+`prefers-reduced-motion`, que mantém o estado final do keyframe).
+
+**Cabeçalho de marca** (flex, gap 12px, `margin-bottom:26px`): selo 40×40
+radius 11px em `var(--accent)` com o glyph 23px em `var(--on-accent)`
+(`LogoMark` — barra vertical + dois chevrons, o segundo a `opacity:.58`;
+é desenho DIFERENTE do `BrandIcon` do app shell, que é o cubo isométrico),
+depois wordmark "Brabo" (Space Grotesk 700, 24px, `letter-spacing:-.035em`,
+`line-height:1.1`) com a tagline abaixo (IBM Plex Mono 10px,
+`letter-spacing:.12em`, uppercase, `var(--text-muted)`).
+
+**Card**: `var(--surface-1)`, `1px var(--border)`, radius 12px,
+`var(--shadow)`, `overflow:hidden` (é o que faz o rodapé respeitar o raio).
+Três regiões:
+
+1. **cabeça** — padding `26px 28px 8px`: `<h1>` (Space Grotesk 600, 19px,
+   `letter-spacing:-.015em`) + subtítulo 13px `var(--text-secondary)`. O
+   título do card é o **único `<h1>` da página**: "Brabo" é identidade, não
+   cabeçalho, e promovê-lo daria dois `<h1>`;
+2. **corpo** — padding `20px 28px 26px`, flex column gap 16px: o `Alert` de
+   erro (quando houver) e o formulário, **irmãos, nunca aninhados**;
+3. **rodapé** — `border-top 1px var(--border)`, fundo `var(--surface-0)` (um
+   degrau abaixo do card), padding `14px 28px`, 12.5px
+   `var(--text-secondary)` com um link para a tela vizinha.
+
+**Bloco abaixo do card** (`margin-top:18px`): `Alert` fora do card, quando a
+tela tem contexto a dar sobre a conta. Fica fora de propósito — dentro
+competiria com o que a pessoa veio fazer.
+
+**Rodapé da página** (`margin-top:22px`, flex centrado, gap 16px uniforme
+entre os cinco filhos, IBM Plex Mono 10.5px `var(--text-muted)`):
+`<versão> · Status · Documentação`. A versão é o valor **cru** do artefato —
+`dev` fora de um release, e isso é informação verdadeira. "Status" é botão
+(rota interna); "Documentação" é `<a target="_blank" rel="noreferrer">`.
+
+### `/login`
+
+Título "Entrar", subtítulo "Acesse seu workspace e retome as sessões em
+andamento.". Campos: e-mail (placeholder `voce@empresa.com`) e senha
+(`revelavel`, mono, placeholder `••••••••••`), os dois na variante
+`preenchido`. "Esqueci minha senha" na linha do rótulo da senha, à direita.
+Submit full-width com `loading` (`Entrar` → `Autenticando…`). Rodapé do card:
+"Não tem acesso? **Criar uma conta**". Abaixo do card: aviso `warning` sobre
+a conta migrada.
+
+**Três coisas do mockup que a implementação não tem** (ADR 0036): o botão
+"Continuar com GitHub" (login social é backlog da fase), o divisor "ou" (que
+existia só para separar os dois botões) e o indicador "N agentes online" (dado
+dinâmico pré-autenticação). Sem o indicador, o rodapé do card fica com um item
+e o `space-between` do mockup vira alinhamento à esquerda.
+
+### `/registrar`, `/esqueci-senha`, `/definir-senha`
+
+Mesma moldura, mesmos componentes. Cada uma tem **estado de sucesso** que
+substitui o formulário: um `Alert` tom `success` com `role="status"` (polido,
+não interrompe — interromper para dar boa notícia é grosseria) mais um botão
+de saída.
+
+Os textos de sucesso são **condicionais de propósito** ("se o endereço estiver
+disponível", "se houver uma conta com…"): a api responde igual para conta
+existente e inexistente, e uma frase afirmativa aqui reabriria a enumeração
+que o servidor fecha.
+
+Erro de campo (senha curta, confirmação diferente) vai **sob o campo** com
+`aria-invalid`; erro de formulário (credencial recusada, link inválido, falha
+de rede) vai no **`Alert` do topo do card**. Quem lê a mensagem não deveria
+precisar dela para saber onde mexer.

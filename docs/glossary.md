@@ -50,7 +50,7 @@ fila mora no Postgres.
 ## Agentes
 
 **Agente** — processo de longa duração com um papel e uma identidade. Onze
-slugs canônicos hoje, definidos em
+papéis canônicos hoje, definidos em
 `apps/engine/lib/engine/harness/agents.ex`:
 
 | slug | papel |
@@ -68,6 +68,15 @@ slugs canônicos hoje, definidos em
 Os nomes são **papéis do produto**, escritos em maiúscula quando usados como
 substantivo ("o Arquiteto propôs um ADR"). Devs são **dinâmicos**: um agente
 por módulo do `module_map`, não uma lista fixa.
+
+**Área** (Fase 8b/8c, [ADR 0038](adr/0038-hierarquia-de-agentes.md)) — `qa` e
+`infra` da tabela acima viraram LEAD de área: continuam o único contato
+externo (mesmo slug, mesmo comportamento visto de fora), mas passam a
+**delegar** a subagentes — `qa-automacao`/`qa-performance-seguranca` (QA),
+`infra-workflows` (Infra). Delegação é mecanismo INTERNO da área, nunca um
+handoff; o que a área devolve pra fora continua sendo um artefato só
+(`qa_verdict`, `open_infra_pr`) — quem consome nunca sabe que existe mais de
+um agente por trás.
 
 **Harness** — o invólucro obrigatório de todo agente. Nenhuma chamada de LLM ou
 de ferramenta acontece fora dele. Cinco peças:
@@ -93,10 +102,10 @@ o agente encerra com artefato de bloqueio.
 porque o destino e o motivo ficam registrados no event log, em vez de um agente
 "assumir" o contexto do outro implicitamente.
 
-**Artefato** — saída estruturada e validada de um agente. Seis schemas fechados
+**Artefato** — saída estruturada e validada de um agente. Sete schemas fechados
 (`note`, `business_rule`, `product_brief`, `task_blocked`, `qa_verdict`,
-`secops_verdict`): campo faltando reprova a emissão. É como o parecer de um
-gate vira dado, não texto.
+`secops_verdict`, `infra_delegation_files`): campo faltando reprova a
+emissão. É como o parecer de um gate vira dado, não texto.
 
 **Worktree** — `git worktree`: uma cópia de trabalho isolada por dev agent,
 sobre o mesmo repositório. Dois devs mexem em branches diferentes sem se
@@ -267,4 +276,16 @@ no cluster inteiro**; sem cluster Erlang formado, cada réplica vira uma ilha
 
 **Trace raiz** — uma sessão = uma trace, atravessando api ↔ engine. O
 `traceparent` fica persistido em `sessions.trace_parent`, e é por ele que se
-navega no Tempo.
+navega no Tempo. O `trace_id` nasce na **web** (o browser gera o `traceparent`) e
+existe mesmo sem coletor: exportar é decisão separada de instrumentar
+([ADR 0035](adr/0035-observabilidade-legivel-e-trace-sem-coletor.md)).
+
+**Caminho entre camadas** — a sequência de fronteiras que uma requisição atravessa
+na api (`interfaces` → `application` → `infrastructure`), com a duração de cada
+passo, emitida como **uma** linha de log por requisição. Vem de um
+`AsyncLocalStorage` alimentado pelo decorator `@Traced`, não de span — é o que faz
+funcionar sem coletor. Ver [observabilidade](explanation/observability.md).
+
+**Camada** — no caminho acima, o rótulo da fronteira: `interfaces`, `application`,
+`domain` ou `infrastructure`. Corresponde aos diretórios de `apps/api/src/` e à
+regra de dependência entre eles.

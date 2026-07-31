@@ -50,6 +50,11 @@ ARG GITLEAKS_VERSION=8.30.1
 ARG GITLEAKS_SHA256=551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
 ARG HADOLINT_VERSION=2.12.0
 ARG HADOLINT_SHA256=56de6d5e5ec427e17b74fa48d51271c7fc0d61244bf5c90e828aab8362d55010
+# actionlint (subagente Workflows da área de Infra, Fase 8c) — mesmo padrão
+# dos dois acima. Checksum conferido contra o `actionlint_1.7.12_checksums.txt`
+# publicado no release, e por download+sha256sum independente do tarball.
+ARG ACTIONLINT_VERSION=1.7.12
+ARG ACTIONLINT_SHA256=8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
 ARG SEMGREP_VERSION=1.171.0
 ARG YAMLLINT_VERSION=1.38.0
 
@@ -94,7 +99,12 @@ RUN apk add --no-cache --virtual .fetch curl tar \
       "https://github.com/hadolint/hadolint/releases/download/v${HADOLINT_VERSION}/hadolint-Linux-x86_64" \
  && echo "${HADOLINT_SHA256}  /usr/local/bin/hadolint" | sha256sum -c - \
  && chmod 0755 /usr/local/bin/hadolint \
- && rm -f /tmp/gitleaks.tar.gz \
+ && curl -fsSL -o /tmp/actionlint.tar.gz \
+      "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz" \
+ && echo "${ACTIONLINT_SHA256}  /tmp/actionlint.tar.gz" | sha256sum -c - \
+ && tar -xzf /tmp/actionlint.tar.gz -C /usr/local/bin actionlint \
+ && chmod 0755 /usr/local/bin/actionlint \
+ && rm -f /tmp/gitleaks.tar.gz /tmp/actionlint.tar.gz \
  && apk del .fetch
 
 # semgrep e yamllint com versão FIXA (em dev são `pip install` sem versão, o que
@@ -116,6 +126,7 @@ RUN pip install --no-cache-dir --break-system-packages \
 RUN set -eux; \
     gitleaks version; \
     hadolint --version; \
+    actionlint -version; \
     semgrep --version; \
     yamllint --version; \
     git --version; \

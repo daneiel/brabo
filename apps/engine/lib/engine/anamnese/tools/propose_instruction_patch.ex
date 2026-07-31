@@ -29,7 +29,11 @@ defmodule Engine.Anamnese.Tools.ProposeInstructionPatch do
         "properties" => %{
           "agent" => %{
             "type" => "string",
-            "description" => "slug do agente alvo (ex.: dev-api, po, arquiteto)"
+            "description" =>
+              "slug do agente alvo (ex.: dev-api, po, arquiteto). Pode ser um SUBAGENTE de " <>
+                "área (ex.: qa-automacao, qa-performance-seguranca, infra-workflows) quando o " <>
+                "ajuste é sobre a instrução daquela subespecialidade especificamente, não do " <>
+                "lead da área"
           },
           "proposedContent" => %{
             "type" => "string",

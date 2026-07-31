@@ -136,9 +136,10 @@ rules:
     watch:
       - "apps/engine/lib/engine/harness/**"
       - "apps/engine/lib/engine/gates/**"
+      - "apps/engine/lib/engine/infra/**"
     docs: ["docs/architecture.md", "docs/glossary.md"]
     severity: warn
-    note: "Atualizar só se mudou contrato de behaviour ou fluxo de gate."
+    note: "Atualizar só se mudou contrato de behaviour ou fluxo de gate. `infra/` (área de Infra, Fase 8c) entrou aqui de passagem — não tinha regra nenhuma até então."
 
   # -------------------------------------------------------- infra e operação
 
@@ -150,6 +151,23 @@ rules:
     docs: ["docs/architecture.md"]
     severity: warn
     note: "Árvore de supervisão e ordem dos guards são fronteiras arquiteturais."
+
+  # O coração da observabilidade não tinha regra nenhuma até o ADR 0035: dava para
+  # trocar o nome de `trace_id`, desligar a propagação ou mudar o formato do log
+  # sem que nada pedisse para atualizar doc. E é justamente aqui que a doc erra
+  # calada — dois textos afirmavam o contrário do comportamento por meses.
+  - id: observabilidade
+    watch:
+      - "apps/api/src/tracing.ts"
+      - "apps/api/src/tracing-boot.ts"
+      - "apps/api/src/infrastructure/observability/**"
+      - "apps/engine/lib/engine/telemetry/**"
+      - "apps/web/src/lib/logger.ts"
+    docs:
+      - "docs/explanation/observability.md"
+      - "docs/runbook.md"
+    severity: warn
+    note: "`trace_id` é contrato (Alloy + derivedFields do Loki). Formato de log e propagação mudam o runbook."
 
   - id: config-e-inferencia
     watch:

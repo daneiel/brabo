@@ -16,6 +16,8 @@ import { Input } from '../components/ui/Input';
 import { Table, type TableColumn } from '../components/ui/Table';
 import { Badge } from '../components/ui/Badge';
 import { CheckIcon, SearchIcon, TrashIcon } from '../components/ui/icons';
+import { AGENTS, AREAS } from '../lib/agents';
+import type { DelegationEventPayload } from '../lib/api-types';
 import styles from './ProjectApprovalsTab.module.css';
 
 interface PermissionRow {
@@ -58,10 +60,69 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
       .sort((a, b) => b.seq - a.seq)[0];
   }
 
+  // Rótulo pro sub-parecer/dispensa dentro do card expandido — nome
+  // reconhecido (AGENTS) quando o subagente é um dos conhecidos, senão o
+  // id cru (mesma degradação graciosa do resto da UI pra agente
+  // desconhecido).
+  function labelFor(agentId: string): string {
+    return AGENTS[agentId as keyof typeof AGENTS]?.name ?? agentId;
+  }
+
+  // Pareceres INTERNOS dos subagentes de QA (Fase 8b/8d) — mesmo `taskId`
+  // do parecer consolidado, mas `actor.id` é a subespecialidade
+  // (`qa-automacao`/`qa-performance-seguranca`), nunca `qa`. Ver `AREAS.qa.
+  // members`.
+  function subVerdictsFor(taskId: string): NonNullable<GateVerdict['subVerdicts']> {
+    const membros: string[] = AREAS.qa.members;
+    return events
+      .filter((e) => e.type === 'artifact.qa_verdict' && membros.includes(e.actor.id))
+      .filter((e) => (e.payload as { taskId?: string }).taskId === taskId)
+      .sort((a, b) => a.seq - b.seq)
+      .map((e) => {
+        const payload = e.payload as QaVerdictPayload;
+        return {
+          agentId: e.actor.id,
+          label: labelFor(e.actor.id),
+          veredito: payload.veredito,
+          resumo: payload.resumo,
+          itens: payload.itens,
+        };
+      });
+  }
+
+  // Delegações DISPENSADAS da área de QA pra esta task (Fase 8b) — a
+  // subespecialidade de Performance/Segurança quando a story não tem RNF
+  // pertinente, sempre com justificativa (nunca silêncio).
+  function dispensedFor(taskId: string): NonNullable<GateVerdict['dispensed']> {
+    return events
+      .filter((e) => e.type === 'delegation.dispensed')
+      .filter((e) => {
+        const payload = e.payload as DelegationEventPayload;
+        return payload.area === 'qa' && payload.taskId === taskId;
+      })
+      .sort((a, b) => a.seq - b.seq)
+      .map((e) => {
+        const payload = e.payload as DelegationEventPayload;
+        return {
+          agentId: payload.subagent,
+          label: labelFor(payload.subagent),
+          justification: payload.justification ?? '',
+        };
+      });
+  }
+
+  // O card PRINCIPAL da timeline é só o parecer CONSOLIDADO — `actor.id ===
+  // 'qa'`/`'secops'`. Antes do 8d isto filtrava só por tipo+taskId, e o
+  // parecer INTERNO de cada subespecialidade (mesmo taskId, actor.id
+  // diferente) vazava como um card "QA" a mais, indistinguível do
+  // consolidado, numa story com RNF de performance (Fase 8b). Os internos
+  // agora só aparecem dentro do expand (`subVerdictsFor`/`dispensedFor`).
   function verdictsFor(taskId: string): GateVerdict[] {
     return events
       .filter(
-        (e) => e.type === 'artifact.qa_verdict' || e.type === 'artifact.secops_verdict',
+        (e) =>
+          (e.type === 'artifact.qa_verdict' && e.actor.id === 'qa') ||
+          (e.type === 'artifact.secops_verdict' && e.actor.id === 'secops'),
       )
       .filter((e) => {
         const payload = e.payload as { taskId?: string };
@@ -78,6 +139,8 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
             resumo: payload.resumo,
             itens: payload.itens,
             coverageMatrix: payload.coverageMatrix as CoverageMatrixRow[] | undefined,
+            subVerdicts: subVerdictsFor(taskId),
+            dispensed: dispensedFor(taskId),
           };
         }
         const payload = e.payload as SecOpsVerdictPayload;

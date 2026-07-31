@@ -13,6 +13,7 @@ const KIND_LABEL: Record<ActivityKind, string> = {
   session: 'Sessão',
   permission: 'Permissões',
   terminal: 'Comandos',
+  delegation: 'Delegações',
   generic: 'Outros',
 };
 

@@ -25,6 +25,8 @@ arquivo. Comece pela triagem.
 | todo mundo deslogado de uma vez, ou conta travada no login | [Rotação das chaves do auth](#rotacao-das-chaves-do-auth) |
 | custo por hora disparou | [Incidente de custo](#incidente-de-custo) |
 | painel vazio, sem trace, sem log | [Observabilidade](#observabilidade) |
+| não sei que versão está rodando | [Que versão está no ar](#que-versao-esta-no-ar) |
+| `blocked by CORS policy` no console do navegador | [Erro de CORS](#erro-de-cors) |
 | agente respondendo vazio, truncado ou lentíssimo | [Ambiente de inferência](#ambiente-de-inferencia) |
 
 Duas coisas que valem antes de qualquer procedimento:
@@ -63,8 +65,8 @@ make deploy-local-clean     # o mesmo, sem reconstruir as imagens
 Ao fim: web em <http://localhost:8088>, api em `:3000`, engine em `:4000` —
 **as mesmas portas do `docker-compose.prod.yml`**, de propósito (ADR 0025,
 decisão 10). O bootstrap roda o seed, que cria `owner@brabo.dev` já verificado
-com a senha de `BRABO_SMOKE_PASSWORD` (default `senha de dev do brabo`) — é
-com ela que se entra no login próprio da web.
+com a senha de `BRABO_SMOKE_PASSWORD` (default `brabo12345678`) — é com ela
+que se entra no login próprio da web.
 
 > **Isto ocupa as portas do `pnpm dev`.** Manter as portas iguais é o que faz o
 > `smoke.sh` valer nos dois modos, e o preço é que eles não
@@ -105,6 +107,89 @@ destacado da tag e constrói as imagens daquele commit.
 Ele **recusa** rodar com a árvore suja, em vez de adivinhar o que fazer com o
 seu trabalho em andamento. Ao terminar você fica em HEAD destacado; o comando
 para voltar aparece no log.
+
+### Que versão está no ar {#que-versao-esta-no-ar}
+
+Três lugares dizem a mesma coisa, e a resposta é a versão **assada no artefato**
+— não uma configuração que alguém possa ter trocado por acidente ([ADR 0036](adr/0036-telas-de-auth-fieis-ao-design-e-fontes-auto-hospedadas.md)):
+
+1. **A tela de login**, no rodapé. É o caminho mais rápido e não precisa de
+   acesso ao cluster: abra `/login` e leia o primeiro item do rodapé.
+2. **A tag da imagem**, se você tem `kubectl`:
+
+   ```bash
+   kubectl -n brabo get deploy -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.spec.template.spec.containers[0].image}{"\n"}{end}'
+   ```
+
+3. **`service.version` nos spans** da api, no Tempo. É o único dos três que
+   liga uma requisição específica a um build.
+
+`dev` nos três não é falha: é o que uma imagem construída fora do `release.yml`
+reporta, porque não nasceu de tag nenhuma. `docker compose`, `make deploy-local`
+sem `TAG=` e build local caem todos aí.
+
+**Divergência entre os três é o achado.** O rodapé vindo de uma versão e a tag da
+imagem de outra significa cache de bundle no navegador ou no nginx, não deploy
+errado — o bundle e a imagem saem do mesmo build. Recarregue ignorando cache
+antes de suspeitar do cluster.
+
+### Erro de CORS {#erro-de-cors}
+
+A mensagem do navegador nomeia o **destino** da chamada, nunca a causa. Leia
+primeiro a **origem** que ela cita, que é a informação útil
+([ADR 0037](adr/0037-cors-do-engine-e-a-porta-como-contrato.md)):
+
+```
+Access to fetch at 'http://localhost:3000/health' from origin
+'http://localhost:5174' has been blocked by CORS policy
+                     ^^^^ esta parte é o diagnóstico
+```
+
+**Se a origem não é a que você espera** (`:5174` em vez de `:5173`, host
+diferente, `https` em vez de `http`), o problema é a origem, não o CORS. Desde o
+ADR 0037 o Vite recusa subir em porta trocada, então isso só acontece se alguém
+passou `--port` ou se a web é servida por outro caminho. Conserte a origem, ou
+acrescente-a a `WEB_ORIGIN` — **nos dois serviços**, que leem a mesma variável.
+
+**Se a origem está certa**, confirme o que cada serviço responde. `curl` não faz
+CORS, então ele mostra o cabeçalho cru — que é exatamente o que o navegador olha:
+
+```bash
+# api — espera-se access-control-allow-origin + allow-credentials
+curl -sI http://localhost:3000/health -H "Origin: http://localhost:5173" \
+  | grep -i access-control
+
+# engine — espera-se access-control-allow-origin + vary: origin
+curl -sI http://localhost:4000/health -H "Origin: http://localhost:5173" \
+  | grep -i access-control
+
+# preflight, que é onde falta de allow-headers aparece
+curl -sI -X OPTIONS http://localhost:3000/auth/login \
+  -H "Origin: http://localhost:5173" \
+  -H "Access-Control-Request-Method: POST" \
+  -H "Access-Control-Request-Headers: content-type,x-csrf-token" \
+  | grep -i access-control
+```
+
+**Saída vazia é o achado**: o serviço não reconheceu a origem. `WEB_ORIGIN`
+errada, ausente, ou com a porta trocada.
+
+**Preflight sem o cabeçalho que a web manda** é o outro modo de falha, e o mais
+enganoso: a lista de `allowedHeaders` da api é explícita e **nenhum teste faz
+preflight**, então um cabeçalho novo no cliente passa no CI e quebra só no
+navegador. Hoje a lista é `Content-Type`, `Authorization`, `X-CSRF-Token`,
+`traceparent`.
+
+Três coisas que **não** são problema de CORS, por mais que pareçam:
+
+- **api ↔ engine**. CORS é mecanismo de navegador; ali quem chama é cliente HTTP
+  de servidor, que ignora esses cabeçalhos. Falha nesse caminho é service token
+  (`401`/`403`) — ver [rotação](#rotacao-das-chaves-do-auth).
+- **O canal Phoenix ficar mudo.** WebSocket não passa por CORS. Quem recusa é o
+  `check_origin` do endpoint, também alimentado por `WEB_ORIGIN`, e a recusa
+  aparece no log do engine — não no console do navegador como erro de CORS.
+- **`/metrics` do engine bloqueado no navegador.** É deliberado: métrica interna
+  não é legível por JavaScript de página. Use `curl`.
 
 ### k3d é o padrão mesmo com kind instalado
 
@@ -240,6 +325,12 @@ versionado. Um Secret plano **nunca** pode.
   `remote unpack failed`.
 - **Sem pgvector** no Postgres do CloudNativePG. Hoje nenhuma migration cria a
   extensão e nenhuma coluna `vector` existe.
+- **`.gitlab-ci.yml` sem validação estática local** (Fase 8c, ADR 0039). O
+  subagente Workflows da área de Infra valida workflow do GitHub Actions com
+  `actionlint` (pinado em `docker/engine/Dockerfile(.prod)`, mesmo padrão de
+  `hadolint`/`gitleaks`); não existe binário offline equivalente pro GitLab
+  CI — o linter oficial precisa de uma instância viva. Gap documentado, não
+  meia-solução inventada.
 
 ---
 
@@ -972,12 +1063,31 @@ por réplica).
    a métrica — a métrica é agregada por projeto e provider de propósito, para
    não criar uma série por sessão.
 
-### Quando não há trace nenhuma
+### Quando não há trace no Tempo {#quando-nao-ha-trace-no-tempo}
+
+O nome desta seção mudou junto com o comportamento (ADR 0035), e a distinção é o
+primeiro passo do diagnóstico: **span sempre é criada, em qualquer ambiente.** O
+que `OTEL_EXPORTER_OTLP_ENDPOINT` controla é a EXPORTAÇÃO. Então "não vejo trace
+no Grafana" e "não existe trace" são problemas diferentes.
+
+Antes de qualquer coisa, veja de que lado está a falha — o log responde sozinho:
+
+```bash
+kubectl -n brabo logs -l app.kubernetes.io/name=api --tail=20 | grep -o '"trace_id":"[^"]*"' | head
+```
+
+- **Tem `trace_id` no log, não tem trace no Tempo** → o problema é exportação:
+  siga de 1 a 4 abaixo.
+- **Não tem `trace_id` no log** → o problema é contexto, e é mais raro: ou o
+  `startTracing()` da api não rodou (ver `apps/api/src/tracing-boot.ts` — tem que
+  ser o primeiro import de `main.ts`), ou o `Engine.Telemetry.Otel.setup/0` não
+  foi chamado antes da árvore de supervisão.
 
 Na ordem, do mais provável ao menos:
 
-**1. A variável não está definida.** Sem `OTEL_EXPORTER_OTLP_ENDPOINT` a
-instrumentação é desligada de propósito, nos dois serviços.
+**1. A variável não está definida.** Sem `OTEL_EXPORTER_OTLP_ENDPOINT` a span é
+criada e descartada no fim, então há `trace_id` no log e nada no Tempo. Em
+desenvolvimento isso é o esperado (não há coletor); em cluster, é defeito.
 
 ```bash
 kubectl -n brabo exec deploy/api -- printenv OTEL_EXPORTER_OTLP_ENDPOINT

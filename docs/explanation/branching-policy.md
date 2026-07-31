@@ -342,6 +342,35 @@ modesto:
 | GitHub Release | com as notas geradas do CHANGELOG pela `scripts/changelog.mjs` |
 | conferência de versão | os quatro arquivos versionados, como **aviso** |
 | as quatro imagens de produção | construídas para provar que a tag é **construível** |
+| a versão dentro de duas delas | assada como `ARG` na api e no web — ver abaixo |
+
+#### A versão vive na tag, e é o release que a leva ao artefato
+
+A tag é a fonte da versão, mas uma imagem não consegue ler a própria tag: o
+container não sabe com que nome foi publicado, e a tag pode ser movida. Então o
+`release.yml` **passa a versão para dentro do build** — e é o único lugar do
+repositório que faz isso.
+
+`VERSION` é uma variável do `docker-bake.hcl`, separada de `TAG`, com default
+`dev`. O alvo `api` a converte em `BRABO_VERSION` e o alvo `web` em
+`VITE_BRABO_VERSION`; cada `Dockerfile.prod` a declara como `ARG` com o mesmo
+default. Daí ela chega ao `service.version` dos spans da api e ao rodapé das telas
+de auth da web ([ADR 0036](../adr/0036-telas-de-auth-fieis-ao-design-e-fontes-auto-hospedadas.md)).
+
+Duas consequências, e as duas são a intenção:
+
+- **Só release carimba versão.** O `ci.yml` usa o mesmo bakefile com `TAG=prod` e
+  não define `VERSION`, então as imagens dele reportam `dev`. Se a versão viesse
+  de `TAG`, todo span do CI sairia com `service.version=prod`, que não é versão de
+  nada.
+- **Versão não é configuração.** Ela é `ARG` de build e não chave de ConfigMap,
+  porque é propriedade do artefato: `brabo-web:1.1.2` não deve poder reportar
+  outra coisa. As URLs continuam em runtime, pelo `/config.js`, porque aquelas são
+  propriedade do ambiente (ADR 0024).
+
+Mexer nessa cadeia é mexer na política: quem alterar `VERSION` no bakefile ou nos
+`ARG` precisa alterar os dois lados juntos, ou a versão silenciosamente volta a
+`dev` — sem erro em lugar nenhum, porque `dev` é um valor válido.
 
 **As imagens não são publicadas** — `push: false`. Publicar em registry ainda não
 está decidido (o overlay de produção aponta para `ghcr.io/OWNER/*`, um

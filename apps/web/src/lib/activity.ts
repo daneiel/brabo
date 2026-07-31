@@ -1,5 +1,6 @@
 import type { ComponentType } from 'react';
-import type { SessionEvent } from './api-types';
+import type { DelegationEventPayload, SessionEvent } from './api-types';
+import { AGENTS } from './agents';
 import {
   BranchIcon,
   CommitIcon,
@@ -19,6 +20,7 @@ export type ActivityKind =
   | 'session'
   | 'permission'
   | 'terminal'
+  | 'delegation'
   | 'generic';
 
 export interface ActivityDisplay {
@@ -472,6 +474,40 @@ export function classifyEvent(event: SessionEvent): ActivityDisplay {
       color: type.includes('failed') ? 'var(--danger)' : 'var(--text-secondary)',
       bad: type.includes('failed'),
       text: `${actorLabel} ${type.includes('failed') ? 'falhou ao executar comando' : 'executou um comando'}`,
+    };
+  }
+  // Delegação de área (Fase 8b QA, Fase 8c Infra — ADR 0038): o lead
+  // registra o desfecho de CADA delegado, separado do parecer/PR
+  // consolidado que a área devolve pra fora. Antes do 8d caía no fallback
+  // genérico ("qa · delegation.completed") — sem rótulo do subagente nem
+  // do desfecho.
+  if (type.startsWith('delegation.')) {
+    const p = payload as DelegationEventPayload;
+    const subagentLabel = AGENTS[p.subagent as keyof typeof AGENTS]?.name ?? p.subagent;
+    if (type === 'delegation.completed') {
+      return {
+        kind: 'delegation',
+        icon: BranchIcon,
+        color: 'var(--success)',
+        bad: false,
+        text: `${subagentLabel} concluiu a delegação (${p.area})`,
+      };
+    }
+    if (type === 'delegation.failed') {
+      return {
+        kind: 'delegation',
+        icon: BranchIcon,
+        color: 'var(--danger)',
+        bad: true,
+        text: `${subagentLabel} falhou — origem: ${p.failureOrigin ?? '?'}`,
+      };
+    }
+    return {
+      kind: 'delegation',
+      icon: BranchIcon,
+      color: 'var(--text-secondary)',
+      bad: false,
+      text: `${subagentLabel} dispensada — ${p.justification ?? 'sem justificativa'}`,
     };
   }
 

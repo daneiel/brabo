@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { Alert } from '../components/ui/Alert';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { AuthLayout } from './AuthLayout';
@@ -16,7 +17,7 @@ interface SetPasswordPageProps {
 const MINIMO_DE_SENHA = 12;
 
 /**
- * Definir senha a partir do link (Fase 7a — o corte).
+ * Definir senha a partir do link (Fase 7a — o corte; visual no ADR 0036).
  *
  * Atende os dois propósitos da api — `password_reset` e
  * `set_initial_password`, o do usuário migrado — porque o cliente não escolhe
@@ -29,6 +30,12 @@ const MINIMO_DE_SENHA = 12;
  * A api não emite sessão aqui, de propósito: entrar direto a partir de um link
  * recebido por e-mail faria comprometer o e-mail equivaler a tomar a conta,
  * sem segundo passo. A tela manda para o login.
+ *
+ * ## Onde cada erro aparece
+ *
+ * Senha curta e senhas diferentes são erros de campo — saem sob o campo em que
+ * se conserta cada um. Link inválido e falha de rede são do formulário: nenhum
+ * campo está errado, e o alerta no topo do card é onde isso se diz.
  */
 export function SetPasswordPage({
   token,
@@ -38,23 +45,31 @@ export function SetPasswordPage({
   const [senha, setSenha] = useState('');
   const [confirmacao, setConfirmacao] = useState('');
   const [erro, setErro] = useState<string | null>(null);
+  const [erroDeSenha, setErroDeSenha] = useState<string | null>(null);
+  const [erroDeConfirmacao, setErroDeConfirmacao] = useState<string | null>(
+    null,
+  );
   const [enviando, setEnviando] = useState(false);
   const [pronto, setPronto] = useState(false);
 
   async function submeter(evento: FormEvent) {
     evento.preventDefault();
     setErro(null);
+    setErroDeSenha(null);
+    setErroDeConfirmacao(null);
 
     if (!token) {
       setErro('Link inválido: falta o código. Peça um novo.');
       return;
     }
     if (senha.length < MINIMO_DE_SENHA) {
-      setErro(`A senha precisa de pelo menos ${MINIMO_DE_SENHA} caracteres.`);
+      setErroDeSenha(
+        `A senha precisa de pelo menos ${MINIMO_DE_SENHA} caracteres.`,
+      );
       return;
     }
     if (senha !== confirmacao) {
-      setErro('As duas senhas não são iguais.');
+      setErroDeConfirmacao('As duas senhas não são iguais.');
       return;
     }
 
@@ -80,11 +95,15 @@ export function SetPasswordPage({
 
   if (pronto) {
     return (
-      <AuthLayout titulo="Senha definida">
-        <p className={styles.aviso}>
-          Pronto. Todas as sessões anteriores foram encerradas — entre de novo
-          com a senha nova.
-        </p>
+      <AuthLayout
+        titulo="Senha definida"
+        subtitulo="Já pode entrar com a senha nova."
+        irPara={irPara}
+      >
+        <Alert tone="success" role="status">
+          Pronto. Todas as sessões anteriores foram encerradas — entre de novo com
+          a senha nova.
+        </Alert>
         <Button fullWidth onClick={() => irPara('/login')}>
           Ir para o login
         </Button>
@@ -93,15 +112,41 @@ export function SetPasswordPage({
   }
 
   return (
-    <AuthLayout titulo="Definir senha">
+    <AuthLayout
+      titulo="Definir senha"
+      subtitulo="Escolha a senha da conta. As sessões abertas serão encerradas."
+      irPara={irPara}
+      rodapeDoCartao={
+        <>
+          O link expirou?{' '}
+          <button
+            type="button"
+            className={styles.link}
+            onClick={() => irPara('/esqueci-senha')}
+          >
+            Pedir outro
+          </button>
+        </>
+      }
+    >
+      {erro && (
+        <Alert tone="danger" role="alert">
+          {erro}
+        </Alert>
+      )}
+
       <form className={styles.form} onSubmit={submeter}>
         <Input
           label="Senha nova"
           type="password"
           autoComplete="new-password"
           required
+          preenchido
+          revelavel
+          mono
           value={senha}
           onChange={(e) => setSenha(e.target.value)}
+          error={erroDeSenha}
           hint={`Pelo menos ${MINIMO_DE_SENHA} caracteres. Uma frase longa vale mais que símbolos.`}
         />
         <Input
@@ -109,26 +154,19 @@ export function SetPasswordPage({
           type="password"
           autoComplete="new-password"
           required
+          preenchido
+          revelavel
+          mono
           value={confirmacao}
           onChange={(e) => setConfirmacao(e.target.value)}
-          error={erro}
+          error={erroDeConfirmacao}
         />
         <div className={styles.acoes}>
-          <Button type="submit" fullWidth disabled={enviando}>
+          <Button type="submit" fullWidth loading={enviando}>
             {enviando ? 'Definindo…' : 'Definir senha'}
           </Button>
         </div>
       </form>
-
-      <div className={styles.rodape}>
-        <button
-          type="button"
-          className={styles.link}
-          onClick={() => irPara('/esqueci-senha')}
-        >
-          Pedir outro link
-        </button>
-      </div>
     </AuthLayout>
   );
 }

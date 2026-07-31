@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { Alert } from '../components/ui/Alert';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { AuthLayout } from './AuthLayout';
@@ -10,7 +11,7 @@ interface ForgotPasswordPageProps {
 }
 
 /**
- * Pedido de redefinição (Fase 7a — o corte).
+ * Pedido de redefinição (Fase 7a — o corte; fidelidade visual no ADR 0036).
  *
  * É também o caminho do usuário MIGRADO do Keycloak: a senha antiga não veio
  * junto, e o `set_initial_password` é emitido por aqui. Por isso o texto fala
@@ -48,11 +49,15 @@ export function ForgotPasswordPage({
 
   if (enviado) {
     return (
-      <AuthLayout titulo="Confira seu e-mail">
-        <p className={styles.aviso}>
-          Se houver uma conta com <strong>{email}</strong>, enviamos um link
-          para definir uma senha nova. Ele vale por tempo limitado.
-        </p>
+      <AuthLayout
+        titulo="Confira seu e-mail"
+        subtitulo="O link vale por tempo limitado e só pode ser usado uma vez."
+        irPara={irPara}
+      >
+        <Alert tone="success" role="status">
+          Se houver uma conta com <strong>{email}</strong>, enviamos um link para
+          definir uma senha nova.
+        </Alert>
         <Button variant="secondary" fullWidth onClick={() => irPara('/login')}>
           Voltar para o login
         </Button>
@@ -61,37 +66,53 @@ export function ForgotPasswordPage({
   }
 
   return (
-    <AuthLayout titulo="Definir uma senha nova">
-      <p className={styles.aviso}>
-        Serve para quem esqueceu a senha e para quem já tinha conta antes desta
-        versão — nesse caso, a senha antiga não foi migrada.
-      </p>
+    <AuthLayout
+      titulo="Definir uma senha nova"
+      subtitulo="Informe seu e-mail e enviamos um link para criar a senha."
+      irPara={irPara}
+      rodapeDoCartao={
+        <>
+          Lembrou a senha?{' '}
+          <button
+            type="button"
+            className={styles.link}
+            onClick={() => irPara('/login')}
+          >
+            Voltar para o login
+          </button>
+        </>
+      }
+      abaixoDoCartao={
+        <Alert tone="warning">
+          Serve também para quem já tinha conta antes desta versão — nesse caso,{' '}
+          <strong>a senha antiga não foi migrada</strong> e este é o caminho para
+          criar a primeira.
+        </Alert>
+      }
+    >
+      {erro && (
+        <Alert tone="danger" role="alert">
+          {erro}
+        </Alert>
+      )}
+
       <form className={styles.form} onSubmit={submeter}>
         <Input
           label="E-mail"
           type="email"
+          placeholder="voce@empresa.com"
           autoComplete="username"
           required
+          preenchido
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          error={erro}
         />
         <div className={styles.acoes}>
-          <Button type="submit" fullWidth disabled={enviando}>
+          <Button type="submit" fullWidth loading={enviando}>
             {enviando ? 'Enviando…' : 'Enviar link'}
           </Button>
         </div>
       </form>
-
-      <div className={styles.rodape}>
-        <button
-          type="button"
-          className={styles.link}
-          onClick={() => irPara('/login')}
-        >
-          Voltar para o login
-        </button>
-      </div>
     </AuthLayout>
   );
 }
