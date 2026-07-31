@@ -456,6 +456,43 @@ export interface SecOpsVerdictPayload {
   itens: string[];
 }
 
+// Desfecho de UMA delegação de área (Fase 8b QA, Fase 8c Infra — ADR 0038).
+// Espelha `apps/api/src/domain/agents/delegation.entity.ts`. `taskId` é
+// `null` pra áreas sem task de backlog por trás (Infra — a delegação é
+// sobre a sessão).
+export type DelegationStatus = 'completed' | 'failed' | 'dispensed';
+export type FailureOrigin = 'infra' | 'modelo' | 'codigo' | 'politica';
+
+export interface Delegation {
+  id: string;
+  projectId: string;
+  sessionId: string;
+  taskId: string | null;
+  area: string;
+  leadAgent: string;
+  subagent: string;
+  status: DelegationStatus;
+  parecerArtifactId: string | null;
+  failureOrigin: FailureOrigin | null;
+  failureReason: string | null;
+  justification: string | null;
+  createdAt: string;
+}
+
+// Payload dos session_events `delegation.completed`/`.failed`/`.dispensed`
+// (Fase 8b/8c) — o que `RecordDelegationUseCase` grava no log, narrado no
+// feed e usado pra montar os sub-pareceres da timeline de PR (Fase 8d).
+export interface DelegationEventPayload {
+  delegationId: string;
+  taskId: string | null;
+  area: string;
+  subagent: string;
+  parecerArtifactId: string | null;
+  failureOrigin: FailureOrigin | null;
+  failureReason: string | null;
+  justification: string | null;
+}
+
 export interface Story {
   id: string;
   epicId: string;

@@ -36,7 +36,11 @@ defmodule Engine.Psychologist.Tools.EmitHypotheses do
               "properties" => %{
                 "agenteAlvo" => %{
                   "type" => "string",
-                  "description" => "id do agente sobre quem é a hipótese (ex.: dev-api, po)"
+                  "description" =>
+                    "id do agente sobre quem é a hipótese (ex.: dev-api, po). Pode ser um " <>
+                      "SUBAGENTE de área quando o log mostra a atividade dele especificamente " <>
+                      "(ex.: qa-automacao, qa-performance-seguranca, infra-workflows) — mire no " <>
+                      "subagente, não no lead, quando a hipótese é sobre o que ELE fez"
                 },
                 "observacao" => %{"type" => "string"},
                 "hipotese" => %{"type" => "string"},

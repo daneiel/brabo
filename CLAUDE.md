@@ -41,65 +41,79 @@ e pipeline de aprovação de ações com autoridade final do usuário.
   retropropagação automática, rulesets versionados em
   docs/reference/rulesets.md. Esteira exercitada de ponta a ponta
   (v0.1.0 → v0.2.0) e a cadeia de hotfix validada por execução real.
-- FASE 7 — ATIVA: auth first-party no domínio da api (substituindo o
-  Keycloak) e referência completa de rotas gerada a partir do OpenAPI.
-  - 7a (itens 1–3) — CONCLUÍDA: módulo auth em paralelo ao Keycloak —
-    argon2id, access token Ed25519, rotação de refresh com revogação
-    de família no reuso, lockout progressivo, tokens de conta e
-    MailSender log-only (ADR 0031, RN-030..033).
-  - 7.2 (itens 4–5) — CONCLUÍDA: o corte atômico — emissor próprio no
-    guard sem tocar no RBAC, /internal/* fora do JWT com service
-    token, sessão da web em cookie httpOnly com CSRF, migração dos
-    usuários e remoção do Keycloak do compose, do k8s e das docs
-    (ADR 0032, RN-034/035).
-  - 7b (itens 6–8) — CONCLUÍDA: OpenAPI em todos os 23 controllers,
-    DTOs de resposta travados por tipo contra a entidade de domínio
-    (Wire<T> + MesmasChaves), teste de tabela exigindo summary,
-    resposta com corpo e tag da lista fechada, e docs/reference/api/
-    gerado pelo docusaurus-plugin-openapi-docs com manifesto de hashes
-    no docs:check (ADR 0033).
+- FASE 7 — CONCLUÍDA: auth first-party substituindo o Keycloak e
+  referência de rotas gerada do OpenAPI — argon2id, access Ed25519,
+  rotação de refresh com revogação de família no reuso, lockout
+  progressivo, tokens de conta e MailSender log-only (ADR 0031,
+  RN-030..033); corte atômico com emissor próprio no guard e RBAC
+  intocado, /internal/* com service token, cookie httpOnly + CSRF na
+  web, migração de usuários e remoção total do Keycloak (ADR 0032,
+  RN-034/035); OpenAPI nos 23 controllers com DTOs travados por tipo
+  (Wire<T> + MesmasChaves), teste de tabela exigindo summary/corpo/tag
+  da lista fechada, docs/reference/api/ gerado com manifesto de hashes
+  no docs:check (ADR 0033).
 - Não refatore o que está pronto sem pedido explícito.
 
-## Escopo da FASE 7 (ativa — auth first-party + referência de rotas)
+## Escopo da FASE 8 (ativa — hierarquia de agentes: leads e subespecialidades)
+Regra estrutural nova: todo subagente/especialista responde ao LEAD da
+sua área; o lead é o ÚNICO ponto de contato externo da área. ADR antes
+de código.
 
-### 7a — Substituir o Keycloak por auth no domínio da api
-1. Módulo auth first-party: registro (email+senha), login, logout,
-   refresh. Senhas com argon2id (parâmetros documentados); tokens:
-   access JWT curto (15min, assinado com chave em env via envelope da
-   Fase 1) + refresh opaco em tabela com ROTAÇÃO obrigatória (reuso de
-   refresh já rotacionado = revogação da família inteira + evento de
-   segurança no log).
-2. Proteções: lockout progressivo por usuário e IP (janela no
-   Postgres, sem Redis), comparações em tempo constante, enumeração de
-   e-mail bloqueada (mesma resposta para usuário inexistente), senha
-   com política mínima verificada no domínio.
-3. Fluxos de conta: verificação de e-mail e reset de senha por token
-   de uso único com expiração — envio de e-mail atrás de interface
-   MailSender com implementação log-only por ora (SMTP real é config
-   futura, não bloqueia a fase).
-4. Migração: usuários existentes do Keycloak importados (id, email,
-   roles do RBAC preservados); senhas NÃO migram — fluxo de "definir
-   nova senha" no primeiro login pós-migração. Guard JWT da api
-   troca de emissor sem mudar o contrato dos controllers (RBAC da
-   Fase 1 intocado). HTTP interno engine↔api passa a service token
-   próprio (segredo compartilhado via env, rotacionável).
-5. Remoção do Keycloak: containers (compose dev e prod), manifests
-   k8s, realm e docs; a web troca o fluxo OIDC por login próprio
-   seguindo o design system. ADR registrando o subconjunto
-   implementado e o backlog consciente (MFA, OIDC social, federação).
+### 8a — Modelo de hierarquia no domínio (genérico, sem agente novo)
+1. Áreas: tabela agent_areas {area, lead_agent, members[]} por projeto;
+   agente pertence a no máximo uma área; área tem exatamente um lead.
+   Agentes sem área (Criativo, PO, Arquiteto, Psicólogo, Anamnese)
+   seguem como hoje.
+2. Handoff externo só endereça LEAD ou agente sem área — handoff a
+   subagente de área é rejeitado no domínio (teste). Delegação interna
+   é mecanismo novo: delegations {lead, subagent, task_ref, status,
+   parecer_ref}, invisível para fora da área.
+3. Consolidação: o lead responde ao handoff com UM artefato
+   consolidado (consolidated_verdict em ArtifactSchemas,
+   server-emitted) referenciando os pareceres internos —
+   rastreabilidade preservada, contrato externo dos gates INALTERADO.
+4. Orçamento e falha: budget da área no lead, repassado às delegações
+   como sub-budget; subagente estourado/blocked reporta ao lead com
+   ORIGEM da falha (ADR 0020), e o lead decide: redistribuir,
+   consolidar parcial ou bloquear a área — decisão registrada como
+   evento; nunca falha silenciosa de subagente.
+5. Dev continua PLANO nesta fase (dev-<modulo> sem lead); extensões
+   futuras registradas no ADR (Dev Lead, áreas propostas pelo
+   Arquiteto via module_map), não implementadas.
 
-### 7b — Referência completa de rotas no Docusaurus (gerada, nunca à mão)
-6. OpenAPI como fonte: @nestjs/swagger em TODOS os controllers —
-   summary (objetivo), tags por domínio, DTOs de request/response
-   tipados com exemplos, códigos de erro; o teste de tabela de rotas
-   da Fase 5 passa a exigir também metadados OpenAPI (rota sem
-   summary/DTO quebra o teste).
-7. Geração: pnpm docs:generate exporta o openapi.json e materializa
-   docs/reference/api/ via docusaurus-plugin-openapi-docs (uma página
-   por tag, sidebar própria); entra no docmap como generated: true
-   com severity block; docs:check falha se o gerado divergir.
-8. Rotas de auth novas nascem já documentadas (7a e 7b na mesma
-   entrega de superfície).
+### 8b — Primeira instância: QA como área
+6. QA Lead (Gerente de Qualidade) assume o gate awaiting_qa como único
+   contato; duas subespecialidades com harness e instruções próprias:
+   QA de Automação (herda o QAAgent atual: suite + coverage_matrix) e
+   QA de Performance e Segurança (RNFs de performance da story + apoio
+   ao checklist de segurança SEM substituir o SecOps, que segue gate
+   próprio — fronteira explícita nas instruções de ambos).
+7. Delegação é decisão do lead conforme a story (sem RNF de
+   performance → "delegação dispensada" registrada com justificativa,
+   nunca silêncio); consolidação num veredito único do gate; ciclo K
+   de correções e teto de orçamento passam ao nível da ÁREA; falha de
+   subespecialidade com origem infra/modelo bloqueia a task com o
+   motivo real — não vira changes_requested nem queima correção do dev.
+
+### 8c — Segunda instância: subagente de workflows no Infra
+8. Área infra: InfraAgent vira lead (handoff do Arquiteto inalterado);
+   subagente Workflows gera pipelines de CI do projeto do usuário
+   conforme o provider (GitHub Actions | GitLab CI via capabilities),
+   com conhecimento base em docs/explanation/branching-policy.md e no
+   ADR 0030; validação local com actionlint (pinado no Dockerfile do
+   engine); entrega via delegação → consolidação → PRs pelo fluxo
+   normal com gates.
+
+### 8d — UI e fechamento
+9. Painel do time agrupado por área (lead com badge, subespecialidades
+   aninhadas com status/binding/tokens próprios); delegações e
+   dispensas visíveis na linha do tempo da PR (parecer consolidado
+   expansível); agente_alvo do Psicólogo e da Anamnese aceita
+   subagentes de área.
+10. ADR "hierarquia de agentes" fechando: modelo, contratos, e o que
+    fica para depois (Dev Lead; áreas dinâmicas do Arquiteto via
+    module_map). docmap, catálogos gerados (delegations,
+    consolidated_verdict), CHANGELOG e docs verdes.
 
 ## Stack (decidida — não proponha alternativas)
 - `apps/api`: NestJS 11 + Drizzle ORM + PostgreSQL 16 + pgvector
@@ -107,8 +121,8 @@ e pipeline de aprovação de ações com autoridade final do usuário.
 - `apps/web`: React 19 + Vite + TanStack Query/Router
 - Monorepo pnpm (TS) com apps/engine Elixir ao lado; Docker Compose para dev
 - Auth: first-party no domínio da api (argon2id + access JWT curto +
-  refresh opaco com rotação) — substitui o Keycloak na Fase 7;
-  autorização RBAC no domínio da api (inalterada desde a Fase 1)
+  refresh opaco com rotação); autorização RBAC no domínio da api
+  (inalterada desde a Fase 1)
 - Deploy: Kubernetes (k3d/kind em validação local)
 - Docs: Docusaurus 3.x em website/ lendo de docs/; Mermaid para
   diagramas; busca local
@@ -124,8 +138,9 @@ e pipeline de aprovação de ações com autoridade final do usuário.
 - Toda mudança entra por PR — push direto em permanente é bloqueado;
   única exceção de push: tags (bot de release) e .release/gate.json
   (bot do gate).
-- Comunicação api ↔ engine: eventos via Postgres (transactional outbox na
-  api, Oban no engine) + HTTP interno para comandos síncronos.
+- Comunicação api ↔ engine: eventos via Postgres (transactional outbox
+  na api, Oban no engine) + HTTP interno com service token para
+  comandos síncronos.
 - Todo evento de domínio é imutável: nunca UPDATE em tabelas de eventos.
 - Estados de sessão são máquina de estados explícita:
   created → active → closing → closed | closed_abnormally
@@ -133,6 +148,8 @@ e pipeline de aprovação de ações com autoridade final do usuário.
   proposed_action e respeita permissions.json; deny sempre vence allow.
 - Agentes rodam SEMPRE dentro de um Harness; nenhuma chamada de LLM ou
   ferramenta fora dele.
+- Handoff externo endereça só LEAD de área ou agente sem área;
+  delegação interna é privada da área (regra da FASE 8).
 - Merge em branch protegida (dev/qa/main) é SEMPRE manual do
   usuário — sem opção de automatizar, garantido por teste.
 - Commits de agentes usam identidade "<agente>[bot]" com o usuário
@@ -181,11 +198,13 @@ e pipeline de aprovação de ações com autoridade final do usuário.
 - Não versionar à mão: toda tag nasce de workflow
 - Não instalar libs sem justificar no plano
 - Não refatorar código das fases concluídas fora do necessário para a
-  Fase 7
+  Fase 8
 
-## O que NÃO fazer (adições da FASE 7)
-- Não implementar MFA, login social, OIDC provider ou federação —
-  backlog registrado no ADR
-- Não migrar senhas do Keycloak (inviável e indesejável): fluxo de
-  redefinição
-- Não escrever docs/reference/api/ à mão — só via geração
+## O que NÃO fazer (adições da FASE 8)
+- Não implementar Dev Lead nem áreas dinâmicas propostas pelo
+  Arquiteto via module_map — backlog registrado no ADR da hierarquia
+- Não mudar o contrato EXTERNO dos gates (QA/SecOps) ao introduzir
+  consolidação — quem consome o parecer continua vendo um veredito por
+  gate
+- Não deixar falha de subagente silenciosa: toda falha reporta origem
+  ao lead, que decide e registra evento

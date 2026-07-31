@@ -33,6 +33,14 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `AUTH_SET_PASSWORD_TTL_MS`. O serviço `keycloak` sai do compose de dev e de
   prod, e `deploy/k8s/base/keycloak/` deixa de existir junto com o
   `ExternalSecret` `keycloak-secrets`
+- **api,engine**: a rota interna de delegação de área deixa de ser aninhada
+  sob task — `POST /internal/sessions/:sessionId/tasks/:taskId/delegations`
+  vira `POST /internal/sessions/:sessionId/delegations`, com `taskId` agora
+  opcional no corpo em vez de obrigatório na URL. `delegations.task_id` no
+  banco virou nullable. Motivo: a área de Infra (Fase 8c) delega sobre a
+  sessão, sem task de backlog por trás de uma PR de infra — a rota nascida
+  na Fase 8b (só QA) era estreita demais pra segunda área
+  ([RN-037](docs/business-rules.md#rn-037))
 
 ### Novidades
 
@@ -121,9 +129,72 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - **web**: `WEB_LOG_LEVEL` ligado no k8s. A encanação existia ponta a ponta e
   faltava a variável, então `logger.debug` era código morto em todo ambiente
   publicado
+- **engine**: o gate de QA vira **área** — `QA Lead` passa a ser o único
+  contato do gate (mesmo contrato `gates/verdict`/`tasks/:taskId/block` de
+  sempre), e delega a duas subespecialidades: `QA de Automação` (o QAAgent de
+  antes, sem mudança de prompt ou de matriz de cobertura) sempre, e `QA de
+  Performance e Segurança` (RNFs de performance da story; apoio de segurança em
+  nível de código — SecOps continua o gate determinístico próprio) só quando a
+  story tem RNF pertinente. Story sem RNF de performance gera delegação
+  **dispensada** com justificativa registrada, nunca silêncio. Falha de
+  subespecialidade com origem infra/modelo bloqueia a task com a origem real em
+  vez de virar `changes_requested` para o dev — a mesma lição do
+  [ADR 0020](docs/adr/0020-gates-validados-por-execucao-real.md), agora um
+  nível acima ([RN-036](docs/business-rules.md#rn-036),
+  [ADR 0038](docs/adr/0038-hierarquia-de-agentes.md))
+- **api**: rota interna nova `POST /internal/sessions/:sessionId/delegations`,
+  que registra o desfecho de cada delegação de área
+  (`completed`/`failed`/`dispensed`) separado da chamada que a área usa pra
+  reportar o resultado consolidado pra fora — a api continua enxergando só
+  esse resultado, nunca os delegados internos. `tasks.block` ganha um campo
+  opcional `origin` (a mesma origem de falha — infra/modelo/código/política)
+  persistido em `tasks.blocked_origin`
+- **engine**: o Infra vira **área** (segunda instância do ADR 0038, depois
+  da de QA) — `InfraLeadServer` continua o contato externo de sempre
+  (handoff do Arquiteto inalterado) e passa a delegar o pipeline de CI pro
+  subagente `Workflows`, que gera GitHub Actions ou GitLab CI conforme o
+  provider do repositório do projeto (nunca por `capabilities` — GitHub e
+  GitLab têm as mesmas). As duas delegações (Dockerfiles/compose pelo
+  próprio Lead, CI pelo Workflows) sempre rodam e sempre são rastreadas, e
+  se consolidam numa PR só, pelo mesmo `open_infra_pr` de sempre. Cada
+  arquivo passa por validação local antes de propor — `actionlint` novo,
+  pinado no Dockerfile do engine, só pra GitHub Actions (sem equivalente
+  offline pro GitLab CI, gap documentado)
+  ([RN-037](docs/business-rules.md#rn-037),
+  [ADR 0039](docs/adr/0039-actionlint-e-validacao-do-pipeline-de-ci-gerado.md))
+- **web**: a hierarquia de agentes (QA e Infra) fica visível — painel do
+  time agrupado por área (card do lead com badge "Lead", subespecialidades
+  aninhadas e recolhíveis, cada uma com binding de modelo e custo de tokens
+  próprios); Insights (hipóteses do Psicólogo) agrupados por área quando o
+  alvo é uma subespecialidade, com o alvo específico sempre visível no
+  card; feed do projeto narrando `delegation.completed`/`failed`/
+  `dispensed` com o mesmo tratamento dos demais eventos. Tudo derivado do
+  `session_events` que a UI já buscava — nenhuma rota nova
+  ([ADR 0038](docs/adr/0038-hierarquia-de-agentes.md#fechamento-fase-8d))
+- **engine**: a tool do Psicólogo (`emit_hypotheses`) e a da Anamnese
+  (`propose_instruction_patch`) passam a citar subagentes de área como
+  exemplo de alvo válido (`qa-automacao`, `qa-performance-seguranca`,
+  `infra-workflows`) — nenhuma validação nova, já aceitavam qualquer string;
+  só o modelo não tinha o nudge pra considerar a subespecialidade
 
 ### Correções
 
+- **web**: a timeline de PR vazava o parecer INTERNO de cada subespecialidade
+  de QA como um card duplicado, idêntico ao consolidado — `verdictsFor`/
+  `infraVerdictsFor` (`ProjectApprovalsTab.tsx`) filtravam só por tipo de
+  evento e `taskId`, nunca por `actor.id`, e o parecer interno de
+  `qa-automacao`/`qa-performance-seguranca` carrega o MESMO `taskId` do
+  parecer final. Numa story com RNF de performance a timeline mostrava 2-3
+  cards "QA" indistinguíveis. Agora o card principal é só o consolidado
+  (`actor.id === 'qa'`); os internos ficam dentro do expand
+- **web**: o filtro "por agente" do feed de atividade nunca funcionou —
+  `agentOptions` existia como prop de `ActivityFeed` desde sempre, mas
+  nenhum dos dois lugares que renderizam o feed (`ProjectOverviewTab.tsx`,
+  `SessionPage.tsx`) chegava a passá-la
+- **docs**: `docs/reference/artifacts.md` ainda dizia "os seis schemas de
+  artefato" e não listava `infra_delegation_files` (o sétimo, Fase 8c) —
+  drift de documentação gerada que o `docmap` marca como `block` e ninguém
+  tinha fechado
 - **engine**: o endpoint **não tinha CORS nenhum**. `GET /health` respondia 200 com
   o corpo correto e sem um único cabeçalho `Access-Control-*`, então o navegador
   descartava a resposta — a tela de status mostrava `engine: error` com o engine

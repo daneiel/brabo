@@ -123,8 +123,13 @@ defmodule Engine.Sessions.FakeEngineApiClient do
   end
 
   @impl true
-  def mark_task_blocked(_project_id, _session_id, task_id, reason, diagnosis, agent_id) do
+  def mark_task_blocked(_project_id, _session_id, task_id, reason, diagnosis, agent_id, origin) do
+    # Mesma mensagem de sempre — os testes da Fase 4a (dev_agent_server_test.exs,
+    # noop_dev_agent_server_test.exs) casam este tuple de 5 e não foram
+    # retrofitados nesta entrega (ADR 0038, corte de escopo). `origin` chega
+    # numa notificação PRÓPRIA, só pra quem quiser afirmar sobre ele (Fase 8b).
     notify({:task_blocked, task_id, reason, diagnosis, agent_id})
+    notify({:task_blocked_origin, task_id, origin})
     {:ok, %{"id" => task_id, "blocked" => true}}
   end
 
@@ -147,6 +152,13 @@ defmodule Engine.Sessions.FakeEngineApiClient do
       ) do
     notify({:gate_verdict_recorded, task_id, gate, veredito, resumo, itens, max_corrections})
     reply(:fake_gate_verdict_response, %{"nextAction" => "done", "task" => %{"id" => task_id}})
+  end
+
+  @impl true
+  def record_delegation(payload) do
+    notify({:delegation_recorded, payload})
+
+    reply(:fake_record_delegation_response, %{"id" => "del-#{System.unique_integer([:positive])}"})
   end
 
   @impl true

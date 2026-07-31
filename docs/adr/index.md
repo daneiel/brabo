@@ -3,7 +3,7 @@ id: adr-index
 title: Decisões arquiteturais (ADR)
 sidebar_label: Índice de ADRs
 sidebar_position: 0
-description: Os 37 registros de decisão arquitetural do Brabo, agrupados por fase, com o que cada um decidiu.
+description: Os 38 registros de decisão arquitetural do Brabo, agrupados por fase, com o que cada um decidiu.
 keywords: [ADR, decisão arquitetural, arquitetura, histórico]
 ---
 
@@ -20,7 +20,7 @@ atual.** Para o estado atual, use [Regras de negócio](../business-rules.md),
 [Arquitetura](../architecture.md) e o [Runbook](../runbook.md). Para o
 raciocínio, venha aqui.
 
-Todos os 37 estão com status **aceito**.
+Todos os 38 estão com status **aceito**.
 
 ## Fase 2 — Git
 
@@ -119,11 +119,18 @@ O loop que faz o time melhorar.
 | [0036](0036-telas-de-auth-fieis-ao-design-e-fontes-auto-hospedadas.md) | As telas de auth fiéis ao mock aprovado: as três fontes do design system auto-hospedadas (a CSP bloqueava o CDN e a tipografia caía em fonte de sistema em produção), a versão da tag assada no artefato, o contraste calculado dos tokens em vez de medido pelo axe, e as seis divergências deliberadas do mock |
 | [0037](0037-cors-do-engine-e-a-porta-como-contrato.md) | O CORS que o engine não tinha (`/health` respondia 200 e o navegador descartava), o plug próprio em vez do Corsica com `/internal` e `/metrics` fora da allowlist, `WEB_ORIGIN` lido num lugar só, e `strictPort` porque a porta faz parte do contrato de CORS |
 
+## Fase 8 — Hierarquia de agentes
+
+| # | decisão |
+|---|---|
+| [0038](0038-hierarquia-de-agentes.md) | Área, lead e delegação: handoff externo só endereça lead ou agente sem área, consolidação num artefato só sem mudar o contrato externo dos gates, orçamento em cascata com sub-teto por delegação, origem da falha tipada e retrofitada em todo o sistema que já classificava falha informalmente |
+| [0039](0039-actionlint-e-validacao-do-pipeline-de-ci-gerado.md) | actionlint pinado no Dockerfile do engine (mesmo padrão do gitleaks/hadolint), validação do pipeline de CI na GERAÇÃO em vez de num gate pós-PR novo, e o gap documentado de `.gitlab-ci.yml` sem linter estático offline equivalente |
+
 ## A convenção
 
 - **Um arquivo por decisão**, em `docs/adr/NNNN-titulo-curto.md`, com
   numeração sequencial de 4 dígitos. **Sem reuso de número**, nem quando um ADR
-  é superado — o próximo é **0038**.
+  é superado — o próximo é **0040**.
 - **Três seções, só elas:** **Contexto** (o problema ou a força que motivou),
   **Decisão** (o que foi decidido), **Consequências** (os trade-offs aceitos e
   o que fica para depois).

@@ -237,3 +237,50 @@ describe('classifyEvent — Anamnese e patches de instrução (Fase 4b)', () => 
 function classifyInput(type: string, payload: Record<string, unknown>) {
   return ev(type, 'action-executor', payload);
 }
+
+describe('classifyEvent — delegação de área (Fase 8b/8c, narrada no feed — Fase 8d)', () => {
+  it('delegation.completed nomeia o subagente reconhecido e a área', () => {
+    const c = classifyEvent(
+      ev('delegation.completed', 'qa-lead', {
+        subagent: 'qa-automacao',
+        area: 'qa',
+      }),
+    );
+    expect(c.kind).toBe('delegation');
+    expect(c.bad).toBe(false);
+    expect(c.text).toContain('QA de Automação');
+    expect(c.text).toContain('qa');
+  });
+
+  it('delegation.failed mostra a origem e marca como ruim', () => {
+    const c = classifyEvent(
+      ev('delegation.failed', 'infra-lead', {
+        subagent: 'infra-workflows',
+        area: 'infra',
+        failureOrigin: 'modelo',
+      }),
+    );
+    expect(c.bad).toBe(true);
+    expect(c.text).toContain('Workflows');
+    expect(c.text).toContain('modelo');
+  });
+
+  it('delegation.dispensed mostra a justificativa — nunca some em silêncio', () => {
+    const c = classifyEvent(
+      ev('delegation.dispensed', 'qa-lead', {
+        subagent: 'qa-performance-seguranca',
+        area: 'qa',
+        justification: 'story sem RNF de performance pertinente',
+      }),
+    );
+    expect(c.bad).toBe(false);
+    expect(c.text).toContain('story sem RNF de performance pertinente');
+  });
+
+  it('subagente desconhecido degrada pro id cru, sem quebrar', () => {
+    const c = classifyEvent(
+      ev('delegation.completed', 'qa-lead', { subagent: 'algo-novo', area: 'qa' }),
+    );
+    expect(c.text).toContain('algo-novo');
+  });
+});

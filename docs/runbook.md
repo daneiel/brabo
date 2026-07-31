@@ -325,6 +325,12 @@ versionado. Um Secret plano **nunca** pode.
   `remote unpack failed`.
 - **Sem pgvector** no Postgres do CloudNativePG. Hoje nenhuma migration cria a
   extensão e nenhuma coluna `vector` existe.
+- **`.gitlab-ci.yml` sem validação estática local** (Fase 8c, ADR 0039). O
+  subagente Workflows da área de Infra valida workflow do GitHub Actions com
+  `actionlint` (pinado em `docker/engine/Dockerfile(.prod)`, mesmo padrão de
+  `hadolint`/`gitleaks`); não existe binário offline equivalente pro GitLab
+  CI — o linter oficial precisa de uma instância viva. Gap documentado, não
+  meia-solução inventada.
 
 ---
 

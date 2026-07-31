@@ -1,7 +1,7 @@
 defmodule Engine.Gates.Dispatcher do
   @moduledoc """
   Indireção pra disparar os gates (QA/SecOps) a partir do
-  `Engine.Dev.DevAgentServer`/`Engine.Gates.QaAgentServer` — trocável em
+  `Engine.Dev.DevAgentServer`/`Engine.Gates.QaLeadServer` — trocável em
   teste (evita subir GenServers reais que tocam o banco fora do sandbox
   Ecto do processo de teste), mesmo padrão de `worktree_manager()` em
   `DevAgentServer`.
@@ -41,16 +41,16 @@ defmodule Engine.Gates.Dispatcher do
 end
 
 defmodule Engine.Gates.Dispatcher.Live do
-  @moduledoc "Sobe (se preciso) e dispara o QAAgent/SecOpsAgent de verdade."
+  @moduledoc "Sobe (se preciso) e dispara o QA Lead/SecOpsAgent de verdade."
 
   @behaviour Engine.Gates.Dispatcher
 
-  alias Engine.Gates.{QaAgentServer, QaAgentSupervisor, SecOpsAgentServer, SecOpsAgentSupervisor}
+  alias Engine.Gates.{QaLeadServer, QaLeadSupervisor, SecOpsAgentServer, SecOpsAgentSupervisor}
 
   @impl true
   def run_qa(project_id, task_id) do
-    {:ok, _pid, _origin} = QaAgentSupervisor.start_agent(project_id)
-    QaAgentServer.run(project_id, task_id)
+    {:ok, _pid, _origin} = QaLeadSupervisor.start_agent(project_id)
+    QaLeadServer.run(project_id, task_id)
     :ok
   end
 
