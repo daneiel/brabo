@@ -453,6 +453,21 @@ dele. As três respostas estão em
   rodado contra os três providers)
 - **Origem:** [ADR 0040](adr/0040-base-openai-compativel-e-contrato-de-llm-providers.md)
 
+### RN-040 — O metering registra quem SERVIU a chamada, não só por onde ela entrou {#rn-040}
+
+Quando a chamada passa por um hub que informa o provedor real, `token_usage`
+grava esse provedor em `upstream_provider` além do provider de entrada. Sem hub
+— ou com hub que não informou — o campo fica **`null`**, nunca string vazia: a
+consulta de custo por provedor precisa distinguir "não passou por hub" de
+"passou e o hub não disse".
+
+Nas métricas o rótulo `upstream_provider` repete o próprio provider quando não
+há hub, para que `sum by (upstream_provider)` continue somando o custo inteiro.
+
+- **Onde:** `apps/api/src/application/use-cases/llm/record-llm-usage.use-case.ts:58`
+- **Teste:** `test/application/use-cases/llm/record-llm-usage.use-case.spec.ts`
+- **Origem:** [ADR 0040](adr/0040-base-openai-compativel-e-contrato-de-llm-providers.md)
+
 ---
 
 ## Psicólogo e Anamnese

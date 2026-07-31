@@ -8862,6 +8862,11 @@
             "type": "boolean",
             "example": false
           },
+          "manualPricing": {
+            "type": "boolean",
+            "example": true,
+            "description": "Preço digitado da doc do provider, não sincronizado. O sync de preços não sobrescreve uma linha marcada sem decisão explícita."
+          },
           "isActive": {
             "type": "boolean",
             "example": true,
@@ -8889,6 +8894,7 @@
           "supportsToolCalling",
           "supportsStreaming",
           "supportsVision",
+          "manualPricing",
           "isActive",
           "createdAt",
           "updatedAt"

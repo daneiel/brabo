@@ -95,6 +95,13 @@ export interface ChatUsageChunk {
   inputTokens: number;
   outputTokens: number;
   estimated: boolean;
+  /**
+   * Quem REALMENTE serviu a chamada, quando o provider é um hub e informa isso
+   * (Fase 9b). Num hub, "openrouter" é a porta de entrada, não o custo real —
+   * sem este campo o metering não distingue qual provedor subjacente atendeu.
+   * `undefined` quando o provider não é hub ou não informou.
+   */
+  upstreamProvider?: string;
 }
 
 export interface ChatErrorChunk {

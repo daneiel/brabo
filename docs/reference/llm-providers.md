@@ -146,6 +146,31 @@ A última linha do Anthropic é a que mais custa: resultados de chamadas
 paralelas precisam vir no **mesmo** turno de `user`, então mensagens `tool`
 consecutivas são agrupadas.
 
+## Hubs e o custo real (preparo da Fase 9b)
+
+Num **hub** (OpenRouter) quem aparece na chamada é o hub, mas quem custa é o
+provedor que serviu. O metering registra os dois:
+
+- `ChatUsageChunk.upstreamProvider` — o provider preenche quando o hub informa;
+- `token_usage.upstream_provider` — texto livre e **nullable**. Não é enum: o
+  conjunto é do hub, muda sem aviso e não é nosso para versionar. `null`
+  significa "não veio de hub, ou o hub não informou";
+- as métricas `brabo_llm_tokens_total` e `brabo_llm_cost_micros_total` ganharam
+  o rótulo `upstream_provider`, e o dashboard executivo tem um painel de custo
+  por provedor subjacente. Sem hub, o rótulo repete o próprio provider — com
+  rótulo vazio, `sum by (upstream_provider)` mostraria só o que passou por hub
+  e faria parecer que o resto não custou nada.
+
+A leitura do campo no frame é um **hook de configuração** da base
+(`extrairUpstreamProvider`), não um `if` dentro do parsing: cada hub põe a
+informação num lugar diferente, e a regra da fase é que particularidade de
+provider vira configuração.
+
+`models.manual_pricing` marca preço digitado da doc do provider em vez de
+sincronizado. Quem sincronizar preço na Fase 9c não pode sobrescrever uma linha
+marcada sem decisão explícita — para provider que não expõe catálogo, o número
+manual é o único que existe.
+
 ## A suite de contrato
 
 `apps/api/test/contract/llm-provider.contract.ts` roda a mesma bateria contra

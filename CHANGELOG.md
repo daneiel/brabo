@@ -44,6 +44,16 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api,k8s**: preparo da Fase 9b — o metering passa a registrar **quem serviu**
+  a chamada, não só por onde ela entrou. `token_usage` ganha
+  `upstream_provider` (texto, `null` quando não houve hub), as métricas
+  `brabo_llm_tokens_total` e `brabo_llm_cost_micros_total` ganham o rótulo
+  `upstream_provider`, e o dashboard executivo ganha um painel de custo por
+  provedor subjacente ([RN-040](docs/business-rules.md#rn-040)). `models` ganha
+  `manual_pricing`, que marca preço digitado da doc para o sync da Fase 9c não
+  sobrescrever sem decisão explícita. **Nenhum provider novo entrou ainda** — a
+  verificação na doc oficial dos seis depende de acesso de rede que a sessão
+  não teve
 - **api**: providers de LLM passam a ter **contrato único** e capabilities, como
   os de git desde a Fase 2. `LLMProvider` ganha `capabilities`
   (`streaming`/`toolCalling`) e `models` ganha `supports_tool_calling`,
