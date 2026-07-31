@@ -57,7 +57,24 @@ function useHealthQuery(name: string, baseUrl: string) {
   });
 }
 
-export function StatusPage() {
+/**
+ * Status da plataforma — rota PÚBLICA desde o ADR 0036.
+ *
+ * Saiu de trás do guard de sessão porque o rodapé das telas de auth aponta para
+ * cá: protegida, ela redirecionava de volta para o login. Só consulta os
+ * `/health` da api e do engine, que já eram públicos.
+ *
+ * Quem decide o destino do "voltar" é o router, não esta página: com sessão o
+ * lugar certo é o dashboard, sem sessão é o login. A página não precisa saber a
+ * diferença — e não precisa importar o módulo de auth para descobrir.
+ */
+export function StatusPage({
+  irPara,
+  voltarPara,
+}: {
+  irPara: (rota: string) => void;
+  voltarPara: string;
+}) {
   const apiHealth = useHealthQuery('api', API_URL);
   const engineHealth = useHealthQuery('engine', ENGINE_URL);
 
@@ -108,6 +125,23 @@ export function StatusPage() {
           <StatusRow label="engine (Elixir/Phoenix)" query={engineHealth} />
         </tbody>
       </table>
+      <p style={{ marginTop: 'var(--space-4)' }}>
+        <button
+          type="button"
+          onClick={() => irPara(voltarPara)}
+          style={{
+            background: 'none',
+            border: 'none',
+            padding: 0,
+            font: 'inherit',
+            fontSize: 13,
+            color: 'var(--accent)',
+            cursor: 'pointer',
+          }}
+        >
+          Voltar
+        </button>
+      </p>
     </main>
   );
 }

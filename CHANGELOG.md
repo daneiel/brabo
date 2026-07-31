@@ -33,8 +33,38 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `AUTH_SET_PASSWORD_TTL_MS`. O serviço `keycloak` sai do compose de dev e de
   prod, e `deploy/k8s/base/keycloak/` deixa de existir junto com o
   `ExternalSecret` `keycloak-secrets`
+- **api,engine**: a rota interna de delegação de área deixa de ser aninhada
+  sob task — `POST /internal/sessions/:sessionId/tasks/:taskId/delegations`
+  vira `POST /internal/sessions/:sessionId/delegations`, com `taskId` agora
+  opcional no corpo em vez de obrigatório na URL. `delegations.task_id` no
+  banco virou nullable. Motivo: a área de Infra (Fase 8c) delega sobre a
+  sessão, sem task de backlog por trás de uma PR de infra — a rota nascida
+  na Fase 8b (só QA) era estreita demais pra segunda área
+  ([RN-037](docs/business-rules.md#rn-037))
 
 ### Novidades
+
+- **web**: as quatro telas de auth (`/login`, `/registrar`, `/esqueci-senha`,
+  `/definir-senha`) passam a seguir o design aprovado: cabeçalho de marca acima
+  do card, rodapé de página com a versão do artefato, campo com botão de mostrar
+  senha, botão com estado de carregamento e o aviso da conta migrada como alerta
+  próprio fora do card
+  ([ADR 0036](docs/adr/0036-telas-de-auth-fieis-ao-design-e-fontes-auto-hospedadas.md))
+- **web**: o erro de credencial passa a aparecer como alerta no topo do card, em
+  vez de sob o campo de senha, e o texto muda para **"E-mail ou senha
+  incorretos."**. A propriedade de anti-enumeração é a mesma: uma única mensagem
+  para conta inexistente, senha errada, conta bloqueada e conta migrada
+- **web**: `/status` **não exige mais sessão** — é para lá que o rodapé das telas
+  de auth aponta, e atrás do guard o clique voltava para o login. A página só
+  consulta os `/health`, que já eram públicos
+- **web**: o rodapé das telas de auth mostra a **versão da imagem**. Fora de um
+  release ela é `dev`, porque o build não nasceu de tag; o `release.yml` passa a
+  assar a tag no artefato via `VERSION` do `docker-bake.hcl`
+- **api**: `BRABO_VERSION` passa a ser **definida na imagem de release**, então o
+  `service.version` dos spans deixa de ser `dev` em todo ambiente
+- **web**: componente `Alert` no design system (4 tons, papel de acessibilidade
+  escolhido e não derivado do tom), `loading` no `Button`, e `preenchido` /
+  `revelavel` / `acaoNoLabel` no `Input`
 
 - **api**: módulo de auth first-party — registro, login, logout, refresh,
   verificação de e-mail e reset de senha, em `/auth/*`. Senhas com argon2id;
@@ -76,8 +106,137 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `/brabo/dev/`. Os dois degraus de baixo saem do índice dos buscadores, e a busca
   local continua funcionando nos três
   ([ADR 0034](docs/adr/0034-documentacao-publicada-por-degrau.md))
+- **api,engine,web**: **trace correlacionado sem coletor.** Instrumentar e
+  exportar passaram a ser decisões separadas: span é sempre criada e o `trace_id`
+  sempre entra no log, e `OTEL_EXPORTER_OTLP_ENDPOINT` decide só se ela sai do
+  processo. Na prática, `pnpm dev` passa a ter as três streams de log marcadas
+  com o mesmo id — antes desenvolvimento era o único ambiente sem correlação
+  nenhuma, justo onde se lê log com os olhos
+  ([ADR 0035](docs/adr/0035-observabilidade-legivel-e-trace-sem-coletor.md))
+- **api**: **o caminho entre camadas no log.** Uma linha por requisição mostra
+  `interfaces → application → infrastructure` com a duração de cada passo, vinda
+  de um `AsyncLocalStorage` alimentado pelo decorator `@Traced`. Em produção sai
+  como o campo `path` numa linha de JSON; em desenvolvimento, como árvore
+  indentada. Nenhum controller foi tocado — a fronteira HTTP vem do
+  `ExecutionContext`
+- **api,engine**: **log legível em desenvolvimento.** `pino-pretty` em processo na
+  api (com a árvore de camadas) e `PrettyLogFormatter` novo no engine, onde
+  `dev.exs` jogava fora timestamp e toda a metadata e deixava `trace_id`,
+  `session_id` e `mfa` invisíveis. Produção segue com uma linha de JSON por
+  evento, que é o que o Alloy parseia
+- **engine**: log de acesso HTTP, que não existia — as 13 rotas `/internal` não
+  deixavam linha nenhuma, então "a api chamou?" não tinha resposta no log
+- **web**: `WEB_LOG_LEVEL` ligado no k8s. A encanação existia ponta a ponta e
+  faltava a variável, então `logger.debug` era código morto em todo ambiente
+  publicado
+- **engine**: o gate de QA vira **área** — `QA Lead` passa a ser o único
+  contato do gate (mesmo contrato `gates/verdict`/`tasks/:taskId/block` de
+  sempre), e delega a duas subespecialidades: `QA de Automação` (o QAAgent de
+  antes, sem mudança de prompt ou de matriz de cobertura) sempre, e `QA de
+  Performance e Segurança` (RNFs de performance da story; apoio de segurança em
+  nível de código — SecOps continua o gate determinístico próprio) só quando a
+  story tem RNF pertinente. Story sem RNF de performance gera delegação
+  **dispensada** com justificativa registrada, nunca silêncio. Falha de
+  subespecialidade com origem infra/modelo bloqueia a task com a origem real em
+  vez de virar `changes_requested` para o dev — a mesma lição do
+  [ADR 0020](docs/adr/0020-gates-validados-por-execucao-real.md), agora um
+  nível acima ([RN-036](docs/business-rules.md#rn-036),
+  [ADR 0038](docs/adr/0038-hierarquia-de-agentes.md))
+- **api**: rota interna nova `POST /internal/sessions/:sessionId/delegations`,
+  que registra o desfecho de cada delegação de área
+  (`completed`/`failed`/`dispensed`) separado da chamada que a área usa pra
+  reportar o resultado consolidado pra fora — a api continua enxergando só
+  esse resultado, nunca os delegados internos. `tasks.block` ganha um campo
+  opcional `origin` (a mesma origem de falha — infra/modelo/código/política)
+  persistido em `tasks.blocked_origin`
+- **engine**: o Infra vira **área** (segunda instância do ADR 0038, depois
+  da de QA) — `InfraLeadServer` continua o contato externo de sempre
+  (handoff do Arquiteto inalterado) e passa a delegar o pipeline de CI pro
+  subagente `Workflows`, que gera GitHub Actions ou GitLab CI conforme o
+  provider do repositório do projeto (nunca por `capabilities` — GitHub e
+  GitLab têm as mesmas). As duas delegações (Dockerfiles/compose pelo
+  próprio Lead, CI pelo Workflows) sempre rodam e sempre são rastreadas, e
+  se consolidam numa PR só, pelo mesmo `open_infra_pr` de sempre. Cada
+  arquivo passa por validação local antes de propor — `actionlint` novo,
+  pinado no Dockerfile do engine, só pra GitHub Actions (sem equivalente
+  offline pro GitLab CI, gap documentado)
+  ([RN-037](docs/business-rules.md#rn-037),
+  [ADR 0039](docs/adr/0039-actionlint-e-validacao-do-pipeline-de-ci-gerado.md))
+- **web**: a hierarquia de agentes (QA e Infra) fica visível — painel do
+  time agrupado por área (card do lead com badge "Lead", subespecialidades
+  aninhadas e recolhíveis, cada uma com binding de modelo e custo de tokens
+  próprios); Insights (hipóteses do Psicólogo) agrupados por área quando o
+  alvo é uma subespecialidade, com o alvo específico sempre visível no
+  card; feed do projeto narrando `delegation.completed`/`failed`/
+  `dispensed` com o mesmo tratamento dos demais eventos. Tudo derivado do
+  `session_events` que a UI já buscava — nenhuma rota nova
+  ([ADR 0038](docs/adr/0038-hierarquia-de-agentes.md#fechamento-fase-8d))
+- **engine**: a tool do Psicólogo (`emit_hypotheses`) e a da Anamnese
+  (`propose_instruction_patch`) passam a citar subagentes de área como
+  exemplo de alvo válido (`qa-automacao`, `qa-performance-seguranca`,
+  `infra-workflows`) — nenhuma validação nova, já aceitavam qualquer string;
+  só o modelo não tinha o nudge pra considerar a subespecialidade
 
 ### Correções
+
+- **web**: a timeline de PR vazava o parecer INTERNO de cada subespecialidade
+  de QA como um card duplicado, idêntico ao consolidado — `verdictsFor`/
+  `infraVerdictsFor` (`ProjectApprovalsTab.tsx`) filtravam só por tipo de
+  evento e `taskId`, nunca por `actor.id`, e o parecer interno de
+  `qa-automacao`/`qa-performance-seguranca` carrega o MESMO `taskId` do
+  parecer final. Numa story com RNF de performance a timeline mostrava 2-3
+  cards "QA" indistinguíveis. Agora o card principal é só o consolidado
+  (`actor.id === 'qa'`); os internos ficam dentro do expand
+- **web**: o filtro "por agente" do feed de atividade nunca funcionou —
+  `agentOptions` existia como prop de `ActivityFeed` desde sempre, mas
+  nenhum dos dois lugares que renderizam o feed (`ProjectOverviewTab.tsx`,
+  `SessionPage.tsx`) chegava a passá-la
+- **docs**: `docs/reference/artifacts.md` ainda dizia "os seis schemas de
+  artefato" e não listava `infra_delegation_files` (o sétimo, Fase 8c) —
+  drift de documentação gerada que o `docmap` marca como `block` e ninguém
+  tinha fechado
+- **engine**: o endpoint **não tinha CORS nenhum**. `GET /health` respondia 200 com
+  o corpo correto e sem um único cabeçalho `Access-Control-*`, então o navegador
+  descartava a resposta — a tela de status mostrava `engine: error` com o engine
+  saudável. Agora há CORS nas rotas de health (`/health`, `/live`, `/ready`), com
+  as origens de `WEB_ORIGIN`; **`/internal/*` e `/metrics` seguem sem**, e há teste
+  afirmando a ausência
+  ([ADR 0037](docs/adr/0037-cors-do-engine-e-a-porta-como-contrato.md))
+- **web**: `vite.config.ts` ganha `strictPort`. Sem ele, com 5173 ocupada o Vite
+  subia em **5174** avisando numa linha de log, e como a api aceita só a origem
+  exata, **toda** chamada era barrada — inclusive o `/auth/refresh`, o que faz a
+  tela parecer deslogada. O erro falava de CORS e não de porta, e a "correção"
+  natural (afrouxar o CORS) conserta 5174 e quebra 5173. Agora o Vite recusa subir
+  e diz que a porta está em uso
+- **engine**: `WEB_ORIGIN` era lida em dois lugares — o `check_origin` do socket
+  tinha a lista certa desde a Fase 4a, e o CORS HTTP não existia. Passa a ser
+  resolvida uma vez em `runtime.exs` e compartilhada pelos dois consumidores
+- **api,engine**: o CORS dos dois ganha `Access-Control-Max-Age: 600`. Toda chamada
+  da web é preflighted (`Authorization` e `traceparent` não são safelisted), então
+  sem cache de preflight cada requisição eram duas viagens
+
+- **web**: as **três fontes do design system não carregavam em produção**.
+  `index.html` as puxava do Google Fonts, e a CSP da imagem do nginx
+  (`style-src 'self'; font-src 'self' data:`) bloqueava a folha e os arquivos —
+  as três caíam em fonte de sistema, e como `--font-heading` e `--font-body`
+  compartilham o fallback `sans-serif`, a distinção entre título e corpo
+  desaparecia. Agora são auto-hospedadas em `public/fonts/`, com aviso de licença
+  OFL, teste de integridade e gate no `Dockerfile.prod`
+- **web**: `fullWidth` do `Button` **nunca funcionou** — era `flex: 1`, que só faz
+  efeito se o pai for flex ou grid, e nenhum dos sete usos tinha pai assim
+- **web**: foco de campo era `:focus` com indicação só por `box-shadow`, que é
+  descartado em `forced-colors` — o campo focado ficava sem indicador nenhum no
+  modo de alto contraste do sistema. Virou `:focus-visible` com `outline`
+  transparente que o modo pinta
+- **web**: três pares de cor reprovavam o 4.5:1 do WCAG AA — o texto de apoio do
+  campo (3.89:1, e valia para as cinco telas fora de auth), o link das telas de
+  auth (3.88:1) e o placeholder do campo preenchido (3.10:1). Os três passaram a
+  usar tokens que já existiam. O botão primário segue em 3.20:1: consertar exige
+  escurecer a cor da marca, e é decisão de design
+- **docs**: `configuration.md` afirmava que a imagem de release injetava
+  `BRABO_VERSION` e que ela aparecia no `/health`. As duas eram falsas — a
+  primeira virou verdade nesta entrega, a segunda foi corrigida no texto (o
+  `/health` não devolve versão de propósito)
 
 - **api**: `PUT /projects/:id/agent-autonomy` e
   `DELETE /projects/:id/members/:userId` devolviam **200 com corpo vazio**, e o
@@ -97,6 +256,39 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `scripts/docs/api-render-check.mjs`, que reprova o CI se a referência
   construir sem renderizar — o build ficava verde durante todo o defeito, e era
   essa lacuna que deixava passar
+- **engine**: a correlação do trabalho assíncrono estava **morta**.
+  `Engine.Outbox.Event` não declarava a coluna `metadata`, então o struct não
+  tinha a chave, a cláusula que lê o `traceparent` era inalcançável, e **todo**
+  job do Oban nascia com `traceparent: nil`. Os dois workers também não liam o
+  argumento: agora abrem a span na trace da sessão e chamam
+  `Logger.metadata(session_id:)` — que não era chamado em lugar nenhum do engine,
+  e é por isso que o campo `session_id` do log sempre saiu ausente
+- **engine**: `traceparent` era injetado só nos POSTs para a api. Os seis
+  `Req.get` e o `llm_turn_stream` iam sem trace, então toda a metade de leitura
+  da conversa entre os serviços — incluindo o turno de LLM em streaming —
+  aparecia no Tempo como trace órfã. Agora há um funil único de headers
+- **engine**: o gate de telemetria estava invertido. Não havia config
+  `:opentelemetry` no projeto, então o SDK subia com o default apontando para
+  `localhost:4318` e o engine pagava por um batch condenado em dev **e em
+  `mix test`**; e o que o gate desligava era justamente a extração do
+  `traceparent` que chega
+- **web**: o chat não propagava trace. `chat-stream.ts` contorna o
+  `api-client.ts` e era o único caminho da web sem `traceparent` — o pior lugar
+  possível para a lacuna, porque é o turno de LLM
+- **web**: a retentativa depois do 401 reusava o mesmo `traceparent`, então as
+  duas tentativas chegavam à api declarando o mesmo `span_id` como pai e o Tempo
+  as colapsava num nó só
+- **web**: três silêncios em caminho crítico. `renovarSessao` falhava sem log (é
+  o caminho pelo qual o usuário é deslogado), falha de rede no `request<T>` subia
+  sem `trace_id` nem rota, e o socket da sessão nunca registrou `onError`/`onClose`
+- **api**: o `X-Brabo-Service-Token` não era redigido no log — se caísse num corpo
+  de erro logado, ia para o Loki em texto claro. Entraram junto `serviceToken`,
+  `privateKey`, `encryptedDek` e `dek`
+- **engine**: a recusa de token de serviço respondia 401 sem deixar linha, então
+  deploy mal configurado e varredura contra `/internal` eram igualmente invisíveis
+- **docs**: duas frases afirmavam o contrário do comportamento — a causa 1 de
+  "quando não há trace" no runbook (já falsa para o engine antes desta mudança) e
+  a nota de `OTEL_EXPORTER_OTLP_ENDPOINT` na referência de configuração
 
 ### Manutenção
 

@@ -114,6 +114,37 @@ o componente `d` da JWK, travado por teste.
 - **`jwt` sem papel não significa sem autorização.** Em `/users/me/*` o escopo é
   o próprio usuário; em `GET /workspaces` a listagem já é filtrada pela
   associação de quem chamou.
+- **O `X-Brabo-Service-Token` passou a ser redigido no log** ([ADR
+  0035](adr/0035-observabilidade-legivel-e-trace-sem-coletor.md)). Ele é o bearer
+  de todo o tráfego api↔engine e **não** constava da lista de `redact` do pino: se
+  caísse num corpo de erro logado, iria para o Loki em texto claro e com retenção.
+  Entraram junto `serviceToken`, `privateKey`, `encryptedDek` e `dek`. A lista
+  completa está em `apps/api/src/infrastructure/observability/logger.config.ts`, e
+  há teste afirmando cada caminho — a lista é contrato, não conveniência.
+- **`allowedHeaders` do CORS é explícito**, e a lista precisa conter todo header
+  que a web manda: `Content-Type`, `Authorization`, `X-CSRF-Token` e `traceparent`.
+  Faltar um não quebra teste nenhum (teste não faz preflight) e quebra o browser.
+- **O engine tem CORS só nas rotas de health** ([ADR
+  0037](adr/0037-cors-do-engine-e-a-porta-como-contrato.md)). `/health`, `/live` e
+  `/ready` respondem `Access-Control-Allow-Origin` para as origens de
+  `WEB_ORIGIN`; **`/internal/*` e `/metrics` não**, e a exclusão é o ponto. As 13
+  rotas internas são server-to-server com segredo compartilhado
+  ([RN-035](business-rules.md#rn-035)); CORS ali não habilitaria nada — o cliente
+  HTTP da api ignora esses cabeçalhos — mas **anunciaria a um navegador que ele é
+  um cliente esperado daquele canal**. Há teste afirmando a ausência, e um sobre a
+  lista de caminhos ter exatamente três entradas, para mover a fronteira aparecer
+  no diff.
+- **Origem desconhecida recebe resposta, não `403`.** Nos dois serviços, o pedido
+  é atendido e sai sem o cabeçalho; quem barra a leitura é o navegador, que é de
+  quem a decisão é. Responder `403` quebraria todo cliente que não manda `Origin`
+  — probe do kubelet, `curl`, o `docker/smoke.sh`.
+- **`POST .../delegations` é engine-service como as demais rotas internas**
+  (Fase 8b QA, Fase 8c Infra — ADR 0038) — o lead de cada área registra o
+  desfecho de cada delegado (`completed`/`failed`/`dispensed`) SEPARADO da
+  chamada que a área usa pra reportar o resultado consolidado pra fora
+  (`gates/verdict` pro QA, `open_infra_pr` pro Infra). Session-scoped, não
+  task-scoped — `taskId` é opcional no corpo. Delegação nunca é visível como
+  handoff.
 
 ## Tabela
 
@@ -135,6 +166,7 @@ o componente `d` da JWK, travado por teste.
 | GET | `/metrics` | public |
 | POST | `/internal/sessions/:sessionId/actions` | engine-service |
 | GET | `/internal/sessions/:sessionId/anamnese-context` | engine-service |
+| POST | `/internal/sessions/:sessionId/delegations` | engine-service |
 | GET | `/internal/sessions/:sessionId/dev-context` | engine-service |
 | POST | `/internal/sessions/:sessionId/epics` | engine-service |
 | GET | `/internal/sessions/:sessionId/events` | engine-service |

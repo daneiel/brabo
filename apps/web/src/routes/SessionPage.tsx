@@ -20,6 +20,7 @@ import { streamChatMessage } from '../lib/chat-stream';
 import { connectSessionHeartbeat } from '../lib/session-channel';
 import { useSessionEvents, useSessionEvent, usePendingActions, useHandoffs } from '../lib/hooks';
 import { emailDaSessao } from '../lib/auth';
+import { AGENTS } from '../lib/agents';
 import type {
   BusinessRulePayload,
   ProposedAction,
@@ -526,6 +527,15 @@ function ContextAside({
 }) {
   const prActions = actions.filter((a) => a.actionType === 'pr_open');
   const businessRules = events.filter((e) => e.type === 'artifact.business_rule');
+  // Opções do filtro "por agente" do feed (Fase 8d — a prop existia desde
+  // sempre em ActivityFeed, mas nenhum dos dois call sites a passava, então
+  // o filtro nunca funcionou). Deriva dos atores REAIS desta sessão — pega
+  // subagentes de área automaticamente, sem precisar buscar module_map/
+  // handoffs só pra montar a lista (que `deriveAgentRoster` exigiria).
+  const agentOptions = Array.from(new Set(events.map((e) => e.actor.id))).map((id) => ({
+    id,
+    label: AGENTS[id as keyof typeof AGENTS]?.name ?? id,
+  }));
   const filesTouched = actions
     .filter((a) => a.actionType === 'git_commit' || a.actionType === 'git_push')
     .flatMap((a) => {
@@ -615,7 +625,11 @@ function ContextAside({
                 O evento citado não foi encontrado nesta sessão.
               </div>
             )}
-            <ActivityFeed events={events} highlightEventId={highlightEvent} />
+            <ActivityFeed
+              events={events}
+              agentOptions={agentOptions}
+              highlightEventId={highlightEvent}
+            />
           </>
         )}
       </div>

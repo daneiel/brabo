@@ -39,6 +39,17 @@ config :engine, EngineWeb.Endpoint,
 # Print only warnings and errors during test
 config :logger, level: :warning
 
+# Mesma separação do dev (ADR 0035): sem exportador, e sem instrumentação
+# automática.
+#
+# A suite não tem coletor, então exportar é batch condenado. E o automático fica
+# de fora aqui — e só aqui — porque `OpentelemetryEcto` cria um span por query, o
+# que encareceria toda `DataCase` para nada. Span MANUAL continua funcionando com
+# `trace_id` de verdade (é o que `span_test.exs` e `otel_test.exs` afirmam): isso
+# não depende do automático.
+config :opentelemetry, traces_exporter: :none
+config :engine, otel_auto_instrumentation: false
+
 # Initialize plugs at runtime for faster test compilation
 config :phoenix, :plug_init_mode, :runtime
 

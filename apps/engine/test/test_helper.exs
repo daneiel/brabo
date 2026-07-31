@@ -1,16 +1,19 @@
 # Testes marcados com a tag de um binário rodam o BINÁRIO de verdade (não um
 # Fake). São as regressões dos gates que já aprovaram vazio: `:gitleaks`
-# (varria o histórico em vez da árvore, ADR 0020) e `:hadolint`/`:yamllint`
-# (o gate de QA de infra aprovava qualquer arquivo, ADR 0021). Dentro do
-# container do engine os três existem e os testes rodam; numa máquina sem eles
-# são excluídos, mesma disciplina de detecção opcional dos detectors
-# (ausência nunca quebra nada).
+# (varria o histórico em vez da árvore, ADR 0020), `:hadolint`/`:yamllint`
+# (o gate de QA de infra aprovava qualquer arquivo, ADR 0021), e `:actionlint`
+# (o Workflows geraria pipeline de CI sem validação nenhuma, Fase 8c/ADR
+# 0039 — mesma lição, um binário depois). Dentro do container do engine os
+# quatro existem e os testes rodam; numa máquina sem eles são excluídos,
+# mesma disciplina de detecção opcional dos detectors (ausência nunca quebra
+# nada).
 binary_exclusions =
   Enum.reject(
     [
       if(System.find_executable("gitleaks"), do: nil, else: :gitleaks),
       if(System.find_executable("hadolint"), do: nil, else: :hadolint),
-      if(System.find_executable("yamllint"), do: nil, else: :yamllint)
+      if(System.find_executable("yamllint"), do: nil, else: :yamllint),
+      if(System.find_executable("actionlint"), do: nil, else: :actionlint)
     ],
     &is_nil/1
   )

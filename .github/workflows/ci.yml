@@ -47,6 +47,7 @@ env:
   GITLEAKS_VERSION: '8.30.1'
   HADOLINT_VERSION: '2.12.0'
   YAMLLINT_VERSION: '1.38.0'
+  ACTIONLINT_VERSION: '1.7.12'
   # Manifests de Kubernetes (Fase 5, sessão 2).
   KUSTOMIZE_VERSION: '5.8.1'
   KUBECONFORM_VERSION: '0.7.0'
@@ -247,16 +248,17 @@ jobs:
       # ---------------------------------------------------------------------
       # ESTE PASSO É O QUE IMPEDE UM FALSO-VERDE.
       #
-      # test_helper.exs exclui as tags :gitleaks/:hadolint/:yamllint quando o
-      # binário não existe na máquina. Esses três módulos são exatamente as
+      # test_helper.exs exclui as tags :gitleaks/:hadolint/:yamllint/:actionlint
+      # quando o binário não existe na máquina. Esses módulos são exatamente as
       # REGRESSÕES que provam que os gates não aprovam vazio (ADR 0020: o
       # gitleaks varria o histórico em vez da árvore; ADR 0021: o gate de QA de
-      # infra aprovava qualquer Dockerfile). Num runner pelado eles somem em
+      # infra aprovava qualquer Dockerfile; ADR 0039: o Workflows geraria
+      # pipeline sem validação nenhuma). Num runner pelado eles somem em
       # silêncio e o CI fica verde sem nunca testar os gates de segurança.
       #
       # Versões idênticas às do Dockerfile.prod do engine.
       # ---------------------------------------------------------------------
-      - name: Instalar os binários dos gates (gitleaks, hadolint, yamllint)
+      - name: Instalar os binários dos gates (gitleaks, hadolint, yamllint, actionlint)
         run: |
           set -euxo pipefail
           curl -fsSL -o /tmp/gitleaks.tar.gz \
@@ -266,8 +268,12 @@ jobs:
           sudo curl -fsSL -o /usr/local/bin/hadolint \
             "https://github.com/hadolint/hadolint/releases/download/v${HADOLINT_VERSION}/hadolint-Linux-x86_64"
           sudo chmod 0755 /usr/local/bin/hadolint
+          curl -fsSL -o /tmp/actionlint.tar.gz \
+            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          sudo tar -xzf /tmp/actionlint.tar.gz -C /usr/local/bin actionlint
+          sudo chmod 0755 /usr/local/bin/actionlint
           pipx install "yamllint==${YAMLLINT_VERSION}"
-          gitleaks version && hadolint --version && yamllint --version
+          gitleaks version && hadolint --version && yamllint --version && actionlint -version
 
       - name: mix deps.get
         working-directory: apps/engine
@@ -497,7 +503,11 @@ jobs:
           # `trace_id` com underscore nos TRÊS serviços — é o que o Alloy extrai
           # e o derivedFields do Loki procura.
           grep -q "trace_id" apps/api/src/infrastructure/observability/logger.config.ts
-          grep -q '"trace_id"' apps/engine/lib/engine/telemetry/json_log_formatter.ex
+          # No engine o campo mora em `log_fields.ex` desde o ADR 0035: o
+          # `json_log_formatter.ex` passou a só serializar o mapa que esse módulo
+          # monta, e o `pretty_log_formatter.ex` consome o mesmo mapa. Apontar
+          # para o dono dos NOMES é mais estável que para um dos formatadores.
+          grep -q '"trace_id"' apps/engine/lib/engine/telemetry/log_fields.ex
           grep -q "trace_id" apps/web/src/lib/logger.ts
           grep -q "matcherRegex: trace_id" deploy/k8s/helm/grafana-values.yaml
           grep -q "trace_id" deploy/k8s/helm/alloy-values.yaml

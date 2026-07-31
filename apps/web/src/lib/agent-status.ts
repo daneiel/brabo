@@ -1,6 +1,6 @@
-import { AGENTS, type AgentDef } from './agents';
+import { AGENTS, AREAS, type AgentDef } from './agents';
 import type { AgentStatus } from '../components/AgentCard';
-import type { SessionEvent, ModuleMap, Handoff } from './api-types';
+import type { DelegationEventPayload, SessionEvent, ModuleMap, Handoff } from './api-types';
 
 export interface RosterEntry {
   id: string;
@@ -78,6 +78,45 @@ function devStatus(events: SessionEvent[], agentId: string): AgentStatus {
   }
 }
 
+// Subagentes de área (Fase 8b/8c/8d) não broadcastam `agent.status` próprio
+// — rodam síncronos dentro do processo do lead, e o lead é quem narra
+// working/idle. O que existe pra eles é o DESFECHO da delegação mais
+// recente da sessão: `completed`/`dispensed` não é "trabalhando" (já
+// terminou), só `failed` merece destaque (`falhou`) — o resto é `ocioso`,
+// mesma disciplina de "sem liveness inventada" do resto do painel.
+function delegationEventsFor(events: SessionEvent[], subagentId: string): SessionEvent[] {
+  return events.filter(
+    (e) =>
+      e.type.startsWith('delegation.') &&
+      (e.payload as DelegationEventPayload).subagent === subagentId,
+  );
+}
+
+function subagentStatus(events: SessionEvent[], subagentId: string): AgentStatus {
+  const last = delegationEventsFor(events, subagentId).at(-1);
+  return last?.type === 'delegation.failed' ? 'falhou' : 'ocioso';
+}
+
+// Rótulo curto do desfecho mais recente — vira `activity.label` no card
+// (Fase 8d). `undefined` quando não há delegação nenhuma ainda (não deveria
+// acontecer aqui: só chamamos isto pra subagente já presente na roster, e
+// presença exige pelo menos uma delegação — ver `deriveAgentRoster`).
+export function subagentOutcomeLabel(events: SessionEvent[], subagentId: string): string | undefined {
+  const last = delegationEventsFor(events, subagentId).at(-1);
+  if (!last) return undefined;
+  const payload = last.payload as DelegationEventPayload;
+  switch (last.type) {
+    case 'delegation.completed':
+      return 'concluiu a delegação';
+    case 'delegation.failed':
+      return `falhou — origem: ${payload.failureOrigin ?? '?'}`;
+    case 'delegation.dispensed':
+      return `dispensada — ${payload.justification ?? ''}`;
+    default:
+      return undefined;
+  }
+}
+
 // Um agente com ação pendente de aprovação está BLOQUEADO esperando o humano,
 // não trabalhando — é o estado `aguardando` do design, que antes nenhum
 // caminho produzia (o contador do header era sempre 0).
@@ -100,12 +139,39 @@ function gateStatus(events: SessionEvent[], gate: 'qa' | 'secops'): AgentStatus 
   return current === expected ? 'trabalhando' : 'ocioso';
 }
 
+// Subagente só entra no painel quando há EVIDÊNCIA de atividade nesta
+// sessão — pelo menos uma delegação registrada (qualquer desfecho,
+// inclusive dispensada: dispensa é decisão registrada, não silêncio, e o
+// painel deve mostrar isso). Mesmo critério que já vale pra `qa`/`secops`/
+// `infra` (só aparecem quando algo realmente aconteceu).
+function pushAreaMembers(roster: RosterEntry[], events: SessionEvent[], areaKey: string): void {
+  const area = AREAS[areaKey];
+  if (!area) return;
+
+  for (const member of area.members) {
+    const teveDelegacao = events.some(
+      (e) => e.type.startsWith('delegation.') && (e.payload as DelegationEventPayload).subagent === member,
+    );
+    if (teveDelegacao) {
+      roster.push({ id: member, def: AGENTS[member], status: subagentStatus(events, member) });
+    }
+  }
+}
+
 /**
  * Monta o roster REAL de agentes instanciados numa sessão (Fase 4a —
  * painel do time ao vivo): criativo/po/arquiteto sempre; dev-<modulo> por
  * módulo do module_map quando a execução foi ativada; qa/secops quando
  * algum gate de PR (dev ou infra) já abriu alguma vez; infra quando o
  * handoff foi aceito. Substitui o AGENT_LIST estático + status uniforme.
+ *
+ * Fase 8d: `qa`/`infra` continuam sendo os LEADS de área (ADR 0038); os
+ * SUBAGENTES (`qa-automacao`, `qa-performance-seguranca`,
+ * `infra-workflows`) entram no MESMO roster flat, logo depois do lead,
+ * quando há uma delegação registrada pra eles nesta sessão
+ * (`pushAreaMembers`). Quem AGRUPA visualmente (lead + membros recolhíveis)
+ * é o componente que renderiza, via `areaFor` — este módulo só decide QUEM
+ * está na roster e o status de cada um.
  */
 export function deriveAgentRoster(
   events: SessionEvent[],
@@ -135,11 +201,13 @@ export function deriveAgentRoster(
   if (gatesEverOpened) {
     roster.push({ id: 'qa', def: AGENTS.qa, status: gateStatus(events, 'qa') });
     roster.push({ id: 'secops', def: AGENTS.secops, status: gateStatus(events, 'secops') });
+    pushAreaMembers(roster, events, 'qa');
   }
 
   const infraActive = handoffs.some((h) => h.toAgent === 'infra' && h.status === 'accepted');
   if (infraActive) {
     roster.push({ id: 'infra', def: AGENTS.infra, status: conversationalStatus(events, 'infra') });
+    pushAreaMembers(roster, events, 'infra');
   }
 
   // Aplicado por último e sobrepondo: esperar aprovação humana é o estado mais

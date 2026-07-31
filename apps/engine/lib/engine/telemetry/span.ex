@@ -16,8 +16,19 @@ defmodule Engine.Telemetry.Span do
   mais interessantes (gates, report de término). `capture/0` e `attach/1` levam
   o contexto na mão: capture no pai, attach na primeira linha do filho.
 
-  Tudo é no-op sem coletor configurado — sem `Engine.Telemetry.Otel.enabled?()`
-  não há SDK, e criar span seria só custo.
+  ## Isto funciona SEM coletor, e sempre funcionou (ADR 0035)
+
+  O texto que ficava aqui afirmava que tudo virava no-op sem coletor, porque sem
+  `Engine.Telemetry.Otel.enabled?()` não haveria SDK. Era falso: o `:opentelemetry`
+  é dependência normal e sobe com a aplicação: `enabled?/0` só decidia se as
+  instrumentações AUTOMÁTICAS eram anexadas, nunca se o SDK existia. Span manual
+  sempre teve `trace_id` de verdade, inclusive em `mix test`.
+
+  O que mudou no ADR 0035 é que isso passou a ser intencional em vez de acidente:
+  `config :opentelemetry, traces_exporter: :none` em dev e test descarta a span no
+  fim (sem ETS, sem batch condenado), e o contexto segue valendo para correlacionar
+  log. Ou seja: criar span é barato, e o `trace_id` no log de desenvolvimento é
+  real.
   """
 
   require OpenTelemetry.Tracer, as: Tracer

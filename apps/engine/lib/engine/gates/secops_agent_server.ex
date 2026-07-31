@@ -13,6 +13,16 @@ defmodule Engine.Gates.SecOpsAgentServer do
   um LLM resumindo achado de segurança (decisão documentada no ADR 0013).
   Sem achados → `approved`; qualquer achado → `changes_requested`, devolve
   pro `Engine.Dev.DevAgentServer.correct/3` no MESMO worktree/branch.
+
+  ## A fronteira com QA de Performance/Segurança (Fase 8b)
+
+  A área de QA ganhou uma subespecialidade de Performance e Segurança
+  (`Engine.Gates.QaPerformanceSegurancaAgent`) que também olha pra segurança —
+  mas só em nível de CÓDIGO/DESIGN (parametrização, validação de entrada, o
+  que dá pra notar lendo o diff), nunca scanner. Ela não tem `Terminal` no
+  registro de ferramentas, então estruturalmente não consegue rodar
+  gitleaks/semgrep nem substituir este gate. Este continua sendo o ÚNICO
+  veredito de segurança que conta pra aprovar a PR.
   """
 
   use GenServer, restart: :temporary

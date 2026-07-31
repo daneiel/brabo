@@ -38,6 +38,18 @@ defmodule EngineWeb.Endpoint do
 
   plug Plug.RequestId
   plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
+  # DEPOIS do RequestId, para a linha de acesso carregar o `request_id` na
+  # metadata. Ver o moduledoc: filtra as rotas de probe, que o `Plug.Logger` não
+  # filtraria.
+  plug EngineWeb.Plugs.AccessLog
+
+  # ANTES do router, porque preflight (`OPTIONS`) não casa rota nenhuma e morreria
+  # com 404 dentro de um pipeline. Ele filtra por caminho — só as rotas de health,
+  # nunca `/internal/*` nem `/metrics`. Ver o moduledoc (ADR 0037).
+  #
+  # Depois do `AccessLog` para o preflight aparecer no log como qualquer outra
+  # requisição, e não desaparecer no meio do caminho.
+  plug EngineWeb.Plugs.Cors
 
   plug Plug.Parsers,
     parsers: [:urlencoded, :multipart, :json],

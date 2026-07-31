@@ -247,6 +247,14 @@ jobs:
       # aqueles escopos é o `ci.yml` em `pull_request` — cache escrito por PR não
       # é legível de uma tag em `main`. O ganho garantido é o PARALELISMO; se o
       # cache pegar, melhor.
+      #
+      # `VERSION` é a terceira variável e não é redundante com `TAG`, apesar de
+      # receber o mesmo valor aqui: ela vira `BRABO_VERSION` na imagem da api e
+      # `VITE_BRABO_VERSION` no bundle do web, assando a versão NO ARTEFATO (ADR
+      # 0036). É o único caminho pelo qual a tag chega ao rodapé da tela de login
+      # e ao `service.version` dos spans. Fora deste workflow o default do
+      # bakefile é "dev" — o `ci.yml` põe `TAG=prod`, e "prod" não é versão de
+      # nada.
       - name: Build das imagens taggeadas
         uses: docker/bake-action@v6
         with:
@@ -256,6 +264,7 @@ jobs:
         env:
           TAG: ${{ steps.versao.outputs.versao }}
           TAG_EXTRA: ${{ steps.versao.outputs.sha }}
+          VERSION: ${{ steps.versao.outputs.versao }}
 
       - name: O que foi construído
         run: |

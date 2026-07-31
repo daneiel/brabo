@@ -17,12 +17,14 @@ describe('readRuntimeConfig', () => {
       apiUrl: 'https://api.brabo.example',
       engineUrl: 'https://engine.brabo.example',
       logLevel: 'warn',
+      version: '1.1.2',
     });
 
     expect(config).toEqual({
       apiUrl: 'https://api.brabo.example',
       engineUrl: 'https://engine.brabo.example',
       logLevel: 'warn',
+      version: '1.1.2',
     });
   });
 
@@ -32,6 +34,15 @@ describe('readRuntimeConfig', () => {
     expect(config.apiUrl).toBe('http://localhost:3000');
     expect(config.engineUrl).toBe('http://localhost:4000');
     expect(config.logLevel).toBe('info');
+    expect(config.version).toBe('dev');
+  });
+
+  it('`version` cai em `dev` fora do release, e é assim que se lê o rodapé', () => {
+    // O rodapé das telas de auth mostra este valor cru. "dev" ali não é bug: é o
+    // artefato dizendo que não nasceu de uma tag. Só o `Dockerfile.prod` de
+    // release inlina outra coisa (ADR 0036).
+    expect(readRuntimeConfig({}).version).toBe('dev');
+    expect(readRuntimeConfig({ version: '' }).version).toBe('dev');
   });
 
   it('trata string vazia como ausente, não como valor', () => {

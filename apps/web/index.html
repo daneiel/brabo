@@ -4,11 +4,33 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!--
+      As fontes são AUTO-HOSPEDADAS em `/fonts/`, declaradas por `@font-face` em
+      `src/index.css` (ADR 0036). Havia aqui um `preconnect` + `<link>` para um
+      CDN de fontes que a CSP do nginx bloqueava em produção — `style-src 'self'`
+      e `font-src 'self' data:` não o incluem, então as três famílias caíam em
+      fonte de sistema e a distinção entre título e corpo desaparecia.
+
+      Este comentário evita citar o hostname de propósito: o vite preserva
+      comentários no index.html publicado, e o `Dockerfile.prod` reprova a imagem
+      se ele aparecer lá.
+
+      O preload abaixo é dos dois arquivos que TODA tela usa no primeiro paint;
+      os demais subsets e o mono carregam por demanda do `unicode-range`.
+    -->
     <link
-      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
-      rel="stylesheet"
+      rel="preload"
+      href="/fonts/archivo-latin.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href="/fonts/space-grotesk-latin.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
     />
     <title>Brabo</title>
     <!--

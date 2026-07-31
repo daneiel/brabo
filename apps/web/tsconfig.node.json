@@ -19,5 +19,9 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["vite.config.ts"]
+  // `test/` fica aqui, e não em `tsconfig.app.json`, porque são verificações de
+  // NÍVEL DE ARQUIVO — leem `index.css`, `index.html` e `public/fonts/` do disco
+  // (ADR 0036). Precisam dos tipos de `node`, e pôr `node` nos tipos da app
+  // vazaria globais de Node para o código que roda no browser.
+  "include": ["vite.config.ts", "test"]
 }

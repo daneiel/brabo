@@ -56,7 +56,7 @@ migrações. `pnpm --filter api seed` cria os usuários de demonstração.
 
 | serviço | endereço | nota |
 |---|---|---|
-| Web | <http://localhost:5173> | login `owner@brabo.dev` / `senha de dev do brabo` (do seed) |
+| Web | <http://localhost:5173> | login `owner@brabo.dev` / `brabo12345678` (do seed) |
 | API | <http://localhost:3000> | `GET /health` |
 | Engine | <http://localhost:4000> | `GET /health` |
 
@@ -112,16 +112,17 @@ merge em `main`, e por isso fica um ciclo de promoção atrás do que está em
 | [Introdução](docs/intro.md) | o panorama |
 | [Primeiros passos](docs/getting-started.md) | do clone ao primeiro turno de agente |
 | [Arquitetura](docs/architecture.md) | code map, fronteiras, invariantes, dívida técnica |
-| [Regras de negócio](docs/business-rules.md) | as 29 RNs, cada uma com `arquivo:linha` e o teste que a cobre |
+| [Regras de negócio](docs/business-rules.md) | as 35 RNs, cada uma com `arquivo:linha` e o teste que a cobre |
 | [Runbook](docs/runbook.md) | deploy, rollout, restore, rotação de chave, incidente de custo |
 | [Glossário](docs/glossary.md) | harness, gate, handoff, DEK, outbox, ciclo K |
+| [Observabilidade](docs/explanation/observability.md) | como se segue uma ação pelos três processos: trace, log e o caminho entre camadas |
 | [Configuração](docs/reference/configuration.md) | todas as variáveis de ambiente |
 | [Eventos](docs/reference/events.md) | os tipos do event log, broadcasts e spans |
 | [Permissões](docs/reference/permissions.md) | o formato do `permissions.json` e a ordem da decisão |
 | [Artefatos](docs/reference/artifacts.md) | os seis schemas e quem pode emitir cada um |
 | [Providers de git](docs/reference/git-providers.md) | o contrato de dez operações e as capabilities |
 | [API interna](docs/reference/internal-api.md) | o contrato api ↔ engine |
-| [ADRs](docs/adr/index.md) | as 34 decisões e o porquê de cada uma |
+| [ADRs](docs/adr/index.md) | as 39 decisões e o porquê de cada uma |
 | [Segurança](SECURITY.md) | como reportar uma vulnerabilidade |
 | [Como contribuir](CONTRIBUTING.md) | fluxo, Definition of Done, o que é aceito |
 | [Onde pedir ajuda](SUPPORT.md) | qual canal para cada tipo de assunto |
@@ -215,9 +216,26 @@ réplicas de uma vez num banco lento —, `/health` é o readiness da api, e
 `/ready` no engine só libera tráfego depois que a reidratação de sessões
 terminou.
 
-Uma sessão é uma **trace raiz** atravessando api e engine. Métricas Prometheus
-cobrem tokens/min e custo/hora por projeto, fila do Oban, sessões ativas e taxa
-de aprovação. Dashboards Grafana são provisionados como código.
+Uma sessão é uma **trace raiz** atravessando api e engine, e o `trace_id` nasce
+no browser — as três streams de log carregam o mesmo id. Isso vale **sem
+coletor**: instrumentar e exportar são decisões separadas, então `pnpm dev` tem
+correlação mesmo sem nada rodando em `monitoring`.
+
+O log é uma linha de JSON por evento em produção e legível para gente em
+desenvolvimento, onde cada requisição também rende uma linha com o **caminho
+entre camadas** e a duração de cada passo:
+
+```
+POST /projects/…/sessions — 34.1ms trace=4bf92f35
+  interfaces        SessionsController.create         0ms
+    ↳ application     CreateSessionUseCase.execute    31.2ms
+      ↳ infrastructure  DrizzleOutboxRepository.append  2.1ms
+```
+
+Métricas Prometheus cobrem tokens/min e custo/hora por projeto, fila do Oban,
+sessões ativas e taxa de aprovação. Dashboards Grafana são provisionados como
+código. O modelo inteiro está em
+[observabilidade](docs/explanation/observability.md).
 
 ## Produção
 
@@ -282,10 +300,12 @@ o job reprovou, e voltou a passar depois do revert.
 
 ## Frontend
 
-Login próprio (`/login`, `/register`, `/forgot-password`, `/set-password`):
+Login próprio (`/login`, `/registrar`, `/esqueci-senha`, `/definir-senha`):
 o access token vive em memória e o refresh num cookie httpOnly, então a sessão
-sobrevive ao reload sem passar por `localStorage`. Depois do login o app opera
-sobre o primeiro workspace do usuário:
+sobrevive ao reload sem passar por `localStorage`. As quatro seguem o mockup
+aprovado do design system, com a marca acima do card e a versão do artefato no
+rodapé ([ADR 0036](docs/adr/0036-telas-de-auth-fieis-ao-design-e-fontes-auto-hospedadas.md)).
+Depois do login o app opera sobre o primeiro workspace do usuário:
 
 - **Dashboard** (`/`) — grid de projetos e o wizard "Novo projeto"
 - **Projeto** (`/projects/:id`) — Visão geral (time de agentes + feed de
@@ -294,9 +314,18 @@ sobre o primeiro workspace do usuário:
 - **Sessão** (`/projects/:id/sessions/:sid`) — chat com streaming, seletor de
   modelo, `TokenMeter` ao vivo e aprovação de ações inline
 
+`/status` é a única rota **pública** fora de auth: consulta os `/health` da api
+e do engine, que já são públicos porque é o kubelet que os chama.
+
 O streaming do agente chega pelo canal Phoenix `session:<id>`
 (`agent.delta`, `agent.status`, `agent.done`); listas e contadores usam
 TanStack Query.
+
+As três famílias do design system (Space Grotesk, Archivo, IBM Plex Mono) são
+**auto-hospedadas** em `apps/web/public/fonts/`. Não é preferência: a CSP da
+imagem de produção é `font-src 'self' data:`, e o `<link>` para o Google Fonts
+que existia antes era bloqueado em silêncio — em produção a tipografia caía em
+fonte de sistema, e título e corpo ficavam indistinguíveis.
 
 ## Convenções
 
@@ -332,3 +361,8 @@ processo separado não contamina nada, mas **publicar a imagem** num registry
 cria obrigação de disponibilizar fonte. Está tudo levantado, com versão e
 licença de cada uma, em [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) —
 leia antes do primeiro push para registry.
+
+A imagem do web embute as três fontes do design system, todas **OFL 1.1** — uma
+licença permissiva, mas que exige distribuir o aviso de copyright junto do
+binário. Ele está em `apps/web/public/fonts/LICENSE.txt`, servido com o resto do
+estático, e a obrigação está registrada no mesmo arquivo de avisos.

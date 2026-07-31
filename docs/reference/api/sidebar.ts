@@ -138,6 +138,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/internal-sessions-controller-record-delegation-outcome",
+          label: "Registra o desfecho de uma delegação de área",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/internal-sessions-controller-dev-context",
           label: "Monta o contexto completo de uma tarefa para o dev agent",
           className: "api-method get",

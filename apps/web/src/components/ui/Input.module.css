@@ -21,18 +21,32 @@
   color: var(--text-muted);
 }
 
-.input:focus {
+/*
+ * `:focus-visible`, e com `outline` transparente (ADR 0036).
+ *
+ * Era `:focus` com `outline: none` acima e indicação SÓ por `box-shadow`. Dois
+ * problemas: `:focus` também acende ao clicar com o mouse, o que não é o que a
+ * indicação de foco existe para resolver; e em `forced-colors` (alto contraste do
+ * sistema) o `box-shadow` é descartado, deixando o campo focado sem indicador
+ * NENHUM. O `outline` transparente reserva o espaço e é o que o modo de alto
+ * contraste pinta.
+ */
+.input:focus-visible {
   border-color: var(--accent);
+  outline: 2px solid transparent;
+  outline-offset: 0;
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+@media (forced-colors: active) {
+  .input:focus-visible {
+    outline-color: Highlight;
+  }
 }
 
 .mono {
   font-family: var(--font-mono);
   font-size: 12px;
-}
-
-.withIcon {
-  padding-left: 34px;
 }
 
 .icon {
@@ -43,6 +57,91 @@
   color: var(--text-muted);
   pointer-events: none;
   display: flex;
+}
+
+/*
+ * Campo preenchido (ADR 0036) — a segunda anatomia de campo do design system, a
+ * do mock de login.
+ *
+ * Não é só o fundo: naquele spec o campo é mais alto (42px) e o texto maior
+ * (14px) que o campo default. As três coisas vêm da mesma especificação e viajam
+ * juntas, porque metade dela dá um campo que não existe em lugar nenhum.
+ *
+ * O fundo é um degrau ACIMA da superfície do card, não abaixo: sobre um card
+ * `--surface-1`, o fundo default do campo é o MESMO do card, e só a borda de 1px
+ * os separa. (O mock afunda o campo com `--code-bg`; aqui ele sobe. É divergência
+ * deliberada, registrada no ADR.)
+ */
+.preenchido {
+  background: var(--surface-2);
+  height: 42px;
+  padding: 0 13px;
+  font-size: 14px;
+}
+
+/*
+ * Senha no campo preenchido: mono, e um pouco menor que o texto normal — os
+ * pontos do mascaramento são largos, e 14px de mono ao lado de 14px de Archivo lê
+ * como um corpo maior. O espaçamento extra é o que separa os pontos.
+ */
+.preenchido.mono {
+  font-size: 13.5px;
+  letter-spacing: 0.02em;
+}
+
+/*
+ * Placeholder do campo preenchido em `--text-secondary`.
+ *
+ * O `--text-muted` do `.input::placeholder` genérico dá 3.10:1 sobre
+ * `--surface-2` — reprova o AA, e placeholder é texto como qualquer outro. Fica
+ * mais presente que no mock; a alternativa era não ter placeholder, e
+ * "voce@empresa.com" diz algo que o rótulo "E-mail" não diz.
+ */
+.preenchido::placeholder {
+  color: var(--text-secondary);
+}
+
+/*
+ * As duas regras que abrem espaço lateral vêm DEPOIS de `.preenchido`, e a ordem
+ * é o que as faz funcionar: `.preenchido` usa o atalho `padding`, que reescreve os
+ * quatro lados. Antes dele, `padding-left` seria apagado no campo preenchido com
+ * ícone — e o texto passaria por baixo do ícone.
+ */
+.withIcon {
+  padding-left: 34px;
+}
+
+.withToggle {
+  padding-right: 44px;
+}
+
+.toggle {
+  position: absolute;
+  right: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    color 0.12s,
+    background 0.12s;
+}
+
+.toggle:hover {
+  color: var(--text-secondary);
+  background: var(--surface-2);
+}
+
+.toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
 /* Rótulo, erro e apoio — Fase 7a, com as telas de auth. */
@@ -57,6 +156,19 @@
   font-size: 12px;
   font-weight: 500;
   color: var(--text-secondary);
+  letter-spacing: 0.01em;
+}
+
+/*
+ * Rótulo e ação na mesma linha (`acaoNoLabel`). `baseline` e não `center`: a ação
+ * é menor que o rótulo, e alinhar pelo centro deixaria as duas linhas de base
+ * desencontradas por 1px — visível justamente onde o olho procura o alinhamento.
+ */
+.linhaLabel {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-2);
 }
 
 .erro {
@@ -65,10 +177,19 @@
   color: var(--danger);
 }
 
+/*
+ * `--text-secondary` e não `--text-muted`, que era o valor até a Fase 7.
+ *
+ * O texto de apoio é TEXTO, e a 12px vale a exigência de 4.5:1 do WCAG AA.
+ * `--text-muted` sobre um card `--surface-1` dá 3.89:1 — reprova, e reprovava
+ * silenciosamente nas cinco telas fora de auth também. `--text-secondary` dá
+ * 8.00:1. O tom cinza continua distinguindo apoio de conteúdo; só deixa de
+ * distinguir por ilegibilidade. Guardado em `design-contraste.test.ts`.
+ */
 .hint {
   font-family: var(--font-body);
   font-size: 12px;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 .invalid {

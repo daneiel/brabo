@@ -14,8 +14,18 @@ FROM node:24.11.1-alpine3.21 AS build
 ARG VITE_API_URL=http://localhost:3000
 ARG VITE_ENGINE_URL=http://localhost:4000
 
+# A versão é compile-time DE PROPÓSITO, e é a única VITE_* que quer ser (ADR
+# 0036). Para as URLs, compile-time é a limitação que o `/config.js` resolve:
+# elas são propriedade do AMBIENTE, e a mesma imagem precisa poder falar com api
+# diferente em staging e produção. Versão é propriedade do ARTEFATO — assar
+# `brabo-web:1.1.2` com a string "1.1.2" é o que impede a imagem de reportar
+# outra coisa. O default "dev" é honesto: build fora do `release.yml` não nasceu
+# de tag nenhuma.
+ARG VITE_BRABO_VERSION=dev
+
 ENV VITE_API_URL=$VITE_API_URL \
-    VITE_ENGINE_URL=$VITE_ENGINE_URL
+    VITE_ENGINE_URL=$VITE_ENGINE_URL \
+    VITE_BRABO_VERSION=$VITE_BRABO_VERSION
 
 RUN corepack enable && corepack prepare pnpm@11.3.0 --activate
 
@@ -71,9 +81,23 @@ COPY --from=build /repo/apps/web/dist /usr/share/nginx/html
 
 # Prova, no build, que o bundle veio e que o envsubst existe nesta base (o
 # entrypoint depende dele) — em vez de descobrir no boot do container.
+#
+# As fontes entram na conferência a partir do ADR 0036. Elas são auto-hospedadas
+# porque a CSP desta imagem (`font-src 'self'`) bloqueia CDN, e o modo de falha é
+# silencioso: sem os arquivos, as três famílias caem em fonte de sistema e só
+# quem abre a página publicada percebe. Contar os .woff2 é o que impede uma
+# imagem sem tipografia de subir — `test -d` sozinho passaria com a pasta vazia.
+#
+# O `find | wc -l` faz o hadolint pedir `-o pipefail` (DL4006), e aqui ele não
+# acrescenta nada: se o `find` falhar, o `wc -l` imprime 0 e o `[ 0 -eq 8 ]`
+# reprova o build de qualquer forma. Suprimido com o motivo, não por hábito.
+# hadolint ignore=DL4006
 RUN chmod 0755 /usr/local/bin/brabo-entrypoint.sh \
  && test -f /usr/share/nginx/html/index.html \
  && test -d /usr/share/nginx/html/assets \
+ && test -d /usr/share/nginx/html/fonts \
+ && [ "$(find /usr/share/nginx/html/fonts -name '*.woff2' | wc -l)" -eq 8 ] \
+ && ! grep -rq 'fonts.googleapis.com' /usr/share/nginx/html/index.html \
  && command -v envsubst >/dev/null
 
 # `nginx` (uid 101) já existe na imagem oficial — não criamos usuário novo.

@@ -61,6 +61,27 @@ const authLayout = createRoute({
   component: Outlet,
 });
 
+/**
+ * Rotas públicas que não são de auth (ADR 0036).
+ *
+ * Hoje só `/status`, e ela precisa ser pública por uma razão concreta: o rodapé
+ * das telas de auth aponta para lá. Atrás do guard de sessão, clicar em "Status"
+ * na tela de login redirecionava de volta para a tela de login — o único destino
+ * que ela não pode ter.
+ *
+ * É seguro: a `StatusPage` só consulta os `/health` da api e do engine, que já
+ * são públicos (é o que o Kubernetes usa em probe, antes de qualquer token
+ * existir). Nada de projeto, sessão ou usuário passa por ela.
+ *
+ * Sem `Shell` porque nenhuma navegação da app leva a `/status` — ela é alcançada
+ * por URL e pelo rodapé de auth, e a página traz o próprio `<main>` e `<h1>`.
+ */
+const publicLayout = createRoute({
+  getParentRoute: () => rootRoute,
+  id: 'public',
+  component: Outlet,
+});
+
 const irPara = (rota: string) => {
   void router.navigate({ to: rota });
 };
@@ -187,9 +208,11 @@ const gitErrorRoute = createRoute({
 });
 
 const statusRoute = createRoute({
-  getParentRoute: () => appLayout,
+  getParentRoute: () => publicLayout,
   path: '/status',
-  component: StatusPage,
+  component: () => (
+    <StatusPage irPara={irPara} voltarPara={temSessao() ? '/' : '/login'} />
+  ),
 });
 
 const routeTree = rootRoute.addChildren([
@@ -199,7 +222,6 @@ const routeTree = rootRoute.addChildren([
     sessionRoute,
     provisioningRoute,
     gitErrorRoute,
-    statusRoute,
   ]),
   authLayout.addChildren([
     loginRoute,
@@ -207,6 +229,7 @@ const routeTree = rootRoute.addChildren([
     forgotRoute,
     setPasswordRoute,
   ]),
+  publicLayout.addChildren([statusRoute]),
 ]);
 
 export const router = createRouter({ routeTree });

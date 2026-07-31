@@ -9,6 +9,20 @@ import { Table, type TableColumn } from './ui/Table';
 import { AlertIcon, CheckIcon, ClockIcon, PrIcon } from './ui/icons';
 import styles from './PrGateTimeline.module.css';
 
+export interface GateSubVerdict {
+  agentId: string;
+  label: string;
+  veredito: 'approved' | 'changes_requested';
+  resumo: string;
+  itens: string[];
+}
+
+export interface GateDispensedDelegation {
+  agentId: string;
+  label: string;
+  justification: string;
+}
+
 export interface GateVerdict {
   seq: number;
   gate: 'qa' | 'secops';
@@ -16,6 +30,13 @@ export interface GateVerdict {
   resumo: string;
   itens: string[];
   coverageMatrix?: CoverageMatrixRow[];
+  // Rastreabilidade da área de QA (Fase 8b/8d): o parecer de CADA
+  // subespecialidade que rodou, e a que foi dispensada (com justificativa —
+  // nunca silêncio). `itens` acima já vem prefixado por `[label]`
+  // (`QaLead.consolidar/1`); os sub-blocos são o detalhe completo por trás
+  // do prefixo.
+  subVerdicts?: GateSubVerdict[];
+  dispensed?: GateDispensedDelegation[];
 }
 
 // Só os campos que o componente realmente usa — assim tanto `Task` quanto
@@ -205,6 +226,39 @@ function VerdictCard({
               rows={verdict.coverageMatrix}
               rowKey={(r) => r.rule}
             />
+          )}
+          {verdict.subVerdicts && verdict.subVerdicts.length > 0 && (
+            <div className={styles.subVerdicts}>
+              {verdict.subVerdicts.map((sv) => (
+                <div key={sv.agentId} className={styles.subVerdictCard}>
+                  <div className={styles.subVerdictHeader}>
+                    <Badge tone={sv.veredito === 'approved' ? 'success' : 'danger'}>
+                      {sv.label}: {sv.veredito === 'approved' ? 'aprovado' : 'mudanças solicitadas'}
+                    </Badge>
+                    <span className={styles.verdictSummary}>{sv.resumo}</span>
+                  </div>
+                  {sv.itens.length > 0 && (
+                    <ul className={styles.itemList}>
+                      {sv.itens.map((item, i) => (
+                        <li key={i}>{item}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          {verdict.dispensed && verdict.dispensed.length > 0 && (
+            <div className={styles.subVerdicts}>
+              {verdict.dispensed.map((d) => (
+                <div key={d.agentId} className={styles.subVerdictCard}>
+                  <div className={styles.subVerdictHeader}>
+                    <Badge tone="muted">{d.label}: dispensada</Badge>
+                    <span className={styles.verdictSummary}>{d.justification}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </div>
       )}

@@ -24,8 +24,16 @@ RUN apk add --no-cache build-base inotify-tools git
 # do scanner significa gate se comportando diferente nos dois lugares. Subiu de
 # 8.21.2 para 8.30.1 na Fase 5 porque o binário do 8.21.2 carrega 15 CVEs de Go
 # stdlib (ver .trivyignore.yaml). As regressões `--only gitleaks` passam nos dois.
+#
+# actionlint (subagente Workflows da área de Infra, Fase 8c) — mesmo padrão
+# de binário estático do GitHub (tar.gz, igual gitleaks). SEM ACTIONLINT O
+# WORKFLOWS GERA WORKFLOW SEM VALIDAÇÃO LOCAL: `Engine.Actions.
+# ActionlintDetector` degrada graciosamente (`ValidateInfraFile` segue sem
+# validar), nunca quebra o turno — ver ADR 0039. Só valida GitHub Actions;
+# não há binário offline equivalente pra `.gitlab-ci.yml` (gap documentado).
 ARG GITLEAKS_VERSION=8.30.1
 ARG HADOLINT_VERSION=2.12.0
+ARG ACTIONLINT_VERSION=1.7.12
 RUN apk add --no-cache --virtual .binaries-build curl tar \
   && (curl -fsSL -o /tmp/gitleaks.tar.gz \
         "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
@@ -36,7 +44,12 @@ RUN apk add --no-cache --virtual .binaries-build curl tar \
         "https://github.com/hadolint/hadolint/releases/download/v${HADOLINT_VERSION}/hadolint-Linux-x86_64" \
       && chmod +x /usr/local/bin/hadolint \
       || echo "[build] hadolint nao instalado -- o gate de QA de infra pula o lint de Dockerfile") \
-  && rm -f /tmp/gitleaks.tar.gz \
+  && (curl -fsSL -o /tmp/actionlint.tar.gz \
+        "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz" \
+      && tar -xzf /tmp/actionlint.tar.gz -C /usr/local/bin actionlint \
+      && chmod +x /usr/local/bin/actionlint \
+      || echo "[build] actionlint nao instalado -- o Workflows segue sem validar o pipeline gerado") \
+  && rm -f /tmp/gitleaks.tar.gz /tmp/actionlint.tar.gz \
   && apk del .binaries-build
 
 # semgrep (SecOpsAgent, Fase 4a) — via pip. python3/pip ficam instalados de

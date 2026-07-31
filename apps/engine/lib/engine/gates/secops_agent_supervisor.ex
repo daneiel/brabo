@@ -2,7 +2,7 @@ defmodule Engine.Gates.SecOpsAgentSupervisor do
   @moduledoc """
   DynamicSupervisor do SecOpsAgent (Fase 4a), um por `project_id`.
   Idempotente — `start_agent/1` sinaliza `:started`/`:existing` (mesmo
-  desenho do `Engine.Gates.QaAgentSupervisor`).
+  desenho do `Engine.Gates.QaLeadSupervisor`).
   """
 
   use DynamicSupervisor

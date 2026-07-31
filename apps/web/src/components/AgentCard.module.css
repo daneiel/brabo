@@ -37,6 +37,45 @@
   font-weight: 600;
   font-size: 14.5px;
   color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Selo "Lead" (área, Fase 8d) — mesma linguagem visual do .branch abaixo,
+   sem competir com a cor de status. */
+.badge {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 9px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--agent-color);
+  background: color-mix(in srgb, var(--agent-color) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--agent-color) 34%, transparent);
+  border-radius: var(--radius-full);
+  padding: 1px 7px;
+}
+
+/* Card de subagente aninhado sob o lead da área (Fase 8d) — mesmos tokens,
+   menos respiro, sem virar uma variante visual nova. */
+.card.compact {
+  padding: 10px 12px;
+  gap: 6px;
+}
+
+.card.compact .avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+}
+
+.card.compact .name {
+  font-size: 13px;
+}
+
+.card.compact .role {
+  font-size: 11px;
 }
 
 .role {

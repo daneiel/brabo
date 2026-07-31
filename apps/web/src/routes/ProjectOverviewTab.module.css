@@ -38,6 +38,42 @@
   gap: 14px;
 }
 
+/* Área da hierarquia de agentes (Fase 8d, ADR 0038) — um card de grid só,
+   card do lead em cima, subespecialidades recolhíveis embaixo. */
+.areaGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.areaMembers {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-left: 10px;
+  border-left: 2px solid var(--border);
+}
+
+.areaToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  border: none;
+  background: transparent;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px 0;
+}
+
+.areaMembersList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 /* --- Fase 3b: seção de arquitetura --- */
 
 .arch {
