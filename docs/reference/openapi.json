@@ -8846,7 +8846,21 @@
           "contextWindow": {
             "type": "object",
             "example": 200000,
-            "nullable": true
+            "nullable": true,
+            "description": "Também é o `context_length` das capabilities do modelo."
+          },
+          "supportsToolCalling": {
+            "type": "boolean",
+            "example": true,
+            "description": "Tool calling NATIVO. Sem isto o modelo é chat-only e não pode ser vinculado a um agente (RN-038)."
+          },
+          "supportsStreaming": {
+            "type": "boolean",
+            "example": true
+          },
+          "supportsVision": {
+            "type": "boolean",
+            "example": false
           },
           "isActive": {
             "type": "boolean",
@@ -8872,6 +8886,9 @@
           "inputPricePerMillionMicros",
           "outputPricePerMillionMicros",
           "contextWindow",
+          "supportsToolCalling",
+          "supportsStreaming",
+          "supportsVision",
           "isActive",
           "createdAt",
           "updatedAt"

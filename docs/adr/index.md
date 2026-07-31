@@ -126,11 +126,17 @@ O loop que faz o time melhorar.
 | [0038](0038-hierarquia-de-agentes.md) | Área, lead e delegação: handoff externo só endereça lead ou agente sem área, consolidação num artefato só sem mudar o contrato externo dos gates, orçamento em cascata com sub-teto por delegação, origem da falha tipada e retrofitada em todo o sistema que já classificava falha informalmente |
 | [0039](0039-actionlint-e-validacao-do-pipeline-de-ci-gerado.md) | actionlint pinado no Dockerfile do engine (mesmo padrão do gitleaks/hadolint), validação do pipeline de CI na GERAÇÃO em vez de num gate pós-PR novo, e o gap documentado de `.gitlab-ci.yml` sem linter estático offline equivalente |
 
+## Fase 9 — Providers de LLM
+
+| # | decisão |
+|---|---|
+| [0040](0040-base-openai-compativel-e-contrato-de-llm-providers.md) | Base OpenAI-compatível sobre `node:http` (não sobre o SDK, para ter timeout de INATIVIDADE), erro normalizado com `code` obrigatório no chunk, capabilities em duas camadas com binding de agente recusado sem tool calling nativo, e suite de contrato onde o contrato é dono das asserções e o harness do dialeto |
+
 ## A convenção
 
 - **Um arquivo por decisão**, em `docs/adr/NNNN-titulo-curto.md`, com
   numeração sequencial de 4 dígitos. **Sem reuso de número**, nem quando um ADR
-  é superado — o próximo é **0040**.
+  é superado — o próximo é **0041**.
 - **Três seções, só elas:** **Contexto** (o problema ou a força que motivou),
   **Decisão** (o que foi decidido), **Consequências** (os trade-offs aceitos e
   o que fica para depois).

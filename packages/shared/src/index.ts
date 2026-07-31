@@ -11,6 +11,38 @@ export interface HealthStatus {
 
 export type LLMProviderName = "ollama" | "anthropic" | "openai";
 
+/**
+ * Taxonomia normalizada de falha de provider (Fase 9a — ADR 0040). Espelha o
+ * que o lado git fez no ADR 0002: quem consome um erro de LLM decide pelo
+ * `code`, nunca por substring da mensagem do vendor — que muda sem aviso e é
+ * diferente em cada um dos providers.
+ */
+export type LLMErrorCode =
+  /** Chave ausente, inválida ou sem permissão pro modelo (401/403). */
+  | "auth"
+  /** Cota ou throughput estourado (429). */
+  | "rate_limit"
+  /** O modelo pedido não existe nesse provider (404). */
+  | "model_not_found"
+  /** O prompt não cabe na janela do modelo (413, ou 400 com o marcador). */
+  | "context_length"
+  /** O provider ficou MUDO além do teto de inatividade. */
+  | "timeout"
+  /** Nem chegou a falar com o provider (DNS, recusa de conexão, TLS). */
+  | "connection"
+  /** Falhou do lado de lá por motivo que não se encaixa nos anteriores. */
+  | "upstream";
+
+/**
+ * O que o provider sabe fazer, independente do modelo escolhido — o TETO.
+ * Um modelo pode ser mais pobre que o provider (ver as colunas
+ * `supports_*` de `models`), nunca mais rico.
+ */
+export interface LLMProviderCapabilities {
+  readonly streaming: boolean;
+  readonly toolCalling: boolean;
+}
+
 export type ModelCategory = "local" | "cloud";
 
 export type ChatRole = "user" | "assistant" | "system" | "tool";
@@ -68,6 +100,11 @@ export interface ChatUsageChunk {
 export interface ChatErrorChunk {
   type: "error";
   message: string;
+  /**
+   * Obrigatório de propósito: com campo opcional, um provider novo esquece de
+   * classificar e o erro dele volta a ser string opaca sem ninguém perceber.
+   */
+  code: LLMErrorCode;
 }
 
 // Ferramentas pedidas pelo modelo — no Ollama vêm na mensagem final (não

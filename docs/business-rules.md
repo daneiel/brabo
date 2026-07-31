@@ -411,6 +411,48 @@ Cada limiar dispara **uma vez**; o último notificado fica persistido em
 - **Onde:** `apps/api/src/domain/llm/binding-resolver.ts`
 - **Teste:** `test/domain/llm/binding-resolver.spec.ts`
 
+### RN-038 — Binding de agente exige tool calling nativo {#rn-038}
+
+Vincular um modelo a um **agente** (`scope = 'agent'`) só é permitido se o
+modelo tiver `supports_tool_calling`. Um agente só existe dentro do ToolLoop, e
+o ToolLoop só funciona se o modelo souber **pedir** ferramentas; sem isso a
+falha apareceria lá na frente como "o agente parou sem concluir", que é
+exatamente o diagnóstico por eliminação que o [ADR 0020](adr/0020-destravar-gates-qa-secops.md)
+proibiu. A recusa é 422 e a mensagem aponta o filtro **"aptos para agentes"** —
+sem esse ponteiro a regra vira beco sem saída.
+
+O `ToolCallRecovery` do engine recupera chamadas que o modelo escreveu em prosa,
+mas é **resgate, não licença**: depende de o modelo acertar o formato por acaso.
+
+Só `agent` valida. `workspace` e `project` são o fallback do chat humano e
+`session` é conversa — nenhum roda ToolLoop, e travá-los proibiria modelo
+chat-only no produto. O agente `context-manager` é coberto por construção: é um
+slug **dentro** do escopo `agent`, não um escopo próprio.
+
+- **Onde:** `apps/api/src/domain/llm/model-capabilities.ts:38`
+- **Teste:** `test/domain/llm/model-capabilities.spec.ts`,
+  `test/application/use-cases/llm/set-model-binding.use-case.spec.ts`
+- **Origem:** [ADR 0040](adr/0040-base-openai-compativel-e-contrato-de-llm-providers.md)
+
+### RN-039 — Contagem de token que o provider não deu é marcada como estimada {#rn-039}
+
+Quando a resposta do provider não traz `usage`, a base OpenAI-compatível conta
+localmente com o tokenizer e emite o chunk com `estimated: true`. O número
+continua servindo para cobrar, mas a marca preserva a diferença entre **"o
+provider disse zero"** e **"o provider não disse nada"** — e é ela que permite
+à UI qualificar o custo em vez de exibir um valor sem procedência.
+
+Os outros dois providers divergem, e a divergência é normalizada, não escondida:
+o Ollama simplesmente não emite `usage` sem a linha `done`; o Anthropic não sabe
+omitir contagem, porque `usage` é obrigatório no `message_start` do protocolo
+dele. As três respostas estão em
+[docs/reference/llm-providers.md](reference/llm-providers.md#divergências-normalizadas).
+
+- **Onde:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:150`
+- **Teste:** `test/contract/llm-provider.contract.ts` (cenário `sem_usage`,
+  rodado contra os três providers)
+- **Origem:** [ADR 0040](adr/0040-base-openai-compativel-e-contrato-de-llm-providers.md)
+
 ---
 
 ## Psicólogo e Anamnese

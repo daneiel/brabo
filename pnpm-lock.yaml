@@ -110,9 +110,6 @@ importers:
       nestjs-pino:
         specifier: ^4.6.1
         version: 4.6.1(@nestjs/common@11.1.28(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2))(pino-http@11.0.0)(pino@10.3.1)(rxjs@7.8.2)
-      openai:
-        specifier: ^6.48.0
-        version: 6.48.0(ws@8.21.1)
       pg:
         specifier: ^8.22.0
         version: 8.22.0
@@ -7624,26 +7621,6 @@ packages:
   open@8.4.2:
     resolution: {integrity: sha512-7x81NCL719oNbsq/3mh+hVrAWmFuEYUqrq/Iw3kUzH8ReypT9QQ0BLoJS7/G9k6N81XjW4qHWtjWwe/9eLy1EQ==}
     engines: {node: '>=12'}
-
-  openai@6.48.0:
-    resolution: {integrity: sha512-KhVp+FyV50QrXNextvL9hIU5l6ox5HYuKQjGVk7lIqprgJol90+dQXWONV6S1lRWsKA1bXjrow8RsUT14M1hNA==}
-    peerDependencies:
-      '@aws-sdk/credential-provider-node': '>=3.972.0 <4'
-      '@smithy/hash-node': '>=4.3.0 <5'
-      '@smithy/signature-v4': '>=5.4.0 <6'
-      ws: ^8.18.0
-      zod: ^3.25 || ^4.0
-    peerDependenciesMeta:
-      '@aws-sdk/credential-provider-node':
-        optional: true
-      '@smithy/hash-node':
-        optional: true
-      '@smithy/signature-v4':
-        optional: true
-      ws:
-        optional: true
-      zod:
-        optional: true
 
   openapi-to-postmanv2@6.3.1:
     resolution: {integrity: sha512-WclrXDtQhdxWn3POP3wbsV1SP7A4zYcptwWHKATWSFjYPmQdZW+1RVKUZ++BrSSI8D8zDmIbeOKf/9YBLVX+5Q==}
@@ -18822,10 +18799,6 @@ snapshots:
       define-lazy-prop: 2.0.0
       is-docker: 2.2.1
       is-wsl: 2.2.0
-
-  openai@6.48.0(ws@8.21.1):
-    optionalDependencies:
-      ws: 8.21.1
 
   openapi-to-postmanv2@6.3.1:
     dependencies:

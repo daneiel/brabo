@@ -44,6 +44,30 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api**: providers de LLM passam a ter **contrato único** e capabilities, como
+  os de git desde a Fase 2. `LLMProvider` ganha `capabilities`
+  (`streaming`/`toolCalling`) e `models` ganha `supports_tool_calling`,
+  `supports_streaming` e `supports_vision`. Vincular a um **agente** um modelo
+  sem tool calling nativo passa a responder **422** com a mensagem que aponta o
+  filtro "aptos para agentes" ([RN-038](docs/business-rules.md#rn-038)); a
+  migração `0026` faz o backfill dirigido dos modelos do seed, então bindings
+  existentes continuam valendo. Decisão em
+  [ADR 0040](docs/adr/0040-base-openai-compativel-e-contrato-de-llm-providers.md)
+- **api**: o provider da **OpenAI passa a fazer tool calling** — antes ele
+  descartava `options.tools` em silêncio, e um agente vinculado a um modelo da
+  OpenAI terminava sem concluir. Ele agora deriva de uma base OpenAI-compatível
+  sobre `node:http`, com teto de **inatividade** de socket configurável em
+  `LLM_REQUEST_TIMEOUT_MS`. A dependência `openai` saiu do projeto
+- **api**: o provider da **Anthropic passa a fazer tool calling**, com
+  `role: 'tool'` virando bloco `tool_result` no turno certo em vez de ser
+  achatado em texto de `user`
+- **api**: falha de provider de LLM passa a ser **classificada**. O chunk de
+  erro ganha `code` (`auth`, `rate_limit`, `model_not_found`, `context_length`,
+  `timeout`, `connection`, `upstream`) em vez de repassar a string crua do
+  vendor. Contagem de token que o provider não informou vem marcada como
+  estimada ([RN-039](docs/business-rules.md#rn-039)) — o número serve para
+  cobrar, mas não se confunde com um zero informado
+
 - **web**: as quatro telas de auth (`/login`, `/registrar`, `/esqueci-senha`,
   `/definir-senha`) passam a seguir o design aprovado: cabeçalho de marca acima
   do card, rodapé de página com a versão do artefato, campo com botão de mostrar
