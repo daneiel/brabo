@@ -271,3 +271,5 @@ o componente `d` da JWK, travado por teste.
 | PUT | `/workspaces/:workspaceId/model-binding` | role:maintainer |
 | GET | `/workspaces/:workspaceId/projects` | role:viewer |
 | POST | `/workspaces/:workspaceId/projects` | role:maintainer |
+| GET | `/workspaces/:workspaceId/projects-status` | role:viewer |
+| GET | `/workspaces/:workspaceId/summary` | role:viewer |

@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { TokenMeter, tokenThreshold } from './TokenMeter';
 
 describe('tokenThreshold', () => {
@@ -68,5 +69,66 @@ describe('TokenMeter', () => {
 
     expect(screen.getByText('ao vivo')).toBeInTheDocument();
     expect(screen.getByText('falta 20')).toBeInTheDocument();
+  });
+
+  it('compact com orçamento mostra gasto e saldo em USD', () => {
+    render(
+      <TokenMeter used={30} limit={100} costBRL={0} costUSD={30} variant="compact" />,
+    );
+
+    expect(screen.getByText(/gasto US\$\s*30,00/)).toBeInTheDocument();
+    expect(screen.getByText(/saldo US\$\s*70,00/)).toBeInTheDocument();
+  });
+});
+
+describe('TokenMeter — sem orçamento (noBudget)', () => {
+  it('compact + noBudget: CTA no lugar da barra, nunca "0/0 · 0%"', () => {
+    render(
+      <TokenMeter used={0} limit={0} costBRL={0} costUSD={0} variant="compact" noBudget />,
+    );
+
+    expect(screen.getByTestId('token-meter-no-budget-cta')).toBeInTheDocument();
+    expect(screen.getByText('Definir orçamento')).toBeInTheDocument();
+    expect(screen.queryByText(/0\s*\/\s*0/)).not.toBeInTheDocument();
+    expect(screen.queryByText('0%')).not.toBeInTheDocument();
+  });
+
+  it('clicar no CTA chama onDefineBudget sem propagar pro clique do card', async () => {
+    const user = userEvent.setup();
+    const onDefineBudget = vi.fn();
+    const onCardClick = vi.fn();
+
+    render(
+      <button type="button" onClick={onCardClick}>
+        <TokenMeter
+          used={0}
+          limit={0}
+          costBRL={0}
+          costUSD={0}
+          variant="compact"
+          noBudget
+          onDefineBudget={onDefineBudget}
+        />
+      </button>,
+    );
+
+    await user.click(screen.getByTestId('token-meter-no-budget-cta'));
+
+    expect(onDefineBudget).toHaveBeenCalledOnce();
+    expect(onCardClick).not.toHaveBeenCalled();
+  });
+
+  it('default e live IGNORAM noBudget — mostram o valor real normalmente', () => {
+    render(
+      <TokenMeter used={50} limit={100} costBRL={10} costUSD={2} variant="default" noBudget />,
+    );
+    expect(screen.queryByTestId('token-meter-no-budget-cta')).not.toBeInTheDocument();
+    expect(screen.getByText('50 / 100 tokens')).toBeInTheDocument();
+
+    render(
+      <TokenMeter used={50} limit={100} costBRL={10} costUSD={2} variant="live" noBudget />,
+    );
+    expect(screen.queryByTestId('token-meter-no-budget-cta')).not.toBeInTheDocument();
+    expect(screen.getByText('50/100')).toBeInTheDocument();
   });
 });

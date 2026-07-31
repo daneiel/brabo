@@ -6481,6 +6481,107 @@
           "workspaces"
         ]
       }
+    },
+    "/workspaces/{workspaceId}/projects-status": {
+      "get": {
+        "description": "Uma linha por projeto do workspace com task bloqueada — alimenta o dot de status da sidebar do dashboard, numa query só em vez de N chamadas ao backlog.",
+        "operationId": "WorkspacesController_getProjectsStatus",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProjectBlockedStatusResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no workspace."
+          },
+          "404": {
+            "description": "Workspace inexistente ou invisível para quem chamou."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Contagem de tasks bloqueadas por projeto",
+        "tags": [
+          "workspaces"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/summary": {
+      "get": {
+        "description": "Contagem de projetos, agentes que gastaram tokens neste mês e o gasto do mês — alimenta a linha de resumo do dashboard de projetos.",
+        "operationId": "WorkspacesController_getSummary",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceSummaryResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no workspace."
+          },
+          "404": {
+            "description": "Workspace inexistente ou invisível para quem chamou."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Resumo agregado do workspace",
+        "tags": [
+          "workspaces"
+        ]
+      }
     }
   },
   "info": {
@@ -9279,6 +9380,23 @@
           "userEmail"
         ]
       },
+      "ProjectBlockedStatusResponseDto": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "example": "01JC4Z0000PROJETO0000000001"
+          },
+          "blockedTaskCount": {
+            "type": "number",
+            "example": 2
+          }
+        },
+        "required": [
+          "projectId",
+          "blockedTaskCount"
+        ]
+      },
       "ProjectMemberComUsuarioResponseDto": {
         "type": "object",
         "properties": {
@@ -11439,6 +11557,31 @@
           "createdBy",
           "createdAt",
           "updatedAt"
+        ]
+      },
+      "WorkspaceSummaryResponseDto": {
+        "type": "object",
+        "properties": {
+          "activeProjects": {
+            "type": "number",
+            "example": 4,
+            "description": "Quantidade de projetos do workspace. Não há flag de \"ativo\" no domínio — todo projeto conta."
+          },
+          "agentCount": {
+            "type": "number",
+            "example": 6,
+            "description": "Agentes distintos (actorKind=agent) que gastaram tokens neste mês, somando todos os projetos do workspace — inclui subespecialidades de área (Fase 8)."
+          },
+          "spentMicros": {
+            "type": "number",
+            "example": 12500000,
+            "description": "Gasto do mês corrente, em micro-USD, somado por token_usage.createdAt."
+          }
+        },
+        "required": [
+          "activeProjects",
+          "agentCount",
+          "spentMicros"
         ]
       }
     }

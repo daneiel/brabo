@@ -44,6 +44,34 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api,web**: fidelidade do dashboard de projetos ao design aprovado
+  (`design/SCREENS.md`, `design/COMPONENTS.md`):
+  - linha de resumo `"{N} projetos ativos · {M} agentes · {gasto} este mês"`,
+    alimentada por um endpoint novo (`GET /workspaces/:workspaceId/summary`)
+    que soma tokens gastos e conta agentes distintos que trabalharam no mês
+    corrente ([RN-038](docs/business-rules.md#rn-038));
+  - cards do dashboard passam a mostrar o roster REAL do projeto (antes era
+    a lista estática de todo agente, igual em todo card) em chips agrupados
+    por área — QA com subespecialidades delegadas vira um chip único com a
+    contagem (`"QA ×3"`), até 4 chips visíveis + excedente num badge;
+  - `TokenMeter` `compact` ganha rodapé de gasto/saldo e um estado de "sem
+    orçamento" (CTA "Definir orçamento" levando à aba de Configurações do
+    projeto, via deep-link `?tab=settings`) — antes mostrava `0/0 · 0%`
+    indistinguível de gasto zero real;
+  - sidebar ganha dot de status por projeto (verde=saudável, âmbar=orçamento
+    ≥70%, vermelho=orçamento ≥90% ou task bloqueada, cinza=sem atividade em
+    7 dias — risco sempre vence inatividade,
+    [RN-039](docs/business-rules.md#rn-039)) via um segundo endpoint novo
+    (`GET /workspaces/:workspaceId/projects-status`), e rodapé com
+    avatar/iniciais + e-mail + papel RBAC (sem o rótulo de proficiência da
+    Anamnese, que o mock mistura ali)
+  - moeda do card e do resumo passam a ser só USD — decisão registrada em
+    [ADR 0040](docs/adr/0040-moeda-do-dashboard.md); `TokenMeter`
+    `default`/`live` (header do projeto, chat) continuam R$+US$, sem mudança;
+  - componente `Skeleton` novo (nenhum existia) durante o carregamento da
+    grade e do resumo; o vazio de "workspace sem projeto nenhum" ganha um
+    CTA "Criar projeto" e passa a se distinguir do vazio de "busca sem
+    resultado" (antes os dois mostravam o mesmo texto)
 - **web**: as quatro telas de auth (`/login`, `/registrar`, `/esqueci-senha`,
   `/definir-senha`) passam a seguir o design aprovado: cabeçalho de marca acima
   do card, rodapé de página com a versão do artefato, campo com botão de mostrar
@@ -179,6 +207,24 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **web**: `design-contraste.test.ts` (citado em comentários de
+  `Input.module.css`/`AuthLayout.module.css` desde a Fase 7, mas nunca
+  criado) recriado — e achou 2 pares novos que reprovavam o AA: o papel
+  RBAC do rodapé da sidebar e o rodapé de gasto/saldo do `TokenMeter`
+  `compact` usavam `--text-muted` sobre `--surface-1` (3.89:1, mesmo motivo
+  já documentado no `.hint` do Input), e o avatar da sidebar era um
+  gradiente `--accent`→`--warning` que derrubava o contraste das iniciais
+  pra 2.10:1. Os três corrigidos antes de qualquer um chegar a produção
+- **web**: a linha de resumo do dashboard dizia **"1 projetos ativos"** — não
+  havia pluralização nenhuma, só interpolação crua do número
+  (`lib/pluralize.ts` agora resolve isso, e a linha de resumo inteira, para
+  os dois substantivos)
+- **web**: `classifyEvent` (última atividade do card/feed) vazava o TIPO CRU
+  do evento pro humano (`"infra · foo.bar_novo"`) sempre que não havia
+  tradução específica — em 6 pontos diferentes da função, não só no fallback
+  final. Agora cai em `"atividade em {agente}"`, nunca no identificador
+  interno; um teste novo (`activity-catalog.test.ts`) lê o catálogo GERADO de
+  eventos e quebra se um tipo cadastrado ficar sem tradução
 - **web**: a timeline de PR vazava o parecer INTERNO de cada subespecialidade
   de QA como um card duplicado, idêntico ao consolidado — `verdictsFor`/
   `infraVerdictsFor` (`ProjectApprovalsTab.tsx`) filtravam só por tipo de

@@ -190,7 +190,7 @@ export function classifyEvent(event: SessionEvent): ActivityDisplay {
             ? `${actorLabel} começou a trabalhar`
             : type === 'dev.idle'
               ? `${actorLabel} sem tarefa disponível`
-              : `${actorLabel} · ${type}`,
+              : `atividade em ${actorLabel}`,
     };
   }
   if (type.startsWith('execution.')) {
@@ -206,7 +206,7 @@ export function classifyEvent(event: SessionEvent): ActivityDisplay {
             ? `sugestão: dev extra para ${payloadField(payload, 'module') ?? 'um módulo'}`
             : type === 'execution.parallelization_accepted'
               ? `dev extra aceito para ${payloadField(payload, 'module') ?? 'um módulo'}`
-              : `execução · ${type}`,
+              : `atividade em ${actorLabel}`,
     };
   }
   // A fase de execução narrada de verdade (Fase 4a): claim, bloqueio e
@@ -291,7 +291,7 @@ export function classifyEvent(event: SessionEvent): ActivityDisplay {
           ? `PR de infra aberta no repositório${payloadField(payload, 'title') ? `: ${payloadField(payload, 'title')}` : ''}`
           : type === 'infra.pr_failed'
             ? 'falha ao abrir a PR de infra'
-            : `infra · ${type}`,
+            : `atividade em ${actorLabel}`,
     };
   }
   if (type.startsWith('backlog.')) {
@@ -358,7 +358,7 @@ export function classifyEvent(event: SessionEvent): ActivityDisplay {
           ? `perfil de proficiência atualizado${competency ? `: ${competency} = ${payloadField(payload, 'level') ?? '?'}` : ''}`
           : type === 'anamnese.run_completed'
             ? 'rodada da Anamnese concluída'
-            : `anamnese · ${type}`,
+            : `atividade em ${actorLabel}`,
     };
   }
   if (type === 'architecture.readiness_confirmed') {
@@ -412,7 +412,7 @@ export function classifyEvent(event: SessionEvent): ActivityDisplay {
               ? `hipótese encaminhada para a Anamnese`
               : type === 'psychologist.analysis_completed'
                 ? `análise do Psicólogo concluída (${payloadField(payload, 'tier') ?? 'triagem'})`
-                : `${actorLabel} · ${type}`;
+                : `atividade em ${actorLabel}`;
     return {
       kind: 'hypothesis',
       icon: HypothesisIcon,
@@ -511,11 +511,14 @@ export function classifyEvent(event: SessionEvent): ActivityDisplay {
     };
   }
 
+  // Tipo sem tradução específica: nunca mostra o tipo cru (`activity-catalog.test.ts`
+  // quebra se um tipo do catálogo gerado cair aqui) — o humano lê "atividade
+  // em X", não um identificador interno tipo "infra.foo_bar".
   return {
     kind: 'generic',
     icon: SessionIcon,
     color: 'var(--text-secondary)',
     bad: false,
-    text: `${actorLabel} · ${type}`,
+    text: `atividade em ${actorLabel}`,
   };
 }

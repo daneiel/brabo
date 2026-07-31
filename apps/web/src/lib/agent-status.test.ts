@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { deriveAgentRoster } from './agent-status';
+import { deriveAgentRoster, groupRosterByArea, type RosterEntry } from './agent-status';
+import { AGENTS } from './agents';
 import type { Handoff, ModuleMap, SessionEvent } from './api-types';
 
 let seq = 0;
@@ -232,5 +233,67 @@ describe('deriveAgentRoster — subagentes de área (Fase 8b/8c, no painel — F
     expect(roster.map((r) => r.id)).toEqual(
       expect.arrayContaining(['infra', 'infra-workflows']),
     );
+  });
+});
+
+describe('groupRosterByArea', () => {
+  function entry(id: keyof typeof AGENTS): RosterEntry {
+    return { id, def: AGENTS[id], status: 'ocioso' };
+  }
+
+  it('lead de QA com as duas subespecialidades vira UM grupo de área', () => {
+    const roster = [
+      entry('qa'),
+      entry('qa-automacao'),
+      entry('qa-performance-seguranca'),
+    ];
+
+    const groups = groupRosterByArea(roster);
+
+    expect(groups).toEqual([
+      {
+        kind: 'area',
+        areaKey: 'qa',
+        lead: roster[0],
+        members: [roster[1], roster[2]],
+      },
+    ]);
+  });
+
+  it('lead de QA com só uma subespecialidade delegada — grupo com 1 membro', () => {
+    const roster = [entry('qa'), entry('qa-automacao')];
+
+    const groups = groupRosterByArea(roster);
+
+    expect(groups).toEqual([
+      { kind: 'area', areaKey: 'qa', lead: roster[0], members: [roster[1]] },
+    ]);
+  });
+
+  it('agentes sem área (po/criativo/arquiteto) ficam soltos, na ordem da roster', () => {
+    const roster = [entry('criativo'), entry('po'), entry('arquiteto')];
+
+    const groups = groupRosterByArea(roster);
+
+    expect(groups).toEqual([
+      { kind: 'solo', entry: roster[0] },
+      { kind: 'solo', entry: roster[1] },
+      { kind: 'solo', entry: roster[2] },
+    ]);
+  });
+
+  it('mistura: solo + área, sem duplicar o membro como solo também', () => {
+    const roster = [entry('po'), entry('qa'), entry('qa-automacao')];
+
+    const groups = groupRosterByArea(roster);
+
+    expect(groups).toEqual([
+      { kind: 'solo', entry: roster[0] },
+      { kind: 'area', areaKey: 'qa', lead: roster[1], members: [roster[2]] },
+    ]);
+  });
+
+  it('roster vazia devolve lista vazia', () => {
+    expect(groupRosterByArea([])).toEqual([]);
   });
 });
