@@ -147,10 +147,17 @@ Access to fetch at 'http://localhost:3000/health' from origin
 ```
 
 **Se a origem não é a que você espera** (`:5174` em vez de `:5173`, host
-diferente, `https` em vez de `http`), o problema é a origem, não o CORS. Desde o
-ADR 0037 o Vite recusa subir em porta trocada, então isso só acontece se alguém
-passou `--port` ou se a web é servida por outro caminho. Conserte a origem, ou
-acrescente-a a `WEB_ORIGIN` — **nos dois serviços**, que leem a mesma variável.
+diferente, `https` em vez de `http`), o problema é a origem, não o CORS.
+
+Nos composes, `WEB_ORIGIN` **deriva** de `WEB_PORT` — mudar
+`WEB_PORT` no `.env` (a orientação de [primeiros passos](getting-started.md) para
+porta ocupada) já move a origem aceita junto, então essa divergência específica
+não acontece mais. O que ainda causa isso: alguém passou `--port` direto ao Vite
+por fora do compose (o ADR 0037 fez o Vite recusar subir nesse caso, com
+`strictPort`, em vez de subir silenciosamente noutra porta), a web é servida por
+outro caminho, ou `WEB_ORIGIN` foi definida à mão e sobrepôs a derivação.
+Conserte a origem, ou acrescente-a a `WEB_ORIGIN` — **nos dois serviços**, que
+leem a mesma variável.
 
 **Se a origem está certa**, confirme o que cada serviço responde. `curl` não faz
 CORS, então ele mostra o cabeçalho cru — que é exatamente o que o navegador olha:
