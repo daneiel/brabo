@@ -182,6 +182,7 @@ o componente `d` da JWK, travado por teste.
 | POST | `/internal/sessions/:sessionId/llm-turn-stream` | engine-service |
 | POST | `/internal/sessions/:sessionId/module-map` | engine-service |
 | POST | `/internal/sessions/:sessionId/proficiency` | engine-service |
+| POST | `/internal/models/sync` | engine-service |
 | GET | `/internal/sessions/:sessionId/psychologist-context` | engine-service |
 | POST | `/internal/sessions/:sessionId/stories` | engine-service |
 | POST | `/internal/sessions/:sessionId/story-modules` | engine-service |
@@ -269,5 +270,10 @@ o componente `d` da JWK, travado por teste.
 | POST | `/workspaces/:workspaceId/members` | role:owner |
 | GET | `/workspaces/:workspaceId/model-binding` | role:viewer |
 | PUT | `/workspaces/:workspaceId/model-binding` | role:maintainer |
+| POST | `/workspaces/:workspaceId/models/activate` | role:owner |
+| GET | `/workspaces/:workspaceId/models/catalog` | role:maintainer |
+| POST | `/workspaces/:workspaceId/models/sync` | role:owner |
+| GET | `/workspaces/:workspaceId/models/:modelId/price-changes` | role:maintainer |
+| PATCH | `/workspaces/:workspaceId/models/:modelId/pricing` | role:owner |
 | GET | `/workspaces/:workspaceId/projects` | role:viewer |
 | POST | `/workspaces/:workspaceId/projects` | role:maintainer |

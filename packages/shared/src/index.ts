@@ -9,7 +9,9 @@ export interface HealthStatus {
 
 // --- LLM ---
 
-export type LLMProviderName = "ollama" | "anthropic" | "openai";
+export const LLM_PROVIDER_NAMES = ["ollama", "anthropic", "openai"] as const;
+
+export type LLMProviderName = (typeof LLM_PROVIDER_NAMES)[number];
 
 /**
  * Taxonomia normalizada de falha de provider (Fase 9a — ADR 0040). Espelha o
@@ -41,6 +43,31 @@ export type LLMErrorCode =
 export interface LLMProviderCapabilities {
   readonly streaming: boolean;
   readonly toolCalling: boolean;
+  /**
+   * O provider sabe LISTAR o próprio catálogo (Fase 9c). Quem não sabe não
+   * expõe `listModels` — o sync pula em vez de chamar e tratar o 404, do mesmo
+   * jeito que o contrato de git provider degrada por capability desde a Fase 2.
+   */
+  readonly listModels: boolean;
+}
+
+/**
+ * Uma linha do catálogo REMOTO do provider (Fase 9c).
+ *
+ * Só `name` é obrigatório: cada catálogo informa um subconjunto diferente — o
+ * `/v1/models` da OpenAI devolve praticamente só o id, enquanto um hub devolve
+ * preço e janela junto. Campo ausente significa "o provider não disse", nunca
+ * "o valor é zero", e por isso o sync não sobrescreve o que já está gravado.
+ */
+export interface ModeloDoCatalogo {
+  readonly name: string;
+  readonly displayName?: string;
+  readonly contextLength?: number;
+  readonly supportsToolCalling?: boolean;
+  readonly inputPricePerMillionMicros?: number;
+  readonly outputPricePerMillionMicros?: number;
+  /** Só um hub preenche: quem de fato serve o modelo por baixo. */
+  readonly upstreamProvider?: string;
 }
 
 export type ModelCategory = "local" | "cloud";
