@@ -24,7 +24,7 @@ import {
   setAgentAutonomy,
   unblockTask,
 } from '../lib/api-client';
-import { deriveAgentRoster, subagentOutcomeLabel } from '../lib/agent-status';
+import { deriveAgentRoster, groupRosterByArea, subagentOutcomeLabel } from '../lib/agent-status';
 import { AREAS, areaFor } from '../lib/agents';
 import { ChevronDownIcon, ChevronRightIcon } from '../components/ui/icons';
 import { deriveExecutionProgress, formatMicros } from '../lib/execution';
@@ -117,31 +117,11 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
     });
   }
 
-  // Agrupa a roster FLAT por área (Fase 8d, ADR 0038) sem mudar
-  // `deriveAgentRoster`: cada lead de área (`qa`/`infra`) vira o topo de um
-  // grupo com os membros presentes na MESMA roster (via `areaFor`); quem
-  // não tem área (Criativo/PO/Arquiteto/dev-*) continua solo. Preserva o
-  // índice original de cada entrada — `bindingQueries`/`tokenUsage` seguem
-  // indexados pela roster inteira, sem re-fetch nem reordenação de query.
-  const rosterGroups: (
-    | { kind: 'solo'; index: number }
-    | { kind: 'area'; areaKey: string; leadIndex: number; memberIndices: number[] }
-  )[] = [];
-  const jaAgrupado = new Set<number>();
-  roster.forEach((entry, index) => {
-    if (jaAgrupado.has(index)) return;
-    const area = AREAS[entry.id];
-    if (area && area.lead === entry.id) {
-      const memberIndices = roster
-        .map((r, i) => ({ r, i }))
-        .filter(({ r }) => (area.members as string[]).includes(r.id))
-        .map(({ i }) => i);
-      memberIndices.forEach((i) => jaAgrupado.add(i));
-      rosterGroups.push({ kind: 'area', areaKey: area.key, leadIndex: index, memberIndices });
-    } else if (!areaFor(entry.id)) {
-      rosterGroups.push({ kind: 'solo', index });
-    }
-  });
+  // Agrupamento por área vem de `groupRosterByArea` (lib/agent-status.ts,
+  // compartilhado com o card do dashboard) — devolve ENTRADAS, não índices;
+  // `bindingQueries`/`tokenUsage` seguem indexados pela roster inteira, daí
+  // o `roster.indexOf(...)` na hora de renderizar (roster é sempre pequena).
+  const rosterGroups = groupRosterByArea(roster);
 
   // Fase 4a — painel do time ao vivo: qualquer evento persistido (Dev/QA/
   // SecOps/Infra) ou `agent.status` (Criativo/PO/Arquiteto/Infra) antecipa
@@ -250,14 +230,16 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
         </div>
         <div className={styles.grid}>
           {rosterGroups.map((group) => {
-            if (group.kind === 'solo') return renderLeadCard(group.index);
+            if (group.kind === 'solo') {
+              return renderLeadCard(roster.indexOf(group.entry));
+            }
 
             const area = AREAS[group.areaKey];
             const collapsed = collapsedAreas.has(group.areaKey);
             return (
               <div key={group.areaKey} className={styles.areaGroup}>
-                {renderLeadCard(group.leadIndex, 'Lead')}
-                {group.memberIndices.length > 0 && (
+                {renderLeadCard(roster.indexOf(group.lead), 'Lead')}
+                {group.members.length > 0 && (
                   <div className={styles.areaMembers}>
                     <button
                       type="button"
@@ -265,12 +247,12 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
                       onClick={() => toggleArea(group.areaKey)}
                     >
                       {collapsed ? <ChevronRightIcon size={13} /> : <ChevronDownIcon size={13} />}
-                      {area.label} · {group.memberIndices.length} subespecialidade
-                      {group.memberIndices.length > 1 ? 's' : ''}
+                      {area.label} · {group.members.length} subespecialidade
+                      {group.members.length > 1 ? 's' : ''}
                     </button>
                     {!collapsed && (
                       <div className={styles.areaMembersList}>
-                        {group.memberIndices.map((i) => renderMemberCard(i))}
+                        {group.members.map((m) => renderMemberCard(roster.indexOf(m)))}
                       </div>
                     )}
                   </div>

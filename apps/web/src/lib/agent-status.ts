@@ -1,4 +1,4 @@
-import { AGENTS, AREAS, type AgentDef } from './agents';
+import { AGENTS, AREAS, areaFor, type AgentDef } from './agents';
 import type { AgentStatus } from '../components/AgentCard';
 import type { DelegationEventPayload, SessionEvent, ModuleMap, Handoff } from './api-types';
 
@@ -218,4 +218,44 @@ export function deriveAgentRoster(
       ? { ...entry, status: 'aguardando' }
       : entry,
   );
+}
+
+export type RosterGroup =
+  | { kind: 'solo'; entry: RosterEntry }
+  | { kind: 'area'; areaKey: string; lead: RosterEntry; members: RosterEntry[] };
+
+/**
+ * Agrupa a roster FLAT por área (Fase 8d, ADR 0038): cada lead de área
+ * (`qa`/`infra`) vira o topo de um grupo com os membros presentes na MESMA
+ * roster (via `areaFor`); quem não tem área (Criativo/PO/Arquiteto/dev-*)
+ * continua solo.
+ *
+ * Devolve ENTRADAS, não índices — extraído do painel do time
+ * (`ProjectOverviewTab.tsx`), que originalmente indexava porque precisa
+ * alinhar com `bindingQueries`/`tokenUsage` (arrays paralelos à roster
+ * inteira); esse acoplamento é problema de QUEM CONSOME o agrupamento, não
+ * do agrupamento em si — o card do dashboard (Fase de fidelidade da UI),
+ * por exemplo, só precisa de `lead.def`/`members.length`, sem índice
+ * nenhum. Chamador que precisar de índice usa `roster.indexOf(entry)`
+ * (roster é sempre pequena, de dígito único).
+ */
+export function groupRosterByArea(roster: RosterEntry[]): RosterGroup[] {
+  const groups: RosterGroup[] = [];
+  const agrupados = new Set<string>();
+
+  for (const entry of roster) {
+    if (agrupados.has(entry.id)) continue;
+    const area = AREAS[entry.id];
+    if (area && area.lead === entry.id) {
+      const members = roster.filter((r) =>
+        (area.members as string[]).includes(r.id),
+      );
+      members.forEach((m) => agrupados.add(m.id));
+      groups.push({ kind: 'area', areaKey: area.key, lead: entry, members });
+    } else if (!areaFor(entry.id)) {
+      groups.push({ kind: 'solo', entry });
+    }
+  }
+
+  return groups;
 }

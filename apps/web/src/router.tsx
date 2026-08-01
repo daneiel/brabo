@@ -130,12 +130,30 @@ const indexRoute = createRoute({
   component: Dashboard,
 });
 
+const PROJECT_TABS = ['overview', 'sessions', 'backlog', 'approvals', 'settings'] as const;
+type ProjectTab = (typeof PROJECT_TABS)[number];
+
+interface ProjectSearch {
+  tab?: ProjectTab;
+}
+
+function ehProjectTab(valor: unknown): valor is ProjectTab {
+  return typeof valor === 'string' && (PROJECT_TABS as readonly string[]).includes(valor);
+}
+
 const projectRoute = createRoute({
   getParentRoute: () => appLayout,
   path: '/projects/$projectId',
+  // `tab` só existe pra deep-link (ex.: CTA "Definir orçamento" do card do
+  // dashboard indo direto pra Configurações) — a navegação normal entre
+  // abas continua em estado local, sem escrever na URL a cada clique.
+  validateSearch: (search: Record<string, unknown>): ProjectSearch => ({
+    tab: ehProjectTab(search.tab) ? search.tab : undefined,
+  }),
   component: () => {
     const { projectId } = projectRoute.useParams();
-    return <ProjectPage projectId={projectId} />;
+    const { tab } = projectRoute.useSearch();
+    return <ProjectPage projectId={projectId} initialTab={tab} />;
   },
 });
 

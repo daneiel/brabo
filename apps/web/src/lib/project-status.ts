@@ -1,0 +1,42 @@
+// Dot de status do projeto na sidebar (RN-039): verde = saudável e ativo;
+// âmbar = orçamento ≥70%; vermelho = orçamento ≥90% OU task bloqueada;
+// cinza = sem atividade nos últimos 7 dias. Quando um sinal de risco
+// (âmbar/vermelho) e o de inatividade (cinza) se aplicam ao mesmo tempo, o
+// de risco VENCE — um projeto estourado e parado ainda é algo a olhar, não
+// algo a esconder atrás de "sem atividade".
+export type ProjectStatus = 'saudavel' | 'atencao' | 'risco' | 'inativo';
+
+export interface ProjectStatusInput {
+  /** Percentual do orçamento consumido — 0 quando não há orçamento definido. */
+  budgetPct: number;
+  blockedTaskCount: number;
+  /** `true` quando houve atividade na sessão mais recente nos últimos 7 dias. */
+  hasRecentActivity: boolean;
+}
+
+export function deriveProjectStatus({
+  budgetPct,
+  blockedTaskCount,
+  hasRecentActivity,
+}: ProjectStatusInput): ProjectStatus {
+  if (budgetPct >= 90 || blockedTaskCount > 0) return 'risco';
+  if (budgetPct >= 70) return 'atencao';
+  if (!hasRecentActivity) return 'inativo';
+  return 'saudavel';
+}
+
+export const PROJECT_STATUS_COLOR: Record<ProjectStatus, string> = {
+  saudavel: 'var(--success)',
+  atencao: 'var(--warning)',
+  risco: 'var(--danger)',
+  inativo: 'var(--text-muted)',
+};
+
+export const PROJECT_STATUS_LABEL: Record<ProjectStatus, string> = {
+  saudavel: 'ativo',
+  atencao: 'orçamento ≥70%',
+  risco: 'requer atenção',
+  inativo: 'sem atividade recente',
+};
+
+export const ATIVIDADE_RECENTE_JANELA_MS = 7 * 24 * 60 * 60 * 1000;

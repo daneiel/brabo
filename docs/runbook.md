@@ -28,6 +28,7 @@ arquivo. Comece pela triagem.
 | não sei que versão está rodando | [Que versão está no ar](#que-versao-esta-no-ar) |
 | `blocked by CORS policy` no console do navegador | [Erro de CORS](#erro-de-cors) |
 | agente respondendo vazio, truncado ou lentíssimo | [Ambiente de inferência](#ambiente-de-inferencia) |
+| quero acrescentar um provider de LLM compatível com a OpenAI | [Adicionando um provider compatível](#adicionando-um-provider-compativel) |
 
 Duas coisas que valem antes de qualquer procedimento:
 
@@ -1212,3 +1213,103 @@ A máquina de gates em si não varia: ordem imutável, devolução na mesma bran
 teto de correções, pareceres como artefato e `awaiting_user` terminal são
 verificados por ExUnit ([RN-014](business-rules.md#rn-014),
 [RN-015](business-rules.md#rn-015)).
+
+---
+
+## Adicionando um provider compatível {#adicionando-um-provider-compativel}
+
+Vale para qualquer provider que fale o dialeto `/chat/completions` da OpenAI —
+que é o caso de praticamente todo hub e de todo serviço de inferência gerenciada.
+A base já existe ([ADR 0041](adr/0041-base-openai-compativel-e-contrato-de-llm-providers.md));
+o que se escreve é **configuração**, não parsing.
+
+### 1. Leia a doc oficial antes de escrever a primeira linha
+
+Quatro coisas precisam sair da documentação do provider, não de suposição:
+`baseUrl`, o header de auth, o formato de `usage` no stream e as
+particularidades de streaming. Registre no cabeçalho do arquivo de config a URL
+consultada e a data — é a única forma de saber, meses depois, se a config está
+velha.
+
+O que divergir do padrão OpenAI vira **flag na base**, nunca `if` espalhado. Se
+a divergência não couber numa flag existente, acrescente uma — e só porque este
+provider real precisa dela.
+
+### 2. Escreva a config
+
+```ts
+// apps/api/src/infrastructure/llm/<provider>-provider.ts
+export function meuProviderConfig(baseUrl = BASE_URL): OpenAICompatibleConfig {
+  return {
+    name: 'meu-provider',
+    baseUrl,
+    capabilities: { streaming: true, toolCalling: true, listModels: true },
+    authHeaders: (apiKey) => ({ Authorization: `Bearer ${apiKey ?? ''}` }),
+    flags: { streamOptionsIncludeUsage: true, maxTokensField: 'max_tokens' },
+    // Só se o catálogo dele devolver mais que `{ data: [{ id }] }`:
+    // parseCatalogo: (corpo) => ...,
+    // Só se for HUB (informa quem serviu de fato):
+    // extrairUpstreamProvider: (frame) => ...,
+  };
+}
+```
+
+Exporte a função de config, não só a classe: é ela que a suite de contrato
+aponta para o servidor falso. Uma cópia da config escrita dentro do teste
+passaria verde mesmo se a de produção divergisse.
+
+### 3. Rode a suite de contrato contra ele
+
+```ts
+runLLMProviderContract('meu-provider', () => ({
+  dialeto: dialetoOpenAI, // reaproveite o da base se o formato for o mesmo
+  criar: (baseUrl) =>
+    new OpenAICompatibleProvider(meuProviderConfig(baseUrl), new GptTokenizerEstimator()),
+  usageFallback: 'estimated',
+  timeoutEnv: 'LLM_REQUEST_TIMEOUT_MS',
+  temFerramentasNoPedido: (body) => Array.isArray(body.tools),
+  modelo: 'algum-modelo',
+}));
+```
+
+Herda de graça: stream com frame partido, usage presente e ausente, tool
+calling, os quatro erros normalizados, o catálogo e o servidor mudo.
+
+### 4. Registre o provider e o kind de credencial
+
+1. **dois lugares, de propósito**: o tipo `LLMProviderName` em
+   `packages/shared/src/index.ts` (a web também o usa) e a lista em runtime
+   `LLM_PROVIDER_NAMES` em `apps/api/src/domain/llm/llm-provider-names.ts`.
+   Elas não podem morar juntas: `packages/shared` é 100% tipo — um valor
+   exportado de lá derruba a imagem de produção da api no boot com
+   `ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING`, e
+   `apps/api/test/packages-shared-so-tipos.spec.ts` reprova antes de chegar
+   lá. Esquecer a lista não passa em silêncio: a checagem de exaustividade
+   nos dois sentidos quebra o typecheck, assim como o `Record` exaustivo de
+   `ROTULO_DO_PROVIDER` na web quebra até o provider ganhar rótulo;
+2. se for hub, acrescente o nome a `HUBS` em `apps/web/src/lib/models.ts` para
+   ele cair no grupo certo do seletor;
+3. o registry de providers da api (`llm-infrastructure.module.ts`);
+4. `pgEnum` de provider no schema + migração, se o nome for novo.
+
+### 5. Semeie os modelos com preço da doc
+
+Preço digitado entra com `manual_pricing: true`. Isso protege a linha do sync de
+preço: para provider que não expõe preço no catálogo, o número manual é o único
+que existe.
+
+Se o provider expõe `GET /models`, **não semeie o catálogo inteiro** — deixe o
+sync descobrir. Ele grava os modelos desativados, e o owner ativa o que
+interessa pela tela de curadoria ([RN-043](business-rules.md#rn-043)).
+
+### 6. Verifique com credencial real
+
+```bash
+# na tela de configurações do projeto: cadastre a credencial, depois
+# "Atualizar catálogo" e confira o relatório por provider.
+```
+
+O relatório mostra **todo** provider, inclusive o pulado, com o motivo e a
+origem da falha. `sem_credencial` significa que a chave não chegou;
+`falha · origem infra` significa que nem se conseguiu falar com o provider;
+`falha · origem modelo` significa que ele respondeu recusando.

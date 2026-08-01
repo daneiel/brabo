@@ -1,0 +1,1 @@
+{"parameters":[{"name":"modelId","required":true,"in":"path","schema":{"type":"string"}}]}

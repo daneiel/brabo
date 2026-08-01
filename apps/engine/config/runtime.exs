@@ -107,6 +107,12 @@ config :engine,
   # ligado, sem mudança de comportamento.
   start_outbox_drain?: System.get_env("START_OUTBOX_DRAIN", "true") == "true",
   start_anamnese?: System.get_env("START_ANAMNESE", "true") == "true",
+  # Sync periódico do catálogo de modelos (Fase 9c). Catálogo de provider muda
+  # em escala de dias, então o default é folgado — o botão de atualizar da tela
+  # de curadoria cobre a pressa.
+  start_model_sync?: System.get_env("START_MODEL_SYNC", "true") == "true",
+  model_sync_interval_seconds:
+    String.to_integer(System.get_env("MODEL_SYNC_INTERVAL_SECONDS", "21600")),
   # Triagem de custo do Psicólogo (Fase 4b) — abaixo do limiar a sessão é
   # analisada pelo agente `psicologo-leve` (modelo barato, tetos menores).
   # Os defaults são os valores do ADR 0015; ficam aqui, e não como atributo

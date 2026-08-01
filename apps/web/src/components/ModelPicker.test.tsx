@@ -8,6 +8,9 @@ import type { Model, ModelsByCategory } from '../lib/api-types';
  * `position: absolute` — então era RECORTADO pelo ancestral: nas últimas linhas
  * (QA, SecOps) desaparecia por completo e não havia como selecionar modelo.
  * Agora ele é `fixed` e recebe coordenadas calculadas do retângulo do gatilho.
+ *
+ * A Fase 9c acrescentou o reagrupamento por origem (Local · APIs diretas ·
+ * Hubs), os selos de custo/janela/tool calling e o filtro "aptos para agentes".
  */
 function model(over: Partial<Model> = {}): Model {
   return {
@@ -18,16 +21,26 @@ function model(over: Partial<Model> = {}): Model {
     inputPricePerMillionMicros: 0,
     outputPricePerMillionMicros: 0,
     contextWindow: 8192,
+    supportsToolCalling: true,
+    supportsStreaming: true,
+    supportsVision: false,
+    manualPricing: true,
     isActive: true,
+    availability: 'available',
+    lastSeenAt: null,
     ...over,
-  } as Model;
+  };
 }
 
 const MODELOS: ModelsByCategory = {
   local: {
     ollama: [
       model(),
-      model({ id: 'm-2', name: 'qwen2.5-coder:7b', displayName: 'Qwen2.5 Coder 7B (local)' }),
+      model({
+        id: 'm-2',
+        name: 'qwen2.5-coder:7b',
+        displayName: 'Qwen2.5 Coder 7B (local)',
+      }),
     ],
   },
   cloud: {
@@ -39,33 +52,87 @@ const MODELOS: ModelsByCategory = {
         displayName: 'Claude Opus 4.8',
         inputPricePerMillionMicros: 5_000_000,
         outputPricePerMillionMicros: 25_000_000,
+        contextWindow: 200_000,
       }),
     ],
   },
 } as ModelsByCategory;
 
-function abrir(selectedModelId?: string) {
+function abrir(selectedModelId?: string, models: ModelsByCategory = MODELOS) {
   const onSelect = vi.fn();
   render(
     <ModelPicker
-      models={MODELOS}
+      models={models}
       selectedModelId={selectedModelId}
       onSelect={onSelect}
     />,
   );
-  fireEvent.click(screen.getByRole('button', { name: /Selecionar modelo|local|Claude/ }));
+  fireEvent.click(
+    screen.getByRole('button', { name: /Selecionar modelo|local|Claude/ }),
+  );
   return { onSelect };
 }
 
 describe('ModelPicker', () => {
-  it('lista todos os modelos, locais e de cloud', () => {
+  it('agrupa por ORIGEM: local, API direta e hub', () => {
     abrir();
 
     expect(screen.getByText('Llama 3.2 1B (local)')).toBeTruthy();
-    expect(screen.getByText('Qwen2.5 Coder 7B (local)')).toBeTruthy();
     expect(screen.getByText(/Claude Opus 4.8/)).toBeTruthy();
-    expect(screen.getByText('Local · Ollama')).toBeTruthy();
-    expect(screen.getByText('Cloud · por provedor')).toBeTruthy();
+    expect(screen.getByText('Local')).toBeTruthy();
+    expect(screen.getByText('APIs diretas')).toBeTruthy();
+    // Grupo sem membro não aparece — os hubs entram na Fase 9b.
+    expect(screen.queryByText('Hubs')).toBeNull();
+  });
+
+  it('mostra entrada e saída SEPARADAS, não a média das duas', () => {
+    abrir();
+
+    // A média de 5 e 25 daria "$15", que não é o preço de nada.
+    expect(screen.getByText('$5.00 / $25.00 por 1M')).toBeTruthy();
+    expect(screen.getAllByText('grátis').length).toBe(2);
+  });
+
+  it('traz os selos de janela e de tool calling', () => {
+    abrir();
+
+    expect(screen.getByText('200k ctx')).toBeTruthy();
+    expect(screen.getAllByText('tool calling').length).toBe(3);
+  });
+
+  it('o filtro "aptos para agentes" esconde o chat-only (RN-040)', () => {
+    abrir(undefined, {
+      local: {
+        ollama: [
+          model({ id: 'chat', displayName: 'Tagarela', supportsToolCalling: false }),
+          model({ id: 'agente', displayName: 'Com ferramentas' }),
+        ],
+      },
+      cloud: {},
+    } as ModelsByCategory);
+
+    expect(screen.getByText('Tagarela')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('checkbox'));
+
+    expect(screen.queryByText('Tagarela')).toBeNull();
+    expect(screen.getByText('Com ferramentas')).toBeTruthy();
+  });
+
+  it('modelo indisponível aparece MARCADO, nunca some', () => {
+    // Se sumisse, o binding que aponta pra ele viraria um mistério na tela —
+    // e trocá-lo é justamente o que a pessoa veio fazer (RN-043).
+    abrir(undefined, {
+      local: {
+        ollama: [
+          model({ id: 'sumiu', displayName: 'Sumiu do provider', availability: 'unavailable' }),
+        ],
+      },
+      cloud: {},
+    } as ModelsByCategory);
+
+    expect(screen.getByText('Sumiu do provider')).toBeTruthy();
+    expect(screen.getByText('indisponível no provider')).toBeTruthy();
   });
 
   it('o dropdown recebe coordenadas próprias, sem depender do ancestral', () => {
@@ -91,7 +158,7 @@ describe('ModelPicker', () => {
     expect(onSelect).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'm-2' }),
     );
-    expect(screen.queryByText('Local · Ollama')).toBeNull();
+    expect(screen.queryByText('Local')).toBeNull();
   });
 
   it('marca o modelo vigente', () => {
@@ -106,7 +173,7 @@ describe('ModelPicker', () => {
 
     fireEvent.keyDown(document, { key: 'Escape' });
 
-    expect(screen.queryByText('Local · Ollama')).toBeNull();
+    expect(screen.queryByText('Local')).toBeNull();
     expect(onSelect).not.toHaveBeenCalled();
   });
 
@@ -115,7 +182,7 @@ describe('ModelPicker', () => {
 
     fireEvent.mouseDown(document.body);
 
-    expect(screen.queryByText('Local · Ollama')).toBeNull();
+    expect(screen.queryByText('Local')).toBeNull();
     expect(onSelect).not.toHaveBeenCalled();
   });
 
@@ -129,5 +196,24 @@ describe('ModelPicker', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Selecionar modelo' }));
 
     expect(screen.getByText('Nenhum modelo cadastrado')).toBeTruthy();
+  });
+
+  it('filtro que esconde tudo explica, em vez de parecer catálogo vazio', () => {
+    render(
+      <ModelPicker
+        models={
+          {
+            local: { ollama: [model({ supportsToolCalling: false })] },
+            cloud: {},
+          } as ModelsByCategory
+        }
+        onSelect={vi.fn()}
+        filtroDeAgentesPadrao
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Selecionar modelo' }));
+
+    expect(screen.getByText(/Nenhum modelo faz tool calling nativo/)).toBeTruthy();
+    expect(screen.queryByText('Nenhum modelo cadastrado')).toBeNull();
   });
 });

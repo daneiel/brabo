@@ -126,6 +126,12 @@ const sidebar: SidebarsConfig = {
       items: [
         {
           type: "doc",
+          id: "docs/reference/api/internal-models-controller-sync",
+          label: "Sincroniza o catálogo de modelos de todos os providers",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/internal-sessions-controller-create-action",
           label: "Propõe uma ação com efeito externo em nome de um agente",
           className: "api-method post",
@@ -381,6 +387,36 @@ const sidebar: SidebarsConfig = {
           id: "docs/reference/api/model-bindings-controller-set-workspace-binding",
           label: "Define o modelo default do workspace",
           className: "api-method put",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/models-controller-price-changes",
+          label: "Histórico de mudanças de preço de um modelo",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/models-controller-update-pricing",
+          label: "Corrige o preço de um modelo",
+          className: "api-method patch",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/models-controller-activate",
+          label: "Liga ou desliga modelos no seletor (lote)",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/models-controller-catalog",
+          label: "Lista o catálogo INTEIRO, inclusive inativo e indisponível",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/models-controller-sync",
+          label: "Força agora o sync de catálogo que o job periódico faz",
+          className: "api-method post",
         },
       ],
     },
@@ -801,6 +837,18 @@ const sidebar: SidebarsConfig = {
           id: "docs/reference/api/workspaces-controller-create-project-in-workspace",
           label: "Cria um projeto dentro do workspace",
           className: "api-method post",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/workspaces-controller-get-projects-status",
+          label: "Contagem de tasks bloqueadas por projeto",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/workspaces-controller-get-summary",
+          label: "Resumo agregado do workspace",
+          className: "api-method get",
         },
       ],
     },

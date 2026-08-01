@@ -1,6 +1,7 @@
 import { renovarSessao, tokenAtual } from './auth';
 import { runtimeConfig } from './runtime-config';
 import { childSpan, logger, newTraceContext } from './logger';
+import type { LlmCredentialProvider } from './models';
 import type {
   AgentAutonomyRule,
   AgentTokenUsage,
@@ -17,12 +18,16 @@ import type {
   Epic,
   ExecutionActivation,
   Handoff,
+  Model,
   ModelBindingScope,
+  ModelPriceChange,
   ModelsByCategory,
+  SyncModelCatalogResult,
   Page,
   PermissionPolicy,
   PermissionsFile,
   Project,
+  ProjectBlockedStatus,
   ProjectMemberWithUser,
   ProposedAction,
   ProvisionedRepository,
@@ -34,6 +39,7 @@ import type {
   SessionEvent,
   UserCredentialMetadata,
   Workspace,
+  WorkspaceSummary,
   WorkspaceWithRole,
 } from './api-types';
 
@@ -149,6 +155,8 @@ const post = <T>(path: string, body?: unknown) =>
   request<T>(path, { method: 'POST', body: body ? JSON.stringify(body) : undefined });
 const put = <T>(path: string, body: unknown) =>
   request<T>(path, { method: 'PUT', body: JSON.stringify(body) });
+const patch = <T>(path: string, body: unknown) =>
+  request<T>(path, { method: 'PATCH', body: JSON.stringify(body) });
 const del = <T>(path: string) => request<T>(path, { method: 'DELETE' });
 
 function qs(
@@ -169,6 +177,10 @@ export const getWorkspace = (workspaceId: string) =>
 
 export const listProjects = (workspaceId: string) =>
   get<Project[]>(`/workspaces/${workspaceId}/projects`);
+export const getWorkspaceSummary = (workspaceId: string) =>
+  get<WorkspaceSummary>(`/workspaces/${workspaceId}/summary`);
+export const getProjectsStatus = (workspaceId: string) =>
+  get<ProjectBlockedStatus[]>(`/workspaces/${workspaceId}/projects-status`);
 export const createProject = (
   workspaceId: string,
   input: { name: string; slug: string },
@@ -418,6 +430,37 @@ export const denyAction = (
 
 export const listModels = () => get<ModelsByCategory>('/models');
 
+// --- Curadoria de catálogo (Fase 9c) ---
+//
+// Ancoradas no workspace porque o RolesGuard resolve o papel a partir de
+// `:workspaceId`/`:projectId`; o catálogo em si é global.
+
+export const listModelCatalog = (workspaceId: string) =>
+  get<ModelsByCategory>(`/workspaces/${workspaceId}/models/catalog`);
+
+export const setModelsActive = (
+  workspaceId: string,
+  input: { modelIds: string[]; isActive: boolean },
+) => post<Model[]>(`/workspaces/${workspaceId}/models/activate`, input);
+
+export const syncModelCatalog = (workspaceId: string) =>
+  post<SyncModelCatalogResult>(`/workspaces/${workspaceId}/models/sync`, {});
+
+export const updateModelPricing = (
+  workspaceId: string,
+  modelId: string,
+  input: {
+    inputPricePerMillionMicros: number;
+    outputPricePerMillionMicros: number;
+  },
+) =>
+  patch<Model>(`/workspaces/${workspaceId}/models/${modelId}/pricing`, input);
+
+export const listModelPriceChanges = (workspaceId: string, modelId: string) =>
+  get<ModelPriceChange[]>(
+    `/workspaces/${workspaceId}/models/${modelId}/price-changes`,
+  );
+
 export const getWorkspaceModelBinding = (workspaceId: string) =>
   get<{ modelId: string } | null>(`/workspaces/${workspaceId}/model-binding`);
 export const setWorkspaceModelBinding = (workspaceId: string, modelId: string) =>
@@ -452,11 +495,13 @@ export const setAgentModelBinding = (
 
 export const listCredentials = () =>
   get<UserCredentialMetadata[]>('/users/me/credentials');
+// `LlmCredentialProvider`, e não o par fechado que estava aqui: um provider
+// novo (Fase 9b) entra pelo tipo compartilhado, sem editar esta linha.
 export const upsertCredential = (input: {
-  provider: 'anthropic' | 'openai';
+  provider: LlmCredentialProvider;
   apiKey: string;
 }) => post<UserCredentialMetadata>('/users/me/credentials', input);
-export const deleteCredential = (provider: 'anthropic' | 'openai') =>
+export const deleteCredential = (provider: LlmCredentialProvider) =>
   del<{ ok: true }>(`/users/me/credentials/${provider}`);
 
 export const getProjectBudget = (projectId: string) =>
