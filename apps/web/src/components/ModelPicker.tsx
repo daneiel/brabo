@@ -18,7 +18,7 @@ interface ModelPickerProps {
   variant?: 'topbar' | 'inline' | 'standalone';
   /**
    * Liga o filtro "aptos para agentes" JÁ MARCADO (Fase 9c). É o que a tela de
-   * binding de agente passa: a mensagem da RN-038 manda o usuário para este
+   * binding de agente passa: a mensagem da RN-040 manda o usuário para este
    * filtro desde a Fase 9a, e até agora ele não existia.
    */
   filtroDeAgentesPadrao?: boolean;

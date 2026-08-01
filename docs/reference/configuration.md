@@ -218,7 +218,7 @@ possível sem downtime ([RN-035](../business-rules.md#rn-035)).
 |---|---|---|
 | `START_OUTBOX_DRAIN` | `true` | — |
 | `START_ANAMNESE` | `true` | desligar impede **novos** enfileiramentos, **não limpa a fila**. Jobs acumulados rodam no boot seguinte — a fila precisa ser purgada. Ver [ambiente de inferência](../runbook.md#ambiente-de-inferencia) |
-| `START_MODEL_SYNC` | `true` | tick periódico do sync de catálogo de modelos. Desligá-lo não congela nada: o botão "Atualizar catálogo" da tela de configurações chama o mesmo caso de uso ([RN-041](../business-rules.md#rn-041)) |
+| `START_MODEL_SYNC` | `true` | tick periódico do sync de catálogo de modelos. Desligá-lo não congela nada: o botão "Atualizar catálogo" da tela de configurações chama o mesmo caso de uso ([RN-043](../business-rules.md#rn-043)) |
 | `MODEL_SYNC_INTERVAL_SECONDS` | `21600` (6h) | catálogo de provider muda em escala de dias, e cada rodada gasta uma chamada de API por provider — daí o default folgado |
 
 ### Tráfego interno e observabilidade

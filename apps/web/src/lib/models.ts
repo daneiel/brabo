@@ -45,7 +45,7 @@ export interface GrupoDeModelos {
 }
 
 export interface AgruparOpcoes {
-  /** Só modelos com tool calling — o filtro "aptos para agentes" (RN-038). */
+  /** Só modelos com tool calling — o filtro "aptos para agentes" (RN-040). */
   somenteAptosParaAgentes?: boolean;
 }
 

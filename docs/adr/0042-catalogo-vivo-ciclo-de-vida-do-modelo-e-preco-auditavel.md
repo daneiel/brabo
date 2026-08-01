@@ -1,8 +1,8 @@
-# 0041 — Catálogo vivo, ciclo de vida do modelo e preço auditável
+# 0042 — Catálogo vivo, ciclo de vida do modelo e preço auditável
 
 ## Contexto
 
-O [ADR 0040](0040-base-openai-compativel-e-contrato-de-llm-providers.md) entregou
+O [ADR 0041](0041-base-openai-compativel-e-contrato-de-llm-providers.md) entregou
 a base OpenAI-compatível, o contrato de providers e as capabilities por modelo.
 Faltava a outra metade da Fase 9: descobrir modelos sozinho, saber o que fazer
 quando um deles some, e mudar preço sem estragar o histórico.
@@ -54,7 +54,7 @@ desligou de propósito.
 
 ### Modelo descoberto entra INATIVO, modelo sumido é marcado e preservado
 
-Formalizado na [RN-041](../business-rules.md#rn-041). Deletar nunca é opção:
+Formalizado na [RN-043](../business-rules.md#rn-043). Deletar nunca é opção:
 `model_bindings` e `token_usage` apontam para a linha.
 
 A terceira regra é a que menos aparece e mais importa: **provider que falhou não
@@ -77,7 +77,7 @@ O ponto não óbvio: quando o turno carrega ferramentas, o filtro de
 `supports_tool_calling` vale para **todo** candidato, não só para o primeiro.
 Sem isso, um binding de agente para modelo indisponível cairia para o nível de
 baixo e pousaria num modelo chat-only, violando a
-[RN-038](../business-rules.md#rn-038) em silêncio — a falha só apareceria depois,
+[RN-040](../business-rules.md#rn-040) em silêncio — a falha só apareceria depois,
 no ToolLoop, como "o agente parou sozinho". É exatamente o modo de falha que o
 ADR 0020 custou nove execuções para diagnosticar.
 
@@ -90,7 +90,7 @@ restringiria mais do que a regra pede.
 `token_usage` ganhou `input_price_per_million_micros` e
 `output_price_per_million_micros` — o preço que produziu aquele custo. É o que
 torna o custo antigo reproduzível, e não apenas imutável
-([RN-042](../business-rules.md#rn-042)).
+([RN-044](../business-rules.md#rn-044)).
 
 A alternativa considerada era uma **tabela de vigência** (preço com intervalo de
 validade, custo recalculado por join). Foi descartada: obrigaria toda leitura de
@@ -138,7 +138,7 @@ está registrada abaixo como backlog.
 - A UI passou a ter uma tela de curadoria, com ativação em lote e o relatório do
   sync mostrando **todo** provider, inclusive o pulado.
 - O `ModelPicker` foi reagrupado por origem (Local · APIs diretas · Hubs) e
-  ganhou o filtro "aptos para agentes" — que a mensagem de erro da RN-038 citava
+  ganhou o filtro "aptos para agentes" — que a mensagem de erro da RN-040 citava
   desde a Fase 9a sem existir.
 - O preço passou a ser mostrado com entrada e saída **separadas**. A média
   escondia a assimetria: um modelo de 3 USD de entrada e 15 de saída aparecia
@@ -166,5 +166,5 @@ está registrada abaixo como backlog.
   rota é só âncora de RBAC — um owner do workspace A ativando um modelo o ativa
   para o B.
 - **Bedrock e Azure OpenAI**, fora do escopo da Fase 9 desde o enunciado.
-- **`brabo_llm_call_errors_total`**, que o ADR 0040 registrou como praticamente
+- **`brabo_llm_call_errors_total`**, que o ADR 0041 registrou como praticamente
   inerte. Segue anotado, não corrigido de passagem.

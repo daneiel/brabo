@@ -93,6 +93,43 @@
   gap: 8px;
 }
 
+/* `--text-secondary`, não `--text-muted` — mesma razão do `.hint` de
+   `Input.module.css`: `--text-muted` sobre `--surface-1` reprova o AA (ver
+   `design-contraste.test.ts`), e este é texto de leitura normal. */
+.compactFooter {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.noBudgetCta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm, 4px);
+  border: 1px dashed var(--border-strong);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.noBudgetCta:hover {
+  background: var(--surface-2);
+  color: var(--text-primary);
+}
+
+.noBudgetCta:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .cost {
   font-family: var(--font-mono);
   font-weight: 700;

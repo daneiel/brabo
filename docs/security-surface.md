@@ -277,3 +277,5 @@ o componente `d` da JWK, travado por teste.
 | PATCH | `/workspaces/:workspaceId/models/:modelId/pricing` | role:owner |
 | GET | `/workspaces/:workspaceId/projects` | role:viewer |
 | POST | `/workspaces/:workspaceId/projects` | role:maintainer |
+| GET | `/workspaces/:workspaceId/projects-status` | role:viewer |
+| GET | `/workspaces/:workspaceId/summary` | role:viewer |

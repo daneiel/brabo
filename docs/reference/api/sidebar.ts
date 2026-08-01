@@ -838,6 +838,18 @@ const sidebar: SidebarsConfig = {
           label: "Cria um projeto dentro do workspace",
           className: "api-method post",
         },
+        {
+          type: "doc",
+          id: "docs/reference/api/workspaces-controller-get-projects-status",
+          label: "Contagem de tasks bloqueadas por projeto",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/workspaces-controller-get-summary",
+          label: "Resumo agregado do workspace",
+          className: "api-method get",
+        },
       ],
     },
   ],

@@ -27,6 +27,7 @@ import type {
   PermissionPolicy,
   PermissionsFile,
   Project,
+  ProjectBlockedStatus,
   ProjectMemberWithUser,
   ProposedAction,
   ProvisionedRepository,
@@ -38,6 +39,7 @@ import type {
   SessionEvent,
   UserCredentialMetadata,
   Workspace,
+  WorkspaceSummary,
   WorkspaceWithRole,
 } from './api-types';
 
@@ -175,6 +177,10 @@ export const getWorkspace = (workspaceId: string) =>
 
 export const listProjects = (workspaceId: string) =>
   get<Project[]>(`/workspaces/${workspaceId}/projects`);
+export const getWorkspaceSummary = (workspaceId: string) =>
+  get<WorkspaceSummary>(`/workspaces/${workspaceId}/summary`);
+export const getProjectsStatus = (workspaceId: string) =>
+  get<ProjectBlockedStatus[]>(`/workspaces/${workspaceId}/projects-status`);
 export const createProject = (
   workspaceId: string,
   input: { name: string; slug: string },

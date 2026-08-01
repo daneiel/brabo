@@ -13,7 +13,7 @@ import { useToast } from './ui/ToastProvider';
 import styles from './ModelCatalogSection.module.css';
 
 /**
- * Curadoria do catálogo (Fase 9c, RN-041).
+ * Curadoria do catálogo (Fase 9c, RN-043).
  *
  * O sync descobre modelos e os deixa INATIVOS; ligar é decisão do owner. Um
  * catálogo de provider tem centenas de linhas, e despejá-las ativas tornaria a

@@ -1220,7 +1220,7 @@ verificados por ExUnit ([RN-014](business-rules.md#rn-014),
 
 Vale para qualquer provider que fale o dialeto `/chat/completions` da OpenAI —
 que é o caso de praticamente todo hub e de todo serviço de inferência gerenciada.
-A base já existe ([ADR 0040](adr/0040-base-openai-compativel-e-contrato-de-llm-providers.md));
+A base já existe ([ADR 0041](adr/0041-base-openai-compativel-e-contrato-de-llm-providers.md));
 o que se escreve é **configuração**, não parsing.
 
 ### 1. Leia a doc oficial antes de escrever a primeira linha
@@ -1293,7 +1293,7 @@ que existe.
 
 Se o provider expõe `GET /models`, **não semeie o catálogo inteiro** — deixe o
 sync descobrir. Ele grava os modelos desativados, e o owner ativa o que
-interessa pela tela de curadoria ([RN-041](business-rules.md#rn-041)).
+interessa pela tela de curadoria ([RN-043](business-rules.md#rn-043)).
 
 ### 6. Verifique com credencial real
 

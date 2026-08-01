@@ -83,10 +83,11 @@ describe('classifyEvent — fase de execução (Fase 4a)', () => {
     expect(c.text).toContain('core');
   });
 
-  it('tipo desconhecido cai no genérico sem quebrar', () => {
+  it('tipo desconhecido cai no genérico sem quebrar, e sem vazar o tipo cru', () => {
     const c = classifyEvent(ev('xpto.aconteceu', 'alguem', {}));
     expect(c.kind).toBe('generic');
-    expect(c.text).toContain('xpto.aconteceu');
+    expect(c.text).not.toContain('xpto.aconteceu');
+    expect(c.text).toBe('atividade em alguem');
   });
 });
 
@@ -146,11 +147,12 @@ describe('classifyEvent — Psicólogo (Fase 4b)', () => {
     expect(c.text).toContain('orçamento excedido');
   });
 
-  it('tipo psychologist.* desconhecido não quebra a narração', () => {
+  it('tipo psychologist.* desconhecido não quebra a narração, e não vaza o tipo cru', () => {
     const c = classifyEvent(ev('psychologist.algo_novo', 'psicologo', {}));
 
     expect(c.kind).toBe('hypothesis');
-    expect(c.text).toContain('psychologist.algo_novo');
+    expect(c.text).not.toContain('psychologist.algo_novo');
+    expect(c.text).toBe('atividade em psicologo');
   });
 });
 
@@ -216,11 +218,11 @@ describe('classifyEvent — Anamnese e patches de instrução (Fase 4b)', () => 
     expect(c.text).toContain('timeout');
   });
 
-  it('evento anamnese.* desconhecido não quebra a narração', () => {
+  it('evento anamnese.* desconhecido não quebra a narração, e não vaza o tipo cru', () => {
     const c = classifyEvent(ev('anamnese.algo_novo', 'anamnese', {}));
 
-    expect(typeof c.text).toBe('string');
-    expect(c.text.length).toBeGreaterThan(0);
+    expect(c.text).not.toContain('anamnese.algo_novo');
+    expect(c.text).toBe('atividade em anamnese');
   });
 
   it('não usa cor crua — o feed é tokenizado', () => {

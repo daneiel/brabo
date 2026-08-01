@@ -14,7 +14,7 @@ export const LLM_PROVIDER_NAMES = ["ollama", "anthropic", "openai"] as const;
 export type LLMProviderName = (typeof LLM_PROVIDER_NAMES)[number];
 
 /**
- * Taxonomia normalizada de falha de provider (Fase 9a — ADR 0040). Espelha o
+ * Taxonomia normalizada de falha de provider (Fase 9a — ADR 0041). Espelha o
  * que o lado git fez no ADR 0002: quem consome um erro de LLM decide pelo
  * `code`, nunca por substring da mensagem do vendor — que muda sem aviso e é
  * diferente em cada um dos providers.

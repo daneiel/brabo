@@ -60,7 +60,7 @@ beforeEach(() => {
 });
 
 describe('ModelCatalogSection', () => {
-  it('mostra o modelo descoberto como DESATIVADO — ativar é do owner (RN-041)', async () => {
+  it('mostra o modelo descoberto como DESATIVADO — ativar é do owner (RN-043)', async () => {
     montar();
 
     expect(await screen.findByText('GPT-4o mini')).toBeTruthy();

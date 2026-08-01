@@ -13,7 +13,7 @@ Todo agente e todo chat do Brabo falam com um modelo por trás de um contrato
 só. Quem chama não sabe se do outro lado está um Ollama no disco, a API da
 OpenAI ou a da Anthropic — e não deveria saber.
 
-Decisão em [ADR 0040](../adr/0040-base-openai-compativel-e-contrato-de-llm-providers.md),
+Decisão em [ADR 0041](../adr/0041-base-openai-compativel-e-contrato-de-llm-providers.md),
 com o teto de inatividade herdado do [ADR 0020](../adr/0020-destravar-gates-qa-secops.md).
 
 ## O contrato
@@ -55,8 +55,8 @@ provider, nunca mais rico.
 | capability | onde vive | usada para |
 | --- | --- | --- |
 | `streaming` | provider + `models.supports_streaming` | — |
-| `toolCalling` | provider + `models.supports_tool_calling` | recusar binding de agente ([RN-038](../business-rules.md#rn-038)) |
-| `listModels` | só provider | ligar/pular o sync de catálogo ([RN-041](../business-rules.md#rn-041)) |
+| `toolCalling` | provider + `models.supports_tool_calling` | recusar binding de agente ([RN-040](../business-rules.md#rn-040)) |
+| `listModels` | só provider | ligar/pular o sync de catálogo ([RN-043](../business-rules.md#rn-043)) |
 | `context_length` | `models.context_window` | orçamento de contexto |
 | `vision` | `models.supports_vision` | reservado |
 
@@ -102,7 +102,7 @@ o formato deles não foi verificado na doc oficial nesta fase, e a regra da Fase
 9 é não codar contra contrato adivinhado. Declarar `false` faz o sync pular
 explicitamente, com o motivo no relatório; declarar `true` e errar o parsing
 marcaria o catálogo inteiro como sumido. Backlog no
-[ADR 0041](../adr/0041-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md).
+[ADR 0042](../adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md).
 
 ### Os dois eixos de disponibilidade
 
@@ -136,7 +136,7 @@ continua valendo: o sync nunca religa o que alguém desligou de propósito.
 `resolveBinding` pula o candidato indisponível e segue a precedência. Quando o
 turno carrega ferramentas, ele também pula quem não faz tool calling **em todo
 nível** — sem isso o fallback de um agente pousaria num modelo chat-only e
-violaria a [RN-038](../business-rules.md#rn-038) em silêncio: a falha só
+violaria a [RN-040](../business-rules.md#rn-040) em silêncio: a falha só
 apareceria depois, no ToolLoop, como "o agente parou sozinho". O que foi pulado
 volta em `skipped`, e a UI mostra.
 

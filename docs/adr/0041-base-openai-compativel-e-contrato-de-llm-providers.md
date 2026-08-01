@@ -1,4 +1,4 @@
-# 0040 — Uma base OpenAI-compatível, um contrato de LLM providers e capabilities que recusam binding
+# 0041 — Uma base OpenAI-compatível, um contrato de LLM providers e capabilities que recusam binding
 
 ## Contexto
 
@@ -84,7 +84,7 @@ Colunas discretas, não um `jsonb`: o filtro "aptos para agentes" da Fase 9c
 precisa ser um `WHERE`, e uma capability sem coluna é uma capability que
 ninguém consegue consultar.
 
-Sobre isso vem a regra nova ([RN-038](../business-rules.md#rn-038)):
+Sobre isso vem a regra nova ([RN-040](../business-rules.md#rn-040)):
 `assertModelFitsBindingScope` recusa vincular a um **agente** um modelo sem
 tool calling nativo, com mensagem que aponta o filtro que o usuário precisa
 usar. Só o escopo `agent` valida — `workspace` e `project` são o fallback do

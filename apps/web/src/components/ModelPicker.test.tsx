@@ -100,7 +100,7 @@ describe('ModelPicker', () => {
     expect(screen.getAllByText('tool calling').length).toBe(3);
   });
 
-  it('o filtro "aptos para agentes" esconde o chat-only (RN-038)', () => {
+  it('o filtro "aptos para agentes" esconde o chat-only (RN-040)', () => {
     abrir(undefined, {
       local: {
         ollama: [
@@ -121,7 +121,7 @@ describe('ModelPicker', () => {
 
   it('modelo indisponível aparece MARCADO, nunca some', () => {
     // Se sumisse, o binding que aponta pra ele viraria um mistério na tela —
-    // e trocá-lo é justamente o que a pessoa veio fazer (RN-041).
+    // e trocá-lo é justamente o que a pessoa veio fazer (RN-043).
     abrir(undefined, {
       local: {
         ollama: [

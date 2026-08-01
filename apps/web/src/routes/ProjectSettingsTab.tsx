@@ -21,6 +21,7 @@ import {
 } from '../lib/api-client';
 import { AGENT_LIST } from '../lib/agents';
 import { useProficiency } from '../lib/hooks';
+import { ROLE_LABEL, ROLE_ORDER } from '../lib/roles';
 import type {
   Model,
   ModelBindingScope,
@@ -43,14 +44,6 @@ import { ModelCatalogSection } from '../components/ModelCatalogSection';
 import { TrashIcon } from '../components/ui/icons';
 import { useToast } from '../components/ui/ToastProvider';
 import styles from './ProjectSettingsTab.module.css';
-
-const ROLE_ORDER: Role[] = ['viewer', 'developer', 'maintainer', 'owner'];
-const ROLE_LABEL: Record<Role, string> = {
-  viewer: 'viewer',
-  developer: 'developer',
-  maintainer: 'maintainer',
-  owner: 'owner',
-};
 
 const ORIGIN_TONE: Record<ModelBindingScope, BadgeTone> = {
   workspace: 'muted',

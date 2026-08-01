@@ -411,7 +411,7 @@ Cada limiar dispara **uma vez**; o último notificado fica persistido em
 - **Onde:** `apps/api/src/domain/llm/binding-resolver.ts`
 - **Teste:** `test/domain/llm/binding-resolver.spec.ts`
 
-### RN-038 — Binding de agente exige tool calling nativo {#rn-038}
+### RN-040 — Binding de agente exige tool calling nativo {#rn-040}
 
 Vincular um modelo a um **agente** (`scope = 'agent'`) só é permitido se o
 modelo tiver `supports_tool_calling`. Um agente só existe dentro do ToolLoop, e
@@ -432,9 +432,9 @@ slug **dentro** do escopo `agent`, não um escopo próprio.
 - **Onde:** `apps/api/src/domain/llm/model-capabilities.ts:38`
 - **Teste:** `test/domain/llm/model-capabilities.spec.ts`,
   `test/application/use-cases/llm/set-model-binding.use-case.spec.ts`
-- **Origem:** [ADR 0040](adr/0040-base-openai-compativel-e-contrato-de-llm-providers.md)
+- **Origem:** [ADR 0041](adr/0041-base-openai-compativel-e-contrato-de-llm-providers.md)
 
-### RN-039 — Contagem de token que o provider não deu é marcada como estimada {#rn-039}
+### RN-041 — Contagem de token que o provider não deu é marcada como estimada {#rn-041}
 
 Quando a resposta do provider não traz `usage`, a base OpenAI-compatível conta
 localmente com o tokenizer e emite o chunk com `estimated: true`. O número
@@ -451,9 +451,9 @@ dele. As três respostas estão em
 - **Onde:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:150`
 - **Teste:** `test/contract/llm-provider.contract.ts` (cenário `sem_usage`,
   rodado contra os três providers)
-- **Origem:** [ADR 0040](adr/0040-base-openai-compativel-e-contrato-de-llm-providers.md)
+- **Origem:** [ADR 0041](adr/0041-base-openai-compativel-e-contrato-de-llm-providers.md)
 
-### RN-040 — O metering registra quem SERVIU a chamada, não só por onde ela entrou {#rn-040}
+### RN-042 — O metering registra quem SERVIU a chamada, não só por onde ela entrou {#rn-042}
 
 Quando a chamada passa por um hub que informa o provedor real, `token_usage`
 grava esse provedor em `upstream_provider` além do provider de entrada. Sem hub
@@ -466,9 +466,9 @@ há hub, para que `sum by (upstream_provider)` continue somando o custo inteiro.
 
 - **Onde:** `apps/api/src/application/use-cases/llm/record-llm-usage.use-case.ts:58`
 - **Teste:** `test/application/use-cases/llm/record-llm-usage.use-case.spec.ts`
-- **Origem:** [ADR 0040](adr/0040-base-openai-compativel-e-contrato-de-llm-providers.md)
+- **Origem:** [ADR 0041](adr/0041-base-openai-compativel-e-contrato-de-llm-providers.md)
 
-### RN-041 — Modelo descoberto entra desligado; modelo que some é marcado, nunca apagado {#rn-041}
+### RN-043 — Modelo descoberto entra desligado; modelo que some é marcado, nunca apagado {#rn-043}
 
 O sync de catálogo tem três desfechos, e nenhum deles é destrutivo:
 
@@ -491,7 +491,7 @@ Três consequências no resto do sistema:
 - **a cascata** de `resolveBinding` pula o candidato indisponível, registra o
   que pulou em `skipped`, e — quando o turno carrega ferramentas — revalida
   `supports_tool_calling` em TODO nível. Sem isso o fallback pousaria um agente
-  num modelo chat-only e violaria a [RN-038](#rn-038) em silêncio;
+  num modelo chat-only e violaria a [RN-040](#rn-040) em silêncio;
 - **provider que falhou não indisponibiliza nada**: um 401 é "não sei o que tem
   lá", não "não tem nada lá". O provider é pulado, com a ORIGEM da falha
   (`infra` | `modelo`) no relatório — nunca diagnóstico por eliminação.
@@ -502,9 +502,9 @@ Três consequências no resto do sistema:
 - **Teste:** `test/application/use-cases/llm/sync-model-catalog.use-case.spec.ts`,
   `test/domain/llm/binding-resolver.spec.ts`,
   `test/application/use-cases/llm/set-model-binding.use-case.spec.ts`
-- **Origem:** [ADR 0041](adr/0041-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md)
+- **Origem:** [ADR 0042](adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md)
 
-### RN-042 — Preço vale daqui em diante, e o custo antigo continua batendo {#rn-042}
+### RN-044 — Preço vale daqui em diante, e o custo antigo continua batendo {#rn-044}
 
 Cada linha de `token_usage` grava o preço que produziu o `cost_micros` dela.
 Trocar o preço de um modelo **não reprecifica consumo passado** — e mais que
@@ -520,8 +520,44 @@ para 10" transformaria o log em ruído.
 
 - **Onde:** `apps/api/src/application/use-cases/llm/update-model-pricing.use-case.ts:44`
 - **Teste:** `test/application/use-cases/llm/update-model-pricing.use-case.spec.ts`
-- **Origem:** [ADR 0041](adr/0041-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md)
+- **Origem:** [ADR 0042](adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md)
 
+### RN-038 — Agente contado no resumo do workspace = gastou tokens este mês {#rn-038}
+
+O resumo do dashboard de projetos ("N projetos ativos · M agentes · gasto
+este mês") conta como "agente" quem tem pelo menos uma linha em
+`token_usage` com `actor_kind = 'agent'` no mês corrente, somando todos os
+projetos do workspace. Sem o filtro de `actor_kind`, um `user` mandando
+chat ou um `system` registrando uso inflaria a contagem — `token_usage`
+grava para qualquer tipo de ator, não só agente. O corte por mês usa
+`created_at >= date_trunc('month', now())`; um agente que trabalhou só no
+mês anterior não conta, mesmo que ainda apareça no roster de alguma
+sessão. A contagem naturalmente inclui as subespecialidades de área da
+Fase 8 (`qa-automacao`, `qa-performance-seguranca`, `infra-workflows`):
+cada uma tem seu próprio `actor_id` quando gasta tokens.
+
+- **Onde:** `apps/api/src/infrastructure/persistence/drizzle/token-usage.repository.ts`
+  (`summarizeForWorkspaceThisMonth`)
+- **Teste:** `test/application/use-cases/iam/get-workspace-summary.use-case.spec.ts`
+
+---
+
+## Painel de projetos
+
+### RN-039 — Dot de status do projeto: risco sempre vence inatividade {#rn-039}
+
+A sidebar do dashboard mostra um dot de saúde por projeto, derivado de três
+sinais independentes: orçamento (mesmos limiares 70%/90% do RN-018), task
+bloqueada (`tasks.blocked`) e atividade recente (7 dias). Cores: verde =
+saudável e ativo; âmbar = orçamento ≥70%; vermelho = orçamento ≥90% **ou**
+task bloqueada; cinza = sem atividade nos últimos 7 dias. Quando um sinal
+de risco (âmbar/vermelho) e o de inatividade (cinza) se aplicam ao mesmo
+tempo, o de risco vence — um projeto estourado e parado ainda é algo a
+olhar, não algo a esconder atrás de "sem atividade".
+
+- **Onde:** `apps/web/src/lib/project-status.ts` (`deriveProjectStatus`)
+- **Teste:** `apps/web/src/lib/project-status.test.ts`
+- **Origem:** fidelidade do dashboard de projetos ao design aprovado
 
 ---
 

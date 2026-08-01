@@ -29,6 +29,17 @@ export interface Project {
   updatedAt: string;
 }
 
+export interface WorkspaceSummary {
+  activeProjects: number;
+  agentCount: number;
+  spentMicros: number;
+}
+
+export interface ProjectBlockedStatus {
+  projectId: string;
+  blockedTaskCount: number;
+}
+
 export interface ProjectMemberWithUser {
   userId: string;
   role: Role;
@@ -157,7 +168,7 @@ export interface Model {
   contextWindow: number | null;
   /**
    * Capabilities DO MODELO (Fase 9a). Sem `supportsToolCalling` o modelo é
-   * chat-only e não pode ser vinculado a um agente (RN-038).
+   * chat-only e não pode ser vinculado a um agente (RN-040).
    */
   supportsToolCalling: boolean;
   supportsStreaming: boolean;
@@ -177,7 +188,7 @@ export interface Model {
 
 export type ModelsByCategory = Record<ModelCategory, Record<string, Model[]>>;
 
-/** Uma mudança de preço, append-only (Fase 9c, RN-042). */
+/** Uma mudança de preço, append-only (Fase 9c, RN-044). */
 export interface ModelPriceChange {
   id: string;
   modelId: string;
