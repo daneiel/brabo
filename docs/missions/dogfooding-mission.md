@@ -27,7 +27,7 @@ Duas coisas ao mesmo tempo, e é importante não confundi-las:
 
 A segunda é a que não dá para recuperar depois. Um travamento de agente às 2h da
 manhã, destravado no impulso e não anotado, é dado perdido para sempre. A tabela
-da Parte 3 existe para isso.
+da Parte 4 existe para isso.
 
 ---
 
@@ -47,7 +47,7 @@ da Parte 3 existe para isso.
    sob teste.
 
 3. **Nenhum refactor do produto durante a fase.** Achado vira backlog priorizado
-   na colheita (Parte 4), nunca fix embutido. Corrigir enquanto mede destrói a
+   na colheita (Parte 5), nunca fix embutido. Corrigir enquanto mede destrói a
    medição.
 
 4. **A esteira do repositório vale integralmente para PR de agente.**
@@ -59,7 +59,7 @@ da Parte 3 existe para isso.
    protegido nunca é auto-aprovável, nem por `agent_autonomy`, nem por
    `permissions.json`). Está aqui só para deixar claro que não há o que afrouxar.
 
-6. **Não invente número na colheita.** Toda métrica da Parte 4 tem que fechar
+6. **Não invente número na colheita.** Toda métrica da Parte 5 tem que fechar
    com o event log. O que não fechar entra como "não medido", não como
    estimativa.
 
@@ -199,7 +199,7 @@ provider que você provavelmente vai usar no dev.
 - [ ] Registrar o PAT do GitHub (escopo `repo`)
 - [ ] Inserir as linhas de `provisioned_repositories` e `repo_bootstraps`
 - [ ] Escolher o modelo do dev e preencher a tabela de 2.2
-- [ ] Definir os dois tetos do critério de encerramento (3.4)
+- [ ] Definir os dois tetos do critério de encerramento (4.4)
 - [ ] Registrar a entrada #1 da tabela de observação
 
 > ⛔ **PARE AQUI.** A Parte 2 só começa com os seis itens acima fechados. Montar
@@ -285,35 +285,232 @@ achado grande, e é o tipo de coisa que só aparece em execução real.
 
 ---
 
-# PARTE 3 — OBSERVAÇÃO
+# PARTE 3 — CONDUÇÃO (10b)
 
-## 3.1 A tabela
+A ordem das sessões dentro do produto. Cada seção diz o que o produto **de fato**
+faz — em vários pontos isso diverge do que o `CLAUDE.md` descrevia, e a
+divergência está registrada na tabela de achados no fim deste documento.
+
+## 3.0 Antes da sessão 0 — smoke da stack
+
+Não gaste sessão real num ambiente que não fecha o ciclo. Rode primeiro:
+
+```bash
+pnpm --filter api demo:pr-gates-area-qa
+```
+
+Ele exercita a área de QA inteira (delegação às duas subespecialidades,
+consolidação num veredito só) contra o servidor falso. Se ele não fecha, nenhuma
+sessão vai fechar.
+
+Dois guards do engine importam aqui:
+
+- **`START_OUTBOX_DRAIN=true` é obrigatório.** É o drain que entrega
+  `session.closed` ao `PsychologistWorker`
+  (`apps/engine/lib/engine/outbox/drain.ex:58-61`). Sem ele o Psicólogo nunca
+  roda e o passo 3.6 não acontece. O compose de dev já traz `true`.
+- **`START_ANAMNESE`** vale desligar durante a execução e ligar entre as
+  tandas. O `docs/runbook.md#ambiente-de-inferencia` registra que Psicólogo e
+  Anamnese consomem turnos de LLM em paralelo com os agentes de execução e
+  chegam a derrubar a conexão no meio do ciclo. Atenção ao aviso de lá: **o
+  guard não purga a fila** — jobs antigos rodam no boot seguinte de qualquer
+  jeito.
+
+Confira também o resto daquela seção do runbook (`OLLAMA_CONTEXT_LENGTH`,
+modelos residentes, GPU). São as cinco causas que o ADR 0020 levou nove
+execuções para isolar.
+
+## 3.1 Sessão 0 — Criativo
+
+**Esta sessão não estava no plano original, e é obrigatória.** O motivo está no
+achado #9: sem o Criativo, nenhuma story chega a `ready` e nenhum dev pega task.
+O Criativo é o único agente com `emit_artifact`, e regra de negócio é
+pré-requisito de prontidão.
+
+1. Abra uma sessão nova. O Criativo é quem conduz.
+2. Cole o texto de `docs/missions/inputs/00-handoff-criativo.md`.
+3. Converse até ele ter emitido **uma `business_rule` por semântica a cobrir**.
+4. **Critério de saída, não negociável:** confira que as regras existem antes de
+   seguir. Elas aparecem no fio da sessão como artefatos emitidos. Se você
+   avançar sem elas, a sessão 1 nasce morta e você só descobre nas sessões 3+,
+   quando nenhum dev conseguir pegar task.
+5. Clique **"Estou pronto para produzir"**. O Criativo oferece o handoff ao PO.
+6. Aceite o handoff (**"Aceitar handoff e iniciar po"**).
+
+Não peça a ele para decidir semântica do Bitbucket — isso é do Arquiteto, contra
+a doc oficial, na sessão 2.
+
+## 3.2 Sessão 1 — PO
+
+O PO **não espera instrução**: na ativação ele faz um `:kickoff` automático e
+gera o backlog inteiro de uma vez, a partir do brief e das regras que o Criativo
+deixou no event log (`apps/engine/lib/engine/agents/po_server.ex:68-80`).
+
+O que o produto faz, e que difere do plano original:
+
+- **Não existe "promover a ready".** A promoção é automática na criação, se a
+  story já nascer com DoD, DoR, ≥1 RF e ≥1 regra vinculada
+  (`create-story.use-case.ts:75-78`). O que você controla é a qualidade da
+  entrada, não um portão no meio.
+- **Não existe devolução ao PO.** Não há botão, estado nem evento. Rejeição é
+  conversa no fio — então **só existe na tabela se você anotar**. Anote: é dado
+  do experimento, e é o único registro que vai sobrar.
+- A aba **Backlog** é somente leitura. Serve para revisar depois do fato.
+
+Duas instruções deliberadas ao refinar com ele:
+
+- **Muitos módulos, poucas tasks cada.** Pelo achado #10, cada dev agent processa **uma**
+  task por ativação. O paralelismo real vem de módulos distintos, não de fila de
+  tasks. Um backlog com 3 módulos × 2 tasks anda muito melhor que 1 módulo × 6.
+- **Ao menos uma story com RNF de performance**, escrito com uma das
+  palavras-chave que o QA Lead reconhece (`apps/engine/lib/engine/gates/qa_lead.ex:20-28`):
+  `performance`, `desempenho`, `latência`, `throughput`, `vazão`,
+  `tempo de resposta`, `escalabilidade`. A checagem é substring, não semântica —
+  "precisa ser rápido" **não** casa. Sem isso, o QA Lead dispensa a
+  subespecialidade de Performance/Segurança em toda task e o experimento nunca
+  exercita a segunda delegação.
+
+## 3.3 Sessão 2 — Arquiteto
+
+O Arquiteto valida as stories contra o `module_map` e produz o ADR das
+semânticas via PR real, com gates. É a sua primeira leitura de parecer de agente
+na fase.
+
+Três coisas que só aparecem aqui e travam a execução se passarem batido:
+
+- **`assign_story_modules` é o que põe `module_ids` na story.** O SQL do claim
+  casa `s.module_ids ? module`
+  (`apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:189`).
+  Story sem módulo atribuído é invisível para todo dev, mesmo `ready`.
+- **Publicar um `module_map` novo rebaixa story `ready` órfã para `draft`**
+  (`create-module-map.use-case.ts:63-82`), com ator
+  `system/module-map-revalidation`. Se o Arquiteto republicar o mapa depois de o
+  PO ter fechado o backlog, parte dele volta para `draft` sem aviso.
+- **A ativação da execução exige `module_map` vigente.** Sem ele a resposta é
+  400 com a mensagem "Projeto sem module_map vigente"
+  (`activate-execution.use-case.ts:88-92`) — não 409.
+
+## 3.4 Sessões 3+ — Devs, em tandas
+
+Aqui a realidade diverge bastante do plano original, por causa do achado #10: **um
+dev agent processa exatamente uma task e para.** Não há reagendamento após o
+gate; nenhum worker redispara. Reativar a execução também não resolve — o
+supervisor devolve o agente existente, `:work` não é disparado, e ainda nasce uma
+sessão a mais sem agentes vinculados (achado #11).
+
+O ciclo de uma **tanda**:
+
+1. Ativar a execução (`maintainer`). Isso cria a sessão, sobe um dev agent por
+   módulo e dispara uma task para cada.
+2. Opcionalmente aceitar a paralelização (ver abaixo) — soma `dev-<módulo>-2`,
+   que faz mais uma task naquele módulo.
+3. Acompanhar os gates (3.5) e mergear no GitHub — o merge é fora do
+   produto, ver 3.5.
+4. **Reiniciar o engine.** Os dev agents são `restart: :temporary`
+   (`dev_agent_server.ex:16`): morrem e não voltam.
+5. Reativar a execução. Agora o registro está vazio, os agentes sobem de novo e
+   pegam a próxima task.
+
+Anote a contagem de restarts na tabela. **É a métrica mais honesta da fase**: o
+número de reinícios manuais por task entregue diz mais sobre convivência do que
+qualquer outra coluna.
+
+**Paralelização.** A sugestão é calculada **uma vez, na ativação**, para cada
+módulo com ≥2 tasks pegáveis (`activate-execution.use-case.ts:159-172`) — ela vai
+estar lá desde o primeiro minuto, não aparece "quando o sistema achar". Serial é
+o default por você **não** clicar em "Aceitar". Aceite na segunda metade e
+compare as medições, como planejado.
+
+**Ciclo K.** `DEFAULT_MAX_GATE_CORRECTIONS = 3`
+(`record-gate-verdict.use-case.ts:21`), configurável na ativação. Esgotado, a
+task vira `blocked`, perde o dono e **sai do claim automático**; o destrave é
+manual, por `POST .../sessions/:sessionId/tasks/:taskId/unblock`, com botão na
+seção "Tasks bloqueadas" da Visão geral.
+
+> **Nota para não confundir com a regra 2.1:** a ativação **escreve sozinha** os
+> `DEV_TERMINAL_ALLOW_PATTERNS` no `permissions.json` do projeto
+> (`activate-execution.use-case.ts:115-118`). Isso é mecanismo do produto — sem
+> ele todo `terminal` do dev cairia em aprovação e nenhuma suite fecharia. Não é
+> violação do "nunca popular `allow`", que continua valendo **para você**.
+
+## 3.5 Gates em toda PR
+
+Onde olhar: aba **Aprovações** do projeto, componente de linha do tempo da PR.
+Cada parecer é um card expansível; dentro dele ficam os itens, a
+`coverageMatrix`, os **sub-vereditos por subespecialidade** e as **dispensas**
+com justificativa.
+
+- **QA Lead** consolida. A dispensa nunca é silêncio: vira
+  `delegation.dispensed` com `justification`.
+- **SecOps** é determinístico, sem LLM — roda semgrep e gitleaks sobre o diff.
+  Scanner ausente é pulado e registrado no resumo, nunca quebra o gate.
+- A ordem é imutável: `awaiting_qa → awaiting_secops → awaiting_user`. Tentar
+  pular etapa é recusado no domínio.
+
+**O merge não é etapa do produto.** `awaiting_user` é terminal de propósito — o
+engine não conhece `git_merge` nem `awaiting_user`. Você lê o parecer
+consolidado, clica em "ver PR" e **mergeia no GitHub**. Isso é desenho, não
+lacuna (RN-014).
+
+## 3.6 Fim de cada sessão — ordem obrigatória
+
+Nesta ordem, sem pular:
+
+1. **Encerrar pelo botão "Encerrar"** no topo da sessão. Ele dispara `closing` e
+   depois `closed` (`apps/web/src/routes/SessionPage.tsx:271-276`).
+2. **Deixar o Psicólogo processar.** Ele roda sozinho em ~2s, pelo drain do
+   outbox — não há botão a apertar. É idempotente e só reage aos dois eventos
+   terminais.
+3. **Preencher a linha da tabela ANTES de abrir a próxima sessão.** A coluna de
+   intervenções é a que evapora.
+4. **Não ler as hipóteses.** Elas são lidas em lote, só na colheita.
+
+O protocolo anti-contaminação, concreto — porque o painel do time que você
+precisa e as hipóteses que você deve evitar moram na **mesma aba** (achado #15):
+
+- No feed de **Atividade**, fixe o filtro de tipo em "Delegações". Ele é
+  exclusivo: mostra só o tipo escolhido, e some com as hipóteses.
+- **Não role até a seção Insights** da Visão geral. Ela não tem colapso.
+- **Não clique em chip de evidência** de hipótese: além de te fazer ler a
+  hipótese, o link abre a sessão analisada já com o log de eventos expandido.
+- Dentro do fio de uma sessão você está seguro: o "Log de eventos" nasce
+  colapsado.
+
+---
+
+# PARTE 4 — OBSERVAÇÃO
+
+## 4.1 A tabela
 
 Uma linha por sessão. Preencher **durante**, não depois — a coluna de
 intervenções é a que evapora.
 
-| # | sessão | task | cliques de aprovação | intervenções manuais + motivo | custo | veredito dos gates | nota livre |
-|---|---|---|---|---|---|---|---|
-| 1 | — (pré-experimento) | — | 0 | Seed manual de `provisioned_repositories`/`repo_bootstraps` apontando para o fork. Motivo: o produto não sabe adotar repositório existente (`provision-repository.use-case.ts:144`) | 0 | — | Primeiro achado da fase, antes da primeira sessão. Vira P1 na colheita |
-| 2 | | | | | | | |
+| # | sessão | task | cliques de aprovação | intervenções manuais + motivo | restarts do engine | custo | veredito dos gates | nota livre |
+|---|---|---|---|---|---|---|---|---|
+| 1 | — (pré-experimento) | — | 0 | Seed manual de `provisioned_repositories`/`repo_bootstraps` apontando para o fork. Motivo: o produto não sabe adotar repositório existente (`provision-repository.use-case.ts:144`) | 0 | 0 | — | Primeiro achado da fase, antes da primeira sessão. Vira P1 na colheita |
+| 2 | | | | | | | | |
 
 Convenções de preenchimento:
 
 - **cliques de aprovação** — conta bruta de decisões suas na tela de Aprovações
   naquela sessão, aprovadas e negadas somadas. É proxy de fadiga, então a conta
-  bruta importa mais que a proporção.
+  bruta importa mais que a proporção. Nenhuma tela soma isso para você (achado #16): a
+  conta sai do event log, na colheita.
 - **intervenções manuais** — qualquer coisa que você fez que o agente deveria ter
   feito, ou que o produto deveria ter permitido. Sempre com motivo. Se o motivo
   for "travou", registre a **origem** (`infra` | `modelo` | `código` |
   `política`) — nunca por eliminação.
+- **restarts do engine** — quantas vezes você precisou reiniciar o engine para a
+  tanda seguinte andar (3.4). Conte separado das outras intervenções: é a
+  métrica que mede o gargalo do achado #10, e a que vale mais na colheita.
 - **custo** — em USD, do `TokenMeter` da sessão. A conferência contra o event log
   fica para a colheita.
 - **veredito dos gates** — `approved` ou `changes_requested` por gate, e se houve
   ciclo de correção, quantos.
 
-## 3.2 Onde cada coluna se valida no event log
+## 4.2 Onde cada coluna se valida no event log
 
-A tabela é anotação humana; o event log é a prova. Na colheita (Parte 4), cada
+A tabela é anotação humana; o event log é a prova. Na colheita (Parte 5), cada
 coluna é conferida contra estes tipos — todos existentes, conferidos em
 `docs/reference/events.md`:
 
@@ -331,7 +528,7 @@ coluna é conferida contra estes tipos — todos existentes, conferidos em
 Se uma coluna não fechar com o log, ela entra na colheita como **não medida**.
 Não estime.
 
-## 3.3 O loop Psicólogo → Anamnese
+## 4.3 O loop Psicólogo → Anamnese
 
 O loop só é exercitado se as hipóteses forem decididas nos dois sentidos. Um
 experimento que aceita tudo não testa nada.
@@ -353,7 +550,7 @@ Vale observar sem intervir: hipótese sem evidência válida não chega a ser gr
 (RN-021, validação atômica por lote). Se o Psicólogo propuser pouca coisa, pode
 ser que esteja sendo reprovado nessa porta — o que é informação, não defeito.
 
-## 3.4 Critério de encerramento
+## 4.4 Critério de encerramento
 
 A fase termina quando **qualquer um** destes for verdade:
 
@@ -381,7 +578,7 @@ foi obtido até ali.
 
 ---
 
-# PARTE 4 — COLHEITA (10c)
+# PARTE 5 — COLHEITA (10c)
 
 Só começa depois do encerramento. Nesta ordem:
 
@@ -430,17 +627,43 @@ O achado #6 tem um valor extra: corrigi-lo é a primeira mudança de doc que os
 agentes vão fazer nesta fase, o que torna a correção um teste do próprio drift
 check.
 
+## Achados do levantamento da condução (Parte 3)
+
+Estes saíram ao verificar se os passos da 10b eram executáveis. Quatro não eram.
+Nenhum foi corrigido, pelo mesmo princípio 3.
+
+| # | achado | onde | prio |
+|---|---|---|---|
+| 9 | **O Criativo não pode ser dispensado.** O claim exige story `ready`; `ready` exige ≥1 regra de negócio; o id da regra é validado contra um evento real; e só o Criativo tem `emit_artifact` — o PO não tem. Sem Criativo, nenhum dev pega task | `backlog.repository.ts:188`, `story-readiness.ts:46`, `create-story.use-case.ts:55-59`, `po_server.ex:18` | **P1** |
+| 10 | **Um dev agent processa UMA task e para.** `:work` só é disparado na ativação e no aceite de paralelização; o `report_done` abre o gate e não se reagenda; nenhum worker do Oban redispara. Teto por módulo: 1 task, ou 2 com paralelização | `execution_command_controller.ex:35,75`, `dev_agent_server.ex:76-91,306-327` | **P1** |
+| 11 | Reativar a execução não redispara `:work` (o supervisor devolve `:existing`) e ainda cria uma sessão a mais sem agentes vinculados. O 409 "execução já ativa" que o Swagger promete **não existe** no use-case | `execution.controller.ts:50-52`, `dev_agent_supervisor.ex:33-52` | P2 |
+| 12 | Não existe handoff manual para um agente à sua escolha — só Criativo→PO (botão) e Arquiteto→Infra (rota sem botão na web). E a validação de alvo do ADR 0038 (`assertHandoffTargetAllowed`, `HandoffToSubagentError`) **nunca foi implementada**; o `toAgent` é string livre | `SessionPage.tsx:403-407,476-478` | P2 |
+| 13 | Não existe "promover a ready": a promoção é automática na criação. `TransitionStoryUseCase` valida e emite `backlog.story_transitioned`, mas **não está ligado a rota nenhuma** — é código morto. A aba Backlog é somente leitura | `create-story.use-case.ts:75-78` | P2 |
+| 14 | Não existe devolução ao PO — nenhum estado, evento ou botão. `backlog.story_demoted` é outra coisa (revalidação de `module_map`). Rejeição só existe se o humano anotar | `create-module-map.use-case.ts:63-82` | P2 |
+| 15 | O painel do time e as hipóteses do Psicólogo dividem a mesma aba, que é a default do projeto — o protocolo de leitura em lote depende de disciplina de filtro, não do produto | `ProjectOverviewTab.tsx:227-263,278-285,576-714` | P2 |
+| 16 | Nenhuma tela soma aprovações por sessão; a Anamnese sob demanda não tem botão (só rota) | `hooks.ts:153-160`, `anamnese.controller.ts:71-81` | P3 |
+
+Dois deles não são defeito, e entram só como registro para a colheita não os
+confundir com lacuna: o **merge fora do produto** (`awaiting_user` é terminal de
+propósito, RN-014 — o engine sequer conhece `git_merge`), e a **dispensa do QA
+por palavra-chave** no RNF (`qa_lead.ex:20-28`), que é heurística declarada, não
+NLP.
+
 ---
 
-# Insumos do PO
+# Os insumos
 
-O PO não parte do zero na 10b. Os três arquivos em `docs/missions/inputs/` são o
+Ninguém parte do zero na 10b. Os quatro arquivos em `docs/missions/inputs/` são o
 material de entrada:
 
-| arquivo | o que é |
-|---|---|
-| `inputs/01-contrato-gitprovider.md` | o que já existe: as 10 operações, as capabilities, os erros normalizados, a suite única |
-| `inputs/02-bitbucket-cloud-a-investigar.md` | **perguntas**, não respostas — o que verificar na doc oficial do Bitbucket Cloud antes de codar |
-| `inputs/03-escopo-do-generic.md` | o que "capabilities mínimas" significa, e como degradar honestamente |
+| arquivo | para quem | o que é |
+|---|---|---|
+| `inputs/00-handoff-criativo.md` | você, na sessão 0 | o **texto literal** para colar no Criativo, mais os prompts de refino do PO |
+| `inputs/01-contrato-gitprovider.md` | PO e Arquiteto | o que já existe: as 10 operações, as capabilities, os erros normalizados, a suite única |
+| `inputs/02-bitbucket-cloud-a-investigar.md` | Arquiteto | **perguntas**, não respostas — o que verificar na doc oficial do Bitbucket Cloud antes de codar |
+| `inputs/03-escopo-do-generic.md` | Arquiteto | o que "capabilities mínimas" significa, e como degradar honestamente |
 
-O Criativo é dispensado nesta fase: o escopo é conhecido e está escrito.
+O Criativo **não** é dispensado, ao contrário do que o plano original previa: ele
+é o único caminho até o PO e o único agente capaz de emitir as regras de negócio
+que destravam a execução (achado #9). O escopo continua conhecido — o que muda é
+que ele passa pelo Criativo em vez de entrar direto no PO.

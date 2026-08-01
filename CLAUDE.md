@@ -121,21 +121,33 @@ atalho.
    PRs de agente.
 
 ### 10b — Execução pelos agentes (conduzida no produto, não no Claude Code)
-4. Criativo dispensado (escopo conhecido); PO recebe os insumos de
-   docs/missions/inputs/ (suite de contrato, capabilities, ADRs da
-   Fase 2, semânticas do Bitbucket a investigar, escopo do Generic) e
-   estrutura épico/stories com DoD/DoR; Arquiteto valida contra o
-   module_map e produz ADR das semânticas (branch restrictions do
-   Bitbucket, auth por token/app password, merge strategies; Generic
-   com capabilities mínimas e degradação já prevista desde a Fase 2)
-   via PR real.
+4. SESSÃO 0 com o CRIATIVO — o Criativo NÃO é dispensado, ao contrário
+   do que esta fase previa. É o único caminho até o PO (não existe
+   handoff manual para agente à escolha) e o único agente com
+   `emit_artifact`: story só vira `ready` com ≥1 regra de negócio
+   vinculada, o id é validado contra um `artifact.business_rule` real,
+   e o claim de task exige `s.status = 'ready'`. Sem Criativo, nenhum
+   dev pega task. O texto de entrada está em
+   docs/missions/inputs/00-handoff-criativo.md; os demais insumos
+   (contrato, semânticas do Bitbucket a investigar, escopo do Generic)
+   seguem em docs/missions/inputs/. PO estrutura épico/stories com
+   DoD/DoR (promoção a `ready` é AUTOMÁTICA na criação — não há passo
+   humano); Arquiteto valida contra o module_map e produz ADR das
+   semânticas via PR real.
 5. Devs implementam BitbucketProvider e GenericGitProvider contra a
    suite de contrato ÚNICA (mock; smoke atrás de env var); bootstrap
    degradando corretamente no Generic; wizard da web ganha os dois
    (ícone do Bitbucket entra na UI, removendo a divergência
    deliberada do dashboard).
-6. Gates reais em toda PR: QA Lead consolidando, SecOps, aprovação e
-   merge manuais do usuário pela esteira normal.
+   A execução roda em TANDAS: cada dev agent processa UMA task e para
+   (`:work` só é disparado na ativação e no aceite de paralelização;
+   nada reagenda depois do gate). Reativar não redispara — o
+   supervisor devolve o agente existente. Entre tandas: reiniciar o
+   engine e reativar. Backlog fatiado em MUITOS módulos com POUCAS
+   tasks; a contagem de restarts é métrica da fase.
+6. Gates reais em toda PR: QA Lead consolidando, SecOps. O MERGE
+   acontece no provider de git, fora do produto: `awaiting_user` é
+   terminal de propósito (RN-014) e o engine não conhece `git_merge`.
 
 ### 10c — Colheita
 7. docs/explanation/primeiro-dogfooding.md: métricas do protocolo
