@@ -1,0 +1,406 @@
+<!doctype html><html lang=pt-BR dir=ltr class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-reference/llm-providers" data-has-hydrated=false><head><meta charset=UTF-8><meta name=generator content="Docusaurus v3.10.2"><title data-rh=true>Providers de LLM | Brabo</title><meta data-rh=true name=viewport content="width=device-width, initial-scale=1.0"/><meta data-rh=true name=robots content="noindex, nofollow"/><meta data-rh=true name=twitter:card content=summary_large_image /><meta data-rh=true property=og:url content=https://daneiel.github.io/brabo/qa/reference/llm-providers /><meta data-rh=true property=og:locale content=pt_BR /><meta data-rh=true name=docusaurus_locale content=pt-BR /><meta data-rh=true name=docsearch:language content=pt-BR /><meta data-rh=true name=docusaurus_version content=current /><meta data-rh=true name=docusaurus_tag content=docs-default-current /><meta data-rh=true name=docsearch:version content=current /><meta data-rh=true name=docsearch:docusaurus_tag content=docs-default-current /><meta data-rh=true property=og:title content="Providers de LLM | Brabo"/><meta data-rh=true name=description content="O contrato único que torna Ollama, OpenAI e Anthropic intercambiáveis, com capabilities por provider e por modelo, sync de catálogo, ciclo de vida do modelo, erros normalizados e teto de inatividade."/><meta data-rh=true property=og:description content="O contrato único que torna Ollama, OpenAI e Anthropic intercambiáveis, com capabilities por provider e por modelo, sync de catálogo, ciclo de vida do modelo, erros normalizados e teto de inatividade."/><meta data-rh=true name=keywords content="LLM,provider,OpenAI,Anthropic,Ollama,capabilities,tool calling,streaming,catálogo,preço"/><link data-rh=true rel=icon href=/brabo/qa/img/favicon.ico /><link data-rh=true rel=canonical href=https://daneiel.github.io/brabo/qa/reference/llm-providers /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/qa/reference/llm-providers hreflang=pt-BR /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/qa/reference/llm-providers hreflang=x-default /><link rel=stylesheet href=/brabo/qa/assets/css/styles.b2fce81b.css /><script src=/brabo/qa/assets/js/runtime~main.d2607e8e.js defer></script><script src=/brabo/qa/assets/js/main.09459b7a.js defer></script></head><body><svg style="display: none;"><defs>
+<symbol id=theme-svg-external-link viewBox="0 0 24 24"><path fill=currentColor d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
+</defs></svg>
+<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme-6fd")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")),document.documentElement.setAttribute("data-theme-choice",t||"system")}(),function(){try{for(var[t,e]of new URLSearchParams(window.location.search).entries())if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id=__docusaurus><link rel=preload as=image href=/brabo/qa/img/logo.svg /><div role=region aria-label="Pular para o conteúdo principal"><a class=skipToContent_vTaE href=#__docusaurus_skipToContent_fallback>Pular para o conteúdo principal</a></div><nav aria-label="Navegação principal" class="theme-layout-navbar navbar navbar--fixed-top"><div class=navbar__inner><div class="theme-layout-navbar-left navbar__items"><button aria-label="Alternar painel de navegação" aria-expanded=false class="navbar__toggle clean-btn" type=button><svg width=30 height=30 viewBox="0 0 30 30" aria-hidden=true><path stroke=currentColor stroke-linecap=round stroke-miterlimit=10 stroke-width=2 d="M4 7h22M4 15h22M4 23h22"/></svg></button><a class=navbar__brand href=/brabo/qa/><div class=navbar__logo><img src=/brabo/qa/img/logo.svg alt=Brabo class="themedComponent_MRFi themedComponent--light_L7lV"/><img src=/brabo/qa/img/logo.svg alt=Brabo class="themedComponent_MRFi themedComponent--dark_IOSi"/></div><b class="navbar__title text--truncate">Brabo</b></a><a class="navbar__item navbar__link" href=/brabo/qa/>Documentação</a><a class="navbar__item navbar__link" href=/brabo/qa/runbook>Runbook</a><a class="navbar__item navbar__link" href=/brabo/qa/adr>ADRs</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_7k9y><use href=#theme-svg-external-link /></svg></a><div class="toggle_U6bG colorModeToggle_T9um"><button class="clean-btn toggleButton_g_PR toggleButtonDisabled_Ngeu" type=button disabled title="modo do sistema" aria-label="Mudar entre modo claro e escuro (modo do sistema está ativo)"><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_z_rx lightToggleIcon_McQy"><path fill=currentColor d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_z_rx darkToggleIcon_Ys4Y"><path fill=currentColor d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_z_rx systemToggleIcon_p3nf"><path fill=currentColor d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"/></svg></button></div><div class=navbarSearchContainer_x4Ld><div class="navbar__search searchBarContainer_eC8_" dir=ltr><input placeholder=Search aria-label=Search class="navbar__search-input searchInput_kJYU" value="" /><div class="loadingRing_DQ9P searchBarLoadingRing_Y6ag"><div></div><div></div><div></div><div></div></div></div></div></div></div><div role=presentation class=navbar-sidebar__backdrop></div></nav><div id=__docusaurus_skipToContent_fallback class="theme-layout-main main-wrapper mainWrapper_esxj"><div class=docsWrapper_Ty4Q><button aria-label="Voltar para o topo" class="clean-btn theme-back-to-top-button backToTopButton_L3CF" type=button></button><div class=docRoot_loR7><main class="docMainContainer_SV68 docMainContainerEnhanced_tpPi"><div class="container padding-top--md padding-bottom--lg"><div class=row><div class="col docItemCol_rx8r"><div class=docItemContainer_F5u4><article><div class="tocCollapsible_leAO theme-doc-toc-mobile tocMobile_jGlV"><button type=button class="clean-btn tocCollapsibleButton_zzRU">Nesta página</button></div><div class="theme-doc-markdown markdown"><div class=row><div class="col col--12 markdown"><header><h1>Providers de LLM</h1></header>
+<p>Todo agente e todo chat do Brabo falam com um modelo por trás de um contrato
+só. Quem chama não sabe se do outro lado está um Ollama no disco, a API da
+OpenAI ou a da Anthropic — e não deveria saber.</p>
+<p>Decisão em <a class="" href=/brabo/qa/adr/0041-base-openai-compativel-e-contrato-de-llm-providers>ADR 0041</a>,
+com o teto de inatividade herdado do <a class="" href=/brabo/qa/adr/0020-destravar-gates-qa-secops>ADR 0020</a>.</p>
+<h2 class="anchor anchorTargetStickyNavbar_K8W5" id=o-contrato>O contrato<a href=#o-contrato class=hash-link aria-label="Link direto para O contrato" title="Link direto para O contrato" translate=no>​</a></h2>
+<p><code>LLMProvider</code> (<code>apps/api/src/application/ports/llm-provider.port.ts</code>) tem uma
+operação só, e ela é sempre streaming:</p>
+<div class="language-ts codeBlockContainer_jMok theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_PNkN><pre tabindex=0 class="prism-code language-ts codeBlock_yR6B thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_qUOc><div class=token-line style=color:#F8F8F2><span class="token keyword" style="color:rgb(189, 147, 249);font-style:italic">abstract</span><span class="token plain"> </span><span class="token keyword" style="color:rgb(189, 147, 249);font-style:italic">class</span><span class="token plain"> </span><span class="token class-name">LLMProvider</span><span class="token plain"> </span><span class="token punctuation" style="color:rgb(248, 248, 242)">{</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  </span><span class="token keyword" style="color:rgb(189, 147, 249);font-style:italic">abstract</span><span class="token plain"> </span><span class="token keyword" style="color:rgb(189, 147, 249);font-style:italic">readonly</span><span class="token plain"> name</span><span class="token operator">:</span><span class="token plain"> LLMProviderName</span><span class="token punctuation" style="color:rgb(248, 248, 242)">;</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  </span><span class="token keyword" style="color:rgb(189, 147, 249);font-style:italic">abstract</span><span class="token plain"> </span><span class="token keyword" style="color:rgb(189, 147, 249);font-style:italic">readonly</span><span class="token plain"> capabilities</span><span class="token operator">:</span><span class="token plain"> LLMProviderCapabilities</span><span class="token punctuation" style="color:rgb(248, 248, 242)">;</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  </span><span class="token keyword" style="color:rgb(189, 147, 249);font-style:italic">abstract</span><span class="token plain"> </span><span class="token function" style="color:rgb(80, 250, 123)">chat</span><span class="token punctuation" style="color:rgb(248, 248, 242)">(</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">    messages</span><span class="token operator">:</span><span class="token plain"> ChatMessage</span><span class="token punctuation" style="color:rgb(248, 248, 242)">[</span><span class="token punctuation" style="color:rgb(248, 248, 242)">]</span><span class="token punctuation" style="color:rgb(248, 248, 242)">,</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">    options</span><span class="token operator">:</span><span class="token plain"> ChatOptions</span><span class="token punctuation" style="color:rgb(248, 248, 242)">,</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  </span><span class="token punctuation" style="color:rgb(248, 248, 242)">)</span><span class="token operator">:</span><span class="token plain"> AsyncGenerator</span><span class="token operator">&lt;</span><span class="token plain">ChatStreamChunk</span><span class="token operator">></span><span class="token punctuation" style="color:rgb(248, 248, 242)">;</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain"></span><span class="token punctuation" style="color:rgb(248, 248, 242)">}</span><br/></div></code></pre></div></div>
+<p>Não há método separado para tool calling nem para contagem de tokens: as
+ferramentas vão em <code>options.tools</code> e tudo volta pelo mesmo stream, como um dos
+quatro tipos de <code>ChatStreamChunk</code>.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>chunk<th>quando<tbody><tr><td><code>text_delta</code><td>pedaço de texto gerado<tr><td><code>tool_calls</code><td>o modelo pediu ferramentas (chunk único, não incremental)<tr><td><code>usage</code><td>contagem de tokens, com a marca <code>estimated</code><tr><td><code>error</code><td>falha classificada por <code>code</code> — <strong>nunca uma exceção</strong></table>
+<p>Uma falha vira chunk, e não exceção, porque o turno já gastou tokens: o
+metering precisa acontecer mesmo quando a resposta não veio.</p>
+<h2 class="anchor anchorTargetStickyNavbar_K8W5" id=capabilities-duas-camadas>Capabilities: duas camadas<a href=#capabilities-duas-camadas class=hash-link aria-label="Link direto para Capabilities: duas camadas" title="Link direto para Capabilities: duas camadas" translate=no>​</a></h2>
+<p><strong>Do provider</strong> é o teto do que aquele backend sabe fazer. <strong>Do modelo</strong> é o que
+aquela linha da tabela <code>models</code> sabe fazer. Um modelo pode ser mais pobre que o
+provider, nunca mais rico.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>capability<th>onde vive<th>usada para<tbody><tr><td><code>streaming</code><td>provider + <code>models.supports_streaming</code><td>—<tr><td><code>toolCalling</code><td>provider + <code>models.supports_tool_calling</code><td>recusar binding de agente (<a class="" href=/brabo/qa/business-rules#rn-040>RN-040</a>)<tr><td><code>listModels</code><td>só provider<td>ligar/pular o sync de catálogo (<a class="" href=/brabo/qa/business-rules#rn-043>RN-043</a>)<tr><td><code>context_length</code><td><code>models.context_window</code><td>orçamento de contexto<tr><td><code>vision</code><td><code>models.supports_vision</code><td>reservado</table>
+<!-- -->
+<blockquote>
+<p>⚠️ Bloco gerado por <code>pnpm docs:generate</code>. Não edite à mão — o próximo build sobrescreve.</p>
+</blockquote>
+<p>Lido dos literais de <code>capabilities</code> em <code>apps/api/src/infrastructure/llm/</code> — <strong>3 providers</strong>.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>provider<th>streaming<th>tool calling<th>list_models<th>fonte<tbody><tr><td><code>anthropic</code><td>sim<td>sim<td>não<td><code>apps/api/src/infrastructure/llm/anthropic-provider.ts</code><tr><td><code>ollama</code><td>sim<td>sim<td>não<td><code>apps/api/src/infrastructure/llm/ollama-provider.ts</code><tr><td><code>openai</code><td>sim<td>sim<td>sim<td><code>apps/api/src/infrastructure/llm/openai-provider.ts</code></table>
+<p>Provider sem <code>list_models</code> é PULADO pelo sync de catálogo, com o motivo
+registrado no relatório — nunca tratado como "o catálogo ficou vazio".</p>
+<!-- -->
+<p>O default de <code>supports_tool_calling</code> é <code>false</code>. É de propósito: modelo
+descoberto por sync automático (Fase 9c) entra sem promessa que ninguém
+verificou. Os modelos do seed declaram a capability explicitamente, e a
+migração <code>0026</code> faz o mesmo backfill nos bancos já existentes — dirigido às
+sete linhas do seed, nunca um <code>UPDATE</code> cego na tabela.</p>
+<p>:::caution Modelo inserido à mão
+<code>models</code> não tem endpoint HTTP de edição: quem acrescenta um modelo faz por
+<code>seed.ts</code> ou por SQL direto. Nos dois casos, <strong>declare
+<code>supports_tool_calling</code></strong> se pretende vincular esse modelo a um agente — o
+default <code>false</code> faz o binding ser recusado, inclusive quando o modelo é
+apontado por <code>DEMO_QA_MODEL</code> nos scripts de demo dos gates.
+:::</p>
+<h2 class="anchor anchorTargetStickyNavbar_K8W5" id=catálogo-de-modelos-descoberta-e-ciclo-de-vida>Catálogo de modelos: descoberta e ciclo de vida<a href=#catálogo-de-modelos-descoberta-e-ciclo-de-vida class=hash-link aria-label="Link direto para Catálogo de modelos: descoberta e ciclo de vida" title="Link direto para Catálogo de modelos: descoberta e ciclo de vida" translate=no>​</a></h2>
+<p>Quem declara <code>listModels</code> sabe listar o próprio catálogo. A base compatível
+implementa o <code>GET /models</code> do dialeto que já fala, com o parsing substituível
+por configuração (<code>parseCatalogo</code>) — um hub devolve preço e janela na mesma
+linha, e isso não pode virar <code>if</code> dentro do parsing padrão.</p>
+<p><strong>Ollama e Anthropic declaram <code>false</code>.</strong> Os dois têm endpoint de catálogo, mas
+o formato deles não foi verificado na doc oficial nesta fase, e a regra da Fase
+9 é não codar contra contrato adivinhado. Declarar <code>false</code> faz o sync pular
+explicitamente, com o motivo no relatório; declarar <code>true</code> e errar o parsing
+marcaria o catálogo inteiro como sumido. Backlog no
+<a class="" href=/brabo/qa/adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel>ADR 0042</a>.</p>
+<h3 class="anchor anchorTargetStickyNavbar_K8W5" id=os-dois-eixos-de-disponibilidade>Os dois eixos de disponibilidade<a href=#os-dois-eixos-de-disponibilidade class=hash-link aria-label="Link direto para Os dois eixos de disponibilidade" title="Link direto para Os dois eixos de disponibilidade" translate=no>​</a></h3>
+<p>Um modelo tem dois estados INDEPENDENTES, e confundi-los era o buraco que a
+Fase 9c fechou:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>coluna<th>quem escreve<th>o que significa<tbody><tr><td><code>models.is_active</code><td>o <strong>owner</strong>, pela tela de curadoria<td>aparece no seletor e pode receber binding novo<tr><td><code>models.availability</code><td>o <strong>sync</strong>, sozinho<td><code>unavailable</code> = sumiu do catálogo do provider</table>
+<p>Um modelo pode estar ativo E indisponível ao mesmo tempo — é esse cruzamento
+que gera o aviso na tela. Quando o provider o traz de volta, a escolha do owner
+continua valendo: o sync nunca religa o que alguém desligou de propósito.</p>
+<h3 class="anchor anchorTargetStickyNavbar_K8W5" id=as-três-regras-da-reconciliação>As três regras da reconciliação<a href=#as-três-regras-da-reconciliação class=hash-link aria-label="Link direto para As três regras da reconciliação" title="Link direto para As três regras da reconciliação" translate=no>​</a></h3>
+<ol>
+<li class=""><strong>Modelo novo entra INATIVO.</strong> Um catálogo tem centenas de linhas; despejá-las
+ativas tornaria a escolha impossível e ligaria modelo caro sem ninguém
+decidir.</li>
+<li class=""><strong>Modelo que sumiu vira <code>unavailable</code>, nunca é deletado.</strong> <code>model_bindings</code> e
+<code>token_usage</code> apontam para a linha; apagá-la levaria junto o histórico de
+custo.</li>
+<li class=""><strong>Falha do provider não indisponibiliza nada.</strong> Um 401 significa "não sei o
+que tem lá", não "não tem nada lá" — marcar tudo como sumido por causa de uma
+chave revogada derrubaria todos os bindings daquele provider de uma vez. O
+provider é PULADO, com a origem da falha (<code>infra</code> | <code>modelo</code>) no relatório.</li>
+</ol>
+<h3 class="anchor anchorTargetStickyNavbar_K8W5" id=a-cascata-revalida-capability-ao-cair-de-nível>A cascata revalida capability ao cair de nível<a href=#a-cascata-revalida-capability-ao-cair-de-nível class=hash-link aria-label="Link direto para A cascata revalida capability ao cair de nível" title="Link direto para A cascata revalida capability ao cair de nível" translate=no>​</a></h3>
+<p><code>resolveBinding</code> pula o candidato indisponível e segue a precedência. Quando o
+turno carrega ferramentas, ele também pula quem não faz tool calling <strong>em todo
+nível</strong> — sem isso o fallback de um agente pousaria num modelo chat-only e
+violaria a <a class="" href=/brabo/qa/business-rules#rn-040>RN-040</a> em silêncio: a falha só
+apareceria depois, no ToolLoop, como "o agente parou sozinho". O que foi pulado
+volta em <code>skipped</code>, e a UI mostra.</p>
+<h3 class="anchor anchorTargetStickyNavbar_K8W5" id=quem-agenda-e-quem-executa>Quem agenda e quem executa<a href=#quem-agenda-e-quem-executa class=hash-link aria-label="Link direto para Quem agenda e quem executa" title="Link direto para Quem agenda e quem executa" translate=no>​</a></h3>
+<p>O engine agenda (worker Oban auto-reagendado, <code>MODEL_SYNC_INTERVAL_SECONDS</code>,
+6h por default) e a api executa, porque é ela que tem as credenciais e o
+registry de providers. O botão "Atualizar catálogo" da tela de curadoria chama
+o <strong>mesmo</strong> caso de uso — não existem duas reconciliações que possam divergir.</p>
+<h2 class="anchor anchorTargetStickyNavbar_K8W5" id=preço-vale-daqui-em-diante-nunca-para-trás>Preço: vale daqui em diante, nunca para trás<a href=#preço-vale-daqui-em-diante-nunca-para-trás class=hash-link aria-label="Link direto para Preço: vale daqui em diante, nunca para trás" title="Link direto para Preço: vale daqui em diante, nunca para trás" translate=no>​</a></h2>
+<p><code>token_usage</code> guarda o preço que produziu cada <code>cost_micros</code>
+(<code>input_price_per_million_micros</code> e <code>output_price_per_million_micros</code>). O custo
+histórico já era imutável antes da Fase 9c; o que faltava era ser
+<strong>reproduzível</strong> — sem o preço gravado, <code>tokens × preço = custo</code> deixava de
+fechar assim que alguém corrigisse a tabela.</p>
+<p>Toda mudança de preço grava uma linha em <code>model_price_changes</code>, append-only,
+com o par antes/depois e a origem (<code>manual</code> | <code>sync</code>). O par vai junto de
+propósito: reconstruir o "antes" a partir da linha anterior dependeria de
+nenhuma escrita ter escapado do caminho auditado, que é justamente o que a
+auditoria existe para provar.</p>
+<p>:::note Não é evento de outbox
+<code>model_price_changes</code> é tabela própria, e não uma linha em <code>outbox_events</code>. O
+<code>Engine.Outbox.Drain.run_once/0</code> filtra <code>aggregate_type == "session"</code> — uma
+linha de preço lá ficaria com <code>processed_at</code> nulo para sempre e sujaria a
+métrica de lag da outbox. É log de domínio imutável, como <code>session_events</code>.
+:::</p>
+<h2 class="anchor anchorTargetStickyNavbar_K8W5" id=erros-normalizados>Erros normalizados<a href=#erros-normalizados class=hash-link aria-label="Link direto para Erros normalizados" title="Link direto para Erros normalizados" translate=no>​</a></h2>
+<p>Ninguém decide nada por substring da mensagem do vendor: a decisão é pelo
+<code>code</code> do chunk. As classes vivem em
+<code>apps/api/src/domain/llm/llm-provider-errors.ts</code>.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>status do provider<th><code>code</code><th>significa<tbody><tr><td>401, 403<td><code>auth</code><td>chave ausente, inválida ou sem acesso ao modelo<tr><td>404<td><code>model_not_found</code><td>o modelo não existe nesse provider<tr><td>429<td><code>rate_limit</code><td>cota ou throughput estourado<tr><td>413, ou 400 com marcador de contexto<td><code>context_length</code><td>o prompt não cabe na janela<tr><td>—<td><code>timeout</code><td>o provider ficou <strong>mudo</strong> além do teto de inatividade<tr><td>—<td><code>connection</code><td>nem chegou a falar com o provider<tr><td>qualquer outro<td><code>upstream</code><td>falhou do lado de lá por outro motivo</table>
+<p>O 400 só vira <code>context_length</code> quando o corpo traz um marcador conhecido
+(<code>context_length_exceeded</code> e variantes). Casar por marcador é frágil, então o
+413 — que é inequívoco — vem antes, e um 400 sem marcador cai em <code>upstream</code> em
+vez de mentir sobre a causa.</p>
+<h2 class="anchor anchorTargetStickyNavbar_K8W5" id=teto-de-inatividade>Teto de inatividade<a href=#teto-de-inatividade class=hash-link aria-label="Link direto para Teto de inatividade" title="Link direto para Teto de inatividade" translate=no>​</a></h2>
+<p>O teto não é de duração total, é de <strong>silêncio</strong>. Um turno legítimo pode
+demorar muito (um modelo processa milhares de tokens de prompt antes do
+primeiro token), mas nunca fica quieto. É a lição do ADR 0020, onde o <code>fetch</code>
+desistia aos 300s fixos do undici com um opaco "fetch failed" e o agente
+registrava "o modelo parou" para uma requisição que nunca foi respondida.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>provider<th>mecanismo<th>env<tbody><tr><td>Ollama<td>timeout de socket do <code>node:http</code><td><code>OLLAMA_REQUEST_TIMEOUT_MS</code><tr><td>Base OpenAI-compatível<td>idem<td><code>LLM_REQUEST_TIMEOUT_MS</code><tr><td>Anthropic<td><code>withIdleTimeout</code> sobre o stream do SDK<td><code>LLM_REQUEST_TIMEOUT_MS</code></table>
+<p>O Ollama tem env própria porque um modelo local tem outra ordem de grandeza de
+latência até o primeiro token.</p>
+<h2 class="anchor anchorTargetStickyNavbar_K8W5" id=a-base-openai-compatível>A base OpenAI-compatível<a href=#a-base-openai-compatível class=hash-link aria-label="Link direto para A base OpenAI-compatível" title="Link direto para A base OpenAI-compatível" translate=no>​</a></h2>
+<p><code>OpenAICompatibleProvider</code> implementa o dialeto <code>/chat/completions</code> uma vez só.
+A OpenAI é a primeira instância dela; os providers da Fase 9b (NVIDIA NIM, Deep
+Infra, Together, Bitdeer, Vultr, OpenRouter) mudam <code>baseUrl</code>, header de auth e
+flags — nunca o parsing.</p>
+<div class="language-ts codeBlockContainer_jMok theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_PNkN><pre tabindex=0 class="prism-code language-ts codeBlock_yR6B thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_qUOc><div class=token-line style=color:#F8F8F2><span class="token keyword" style="color:rgb(189, 147, 249);font-style:italic">interface</span><span class="token plain"> </span><span class="token class-name">OpenAICompatibleFlags</span><span class="token plain"> </span><span class="token punctuation" style="color:rgb(248, 248, 242)">{</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  streamOptionsIncludeUsage</span><span class="token operator">:</span><span class="token plain"> </span><span class="token builtin" style="color:rgb(189, 147, 249)">boolean</span><span class="token punctuation" style="color:rgb(248, 248, 242)">;</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  maxTokensField</span><span class="token operator">:</span><span class="token plain"> </span><span class="token string" style="color:rgb(255, 121, 198)">'max_tokens'</span><span class="token plain"> </span><span class="token operator">|</span><span class="token plain"> </span><span class="token string" style="color:rgb(255, 121, 198)">'max_completion_tokens'</span><span class="token punctuation" style="color:rgb(248, 248, 242)">;</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain"></span><span class="token punctuation" style="color:rgb(248, 248, 242)">}</span><br/></div></code></pre></div></div>
+<p>Cada flag existe porque um provider real diverge. Não acrescente flag sem um
+provider que precise dela.</p>
+<h2 class="anchor anchorTargetStickyNavbar_K8W5" id=divergências-normalizadas>Divergências normalizadas<a href=#divergências-normalizadas class=hash-link aria-label="Link direto para Divergências normalizadas" title="Link direto para Divergências normalizadas" translate=no>​</a></h2>
+<p>Os três providers passam o mesmo contrato, mas os dialetos não são iguais. O
+que diverge está normalizado, não escondido:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>assunto<th>Ollama<th>Base compatível<th>Anthropic<tbody><tr><td>formato<td>NDJSON<td>SSE <code>data:</code><td>SSE com eventos nomeados<tr><td>transporte<td><code>node:http</code><td><code>node:http</code><td>SDK oficial + <code>withIdleTimeout</code><tr><td>ids de tool call<td>não manda — geramos<td>manda; geramos se faltar<td>manda<tr><td>argumentos de tool call<td>já desserializados<td>string fatiada, remontada por índice<td><code>input_json_delta</code>, remontado pelo SDK<tr><td>resposta sem <code>usage</code><td>não emite chunk<td>conta local com <code>estimated: true</code><td><strong>impossível</strong> — <code>usage</code> é obrigatório no <code>message_start</code><tr><td>papel <code>tool</code><td>mensagem própria<td><code>role: "tool"</code> + <code>tool_call_id</code><td>bloco <code>tool_result</code> num turno de <code>user</code></table>
+<p>A última linha do Anthropic é a que mais custa: resultados de chamadas
+paralelas precisam vir no <strong>mesmo</strong> turno de <code>user</code>, então mensagens <code>tool</code>
+consecutivas são agrupadas.</p>
+<h2 class="anchor anchorTargetStickyNavbar_K8W5" id=hubs-e-o-custo-real-preparo-da-fase-9b>Hubs e o custo real (preparo da Fase 9b)<a href=#hubs-e-o-custo-real-preparo-da-fase-9b class=hash-link aria-label="Link direto para Hubs e o custo real (preparo da Fase 9b)" title="Link direto para Hubs e o custo real (preparo da Fase 9b)" translate=no>​</a></h2>
+<p>Num <strong>hub</strong> (OpenRouter) quem aparece na chamada é o hub, mas quem custa é o
+provedor que serviu. O metering registra os dois:</p>
+<ul>
+<li class=""><code>ChatUsageChunk.upstreamProvider</code> — o provider preenche quando o hub informa;</li>
+<li class=""><code>token_usage.upstream_provider</code> — texto livre e <strong>nullable</strong>. Não é enum: o
+conjunto é do hub, muda sem aviso e não é nosso para versionar. <code>null</code>
+significa "não veio de hub, ou o hub não informou";</li>
+<li class="">as métricas <code>brabo_llm_tokens_total</code> e <code>brabo_llm_cost_micros_total</code> ganharam
+o rótulo <code>upstream_provider</code>, e o dashboard executivo tem um painel de custo
+por provedor subjacente. Sem hub, o rótulo repete o próprio provider — com
+rótulo vazio, <code>sum by (upstream_provider)</code> mostraria só o que passou por hub
+e faria parecer que o resto não custou nada.</li>
+</ul>
+<p>A leitura do campo no frame é um <strong>hook de configuração</strong> da base
+(<code>extrairUpstreamProvider</code>), não um <code>if</code> dentro do parsing: cada hub põe a
+informação num lugar diferente, e a regra da fase é que particularidade de
+provider vira configuração.</p>
+<p><code>models.manual_pricing</code> marca preço digitado da doc do provider em vez de
+sincronizado. O sync de catálogo <strong>não sobrescreve</strong> preço de linha marcada sem
+decisão explícita — e quando o catálogo remoto não informa preço, o valor
+gravado é preservado em vez de zerado: campo ausente significa "o provider não
+disse", nunca "é de graça".</p>
+<h2 class="anchor anchorTargetStickyNavbar_K8W5" id=a-suite-de-contrato>A suite de contrato<a href=#a-suite-de-contrato class=hash-link aria-label="Link direto para A suite de contrato" title="Link direto para A suite de contrato" translate=no>​</a></h2>
+<p><code>apps/api/test/contract/llm-provider.contract.ts</code> roda a mesma bateria contra
+qualquer implementação, como a suite de git faz desde a Fase 2. A divisão é o
+ponto: <strong>o contrato é dono das asserções, o harness é dono do dialeto.</strong></p>
+<p>Um provider novo escreve só o harness — traduzir cada cenário para o seu
+formato de fio — e herda os testes de stream com frame partido, usage
+presente e ausente, tool calling, os quatro erros e o servidor mudo. O
+servidor falso é um <code>node:http</code> de verdade em porta efêmera, não um mock de
+<code>fetch</code>: o que está sob teste é justamente o comportamento de socket.</p>
+<h2 class="anchor anchorTargetStickyNavbar_K8W5" id=tool-calling-e-o-resgate-do-engine>Tool calling e o resgate do engine<a href=#tool-calling-e-o-resgate-do-engine class=hash-link aria-label="Link direto para Tool calling e o resgate do engine" title="Link direto para Tool calling e o resgate do engine" translate=no>​</a></h2>
+<p>O <code>ToolCallRecovery</code> do engine (ADR 0020) recupera chamadas que um modelo
+pequeno escreveu em prosa em vez de usar o campo <code>tools</code>. Ele é <strong>resgate, não
+licença</strong>: depende de o modelo acertar o formato por acaso e falha em silêncio
+quando não acerta. Por isso vincular um modelo sem tool calling nativo a um
+agente é recusado no domínio, e não apenas desencorajado.</div></div></div><div class=row><div class="col col--12"><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_aQxr"><a href=https://github.com/daneiel/brabo/blob/dev/docs/reference/llm-providers.md target=_blank rel="noopener noreferrer" class=theme-edit-this-page><svg fill=currentColor height=20 width=20 viewBox="0 0 40 40" class=iconEdit_V7pD aria-hidden=true><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"/></g></svg>Editar esta página</a></div><div class="col lastUpdated_KApo"><span class=theme-last-updated>Última atualização<!-- --> em <b><time datetime=2026-08-01T18:49:01.000Z itemprop=dateModified>1 de ago. de 2026</time></b> por <b>Claude</b></span></div></div></footer></div></div></article><div class=row><div class="col col--12"><nav class="docusaurus-mt-lg pagination-nav" aria-label="Páginas de documento"></nav></div></div></div></div><div class="col col--3"><div class="tableOfContents_a7aG thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href=#o-contrato class="table-of-contents__link toc-highlight">O contrato</a><li><a href=#capabilities-duas-camadas class="table-of-contents__link toc-highlight">Capabilities: duas camadas</a><li><a href=#catálogo-de-modelos-descoberta-e-ciclo-de-vida class="table-of-contents__link toc-highlight">Catálogo de modelos: descoberta e ciclo de vida</a><ul><li><a href=#os-dois-eixos-de-disponibilidade class="table-of-contents__link toc-highlight">Os dois eixos de disponibilidade</a><li><a href=#as-três-regras-da-reconciliação class="table-of-contents__link toc-highlight">As três regras da reconciliação</a><li><a href=#a-cascata-revalida-capability-ao-cair-de-nível class="table-of-contents__link toc-highlight">A cascata revalida capability ao cair de nível</a><li><a href=#quem-agenda-e-quem-executa class="table-of-contents__link toc-highlight">Quem agenda e quem executa</a></ul><li><a href=#preço-vale-daqui-em-diante-nunca-para-trás class="table-of-contents__link toc-highlight">Preço: vale daqui em diante, nunca para trás</a><li><a href=#erros-normalizados class="table-of-contents__link toc-highlight">Erros normalizados</a><li><a href=#teto-de-inatividade class="table-of-contents__link toc-highlight">Teto de inatividade</a><li><a href=#a-base-openai-compatível class="table-of-contents__link toc-highlight">A base OpenAI-compatível</a><li><a href=#divergências-normalizadas class="table-of-contents__link toc-highlight">Divergências normalizadas</a><li><a href=#hubs-e-o-custo-real-preparo-da-fase-9b class="table-of-contents__link toc-highlight">Hubs e o custo real (preparo da Fase 9b)</a><li><a href=#a-suite-de-contrato class="table-of-contents__link toc-highlight">A suite de contrato</a><li><a href=#tool-calling-e-o-resgate-do-engine class="table-of-contents__link toc-highlight">Tool calling e o resgate do engine</a></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Documentação</div><ul class="footer__items clean-list"><li class=footer__item><a class=footer__link-item href=/brabo/qa/getting-started>Primeiros passos</a><li class=footer__item><a class=footer__link-item href=/brabo/qa/architecture>Arquitetura</a><li class=footer__item><a class=footer__link-item href=/brabo/qa/business-rules>Regras de negócio</a><li class=footer__item><a class=footer__link-item href=/brabo/qa/runbook>Runbook</a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Comunidade</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class=footer__link-item>Como contribuir<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_7k9y><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class=footer__link-item>Onde pedir ajuda<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_7k9y><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class=footer__link-item>Segurança<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_7k9y><use href=#theme-svg-external-link /></svg></a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Mais</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class=footer__link-item>GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_7k9y><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CHANGELOG.md target=_blank rel="noopener noreferrer" class=footer__link-item>CHANGELOG<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_7k9y><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/LICENSE target=_blank rel="noopener noreferrer" class=footer__link-item>Licença MIT<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_7k9y><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/THIRD_PARTY_NOTICES.md target=_blank rel="noopener noreferrer" class=footer__link-item>Avisos de terceiros<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_7k9y><use href=#theme-svg-external-link /></svg></a></ul></div></div><div class="footer__bottom text--center"><div class=footer__copyright>Copyright © 2026 Daniel Souza. Licenciado sob a MIT. Ferramentas de terceiros mantêm as próprias licenças — ver Avisos de terceiros.</div></div></div></footer></div></body>
