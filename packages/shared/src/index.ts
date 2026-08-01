@@ -9,9 +9,22 @@ export interface HealthStatus {
 
 // --- LLM ---
 
-export const LLM_PROVIDER_NAMES = ["ollama", "anthropic", "openai"] as const;
-
-export type LLMProviderName = (typeof LLM_PROVIDER_NAMES)[number];
+/**
+ * `packages/shared` é 100% TIPO — nada aqui pode sobreviver ao `tsc`.
+ *
+ * O `main` do pacote aponta pro `.ts` cru, e a imagem de produção da api roda
+ * o compilado com `node main.js`: um `export const` daqui vira um `require`
+ * de verdade em runtime, e o Node morre com
+ * `ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING` ao achar um `.ts` dentro de
+ * `node_modules` — o container não sobe. O `Dockerfile.prod` da api conta com
+ * este invariante ("por isso ele NÃO aparece no estágio final"), e
+ * `packages-shared-so-tipos.spec.ts` na api o mantém honesto.
+ *
+ * Precisa da LISTA em runtime? Ela mora no consumidor —
+ * `apps/api/src/domain/llm/llm-provider-names.ts` guarda a da api, amarrada a
+ * este tipo por checagem de exaustividade nos dois sentidos.
+ */
+export type LLMProviderName = "ollama" | "anthropic" | "openai";
 
 /**
  * Taxonomia normalizada de falha de provider (Fase 9a — ADR 0041). Espelha o

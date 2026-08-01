@@ -270,6 +270,18 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **api**: a imagem de produção da api voltou a **subir**. A Fase 9a exportou
+  `LLM_PROVIDER_NAMES` (uma `const`) de `packages/shared`, e esse era o
+  primeiro valor em runtime de um pacote que o `Dockerfile.prod` documenta
+  como "100% tipos": todo import anterior era `import type` e sumia na
+  compilação. Com um valor de verdade, o compilado passou a fazer `require`
+  do pacote, cujo `main` aponta pro `.ts` cru — o Node recusa type stripping
+  dentro de `node_modules` e o container morria no boot com
+  `ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING`. A lista mudou para
+  `apps/api/src/domain/llm/llm-provider-names.ts`, amarrada ao tipo do shared
+  por exaustividade nos dois sentidos, e o invariante — que até aqui só vivia
+  num comentário de Dockerfile — passou a ter teste
+  (`test/packages-shared-so-tipos.spec.ts`)
 - **web**: `design-contraste.test.ts` (citado em comentários de
   `Input.module.css`/`AuthLayout.module.css` desde a Fase 7, mas nunca
   criado) recriado — e achou 2 pares novos que reprovavam o AA: o papel

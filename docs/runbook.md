@@ -1277,9 +1277,16 @@ calling, os quatro erros normalizados, o catálogo e o servidor mudo.
 
 ### 4. Registre o provider e o kind de credencial
 
-1. `LLM_PROVIDER_NAMES` em `packages/shared/src/index.ts` — o `Record`
-   exaustivo de `ROTULO_DO_PROVIDER` na web quebra o typecheck até ganhar
-   rótulo, o que é o comportamento desejado;
+1. **dois lugares, de propósito**: o tipo `LLMProviderName` em
+   `packages/shared/src/index.ts` (a web também o usa) e a lista em runtime
+   `LLM_PROVIDER_NAMES` em `apps/api/src/domain/llm/llm-provider-names.ts`.
+   Elas não podem morar juntas: `packages/shared` é 100% tipo — um valor
+   exportado de lá derruba a imagem de produção da api no boot com
+   `ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING`, e
+   `apps/api/test/packages-shared-so-tipos.spec.ts` reprova antes de chegar
+   lá. Esquecer a lista não passa em silêncio: a checagem de exaustividade
+   nos dois sentidos quebra o typecheck, assim como o `Record` exaustivo de
+   `ROTULO_DO_PROVIDER` na web quebra até o provider ganhar rótulo;
 2. se for hub, acrescente o nome a `HUBS` em `apps/web/src/lib/models.ts` para
    ele cair no grupo certo do seletor;
 3. o registry de providers da api (`llm-infrastructure.module.ts`);
