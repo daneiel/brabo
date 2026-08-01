@@ -270,6 +270,19 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **infra**: mudar `WEB_PORT` deixa de quebrar o CORS em silêncio. A porta faz
+  parte do contrato de CORS desde o [ADR 0037](docs/adr/0037-cors-do-engine-e-a-porta-como-contrato.md),
+  mas nos composes `WEB_PORT` e `WEB_ORIGIN` tinham defaults **independentes**:
+  quem trocasse a porta (o que o próprio guia de primeiros passos manda fazer
+  quando a 5173 está ocupada) abria o browser numa origem que a api e o engine
+  não aceitavam, e a mensagem no console falava de CORS, não de porta. O default
+  de `WEB_ORIGIN` passa a **derivar** de `WEB_PORT` nos dois composes, e um check
+  do CI impede que alguém volte a separá-los. Definir `WEB_ORIGIN` à mão continua
+  sobrepondo a derivação
+- **deps**: `brace-expansion` sobe para `1.1.18` (era `1.1.16`), fechando o
+  alerta HIGH de DoS por expansão sem limite. Vinha transitivamente do
+  `minimatch@3.1.5`, cujo range já aceitava a versão corrigida — só o lockfile
+  mudou
 - **api**: a imagem de produção da api voltou a **subir**. A Fase 9a exportou
   `LLM_PROVIDER_NAMES` (uma `const`) de `packages/shared`, e esse era o
   primeiro valor em runtime de um pacote que o `Dockerfile.prod` documenta
