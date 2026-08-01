@@ -514,9 +514,16 @@ A tabela é anotação humana; o event log é a prova. Na colheita (Parte 5), ca
 coluna é conferida contra estes tipos — todos existentes, conferidos em
 `docs/reference/events.md`:
 
+> ⚠️ **Correção (achado #17):** a coluna mais importante da tabela **não** se
+> valida no event log. `ApproveActionUseCase` grava `proposed_action.approved`
+> só no outbox (`approve-action.use-case.ts:98`), nunca em `session_events` —
+> confirmado por query, zero eventos `proposed_action.*` num banco com centenas
+> de ações. A fonte durável é a tabela `proposed_actions`, e as queries prontas
+> estão em `docs/missions/colheita-queries.sql`.
+
 | coluna | onde confere |
 |---|---|
-| cliques de aprovação | `proposed_action.created` → `proposed_action.approved` / `proposed_action.denied` |
+| cliques de aprovação | `proposed_actions.decided_at IS NOT NULL` — **não** o event log. `decided_at` só é preenchido quando uma pessoa decidiu. Duas armadilhas: contar por `status` subestima (aprovada que executa vira `executed`), e `status = 'denied'` inclui o que a política barrou sem chegar a um humano (`resolved_policy = 'deny'`) |
 | custo | tabela `token_usage` — cada linha grava o preço que produziu o custo, então o número de ontem continua reproduzível (RN-044); mais `budget.threshold_crossed` para os limiares |
 | veredito dos gates | `pr.gate_changed` e `infra.gate_changed`; o conteúdo do parecer nos artefatos `qa_verdict` / `secops_verdict` |
 | qualidade do parecer consolidado | `delegation.completed` / `delegation.failed` / `delegation.dispensed` — um por subespecialidade, com `parecerArtifactId` do parecer INTERNO; a dispensa carrega `justification` |
@@ -580,18 +587,32 @@ foi obtido até ali.
 
 # PARTE 5 — COLHEITA (10c)
 
-Só começa depois do encerramento. Nesta ordem:
+Só começa depois do encerramento. **O kit já está pronto:**
 
-1. **Conferir a tabela contra o event log**, coluna por coluna, pelo mapa de 3.2.
-   O que não fechar vira "não medido" — explicitamente, no texto.
+| arquivo | o que é |
+|---|---|
+| `docs/missions/colheita-queries.sql` | as 11 queries que produzem cada número, já validadas contra o schema real |
+| `docs/missions/colheita-esqueleto.md` | o molde do relatório, com cada número amarrado à query que o preenche, mais o roteiro do ADR |
 
-2. **Escrever `docs/explanation/primeiro-dogfooding.md`.** Este **é** página do
-   site: precisa de frontmatter (`id`, `title`, `sidebar_label`,
-   `sidebar_position`, `description`, `keywords`, no padrão de
+Antes de rodar qualquer coisa: **`pnpm --filter api db:migrate`**. As queries de
+custo usam `input_price_per_million_micros`, `output_price_per_million_micros` e
+`upstream_provider`, que só existem a partir das migrações da Fase 9.
+
+Nesta ordem:
+
+1. **Conferir a tabela contra o banco**, coluna por coluna, pelo mapa de 4.2 —
+   com a correção do achado #17 em mente: cliques saem de `proposed_actions`, não
+   do event log. O que não fechar vira "não medido", explicitamente, no texto.
+
+2. **Preencher `colheita-esqueleto.md` e movê-lo** para
+   `docs/explanation/primeiro-dogfooding.md`. Só então ele vira página do site, e
+   aí precisa de frontmatter (`id`, `title`, `sidebar_label`, `sidebar_position`,
+   `description`, `keywords`, no padrão de
    `docs/explanation/documentation-workflow.md`) e de entrada em
    `website/sidebars.ts`. Conteúdo: as métricas validadas, o custo real por
    provider, as intervenções, e o diff entre promessa e realidade em prosa
-   honesta. Sem número inventado.
+   honesta — **incluindo o que os agentes fizeram melhor que o esperado**. Sem
+   número inventado.
 
 3. **Revisar as hipóteses do Psicólogo em lote**, uma a uma, e avaliar os patches
    da Anamnese decorrentes. Aqui é onde se responde se o loop produziu algo útil
@@ -642,6 +663,7 @@ Nenhum foi corrigido, pelo mesmo princípio 3.
 | 14 | Não existe devolução ao PO — nenhum estado, evento ou botão. `backlog.story_demoted` é outra coisa (revalidação de `module_map`). Rejeição só existe se o humano anotar | `create-module-map.use-case.ts:63-82` | P2 |
 | 15 | O painel do time e as hipóteses do Psicólogo dividem a mesma aba, que é a default do projeto — o protocolo de leitura em lote depende de disciplina de filtro, não do produto | `ProjectOverviewTab.tsx:227-263,278-285,576-714` | P2 |
 | 16 | Nenhuma tela soma aprovações por sessão; a Anamnese sob demanda não tem botão (só rota) | `hooks.ts:153-160`, `anamnese.controller.ts:71-81` | P3 |
+| 17 | **A métrica principal da fase não está no event log.** `proposed_action.approved`/`.denied` vão só para o outbox, nunca para `session_events` — a Parte 4.2 afirmava o contrário e foi corrigida. A fonte durável é `proposed_actions.decided_at`; o outbox retém as linhas (`processed_at`) e serve de conferência cruzada | `approve-action.use-case.ts:98`, `deny-action.use-case.ts:50` | **P1** |
 
 Dois deles não são defeito, e entram só como registro para a colheita não os
 confundir com lacuna: o **merge fora do produto** (`awaiting_user` é terminal de
