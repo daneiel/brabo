@@ -1,4 +1,5 @@
 import { AlertIcon, ArrowUpIcon } from './ui/icons';
+import { brlFmt, numberFmt, usdFmt } from '../lib/currency';
 import styles from './TokenMeter.module.css';
 
 export type TokenMeterVariant = 'default' | 'compact' | 'live';
@@ -16,11 +17,19 @@ export interface TokenMeterProps {
    * como "USD" quando o meter é alimentado por orçamento monetário (que
    * é o que o backend efetivamente rastreia hoje, ver Budget.limitMicros). */
   unitLabel?: string;
+  /**
+   * `true` quando não existe orçamento definido pro projeto/sessão —
+   * DISTINTO de "gasto zero real" (`used=0` com orçamento existente). Vem
+   * de `getProjectBudget` devolvendo `null` (não uma linha zerada), então é
+   * o CHAMADOR quem sabe distinguir "ainda carregando" de "confirmado sem
+   * orçamento" — este componente só recebe a resposta já resolvida (ADR:
+   * fidelidade do dashboard). Efeito: variante `compact` mostra o CTA
+   * "Definir orçamento" no lugar da barra/percentual, nunca "0/0 · 0%".
+   */
+  noBudget?: boolean;
+  /** Acionado ao clicar no CTA de `noBudget` — só usado na variante `compact`. */
+  onDefineBudget?: () => void;
 }
-
-const numberFmt = new Intl.NumberFormat('pt-BR');
-const brlFmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
-const usdFmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'USD' });
 
 export function tokenThreshold(pct: number): TokenThreshold {
   if (pct >= 90) return 'danger';
@@ -43,6 +52,8 @@ export function TokenMeter({
   savingsPct,
   variant = 'default',
   unitLabel = 'tokens',
+  noBudget = false,
+  onDefineBudget,
 }: TokenMeterProps) {
   const pct = limit > 0 ? Math.min(999, Math.round((used / limit) * 100)) : 0;
   const barPct = Math.min(100, pct);
@@ -71,6 +82,37 @@ export function TokenMeter({
   }
 
   const compact = variant === 'compact';
+
+  if (compact && noBudget) {
+    return (
+      <div className={styles.card} data-testid="token-meter" data-threshold="ok">
+        <span
+          role="button"
+          tabIndex={0}
+          className={styles.noBudgetCta}
+          data-testid="token-meter-no-budget-cta"
+          // stopPropagation: o card do dashboard inteiro é clicável (navega
+          // pro projeto) — sem isto o clique no CTA dispararia os DOIS
+          // destinos ao mesmo tempo. Não é `<button>` de propósito: o
+          // TokenMeter já vive dentro do `<button>` do ProjectCard, e
+          // `<button>` dentro de `<button>` é HTML inválido.
+          onClick={(e) => {
+            e.stopPropagation();
+            onDefineBudget?.();
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.stopPropagation();
+              e.preventDefault();
+              onDefineBudget?.();
+            }
+          }}
+        >
+          Definir orçamento
+        </span>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -135,6 +177,13 @@ export function TokenMeter({
           <ArrowUpIcon size={12} />
           {savingsPct}% de tokens poupados este ciclo
         </span>
+      )}
+
+      {compact && (
+        <div className={styles.compactFooter}>
+          <span>gasto {usdFmt.format(costUSD)}</span>
+          <span>saldo {usdFmt.format(Math.max(0, limit - used))}</span>
+        </div>
       )}
     </div>
   );

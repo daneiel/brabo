@@ -1,0 +1,69 @@
+---
+id: models-controller-activate
+title: "Liga ou desliga modelos no seletor (lote)"
+description: "Curadoria do owner. Só mexe em `isActive` — `availability` é o que o sync observou no provider e não se altera por aqui. Lote inteiro ou nada: um id inexistente reprova a chamada sem aplicar nenhuma linha."
+sidebar_label: "Liga ou desliga modelos no seletor (lote)"
+hide_title: true
+hide_table_of_contents: true
+api: eJzdWU9vG8cV/yoP24tNLKmVLdsJ2xSlZaWwG0uCKMdBRCH7uPNEjjU7s5qZpS3LBHoq0ENvOfVm9BD44JPRS678Jvkk7ZtZkitZVpMA7aEGbO+/efP+v99veJEIcoWVlZdGJ/1ku7YojJUIwoB5qcn2YLj4ACW9IqAScukGhZczyuGnP38POc5QKhxLJf15Dot3YOCsJjDgznUBZuzIzkwN2kBlzUwKskCgF/8w4AhQebIIlbGAZ7XswVfGE0jtSVoDvAwF9qEuQQqQml5J50l7AkssDQGhmGKJAsFRCVgpWaAFTXpalwhK6in2kjQxFVlkAx+LpJ88NYKU2zbaW6MU2e+QDUJPSZpUaLEkT9Yl/aPjNLF0VpPzD404T/oX4VZaEknf25rSpDCaFeJXWIXdeZeNF459eZG4Ykol8pU/ryjpJ2b8ggrP+1jWyUty/LZkjR6LcE2vsKwUJf2j5PPxZnFH3KXu1sm9rLuF9ze7n40f3OlmxV2xRfdO7uODcXKcXolgMM84YPsnaNmNgly4vt7B7KFGP7QWz5M0kZ5K19LbeSv1JEmTE2NL9Ek/qWspkvk8TZb50Pp6bIwi1Em6Nia667KiOT/M4QRfg4HgAgNYoaWCLCeMI0XecL5UhvOGX4zJwlhqIfUEtJmZHuxyLq2y81I6piEVf05O9oIp6+gerUPSsvA4Tbz0bE4yJB/TKL565E0yn0cZrjLaxbjeyTL+77LZyS9Pm0+F5RPpJMV1oVvFIsk2n2xvfZtlWfZ079HOV3vZ6s9mMg/CglOuFaLrkt1jlMISkzRB7afWVLKIZaZRspvWe63fz9NEY0k3q1YorAV1TVW77lb3s+RqzjwWpL08kQU3qSsRTBMhXaXwfPc/brMdtoG9qnaw1fuM10pd1X7fyoL2yT6VSkmjn8rCmrbDdV2OybZFbd6Lnruq6L6lxQ8mtLZSqiknqSDw5pS046ud3cODwaNByllb8jbdZ8NHwQhT+1+lyYNfqclwsPjbtYqELH3ln0stzMvrsm619Z1mY10rheNP1fshluPFuzIWZN5I/06RnvhpDgIdFFjF2pXkeP7EphCUcXVVGevdoTFqG5XiiP7ijsOLoYirYXdw+PjrvR4MqQTpvFk3ocU7Hiu+a7Q6X04rbkHgyMJM6qJWKAwgDyachIF062C3m21lty/pOvSWsPxZmrZWfS2djH3g00tOUDleU6KuUXGu/Cp/NKkh5ER6tkjw1C/Y88uySptZLXVhjZavUZge7MVGKgiqIMA1H5mxZfE0I1iNXyjRFssBLaiQjj+lV5VavC+kx+CwXz9DLsGVvee7Owf9ZRQFOeS5LlizkiDooGjxQxgYnG1Ge6lrBG0cFLXzxsFUOr/4YGVhXA+ergQVZkzWG6j4fml8gX7xVpmJAdLeIuQhKnmwqD2HbuqjzXeKsUet13eXe2jro8vmHxAqKVAQHOw83TscNMON/b1SNQWSrwxILagiLUK6CmoBuR7kra0bENc4keemq0tZs3/XBrcyJMBAUgS61gXyYsFzG4VJueewgGZgO6CWf4MH2emAldEeS2DsxZKCAxU6PyTSA39j50nuZHfud7MH3bvZYXa3n2X9LOtlWfZtG6sI9NT1smT/3dyiFn9XXpYIM3rdhgwzWa9doj/hiNgzLaEncUnra+bPUuts8zCofLPW8zSpK/FfkHsF80iRtKZ/M64vT9Ub5+TNs+vqQLm+p1/XPT/qjVcbX6uDXCm9S4nUDk/bpS1cF0r+oMFwS1Q3T5Ot65DctrEVF9Zs8VbJ2Bjzr0NB8gf7sqIcrBEIhSkhfzmVnpR0PgeC/MTYsRS7Rj9fPiaRp9xJuD0VWFZN49FTKqQw4Jvp2VCfkG1b2ebHWvE8C9M9jf9xs5XcJRnvo3NSo68trvReirr7saidV3JCkAcamHPivzT21FVYULNm6+M1AzWJfE0YUMw2dGz4bGFcdefzj1cdoCdQspQ+AJXa1Yu3VgaV+f7xfkTojorahpZ6dJGMCS2j1KPjOUcQJ8zZEqVKDmhJfmqY7VXGBYSMfpr0k42VBW7jYnX9WMw3QnW7jRYX5E66IoLLnYeMzSPMXu7fAPYwteKjtLn4cllzT54frknW1PsqwASyM1lQN0SpjfYr+ScKcJ89MyVsVWM/+ab70OLYdIfN6sOwmp3D9OFgzVd3ll2hzS9/Pqlcz+QGn0h9YoKWTakENWCw//ijqTTgpxz/8EkPDo3gGSkqI7UHQTOjZgRPhnu7KThUMwPGwVmN3nJDLeqSNM8PN9KMEyTDhDKMLa4jU/NneUOhuuyzHG4JIyOYHe6kEGZLuXjnrSyQp44ZaUZ9YyxO+dXeoPbTSA4tCWmpkEbj7d5Ij/RvfgODmiXLAgNU4Id7gEVBzjUFtXjHyO/J80PodHbEo+GAhW7eg1Lq2hvX6aSAlSUXzQAqRzrnLY2Vr0Nr6MPDkB/wuyDw93kPBgw5ZwTV4scxE0JgjhOX/nHnEDZ6L0mp7qk2L/XGi5enrsfRzntRO0snltwUOh0utk5nrWG/uYyKmwqLONNncsYTu4TCmFNJkHNS7ml1no/0rXzMcfuukZqnkO+jn36xgbUPd0MsaSg9fTFkD/v8Niynf0Pfw4zk5jjSglbHMYEaO489yPf3hocQ5G0sd+Gm2HrM07X2OSiiEkyj5kgTd5JJfIRjWvyAamog/6a7PTz4MtZCDnJSowI0K+OiPYWzJ9Fjnc4ArPExwAHvjK2cYEAm2Pu3/7YZQS29WhgdAKRpvHgptkCl9DTSIS17cECrt5b9/mLxNqyvS+7hi3ftBiwIrKnHLMTSzEz4OOsEy8V7JXGk4yENBngldaFqxyFjDOsChFY0WbxnsNKDZyUUSoYK4djyvEZLEGqiMWKkC6MLYy1/xZVibT1GYPSy+FBxp1223N9C7SJ+X/yoOQeXJ2xUwsyY4L+BC+5zkG+wmlaj2ujkEPRCcHVF9oThPQFWEn76y/dAeiI5eCGtS+h0TowNmP3J88NOpz/SpLhSr4/tNQ0vj70AHE0sMTQ1ZYXWSzVlhjLSz5YpL2g9TMIkwrFdp6TgbZd1v2Mt95yRjm3bQIXCBrpsYJecfzLsQ34Bo8R59LXbNoJGSR8iE09hlJTkHE7Cw4jN4E1zcXTM78laY1tv5zEb30Cx+CDkxMAb7oJaGHgz0m+63W74yx/kW1mWw5tYVGvEEZLD/O9AByyV2WRl3E1Ao7AkSBcS1RporJbf5eW4bLMi0jEXIl9hRSokAu8fSMzBw8F2yjKbgbnczYa9ljK3WKblKe3MpbPiTsfUnQ5rId3i/YxUJBpnNZUht029kvF59LE+UdKHIUIuVDm72VvUTsaOEY4CYhmujEtXm3PNr7dvZN8Jsu0a5pgalClOTe2ZQUwsOSdnwZxWfQliN01j69QiUGgISB46HUFKjsmiaKYjsyznpZ7UwcxOJ/BSbprdEqVqOyUFR0zOgw8RKHBhhLEyZzWFM/eSXNk08bS5iWmfjnS89VRWpgeLvzbHqydUTLmFMbUliytPBdEuXR6kBIJ4QtHBIy0kTvTig/OyMMtCXINBfvAEuTnEM+zXyIZqA/vGefZZH+5mGQQSE4LzT3KXASTB/SxrMCT/XIACR/p+Bi4NgZaT2i7ezki6HhwYj5D/Yb/mAXzrNlcMRyFG284kH5WEmHc6MnR41+k0FXhW00g7mnBbz+MA6zRE+pogN4cqppUOfAbPYDMCqKy32csawoQFcz7Gdzw8SwxIscGCX8kJts73G4bq2ofntxiD374K0S7WR9D/n7/4NFCa6eZGpVDqQKKtYtMjFThK1lQgSZN+iwwwvwxsgNnkkg8cp8mUqUT/KLm4GKOjZ1bN5/z4rCZ7HlnCDK2MpwtHx/N0id2ZrJzSeWCMEbUesnr8uaoj4r/yI8A8Xa4YFAVV/sZv22yHERTTj+b3KjYj6ScWmW7zv+HnBxOyIHCY8OwiUagnNU742yiT843TuH0id5nbBKuWjEWftzS8uIhfhEE9nydpY0rkOfPj+Xz+LxX4K0g=
+sidebar_class_name: "post api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Liga ou desliga modelos no seletor (lote)"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/workspaces/{workspaceId}/models/activate"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Curadoria do owner. Só mexe em `isActive` — `availability` é o que o sync observou no provider e não se altera por aqui. Lote inteiro ou nada: um id inexistente reprova a chamada sem aplicar nenhuma linha.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./models-controller-activate.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./models-controller-activate.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./models-controller-activate.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

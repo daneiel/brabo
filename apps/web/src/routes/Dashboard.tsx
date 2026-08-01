@@ -2,15 +2,28 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { getBootstrapStatus, getProjectBudget, getRepository } from '../lib/api-client';
-import { useCurrentWorkspace, useProjectLastActivity, useProjects } from '../lib/hooks';
+import {
+  useArchitecture,
+  useCurrentWorkspace,
+  useHandoffs,
+  useLatestSession,
+  usePendingActions,
+  useProjectLastActivity,
+  useProjects,
+  useSessionEvents,
+  useWorkspaceSummary,
+} from '../lib/hooks';
 import { useProjectsUnread, useNotificationGroups } from '../lib/notifications';
 import { setLastSeenSeq } from '../lib/read-state';
-import { AGENT_LIST } from '../lib/agents';
+import { deriveAgentRoster, groupRosterByArea } from '../lib/agent-status';
+import { contagemAgentes, contagemProjetos } from '../lib/pluralize';
+import { microsParaUsd, usdFmt } from '../lib/currency';
 import type { Project } from '../lib/api-types';
-import { ProjectCard } from '../components/ProjectCard';
+import { ProjectCard, ProjectCardSkeleton } from '../components/ProjectCard';
 import { NotificationBell } from '../components/NotificationBell';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
+import { Skeleton } from '../components/ui/Skeleton';
 import { PlusIcon, SearchIcon } from '../components/ui/icons';
 import { NewProjectWizard } from './NewProjectWizard';
 import styles from './Dashboard.module.css';
@@ -21,10 +34,15 @@ function ProjectCardContainer({ project }: { project: Project }) {
     queryKey: ['repository', project.id],
     queryFn: () => getRepository(project.id),
   });
-  const { data: budget } = useQuery({
+  const budgetQuery = useQuery({
     queryKey: ['budget', project.id],
     queryFn: () => getProjectBudget(project.id),
   });
+  const budget = budgetQuery.data;
+  // `getProjectBudget` devolve `null` (não uma linha zerada) quando o
+  // projeto nunca teve orçamento definido — distinto de "ainda carregando"
+  // (`data === undefined`). Só o segundo é "sem orçamento" de verdade.
+  const noBudget = budgetQuery.isSuccess && budget === null;
   const { data: bootstrap } = useQuery({
     queryKey: ['bootstrap', project.id],
     queryFn: () => getBootstrapStatus(project.id),
@@ -37,16 +55,49 @@ function ProjectCardContainer({ project }: { project: Project }) {
   const provider = repository?.provider ?? 'local';
   const lastActivityText = useProjectLastActivity(project.id);
 
+  // Roster do PROJETO pro chip de agentes do card — mesma cadeia que
+  // ProjectOverviewTab usa pro painel do time (não existe roster por
+  // projeto no backend, só por SESSÃO). ~5 queries a mais por card, mesmo
+  // padrão N+1-por-card já estabelecido neste dashboard.
+  const { latest: latestSession } = useLatestSession(project.id);
+  const sessionId = latestSession?.id;
+  const eventsQuery = useSessionEvents(project.id, sessionId);
+  const events = eventsQuery.data?.items ?? [];
+  const { data: architecture } = useArchitecture(project.id);
+  const handoffsQuery = useHandoffs(project.id, sessionId);
+  const actionsQuery = usePendingActions(project.id, sessionId);
+  const pendingActionAgentIds = new Set(
+    (actionsQuery.data?.items ?? [])
+      .filter((a) => a.status === 'pending')
+      .map((a) => a.actor.id),
+  );
+  const roster = deriveAgentRoster(
+    events,
+    architecture?.moduleMap,
+    events.some((e) => e.type === 'execution.activated'),
+    handoffsQuery.data ?? [],
+    pendingActionAgentIds,
+  );
+  const rosterGroups = groupRosterByArea(roster);
+
   return (
     <ProjectCard
       name={project.name}
       provider={provider}
       provisioningStatus={provisioningStatus}
-      agents={AGENT_LIST}
+      rosterGroups={rosterGroups}
       tokensUsed={budget ? budget.spentMicros / 1_000_000 : 0}
       tokensLimit={budget ? budget.limitMicros / 1_000_000 : 0}
       costBRL={0}
       costUSD={budget ? budget.spentMicros / 1_000_000 : 0}
+      noBudget={noBudget}
+      onDefineBudget={() =>
+        navigate({
+          to: '/projects/$projectId',
+          params: { projectId: project.id },
+          search: { tab: 'settings' },
+        })
+      }
       lastActivityText={lastActivityText}
       onClick={() =>
         provisioningStatus === 'provision_failed'
@@ -63,7 +114,9 @@ function ProjectCardContainer({ project }: { project: Project }) {
 
 export function Dashboard() {
   const { data: workspace } = useCurrentWorkspace();
-  const { data: projects } = useProjects(workspace?.id);
+  const projectsQuery = useProjects(workspace?.id);
+  const projects = projectsQuery.data;
+  const summaryQuery = useWorkspaceSummary(workspace?.id);
   const [search, setSearch] = useState('');
   const [wizardOpen, setWizardOpen] = useState(false);
 
@@ -96,10 +149,36 @@ export function Dashboard() {
       </div>
 
       <div className={styles.content}>
-        <div className={styles.summary}>{projects?.length ?? 0} projetos ativos</div>
+        <div className={styles.summary}>
+          {summaryQuery.isError ? (
+            <span className={styles.summaryFallback}>resumo indisponível</span>
+          ) : summaryQuery.data ? (
+            `${contagemProjetos(summaryQuery.data.activeProjects)} · ${contagemAgentes(summaryQuery.data.agentCount)} · ${usdFmt.format(microsParaUsd(summaryQuery.data.spentMicros))} este mês`
+          ) : (
+            <Skeleton width={220} height={13} />
+          )}
+        </div>
 
-        {filtered.length === 0 ? (
-          <div className={styles.empty}>Nenhum projeto por aqui ainda. Crie o primeiro para começar.</div>
+        {projectsQuery.isLoading ? (
+          <div className={styles.grid}>
+            {Array.from({ length: 6 }).map((_, i) => (
+              <ProjectCardSkeleton key={i} />
+            ))}
+          </div>
+        ) : !projects || projects.length === 0 ? (
+          // Primeiro uso de verdade: o workspace não tem NENHUM projeto —
+          // distinto do caso abaixo (busca sem resultado), que tem projetos
+          // e não precisa de CTA de criar o primeiro.
+          <div className={styles.empty}>
+            <p>Nenhum projeto por aqui ainda.</p>
+            <Button onClick={() => setWizardOpen(true)}>
+              <PlusIcon size={14} /> Criar projeto
+            </Button>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className={styles.empty}>
+            Nenhum projeto encontrado para &quot;{search}&quot;.
+          </div>
         ) : (
           <div className={styles.grid}>
             {filtered.map((project) => (

@@ -71,6 +71,10 @@ defmodule Engine.Application do
       {:ok, _anamnese} = Engine.Workers.AnamneseSchedulerWorker.kickoff()
     end
 
+    if match?({:ok, _}, result) and model_sync_should_start?() do
+      {:ok, _model_sync} = Engine.Workers.ModelSyncSchedulerWorker.kickoff()
+    end
+
     result
   end
 
@@ -85,6 +89,12 @@ defmodule Engine.Application do
   # suite dispara AnamneseWorker.perform/1 direto, sem o tick periódico.
   defp anamnese_should_start? do
     Application.get_env(:engine, :start_anamnese?, true)
+  end
+
+  # Desligável em teste (config :engine, start_model_sync?: false) — a suite
+  # chama ModelSyncSchedulerWorker.perform/1 direto, sem o tick periódico.
+  defp model_sync_should_start? do
+    Application.get_env(:engine, :start_model_sync?, true)
   end
 
   # Tell Phoenix to update the endpoint configuration

@@ -243,3 +243,14 @@ pre {
     opacity: 0.25;
   }
 }
+
+/* Skeleton de carregamento (net-new — sem contraparte no design/, ver
+   COMPONENTS.md; segue a mesma convenção de nome "b*" das demais). */
+@keyframes bshimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}

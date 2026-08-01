@@ -1,0 +1,69 @@
+---
+id: models-controller-update-pricing
+title: "Corrige o preço de um modelo"
+description: "Vale daqui em diante e NUNCA reprecifica o passado: cada linha de `token_usage` guarda o preço que produziu o custo dela. A mudança fica registrada com o par antes/depois — consultável na rota de histórico."
+sidebar_label: "Corrige o preço de um modelo"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "patch api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Corrige o preço de um modelo"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"patch"}
+  path={"/workspaces/{workspaceId}/models/{modelId}/pricing"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Vale daqui em diante e NUNCA reprecifica o passado: cada linha de `token_usage` guarda o preço que produziu o custo dela. A mudança fica registrada com o par antes/depois — consultável na rota de histórico.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./models-controller-update-pricing.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./models-controller-update-pricing.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./models-controller-update-pricing.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

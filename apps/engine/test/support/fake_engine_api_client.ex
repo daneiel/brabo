@@ -288,6 +288,16 @@ defmodule Engine.Sessions.FakeEngineApiClient do
   end
 
   @impl true
+  def sync_model_catalog do
+    notify(:model_catalog_synced)
+
+    case Process.get(:fake_model_sync_error) do
+      nil -> reply(:fake_model_sync, %{"porProvider" => []})
+      reason -> {:error, reason}
+    end
+  end
+
+  @impl true
   def propose_instruction_patch(_project_id, _session_id, payload) do
     notify({:instruction_patch_proposed, payload})
 

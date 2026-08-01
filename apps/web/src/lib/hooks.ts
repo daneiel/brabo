@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
-import { getArchitecture, getCoverage, getSessionEvent, listActions, listBacklog, listHandoffs, listHypotheses, listInfraArtifacts, listProficiency, listProjects, listPsychologistAnalyses, listSessionEvents, listSessions, listWorkspaces, getSessionTokenUsage } from './api-client';
+import { getArchitecture, getCoverage, getProjectsStatus, getSessionEvent, getWorkspaceSummary, listActions, listBacklog, listHandoffs, listHypotheses, listInfraArtifacts, listProficiency, listProjects, listPsychologistAnalyses, listSessionEvents, listSessions, listWorkspaces, getSessionTokenUsage } from './api-client';
 import { classifyEvent } from './activity';
 import { formatRelativeTime } from './time';
+import { ATIVIDADE_RECENTE_JANELA_MS } from './project-status';
 
 // App opera sobre o primeiro workspace do usuário — sem UI de troca de
 // workspace ainda (nunca especificado nos mockups, ver design/COMPONENTS.md).
@@ -13,10 +14,47 @@ export function useCurrentWorkspace() {
   });
 }
 
+// Irmão de `useCurrentWorkspace()`: aquele descarta `role` no `select`
+// (call sites atuais só querem o `Workspace`) — este devolve o par
+// completo, pro rodapé da sidebar mostrar o papel RBAC de quem chamou.
+// MESMA queryKey ['workspaces']: o React Query deduplica com o hook acima
+// quando os dois estão montados juntos, sem round-trip extra.
+export function useCurrentWorkspaceWithRole() {
+  return useQuery({
+    queryKey: ['workspaces'],
+    queryFn: listWorkspaces,
+    select: (list) => list[0],
+  });
+}
+
 export function useProjects(workspaceId: string | undefined) {
   return useQuery({
     queryKey: ['projects', workspaceId],
     queryFn: () => listProjects(workspaceId!),
+    enabled: !!workspaceId,
+  });
+}
+
+// Resumo do topo do dashboard: N projetos · M agentes · gasto do mês. Sem
+// refetchInterval — não é um número que precisa de frescor de segundos, e um
+// erro aqui não pode derrubar a grade de cards (que vem de queries à parte).
+export function useWorkspaceSummary(workspaceId: string | undefined) {
+  return useQuery({
+    queryKey: ['workspace-summary', workspaceId],
+    queryFn: () => getWorkspaceSummary(workspaceId!),
+    enabled: !!workspaceId,
+  });
+}
+
+// Contagem de tasks bloqueadas por projeto, pro dot de status da sidebar —
+// UMA chamada pro workspace inteiro (não uma por projeto). Sem
+// refetchInterval de propósito: o Shell é montado em TODA rota, e o dot é
+// leitura periférica, não painel ao vivo — mount + refetch no foco (mesma
+// cadência do `budget`) já é atualização suficiente.
+export function useProjectsStatus(workspaceId: string | undefined) {
+  return useQuery({
+    queryKey: ['projects-status', workspaceId],
+    queryFn: () => getProjectsStatus(workspaceId!),
     enabled: !!workspaceId,
   });
 }
@@ -89,6 +127,27 @@ export function useProjectLastActivity(projectId: string): string {
   const event = eventsQuery.data?.items[0];
   if (!event) return 'Sem atividade ainda';
   return `${classifyEvent(event).text} · ${formatRelativeTime(event.createdAt)}`;
+}
+
+// Booleano pro dot de status da sidebar (RN-039) — MESMA queryKey de
+// `useProjectLastActivity`, de propósito: quando o Dashboard está montado
+// (e mantém a query fresca a cada 5s), a sidebar se beneficia de graça, sem
+// poll próprio. Sem `refetchInterval` aqui: o Shell é global (toda rota), e
+// um dot que atualiza minutos depois é imperceptível — mount + refetch no
+// foco basta.
+export function useProjectHasRecentActivity(projectId: string): boolean {
+  const { latest: session } = useLatestSession(projectId);
+  const latestSeq = session ? session.nextSeq - 1 : 0;
+
+  const eventsQuery = useQuery({
+    queryKey: ['last-event', projectId, session?.id, latestSeq],
+    queryFn: () => listSessionEvents(projectId, session!.id, { afterSeq: Math.max(0, latestSeq - 1), limit: 1 }),
+    enabled: !!session && latestSeq > 0,
+  });
+
+  const event = eventsQuery.data?.items[0];
+  if (!event) return false;
+  return Date.now() - new Date(event.createdAt).getTime() < ATIVIDADE_RECENTE_JANELA_MS;
 }
 
 export function usePendingActions(projectId: string | undefined, sessionId: string | undefined, intervalMs = 3000) {
