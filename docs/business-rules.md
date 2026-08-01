@@ -411,6 +411,43 @@ Cada limiar dispara **uma vez**; o último notificado fica persistido em
 - **Onde:** `apps/api/src/domain/llm/binding-resolver.ts`
 - **Teste:** `test/domain/llm/binding-resolver.spec.ts`
 
+### RN-038 — Agente contado no resumo do workspace = gastou tokens este mês {#rn-038}
+
+O resumo do dashboard de projetos ("N projetos ativos · M agentes · gasto
+este mês") conta como "agente" quem tem pelo menos uma linha em
+`token_usage` com `actor_kind = 'agent'` no mês corrente, somando todos os
+projetos do workspace. Sem o filtro de `actor_kind`, um `user` mandando
+chat ou um `system` registrando uso inflaria a contagem — `token_usage`
+grava para qualquer tipo de ator, não só agente. O corte por mês usa
+`created_at >= date_trunc('month', now())`; um agente que trabalhou só no
+mês anterior não conta, mesmo que ainda apareça no roster de alguma
+sessão. A contagem naturalmente inclui as subespecialidades de área da
+Fase 8 (`qa-automacao`, `qa-performance-seguranca`, `infra-workflows`):
+cada uma tem seu próprio `actor_id` quando gasta tokens.
+
+- **Onde:** `apps/api/src/infrastructure/persistence/drizzle/token-usage.repository.ts`
+  (`summarizeForWorkspaceThisMonth`)
+- **Teste:** `test/application/use-cases/iam/get-workspace-summary.use-case.spec.ts`
+
+---
+
+## Painel de projetos
+
+### RN-039 — Dot de status do projeto: risco sempre vence inatividade {#rn-039}
+
+A sidebar do dashboard mostra um dot de saúde por projeto, derivado de três
+sinais independentes: orçamento (mesmos limiares 70%/90% do RN-018), task
+bloqueada (`tasks.blocked`) e atividade recente (7 dias). Cores: verde =
+saudável e ativo; âmbar = orçamento ≥70%; vermelho = orçamento ≥90% **ou**
+task bloqueada; cinza = sem atividade nos últimos 7 dias. Quando um sinal
+de risco (âmbar/vermelho) e o de inatividade (cinza) se aplicam ao mesmo
+tempo, o de risco vence — um projeto estourado e parado ainda é algo a
+olhar, não algo a esconder atrás de "sem atividade".
+
+- **Onde:** `apps/web/src/lib/project-status.ts` (`deriveProjectStatus`)
+- **Teste:** `apps/web/src/lib/project-status.test.ts`
+- **Origem:** fidelidade do dashboard de projetos ao design aprovado
+
 ---
 
 ## Psicólogo e Anamnese

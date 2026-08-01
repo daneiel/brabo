@@ -64,6 +64,7 @@
 }
 
 .avatar {
+  position: relative;
   width: 26px;
   height: 26px;
   border-radius: 8px;
@@ -78,6 +79,35 @@
 
 .avatar:first-child {
   margin-left: 0;
+}
+
+.avatarCount {
+  position: absolute;
+  bottom: -4px;
+  right: -6px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  line-height: 1;
+  color: var(--text-primary);
+  background: var(--surface-2);
+  border: 1px solid var(--surface-1);
+  border-radius: var(--radius-full, 9999px);
+  padding: 2px 3px;
+}
+
+.avatarOverflow {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  background: var(--surface-2);
+  box-shadow: 0 0 0 2px var(--surface-1);
+  margin-left: -6px;
 }
 
 .footer {

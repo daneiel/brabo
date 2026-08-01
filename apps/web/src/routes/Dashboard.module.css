@@ -36,6 +36,10 @@
   color: var(--text-secondary);
 }
 
+.summaryFallback {
+  color: var(--text-muted);
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
@@ -46,4 +50,8 @@
   padding: 60px 20px;
   text-align: center;
   color: var(--text-muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
 }

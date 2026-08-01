@@ -19,10 +19,11 @@ type TabKey = 'overview' | 'sessions' | 'backlog' | 'approvals' | 'settings';
 
 interface ProjectPageProps {
   projectId: string;
+  initialTab?: TabKey;
 }
 
-export function ProjectPage({ projectId }: ProjectPageProps) {
-  const [tab, setTab] = useState<TabKey>('overview');
+export function ProjectPage({ projectId, initialTab }: ProjectPageProps) {
+  const [tab, setTab] = useState<TabKey>(initialTab ?? 'overview');
 
   const { data: project } = useQuery({ queryKey: ['project', projectId], queryFn: () => getProject(projectId) });
   const { data: repository } = useQuery({ queryKey: ['repository', projectId], queryFn: () => getRepository(projectId) });

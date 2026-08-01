@@ -29,6 +29,17 @@ export interface Project {
   updatedAt: string;
 }
 
+export interface WorkspaceSummary {
+  activeProjects: number;
+  agentCount: number;
+  spentMicros: number;
+}
+
+export interface ProjectBlockedStatus {
+  projectId: string;
+  blockedTaskCount: number;
+}
+
 export interface ProjectMemberWithUser {
   userId: string;
   role: Role;
