@@ -44,6 +44,32 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api,engine,web**: o catálogo de modelos passa a ser **vivo**. Provider que
+  declara `listModels` é sincronizado por um job periódico (6h, configurável por
+  `MODEL_SYNC_INTERVAL_SECONDS`) e pelo botão "Atualizar catálogo" na tela de
+  configurações. Modelo descoberto entra **desativado**, modelo que some do
+  provider vira `unavailable` e **nunca é deletado**, e provider que falhou é
+  PULADO com a origem da falha — nunca tratado como catálogo vazio
+  ([RN-041](docs/business-rules.md#rn-041))
+- **api**: `is_active` de modelo ganha dentes. Binding NOVO para modelo
+  desativado ou indisponível responde **422**, e a cascata de resolução passa a
+  pular o indisponível avisando qual escopo pulou, em vez de trocar o modelo em
+  silêncio. Quando o turno carrega ferramentas, a cascata revalida
+  `supports_tool_calling` em todo nível — sem isso o fallback pousaria um agente
+  num modelo chat-only ([RN-038](docs/business-rules.md#rn-038))
+- **api**: custo passa a ser **reproduzível**, não só imutável. `token_usage`
+  grava o preço que produziu cada `cost_micros`, e toda mudança de preço deixa
+  linha em `model_price_changes` com o par antes/depois e a origem
+  (`manual` | `sync`). Preço novo continua não reprecificando o passado
+  ([RN-042](docs/business-rules.md#rn-042)). Decisão em
+  [ADR 0041](docs/adr/0041-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md)
+- **web**: o seletor de modelos foi reagrupado por **origem** (Local · APIs
+  diretas · Hubs), ganhou selos de custo, janela e tool calling, e o filtro
+  **"aptos para agentes"** que a mensagem de erro da RN-038 citava desde a Fase
+  9a sem existir. O custo passa a mostrar entrada e saída separadas — a média
+  escondia a assimetria. Modelo indisponível aparece esmaecido e marcado, nunca
+  some. Nova seção de curadoria do catálogo, com ativação em lote e o relatório
+  do sync por provider
 - **api,k8s**: preparo da Fase 9b — o metering passa a registrar **quem serviu**
   a chamada, não só por onde ela entrou. `token_usage` ganha
   `upstream_provider` (texto, `null` quando não houve hub), as métricas
@@ -53,7 +79,10 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `manual_pricing`, que marca preço digitado da doc para o sync da Fase 9c não
   sobrescrever sem decisão explícita. **Nenhum provider novo entrou ainda** — a
   verificação na doc oficial dos seis depende de acesso de rede que a sessão
-  não teve
+  não teve. **Pendente:** o aceite com credencial real do OpenRouter (catálogo
+  de verdade e `upstream_provider` preenchido numa task) fica em aberto até os
+  seis providers entrarem — registrado no
+  [ADR 0041](docs/adr/0041-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md)
 - **api**: providers de LLM passam a ter **contrato único** e capabilities, como
   os de git desde a Fase 2. `LLMProvider` ganha `capabilities`
   (`streaming`/`toolCalling`) e `models` ganha `supports_tool_calling`,

@@ -468,6 +468,61 @@ há hub, para que `sum by (upstream_provider)` continue somando o custo inteiro.
 - **Teste:** `test/application/use-cases/llm/record-llm-usage.use-case.spec.ts`
 - **Origem:** [ADR 0040](adr/0040-base-openai-compativel-e-contrato-de-llm-providers.md)
 
+### RN-041 — Modelo descoberto entra desligado; modelo que some é marcado, nunca apagado {#rn-041}
+
+O sync de catálogo tem três desfechos, e nenhum deles é destrutivo:
+
+1. **Modelo novo** é gravado com `is_active = false`. Um catálogo de provider
+   tem centenas de linhas — despejá-las ativas tornaria a escolha impossível e
+   ligaria modelo caro sem ninguém decidir. Ativar é curadoria do owner.
+2. **Modelo que sumiu do catálogo remoto** recebe `availability = 'unavailable'`
+   e **permanece na tabela**: `model_bindings` e `token_usage` apontam para a
+   linha, e apagá-la levaria junto o histórico de custo.
+3. **Modelo que voltou** volta a `available` com o `is_active` **intocado** — a
+   escolha do owner sobrevive a uma ausência temporária do provider.
+
+Os dois eixos são independentes de propósito: `is_active` é decisão de pessoa,
+`availability` é observação do provider. Nenhum dos dois escreve no outro.
+
+Três consequências no resto do sistema:
+
+- **binding NOVO** para modelo inativo ou indisponível é recusado no domínio
+  (`ModelNotBindableError`, 422). Os bindings que já existem ficam de pé;
+- **a cascata** de `resolveBinding` pula o candidato indisponível, registra o
+  que pulou em `skipped`, e — quando o turno carrega ferramentas — revalida
+  `supports_tool_calling` em TODO nível. Sem isso o fallback pousaria um agente
+  num modelo chat-only e violaria a [RN-038](#rn-038) em silêncio;
+- **provider que falhou não indisponibiliza nada**: um 401 é "não sei o que tem
+  lá", não "não tem nada lá". O provider é pulado, com a ORIGEM da falha
+  (`infra` | `modelo`) no relatório — nunca diagnóstico por eliminação.
+
+- **Onde:** `apps/api/src/application/use-cases/llm/sync-model-catalog.use-case.ts:160`,
+  `apps/api/src/domain/llm/binding-resolver.ts:63`,
+  `apps/api/src/domain/llm/model-capabilities.ts:49`
+- **Teste:** `test/application/use-cases/llm/sync-model-catalog.use-case.spec.ts`,
+  `test/domain/llm/binding-resolver.spec.ts`,
+  `test/application/use-cases/llm/set-model-binding.use-case.spec.ts`
+- **Origem:** [ADR 0041](adr/0041-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md)
+
+### RN-042 — Preço vale daqui em diante, e o custo antigo continua batendo {#rn-042}
+
+Cada linha de `token_usage` grava o preço que produziu o `cost_micros` dela.
+Trocar o preço de um modelo **não reprecifica consumo passado** — e mais que
+isso: o custo antigo continua **reproduzível**, porque `tokens × preço gravado`
+fecha com o custo gravado mesmo depois de três correções na tabela `models`.
+
+Toda mudança de preço grava uma linha em `model_price_changes`, append-only,
+com o par antes/depois e a origem (`manual` | `sync`). O par é gravado junto de
+propósito: reconstruir o "antes" a partir da linha anterior dependeria de
+nenhuma escrita ter escapado do caminho auditado, que é o que a auditoria
+existe para provar. Preço igual ao vigente é no-op — uma linha "mudou de 10
+para 10" transformaria o log em ruído.
+
+- **Onde:** `apps/api/src/application/use-cases/llm/update-model-pricing.use-case.ts:44`
+- **Teste:** `test/application/use-cases/llm/update-model-pricing.use-case.spec.ts`
+- **Origem:** [ADR 0041](adr/0041-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md)
+
+
 ---
 
 ## Psicólogo e Anamnese
@@ -712,6 +767,9 @@ verificação, para a rotação não ter janela de indisponibilidade.
 | Credencial errada, conta inexistente ou conta bloqueada | **a mesma** resposta 401, com o mesmo custo de argon2 (RN-032) |
 | Refresh já usado reapresentado | família revogada e evento de segurança; o usuário legítimo também é deslogado (RN-030) |
 | Tráfego interno sem o segredo de serviço | 403 na api, 401 no engine — nunca alcança o controller (RN-035) |
+| Provider recusa a chave durante o sync de catálogo | provider **pulado** com a origem da falha; nenhum modelo é marcado como sumido (RN-041) |
+| Modelo do binding some do provider | a cascata cai para o nível de baixo e AVISA qual escopo pulou — nunca troca o modelo em silêncio (RN-041) |
+| Preço do modelo muda | vale daqui em diante; o custo gravado e o preço que o produziu ficam intocados (RN-042) |
 
 > **TODO(humano):** as RNs acima foram extraídas do código e dos testes. Falta
 > confirmar se existe regra de negócio **não implementada** que deveria estar

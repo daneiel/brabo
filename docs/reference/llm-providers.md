@@ -3,8 +3,8 @@ id: llm-providers
 title: Providers de LLM
 sidebar_label: Providers de LLM
 sidebar_position: 9
-description: O contrato único que torna Ollama, OpenAI e Anthropic intercambiáveis, com capabilities por provider e por modelo, erros normalizados e teto de inatividade.
-keywords: [LLM, provider, OpenAI, Anthropic, Ollama, capabilities, tool calling, streaming]
+description: O contrato único que torna Ollama, OpenAI e Anthropic intercambiáveis, com capabilities por provider e por modelo, sync de catálogo, ciclo de vida do modelo, erros normalizados e teto de inatividade.
+keywords: [LLM, provider, OpenAI, Anthropic, Ollama, capabilities, tool calling, streaming, catálogo, preço]
 ---
 
 # Providers de LLM
@@ -56,8 +56,25 @@ provider, nunca mais rico.
 | --- | --- | --- |
 | `streaming` | provider + `models.supports_streaming` | — |
 | `toolCalling` | provider + `models.supports_tool_calling` | recusar binding de agente ([RN-038](../business-rules.md#rn-038)) |
+| `listModels` | só provider | ligar/pular o sync de catálogo ([RN-041](../business-rules.md#rn-041)) |
 | `context_length` | `models.context_window` | orçamento de contexto |
-| `vision` | `models.supports_vision` | reservado para a Fase 9c |
+| `vision` | `models.supports_vision` | reservado |
+
+<!-- BEGIN:GENERATED:providers-capabilities -->
+
+> ⚠️ Bloco gerado por `pnpm docs:generate`. Não edite à mão — o próximo build sobrescreve.
+
+Lido dos literais de `capabilities` em `apps/api/src/infrastructure/llm/` — **3 providers**.
+
+| provider | streaming | tool calling | list_models | fonte |
+| --- | --- | --- | --- | --- |
+| `anthropic` | sim | sim | não | `apps/api/src/infrastructure/llm/anthropic-provider.ts` |
+| `ollama` | sim | sim | não | `apps/api/src/infrastructure/llm/ollama-provider.ts` |
+| `openai` | sim | sim | sim | `apps/api/src/infrastructure/llm/openai-provider.ts` |
+
+Provider sem `list_models` é PULADO pelo sync de catálogo, com o motivo
+registrado no relatório — nunca tratado como "o catálogo ficou vazio".
+<!-- END:GENERATED:providers-capabilities -->
 
 O default de `supports_tool_calling` é `false`. É de propósito: modelo
 descoberto por sync automático (Fase 9c) entra sem promessa que ninguém
@@ -71,6 +88,84 @@ sete linhas do seed, nunca um `UPDATE` cego na tabela.
 `supports_tool_calling`** se pretende vincular esse modelo a um agente — o
 default `false` faz o binding ser recusado, inclusive quando o modelo é
 apontado por `DEMO_QA_MODEL` nos scripts de demo dos gates.
+:::
+
+## Catálogo de modelos: descoberta e ciclo de vida
+
+Quem declara `listModels` sabe listar o próprio catálogo. A base compatível
+implementa o `GET /models` do dialeto que já fala, com o parsing substituível
+por configuração (`parseCatalogo`) — um hub devolve preço e janela na mesma
+linha, e isso não pode virar `if` dentro do parsing padrão.
+
+**Ollama e Anthropic declaram `false`.** Os dois têm endpoint de catálogo, mas
+o formato deles não foi verificado na doc oficial nesta fase, e a regra da Fase
+9 é não codar contra contrato adivinhado. Declarar `false` faz o sync pular
+explicitamente, com o motivo no relatório; declarar `true` e errar o parsing
+marcaria o catálogo inteiro como sumido. Backlog no
+[ADR 0041](../adr/0041-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md).
+
+### Os dois eixos de disponibilidade
+
+Um modelo tem dois estados INDEPENDENTES, e confundi-los era o buraco que a
+Fase 9c fechou:
+
+| coluna | quem escreve | o que significa |
+| --- | --- | --- |
+| `models.is_active` | o **owner**, pela tela de curadoria | aparece no seletor e pode receber binding novo |
+| `models.availability` | o **sync**, sozinho | `unavailable` = sumiu do catálogo do provider |
+
+Um modelo pode estar ativo E indisponível ao mesmo tempo — é esse cruzamento
+que gera o aviso na tela. Quando o provider o traz de volta, a escolha do owner
+continua valendo: o sync nunca religa o que alguém desligou de propósito.
+
+### As três regras da reconciliação
+
+1. **Modelo novo entra INATIVO.** Um catálogo tem centenas de linhas; despejá-las
+   ativas tornaria a escolha impossível e ligaria modelo caro sem ninguém
+   decidir.
+2. **Modelo que sumiu vira `unavailable`, nunca é deletado.** `model_bindings` e
+   `token_usage` apontam para a linha; apagá-la levaria junto o histórico de
+   custo.
+3. **Falha do provider não indisponibiliza nada.** Um 401 significa "não sei o
+   que tem lá", não "não tem nada lá" — marcar tudo como sumido por causa de uma
+   chave revogada derrubaria todos os bindings daquele provider de uma vez. O
+   provider é PULADO, com a origem da falha (`infra` | `modelo`) no relatório.
+
+### A cascata revalida capability ao cair de nível
+
+`resolveBinding` pula o candidato indisponível e segue a precedência. Quando o
+turno carrega ferramentas, ele também pula quem não faz tool calling **em todo
+nível** — sem isso o fallback de um agente pousaria num modelo chat-only e
+violaria a [RN-038](../business-rules.md#rn-038) em silêncio: a falha só
+apareceria depois, no ToolLoop, como "o agente parou sozinho". O que foi pulado
+volta em `skipped`, e a UI mostra.
+
+### Quem agenda e quem executa
+
+O engine agenda (worker Oban auto-reagendado, `MODEL_SYNC_INTERVAL_SECONDS`,
+6h por default) e a api executa, porque é ela que tem as credenciais e o
+registry de providers. O botão "Atualizar catálogo" da tela de curadoria chama
+o **mesmo** caso de uso — não existem duas reconciliações que possam divergir.
+
+## Preço: vale daqui em diante, nunca para trás
+
+`token_usage` guarda o preço que produziu cada `cost_micros`
+(`input_price_per_million_micros` e `output_price_per_million_micros`). O custo
+histórico já era imutável antes da Fase 9c; o que faltava era ser
+**reproduzível** — sem o preço gravado, `tokens × preço = custo` deixava de
+fechar assim que alguém corrigisse a tabela.
+
+Toda mudança de preço grava uma linha em `model_price_changes`, append-only,
+com o par antes/depois e a origem (`manual` | `sync`). O par vai junto de
+propósito: reconstruir o "antes" a partir da linha anterior dependeria de
+nenhuma escrita ter escapado do caminho auditado, que é justamente o que a
+auditoria existe para provar.
+
+:::note Não é evento de outbox
+`model_price_changes` é tabela própria, e não uma linha em `outbox_events`. O
+`Engine.Outbox.Drain.run_once/0` filtra `aggregate_type == "session"` — uma
+linha de preço lá ficaria com `processed_at` nulo para sempre e sujaria a
+métrica de lag da outbox. É log de domínio imutável, como `session_events`.
 :::
 
 ## Erros normalizados
@@ -167,9 +262,10 @@ informação num lugar diferente, e a regra da fase é que particularidade de
 provider vira configuração.
 
 `models.manual_pricing` marca preço digitado da doc do provider em vez de
-sincronizado. Quem sincronizar preço na Fase 9c não pode sobrescrever uma linha
-marcada sem decisão explícita — para provider que não expõe catálogo, o número
-manual é o único que existe.
+sincronizado. O sync de catálogo **não sobrescreve** preço de linha marcada sem
+decisão explícita — e quando o catálogo remoto não informa preço, o valor
+gravado é preservado em vez de zerado: campo ausente significa "o provider não
+disse", nunca "é de graça".
 
 ## A suite de contrato
 

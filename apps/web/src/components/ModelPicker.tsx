@@ -1,9 +1,9 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Model, ModelsByCategory } from '../lib/api-types';
+import { agruparModelos, formatarJanela, formatarPreco } from '../lib/models';
+import { Badge } from './ui/Badge';
 import { ChevronDownIcon, ModelIcon } from './ui/icons';
 import styles from './ModelPicker.module.css';
-
-const usdFmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 });
 
 // Precisa casar com .dropdown no CSS — o cálculo de posição depende disso.
 const DROPDOWN_WIDTH = 320;
@@ -11,33 +11,42 @@ const DROPDOWN_MAX_HEIGHT = 360;
 const GAP = 6;
 const MARGEM_VIEWPORT = 8;
 
-function formatModelCost(model: Model): string {
-  const avgMicros = (model.inputPricePerMillionMicros + model.outputPricePerMillionMicros) / 2;
-  return `${usdFmt.format(avgMicros / 1_000_000)} /1M tok`;
-}
-
 interface ModelPickerProps {
   models: ModelsByCategory;
   selectedModelId?: string;
   onSelect: (model: Model) => void;
   variant?: 'topbar' | 'inline' | 'standalone';
+  /**
+   * Liga o filtro "aptos para agentes" JÁ MARCADO (Fase 9c). É o que a tela de
+   * binding de agente passa: a mensagem da RN-038 manda o usuário para este
+   * filtro desde a Fase 9a, e até agora ele não existia.
+   */
+  filtroDeAgentesPadrao?: boolean;
 }
 
-function flatten(group: Record<string, Model[]> | undefined): Model[] {
-  if (!group) return [];
-  return Object.values(group).flat();
-}
-
-export function ModelPicker({ models, selectedModelId, onSelect, variant = 'standalone' }: ModelPickerProps) {
+export function ModelPicker({
+  models,
+  selectedModelId,
+  onSelect,
+  variant = 'standalone',
+  filtroDeAgentesPadrao = false,
+}: ModelPickerProps) {
   const [open, setOpen] = useState(false);
+  const [soAptos, setSoAptos] = useState(filtroDeAgentesPadrao);
   const [posicao, setPosicao] = useState<{ top: number; left: number; maxHeight: number } | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
-  const localModels = flatten(models.local);
-  const cloudModels = flatten(models.cloud);
-  const allModels = [...localModels, ...cloudModels];
-  const selected = allModels.find((m) => m.id === selectedModelId);
+  const grupos = useMemo(
+    () => agruparModelos(models, { somenteAptosParaAgentes: soAptos }),
+    [models, soAptos],
+  );
+  const todosOsModelos = useMemo(() => agruparModelos(models), [models]).flatMap(
+    (g) => g.modelos,
+  );
+  // Procura no conjunto INTEIRO, não no filtrado: o vigente precisa aparecer no
+  // gatilho mesmo quando o filtro o esconde da lista.
+  const selected = todosOsModelos.find((m) => m.id === selectedModelId);
 
   /**
    * O dropdown é `position: fixed` ancorado no gatilho, não `absolute` dentro
@@ -138,25 +147,37 @@ export function ModelPicker({ models, selectedModelId, onSelect, variant = 'stan
           className={styles.dropdown}
           style={{ top: posicao.top, left: posicao.left, maxHeight: posicao.maxHeight }}
         >
-          {allModels.length === 0 && (
+          <label className={styles.filtro}>
+            <input
+              type="checkbox"
+              checked={soAptos}
+              onChange={(e) => setSoAptos(e.target.checked)}
+            />
+            aptos para agentes
+          </label>
+
+          {todosOsModelos.length === 0 && (
             <div className={styles.groupHeader}>Nenhum modelo cadastrado</div>
           )}
-          {localModels.length > 0 && (
-            <>
-              <div className={styles.groupHeader}>Local · Ollama</div>
-              {localModels.map((model) => (
-                <ModelOption key={model.id} model={model} selected={model.id === selectedModelId} onClick={() => pick(model)} />
-              ))}
-            </>
+          {todosOsModelos.length > 0 && grupos.length === 0 && (
+            <div className={styles.vazio}>
+              Nenhum modelo faz tool calling nativo. Desmarque o filtro para ver
+              os demais.
+            </div>
           )}
-          {cloudModels.length > 0 && (
-            <>
-              <div className={styles.groupHeader}>Cloud · por provedor</div>
-              {cloudModels.map((model) => (
-                <ModelOption key={model.id} model={model} selected={model.id === selectedModelId} onClick={() => pick(model)} />
+          {grupos.map((grupo) => (
+            <div key={grupo.kind}>
+              <div className={styles.groupHeader}>{grupo.rotulo}</div>
+              {grupo.modelos.map((model) => (
+                <ModelOption
+                  key={model.id}
+                  model={model}
+                  selected={model.id === selectedModelId}
+                  onClick={() => pick(model)}
+                />
               ))}
-            </>
-          )}
+            </div>
+          ))}
         </div>
       )}
     </div>
@@ -165,17 +186,33 @@ export function ModelPicker({ models, selectedModelId, onSelect, variant = 'stan
 
 function ModelOption({ model, selected, onClick }: { model: Model; selected: boolean; onClick: () => void }) {
   const isFree = model.provider === 'ollama';
+  const indisponivel = model.availability === 'unavailable';
+  const janela = formatarJanela(model);
+
   return (
-    <button type="button" className={[styles.option, selected && styles.selected].filter(Boolean).join(' ')} onClick={onClick}>
+    <button
+      type="button"
+      className={[styles.option, selected && styles.selected, indisponivel && styles.indisponivel]
+        .filter(Boolean)
+        .join(' ')}
+      onClick={onClick}
+    >
       <span className={[styles.radio, selected && styles.checked].filter(Boolean).join(' ')}>
         {selected && <span className={styles.radioDot} />}
       </span>
-      <span className={styles.optionName}>
-        {model.displayName}
-        {!isFree && <span className={styles.optionProvider}> · {model.provider}</span>}
-      </span>
-      <span className={[styles.cost, isFree ? styles.costFree : styles.costPaid].join(' ')}>
-        {isFree ? 'grátis' : formatModelCost(model)}
+      <span className={styles.corpo}>
+        <span className={styles.optionName}>
+          {model.displayName}
+          {!isFree && <span className={styles.optionProvider}> · {model.provider}</span>}
+        </span>
+        <span className={styles.selos}>
+          <Badge tone={isFree ? 'success' : 'muted'}>{formatarPreco(model)}</Badge>
+          {janela && <Badge tone="muted">{janela}</Badge>}
+          {model.supportsToolCalling && <Badge tone="accent">tool calling</Badge>}
+          {/* Indisponível aparece MARCADO, nunca some: um modelo ausente da
+              lista deixaria o binding que aponta pra ele sem explicação. */}
+          {indisponivel && <Badge tone="warning">indisponível no provider</Badge>}
+        </span>
       </span>
     </button>
   );

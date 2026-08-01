@@ -333,6 +333,37 @@
         ]
       }
     },
+    "/internal/models/sync": {
+      "post": {
+        "description": "Nunca falha por causa de um provider: cada um responde por si no relatório, com o motivo do pulo e a origem da falha quando houve. Um provider que não respondeu é PULADO, não indisponibilizado.",
+        "operationId": "InternalModelsController_sync",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncModelCatalogResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Service token ausente ou diferente do compartilhado."
+          }
+        },
+        "security": [
+          {
+            "service-token": []
+          }
+        ],
+        "summary": "Sincroniza o catálogo de modelos de todos os providers",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
     "/internal/sessions/{sessionId}/actions": {
       "post": {
         "description": "A porta ÚNICA pela qual um agente toca git, terminal ou gasto. O `permissions.json` decide na criação, e `deny` vence qualquer autonomia concedida ao agente.",
@@ -1918,7 +1949,7 @@
     },
     "/models": {
       "get": {
-        "description": "Categoria `local` são os do Ollama, que não gastam dinheiro; `cloud` são os de API paga. Modelo inativo não aparece aqui, mas continua nos custos históricos.",
+        "description": "Categoria `local` são os do Ollama, que não gastam dinheiro; `cloud` são os de API paga. Modelo inativo não aparece aqui, mas continua nos custos históricos — para vê-lo use a rota de catálogo.",
         "operationId": "ModelsController_list",
         "parameters": [],
         "responses": {
@@ -6369,6 +6400,276 @@
         ]
       }
     },
+    "/workspaces/{workspaceId}/models/{modelId}/price-changes": {
+      "get": {
+        "description": "Mais recente primeiro. É log imutável: nunca sofre UPDATE, e a linha traz o par antes/depois para a auditoria não depender de reconstruir o \"antes\" a partir da linha anterior.",
+        "operationId": "ModelsController_priceChanges",
+        "parameters": [
+          {
+            "name": "modelId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ModelPriceChangeResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no workspace."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Histórico de mudanças de preço de um modelo",
+        "tags": [
+          "llm"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/models/{modelId}/pricing": {
+      "patch": {
+        "description": "Vale daqui em diante e NUNCA reprecifica o passado: cada linha de `token_usage` guarda o preço que produziu o custo dela. A mudança fica registrada com o par antes/depois — consultável na rota de histórico.",
+        "operationId": "ModelsController_updatePricing",
+        "parameters": [
+          {
+            "name": "modelId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateModelPricingDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Exige `owner` no workspace."
+          },
+          "404": {
+            "description": "Modelo inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Corrige o preço de um modelo",
+        "tags": [
+          "llm"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/models/activate": {
+      "post": {
+        "description": "Curadoria do owner. Só mexe em `isActive` — `availability` é o que o sync observou no provider e não se altera por aqui. Lote inteiro ou nada: um id inexistente reprova a chamada sem aplicar nenhuma linha.",
+        "operationId": "ModelsController_activate",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetModelsActiveDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ModelResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Exige `owner` no workspace."
+          },
+          "404": {
+            "description": "Algum id do lote não existe."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Liga ou desliga modelos no seletor (lote)",
+        "tags": [
+          "llm"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/models/catalog": {
+      "get": {
+        "description": "A tela de curadoria. Modelo descoberto pelo sync entra `isActive: false` e só aparece aqui até alguém ativá-lo; modelo que sumiu do provider vem com `availability: \"unavailable\"` e nunca é deletado, porque bindings e histórico de custo apontam para ele.",
+        "operationId": "ModelsController_catalog",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "local": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/components/schemas/ModelResponseDto"
+                        }
+                      }
+                    },
+                    "cloud": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/components/schemas/ModelResponseDto"
+                        }
+                      }
+                    }
+                  },
+                  "example": {
+                    "local": {
+                      "ollama": []
+                    },
+                    "cloud": {
+                      "anthropic": [],
+                      "openai": []
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no workspace."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Lista o catálogo INTEIRO, inclusive inativo e indisponível",
+        "tags": [
+          "llm"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/models/sync": {
+      "post": {
+        "description": "Mesmo caso de uso da rota interna que o engine agenda — o botão de atualizar da tela de curadoria não tem um caminho próprio, para não existirem duas reconciliações que possam divergir.",
+        "operationId": "ModelsController_sync",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncModelCatalogResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Exige `owner` no workspace."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Força agora o sync de catálogo que o job periódico faz",
+        "tags": [
+          "llm"
+        ]
+      }
+    },
     "/workspaces/{workspaceId}/projects": {
       "get": {
         "operationId": "WorkspacesController_listProjects",
@@ -8808,6 +9109,68 @@
           "updatedAt"
         ]
       },
+      "ModelPriceChangeResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01JC4Z0000PRECO000000000001"
+          },
+          "modelId": {
+            "type": "string",
+            "example": "01JC4Z0000MODELO00000000001"
+          },
+          "inputBeforeMicros": {
+            "type": "number",
+            "example": 2500000,
+            "description": "Micro-USD por 1M, antes."
+          },
+          "inputAfterMicros": {
+            "type": "number",
+            "example": 3000000,
+            "description": "Micro-USD por 1M, depois."
+          },
+          "outputBeforeMicros": {
+            "type": "number",
+            "example": 10000000
+          },
+          "outputAfterMicros": {
+            "type": "number",
+            "example": 12000000
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "sync"
+            ],
+            "example": "manual",
+            "description": "`manual` foi alguém digitando da doc do provider; `sync` veio do catálogo remoto."
+          },
+          "changedBy": {
+            "type": "object",
+            "example": "01JC4Z0000USUARIO0000000001",
+            "nullable": true,
+            "description": "`null` quando veio do sync — não há pessoa por trás."
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-08-01T12:00:00.000Z",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "modelId",
+          "inputBeforeMicros",
+          "inputAfterMicros",
+          "outputBeforeMicros",
+          "outputAfterMicros",
+          "source",
+          "changedBy",
+          "createdAt"
+        ]
+      },
       "ModelResponseDto": {
         "type": "object",
         "properties": {
@@ -8870,7 +9233,23 @@
           "isActive": {
             "type": "boolean",
             "example": true,
-            "description": "Modelo desativado some da seleção mas continua nos custos históricos."
+            "description": "Curadoria do OWNER: modelo desativado some da seleção mas continua nos custos históricos. Modelo descoberto pelo sync de catálogo entra `false`."
+          },
+          "availability": {
+            "type": "string",
+            "enum": [
+              "available",
+              "unavailable"
+            ],
+            "example": "available",
+            "description": "Realidade REMOTA observada pelo sync, eixo independente de `isActive`. `unavailable` é o modelo que sumiu do catálogo do provider — ele nunca é deletado, porque bindings e histórico de custo apontam para ele."
+          },
+          "lastSeenAt": {
+            "type": "object",
+            "example": "2026-07-30T03:00:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Última vez que o sync viu o modelo no catálogo do provider."
           },
           "createdAt": {
             "type": "string",
@@ -8896,6 +9275,8 @@
           "supportsVision",
           "manualPricing",
           "isActive",
+          "availability",
+          "lastSeenAt",
           "createdAt",
           "updatedAt"
         ]
@@ -10396,11 +10777,75 @@
             ],
             "example": "project",
             "description": "De qual escopo o valor veio. A cascata é sessão → agente → projeto → workspace, e expor a ORIGEM é o que permite a UI dizer \"herdado do projeto\" em vez de mostrar um valor sem procedência."
+          },
+          "skipped": {
+            "description": "Escopos mais específicos que a cascata descartou antes de chegar em `origin`. Vazio no caminho normal.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SkippedBindingResponseDto"
+            }
           }
         },
         "required": [
           "modelId",
-          "origin"
+          "origin",
+          "skipped"
+        ]
+      },
+      "ResultadoPorProviderResponseDto": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string",
+            "enum": [
+              "ollama",
+              "anthropic",
+              "openai"
+            ],
+            "example": "openai"
+          },
+          "descobertos": {
+            "type": "number",
+            "example": 3,
+            "description": "Modelos que não existiam no banco. Entram INATIVOS — ativar é curadoria do owner (RN-041)."
+          },
+          "reencontrados": {
+            "type": "number",
+            "example": 1,
+            "description": "Modelos que estavam `unavailable` e voltaram ao catálogo. O `isActive` deles não é tocado: a escolha do owner sobrevive à ausência."
+          },
+          "indisponibilizados": {
+            "type": "number",
+            "example": 0,
+            "description": "Modelos que sumiram do catálogo remoto. Viram `unavailable` e NUNCA são deletados — bindings e histórico de custo apontam para eles."
+          },
+          "pulado": {
+            "type": "string",
+            "enum": [
+              "sem_capability",
+              "sem_credencial",
+              "falha"
+            ],
+            "description": "Presente quando o provider não foi sincronizado. Provider pulado não indisponibiliza nada: \"não sei o que tem lá\" não é \"não tem nada lá\"."
+          },
+          "origemDaFalha": {
+            "type": "string",
+            "enum": [
+              "infra",
+              "modelo"
+            ],
+            "description": "Só com `pulado: \"falha\"`. Vocabulário de origem do ADR 0020 — `infra` quando nem se chegou a falar com o provider, `modelo` quando ele respondeu recusando."
+          },
+          "detalhe": {
+            "type": "string",
+            "example": "openai respondeu com status 401"
+          }
+        },
+        "required": [
+          "provider",
+          "descobertos",
+          "reencontrados",
+          "indisponibilizados"
         ]
       },
       "RollbackResponseDto": {
@@ -10737,6 +11182,31 @@
           "modelId"
         ]
       },
+      "SetModelsActiveDto": {
+        "type": "object",
+        "properties": {
+          "modelIds": {
+            "example": [
+              "9b1c2d3e-4f50-4a61-8b72-0c3d4e5f6a7b"
+            ],
+            "description": "Modelos a ligar ou desligar. Lote inteiro ou nada.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "isActive": {
+            "type": "boolean",
+            "example": true,
+            "description": "`true` faz o modelo aparecer no seletor e poder receber binding novo. Não mexe em `availability`, que é o que o sync observou no provider."
+          }
+        },
+        "required": [
+          "modelIds",
+          "isActive"
+        ]
+      },
       "SetProjectPermissionsDto": {
         "type": "object",
         "properties": {
@@ -10777,6 +11247,39 @@
           "allow",
           "deny",
           "ask"
+        ]
+      },
+      "SkippedBindingResponseDto": {
+        "type": "object",
+        "properties": {
+          "scope": {
+            "type": "string",
+            "enum": [
+              "workspace",
+              "project",
+              "agent",
+              "session"
+            ],
+            "example": "agent"
+          },
+          "modelId": {
+            "type": "string",
+            "example": "01JC4Z0000MODELO00000000001"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "unavailable",
+              "sem_tool_calling"
+            ],
+            "example": "unavailable",
+            "description": "`unavailable`: o modelo sumiu do catálogo do provider. `sem_tool_calling`: o pedido é de um agente e o modelo é chat-only — a cascata revalida a capability a cada nível para não violar a RN-038 em silêncio."
+          }
+        },
+        "required": [
+          "scope",
+          "modelId",
+          "reason"
         ]
       },
       "StoryComTarefasResponseDto": {
@@ -11076,6 +11579,20 @@
           "messages"
         ]
       },
+      "SyncModelCatalogResponseDto": {
+        "type": "object",
+        "properties": {
+          "porProvider": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResultadoPorProviderResponseDto"
+            }
+          }
+        },
+        "required": [
+          "porProvider"
+        ]
+      },
       "TaskResponseDto": {
         "type": "object",
         "properties": {
@@ -11244,6 +11761,25 @@
         },
         "required": [
           "status"
+        ]
+      },
+      "UpdateModelPricingDto": {
+        "type": "object",
+        "properties": {
+          "inputPricePerMillionMicros": {
+            "type": "number",
+            "example": 2500000,
+            "description": "Preço por milhão de tokens de ENTRADA, em micro-USD."
+          },
+          "outputPricePerMillionMicros": {
+            "type": "number",
+            "example": 10000000,
+            "description": "Preço por milhão de tokens de SAÍDA, em micro-USD."
+          }
+        },
+        "required": [
+          "inputPricePerMillionMicros",
+          "outputPricePerMillionMicros"
         ]
       },
       "UpdateProjectDto": {

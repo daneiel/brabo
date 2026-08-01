@@ -4,6 +4,7 @@ import { useNavigate } from '@tanstack/react-router';
 import {
   addProjectMember,
   deleteMyProficiency,
+  getProject,
   getProjectEvent,
   listProjectInstructionVersions,
   optInProficiency,
@@ -27,6 +28,10 @@ import type {
   ProficiencyProfile,
   Role,
 } from '../lib/api-types';
+import {
+  CREDENCIAIS_DE_LLM,
+  type LlmCredentialProvider,
+} from '../lib/models';
 import { Table, type TableColumn } from '../components/ui/Table';
 import { Badge, type BadgeTone } from '../components/ui/Badge';
 import { Select } from '../components/ui/Select';
@@ -34,6 +39,7 @@ import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { ModelPicker } from '../components/ModelPicker';
+import { ModelCatalogSection } from '../components/ModelCatalogSection';
 import { TrashIcon } from '../components/ui/icons';
 import { useToast } from '../components/ui/ToastProvider';
 import styles from './ProjectSettingsTab.module.css';
@@ -67,11 +73,6 @@ const LEVEL_TONE: Record<ProficiencyLevel, BadgeTone> = {
   avancado: 'success',
 };
 
-const CREDENTIAL_PROVIDERS: { id: 'anthropic' | 'openai'; label: string }[] = [
-  { id: 'anthropic', label: 'Anthropic' },
-  { id: 'openai', label: 'OpenAI' },
-];
-
 interface ProjectSettingsTabProps {
   projectId: string;
 }
@@ -80,6 +81,7 @@ export function ProjectSettingsTab({ projectId }: ProjectSettingsTabProps) {
   return (
     <div>
       <ModelsSection projectId={projectId} />
+      <CatalogoDeModelos projectId={projectId} />
       <MembersSection projectId={projectId} />
       <ProficiencySection projectId={projectId} />
       <InstructionVersionsSection projectId={projectId} />
@@ -87,6 +89,20 @@ export function ProjectSettingsTab({ projectId }: ProjectSettingsTabProps) {
       <CredentialsSection />
     </div>
   );
+}
+
+/**
+ * O catálogo é global, mas a curadoria pende do workspace: é de lá que o
+ * `RolesGuard` tira o papel (só `owner` ativa). Daí a busca do projeto só para
+ * descobrir a que workspace ele pertence.
+ */
+function CatalogoDeModelos({ projectId }: { projectId: string }) {
+  const { data: project } = useQuery({
+    queryKey: ['project', projectId],
+    queryFn: () => getProject(projectId),
+  });
+  if (!project) return null;
+  return <ModelCatalogSection workspaceId={project.workspaceId} />;
 }
 
 function ModelsSection({ projectId }: { projectId: string }) {
@@ -147,7 +163,28 @@ function ModelsSection({ projectId }: { projectId: string }) {
       render: (agent) => {
         const index = AGENT_LIST.indexOf(agent);
         const resolved = bindingQueries[index]?.data;
-        return resolved ? <Badge tone={ORIGIN_TONE[resolved.origin]}>{resolved.origin}</Badge> : <span className={styles.dash}>—</span>;
+        if (!resolved) return <span className={styles.dash}>—</span>;
+
+        // A cascata pode ter PULADO o binding mais específico (Fase 9c). Sem
+        // dizer isso, o modelo do agente teria trocado sozinho e em silêncio.
+        const pulado = resolved.skipped?.[0];
+        return (
+          <span className={styles.origem}>
+            <Badge tone={ORIGIN_TONE[resolved.origin]}>{resolved.origin}</Badge>
+            {pulado && (
+              <Badge
+                tone="warning"
+                title={
+                  pulado.reason === 'unavailable'
+                    ? `O modelo de ${pulado.scope} sumiu do provider — a cascata caiu para ${resolved.origin}.`
+                    : `O modelo de ${pulado.scope} não faz tool calling e não serve a um agente — a cascata caiu para ${resolved.origin}.`
+                }
+              >
+                {pulado.scope} pulado
+              </Badge>
+            )}
+          </span>
+        );
       },
     },
     {
@@ -309,7 +346,7 @@ function CredentialsSection() {
   const { data: credentials } = useQuery({ queryKey: ['credentials'], queryFn: listCredentials });
   const [drafts, setDrafts] = useState<Record<string, string>>({});
 
-  async function handleSave(provider: 'anthropic' | 'openai') {
+  async function handleSave(provider: LlmCredentialProvider) {
     const apiKey = drafts[provider]?.trim();
     if (!apiKey) return;
     await upsertCredential({ provider, apiKey });
@@ -318,7 +355,7 @@ function CredentialsSection() {
     showToast({ title: 'Credencial salva', tone: 'success' });
   }
 
-  async function handleRemove(provider: 'anthropic' | 'openai') {
+  async function handleRemove(provider: LlmCredentialProvider) {
     await deleteCredential(provider);
     queryClient.invalidateQueries({ queryKey: ['credentials'] });
   }
@@ -328,12 +365,17 @@ function CredentialsSection() {
       <div className={styles.title}>Credenciais de provider</div>
       <div className={styles.subtitle}>Chaves write-only — nunca reexibidas após salvas.</div>
 
-      {CREDENTIAL_PROVIDERS.map(({ id, label }) => {
+      {CREDENCIAIS_DE_LLM.map(({ id, label, kind }) => {
         const existing = credentials?.find((c) => c.provider === id);
         return (
           <div key={id} className={styles.credentialCard}>
             <div className={styles.credentialInfo}>
-              <div className={styles.credentialProvider}>{label}</div>
+              <div className={styles.credentialProvider}>
+                {label}
+                {/* Um hub roteia para provedores de terceiros: o custo e a
+                    disponibilidade dependem de quem serve por baixo. */}
+                {kind === 'hub' && <Badge tone="muted">hub</Badge>}
+              </div>
               <div className={styles.credentialStatus}>
                 {existing ? `Configurado em ${new Date(existing.updatedAt).toLocaleDateString('pt-BR')}` : 'Nenhuma credencial salva'}
               </div>
