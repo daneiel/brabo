@@ -286,6 +286,19 @@ defmodule Engine.Sessions.EngineApiClient do
               {:ok, map()} | {:error, term()}
 
   @doc """
+  Dispara o sync de catálogo de modelos na api (Fase 9c).
+
+  Não leva projeto nem sessão: o catálogo é global e a chamada não roda em
+  nome de ninguém. Quem AGENDA é o engine (Oban), quem tem as credenciais e o
+  registry de providers é a api — duplicar o registry aqui significaria manter
+  dois catálogos.
+
+  Retorna o relatório por provider (`%{"porProvider" => [...]}`), que traz o
+  motivo do pulo e a ORIGEM da falha de cada um.
+  """
+  @callback sync_model_catalog() :: {:ok, map()} | {:error, term()}
+
+  @doc """
   Propõe um patch de instrução (Fase 4b). A api calcula o diff e recusa
   repropor um patch já negado antes.
   """
@@ -543,6 +556,11 @@ defmodule Engine.Sessions.EngineApiClient.Live do
       {:error, reason} ->
         {:error, reason}
     end
+  end
+
+  @impl true
+  def sync_model_catalog do
+    post_returning("/internal/models/sync", %{})
   end
 
   @impl true

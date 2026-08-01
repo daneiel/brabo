@@ -155,6 +155,9 @@ export interface ProposedAction {
 export type LLMProviderName = 'ollama' | 'anthropic' | 'openai';
 export type ModelCategory = 'local' | 'cloud';
 
+/** Realidade REMOTA observada pelo sync de catálogo (Fase 9c). */
+export type ModelAvailability = 'available' | 'unavailable';
+
 export interface Model {
   id: string;
   provider: LLMProviderName;
@@ -163,10 +166,57 @@ export interface Model {
   inputPricePerMillionMicros: number;
   outputPricePerMillionMicros: number;
   contextWindow: number | null;
+  /**
+   * Capabilities DO MODELO (Fase 9a). Sem `supportsToolCalling` o modelo é
+   * chat-only e não pode ser vinculado a um agente (RN-040).
+   */
+  supportsToolCalling: boolean;
+  supportsStreaming: boolean;
+  supportsVision: boolean;
+  /** Preço digitado da doc do provider, não sincronizado (Fase 9b). */
+  manualPricing: boolean;
+  /** Curadoria do OWNER: se aparece no seletor (Fase 9c). */
   isActive: boolean;
+  /**
+   * Eixo INDEPENDENTE de `isActive`: um modelo pode estar ativo e
+   * indisponível ao mesmo tempo. `unavailable` nunca é deletado — bindings e
+   * histórico de custo apontam para ele.
+   */
+  availability: ModelAvailability;
+  lastSeenAt: string | null;
 }
 
 export type ModelsByCategory = Record<ModelCategory, Record<string, Model[]>>;
+
+/** Uma mudança de preço, append-only (Fase 9c, RN-044). */
+export interface ModelPriceChange {
+  id: string;
+  modelId: string;
+  inputBeforeMicros: number;
+  inputAfterMicros: number;
+  outputBeforeMicros: number;
+  outputAfterMicros: number;
+  source: 'manual' | 'sync';
+  /** `null` quando veio do sync — não há pessoa por trás. */
+  changedBy: string | null;
+  createdAt: string;
+}
+
+/** O relatório do sync, um item por provider — nenhum some da lista. */
+export interface ResultadoDoSync {
+  provider: LLMProviderName;
+  descobertos: number;
+  reencontrados: number;
+  indisponibilizados: number;
+  pulado?: 'sem_capability' | 'sem_credencial' | 'falha';
+  /** Vocabulário de origem do ADR 0020. Só com `pulado: 'falha'`. */
+  origemDaFalha?: 'infra' | 'modelo';
+  detalhe?: string;
+}
+
+export interface SyncModelCatalogResult {
+  porProvider: ResultadoDoSync[];
+}
 
 export type ModelBindingScope = 'workspace' | 'project' | 'agent' | 'session';
 
@@ -177,9 +227,22 @@ export interface ModelBinding {
   modelId: string;
 }
 
+export interface SkippedBinding {
+  scope: ModelBindingScope;
+  modelId: string;
+  reason: 'unavailable' | 'sem_tool_calling';
+}
+
 export interface ResolvedBinding {
   modelId: string;
   origin: ModelBindingScope;
+  /**
+   * Escopos mais específicos que a cascata descartou antes de chegar em
+   * `origin` (Fase 9c). Vazio no caminho normal; é o que permite a UI dizer
+   * "o modelo do agente sumiu, caiu para o do projeto" em vez de trocar o
+   * modelo em silêncio.
+   */
+  skipped: SkippedBinding[];
 }
 
 // user_credentials guarda tanto chaves de LLM quanto tokens de git do

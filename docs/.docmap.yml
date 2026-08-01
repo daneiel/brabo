@@ -130,6 +130,15 @@ rules:
     docs: ["docs/reference/git-providers.md"]
     severity: warn
 
+  - id: llm-providers
+    watch:
+      - "apps/api/src/infrastructure/llm/**"
+      - "apps/api/src/domain/llm/**"
+      - "apps/api/test/contract/llm-provider.contract.ts"
+    docs: ["docs/reference/llm-providers.md"]
+    severity: warn
+    note: "Até a Fase 9a NENHUMA regra observava a camada de LLM — provider, capabilities e taxonomia de erro mudavam sem doc cobrando nada. Contrato, capabilities e divergências por dialeto vivem no doc apontado (ADR 0041)."
+
   # ---------------------------------------------------------------- agentes
 
   - id: harness-e-gates

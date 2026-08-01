@@ -9,7 +9,79 @@ export interface HealthStatus {
 
 // --- LLM ---
 
+/**
+ * `packages/shared` é 100% TIPO — nada aqui pode sobreviver ao `tsc`.
+ *
+ * O `main` do pacote aponta pro `.ts` cru, e a imagem de produção da api roda
+ * o compilado com `node main.js`: um `export const` daqui vira um `require`
+ * de verdade em runtime, e o Node morre com
+ * `ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING` ao achar um `.ts` dentro de
+ * `node_modules` — o container não sobe. O `Dockerfile.prod` da api conta com
+ * este invariante ("por isso ele NÃO aparece no estágio final"), e
+ * `packages-shared-so-tipos.spec.ts` na api o mantém honesto.
+ *
+ * Precisa da LISTA em runtime? Ela mora no consumidor —
+ * `apps/api/src/domain/llm/llm-provider-names.ts` guarda a da api, amarrada a
+ * este tipo por checagem de exaustividade nos dois sentidos.
+ */
 export type LLMProviderName = "ollama" | "anthropic" | "openai";
+
+/**
+ * Taxonomia normalizada de falha de provider (Fase 9a — ADR 0041). Espelha o
+ * que o lado git fez no ADR 0002: quem consome um erro de LLM decide pelo
+ * `code`, nunca por substring da mensagem do vendor — que muda sem aviso e é
+ * diferente em cada um dos providers.
+ */
+export type LLMErrorCode =
+  /** Chave ausente, inválida ou sem permissão pro modelo (401/403). */
+  | "auth"
+  /** Cota ou throughput estourado (429). */
+  | "rate_limit"
+  /** O modelo pedido não existe nesse provider (404). */
+  | "model_not_found"
+  /** O prompt não cabe na janela do modelo (413, ou 400 com o marcador). */
+  | "context_length"
+  /** O provider ficou MUDO além do teto de inatividade. */
+  | "timeout"
+  /** Nem chegou a falar com o provider (DNS, recusa de conexão, TLS). */
+  | "connection"
+  /** Falhou do lado de lá por motivo que não se encaixa nos anteriores. */
+  | "upstream";
+
+/**
+ * O que o provider sabe fazer, independente do modelo escolhido — o TETO.
+ * Um modelo pode ser mais pobre que o provider (ver as colunas
+ * `supports_*` de `models`), nunca mais rico.
+ */
+export interface LLMProviderCapabilities {
+  readonly streaming: boolean;
+  readonly toolCalling: boolean;
+  /**
+   * O provider sabe LISTAR o próprio catálogo (Fase 9c). Quem não sabe não
+   * expõe `listModels` — o sync pula em vez de chamar e tratar o 404, do mesmo
+   * jeito que o contrato de git provider degrada por capability desde a Fase 2.
+   */
+  readonly listModels: boolean;
+}
+
+/**
+ * Uma linha do catálogo REMOTO do provider (Fase 9c).
+ *
+ * Só `name` é obrigatório: cada catálogo informa um subconjunto diferente — o
+ * `/v1/models` da OpenAI devolve praticamente só o id, enquanto um hub devolve
+ * preço e janela junto. Campo ausente significa "o provider não disse", nunca
+ * "o valor é zero", e por isso o sync não sobrescreve o que já está gravado.
+ */
+export interface ModeloDoCatalogo {
+  readonly name: string;
+  readonly displayName?: string;
+  readonly contextLength?: number;
+  readonly supportsToolCalling?: boolean;
+  readonly inputPricePerMillionMicros?: number;
+  readonly outputPricePerMillionMicros?: number;
+  /** Só um hub preenche: quem de fato serve o modelo por baixo. */
+  readonly upstreamProvider?: string;
+}
 
 export type ModelCategory = "local" | "cloud";
 
@@ -63,11 +135,23 @@ export interface ChatUsageChunk {
   inputTokens: number;
   outputTokens: number;
   estimated: boolean;
+  /**
+   * Quem REALMENTE serviu a chamada, quando o provider é um hub e informa isso
+   * (Fase 9b). Num hub, "openrouter" é a porta de entrada, não o custo real —
+   * sem este campo o metering não distingue qual provedor subjacente atendeu.
+   * `undefined` quando o provider não é hub ou não informou.
+   */
+  upstreamProvider?: string;
 }
 
 export interface ChatErrorChunk {
   type: "error";
   message: string;
+  /**
+   * Obrigatório de propósito: com campo opcional, um provider novo esquece de
+   * classificar e o erro dele volta a ser string opaca sem ninguém perceber.
+   */
+  code: LLMErrorCode;
 }
 
 // Ferramentas pedidas pelo modelo — no Ollama vêm na mensagem final (não

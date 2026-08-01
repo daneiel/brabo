@@ -77,7 +77,7 @@ nova neste contrato, use o funil: é o que garante que ela não nasça órfã.
 
 ## engine → api
 
-Vinte e seis rotas, todas sob `/internal/sessions/:sessionId/` salvo indicação.
+Vinte e sete rotas, todas sob `/internal/sessions/:sessionId/` salvo indicação.
 Agrupadas pelo que fazem:
 
 ### Event log e ações
@@ -102,6 +102,28 @@ quem controla a `seq` e a atomicidade com o outbox.
 Toda chamada de modelo passa pela api. Não é indireção gratuita: é onde o
 metering acontece e onde o orçamento pode **recusar** a chamada. Um engine que
 falasse direto com o provedor tornaria o teto de gasto inaplicável.
+
+### Catálogo de modelos
+
+| método | caminho |
+|---|---|
+| POST | `/internal/models/sync` (**não** é session-scoped) |
+
+A única rota `engine → api` fora de `/internal/sessions/:sessionId/`, porque o
+sync de catálogo não pertence a sessão nenhuma: é do workspace inteiro. Quem
+**agenda** é o engine (`ModelSyncSchedulerWorker`, Oban, com o mesmo idioma de
+worker que se reagenda do `AnamneseSchedulerWorker`); quem tem as credenciais e
+o registry de providers é a api. Duplicar o registry no Elixir seria manter dois
+catálogos — ver [ADR 0042](../adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md).
+
+Responde **200** com um relatório por provider (`porProvider[]`), nunca 5xx por
+causa de um provider: cada linha traz `descobertos`, `reencontrados`,
+`indisponibilizados` e — quando o provider não foi sincronizado — `pulado`
+(`sem_capability` | `sem_credencial` | `falha`) com `origemDaFalha`
+(`infra` | `modelo`) e `detalhe`. Provider pulado **não indisponibiliza nada**:
+"não sei o que tem lá" não é "não tem nada lá"
+([RN-043](../business-rules.md#rn-043)). O corpo completo está no
+[OpenAPI gerado](api/brabo-api) sob a tag `internal`.
 
 ### Contexto por agente
 

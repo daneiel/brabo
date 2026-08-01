@@ -59,9 +59,34 @@
   padding: 6px 12px;
 }
 
-.option {
+.filtro {
   display: flex;
   align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.filtro input {
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.vazio {
+  padding: 12px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.option {
+  display: flex;
+  align-items: flex-start;
   gap: 10px;
   width: 100%;
   border: none;
@@ -69,6 +94,26 @@
   padding: 9px 12px;
   cursor: pointer;
   text-align: left;
+}
+
+/* Esmaecido, e ainda assim selecionável: o binding que aponta pra ele
+   continua existindo, e trocá-lo é justamente o que a pessoa veio fazer. */
+.option.indisponivel .corpo {
+  opacity: 0.6;
+}
+
+.corpo {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1;
+  min-width: 0;
+}
+
+.selos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
 }
 
 .option:hover {
@@ -88,6 +133,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  /* Alinha com a primeira linha do nome, agora que a opção tem duas linhas. */
+  margin-top: 2px;
 }
 
 .radio.checked {
@@ -102,7 +149,6 @@
 }
 
 .optionName {
-  flex: 1;
   min-width: 0;
   font-family: var(--font-mono);
   font-size: 12.5px;
@@ -113,19 +159,5 @@
 }
 
 .optionProvider {
-  color: var(--text-muted);
-}
-
-.cost {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  flex-shrink: 0;
-}
-
-.costFree {
-  color: var(--success);
-}
-
-.costPaid {
   color: var(--text-muted);
 }

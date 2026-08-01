@@ -287,6 +287,61 @@ const PREFIXOS_DE_EVENTO = [
 ];
 
 
+
+// ------------------------------- 6. catálogo de providers de LLM (Fase 9c)
+
+/**
+ * Providers × origem × capabilities, lidos do CÓDIGO.
+ *
+ * A tabela existia à mão e envelhecia calada: a Fase 9c acrescentou
+ * `listModels` às capabilities e nenhuma doc cobrou nada. As capabilities vêm
+ * do literal que cada provider declara — se alguém trocar `true` por `false`,
+ * o bloco muda e o `--check` reprova até a regeneração entrar no mesmo commit.
+ */
+function gerarProvidersDeLlm() {
+  const fontes = arquivos('apps/api/src/infrastructure/llm/*.ts');
+  const achados = new Map();
+
+  for (const caminho of fontes) {
+    const conteudo = ler(caminho);
+    // Casa tanto `readonly capabilities: X = { ... }` (Ollama, Anthropic)
+    // quanto `capabilities: { ... }` dentro da config (base compatível).
+    const nome = /name:\s*LLMProviderName\s*=\s*'([a-z]+)'|name:\s*'([a-z]+)'/.exec(conteudo);
+    const caps = /capabilities[^{]*\{([^}]*)\}/.exec(conteudo);
+    if (!nome || !caps) continue;
+
+    const provider = nome[1] ?? nome[2];
+    if (achados.has(provider)) continue;
+
+    const flag = (chave) => {
+      const m = new RegExp(`${chave}:\\s*(true|false)`).exec(caps[1]);
+      return m ? m[1] === 'true' : null;
+    };
+    achados.set(provider, {
+      arquivo: caminho,
+      streaming: flag('streaming'),
+      toolCalling: flag('toolCalling'),
+      listModels: flag('listModels'),
+    });
+  }
+
+  const marca = (v) => (v === null ? '?' : v ? 'sim' : 'não');
+  const ordenados = [...achados.entries()].sort(([a], [b]) => a.localeCompare(b));
+
+  let corpo = `\n${AVISO_BLOCO}\n\n`;
+  corpo += `Lido dos literais de \`capabilities\` em \`apps/api/src/infrastructure/llm/\` — `;
+  corpo += `**${ordenados.length} providers**.\n\n`;
+  corpo += '| provider | streaming | tool calling | list_models | fonte |\n';
+  corpo += '| --- | --- | --- | --- | --- |\n';
+  for (const [provider, c] of ordenados) {
+    corpo += `| \`${provider}\` | ${marca(c.streaming)} | ${marca(c.toolCalling)} | ${marca(c.listModels)} | \`${c.arquivo}\` |\n`;
+  }
+  corpo += '\nProvider sem `list_models` é PULADO pelo sync de catálogo, com o motivo\n';
+  corpo += 'registrado no relatório — nunca tratado como "o catálogo ficou vazio".\n';
+
+  escreverBloco('docs/reference/llm-providers.md', 'providers-capabilities', corpo);
+}
+
 // ------------------------------------------- 4. documento OpenAPI da api
 
 /**
@@ -485,6 +540,7 @@ gerarEnv();
 gerarEventos();
 gerarOpenapi();
 gerarReferenciaApi();
+gerarProvidersDeLlm();
 verificarIndiceAdr();
 verificarContagensDeAdr();
 

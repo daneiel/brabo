@@ -44,6 +44,69 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api,engine,web**: o catálogo de modelos passa a ser **vivo**. Provider que
+  declara `listModels` é sincronizado por um job periódico (6h, configurável por
+  `MODEL_SYNC_INTERVAL_SECONDS`) e pelo botão "Atualizar catálogo" na tela de
+  configurações. Modelo descoberto entra **desativado**, modelo que some do
+  provider vira `unavailable` e **nunca é deletado**, e provider que falhou é
+  PULADO com a origem da falha — nunca tratado como catálogo vazio
+  ([RN-043](docs/business-rules.md#rn-043))
+- **api**: `is_active` de modelo ganha dentes. Binding NOVO para modelo
+  desativado ou indisponível responde **422**, e a cascata de resolução passa a
+  pular o indisponível avisando qual escopo pulou, em vez de trocar o modelo em
+  silêncio. Quando o turno carrega ferramentas, a cascata revalida
+  `supports_tool_calling` em todo nível — sem isso o fallback pousaria um agente
+  num modelo chat-only ([RN-040](docs/business-rules.md#rn-040))
+- **api**: custo passa a ser **reproduzível**, não só imutável. `token_usage`
+  grava o preço que produziu cada `cost_micros`, e toda mudança de preço deixa
+  linha em `model_price_changes` com o par antes/depois e a origem
+  (`manual` | `sync`). Preço novo continua não reprecificando o passado
+  ([RN-044](docs/business-rules.md#rn-044)). Decisão em
+  [ADR 0042](docs/adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md)
+- **web**: o seletor de modelos foi reagrupado por **origem** (Local · APIs
+  diretas · Hubs), ganhou selos de custo, janela e tool calling, e o filtro
+  **"aptos para agentes"** que a mensagem de erro da RN-040 citava desde a Fase
+  9a sem existir. O custo passa a mostrar entrada e saída separadas — a média
+  escondia a assimetria. Modelo indisponível aparece esmaecido e marcado, nunca
+  some. Nova seção de curadoria do catálogo, com ativação em lote e o relatório
+  do sync por provider
+- **api,k8s**: preparo da Fase 9b — o metering passa a registrar **quem serviu**
+  a chamada, não só por onde ela entrou. `token_usage` ganha
+  `upstream_provider` (texto, `null` quando não houve hub), as métricas
+  `brabo_llm_tokens_total` e `brabo_llm_cost_micros_total` ganham o rótulo
+  `upstream_provider`, e o dashboard executivo ganha um painel de custo por
+  provedor subjacente ([RN-042](docs/business-rules.md#rn-042)). `models` ganha
+  `manual_pricing`, que marca preço digitado da doc para o sync da Fase 9c não
+  sobrescrever sem decisão explícita. **Nenhum provider novo entrou ainda** — a
+  verificação na doc oficial dos seis depende de acesso de rede que a sessão
+  não teve. **Pendente:** o aceite com credencial real do OpenRouter (catálogo
+  de verdade e `upstream_provider` preenchido numa task) fica em aberto até os
+  seis providers entrarem — registrado no
+  [ADR 0042](docs/adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md)
+- **api**: providers de LLM passam a ter **contrato único** e capabilities, como
+  os de git desde a Fase 2. `LLMProvider` ganha `capabilities`
+  (`streaming`/`toolCalling`) e `models` ganha `supports_tool_calling`,
+  `supports_streaming` e `supports_vision`. Vincular a um **agente** um modelo
+  sem tool calling nativo passa a responder **422** com a mensagem que aponta o
+  filtro "aptos para agentes" ([RN-040](docs/business-rules.md#rn-040)); a
+  migração `0026` faz o backfill dirigido dos modelos do seed, então bindings
+  existentes continuam valendo. Decisão em
+  [ADR 0041](docs/adr/0041-base-openai-compativel-e-contrato-de-llm-providers.md)
+- **api**: o provider da **OpenAI passa a fazer tool calling** — antes ele
+  descartava `options.tools` em silêncio, e um agente vinculado a um modelo da
+  OpenAI terminava sem concluir. Ele agora deriva de uma base OpenAI-compatível
+  sobre `node:http`, com teto de **inatividade** de socket configurável em
+  `LLM_REQUEST_TIMEOUT_MS`. A dependência `openai` saiu do projeto
+- **api**: o provider da **Anthropic passa a fazer tool calling**, com
+  `role: 'tool'` virando bloco `tool_result` no turno certo em vez de ser
+  achatado em texto de `user`
+- **api**: falha de provider de LLM passa a ser **classificada**. O chunk de
+  erro ganha `code` (`auth`, `rate_limit`, `model_not_found`, `context_length`,
+  `timeout`, `connection`, `upstream`) em vez de repassar a string crua do
+  vendor. Contagem de token que o provider não informou vem marcada como
+  estimada ([RN-041](docs/business-rules.md#rn-041)) — o número serve para
+  cobrar, mas não se confunde com um zero informado
+
 - **api,web**: fidelidade do dashboard de projetos ao design aprovado
   (`design/SCREENS.md`, `design/COMPONENTS.md`):
   - linha de resumo `"{N} projetos ativos · {M} agentes · {gasto} este mês"`,
@@ -207,6 +270,18 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **api**: a imagem de produção da api voltou a **subir**. A Fase 9a exportou
+  `LLM_PROVIDER_NAMES` (uma `const`) de `packages/shared`, e esse era o
+  primeiro valor em runtime de um pacote que o `Dockerfile.prod` documenta
+  como "100% tipos": todo import anterior era `import type` e sumia na
+  compilação. Com um valor de verdade, o compilado passou a fazer `require`
+  do pacote, cujo `main` aponta pro `.ts` cru — o Node recusa type stripping
+  dentro de `node_modules` e o container morria no boot com
+  `ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING`. A lista mudou para
+  `apps/api/src/domain/llm/llm-provider-names.ts`, amarrada ao tipo do shared
+  por exaustividade nos dois sentidos, e o invariante — que até aqui só vivia
+  num comentário de Dockerfile — passou a ter teste
+  (`test/packages-shared-so-tipos.spec.ts`)
 - **web**: `design-contraste.test.ts` (citado em comentários de
   `Input.module.css`/`AuthLayout.module.css` desde a Fase 7, mas nunca
   criado) recriado — e achou 2 pares novos que reprovavam o AA: o papel
