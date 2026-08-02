@@ -32,6 +32,8 @@ import type {
   ProposedAction,
   ProvisionedRepository,
   ProvisionRepositoryResult,
+  AdoptRepositoryResult,
+  BootstrapPlanEstado,
   RepoBootstrapStatus,
   ResolvedBinding,
   Role,
@@ -226,6 +228,36 @@ export const getRepository = (projectId: string) =>
   get<ProvisionedRepository | null>(`/projects/${projectId}/git/repository`);
 export const getBootstrapStatus = (projectId: string) =>
   get<RepoBootstrapStatus>(`/projects/${projectId}/git/bootstrap`);
+
+// Adoção (Fase 12a): `adopt` NÃO cria nada e NÃO executa nada — devolve o
+// plano (dry-run). Só `approvePlan` roda o bootstrap; `skipPlan` dispensa.
+export const adoptRepository = (
+  projectId: string,
+  provider: 'local' | 'github' | 'gitlab',
+  input: { externalId: string },
+) =>
+  post<AdoptRepositoryResult>(
+    `/projects/${projectId}/git/${provider}/repository/adopt`,
+    input,
+  );
+export const getBootstrapPlan = (projectId: string) =>
+  get<BootstrapPlanEstado>(`/projects/${projectId}/git/bootstrap/plan`);
+export const approveBootstrapPlan = (
+  projectId: string,
+  input: { planGeneratedAt: string },
+) =>
+  post<ProvisionRepositoryResult>(
+    `/projects/${projectId}/git/bootstrap/plan/approve`,
+    input,
+  );
+export const skipBootstrapPlan = (
+  projectId: string,
+  input: { planGeneratedAt: string },
+) =>
+  post<ProvisionRepositoryResult>(
+    `/projects/${projectId}/git/bootstrap/plan/skip`,
+    input,
+  );
 // Cadastra um PAT de git do usuário — o backend TESTA a conexão antes de
 // persistir (422 = token inválido); nunca reexibe o token.
 export const registerGitCredential = (input: {

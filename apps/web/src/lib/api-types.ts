@@ -288,6 +288,9 @@ export interface Budget {
 
 export type GitProviderName = 'local' | 'github' | 'gitlab';
 
+/** Criado pelo Brabo, ou adotado de fora (Fase 12a, RN-046). */
+export type RepoOrigin = 'created' | 'adopted';
+
 export interface ProvisionedRepository {
   id: string;
   projectId: string;
@@ -296,6 +299,7 @@ export interface ProvisionedRepository {
   url: string;
   defaultBranch: string;
   visibility: 'public' | 'private';
+  origin: RepoOrigin;
   provisionedBy: string;
   createdAt: string;
   updatedAt: string;
@@ -318,7 +322,9 @@ export type BootstrapStepStatus = 'pending' | 'running' | 'done' | 'failed';
 export type ProvisioningStatus =
   | 'provisioning'
   | 'provisioned'
-  | 'provision_failed';
+  | 'provision_failed'
+  /** Repo adotado com plano gerado e ainda não decidido — nada roda. */
+  | 'awaiting_plan_decision';
 
 export interface RepoBootstrapStatus {
   status: ProvisioningStatus | null;
@@ -331,6 +337,48 @@ export interface RepoBootstrapStatus {
 export interface ProvisionRepositoryResult {
   repository: ProvisionedRepository;
   bootstrap: { step: BootstrapStepName; status: BootstrapStepStatus };
+}
+
+// --- Adoção de repositório existente (Fase 12a) — espelha
+// apps/api/src/domain/git/repo-bootstrap.entity.ts ---
+
+export interface BootstrapPlanStep {
+  step: BootstrapStepName;
+  actionType: string;
+  payload: Record<string, unknown>;
+}
+
+export type BootstrapDiagnosticKind =
+  | 'missing_branch'
+  | 'unprotected_branch'
+  | 'missing_file'
+  | 'extra_branch'
+  | 'capability_unsupported';
+
+export interface BootstrapDiagnostic {
+  kind: BootstrapDiagnosticKind;
+  detail: Record<string, unknown>;
+}
+
+export interface BootstrapPlan {
+  generatedAt: string;
+  steps: BootstrapPlanStep[];
+  diagnostics: BootstrapDiagnostic[];
+}
+
+export type BootstrapPlanDecision = 'approved' | 'as_is';
+
+export interface BootstrapPlanEstado {
+  plan: BootstrapPlan | null;
+  decision: BootstrapPlanDecision | null;
+  decidedAt: string | null;
+  decidedBy: string | null;
+}
+
+export interface AdoptRepositoryResult {
+  repository: ProvisionedRepository;
+  plan: BootstrapPlan;
+  alreadyAdopted: boolean;
 }
 
 // --- Chat SSE — espelha ChatSseEvent de

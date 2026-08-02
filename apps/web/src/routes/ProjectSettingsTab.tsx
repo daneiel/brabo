@@ -12,6 +12,8 @@ import {
   rollbackInstruction,
   deleteCredential,
   getAgentModelBinding,
+  getBootstrapPlan,
+  getRepository,
   listCredentials,
   listModels,
   listProjectMembers,
@@ -33,6 +35,8 @@ import {
   CREDENCIAIS_DE_LLM,
   type LlmCredentialProvider,
 } from '../lib/models';
+import { divergencias } from '../lib/adoption';
+import { Alert } from '../components/ui/Alert';
 import { Table, type TableColumn } from '../components/ui/Table';
 import { Badge, type BadgeTone } from '../components/ui/Badge';
 import { Select } from '../components/ui/Select';
@@ -73,6 +77,7 @@ interface ProjectSettingsTabProps {
 export function ProjectSettingsTab({ projectId }: ProjectSettingsTabProps) {
   return (
     <div>
+      <RepositorySection projectId={projectId} />
       <ModelsSection projectId={projectId} />
       <CatalogoDeModelos projectId={projectId} />
       <MembersSection projectId={projectId} />
@@ -290,6 +295,68 @@ function MembersSection({ projectId }: { projectId: string }) {
       </div>
 
       <Table columns={columns} rows={members ?? []} rowKey={(m) => m.userId} emptyMessage="Nenhum membro além do dono do projeto." />
+    </div>
+  );
+}
+
+/**
+ * Repositório do projeto e, quando ele foi ADOTADO, as divergências que
+ * o plano registrou (Fase 12a).
+ *
+ * Fica em Configurações, não na Visão geral: aquela é a superfície viva
+ * (time de agentes, execução, feed de atividade em polling), e um
+ * diagnóstico estático e não-bloqueante ali competiria com o que muda. É
+ * aqui que fatos de repositório e credencial já moram, e é para cá que o
+ * maintainer vem quando decide agir.
+ */
+function RepositorySection({ projectId }: { projectId: string }) {
+  const { data: repository } = useQuery({
+    queryKey: ['repository', projectId],
+    queryFn: () => getRepository(projectId),
+  });
+  const { data: planoEstado } = useQuery({
+    queryKey: ['bootstrap-plan', projectId],
+    queryFn: () => getBootstrapPlan(projectId),
+    enabled: repository?.origin === 'adopted',
+  });
+
+  if (!repository) return null;
+
+  const avisos = planoEstado?.plan ? divergencias(planoEstado.plan) : [];
+
+  return (
+    <div className={styles.section}>
+      <div className={styles.title}>Repositório</div>
+      <div className={styles.subtitle}>
+        {repository.origin === 'adopted'
+          ? 'Adotado — já existia antes do projeto, e a política de branches é dele.'
+          : 'Criado pelo Brabo, com o bootstrap de Gitflow aplicado.'}
+      </div>
+
+      <div className={styles.repoMeta}>
+        <code>{repository.externalId}</code>
+        <span>
+          {repository.provider} · {repository.defaultBranch}
+        </span>
+      </div>
+
+      {planoEstado?.decision === 'as_is' && (
+        <Alert tone="accent">
+          O bootstrap foi <strong>dispensado</strong> na adoção: nenhuma branch
+          ou proteção foi alterada por nós.
+        </Alert>
+      )}
+
+      {avisos.length > 0 && (
+        <Alert tone="accent">
+          <div>Este repositório diverge do template:</div>
+          <ul>
+            {avisos.map((a) => (
+              <li key={a}>{a}</li>
+            ))}
+          </ul>
+        </Alert>
+      )}
     </div>
   );
 }

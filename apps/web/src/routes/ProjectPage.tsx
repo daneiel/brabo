@@ -55,7 +55,19 @@ export function ProjectPage({ projectId, initialTab }: ProjectPageProps) {
               <span className={styles.name}>{project.name}</span>
             </div>
             <div className={styles.meta}>
-              {repository ? `${repository.provider} · ${repository.visibility} · ${repository.defaultBranch}` : 'repositório não provisionado'}
+              {repository
+                ? [
+                    repository.provider,
+                    repository.visibility,
+                    repository.defaultBranch,
+                    // Fase 12a: adotado é fato permanente do projeto, e
+                    // saber que o repo veio de fora muda como se lê tudo
+                    // o mais (a política de branches é dele, não nossa).
+                    repository.origin === 'adopted' ? 'adotado' : null,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')
+                : 'repositório não provisionado'}
             </div>
           </div>
         </div>

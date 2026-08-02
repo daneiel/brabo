@@ -11,6 +11,7 @@ import { Dashboard } from './routes/Dashboard';
 import { ProjectPage } from './routes/ProjectPage';
 import { SessionPage } from './routes/SessionPage';
 import { ProvisioningPage } from './routes/ProvisioningPage';
+import { AdoptionPlanPage } from './routes/AdoptionPlanPage';
 import { GitErrorPage } from './routes/GitErrorPage';
 import { StatusPage } from './routes/StatusPage';
 import { LoginPage } from './routes/LoginPage';
@@ -204,6 +205,33 @@ const provisioningRoute = createRoute({
     const { projectId } = provisioningRoute.useParams();
     const { provider } = provisioningRoute.useSearch();
     return <ProvisioningPage projectId={projectId} provider={provider} />;
+  },
+});
+
+interface AdoptionSearch {
+  provider: GitProviderName;
+  externalId: string;
+}
+
+const adoptionRoute = createRoute({
+  getParentRoute: () => appLayout,
+  path: '/projects/$projectId/adoption',
+  validateSearch: (search: Record<string, unknown>): AdoptionSearch => ({
+    provider: GIT_PROVIDERS.includes(search.provider as GitProviderName)
+      ? (search.provider as GitProviderName)
+      : 'local',
+    externalId: typeof search.externalId === 'string' ? search.externalId : '',
+  }),
+  component: () => {
+    const { projectId } = adoptionRoute.useParams();
+    const { provider, externalId } = adoptionRoute.useSearch();
+    return (
+      <AdoptionPlanPage
+        projectId={projectId}
+        provider={provider}
+        externalId={externalId}
+      />
+    );
   },
 });
 
