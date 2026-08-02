@@ -27,11 +27,13 @@ defmodule Engine.Dev.NoopDevAgentServer do
   @impl_tag "noop"
 
   def start_link(
-        {project_id, agent_id, module, session_id, task_budget_micros, max_gate_corrections}
+        {project_id, agent_id, module, session_id, task_budget_micros, max_gate_corrections,
+         max_consecutive_blocked}
       ) do
     GenServer.start_link(
       __MODULE__,
-      {project_id, agent_id, module, session_id, task_budget_micros, max_gate_corrections},
+      {project_id, agent_id, module, session_id, task_budget_micros, max_gate_corrections,
+       max_consecutive_blocked},
       name: via(project_id, agent_id)
     )
   end
@@ -44,7 +46,10 @@ defmodule Engine.Dev.NoopDevAgentServer do
   # --- Callbacks ---
 
   @impl true
-  def init({project_id, agent_id, module, session_id, task_budget_micros, max_gate_corrections}) do
+  def init(
+        {project_id, agent_id, module, session_id, task_budget_micros, max_gate_corrections,
+         max_consecutive_blocked}
+      ) do
     state = %{
       project_id: project_id,
       agent_id: agent_id,
@@ -58,7 +63,13 @@ defmodule Engine.Dev.NoopDevAgentServer do
       # durável: o subagente extra da paralelização HERDA a linha do agente
       # base, e trocar o modo não pode zerar o que o usuário configurou.
       task_budget_micros: task_budget_micros,
-      max_gate_corrections: max_gate_corrections
+      max_gate_corrections: max_gate_corrections,
+      # O Noop nunca abre gate nem é acordado por evento (Fase 12b) — fica
+      # sempre "working" pro persist/1 compartilhado, igual ao hardcode que
+      # existia antes disso virar `state.status` de verdade.
+      status: :working,
+      consecutive_blocked: 0,
+      max_consecutive_blocked: max_consecutive_blocked
     }
 
     AgentIo.persist(state)

@@ -28,7 +28,7 @@ defmodule Engine.Dev.DevAgentServerTest do
     session_id = Ecto.UUID.generate()
 
     {:ok, state} =
-      DevAgentServer.init({project_id, "dev-api", "api", session_id, nil, nil})
+      DevAgentServer.init({project_id, "dev-api", "api", session_id, nil, nil, nil})
 
     %{state: state, project_id: project_id, session_id: session_id}
   end
@@ -53,10 +53,11 @@ defmodule Engine.Dev.DevAgentServerTest do
   test "sem task pegável: fica idle, sem propor ações", %{state: state} do
     Process.put(:fake_tasks, [])
 
-    assert {:noreply, _} = DevAgentServer.handle_cast(:work, state)
+    assert {:noreply, new_state} = DevAgentServer.handle_cast(:work, state)
 
     assert_received {:event_appended, _, _, %{type: "dev.idle"}}
     refute_received {:propose_action, _, _, _}
+    assert new_state.status == :idle
   end
 
   test "fluxo feliz: report_done após terminal exit 0 → abre PR, marca in_review", %{
@@ -108,7 +109,20 @@ defmodule Engine.Dev.DevAgentServerTest do
     assert_received {:gate_dispatch, :qa, _, "task-abc12345"}
     refute_received {:task_blocked, _, _, _, _}
 
+    # Fase 12b: PR aberta NÃO libera o agente — o worktree é por agente, não
+    # por task, e o gate ainda vai varrê-lo. task_id/worktree/branch ficam
+    # intactos até um `task.gate_resolved` terminal chegar (fora de escopo
+    # aqui: nada dispara isso ainda).
     assert new_state.task_id == "task-abc12345"
+    assert new_state.status == :awaiting_gate
+    assert new_state.worktree != nil
+    assert new_state.branch != nil
+
+    assert_received {:event_appended, _, _,
+                     %{
+                       type: "dev.awaiting_gate",
+                       payload: %{taskId: "task-abc12345", gate: "qa"}
+                     }}
   end
 
   test "persist não apaga os tetos gravados no init", %{
@@ -119,7 +133,7 @@ defmodule Engine.Dev.DevAgentServerTest do
     # omiti-la no upsert do persist/1 a zerava no primeiro ciclo de task, e os
     # gates (que leem o campo do banco) caíam no default da api.
     {:ok, state} =
-      DevAgentServer.init({project_id, "dev-web", "web", session_id, 500_000, 1})
+      DevAgentServer.init({project_id, "dev-web", "web", session_id, 500_000, 1, nil})
 
     Process.put(:fake_tasks, [%{"id" => "task-tetos123", "title" => "T"}])
     Application.put_env(:engine, :tool_loop_max_iterations, 1)
@@ -131,13 +145,18 @@ defmodule Engine.Dev.DevAgentServerTest do
 
     assert {:noreply, _} = DevAgentServer.handle_cast(:work, state)
 
+    # Fase 12b: task-tetos123 bloqueia (limite de iterações) e o agente já
+    # tenta a próxima — fila vazia, volta a idle, e a linha reflete isso.
+    # O que este teste prova continua valendo: os tetos sobrevivem ao
+    # upsert do :replace, mesmo depois de mais de um persist/1 na sequência.
     row = DevAgentState.get(project_id, "dev-web")
-    assert row.task_id == "task-tetos123"
+    assert row.task_id == nil
+    assert row.status == "idle"
     assert row.max_gate_corrections == 1
     assert row.task_budget_micros == 500_000
   end
 
-  test "falha ao montar o worktree: devolve a task em vez de deixá-la órfã", %{
+  test "falha ao montar o worktree: devolve a task e tenta reivindicar a próxima", %{
     state: state
   } do
     # A task já foi reivindicada (in_progress na api) quando o worktree é
@@ -151,7 +170,13 @@ defmodule Engine.Dev.DevAgentServerTest do
     assert_received {:event_appended, _, _, %{type: "dev.error"}}
     assert_received {:task_blocked, "task-semwt12", "falha ao preparar o worktree", _, "dev-api"}
     refute_received {:propose_action, _, _, _}
-    assert new_state.task_id == "task-semwt12"
+
+    # Fase 12b: task devolvida não fica presa no state — finish_task/2 zera
+    # os campos e o agente já tenta a próxima (fila vazia → volta a idle).
+    assert new_state.task_id == nil
+    assert new_state.status == :idle
+    assert new_state.consecutive_blocked == 1
+    assert_received {:event_appended, _, _, %{type: "dev.idle"}}
   end
 
   test "task impossível: limite de iterações → blocked, sem PR", %{state: state} do
@@ -176,7 +201,8 @@ defmodule Engine.Dev.DevAgentServerTest do
     refute_received {:propose_action, "pr_open", _, _}
     refute_received {:task_marked, _, "in_review", _}
 
-    assert new_state.task_id == "task-impossivel"
+    assert new_state.task_id == nil
+    assert new_state.status == :idle
   end
 
   test "suite vermelha até o limite de iterações: blocked com a saída do teste que falhou", %{
@@ -347,6 +373,17 @@ defmodule Engine.Dev.DevAgentServerTest do
       refute_received {:propose_action, "pr_open", _, _}
 
       assert_received {:gate_dispatch, :qa, _, "task-abc12345"}
+
+      # Fase 12b: volta a awaiting_gate (não idle) — a task segue aberta até
+      # o gate resolver de novo.
+      assert new_state.status == :awaiting_gate
+      assert new_state.task_id == "task-abc12345"
+
+      assert_received {:event_appended, _, _,
+                       %{
+                         type: "dev.awaiting_gate",
+                         payload: %{taskId: "task-abc12345", gate: "qa"}
+                       }}
     end
 
     test "report_blocked na correção: bloqueia igual ao fluxo original", %{state: state} do
@@ -359,11 +396,117 @@ defmodule Engine.Dev.DevAgentServerTest do
 
       findings = %{gate: "secops", reason: "segredo encontrado", diagnosis: "arquivo x linha y"}
 
-      assert {:noreply, _new_state} = DevAgentServer.handle_cast({:correct, findings}, state)
+      assert {:noreply, new_state} = DevAgentServer.handle_cast({:correct, findings}, state)
 
       assert_received {:task_blocked, "task-abc12345", "não consegui corrigir", _, "dev-api"}
       refute_received {:propose_action, "pr_open", _, _}
       refute_received {:gate_dispatch, _, _, _}
+
+      # Fase 12b: bloqueio na correção também libera o agente (finish_task/2)
+      # — sem fake_tasks configurado, cai direto em idle.
+      assert new_state.task_id == nil
+      assert new_state.status == :idle
+      assert_received {:event_appended, _, _, %{type: "dev.idle"}}
+    end
+  end
+
+  describe "circuit breaker (Fase 12b, RN-047)" do
+    test "3 blocks consecutivos → idle_tripped, sem tentar reivindicar de novo", %{
+      state: state
+    } do
+      state = %{state | max_consecutive_blocked: 3}
+
+      Process.put(:fake_tasks, [
+        %{"id" => "task-b1", "title" => "T1"},
+        %{"id" => "task-b2", "title" => "T2"},
+        %{"id" => "task-b3", "title" => "T3"}
+      ])
+
+      Process.put(:fake_dev_context, %{
+        "task" => %{"id" => "x", "title" => "x", "description" => ""},
+        "story" => %{
+          "id" => "st-1",
+          "title" => "x",
+          "description" => "",
+          "rf" => [],
+          "rnf" => [],
+          "dod" => [],
+          "dor" => []
+        },
+        "businessRules" => [],
+        "adrs" => []
+      })
+
+      Process.put(
+        :fake_llm_always,
+        FakeEngineApiClient.tool_call_response("report_blocked", %{
+          "reason" => "sempre falha",
+          "diagnosis" => "propositalmente"
+        })
+      )
+
+      assert {:noreply, new_state} = DevAgentServer.handle_cast(:work, state)
+
+      assert new_state.status == :idle_tripped
+      assert new_state.consecutive_blocked == 3
+      assert new_state.task_id == nil
+
+      assert_received {:event_appended, _, _,
+                       %{type: "dev.idle_tripped", payload: %{consecutiveBlocked: 3}}}
+
+      # Se o breaker não tivesse parado ANTES de uma 4ª tentativa, a fila
+      # vazia teria emitido "dev.idle" em vez de "dev.idle_tripped".
+      refute_received {:event_appended, _, _,
+                       %{type: "dev.idle", payload: %{reason: "sem task pegável"}}}
+    end
+
+    test "orçamento por task não vaza entre reivindicações da mesma sequência", %{
+      state: state
+    } do
+      # Cada task blocked tenta a próxima IMEDIATAMENTE (mesma chamada de
+      # handle_cast) — requisito 4 do CLAUDE.md: o teto por task continua
+      # vindo fresco de state.task_budget_micros a cada ToolLoop.run/1, nunca
+      # acumulado ou decrementado entre tasks.
+      state = %{state | task_budget_micros: 500_000}
+
+      Process.put(:fake_tasks, [
+        %{"id" => "task-cara-1", "title" => "T1"},
+        %{"id" => "task-cara-2", "title" => "T2"}
+      ])
+
+      expensive_tool_call = %{
+        "message" => %{
+          "role" => "assistant",
+          "content" => "",
+          "toolCalls" => [
+            %{"id" => "tc-1", "name" => "search_workspace", "arguments" => %{"query" => "x"}}
+          ]
+        },
+        "usage" => %{
+          "inputTokens" => 1000,
+          "outputTokens" => 1000,
+          "costMicros" => 1_000_000,
+          "estimated" => false
+        },
+        "error" => nil
+      }
+
+      Process.put(:fake_llm_always, expensive_tool_call)
+
+      assert {:noreply, new_state} = DevAgentServer.handle_cast(:work, state)
+
+      assert new_state.consecutive_blocked == 2
+      assert new_state.task_budget_micros == 500_000
+
+      diagnoses =
+        for _ <- 1..2 do
+          assert_received {:task_blocked, _, "orçamento de tokens excedido", diagnosis, "dev-api"}
+          diagnosis
+        end
+
+      # Os dois diagnósticos carregam o MESMO teto — nenhum decremento vazou
+      # da primeira task pra segunda.
+      assert Enum.all?(diagnoses, &(&1 =~ "teto: 500000"))
     end
   end
 end

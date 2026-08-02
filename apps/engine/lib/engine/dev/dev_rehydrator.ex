@@ -22,7 +22,8 @@ defmodule Engine.Dev.DevRehydrator do
         s.session_id,
         s.task_budget_micros,
         s.max_gate_corrections,
-        s.impl
+        s.impl,
+        s.max_consecutive_blocked
       )
     end)
 

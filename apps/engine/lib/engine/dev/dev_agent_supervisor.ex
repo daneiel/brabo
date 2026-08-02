@@ -1,9 +1,10 @@
 defmodule Engine.Dev.DevAgentSupervisor do
   @moduledoc """
   DynamicSupervisor dos dev agents (Fase 4a), um por {project_id, agent_id}.
-  Idempotente; `start_agent/4..7` sinaliza `:started` (start fresco → o
+  Idempotente; `start_agent/4..8` sinaliza `:started` (start fresco → o
   chamador dispara `:work`) vs `:existing`. `task_budget_micros` (teto de
-  tokens por task) e `max_gate_corrections` (teto de correções dev↔gate) são
+  tokens por task), `max_gate_corrections` (teto de correções dev↔gate) e
+  `max_consecutive_blocked` (circuit breaker, Fase 12b — RN-047) são
   opcionais, configurados na ativação da execução.
 
   `impl` escolhe a implementação: `:real` (ToolLoop + LLM) ou `:noop`
@@ -28,7 +29,8 @@ defmodule Engine.Dev.DevAgentSupervisor do
         session_id,
         task_budget_micros \\ nil,
         max_gate_corrections \\ nil,
-        impl \\ :real
+        impl \\ :real,
+        max_consecutive_blocked \\ nil
       ) do
     case Registry.lookup(Engine.Dev.Registry, {project_id, agent_id}) do
       [{pid, _}] ->
@@ -37,7 +39,8 @@ defmodule Engine.Dev.DevAgentSupervisor do
       [] ->
         spec =
           {server_for(impl),
-           {project_id, agent_id, module, session_id, task_budget_micros, max_gate_corrections}}
+           {project_id, agent_id, module, session_id, task_budget_micros, max_gate_corrections,
+            max_consecutive_blocked}}
 
         case DynamicSupervisor.start_child(__MODULE__, spec) do
           {:ok, pid} ->

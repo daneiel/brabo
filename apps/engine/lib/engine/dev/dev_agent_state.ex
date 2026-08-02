@@ -23,6 +23,9 @@ defmodule Engine.Dev.DevAgentState do
     field :status, :string, default: "working"
     field :task_budget_micros, :integer
     field :max_gate_corrections, :integer
+    # Circuit breaker por agente (Fase 12b, RN-047) — ver dev_agent_server.ex.
+    field :consecutive_blocked, :integer, default: 0
+    field :max_consecutive_blocked, :integer
     # "real" (ToolLoop + LLM) | "noop" (smoke test da infra, sem LLM) — a
     # reidratação escolhe o módulo a subir a partir daqui.
     field :impl, :string, default: "real"
@@ -40,6 +43,8 @@ defmodule Engine.Dev.DevAgentState do
     :status,
     :task_budget_micros,
     :max_gate_corrections,
+    :consecutive_blocked,
+    :max_consecutive_blocked,
     :impl
   ]
 
@@ -57,6 +62,8 @@ defmodule Engine.Dev.DevAgentState do
            :status,
            :task_budget_micros,
            :max_gate_corrections,
+           :consecutive_blocked,
+           :max_consecutive_blocked,
            :impl,
            :updated_at
          ]},
@@ -89,6 +96,28 @@ defmodule Engine.Dev.DevAgentState do
       from(s in __MODULE__,
         where: s.project_id == ^project_id and s.task_id == ^task_id,
         limit: 1
+      )
+    )
+  end
+
+  @doc """
+  Agentes de um módulo do projeto (Fase 12b — `DevAgentWakeWorker` usa isto
+  pra achar quem acordar em `task.became_claimable`, incluindo extras de
+  paralelização como `dev-api-2`, que `Naming.dev_agent_id/1` não conhece).
+  """
+  def list_by_module(project_id, module) do
+    Repo.all(
+      from(s in __MODULE__,
+        where: s.project_id == ^project_id and s.module == ^module
+      )
+    )
+  end
+
+  @doc "Agentes de um módulo do projeto num status específico."
+  def list_by_status(project_id, module, status) do
+    Repo.all(
+      from(s in __MODULE__,
+        where: s.project_id == ^project_id and s.module == ^module and s.status == ^status
       )
     )
   end

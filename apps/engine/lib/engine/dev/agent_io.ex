@@ -12,8 +12,9 @@ defmodule Engine.Dev.AgentIo do
 
   Todas as funções recebem o `state` do GenServer, que precisa ter as chaves
   `:project_id`, `:agent_id`, `:module`, `:session_id`, `:task_id`,
-  `:worktree`, `:branch`, `:impl`, `:task_budget_micros` e
-  `:max_gate_corrections`.
+  `:worktree`, `:branch`, `:impl`, `:task_budget_micros`,
+  `:max_gate_corrections`, `:status` e `:consecutive_blocked`/
+  `:max_consecutive_blocked` (Fase 12b — circuit breaker por agente).
   """
 
   alias Engine.Dev.DevAgentState
@@ -129,13 +130,18 @@ defmodule Engine.Dev.AgentIo do
       session_id: state.session_id,
       task_id: state.task_id,
       worktree_path: state.worktree,
-      status: "working",
+      # Fase 12b: o estado real do agente (idle | working | awaiting_gate |
+      # idle_tripped), não mais hardcoded — é o que a reidratação e o
+      # painel passam a ler.
+      status: to_string(state.status),
       # OBRIGATÓRIO mesmo quando nil: a coluna está na lista de :replace do
       # on_conflict, então omitir aqui APAGA o teto gravado no init — e os
       # gates leem esse campo do banco (qa/secops_agent_server), caindo no
       # DEFAULT_MAX_GATE_CORRECTIONS da api sem o usuário pedir.
       task_budget_micros: state.task_budget_micros,
       max_gate_corrections: state.max_gate_corrections,
+      consecutive_blocked: state.consecutive_blocked,
+      max_consecutive_blocked: state.max_consecutive_blocked,
       # Mesma armadilha do :replace acima — e omitir aqui faria a reidratação
       # subir um agente REAL onde havia um Noop (e vice-versa).
       impl: state.impl

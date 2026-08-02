@@ -15,6 +15,7 @@ defmodule EngineWeb.ExecutionCommandController do
       ) do
     task_budget_micros = Map.get(params, "taskBudgetMicros")
     max_gate_corrections = Map.get(params, "maxGateCorrections")
+    max_consecutive_blocked = Map.get(params, "maxConsecutiveBlocked")
     # "real" (default) | "noop" — ver Engine.Dev.NoopDevAgentServer.
     impl = Map.get(params, "impl", "real")
 
@@ -29,7 +30,8 @@ defmodule EngineWeb.ExecutionCommandController do
           session_id,
           task_budget_micros,
           max_gate_corrections,
-          impl
+          impl,
+          max_consecutive_blocked
         )
 
       if origin == :started, do: DevAgentSupervisor.server_for(impl).work(project_id, agent_id)
@@ -50,7 +52,8 @@ defmodule EngineWeb.ExecutionCommandController do
     # aqui: ela não persiste o orçamento escolhido na ativação, então o
     # estado durável do engine é o único lugar que conhece um valor
     # customizado. O modo segue a mesma regra: aceitar a paralelização de uma
-    # execução Noop não pode subir um agente real (com LLM e custo).
+    # execução Noop não pode subir um agente real (com LLM e custo). O teto
+    # do circuit breaker (Fase 12b) segue a mesma herança.
     case DevAgentState.get(project_id, Naming.dev_agent_id(module)) do
       nil ->
         conn
@@ -68,7 +71,8 @@ defmodule EngineWeb.ExecutionCommandController do
             session_id,
             base.task_budget_micros,
             base.max_gate_corrections,
-            base.impl
+            base.impl,
+            base.max_consecutive_blocked
           )
 
         if origin == :started,

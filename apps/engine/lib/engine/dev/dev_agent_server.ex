@@ -11,6 +11,28 @@ defmodule Engine.Dev.DevAgentServer do
   estourado, ou o modelo parar sem sinalizar) devolve a task com diagnóstico
   (`blocked`), nunca abre PR vermelha nem entra em loop infinito. Estado
   durável em `dev_agent_states` (rehydration no boot).
+
+  ## Máquina de estados (Fase 12b — reagendamento após gate)
+
+  `status`: `:working | :awaiting_gate | :idle | :idle_tripped`, persistido
+  em `dev_agent_states.status`.
+
+  PR aberta não libera o agente — ele entra em `:awaiting_gate` e MANTÉM
+  `task_id`/`worktree`/`branch`: o worktree é um por AGENTE (não por task,
+  ver `WorktreeManager`), e os gates de QA/SecOps o encontram via
+  `DevAgentState.find_by_task_id/2`. Reivindicar a próxima task nesse
+  meio-tempo destruiria fisicamente o worktree que o gate ainda está
+  varrendo. Só um desfecho TERMINAL do gate (`task.gate_resolved` via
+  outbox — ver `Engine.Workers.DevAgentWakeWorker`) libera o agente pra
+  tentar a próxima task, através de `finish_task/2`.
+
+  Task que termina `blocked` localmente (no ToolLoop) passa por
+  `finish_task/2`, que incrementa `consecutive_blocked`; N consecutivas
+  (teto por projeto, `max_consecutive_blocked`) para o agente em
+  `:idle_tripped` — o circuit breaker da RN-047. `finish_task/2` também
+  liga um sucesso terminal (`:approved`, zerando o contador) e um bloqueio
+  REMOTO (teto de correções do gate estourado) — chegam na Fase 12b-3, via
+  `task.gate_resolved` (outbox).
   """
 
   use GenServer, restart: :temporary
@@ -27,12 +49,20 @@ defmodule Engine.Dev.DevAgentServer do
   # certo a partir dela (ver Engine.Dev.DevRehydrator).
   @impl_tag "real"
 
+  # Usado só quando `max_consecutive_blocked` não veio configurado (projeto
+  # ainda não migrou pra Fase 12b, ou início de ciclo antes da 12b-4 ligar a
+  # superfície de config) — nunca deixa o breaker inoperante por ausência de
+  # valor.
+  @default_max_consecutive_blocked 3
+
   def start_link(
-        {project_id, agent_id, module, session_id, task_budget_micros, max_gate_corrections}
+        {project_id, agent_id, module, session_id, task_budget_micros, max_gate_corrections,
+         max_consecutive_blocked}
       ) do
     GenServer.start_link(
       __MODULE__,
-      {project_id, agent_id, module, session_id, task_budget_micros, max_gate_corrections},
+      {project_id, agent_id, module, session_id, task_budget_micros, max_gate_corrections,
+       max_consecutive_blocked},
       name: via(project_id, agent_id)
     )
   end
@@ -53,7 +83,10 @@ defmodule Engine.Dev.DevAgentServer do
   # --- Callbacks ---
 
   @impl true
-  def init({project_id, agent_id, module, session_id, task_budget_micros, max_gate_corrections}) do
+  def init(
+        {project_id, agent_id, module, session_id, task_budget_micros, max_gate_corrections,
+         max_consecutive_blocked}
+      ) do
     state = %{
       project_id: project_id,
       agent_id: agent_id,
@@ -64,7 +97,10 @@ defmodule Engine.Dev.DevAgentServer do
       branch: nil,
       impl: @impl_tag,
       task_budget_micros: task_budget_micros,
-      max_gate_corrections: max_gate_corrections
+      max_gate_corrections: max_gate_corrections,
+      status: :idle,
+      consecutive_blocked: 0,
+      max_consecutive_blocked: max_consecutive_blocked
     }
 
     AgentIo.persist(state)
@@ -75,23 +111,14 @@ defmodule Engine.Dev.DevAgentServer do
   @impl true
   def handle_cast(:work, state) do
     AgentIo.emit(state, "dev.started", %{agentId: state.agent_id, module: state.module})
-
-    case AgentIo.claim_task(state) do
-      {:ok, nil} ->
-        AgentIo.emit(state, "dev.idle", %{agentId: state.agent_id, reason: "sem task pegável"})
-        {:noreply, state}
-
-      {:ok, task} ->
-        {:noreply, run_task(state, task)}
-
-      {:error, reason} ->
-        AgentIo.emit(state, "dev.error", %{agentId: state.agent_id, reason: inspect(reason)})
-        {:noreply, state}
-    end
+    {:noreply, try_claim(state)}
   end
 
   @impl true
   def handle_cast({:correct, findings}, state) do
+    state = %{state | status: :working}
+    AgentIo.persist(state)
+
     case ContextBuilder.fetch(state.project_id, state.session_id, state.task_id, state.module) do
       {:ok, dev_context} ->
         {:noreply, implement_correction(state, dev_context, findings)}
@@ -101,6 +128,62 @@ defmodule Engine.Dev.DevAgentServer do
         {:noreply, state}
     end
   end
+
+  # --- Máquina de estados (Fase 12b) ---
+
+  # Ponto único de claim — chamado pelo `:work` inicial e por `finish_task/2`
+  # sempre que uma task termina e o agente segue livre.
+  defp try_claim(state) do
+    case AgentIo.claim_task(state) do
+      {:ok, nil} ->
+        state = %{state | status: :idle}
+        AgentIo.persist(state)
+        AgentIo.emit(state, "dev.idle", %{agentId: state.agent_id, reason: "sem task pegável"})
+        state
+
+      {:ok, task} ->
+        run_task(%{state | status: :working}, task)
+
+      {:error, reason} ->
+        AgentIo.emit(state, "dev.error", %{agentId: state.agent_id, reason: inspect(reason)})
+        state
+    end
+  end
+
+  # Único lugar que zera task_id/worktree/branch — deixá-los obsoletos faria
+  # um gate tardio achar o worktree ERRADO via `find_by_task_id/2`. `:blocked`
+  # incrementa o contador do breaker e, ao bater o teto, para em
+  # `:idle_tripped` SEM tentar reivindicar. O desfecho `:approved` (que zera
+  # o contador) chega na Fase 12b-3, quando `task.gate_resolved` passa a
+  # existir de fato — sem caller, a cláusula ficaria morta pro compilador.
+  defp finish_task(state, :blocked) do
+    counter = state.consecutive_blocked + 1
+
+    state =
+      Map.merge(state, %{
+        task_id: nil,
+        worktree: nil,
+        branch: nil,
+        consecutive_blocked: counter
+      })
+
+    if tripped?(counter, state.max_consecutive_blocked) do
+      state = %{state | status: :idle_tripped}
+      AgentIo.persist(state)
+
+      AgentIo.emit(state, "dev.idle_tripped", %{
+        agentId: state.agent_id,
+        consecutiveBlocked: counter
+      })
+
+      state
+    else
+      try_claim(state)
+    end
+  end
+
+  defp tripped?(counter, max) when is_integer(max), do: counter >= max
+  defp tripped?(counter, _), do: counter >= @default_max_consecutive_blocked
 
   # --- Ciclo do DevAgent ---
 
@@ -133,12 +216,17 @@ defmodule Engine.Dev.DevAgentServer do
             implement(state, dev_context)
 
           {:error, reason} ->
-            AgentIo.block_task(state, "falha ao montar contexto da task", inspect(reason))
+            state
+            |> AgentIo.block_task("falha ao montar contexto da task", inspect(reason))
+            |> finish_task(:blocked)
         end
 
       {:error, reason} ->
         AgentIo.emit(state, "dev.error", %{agentId: state.agent_id, reason: inspect(reason)})
-        AgentIo.block_task(state, "falha ao preparar o worktree", inspect(reason))
+
+        state
+        |> AgentIo.block_task("falha ao preparar o worktree", inspect(reason))
+        |> finish_task(:blocked)
     end
   end
 
@@ -263,6 +351,16 @@ defmodule Engine.Dev.DevAgentServer do
     AgentIo.propose_commit(state, summary)
     AgentIo.propose_push(state)
     trigger_gate_recheck(state, findings.gate)
+
+    state = %{state | status: :awaiting_gate}
+    AgentIo.persist(state)
+
+    AgentIo.emit(state, "dev.awaiting_gate", %{
+      agentId: state.agent_id,
+      taskId: state.task_id,
+      gate: findings.gate
+    })
+
     state
   end
 
@@ -271,31 +369,33 @@ defmodule Engine.Dev.DevAgentServer do
          state,
          _findings
        ) do
-    AgentIo.block_task(state, reason, diagnosis)
+    state
+    |> AgentIo.block_task(reason, diagnosis)
+    |> finish_task(:blocked)
   end
 
   defp handle_correction_outcome({:limit_reached, ctx}, state, _findings) do
-    AgentIo.block_task(
-      state,
-      "limite de iterações atingido (correção)",
-      last_terminal_output(ctx)
-    )
+    state
+    |> AgentIo.block_task("limite de iterações atingido (correção)", last_terminal_output(ctx))
+    |> finish_task(:blocked)
   end
 
   defp handle_correction_outcome({:budget_exceeded, ctx}, state, _findings) do
-    AgentIo.block_task(
-      state,
+    state
+    |> AgentIo.block_task(
       "orçamento de tokens excedido (correção)",
       "gasto: #{ctx.tokens_spent_micros} micro-USD (teto: #{ctx.token_budget_micros})"
     )
+    |> finish_task(:blocked)
   end
 
   defp handle_correction_outcome({:ok, ctx}, state, _findings) do
-    AgentIo.block_task(
-      state,
+    state
+    |> AgentIo.block_task(
       "parou sem concluir nem reportar bloqueio (correção)",
       stop_diagnosis(ctx)
     )
+    |> finish_task(:blocked)
   end
 
   defp trigger_gate_recheck(state, "qa"),
@@ -323,6 +423,18 @@ defmodule Engine.Dev.DevAgentServer do
 
     :ok = Dispatcher.run_qa(state.project_id, state.task_id)
 
+    # Fase 12b: PR aberta não libera o agente — o worktree é por AGENTE, não
+    # por task (ver moduledoc), e o gate ainda vai varrê-lo. Só um desfecho
+    # TERMINAL do gate (via `task.gate_resolved`) chama `finish_task/2`.
+    state = %{state | status: :awaiting_gate}
+    AgentIo.persist(state)
+
+    AgentIo.emit(state, "dev.awaiting_gate", %{
+      agentId: state.agent_id,
+      taskId: state.task_id,
+      gate: "qa"
+    })
+
     state
   end
 
@@ -332,23 +444,30 @@ defmodule Engine.Dev.DevAgentServer do
          _task,
          _story
        ) do
-    AgentIo.block_task(state, reason, diagnosis)
+    state
+    |> AgentIo.block_task(reason, diagnosis)
+    |> finish_task(:blocked)
   end
 
   defp handle_outcome({:limit_reached, ctx}, state, _task, _story) do
-    AgentIo.block_task(state, "limite de iterações atingido", last_terminal_output(ctx))
+    state
+    |> AgentIo.block_task("limite de iterações atingido", last_terminal_output(ctx))
+    |> finish_task(:blocked)
   end
 
   defp handle_outcome({:budget_exceeded, ctx}, state, _task, _story) do
-    AgentIo.block_task(
-      state,
+    state
+    |> AgentIo.block_task(
       "orçamento de tokens excedido",
       "gasto: #{ctx.tokens_spent_micros} micro-USD (teto: #{ctx.token_budget_micros})"
     )
+    |> finish_task(:blocked)
   end
 
   defp handle_outcome({:ok, ctx}, state, _task, _story) do
-    AgentIo.block_task(state, "parou sem concluir nem reportar bloqueio", stop_diagnosis(ctx))
+    state
+    |> AgentIo.block_task("parou sem concluir nem reportar bloqueio", stop_diagnosis(ctx))
+    |> finish_task(:blocked)
   end
 
   # Distingue falha de provider (timeout, 5xx) de "o modelo simplesmente parou".

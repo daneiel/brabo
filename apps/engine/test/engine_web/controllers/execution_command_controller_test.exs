@@ -106,6 +106,12 @@ defmodule EngineWeb.ExecutionCommandControllerTest do
     assert server_module(project_id, "dev-api-2") == NoopDevAgentServer,
            "aceitar a paralelização de uma execução Noop subiu um agente REAL — " <>
              "um clique passaria a gastar token sem o usuário pedir"
+
+    # Drena o cast assíncrono do :work disparado pelo parallelize ANTES do
+    # teste terminar — sem isto, a mensagem de {:task_claimed, ...} podia
+    # chegar depois, quando `Application.get_env(:engine, :test_pid)` já
+    # apontava pro próximo teste (mailbox de outro processo).
+    assert_receive {:task_claimed, "api", "dev-api-2"}, 2_000
   end
 
   test "parallelize herda os tetos do agente base do módulo", %{
