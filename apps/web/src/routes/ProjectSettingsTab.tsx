@@ -12,11 +12,14 @@ import {
   rollbackInstruction,
   deleteCredential,
   getAgentModelBinding,
+  getBootstrapPlan,
+  getRepository,
   listCredentials,
   listModels,
   listProjectMembers,
   removeProjectMember,
   setAgentModelBinding,
+  updateProject,
   upsertCredential,
 } from '../lib/api-client';
 import { AGENT_LIST } from '../lib/agents';
@@ -28,11 +31,14 @@ import type {
   ProficiencyLevel,
   ProficiencyProfile,
   Role,
+  StoryPromotionMode,
 } from '../lib/api-types';
 import {
   CREDENCIAIS_DE_LLM,
   type LlmCredentialProvider,
 } from '../lib/models';
+import { divergencias } from '../lib/adoption';
+import { Alert } from '../components/ui/Alert';
 import { Table, type TableColumn } from '../components/ui/Table';
 import { Badge, type BadgeTone } from '../components/ui/Badge';
 import { Select } from '../components/ui/Select';
@@ -73,6 +79,9 @@ interface ProjectSettingsTabProps {
 export function ProjectSettingsTab({ projectId }: ProjectSettingsTabProps) {
   return (
     <div>
+      <RepositorySection projectId={projectId} />
+      <ExecutionSection projectId={projectId} />
+      <PromotionSection projectId={projectId} />
       <ModelsSection projectId={projectId} />
       <CatalogoDeModelos projectId={projectId} />
       <MembersSection projectId={projectId} />
@@ -290,6 +299,220 @@ function MembersSection({ projectId }: { projectId: string }) {
       </div>
 
       <Table columns={columns} rows={members ?? []} rowKey={(m) => m.userId} emptyMessage="Nenhum membro além do dono do projeto." />
+    </div>
+  );
+}
+
+/**
+ * Repositório do projeto e, quando ele foi ADOTADO, as divergências que
+ * o plano registrou (Fase 12a).
+ *
+ * Fica em Configurações, não na Visão geral: aquela é a superfície viva
+ * (time de agentes, execução, feed de atividade em polling), e um
+ * diagnóstico estático e não-bloqueante ali competiria com o que muda. É
+ * aqui que fatos de repositório e credencial já moram, e é para cá que o
+ * maintainer vem quando decide agir.
+ */
+function RepositorySection({ projectId }: { projectId: string }) {
+  const { data: repository } = useQuery({
+    queryKey: ['repository', projectId],
+    queryFn: () => getRepository(projectId),
+  });
+  const { data: planoEstado } = useQuery({
+    queryKey: ['bootstrap-plan', projectId],
+    queryFn: () => getBootstrapPlan(projectId),
+    enabled: repository?.origin === 'adopted',
+  });
+
+  if (!repository) return null;
+
+  const avisos = planoEstado?.plan ? divergencias(planoEstado.plan) : [];
+
+  return (
+    <div className={styles.section}>
+      <div className={styles.title}>Repositório</div>
+      <div className={styles.subtitle}>
+        {repository.origin === 'adopted'
+          ? 'Adotado — já existia antes do projeto, e a política de branches é dele.'
+          : 'Criado pelo Brabo, com o bootstrap de Gitflow aplicado.'}
+      </div>
+
+      <div className={styles.repoMeta}>
+        <code>{repository.externalId}</code>
+        <span>
+          {repository.provider} · {repository.defaultBranch}
+        </span>
+      </div>
+
+      {planoEstado?.decision === 'as_is' && (
+        <Alert tone="accent">
+          O bootstrap foi <strong>dispensado</strong> na adoção: nenhuma branch
+          ou proteção foi alterada por nós.
+        </Alert>
+      )}
+
+      {avisos.length > 0 && (
+        <Alert tone="accent">
+          <div>Este repositório diverge do template:</div>
+          <ul>
+            {avisos.map((a) => (
+              <li key={a}>{a}</li>
+            ))}
+          </ul>
+        </Alert>
+      )}
+    </div>
+  );
+}
+
+const DEFAULT_MAX_CONSECUTIVE_BLOCKED = 3;
+
+/**
+ * Teto do circuit breaker por dev agent (Fase 12b — RN-047): quantas tasks
+ * consecutivas terminando `blocked` param o agente do módulo em
+ * `idle_tripped`, em vez de continuar reivindicando trabalho.
+ *
+ * Primeiro campo numérico da aba — sem botão de "voltar ao default": o
+ * default É o valor mostrado quando o projeto ainda não tem um próprio
+ * (`null` na api), então digitar por cima e salvar já cobre os dois casos.
+ */
+export function ExecutionSection({ projectId }: { projectId: string }) {
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+  const { data: project } = useQuery({
+    queryKey: ['project', projectId],
+    queryFn: () => getProject(projectId),
+  });
+  const [draft, setDraft] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const valorAtual = project?.maxConsecutiveBlocked ?? DEFAULT_MAX_CONSECUTIVE_BLOCKED;
+  const valorExibido = draft ?? String(valorAtual);
+  const numero = Number(valorExibido);
+  const valido = Number.isInteger(numero) && numero > 0;
+
+  async function handleSave() {
+    if (!valido) return;
+    setSaving(true);
+    try {
+      await updateProject(projectId, { maxConsecutiveBlocked: numero });
+      await queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      setDraft(null);
+      showToast({ title: 'Teto do circuit breaker salvo', tone: 'success' });
+    } catch {
+      showToast({ title: 'Não foi possível salvar', tone: 'danger' });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!project) return null;
+
+  return (
+    <div className={styles.section}>
+      <div className={styles.title}>Execução</div>
+      <div className={styles.subtitle}>
+        Circuit breaker dos dev agents — vale a partir da próxima ativação da
+        execução, não afeta agentes já rodando.
+      </div>
+
+      <div className={styles.credentialCard}>
+        <div className={styles.credentialInfo}>
+          <div className={styles.credentialProvider}>
+            Tasks blocked seguidas até parar
+          </div>
+          <div className={styles.credentialStatus}>
+            {project.maxConsecutiveBlocked === null
+              ? `Sem valor próprio — usa o default (${DEFAULT_MAX_CONSECUTIVE_BLOCKED})`
+              : 'Configurado para este projeto'}
+          </div>
+        </div>
+        <div className={styles.credentialInput}>
+          <Input
+            type="number"
+            min={1}
+            value={valorExibido}
+            onChange={(e) => setDraft(e.target.value)}
+          />
+        </div>
+        <Button onClick={handleSave} disabled={!valido || saving}>
+          {saving ? 'Salvando…' : 'Salvar'}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Quem promove história a `ready` (Fase 12c — RN-048).
+ *
+ * Salva no `onChange`, sem botão, como o seletor de papel em `MembersSection`:
+ * é uma escolha entre dois valores nomeados, não um campo digitado que precise
+ * de confirmação.
+ */
+export function PromotionSection({ projectId }: { projectId: string }) {
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+  const { data: project } = useQuery({
+    queryKey: ['project', projectId],
+    queryFn: () => getProject(projectId),
+  });
+  const [saving, setSaving] = useState(false);
+
+  async function handleChange(modo: StoryPromotionMode) {
+    setSaving(true);
+    try {
+      await updateProject(projectId, { storyPromotion: modo });
+      await queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      showToast({
+        title:
+          modo === 'manual'
+            ? 'Promoção manual: você decide o que fica pronto'
+            : 'Promoção automática: o PO promove sozinho',
+        tone: 'success',
+      });
+    } catch {
+      showToast({ title: 'Não foi possível salvar', tone: 'danger' });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!project) return null;
+
+  return (
+    <div className={styles.section}>
+      <div className={styles.title}>Promoção de histórias</div>
+      <div className={styles.subtitle}>
+        Uma história só vira trabalho pegável quando está <em>pronta</em>. Isto
+        define quem dá esse passo. As validações são as MESMAS nos dois modos —
+        o que muda é quem dispara, nunca o que é exigido. Vale para as próximas
+        histórias; as que já estão propostas continuam esperando você.
+      </div>
+
+      <div className={styles.credentialCard}>
+        <div className={styles.credentialInfo}>
+          <div className={styles.credentialProvider}>Quem promove</div>
+          <div className={styles.credentialStatus}>
+            {project.storyPromotion === 'manual'
+              ? 'O PO deixa a história completa e ela aguarda você no Backlog. Nenhuma tarefa dela é pegável até lá.'
+              : 'O PO promove sozinho ao terminar uma história completa — era o comportamento anterior à Fase 12c, mantido como opção.'}
+          </div>
+        </div>
+        <div className={styles.credentialInput}>
+          <Select
+            value={project.storyPromotion}
+            disabled={saving}
+            aria-label="Quem promove histórias"
+            onChange={(e) =>
+              handleChange(e.target.value as StoryPromotionMode)
+            }
+          >
+            <option value="manual">Manual — eu promovo</option>
+            <option value="auto">Automática — o PO promove</option>
+          </Select>
+        </div>
+      </div>
     </div>
   );
 }

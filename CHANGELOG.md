@@ -6,6 +6,23 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### ⚠ Mudanças incompatíveis
 
+- **api,web,engine**: história **não vira `ready` sozinha** em projeto novo. O
+  default de `projects.story_promotion` passa a ser `manual` (Fase 12c): o PO
+  deixa a história completa, ela fica `draft` marcada como proposta, e **nenhuma
+  tarefa dela é pegável** até o usuário promover na aba Backlog — individualmente
+  ou em lote. É o terceiro achado P1 do dogfooding: a promoção automática na
+  criação contradizia o princípio de autoridade final do usuário, porque um
+  agente de LLM decidia sozinho o que entrava na fila dos dev agents.
+  **Projeto existente não muda de comportamento**: a migração `0033` faz um
+  backfill dirigido movendo todos os que já existiam para `auto`, o modo
+  anterior, que continua disponível em Configurações → Promoção de histórias.
+  Quem cria projeto novo e espera o backlog andar sozinho precisa ou promover,
+  ou trocar o modo para `auto`.
+  A recusa devolve a história ao PO com o motivo, como um gate devolve uma PR ao
+  dev. As validações são as MESMAS nos dois modos — o que muda é quem dispara,
+  nunca o que é exigido, e há teste de simetria fixando isso
+  ([RN-048](docs/business-rules.md#rn-048),
+  [ADR 0046](docs/adr/0046-promocao-de-story-com-autoridade-do-usuario.md))
 - **auth**: o Keycloak saiu. A api passa a ser o **emissor** dos tokens de
   acesso, num corte **atômico** — não há período de coexistência, e um token
   do emissor antigo não é aceito em rota nenhuma. Todo mundo é deslogado no
@@ -42,8 +59,177 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   na Fase 8b (só QA) era estreita demais pra segunda área
   ([RN-037](docs/business-rules.md#rn-037))
 
+### Correções
+
+- **web,ci**: o **build de produção da web estava quebrado** — e com ele a
+  imagem `brabo-web`, ou seja, o deploy Kubernetes inteiro. Quatro erros de
+  tipo acumulados em três fases sem ninguém ver, porque o CI rodava `lint` e
+  `test` do web e **nunca** `build`: o vitest transpila por esbuild (apaga os
+  tipos sem verificar) e o eslint aqui não faz checagem de tipo. O único lugar
+  que verificava era o `tsc -b` dentro do build da imagem, que só roda no
+  bootstrap do k8s, à mão.
+  Entram um script `typecheck` no web e o passo correspondente no CI, ao lado
+  do que a api já tinha. Os quatro: `awaiting_plan_decision` faltando no mapa
+  de badge do `ProjectCard` (o estado entrou no tipo na 12a e o mapa ficou
+  para trás); parâmetro-propriedade proibido por `erasableSyntaxOnly` num
+  mock de teste; e dois fixtures de `Project` desatualizados.
+  Junto, um defeito de runtime da mesma safra: **`adoptionRoute` era criada e
+  nunca entrava na árvore de rotas** — a tela do plano de adoção era
+  inalcançável por URL, e o `navigate` do wizard apontava para uma rota que
+  não existia nos tipos
+
 ### Novidades
 
+- **api,engine,docs**: dois achados do dogfooding revisitados
+  ([ADR 0048](docs/adr/0048-decisao-no-log-e-a-ordem-do-gate.md)).
+  **A decisão de uma ação passa a existir no event log**
+  ([RN-049](docs/business-rules.md#rn-049)): `proposed_action.created`,
+  `.approved` e `.denied` viram eventos de domínio com o ator REAL — o usuário
+  que clicou, ou o agente que propôs. Iam só para o outbox, que é transporte e
+  é podado, e por isso "cliques de aprovação" — a métrica principal da Fase 10 —
+  não pôde ser colhida (achado #17). `created.payload.status` distingue clique
+  humano de auto-aprovação por política. `docs/reference/events.md` documentava
+  os três desde sempre; até aqui isso não era verdade.
+  **O gate deixa de abrir sem PR** ([RN-050](docs/business-rules.md#rn-050)).
+  `AgentIo.propose/3` descartava o status da ação, então com a autonomia do dev
+  em `require_approval` commit/push/PR nasciam `pending` e o agente abria o gate
+  assim mesmo: o QA varria o WORKTREE (onde os arquivos estão), aprovava, e **a
+  task fechava como concluída sem uma linha commitada e sem PR nenhuma**. Agora
+  o agente lê o desfecho das três e, se alguma ficou pendente, espera em
+  `awaiting_approval` retendo o worktree; quem o solta é `task.pr_settled`,
+  emitido pela api quando o `pr_open` tem desfecho. PR negada devolve a task com
+  diagnóstico e **não** conta para o circuit breaker.
+  Isso também elimina o **D5** — o worktree reciclado sob aprovação pendente,
+  que o [ADR 0045](docs/adr/0045-reagendamento-por-evento-do-dev-agent.md) tinha
+  registrado como limite conhecido. A previsão de lá (worktree por task) **não
+  foi cumprida de propósito**: ela consertava o sintoma; a causa era a ordem do
+  gate
+
+- **engine,api,docs**: a **Fase 12 fecha** com os três achados P1 de
+  operabilidade do dogfooding provados mortos numa execução única
+  ([ADR 0047](docs/adr/0047-operabilidade-pos-dogfooding.md)). A validação é um
+  script — `pnpm --filter api validacao:fase-12` — que sai com código != 0
+  quando um critério não fecha e extrai a tabela de evidência do banco em vez de
+  transcrevê-la, recusando-se a terminar bem se alguma etapa que ele afirmou ter
+  exercitado não deixou evento no log. Ela roda com provider Local e sem LLM, e
+  o documento diz no primeiro parágrafo o que isso **não** prova (GitHub remoto
+  e o julgamento dos gates), com o porquê de cada limite.
+  Junto veio um achado da própria preparação: o `NoopDevAgentServer` tinha
+  ficado de fora da Fase 12b — fixava `status: :working`, não assinava o `Wake`
+  e processava uma task antes de parar. O achado #10 estava vivo dentro do único
+  veículo capaz de validar a fase sem gastar token. A máquina de estados foi
+  movida para `Engine.Dev.AgentIo` e passou a ser compartilhada pelos dois
+  agentes, em vez de copiada.
+  A colheita da Fase 10 foi finalmente escrita
+  ([primeiro-dogfooding](docs/explanation/primeiro-dogfooding.md)) — os 17
+  achados com arquivo:linha são reais, e tudo que dependeria de contagem ao vivo
+  entrou como `não medido`, nunca como estimativa
+
+- **engine,api,web**: o dev agent passa a processar toda a fila do módulo
+  **sem restart do engine** (Fase 12b). É o segundo achado P1 do
+  dogfooding: `:work` só disparava na ativação e no aceite de
+  paralelização, e a Fase 10 rodou em tandas — um humano reativando a
+  execução (ou reiniciando o engine) entre cada task. O agente ganha uma
+  máquina de estados persistida (`working`\|`awaiting_gate`\|`idle`\|
+  `idle_tripped`) e reage a dois eventos entregues pela outbox já
+  existente (`aggregate_type` ganhou `"task"` ao lado de `"session"`):
+  gate resolvido (aprova → reivindica a próxima; bloqueia → conta pro
+  circuit breaker) e task nova ficando pegável (acorda todo agente idle
+  do módulo). PR aberta NÃO libera o agente — ele fica em
+  `awaiting_gate` retendo o worktree (que é por AGENTE, não por task, e
+  o gate ainda precisa dele) até o desfecho terminal.
+  **Circuit breaker** (`RN-047`): N tasks consecutivas terminando
+  `blocked` param o agente em `idle_tripped`, configurável por projeto
+  (Configurações → Execução), sem destrave automático — rearmar é um
+  clique (`POST .../agents/:agentId/rearm`) que registra quem clicou.
+  **Reidratação** estende os quatro estados: `awaiting_gate` retoma
+  intacto e reage a um gate que resolve DEPOIS do restart (é por isso
+  que o sinal tinha que ser outbox, não uma chamada em processo);
+  `working` interrompido bloqueia com diagnóstico honesto do restart
+  em vez de tentar retomar um ToolLoop que só existia em memória — e
+  isso NÃO conta pro circuit breaker. Decisão completa em
+  [ADR 0045](docs/adr/0045-reagendamento-por-evento-do-dev-agent.md).
+  **Limite conhecido:** entrega do wake é at-most-once (PubSub, não
+  `:global` — Registry é local ao nó e o engine roda 2 réplicas em
+  produção); um wake perdido só é recuperado no próximo evento.
+  O aceite de 3 tasks em sequência sem restart passou a ser executável na
+  Fase 12d (`pnpm --filter api validacao:fase-12`), com o veredito do gate
+  entrando pelo funil real (`RecordGateVerdictUseCase`) em vez de pelo
+  julgamento de um modelo — que continua não determinístico, pelo mesmo
+  motivo do [ADR 0020](docs/adr/0020-destravar-gates-qa-secops.md).
+- **api,web**: o projeto passa a poder **adotar um repositório que já
+  existe**, em vez de só criar um (Fase 12a). É o primeiro dos três achados
+  P1 do dogfooding: a Fase 10 só rodou porque alguém inseriu à mão as linhas
+  de `project_repositories`/`repo_bootstraps`, a segunda "marcada como
+  convergida para o produto não tentar retomar bootstrap nenhum". O wizard
+  ganha "Criar novo | Adotar existente"; adotar valida o acesso com `getRepo`
+  (que existia desde a Fase 2 e nenhum caso de uso chamava) e produz um
+  **plano** — o que o bootstrap faria, sem fazer nada. O usuário aprova o
+  plano inteiro, ou adota como está e dispensa o bootstrap. Enquanto não
+  decidir, **nada roda**: nenhuma proteção de branch é sobrescrita fora de um
+  plano aprovado ([RN-045](docs/business-rules.md#rn-045)). As duas tabelas
+  ganham `origin` (`created` | `adopted`), com backfill `created`
+  ([RN-046](docs/business-rules.md#rn-046)). Repositório adotado com branches
+  fora do template (`develop`, `release/*`) vira diagnóstico informativo na
+  tela de Configurações — **nunca bloqueia**, porque a política é dele.
+  Decisão em [ADR 0044](docs/adr/0044-adocao-de-repositorio-existente.md).
+  **Limite conhecido:** "proteção divergente" é presença × ausência, porque é
+  só isso que o contrato expõe — uma branch com proteção PARCIAL conta como
+  desprotegida (o `ProtectionPolicy` normalizado segue adiado pelo ADR 0028).
+  **Pendente:** o aceite contra o fork da Fase 10, gated por
+  `ADOPT_TEST_REPO` + `GITHUB_TEST_TOKEN`, é somente leitura e nunca aprova
+- **api,web**: **OpenRouter** entra como o primeiro hub sobre a base
+  OpenAI-compatível (Fase 11a). Declara `listModels: true` — o catálogo do
+  OpenRouter passa a sincronizar sozinho, com preço convertido do formato
+  USD/token do provider para o `bigint` de micro-USD/milhão do schema. Ganha
+  headers próprios (`HTTP-Referer`, `X-Title`), tratamento do erro que chega
+  NO MEIO do stream (modo de falha que só um hub tem, porque roteia pra
+  infraestrutura de terceiros) e teste de conexão (`GET /key`) antes de
+  cifrar/persistir a credencial — o primeiro `LLMCredentialConnectionTester`
+  do lado LLM, mesmo momento do fluxo de credencial git desde o ADR 0004. Tela
+  de credenciais e seletor de modelo já acomodavam a categoria "Hubs" desde a
+  preparação da Fase 9b; só precisaram do provider de verdade. O smoke test do
+  aceite (`openrouter-provider.smoke.spec.ts`) já existe, gated por
+  `OPENROUTER_TEST_KEY` — cadastro, sync populando o catálogo, ativação
+  curada e sessão de chat de ponta a ponta com custo congelado em
+  `token_usage`, tudo num fluxo só. **Pendente:** rodar de fato contra uma
+  chave real fecha a Fase 11a
+- **api**: os cinco providers restantes da Fase 9b entram (Fase 11b) —
+  `LLM_PROVIDER_NAMES` vai de 4 para **9**. Cada um investigado do zero
+  contra a doc oficial, sem herdar suposição de quirk entre providers
+  (achado real, não copiado): **Together** e **DeepInfra** declaram
+  `listModels: true` com preço confirmado no catálogo (Together tem
+  pricing achatado em número USD/milhão — unidade inferida por
+  comparação de mercado, não documentada explicitamente pela Together;
+  DeepInfra tem o catálogo **público, sem autenticação**, confirmado ao
+  vivo, o que também significa que ela não tem teste de conexão — só o
+  primeiro chat real descobre uma chave ruim). **NVIDIA NIM**, **Bitdeer**
+  e **Vultr** declaram `listModels: false` (sem preço confirmado na rota
+  que a base realmente chama) e vivem de seed manual — a decisão do
+  Vultr mudou durante a implementação: a doc aponta um endpoint com preço
+  que devolveu 404 ao vivo, então ficou `false` em vez do `true`
+  cogitado no planejamento. Bitdeer tem a doc pública mais rasa dos
+  cinco, mas ainda assim ganhou três ids de modelo REAIS (confirmados em
+  exemplo de config do próprio blog da Bitdeer) e teste de conexão
+  (`GET /v1/models`, autenticado, confirmado 401 sem chave). Suite de
+  contrato verde nos 9 providers; smoke test por provider gated por
+  `<PROVIDER>_TEST_KEY`, cada um pulado-avisado sem a chave. **Pendente:**
+  rodar os cinco smokes contra chave real fecha a Fase 11b
+- **docs**: [ADR 0043](docs/adr/0043-seis-providers-de-llm-e-o-fechamento-da-fase-9b.md)
+  fecha a Fase 9b de fato — registra a tabela de aceite dos seis
+  providers (11a+11b), o padrão "falso honesto" com os dois casos onde a
+  decisão só foi resolvida ao vivo durante a implementação (DeepInfra
+  virou `true`, Vultr virou `false` — os dois diferentes do que o
+  planejamento cogitava), e confirma a base intocada: diff vazio no
+  `SyncModelCatalogUseCase`, e o único hook novo em
+  `OpenAICompatibleProvider` (`parseErrorFrame`, +31 linhas) justificado
+  linha a linha — necessário só porque o OpenRouter é o único hub dos
+  seis. A referência gerada
+  (`docs/reference/llm-providers.md`) ganha três colunas por provider
+  (credencial, origem dos modelos, quirks resumidos), todas derivadas do
+  código e da prosa já escrita, e a query de exemplo de custo hub×direto
+  que a Fase 11a tinha prometido. **Pendente:** o mesmo aceite com
+  credencial real dos seis smokes, ainda em aberto
 - **api,engine,web**: o catálogo de modelos passa a ser **vivo**. Provider que
   declara `listModels` é sincronizado por um job periódico (6h, configurável por
   `MODEL_SYNC_INTERVAL_SECONDS`) e pelo botão "Atualizar catálogo" na tela de
@@ -270,6 +456,19 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **infra**: mudar `WEB_PORT` deixa de quebrar o CORS em silêncio. A porta faz
+  parte do contrato de CORS desde o [ADR 0037](docs/adr/0037-cors-do-engine-e-a-porta-como-contrato.md),
+  mas nos composes `WEB_PORT` e `WEB_ORIGIN` tinham defaults **independentes**:
+  quem trocasse a porta (o que o próprio guia de primeiros passos manda fazer
+  quando a 5173 está ocupada) abria o browser numa origem que a api e o engine
+  não aceitavam, e a mensagem no console falava de CORS, não de porta. O default
+  de `WEB_ORIGIN` passa a **derivar** de `WEB_PORT` nos dois composes, e um check
+  do CI impede que alguém volte a separá-los. Definir `WEB_ORIGIN` à mão continua
+  sobrepondo a derivação
+- **deps**: `brace-expansion` sobe para `1.1.18` (era `1.1.16`), fechando o
+  alerta HIGH de DoS por expansão sem limite. Vinha transitivamente do
+  `minimatch@3.1.5`, cujo range já aceitava a versão corrigida — só o lockfile
+  mudou
 - **api**: a imagem de produção da api voltou a **subir**. A Fase 9a exportou
   `LLM_PROVIDER_NAMES` (uma `const`) de `packages/shared`, e esse era o
   primeiro valor em runtime de um pacote que o `Dockerfile.prod` documenta

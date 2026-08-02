@@ -10,7 +10,8 @@ defmodule EngineWeb.ExecutionCommandControllerTest do
     DevAgentState,
     DevAgentSupervisor,
     FakeWorktreeManager,
-    NoopDevAgentServer
+    NoopDevAgentServer,
+    Wake
   }
 
   alias Engine.Sessions.FakeEngineApiClient
@@ -106,6 +107,12 @@ defmodule EngineWeb.ExecutionCommandControllerTest do
     assert server_module(project_id, "dev-api-2") == NoopDevAgentServer,
            "aceitar a paralelização de uma execução Noop subiu um agente REAL — " <>
              "um clique passaria a gastar token sem o usuário pedir"
+
+    # Drena o cast assíncrono do :work disparado pelo parallelize ANTES do
+    # teste terminar — sem isto, a mensagem de {:task_claimed, ...} podia
+    # chegar depois, quando `Application.get_env(:engine, :test_pid)` já
+    # apontava pro próximo teste (mailbox de outro processo).
+    assert_receive {:task_claimed, "api", "dev-api-2"}, 2_000
   end
 
   test "parallelize herda os tetos do agente base do módulo", %{
@@ -147,5 +154,83 @@ defmodule EngineWeb.ExecutionCommandControllerTest do
 
     assert conn.status == 409
     refute DevAgentState.get(project_id, "dev-web-2")
+  end
+
+  describe "rearm (Fase 12b — RN-047)" do
+    test "agente existente: 202 e entrega :rearm por PubSub", %{
+      conn: conn,
+      project_id: project_id,
+      session_id: session_id
+    } do
+      DevAgentState.upsert!(%{
+        project_id: project_id,
+        agent_id: "dev-api",
+        module: "api",
+        session_id: session_id,
+        status: "idle_tripped",
+        consecutive_blocked: 3,
+        impl: "real"
+      })
+
+      :ok = Wake.subscribe(project_id, "dev-api")
+
+      conn =
+        ExecutionCommandController.rearm(conn, %{
+          "sessionId" => session_id,
+          "projectId" => project_id,
+          "agentId" => "dev-api"
+        })
+
+      assert conn.status == 202
+      assert_receive :rearm
+    end
+
+    test "agente que NÃO está travado: 409, nada entregue (D8)", %{
+      conn: conn,
+      project_id: project_id,
+      session_id: session_id
+    } do
+      # Antes devolvia 202 pra qualquer status. Como o `handle_info(:rearm, …)`
+      # é no-op fora de `idle_tripped`, a api gravava um `dev.rearmed` —
+      # evento IMUTÁVEL — pra um rearm que comprovadamente não aconteceu.
+      DevAgentState.upsert!(%{
+        project_id: project_id,
+        agent_id: "dev-api",
+        module: "api",
+        session_id: session_id,
+        status: "working",
+        impl: "real"
+      })
+
+      :ok = Wake.subscribe(project_id, "dev-api")
+
+      conn =
+        ExecutionCommandController.rearm(conn, %{
+          "sessionId" => session_id,
+          "projectId" => project_id,
+          "agentId" => "dev-api"
+        })
+
+      assert conn.status == 409
+      refute_receive :rearm, 100
+    end
+
+    test "agente inexistente: 404, nada entregue", %{
+      conn: conn,
+      project_id: project_id,
+      session_id: session_id
+    } do
+      :ok = Wake.subscribe(project_id, "dev-fantasma")
+
+      conn =
+        ExecutionCommandController.rearm(conn, %{
+          "sessionId" => session_id,
+          "projectId" => project_id,
+          "agentId" => "dev-fantasma"
+        })
+
+      assert conn.status == 404
+      refute_receive :rearm, 100
+    end
   end
 end

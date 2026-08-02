@@ -177,6 +177,24 @@ export function classifyEvent(event: SessionEvent): ActivityDisplay {
       text: `${actorLabel} bloqueou a task: ${payloadField(payload, 'reason') ?? 'sem motivo informado'}`,
     };
   }
+  // O circuit breaker (Fase 12b, RN-047) é o evento MAIS grave que um dev
+  // agent produz — ele parou de trabalhar e só um humano o destrava. Cai
+  // aqui, antes do genérico de `dev.`, porque naquele ele virava "atividade
+  // em dev-api" em cinza neutro: indistinguível de ruído no sino de
+  // notificações, enquanto UMA task bloqueada aparecia em vermelho.
+  if (type === 'dev.idle_tripped') {
+    const n = payloadField(payload, 'consecutiveBlocked');
+    return {
+      kind: 'commit',
+      icon: CommitIcon,
+      color: 'var(--danger)',
+      bad: true,
+      text:
+        `${actorLabel} PAROU — circuit breaker` +
+        (n ? `: ${n} tasks bloqueadas seguidas` : '') +
+        '. Rearme no painel do time para retomar.',
+    };
+  }
   if (type.startsWith('dev.')) {
     return {
       kind: 'commit',
@@ -190,7 +208,11 @@ export function classifyEvent(event: SessionEvent): ActivityDisplay {
             ? `${actorLabel} começou a trabalhar`
             : type === 'dev.idle'
               ? `${actorLabel} sem tarefa disponível`
-              : `atividade em ${actorLabel}`,
+              : type === 'dev.awaiting_gate'
+                ? `${actorLabel} abriu a PR e aguarda o gate`
+                : type === 'dev.rearmed'
+                  ? `${actorLabel} rearmou ${payloadField(payload, 'agentId') ?? 'o agente'}`
+                  : `atividade em ${actorLabel}`,
     };
   }
   if (type.startsWith('execution.')) {
@@ -248,6 +270,43 @@ export function classifyEvent(event: SessionEvent): ActivityDisplay {
       color: 'var(--text-muted)',
       bad: false,
       text: `task → ${payloadField(payload, 'status') ?? 'novo status'}`,
+    };
+  }
+  // Fase 12c (RN-048). As três precedem o fallback `type.startsWith('backlog.')`
+  // lá embaixo, que as reduziria a "criou uma história" — mesmo cuidado que a
+  // 12b tomou com `dev.idle_tripped`.
+  if (type === 'backlog.story_promotion_proposed') {
+    return {
+      kind: 'generic',
+      icon: StackIcon,
+      color: 'var(--warning)',
+      // Não é falha: o PO fez o trabalho dele. É uma decisão esperando você.
+      bad: false,
+      text: `história "${payloadField(payload, 'title') ?? 'sem título'}" pronta, aguardando sua promoção`,
+    };
+  }
+  if (type === 'backlog.story_promotion_returned') {
+    return {
+      kind: 'generic',
+      icon: StackIcon,
+      color: 'var(--danger)',
+      bad: true,
+      text: `você devolveu "${payloadField(payload, 'title') ?? 'uma história'}" ao PO: ${payloadField(payload, 'reason') ?? 'sem motivo'}`,
+    };
+  }
+  if (type === 'backlog.story_transitioned') {
+    const para = payloadField(payload, 'to');
+    // `ready` com ator `user` é a promoção manual; com ator `po`, o modo auto.
+    const quem = actorLabel === 'user' ? 'você promoveu' : `${actorLabel} moveu`;
+    return {
+      kind: 'generic',
+      icon: StackIcon,
+      color: para === 'ready' ? 'var(--success)' : 'var(--text-muted)',
+      bad: false,
+      text:
+        para === 'ready'
+          ? `${quem} uma história a pronta — as tarefas dela ficaram pegáveis`
+          : `história → ${para ?? 'novo estado'}`,
     };
   }
   if (type === 'backlog.story_demoted') {

@@ -109,7 +109,16 @@ emissão. É como o parecer de um gate vira dado, não texto.
 
 **Worktree** — `git worktree`: uma cópia de trabalho isolada por dev agent,
 sobre o mesmo repositório. Dois devs mexem em branches diferentes sem se
-atropelar.
+atropelar. É por **agente**, não por task: quem reivindica a próxima task
+substitui o diretório, e é isso que obriga o agente a segurá-lo enquanto um
+gate ainda vai lê-lo.
+
+**Estados do dev agent** — `working` (implementando), `awaiting_approval`
+(propôs commit/push/PR e alguma ficou pendente de aprovação — **sem PR não se
+abre gate**, [RN-050](business-rules.md#rn-050)), `awaiting_gate` (PR aberta,
+esperando o veredito), `idle` (sem task pegável, processo vivo) e
+`idle_tripped` (circuit breaker disparado, só sai por rearm explícito —
+[RN-047](business-rules.md#rn-047)). Os três primeiros retêm o worktree.
 
 ---
 

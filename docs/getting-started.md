@@ -70,7 +70,7 @@ Para saber em qual você está sem adivinhar: `pnpm dev:preflight`.
 
 | sintoma | causa |
 |---|---|
-| porta ocupada | quase sempre é o cluster local ainda de pé — veja acima. Se não for, mude `API_PORT`, `ENGINE_PORT`, `WEB_PORT` ou `OLLAMA_PORT` no `.env` |
+| porta ocupada | quase sempre é o cluster local ainda de pé — veja acima. Se não for, mude `API_PORT`, `ENGINE_PORT`, `WEB_PORT` ou `OLLAMA_PORT` no `.env`. Mudar `WEB_PORT` é seguro: o `WEB_ORIGIN` do CORS deriva dele, então a origem aceita acompanha a porta ([ADR 0037](adr/0037-cors-do-engine-e-a-porta-como-contrato.md)) |
 | api sobe e cai | veja `docker compose logs api` — quase sempre é a migração |
 
 ## 2. Entrar

@@ -286,3 +286,43 @@ describe('classifyEvent — delegação de área (Fase 8b/8c, narrada no feed �
     expect(c.text).toContain('algo-novo');
   });
 });
+
+describe('classifyEvent — reagendamento e circuit breaker (Fase 12b)', () => {
+  it('idle_tripped é vermelho, marcado como bad, e diz o que fazer', () => {
+    // A regressão que isto trava: antes caía no genérico de `dev.` e virava
+    // "atividade em dev-api" em cinza neutro — no SINO DE NOTIFICAÇÕES,
+    // indistinguível de ruído, enquanto UMA task bloqueada saía em vermelho.
+    // É o evento mais grave que um dev agent produz.
+    const c = classifyEvent(
+      ev('dev.idle_tripped', 'dev-api', { consecutiveBlocked: 3 }),
+    );
+
+    expect(c.bad).toBe(true);
+    expect(c.color).toBe('var(--danger)');
+    expect(c.text).toContain('circuit breaker');
+    expect(c.text).toContain('3');
+    expect(c.text).toContain('Rearme');
+    expect(c.text).not.toContain('atividade em');
+  });
+
+  it('idle_tripped sem contador ainda diz o essencial', () => {
+    const c = classifyEvent(ev('dev.idle_tripped', 'dev-api', {}));
+    expect(c.bad).toBe(true);
+    expect(c.text).toContain('circuit breaker');
+  });
+
+  it('awaiting_gate e rearmed deixam de cair no genérico', () => {
+    expect(
+      classifyEvent(ev('dev.awaiting_gate', 'dev-api', { gate: 'qa' })).text,
+    ).toContain('aguarda o gate');
+
+    expect(
+      classifyEvent(ev('dev.rearmed', 'user-1', { agentId: 'dev-api' })).text,
+    ).toContain('dev-api');
+  });
+
+  it('awaiting_gate NÃO é bad — é o fluxo normal, não um problema', () => {
+    const c = classifyEvent(ev('dev.awaiting_gate', 'dev-api', { gate: 'qa' }));
+    expect(c.bad).toBe(false);
+  });
+});

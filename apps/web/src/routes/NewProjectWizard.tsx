@@ -10,8 +10,11 @@ import {
 } from '../lib/api-client';
 import {
   canAdvanceFromCredential,
+  canAdvanceFromDetails,
+  canAdvanceFromMode,
   providerNeedsCredential,
   slugify,
+  type ModoDeRepositorio,
 } from '../lib/wizard';
 import { BOOTSTRAP_STEPS } from '../lib/bootstrap';
 import { CredentialStep } from '../components/wizard/CredentialStep';
@@ -22,8 +25,27 @@ import { useToast } from '../components/ui/ToastProvider';
 import { GitHubIcon, GitLabIcon, LocalRepoIcon, PlusIcon } from '../components/ui/icons';
 import styles from './NewProjectWizard.module.css';
 
-type StepKey = 'provider' | 'credential' | 'details' | 'policy' | 'confirm';
+type StepKey =
+  | 'mode'
+  | 'provider'
+  | 'credential'
+  | 'details'
+  | 'policy'
+  | 'confirm';
 type Visibility = 'private' | 'public';
+
+const MODOS: { id: ModoDeRepositorio; label: string; desc: string }[] = [
+  {
+    id: 'create',
+    label: 'Criar novo',
+    desc: 'O Brabo cria o repositório no provider e roda o bootstrap de Gitflow.',
+  },
+  {
+    id: 'adopt',
+    label: 'Adotar existente',
+    desc: 'Aponta o projeto para um repositório que já existe. Nada é criado, e nada é alterado sem você aprovar.',
+  },
+];
 
 const PROVIDERS: {
   id: GitProviderName;
@@ -37,6 +59,7 @@ const PROVIDERS: {
 ];
 
 const STEP_TITLE: Record<StepKey, string> = {
+  mode: 'Criar novo ou adotar existente',
   provider: 'Onde hospedar',
   credential: 'Credencial de acesso',
   details: 'Nome e visibilidade',
@@ -50,8 +73,10 @@ interface NewProjectWizardProps {
 }
 
 export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps) {
+  const [modo, setModo] = useState<ModoDeRepositorio | undefined>();
   const [provider, setProvider] = useState<GitProviderName | undefined>();
   const [name, setName] = useState('');
+  const [externalId, setExternalId] = useState('');
   const [visibility, setVisibility] = useState<Visibility>('private');
   const [selectedCredentialId, setSelectedCredentialId] = useState<string>();
   const [registering, setRegistering] = useState(false);
@@ -66,12 +91,20 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
   const slug = slugify(name);
   const needsCredential = !!provider && providerNeedsCredential(provider);
 
+  const adotando = modo === 'adopt';
+
   const stepKeys = useMemo<StepKey[]>(() => {
-    const keys: StepKey[] = ['provider'];
+    const keys: StepKey[] = ['mode', 'provider'];
     if (needsCredential) keys.push('credential');
-    keys.push('details', 'policy', 'confirm');
+    keys.push('details');
+    // Adotar não passa pela política: o que vai (ou não) acontecer com as
+    // branches é decidido depois, na tela do PLANO, contra o repositório
+    // real — prometer o template aqui seria mentir sobre o que o
+    // bootstrap faria num repo que já tem política própria.
+    if (!adotando) keys.push('policy');
+    keys.push('confirm');
     return keys;
-  }, [needsCredential]);
+  }, [needsCredential, adotando]);
 
   const currentStep = stepKeys[stepIndex];
 
@@ -98,12 +131,17 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
 
   function canAdvance(): boolean {
     switch (currentStep) {
+      case 'mode':
+        return canAdvanceFromMode(modo);
       case 'provider':
         return !!provider;
       case 'credential':
         return canAdvanceFromCredential(provider!, selectedCredentialId);
       case 'details':
-        return slug.length > 0;
+        return (
+          canAdvanceFromDetails(modo!, { name, externalId }) &&
+          (adotando || slug.length > 0)
+        );
       default:
         return true;
     }
@@ -133,14 +171,32 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
     if (!provider) return;
     setSubmitting(true);
     try {
-      const project = await createProject(workspaceId, { name, slug });
+      // Na adoção o nome do PROJETO vem do identificador do repositório
+      // (o usuário não digitou nome nenhum) — `acme/checkout` vira
+      // "checkout".
+      const nomeDoProjeto = adotando ? nomeDoExternalId(externalId) : name;
+      const project = await createProject(workspaceId, {
+        name: nomeDoProjeto,
+        slug: slugify(nomeDoProjeto),
+      });
       await queryClient.invalidateQueries({ queryKey: ['projects', workspaceId] });
       onClose();
-      navigate({
-        to: '/projects/$projectId/provisioning',
-        params: { projectId: project.id },
-        search: { provider },
-      });
+      // Adotar vai para a tela do PLANO, nunca para a de provisionamento:
+      // aquela dispara `provisionRepository` ao montar, o que CRIARIA um
+      // repositório — exatamente o que a adoção existe para não fazer.
+      navigate(
+        adotando
+          ? {
+              to: '/projects/$projectId/adoption',
+              params: { projectId: project.id },
+              search: { provider, externalId: externalId.trim() },
+            }
+          : {
+              to: '/projects/$projectId/provisioning',
+              params: { projectId: project.id },
+              search: { provider },
+            },
+      );
     } catch {
       showToast({ title: 'Falha ao criar projeto', tone: 'danger' });
       setSubmitting(false);
@@ -174,6 +230,24 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
       </div>
 
       <div className={styles.stepTitle}>{STEP_TITLE[currentStep]}</div>
+
+      {currentStep === 'mode' && (
+        <div className={styles.providerGrid}>
+          {MODOS.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              className={[styles.providerOption, modo === m.id && styles.selected]
+                .filter(Boolean)
+                .join(' ')}
+              onClick={() => setModo(m.id)}
+            >
+              <span className={styles.providerLabel}>{m.label}</span>
+              <span className={styles.providerDesc}>{m.desc}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {currentStep === 'provider' && (
         <div className={styles.providerGrid}>
@@ -211,7 +285,36 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
         />
       )}
 
-      {currentStep === 'details' && (
+      {currentStep === 'details' && adotando && (
+        <div>
+          <div className={styles.field}>
+            <label className={styles.fieldLabel} htmlFor="repo-external-id">
+              Repositório existente
+            </label>
+            <Input
+              id="repo-external-id"
+              value={externalId}
+              onChange={(e) => setExternalId(e.target.value)}
+              placeholder={
+                provider === 'local' ? '/caminho/do/repo.git' : 'acme/checkout'
+              }
+              autoFocus
+            />
+            <div className={styles.slugPreview}>
+              {provider === 'local'
+                ? 'caminho absoluto do bare repo'
+                : 'no formato dono/repositório, como aparece na URL'}
+            </div>
+          </div>
+          <p className={styles.policyNote}>
+            Nada é criado e nada é alterado agora. O próximo passo mostra um{' '}
+            <strong>plano</strong> do que o bootstrap faria neste repositório —
+            e você decide se aplica ou adota como está.
+          </p>
+        </div>
+      )}
+
+      {currentStep === 'details' && !adotando && (
         <div>
           <div className={styles.field}>
             <label className={styles.fieldLabel} htmlFor="project-name">
@@ -273,10 +376,26 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
 
       {currentStep === 'confirm' && (
         <div className={styles.summary}>
+          <SummaryRow
+            label="Modo"
+            value={adotando ? 'Adotar existente' : 'Criar novo'}
+          />
           <SummaryRow label="Provider" value={PROVIDERS.find((p) => p.id === provider)?.label ?? '—'} />
-          <SummaryRow label="Repositório" value={`brabo/${slug}`} mono />
-          <SummaryRow label="Visibilidade" value={visibility === 'private' ? 'Privado' : 'Público'} />
-          <SummaryRow label="Bootstrap" value={`${BOOTSTRAP_STEPS.length} passos de Gitflow`} />
+          {adotando ? (
+            <>
+              <SummaryRow label="Repositório" value={externalId.trim()} mono />
+              <SummaryRow
+                label="Bootstrap"
+                value="nada roda sem sua aprovação"
+              />
+            </>
+          ) : (
+            <>
+              <SummaryRow label="Repositório" value={`brabo/${slug}`} mono />
+              <SummaryRow label="Visibilidade" value={visibility === 'private' ? 'Privado' : 'Público'} />
+              <SummaryRow label="Bootstrap" value={`${BOOTSTRAP_STEPS.length} passos de Gitflow`} />
+            </>
+          )}
         </div>
       )}
 
@@ -298,13 +417,23 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
             </Button>
           ) : (
             <Button variant="success" onClick={handleConfirm} disabled={submitting}>
-              {submitting ? 'Criando…' : 'Provisionar'}
+              {submitting
+                ? 'Criando…'
+                : adotando
+                  ? 'Ver o plano'
+                  : 'Provisionar'}
             </Button>
           )}
         </div>
       </div>
     </Modal>
   );
+}
+
+/** `acme/checkout` → `checkout`; `/srv/git/loja.git` → `loja`. */
+function nomeDoExternalId(externalId: string): string {
+  const ultimo = externalId.trim().replace(/\/+$/, '').split('/').pop() ?? '';
+  return ultimo.replace(/\.git$/, '') || externalId.trim();
 }
 
 function SummaryRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {

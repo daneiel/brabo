@@ -11,6 +11,7 @@ import { Dashboard } from './routes/Dashboard';
 import { ProjectPage } from './routes/ProjectPage';
 import { SessionPage } from './routes/SessionPage';
 import { ProvisioningPage } from './routes/ProvisioningPage';
+import { AdoptionPlanPage } from './routes/AdoptionPlanPage';
 import { GitErrorPage } from './routes/GitErrorPage';
 import { StatusPage } from './routes/StatusPage';
 import { LoginPage } from './routes/LoginPage';
@@ -207,6 +208,33 @@ const provisioningRoute = createRoute({
   },
 });
 
+interface AdoptionSearch {
+  provider: GitProviderName;
+  externalId: string;
+}
+
+const adoptionRoute = createRoute({
+  getParentRoute: () => appLayout,
+  path: '/projects/$projectId/adoption',
+  validateSearch: (search: Record<string, unknown>): AdoptionSearch => ({
+    provider: GIT_PROVIDERS.includes(search.provider as GitProviderName)
+      ? (search.provider as GitProviderName)
+      : 'local',
+    externalId: typeof search.externalId === 'string' ? search.externalId : '',
+  }),
+  component: () => {
+    const { projectId } = adoptionRoute.useParams();
+    const { provider, externalId } = adoptionRoute.useSearch();
+    return (
+      <AdoptionPlanPage
+        projectId={projectId}
+        provider={provider}
+        externalId={externalId}
+      />
+    );
+  },
+});
+
 interface GitErrorSearch {
   projectId?: string;
   provider?: string;
@@ -239,6 +267,11 @@ const routeTree = rootRoute.addChildren([
     projectRoute,
     sessionRoute,
     provisioningRoute,
+    // Fase 12a: a rota era CRIADA e nunca entrava na árvore. Consequência
+    // dupla — o `navigate` do wizard para `/adoption` não existia nos tipos
+    // (quebrando `tsc -b`, e com ele a imagem de produção da web), e em
+    // runtime a tela do plano de adoção era inalcançável por URL.
+    adoptionRoute,
     gitErrorRoute,
   ]),
   authLayout.addChildren([

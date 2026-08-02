@@ -21,10 +21,16 @@ import {
   listAgentAutonomy,
   listModels,
   reanalyzeSession,
+  rearmDevAgent,
   setAgentAutonomy,
   unblockTask,
 } from '../lib/api-client';
-import { deriveAgentRoster, groupRosterByArea, subagentOutcomeLabel } from '../lib/agent-status';
+import {
+  breakerReasonFor,
+  deriveAgentRoster,
+  groupRosterByArea,
+  subagentOutcomeLabel,
+} from '../lib/agent-status';
 import { AREAS, areaFor } from '../lib/agents';
 import { ChevronDownIcon, ChevronRightIcon } from '../components/ui/icons';
 import { deriveExecutionProgress, formatMicros } from '../lib/execution';
@@ -165,6 +171,22 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
     }
   }
 
+  // Única saída de idle_tripped (Fase 12b — RN-047): sem sessionId (sessão
+  // não carregou ainda) o botão nem aparece — deriveAgentRoster depende de
+  // eventos da sessão, então os dois chegam juntos na prática.
+  async function handleRearm(agentId: string) {
+    if (!sessionId) return;
+    try {
+      await rearmDevAgent(projectId, sessionId, agentId);
+      await queryClient.invalidateQueries({
+        queryKey: ['session-events', projectId, sessionId],
+      });
+      showToast({ title: 'Agente rearmado', tone: 'success' });
+    } catch {
+      showToast({ title: 'Não foi possível rearmar o agente', message: agentId, tone: 'danger' });
+    }
+  }
+
   const workingCount = roster.filter((r) => r.status === 'trabalhando').length;
   const waitingCount = roster.filter((r) => r.status === 'aguardando').length;
 
@@ -190,8 +212,13 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
         // é o que torna a autonomia AJUSTÁVEL daqui.
         autonomy={rule?.mode === 'auto_approve' ? 'auto' : 'manual'}
         onAutonomyChange={(mode) => handleAutonomyChange(r.id, autonomyType, mode)}
+        onRearm={r.status === 'travado' ? () => handleRearm(r.id) : undefined}
         activity={
-          progress?.taskTitle ? { label: progress.taskTitle, branch: progress.branch } : undefined
+          r.status === 'travado'
+            ? { label: breakerReasonFor(events, r.id) ?? 'circuit breaker disparado' }
+            : progress?.taskTitle
+              ? { label: progress.taskTitle, branch: progress.branch }
+              : undefined
         }
         tokensMicros={custo}
       />

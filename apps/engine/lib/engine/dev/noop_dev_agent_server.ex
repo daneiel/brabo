@@ -12,26 +12,38 @@ defmodule Engine.Dev.NoopDevAgentServer do
   reidratação suba o server certo depois de um restart do nó.
 
   Tudo que ele exercita — worktree, identidade `dev-<modulo>[bot]`, propostas
-  git — vem de `Engine.Dev.AgentIo`, o MESMO código do agente real: um Noop
-  que reimplementasse essas partes validaria uma cópia, não a infraestrutura.
+  git, e desde a Fase 12d a máquina de estados do reagendamento — vem de
+  `Engine.Dev.AgentIo`, o MESMO código do agente real: um Noop que
+  reimplementasse essas partes validaria uma cópia, não a infraestrutura.
 
-  **Não abre gate.** O QA é um agente de LLM; o Noop para na PR aberta, e o
-  fluxo dev↔gate é o caminho do agente real.
+  **Não JULGA, mas participa do ciclo do gate.** Ele não tem LLM: não corrige
+  uma devolução e não emite parecer. Mas abre a PR, fica em `:awaiting_gate`
+  retendo o worktree, e reage ao desfecho como o agente real — aprovado,
+  reivindica a próxima; bloqueado, conta para o circuit breaker.
+
+  Até a Fase 12d isto não era verdade: o Noop fixava `status: :working`, não
+  assinava o `Engine.Dev.Wake` e processava UMA task antes de parar. Ou seja,
+  o achado #10 do dogfooding — que a Fase 12b existiu para matar — seguia vivo
+  dentro do único veículo capaz de validar a fase sem gastar token. Uma
+  validação de ponta a ponta com este agente reprovaria o critério "zero
+  restarts" por defeito do próprio instrumento.
   """
 
   use GenServer, restart: :temporary
 
-  alias Engine.Dev.AgentIo
+  alias Engine.Dev.{AgentIo, Wake}
   alias Engine.Sessions.EngineApiClient
 
   @impl_tag "noop"
 
   def start_link(
-        {project_id, agent_id, module, session_id, task_budget_micros, max_gate_corrections}
+        {project_id, agent_id, module, session_id, task_budget_micros, max_gate_corrections,
+         max_consecutive_blocked, resume}
       ) do
     GenServer.start_link(
       __MODULE__,
-      {project_id, agent_id, module, session_id, task_budget_micros, max_gate_corrections},
+      {project_id, agent_id, module, session_id, task_budget_micros, max_gate_corrections,
+       max_consecutive_blocked, resume},
       name: via(project_id, agent_id)
     )
   end
@@ -44,52 +56,66 @@ defmodule Engine.Dev.NoopDevAgentServer do
   # --- Callbacks ---
 
   @impl true
-  def init({project_id, agent_id, module, session_id, task_budget_micros, max_gate_corrections}) do
-    state = %{
+  def init(
+        {project_id, agent_id, module, session_id, task_budget_micros, max_gate_corrections,
+         max_consecutive_blocked, resume}
+      ) do
+    base = %{
       project_id: project_id,
       agent_id: agent_id,
       module: module,
       session_id: session_id,
-      task_id: nil,
-      worktree: nil,
-      branch: nil,
       impl: @impl_tag,
-      # Não gasta token nem passa por gate, mas os tetos viajam no estado
-      # durável: o subagente extra da paralelização HERDA a linha do agente
-      # base, e trocar o modo não pode zerar o que o usuário configurou.
+      # Não gasta token, mas os tetos viajam no estado durável: o subagente
+      # extra da paralelização HERDA a linha do agente base, e trocar o modo
+      # não pode zerar o que o usuário configurou.
       task_budget_micros: task_budget_micros,
-      max_gate_corrections: max_gate_corrections
+      max_gate_corrections: max_gate_corrections,
+      max_consecutive_blocked: max_consecutive_blocked
     }
 
+    state = AgentIo.resume_state(base, resume)
     AgentIo.persist(state)
+    :ok = Wake.subscribe(project_id, agent_id)
 
-    {:ok, state}
+    # Mesma razão do agente real (D2): a recuperação de um `working`
+    # interrompido bloqueia, e feita no `init/1` seguraria o boot inteiro pelo
+    # `DevRehydrator`.
+    if resume && resume.status == "working" do
+      {:ok, state, {:continue, :restart_recovery}}
+    else
+      {:ok, state}
+    end
+  end
+
+  @impl true
+  def handle_continue(:restart_recovery, state) do
+    state =
+      AgentIo.block_task(
+        state,
+        "engine reiniciou durante a task",
+        "o trabalho do NoopDevAgent não pôde ser retomado após o restart"
+      )
+
+    # SEM passar por `finish_task/3`: reiniciar o engine não é o agente
+    # queimando o teto, e não pode contar pro circuit breaker.
+    {:noreply,
+     state
+     |> Map.merge(%{task_id: nil, worktree: nil, branch: nil})
+     |> try_claim()}
   end
 
   @impl true
   def handle_cast(:work, state) do
     AgentIo.emit(state, "dev.started", %{agentId: state.agent_id, module: state.module})
-
-    case AgentIo.claim_task(state) do
-      {:ok, nil} ->
-        AgentIo.emit(state, "dev.idle", %{agentId: state.agent_id, reason: "sem task pegável"})
-        {:noreply, state}
-
-      {:ok, task} ->
-        {:noreply, run_task(state, task)}
-
-      {:error, reason} ->
-        AgentIo.emit(state, "dev.error", %{agentId: state.agent_id, reason: inspect(reason)})
-        {:noreply, state}
-    end
+    {:noreply, try_claim(state)}
   end
 
   @impl true
-  def handle_cast({:correct, findings}, state) do
-    # Defensiva: `DevAgentServer.correct/3` é um cast no `via/2`, então o
-    # Registry entregaria a devolução de um gate AQUI se algum fosse aberto
-    # pro Noop. Ele não sabe corrigir nada (não tem LLM) — devolve a task com
-    # diagnóstico em vez de derrubar o processo.
+  def handle_cast({:correct, findings}, %{status: :awaiting_gate} = state) do
+    # O Noop não tem LLM: não sabe corrigir. Devolve a task com diagnóstico em
+    # vez de derrubar o processo — e o `block_task` conta pro breaker pelo
+    # `handle_info` do gate, como no agente real.
     {:noreply,
      AgentIo.block_task(
        state,
@@ -97,6 +123,45 @@ defmodule Engine.Dev.NoopDevAgentServer do
        "gate: #{inspect(Map.get(findings, :gate))}"
      )}
   end
+
+  # Mesmo guard do agente real (D4): uma devolução que chega tarde, quando o
+  # agente já seguiu para outra task, rodaria contra o `task_id` ERRADO.
+  def handle_cast({:correct, _findings}, state), do: {:noreply, state}
+
+  # --- Wakes (Fase 12b, entregues ao Noop desde a 12d) ---
+
+  @impl true
+  def handle_info(
+        {:gate_resolved, %{task_id: task_id, next_action: next_action}},
+        %{task_id: task_id, status: :awaiting_gate} = state
+      ) do
+    {:noreply, finish_task(state, desfecho(next_action))}
+  end
+
+  def handle_info({:gate_resolved, _}, state), do: {:noreply, state}
+
+  def handle_info({:wake, :became_claimable}, %{status: :idle} = state) do
+    {:noreply, try_claim(state)}
+  end
+
+  def handle_info({:wake, :became_claimable}, state), do: {:noreply, state}
+
+  def handle_info(:rearm, %{status: :idle_tripped} = state) do
+    state = %{state | consecutive_blocked: 0}
+    AgentIo.persist(state)
+    {:noreply, try_claim(state)}
+  end
+
+  def handle_info(:rearm, state), do: {:noreply, state}
+
+  defp desfecho("done"), do: :approved
+  defp desfecho(:done), do: :approved
+  defp desfecho(_), do: :blocked
+
+  # A máquina é a MESMA do agente real (`AgentIo`); só o `run_task/2` difere.
+  defp try_claim(state), do: AgentIo.try_claim(state, &run_task/2)
+
+  defp finish_task(state, desfecho), do: AgentIo.finish_task(state, desfecho, &run_task/2)
 
   # --- Ciclo do NoopDevAgent ---
 
@@ -124,9 +189,15 @@ defmodule Engine.Dev.NoopDevAgentServer do
           branch: branch
         })
 
-        AgentIo.propose_commit(state, "#{state.agent_id}: #{task_title(task)}")
-        AgentIo.propose_push(state)
-        AgentIo.propose_pr(state, "#{state.agent_id}: #{task_title(task)}", pr_body(state, task))
+        desfechos = [
+          AgentIo.propose_commit(state, "#{state.agent_id}: #{task_title(task)}"),
+          AgentIo.propose_push(state),
+          AgentIo.propose_pr(
+            state,
+            "#{state.agent_id}: #{task_title(task)}",
+            pr_body(state, task)
+          )
+        ]
 
         _ =
           EngineApiClient.mark_task(
@@ -136,6 +207,25 @@ defmodule Engine.Dev.NoopDevAgentServer do
             "in_review",
             state.agent_id
           )
+
+        # PR aberta NÃO libera o agente (Fase 12b): o worktree é por AGENTE,
+        # não por task, e reivindicar a próxima agora apagaria fisicamente o
+        # que o gate ainda precisa ler. Fica retido até o desfecho terminal.
+        #
+        # Fase 12e: com ação git pendente de aprovação, o estado é
+        # `awaiting_approval` — não há PR para gate nenhum julgar.
+        status =
+          if Enum.all?(desfechos, &(&1 == :executed)),
+            do: :awaiting_gate,
+            else: :awaiting_approval
+
+        state = %{state | status: status}
+        AgentIo.persist(state)
+
+        AgentIo.emit(state, "dev.#{status}", %{
+          agentId: state.agent_id,
+          taskId: task_id
+        })
 
         state
 

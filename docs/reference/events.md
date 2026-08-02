@@ -65,9 +65,9 @@ Uma linha em `session_events`, append-only, com `seq` densa por sessão
 
 | tipo | quando |
 |---|---|
-| `proposed_action.created` | nasceu a ação — antes de qualquer execução |
-| `proposed_action.approved` | decidida pelo usuário |
-| `proposed_action.denied` | negada — estado terminal |
+| `proposed_action.created` | nasceu a ação — antes de qualquer execução. `payload.status` diz como ela nasceu (`pending`, `auto_approved` ou `denied`), e é o que distingue decisão humana de política ([RN-049](../business-rules.md#rn-049)) |
+| `proposed_action.approved` | decidida pelo usuário — o `actor` é **quem clicou**. Auto-aprovação NÃO passa por aqui: ela aparece no `created` com `status: auto_approved` e ator agente |
+| `proposed_action.denied` | negada — estado terminal. `actor` é quem recusou, e `payload.reason` o motivo |
 | `proposed_action.executed` | executou com sucesso |
 | `action.failed` | executou e falhou |
 | `permission.granted` | concessão registrada na política |
@@ -78,7 +78,9 @@ Uma linha em `session_events`, append-only, com `seq` densa por sessão
 |---|---|
 | `backlog.epic_created` | — |
 | `backlog.story_created` | — |
-| `backlog.story_transitioned` | mudança de estado da história |
+| `backlog.story_transitioned` | mudança de estado da história. O `actor` diz quem promoveu: `agent/po` no modo `auto`, `user` no modo `manual` ([RN-048](../business-rules.md#rn-048)) |
+| `backlog.story_promotion_proposed` | o PO terminou uma história COMPLETA num projeto em modo `manual`: ela fica `draft` aguardando a decisão do usuário, e nenhuma tarefa dela é pegável até lá ([RN-048](../business-rules.md#rn-048)) |
+| `backlog.story_promotion_returned` | o usuário RECUSOU promover e devolveu a história ao PO com um motivo — que vira mensagem fixada na sessão dele, como a devolução de um gate ao dev ([RN-048](../business-rules.md#rn-048)) |
 | `backlog.story_demoted` | módulo sumiu do `module_map`; a história voltou para `draft` ([RN-012](../business-rules.md#rn-012)) |
 | `backlog.story_modules_assigned` | vínculo história ↔ módulo |
 | `backlog.task_created` | — |
@@ -94,6 +96,14 @@ Uma linha em `session_events`, append-only, com `seq` densa por sessão
 | `execution.activated` | a fase de execução começou |
 | `execution.parallelization_suggested` | o sistema propôs paralelizar |
 | `execution.parallelization_accepted` | aceita — o subagente herda o teto do agente base |
+| `dev.started` | o dev agent começou o ciclo (ativação, paralelização — NÃO reidratação, que nunca redispara) |
+| `dev.working` | reivindicou uma task e montou o worktree |
+| `dev.idle` | fila do módulo vazia — sem task pegável agora |
+| `dev.awaiting_approval` | as ações git ficaram pendentes de aprovação (Fase 12e): **o gate NÃO abre** — sem PR não há o que julgar — e o worktree fica retido até `task.pr_settled` ([RN-050](../business-rules.md#rn-050)) |
+| `dev.awaiting_gate` | PR aberta, esperando o gate (Fase 12b) — `task_id`/`worktree` continuam retidos |
+| `dev.blocked` | a task devolvida com diagnóstico (limite de iterações, orçamento excedido, `report_blocked`, falha de worktree/contexto) |
+| `dev.idle_tripped` | circuit breaker disparado (RN-047) — N tasks blocked seguidas param o agente |
+| `dev.rearmed` | usuário rearmou um agente travado (Fase 12b) — `actor` é o USUÁRIO que clicou, não o agente |
 | `pr.gate_changed` | o PR mudou de gate (`awaiting_qa` → `awaiting_secops` → `awaiting_user`) |
 | `infra.gate_changed` | gate do Infra |
 | `infra.artifact_blocked` | artefato do Infra reprovado |
@@ -135,12 +145,16 @@ Os schemas são fechados: campo faltando reprova a emissão
 | tipo | quando |
 |---|---|
 | `project.git_connected` | credencial de git vinculada ao projeto |
-| `project.repository_provisioned` | repositório criado/adotado |
+| `project.repository_provisioned` | repositório **criado** pelo Brabo |
+| `project.repository_adopted` | repositório que **já existia** passou a ser o do projeto ([RN-046](../business-rules.md#rn-046)) |
+| `bootstrap.repository_adopted` | o mesmo fato na sessão dedicada, com o `defaultBranch` observado no provider |
 | `bootstrap.step_started` | um dos seis passos do Gitflow começou |
 | `bootstrap.step_completed` | concluído |
 | `bootstrap.step_skipped` | já estava feito — **é sucesso**, não erro ([RN-029](../business-rules.md#rn-029)) |
 | `bootstrap.step_degraded` | concluiu sem uma capability do provider (ex.: proteção de branch no Local) |
 | `bootstrap.step_failed` | falhou; o bootstrap é retomável deste ponto |
+| `bootstrap.plan_approved` | o usuário aprovou o plano de adoção — **é só daqui que o bootstrap roda num repo adotado** ([RN-045](../business-rules.md#rn-045)) |
+| `bootstrap.adopted_as_is` | o usuário dispensou o bootstrap; nenhum passo rodou, e o plano fica guardado como evidência do que não foi aplicado |
 
 ### Custo
 
@@ -258,7 +272,7 @@ respeito.
 
 > ⚠️ Bloco gerado por `pnpm docs:generate`. Não edite à mão — o próximo build sobrescreve.
 
-Extraído dos pontos de emissão: **69 identificadores**, todos descritos acima.
+Extraído dos pontos de emissão: **75 identificadores**, todos descritos acima.
 
 - `action.failed` <sub>(apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts)</sub>
 - `agent.activated` <sub>(apps/api/src/application/use-cases/agents/activate-agent.use-case.ts)</sub>
@@ -280,17 +294,22 @@ Extraído dos pontos de emissão: **69 identificadores**, todos descritos acima.
 - `backlog.story_created` <sub>(apps/api/src/application/use-cases/backlog/create-story.use-case.ts)</sub>
 - `backlog.story_demoted` <sub>(apps/api/src/application/use-cases/architecture/create-module-map.use-case.ts)</sub>
 - `backlog.story_modules_assigned` <sub>(apps/api/src/application/use-cases/architecture/assign-story-modules.use-case.ts)</sub>
+- `backlog.story_promotion_proposed` <sub>(apps/api/src/application/use-cases/backlog/create-story.use-case.ts)</sub>
+- `backlog.story_promotion_returned` <sub>(apps/api/src/application/use-cases/backlog/return-story.use-case.ts)</sub>
 - `backlog.story_transitioned` <sub>(apps/api/src/application/use-cases/backlog/transition-story.use-case.ts)</sub>
 - `backlog.task_blocked` <sub>(apps/api/src/application/use-cases/execution/mark-task-blocked.use-case.ts)</sub>
 - `backlog.task_claimed` <sub>(apps/api/src/application/use-cases/execution/claim-next-task.use-case.ts)</sub>
 - `backlog.task_created` <sub>(apps/api/src/application/use-cases/backlog/create-task.use-case.ts)</sub>
 - `backlog.task_status_changed` <sub>(apps/api/src/application/use-cases/execution/mark-task.use-case.ts)</sub>
 - `backlog.task_unblocked` <sub>(apps/api/src/application/use-cases/execution/unblock-task.use-case.ts)</sub>
-- `bootstrap.step_completed` <sub>(apps/api/src/application/use-cases/git/provision-repository.use-case.ts)</sub>
-- `bootstrap.step_degraded` <sub>(apps/api/src/application/use-cases/git/provision-repository.use-case.ts)</sub>
-- `bootstrap.step_failed` <sub>(apps/api/src/application/use-cases/git/provision-repository.use-case.ts)</sub>
-- `bootstrap.step_skipped` <sub>(apps/api/src/application/use-cases/git/provision-repository.use-case.ts)</sub>
-- `bootstrap.step_started` <sub>(apps/api/src/application/use-cases/git/provision-repository.use-case.ts)</sub>
+- `bootstrap.adopted_as_is` <sub>(apps/api/src/application/use-cases/git/decide-bootstrap-plan.use-case.ts)</sub>
+- `bootstrap.plan_approved` <sub>(apps/api/src/application/use-cases/git/decide-bootstrap-plan.use-case.ts)</sub>
+- `bootstrap.repository_adopted` <sub>(apps/api/src/application/use-cases/git/adopt-repository.use-case.ts)</sub>
+- `bootstrap.step_completed` <sub>(apps/api/src/application/use-cases/git/bootstrap-runner.ts)</sub>
+- `bootstrap.step_degraded` <sub>(apps/api/src/application/use-cases/git/bootstrap-runner.ts)</sub>
+- `bootstrap.step_failed` <sub>(apps/api/src/application/use-cases/git/bootstrap-runner.ts)</sub>
+- `bootstrap.step_skipped` <sub>(apps/api/src/application/use-cases/git/bootstrap-runner.ts)</sub>
+- `bootstrap.step_started` <sub>(apps/api/src/application/use-cases/git/bootstrap-runner.ts)</sub>
 - `budget.threshold_crossed` <sub>(apps/api/src/application/use-cases/llm/record-llm-usage.use-case.ts)</sub>
 - `chat.message` <sub>(apps/api/src/application/use-cases/agents/send-agent-message.use-case.ts)</sub>
 - `delegation.completed` <sub>(apps/api/src/application/use-cases/execution/record-delegation.use-case.ts)</sub>
@@ -310,6 +329,7 @@ Extraído dos pontos de emissão: **69 identificadores**, todos descritos acima.
 - `permission.granted` <sub>(apps/api/src/application/use-cases/actions/approve-always-action.use-case.ts)</sub>
 - `pr.gate_changed` <sub>(apps/api/src/application/use-cases/execution/open-gate.use-case.ts)</sub>
 - `project.git_connected` <sub>(apps/api/src/application/use-cases/git/handle-git-oauth-callback.use-case.ts)</sub>
+- `project.repository_adopted` <sub>(apps/api/src/application/use-cases/git/adopt-repository.use-case.ts)</sub>
 - `project.repository_provisioned` <sub>(apps/api/src/application/use-cases/git/provision-repository.use-case.ts)</sub>
 - `proposed_action.approved` <sub>(apps/api/src/application/use-cases/actions/approve-action.use-case.ts)</sub>
 - `proposed_action.created` <sub>(apps/api/src/application/use-cases/actions/propose-action.use-case.ts)</sub>

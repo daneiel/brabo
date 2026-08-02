@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { deriveAgentRoster, groupRosterByArea, type RosterEntry } from './agent-status';
+import {
+  breakerReasonFor,
+  deriveAgentRoster,
+  groupRosterByArea,
+  type RosterEntry,
+} from './agent-status';
 import { AGENTS } from './agents';
 import type { Handoff, ModuleMap, SessionEvent } from './api-types';
 
@@ -158,6 +163,68 @@ describe('deriveAgentRoster — status', () => {
       new Set(['dev-core']),
     );
     expect(statusOf(roster, 'dev-core')).toBe('falhou');
+  });
+
+  describe('Fase 12b — RN-047', () => {
+    it('dev.awaiting_gate deixa o dev aguardando (PR aberta, esperando o gate)', () => {
+      const roster = deriveAgentRoster(
+        [
+          ev('dev.working', 'dev-core', {}),
+          ev('dev.awaiting_gate', 'dev-core', { taskId: 't1', gate: 'qa' }),
+        ],
+        moduleMap,
+        true,
+        [],
+      );
+      expect(statusOf(roster, 'dev-core')).toBe('aguardando');
+    });
+
+    it('dev.idle_tripped deixa o dev travado', () => {
+      const roster = deriveAgentRoster(
+        [ev('dev.idle_tripped', 'dev-core', { consecutiveBlocked: 3 })],
+        moduleMap,
+        true,
+        [],
+      );
+      expect(statusOf(roster, 'dev-core')).toBe('travado');
+    });
+
+    it('travado vence aguardando — o breaker parou o agente de propósito', () => {
+      const roster = deriveAgentRoster(
+        [ev('dev.idle_tripped', 'dev-core', { consecutiveBlocked: 3 })],
+        moduleMap,
+        true,
+        [],
+        new Set(['dev-core']),
+      );
+      expect(statusOf(roster, 'dev-core')).toBe('travado');
+    });
+
+    it('breakerReasonFor extrai o contador do dev.idle_tripped mais recente', () => {
+      expect(
+        breakerReasonFor(
+          [ev('dev.idle_tripped', 'dev-core', { consecutiveBlocked: 3 })],
+          'dev-core',
+        ),
+      ).toBe('circuit breaker: 3 tasks blocked seguidas');
+
+      expect(breakerReasonFor([], 'dev-core')).toBeUndefined();
+    });
+
+    it('dev.idle depois de dev.working limpa o card — não fica preso em ocioso mostrando a task antiga', () => {
+      // A prova em si é de execution.ts (deriveExecutionProgress); aqui
+      // só confirma que o STATUS reflete o evento mais recente.
+      const roster = deriveAgentRoster(
+        [
+          ev('dev.working', 'dev-core', { taskId: 't1', taskTitle: 'Implementar x' }),
+          ev('dev.idle', 'dev-core', { reason: 'sem task pegável' }),
+        ],
+        moduleMap,
+        true,
+        [],
+      );
+      expect(statusOf(roster, 'dev-core')).toBe('ocioso');
+    });
   });
 });
 

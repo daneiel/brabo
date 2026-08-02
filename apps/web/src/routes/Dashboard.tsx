@@ -13,7 +13,11 @@ import {
   useSessionEvents,
   useWorkspaceSummary,
 } from '../lib/hooks';
-import { useProjectsUnread, useNotificationGroups } from '../lib/notifications';
+import {
+  useProjectsUnread,
+  useNotificationGroups,
+  useStoriesAwaitingPromotion,
+} from '../lib/notifications';
 import { setLastSeenSeq } from '../lib/read-state';
 import { deriveAgentRoster, groupRosterByArea } from '../lib/agent-status';
 import { contagemAgentes, contagemProjetos } from '../lib/pluralize';
@@ -122,7 +126,12 @@ export function Dashboard() {
 
   const unread = useProjectsUnread(projects);
   const notificationGroups = useNotificationGroups(unread);
-  const totalUnread = unread.reduce((sum, u) => sum + u.unreadCount, 0);
+  // Duas fontes, um número. As promoções pendentes (Fase 12c) NÃO entram em
+  // `unreadCount`: aquele é consumido por `seq`, e o `onMarkRead` abaixo o
+  // zeraria — abrir o sino cancelaria a fila de decisões do usuário.
+  const aguardandoPromocao = useStoriesAwaitingPromotion(projects);
+  const totalUnread =
+    unread.reduce((sum, u) => sum + u.unreadCount, 0) + aguardandoPromocao;
 
   const filtered = (projects ?? []).filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
 

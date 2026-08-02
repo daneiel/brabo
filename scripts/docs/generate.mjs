@@ -291,12 +291,62 @@ const PREFIXOS_DE_EVENTO = [
 // ------------------------------- 6. catálogo de providers de LLM (Fase 9c)
 
 /**
- * Providers × origem × capabilities, lidos do CÓDIGO.
+ * Cabeçalho (ou prefixo dele) da seção de prosa de cada provider em
+ * `docs/reference/llm-providers.md`, usado só pra achar a lista de quirks já
+ * escrita à mão — a fonte é a prosa, a lista curta do bloco gerado é
+ * DERIVADA dela, nunca duplicada à parte. Provider sem seção própria
+ * (`ollama`/`anthropic`/`openai`, cobertos só pela tabela "Divergências
+ * normalizadas") fica sem quirks resumidos — isso é esperado, não um erro.
+ *
+ * Provider novo com seção de prosa própria precisa de uma entrada aqui.
+ */
+const CABECALHO_DA_SECAO_DO_PROVIDER = {
+  openrouter: 'OpenRouter',
+  'nvidia-nim': 'NVIDIA NIM',
+  together: 'Together AI',
+  deepinfra: 'DeepInfra',
+  bitdeer: 'Bitdeer',
+  vultr: 'Vultr Serverless Inference',
+};
+
+/** Rótulos em negrito (`- **Rótulo**: ...`) da seção de prosa de um provider. */
+function extrairQuirksResumidos(docLlmProviders) {
+  const secoes = docLlmProviders.split(/^## /m).slice(1);
+  const porProvider = new Map();
+
+  for (const [provider, prefixo] of Object.entries(CABECALHO_DA_SECAO_DO_PROVIDER)) {
+    const secao = secoes.find((s) => s.startsWith(prefixo));
+    if (!secao) continue;
+
+    const rotulos = [];
+    for (const m of secao.matchAll(/^-\s+\*\*(.+?)\*\*/gm)) {
+      // `listModels`/"Teste de conexão" já têm coluna própria — não duplica.
+      if (/^`?listModels|^Teste de conexão/.test(m[1])) continue;
+      // `|` cru quebraria a tabela markdown (é o separador de coluna) — um
+      // rótulo citando código com `|` dentro (ex.: `a | b`) precisa escapar.
+      rotulos.push(m[1].replace(/\|/g, '\\|'));
+    }
+    porProvider.set(provider, rotulos);
+  }
+  return porProvider;
+}
+
+function contarLinhasDeSeed(seedTs, provider) {
+  const padrao = new RegExp(`provider:\\s*'${provider}'`, 'g');
+  return (seedTs.match(padrao) ?? []).length;
+}
+
+/**
+ * Providers × origem × capabilities × credencial × quirks, lidos do CÓDIGO
+ * (e da prosa já escrita, pro resumo de quirks — ver `extrairQuirksResumidos`).
  *
  * A tabela existia à mão e envelhecia calada: a Fase 9c acrescentou
  * `listModels` às capabilities e nenhuma doc cobrou nada. As capabilities vêm
  * do literal que cada provider declara — se alguém trocar `true` por `false`,
  * o bloco muda e o `--check` reprova até a regeneração entrar no mesmo commit.
+ * Fase 11c ampliou pra credencial/origem/quirks, todos DERIVADOS (nunca
+ * hand-typed) — nenhum arquivo de provider precisou ganhar campo novo só
+ * pra alimentar doc.
  */
 function gerarProvidersDeLlm() {
   const fontes = arquivos('apps/api/src/infrastructure/llm/*.ts');
@@ -306,8 +356,12 @@ function gerarProvidersDeLlm() {
     const conteudo = ler(caminho);
     // Casa tanto `readonly capabilities: X = { ... }` (Ollama, Anthropic)
     // quanto `capabilities: { ... }` dentro da config (base compatível).
-    const nome = /name:\s*LLMProviderName\s*=\s*'([a-z]+)'|name:\s*'([a-z]+)'/.exec(conteudo);
-    const caps = /capabilities[^{]*\{([^}]*)\}/.exec(conteudo);
+    // Slug pode ter hífen (`nvidia-nim`, Fase 11b).
+    const nome = /name:\s*LLMProviderName\s*=\s*'([a-z-]+)'|name:\s*'([a-z-]+)'/.exec(conteudo);
+    // Ancorado em `capabilities:` de verdade (com o dois-pontos colado) —
+    // um comentário citando "capabilities.toolCalling" ou "capabilities em
+    // duas camadas" não tem dois-pontos ali, então não confunde o match.
+    const caps = /capabilities:\s*(?:LLMProviderCapabilities\s*=\s*)?\{([^}]*)\}/.exec(conteudo);
     if (!nome || !caps) continue;
 
     const provider = nome[1] ?? nome[2];
@@ -325,19 +379,41 @@ function gerarProvidersDeLlm() {
     });
   }
 
+  const seedTs = ler('apps/api/src/db/seed.ts');
+  const quirksPorProvider = extrairQuirksResumidos(ler('docs/reference/llm-providers.md'));
+
   const marca = (v) => (v === null ? '?' : v ? 'sim' : 'não');
+  // Toda credencial de LLM tem a MESMA forma hoje — uma chave de API cifrada
+  // por envelope encryption (`user_credentials`); não existe "tipo" diferente
+  // por provider. `ollama` roda local, sem chave.
+  const credencial = (provider) => (provider === 'ollama' ? 'nenhuma (local)' : 'chave de API');
+  const origem = (provider, c) => {
+    if (!c.listModels) return 'seed';
+    return contarLinhasDeSeed(seedTs, provider) > 0 ? 'sync + seed' : 'sync';
+  };
+  const quirks = (provider) => {
+    const lista = quirksPorProvider.get(provider);
+    return lista && lista.length > 0 ? lista.join('; ') : '—';
+  };
+
   const ordenados = [...achados.entries()].sort(([a], [b]) => a.localeCompare(b));
 
   let corpo = `\n${AVISO_BLOCO}\n\n`;
   corpo += `Lido dos literais de \`capabilities\` em \`apps/api/src/infrastructure/llm/\` — `;
   corpo += `**${ordenados.length} providers**.\n\n`;
-  corpo += '| provider | streaming | tool calling | list_models | fonte |\n';
-  corpo += '| --- | --- | --- | --- | --- |\n';
+  corpo += '| provider | streaming | tool calling | list_models | credencial | origem dos modelos | quirks resumidos | fonte |\n';
+  corpo += '| --- | --- | --- | --- | --- | --- | --- | --- |\n';
   for (const [provider, c] of ordenados) {
-    corpo += `| \`${provider}\` | ${marca(c.streaming)} | ${marca(c.toolCalling)} | ${marca(c.listModels)} | \`${c.arquivo}\` |\n`;
+    corpo +=
+      `| \`${provider}\` | ${marca(c.streaming)} | ${marca(c.toolCalling)} | ${marca(c.listModels)} | ` +
+      `${credencial(provider)} | ${origem(provider, c)} | ${quirks(provider)} | \`${c.arquivo}\` |\n`;
   }
   corpo += '\nProvider sem `list_models` é PULADO pelo sync de catálogo, com o motivo\n';
   corpo += 'registrado no relatório — nunca tratado como "o catálogo ficou vazio".\n';
+  corpo += '"Origem dos modelos": `sync` descobre sozinho, `seed` só entra por\n';
+  corpo += '`apps/api/src/db/seed.ts`, `sync + seed` tem os dois (seed é só bootstrap\n';
+  corpo += 'antes do primeiro sync). "Quirks resumidos" são os RÓTULOS em negrito da\n';
+  corpo += 'seção de prosa do provider abaixo — o porquê de cada um está lá, não aqui.\n';
 
   escreverBloco('docs/reference/llm-providers.md', 'providers-capabilities', corpo);
 }

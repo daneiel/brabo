@@ -51,4 +51,28 @@ describe('AgentCard', () => {
     fireEvent.click(screen.getByRole('button', { name: 'auto' }));
     expect(onAutonomyChange).toHaveBeenCalledWith('auto');
   });
+
+  describe('rearmar (Fase 12b — RN-047)', () => {
+    it('só aparece com status travado E o handler — nenhum dos dois sozinho basta', () => {
+      const onRearm = vi.fn();
+
+      renderCard({ status: 'trabalhando', onRearm }).unmount();
+      expect(screen.queryByRole('button', { name: 'rearmar' })).not.toBeInTheDocument();
+
+      renderCard({ status: 'travado' }).unmount();
+      expect(screen.queryByRole('button', { name: 'rearmar' })).not.toBeInTheDocument();
+
+      renderCard({ status: 'travado', onRearm });
+      expect(screen.getByRole('button', { name: 'rearmar' })).toBeInTheDocument();
+    });
+
+    it('chama onRearm ao clicar', () => {
+      const onRearm = vi.fn();
+      renderCard({ status: 'travado', onRearm });
+
+      fireEvent.click(screen.getByRole('button', { name: 'rearmar' }));
+
+      expect(onRearm).toHaveBeenCalledTimes(1);
+    });
+  });
 });

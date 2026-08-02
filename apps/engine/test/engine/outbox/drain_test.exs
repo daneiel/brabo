@@ -83,6 +83,74 @@ defmodule Engine.Outbox.DrainTest do
     refute_enqueued(worker: Engine.Workers.PsychologistWorker)
   end
 
+  describe "aggregate_type task (Fase 12b — reagendamento do dev agent)" do
+    test "task.gate_resolved roteia pro DevAgentWakeWorker" do
+      row =
+        insert_outbox_event!(%{
+          aggregate_type: "task",
+          event_type: "task.gate_resolved",
+          payload: %{"taskId" => "t1", "agentId" => "dev-api", "nextAction" => "done"}
+        })
+
+      Drain.run_once()
+
+      reloaded = Repo.get!(Event, row.id)
+      assert reloaded.processed_at != nil
+
+      assert_enqueued(
+        worker: Engine.Workers.DevAgentWakeWorker,
+        args: %{
+          "event_type" => "task.gate_resolved",
+          "aggregate_id" => row.aggregate_id,
+          "payload" => %{"taskId" => "t1", "agentId" => "dev-api", "nextAction" => "done"}
+        }
+      )
+    end
+
+    test "task.became_claimable roteia pro DevAgentWakeWorker" do
+      row =
+        insert_outbox_event!(%{
+          aggregate_type: "task",
+          event_type: "task.became_claimable",
+          payload: %{"taskId" => "t1", "modules" => ["api"]}
+        })
+
+      Drain.run_once()
+
+      reloaded = Repo.get!(Event, row.id)
+      assert reloaded.processed_at != nil
+
+      assert_enqueued(
+        worker: Engine.Workers.DevAgentWakeWorker,
+        args: %{"event_type" => "task.became_claimable", "aggregate_id" => row.aggregate_id}
+      )
+    end
+
+    test "task de event_type desconhecido cai no catch-all (SessionLifecycleWorker), não no DevAgentWakeWorker" do
+      # `aggregate_type` entrou na lista de lidos pela Fase 12b, mas
+      # `handlers_for/1` só tem regra explícita pros dois tipos conhecidos —
+      # qualquer outro cai no catch-all pré-existente, que é inofensivo
+      # (SessionLifecycleWorker ignora o que não reconhece).
+      row =
+        insert_outbox_event!(%{
+          aggregate_type: "task",
+          event_type: "task.algo_desconhecido",
+          payload: %{}
+        })
+
+      Drain.run_once()
+
+      reloaded = Repo.get!(Event, row.id)
+      assert reloaded.processed_at != nil
+      refute_enqueued(worker: Engine.Workers.DevAgentWakeWorker)
+
+      assert_enqueued(
+        worker: Engine.Workers.SessionLifecycleWorker,
+        args: %{"aggregate_id" => row.aggregate_id}
+      )
+    end
+  end
+
   # A correlação do trabalho assíncrono (ADR 0035).
   #
   # Estava quebrada em silêncio desde a Fase 5: o schema `Engine.Outbox.Event`

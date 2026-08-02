@@ -34,6 +34,101 @@
   border-radius: var(--radius-md);
 }
 
+/* --- Aguardando sua promoção (Fase 12c — RN-048) --- */
+
+/*
+ * Fica ACIMA da árvore e com borda de destaque porque é a única parte desta
+ * aba que pede uma decisão. O resto é leitura.
+ */
+.promotion {
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-1);
+  padding: 14px;
+  margin-bottom: 20px;
+}
+
+.promotionHint {
+  margin: -4px 0 12px;
+  font-size: 12px;
+  /* Texto de apoio a 12px vale a exigência de 4.5:1 do WCAG AA — mesma razão
+     documentada em Input.module.css para o `.hint` não usar `--text-muted`. */
+  color: var(--text-secondary);
+}
+
+/* Mesmos tokens da barra do ProjectApprovalsTab: é o mesmo gesto. */
+.selectionBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.proposals {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.proposal {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px;
+}
+
+.proposalPick {
+  display: flex;
+  align-items: center;
+  /* Alinha a caixa com a primeira linha do título, não com o topo do card. */
+  padding-top: 2px;
+}
+
+.proposalBody {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+}
+
+.proposalTitle {
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.proposalActions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+/*
+ * A recusa anterior, dentro da história devolvida. `--danger` na borda e não
+ * no texto: o motivo é para ser LIDO, e texto em cor de alerta a 12.5px
+ * reprova contraste sobre `--surface-2`.
+ */
+.returned {
+  margin: 0;
+  padding: 8px 10px;
+  border-left: 2px solid var(--danger);
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+}
+
 /* --- Árvore --- */
 
 .epic {
