@@ -189,6 +189,12 @@ export const createProject = (
 ) => post<Project>(`/workspaces/${workspaceId}/projects`, input);
 export const getProject = (projectId: string) =>
   get<Project>(`/projects/${projectId}`);
+// `maxConsecutiveBlocked` (Fase 12b): vale a partir da PRÓXIMA ativação da
+// execução — não afeta dev agents já rodando.
+export const updateProject = (
+  projectId: string,
+  input: { maxConsecutiveBlocked: number },
+) => patch<Project>(`/projects/${projectId}`, input);
 
 export const listProjectMembers = (projectId: string) =>
   get<ProjectMemberWithUser[]>(`/projects/${projectId}/members`);

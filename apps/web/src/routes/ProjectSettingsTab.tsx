@@ -19,6 +19,7 @@ import {
   listProjectMembers,
   removeProjectMember,
   setAgentModelBinding,
+  updateProject,
   upsertCredential,
 } from '../lib/api-client';
 import { AGENT_LIST } from '../lib/agents';
@@ -78,6 +79,7 @@ export function ProjectSettingsTab({ projectId }: ProjectSettingsTabProps) {
   return (
     <div>
       <RepositorySection projectId={projectId} />
+      <ExecutionSection projectId={projectId} />
       <ModelsSection projectId={projectId} />
       <CatalogoDeModelos projectId={projectId} />
       <MembersSection projectId={projectId} />
@@ -357,6 +359,84 @@ function RepositorySection({ projectId }: { projectId: string }) {
           </ul>
         </Alert>
       )}
+    </div>
+  );
+}
+
+const DEFAULT_MAX_CONSECUTIVE_BLOCKED = 3;
+
+/**
+ * Teto do circuit breaker por dev agent (Fase 12b — RN-047): quantas tasks
+ * consecutivas terminando `blocked` param o agente do módulo em
+ * `idle_tripped`, em vez de continuar reivindicando trabalho.
+ *
+ * Primeiro campo numérico da aba — sem botão de "voltar ao default": o
+ * default É o valor mostrado quando o projeto ainda não tem um próprio
+ * (`null` na api), então digitar por cima e salvar já cobre os dois casos.
+ */
+export function ExecutionSection({ projectId }: { projectId: string }) {
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+  const { data: project } = useQuery({
+    queryKey: ['project', projectId],
+    queryFn: () => getProject(projectId),
+  });
+  const [draft, setDraft] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const valorAtual = project?.maxConsecutiveBlocked ?? DEFAULT_MAX_CONSECUTIVE_BLOCKED;
+  const valorExibido = draft ?? String(valorAtual);
+  const numero = Number(valorExibido);
+  const valido = Number.isInteger(numero) && numero > 0;
+
+  async function handleSave() {
+    if (!valido) return;
+    setSaving(true);
+    try {
+      await updateProject(projectId, { maxConsecutiveBlocked: numero });
+      await queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      setDraft(null);
+      showToast({ title: 'Teto do circuit breaker salvo', tone: 'success' });
+    } catch {
+      showToast({ title: 'Não foi possível salvar', tone: 'danger' });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!project) return null;
+
+  return (
+    <div className={styles.section}>
+      <div className={styles.title}>Execução</div>
+      <div className={styles.subtitle}>
+        Circuit breaker dos dev agents — vale a partir da próxima ativação da
+        execução, não afeta agentes já rodando.
+      </div>
+
+      <div className={styles.credentialCard}>
+        <div className={styles.credentialInfo}>
+          <div className={styles.credentialProvider}>
+            Tasks blocked seguidas até parar
+          </div>
+          <div className={styles.credentialStatus}>
+            {project.maxConsecutiveBlocked === null
+              ? `Sem valor próprio — usa o default (${DEFAULT_MAX_CONSECUTIVE_BLOCKED})`
+              : 'Configurado para este projeto'}
+          </div>
+        </div>
+        <div className={styles.credentialInput}>
+          <Input
+            type="number"
+            min={1}
+            value={valorExibido}
+            onChange={(e) => setDraft(e.target.value)}
+          />
+        </div>
+        <Button onClick={handleSave} disabled={!valido || saving}>
+          {saving ? 'Salvando…' : 'Salvar'}
+        </Button>
+      </div>
     </div>
   );
 }

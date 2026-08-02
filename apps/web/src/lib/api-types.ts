@@ -25,6 +25,9 @@ export interface Project {
   name: string;
   slug: string;
   createdBy: string;
+  // Circuit breaker por dev agent (Fase 12b — RN-047). `null` usa o default
+  // do domínio (3).
+  maxConsecutiveBlocked: number | null;
   createdAt: string;
   updatedAt: string;
 }

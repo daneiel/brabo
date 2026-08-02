@@ -8373,6 +8373,11 @@
             "example": "checkout",
             "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
             "description": "kebab-case. Único dentro do workspace."
+          },
+          "maxConsecutiveBlocked": {
+            "type": "number",
+            "example": 3,
+            "description": "Circuit breaker (Fase 12b — RN-047): quantas tasks consecutivas terminando blocked param o dev agent do módulo em idle_tripped. Omitido usa o default do domínio (DEFAULT_MAX_CONSECUTIVE_BLOCKED). Vale a partir da PRÓXIMA ativação da execução — não afeta agentes já rodando."
           }
         },
         "required": [
@@ -10364,6 +10369,12 @@
             "nullable": true,
             "description": "Teto de tokens por task dos dev agents, em micro-USD. `null` usa o padrão do domínio."
           },
+          "maxConsecutiveBlocked": {
+            "type": "object",
+            "example": 3,
+            "nullable": true,
+            "description": "Circuit breaker por dev agent (Fase 12b — RN-047): tasks consecutivas terminando blocked até parar em idle_tripped. `null` usa o padrão do domínio."
+          },
           "createdAt": {
             "type": "string",
             "example": "2026-07-21T11:00:00.000Z",
@@ -10382,6 +10393,7 @@
           "slug",
           "createdBy",
           "taskBudgetMicros",
+          "maxConsecutiveBlocked",
           "createdAt",
           "updatedAt"
         ]
@@ -12393,6 +12405,11 @@
             "example": "checkout",
             "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
             "description": "kebab-case. Único dentro do workspace."
+          },
+          "maxConsecutiveBlocked": {
+            "type": "number",
+            "example": 3,
+            "description": "Circuit breaker (Fase 12b — RN-047): quantas tasks consecutivas terminando blocked param o dev agent do módulo em idle_tripped. Omitido usa o default do domínio (DEFAULT_MAX_CONSECUTIVE_BLOCKED). Vale a partir da PRÓXIMA ativação da execução — não afeta agentes já rodando."
           }
         }
       },
