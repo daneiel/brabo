@@ -642,6 +642,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/execution-controller-rearm",
+          label: "Rearma um dev agent travado pelo circuit breaker",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/execution-controller-parallelize",
           label: "Aceita paralelizar um módulo com um dev agent dedicado",
           className: "api-method post",

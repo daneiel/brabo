@@ -162,6 +162,19 @@ defmodule Engine.Dev.DevAgentServer do
 
   def handle_info({:wake, :became_claimable}, state), do: {:noreply, state}
 
+  # A ÚNICA saída de `idle_tripped` (Fase 12b — RN-047): zera o contador e
+  # tenta reivindicar. O registro de QUEM rearmou é da api (`dev.rearmed`,
+  # `actor: user`, em `RearmDevAgentUseCase`) — emitir aqui de novo seria o
+  # MESMO evento contado duas vezes, uma por ator diferente, na mesma sessão.
+  @impl true
+  def handle_info(:rearm, %{status: :idle_tripped} = state) do
+    state = %{state | consecutive_blocked: 0}
+    AgentIo.persist(state)
+    {:noreply, try_claim(state)}
+  end
+
+  def handle_info(:rearm, state), do: {:noreply, state}
+
   # --- Máquina de estados (Fase 12b) ---
 
   # Ponto único de claim — chamado pelo `:work` inicial e por `finish_task/2`

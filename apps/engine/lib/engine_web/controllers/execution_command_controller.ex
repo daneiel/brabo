@@ -1,13 +1,14 @@
 defmodule EngineWeb.ExecutionCommandController do
   @moduledoc """
   Comandos síncronos da api pra fase de execução (Fase 4a): subir os
-  DevAgentServers (um por módulo) e aceitar a paralelização (subagente extra).
+  DevAgentServers (um por módulo), aceitar a paralelização (subagente extra),
+  e rearmar um agente travado pelo circuit breaker (Fase 12b — RN-047).
   Guardado por VerifyServiceToken.
   """
 
   use EngineWeb, :controller
 
-  alias Engine.Dev.{DevAgentState, DevAgentSupervisor, Naming}
+  alias Engine.Dev.{DevAgentState, DevAgentSupervisor, Naming, Wake}
 
   def start(
         conn,
@@ -78,6 +79,23 @@ defmodule EngineWeb.ExecutionCommandController do
         if origin == :started,
           do: DevAgentSupervisor.server_for(base.impl).work(project_id, agent_id)
 
+        send_resp(conn, 202, "")
+    end
+  end
+
+  def rearm(conn, %{
+        "sessionId" => _session_id,
+        "agentId" => agent_id,
+        "projectId" => project_id
+      }) do
+    case DevAgentState.get(project_id, agent_id) do
+      nil ->
+        conn
+        |> put_status(404)
+        |> json(%{error: "agente #{agent_id} não encontrado"})
+
+      _state ->
+        :ok = Wake.deliver(project_id, agent_id, :rearm)
         send_resp(conn, 202, "")
     end
   end

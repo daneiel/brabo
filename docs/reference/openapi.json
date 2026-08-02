@@ -4975,6 +4975,71 @@
         ]
       }
     },
+    "/projects/{projectId}/sessions/{sessionId}/agents/{agentId}/rearm": {
+      "post": {
+        "description": "Zera o contador de tasks blocked consecutivas (RN-047) e devolve o agente a tentar reivindicar. É a única saída de `idle_tripped` — não existe destrave automático.",
+        "operationId": "ExecutionController_rearm",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "agentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto, sessão ou tarefa inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Rearma um dev agent travado pelo circuit breaker",
+        "tags": [
+          "execução"
+        ]
+      }
+    },
     "/projects/{projectId}/sessions/{sessionId}/agents/arquiteto/handoff-infra": {
       "post": {
         "description": "Endpoint dedicado em vez de reaproveitar `readiness`, que é do Criativo: são dois marcos diferentes da sessão e confundi-los tornaria o event log ambíguo.",

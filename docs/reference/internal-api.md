@@ -199,7 +199,7 @@ válida nem perfilar uma competência fora do catálogo, ainda que o modelo peç
 
 ## api → engine
 
-Onze rotas de comando, mais as de saúde. Sob `/internal` com `VerifyServiceToken`:
+Doze rotas de comando, mais as de saúde. Sob `/internal` com `VerifyServiceToken`:
 
 | método | caminho | o que dispara |
 |---|---|---|
@@ -210,6 +210,7 @@ Onze rotas de comando, mais as de saúde. Sob `/internal` com `VerifyServiceToke
 | POST | `/sessions/:id/agent/offer-infra-handoff` | oferta de handoff ao Infra |
 | POST | `/sessions/:id/execution/start` | ativa a fase de execução |
 | POST | `/sessions/:id/execution/parallelize` | cria subagentes |
+| POST | `/sessions/:id/dev-agents/:agentId/rearm` | rearma um dev agent travado (Fase 12b — RN-047) |
 | POST | `/sessions/:id/psychologist/reanalyze` | reanálise sob demanda |
 | POST | `/projects/:id/anamnese/run` | execução da Anamnese |
 | POST | `/projects/:id/agents/:agent/instructions/invalidate` | invalida o cache de instrução |

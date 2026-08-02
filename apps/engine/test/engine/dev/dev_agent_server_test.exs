@@ -509,4 +509,34 @@ defmodule Engine.Dev.DevAgentServerTest do
       assert Enum.all?(diagnoses, &(&1 =~ "teto: 500000"))
     end
   end
+
+  describe "rearm (Fase 12b — RN-047)" do
+    test ":rearm em idle_tripped zera o contador e tenta reivindicar", %{state: state} do
+      state = %{
+        state
+        | status: :idle_tripped,
+          consecutive_blocked: 3,
+          max_consecutive_blocked: 3
+      }
+
+      Process.put(:fake_tasks, [])
+
+      assert {:noreply, new_state} = DevAgentServer.handle_info(:rearm, state)
+
+      assert new_state.status == :idle
+      assert new_state.consecutive_blocked == 0
+      assert_received {:event_appended, _, _, %{type: "dev.idle"}}
+    end
+
+    test ":rearm fora de idle_tripped é no-op — não é a saída certa de nenhum outro estado", %{
+      state: state
+    } do
+      state = %{state | status: :awaiting_gate, task_id: "task-x", consecutive_blocked: 1}
+
+      assert {:noreply, unchanged} = DevAgentServer.handle_info(:rearm, state)
+
+      assert unchanged == state
+      refute_received {:task_claimed, _, _}
+    end
+  end
 end

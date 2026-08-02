@@ -425,6 +425,16 @@ export const unblockTask = (
   post<{ ok: true }>(
     `/projects/${projectId}/sessions/${sessionId}/tasks/${taskId}/unblock`,
   );
+// Rearma um dev agent travado pelo circuit breaker (Fase 12b — RN-047) — a
+// única saída de idle_tripped.
+export const rearmDevAgent = (
+  projectId: string,
+  sessionId: string,
+  agentId: string,
+) =>
+  post<{ ok: true }>(
+    `/projects/${projectId}/sessions/${sessionId}/agents/${agentId}/rearm`,
+  );
 
 // --- Proposed actions ---
 

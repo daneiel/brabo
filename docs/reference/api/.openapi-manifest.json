@@ -1,6 +1,6 @@
 {
   "_": "Gerado por `pnpm docs:generate`. Não edite — é a trava do que está em docs/reference/api/.",
-  "openapiSha256": "22d07e021ea2a5a6b29e9c9e012c1e1130272b9e91ea8a7d9439eb92376b3ffa",
+  "openapiSha256": "d98a76d93d2c9ff5502874bd3edc6ec60f0320b95cf14db4a2944263ae0300fa",
   "arquivos": {
     "actions-controller-approve-always.ParamsDetails.json": "f51f6d74f8b4a7e9c8f70cef93e0d026d63e77123672029da660c802def3ad0e",
     "actions-controller-approve-always.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
@@ -175,6 +175,10 @@
     "execution-controller-parallelize.RequestSchema.json": "c421ee1e87804ca094698beedf3ca962f1e14490904223c4263776793af0cd8c",
     "execution-controller-parallelize.StatusCodes.json": "fa0d14be4d95ea5a643875bb7571b1588b3ab0a941fe2fbe0f1bc7ff0bdeccaa",
     "execution-controller-parallelize.api.mdx": "4c6c970900bb1e8217f78f843a65ec87bcee721cf9cd66ed8a46aa5b904d382f",
+    "execution-controller-rearm.ParamsDetails.json": "9c6d31a508072ea33645a040ac6f84ecfd37251124a85a78abf9eb7173c49a37",
+    "execution-controller-rearm.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
+    "execution-controller-rearm.StatusCodes.json": "c0b5c892bd795b94a0543d6105e2ee97e9df4a56d27cda97cd740212c9034b1f",
+    "execution-controller-rearm.api.mdx": "f08bb33dd6b97ce38fc2465af427e50518711c9d3e91f82bfa19e557ccd46343",
     "execution-controller-unblock.ParamsDetails.json": "115478916c33fb0b06d6869fa565afdc32149c87fc67d8181fc53f1eadb95a13",
     "execution-controller-unblock.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
     "execution-controller-unblock.StatusCodes.json": "c0b5c892bd795b94a0543d6105e2ee97e9df4a56d27cda97cd740212c9034b1f",
@@ -483,7 +487,7 @@
     "sessions-controller-transition.RequestSchema.json": "1a1741c5ed6c1e8c653b079f28c80327bfe57363efc50b9673ed8fa755c256f3",
     "sessions-controller-transition.StatusCodes.json": "ad65603d00aa842175d178e0d998a25b55da05f723c870ecf304bca643783cf4",
     "sessions-controller-transition.api.mdx": "537d042f310b6554fda50ed8cbb6f32f80f5bb688d6e41e2b281d5d25310ac76",
-    "sidebar.ts": "5b74298274953cf64c6d1cc776a431c421f0af7e3f7e8a53ece03d59634955cf",
+    "sidebar.ts": "b934802ecab2690d1256fd40905781812289918dc7cf95ebd81dc39d74e03258",
     "workspaces-controller-add-member.ParamsDetails.json": "56d669b72315e3339a75e1873f3cf2543f5b2ba3552994ad2fb69d673da7192b",
     "workspaces-controller-add-member.RequestSchema.json": "c17baeb1beca0020e67b7b40d66d88fbf644c7d3d24276560d0d58149ac2249a",
     "workspaces-controller-add-member.StatusCodes.json": "6a3de2295117fd5c898f85528f29d667fcbe398fa244bbf3c3f32f8ca71aa339",
