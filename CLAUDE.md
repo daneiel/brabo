@@ -76,27 +76,83 @@ e pipeline de aprovação de ações com autoridade final do usuário.
   Brabo, em fork com seed manual, tandas com restart entre tasks,
   Criativo obrigatório na cadeia). Colheita em
   docs/explanation/primeiro-dogfooding.md e ADR TODO(humano): número.
-  Achados priorizados TODO(humano): listar os P1 aqui — no mínimo os
-  já conhecidos da preparação: adoção de repositório existente
-  (createRepo incondicional, getRepo sem uso, sem externalId no DTO),
-  reagendamento de dev agent após gate (tandas exigem restart do
-  engine), e promoção automática de story a ready sem passo humano.
-- FASE 11 — CONCLUÍDA: os seis providers da Fase 9b entraram como
-  config sobre a base, um de cada vez, cada um investigado do zero
-  contra a doc oficial da API dele — proibido herdar suposição de
-  quirk entre providers (11a: OpenRouter, o único hub dos seis,
-  primeiro para provar a base contra produção real; 11b: NVIDIA NIM,
-  Together, DeepInfra, Bitdeer, Vultr). LLM_PROVIDER_NAMES foi de 3
-  para 9; DTO de credencial e testador de conexão passaram a derivar
-  de uma lista única em vez de hardcode triplicado. Capability só
-  declarada quando provada — dois casos reais de decisão revertida ao
-  vivo durante a implementação (DeepInfra e Vultr), nunca travada só
-  no planejamento. Único hook novo na base
-  (`parseErrorFrame`, +31 linhas) é o que o OpenRouter, sendo hub,
-  provou necessário — nenhum dos cinco diretos precisou (ADR 0043).
+  Achados P1: adoção de repositório existente (createRepo incondicional
+  em provision-repository.use-case.ts:144, getRepo sem uso, sem
+  externalId no DTO), reagendamento de dev agent após gate (`:work` só
+  na ativação — tandas exigem restart do engine) e promoção automática
+  de story a ready sem passo humano. Demais achados: TODO(humano).
+- FASE 11 — CONCLUÍDA: os seis providers da Fase 9b como config sobre
+  a base, cada um investigado do zero contra a doc oficial (proibido
+  herdar quirk); LLM_PROVIDER_NAMES de 3 para 9; DTO de credencial e
+  testador de conexão derivando de lista única; capability só
+  declarada quando provada, com duas reversões ao vivo (DeepInfra e
+  Vultr); único hook novo na base (`parseErrorFrame`, +31 linhas)
+  provado necessário pelo OpenRouter (ADR 0043).
   Pendente: aceite com credencial real dos seis smokes, gated por
-  `<PROVIDER>_TEST_KEY`, ainda não rodado contra chave nenhuma.
+  `<PROVIDER>_TEST_KEY` — depende de chaves do usuário, rastreado como
+  item de backlog, não bloqueia fase.
 - Não refatore o que está pronto sem pedido explícito.
+
+## Escopo da FASE 12 (ativa — operabilidade: os três achados P1 do dogfooding)
+O que separa o experimento controlado da operação real. Cada item
+nasce da colheita da Fase 10; a correção deve caber no desenho
+existente — se exigir mudança estrutural, ADR antes.
+
+### 12a — Adoção de repositório existente
+1. O wizard ganha o caminho "Adotar repositório existente" ao lado de
+   "Criar novo": DTO com externalId/URL + provider + credencial;
+   getRepo (existente e sem uso desde a Fase 2) valida acesso e
+   capabilities; createRepo deixa de ser incondicional
+   (provision-repository.use-case.ts:144) — adoção NÃO cria repo.
+2. Bootstrap em modo adoção é OPT-IN e começa com PLANO: o use-case
+   roda em dry-run listando o que criaria/alteraria (branches
+   faltantes, proteções, arquivos) SEM executar; o usuário aprova o
+   plano inteiro ou adota "como está" (bootstrap dispensado,
+   registrado). Nunca sobrescrever proteção existente sem aprovação
+   explícita — a lição do ADR 0028 vira regra do produto.
+3. Detecção de política divergente: repo adotado cujas branches não
+   batem com o template (ex.: sem qa, com rc) é registrado como
+   política própria do projeto — o bootstrap não força o template;
+   diagnóstico vai para o event log e para a tela do projeto.
+4. Idempotência preservada: adotar o mesmo repo duas vezes converge;
+   provisioned_repositories/repo_bootstraps ganham origem
+   (created | adopted) — o seed manual da Fase 10 nunca mais é
+   necessário.
+
+### 12b — Reagendamento do dev agent após gate
+5. Fim das tandas: o DevAgentServer volta ao trabalho quando (a) o
+   gate resolve sua task (approved → pega a próxima ready do módulo;
+   changes_requested → correção, fluxo já existente) e (b) uma task
+   nova do seu módulo vira ready — sem restart do engine. Sem task
+   ready: estado idle explícito no painel, não processo morto.
+6. Guardas do reagendamento: claim atômico preservado, teto de
+   orçamento por task inalterado, e um circuit breaker por agente
+   (N tasks consecutivas blocked → agente para em idle com evento e
+   notificação, em vez de queimar orçamento em série — valor
+   configurável por projeto).
+7. Reidratação pós-restart retoma o estado correto (idle | working |
+   awaiting_gate) — o teste da Fase 4 de reidratação é estendido para
+   os estados novos.
+
+### 12c — Promoção de story com autoridade do usuário
+8. Transição draft→ready deixa de ser automática na criação: modo por
+   projeto (manual — DEFAULT — | auto), alinhado ao princípio de
+   autoridade do usuário. Em manual, o PO propõe (story fica draft
+   completa com DoD/DoR validados) e o usuário promove na UI do
+   Backlog — individualmente ou em lote com revisão.
+9. O modo auto permanece para quem preferir (é o comportamento atual,
+   documentado como opt-in); a mudança de default entra no CHANGELOG
+   como breaking de comportamento.
+
+### 12d — Fechamento
+10. Mini-validação: reexecutar UMA task de ponta a ponta num projeto
+    ADOTADO (fork da Fase 10 serve), sem seed manual, sem restart do
+    engine, com promoção manual de story — os três achados provados
+    resolvidos numa única execução.
+11. ADR "operabilidade pós-dogfooding" referenciando a colheita;
+    RN-XXX para as regras novas (adoção sem sobrescrita, circuit
+    breaker, promoção manual como default); docmap/CHANGELOG/docs
+    verdes.
 
 ## Stack (decidida — não proponha alternativas)
 - `apps/api`: NestJS 11 + Drizzle ORM + PostgreSQL 16 + pgvector
@@ -109,7 +165,7 @@ e pipeline de aprovação de ações com autoridade final do usuário.
 - LLM: roteador na api com suite de contrato; base OpenAI-compatível
   sobre node:http (timeout de inatividade, erro por `code`,
   capabilities em duas camadas — ADR 0041); catálogo com curadoria e
-  preço congelado no metering (ADR 0042)
+  preço congelado no metering (ADR 0042); 9 providers (ADR 0043)
 - Deploy: Kubernetes (k3d/kind em validação local)
 - Docs: Docusaurus 3.x em website/ lendo de docs/; Mermaid; busca local
 - CI/CD de release: GitHub Actions com lógica em scripts testáveis
@@ -141,6 +197,9 @@ e pipeline de aprovação de ações com autoridade final do usuário.
   por gate, independente da estrutura interna da área.
 - Merge em branch protegida (dev/qa/main) é SEMPRE manual do
   usuário — sem opção de automatizar, garantido por teste.
+- O produto NUNCA sobrescreve configuração de repositório do usuário
+  (proteções, branches) sem plano aprovado explicitamente (regra da
+  FASE 12, origem no ADR 0028).
 - Commits de agentes usam identidade "<agente>[bot]" com o usuário
   como co-author.
 - Todo desfecho de falha de agente registra a ORIGEM da falha
@@ -191,13 +250,15 @@ e pipeline de aprovação de ações com autoridade final do usuário.
 - Não implementar Dev Lead nem áreas dinâmicas via module_map (backlog
   do ADR 0038)
 - Não implementar o aparato genérico de áreas (agent_areas/budget por
-  área) — corte registrado da Fase 8; se um provider novo esbarrar
-  nisso, é achado, não convite
+  área) — corte registrado da Fase 8
 - Não versionar à mão: toda tag nasce de workflow
 - Não instalar libs sem justificar no plano
 - Não refatorar código das fases concluídas fora do necessário para a
-  fase ativa
+  Fase 12
 - Não ativar modelo descoberto automaticamente: curadoria manual
   sempre (ADR 0042)
-- Não atacar os achados P1 do dogfooding fora da FASE 12, que disputa
-  isso com o restante do backlog
+- (FASE 12) Não estender a adoção a migração de dados do repo
+  (issues, PRs históricas) — adoção é acesso + política, nada mais
+- (FASE 12) Não transformar o reagendamento em autonomia nova: o
+  pipeline de aprovações continua exatamente como está — o que muda é
+  o agente não morrer entre tasks
