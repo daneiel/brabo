@@ -58,6 +58,24 @@ defmodule Engine.Dev.DevRehydratorTest do
     end
   end
 
+  # A recuperação do `working` reidratado é assíncrona (handle_continue,
+  # correção D2) — a linha durável só reflete o desfecho depois que ela roda.
+  defp wait_status!(project_id, agent_id, esperado, tentativas \\ 200) do
+    row = DevAgentState.get(project_id, agent_id)
+
+    cond do
+      row && row.status == esperado ->
+        row
+
+      tentativas > 0 ->
+        Process.sleep(10)
+        wait_status!(project_id, agent_id, esperado, tentativas - 1)
+
+      true ->
+        flunk("status não chegou a #{esperado}; último: #{inspect(row && row.status)}")
+    end
+  end
+
   test "reidrata um NoopDevAgent como Noop — não como agente real", %{
     project_id: project_id,
     session_id: session_id
@@ -328,16 +346,72 @@ defmodule Engine.Dev.DevRehydratorTest do
       desliga(project_id, "dev-api")
       :ok = DevRehydrator.run()
 
-      assert_received {:task_blocked, ^task_id, "engine reiniciou durante a task", _, "dev-api"}
-      # Já tenta a próxima sozinho — sem restart, sem intervenção.
-      assert_received {:task_claimed, "api", "dev-api"}
+      # `assert_receive` (com espera), não `assert_received` (imediato): a
+      # recuperação saiu do `init/1` para um `handle_continue` na correção
+      # D2, justamente para não bloquear o boot. Ela é assíncrona AGORA — e
+      # o `DevRehydrator.run()` retornar antes dela terminar é o ponto.
+      assert_receive {:task_blocked, ^task_id, "engine reiniciou durante a task", _, "dev-api"},
+                     2_000
 
-      row = DevAgentState.get(project_id, "dev-api")
-      assert row.status == "idle"
+      # Já tenta a próxima sozinho — sem restart, sem intervenção.
+      assert_receive {:task_claimed, "api", "dev-api"}, 2_000
+
+      # Só depois de a recuperação assíncrona terminar é que a linha reflete
+      # o desfecho — daí o wait_status!/3 em vez de um get direto.
+      row = wait_status!(project_id, "dev-api", "idle")
       assert row.task_id == nil
       # O contador NÃO sobe: reiniciar o engine não é o agente queimando o
       # teto do circuit breaker.
       assert row.consecutive_blocked == 0
+
+      desliga(project_id, "dev-api")
+    end
+
+    test "run() NÃO espera a recuperação do working — o boot não pode ficar preso numa task (D2)",
+         %{project_id: project_id, session_id: session_id} do
+      # A regressão que isto trava: com a recuperação dentro do `init/1`,
+      # `start_link`/`start_child` esperam `:infinity`, e o `DevRehydrator`
+      # roda na árvore de supervisão da APLICAÇÃO — o boot inteiro ficava
+      # parado pela duração de uma task de LLM, e `Readiness.mark` nunca
+      # disparava (`/ready` em 503, pod morto pelo Kubernetes).
+      {:ok, _pid, :started} =
+        DevAgentSupervisor.start_agent(
+          project_id,
+          "dev-api",
+          "api",
+          session_id,
+          nil,
+          nil,
+          :real,
+          3
+        )
+
+      task_id = Ecto.UUID.generate()
+
+      force_status!(project_id, "dev-api", %{
+        status: "working",
+        task_id: task_id,
+        worktree_path: "/tmp/brabo-fake-worktree-#{task_id}",
+        consecutive_blocked: 0
+      })
+
+      desliga(project_id, "dev-api")
+
+      # O fake de claim segura por 300ms, simulando o custo real de uma task.
+      # Se a recuperação ainda fosse síncrona no init, `run()` só voltaria
+      # depois disso.
+      Application.put_env(:engine, :fake_claim_delay_ms, 300)
+      on_exit(fn -> Application.delete_env(:engine, :fake_claim_delay_ms) end)
+
+      {micros, :ok} = :timer.tc(fn -> DevRehydrator.run() end)
+
+      assert div(micros, 1000) < 200,
+             "DevRehydrator.run() levou #{div(micros, 1000)}ms — está esperando a " <>
+               "recuperação da task, e portanto bloqueando o boot"
+
+      # E a recuperação acontece mesmo assim, só que fora do caminho do boot.
+      assert_receive {:task_blocked, ^task_id, "engine reiniciou durante a task", _, "dev-api"},
+                     2_000
 
       desliga(project_id, "dev-api")
     end

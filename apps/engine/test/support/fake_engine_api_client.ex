@@ -104,15 +104,35 @@ defmodule Engine.Sessions.FakeEngineApiClient do
 
   @impl true
   def claim_task(_project_id, _session_id, module, agent_id) do
-    notify({:task_claimed, module, agent_id})
-    # Fila de tasks scriptada por :fake_tasks (pop); esgotada → nil.
-    case Process.get(:fake_tasks, []) do
-      [task | rest] ->
-        Process.put(:fake_tasks, rest)
-        {:ok, task}
+    # Atraso opcional via Application env (NÃO dicionário de processo): o
+    # agente reidratado roda no processo DELE, então `Process.put` do teste
+    # não o alcança. Usado só pelo teste de que o boot não espera a
+    # recuperação de um `working` (D2).
+    case Application.get_env(:engine, :fake_claim_delay_ms) do
+      ms when is_integer(ms) -> Process.sleep(ms)
+      _ -> :ok
+    end
 
-      [] ->
-        {:ok, nil}
+    notify({:task_claimed, module, agent_id})
+
+    # `:fake_claim_error` força o ramo de erro do claim (5xx/timeout da api).
+    # Não existia até a revisão da Fase 12b, e a ausência dele foi o motivo
+    # de o travamento permanente do agente (D1) passar por toda a suite: o
+    # caminho feliz do claim era o ÚNICO exercitado.
+    case Process.get(:fake_claim_error) do
+      nil ->
+        # Fila de tasks scriptada por :fake_tasks (pop); esgotada → nil.
+        case Process.get(:fake_tasks, []) do
+          [task | rest] ->
+            Process.put(:fake_tasks, rest)
+            {:ok, task}
+
+          [] ->
+            {:ok, nil}
+        end
+
+      reason ->
+        {:error, reason}
     end
   end
 

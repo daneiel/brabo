@@ -510,6 +510,52 @@ defmodule Engine.Dev.DevAgentServerTest do
     end
   end
 
+  describe "falha do claim (D1 — revisão da Fase 12b)" do
+    test "claim que falha deixa o agente ACORDÁVEL, não travado para sempre", %{
+      state: state
+    } do
+      # O agente termina uma task aprovada e vai reivindicar a próxima —
+      # mas a api devolve erro. Antes da correção o state voltava intocado:
+      # `finish_task/2` já tinha zerado `task_id`, mas `status` continuava
+      # `:awaiting_gate`, e a partir daí NENHUM dos três handle_info agia.
+      state = %{state | status: :awaiting_gate, task_id: "task-a", worktree: "/wt", branch: "b"}
+      Process.put(:fake_claim_error, :timeout)
+
+      assert {:noreply, apos_erro} =
+               DevAgentServer.handle_info(
+                 {:gate_resolved, %{task_id: "task-a", next_action: "done"}},
+                 state
+               )
+
+      assert apos_erro.status == :idle
+      assert_received {:event_appended, _, _, %{type: "dev.error"}}
+
+      # A prova que importa: um wake seguinte AINDA resgata o agente.
+      Process.delete(:fake_claim_error)
+      Process.put(:fake_tasks, [%{"id" => "task-b", "title" => "B"}])
+
+      assert {:noreply, _} = DevAgentServer.handle_info({:wake, :became_claimable}, apos_erro)
+
+      assert_received {:task_claimed, "api", "dev-api"}
+    end
+
+    test "o estado recuperável também é PERSISTIDO — senão a reidratação ressuscita o travamento",
+         %{state: state, project_id: project_id} do
+      state = %{state | status: :awaiting_gate, task_id: "task-a"}
+      Process.put(:fake_claim_error, :timeout)
+
+      assert {:noreply, _} =
+               DevAgentServer.handle_info(
+                 {:gate_resolved, %{task_id: "task-a", next_action: "done"}},
+                 state
+               )
+
+      row = DevAgentState.get(project_id, "dev-api")
+      assert row.status == "idle"
+      assert row.task_id == nil
+    end
+  end
+
   describe "rearm (Fase 12b — RN-047)" do
     test ":rearm em idle_tripped zera o contador e tenta reivindicar", %{state: state} do
       state = %{

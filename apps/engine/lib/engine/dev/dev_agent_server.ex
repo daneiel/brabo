@@ -126,20 +126,32 @@ defmodule Engine.Dev.DevAgentServer do
     AgentIo.persist(state)
     :ok = Wake.subscribe(project_id, agent_id)
 
-    final_state =
-      if resume && resume.status == "working" do
-        state
-        |> AgentIo.block_task(
-          "engine reiniciou durante a task",
-          "o ToolLoop não pôde ser retomado após o restart — turno, mensagens " <>
-            "e edições do worktree só existiam em memória"
-        )
-        |> finish_restart_recovery()
-      else
-        state
-      end
+    # A recuperação de um `working` interrompido sai do `init/1` por
+    # `{:continue, ...}` — ela BLOQUEIA (block_task + claim, que pode rodar um
+    # ToolLoop inteiro), e `start_link`/`start_child` esperam `:infinity`.
+    # Fazendo isso dentro do `init/1`, o `DevRehydrator` (que roda na árvore
+    # de supervisão da aplicação) segurava o BOOT pela duração de uma task de
+    # LLM, `Readiness.mark(:dev_agents)` nunca disparava (o `/ready` ficava
+    # 503 e o Kubernetes matava o pod), e qualquer exceção derrubava a
+    # reidratação de TODOS os outros agentes. Com `handle_continue` o `init`
+    # volta a ser instantâneo e a recuperação acontece já supervisionada.
+    if resume && resume.status == "working" do
+      {:ok, state, {:continue, :restart_recovery}}
+    else
+      {:ok, state}
+    end
+  end
 
-    {:ok, final_state}
+  @impl true
+  def handle_continue(:restart_recovery, state) do
+    {:noreply,
+     state
+     |> AgentIo.block_task(
+       "engine reiniciou durante a task",
+       "o ToolLoop não pôde ser retomado após o restart — turno, mensagens " <>
+         "e edições do worktree só existiam em memória"
+     )
+     |> finish_restart_recovery()}
   end
 
   # Start fresco: sempre idle, sem task — igual a antes da Fase 12b-6.
@@ -267,6 +279,16 @@ defmodule Engine.Dev.DevAgentServer do
         run_task(%{state | status: :working}, task)
 
       {:error, reason} ->
+        # CAI EM `:idle`, e persiste. Devolver o state intocado aqui travava o
+        # agente PARA SEMPRE: `finish_task/2` já zerou `task_id` mas não mexe
+        # em `status`, então o agente ficava `:awaiting_gate` com `task_id`
+        # nil — e aí os três guards de `handle_info/2` falham todos
+        # (`gate_resolved` exige task_id batendo, `became_claimable` exige
+        # `:idle`, `:rearm` exige `:idle_tripped`). Um 5xx transitório da api
+        # no claim produzia exatamente o sintoma que esta fase existe para
+        # eliminar. `:idle` é o único estado do qual um wake ainda resgata.
+        state = %{state | status: :idle}
+        AgentIo.persist(state)
         AgentIo.emit(state, "dev.error", %{agentId: state.agent_id, reason: inspect(reason)})
         state
     end

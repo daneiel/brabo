@@ -16,6 +16,8 @@ defmodule Engine.Dev.DevRehydrator do
   depois de um restart do nó, não virar agente real.
   """
 
+  require Logger
+
   alias Engine.Dev.{DevAgentState, DevAgentSupervisor}
   alias Engine.Readiness
 
@@ -29,17 +31,31 @@ defmodule Engine.Dev.DevRehydrator do
         consecutive_blocked: s.consecutive_blocked
       }
 
-      DevAgentSupervisor.start_agent(
-        s.project_id,
-        s.agent_id,
-        s.module,
-        s.session_id,
-        s.task_budget_micros,
-        s.max_gate_corrections,
-        s.impl,
-        s.max_consecutive_blocked,
-        resume
-      )
+      # Um agente que não sobe NÃO pode levar os outros junto: isto roda no
+      # boot, e antes uma exceção aqui (ou um `{:error, _}` sem cláusula no
+      # supervisor) derrubava a reidratação inteira — em ciclo, porque a
+      # linha durável sobrevive e o próximo boot repete. Loga e segue: o
+      # agente que falhou fica sem processo até alguém reativar a execução,
+      # que é muito melhor do que um engine que não sobe.
+      try do
+        DevAgentSupervisor.start_agent(
+          s.project_id,
+          s.agent_id,
+          s.module,
+          s.session_id,
+          s.task_budget_micros,
+          s.max_gate_corrections,
+          s.impl,
+          s.max_consecutive_blocked,
+          resume
+        )
+      catch
+        kind, reason ->
+          Logger.error(
+            "reidratação do dev agent #{s.agent_id} (projeto #{s.project_id}) falhou: " <>
+              "#{inspect(kind)} #{inspect(reason)}"
+          )
+      end
     end)
 
     Readiness.mark(:dev_agents)

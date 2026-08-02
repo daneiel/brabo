@@ -54,6 +54,14 @@ defmodule Engine.Dev.DevAgentSupervisor do
 
           {:error, {:already_started, pid}} ->
             {:ok, pid, :existing}
+
+          # Sem esta cláusula, um `init/1` que levantasse virava
+          # `CaseClauseError` AQUI — e como o `DevRehydrator` chama isto em
+          # loop no boot, um único agente problemático derrubava a
+          # reidratação de todos os outros e a aplicação inteira, em ciclo
+          # (a linha durável sobrevive, o próximo boot repete).
+          {:error, reason} ->
+            {:error, reason}
         end
     end
   end
