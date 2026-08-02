@@ -84,9 +84,33 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/git-controller-adopt",
+          label: "Adota um repositório que já existe, sem criar nada",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/git-controller-get-bootstrap",
           label: "Devolve o estado do bootstrap de Gitflow",
           className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/git-controller-plan",
+          label: "Devolve o plano de bootstrap e o que foi decidido sobre ele",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/git-controller-approve-plan",
+          label: "Aprova o plano INTEIRO e roda o bootstrap",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/git-controller-skip-plan",
+          label: "Adota o repositório COMO ESTÁ, dispensando o bootstrap",
+          className: "api-method post",
         },
         {
           type: "doc",

@@ -135,12 +135,16 @@ Os schemas são fechados: campo faltando reprova a emissão
 | tipo | quando |
 |---|---|
 | `project.git_connected` | credencial de git vinculada ao projeto |
-| `project.repository_provisioned` | repositório criado/adotado |
+| `project.repository_provisioned` | repositório **criado** pelo Brabo |
+| `project.repository_adopted` | repositório que **já existia** passou a ser o do projeto ([RN-046](../business-rules.md#rn-046)) |
+| `bootstrap.repository_adopted` | o mesmo fato na sessão dedicada, com o `defaultBranch` observado no provider |
 | `bootstrap.step_started` | um dos seis passos do Gitflow começou |
 | `bootstrap.step_completed` | concluído |
 | `bootstrap.step_skipped` | já estava feito — **é sucesso**, não erro ([RN-029](../business-rules.md#rn-029)) |
 | `bootstrap.step_degraded` | concluiu sem uma capability do provider (ex.: proteção de branch no Local) |
 | `bootstrap.step_failed` | falhou; o bootstrap é retomável deste ponto |
+| `bootstrap.plan_approved` | o usuário aprovou o plano de adoção — **é só daqui que o bootstrap roda num repo adotado** ([RN-045](../business-rules.md#rn-045)) |
+| `bootstrap.adopted_as_is` | o usuário dispensou o bootstrap; nenhum passo rodou, e o plano fica guardado como evidência do que não foi aplicado |
 
 ### Custo
 
@@ -258,7 +262,7 @@ respeito.
 
 > ⚠️ Bloco gerado por `pnpm docs:generate`. Não edite à mão — o próximo build sobrescreve.
 
-Extraído dos pontos de emissão: **69 identificadores**, todos descritos acima.
+Extraído dos pontos de emissão: **73 identificadores**, todos descritos acima.
 
 - `action.failed` <sub>(apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts)</sub>
 - `agent.activated` <sub>(apps/api/src/application/use-cases/agents/activate-agent.use-case.ts)</sub>
@@ -286,11 +290,14 @@ Extraído dos pontos de emissão: **69 identificadores**, todos descritos acima.
 - `backlog.task_created` <sub>(apps/api/src/application/use-cases/backlog/create-task.use-case.ts)</sub>
 - `backlog.task_status_changed` <sub>(apps/api/src/application/use-cases/execution/mark-task.use-case.ts)</sub>
 - `backlog.task_unblocked` <sub>(apps/api/src/application/use-cases/execution/unblock-task.use-case.ts)</sub>
-- `bootstrap.step_completed` <sub>(apps/api/src/application/use-cases/git/provision-repository.use-case.ts)</sub>
-- `bootstrap.step_degraded` <sub>(apps/api/src/application/use-cases/git/provision-repository.use-case.ts)</sub>
-- `bootstrap.step_failed` <sub>(apps/api/src/application/use-cases/git/provision-repository.use-case.ts)</sub>
-- `bootstrap.step_skipped` <sub>(apps/api/src/application/use-cases/git/provision-repository.use-case.ts)</sub>
-- `bootstrap.step_started` <sub>(apps/api/src/application/use-cases/git/provision-repository.use-case.ts)</sub>
+- `bootstrap.adopted_as_is` <sub>(apps/api/src/application/use-cases/git/decide-bootstrap-plan.use-case.ts)</sub>
+- `bootstrap.plan_approved` <sub>(apps/api/src/application/use-cases/git/decide-bootstrap-plan.use-case.ts)</sub>
+- `bootstrap.repository_adopted` <sub>(apps/api/src/application/use-cases/git/adopt-repository.use-case.ts)</sub>
+- `bootstrap.step_completed` <sub>(apps/api/src/application/use-cases/git/bootstrap-runner.ts)</sub>
+- `bootstrap.step_degraded` <sub>(apps/api/src/application/use-cases/git/bootstrap-runner.ts)</sub>
+- `bootstrap.step_failed` <sub>(apps/api/src/application/use-cases/git/bootstrap-runner.ts)</sub>
+- `bootstrap.step_skipped` <sub>(apps/api/src/application/use-cases/git/bootstrap-runner.ts)</sub>
+- `bootstrap.step_started` <sub>(apps/api/src/application/use-cases/git/bootstrap-runner.ts)</sub>
 - `budget.threshold_crossed` <sub>(apps/api/src/application/use-cases/llm/record-llm-usage.use-case.ts)</sub>
 - `chat.message` <sub>(apps/api/src/application/use-cases/agents/send-agent-message.use-case.ts)</sub>
 - `delegation.completed` <sub>(apps/api/src/application/use-cases/execution/record-delegation.use-case.ts)</sub>
@@ -310,6 +317,7 @@ Extraído dos pontos de emissão: **69 identificadores**, todos descritos acima.
 - `permission.granted` <sub>(apps/api/src/application/use-cases/actions/approve-always-action.use-case.ts)</sub>
 - `pr.gate_changed` <sub>(apps/api/src/application/use-cases/execution/open-gate.use-case.ts)</sub>
 - `project.git_connected` <sub>(apps/api/src/application/use-cases/git/handle-git-oauth-callback.use-case.ts)</sub>
+- `project.repository_adopted` <sub>(apps/api/src/application/use-cases/git/adopt-repository.use-case.ts)</sub>
 - `project.repository_provisioned` <sub>(apps/api/src/application/use-cases/git/provision-repository.use-case.ts)</sub>
 - `proposed_action.approved` <sub>(apps/api/src/application/use-cases/actions/approve-action.use-case.ts)</sub>
 - `proposed_action.created` <sub>(apps/api/src/application/use-cases/actions/propose-action.use-case.ts)</sub>

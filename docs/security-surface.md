@@ -219,7 +219,11 @@ o componente `d` da JWK, travado por teste.
 | POST | `/projects/:projectId/execution/activate` | role:maintainer |
 | GET | `/projects/:projectId/git/:provider/connect` | role:maintainer |
 | POST | `/projects/:projectId/git/:provider/repository` | role:maintainer |
+| POST | `/projects/:projectId/git/:provider/repository/adopt` | role:maintainer |
 | GET | `/projects/:projectId/git/bootstrap` | role:viewer |
+| GET | `/projects/:projectId/git/bootstrap/plan` | role:viewer |
+| POST | `/projects/:projectId/git/bootstrap/plan/approve` | role:maintainer |
+| POST | `/projects/:projectId/git/bootstrap/plan/skip` | role:maintainer |
 | GET | `/projects/:projectId/git/repository` | role:viewer |
 | GET | `/projects/:projectId/hypotheses` | role:viewer |
 | POST | `/projects/:projectId/hypotheses/:hypothesisId/accept` | role:developer |
