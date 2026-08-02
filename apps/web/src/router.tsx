@@ -267,6 +267,11 @@ const routeTree = rootRoute.addChildren([
     projectRoute,
     sessionRoute,
     provisioningRoute,
+    // Fase 12a: a rota era CRIADA e nunca entrava na árvore. Consequência
+    // dupla — o `navigate` do wizard para `/adoption` não existia nos tipos
+    // (quebrando `tsc -b`, e com ele a imagem de produção da web), e em
+    // runtime a tela do plano de adoção era inalcançável por URL.
+    adoptionRoute,
     gitErrorRoute,
   ]),
   authLayout.addChildren([

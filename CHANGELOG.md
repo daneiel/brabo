@@ -59,6 +59,25 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   na Fase 8b (só QA) era estreita demais pra segunda área
   ([RN-037](docs/business-rules.md#rn-037))
 
+### Correções
+
+- **web,ci**: o **build de produção da web estava quebrado** — e com ele a
+  imagem `brabo-web`, ou seja, o deploy Kubernetes inteiro. Quatro erros de
+  tipo acumulados em três fases sem ninguém ver, porque o CI rodava `lint` e
+  `test` do web e **nunca** `build`: o vitest transpila por esbuild (apaga os
+  tipos sem verificar) e o eslint aqui não faz checagem de tipo. O único lugar
+  que verificava era o `tsc -b` dentro do build da imagem, que só roda no
+  bootstrap do k8s, à mão.
+  Entram um script `typecheck` no web e o passo correspondente no CI, ao lado
+  do que a api já tinha. Os quatro: `awaiting_plan_decision` faltando no mapa
+  de badge do `ProjectCard` (o estado entrou no tipo na 12a e o mapa ficou
+  para trás); parâmetro-propriedade proibido por `erasableSyntaxOnly` num
+  mock de teste; e dois fixtures de `Project` desatualizados.
+  Junto, um defeito de runtime da mesma safra: **`adoptionRoute` era criada e
+  nunca entrava na árvore de rotas** — a tela do plano de adoção era
+  inalcançável por URL, e o `navigate` do wizard apontava para uma rota que
+  não existia nos tipos
+
 ### Novidades
 
 - **api,engine,docs**: dois achados do dogfooding revisitados

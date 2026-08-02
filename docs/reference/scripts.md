@@ -78,6 +78,7 @@ Fonte: os `package.json` de cada pacote e o `Makefile` da raiz.
 |---|---|
 | `pnpm --filter web dev` | `vite` |
 | `pnpm --filter web build` | `tsc -b && vite build` |
+| `pnpm --filter web typecheck` | `tsc -b --force` |
 | `pnpm --filter web lint` | `oxlint` |
 | `pnpm --filter web preview` | `vite preview` |
 | `pnpm --filter web test` | `vitest run` |
@@ -121,4 +122,4 @@ Fonte: os `package.json` de cada pacote e o `Makefile` da raiz.
 
 ---
 
-76 comandos no total. Alvo do Makefile sem anotação `## descrição` não aparece aqui — anote na fonte.
+77 comandos no total. Alvo do Makefile sem anotação `## descrição` não aparece aqui — anote na fonte.

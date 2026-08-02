@@ -12,12 +12,14 @@ const getBootstrapStatus = vi.fn();
 const getProject = vi.fn();
 
 vi.mock('../lib/api-client', () => ({
+  // Campo declarado e atribuído no corpo, não parâmetro-propriedade: o
+  // `erasableSyntaxOnly` do tsconfig proíbe a forma curta, e ela quebrava o
+  // build de produção (`tsc -b`) sem aparecer no `--noEmit` local.
   ApiError: class ApiError extends Error {
-    constructor(
-      public status: number,
-      message: string,
-    ) {
+    status: number;
+    constructor(status: number, message: string) {
       super(message);
+      this.status = status;
     }
   },
   adoptRepository: (...a: unknown[]) => adoptRepository(...a),
