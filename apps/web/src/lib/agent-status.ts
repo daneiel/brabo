@@ -50,11 +50,25 @@ function conversationalStatus(events: SessionEvent[], actorId: string): AgentSta
 // inclusive quando o log dizia `dev.idle` e inclusive sem nenhum evento do
 // agente: um dev parado aparecia trabalhando para sempre. `dev.idle` (emitido
 // quando não há task pegável) e o silêncio total agora dizem a verdade.
+//
+// Fase 12b: `dev.awaiting_gate` (PR aberta, esperando o gate — o agente
+// mantém task_id/worktree, mas não está "trabalhando" no sentido do
+// ToolLoop rodando) e `dev.idle_tripped` (circuit breaker disparado, RN-047)
+// entram na mesma lista — são status tão reais quanto os que já existiam.
+//
+// `dev.rearmed` FICA DE FORA de propósito: quem o grava é a api, com
+// `actor: {kind: 'user', ...}` (é o clique do humano, não uma narrativa do
+// agente) — o filtro abaixo é por `actor.id === agentId`, então esse evento
+// nunca bateria mesmo estando na lista. O `dev.idle`/`dev.working` que
+// `try_claim` dispara em seguida (round-trip assíncrono pelo engine) é
+// quem efetivamente atualiza o status, poucos instantes depois.
 const DEV_STATUS_EVENTS = [
   'dev.started',
   'dev.working',
   'dev.idle',
   'dev.blocked',
+  'dev.awaiting_gate',
+  'dev.idle_tripped',
   'agent.response',
   'backlog.task_blocked',
 ];
@@ -73,6 +87,10 @@ function devStatus(events: SessionEvent[], agentId: string): AgentStatus {
       return 'falhou';
     case 'dev.idle':
       return 'ocioso';
+    case 'dev.awaiting_gate':
+      return 'aguardando';
+    case 'dev.idle_tripped':
+      return 'travado';
     default:
       return 'trabalhando';
   }
@@ -115,6 +133,20 @@ export function subagentOutcomeLabel(events: SessionEvent[], subagentId: string)
     default:
       return undefined;
   }
+}
+
+// Motivo do circuit breaker (Fase 12b — RN-047), pro card não ficar só com
+// "travado" sem dizer POR QUÊ — é a única informação nova que o painel
+// precisa mostrar pra esse estado (a task/branch já sumiram via
+// `deriveExecutionProgress`, e não há nada mais recente a contar).
+export function breakerReasonFor(events: SessionEvent[], agentId: string): string | undefined {
+  const last = lastEventFor(
+    events,
+    (e) => e.actor.id === agentId && e.type === 'dev.idle_tripped',
+  );
+  if (!last) return undefined;
+  const n = (last.payload as { consecutiveBlocked?: number }).consecutiveBlocked;
+  return n ? `circuit breaker: ${n} tasks blocked seguidas` : 'circuit breaker disparado';
 }
 
 // Um agente com ação pendente de aprovação está BLOQUEADO esperando o humano,
@@ -212,9 +244,11 @@ export function deriveAgentRoster(
 
   // Aplicado por último e sobrepondo: esperar aprovação humana é o estado mais
   // informativo que um agente pode ter no painel. `falhou` continua vencendo —
-  // uma task bloqueada é o que o usuário precisa ver primeiro.
+  // uma task bloqueada é o que o usuário precisa ver primeiro. `travado`
+  // (Fase 12b) vence também: o circuit breaker parou o agente de propósito,
+  // e isso pesa mais que uma aprovação pendente.
   return roster.map((entry) =>
-    entry.status !== 'falhou' && awaitingApproval(pendentes, entry.id)
+    entry.status !== 'falhou' && entry.status !== 'travado' && awaitingApproval(pendentes, entry.id)
       ? { ...entry, status: 'aguardando' }
       : entry,
   );

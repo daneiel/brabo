@@ -25,7 +25,12 @@ import {
   setAgentAutonomy,
   unblockTask,
 } from '../lib/api-client';
-import { deriveAgentRoster, groupRosterByArea, subagentOutcomeLabel } from '../lib/agent-status';
+import {
+  breakerReasonFor,
+  deriveAgentRoster,
+  groupRosterByArea,
+  subagentOutcomeLabel,
+} from '../lib/agent-status';
 import { AREAS, areaFor } from '../lib/agents';
 import { ChevronDownIcon, ChevronRightIcon } from '../components/ui/icons';
 import { deriveExecutionProgress, formatMicros } from '../lib/execution';
@@ -209,7 +214,11 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
         onAutonomyChange={(mode) => handleAutonomyChange(r.id, autonomyType, mode)}
         onRearm={r.status === 'travado' ? () => handleRearm(r.id) : undefined}
         activity={
-          progress?.taskTitle ? { label: progress.taskTitle, branch: progress.branch } : undefined
+          r.status === 'travado'
+            ? { label: breakerReasonFor(events, r.id) ?? 'circuit breaker disparado' }
+            : progress?.taskTitle
+              ? { label: progress.taskTitle, branch: progress.branch }
+              : undefined
         }
         tokensMicros={custo}
       />

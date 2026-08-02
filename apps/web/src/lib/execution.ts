@@ -60,6 +60,21 @@ export function deriveExecutionProgress(
       });
     }
 
+    // Fase 12b: sem isto, um agente que termina uma task e volta a idle
+    // (ou trava no circuit breaker) continuava mostrando a task/branch da
+    // ANTERIOR pra sempre — o card dizia "ocioso" ao lado de "Implementar
+    // X", uma task que já não existe mais pra ele. `dev.awaiting_gate` NÃO
+    // limpa: a mesma task segue em aberto, só esperando o gate.
+    if ((e.type === 'dev.idle' || e.type === 'dev.idle_tripped') && p.agentId) {
+      agents.set(p.agentId, {
+        ...agents.get(p.agentId),
+        module: agents.get(p.agentId)?.module ?? '',
+        branch: undefined,
+        taskId: undefined,
+        taskTitle: undefined,
+      });
+    }
+
     if (e.type === 'agent.response' && agents.has(e.actor.id)) {
       const rp = e.payload as ResponsePayload;
       agents.set(e.actor.id, {

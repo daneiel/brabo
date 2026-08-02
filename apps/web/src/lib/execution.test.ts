@@ -139,6 +139,74 @@ describe('deriveExecutionProgress', () => {
   it('event log vazio devolve mapa vazio', () => {
     expect(deriveExecutionProgress([]).size).toBe(0);
   });
+
+  describe('Fase 12b — dev.idle limpa a task/branch anterior', () => {
+    it('dev.idle depois de dev.working: task/branch somem, módulo fica', () => {
+      const agents = deriveExecutionProgress([
+        ev('dev.started', 'dev-api', { agentId: 'dev-api', module: 'api' }),
+        ev('dev.working', 'dev-api', {
+          agentId: 'dev-api',
+          taskId: 't-1',
+          taskTitle: 'Endpoint de cadastro',
+          branch: 'feature/task-1',
+        }),
+        ev('dev.idle', 'dev-api', { agentId: 'dev-api', reason: 'sem task pegável' }),
+      ]);
+
+      expect(agents.get('dev-api')).toEqual({ module: 'api' });
+    });
+
+    it('dev.idle_tripped também limpa — o breaker parou o agente, não há task dele mais', () => {
+      const agents = deriveExecutionProgress([
+        ev('dev.working', 'dev-api', {
+          agentId: 'dev-api',
+          taskId: 't-1',
+          taskTitle: 'Endpoint de cadastro',
+          branch: 'feature/task-1',
+        }),
+        ev('dev.idle_tripped', 'dev-api', { agentId: 'dev-api', consecutiveBlocked: 3 }),
+      ]);
+
+      expect(agents.get('dev-api')?.taskTitle).toBeUndefined();
+      expect(agents.get('dev-api')?.branch).toBeUndefined();
+    });
+
+    it('dev.awaiting_gate NÃO limpa — a mesma task segue em aberto, só esperando o gate', () => {
+      const agents = deriveExecutionProgress([
+        ev('dev.working', 'dev-api', {
+          agentId: 'dev-api',
+          taskId: 't-1',
+          taskTitle: 'Endpoint de cadastro',
+          branch: 'feature/task-1',
+        }),
+        ev('dev.awaiting_gate', 'dev-api', { agentId: 'dev-api', taskId: 't-1', gate: 'qa' }),
+      ]);
+
+      expect(agents.get('dev-api')?.taskTitle).toBe('Endpoint de cadastro');
+      expect(agents.get('dev-api')?.branch).toBe('feature/task-1');
+    });
+
+    it('claim seguinte depois de idle repõe a task nova normalmente', () => {
+      const agents = deriveExecutionProgress([
+        ev('dev.working', 'dev-api', {
+          agentId: 'dev-api',
+          taskId: 't-1',
+          taskTitle: 'Primeira',
+          branch: 'feature/task-1',
+        }),
+        ev('dev.idle', 'dev-api', { agentId: 'dev-api', reason: 'sem task pegável' }),
+        ev('dev.working', 'dev-api', {
+          agentId: 'dev-api',
+          taskId: 't-2',
+          taskTitle: 'Segunda',
+          branch: 'feature/task-2',
+        }),
+      ]);
+
+      expect(agents.get('dev-api')?.taskTitle).toBe('Segunda');
+      expect(agents.get('dev-api')?.branch).toBe('feature/task-2');
+    });
+  });
 });
 
 describe('formatMicros', () => {
