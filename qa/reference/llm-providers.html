@@ -1,4 +1,4 @@
-<!doctype html><html lang=pt-BR dir=ltr class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-reference/llm-providers" data-has-hydrated=false><head><meta charset=UTF-8><meta name=generator content="Docusaurus v3.10.2"><title data-rh=true>Providers de LLM | Brabo</title><meta data-rh=true name=viewport content="width=device-width, initial-scale=1.0"/><meta data-rh=true name=robots content="noindex, nofollow"/><meta data-rh=true name=twitter:card content=summary_large_image /><meta data-rh=true property=og:url content=https://daneiel.github.io/brabo/qa/reference/llm-providers /><meta data-rh=true property=og:locale content=pt_BR /><meta data-rh=true name=docusaurus_locale content=pt-BR /><meta data-rh=true name=docsearch:language content=pt-BR /><meta data-rh=true name=docusaurus_version content=current /><meta data-rh=true name=docusaurus_tag content=docs-default-current /><meta data-rh=true name=docsearch:version content=current /><meta data-rh=true name=docsearch:docusaurus_tag content=docs-default-current /><meta data-rh=true property=og:title content="Providers de LLM | Brabo"/><meta data-rh=true name=description content="O contrato único que torna Ollama, OpenAI e Anthropic intercambiáveis, com capabilities por provider e por modelo, sync de catálogo, ciclo de vida do modelo, erros normalizados e teto de inatividade."/><meta data-rh=true property=og:description content="O contrato único que torna Ollama, OpenAI e Anthropic intercambiáveis, com capabilities por provider e por modelo, sync de catálogo, ciclo de vida do modelo, erros normalizados e teto de inatividade."/><meta data-rh=true name=keywords content="LLM,provider,OpenAI,Anthropic,Ollama,capabilities,tool calling,streaming,catálogo,preço"/><link data-rh=true rel=icon href=/brabo/qa/img/favicon.ico /><link data-rh=true rel=canonical href=https://daneiel.github.io/brabo/qa/reference/llm-providers /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/qa/reference/llm-providers hreflang=pt-BR /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/qa/reference/llm-providers hreflang=x-default /><link rel=stylesheet href=/brabo/qa/assets/css/styles.b2fce81b.css /><script src=/brabo/qa/assets/js/runtime~main.d2607e8e.js defer></script><script src=/brabo/qa/assets/js/main.09459b7a.js defer></script></head><body><svg style="display: none;"><defs>
+<!doctype html><html lang=pt-BR dir=ltr class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-reference/llm-providers" data-has-hydrated=false><head><meta charset=UTF-8><meta name=generator content="Docusaurus v3.10.2"><title data-rh=true>Providers de LLM | Brabo</title><meta data-rh=true name=viewport content="width=device-width, initial-scale=1.0"/><meta data-rh=true name=robots content="noindex, nofollow"/><meta data-rh=true name=twitter:card content=summary_large_image /><meta data-rh=true property=og:url content=https://daneiel.github.io/brabo/qa/reference/llm-providers /><meta data-rh=true property=og:locale content=pt_BR /><meta data-rh=true name=docusaurus_locale content=pt-BR /><meta data-rh=true name=docsearch:language content=pt-BR /><meta data-rh=true name=docusaurus_version content=current /><meta data-rh=true name=docusaurus_tag content=docs-default-current /><meta data-rh=true name=docsearch:version content=current /><meta data-rh=true name=docsearch:docusaurus_tag content=docs-default-current /><meta data-rh=true property=og:title content="Providers de LLM | Brabo"/><meta data-rh=true name=description content="O contrato único que torna Ollama, OpenAI e Anthropic intercambiáveis, com capabilities por provider e por modelo, sync de catálogo, ciclo de vida do modelo, erros normalizados e teto de inatividade."/><meta data-rh=true property=og:description content="O contrato único que torna Ollama, OpenAI e Anthropic intercambiáveis, com capabilities por provider e por modelo, sync de catálogo, ciclo de vida do modelo, erros normalizados e teto de inatividade."/><meta data-rh=true name=keywords content="LLM,provider,OpenAI,Anthropic,Ollama,capabilities,tool calling,streaming,catálogo,preço"/><link data-rh=true rel=icon href=/brabo/qa/img/favicon.ico /><link data-rh=true rel=canonical href=https://daneiel.github.io/brabo/qa/reference/llm-providers /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/qa/reference/llm-providers hreflang=pt-BR /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/qa/reference/llm-providers hreflang=x-default /><link rel=stylesheet href=/brabo/qa/assets/css/styles.b2fce81b.css /><script src=/brabo/qa/assets/js/runtime~main.2dd0bf6c.js defer></script><script src=/brabo/qa/assets/js/main.602d60f3.js defer></script></head><body><svg style="display: none;"><defs>
 <symbol id=theme-svg-external-link viewBox="0 0 24 24"><path fill=currentColor d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
 </defs></svg>
 <script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme-6fd")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")),document.documentElement.setAttribute("data-theme-choice",t||"system")}(),function(){try{for(var[t,e]of new URLSearchParams(window.location.search).entries())if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id=__docusaurus><link rel=preload as=image href=/brabo/qa/img/logo.svg /><div role=region aria-label="Pular para o conteúdo principal"><a class=skipToContent_vTaE href=#__docusaurus_skipToContent_fallback>Pular para o conteúdo principal</a></div><nav aria-label="Navegação principal" class="theme-layout-navbar navbar navbar--fixed-top"><div class=navbar__inner><div class="theme-layout-navbar-left navbar__items"><button aria-label="Alternar painel de navegação" aria-expanded=false class="navbar__toggle clean-btn" type=button><svg width=30 height=30 viewBox="0 0 30 30" aria-hidden=true><path stroke=currentColor stroke-linecap=round stroke-miterlimit=10 stroke-width=2 d="M4 7h22M4 15h22M4 23h22"/></svg></button><a class=navbar__brand href=/brabo/qa/><div class=navbar__logo><img src=/brabo/qa/img/logo.svg alt=Brabo class="themedComponent_MRFi themedComponent--light_L7lV"/><img src=/brabo/qa/img/logo.svg alt=Brabo class="themedComponent_MRFi themedComponent--dark_IOSi"/></div><b class="navbar__title text--truncate">Brabo</b></a><a class="navbar__item navbar__link" href=/brabo/qa/>Documentação</a><a class="navbar__item navbar__link" href=/brabo/qa/runbook>Runbook</a><a class="navbar__item navbar__link" href=/brabo/qa/adr>ADRs</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_7k9y><use href=#theme-svg-external-link /></svg></a><div class="toggle_U6bG colorModeToggle_T9um"><button class="clean-btn toggleButton_g_PR toggleButtonDisabled_Ngeu" type=button disabled title="modo do sistema" aria-label="Mudar entre modo claro e escuro (modo do sistema está ativo)"><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_z_rx lightToggleIcon_McQy"><path fill=currentColor d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_z_rx darkToggleIcon_Ys4Y"><path fill=currentColor d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_z_rx systemToggleIcon_p3nf"><path fill=currentColor d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"/></svg></button></div><div class=navbarSearchContainer_x4Ld><div class="navbar__search searchBarContainer_eC8_" dir=ltr><input placeholder=Search aria-label=Search class="navbar__search-input searchInput_kJYU" value="" /><div class="loadingRing_DQ9P searchBarLoadingRing_Y6ag"><div></div><div></div><div></div><div></div></div></div></div></div></div><div role=presentation class=navbar-sidebar__backdrop></div></nav><div id=__docusaurus_skipToContent_fallback class="theme-layout-main main-wrapper mainWrapper_esxj"><div class=docsWrapper_Ty4Q><button aria-label="Voltar para o topo" class="clean-btn theme-back-to-top-button backToTopButton_L3CF" type=button></button><div class=docRoot_loR7><main class="docMainContainer_SV68 docMainContainerEnhanced_tpPi"><div class="container padding-top--md padding-bottom--lg"><div class=row><div class="col docItemCol_rx8r"><div class=docItemContainer_F5u4><article><div class="tocCollapsible_leAO theme-doc-toc-mobile tocMobile_jGlV"><button type=button class="clean-btn tocCollapsibleButton_zzRU">Nesta página</button></div><div class="theme-doc-markdown markdown"><div class=row><div class="col col--12 markdown"><header><h1>Providers de LLM</h1></header>
@@ -86,7 +86,7 @@ provider, nunca mais rico.</p>
 <blockquote>
 <p>⚠️ Bloco gerado por <code>pnpm docs:generate</code>. Não edite à mão — o próximo build sobrescreve.</p>
 </blockquote>
-<p>Lido dos literais de <code>capabilities</code> em <code>apps/api/src/infrastructure/llm/</code> — <strong>3 providers</strong>.</p>
+<p>Lido dos literais de <code>capabilities</code> em <code>apps/api/src/infrastructure/llm/</code> — <strong>9 providers</strong>.</p>
 
 
 
@@ -120,9 +120,85 @@ provider, nunca mais rico.</p>
 
 
 
-<table><thead><tr><th>provider<th>streaming<th>tool calling<th>list_models<th>fonte<tbody><tr><td><code>anthropic</code><td>sim<td>sim<td>não<td><code>apps/api/src/infrastructure/llm/anthropic-provider.ts</code><tr><td><code>ollama</code><td>sim<td>sim<td>não<td><code>apps/api/src/infrastructure/llm/ollama-provider.ts</code><tr><td><code>openai</code><td>sim<td>sim<td>sim<td><code>apps/api/src/infrastructure/llm/openai-provider.ts</code></table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>provider<th>streaming<th>tool calling<th>list_models<th>credencial<th>origem dos modelos<th>quirks resumidos<th>fonte<tbody><tr><td><code>anthropic</code><td>sim<td>sim<td>não<td>chave de API<td>seed<td>—<td><code>apps/api/src/infrastructure/llm/anthropic-provider.ts</code><tr><td><code>bitdeer</code><td>sim<td>sim<td>não<td>chave de API<td>seed<td><code>Authorization: Bearer &lt;chave></code> CONFIRMADO; <code>GET /v1/models</code> existe e é autenticado; Três ids de modelo REAIS confirmados; Nenhum quirk de stream/erro confirmado<td><code>apps/api/src/infrastructure/llm/bitdeer-provider.ts</code><tr><td><code>deepinfra</code><td>sim<td>sim<td>sim<td>chave de API<td>sync + seed<td>O catálogo é PÚBLICO — sem autenticação nenhuma; <code>stream_options.include_usage</code> confirmado suportado; Erro em shape padrão<td><code>apps/api/src/infrastructure/llm/deepinfra-provider.ts</code><tr><td><code>nvidia-nim</code><td>sim<td>sim<td>não<td>chave de API<td>seed<td>Sem header próprio; Tool calling é por MODELO, não por API; <code>stream_options.include_usage</code> não confirmado<td><code>apps/api/src/infrastructure/llm/nvidia-nim-provider.ts</code><tr><td><code>ollama</code><td>sim<td>sim<td>não<td>nenhuma (local)<td>seed<td>—<td><code>apps/api/src/infrastructure/llm/ollama-provider.ts</code><tr><td><code>openai</code><td>sim<td>sim<td>sim<td>chave de API<td>sync + seed<td>—<td><code>apps/api/src/infrastructure/llm/openai-provider.ts</code><tr><td><code>openrouter</code><td>sim<td>sim<td>sim<td>chave de API<td>sync<td>Headers próprios; Id de modelo prefixado pelo upstream; Catálogo com pricing na própria linha; Erro NO MEIO do stream<td><code>apps/api/src/infrastructure/llm/openrouter-provider.ts</code><tr><td><code>together</code><td>sim<td>sim<td>sim<td>chave de API<td>sync + seed<td>Unidade do preço NÃO documentada explicitamente pela Together; Ids namespaced; <code>stream_options.include_usage</code> não confirmado; 429 carrega <code>error_type: dynamic_request_limited | dynamic_token_limited</code><td><code>apps/api/src/infrastructure/llm/together-provider.ts</code><tr><td><code>vultr</code><td>sim<td>sim<td>não<td>chave de API<td>seed<td>Tool calling CONFIRMADO com exemplo real; Sufixo <code>-normalize</code><td><code>apps/api/src/infrastructure/llm/vultr-provider.ts</code></table>
 <p>Provider sem <code>list_models</code> é PULADO pelo sync de catálogo, com o motivo
-registrado no relatório — nunca tratado como "o catálogo ficou vazio".</p>
+registrado no relatório — nunca tratado como "o catálogo ficou vazio".
+"Origem dos modelos": <code>sync</code> descobre sozinho, <code>seed</code> só entra por
+<code>apps/api/src/db/seed.ts</code>, <code>sync + seed</code> tem os dois (seed é só bootstrap
+antes do primeiro sync). "Quirks resumidos" são os RÓTULOS em negrito da
+seção de prosa do provider abaixo — o porquê de cada um está lá, não aqui.</p>
 <!-- -->
 <p>O default de <code>supports_tool_calling</code> é <code>false</code>. É de propósito: modelo
 descoberto por sync automático (Fase 9c) entra sem promessa que ninguém
@@ -306,9 +382,11 @@ registrava "o modelo parou" para uma requisição que nunca foi respondida.</p>
 latência até o primeiro token.</p>
 <h2 class="anchor anchorTargetStickyNavbar_K8W5" id=a-base-openai-compatível>A base OpenAI-compatível<a href=#a-base-openai-compatível class=hash-link aria-label="Link direto para A base OpenAI-compatível" title="Link direto para A base OpenAI-compatível" translate=no>​</a></h2>
 <p><code>OpenAICompatibleProvider</code> implementa o dialeto <code>/chat/completions</code> uma vez só.
-A OpenAI é a primeira instância dela; os providers da Fase 9b (NVIDIA NIM, Deep
-Infra, Together, Bitdeer, Vultr, OpenRouter) mudam <code>baseUrl</code>, header de auth e
-flags — nunca o parsing.</p>
+Nove providers nascem dela: OpenAI (a primeira instância), OpenRouter (Fase
+11a, o hub), e os cinco da Fase 11b — NVIDIA NIM, Together, DeepInfra,
+Bitdeer, Vultr. Todos mudam <code>baseUrl</code>, header de auth e flags — nunca o
+parsing (a única exceção provada necessária foi o <code>parseCatalogo</code> de cada
+um, quando a capability é <code>true</code> — ver as seções por provider abaixo).</p>
 <div class="language-ts codeBlockContainer_jMok theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_PNkN><pre tabindex=0 class="prism-code language-ts codeBlock_yR6B thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_qUOc><div class=token-line style=color:#F8F8F2><span class="token keyword" style="color:rgb(189, 147, 249);font-style:italic">interface</span><span class="token plain"> </span><span class="token class-name">OpenAICompatibleFlags</span><span class="token plain"> </span><span class="token punctuation" style="color:rgb(248, 248, 242)">{</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  streamOptionsIncludeUsage</span><span class="token operator">:</span><span class="token plain"> </span><span class="token builtin" style="color:rgb(189, 147, 249)">boolean</span><span class="token punctuation" style="color:rgb(248, 248, 242)">;</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  maxTokensField</span><span class="token operator">:</span><span class="token plain"> </span><span class="token string" style="color:rgb(255, 121, 198)">'max_tokens'</span><span class="token plain"> </span><span class="token operator">|</span><span class="token plain"> </span><span class="token string" style="color:rgb(255, 121, 198)">'max_completion_tokens'</span><span class="token punctuation" style="color:rgb(248, 248, 242)">;</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain"></span><span class="token punctuation" style="color:rgb(248, 248, 242)">}</span><br/></div></code></pre></div></div>
 <p>Cada flag existe porque um provider real diverge. Não acrescente flag sem um
 provider que precise dela.</p>
@@ -366,7 +444,204 @@ que diverge está normalizado, não escondido:</p>
 <p>A última linha do Anthropic é a que mais custa: resultados de chamadas
 paralelas precisam vir no <strong>mesmo</strong> turno de <code>user</code>, então mensagens <code>tool</code>
 consecutivas são agrupadas.</p>
-<h2 class="anchor anchorTargetStickyNavbar_K8W5" id=hubs-e-o-custo-real-preparo-da-fase-9b>Hubs e o custo real (preparo da Fase 9b)<a href=#hubs-e-o-custo-real-preparo-da-fase-9b class=hash-link aria-label="Link direto para Hubs e o custo real (preparo da Fase 9b)" title="Link direto para Hubs e o custo real (preparo da Fase 9b)" translate=no>​</a></h2>
+<h2 class="anchor anchorTargetStickyNavbar_K8W5" id=openrouter--o-primeiro-hub-fase-11a>OpenRouter — o primeiro hub (Fase 11a)<a href=#openrouter--o-primeiro-hub-fase-11a class=hash-link aria-label="Link direto para OpenRouter — o primeiro hub (Fase 11a)" title="Link direto para OpenRouter — o primeiro hub (Fase 11a)" translate=no>​</a></h2>
+<p><code>OpenRouterProvider</code> é <code>OpenAICompatibleProvider</code> com <code>openrouterConfig()</code>
+(<code>apps/api/src/infrastructure/llm/openrouter-provider.ts</code>). Declara
+<code>listModels: true</code> — o único ponto de código que muda quando uma capability
+liga é a config, o <code>SyncModelCatalogUseCase</code> já lida com o resto.</p>
+<p>Quirks encontrados e testados
+(<code>test/infrastructure/llm/openrouter-provider.contract.spec.ts</code>):</p>
+<ul>
+<li class=""><strong>Headers próprios</strong>: <code>HTTP-Referer</code> (de <code>API_PUBLIC_URL</code>) e <code>X-Title: "Brabo"</code> — opcionais na doc oficial (atribuição/ranking no site do
+OpenRouter), mandados sempre porque não custam nada;</li>
+<li class=""><strong>Id de modelo prefixado pelo upstream</strong> (<code>openai/gpt-4o-mini</code>,
+<code>anthropic/claude-3-5-sonnet</code>): o prefixo é o vendor PEDIDO, não o que
+respondeu — ver <code>extrairUpstreamProvider</code> abaixo;</li>
+<li class=""><strong>Catálogo com pricing na própria linha</strong>: <code>GET /v1/models</code> devolve
+<code>pricing.prompt</code>/<code>pricing.completion</code> como STRING decimal em USD <strong>por
+token</strong>, diferente do padrão <code>{ data: [{ id }] }</code> só-com-id da OpenAI.
+<code>parseCatalogoOpenRouter</code> converte para micro-USD por milhão
+(<code>* 1e12</code>, arredondado — a coluna é <code>bigint</code>);</li>
+<li class=""><strong>Erro NO MEIO do stream</strong>: o OpenRouter aceita a conexão e começa a mandar
+texto antes de saber se o provedor real por trás vai falhar — um modo de
+falha que a OpenAI não tem, porque não roteia pra infraestrutura de
+terceiros. O frame vem como
+<code>{"error":{"code":"...","message":"..."},"choices":[...]}</code>; presença de
+<code>error</code> truthy é o sinal. Código numérico usa o mesmo <code>normalizeHttpStatus</code>
+do erro pré-stream; código string é mapeado por substring
+(<code>mapearCodigoDeFrame</code>) com <code>upstream</code> como default seguro — nunca silêncio,
+mesmo pra um código fora do mapa;</li>
+<li class=""><strong>Teste de conexão</strong>: <code>GET /key</code> (doc oficial) valida a chave sem gastar
+tokens numa chamada de chat real. É o primeiro <code>LLMCredentialConnectionTester</code>
+do lado LLM — o cadastro de credencial (<code>POST /llm/credentials</code>) testa ANTES
+de cifrar/persistir, mesmo momento do fluxo de credencial git desde o
+ADR 0004. Provider sem teste declarado (hoje: <code>ollama</code>/<code>anthropic</code>/<code>openai</code>)
+é NO-OP, não exceção.</li>
+</ul>
+<p>O aceite com credencial real que a Fase 11a exige — cadastro, sync populando
+o catálogo, ativação curada e sessão de chat de ponta a ponta com custo
+congelado em <code>token_usage</code> — é
+<code>test/infrastructure/llm/openrouter-provider.smoke.spec.ts</code>. Nunca roda em
+CI: sem <code>OPENROUTER_TEST_KEY</code> no ambiente, o <code>describe</code> inteiro é pulado com
+um aviso. Mesmo molde dos smokes de git contra API real
+(<code>github-provider.smoke.spec.ts</code>, <code>gitlab-provider.smoke.spec.ts</code>).</p>
+<h2 class="anchor anchorTargetStickyNavbar_K8W5" id=nvidia-nim-fase-11b>NVIDIA NIM (Fase 11b)<a href=#nvidia-nim-fase-11b class=hash-link aria-label="Link direto para NVIDIA NIM (Fase 11b)" title="Link direto para NVIDIA NIM (Fase 11b)" translate=no>​</a></h2>
+<p><code>NvidiaNimProvider</code> é <code>OpenAICompatibleProvider</code> com <code>nvidiaNimConfig()</code>
+(<code>apps/api/src/infrastructure/llm/nvidia-nim-provider.ts</code>), apontado pro
+endpoint <strong>hospedado</strong> (<code>integrate.api.nvidia.com</code>) — não o produto de
+container auto-hospedado, que é outro produto com outro endereço.</p>
+<ul>
+<li class=""><strong><code>listModels: false</code></strong>: <code>GET /v1/models</code> existe (doc oficial verificada
+nesta sessão) e devolve <code>id</code>/<code>object</code>/<code>created</code>/<code>owned_by</code>, mas nenhuma doc
+encontrada traz preço por token — catálogo real, porém inutilizável para o
+custo por modelo que o metering exige (capabilities em duas camadas, ADR
+0041). O provider vive de <strong>seed manual</strong>
+(<code>apps/api/src/db/seed.ts</code>) até alguém confirmar um endpoint de preço, se
+existir;</li>
+<li class=""><strong>Sem header próprio</strong>: <code>Authorization: Bearer nvapi-...</code> — bearer padrão,
+a chave só tem o prefixo <code>nvapi-</code> por convenção da NVIDIA;</li>
+<li class=""><strong>Tool calling é por MODELO, não por API</strong>: só modelos específicos (Llama
+3.1 70B/405B, variantes Nemotron, ...) suportam de fato — mas isso nunca é
+um flag de config, é inteiramente <code>models.supports_tool_calling</code>
+(seed/curadoria), confirmado lendo <code>buildBody()</code> na base: o flag de
+<code>capabilities.toolCalling</code> só decide se o parâmetro <code>tools</code> é enviado, não
+se o modelo específico sabe usá-lo;</li>
+<li class=""><strong><code>stream_options.include_usage</code> não confirmado</strong> para o endpoint
+hospedado (só documentado para o software NIM auto-hospedado) —
+<code>streamOptionsIncludeUsage: false</code>; o fallback <code>estimated</code> da base cobre o
+caso de o campo nunca vir;</li>
+<li class=""><strong>Teste de conexão</strong>: sem endpoint de validação dedicado (nenhum
+"whoami"/saldo encontrado) — <code>GET /v1/models</code> com a chave, só o
+status importa (200 vs 401/403).</li>
+</ul>
+<p>O aceite com credencial real fica em
+<code>test/infrastructure/llm/nvidia-nim-provider.smoke.spec.ts</code>, gated por
+<code>NVIDIA_NIM_TEST_KEY</code>. Diferente do OpenRouter, o passo de "sync" não
+descobre nada (a capability é <code>false</code> de propósito) — o smoke confirma que o
+provider é <code>pulado: 'sem_capability'</code> no relatório e cura um modelo inserido
+manualmente, exatamente como um owner faria em produção.</p>
+<h2 class="anchor anchorTargetStickyNavbar_K8W5" id=together-ai-fase-11b>Together AI (Fase 11b)<a href=#together-ai-fase-11b class=hash-link aria-label="Link direto para Together AI (Fase 11b)" title="Link direto para Together AI (Fase 11b)" translate=no>​</a></h2>
+<p><code>TogetherProvider</code> é <code>OpenAICompatibleProvider</code> com <code>togetherConfig()</code>
+(<code>apps/api/src/infrastructure/llm/together-provider.ts</code>).</p>
+<ul>
+<li class=""><strong><code>listModels: true</code></strong>: <code>GET /v1/models</code> documentado com <code>pricing: {input, output, cached_input, base, hourly, finetune}</code> — só <code>input</code>/
+<code>output</code> são usados;</li>
+<li class=""><strong>Unidade do preço NÃO documentada explicitamente pela Together</strong>: os
+valores são NÚMERO (não string como o OpenRouter) e, por comparação com
+preço de mercado publicado (Llama 3.3 70B a US$ 1,04/1M em
+together.ai/models — mesma ordem de grandeza do exemplo <code>"input": 0.3</code> do
+schema oficial), a inferência é <strong>USD por MILHÃO de tokens direto</strong>, não
+por token. O smoke test é quem confirma isto contra uma chave real (ver
+comentário no topo de <code>together-provider.smoke.spec.ts</code>) — se algum dia
+provar errado, é achado a corrigir aqui e no parser, não silenciar;</li>
+<li class=""><strong>Ids namespaced</strong>: <code>meta-llama/Llama-3.3-70B-Instruct-Turbo</code> — um id
+"achatado" tipo OpenAI (<code>gpt-4o</code>) responde 404;</li>
+<li class=""><strong><code>stream_options.include_usage</code> não confirmado</strong> na doc — mesmo
+tratamento cauteloso da NIM, fallback <code>estimated</code> cobre;</li>
+<li class=""><strong>429 carrega <code>error_type: dynamic_request_limited | dynamic_token_limited</code></strong>
+no corpo — não testado à parte porque o corpo ainda é
+<code>{error: {message}}</code>, compatível com o parsing padrão da base; só relevante
+se algum dia precisarmos distinguir os dois tipos de rate limit;</li>
+<li class=""><strong>Teste de conexão</strong>: sem endpoint dedicado — <code>GET /v1/models</code> status-only.</li>
+</ul>
+<p>O aceite com credencial real fica em
+<code>test/infrastructure/llm/together-provider.smoke.spec.ts</code>, gated por
+<code>TOGETHER_TEST_KEY</code>.</p>
+<h2 class="anchor anchorTargetStickyNavbar_K8W5" id=deepinfra-fase-11b>DeepInfra (Fase 11b)<a href=#deepinfra-fase-11b class=hash-link aria-label="Link direto para DeepInfra (Fase 11b)" title="Link direto para DeepInfra (Fase 11b)" translate=no>​</a></h2>
+<p><code>DeepInfraProvider</code> é <code>OpenAICompatibleProvider</code> com <code>deepinfraConfig()</code>
+(<code>apps/api/src/infrastructure/llm/deepinfra-provider.ts</code>), <code>baseUrl</code>
+<code>https://api.deepinfra.com/v1/openai</code> (a superfície OpenAI-compatível —
+DeepInfra também tem endpoints nativos fora dela, não usados aqui).</p>
+<ul>
+<li class=""><strong><code>listModels: true</code></strong>, confirmado AO VIVO nesta sessão contra
+<code>GET {baseUrl}/models</code> (o MESMO endpoint que a base já chama por padrão,
+nenhuma extensão precisou ser feita): a resposta traz <code>metadata.pricing. {input_tokens,output_tokens}</code> (USD por milhão, número — mesma convenção
+inferida pra Together) e <code>metadata.context_length</code> por linha;</li>
+<li class=""><strong>O catálogo é PÚBLICO — sem autenticação nenhuma</strong>, confirmado ao vivo
+(a chamada funcionou sem header <code>Authorization</code>). Isso tem uma
+consequência real: <strong>não existe teste de conexão pra DeepInfra</strong>
+(<code>llm-credential-connection-tester.ts</code> não tem entrada pra ela) — uma
+chave inválida só seria descoberta na primeira chamada de CHAT de
+verdade, nunca no cadastro. Nenhum outro endpoint autenticado de
+validação foi encontrado publicamente documentado;</li>
+<li class=""><strong>O catálogo mistura chat com imagem/áudio/vídeo/embedding na MESMA
+lista</strong>, cada tipo com um shape de <code>pricing</code> diferente
+(<code>per_image_unit</code>, <code>input_characters</code>, <code>output_seconds</code>, ...) —
+<code>parseCatalogoDeepInfra</code> filtra por <code>metadata.tags.includes('chat')</code>
+antes de tentar ler <code>input_tokens</code>/<code>output_tokens</code>; sem o filtro, um
+modelo de imagem entraria com um preço fabricado a partir de um campo
+que não é "por token" nenhum;</li>
+<li class=""><strong><code>stream_options.include_usage</code> confirmado suportado</strong> na doc
+(diferente de NIM/Together) — <code>streamOptionsIncludeUsage: true</code>;</li>
+<li class=""><strong>Erro em shape padrão</strong> <code>{"error": {"message", "type", "param", "code"}}</code>
+— compatível com o parsing padrão da base, sem <code>parseErrorFrame</code> próprio.</li>
+</ul>
+<p>O aceite com credencial real fica em
+<code>test/infrastructure/llm/deepinfra-provider.smoke.spec.ts</code>, gated por
+<code>DEEPINFRA_TEST_KEY</code> — e é o primeiro smoke onde o passo de CADASTRO não
+valida nada, só o passo de CHAT descobriria uma chave ruim.</p>
+<h2 class="anchor anchorTargetStickyNavbar_K8W5" id=bitdeer-fase-11b>Bitdeer (Fase 11b)<a href=#bitdeer-fase-11b class=hash-link aria-label="Link direto para Bitdeer (Fase 11b)" title="Link direto para Bitdeer (Fase 11b)" translate=no>​</a></h2>
+<p><code>BitdeerProvider</code> é <code>OpenAICompatibleProvider</code> com <code>bitdeerConfig()</code>
+(<code>apps/api/src/infrastructure/llm/bitdeer-provider.ts</code>) — a doc pública
+mais rasa dos cinco desta fase.</p>
+<ul>
+<li class=""><strong><code>listModels: false</code></strong>: nenhum shape de catálogo/preço foi encontrado
+publicamente (a página de preço renderiza via JS, sem exemplo acessível a
+uma busca não-interativa) — sem shape verificado, não há <code>parseCatalogo</code>
+honesto pra escrever;</li>
+<li class=""><strong><code>Authorization: Bearer &lt;chave></code> CONFIRMADO</strong> (exemplo de curl real
+encontrado na doc da API de embeddings da Bitdeer nesta sessão) — mesmo
+quando o resto do dialeto não tinha exemplo nenhum;</li>
+<li class=""><strong><code>GET /v1/models</code> existe e é autenticado</strong> (401 ao vivo sem chave,
+confirmado nesta sessão) — vira teste de conexão (status-only, igual aos
+outros sem endpoint dedicado);</li>
+<li class=""><strong>Três ids de modelo REAIS confirmados</strong> em exemplos de configuração do
+próprio blog da Bitdeer (não são nome de vitrine): <code>moonshotai/Kimi-K2.5</code>,
+<code>zai-org/GLM-5</code>, <code>nvidia/NVIDIA-Nemotron-3-Super-120B-A12B</code> — semeados em
+<code>apps/api/src/db/seed.ts</code> com preço ESTIMADO (mercado do modelo/família
+noutros providers, não confirmado pela própria Bitdeer);</li>
+<li class=""><strong>Nenhum quirk de stream/erro confirmado</strong> — a claim "OpenAI REST API
+standards" da Bitdeer não veio acompanhada de exemplo real de
+<code>/chat/completions</code>, então o contract test não hidrata nenhuma
+particularidade que a doc não provou. O smoke test é a PRIMEIRA
+confirmação real do dialeto.</li>
+</ul>
+<p>O aceite com credencial real fica em
+<code>test/infrastructure/llm/bitdeer-provider.smoke.spec.ts</code>, gated por
+<code>BITDEER_TEST_KEY</code>.</p>
+<h2 class="anchor anchorTargetStickyNavbar_K8W5" id=vultr-serverless-inference-fase-11b>Vultr Serverless Inference (Fase 11b)<a href=#vultr-serverless-inference-fase-11b class=hash-link aria-label="Link direto para Vultr Serverless Inference (Fase 11b)" title="Link direto para Vultr Serverless Inference (Fase 11b)" translate=no>​</a></h2>
+<p><code>VultrProvider</code> é <code>OpenAICompatibleProvider</code> com <code>vultrConfig()</code>
+(<code>apps/api/src/infrastructure/llm/vultr-provider.ts</code>) — o único dos cinco
+onde a decisão de <code>listModels</code> <strong>mudou durante a implementação</strong> em relação
+ao plano original.</p>
+<ul>
+<li class=""><strong><code>listModels: false</code></strong> (o plano original apontava <code>true</code>): a base
+SEMPRE chama <code>{baseUrl}/models</code> (<code>openai-compatible-provider.ts</code>,
+<code>listModels()</code>), e a própria referência oficial da Vultr
+(<code>api.vultrinference.com</code>) descreve <code>GET /models</code> como devolvendo só
+<code>id</code>/<code>created</code>/<code>object</code>/<code>owned_by</code>/<code>features</code> — <strong>sem preço</strong>. O
+endpoint que a doc associa a preço (<code>GET /provider</code>, com <code>cost</code>/
+<code>contextWindow</code>) devolveu <strong>404 ao vivo</strong> no caminho testado nesta sessão
+— dado insuficiente pra escrever um <code>parseCatalogo</code> sem risco de apontar
+pra uma URL errada ("true frágil"). <code>GET /v1/models</code> em si está
+confirmado (401 ao vivo sem chave, duas vezes) — só não tem preço;</li>
+<li class=""><strong>Tool calling CONFIRMADO com exemplo real</strong>: doc oficial
+(<code>docs.vultr.com/how-to-use-tool-calling-with-vultr-serverless-inference</code>)
+mostra <code>kimi-k2-instruct</code> respondendo com <code>finish_reason: "tool_calls"</code> —
+dialeto OpenAI padrão puro, sem campo estranho nesse exemplo específico;
+os outros dois modelos semeados (<code>llama-3.3-70b-instruct-fp8</code>,
+<code>deepseek-r1-distill-llama-70b</code>) não têm confirmação de tool calling —
+<code>supportsToolCalling: false</code> pra eles;</li>
+<li class=""><strong>Sufixo <code>-normalize</code></strong>: pesquisa inicial apontava um proxy normalizador
+documentado — NÃO foi possível reconfirmar essa doc nesta sessão (a busca
+direcionada não encontrou o termo nas páginas verificadas). Não usado por
+padrão de qualquer forma (mantemos id de modelo cru);</li>
+<li class=""><strong>Teste de conexão</strong>: <code>GET /v1/models</code>, status-only.</li>
+</ul>
+<p>O aceite com credencial real fica em
+<code>test/infrastructure/llm/vultr-provider.smoke.spec.ts</code>, gated por
+<code>VULTR_TEST_KEY</code>.</p>
+<h2 class="anchor anchorTargetStickyNavbar_K8W5" id=hubs-e-o-custo-real>Hubs e o custo real<a href=#hubs-e-o-custo-real class=hash-link aria-label="Link direto para Hubs e o custo real" title="Link direto para Hubs e o custo real" translate=no>​</a></h2>
 <p>Num <strong>hub</strong> (OpenRouter) quem aparece na chamada é o hub, mas quem custa é o
 provedor que serviu. O metering registra os dois:</p>
 <ul>
@@ -389,6 +664,16 @@ sincronizado. O sync de catálogo <strong>não sobrescreve</strong> preço de li
 decisão explícita — e quando o catálogo remoto não informa preço, o valor
 gravado é preservado em vez de zerado: campo ausente significa "o provider não
 disse", nunca "é de graça".</p>
+<h3 class="anchor anchorTargetStickyNavbar_K8W5" id=exemplo-o-mesmo-modelo-hub--direto>Exemplo: o mesmo modelo, hub × direto<a href=#exemplo-o-mesmo-modelo-hub--direto class=hash-link aria-label="Link direto para Exemplo: o mesmo modelo, hub × direto" title="Link direto para Exemplo: o mesmo modelo, hub × direto" translate=no>​</a></h3>
+<p>A promessa da Fase 11a ("custo comparável entre 'mesmo modelo via hub' e
+'direto' fica consultável") só vira uso real quando o MESMO modelo aparece
+dos dois lados — hoje é o caso de qualquer modelo que a OpenAI/Anthropic
+publicam e que também está no catálogo do OpenRouter (ex.: GPT-4o):</p>
+<div class="language-promql codeBlockContainer_jMok theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_PNkN><pre tabindex=0 class="prism-code language-promql codeBlock_yR6B thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_qUOc><div class=token-line style=color:#F8F8F2><span class="token plain"># Razão de custo: servido via OpenRouter vs. servido direto na OpenAI,</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain"># no mesmo período. > 1 significa que o hub saiu mais caro que o direto.</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">sum(rate(brabo_llm_cost_micros_total{provider="openrouter", upstream_provider="openai"}[1h]))</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  /</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">sum(rate(brabo_llm_cost_micros_total{provider="openai"}[1h]))</span><br/></div></code></pre></div></div>
+<p>Isto é o gancho que <code>upstream_provider</code> habilita — hoje sem nenhum
+consumidor automático. A leitura pretendida (registrada como semente, não
+implementada) é o Psicólogo um dia sugerir "este modelo sai mais barato
+direto que via hub" a partir da mesma métrica.</p>
 <h2 class="anchor anchorTargetStickyNavbar_K8W5" id=a-suite-de-contrato>A suite de contrato<a href=#a-suite-de-contrato class=hash-link aria-label="Link direto para A suite de contrato" title="Link direto para A suite de contrato" translate=no>​</a></h2>
 <p><code>apps/api/test/contract/llm-provider.contract.ts</code> roda a mesma bateria contra
 qualquer implementação, como a suite de git faz desde a Fase 2. A divisão é o
@@ -403,4 +688,4 @@ servidor falso é um <code>node:http</code> de verdade em porta efêmera, não u
 pequeno escreveu em prosa em vez de usar o campo <code>tools</code>. Ele é <strong>resgate, não
 licença</strong>: depende de o modelo acertar o formato por acaso e falha em silêncio
 quando não acerta. Por isso vincular um modelo sem tool calling nativo a um
-agente é recusado no domínio, e não apenas desencorajado.</div></div></div><div class=row><div class="col col--12"><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_aQxr"><a href=https://github.com/daneiel/brabo/blob/dev/docs/reference/llm-providers.md target=_blank rel="noopener noreferrer" class=theme-edit-this-page><svg fill=currentColor height=20 width=20 viewBox="0 0 40 40" class=iconEdit_V7pD aria-hidden=true><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"/></g></svg>Editar esta página</a></div><div class="col lastUpdated_KApo"><span class=theme-last-updated>Última atualização<!-- --> em <b><time datetime=2026-08-01T18:49:01.000Z itemprop=dateModified>1 de ago. de 2026</time></b> por <b>Claude</b></span></div></div></footer></div></div></article><div class=row><div class="col col--12"><nav class="docusaurus-mt-lg pagination-nav" aria-label="Páginas de documento"></nav></div></div></div></div><div class="col col--3"><div class="tableOfContents_a7aG thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href=#o-contrato class="table-of-contents__link toc-highlight">O contrato</a><li><a href=#capabilities-duas-camadas class="table-of-contents__link toc-highlight">Capabilities: duas camadas</a><li><a href=#catálogo-de-modelos-descoberta-e-ciclo-de-vida class="table-of-contents__link toc-highlight">Catálogo de modelos: descoberta e ciclo de vida</a><ul><li><a href=#os-dois-eixos-de-disponibilidade class="table-of-contents__link toc-highlight">Os dois eixos de disponibilidade</a><li><a href=#as-três-regras-da-reconciliação class="table-of-contents__link toc-highlight">As três regras da reconciliação</a><li><a href=#a-cascata-revalida-capability-ao-cair-de-nível class="table-of-contents__link toc-highlight">A cascata revalida capability ao cair de nível</a><li><a href=#quem-agenda-e-quem-executa class="table-of-contents__link toc-highlight">Quem agenda e quem executa</a></ul><li><a href=#preço-vale-daqui-em-diante-nunca-para-trás class="table-of-contents__link toc-highlight">Preço: vale daqui em diante, nunca para trás</a><li><a href=#erros-normalizados class="table-of-contents__link toc-highlight">Erros normalizados</a><li><a href=#teto-de-inatividade class="table-of-contents__link toc-highlight">Teto de inatividade</a><li><a href=#a-base-openai-compatível class="table-of-contents__link toc-highlight">A base OpenAI-compatível</a><li><a href=#divergências-normalizadas class="table-of-contents__link toc-highlight">Divergências normalizadas</a><li><a href=#hubs-e-o-custo-real-preparo-da-fase-9b class="table-of-contents__link toc-highlight">Hubs e o custo real (preparo da Fase 9b)</a><li><a href=#a-suite-de-contrato class="table-of-contents__link toc-highlight">A suite de contrato</a><li><a href=#tool-calling-e-o-resgate-do-engine class="table-of-contents__link toc-highlight">Tool calling e o resgate do engine</a></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Documentação</div><ul class="footer__items clean-list"><li class=footer__item><a class=footer__link-item href=/brabo/qa/getting-started>Primeiros passos</a><li class=footer__item><a class=footer__link-item href=/brabo/qa/architecture>Arquitetura</a><li class=footer__item><a class=footer__link-item href=/brabo/qa/business-rules>Regras de negócio</a><li class=footer__item><a class=footer__link-item href=/brabo/qa/runbook>Runbook</a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Comunidade</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class=footer__link-item>Como contribuir<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_7k9y><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class=footer__link-item>Onde pedir ajuda<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_7k9y><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class=footer__link-item>Segurança<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_7k9y><use href=#theme-svg-external-link /></svg></a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Mais</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class=footer__link-item>GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_7k9y><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CHANGELOG.md target=_blank rel="noopener noreferrer" class=footer__link-item>CHANGELOG<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_7k9y><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/LICENSE target=_blank rel="noopener noreferrer" class=footer__link-item>Licença MIT<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_7k9y><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/THIRD_PARTY_NOTICES.md target=_blank rel="noopener noreferrer" class=footer__link-item>Avisos de terceiros<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_7k9y><use href=#theme-svg-external-link /></svg></a></ul></div></div><div class="footer__bottom text--center"><div class=footer__copyright>Copyright © 2026 Daniel Souza. Licenciado sob a MIT. Ferramentas de terceiros mantêm as próprias licenças — ver Avisos de terceiros.</div></div></div></footer></div></body>
+agente é recusado no domínio, e não apenas desencorajado.</div></div></div><div class=row><div class="col col--12"><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_aQxr"><a href=https://github.com/daneiel/brabo/blob/dev/docs/reference/llm-providers.md target=_blank rel="noopener noreferrer" class=theme-edit-this-page><svg fill=currentColor height=20 width=20 viewBox="0 0 40 40" class=iconEdit_V7pD aria-hidden=true><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"/></g></svg>Editar esta página</a></div><div class="col lastUpdated_KApo"><span class=theme-last-updated>Última atualização<!-- --> em <b><time datetime=2026-08-02T01:47:50.000Z itemprop=dateModified>2 de ago. de 2026</time></b> por <b>Daniel Souza</b></span></div></div></footer></div></div></article><div class=row><div class="col col--12"><nav class="docusaurus-mt-lg pagination-nav" aria-label="Páginas de documento"></nav></div></div></div></div><div class="col col--3"><div class="tableOfContents_a7aG thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href=#o-contrato class="table-of-contents__link toc-highlight">O contrato</a><li><a href=#capabilities-duas-camadas class="table-of-contents__link toc-highlight">Capabilities: duas camadas</a><li><a href=#catálogo-de-modelos-descoberta-e-ciclo-de-vida class="table-of-contents__link toc-highlight">Catálogo de modelos: descoberta e ciclo de vida</a><ul><li><a href=#os-dois-eixos-de-disponibilidade class="table-of-contents__link toc-highlight">Os dois eixos de disponibilidade</a><li><a href=#as-três-regras-da-reconciliação class="table-of-contents__link toc-highlight">As três regras da reconciliação</a><li><a href=#a-cascata-revalida-capability-ao-cair-de-nível class="table-of-contents__link toc-highlight">A cascata revalida capability ao cair de nível</a><li><a href=#quem-agenda-e-quem-executa class="table-of-contents__link toc-highlight">Quem agenda e quem executa</a></ul><li><a href=#preço-vale-daqui-em-diante-nunca-para-trás class="table-of-contents__link toc-highlight">Preço: vale daqui em diante, nunca para trás</a><li><a href=#erros-normalizados class="table-of-contents__link toc-highlight">Erros normalizados</a><li><a href=#teto-de-inatividade class="table-of-contents__link toc-highlight">Teto de inatividade</a><li><a href=#a-base-openai-compatível class="table-of-contents__link toc-highlight">A base OpenAI-compatível</a><li><a href=#divergências-normalizadas class="table-of-contents__link toc-highlight">Divergências normalizadas</a><li><a href=#openrouter--o-primeiro-hub-fase-11a class="table-of-contents__link toc-highlight">OpenRouter — o primeiro hub (Fase 11a)</a><li><a href=#nvidia-nim-fase-11b class="table-of-contents__link toc-highlight">NVIDIA NIM (Fase 11b)</a><li><a href=#together-ai-fase-11b class="table-of-contents__link toc-highlight">Together AI (Fase 11b)</a><li><a href=#deepinfra-fase-11b class="table-of-contents__link toc-highlight">DeepInfra (Fase 11b)</a><li><a href=#bitdeer-fase-11b class="table-of-contents__link toc-highlight">Bitdeer (Fase 11b)</a><li><a href=#vultr-serverless-inference-fase-11b class="table-of-contents__link toc-highlight">Vultr Serverless Inference (Fase 11b)</a><li><a href=#hubs-e-o-custo-real class="table-of-contents__link toc-highlight">Hubs e o custo real</a><ul><li><a href=#exemplo-o-mesmo-modelo-hub--direto class="table-of-contents__link toc-highlight">Exemplo: o mesmo modelo, hub × direto</a></ul><li><a href=#a-suite-de-contrato class="table-of-contents__link toc-highlight">A suite de contrato</a><li><a href=#tool-calling-e-o-resgate-do-engine class="table-of-contents__link toc-highlight">Tool calling e o resgate do engine</a></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Documentação</div><ul class="footer__items clean-list"><li class=footer__item><a class=footer__link-item href=/brabo/qa/getting-started>Primeiros passos</a><li class=footer__item><a class=footer__link-item href=/brabo/qa/architecture>Arquitetura</a><li class=footer__item><a class=footer__link-item href=/brabo/qa/business-rules>Regras de negócio</a><li class=footer__item><a class=footer__link-item href=/brabo/qa/runbook>Runbook</a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Comunidade</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class=footer__link-item>Como contribuir<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_7k9y><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class=footer__link-item>Onde pedir ajuda<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_7k9y><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class=footer__link-item>Segurança<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_7k9y><use href=#theme-svg-external-link /></svg></a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Mais</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class=footer__link-item>GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_7k9y><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CHANGELOG.md target=_blank rel="noopener noreferrer" class=footer__link-item>CHANGELOG<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_7k9y><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/LICENSE target=_blank rel="noopener noreferrer" class=footer__link-item>Licença MIT<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_7k9y><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/THIRD_PARTY_NOTICES.md target=_blank rel="noopener noreferrer" class=footer__link-item>Avisos de terceiros<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_7k9y><use href=#theme-svg-external-link /></svg></a></ul></div></div><div class="footer__bottom text--center"><div class=footer__copyright>Copyright © 2026 Daniel Souza. Licenciado sob a MIT. Ferramentas de terceiros mantêm as próprias licenças — ver Avisos de terceiros.</div></div></div></footer></div></body>
