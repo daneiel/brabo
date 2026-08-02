@@ -57,13 +57,14 @@ defmodule Engine.Dev.AgentIo do
     })
   end
 
-  # `awaiting_gate` e `working` retêm task_id/worktree — o worktree
+  # `awaiting_gate`, `awaiting_approval` e `working` retêm task_id/worktree — o worktree
   # reidratado ainda está no disco (não foi apagado; só seria substituído
   # por um `add_worktree/3` futuro), e um gate tardio ainda o encontra via
   # `find_by_task_id/2`. `branch` não é persistido (nunca foi — só
   # task_id/worktree_path), reconstruído do mesmo jeito que `run_task/2` o
   # monta originalmente.
-  def resume_state(base, %{status: status} = row) when status in ["awaiting_gate", "working"] do
+  def resume_state(base, %{status: status} = row)
+      when status in ["awaiting_gate", "awaiting_approval", "working"] do
     Map.merge(base, %{
       task_id: row.task_id,
       worktree: row.worktree_path,
@@ -211,14 +212,35 @@ defmodule Engine.Dev.AgentIo do
     })
   end
 
+  @doc """
+  Propõe uma ação e devolve o STATUS com que ela nasceu.
+
+  Descartava o status até a Fase 12e (`{:ok, _action} -> :ok`), e o preço foi
+  concreto: com a autonomia do dev em `require_approval`, commit/push/PR
+  nasciam `pending` e o agente abria o gate assim mesmo. O QA varria o
+  worktree — os arquivos estavam lá —, aprovava, a task fechava, e a PR nunca
+  tinha existido.
+
+  `:executed` cobre `executed` e `auto_approved` porque, para quem propôs, os
+  dois significam a mesma coisa: aconteceu. `:pending` é a espera; qualquer
+  outro desfecho (`denied`, `failed`) é `:refused`.
+  """
   def propose(state, type, payload) do
     actor = %{kind: "agent", id: state.agent_id}
 
     case EngineApiClient.propose_action(state.project_id, state.session_id, type, actor, payload) do
-      {:ok, _action} -> :ok
-      {:error, reason} -> emit(state, "dev.error", %{action: type, reason: inspect(reason)})
+      {:ok, action} ->
+        classify(Map.get(action, "status"))
+
+      {:error, reason} ->
+        emit(state, "dev.error", %{action: type, reason: inspect(reason)})
+        :refused
     end
   end
+
+  defp classify(status) when status in ["executed", "auto_approved"], do: :executed
+  defp classify("pending"), do: :pending
+  defp classify(_), do: :refused
 
   # --- Devolução da task ---
 

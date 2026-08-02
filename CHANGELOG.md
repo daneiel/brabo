@@ -61,6 +61,31 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api,engine,docs**: dois achados do dogfooding revisitados
+  ([ADR 0048](docs/adr/0048-decisao-no-log-e-a-ordem-do-gate.md)).
+  **A decisão de uma ação passa a existir no event log**
+  ([RN-049](docs/business-rules.md#rn-049)): `proposed_action.created`,
+  `.approved` e `.denied` viram eventos de domínio com o ator REAL — o usuário
+  que clicou, ou o agente que propôs. Iam só para o outbox, que é transporte e
+  é podado, e por isso "cliques de aprovação" — a métrica principal da Fase 10 —
+  não pôde ser colhida (achado #17). `created.payload.status` distingue clique
+  humano de auto-aprovação por política. `docs/reference/events.md` documentava
+  os três desde sempre; até aqui isso não era verdade.
+  **O gate deixa de abrir sem PR** ([RN-050](docs/business-rules.md#rn-050)).
+  `AgentIo.propose/3` descartava o status da ação, então com a autonomia do dev
+  em `require_approval` commit/push/PR nasciam `pending` e o agente abria o gate
+  assim mesmo: o QA varria o WORKTREE (onde os arquivos estão), aprovava, e **a
+  task fechava como concluída sem uma linha commitada e sem PR nenhuma**. Agora
+  o agente lê o desfecho das três e, se alguma ficou pendente, espera em
+  `awaiting_approval` retendo o worktree; quem o solta é `task.pr_settled`,
+  emitido pela api quando o `pr_open` tem desfecho. PR negada devolve a task com
+  diagnóstico e **não** conta para o circuit breaker.
+  Isso também elimina o **D5** — o worktree reciclado sob aprovação pendente,
+  que o [ADR 0045](docs/adr/0045-reagendamento-por-evento-do-dev-agent.md) tinha
+  registrado como limite conhecido. A previsão de lá (worktree por task) **não
+  foi cumprida de propósito**: ela consertava o sintoma; a causa era a ordem do
+  gate
+
 - **engine,api,docs**: a **Fase 12 fecha** com os três achados P1 de
   operabilidade do dogfooding provados mortos numa execução única
   ([ADR 0047](docs/adr/0047-operabilidade-pos-dogfooding.md)). A validação é um

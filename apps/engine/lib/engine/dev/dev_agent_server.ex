@@ -14,8 +14,16 @@ defmodule Engine.Dev.DevAgentServer do
 
   ## Máquina de estados (Fase 12b — reagendamento após gate)
 
-  `status`: `:working | :awaiting_gate | :idle | :idle_tripped`, persistido
-  em `dev_agent_states.status`.
+  `status`: `:working | :awaiting_approval | :awaiting_gate | :idle |
+  :idle_tripped`, persistido em `dev_agent_states.status`.
+
+  `:awaiting_approval` entrou na Fase 12e. O agente propõe commit, push e PR e
+  LÊ o status de cada uma: se alguma ficou `pending` (autonomia do dev em
+  `require_approval`), **o gate não é aberto** — sem PR não há o que julgar. O
+  defeito que isso corrige era silencioso e caro: o gate abria assim mesmo, o
+  QA varria o WORKTREE (onde os arquivos estão), aprovava, e a task fechava
+  sem uma linha commitada. Quem solta o agente é `task.pr_settled`, emitido
+  pela api quando o `pr_open` tem desfecho — executado, negado ou falho.
 
   PR aberta não libera o agente — ele entra em `:awaiting_gate` e MANTÉM
   `task_id`/`worktree`/`branch`: o worktree é um por AGENTE (não por task,
@@ -220,6 +228,38 @@ defmodule Engine.Dev.DevAgentServer do
   # já está sendo atendida ou o agente está no meio de outra coisa;
   # `:idle_tripped` ignora até rearmar.
   @impl true
+  # Desfecho do `pr_open` que estava pendente de aprovação (Fase 12e).
+  # `opened: true` — a PR existe agora; abre o gate, tarde mas correto.
+  def handle_info(
+        {:pr_settled, %{task_id: task_id, opened: true}},
+        %{task_id: task_id, status: :awaiting_approval} = state
+      ) do
+    {:noreply, abrir_gate(state)}
+  end
+
+  # `opened: false` — o usuário negou, ou a abertura falhou. A task volta com
+  # diagnóstico em vez de o agente esperar para sempre por um gate que ninguém
+  # vai abrir. NÃO conta pro circuit breaker: a decisão foi do usuário, não o
+  # agente queimando o teto (mesmo princípio da recuperação de restart).
+  def handle_info(
+        {:pr_settled, %{task_id: task_id, opened: false}},
+        %{task_id: task_id, status: :awaiting_approval} = state
+      ) do
+    state =
+      AgentIo.block_task(
+        state,
+        "a PR não foi aberta",
+        "as ações git da task não foram aprovadas — o trabalho ficou no worktree e o gate nunca abriu"
+      )
+
+    {:noreply,
+     state
+     |> Map.merge(%{task_id: nil, worktree: nil, branch: nil})
+     |> try_claim()}
+  end
+
+  def handle_info({:pr_settled, _}, state), do: {:noreply, state}
+
   def handle_info({:wake, :became_claimable}, %{status: :idle} = state) do
     {:noreply, try_claim(state)}
   end
@@ -471,9 +511,11 @@ defmodule Engine.Dev.DevAgentServer do
     do: :ok = Dispatcher.run_secops(state.project_id, state.task_id)
 
   defp handle_outcome({:halted, {"report_done", %{summary: summary}}, _ctx}, state, task, story) do
-    AgentIo.propose_commit(state, summary)
-    AgentIo.propose_push(state)
-    propose_pr(state, task, story)
+    desfechos = [
+      AgentIo.propose_commit(state, summary),
+      AgentIo.propose_push(state),
+      propose_pr(state, task, story)
+    ]
 
     _ =
       EngineApiClient.mark_task(
@@ -484,24 +526,11 @@ defmodule Engine.Dev.DevAgentServer do
         state.agent_id
       )
 
-    _ =
-      EngineApiClient.open_gate(state.project_id, state.session_id, state.task_id, state.agent_id)
-
-    :ok = Dispatcher.run_qa(state.project_id, state.task_id)
-
-    # Fase 12b: PR aberta não libera o agente — o worktree é por AGENTE, não
-    # por task (ver moduledoc), e o gate ainda vai varrê-lo. Só um desfecho
-    # TERMINAL do gate (via `task.gate_resolved`) chama `finish_task/2`.
-    state = %{state | status: :awaiting_gate}
-    AgentIo.persist(state)
-
-    AgentIo.emit(state, "dev.awaiting_gate", %{
-      agentId: state.agent_id,
-      taskId: state.task_id,
-      gate: "qa"
-    })
-
-    state
+    if Enum.all?(desfechos, &(&1 == :executed)) do
+      abrir_gate(state)
+    else
+      aguardar_aprovacao(state, desfechos)
+    end
   end
 
   defp handle_outcome(
@@ -534,6 +563,50 @@ defmodule Engine.Dev.DevAgentServer do
     state
     |> AgentIo.block_task("parou sem concluir nem reportar bloqueio", stop_diagnosis(ctx))
     |> finish_task(:blocked)
+  end
+
+  # Caminho normal (autonomia `auto_approve`, o default da ativação): a PR
+  # existe, o gate pode julgar.
+  defp abrir_gate(state) do
+    _ =
+      EngineApiClient.open_gate(state.project_id, state.session_id, state.task_id, state.agent_id)
+
+    :ok = Dispatcher.run_qa(state.project_id, state.task_id)
+
+    # Fase 12b: PR aberta não libera o agente — o worktree é por AGENTE, não
+    # por task (ver moduledoc), e o gate ainda vai varrê-lo. Só um desfecho
+    # TERMINAL do gate (via `task.gate_resolved`) chama `finish_task/2`.
+    state = %{state | status: :awaiting_gate}
+    AgentIo.persist(state)
+
+    AgentIo.emit(state, "dev.awaiting_gate", %{
+      agentId: state.agent_id,
+      taskId: state.task_id,
+      gate: "qa"
+    })
+
+    state
+  end
+
+  # Alguma das três ações git ficou pendente de aprovação (autonomia do dev em
+  # `require_approval`). O gate NÃO abre: sem PR não há o que julgar, e abrir
+  # aqui era o defeito — o QA varria o worktree, aprovava, e a task fechava
+  # sem uma linha commitada (Fase 12e).
+  #
+  # O agente fica retendo o worktree, exatamente como em `awaiting_gate`. Quem
+  # o solta é `task.pr_settled`, emitido pela api quando o `pr_open` tem
+  # desfecho — aprovado e executado, negado, ou falho.
+  defp aguardar_aprovacao(state, desfechos) do
+    state = %{state | status: :awaiting_approval}
+    AgentIo.persist(state)
+
+    AgentIo.emit(state, "dev.awaiting_approval", %{
+      agentId: state.agent_id,
+      taskId: state.task_id,
+      pendentes: Enum.count(desfechos, &(&1 == :pending))
+    })
+
+    state
   end
 
   # Distingue falha de provider (timeout, 5xx) de "o modelo simplesmente parou".

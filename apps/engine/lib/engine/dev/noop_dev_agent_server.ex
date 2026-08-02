@@ -189,9 +189,15 @@ defmodule Engine.Dev.NoopDevAgentServer do
           branch: branch
         })
 
-        AgentIo.propose_commit(state, "#{state.agent_id}: #{task_title(task)}")
-        AgentIo.propose_push(state)
-        AgentIo.propose_pr(state, "#{state.agent_id}: #{task_title(task)}", pr_body(state, task))
+        desfechos = [
+          AgentIo.propose_commit(state, "#{state.agent_id}: #{task_title(task)}"),
+          AgentIo.propose_push(state),
+          AgentIo.propose_pr(
+            state,
+            "#{state.agent_id}: #{task_title(task)}",
+            pr_body(state, task)
+          )
+        ]
 
         _ =
           EngineApiClient.mark_task(
@@ -205,10 +211,15 @@ defmodule Engine.Dev.NoopDevAgentServer do
         # PR aberta NÃO libera o agente (Fase 12b): o worktree é por AGENTE,
         # não por task, e reivindicar a próxima agora apagaria fisicamente o
         # que o gate ainda precisa ler. Fica retido até o desfecho terminal.
-        state = %{state | status: :awaiting_gate}
+        #
+        # Fase 12e: com ação git pendente de aprovação, o estado é
+        # `awaiting_approval` — não há PR para gate nenhum julgar.
+        status = if Enum.all?(desfechos, &(&1 == :executed)), do: :awaiting_gate, else: :awaiting_approval
+
+        state = %{state | status: status}
         AgentIo.persist(state)
 
-        AgentIo.emit(state, "dev.awaiting_gate", %{
+        AgentIo.emit(state, "dev.#{status}", %{
           agentId: state.agent_id,
           taskId: task_id
         })

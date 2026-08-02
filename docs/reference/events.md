@@ -65,9 +65,9 @@ Uma linha em `session_events`, append-only, com `seq` densa por sessão
 
 | tipo | quando |
 |---|---|
-| `proposed_action.created` | nasceu a ação — antes de qualquer execução |
-| `proposed_action.approved` | decidida pelo usuário |
-| `proposed_action.denied` | negada — estado terminal |
+| `proposed_action.created` | nasceu a ação — antes de qualquer execução. `payload.status` diz como ela nasceu (`pending`, `auto_approved` ou `denied`), e é o que distingue decisão humana de política ([RN-049](../business-rules.md#rn-049)) |
+| `proposed_action.approved` | decidida pelo usuário — o `actor` é **quem clicou**. Auto-aprovação NÃO passa por aqui: ela aparece no `created` com `status: auto_approved` e ator agente |
+| `proposed_action.denied` | negada — estado terminal. `actor` é quem recusou, e `payload.reason` o motivo |
 | `proposed_action.executed` | executou com sucesso |
 | `action.failed` | executou e falhou |
 | `permission.granted` | concessão registrada na política |
@@ -99,6 +99,7 @@ Uma linha em `session_events`, append-only, com `seq` densa por sessão
 | `dev.started` | o dev agent começou o ciclo (ativação, paralelização — NÃO reidratação, que nunca redispara) |
 | `dev.working` | reivindicou uma task e montou o worktree |
 | `dev.idle` | fila do módulo vazia — sem task pegável agora |
+| `dev.awaiting_approval` | as ações git ficaram pendentes de aprovação (Fase 12e): **o gate NÃO abre** — sem PR não há o que julgar — e o worktree fica retido até `task.pr_settled` ([RN-050](../business-rules.md#rn-050)) |
 | `dev.awaiting_gate` | PR aberta, esperando o gate (Fase 12b) — `task_id`/`worktree` continuam retidos |
 | `dev.blocked` | a task devolvida com diagnóstico (limite de iterações, orçamento excedido, `report_blocked`, falha de worktree/contexto) |
 | `dev.idle_tripped` | circuit breaker disparado (RN-047) — N tasks blocked seguidas param o agente |

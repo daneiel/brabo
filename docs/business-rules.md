@@ -690,6 +690,70 @@ produzir por causa de um deploy.
   `apps/engine/test/engine/agents/po_server_test.exs` (describe `revise/2`)
 - **Origem:** [ADR 0046](adr/0046-promocao-de-story-com-autoridade-do-usuario.md)
 
+### RN-049 — Toda decisão sobre uma ação proposta fica no event log, com quem decidiu {#rn-049}
+
+`proposed_action.created`, `.approved` e `.denied` são eventos de domínio em
+`session_events`, além das linhas de outbox que os transportam ao engine. O
+outbox **não** é memória: é drenado, marcado com `processed_at` e podado.
+
+O `actor` é quem realmente decidiu — o **usuário** em `.approved`/`.denied`, o
+**agente** que propôs em `.created`. E `created.payload.status` diz como a ação
+nasceu (`pending`, `auto_approved`, `denied`).
+
+Disso sai a distinção que dá a métrica: **decisão humana = evento
+`proposed_action.approved`**; política decidindo sozinha aparece só no
+`.created` com `status: auto_approved` e ator agente, e nunca é confundida com
+um clique. Era exatamente essa contagem — "cliques de aprovação" — que a Fase
+10 quis medir e não conseguiu, porque a decisão não existia em lugar nenhum
+consultável (achado #17). `approve_always` conta como aprovação porque delega
+ao mesmo use-case, e emite `permission.granted` por cima.
+
+Fica de fora, por decisão: o `proposed_action.created` que o bootstrap de
+repositório emite direto no outbox. Aquelas mutações já são narradas por
+`bootstrap.step_*` na mesma sessão, e duplicá-las contaria o mesmo fato duas
+vezes numa métrica de aprovação.
+
+- **Onde:** `apps/api/src/application/use-cases/actions/propose-action.use-case.ts`,
+  `.../approve-action.use-case.ts`, `.../deny-action.use-case.ts`
+- **Teste:** `test/application/use-cases/actions/approve-deny-action.use-case.spec.ts`
+  (describe `a decisão no event log`)
+- **Origem:** [ADR 0048](adr/0048-decisao-no-log-e-a-ordem-do-gate.md)
+
+### RN-050 — Sem PR aberta não se abre gate {#rn-050}
+
+O dev agent propõe commit, push e PR e **lê o desfecho de cada uma**. Só abre o
+gate se as três executaram. Se alguma ficou `pending` — autonomia do agente em
+`require_approval` —, ele entra em `awaiting_approval`, **retendo o worktree**,
+e não abre gate nenhum.
+
+Sem isso o gate abria de qualquer jeito, e o estrago era silencioso: o QA varre
+o **worktree**, não a PR; encontrava os arquivos, aprovava; o SecOps aprovava; a
+task fechava como concluída — **sem uma linha commitada e sem PR nenhuma**. Só
+depois, ao aprovar o commit, o usuário via a ação falhar (com diagnóstico
+vazio, porque `System.cmd` num diretório apagado devolve `{"", 2}`).
+
+Quem solta o agente é `task.pr_settled`, emitido pela api quando o `pr_open`
+tem desfecho terminal: `opened: true` abre o gate; `opened: false` (negado ou
+falho) devolve a task com diagnóstico, em vez de deixar o agente esperando para
+sempre por um gate que ninguém vai abrir.
+
+Uma PR negada **não conta para o circuit breaker** da [RN-047](#rn-047): a
+decisão foi do usuário, não o agente queimando o teto — mesmo princípio da
+recuperação de restart.
+
+Esta regra também elimina o D5 (worktree reciclado sob aprovação pendente) por
+consequência: o worktree só é liberado em `gate_resolved`, o gate só abre depois
+da PR, e a PR só abre depois de commit e push.
+
+- **Onde:** `apps/engine/lib/engine/dev/agent_io.ex` (`propose/3`),
+  `apps/engine/lib/engine/dev/dev_agent_server.ex` (`abrir_gate/1`,
+  `aguardar_aprovacao/2`),
+  `apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts`
+  (`settlePrOpen`)
+- **Teste:** `apps/engine/test/engine/dev/dev_agent_server_test.exs`
+  (describe `aprovação pendente não abre gate`)
+- **Origem:** [ADR 0048](adr/0048-decisao-no-log-e-a-ordem-do-gate.md)
+
 ### RN-038 — Agente contado no resumo do workspace = gastou tokens este mês {#rn-038}
 
 O resumo do dashboard de projetos ("N projetos ativos · M agentes · gasto

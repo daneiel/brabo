@@ -68,6 +68,33 @@ defmodule Engine.Workers.DevAgentWakeWorker do
   def perform(%Oban.Job{
         args:
           %{
+            "event_type" => "task.pr_settled",
+            "payload" => %{
+              "projectId" => project_id,
+              "taskId" => task_id,
+              "agentId" => agent_id,
+              "opened" => opened
+            }
+          } = args
+      }) do
+    Span.with_session(
+      args["traceparent"],
+      "outbox.dev_agent_wake",
+      %{
+        "brabo.project_id" => project_id,
+        "brabo.agent_id" => agent_id,
+        "brabo.task_id" => task_id
+      },
+      fn ->
+        Wake.deliver(project_id, agent_id, {:pr_settled, %{task_id: task_id, opened: opened}})
+        :ok
+      end
+    )
+  end
+
+  def perform(%Oban.Job{
+        args:
+          %{
             "event_type" => "task.became_claimable",
             "payload" => %{"projectId" => project_id, "modules" => modules}
           } = args

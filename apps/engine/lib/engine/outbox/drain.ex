@@ -64,7 +64,7 @@ defmodule Engine.Outbox.Drain do
        do: [Engine.Workers.SessionLifecycleWorker, Engine.Workers.PsychologistWorker]
 
   defp handlers_for(event_type)
-       when event_type in ["task.gate_resolved", "task.became_claimable"],
+       when event_type in ["task.gate_resolved", "task.became_claimable", "task.pr_settled"],
        do: [Engine.Workers.DevAgentWakeWorker]
 
   defp handlers_for(_), do: [Engine.Workers.SessionLifecycleWorker]

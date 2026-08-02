@@ -3,7 +3,7 @@ id: adr-index
 title: Decisões arquiteturais (ADR)
 sidebar_label: Índice de ADRs
 sidebar_position: 0
-description: Os 47 registros de decisão arquitetural do Brabo, agrupados por fase, com o que cada um decidiu.
+description: Os 48 registros de decisão arquitetural do Brabo, agrupados por fase, com o que cada um decidiu.
 keywords: [ADR, decisão arquitetural, arquitetura, histórico]
 ---
 
@@ -20,7 +20,7 @@ atual.** Para o estado atual, use [Regras de negócio](../business-rules.md),
 [Arquitetura](../architecture.md) e o [Runbook](../runbook.md). Para o
 raciocínio, venha aqui.
 
-Todos os 47 estão com status **aceito**.
+Todos os 48 estão com status **aceito**.
 
 ## Fase 2 — Git
 
@@ -148,12 +148,13 @@ O loop que faz o time melhorar.
 | [0045](0045-reagendamento-por-evento-do-dev-agent.md) | Reagendamento do dev agent por evento: outbox (não chamada em processo) porque sobrevive a um restart entre o veredito do gate e o wake; `awaiting_gate` retém o worktree por AGENTE (não por task) até o gate terminar; entrega por PubSub (não Registry, local ao nó) com o limite at-most-once aceito conscientemente; circuit breaker (RN-047) mora no engine porque `actor.id` de `backlog.task_blocked` não identifica a sequência de um agente |
 | [0046](0046-promocao-de-story-com-autoridade-do-usuario.md) | Promoção de história volta a ser do usuário: `proposed_ready` é booleano e não valor novo no enum porque o enum É o portão do `claimNext`; promover reusa o `TransitionStoryUseCase` (código morto do achado #13) e herda de graça o `task.became_claimable` da 12b; a validação é unificada em `assertPromotable` ANTES de o gatilho virar configurável, senão os dois modos seriam regras distintas com o mesmo nome; backfill DIRIGIDO (projeto existente vai para `auto`) porque o comportamento estava em uso; a recusa grava antes de falar com o engine — inverso do rearm, porque o evento afirma algo sobre o USUÁRIO, não sobre o engine |
 | [0047](0047-operabilidade-pos-dogfooding.md) | Fechamento da Fase 12: a validação é um SCRIPT que sai != 0, não um roteiro em prosa, e a evidência é extraída do banco em vez de transcrita; roda local e sem LLM por dois motivos verificados (o fork nunca foi nomeado; o julgamento dos gates com modelo local não é determinístico desde o ADR 0020), e isso é declarado no primeiro parágrafo e não no rodapé; o Noop entrou na máquina de estados da 12b — o achado #10 sobrevivia dentro do próprio instrumento de medida —, movendo-a para o `AgentIo` em vez de copiá-la; a colheita da Fase 10 foi escrita com os buracos como `não medido` |
+| [0048](0048-decisao-no-log-e-a-ordem-do-gate.md) | Dois achados revisitados: a DECISÃO de uma ação (`created`/`approved`/`denied`) vira evento de domínio com o ator real — o outbox é transporte, não memória, e `events.md` documentava os três desde sempre sem que existissem; `status` no payload do `created` é o que distingue clique humano de auto-aprovação por política, a métrica que a Fase 10 não conseguiu colher. E o D5: a causa não era o worktree ser reciclado, era `propose/3` descartar o status e o gate abrir sem PR — o QA varria o worktree, aprovava, e a task fechava sem uma linha commitada. Corrigida a ordem, o D5 morre por consequência, e worktree-por-task (previsto pelo ADR 0045) deixa de ser necessário |
 
 ## A convenção
 
 - **Um arquivo por decisão**, em `docs/adr/NNNN-titulo-curto.md`, com
   numeração sequencial de 4 dígitos. **Sem reuso de número**, nem quando um ADR
-  é superado — o próximo é **0048**.
+  é superado — o próximo é **0049**.
 - **Três seções, só elas:** **Contexto** (o problema ou a força que motivou),
   **Decisão** (o que foi decidido), **Consequências** (os trade-offs aceitos e
   o que fica para depois).

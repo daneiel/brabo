@@ -394,7 +394,25 @@ defmodule Engine.Sessions.FakeEngineApiClient do
   @impl true
   def propose_action(_project_id, _session_id, action_type, actor, payload) do
     notify({:propose_action, action_type, actor, payload})
-    {:ok, Process.get(:fake_propose_action, %{"id" => "pa-1", "status" => "pending"})}
+
+    # Default `auto_approved` porque é o que a REALIDADE faz: o
+    # `ActivateExecutionUseCase` semeia `auto_approve` para git_commit/git_push/
+    # pr_open de todo dev agent. Era `pending` aqui, e não fazia diferença
+    # enquanto `AgentIo.propose/3` descartava o status — a partir da Fase 12e
+    # faz, e um default que não é o de produção mandaria toda a suite pelo
+    # caminho da aprovação manual. Quem quer testar esse caminho põe
+    # `:fake_propose_action` no dicionário de processo.
+    # `:fake_propose_action_by_type` tem precedência e é por TIPO de ação —
+    # necessário desde a Fase 12e para exercitar "o terminal executou, mas as
+    # ações git ficaram pendentes de aprovação", que é exatamente a
+    # configuração em que o gate abria sem PR nenhuma.
+    por_tipo = Process.get(:fake_propose_action_by_type, %{})
+
+    resposta =
+      Map.get(por_tipo, action_type) ||
+        Process.get(:fake_propose_action, %{"id" => "pa-1", "status" => "auto_approved"})
+
+    {:ok, resposta}
   end
 
   @doc "Resposta que só devolve texto final, sem tool calls (encerra o loop)."

@@ -416,6 +416,129 @@ defmodule Engine.Dev.DevAgentServerTest do
     end
   end
 
+  describe "aprovação pendente não abre gate (Fase 12e — causa raiz do D5)" do
+    # O defeito: `AgentIo.propose/3` descartava o status, então com a autonomia
+    # do dev em `require_approval` as três ações git ficavam `pending` e o gate
+    # abria assim mesmo. O QA varria o WORKTREE (os arquivos estão lá),
+    # aprovava, a task fechava — e a PR nunca existiu.
+    defp roda_ate_report_done(state) do
+      Process.put(:fake_tasks, [%{"id" => "task-abc12345", "title" => "Cadastro"}])
+
+      Process.put(:fake_dev_context, %{
+        "task" => %{"id" => "task-abc12345", "title" => "Cadastro", "description" => ""},
+        "story" => %{
+          "id" => "st-1",
+          "title" => "Cadastro",
+          "description" => "",
+          "rf" => [],
+          "rnf" => [],
+          "dod" => [],
+          "dor" => []
+        },
+        "businessRules" => [],
+        "adrs" => []
+      })
+
+      Process.put(:fake_llm_turns, [
+        FakeEngineApiClient.tool_call_response("terminal", %{"command" => "npm test"}),
+        FakeEngineApiClient.tool_call_response("report_done", %{"summary" => "feito"})
+      ])
+
+      DevAgentServer.handle_cast(:work, state)
+    end
+
+    test "git pendente: NÃO abre o gate e fica em awaiting_approval", %{
+      state: state,
+      project_id: project_id
+    } do
+      # O terminal executa (o `report_done` exige exit 0 antes), mas as três
+      # ações git ficam pendentes de aprovação — a configuração exata do
+      # defeito.
+      Process.put(:fake_propose_action, terminal_ok())
+
+      Process.put(:fake_propose_action_by_type, %{
+        "git_commit" => %{"id" => "pa-c", "status" => "pending"},
+        "git_push" => %{"id" => "pa-p", "status" => "pending"},
+        "pr_open" => %{"id" => "pa-r", "status" => "pending"}
+      })
+
+      assert {:noreply, novo} = roda_ate_report_done(state)
+
+      assert novo.status == :awaiting_approval
+      assert novo.task_id == "task-abc12345"
+      # O worktree fica RETIDO — é onde o trabalho está.
+      assert novo.worktree != nil
+
+      # O coração: sem PR, nada de gate.
+      refute_received {:gate_opened, _, _}
+      refute_received {:gate_dispatch, :qa, _, _}
+      assert DevAgentState.get(project_id, "dev-api").status == "awaiting_approval"
+      assert_received {:event_appended, _, _, %{type: "dev.awaiting_approval"}}
+    end
+
+    test "pr_settled(opened: true) abre o gate, tarde mas correto", %{state: state} do
+      esperando = %{state | status: :awaiting_approval, task_id: "task-abc12345"}
+
+      assert {:noreply, novo} =
+               DevAgentServer.handle_info(
+                 {:pr_settled, %{task_id: "task-abc12345", opened: true}},
+                 esperando
+               )
+
+      assert novo.status == :awaiting_gate
+      assert_received {:gate_opened, "task-abc12345", "dev-api"}
+      assert_received {:gate_dispatch, :qa, _, "task-abc12345"}
+    end
+
+    test "pr_settled(opened: false) devolve a task com diagnóstico, sem contar no breaker", %{
+      state: state
+    } do
+      Process.put(:fake_tasks, [])
+
+      esperando = %{
+        state
+        | status: :awaiting_approval,
+          task_id: "task-abc12345",
+          consecutive_blocked: 0
+      }
+
+      assert {:noreply, novo} =
+               DevAgentServer.handle_info(
+                 {:pr_settled, %{task_id: "task-abc12345", opened: false}},
+                 esperando
+               )
+
+      assert_received {:task_blocked, "task-abc12345", "a PR não foi aberta", _, "dev-api"}
+      # A decisão foi do USUÁRIO — não é o agente queimando o teto.
+      assert novo.consecutive_blocked == 0
+      refute_received {:gate_opened, _, _}
+    end
+
+    test "pr_settled de OUTRA task é ignorado", %{state: state} do
+      esperando = %{state | status: :awaiting_approval, task_id: "task-abc12345"}
+
+      assert {:noreply, ^esperando} =
+               DevAgentServer.handle_info(
+                 {:pr_settled, %{task_id: "task-outra", opened: true}},
+                 esperando
+               )
+
+      refute_received {:gate_opened, _, _}
+    end
+
+    test "pr_settled em quem NÃO está esperando aprovação é ignorado", %{state: state} do
+      trabalhando = %{state | status: :working, task_id: "task-abc12345"}
+
+      assert {:noreply, ^trabalhando} =
+               DevAgentServer.handle_info(
+                 {:pr_settled, %{task_id: "task-abc12345", opened: true}},
+                 trabalhando
+               )
+
+      refute_received {:gate_opened, _, _}
+    end
+  end
+
   describe "circuit breaker (Fase 12b, RN-047)" do
     test "3 blocks consecutivos → idle_tripped, sem tentar reivindicar de novo", %{
       state: state
