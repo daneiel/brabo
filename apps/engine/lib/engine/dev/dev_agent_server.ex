@@ -77,7 +77,6 @@ defmodule Engine.Dev.DevAgentServer do
   # ainda não migrou pra Fase 12b, ou início de ciclo antes da 12b-4 ligar a
   # superfície de config) — nunca deixa o breaker inoperante por ausência de
   # valor.
-  @default_max_consecutive_blocked 3
 
   def start_link(
         {project_id, agent_id, module, session_id, task_budget_micros, max_gate_corrections,
@@ -122,7 +121,7 @@ defmodule Engine.Dev.DevAgentServer do
       max_consecutive_blocked: max_consecutive_blocked
     }
 
-    state = resume_state(base, resume)
+    state = AgentIo.resume_state(base, resume)
     AgentIo.persist(state)
     :ok = Wake.subscribe(project_id, agent_id)
 
@@ -152,46 +151,6 @@ defmodule Engine.Dev.DevAgentServer do
          "e edições do worktree só existiam em memória"
      )
      |> finish_restart_recovery()}
-  end
-
-  # Start fresco: sempre idle, sem task — igual a antes da Fase 12b-6.
-  defp resume_state(base, nil) do
-    Map.merge(base, %{
-      task_id: nil,
-      worktree: nil,
-      branch: nil,
-      status: :idle,
-      consecutive_blocked: 0
-    })
-  end
-
-  # `awaiting_gate` e `working` retêm task_id/worktree — o worktree
-  # reidratado ainda está no disco (não foi apagado; só seria substituído
-  # por um `add_worktree/3` futuro), e um gate tardio ainda o encontra via
-  # `find_by_task_id/2`. `branch` não é persistido (nunca foi — só
-  # task_id/worktree_path), reconstruído do mesmo jeito que `run_task/2` o
-  # monta originalmente.
-  defp resume_state(base, %{status: status} = row) when status in ["awaiting_gate", "working"] do
-    Map.merge(base, %{
-      task_id: row.task_id,
-      worktree: row.worktree_path,
-      branch: "feature/task-" <> String.slice(to_string(row.task_id), 0, 8),
-      status: String.to_existing_atom(status),
-      consecutive_blocked: row.consecutive_blocked
-    })
-  end
-
-  # `idle` e `idle_tripped` — nada a reter; o contador do breaker é o único
-  # campo que precisa sobreviver ao restart (senão um restart no meio de
-  # uma sequência de blocked zeraria o breaker de graça).
-  defp resume_state(base, row) do
-    Map.merge(base, %{
-      task_id: nil,
-      worktree: nil,
-      branch: nil,
-      status: String.to_existing_atom(row.status),
-      consecutive_blocked: row.consecutive_blocked
-    })
   end
 
   # Fecha o `working` reidratado: task já bloqueada por `AgentIo.block_task`
@@ -281,74 +240,16 @@ defmodule Engine.Dev.DevAgentServer do
   def handle_info(:rearm, state), do: {:noreply, state}
 
   # --- Máquina de estados (Fase 12b) ---
+  #
+  # A lógica vive em `AgentIo.try_claim/2` e `AgentIo.finish_task/3`, junto do
+  # resto do que os dois dev agents compartilham: a 12b nasceu só aqui, e o
+  # `NoopDevAgentServer` ficou processando UMA task e parando — o achado #10
+  # vivo dentro do único veículo de validação sem LLM. Estes dois wrappers
+  # existem só para amarrar o `run_task/2` deste agente.
 
-  # Ponto único de claim — chamado pelo `:work` inicial e por `finish_task/2`
-  # sempre que uma task termina e o agente segue livre.
-  defp try_claim(state) do
-    case AgentIo.claim_task(state) do
-      {:ok, nil} ->
-        state = %{state | status: :idle}
-        AgentIo.persist(state)
-        AgentIo.emit(state, "dev.idle", %{agentId: state.agent_id, reason: "sem task pegável"})
-        state
+  defp try_claim(state), do: AgentIo.try_claim(state, &run_task/2)
 
-      {:ok, task} ->
-        run_task(%{state | status: :working}, task)
-
-      {:error, reason} ->
-        # CAI EM `:idle`, e persiste. Devolver o state intocado aqui travava o
-        # agente PARA SEMPRE: `finish_task/2` já zerou `task_id` mas não mexe
-        # em `status`, então o agente ficava `:awaiting_gate` com `task_id`
-        # nil — e aí os três guards de `handle_info/2` falham todos
-        # (`gate_resolved` exige task_id batendo, `became_claimable` exige
-        # `:idle`, `:rearm` exige `:idle_tripped`). Um 5xx transitório da api
-        # no claim produzia exatamente o sintoma que esta fase existe para
-        # eliminar. `:idle` é o único estado do qual um wake ainda resgata.
-        state = %{state | status: :idle}
-        AgentIo.persist(state)
-        AgentIo.emit(state, "dev.error", %{agentId: state.agent_id, reason: inspect(reason)})
-        state
-    end
-  end
-
-  # Único lugar que zera task_id/worktree/branch — deixá-los obsoletos faria
-  # um gate tardio achar o worktree ERRADO via `find_by_task_id/2`. `:approved`
-  # zera o contador do breaker; `:blocked` incrementa e, ao bater o teto, para
-  # em `:idle_tripped` SEM tentar reivindicar.
-  defp finish_task(state, :approved) do
-    state
-    |> Map.merge(%{task_id: nil, worktree: nil, branch: nil, consecutive_blocked: 0})
-    |> try_claim()
-  end
-
-  defp finish_task(state, :blocked) do
-    counter = state.consecutive_blocked + 1
-
-    state =
-      Map.merge(state, %{
-        task_id: nil,
-        worktree: nil,
-        branch: nil,
-        consecutive_blocked: counter
-      })
-
-    if tripped?(counter, state.max_consecutive_blocked) do
-      state = %{state | status: :idle_tripped}
-      AgentIo.persist(state)
-
-      AgentIo.emit(state, "dev.idle_tripped", %{
-        agentId: state.agent_id,
-        consecutiveBlocked: counter
-      })
-
-      state
-    else
-      try_claim(state)
-    end
-  end
-
-  defp tripped?(counter, max) when is_integer(max), do: counter >= max
-  defp tripped?(counter, _), do: counter >= @default_max_consecutive_blocked
+  defp finish_task(state, desfecho), do: AgentIo.finish_task(state, desfecho, &run_task/2)
 
   # --- Ciclo do DevAgent ---
 

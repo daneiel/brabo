@@ -3,7 +3,7 @@ id: adr-index
 title: Decisões arquiteturais (ADR)
 sidebar_label: Índice de ADRs
 sidebar_position: 0
-description: Os 46 registros de decisão arquitetural do Brabo, agrupados por fase, com o que cada um decidiu.
+description: Os 47 registros de decisão arquitetural do Brabo, agrupados por fase, com o que cada um decidiu.
 keywords: [ADR, decisão arquitetural, arquitetura, histórico]
 ---
 
@@ -20,7 +20,7 @@ atual.** Para o estado atual, use [Regras de negócio](../business-rules.md),
 [Arquitetura](../architecture.md) e o [Runbook](../runbook.md). Para o
 raciocínio, venha aqui.
 
-Todos os 46 estão com status **aceito**.
+Todos os 47 estão com status **aceito**.
 
 ## Fase 2 — Git
 
@@ -147,12 +147,13 @@ O loop que faz o time melhorar.
 | [0044](0044-adocao-de-repositorio-existente.md) | Adoção de repositório existente com `origin` (`created`\|`adopted`) nas duas tabelas, e o PLANO como portão: o dry-run é o `check()` do ADR 0005 sem `run()`, o plano vive no cursor (snapshot, não log), e nada é alterado enquanto a decisão for nula — o runner da Fase 2 sai verbatim para um colaborador e nunca é filtrado, só não é chamado; "proteção divergente" fica no nível booleano porque é só isso que o contrato expõe (ADR 0028) |
 | [0045](0045-reagendamento-por-evento-do-dev-agent.md) | Reagendamento do dev agent por evento: outbox (não chamada em processo) porque sobrevive a um restart entre o veredito do gate e o wake; `awaiting_gate` retém o worktree por AGENTE (não por task) até o gate terminar; entrega por PubSub (não Registry, local ao nó) com o limite at-most-once aceito conscientemente; circuit breaker (RN-047) mora no engine porque `actor.id` de `backlog.task_blocked` não identifica a sequência de um agente |
 | [0046](0046-promocao-de-story-com-autoridade-do-usuario.md) | Promoção de história volta a ser do usuário: `proposed_ready` é booleano e não valor novo no enum porque o enum É o portão do `claimNext`; promover reusa o `TransitionStoryUseCase` (código morto do achado #13) e herda de graça o `task.became_claimable` da 12b; a validação é unificada em `assertPromotable` ANTES de o gatilho virar configurável, senão os dois modos seriam regras distintas com o mesmo nome; backfill DIRIGIDO (projeto existente vai para `auto`) porque o comportamento estava em uso; a recusa grava antes de falar com o engine — inverso do rearm, porque o evento afirma algo sobre o USUÁRIO, não sobre o engine |
+| [0047](0047-operabilidade-pos-dogfooding.md) | Fechamento da Fase 12: a validação é um SCRIPT que sai != 0, não um roteiro em prosa, e a evidência é extraída do banco em vez de transcrita; roda local e sem LLM por dois motivos verificados (o fork nunca foi nomeado; o julgamento dos gates com modelo local não é determinístico desde o ADR 0020), e isso é declarado no primeiro parágrafo e não no rodapé; o Noop entrou na máquina de estados da 12b — o achado #10 sobrevivia dentro do próprio instrumento de medida —, movendo-a para o `AgentIo` em vez de copiá-la; a colheita da Fase 10 foi escrita com os buracos como `não medido` |
 
 ## A convenção
 
 - **Um arquivo por decisão**, em `docs/adr/NNNN-titulo-curto.md`, com
   numeração sequencial de 4 dígitos. **Sem reuso de número**, nem quando um ADR
-  é superado — o próximo é **0047**.
+  é superado — o próximo é **0048**.
 - **Três seções, só elas:** **Contexto** (o problema ou a força que motivou),
   **Decisão** (o que foi decidido), **Consequências** (os trade-offs aceitos e
   o que fica para depois).

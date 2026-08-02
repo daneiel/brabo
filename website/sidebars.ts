@@ -112,6 +112,8 @@ const sidebars: SidebarsConfig = {
         'explanation/documentation-workflow',
         'explanation/branching-policy',
         'explanation/observability',
+        'explanation/primeiro-dogfooding',
+        'explanation/validacao-fase-12',
       ],
     },
     {

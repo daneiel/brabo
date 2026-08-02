@@ -61,6 +61,26 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **engine,api,docs**: a **Fase 12 fecha** com os três achados P1 de
+  operabilidade do dogfooding provados mortos numa execução única
+  ([ADR 0047](docs/adr/0047-operabilidade-pos-dogfooding.md)). A validação é um
+  script — `pnpm --filter api validacao:fase-12` — que sai com código != 0
+  quando um critério não fecha e extrai a tabela de evidência do banco em vez de
+  transcrevê-la, recusando-se a terminar bem se alguma etapa que ele afirmou ter
+  exercitado não deixou evento no log. Ela roda com provider Local e sem LLM, e
+  o documento diz no primeiro parágrafo o que isso **não** prova (GitHub remoto
+  e o julgamento dos gates), com o porquê de cada limite.
+  Junto veio um achado da própria preparação: o `NoopDevAgentServer` tinha
+  ficado de fora da Fase 12b — fixava `status: :working`, não assinava o `Wake`
+  e processava uma task antes de parar. O achado #10 estava vivo dentro do único
+  veículo capaz de validar a fase sem gastar token. A máquina de estados foi
+  movida para `Engine.Dev.AgentIo` e passou a ser compartilhada pelos dois
+  agentes, em vez de copiada.
+  A colheita da Fase 10 foi finalmente escrita
+  ([primeiro-dogfooding](docs/explanation/primeiro-dogfooding.md)) — os 17
+  achados com arquivo:linha são reais, e tudo que dependeria de contagem ao vivo
+  entrou como `não medido`, nunca como estimativa
+
 - **engine,api,web**: o dev agent passa a processar toda a fila do módulo
   **sem restart do engine** (Fase 12b). É o segundo achado P1 do
   dogfooding: `:work` só disparava na ativação e no aceite de
@@ -88,9 +108,11 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   **Limite conhecido:** entrega do wake é at-most-once (PubSub, não
   `:global` — Registry é local ao nó e o engine roda 2 réplicas em
   produção); um wake perdido só é recuperado no próximo evento.
-  **Pendente:** o aceite com 3 gates reais em sequência (QA/SecOps são
-  julgamento de LLM, não determinístico) é demonstração manual, não CI
-  — mesmo padrão do [ADR 0020](docs/adr/0020-destravar-gates-qa-secops.md).
+  O aceite de 3 tasks em sequência sem restart passou a ser executável na
+  Fase 12d (`pnpm --filter api validacao:fase-12`), com o veredito do gate
+  entrando pelo funil real (`RecordGateVerdictUseCase`) em vez de pelo
+  julgamento de um modelo — que continua não determinístico, pelo mesmo
+  motivo do [ADR 0020](docs/adr/0020-destravar-gates-qa-secops.md).
 - **api,web**: o projeto passa a poder **adotar um repositório que já
   existe**, em vez de só criar um (Fase 12a). É o primeiro dos três achados
   P1 do dogfooding: a Fase 10 só rodou porque alguém inseriu à mão as linhas

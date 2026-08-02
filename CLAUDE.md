@@ -74,13 +74,14 @@ e pipeline de aprovação de ações com autoridade final do usuário.
 - FASE 10 — CONCLUÍDA: Bitbucket + GenericGitProvider entregues VIA
   dogfooding (primeira execução real do Brabo construindo o próprio
   Brabo, em fork com seed manual, tandas com restart entre tasks,
-  Criativo obrigatório na cadeia). Colheita em
-  docs/explanation/primeiro-dogfooding.md e ADR TODO(humano): número.
-  Achados P1: adoção de repositório existente (createRepo incondicional
-  em provision-repository.use-case.ts:144, getRepo sem uso, sem
-  externalId no DTO), reagendamento de dev agent após gate (`:work` só
-  na ativação — tandas exigem restart do engine) e promoção automática
-  de story a ready sem passo humano. Demais achados: TODO(humano).
+  Criativo obrigatório na cadeia). Colheita escrita na Fase 12d, em
+  docs/explanation/primeiro-dogfooding.md — os 17 achados com
+  arquivo:linha são reais; a metade QUANTITATIVA (restarts,
+  intervenções, custo) ficou como `não medido`, porque a tabela de
+  observação nunca foi preenchida. Os três P1 de operabilidade
+  (adoção de repo existente, reagendamento do dev agent, promoção de
+  story sem passo humano) foram fechados pela Fase 12. Os outros 14
+  seguem abertos e listados na colheita — não corrija de passagem.
 - FASE 11 — CONCLUÍDA: os seis providers da Fase 9b como config sobre
   a base, cada um investigado do zero contra a doc oficial (proibido
   herdar quirk); LLM_PROVIDER_NAMES de 3 para 9; DTO de credencial e
@@ -91,68 +92,36 @@ e pipeline de aprovação de ações com autoridade final do usuário.
   Pendente: aceite com credencial real dos seis smokes, gated por
   `<PROVIDER>_TEST_KEY` — depende de chaves do usuário, rastreado como
   item de backlog, não bloqueia fase.
+- FASE 12 — CONCLUÍDA: operabilidade pós-dogfooding, os três achados
+  P1 fechados e provados numa execução única (ADR 0047).
+  12a — adoção de repositório existente: rota própria, `getRepo`
+  validando acesso antes de gravar, `origin` (created|adopted) nas duas
+  tabelas, e o PLANO como portão — dry-run que descreve a divergência e
+  não altera nada enquanto a decisão for nula; readotar converge
+  (ADR 0044, RN-045/046).
+  12b — reagendamento do dev agent por evento: máquina de estados
+  persistida (working|awaiting_gate|idle|idle_tripped) reagindo a dois
+  eventos da outbox existente, `awaiting_gate` retendo o worktree (que
+  é por AGENTE, não por task) até o gate terminar, e circuit breaker
+  com rearm explícito (ADR 0045, RN-047).
+  12c — promoção de story com autoridade do usuário: `story_promotion`
+  por projeto com `manual` como DEFAULT NOVO (backfill dirigido põe os
+  projetos existentes em `auto`), `proposed_ready` como proposta e não
+  estado, promoção reusando o TransitionStoryUseCase (código morto do
+  achado #13) e recusa devolvendo ao PO com o motivo fixado na sessão
+  dele (ADR 0046, RN-048).
+  12d — o Noop entrou na máquina de estados da 12b (ele processava UMA
+  task e parava: o achado #10 vivia dentro do próprio instrumento de
+  validação); script `pnpm --filter api validacao:fase-12` que sai != 0
+  quando o critério não fecha e extrai a evidência do banco; colheita
+  da Fase 10 escrita; docmap cobrindo engine/dev e engine/agents, que
+  não eram observados por regra nenhuma.
+  Pendente: rodar a validação e colar a tabela de event ids em
+  docs/explanation/validacao-fase-12.md (marcado com TODO(humano) no
+  próprio arquivo). A validação roda com provider Local e NoopDevAgent
+  — NÃO prova GitHub remoto nem o julgamento dos gates por LLM, e isso
+  está declarado no documento.
 - Não refatore o que está pronto sem pedido explícito.
-
-## Escopo da FASE 12 (ativa — operabilidade: os três achados P1 do dogfooding)
-O que separa o experimento controlado da operação real. Cada item
-nasce da colheita da Fase 10; a correção deve caber no desenho
-existente — se exigir mudança estrutural, ADR antes.
-
-### 12a — Adoção de repositório existente
-1. O wizard ganha o caminho "Adotar repositório existente" ao lado de
-   "Criar novo": DTO com externalId/URL + provider + credencial;
-   getRepo (existente e sem uso desde a Fase 2) valida acesso e
-   capabilities; createRepo deixa de ser incondicional
-   (provision-repository.use-case.ts:144) — adoção NÃO cria repo.
-2. Bootstrap em modo adoção é OPT-IN e começa com PLANO: o use-case
-   roda em dry-run listando o que criaria/alteraria (branches
-   faltantes, proteções, arquivos) SEM executar; o usuário aprova o
-   plano inteiro ou adota "como está" (bootstrap dispensado,
-   registrado). Nunca sobrescrever proteção existente sem aprovação
-   explícita — a lição do ADR 0028 vira regra do produto.
-3. Detecção de política divergente: repo adotado cujas branches não
-   batem com o template (ex.: sem qa, com rc) é registrado como
-   política própria do projeto — o bootstrap não força o template;
-   diagnóstico vai para o event log e para a tela do projeto.
-4. Idempotência preservada: adotar o mesmo repo duas vezes converge;
-   provisioned_repositories/repo_bootstraps ganham origem
-   (created | adopted) — o seed manual da Fase 10 nunca mais é
-   necessário.
-
-### 12b — Reagendamento do dev agent após gate
-5. Fim das tandas: o DevAgentServer volta ao trabalho quando (a) o
-   gate resolve sua task (approved → pega a próxima ready do módulo;
-   changes_requested → correção, fluxo já existente) e (b) uma task
-   nova do seu módulo vira ready — sem restart do engine. Sem task
-   ready: estado idle explícito no painel, não processo morto.
-6. Guardas do reagendamento: claim atômico preservado, teto de
-   orçamento por task inalterado, e um circuit breaker por agente
-   (N tasks consecutivas blocked → agente para em idle com evento e
-   notificação, em vez de queimar orçamento em série — valor
-   configurável por projeto).
-7. Reidratação pós-restart retoma o estado correto (idle | working |
-   awaiting_gate) — o teste da Fase 4 de reidratação é estendido para
-   os estados novos.
-
-### 12c — Promoção de story com autoridade do usuário
-8. Transição draft→ready deixa de ser automática na criação: modo por
-   projeto (manual — DEFAULT — | auto), alinhado ao princípio de
-   autoridade do usuário. Em manual, o PO propõe (story fica draft
-   completa com DoD/DoR validados) e o usuário promove na UI do
-   Backlog — individualmente ou em lote com revisão.
-9. O modo auto permanece para quem preferir (é o comportamento atual,
-   documentado como opt-in); a mudança de default entra no CHANGELOG
-   como breaking de comportamento.
-
-### 12d — Fechamento
-10. Mini-validação: reexecutar UMA task de ponta a ponta num projeto
-    ADOTADO (fork da Fase 10 serve), sem seed manual, sem restart do
-    engine, com promoção manual de story — os três achados provados
-    resolvidos numa única execução.
-11. ADR "operabilidade pós-dogfooding" referenciando a colheita;
-    RN-XXX para as regras novas (adoção sem sobrescrita, circuit
-    breaker, promoção manual como default); docmap/CHANGELOG/docs
-    verdes.
 
 ## Stack (decidida — não proponha alternativas)
 - `apps/api`: NestJS 11 + Drizzle ORM + PostgreSQL 16 + pgvector
@@ -253,12 +222,14 @@ existente — se exigir mudança estrutural, ADR antes.
   área) — corte registrado da Fase 8
 - Não versionar à mão: toda tag nasce de workflow
 - Não instalar libs sem justificar no plano
-- Não refatorar código das fases concluídas fora do necessário para a
-  Fase 12
+- Não refatorar código de fase concluída sem pedido explícito
 - Não ativar modelo descoberto automaticamente: curadoria manual
   sempre (ADR 0042)
-- (FASE 12) Não estender a adoção a migração de dados do repo
-  (issues, PRs históricas) — adoção é acesso + política, nada mais
-- (FASE 12) Não transformar o reagendamento em autonomia nova: o
-  pipeline de aprovações continua exatamente como está — o que muda é
-  o agente não morrer entre tasks
+- Não estender a adoção a migração de dados do repo (issues, PRs
+  históricas) — adoção é acesso + política, nada mais
+- Não transformar o reagendamento em autonomia nova: o pipeline de
+  aprovações continua exatamente como está — o que muda é o agente não
+  morrer entre tasks
+- Não corrigir de passagem os 14 achados abertos do dogfooding
+  (docs/explanation/primeiro-dogfooding.md) — cada um espera a fase que
+  o endereça, e corrigir fora dela apaga a evidência de por que existia
