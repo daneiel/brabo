@@ -31,6 +31,7 @@ import type {
   ProficiencyLevel,
   ProficiencyProfile,
   Role,
+  StoryPromotionMode,
 } from '../lib/api-types';
 import {
   CREDENCIAIS_DE_LLM,
@@ -80,6 +81,7 @@ export function ProjectSettingsTab({ projectId }: ProjectSettingsTabProps) {
     <div>
       <RepositorySection projectId={projectId} />
       <ExecutionSection projectId={projectId} />
+      <PromotionSection projectId={projectId} />
       <ModelsSection projectId={projectId} />
       <CatalogoDeModelos projectId={projectId} />
       <MembersSection projectId={projectId} />
@@ -436,6 +438,80 @@ export function ExecutionSection({ projectId }: { projectId: string }) {
         <Button onClick={handleSave} disabled={!valido || saving}>
           {saving ? 'Salvando…' : 'Salvar'}
         </Button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Quem promove história a `ready` (Fase 12c — RN-048).
+ *
+ * Salva no `onChange`, sem botão, como o seletor de papel em `MembersSection`:
+ * é uma escolha entre dois valores nomeados, não um campo digitado que precise
+ * de confirmação.
+ */
+export function PromotionSection({ projectId }: { projectId: string }) {
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+  const { data: project } = useQuery({
+    queryKey: ['project', projectId],
+    queryFn: () => getProject(projectId),
+  });
+  const [saving, setSaving] = useState(false);
+
+  async function handleChange(modo: StoryPromotionMode) {
+    setSaving(true);
+    try {
+      await updateProject(projectId, { storyPromotion: modo });
+      await queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      showToast({
+        title:
+          modo === 'manual'
+            ? 'Promoção manual: você decide o que fica pronto'
+            : 'Promoção automática: o PO promove sozinho',
+        tone: 'success',
+      });
+    } catch {
+      showToast({ title: 'Não foi possível salvar', tone: 'danger' });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!project) return null;
+
+  return (
+    <div className={styles.section}>
+      <div className={styles.title}>Promoção de histórias</div>
+      <div className={styles.subtitle}>
+        Uma história só vira trabalho pegável quando está <em>pronta</em>. Isto
+        define quem dá esse passo. As validações são as MESMAS nos dois modos —
+        o que muda é quem dispara, nunca o que é exigido. Vale para as próximas
+        histórias; as que já estão propostas continuam esperando você.
+      </div>
+
+      <div className={styles.credentialCard}>
+        <div className={styles.credentialInfo}>
+          <div className={styles.credentialProvider}>Quem promove</div>
+          <div className={styles.credentialStatus}>
+            {project.storyPromotion === 'manual'
+              ? 'O PO deixa a história completa e ela aguarda você no Backlog. Nenhuma tarefa dela é pegável até lá.'
+              : 'O PO promove sozinho ao terminar uma história completa — era o comportamento anterior à Fase 12c, mantido como opção.'}
+          </div>
+        </div>
+        <div className={styles.credentialInput}>
+          <Select
+            value={project.storyPromotion}
+            disabled={saving}
+            aria-label="Quem promove histórias"
+            onChange={(e) =>
+              handleChange(e.target.value as StoryPromotionMode)
+            }
+          >
+            <option value="manual">Manual — eu promovo</option>
+            <option value="auto">Automática — o PO promove</option>
+          </Select>
+        </div>
       </div>
     </div>
   );

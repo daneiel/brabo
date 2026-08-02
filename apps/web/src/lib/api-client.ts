@@ -7,6 +7,7 @@ import type {
   AgentTokenUsage,
   ActionType,
   Architecture,
+  StoryPromotionMode,
   InfraArtifact,
   PsychologistHypothesis,
   PsychologistAnalysis,
@@ -36,6 +37,7 @@ import type {
   BootstrapPlanEstado,
   RepoBootstrapStatus,
   ResolvedBinding,
+  PromoteStoriesResult,
   Role,
   Session,
   SessionEvent,
@@ -191,9 +193,16 @@ export const getProject = (projectId: string) =>
   get<Project>(`/projects/${projectId}`);
 // `maxConsecutiveBlocked` (Fase 12b): vale a partir da PRÓXIMA ativação da
 // execução — não afeta dev agents já rodando.
+// `storyPromotion` (Fase 12c): vale para as PRÓXIMAS histórias criadas; as que
+// já estão propostas continuam aguardando promoção mesmo se o modo virar
+// `auto`, porque a proposta já existe e ignorá-la esconderia trabalho do PO.
+// Os dois são opcionais — a tela salva um campo por vez.
 export const updateProject = (
   projectId: string,
-  input: { maxConsecutiveBlocked: number },
+  input: {
+    maxConsecutiveBlocked?: number;
+    storyPromotion?: StoryPromotionMode;
+  },
 ) => patch<Project>(`/projects/${projectId}`, input);
 
 export const listProjectMembers = (projectId: string) =>
@@ -337,6 +346,26 @@ export const acceptHandoff = (
 
 export const listBacklog = (projectId: string) =>
   get<Epic[]>(`/projects/${projectId}/backlog`);
+
+// Promoção e recusa (Fase 12c — RN-048): as duas ÚNICAS escritas de backlog
+// que são do usuário e não de um agente.
+//
+// `promoteStories` é sempre lote, mesmo para uma história — e não rejeita
+// quando parte falha: quem não passou volta em `failed` com o motivo, e quem
+// passou está promovido. Tratar a resposta como sucesso/erro binário perde
+// exatamente a informação que ela existe para dar.
+export const promoteStories = (projectId: string, storyIds: string[]) =>
+  post<PromoteStoriesResult>(`/projects/${projectId}/stories/promote`, {
+    storyIds,
+  });
+export const returnStory = (
+  projectId: string,
+  storyId: string,
+  reason: string,
+) =>
+  post<{ ok: true }>(`/projects/${projectId}/stories/${storyId}/return`, {
+    reason,
+  });
 export const getCoverage = (projectId: string) =>
   get<CoverageReport>(`/projects/${projectId}/coverage`);
 export const getArchitecture = (projectId: string) =>

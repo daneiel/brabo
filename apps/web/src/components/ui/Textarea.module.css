@@ -1,0 +1,45 @@
+/*
+ * O primeiro `Textarea` do produto (Fase 12c), para o motivo da recusa de
+ * promoção de história.
+ *
+ * `composes` em vez de copiar as regras do `Input`: a caixa é a MESMA anatomia
+ * — mesma tipografia, mesma borda, mesmo raio, mesmo `:focus-visible` com o
+ * `outline` transparente que o modo de alto contraste pinta (ADR 0036), mesmo
+ * `.hint` em `--text-secondary` que a `design-contraste.test.ts` guarda. Uma
+ * cópia nasceria idêntica e divergiria na primeira correção feita só de um
+ * lado — foi assim que o `--text-muted` reprovado em AA sobreviveu em cinco
+ * telas.
+ *
+ * `composes` acrescenta o nome da classe original ao elemento, então as regras
+ * de pseudo-classe (`:focus-visible`, `::placeholder`, `.invalid:focus`) valem
+ * aqui sem serem redeclaradas.
+ */
+
+.textarea {
+  composes: input from './Input.module.css';
+  /* O que difere de um input de uma linha, e só isso. */
+  min-height: 88px;
+  line-height: 1.5;
+  /* Só na vertical: redimensionar na horizontal estoura o card que o contém. */
+  resize: vertical;
+}
+
+.campo {
+  composes: campo from './Input.module.css';
+}
+
+.label {
+  composes: label from './Input.module.css';
+}
+
+.hint {
+  composes: hint from './Input.module.css';
+}
+
+.erro {
+  composes: erro from './Input.module.css';
+}
+
+.invalid {
+  composes: invalid from './Input.module.css';
+}

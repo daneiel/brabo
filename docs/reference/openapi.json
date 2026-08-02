@@ -6121,6 +6121,138 @@
         ]
       }
     },
+    "/projects/{projectId}/stories/{storyId}/return": {
+      "post": {
+        "description": "A história sai da fila de propostas e o motivo vira mensagem fixada na sessão do PO — mesmo padrão da devolução de um gate ao dev. Se o PO daquela sessão não estiver mais de pé, a devolução é gravada assim mesmo: a decisão é do usuário e não depende de haver agente ouvindo.",
+        "operationId": "BacklogController_return",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "storyId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReturnStoryDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Devolve ao PO uma história recusada, com o motivo",
+        "tags": [
+          "backlog"
+        ]
+      }
+    },
+    "/projects/{projectId}/stories/promote": {
+      "post": {
+        "description": "O passo humano que o modo `manual` (default desde a Fase 12c) devolve ao usuário: até promover, NENHUMA tarefa da história é pegável por dev agent nenhum. Promover libera o lote de tarefas de uma vez e acorda os agentes idle do módulo (Fase 12b). O lote NÃO é all-or-nothing — o que não passou volta em `failed` com o motivo, e o que passou está promovido.",
+        "operationId": "BacklogController_promote",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PromoteStoriesDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromoteStoriesResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Promove a `ready` as histórias que o PO propôs",
+        "tags": [
+          "backlog"
+        ]
+      }
+    },
     "/users/me/credentials": {
       "get": {
         "description": "Sem papel exigido: credencial é sobre quem chamou, não sobre workspace ou projeto. Cobre chaves de LLM e tokens de git na mesma listagem.",
@@ -8443,6 +8575,15 @@
             "type": "number",
             "example": 3,
             "description": "Circuit breaker (Fase 12b — RN-047): quantas tasks consecutivas terminando blocked param o dev agent do módulo em idle_tripped. Omitido usa o default do domínio (DEFAULT_MAX_CONSECUTIVE_BLOCKED). Vale a partir da PRÓXIMA ativação da execução — não afeta agentes já rodando."
+          },
+          "storyPromotion": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "auto"
+            ],
+            "example": "manual",
+            "description": "Quem promove uma story de `draft` para `ready` (Fase 12c — RN-048). `manual` (default de projeto novo): o PO propõe e VOCÊ decide, na aba Backlog. `auto`: a story completa já nasce `ready`, sem passo humano — era o comportamento até a 12c, e projetos criados antes dela ficaram nele. As validações de domínio (DoD/DoR/RF/regra/módulos) são as MESMAS nos dois modos; o modo muda só quem dispara."
           }
         },
         "required": [
@@ -10440,6 +10581,15 @@
             "nullable": true,
             "description": "Circuit breaker por dev agent (Fase 12b — RN-047): tasks consecutivas terminando blocked até parar em idle_tripped. `null` usa o padrão do domínio."
           },
+          "storyPromotion": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "auto"
+            ],
+            "example": "manual",
+            "description": "Quem promove story a `ready` (Fase 12c — RN-048). `manual`: o PO propõe e o usuário decide. `auto`: promoção automática na criação (opt-in; é onde os projetos anteriores à 12c ficaram)."
+          },
           "createdAt": {
             "type": "string",
             "example": "2026-07-21T11:00:00.000Z",
@@ -10459,8 +10609,69 @@
           "createdBy",
           "taskBudgetMicros",
           "maxConsecutiveBlocked",
+          "storyPromotion",
           "createdAt",
           "updatedAt"
+        ]
+      },
+      "PromocaoRecusadaResponseDto": {
+        "type": "object",
+        "properties": {
+          "storyId": {
+            "type": "string",
+            "example": "01JC2XK9Q7"
+          },
+          "reason": {
+            "type": "string",
+            "example": "História não está pronta: faltam dod, dor",
+            "description": "Motivo legível. A história pode ter perdido a prontidão, ou um módulo dela pode ter saído do `module_map` entre a proposta e a decisão."
+          }
+        },
+        "required": [
+          "storyId",
+          "reason"
+        ]
+      },
+      "PromoteStoriesDto": {
+        "type": "object",
+        "properties": {
+          "storyIds": {
+            "example": [
+              "01JC2XK9Q7",
+              "01JC2XKB4M"
+            ],
+            "description": "Ids das histórias a promover para `ready`. Uma só é um lote de 1. Cada história é validada e promovida por conta própria — uma que falhe não impede as outras.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "storyIds"
+        ]
+      },
+      "PromoteStoriesResponseDto": {
+        "type": "object",
+        "properties": {
+          "promoted": {
+            "description": "Ids que foram para `ready`, com as tasks já pegáveis.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "failed": {
+            "description": "Vazio quando o lote inteiro passou.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PromocaoRecusadaResponseDto"
+            }
+          }
+        },
+        "required": [
+          "promoted",
+          "failed"
         ]
       },
       "ProposeActionDto": {
@@ -11523,6 +11734,19 @@
           "indisponibilizados"
         ]
       },
+      "ReturnStoryDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "example": "Os critérios de aceite não cobrem o caso de recusa do pagamento.",
+            "description": "O motivo é OBRIGATÓRIO: ele vira mensagem fixada na sessão do PO, e uma devolução sem motivo devolve trabalho sem informação."
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
       "RollbackResponseDto": {
         "type": "object",
         "properties": {
@@ -12054,6 +12278,23 @@
             ],
             "example": "ready"
           },
+          "proposedReady": {
+            "type": "boolean",
+            "example": true,
+            "description": "O PO terminou a história e ela aguarda a decisão do usuário (Fase 12c — RN-048). Convive com `status: \"draft\"`: é uma proposta, não um estado. Sempre `false` em projeto no modo `auto`."
+          },
+          "returnedReason": {
+            "type": "object",
+            "example": "DoD genérico demais — detalhe o critério de aceite.",
+            "nullable": true,
+            "description": "Por que o usuário devolveu a história ao PO. `null` quando nunca foi devolvida."
+          },
+          "returnedAt": {
+            "type": "object",
+            "example": "2026-08-02T14:00:00.000Z",
+            "format": "date-time",
+            "nullable": true
+          },
           "createdAt": {
             "type": "string",
             "example": "2026-07-25T09:00:00.000Z",
@@ -12085,6 +12326,9 @@
           "dor",
           "moduleIds",
           "status",
+          "proposedReady",
+          "returnedReason",
+          "returnedAt",
           "createdAt",
           "updatedAt",
           "tasks"
@@ -12187,6 +12431,23 @@
             ],
             "example": "ready"
           },
+          "proposedReady": {
+            "type": "boolean",
+            "example": true,
+            "description": "O PO terminou a história e ela aguarda a decisão do usuário (Fase 12c — RN-048). Convive com `status: \"draft\"`: é uma proposta, não um estado. Sempre `false` em projeto no modo `auto`."
+          },
+          "returnedReason": {
+            "type": "object",
+            "example": "DoD genérico demais — detalhe o critério de aceite.",
+            "nullable": true,
+            "description": "Por que o usuário devolveu a história ao PO. `null` quando nunca foi devolvida."
+          },
+          "returnedAt": {
+            "type": "object",
+            "example": "2026-08-02T14:00:00.000Z",
+            "format": "date-time",
+            "nullable": true
+          },
           "createdAt": {
             "type": "string",
             "example": "2026-07-25T09:00:00.000Z",
@@ -12212,6 +12473,9 @@
           "dor",
           "moduleIds",
           "status",
+          "proposedReady",
+          "returnedReason",
+          "returnedAt",
           "createdAt",
           "updatedAt"
         ]
@@ -12475,6 +12739,15 @@
             "type": "number",
             "example": 3,
             "description": "Circuit breaker (Fase 12b — RN-047): quantas tasks consecutivas terminando blocked param o dev agent do módulo em idle_tripped. Omitido usa o default do domínio (DEFAULT_MAX_CONSECUTIVE_BLOCKED). Vale a partir da PRÓXIMA ativação da execução — não afeta agentes já rodando."
+          },
+          "storyPromotion": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "auto"
+            ],
+            "example": "manual",
+            "description": "Quem promove uma story de `draft` para `ready` (Fase 12c — RN-048). `manual` (default de projeto novo): o PO propõe e VOCÊ decide, na aba Backlog. `auto`: a story completa já nasce `ready`, sem passo humano — era o comportamento até a 12c, e projetos criados antes dela ficaram nele. As validações de domínio (DoD/DoR/RF/regra/módulos) são as MESMAS nos dois modos; o modo muda só quem dispara."
           }
         }
       },

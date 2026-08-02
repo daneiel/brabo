@@ -272,6 +272,43 @@ export function classifyEvent(event: SessionEvent): ActivityDisplay {
       text: `task → ${payloadField(payload, 'status') ?? 'novo status'}`,
     };
   }
+  // Fase 12c (RN-048). As três precedem o fallback `type.startsWith('backlog.')`
+  // lá embaixo, que as reduziria a "criou uma história" — mesmo cuidado que a
+  // 12b tomou com `dev.idle_tripped`.
+  if (type === 'backlog.story_promotion_proposed') {
+    return {
+      kind: 'generic',
+      icon: StackIcon,
+      color: 'var(--warning)',
+      // Não é falha: o PO fez o trabalho dele. É uma decisão esperando você.
+      bad: false,
+      text: `história "${payloadField(payload, 'title') ?? 'sem título'}" pronta, aguardando sua promoção`,
+    };
+  }
+  if (type === 'backlog.story_promotion_returned') {
+    return {
+      kind: 'generic',
+      icon: StackIcon,
+      color: 'var(--danger)',
+      bad: true,
+      text: `você devolveu "${payloadField(payload, 'title') ?? 'uma história'}" ao PO: ${payloadField(payload, 'reason') ?? 'sem motivo'}`,
+    };
+  }
+  if (type === 'backlog.story_transitioned') {
+    const para = payloadField(payload, 'to');
+    // `ready` com ator `user` é a promoção manual; com ator `po`, o modo auto.
+    const quem = actorLabel === 'user' ? 'você promoveu' : `${actorLabel} moveu`;
+    return {
+      kind: 'generic',
+      icon: StackIcon,
+      color: para === 'ready' ? 'var(--success)' : 'var(--text-muted)',
+      bad: false,
+      text:
+        para === 'ready'
+          ? `${quem} uma história a pronta — as tarefas dela ficaram pegáveis`
+          : `história → ${para ?? 'novo estado'}`,
+    };
+  }
   if (type === 'backlog.story_demoted') {
     return {
       kind: 'generic',

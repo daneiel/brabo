@@ -199,7 +199,7 @@ válida nem perfilar uma competência fora do catálogo, ainda que o modelo peç
 
 ## api → engine
 
-Doze rotas de comando, mais as de saúde. Sob `/internal` com `VerifyServiceToken`:
+Treze rotas de comando, mais as de saúde. Sob `/internal` com `VerifyServiceToken`:
 
 | método | caminho | o que dispara |
 |---|---|---|
@@ -207,6 +207,7 @@ Doze rotas de comando, mais as de saúde. Sob `/internal` com `VerifyServiceToke
 | POST | `/sessions/:id/agent/start` | inicia um turno de agente |
 | POST | `/sessions/:id/agent/message` | mensagem do usuário no fio |
 | POST | `/sessions/:id/agent/readiness` | confirmação de prontidão |
+| POST | `/sessions/:id/agent/revise` | devolve ao PO uma história que o usuário recusou promover (Fase 12c — RN-048); **404 se o PO não está de pé**, e isso não é erro para a api |
 | POST | `/sessions/:id/agent/offer-infra-handoff` | oferta de handoff ao Infra |
 | POST | `/sessions/:id/execution/start` | ativa a fase de execução |
 | POST | `/sessions/:id/execution/parallelize` | cria subagentes |

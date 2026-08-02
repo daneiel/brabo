@@ -78,7 +78,9 @@ Uma linha em `session_events`, append-only, com `seq` densa por sessão
 |---|---|
 | `backlog.epic_created` | — |
 | `backlog.story_created` | — |
-| `backlog.story_transitioned` | mudança de estado da história |
+| `backlog.story_transitioned` | mudança de estado da história. O `actor` diz quem promoveu: `agent/po` no modo `auto`, `user` no modo `manual` ([RN-048](../business-rules.md#rn-048)) |
+| `backlog.story_promotion_proposed` | o PO terminou uma história COMPLETA num projeto em modo `manual`: ela fica `draft` aguardando a decisão do usuário, e nenhuma tarefa dela é pegável até lá ([RN-048](../business-rules.md#rn-048)) |
+| `backlog.story_promotion_returned` | o usuário RECUSOU promover e devolveu a história ao PO com um motivo — que vira mensagem fixada na sessão dele, como a devolução de um gate ao dev ([RN-048](../business-rules.md#rn-048)) |
 | `backlog.story_demoted` | módulo sumiu do `module_map`; a história voltou para `draft` ([RN-012](../business-rules.md#rn-012)) |
 | `backlog.story_modules_assigned` | vínculo história ↔ módulo |
 | `backlog.task_created` | — |
@@ -269,7 +271,7 @@ respeito.
 
 > ⚠️ Bloco gerado por `pnpm docs:generate`. Não edite à mão — o próximo build sobrescreve.
 
-Extraído dos pontos de emissão: **73 identificadores**, todos descritos acima.
+Extraído dos pontos de emissão: **75 identificadores**, todos descritos acima.
 
 - `action.failed` <sub>(apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts)</sub>
 - `agent.activated` <sub>(apps/api/src/application/use-cases/agents/activate-agent.use-case.ts)</sub>
@@ -291,6 +293,8 @@ Extraído dos pontos de emissão: **73 identificadores**, todos descritos acima.
 - `backlog.story_created` <sub>(apps/api/src/application/use-cases/backlog/create-story.use-case.ts)</sub>
 - `backlog.story_demoted` <sub>(apps/api/src/application/use-cases/architecture/create-module-map.use-case.ts)</sub>
 - `backlog.story_modules_assigned` <sub>(apps/api/src/application/use-cases/architecture/assign-story-modules.use-case.ts)</sub>
+- `backlog.story_promotion_proposed` <sub>(apps/api/src/application/use-cases/backlog/create-story.use-case.ts)</sub>
+- `backlog.story_promotion_returned` <sub>(apps/api/src/application/use-cases/backlog/return-story.use-case.ts)</sub>
 - `backlog.story_transitioned` <sub>(apps/api/src/application/use-cases/backlog/transition-story.use-case.ts)</sub>
 - `backlog.task_blocked` <sub>(apps/api/src/application/use-cases/execution/mark-task-blocked.use-case.ts)</sub>
 - `backlog.task_claimed` <sub>(apps/api/src/application/use-cases/execution/claim-next-task.use-case.ts)</sub>

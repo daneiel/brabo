@@ -6,6 +6,23 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### ⚠ Mudanças incompatíveis
 
+- **api,web,engine**: história **não vira `ready` sozinha** em projeto novo. O
+  default de `projects.story_promotion` passa a ser `manual` (Fase 12c): o PO
+  deixa a história completa, ela fica `draft` marcada como proposta, e **nenhuma
+  tarefa dela é pegável** até o usuário promover na aba Backlog — individualmente
+  ou em lote. É o terceiro achado P1 do dogfooding: a promoção automática na
+  criação contradizia o princípio de autoridade final do usuário, porque um
+  agente de LLM decidia sozinho o que entrava na fila dos dev agents.
+  **Projeto existente não muda de comportamento**: a migração `0033` faz um
+  backfill dirigido movendo todos os que já existiam para `auto`, o modo
+  anterior, que continua disponível em Configurações → Promoção de histórias.
+  Quem cria projeto novo e espera o backlog andar sozinho precisa ou promover,
+  ou trocar o modo para `auto`.
+  A recusa devolve a história ao PO com o motivo, como um gate devolve uma PR ao
+  dev. As validações são as MESMAS nos dois modos — o que muda é quem dispara,
+  nunca o que é exigido, e há teste de simetria fixando isso
+  ([RN-048](docs/business-rules.md#rn-048),
+  [ADR 0046](docs/adr/0046-promocao-de-story-com-autoridade-do-usuario.md))
 - **auth**: o Keycloak saiu. A api passa a ser o **emissor** dos tokens de
   acesso, num corte **atômico** — não há período de coexistência, e um token
   do emissor antigo não é aceito em rota nenhuma. Todo mundo é deslogado no

@@ -628,6 +628,18 @@ const sidebar: SidebarsConfig = {
           label: "Lista as PRs de infra e o estágio de gate de cada uma",
           className: "api-method get",
         },
+        {
+          type: "doc",
+          id: "docs/reference/api/backlog-controller-return",
+          label: "Devolve ao PO uma história recusada, com o motivo",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/backlog-controller-promote",
+          label: "Promove a `ready` as histórias que o PO propôs",
+          className: "api-method post",
+        },
       ],
     },
     {

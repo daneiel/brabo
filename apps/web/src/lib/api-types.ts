@@ -28,8 +28,23 @@ export interface Project {
   // Circuit breaker por dev agent (Fase 12b — RN-047). `null` usa o default
   // do domínio (3).
   maxConsecutiveBlocked: number | null;
+  // Quem promove história a `ready` (Fase 12c — RN-048). `manual` é o default
+  // de projeto novo; os projetos que existiam antes da fase ficaram em `auto`,
+  // que é o comportamento anterior.
+  storyPromotion: StoryPromotionMode;
   createdAt: string;
   updatedAt: string;
+}
+
+export type StoryPromotionMode = 'manual' | 'auto';
+
+/**
+ * O resultado de um lote de promoção (Fase 12c — RN-048). NÃO é
+ * all-or-nothing: `failed` pode vir preenchido numa resposta de sucesso.
+ */
+export interface PromoteStoriesResult {
+  promoted: string[];
+  failed: { storyId: string; reason: string }[];
 }
 
 export interface WorkspaceSummary {
@@ -640,6 +655,14 @@ export interface Story {
   dod: string[];
   dor: string[];
   status: StoryStatus;
+  // Fase 12c (RN-048). Convive com `status: 'draft'` — é uma PROPOSTA, não um
+  // estado: o PO terminou a história e ela aguarda a decisão do usuário.
+  // Enquanto isso nenhuma tarefa dela é pegável.
+  proposedReady: boolean;
+  // O motivo da última recusa, e quando. Ficam gravados mesmo depois de o PO
+  // recriar a história corrigida — a recusa é fato, não estado transitório.
+  returnedReason: string | null;
+  returnedAt: string | null;
   createdAt: string;
   updatedAt: string;
   tasks: Task[];

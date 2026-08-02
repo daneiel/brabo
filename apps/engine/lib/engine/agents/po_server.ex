@@ -37,6 +37,25 @@ defmodule Engine.Agents.PoServer do
   def user_message(session_id, text),
     do: GenServer.call(via(session_id), {:user_message, text}, 180_000)
 
+  @doc """
+  Devolução de história recusada (Fase 12c — RN-048): o usuário não promoveu
+  e mandou o trabalho de volta. `story` é `%{id:, title:, reason:}`.
+
+  Distinto de `user_message/2`, que é conversa: aqui o PO recebe uma pendência
+  ENDEREÇADA, com precedência declarada — o mesmo desenho da devolução de um
+  gate ao dev agent (`DevAgentServer.correct/3`).
+  """
+  def revise(session_id, story),
+    do: GenServer.call(via(session_id), {:revise, story}, 180_000)
+
+  @doc """
+  O PO daquela sessão está de pé? A rota interna usa isso para responder 404
+  em vez de estourar `:noproc` num `GenServer.call` — a devolução já foi
+  gravada na api, e o chamador precisa saber que a notificação não chegou.
+  """
+  def vivo?(session_id),
+    do: Registry.lookup(Engine.Sessions.Registry, "po:" <> session_id) != []
+
   # --- Callbacks ---
 
   @impl true
@@ -86,6 +105,21 @@ defmodule Engine.Agents.PoServer do
     state =
       state
       |> append(user_msg(text))
+      |> compact()
+      |> run_turn(@max_iterations)
+
+    broadcast(state, "agent.done", %{})
+    broadcast(state, "agent.status", %{status: "idle"})
+    {:reply, :ok, state}
+  end
+
+  @impl true
+  def handle_call({:revise, story}, _from, state) do
+    broadcast(state, "agent.status", %{status: "working"})
+
+    state =
+      state
+      |> append(revision_message(story))
       |> compact()
       |> run_turn(@max_iterations)
 
@@ -250,6 +284,42 @@ defmodule Engine.Agents.PoServer do
 
   defp assistant_msg(content),
     do: %{"role" => "assistant", "content" => content, :pinned => false}
+
+  # A devolução de uma história recusada (Fase 12c — RN-048).
+  #
+  # `:pinned => true` e não `false` como as mensagens de conversa: é o PRIMEIRO
+  # fixado fora do system prompt num agente conversacional, e é deliberado. A
+  # recusa é uma pendência endereçada, não uma fala — se o `ContextManager`
+  # compactasse o histórico e a engolisse, o PO voltaria a propor a mesma
+  # história com o mesmo defeito. `to_wire/1` remove a chave antes do modelo.
+  #
+  # A frase de precedência é a mesma lição do ADR 0020, aprendida com o dev
+  # agent repondo o segredo que o SecOps acabara de reprovar: a história
+  # original continua no contexto, então o parecer que a contradiz precisa
+  # dizer que vale mais.
+  #
+  # O que o PO pode fazer está dito EXPLICITAMENTE porque não existe ferramenta
+  # de editar história — só `create_story`. Mandar "corrija a história" seria
+  # pedir o impossível, e um modelo diante de uma instrução impossível inventa
+  # uma ferramenta ou repete a chamada até esgotar o loop.
+  defp revision_message(story) do
+    %{
+      "role" => "user",
+      "content" =>
+        "O usuário RECUSOU promover a história \"#{Map.get(story, "title")}\" " <>
+          "(id=#{Map.get(story, "id")}) e a devolveu para você.\n\n" <>
+          "Motivo: #{Map.get(story, "reason")}\n\n" <>
+          "Este motivo PREVALECE sobre o seu julgamento anterior de que a história " <>
+          "estava completa: onde os dois se contradisserem, siga o motivo. A promoção " <>
+          "é decisão do usuário, e repropor a mesma história sem endereçar o que ele " <>
+          "apontou só devolve o problema para ele.\n\n" <>
+          "Não existe ferramenta de EDITAR história. O que você pode fazer: criar a " <>
+          "versão corrigida com `create_story` (a recusada fica registrada como " <>
+          "devolvida, com o motivo), ou — se o motivo não estiver claro — responder " <>
+          "perguntando ao usuário antes de recriar qualquer coisa.",
+      :pinned => true
+    }
+  end
 
   defp append(state, message), do: %{state | messages: state.messages ++ [message]}
 

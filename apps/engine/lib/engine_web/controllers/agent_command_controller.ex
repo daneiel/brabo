@@ -66,6 +66,33 @@ defmodule EngineWeb.AgentCommandController do
     send_resp(conn, 202, "")
   end
 
+  @doc """
+  Devolve ao PO uma história que o usuário recusou promover (Fase 12c —
+  RN-048).
+
+  Checa liveness ANTES de chamar, ao contrário de `message/2`: aquela rota
+  nasce de um usuário digitando numa sessão que ele está vendo, e um PO morto
+  ali é um bug. Esta nasce de uma recusa JÁ GRAVADA na api — o PO pode ter
+  morrido num restart do engine no meio do caminho, e a api precisa distinguir
+  "não notifiquei" de "explodi". Sem a checagem, `GenServer.call` sairia por
+  `:noproc` e viraria 500.
+  """
+  def revise(conn, %{
+        "sessionId" => session_id,
+        "storyId" => story_id,
+        "title" => title,
+        "reason" => reason
+      }) do
+    if PoServer.vivo?(session_id) do
+      :ok = PoServer.revise(session_id, %{"id" => story_id, "title" => title, "reason" => reason})
+      send_resp(conn, 202, "")
+    else
+      conn
+      |> put_status(404)
+      |> json(%{error: "PO da sessão #{session_id} não está de pé"})
+    end
+  end
+
   def readiness(conn, %{"sessionId" => session_id}) do
     :ok = CriativoServer.confirm_readiness(session_id)
     send_resp(conn, 202, "")

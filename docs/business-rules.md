@@ -628,6 +628,68 @@ verdade.
   (describe `os quatro estados reidratados`), `test/application/use-cases/execution/rearm-dev-agent.use-case.spec.ts`
 - **Origem:** [ADR 0045](adr/0045-reagendamento-por-evento-do-dev-agent.md)
 
+### RN-048 — Promoção de história é do usuário por default; o modo muda quem dispara, nunca o que é validado {#rn-048}
+
+`projects.story_promotion` escolhe QUEM promove uma história de `draft` para
+`ready`:
+
+- **`manual`** (default de projeto novo): o PO deixa a história completa e ela
+  fica `draft` com `stories.proposed_ready = true`. **Nenhuma tarefa dela é
+  pegável** — `claimNext` exige `story.status = 'ready'` —, e é o usuário que
+  promove, individualmente ou em lote, pelo Backlog.
+- **`auto`**: o PO promove sozinho ao terminar uma história completa. É o
+  comportamento anterior à Fase 12c, preservado como opção explícita.
+
+**O modo muda o gatilho, não o critério.** Os dois caminhos passam por
+`assertPromotable` — prontidão (RF/DoD/DoR/regra) e módulos resolvidos contra o
+`module_map` vigente —, e é isso que o teste de simetria em
+`story-promotion.spec.ts` fixa: para toda história, `isPromotable` concorda com
+o que `assertPromotable` levanta. Antes da fase a validação estava duplicada e
+assimétrica (a criação chamava `canBecomeReady`, a transição chamava
+`assertReady` + `assertModulesResolved`): duas portas para o mesmo estado, com
+fechaduras diferentes. Tornar o gatilho configurável exigia unificá-las
+primeiro, senão "promover pela UI" e "promover na criação" seriam regras
+distintas com o mesmo nome.
+
+Uma história **incompleta nunca é proposta**. `proposed_ready` só liga quando a
+história já passaria na validação — propor o que o domínio recusaria empurraria
+o trabalho do PO para o usuário sob o disfarce de uma decisão.
+
+A **recusa** devolve a história ao PO: grava `returned_reason`/`returned_at`,
+desliga `proposed_ready`, emite `backlog.story_promotion_returned` e injeta o
+motivo como mensagem FIXADA na sessão do PO, com a mesma frase de precedência
+da devolução de um gate ao dev (lição do ADR 0020). A recusa é gravada **antes**
+de falar com o engine, e o engine falhando não a desfaz — é o inverso da ordem
+do rearm da [RN-047](#rn-047), e por um motivo: lá o evento afirma algo SOBRE o
+engine, aqui afirma algo sobre o usuário, que é verdade tenha ou não um PO de pé
+para ouvir.
+
+Promover **em lote não é all-or-nothing**: cada história é sua própria
+transação, e uma que perdeu a prontidão entre a proposta e a decisão volta em
+`failed` com o motivo, sem derrubar as outras que o usuário acabou de revisar.
+
+O evento `backlog.story_transitioned` grava o **ator real** — `user` na promoção
+manual, `agent/po` na automática. O event log é imutável e é o que a auditoria
+lê: registrar o PO numa decisão do usuário apagaria exatamente o passo humano
+que a regra existe para devolver.
+
+A migração `0033` faz um backfill **dirigido**, não cego: a coluna nasce
+`manual` e todos os projetos que já existiam são movidos para `auto`. O default
+novo vale para quem vier depois; um projeto em andamento não pode parar de
+produzir por causa de um deploy.
+
+- **Onde:** `apps/api/src/domain/backlog/story-promotion.ts`,
+  `apps/api/src/db/migrations/0033_absurd_domino.sql`,
+  `apps/api/src/application/use-cases/backlog/promote-stories.use-case.ts`,
+  `apps/api/src/application/use-cases/backlog/return-story.use-case.ts`,
+  `apps/engine/lib/engine/agents/po_server.ex` (`revision_message/1`)
+- **Teste:** `test/domain/backlog/story-promotion.spec.ts` (simetria),
+  `test/db/story-promotion-migration.spec.ts` (backfill dirigido),
+  `test/application/use-cases/backlog/promote-stories.use-case.spec.ts`,
+  `test/application/use-cases/backlog/return-story.use-case.spec.ts`,
+  `apps/engine/test/engine/agents/po_server_test.exs` (describe `revise/2`)
+- **Origem:** [ADR 0046](adr/0046-promocao-de-story-com-autoridade-do-usuario.md)
+
 ### RN-038 — Agente contado no resumo do workspace = gastou tokens este mês {#rn-038}
 
 O resumo do dashboard de projetos ("N projetos ativos · M agentes · gasto

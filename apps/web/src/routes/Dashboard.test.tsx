@@ -44,6 +44,7 @@ vi.mock('../lib/notifications', () => ({
       unreadCount: 0,
     })),
   useNotificationGroups: () => [],
+  useStoriesAwaitingPromotion: () => 0,
 }));
 
 vi.mock('../lib/api-client', () => ({
