@@ -44,6 +44,58 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api,web**: **OpenRouter** entra como o primeiro hub sobre a base
+  OpenAI-compatível (Fase 11a). Declara `listModels: true` — o catálogo do
+  OpenRouter passa a sincronizar sozinho, com preço convertido do formato
+  USD/token do provider para o `bigint` de micro-USD/milhão do schema. Ganha
+  headers próprios (`HTTP-Referer`, `X-Title`), tratamento do erro que chega
+  NO MEIO do stream (modo de falha que só um hub tem, porque roteia pra
+  infraestrutura de terceiros) e teste de conexão (`GET /key`) antes de
+  cifrar/persistir a credencial — o primeiro `LLMCredentialConnectionTester`
+  do lado LLM, mesmo momento do fluxo de credencial git desde o ADR 0004. Tela
+  de credenciais e seletor de modelo já acomodavam a categoria "Hubs" desde a
+  preparação da Fase 9b; só precisaram do provider de verdade. O smoke test do
+  aceite (`openrouter-provider.smoke.spec.ts`) já existe, gated por
+  `OPENROUTER_TEST_KEY` — cadastro, sync populando o catálogo, ativação
+  curada e sessão de chat de ponta a ponta com custo congelado em
+  `token_usage`, tudo num fluxo só. **Pendente:** rodar de fato contra uma
+  chave real fecha a Fase 11a
+- **api**: os cinco providers restantes da Fase 9b entram (Fase 11b) —
+  `LLM_PROVIDER_NAMES` vai de 4 para **9**. Cada um investigado do zero
+  contra a doc oficial, sem herdar suposição de quirk entre providers
+  (achado real, não copiado): **Together** e **DeepInfra** declaram
+  `listModels: true` com preço confirmado no catálogo (Together tem
+  pricing achatado em número USD/milhão — unidade inferida por
+  comparação de mercado, não documentada explicitamente pela Together;
+  DeepInfra tem o catálogo **público, sem autenticação**, confirmado ao
+  vivo, o que também significa que ela não tem teste de conexão — só o
+  primeiro chat real descobre uma chave ruim). **NVIDIA NIM**, **Bitdeer**
+  e **Vultr** declaram `listModels: false` (sem preço confirmado na rota
+  que a base realmente chama) e vivem de seed manual — a decisão do
+  Vultr mudou durante a implementação: a doc aponta um endpoint com preço
+  que devolveu 404 ao vivo, então ficou `false` em vez do `true`
+  cogitado no planejamento. Bitdeer tem a doc pública mais rasa dos
+  cinco, mas ainda assim ganhou três ids de modelo REAIS (confirmados em
+  exemplo de config do próprio blog da Bitdeer) e teste de conexão
+  (`GET /v1/models`, autenticado, confirmado 401 sem chave). Suite de
+  contrato verde nos 9 providers; smoke test por provider gated por
+  `<PROVIDER>_TEST_KEY`, cada um pulado-avisado sem a chave. **Pendente:**
+  rodar os cinco smokes contra chave real fecha a Fase 11b
+- **docs**: [ADR 0043](docs/adr/0043-seis-providers-de-llm-e-o-fechamento-da-fase-9b.md)
+  fecha a Fase 9b de fato — registra a tabela de aceite dos seis
+  providers (11a+11b), o padrão "falso honesto" com os dois casos onde a
+  decisão só foi resolvida ao vivo durante a implementação (DeepInfra
+  virou `true`, Vultr virou `false` — os dois diferentes do que o
+  planejamento cogitava), e confirma a base intocada: diff vazio no
+  `SyncModelCatalogUseCase`, e o único hook novo em
+  `OpenAICompatibleProvider` (`parseErrorFrame`, +31 linhas) justificado
+  linha a linha — necessário só porque o OpenRouter é o único hub dos
+  seis. A referência gerada
+  (`docs/reference/llm-providers.md`) ganha três colunas por provider
+  (credencial, origem dos modelos, quirks resumidos), todas derivadas do
+  código e da prosa já escrita, e a query de exemplo de custo hub×direto
+  que a Fase 11a tinha prometido. **Pendente:** o mesmo aceite com
+  credencial real dos seis smokes, ainda em aberto
 - **api,engine,web**: o catálogo de modelos passa a ser **vivo**. Provider que
   declara `listModels` é sincronizado por um job periódico (6h, configurável por
   `MODEL_SYNC_INTERVAL_SECONDS`) e pelo botão "Atualizar catálogo" na tela de

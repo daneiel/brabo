@@ -152,7 +152,16 @@ export interface ProposedAction {
   updatedAt: string;
 }
 
-export type LLMProviderName = 'ollama' | 'anthropic' | 'openai';
+export type LLMProviderName =
+  | 'ollama'
+  | 'anthropic'
+  | 'openai'
+  | 'openrouter'
+  | 'nvidia-nim'
+  | 'together'
+  | 'deepinfra'
+  | 'bitdeer'
+  | 'vultr';
 export type ModelCategory = 'local' | 'cloud';
 
 /** Realidade REMOTA observada pelo sync de catálogo (Fase 9c). */

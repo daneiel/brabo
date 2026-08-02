@@ -3,7 +3,7 @@ id: adr-index
 title: Decisões arquiteturais (ADR)
 sidebar_label: Índice de ADRs
 sidebar_position: 0
-description: Os 38 registros de decisão arquitetural do Brabo, agrupados por fase, com o que cada um decidiu.
+description: Os 43 registros de decisão arquitetural do Brabo, agrupados por fase, com o que cada um decidiu.
 keywords: [ADR, decisão arquitetural, arquitetura, histórico]
 ---
 
@@ -20,7 +20,7 @@ atual.** Para o estado atual, use [Regras de negócio](../business-rules.md),
 [Arquitetura](../architecture.md) e o [Runbook](../runbook.md). Para o
 raciocínio, venha aqui.
 
-Todos os 38 estão com status **aceito**.
+Todos os 43 estão com status **aceito**.
 
 ## Fase 2 — Git
 
@@ -138,12 +138,13 @@ O loop que faz o time melhorar.
 |---|---|
 | [0041](0041-base-openai-compativel-e-contrato-de-llm-providers.md) | Base OpenAI-compatível sobre `node:http` (não sobre o SDK, para ter timeout de INATIVIDADE), erro normalizado com `code` obrigatório no chunk, capabilities em duas camadas com binding de agente recusado sem tool calling nativo, e suite de contrato onde o contrato é dono das asserções e o harness do dialeto |
 | [0042](0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md) | Sync de catálogo por capability, com modelo descoberto entrando desativado e modelo sumido marcado em vez de apagado; dois eixos independentes de disponibilidade (curadoria do owner × realidade remota); cascata que revalida capability ao cair de nível; e preço congelado em `token_usage` para o custo antigo ficar reproduzível, com auditoria append-only fora do outbox |
+| [0043](0043-seis-providers-de-llm-e-o-fechamento-da-fase-9b.md) | Os seis providers da 9b (NVIDIA NIM, Together, DeepInfra, Bitdeer, Vultr, OpenRouter) entram como config sobre a base, cada um investigado do zero contra a doc oficial — capability só declarada quando provada, com dois casos reais de decisão revertida ao vivo durante a implementação; único hook novo na base é o `parseErrorFrame` que só o OpenRouter (o hub) precisou |
 
 ## A convenção
 
 - **Um arquivo por decisão**, em `docs/adr/NNNN-titulo-curto.md`, com
   numeração sequencial de 4 dígitos. **Sem reuso de número**, nem quando um ADR
-  é superado — o próximo é **0043**.
+  é superado — o próximo é **0044**.
 - **Três seções, só elas:** **Contexto** (o problema ou a força que motivou),
   **Decisão** (o que foi decidido), **Consequências** (os trade-offs aceitos e
   o que fica para depois).

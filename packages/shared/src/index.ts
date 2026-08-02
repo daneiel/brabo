@@ -24,7 +24,16 @@ export interface HealthStatus {
  * `apps/api/src/domain/llm/llm-provider-names.ts` guarda a da api, amarrada a
  * este tipo por checagem de exaustividade nos dois sentidos.
  */
-export type LLMProviderName = "ollama" | "anthropic" | "openai";
+export type LLMProviderName =
+  | "ollama"
+  | "anthropic"
+  | "openai"
+  | "openrouter"
+  | "nvidia-nim"
+  | "together"
+  | "deepinfra"
+  | "bitdeer"
+  | "vultr";
 
 /**
  * Taxonomia normalizada de falha de provider (Fase 9a — ADR 0041). Espelha o
