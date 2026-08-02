@@ -26,18 +26,24 @@ defmodule Engine.Dev.DevAgentServer do
   outbox — ver `Engine.Workers.DevAgentWakeWorker`) libera o agente pra
   tentar a próxima task, através de `finish_task/2`.
 
-  Task que termina `blocked` localmente (no ToolLoop) passa por
+  Task que termina `blocked` — localmente (no ToolLoop) ou REMOTAMENTE (teto
+  de correções do gate estourado, via `task.gate_resolved`) — passa por
   `finish_task/2`, que incrementa `consecutive_blocked`; N consecutivas
   (teto por projeto, `max_consecutive_blocked`) para o agente em
-  `:idle_tripped` — o circuit breaker da RN-047. `finish_task/2` também
-  liga um sucesso terminal (`:approved`, zerando o contador) e um bloqueio
-  REMOTO (teto de correções do gate estourado) — chegam na Fase 12b-3, via
-  `task.gate_resolved` (outbox).
+  `:idle_tripped` — o circuit breaker da RN-047. Um sucesso terminal
+  (`:approved`, via `task.gate_resolved` com `nextAction: "done"`) zera o
+  contador e tenta a próxima task.
+
+  Dois `handle_info/2` recebem os wakes entregues por `Engine.Dev.Wake`
+  (PubSub, não Registry — o job que os dispara pode rodar em qualquer
+  réplica): `{:gate_resolved, %{task_id:, next_action:}}` só age se
+  `task_id` bater E o agente estiver `:awaiting_gate` — entrega
+  duplicada/tardia é no-op; `{:wake, :became_claimable}` só age se `:idle`.
   """
 
   use GenServer, restart: :temporary
 
-  alias Engine.Dev.{AgentIo, ContextBuilder, Tools}
+  alias Engine.Dev.{AgentIo, ContextBuilder, Tools, Wake}
   alias Engine.Dev.Hooks.Termination
   alias Engine.Gates.Dispatcher
   alias Engine.Harness.ToolLoop
@@ -104,6 +110,7 @@ defmodule Engine.Dev.DevAgentServer do
     }
 
     AgentIo.persist(state)
+    :ok = Wake.subscribe(project_id, agent_id)
 
     {:ok, state}
   end
@@ -129,6 +136,32 @@ defmodule Engine.Dev.DevAgentServer do
     end
   end
 
+  # Chegou pelo `Engine.Dev.Wake` (outbox → DevAgentWakeWorker). Guard de
+  # identidade: só age se for a MESMA task que este agente está esperando, E
+  # se ele ainda estiver esperando — entrega duplicada (retry do Oban, drain
+  # concorrente) ou tardia (agente já reagendado por outro caminho) vira
+  # no-op, nunca um segundo `finish_task/2` pra task que já foi embora.
+  @impl true
+  def handle_info(
+        {:gate_resolved, %{task_id: task_id, next_action: next_action}},
+        %{task_id: task_id, status: :awaiting_gate} = state
+      ) do
+    outcome = if next_action == "done", do: :approved, else: :blocked
+    {:noreply, finish_task(state, outcome)}
+  end
+
+  def handle_info({:gate_resolved, _}, state), do: {:noreply, state}
+
+  # Só age se estiver livre (`:idle`) — em `:working`/`:awaiting_gate` a fila
+  # já está sendo atendida ou o agente está no meio de outra coisa;
+  # `:idle_tripped` ignora até rearmar.
+  @impl true
+  def handle_info({:wake, :became_claimable}, %{status: :idle} = state) do
+    {:noreply, try_claim(state)}
+  end
+
+  def handle_info({:wake, :became_claimable}, state), do: {:noreply, state}
+
   # --- Máquina de estados (Fase 12b) ---
 
   # Ponto único de claim — chamado pelo `:work` inicial e por `finish_task/2`
@@ -151,11 +184,15 @@ defmodule Engine.Dev.DevAgentServer do
   end
 
   # Único lugar que zera task_id/worktree/branch — deixá-los obsoletos faria
-  # um gate tardio achar o worktree ERRADO via `find_by_task_id/2`. `:blocked`
-  # incrementa o contador do breaker e, ao bater o teto, para em
-  # `:idle_tripped` SEM tentar reivindicar. O desfecho `:approved` (que zera
-  # o contador) chega na Fase 12b-3, quando `task.gate_resolved` passa a
-  # existir de fato — sem caller, a cláusula ficaria morta pro compilador.
+  # um gate tardio achar o worktree ERRADO via `find_by_task_id/2`. `:approved`
+  # zera o contador do breaker; `:blocked` incrementa e, ao bater o teto, para
+  # em `:idle_tripped` SEM tentar reivindicar.
+  defp finish_task(state, :approved) do
+    state
+    |> Map.merge(%{task_id: nil, worktree: nil, branch: nil, consecutive_blocked: 0})
+    |> try_claim()
+  end
+
   defp finish_task(state, :blocked) do
     counter = state.consecutive_blocked + 1
 

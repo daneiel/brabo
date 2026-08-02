@@ -1,10 +1,14 @@
 defmodule Engine.Outbox.Drain do
   @moduledoc """
-  Drena outbox_events (aggregate_type = "session", processed_at IS NULL)
-  com FOR UPDATE SKIP LOCKED — permite múltiplos consumidores concorrentes
-  sem processar a mesma linha duas vezes. Pra cada linha, roteia pros
-  handlers apropriados (ver handlers_for/1) e marca processed_at, tudo na
-  mesma transação.
+  Drena outbox_events (aggregate_type IN "session"/"task", processed_at IS
+  NULL) com FOR UPDATE SKIP LOCKED — permite múltiplos consumidores
+  concorrentes sem processar a mesma linha duas vezes. Pra cada linha,
+  roteia pros handlers apropriados (ver handlers_for/1) e marca
+  processed_at, tudo na mesma transação.
+
+  `aggregate_type = "task"` entrou na Fase 12b — reagendamento do dev agent
+  por evento (`task.gate_resolved`, `task.became_claimable`), ver
+  `Engine.Workers.DevAgentWakeWorker`.
   """
 
   import Ecto.Query
@@ -16,7 +20,7 @@ defmodule Engine.Outbox.Drain do
     Repo.transaction(fn ->
       query =
         from e in Event,
-          where: e.aggregate_type == "session" and is_nil(e.processed_at),
+          where: e.aggregate_type in ["session", "task"] and is_nil(e.processed_at),
           order_by: e.created_at,
           limit: 50,
           lock: "FOR UPDATE SKIP LOCKED"
@@ -58,6 +62,10 @@ defmodule Engine.Outbox.Drain do
   defp handlers_for(event_type)
        when event_type in ["session.closed", "session.closed_abnormally"],
        do: [Engine.Workers.SessionLifecycleWorker, Engine.Workers.PsychologistWorker]
+
+  defp handlers_for(event_type)
+       when event_type in ["task.gate_resolved", "task.became_claimable"],
+       do: [Engine.Workers.DevAgentWakeWorker]
 
   defp handlers_for(_), do: [Engine.Workers.SessionLifecycleWorker]
 end
