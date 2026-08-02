@@ -23,7 +23,7 @@ defmodule Engine.Dev.NoopDevAgentServerTest do
     session_id = Ecto.UUID.generate()
 
     {:ok, state} =
-      NoopDevAgentServer.init({project_id, "dev-api", "api", session_id, 500_000, 2, nil})
+      NoopDevAgentServer.init({project_id, "dev-api", "api", session_id, 500_000, 2, nil, nil})
 
     %{state: state, project_id: project_id, session_id: session_id}
   end
@@ -132,10 +132,10 @@ defmodule Engine.Dev.NoopDevAgentServerTest do
     session_id: session_id
   } do
     {:ok, api} =
-      NoopDevAgentServer.init({project_id, "dev-api", "api", session_id, nil, nil, nil})
+      NoopDevAgentServer.init({project_id, "dev-api", "api", session_id, nil, nil, nil, nil})
 
     {:ok, web} =
-      NoopDevAgentServer.init({project_id, "dev-web", "web", session_id, nil, nil, nil})
+      NoopDevAgentServer.init({project_id, "dev-web", "web", session_id, nil, nil, nil, nil})
 
     Process.put(:fake_tasks, [
       %{"id" => "aaaa1111-2222-4333-8444-555555555555", "title" => "Cadastro"},

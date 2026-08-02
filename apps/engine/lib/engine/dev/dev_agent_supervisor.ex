@@ -1,11 +1,13 @@
 defmodule Engine.Dev.DevAgentSupervisor do
   @moduledoc """
   DynamicSupervisor dos dev agents (Fase 4a), um por {project_id, agent_id}.
-  Idempotente; `start_agent/4..8` sinaliza `:started` (start fresco → o
+  Idempotente; `start_agent/4..9` sinaliza `:started` (start fresco → o
   chamador dispara `:work`) vs `:existing`. `task_budget_micros` (teto de
   tokens por task), `max_gate_corrections` (teto de correções dev↔gate) e
   `max_consecutive_blocked` (circuit breaker, Fase 12b — RN-047) são
-  opcionais, configurados na ativação da execução.
+  opcionais, configurados na ativação da execução. `resume` (Fase 12b-6) é
+  a linha durável quando quem chama é `Engine.Dev.DevRehydrator` — `nil`
+  num start fresco.
 
   `impl` escolhe a implementação: `:real` (ToolLoop + LLM) ou `:noop`
   (`NoopDevAgentServer`, smoke test da infraestrutura sem LLM). Os dois
@@ -30,7 +32,8 @@ defmodule Engine.Dev.DevAgentSupervisor do
         task_budget_micros \\ nil,
         max_gate_corrections \\ nil,
         impl \\ :real,
-        max_consecutive_blocked \\ nil
+        max_consecutive_blocked \\ nil,
+        resume \\ nil
       ) do
     case Registry.lookup(Engine.Dev.Registry, {project_id, agent_id}) do
       [{pid, _}] ->
@@ -40,7 +43,7 @@ defmodule Engine.Dev.DevAgentSupervisor do
         spec =
           {server_for(impl),
            {project_id, agent_id, module, session_id, task_budget_micros, max_gate_corrections,
-            max_consecutive_blocked}}
+            max_consecutive_blocked, resume}}
 
         case DynamicSupervisor.start_child(__MODULE__, spec) do
           {:ok, pid} ->

@@ -28,7 +28,7 @@ defmodule Engine.Dev.DevAgentServerTest do
     session_id = Ecto.UUID.generate()
 
     {:ok, state} =
-      DevAgentServer.init({project_id, "dev-api", "api", session_id, nil, nil, nil})
+      DevAgentServer.init({project_id, "dev-api", "api", session_id, nil, nil, nil, nil})
 
     %{state: state, project_id: project_id, session_id: session_id}
   end
@@ -133,7 +133,7 @@ defmodule Engine.Dev.DevAgentServerTest do
     # omiti-la no upsert do persist/1 a zerava no primeiro ciclo de task, e os
     # gates (que leem o campo do banco) caíam no default da api.
     {:ok, state} =
-      DevAgentServer.init({project_id, "dev-web", "web", session_id, 500_000, 1, nil})
+      DevAgentServer.init({project_id, "dev-web", "web", session_id, 500_000, 1, nil, nil})
 
     Process.put(:fake_tasks, [%{"id" => "task-tetos123", "title" => "T"}])
     Application.put_env(:engine, :tool_loop_max_iterations, 1)

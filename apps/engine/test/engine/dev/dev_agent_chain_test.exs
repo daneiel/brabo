@@ -46,7 +46,7 @@ defmodule Engine.Dev.DevAgentChainTest do
     session_id = Ecto.UUID.generate()
 
     {:ok, state} =
-      DevAgentServer.init({project_id, "dev-api", "api", session_id, nil, nil, 3})
+      DevAgentServer.init({project_id, "dev-api", "api", session_id, nil, nil, 3, nil})
 
     %{state: state, project_id: project_id, session_id: session_id}
   end

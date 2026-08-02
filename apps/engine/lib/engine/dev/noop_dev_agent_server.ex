@@ -28,12 +28,12 @@ defmodule Engine.Dev.NoopDevAgentServer do
 
   def start_link(
         {project_id, agent_id, module, session_id, task_budget_micros, max_gate_corrections,
-         max_consecutive_blocked}
+         max_consecutive_blocked, resume}
       ) do
     GenServer.start_link(
       __MODULE__,
       {project_id, agent_id, module, session_id, task_budget_micros, max_gate_corrections,
-       max_consecutive_blocked},
+       max_consecutive_blocked, resume},
       name: via(project_id, agent_id)
     )
   end
@@ -48,7 +48,7 @@ defmodule Engine.Dev.NoopDevAgentServer do
   @impl true
   def init(
         {project_id, agent_id, module, session_id, task_budget_micros, max_gate_corrections,
-         max_consecutive_blocked}
+         max_consecutive_blocked, _resume}
       ) do
     state = %{
       project_id: project_id,

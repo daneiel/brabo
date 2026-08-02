@@ -37,10 +37,10 @@ defmodule Engine.Dev.DevAgentConcurrencyTest do
     session_id = Ecto.UUID.generate()
 
     {:ok, base} =
-      DevAgentServer.init({project_id, "dev-api", "api", session_id, nil, nil, 3})
+      DevAgentServer.init({project_id, "dev-api", "api", session_id, nil, nil, 3, nil})
 
     {:ok, extra} =
-      DevAgentServer.init({project_id, "dev-api-2", "api", session_id, nil, nil, 3})
+      DevAgentServer.init({project_id, "dev-api-2", "api", session_id, nil, nil, 3, nil})
 
     %{base: base, extra: extra, project_id: project_id, session_id: session_id}
   end

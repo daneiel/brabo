@@ -39,6 +39,24 @@ defmodule Engine.Dev.DevAgentServer do
   réplica): `{:gate_resolved, %{task_id:, next_action:}}` só age se
   `task_id` bater E o agente estiver `:awaiting_gate` — entrega
   duplicada/tardia é no-op; `{:wake, :became_claimable}` só age se `:idle`.
+
+  ## Reidratação (Fase 12b-6)
+
+  `Engine.Dev.DevRehydrator` passa um `resume` (a linha durável, ou `nil`
+  num start fresco) como último elemento do tuple de `init/1`. Os quatro
+  estados voltam assim:
+
+  - `idle`/`idle_tripped` — campos zerados/preservados como estavam, sem
+    claim. `idle_tripped` ignora wake até um rearm explícito.
+  - `awaiting_gate` — `task_id`/`worktree` voltam intactos (`branch` não é
+    persistido; reconstruído do `task_id`, igual a `run_task/2`), sem
+    claim — a linha de outbox pendente (ou uma escrita depois do
+    restart) drena e acorda, exatamente como um wake normal.
+  - `working` — o ToolLoop não existe mais pra retomar (turno, mensagens e
+    edições do worktree só existiam em memória). Bloqueia a task retida
+    com diagnóstico do restart e segue pro próximo claim — SEM incrementar
+    `consecutive_blocked` (reiniciar o engine não é o agente queimando o
+    teto).
   """
 
   use GenServer, restart: :temporary
@@ -63,12 +81,12 @@ defmodule Engine.Dev.DevAgentServer do
 
   def start_link(
         {project_id, agent_id, module, session_id, task_budget_micros, max_gate_corrections,
-         max_consecutive_blocked}
+         max_consecutive_blocked, resume}
       ) do
     GenServer.start_link(
       __MODULE__,
       {project_id, agent_id, module, session_id, task_budget_micros, max_gate_corrections,
-       max_consecutive_blocked},
+       max_consecutive_blocked, resume},
       name: via(project_id, agent_id)
     )
   end
@@ -91,28 +109,86 @@ defmodule Engine.Dev.DevAgentServer do
   @impl true
   def init(
         {project_id, agent_id, module, session_id, task_budget_micros, max_gate_corrections,
-         max_consecutive_blocked}
+         max_consecutive_blocked, resume}
       ) do
-    state = %{
+    base = %{
       project_id: project_id,
       agent_id: agent_id,
       module: module,
       session_id: session_id,
-      task_id: nil,
-      worktree: nil,
-      branch: nil,
       impl: @impl_tag,
       task_budget_micros: task_budget_micros,
       max_gate_corrections: max_gate_corrections,
-      status: :idle,
-      consecutive_blocked: 0,
       max_consecutive_blocked: max_consecutive_blocked
     }
 
+    state = resume_state(base, resume)
     AgentIo.persist(state)
     :ok = Wake.subscribe(project_id, agent_id)
 
-    {:ok, state}
+    final_state =
+      if resume && resume.status == "working" do
+        state
+        |> AgentIo.block_task(
+          "engine reiniciou durante a task",
+          "o ToolLoop não pôde ser retomado após o restart — turno, mensagens " <>
+            "e edições do worktree só existiam em memória"
+        )
+        |> finish_restart_recovery()
+      else
+        state
+      end
+
+    {:ok, final_state}
+  end
+
+  # Start fresco: sempre idle, sem task — igual a antes da Fase 12b-6.
+  defp resume_state(base, nil) do
+    Map.merge(base, %{
+      task_id: nil,
+      worktree: nil,
+      branch: nil,
+      status: :idle,
+      consecutive_blocked: 0
+    })
+  end
+
+  # `awaiting_gate` e `working` retêm task_id/worktree — o worktree
+  # reidratado ainda está no disco (não foi apagado; só seria substituído
+  # por um `add_worktree/3` futuro), e um gate tardio ainda o encontra via
+  # `find_by_task_id/2`. `branch` não é persistido (nunca foi — só
+  # task_id/worktree_path), reconstruído do mesmo jeito que `run_task/2` o
+  # monta originalmente.
+  defp resume_state(base, %{status: status} = row) when status in ["awaiting_gate", "working"] do
+    Map.merge(base, %{
+      task_id: row.task_id,
+      worktree: row.worktree_path,
+      branch: "feature/task-" <> String.slice(to_string(row.task_id), 0, 8),
+      status: String.to_existing_atom(status),
+      consecutive_blocked: row.consecutive_blocked
+    })
+  end
+
+  # `idle` e `idle_tripped` — nada a reter; o contador do breaker é o único
+  # campo que precisa sobreviver ao restart (senão um restart no meio de
+  # uma sequência de blocked zeraria o breaker de graça).
+  defp resume_state(base, row) do
+    Map.merge(base, %{
+      task_id: nil,
+      worktree: nil,
+      branch: nil,
+      status: String.to_existing_atom(row.status),
+      consecutive_blocked: row.consecutive_blocked
+    })
+  end
+
+  # Fecha o `working` reidratado: task já bloqueada por `AgentIo.block_task`
+  # acima, e SEM passar por `finish_task/2` — reiniciar o engine não é o
+  # agente queimando o teto, não pode contar pro circuit breaker.
+  defp finish_restart_recovery(state) do
+    state
+    |> Map.merge(%{task_id: nil, worktree: nil, branch: nil})
+    |> try_claim()
   end
 
   @impl true
