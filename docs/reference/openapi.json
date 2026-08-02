@@ -10918,7 +10918,13 @@
             "enum": [
               "ollama",
               "anthropic",
-              "openai"
+              "openai",
+              "openrouter",
+              "nvidia-nim",
+              "together",
+              "deepinfra",
+              "bitdeer",
+              "vultr"
             ],
             "example": "openai"
           },
@@ -11963,7 +11969,13 @@
             "type": "string",
             "enum": [
               "anthropic",
-              "openai"
+              "openai",
+              "openrouter",
+              "nvidia-nim",
+              "together",
+              "deepinfra",
+              "bitdeer",
+              "vultr"
             ],
             "example": "anthropic"
           },

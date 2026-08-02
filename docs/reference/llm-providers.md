@@ -64,16 +64,26 @@ provider, nunca mais rico.
 
 > ⚠️ Bloco gerado por `pnpm docs:generate`. Não edite à mão — o próximo build sobrescreve.
 
-Lido dos literais de `capabilities` em `apps/api/src/infrastructure/llm/` — **3 providers**.
+Lido dos literais de `capabilities` em `apps/api/src/infrastructure/llm/` — **9 providers**.
 
-| provider | streaming | tool calling | list_models | fonte |
-| --- | --- | --- | --- | --- |
-| `anthropic` | sim | sim | não | `apps/api/src/infrastructure/llm/anthropic-provider.ts` |
-| `ollama` | sim | sim | não | `apps/api/src/infrastructure/llm/ollama-provider.ts` |
-| `openai` | sim | sim | sim | `apps/api/src/infrastructure/llm/openai-provider.ts` |
+| provider | streaming | tool calling | list_models | credencial | origem dos modelos | quirks resumidos | fonte |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `anthropic` | sim | sim | não | chave de API | seed | — | `apps/api/src/infrastructure/llm/anthropic-provider.ts` |
+| `bitdeer` | sim | sim | não | chave de API | seed | `Authorization: Bearer <chave>` CONFIRMADO; `GET /v1/models` existe e é autenticado; Três ids de modelo REAIS confirmados; Nenhum quirk de stream/erro confirmado | `apps/api/src/infrastructure/llm/bitdeer-provider.ts` |
+| `deepinfra` | sim | sim | sim | chave de API | sync + seed | O catálogo é PÚBLICO — sem autenticação nenhuma; `stream_options.include_usage` confirmado suportado; Erro em shape padrão | `apps/api/src/infrastructure/llm/deepinfra-provider.ts` |
+| `nvidia-nim` | sim | sim | não | chave de API | seed | Sem header próprio; Tool calling é por MODELO, não por API; `stream_options.include_usage` não confirmado | `apps/api/src/infrastructure/llm/nvidia-nim-provider.ts` |
+| `ollama` | sim | sim | não | nenhuma (local) | seed | — | `apps/api/src/infrastructure/llm/ollama-provider.ts` |
+| `openai` | sim | sim | sim | chave de API | sync + seed | — | `apps/api/src/infrastructure/llm/openai-provider.ts` |
+| `openrouter` | sim | sim | sim | chave de API | sync | Headers próprios; Id de modelo prefixado pelo upstream; Catálogo com pricing na própria linha; Erro NO MEIO do stream | `apps/api/src/infrastructure/llm/openrouter-provider.ts` |
+| `together` | sim | sim | sim | chave de API | sync + seed | Unidade do preço NÃO documentada explicitamente pela Together; Ids namespaced; `stream_options.include_usage` não confirmado; 429 carrega `error_type: dynamic_request_limited \| dynamic_token_limited` | `apps/api/src/infrastructure/llm/together-provider.ts` |
+| `vultr` | sim | sim | não | chave de API | seed | Tool calling CONFIRMADO com exemplo real; Sufixo `-normalize` | `apps/api/src/infrastructure/llm/vultr-provider.ts` |
 
 Provider sem `list_models` é PULADO pelo sync de catálogo, com o motivo
 registrado no relatório — nunca tratado como "o catálogo ficou vazio".
+"Origem dos modelos": `sync` descobre sozinho, `seed` só entra por
+`apps/api/src/db/seed.ts`, `sync + seed` tem os dois (seed é só bootstrap
+antes do primeiro sync). "Quirks resumidos" são os RÓTULOS em negrito da
+seção de prosa do provider abaixo — o porquê de cada um está lá, não aqui.
 <!-- END:GENERATED:providers-capabilities -->
 
 O default de `supports_tool_calling` é `false`. É de propósito: modelo
@@ -209,9 +219,11 @@ latência até o primeiro token.
 ## A base OpenAI-compatível
 
 `OpenAICompatibleProvider` implementa o dialeto `/chat/completions` uma vez só.
-A OpenAI é a primeira instância dela; os providers da Fase 9b (NVIDIA NIM, Deep
-Infra, Together, Bitdeer, Vultr, OpenRouter) mudam `baseUrl`, header de auth e
-flags — nunca o parsing.
+Nove providers nascem dela: OpenAI (a primeira instância), OpenRouter (Fase
+11a, o hub), e os cinco da Fase 11b — NVIDIA NIM, Together, DeepInfra,
+Bitdeer, Vultr. Todos mudam `baseUrl`, header de auth e flags — nunca o
+parsing (a única exceção provada necessária foi o `parseCatalogo` de cada
+um, quando a capability é `true` — ver as seções por provider abaixo).
 
 ```ts
 interface OpenAICompatibleFlags {
@@ -241,7 +253,220 @@ A última linha do Anthropic é a que mais custa: resultados de chamadas
 paralelas precisam vir no **mesmo** turno de `user`, então mensagens `tool`
 consecutivas são agrupadas.
 
-## Hubs e o custo real (preparo da Fase 9b)
+## OpenRouter — o primeiro hub (Fase 11a)
+
+`OpenRouterProvider` é `OpenAICompatibleProvider` com `openrouterConfig()`
+(`apps/api/src/infrastructure/llm/openrouter-provider.ts`). Declara
+`listModels: true` — o único ponto de código que muda quando uma capability
+liga é a config, o `SyncModelCatalogUseCase` já lida com o resto.
+
+Quirks encontrados e testados
+(`test/infrastructure/llm/openrouter-provider.contract.spec.ts`):
+
+- **Headers próprios**: `HTTP-Referer` (de `API_PUBLIC_URL`) e `X-Title:
+  "Brabo"` — opcionais na doc oficial (atribuição/ranking no site do
+  OpenRouter), mandados sempre porque não custam nada;
+- **Id de modelo prefixado pelo upstream** (`openai/gpt-4o-mini`,
+  `anthropic/claude-3-5-sonnet`): o prefixo é o vendor PEDIDO, não o que
+  respondeu — ver `extrairUpstreamProvider` abaixo;
+- **Catálogo com pricing na própria linha**: `GET /v1/models` devolve
+  `pricing.prompt`/`pricing.completion` como STRING decimal em USD **por
+  token**, diferente do padrão `{ data: [{ id }] }` só-com-id da OpenAI.
+  `parseCatalogoOpenRouter` converte para micro-USD por milhão
+  (`* 1e12`, arredondado — a coluna é `bigint`);
+- **Erro NO MEIO do stream**: o OpenRouter aceita a conexão e começa a mandar
+  texto antes de saber se o provedor real por trás vai falhar — um modo de
+  falha que a OpenAI não tem, porque não roteia pra infraestrutura de
+  terceiros. O frame vem como
+  `{"error":{"code":"...","message":"..."},"choices":[...]}`; presença de
+  `error` truthy é o sinal. Código numérico usa o mesmo `normalizeHttpStatus`
+  do erro pré-stream; código string é mapeado por substring
+  (`mapearCodigoDeFrame`) com `upstream` como default seguro — nunca silêncio,
+  mesmo pra um código fora do mapa;
+- **Teste de conexão**: `GET /key` (doc oficial) valida a chave sem gastar
+  tokens numa chamada de chat real. É o primeiro `LLMCredentialConnectionTester`
+  do lado LLM — o cadastro de credencial (`POST /llm/credentials`) testa ANTES
+  de cifrar/persistir, mesmo momento do fluxo de credencial git desde o
+  ADR 0004. Provider sem teste declarado (hoje: `ollama`/`anthropic`/`openai`)
+  é NO-OP, não exceção.
+
+O aceite com credencial real que a Fase 11a exige — cadastro, sync populando
+o catálogo, ativação curada e sessão de chat de ponta a ponta com custo
+congelado em `token_usage` — é
+`test/infrastructure/llm/openrouter-provider.smoke.spec.ts`. Nunca roda em
+CI: sem `OPENROUTER_TEST_KEY` no ambiente, o `describe` inteiro é pulado com
+um aviso. Mesmo molde dos smokes de git contra API real
+(`github-provider.smoke.spec.ts`, `gitlab-provider.smoke.spec.ts`).
+
+## NVIDIA NIM (Fase 11b)
+
+`NvidiaNimProvider` é `OpenAICompatibleProvider` com `nvidiaNimConfig()`
+(`apps/api/src/infrastructure/llm/nvidia-nim-provider.ts`), apontado pro
+endpoint **hospedado** (`integrate.api.nvidia.com`) — não o produto de
+container auto-hospedado, que é outro produto com outro endereço.
+
+- **`listModels: false`**: `GET /v1/models` existe (doc oficial verificada
+  nesta sessão) e devolve `id`/`object`/`created`/`owned_by`, mas nenhuma doc
+  encontrada traz preço por token — catálogo real, porém inutilizável para o
+  custo por modelo que o metering exige (capabilities em duas camadas, ADR
+  0041). O provider vive de **seed manual**
+  (`apps/api/src/db/seed.ts`) até alguém confirmar um endpoint de preço, se
+  existir;
+- **Sem header próprio**: `Authorization: Bearer nvapi-...` — bearer padrão,
+  a chave só tem o prefixo `nvapi-` por convenção da NVIDIA;
+- **Tool calling é por MODELO, não por API**: só modelos específicos (Llama
+  3.1 70B/405B, variantes Nemotron, ...) suportam de fato — mas isso nunca é
+  um flag de config, é inteiramente `models.supports_tool_calling`
+  (seed/curadoria), confirmado lendo `buildBody()` na base: o flag de
+  `capabilities.toolCalling` só decide se o parâmetro `tools` é enviado, não
+  se o modelo específico sabe usá-lo;
+- **`stream_options.include_usage` não confirmado** para o endpoint
+  hospedado (só documentado para o software NIM auto-hospedado) —
+  `streamOptionsIncludeUsage: false`; o fallback `estimated` da base cobre o
+  caso de o campo nunca vir;
+- **Teste de conexão**: sem endpoint de validação dedicado (nenhum
+  "whoami"/saldo encontrado) — `GET /v1/models` com a chave, só o
+  status importa (200 vs 401/403).
+
+O aceite com credencial real fica em
+`test/infrastructure/llm/nvidia-nim-provider.smoke.spec.ts`, gated por
+`NVIDIA_NIM_TEST_KEY`. Diferente do OpenRouter, o passo de "sync" não
+descobre nada (a capability é `false` de propósito) — o smoke confirma que o
+provider é `pulado: 'sem_capability'` no relatório e cura um modelo inserido
+manualmente, exatamente como um owner faria em produção.
+
+## Together AI (Fase 11b)
+
+`TogetherProvider` é `OpenAICompatibleProvider` com `togetherConfig()`
+(`apps/api/src/infrastructure/llm/together-provider.ts`).
+
+- **`listModels: true`**: `GET /v1/models` documentado com `pricing:
+  {input, output, cached_input, base, hourly, finetune}` — só `input`/
+  `output` são usados;
+- **Unidade do preço NÃO documentada explicitamente pela Together**: os
+  valores são NÚMERO (não string como o OpenRouter) e, por comparação com
+  preço de mercado publicado (Llama 3.3 70B a US$ 1,04/1M em
+  together.ai/models — mesma ordem de grandeza do exemplo `"input": 0.3` do
+  schema oficial), a inferência é **USD por MILHÃO de tokens direto**, não
+  por token. O smoke test é quem confirma isto contra uma chave real (ver
+  comentário no topo de `together-provider.smoke.spec.ts`) — se algum dia
+  provar errado, é achado a corrigir aqui e no parser, não silenciar;
+- **Ids namespaced**: `meta-llama/Llama-3.3-70B-Instruct-Turbo` — um id
+  "achatado" tipo OpenAI (`gpt-4o`) responde 404;
+- **`stream_options.include_usage` não confirmado** na doc — mesmo
+  tratamento cauteloso da NIM, fallback `estimated` cobre;
+- **429 carrega `error_type: dynamic_request_limited | dynamic_token_limited`**
+  no corpo — não testado à parte porque o corpo ainda é
+  `{error: {message}}`, compatível com o parsing padrão da base; só relevante
+  se algum dia precisarmos distinguir os dois tipos de rate limit;
+- **Teste de conexão**: sem endpoint dedicado — `GET /v1/models` status-only.
+
+O aceite com credencial real fica em
+`test/infrastructure/llm/together-provider.smoke.spec.ts`, gated por
+`TOGETHER_TEST_KEY`.
+
+## DeepInfra (Fase 11b)
+
+`DeepInfraProvider` é `OpenAICompatibleProvider` com `deepinfraConfig()`
+(`apps/api/src/infrastructure/llm/deepinfra-provider.ts`), `baseUrl`
+`https://api.deepinfra.com/v1/openai` (a superfície OpenAI-compatível —
+DeepInfra também tem endpoints nativos fora dela, não usados aqui).
+
+- **`listModels: true`**, confirmado AO VIVO nesta sessão contra
+  `GET {baseUrl}/models` (o MESMO endpoint que a base já chama por padrão,
+  nenhuma extensão precisou ser feita): a resposta traz `metadata.pricing.
+  {input_tokens,output_tokens}` (USD por milhão, número — mesma convenção
+  inferida pra Together) e `metadata.context_length` por linha;
+- **O catálogo é PÚBLICO — sem autenticação nenhuma**, confirmado ao vivo
+  (a chamada funcionou sem header `Authorization`). Isso tem uma
+  consequência real: **não existe teste de conexão pra DeepInfra**
+  (`llm-credential-connection-tester.ts` não tem entrada pra ela) — uma
+  chave inválida só seria descoberta na primeira chamada de CHAT de
+  verdade, nunca no cadastro. Nenhum outro endpoint autenticado de
+  validação foi encontrado publicamente documentado;
+- **O catálogo mistura chat com imagem/áudio/vídeo/embedding na MESMA
+  lista**, cada tipo com um shape de `pricing` diferente
+  (`per_image_unit`, `input_characters`, `output_seconds`, ...) —
+  `parseCatalogoDeepInfra` filtra por `metadata.tags.includes('chat')`
+  antes de tentar ler `input_tokens`/`output_tokens`; sem o filtro, um
+  modelo de imagem entraria com um preço fabricado a partir de um campo
+  que não é "por token" nenhum;
+- **`stream_options.include_usage` confirmado suportado** na doc
+  (diferente de NIM/Together) — `streamOptionsIncludeUsage: true`;
+- **Erro em shape padrão** `{"error": {"message", "type", "param", "code"}}`
+  — compatível com o parsing padrão da base, sem `parseErrorFrame` próprio.
+
+O aceite com credencial real fica em
+`test/infrastructure/llm/deepinfra-provider.smoke.spec.ts`, gated por
+`DEEPINFRA_TEST_KEY` — e é o primeiro smoke onde o passo de CADASTRO não
+valida nada, só o passo de CHAT descobriria uma chave ruim.
+
+## Bitdeer (Fase 11b)
+
+`BitdeerProvider` é `OpenAICompatibleProvider` com `bitdeerConfig()`
+(`apps/api/src/infrastructure/llm/bitdeer-provider.ts`) — a doc pública
+mais rasa dos cinco desta fase.
+
+- **`listModels: false`**: nenhum shape de catálogo/preço foi encontrado
+  publicamente (a página de preço renderiza via JS, sem exemplo acessível a
+  uma busca não-interativa) — sem shape verificado, não há `parseCatalogo`
+  honesto pra escrever;
+- **`Authorization: Bearer <chave>` CONFIRMADO** (exemplo de curl real
+  encontrado na doc da API de embeddings da Bitdeer nesta sessão) — mesmo
+  quando o resto do dialeto não tinha exemplo nenhum;
+- **`GET /v1/models` existe e é autenticado** (401 ao vivo sem chave,
+  confirmado nesta sessão) — vira teste de conexão (status-only, igual aos
+  outros sem endpoint dedicado);
+- **Três ids de modelo REAIS confirmados** em exemplos de configuração do
+  próprio blog da Bitdeer (não são nome de vitrine): `moonshotai/Kimi-K2.5`,
+  `zai-org/GLM-5`, `nvidia/NVIDIA-Nemotron-3-Super-120B-A12B` — semeados em
+  `apps/api/src/db/seed.ts` com preço ESTIMADO (mercado do modelo/família
+  noutros providers, não confirmado pela própria Bitdeer);
+- **Nenhum quirk de stream/erro confirmado** — a claim "OpenAI REST API
+  standards" da Bitdeer não veio acompanhada de exemplo real de
+  `/chat/completions`, então o contract test não hidrata nenhuma
+  particularidade que a doc não provou. O smoke test é a PRIMEIRA
+  confirmação real do dialeto.
+
+O aceite com credencial real fica em
+`test/infrastructure/llm/bitdeer-provider.smoke.spec.ts`, gated por
+`BITDEER_TEST_KEY`.
+
+## Vultr Serverless Inference (Fase 11b)
+
+`VultrProvider` é `OpenAICompatibleProvider` com `vultrConfig()`
+(`apps/api/src/infrastructure/llm/vultr-provider.ts`) — o único dos cinco
+onde a decisão de `listModels` **mudou durante a implementação** em relação
+ao plano original.
+
+- **`listModels: false`** (o plano original apontava `true`): a base
+  SEMPRE chama `{baseUrl}/models` (`openai-compatible-provider.ts`,
+  `listModels()`), e a própria referência oficial da Vultr
+  (`api.vultrinference.com`) descreve `GET /models` como devolvendo só
+  `id`/`created`/`object`/`owned_by`/`features` — **sem preço**. O
+  endpoint que a doc associa a preço (`GET /provider`, com `cost`/
+  `contextWindow`) devolveu **404 ao vivo** no caminho testado nesta sessão
+  — dado insuficiente pra escrever um `parseCatalogo` sem risco de apontar
+  pra uma URL errada ("true frágil"). `GET /v1/models` em si está
+  confirmado (401 ao vivo sem chave, duas vezes) — só não tem preço;
+- **Tool calling CONFIRMADO com exemplo real**: doc oficial
+  (`docs.vultr.com/how-to-use-tool-calling-with-vultr-serverless-inference`)
+  mostra `kimi-k2-instruct` respondendo com `finish_reason: "tool_calls"` —
+  dialeto OpenAI padrão puro, sem campo estranho nesse exemplo específico;
+  os outros dois modelos semeados (`llama-3.3-70b-instruct-fp8`,
+  `deepseek-r1-distill-llama-70b`) não têm confirmação de tool calling —
+  `supportsToolCalling: false` pra eles;
+- **Sufixo `-normalize`**: pesquisa inicial apontava um proxy normalizador
+  documentado — NÃO foi possível reconfirmar essa doc nesta sessão (a busca
+  direcionada não encontrou o termo nas páginas verificadas). Não usado por
+  padrão de qualquer forma (mantemos id de modelo cru);
+- **Teste de conexão**: `GET /v1/models`, status-only.
+
+O aceite com credencial real fica em
+`test/infrastructure/llm/vultr-provider.smoke.spec.ts`, gated por
+`VULTR_TEST_KEY`.
+
+## Hubs e o custo real
 
 Num **hub** (OpenRouter) quem aparece na chamada é o hub, mas quem custa é o
 provedor que serviu. O metering registra os dois:
@@ -266,6 +491,26 @@ sincronizado. O sync de catálogo **não sobrescreve** preço de linha marcada s
 decisão explícita — e quando o catálogo remoto não informa preço, o valor
 gravado é preservado em vez de zerado: campo ausente significa "o provider não
 disse", nunca "é de graça".
+
+### Exemplo: o mesmo modelo, hub × direto
+
+A promessa da Fase 11a ("custo comparável entre 'mesmo modelo via hub' e
+'direto' fica consultável") só vira uso real quando o MESMO modelo aparece
+dos dois lados — hoje é o caso de qualquer modelo que a OpenAI/Anthropic
+publicam e que também está no catálogo do OpenRouter (ex.: GPT-4o):
+
+```promql
+# Razão de custo: servido via OpenRouter vs. servido direto na OpenAI,
+# no mesmo período. > 1 significa que o hub saiu mais caro que o direto.
+sum(rate(brabo_llm_cost_micros_total{provider="openrouter", upstream_provider="openai"}[1h]))
+  /
+sum(rate(brabo_llm_cost_micros_total{provider="openai"}[1h]))
+```
+
+Isto é o gancho que `upstream_provider` habilita — hoje sem nenhum
+consumidor automático. A leitura pretendida (registrada como semente, não
+implementada) é o Psicólogo um dia sugerir "este modelo sai mais barato
+direto que via hub" a partir da mesma métrica.
 
 ## A suite de contrato
 

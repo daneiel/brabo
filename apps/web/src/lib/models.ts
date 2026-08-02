@@ -81,6 +81,12 @@ export const ROTULO_DO_PROVIDER: Record<LLMProviderName, string> = {
   ollama: 'Ollama (local)',
   anthropic: 'Anthropic',
   openai: 'OpenAI',
+  openrouter: 'OpenRouter',
+  'nvidia-nim': 'NVIDIA NIM',
+  together: 'Together AI',
+  deepinfra: 'DeepInfra',
+  bitdeer: 'Bitdeer',
+  vultr: 'Vultr',
 };
 
 /** Provider que exige chave: todos menos os locais, que rodam na máquina. */
