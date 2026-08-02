@@ -177,6 +177,24 @@ export function classifyEvent(event: SessionEvent): ActivityDisplay {
       text: `${actorLabel} bloqueou a task: ${payloadField(payload, 'reason') ?? 'sem motivo informado'}`,
     };
   }
+  // O circuit breaker (Fase 12b, RN-047) é o evento MAIS grave que um dev
+  // agent produz — ele parou de trabalhar e só um humano o destrava. Cai
+  // aqui, antes do genérico de `dev.`, porque naquele ele virava "atividade
+  // em dev-api" em cinza neutro: indistinguível de ruído no sino de
+  // notificações, enquanto UMA task bloqueada aparecia em vermelho.
+  if (type === 'dev.idle_tripped') {
+    const n = payloadField(payload, 'consecutiveBlocked');
+    return {
+      kind: 'commit',
+      icon: CommitIcon,
+      color: 'var(--danger)',
+      bad: true,
+      text:
+        `${actorLabel} PAROU — circuit breaker` +
+        (n ? `: ${n} tasks bloqueadas seguidas` : '') +
+        '. Rearme no painel do time para retomar.',
+    };
+  }
   if (type.startsWith('dev.')) {
     return {
       kind: 'commit',
@@ -190,7 +208,11 @@ export function classifyEvent(event: SessionEvent): ActivityDisplay {
             ? `${actorLabel} começou a trabalhar`
             : type === 'dev.idle'
               ? `${actorLabel} sem tarefa disponível`
-              : `atividade em ${actorLabel}`,
+              : type === 'dev.awaiting_gate'
+                ? `${actorLabel} abriu a PR e aguarda o gate`
+                : type === 'dev.rearmed'
+                  ? `${actorLabel} rearmou ${payloadField(payload, 'agentId') ?? 'o agente'}`
+                  : `atividade em ${actorLabel}`,
     };
   }
   if (type.startsWith('execution.')) {

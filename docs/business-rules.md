@@ -603,7 +603,16 @@ A única saída de `idle_tripped` é o rearm explícito
 (`POST .../agents/:agentId/rearm`, role `developer`): zera o contador e o
 agente volta a tentar reivindicar. Não existe destrave automático — o
 mesmo princípio de `MarkTaskBlockedUseCase`/`unblock`, aplicado à
-sequência em vez de à task.
+sequência em vez de à task. Rearmar um agente que **não** está travado é
+**409**, não sucesso silencioso: o evento `dev.rearmed` é imutável, e
+gravá-lo para um rearm que não aconteceu seria mentira no event log.
+
+Um bloqueio que vem de FORA do agente (o `QaLeadServer` falhando
+internamente, por exemplo) também precisa acordá-lo — por isso a emissão
+de `task.gate_resolved` fica em `MarkTaskBlockedUseCase`, o funil por
+onde TODOS os bloqueios passam, e não no `RecordGateVerdictUseCase`, que
+só vê parte deles. Sem isso o agente ficava em `awaiting_gate` para
+sempre, com a task morta e o contador do breaker sem incrementar.
 
 Reiniciar o engine com um agente em `working` **não** conta pro contador:
 a task retida é bloqueada com diagnóstico do restart, mas esse bloqueio

@@ -141,6 +141,48 @@ acontece depois (reivindicou ou voltou a idle) já narra via
   infraestrutura, não um segundo produto a manter em dia com a máquina
   de estados.
 
+## Revisão adversarial, e o que ela achou
+
+A implementação passou por uma auditoria independente ANTES de sair da
+branch — feita sem alimentar o auditor com as justificativas acima, para
+não herdar os pontos cegos de quem escreveu. Ela achou **oito defeitos,
+quatro deles capazes de travar um agente ou o boot**. Todos foram
+corrigidos; o registro fica aqui porque a lição é mais útil que a lista.
+
+**A decisão deste ADR não mudou.** O que mudou foi a implementação dela,
+que estava errada em pontos que os testes não alcançavam.
+
+**Por que a suite inteira passou verde com quatro travamentos dentro:**
+os fakes (`FakeWorktreeManager`, `FakeEngineApiClient`) retornam
+instantaneamente e **sempre com sucesso**. Não existia caminho de teste
+para um `claim_task` que falha, para o custo real do ToolLoop dentro do
+`init/1`, nem para um gate terminando a task por fora do
+`RecordGateVerdictUseCase`. Um teste que só exercita o caminho feliz
+mede a ausência de erros de digitação, não a corretude do desenho. O
+fake ganhou ramo de erro e atraso configurável junto das correções.
+
+Os quatro críticos, pelo que ensinam:
+
+- **Estado parcial é pior que estado errado.** `finish_task/2` zerava
+  `task_id` mas não tocava em `status`; bastava um 5xx transitório no
+  claim para o agente ficar `awaiting_gate` com `task_id` nil — uma
+  combinação que NENHUM dos três guards aceita. O agente ficava
+  morto-vivo, e a causa era uma falha de rede de um segundo.
+- **`init/1` é caminho de boot, não lugar de trabalho.** A recuperação
+  de um `working` interrompido rodava lá dentro, e como
+  `start_link`/`start_child` esperam `:infinity`, o boot inteiro ficava
+  preso pela duração de uma task de LLM. Foi para `handle_continue`.
+- **Um funil que não é o único funil não é funil.** O desenho dizia "o
+  agente aprende TODO desfecho da própria task por `finish_task/2`" —
+  mas o `QaLeadServer` bloqueia chamando `MarkTaskBlockedUseCase`
+  direto, sem passar pelo `RecordGateVerdictUseCase` onde a emissão
+  estava. A emissão desceu para o funil de verdade.
+- **Copiei o mecanismo do outbox sem copiar a razão dele.** As quatro
+  emissões novas não usavam `UnitOfWork`, embora o
+  `AppendSessionEventUseCase` use — quebrando a invariante que o
+  `architecture.md` descreve como o motivo de o outbox existir, num
+  arquivo que editei nesta mesma fase.
+
 ## O que fica para depois
 
 - **`:global` pros dev agents** — fecharia a lacuna at-most-once da
@@ -161,6 +203,26 @@ acontece depois (reivindicou ou voltou a idle) já narra via
   retomada automática completa (re-despachar um ToolLoop novo na MESMA
   task já reivindicada) seria autonomia nova, e o CLAUDE.md marca
   isso como não-objetivo explícito da Fase 12.
+- **O worktree pode sumir debaixo de uma aprovação pendente** — achado
+  D5 da revisão, **aceito conscientemente, não corrigido**. O interlock
+  `awaiting_gate` protege a janela do GATE, mas não a do pipeline de
+  aprovações: com a autonomia do dev em `manual` (o toggle do painel
+  permite), `git_commit`/`git_push` ficam `pending`; os gates varrem o
+  WORKTREE e não a PR, então podem aprovar, o agente reivindica a
+  próxima task e `add_worktree/3` apaga o diretório — e a aprovação
+  humana, quando vier, executa contra um caminho que não existe mais.
+  Antes da 12b o agente parava e o worktree sobrevivia indefinidamente.
+
+  Não foi corrigido porque a correção óbvia — segurar o claim enquanto
+  houver `proposed_action` pendente daquele worktree — reintroduz
+  exatamente o acoplamento que esta fase removeu: o agente voltaria a
+  depender de um estado externo para decidir se pode trabalhar. O
+  caminho também exige sair do default: `ActivateExecutionUseCase`
+  seeda `auto_approve` para `git_commit`/`git_push`/`pr_open` de todo
+  dev agent, então só alcança quem mudou a autonomia à mão. Fica
+  registrado como limite conhecido; se aparecer na prática, a
+  correção certa é o worktree ser por TASK e não por agente, o que é
+  mudança estrutural e pede ADR próprio.
 - **12b não mexeu nos achados #12 a #16** da mesma colheita (handoff
   manual livre, promoção de story — essa é a Fase 12c —, devolução ao
   PO, aba compartilhada do painel, contador de aprovações). Fora de

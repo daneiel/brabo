@@ -90,6 +90,17 @@ defmodule Engine.Dev.DevAgentChainTest do
     |> Repo.insert!()
   end
 
+  # Esvazia da mailbox as `proposed_action` acumuladas, na ordem em que
+  # foram propostas. Usado pra comparar o conjunto da 1a task da cadeia com
+  # o da 2a (requisito 4: reagendar não muda o pipeline de aprovações).
+  defp drena_propostas(acc \\ []) do
+    receive do
+      {:propose_action, tipo, _actor, _payload} -> drena_propostas([tipo | acc])
+    after
+      0 -> Enum.reverse(acc)
+    end
+  end
+
   # A ponte que o mundo real percorre em dois processos (api → engine) —
   # aqui, os dois pedaços de infraestrutura reais, chamados em sequência.
   # Cada job PERFORMADO é apagado: `perform/1` chamado direto (sem passar
@@ -137,6 +148,10 @@ defmodule Engine.Dev.DevAgentChainTest do
     assert_received {:task_claimed, "api", "dev-api"}
     assert_received {:gate_dispatch, :qa, _, ^task1}
 
+    # A LINHA DE BASE do requisito 4: o que uma task normal (não reagendada)
+    # propõe. A 2a task da cadeia tem que bater com isto exatamente.
+    assert drena_propostas() == ["terminal", "git_commit", "git_push", "pr_open"]
+
     # --- 2. o gate aprova, FORA de processo: outbox → drain → wake worker
     #     → PubSub → chega na mailbox deste processo (onde init/1 assinou) ---
     insert_outbox!(task1, "task.gate_resolved", %{
@@ -168,6 +183,19 @@ defmodule Engine.Dev.DevAgentChainTest do
     assert state.task_id == task2
     assert state.consecutive_blocked == 0
     assert_received {:task_claimed, "api", "dev-api"}
+
+    # --- Requisito 4 (F1): reagendar NÃO é autonomia nova. A segunda task da
+    #     cadeia — a que só existe POR CAUSA do reagendamento — produz
+    #     exatamente o mesmo conjunto de proposed_action da primeira, na
+    #     mesma ordem, e NADA além. Se o reagendamento tivesse aberto
+    #     qualquer atalho no pipeline de aprovações, apareceria aqui.
+    propostas_task2 = drena_propostas()
+
+    assert propostas_task2 == ["terminal", "git_commit", "git_push", "pr_open"],
+           "o conjunto de proposed_action da 2a task da cadeia divergiu da 1a: " <>
+             inspect(propostas_task2)
+
+    refute_received {:propose_action, "git_merge", _, _}
 
     # --- 4. task-2 também aprova; a fila JÁ ESTÁ VAZIA → volta a idle ---
     insert_outbox!(task2, "task.gate_resolved", %{
