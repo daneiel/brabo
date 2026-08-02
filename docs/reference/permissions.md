@@ -161,3 +161,35 @@ Um teto rebaixa `auto_approve` para `require_approval`; ele **não** transforma
 A diferença entre um teto e um default: o default é o que acontece quando
 ninguém configurou nada; o teto é o que acontece **independente** do que foi
 configurado.
+
+## O que fica escrito de cada decisão
+
+Toda ação proposta e toda decisão sobre ela viram **evento de domínio** em
+`session_events`, com o ator real ([RN-049](../business-rules.md#rn-049)):
+
+| evento | ator | quando |
+|---|---|---|
+| `proposed_action.created` | o **agente** que propôs | sempre, antes de qualquer execução. `payload.status` diz como a ação nasceu: `pending`, `auto_approved` ou `denied` |
+| `proposed_action.approved` | o **usuário** que clicou | só na aprovação manual (inclusive `approve_always`) |
+| `proposed_action.denied` | o **usuário** que recusou | com `payload.reason` |
+| `action.executed` / `action.failed` | `system` | desfecho da execução |
+
+Daí sai a única forma confiável de separar as duas coisas que este documento
+descreve:
+
+- **decisão humana** = contar eventos `proposed_action.approved`;
+- **decisão da política** = `proposed_action.created` com
+  `status: auto_approved` e ator agente. Ela nunca produz um `.approved`, e por
+  isso nunca é confundida com um clique.
+
+Isso não era verdade até a Fase 12e. As três primeiras linhas iam **só para o
+outbox**, que é transporte — drenado, marcado com `processed_at` e podado — e a
+decisão sobrevivia apenas em `proposed_actions.decided_at`, uma coluna fora da
+linha do tempo que a UI, o Psicólogo e a Anamnese leem. O resultado prático foi
+que "quantas vezes o humano aprovou" não pôde ser respondido no dogfooding da
+Fase 10, que era justamente a métrica principal daquele experimento.
+
+O bootstrap de repositório é a exceção deliberada: as mutações que ele propõe
+não emitem `proposed_action.created` no log, porque já são narradas por
+`bootstrap.step_*` na mesma sessão — contá-las de novo inflaria a métrica de
+aprovação com trabalho que ninguém aprovou.
