@@ -87,7 +87,6 @@ defmodule Engine.Dev.AgentIo do
     })
   end
 
-
   # --- Máquina de estados do reagendamento (Fase 12b — RN-047) ---
   #
   # Mora aqui pelo MESMO motivo que o resto deste módulo: há duas

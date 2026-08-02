@@ -214,7 +214,10 @@ defmodule Engine.Dev.NoopDevAgentServer do
         #
         # Fase 12e: com ação git pendente de aprovação, o estado é
         # `awaiting_approval` — não há PR para gate nenhum julgar.
-        status = if Enum.all?(desfechos, &(&1 == :executed)), do: :awaiting_gate, else: :awaiting_approval
+        status =
+          if Enum.all?(desfechos, &(&1 == :executed)),
+            do: :awaiting_gate,
+            else: :awaiting_approval
 
         state = %{state | status: status}
         AgentIo.persist(state)

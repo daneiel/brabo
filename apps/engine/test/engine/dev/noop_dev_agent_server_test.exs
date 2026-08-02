@@ -167,29 +167,29 @@ defmodule Engine.Dev.NoopDevAgentServerTest do
 
       # Gate aprova → o agente reivindica a PRÓXIMA sozinho.
       assert {:noreply, s2} =
-                NoopDevAgentServer.handle_info(
-                  {:gate_resolved, %{task_id: s1.task_id, next_action: "done"}},
-                  s1
-                )
+               NoopDevAgentServer.handle_info(
+                 {:gate_resolved, %{task_id: s1.task_id, next_action: "done"}},
+                 s1
+               )
 
       assert s2.status == :awaiting_gate
       assert s2.task_id == "bbbb2222-3333-4444-8555-666666666666"
 
       assert {:noreply, s3} =
-                NoopDevAgentServer.handle_info(
-                  {:gate_resolved, %{task_id: s2.task_id, next_action: "done"}},
-                  s2
-                )
+               NoopDevAgentServer.handle_info(
+                 {:gate_resolved, %{task_id: s2.task_id, next_action: "done"}},
+                 s2
+               )
 
       assert s3.task_id == "cccc3333-4444-4555-8666-777777777777"
 
       # Fila vazia: idle EXPLÍCITO, com o processo vivo e a linha durável
       # dizendo a verdade — não um processo morto.
       assert {:noreply, s4} =
-                NoopDevAgentServer.handle_info(
-                  {:gate_resolved, %{task_id: s3.task_id, next_action: "done"}},
-                  s3
-                )
+               NoopDevAgentServer.handle_info(
+                 {:gate_resolved, %{task_id: s3.task_id, next_action: "done"}},
+                 s3
+               )
 
       assert s4.status == :idle
       assert s4.task_id == nil
@@ -206,7 +206,7 @@ defmodule Engine.Dev.NoopDevAgentServerTest do
       ])
 
       assert {:noreply, trabalhando} =
-                NoopDevAgentServer.handle_info({:wake, :became_claimable}, idle)
+               NoopDevAgentServer.handle_info({:wake, :became_claimable}, idle)
 
       assert trabalhando.task_id == "aaaa1111-2222-4333-8444-555555555555"
     end
@@ -215,7 +215,7 @@ defmodule Engine.Dev.NoopDevAgentServerTest do
       ocupado = %{state | status: :awaiting_gate, task_id: "aaaa1111-2222-4333-8444-555555555555"}
 
       assert {:noreply, ^ocupado} =
-                NoopDevAgentServer.handle_info({:wake, :became_claimable}, ocupado)
+               NoopDevAgentServer.handle_info({:wake, :became_claimable}, ocupado)
 
       refute_received {:task_claimed, _, _}
     end
@@ -267,10 +267,10 @@ defmodule Engine.Dev.NoopDevAgentServerTest do
       }
 
       assert {:noreply, zerado} =
-                NoopDevAgentServer.handle_info(
-                  {:gate_resolved, %{task_id: travando.task_id, next_action: "done"}},
-                  travando
-                )
+               NoopDevAgentServer.handle_info(
+                 {:gate_resolved, %{task_id: travando.task_id, next_action: "done"}},
+                 travando
+               )
 
       assert zerado.consecutive_blocked == 0
       assert zerado.status == :idle
@@ -318,7 +318,12 @@ defmodule Engine.Dev.NoopDevAgentServerTest do
       assert idle.consecutive_blocked == 1
 
       travado =
-        subir.(%{status: "idle_tripped", task_id: nil, worktree_path: nil, consecutive_blocked: 3})
+        subir.(%{
+          status: "idle_tripped",
+          task_id: nil,
+          worktree_path: nil,
+          consecutive_blocked: 3
+        })
 
       assert travado.status == :idle_tripped
       assert travado.consecutive_blocked == 3
