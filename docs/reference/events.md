@@ -94,6 +94,13 @@ Uma linha em `session_events`, append-only, com `seq` densa por sessão
 | `execution.activated` | a fase de execução começou |
 | `execution.parallelization_suggested` | o sistema propôs paralelizar |
 | `execution.parallelization_accepted` | aceita — o subagente herda o teto do agente base |
+| `dev.started` | o dev agent começou o ciclo (ativação, paralelização — NÃO reidratação, que nunca redispara) |
+| `dev.working` | reivindicou uma task e montou o worktree |
+| `dev.idle` | fila do módulo vazia — sem task pegável agora |
+| `dev.awaiting_gate` | PR aberta, esperando o gate (Fase 12b) — `task_id`/`worktree` continuam retidos |
+| `dev.blocked` | a task devolvida com diagnóstico (limite de iterações, orçamento excedido, `report_blocked`, falha de worktree/contexto) |
+| `dev.idle_tripped` | circuit breaker disparado (RN-047) — N tasks blocked seguidas param o agente |
+| `dev.rearmed` | usuário rearmou um agente travado (Fase 12b) — `actor` é o USUÁRIO que clicou, não o agente |
 | `pr.gate_changed` | o PR mudou de gate (`awaiting_qa` → `awaiting_secops` → `awaiting_user`) |
 | `infra.gate_changed` | gate do Infra |
 | `infra.artifact_blocked` | artefato do Infra reprovado |

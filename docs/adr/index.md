@@ -3,7 +3,7 @@ id: adr-index
 title: Decisões arquiteturais (ADR)
 sidebar_label: Índice de ADRs
 sidebar_position: 0
-description: Os 44 registros de decisão arquitetural do Brabo, agrupados por fase, com o que cada um decidiu.
+description: Os 45 registros de decisão arquitetural do Brabo, agrupados por fase, com o que cada um decidiu.
 keywords: [ADR, decisão arquitetural, arquitetura, histórico]
 ---
 
@@ -20,7 +20,7 @@ atual.** Para o estado atual, use [Regras de negócio](../business-rules.md),
 [Arquitetura](../architecture.md) e o [Runbook](../runbook.md). Para o
 raciocínio, venha aqui.
 
-Todos os 44 estão com status **aceito**.
+Todos os 45 estão com status **aceito**.
 
 ## Fase 2 — Git
 
@@ -145,12 +145,13 @@ O loop que faz o time melhorar.
 | # | decisão |
 |---|---|
 | [0044](0044-adocao-de-repositorio-existente.md) | Adoção de repositório existente com `origin` (`created`\|`adopted`) nas duas tabelas, e o PLANO como portão: o dry-run é o `check()` do ADR 0005 sem `run()`, o plano vive no cursor (snapshot, não log), e nada é alterado enquanto a decisão for nula — o runner da Fase 2 sai verbatim para um colaborador e nunca é filtrado, só não é chamado; "proteção divergente" fica no nível booleano porque é só isso que o contrato expõe (ADR 0028) |
+| [0045](0045-reagendamento-por-evento-do-dev-agent.md) | Reagendamento do dev agent por evento: outbox (não chamada em processo) porque sobrevive a um restart entre o veredito do gate e o wake; `awaiting_gate` retém o worktree por AGENTE (não por task) até o gate terminar; entrega por PubSub (não Registry, local ao nó) com o limite at-most-once aceito conscientemente; circuit breaker (RN-047) mora no engine porque `actor.id` de `backlog.task_blocked` não identifica a sequência de um agente |
 
 ## A convenção
 
 - **Um arquivo por decisão**, em `docs/adr/NNNN-titulo-curto.md`, com
   numeração sequencial de 4 dígitos. **Sem reuso de número**, nem quando um ADR
-  é superado — o próximo é **0045**.
+  é superado — o próximo é **0046**.
 - **Três seções, só elas:** **Contexto** (o problema ou a força que motivou),
   **Decisão** (o que foi decidido), **Consequências** (os trade-offs aceitos e
   o que fica para depois).

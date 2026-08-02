@@ -588,6 +588,37 @@ classificar errado.
 - **Teste:** `test/application/use-cases/git/adopt-repository.use-case.spec.ts`
 - **Origem:** [ADR 0044](adr/0044-adocao-de-repositorio-existente.md)
 
+### RN-047 — Circuit breaker do dev agent: N blocked seguidas param, sem gastar orçamento em loop {#rn-047}
+
+Cada dev agent mantém um contador (`dev_agent_states.consecutive_blocked`)
+de quantas tasks TERMINARAM `blocked` em sequência — local (no ToolLoop) ou
+remotamente (teto de correções do gate estourado). Ao bater o teto por
+projeto (`max_consecutive_blocked`, default 3), o agente para em
+`idle_tripped` **sem tentar reivindicar a próxima task**. Um desfecho
+terminal aprovado zera o contador; uma task blocked individual continua o
+fluxo normal (devolvida com diagnóstico, disponível pra um humano
+desbloquear) — o breaker é sobre a SEQUÊNCIA, não sobre a task.
+
+A única saída de `idle_tripped` é o rearm explícito
+(`POST .../agents/:agentId/rearm`, role `developer`): zera o contador e o
+agente volta a tentar reivindicar. Não existe destrave automático — o
+mesmo princípio de `MarkTaskBlockedUseCase`/`unblock`, aplicado à
+sequência em vez de à task.
+
+Reiniciar o engine com um agente em `working` **não** conta pro contador:
+a task retida é bloqueada com diagnóstico do restart, mas esse bloqueio
+não é o agente "queimando o teto" — é a infraestrutura caindo. O
+contador só sobe quando o próprio ciclo dev↔gate produz um `blocked` de
+verdade.
+
+- **Onde:** `apps/engine/lib/engine/dev/dev_agent_server.ex` (`finish_task/2`,
+  `resume_state/2`), `apps/api/src/application/use-cases/execution/rearm-dev-agent.use-case.ts`,
+  `apps/api/src/db/schema.ts` (`projects.max_consecutive_blocked`)
+- **Teste:** `apps/engine/test/engine/dev/dev_agent_server_test.exs`
+  (describe `circuit breaker`), `apps/engine/test/engine/dev/dev_rehydrator_test.exs`
+  (describe `os quatro estados reidratados`), `test/application/use-cases/execution/rearm-dev-agent.use-case.spec.ts`
+- **Origem:** [ADR 0045](adr/0045-reagendamento-por-evento-do-dev-agent.md)
+
 ### RN-038 — Agente contado no resumo do workspace = gastou tokens este mês {#rn-038}
 
 O resumo do dashboard de projetos ("N projetos ativos · M agentes · gasto

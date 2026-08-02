@@ -254,6 +254,15 @@ sequenceDiagram
 Não há broker. A fila é o Postgres, via Oban — e é por isso que a profundidade
 dela é uma métrica de banco, consultável por SQL, e serve de sinal para o HPA.
 
+O diagrama acima é o caminho de `aggregate_type = "session"` — todo evento de
+domínio grava um `session_events` na mesma transação do outbox. A Fase 12b
+acrescentou `aggregate_type = "task"` (`task.gate_resolved`,
+`task.became_claimable`, o reagendamento do dev agent): sem `session_events`
+correspondente, só a linha de outbox — o Drain roteia pro
+`Engine.Workers.DevAgentWakeWorker`, que entrega por PubSub a UM agente
+específico ou a todos os `idle` de um módulo. Ver
+[ADR 0045](../adr/0045-reagendamento-por-evento-do-dev-agent.md).
+
 ## Onde o contrato vive
 
 Desde a Fase 7b existe **OpenAPI** para o sentido engine → api: as 26 rotas

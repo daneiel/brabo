@@ -44,6 +44,36 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **engine,api,web**: o dev agent passa a processar toda a fila do módulo
+  **sem restart do engine** (Fase 12b). É o segundo achado P1 do
+  dogfooding: `:work` só disparava na ativação e no aceite de
+  paralelização, e a Fase 10 rodou em tandas — um humano reativando a
+  execução (ou reiniciando o engine) entre cada task. O agente ganha uma
+  máquina de estados persistida (`working`\|`awaiting_gate`\|`idle`\|
+  `idle_tripped`) e reage a dois eventos entregues pela outbox já
+  existente (`aggregate_type` ganhou `"task"` ao lado de `"session"`):
+  gate resolvido (aprova → reivindica a próxima; bloqueia → conta pro
+  circuit breaker) e task nova ficando pegável (acorda todo agente idle
+  do módulo). PR aberta NÃO libera o agente — ele fica em
+  `awaiting_gate` retendo o worktree (que é por AGENTE, não por task, e
+  o gate ainda precisa dele) até o desfecho terminal.
+  **Circuit breaker** (`RN-047`): N tasks consecutivas terminando
+  `blocked` param o agente em `idle_tripped`, configurável por projeto
+  (Configurações → Execução), sem destrave automático — rearmar é um
+  clique (`POST .../agents/:agentId/rearm`) que registra quem clicou.
+  **Reidratação** estende os quatro estados: `awaiting_gate` retoma
+  intacto e reage a um gate que resolve DEPOIS do restart (é por isso
+  que o sinal tinha que ser outbox, não uma chamada em processo);
+  `working` interrompido bloqueia com diagnóstico honesto do restart
+  em vez de tentar retomar um ToolLoop que só existia em memória — e
+  isso NÃO conta pro circuit breaker. Decisão completa em
+  [ADR 0045](docs/adr/0045-reagendamento-por-evento-do-dev-agent.md).
+  **Limite conhecido:** entrega do wake é at-most-once (PubSub, não
+  `:global` — Registry é local ao nó e o engine roda 2 réplicas em
+  produção); um wake perdido só é recuperado no próximo evento.
+  **Pendente:** o aceite com 3 gates reais em sequência (QA/SecOps são
+  julgamento de LLM, não determinístico) é demonstração manual, não CI
+  — mesmo padrão do [ADR 0020](docs/adr/0020-destravar-gates-qa-secops.md).
 - **api,web**: o projeto passa a poder **adotar um repositório que já
   existe**, em vez de só criar um (Fase 12a). É o primeiro dos três achados
   P1 do dogfooding: a Fase 10 só rodou porque alguém inseriu à mão as linhas

@@ -12,7 +12,7 @@ keywords: [arquitetura, code map, invariantes, harness, event log]
 Este documento é o mapa para quem vai **mexer** no código. Ele diz por onde
 começar a ler, o que cada fronteira promete, e o que já se sabe que está torto.
 
-Decisões e o porquê delas ficam nos [ADRs](adr/index.md) — 44 deles, vários
+Decisões e o porquê delas ficam nos [ADRs](adr/index.md) — 45 deles, vários
 registrando defeito real encontrado em execução. Aqui não repetimos a
 argumentação: apontamos.
 
@@ -71,6 +71,17 @@ outbox* no Postgres (consumido pelo Oban), e HTTP interno para comando
 síncrono. O outbox existe porque gravar o estado e publicar o evento precisam
 ser a mesma transação; o HTTP existe porque algumas operações precisam de
 resposta imediata.
+
+O outbox drena dois `aggregate_type`: `session` (desde a Fase 5) e `task`
+(Fase 12b — `task.gate_resolved`/`task.became_claimable`, o reagendamento
+do dev agent após um gate resolver ou uma task nova ficar pegável). A
+razão de ser outbox, e não uma chamada HTTP síncrona como as demais: um
+restart do engine entre o veredito do gate e a reação do agente não pode
+perder o sinal — a linha sobrevive ao processo que a leria, o HTTP não
+sobreviveria à queda de quem esperava a resposta.
+`dev_agent_states` ganhou `consecutive_blocked`/`max_consecutive_blocked`
+(o circuit breaker, [RN-047](business-rules.md#rn-047)); decisão completa
+no [ADR 0045](adr/0045-reagendamento-por-evento-do-dev-agent.md).
 
 ## Code map
 
