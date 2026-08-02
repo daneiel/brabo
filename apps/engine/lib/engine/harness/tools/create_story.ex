@@ -51,8 +51,8 @@ defmodule Engine.Harness.Tools.CreateStory do
     }
 
     case EngineApiClient.create_story(ctx.project_id, ctx.session_id, fields) do
-      {:ok, %{"id" => id, "status" => status}} ->
-        {:ok, "história criada: id=#{id}, status=#{status}."}
+      {:ok, %{"id" => id} = story} ->
+        {:ok, "história criada: id=#{id}, #{desfecho(story)}"}
 
       {:error, reason} ->
         {:error, "falha ao criar história: #{inspect(reason)}"}
@@ -61,6 +61,21 @@ defmodule Engine.Harness.Tools.CreateStory do
 
   def run(_args, _ctx),
     do: {:error, "create_story exige `epic_id`, `title` e `business_rule_ids`"}
+
+  # O que dizer ao modelo sobre o que aconteceu com a história (Fase 12c).
+  #
+  # Em projeto no modo `manual` a história NÃO vira `ready` sozinha — ela
+  # fica proposta, aguardando o usuário. Se o retorno continuasse dizendo só
+  # `status=draft`, o PO concluiria que falhou e tentaria "consertar" uma
+  # história que está correta; e se dissesse `ready` estaria mentindo. Daí a
+  # frase explícita.
+  defp desfecho(%{"proposedReady" => true}),
+    do: "está COMPLETA e aguardando a promoção do usuário (o projeto exige aprovação manual)."
+
+  defp desfecho(%{"status" => "ready"}), do: "status=ready."
+
+  defp desfecho(%{"status" => status}),
+    do: "status=#{status} — faltam RF, DoD, DoR ou business_rule_ids para ficar completa."
 
   defp list(args, key) do
     case Map.get(args, key) do

@@ -199,7 +199,11 @@ defmodule Engine.Agents.PoServer do
     O Criativo entregou o product brief e as regras de negócio abaixo. Gere o backlog:
     crie 1+ épico(s) com create_epic e histórias COMPLETAS com create_story — cada história
     precisa de RF, DoD, DoR e `business_rule_ids` apontando para os ids das regras que a
-    originaram (assim ela vira 'ready'). Adicione tarefas com create_task quando fizer sentido.
+    originaram (é o que a torna promovível). Dependendo da configuração do projeto, uma
+    história completa vira 'ready' na hora ou fica aguardando a promoção do usuário — o
+    retorno de create_story diz qual foi o caso, e AGUARDAR APROVAÇÃO NÃO É ERRO: não
+    tente recriar nem "consertar" uma história que voltou como completa.
+    Adicione tarefas com create_task quando fizer sentido.
     Cubra TODAS as regras com ao menos uma história. Quando o backlog estiver pronto, ofereça
     um handoff ao arquiteto com offer_handoff(to_agent: "arquiteto").
 
