@@ -74,28 +74,53 @@ e pipeline de aprovação de ações com autoridade final do usuário.
 - FASE 10 — CONCLUÍDA: Bitbucket + GenericGitProvider entregues VIA
   dogfooding (primeira execução real do Brabo construindo o próprio
   Brabo, em fork com seed manual, tandas com restart entre tasks,
-  Criativo obrigatório na cadeia). Colheita em
-  docs/explanation/primeiro-dogfooding.md e ADR TODO(humano): número.
-  Achados priorizados TODO(humano): listar os P1 aqui — no mínimo os
-  já conhecidos da preparação: adoção de repositório existente
-  (createRepo incondicional, getRepo sem uso, sem externalId no DTO),
-  reagendamento de dev agent após gate (tandas exigem restart do
-  engine), e promoção automática de story a ready sem passo humano.
-- FASE 11 — CONCLUÍDA: os seis providers da Fase 9b entraram como
-  config sobre a base, um de cada vez, cada um investigado do zero
-  contra a doc oficial da API dele — proibido herdar suposição de
-  quirk entre providers (11a: OpenRouter, o único hub dos seis,
-  primeiro para provar a base contra produção real; 11b: NVIDIA NIM,
-  Together, DeepInfra, Bitdeer, Vultr). LLM_PROVIDER_NAMES foi de 3
-  para 9; DTO de credencial e testador de conexão passaram a derivar
-  de uma lista única em vez de hardcode triplicado. Capability só
-  declarada quando provada — dois casos reais de decisão revertida ao
-  vivo durante a implementação (DeepInfra e Vultr), nunca travada só
-  no planejamento. Único hook novo na base
-  (`parseErrorFrame`, +31 linhas) é o que o OpenRouter, sendo hub,
-  provou necessário — nenhum dos cinco diretos precisou (ADR 0043).
+  Criativo obrigatório na cadeia). Colheita escrita na Fase 12d, em
+  docs/explanation/primeiro-dogfooding.md — os 17 achados com
+  arquivo:linha são reais; a metade QUANTITATIVA (restarts,
+  intervenções, custo) ficou como `não medido`, porque a tabela de
+  observação nunca foi preenchida. Os três P1 de operabilidade
+  (adoção de repo existente, reagendamento do dev agent, promoção de
+  story sem passo humano) foram fechados pela Fase 12. Os outros 14
+  seguem abertos e listados na colheita — não corrija de passagem.
+- FASE 11 — CONCLUÍDA: os seis providers da Fase 9b como config sobre
+  a base, cada um investigado do zero contra a doc oficial (proibido
+  herdar quirk); LLM_PROVIDER_NAMES de 3 para 9; DTO de credencial e
+  testador de conexão derivando de lista única; capability só
+  declarada quando provada, com duas reversões ao vivo (DeepInfra e
+  Vultr); único hook novo na base (`parseErrorFrame`, +31 linhas)
+  provado necessário pelo OpenRouter (ADR 0043).
   Pendente: aceite com credencial real dos seis smokes, gated por
-  `<PROVIDER>_TEST_KEY`, ainda não rodado contra chave nenhuma.
+  `<PROVIDER>_TEST_KEY` — depende de chaves do usuário, rastreado como
+  item de backlog, não bloqueia fase.
+- FASE 12 — CONCLUÍDA: operabilidade pós-dogfooding, os três achados
+  P1 fechados e provados numa execução única (ADR 0047).
+  12a — adoção de repositório existente: rota própria, `getRepo`
+  validando acesso antes de gravar, `origin` (created|adopted) nas duas
+  tabelas, e o PLANO como portão — dry-run que descreve a divergência e
+  não altera nada enquanto a decisão for nula; readotar converge
+  (ADR 0044, RN-045/046).
+  12b — reagendamento do dev agent por evento: máquina de estados
+  persistida (working|awaiting_gate|idle|idle_tripped) reagindo a dois
+  eventos da outbox existente, `awaiting_gate` retendo o worktree (que
+  é por AGENTE, não por task) até o gate terminar, e circuit breaker
+  com rearm explícito (ADR 0045, RN-047).
+  12c — promoção de story com autoridade do usuário: `story_promotion`
+  por projeto com `manual` como DEFAULT NOVO (backfill dirigido põe os
+  projetos existentes em `auto`), `proposed_ready` como proposta e não
+  estado, promoção reusando o TransitionStoryUseCase (código morto do
+  achado #13) e recusa devolvendo ao PO com o motivo fixado na sessão
+  dele (ADR 0046, RN-048).
+  12d — o Noop entrou na máquina de estados da 12b (ele processava UMA
+  task e parava: o achado #10 vivia dentro do próprio instrumento de
+  validação); script `pnpm --filter api validacao:fase-12` que sai != 0
+  quando o critério não fecha e extrai a evidência do banco; colheita
+  da Fase 10 escrita; docmap cobrindo engine/dev e engine/agents, que
+  não eram observados por regra nenhuma.
+  Pendente: rodar a validação e colar a tabela de event ids em
+  docs/explanation/validacao-fase-12.md (marcado com TODO(humano) no
+  próprio arquivo). A validação roda com provider Local e NoopDevAgent
+  — NÃO prova GitHub remoto nem o julgamento dos gates por LLM, e isso
+  está declarado no documento.
 - Não refatore o que está pronto sem pedido explícito.
 
 ## Stack (decidida — não proponha alternativas)
@@ -109,7 +134,7 @@ e pipeline de aprovação de ações com autoridade final do usuário.
 - LLM: roteador na api com suite de contrato; base OpenAI-compatível
   sobre node:http (timeout de inatividade, erro por `code`,
   capabilities em duas camadas — ADR 0041); catálogo com curadoria e
-  preço congelado no metering (ADR 0042)
+  preço congelado no metering (ADR 0042); 9 providers (ADR 0043)
 - Deploy: Kubernetes (k3d/kind em validação local)
 - Docs: Docusaurus 3.x em website/ lendo de docs/; Mermaid; busca local
 - CI/CD de release: GitHub Actions com lógica em scripts testáveis
@@ -141,6 +166,9 @@ e pipeline de aprovação de ações com autoridade final do usuário.
   por gate, independente da estrutura interna da área.
 - Merge em branch protegida (dev/qa/main) é SEMPRE manual do
   usuário — sem opção de automatizar, garantido por teste.
+- O produto NUNCA sobrescreve configuração de repositório do usuário
+  (proteções, branches) sem plano aprovado explicitamente (regra da
+  FASE 12, origem no ADR 0028).
 - Commits de agentes usam identidade "<agente>[bot]" com o usuário
   como co-author.
 - Todo desfecho de falha de agente registra a ORIGEM da falha
@@ -191,13 +219,17 @@ e pipeline de aprovação de ações com autoridade final do usuário.
 - Não implementar Dev Lead nem áreas dinâmicas via module_map (backlog
   do ADR 0038)
 - Não implementar o aparato genérico de áreas (agent_areas/budget por
-  área) — corte registrado da Fase 8; se um provider novo esbarrar
-  nisso, é achado, não convite
+  área) — corte registrado da Fase 8
 - Não versionar à mão: toda tag nasce de workflow
 - Não instalar libs sem justificar no plano
-- Não refatorar código das fases concluídas fora do necessário para a
-  fase ativa
+- Não refatorar código de fase concluída sem pedido explícito
 - Não ativar modelo descoberto automaticamente: curadoria manual
   sempre (ADR 0042)
-- Não atacar os achados P1 do dogfooding fora da FASE 12, que disputa
-  isso com o restante do backlog
+- Não estender a adoção a migração de dados do repo (issues, PRs
+  históricas) — adoção é acesso + política, nada mais
+- Não transformar o reagendamento em autonomia nova: o pipeline de
+  aprovações continua exatamente como está — o que muda é o agente não
+  morrer entre tasks
+- Não corrigir de passagem os 14 achados abertos do dogfooding
+  (docs/explanation/primeiro-dogfooding.md) — cada um espera a fase que
+  o endereça, e corrigir fora dela apaga a evidência de por que existia

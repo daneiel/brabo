@@ -25,8 +25,26 @@ export interface Project {
   name: string;
   slug: string;
   createdBy: string;
+  // Circuit breaker por dev agent (Fase 12b — RN-047). `null` usa o default
+  // do domínio (3).
+  maxConsecutiveBlocked: number | null;
+  // Quem promove história a `ready` (Fase 12c — RN-048). `manual` é o default
+  // de projeto novo; os projetos que existiam antes da fase ficaram em `auto`,
+  // que é o comportamento anterior.
+  storyPromotion: StoryPromotionMode;
   createdAt: string;
   updatedAt: string;
+}
+
+export type StoryPromotionMode = 'manual' | 'auto';
+
+/**
+ * O resultado de um lote de promoção (Fase 12c — RN-048). NÃO é
+ * all-or-nothing: `failed` pode vir preenchido numa resposta de sucesso.
+ */
+export interface PromoteStoriesResult {
+  promoted: string[];
+  failed: { storyId: string; reason: string }[];
 }
 
 export interface WorkspaceSummary {
@@ -288,6 +306,9 @@ export interface Budget {
 
 export type GitProviderName = 'local' | 'github' | 'gitlab';
 
+/** Criado pelo Brabo, ou adotado de fora (Fase 12a, RN-046). */
+export type RepoOrigin = 'created' | 'adopted';
+
 export interface ProvisionedRepository {
   id: string;
   projectId: string;
@@ -296,6 +317,7 @@ export interface ProvisionedRepository {
   url: string;
   defaultBranch: string;
   visibility: 'public' | 'private';
+  origin: RepoOrigin;
   provisionedBy: string;
   createdAt: string;
   updatedAt: string;
@@ -318,7 +340,9 @@ export type BootstrapStepStatus = 'pending' | 'running' | 'done' | 'failed';
 export type ProvisioningStatus =
   | 'provisioning'
   | 'provisioned'
-  | 'provision_failed';
+  | 'provision_failed'
+  /** Repo adotado com plano gerado e ainda não decidido — nada roda. */
+  | 'awaiting_plan_decision';
 
 export interface RepoBootstrapStatus {
   status: ProvisioningStatus | null;
@@ -331,6 +355,48 @@ export interface RepoBootstrapStatus {
 export interface ProvisionRepositoryResult {
   repository: ProvisionedRepository;
   bootstrap: { step: BootstrapStepName; status: BootstrapStepStatus };
+}
+
+// --- Adoção de repositório existente (Fase 12a) — espelha
+// apps/api/src/domain/git/repo-bootstrap.entity.ts ---
+
+export interface BootstrapPlanStep {
+  step: BootstrapStepName;
+  actionType: string;
+  payload: Record<string, unknown>;
+}
+
+export type BootstrapDiagnosticKind =
+  | 'missing_branch'
+  | 'unprotected_branch'
+  | 'missing_file'
+  | 'extra_branch'
+  | 'capability_unsupported';
+
+export interface BootstrapDiagnostic {
+  kind: BootstrapDiagnosticKind;
+  detail: Record<string, unknown>;
+}
+
+export interface BootstrapPlan {
+  generatedAt: string;
+  steps: BootstrapPlanStep[];
+  diagnostics: BootstrapDiagnostic[];
+}
+
+export type BootstrapPlanDecision = 'approved' | 'as_is';
+
+export interface BootstrapPlanEstado {
+  plan: BootstrapPlan | null;
+  decision: BootstrapPlanDecision | null;
+  decidedAt: string | null;
+  decidedBy: string | null;
+}
+
+export interface AdoptRepositoryResult {
+  repository: ProvisionedRepository;
+  plan: BootstrapPlan;
+  alreadyAdopted: boolean;
 }
 
 // --- Chat SSE — espelha ChatSseEvent de
@@ -589,6 +655,14 @@ export interface Story {
   dod: string[];
   dor: string[];
   status: StoryStatus;
+  // Fase 12c (RN-048). Convive com `status: 'draft'` — é uma PROPOSTA, não um
+  // estado: o PO terminou a história e ela aguarda a decisão do usuário.
+  // Enquanto isso nenhuma tarefa dela é pegável.
+  proposedReady: boolean;
+  // O motivo da última recusa, e quando. Ficam gravados mesmo depois de o PO
+  // recriar a história corrigida — a recusa é fato, não estado transitório.
+  returnedReason: string | null;
+  returnedAt: string | null;
   createdAt: string;
   updatedAt: string;
   tasks: Task[];

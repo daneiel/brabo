@@ -104,15 +104,35 @@ defmodule Engine.Sessions.FakeEngineApiClient do
 
   @impl true
   def claim_task(_project_id, _session_id, module, agent_id) do
-    notify({:task_claimed, module, agent_id})
-    # Fila de tasks scriptada por :fake_tasks (pop); esgotada → nil.
-    case Process.get(:fake_tasks, []) do
-      [task | rest] ->
-        Process.put(:fake_tasks, rest)
-        {:ok, task}
+    # Atraso opcional via Application env (NÃO dicionário de processo): o
+    # agente reidratado roda no processo DELE, então `Process.put` do teste
+    # não o alcança. Usado só pelo teste de que o boot não espera a
+    # recuperação de um `working` (D2).
+    case Application.get_env(:engine, :fake_claim_delay_ms) do
+      ms when is_integer(ms) -> Process.sleep(ms)
+      _ -> :ok
+    end
 
-      [] ->
-        {:ok, nil}
+    notify({:task_claimed, module, agent_id})
+
+    # `:fake_claim_error` força o ramo de erro do claim (5xx/timeout da api).
+    # Não existia até a revisão da Fase 12b, e a ausência dele foi o motivo
+    # de o travamento permanente do agente (D1) passar por toda a suite: o
+    # caminho feliz do claim era o ÚNICO exercitado.
+    case Process.get(:fake_claim_error) do
+      nil ->
+        # Fila de tasks scriptada por :fake_tasks (pop); esgotada → nil.
+        case Process.get(:fake_tasks, []) do
+          [task | rest] ->
+            Process.put(:fake_tasks, rest)
+            {:ok, task}
+
+          [] ->
+            {:ok, nil}
+        end
+
+      reason ->
+        {:error, reason}
     end
   end
 
@@ -374,7 +394,25 @@ defmodule Engine.Sessions.FakeEngineApiClient do
   @impl true
   def propose_action(_project_id, _session_id, action_type, actor, payload) do
     notify({:propose_action, action_type, actor, payload})
-    {:ok, Process.get(:fake_propose_action, %{"id" => "pa-1", "status" => "pending"})}
+
+    # Default `auto_approved` porque é o que a REALIDADE faz: o
+    # `ActivateExecutionUseCase` semeia `auto_approve` para git_commit/git_push/
+    # pr_open de todo dev agent. Era `pending` aqui, e não fazia diferença
+    # enquanto `AgentIo.propose/3` descartava o status — a partir da Fase 12e
+    # faz, e um default que não é o de produção mandaria toda a suite pelo
+    # caminho da aprovação manual. Quem quer testar esse caminho põe
+    # `:fake_propose_action` no dicionário de processo.
+    # `:fake_propose_action_by_type` tem precedência e é por TIPO de ação —
+    # necessário desde a Fase 12e para exercitar "o terminal executou, mas as
+    # ações git ficaram pendentes de aprovação", que é exatamente a
+    # configuração em que o gate abria sem PR nenhuma.
+    por_tipo = Process.get(:fake_propose_action_by_type, %{})
+
+    resposta =
+      Map.get(por_tipo, action_type) ||
+        Process.get(:fake_propose_action, %{"id" => "pa-1", "status" => "auto_approved"})
+
+    {:ok, resposta}
   end
 
   @doc "Resposta que só devolve texto final, sem tool calls (encerra o loop)."

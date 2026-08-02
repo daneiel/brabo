@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getProject, getProjectBudget, getRepository } from '../lib/api-client';
-import { useLatestSession, usePendingActions } from '../lib/hooks';
+import { useBacklog, useLatestSession, usePendingActions } from '../lib/hooks';
 import { setLastSeenSeq } from '../lib/read-state';
 import { TokenMeter } from '../components/TokenMeter';
 import { Tabs } from '../components/ui/Tabs';
@@ -9,7 +9,7 @@ import { GitHubIcon, GitLabIcon, LocalRepoIcon } from '../components/ui/icons';
 import { ProjectOverviewTab } from './ProjectOverviewTab';
 import { ProjectSessionsTab } from './ProjectSessionsTab';
 import { ProjectApprovalsTab } from './ProjectApprovalsTab';
-import { ProjectBacklogTab } from './ProjectBacklogTab';
+import { ProjectBacklogTab, aguardandoPromocao } from './ProjectBacklogTab';
 import { ProjectSettingsTab } from './ProjectSettingsTab';
 import styles from './ProjectPage.module.css';
 
@@ -33,6 +33,12 @@ export function ProjectPage({ projectId, initialTab }: ProjectPageProps) {
   const pendingActionsQuery = usePendingActions(projectId, latestSession?.id);
   const pendingCount = pendingActionsQuery.data?.items.filter((a) => a.status === 'pending').length ?? 0;
 
+  // Histórias esperando promoção do usuário (Fase 12c — RN-048). Contador
+  // próprio, ao lado do de aprovações: são duas filas de decisão diferentes,
+  // e somá-las esconderia qual delas está pedindo atenção.
+  const backlogQuery = useBacklog(projectId);
+  const promocoesPendentes = aguardandoPromocao(backlogQuery.data).length;
+
   useEffect(() => {
     if (tab === 'overview' && latestSession) {
       setLastSeenSeq(projectId, latestSession.nextSeq - 1);
@@ -55,7 +61,19 @@ export function ProjectPage({ projectId, initialTab }: ProjectPageProps) {
               <span className={styles.name}>{project.name}</span>
             </div>
             <div className={styles.meta}>
-              {repository ? `${repository.provider} · ${repository.visibility} · ${repository.defaultBranch}` : 'repositório não provisionado'}
+              {repository
+                ? [
+                    repository.provider,
+                    repository.visibility,
+                    repository.defaultBranch,
+                    // Fase 12a: adotado é fato permanente do projeto, e
+                    // saber que o repo veio de fora muda como se lê tudo
+                    // o mais (a política de branches é dele, não nossa).
+                    repository.origin === 'adopted' ? 'adotado' : null,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')
+                : 'repositório não provisionado'}
             </div>
           </div>
         </div>
@@ -79,7 +97,7 @@ export function ProjectPage({ projectId, initialTab }: ProjectPageProps) {
           items={[
             { key: 'overview', label: 'Visão geral' },
             { key: 'sessions', label: 'Sessões' },
-            { key: 'backlog', label: 'Backlog' },
+            { key: 'backlog', label: 'Backlog', count: promocoesPendentes || undefined },
             { key: 'approvals', label: 'Aprovações', count: pendingCount || undefined },
             { key: 'settings', label: 'Configurações' },
           ]}

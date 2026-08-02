@@ -193,6 +193,19 @@ jobs:
       - name: Testes do web
         run: pnpm --filter web test
 
+      # O web NÃO tinha typecheck no CI — só `lint` e `test`, e os dois passam
+      # com erro de tipo (o vitest transpila por esbuild, que apaga os tipos
+      # sem verificá-los, e o eslint não faz checagem de tipo aqui). O único
+      # lugar que verificava era o `tsc -b` dentro do build da IMAGEM, que só
+      # roda no bootstrap do k8s — feito à mão.
+      #
+      # O resultado foi quatro erros acumulados em três fases sem ninguém ver,
+      # e a imagem `brabo-web` sem conseguir ser construída — ou seja, o deploy
+      # Kubernetes inteiro quebrado, em silêncio. `--force` porque o `tsc -b`
+      # é incremental e pularia o trabalho num runner com cache.
+      - name: Typecheck do web
+        run: pnpm --filter web typecheck
+
       # Os scripts de CI são lógica pura, sem banco — mas rodam no mesmo job
       # porque compartilham o `pnpm install` acima.
       - name: Testes dos scripts de CI

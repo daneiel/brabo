@@ -3100,6 +3100,81 @@
         ]
       }
     },
+    "/projects/{projectId}/git/{provider}/repository/adopt": {
+      "post": {
+        "description": "Valida o acesso com `getRepo` e produz um PLANO (dry-run) do que o bootstrap faria — branches faltantes, proteções ausentes, arquivos. NADA é executado no repositório: decida depois por `plan/approve` ou `plan/skip`. Readotar o mesmo repositório converge (regenera o plano sem duplicar linha).",
+        "operationId": "GitController_adopt",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "provider",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "enum": [
+                "local",
+                "github",
+                "gitlab"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdoptRepositoryDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdoptRepositoryResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "O repositório existe, mas a credencial cadastrada não o alcança."
+          },
+          "404": {
+            "description": "O repositório não existe no provider — confira o identificador."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Adota um repositório que já existe, sem criar nada",
+        "tags": [
+          "git"
+        ]
+      }
+    },
     "/projects/{projectId}/git/bootstrap": {
       "get": {
         "description": "Em que passo está, se falhou e onde, e quantas tentativas houve. O detalhe passo a passo vem dos eventos `bootstrap.step_*` da sessão dedicada.",
@@ -3144,6 +3219,185 @@
           }
         ],
         "summary": "Devolve o estado do bootstrap de Gitflow",
+        "tags": [
+          "git"
+        ]
+      }
+    },
+    "/projects/{projectId}/git/bootstrap/plan": {
+      "get": {
+        "description": "`decision: null` com plano presente é o estado em que NADA roda — esperando aprovação ou adoção como está (RN-045).",
+        "operationId": "GitController_plan",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BootstrapPlanEstadoResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Devolve o plano de bootstrap e o que foi decidido sobre ele",
+        "tags": [
+          "git"
+        ]
+      }
+    },
+    "/projects/{projectId}/git/bootstrap/plan/approve": {
+      "post": {
+        "description": "Aprovação é tudo-ou-nada: aprovar passos soltos quebraria a cascata `dev←main, qa←dev, rc←qa`. O que roda é o plano RE-DERIVADO no momento da execução — igual ou menor que o exibido, nunca maior.",
+        "operationId": "GitController_approvePlan",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecideBootstrapPlanDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DecideBootstrapPlanResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto inexistente."
+          },
+          "409": {
+            "description": "O plano foi regerado desde que você o viu, ou já havia sido decidido."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Aprova o plano INTEIRO e roda o bootstrap",
+        "tags": [
+          "git"
+        ]
+      }
+    },
+    "/projects/{projectId}/git/bootstrap/plan/skip": {
+      "post": {
+        "description": "Registra a decisão e não toca no repositório. O plano fica guardado como evidência do que deliberadamente não foi aplicado, e o cursor do bootstrap NÃO é adulterado — nenhum passo rodou.",
+        "operationId": "GitController_skipPlan",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecideBootstrapPlanDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DecideBootstrapPlanResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto inexistente."
+          },
+          "409": {
+            "description": "O plano foi regerado desde que você o viu, ou já havia sido decidido."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Adota o repositório COMO ESTÁ, dispensando o bootstrap",
         "tags": [
           "git"
         ]
@@ -4721,6 +4975,71 @@
         ]
       }
     },
+    "/projects/{projectId}/sessions/{sessionId}/agents/{agentId}/rearm": {
+      "post": {
+        "description": "Zera o contador de tasks blocked consecutivas (RN-047) e devolve o agente a tentar reivindicar. É a única saída de `idle_tripped` — não existe destrave automático.",
+        "operationId": "ExecutionController_rearm",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "agentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto, sessão ou tarefa inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Rearma um dev agent travado pelo circuit breaker",
+        "tags": [
+          "execução"
+        ]
+      }
+    },
     "/projects/{projectId}/sessions/{sessionId}/agents/arquiteto/handoff-infra": {
       "post": {
         "description": "Endpoint dedicado em vez de reaproveitar `readiness`, que é do Criativo: são dois marcos diferentes da sessão e confundi-los tornaria o event log ambíguo.",
@@ -5799,6 +6118,138 @@
         "summary": "Move a sessão para outro estado",
         "tags": [
           "sessões"
+        ]
+      }
+    },
+    "/projects/{projectId}/stories/{storyId}/return": {
+      "post": {
+        "description": "A história sai da fila de propostas e o motivo vira mensagem fixada na sessão do PO — mesmo padrão da devolução de um gate ao dev. Se o PO daquela sessão não estiver mais de pé, a devolução é gravada assim mesmo: a decisão é do usuário e não depende de haver agente ouvindo.",
+        "operationId": "BacklogController_return",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "storyId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReturnStoryDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Devolve ao PO uma história recusada, com o motivo",
+        "tags": [
+          "backlog"
+        ]
+      }
+    },
+    "/projects/{projectId}/stories/promote": {
+      "post": {
+        "description": "O passo humano que o modo `manual` (default desde a Fase 12c) devolve ao usuário: até promover, NENHUMA tarefa da história é pegável por dev agent nenhum. Promover libera o lote de tarefas de uma vez e acorda os agentes idle do módulo (Fase 12b). O lote NÃO é all-or-nothing — o que não passou volta em `failed` com o motivo, e o que passou está promovido.",
+        "operationId": "BacklogController_promote",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PromoteStoriesDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromoteStoriesResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Promove a `ready` as histórias que o PO propôs",
+        "tags": [
+          "backlog"
         ]
       }
     },
@@ -7042,6 +7493,45 @@
           "role"
         ]
       },
+      "AdoptRepositoryDto": {
+        "type": "object",
+        "properties": {
+          "externalId": {
+            "type": "string",
+            "example": "acme/checkout",
+            "description": "Identificador do repositório NO PROVIDER: `owner/repo` no github, `namespace/path` no gitlab, caminho absoluto do bare repo no local. Nada é criado — o repositório precisa já existir e a credencial cadastrada precisa alcançá-lo."
+          }
+        },
+        "required": [
+          "externalId"
+        ]
+      },
+      "AdoptRepositoryResponseDto": {
+        "type": "object",
+        "properties": {
+          "repository": {
+            "$ref": "#/components/schemas/ProvisionedRepositoryResponseDto"
+          },
+          "plan": {
+            "description": "O DRY-RUN: nada foi executado no repositório. Decida por `POST .../bootstrap/plan/approve` ou `.../plan/skip`.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BootstrapPlanResponseDto"
+              }
+            ]
+          },
+          "alreadyAdopted": {
+            "type": "boolean",
+            "example": false,
+            "description": "`true` quando o projeto já tinha adotado ESTE repositório — nada foi criado, o plano só foi regerado sobre o estado atual."
+          }
+        },
+        "required": [
+          "repository",
+          "plan",
+          "alreadyAdopted"
+        ]
+      },
       "AdrRefResponseDto": {
         "type": "object",
         "properties": {
@@ -7640,6 +8130,142 @@
           "diagnosis"
         ]
       },
+      "BootstrapDiagnosticResponseDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "missing_branch",
+              "unprotected_branch",
+              "missing_file",
+              "extra_branch",
+              "capability_unsupported"
+            ],
+            "example": "extra_branch",
+            "description": "`extra_branch` é INFORMATIVO e nunca bloqueia: repositório adotado tem a política que tem, e o bootstrap não a apaga."
+          },
+          "detail": {
+            "type": "object",
+            "example": {
+              "branchName": "develop",
+              "protected": false
+            },
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "kind",
+          "detail"
+        ]
+      },
+      "BootstrapPlanEstadoResponseDto": {
+        "type": "object",
+        "properties": {
+          "plan": {
+            "nullable": true,
+            "description": "`null` quando o projeto não tem repositório adotado.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BootstrapPlanResponseDto"
+              }
+            ]
+          },
+          "decision": {
+            "type": "string",
+            "enum": [
+              "approved",
+              "as_is"
+            ],
+            "example": null,
+            "nullable": true,
+            "description": "`null` = plano gerado e ainda NÃO decidido. É o estado em que nada roda (RN-045)."
+          },
+          "decidedAt": {
+            "type": "object",
+            "example": null,
+            "nullable": true,
+            "format": "date-time"
+          },
+          "decidedBy": {
+            "type": "object",
+            "example": null,
+            "nullable": true
+          }
+        },
+        "required": [
+          "plan",
+          "decision",
+          "decidedAt",
+          "decidedBy"
+        ]
+      },
+      "BootstrapPlanResponseDto": {
+        "type": "object",
+        "properties": {
+          "generatedAt": {
+            "type": "string",
+            "example": "2026-08-01T23:45:00.000Z",
+            "format": "date-time"
+          },
+          "steps": {
+            "description": "O que o bootstrap FARIA. Lista vazia = o repositório já está como o template quer, e não há o que aprovar.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BootstrapPlanStepResponseDto"
+            }
+          },
+          "diagnostics": {
+            "description": "As divergências entre o repositório e o template.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BootstrapDiagnosticResponseDto"
+            }
+          }
+        },
+        "required": [
+          "generatedAt",
+          "steps",
+          "diagnostics"
+        ]
+      },
+      "BootstrapPlanStepResponseDto": {
+        "type": "object",
+        "properties": {
+          "step": {
+            "type": "string",
+            "enum": [
+              "commit_pr_template",
+              "commit_branching_policy",
+              "create_dev_branch",
+              "create_qa_branch",
+              "create_rc_branch",
+              "protect_branches"
+            ],
+            "example": "create_qa_branch"
+          },
+          "actionType": {
+            "type": "string",
+            "example": "git_branch_create",
+            "description": "A mesma taxonomia de `proposed_actions` — cada passo aprovado vira uma ação registrada quando o bootstrap roda."
+          },
+          "payload": {
+            "type": "object",
+            "example": {
+              "branchName": "qa",
+              "fromRef": "dev"
+            },
+            "description": "Os dados da mutação: qual branch, qual arquivo, de onde.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "step",
+          "actionType",
+          "payload"
+        ]
+      },
       "BudgetResponseDto": {
         "type": "object",
         "properties": {
@@ -7944,6 +8570,20 @@
             "example": "checkout",
             "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
             "description": "kebab-case. Único dentro do workspace."
+          },
+          "maxConsecutiveBlocked": {
+            "type": "number",
+            "example": 3,
+            "description": "Circuit breaker (Fase 12b — RN-047): quantas tasks consecutivas terminando blocked param o dev agent do módulo em idle_tripped. Omitido usa o default do domínio (DEFAULT_MAX_CONSECUTIVE_BLOCKED). Vale a partir da PRÓXIMA ativação da execução — não afeta agentes já rodando."
+          },
+          "storyPromotion": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "auto"
+            ],
+            "example": "manual",
+            "description": "Quem promove uma story de `draft` para `ready` (Fase 12c — RN-048). `manual` (default de projeto novo): o PO propõe e VOCÊ decide, na aba Backlog. `auto`: a story completa já nasce `ready`, sem passo humano — era o comportamento até a 12c, e projetos criados antes dela ficaram nele. As validações de domínio (DoD/DoR/RF/regra/módulos) são as MESMAS nos dois modos; o modo muda só quem dispara."
           }
         },
         "required": [
@@ -8071,6 +8711,40 @@
         "required": [
           "name",
           "slug"
+        ]
+      },
+      "DecideBootstrapPlanDto": {
+        "type": "object",
+        "properties": {
+          "planGeneratedAt": {
+            "type": "string",
+            "example": "2026-08-01T23:45:00.000Z",
+            "format": "date-time",
+            "description": "O `generatedAt` do plano que você VIU. Guarda otimista: se o plano tiver sido regerado desde então (readoção, ou o repositório mudou), a decisão é recusada com 409 em vez de aplicar um \"sim\" dado sobre outra coisa."
+          }
+        },
+        "required": [
+          "planGeneratedAt"
+        ]
+      },
+      "DecideBootstrapPlanResponseDto": {
+        "type": "object",
+        "properties": {
+          "repository": {
+            "$ref": "#/components/schemas/ProvisionedRepositoryResponseDto"
+          },
+          "bootstrap": {
+            "description": "Onde o bootstrap ficou. Em `skip` o cursor NÃO avança: nenhum passo rodou, e o registro diz isso.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PassoDeBootstrapResponseDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "repository",
+          "bootstrap"
         ]
       },
       "DelegationResponseDto": {
@@ -9901,6 +10575,21 @@
             "nullable": true,
             "description": "Teto de tokens por task dos dev agents, em micro-USD. `null` usa o padrão do domínio."
           },
+          "maxConsecutiveBlocked": {
+            "type": "object",
+            "example": 3,
+            "nullable": true,
+            "description": "Circuit breaker por dev agent (Fase 12b — RN-047): tasks consecutivas terminando blocked até parar em idle_tripped. `null` usa o padrão do domínio."
+          },
+          "storyPromotion": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "auto"
+            ],
+            "example": "manual",
+            "description": "Quem promove story a `ready` (Fase 12c — RN-048). `manual`: o PO propõe e o usuário decide. `auto`: promoção automática na criação (opt-in; é onde os projetos anteriores à 12c ficaram)."
+          },
           "createdAt": {
             "type": "string",
             "example": "2026-07-21T11:00:00.000Z",
@@ -9919,8 +10608,70 @@
           "slug",
           "createdBy",
           "taskBudgetMicros",
+          "maxConsecutiveBlocked",
+          "storyPromotion",
           "createdAt",
           "updatedAt"
+        ]
+      },
+      "PromocaoRecusadaResponseDto": {
+        "type": "object",
+        "properties": {
+          "storyId": {
+            "type": "string",
+            "example": "01JC2XK9Q7"
+          },
+          "reason": {
+            "type": "string",
+            "example": "História não está pronta: faltam dod, dor",
+            "description": "Motivo legível. A história pode ter perdido a prontidão, ou um módulo dela pode ter saído do `module_map` entre a proposta e a decisão."
+          }
+        },
+        "required": [
+          "storyId",
+          "reason"
+        ]
+      },
+      "PromoteStoriesDto": {
+        "type": "object",
+        "properties": {
+          "storyIds": {
+            "example": [
+              "01JC2XK9Q7",
+              "01JC2XKB4M"
+            ],
+            "description": "Ids das histórias a promover para `ready`. Uma só é um lote de 1. Cada história é validada e promovida por conta própria — uma que falhe não impede as outras.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "storyIds"
+        ]
+      },
+      "PromoteStoriesResponseDto": {
+        "type": "object",
+        "properties": {
+          "promoted": {
+            "description": "Ids que foram para `ready`, com as tasks já pegáveis.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "failed": {
+            "description": "Vazio quando o lote inteiro passou.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PromocaoRecusadaResponseDto"
+            }
+          }
+        },
+        "required": [
+          "promoted",
+          "failed"
         ]
       },
       "ProposeActionDto": {
@@ -10257,6 +11008,15 @@
             ],
             "example": "private"
           },
+          "origin": {
+            "type": "string",
+            "enum": [
+              "created",
+              "adopted"
+            ],
+            "example": "created",
+            "description": "`created` = o Brabo criou o repositório; `adopted` = apontou para um que já existia. Imutável depois de gravado (RN-046)."
+          },
           "provisionedBy": {
             "type": "string",
             "example": "01JC4Z0000USUARIO0000000001"
@@ -10280,6 +11040,7 @@
           "url",
           "defaultBranch",
           "visibility",
+          "origin",
           "provisionedBy",
           "createdAt",
           "updatedAt"
@@ -10774,12 +11535,13 @@
             "type": "string",
             "enum": [
               "provisioning",
-              "ready",
-              "failed"
+              "provisioned",
+              "provision_failed",
+              "awaiting_plan_decision"
             ],
             "example": "provisioning",
             "nullable": true,
-            "description": "`null` quando nunca houve provisionamento neste projeto."
+            "description": "`null` quando nunca houve provisionamento neste projeto. `awaiting_plan_decision` é repositório ADOTADO com plano gerado e ainda não decidido: nada roda até alguém aprovar o plano ou adotar como está."
           },
           "sessionId": {
             "type": "object",
@@ -10970,6 +11732,19 @@
           "descobertos",
           "reencontrados",
           "indisponibilizados"
+        ]
+      },
+      "ReturnStoryDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "example": "Os critérios de aceite não cobrem o caso de recusa do pagamento.",
+            "description": "O motivo é OBRIGATÓRIO: ele vira mensagem fixada na sessão do PO, e uma devolução sem motivo devolve trabalho sem informação."
+          }
+        },
+        "required": [
+          "reason"
         ]
       },
       "RollbackResponseDto": {
@@ -11503,6 +12278,23 @@
             ],
             "example": "ready"
           },
+          "proposedReady": {
+            "type": "boolean",
+            "example": true,
+            "description": "O PO terminou a história e ela aguarda a decisão do usuário (Fase 12c — RN-048). Convive com `status: \"draft\"`: é uma proposta, não um estado. Sempre `false` em projeto no modo `auto`."
+          },
+          "returnedReason": {
+            "type": "object",
+            "example": "DoD genérico demais — detalhe o critério de aceite.",
+            "nullable": true,
+            "description": "Por que o usuário devolveu a história ao PO. `null` quando nunca foi devolvida."
+          },
+          "returnedAt": {
+            "type": "object",
+            "example": "2026-08-02T14:00:00.000Z",
+            "format": "date-time",
+            "nullable": true
+          },
           "createdAt": {
             "type": "string",
             "example": "2026-07-25T09:00:00.000Z",
@@ -11534,6 +12326,9 @@
           "dor",
           "moduleIds",
           "status",
+          "proposedReady",
+          "returnedReason",
+          "returnedAt",
           "createdAt",
           "updatedAt",
           "tasks"
@@ -11636,6 +12431,23 @@
             ],
             "example": "ready"
           },
+          "proposedReady": {
+            "type": "boolean",
+            "example": true,
+            "description": "O PO terminou a história e ela aguarda a decisão do usuário (Fase 12c — RN-048). Convive com `status: \"draft\"`: é uma proposta, não um estado. Sempre `false` em projeto no modo `auto`."
+          },
+          "returnedReason": {
+            "type": "object",
+            "example": "DoD genérico demais — detalhe o critério de aceite.",
+            "nullable": true,
+            "description": "Por que o usuário devolveu a história ao PO. `null` quando nunca foi devolvida."
+          },
+          "returnedAt": {
+            "type": "object",
+            "example": "2026-08-02T14:00:00.000Z",
+            "format": "date-time",
+            "nullable": true
+          },
           "createdAt": {
             "type": "string",
             "example": "2026-07-25T09:00:00.000Z",
@@ -11661,6 +12473,9 @@
           "dor",
           "moduleIds",
           "status",
+          "proposedReady",
+          "returnedReason",
+          "returnedAt",
           "createdAt",
           "updatedAt"
         ]
@@ -11919,6 +12734,20 @@
             "example": "checkout",
             "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
             "description": "kebab-case. Único dentro do workspace."
+          },
+          "maxConsecutiveBlocked": {
+            "type": "number",
+            "example": 3,
+            "description": "Circuit breaker (Fase 12b — RN-047): quantas tasks consecutivas terminando blocked param o dev agent do módulo em idle_tripped. Omitido usa o default do domínio (DEFAULT_MAX_CONSECUTIVE_BLOCKED). Vale a partir da PRÓXIMA ativação da execução — não afeta agentes já rodando."
+          },
+          "storyPromotion": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "auto"
+            ],
+            "example": "manual",
+            "description": "Quem promove uma story de `draft` para `ready` (Fase 12c — RN-048). `manual` (default de projeto novo): o PO propõe e VOCÊ decide, na aba Backlog. `auto`: a story completa já nasce `ready`, sem passo humano — era o comportamento até a 12c, e projetos criados antes dela ficaram nele. As validações de domínio (DoD/DoR/RF/regra/módulos) são as MESMAS nos dois modos; o modo muda só quem dispara."
           }
         }
       },

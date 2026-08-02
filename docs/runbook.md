@@ -69,6 +69,20 @@ decisão 10). O bootstrap roda o seed, que cria `owner@brabo.dev` já verificado
 com a senha de `BRABO_SMOKE_PASSWORD` (default `brabo12345678`) — é com ela
 que se entra no login próprio da web.
 
+O seed roda **depois** dos rollouts (o último passo dele ativa uma sessão, o
+que faz a api chamar o engine) e o bootstrap só segue adiante depois de
+**verificar que o login responde 200**. Essa checagem é de resultado, não de
+processo, e existe porque a anterior não era: `wait --for=condition=Ready=false`
+é satisfeito por um pod que nunca chegou a rodar, e por isso o bootstrap
+anunciava "usuário do smoke pronto" enquanto o login devolvia 401.
+
+> **O seed não é idempotente.** `createWorkspace` não faz upsert, então numa
+> segunda execução (`BRABO_KEEP_CLUSTER=1`) o pod termina em erro por
+> `workspaces_slug_unique` — e está certo assim: o usuário já existe desde a
+> primeira vez, o login é verificado do mesmo jeito, e o pod é removido ao
+> final para não reprovar o passo 1 do `smoke.sh`, que exige todos os pods
+> saudáveis.
+
 > **Isto ocupa as portas do `pnpm dev`.** Manter as portas iguais é o que faz o
 > `smoke.sh` valer nos dois modos, e o preço é que eles não
 > coexistem: com o cluster de pé, o `pnpm dev` não publica a porta do `api` e a

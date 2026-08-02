@@ -11,11 +11,65 @@ defmodule Engine.Dev.DevAgentServer do
   estourado, ou o modelo parar sem sinalizar) devolve a task com diagnóstico
   (`blocked`), nunca abre PR vermelha nem entra em loop infinito. Estado
   durável em `dev_agent_states` (rehydration no boot).
+
+  ## Máquina de estados (Fase 12b — reagendamento após gate)
+
+  `status`: `:working | :awaiting_approval | :awaiting_gate | :idle |
+  :idle_tripped`, persistido em `dev_agent_states.status`.
+
+  `:awaiting_approval` entrou na Fase 12e. O agente propõe commit, push e PR e
+  LÊ o status de cada uma: se alguma ficou `pending` (autonomia do dev em
+  `require_approval`), **o gate não é aberto** — sem PR não há o que julgar. O
+  defeito que isso corrige era silencioso e caro: o gate abria assim mesmo, o
+  QA varria o WORKTREE (onde os arquivos estão), aprovava, e a task fechava
+  sem uma linha commitada. Quem solta o agente é `task.pr_settled`, emitido
+  pela api quando o `pr_open` tem desfecho — executado, negado ou falho.
+
+  PR aberta não libera o agente — ele entra em `:awaiting_gate` e MANTÉM
+  `task_id`/`worktree`/`branch`: o worktree é um por AGENTE (não por task,
+  ver `WorktreeManager`), e os gates de QA/SecOps o encontram via
+  `DevAgentState.find_by_task_id/2`. Reivindicar a próxima task nesse
+  meio-tempo destruiria fisicamente o worktree que o gate ainda está
+  varrendo. Só um desfecho TERMINAL do gate (`task.gate_resolved` via
+  outbox — ver `Engine.Workers.DevAgentWakeWorker`) libera o agente pra
+  tentar a próxima task, através de `finish_task/2`.
+
+  Task que termina `blocked` — localmente (no ToolLoop) ou REMOTAMENTE (teto
+  de correções do gate estourado, via `task.gate_resolved`) — passa por
+  `finish_task/2`, que incrementa `consecutive_blocked`; N consecutivas
+  (teto por projeto, `max_consecutive_blocked`) para o agente em
+  `:idle_tripped` — o circuit breaker da RN-047. Um sucesso terminal
+  (`:approved`, via `task.gate_resolved` com `nextAction: "done"`) zera o
+  contador e tenta a próxima task.
+
+  Dois `handle_info/2` recebem os wakes entregues por `Engine.Dev.Wake`
+  (PubSub, não Registry — o job que os dispara pode rodar em qualquer
+  réplica): `{:gate_resolved, %{task_id:, next_action:}}` só age se
+  `task_id` bater E o agente estiver `:awaiting_gate` — entrega
+  duplicada/tardia é no-op; `{:wake, :became_claimable}` só age se `:idle`.
+
+  ## Reidratação (Fase 12b-6)
+
+  `Engine.Dev.DevRehydrator` passa um `resume` (a linha durável, ou `nil`
+  num start fresco) como último elemento do tuple de `init/1`. Os quatro
+  estados voltam assim:
+
+  - `idle`/`idle_tripped` — campos zerados/preservados como estavam, sem
+    claim. `idle_tripped` ignora wake até um rearm explícito.
+  - `awaiting_gate` — `task_id`/`worktree` voltam intactos (`branch` não é
+    persistido; reconstruído do `task_id`, igual a `run_task/2`), sem
+    claim — a linha de outbox pendente (ou uma escrita depois do
+    restart) drena e acorda, exatamente como um wake normal.
+  - `working` — o ToolLoop não existe mais pra retomar (turno, mensagens e
+    edições do worktree só existiam em memória). Bloqueia a task retida
+    com diagnóstico do restart e segue pro próximo claim — SEM incrementar
+    `consecutive_blocked` (reiniciar o engine não é o agente queimando o
+    teto).
   """
 
   use GenServer, restart: :temporary
 
-  alias Engine.Dev.{AgentIo, ContextBuilder, Tools}
+  alias Engine.Dev.{AgentIo, ContextBuilder, Tools, Wake}
   alias Engine.Dev.Hooks.Termination
   alias Engine.Gates.Dispatcher
   alias Engine.Harness.ToolLoop
@@ -27,12 +81,19 @@ defmodule Engine.Dev.DevAgentServer do
   # certo a partir dela (ver Engine.Dev.DevRehydrator).
   @impl_tag "real"
 
+  # Usado só quando `max_consecutive_blocked` não veio configurado (projeto
+  # ainda não migrou pra Fase 12b, ou início de ciclo antes da 12b-4 ligar a
+  # superfície de config) — nunca deixa o breaker inoperante por ausência de
+  # valor.
+
   def start_link(
-        {project_id, agent_id, module, session_id, task_budget_micros, max_gate_corrections}
+        {project_id, agent_id, module, session_id, task_budget_micros, max_gate_corrections,
+         max_consecutive_blocked, resume}
       ) do
     GenServer.start_link(
       __MODULE__,
-      {project_id, agent_id, module, session_id, task_budget_micros, max_gate_corrections},
+      {project_id, agent_id, module, session_id, task_budget_micros, max_gate_corrections,
+       max_consecutive_blocked, resume},
       name: via(project_id, agent_id)
     )
   end
@@ -53,54 +114,182 @@ defmodule Engine.Dev.DevAgentServer do
   # --- Callbacks ---
 
   @impl true
-  def init({project_id, agent_id, module, session_id, task_budget_micros, max_gate_corrections}) do
-    state = %{
+  def init(
+        {project_id, agent_id, module, session_id, task_budget_micros, max_gate_corrections,
+         max_consecutive_blocked, resume}
+      ) do
+    base = %{
       project_id: project_id,
       agent_id: agent_id,
       module: module,
       session_id: session_id,
-      task_id: nil,
-      worktree: nil,
-      branch: nil,
       impl: @impl_tag,
       task_budget_micros: task_budget_micros,
-      max_gate_corrections: max_gate_corrections
+      max_gate_corrections: max_gate_corrections,
+      max_consecutive_blocked: max_consecutive_blocked
     }
 
+    state = AgentIo.resume_state(base, resume)
     AgentIo.persist(state)
+    :ok = Wake.subscribe(project_id, agent_id)
 
-    {:ok, state}
+    # A recuperação de um `working` interrompido sai do `init/1` por
+    # `{:continue, ...}` — ela BLOQUEIA (block_task + claim, que pode rodar um
+    # ToolLoop inteiro), e `start_link`/`start_child` esperam `:infinity`.
+    # Fazendo isso dentro do `init/1`, o `DevRehydrator` (que roda na árvore
+    # de supervisão da aplicação) segurava o BOOT pela duração de uma task de
+    # LLM, `Readiness.mark(:dev_agents)` nunca disparava (o `/ready` ficava
+    # 503 e o Kubernetes matava o pod), e qualquer exceção derrubava a
+    # reidratação de TODOS os outros agentes. Com `handle_continue` o `init`
+    # volta a ser instantâneo e a recuperação acontece já supervisionada.
+    if resume && resume.status == "working" do
+      {:ok, state, {:continue, :restart_recovery}}
+    else
+      {:ok, state}
+    end
+  end
+
+  @impl true
+  def handle_continue(:restart_recovery, state) do
+    {:noreply,
+     state
+     |> AgentIo.block_task(
+       "engine reiniciou durante a task",
+       "o ToolLoop não pôde ser retomado após o restart — turno, mensagens " <>
+         "e edições do worktree só existiam em memória"
+     )
+     |> finish_restart_recovery()}
+  end
+
+  # Fecha o `working` reidratado: task já bloqueada por `AgentIo.block_task`
+  # acima, e SEM passar por `finish_task/2` — reiniciar o engine não é o
+  # agente queimando o teto, não pode contar pro circuit breaker.
+  defp finish_restart_recovery(state) do
+    state
+    |> Map.merge(%{task_id: nil, worktree: nil, branch: nil})
+    |> try_claim()
   end
 
   @impl true
   def handle_cast(:work, state) do
     AgentIo.emit(state, "dev.started", %{agentId: state.agent_id, module: state.module})
-
-    case AgentIo.claim_task(state) do
-      {:ok, nil} ->
-        AgentIo.emit(state, "dev.idle", %{agentId: state.agent_id, reason: "sem task pegável"})
-        {:noreply, state}
-
-      {:ok, task} ->
-        {:noreply, run_task(state, task)}
-
-      {:error, reason} ->
-        AgentIo.emit(state, "dev.error", %{agentId: state.agent_id, reason: inspect(reason)})
-        {:noreply, state}
-    end
+    {:noreply, try_claim(state)}
   end
 
+  # Guard de estado (D4): correção só faz sentido para quem está ESPERANDO um
+  # gate. `DevAgentServer.correct/3` é um cast puro, disparado pelos gates —
+  # uma entrega tardia (o agente já seguiu para outra task) rodaria a correção
+  # do gate ANTIGO contra o `task_id` ATUAL, corrompendo o trabalho em curso.
   @impl true
-  def handle_cast({:correct, findings}, state) do
+  def handle_cast({:correct, findings}, %{status: :awaiting_gate} = state) do
+    state = %{state | status: :working}
+    AgentIo.persist(state)
+
     case ContextBuilder.fetch(state.project_id, state.session_id, state.task_id, state.module) do
       {:ok, dev_context} ->
         {:noreply, implement_correction(state, dev_context, findings)}
 
       {:error, reason} ->
+        # DESFECHO TERMINAL, não só um log. Antes o agente voltava com
+        # `status: :working` e `task_id` setado, e daí nenhum dos três
+        # `handle_info/2` agia nunca mais — travado por uma falha
+        # transitória de leitura de contexto.
         AgentIo.emit(state, "dev.error", %{agentId: state.agent_id, reason: inspect(reason)})
-        {:noreply, state}
+
+        {:noreply,
+         state
+         |> AgentIo.block_task(
+           "falha ao montar contexto da correção",
+           inspect(reason)
+         )
+         |> finish_task(:blocked)}
     end
   end
+
+  def handle_cast({:correct, _findings}, state), do: {:noreply, state}
+
+  # Chegou pelo `Engine.Dev.Wake` (outbox → DevAgentWakeWorker). Guard de
+  # identidade: só age se for a MESMA task que este agente está esperando, E
+  # se ele ainda estiver esperando — entrega duplicada (retry do Oban, drain
+  # concorrente) ou tardia (agente já reagendado por outro caminho) vira
+  # no-op, nunca um segundo `finish_task/2` pra task que já foi embora.
+  @impl true
+  def handle_info(
+        {:gate_resolved, %{task_id: task_id, next_action: next_action}},
+        %{task_id: task_id, status: :awaiting_gate} = state
+      ) do
+    outcome = if next_action == "done", do: :approved, else: :blocked
+    {:noreply, finish_task(state, outcome)}
+  end
+
+  def handle_info({:gate_resolved, _}, state), do: {:noreply, state}
+
+  # Só age se estiver livre (`:idle`) — em `:working`/`:awaiting_gate` a fila
+  # já está sendo atendida ou o agente está no meio de outra coisa;
+  # `:idle_tripped` ignora até rearmar.
+  @impl true
+  # Desfecho do `pr_open` que estava pendente de aprovação (Fase 12e).
+  # `opened: true` — a PR existe agora; abre o gate, tarde mas correto.
+  def handle_info(
+        {:pr_settled, %{task_id: task_id, opened: true}},
+        %{task_id: task_id, status: :awaiting_approval} = state
+      ) do
+    {:noreply, abrir_gate(state)}
+  end
+
+  # `opened: false` — o usuário negou, ou a abertura falhou. A task volta com
+  # diagnóstico em vez de o agente esperar para sempre por um gate que ninguém
+  # vai abrir. NÃO conta pro circuit breaker: a decisão foi do usuário, não o
+  # agente queimando o teto (mesmo princípio da recuperação de restart).
+  def handle_info(
+        {:pr_settled, %{task_id: task_id, opened: false}},
+        %{task_id: task_id, status: :awaiting_approval} = state
+      ) do
+    state =
+      AgentIo.block_task(
+        state,
+        "a PR não foi aberta",
+        "as ações git da task não foram aprovadas — o trabalho ficou no worktree e o gate nunca abriu"
+      )
+
+    {:noreply,
+     state
+     |> Map.merge(%{task_id: nil, worktree: nil, branch: nil})
+     |> try_claim()}
+  end
+
+  def handle_info({:pr_settled, _}, state), do: {:noreply, state}
+
+  def handle_info({:wake, :became_claimable}, %{status: :idle} = state) do
+    {:noreply, try_claim(state)}
+  end
+
+  def handle_info({:wake, :became_claimable}, state), do: {:noreply, state}
+
+  # A ÚNICA saída de `idle_tripped` (Fase 12b — RN-047): zera o contador e
+  # tenta reivindicar. O registro de QUEM rearmou é da api (`dev.rearmed`,
+  # `actor: user`, em `RearmDevAgentUseCase`) — emitir aqui de novo seria o
+  # MESMO evento contado duas vezes, uma por ator diferente, na mesma sessão.
+  @impl true
+  def handle_info(:rearm, %{status: :idle_tripped} = state) do
+    state = %{state | consecutive_blocked: 0}
+    AgentIo.persist(state)
+    {:noreply, try_claim(state)}
+  end
+
+  def handle_info(:rearm, state), do: {:noreply, state}
+
+  # --- Máquina de estados (Fase 12b) ---
+  #
+  # A lógica vive em `AgentIo.try_claim/2` e `AgentIo.finish_task/3`, junto do
+  # resto do que os dois dev agents compartilham: a 12b nasceu só aqui, e o
+  # `NoopDevAgentServer` ficou processando UMA task e parando — o achado #10
+  # vivo dentro do único veículo de validação sem LLM. Estes dois wrappers
+  # existem só para amarrar o `run_task/2` deste agente.
+
+  defp try_claim(state), do: AgentIo.try_claim(state, &run_task/2)
+
+  defp finish_task(state, desfecho), do: AgentIo.finish_task(state, desfecho, &run_task/2)
 
   # --- Ciclo do DevAgent ---
 
@@ -133,12 +322,17 @@ defmodule Engine.Dev.DevAgentServer do
             implement(state, dev_context)
 
           {:error, reason} ->
-            AgentIo.block_task(state, "falha ao montar contexto da task", inspect(reason))
+            state
+            |> AgentIo.block_task("falha ao montar contexto da task", inspect(reason))
+            |> finish_task(:blocked)
         end
 
       {:error, reason} ->
         AgentIo.emit(state, "dev.error", %{agentId: state.agent_id, reason: inspect(reason)})
-        AgentIo.block_task(state, "falha ao preparar o worktree", inspect(reason))
+
+        state
+        |> AgentIo.block_task("falha ao preparar o worktree", inspect(reason))
+        |> finish_task(:blocked)
     end
   end
 
@@ -263,6 +457,16 @@ defmodule Engine.Dev.DevAgentServer do
     AgentIo.propose_commit(state, summary)
     AgentIo.propose_push(state)
     trigger_gate_recheck(state, findings.gate)
+
+    state = %{state | status: :awaiting_gate}
+    AgentIo.persist(state)
+
+    AgentIo.emit(state, "dev.awaiting_gate", %{
+      agentId: state.agent_id,
+      taskId: state.task_id,
+      gate: findings.gate
+    })
+
     state
   end
 
@@ -271,31 +475,33 @@ defmodule Engine.Dev.DevAgentServer do
          state,
          _findings
        ) do
-    AgentIo.block_task(state, reason, diagnosis)
+    state
+    |> AgentIo.block_task(reason, diagnosis)
+    |> finish_task(:blocked)
   end
 
   defp handle_correction_outcome({:limit_reached, ctx}, state, _findings) do
-    AgentIo.block_task(
-      state,
-      "limite de iterações atingido (correção)",
-      last_terminal_output(ctx)
-    )
+    state
+    |> AgentIo.block_task("limite de iterações atingido (correção)", last_terminal_output(ctx))
+    |> finish_task(:blocked)
   end
 
   defp handle_correction_outcome({:budget_exceeded, ctx}, state, _findings) do
-    AgentIo.block_task(
-      state,
+    state
+    |> AgentIo.block_task(
       "orçamento de tokens excedido (correção)",
       "gasto: #{ctx.tokens_spent_micros} micro-USD (teto: #{ctx.token_budget_micros})"
     )
+    |> finish_task(:blocked)
   end
 
   defp handle_correction_outcome({:ok, ctx}, state, _findings) do
-    AgentIo.block_task(
-      state,
+    state
+    |> AgentIo.block_task(
       "parou sem concluir nem reportar bloqueio (correção)",
       stop_diagnosis(ctx)
     )
+    |> finish_task(:blocked)
   end
 
   defp trigger_gate_recheck(state, "qa"),
@@ -305,9 +511,11 @@ defmodule Engine.Dev.DevAgentServer do
     do: :ok = Dispatcher.run_secops(state.project_id, state.task_id)
 
   defp handle_outcome({:halted, {"report_done", %{summary: summary}}, _ctx}, state, task, story) do
-    AgentIo.propose_commit(state, summary)
-    AgentIo.propose_push(state)
-    propose_pr(state, task, story)
+    desfechos = [
+      AgentIo.propose_commit(state, summary),
+      AgentIo.propose_push(state),
+      propose_pr(state, task, story)
+    ]
 
     _ =
       EngineApiClient.mark_task(
@@ -318,12 +526,11 @@ defmodule Engine.Dev.DevAgentServer do
         state.agent_id
       )
 
-    _ =
-      EngineApiClient.open_gate(state.project_id, state.session_id, state.task_id, state.agent_id)
-
-    :ok = Dispatcher.run_qa(state.project_id, state.task_id)
-
-    state
+    if Enum.all?(desfechos, &(&1 == :executed)) do
+      abrir_gate(state)
+    else
+      aguardar_aprovacao(state, desfechos)
+    end
   end
 
   defp handle_outcome(
@@ -332,23 +539,74 @@ defmodule Engine.Dev.DevAgentServer do
          _task,
          _story
        ) do
-    AgentIo.block_task(state, reason, diagnosis)
+    state
+    |> AgentIo.block_task(reason, diagnosis)
+    |> finish_task(:blocked)
   end
 
   defp handle_outcome({:limit_reached, ctx}, state, _task, _story) do
-    AgentIo.block_task(state, "limite de iterações atingido", last_terminal_output(ctx))
+    state
+    |> AgentIo.block_task("limite de iterações atingido", last_terminal_output(ctx))
+    |> finish_task(:blocked)
   end
 
   defp handle_outcome({:budget_exceeded, ctx}, state, _task, _story) do
-    AgentIo.block_task(
-      state,
+    state
+    |> AgentIo.block_task(
       "orçamento de tokens excedido",
       "gasto: #{ctx.tokens_spent_micros} micro-USD (teto: #{ctx.token_budget_micros})"
     )
+    |> finish_task(:blocked)
   end
 
   defp handle_outcome({:ok, ctx}, state, _task, _story) do
-    AgentIo.block_task(state, "parou sem concluir nem reportar bloqueio", stop_diagnosis(ctx))
+    state
+    |> AgentIo.block_task("parou sem concluir nem reportar bloqueio", stop_diagnosis(ctx))
+    |> finish_task(:blocked)
+  end
+
+  # Caminho normal (autonomia `auto_approve`, o default da ativação): a PR
+  # existe, o gate pode julgar.
+  defp abrir_gate(state) do
+    _ =
+      EngineApiClient.open_gate(state.project_id, state.session_id, state.task_id, state.agent_id)
+
+    :ok = Dispatcher.run_qa(state.project_id, state.task_id)
+
+    # Fase 12b: PR aberta não libera o agente — o worktree é por AGENTE, não
+    # por task (ver moduledoc), e o gate ainda vai varrê-lo. Só um desfecho
+    # TERMINAL do gate (via `task.gate_resolved`) chama `finish_task/2`.
+    state = %{state | status: :awaiting_gate}
+    AgentIo.persist(state)
+
+    AgentIo.emit(state, "dev.awaiting_gate", %{
+      agentId: state.agent_id,
+      taskId: state.task_id,
+      gate: "qa"
+    })
+
+    state
+  end
+
+  # Alguma das três ações git ficou pendente de aprovação (autonomia do dev em
+  # `require_approval`). O gate NÃO abre: sem PR não há o que julgar, e abrir
+  # aqui era o defeito — o QA varria o worktree, aprovava, e a task fechava
+  # sem uma linha commitada (Fase 12e).
+  #
+  # O agente fica retendo o worktree, exatamente como em `awaiting_gate`. Quem
+  # o solta é `task.pr_settled`, emitido pela api quando o `pr_open` tem
+  # desfecho — aprovado e executado, negado, ou falho.
+  defp aguardar_aprovacao(state, desfechos) do
+    state = %{state | status: :awaiting_approval}
+    AgentIo.persist(state)
+
+    AgentIo.emit(state, "dev.awaiting_approval", %{
+      agentId: state.agent_id,
+      taskId: state.task_id,
+      pendentes: Enum.count(desfechos, &(&1 == :pending))
+    })
+
+    state
   end
 
   # Distingue falha de provider (timeout, 5xx) de "o modelo simplesmente parou".

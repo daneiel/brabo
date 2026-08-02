@@ -38,6 +38,7 @@ defmodule EngineWeb.Router do
     post "/sessions/:sessionId/agent/start", AgentCommandController, :start
     post "/sessions/:sessionId/agent/message", AgentCommandController, :message
     post "/sessions/:sessionId/agent/readiness", AgentCommandController, :readiness
+    post "/sessions/:sessionId/agent/revise", AgentCommandController, :revise
 
     post "/sessions/:sessionId/agent/offer-infra-handoff",
          AgentCommandController,
@@ -45,6 +46,10 @@ defmodule EngineWeb.Router do
 
     post "/sessions/:sessionId/execution/start", ExecutionCommandController, :start
     post "/sessions/:sessionId/execution/parallelize", ExecutionCommandController, :parallelize
+
+    post "/sessions/:sessionId/dev-agents/:agentId/rearm",
+         ExecutionCommandController,
+         :rearm
 
     post "/sessions/:sessionId/psychologist/reanalyze",
          PsychologistCommandController,

@@ -150,6 +150,43 @@ diferente de um que fez tudo, e um que rodou sem proteção de branch é diferen
 dos dois. Colapsar os três em "ok" perderia exatamente a informação que alguém
 vai querer depois.
 
+## Adotar um repositório existente (Fase 12a)
+
+Um projeto pode apontar para um repositório que **já existe**, em vez de criar
+um. `project_repositories.origin` diz qual dos dois foi
+([RN-046](../business-rules.md#rn-046)).
+
+A adoção usa **só o que o contrato já tinha**: `getRepo` valida o acesso —
+existia desde a Fase 2 e nenhum caso de uso o chamava —, e o diagnóstico usa
+`listBranches` e `getFileContent`. **Nenhum método novo entrou no contrato, e a
+suite de contrato ficou intocada.**
+
+O bootstrap NÃO roda na adoção. O que sai é um **plano**: a lista serializada
+do que ele faria, obtida chamando o `check()` de cada passo — o mesmo que dá
+idempotência — sem executar nada. O usuário então aprova o plano inteiro, ou
+adota como está e dispensa o bootstrap
+([RN-045](../business-rules.md#rn-045)).
+
+| evento | significa |
+|---|---|
+| `bootstrap.repository_adopted` | o repositório passou a ser o do projeto; nada foi alterado nele |
+| `bootstrap.plan_approved` | o usuário aprovou — **é só daqui que o bootstrap roda num repo adotado** |
+| `bootstrap.adopted_as_is` | o usuário dispensou o bootstrap; o plano fica guardado como evidência do que não foi aplicado |
+
+**Proteção divergente é presença × ausência, e só.** O contrato expõe
+`GitBranch.protected` como booleano, e o
+[ADR 0028](../adr/0028-protecao-de-branch-divergencia-entre-providers.md) adiou
+um `ProtectionPolicy` normalizado — então o plano sabe dizer "`qa` está sem
+proteção → aplicaria" e "`main` já está protegida → não toca", mas não sabe
+dizer que a proteção existente exige dois revisores e a nossa exigiria um. Uma
+branch com proteção PARCIAL conta como desprotegida, e pode ser sobrescrita —
+sempre dentro de um plano aprovado.
+
+Branch que o template não conhece (`develop`, `release/*`) vira **diagnóstico
+informativo** e nunca é tocada: repositório adotado tem a política que tem.
+
+Decisão em [ADR 0044](../adr/0044-adocao-de-repositorio-existente.md).
+
 ## Credenciais
 
 Tokens de git são segredos do usuário: cifrados com envelope encryption, DEK

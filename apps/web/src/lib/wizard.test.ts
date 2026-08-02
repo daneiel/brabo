@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   canAdvanceFromCredential,
+  canAdvanceFromDetails,
+  canAdvanceFromMode,
   providerNeedsCredential,
   slugify,
 } from './wizard';
@@ -35,5 +37,36 @@ describe('slugify', () => {
   it('normaliza nome pra kebab-case sem acento', () => {
     expect(slugify('Loja Online')).toBe('loja-online');
     expect(slugify('  Coração  ')).toBe('coracao');
+  });
+});
+
+describe('canAdvanceFromMode', () => {
+  it('sem modo escolhido não avança — nenhuma das duas opções é o default', () => {
+    expect(canAdvanceFromMode(undefined)).toBe(false);
+  });
+
+  it('qualquer um dos dois modos avança', () => {
+    expect(canAdvanceFromMode('create')).toBe(true);
+    expect(canAdvanceFromMode('adopt')).toBe(true);
+  });
+});
+
+describe('canAdvanceFromDetails', () => {
+  it('criar exige nome; o identificador é irrelevante', () => {
+    expect(
+      canAdvanceFromDetails('create', { name: 'checkout', externalId: '' }),
+    ).toBe(true);
+    expect(
+      canAdvanceFromDetails('create', { name: '  ', externalId: 'acme/x' }),
+    ).toBe(false);
+  });
+
+  it('adotar exige o identificador; o nome vem do provider', () => {
+    expect(
+      canAdvanceFromDetails('adopt', { name: '', externalId: 'acme/checkout' }),
+    ).toBe(true);
+    expect(
+      canAdvanceFromDetails('adopt', { name: 'checkout', externalId: '  ' }),
+    ).toBe(false);
   });
 });

@@ -119,6 +119,46 @@ defmodule Engine.Agents.PoServerTest do
     assert_received %Phoenix.Socket.Broadcast{event: "agent.done"}
   end
 
+  describe "revise/2 — devolução de história recusada (Fase 12c, RN-048)" do
+    test "injeta a recusa como mensagem FIXADA e roda um turno", %{state: state} do
+      Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("vou revisar")])
+
+      assert {:reply, :ok, new_state} =
+               PoServer.handle_call(
+                 {:revise,
+                  %{
+                    "id" => "story-1",
+                    "title" => "Cadastro",
+                    "reason" => "Falta o caso de recusa do pagamento"
+                  }},
+                 self(),
+                 state
+               )
+
+      devolucao =
+        Enum.find(new_state.messages, fn m ->
+          m["role"] == "user" and String.contains?(m["content"], "RECUSOU promover")
+        end)
+
+      assert devolucao, "a devolução tem que entrar no histórico como mensagem do usuário"
+
+      # Fixada: se a compactação a engolisse, o PO reproporia a mesma história
+      # com o mesmo defeito.
+      assert devolucao[:pinned] == true
+
+      assert String.contains?(devolucao["content"], "Cadastro")
+      assert String.contains?(devolucao["content"], "Falta o caso de recusa do pagamento")
+      # A frase de precedência (lição do ADR 0020).
+      assert String.contains?(devolucao["content"], "PREVALECE")
+      # O modelo precisa saber o que PODE fazer: não existe editar história.
+      assert String.contains?(devolucao["content"], "create_story")
+    end
+
+    test "vivo?/1 é falso quando não há PO registrado para a sessão" do
+      refute PoServer.vivo?(Ecto.UUID.generate())
+    end
+  end
+
   test "rehydration: reconstrói o histórico do event log no init", %{} do
     Process.put(:fake_events, [
       %{"type" => "chat.message", "payload" => %{"text" => "quero um app"}},

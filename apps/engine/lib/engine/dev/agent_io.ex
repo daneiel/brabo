@@ -12,8 +12,9 @@ defmodule Engine.Dev.AgentIo do
 
   Todas as funções recebem o `state` do GenServer, que precisa ter as chaves
   `:project_id`, `:agent_id`, `:module`, `:session_id`, `:task_id`,
-  `:worktree`, `:branch`, `:impl`, `:task_budget_micros` e
-  `:max_gate_corrections`.
+  `:worktree`, `:branch`, `:impl`, `:task_budget_micros`,
+  `:max_gate_corrections`, `:status` e `:consecutive_blocked`/
+  `:max_consecutive_blocked` (Fase 12b — circuit breaker por agente).
   """
 
   alias Engine.Dev.DevAgentState
@@ -37,6 +38,145 @@ defmodule Engine.Dev.AgentIo do
       state.agent_id
     )
   end
+
+  @doc """
+  Monta o state inicial a partir da linha durável (`nil` = start fresco).
+
+  Compartilhado pelos dois agentes desde a Fase 12d: o modo (`impl`) volta da
+  linha, então uma reidratação que divergisse entre Noop e real produziria dois
+  agentes com semânticas diferentes para a MESMA linha de `dev_agent_states`.
+  """
+  # Start fresco: sempre idle, sem task — igual a antes da Fase 12b-6.
+  def resume_state(base, nil) do
+    Map.merge(base, %{
+      task_id: nil,
+      worktree: nil,
+      branch: nil,
+      status: :idle,
+      consecutive_blocked: 0
+    })
+  end
+
+  # `awaiting_gate`, `awaiting_approval` e `working` retêm task_id/worktree — o worktree
+  # reidratado ainda está no disco (não foi apagado; só seria substituído
+  # por um `add_worktree/3` futuro), e um gate tardio ainda o encontra via
+  # `find_by_task_id/2`. `branch` não é persistido (nunca foi — só
+  # task_id/worktree_path), reconstruído do mesmo jeito que `run_task/2` o
+  # monta originalmente.
+  def resume_state(base, %{status: status} = row)
+      when status in ["awaiting_gate", "awaiting_approval", "working"] do
+    Map.merge(base, %{
+      task_id: row.task_id,
+      worktree: row.worktree_path,
+      branch: "feature/task-" <> String.slice(to_string(row.task_id), 0, 8),
+      status: String.to_existing_atom(status),
+      consecutive_blocked: row.consecutive_blocked
+    })
+  end
+
+  # `idle` e `idle_tripped` — nada a reter; o contador do breaker é o único
+  # campo que precisa sobreviver ao restart (senão um restart no meio de
+  # uma sequência de blocked zeraria o breaker de graça).
+  def resume_state(base, row) do
+    Map.merge(base, %{
+      task_id: nil,
+      worktree: nil,
+      branch: nil,
+      status: String.to_existing_atom(row.status),
+      consecutive_blocked: row.consecutive_blocked
+    })
+  end
+
+  # --- Máquina de estados do reagendamento (Fase 12b — RN-047) ---
+  #
+  # Mora aqui pelo MESMO motivo que o resto deste módulo: há duas
+  # implementações de dev agent, e a que serve de smoke test sem LLM só prova
+  # alguma coisa se exercitar este código e não uma cópia dele. A 12b nasceu
+  # só no `DevAgentServer`, e a consequência foi concreta: o `NoopDevAgentServer`
+  # continuava processando UMA task e parando — o mesmo achado #10 que a fase
+  # existiu para matar, vivo no único veículo de validação sem modelo.
+  #
+  # O que difere entre os dois agentes é `run_task`, e só ele — por isso entra
+  # como função, não como behaviour: um callback obrigaria os dois servers a
+  # declarar `@behaviour` e reimplementar o contrato inteiro para uma
+  # divergência de uma função.
+
+  @default_max_consecutive_blocked 3
+
+  @doc """
+  Ponto ÚNICO de claim. Chamado pelo `:work` inicial e por `finish_task/3`
+  sempre que uma task termina e o agente segue livre.
+
+  `run_task` recebe `{state_em_working, task}` e devolve o novo state.
+  """
+  def try_claim(state, run_task) when is_function(run_task, 2) do
+    case claim_task(state) do
+      {:ok, nil} ->
+        state = %{state | status: :idle}
+        persist(state)
+        emit(state, "dev.idle", %{agentId: state.agent_id, reason: "sem task pegável"})
+        state
+
+      {:ok, task} ->
+        run_task.(%{state | status: :working}, task)
+
+      {:error, reason} ->
+        # CAI EM `:idle`, e persiste. Devolver o state intocado aqui travava o
+        # agente PARA SEMPRE: `finish_task/3` já zerou `task_id` mas não mexe
+        # em `status`, então o agente ficava `:awaiting_gate` com `task_id`
+        # nil — e aí os guards de `handle_info/2` falham todos
+        # (`gate_resolved` exige task_id batendo, `became_claimable` exige
+        # `:idle`, `:rearm` exige `:idle_tripped`). Um 5xx transitório da api
+        # no claim produzia exatamente o sintoma que esta fase existe para
+        # eliminar. `:idle` é o único estado do qual um wake ainda resgata.
+        state = %{state | status: :idle}
+        persist(state)
+        emit(state, "dev.error", %{agentId: state.agent_id, reason: inspect(reason)})
+        state
+    end
+  end
+
+  @doc """
+  Único lugar que zera task_id/worktree/branch — deixá-los obsoletos faria um
+  gate tardio achar o worktree ERRADO via `DevAgentState.find_by_task_id/2`.
+
+  `:approved` zera o contador do breaker; `:blocked` incrementa e, ao bater o
+  teto, para em `:idle_tripped` SEM tentar reivindicar.
+  """
+  def finish_task(state, :approved, run_task) do
+    state
+    |> Map.merge(%{task_id: nil, worktree: nil, branch: nil, consecutive_blocked: 0})
+    |> try_claim(run_task)
+  end
+
+  def finish_task(state, :blocked, run_task) do
+    counter = state.consecutive_blocked + 1
+
+    state =
+      Map.merge(state, %{
+        task_id: nil,
+        worktree: nil,
+        branch: nil,
+        consecutive_blocked: counter
+      })
+
+    if tripped?(counter, state.max_consecutive_blocked) do
+      state = %{state | status: :idle_tripped}
+      persist(state)
+
+      emit(state, "dev.idle_tripped", %{
+        agentId: state.agent_id,
+        consecutiveBlocked: counter
+      })
+
+      state
+    else
+      try_claim(state, run_task)
+    end
+  end
+
+  defp tripped?(counter, max) when is_integer(max), do: counter >= max
+  defp tripped?(counter, _), do: counter >= @default_max_consecutive_blocked
 
   # --- Propostas git (pipeline de proposed_actions) ---
 
@@ -71,14 +211,35 @@ defmodule Engine.Dev.AgentIo do
     })
   end
 
+  @doc """
+  Propõe uma ação e devolve o STATUS com que ela nasceu.
+
+  Descartava o status até a Fase 12e (`{:ok, _action} -> :ok`), e o preço foi
+  concreto: com a autonomia do dev em `require_approval`, commit/push/PR
+  nasciam `pending` e o agente abria o gate assim mesmo. O QA varria o
+  worktree — os arquivos estavam lá —, aprovava, a task fechava, e a PR nunca
+  tinha existido.
+
+  `:executed` cobre `executed` e `auto_approved` porque, para quem propôs, os
+  dois significam a mesma coisa: aconteceu. `:pending` é a espera; qualquer
+  outro desfecho (`denied`, `failed`) é `:refused`.
+  """
   def propose(state, type, payload) do
     actor = %{kind: "agent", id: state.agent_id}
 
     case EngineApiClient.propose_action(state.project_id, state.session_id, type, actor, payload) do
-      {:ok, _action} -> :ok
-      {:error, reason} -> emit(state, "dev.error", %{action: type, reason: inspect(reason)})
+      {:ok, action} ->
+        classify(Map.get(action, "status"))
+
+      {:error, reason} ->
+        emit(state, "dev.error", %{action: type, reason: inspect(reason)})
+        :refused
     end
   end
+
+  defp classify(status) when status in ["executed", "auto_approved"], do: :executed
+  defp classify("pending"), do: :pending
+  defp classify(_), do: :refused
 
   # --- Devolução da task ---
 
@@ -129,13 +290,18 @@ defmodule Engine.Dev.AgentIo do
       session_id: state.session_id,
       task_id: state.task_id,
       worktree_path: state.worktree,
-      status: "working",
+      # Fase 12b: o estado real do agente (idle | working | awaiting_gate |
+      # idle_tripped), não mais hardcoded — é o que a reidratação e o
+      # painel passam a ler.
+      status: to_string(state.status),
       # OBRIGATÓRIO mesmo quando nil: a coluna está na lista de :replace do
       # on_conflict, então omitir aqui APAGA o teto gravado no init — e os
       # gates leem esse campo do banco (qa/secops_agent_server), caindo no
       # DEFAULT_MAX_GATE_CORRECTIONS da api sem o usuário pedir.
       task_budget_micros: state.task_budget_micros,
       max_gate_corrections: state.max_gate_corrections,
+      consecutive_blocked: state.consecutive_blocked,
+      max_consecutive_blocked: state.max_consecutive_blocked,
       # Mesma armadilha do :replace acima — e omitir aqui faria a reidratação
       # subir um agente REAL onde havia um Noop (e vice-versa).
       impl: state.impl

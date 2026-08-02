@@ -26,6 +26,16 @@ const PROVISIONING_BADGE: Record<
 > = {
   provisioning: { tone: 'warning', label: 'Provisionando', pulse: true },
   provision_failed: { tone: 'danger', label: 'Falha' },
+  // Fase 12a: repo adotado com plano gerado e ainda não decidido — nada roda
+  // até o usuário aprovar ou dispensar (RN-045). O estado entrou no tipo e
+  // este mapa ficou para trás, o que quebrava o BUILD de produção (`tsc -b`
+  // vê o `Record` exaustivo; o `--noEmit` da checagem local não via).
+  // `pulse` porque é pendência de decisão, não trabalho em andamento.
+  awaiting_plan_decision: {
+    tone: 'warning',
+    label: 'Aguardando sua decisão',
+    pulse: true,
+  },
 };
 
 const MAX_CHIPS = 4;

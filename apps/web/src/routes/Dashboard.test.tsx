@@ -10,6 +10,8 @@ const PROJECT: Project = {
   name: 'Core API',
   slug: 'core-api',
   createdBy: 'user-1',
+  maxConsecutiveBlocked: null,
+  storyPromotion: 'manual',
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
 };
@@ -44,6 +46,7 @@ vi.mock('../lib/notifications', () => ({
       unreadCount: 0,
     })),
   useNotificationGroups: () => [],
+  useStoriesAwaitingPromotion: () => 0,
 }));
 
 vi.mock('../lib/api-client', () => ({

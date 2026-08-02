@@ -84,9 +84,33 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/git-controller-adopt",
+          label: "Adota um repositório que já existe, sem criar nada",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/git-controller-get-bootstrap",
           label: "Devolve o estado do bootstrap de Gitflow",
           className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/git-controller-plan",
+          label: "Devolve o plano de bootstrap e o que foi decidido sobre ele",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/git-controller-approve-plan",
+          label: "Aprova o plano INTEIRO e roda o bootstrap",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/git-controller-skip-plan",
+          label: "Adota o repositório COMO ESTÁ, dispensando o bootstrap",
+          className: "api-method post",
         },
         {
           type: "doc",
@@ -604,6 +628,18 @@ const sidebar: SidebarsConfig = {
           label: "Lista as PRs de infra e o estágio de gate de cada uma",
           className: "api-method get",
         },
+        {
+          type: "doc",
+          id: "docs/reference/api/backlog-controller-return",
+          label: "Devolve ao PO uma história recusada, com o motivo",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/backlog-controller-promote",
+          label: "Promove a `ready` as histórias que o PO propôs",
+          className: "api-method post",
+        },
       ],
     },
     {
@@ -614,6 +650,12 @@ const sidebar: SidebarsConfig = {
           type: "doc",
           id: "docs/reference/api/execution-controller-activate",
           label: "Ativa a fase de execução e sobe um dev agent por módulo",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/execution-controller-rearm",
+          label: "Rearma um dev agent travado pelo circuit breaker",
           className: "api-method post",
         },
         {
