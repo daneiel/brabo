@@ -3,7 +3,7 @@ id: adr-index
 title: Decisões arquiteturais (ADR)
 sidebar_label: Índice de ADRs
 sidebar_position: 0
-description: Os 43 registros de decisão arquitetural do Brabo, agrupados por fase, com o que cada um decidiu.
+description: Os 44 registros de decisão arquitetural do Brabo, agrupados por fase, com o que cada um decidiu.
 keywords: [ADR, decisão arquitetural, arquitetura, histórico]
 ---
 
@@ -20,7 +20,7 @@ atual.** Para o estado atual, use [Regras de negócio](../business-rules.md),
 [Arquitetura](../architecture.md) e o [Runbook](../runbook.md). Para o
 raciocínio, venha aqui.
 
-Todos os 43 estão com status **aceito**.
+Todos os 44 estão com status **aceito**.
 
 ## Fase 2 — Git
 
@@ -140,11 +140,17 @@ O loop que faz o time melhorar.
 | [0042](0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md) | Sync de catálogo por capability, com modelo descoberto entrando desativado e modelo sumido marcado em vez de apagado; dois eixos independentes de disponibilidade (curadoria do owner × realidade remota); cascata que revalida capability ao cair de nível; e preço congelado em `token_usage` para o custo antigo ficar reproduzível, com auditoria append-only fora do outbox |
 | [0043](0043-seis-providers-de-llm-e-o-fechamento-da-fase-9b.md) | Os seis providers da 9b (NVIDIA NIM, Together, DeepInfra, Bitdeer, Vultr, OpenRouter) entram como config sobre a base, cada um investigado do zero contra a doc oficial — capability só declarada quando provada, com dois casos reais de decisão revertida ao vivo durante a implementação; único hook novo na base é o `parseErrorFrame` que só o OpenRouter (o hub) precisou |
 
+## Fase 12 — Operabilidade pós-dogfooding
+
+| # | decisão |
+|---|---|
+| [0044](0044-adocao-de-repositorio-existente.md) | Adoção de repositório existente com `origin` (`created`\|`adopted`) nas duas tabelas, e o PLANO como portão: o dry-run é o `check()` do ADR 0005 sem `run()`, o plano vive no cursor (snapshot, não log), e nada é alterado enquanto a decisão for nula — o runner da Fase 2 sai verbatim para um colaborador e nunca é filtrado, só não é chamado; "proteção divergente" fica no nível booleano porque é só isso que o contrato expõe (ADR 0028) |
+
 ## A convenção
 
 - **Um arquivo por decisão**, em `docs/adr/NNNN-titulo-curto.md`, com
   numeração sequencial de 4 dígitos. **Sem reuso de número**, nem quando um ADR
-  é superado — o próximo é **0044**.
+  é superado — o próximo é **0045**.
 - **Três seções, só elas:** **Contexto** (o problema ou a força que motivou),
   **Decisão** (o que foi decidido), **Consequências** (os trade-offs aceitos e
   o que fica para depois).

@@ -44,6 +44,27 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api,web**: o projeto passa a poder **adotar um repositório que já
+  existe**, em vez de só criar um (Fase 12a). É o primeiro dos três achados
+  P1 do dogfooding: a Fase 10 só rodou porque alguém inseriu à mão as linhas
+  de `project_repositories`/`repo_bootstraps`, a segunda "marcada como
+  convergida para o produto não tentar retomar bootstrap nenhum". O wizard
+  ganha "Criar novo | Adotar existente"; adotar valida o acesso com `getRepo`
+  (que existia desde a Fase 2 e nenhum caso de uso chamava) e produz um
+  **plano** — o que o bootstrap faria, sem fazer nada. O usuário aprova o
+  plano inteiro, ou adota como está e dispensa o bootstrap. Enquanto não
+  decidir, **nada roda**: nenhuma proteção de branch é sobrescrita fora de um
+  plano aprovado ([RN-045](docs/business-rules.md#rn-045)). As duas tabelas
+  ganham `origin` (`created` | `adopted`), com backfill `created`
+  ([RN-046](docs/business-rules.md#rn-046)). Repositório adotado com branches
+  fora do template (`develop`, `release/*`) vira diagnóstico informativo na
+  tela de Configurações — **nunca bloqueia**, porque a política é dele.
+  Decisão em [ADR 0044](docs/adr/0044-adocao-de-repositorio-existente.md).
+  **Limite conhecido:** "proteção divergente" é presença × ausência, porque é
+  só isso que o contrato expõe — uma branch com proteção PARCIAL conta como
+  desprotegida (o `ProtectionPolicy` normalizado segue adiado pelo ADR 0028).
+  **Pendente:** o aceite contra o fork da Fase 10, gated por
+  `ADOPT_TEST_REPO` + `GITHUB_TEST_TOKEN`, é somente leitura e nunca aprova
 - **api,web**: **OpenRouter** entra como o primeiro hub sobre a base
   OpenAI-compatível (Fase 11a). Declara `listModels: true` — o catálogo do
   OpenRouter passa a sincronizar sozinho, com preço convertido do formato

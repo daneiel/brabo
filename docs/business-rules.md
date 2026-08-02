@@ -522,6 +522,72 @@ para 10" transformaria o log em ruído.
 - **Teste:** `test/application/use-cases/llm/update-model-pricing.use-case.spec.ts`
 - **Origem:** [ADR 0042](adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md)
 
+### RN-045 — Repositório adotado só é alterado por plano aprovado {#rn-045}
+
+Adotar um repositório existente **diagnostica sem agir**. A adoção valida o
+acesso (`getRepo`), grava as linhas do projeto e produz um **plano**: a lista
+serializada do que o bootstrap faria, obtida chamando o `check()` de cada passo
+— o mesmo que dá idempotência desde a [RN-029](#rn-029) — sem nunca executar a
+mutação correspondente.
+
+Enquanto `repo_bootstraps.plan_decision` for **nulo**, nenhuma mutação roda. O
+portão está **antes** do executor, não dentro dele: o runner do bootstrap é o
+mesmo da Fase 2, sem filtro, e simplesmente não é chamado. Somado ao guard que
+já pulava branch protegida, não existe caminho de código que proteja uma branch
+fora de um plano aprovado.
+
+As duas saídas:
+
+- **aprovar** é tudo-ou-nada (aprovar passos soltos quebraria a cascata
+  `dev←main, qa←dev, rc←qa`). O que executa é o plano **re-derivado** no
+  momento da execução: igual ou menor que o exibido, **nunca maior** — uma
+  branch que tenha virado protegida nesse meio-tempo é pulada;
+- **adotar como está** dispensa o bootstrap, registra a decisão e **não
+  adultera o cursor** para fingir convergência. O plano fica guardado como
+  evidência do que deliberadamente não foi aplicado.
+
+Decidir sobre um plano regerado é recusado (409): a decisão carrega o
+`planGeneratedAt` que o usuário viu, e um "sim" dado sobre outra coisa não vale.
+
+O provisionamento normal recusa (409) rodar num repositório adotado — sem essa
+guarda, o caminho de retomada rodaria o bootstrap num repositório de terceiro
+sem plano nenhum.
+
+**Limite conhecido:** "proteção divergente" aqui é presença × ausência, porque
+é só isso que o contrato expõe (`GitBranch.protected` é booleano, e o
+[ADR 0028](adr/0028-protecao-de-branch-divergencia-entre-providers.md) adiou um
+`ProtectionPolicy` normalizado). Uma branch com proteção PARCIAL conta como
+"sem proteção" e pode ser sobrescrita — mas só dentro de um plano aprovado.
+
+- **Onde:** `apps/api/src/application/use-cases/git/decide-bootstrap-plan.use-case.ts`,
+  `apps/api/src/application/use-cases/git/bootstrap-plan.ts`,
+  `apps/api/src/application/use-cases/git/bootstrap-steps.ts:112`
+- **Teste:** `test/application/use-cases/git/decide-bootstrap-plan.use-case.spec.ts`,
+  `test/application/use-cases/git/bootstrap-plan.spec.ts`
+- **Origem:** [ADR 0044](adr/0044-adocao-de-repositorio-existente.md)
+
+### RN-046 — Todo repositório de projeto declara sua origem {#rn-046}
+
+`project_repositories.origin` e `repo_bootstraps.origin` dizem se o Brabo
+**criou** o repositório (`created`) ou **adotou** um que já existia (`adopted`).
+A origem é gravada explicitamente por quem escreve — não pelo default da coluna
+— e não muda depois.
+
+Ela não é decoração: é o que faz o produto tratar como caso legítimo o que a
+Fase 10 precisou fazer à mão (inserir linhas em `project_repositories` e
+`repo_bootstraps` para apontar um projeto a um fork). Um repositório `adopted`
+tem política de branches própria, não passa pelo provisionamento, e só é
+alterado conforme a [RN-045](#rn-045).
+
+O backfill da migração `0031` marca tudo que existia como `created`, e pode ser
+cego: adoção não existia antes dela, então não há linha adotada para
+classificar errado.
+
+- **Onde:** `apps/api/src/db/schema.ts`, `apps/api/src/db/migrations/0031_special_winter_soldier.sql`,
+  `apps/api/src/domain/git/repo-bootstrap.entity.ts`
+- **Teste:** `test/application/use-cases/git/adopt-repository.use-case.spec.ts`
+- **Origem:** [ADR 0044](adr/0044-adocao-de-repositorio-existente.md)
+
 ### RN-038 — Agente contado no resumo do workspace = gastou tokens este mês {#rn-038}
 
 O resumo do dashboard de projetos ("N projetos ativos · M agentes · gasto
