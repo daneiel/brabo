@@ -209,8 +209,12 @@ defmodule Engine.Dev.DevAgentServer do
     {:noreply, try_claim(state)}
   end
 
+  # Guard de estado (D4): correção só faz sentido para quem está ESPERANDO um
+  # gate. `DevAgentServer.correct/3` é um cast puro, disparado pelos gates —
+  # uma entrega tardia (o agente já seguiu para outra task) rodaria a correção
+  # do gate ANTIGO contra o `task_id` ATUAL, corrompendo o trabalho em curso.
   @impl true
-  def handle_cast({:correct, findings}, state) do
+  def handle_cast({:correct, findings}, %{status: :awaiting_gate} = state) do
     state = %{state | status: :working}
     AgentIo.persist(state)
 
@@ -219,10 +223,23 @@ defmodule Engine.Dev.DevAgentServer do
         {:noreply, implement_correction(state, dev_context, findings)}
 
       {:error, reason} ->
+        # DESFECHO TERMINAL, não só um log. Antes o agente voltava com
+        # `status: :working` e `task_id` setado, e daí nenhum dos três
+        # `handle_info/2` agia nunca mais — travado por uma falha
+        # transitória de leitura de contexto.
         AgentIo.emit(state, "dev.error", %{agentId: state.agent_id, reason: inspect(reason)})
-        {:noreply, state}
+
+        {:noreply,
+         state
+         |> AgentIo.block_task(
+           "falha ao montar contexto da correção",
+           inspect(reason)
+         )
+         |> finish_task(:blocked)}
     end
   end
+
+  def handle_cast({:correct, _findings}, state), do: {:noreply, state}
 
   # Chegou pelo `Engine.Dev.Wake` (outbox → DevAgentWakeWorker). Guard de
   # identidade: só age se for a MESMA task que este agente está esperando, E

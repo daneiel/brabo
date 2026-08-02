@@ -185,6 +185,36 @@ defmodule EngineWeb.ExecutionCommandControllerTest do
       assert_receive :rearm
     end
 
+    test "agente que NÃO está travado: 409, nada entregue (D8)", %{
+      conn: conn,
+      project_id: project_id,
+      session_id: session_id
+    } do
+      # Antes devolvia 202 pra qualquer status. Como o `handle_info(:rearm, …)`
+      # é no-op fora de `idle_tripped`, a api gravava um `dev.rearmed` —
+      # evento IMUTÁVEL — pra um rearm que comprovadamente não aconteceu.
+      DevAgentState.upsert!(%{
+        project_id: project_id,
+        agent_id: "dev-api",
+        module: "api",
+        session_id: session_id,
+        status: "working",
+        impl: "real"
+      })
+
+      :ok = Wake.subscribe(project_id, "dev-api")
+
+      conn =
+        ExecutionCommandController.rearm(conn, %{
+          "sessionId" => session_id,
+          "projectId" => project_id,
+          "agentId" => "dev-api"
+        })
+
+      assert conn.status == 409
+      refute_receive :rearm, 100
+    end
+
     test "agente inexistente: 404, nada entregue", %{
       conn: conn,
       project_id: project_id,

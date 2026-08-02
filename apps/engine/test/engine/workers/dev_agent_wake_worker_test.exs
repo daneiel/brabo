@@ -75,7 +75,14 @@ defmodule Engine.Workers.DevAgentWakeWorkerTest do
       assert_receive {:wake, :became_claimable}
     end
 
-    test "NÃO acorda agente working/awaiting_gate/idle_tripped — só idle" do
+    test "entrega mesmo a agente não-idle: quem filtra é o guard EM PROCESSO, não o banco (D6)" do
+      # Antes o worker filtrava `status == "idle"` lendo o BANCO — e o agente
+      # só persiste `:idle` DEPOIS de o claim voltar vazio. Na janela desse
+      # round-trip a linha ainda dizia `working`, e um wake legítimo era
+      # descartado, deixando a task esperando um evento não relacionado.
+      # Agora entrega sempre; `handle_info({:wake, …}, %{status: :idle})`
+      # decide com o estado REAL, sem corrida. Entregar a mais custa uma
+      # mensagem ignorada; entregar a menos custa trabalho parado.
       project_id = Ecto.UUID.generate()
       seed_agent(project_id, "dev-api", "api", "working")
 
@@ -89,7 +96,7 @@ defmodule Engine.Workers.DevAgentWakeWorkerTest do
         })
       )
 
-      refute_receive {:wake, _}, 100
+      assert_receive {:wake, :became_claimable}
     end
 
     test "resolve por módulo na tabela durável, não por Naming — extra sem base cadastrado ainda funciona" do

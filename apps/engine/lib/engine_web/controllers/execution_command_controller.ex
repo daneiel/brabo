@@ -94,6 +94,18 @@ defmodule EngineWeb.ExecutionCommandController do
         |> put_status(404)
         |> json(%{error: "agente #{agent_id} não encontrado"})
 
+      # 409 fora de `idle_tripped` (correção D8): o `handle_info(:rearm, …)`
+      # é no-op em qualquer outro estado, então devolver 202 fazia a api
+      # gravar um `dev.rearmed` — evento IMUTÁVEL — para um rearm que
+      # comprovadamente não aconteceu. Rearmar quem não está travado não é
+      # sucesso silencioso, é pedido sem sentido.
+      %{status: status} when status != "idle_tripped" ->
+        conn
+        |> put_status(409)
+        |> json(%{
+          error: "agente #{agent_id} não está travado (status: #{status}) — nada a rearmar"
+        })
+
       _state ->
         :ok = Wake.deliver(project_id, agent_id, :rearm)
         send_resp(conn, 202, "")

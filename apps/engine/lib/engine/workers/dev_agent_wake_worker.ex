@@ -7,11 +7,20 @@ defmodule Engine.Workers.DevAgentWakeWorker do
   UM agente específico (`payload["agentId"]`); entrega `{:gate_resolved,
   ...}` só pra ele.
 
-  `task.became_claimable` — uma task virou pegável; resolve TODOS os
-  agentes `idle` dos módulos do payload via `DevAgentState.list_by_module/2`
-  (não via `Engine.Dev.Naming.dev_agent_id/1`, que só conhece o agente
-  BASE — um extra de paralelização como `dev-api-2` ficaria de fora) e
-  entrega `{:wake, :became_claimable}` a cada um.
+  `task.became_claimable` — uma task virou pegável; entrega
+  `{:wake, :became_claimable}` a TODOS os agentes dos módulos do payload
+  (`DevAgentState.list_by_module/2`, não `Engine.Dev.Naming.dev_agent_id/1`,
+  que só conhece o agente BASE — um extra de paralelização como `dev-api-2`
+  ficaria de fora).
+
+  **Não filtra por status aqui de propósito** (correção D6). Filtrar
+  `status == "idle"` lendo o BANCO parecia uma economia, mas o agente só
+  persiste `:idle` DEPOIS de o `claim_task` voltar vazio — na janela desse
+  round-trip a linha ainda diz `working`/`awaiting_gate`, e um wake
+  legítimo era descartado, deixando a task esperando um evento não
+  relacionado. Quem decide é o guard EM PROCESSO
+  (`handle_info({:wake, …}, %{status: :idle})`), que enxerga o estado real
+  e sem corrida; o custo de entregar a mais é uma mensagem ignorada.
 
   Entrega sempre via `Engine.Dev.Wake` (PubSub) — nunca chama o GenServer
   direto. Agente inexistente ou já ocupado: `:ok`, sem retry — não é erro,
@@ -70,7 +79,7 @@ defmodule Engine.Workers.DevAgentWakeWorker do
       fn ->
         modules
         |> Enum.flat_map(&DevAgentState.list_by_module(project_id, &1))
-        |> Enum.filter(&(&1.status == "idle"))
+        |> Enum.uniq_by(& &1.agent_id)
         |> Enum.each(&Wake.deliver(project_id, &1.agent_id, {:wake, :became_claimable}))
 
         :ok

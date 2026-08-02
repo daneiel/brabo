@@ -327,7 +327,13 @@ defmodule Engine.Dev.DevAgentServerTest do
         state
         | task_id: "task-abc12345",
           worktree: original_worktree,
-          branch: "feature/task-abc12345"
+          branch: "feature/task-abc12345",
+          # É o estado REAL de quem recebe uma devolução de gate: a PR está
+          # aberta e o agente espera o veredito. Virou guard em `correct/3`
+          # na correção D4 — um cast tardio, chegando quando o agente já
+          # seguiu para outra task, rodaria a correção do gate ANTIGO contra
+          # a task ATUAL.
+          status: :awaiting_gate
       }
 
       Process.put(:fake_dev_context, %{
@@ -507,6 +513,56 @@ defmodule Engine.Dev.DevAgentServerTest do
       # Os dois diagnósticos carregam o MESMO teto — nenhum decremento vazou
       # da primeira task pra segunda.
       assert Enum.all?(diagnoses, &(&1 =~ "teto: 500000"))
+    end
+  end
+
+  describe "guardas do correct/3 (D4 — revisão da Fase 12b)" do
+    test "correct entregue tarde (agente já em outra task) é IGNORADO", %{state: state} do
+      # `correct/3` é um cast puro disparado pelos gates. Sem o guard, uma
+      # entrega atrasada rodava a correção do gate ANTIGO contra o task_id
+      # ATUAL — corrompendo trabalho em curso.
+      state = %{state | status: :working, task_id: "task-nova"}
+
+      assert {:noreply, unchanged} =
+               DevAgentServer.handle_cast(
+                 {:correct, %{gate: "qa", reason: "do gate antigo", diagnosis: "..."}},
+                 state
+               )
+
+      assert unchanged == state
+      refute_received {:dev_context_fetched, _, _}
+      refute_received {:propose_action, _, _, _}
+    end
+
+    test "falha ao montar o contexto da correção BLOQUEIA a task em vez de travar o agente", %{
+      state: state
+    } do
+      state = %{
+        state
+        | status: :awaiting_gate,
+          task_id: "task-abc12345",
+          worktree: "/wt",
+          branch: "b"
+      }
+
+      # `reply/2` do fake já repassa `{:error, _}` — não precisa de chave nova.
+      Process.put(:fake_dev_context, {:error, :indisponivel})
+
+      assert {:noreply, novo} =
+               DevAgentServer.handle_cast(
+                 {:correct, %{gate: "qa", reason: "x", diagnosis: "y"}},
+                 state
+               )
+
+      assert_received {:event_appended, _, _, %{type: "dev.error"}}
+
+      assert_received {:task_blocked, "task-abc12345", "falha ao montar contexto da correção", _,
+                       "dev-api"}
+
+      # O que importa: NÃO ficou preso em `:working` com task_id setado, que
+      # era um estado do qual nenhum handle_info resgatava.
+      assert novo.task_id == nil
+      assert novo.status == :idle
     end
   end
 
