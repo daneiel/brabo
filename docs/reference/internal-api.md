@@ -199,7 +199,7 @@ válida nem perfilar uma competência fora do catálogo, ainda que o modelo peç
 
 ## api → engine
 
-Onze rotas de comando, mais as de saúde. Sob `/internal` com `VerifyServiceToken`:
+Treze rotas de comando, mais as de saúde. Sob `/internal` com `VerifyServiceToken`:
 
 | método | caminho | o que dispara |
 |---|---|---|
@@ -207,9 +207,11 @@ Onze rotas de comando, mais as de saúde. Sob `/internal` com `VerifyServiceToke
 | POST | `/sessions/:id/agent/start` | inicia um turno de agente |
 | POST | `/sessions/:id/agent/message` | mensagem do usuário no fio |
 | POST | `/sessions/:id/agent/readiness` | confirmação de prontidão |
+| POST | `/sessions/:id/agent/revise` | devolve ao PO uma história que o usuário recusou promover (Fase 12c — RN-048); **404 se o PO não está de pé**, e isso não é erro para a api |
 | POST | `/sessions/:id/agent/offer-infra-handoff` | oferta de handoff ao Infra |
 | POST | `/sessions/:id/execution/start` | ativa a fase de execução |
 | POST | `/sessions/:id/execution/parallelize` | cria subagentes |
+| POST | `/sessions/:id/dev-agents/:agentId/rearm` | rearma um dev agent travado (Fase 12b — RN-047); 404 se não existe, **409 se não está `idle_tripped`** |
 | POST | `/sessions/:id/psychologist/reanalyze` | reanálise sob demanda |
 | POST | `/projects/:id/anamnese/run` | execução da Anamnese |
 | POST | `/projects/:id/agents/:agent/instructions/invalidate` | invalida o cache de instrução |
@@ -252,6 +254,15 @@ sequenceDiagram
 
 Não há broker. A fila é o Postgres, via Oban — e é por isso que a profundidade
 dela é uma métrica de banco, consultável por SQL, e serve de sinal para o HPA.
+
+O diagrama acima é o caminho de `aggregate_type = "session"` — todo evento de
+domínio grava um `session_events` na mesma transação do outbox. A Fase 12b
+acrescentou `aggregate_type = "task"` (`task.gate_resolved`,
+`task.became_claimable`, o reagendamento do dev agent): sem `session_events`
+correspondente, só a linha de outbox — o Drain roteia pro
+`Engine.Workers.DevAgentWakeWorker`, que entrega por PubSub a UM agente
+específico ou a todos os `idle` de um módulo. Ver
+[ADR 0045](../adr/0045-reagendamento-por-evento-do-dev-agent.md).
 
 ## Onde o contrato vive
 

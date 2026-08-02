@@ -68,6 +68,7 @@ Fonte: os `package.json` de cada pacote e o `Makefile` da raiz.
 | `pnpm --filter api demo:infra-workflows-github` | `ts-node scripts/demo-infra-workflows-github.ts` |
 | `pnpm --filter api demo:psicologo` | `ts-node scripts/demo-psicologo.ts` |
 | `pnpm --filter api demo:anamnese` | `ts-node scripts/demo-anamnese.ts` |
+| `pnpm --filter api validacao:fase-12` | `ts-node scripts/validacao-fase-12.ts` |
 | `pnpm --filter api db:generate` | `drizzle-kit generate` |
 | `pnpm --filter api db:migrate` | `drizzle-kit migrate` |
 
@@ -77,6 +78,7 @@ Fonte: os `package.json` de cada pacote e o `Makefile` da raiz.
 |---|---|
 | `pnpm --filter web dev` | `vite` |
 | `pnpm --filter web build` | `tsc -b && vite build` |
+| `pnpm --filter web typecheck` | `tsc -b --force` |
 | `pnpm --filter web lint` | `oxlint` |
 | `pnpm --filter web preview` | `vite preview` |
 | `pnpm --filter web test` | `vitest run` |
@@ -120,4 +122,4 @@ Fonte: os `package.json` de cada pacote e o `Makefile` da raiz.
 
 ---
 
-75 comandos no total. Alvo do Makefile sem anotação `## descrição` não aparece aqui — anote na fonte.
+77 comandos no total. Alvo do Makefile sem anotação `## descrição` não aparece aqui — anote na fonte.

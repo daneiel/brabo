@@ -7,6 +7,7 @@ import type {
   AgentTokenUsage,
   ActionType,
   Architecture,
+  StoryPromotionMode,
   InfraArtifact,
   PsychologistHypothesis,
   PsychologistAnalysis,
@@ -32,8 +33,11 @@ import type {
   ProposedAction,
   ProvisionedRepository,
   ProvisionRepositoryResult,
+  AdoptRepositoryResult,
+  BootstrapPlanEstado,
   RepoBootstrapStatus,
   ResolvedBinding,
+  PromoteStoriesResult,
   Role,
   Session,
   SessionEvent,
@@ -187,6 +191,19 @@ export const createProject = (
 ) => post<Project>(`/workspaces/${workspaceId}/projects`, input);
 export const getProject = (projectId: string) =>
   get<Project>(`/projects/${projectId}`);
+// `maxConsecutiveBlocked` (Fase 12b): vale a partir da PRÓXIMA ativação da
+// execução — não afeta dev agents já rodando.
+// `storyPromotion` (Fase 12c): vale para as PRÓXIMAS histórias criadas; as que
+// já estão propostas continuam aguardando promoção mesmo se o modo virar
+// `auto`, porque a proposta já existe e ignorá-la esconderia trabalho do PO.
+// Os dois são opcionais — a tela salva um campo por vez.
+export const updateProject = (
+  projectId: string,
+  input: {
+    maxConsecutiveBlocked?: number;
+    storyPromotion?: StoryPromotionMode;
+  },
+) => patch<Project>(`/projects/${projectId}`, input);
 
 export const listProjectMembers = (projectId: string) =>
   get<ProjectMemberWithUser[]>(`/projects/${projectId}/members`);
@@ -226,6 +243,36 @@ export const getRepository = (projectId: string) =>
   get<ProvisionedRepository | null>(`/projects/${projectId}/git/repository`);
 export const getBootstrapStatus = (projectId: string) =>
   get<RepoBootstrapStatus>(`/projects/${projectId}/git/bootstrap`);
+
+// Adoção (Fase 12a): `adopt` NÃO cria nada e NÃO executa nada — devolve o
+// plano (dry-run). Só `approvePlan` roda o bootstrap; `skipPlan` dispensa.
+export const adoptRepository = (
+  projectId: string,
+  provider: 'local' | 'github' | 'gitlab',
+  input: { externalId: string },
+) =>
+  post<AdoptRepositoryResult>(
+    `/projects/${projectId}/git/${provider}/repository/adopt`,
+    input,
+  );
+export const getBootstrapPlan = (projectId: string) =>
+  get<BootstrapPlanEstado>(`/projects/${projectId}/git/bootstrap/plan`);
+export const approveBootstrapPlan = (
+  projectId: string,
+  input: { planGeneratedAt: string },
+) =>
+  post<ProvisionRepositoryResult>(
+    `/projects/${projectId}/git/bootstrap/plan/approve`,
+    input,
+  );
+export const skipBootstrapPlan = (
+  projectId: string,
+  input: { planGeneratedAt: string },
+) =>
+  post<ProvisionRepositoryResult>(
+    `/projects/${projectId}/git/bootstrap/plan/skip`,
+    input,
+  );
 // Cadastra um PAT de git do usuário — o backend TESTA a conexão antes de
 // persistir (422 = token inválido); nunca reexibe o token.
 export const registerGitCredential = (input: {
@@ -299,6 +346,26 @@ export const acceptHandoff = (
 
 export const listBacklog = (projectId: string) =>
   get<Epic[]>(`/projects/${projectId}/backlog`);
+
+// Promoção e recusa (Fase 12c — RN-048): as duas ÚNICAS escritas de backlog
+// que são do usuário e não de um agente.
+//
+// `promoteStories` é sempre lote, mesmo para uma história — e não rejeita
+// quando parte falha: quem não passou volta em `failed` com o motivo, e quem
+// passou está promovido. Tratar a resposta como sucesso/erro binário perde
+// exatamente a informação que ela existe para dar.
+export const promoteStories = (projectId: string, storyIds: string[]) =>
+  post<PromoteStoriesResult>(`/projects/${projectId}/stories/promote`, {
+    storyIds,
+  });
+export const returnStory = (
+  projectId: string,
+  storyId: string,
+  reason: string,
+) =>
+  post<{ ok: true }>(`/projects/${projectId}/stories/${storyId}/return`, {
+    reason,
+  });
 export const getCoverage = (projectId: string) =>
   get<CoverageReport>(`/projects/${projectId}/coverage`);
 export const getArchitecture = (projectId: string) =>
@@ -386,6 +453,16 @@ export const unblockTask = (
 ) =>
   post<{ ok: true }>(
     `/projects/${projectId}/sessions/${sessionId}/tasks/${taskId}/unblock`,
+  );
+// Rearma um dev agent travado pelo circuit breaker (Fase 12b — RN-047) — a
+// única saída de idle_tripped.
+export const rearmDevAgent = (
+  projectId: string,
+  sessionId: string,
+  agentId: string,
+) =>
+  post<{ ok: true }>(
+    `/projects/${projectId}/sessions/${sessionId}/agents/${agentId}/rearm`,
   );
 
 // --- Proposed actions ---

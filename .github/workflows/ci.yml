@@ -193,6 +193,19 @@ jobs:
       - name: Testes do web
         run: pnpm --filter web test
 
+      # O web NÃO tinha typecheck no CI — só `lint` e `test`, e os dois passam
+      # com erro de tipo (o vitest transpila por esbuild, que apaga os tipos
+      # sem verificá-los, e o eslint não faz checagem de tipo aqui). O único
+      # lugar que verificava era o `tsc -b` dentro do build da IMAGEM, que só
+      # roda no bootstrap do k8s — feito à mão.
+      #
+      # O resultado foi quatro erros acumulados em três fases sem ninguém ver,
+      # e a imagem `brabo-web` sem conseguir ser construída — ou seja, o deploy
+      # Kubernetes inteiro quebrado, em silêncio. `--force` porque o `tsc -b`
+      # é incremental e pularia o trabalho num runner com cache.
+      - name: Typecheck do web
+        run: pnpm --filter web typecheck
+
       # Os scripts de CI são lógica pura, sem banco — mas rodam no mesmo job
       # porque compartilham o `pnpm install` acima.
       - name: Testes dos scripts de CI
@@ -460,6 +473,34 @@ jobs:
             grep -q "nodePort: ${port}" <<<"${out}" \
               || { echo "NodePort ${port} sumiu do overlay local"; exit 1; }
           done
+
+      # `WEB_PORT` e `WEB_ORIGIN` são a MESMA informação vista de dois lados: a
+      # porta em que o browser abre o web, e a origem que a api e o engine
+      # aceitam no CORS. Enquanto tiveram defaults independentes, trocar
+      # `WEB_PORT` movia o browser e deixava o CORS para trás — e o console fala
+      # de CORS, não de porta, então o tempo vai todo para o lugar errado
+      # (ADR 0037). Derivar um do outro torna a divergência impossível; esta
+      # asserção impede que alguém volte a separá-los sem perceber.
+      - name: WEB_ORIGIN deriva de WEB_PORT nos composes
+        run: |
+          set -euo pipefail
+          faltou=0
+          for arquivo in docker/docker-compose.yml docker/docker-compose.prod.yml; do
+            while IFS= read -r linha; do
+              case "${linha}" in
+                *'${WEB_PORT'*) ;;
+                *)
+                  echo "${arquivo}: WEB_ORIGIN não deriva de WEB_PORT -> ${linha}"
+                  faltou=1
+                  ;;
+              esac
+            done < <(grep -E '^[[:space:]]*WEB_ORIGIN:' "${arquivo}" || true)
+          done
+          if [ "${faltou}" -ne 0 ]; then
+            echo "A porta faz parte do contrato de CORS — ver docs/adr/0037-cors-do-engine-e-a-porta-como-contrato.md"
+            exit 1
+          fi
+          echo "ok: todo WEB_ORIGIN dos composes deriva de WEB_PORT"
 
       # O nome da métrica e os rótulos são referenciados por STRING em três
       # lugares que não se enxergam: o HPA, a regra do prometheus-adapter e o

@@ -522,6 +522,238 @@ para 10" transformaria o log em ruído.
 - **Teste:** `test/application/use-cases/llm/update-model-pricing.use-case.spec.ts`
 - **Origem:** [ADR 0042](adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md)
 
+### RN-045 — Repositório adotado só é alterado por plano aprovado {#rn-045}
+
+Adotar um repositório existente **diagnostica sem agir**. A adoção valida o
+acesso (`getRepo`), grava as linhas do projeto e produz um **plano**: a lista
+serializada do que o bootstrap faria, obtida chamando o `check()` de cada passo
+— o mesmo que dá idempotência desde a [RN-029](#rn-029) — sem nunca executar a
+mutação correspondente.
+
+Enquanto `repo_bootstraps.plan_decision` for **nulo**, nenhuma mutação roda. O
+portão está **antes** do executor, não dentro dele: o runner do bootstrap é o
+mesmo da Fase 2, sem filtro, e simplesmente não é chamado. Somado ao guard que
+já pulava branch protegida, não existe caminho de código que proteja uma branch
+fora de um plano aprovado.
+
+As duas saídas:
+
+- **aprovar** é tudo-ou-nada (aprovar passos soltos quebraria a cascata
+  `dev←main, qa←dev, rc←qa`). O que executa é o plano **re-derivado** no
+  momento da execução: igual ou menor que o exibido, **nunca maior** — uma
+  branch que tenha virado protegida nesse meio-tempo é pulada;
+- **adotar como está** dispensa o bootstrap, registra a decisão e **não
+  adultera o cursor** para fingir convergência. O plano fica guardado como
+  evidência do que deliberadamente não foi aplicado.
+
+Decidir sobre um plano regerado é recusado (409): a decisão carrega o
+`planGeneratedAt` que o usuário viu, e um "sim" dado sobre outra coisa não vale.
+
+O provisionamento normal recusa (409) rodar num repositório adotado — sem essa
+guarda, o caminho de retomada rodaria o bootstrap num repositório de terceiro
+sem plano nenhum.
+
+**Limite conhecido:** "proteção divergente" aqui é presença × ausência, porque
+é só isso que o contrato expõe (`GitBranch.protected` é booleano, e o
+[ADR 0028](adr/0028-protecao-de-branch-divergencia-entre-providers.md) adiou um
+`ProtectionPolicy` normalizado). Uma branch com proteção PARCIAL conta como
+"sem proteção" e pode ser sobrescrita — mas só dentro de um plano aprovado.
+
+- **Onde:** `apps/api/src/application/use-cases/git/decide-bootstrap-plan.use-case.ts`,
+  `apps/api/src/application/use-cases/git/bootstrap-plan.ts`,
+  `apps/api/src/application/use-cases/git/bootstrap-steps.ts:112`
+- **Teste:** `test/application/use-cases/git/decide-bootstrap-plan.use-case.spec.ts`,
+  `test/application/use-cases/git/bootstrap-plan.spec.ts`
+- **Origem:** [ADR 0044](adr/0044-adocao-de-repositorio-existente.md)
+
+### RN-046 — Todo repositório de projeto declara sua origem {#rn-046}
+
+`project_repositories.origin` e `repo_bootstraps.origin` dizem se o Brabo
+**criou** o repositório (`created`) ou **adotou** um que já existia (`adopted`).
+A origem é gravada explicitamente por quem escreve — não pelo default da coluna
+— e não muda depois.
+
+Ela não é decoração: é o que faz o produto tratar como caso legítimo o que a
+Fase 10 precisou fazer à mão (inserir linhas em `project_repositories` e
+`repo_bootstraps` para apontar um projeto a um fork). Um repositório `adopted`
+tem política de branches própria, não passa pelo provisionamento, e só é
+alterado conforme a [RN-045](#rn-045).
+
+O backfill da migração `0031` marca tudo que existia como `created`, e pode ser
+cego: adoção não existia antes dela, então não há linha adotada para
+classificar errado.
+
+- **Onde:** `apps/api/src/db/schema.ts`, `apps/api/src/db/migrations/0031_special_winter_soldier.sql`,
+  `apps/api/src/domain/git/repo-bootstrap.entity.ts`
+- **Teste:** `test/application/use-cases/git/adopt-repository.use-case.spec.ts`
+- **Origem:** [ADR 0044](adr/0044-adocao-de-repositorio-existente.md)
+
+### RN-047 — Circuit breaker do dev agent: N blocked seguidas param, sem gastar orçamento em loop {#rn-047}
+
+Cada dev agent mantém um contador (`dev_agent_states.consecutive_blocked`)
+de quantas tasks TERMINARAM `blocked` em sequência — local (no ToolLoop) ou
+remotamente (teto de correções do gate estourado). Ao bater o teto por
+projeto (`max_consecutive_blocked`, default 3), o agente para em
+`idle_tripped` **sem tentar reivindicar a próxima task**. Um desfecho
+terminal aprovado zera o contador; uma task blocked individual continua o
+fluxo normal (devolvida com diagnóstico, disponível pra um humano
+desbloquear) — o breaker é sobre a SEQUÊNCIA, não sobre a task.
+
+A única saída de `idle_tripped` é o rearm explícito
+(`POST .../agents/:agentId/rearm`, role `developer`): zera o contador e o
+agente volta a tentar reivindicar. Não existe destrave automático — o
+mesmo princípio de `MarkTaskBlockedUseCase`/`unblock`, aplicado à
+sequência em vez de à task. Rearmar um agente que **não** está travado é
+**409**, não sucesso silencioso: o evento `dev.rearmed` é imutável, e
+gravá-lo para um rearm que não aconteceu seria mentira no event log.
+
+Um bloqueio que vem de FORA do agente (o `QaLeadServer` falhando
+internamente, por exemplo) também precisa acordá-lo — por isso a emissão
+de `task.gate_resolved` fica em `MarkTaskBlockedUseCase`, o funil por
+onde TODOS os bloqueios passam, e não no `RecordGateVerdictUseCase`, que
+só vê parte deles. Sem isso o agente ficava em `awaiting_gate` para
+sempre, com a task morta e o contador do breaker sem incrementar.
+
+Reiniciar o engine com um agente em `working` **não** conta pro contador:
+a task retida é bloqueada com diagnóstico do restart, mas esse bloqueio
+não é o agente "queimando o teto" — é a infraestrutura caindo. O
+contador só sobe quando o próprio ciclo dev↔gate produz um `blocked` de
+verdade.
+
+- **Onde:** `apps/engine/lib/engine/dev/dev_agent_server.ex` (`finish_task/2`,
+  `resume_state/2`), `apps/api/src/application/use-cases/execution/rearm-dev-agent.use-case.ts`,
+  `apps/api/src/db/schema.ts` (`projects.max_consecutive_blocked`)
+- **Teste:** `apps/engine/test/engine/dev/dev_agent_server_test.exs`
+  (describe `circuit breaker`), `apps/engine/test/engine/dev/dev_rehydrator_test.exs`
+  (describe `os quatro estados reidratados`), `test/application/use-cases/execution/rearm-dev-agent.use-case.spec.ts`
+- **Origem:** [ADR 0045](adr/0045-reagendamento-por-evento-do-dev-agent.md)
+
+### RN-048 — Promoção de história é do usuário por default; o modo muda quem dispara, nunca o que é validado {#rn-048}
+
+`projects.story_promotion` escolhe QUEM promove uma história de `draft` para
+`ready`:
+
+- **`manual`** (default de projeto novo): o PO deixa a história completa e ela
+  fica `draft` com `stories.proposed_ready = true`. **Nenhuma tarefa dela é
+  pegável** — `claimNext` exige `story.status = 'ready'` —, e é o usuário que
+  promove, individualmente ou em lote, pelo Backlog.
+- **`auto`**: o PO promove sozinho ao terminar uma história completa. É o
+  comportamento anterior à Fase 12c, preservado como opção explícita.
+
+**O modo muda o gatilho, não o critério.** Os dois caminhos passam por
+`assertPromotable` — prontidão (RF/DoD/DoR/regra) e módulos resolvidos contra o
+`module_map` vigente —, e é isso que o teste de simetria em
+`story-promotion.spec.ts` fixa: para toda história, `isPromotable` concorda com
+o que `assertPromotable` levanta. Antes da fase a validação estava duplicada e
+assimétrica (a criação chamava `canBecomeReady`, a transição chamava
+`assertReady` + `assertModulesResolved`): duas portas para o mesmo estado, com
+fechaduras diferentes. Tornar o gatilho configurável exigia unificá-las
+primeiro, senão "promover pela UI" e "promover na criação" seriam regras
+distintas com o mesmo nome.
+
+Uma história **incompleta nunca é proposta**. `proposed_ready` só liga quando a
+história já passaria na validação — propor o que o domínio recusaria empurraria
+o trabalho do PO para o usuário sob o disfarce de uma decisão.
+
+A **recusa** devolve a história ao PO: grava `returned_reason`/`returned_at`,
+desliga `proposed_ready`, emite `backlog.story_promotion_returned` e injeta o
+motivo como mensagem FIXADA na sessão do PO, com a mesma frase de precedência
+da devolução de um gate ao dev (lição do ADR 0020). A recusa é gravada **antes**
+de falar com o engine, e o engine falhando não a desfaz — é o inverso da ordem
+do rearm da [RN-047](#rn-047), e por um motivo: lá o evento afirma algo SOBRE o
+engine, aqui afirma algo sobre o usuário, que é verdade tenha ou não um PO de pé
+para ouvir.
+
+Promover **em lote não é all-or-nothing**: cada história é sua própria
+transação, e uma que perdeu a prontidão entre a proposta e a decisão volta em
+`failed` com o motivo, sem derrubar as outras que o usuário acabou de revisar.
+
+O evento `backlog.story_transitioned` grava o **ator real** — `user` na promoção
+manual, `agent/po` na automática. O event log é imutável e é o que a auditoria
+lê: registrar o PO numa decisão do usuário apagaria exatamente o passo humano
+que a regra existe para devolver.
+
+A migração `0033` faz um backfill **dirigido**, não cego: a coluna nasce
+`manual` e todos os projetos que já existiam são movidos para `auto`. O default
+novo vale para quem vier depois; um projeto em andamento não pode parar de
+produzir por causa de um deploy.
+
+- **Onde:** `apps/api/src/domain/backlog/story-promotion.ts`,
+  `apps/api/src/db/migrations/0033_absurd_domino.sql`,
+  `apps/api/src/application/use-cases/backlog/promote-stories.use-case.ts`,
+  `apps/api/src/application/use-cases/backlog/return-story.use-case.ts`,
+  `apps/engine/lib/engine/agents/po_server.ex` (`revision_message/1`)
+- **Teste:** `test/domain/backlog/story-promotion.spec.ts` (simetria),
+  `test/db/story-promotion-migration.spec.ts` (backfill dirigido),
+  `test/application/use-cases/backlog/promote-stories.use-case.spec.ts`,
+  `test/application/use-cases/backlog/return-story.use-case.spec.ts`,
+  `apps/engine/test/engine/agents/po_server_test.exs` (describe `revise/2`)
+- **Origem:** [ADR 0046](adr/0046-promocao-de-story-com-autoridade-do-usuario.md)
+
+### RN-049 — Toda decisão sobre uma ação proposta fica no event log, com quem decidiu {#rn-049}
+
+`proposed_action.created`, `.approved` e `.denied` são eventos de domínio em
+`session_events`, além das linhas de outbox que os transportam ao engine. O
+outbox **não** é memória: é drenado, marcado com `processed_at` e podado.
+
+O `actor` é quem realmente decidiu — o **usuário** em `.approved`/`.denied`, o
+**agente** que propôs em `.created`. E `created.payload.status` diz como a ação
+nasceu (`pending`, `auto_approved`, `denied`).
+
+Disso sai a distinção que dá a métrica: **decisão humana = evento
+`proposed_action.approved`**; política decidindo sozinha aparece só no
+`.created` com `status: auto_approved` e ator agente, e nunca é confundida com
+um clique. Era exatamente essa contagem — "cliques de aprovação" — que a Fase
+10 quis medir e não conseguiu, porque a decisão não existia em lugar nenhum
+consultável (achado #17). `approve_always` conta como aprovação porque delega
+ao mesmo use-case, e emite `permission.granted` por cima.
+
+Fica de fora, por decisão: o `proposed_action.created` que o bootstrap de
+repositório emite direto no outbox. Aquelas mutações já são narradas por
+`bootstrap.step_*` na mesma sessão, e duplicá-las contaria o mesmo fato duas
+vezes numa métrica de aprovação.
+
+- **Onde:** `apps/api/src/application/use-cases/actions/propose-action.use-case.ts`,
+  `.../approve-action.use-case.ts`, `.../deny-action.use-case.ts`
+- **Teste:** `test/application/use-cases/actions/approve-deny-action.use-case.spec.ts`
+  (describe `a decisão no event log`)
+- **Origem:** [ADR 0048](adr/0048-decisao-no-log-e-a-ordem-do-gate.md)
+
+### RN-050 — Sem PR aberta não se abre gate {#rn-050}
+
+O dev agent propõe commit, push e PR e **lê o desfecho de cada uma**. Só abre o
+gate se as três executaram. Se alguma ficou `pending` — autonomia do agente em
+`require_approval` —, ele entra em `awaiting_approval`, **retendo o worktree**,
+e não abre gate nenhum.
+
+Sem isso o gate abria de qualquer jeito, e o estrago era silencioso: o QA varre
+o **worktree**, não a PR; encontrava os arquivos, aprovava; o SecOps aprovava; a
+task fechava como concluída — **sem uma linha commitada e sem PR nenhuma**. Só
+depois, ao aprovar o commit, o usuário via a ação falhar (com diagnóstico
+vazio, porque `System.cmd` num diretório apagado devolve `{"", 2}`).
+
+Quem solta o agente é `task.pr_settled`, emitido pela api quando o `pr_open`
+tem desfecho terminal: `opened: true` abre o gate; `opened: false` (negado ou
+falho) devolve a task com diagnóstico, em vez de deixar o agente esperando para
+sempre por um gate que ninguém vai abrir.
+
+Uma PR negada **não conta para o circuit breaker** da [RN-047](#rn-047): a
+decisão foi do usuário, não o agente queimando o teto — mesmo princípio da
+recuperação de restart.
+
+Esta regra também elimina o D5 (worktree reciclado sob aprovação pendente) por
+consequência: o worktree só é liberado em `gate_resolved`, o gate só abre depois
+da PR, e a PR só abre depois de commit e push.
+
+- **Onde:** `apps/engine/lib/engine/dev/agent_io.ex` (`propose/3`),
+  `apps/engine/lib/engine/dev/dev_agent_server.ex` (`abrir_gate/1`,
+  `aguardar_aprovacao/2`),
+  `apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts`
+  (`settlePrOpen`)
+- **Teste:** `apps/engine/test/engine/dev/dev_agent_server_test.exs`
+  (describe `aprovação pendente não abre gate`)
+- **Origem:** [ADR 0048](adr/0048-decisao-no-log-e-a-ordem-do-gate.md)
+
 ### RN-038 — Agente contado no resumo do workspace = gastou tokens este mês {#rn-038}
 
 O resumo do dashboard de projetos ("N projetos ativos · M agentes · gasto

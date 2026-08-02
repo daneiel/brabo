@@ -1,0 +1,69 @@
+---
+id: git-controller-approve-plan
+title: "Aprova o plano INTEIRO e roda o bootstrap"
+description: "Aprovação é tudo-ou-nada: aprovar passos soltos quebraria a cascata `dev←main, qa←dev, rc←qa`. O que roda é o plano RE-DERIVADO no momento da execução — igual ou menor que o exibido, nunca maior."
+sidebar_label: "Aprova o plano INTEIRO e roda o bootstrap"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "post api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Aprova o plano INTEIRO e roda o bootstrap"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/projects/{projectId}/git/bootstrap/plan/approve"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Aprovação é tudo-ou-nada: aprovar passos soltos quebraria a cascata `dev←main, qa←dev, rc←qa`. O que roda é o plano RE-DERIVADO no momento da execução — igual ou menor que o exibido, nunca maior.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./git-controller-approve-plan.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./git-controller-approve-plan.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./git-controller-approve-plan.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

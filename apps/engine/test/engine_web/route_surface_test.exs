@@ -57,6 +57,31 @@ defmodule EngineWeb.RouteSurfaceTest do
     end)
   end
 
+  # O corpo enviado é `%{}`, então quase toda action de comando erra a cláusula
+  # de função. Isso é ESPERADO — o teste afirma "não é 401", e o próprio
+  # comentário dele diz que 400/404/500 são assunto do controller. Só que
+  # `Phoenix.ActionClauseError` é LEVANTADA em vez de virar status, e o
+  # `Enum.filter` estourava na primeira rota antes de examinar as outras: o
+  # teste vinha reprovando desde que foi escrito (Fase 7a), reclamando de
+  # cláusula de função e não da superfície de auth que ele existe para vigiar.
+  #
+  # Uma exceção só pode acontecer DEPOIS do plug ter deixado passar — ela é,
+  # portanto, a prova mais forte de que a rota aceitou o token.
+  #
+  # `catch` além de `rescue` porque nem toda falha aqui é exceção: as actions
+  # que fazem `GenServer.call` num agente que não existe nesta suite (o
+  # `readiness` chama o Criativo) saem por EXIT, que `rescue` não pega.
+  defp status_com_token(conn, token, verbo, caminho) do
+    conn
+    |> put_req_header("x-brabo-service-token", token)
+    |> requisitar(verbo, concretizar(caminho))
+    |> Map.get(:status)
+  rescue
+    _ -> :passou_do_plug
+  catch
+    :exit, _ -> :passou_do_plug
+  end
+
   defp requisitar(conn, "GET", caminho), do: get(conn, caminho)
   defp requisitar(conn, "POST", caminho), do: post(conn, caminho, %{})
   defp requisitar(conn, "PUT", caminho), do: put(conn, caminho, %{})
@@ -140,10 +165,7 @@ defmodule EngineWeb.RouteSurfaceTest do
 
     recusadas =
       Enum.filter(internas, fn {verbo, caminho} ->
-        conn
-        |> put_req_header("x-brabo-service-token", token)
-        |> requisitar(verbo, concretizar(caminho))
-        |> Map.get(:status) == 401
+        status_com_token(conn, token, verbo, caminho) == 401
       end)
 
     assert recusadas == [], """

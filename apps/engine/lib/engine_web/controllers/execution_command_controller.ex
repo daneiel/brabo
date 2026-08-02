@@ -1,13 +1,14 @@
 defmodule EngineWeb.ExecutionCommandController do
   @moduledoc """
   Comandos síncronos da api pra fase de execução (Fase 4a): subir os
-  DevAgentServers (um por módulo) e aceitar a paralelização (subagente extra).
+  DevAgentServers (um por módulo), aceitar a paralelização (subagente extra),
+  e rearmar um agente travado pelo circuit breaker (Fase 12b — RN-047).
   Guardado por VerifyServiceToken.
   """
 
   use EngineWeb, :controller
 
-  alias Engine.Dev.{DevAgentState, DevAgentSupervisor, Naming}
+  alias Engine.Dev.{DevAgentState, DevAgentSupervisor, Naming, Wake}
 
   def start(
         conn,
@@ -15,6 +16,7 @@ defmodule EngineWeb.ExecutionCommandController do
       ) do
     task_budget_micros = Map.get(params, "taskBudgetMicros")
     max_gate_corrections = Map.get(params, "maxGateCorrections")
+    max_consecutive_blocked = Map.get(params, "maxConsecutiveBlocked")
     # "real" (default) | "noop" — ver Engine.Dev.NoopDevAgentServer.
     impl = Map.get(params, "impl", "real")
 
@@ -29,7 +31,8 @@ defmodule EngineWeb.ExecutionCommandController do
           session_id,
           task_budget_micros,
           max_gate_corrections,
-          impl
+          impl,
+          max_consecutive_blocked
         )
 
       if origin == :started, do: DevAgentSupervisor.server_for(impl).work(project_id, agent_id)
@@ -50,7 +53,8 @@ defmodule EngineWeb.ExecutionCommandController do
     # aqui: ela não persiste o orçamento escolhido na ativação, então o
     # estado durável do engine é o único lugar que conhece um valor
     # customizado. O modo segue a mesma regra: aceitar a paralelização de uma
-    # execução Noop não pode subir um agente real (com LLM e custo).
+    # execução Noop não pode subir um agente real (com LLM e custo). O teto
+    # do circuit breaker (Fase 12b) segue a mesma herança.
     case DevAgentState.get(project_id, Naming.dev_agent_id(module)) do
       nil ->
         conn
@@ -68,12 +72,42 @@ defmodule EngineWeb.ExecutionCommandController do
             session_id,
             base.task_budget_micros,
             base.max_gate_corrections,
-            base.impl
+            base.impl,
+            base.max_consecutive_blocked
           )
 
         if origin == :started,
           do: DevAgentSupervisor.server_for(base.impl).work(project_id, agent_id)
 
+        send_resp(conn, 202, "")
+    end
+  end
+
+  def rearm(conn, %{
+        "sessionId" => _session_id,
+        "agentId" => agent_id,
+        "projectId" => project_id
+      }) do
+    case DevAgentState.get(project_id, agent_id) do
+      nil ->
+        conn
+        |> put_status(404)
+        |> json(%{error: "agente #{agent_id} não encontrado"})
+
+      # 409 fora de `idle_tripped` (correção D8): o `handle_info(:rearm, …)`
+      # é no-op em qualquer outro estado, então devolver 202 fazia a api
+      # gravar um `dev.rearmed` — evento IMUTÁVEL — para um rearm que
+      # comprovadamente não aconteceu. Rearmar quem não está travado não é
+      # sucesso silencioso, é pedido sem sentido.
+      %{status: status} when status != "idle_tripped" ->
+        conn
+        |> put_status(409)
+        |> json(%{
+          error: "agente #{agent_id} não está travado (status: #{status}) — nada a rearmar"
+        })
+
+      _state ->
+        :ok = Wake.deliver(project_id, agent_id, :rearm)
         send_resp(conn, 202, "")
     end
   end

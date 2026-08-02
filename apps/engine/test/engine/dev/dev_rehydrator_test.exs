@@ -2,23 +2,32 @@ defmodule Engine.Dev.DevRehydratorTest do
   # async: false — DevAgentSupervisor e Registry são processos globais, e os
   # agentes rodam em processos próprios (sandbox em modo compartilhado).
   use Engine.DataCase, async: false
+  use Oban.Testing, repo: Engine.Repo, prefix: "engine"
 
   alias Engine.Dev.{
     DevAgentServer,
     DevAgentState,
     DevAgentSupervisor,
     DevRehydrator,
+    FakeWorktreeManager,
     NoopDevAgentServer
   }
 
+  alias Engine.Gates.FakeGateDispatcher
+  alias Engine.Outbox.Event
   alias Engine.Sessions.FakeEngineApiClient
+  alias Engine.Workers.DevAgentWakeWorker
 
   setup do
     Application.put_env(:engine, :engine_api_client, FakeEngineApiClient)
+    Application.put_env(:engine, :worktree_manager, FakeWorktreeManager)
+    Application.put_env(:engine, :gate_dispatcher, FakeGateDispatcher)
     Application.put_env(:engine, :test_pid, self())
 
     on_exit(fn ->
       Application.delete_env(:engine, :engine_api_client)
+      Application.delete_env(:engine, :worktree_manager)
+      Application.delete_env(:engine, :gate_dispatcher)
       Application.delete_env(:engine, :test_pid)
     end)
 
@@ -46,6 +55,24 @@ defmodule Engine.Dev.DevRehydratorTest do
     if Registry.lookup(Engine.Dev.Registry, {project_id, agent_id}) != [] and tentativas > 0 do
       Process.sleep(10)
       wait_unregister(project_id, agent_id, tentativas - 1)
+    end
+  end
+
+  # A recuperação do `working` reidratado é assíncrona (handle_continue,
+  # correção D2) — a linha durável só reflete o desfecho depois que ela roda.
+  defp wait_status!(project_id, agent_id, esperado, tentativas \\ 200) do
+    row = DevAgentState.get(project_id, agent_id)
+
+    cond do
+      row && row.status == esperado ->
+        row
+
+      tentativas > 0 ->
+        Process.sleep(10)
+        wait_status!(project_id, agent_id, esperado, tentativas - 1)
+
+      true ->
+        flunk("status não chegou a #{esperado}; último: #{inspect(row && row.status)}")
     end
   end
 
@@ -121,5 +148,272 @@ defmodule Engine.Dev.DevRehydratorTest do
     assert length(Registry.lookup(Engine.Dev.Registry, {project_id, "dev-api"})) == 1
 
     desliga(project_id, "dev-api")
+  end
+
+  describe "os quatro estados reidratados (Fase 12b-6)" do
+    # `DevAgentState.upsert!/1` é um upsert LITERAL: campo ausente do map vira
+    # nil na linha existente (a coluna está na lista de :replace do
+    # on_conflict — mesma armadilha documentada em agent_io.ex). Simular "o
+    # estado mudou por fora" precisa reler a linha e só sobrescrever o que
+    # está testando, senão module/session_id (NOT NULL) quebram o upsert.
+    defp force_status!(project_id, agent_id, overrides) do
+      row = DevAgentState.get(project_id, agent_id)
+
+      DevAgentState.upsert!(
+        Map.merge(
+          %{
+            project_id: row.project_id,
+            agent_id: row.agent_id,
+            module: row.module,
+            session_id: row.session_id,
+            task_id: row.task_id,
+            worktree_path: row.worktree_path,
+            status: row.status,
+            task_budget_micros: row.task_budget_micros,
+            max_gate_corrections: row.max_gate_corrections,
+            consecutive_blocked: row.consecutive_blocked,
+            max_consecutive_blocked: row.max_consecutive_blocked,
+            impl: row.impl
+          },
+          overrides
+        )
+      )
+    end
+
+    defp insert_outbox!(aggregate_id, event_type, payload) do
+      %Event{}
+      |> Ecto.Changeset.change(%{
+        id: Ecto.UUID.generate(),
+        aggregate_type: "task",
+        aggregate_id: aggregate_id,
+        event_type: event_type,
+        payload: payload,
+        created_at: DateTime.utc_now(),
+        processed_at: nil
+      })
+      |> Repo.insert!()
+    end
+
+    defp drain_and_wake do
+      Engine.Outbox.Drain.run_once()
+
+      for job <- all_enqueued(worker: DevAgentWakeWorker) do
+        :ok = DevAgentWakeWorker.perform(%Oban.Job{args: job.args})
+      end
+    end
+
+    test "idle reidratado: volta idle, sem claim", %{
+      project_id: project_id,
+      session_id: session_id
+    } do
+      {:ok, _pid, :started} =
+        DevAgentSupervisor.start_agent(
+          project_id,
+          "dev-api",
+          "api",
+          session_id,
+          nil,
+          nil,
+          :real,
+          3
+        )
+
+      row_antes = DevAgentState.get(project_id, "dev-api")
+      assert row_antes.status == "idle"
+
+      desliga(project_id, "dev-api")
+      :ok = DevRehydrator.run()
+
+      assert server_module(project_id, "dev-api") == DevAgentServer
+      refute_received {:task_claimed, _, _}
+
+      row_depois = DevAgentState.get(project_id, "dev-api")
+      assert row_depois.status == "idle"
+      assert row_depois.task_id == nil
+
+      desliga(project_id, "dev-api")
+    end
+
+    test "idle_tripped reidratado: contador intacto, ignora wake até rearmar", %{
+      project_id: project_id,
+      session_id: session_id
+    } do
+      {:ok, _pid, :started} =
+        DevAgentSupervisor.start_agent(
+          project_id,
+          "dev-api",
+          "api",
+          session_id,
+          nil,
+          nil,
+          :real,
+          3
+        )
+
+      force_status!(project_id, "dev-api", %{status: "idle_tripped", consecutive_blocked: 3})
+
+      desliga(project_id, "dev-api")
+      :ok = DevRehydrator.run()
+
+      row = DevAgentState.get(project_id, "dev-api")
+      assert row.status == "idle_tripped"
+      assert row.consecutive_blocked == 3
+
+      # Um wake normal (became_claimable) chega no processo reidratado —
+      # travado, ele ignora: claim_task nunca é chamado (a notificação
+      # `task_claimed` acontece incondicionalmente DENTRO dele, então sua
+      # ausência prova que o guard barrou antes).
+      Engine.Dev.Wake.deliver(project_id, "dev-api", {:wake, :became_claimable})
+      refute_receive {:task_claimed, _, _}, 200
+
+      desliga(project_id, "dev-api")
+    end
+
+    test "awaiting_gate reidratado: retoma intacto e reage a um gate que resolve DEPOIS do restart",
+         %{project_id: project_id, session_id: session_id} do
+      {:ok, _pid, :started} =
+        DevAgentSupervisor.start_agent(
+          project_id,
+          "dev-api",
+          "api",
+          session_id,
+          nil,
+          nil,
+          :real,
+          3
+        )
+
+      task_id = Ecto.UUID.generate()
+
+      force_status!(project_id, "dev-api", %{
+        status: "awaiting_gate",
+        task_id: task_id,
+        worktree_path: "/tmp/brabo-fake-worktree-#{task_id}",
+        consecutive_blocked: 0
+      })
+
+      desliga(project_id, "dev-api")
+      :ok = DevRehydrator.run()
+
+      row = DevAgentState.get(project_id, "dev-api")
+      assert row.status == "awaiting_gate"
+      assert row.task_id == task_id
+      # Nada reivindicado só por reidratar — awaiting_gate não tenta claim.
+      refute_received {:task_claimed, _, _}
+
+      # O gate resolve DEPOIS do restart — outbox real → drain → wake worker
+      # → PubSub → o processo reidratado (que assinou no init/1) reage.
+      insert_outbox!(task_id, "task.gate_resolved", %{
+        "projectId" => project_id,
+        "sessionId" => session_id,
+        "taskId" => task_id,
+        "agentId" => "dev-api",
+        "gate" => "secops",
+        "veredito" => "approved",
+        "nextAction" => "done"
+      })
+
+      drain_and_wake()
+
+      assert_receive {:task_claimed, "api", "dev-api"}, 2_000
+
+      desliga(project_id, "dev-api")
+    end
+
+    test "working reidratado: bloqueia a task retida com diagnóstico do restart, tenta a próxima, e NÃO conta pro circuit breaker",
+         %{project_id: project_id, session_id: session_id} do
+      {:ok, _pid, :started} =
+        DevAgentSupervisor.start_agent(
+          project_id,
+          "dev-api",
+          "api",
+          session_id,
+          nil,
+          nil,
+          :real,
+          3
+        )
+
+      task_id = Ecto.UUID.generate()
+
+      force_status!(project_id, "dev-api", %{
+        status: "working",
+        task_id: task_id,
+        worktree_path: "/tmp/brabo-fake-worktree-#{task_id}",
+        consecutive_blocked: 0
+      })
+
+      desliga(project_id, "dev-api")
+      :ok = DevRehydrator.run()
+
+      # `assert_receive` (com espera), não `assert_received` (imediato): a
+      # recuperação saiu do `init/1` para um `handle_continue` na correção
+      # D2, justamente para não bloquear o boot. Ela é assíncrona AGORA — e
+      # o `DevRehydrator.run()` retornar antes dela terminar é o ponto.
+      assert_receive {:task_blocked, ^task_id, "engine reiniciou durante a task", _, "dev-api"},
+                     2_000
+
+      # Já tenta a próxima sozinho — sem restart, sem intervenção.
+      assert_receive {:task_claimed, "api", "dev-api"}, 2_000
+
+      # Só depois de a recuperação assíncrona terminar é que a linha reflete
+      # o desfecho — daí o wait_status!/3 em vez de um get direto.
+      row = wait_status!(project_id, "dev-api", "idle")
+      assert row.task_id == nil
+      # O contador NÃO sobe: reiniciar o engine não é o agente queimando o
+      # teto do circuit breaker.
+      assert row.consecutive_blocked == 0
+
+      desliga(project_id, "dev-api")
+    end
+
+    test "run() NÃO espera a recuperação do working — o boot não pode ficar preso numa task (D2)",
+         %{project_id: project_id, session_id: session_id} do
+      # A regressão que isto trava: com a recuperação dentro do `init/1`,
+      # `start_link`/`start_child` esperam `:infinity`, e o `DevRehydrator`
+      # roda na árvore de supervisão da APLICAÇÃO — o boot inteiro ficava
+      # parado pela duração de uma task de LLM, e `Readiness.mark` nunca
+      # disparava (`/ready` em 503, pod morto pelo Kubernetes).
+      {:ok, _pid, :started} =
+        DevAgentSupervisor.start_agent(
+          project_id,
+          "dev-api",
+          "api",
+          session_id,
+          nil,
+          nil,
+          :real,
+          3
+        )
+
+      task_id = Ecto.UUID.generate()
+
+      force_status!(project_id, "dev-api", %{
+        status: "working",
+        task_id: task_id,
+        worktree_path: "/tmp/brabo-fake-worktree-#{task_id}",
+        consecutive_blocked: 0
+      })
+
+      desliga(project_id, "dev-api")
+
+      # O fake de claim segura por 300ms, simulando o custo real de uma task.
+      # Se a recuperação ainda fosse síncrona no init, `run()` só voltaria
+      # depois disso.
+      Application.put_env(:engine, :fake_claim_delay_ms, 300)
+      on_exit(fn -> Application.delete_env(:engine, :fake_claim_delay_ms) end)
+
+      {micros, :ok} = :timer.tc(fn -> DevRehydrator.run() end)
+
+      assert div(micros, 1000) < 200,
+             "DevRehydrator.run() levou #{div(micros, 1000)}ms — está esperando a " <>
+               "recuperação da task, e portanto bloqueando o boot"
+
+      # E a recuperação acontece mesmo assim, só que fora do caminho do boot.
+      assert_receive {:task_blocked, ^task_id, "engine reiniciou durante a task", _, "dev-api"},
+                     2_000
+
+      desliga(project_id, "dev-api")
+    end
   end
 end

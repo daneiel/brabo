@@ -21,6 +21,9 @@ rules:
     watch:
       - "apps/api/src/domain/**"
       - "apps/api/src/db/migrations/**"
+      # Fase 12d: os casos de uso de backlog decidem QUEM promove uma história
+      # (RN-048) — regra de negócio que não mora no diretório `domain/`.
+      - "apps/api/src/application/use-cases/backlog/**"
     docs: ["docs/business-rules.md"]
     severity: block
     note: "RN alterada exige arquivo:linha atualizado e o teste que a cobre."
@@ -146,9 +149,15 @@ rules:
       - "apps/engine/lib/engine/harness/**"
       - "apps/engine/lib/engine/gates/**"
       - "apps/engine/lib/engine/infra/**"
+      # Fase 12d: `dev/` e `agents/` não eram observados por regra NENHUMA — a
+      # máquina de estados dos dev agents (12b) e os agentes conversacionais
+      # (12c) podiam mudar sem doc ser cobrada. O vão estava exatamente onde a
+      # Fase 12 mais mexeu.
+      - "apps/engine/lib/engine/dev/**"
+      - "apps/engine/lib/engine/agents/**"
     docs: ["docs/architecture.md", "docs/glossary.md"]
     severity: warn
-    note: "Atualizar só se mudou contrato de behaviour ou fluxo de gate. `infra/` (área de Infra, Fase 8c) entrou aqui de passagem — não tinha regra nenhuma até então."
+    note: "Atualizar só se mudou contrato de behaviour ou fluxo de gate. `infra/` (área de Infra, Fase 8c) entrou aqui de passagem — não tinha regra nenhuma até então; `dev/` e `agents/` entraram na 12d pelo mesmo motivo."
 
   # -------------------------------------------------------- infra e operação
 

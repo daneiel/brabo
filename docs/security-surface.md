@@ -219,7 +219,11 @@ o componente `d` da JWK, travado por teste.
 | POST | `/projects/:projectId/execution/activate` | role:maintainer |
 | GET | `/projects/:projectId/git/:provider/connect` | role:maintainer |
 | POST | `/projects/:projectId/git/:provider/repository` | role:maintainer |
+| POST | `/projects/:projectId/git/:provider/repository/adopt` | role:maintainer |
 | GET | `/projects/:projectId/git/bootstrap` | role:viewer |
+| GET | `/projects/:projectId/git/bootstrap/plan` | role:viewer |
+| POST | `/projects/:projectId/git/bootstrap/plan/approve` | role:maintainer |
+| POST | `/projects/:projectId/git/bootstrap/plan/skip` | role:maintainer |
 | GET | `/projects/:projectId/git/repository` | role:viewer |
 | GET | `/projects/:projectId/hypotheses` | role:viewer |
 | POST | `/projects/:projectId/hypotheses/:hypothesisId/accept` | role:developer |
@@ -247,6 +251,7 @@ o componente `d` da JWK, travado por teste.
 | POST | `/projects/:projectId/sessions/:sessionId/actions/:actionId/deny` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/agents/:agent/message` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/agents/:agent/start` | role:developer |
+| POST | `/projects/:projectId/sessions/:sessionId/agents/:agentId/rearm` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/agents/arquiteto/handoff-infra` | role:developer |
 | GET | `/projects/:projectId/sessions/:sessionId/budget` | role:developer |
 | PUT | `/projects/:projectId/sessions/:sessionId/budget` | role:developer |
@@ -264,6 +269,8 @@ o componente `d` da JWK, travado por teste.
 | POST | `/projects/:projectId/sessions/:sessionId/tasks/:taskId/unblock` | role:developer |
 | GET | `/projects/:projectId/sessions/:sessionId/token-usage` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/transition` | role:developer |
+| POST | `/projects/:projectId/stories/:storyId/return` | role:developer |
+| POST | `/projects/:projectId/stories/promote` | role:developer |
 | DELETE | `/workspaces/:workspaceId` | role:owner |
 | GET | `/workspaces/:workspaceId` | role:viewer |
 | PATCH | `/workspaces/:workspaceId` | role:maintainer |

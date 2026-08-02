@@ -23,7 +23,7 @@ defmodule Engine.Dev.NoopDevAgentServerTest do
     session_id = Ecto.UUID.generate()
 
     {:ok, state} =
-      NoopDevAgentServer.init({project_id, "dev-api", "api", session_id, 500_000, 2})
+      NoopDevAgentServer.init({project_id, "dev-api", "api", session_id, 500_000, 2, nil, nil})
 
     %{state: state, project_id: project_id, session_id: session_id}
   end
@@ -115,7 +115,13 @@ defmodule Engine.Dev.NoopDevAgentServerTest do
   test "devolução de gate: bloqueia com diagnóstico em vez de derrubar o processo", %{
     state: state
   } do
-    state = %{state | task_id: "aaaa1111-2222-4333-8444-555555555555"}
+    # `:awaiting_gate` é o estado REAL de quem acabou de abrir PR (Fase 12d) —
+    # e é o único em que uma devolução faz sentido.
+    state = %{
+      state
+      | task_id: "aaaa1111-2222-4333-8444-555555555555",
+        status: :awaiting_gate
+    }
 
     assert {:noreply, _} =
              NoopDevAgentServer.handle_cast(
@@ -127,12 +133,229 @@ defmodule Engine.Dev.NoopDevAgentServerTest do
     assert reason =~ "não corrige"
   end
 
+  test "devolução de gate ATRASADA, quando o agente já seguiu, é ignorada", %{state: state} do
+    # Mesmo guard do agente real (D4): `correct/3` é um cast puro. Uma entrega
+    # tardia rodaria a devolução do gate ANTIGO contra o `task_id` ATUAL —
+    # bloquearia uma task que não tem nada a ver com o parecer.
+    state = %{state | task_id: "bbbb2222-3333-4444-8555-666666666666", status: :working}
+
+    assert {:noreply, ^state} =
+             NoopDevAgentServer.handle_cast(
+               {:correct, %{gate: "qa", reason: "suite vermelha", diagnosis: "..."}},
+               state
+             )
+
+    refute_received {:task_blocked, _, _, _, _}
+  end
+
+  describe "reagendamento sem restart (Fase 12d — o Noop entra na 12b)" do
+    test "três tasks em SEQUÊNCIA, um agente, zero restarts, termina idle", %{
+      state: state,
+      project_id: project_id
+    } do
+      # O critério de aceite da Fase 12b, exercitado pelo veículo sem LLM.
+      # Antes da 12d isto era impossível: o Noop parava na primeira.
+      Process.put(:fake_tasks, [
+        %{"id" => "aaaa1111-2222-4333-8444-555555555555", "title" => "t1"},
+        %{"id" => "bbbb2222-3333-4444-8555-666666666666", "title" => "t2"},
+        %{"id" => "cccc3333-4444-4555-8666-777777777777", "title" => "t3"}
+      ])
+
+      assert {:noreply, s1} = NoopDevAgentServer.handle_cast(:work, state)
+      assert s1.status == :awaiting_gate
+      assert s1.task_id == "aaaa1111-2222-4333-8444-555555555555"
+
+      # Gate aprova → o agente reivindica a PRÓXIMA sozinho.
+      assert {:noreply, s2} =
+               NoopDevAgentServer.handle_info(
+                 {:gate_resolved, %{task_id: s1.task_id, next_action: "done"}},
+                 s1
+               )
+
+      assert s2.status == :awaiting_gate
+      assert s2.task_id == "bbbb2222-3333-4444-8555-666666666666"
+
+      assert {:noreply, s3} =
+               NoopDevAgentServer.handle_info(
+                 {:gate_resolved, %{task_id: s2.task_id, next_action: "done"}},
+                 s2
+               )
+
+      assert s3.task_id == "cccc3333-4444-4555-8666-777777777777"
+
+      # Fila vazia: idle EXPLÍCITO, com o processo vivo e a linha durável
+      # dizendo a verdade — não um processo morto.
+      assert {:noreply, s4} =
+               NoopDevAgentServer.handle_info(
+                 {:gate_resolved, %{task_id: s3.task_id, next_action: "done"}},
+                 s3
+               )
+
+      assert s4.status == :idle
+      assert s4.task_id == nil
+      assert DevAgentState.get(project_id, "dev-api").status == "idle"
+    end
+
+    test "task nova fica pegável e acorda quem está idle", %{state: state} do
+      Process.put(:fake_tasks, [])
+      assert {:noreply, idle} = NoopDevAgentServer.handle_cast(:work, state)
+      assert idle.status == :idle
+
+      Process.put(:fake_tasks, [
+        %{"id" => "aaaa1111-2222-4333-8444-555555555555", "title" => "nova"}
+      ])
+
+      assert {:noreply, trabalhando} =
+               NoopDevAgentServer.handle_info({:wake, :became_claimable}, idle)
+
+      assert trabalhando.task_id == "aaaa1111-2222-4333-8444-555555555555"
+    end
+
+    test "wake de task pegável NÃO interrompe quem está em awaiting_gate", %{state: state} do
+      ocupado = %{state | status: :awaiting_gate, task_id: "aaaa1111-2222-4333-8444-555555555555"}
+
+      assert {:noreply, ^ocupado} =
+               NoopDevAgentServer.handle_info({:wake, :became_claimable}, ocupado)
+
+      refute_received {:task_claimed, _, _}
+    end
+
+    test "três blocked seguidas travam o agente em idle_tripped", %{
+      state: state,
+      project_id: project_id
+    } do
+      state = %{state | max_consecutive_blocked: 3}
+
+      # Cada volta: o agente está em awaiting_gate e o gate bloqueia. A fila
+      # tem sempre uma próxima, então só o breaker pode pará-lo.
+      travado =
+        Enum.reduce(1..3, state, fn i, acc ->
+          Process.put(:fake_tasks, [
+            %{"id" => "aaaa1111-2222-4333-8444-55555555555#{i}", "title" => "t#{i}"}
+          ])
+
+          acc = %{
+            acc
+            | status: :awaiting_gate,
+              task_id: "aaaa1111-2222-4333-8444-55555555555#{i}"
+          }
+
+          {:noreply, novo} =
+            NoopDevAgentServer.handle_info(
+              {:gate_resolved, %{task_id: acc.task_id, next_action: "blocked"}},
+              acc
+            )
+
+          novo
+        end)
+
+      assert travado.status == :idle_tripped
+      assert travado.consecutive_blocked == 3
+      assert DevAgentState.get(project_id, "dev-api").status == "idle_tripped"
+      assert_received {:event_appended, _, _, %{type: "dev.idle_tripped"}}
+    end
+
+    test "aprovado no meio de uma sequência zera o contador do breaker", %{state: state} do
+      Process.put(:fake_tasks, [])
+
+      travando = %{
+        state
+        | status: :awaiting_gate,
+          task_id: "aaaa1111-2222-4333-8444-555555555555",
+          consecutive_blocked: 2,
+          max_consecutive_blocked: 3
+      }
+
+      assert {:noreply, zerado} =
+               NoopDevAgentServer.handle_info(
+                 {:gate_resolved, %{task_id: travando.task_id, next_action: "done"}},
+                 travando
+               )
+
+      assert zerado.consecutive_blocked == 0
+      assert zerado.status == :idle
+    end
+
+    test "rearm é a única saída de idle_tripped", %{state: state} do
+      Process.put(:fake_tasks, [
+        %{"id" => "aaaa1111-2222-4333-8444-555555555555", "title" => "depois do rearm"}
+      ])
+
+      travado = %{state | status: :idle_tripped, consecutive_blocked: 3}
+
+      assert {:noreply, solto} = NoopDevAgentServer.handle_info(:rearm, travado)
+      assert solto.consecutive_blocked == 0
+      assert solto.task_id == "aaaa1111-2222-4333-8444-555555555555"
+    end
+
+    test "rearm em agente que não está travado não faz nada", %{state: state} do
+      idle = %{state | status: :idle}
+      assert {:noreply, ^idle} = NoopDevAgentServer.handle_info(:rearm, idle)
+      refute_received {:task_claimed, _, _}
+    end
+  end
+
+  describe "reidratação nos quatro estados (Fase 12d)" do
+    setup %{project_id: project_id, session_id: session_id} do
+      %{
+        subir: fn resume ->
+          {:ok, s} =
+            NoopDevAgentServer.init(
+              {project_id, "dev-web", "web", session_id, 500_000, 2, 3, resume}
+            )
+
+          s
+        end
+      }
+    end
+
+    test "idle e idle_tripped voltam sem task, preservando o contador", %{subir: subir} do
+      idle = subir.(%{status: "idle", task_id: nil, worktree_path: nil, consecutive_blocked: 1})
+      assert idle.status == :idle
+      assert idle.task_id == nil
+      # O contador PRECISA sobreviver: senão um restart no meio de uma
+      # sequência de blocked zeraria o breaker de graça.
+      assert idle.consecutive_blocked == 1
+
+      travado =
+        subir.(%{
+          status: "idle_tripped",
+          task_id: nil,
+          worktree_path: nil,
+          consecutive_blocked: 3
+        })
+
+      assert travado.status == :idle_tripped
+      assert travado.consecutive_blocked == 3
+    end
+
+    test "awaiting_gate retém task e worktree — um gate tardio ainda os encontra", %{
+      subir: subir
+    } do
+      s =
+        subir.(%{
+          status: "awaiting_gate",
+          task_id: "aaaa1111-2222-4333-8444-555555555555",
+          worktree_path: "/data/wt/dev-web",
+          consecutive_blocked: 0
+        })
+
+      assert s.status == :awaiting_gate
+      assert s.task_id == "aaaa1111-2222-4333-8444-555555555555"
+      assert s.worktree == "/data/wt/dev-web"
+      assert s.branch == "feature/task-aaaa1111"
+    end
+  end
+
   test "dois agentes do mesmo projeto trabalham em paralelo sem conflito", %{
     project_id: project_id,
     session_id: session_id
   } do
-    {:ok, api} = NoopDevAgentServer.init({project_id, "dev-api", "api", session_id, nil, nil})
-    {:ok, web} = NoopDevAgentServer.init({project_id, "dev-web", "web", session_id, nil, nil})
+    {:ok, api} =
+      NoopDevAgentServer.init({project_id, "dev-api", "api", session_id, nil, nil, nil, nil})
+
+    {:ok, web} =
+      NoopDevAgentServer.init({project_id, "dev-web", "web", session_id, nil, nil, nil, nil})
 
     Process.put(:fake_tasks, [
       %{"id" => "aaaa1111-2222-4333-8444-555555555555", "title" => "Cadastro"},
