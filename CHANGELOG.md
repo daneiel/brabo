@@ -29,6 +29,18 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **api,engine**: reativar a execução volta a ter efeito. Ativar um projeto que
+  já estava executando era **no-op** para todo agente já vivo (`if origin ==
+  :started`), então um dev parado em `idle` — fila vazia no claim anterior — só
+  voltava a trabalhar por acidente, quando outra task ficasse pegável e o
+  outbox o acordasse por outro caminho. Agora ele recebe um wake, e o guard de
+  estado decide: `idle` reivindica, `working`/`awaiting_gate` seguem intactos e
+  `idle_tripped` continua exigindo rearm explícito (RN-047 preservada). Junto,
+  a ativação deixa de abrir uma **sessão órfã** por clique: ela reusa a sessão
+  de execução vigente, porque o engine descarta o `session_id` novo quando o
+  agente já existe — a sessão nova nascia ativa, recebia o
+  `execution.activated` e nunca mais recebia nada, enquanto os eventos dos
+  agentes continuavam na anterior (RN-053)
 - **engine**: falha de git deixa de chegar **em branco**. `System.cmd/3` com
   `cd:` apontando para diretório inexistente não levanta exceção — devolve
   `{"", 2}` —, e isso virava `{:error, ""}`: o usuário via a ação falhar sem

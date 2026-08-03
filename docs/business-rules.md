@@ -643,6 +643,52 @@ verdade.
   (describe `os quatro estados reidratados`), `test/application/use-cases/execution/rearm-dev-agent.use-case.spec.ts`
 - **Origem:** [ADR 0045](adr/0045-reagendamento-por-evento-do-dev-agent.md)
 
+### RN-053 — Reativar a execução acorda quem está parado, dentro da sessão que já existe {#rn-053}
+
+Ativar a execução de um projeto que **já está executando** é reativação, não
+começo: cai na sessão de execução vigente e acorda os agentes que estavam
+parados. Duas partes, uma de cada lado do sistema.
+
+**A sessão é reusada.** A ativação usa a sessão `active` do projeto que já
+carrega um `execution.activated`; só cria uma quando não há nenhuma. Não existe
+coluna dizendo "esta sessão é de execução" — o que distingue uma é o evento que
+ela guarda, e é por ele que se pergunta. Fechar a sessão continua sendo o jeito
+de recomeçar do zero: a fechada não é candidata, e a próxima ativação abre uma
+nova.
+
+Antes o `create` era incondicional, e o engine **descarta** o `session_id` novo
+quando o agente já está vivo. Cada clique em "ativar" deixava para trás uma
+sessão ativa que recebia o `execution.activated` e mais nada — os eventos dos
+agentes continuavam indo para a sessão da ativação anterior.
+
+**O agente é acordado por wake, não por `work`.** Start fresco dispara o ciclo
+(`:work` — emite `dev.started` e reivindica). Agente que já estava vivo recebe
+`{:wake, :became_claimable}`, e quem decide é o guard de estado do server:
+
+| estado do agente | o que a reativação faz |
+|---|---|
+| `idle` | reivindica a próxima task |
+| `working`, `awaiting_gate`, `awaiting_approval` | nada — a task em curso não é abandonada |
+| `idle_tripped` | nada — só o rearm explícito destrava ([RN-047](#rn-047)) |
+
+Disparar `:work` para todos seria pior que o defeito: ele reivindica
+incondicionalmente, e sobre um agente `awaiting_gate` significaria largar o
+worktree que o gate está varrendo — além de contornar o circuit breaker com um
+clique.
+
+- **Onde:** `apps/api/src/application/use-cases/execution/activate-execution.use-case.ts`,
+  `apps/api/src/infrastructure/persistence/drizzle/session.repository.ts`
+  (`findActiveExecutionSession`),
+  `apps/engine/lib/engine_web/controllers/execution_command_controller.ex`
+  (`acordar/4`)
+- **Teste:** `test/application/use-cases/execution/activate-execution.use-case.spec.ts`
+  (describe `reativação não abre sessão órfã`),
+  `test/infrastructure/persistence/session-execution.repository.spec.ts`,
+  `apps/engine/test/engine_web/controllers/execution_command_controller_test.exs`
+  (describe `reativação`)
+- **Origem:** achado #11 do
+  [primeiro dogfooding](explanation/primeiro-dogfooding.md)
+
 ### RN-048 — Promoção de história é do usuário por default; o modo muda quem dispara, nunca o que é validado {#rn-048}
 
 `projects.story_promotion` escolhe QUEM promove uma história de `draft` para

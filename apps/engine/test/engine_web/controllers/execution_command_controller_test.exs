@@ -156,6 +156,65 @@ defmodule EngineWeb.ExecutionCommandControllerTest do
     refute DevAgentState.get(project_id, "dev-web-2")
   end
 
+  describe "reativação (achado #11 do primeiro dogfooding)" do
+    test "agente que já estava vivo é ACORDADO, não ignorado", %{
+      conn: conn,
+      project_id: project_id,
+      session_id: session_id
+    } do
+      # Antes o controller fazia `if origin == :started`: reativar a execução
+      # era no-op para todo agente já vivo. Um agente parado em `idle` (fila
+      # vazia no claim anterior) só voltava a trabalhar por acidente, se outra
+      # task ficasse pegável e o outbox o acordasse por outro caminho.
+      #
+      # O que chega é um WAKE, não um `:work`. A diferença é o guard de estado
+      # do server: `:idle` reivindica, `:working`/`:awaiting_gate` ignoram (a
+      # task em curso não é abandonada) e `:idle_tripped` continua exigindo
+      # rearm explícito — reativar não contorna o circuit breaker (RN-047).
+      Process.put(:fake_tasks, [])
+
+      {:ok, _pid, :started} =
+        DevAgentSupervisor.start_agent(project_id, "dev-api", "api", session_id, nil, nil, :noop)
+
+      :ok = Wake.subscribe(project_id, "dev-api")
+
+      conn =
+        ExecutionCommandController.start(conn, %{
+          "sessionId" => session_id,
+          "projectId" => project_id,
+          "modules" => ["api"],
+          "impl" => "noop"
+        })
+
+      assert conn.status == 201
+      assert_receive {:wake, :became_claimable}, 2_000
+    end
+
+    test "start FRESCO dispara o ciclo, não o wake", %{
+      conn: conn,
+      project_id: project_id,
+      session_id: session_id
+    } do
+      # O wake é o instrumento da REATIVAÇÃO. Num start fresco quem dispara é
+      # o `:work` — que emite `dev.started` e reivindica. Trocar um pelo outro
+      # perderia o evento de início do agente.
+      Process.put(:fake_tasks, [])
+      :ok = Wake.subscribe(project_id, "dev-api")
+
+      conn =
+        ExecutionCommandController.start(conn, %{
+          "sessionId" => session_id,
+          "projectId" => project_id,
+          "modules" => ["api"],
+          "impl" => "noop"
+        })
+
+      assert conn.status == 201
+      refute_receive {:wake, :became_claimable}, 300
+    end
+
+  end
+
   describe "rearm (Fase 12b — RN-047)" do
     test "agente existente: 202 e entrega :rearm por PubSub", %{
       conn: conn,
