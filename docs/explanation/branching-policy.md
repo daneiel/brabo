@@ -417,6 +417,27 @@ recriar a tag — reescrever o registro para consertar o efeito dele. Quem
 republica é o responsável de release, a mesma restrição do `promote`. O
 procedimento está em [Rulesets](../reference/rulesets.md#republicar-uma-tag-que-ficou-órfã).
 
+### O CHANGELOG volta por PR, e por que não por push
+
+Publicada a Release, o `release.yml` abre uma PR `chore/changelog-<tag>` para
+**`dev`** com o corte da versão no `CHANGELOG.md`.
+
+Por PR, e não por push, porque nenhum dos caminhos diretos existe: `main` só
+aceita tag (bot de release) e `.release/gate.json` (bot do gate), e commitar em
+`qa` ou `dev` antes da promoção quebraria o **range limpo** do check de
+promoção — o head do PR deixaria de ser o tip da origem.
+
+**Consequência aceita:** o `CHANGELOG.md` de `main` fica um ciclo atrás. Não é
+perda de informação: a fonte autoritativa das notas é a **GitHub Release**,
+publicada no mesmo instante da tag, e o corte sobe no ciclo seguinte como
+qualquer outra mudança.
+
+> Antes disso **nada nunca escrevia no arquivo**. O gerador só era chamado com
+> `--stdout`, para montar o corpo da Release, e o `CHANGELOG.md` acumulou doze
+> versões dentro de um único "Unreleased" — enquanto seis Releases saíam com o
+> corpo vazio, porque a "tag anterior" incluía as pré-releases da própria
+> versão sendo lançada.
+
 ### A versão do ciclo
 
 Sai do **maior impacto** entre os PRs mergeados desde a última final:
