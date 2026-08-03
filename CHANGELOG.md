@@ -45,6 +45,16 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **api**: handoff endereçado a **subagente** passa a ser recusado, com erro
+  que nomeia o lead a quem o chamador devia falar. O ADR 0038 pediu essa
+  validação nomeando o lugar — `CreateHandoffUseCase` é o único do sistema que
+  grava `toAgent` — e ela nunca tinha sido implementada: a `offer_handoff` do
+  engine repassa `to_agent` como string livre, então nada impedia um agente de
+  se dirigir direto a `qa-automacao` e furar a hierarquia. A recusa acontece
+  **antes** do insert, senão sobraria um handoff fantasma e um
+  `handoff.offered` — evento imutável — afirmando uma oferta que a política não
+  permite. Área/lead/membros continuam hardcoded (o corte de escopo da Fase 8
+  segue de pé); o que impede as cópias de divergirem é teste (RN-054)
 - **api,engine**: reativar a execução volta a ter efeito. Ativar um projeto que
   já estava executando era **no-op** para todo agente já vivo (`if origin ==
   :started`), então um dev parado em `idle` — fila vazia no claim anterior — só

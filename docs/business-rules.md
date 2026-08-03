@@ -327,6 +327,47 @@ recolhíveis, a timeline de PR expande o parecer consolidado nos internos
 
 ---
 
+### RN-054 — Handoff externo endereça lead de área ou agente sem área — nunca subagente {#rn-054}
+
+Quem fala com uma área **de fora** fala com o lead. Um handoff endereçado a
+subagente (`qa-automacao`, `qa-performance-seguranca`, `infra-workflows`) é
+recusado com erro tipado que **nomeia o lead** a quem o chamador devia se
+dirigir — recusar sem dizer o caminho certo só troca o furo de hierarquia por
+um agente travado.
+
+A recusa acontece **antes** do INSERT. Recusar depois deixaria um handoff
+fantasma na tabela e um `handoff.offered` — evento imutável — afirmando uma
+oferta que a política não permite.
+
+Delegação interna (lead → subagente) **não** passa por aqui: é privada da área,
+tem tabela própria (`delegations`) e caminho próprio
+(`RecordDelegationUseCase`). A regra é sobre o contorno externo da área, não
+sobre o que acontece dentro dela.
+
+O ADR 0038 pediu esta validação nomeando o lugar — `CreateHandoffUseCase` é o
+único do sistema que grava `toAgent` — e ela nunca tinha sido implementada
+(achado #12 do primeiro dogfooding). A `offer_handoff` do engine repassa
+`to_agent` como string livre, então até aqui nada impedia um agente de furar a
+hierarquia.
+
+**Área, lead e membros continuam hardcoded**, em três lugares (web, engine,
+api): o aparato genérico do ADR 0038 (`agent_areas`/`agent_area_members`) é
+corte de escopo registrado da Fase 8, e esta regra não o desfaz. O que a
+impede de divergir em silêncio é teste, não tabela: a lista da api é comparada
+com a do web, e acrescentar um subagente só de um lado reprova.
+
+- **Onde:** `apps/api/src/domain/agents/agent-areas.ts`
+  (`assertHandoffTargetAllowed`, `HandoffToSubagentError`),
+  `apps/api/src/application/use-cases/agents/create-handoff.use-case.ts`
+- **Teste:** `test/domain/agents/agent-areas.spec.ts` (a regra + a checagem de
+  divergência contra o web),
+  `test/application/use-cases/agents/create-handoff.use-case.spec.ts`
+  (recusa sem linha e sem evento)
+- **Origem:** [ADR 0038](adr/0038-hierarquia-de-agentes.md), fechado a partir
+  do achado #12 do [primeiro dogfooding](explanation/primeiro-dogfooding.md)
+
+---
+
 ### RN-037 — Infra vira área: Workflows gera CI conforme o provider, Lead consolida numa PR só {#rn-037}
 
 Segunda instância do modelo do ADR 0038, depois da área de QA (RN-036) — com
