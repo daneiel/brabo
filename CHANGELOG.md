@@ -19,6 +19,13 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **web**: os Insights do Psicólogo ganham **aba própria**, com contador de
+  hipóteses aguardando decisão. Eles moravam no fim da Visão geral, embaixo do
+  painel do time, da execução e da arquitetura — quatro assuntos numa coluna
+  só, na aba que abre por padrão, e a fila de decisões do Psicólogo ficava
+  fora da tela sem nenhum sinal de que existia. Agora ela fica ao lado das
+  outras duas filas de decisão do projeto (backlog e aprovações), cada uma com
+  seu próprio contador: somá-las esconderia qual está pedindo atenção
 - **api**: Ollama e Anthropic passam a declarar `listModels` e a ter o catálogo
   descoberto pelo sync — o backlog que o ADR 0042 deixou aberto. Os dois
   formatos foram verificados na doc oficial antes de uma linha de código: o
