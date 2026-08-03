@@ -35,7 +35,7 @@ defmodule EngineWeb.ExecutionCommandController do
           max_consecutive_blocked
         )
 
-      if origin == :started, do: DevAgentSupervisor.server_for(impl).work(project_id, agent_id)
+      acordar(origin, impl, project_id, agent_id)
     end)
 
     send_resp(conn, 201, "")
@@ -76,8 +76,7 @@ defmodule EngineWeb.ExecutionCommandController do
             base.max_consecutive_blocked
           )
 
-        if origin == :started,
-          do: DevAgentSupervisor.server_for(base.impl).work(project_id, agent_id)
+        acordar(origin, base.impl, project_id, agent_id)
 
         send_resp(conn, 202, "")
     end
@@ -111,4 +110,26 @@ defmodule EngineWeb.ExecutionCommandController do
         send_resp(conn, 202, "")
     end
   end
+
+  # Start FRESCO dispara o ciclo. Agente que já estava vivo — o caso da
+  # REATIVAÇÃO — recebe um wake, não um `work`.
+  #
+  # Antes, reativar era no-op para quem já existia (`if origin == :started`):
+  # um agente parado em `idle` (fila vazia no claim anterior, ou erro de
+  # claim) só voltava a trabalhar por acidente, se alguma outra task ficasse
+  # pegável e o outbox o acordasse. Era o achado #11 do primeiro dogfooding, e
+  # o `DevRehydrator` delegava esse disparo justamente a quem não o fazia.
+  #
+  # `work` seria a ferramenta errada aqui: ele emite `dev.started` e reivindica
+  # incondicionalmente, o que sobre um agente `:working` ou `:awaiting_gate`
+  # significaria abandonar a task em curso. `{:wake, :became_claimable}` já é
+  # exatamente esta semântica — "pode haver trabalho agora" —, e o guard de
+  # estado do server é quem decide: só `:idle` age. `:idle_tripped` continua
+  # exigindo rearm explícito (RN-047) — reativar a execução não é decisão de
+  # destravar um agente que o breaker parou.
+  defp acordar(:started, impl, project_id, agent_id),
+    do: DevAgentSupervisor.server_for(impl).work(project_id, agent_id)
+
+  defp acordar(:existing, _impl, project_id, agent_id),
+    do: Wake.deliver(project_id, agent_id, {:wake, :became_claimable})
 end

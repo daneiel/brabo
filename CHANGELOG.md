@@ -2,6 +2,27 @@
 
 Gerado dos conventional commits por `scripts/changelog.mjs`.
 
+## v2.0.0 — 2026-08-03
+
+### ⚠ Mudanças incompatíveis
+
+- **api,web**: a curadoria de modelo passa a ser por workspace (aae747d)
+
+### Novidades
+
+- **api**: Ollama e Anthropic descobrem o próprio catálogo (3b8a54e)
+
+### Correções
+
+- **api**: o preço da Vultr é oficial e nenhuma troca de preço escapa da auditoria (acf0ad1)
+- **ci**: PR de workflow nascia sem checks, e quebra não chegava ao changelog (44dec9b)
+- **scripts,ci**: o CHANGELOG e as notas de release estavam vazios (9976b70)
+
+### Documentação
+
+- **api**: a rota interna de sync não é "do workspace inteiro" (0962c05)
+- **branching**: o CHANGELOG volta por PR depois do release (fc570b6)
+
 ## Unreleased
 
 ### ⚠ Mudanças incompatíveis
@@ -19,6 +40,22 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **web**: a aba Sessões passa a somar as **aprovações de cada sessão** — o que
+  ainda aguarda você, o que você já decidiu e o que a política auto-aprovou —,
+  além do total do projeto. Tudo o que existia vinha de `usePendingActions`,
+  que exige um `sessionId`, e os três chamadores passavam o da sessão mais
+  recente: uma decisão esquecida numa sessão anterior ficava invisível para
+  sempre. A separação entre clique humano e política sai de colunas que a
+  execução não reescreve (`decidedBy` e `resolvedPolicy`) — contar por `status`
+  perderia a ação aprovada que já executou, que é justamente a métrica que a
+  Fase 10 não conseguiu colher
+- **web**: os Insights do Psicólogo ganham **aba própria**, com contador de
+  hipóteses aguardando decisão. Eles moravam no fim da Visão geral, embaixo do
+  painel do time, da execução e da arquitetura — quatro assuntos numa coluna
+  só, na aba que abre por padrão, e a fila de decisões do Psicólogo ficava
+  fora da tela sem nenhum sinal de que existia. Agora ela fica ao lado das
+  outras duas filas de decisão do projeto (backlog e aprovações), cada uma com
+  seu próprio contador: somá-las esconderia qual está pedindo atenção
 - **api**: Ollama e Anthropic passam a declarar `listModels` e a ter o catálogo
   descoberto pelo sync — o backlog que o ADR 0042 deixou aberto. Os dois
   formatos foram verificados na doc oficial antes de uma linha de código: o
@@ -29,6 +66,50 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **api,web**: o bootstrap para de criar e proteger a branch `rc`, e o
+  `branching-policy.md` que ele **commita no repositório do usuário** passa a
+  descrever a escada de três degraus. O `rc` saiu da política pelo ADR 0030
+  ("sem ambiente e sem gente para exercê-lo, seria degrau cerimonial") e o
+  `pr-police` do CI opera com três desde então — o bootstrap era o último lugar
+  que ainda ensinava a escada de quatro, dentro do repositório de quem usa o
+  produto. São cinco passos agora, não seis. Duas coisas ficam como estão de
+  propósito: o valor `create_rc_branch` continua no enum `bootstrap_step`
+  (linhas antigas o referenciam, e passo que aconteceu não se apaga), e `rc`
+  continua na lista de merge protegido — desproteger uma branch que ainda
+  existe em repositórios antigos custaria caro. Efeito na adoção: um repo com
+  `rc` passa a vê-la classificada como branch **extra**, descrita no plano e
+  nunca tocada, que é o que ela é hoje
+- **api**: handoff endereçado a **subagente** passa a ser recusado, com erro
+  que nomeia o lead a quem o chamador devia falar. O ADR 0038 pediu essa
+  validação nomeando o lugar — `CreateHandoffUseCase` é o único do sistema que
+  grava `toAgent` — e ela nunca tinha sido implementada: a `offer_handoff` do
+  engine repassa `to_agent` como string livre, então nada impedia um agente de
+  se dirigir direto a `qa-automacao` e furar a hierarquia. A recusa acontece
+  **antes** do insert, senão sobraria um handoff fantasma e um
+  `handoff.offered` — evento imutável — afirmando uma oferta que a política não
+  permite. Área/lead/membros continuam hardcoded (o corte de escopo da Fase 8
+  segue de pé); o que impede as cópias de divergirem é teste (RN-054)
+- **api,engine**: reativar a execução volta a ter efeito. Ativar um projeto que
+  já estava executando era **no-op** para todo agente já vivo (`if origin ==
+  :started`), então um dev parado em `idle` — fila vazia no claim anterior — só
+  voltava a trabalhar por acidente, quando outra task ficasse pegável e o
+  outbox o acordasse por outro caminho. Agora ele recebe um wake, e o guard de
+  estado decide: `idle` reivindica, `working`/`awaiting_gate` seguem intactos e
+  `idle_tripped` continua exigindo rearm explícito (RN-047 preservada). Junto,
+  a ativação deixa de abrir uma **sessão órfã** por clique: ela reusa a sessão
+  de execução vigente, porque o engine descarta o `session_id` novo quando o
+  agente já existe — a sessão nova nascia ativa, recebia o
+  `execution.activated` e nunca mais recebia nada, enquanto os eventos dos
+  agentes continuavam na anterior (RN-053)
+- **engine**: falha de git deixa de chegar **em branco**. `System.cmd/3` com
+  `cd:` apontando para diretório inexistente não levanta exceção — devolve
+  `{"", 2}` —, e isso virava `{:error, ""}`: o usuário via a ação falhar sem
+  motivo nenhum. Era o buraco de diagnóstico que o ADR 0048 fechou pela causa
+  raiz (o gate abrindo antes da PR) e deixou registrado como backlog, porque
+  vale para **qualquer** falha de diretório, não só aquela. Toda chamada de git
+  do engine passa a nomear comando, status e diretório quando o git não diz
+  nada; quando ele diz, a saída continua verbatim — quem lia `nothing to
+  commit` continua lendo
 - **api**: o preço dos três modelos da Vultr passa a ser o **oficial**
   (`$0.55`/1M de entrada, `$2.75`/1M de saída, tarifa única do serviço). A
   estimativa anterior errava na direção perigosa — `400_000` micros de saída em

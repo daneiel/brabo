@@ -93,12 +93,12 @@ Fase 12 fechou estão marcados.
 |---|---|---|---|---|
 | 1 | O produto não sabe apontar um projeto para repositório existente. `createRepo` é incondicional; `getRepo` existe e não é chamado por nenhum caso de uso; o DTO não tem campo para `externalId` | `provision-repository.use-case.ts:144` | **P1** | **fechado** — [ADR 0044](../adr/0044-adocao-de-repositorio-existente.md) |
 | 2 | `protectBranch` no GitHub aplica `enforce_admins: true` + 1 revisor sobre proteção existente, sem ler o estado atual — pode travar o merge manual do dono | `github-provider.ts:170-175` | **P1** | **fechado** — virou regra de produto ([RN-045](../business-rules.md#rn-045)) |
-| 3 | O bootstrap cria e protege uma branch `rc` que a política de branches do Brabo (Fase 6) não usa | `bootstrap-steps.ts:94,195` | P2 | aberto |
+| 3 | O bootstrap cria e protege uma branch `rc` que a política de branches do Brabo (Fase 6) não usa | `bootstrap-steps.ts:94,195` | P2 | **fechado** — [RN-029](../business-rules.md#rn-029) |
 | 4 | `agent_areas`/`agent_area_members` não existem; áreas, leads e membros são hardcoded em dois lugares que podem divergir | `schema.ts:781-786` | P2 | corte registrado da Fase 8 |
 | 5 | Os seis providers de LLM da Fase 9b não entraram, e o CLAUDE.md descrevia a Fase 9 como se tivessem entrado | ADR 0042:147-156 | P2 | fechado na Fase 11 |
 | 6 | `git-providers.md` afirma que Bitbucket e Generic são "fora de escopo"; o CLAUDE.md marcava os dois como fase ativa | `docs/reference/git-providers.md:170-174` | P2 | fechado na própria Fase 10 |
-| 7 | O comentário de `git-errors.ts` diz "8 operações"; o contrato tem 10 | `git-errors.ts:3` | P3 | aberto |
-| 8 | O cabeçalho da suite de contrato diz que só o Local a exercita; GitHub e GitLab já a rodam desde a Fase 2 | `git-provider.contract.ts:12-18` | P3 | aberto |
+| 7 | O comentário de `git-errors.ts` diz "8 operações"; o contrato tem 10 | `git-errors.ts:3` | P3 | **fechado** — e a contagem virou teste |
+| 8 | O cabeçalho da suite de contrato diz que só o Local a exercita; GitHub e GitLab já a rodam desde a Fase 2 | `git-provider.contract.ts:12-18` | P3 | **fechado** — e a lista de chamadores virou teste |
 
 ### Do levantamento da condução
 
@@ -106,13 +106,34 @@ Fase 12 fechou estão marcados.
 |---|---|---|---|---|
 | 9 | **O Criativo não pode ser dispensado.** O claim exige story `ready`; `ready` exige ≥1 regra de negócio; o id é validado contra evento real; e só o Criativo tem `emit_artifact` | `story-readiness.ts:46`, `po_server.ex:18` | **P1** | aberto |
 | 10 | **Um dev agent processa UMA task e para.** `:work` só é disparado na ativação e no aceite de paralelização | `dev_agent_server.ex:76-91,306-327` | **P1** | **fechado** — [ADR 0045](../adr/0045-reagendamento-por-evento-do-dev-agent.md) |
-| 11 | Reativar a execução não redispara `:work` e ainda cria uma sessão a mais sem agentes vinculados | `dev_agent_supervisor.ex:33-52` | P2 | aberto |
-| 12 | Não existe handoff manual para um agente à escolha, e a validação de alvo do ADR 0038 nunca foi implementada | `SessionPage.tsx:403-407` | P2 | aberto |
+| 11 | Reativar a execução não redispara `:work` e ainda cria uma sessão a mais sem agentes vinculados | `dev_agent_supervisor.ex:33-52` | P2 | **fechado** — [RN-053](../business-rules.md#rn-053) |
+| 12 | Não existe handoff manual para um agente à escolha, e a validação de alvo do ADR 0038 nunca foi implementada | `SessionPage.tsx:403-407` | P2 | **metade fechada** — validação de alvo em [RN-054](../business-rules.md#rn-054); handoff manual segue aberto |
 | 13 | Não existe "promover a ready": a promoção é automática na criação. `TransitionStoryUseCase` não está ligado a rota nenhuma — é código morto | `create-story.use-case.ts:75-78` | P2 → **P1** | **fechado** — [ADR 0046](../adr/0046-promocao-de-story-com-autoridade-do-usuario.md) |
 | 14 | Não existe devolução ao PO — nenhum estado, evento ou botão | — | P2 | **fechado** junto com o #13 |
-| 15 | O painel do time e as hipóteses do Psicólogo dividem a mesma aba, que é a default do projeto | `ProjectOverviewTab.tsx:227-263` | P2 | aberto |
-| 16 | Nenhuma tela soma aprovações por sessão; a Anamnese sob demanda não tem botão | `hooks.ts:153-160` | P3 | aberto |
-| 17 | **A métrica principal da fase não está no event log.** `proposed_action.approved`/`.denied` vão só para o outbox | `approve-action.use-case.ts:98` | **P1** | aberto |
+| 15 | O painel do time e as hipóteses do Psicólogo dividem a mesma aba, que é a default do projeto | `ProjectOverviewTab.tsx:227-263` | P2 | **fechado** — aba Insights própria, com contador |
+| 16 | Nenhuma tela soma aprovações por sessão; a Anamnese sob demanda não tem botão | `hooks.ts:153-160` | P3 | **fechado em parte** — ver nota abaixo |
+| 17 | **A métrica principal da fase não está no event log.** `proposed_action.approved`/`.denied` vão só para o outbox | `approve-action.use-case.ts:98` | **P1** | **fechado** — [ADR 0048](../adr/0048-decisao-no-log-e-a-ordem-do-gate.md) |
+
+:::note O achado #16 tinha uma metade errada
+
+Ao fechá-lo, a verificação mostrou que a segunda afirmação — "a Anamnese sob
+demanda não tem botão" — **já era falsa quando o achado foi escrito**: a rota
+`POST /projects/:projectId/anamnese/run` existe (`anamnese.controller.ts:71`) e
+o botão "Rodar agora" está em Configurações › Proficiência
+(`ProjectSettingsTab.tsx:777`), coberto por
+`ProficiencySection.test.tsx`.
+
+A primeira metade era real e foi fechada: a aba Sessões passa a somar as ações
+propostas **de cada sessão**, separando o que foi clique seu (`decidedBy`) do
+que a política auto-aprovou (`resolvedPolicy`). Antes tudo saía de
+`usePendingActions`, que exige um `sessionId`, e os três chamadores passavam o
+da sessão mais recente — uma decisão esquecida numa sessão anterior ficava
+invisível para sempre.
+
+O registro fica porque **a colheita não se corrige apagando**: um achado
+parcialmente errado é informação sobre como a corrida foi conduzida.
+
+:::
 
 Dois itens entraram como **registro, não defeito**, para a colheita não os
 confundir com lacuna: o **merge fora do produto** (`awaiting_user` é terminal de
@@ -128,20 +149,26 @@ Listado explicitamente, para não parecer esquecimento:
 |---|---|
 | restarts do engine por task | não tem registro no sistema; dependia de anotação humana ao vivo |
 | intervenções manuais e seus motivos | idem — a tabela de observação ficou em branco a partir da linha 2 |
-| cliques de aprovação por sessão | o achado #17 explica: `proposed_action.approved` não vai para `session_events`; a fonte durável é `proposed_actions.decided_at`, que a corrida não consolidou |
+| cliques de aprovação por sessão | o achado #17 explica: `proposed_action.approved` não ia para `session_events`; a fonte durável era `proposed_actions.decided_at`, que a corrida não consolidou. Fechado depois pelo [ADR 0048](../adr/0048-decisao-no-log-e-a-ordem-do-gate.md) — a métrica existe daqui em diante, mas não retroage a esta corrida |
 | custo em tokens por agente e por provider | `token_usage` tem os dados, mas nenhuma consulta foi rodada e o banco daquela execução não foi preservado |
 | voltas de correção nos gates | idem |
 
 O achado #17 é o mais custoso deste conjunto, e a lição é de instrumentação: **a
 métrica principal de um experimento precisa estar no log durável antes de o
 experimento começar.** Não estava, e por isso a metade quantitativa da colheita
-não existe.
+não existe. Ele foi fechado depois, pelo
+[ADR 0048](../adr/0048-decisao-no-log-e-a-ordem-do-gate.md), e isso vale para o
+**próximo** experimento: nenhuma correção reconstrói dado que não foi gravado.
 
 ## O que a Fase 12 fez com isto
 
 Os três achados P1 de **operabilidade** — #1, #10 e #13 — foram fechados na Fase
 12, e a prova de que morreram numa execução única está em
 [Validação da Fase 12](./validacao-fase-12.md).
+
+O quarto P1, o #17, foi fechado depois pelo
+[ADR 0048](../adr/0048-decisao-no-log-e-a-ordem-do-gate.md), junto com o D5 que
+o ADR 0045 tinha deixado registrado.
 
 Os demais continuam abertos, listados acima, e nenhum foi corrigido de passagem:
 corrigir um achado fora da fase que o endereça é exatamente o que a missão

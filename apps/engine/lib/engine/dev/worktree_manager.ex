@@ -7,6 +7,7 @@ defmodule Engine.Dev.WorktreeManager do
   garante), com limpeza de órfãos (worktree sem agente vivo).
   """
 
+  alias Engine.Actions.GitCmd
   alias Engine.Actions.Workspace
   alias Engine.Projects.ProjectRepository
 
@@ -86,10 +87,5 @@ defmodule Engine.Dev.WorktreeManager do
     :ok
   end
 
-  defp git(cd, args) do
-    case System.cmd("git", args, cd: cd, stderr_to_stdout: true) do
-      {out, 0} -> {:ok, out}
-      {out, _} -> {:error, out}
-    end
-  end
+  defp git(cd, args), do: GitCmd.run(cd, args)
 end

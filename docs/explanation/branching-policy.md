@@ -53,6 +53,19 @@ um ambiente para separar "validado" de "quase pronto" — distinção que não
 estava pagando o próprio custo. `qa` passa a ser o único portão antes de
 produção.
 
+A remoção levou tempo para chegar ao fim. O `pr-police` passou a operar com
+três degraus imediatamente, mas o **bootstrap de Gitflow** continuou criando
+`rc`, protegendo `rc` e commitando no repositório do usuário um
+`branching-policy.md` que ensinava a escada de quatro — o produto documentando
+para quem o usa uma política que ele mesmo tinha abandonado. Foi o achado #3 do
+[primeiro dogfooding](./primeiro-dogfooding.md), fechado depois
+([RN-029](../business-rules.md#rn-029)).
+
+Duas pontas ficaram de pé de propósito, e por motivos diferentes: o valor
+`create_rc_branch` continua no enum `bootstrap_step` do banco (bootstraps já
+rodados têm linhas com ele) e `rc` continua na lista de **merge protegido** —
+ver a nota em [permissions.md](../reference/permissions.md).
+
 **Não se pula degrau.** `dev → main` não existe, nem em emergência —
 emergência tem caminho próprio (`hotfix`, abaixo), e ele também respeita a
 escada, só que começando do topo.

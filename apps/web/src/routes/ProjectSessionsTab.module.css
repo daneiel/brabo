@@ -46,6 +46,26 @@
   color: var(--text-muted);
 }
 
+/* Resumo de aprovações por sessão (achado #16): antes nenhuma tela somava
+   isso, e tudo o que existia estava preso à sessão mais recente. */
+.rowApprovals {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.rowApprovalsPending {
+  color: var(--warning);
+}
+
+.subtitle {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+
 .empty {
   color: var(--text-muted);
   font-size: 13px;
