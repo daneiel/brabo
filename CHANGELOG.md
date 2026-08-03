@@ -2,6 +2,27 @@
 
 Gerado dos conventional commits por `scripts/changelog.mjs`.
 
+## v2.0.0 — 2026-08-03
+
+### ⚠ Mudanças incompatíveis
+
+- **api,web**: a curadoria de modelo passa a ser por workspace (aae747d)
+
+### Novidades
+
+- **api**: Ollama e Anthropic descobrem o próprio catálogo (3b8a54e)
+
+### Correções
+
+- **api**: o preço da Vultr é oficial e nenhuma troca de preço escapa da auditoria (acf0ad1)
+- **ci**: PR de workflow nascia sem checks, e quebra não chegava ao changelog (44dec9b)
+- **scripts,ci**: o CHANGELOG e as notas de release estavam vazios (9976b70)
+
+### Documentação
+
+- **api**: a rota interna de sync não é "do workspace inteiro" (0962c05)
+- **branching**: o CHANGELOG volta por PR depois do release (fc570b6)
+
 ## Unreleased
 
 ### ⚠ Mudanças incompatíveis
