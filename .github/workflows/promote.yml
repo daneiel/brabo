@@ -32,6 +32,11 @@ jobs:
     name: Abrir PR de promoção
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      # `secrets` não existe no `if:` de um step — só em `env`. Passar por aqui
+      # é o que torna a presença do PAT testável dentro do job, igual ao
+      # `tag-release.yml`.
+      TEM_PAT: ${{ secrets.BRABO_BOT_TOKEN != '' }}
     steps:
       # PRIMEIRO passo do job, antes de qualquer checkout: quem dispara é
       # restrito. `workflow_dispatch` já exige permissão de escrita no repo,
@@ -89,9 +94,30 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: node scripts/ci/promote.ts
 
+      - name: O PAT está configurado?
+        if: env.TEM_PAT != 'true'
+        run: |
+          echo "::warning::sem BRABO_BOT_TOKEN: o PR de promoção abre, mas os checks dele nascem em 'action_required' e alguém precisa liberá-los à mão — inclusive o Check de promoção."
+
+      # O PR é aberto pelo PAT, e isso NÃO é cosmético.
+      #
+      # PR criado com o `GITHUB_TOKEN` sai com autor `app/github-actions`, e os
+      # workflows de PR nascem em `action_required` esperando aprovação manual.
+      # O efeito prático foi medido: o PR de promoção chegava a `MERGEABLE`
+      # com quatro checks — todos herdados do push da branch de origem — e o
+      # **Check de promoção não tinha rodado**. Quem mergeasse sem reparar
+      # promoveria sem o portão que valida range limpo, degrau carimbado e
+      # merge commit possível.
+      #
+      # É a MESMA regra do GitHub contra recursão que o `tag-release.yml` já
+      # documenta desde a v0.2.0 — o aviso de lá diz, literalmente, "nem abre
+      # PR com checks". Este workflow só nunca tinha recebido o mesmo remédio.
+      #
+      # Sem o segredo, cai no token padrão: o PR ainda abre, só nasce travado —
+      # degradação visível (o aviso acima), não silenciosa.
       - name: Abrir o PR de promoção
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.BRABO_BOT_TOKEN || github.token }}
           DE: ${{ steps.calculo.outputs.de }}
           PARA: ${{ steps.calculo.outputs.para }}
           VERSAO: ${{ steps.calculo.outputs.versao }}

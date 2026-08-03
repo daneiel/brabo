@@ -23,6 +23,8 @@ import type {
   ModelBindingScope,
   ModelPriceChange,
   ModelsByCategory,
+  ModelComCuradoria,
+  CatalogoPorCategoria,
   SyncModelCatalogResult,
   Page,
   PermissionPolicy,
@@ -505,20 +507,29 @@ export const denyAction = (
 
 // --- LLM: modelos, bindings, credenciais, budgets ---
 
-export const listModels = () => get<ModelsByCategory>('/models');
+// Pende do PROJETO desde o ADR 0049: a curadoria é por workspace, e o
+// workspace sai do projeto no servidor. As três telas que chamam isto já
+// estavam dentro de um projeto — nenhuma tinha workspace na mão.
+export const listModels = (projectId: string) =>
+  get<ModelsByCategory>(`/projects/${projectId}/models`);
 
 // --- Curadoria de catálogo (Fase 9c) ---
 //
-// Ancoradas no workspace porque o RolesGuard resolve o papel a partir de
-// `:workspaceId`/`:projectId`; o catálogo em si é global.
+// Ancoradas no workspace porque a curadoria É por workspace desde o ADR 0049
+// — não só porque o RolesGuard resolve o papel a partir de `:workspaceId`.
+// O catálogo em si (nome, preço, capabilities) continua global.
 
 export const listModelCatalog = (workspaceId: string) =>
-  get<ModelsByCategory>(`/workspaces/${workspaceId}/models/catalog`);
+  get<CatalogoPorCategoria>(`/workspaces/${workspaceId}/models/catalog`);
 
 export const setModelsActive = (
   workspaceId: string,
   input: { modelIds: string[]; isActive: boolean },
-) => post<Model[]>(`/workspaces/${workspaceId}/models/activate`, input);
+) =>
+  post<ModelComCuradoria[]>(
+    `/workspaces/${workspaceId}/models/activate`,
+    input,
+  );
 
 export const syncModelCatalog = (workspaceId: string) =>
   post<SyncModelCatalogResult>(`/workspaces/${workspaceId}/models/sync`, {});

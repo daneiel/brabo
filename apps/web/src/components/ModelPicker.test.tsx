@@ -25,7 +25,6 @@ function model(over: Partial<Model> = {}): Model {
     supportsStreaming: true,
     supportsVision: false,
     manualPricing: true,
-    isActive: true,
     availability: 'available',
     lastSeenAt: null,
     ...over,

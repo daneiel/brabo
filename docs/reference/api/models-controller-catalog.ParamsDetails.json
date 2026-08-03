@@ -1,1 +1,1 @@
-{"parameters":[]}
+{"parameters":[{"name":"workspaceId","required":true,"in":"path","schema":{"type":"string"}}]}
