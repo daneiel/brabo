@@ -93,12 +93,12 @@ Fase 12 fechou estão marcados.
 |---|---|---|---|---|
 | 1 | O produto não sabe apontar um projeto para repositório existente. `createRepo` é incondicional; `getRepo` existe e não é chamado por nenhum caso de uso; o DTO não tem campo para `externalId` | `provision-repository.use-case.ts:144` | **P1** | **fechado** — [ADR 0044](../adr/0044-adocao-de-repositorio-existente.md) |
 | 2 | `protectBranch` no GitHub aplica `enforce_admins: true` + 1 revisor sobre proteção existente, sem ler o estado atual — pode travar o merge manual do dono | `github-provider.ts:170-175` | **P1** | **fechado** — virou regra de produto ([RN-045](../business-rules.md#rn-045)) |
-| 3 | O bootstrap cria e protege uma branch `rc` que a política de branches do Brabo (Fase 6) não usa | `bootstrap-steps.ts:94,195` | P2 | aberto |
+| 3 | O bootstrap cria e protege uma branch `rc` que a política de branches do Brabo (Fase 6) não usa | `bootstrap-steps.ts:94,195` | P2 | **fechado** — [RN-029](../business-rules.md#rn-029) |
 | 4 | `agent_areas`/`agent_area_members` não existem; áreas, leads e membros são hardcoded em dois lugares que podem divergir | `schema.ts:781-786` | P2 | corte registrado da Fase 8 |
 | 5 | Os seis providers de LLM da Fase 9b não entraram, e o CLAUDE.md descrevia a Fase 9 como se tivessem entrado | ADR 0042:147-156 | P2 | fechado na Fase 11 |
 | 6 | `git-providers.md` afirma que Bitbucket e Generic são "fora de escopo"; o CLAUDE.md marcava os dois como fase ativa | `docs/reference/git-providers.md:170-174` | P2 | fechado na própria Fase 10 |
-| 7 | O comentário de `git-errors.ts` diz "8 operações"; o contrato tem 10 | `git-errors.ts:3` | P3 | aberto |
-| 8 | O cabeçalho da suite de contrato diz que só o Local a exercita; GitHub e GitLab já a rodam desde a Fase 2 | `git-provider.contract.ts:12-18` | P3 | aberto |
+| 7 | O comentário de `git-errors.ts` diz "8 operações"; o contrato tem 10 | `git-errors.ts:3` | P3 | **fechado** — e a contagem virou teste |
+| 8 | O cabeçalho da suite de contrato diz que só o Local a exercita; GitHub e GitLab já a rodam desde a Fase 2 | `git-provider.contract.ts:12-18` | P3 | **fechado** — e a lista de chamadores virou teste |
 
 ### Do levantamento da condução
 

@@ -134,6 +134,13 @@ delas é rebaixado de `auto_approve` para `require_approval` **depois** de toda
 a política ter rodado. Nem `agent_autonomy` nem `permissions.json` conseguem
 promovê-lo.
 
+`rc` continua na lista mesmo depois de o degrau sair da política
+([ADR 0030](adr/0030-politica-de-branches-mecanizada.md)) e de o bootstrap
+parar de criá-la ([RN-029](#rn-029)). Esta lista decide o que a trava
+**recusa**, e repositórios bootstrapados por versões anteriores ainda têm a
+branch: proteger uma que não existe não custa nada; desproteger uma que existe
+custa caro.
+
 - **Onde:** `apps/api/src/domain/actions/decide.ts:149` + `protected-branches.ts:4`
 - **Teste:** `test/domain/actions/decide.spec.ts`
 - **Origem:** [ADR 0011](adr/0011-infra-dev-agents-worktrees-merge-lock.md) §1
@@ -595,7 +602,7 @@ fora de um plano aprovado.
 As duas saídas:
 
 - **aprovar** é tudo-ou-nada (aprovar passos soltos quebraria a cascata
-  `dev←main, qa←dev, rc←qa`). O que executa é o plano **re-derivado** no
+  `dev←main, qa←dev`). O que executa é o plano **re-derivado** no
   momento da execução: igual ou menor que o exibido, **nunca maior** — uma
   branch que tenha virado protegida nesse meio-tempo é pulada;
 - **adotar como está** dispensa o bootstrap, registra a decisão e **não
@@ -1040,11 +1047,19 @@ Operação não suportada (proteção de branch no provider local) é declarada 
 
 ### RN-029 — O bootstrap de Gitflow é idempotente e retomável {#rn-029}
 
-Seis passos; cada um verifica antes de agir e pode ser retomado do ponto que
+Cinco passos; cada um verifica antes de agir e pode ser retomado do ponto que
 falhou. `skip` é sucesso, não erro.
 
+Eram seis. O sexto criava a branch `rc`, degrau que o
+[ADR 0030](adr/0030-politica-de-branches-mecanizada.md) removeu da política —
+o bootstrap continuou criando, protegendo e **documentando no repositório do
+usuário** uma escada que o produto já tinha abandonado (achado #3 do primeiro
+dogfooding). O valor `create_rc_branch` continua no enum `bootstrap_step`:
+linhas antigas o referenciam, e passo que aconteceu de verdade não se apaga do
+histórico.
+
 - **Onde:** `apps/api/src/application/use-cases/git/bootstrap-steps.ts` +
-  `domain/git/repo-bootstrap.entity.ts`
+  `domain/git/repo-bootstrap.entity.ts` (`RETIRED_BOOTSTRAP_STEPS`)
 - **Teste:** `test/domain/git/repo-bootstrap-status.spec.ts`
 - **Origem:** [ADR 0005](adr/0005-repo-bootstrap-idempotent-steps.md)
 

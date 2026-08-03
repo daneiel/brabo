@@ -45,6 +45,19 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **api,web**: o bootstrap para de criar e proteger a branch `rc`, e o
+  `branching-policy.md` que ele **commita no repositório do usuário** passa a
+  descrever a escada de três degraus. O `rc` saiu da política pelo ADR 0030
+  ("sem ambiente e sem gente para exercê-lo, seria degrau cerimonial") e o
+  `pr-police` do CI opera com três desde então — o bootstrap era o último lugar
+  que ainda ensinava a escada de quatro, dentro do repositório de quem usa o
+  produto. São cinco passos agora, não seis. Duas coisas ficam como estão de
+  propósito: o valor `create_rc_branch` continua no enum `bootstrap_step`
+  (linhas antigas o referenciam, e passo que aconteceu não se apaga), e `rc`
+  continua na lista de merge protegido — desproteger uma branch que ainda
+  existe em repositórios antigos custaria caro. Efeito na adoção: um repo com
+  `rc` passa a vê-la classificada como branch **extra**, descrita no plano e
+  nunca tocada, que é o que ela é hoje
 - **api**: handoff endereçado a **subagente** passa a ser recusado, com erro
   que nomeia o lead a quem o chamador devia falar. O ADR 0038 pediu essa
   validação nomeando o lugar — `CreateHandoffUseCase` é o único do sistema que

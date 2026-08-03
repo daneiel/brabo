@@ -49,9 +49,9 @@ describe('agruparPlano', () => {
       plano({
         steps: [
           {
-            step: 'create_rc_branch',
+            step: 'create_qa_branch',
             actionType: 'git_branch_create',
-            payload: { branchName: 'rc', fromRef: 'qa' },
+            payload: { branchName: 'qa', fromRef: 'dev' },
           },
         ],
       }),

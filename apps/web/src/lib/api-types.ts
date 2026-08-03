@@ -344,8 +344,12 @@ export type BootstrapStepName =
   | 'commit_branching_policy'
   | 'create_dev_branch'
   | 'create_qa_branch'
-  | 'create_rc_branch'
-  | 'protect_branches';
+  | 'protect_branches'
+  // Aposentado com o degrau `rc` (ADR 0030): o bootstrap não executa mais,
+  // mas projetos bootstrapados antes têm eventos e cursor com este valor, e a
+  // api continua podendo devolvê-lo. Ele não aparece na lista de passos do
+  // painel (`lib/bootstrap.ts`), que mostra o que o bootstrap FAZ hoje.
+  | 'create_rc_branch';
 
 export type BootstrapStepStatus = 'pending' | 'running' | 'done' | 'failed';
 

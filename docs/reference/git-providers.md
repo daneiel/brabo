@@ -122,8 +122,17 @@ a suite nos dois sentidos.
 
 ## Bootstrap de Gitflow
 
-Seis passos que preparam o repositório do projeto: branches permanentes (`dev`,
-`qa`, `rc`, `main`), proteções onde o provider suporta, e arquivos base.
+Cinco passos que preparam o repositório do projeto: branches permanentes
+(`dev`, `qa`, `main`), proteções onde o provider suporta, e arquivos base.
+
+Eram seis: havia um passo `create_rc_branch`, que criava o degrau `rc` entre
+`qa` e `main`. O degrau saiu da política pelo
+[ADR 0030](../adr/0030-politica-de-branches-mecanizada.md) e o passo saiu do
+bootstrap depois, quando o descompasso foi notado — o produto criava, protegia
+e **documentava no repositório do usuário** uma escada de quatro degraus que
+ele mesmo tinha abandonado. O valor `create_rc_branch` continua no enum
+`bootstrap_step` do banco: bootstraps antigos têm linhas com ele, e um passo
+que realmente aconteceu não se apaga.
 
 Duas propriedades, ambas testadas
 ([ADR 0005](../adr/0005-repo-bootstrap-idempotent-steps.md),

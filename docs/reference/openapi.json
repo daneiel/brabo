@@ -8267,8 +8267,8 @@
               "commit_branching_policy",
               "create_dev_branch",
               "create_qa_branch",
-              "create_rc_branch",
-              "protect_branches"
+              "protect_branches",
+              "create_rc_branch"
             ],
             "example": "create_qa_branch"
           },
@@ -10344,8 +10344,8 @@
               "commit_branching_policy",
               "create_dev_branch",
               "create_qa_branch",
-              "create_rc_branch",
-              "protect_branches"
+              "protect_branches",
+              "create_rc_branch"
             ],
             "example": "create_dev_branch"
           },
@@ -11687,8 +11687,8 @@
               "commit_branching_policy",
               "create_dev_branch",
               "create_qa_branch",
-              "create_rc_branch",
-              "protect_branches"
+              "protect_branches",
+              "create_rc_branch"
             ],
             "example": null,
             "nullable": true
