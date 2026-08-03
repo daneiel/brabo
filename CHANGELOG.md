@@ -29,6 +29,15 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **engine**: falha de git deixa de chegar **em branco**. `System.cmd/3` com
+  `cd:` apontando para diretório inexistente não levanta exceção — devolve
+  `{"", 2}` —, e isso virava `{:error, ""}`: o usuário via a ação falhar sem
+  motivo nenhum. Era o buraco de diagnóstico que o ADR 0048 fechou pela causa
+  raiz (o gate abrindo antes da PR) e deixou registrado como backlog, porque
+  vale para **qualquer** falha de diretório, não só aquela. Toda chamada de git
+  do engine passa a nomear comando, status e diretório quando o git não diz
+  nada; quando ele diz, a saída continua verbatim — quem lia `nothing to
+  commit` continua lendo
 - **api**: o preço dos três modelos da Vultr passa a ser o **oficial**
   (`$0.55`/1M de entrada, `$2.75`/1M de saída, tarifa única do serviço). A
   estimativa anterior errava na direção perigosa — `400_000` micros de saída em

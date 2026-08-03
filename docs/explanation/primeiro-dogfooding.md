@@ -112,7 +112,7 @@ Fase 12 fechou estão marcados.
 | 14 | Não existe devolução ao PO — nenhum estado, evento ou botão | — | P2 | **fechado** junto com o #13 |
 | 15 | O painel do time e as hipóteses do Psicólogo dividem a mesma aba, que é a default do projeto | `ProjectOverviewTab.tsx:227-263` | P2 | aberto |
 | 16 | Nenhuma tela soma aprovações por sessão; a Anamnese sob demanda não tem botão | `hooks.ts:153-160` | P3 | aberto |
-| 17 | **A métrica principal da fase não está no event log.** `proposed_action.approved`/`.denied` vão só para o outbox | `approve-action.use-case.ts:98` | **P1** | aberto |
+| 17 | **A métrica principal da fase não está no event log.** `proposed_action.approved`/`.denied` vão só para o outbox | `approve-action.use-case.ts:98` | **P1** | **fechado** — [ADR 0048](../adr/0048-decisao-no-log-e-a-ordem-do-gate.md) |
 
 Dois itens entraram como **registro, não defeito**, para a colheita não os
 confundir com lacuna: o **merge fora do produto** (`awaiting_user` é terminal de
@@ -128,20 +128,26 @@ Listado explicitamente, para não parecer esquecimento:
 |---|---|
 | restarts do engine por task | não tem registro no sistema; dependia de anotação humana ao vivo |
 | intervenções manuais e seus motivos | idem — a tabela de observação ficou em branco a partir da linha 2 |
-| cliques de aprovação por sessão | o achado #17 explica: `proposed_action.approved` não vai para `session_events`; a fonte durável é `proposed_actions.decided_at`, que a corrida não consolidou |
+| cliques de aprovação por sessão | o achado #17 explica: `proposed_action.approved` não ia para `session_events`; a fonte durável era `proposed_actions.decided_at`, que a corrida não consolidou. Fechado depois pelo [ADR 0048](../adr/0048-decisao-no-log-e-a-ordem-do-gate.md) — a métrica existe daqui em diante, mas não retroage a esta corrida |
 | custo em tokens por agente e por provider | `token_usage` tem os dados, mas nenhuma consulta foi rodada e o banco daquela execução não foi preservado |
 | voltas de correção nos gates | idem |
 
 O achado #17 é o mais custoso deste conjunto, e a lição é de instrumentação: **a
 métrica principal de um experimento precisa estar no log durável antes de o
 experimento começar.** Não estava, e por isso a metade quantitativa da colheita
-não existe.
+não existe. Ele foi fechado depois, pelo
+[ADR 0048](../adr/0048-decisao-no-log-e-a-ordem-do-gate.md), e isso vale para o
+**próximo** experimento: nenhuma correção reconstrói dado que não foi gravado.
 
 ## O que a Fase 12 fez com isto
 
 Os três achados P1 de **operabilidade** — #1, #10 e #13 — foram fechados na Fase
 12, e a prova de que morreram numa execução única está em
 [Validação da Fase 12](./validacao-fase-12.md).
+
+O quarto P1, o #17, foi fechado depois pelo
+[ADR 0048](../adr/0048-decisao-no-log-e-a-ordem-do-gate.md), junto com o D5 que
+o ADR 0045 tinha deixado registrado.
 
 Os demais continuam abertos, listados acima, e nenhum foi corrigido de passagem:
 corrigir um achado fora da fase que o endereça é exatamente o que a missão
