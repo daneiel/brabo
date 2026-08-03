@@ -202,18 +202,30 @@ export interface Model {
   supportsVision: boolean;
   /** Preço digitado da doc do provider, não sincronizado (Fase 9b). */
   manualPricing: boolean;
-  /** Curadoria do OWNER: se aparece no seletor (Fase 9c). */
-  isActive: boolean;
   /**
-   * Eixo INDEPENDENTE de `isActive`: um modelo pode estar ativo e
-   * indisponível ao mesmo tempo. `unavailable` nunca é deletado — bindings e
-   * histórico de custo apontam para ele.
+   * Eixo INDEPENDENTE da curadoria: um modelo pode estar ativo num workspace
+   * e indisponível no provider ao mesmo tempo. `unavailable` nunca é deletado
+   * — bindings e histórico de custo apontam para ele.
    */
   availability: ModelAvailability;
   lastSeenAt: string | null;
 }
 
+/**
+ * O modelo COM a curadoria de um workspace (ADR 0049). `isActive` não é
+ * atributo do modelo: é a decisão de um workspace sobre ele, e o mesmo modelo
+ * sai ligado aqui e desligado no vizinho. Só a tela de curadoria recebe isto
+ * — o seletor recebe `Model`, porque a lista dele já É a dos ativos.
+ */
+export interface ModelComCuradoria extends Model {
+  isActive: boolean;
+}
+
 export type ModelsByCategory = Record<ModelCategory, Record<string, Model[]>>;
+export type CatalogoPorCategoria = Record<
+  ModelCategory,
+  Record<string, ModelComCuradoria[]>
+>;
 
 /** Uma mudança de preço, append-only (Fase 9c, RN-044). */
 export interface ModelPriceChange {
