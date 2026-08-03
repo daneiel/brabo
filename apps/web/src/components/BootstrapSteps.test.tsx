@@ -13,10 +13,12 @@ function states(
 }
 
 describe('BootstrapSteps', () => {
-  it('renderiza os 6 passos', () => {
+  it('renderiza os 5 passos', () => {
+    // Eram 6 até `create_rc_branch` sair da sequência junto com o degrau
+    // `rc` (ADR 0030, achado #3). O painel lista o que o bootstrap FAZ.
     render(<BootstrapSteps stepStates={states()} />);
     const items = screen.getByTestId('bootstrap-steps').querySelectorAll('li');
-    expect(items).toHaveLength(6);
+    expect(items).toHaveLength(5);
   });
 
   it('marca o passo que falhou com data-state=falha e mostra a nota', () => {

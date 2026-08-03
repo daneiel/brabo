@@ -134,6 +134,13 @@ delas é rebaixado de `auto_approve` para `require_approval` **depois** de toda
 a política ter rodado. Nem `agent_autonomy` nem `permissions.json` conseguem
 promovê-lo.
 
+`rc` continua na lista mesmo depois de o degrau sair da política
+([ADR 0030](adr/0030-politica-de-branches-mecanizada.md)) e de o bootstrap
+parar de criá-la ([RN-029](#rn-029)). Esta lista decide o que a trava
+**recusa**, e repositórios bootstrapados por versões anteriores ainda têm a
+branch: proteger uma que não existe não custa nada; desproteger uma que existe
+custa caro.
+
 - **Onde:** `apps/api/src/domain/actions/decide.ts:149` + `protected-branches.ts:4`
 - **Teste:** `test/domain/actions/decide.spec.ts`
 - **Origem:** [ADR 0011](adr/0011-infra-dev-agents-worktrees-merge-lock.md) §1
@@ -324,6 +331,47 @@ Do lado da `apps/web` (Fase 8d): o painel do time agrupa `qa`/
 recolhíveis, a timeline de PR expande o parecer consolidado nos internos
 (`ProjectApprovalsTab.tsx`, `PrGateTimeline.tsx`), e o feed narra
 `delegation.*` — ver `apps/web/src/lib/agents.ts` (`AREAS`/`areaFor`).
+
+---
+
+### RN-054 — Handoff externo endereça lead de área ou agente sem área — nunca subagente {#rn-054}
+
+Quem fala com uma área **de fora** fala com o lead. Um handoff endereçado a
+subagente (`qa-automacao`, `qa-performance-seguranca`, `infra-workflows`) é
+recusado com erro tipado que **nomeia o lead** a quem o chamador devia se
+dirigir — recusar sem dizer o caminho certo só troca o furo de hierarquia por
+um agente travado.
+
+A recusa acontece **antes** do INSERT. Recusar depois deixaria um handoff
+fantasma na tabela e um `handoff.offered` — evento imutável — afirmando uma
+oferta que a política não permite.
+
+Delegação interna (lead → subagente) **não** passa por aqui: é privada da área,
+tem tabela própria (`delegations`) e caminho próprio
+(`RecordDelegationUseCase`). A regra é sobre o contorno externo da área, não
+sobre o que acontece dentro dela.
+
+O ADR 0038 pediu esta validação nomeando o lugar — `CreateHandoffUseCase` é o
+único do sistema que grava `toAgent` — e ela nunca tinha sido implementada
+(achado #12 do primeiro dogfooding). A `offer_handoff` do engine repassa
+`to_agent` como string livre, então até aqui nada impedia um agente de furar a
+hierarquia.
+
+**Área, lead e membros continuam hardcoded**, em três lugares (web, engine,
+api): o aparato genérico do ADR 0038 (`agent_areas`/`agent_area_members`) é
+corte de escopo registrado da Fase 8, e esta regra não o desfaz. O que a
+impede de divergir em silêncio é teste, não tabela: a lista da api é comparada
+com a do web, e acrescentar um subagente só de um lado reprova.
+
+- **Onde:** `apps/api/src/domain/agents/agent-areas.ts`
+  (`assertHandoffTargetAllowed`, `HandoffToSubagentError`),
+  `apps/api/src/application/use-cases/agents/create-handoff.use-case.ts`
+- **Teste:** `test/domain/agents/agent-areas.spec.ts` (a regra + a checagem de
+  divergência contra o web),
+  `test/application/use-cases/agents/create-handoff.use-case.spec.ts`
+  (recusa sem linha e sem evento)
+- **Origem:** [ADR 0038](adr/0038-hierarquia-de-agentes.md), fechado a partir
+  do achado #12 do [primeiro dogfooding](explanation/primeiro-dogfooding.md)
 
 ---
 
@@ -554,7 +602,7 @@ fora de um plano aprovado.
 As duas saídas:
 
 - **aprovar** é tudo-ou-nada (aprovar passos soltos quebraria a cascata
-  `dev←main, qa←dev, rc←qa`). O que executa é o plano **re-derivado** no
+  `dev←main, qa←dev`). O que executa é o plano **re-derivado** no
   momento da execução: igual ou menor que o exibido, **nunca maior** — uma
   branch que tenha virado protegida nesse meio-tempo é pulada;
 - **adotar como está** dispensa o bootstrap, registra a decisão e **não
@@ -642,6 +690,52 @@ verdade.
   (describe `circuit breaker`), `apps/engine/test/engine/dev/dev_rehydrator_test.exs`
   (describe `os quatro estados reidratados`), `test/application/use-cases/execution/rearm-dev-agent.use-case.spec.ts`
 - **Origem:** [ADR 0045](adr/0045-reagendamento-por-evento-do-dev-agent.md)
+
+### RN-053 — Reativar a execução acorda quem está parado, dentro da sessão que já existe {#rn-053}
+
+Ativar a execução de um projeto que **já está executando** é reativação, não
+começo: cai na sessão de execução vigente e acorda os agentes que estavam
+parados. Duas partes, uma de cada lado do sistema.
+
+**A sessão é reusada.** A ativação usa a sessão `active` do projeto que já
+carrega um `execution.activated`; só cria uma quando não há nenhuma. Não existe
+coluna dizendo "esta sessão é de execução" — o que distingue uma é o evento que
+ela guarda, e é por ele que se pergunta. Fechar a sessão continua sendo o jeito
+de recomeçar do zero: a fechada não é candidata, e a próxima ativação abre uma
+nova.
+
+Antes o `create` era incondicional, e o engine **descarta** o `session_id` novo
+quando o agente já está vivo. Cada clique em "ativar" deixava para trás uma
+sessão ativa que recebia o `execution.activated` e mais nada — os eventos dos
+agentes continuavam indo para a sessão da ativação anterior.
+
+**O agente é acordado por wake, não por `work`.** Start fresco dispara o ciclo
+(`:work` — emite `dev.started` e reivindica). Agente que já estava vivo recebe
+`{:wake, :became_claimable}`, e quem decide é o guard de estado do server:
+
+| estado do agente | o que a reativação faz |
+|---|---|
+| `idle` | reivindica a próxima task |
+| `working`, `awaiting_gate`, `awaiting_approval` | nada — a task em curso não é abandonada |
+| `idle_tripped` | nada — só o rearm explícito destrava ([RN-047](#rn-047)) |
+
+Disparar `:work` para todos seria pior que o defeito: ele reivindica
+incondicionalmente, e sobre um agente `awaiting_gate` significaria largar o
+worktree que o gate está varrendo — além de contornar o circuit breaker com um
+clique.
+
+- **Onde:** `apps/api/src/application/use-cases/execution/activate-execution.use-case.ts`,
+  `apps/api/src/infrastructure/persistence/drizzle/session.repository.ts`
+  (`findActiveExecutionSession`),
+  `apps/engine/lib/engine_web/controllers/execution_command_controller.ex`
+  (`acordar/4`)
+- **Teste:** `test/application/use-cases/execution/activate-execution.use-case.spec.ts`
+  (describe `reativação não abre sessão órfã`),
+  `test/infrastructure/persistence/session-execution.repository.spec.ts`,
+  `apps/engine/test/engine_web/controllers/execution_command_controller_test.exs`
+  (describe `reativação`)
+- **Origem:** achado #11 do
+  [primeiro dogfooding](explanation/primeiro-dogfooding.md)
 
 ### RN-048 — Promoção de história é do usuário por default; o modo muda quem dispara, nunca o que é validado {#rn-048}
 
@@ -953,11 +1047,19 @@ Operação não suportada (proteção de branch no provider local) é declarada 
 
 ### RN-029 — O bootstrap de Gitflow é idempotente e retomável {#rn-029}
 
-Seis passos; cada um verifica antes de agir e pode ser retomado do ponto que
+Cinco passos; cada um verifica antes de agir e pode ser retomado do ponto que
 falhou. `skip` é sucesso, não erro.
 
+Eram seis. O sexto criava a branch `rc`, degrau que o
+[ADR 0030](adr/0030-politica-de-branches-mecanizada.md) removeu da política —
+o bootstrap continuou criando, protegendo e **documentando no repositório do
+usuário** uma escada que o produto já tinha abandonado (achado #3 do primeiro
+dogfooding). O valor `create_rc_branch` continua no enum `bootstrap_step`:
+linhas antigas o referenciam, e passo que aconteceu de verdade não se apaga do
+histórico.
+
 - **Onde:** `apps/api/src/application/use-cases/git/bootstrap-steps.ts` +
-  `domain/git/repo-bootstrap.entity.ts`
+  `domain/git/repo-bootstrap.entity.ts` (`RETIRED_BOOTSTRAP_STEPS`)
 - **Teste:** `test/domain/git/repo-bootstrap-status.spec.ts`
 - **Origem:** [ADR 0005](adr/0005-repo-bootstrap-idempotent-steps.md)
 

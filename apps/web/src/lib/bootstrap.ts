@@ -14,7 +14,11 @@ export const BOOTSTRAP_STEPS: readonly BootstrapStepDef[] = [
   { name: 'commit_branching_policy', label: 'Commit da política de branches' },
   { name: 'create_dev_branch', label: 'Criar branch dev' },
   { name: 'create_qa_branch', label: 'Criar branch qa' },
-  { name: 'create_rc_branch', label: 'Criar branch rc' },
+  // `create_rc_branch` saiu com o degrau `rc` (ADR 0030, achado #3). O nome
+  // continua no VOCABULÁRIO (`BootstrapStepName`, e o enum do banco), porque
+  // projetos bootstrapados antes têm eventos e cursor com ele — o que esta
+  // lista descreve é o que o bootstrap FAZ hoje, e listar um passo que nunca
+  // vai rodar o deixaria `pendente` para sempre no painel.
   { name: 'protect_branches', label: 'Proteger branches' },
 ];
 

@@ -5,6 +5,7 @@ defmodule Engine.Gates.Diff do
   cálculo de diff no engine antes disso.
   """
 
+  alias Engine.Actions.GitCmd
   alias Engine.Projects.ProjectRepository
 
   @doc """
@@ -15,13 +16,7 @@ defmodule Engine.Gates.Diff do
   def compute(project_id, worktree_path) do
     case ProjectRepository.get_local_repo_path(project_id) do
       {:ok, _bare_repo_path, default_branch} ->
-        case System.cmd("git", ["diff", "#{default_branch}...HEAD"],
-               cd: worktree_path,
-               stderr_to_stdout: true
-             ) do
-          {output, 0} -> {:ok, output}
-          {output, _exit} -> {:error, output}
-        end
+        GitCmd.run(worktree_path, ["diff", "#{default_branch}...HEAD"])
 
       {:error, reason} ->
         {:error, reason}
