@@ -2,6 +2,33 @@
 
 Gerado dos conventional commits por `scripts/changelog.mjs`.
 
+## Unreleased
+
+### Correções
+
+- **ci**: a PR de promoção nascia com os checks **travados**. `promote.yml`
+  abria o PR com o `GITHUB_TOKEN`, e evento criado por esse token não dispara
+  workflow de PR — os sete checks nasciam em `action_required`, esperando
+  aprovação manual. Na prática o PR chegava a `MERGEABLE` com quatro checks
+  herdados do push da origem e **sem o Check de promoção ter rodado**: quem
+  mergeasse sem reparar promovia sem o portão que valida range limpo, degrau
+  carimbado e merge commit possível. Passa a usar `BRABO_BOT_TOKEN`, o mesmo
+  remédio que o `tag-release.yml` já aplicava desde a v0.2.0 — cujo aviso diz,
+  literalmente, "nem abre PR com checks". O passo do CHANGELOG no `release.yml`
+  tinha o mesmo defeito e foi corrigido junto
+- **ci**: o `pr-police` passa a exigir que `breaking/` e o marcador de quebra
+  no commit (`!` ou `BREAKING CHANGE:`) andem juntos, nas duas direções. Eram
+  dois mecanismos para o mesmo fato, soltos: a versão sai da FUNÇÃO da branch,
+  e o CHANGELOG detecta quebra pelo MARCADOR. `breaking/fase-7-auth-e-openapi`
+  removeu o Keycloak, subiu MAJOR corretamente — e nenhuma das doze versões
+  tem seção de "⚠ Mudanças incompatíveis", porque **nenhum commit do histórico
+  jamais usou os marcadores**. As versões já lançadas seguem sem a seção: os
+  commits são imutáveis e o gerador não tem de onde inferir; a regra vale daqui
+  para frente
+- **docs**: o `CONTRIBUTING.md` ensinava `fix/<assunto>`, que **não está na
+  taxonomia** — o `pr-police` reprova. É o engano mais comum, e a doc o
+  induzia
+
 ## v1.4.0 — 2026-08-02
 
 ### Novidades

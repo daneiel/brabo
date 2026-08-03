@@ -107,7 +107,11 @@ manutenção da documentação por N, e ninguém procura a doc de um patch.
 
 1. **Fork** e clone.
 2. **Branch** a partir de `dev`, nunca de `main`:
-   `feature/<assunto>`, `fix/<assunto>` ou `docs/<assunto>`.
+   `feature/<assunto>`, `bugfix/<assunto>` ou `docs/<assunto>`.
+
+   A lista de funções é **fechada**: `breaking`, `feature`, `bugfix`, `perf`,
+   `refactor`, `chore`, `docs`, `test`, `hotfix`. O `pr-police` reprova o que
+   estiver fora — `fix/` inclusive, que é o engano mais comum.
 3. **Commits** em [conventional commits](https://www.conventionalcommits.org/),
    **em pt-BR** — é o padrão que o histórico inteiro usa:
    ```
@@ -115,6 +119,16 @@ manutenção da documentação por N, e ninguém procura a doc de um patch.
    fix(engine): drain não deixava sessão órfã com uma réplica
    docs(runbook): funde os seis runbooks num só
    ```
+
+   **Quebra de compatibilidade se marca no commit**, com `!` antes dos
+   dois-pontos ou `BREAKING CHANGE:` no corpo — e a branch tem que ser
+   `breaking/`:
+   ```
+   feat(auth)!: o refresh sai do corpo e vai para cookie httpOnly
+   ```
+   É o marcador que faz a quebra aparecer no CHANGELOG; a função da branch é
+   que faz a versão subir MAJOR. O `pr-police` exige os dois juntos, porque
+   ter só um deles produz uma release que mente — em algum dos dois sentidos.
 4. **PR contra `dev`** (não `main`).
 5. **Review** meu.
 6. **Squash merge.**

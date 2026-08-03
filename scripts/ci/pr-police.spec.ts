@@ -328,6 +328,57 @@ describe('isenção de bot', () => {
   });
 });
 
+// ---------------------- 6b. a função da branch e o marcador de quebra
+
+describe('breaking/ e o marcador de quebra andam juntos', () => {
+  // São dois mecanismos para o mesmo fato: `version.ts` calcula o bump pela
+  // FUNÇÃO da branch, e o `changelog.mjs` detecta quebra pelo MARCADOR no
+  // commit. Viviam soltos — e o resultado foi doze versões sem uma única
+  // seção de "Mudanças incompatíveis", inclusive a que removeu o Keycloak.
+
+  it('breaking/ SEM commit marcado reprova', () => {
+    const v = avaliarPr(pr({ head: 'breaking/tira-o-keycloak', quebrasMarcadas: false }));
+
+    expect(v.ok).toBe(false);
+    expect(v.violacoes.map((x) => x.codigo)).toContain('QUEBRA-SEM-MARCADOR');
+  });
+
+  it('breaking/ COM commit marcado passa', () => {
+    const v = avaliarPr(pr({ head: 'breaking/tira-o-keycloak', quebrasMarcadas: true }));
+
+    expect(v.ok).toBe(true);
+  });
+
+  it('commit marcado FORA de breaking/ reprova — a versão sairia PATCH', () => {
+    const v = avaliarPr(pr({ head: 'feature/x', quebrasMarcadas: true }));
+
+    expect(v.ok).toBe(false);
+    expect(v.violacoes.map((x) => x.codigo)).toContain('MARCADOR-SEM-BREAKING');
+  });
+
+  it('sem marcador e sem breaking/ é o caso comum, e passa', () => {
+    const v = avaliarPr(pr({ head: 'feature/x', quebrasMarcadas: false }));
+
+    expect(v.ok).toBe(true);
+  });
+
+  it('não medido não reprova — verificação impossível não vira acusação', () => {
+    // `quebrasMarcadas: undefined` é o checkout raso ou a ref não buscada.
+    // Reprovar aí seria inventar uma violação a partir de ignorância.
+    expect(avaliarPr(pr({ head: 'breaking/x' })).ok).toBe(true);
+    expect(avaliarPr(pr({ head: 'feature/x' })).ok).toBe(true);
+  });
+
+  it('a regra não se aplica a promoção entre permanentes', () => {
+    // Promoção carrega commits marcados do degrau de baixo, e isso é normal:
+    // a quebra já foi declarada quando entrou. Cobrar de novo travaria a
+    // esteira inteira depois de qualquer release MAJOR.
+    const v = avaliarPr({ head: 'dev', base: 'qa', quebrasMarcadas: true });
+
+    expect(v.ok).toBe(true);
+  });
+});
+
 // ------------------------------------------------- 7. qualidade da mensagem
 
 describe('toda violação ensina', () => {
@@ -338,6 +389,8 @@ describe('toda violação ensina', () => {
     pr({ head: 'feature/x', base: 'qa' }),
     { head: 'dev', base: 'main' },
     pr({ head: 'hotfix/x', base: 'main', ancestralidade: escadaEsticada('dev') }),
+    pr({ head: 'breaking/x', quebrasMarcadas: false }),
+    pr({ head: 'feature/x', quebrasMarcadas: true }),
   ];
 
   it.each(casos)('$head → $base tem os quatro campos preenchidos', (entrada) => {

@@ -452,6 +452,33 @@ Um `breaking` no meio de dez `docs` faz o ciclo inteiro ser MAJOR. E é a
 **função da branch** que decide, não a label de família: `breaking/x` e
 `docs/y` são ambos da família `trabalho`.
 
+#### `breaking/` exige o marcador no commit
+
+O `pr-police` reprova um PR de `breaking/` cujos commits não marcam a quebra —
+`!` no assunto (`feat(api)!: …`) ou `BREAKING CHANGE:` no corpo — e reprova
+também o inverso: commit marcado numa branch que não é `breaking/`.
+
+A regra existe porque são **dois mecanismos para o mesmo fato**, e eles viviam
+soltos: a versão sai da FUNÇÃO da branch (a tabela acima), e o CHANGELOG
+detecta quebra pelo MARCADOR no commit. Nada os ligava.
+
+O preço foi medido. `breaking/fase-7-auth-e-openapi` removeu o Keycloak,
+deslogou todo mundo e subiu MAJOR corretamente — e o CHANGELOG não registra
+quebra nenhuma, em **nenhuma** das doze versões, porque nenhum commit do
+histórico jamais usou os marcadores. As duas metades funcionavam; a informação
+não atravessava de uma para a outra.
+
+As duas direções importam, e a segunda é pior:
+
+| situação | o que acontecia |
+|---|---|
+| `breaking/` sem marcador | a versão salta MAJOR e o changelog não diz o que quebrou |
+| marcador fora de `breaking/` | o changelog anuncia a quebra e a versão sai PATCH — quem confia no número quebra sem aviso |
+
+Verificação que não pôde ser feita (checkout raso, ref não buscada) **não
+reprova**: a regra só roda quando o intervalo `base..head` é legível, a mesma
+doutrina da checagem de contaminação.
+
 Ciclo **vazio** — nenhum PR desde a última final — falha com mensagem em vez de
 gerar tag. Tag nova apontando para o mesmo commit da anterior faz o histórico
 de versões mentir.
