@@ -212,7 +212,6 @@ defmodule EngineWeb.ExecutionCommandControllerTest do
       assert conn.status == 201
       refute_receive {:wake, :became_claimable}, 300
     end
-
   end
 
   describe "rearm (Fase 12b — RN-047)" do
