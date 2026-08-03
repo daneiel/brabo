@@ -131,7 +131,14 @@ const indexRoute = createRoute({
   component: Dashboard,
 });
 
-const PROJECT_TABS = ['overview', 'sessions', 'backlog', 'approvals', 'settings'] as const;
+const PROJECT_TABS = [
+  'overview',
+  'sessions',
+  'backlog',
+  'approvals',
+  'insights',
+  'settings',
+] as const;
 type ProjectTab = (typeof PROJECT_TABS)[number];
 
 interface ProjectSearch {

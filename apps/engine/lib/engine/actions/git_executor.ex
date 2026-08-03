@@ -3,8 +3,11 @@ defmodule Engine.Actions.GitExecutor do
   Executa as ações git dos dev agents NO WORKTREE local (Fase 4a) — commit com
   identidade `dev-<modulo>[bot]` (usuário como co-author) e push pro bare repo
   local. Chamado pela api (pipeline de proposed_actions → engine), espelhando o
-  TerminalExecutor. Toda operação git via `System.cmd`.
+  TerminalExecutor. Toda operação git passa por `Engine.Actions.GitCmd`, que é
+  quem garante que uma falha nunca chega vazia.
   """
+
+  alias Engine.Actions.GitCmd
 
   @doc """
   `git add -A` + commit no worktree, com author bot + Co-authored-by. `payload`
@@ -50,10 +53,5 @@ defmodule Engine.Actions.GitExecutor do
     end
   end
 
-  defp git(cd, args) do
-    case System.cmd("git", args, cd: cd, stderr_to_stdout: true) do
-      {out, 0} -> {:ok, out}
-      {out, _} -> {:error, out}
-    end
-  end
+  defp git(cd, args), do: GitCmd.run(cd, args)
 end

@@ -158,6 +158,24 @@ Aplicados **por último**, depois de todo o resto:
 Um teto rebaixa `auto_approve` para `require_approval`; ele **não** transforma
 `deny` em outra coisa, porque `deny` já teria retornado antes.
 
+:::note Por que `rc` ainda está na lista
+
+O degrau `rc` saiu da política de branches
+([ADR 0030](../adr/0030-politica-de-branches-mecanizada.md)) e o bootstrap
+parou de criá-lo ([RN-029](../business-rules.md#rn-029)) — mas ele continua
+aqui, em `domain/actions/protected-branches.ts`.
+
+Esta lista decide o que a trava de merge **recusa**, e repositórios
+bootstrapados por versões anteriores do Brabo ainda têm a branch. Tirá-la daqui
+não removeria nada do repositório de ninguém: só tornaria um `git_merge` com
+destino em `rc` auto-aprovável, numa branch que alguém pode estar usando como
+produção.
+
+Proteger uma branch que não existe não custa nada. Desproteger uma que existe
+custa caro — e a assimetria é deliberada.
+
+:::
+
 A diferença entre um teto e um default: o default é o que acontece quando
 ninguém configurou nada; o teto é o que acontece **independente** do que foi
 configurado.

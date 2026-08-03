@@ -141,8 +141,8 @@ Dashboard → **Novo projeto**. O wizard pede nome e como conectar o git:
 | **Local** | experimentar. Bare repos no disco, sem conta em lugar nenhum |
 | **GitHub** / **GitLab** | trabalho de verdade. PAT ou OAuth |
 
-Ao confirmar, roda o **bootstrap de Gitflow**: seis passos que criam `dev`,
-`qa`, `rc`, `main`, aplicam proteções e commitam os arquivos base. O progresso
+Ao confirmar, roda o **bootstrap de Gitflow**: cinco passos que criam `dev`,
+`qa`, `main`, aplicam proteções e commitam os arquivos base. O progresso
 aparece ao vivo.
 
 Alguns passos podem sair como **`skipped`** (já estava feito) ou

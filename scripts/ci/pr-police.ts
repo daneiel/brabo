@@ -291,7 +291,7 @@ export function avaliarPr(entrada: EntradaPr): Veredito {
       violacoes.push({
         codigo: 'PROMOCAO-NAO-ADJACENTE',
         observado: `\`${head}\` → \`${base}\` pula ${pulados.map((p) => `\`${p}\``).join(' e ')}`,
-        regra: 'Promoção e retropropagação só entre par ADJACENTE: dev → qa → rc → main.',
+        regra: 'Promoção e retropropagação só entre par ADJACENTE: dev → qa → main.',
         porque:
           'Cada degrau é um ambiente com sua verificação. Pular promove para ' +
           'um ambiente código que nunca rodou no anterior, e a tag do degrau ' +

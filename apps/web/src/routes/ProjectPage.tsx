@@ -1,7 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getProject, getProjectBudget, getRepository } from '../lib/api-client';
-import { useBacklog, useLatestSession, usePendingActions } from '../lib/hooks';
+import {
+  useBacklog,
+  useHypotheses,
+  useLatestSession,
+  usePendingActions,
+} from '../lib/hooks';
 import { setLastSeenSeq } from '../lib/read-state';
 import { TokenMeter } from '../components/TokenMeter';
 import { Tabs } from '../components/ui/Tabs';
@@ -10,12 +15,13 @@ import { ProjectOverviewTab } from './ProjectOverviewTab';
 import { ProjectSessionsTab } from './ProjectSessionsTab';
 import { ProjectApprovalsTab } from './ProjectApprovalsTab';
 import { ProjectBacklogTab, aguardandoPromocao } from './ProjectBacklogTab';
+import { ProjectInsightsTab } from './ProjectInsightsTab';
 import { ProjectSettingsTab } from './ProjectSettingsTab';
 import styles from './ProjectPage.module.css';
 
 const PROVIDER_ICON = { github: GitHubIcon, gitlab: GitLabIcon, local: LocalRepoIcon } as const;
 
-type TabKey = 'overview' | 'sessions' | 'backlog' | 'approvals' | 'settings';
+type TabKey = 'overview' | 'sessions' | 'backlog' | 'approvals' | 'insights' | 'settings';
 
 interface ProjectPageProps {
   projectId: string;
@@ -38,6 +44,15 @@ export function ProjectPage({ projectId, initialTab }: ProjectPageProps) {
   // e somá-las esconderia qual delas está pedindo atenção.
   const backlogQuery = useBacklog(projectId);
   const promocoesPendentes = aguardandoPromocao(backlogQuery.data).length;
+
+  // Terceira fila de decisão do projeto: hipóteses do Psicólogo esperando
+  // aceitar/descartar. Ficavam no fim da Visão geral, sem contador nenhum —
+  // achado #15. Contador próprio pelo mesmo motivo do de promoções: somar
+  // filas diferentes esconde qual delas está pedindo atenção.
+  const hypothesesQuery = useHypotheses(projectId);
+  const hipotesesPendentes = (hypothesesQuery.data ?? []).filter(
+    (h) => h.status === 'proposed',
+  ).length;
 
   useEffect(() => {
     if (tab === 'overview' && latestSession) {
@@ -99,6 +114,7 @@ export function ProjectPage({ projectId, initialTab }: ProjectPageProps) {
             { key: 'sessions', label: 'Sessões' },
             { key: 'backlog', label: 'Backlog', count: promocoesPendentes || undefined },
             { key: 'approvals', label: 'Aprovações', count: pendingCount || undefined },
+            { key: 'insights', label: 'Insights', count: hipotesesPendentes || undefined },
             { key: 'settings', label: 'Configurações' },
           ]}
         />
@@ -109,6 +125,7 @@ export function ProjectPage({ projectId, initialTab }: ProjectPageProps) {
         {tab === 'sessions' && <ProjectSessionsTab projectId={projectId} />}
         {tab === 'backlog' && <ProjectBacklogTab projectId={projectId} />}
         {tab === 'approvals' && <ProjectApprovalsTab projectId={projectId} />}
+        {tab === 'insights' && <ProjectInsightsTab projectId={projectId} />}
         {tab === 'settings' && <ProjectSettingsTab projectId={projectId} />}
       </div>
     </div>
