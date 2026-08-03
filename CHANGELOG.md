@@ -19,6 +19,15 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **web**: a aba Sessões passa a somar as **aprovações de cada sessão** — o que
+  ainda aguarda você, o que você já decidiu e o que a política auto-aprovou —,
+  além do total do projeto. Tudo o que existia vinha de `usePendingActions`,
+  que exige um `sessionId`, e os três chamadores passavam o da sessão mais
+  recente: uma decisão esquecida numa sessão anterior ficava invisível para
+  sempre. A separação entre clique humano e política sai de colunas que a
+  execução não reescreve (`decidedBy` e `resolvedPolicy`) — contar por `status`
+  perderia a ação aprovada que já executou, que é justamente a métrica que a
+  Fase 10 não conseguiu colher
 - **web**: os Insights do Psicólogo ganham **aba própria**, com contador de
   hipóteses aguardando decisão. Eles moravam no fim da Visão geral, embaixo do
   painel do time, da execução e da arquitetura — quatro assuntos numa coluna

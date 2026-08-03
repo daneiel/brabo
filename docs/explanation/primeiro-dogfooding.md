@@ -111,8 +111,29 @@ Fase 12 fechou estão marcados.
 | 13 | Não existe "promover a ready": a promoção é automática na criação. `TransitionStoryUseCase` não está ligado a rota nenhuma — é código morto | `create-story.use-case.ts:75-78` | P2 → **P1** | **fechado** — [ADR 0046](../adr/0046-promocao-de-story-com-autoridade-do-usuario.md) |
 | 14 | Não existe devolução ao PO — nenhum estado, evento ou botão | — | P2 | **fechado** junto com o #13 |
 | 15 | O painel do time e as hipóteses do Psicólogo dividem a mesma aba, que é a default do projeto | `ProjectOverviewTab.tsx:227-263` | P2 | **fechado** — aba Insights própria, com contador |
-| 16 | Nenhuma tela soma aprovações por sessão; a Anamnese sob demanda não tem botão | `hooks.ts:153-160` | P3 | aberto |
+| 16 | Nenhuma tela soma aprovações por sessão; a Anamnese sob demanda não tem botão | `hooks.ts:153-160` | P3 | **fechado em parte** — ver nota abaixo |
 | 17 | **A métrica principal da fase não está no event log.** `proposed_action.approved`/`.denied` vão só para o outbox | `approve-action.use-case.ts:98` | **P1** | **fechado** — [ADR 0048](../adr/0048-decisao-no-log-e-a-ordem-do-gate.md) |
+
+:::note O achado #16 tinha uma metade errada
+
+Ao fechá-lo, a verificação mostrou que a segunda afirmação — "a Anamnese sob
+demanda não tem botão" — **já era falsa quando o achado foi escrito**: a rota
+`POST /projects/:projectId/anamnese/run` existe (`anamnese.controller.ts:71`) e
+o botão "Rodar agora" está em Configurações › Proficiência
+(`ProjectSettingsTab.tsx:777`), coberto por
+`ProficiencySection.test.tsx`.
+
+A primeira metade era real e foi fechada: a aba Sessões passa a somar as ações
+propostas **de cada sessão**, separando o que foi clique seu (`decidedBy`) do
+que a política auto-aprovou (`resolvedPolicy`). Antes tudo saía de
+`usePendingActions`, que exige um `sessionId`, e os três chamadores passavam o
+da sessão mais recente — uma decisão esquecida numa sessão anterior ficava
+invisível para sempre.
+
+O registro fica porque **a colheita não se corrige apagando**: um achado
+parcialmente errado é informação sobre como a corrida foi conduzida.
+
+:::
 
 Dois itens entraram como **registro, não defeito**, para a colheita não os
 confundir com lacuna: o **merge fora do produto** (`awaiting_user` é terminal de
