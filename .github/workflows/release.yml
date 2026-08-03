@@ -50,6 +50,10 @@ jobs:
     name: Publicar release
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      # `secrets` não existe no `if:` de um step — só em `env`. Mesmo padrão do
+      # `tag-release.yml`.
+      TEM_PAT: ${{ secrets.BRABO_BOT_TOKEN != '' }}
     steps:
       # PRIMEIRO passo, antes de qualquer checkout: quem republica é restrito,
       # pela mesma razão e com a mesma lógica do `promote.yml`. `workflow_dispatch`
@@ -124,6 +128,11 @@ jobs:
           # checkout raso traz um commit só e a release sai com o changelog
           # vazio, sem erro nenhum.
           fetch-depth: 0
+          # O PAT porque o último passo EMPURRA a branch do corte do CHANGELOG
+          # e abre PR com ela. Branch empurrada com o `GITHUB_TOKEN` abre PR
+          # cujos checks nascem em `action_required` — o mesmo defeito que o
+          # `promote.yml` tinha.
+          token: ${{ secrets.BRABO_BOT_TOKEN || github.token }}
 
       # RECUSA republicar sobre o que já existe, e isso é escolha, não limitação:
       # uma Release publicada é registro, e sobrescrevê-la em silêncio apagaria as
@@ -307,9 +316,16 @@ jobs:
       # Antes disto NADA nunca escrevia no arquivo: o gerador só era chamado
       # com `--stdout` para montar o corpo da Release, e o `CHANGELOG.md`
       # acumulou doze versões dentro de um único "Unreleased".
+      - name: O PAT está configurado?
+        if: env.TEM_PAT != 'true'
+        run: |
+          echo "::warning::sem BRABO_BOT_TOKEN: a PR do CHANGELOG abre, mas os checks dela nascem em 'action_required' e precisam ser liberados à mão."
+
       - name: Levar o CHANGELOG desta versão para `dev`
         env:
-          GH_TOKEN: ${{ github.token }}
+          # PAT pelo mesmo motivo do `promote.yml`: PR aberto pelo
+          # `GITHUB_TOKEN` nasce com os checks travados em `action_required`.
+          GH_TOKEN: ${{ secrets.BRABO_BOT_TOKEN || github.token }}
           TAG: ${{ steps.alvo.outputs.tag }}
         run: |
           set -euo pipefail
