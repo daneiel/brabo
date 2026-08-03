@@ -86,6 +86,15 @@ export interface EntradaPr {
   /** `false` quando o head vem de fork: aí `head` pode ser `main` sem ser promoção. */
   mesmoRepositorio?: boolean;
   ancestralidade?: Ancestralidade;
+  /**
+   * Algum commit de `base..head` marca quebra de compatibilidade — `!` no
+   * assunto (`feat(api)!: …`) ou `BREAKING CHANGE:` no corpo.
+   *
+   * Pré-computado fora, como `ancestralidade`: `avaliarPr` continua pura e
+   * testável sem git. `undefined` = não foi possível medir, e aí a regra não
+   * roda (verificação que não pôde ser feita não vira reprovação inventada).
+   */
+  quebrasMarcadas?: boolean;
 }
 
 export type CodigoDeViolacao =
@@ -94,7 +103,9 @@ export type CodigoDeViolacao =
   | 'FUNCAO-DESCONHECIDA'
   | 'DESTINO-INVALIDO'
   | 'PROMOCAO-NAO-ADJACENTE'
-  | 'ORIGEM-CONTAMINADA';
+  | 'ORIGEM-CONTAMINADA'
+  | 'QUEBRA-SEM-MARCADOR'
+  | 'MARCADOR-SEM-BREAKING';
 
 export interface Violacao {
   codigo: CodigoDeViolacao;
@@ -399,6 +410,57 @@ export function avaliarPr(entrada: EntradaPr): Veredito {
     });
   }
 
+  // 6. A função da branch e o marcador de quebra têm que concordar.
+  //
+  // São dois mecanismos para o MESMO fato, e viviam soltos: `version.ts`
+  // calcula o bump pela FUNÇÃO da branch (`breaking` → MAJOR), enquanto o
+  // `changelog.mjs` detecta quebra pelo MARCADOR no commit (`!` ou
+  // `BREAKING CHANGE:`). Nada os ligava.
+  //
+  // O preço foi medido: `breaking/fase-7-auth-e-openapi` removeu o Keycloak e
+  // deslogou todo mundo, subiu MAJOR corretamente — e o CHANGELOG não registra
+  // quebra nenhuma, em NENHUMA das doze versões, porque nenhum commit do
+  // histórico jamais usou os marcadores.
+  //
+  // A checagem só roda quando `quebrasMarcadas` foi medido.
+  if (entrada.quebrasMarcadas !== undefined) {
+    if (funcao === 'breaking' && !entrada.quebrasMarcadas) {
+      violacoes.push({
+        codigo: 'QUEBRA-SEM-MARCADOR',
+        observado: `\`${head}\` é \`breaking/\`, mas nenhum commit marca a quebra`,
+        regra:
+          'PR de `breaking/` precisa de ao menos um commit com `!` no assunto ' +
+          'ou `BREAKING CHANGE:` no corpo.',
+        porque:
+          'A função da branch sobe a versão para MAJOR, mas quem gera o ' +
+          'CHANGELOG lê o commit. Sem o marcador a versão salta e o changelog ' +
+          'não diz o que quebrou — que é justamente a linha que decide se dá ' +
+          'para atualizar sem ler mais nada.',
+        conserto:
+          `git commit --amend -m 'feat(escopo)!: o que quebrou'\n\n` +
+          `            Ou, no corpo do commit:\n` +
+          `            BREAKING CHANGE: o que quebrou e o que fazer a respeito`,
+      });
+    }
+
+    if (funcao !== 'breaking' && entrada.quebrasMarcadas) {
+      violacoes.push({
+        codigo: 'MARCADOR-SEM-BREAKING',
+        observado: `um commit marca quebra, mas \`${head}\` usa a função \`${funcao}\``,
+        regra:
+          'Commit marcado com `!`/`BREAKING CHANGE:` só em branch `breaking/`.',
+        porque:
+          'É o inverso, e pior: o changelog anuncia a quebra e a versão sai ' +
+          `PATCH ou MINOR, porque \`${funcao}\` não é MAJOR. Quem atualizar ` +
+          'confiando no número quebra sem aviso.',
+        conserto:
+          `git branch -m ${head} breaking/${descritivo}\n` +
+          `            git push origin -u breaking/${descritivo}\n\n` +
+          `            Se a mudança NÃO quebra nada, tire o marcador do commit.`,
+      });
+    }
+  }
+
   if (naoVerificado.length > 0) {
     avisos.push(
       `origem não verificada contra ${naoVerificado.map((p) => `\`${p}\``).join(', ')}: ` +
@@ -512,6 +574,41 @@ async function principal(): Promise<void> {
     }
   }
 
+  /**
+   * Algum commit de `base..head` marca quebra de compatibilidade?
+   *
+   * `%B` (assunto + corpo) para pegar as duas formas de marcar numa varredura
+   * só. `undefined` quando o intervalo não pôde ser lido — ref não buscada,
+   * checkout raso — e aí a regra não roda: verificação impossível não vira
+   * reprovação inventada, mesma doutrina do `ehAncestral` acima.
+   */
+  const quebrasMarcadas = ((): boolean | undefined => {
+    const refBase = existe(`origin/${base}`) ? `origin/${base}` : base;
+    if (!existe(refBase)) return undefined;
+
+    try {
+      const bruto = execFileSync(
+        'git',
+        ['log', '--no-merges', '--format=%B%x1e', `${refBase}..${alvo}`],
+        { encoding: 'utf8' },
+      );
+
+      return bruto
+        .split('\x1e')
+        .map((m) => m.trim())
+        .filter(Boolean)
+        .some((mensagem) => {
+          const [assunto = '', ...resto] = mensagem.split('\n');
+          // `!` só conta ANTES dos dois-pontos do conventional commit — um `!`
+          // no meio da descrição não é marcador.
+          const marcadoNoAssunto = /^\w+(\([^)]*\))?!:/.test(assunto);
+          return marcadoNoAssunto || /^BREAKING[ -]CHANGE:/m.test(resto.join('\n'));
+        });
+    } catch {
+      return undefined;
+    }
+  })();
+
   const entrada: EntradaPr = {
     head,
     base,
@@ -519,6 +616,7 @@ async function principal(): Promise<void> {
     tipoDoAutor: process.env.PR_AUTOR_TIPO,
     mesmoRepositorio: process.env.PR_MESMO_REPO !== 'false',
     ancestralidade,
+    quebrasMarcadas,
   };
 
   const veredito = avaliarPr(entrada);

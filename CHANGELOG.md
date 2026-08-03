@@ -6,638 +6,309 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### ⚠ Mudanças incompatíveis
 
-- **api,web,engine**: história **não vira `ready` sozinha** em projeto novo. O
-  default de `projects.story_promotion` passa a ser `manual` (Fase 12c): o PO
-  deixa a história completa, ela fica `draft` marcada como proposta, e **nenhuma
-  tarefa dela é pegável** até o usuário promover na aba Backlog — individualmente
-  ou em lote. É o terceiro achado P1 do dogfooding: a promoção automática na
-  criação contradizia o princípio de autoridade final do usuário, porque um
-  agente de LLM decidia sozinho o que entrava na fila dos dev agents.
-  **Projeto existente não muda de comportamento**: a migração `0033` faz um
-  backfill dirigido movendo todos os que já existiam para `auto`, o modo
-  anterior, que continua disponível em Configurações → Promoção de histórias.
-  Quem cria projeto novo e espera o backlog andar sozinho precisa ou promover,
-  ou trocar o modo para `auto`.
-  A recusa devolve a história ao PO com o motivo, como um gate devolve uma PR ao
-  dev. As validações são as MESMAS nos dois modos — o que muda é quem dispara,
-  nunca o que é exigido, e há teste de simetria fixando isso
-  ([RN-048](docs/business-rules.md#rn-048),
-  [ADR 0046](docs/adr/0046-promocao-de-story-com-autoridade-do-usuario.md))
-- **auth**: o Keycloak saiu. A api passa a ser o **emissor** dos tokens de
-  acesso, num corte **atômico** — não há período de coexistência, e um token
-  do emissor antigo não é aceito em rota nenhuma. Todo mundo é deslogado no
-  deploy. Decisões e o porquê do corte sem transição em
-  [ADR 0032](docs/adr/0032-corte-do-keycloak-e-sessao-em-cookie.md)
-- **auth**: usuários existentes **não têm senha** — hash do Keycloak não migra.
-  Rode `pnpm --filter api migrate:keycloak-users` no release para emitir os
-  links de definição de senha. Enquanto o usuário não define uma, o login
-  responde o **mesmo 401** de sempre, indistinguível de senha errada
-  ([RN-032](docs/business-rules.md#rn-032)). Procedimento no
-  [runbook](docs/runbook.md#migracao-dos-usuarios-do-keycloak)
-- **api**: `POST /auth/login` deixa de devolver `refreshToken` no corpo. A
-  resposta passa a ser `{ accessToken, expiresIn }` mais dois cookies —
-  `brabo_refresh` (httpOnly) e `brabo_csrf`. `/auth/refresh` e `/auth/logout`
-  passam a exigir o cabeçalho `X-CSRF-Token` igual ao segundo
-  ([RN-034](docs/business-rules.md#rn-034)). Cliente que lia o refresh do corpo
-  quebra
-- **api,engine**: o tráfego interno `/internal/*` sai do JWT. Passa a exigir
-  `X-Brabo-Service-Token` igual ao segredo compartilhado
-  `BRABO_SERVICE_TOKEN`, obrigatório **nas duas cargas**
-  ([RN-035](docs/business-rules.md#rn-035)). Token de usuário não abre mais
-  essas rotas, e o service token não abre nenhuma outra
-- **config**: saem todas as `KEYCLOAK_*`, `*_KEYCLOAK_CLIENT_*` e
-  `VITE_KEYCLOAK_*`; entram `BRABO_SERVICE_TOKEN(_PREVIOUS)` e
-  `AUTH_SET_PASSWORD_TTL_MS`. O serviço `keycloak` sai do compose de dev e de
-  prod, e `deploy/k8s/base/keycloak/` deixa de existir junto com o
-  `ExternalSecret` `keycloak-secrets`
-- **api,engine**: a rota interna de delegação de área deixa de ser aninhada
-  sob task — `POST /internal/sessions/:sessionId/tasks/:taskId/delegations`
-  vira `POST /internal/sessions/:sessionId/delegations`, com `taskId` agora
-  opcional no corpo em vez de obrigatório na URL. `delegations.task_id` no
-  banco virou nullable. Motivo: a área de Infra (Fase 8c) delega sobre a
-  sessão, sem task de backlog por trás de uma PR de infra — a rota nascida
-  na Fase 8b (só QA) era estreita demais pra segunda área
-  ([RN-037](docs/business-rules.md#rn-037))
-
-### Correções
-
-- **web,ci**: o **build de produção da web estava quebrado** — e com ele a
-  imagem `brabo-web`, ou seja, o deploy Kubernetes inteiro. Quatro erros de
-  tipo acumulados em três fases sem ninguém ver, porque o CI rodava `lint` e
-  `test` do web e **nunca** `build`: o vitest transpila por esbuild (apaga os
-  tipos sem verificar) e o eslint aqui não faz checagem de tipo. O único lugar
-  que verificava era o `tsc -b` dentro do build da imagem, que só roda no
-  bootstrap do k8s, à mão.
-  Entram um script `typecheck` no web e o passo correspondente no CI, ao lado
-  do que a api já tinha. Os quatro: `awaiting_plan_decision` faltando no mapa
-  de badge do `ProjectCard` (o estado entrou no tipo na 12a e o mapa ficou
-  para trás); parâmetro-propriedade proibido por `erasableSyntaxOnly` num
-  mock de teste; e dois fixtures de `Project` desatualizados.
-  Junto, um defeito de runtime da mesma safra: **`adoptionRoute` era criada e
-  nunca entrava na árvore de rotas** — a tela do plano de adoção era
-  inalcançável por URL, e o `navigate` do wizard apontava para uma rota que
-  não existia nos tipos
+- **api**: `GET /models` deixou de existir. A lista do seletor virou
+  `GET /projects/:projectId/models` porque a curadoria passou a ser **por
+  workspace** (ADR 0049): `models.is_active` era uma coluna para a instalação
+  inteira, e um owner do workspace A ligando um modelo o ligava para o B — com
+  o gasto caindo no orçamento de quem não decidiu nada. O catálogo em si
+  continua global (nome, preço e capabilities são fato do provider); só a
+  decisão "aparece no seletor?" mudou de lugar, para a tabela nova
+  `workspace_models`. A migração `0034` dá a cada workspace existente
+  exatamente o que ele enxergava antes, **antes** de derrubar a coluna. Quem
+  consome a api por fora precisa trocar a rota; a UI já foi junto
 
 ### Novidades
 
-- **api,engine,docs**: dois achados do dogfooding revisitados
-  ([ADR 0048](docs/adr/0048-decisao-no-log-e-a-ordem-do-gate.md)).
-  **A decisão de uma ação passa a existir no event log**
-  ([RN-049](docs/business-rules.md#rn-049)): `proposed_action.created`,
-  `.approved` e `.denied` viram eventos de domínio com o ator REAL — o usuário
-  que clicou, ou o agente que propôs. Iam só para o outbox, que é transporte e
-  é podado, e por isso "cliques de aprovação" — a métrica principal da Fase 10 —
-  não pôde ser colhida (achado #17). `created.payload.status` distingue clique
-  humano de auto-aprovação por política. `docs/reference/events.md` documentava
-  os três desde sempre; até aqui isso não era verdade.
-  **O gate deixa de abrir sem PR** ([RN-050](docs/business-rules.md#rn-050)).
-  `AgentIo.propose/3` descartava o status da ação, então com a autonomia do dev
-  em `require_approval` commit/push/PR nasciam `pending` e o agente abria o gate
-  assim mesmo: o QA varria o WORKTREE (onde os arquivos estão), aprovava, e **a
-  task fechava como concluída sem uma linha commitada e sem PR nenhuma**. Agora
-  o agente lê o desfecho das três e, se alguma ficou pendente, espera em
-  `awaiting_approval` retendo o worktree; quem o solta é `task.pr_settled`,
-  emitido pela api quando o `pr_open` tem desfecho. PR negada devolve a task com
-  diagnóstico e **não** conta para o circuit breaker.
-  Isso também elimina o **D5** — o worktree reciclado sob aprovação pendente,
-  que o [ADR 0045](docs/adr/0045-reagendamento-por-evento-do-dev-agent.md) tinha
-  registrado como limite conhecido. A previsão de lá (worktree por task) **não
-  foi cumprida de propósito**: ela consertava o sintoma; a causa era a ordem do
-  gate
-
-- **engine,api,docs**: a **Fase 12 fecha** com os três achados P1 de
-  operabilidade do dogfooding provados mortos numa execução única
-  ([ADR 0047](docs/adr/0047-operabilidade-pos-dogfooding.md)). A validação é um
-  script — `pnpm --filter api validacao:fase-12` — que sai com código != 0
-  quando um critério não fecha e extrai a tabela de evidência do banco em vez de
-  transcrevê-la, recusando-se a terminar bem se alguma etapa que ele afirmou ter
-  exercitado não deixou evento no log. Ela roda com provider Local e sem LLM, e
-  o documento diz no primeiro parágrafo o que isso **não** prova (GitHub remoto
-  e o julgamento dos gates), com o porquê de cada limite.
-  Junto veio um achado da própria preparação: o `NoopDevAgentServer` tinha
-  ficado de fora da Fase 12b — fixava `status: :working`, não assinava o `Wake`
-  e processava uma task antes de parar. O achado #10 estava vivo dentro do único
-  veículo capaz de validar a fase sem gastar token. A máquina de estados foi
-  movida para `Engine.Dev.AgentIo` e passou a ser compartilhada pelos dois
-  agentes, em vez de copiada.
-  A colheita da Fase 10 foi finalmente escrita
-  ([primeiro-dogfooding](docs/explanation/primeiro-dogfooding.md)) — os 17
-  achados com arquivo:linha são reais, e tudo que dependeria de contagem ao vivo
-  entrou como `não medido`, nunca como estimativa
-
-- **engine,api,web**: o dev agent passa a processar toda a fila do módulo
-  **sem restart do engine** (Fase 12b). É o segundo achado P1 do
-  dogfooding: `:work` só disparava na ativação e no aceite de
-  paralelização, e a Fase 10 rodou em tandas — um humano reativando a
-  execução (ou reiniciando o engine) entre cada task. O agente ganha uma
-  máquina de estados persistida (`working`\|`awaiting_gate`\|`idle`\|
-  `idle_tripped`) e reage a dois eventos entregues pela outbox já
-  existente (`aggregate_type` ganhou `"task"` ao lado de `"session"`):
-  gate resolvido (aprova → reivindica a próxima; bloqueia → conta pro
-  circuit breaker) e task nova ficando pegável (acorda todo agente idle
-  do módulo). PR aberta NÃO libera o agente — ele fica em
-  `awaiting_gate` retendo o worktree (que é por AGENTE, não por task, e
-  o gate ainda precisa dele) até o desfecho terminal.
-  **Circuit breaker** (`RN-047`): N tasks consecutivas terminando
-  `blocked` param o agente em `idle_tripped`, configurável por projeto
-  (Configurações → Execução), sem destrave automático — rearmar é um
-  clique (`POST .../agents/:agentId/rearm`) que registra quem clicou.
-  **Reidratação** estende os quatro estados: `awaiting_gate` retoma
-  intacto e reage a um gate que resolve DEPOIS do restart (é por isso
-  que o sinal tinha que ser outbox, não uma chamada em processo);
-  `working` interrompido bloqueia com diagnóstico honesto do restart
-  em vez de tentar retomar um ToolLoop que só existia em memória — e
-  isso NÃO conta pro circuit breaker. Decisão completa em
-  [ADR 0045](docs/adr/0045-reagendamento-por-evento-do-dev-agent.md).
-  **Limite conhecido:** entrega do wake é at-most-once (PubSub, não
-  `:global` — Registry é local ao nó e o engine roda 2 réplicas em
-  produção); um wake perdido só é recuperado no próximo evento.
-  O aceite de 3 tasks em sequência sem restart passou a ser executável na
-  Fase 12d (`pnpm --filter api validacao:fase-12`), com o veredito do gate
-  entrando pelo funil real (`RecordGateVerdictUseCase`) em vez de pelo
-  julgamento de um modelo — que continua não determinístico, pelo mesmo
-  motivo do [ADR 0020](docs/adr/0020-destravar-gates-qa-secops.md).
-- **api,web**: o projeto passa a poder **adotar um repositório que já
-  existe**, em vez de só criar um (Fase 12a). É o primeiro dos três achados
-  P1 do dogfooding: a Fase 10 só rodou porque alguém inseriu à mão as linhas
-  de `project_repositories`/`repo_bootstraps`, a segunda "marcada como
-  convergida para o produto não tentar retomar bootstrap nenhum". O wizard
-  ganha "Criar novo | Adotar existente"; adotar valida o acesso com `getRepo`
-  (que existia desde a Fase 2 e nenhum caso de uso chamava) e produz um
-  **plano** — o que o bootstrap faria, sem fazer nada. O usuário aprova o
-  plano inteiro, ou adota como está e dispensa o bootstrap. Enquanto não
-  decidir, **nada roda**: nenhuma proteção de branch é sobrescrita fora de um
-  plano aprovado ([RN-045](docs/business-rules.md#rn-045)). As duas tabelas
-  ganham `origin` (`created` | `adopted`), com backfill `created`
-  ([RN-046](docs/business-rules.md#rn-046)). Repositório adotado com branches
-  fora do template (`develop`, `release/*`) vira diagnóstico informativo na
-  tela de Configurações — **nunca bloqueia**, porque a política é dele.
-  Decisão em [ADR 0044](docs/adr/0044-adocao-de-repositorio-existente.md).
-  **Limite conhecido:** "proteção divergente" é presença × ausência, porque é
-  só isso que o contrato expõe — uma branch com proteção PARCIAL conta como
-  desprotegida (o `ProtectionPolicy` normalizado segue adiado pelo ADR 0028).
-  **Pendente:** o aceite contra o fork da Fase 10, gated por
-  `ADOPT_TEST_REPO` + `GITHUB_TEST_TOKEN`, é somente leitura e nunca aprova
-- **api,web**: **OpenRouter** entra como o primeiro hub sobre a base
-  OpenAI-compatível (Fase 11a). Declara `listModels: true` — o catálogo do
-  OpenRouter passa a sincronizar sozinho, com preço convertido do formato
-  USD/token do provider para o `bigint` de micro-USD/milhão do schema. Ganha
-  headers próprios (`HTTP-Referer`, `X-Title`), tratamento do erro que chega
-  NO MEIO do stream (modo de falha que só um hub tem, porque roteia pra
-  infraestrutura de terceiros) e teste de conexão (`GET /key`) antes de
-  cifrar/persistir a credencial — o primeiro `LLMCredentialConnectionTester`
-  do lado LLM, mesmo momento do fluxo de credencial git desde o ADR 0004. Tela
-  de credenciais e seletor de modelo já acomodavam a categoria "Hubs" desde a
-  preparação da Fase 9b; só precisaram do provider de verdade. O smoke test do
-  aceite (`openrouter-provider.smoke.spec.ts`) já existe, gated por
-  `OPENROUTER_TEST_KEY` — cadastro, sync populando o catálogo, ativação
-  curada e sessão de chat de ponta a ponta com custo congelado em
-  `token_usage`, tudo num fluxo só. **Pendente:** rodar de fato contra uma
-  chave real fecha a Fase 11a
-- **api**: os cinco providers restantes da Fase 9b entram (Fase 11b) —
-  `LLM_PROVIDER_NAMES` vai de 4 para **9**. Cada um investigado do zero
-  contra a doc oficial, sem herdar suposição de quirk entre providers
-  (achado real, não copiado): **Together** e **DeepInfra** declaram
-  `listModels: true` com preço confirmado no catálogo (Together tem
-  pricing achatado em número USD/milhão — unidade inferida por
-  comparação de mercado, não documentada explicitamente pela Together;
-  DeepInfra tem o catálogo **público, sem autenticação**, confirmado ao
-  vivo, o que também significa que ela não tem teste de conexão — só o
-  primeiro chat real descobre uma chave ruim). **NVIDIA NIM**, **Bitdeer**
-  e **Vultr** declaram `listModels: false` (sem preço confirmado na rota
-  que a base realmente chama) e vivem de seed manual — a decisão do
-  Vultr mudou durante a implementação: a doc aponta um endpoint com preço
-  que devolveu 404 ao vivo, então ficou `false` em vez do `true`
-  cogitado no planejamento. Bitdeer tem a doc pública mais rasa dos
-  cinco, mas ainda assim ganhou três ids de modelo REAIS (confirmados em
-  exemplo de config do próprio blog da Bitdeer) e teste de conexão
-  (`GET /v1/models`, autenticado, confirmado 401 sem chave). Suite de
-  contrato verde nos 9 providers; smoke test por provider gated por
-  `<PROVIDER>_TEST_KEY`, cada um pulado-avisado sem a chave. **Pendente:**
-  rodar os cinco smokes contra chave real fecha a Fase 11b
-- **docs**: [ADR 0043](docs/adr/0043-seis-providers-de-llm-e-o-fechamento-da-fase-9b.md)
-  fecha a Fase 9b de fato — registra a tabela de aceite dos seis
-  providers (11a+11b), o padrão "falso honesto" com os dois casos onde a
-  decisão só foi resolvida ao vivo durante a implementação (DeepInfra
-  virou `true`, Vultr virou `false` — os dois diferentes do que o
-  planejamento cogitava), e confirma a base intocada: diff vazio no
-  `SyncModelCatalogUseCase`, e o único hook novo em
-  `OpenAICompatibleProvider` (`parseErrorFrame`, +31 linhas) justificado
-  linha a linha — necessário só porque o OpenRouter é o único hub dos
-  seis. A referência gerada
-  (`docs/reference/llm-providers.md`) ganha três colunas por provider
-  (credencial, origem dos modelos, quirks resumidos), todas derivadas do
-  código e da prosa já escrita, e a query de exemplo de custo hub×direto
-  que a Fase 11a tinha prometido. **Pendente:** o mesmo aceite com
-  credencial real dos seis smokes, ainda em aberto
-- **api,engine,web**: o catálogo de modelos passa a ser **vivo**. Provider que
-  declara `listModels` é sincronizado por um job periódico (6h, configurável por
-  `MODEL_SYNC_INTERVAL_SECONDS`) e pelo botão "Atualizar catálogo" na tela de
-  configurações. Modelo descoberto entra **desativado**, modelo que some do
-  provider vira `unavailable` e **nunca é deletado**, e provider que falhou é
-  PULADO com a origem da falha — nunca tratado como catálogo vazio
-  ([RN-043](docs/business-rules.md#rn-043))
-- **api**: `is_active` de modelo ganha dentes. Binding NOVO para modelo
-  desativado ou indisponível responde **422**, e a cascata de resolução passa a
-  pular o indisponível avisando qual escopo pulou, em vez de trocar o modelo em
-  silêncio. Quando o turno carrega ferramentas, a cascata revalida
-  `supports_tool_calling` em todo nível — sem isso o fallback pousaria um agente
-  num modelo chat-only ([RN-040](docs/business-rules.md#rn-040))
-- **api**: custo passa a ser **reproduzível**, não só imutável. `token_usage`
-  grava o preço que produziu cada `cost_micros`, e toda mudança de preço deixa
-  linha em `model_price_changes` com o par antes/depois e a origem
-  (`manual` | `sync`). Preço novo continua não reprecificando o passado
-  ([RN-044](docs/business-rules.md#rn-044)). Decisão em
-  [ADR 0042](docs/adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md)
-- **web**: o seletor de modelos foi reagrupado por **origem** (Local · APIs
-  diretas · Hubs), ganhou selos de custo, janela e tool calling, e o filtro
-  **"aptos para agentes"** que a mensagem de erro da RN-040 citava desde a Fase
-  9a sem existir. O custo passa a mostrar entrada e saída separadas — a média
-  escondia a assimetria. Modelo indisponível aparece esmaecido e marcado, nunca
-  some. Nova seção de curadoria do catálogo, com ativação em lote e o relatório
-  do sync por provider
-- **api,k8s**: preparo da Fase 9b — o metering passa a registrar **quem serviu**
-  a chamada, não só por onde ela entrou. `token_usage` ganha
-  `upstream_provider` (texto, `null` quando não houve hub), as métricas
-  `brabo_llm_tokens_total` e `brabo_llm_cost_micros_total` ganham o rótulo
-  `upstream_provider`, e o dashboard executivo ganha um painel de custo por
-  provedor subjacente ([RN-042](docs/business-rules.md#rn-042)). `models` ganha
-  `manual_pricing`, que marca preço digitado da doc para o sync da Fase 9c não
-  sobrescrever sem decisão explícita. **Nenhum provider novo entrou ainda** — a
-  verificação na doc oficial dos seis depende de acesso de rede que a sessão
-  não teve. **Pendente:** o aceite com credencial real do OpenRouter (catálogo
-  de verdade e `upstream_provider` preenchido numa task) fica em aberto até os
-  seis providers entrarem — registrado no
-  [ADR 0042](docs/adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md)
-- **api**: providers de LLM passam a ter **contrato único** e capabilities, como
-  os de git desde a Fase 2. `LLMProvider` ganha `capabilities`
-  (`streaming`/`toolCalling`) e `models` ganha `supports_tool_calling`,
-  `supports_streaming` e `supports_vision`. Vincular a um **agente** um modelo
-  sem tool calling nativo passa a responder **422** com a mensagem que aponta o
-  filtro "aptos para agentes" ([RN-040](docs/business-rules.md#rn-040)); a
-  migração `0026` faz o backfill dirigido dos modelos do seed, então bindings
-  existentes continuam valendo. Decisão em
-  [ADR 0041](docs/adr/0041-base-openai-compativel-e-contrato-de-llm-providers.md)
-- **api**: o provider da **OpenAI passa a fazer tool calling** — antes ele
-  descartava `options.tools` em silêncio, e um agente vinculado a um modelo da
-  OpenAI terminava sem concluir. Ele agora deriva de uma base OpenAI-compatível
-  sobre `node:http`, com teto de **inatividade** de socket configurável em
-  `LLM_REQUEST_TIMEOUT_MS`. A dependência `openai` saiu do projeto
-- **api**: o provider da **Anthropic passa a fazer tool calling**, com
-  `role: 'tool'` virando bloco `tool_result` no turno certo em vez de ser
-  achatado em texto de `user`
-- **api**: falha de provider de LLM passa a ser **classificada**. O chunk de
-  erro ganha `code` (`auth`, `rate_limit`, `model_not_found`, `context_length`,
-  `timeout`, `connection`, `upstream`) em vez de repassar a string crua do
-  vendor. Contagem de token que o provider não informou vem marcada como
-  estimada ([RN-041](docs/business-rules.md#rn-041)) — o número serve para
-  cobrar, mas não se confunde com um zero informado
-
-- **api,web**: fidelidade do dashboard de projetos ao design aprovado
-  (`design/SCREENS.md`, `design/COMPONENTS.md`):
-  - linha de resumo `"{N} projetos ativos · {M} agentes · {gasto} este mês"`,
-    alimentada por um endpoint novo (`GET /workspaces/:workspaceId/summary`)
-    que soma tokens gastos e conta agentes distintos que trabalharam no mês
-    corrente ([RN-038](docs/business-rules.md#rn-038));
-  - cards do dashboard passam a mostrar o roster REAL do projeto (antes era
-    a lista estática de todo agente, igual em todo card) em chips agrupados
-    por área — QA com subespecialidades delegadas vira um chip único com a
-    contagem (`"QA ×3"`), até 4 chips visíveis + excedente num badge;
-  - `TokenMeter` `compact` ganha rodapé de gasto/saldo e um estado de "sem
-    orçamento" (CTA "Definir orçamento" levando à aba de Configurações do
-    projeto, via deep-link `?tab=settings`) — antes mostrava `0/0 · 0%`
-    indistinguível de gasto zero real;
-  - sidebar ganha dot de status por projeto (verde=saudável, âmbar=orçamento
-    ≥70%, vermelho=orçamento ≥90% ou task bloqueada, cinza=sem atividade em
-    7 dias — risco sempre vence inatividade,
-    [RN-039](docs/business-rules.md#rn-039)) via um segundo endpoint novo
-    (`GET /workspaces/:workspaceId/projects-status`), e rodapé com
-    avatar/iniciais + e-mail + papel RBAC (sem o rótulo de proficiência da
-    Anamnese, que o mock mistura ali)
-  - moeda do card e do resumo passam a ser só USD — decisão registrada em
-    [ADR 0040](docs/adr/0040-moeda-do-dashboard.md); `TokenMeter`
-    `default`/`live` (header do projeto, chat) continuam R$+US$, sem mudança;
-  - componente `Skeleton` novo (nenhum existia) durante o carregamento da
-    grade e do resumo; o vazio de "workspace sem projeto nenhum" ganha um
-    CTA "Criar projeto" e passa a se distinguir do vazio de "busca sem
-    resultado" (antes os dois mostravam o mesmo texto)
-- **web**: as quatro telas de auth (`/login`, `/registrar`, `/esqueci-senha`,
-  `/definir-senha`) passam a seguir o design aprovado: cabeçalho de marca acima
-  do card, rodapé de página com a versão do artefato, campo com botão de mostrar
-  senha, botão com estado de carregamento e o aviso da conta migrada como alerta
-  próprio fora do card
-  ([ADR 0036](docs/adr/0036-telas-de-auth-fieis-ao-design-e-fontes-auto-hospedadas.md))
-- **web**: o erro de credencial passa a aparecer como alerta no topo do card, em
-  vez de sob o campo de senha, e o texto muda para **"E-mail ou senha
-  incorretos."**. A propriedade de anti-enumeração é a mesma: uma única mensagem
-  para conta inexistente, senha errada, conta bloqueada e conta migrada
-- **web**: `/status` **não exige mais sessão** — é para lá que o rodapé das telas
-  de auth aponta, e atrás do guard o clique voltava para o login. A página só
-  consulta os `/health`, que já eram públicos
-- **web**: o rodapé das telas de auth mostra a **versão da imagem**. Fora de um
-  release ela é `dev`, porque o build não nasceu de tag; o `release.yml` passa a
-  assar a tag no artefato via `VERSION` do `docker-bake.hcl`
-- **api**: `BRABO_VERSION` passa a ser **definida na imagem de release**, então o
-  `service.version` dos spans deixa de ser `dev` em todo ambiente
-- **web**: componente `Alert` no design system (4 tons, papel de acessibilidade
-  escolhido e não derivado do tom), `loading` no `Button`, e `preenchido` /
-  `revelavel` / `acaoNoLabel` no `Input`
-
-- **api**: módulo de auth first-party — registro, login, logout, refresh,
-  verificação de e-mail e reset de senha, em `/auth/*`. Senhas com argon2id;
-  access token EdDSA de 15 min com chave derivada por scrypt e JWKS público em
-  `/.well-known/jwks.json`; refresh opaco com rotação obrigatória, em que
-  reapresentar um token já usado revoga a família inteira
-  ([RN-030](docs/business-rules.md#rn-030))
-- **api**: lockout progressivo por e-mail e por IP, em janela deslizante no
-  Postgres, sem Redis ([RN-031](docs/business-rules.md#rn-031))
-- **api**: respostas de login, registro e pedido de reset não distinguem conta
-  existente de inexistente ([RN-032](docs/business-rules.md#rn-032))
-- **api**: tokens de verificação e reset de uso único, com hash em repouso e
-  expiração ([RN-033](docs/business-rules.md#rn-033))
-- **web**: login próprio em `/login`, `/register`, `/forgot-password` e
-  `/set-password`, seguindo o design system. O access token vive em memória e o
-  refresh no cookie httpOnly, então a sessão sobrevive ao reload sem
-  `localStorage`. O refresh é single-flight: sem isso, dois 401 simultâneos
-  disparariam duas rotações e a segunda revogaria a família por reuso
-- **api**: `BRABO_SERVICE_TOKEN_PREVIOUS` e `AUTH_JWT_SECRET_PREVIOUS` aceitos
-  só na verificação, o que permite rotacionar os dois segredos sem downtime
-  ([runbook](docs/runbook.md#rotacao-das-chaves-do-auth))
-
-- **docs**: referência completa da API em `docs/reference/api/`, gerada do
-  OpenAPI — 118 páginas, uma por rota, agrupadas por domínio, com corpo de
-  request, corpo de response e códigos de erro. A visão geral sai do
-  `info.description` do documento, então é gerada de fonte única
-  ([ADR 0033](docs/adr/0033-referencia-de-api-gerada-do-openapi.md))
-- **api**: Swagger UI em `/docs` e `/docs-json`, montada apenas quando
-  `NODE_ENV !== 'production'`
-- **api**: o teste de tabela de rotas passa a exigir os metadados de OpenAPI —
-  rota nova sem summary, sem resposta com corpo descrito ou sem tag da lista
-  fechada reprova. É o mecanismo anti-drift que o docmap não tem: ele dispara
-  quando um arquivo muda, mas não enxerga rota nova que nasceu sem documentação
-- **docs**: `pnpm docs:check` reprova quando o `openapi.json` ou os MDX gerados
-  saem de dia — alterar um DTO sem regerar quebra o check
-
-- **docs**: a documentação passa a ser publicada por **degrau**, no mesmo GitHub
-  Pages: `main` em `/brabo/` (inalterado), `qa` em `/brabo/qa/` e `dev` em
-  `/brabo/dev/`. Os dois degraus de baixo saem do índice dos buscadores, e a busca
-  local continua funcionando nos três
-  ([ADR 0034](docs/adr/0034-documentacao-publicada-por-degrau.md))
-- **api,engine,web**: **trace correlacionado sem coletor.** Instrumentar e
-  exportar passaram a ser decisões separadas: span é sempre criada e o `trace_id`
-  sempre entra no log, e `OTEL_EXPORTER_OTLP_ENDPOINT` decide só se ela sai do
-  processo. Na prática, `pnpm dev` passa a ter as três streams de log marcadas
-  com o mesmo id — antes desenvolvimento era o único ambiente sem correlação
-  nenhuma, justo onde se lê log com os olhos
-  ([ADR 0035](docs/adr/0035-observabilidade-legivel-e-trace-sem-coletor.md))
-- **api**: **o caminho entre camadas no log.** Uma linha por requisição mostra
-  `interfaces → application → infrastructure` com a duração de cada passo, vinda
-  de um `AsyncLocalStorage` alimentado pelo decorator `@Traced`. Em produção sai
-  como o campo `path` numa linha de JSON; em desenvolvimento, como árvore
-  indentada. Nenhum controller foi tocado — a fronteira HTTP vem do
-  `ExecutionContext`
-- **api,engine**: **log legível em desenvolvimento.** `pino-pretty` em processo na
-  api (com a árvore de camadas) e `PrettyLogFormatter` novo no engine, onde
-  `dev.exs` jogava fora timestamp e toda a metadata e deixava `trace_id`,
-  `session_id` e `mfa` invisíveis. Produção segue com uma linha de JSON por
-  evento, que é o que o Alloy parseia
-- **engine**: log de acesso HTTP, que não existia — as 13 rotas `/internal` não
-  deixavam linha nenhuma, então "a api chamou?" não tinha resposta no log
-- **web**: `WEB_LOG_LEVEL` ligado no k8s. A encanação existia ponta a ponta e
-  faltava a variável, então `logger.debug` era código morto em todo ambiente
-  publicado
-- **engine**: o gate de QA vira **área** — `QA Lead` passa a ser o único
-  contato do gate (mesmo contrato `gates/verdict`/`tasks/:taskId/block` de
-  sempre), e delega a duas subespecialidades: `QA de Automação` (o QAAgent de
-  antes, sem mudança de prompt ou de matriz de cobertura) sempre, e `QA de
-  Performance e Segurança` (RNFs de performance da story; apoio de segurança em
-  nível de código — SecOps continua o gate determinístico próprio) só quando a
-  story tem RNF pertinente. Story sem RNF de performance gera delegação
-  **dispensada** com justificativa registrada, nunca silêncio. Falha de
-  subespecialidade com origem infra/modelo bloqueia a task com a origem real em
-  vez de virar `changes_requested` para o dev — a mesma lição do
-  [ADR 0020](docs/adr/0020-gates-validados-por-execucao-real.md), agora um
-  nível acima ([RN-036](docs/business-rules.md#rn-036),
-  [ADR 0038](docs/adr/0038-hierarquia-de-agentes.md))
-- **api**: rota interna nova `POST /internal/sessions/:sessionId/delegations`,
-  que registra o desfecho de cada delegação de área
-  (`completed`/`failed`/`dispensed`) separado da chamada que a área usa pra
-  reportar o resultado consolidado pra fora — a api continua enxergando só
-  esse resultado, nunca os delegados internos. `tasks.block` ganha um campo
-  opcional `origin` (a mesma origem de falha — infra/modelo/código/política)
-  persistido em `tasks.blocked_origin`
-- **engine**: o Infra vira **área** (segunda instância do ADR 0038, depois
-  da de QA) — `InfraLeadServer` continua o contato externo de sempre
-  (handoff do Arquiteto inalterado) e passa a delegar o pipeline de CI pro
-  subagente `Workflows`, que gera GitHub Actions ou GitLab CI conforme o
-  provider do repositório do projeto (nunca por `capabilities` — GitHub e
-  GitLab têm as mesmas). As duas delegações (Dockerfiles/compose pelo
-  próprio Lead, CI pelo Workflows) sempre rodam e sempre são rastreadas, e
-  se consolidam numa PR só, pelo mesmo `open_infra_pr` de sempre. Cada
-  arquivo passa por validação local antes de propor — `actionlint` novo,
-  pinado no Dockerfile do engine, só pra GitHub Actions (sem equivalente
-  offline pro GitLab CI, gap documentado)
-  ([RN-037](docs/business-rules.md#rn-037),
-  [ADR 0039](docs/adr/0039-actionlint-e-validacao-do-pipeline-de-ci-gerado.md))
-- **web**: a hierarquia de agentes (QA e Infra) fica visível — painel do
-  time agrupado por área (card do lead com badge "Lead", subespecialidades
-  aninhadas e recolhíveis, cada uma com binding de modelo e custo de tokens
-  próprios); Insights (hipóteses do Psicólogo) agrupados por área quando o
-  alvo é uma subespecialidade, com o alvo específico sempre visível no
-  card; feed do projeto narrando `delegation.completed`/`failed`/
-  `dispensed` com o mesmo tratamento dos demais eventos. Tudo derivado do
-  `session_events` que a UI já buscava — nenhuma rota nova
-  ([ADR 0038](docs/adr/0038-hierarquia-de-agentes.md#fechamento-fase-8d))
-- **engine**: a tool do Psicólogo (`emit_hypotheses`) e a da Anamnese
-  (`propose_instruction_patch`) passam a citar subagentes de área como
-  exemplo de alvo válido (`qa-automacao`, `qa-performance-seguranca`,
-  `infra-workflows`) — nenhuma validação nova, já aceitavam qualquer string;
-  só o modelo não tinha o nudge pra considerar a subespecialidade
+- **api**: Ollama e Anthropic passam a declarar `listModels` e a ter o catálogo
+  descoberto pelo sync — o backlog que o ADR 0042 deixou aberto. Os dois
+  formatos foram verificados na doc oficial antes de uma linha de código: o
+  Anthropic pagina **por cursor** (`has_more`/`last_id`, percorrido pela
+  auto-paginação do SDK oficial) e o Ollama lê `GET /api/tags` no host de
+  `OLLAMA_HOST`. Nenhum dos dois informa preço, então o modelo entra no catálogo
+  **sem preço** em vez de com preço inventado
 
 ### Correções
 
-- **infra**: mudar `WEB_PORT` deixa de quebrar o CORS em silêncio. A porta faz
-  parte do contrato de CORS desde o [ADR 0037](docs/adr/0037-cors-do-engine-e-a-porta-como-contrato.md),
-  mas nos composes `WEB_PORT` e `WEB_ORIGIN` tinham defaults **independentes**:
-  quem trocasse a porta (o que o próprio guia de primeiros passos manda fazer
-  quando a 5173 está ocupada) abria o browser numa origem que a api e o engine
-  não aceitavam, e a mensagem no console falava de CORS, não de porta. O default
-  de `WEB_ORIGIN` passa a **derivar** de `WEB_PORT` nos dois composes, e um check
-  do CI impede que alguém volte a separá-los. Definir `WEB_ORIGIN` à mão continua
-  sobrepondo a derivação
-- **deps**: `brace-expansion` sobe para `1.1.18` (era `1.1.16`), fechando o
-  alerta HIGH de DoS por expansão sem limite. Vinha transitivamente do
-  `minimatch@3.1.5`, cujo range já aceitava a versão corrigida — só o lockfile
-  mudou
-- **api**: a imagem de produção da api voltou a **subir**. A Fase 9a exportou
-  `LLM_PROVIDER_NAMES` (uma `const`) de `packages/shared`, e esse era o
-  primeiro valor em runtime de um pacote que o `Dockerfile.prod` documenta
-  como "100% tipos": todo import anterior era `import type` e sumia na
-  compilação. Com um valor de verdade, o compilado passou a fazer `require`
-  do pacote, cujo `main` aponta pro `.ts` cru — o Node recusa type stripping
-  dentro de `node_modules` e o container morria no boot com
-  `ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING`. A lista mudou para
-  `apps/api/src/domain/llm/llm-provider-names.ts`, amarrada ao tipo do shared
-  por exaustividade nos dois sentidos, e o invariante — que até aqui só vivia
-  num comentário de Dockerfile — passou a ter teste
-  (`test/packages-shared-so-tipos.spec.ts`)
-- **web**: `design-contraste.test.ts` (citado em comentários de
-  `Input.module.css`/`AuthLayout.module.css` desde a Fase 7, mas nunca
-  criado) recriado — e achou 2 pares novos que reprovavam o AA: o papel
-  RBAC do rodapé da sidebar e o rodapé de gasto/saldo do `TokenMeter`
-  `compact` usavam `--text-muted` sobre `--surface-1` (3.89:1, mesmo motivo
-  já documentado no `.hint` do Input), e o avatar da sidebar era um
-  gradiente `--accent`→`--warning` que derrubava o contraste das iniciais
-  pra 2.10:1. Os três corrigidos antes de qualquer um chegar a produção
-- **web**: a linha de resumo do dashboard dizia **"1 projetos ativos"** — não
-  havia pluralização nenhuma, só interpolação crua do número
-  (`lib/pluralize.ts` agora resolve isso, e a linha de resumo inteira, para
-  os dois substantivos)
-- **web**: `classifyEvent` (última atividade do card/feed) vazava o TIPO CRU
-  do evento pro humano (`"infra · foo.bar_novo"`) sempre que não havia
-  tradução específica — em 6 pontos diferentes da função, não só no fallback
-  final. Agora cai em `"atividade em {agente}"`, nunca no identificador
-  interno; um teste novo (`activity-catalog.test.ts`) lê o catálogo GERADO de
-  eventos e quebra se um tipo cadastrado ficar sem tradução
-- **web**: a timeline de PR vazava o parecer INTERNO de cada subespecialidade
-  de QA como um card duplicado, idêntico ao consolidado — `verdictsFor`/
-  `infraVerdictsFor` (`ProjectApprovalsTab.tsx`) filtravam só por tipo de
-  evento e `taskId`, nunca por `actor.id`, e o parecer interno de
-  `qa-automacao`/`qa-performance-seguranca` carrega o MESMO `taskId` do
-  parecer final. Numa story com RNF de performance a timeline mostrava 2-3
-  cards "QA" indistinguíveis. Agora o card principal é só o consolidado
-  (`actor.id === 'qa'`); os internos ficam dentro do expand
-- **web**: o filtro "por agente" do feed de atividade nunca funcionou —
-  `agentOptions` existia como prop de `ActivityFeed` desde sempre, mas
-  nenhum dos dois lugares que renderizam o feed (`ProjectOverviewTab.tsx`,
-  `SessionPage.tsx`) chegava a passá-la
-- **docs**: `docs/reference/artifacts.md` ainda dizia "os seis schemas de
-  artefato" e não listava `infra_delegation_files` (o sétimo, Fase 8c) —
-  drift de documentação gerada que o `docmap` marca como `block` e ninguém
-  tinha fechado
-- **engine**: o endpoint **não tinha CORS nenhum**. `GET /health` respondia 200 com
-  o corpo correto e sem um único cabeçalho `Access-Control-*`, então o navegador
-  descartava a resposta — a tela de status mostrava `engine: error` com o engine
-  saudável. Agora há CORS nas rotas de health (`/health`, `/live`, `/ready`), com
-  as origens de `WEB_ORIGIN`; **`/internal/*` e `/metrics` seguem sem**, e há teste
-  afirmando a ausência
-  ([ADR 0037](docs/adr/0037-cors-do-engine-e-a-porta-como-contrato.md))
-- **web**: `vite.config.ts` ganha `strictPort`. Sem ele, com 5173 ocupada o Vite
-  subia em **5174** avisando numa linha de log, e como a api aceita só a origem
-  exata, **toda** chamada era barrada — inclusive o `/auth/refresh`, o que faz a
-  tela parecer deslogada. O erro falava de CORS e não de porta, e a "correção"
-  natural (afrouxar o CORS) conserta 5174 e quebra 5173. Agora o Vite recusa subir
-  e diz que a porta está em uso
-- **engine**: `WEB_ORIGIN` era lida em dois lugares — o `check_origin` do socket
-  tinha a lista certa desde a Fase 4a, e o CORS HTTP não existia. Passa a ser
-  resolvida uma vez em `runtime.exs` e compartilhada pelos dois consumidores
-- **api,engine**: o CORS dos dois ganha `Access-Control-Max-Age: 600`. Toda chamada
-  da web é preflighted (`Authorization` e `traceparent` não são safelisted), então
-  sem cache de preflight cada requisição eram duas viagens
+- **api**: o preço dos três modelos da Vultr passa a ser o **oficial**
+  (`$0.55`/1M de entrada, `$2.75`/1M de saída, tarifa única do serviço). A
+  estimativa anterior errava na direção perigosa — `400_000` micros de saída em
+  dois dos três modelos, contra `2_750_000` reais: o metering subestimava o
+  custo de saída em quase **7×**, e é a saída que domina a conta de um agente
+  que escreve código. NVIDIA NIM e Bitdeer seguem estimados, e agora com o
+  motivo registrado: a NVIDIA **não cobra por token** (prototipagem gratuita +
+  licença por GPU/hora) e a Bitdeer monta a tabela de preço no cliente
+- **api**: o sync de catálogo parava de sobrescrever preço marcado como
+  `manual_pricing`. O schema sempre disse que quem sincroniza não pode
+  sobrescrever essa linha sem decisão explícita; o código deixava o remoto
+  vencer sempre que trouxesse preço, e o sync seguinte desfazia a correção de
+  quem tinha arrumado um número errado (RN-051)
+- **api**: toda troca de preço passa a deixar linha em `model_price_changes`.
+  A origem `sync` existia no domínio desde a Fase 9c e **nenhuma escrita a
+  produzia** — o sync trocava preço por fora do caminho auditado, e o `seed.ts`
+  fazia o mesmo sobre banco já semeado (`BRABO_FORCE_SEED=1` no `bootstrap.sh`
+  do k8s). Corrigir um preço no seed mudava o número em silêncio (RN-044)
+- **ci**: a PR de promoção nascia com os checks **travados**. `promote.yml`
+  abria o PR com o `GITHUB_TOKEN`, e evento criado por esse token não dispara
+  workflow de PR — os sete checks nasciam em `action_required`, esperando
+  aprovação manual. Na prática o PR chegava a `MERGEABLE` com quatro checks
+  herdados do push da origem e **sem o Check de promoção ter rodado**: quem
+  mergeasse sem reparar promovia sem o portão que valida range limpo, degrau
+  carimbado e merge commit possível. Passa a usar `BRABO_BOT_TOKEN`, o mesmo
+  remédio que o `tag-release.yml` já aplicava desde a v0.2.0 — cujo aviso diz,
+  literalmente, "nem abre PR com checks". O passo do CHANGELOG no `release.yml`
+  tinha o mesmo defeito e foi corrigido junto
+- **ci**: o `pr-police` passa a exigir que `breaking/` e o marcador de quebra
+  no commit (`!` ou `BREAKING CHANGE:`) andem juntos, nas duas direções. Eram
+  dois mecanismos para o mesmo fato, soltos: a versão sai da FUNÇÃO da branch,
+  e o CHANGELOG detecta quebra pelo MARCADOR. `breaking/fase-7-auth-e-openapi`
+  removeu o Keycloak, subiu MAJOR corretamente — e nenhuma das doze versões
+  tem seção de "⚠ Mudanças incompatíveis", porque **nenhum commit do histórico
+  jamais usou os marcadores**. As versões já lançadas seguem sem a seção: os
+  commits são imutáveis e o gerador não tem de onde inferir; a regra vale daqui
+  para frente
+- **docs**: o `CONTRIBUTING.md` ensinava `fix/<assunto>`, que **não está na
+  taxonomia** — o `pr-police` reprova. É o engano mais comum, e a doc o
+  induzia
 
-- **web**: as **três fontes do design system não carregavam em produção**.
-  `index.html` as puxava do Google Fonts, e a CSP da imagem do nginx
-  (`style-src 'self'; font-src 'self' data:`) bloqueava a folha e os arquivos —
-  as três caíam em fonte de sistema, e como `--font-heading` e `--font-body`
-  compartilham o fallback `sans-serif`, a distinção entre título e corpo
-  desaparecia. Agora são auto-hospedadas em `public/fonts/`, com aviso de licença
-  OFL, teste de integridade e gate no `Dockerfile.prod`
-- **web**: `fullWidth` do `Button` **nunca funcionou** — era `flex: 1`, que só faz
-  efeito se o pai for flex ou grid, e nenhum dos sete usos tinha pai assim
-- **web**: foco de campo era `:focus` com indicação só por `box-shadow`, que é
-  descartado em `forced-colors` — o campo focado ficava sem indicador nenhum no
-  modo de alto contraste do sistema. Virou `:focus-visible` com `outline`
-  transparente que o modo pinta
-- **web**: três pares de cor reprovavam o 4.5:1 do WCAG AA — o texto de apoio do
-  campo (3.89:1, e valia para as cinco telas fora de auth), o link das telas de
-  auth (3.88:1) e o placeholder do campo preenchido (3.10:1). Os três passaram a
-  usar tokens que já existiam. O botão primário segue em 3.20:1: consertar exige
-  escurecer a cor da marca, e é decisão de design
-- **docs**: `configuration.md` afirmava que a imagem de release injetava
-  `BRABO_VERSION` e que ela aparecia no `/health`. As duas eram falsas — a
-  primeira virou verdade nesta entrega, a segunda foi corrigida no texto (o
-  `/health` não devolve versão de propósito)
+## v1.4.0 — 2026-08-02
 
-- **api**: `PUT /projects/:id/agent-autonomy` e
-  `DELETE /projects/:id/members/:userId` devolviam **200 com corpo vazio**, e o
-  cliente da web caía em `res.json()` lançando `SyntaxError`. Os dois passam a
-  responder **204**
-- **api**: `POST /auth/register` e `POST /auth/request-password-reset`
-  documentavam 200 enquanto devolvem 202 — o `@nestjs/swagger` ignora
-  `@HttpCode` quando há qualquer `@ApiResponse`
-- **api**: o `@ApiBearerAuth` de classe no controller de git vazava para o
-  callback de OAuth, que é público
-- **docs**: as **117 páginas de operação** da referência de API não
-  renderizavam no site publicado — todas mostravam "Esta página deu erro." em
-  vez do explorador. Faltava `docItemComponent: '@theme/ApiItem'` no config do
-  Docusaurus, então o wrapper que monta o store do redux nunca era montado e
-  cada página morria na hidratação. Estava assim desde que a referência nasceu:
-  saiu quebrada na `v1.0.0` e na `v1.0.1`. Junto entra
-  `scripts/docs/api-render-check.mjs`, que reprova o CI se a referência
-  construir sem renderizar — o build ficava verde durante todo o defeito, e era
-  essa lacuna que deixava passar
-- **engine**: a correlação do trabalho assíncrono estava **morta**.
-  `Engine.Outbox.Event` não declarava a coluna `metadata`, então o struct não
-  tinha a chave, a cláusula que lê o `traceparent` era inalcançável, e **todo**
-  job do Oban nascia com `traceparent: nil`. Os dois workers também não liam o
-  argumento: agora abrem a span na trace da sessão e chamam
-  `Logger.metadata(session_id:)` — que não era chamado em lugar nenhum do engine,
-  e é por isso que o campo `session_id` do log sempre saiu ausente
-- **engine**: `traceparent` era injetado só nos POSTs para a api. Os seis
-  `Req.get` e o `llm_turn_stream` iam sem trace, então toda a metade de leitura
-  da conversa entre os serviços — incluindo o turno de LLM em streaming —
-  aparecia no Tempo como trace órfã. Agora há um funil único de headers
-- **engine**: o gate de telemetria estava invertido. Não havia config
-  `:opentelemetry` no projeto, então o SDK subia com o default apontando para
-  `localhost:4318` e o engine pagava por um batch condenado em dev **e em
-  `mix test`**; e o que o gate desligava era justamente a extração do
-  `traceparent` que chega
-- **web**: o chat não propagava trace. `chat-stream.ts` contorna o
-  `api-client.ts` e era o único caminho da web sem `traceparent` — o pior lugar
-  possível para a lacuna, porque é o turno de LLM
-- **web**: a retentativa depois do 401 reusava o mesmo `traceparent`, então as
-  duas tentativas chegavam à api declarando o mesmo `span_id` como pai e o Tempo
-  as colapsava num nó só
-- **web**: três silêncios em caminho crítico. `renovarSessao` falhava sem log (é
-  o caminho pelo qual o usuário é deslogado), falha de rede no `request<T>` subia
-  sem `trace_id` nem rota, e o socket da sessão nunca registrou `onError`/`onClose`
-- **api**: o `X-Brabo-Service-Token` não era redigido no log — se caísse num corpo
-  de erro logado, ia para o Loki em texto claro. Entraram junto `serviceToken`,
-  `privateKey`, `encryptedDek` e `dek`
-- **engine**: a recusa de token de serviço respondia 401 sem deixar linha, então
-  deploy mal configurado e varredura contra `/internal` eram igualmente invisíveis
-- **docs**: duas frases afirmavam o contrário do comportamento — a causa 1 de
-  "quando não há trace" no runbook (já falsa para o engine antes desta mudança) e
-  a nota de `OTEL_EXPORTER_OTLP_ENDPOINT` na referência de configuração
+### Novidades
+
+- **engine,api,docs**: fechamento da Fase 12 — a prova de que os três achados morreram (12d) (c366f0a)
+- **api,engine,web,docs**: promoção de story volta a ser do usuário (12c-3..12c-7) (28317be)
+- **api,engine**: create_story respeita o modo do projeto (12c-2) (6d6e791)
+- **api**: o modo de promoção de story entra no domínio (12c-1) (7eafdb3)
+- **web**: o painel mostra awaiting_gate, travado e não mais fica preso na task antiga (90e7faf)
+- **engine**: reidratação retoma os quatro estados (fa36915)
+- **api,engine,web**: rearmar o agente travado é um clique (ef35bde)
+- **engine,api,web**: circuit breaker por agente vira configurável de ponta a ponta (c79510b)
+- **engine**: o dev agent acorda por evento (22e8fca)
+- **api**: a outbox conta gate resolvido e task pegável (2be2c2a)
+- **engine**: o estado do dev agent vira explícito (2f17b29)
+- **web**: o wizard pergunta criar ou adotar, e a tela do plano decide (ed24393)
+- **api**: as quatro rotas da adoção, com a superfície documentada junto (4b098f5)
+- **api**: o portão do plano — aprovar roda, adotar como está dispensa (0faa6e0)
+- **api**: adoção de repositório existente — o fim do seed manual (ac5ab2c)
+- **api**: dry-run do bootstrap — o plano que diagnostica sem agir (a33c1ae)
+- **api**: origem do repositório e o plano de bootstrap no schema (4b5fbfd)
+- **api,docs**: seis providers de LLM sobre a base OpenAI-compatível — Fase 11 completa (862bab3)
+
+### Correções
+
+- **k8s**: o seed do usuário do smoke nunca rodou — cinco defeitos empilhados (7ccd676)
+- **web,ci**: o build de produção da web estava quebrado — e o CI não olhava (c8e3080)
+- **api,engine,docs**: a decisão no event log, e o gate que abria sem PR (e3acffc)
+- **engine,web,docs**: teste do requisito 4, notificação do breaker e o limite aceito (F1, F2, D5) (7baa7cc)
+- **engine**: guard do correct, filtro do worker e rearm honesto (D4, D6, D8) (fd0cc48)
+- **api**: outbox do reagendamento volta a ser transacional (D7) (db1b3a7)
+- **engine,api**: três travamentos críticos do reagendamento (D1, D2, D3) (51eb0ac)
+- **infra,deps**: WEB_ORIGIN deriva de WEB_PORT, e brace-expansion sobe (8fc8dad)
+
+### Refatorações
+
+- **api**: o executor do bootstrap vira colaborador próprio (d6bbf3d)
+
+### Documentação
+
+- permissões, runbook e glossário acompanham as mudanças da leva (0ff55d3)
+- RN-047, ADR 0045 e o catálogo de eventos do reagendamento (6fcf4db)
+- RN-045/046, ADR 0044 e o smoke do aceite da adoção (96de3bc)
+- escopo da FASE 12 no CLAUDE.md, e a 11 fecha no Status (706d48b)
+- runbook cobre a derivação de WEB_ORIGIN a partir de WEB_PORT (09f5098)
+
+## v1.3.0 — 2026-08-01
+
+### Novidades
+
+- **web,docs**: ModelPicker reagrupado, curadoria de catálogo e fechamento da Fase 9c (a87ec50)
+- **api,engine**: sync de catálogo, ciclo de vida do modelo e preço auditável (0dfb227)
+- **api,k8s**: metering por provedor subjacente e preço manual (preparo da Fase 9b) (b1c7e4e)
+- **api**: base OpenAI-compatível, contrato de LLM providers e capabilities (Fase 9a) (a04454f)
+- **web,api**: dashboard de projetos — fidelidade ao design aprovado (f0ba9bd)
+
+### Correções
+
+- **api**: a lista de providers de LLM sai do packages/shared e vai pro domínio (39bd783)
+
+### Documentação
+
+- kit de colheita da 10c — queries validadas, esqueleto e o achado #17 (f35a8eb)
+- runbook de condução da 10b e o texto de entrada da sessão 0 (ed2cd39)
+- CLAUDE.md admite o que as Fases 8 e 9 não entregaram (b999249)
+- missão de dogfooding da Fase 10 e insumos do PO (0e27ecd)
+
+## v1.2.0 — 2026-07-30
+
+### Novidades
+
+- hierarquia de agentes — QA e Infra viram área, com Lead e subagentes (Fase 8) (c04bfc0)
+- a versão da tag chega ao artefato, e o contraste das telas de auth passa AA (f8f9336)
+- **web**: as quatro telas de auth ganham a moldura do design aprovado (694f3b6)
+- **web**: Alert, loading no Button, campo preenchido e revelável, e foco visível (2d64049)
+- **web,api**: trace no chat, span própria na retentativa e fim dos silêncios do browser (3e359a4)
+- **api,engine**: log legível e o caminho do usuário entre as camadas (07c6b00)
+
+### Correções
+
+- **ci**: actionlint sobe pra 1.7.12 e ganha aceite no trivy, prettier, e o glossário desatualizado (65a9945)
+- o CORS que o engine não tinha, e a porta como parte do contrato (4dfa280)
+- **ci**: silencia o DL4006 que a contagem de fontes introduziu no hadolint (8646a36)
+- **web**: as três fontes do design system não carregavam em produção (2404d0e)
+- **api,engine**: trace correlacionado sem coletor, e a correlação assíncrona que estava morta (b504403)
+
+### Documentação
+
+- ADR 0036, a tela de login no design system, e as contagens que estavam erradas (da71efe)
+- corrige as duas citações arquivo:linha que o decorator deslocou (79d8596)
+- registra que página nova precisa do sidebars.ts, e que o docmap é piso (4e30cd2)
+- ADR 0035, a página de observabilidade e as duas frases que estavam falsas (f4a4b68)
+
+### CI
+
+- reaponta o contrato de trace_id do engine e libera o trace id de exemplo da spec (569d89c)
 
 ### Manutenção
 
-- **api**: `pnpm --filter api typecheck` entra no CI. O vitest transpila por
-  SWC e não verifica tipo nenhum, e os DTOs de resposta provam POR TIPO que
-  espelham a entidade de domínio
-- **api**: `users.keycloak_sub` passa a aceitar `NULL` (conta criada pelo auth
-  first-party não tem sub) e `users.email` ganha índice único em `lower(email)`.
-  A coluna **fica**: é a única evidência de procedência das contas migradas, e
-  apagá-la no mesmo release destruiria o que o script de migração usa
-- **api**: superfície pública passa de 4 para 12 rotas, cada uma justificada em
-  [`docs/security-surface.md`](docs/security-surface.md)
-- **api**: `JwtAuthGuard` deixa de fazer upsert de usuário por requisição —
-  agora é uma leitura por `id`, com 401 quando não existe. Somem
-  `SyncUserUseCase`, `upsertFromKeycloak` e `KeycloakTokenVerifier`
-- **api**: o RBAC da Fase 1 fica **intocado** — nenhuma decisão de autorização
-  lia claim de token. A matriz `(papel efetivo × papel exigido)` ganhou spec
-  próprio de `RolesGuard` para provar isso
-- **engine**: `Engine.Auth.ApiTokenVerifier` e `JwksStrategy` removidos, e com
-  eles as dependências `joken`, `joken_jwks`, `jose` e `tesla`.
-  `EngineWeb.Plugs.VerifyApiToken` vira `VerifyServiceToken`, preservando o
-  contrato de 401 + JSON + `halt()`
-- **web**: `keycloak-js` sai das dependências junto com `src/lib/keycloak.ts` e
-  os três campos `VITE_KEYCLOAK_*` de `runtime-config.ts`
-- **deploy**: o seed passa a criar `owner@brabo.dev` já verificado com a senha
-  de `BRABO_SEED_PASSWORD` — sem IdP externo não haveria credencial pronta para
-  o smoke nem para entrar na web local
+- senha do seed vira brabo12345678, nos nove lugares que a citam (c62f436)
+- **ci**: aceita CVE-2026-56852 no binário do gitleaks, com prazo (c0bd99d)
+- **design-sync**: sincroniza o DS com o Input da Fase 7a (752634a)
 
-## v0.1.0 — 2026-07-27
+## v1.1.2 — 2026-07-28
+
+### Documentação
+
+- corrige o que a doc afirmava sobre estado que mudou nesta sessão (1055e5e)
+
+## v1.1.1 — 2026-07-27
+
+### Manutenção
+
+- **ci**: torna a Release republicável e documenta as seis tags órfãs (bb517ee)
+
+## v1.1.0 — 2026-07-27
+
+### Novidades
+
+- **docs**: publica a documentação de cada degrau no Pages (48c17dd)
+
+### Correções
+
+- **ci**: gitleaks varria a gh-pages e reprovava por site construído (73943cf)
+- **docs**: referência de API não renderizava nenhuma das 117 rotas (2c73681)
+
+### Desempenho
+
+- **ci**: paraleliza o build da release e conserta o cache do Elixir (13dd7e0)
+
+## v1.0.1 — 2026-07-27
+
+### Correções
+
+- **ci**: drift cobrava documentação em PR de promoção (1245505)
+- **ci**: faz o guardião da documentação reavaliar quando a base ou o corpo mudam (d03259c)
+- **deps**: fecha 12 dos 13 alertas do Dependabot com overrides escopados (c50c93a)
+- **docker**: faz o smoke semear o usuário do jeito que a imagem permite (795ca89)
+- **docker**: devolve os defaults de dev às duas variáveis novas do auth (527ce35)
+- **deps**: força js-yaml 5.2.2 e fecha a GHSA-pm4m-ph32-ghv5 na imagem (ae2e12d)
+
+### Manutenção
+
+- **ci**: fecha os três checks que a FASE 7 deixou vermelhos (5f75f93)
+
+## v1.0.0 — 2026-07-27
+
+### Novidades
+
+- **api**: 400, 401 e 429 derivados da cadeia de guards no documento (1d7d4cb)
+- **docs**: referência da API gerada do OpenAPI no Docusaurus (68225ee)
+- **api**: metadados OpenAPI nas 26 rotas internas — varredura completa (0dc10a2)
+- **api**: metadados OpenAPI em llm, git, credenciais e infraestrutura (97a9c08)
+- **api**: metadados OpenAPI em backlog, agentes, execução, psicólogo e anamnese (37e7f2c)
+- **api**: metadados OpenAPI em sessões, ações e IAM (89d51ce)
+- **api**: documento OpenAPI, /docs fora de produção e export determinístico (fc48365)
+- **web**: login próprio, sessão em cookie e as quatro telas de auth (8ee0270)
+- **api**: sessão da web em cookie httpOnly com CSRF por double-submit (fb502e1)
+- **api**: migração dos usuários do Keycloak e login de conta pendente (0cc44b2)
+- **api,engine**: service token no tráfego interno e emissor próprio no guard (31aa544)
+- **api**: casos de uso, controllers e superfície do auth first-party (805c1c5)
+- **api**: domínio, portas e repositórios do auth first-party (5b8492c)
+- **api**: fundação do auth first-party — argon2id, Ed25519 e as cinco tabelas (b0274b9)
+
+### Correções
+
+- **ci**: claude-review falhava em todo PR de promoção (e3e0f70)
+
+### Documentação
+
+- regra de docmap, ADR 0033 e as docs afetadas pela referência gerada (4fba9f6)
+- ADR 0032 e a documentação do corte do Keycloak (063520a)
+- ADR 0031, RN-030..033 e a documentação da Fase 7a (724771c)
+- ativar FASE 7 (auth first-party + referência de rotas) no CLAUDE.md (f079258)
+
+### Testes
+
+- **api**: o teste de tabela passa a exigir os metadados de OpenAPI (77cdded)
+- **api**: suite de ataque do auth e as duas correções que ela encontrou (f0ca194)
+
+### Manutenção
+
+- remove o Keycloak do compose, dos manifests e dos scripts (796e133)
+
+## v0.3.1 — 2026-07-27
+
+### Correções
+
+- **dev**: pnpm dev explica a colisão de portas em vez de só falhar (c93ab44)
+
+### Documentação
+
+- CI confere as contagens de ADR escritas em prosa (3efb89a)
+
+## v0.3.0 — 2026-07-27
+
+### Novidades
+
+- **ci**: backmerge gate e fechamento da FASE 6 (ADR 0030) (50d7b16)
+
+### Correções
+
+- **ci**: promote tinha o mesmo ciclo vazio do tag-release (39119ed)
+- **ci**: ciclo vazio quando o PR entra por merge commit (227769c)
+
+### Documentação
+
+- **pages**: link para o site publicado e um build de site por PR (a05518b)
+
+## v0.2.0 — 2026-07-27
+
+### Novidades
+
+- **ci**: esteira de promoção e versionamento calculado (FASE 6, itens 4 e 5) (#47) (0fdd422)
+- **ci**: approval-ladder com os dois modos (FASE 6, item 3) (#45) (7f440a2)
+- **ci**: política de branches escrita e aplicada pelo pr-police (FASE 6, itens 1 e 2) (#44) (9d08dff)
+
+### Correções
+
+- **ci**: âncora da tag final era impossível de passar com merge commit (#53) (4e81a75)
+- **ci**: promotion-check tratava "não consegui ler" como "está desabilitado" (#49) (996c634)
+- **deps**: sobe brace-expansion para 5.0.8 (GHSA-mh99-v99m-4gvg) (#41) (9f36351)
+
+### Documentação
+
+- **policy**: registra a execução da esteira de ponta a ponta (#50) (0307075)
+- **security**: volta ao canal privado do GitHub, agora que o repo é público (#43) (1a72fad)
+- código de conduta e canal de segurança que existe de verdade (#40) (e5cc19b)
+- documentação completa e mecanismo de sincronização contínua (#39) (b57329a)
+
+### CI
+
+- constrói as quatro imagens de produção em paralelo com buildx bake (#42) (e4cd944)
+
+### Manutenção
+
+- **ci**: escada de três degraus e CI sem gatilho de push (#46) (b52bf00)
+
+## v0.1.0 — 2026-07-26
 
 ### Novidades
 
@@ -679,6 +350,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **scripts**: changelog perdia os commits de revert, contando meia história (23dc8b2)
 - **docker**: troca mc por aws-cli na imagem de backup — 48 CVEs para 0 (533862b)
 - **ci**: pina o trivy na versão que a action realmente instala (f7875a1)
 - **ci**: mix deps.get antes do format e tag válida do trivy-action (e45cf6a)
@@ -706,69 +378,6 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 ### Revertidos
 
 - **ci**: remove a CVE plantada e corrige a formatação do prettier (64f5ccf)
-
-### Manutenção
-
-- scaffold do monorepo (api, engine, web, packages/shared, docker) (0827e80)
-
-## v0.1.0 — 2026-07-27
-
-### Novidades
-
-- **design-sync**: importa os 57 componentes do apps/web para o Claude Design (f340416)
-- **api,engine,web**: OpenTelemetry, logs JSON correlacionados e dashboards (Fase 5) (3f6781b)
-- **api,engine**: métricas Prometheus de custo, sessões, ações e latência (Fase 5) (e76c74b)
-- **k8s**: stack de observabilidade local — Tempo, Loki, Alloy, Collector e Grafana (Fase 5) (9efd832)
-- **engine,api,k8s**: graceful shutdown com handoff de sessão e propriedade única no cluster (Fase 5) (8b4614a)
-- **k8s**: deploy Kubernetes com Kustomize, HPA por fila do Oban e overlay local (Fase 5) (ec47864)
-- **docker,ci**: imagens de produção non-root, compose.prod, CI e smoke test (Fase 5) (6ffac72)
-- **api,docs**: critério de aceite executável da Anamnese e ADR 0023 (0bf764c)
-- **api,engine,web**: rodada da Anamnese sob demanda e os testes que faltavam (Fase 4b) (5a84add)
-- **engine,api**: NoopDevAgent como modo de execução permanente (Fase 4a) (f93e2ef)
-- **api,engine,web**: Anamnese — perfil de proficiência e patches de instrução (Fase 4b, sessão 2) (0e23bed)
-- **api,engine,web**: Psicólogo real substitui o stub (Fase 4b, sessão 1) (9fa8b68)
-- **api,engine,web**: InfraAgent e painel do time ao vivo (fechamento Fase 4a) (fb2513c)
-- **api,engine,web**: gates de QA e SecOps pra PR de dev agent (Fase 4a) (c7a8937)
-- **api,engine,web**: DevAgent real via ToolLoop, substitui o NoopDevAgent (Fase 4a) (82918aa)
-- **api,engine,web**: infraestrutura dos dev agents com NoopDevAgent (Fase 4a) (f1247ca)
-- **api,engine,web**: Agente Arquiteto — ADRs via PR real, module_map, validação cruzada (Fase 3b) (3b9a82b)
-- **api,engine,web**: Agente PO + backlog + rastreabilidade (Fase 3b) (72b6c01)
-- **api,engine,web**: Agente Criativo conversacional + handoffs (Fase 3b) (c97b2c4)
-- **engine,api**: ToolLoop, ferramentas, ContextManager e EchoAgent (Fase 3a) (77c05cc)
-- **engine,api**: harness de agentes — montagem determinística de contexto (Fase 3a) (f9a6e4e)
-- **web,api**: wizard de novo projeto ligado ao fluxo real + tela de progresso do bootstrap (c2a5b05)
-- **api,shared**: bootstrap de Gitflow idempotente e retomável (ProvisionRepositoryUseCase) (5d31d4f)
-- **api,shared**: credenciais de git, GithubProvider/GitlabProvider completos e suite de contrato mockada (d858982)
-- **api,shared**: fundação do contrato normalizado GitProvider (Fase 2) (935f55b)
-- **web,api**: implementa apps/web completo e endpoints de suporte (fb630ab)
-- **api,engine**: endurece o pipeline de acoes propostas com decide(), permissions.json fisico, agent_autonomy e executor de terminal (d581c88)
-- **engine**: endurece o motor de sessoes com persistencia, heartbeat, outbox via Oban e PsychologistStub (74b0c46)
-- **api**: abstracao GitProvider + LocalGitProvider/GithubProvider/GitlabProvider e provisionamento de repositorio (02302af)
-- **engine**: motor de sessoes em Elixir/OTP com supervisao e evento de termino (e258558)
-- **api**: adiciona pipeline de acoes propostas e permissions.json por projeto (5e86ee7)
-- **api**: camada de LLM — providers, binding em cascata, metering e budget (b3972b7)
-- **api**: núcleo de domínio — auth, IAM, sessões, event log e outbox (968c150)
-- **design**: extrai tokens do design system para design/tokens.css (f797899)
-
-### Correções
-
-- **ci**: pina o trivy na versão que a action realmente instala (f7875a1)
-- **ci**: mix deps.get antes do format e tag válida do trivy-action (e45cf6a)
-- **web**: dropdown de modelo era recortado pela tabela nas últimas linhas (a3fe71c)
-- **engine**: janela da Anamnese truncava pra segundo e pulava a rodada calada (4a2bb45)
-- **api,web**: perfil de proficiência identifica a pessoa por e-mail (7f11f89)
-- **api,web**: três defeitos que só a passada visual pegaria (Fase 4b) (58220b6)
-- **api,engine,web**: destrava a Anamnese num projeto real (Fase 4b, sessão 2) (3deaef5)
-- **api,docker**: ajusta o demo do Psicólogo ao que a stack local aguenta (Fase 4b) (da25bb3)
-- **api,engine,web**: fecha os desvios do Psicólogo e roda o critério de aceite (Fase 4b, sessão 1) (3571634)
-- **engine,api,web**: gate de infra que valida e painel que diz a verdade (Fase 4a) (df2573a)
-- **engine,api**: destrava os gates de QA e SecOps e roda o critério de aceite (Fase 4a) (5d721bd)
-- **engine,api,web**: destrava o DevAgent real e fecha os desvios do enunciado (Fase 4a) (15dc967)
-- **engine,api**: corrida do workspace, monitor de dev agents e tetos (Fase 4a) (391f992)
-
-### Documentação
-
-- **adr**: registra a verificação executada do fechamento da 4b (5ca75ea)
 
 ### Manutenção
 

@@ -38,7 +38,8 @@ on:
         type: string
 
 permissions:
-  contents: write # criar a GitHub Release
+  contents: write # criar a GitHub Release e a branch do corte do CHANGELOG
+  pull-requests: write # abrir a PR do CHANGELOG para `dev`
 
 env:
   NODE_VERSION: '24.11.1'
@@ -49,6 +50,10 @@ jobs:
     name: Publicar release
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      # `secrets` não existe no `if:` de um step — só em `env`. Mesmo padrão do
+      # `tag-release.yml`.
+      TEM_PAT: ${{ secrets.BRABO_BOT_TOKEN != '' }}
     steps:
       # PRIMEIRO passo, antes de qualquer checkout: quem republica é restrito,
       # pela mesma razão e com a mesma lógica do `promote.yml`. `workflow_dispatch`
@@ -123,6 +128,11 @@ jobs:
           # checkout raso traz um commit só e a release sai com o changelog
           # vazio, sem erro nenhum.
           fetch-depth: 0
+          # O PAT porque o último passo EMPURRA a branch do corte do CHANGELOG
+          # e abre PR com ela. Branch empurrada com o `GITHUB_TOKEN` abre PR
+          # cujos checks nascem em `action_required` — o mesmo defeito que o
+          # `promote.yml` tinha.
+          token: ${{ secrets.BRABO_BOT_TOKEN || github.token }}
 
       # RECUSA republicar sobre o que já existe, e isso é escolha, não limitação:
       # uma Release publicada é registro, e sobrescrevê-la em silêncio apagaria as
@@ -205,9 +215,16 @@ jobs:
           TAG: ${{ steps.alvo.outputs.tag }}
         run: |
           set -euo pipefail
-          # A tag anterior é a penúltima em ordem de versão — `HEAD^` daria o
-          # commit anterior, que não é a mesma coisa.
-          anterior="$(git tag --list 'v*' --sort=-v:refname | sed -n '2p')"
+          # A tag anterior é a penúltima FINAL em ordem de versão — `HEAD^`
+          # daria o commit anterior, que não é a mesma coisa.
+          #
+          # O `grep -v -- '-'` não é detalhe: `--sort=-v:refname` coloca
+          # `v1.4.0-qa.1` ACIMA de `v1.4.0`, então sem o filtro a "penúltima"
+          # era uma PRÉ-RELEASE da própria versão sendo lançada. O intervalo
+          # sobrava só os merges de promoção, que o `--no-merges` do gerador
+          # descarta — e a Release saía com "_Nenhum commit em conventional
+          # commits neste intervalo._". Aconteceu em seis releases.
+          anterior="$(git tag --list 'v*' --sort=-v:refname | grep -v -- '-' | sed -n '2p')"
           node scripts/changelog.mjs "${TAG}" ${anterior:+"${anterior}"} --stdout \
             | tee RELEASE_NOTES.md
 
@@ -284,3 +301,55 @@ jobs:
           gh release create "${TAG}" \
             --title "${TAG}" \
             --notes-file RELEASE_NOTES.md
+
+      # O CHANGELOG.md do repositório volta por PR para `dev`, não por push.
+      #
+      # `main` não aceita push (só tag pelo bot de release e
+      # `.release/gate.json` pelo bot do gate), e commitar em `qa`/`dev` antes
+      # de abrir a promoção quebraria o "range limpo" do check de promoção.
+      # Sobra o caminho que a política já prevê para tudo: entrar por PR.
+      #
+      # Consequência aceita: o `CHANGELOG.md` de `main` fica um ciclo atrás. A
+      # fonte autoritativa das notas é a GitHub Release, publicada acima no
+      # mesmo instante da tag.
+      #
+      # Antes disto NADA nunca escrevia no arquivo: o gerador só era chamado
+      # com `--stdout` para montar o corpo da Release, e o `CHANGELOG.md`
+      # acumulou doze versões dentro de um único "Unreleased".
+      - name: O PAT está configurado?
+        if: env.TEM_PAT != 'true'
+        run: |
+          echo "::warning::sem BRABO_BOT_TOKEN: a PR do CHANGELOG abre, mas os checks dela nascem em 'action_required' e precisam ser liberados à mão."
+
+      - name: Levar o CHANGELOG desta versão para `dev`
+        env:
+          # PAT pelo mesmo motivo do `promote.yml`: PR aberto pelo
+          # `GITHUB_TOKEN` nasce com os checks travados em `action_required`.
+          GH_TOKEN: ${{ secrets.BRABO_BOT_TOKEN || github.token }}
+          TAG: ${{ steps.alvo.outputs.tag }}
+        run: |
+          set -euo pipefail
+          git fetch origin dev --no-tags
+          git checkout -B "chore/changelog-${TAG}" origin/dev
+
+          anterior="$(git tag --list 'v*' --sort=-v:refname | grep -v -- '-' | sed -n '2p')"
+          node scripts/changelog.mjs "${TAG}" ${anterior:+"${anterior}"} "${TAG}"
+
+          if git diff --quiet -- CHANGELOG.md; then
+            echo "::notice::CHANGELOG já contém ${TAG} — nada a abrir."
+            exit 0
+          fi
+
+          git config user.name  'brabo-release[bot]'
+          git config user.email 'brabo-release[bot]@users.noreply.github.com'
+          git add CHANGELOG.md
+          git commit -m "docs(changelog): ${TAG}"
+          git push -u origin "chore/changelog-${TAG}"
+
+          gh pr create --base dev --head "chore/changelog-${TAG}" \
+            --title "docs(changelog): ${TAG}" \
+            --body "Corte do CHANGELOG na versão \`${TAG}\`, gerado por \`scripts/changelog.mjs\`.
+
+          Entra por PR porque \`main\` não aceita push, e commitar em \`qa\`/\`dev\`
+          antes da promoção quebraria o \"range limpo\" do check de promoção.
+          Sobe para \`qa\` e \`main\` no próximo ciclo, como qualquer mudança." 

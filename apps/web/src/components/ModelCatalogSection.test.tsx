@@ -3,7 +3,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ModelCatalogSection } from './ModelCatalogSection';
 import { ToastProvider } from './ui/ToastProvider';
-import type { Model, ModelsByCategory } from '../lib/api-types';
+import type {
+  CatalogoPorCategoria,
+  ModelComCuradoria,
+} from '../lib/api-types';
 
 const listModelCatalog = vi.fn();
 const setModelsActive = vi.fn();
@@ -15,7 +18,9 @@ vi.mock('../lib/api-client', () => ({
   syncModelCatalog: (...args: unknown[]) => syncModelCatalog(...args),
 }));
 
-function model(over: Partial<Model> = {}): Model {
+function model(
+  over: Partial<ModelComCuradoria> = {},
+): ModelComCuradoria {
   return {
     id: 'm-1',
     provider: 'openai',
@@ -35,8 +40,8 @@ function model(over: Partial<Model> = {}): Model {
   };
 }
 
-function catalogo(modelos: Model[]): ModelsByCategory {
-  return { local: {}, cloud: { openai: modelos } } as ModelsByCategory;
+function catalogo(modelos: ModelComCuradoria[]): CatalogoPorCategoria {
+  return { local: {}, cloud: { openai: modelos } } as CatalogoPorCategoria;
 }
 
 function montar() {

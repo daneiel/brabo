@@ -1,4 +1,4 @@
-import type { LLMProviderName, Model, ModelsByCategory } from './api-types';
+import type { LLMProviderName, Model, ModelCategory } from './api-types';
 
 /**
  * Como o modelo CHEGA até a chamada (Fase 9c) — outra pergunta que a categoria
@@ -38,10 +38,10 @@ export const ORDEM_DOS_GRUPOS: readonly ProviderKind[] = [
   'hub',
 ];
 
-export interface GrupoDeModelos {
+export interface GrupoDeModelos<M extends Model = Model> {
   kind: ProviderKind;
   rotulo: string;
-  modelos: Model[];
+  modelos: M[];
 }
 
 export interface AgruparOpcoes {
@@ -56,10 +56,15 @@ export interface AgruparOpcoes {
  * O modelo `unavailable` NÃO é filtrado: ele continua aparecendo, marcado — se
  * sumisse, o binding que aponta para ele viraria um mistério na tela.
  */
-export function agruparModelos(
-  models: ModelsByCategory,
+// Genérica no tipo do modelo porque as duas telas passam coisas diferentes: o
+// seletor manda `Model` e a curadoria manda `ModelComCuradoria` (ADR 0049). O
+// agrupamento só olha `provider` e `supportsToolCalling` — que os dois têm —,
+// então fixar `Model` aqui só serviria para a curadoria perder o `isActive` na
+// saída.
+export function agruparModelos<M extends Model>(
+  models: Record<ModelCategory, Record<string, M[]>>,
   opcoes: AgruparOpcoes = {},
-): GrupoDeModelos[] {
+): GrupoDeModelos<M>[] {
   const todos = [
     ...Object.values(models.local ?? {}).flat(),
     ...Object.values(models.cloud ?? {}).flat(),

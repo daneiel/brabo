@@ -193,7 +193,6 @@ o componente `d` da JWK, travado por teste.
 | POST | `/internal/sessions/:sessionId/tasks/claim` | engine-service |
 | POST | `/internal/sessions/:sessionId/termination` | engine-service |
 | GET | `/` | jwt |
-| GET | `/models` | jwt |
 | GET | `/users/me/credentials` | jwt |
 | POST | `/users/me/credentials` | jwt |
 | DELETE | `/users/me/credentials/:provider` | jwt |
@@ -203,6 +202,7 @@ o componente `d` da JWK, travado por teste.
 | DELETE | `/projects/:projectId` | role:maintainer |
 | GET | `/projects/:projectId` | role:viewer |
 | PATCH | `/projects/:projectId` | role:maintainer |
+| GET | `/projects/:projectId/models` | role:viewer |
 | GET | `/projects/:projectId/agent-autonomy` | role:maintainer |
 | PUT | `/projects/:projectId/agent-autonomy` | role:maintainer |
 | GET | `/projects/:projectId/agent-bindings/:agentSlug` | role:viewer |

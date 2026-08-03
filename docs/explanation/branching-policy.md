@@ -417,6 +417,27 @@ recriar a tag — reescrever o registro para consertar o efeito dele. Quem
 republica é o responsável de release, a mesma restrição do `promote`. O
 procedimento está em [Rulesets](../reference/rulesets.md#republicar-uma-tag-que-ficou-órfã).
 
+### O CHANGELOG volta por PR, e por que não por push
+
+Publicada a Release, o `release.yml` abre uma PR `chore/changelog-<tag>` para
+**`dev`** com o corte da versão no `CHANGELOG.md`.
+
+Por PR, e não por push, porque nenhum dos caminhos diretos existe: `main` só
+aceita tag (bot de release) e `.release/gate.json` (bot do gate), e commitar em
+`qa` ou `dev` antes da promoção quebraria o **range limpo** do check de
+promoção — o head do PR deixaria de ser o tip da origem.
+
+**Consequência aceita:** o `CHANGELOG.md` de `main` fica um ciclo atrás. Não é
+perda de informação: a fonte autoritativa das notas é a **GitHub Release**,
+publicada no mesmo instante da tag, e o corte sobe no ciclo seguinte como
+qualquer outra mudança.
+
+> Antes disso **nada nunca escrevia no arquivo**. O gerador só era chamado com
+> `--stdout`, para montar o corpo da Release, e o `CHANGELOG.md` acumulou doze
+> versões dentro de um único "Unreleased" — enquanto seis Releases saíam com o
+> corpo vazio, porque a "tag anterior" incluía as pré-releases da própria
+> versão sendo lançada.
+
 ### A versão do ciclo
 
 Sai do **maior impacto** entre os PRs mergeados desde a última final:
@@ -430,6 +451,33 @@ Sai do **maior impacto** entre os PRs mergeados desde a última final:
 Um `breaking` no meio de dez `docs` faz o ciclo inteiro ser MAJOR. E é a
 **função da branch** que decide, não a label de família: `breaking/x` e
 `docs/y` são ambos da família `trabalho`.
+
+#### `breaking/` exige o marcador no commit
+
+O `pr-police` reprova um PR de `breaking/` cujos commits não marcam a quebra —
+`!` no assunto (`feat(api)!: …`) ou `BREAKING CHANGE:` no corpo — e reprova
+também o inverso: commit marcado numa branch que não é `breaking/`.
+
+A regra existe porque são **dois mecanismos para o mesmo fato**, e eles viviam
+soltos: a versão sai da FUNÇÃO da branch (a tabela acima), e o CHANGELOG
+detecta quebra pelo MARCADOR no commit. Nada os ligava.
+
+O preço foi medido. `breaking/fase-7-auth-e-openapi` removeu o Keycloak,
+deslogou todo mundo e subiu MAJOR corretamente — e o CHANGELOG não registra
+quebra nenhuma, em **nenhuma** das doze versões, porque nenhum commit do
+histórico jamais usou os marcadores. As duas metades funcionavam; a informação
+não atravessava de uma para a outra.
+
+As duas direções importam, e a segunda é pior:
+
+| situação | o que acontecia |
+|---|---|
+| `breaking/` sem marcador | a versão salta MAJOR e o changelog não diz o que quebrou |
+| marcador fora de `breaking/` | o changelog anuncia a quebra e a versão sai PATCH — quem confia no número quebra sem aviso |
+
+Verificação que não pôde ser feita (checkout raso, ref não buscada) **não
+reprova**: a regra só roda quando o intervalo `base..head` é legível, a mesma
+doutrina da checagem de contaminação.
 
 Ciclo **vazio** — nenhum PR desde a última final — falha com mensagem em vez de
 gerar tag. Tag nova apontando para o mesmo commit da anterior faz o histórico

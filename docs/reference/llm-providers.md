@@ -68,11 +68,11 @@ Lido dos literais de `capabilities` em `apps/api/src/infrastructure/llm/` — **
 
 | provider | streaming | tool calling | list_models | credencial | origem dos modelos | quirks resumidos | fonte |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `anthropic` | sim | sim | não | chave de API | seed | — | `apps/api/src/infrastructure/llm/anthropic-provider.ts` |
+| `anthropic` | sim | sim | sim | chave de API | sync + seed | — | `apps/api/src/infrastructure/llm/anthropic-provider.ts` |
 | `bitdeer` | sim | sim | não | chave de API | seed | `Authorization: Bearer <chave>` CONFIRMADO; `GET /v1/models` existe e é autenticado; Três ids de modelo REAIS confirmados; Nenhum quirk de stream/erro confirmado | `apps/api/src/infrastructure/llm/bitdeer-provider.ts` |
 | `deepinfra` | sim | sim | sim | chave de API | sync + seed | O catálogo é PÚBLICO — sem autenticação nenhuma; `stream_options.include_usage` confirmado suportado; Erro em shape padrão | `apps/api/src/infrastructure/llm/deepinfra-provider.ts` |
 | `nvidia-nim` | sim | sim | não | chave de API | seed | Sem header próprio; Tool calling é por MODELO, não por API; `stream_options.include_usage` não confirmado | `apps/api/src/infrastructure/llm/nvidia-nim-provider.ts` |
-| `ollama` | sim | sim | não | nenhuma (local) | seed | — | `apps/api/src/infrastructure/llm/ollama-provider.ts` |
+| `ollama` | sim | sim | sim | nenhuma (local) | sync + seed | — | `apps/api/src/infrastructure/llm/ollama-provider.ts` |
 | `openai` | sim | sim | sim | chave de API | sync + seed | — | `apps/api/src/infrastructure/llm/openai-provider.ts` |
 | `openrouter` | sim | sim | sim | chave de API | sync | Headers próprios; Id de modelo prefixado pelo upstream; Catálogo com pricing na própria linha; Erro NO MEIO do stream | `apps/api/src/infrastructure/llm/openrouter-provider.ts` |
 | `together` | sim | sim | sim | chave de API | sync + seed | Unidade do preço NÃO documentada explicitamente pela Together; Ids namespaced; `stream_options.include_usage` não confirmado; 429 carrega `error_type: dynamic_request_limited \| dynamic_token_limited` | `apps/api/src/infrastructure/llm/together-provider.ts` |
@@ -107,32 +107,59 @@ implementa o `GET /models` do dialeto que já fala, com o parsing substituível
 por configuração (`parseCatalogo`) — um hub devolve preço e janela na mesma
 linha, e isso não pode virar `if` dentro do parsing padrão.
 
-**Ollama e Anthropic declaram `false`.** Os dois têm endpoint de catálogo, mas
-o formato deles não foi verificado na doc oficial nesta fase, e a regra da Fase
-9 é não codar contra contrato adivinhado. Declarar `false` faz o sync pular
-explicitamente, com o motivo no relatório; declarar `true` e errar o parsing
-marcaria o catálogo inteiro como sumido. Backlog no
-[ADR 0042](../adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md).
+**Ollama e Anthropic agora declaram `true`** — o backlog que o
+[ADR 0042](../adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md)
+deixou aberto. Eles declaravam `false` não por falta de endpoint, mas porque o
+formato não tinha sido verificado na doc oficial, e a regra é não codar contra
+contrato adivinhado. Os dois formatos foram verificados antes de uma linha de
+código:
+
+- **Anthropic** — `GET /v1/models` devolve
+  `{ data: [{ id, display_name, max_input_tokens, ... }], has_more, last_id }`,
+  paginado **por cursor** (não por offset): `last_id` vira o `after_id` da
+  próxima página, com `limit` de 1 a 1000. Quem percorre é o
+  `client.models.list` do SDK oficial, que já faz a auto-paginação — refazer o
+  laço de cursor à mão seria reescrever código mantido pelo vendor. Preço **não
+  vem** na resposta, então o modelo entra sem preço em vez de com preço
+  inventado.
+- **Ollama** — `GET /api/tags` devolve `{ models: [{ name, model, size, ... }] }`
+  no host local (`OLLAMA_HOST`, default `http://localhost:11434`). Sem preço,
+  como convém a um runtime local.
+
+Os dois LANÇAM em caso de erro, como o contrato exige: devolver lista vazia
+seria lido pela reconciliação como "sumiram todos" e indisponibilizaria o
+catálogo inteiro ([RN-043](../business-rules.md#rn-043)).
 
 ### Os dois eixos de disponibilidade
 
 Um modelo tem dois estados INDEPENDENTES, e confundi-los era o buraco que a
 Fase 9c fechou:
 
-| coluna | quem escreve | o que significa |
+| onde | quem escreve | o que significa |
 | --- | --- | --- |
-| `models.is_active` | o **owner**, pela tela de curadoria | aparece no seletor e pode receber binding novo |
+| `workspace_models.is_active` | o **owner daquele workspace**, pela tela de curadoria | aparece no seletor e pode receber binding novo |
 | `models.availability` | o **sync**, sozinho | `unavailable` = sumiu do catálogo do provider |
 
 Um modelo pode estar ativo E indisponível ao mesmo tempo — é esse cruzamento
 que gera o aviso na tela. Quando o provider o traz de volta, a escolha do owner
 continua valendo: o sync nunca religa o que alguém desligou de propósito.
 
+Os dois eixos deixaram de morar na mesma tabela no
+[ADR 0049](../adr/0049-curadoria-de-modelo-por-workspace.md). A curadoria é
+**por workspace** — `models.is_active` era uma coluna para a instalação
+inteira, e um owner do workspace A ligando um modelo o ligava para o B
+([RN-052](../business-rules.md#rn-052)). O que sobrou em `models` é fato do
+provider: nome, preço, capabilities e disponibilidade, iguais para todo mundo.
+
+**Ausência de linha em `workspace_models` É o desligado.** Não existe estado
+"nunca decidido" separado, e é assim que a RN-043 continua valendo sem coluna
+nenhuma que o sync possa atropelar.
+
 ### As três regras da reconciliação
 
-1. **Modelo novo entra INATIVO.** Um catálogo tem centenas de linhas; despejá-las
-   ativas tornaria a escolha impossível e ligaria modelo caro sem ninguém
-   decidir.
+1. **Modelo novo entra INATIVO** — sem linha de curadoria em workspace nenhum.
+   Um catálogo tem centenas de linhas; despejá-las ativas tornaria a escolha
+   impossível e ligaria modelo caro sem ninguém decidir.
 2. **Modelo que sumiu vira `unavailable`, nunca é deletado.** `model_bindings` e
    `token_usage` apontam para a linha; apagá-la levaria junto o histórico de
    custo.
@@ -140,6 +167,21 @@ continua valendo: o sync nunca religa o que alguém desligou de propósito.
    que tem lá", não "não tem nada lá" — marcar tudo como sumido por causa de uma
    chave revogada derrubaria todos os bindings daquele provider de uma vez. O
    provider é PULADO, com a origem da falha (`infra` | `modelo`) no relatório.
+
+### E as duas regras de preço da reconciliação
+
+4. **`manual_pricing` vence o catálogo remoto.** Linha marcada assim tem um
+   número que alguém digitou da doc do provider, e o sync não encosta nele —
+   nem quando o catálogo traz preço próprio
+   ([RN-051](../business-rules.md#rn-051)).
+5. **Toda troca de preço pelo sync deixa linha em `model_price_changes`**, com
+   origem `sync` e `changed_by` nulo ([RN-044](../business-rules.md#rn-044)).
+
+Modelo NOVO descoberto pelo sync nasce `manual_pricing = false` quando o
+catálogo informou preço — a origem é o sync, e é ele quem mantém a linha em
+dia. Descoberto SEM preço, nasce `true`: a linha está esperando alguém digitar,
+e marcá-la já protege esse número do primeiro catálogo que resolver informar
+preço.
 
 ### A cascata revalida capability ao cair de nível
 
@@ -170,6 +212,17 @@ com o par antes/depois e a origem (`manual` | `sync`). O par vai junto de
 propósito: reconstruir o "antes" a partir da linha anterior dependeria de
 nenhuma escrita ter escapado do caminho auditado, que é justamente o que a
 auditoria existe para provar.
+
+:::caution Duas escritas escapavam
+A origem `sync` existia no domínio desde a Fase 9c e **nenhuma escrita a
+produzia**: o sync trocava preço pelo `upsert`, por fora do caminho auditado.
+O `seed.ts` fazia o mesmo — e ele roda sobre banco já semeado (`BRABO_FORCE_SEED=1`
+no `bootstrap.sh` do k8s), então corrigir um preço no seed trocava o número em
+silêncio. Os dois passaram a auditar; o seed reusa o
+`UpdateModelPricingUseCase` em vez de repetir a lógica, e o chama **antes** do
+upsert — depois dele os dois valores já seriam iguais e a auditoria trataria
+como no-op.
+:::
 
 :::note Não é evento de outbox
 `model_price_changes` é tabela própria, e não uma linha em `outbox_events`. O
@@ -328,6 +381,21 @@ container auto-hospedado, que é outro produto com outro endereço.
   "whoami"/saldo encontrado) — `GET /v1/models` com a chave, só o
   status importa (200 vs 401/403).
 
+:::info A NVIDIA não cobra por token
+A busca por preço oficial foi refeita e chegou a uma resposta melhor que "não
+encontrei": **não existe preço por token pra encontrar**. A doc oficial
+([docs.api.nvidia.com/nim/docs/product](https://docs.api.nvidia.com/nim/docs/product))
+diz que o endpoint hospedado é acesso gratuito de **prototipagem** pra membro
+do Developer Program, e que produção exige licença NVIDIA AI Enterprise —
+"These licenses start at $4500 per GPU per year or ~ $1 per GPU per hour in the
+cloud". A unidade é GPU/hora, não token.
+
+Os três modelos de NIM no seed seguem, portanto, com preço **estimado** por
+comparação com equivalentes noutros providers e `manual_pricing = true`: é o
+suficiente pra o teto de orçamento ter o que descontar, e é o máximo de
+honestidade possível enquanto o modelo comercial do vendor não for por token.
+:::
+
 O aceite com credencial real fica em
 `test/infrastructure/llm/nvidia-nim-provider.smoke.spec.ts`, gated por
 `NVIDIA_NIM_TEST_KEY`. Diferente do OpenRouter, o passo de "sync" não
@@ -410,7 +478,10 @@ mais rasa dos cinco desta fase.
 - **`listModels: false`**: nenhum shape de catálogo/preço foi encontrado
   publicamente (a página de preço renderiza via JS, sem exemplo acessível a
   uma busca não-interativa) — sem shape verificado, não há `parseCatalogo`
-  honesto pra escrever;
+  honesto pra escrever. Reverificado: `bitdeer.ai/en/pricing/ai-models`
+  continua montando a tabela no cliente (o HTML servido não traz **nenhum**
+  nome de modelo) e não há doc de preço fora dela. O preço do seed segue
+  ESTIMADO;
 - **`Authorization: Bearer <chave>` CONFIRMADO** (exemplo de curl real
   encontrado na doc da API de embeddings da Bitdeer nesta sessão) — mesmo
   quando o resto do dialeto não tinha exemplo nenhum;
@@ -461,6 +532,25 @@ ao plano original.
   direcionada não encontrou o termo nas páginas verificadas). Não usado por
   padrão de qualquer forma (mantemos id de modelo cru);
 - **Teste de conexão**: `GET /v1/models`, status-only.
+
+:::tip Preço da Vultr é OFICIAL, e é tarifa única
+Diferente de NIM e Bitdeer, a Vultr **publica** a tarifa —
+[na doc de uso e custo do Serverless Inference](https://docs.vultr.com/support/products/serverless/how-do-i-monitor-the-usage-and-cost-of-my-vultr-serverless-inference-subscription):
+"Requests are billed at $0.55 per 1,000,000 input tokens and $2.75 per
+1,000,000 output tokens." É tarifa **do serviço**, não do modelo — a doc não
+diferencia por modelo, e por isso as três linhas do seed repetem o mesmo par
+(`550_000` / `2_750_000` micros).
+
+A estimativa que estava lá errava na direção perigosa: `400_000` de **saída**
+em dois dos três modelos, contra `2_750_000` reais. O metering subestimava o
+custo de saída em quase 7× — e é a saída que domina a conta de um agente que
+escreve código.
+
+`manual_pricing` continua `true`, e isso não é contradição: a flag significa
+"preço digitado por gente lendo doc, em vez de vindo de sync"
+(`apps/api/src/db/schema.ts`). O que mudou é que o número agora é o do
+provider, não uma comparação de mercado.
+:::
 
 O aceite com credencial real fica em
 `test/infrastructure/llm/vultr-provider.smoke.spec.ts`, gated por

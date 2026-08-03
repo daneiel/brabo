@@ -96,7 +96,12 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
   const progressByAgent = deriveExecutionProgress(events);
   const { data: tokenUsage } = useSessionTokenUsage(projectId, sessionId);
 
-  const { data: modelsByCategory } = useQuery({ queryKey: ['models'], queryFn: listModels });
+  const { data: modelsByCategory } = useQuery({
+    // A chave carrega o projeto porque a lista é do WORKSPACE dele (ADR 0049):
+    // um cache global devolveria a curadoria de outro workspace.
+    queryKey: ['models', projectId],
+    queryFn: () => listModels(projectId),
+  });
   const allModels = modelsByCategory
     ? [...Object.values(modelsByCategory.local).flat(), ...Object.values(modelsByCategory.cloud).flat()]
     : [];

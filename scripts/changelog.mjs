@@ -6,6 +6,7 @@
  *   node scripts/changelog.mjs v0.1.0            # do início até HEAD
  *   node scripts/changelog.mjs v0.2.0 v0.1.0     # desde a tag anterior
  *   node scripts/changelog.mjs v0.1.0 --stdout   # imprime sem gravar
+ *   node scripts/changelog.mjs v0.3.0 v0.2.0 v0.3.0  # reconstrói uma antiga
  *
  * ## Por que um script e não standard-version / changesets
  *
@@ -84,9 +85,25 @@ function analisar({ hash, assunto, corpo }) {
   return { hash, tipo: m[1], escopo: m[2] ?? null, quebra, descricao: m[4] };
 }
 
+/**
+ * A data da SEÇÃO é a do commit em `ate`, não a de hoje.
+ *
+ * Parece detalhe e não é: reconstruir o histórico rodando o gerador para cada
+ * tag antiga carimbaria todas as versões com a data de quem rodou. E mesmo no
+ * uso normal, a data do commit da tag é mais honesta que a do runner — que
+ * pode ser outro dia se a release for republicada.
+ */
+function dataDe(ref) {
+  try {
+    return git('log', '-1', '--format=%ad', '--date=short', ref);
+  } catch {
+    return new Date().toISOString().slice(0, 10);
+  }
+}
+
 function render(versao, de, ate) {
   const analisados = commits(de, ate).map(analisar).filter(Boolean);
-  const data = new Date().toISOString().slice(0, 10);
+  const data = dataDe(ate);
 
   const linhas = [`## ${versao} — ${data}`, ''];
 
@@ -121,25 +138,53 @@ const escopo = (c) => (c.escopo ? `**${c.escopo}**: ` : '');
 // --- execução --------------------------------------------------------------
 const args = process.argv.slice(2).filter((a) => a !== '--stdout');
 const soImprimir = process.argv.includes('--stdout');
-const [versao, anteriorArg] = args;
+const [versao, anteriorArg, ateArg] = args;
 
 if (!versao) {
-  console.error('uso: node scripts/changelog.mjs <versão> [tag-anterior] [--stdout]');
+  console.error(
+    'uso: node scripts/changelog.mjs <versão> [tag-anterior] [até] [--stdout]',
+  );
   process.exit(1);
 }
 
-// Tag anterior descoberta sozinha quando não informada. `|| null` porque no
-// primeiro release não existe nenhuma — e aí o intervalo é a história inteira.
-let anterior = anteriorArg ?? null;
+// `até` existe para reconstruir uma versão ANTIGA (o intervalo termina na tag
+// dela, não em HEAD). O default `HEAD` é o uso normal do release.
+const ate = ateArg ?? 'HEAD';
+
+// Tag anterior descoberta sozinha quando não informada — relativa a `ate`, e
+// ignorando PRÉ-RELEASES.
+//
+// Eram dois erros no mesmo lugar. `describe ... HEAD` só acertava quando `ate`
+// FOSSE HEAD: reconstruir uma versão antiga produzia intervalo invertido
+// (`v1.4.0..v0.1.0`), que o git resolve como vazio. E sem `--exclude '*-*'` a
+// tag anterior a `v1.4.0` é `v1.4.0-qa.1`, sobrando só os merges de promoção —
+// que o `--no-merges` descarta.
+//
+// Os dois juntos produziam uma seção dizendo "nenhum commit neste intervalo"
+// em vez de falhar: silencioso e errado. Foi o que deixou seis GitHub Releases
+// publicadas com o corpo vazio.
+//
+// `null` quando não existe tag anterior: é o primeiro release, e aí o
+// intervalo é a história inteira até `ate`.
+let anterior = anteriorArg || null;
 if (!anterior) {
   try {
-    anterior = git('describe', '--tags', '--abbrev=0', 'HEAD');
+    anterior = git(
+      'describe',
+      '--tags',
+      '--abbrev=0',
+      '--match',
+      'v*',
+      '--exclude',
+      '*-*',
+      `${ate}^`,
+    );
   } catch {
     anterior = null;
   }
 }
 
-const secao = render(versao, anterior, 'HEAD');
+const secao = render(versao, anterior, ate);
 
 if (soImprimir) {
   process.stdout.write(secao);
