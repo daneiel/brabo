@@ -2,6 +2,39 @@
 
 Gerado dos conventional commits por `scripts/changelog.mjs`.
 
+## Unreleased
+
+### Novidades
+
+- **api**: Ollama e Anthropic passam a declarar `listModels` e a ter o catálogo
+  descoberto pelo sync — o backlog que o ADR 0042 deixou aberto. Os dois
+  formatos foram verificados na doc oficial antes de uma linha de código: o
+  Anthropic pagina **por cursor** (`has_more`/`last_id`, percorrido pela
+  auto-paginação do SDK oficial) e o Ollama lê `GET /api/tags` no host de
+  `OLLAMA_HOST`. Nenhum dos dois informa preço, então o modelo entra no catálogo
+  **sem preço** em vez de com preço inventado
+
+### Correções
+
+- **api**: o preço dos três modelos da Vultr passa a ser o **oficial**
+  (`$0.55`/1M de entrada, `$2.75`/1M de saída, tarifa única do serviço). A
+  estimativa anterior errava na direção perigosa — `400_000` micros de saída em
+  dois dos três modelos, contra `2_750_000` reais: o metering subestimava o
+  custo de saída em quase **7×**, e é a saída que domina a conta de um agente
+  que escreve código. NVIDIA NIM e Bitdeer seguem estimados, e agora com o
+  motivo registrado: a NVIDIA **não cobra por token** (prototipagem gratuita +
+  licença por GPU/hora) e a Bitdeer monta a tabela de preço no cliente
+- **api**: o sync de catálogo parava de sobrescrever preço marcado como
+  `manual_pricing`. O schema sempre disse que quem sincroniza não pode
+  sobrescrever essa linha sem decisão explícita; o código deixava o remoto
+  vencer sempre que trouxesse preço, e o sync seguinte desfazia a correção de
+  quem tinha arrumado um número errado (RN-051)
+- **api**: toda troca de preço passa a deixar linha em `model_price_changes`.
+  A origem `sync` existia no domínio desde a Fase 9c e **nenhuma escrita a
+  produzia** — o sync trocava preço por fora do caminho auditado, e o `seed.ts`
+  fazia o mesmo sobre banco já semeado (`BRABO_FORCE_SEED=1` no `bootstrap.sh`
+  do k8s). Corrigir um preço no seed mudava o número em silêncio (RN-044)
+
 ## v1.4.0 — 2026-08-02
 
 ### Novidades
