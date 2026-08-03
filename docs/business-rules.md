@@ -518,8 +518,18 @@ nenhuma escrita ter escapado do caminho auditado, que é o que a auditoria
 existe para provar. Preço igual ao vigente é no-op — uma linha "mudou de 10
 para 10" transformaria o log em ruído.
 
-- **Onde:** `apps/api/src/application/use-cases/llm/update-model-pricing.use-case.ts:44`
-- **Teste:** `test/application/use-cases/llm/update-model-pricing.use-case.spec.ts`
+A regra vale para **todo** caminho que troca preço, não só o da tela. Duas
+escritas escapavam dela: o sync de catálogo (que trocava preço pelo `upsert`,
+sem nunca produzir a origem `sync` que o domínio declarava desde a Fase 9c) e o
+`seed.ts` (que roda sobre banco já semeado — `BRABO_FORCE_SEED=1` no
+`bootstrap.sh` do k8s — e portanto corrigia preço em silêncio). Os dois passaram
+a auditar, o seed reusando o próprio `UpdateModelPricingUseCase`.
+
+- **Onde:** `apps/api/src/application/use-cases/llm/update-model-pricing.use-case.ts:44`,
+  `apps/api/src/application/use-cases/llm/sync-model-catalog.use-case.ts:213`,
+  `apps/api/src/db/seed.ts:376`
+- **Teste:** `test/application/use-cases/llm/update-model-pricing.use-case.spec.ts`,
+  `test/application/use-cases/llm/sync-model-catalog.use-case.spec.ts`
 - **Origem:** [ADR 0042](adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md)
 
 ### RN-045 — Repositório adotado só é alterado por plano aprovado {#rn-045}
@@ -753,6 +763,34 @@ da PR, e a PR só abre depois de commit e push.
 - **Teste:** `apps/engine/test/engine/dev/dev_agent_server_test.exs`
   (describe `aprovação pendente não abre gate`)
 - **Origem:** [ADR 0048](adr/0048-decisao-no-log-e-a-ordem-do-gate.md)
+
+### RN-051 — Preço digitado à mão vence o catálogo do provider {#rn-051}
+
+Linha de `models` com `manual_pricing = true` tem um número que alguém digitou
+lendo a doc do provider. O sync de catálogo **não encosta nele** — nem quando o
+catálogo remoto traz preço próprio. É o que o schema sempre disse ("quem
+sincroniza preço NÃO pode sobrescrever uma linha marcada aqui sem decisão
+explícita") e o que o código não fazia: o remoto vencia sempre que trouxesse
+preço, e o sync seguinte desfazia a correção de quem tinha arrumado um número
+errado.
+
+A regra existe porque para vários providers o número digitado é o **único que
+existe**: NVIDIA NIM e Bitdeer não publicam preço por token em doc alguma
+([referência de providers](reference/llm-providers.md)), e o valor semeado é
+aproximação de mercado. Deixar o catálogo remoto sobrescrever isso trocaria uma
+aproximação conhecida por outra, sem ninguém decidir.
+
+Modelo NOVO nasce com a marca vinda do catálogo, não de um default fixo:
+descoberto **com** preço, `manual_pricing = false` (a origem é o sync, e é ele
+quem mantém a linha em dia); descoberto **sem** preço, `true` — a linha está
+esperando alguém digitar, e marcá-la já protege esse número do primeiro
+catálogo que resolver informar preço.
+
+- **Onde:** `apps/api/src/application/use-cases/llm/sync-model-catalog.use-case.ts`
+  (`resolverPreco`), `apps/api/src/db/schema.ts:507`
+- **Teste:** `test/application/use-cases/llm/sync-model-catalog.use-case.spec.ts`
+  (`preço digitado à mão vence o catálogo que INFORMA preço`)
+- **Origem:** [ADR 0042](adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md)
 
 ### RN-038 — Agente contado no resumo do workspace = gastou tokens este mês {#rn-038}
 
