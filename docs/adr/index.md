@@ -150,11 +150,13 @@ O loop que faz o time melhorar.
 | [0047](0047-operabilidade-pos-dogfooding.md) | Fechamento da Fase 12: a validação é um SCRIPT que sai != 0, não um roteiro em prosa, e a evidência é extraída do banco em vez de transcrita; roda local e sem LLM por dois motivos verificados (o fork nunca foi nomeado; o julgamento dos gates com modelo local não é determinístico desde o ADR 0020), e isso é declarado no primeiro parágrafo e não no rodapé; o Noop entrou na máquina de estados da 12b — o achado #10 sobrevivia dentro do próprio instrumento de medida —, movendo-a para o `AgentIo` em vez de copiá-la; a colheita da Fase 10 foi escrita com os buracos como `não medido` |
 | [0048](0048-decisao-no-log-e-a-ordem-do-gate.md) | Dois achados revisitados: a DECISÃO de uma ação (`created`/`approved`/`denied`) vira evento de domínio com o ator real — o outbox é transporte, não memória, e `events.md` documentava os três desde sempre sem que existissem; `status` no payload do `created` é o que distingue clique humano de auto-aprovação por política, a métrica que a Fase 10 não conseguiu colher. E o D5: a causa não era o worktree ser reciclado, era `propose/3` descartar o status e o gate abrir sem PR — o QA varria o worktree, aprovava, e a task fechava sem uma linha commitada. Corrigida a ordem, o D5 morre por consequência, e worktree-por-task (previsto pelo ADR 0045) deixa de ser necessário |
 
+| [0049](0049-curadoria-de-modelo-por-workspace.md) | Curadoria de modelo por workspace: `models.is_active` era uma coluna para a instalação INTEIRA — um owner do workspace A ligando um modelo o ligava para o B, com o gasto caindo no orçamento de quem não decidiu. O catálogo segue global porque nome, preço e capabilities são fato do provider, e duplicá-lo por workspace criaria N verdades sobre o mesmo modelo além de partir `token_usage.model_id`; só a decisão migra, para `workspace_models`. Ausência de linha É o desligado — não há terceiro estado, e é assim que a RN-043 sobrevive sem coluna nenhuma que o sync possa atropelar; desligar é UPDATE e não DELETE, para não apagar quem decidiu junto. A rota do seletor pende do PROJETO (as três telas que a consomem já tinham `projectId`, nenhuma tinha workspace), e `isActive` sai da entidade `Model`: quem precisa dele usa um tipo que só existe com workspace na mão |
+
 ## A convenção
 
 - **Um arquivo por decisão**, em `docs/adr/NNNN-titulo-curto.md`, com
   numeração sequencial de 4 dígitos. **Sem reuso de número**, nem quando um ADR
-  é superado — o próximo é **0049**.
+  é superado — o próximo é **0050**.
 - **Três seções, só elas:** **Contexto** (o problema ou a força que motivou),
   **Decisão** (o que foi decidido), **Consequências** (os trade-offs aceitos e
   o que fica para depois).

@@ -110,7 +110,10 @@ falasse direto com o provedor tornaria o teto de gasto inaplicável.
 | POST | `/internal/models/sync` (**não** é session-scoped) |
 
 A única rota `engine → api` fora de `/internal/sessions/:sessionId/`, porque o
-sync de catálogo não pertence a sessão nenhuma: é do workspace inteiro. Quem
+sync de catálogo não pertence a sessão nem a workspace nenhum: o catálogo é
+GLOBAL — nome, preço, janela e capabilities são fato do provider, iguais para
+todo mundo. O que é por workspace é a **curadoria**, e o sync não a alcança
+([ADR 0049](../adr/0049-curadoria-de-modelo-por-workspace.md)). Quem
 **agenda** é o engine (`ModelSyncSchedulerWorker`, Oban, com o mesmo idioma de
 worker que se reagenda do `AnamneseSchedulerWorker`); quem tem as credenciais e
 o registry de providers é a api. Duplicar o registry no Elixir seria manter dois
@@ -124,6 +127,17 @@ causa de um provider: cada linha traz `descobertos`, `reencontrados`,
 "não sei o que tem lá" não é "não tem nada lá"
 ([RN-043](../business-rules.md#rn-043)). O corpo completo está no
 [OpenAPI gerado](api/brabo-api) sob a tag `internal`.
+
+Duas coisas que esta rota **não** faz, e que já foram diferentes:
+
+- **Não liga nem desliga modelo em workspace nenhum.** `descobertos` conta
+  linhas novas em `models`; nenhuma delas ganha curadoria. Modelo descoberto
+  não tem linha em `workspace_models`, e ausência de linha é o desligado
+  ([RN-052](../business-rules.md#rn-052)).
+- **Não troca preço em silêncio.** Preço marcado `manual_pricing` é preservado
+  como está, e toda troca que o sync faz grava uma linha em
+  `model_price_changes` com origem `sync` — na mesma transação da escrita
+  ([RN-044](../business-rules.md#rn-044), [RN-051](../business-rules.md#rn-051)).
 
 ### Contexto por agente
 

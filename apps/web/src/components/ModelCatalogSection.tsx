@@ -5,7 +5,7 @@ import {
   setModelsActive,
   syncModelCatalog,
 } from '../lib/api-client';
-import type { Model, ResultadoDoSync } from '../lib/api-types';
+import type { ModelComCuradoria, ResultadoDoSync } from '../lib/api-types';
 import { agruparModelos, formatarJanela, formatarPreco } from '../lib/models';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
@@ -178,7 +178,7 @@ function LinhaDoCatalogo({
   marcado,
   onToggle,
 }: {
-  model: Model;
+  model: ModelComCuradoria;
   marcado: boolean;
   onToggle: () => void;
 }) {

@@ -135,20 +135,31 @@ catálogo inteiro ([RN-043](../business-rules.md#rn-043)).
 Um modelo tem dois estados INDEPENDENTES, e confundi-los era o buraco que a
 Fase 9c fechou:
 
-| coluna | quem escreve | o que significa |
+| onde | quem escreve | o que significa |
 | --- | --- | --- |
-| `models.is_active` | o **owner**, pela tela de curadoria | aparece no seletor e pode receber binding novo |
+| `workspace_models.is_active` | o **owner daquele workspace**, pela tela de curadoria | aparece no seletor e pode receber binding novo |
 | `models.availability` | o **sync**, sozinho | `unavailable` = sumiu do catálogo do provider |
 
 Um modelo pode estar ativo E indisponível ao mesmo tempo — é esse cruzamento
 que gera o aviso na tela. Quando o provider o traz de volta, a escolha do owner
 continua valendo: o sync nunca religa o que alguém desligou de propósito.
 
+Os dois eixos deixaram de morar na mesma tabela no
+[ADR 0049](../adr/0049-curadoria-de-modelo-por-workspace.md). A curadoria é
+**por workspace** — `models.is_active` era uma coluna para a instalação
+inteira, e um owner do workspace A ligando um modelo o ligava para o B
+([RN-052](../business-rules.md#rn-052)). O que sobrou em `models` é fato do
+provider: nome, preço, capabilities e disponibilidade, iguais para todo mundo.
+
+**Ausência de linha em `workspace_models` É o desligado.** Não existe estado
+"nunca decidido" separado, e é assim que a RN-043 continua valendo sem coluna
+nenhuma que o sync possa atropelar.
+
 ### As três regras da reconciliação
 
-1. **Modelo novo entra INATIVO.** Um catálogo tem centenas de linhas; despejá-las
-   ativas tornaria a escolha impossível e ligaria modelo caro sem ninguém
-   decidir.
+1. **Modelo novo entra INATIVO** — sem linha de curadoria em workspace nenhum.
+   Um catálogo tem centenas de linhas; despejá-las ativas tornaria a escolha
+   impossível e ligaria modelo caro sem ninguém decidir.
 2. **Modelo que sumiu vira `unavailable`, nunca é deletado.** `model_bindings` e
    `token_usage` apontam para a linha; apagá-la levaria junto o histórico de
    custo.

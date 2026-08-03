@@ -472,17 +472,22 @@ há hub, para que `sum by (upstream_provider)` continue somando o custo inteiro.
 
 O sync de catálogo tem três desfechos, e nenhum deles é destrutivo:
 
-1. **Modelo novo** é gravado com `is_active = false`. Um catálogo de provider
-   tem centenas de linhas — despejá-las ativas tornaria a escolha impossível e
-   ligaria modelo caro sem ninguém decidir. Ativar é curadoria do owner.
+1. **Modelo novo** entra **sem linha de curadoria em workspace nenhum**, e
+   ausência de linha É o desligado. Um catálogo de provider tem centenas de
+   linhas — despejá-las ativas tornaria a escolha impossível e ligaria modelo
+   caro sem ninguém decidir. Ativar é curadoria do owner, e vale só no
+   workspace dele ([RN-052](#rn-052)).
 2. **Modelo que sumiu do catálogo remoto** recebe `availability = 'unavailable'`
    e **permanece na tabela**: `model_bindings` e `token_usage` apontam para a
    linha, e apagá-la levaria junto o histórico de custo.
-3. **Modelo que voltou** volta a `available` com o `is_active` **intocado** — a
+3. **Modelo que voltou** volta a `available` com a curadoria **intocada** — a
    escolha do owner sobrevive a uma ausência temporária do provider.
 
-Os dois eixos são independentes de propósito: `is_active` é decisão de pessoa,
-`availability` é observação do provider. Nenhum dos dois escreve no outro.
+Os dois eixos são independentes de propósito: a curadoria é decisão de pessoa,
+`availability` é observação do provider. Nenhum dos dois escreve no outro — e
+desde o [ADR 0049](adr/0049-curadoria-de-modelo-por-workspace.md) eles nem
+moram na mesma tabela, então o sync não tem campo de curadoria para atropelar
+nem se quisesse.
 
 Três consequências no resto do sistema:
 
@@ -791,6 +796,40 @@ catálogo que resolver informar preço.
 - **Teste:** `test/application/use-cases/llm/sync-model-catalog.use-case.spec.ts`
   (`preço digitado à mão vence o catálogo que INFORMA preço`)
 - **Origem:** [ADR 0042](adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md)
+
+### RN-052 — Curadoria de modelo vale só no workspace que decidiu {#rn-052}
+
+Ligar ou desligar um modelo no seletor é decisão **daquele workspace**, e não
+alcança o vizinho. O catálogo em si continua global — nome, preço, janela e
+capabilities são fato do provider, iguais para todo mundo, e duplicá-los por
+workspace criaria N verdades sobre o mesmo modelo além de partir
+`token_usage.model_id` ao meio.
+
+Antes disso `models.is_active` era uma coluna para a instalação inteira: quem
+clicasse "ativar" decidia por todos os workspaces, e a tela não dava sinal
+nenhum disso. O efeito prático era um workspace ligar um modelo caro no seletor
+do outro — e o gasto aparecer no orçamento de quem não decidiu nada.
+
+Três regras derivadas:
+
+1. **Ausência de linha é o desligado.** Não existe estado "nunca decidido"
+   separado; modelo que o sync descobriu não tem linha e não aparece no seletor
+   ([RN-043](#rn-043)).
+2. **Desligar é `UPDATE`, não `DELETE`.** Apagar a linha apagaria junto quem
+   decidiu e quando. A leitura trata os dois casos como inativo; o registro
+   existe para quem for auditar.
+3. **Escopos `agent` e `session` não verificam curadoria.** Os dois não têm
+   âncora de workspace — binding de agente é por slug global. A verificação
+   recebe `null` e checa só a disponibilidade, deixando a lacuna explícita em
+   vez de chutar um workspace.
+
+- **Onde:** `apps/api/src/db/schema.ts` (`workspace_models`),
+  `apps/api/src/application/use-cases/llm/set-models-active.use-case.ts`,
+  `apps/api/src/application/use-cases/llm/set-model-binding.use-case.ts`
+  (`workspaceDoEscopo`)
+- **Teste:** `test/application/use-cases/llm/set-models-active.use-case.spec.ts`
+  (`ativar num workspace NÃO liga o modelo no vizinho`)
+- **Origem:** [ADR 0049](adr/0049-curadoria-de-modelo-por-workspace.md)
 
 ### RN-038 — Agente contado no resumo do workspace = gastou tokens este mês {#rn-038}
 

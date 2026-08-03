@@ -4,6 +4,19 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ## Unreleased
 
+### ⚠ Mudanças incompatíveis
+
+- **api**: `GET /models` deixou de existir. A lista do seletor virou
+  `GET /projects/:projectId/models` porque a curadoria passou a ser **por
+  workspace** (ADR 0049): `models.is_active` era uma coluna para a instalação
+  inteira, e um owner do workspace A ligando um modelo o ligava para o B — com
+  o gasto caindo no orçamento de quem não decidiu nada. O catálogo em si
+  continua global (nome, preço e capabilities são fato do provider); só a
+  decisão "aparece no seletor?" mudou de lugar, para a tabela nova
+  `workspace_models`. A migração `0034` dá a cada workspace existente
+  exatamente o que ele enxergava antes, **antes** de derrubar a coluna. Quem
+  consome a api por fora precisa trocar a rota; a UI já foi junto
+
 ### Novidades
 
 - **api**: Ollama e Anthropic passam a declarar `listModels` e a ter o catálogo

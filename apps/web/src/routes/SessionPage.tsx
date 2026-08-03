@@ -155,7 +155,12 @@ export function SessionPage({
     return disconnect;
   }, [session?.status, sessionId, projectId, queryClient]);
 
-  const { data: modelsByCategory } = useQuery({ queryKey: ['models'], queryFn: listModels });
+  const { data: modelsByCategory } = useQuery({
+    // A chave carrega o projeto porque a lista é do WORKSPACE dele (ADR 0049):
+    // um cache global devolveria a curadoria de outro workspace.
+    queryKey: ['models', projectId],
+    queryFn: () => listModels(projectId),
+  });
   const { data: resolvedBinding } = useQuery({
     queryKey: ['session-model-binding', projectId, sessionId],
     queryFn: () => getSessionModelBinding(projectId, sessionId),
