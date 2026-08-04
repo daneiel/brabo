@@ -295,6 +295,19 @@ export interface UserCredentialMetadata {
   updatedAt: string;
 }
 
+/**
+ * O veredito de `POST /users/me/credentials/{provider}/test` (ADR 0050).
+ *
+ * `nao_suportado` é um estado de primeira classe, não um "não sei": os
+ * providers sem endpoint de teste verificado (`ollama`, `anthropic`, `openai`)
+ * caem aqui, e a tela precisa dizer isso em vez de exibir um "ok" que ninguém
+ * verificou.
+ */
+export interface CredentialTestResult {
+  resultado: 'ok' | 'recusado' | 'nao_suportado';
+  motivo?: string;
+}
+
 export type BudgetPolicy = 'block' | 'allow';
 
 // Custo por AGENTE numa sessão (Fase 4a — painel do time). Espelha

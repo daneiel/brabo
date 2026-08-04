@@ -36,6 +36,10 @@ export function ModelPicker({
   const [posicao, setPosicao] = useState<{ top: number; left: number; maxHeight: number } | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  // O dropdown é `fixed` e vive FORA do wrapper na árvore de layout, mas
+  // continua filho dele no DOM — a ref existe para distinguir "rolou a lista"
+  // de "rolou a página" no listener de captura.
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const grupos = useMemo(
     () => agruparModelos(models, { somenteAptosParaAgentes: soAptos }),
@@ -80,17 +84,31 @@ export function ModelPicker({
       });
     }
 
-    // Rolar/redimensionar descola o `fixed` do gatilho — fechar é mais honesto
-    // que perseguir o elemento a cada frame.
+    // Rolar a PÁGINA descola o `fixed` do gatilho — fechar é mais honesto que
+    // perseguir o elemento a cada frame. Redimensionar invalida o cálculo de
+    // posição pelo mesmo motivo.
     function fecha() {
       setOpen(false);
     }
 
+    /**
+     * Rolar DENTRO da lista não é rolar a página, e fechar aqui inutilizava o
+     * componente: o listener era de captura e sem olhar o alvo, então a
+     * primeira volta da roda do mouse sobre o dropdown o fechava — e a rolagem
+     * seguia para a página atrás. Com `max-height: 360px` e mais modelos que
+     * isso, os de baixo eram simplesmente inalcançáveis.
+     */
+    function aoRolar(evento: Event) {
+      const alvo = evento.target as Node | null;
+      if (alvo && dropdownRef.current?.contains(alvo)) return;
+      fecha();
+    }
+
     window.addEventListener('resize', fecha);
-    window.addEventListener('scroll', fecha, true);
+    window.addEventListener('scroll', aoRolar, true);
     return () => {
       window.removeEventListener('resize', fecha);
-      window.removeEventListener('scroll', fecha, true);
+      window.removeEventListener('scroll', aoRolar, true);
     };
   }, [open]);
 
@@ -144,6 +162,7 @@ export function ModelPicker({
 
       {open && posicao && (
         <div
+          ref={dropdownRef}
           className={styles.dropdown}
           style={{ top: posicao.top, left: posicao.left, maxHeight: posicao.maxHeight }}
         >

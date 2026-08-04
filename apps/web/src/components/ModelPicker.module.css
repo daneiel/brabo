@@ -40,6 +40,10 @@
   position: fixed;
   width: 320px;
   overflow-y: auto;
+  /* Chegar ao fim da lista não continua rolando a página atrás — sem isto, o
+     encadeamento da rolagem dispara o listener de `scroll` da janela e fecha o
+     dropdown justamente quando o usuário chegou nos últimos modelos. */
+  overscroll-behavior: contain;
   background: var(--surface-1);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);

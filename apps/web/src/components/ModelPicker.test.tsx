@@ -215,4 +215,28 @@ describe('ModelPicker', () => {
     expect(screen.getByText(/Nenhum modelo faz tool calling nativo/)).toBeTruthy();
     expect(screen.queryByText('Nenhum modelo cadastrado')).toBeNull();
   });
+  /**
+   * O defeito: o listener de `scroll` era de CAPTURA e não olhava o alvo, então
+   * rolar a própria lista a fechava — e a rolagem seguia para a página atrás.
+   * Com `max-height` e mais modelos que cabem, os de baixo eram inalcançáveis.
+   */
+  it('rolar DENTRO da lista não fecha', () => {
+    abrir();
+
+    const grupo = screen.getByText('Local');
+    const dropdown = grupo.closest('div[class*="dropdown"]');
+    expect(dropdown).toBeTruthy();
+
+    fireEvent.scroll(dropdown!);
+
+    expect(screen.queryByText('Local')).toBeTruthy();
+  });
+
+  it('rolar a PÁGINA fecha — o `fixed` descola do gatilho', () => {
+    abrir();
+
+    fireEvent.scroll(document.body);
+
+    expect(screen.queryByText('Local')).toBeNull();
+  });
 });
