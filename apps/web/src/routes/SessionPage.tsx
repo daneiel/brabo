@@ -33,7 +33,13 @@ import { ApprovalCard } from '../components/ApprovalCard';
 import { ActivityFeed } from '../components/ActivityFeed';
 import { EventItem } from '../components/EventItem';
 import { Button } from '../components/ui/Button';
-import { LayoutSidebarIcon, ModelIcon, UserIcon } from '../components/ui/icons';
+import { lerFalhaDeTurno } from '../lib/session-falha';
+import {
+  AlertCircleIcon,
+  LayoutSidebarIcon,
+  ModelIcon,
+  UserIcon,
+} from '../components/ui/icons';
 import styles from './SessionPage.module.css';
 
 interface SessionPageProps {
@@ -235,7 +241,54 @@ export function SessionPage({
                   </span>
                   <span className={styles.messageMeta}>modelo</span>
                 </div>
-                <div className={styles.bubble}>{text}</div>
+                {/* Resposta vazia é evento ANTIGO: até a RN-059, falha de
+                    turno era gravada como `agent.response` com conteúdo "" —
+                    e a tela mostrava um balão em branco, indistinguível de um
+                    agente que não teve o que dizer. Os eventos já gravados não
+                    se apagam, então a tela os NOMEIA. */}
+                {text === '' ? (
+                  <div className={[styles.bubble, styles.bubbleVazio].join(' ')}>
+                    Resposta vazia — evento anterior à RN-059, quando falha de
+                    turno era gravada como resposta em branco. O motivo real
+                    não foi registrado.
+                  </div>
+                ) : (
+                  <div className={styles.bubble}>{text}</div>
+                )}
+              </div>
+            </div>
+          ),
+        });
+      } else if (event.type === 'agent.error') {
+        // O agente FALA a falha, no mesmo fio. Antes o motivo ia só por
+        // broadcast (efêmero) e o log guardava uma resposta vazia — quem
+        // abrisse a sessão depois via um balão em branco e nada mais.
+        const { mensagem, origem } = lerFalhaDeTurno(event.payload);
+        items.push({
+          seq: event.seq,
+          node: (
+            <div className={styles.message} key={event.id}>
+              <span
+                className={styles.avatar}
+                style={{ ['--msg-color' as string]: 'var(--danger)' } as CSSProperties}
+              >
+                <AlertCircleIcon size={15} />
+              </span>
+              <div className={styles.messageBody}>
+                <div className={styles.messageHeader}>
+                  <span
+                    className={styles.messageName}
+                    style={{ ['--msg-color' as string]: 'var(--danger)' }}
+                  >
+                    {event.actor.id}
+                  </span>
+                  {/* A ORIGEM fica visível: é ela que diz se o próximo passo é
+                      trocar a chave, esperar o provider ou abrir um bug. */}
+                  <span className={styles.messageMeta}>falha · origem {origem}</span>
+                </div>
+                <div className={[styles.bubble, styles.bubbleFalha].join(' ')}>
+                  {mensagem}
+                </div>
               </div>
             </div>
           ),
@@ -422,6 +475,44 @@ export function SessionPage({
         <div className={styles.chatColumn}>
           <div className={styles.messages}>
             <div className={styles.messagesInner}>
+              {/* O Criativo é ativado e NÃO fala primeiro: ele espera a sua
+                  mensagem. Sem isto a tela ficava em branco depois de "Iniciar
+                  ideação", e quem chega não tem como saber que a vez é dele.
+                  Convite em vez de turno automático: informa sem gastar token. */}
+              {timeline.length === 0 && !optimisticUser && !streaming && (
+                <div className={styles.convite}>
+                  <h2 className={styles.conviteTitulo}>A vez é sua</h2>
+                  <p className={styles.conviteTexto}>
+                    O <strong>Criativo</strong> conduz a ideação: ele faz
+                    perguntas sobre o produto e registra as{' '}
+                    <strong>regras de negócio</strong> que saírem da conversa.
+                    Ele não decide tecnologia nem escreve código — isso é do
+                    Arquiteto e dos devs, mais adiante.
+                  </p>
+                  <p className={styles.conviteTexto}>
+                    Comece contando o que você quer construir e para quem. Por
+                    exemplo:
+                  </p>
+                  <button
+                    type="button"
+                    className={styles.conviteExemplo}
+                    onClick={() =>
+                      setDraft(
+                        'Quero uma API que responda uma saudação para quem chamar. É para eu validar o fluxo de ponta a ponta.',
+                      )
+                    }
+                  >
+                    “Quero uma API que responda uma saudação para quem chamar. É
+                    para eu validar o fluxo de ponta a ponta.”
+                  </button>
+                  <p className={styles.conviteRodape}>
+                    Quando as regras estiverem completas, use{' '}
+                    <strong>Estou pronto para produzir</strong> — é o que gera o
+                    brief e passa a bola ao PO.
+                  </p>
+                </div>
+              )}
+
               {timeline.map((entry) => (
                 <div key={entry.seq}>{entry.node}</div>
               ))}

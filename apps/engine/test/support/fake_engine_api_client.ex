@@ -362,7 +362,13 @@ defmodule Engine.Sessions.FakeEngineApiClient do
           end
       end
 
-    {:ok, resp}
+    # Mesmo idioma do `reply/2`: um script já em forma de `{:error, _}` passa
+    # direto, para o teste simular "a api caiu no meio do stream" sem uma
+    # chave separada só para isso.
+    case resp do
+      {:error, _} = erro -> erro
+      valor -> {:ok, valor}
+    end
   end
 
   @impl true
