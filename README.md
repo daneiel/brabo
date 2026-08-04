@@ -7,7 +7,7 @@ A autoridade final continua sendo sua — por construção, não por convenção
 
 [![CI](https://github.com/daneiel/brabo/actions/workflows/ci.yml/badge.svg)](https://github.com/daneiel/brabo/actions/workflows/ci.yml)
 [![Licença: MIT](https://img.shields.io/badge/licença-MIT-blue.svg)](LICENSE)
-[![Versão](https://img.shields.io/badge/versão-v0.1.0-informational.svg)](CHANGELOG.md)
+[![Versão](https://img.shields.io/github/v/release/daneiel/brabo?label=vers%C3%A3o&color=informational)](CHANGELOG.md)
 [![Documentação](https://img.shields.io/badge/docs-daneiel.github.io/brabo-8A2BE2.svg)](https://daneiel.github.io/brabo/)
 
 </div>
@@ -343,9 +343,14 @@ fonte de sistema, e título e corpo ficavam indistinguíveis.
 
 ## Estado
 
-**Fases 1 a 5 concluídas**, versão **v0.1.0** ([CHANGELOG](CHANGELOG.md)).
-Backup com restore testado, graceful shutdown sem sessão órfã, observabilidade
-ponta a ponta e superfície HTTP auditada.
+**Fases 1 a 12 concluídas**, versão **v2.1.0** ([CHANGELOG](CHANGELOG.md)).
+Esteira de release exercitada de ponta a ponta, auth first-party sem Keycloak,
+nove providers de LLM sobre uma base única e o primeiro dogfooding — o Brabo
+construindo o próprio Brabo — com a colheita escrita.
+
+A **Fase 13** está em curso: nenhuma feature nova, e sim provar por execução o
+que a validação local não prova, medir por script (nunca à mão) e triar os 14
+achados abertos do dogfooding.
 
 O que ainda não existe está dito onde importa: a
 [dívida técnica conhecida](docs/architecture.md#divida-tecnica) é uma seção da
