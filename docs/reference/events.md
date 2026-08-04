@@ -179,6 +179,7 @@ Os schemas são fechados: campo faltando reprova a emissão
 |---|---|
 | `anamnese.run_completed` | — |
 | `anamnese.run_failed` | — |
+| `anamnese.run_skipped` | a rodada encerrou SEM perfil, de propósito — `payload.motivo` diz por quê ([RN-063](../business-rules.md#rn-063)) |
 | `anamnese.profile_updated` | o `proficiency_profile` mudou |
 | `instruction.rolled_back` | reversão de versão de instrução — cria versão nova, não apaga ([RN-027](../business-rules.md#rn-027)) |
 
@@ -272,7 +273,7 @@ respeito.
 
 > ⚠️ Bloco gerado por `pnpm docs:generate`. Não edite à mão — o próximo build sobrescreve.
 
-Extraído dos pontos de emissão: **75 identificadores**, todos descritos acima.
+Extraído dos pontos de emissão: **76 identificadores**, todos descritos acima.
 
 - `action.failed` <sub>(apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts)</sub>
 - `agent.activated` <sub>(apps/api/src/application/use-cases/agents/activate-agent.use-case.ts)</sub>
@@ -285,6 +286,7 @@ Extraído dos pontos de emissão: **75 identificadores**, todos descritos acima.
 - `anamnese.profile_updated` <sub>(apps/api/src/application/use-cases/anamnese/record-proficiency.use-case.ts)</sub>
 - `anamnese.run_completed` <sub>(apps/api/src/application/use-cases/anamnese/record-proficiency.use-case.ts)</sub>
 - `anamnese.run_failed` <sub>(apps/engine/lib/engine/workers/anamnese_worker.ex)</sub>
+- `anamnese.run_skipped` <sub>(apps/engine/lib/engine/workers/anamnese_worker.ex)</sub>
 - `architecture.readiness_confirmed` <sub>(apps/api/src/application/use-cases/agents/offer-infra-handoff.use-case.ts)</sub>
 - `artifact.business_rule` <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub>
 - `artifact.insight` <sub>(apps/engine/lib/engine/harness/tools/emit_insight.ex)</sub>

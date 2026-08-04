@@ -210,6 +210,51 @@ defmodule Engine.Workers.AnamneseWorkerTest do
     assert_received {:event_appended, ^project_id, ^session_id, %{type: "anamnese.run_failed"}}
   end
 
+  # A saída honesta. Sem ela, a Anamnese que descobria "não há membro elegível"
+  # na PRIMEIRA iteração insistia em `emit_proficiency` com lista vazia até o
+  # teto — 145 mil tokens de entrada e 4x o gasto do Criativo e do PO numa
+  # execução real, sem produzir nada, e de novo a cada tick do agendador.
+  test "encerrar sem perfis é DESFECHO: narra run_skipped com o motivo, não falha", %{
+    project_id: project_id,
+    session_id: session_id
+  } do
+    Process.put(
+      :fake_anamnese_context,
+      context(%{
+        "queuedHypotheses" => [
+          %{
+            "queueId" => "q",
+            "hypothesisId" => "h",
+            "agenteAlvo" => "a",
+            "hipotese" => "x",
+            "sugestao" => "y",
+            "confiancaPercent" => 1
+          }
+        ]
+      })
+    )
+
+    Process.put(:fake_llm_turns, [
+      FakeEngineApiClient.tool_call_response("skip_proficiency", %{
+        "motivo" => "nenhum membro elegível nesta janela"
+      })
+    ])
+
+    assert :ok = AnamneseWorker.perform(job(project_id, session_id))
+
+    refute_received {:proficiency_recorded, _}
+
+    assert_received {:event_appended, ^project_id, ^session_id,
+                     %{type: "anamnese.run_skipped", payload: %{motivo: motivo}}}
+
+    assert motivo =~ "elegível"
+
+    # E NÃO narra falha: uma rodada que fez a coisa certa não pode aparecer
+    # como falha, senão quem lê o log aprende a ignorar o evento de falha.
+    refute_received {:event_appended, ^project_id, ^session_id,
+                     %{type: "anamnese.run_failed"}}
+  end
+
   test "sem sessão no projeto: não roda (não há onde narrar)", %{
     project_id: project_id
   } do

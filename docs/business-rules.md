@@ -954,6 +954,37 @@ políticas para o mesmo problema seriam duas chances de engolir o erro.
   (`ferramenta recusada vira tool.result com erro, e o agente fala`)
 - **Origem:** execução real da FASE 13b
 
+### RN-063 — Encerrar sem produzir é desfecho, não falha {#rn-063}
+
+A Anamnese tem uma ferramenta para dizer **"não há nada a emitir, e este é o
+motivo"** (`skip_proficiency`). A rodada encerra com `anamnese.run_skipped` e o
+motivo no payload — nunca com `anamnese.run_failed`.
+
+Antes ela não tinha esse verbo. A única ferramenta era `emit_proficiency`, que
+recusa lista vazia (com razão: perfil vazio não é perfil). Numa janela sem
+membro elegível a Anamnese descobria isso na PRIMEIRA iteração, escrevia em
+prosa "não há membros elegíveis", chamava `emit_proficiency` com `profiles: []`,
+era recusada — e repetia até o teto de iterações. Cada volta reenvia o
+histórico, que cresce a cada volta.
+
+Numa execução real isso custou **145 mil tokens de entrada e 4× o gasto do
+Criativo e do PO somados**, sem produzir nada. E voltava a cada tick do
+agendador, a cada 15 minutos, para sempre.
+
+O teto de iterações funcionava — não era laço infinito. O desperdício era **por
+rodada, repetido indefinidamente**, que é pior: um laço trava e alguém percebe;
+este sangrava devagar.
+
+Narrar `run_failed` para uma rodada que fez a coisa certa também é defeito: quem
+lê o log aprende a ignorar o evento de falha.
+
+- **Onde:** `apps/engine/lib/engine/anamnese/tools/skip_proficiency.ex`,
+  `apps/engine/lib/engine/anamnese/hooks/termination.ex`,
+  `apps/engine/lib/engine/workers/anamnese_worker.ex` (`handle_outcome`)
+- **Teste:** `apps/engine/test/engine/workers/anamnese_worker_test.exs`
+  (`encerrar sem perfis é DESFECHO: narra run_skipped com o motivo, não falha`)
+- **Origem:** execução real da FASE 13b
+
 ### RN-062 — Mensagem a agente conversacional REIDRATA o processo {#rn-062}
 
 Uma mensagem endereçada a Criativo, PO ou Arquiteto sobe o processo se ele não
