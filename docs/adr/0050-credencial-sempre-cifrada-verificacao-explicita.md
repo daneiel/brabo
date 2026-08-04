@@ -80,7 +80,19 @@ distintas para o mesmo objeto.
    filtro que não pode disparar é regra morta, mesmo critério que o docmap
    aplica a glob que não casa com arquivo nenhum.
 
-6. **A tela oferece o que é possível oferecer.** Não dá para conferir o que
+6. **Um teto de comprimento, e ele é proteção — não validação de formato.**
+   `CREDENCIAL_COMPRIMENTO_MAXIMO = 512` nos dois DTOs, mesma natureza do
+   `@MaxLength` da senha (`domain/auth/password-policy.ts`): a rota cifra, e
+   cifrar copia a entrada. O valor é folgado de propósito. A tentação, depois
+   de uma chave truncada ter sido gravada em silêncio, é apertar o teto até
+   ele "validar" a chave — e isso recriaria o portão por outra porta. As
+   credenciais reais dos nove providers vão de ~26 caracteres (`glpat-`) a
+   ~164 (project key da OpenAI); um teto perto do tamanho real recusaria
+   cadastro de chave boa, e envelheceria mal quando um provider alongasse o
+   formato. Uma chave pela metade continua sendo aceita, e é a rota de teste
+   que a desmascara.
+
+7. **A tela oferece o que é possível oferecer.** Não dá para conferir o que
    está guardado, então o que se oferece é **trocar** (o campo agora fica
    visível também com credencial salva — antes era preciso remover primeiro) e
    **testar**. E todo caminho ganhou `try/catch` com toast: era a ausência

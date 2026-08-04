@@ -152,11 +152,13 @@ O loop que faz o time melhorar.
 
 | [0049](0049-curadoria-de-modelo-por-workspace.md) | Curadoria de modelo por workspace: `models.is_active` era uma coluna para a instalação INTEIRA — um owner do workspace A ligando um modelo o ligava para o B, com o gasto caindo no orçamento de quem não decidiu. O catálogo segue global porque nome, preço e capabilities são fato do provider, e duplicá-lo por workspace criaria N verdades sobre o mesmo modelo além de partir `token_usage.model_id`; só a decisão migra, para `workspace_models`. Ausência de linha É o desligado — não há terceiro estado, e é assim que a RN-043 sobrevive sem coluna nenhuma que o sync possa atropelar; desligar é UPDATE e não DELETE, para não apagar quem decidiu junto. A rota do seletor pende do PROJETO (as três telas que a consomem já tinham `projectId`, nenhuma tinha workspace), e `isActive` sai da entidade `Model`: quem precisa dele usa um tipo que só existe com workspace na mão |
 
+| [0050](0050-credencial-sempre-cifrada-verificacao-explicita.md) | Credencial sempre cifrada e gravada; verificar vira ação à parte. O portão do ADR 0004 (testar ANTES de persistir) parecia prudente e produzia o pior desfecho: campo write-only + recusa = usuário sem credencial E sem o texto para corrigir, porque a tela nunca reexibe o que ele colou. Guardar e verificar são perguntas diferentes, e amarrá-las fazia a segunda depender da primeira ter resposta agora. Vale para LLM e git juntos — mesma tabela, mesma promessa, e tratá-las diferente daria duas telas com regras distintas para o mesmo objeto. O veredito tem TRÊS estados porque o tester é NO-OP em ollama/anthropic/openai: num binário eles voltariam `ok` e a tela afirmaria uma verificação que ninguém fez (a regra de capability do ADR 0041 aplicada aqui). Chave ruim deixa de ser exceção HTTP e vira resultado 200, então os dois `@Catch` que a mapeavam saíram — filtro que não pode disparar é regra morta |
+
 ## A convenção
 
 - **Um arquivo por decisão**, em `docs/adr/NNNN-titulo-curto.md`, com
   numeração sequencial de 4 dígitos. **Sem reuso de número**, nem quando um ADR
-  é superado — o próximo é **0050**.
+  é superado — o próximo é **0051**.
 - **Três seções, só elas:** **Contexto** (o problema ou a força que motivou),
   **Decisão** (o que foi decidido), **Consequências** (os trade-offs aceitos e
   o que fica para depois).

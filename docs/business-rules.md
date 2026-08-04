@@ -1065,6 +1065,60 @@ histórico.
 
 ---
 
+## Credenciais
+
+Chave de LLM e token de git do usuário vivem na mesma tabela
+(`user_credentials`), sob o mesmo envelope encryption. Esta seção vale para as
+duas.
+
+### RN-055 — Credencial é sempre cifrada e gravada; verificar é ação à parte, com três respostas {#rn-055}
+
+O cadastro **não julga a credencial**: cifra e grava, mesmo que o provider
+fosse recusá-la. Verificar é uma ação explícita sobre a credencial **já
+gravada** — a api decifra, chama o provider e devolve só o veredito. O texto
+plano nunca volta em resposta nenhuma, nem em pedaço, nem no motivo da recusa.
+
+Era o contrário: o cadastro testava antes de persistir e recusava a gravação
+([ADR 0004](adr/0004-git-credential-registration.md), estendido às chaves de
+LLM na Fase 11a). O modo de falha real foi o oposto do previsto — como o campo
+é write-only e a tela nunca reexibe o que foi digitado, uma recusa deixava o
+usuário **sem credencial e sem o texto para corrigir**.
+
+O veredito tem **três** valores, e o terceiro é obrigatório:
+
+| | quando |
+|---|---|
+| `ok` | o provider aceitou |
+| `recusado` | o provider rejeitou — carrega o motivo **dele** |
+| `nao_suportado` | não há endpoint de teste verificado (`ollama`, `anthropic`, `openai`) |
+
+Sem `nao_suportado`, um provider cujo tester é NO-OP voltaria `ok` e a tela
+afirmaria uma verificação que nunca aconteceu. É a regra de capability do
+[ADR 0041](adr/0041-base-openai-compativel-e-contrato-de-llm-providers.md)
+aplicada aqui: só se declara o que foi provado. Por isso o port declara
+`supports()` — o silêncio de `test()` sozinho é ambíguo.
+
+Chave ruim **não é exceção HTTP**: o caso de uso captura
+`LLMCredentialConnectionTestFailedError`/`GitCredentialConnectionTestFailedError`
+e devolve resultado, com 200. A única exceção é não existir credencial para
+(usuário, provider) — 404, porque aí não há o que testar.
+
+- **Onde:**
+  `apps/api/src/application/use-cases/credentials/test-stored-credential.use-case.ts`,
+  `apps/api/src/application/use-cases/llm/upsert-user-credential.use-case.ts`,
+  `apps/api/src/application/use-cases/git/register-git-credential.use-case.ts`,
+  `apps/api/src/application/ports/llm-credential-connection-tester.port.ts`
+  (`supports`)
+- **Teste:**
+  `test/application/use-cases/credentials/test-stored-credential.use-case.spec.ts`
+  (os três resultados, o despacho git×LLM, o 404 e a ausência do segredo na
+  resposta); `test/application/use-cases/llm/upsert-user-credential.use-case.spec.ts`
+  e `test/application/use-cases/git/register-git-credential.use-case.spec.ts`
+  (a gravação incondicional, que é a inversão)
+- **Origem:** [ADR 0050](adr/0050-credencial-sempre-cifrada-verificacao-explicita.md)
+
+---
+
 ## Autenticação
 
 Regras do auth first-party. Todas valem no domínio da api, que desde a 7.2 é

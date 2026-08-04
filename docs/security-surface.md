@@ -195,6 +195,7 @@ o componente `d` da JWK, travado por teste.
 | GET | `/` | jwt |
 | GET | `/users/me/credentials` | jwt |
 | POST | `/users/me/credentials` | jwt |
+| POST | `/users/me/credentials/:provider/test` | jwt |
 | DELETE | `/users/me/credentials/:provider` | jwt |
 | POST | `/users/me/git-credentials` | jwt |
 | GET | `/workspaces` | jwt |
@@ -207,6 +208,7 @@ o componente `d` da JWK, travado por teste.
 | PUT | `/projects/:projectId/agent-autonomy` | role:maintainer |
 | GET | `/projects/:projectId/agent-bindings/:agentSlug` | role:viewer |
 | PUT | `/projects/:projectId/agent-bindings/:agentSlug` | role:developer |
+| GET | `/projects/:projectId/agent-costs` | role:developer |
 | GET | `/projects/:projectId/agents/:agent/instruction-versions` | role:viewer |
 | POST | `/projects/:projectId/agents/:agent/instruction-versions/:version/rollback` | role:maintainer |
 | POST | `/projects/:projectId/anamnese/run` | role:maintainer |
