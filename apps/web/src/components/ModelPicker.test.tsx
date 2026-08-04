@@ -23,6 +23,8 @@ function model(over: Partial<Model> = {}): Model {
     contextWindow: 8192,
     supportsToolCalling: true,
     supportsStreaming: true,
+    supportsReasoning: false,
+    generatesImage: false,
     supportsVision: false,
     manualPricing: true,
     availability: 'available',
