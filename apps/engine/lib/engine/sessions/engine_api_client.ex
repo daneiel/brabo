@@ -56,6 +56,17 @@ defmodule Engine.Sessions.EngineApiClient do
               {:ok, map()} | {:error, term()}
 
   @doc """
+  A sessão tem trabalho pendente que impeça encerrá-la por heartbeat?
+
+  Fechar sessão é sobre o TRABALHO ter acabado, não sobre quem está olhando. O
+  timeout de 30s matava a sessão assim que a aba saía da tela — e numa execução
+  real deixou um handoff `offered` para o Arquiteto preso numa sessão fechada,
+  com épico e quatro histórias prontos e a cadeia sem como seguir.
+  """
+  @callback session_pending_work(session_id :: String.t()) ::
+              {:ok, %{pending: boolean(), motivo: String.t() | nil}} | {:error, term()}
+
+  @doc """
   Cria um handoff (offered) na api — o Criativo oferece ao PO ao emitir o
   product_brief. Retorna `{:ok, handoff_map}` ou `{:error, term}`.
   """
@@ -359,6 +370,8 @@ defmodule Engine.Sessions.EngineApiClient do
 
   def llm_turn_stream(project_id, session_id, agent, messages, tools, on_delta),
     do: impl().llm_turn_stream(project_id, session_id, agent, messages, tools, on_delta)
+
+  def session_pending_work(session_id), do: impl().session_pending_work(session_id)
 
   def create_handoff(project_id, session_id, from_agent, to_agent, artifact_id),
     do: impl().create_handoff(project_id, session_id, from_agent, to_agent, artifact_id)
@@ -704,6 +717,22 @@ defmodule Engine.Sessions.EngineApiClient.Live do
     case Req.get(url, headers: headers()) do
       {:ok, %Req.Response{status: status, body: body}} when status in 200..299 ->
         {:ok, body}
+
+      {:ok, %Req.Response{status: status, body: resp}} ->
+        {:error, {status, resp}}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  @impl true
+  def session_pending_work(session_id) do
+    url = api_url() <> "/internal/sessions/#{session_id}/pending-work"
+
+    case Req.get(url, headers: headers()) do
+      {:ok, %Req.Response{status: status, body: body}} when status in 200..299 ->
+        {:ok, %{pending: Map.get(body, "pending", false), motivo: Map.get(body, "motivo")}}
 
       {:ok, %Req.Response{status: status, body: resp}} ->
         {:error, {status, resp}}

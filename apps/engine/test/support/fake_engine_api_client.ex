@@ -340,6 +340,16 @@ defmodule Engine.Sessions.FakeEngineApiClient do
   defp unique, do: System.unique_integer([:positive])
 
   @impl true
+  def session_pending_work(_session_id) do
+    # Application env, e NÃO dicionário de processo: quem chama isto é o
+    # `SessionServer`, que roda em processo próprio (spawnado pelo supervisor)
+    # — um `Process.put` do teste nunca chegaria lá. Default é "nada pendente",
+    # para todo teste que não se importa manter o comportamento antigo.
+    {:ok,
+     Application.get_env(:engine, :fake_pending_work, %{pending: false, motivo: nil})}
+  end
+
+  @impl true
   def llm_turn_stream(_project_id, _session_id, agent, messages, tools, on_delta) do
     notify({:llm_turn_stream, agent, messages, tools})
 

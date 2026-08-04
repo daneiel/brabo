@@ -1,0 +1,69 @@
+---
+id: internal-sessions-controller-pending-work
+title: "A sessão tem trabalho pendente que impede encerrá-la?"
+description: "Consultada pelo `SessionServer` do engine no timeout de heartbeat. `pending: true` faz o timeout ser reagendado em vez de encerrar, e o `motivo` vai para o log do engine — sessão que não fecha sem dizer por que é indiagnosticável."
+sidebar_label: "A sessão tem trabalho pendente que impede encerrá-la?"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "get api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"A sessão tem trabalho pendente que impede encerrá-la?"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/internal/sessions/{sessionId}/pending-work"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Consultada pelo `SessionServer` do engine no timeout de heartbeat. `pending: true` faz o timeout ser reagendado em vez de encerrar, e o `motivo` vai para o log do engine — sessão que não fecha sem dizer por que é indiagnosticável.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./internal-sessions-controller-pending-work.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./internal-sessions-controller-pending-work.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./internal-sessions-controller-pending-work.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      
