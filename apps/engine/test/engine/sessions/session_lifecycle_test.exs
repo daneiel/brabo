@@ -42,6 +42,7 @@ defmodule Engine.Sessions.SessionLifecycleTest do
   # quatro histórias prontos, e a cadeia sem como seguir.
   test "heartbeat NÃO encerra sessão com trabalho pendente" do
     session_id = unique_id()
+
     Application.put_env(:engine, :fake_pending_work, %{
       pending: true,
       motivo: "handoff po → arquiteto"

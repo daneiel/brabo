@@ -164,8 +164,7 @@ defmodule Engine.Agents.CriativoServerTest do
     assert {:reply, :ok, _} =
              CriativoServer.handle_call({:user_message, "oi"}, self(), state)
 
-    assert_received {:event_appended, _, ^session_id,
-                     %{type: "agent.error", payload: payload}}
+    assert_received {:event_appended, _, ^session_id, %{type: "agent.error", payload: payload}}
 
     assert payload.origem == "infra"
     assert payload.mensagem =~ "Não consegui completar este turno"
@@ -197,8 +196,7 @@ defmodule Engine.Agents.CriativoServerTest do
     assert {:reply, :ok, _} =
              CriativoServer.handle_call({:user_message, "oi"}, self(), state)
 
-    assert_received {:event_appended, _, ^session_id,
-                     %{type: "agent.error", payload: payload}}
+    assert_received {:event_appended, _, ^session_id, %{type: "agent.error", payload: payload}}
 
     assert payload.origem == "politica"
     assert payload.mensagem =~ "credencial"

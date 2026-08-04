@@ -345,8 +345,7 @@ defmodule Engine.Sessions.FakeEngineApiClient do
     # `SessionServer`, que roda em processo próprio (spawnado pelo supervisor)
     # — um `Process.put` do teste nunca chegaria lá. Default é "nada pendente",
     # para todo teste que não se importa manter o comportamento antigo.
-    {:ok,
-     Application.get_env(:engine, :fake_pending_work, %{pending: false, motivo: nil})}
+    {:ok, Application.get_env(:engine, :fake_pending_work, %{pending: false, motivo: nil})}
   end
 
   @impl true

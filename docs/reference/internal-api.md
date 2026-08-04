@@ -103,6 +103,23 @@ Toda chamada de modelo passa pela api. Não é indireção gratuita: é onde o
 metering acontece e onde o orçamento pode **recusar** a chamada. Um engine que
 falasse direto com o provedor tornaria o teto de gasto inaplicável.
 
+### Ciclo de vida da sessão
+
+| método | caminho |
+|---|---|
+| GET | `/internal/sessions/:id/pending-work` (**não** é session-scoped no sentido dos demais: é sobre a sessão, não dentro dela) |
+
+O `SessionServer` pergunta antes de encerrar por heartbeat. O timeout mede
+inatividade da ABA — 30 segundos —, e fechar sessão é sobre o TRABALHO ter
+acabado, não sobre quem está olhando. Numa execução real isso prendeu um
+handoff `offered` para o Arquiteto dentro de uma sessão fechada
+([RN-064](../business-rules.md#rn-064)).
+
+Resposta: `{ pending, motivo }`. `motivo` vai para o log do engine — sessão que
+se recusa a fechar sem dizer por quê é indiagnosticável. E api fora do ar
+**não** impede o encerramento: trocar sessão órfã por sessão imortal seria
+trocar um defeito por outro.
+
 ### Catálogo de modelos
 
 | método | caminho |
