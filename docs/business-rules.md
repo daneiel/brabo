@@ -925,6 +925,56 @@ Três regras derivadas:
   (`ativar num workspace NÃO liga o modelo no vizinho`)
 - **Origem:** [ADR 0049](adr/0049-curadoria-de-modelo-por-workspace.md)
 
+### RN-061 — Falha de FERRAMENTA também é evento, e volta para o modelo {#rn-061}
+
+O resultado de uma tool call nunca é descartado. Ele vira `tool.result` no
+event log (`ok` e, quando falha, `erro`), o agente **diz** o que houve no fio, e
+o motivo **volta ao modelo** no papel `tool` — para ele corrigir e reemitir no
+turno seguinte. Erro de ferramenta é entrada do laço, não fim de linha.
+
+O Criativo era o único que descartava (`_ = EmitArtifact.run(args, state)`) — o
+PO e o Arquiteto já realimentavam. Numa execução real o modelo emitiu
+`titulo`/`descricao` contra um schema que exige `title`/`description`/`origin`:
+as **quatro regras de negócio da conversa foram recusadas**, nenhum evento foi
+gravado, e ele seguiu dizendo "registrei as regras" com o painel vazio.
+
+A descrição da ferramenta passou a NOMEAR os campos obrigatórios de cada tipo,
+em inglês e com exemplo preenchido — inclusive que `business_rule.origin` é uma
+**lista não-vazia** de `seq` das mensagens que originaram a regra, não texto
+livre. Sem isso o modelo adivinha, e adivinha no idioma da conversa.
+
+É a mesma regra da [RN-059](#rn-059) aplicada ao outro caminho de falha: duas
+políticas para o mesmo problema seriam duas chances de engolir o erro.
+
+- **Onde:** `apps/engine/lib/engine/agents/criativo_server.ex` (`dispatch_tool`,
+  `realimentar`), `apps/engine/lib/engine/harness/tools/emit_artifact.ex`
+  (`descricao/0`), `apps/engine/lib/engine/harness/artifact_schemas.ex`
+  (`required/1`)
+- **Teste:** `apps/engine/test/engine/agents/criativo_server_test.exs`
+  (`ferramenta recusada vira tool.result com erro, e o agente fala`)
+- **Origem:** execução real da FASE 13b
+
+### RN-062 — Mensagem a agente conversacional REIDRATA o processo {#rn-062}
+
+Uma mensagem endereçada a Criativo, PO ou Arquiteto sobe o processo se ele não
+estiver de pé, antes de entregar. O `init` de cada servidor já reconstrói o
+histórico do event log; faltava quem o chamasse.
+
+Antes, um restart do engine matava a conversa em silêncio: a sessão sobrevivia
+como `active`, o processo do agente não, e a próxima mensagem morria com
+`GenServer.call ... exited` — sem evento, sem erro na tela, sem nada. O usuário
+via a própria mensagem aparecer e nenhuma resposta chegar, para sempre.
+
+O comentário de `revise/2` dizia que agente morto nesta rota "é um bug". É — e
+basta o engine reiniciar para acontecer. É a mesma garantia que a Fase 12b deu
+aos dev agents, aplicada aos conversacionais.
+
+- **Onde:** `apps/engine/lib/engine_web/controllers/agent_command_controller.ex`
+  (`message/2`)
+- **Teste:** coberto pela suite de agentes; a prova de execução está em
+  docs/explanation/validacao-real.md
+- **Origem:** execução real da FASE 13b
+
 ### RN-060 — O gasto das chaves é do owner, e só ele vê {#rn-060}
 
 O relatório de consumo por credencial (`GET /workspaces/:id/credential-spend`)

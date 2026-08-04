@@ -204,6 +204,53 @@ defmodule Engine.Agents.CriativoServerTest do
     assert payload.mensagem =~ "credencial"
   end
 
+  # O payload recusado pelo schema sumia: o resultado da ferramenta era
+  # DESCARTADO (`_ =`), o Criativo dizia "registrei as regras", e quatro regras
+  # de negócio iam para o lixo com o painel vazio.
+  test "ferramenta recusada vira tool.result com erro, e o agente fala", %{
+    state: state,
+    session_id: session_id
+  } do
+    # Payload no idioma da conversa, contra um schema em inglês — o caso real.
+    Process.put(:fake_llm_turns, [
+      %{
+        "message" => %{
+          "role" => "assistant",
+          "content" => "Vou registrar as regras.",
+          "toolCalls" => [
+            %{
+              "id" => "tc1",
+              "name" => "emit_artifact",
+              "arguments" => %{
+                "type" => "business_rule",
+                "payload" => %{"titulo" => "Saudação", "descricao" => "…"}
+              }
+            }
+          ]
+        }
+      }
+    ])
+
+    assert {:reply, :ok, _} =
+             CriativoServer.handle_call({:user_message, "oi"}, self(), state)
+
+    assert_received {:event_appended, _, ^session_id,
+                     %{type: "tool.result", payload: %{ok: false, erro: erro}}}
+
+    assert erro =~ "title" or erro =~ "obrigat"
+
+    # E o agente DIZ o que houve, em vez de seguir como se tivesse registrado.
+    # O casamento é por PREFIXO: a primeira `agent.response` do turno é a fala
+    # normal do modelo ("Vou registrar as regras"), e `assert_received` pega a
+    # primeira que casar — sem o prefixo, o teste passaria olhando a mensagem
+    # errada.
+    assert_received {:event_appended, _, ^session_id,
+                     %{
+                       type: "agent.response",
+                       payload: %{content: "Não consegui registrar" <> _}
+                     }}
+  end
+
   test "rehydration: reconstrói o histórico do event log no init", %{} do
     Process.put(:fake_events, [
       %{"type" => "chat.message", "payload" => %{"text" => "minha ideia é X"}},

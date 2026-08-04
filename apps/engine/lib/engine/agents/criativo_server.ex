@@ -159,13 +159,51 @@ defmodule Engine.Agents.CriativoServer do
   # emit_artifact é a única ferramenta do Criativo; o guardrail (product_brief
   # bloqueado) vive dentro de EmitArtifact.run. Rodamos direto (tool :direct),
   # sem pipeline/hooks — o Criativo não toca terminal/arquivos.
-  defp dispatch_tool(%{"name" => "emit_artifact", "arguments" => args}, state) do
+  defp dispatch_tool(%{"name" => "emit_artifact", "arguments" => args} = call, state) do
     emit(state, "tool.call", %{tool: "emit_artifact", args: args})
-    _ = EmitArtifact.run(args, state)
-    state
+
+    # O resultado era DESCARTADO (`_ =`). Um payload recusado pelo schema — o
+    # modelo emitiu `titulo`/`descricao` contra `title`/`description` — sumia
+    # sem evento, sem aviso e sem chegar ao modelo: o Criativo dizia "registrei
+    # as regras", quatro regras iam para o lixo e o painel ficava vazio.
+    case EmitArtifact.run(args, state) do
+      {:ok, texto} ->
+        emit(state, "tool.result", %{tool: "emit_artifact", ok: true})
+        realimentar(state, call, texto)
+
+      {:error, motivo} ->
+        emit(state, "tool.result", %{
+          tool: "emit_artifact",
+          ok: false,
+          erro: to_string(motivo)
+        })
+
+        # O agente FALA (RN-059) e o erro VOLTA para o modelo: no próximo turno
+        # ele lê o motivo e reemite corrigido, que é como um tool loop deve
+        # funcionar — erro é entrada, não fim de linha.
+        emit_response(
+          state,
+          "Não consegui registrar isso: #{motivo}. Vou corrigir e tentar de novo."
+        )
+
+        realimentar(state, call, "ERRO: #{motivo}")
+    end
   end
 
   defp dispatch_tool(_other, state), do: state
+
+  # Devolve o resultado da ferramenta ao histórico, no papel `tool` — é o que
+  # o PO e o Arquiteto já faziam, e o que faltava aqui.
+  defp realimentar(state, call, texto) do
+    append(state, %{
+      "role" => "tool",
+      "content" => to_string(texto),
+      "toolCallId" => Map.get(call, "id"),
+      "name" => "emit_artifact",
+      :pinned => false
+    })
+  end
+
 
   # --- product_brief (server-emitted) ---
 
