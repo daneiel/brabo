@@ -166,6 +166,60 @@ extraída por script do event log/token_usage, nunca anotada à mão.
    "N agentes online" no dashboard, preferência de moeda com taxa
    manual.
 
+## FASE 14 (ativa em paralelo à 13 — o que a execução real exigiu)
+A execução do hello world não passou do primeiro turno e revelou defeitos que
+nenhuma suite pegava, porque tudo antes rodou com modelo LOCAL. As correções
+já entraram; o que sobra é feature decidida pelo usuário durante a execução.
+
+### 14a — Operabilidade dos agentes (CONCLUÍDA)
+- Falha de turno virou `agent.error` DURÁVEL com origem, e o agente FALA no
+  fio; os quatro conversacionais paravam de gravar `agent.response` vazio
+  (RN-059). O caminho do erro narrado no frame final, que não emitia evento
+  nenhum, também fechou.
+- O chat do Criativo abre com convite em vez de vazio: ele é ativado e espera
+  o usuário falar primeiro, e a tela agora diz isso — incluindo que tecnologia
+  e código NÃO são dele.
+- A chave que o agente gasta é a do OWNER do workspace (RN-058). Antes o turno
+  procurava a credencial pelo SLUG do agente numa coluna UUID: nenhum agente
+  jamais usou provider com credencial, e só `ollama` funcionava.
+- Relatório de gasto das chaves, só para o owner, com agente separado de
+  pessoa (RN-060).
+- Bootstrap de Gitflow no GitHub: repo recém-criado responde 409 em toda a Git
+  Data API, e o primeiro commit passa pela Contents API. O backend falso dos
+  testes mentia (404 onde o GitHub responde 409) — corrigido junto, é o que
+  fazia a suite ficar verde com o produto quebrado.
+
+### 14b — Linha do tempo em árvore (CONCLUÍDA)
+Um ramo por agente, do primeiro marco ao que ele está fazendo AGORA, derivado
+100% do event log que a tela já busca. Ativos abrem sozinhos; quem terminou
+nasce fechado. O feed cronológico continua, na coluna de atividade: ele
+responde "o que aconteceu", a árvore responde "quem está fazendo o quê".
+
+### 14c — Validação automática de UI (CONCLUÍDA)
+Contraste virou teste sobre `design/tokens.css`, com a dívida conhecida medida
+e travada; layout (texto cortado, menu fora da viewport, dropdown recortado
+por ancestral, alvo < 24px) virou verificador de navegador em
+`scripts/dev/validacao-visual.js`. Sem dependência nova.
+
+### 14d — Paralelismo decidido pelo LEAD, com autorização do usuário (A FAZER)
+Decisão do usuário, tomada durante a execução — substitui a ideia de teto fixo:
+
+1. **Quem decide é o lead.** Ele avalia quantos agentes valem a pena para o
+   trabalho em mão, em vez de um número fixo no código.
+2. **Acima de 2, pede autorização.** Passar de dois agentes na sessão vira
+   `proposed_action` — o mesmo pipeline de aprovação de toda ação com efeito
+   externo. O usuário decide, e a decisão fica no event log.
+3. **Configurável por lead**, na tela de Configurações: cada lead tem um máximo
+   próprio, com 2 como default.
+4. **A Anamnese propõe subir o limite** quando perceber que a autorização é
+   RECORRENTE — mesma mecânica de hipótese que ela já usa, com o usuário
+   decidindo. Automatizar sem isso seria o produto elevando o próprio teto de
+   gasto, que é exatamente o que o pipeline de aprovação existe para impedir.
+
+Ainda não implementado. O que existe hoje continua: um agente por módulo no
+`start`, e um extra por módulo (`dev-<modulo>-2`) via aceite de um clique, sem
+teto de sessão.
+
 ## Stack (decidida — não proponha alternativas)
 - `apps/api`: NestJS 11 + Drizzle ORM + PostgreSQL 16 + pgvector
 - `apps/engine`: Elixir/OTP + Phoenix (canais) + Oban (filas no Postgres)
@@ -216,7 +270,11 @@ extraída por script do event log/token_usage, nunca anotada à mão.
   como co-author.
 - Todo desfecho de falha de agente registra a ORIGEM da falha
   (infra | modelo | código | política) — nunca diagnóstico por
-  eliminação (lição do ADR 0020).
+  eliminação (lição do ADR 0020). Falha NUNCA vira resposta vazia no
+  event log, e o motivo NUNCA fica só em broadcast: `agent.error` é
+  durável e o agente diz o que houve no fio (RN-059).
+- A chave de LLM que um agente gasta é a do OWNER do workspace
+  (RN-058); o relatório desse gasto é do owner e só dele (RN-060).
 - Métrica de execução de agentes é extraída do event log/token_usage
   por script, nunca anotada manualmente (lição da Fase 10/13).
 - Testes: vitest (api/web/scripts de CI), ExUnit (engine). Nenhuma
@@ -226,7 +284,10 @@ extraída por script do event log/token_usage, nunca anotada à mão.
   declara-se false e degrada (regra dos ADRs 0041/0042, vale para git
   e LLM).
 - UI: fidelidade estrita ao design system em design/ (tokens, tipografia
-  Space Grotesk/Archivo/IBM Plex Mono, dark mode primário).
+  Space Grotesk/Archivo/IBM Plex Mono, dark mode primário). Contraste é
+  medido por teste sobre os tokens e layout é verificado no navegador
+  por scripts/dev/validacao-visual.js — as duas validações estão
+  explicadas em design/README.md.
 - Segredos de usuário (API keys de LLM e tokens de git) criptografados
   com envelope encryption; nunca em plaintext no banco ou em logs.
 - Decisões arquiteturais relevantes registradas em docs/adr/.
