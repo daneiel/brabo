@@ -550,6 +550,12 @@ const sidebar: SidebarsConfig = {
           label: "Força agora o sync de catálogo que o job periódico faz",
           className: "api-method post",
         },
+        {
+          type: "doc",
+          id: "docs/reference/api/models-controller-uses",
+          label: "Marca para que o workspace usa cada modelo (lote)",
+          className: "api-method post",
+        },
       ],
     },
     {

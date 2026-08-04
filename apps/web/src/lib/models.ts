@@ -1,4 +1,10 @@
-import type { LLMProviderName, Model, ModelCategory } from './api-types';
+import type {
+  LLMProviderName,
+  Model,
+  ModelComCuradoria,
+  ModelCategory,
+  UsoDeModelo,
+} from './api-types';
 
 /**
  * Como o modelo CHEGA até a chamada (Fase 9c) — outra pergunta que a categoria
@@ -112,9 +118,85 @@ export function rotuloDoUpstream(upstream: string): string {
   return ROTULO_DO_UPSTREAM[upstream] ?? upstream;
 }
 
+/**
+ * As facetas de capability que o catálogo PROVA — o eixo pelo qual se procura um
+ * modelo quando o catálogo tem 338 linhas.
+ *
+ * Só entra faceta que algum provider declara e o sync grava. "Melhor para
+ * código", "melhor para documentação" e vídeo ficaram de fora de propósito:
+ * nenhum catálogo publica isso, e uma faceta derivada do nome do modelo seria
+ * palpite vestido de dado (ADR 0041). Essa parte é curadoria de quem opera, não
+ * capability — mora nos favoritos, não aqui.
+ */
+export type Faceta = 'toolCalling' | 'vision' | 'reasoning' | 'imagem';
+
+export const FACETAS: readonly {
+  id: Faceta;
+  rotulo: string;
+  /** Por que ligar este filtro — o que muda no que sobra na lista. */
+  ajuda: string;
+  aceita: (m: Model) => boolean;
+}[] = [
+  {
+    id: 'toolCalling',
+    rotulo: 'tool calling',
+    ajuda: 'Só os que um agente consegue usar (RN-040).',
+    aceita: (m) => m.supportsToolCalling,
+  },
+  {
+    id: 'vision',
+    rotulo: 'lê imagem',
+    ajuda: 'Aceita imagem na ENTRADA — print, diagrama, PDF renderizado.',
+    aceita: (m) => m.supportsVision === true,
+  },
+  {
+    id: 'reasoning',
+    rotulo: 'thinking',
+    ajuda: 'Expõe raciocínio explícito antes da resposta.',
+    aceita: (m) => m.supportsReasoning === true,
+  },
+  {
+    id: 'imagem',
+    rotulo: 'gera imagem',
+    ajuda: 'PRODUZ imagem — eixo diferente de saber lê-la.',
+    aceita: (m) => m.generatesImage === true,
+  },
+];
+
+/**
+ * O rótulo humano de cada uso. `Record` EXAUSTIVO: uso novo no tipo quebra o
+ * typecheck aqui até ganhar tradução, em vez de aparecer na tela pelo slug.
+ */
+export const ROTULO_DO_USO: Record<UsoDeModelo, string> = {
+  codigo: 'código',
+  documentacao: 'documentação',
+  analise: 'análise',
+  imagem: 'imagem',
+  conversa: 'conversa',
+};
+
+export const USOS_DE_MODELO = Object.keys(ROTULO_DO_USO) as UsoDeModelo[];
+
 export interface AgruparOpcoes {
   /** Só modelos com tool calling — o filtro "aptos para agentes" (RN-040). */
   somenteAptosParaAgentes?: boolean;
+  /**
+   * Facetas exigidas, em CONJUNÇÃO: marcar "lê imagem" e "thinking" pede um
+   * modelo que faça as duas. Disjunção devolveria a lista quase inteira e não
+   * responderia à pergunta que se faz na tela ("qual serve para esta tarefa?").
+   */
+  facetas?: readonly Faceta[];
+  /**
+   * Usos exigidos, também em conjunção — "o modelo que marcamos para código E
+   * para análise". Só faz sentido com `ModelComCuradoria`: uso é curadoria de
+   * workspace, e o seletor (que recebe `Model`) não a carrega.
+   */
+  usos?: readonly UsoDeModelo[];
+}
+
+/** Uso é curadoria: só o catálogo com curadoria anexada pode ser filtrado por ele. */
+function usosDe(modelo: Model): UsoDeModelo[] {
+  return (modelo as Partial<ModelComCuradoria>).uses ?? [];
 }
 
 /**
@@ -136,7 +218,14 @@ export function agruparModelos<M extends Model>(
   const todos = [
     ...Object.values(models.local ?? {}).flat(),
     ...Object.values(models.cloud ?? {}).flat(),
-  ].filter((m) => !opcoes.somenteAptosParaAgentes || m.supportsToolCalling);
+  ]
+    .filter((m) => !opcoes.somenteAptosParaAgentes || m.supportsToolCalling)
+    .filter((m) =>
+      (opcoes.facetas ?? []).every(
+        (id) => FACETAS.find((f) => f.id === id)?.aceita(m) ?? true,
+      ),
+    )
+    .filter((m) => (opcoes.usos ?? []).every((u) => usosDe(m).includes(u)));
 
   return ORDEM_DOS_GRUPOS.map((kind) => {
     const modelos = todos.filter((m) => providerKind(m.provider) === kind);

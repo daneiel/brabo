@@ -170,6 +170,19 @@ export interface ProposedAction {
   updatedAt: string;
 }
 
+/**
+ * Para que o workspace usa um modelo (ADR 0051) — curadoria, não capability.
+ * Espelha `UsoDeModelo` do domínio da api, como o resto deste arquivo espelha
+ * as entidades reais; o rótulo humano de cada um vive em `lib/models.ts`, num
+ * `Record` exaustivo que quebra o build se um uso novo ficar sem tradução.
+ */
+export type UsoDeModelo =
+  | 'codigo'
+  | 'documentacao'
+  | 'analise'
+  | 'imagem'
+  | 'conversa';
+
 export type LLMProviderName =
   | 'ollama'
   | 'anthropic'
@@ -199,7 +212,14 @@ export interface Model {
    */
   supportsToolCalling: boolean;
   supportsStreaming: boolean;
+  /**
+   * As facetas de modalidade e raciocínio. `false` aqui quer dizer "o provider
+   * não declarou" — não "o modelo não faz" (ADR 0041). É por isso que a tela as
+   * usa como filtro POSITIVO e nunca escreve "não lê imagem".
+   */
   supportsVision: boolean;
+  supportsReasoning: boolean;
+  generatesImage: boolean;
   /** Preço digitado da doc do provider, não sincronizado (Fase 9b). */
   manualPricing: boolean;
   /**
@@ -219,6 +239,12 @@ export interface Model {
  */
 export interface ModelComCuradoria extends Model {
   isActive: boolean;
+  /**
+   * Para que ESTE workspace usa o modelo (ADR 0051). Eixo independente de
+   * `isActive`: marcar uso não liga o modelo no seletor. Lista vazia é
+   * "ninguém opinou", não "não serve".
+   */
+  uses: UsoDeModelo[];
 }
 
 export type ModelsByCategory = Record<ModelCategory, Record<string, Model[]>>;

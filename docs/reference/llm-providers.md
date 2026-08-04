@@ -58,7 +58,38 @@ provider, nunca mais rico.
 | `toolCalling` | provider + `models.supports_tool_calling` | recusar binding de agente ([RN-040](../business-rules.md#rn-040)) |
 | `listModels` | só provider | ligar/pular o sync de catálogo ([RN-043](../business-rules.md#rn-043)) |
 | `context_length` | `models.context_window` | orçamento de contexto |
-| `vision` | `models.supports_vision` | reservado |
+| `vision` | `models.supports_vision` | filtrar o catálogo ([RN-056](../business-rules.md#rn-056)) |
+| `reasoning` | `models.supports_reasoning` | idem |
+| `imagem na saída` | `models.generates_image` | idem |
+
+### As três facetas de modalidade
+
+`supports_vision`, `supports_reasoning` e `generates_image` são **fato do
+provider**: saem do catálogo remoto no sync, com o mesmo fallback do tool
+calling — remoto, depois local, depois `false`. Hoje só o OpenRouter as
+publica:
+
+| faceta | de onde sai no OpenRouter | no catálogo de 2026-08-04 |
+| --- | --- | --- |
+| `supports_vision` | `architecture.input_modalities` contém `image` | 181 de 338 |
+| `generates_image` | `architecture.output_modalities` contém `image` | 11 de 338 |
+| `supports_reasoning` | `supported_parameters` contém `reasoning` | 213 de 338 |
+
+Aceitar imagem e **produzir** imagem são eixos distintos: quem lê diagrama e
+quem desenha resolvem problemas diferentes.
+
+O parser **omite** o campo quando o provider não declara a modalidade, e
+`undefined` preserva o valor local no sync — ausência de declaração não é
+declaração de ausência. Por isso a tela usa as facetas só como filtro positivo:
+`false` quer dizer "o provider não declarou", nunca "o modelo não faz"
+([ADR 0051](../adr/0051-facetas-de-capability-e-curadoria-por-uso.md)).
+
+:::caution Isto NÃO cobre "melhor para código"
+Nenhum catálogo de provider publica para que um modelo serve. Isso é curadoria
+de quem opera e vive em `workspace_models.uses`, por workspace
+([RN-057](../business-rules.md#rn-057)) — não é capability, e derivá-la do nome
+do modelo seria palpite vestido de dado.
+:::
 
 <!-- BEGIN:GENERATED:providers-capabilities -->
 
@@ -154,6 +185,24 @@ provider: nome, preço, capabilities e disponibilidade, iguais para todo mundo.
 **Ausência de linha em `workspace_models` É o desligado.** Não existe estado
 "nunca decidido" separado, e é assim que a RN-043 continua valendo sem coluna
 nenhuma que o sync possa atropelar.
+
+### O terceiro eixo: para que o workspace usa o modelo
+
+`workspace_models.uses` guarda a curadoria por USO — `codigo`, `documentacao`,
+`analise`, `imagem`, `conversa` —, vocabulário fechado em
+`apps/api/src/domain/llm/model-uses.ts`. É o que nenhum catálogo publica: o
+provider declara capability, mas qual modelo rende no código **deste** time só
+se descobre usando.
+
+Ele não se mistura com `is_active`:
+
+- marcar uso **não liga** o modelo — a linha nova nasce com `is_active = false`
+  explícito, contra o DEFAULT `true` da coluna;
+- trocar o uso **não desliga** o que estava ligado;
+- a lista **substitui** a anterior (lista vazia é como se desmarca tudo).
+
+Rota: `POST /workspaces/:workspaceId/models/uses`, `owner`
+([RN-057](../business-rules.md#rn-057)).
 
 ### As três regras da reconciliação
 

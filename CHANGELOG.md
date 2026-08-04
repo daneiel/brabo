@@ -40,6 +40,23 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api,web**: o catálogo passa a saber **quais modelos leem imagem, quais
+  geram imagem e quais fazem thinking**, e a tela filtra por isso. O sync nunca
+  consultava o provider sobre modalidade — lia `supports_vision` do que já
+  estava gravado, que tinha nascido `false` —, então os 338 modelos do primeiro
+  sync real do OpenRouter ficaram todos sem vision, incluindo os 181 que o
+  próprio provider declara multimodais. Aceitar imagem e **produzir** imagem
+  viraram eixos distintos: quem lê diagrama e quem desenha resolvem problemas
+  diferentes. Modalidade que o provider não declara continua omitida em vez de
+  virar `false` — silêncio não apaga o que estava lá (ADR 0051)
+- **api,web**: **curadoria por uso** — você marca para que este workspace usa
+  cada modelo (código, documentação, análise, imagem, conversa) e filtra o
+  catálogo por isso. Nenhum provider publica "bom para código"; isso é opinião
+  de quem opera, então vale só no seu workspace, como toda curadoria desde o
+  ADR 0049. Marcar uso **não liga** o modelo no seletor, e trocar o uso não
+  desliga o que já estava ligado — os dois eixos não se misturam
+- **web**: um filtro que zera a lista deixa de ser confundido com catálogo
+  vazio: antes a tela mandava cadastrar uma credencial que já existia
 - **web**: a aba Sessões passa a somar as **aprovações de cada sessão** — o que
   ainda aguarda você, o que você já decidiu e o que a política auto-aprovou —,
   além do total do projeto. Tudo o que existia vinha de `usePendingActions`,

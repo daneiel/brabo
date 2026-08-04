@@ -3,15 +3,24 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   listCredentials,
   listModelCatalog,
+  setModelUses,
   setModelsActive,
   syncModelCatalog,
 } from '../lib/api-client';
-import type { ModelComCuradoria, ResultadoDoSync } from '../lib/api-types';
+import type {
+  ModelComCuradoria,
+  ResultadoDoSync,
+  UsoDeModelo,
+} from '../lib/api-types';
 import {
+  FACETAS,
   ROTULO_DO_PROVIDER,
+  ROTULO_DO_USO,
+  USOS_DE_MODELO,
   agruparModelos,
   formatarJanela,
   formatarPreco,
+  type Faceta,
 } from '../lib/models';
 import { Alert } from './ui/Alert';
 import { ChevronDownIcon, ChevronRightIcon } from './ui/icons';
@@ -49,6 +58,37 @@ export function ModelCatalogSection({ workspaceId }: { workspaceId: string }) {
   const [subgruposAbertos, setSubgruposAbertos] = useState<Set<string>>(
     new Set(),
   );
+  /**
+   * As facetas exigidas. Nascem vazias: o catálogo inteiro é o default, e um
+   * filtro ligado por conta própria esconderia modelo sem o usuário ter pedido
+   * — que é o mesmo defeito do modelo que some da lista.
+   */
+  const [facetas, setFacetas] = useState<Set<Faceta>>(new Set());
+  /** Filtro pelo uso que ESTE workspace marcou — o outro eixo da busca. */
+  const [usosFiltrados, setUsosFiltrados] = useState<Set<UsoDeModelo>>(
+    new Set(),
+  );
+  /** Os usos que a barra de lote vai APLICAR (substituindo) nos marcados. */
+  const [usosDoLote, setUsosDoLote] = useState<Set<UsoDeModelo>>(new Set());
+
+  function alternarNoSet<T>(
+    set: React.Dispatch<React.SetStateAction<Set<T>>>,
+    valor: T,
+  ) {
+    set((atual) => {
+      const proximo = new Set(atual);
+      if (!proximo.delete(valor)) proximo.add(valor);
+      return proximo;
+    });
+  }
+
+  function alternarFaceta(id: Faceta) {
+    setFacetas((atual) => {
+      const proximo = new Set(atual);
+      if (!proximo.delete(id)) proximo.add(id);
+      return proximo;
+    });
+  }
 
   function alternarGrupo(kind: string) {
     setGruposFechados((atual) => {
@@ -72,9 +112,26 @@ export function ModelCatalogSection({ workspaceId }: { workspaceId: string }) {
   });
 
   const grupos = useMemo(
-    () => (catalogo ? agruparModelos(catalogo) : []),
+    () =>
+      catalogo
+        ? agruparModelos(catalogo, {
+            facetas: [...facetas],
+            usos: [...usosFiltrados],
+          })
+        : [],
+    [catalogo, facetas, usosFiltrados],
+  );
+
+  /** O total sem filtro, para dizer quanto o filtro escondeu em vez de só sumir. */
+  const totalSemFiltro = useMemo(
+    () =>
+      catalogo
+        ? agruparModelos(catalogo).reduce((n, g) => n + g.modelos.length, 0)
+        : 0,
     [catalogo],
   );
+  const totalVisivel = grupos.reduce((n, g) => n + g.modelos.length, 0);
+  const filtrando = facetas.size > 0 || usosFiltrados.size > 0;
 
   const todosOsUpstreams = grupos.flatMap((g) =>
     (g.subgrupos ?? []).map((s) => s.upstream),
@@ -164,6 +221,22 @@ export function ModelCatalogSection({ workspaceId }: { workspaceId: string }) {
       showToast({ title: 'Não foi possível salvar', tone: 'danger' }),
   });
 
+  const marcarUsos = useMutation({
+    mutationFn: () =>
+      setModelUses(workspaceId, {
+        modelIds: [...marcados],
+        uses: [...usosDoLote],
+      }),
+    onSuccess: () => {
+      invalidar();
+      setMarcados(new Set());
+      setUsosDoLote(new Set());
+      showToast({ title: 'Usos atualizados', tone: 'success' });
+    },
+    onError: () =>
+      showToast({ title: 'Não foi possível salvar', tone: 'danger' }),
+  });
+
   function alternar(id: string) {
     setMarcados((atual) => {
       const proximo = new Set(atual);
@@ -197,6 +270,66 @@ export function ModelCatalogSection({ workspaceId }: { workspaceId: string }) {
         </div>
       </div>
 
+      {totalSemFiltro > 0 && (
+        <div className={styles.facetas}>
+          {FACETAS.map((f) => (
+            <button
+              key={f.id}
+              type="button"
+              title={f.ajuda}
+              aria-pressed={facetas.has(f.id)}
+              className={[
+                styles.faceta,
+                facetas.has(f.id) && styles.facetaLigada,
+              ]
+                .filter(Boolean)
+                .join(' ')}
+              onClick={() => alternarFaceta(f.id)}
+            >
+              {f.rotulo}
+            </button>
+          ))}
+          {/* O outro eixo: capability é o que o provider PROVA, uso é o que
+              este workspace decidiu. Separados por um divisor porque
+              confundi-los é justamente o erro que o ADR 0051 evita. */}
+          <span className={styles.divisorDeFiltro} aria-hidden="true" />
+          {USOS_DE_MODELO.map((u) => (
+            <button
+              key={u}
+              type="button"
+              title={`Modelos que este workspace marcou como "${ROTULO_DO_USO[u]}"`}
+              aria-pressed={usosFiltrados.has(u)}
+              className={[
+                styles.faceta,
+                styles.facetaDeUso,
+                usosFiltrados.has(u) && styles.facetaLigada,
+              ]
+                .filter(Boolean)
+                .join(' ')}
+              onClick={() => alternarNoSet(setUsosFiltrados, u)}
+            >
+              {ROTULO_DO_USO[u]}
+            </button>
+          ))}
+          {/* Sem esta contagem, um filtro que zera a lista é indistinguível de
+              um catálogo vazio — e a saída (desligar a faceta) fica escondida. */}
+          {filtrando && (
+            <span className={styles.facetaContagem}>
+              {totalVisivel} de {totalSemFiltro}
+            </span>
+          )}
+        </div>
+      )}
+
+      {filtrando && totalVisivel === 0 && (
+        <Alert tone="accent">
+          Nenhum modelo atende a tudo que está marcado. Capability não declarada
+          pelo provider conta como ausente, e uso é o que{' '}
+          <strong>este workspace</strong> marcou — desligue um filtro para ver o
+          resto.
+        </Alert>
+      )}
+
       {semCatalogo.length > 0 && (
         <Alert tone="warning">
           Você tem credencial de{' '}
@@ -226,10 +359,43 @@ export function ModelCatalogSection({ workspaceId }: { workspaceId: string }) {
           >
             Desativar
           </Button>
+          <span className={styles.divisorDeFiltro} aria-hidden="true" />
+          {/* Marcar uso é operação SEPARADA de ativar: os dois eixos não se
+              misturam num botão só, para ninguém ligar um modelo achando que
+              só estava opinando sobre ele. */}
+          <span className={styles.rotuloDoLote}>marcar como</span>
+          {USOS_DE_MODELO.map((u) => (
+            <button
+              key={u}
+              type="button"
+              aria-pressed={usosDoLote.has(u)}
+              className={[
+                styles.faceta,
+                styles.facetaDeUso,
+                usosDoLote.has(u) && styles.facetaLigada,
+              ]
+                .filter(Boolean)
+                .join(' ')}
+              onClick={() => alternarNoSet(setUsosDoLote, u)}
+            >
+              {ROTULO_DO_USO[u]}
+            </button>
+          ))}
+          <Button
+            variant="ghost"
+            onClick={() => marcarUsos.mutate()}
+            disabled={marcarUsos.isPending}
+            title="Substitui os usos dos modelos marcados — não soma aos que já tinham"
+          >
+            {usosDoLote.size > 0 ? 'Aplicar usos' : 'Limpar usos'}
+          </Button>
         </div>
       )}
 
-      {grupos.length === 0 && (
+      {/* Só quando o catálogo é REALMENTE vazio: com filtro ligado, mandar
+          cadastrar credencial seria mentira — a credencial existe e o modelo
+          também, quem escondeu foi a faceta. */}
+      {totalSemFiltro === 0 && (
         <div className={styles.vazio}>
           Nenhum modelo no catálogo. Cadastre uma credencial de provider e
           atualize.
@@ -392,7 +558,19 @@ function LinhaDoCatalogo({
         <Badge tone="muted">{formatarPreco(model)}</Badge>
         {janela && <Badge tone="muted">{janela}</Badge>}
         {model.supportsToolCalling && <Badge tone="accent">tool calling</Badge>}
+        {/* Só o que é VERDADE aparece: um selo "não lê imagem" afirmaria uma
+            ausência que o catálogo não prova. */}
+        {model.supportsVision && <Badge tone="accent">lê imagem</Badge>}
+        {model.supportsReasoning && <Badge tone="accent">thinking</Badge>}
+        {model.generatesImage && <Badge tone="accent">gera imagem</Badge>}
         {model.manualPricing && <Badge tone="muted">preço manual</Badge>}
+        {/* Uso vem depois das capabilities e com tom próprio: uma é o que o
+            provider prova, a outra é o que este workspace decidiu. */}
+        {model.uses.map((u) => (
+          <Badge key={u} tone="warning">
+            {ROTULO_DO_USO[u]}
+          </Badge>
+        ))}
       </span>
     </label>
   );

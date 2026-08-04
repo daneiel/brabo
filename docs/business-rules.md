@@ -925,6 +925,73 @@ Três regras derivadas:
   (`ativar num workspace NÃO liga o modelo no vizinho`)
 - **Origem:** [ADR 0049](adr/0049-curadoria-de-modelo-por-workspace.md)
 
+### RN-056 — Faceta de capability vem do provider; silêncio preserva o que estava {#rn-056}
+
+`supports_vision`, `supports_reasoning` e `generates_image` são **fato do
+provider**, não opinião: saem do catálogo remoto no sync, com o mesmo fallback
+de `supports_tool_calling` — remoto, depois local, depois `false`.
+
+No OpenRouter (o único que publica isso hoje) as três saem de:
+`architecture.input_modalities` contém `image`,
+`supported_parameters` contém `reasoning`, e
+`architecture.output_modalities` contém `image`. Aceitar imagem e **produzir**
+imagem são eixos distintos: fundi-los mandaria o usuário para o modelo errado.
+
+Antes, o sync lia `supportsVision` do que já estava GRAVADO e nunca consultava
+o remoto — a coluna nascia `false` e não havia caminho para virar verdadeira.
+Os 338 modelos do primeiro sync real ficaram todos `false`, incluindo 181 que o
+provider declara como multimodais.
+
+**Ausência de declaração não é declaração de ausência**
+([ADR 0041](adr/0041-base-openai-compativel-e-contrato-de-llm-providers.md)): o
+parser OMITE o campo quando o provider se cala, e `undefined` preserva o valor
+local. Por isso a tela usa as facetas só como filtro POSITIVO e nunca escreve
+"não lê imagem" — `false` aqui quer dizer "o provider não declarou".
+
+- **Onde:** `apps/api/src/infrastructure/llm/openrouter-provider.ts`
+  (`temModalidade`, `parseCatalogoOpenRouter`),
+  `apps/api/src/application/use-cases/llm/sync-model-catalog.use-case.ts`,
+  `apps/api/src/db/schema.ts` (`models`)
+- **Teste:**
+  `test/infrastructure/llm/openrouter-provider.contract.spec.ts`
+  (`modalidade não declarada OMITE o campo em vez de afirmar false`);
+  `test/application/use-cases/llm/sync-model-catalog.use-case.spec.ts`
+  (`catálogo que se cala sobre modalidade preserva a faceta gravada`)
+- **Origem:** [ADR 0051](adr/0051-facetas-de-capability-e-curadoria-por-uso.md)
+
+### RN-057 — "Para que serve" é curadoria do workspace, e marcar uso não liga o modelo {#rn-057}
+
+Nenhum catálogo de provider publica "bom para código". Isso é **opinião de quem
+opera**, descoberta usando — então mora em `workspace_models.uses`, ao lado da
+outra decisão do workspace ([RN-052](#rn-052)), e não em `models`.
+
+Vocabulário FECHADO — `codigo`, `documentacao`, `analise`, `imagem`,
+`conversa` —, com prova de exaustividade em tempo de compilação nos dois lados.
+Texto livre daria `code`, `coding` e `código` no mesmo filtro em uma semana.
+
+Duas regras que mantêm os eixos separados:
+
+1. **Marcar uso não liga o modelo.** `workspace_models.is_active` tem DEFAULT
+   `true`, então a linha criada por uma marcação de uso é inserida com
+   `is_active = false` explícito. Sem isso, opinar sobre um modelo o autorizaria
+   a gastar, contra a [RN-043](#rn-043).
+2. **Trocar o uso não desliga o que estava ligado.** `is_active` fica fora do
+   `SET` do `ON CONFLICT`.
+
+A lista de usos **substitui** a anterior, não soma: lista vazia é como se
+desmarca tudo, e é um estado legítimo — "ninguém opinou" não é "não serve".
+
+- **Onde:** `apps/api/src/domain/llm/model-uses.ts`,
+  `apps/api/src/db/schema.ts` (`workspace_models.uses`),
+  `apps/api/src/infrastructure/persistence/drizzle/workspace-model.repository.ts`
+  (`setUses`),
+  `apps/api/src/application/use-cases/llm/set-model-uses.use-case.ts`
+- **Teste:** `test/application/use-cases/llm/set-model-uses.use-case.spec.ts`
+  (`marcar uso NÃO liga o modelo — a linha nova nasce inativa`,
+  `trocar o uso não desliga o que já estava ligado`,
+  `o uso vale só neste workspace`)
+- **Origem:** [ADR 0051](adr/0051-facetas-de-capability-e-curadoria-por-uso.md)
+
 ### RN-038 — Agente contado no resumo do workspace = gastou tokens este mês {#rn-038}
 
 O resumo do dashboard de projetos ("N projetos ativos · M agentes · gasto

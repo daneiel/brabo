@@ -4,6 +4,7 @@ import { childSpan, logger, newTraceContext } from './logger';
 import type { LlmCredentialProvider } from './models';
 import type {
   AgentAutonomyRule,
+  UsoDeModelo,
   AgentTokenUsage,
   ActionType,
   Architecture,
@@ -569,6 +570,15 @@ export const setModelsActive = (
     `/workspaces/${workspaceId}/models/activate`,
     input,
   );
+
+/**
+ * A curadoria por USO — substitui a lista, não soma (ADR 0051). Lista vazia é
+ * como se desmarca tudo, e por isso não há rota de "remover uso".
+ */
+export const setModelUses = (
+  workspaceId: string,
+  input: { modelIds: string[]; uses: UsoDeModelo[] },
+) => post<ModelComCuradoria[]>(`/workspaces/${workspaceId}/models/uses`, input);
 
 export const syncModelCatalog = (workspaceId: string) =>
   post<SyncModelCatalogResult>(`/workspaces/${workspaceId}/models/sync`, {});

@@ -12,12 +12,14 @@ const listModelCatalog = vi.fn();
 const setModelsActive = vi.fn();
 const syncModelCatalog = vi.fn();
 const listCredentials = vi.fn();
+const setModelUses = vi.fn();
 
 vi.mock('../lib/api-client', () => ({
   listModelCatalog: (...args: unknown[]) => listModelCatalog(...args),
   setModelsActive: (...args: unknown[]) => setModelsActive(...args),
   syncModelCatalog: (...args: unknown[]) => syncModelCatalog(...args),
   listCredentials: (...args: unknown[]) => listCredentials(...args),
+  setModelUses: (...args: unknown[]) => setModelUses(...args),
 }));
 
 function model(
@@ -34,8 +36,11 @@ function model(
     supportsToolCalling: true,
     supportsStreaming: true,
     supportsVision: false,
+    supportsReasoning: false,
+    generatesImage: false,
     manualPricing: true,
     isActive: false,
+    uses: [],
     availability: 'available',
     lastSeenAt: '2026-08-01T00:00:00.000Z',
     ...over,
@@ -63,6 +68,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   listModelCatalog.mockResolvedValue(catalogo([model()]));
   setModelsActive.mockResolvedValue([]);
+  setModelUses.mockResolvedValue([]);
   syncModelCatalog.mockResolvedValue({ porProvider: [] });
   listCredentials.mockResolvedValue([]);
 });
@@ -337,3 +343,150 @@ describe('colapso de grupo e "minimizar tudo"', () => {
   });
 });
 
+
+/**
+ * Facetas de capability (ADR 0051).
+ *
+ * Um catálogo de 338 linhas não se navega por rolagem: a pergunta real é "qual
+ * modelo serve para ESTA tarefa". As facetas respondem isso com o que o
+ * provider PROVA — e nada além disso.
+ */
+describe('filtro por faceta', () => {
+  const catalogoRico = {
+    local: {},
+    cloud: {
+      openai: [
+        model({ id: 'm-ve', name: 've', displayName: 'Vê imagem', supportsVision: true }),
+        model({
+          id: 'm-pensa',
+          name: 'pensa',
+          displayName: 'Pensa',
+          supportsReasoning: true,
+        }),
+        model({
+          id: 'm-ambos',
+          name: 'ambos',
+          displayName: 'Vê e pensa',
+          supportsVision: true,
+          supportsReasoning: true,
+        }),
+      ],
+    },
+  } as CatalogoPorCategoria;
+
+  it('nasce sem filtro — o catálogo inteiro é o default', async () => {
+    listModelCatalog.mockResolvedValue(catalogoRico);
+    montar();
+
+    expect(await screen.findByText('Vê imagem')).toBeTruthy();
+    expect(screen.getByText('Pensa')).toBeTruthy();
+  });
+
+  it('marcar duas facetas exige AS DUAS, não uma ou outra', async () => {
+    listModelCatalog.mockResolvedValue(catalogoRico);
+    montar();
+    await screen.findByText('Vê imagem');
+
+    fireEvent.click(screen.getByRole('button', { name: 'lê imagem' }));
+    fireEvent.click(screen.getByRole('button', { name: 'thinking' }));
+
+    expect(screen.getByText('Vê e pensa')).toBeTruthy();
+    expect(screen.queryByText('Vê imagem')).toBeNull();
+    expect(screen.queryByText('Pensa')).toBeNull();
+  });
+
+  /** Filtro que zera a lista tem de ser distinguível de catálogo vazio. */
+  it('quando nada sobra, explica que foi o filtro e como sair', async () => {
+    listModelCatalog.mockResolvedValue(catalogoRico);
+    montar();
+    await screen.findByText('Vê imagem');
+
+    fireEvent.click(screen.getByRole('button', { name: 'gera imagem' }));
+
+    expect(screen.getByText(/desligue um filtro/i)).toBeTruthy();
+    expect(screen.queryByText(/Nenhum modelo no catálogo\./)).toBeNull();
+  });
+
+  it('o selo só afirma o que é verdade — nunca a ausência', async () => {
+    listModelCatalog.mockResolvedValue(
+      catalogo([model({ supportsVision: true })]),
+    );
+    montar();
+    await screen.findByText('GPT-4o mini');
+
+    // O selo existe uma vez só na linha; o chip de filtro tem o mesmo texto,
+    // então a busca é por papel para não confundir os dois.
+    expect(screen.getAllByText('lê imagem').length).toBeGreaterThan(0);
+    expect(screen.queryByText(/não lê imagem|não gera imagem/)).toBeNull();
+  });
+});
+
+/**
+ * Curadoria por USO (ADR 0051) — o eixo que o time decide, ao lado do que o
+ * provider prova.
+ */
+describe('curadoria por uso', () => {
+  it('o selo mostra o uso que o workspace marcou', async () => {
+    listModelCatalog.mockResolvedValue(catalogo([model({ uses: ['codigo'] })]));
+    montar();
+    await screen.findByText('GPT-4o mini');
+
+    // Duas ocorrências: o chip de filtro e o selo da linha — a lista tem uma só.
+    expect(screen.getAllByText('código')).toHaveLength(2);
+  });
+
+  it('marcar em lote SUBSTITUI os usos dos modelos selecionados', async () => {
+    montar();
+    await screen.findByText('GPT-4o mini');
+
+    fireEvent.click(screen.getByRole('checkbox'));
+    // O chip da barra de lote, não o do filtro: ambos existem, e o de lote só
+    // aparece depois de marcar uma linha.
+    const chips = screen.getAllByRole('button', { name: 'análise' });
+    fireEvent.click(chips[chips.length - 1]);
+    fireEvent.click(screen.getByRole('button', { name: 'Aplicar usos' }));
+
+    await waitFor(() =>
+      expect(setModelUses).toHaveBeenCalledWith('ws-1', {
+        modelIds: ['m-1'],
+        uses: ['analise'],
+      }),
+    );
+  });
+
+  /** Sem uso escolhido, a mesma rota LIMPA — é como se desmarca tudo. */
+  it('sem uso escolhido o botão diz que vai limpar, e limpa', async () => {
+    listModelCatalog.mockResolvedValue(catalogo([model({ uses: ['codigo'] })]));
+    montar();
+    await screen.findByText('GPT-4o mini');
+
+    fireEvent.click(screen.getByRole('checkbox'));
+    fireEvent.click(screen.getByRole('button', { name: 'Limpar usos' }));
+
+    await waitFor(() =>
+      expect(setModelUses).toHaveBeenCalledWith('ws-1', {
+        modelIds: ['m-1'],
+        uses: [],
+      }),
+    );
+  });
+
+  it('filtrar por uso esconde quem não foi marcado', async () => {
+    listModelCatalog.mockResolvedValue({
+      local: {},
+      cloud: {
+        openai: [
+          model({ id: 'm-cod', name: 'cod', displayName: 'O de código', uses: ['codigo'] }),
+          model({ id: 'm-nada', name: 'nada', displayName: 'Sem opinião' }),
+        ],
+      },
+    } as CatalogoPorCategoria);
+    montar();
+    await screen.findByText('O de código');
+
+    fireEvent.click(screen.getByRole('button', { name: 'código' }));
+
+    expect(screen.getByText('O de código')).toBeTruthy();
+    expect(screen.queryByText('Sem opinião')).toBeNull();
+  });
+});
