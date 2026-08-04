@@ -16,8 +16,11 @@ defmodule Engine.Harness.Tools.EmitArtifact do
   def spec do
     %{
       name: "emit_artifact",
-      description:
-        "Emite um artefato tipado no event log. Tipos: #{Enum.join(ArtifactSchemas.known(), ", ")}.",
+      # A descrição NOMEIA os campos de cada tipo, em inglês e com exemplo. A
+      # versão anterior dizia só "emite um artefato tipado" e listava os tipos:
+      # o modelo tinha de adivinhar as chaves, e adivinhou no idioma da
+      # conversa (`titulo`/`descricao`). O payload era recusado em silêncio.
+      description: descricao(),
       parameters: %{
         "type" => "object",
         "properties" => %{
@@ -46,6 +49,32 @@ defmodule Engine.Harness.Tools.EmitArtifact do
   end
 
   def run(_args, _ctx), do: {:error, "emit_artifact exige `type` e `payload` (objeto)"}
+
+  defp descricao do
+    tipos =
+      Enum.map_join(ArtifactSchemas.known(), "\n", fn tipo ->
+        campos = Enum.map_join(ArtifactSchemas.required(tipo), ", ", &"`#{&1}`")
+        "- `#{tipo}` — payload EXIGE: #{campos}"
+      end)
+
+    """
+    Emite um artefato tipado no event log.
+
+    As chaves do payload são estas, em INGLÊS e exatamente como escritas —
+    payload com chave diferente é RECUSADO:
+
+    #{tipos}
+
+    Exemplo de chamada válida:
+    {"type": "business_rule", "payload": {"title": "Saudação com nome",
+    "description": "Quem chama pode se identificar e recebe a saudação com o
+    próprio nome.", "origin": [2, 6]}}
+
+    `origin` é a rastreabilidade da regra até a conversa: uma LISTA NÃO-VAZIA
+    com os números (`seq`) das mensagens desta sessão que originaram a regra.
+    Texto livre é RECUSADO — precisa ser lista.
+    """
+  end
 
   defp emit(type, payload, ctx) do
     case ArtifactSchemas.validate(type, payload) do

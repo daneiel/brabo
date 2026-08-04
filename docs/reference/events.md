@@ -348,7 +348,7 @@ Extraído dos pontos de emissão: **75 identificadores**, todos descritos acima.
 - `session.created` <sub>(apps/api/src/application/use-cases/sessions/create-session.use-case.ts)</sub>
 - `session.draining` <sub>(apps/engine/lib/engine/shutdown.ex)</sub>
 - `tool.call` <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub>
-- `tool.result` <sub>(apps/engine/lib/engine/harness/hooks/event_log.ex)</sub>
+- `tool.result` <sub>(apps/engine/lib/engine/agents/criativo_server.ex)</sub>
 <!-- END:GENERATED:eventos-inventario -->
 
 ---
