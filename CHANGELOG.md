@@ -77,6 +77,19 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **api**: o bootstrap de Gitflow morria no primeiro passo em **todo projeto
+  GitHub novo**. Repositório recém-criado não tem commit nenhum, e aí a Git
+  Data API inteira do GitHub responde `409 Git Repository is empty` — o
+  provider tratava só `404` e nunca alcançava o próprio caminho de "primeiro
+  commit" que já tinha escrito. Agora o commit inicial sai pela Contents API,
+  que é a única que funciona em repo vazio. O backend falso dos testes também
+  foi corrigido: ele respondia `404` onde o GitHub responde `409`, e era por
+  isso que a suite ficava verde enquanto o produto quebrava
+- **web**: o wizard avisa, ao escolher **repositório privado no GitHub**, que o
+  plano gratuito não aceita proteção de branch — antes a limitação só aparecia
+  no último passo do bootstrap, com o repositório já criado e a mensagem crua
+  da API na tela
+
 - **ci**: a PR de changelog que o release abre passa a trazer junto a versão
   anunciada no `README.md`. Sem isso, o check de versão (novo nesta rodada)
   reprovaria toda PR de release — que é aberta pelo bot e só toca o CHANGELOG,
