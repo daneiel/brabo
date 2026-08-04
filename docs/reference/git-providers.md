@@ -81,7 +81,7 @@ domínio nunca vê um 422 do GitHub ou um `fatal:` do git:
 | `GitBranchAlreadyExistsError` | criar branch que já existe |
 | `GitPermissionDeniedError` | credencial válida, permissão insuficiente |
 | `GitNotSupportedError` | operação fora das `capabilities` daquele provider |
-| `GitCredentialConnectionTestFailedError` | teste de conexão da credencial falhou |
+| `GitCredentialConnectionTestFailedError` | teste de conexão da credencial falhou — **não** chega a HTTP: `TestStoredCredentialUseCase` o captura e devolve `recusado` ([ADR 0050](../adr/0050-credencial-sempre-cifrada-verificacao-explicita.md)) |
 | `GitProviderAuthError` | credencial inválida ou expirada |
 | `InvalidOauthStateError` | `state` do OAuth não confere |
 

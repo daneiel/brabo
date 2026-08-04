@@ -438,6 +438,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/budgets-controller-get-project-agent-costs",
+          label: "Quebra o gasto do projeto por agente, nos últimos 30 dias",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/budgets-controller-get-project-budget",
           label: "Lê o orçamento do projeto e o quanto já foi gasto",
           className: "api-method get",
@@ -542,6 +548,12 @@ const sidebar: SidebarsConfig = {
           type: "doc",
           id: "docs/reference/api/models-controller-sync",
           label: "Força agora o sync de catálogo que o job periódico faz",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/models-controller-uses",
+          label: "Marca para que o workspace usa cada modelo (lote)",
           className: "api-method post",
         },
       ],
@@ -822,8 +834,14 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/credentials-controller-test",
+          label: "Verifica a credencial JÁ gravada contra o provider",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/git-credentials-controller-create",
-          label: "Registra um token de git depois de TESTAR a conexão",
+          label: "Registra um token de git (cifrado, sem testar)",
           className: "api-method post",
         },
       ],

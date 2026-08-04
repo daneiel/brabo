@@ -26,7 +26,10 @@ import { fileURLToPath } from 'node:url';
 const AQUI = dirname(fileURLToPath(import.meta.url));
 const RAIZ_WEB = resolve(AQUI, '..');
 
-const indexCss = readFileSync(resolve(RAIZ_WEB, 'src/index.css'), 'utf8');
+// As `@font-face` moram em `src/fonts.css` desde que o design-sync passou a
+// montar o bundle a partir do `index.css` — um `url('/fonts/…')` derruba o
+// esbuild. O `index.css` segue com tokens, reset e keyframes.
+const indexCss = readFileSync(resolve(RAIZ_WEB, 'src/fonts.css'), 'utf8');
 const indexHtml = readFileSync(resolve(RAIZ_WEB, 'index.html'), 'utf8');
 
 /** Os blocos `@font-face` do index.css, um objeto por bloco. */
@@ -117,5 +120,16 @@ describe('nada volta a depender de CDN de fonte', () => {
     for (const { url } of blocos) {
       expect(url).toMatch(/^\/fonts\//);
     }
+  });
+
+  /**
+   * A folha só vale se a app a carregar. Separar as `@font-face` do
+   * `index.css` foi o que quebrou este teste uma vez; sem esta asserção, um
+   * import esquecido no `main.tsx` deixaria as três famílias declaradas e
+   * nunca aplicadas — o mesmo sintoma do ADR 0036, por outra porta.
+   */
+  it('o main.tsx importa a folha de fontes', () => {
+    const main = readFileSync(resolve(RAIZ_WEB, 'src/main.tsx'), 'utf8');
+    expect(main).toContain("import './fonts.css'");
   });
 });

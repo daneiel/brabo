@@ -1323,6 +1323,12 @@ Se o provider expõe `GET /models`, **não semeie o catálogo inteiro** — deix
 sync descobrir. Ele grava os modelos desativados, e o owner ativa o que
 interessa pela tela de curadoria ([RN-043](business-rules.md#rn-043)).
 
+Se o catálogo do provider publicar **modalidade** (aceita imagem, gera imagem)
+ou `reasoning`, emita-as no `parseCatalogo` dele — e só quando a doc oficial
+disser. Campo que o provider não declara fica **omitido**, nunca `false`:
+`undefined` preserva o que já estava gravado, e `false` apagaria curadoria feita
+à mão ([RN-056](business-rules.md#rn-056)).
+
 ### 6. Verifique com credencial real
 
 ```bash

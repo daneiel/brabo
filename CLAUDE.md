@@ -38,7 +38,7 @@ e pipeline de aprovação de ações com autoridade final do usuário.
   pr-police, approval-ladder com os dois modos, promote/tag-release
   com versão calculada e âncora por árvore, backmerge gate com
   retropropagação automática, rulesets versionados. Esteira exercitada
-  de ponta a ponta (v0.1.0 → v0.2.0) e cadeia de hotfix validada por
+  de ponta a ponta (v0.1.0 → v0.2.0) e a cadeia de hotfix validada por
   execução real.
 - FASE 7 — CONCLUÍDA: auth first-party substituindo o Keycloak —
   argon2id, access Ed25519, rotação de refresh com revogação de
@@ -78,10 +78,9 @@ e pipeline de aprovação de ações com autoridade final do usuário.
   docs/explanation/primeiro-dogfooding.md — os 17 achados com
   arquivo:linha são reais; a metade QUANTITATIVA (restarts,
   intervenções, custo) ficou como `não medido`, porque a tabela de
-  observação nunca foi preenchida. Os três P1 de operabilidade
-  (adoção de repo existente, reagendamento do dev agent, promoção de
-  story sem passo humano) foram fechados pela Fase 12. Os outros 14
-  seguem abertos e listados na colheita — não corrija de passagem.
+  observação nunca foi preenchida. Os três P1 de operabilidade foram
+  fechados pela Fase 12. Os outros 14 seguem abertos e listados na
+  colheita — não corrija de passagem.
 - FASE 11 — CONCLUÍDA: os seis providers da Fase 9b como config sobre
   a base, cada um investigado do zero contra a doc oficial (proibido
   herdar quirk); LLM_PROVIDER_NAMES de 3 para 9; DTO de credencial e
@@ -89,9 +88,7 @@ e pipeline de aprovação de ações com autoridade final do usuário.
   declarada quando provada, com duas reversões ao vivo (DeepInfra e
   Vultr); único hook novo na base (`parseErrorFrame`, +31 linhas)
   provado necessário pelo OpenRouter (ADR 0043).
-  Pendente: aceite com credencial real dos seis smokes, gated por
-  `<PROVIDER>_TEST_KEY` — depende de chaves do usuário, rastreado como
-  item de backlog, não bloqueia fase.
+  Pendência dos smokes com credencial real: absorvida pela FASE 13.
 - FASE 12 — CONCLUÍDA: operabilidade pós-dogfooding, os três achados
   P1 fechados e provados numa execução única (ADR 0047).
   12a — adoção de repositório existente: rota própria, `getRepo`
@@ -110,18 +107,64 @@ e pipeline de aprovação de ações com autoridade final do usuário.
   estado, promoção reusando o TransitionStoryUseCase (código morto do
   achado #13) e recusa devolvendo ao PO com o motivo fixado na sessão
   dele (ADR 0046, RN-048).
-  12d — o Noop entrou na máquina de estados da 12b (ele processava UMA
-  task e parava: o achado #10 vivia dentro do próprio instrumento de
-  validação); script `pnpm --filter api validacao:fase-12` que sai != 0
-  quando o critério não fecha e extrai a evidência do banco; colheita
-  da Fase 10 escrita; docmap cobrindo engine/dev e engine/agents, que
-  não eram observados por regra nenhuma.
-  Pendente: rodar a validação e colar a tabela de event ids em
-  docs/explanation/validacao-fase-12.md (marcado com TODO(humano) no
-  próprio arquivo). A validação roda com provider Local e NoopDevAgent
-  — NÃO prova GitHub remoto nem o julgamento dos gates por LLM, e isso
-  está declarado no documento.
+  12d — o Noop entrou na máquina de estados da 12b; script
+  `pnpm --filter api validacao:fase-12` que sai != 0 quando o critério
+  não fecha e extrai a evidência do banco; colheita da Fase 10
+  escrita; docmap cobrindo engine/dev e engine/agents.
+  Pendências (execução da validação; limites Local/Noop declarados):
+  absorvidas pela FASE 13.
 - Não refatore o que está pronto sem pedido explícito.
+
+## Escopo da FASE 13 (ativa — provar de verdade e triar os achados)
+Nenhuma feature nova. A fase fecha as pendências declaradas, prova o
+que a validação Local/Noop declaradamente não prova, e transforma os
+14 achados abertos em plano priorizado. Lição incorporada: a tabela
+manual da Fase 10 nunca foi preenchida — nesta fase TODA métrica é
+extraída por script do event log/token_usage, nunca anotada à mão.
+
+### 13a — Fechar as pendências declaradas
+1. Rodar `pnpm --filter api validacao:fase-12` e preencher a tabela de
+   event ids em docs/explanation/validacao-fase-12.md (o TODO(humano)
+   do próprio arquivo sai).
+2. Smokes com credencial real da Fase 11: rodar os que houver
+   `<PROVIDER>_TEST_KEY` exportada (custo em centavos, autorização
+   explícita do usuário antes); resultado datado — quais rodaram,
+   quais pularam e por quê — registrado em
+   docs/explanation/aceite-providers.md (ADR 0043 não é editado; o
+   documento o referencia).
+
+### 13b — Validação REAL: GitHub remoto + gates por LLM, MEDIDA
+3. Repetir o roteiro da validação num projeto ADOTADO do fork via
+   GithubProvider remoto, DevAgent real (modelo de API forte) e gates
+   por LLM (nunca 7B local no passo semântico — ADR 0020): adoção sem
+   seed → promoção manual de UMA story → dev implementa → PR remota →
+   gates com julgamento real → merge manual do usuário. Zero restart
+   do engine.
+4. Medição por script (scripts/ci/ ou apps/api/scripts): extrai do
+   event log e do token_usage a tabela que a Fase 10 deixou como "não
+   medido" — restarts, intervenções (proposed_actions decididas pelo
+   usuário, com tipo), voltas de gate, custo por task e por agente,
+   duração por etapa. O script é reutilizável: vira o instrumento
+   padrão de qualquer dogfooding futuro.
+5. Resultado em docs/explanation/validacao-real.md com event ids e a
+   tabela extraída; achado novo vai para a triagem da 13c como item,
+   nunca como fix (a disciplina de sempre).
+
+### 13c — Triagem dos 14 achados abertos
+6. Sessão de triagem: ler docs/explanation/primeiro-dogfooding.md e
+   classificar os 14 achados em P1/P2/P3 com proposta de agrupamento
+   em fases coesas (por tema e dependência entre eles), custo relativo
+   estimado (P/M/G) e risco de esperar. A saída é PROPOSTA — a
+   decisão de prioridade é do usuário.
+7. Consolidar o backlog completo num documento vivo
+   (docs/explanation/backlog.md ou equivalente): achados triados +
+   itens antigos — aparato genérico de áreas e budget por área
+   (ADR 0038), Dev Lead e áreas via module_map (ADR 0038), handoff
+   manual a agente à escolha, MFA/social/OIDC/federação (ADR 0031),
+   SMTP real no MailSender, deploy (DEPLOY_ENABLED + Environments),
+   volta da rc/rcfix (ADR 0030), modo community do approval-ladder,
+   "N agentes online" no dashboard, preferência de moeda com taxa
+   manual.
 
 ## Stack (decidida — não proponha alternativas)
 - `apps/api`: NestJS 11 + Drizzle ORM + PostgreSQL 16 + pgvector
@@ -174,6 +217,8 @@ e pipeline de aprovação de ações com autoridade final do usuário.
 - Todo desfecho de falha de agente registra a ORIGEM da falha
   (infra | modelo | código | política) — nunca diagnóstico por
   eliminação (lição do ADR 0020).
+- Métrica de execução de agentes é extraída do event log/token_usage
+  por script, nunca anotada manualmente (lição da Fase 10/13).
 - Testes: vitest (api/web/scripts de CI), ExUnit (engine). Nenhuma
   feature sem teste do caminho feliz + 1 caso de falha. Providers de
   git e de LLM validados por suas suites de contrato únicas.
@@ -225,11 +270,8 @@ e pipeline de aprovação de ações com autoridade final do usuário.
 - Não refatorar código de fase concluída sem pedido explícito
 - Não ativar modelo descoberto automaticamente: curadoria manual
   sempre (ADR 0042)
-- Não estender a adoção a migração de dados do repo (issues, PRs
-  históricas) — adoção é acesso + política, nada mais
-- Não transformar o reagendamento em autonomia nova: o pipeline de
-  aprovações continua exatamente como está — o que muda é o agente não
-  morrer entre tasks
-- Não corrigir de passagem os 14 achados abertos do dogfooding
-  (docs/explanation/primeiro-dogfooding.md) — cada um espera a fase que
-  o endereça, e corrigir fora dela apaga a evidência de por que existia
+- Não corrigir de passagem os 14 achados abertos do dogfooding — cada
+  um espera a fase que o endereça, e corrigir fora dela apaga a
+  evidência de por que existia
+- (FASE 13) Nenhuma feature nova e nenhum fix: a fase produz
+  execuções, medições e um plano — achado novo entra na triagem

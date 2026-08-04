@@ -112,7 +112,10 @@ falasse direto com o provedor tornaria o teto de gasto inaplicável.
 A única rota `engine → api` fora de `/internal/sessions/:sessionId/`, porque o
 sync de catálogo não pertence a sessão nem a workspace nenhum: o catálogo é
 GLOBAL — nome, preço, janela e capabilities são fato do provider, iguais para
-todo mundo. O que é por workspace é a **curadoria**, e o sync não a alcança
+todo mundo. Desde o [ADR 0051](../adr/0051-facetas-de-capability-e-curadoria-por-uso.md)
+isso inclui as facetas de modalidade (lê imagem, gera imagem, thinking), que a
+mesma chamada reconcilia a partir do catálogo remoto — modalidade que o
+provider não declara fica preservada, não zerada. O que é por workspace é a **curadoria**, e o sync não a alcança
 ([ADR 0049](../adr/0049-curadoria-de-modelo-por-workspace.md)). Quem
 **agenda** é o engine (`ModelSyncSchedulerWorker`, Oban, com o mesmo idioma de
 worker que se reagenda do `AnamneseSchedulerWorker`); quem tem as credenciais e
