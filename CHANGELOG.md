@@ -2,6 +2,37 @@
 
 Gerado dos conventional commits por `scripts/changelog.mjs`.
 
+## v2.2.0 — 2026-08-04
+
+### Novidades
+
+- **api,web**: facetas de capability lidas do provider e curadoria por uso (e722470b)
+- **web**: catálogo agrupa hub por fabricante, com colapso (88a1169a)
+- **web,api**: Configurações segue o mockup e ganha custo por agente (ba0f2d3c)
+- **api,web**: credencial sempre cifrada; verificar vira ação à parte (99b9fa72)
+
+### Correções
+
+- **web**: fixture do ModelPicker sem as facetas novas quebrava o build (00a23381)
+- **api,docs**: o DTO da resposta do teste de credencial e a contagem de ADR (5021192c)
+- **web**: corpo vazio da api e rolagem da lista de modelos (7be6b29d)
+- **api**: o decorator de tracing perdia listModels e matava o sync de catálogo (429a3228)
+- **api**: o CSRF nascia em /auth e o refresh nunca funcionou no browser (b5430acf)
+
+### Refatorações
+
+- **web**: as @font-face saem do index.css para um arquivo próprio (59b78632)
+
+### Documentação
+
+- o README anuncia a versão de verdade, e o CI passa a cobrar isso (265055c0)
+- CHANGELOG da rodada e o escopo da FASE 13 (5696bdf0)
+- **changelog**: v2.1.0 (becec969)
+
+### Manutenção
+
+- **design-sync**: re-sync do design system — 66 componentes no Claude Design (3c9b6ad8)
+
 ## v2.1.0 — 2026-08-03
 
 ### Novidades
