@@ -258,6 +258,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/internal-sessions-controller-pending-work",
+          label: "A sessão tem trabalho pendente que impede encerrá-la?",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/internal-sessions-controller-proficiency",
           label: "Grava os perfis de proficiência derivados na rodada",
           className: "api-method post",

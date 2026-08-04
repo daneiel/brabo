@@ -204,7 +204,6 @@ defmodule Engine.Agents.CriativoServer do
     })
   end
 
-
   # --- product_brief (server-emitted) ---
 
   defp emit_product_brief(state, summary) do

@@ -954,6 +954,35 @@ políticas para o mesmo problema seriam duas chances de engolir o erro.
   (`ferramenta recusada vira tool.result com erro, e o agente fala`)
 - **Origem:** execução real da FASE 13b
 
+### RN-064 — Heartbeat não encerra sessão com trabalho pendente {#rn-064}
+
+O timeout de heartbeat mede inatividade da **aba**, não do **trabalho**. Antes
+de encerrar, o `SessionServer` pergunta à api se sobrou trabalho
+(`GET /internal/sessions/:id/pending-work`); havendo, reagenda o timeout e
+registra o motivo no log em vez de matar a sessão.
+
+O default são **30 segundos**. Sair da sessão para a aba de Backlog já bastava
+para matá-la — e numa execução real isso prendeu um handoff `offered` para o
+Arquiteto dentro de uma sessão fechada: épico e quatro histórias prontos, e a
+cadeia sem como seguir, porque não existe onde aceitar handoff de sessão morta.
+
+Fechar sessão é sobre o trabalho ter acabado, não sobre quem está olhando.
+
+**A api fora do ar NÃO impede o encerramento**: `{:error, _}` encerra assim
+mesmo, com aviso no log. Trocar sessão órfã por sessão imortal seria trocar um
+defeito por outro.
+
+Hoje "trabalho pendente" é **handoff `offered`**. Task em andamento ficou de
+fora de propósito: o dev agent tem máquina de estados própria (Fase 12b) e
+retém o worktree por conta dele — incluí-la sem um teste que prove a interação
+seria adivinhar.
+
+- **Onde:** `apps/api/src/application/use-cases/sessions/get-session-pending-work.use-case.ts`,
+  `apps/engine/lib/engine/sessions/session_server.ex` (`handle_info(:heartbeat_timeout, …)`)
+- **Teste:** `apps/engine/test/engine/sessions/session_lifecycle_test.exs`
+  (`heartbeat NÃO encerra sessão com trabalho pendente` e o caso oposto)
+- **Origem:** execução real da FASE 13b
+
 ### RN-063 — Encerrar sem produzir é desfecho, não falha {#rn-063}
 
 A Anamnese tem uma ferramenta para dizer **"não há nada a emitir, e este é o

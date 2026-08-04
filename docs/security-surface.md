@@ -170,6 +170,7 @@ o componente `d` da JWK, travado por teste.
 | GET | `/internal/sessions/:sessionId/dev-context` | engine-service |
 | POST | `/internal/sessions/:sessionId/epics` | engine-service |
 | GET | `/internal/sessions/:sessionId/events` | engine-service |
+| GET | `/internal/sessions/:sessionId/pending-work` | engine-service |
 | POST | `/internal/sessions/:sessionId/events` | engine-service |
 | POST | `/internal/sessions/:sessionId/gates/verdict` | engine-service |
 | POST | `/internal/sessions/:sessionId/handoffs` | engine-service |

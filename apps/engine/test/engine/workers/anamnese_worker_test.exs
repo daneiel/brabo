@@ -251,8 +251,7 @@ defmodule Engine.Workers.AnamneseWorkerTest do
 
     # E NÃO narra falha: uma rodada que fez a coisa certa não pode aparecer
     # como falha, senão quem lê o log aprende a ignorar o evento de falha.
-    refute_received {:event_appended, ^project_id, ^session_id,
-                     %{type: "anamnese.run_failed"}}
+    refute_received {:event_appended, ^project_id, ^session_id, %{type: "anamnese.run_failed"}}
   end
 
   test "sem sessão no projeto: não roda (não há onde narrar)", %{
