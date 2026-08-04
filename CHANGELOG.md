@@ -44,6 +44,13 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ## Unreleased
 
+### Correções
+
+- **ci**: a PR de changelog que o release abre passa a trazer junto a versão
+  anunciada no `README.md`. Sem isso, o check de versão (novo nesta rodada)
+  reprovaria toda PR de release — que é aberta pelo bot e só toca o CHANGELOG,
+  então nasceria vermelha esperando uma mão humana que a política não prevê
+
 ### ⚠ Mudanças incompatíveis
 
 - **api**: `GET /models` deixou de existir. A lista do seletor virou
