@@ -41,7 +41,75 @@ export const ORDEM_DOS_GRUPOS: readonly ProviderKind[] = [
 export interface GrupoDeModelos<M extends Model = Model> {
   kind: ProviderKind;
   rotulo: string;
+  /**
+   * Os providers que compõem o grupo, em ordem de tamanho.
+   *
+   * "Hubs" sozinho não diz de QUEM é o catálogo — e é uma informação que muda
+   * tudo, porque preço, disponibilidade e credencial pertencem ao hub, não ao
+   * fabricante do modelo. Com isto a tela escreve "Hubs · OpenRouter" em vez de
+   * fazer o usuário deduzir.
+   */
+  provedores: LLMProviderName[];
   modelos: M[];
+  /**
+   * Só no `hub`: os mesmos `modelos`, repartidos por quem os SERVE por baixo.
+   *
+   * Um hub devolve o catálogo de dezenas de fabricantes numa lista só — o
+   * OpenRouter traz 338 —, e uma lista plana desse tamanho não é navegável:
+   * achar o Claude ali é rolagem, não escolha. O provedor upstream sai do
+   * PREFIXO do id (`anthropic/claude-…`, `openai/gpt-4o`), que é como o hub
+   * namespaceia o catálogo inteiro.
+   *
+   * `undefined` nos outros grupos: numa API direta o dono do modelo já é o
+   * provider, e repetir isso seria um nível de aninhamento sem informação.
+   */
+  subgrupos?: SubgrupoDeModelos<M>[];
+}
+
+export interface SubgrupoDeModelos<M extends Model = Model> {
+  /** O prefixo do id, que é o slug do fabricante no hub. */
+  upstream: string;
+  rotulo: string;
+  modelos: M[];
+}
+
+/**
+ * O fabricante por trás de um modelo de hub, lido do prefixo do id.
+ *
+ * Modelo sem `/` no nome não é erro: alguns hubs expõem modelos próprios sem
+ * namespace. Eles caem num grupo à parte em vez de sumir.
+ */
+export function upstreamDoModelo(nome: string): string {
+  const barra = nome.indexOf('/');
+  return barra > 0 ? nome.slice(0, barra) : 'outros';
+}
+
+/**
+ * Rótulo do fabricante. Sem `Record` exaustivo aqui, ao contrário de
+ * `ROTULO_DO_PROVIDER`: a lista é do HUB, muda quando ele quiser, e travar o
+ * typecheck num slug que o OpenRouter inventou amanhã pararia o build por um
+ * dado que não é nosso. Quem não está no mapa aparece com o próprio slug.
+ */
+const ROTULO_DO_UPSTREAM: Record<string, string> = {
+  'openai': 'OpenAI',
+  'anthropic': 'Anthropic',
+  'google': 'Google',
+  'meta-llama': 'Meta',
+  'mistralai': 'Mistral',
+  'deepseek': 'DeepSeek',
+  'qwen': 'Qwen',
+  'x-ai': 'xAI',
+  'amazon': 'Amazon',
+  'microsoft': 'Microsoft',
+  'cohere': 'Cohere',
+  'nvidia': 'NVIDIA',
+  'moonshotai': 'Moonshot',
+  'perplexity': 'Perplexity',
+  'outros': 'Sem fabricante declarado',
+};
+
+export function rotuloDoUpstream(upstream: string): string {
+  return ROTULO_DO_UPSTREAM[upstream] ?? upstream;
 }
 
 export interface AgruparOpcoes {
@@ -70,11 +138,16 @@ export function agruparModelos<M extends Model>(
     ...Object.values(models.cloud ?? {}).flat(),
   ].filter((m) => !opcoes.somenteAptosParaAgentes || m.supportsToolCalling);
 
-  return ORDEM_DOS_GRUPOS.map((kind) => ({
-    kind,
-    rotulo: ROTULO_DO_GRUPO[kind],
-    modelos: todos.filter((m) => providerKind(m.provider) === kind),
-  })).filter((grupo) => grupo.modelos.length > 0);
+  return ORDEM_DOS_GRUPOS.map((kind) => {
+    const modelos = todos.filter((m) => providerKind(m.provider) === kind);
+    return {
+      kind,
+      rotulo: ROTULO_DO_GRUPO[kind],
+      provedores: provedoresDe(modelos),
+      modelos,
+      ...(kind === 'hub' ? { subgrupos: repartirPorUpstream(modelos) } : {}),
+    };
+  }).filter((grupo) => grupo.modelos.length > 0);
 }
 
 /**
@@ -139,4 +212,39 @@ export function formatarJanela(model: Model): string | null {
   return model.contextWindow >= 1000
     ? `${Math.round(model.contextWindow / 1000)}k ctx`
     : `${model.contextWindow} ctx`;
+}
+
+/**
+ * Reparte os modelos de um hub por fabricante, do maior grupo para o menor —
+ * quem serve mais modelos é quem o usuário mais procura. Empate desempata por
+ * rótulo, para a ordem não dançar entre dois syncs.
+ */
+function repartirPorUpstream<M extends Model>(modelos: M[]): SubgrupoDeModelos<M>[] {
+  const porUpstream = new Map<string, M[]>();
+  for (const modelo of modelos) {
+    const upstream = upstreamDoModelo(modelo.name);
+    porUpstream.set(upstream, [...(porUpstream.get(upstream) ?? []), modelo]);
+  }
+
+  return [...porUpstream.entries()]
+    .map(([upstream, lista]) => ({
+      upstream,
+      rotulo: rotuloDoUpstream(upstream),
+      modelos: lista,
+    }))
+    .sort(
+      (a, b) =>
+        b.modelos.length - a.modelos.length || a.rotulo.localeCompare(b.rotulo),
+    );
+}
+
+/** Os providers presentes num grupo, do que mais serve para o que menos serve. */
+function provedoresDe(modelos: Model[]): LLMProviderName[] {
+  const contagem = new Map<LLMProviderName, number>();
+  for (const m of modelos) {
+    contagem.set(m.provider, (contagem.get(m.provider) ?? 0) + 1);
+  }
+  return [...contagem.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .map(([provider]) => provider);
 }
