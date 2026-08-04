@@ -925,6 +925,38 @@ Três regras derivadas:
   (`ativar num workspace NÃO liga o modelo no vizinho`)
 - **Origem:** [ADR 0049](adr/0049-curadoria-de-modelo-por-workspace.md)
 
+### RN-059 — Falha de turno é evento durável com origem, e o agente fala {#rn-059}
+
+Quando um turno de LLM falha, o agente grava **`agent.error`** no event log
+com três campos: `origem` (vocabulário do ADR 0020), `mensagem` em português e
+o `reason` bruto. E a mensagem aparece **no fio da conversa**, não só no log.
+
+Era o contrário, e o desfecho era o pior possível: os quatro agentes
+conversacionais gravavam `agent.response` com conteúdo **vazio** —
+indistinguível de sucesso no log imutável — e mandavam o motivo por
+`broadcast`, que é efêmero. Quem não estivesse com a aba aberta naquele
+segundo nunca saberia que houve erro; quem estivesse, via um balão em branco.
+
+Havia um segundo caminho, pior ainda: quando a api narrava a falha no PRÓPRIO
+frame final (budget, credencial ausente, binding faltando), o turno não caía no
+ramo de erro e **não emitia evento nenhum** — silêncio absoluto.
+
+A origem NUNCA é adivinhada: cada padrão em `FalhaDeTurno.origem/1` tem um
+motivo escrito, e o que não casa com nenhum sai como **`indeterminada`**, que é
+mais honesto que chutar uma das quatro (ADR 0020).
+
+Os eventos já gravados não se apagam — a tela os NOMEIA como resposta vazia
+anterior a esta regra, em vez de mostrar branco.
+
+- **Onde:** `apps/engine/lib/engine/agents/falha_de_turno.ex`,
+  `criativo_server.ex`, `po_server.ex`, `arquiteto_server.ex`,
+  `infra_lead_server.ex` (`emit_falha/2`),
+  `apps/web/src/lib/session-falha.ts`
+- **Teste:** `apps/engine/test/engine/agents/criativo_server_test.exs`
+  (evento durável com origem; nunca grava resposta vazia; erro narrado no frame
+  final também vira evento); `apps/web/src/lib/session-falha.test.ts`
+- **Origem:** execução real da FASE 13b
+
 ### RN-058 — A chave que o AGENTE gasta é a do owner do workspace {#rn-058}
 
 Credencial de LLM pertence a uma pessoa (`user_credentials.user_id`), e agente

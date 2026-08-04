@@ -151,6 +151,59 @@ defmodule Engine.Agents.CriativoServerTest do
     assert_received %Phoenix.Socket.Broadcast{event: "agent.done"}
   end
 
+  # A falha de um turno era o pior desfecho possível: `agent.response` VAZIO no
+  # event log (indistinguível de sucesso) e o motivo só por broadcast, que é
+  # efêmero. Quem não estivesse com a aba aberta nunca saberia.
+  test "falha de turno vira agent.error DURÁVEL, com origem e mensagem", %{
+    state: state,
+    session_id: session_id
+  } do
+    Phoenix.PubSub.subscribe(Engine.PubSub, "session:" <> session_id)
+    Process.put(:fake_llm_turns, [{:error, :no_final_event}])
+
+    assert {:reply, :ok, _} =
+             CriativoServer.handle_call({:user_message, "oi"}, self(), state)
+
+    assert_received {:event_appended, _, ^session_id,
+                     %{type: "agent.error", payload: payload}}
+
+    assert payload.origem == "infra"
+    assert payload.mensagem =~ "Não consegui completar este turno"
+    assert payload.mensagem =~ "Nada foi gasto"
+
+    # E o agente FALA no canal também, para quem está na conversa agora.
+    assert_received %Phoenix.Socket.Broadcast{event: "agent.error"}
+  end
+
+  test "falha NUNCA grava agent.response vazio", %{state: state, session_id: session_id} do
+    Process.put(:fake_llm_turns, [{:error, :no_final_event}])
+
+    assert {:reply, :ok, _} =
+             CriativoServer.handle_call({:user_message, "oi"}, self(), state)
+
+    refute_received {:event_appended, _, ^session_id,
+                     %{type: "agent.response", payload: %{content: ""}}}
+  end
+
+  # A api narra budget/credencial/binding no PRÓPRIO frame final. Isso não caía
+  # no ramo de erro e não emitia evento nenhum — o turno acabava em silêncio
+  # absoluto, pior que o balão vazio.
+  test "erro narrado no frame final também vira evento, com origem política", %{
+    state: state,
+    session_id: session_id
+  } do
+    Process.put(:fake_llm_turns, [%{"error" => "Nenhuma credencial cadastrada para openrouter"}])
+
+    assert {:reply, :ok, _} =
+             CriativoServer.handle_call({:user_message, "oi"}, self(), state)
+
+    assert_received {:event_appended, _, ^session_id,
+                     %{type: "agent.error", payload: payload}}
+
+    assert payload.origem == "politica"
+    assert payload.mensagem =~ "credencial"
+  end
+
   test "rehydration: reconstrói o histórico do event log no init", %{} do
     Process.put(:fake_events, [
       %{"type" => "chat.message", "payload" => %{"text" => "minha ideia é X"}},
