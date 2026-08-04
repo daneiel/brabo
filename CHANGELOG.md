@@ -2,6 +2,25 @@
 
 Gerado dos conventional commits por `scripts/changelog.mjs`.
 
+## v2.1.0 — 2026-08-03
+
+### Novidades
+
+- **web,docs**: aprovações somadas por sessão (achado #16) (3506970)
+- **web,docs**: Insights ganham aba própria, com contador (achado #15) (34ba57f)
+
+### Correções
+
+- **api,web,docs**: destrava a esteira — lint, e o gatilho de drift que eu criei à toa (7382203)
+- **api,web,docs**: o bootstrap para de criar a branch rc (achado #3) (a989e87)
+- **api,docs**: handoff a subagente é recusado, com o lead no erro (achado #12) (dd3de59)
+- **api,engine,docs**: reativar a execução volta a ter efeito (achado #11) (39ab1f6)
+- **engine,api,docs**: falha de git sem motivo, e dois comentários que mentiam (4b49b15)
+
+### Documentação
+
+- **changelog**: v2.0.0 (9336246)
+
 ## v2.0.0 — 2026-08-03
 
 ### ⚠ Mudanças incompatíveis
