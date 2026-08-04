@@ -925,6 +925,38 @@ Três regras derivadas:
   (`ativar num workspace NÃO liga o modelo no vizinho`)
 - **Origem:** [ADR 0049](adr/0049-curadoria-de-modelo-por-workspace.md)
 
+### RN-060 — O gasto das chaves é do owner, e só ele vê {#rn-060}
+
+O relatório de consumo por credencial (`GET /workspaces/:id/credential-spend`)
+exige **`owner`** no workspace. Não é `maintainer`: desde a
+[RN-058](#rn-058) os agentes de todos os projetos gastam a credencial do dono,
+e a fatura dele não é assunto de quem só opera um projeto.
+
+O relatório agrupa por **provider**, porque é essa a unidade da credencial —
+uma chave por provider, por pessoa. Um total único não bateria com fatura
+nenhuma.
+
+E separa **agente** de **pessoa**: as duas coisas saem da mesma chave desde a
+RN-058, e "meus agentes estão caros?" é uma pergunta diferente de "eu uso muito
+o chat?". Por isso este é o único agregado de custo do produto **sem** o filtro
+`actor_kind = 'agent'` da [RN-038](#rn-038) — aqui a pergunta é quanto saiu da
+chave, e o chat do próprio owner sai dela.
+
+Gasto de credencial **já removida** continua no relatório, marcado: o consumo
+aconteceu, e escondê-lo daria um total que não fecha com o extrato do provider.
+
+Nenhum segredo atravessa: a resposta tem provider, tokens e custo — nunca a
+chave, nem cifrada ([ADR 0050](adr/0050-credencial-sempre-cifrada-verificacao-explicita.md)).
+
+- **Onde:**
+  `apps/api/src/application/use-cases/llm/get-credential-spend.use-case.ts`,
+  `apps/api/src/interfaces/http/llm/budgets.controller.ts`,
+  `apps/web/src/components/CredentialSpendSection.tsx`
+- **Teste:** `test/application/use-cases/llm/get-credential-spend.use-case.spec.ts`
+  (agrupa por provider; separa agente de pessoa; chave removida fica marcada);
+  `apps/web/src/components/CredentialSpendSection.test.tsx`
+- **Origem:** decisão do usuário junto com a RN-058
+
 ### RN-059 — Falha de turno é evento durável com origem, e o agente fala {#rn-059}
 
 Quando um turno de LLM falha, o agente grava **`agent.error`** no event log

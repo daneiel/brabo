@@ -4,6 +4,7 @@ import { childSpan, logger, newTraceContext } from './logger';
 import type { LlmCredentialProvider } from './models';
 import type {
   AgentAutonomyRule,
+  CredentialSpend,
   UsoDeModelo,
   AgentTokenUsage,
   ActionType,
@@ -575,6 +576,15 @@ export const setModelsActive = (
  * A curadoria por USO — substitui a lista, não soma (ADR 0051). Lista vazia é
  * como se desmarca tudo, e por isso não há rota de "remover uso".
  */
+/**
+ * Gasto das chaves do owner. A rota exige `owner` no workspace (RN-060) — a
+ * tela só a chama quando o papel confere, para não pedir um 403 de propósito.
+ */
+export const getCredentialSpend = (workspaceId: string, meses?: number) =>
+  get<CredentialSpend>(
+    `/workspaces/${workspaceId}/credential-spend${meses ? `?meses=${meses}` : ''}`,
+  );
+
 export const setModelUses = (
   workspaceId: string,
   input: { modelIds: string[]; uses: UsoDeModelo[] },

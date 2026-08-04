@@ -510,6 +510,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/budgets-controller-get-credential-spend",
+          label: "Quanto as chaves do owner gastaram, por provider e por mês",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/model-bindings-controller-get-workspace-binding",
           label: "Lê o binding de modelo do workspace",
           className: "api-method get",

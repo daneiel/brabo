@@ -791,3 +791,35 @@ export interface ExecutionActivation {
   sessionId: string;
   modules: string[];
 }
+
+/**
+ * Gasto das chaves do owner (RN-060). Nunca traz segredo — só quanto cada
+ * provider consumiu, separando o que saiu por AGENTE do que saiu por pessoa,
+ * porque desde a RN-058 as duas coisas saem da MESMA chave.
+ */
+export interface CredentialSpendPorMes {
+  mes: string;
+  costMicros: number;
+  chamadas: number;
+}
+
+export interface CredentialSpendPorProvider {
+  provider: string;
+  /** A credencial existe hoje. `false` é gasto de chave já removida. */
+  temCredencial: boolean;
+  costMicros: number;
+  inputTokens: number;
+  outputTokens: number;
+  chamadas: number;
+  costMicrosAgentes: number;
+  costMicrosPessoas: number;
+  porMes: CredentialSpendPorMes[];
+}
+
+export interface CredentialSpend {
+  workspaceId: string;
+  ownerId: string;
+  meses: number;
+  totalMicros: number;
+  porProvider: CredentialSpendPorProvider[];
+}

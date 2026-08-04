@@ -279,6 +279,7 @@ o componente `d` da JWK, travado por teste.
 | POST | `/workspaces/:workspaceId/members` | role:owner |
 | GET | `/workspaces/:workspaceId/model-binding` | role:viewer |
 | PUT | `/workspaces/:workspaceId/model-binding` | role:maintainer |
+| GET | `/workspaces/:workspaceId/credential-spend` | role:owner |
 | POST | `/workspaces/:workspaceId/models/activate` | role:owner |
 | GET | `/workspaces/:workspaceId/models/catalog` | role:maintainer |
 | POST | `/workspaces/:workspaceId/models/sync` | role:owner |
