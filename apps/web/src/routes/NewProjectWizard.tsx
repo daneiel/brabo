@@ -21,6 +21,7 @@ import { CredentialStep } from '../components/wizard/CredentialStep';
 import { Modal } from '../components/ui/Modal';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { Alert } from '../components/ui/Alert';
 import { useToast } from '../components/ui/ToastProvider';
 import { GitHubIcon, GitLabIcon, LocalRepoIcon, PlusIcon } from '../components/ui/icons';
 import styles from './NewProjectWizard.module.css';
@@ -343,6 +344,21 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
                 </button>
               ))}
             </div>
+            {/* O plano gratuito do GitHub só protege branch em repositório
+                PÚBLICO. Sem este aviso, a escolha "Privado" leva a um
+                bootstrap que falha no último passo com a mensagem crua da API
+                — e o usuário descobre a limitação do plano dele já com o
+                repositório criado. */}
+            {provider === 'github' && visibility === 'private' && (
+              <Alert tone="warning">
+                No plano gratuito do GitHub, <strong>repositório privado não
+                aceita proteção de branch</strong>. O projeto funciona e as
+                branches são criadas, mas o passo "Proteger branches" vai
+                falhar, e o GitHub não impedirá push direto em{' '}
+                <code>main</code>, <code>qa</code> e <code>dev</code> — a trava
+                de merge do Brabo continua valendo, a do GitHub não.
+              </Alert>
+            )}
           </div>
         </div>
       )}
