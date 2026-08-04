@@ -338,10 +338,12 @@ Quirks encontrados e testados
   mesmo pra um código fora do mapa;
 - **Teste de conexão**: `GET /key` (doc oficial) valida a chave sem gastar
   tokens numa chamada de chat real. É o primeiro `LLMCredentialConnectionTester`
-  do lado LLM — o cadastro de credencial (`POST /llm/credentials`) testa ANTES
-  de cifrar/persistir, mesmo momento do fluxo de credencial git desde o
-  ADR 0004. Provider sem teste declarado (hoje: `ollama`/`anthropic`/`openai`)
-  é NO-OP, não exceção.
+  do lado LLM. Desde o [ADR 0050](../adr/0050-credencial-sempre-cifrada-verificacao-explicita.md)
+  ele **não roda no cadastro**: a credencial é cifrada e gravada sem
+  julgamento, e a verificação é a ação explícita
+  `POST /users/me/credentials/{provider}/test`, sobre a chave já gravada.
+  Provider sem teste declarado (hoje: `ollama`/`anthropic`/`openai`) responde
+  `nao_suportado` — nunca um `ok` de mentira ([RN-055](../business-rules.md#rn-055)).
 
 O aceite com credencial real que a Fase 11a exige — cadastro, sync populando
 o catálogo, ativação curada e sessão de chat de ponta a ponta com custo

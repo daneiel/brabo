@@ -2336,6 +2336,58 @@
         ]
       }
     },
+    "/projects/{projectId}/agent-costs": {
+      "get": {
+        "description": "Janela DESLIZANTE de 30 dias, não o mês corrente: é o rótulo que a tela mostra, e num mês-calendário a estimativa despencaria no dia 1º por virada de página, não por mudança de uso. Só `actor_kind = agent` entra (RN-038). Agente que nunca rodou não aparece na lista — a tela mostra traço para ele, que é diferente de zero.",
+        "operationId": "BudgetsController_getProjectAgentCosts",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AgentTokenUsageResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto ou sessão inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Quebra o gasto do projeto por agente, nos últimos 30 dias",
+        "tags": [
+          "llm"
+        ]
+      }
+    },
     "/projects/{projectId}/agents/{agent}/instruction-versions": {
       "get": {
         "description": "Mais recente primeiro, cada uma já com o diff contra a anterior calculado no servidor.",
@@ -6388,9 +6440,56 @@
         ]
       }
     },
+    "/users/me/credentials/{provider}/test": {
+      "post": {
+        "description": "A verificação é uma ação explícita, separada do cadastro (ADR 0050): a api decifra o segredo, chama o provider e devolve SÓ o veredito — a chave nunca volta, nem em pedaço. Responde 200 nos três resultados, porque o pedido foi processado; `recusado` é um resultado, não um erro de protocolo. 404 quando não há credencial para (usuário, provider) — aí não há o que testar.",
+        "operationId": "CredentialsController_test",
+        "parameters": [
+          {
+            "name": "provider",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "example": "openrouter",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CredentialTestResultResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "404": {
+            "description": "Nenhuma credencial deste provider."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Verifica a credencial JÁ gravada contra o provider",
+        "tags": [
+          "credenciais"
+        ]
+      }
+    },
     "/users/me/git-credentials": {
       "post": {
-        "description": "Caminho próprio, e não o de `users/me/credentials`, por causa do teste: o token é validado contra o provider ANTES de ser persistido, para não guardar uma credencial que só falharia no primeiro push. A leitura e a remoção reaproveitam as rotas de `users/me/credentials` — é a mesma tabela.",
+        "description": "Caminho próprio, e não o de `users/me/credentials`, porque o corpo é outro (`token`, e o enum de providers é `github`/`gitlab`). O token é cifrado e gravado sem verificação prévia (ADR 0050); para verificá-lo, `POST /users/me/credentials/{provider}/test`. Leitura, remoção e teste reaproveitam as rotas de `users/me/credentials` — é a mesma tabela.",
         "operationId": "GitCredentialsController_create",
         "parameters": [],
         "requestBody": {
@@ -6415,7 +6514,7 @@
             }
           },
           "400": {
-            "description": "O provider recusou o token."
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
           },
           "401": {
             "description": "Sem token, token expirado ou assinatura inválida."
@@ -6429,7 +6528,7 @@
             "bearer": []
           }
         ],
-        "summary": "Registra um token de git depois de TESTAR a conexão",
+        "summary": "Registra um token de git (cifrado, sem testar)",
         "tags": [
           "credenciais"
         ]
@@ -8738,6 +8837,29 @@
         "required": [
           "name",
           "slug"
+        ]
+      },
+      "CredentialTestResultResponseDto": {
+        "type": "object",
+        "properties": {
+          "resultado": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "recusado",
+              "nao_suportado"
+            ],
+            "example": "recusado",
+            "description": "`ok` — o provider aceitou a credencial. `recusado` — o provider a rejeitou (chave inválida/revogada, sem saldo, rede). `nao_suportado` — este provider não tem endpoint de teste verificado (`ollama`, `anthropic`, `openai`): NADA foi verificado, e dizer \"ok\" aqui seria mentira."
+          },
+          "motivo": {
+            "type": "string",
+            "example": "teste de conexão falhou para openrouter: openrouter respondeu 401",
+            "description": "Só em `recusado` — o motivo que o provider deu."
+          }
+        },
+        "required": [
+          "resultado"
         ]
       },
       "DecideBootstrapPlanDto": {
@@ -11651,7 +11773,8 @@
           "token": {
             "type": "string",
             "example": "ghp_…",
-            "description": "Personal access token. É TESTADO contra o provider antes de ser persistido — token inválido responde erro em vez de ser guardado para falhar depois. Cifrado por envelope encryption e nunca devolvido."
+            "maxLength": 512,
+            "description": "Personal access token. Cifrado por envelope encryption antes de tocar o banco e nunca devolvido, nem cifrado. O cadastro NÃO testa o token (ADR 0050) — para verificá-lo use `POST /users/me/credentials/{provider}/test`. O teto de 512 caracteres é proteção contra payload absurdo, não validação de formato."
           }
         },
         "required": [
@@ -12942,7 +13065,8 @@
           "apiKey": {
             "type": "string",
             "example": "sk-ant-api03-…",
-            "description": "A chave em texto plano. É cifrada por envelope encryption antes de tocar o banco e NUNCA volta em resposta nenhuma — nem cifrada."
+            "maxLength": 512,
+            "description": "A chave em texto plano. É cifrada por envelope encryption antes de tocar o banco e NUNCA volta em resposta nenhuma — nem cifrada. O teto de 512 caracteres é proteção contra payload absurdo, não validação de formato: se a chave presta ou não, quem responde é o provider em `POST /users/me/credentials/{provider}/test`."
           }
         },
         "required": [
