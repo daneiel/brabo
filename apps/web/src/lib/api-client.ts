@@ -4,6 +4,7 @@ import { childSpan, logger, newTraceContext } from './logger';
 import type { LlmCredentialProvider } from './models';
 import type {
   AgentAutonomyRule,
+  UsoDeModelo,
   AgentTokenUsage,
   ActionType,
   Architecture,
@@ -43,6 +44,8 @@ import type {
   Role,
   Session,
   SessionEvent,
+  CredentialProviderName,
+  CredentialTestResult,
   UserCredentialMetadata,
   Workspace,
   WorkspaceSummary,
@@ -70,6 +73,24 @@ export class ApiError extends Error {
     this.body = body;
     this.traceId = traceId;
   }
+}
+
+/**
+ * A frase que a api mandou, pronta para ir a um toast.
+ *
+ * `ApiError.message` é sempre `api error 422` — bom para log, inútil para
+ * quem está olhando a tela. O que interessa está em `body.message`, e antes
+ * disto cada `catch` teria de reescrever a mesma extração (ou, como acontecia
+ * na seção de credenciais, não escrever `catch` nenhum e engolir a mensagem).
+ */
+export function mensagemDaApi(erro: unknown, padrao = 'Erro inesperado'): string {
+  if (erro instanceof ApiError) {
+    const body = erro.body as { message?: unknown } | null;
+    if (typeof body?.message === 'string') return body.message;
+    if (Array.isArray(body?.message)) return body.message.join('; ');
+    return `A api respondeu ${erro.status}.`;
+  }
+  return erro instanceof Error ? erro.message : padrao;
 }
 
 /**
@@ -152,8 +173,27 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     });
     throw new ApiError(res.status, body, traceCtx.traceId);
   }
-  if (res.status === 204) return undefined as T;
-  return (await res.json()) as T;
+  // Corpo VAZIO é resposta legítima, não erro de parsing.
+  //
+  // Só o 204 era tratado aqui, e `res.json()` estourava um `SyntaxError` cru
+  // em tudo o mais. Acontece que um handler do Nest que devolve `null` responde
+  // **200 com corpo vazio** — e `null` é o que o domínio diz o tempo todo:
+  // "este projeto não tem orçamento", "este agente não tem binding", "este
+  // projeto não tem repositório". Seis funções deste arquivo já declaravam
+  // `| null` no retorno; era só o transporte que não sabia receber.
+  //
+  // O sintoma era desproporcional à causa: o `SyntaxError` subia até o
+  // `QueryCache.onError` e derrubava a query inteira, então a tela de
+  // configurações perdia a lista de modelos por causa de um agente sem binding.
+  //
+  // Devolve `null`, não `undefined`, e a diferença não é cosmética: o
+  // TanStack Query REJEITA uma `queryFn` que resolve `undefined`
+  // (`Error: [...] data is undefined`), então devolver `undefined` aqui só
+  // trocaria o `SyntaxError` por outro erro — foi o que aconteceu na primeira
+  // versão deste conserto. `null` é o que os tipos do cliente já declaram
+  // (`Budget | null`, `ResolvedBinding | null`) e o que o Nest quis dizer.
+  const texto = await res.text();
+  return (texto ? JSON.parse(texto) : null) as T;
 }
 
 const get = <T>(path: string) => request<T>(path);
@@ -531,6 +571,15 @@ export const setModelsActive = (
     input,
   );
 
+/**
+ * A curadoria por USO — substitui a lista, não soma (ADR 0051). Lista vazia é
+ * como se desmarca tudo, e por isso não há rota de "remover uso".
+ */
+export const setModelUses = (
+  workspaceId: string,
+  input: { modelIds: string[]; uses: UsoDeModelo[] },
+) => post<ModelComCuradoria[]>(`/workspaces/${workspaceId}/models/uses`, input);
+
 export const syncModelCatalog = (workspaceId: string) =>
   post<SyncModelCatalogResult>(`/workspaces/${workspaceId}/models/sync`, {});
 
@@ -591,6 +640,10 @@ export const upsertCredential = (input: {
 }) => post<UserCredentialMetadata>('/users/me/credentials', input);
 export const deleteCredential = (provider: LlmCredentialProvider) =>
   del<{ ok: true }>(`/users/me/credentials/${provider}`);
+// Verificação da credencial JÁ gravada (ADR 0050): a chave nunca sai da api,
+// só o veredito volta. `recusado` chega como 200 com motivo, não como erro.
+export const testCredential = (provider: CredentialProviderName) =>
+  post<CredentialTestResult>(`/users/me/credentials/${provider}/test`);
 
 export const getProjectBudget = (projectId: string) =>
   get<Budget | null>(`/projects/${projectId}/budget`);
@@ -604,6 +657,11 @@ export const getSessionTokenUsage = (projectId: string, sessionId: string) =>
   get<AgentTokenUsage[]>(
     `/projects/${projectId}/sessions/${sessionId}/token-usage`,
   );
+// Custo por agente no projeto, janela deslizante de 30 dias — a coluna
+// "EST. MÊS" e o card de custo do time da tela de Configurações. Agente que
+// nunca rodou NÃO vem na lista: a tela mostra traço, que é diferente de zero.
+export const getProjectAgentCosts = (projectId: string) =>
+  get<AgentTokenUsage[]>(`/projects/${projectId}/agent-costs`);
 export const setSessionBudget = (
   projectId: string,
   sessionId: string,

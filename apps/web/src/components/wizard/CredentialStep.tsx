@@ -25,7 +25,10 @@ const PROVIDER_LABEL: Record<'github' | 'gitlab', string> = {
  * Passo de credencial do wizard — presentacional (props in, callbacks out),
  * testável sem rede. Lista credenciais existentes do provider como chips
  * selecionáveis (só metadados, NUNCA o token) e um form write-only pra
- * cadastrar um PAT novo, que o backend testa antes de salvar.
+ * cadastrar um PAT novo, que o backend cifra e grava sem testar (ADR 0050).
+ *
+ * A prop `error` continua: ela agora mostra falha de GRAVAÇÃO, não mais
+ * recusa do provider.
  */
 export function CredentialStep({
   provider,
@@ -44,7 +47,8 @@ export function CredentialStep({
       <p className={styles.hint}>
         Provisionar no {PROVIDER_LABEL[provider]} exige um token de acesso
         pessoal (PAT). Selecione um já cadastrado ou adicione um novo — o
-        token é testado na hora e nunca é reexibido.
+        token é cifrado ao salvar e nunca é reexibido. A verificação fica nas
+        configurações do projeto, sobre o token já guardado.
       </p>
 
       {credentials.length > 0 && (
@@ -114,7 +118,7 @@ export function CredentialStep({
               onClick={() => onRegister(token.trim())}
               disabled={registering || token.trim().length === 0}
             >
-              {registering ? 'Testando…' : 'Testar e salvar'}
+              {registering ? 'Salvando…' : 'Salvar'}
             </Button>
           </div>
         </div>

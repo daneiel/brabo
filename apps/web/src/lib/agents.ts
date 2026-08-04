@@ -40,6 +40,13 @@ export type AgentKey =
 export interface AgentDef {
   key: AgentKey;
   name: string;
+  /**
+   * Duas letras para o avatar quadrado da tela de Configurações
+   * (`design/SCREENS.md`). Escritas, não derivadas do nome: o desenho abrevia
+   * "Dev Backend" como BE e "Dev Frontend" como FE — regra nenhuma sobre o
+   * nome produz isso.
+   */
+  initials: string;
   role: string;
   color: string;
   icon: ComponentType<{ size?: number; className?: string }>;
@@ -49,6 +56,7 @@ export const AGENTS: Record<AgentKey, AgentDef> = {
   psicologo: {
     key: 'psicologo',
     name: 'Psicólogo',
+    initials: 'PS',
     role: 'Anamnese emocional do time',
     color: '#9C7BE0',
     icon: HypothesisIcon,
@@ -59,6 +67,7 @@ export const AGENTS: Record<AgentKey, AgentDef> = {
   'psicologo-leve': {
     key: 'psicologo-leve',
     name: 'Psicólogo (leve)',
+    initials: 'PL',
     role: 'Triagem econômica de sessões simples',
     color: '#B9A5E8',
     icon: HypothesisIcon,
@@ -66,6 +75,7 @@ export const AGENTS: Record<AgentKey, AgentDef> = {
   anamnese: {
     key: 'anamnese',
     name: 'Anamnese',
+    initials: 'AN',
     role: 'Levantamento de contexto inicial',
     color: 'var(--success)',
     icon: ClockIcon,
@@ -73,6 +83,7 @@ export const AGENTS: Record<AgentKey, AgentDef> = {
   criativo: {
     key: 'criativo',
     name: 'Criativo',
+    initials: 'CR',
     role: 'Ideação e direção de produto',
     color: 'var(--warning)',
     icon: BulbIcon,
@@ -80,6 +91,7 @@ export const AGENTS: Record<AgentKey, AgentDef> = {
   arquiteto: {
     key: 'arquiteto',
     name: 'Arquiteto',
+    initials: 'AR',
     role: 'Design técnico e decisões estruturais',
     color: 'var(--accent)',
     icon: StackIcon,
@@ -87,6 +99,7 @@ export const AGENTS: Record<AgentKey, AgentDef> = {
   po: {
     key: 'po',
     name: 'PO',
+    initials: 'PO',
     role: 'Priorização e backlog',
     color: '#9C7BE0',
     icon: UserIcon,
@@ -94,6 +107,7 @@ export const AGENTS: Record<AgentKey, AgentDef> = {
   'dev-backend': {
     key: 'dev-backend',
     name: 'Dev Backend',
+    initials: 'BE',
     role: 'Implementação de API e domínio',
     color: 'var(--success)',
     icon: CodeIcon,
@@ -101,6 +115,7 @@ export const AGENTS: Record<AgentKey, AgentDef> = {
   'dev-frontend': {
     key: 'dev-frontend',
     name: 'Dev Frontend',
+    initials: 'FE',
     role: 'Implementação de interface',
     color: '#5EBEB1',
     icon: LayoutSidebarIcon,
@@ -108,6 +123,7 @@ export const AGENTS: Record<AgentKey, AgentDef> = {
   infra: {
     key: 'infra',
     name: 'Infra',
+    initials: 'IN',
     role: 'Provisionamento e operação',
     color: 'var(--warning)',
     icon: ServerIcon,
@@ -118,6 +134,7 @@ export const AGENTS: Record<AgentKey, AgentDef> = {
   'infra-workflows': {
     key: 'infra-workflows',
     name: 'Workflows',
+    initials: 'WF',
     role: 'Pipeline de CI (GitHub Actions / GitLab CI)',
     color: 'var(--warning)',
     icon: DeployIcon,
@@ -125,6 +142,7 @@ export const AGENTS: Record<AgentKey, AgentDef> = {
   qa: {
     key: 'qa',
     name: 'QA',
+    initials: 'QA',
     role: 'Verificação e testes',
     color: 'var(--danger)',
     icon: PermissionIcon,
@@ -134,6 +152,7 @@ export const AGENTS: Record<AgentKey, AgentDef> = {
   'qa-automacao': {
     key: 'qa-automacao',
     name: 'QA de Automação',
+    initials: 'QA',
     role: 'Suite de testes e coverage_matrix',
     color: 'var(--danger)',
     icon: CodeIcon,
@@ -141,6 +160,7 @@ export const AGENTS: Record<AgentKey, AgentDef> = {
   'qa-performance-seguranca': {
     key: 'qa-performance-seguranca',
     name: 'QA de Performance e Segurança',
+    initials: 'QP',
     role: 'RNFs de performance e apoio de segurança em nível de código',
     color: 'var(--danger)',
     icon: GaugeIcon,
@@ -148,6 +168,7 @@ export const AGENTS: Record<AgentKey, AgentDef> = {
   secops: {
     key: 'secops',
     name: 'SecOps',
+    initials: 'SO',
     role: 'Segurança e conformidade',
     color: '#8AA6AE',
     icon: LockIcon,

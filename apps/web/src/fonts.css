@@ -1,0 +1,125 @@
+/*
+ * As `@font-face` do design system, num arquivo próprio.
+ *
+ * Elas vivem SEPARADAS do `index.css` por causa do design-sync: o bundle do
+ * design system é montado pelo esbuild a partir do `index.css` (que traz os
+ * tokens, o reset e os `@keyframes` que os componentes usam), e um
+ * `url('/fonts/…')` — caminho absoluto, que só existe quando a app serve o
+ * `public/` — o esbuild não resolve, derrubando o build inteiro. O bundle do DS
+ * declara as mesmas famílias por conta própria, com os mesmos arquivos, em
+ * `.design-sync/fonts.css`.
+ *
+ * Para a app não muda nada: o `main.tsx` importa este arquivo junto do
+ * `index.css`, e o browser recebe exatamente as mesmas regras de antes.
+ */
+
+/*
+ * As três famílias do design system, AUTO-HOSPEDADAS (ADR 0036).
+ *
+ * Antes vinham do Google Fonts por `<link>` no `index.html`. Em produção isso
+ * NUNCA funcionou: a CSP do nginx (docker/web/nginx.conf) é
+ * `style-src 'self' 'unsafe-inline'; font-src 'self' data:` — bloqueia tanto a
+ * folha do fonts.googleapis.com quanto os .woff2 do fonts.gstatic.com. As três
+ * caíam em fonte de sistema, e como `--font-heading` e `--font-body`
+ * compartilham o fallback `sans-serif`, a distinção entre título e corpo
+ * desaparecia. Com `font-synthesis: none` abaixo, nem o peso 700 era sintetizado.
+ *
+ * Era invisível em `pnpm dev`, onde não há nginx — por isso durou.
+ *
+ * Servir de `/fonts/` satisfaz a CSP atual sem afrouxá-la, e funciona
+ * offline. Os arquivos são os subsets latin e latin-ext em woff2; quem precisar
+ * de cirílico ou vietnamita acrescenta o subset, não troca o mecanismo.
+ *
+ * Space Grotesk e Archivo são fontes VARIÁVEIS — um arquivo cobre a faixa de
+ * peso, daí o `font-weight` com dois valores. IBM Plex Mono é estática, um
+ * arquivo por peso. Verificado decodificando a tabela de diretório do woff2:
+ * as duas primeiras têm `fvar`, a terceira não. Declarar faixa numa fonte
+ * estática renderizaria todos os pesos iguais, em silêncio, justamente por
+ * causa do `font-synthesis: none`.
+ */
+
+/* Space Grotesk — títulos e wordmark. Variável, 500-700. */
+@font-face {
+  font-family: 'Space Grotesk';
+  font-style: normal;
+  font-weight: 500 700;
+  font-display: swap;
+  src: url('/fonts/space-grotesk-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191,
+    U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Space Grotesk';
+  font-style: normal;
+  font-weight: 500 700;
+  font-display: swap;
+  src: url('/fonts/space-grotesk-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7,
+    U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF,
+    U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* Archivo — corpo. Variável, 400-600. */
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url('/fonts/archivo-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191,
+    U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url('/fonts/archivo-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7,
+    U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF,
+    U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* IBM Plex Mono — identificador, comando, SHA. Estática: um arquivo por peso. */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/ibm-plex-mono-400-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191,
+    U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/ibm-plex-mono-400-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7,
+    U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF,
+    U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/ibm-plex-mono-500-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191,
+    U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/ibm-plex-mono-500-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7,
+    U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF,
+    U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}

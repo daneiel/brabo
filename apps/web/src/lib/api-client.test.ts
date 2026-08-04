@@ -31,6 +31,20 @@ function json(status: number, corpo: unknown = {}): Response {
     ok: status >= 200 && status < 300,
     status,
     json: () => Promise.resolve(corpo),
+    text: () => Promise.resolve(JSON.stringify(corpo)),
+  } as unknown as Response;
+}
+
+/**
+ * Resposta SEM corpo. É o que o Nest manda quando o handler devolve `null` —
+ * 200 com zero bytes — e também o 204 de um DELETE.
+ */
+function semCorpo(status: number): Response {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    json: () => Promise.reject(new SyntaxError('Unexpected end of JSON input')),
+    text: () => Promise.resolve(''),
   } as unknown as Response;
 }
 
@@ -97,5 +111,54 @@ describe('api-client', () => {
     expect(linha.message).toContain('inalcançável');
     expect(linha.trace_id).toMatch(/^[0-9a-f]{32}$/);
     expect(linha.erro).toBe('offline');
+  });
+
+  /**
+   * Corpo vazio não é erro de parsing.
+   *
+   * Só o 204 era tratado, e `res.json()` estourava um `SyntaxError` cru em
+   * tudo o mais — inclusive no **200 com corpo vazio**, que é como o Nest
+   * responde quando o handler devolve `null`. E `null` é o que o domínio diz o
+   * tempo todo: projeto sem orçamento, agente sem binding, projeto sem
+   * repositório. O erro subia até o `QueryCache.onError` e derrubava a query
+   * inteira: a tela de configurações perdia a lista de modelos por causa de um
+   * agente sem binding.
+   *
+   * `null`, e não `undefined`: o TanStack Query REJEITA uma `queryFn` que
+   * resolve `undefined` (`Error: [...] data is undefined`). A primeira versão
+   * deste conserto devolvia `undefined` e só trocou o `SyntaxError` por outro
+   * erro — a tela continuou quebrando, agora sem pista de parsing. `null` é o
+   * que os tipos do cliente já declaravam.
+   */
+  it('200 com corpo vazio devolve null em vez de estourar', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(semCorpo(200)));
+
+    await expect(listWorkspaces()).resolves.toBeNull();
+  });
+
+  it('204 continua sendo corpo vazio', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(semCorpo(204)));
+
+    await expect(listWorkspaces()).resolves.toBeNull();
+  });
+
+  it('corpo JSON de verdade continua sendo parseado', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(json(200, [{ id: 'ws-1' }])));
+
+    await expect(listWorkspaces()).resolves.toEqual([{ id: 'ws-1' }]);
+  });
+
+  /**
+   * O outro lado da mesma moeda: um erro SEM corpo (nginx cortando, 502 de
+   * proxy) continua virando `ApiError` com o status, e não um `SyntaxError`
+   * que esconderia o status atrás de um erro de parsing.
+   */
+  it('erro com corpo vazio vira ApiError, não SyntaxError', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(semCorpo(502)));
+
+    const falha = await listWorkspaces().catch((e: unknown) => e);
+
+    expect(falha).toBeInstanceOf(ApiError);
+    expect((falha as ApiError).status).toBe(502);
   });
 });

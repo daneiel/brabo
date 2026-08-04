@@ -13,12 +13,17 @@ import {
   deleteCredential,
   getAgentModelBinding,
   getBootstrapPlan,
+  getProjectAgentCosts,
+  getProjectModelBinding,
   getRepository,
+  getWorkspaceModelBinding,
   listCredentials,
   listModels,
   listProjectMembers,
   removeProjectMember,
+  mensagemDaApi,
   setAgentModelBinding,
+  testCredential,
   updateProject,
   upsertCredential,
 } from '../lib/api-client';
@@ -28,6 +33,7 @@ import { ROLE_LABEL, ROLE_ORDER } from '../lib/roles';
 import type {
   Model,
   ModelBindingScope,
+  ResolvedBinding,
   ProficiencyLevel,
   ProficiencyProfile,
   Role,
@@ -38,6 +44,7 @@ import {
   type LlmCredentialProvider,
 } from '../lib/models';
 import { divergencias } from '../lib/adoption';
+import { microsParaUsd, usdFmt } from '../lib/currency';
 import { Alert } from '../components/ui/Alert';
 import { Table, type TableColumn } from '../components/ui/Table';
 import { Badge, type BadgeTone } from '../components/ui/Badge';
@@ -47,7 +54,7 @@ import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { ModelPicker } from '../components/ModelPicker';
 import { ModelCatalogSection } from '../components/ModelCatalogSection';
-import { TrashIcon } from '../components/ui/icons';
+import { ClockIcon, TrashIcon } from '../components/ui/icons';
 import { useToast } from '../components/ui/ToastProvider';
 import styles from './ProjectSettingsTab.module.css';
 
@@ -65,6 +72,56 @@ const MATRIX_ROWS: { label: string; minRole: Role }[] = [
   { label: 'Alterar schema/migração', minRole: 'developer' },
   { label: 'Editar permissions.json', minRole: 'maintainer' },
 ];
+
+/** Duas letras a partir do nome (ou do e-mail, quando não há nome). */
+function iniciaisDe(rotulo: string): string {
+  const partes = rotulo.split(/[\s@._-]+/u).filter(Boolean);
+  const letras =
+    partes.length >= 2
+      ? partes[0][0] + partes[1][0]
+      : (partes[0] ?? '?').slice(0, 2);
+  return letras.toUpperCase();
+}
+
+/**
+ * O avatar do membro é um GRADIENTE no desenho — é o que o distingue do avatar
+ * do agente, que tem cor chapada e anel. As duas pontas saem de um hash do
+ * e-mail: a mesma pessoa fica com o mesmo par em qualquer tela, e ninguém
+ * precisa cadastrar cor de avatar.
+ */
+const PARES_DE_GRADIENTE = [
+  ['var(--accent)', 'var(--warning)'],
+  ['var(--success)', 'var(--accent)'],
+  ['var(--warning)', 'var(--danger)'],
+  ['var(--success)', 'var(--border-strong)'],
+  ['var(--danger)', 'var(--accent)'],
+] as const;
+
+function gradienteDe(email: string): CSSProperties {
+  let hash = 0;
+  for (const char of email) hash = (hash * 31 + char.charCodeAt(0)) % 997;
+  const [de, para] = PARES_DE_GRADIENTE[hash % PARES_DE_GRADIENTE.length];
+  return { ['--membro-de']: de, ['--membro-para']: para } as CSSProperties;
+}
+
+/**
+ * Custo em USD. O mockup mostra `R$ 640,10 · US$ 116`, mas converter exigiria
+ * uma taxa de câmbio — e "preferência de moeda com taxa manual" é backlog
+ * declarado no CLAUDE.md. Um número em reais tirado de taxa inventada seria
+ * pior que um número honesto em dólar.
+ *
+ * Abaixo de um centavo NÃO vira `US$ 0,00`. Preço de token é da ordem de 10⁻⁶,
+ * e na primeira versão desta tela um agente que gastou 1811 micro-USD aparecia
+ * com o mesmo `US$ 0,00` de um agente que não gastou nada — a coluna afirmava
+ * ausência de consumo onde havia consumo. `< US$ 0,01` diz a verdade sem
+ * encher a coluna de casas decimais que ninguém compara.
+ */
+function formatarCustoMicros(micros: number): string {
+  if (micros === 0) return usdFmt.format(0);
+  const usd = microsParaUsd(micros);
+  if (usd < 0.01) return `< ${usdFmt.format(0.01)}`;
+  return usdFmt.format(usd);
+}
 
 const LEVEL_TONE: Record<ProficiencyLevel, BadgeTone> = {
   iniciante: 'muted',
@@ -107,8 +164,21 @@ function CatalogoDeModelos({ projectId }: { projectId: string }) {
   return <ModelCatalogSection workspaceId={project.workspaceId} />;
 }
 
-function ModelsSection({ projectId }: { projectId: string }) {
+/**
+ * Modelos por agente — a primeira seção do mockup (`design/SCREENS.md`).
+ *
+ * Cinco colunas, como no desenho: AGENTE, MODELO VIGENTE, ORIGEM, FALLBACK e
+ * EST. MÊS. As duas últimas não existiam: `FALLBACK` é derivado aqui a partir
+ * dos bindings de projeto e workspace, e `EST. MÊS` vem da rota de custo por
+ * agente.
+ */
+// Exportada para o teste, como as demais seções.
+export function ModelsSection({ projectId }: { projectId: string }) {
   const queryClient = useQueryClient();
+  const { data: project } = useQuery({
+    queryKey: ['project', projectId],
+    queryFn: () => getProject(projectId),
+  });
   const { data: modelsByCategory } = useQuery({
     // A chave carrega o projeto porque a lista é do WORKSPACE dele (ADR 0049):
     // um cache global devolveria a curadoria de outro workspace.
@@ -123,9 +193,54 @@ function ModelsSection({ projectId }: { projectId: string }) {
     })),
   });
 
+  // Os dois níveis de cima da cascata, buscados UMA vez — é deles que sai a
+  // coluna FALLBACK de todas as linhas.
+  const { data: bindingDoProjeto } = useQuery({
+    queryKey: ['project-model-binding', projectId],
+    queryFn: () => getProjectModelBinding(projectId),
+  });
+  const { data: bindingDoWorkspace } = useQuery({
+    queryKey: ['workspace-model-binding', project?.workspaceId],
+    queryFn: () => getWorkspaceModelBinding(project!.workspaceId),
+    enabled: Boolean(project?.workspaceId),
+  });
+
+  const { data: custos } = useQuery({
+    queryKey: ['agent-costs', projectId],
+    queryFn: () => getProjectAgentCosts(projectId),
+  });
+
   const allModels: Model[] = modelsByCategory
     ? [...Object.values(modelsByCategory.local).flat(), ...Object.values(modelsByCategory.cloud).flat()]
     : [];
+
+  const nomeDoModelo = (modelId: string | undefined) =>
+    allModels.find((m) => m.id === modelId)?.displayName;
+
+  /**
+   * O que valeria se o binding vigente sumisse — a precedência é
+   * `session > agent > project > workspace` (`domain/llm/binding-resolver.ts`),
+   * então o fallback é o binding do nível imediatamente inferior à origem
+   * resolvida. Origem `workspace` já é o último nível: não há para onde cair.
+   */
+  function fallbackDe(origin: ResolvedBinding['origin'] | undefined) {
+    if (origin === 'session' || origin === 'agent') {
+      return (
+        nomeDoModelo(bindingDoProjeto?.modelId) ??
+        nomeDoModelo(bindingDoWorkspace?.modelId)
+      );
+    }
+    if (origin === 'project') return nomeDoModelo(bindingDoWorkspace?.modelId);
+    return undefined;
+  }
+
+  const custoPorAgente = new Map(
+    (custos ?? []).map((c) => [c.actorId, c.costMicros]),
+  );
+  const custoTotalMicros = (custos ?? []).reduce(
+    (soma, c) => soma + c.costMicros,
+    0,
+  );
 
   async function handleModelChange(agentKey: string, model: Model) {
     await setAgentModelBinding(projectId, agentKey, model.id);
@@ -136,20 +251,20 @@ function ModelsSection({ projectId }: { projectId: string }) {
     {
       key: 'agent',
       label: 'Agente',
-      width: '1.4fr',
+      width: '1.3fr',
       render: (agent) => (
         <span className={styles.agentCell}>
           <span className={styles.agentAvatar} style={{ ['--agent-color' as string]: agent.color } as CSSProperties}>
-            <agent.icon size={13} />
+            {agent.initials}
           </span>
-          {agent.name}
+          <span className={styles.agentNome}>{agent.name}</span>
         </span>
       ),
     },
     {
       key: 'model',
       label: 'Modelo vigente',
-      width: '1.6fr',
+      width: '1.9fr',
       render: (agent) => {
         const index = AGENT_LIST.indexOf(agent);
         const resolved = bindingQueries[index]?.data;
@@ -166,7 +281,7 @@ function ModelsSection({ projectId }: { projectId: string }) {
     {
       key: 'origin',
       label: 'Origem',
-      width: '110px',
+      width: '0.9fr',
       render: (agent) => {
         const index = AGENT_LIST.indexOf(agent);
         const resolved = bindingQueries[index]?.data;
@@ -195,19 +310,62 @@ function ModelsSection({ projectId }: { projectId: string }) {
       },
     },
     {
+      key: 'fallback',
+      label: 'Fallback',
+      width: '1.5fr',
+      render: (agent) => {
+        const index = AGENT_LIST.indexOf(agent);
+        const nome = fallbackDe(bindingQueries[index]?.data?.origin);
+        return nome ? (
+          <span className={styles.fallback}>{nome}</span>
+        ) : (
+          <span className={styles.dash}>—</span>
+        );
+      },
+    },
+    {
       key: 'estimate',
       label: 'Est. mês',
-      width: '90px',
-      render: () => <span className={styles.dash}>—</span>,
+      width: '1fr',
+      render: (agent) => {
+        const micros = custoPorAgente.get(agent.key);
+        // Agente que nunca rodou não vem na resposta, e traço é diferente de
+        // zero: zero afirmaria um agente ativo e gratuito.
+        return micros === undefined ? (
+          <span className={styles.dash}>—</span>
+        ) : (
+          <span className={styles.estimativa}>{formatarCustoMicros(micros)}</span>
+        );
+      },
     },
   ];
 
   return (
     <div className={styles.section}>
-      <div className={styles.title}>Modelos por agente</div>
-      <div className={styles.subtitle}>
-        Cascata de resolução: workspace → projeto → agente → sessão. Cada nível sobrepõe o anterior quando configurado.
+      <div className={styles.sectionHead}>
+        <h2 className={styles.title}>Modelos por agente</h2>
+        <span className={styles.eyebrow}>binding vigente por cascata</span>
       </div>
+      <p className={styles.subtitle}>
+        A origem indica onde o valor é resolvido:{' '}
+        <span className={`${styles.nivel} ${styles.nivelWorkspace}`}>workspace</span> →{' '}
+        <span className={`${styles.nivel} ${styles.nivelProject}`}>project</span> →{' '}
+        <span className={`${styles.nivel} ${styles.nivelAgent}`}>agent</span> →{' '}
+        <span className={`${styles.nivel} ${styles.nivelAgent}`}>session</span>. O mais
+        específico vence.
+      </p>
+
+      <div className={styles.custoCard}>
+        <ClockIcon size={15} className={styles.custoIcone} />
+        <span className={styles.custoTexto}>
+          Custo estimado mensal do time{' '}
+          <span className={styles.custoDetalhe}>· com base no histórico de 30 dias</span>
+        </span>
+        <span className={styles.custoValor}>
+          {custos === undefined ? '—' : formatarCustoMicros(custoTotalMicros)}
+        </span>
+      </div>
+
       <Table columns={columns} rows={AGENT_LIST} rowKey={(a) => a.key} emptyMessage="Nenhum agente configurado." />
       {allModels.length === 0 && <div className={styles.subtitle}>Nenhum modelo disponível ainda.</div>}
     </div>
@@ -252,9 +410,14 @@ function MembersSection({ projectId }: { projectId: string }) {
       label: 'Membro',
       width: '2fr',
       render: (member) => (
-        <span className={styles.memberCell}>
-          <span className={styles.memberName}>{member.name ?? member.email}</span>
-          <span className={styles.memberEmail}>{member.email}</span>
+        <span className={styles.membroCell}>
+          <span className={styles.membroAvatar} style={gradienteDe(member.email)}>
+            {iniciaisDe(member.name ?? member.email)}
+          </span>
+          <span className={styles.memberCell}>
+            <span className={styles.memberName}>{member.name ?? member.email}</span>
+            <span className={styles.memberEmail}>{member.email}</span>
+          </span>
         </span>
       ),
     },
@@ -273,12 +436,29 @@ function MembersSection({ projectId }: { projectId: string }) {
       ),
     },
     {
+      key: 'status',
+      label: 'Status',
+      width: '1fr',
+      render: () => (
+        <span className={styles.status}>
+          <span className={styles.statusDot} />
+          ativo
+        </span>
+      ),
+    },
+    {
       key: 'action',
-      label: 'Ação',
-      width: '90px',
+      label: '',
+      width: '56px',
       render: (member) => (
-        <button type="button" className={styles.remove} onClick={() => handleRemove(member.userId)}>
-          <TrashIcon size={14} /> remover
+        <button
+          type="button"
+          aria-label={`Remover ${member.name ?? member.email}`}
+          title="Remover"
+          className={styles.remove}
+          onClick={() => handleRemove(member.userId)}
+        >
+          <TrashIcon size={14} />
         </button>
       ),
     },
@@ -286,20 +466,27 @@ function MembersSection({ projectId }: { projectId: string }) {
 
   return (
     <div className={styles.section}>
-      <div className={styles.title}>Membros e papéis</div>
-      <div className={styles.subtitle}>Adicione membros pelo ID de usuário.</div>
+      <div className={styles.sectionHead}>
+        <h2 className={styles.title}>Membros e papéis</h2>
+        <span className={styles.eyebrow}>IAM · por projeto</span>
+      </div>
+      <p className={styles.subtitle}>
+        Papéis definem quem pode aprovar quais ações dos agentes neste projeto.
+      </p>
 
       <div className={styles.inviteBar}>
         <div className={styles.inviteInput}>
           <Input mono placeholder="ID do usuário (UUID)" value={inviteUserId} onChange={(e) => setInviteUserId(e.target.value)} />
         </div>
-        <Select value={inviteRole} onChange={(e) => setInviteRole(e.target.value as Role)}>
-          {ROLE_ORDER.map((role) => (
-            <option key={role} value={role}>
-              {ROLE_LABEL[role]}
-            </option>
-          ))}
-        </Select>
+        <div className={styles.inviteRole}>
+          <Select value={inviteRole} onChange={(e) => setInviteRole(e.target.value as Role)}>
+            {ROLE_ORDER.map((role) => (
+              <option key={role} value={role}>
+                {ROLE_LABEL[role]}
+              </option>
+            ))}
+          </Select>
+        </div>
         <Button onClick={handleInvite}>Convidar</Button>
       </div>
 
@@ -335,7 +522,10 @@ function RepositorySection({ projectId }: { projectId: string }) {
 
   return (
     <div className={styles.section}>
-      <div className={styles.title}>Repositório</div>
+      <div className={styles.sectionHead}>
+        <h2 className={styles.title}>Repositório</h2>
+        <span className={styles.eyebrow}>git · provider e política</span>
+      </div>
       <div className={styles.subtitle}>
         {repository.origin === 'adopted'
           ? 'Adotado — já existia antes do projeto, e a política de branches é dele.'
@@ -415,7 +605,10 @@ export function ExecutionSection({ projectId }: { projectId: string }) {
 
   return (
     <div className={styles.section}>
-      <div className={styles.title}>Execução</div>
+      <div className={styles.sectionHead}>
+        <h2 className={styles.title}>Execução</h2>
+        <span className={styles.eyebrow}>circuit breaker do dev agent</span>
+      </div>
       <div className={styles.subtitle}>
         Circuit breaker dos dev agents — vale a partir da próxima ativação da
         execução, não afeta agentes já rodando.
@@ -487,7 +680,10 @@ export function PromotionSection({ projectId }: { projectId: string }) {
 
   return (
     <div className={styles.section}>
-      <div className={styles.title}>Promoção de histórias</div>
+      <div className={styles.sectionHead}>
+        <h2 className={styles.title}>Promoção de histórias</h2>
+        <span className={styles.eyebrow}>quem dá o passo</span>
+      </div>
       <div className={styles.subtitle}>
         Uma história só vira trabalho pegável quando está <em>pronta</em>. Isto
         define quem dá esse passo. As validações são as MESMAS nos dois modos —
@@ -525,11 +721,14 @@ export function PromotionSection({ projectId }: { projectId: string }) {
 function MatrixSection() {
   return (
     <div className={styles.section}>
-      <div className={styles.title}>Quem pode aprovar o quê</div>
-      <div className={styles.subtitle}>
+      <div className={styles.sectionHead}>
+        <h2 className={styles.title}>Quem pode aprovar o quê</h2>
+        <span className={styles.eyebrow}>matriz resumida</span>
+      </div>
+      <p className={styles.subtitle}>
         Tabela informativa — reflete os papéis mínimos por tipo de ação hoje aplicados no backend; algumas linhas ainda não têm checagem
         granular própria e usam a aproximação mais próxima.
-      </div>
+      </p>
       <table className={styles.matrixTable}>
         <thead>
           <tr>
@@ -557,37 +756,119 @@ function MatrixSection() {
           ))}
         </tbody>
       </table>
+      {/* A legenda do desenho: sem ela, ✓ e — são dois símbolos sem contrato. */}
+      <div className={styles.matrixLegenda}>
+        <span className={styles.matrixLegendaItem}>
+          <span className={styles.check}>✓</span> pode aprovar
+        </span>
+        <span className={styles.matrixLegendaItem}>
+          <span className={styles.dash}>—</span> sem permissão
+        </span>
+      </div>
     </div>
   );
 }
 
-function CredentialsSection() {
+// Exportada para o teste, como ExecutionSection e PromotionSection.
+export function CredentialsSection() {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const { data: credentials } = useQuery({ queryKey: ['credentials'], queryFn: listCredentials });
   const [drafts, setDrafts] = useState<Record<string, string>>({});
 
+  // Qual provider está com uma chamada em voo — `null` quando nenhum. Um id
+  // só, e não um booleano por card: duas chamadas simultâneas aqui não fazem
+  // sentido nenhum, e o estado por provider convidaria a esquecer de limpá-lo.
+  const [emVoo, setEmVoo] = useState<string | null>(null);
+
+  /**
+   * Todo `catch` desta seção existe por um bug real: sem eles, o `ApiError`
+   * escapava do `onClick` e caía no `unhandledrejection` global, que só LOGA.
+   * O sintoma era o pior possível — o botão Salvar parecia não ter ação,
+   * enquanto a api respondia 422 a cada clique.
+   */
   async function handleSave(provider: LlmCredentialProvider) {
     const apiKey = drafts[provider]?.trim();
     if (!apiKey) return;
-    await upsertCredential({ provider, apiKey });
-    setDrafts((d) => ({ ...d, [provider]: '' }));
-    queryClient.invalidateQueries({ queryKey: ['credentials'] });
-    showToast({ title: 'Credencial salva', tone: 'success' });
+    setEmVoo(provider);
+    try {
+      await upsertCredential({ provider, apiKey });
+      setDrafts((d) => ({ ...d, [provider]: '' }));
+      queryClient.invalidateQueries({ queryKey: ['credentials'] });
+      showToast({ title: 'Credencial salva', tone: 'success' });
+    } catch (erro) {
+      showToast({
+        title: 'Não deu para salvar',
+        message: mensagemDaApi(erro),
+        tone: 'danger',
+      });
+    } finally {
+      setEmVoo(null);
+    }
+  }
+
+  /**
+   * A verificação que saiu do cadastro (ADR 0050). Os três resultados viram
+   * três toasts diferentes de propósito: `nao_suportado` NÃO pode parecer
+   * sucesso, senão a tela afirma que uma chave foi checada quando ninguém a
+   * checou.
+   */
+  async function handleTest(provider: LlmCredentialProvider) {
+    setEmVoo(provider);
+    try {
+      const { resultado, motivo } = await testCredential(provider);
+      if (resultado === 'ok') {
+        showToast({ title: 'O provider aceitou a chave', tone: 'success' });
+      } else if (resultado === 'recusado') {
+        showToast({ title: 'O provider recusou a chave', message: motivo, tone: 'danger' });
+      } else {
+        showToast({
+          title: 'Sem verificação para este provider',
+          message: 'A chave continua salva — este provider não tem endpoint de teste.',
+          tone: 'warning',
+        });
+      }
+    } catch (erro) {
+      showToast({ title: 'Não deu para testar', message: mensagemDaApi(erro), tone: 'danger' });
+    } finally {
+      setEmVoo(null);
+    }
   }
 
   async function handleRemove(provider: LlmCredentialProvider) {
-    await deleteCredential(provider);
-    queryClient.invalidateQueries({ queryKey: ['credentials'] });
+    setEmVoo(provider);
+    try {
+      await deleteCredential(provider);
+      queryClient.invalidateQueries({ queryKey: ['credentials'] });
+      showToast({ title: 'Credencial removida', tone: 'success' });
+    } catch (erro) {
+      showToast({
+        title: 'Não deu para remover',
+        message: mensagemDaApi(erro),
+        tone: 'danger',
+      });
+    } finally {
+      setEmVoo(null);
+    }
   }
 
   return (
     <div className={styles.section}>
-      <div className={styles.title}>Credenciais de provider</div>
-      <div className={styles.subtitle}>Chaves write-only — nunca reexibidas após salvas.</div>
+      <div className={styles.sectionHead}>
+        <h2 className={styles.title}>Credenciais de provider</h2>
+        <span className={styles.eyebrow}>write-only · por usuário</span>
+      </div>
+      <div className={styles.subtitle}>
+        Chaves write-only — nunca reexibidas após salvas. Como não há como
+        conferir o que está guardado, o que se oferece é <strong>trocar</strong>{' '}
+        e <strong>testar</strong>: o teste roda no servidor sobre a chave
+        cifrada e devolve só o veredito.
+      </div>
 
       {CREDENCIAIS_DE_LLM.map(({ id, label, kind }) => {
         const existing = credentials?.find((c) => c.provider === id);
+        const rascunho = drafts[id]?.trim() ?? '';
+        const ocupado = emVoo === id;
         return (
           <div key={id} className={styles.credentialCard}>
             <div className={styles.credentialInfo}>
@@ -601,23 +882,46 @@ function CredentialsSection() {
                 {existing ? `Configurado em ${new Date(existing.updatedAt).toLocaleDateString('pt-BR')}` : 'Nenhuma credencial salva'}
               </div>
             </div>
-            {!existing && (
-              <div className={styles.credentialInput}>
-                <Input
-                  mono
-                  type="password"
-                  placeholder="API key"
-                  value={drafts[id] ?? ''}
-                  onChange={(e) => setDrafts((d) => ({ ...d, [id]: e.target.value }))}
-                />
-              </div>
-            )}
-            {existing ? (
-              <Button variant="danger" onClick={() => handleRemove(id)}>
-                Remover
-              </Button>
-            ) : (
-              <Button onClick={() => handleSave(id)}>Salvar</Button>
+            {/* O input fica SEMPRE visível: com credencial salva ele é o
+                caminho da troca, que antes só existia removendo primeiro. */}
+            <div className={styles.credentialInput}>
+              <Input
+                mono
+                type="password"
+                aria-label={existing ? `Nova chave de ${label}` : `API key de ${label}`}
+                placeholder={existing ? 'Trocar chave' : 'API key'}
+                value={drafts[id] ?? ''}
+                onChange={(e) => setDrafts((d) => ({ ...d, [id]: e.target.value }))}
+              />
+            </div>
+            {/* Nome acessível com o provider: são nove cards com botões de
+                texto idêntico, e "Salvar" sozinho não diz salvar o quê. */}
+            <Button
+              aria-label={`${existing ? 'Trocar' : 'Salvar'} chave de ${label}`}
+              disabled={ocupado || rascunho.length === 0}
+              onClick={() => handleSave(id)}
+            >
+              {existing ? 'Trocar' : 'Salvar'}
+            </Button>
+            {existing && (
+              <>
+                <Button
+                  variant="secondary"
+                  aria-label={`Testar chave de ${label}`}
+                  disabled={ocupado}
+                  onClick={() => handleTest(id)}
+                >
+                  Testar
+                </Button>
+                <Button
+                  variant="danger"
+                  aria-label={`Remover chave de ${label}`}
+                  disabled={ocupado}
+                  onClick={() => handleRemove(id)}
+                >
+                  Remover
+                </Button>
+              </>
             )}
           </div>
         );
@@ -720,7 +1024,10 @@ function ProficiencySection({ projectId }: { projectId: string }) {
 
   return (
     <div className={styles.section}>
-      <div className={styles.title}>Perfil de proficiência</div>
+      <div className={styles.sectionHead}>
+        <h2 className={styles.title}>Perfil de proficiência</h2>
+        <span className={styles.eyebrow}>anamnese · derivado</span>
+      </div>
       <div className={styles.subtitle} style={{ marginBottom: 12 }}>
         Derivado pela Anamnese a partir das suas interações. Só competências
         técnicas e de processo — nunca características pessoais.
@@ -858,7 +1165,10 @@ function InstructionVersionsSection({ projectId }: { projectId: string }) {
 
   return (
     <div className={styles.section}>
-      <div className={styles.title}>Histórico de instruções</div>
+      <div className={styles.sectionHead}>
+        <h2 className={styles.title}>Histórico de instruções</h2>
+        <span className={styles.eyebrow}>versionamento por agente</span>
+      </div>
       <div className={styles.subtitle} style={{ marginBottom: 12 }}>
         Cada patch aprovado vira uma versão. Reverter grava uma versão nova
         com o conteúdo antigo — nada é apagado.

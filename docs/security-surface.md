@@ -195,6 +195,7 @@ o componente `d` da JWK, travado por teste.
 | GET | `/` | jwt |
 | GET | `/users/me/credentials` | jwt |
 | POST | `/users/me/credentials` | jwt |
+| POST | `/users/me/credentials/:provider/test` | jwt |
 | DELETE | `/users/me/credentials/:provider` | jwt |
 | POST | `/users/me/git-credentials` | jwt |
 | GET | `/workspaces` | jwt |
@@ -207,6 +208,7 @@ o componente `d` da JWK, travado por teste.
 | PUT | `/projects/:projectId/agent-autonomy` | role:maintainer |
 | GET | `/projects/:projectId/agent-bindings/:agentSlug` | role:viewer |
 | PUT | `/projects/:projectId/agent-bindings/:agentSlug` | role:developer |
+| GET | `/projects/:projectId/agent-costs` | role:developer |
 | GET | `/projects/:projectId/agents/:agent/instruction-versions` | role:viewer |
 | POST | `/projects/:projectId/agents/:agent/instruction-versions/:version/rollback` | role:maintainer |
 | POST | `/projects/:projectId/anamnese/run` | role:maintainer |
@@ -280,6 +282,7 @@ o componente `d` da JWK, travado por teste.
 | POST | `/workspaces/:workspaceId/models/activate` | role:owner |
 | GET | `/workspaces/:workspaceId/models/catalog` | role:maintainer |
 | POST | `/workspaces/:workspaceId/models/sync` | role:owner |
+| POST | `/workspaces/:workspaceId/models/uses` | role:owner |
 | GET | `/workspaces/:workspaceId/models/:modelId/price-changes` | role:maintainer |
 | PATCH | `/workspaces/:workspaceId/models/:modelId/pricing` | role:owner |
 | GET | `/workspaces/:workspaceId/projects` | role:viewer |

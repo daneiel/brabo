@@ -1,12 +1,29 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  listCredentials,
   listModelCatalog,
+  setModelUses,
   setModelsActive,
   syncModelCatalog,
 } from '../lib/api-client';
-import type { ModelComCuradoria, ResultadoDoSync } from '../lib/api-types';
-import { agruparModelos, formatarJanela, formatarPreco } from '../lib/models';
+import type {
+  ModelComCuradoria,
+  ResultadoDoSync,
+  UsoDeModelo,
+} from '../lib/api-types';
+import {
+  FACETAS,
+  ROTULO_DO_PROVIDER,
+  ROTULO_DO_USO,
+  USOS_DE_MODELO,
+  agruparModelos,
+  formatarJanela,
+  formatarPreco,
+  type Faceta,
+} from '../lib/models';
+import { Alert } from './ui/Alert';
+import { ChevronDownIcon, ChevronRightIcon } from './ui/icons';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { useToast } from './ui/ToastProvider';
@@ -27,6 +44,67 @@ export function ModelCatalogSection({ workspaceId }: { workspaceId: string }) {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const [marcados, setMarcados] = useState<Set<string>>(new Set());
+  /**
+   * Dois conjuntos com POLARIDADE oposta, e é de propósito: cada um carrega o
+   * seu default no próprio nome.
+   *
+   * Grupos nascem ABERTOS (são três, e fechá-los de saída esconderia até o que
+   * é pequeno); subgrupos de fabricante nascem FECHADOS (são 58 no OpenRouter,
+   * e abri-los devolve a lista de 338 linhas que o agrupamento existe para
+   * evitar). Um único Set com "aberto" ou "fechado" para os dois exigiria semear
+   * um deles com dados que só chegam depois da query.
+   */
+  const [gruposFechados, setGruposFechados] = useState<Set<string>>(new Set());
+  const [subgruposAbertos, setSubgruposAbertos] = useState<Set<string>>(
+    new Set(),
+  );
+  /**
+   * As facetas exigidas. Nascem vazias: o catálogo inteiro é o default, e um
+   * filtro ligado por conta própria esconderia modelo sem o usuário ter pedido
+   * — que é o mesmo defeito do modelo que some da lista.
+   */
+  const [facetas, setFacetas] = useState<Set<Faceta>>(new Set());
+  /** Filtro pelo uso que ESTE workspace marcou — o outro eixo da busca. */
+  const [usosFiltrados, setUsosFiltrados] = useState<Set<UsoDeModelo>>(
+    new Set(),
+  );
+  /** Os usos que a barra de lote vai APLICAR (substituindo) nos marcados. */
+  const [usosDoLote, setUsosDoLote] = useState<Set<UsoDeModelo>>(new Set());
+
+  function alternarNoSet<T>(
+    set: React.Dispatch<React.SetStateAction<Set<T>>>,
+    valor: T,
+  ) {
+    set((atual) => {
+      const proximo = new Set(atual);
+      if (!proximo.delete(valor)) proximo.add(valor);
+      return proximo;
+    });
+  }
+
+  function alternarFaceta(id: Faceta) {
+    setFacetas((atual) => {
+      const proximo = new Set(atual);
+      if (!proximo.delete(id)) proximo.add(id);
+      return proximo;
+    });
+  }
+
+  function alternarGrupo(kind: string) {
+    setGruposFechados((atual) => {
+      const proximo = new Set(atual);
+      if (!proximo.delete(kind)) proximo.add(kind);
+      return proximo;
+    });
+  }
+
+  function alternarSubgrupo(upstream: string) {
+    setSubgruposAbertos((atual) => {
+      const proximo = new Set(atual);
+      if (!proximo.delete(upstream)) proximo.add(upstream);
+      return proximo;
+    });
+  }
 
   const { data: catalogo } = useQuery({
     queryKey: ['model-catalog', workspaceId],
@@ -34,9 +112,75 @@ export function ModelCatalogSection({ workspaceId }: { workspaceId: string }) {
   });
 
   const grupos = useMemo(
-    () => (catalogo ? agruparModelos(catalogo) : []),
+    () =>
+      catalogo
+        ? agruparModelos(catalogo, {
+            facetas: [...facetas],
+            usos: [...usosFiltrados],
+          })
+        : [],
+    [catalogo, facetas, usosFiltrados],
+  );
+
+  /** O total sem filtro, para dizer quanto o filtro escondeu em vez de só sumir. */
+  const totalSemFiltro = useMemo(
+    () =>
+      catalogo
+        ? agruparModelos(catalogo).reduce((n, g) => n + g.modelos.length, 0)
+        : 0,
     [catalogo],
   );
+  const totalVisivel = grupos.reduce((n, g) => n + g.modelos.length, 0);
+  const filtrando = facetas.size > 0 || usosFiltrados.size > 0;
+
+  const todosOsUpstreams = grupos.flatMap((g) =>
+    (g.subgrupos ?? []).map((s) => s.upstream),
+  );
+  // "Tudo minimizado" é o que decide o que o botão OFERECE — ele mostra a ação,
+  // não o estado, para não fazer o usuário adivinhar o que vai acontecer.
+  const tudoMinimizado =
+    gruposFechados.size === grupos.length && subgruposAbertos.size === 0;
+
+  function alternarTudo() {
+    if (tudoMinimizado) {
+      setGruposFechados(new Set());
+      setSubgruposAbertos(new Set(todosOsUpstreams));
+    } else {
+      setGruposFechados(new Set(grupos.map((g) => g.kind)));
+      setSubgruposAbertos(new Set());
+    }
+  }
+
+
+  const { data: credenciais } = useQuery({
+    queryKey: ['credentials'],
+    queryFn: listCredentials,
+  });
+
+  /**
+   * Providers com credencial cadastrada e NENHUM modelo no catálogo.
+   *
+   * O passo que faltava estar dito: cadastrar a chave não descobre modelo
+   * nenhum — quem descobre é o sync, e nada na tela ligava as duas coisas. O
+   * caso real foi uma chave de OpenRouter válida, testada e verde, com o
+   * seletor de modelos oferecendo só os locais.
+   *
+   * Compara com o catálogo INTEIRO (ativos e inativos): o que interessa aqui é
+   * "o sync já trouxe algo deste provider?", não a curadoria.
+   */
+  const semCatalogo = useMemo(() => {
+    if (!credenciais || !catalogo) return [];
+    const comModelo = new Set(
+      Object.values(catalogo)
+        .flatMap((porGrupo) => Object.values(porGrupo).flat())
+        .map((m) => m.provider),
+    );
+    return credenciais
+      .map((c) => c.provider)
+      // `github`/`gitlab` são token de git, não dão modelo nenhum.
+      .filter((p): p is keyof typeof ROTULO_DO_PROVIDER => p in ROTULO_DO_PROVIDER)
+      .filter((p) => !comModelo.has(p));
+  }, [credenciais, catalogo]);
 
   function invalidar() {
     void queryClient.invalidateQueries({
@@ -77,6 +221,22 @@ export function ModelCatalogSection({ workspaceId }: { workspaceId: string }) {
       showToast({ title: 'Não foi possível salvar', tone: 'danger' }),
   });
 
+  const marcarUsos = useMutation({
+    mutationFn: () =>
+      setModelUses(workspaceId, {
+        modelIds: [...marcados],
+        uses: [...usosDoLote],
+      }),
+    onSuccess: () => {
+      invalidar();
+      setMarcados(new Set());
+      setUsosDoLote(new Set());
+      showToast({ title: 'Usos atualizados', tone: 'success' });
+    },
+    onError: () =>
+      showToast({ title: 'Não foi possível salvar', tone: 'danger' }),
+  });
+
   function alternar(id: string) {
     setMarcados((atual) => {
       const proximo = new Set(atual);
@@ -89,16 +249,98 @@ export function ModelCatalogSection({ workspaceId }: { workspaceId: string }) {
     <div className={styles.section}>
       <div className={styles.header}>
         <div>
-          <div className={styles.title}>Catálogo de modelos</div>
+          <div className={styles.tituloLinha}>
+            <h2 className={styles.title}>Catálogo de modelos</h2>
+            <span className={styles.eyebrow}>curadoria por workspace</span>
+          </div>
           <div className={styles.subtitle}>
             O que o sync descobre entra desativado. Só o que você ativar aparece
             no seletor de modelos.
           </div>
         </div>
-        <Button onClick={() => sync.mutate()} disabled={sync.isPending}>
-          {sync.isPending ? 'Sincronizando…' : 'Atualizar catálogo'}
-        </Button>
+        <div className={styles.acoes}>
+          {grupos.length > 0 && (
+            <Button variant="ghost" onClick={alternarTudo}>
+              {tudoMinimizado ? 'Expandir tudo' : 'Minimizar tudo'}
+            </Button>
+          )}
+          <Button onClick={() => sync.mutate()} disabled={sync.isPending}>
+            {sync.isPending ? 'Sincronizando…' : 'Atualizar catálogo'}
+          </Button>
+        </div>
       </div>
+
+      {totalSemFiltro > 0 && (
+        <div className={styles.facetas}>
+          {FACETAS.map((f) => (
+            <button
+              key={f.id}
+              type="button"
+              title={f.ajuda}
+              aria-pressed={facetas.has(f.id)}
+              className={[
+                styles.faceta,
+                facetas.has(f.id) && styles.facetaLigada,
+              ]
+                .filter(Boolean)
+                .join(' ')}
+              onClick={() => alternarFaceta(f.id)}
+            >
+              {f.rotulo}
+            </button>
+          ))}
+          {/* O outro eixo: capability é o que o provider PROVA, uso é o que
+              este workspace decidiu. Separados por um divisor porque
+              confundi-los é justamente o erro que o ADR 0051 evita. */}
+          <span className={styles.divisorDeFiltro} aria-hidden="true" />
+          {USOS_DE_MODELO.map((u) => (
+            <button
+              key={u}
+              type="button"
+              title={`Modelos que este workspace marcou como "${ROTULO_DO_USO[u]}"`}
+              aria-pressed={usosFiltrados.has(u)}
+              className={[
+                styles.faceta,
+                styles.facetaDeUso,
+                usosFiltrados.has(u) && styles.facetaLigada,
+              ]
+                .filter(Boolean)
+                .join(' ')}
+              onClick={() => alternarNoSet(setUsosFiltrados, u)}
+            >
+              {ROTULO_DO_USO[u]}
+            </button>
+          ))}
+          {/* Sem esta contagem, um filtro que zera a lista é indistinguível de
+              um catálogo vazio — e a saída (desligar a faceta) fica escondida. */}
+          {filtrando && (
+            <span className={styles.facetaContagem}>
+              {totalVisivel} de {totalSemFiltro}
+            </span>
+          )}
+        </div>
+      )}
+
+      {filtrando && totalVisivel === 0 && (
+        <Alert tone="accent">
+          Nenhum modelo atende a tudo que está marcado. Capability não declarada
+          pelo provider conta como ausente, e uso é o que{' '}
+          <strong>este workspace</strong> marcou — desligue um filtro para ver o
+          resto.
+        </Alert>
+      )}
+
+      {semCatalogo.length > 0 && (
+        <Alert tone="warning">
+          Você tem credencial de{' '}
+          <strong>
+            {semCatalogo.map((p) => ROTULO_DO_PROVIDER[p]).join(', ')}
+          </strong>{' '}
+          e nenhum modelo {semCatalogo.length > 1 ? 'deles' : 'dele'} no
+          catálogo. Cadastrar a chave não descobre modelo — clique em{' '}
+          <strong>Atualizar catálogo</strong> para buscá-los no provider.
+        </Alert>
+      )}
 
       {sync.data && <RelatorioDoSync resultados={sync.data.porProvider} />}
 
@@ -117,10 +359,43 @@ export function ModelCatalogSection({ workspaceId }: { workspaceId: string }) {
           >
             Desativar
           </Button>
+          <span className={styles.divisorDeFiltro} aria-hidden="true" />
+          {/* Marcar uso é operação SEPARADA de ativar: os dois eixos não se
+              misturam num botão só, para ninguém ligar um modelo achando que
+              só estava opinando sobre ele. */}
+          <span className={styles.rotuloDoLote}>marcar como</span>
+          {USOS_DE_MODELO.map((u) => (
+            <button
+              key={u}
+              type="button"
+              aria-pressed={usosDoLote.has(u)}
+              className={[
+                styles.faceta,
+                styles.facetaDeUso,
+                usosDoLote.has(u) && styles.facetaLigada,
+              ]
+                .filter(Boolean)
+                .join(' ')}
+              onClick={() => alternarNoSet(setUsosDoLote, u)}
+            >
+              {ROTULO_DO_USO[u]}
+            </button>
+          ))}
+          <Button
+            variant="ghost"
+            onClick={() => marcarUsos.mutate()}
+            disabled={marcarUsos.isPending}
+            title="Substitui os usos dos modelos marcados — não soma aos que já tinham"
+          >
+            {usosDoLote.size > 0 ? 'Aplicar usos' : 'Limpar usos'}
+          </Button>
         </div>
       )}
 
-      {grupos.length === 0 && (
+      {/* Só quando o catálogo é REALMENTE vazio: com filtro ligado, mandar
+          cadastrar credencial seria mentira — a credencial existe e o modelo
+          também, quem escondeu foi a faceta. */}
+      {totalSemFiltro === 0 && (
         <div className={styles.vazio}>
           Nenhum modelo no catálogo. Cadastre uma credencial de provider e
           atualize.
@@ -129,15 +404,92 @@ export function ModelCatalogSection({ workspaceId }: { workspaceId: string }) {
 
       {grupos.map((grupo) => (
         <div key={grupo.kind} className={styles.grupo}>
-          <div className={styles.grupoTitulo}>{grupo.rotulo}</div>
-          {grupo.modelos.map((model) => (
-            <LinhaDoCatalogo
-              key={model.id}
-              model={model}
-              marcado={marcados.has(model.id)}
-              onToggle={() => alternar(model.id)}
-            />
-          ))}
+          <button
+            type="button"
+            className={styles.grupoTitulo}
+            aria-expanded={!gruposFechados.has(grupo.kind)}
+            onClick={() => alternarGrupo(grupo.kind)}
+          >
+            <span className={styles.chevron}>
+              {gruposFechados.has(grupo.kind) ? (
+                <ChevronRightIcon size={13} />
+              ) : (
+                <ChevronDownIcon size={13} />
+              )}
+            </span>
+            {grupo.rotulo}
+            {/* "Hubs" sozinho não diz de QUEM é o catálogo — e preço,
+                disponibilidade e credencial pertencem ao hub, não ao fabricante
+                do modelo. Nos outros grupos o provider já é evidente na linha. */}
+            {grupo.kind === 'hub' && (
+              <span className={styles.grupoProvedores}>
+                ·{' '}
+                {grupo.provedores
+                  .map((p) => ROTULO_DO_PROVIDER[p] ?? p)
+                  .join(', ')}
+              </span>
+            )}
+            <span className={styles.grupoContagem}>{grupo.modelos.length}</span>
+          </button>
+
+          {/* Um hub serve o catálogo de dezenas de fabricantes numa lista só —
+              338, no caso do OpenRouter. Repartir por quem serve por baixo é o
+              que torna a lista navegável; sem isso, achar o Claude é rolagem. */}
+          {!gruposFechados.has(grupo.kind) &&
+            (grupo.subgrupos
+            ? grupo.subgrupos.map((sub) => {
+                const aberto = subgruposAbertos.has(sub.upstream);
+                const marcadosAqui = sub.modelos.filter((m) =>
+                  marcados.has(m.id),
+                ).length;
+                return (
+                  <div key={sub.upstream} className={styles.subgrupo}>
+                    <button
+                      type="button"
+                      className={styles.subgrupoTitulo}
+                      aria-expanded={aberto}
+                      onClick={() => alternarSubgrupo(sub.upstream)}
+                    >
+                      <span className={styles.chevron}>
+                        {aberto ? (
+                          <ChevronDownIcon size={12} />
+                        ) : (
+                          <ChevronRightIcon size={12} />
+                        )}
+                      </span>
+                      {sub.rotulo}
+                      <span className={styles.grupoContagem}>
+                        {sub.modelos.length}
+                      </span>
+                      {/* Fechado com itens marcados: sem este selo, a barra
+                          diria "12 selecionados" e você não teria como ver
+                          QUAIS — ativaria em lote às cegas. */}
+                      {!aberto && marcadosAqui > 0 && (
+                        <span className={styles.marcadosOcultos}>
+                          {marcadosAqui} marcado{marcadosAqui > 1 ? 's' : ''}
+                        </span>
+                      )}
+                    </button>
+                    {aberto &&
+                      sub.modelos.map((model) => (
+                        <LinhaDoCatalogo
+                          key={model.id}
+                          model={model}
+                          marcado={marcados.has(model.id)}
+                          onToggle={() => alternar(model.id)}
+                        />
+                      ))}
+                  </div>
+                );
+              })
+            : grupo.modelos.map((model) => (
+                <LinhaDoCatalogo
+                  key={model.id}
+                  model={model}
+                  marcado={marcados.has(model.id)}
+                  onToggle={() => alternar(model.id)}
+                />
+              )))}
         </div>
       ))}
     </div>
@@ -206,7 +558,19 @@ function LinhaDoCatalogo({
         <Badge tone="muted">{formatarPreco(model)}</Badge>
         {janela && <Badge tone="muted">{janela}</Badge>}
         {model.supportsToolCalling && <Badge tone="accent">tool calling</Badge>}
+        {/* Só o que é VERDADE aparece: um selo "não lê imagem" afirmaria uma
+            ausência que o catálogo não prova. */}
+        {model.supportsVision && <Badge tone="accent">lê imagem</Badge>}
+        {model.supportsReasoning && <Badge tone="accent">thinking</Badge>}
+        {model.generatesImage && <Badge tone="accent">gera imagem</Badge>}
         {model.manualPricing && <Badge tone="muted">preço manual</Badge>}
+        {/* Uso vem depois das capabilities e com tom próprio: uma é o que o
+            provider prova, a outra é o que este workspace decidiu. */}
+        {model.uses.map((u) => (
+          <Badge key={u} tone="warning">
+            {ROTULO_DO_USO[u]}
+          </Badge>
+        ))}
       </span>
     </label>
   );

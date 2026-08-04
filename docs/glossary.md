@@ -213,6 +213,16 @@ cascata: **sessão > agente > projeto > workspace**, o primeiro que existir
 ([RN-020](business-rules.md#rn-020)). É por isso que dá para pôr um modelo caro
 só no QA.
 
+**Faceta de capability** — o que o **provider declara** sobre um modelo: lê
+imagem, gera imagem, faz thinking, aceita `tools`. Vem do catálogo remoto no
+sync; `false` quer dizer "não declarou", nunca "não faz"
+([RN-056](business-rules.md#rn-056)).
+
+**Uso do modelo** — para que **este workspace** usa aquele modelo (`codigo`,
+`documentacao`, `analise`, `imagem`, `conversa`). É opinião de quem opera, não
+capability: nenhum catálogo publica "bom para código". Marcar uso **não liga** o
+modelo no seletor ([RN-057](business-rules.md#rn-057)).
+
 ---
 
 ## Psicólogo e Anamnese

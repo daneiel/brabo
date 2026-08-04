@@ -40,6 +40,15 @@ Sem isso, ele envelhece calado. Foi o que aconteceu: o site publicado dizia
 "28 deles" e "as 29 decisões" quando já eram 30, e "o próximo é 0030" com o
 0030 pronto. Nada quebrou, nenhum check reclamou — só ficou errado.
 
+O caso mais caro foi a **versão no README**: ele anunciou `v0.1.0` da Fase 5
+até a v2.1.0 — sete releases atrás da realidade, na primeira coisa que quem
+chega lê. A conferência compara a prosa com o primeiro `## vX.Y.Z` do
+CHANGELOG, que é escrito pelo workflow de release e volta por PR; uma tag lida
+do git não serviria, porque o checkout raso do CI pode não ter tag nenhuma. Já
+o **badge** saiu da conferência e virou geração: ele lê a release do GitHub
+direto (`shields.io/github/v/release`) e se atualiza sozinho — verifica-se só o
+que não dá para gerar.
+
 O `generate.mjs` agora confere essas afirmações contra a realidade do
 diretório. E **padrão que não casa também reprova**: um check cuja regex parou
 de encontrar a frase é pior que check nenhum, porque fica verde para sempre
@@ -47,7 +56,9 @@ dizendo que conferiu algo que não olhou. Quando a frase mudar, o CI diz `CEGO`
 e pede o ajuste do padrão.
 
 Acrescentar uma afirmação nova à conferência é uma entrada na lista
-`afericoes` de `verificarContagensDeAdr`: arquivo, padrão, valor esperado.
+`afericoes` de `verificarContagensDeAdr` (arquivo, padrão, valor esperado) ou
+uma função própria ao lado de `verificarVersaoNoReadme`, quando a fonte da
+verdade não for o diretório de ADRs.
 
 ## As peças
 

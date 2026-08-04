@@ -1,7 +1,13 @@
+/*
+ * Métricas do mockup do design system (`Brabo Settings.dc.html`): raio 12px,
+ * cabeçalho em surface-2 com mono 10px/600 e `letter-spacing:.05em`, células
+ * de 11px×14px, separadores de 1px. Estavam próximas, não iguais — e como esta
+ * tabela é a de TODAS as telas, a diferença aparecia em todas.
+ */
 .table {
   width: 100%;
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   overflow: hidden;
 }
 
@@ -17,10 +23,10 @@
 .header .cell {
   font-family: var(--font-mono);
   font-size: 10px;
-  font-weight: 500;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-muted);
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
 }
 
 .body .row {
@@ -33,7 +39,7 @@
 }
 
 .cell {
-  padding: 10px 14px;
+  padding: 11px 14px;
   font-family: var(--font-body);
   font-size: 13px;
   color: var(--text-primary);
