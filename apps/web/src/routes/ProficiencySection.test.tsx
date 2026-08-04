@@ -36,6 +36,10 @@ vi.mock('@tanstack/react-router', () => ({
 
 vi.mock('../lib/hooks', () => ({
   useProficiency: () => ({ data: [PERFIL] }),
+  // A aba inteira monta junto, e desde a RN-060 ela pergunta o papel para
+  // decidir se mostra o gasto das chaves. Sem papel de owner, a seção não
+  // monta — que é exatamente o comportamento desejado aqui.
+  useCurrentWorkspaceWithRole: () => ({ data: undefined }),
 }));
 
 vi.mock('../lib/api-client', () => ({

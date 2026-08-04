@@ -1,6 +1,6 @@
 {
   "_": "Gerado por `pnpm docs:generate`. Não edite — é a trava do que está em docs/reference/api/.",
-  "openapiSha256": "e0645f81b8822bd9fa6e9f528da40253993369eb8fd0c8d700633996091057ae",
+  "openapiSha256": "4536f2cd36b9c6555f7a7d429648f84e9f2150220e901b7ca0f369c3ceda8572",
   "arquivos": {
     "actions-controller-approve-always.ParamsDetails.json": "f51f6d74f8b4a7e9c8f70cef93e0d026d63e77123672029da660c802def3ad0e",
     "actions-controller-approve-always.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
@@ -139,6 +139,10 @@
     "backlog-controller-return.StatusCodes.json": "686d5e28817de827e3f1f5dc44d9a80a5e81260c7d0ba8be28d25a8f4331e743",
     "backlog-controller-return.api.mdx": "1a90b2880aeac64571c05a717075c90959c6802acd034093c3b56483be1b668f",
     "brabo-api.info.mdx": "3bc3aeb8411e3373c767b82a5917c6eb794600f10fd3c1f1046895e4195f59e8",
+    "budgets-controller-get-credential-spend.ParamsDetails.json": "94ab4c0ad026ea8fc2de73948b529cbfceca29e7ce6ceec64ff8030654c58210",
+    "budgets-controller-get-credential-spend.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
+    "budgets-controller-get-credential-spend.StatusCodes.json": "4a96a30405fdeac555b3c82e5fd6645ceead8154ee9be7984e25e920f0e2528a",
+    "budgets-controller-get-credential-spend.api.mdx": "ceb5c60449ed0a71d613ffa081a289bf5c3321116daa8203168df5e24db2dfa4",
     "budgets-controller-get-project-agent-costs.ParamsDetails.json": "f1cf321fa2c84a7ad647e71995c44bdb32efe0baf7ce03ee78703c9e1a2ea0e3",
     "budgets-controller-get-project-agent-costs.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
     "budgets-controller-get-project-agent-costs.StatusCodes.json": "5b89bb25741d55fcf55aa02271e596d71ac64496aacacb66a47ac21a07ff1b5e",
@@ -507,7 +511,7 @@
     "sessions-controller-transition.RequestSchema.json": "1a1741c5ed6c1e8c653b079f28c80327bfe57363efc50b9673ed8fa755c256f3",
     "sessions-controller-transition.StatusCodes.json": "ad65603d00aa842175d178e0d998a25b55da05f723c870ecf304bca643783cf4",
     "sessions-controller-transition.api.mdx": "537d042f310b6554fda50ed8cbb6f32f80f5bb688d6e41e2b281d5d25310ac76",
-    "sidebar.ts": "d0299f550b1ddd75281715ad3eb7df41d29e4f336ffcf650285c6f53709f1887",
+    "sidebar.ts": "583b265e5b43f822719d31ad63427288cdfb2db4bbcd76b8b9a60e4216d5f4e9",
     "workspaces-controller-add-member.ParamsDetails.json": "56d669b72315e3339a75e1873f3cf2543f5b2ba3552994ad2fb69d673da7192b",
     "workspaces-controller-add-member.RequestSchema.json": "c17baeb1beca0020e67b7b40d66d88fbf644c7d3d24276560d0d58149ac2249a",
     "workspaces-controller-add-member.StatusCodes.json": "6a3de2295117fd5c898f85528f29d667fcbe398fa244bbf3c3f32f8ca71aa339",
