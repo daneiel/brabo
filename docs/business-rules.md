@@ -925,6 +925,38 @@ Três regras derivadas:
   (`ativar num workspace NÃO liga o modelo no vizinho`)
 - **Origem:** [ADR 0049](adr/0049-curadoria-de-modelo-por-workspace.md)
 
+### RN-058 — A chave que o AGENTE gasta é a do owner do workspace {#rn-058}
+
+Credencial de LLM pertence a uma pessoa (`user_credentials.user_id`), e agente
+não é pessoa. O turno de agente resolve a chave pelo **owner do workspace**
+(`workspaces.created_by`), não por quem abriu a sessão nem por quem criou o
+projeto: quem banca a conta banca os agentes, e isso não muda quando outra
+pessoa da equipe começa a sessão.
+
+`created_by` e não `workspace_members.role = 'owner'`: pode haver vários
+owners, e "qualquer um deles" faria a chave usada variar sem ninguém decidir.
+
+Antes disto o turno passava o **slug do agente** (`agentId ?? sessionId`) na
+coluna de usuário. A consulta ia ao banco com `user_id = 'criativo'`, o
+Postgres recusava o UUID inválido, e o erro virava **resposta vazia** no fio —
+sem métrica, sem evento de falha, sem nada na tela. O efeito prático, que só
+uma execução real revelou: **nenhum agente jamais usou um provider com
+credencial**. Só `ollama` funcionava, porque para ele a busca é pulada — e foi
+com modelo local que a Fase 4, o dogfooding da Fase 10 e todas as demos
+rodaram.
+
+O chat humano nunca teve o defeito: ele usa `actor.id`, que é o usuário de
+verdade.
+
+- **Onde:**
+  `apps/api/src/application/use-cases/llm/resolve-credential-owner.use-case.ts`,
+  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts`,
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts`
+- **Teste:** `test/application/use-cases/llm/resolve-credential-owner.use-case.spec.ts`
+  (o owner vence quem criou o projeto; a chave encontrada é a dele; projeto
+  inexistente é 404 e não erro de banco)
+- **Origem:** execução real da FASE 13b
+
 ### RN-056 — Faceta de capability vem do provider; silêncio preserva o que estava {#rn-056}
 
 `supports_vision`, `supports_reasoning` e `generates_image` são **fato do
