@@ -7,6 +7,8 @@ import {
   QueryClientProvider,
 } from '@tanstack/react-query';
 import { RouterProvider } from '@tanstack/react-router';
+// As fontes vêm antes: `index.css` já as referencia por `var(--font-*)`.
+import './fonts.css';
 import './index.css';
 import { router } from './router';
 import { restaurarSessao } from './lib/auth';
