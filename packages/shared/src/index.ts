@@ -81,11 +81,40 @@ export interface LLMProviderCapabilities {
  * preço e janela junto. Campo ausente significa "o provider não disse", nunca
  * "o valor é zero", e por isso o sync não sobrescreve o que já está gravado.
  */
+/**
+ * Para que um workspace usa um modelo — a curadoria por uso (ADR 0051).
+ *
+ * Vocabulário FECHADO: texto livre daria `code`, `coding` e `código` no mesmo
+ * filtro em uma semana. Vive aqui, e não só na api, porque a tela de curadoria
+ * precisa do mesmo vocabulário — as listas em runtime ficam de cada lado
+ * (`domain/llm/model-uses.ts` e `web/src/lib/models.ts`), pela mesma razão de
+ * `LLMProviderName`: este pacote é 100% tipo.
+ *
+ * NÃO é capability: nenhum catálogo de provider publica "bom para código", e
+ * declarar isso como capability seria palpite vestido de dado (ADR 0041).
+ */
+export type UsoDeModelo =
+  | "codigo"
+  | "documentacao"
+  | "analise"
+  | "imagem"
+  | "conversa";
+
 export interface ModeloDoCatalogo {
   readonly name: string;
   readonly displayName?: string;
   readonly contextLength?: number;
   readonly supportsToolCalling?: boolean;
+  /**
+   * Aceita IMAGEM na entrada. Campo opcional porque quase nenhum provider
+   * publica isso: quem não declara não vira `false` no catálogo — vira
+   * "não sabemos", e o sync preserva o que já estava lá (ADR 0041).
+   */
+  readonly supportsVision?: boolean;
+  /** Aceita raciocínio explícito (`reasoning`/thinking) como parâmetro. */
+  readonly supportsReasoning?: boolean;
+  /** PRODUZ imagem — eixo diferente de aceitar imagem na entrada. */
+  readonly generatesImage?: boolean;
   readonly inputPricePerMillionMicros?: number;
   readonly outputPricePerMillionMicros?: number;
   /** Só um hub preenche: quem de fato serve o modelo por baixo. */

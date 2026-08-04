@@ -201,3 +201,102 @@ Ambos verificados e legítimos — um warn fora desta lista é novidade:
 - `[FONT_REMOTE] Archivo, Space Grotesk, IBM Plex Mono` — servidas por CDN,
   não empacotadas. Consequência aceita: preview sem rede cai na fonte de
   fallback.
+
+## 2026-08-04 — re-sync pós-Fases 9–12
+
+**O build quebrou por FONTE, e a causa é produto.** O commit `2404d0eb` (ADR
+0036) trocou as três famílias de CDN para auto-hospedadas, com `@font-face`
+usando `url('/fonts/…')` dentro de `apps/web/src/index.css`. Esse caminho é
+absoluto — só existe quando a app serve o `public/` — e o esbuild não o resolve:
+8 erros, build inteiro no chão. Não há knob de config para isso, e
+`lib/bundle.mjs` é contrato (não se forka).
+
+Solução, em duas partes:
+
+1. **As `@font-face` saíram para `apps/web/src/fonts.css`**, importado pelo
+   `main.tsx` junto do `index.css`. A app recebe exatamente as mesmas regras; o
+   `index.css` (tokens + reset + os cinco `@keyframes` que 6 componentes usam)
+   volta a ser importável pelo esbuild. **Isto é mudança de produto** — pequena
+   e sem efeito no browser, mas mudança. O teste `apps/web/test/fontes.test.ts`
+   foi repontado para o arquivo novo e ganhou uma asserção de que o `main.tsx`
+   importa a folha (sem ela, separar os arquivos reintroduziria o ADR 0036 por
+   outra porta).
+2. **`.design-sync/fonts.css` parou de usar `@import` remoto** do Google Fonts —
+   que virou mentira com o ADR 0036 — e passou a declarar as MESMAS regras
+   apontando para os `.woff2` do disco. O esbuild os inlina como data-URI, então
+   o bundle sai auto-contido. Ao acrescentar peso/subset na app, replique aqui:
+   são dois arquivos de propósito (a app precisa da url servida, o bundle da url
+   de disco) e nada os casa automaticamente.
+
+**O risco #0 se confirmou.** O driver reportou `changed: 0` com 38 arquivos de
+componente alterados desde o último sync. Só o partition `added` (9) veio certo.
+O `ProjectCard` estava `bad` — `agents` virou `rosterGroups` (agrupamento por
+área do ADR 0038) e o preview antigo passava a prop velha: `Cannot read
+properties of undefined (reading 'length')`. Preview portado, mais um export
+novo (`SemOrcamento`) para exercitar `noBudget`/`onDefineBudget`, que era a
+mesma armadilha do `Input` em julho: sem exercitar a prop nova, o `renderHashes`
+não se move e a mudança fica invisível.
+
+**Componentes novos (9).** `Alert`, `Skeleton`, `ProjectCardSkeleton`,
+`Textarea` e os ícones `AlertCircleIcon`/`EyeIcon`/`EyeOffIcon`/`LogoMark`
+ganharam doc + preview e graduaram `good`. Os quatro ícones saíram do molde do
+`CheckIcon` (mesma assinatura), e os quatro entraram em `dtsPropsFor` — a
+extração continua sem pegar `export const X = (props: P) =>`.
+
+**`ModelCatalogSection` fica no floor card, de propósito.** Ele busca dados
+(`useQuery`/`useMutation`) e precisaria de um `QueryClientProvider` acima. Pôr
+isso em `cfg.provider` envolveria os 57 componentes e **limparia todas as
+grades** — caro demais por um componente. Está em `overrides.ModelCatalogSection.skip`
+e o motivo está escrito na doc dele, para quem abrir o card não achar que é
+defeito.
+
+### Validação do conventions.md (2026-08-04)
+
+Rodada contra o build novo: **nenhum nome deixou de verificar** — todos os
+tokens `var(--*)` citados existem nas folhas do bundle, e as afirmações de
+ausência (`Tooltip`, `Popover`, `DatePicker`, "não há layout/grid/stack") seguem
+verdadeiras. `DatePicker` aparece na varredura automática como suspeito porque é
+citado justamente como algo que NÃO existe; não é drift.
+
+**O que ficou incompleto, e é proposta, não correção:** o header não menciona as
+quatro primitivas novas — `Alert`, `Skeleton`, `ProjectCardSkeleton` e
+`Textarea`. O agente de design não vai usá-las sem saber que existem. O arquivo
+é de autoria humana e não foi reescrito; a sugestão é uma linha em "As
+primitivas" para cada uma, e uma menção ao par `Skeleton`/`ProjectCardSkeleton`
+na seção de estados de carregamento.
+
+**`overrides.<Nome>.skip` é LISTA de exports, não booleano.** Pus `skip: true`
+para o `ModelCatalogSection` e o build morreu em
+`emit.mjs:368 — boolean true is not iterable` (`new Set(skip ?? [])`). E era
+desnecessário: componente sem `.design-sync/previews/<Nome>.tsx` já cai no floor
+card por construção. `skip` serve para calar UMA story de um preview que existe.
+
+### Resultado do re-sync (2026-08-04)
+
+66 componentes no projeto (eram 57): **+9**. Render check 66/66 limpo, `bad: []`.
+Um único floor card, o `ModelCatalogSection`, deliberado e explicado na doc dele.
+341 arquivos enviados, `deletePaths` vazio (nada foi removido).
+
+**`fonts/` não existe mais no bundle, e isso é correto.** As três famílias agora
+entram como data-URI dentro do `_ds_bundle.css` (8 `@font-face`), porque o
+`.design-sync/fonts.css` passou a apontar para os `.woff2` do disco em vez de
+fazer `@import` remoto. `tokens/` também está vazio: os tokens são compilados
+para dentro do `_ds_bundle.css` pelo grafo do `styles-entry.ts`. O que garante
+que designs recebem tudo é o `styles.css` abrir com
+`@import "./_ds_bundle.css"` — não a existência das pastas.
+
+### Riscos para o próximo re-sync
+
+- **O risco #0 continua vivo e me pegou de novo**: o driver reportou
+  `changed: 0` com 38 arquivos de componente alterados. Só o `ProjectCard`
+  denunciou (quebrou), porque a prop virou `rosterGroups`. Faça o `git diff`
+  contra o commit do último sync SEMPRE, e force com
+  `package-capture.mjs --components <lista> --spot-check-components <lista>` —
+  sem o segundo flag, tudo volta `carried forward`.
+- **Não leia `.render-check.json` logo após o driver.** O estágio de validate
+  dele pode correr contra um bundle ainda incompleto; eu li um json velho e
+  concluí que dois componentes seguiam quebrados. Rode
+  `package-validate.mjs ./ds-bundle` isolado quando o veredito parecer estranho.
+- **`overrides.<Nome>.skip` é LISTA**, não booleano (ver acima).
+- O `conventions.md` não menciona as quatro primitivas novas (`Alert`,
+  `Skeleton`, `ProjectCardSkeleton`, `Textarea`). É proposta pendente, não drift.

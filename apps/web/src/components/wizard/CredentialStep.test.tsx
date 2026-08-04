@@ -32,7 +32,7 @@ describe('CredentialStep', () => {
 
     const input = screen.getByPlaceholderText('ghp_… / glpat-…');
     fireEvent.change(input, { target: { value: 'ghp_token123' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Testar e salvar' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
 
     expect(onRegister).toHaveBeenCalledWith('ghp_token123');
   });
@@ -50,7 +50,7 @@ describe('CredentialStep', () => {
       />,
     );
     expect(
-      screen.getByRole('button', { name: 'Testar e salvar' }),
+      screen.getByRole('button', { name: 'Salvar' }),
     ).toBeDisabled();
   });
 
@@ -90,7 +90,7 @@ describe('CredentialStep', () => {
     );
   });
 
-  it('mostra a mensagem de erro do teste de conexão', () => {
+  it('mostra a mensagem de erro vinda da api ao salvar', () => {
     render(
       <CredentialStep
         provider="github"

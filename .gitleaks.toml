@@ -45,6 +45,18 @@ paths = [
 
 [[allowlists]]
 description = """
+A chave TRUNCADA que o teto de comprimento existe para NÃO recusar
+(`sk-or-v1-abcdefghi`, ADR 0050). É um prefixo de OpenRouter seguido de nove
+letras em ordem alfabética — não abre nada, e a alta entropia vem do prefixo.
+O teste afirma que uma colagem pela metade continua sendo aceita, porque o DTO
+não é validador de formato; trocar o fixture por outra coisa apagaria
+justamente o caso real que originou a regra.
+"""
+targetRules = ["generic-api-key"]
+paths = ['''apps/api/test/interfaces/credential-dto\.spec\.ts''']
+
+[[allowlists]]
+description = """
 Badge do CircleCI que veio no README boilerplate do NestJS, com o placeholder
 literal `abc123def456` apontando pro repositório nestjs/nest.
 """

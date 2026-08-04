@@ -2,6 +2,25 @@
 
 Gerado dos conventional commits por `scripts/changelog.mjs`.
 
+## v2.1.0 — 2026-08-03
+
+### Novidades
+
+- **web,docs**: aprovações somadas por sessão (achado #16) (3506970)
+- **web,docs**: Insights ganham aba própria, com contador (achado #15) (34ba57f)
+
+### Correções
+
+- **api,web,docs**: destrava a esteira — lint, e o gatilho de drift que eu criei à toa (7382203)
+- **api,web,docs**: o bootstrap para de criar a branch rc (achado #3) (a989e87)
+- **api,docs**: handoff a subagente é recusado, com o lead no erro (achado #12) (dd3de59)
+- **api,engine,docs**: reativar a execução volta a ter efeito (achado #11) (39ab1f6)
+- **engine,api,docs**: falha de git sem motivo, e dois comentários que mentiam (4b49b15)
+
+### Documentação
+
+- **changelog**: v2.0.0 (9336246)
+
 ## v2.0.0 — 2026-08-03
 
 ### ⚠ Mudanças incompatíveis
@@ -40,6 +59,23 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api,web**: o catálogo passa a saber **quais modelos leem imagem, quais
+  geram imagem e quais fazem thinking**, e a tela filtra por isso. O sync nunca
+  consultava o provider sobre modalidade — lia `supports_vision` do que já
+  estava gravado, que tinha nascido `false` —, então os 338 modelos do primeiro
+  sync real do OpenRouter ficaram todos sem vision, incluindo os 181 que o
+  próprio provider declara multimodais. Aceitar imagem e **produzir** imagem
+  viraram eixos distintos: quem lê diagrama e quem desenha resolvem problemas
+  diferentes. Modalidade que o provider não declara continua omitida em vez de
+  virar `false` — silêncio não apaga o que estava lá (ADR 0051)
+- **api,web**: **curadoria por uso** — você marca para que este workspace usa
+  cada modelo (código, documentação, análise, imagem, conversa) e filtra o
+  catálogo por isso. Nenhum provider publica "bom para código"; isso é opinião
+  de quem opera, então vale só no seu workspace, como toda curadoria desde o
+  ADR 0049. Marcar uso **não liga** o modelo no seletor, e trocar o uso não
+  desliga o que já estava ligado — os dois eixos não se misturam
+- **web**: um filtro que zera a lista deixa de ser confundido com catálogo
+  vazio: antes a tela mandava cadastrar uma credencial que já existia
 - **web**: a aba Sessões passa a somar as **aprovações de cada sessão** — o que
   ainda aguarda você, o que você já decidiu e o que a política auto-aprovou —,
   além do total do projeto. Tudo o que existia vinha de `usePendingActions`,
@@ -64,8 +100,108 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `OLLAMA_HOST`. Nenhum dos dois informa preço, então o modelo entra no catálogo
   **sem preço** em vez de com preço inventado
 
+- **api,web**: cadastrar credencial (chave de LLM ou token de git) passa a
+  **sempre cifrar e gravar**, e verificar virou ação própria:
+  `POST /users/me/credentials/{provider}/test`, que decifra no servidor e
+  devolve só o veredito — `ok`, `recusado` (com o motivo do provider) ou
+  `nao_suportado`. Antes o cadastro testava a chave antes de persistir e
+  recusava a gravação; como o campo é write-only e a tela nunca reexibe o que
+  foi digitado, uma recusa deixava o usuário sem credencial **e** sem o texto
+  para corrigir. O terceiro estado existe porque `ollama`/`anthropic`/`openai`
+  não têm endpoint de teste verificado: num veredito binário eles voltariam
+  `ok`, e a tela afirmaria uma verificação que ninguém fez. A tela de
+  configurações ganhou junto o campo de **troca** (antes era preciso remover
+  para trocar) e o botão **Testar** (ADR 0050, RN-055)
+- **api**: credencial passa a ter teto de **512 caracteres** nas duas rotas de
+  cadastro. É proteção contra payload absurdo numa rota que cifra (e portanto
+  copia) a entrada — mesma natureza do `@MaxLength` da senha —, **não**
+  validação de formato: cabe com folga a maior credencial conhecida (~164, a
+  project key da OpenAI) e continua aceitando uma chave pela metade, que quem
+  desmascara é a rota de teste
+
+- **web,api**: a tela de **Configurações** passa a seguir o mockup do design
+  system (`design/SCREENS.md`). "Modelos por agente" ganha as duas colunas que
+  faltavam — **FALLBACK** (o nível da cascata que valeria se o vigente sumisse,
+  derivado dos bindings de projeto e workspace) e **EST. MÊS** por agente — mais
+  o card de **custo estimado do time**, alimentados por
+  `GET /projects/:projectId/agent-costs`, agregação nova de `token_usage` numa
+  janela deslizante de 30 dias (só `actor_kind = agent`, RN-038). Agente que
+  nunca rodou aparece com traço, não com zero. Avatares, badges, densidade de
+  tabela, cabeçalhos de seção e a legenda da matriz de papéis passam a usar as
+  métricas do desenho. Duas divergências ficam, e por escrito: o custo aparece
+  em **USD** (o mockup mostra BRL, mas converter exigiria uma taxa de câmbio, e
+  moeda com taxa manual é backlog) e o convite continua pedindo o **ID do
+  usuário** (a api não tem rota que resolva e-mail — um campo prometendo e-mail
+  seria um formulário que não funciona)
+
+- **web**: o catálogo de modelos passa a **repartir os hubs por fabricante**. Um
+  hub devolve o catálogo de dezenas de fabricantes numa lista só — o OpenRouter
+  trouxe **338** —, e uma lista plana desse tamanho não é navegável: achar o
+  Claude ali era rolagem, não escolha. O fabricante sai do prefixo do id
+  (`anthropic/claude-…`), então não houve mudança de banco; os subgrupos vêm do
+  maior para o menor (OpenAI 60, Qwen 49, Google 30, Mistral 18, Anthropic 17…)
+  e a contagem aparece ao lado de cada rótulo. Modelo sem namespace cai num
+  grupo à parte em vez de sumir. APIs diretas não ganham subgrupo — ali o dono
+  do modelo já é o provider. Cada fabricante **abre e fecha**, e todos começam
+  fechados: 58 subgrupos abertos de saída devolvem a mesma lista quilométrica
+  que o agrupamento existe para evitar, enquanto fechados os cabeçalhos com
+  contagem viram um índice. Um subgrupo fechado que contenha itens marcados diz
+  isso no cabeçalho — sem esse selo a barra de lote contaria "12 selecionados"
+  sem que houvesse como ver quais, e a ativação em lote seria às cegas.
+  **Local e APIs diretas também colapsam**, e um botão **Minimizar tudo /
+  Expandir tudo** fecha ou abre grupos e subgrupos de uma vez (ele mostra a
+  AÇÃO, não o estado). O cabeçalho do hub passa a **nomear quem o serve** —
+  `Hubs · OpenRouter` —, porque preço, disponibilidade e credencial pertencem ao
+  hub e não ao fabricante do modelo; nas APIs diretas isso não se repete, já que
+  a própria linha diz o provider
+
 ### Correções
 
+- **api**: o **refresh de sessão voltou a funcionar no browser** — na prática,
+  nunca funcionou. O cookie `brabo_csrf` era gravado com `Path=/auth`, junto do
+  refresh, mas `document.cookie` só expõe cookies cujo path é prefixo do path da
+  PÁGINA: a web vive em `/`, `/login` e `/projects/...`, e nunca enxergou o
+  cookie que ela precisa ecoar no `X-CSRF-Token`. O cabeçalho ia vazio e todo
+  `POST /auth/refresh` morria em 403, então a sessão caía no primeiro reload —
+  ou quando o access token de 15 minutos expirava — e o sintoma (voltar para o
+  login) não parecia bug de cookie. Agora cada cookie tem o seu path: o CSRF em
+  `/` (é um valor aleatório para ecoar, não credencial) e o refresh onde sempre
+  esteve, `/auth` e `httpOnly`. Nenhuma proteção foi afrouxada
+- **api**: o **sync de catálogo voltou a funcionar** — estava morto para os
+  nove providers. `TracedLLMProvider`, o decorator de tracing por onde o
+  registry faz TODO provider passar, encaminhava `name`, `capabilities` e
+  `chat` e deixava `listModels` de fora. Como o sync exige os dois lados
+  (a capability **e** o método), ele pulava cada provider com
+  `pulado: 'sem_capability'` — um relatório que mentia, já que a capability
+  estava declarada e quem a perdia era o decorator. Efeito prático: nenhum
+  modelo de provider remoto jamais entrava no catálogo, e o seletor só
+  oferecia os locais mesmo com credencial válida cadastrada. Com o
+  encaminhamento no lugar, um sync trouxe 338 modelos do OpenRouter
+- **web**: resposta da api **com corpo vazio** deixa de derrubar a tela. O
+  cliente tratava só o `204` e fazia `res.json()` em tudo o mais — mas um
+  handler que devolve `null` responde **200 sem corpo**, e `null` é o que o
+  domínio diz o tempo todo (projeto sem orçamento, agente sem binding, projeto
+  sem repositório: seis funções do cliente já declaravam `| null`). O
+  `SyntaxError` cru subia até o `QueryCache.onError` e matava a query inteira,
+  então a tela de configurações perdia a lista de modelos por causa de um
+  agente sem binding
+- **web**: a lista de modelos **fecha ao rolar dentro dela**. O listener de
+  `scroll` era de captura e não olhava o alvo, então a primeira volta da roda
+  do mouse sobre o dropdown o fechava — e a rolagem seguia para a página
+  atrás. Com mais modelos do que cabem na altura máxima, os de baixo eram
+  inalcançáveis. Rolar a **página** continua fechando, que é o
+  comportamento pretendido (o dropdown é `fixed` e descola do gatilho)
+- **web**: a tela de catálogo passa a **avisar quando há credencial de um
+  provider e nenhum modelo dele**, apontando o botão "Atualizar catálogo".
+  Cadastrar a chave não descobre modelo — quem descobre é o sync —, e nada
+  ligava as duas coisas: uma chave de OpenRouter válida e testada convivia com
+  um seletor que só oferecia modelos locais
+- **web**: o botão Salvar da seção de credenciais **parecia não ter ação**. Ele
+  tinha: a api respondia `422` e o `ApiError` escapava do `onClick` para o
+  `window.onunhandledrejection`, que só escreve no console. Sem `try/catch`,
+  sem toast de erro e sem estado de carregando, seis cliques seguidos não
+  produziram nenhum sinal na tela. Todo caminho da seção (salvar, testar,
+  remover) passa a reportar a mensagem que a api mandou
 - **api,web**: o bootstrap para de criar e proteger a branch `rc`, e o
   `branching-policy.md` que ele **commita no repositório do usuário** passa a
   descrever a escada de três degraus. O `rc` saiu da política pelo ADR 0030

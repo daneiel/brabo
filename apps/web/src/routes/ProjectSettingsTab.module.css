@@ -1,78 +1,257 @@
+/*
+ * Métricas do mockup `Brabo Settings.dc.html` (via DesignSync). Só tokens
+ * semânticos, como o `design/README.md` exige.
+ */
+
 .section {
-  margin-bottom: 36px;
+  margin-bottom: 44px;
+}
+
+/* Título e legenda dividem a MESMA linha de base, como no desenho. */
+.sectionHead {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
 }
 
 .title {
   font-family: var(--font-heading);
   font-weight: 600;
-  font-size: 14px;
+  font-size: 18px;
   color: var(--text-primary);
+  margin: 0;
+}
+
+/* A legenda mono ao lado do título ("binding vigente por cascata"). */
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
 .subtitle {
-  font-size: 12px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0 0 14px;
+}
+
+/* Os níveis da cascata, coloridos dentro da frase. */
+.nivel {
+  font-family: var(--font-mono);
+}
+
+.nivelWorkspace {
   color: var(--text-muted);
-  margin: 4px 0 14px;
+}
+
+.nivelProject {
+  color: var(--warning);
+}
+
+.nivelAgent {
+  color: var(--accent);
+}
+
+/* Card de custo do time, acima da tabela de modelos. */
+.custoCard {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  margin-bottom: 14px;
+}
+
+.custoIcone {
+  color: var(--success);
+  flex-shrink: 0;
+}
+
+.custoTexto {
+  font-size: 13px;
+  color: var(--text-secondary);
+  flex: 1;
+}
+
+.custoDetalhe {
+  color: var(--text-muted);
+}
+
+.custoValor {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
 .agentCell {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
+  min-width: 0;
 }
 
+/*
+ * Avatar do agente como no desenho: quadrado de 26px com as INICIAIS em mono,
+ * fundo e anel derivados da cor do agente. Era um ícone; as iniciais leem
+ * melhor em 26px e é o que o mockup mostra.
+ */
 .agentAvatar {
-  width: 24px;
-  height: 24px;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: color-mix(in srgb, var(--agent-color) 18%, var(--surface-2));
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--agent-color) 15%, var(--surface-2));
+  border: 1px solid color-mix(in srgb, var(--agent-color) 45%, transparent);
   color: var(--agent-color);
   flex-shrink: 0;
+}
+
+.agentNome {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Fallback e estimativa: mono, como toda coluna de dado do desenho. */
+.fallback {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.estimativa {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-align: right;
 }
 
 .inviteBar {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 14px;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
 }
 
 .inviteInput {
   flex: 1;
-  max-width: 320px;
+  min-width: 220px;
+}
+
+/*
+ * O wrapper do `Select` é `width:100%`, então dentro de um flex ele reivindica
+ * a linha inteira e joga o botão para baixo — a barra de convite aparecia em
+ * três andares. Largura própria e sem crescer resolve, e é o que o desenho
+ * mostra: uma linha só.
+ */
+.inviteRole {
+  flex: 0 0 auto;
+  width: 180px;
+}
+
+.membroCell {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+}
+
+/*
+ * Avatar do membro: 32px com GRADIENTE e iniciais, como no desenho — o
+ * gradiente é o que distingue pessoa de agente (que tem cor chapada + anel).
+ */
+.membroAvatar {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  display: grid;
+  place-items: center;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--on-accent);
+  background: linear-gradient(
+    135deg,
+    var(--membro-de),
+    var(--membro-para)
+  );
+  flex-shrink: 0;
 }
 
 .memberCell {
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .memberName {
   font-size: 13px;
+  font-weight: 600;
   color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .memberEmail {
   font-family: var(--font-mono);
   font-size: 11px;
   color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.remove {
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
+/* Status do membro: bolinha + texto em mono. */
+.status {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--success);
+}
+
+.statusDot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: currentColor;
+}
+
+/* Remover é um botão QUADRADO só de ícone no desenho, não um botão com texto. */
+.remove {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: color 0.1s, border-color 0.1s;
 }
 
 .remove:hover {
   color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 50%, transparent);
 }
 
 .matrixTable {
@@ -92,14 +271,37 @@
   background: var(--surface-2);
   font-family: var(--font-mono);
   font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 .matrixTable td:first-child,
 .matrixTable th:first-child {
   text-align: left;
   color: var(--text-primary);
+}
+
+/*
+ * A legenda do desenho, abaixo da matriz. Sem ela, um check e um traço numa
+ * grade de papéis são dois símbolos sem contrato — e "sem permissão" não é
+ * adivinhável a partir de um traço.
+ */
+.matrixLegenda {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.matrixLegendaItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .check {

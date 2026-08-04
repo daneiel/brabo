@@ -2336,6 +2336,58 @@
         ]
       }
     },
+    "/projects/{projectId}/agent-costs": {
+      "get": {
+        "description": "Janela DESLIZANTE de 30 dias, não o mês corrente: é o rótulo que a tela mostra, e num mês-calendário a estimativa despencaria no dia 1º por virada de página, não por mudança de uso. Só `actor_kind = agent` entra (RN-038). Agente que nunca rodou não aparece na lista — a tela mostra traço para ele, que é diferente de zero.",
+        "operationId": "BudgetsController_getProjectAgentCosts",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AgentTokenUsageResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto ou sessão inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Quebra o gasto do projeto por agente, nos últimos 30 dias",
+        "tags": [
+          "llm"
+        ]
+      }
+    },
     "/projects/{projectId}/agents/{agent}/instruction-versions": {
       "get": {
         "description": "Mais recente primeiro, cada uma já com o diff contra a anterior calculado no servidor.",
@@ -6388,9 +6440,56 @@
         ]
       }
     },
+    "/users/me/credentials/{provider}/test": {
+      "post": {
+        "description": "A verificação é uma ação explícita, separada do cadastro (ADR 0050): a api decifra o segredo, chama o provider e devolve SÓ o veredito — a chave nunca volta, nem em pedaço. Responde 200 nos três resultados, porque o pedido foi processado; `recusado` é um resultado, não um erro de protocolo. 404 quando não há credencial para (usuário, provider) — aí não há o que testar.",
+        "operationId": "CredentialsController_test",
+        "parameters": [
+          {
+            "name": "provider",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "example": "openrouter",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CredentialTestResultResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "404": {
+            "description": "Nenhuma credencial deste provider."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Verifica a credencial JÁ gravada contra o provider",
+        "tags": [
+          "credenciais"
+        ]
+      }
+    },
     "/users/me/git-credentials": {
       "post": {
-        "description": "Caminho próprio, e não o de `users/me/credentials`, por causa do teste: o token é validado contra o provider ANTES de ser persistido, para não guardar uma credencial que só falharia no primeiro push. A leitura e a remoção reaproveitam as rotas de `users/me/credentials` — é a mesma tabela.",
+        "description": "Caminho próprio, e não o de `users/me/credentials`, porque o corpo é outro (`token`, e o enum de providers é `github`/`gitlab`). O token é cifrado e gravado sem verificação prévia (ADR 0050); para verificá-lo, `POST /users/me/credentials/{provider}/test`. Leitura, remoção e teste reaproveitam as rotas de `users/me/credentials` — é a mesma tabela.",
         "operationId": "GitCredentialsController_create",
         "parameters": [],
         "requestBody": {
@@ -6415,7 +6514,7 @@
             }
           },
           "400": {
-            "description": "O provider recusou o token."
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
           },
           "401": {
             "description": "Sem token, token expirado ou assinatura inválida."
@@ -6429,7 +6528,7 @@
             "bearer": []
           }
         ],
-        "summary": "Registra um token de git depois de TESTAR a conexão",
+        "summary": "Registra um token de git (cifrado, sem testar)",
         "tags": [
           "credenciais"
         ]
@@ -7143,6 +7242,71 @@
           }
         ],
         "summary": "Força agora o sync de catálogo que o job periódico faz",
+        "tags": [
+          "llm"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/models/uses": {
+      "post": {
+        "description": "O eixo que nenhum catálogo publica: \"bom para código\" não é capability declarada por provider nenhum, é opinião de quem opera — e vale SÓ neste workspace (ADR 0049). Eixo independente da ativação: marcar uso não liga o modelo no seletor, e trocar o uso não desliga o que estava ligado. A lista de usos SUBSTITUI a anterior.",
+        "operationId": "ModelsController_uses",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetModelUsesDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ModelComCuradoriaResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Exige `owner` no workspace."
+          },
+          "404": {
+            "description": "Algum id do lote não existe."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Marca para que o workspace usa cada modelo (lote)",
         "tags": [
           "llm"
         ]
@@ -8740,6 +8904,29 @@
           "slug"
         ]
       },
+      "CredentialTestResultResponseDto": {
+        "type": "object",
+        "properties": {
+          "resultado": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "recusado",
+              "nao_suportado"
+            ],
+            "example": "recusado",
+            "description": "`ok` — o provider aceitou a credencial. `recusado` — o provider a rejeitou (chave inválida/revogada, sem saldo, rede). `nao_suportado` — este provider não tem endpoint de teste verificado (`ollama`, `anthropic`, `openai`): NADA foi verificado, e dizer \"ok\" aqui seria mentira."
+          },
+          "motivo": {
+            "type": "string",
+            "example": "teste de conexão falhou para openrouter: openrouter respondeu 401",
+            "description": "Só em `recusado` — o motivo que o provider deu."
+          }
+        },
+        "required": [
+          "resultado"
+        ]
+      },
       "DecideBootstrapPlanDto": {
         "type": "object",
         "properties": {
@@ -9963,7 +10150,18 @@
           },
           "supportsVision": {
             "type": "boolean",
-            "example": false
+            "example": false,
+            "description": "Aceita IMAGEM na entrada. `false` quer dizer que o provider não declarou a modalidade — não que o modelo não saiba (ADR 0041)."
+          },
+          "supportsReasoning": {
+            "type": "boolean",
+            "example": true,
+            "description": "Aceita raciocínio explícito (thinking). No OpenRouter sai de `supported_parameters: reasoning`."
+          },
+          "generatesImage": {
+            "type": "boolean",
+            "example": false,
+            "description": "PRODUZ imagem — eixo diferente de aceitá-la na entrada. São poucos modelos, e confundir os dois manda o usuário para o modelo errado."
           },
           "manualPricing": {
             "type": "boolean",
@@ -10000,6 +10198,23 @@
             "type": "boolean",
             "example": true,
             "description": "Curadoria do OWNER **deste workspace**: modelo desativado some da seleção mas continua nos custos históricos. Modelo descoberto pelo sync não tem linha de curadoria, e ausência de linha é `false`."
+          },
+          "uses": {
+            "type": "array",
+            "example": [
+              "codigo"
+            ],
+            "description": "Para que ESTE workspace usa o modelo. Opinião de quem opera, não capability do provider — nenhum catálogo publica \"bom para código\". Lista vazia é \"ninguém opinou\", não \"não serve\".",
+            "items": {
+              "type": "string",
+              "enum": [
+                "codigo",
+                "documentacao",
+                "analise",
+                "imagem",
+                "conversa"
+              ]
+            }
           }
         },
         "required": [
@@ -10013,12 +10228,15 @@
           "supportsToolCalling",
           "supportsStreaming",
           "supportsVision",
+          "supportsReasoning",
+          "generatesImage",
           "manualPricing",
           "availability",
           "lastSeenAt",
           "createdAt",
           "updatedAt",
-          "isActive"
+          "isActive",
+          "uses"
         ]
       },
       "ModelPriceChangeResponseDto": {
@@ -10135,7 +10353,18 @@
           },
           "supportsVision": {
             "type": "boolean",
-            "example": false
+            "example": false,
+            "description": "Aceita IMAGEM na entrada. `false` quer dizer que o provider não declarou a modalidade — não que o modelo não saiba (ADR 0041)."
+          },
+          "supportsReasoning": {
+            "type": "boolean",
+            "example": true,
+            "description": "Aceita raciocínio explícito (thinking). No OpenRouter sai de `supported_parameters: reasoning`."
+          },
+          "generatesImage": {
+            "type": "boolean",
+            "example": false,
+            "description": "PRODUZ imagem — eixo diferente de aceitá-la na entrada. São poucos modelos, e confundir os dois manda o usuário para o modelo errado."
           },
           "manualPricing": {
             "type": "boolean",
@@ -10180,6 +10409,8 @@
           "supportsToolCalling",
           "supportsStreaming",
           "supportsVision",
+          "supportsReasoning",
+          "generatesImage",
           "manualPricing",
           "availability",
           "lastSeenAt",
@@ -11651,7 +11882,8 @@
           "token": {
             "type": "string",
             "example": "ghp_…",
-            "description": "Personal access token. É TESTADO contra o provider antes de ser persistido — token inválido responde erro em vez de ser guardado para falhar depois. Cifrado por envelope encryption e nunca devolvido."
+            "maxLength": 512,
+            "description": "Personal access token. Cifrado por envelope encryption antes de tocar o banco e nunca devolvido, nem cifrado. O cadastro NÃO testa o token (ADR 0050) — para verificá-lo use `POST /users/me/credentials/{provider}/test`. O teto de 512 caracteres é proteção contra payload absurdo, não validação de formato."
           }
         },
         "required": [
@@ -12235,6 +12467,44 @@
         "required": [
           "modelIds",
           "isActive"
+        ]
+      },
+      "SetModelUsesDto": {
+        "type": "object",
+        "properties": {
+          "modelIds": {
+            "example": [
+              "9b1c2d3e-4f50-4a61-8b72-0c3d4e5f6a7b"
+            ],
+            "description": "Modelos a marcar. Lote inteiro ou nada.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "uses": {
+            "type": "array",
+            "example": [
+              "codigo",
+              "analise"
+            ],
+            "description": "A lista COMPLETA de usos — substitui a anterior, não soma. Lista vazia desmarca todos. Vocabulário fechado: uso fora dele reprova a chamada, porque texto livre daria `code`, `coding` e `código` no mesmo filtro.",
+            "items": {
+              "type": "string",
+              "enum": [
+                "codigo",
+                "documentacao",
+                "analise",
+                "imagem",
+                "conversa"
+              ]
+            }
+          }
+        },
+        "required": [
+          "modelIds",
+          "uses"
         ]
       },
       "SetProjectPermissionsDto": {
@@ -12942,7 +13212,8 @@
           "apiKey": {
             "type": "string",
             "example": "sk-ant-api03-…",
-            "description": "A chave em texto plano. É cifrada por envelope encryption antes de tocar o banco e NUNCA volta em resposta nenhuma — nem cifrada."
+            "maxLength": 512,
+            "description": "A chave em texto plano. É cifrada por envelope encryption antes de tocar o banco e NUNCA volta em resposta nenhuma — nem cifrada. O teto de 512 caracteres é proteção contra payload absurdo, não validação de formato: se a chave presta ou não, quem responde é o provider em `POST /users/me/credentials/{provider}/test`."
           }
         },
         "required": [
