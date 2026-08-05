@@ -77,6 +77,14 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api**: sessão nova e dev agent param de nascer no modelo local do
+  workspace. Quando ninguém configurou nada para o projeto, o modelo herdado
+  passa a ser o do **Criativo** — ele é a porta de entrada, e o binding dele
+  representa o modelo que o projeto usa para pensar. A herança ocupa o vazio e
+  nunca sobrepõe: escolha explícita de sessão, agente ou projeto continua
+  vencendo. Antes era preciso trocar o modelo à mão em toda sessão aberta, e os
+  dev agents subiam em `llama3.2:1b`, que o ADR 0020 proíbe no passo semântico
+
 - **api,docs**: os gates do fluxo viram **registro declarativo** em
   `docs/gates.yml` — treze deles, que até agora só existiam espalhados entre
   regra pura, use case, teste e workflow. O registro descreve e não executa:
