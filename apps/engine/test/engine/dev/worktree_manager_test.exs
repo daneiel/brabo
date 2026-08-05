@@ -39,6 +39,29 @@ defmodule Engine.Dev.WorktreeManagerTest do
     {_, 0} = System.cmd("git", args, cd: cd, stderr_to_stdout: true)
   end
 
+  @doc false
+  # A regressão que isto pega: `remove_worktree/2` limpava o DIRETÓRIO e deixava
+  # a BRANCH para trás. Como o nome dela vem do slug da task, retentar a mesma
+  # task caía sempre em `fatal: a branch named 'feature/<slug>' already exists`,
+  # e a task ficava presa para sempre — destravar não adiantava. Numa execução
+  # real só saiu com cirurgia manual no git.
+  test "retentar a MESMA task recria o worktree em vez de falhar", %{work_dir: work_dir} do
+    assert {:ok, primeiro} = WorktreeManager.add_worktree(work_dir, "dev-api", "task-a")
+    assert primeiro.branch == "feature/task-a"
+
+    # Segunda tentativa da mesma task, mesmo agente: é o caminho do retry.
+    assert {:ok, segundo} = WorktreeManager.add_worktree(work_dir, "dev-api", "task-a")
+    assert segundo.branch == "feature/task-a"
+    assert segundo.path == primeiro.path
+    assert File.dir?(segundo.path)
+  end
+
+  test "retentar três vezes seguidas continua funcionando", %{work_dir: work_dir} do
+    for _ <- 1..3 do
+      assert {:ok, _} = WorktreeManager.add_worktree(work_dir, "dev-api", "task-a")
+    end
+  end
+
   test "dois agentes trabalham em worktrees paralelos, sem conflito", %{
     project_id: project_id,
     work_dir: work_dir
