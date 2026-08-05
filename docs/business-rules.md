@@ -1053,6 +1053,61 @@ caminho de cada vez, e o defeito aqui é o caminho em que ninguém pensou.
   (`só o CreateSessionUseCase chama sessions.create`)
 - **Origem:** execução real da FASE 13b
 
+### RN-068 — O dev agent lê o worktree sem pedir licença {#rn-068}
+
+Ativar a execução semeia no `allow` do projeto duas famílias de comando: as de
+**leitura do próprio worktree** (`ls`, `pwd`, `find`, `cat`, `head`, `tail`,
+`grep`, `wc`, `echo`, `git status`, `git diff`, `git log`) e as de **build e
+teste**.
+
+A segunda já existia: `ReportDone` só deixa abrir PR depois de um `terminal`
+com `exit 0`. A primeira entrou porque o agente **olha antes de construir**, e
+sem ela não conseguia começar.
+
+O motivo é concreto. Ferramenta `:pipeline` pendente devolve
+`proposed_action <id> status pending` como RESULTADO — não a saída do comando —
+e o ToolLoop segue. Num repositório recém-provisionado, cada `ls -la` do agente
+caía em aprovação, não ensinava nada e queimava uma iteração. Numa execução real
+o desfecho foi `toolloop.limit_reached {iteration: 8, max_iterations: 8}`, task
+bloqueada por "limite de iterações atingido", sem uma linha escrita — e as
+aprovações concedidas pelo usuário chegaram depois do laço esgotado.
+
+Liberar leitura não afrouxa o pipeline, e é isso que o teste afirma: `deny`
+vence `allow`, os `BUILTIN_DENY_PATTERNS` seguem ativos, o casamento é por
+prefixo de TOKEN (`ls` liberado não libera `lsof`) e comando composto exige que
+CADA segmento case — `ls && rm -rf /` não passa por causa do `ls`.
+
+A allowlist é mitigação, não solução: é lista de comandos previstos e o modelo
+inventa comandos. A correção estrutural — o agente ESPERAR a decisão em vez de
+queimar iterações — está no [ADR 0052](adr/0052-dev-agent-espera-aprovacao-no-meio-do-laco.md).
+
+- **Onde:** `apps/api/src/domain/actions/dev-terminal-patterns.ts`,
+  semeado por `application/use-cases/execution/activate-execution.use-case.ts`
+- **Teste:** `test/domain/actions/dev-terminal-patterns.spec.ts`
+  (`libera ls -la`; `comando composto não passa carona no segmento liberado`)
+- **Origem:** execução real da FASE 13b
+
+### RN-069 — Retentar uma task recria a branch, não falha {#rn-069}
+
+`WorktreeManager.add_worktree/3` usa `git worktree add -B` (cria **ou**
+redefine), não `-b`. Ele já removia o diretório do worktree anterior, mas
+deixava a branch para trás — e como o nome dela vem do slug da task, a segunda
+tentativa da MESMA task caía sempre em
+`fatal: a branch named 'feature/<slug>' already exists`.
+
+O efeito era permanente: destravar a task não adiantava, reativar a execução não
+adiantava, e o circuit breaker desarmava sem saída. Numa execução real só saiu
+com `git worktree prune` manual no workspace do projeto.
+
+Redefinir é o certo: o worktree anterior já foi removido, o trabalho daquela
+tentativa não vale (a task voltou para a fila) e a branch renasce do ponto atual
+do work_dir.
+
+- **Onde:** `apps/engine/lib/engine/dev/worktree_manager.ex`
+- **Teste:** `apps/engine/test/engine/dev/worktree_manager_test.exs`
+  (`retentar a MESMA task recria o worktree em vez de falhar`)
+- **Origem:** execução real da FASE 13b
+
 ### RN-064 — Heartbeat não encerra sessão com trabalho pendente {#rn-064}
 
 O timeout de heartbeat mede inatividade da **aba**, não do **trabalho**. Antes

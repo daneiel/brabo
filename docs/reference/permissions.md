@@ -114,6 +114,33 @@ Terminal(rm -fr /)
 Não são uma lista de segurança abrangente — são um piso. A proteção de verdade
 vem de `allow` ser explícito e de tudo o mais cair em aprovação.
 
+## O que a ativação da execução semeia
+
+Ativar a execução escreve no `allow` do projeto os padrões de
+`DEV_TERMINAL_ALLOW_PATTERNS` (`apps/api/src/domain/actions/dev-terminal-patterns.ts`).
+São duas famílias:
+
+- **leitura do próprio worktree** — `ls`, `pwd`, `find`, `cat`, `head`, `tail`,
+  `grep`, `wc`, `echo`, `git status`, `git diff`, `git log`;
+- **build e teste** — `pnpm install`, `pnpm test`, `npm run`, `npx vitest`,
+  `mix test`, `pytest`, `go test`, `cargo test`, entre outros.
+
+A segunda família existe porque `ReportDone` só deixa abrir PR depois de um
+`terminal` com `exit 0` no histórico. A primeira existe porque o agente **olha
+antes de construir**: sem ela, cada `ls -la` num repositório recém-provisionado
+caía em aprovação, voltava como `status pending` — e não como a saída do
+comando — e queimava uma iteração do ToolLoop até a task morrer por limite
+(ver [RN-068](../business-rules.md#rn-068)).
+
+Isto NÃO afrouxa nada do que está acima. Continua valendo que `deny` vence
+`allow`, que os padrões embutidos seguem ativos, que o casamento é por prefixo
+de **token** (`ls` liberado não libera `lsof`) e que comando composto exige que
+CADA segmento case — então `ls && rm -rf /` não passa por causa do `ls`.
+
+Auto-aprovar `terminal` por `agent_autonomy` seria diferente e não é o que se
+faz: liberaria QUALQUER comando dentro do container do engine, sem o arquivo no
+meio.
+
 ## A ordem completa da decisão
 
 ```mermaid
