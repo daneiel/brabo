@@ -31,6 +31,10 @@ coverage
 # Não entra em imagem de produção
 spike
 docs
+# ...exceto o registro de gates, que a api LÊ em runtime
+# (`GET /internal/gates`). É o único arquivo de docs/ que é dado de produção, e
+# não documentação.
+!docs/gates.yml
 # website/: o site de documentação (Docusaurus). Nenhum Dockerfile o lê, e o
 # `website/build` sozinho passa de 2 MB com o índice de busca. Mandar isso ao
 # daemon a cada build das quatro imagens é transferência pura.

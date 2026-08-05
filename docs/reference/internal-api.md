@@ -77,7 +77,7 @@ nova neste contrato, use o funil: é o que garante que ela não nasça órfã.
 
 ## engine → api
 
-Vinte e sete rotas, todas sob `/internal/sessions/:sessionId/` salvo indicação.
+Vinte e oito rotas, todas sob `/internal/sessions/:sessionId/` salvo indicação.
 Agrupadas pelo que fazem:
 
 ### Event log e ações
@@ -134,6 +134,31 @@ Resposta: `{ pending, motivo }`. `motivo` vai para o log do engine — sessão q
 se recusa a fechar sem dizer por quê é indiagnosticável. E api fora do ar
 **não** impede o encerramento: trocar sessão órfã por sessão imortal seria
 trocar um defeito por outro.
+
+### Registro de gates
+
+| método | caminho |
+|---|---|
+| GET | `/internal/gates` (**não** é session-scoped) |
+
+Leitura do registro declarativo de `docs/gates.yml`
+([ADR 0054](../adr/0054-gates-como-registro-declarativo.md)). Não é
+session-scoped pelo mesmo motivo do catálogo de modelos: o registro é global —
+quais gates existem é fato do produto, igual para todo projeto.
+
+Read-only, e sem rota de escrita **de propósito**: o registro muda por PR
+revisado, não em runtime. Uma rota de escrita transformaria uma decisão de
+engenharia em configuração de produção, que é o que o ADR recusou ao escolher
+YAML em vez de tabela.
+
+O arquivo viaja dentro da imagem (`COPY docs/gates.yml` em
+`docker/api/Dockerfile.prod`), como as migrations: o loader sobe de
+`__dirname` até achá-lo, e em produção o encontra em `/app/docs/gates.yml`. A
+carga é preguiçosa — arquivo ilegível responde erro nesta rota, em vez de
+impedir a api de subir.
+
+O mecanismo inteiro está em
+[docs/explanation/gates.md](../explanation/gates.md).
 
 ### Catálogo de modelos
 

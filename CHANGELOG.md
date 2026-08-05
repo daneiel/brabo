@@ -89,6 +89,10 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   achados antes de medir qualquer coisa — o gate de PR de infra, que ninguém
   tinha listado; um check required sem teste próprio; e um filtro que apontava
   para coluna em vez de payload, fazendo um gate parecer nunca ter passado
+- **api**: `GET /internal/gates` devolve o registro validado. O arquivo passa a
+  viajar dentro da imagem de produção — sem isso a rota funcionaria em
+  desenvolvimento e responderia erro só em produção, porque `docs/` inteiro é
+  ignorado no build
 
 ### Correções
 

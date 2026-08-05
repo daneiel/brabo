@@ -184,6 +184,7 @@ o componente `d` da JWK, travado por teste.
 | POST | `/internal/sessions/:sessionId/module-map` | engine-service |
 | POST | `/internal/sessions/:sessionId/proficiency` | engine-service |
 | POST | `/internal/models/sync` | engine-service |
+| GET | `/internal/gates` | engine-service |
 | GET | `/internal/sessions/:sessionId/psychologist-context` | engine-service |
 | POST | `/internal/sessions/:sessionId/stories` | engine-service |
 | POST | `/internal/sessions/:sessionId/story-modules` | engine-service |
