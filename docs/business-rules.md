@@ -1018,6 +1018,41 @@ justamente para tentar fixar nomes que não conseguia ler.
   `create-module-map.use-case.spec.ts` (`a recusa diz QUAIS são os módulos`)
 - **Origem:** execução real da FASE 13b
 
+### RN-067 — Toda sessão nasce emitindo `session.created` {#rn-067}
+
+`CreateSessionUseCase` é o **único** lugar que cria sessão. Ele emite
+`session.created` no outbox **na mesma transação** do insert, e é esse evento
+que faz o engine subir o `SessionServer` da sessão.
+
+Quem chamasse `sessions.create(...)` direto produzia uma sessão que o engine
+nunca conhecia. O efeito é uma cascata silenciosa:
+
+- o canal Phoenix responde `REFUSED JOIN` para sempre — a UI só reclama no
+  console e segue tentando de 10 em 10 segundos;
+- sem canal não há atualização ao vivo: o fio fica preso no indicador de
+  digitação, mesmo com o agente já `idle`;
+- ninguém bate heartbeat e, como é o heartbeat que encerra a sessão
+  ([RN-064](#rn-064)), ela fica `active` **para sempre**.
+
+Três caminhos faziam isso: `provision-repository` (duas chamadas),
+`adopt-repository` e `activate-execution` — este último cria a sessão em que os
+**dev agents** rodam.
+
+A prova por contraste, de uma execução real: a sessão do wizard não tinha
+`session.created`, tinha `engine.session_states` vazia e `REFUSED JOIN`; a
+sessão aberta pela rota normal tinha o evento, a linha de estado e `JOINED`.
+
+O teste é sobre a FONTE de propósito: um teste de comportamento provaria um
+caminho de cada vez, e o defeito aqui é o caminho em que ninguém pensou.
+
+- **Onde:** `apps/api/src/application/use-cases/sessions/create-session.use-case.ts`
+  (o dono), `git/provision-repository.use-case.ts`,
+  `git/adopt-repository.use-case.ts`,
+  `execution/activate-execution.use-case.ts` (os chamadores)
+- **Teste:** `test/application/use-cases/sessions/toda-sessao-emite-created.spec.ts`
+  (`só o CreateSessionUseCase chama sessions.create`)
+- **Origem:** execução real da FASE 13b
+
 ### RN-064 — Heartbeat não encerra sessão com trabalho pendente {#rn-064}
 
 O timeout de heartbeat mede inatividade da **aba**, não do **trabalho**. Antes
