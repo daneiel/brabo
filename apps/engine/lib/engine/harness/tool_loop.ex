@@ -213,8 +213,22 @@ defmodule Engine.Harness.ToolLoop.Default do
 
     hook_ctx = ctx |> Map.put(:tool, name) |> Map.put(:args, args)
 
+    case Hooks.run(ctx.hooks, :pre_tool_use, hook_ctx) do
+      # A ferramenta ficou pendente de aprovação (ADR 0052). O laço para SEM
+      # gravar mensagem de ferramenta: o lugar dela fica vago, e quem retoma
+      # preenche com o resultado de verdade. Gravar "pending" aqui seria dizer
+      # ao modelo que o comando respondeu isso.
+      {:ok, %{aguardando_aprovacao: action_id}} when is_binary(action_id) ->
+        {ctx, {:halt, {:awaiting_approval, action_id, id, name}}}
+
+      hook ->
+        concluir_despacho(ctx, hook, name, args, id)
+    end
+  end
+
+  defp concluir_despacho(ctx, hook, name, args, id) do
     {result, ok?} =
-      case Hooks.run(ctx.hooks, :pre_tool_use, hook_ctx) do
+      case hook do
         {:halt, reason} -> {"bloqueado: #{inspect(reason)}", false}
         {:ok, %{result: precomputed}} -> {precomputed, true}
         {:ok, _cont} -> run_direct(name, args, ctx)

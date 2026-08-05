@@ -65,6 +65,49 @@ defmodule Engine.Workers.DevAgentWakeWorker do
     )
   end
 
+  # Uma ação que o agente propôs teve desfecho — aprovada e executada, ou
+  # negada (ADR 0052). Diferente do `pr_settled`, que é sobre a task inteira:
+  # aqui o agente está PARADO no meio de um turno, esperando o resultado de uma
+  # ferramenta, e o que ele recebe de volta entra no lugar onde estaria a
+  # palavra "pending".
+  def perform(%Oban.Job{
+        args:
+          %{
+            "event_type" => "task.action_settled",
+            "payload" =>
+              %{
+                "projectId" => project_id,
+                "actionId" => action_id,
+                "agentId" => agent_id
+              } = payload
+          } = args
+      }) do
+    Span.with_session(
+      args["traceparent"],
+      "outbox.dev_agent_wake",
+      %{
+        "brabo.project_id" => project_id,
+        "brabo.agent_id" => agent_id,
+        "brabo.action_id" => action_id
+      },
+      fn ->
+        Wake.deliver(
+          project_id,
+          agent_id,
+          {:action_settled,
+           %{
+             action_id: action_id,
+             status: Map.get(payload, "status"),
+             execution_result: Map.get(payload, "executionResult"),
+             rejection_reason: Map.get(payload, "rejectionReason")
+           }}
+        )
+
+        :ok
+      end
+    )
+  end
+
   def perform(%Oban.Job{
         args:
           %{
