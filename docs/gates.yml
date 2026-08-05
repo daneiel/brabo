@@ -105,20 +105,39 @@ gates:
       filtro: { gate: secops, veredito: presente }
       onde: apps/api/src/application/use-cases/execution/record-gate-verdict.use-case.ts
 
-  - id: infra-verificada
+  # PR de INFRA tem caminho próprio: não há task de backlog por trás, então o
+  # payload traz `artifactId` no lugar de `taskId` (Fase 8c). São DOIS gates
+  # pelo mesmo motivo que qa/secops são dois: `infra.gate_changed` também
+  # discrimina por `payload.gate`, e juntá-los reportaria a passagem de um como
+  # se fosse a do outro.
+  - id: infra-qa-verificada
     fluxo: pr
     dono: area-qa
     entrada: [pr-de-infra-aberta]
-    entregavel: veredito-infra
+    entregavel: veredito-qa-infra
     verificacao: script
     severidade: block
     aprovacao_humana: false
     status: active
     evidencia:
       tipo: event_log
-      # PR de INFRA tem caminho próprio: não há task de backlog por trás, então
-      # o payload traz `artifactId` no lugar de `taskId` (Fase 8c).
       event_types: [infra.gate_changed]
+      filtro: { gate: qa }
+      onde: apps/api/src/application/use-cases/execution/record-infra-gate-verdict.use-case.ts
+
+  - id: infra-secops-segura
+    fluxo: pr
+    dono: secops
+    entrada: [pr-de-infra-aberta]
+    entregavel: veredito-secops-infra
+    verificacao: script
+    severidade: block
+    aprovacao_humana: false
+    status: active
+    evidencia:
+      tipo: event_log
+      event_types: [infra.gate_changed]
+      filtro: { gate: secops }
       onde: apps/api/src/application/use-cases/execution/record-infra-gate-verdict.use-case.ts
 
   - id: merge-protegida
@@ -156,6 +175,63 @@ gates:
       workflow: .github/workflows/backmerge-gate.yml
       arquivo: scripts/ci/gate.spec.ts
       onde: scripts/ci/gate.ts
+
+  # Os gates do REPOSITÓRIO (ADR 0030). Entram pelo mesmo critério dos demais —
+  # têm dono, entrada, entregável, verificação mecânica e severidade — e porque
+  # são os que mais reprovam PR no dia a dia. Incluir o `backmerge` e deixar
+  # estes de fora seria arbitrário: são a mesma família (script puro + workflow
+  # + spec). O registro é ÍNDICE, não a política: quem manda continua sendo
+  # docs/explanation/branching-policy.md, e `onde` aponta para o script.
+  - id: pr-no-lugar-certo
+    fluxo: ci
+    dono: bot-gate
+    entrada: [pr-aberta-ou-atualizada]
+    entregavel: check-required-verde
+    verificacao: script
+    severidade: block
+    aprovacao_humana: false
+    status: active
+    evidencia:
+      tipo: ci
+      workflow: .github/workflows/pr-police.yml
+      arquivo: scripts/ci/pr-police.spec.ts
+      onde: scripts/ci/pr-police.ts
+
+  - id: aprovacoes-da-escada
+    fluxo: ci
+    dono: usuario # ele conta ASSINATURAS de pessoas, por papel
+    entrada: [pr-aberta-ou-atualizada]
+    entregavel: check-required-verde
+    verificacao: script
+    severidade: block
+    # O único gate de CI com aprovação humana: o que ele mede é gente
+    # aprovando. Um registro de gates que omitisse justamente este omitiria o
+    # mais óbvio.
+    aprovacao_humana: true
+    status: active
+    evidencia:
+      tipo: ci
+      workflow: .github/workflows/approval-ladder.yml
+      arquivo: scripts/ci/approval-ladder.spec.ts
+      onde: scripts/ci/approval-ladder.ts
+
+  - id: promocao-conferida
+    fluxo: ci
+    dono: bot-gate
+    entrada: [pr-de-promocao]
+    entregavel: check-required-verde
+    verificacao: script
+    severidade: block
+    aprovacao_humana: false
+    status: active
+    evidencia:
+      tipo: ci
+      workflow: .github/workflows/promotion-check.yml
+      # Aponta para o SCRIPT porque este gate não tem spec própria, ao
+      # contrário dos irmãos (pr-police e approval-ladder têm). Lacuna real,
+      # registrada aqui e levada à triagem — não corrigida de passagem.
+      arquivo: scripts/ci/promotion-check.ts
+      onde: scripts/ci/promotion-check.ts
 
   - id: paralelismo-autorizado # FASE 14d — entra active quando ela fechar
     fluxo: execucao

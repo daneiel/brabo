@@ -63,6 +63,23 @@ confirma que o alvo existe.
 A alternativa — rebaixar os dois a `warn` — foi recusada por mentir sobre a
 severidade real, que é justamente o que o registro existe para acabar.
 
+### Os gates do repositório entram junto
+
+`backmerge`, `pr-no-lugar-certo`, `aprovacoes-da-escada` e `promocao-conferida`
+(ADR 0030) são gates pelo mesmo critério dos demais: têm dono, entrada,
+entregável, verificação mecânica e severidade. E são os que mais reprovam PR no
+dia a dia. Incluir só o `backmerge` seria arbitrário — são a mesma família
+(script puro + workflow + spec).
+
+`aprovacoes-da-escada` é o único gate de CI com `aprovacao_humana: true`: o que
+ele mede é gente aprovando, por papel. Um registro de gates que omitisse
+justamente o gate que conta assinaturas humanas omitiria o mais óbvio.
+
+O limite: o registro é **índice**, não política. Quem manda sobre branches
+continua sendo `docs/explanation/branching-policy.md`; `entrada` e `entregavel`
+são uma frase, e `onde` aponta para o script. O YAML nunca reproduz a regra —
+se reproduzisse, viraria a segunda fonte de verdade que ele existe para evitar.
+
 ### O filtro importa tanto quanto o tipo
 
 `qa-verificada` e `secops-segura` **não são dois tipos de evento**: os dois
@@ -70,6 +87,13 @@ gravam `pr.gate_changed`, discriminados por `payload.gate`. E o mesmo tipo é
 gravado na ABERTURA do gate, sem `veredito`. Um registro que guardasse só o
 nome do tipo contaria abertura como passagem, e mediria o dobro do que
 aconteceu. Por isso `evidencia` carrega o filtro de payload, não só o tipo.
+
+Pelo mesmo motivo o julgamento sobre PR de infra são **dois** gates
+(`infra-qa-verificada` e `infra-secops-segura`): `infra.gate_changed` também
+discrimina por `payload.gate`, e juntá-los reportaria a passagem de um como se
+fosse a do outro. O teste afirma que nenhum par (`event_types` + `filtro`) se
+repete no registro — é essa unicidade que faz a medição significar alguma
+coisa.
 
 ## Alternativas consideradas
 
@@ -85,11 +109,16 @@ aconteceu. Por isso `evidencia` carrega o filtro de payload, não só o tipo.
   `aprovacao_humana`, não reescrita de agentes.
 - Dev Lead (ADR 0053) e Platform/SRE ganham contrato de entrada: quando forem
   implementados, o gate deles já está especificado como `planned`.
-- O registro nasce sabendo de um gate que a spec original esquecera —
-  `infra-verificada`, o julgamento de QA/SecOps sobre PR de infra, que tem
-  caminho próprio (`infra.gate_changed`) porque não há task de backlog por
-  trás. Enumerar encontra o que estava fora da conta: é o primeiro dividendo do
-  registro, antes mesmo de ele medir qualquer coisa.
+- O registro nasce sabendo de gates que a lista original esquecera — o
+  julgamento de QA/SecOps sobre PR de **infra**, que tem caminho próprio
+  (`infra.gate_changed`) porque não há task de backlog por trás. Enumerar
+  encontra o que estava fora da conta: é o primeiro dividendo do registro,
+  antes mesmo de ele medir qualquer coisa.
+- E encontra lacuna: `promocao-conferida` é check required **sem spec
+  própria**, ao contrário de `pr-police` e `approval-ladder`. A evidência dele
+  aponta para o script em vez do teste, com a lacuna escrita ali. Vai para a
+  triagem da 13c como item, não corrigida aqui — a fase declara e mede, não
+  conserta.
 
 ## Referências
 
