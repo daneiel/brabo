@@ -93,6 +93,40 @@ O que ela **não** faz é subir sozinha. Automatizar isso seria o produto elevan
 o próprio teto de gasto, que é precisamente o que o pipeline de aprovação existe
 para impedir.
 
+### 5. O Dev Lead é agente conversacional, e recebe o handoff do Arquiteto
+
+Não é papel do Arquiteto na ativação: é agente próprio (`dev-lead`), com
+instrução, binding de modelo e lugar no fio, como Criativo, PO e Arquiteto.
+
+A cadeia passa a ser **Arquiteto → Dev Lead → execução**. Hoje o Arquiteto
+termina e a execução é ativada por um botão do usuário, sem ninguém no meio para
+avaliar o trabalho; com o Dev Lead há um interlocutor sobre paralelismo — que é
+o ponto da 14d, e o que "quem decide é o lead" exige para não ser uma frase.
+
+Isso **encaixa na regra de handoff que já existe** em vez de abrir exceção:
+handoff externo endereça só lead de área ou agente sem área. Hoje os
+`dev-<modulo>` são agentes sem área e por isso endereçáveis; ao virarem membros
+da área de dev, deixam de ser — e o único endereço externo da execução passa a
+ser o Dev Lead. A hierarquia do ADR 0038 vale para o dev sem caso especial.
+
+Consequências diretas:
+
+- **Delegação interna.** Dev Lead → `dev-<modulo>` é delegação de área, privada,
+  na tabela `delegations` com `area = "dev"` — o mesmo caminho de QA e Infra.
+  Falha de subagente reporta origem ao lead, que decide e registra evento.
+- **O botão "Ativar execução" muda de dono.** Deixa de ser o gatilho e vira o
+  aceite do plano do Dev Lead: ele diz quantos agentes quer e por quê, e o
+  usuário aprova — dentro do teto sem cerimônia, acima dele pela
+  `proposed_action` do item 2.
+- **Instrução própria.** O que o Dev Lead precisa saber é o `module_map`, o
+  backlog pegável e o teto vigente. Ele não escreve código: distribui trabalho e
+  responde por ele.
+
+> **TODO(humano):** o Dev Lead conduz também a correção pós-gate (hoje o
+> veredito volta direto ao `dev-<modulo>` que abriu a PR), ou o gate continua
+> falando com o dev? Manter como está preserva a suite da Fase 4 intacta;
+> passar pelo lead é mais coerente com a hierarquia e mexe no contrato interno.
+
 ## Consequências
 
 **A favor**
@@ -107,6 +141,9 @@ para impedir.
 
 - É a maior mudança estrutural desde a Fase 8, e toca o fluxo de handoff: o
   Arquiteto passa a entregar ao Dev Lead, não à ativação manual do usuário.
+- Um agente conversacional a mais é um turno de LLM a mais por execução, antes
+  de qualquer código ser escrito. O que ele compra é o teto de gasto ter dono;
+  se o plano dele couber no teto, o custo dele é o do próprio pedido.
 - `delegations.area` é TEXT com "qa" e "infra" hoje; ganha "dev" e passa a ter
   uma fonte de verdade em tabela. A migração precisa manter o histórico legível.
 - Trocar a fonte dos membros de `qa`/`infra` é risco puro sem benefício
@@ -136,8 +173,3 @@ resolve nada: sem autorização, qualquer número é arbitrário.
 - `apps/api/src/db/schema.ts` (nota em `delegations`) — onde o corte está dito
 - `apps/api/src/application/use-cases/execution/accept-parallelization.use-case.ts`
   — o mecanismo de hoje, absorvido pelo item 2
-
-> **TODO(humano):** o Dev Lead é um agente conversacional novo (recebe handoff
-> do Arquiteto e conduz a execução) ou um papel do próprio Arquiteto ao ativar?
-> A primeira opção muda a cadeia de handoff e pede instrução própria; a segunda
-> é menor, mas deixa "lead" sem interlocutor no fio.
