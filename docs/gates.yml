@@ -54,8 +54,11 @@ gates:
     evidencia:
       tipo: event_log
       event_types: [backlog.story_transitioned]
-      # `actor.kind: user` é o que distingue promoção humana da automática.
-      filtro: { actor_kind: user }
+      # `to: ready` é a passagem: a story saiu de draft. O filtro só olha o
+      # PAYLOAD — quem promoveu (humano ou o PO) vive na COLUNA `actor_kind`,
+      # fora do alcance do vocabulário declarativo, e de propósito: aceitar
+      # coluna arbitrária no YAML seria abrir a consulta inteira.
+      filtro: { to: ready }
       onde: apps/api/src/application/use-cases/backlog/transition-story.use-case.ts
 
   - id: plano-de-adocao

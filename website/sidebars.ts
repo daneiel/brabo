@@ -117,6 +117,7 @@ const sidebars: SidebarsConfig = {
         'explanation/achados-execucao-real',
         'explanation/validacao-fase-12',
         'explanation/aceite-providers',
+        'explanation/gates',
       ],
     },
     {

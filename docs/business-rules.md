@@ -1108,6 +1108,64 @@ do work_dir.
   (`retentar a MESMA task recria o worktree em vez de falhar`)
 - **Origem:** execução real da FASE 13b
 
+### RN-070 — Todo gate declarado aponta para a evidência que o prova {#rn-070}
+
+Nenhuma entrada de `docs/gates.yml` existe sem `evidencia`, e o registro não
+pode afirmar mais do que verifica: gate `block` exige `verificacao: script`, e
+gate `planned` não carrega evidência de algo que ainda não aconteceu.
+
+A evidência é um **localizador**, não prosa: `event_log` traz os tipos de evento
+e o filtro de payload que os distingue dos vizinhos; `teste` e `ci` trazem o
+caminho, e alvo que sumiu REPROVA. É o mesmo modo de falha que o docmap chama de
+glob morto — regra que nunca dispara e finge cobertura.
+
+Três tipos porque nem todo gate mora no event log:
+[`merge-protegida`](#rn-014) é um teto em regra pura que não emite evento
+próprio (o que o garante é teste) e `backmerge` é CI com estado em
+`.release/gate.json`. Rebaixá-los a `warn` por isso mentiria sobre as travas
+mais duras do produto.
+
+O filtro importa tanto quanto o tipo: `qa-verificada` e `secops-segura` gravam o
+MESMO `pr.gate_changed`, e o mesmo tipo sai na ABERTURA do gate sem `veredito` —
+sem o filtro, abertura contaria como passagem. Vale igual para os dois gates de
+PR de infra. Por isso nenhum par (`event_types` + `filtro`) pode se repetir.
+
+O filtro só alcança o PAYLOAD, de propósito: aceitar coluna arbitrária abriria a
+consulta inteira. Quem promoveu uma story (humano ou o PO) vive na coluna
+`actor_kind` e fica fora do vocabulário declarativo.
+
+- **Onde:** `apps/api/src/domain/gates/gate-registry.ts`, registro em
+  `docs/gates.yml`, medição em `apps/api/scripts/validacao-gates.ts`
+- **Teste:** `apps/api/test/domain/gates/gate-registry.spec.ts`
+  (`é válido: nenhum problema acumulado`; `nenhum par (event_types + filtro) se
+  repete entre gates`)
+- **Origem:** FASE 15a (ADR 0054)
+
+### RN-071 — Os quatro gates de autoridade do usuário não podem ser declarados automáticos {#rn-071}
+
+`acao-aprovada`, `story-promovida`, `plano-de-adocao` e `merge-protegida` têm
+`aprovacao_humana: true` por construção. A lista mora no DOMÍNIO
+(`GATES_HUMANOS_IMUTAVEIS`), não no teste: mexer nela tem que ser ato
+deliberado, revisado como código.
+
+`aprovacao_humana: true` quer dizer que a decisão é do usuário — direta no
+clique, ou delegada por política que ele mesmo escreveu no `permissions.json`. É
+isso que deixa `acao-aprovada` conviver com `status: auto_approved`: a política
+decidindo sozinha é o usuário decidindo antes. `merge-protegida` é o caso onde
+nem a delegação existe — o teto rebaixa `auto_approve` para `require_approval`
+mesmo com autonomia ligada.
+
+O contrário também reprova: id na lista sem gate correspondente é regra morta,
+apontando para o vazio.
+
+- **Onde:** `apps/api/src/domain/gates/gate-registry.ts`
+  (`GATES_HUMANOS_IMUTAVEIS`); o teto em
+  `apps/api/src/domain/actions/decide.ts`
+- **Teste:** `apps/api/test/domain/gates/gate-registry.spec.ts`
+  (`%s não pode ter aprovacao_humana false`); o teto em
+  `apps/api/test/domain/actions/decide.spec.ts`
+- **Origem:** FASE 15a (ADR 0054)
+
 ### RN-064 — Heartbeat não encerra sessão com trabalho pendente {#rn-064}
 
 O timeout de heartbeat mede inatividade da **aba**, não do **trabalho**. Antes
