@@ -113,6 +113,7 @@ const sidebars: SidebarsConfig = {
         'explanation/branching-policy',
         'explanation/observability',
         'explanation/primeiro-dogfooding',
+        'explanation/execucao-real-hello-world',
         'explanation/validacao-fase-12',
         'explanation/aceite-providers',
       ],
