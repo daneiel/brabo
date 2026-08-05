@@ -1,0 +1,191 @@
+# Registro declarativo dos gates do fluxo.
+#
+# Fonte: ADR 0054, sobre a fundação do ADR 0048 (a decisão no event log é o que
+# torna a passagem de um gate MENSURÁVEL). Este arquivo não cria gate nenhum:
+# declara os que já existem, espalhados hoje entre regra pura, use case, teste e
+# CI. O contrato externo dos gates não muda por causa dele.
+#
+# Regras do registro, garantidas por teste (RN-070, RN-071):
+#
+#   * gate `block` exige `verificacao: script` — sem script de verificação um
+#     gate nasce `warn` e só é promovido quando o script existir e tiver medido
+#     passagens (mesma filosofia do staged rollout da documentação);
+#   * `aprovacao_humana: true` é IMUTÁVEL nos gates que a constituição declara
+#     manuais — nenhuma configuração de produto os automatiza;
+#   * `status: planned` declara gate de papel futuro sem ativá-lo.
+#
+# `evidencia` diz ONDE mora a prova de que o gate passou, porque nem toda prova
+# está no event log: `merge-protegida` é uma trava em regra pura que não emite
+# evento próprio (o que a garante é teste), e `backmerge` é CI com estado em
+# `.release/gate.json`. O script só cobra o event log de quem o declara.
+version: 1
+
+gates:
+  - id: acao-aprovada
+    fluxo: transversal
+    dono: usuario
+    entrada: [proposed_action]
+    entregavel: decisao-registrada-no-event-log
+    verificacao: script # permissions.json; deny vence allow
+    severidade: block
+    aprovacao_humana: true # imutável — pipeline da Fase 1
+    status: active
+    evidencia:
+      tipo: event_log
+      # `.created` carrega o `status`: é assim que auto-aprovação (política
+      # decidindo sozinha) não se confunde com clique humano (ADR 0048).
+      event_types:
+        [
+          proposed_action.created,
+          proposed_action.approved,
+          proposed_action.denied,
+        ]
+      onde: apps/api/src/application/use-cases/actions/propose-action.use-case.ts
+
+  - id: story-promovida
+    fluxo: pre-dev
+    dono: usuario # modo manual é o default (RN-048)
+    entrada: [proposed_ready]
+    entregavel: story-ready
+    verificacao: script # TransitionStoryUseCase, ADR 0046
+    severidade: block
+    aprovacao_humana: true
+    status: active
+    evidencia:
+      tipo: event_log
+      event_types: [backlog.story_transitioned]
+      # `actor.kind: user` é o que distingue promoção humana da automática.
+      filtro: { actor_kind: user }
+      onde: apps/api/src/application/use-cases/backlog/transition-story.use-case.ts
+
+  - id: plano-de-adocao
+    fluxo: provisionamento
+    dono: usuario
+    entrada: [dry-run-divergencia]
+    entregavel: plano-aprovado
+    verificacao: script # RN-045/046, ADR 0044
+    severidade: block
+    aprovacao_humana: true
+    status: active
+    evidencia:
+      tipo: event_log
+      event_types: [bootstrap.plan_approved, bootstrap.adopted_as_is]
+      onde: apps/api/src/application/use-cases/git/decide-bootstrap-plan.use-case.ts
+
+  - id: qa-verificada
+    fluxo: pr
+    dono: area-qa # lead consolida (ADR 0038)
+    entrada: [pr-aberta]
+    entregavel: veredito-qa
+    verificacao: script # veredito no event log, ADR 0020
+    severidade: block
+    aprovacao_humana: false
+    status: active
+    evidencia:
+      tipo: event_log
+      # QA e SecOps gravam o MESMO type, discriminados por `payload.gate`. E o
+      # mesmo type sai na ABERTURA do gate, sem `veredito` — sem exigir esse
+      # campo, abertura contaria como passagem.
+      event_types: [pr.gate_changed]
+      filtro: { gate: qa, veredito: presente }
+      onde: apps/api/src/application/use-cases/execution/record-gate-verdict.use-case.ts
+
+  - id: secops-segura
+    fluxo: pr
+    dono: secops
+    entrada: [pr-aberta]
+    entregavel: veredito-secops
+    verificacao: script
+    severidade: block
+    aprovacao_humana: false
+    status: active
+    evidencia:
+      tipo: event_log
+      event_types: [pr.gate_changed]
+      filtro: { gate: secops, veredito: presente }
+      onde: apps/api/src/application/use-cases/execution/record-gate-verdict.use-case.ts
+
+  - id: infra-verificada
+    fluxo: pr
+    dono: area-qa
+    entrada: [pr-de-infra-aberta]
+    entregavel: veredito-infra
+    verificacao: script
+    severidade: block
+    aprovacao_humana: false
+    status: active
+    evidencia:
+      tipo: event_log
+      # PR de INFRA tem caminho próprio: não há task de backlog por trás, então
+      # o payload traz `artifactId` no lugar de `taskId` (Fase 8c).
+      event_types: [infra.gate_changed]
+      onde: apps/api/src/application/use-cases/execution/record-infra-gate-verdict.use-case.ts
+
+  - id: merge-protegida
+    fluxo: pr
+    dono: usuario
+    entrada: [qa-verificada, secops-segura]
+    entregavel: merge
+    verificacao: script # garantido por teste desde a Fase 4
+    severidade: block
+    aprovacao_humana: true # imutável — sem opção de automatizar
+    status: active
+    evidencia:
+      # Não há evento próprio: a trava é um TETO aplicado por último sobre o
+      # veredito já calculado, que rebaixa `auto_approve` para
+      # `require_approval`. O desfecho aparece como um `proposed_action.created`
+      # pendente, indistinguível de qualquer outra pendência. O que garante a
+      # trava é o teste.
+      tipo: teste
+      arquivo: apps/api/test/domain/actions/decide.spec.ts
+      onde: apps/api/src/domain/actions/decide.ts
+
+  - id: backmerge
+    fluxo: release
+    dono: bot-gate # ADR 0030
+    entrada: [merge-em-superior]
+    entregavel: retropropagacao
+    verificacao: script
+    severidade: block
+    aprovacao_humana: false
+    status: active
+    evidencia:
+      # Vive fora da aplicação: é check required de PR, com estado versionado
+      # em `.release/gate.json` na main.
+      tipo: ci
+      workflow: .github/workflows/backmerge-gate.yml
+      arquivo: scripts/ci/gate.spec.ts
+      onde: scripts/ci/gate.ts
+
+  - id: paralelismo-autorizado # FASE 14d — entra active quando ela fechar
+    fluxo: execucao
+    dono: lead-de-area
+    entrada: [pedido-acima-do-limite]
+    entregavel: proposed_action-decidida
+    verificacao: script
+    severidade: block
+    aprovacao_humana: true
+    status: planned
+    backlog: ADR 0053
+
+  - id: implementavel # Dev Lead — FASE 14d (ADR 0053)
+    fluxo: pre-dev
+    dono: dev-lead
+    entrada: [story-ready, plano-de-teste]
+    entregavel: parecer-implementabilidade
+    verificacao: script
+    severidade: warn # nasce warn mesmo quando ativar
+    aprovacao_humana: true
+    status: planned
+    backlog: ADR 0053
+
+  - id: operavel # Platform/SRE — sincronizado com DEPLOY_ENABLED
+    fluxo: pre-deploy
+    dono: platform
+    entrada: [pipeline-verde]
+    entregavel: [slo, dashboard, runbook]
+    verificacao: script
+    severidade: warn
+    aprovacao_humana: false
+    status: planned
+    backlog: deploy (DEPLOY_ENABLED + Environments)
