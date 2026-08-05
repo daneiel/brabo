@@ -34,6 +34,11 @@ defmodule Engine.Agents.FalhaDeTurno do
   def origem(%{__exception__: true}), do: "infra"
   def origem(:timeout), do: "infra"
 
+  # Requisição abortada no transporte (Req/Mint): a conexão morreu, não o
+  # modelo. Saía como `indeterminada` porque não tinha cláusula — e
+  # `indeterminada` é para o que não se sabe, não para o que ninguém escreveu.
+  def origem(:aborted), do: "infra"
+
   # A api recusou a chamada. 5xx é dela; 4xx é do que o engine mandou.
   def origem({status, _corpo}) when is_integer(status) and status >= 500, do: "infra"
   def origem({status, _corpo}) when is_integer(status) and status >= 400, do: "codigo"
@@ -63,6 +68,7 @@ defmodule Engine.Agents.FalhaDeTurno do
   end
 
   defp motivo(:no_final_event), do: "a resposta do modelo foi interrompida antes do fim"
+  defp motivo(:aborted), do: "a conexão com a api foi abortada no meio do turno"
   defp motivo({:final, texto}) when is_binary(texto), do: texto
   defp motivo({status, _}) when is_integer(status), do: "a api respondeu #{status}"
   defp motivo(%{__exception__: true} = erro), do: Exception.message(erro)
