@@ -75,6 +75,25 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ## Unreleased
 
+### Novidades
+
+- **api,docs**: os gates do fluxo viram **registro declarativo** em
+  `docs/gates.yml` — treze deles, que até agora só existiam espalhados entre
+  regra pura, use case, teste e workflow. O registro descreve e não executa:
+  trocar um campo nele não muda comportamento nenhum. O que ele compra é os
+  gates ficarem enumeráveis, e com isso mensuráveis por
+  `pnpm --filter api validacao:gates`, que extrai do event log a última
+  passagem de cada um. Cada gate diz ONDE mora a prova dele
+  (`event_log | teste | ci`), porque nem toda prova está no log: a trava de
+  merge é garantida por teste e o backmerge é CI. Enumerar já rendeu três
+  achados antes de medir qualquer coisa — o gate de PR de infra, que ninguém
+  tinha listado; um check required sem teste próprio; e um filtro que apontava
+  para coluna em vez de payload, fazendo um gate parecer nunca ter passado
+- **api**: `GET /internal/gates` devolve o registro validado. O arquivo passa a
+  viajar dentro da imagem de produção — sem isso a rota funcionaria em
+  desenvolvimento e responderia erro só em produção, porque `docs/` inteiro é
+  ignorado no build
+
 ### Correções
 
 - **api**: o bootstrap de Gitflow morria no primeiro passo em **todo projeto

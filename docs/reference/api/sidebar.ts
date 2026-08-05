@@ -150,6 +150,12 @@ const sidebar: SidebarsConfig = {
       items: [
         {
           type: "doc",
+          id: "docs/reference/api/internal-gates-controller-ler",
+          label: "Lê o registro declarativo de gates",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/internal-models-controller-sync",
           label: "Sincroniza o catálogo de modelos de todos os providers",
           className: "api-method post",

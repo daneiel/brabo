@@ -1199,6 +1199,43 @@ notificação configurado.
 
 ---
 
+## Registro de gates {#registro-de-gates}
+
+Os gates do fluxo são declarados em `docs/gates.yml`
+([ADR 0054](adr/0054-gates-como-registro-declarativo.md)). Duas coisas de
+operação valem saber.
+
+**O arquivo viaja dentro da imagem.** `docker/api/Dockerfile.prod` o copia nos
+dois estágios, como faz com as migrations, e `.dockerignore` o reinclui
+explicitamente — `docs/` inteiro é ignorado, e este é o único arquivo de lá que
+é dado de produção, não documentação. Em runtime ele fica em
+`/app/docs/gates.yml`; o loader sobe de `__dirname` até achá-lo, sem variável
+de ambiente.
+
+**Arquivo ilegível não derruba a api.** A carga é preguiçosa: quem pedir
+`GET /internal/gates` recebe o erro, e o resto do processo segue. Se a rota
+responder erro, confira que o arquivo chegou:
+
+```bash
+kubectl -n brabo exec deploy/api -- cat /app/docs/gates.yml | head -5
+```
+
+Vazio ou ausente quer dizer que a imagem foi construída sem ele — provável
+`.dockerignore` mexido, ou build a partir de um contexto que não tem `docs/`.
+
+Para ver o registro como a api o enxerga, já validado:
+
+```bash
+kubectl -n brabo exec deploy/api -- \
+  curl -sH "x-brabo-service-token: $BRABO_SERVICE_TOKEN" localhost:3000/internal/gates
+```
+
+A medição de passagem NÃO roda em produção: é
+`pnpm --filter api validacao:gates`, do repositório, contra o banco. Ver
+[docs/explanation/gates.md](explanation/gates.md).
+
+---
+
 ## Ambiente de inferência {#ambiente-de-inferencia}
 
 Quando o agente responde vazio, truncado, lentíssimo, ou "esquece" as próprias

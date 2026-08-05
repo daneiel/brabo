@@ -1,6 +1,6 @@
 {
   "_": "Gerado por `pnpm docs:generate`. Não edite — é a trava do que está em docs/reference/api/.",
-  "openapiSha256": "a6a16e1144c8bd3a4c604d73d0a715848ad32507827d5da1d7f2a888339ca855",
+  "openapiSha256": "c35e8800dbb30f9d56c69ca667ef26ff699a1a8b5120b74d40423e43239ea9d6",
   "arquivos": {
     "actions-controller-approve-always.ParamsDetails.json": "f51f6d74f8b4a7e9c8f70cef93e0d026d63e77123672029da660c802def3ad0e",
     "actions-controller-approve-always.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
@@ -251,6 +251,10 @@
     "health-controller-live.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
     "health-controller-live.StatusCodes.json": "91ab3b6b0f9a088a0128c6b9cbff0b1f27ce445ca4567289eaa0f0eb116845d4",
     "health-controller-live.api.mdx": "c7c974b97522e112ff6103393396e4e8b47fedb698c563e3101016e4cfe04278",
+    "internal-gates-controller-ler.ParamsDetails.json": "c7c69ffea7e3e6af99994c9347a2f29c4a558bdf8854ac3b61df817cbadcd1f7",
+    "internal-gates-controller-ler.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
+    "internal-gates-controller-ler.StatusCodes.json": "0634c656781287db35243f7b1006f79c420ba4111545925106aa3a9664c20575",
+    "internal-gates-controller-ler.api.mdx": "335eaa34ddcf70187c38543e9bbc3b7e44449356e0cf4b0ba2ad63bd5cb8ac73",
     "internal-models-controller-sync.ParamsDetails.json": "c7c69ffea7e3e6af99994c9347a2f29c4a558bdf8854ac3b61df817cbadcd1f7",
     "internal-models-controller-sync.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
     "internal-models-controller-sync.StatusCodes.json": "98b1b8a477c0ba180bdc4d1bac5a69560dcc7cf2b6f3d74213fb7e66fa66033b",
@@ -515,7 +519,7 @@
     "sessions-controller-transition.RequestSchema.json": "1a1741c5ed6c1e8c653b079f28c80327bfe57363efc50b9673ed8fa755c256f3",
     "sessions-controller-transition.StatusCodes.json": "ad65603d00aa842175d178e0d998a25b55da05f723c870ecf304bca643783cf4",
     "sessions-controller-transition.api.mdx": "537d042f310b6554fda50ed8cbb6f32f80f5bb688d6e41e2b281d5d25310ac76",
-    "sidebar.ts": "4979d3eb78d55ff006e7a873e6b655abef8f2633d6f02ae32f2d6694e633f907",
+    "sidebar.ts": "8354b9fbc96864fc27b5b8b10603f1e19eeba9faa7434c816447e3d93f00bf7f",
     "workspaces-controller-add-member.ParamsDetails.json": "56d669b72315e3339a75e1873f3cf2543f5b2ba3552994ad2fb69d673da7192b",
     "workspaces-controller-add-member.RequestSchema.json": "c17baeb1beca0020e67b7b40d66d88fbf644c7d3d24276560d0d58149ac2249a",
     "workspaces-controller-add-member.StatusCodes.json": "6a3de2295117fd5c898f85528f29d667fcbe398fa244bbf3c3f32f8ca71aa339",

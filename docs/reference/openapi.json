@@ -333,6 +333,37 @@
         ]
       }
     },
+    "/internal/gates": {
+      "get": {
+        "description": "O registro DESCREVE, não executa: nenhum gate passa a ser aplicado por causa dele, e mudar um campo aqui não muda comportamento nenhum. Cada gate diz onde mora a prova de que passou (`evidencia`), porque nem toda prova está no event log.",
+        "operationId": "InternalGatesController_ler",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GateRegistryResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Service token ausente ou diferente do compartilhado."
+          }
+        },
+        "security": [
+          {
+            "service-token": []
+          }
+        ],
+        "summary": "Lê o registro declarativo de gates",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
     "/internal/models/sync": {
       "post": {
         "description": "Nunca falha por causa de um provider: cada um responde por si no relatório, com o motivo do pulo e a origem da falha quando houve. Um provider que não respondeu é PULADO, não indisponibilizado.",
@@ -9515,6 +9546,110 @@
         },
         "required": [
           "gateStatus"
+        ]
+      },
+      "GateRegistryResponseDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number",
+            "example": 1
+          },
+          "gates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GateResponseDto"
+            }
+          }
+        },
+        "required": [
+          "version",
+          "gates"
+        ]
+      },
+      "GateResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "qa-verificada"
+          },
+          "fluxo": {
+            "type": "string",
+            "example": "pr"
+          },
+          "dono": {
+            "type": "string",
+            "example": "area-qa"
+          },
+          "entrada": {
+            "example": [
+              "pr-aberta"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "entregavel": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            ],
+            "example": "veredito-qa"
+          },
+          "verificacao": {
+            "type": "string",
+            "enum": [
+              "script",
+              "humana"
+            ]
+          },
+          "severidade": {
+            "type": "string",
+            "enum": [
+              "block",
+              "warn"
+            ]
+          },
+          "aprovacao_humana": {
+            "type": "boolean",
+            "description": "A decisão é do usuário — direta no clique, ou delegada por política que ele escreveu. Invariante nos quatro gates constitucionalmente manuais (RN-071)."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "planned"
+            ]
+          },
+          "evidencia": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Onde mora a prova de que o gate passou: `event_log` (tipos + filtro de payload), `teste` ou `ci` (caminho do alvo). Ausente em gate `planned`."
+          },
+          "backlog": {
+            "type": "string",
+            "example": "ADR 0053"
+          }
+        },
+        "required": [
+          "id",
+          "fluxo",
+          "dono",
+          "entrada",
+          "entregavel",
+          "verificacao",
+          "severidade",
+          "aprovacao_humana",
+          "status"
         ]
       },
       "GateVerdictResponseDto": {

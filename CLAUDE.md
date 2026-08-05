@@ -118,7 +118,7 @@ e pipeline de aprovação de ações com autoridade final do usuário.
 ## Escopo da FASE 13 (ativa — provar de verdade e triar os achados)
 Nenhuma feature nova. A fase fecha as pendências declaradas, prova o
 que a validação Local/Noop declaradamente não prova, e transforma os
-14 achados abertos em plano priorizado. Lição incorporada: a tabela
+18 achados abertos em plano priorizado. Lição incorporada: a tabela
 manual da Fase 10 nunca foi preenchida — nesta fase TODA métrica é
 extraída por script do event log/token_usage, nunca anotada à mão.
 
@@ -150,17 +150,18 @@ extraída por script do event log/token_usage, nunca anotada à mão.
    tabela extraída; achado novo vai para a triagem da 13c como item,
    nunca como fix (a disciplina de sempre).
 
-### 13c — Triagem dos 14 achados abertos
+### 13c — Triagem dos 18 achados abertos
 6. Sessão de triagem: ler docs/explanation/primeiro-dogfooding.md e
-   classificar os 14 achados em P1/P2/P3 com proposta de agrupamento
+   classificar os 18 achados em P1/P2/P3 com proposta de agrupamento
    em fases coesas (por tema e dependência entre eles), custo relativo
    estimado (P/M/G) e risco de esperar. A saída é PROPOSTA — a
    decisão de prioridade é do usuário.
 7. Consolidar o backlog completo num documento vivo
    (docs/explanation/backlog.md ou equivalente): achados triados +
-   itens antigos — aparato genérico de áreas e budget por área
-   (ADR 0038), Dev Lead e áreas via module_map (ADR 0038), handoff
-   manual a agente à escolha, MFA/social/OIDC/federação (ADR 0031),
+   itens antigos — budget por área (ADR 0038; o aparato de áreas e o
+   Dev Lead saíram do backlog com o ADR 0053, que a FASE 14d
+   implementa), handoff manual a agente à escolha,
+   MFA/social/OIDC/federação (ADR 0031),
    SMTP real no MailSender, deploy (DEPLOY_ENABLED + Environments),
    volta da rc/rcfix (ADR 0030), modo community do approval-ladder,
    "N agentes online" no dashboard, preferência de moeda com taxa
@@ -219,6 +220,40 @@ Decisão do usuário, tomada durante a execução — substitui a ideia de teto 
 Ainda não implementado. O que existe hoje continua: um agente por módulo no
 `start`, e um extra por módulo (`dev-<modulo>-2`) via aceite de um clique, sem
 teto de sessão.
+
+O desenho está fechado no ADR 0053, que revoga três cortes de uma vez (Dev
+Lead, áreas dinâmicas via module_map e o aparato genérico de áreas) — os três
+caem juntos porque os membros da área de dev são um por módulo do module_map,
+decididos pelo Arquiteto e diferentes em cada projeto, logo não são
+hardcodáveis como qa e infra.
+
+## FASE 15 (paralela à 13 — gates como dado)
+Nenhum gate NOVO. A fase extrai para docs/gates.yml os gates que JÁ
+existem implícitos no produto, com verificação por script e severidade,
+no mesmo espírito do docs/.docmap.yml. Gate de agente que não existe
+(dev-lead, platform) entra como `status: planned` referenciando o
+backlog — nunca ativo. O contrato externo dos gates NÃO muda.
+
+### 15a — Registro declarativo
+1. docs/gates.yml com os gates existentes (ver ADR 0054, que estende o
+   ADR 0048 — a decisão no event log é o que torna a passagem de um
+   gate mensurável), schema validado por teste.
+2. Loader na api lendo o registro; endpoint interno de leitura.
+3. Script `pnpm --filter api validacao:gates` que extrai do event log
+   a última passagem de cada gate ativo e sai != 0 se algum gate
+   `block` não tem evidência de verificação por script.
+
+Nem todo gate tem prova no event log, e o registro diz onde ela mora:
+`merge-protegida` é garantido por TESTE (a trava em decide.ts não emite
+evento próprio) e `backmerge` é CI, com estado em .release/gate.json.
+Por isso cada gate declara `evidencia: event_log | teste | ci` com o
+localizador — rebaixá-los a `warn` seria mentir sobre as travas mais
+duras do produto.
+
+### 15b — Consumo
+4. Painel do time exibe o gate que cada story/PR está aguardando,
+   derivado do registro (não hardcoded).
+5. docs/explanation/gates.md explicando o mecanismo, no docmap.
 
 ## Stack (decidida — não proponha alternativas)
 - `apps/api`: NestJS 11 + Drizzle ORM + PostgreSQL 16 + pgvector
@@ -322,17 +357,19 @@ teto de sessão.
 - Não usar Redis (filas ficam no Postgres via Oban)
 - Não implementar MFA, login social, OIDC provider ou federação
   (backlog do ADR 0031)
-- Não implementar Dev Lead nem áreas dinâmicas via module_map (backlog
-  do ADR 0038)
-- Não implementar o aparato genérico de áreas (agent_areas/budget por
-  área) — corte registrado da Fase 8
+- Dev Lead, áreas dinâmicas via module_map e o aparato genérico de
+  áreas (agent_areas) DEIXARAM de ser proibidos: o ADR 0053 revogou os
+  três cortes (do ADR 0038 e da Fase 8) e a FASE 14d os implementa.
+  Fora da 14d, continuam valendo — não abra área nova de passagem
 - Não versionar à mão: toda tag nasce de workflow
 - Não instalar libs sem justificar no plano
 - Não refatorar código de fase concluída sem pedido explícito
 - Não ativar modelo descoberto automaticamente: curadoria manual
   sempre (ADR 0042)
-- Não corrigir de passagem os 14 achados abertos do dogfooding — cada
-  um espera a fase que o endereça, e corrigir fora dela apaga a
-  evidência de por que existia
+- Não corrigir de passagem os 18 achados abertos, hoje em
+  docs/explanation/achados-execucao-real.md — cada um espera a fase que
+  o endereça, e corrigir fora dela apaga a evidência de por que existia
+- (FASE 15) Nenhum gate NOVO e nenhuma mudança de comportamento de
+  gate existente — a fase só DECLARA e MEDE o que já existe
 - (FASE 13) Nenhuma feature nova e nenhum fix: a fase produz
   execuções, medições e um plano — achado novo entra na triagem

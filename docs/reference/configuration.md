@@ -13,6 +13,15 @@ Toda a configuração é por **variável de ambiente**. Não há arquivo de conf
 aplicação — o que existe é o `permissions.json`, que é política de projeto, não
 configuração de processo.
 
+Dois arquivos versionados são lidos em runtime e não são configuração, embora
+seja fácil confundi-los com ela: o `permissions.json` acima, e `docs/gates.yml`
+([ADR 0054](../adr/0054-gates-como-registro-declarativo.md)), o registro
+declarativo de gates. Nenhum dos dois tem variável de ambiente para apontar
+caminho — o registro é encontrado subindo de `__dirname` — e nenhum muda
+comportamento por edição em produção: o registro DESCREVE os gates, não os
+aplica. Ele viaja dentro da imagem da api; ver
+[runbook](../runbook.md#registro-de-gates).
+
 Os defaults abaixo foram extraídos do código, não de documentação anterior. A
 coluna **quando dá errado** é a parte que economiza tempo: quase toda variável
 tem um default que funciona em desenvolvimento e um modo de falha específico em

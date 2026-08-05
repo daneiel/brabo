@@ -1,0 +1,69 @@
+---
+id: internal-gates-controller-ler
+title: "Lê o registro declarativo de gates"
+description: "O registro DESCREVE, não executa: nenhum gate passa a ser aplicado por causa dele, e mudar um campo aqui não muda comportamento nenhum. Cada gate diz onde mora a prova de que passou (`evidencia`), porque nem toda prova está no event log."
+sidebar_label: "Lê o registro declarativo de gates"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "get api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Lê o registro declarativo de gates"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/internal/gates"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+O registro DESCREVE, não executa: nenhum gate passa a ser aplicado por causa dele, e mudar um campo aqui não muda comportamento nenhum. Cada gate diz onde mora a prova de que passou (`evidencia`), porque nem toda prova está no event log.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./internal-gates-controller-ler.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./internal-gates-controller-ler.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./internal-gates-controller-ler.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      
