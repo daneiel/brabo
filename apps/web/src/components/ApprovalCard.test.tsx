@@ -1,7 +1,28 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { ApprovalCard } from './ApprovalCard';
-import type { ProposedAction } from '../lib/api-types';
+import type { ActionType, ProposedAction } from '../lib/api-types';
+
+/**
+ * Os 13 tipos do backend (`apps/api/src/domain/actions/decide.ts`). A lista é
+ * escrita à mão de propósito: se o backend ganhar um tipo e ninguém acrescentar
+ * aqui, é o `Record<ActionType, …>` do ApprovalCard que reprova na compilação.
+ */
+const TODOS_OS_TIPOS: ActionType[] = [
+  'terminal',
+  'git_commit',
+  'git_push',
+  'pr_open',
+  'spend',
+  'git_repo_create',
+  'git_branch_create',
+  'git_branch_protect',
+  'write_file',
+  'open_adr_pr',
+  'git_merge',
+  'open_infra_pr',
+  'instruction_patch',
+];
 
 function makeAction(overrides: Partial<ProposedAction> = {}): ProposedAction {
   return {
@@ -231,6 +252,34 @@ describe('ApprovalCard', () => {
       expect(screen.getByText('primeiro arquivo')).toBeTruthy();
       expect(screen.getByText('segundo arquivo')).toBeTruthy();
       expect(screen.getByText('po.md')).toBeTruthy();
+    });
+  });
+
+  /**
+   * A regressão que isto existe para pegar: a união `ActionType` do web era um
+   * subconjunto da do backend, e `ACTION_ICON[actionType]` devolvia `undefined`
+   * para o resto — o que o React trata como componente inválido e derruba a
+   * árvore inteira, não só o card.
+   *
+   * Como o bootstrap de Gitflow propõe `git_repo_create`, `git_branch_create` e
+   * `git_branch_protect`, a tela da sessão de TODO projeto criado num provider
+   * ficava impossível de abrir. Projeto ADOTADO não passa por bootstrap, e era
+   * por isso que a execução anterior nunca tinha esbarrado nisso.
+   */
+  describe('todo tipo de ação do backend', () => {
+    it.each(TODOS_OS_TIPOS)('renderiza %s sem derrubar a tela', (actionType) => {
+      render(
+        <ApprovalCard
+          action={makeAction({ actionType })}
+          onApprove={vi.fn()}
+          onDeny={vi.fn()}
+          onAlwaysAllow={vi.fn()}
+        />,
+      );
+
+      // Um card de verdade, não uma casca: o botão só existe se o corpo
+      // inteiro renderizou.
+      expect(screen.getByRole('button', { name: 'Aprovar' })).toBeTruthy();
     });
   });
 });
