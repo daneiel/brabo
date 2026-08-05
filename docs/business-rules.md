@@ -979,6 +979,45 @@ terminar ali mataria os três.
   continua provado ao lado)
 - **Origem:** execução real da FASE 13b
 
+### RN-066 — Toda resposta sobre módulos carrega os nomes canônicos {#rn-066}
+
+O Arquiteto **não tem ferramenta para ler** o module_map vigente. Por isso as
+três respostas que ele recebe sobre módulos precisam dizer os nomes:
+
+1. `create_module_map` bem-sucedido devolve os módulos **como a api os gravou**
+   — não só a versão.
+2. `assign_story_modules` recusado lista os módulos **válidos**, além dos
+   inexistentes.
+3. `create_module_map` recusado por [RN-065](#rn-065) diz **quais** módulos a
+   sessão já definiu, não quantos.
+
+Sem mapa nenhum não há nomes a oferecer, e uma lista vazia lê-se como "chute de
+novo": esse caminho nomeia o problema real — falta o passo 1 do kickoff.
+
+O motivo é concreto. Numa execução real o Arquiteto emitiu o mapa
+(`saudacao`, `api_http`), não conseguiu relê-lo, e partiu para força bruta: 18
+chutes em sequência — `api`, `core`, `http`, `greeting`, `domain`, `web`,
+`hello-api`, `hello`, `greeting-api`, `saudacao`, `app`, `server`, `publico`,
+`public-api`, `api-publica` — até acertar **um por sorte**. Nas palavras dele no
+event log: *"vou descobrir os nomes válidos testando candidatos plausíveis"*.
+
+O estrago não foi o desperdício, foi o resultado: as **quatro** histórias
+terminaram no mesmo módulo (`saudacao`), inclusive a do endpoint, `api_http`
+ficou sem história nenhuma, e o desfecho afirmou *"Todas as 4 histórias foram
+vinculadas com sucesso aos módulos"*. Como a execução sobe **um dev agent por
+módulo**, a arquitetura desenhada não seria a construída.
+
+O laço de [RN-065](#rn-065) era sintoma disto: o Arquiteto reemitia o mapa
+justamente para tentar fixar nomes que não conseguia ler.
+
+- **Onde:** `apps/api/src/application/use-cases/architecture/assign-story-modules.use-case.ts`,
+  `apps/api/src/application/use-cases/architecture/create-module-map.use-case.ts`,
+  `apps/engine/lib/engine/harness/tools/create_module_map.ex`
+- **Teste:** `test/application/use-cases/architecture/assign-story-modules.use-case.spec.ts`
+  (`a recusa lista os módulos VÁLIDOS`; `sem module_map, manda criar o mapa`) e
+  `create-module-map.use-case.spec.ts` (`a recusa diz QUAIS são os módulos`)
+- **Origem:** execução real da FASE 13b
+
 ### RN-064 — Heartbeat não encerra sessão com trabalho pendente {#rn-064}
 
 O timeout de heartbeat mede inatividade da **aba**, não do **trabalho**. Antes
