@@ -954,6 +954,31 @@ políticas para o mesmo problema seriam duas chances de engolir o erro.
   (`ferramenta recusada vira tool.result com erro, e o agente fala`)
 - **Origem:** execução real da FASE 13b
 
+### RN-065 — Um module_map por SESSÃO; revisão é outra sessão {#rn-065}
+
+`create_module_map` recusa a segunda emissão **na mesma sessão**, com uma
+mensagem que diz o próximo passo. Entre sessões o mapa continua versionando
+(`version + 1`, `findCurrent` devolve o maior) — revisar arquitetura é
+comportamento desejado.
+
+A distinção é o ponto: entre sessões, uma emissão nova é **revisão**; dentro da
+mesma, é o modelo **redecidindo do zero**. Numa execução real o Arquiteto
+emitiu quatro mapas seguidos, com nomes e recortes diferentes a cada volta —
+`greeting`, `hello_core`, `greeting`, `hello-api-core` — e o laço só terminou
+porque a rede caiu (`%Req.TransportError{reason: :timeout}`).
+
+A recusa volta ao modelo pelo tool-result ([RN-061](#rn-061)): ele lê que já
+existe e segue para `assign_story_modules`, que é o passo 2 do kickoff dele. Por
+isso **não** se encerra o turno ao emitir o mapa — o Arquiteto ainda tem três
+passos pela frente (vincular histórias, propor ADR, registrar tensões), e
+terminar ali mataria os três.
+
+- **Onde:** `apps/api/src/application/use-cases/architecture/create-module-map.use-case.ts`
+- **Teste:** `test/application/use-cases/architecture/create-module-map.use-case.spec.ts`
+  (`recusa o SEGUNDO mapa da mesma sessão`; e o versionamento entre sessões
+  continua provado ao lado)
+- **Origem:** execução real da FASE 13b
+
 ### RN-064 — Heartbeat não encerra sessão com trabalho pendente {#rn-064}
 
 O timeout de heartbeat mede inatividade da **aba**, não do **trabalho**. Antes
