@@ -323,7 +323,7 @@ defmodule Engine.Dev.DevAgentServer do
 
           {:error, reason} ->
             state
-            |> AgentIo.block_task("falha ao montar contexto da task", inspect(reason))
+            |> AgentIo.block_task("falha ao montar contexto da task", inspect(reason), "infra")
             |> finish_task(:blocked)
         end
 
@@ -331,7 +331,7 @@ defmodule Engine.Dev.DevAgentServer do
         AgentIo.emit(state, "dev.error", %{agentId: state.agent_id, reason: inspect(reason)})
 
         state
-        |> AgentIo.block_task("falha ao preparar o worktree", inspect(reason))
+        |> AgentIo.block_task("falha ao preparar o worktree", inspect(reason), "codigo")
         |> finish_task(:blocked)
     end
   end

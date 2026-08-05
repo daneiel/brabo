@@ -114,6 +114,7 @@ const sidebars: SidebarsConfig = {
         'explanation/observability',
         'explanation/primeiro-dogfooding',
         'explanation/execucao-real-hello-world',
+        'explanation/achados-execucao-real',
         'explanation/validacao-fase-12',
         'explanation/aceite-providers',
       ],
