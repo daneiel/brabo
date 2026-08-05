@@ -884,11 +884,21 @@ defmodule Engine.Sessions.EngineApiClient.Live do
       {:cont, {req, resp}}
     end
 
+    # O MESMO teto do `llm_turn/5`. Sem ele valia o default do Req (15s), e o
+    # turno dos quatro agentes conversacionais — que só passam por aqui —
+    # morria com `%Req.TransportError{reason: :timeout}` antes do modelo
+    # responder. Com Ollama local o turno cabia nos 15s e o defeito não
+    # aparecia; com provider de API e contexto grande, não cabe.
+    #
+    # Em resposta streamada o `receive_timeout` do Req vale por CHUNK, então
+    # aqui ele é o teto de inatividade que o ADR 0041 pede — não o da resposta
+    # inteira.
     result =
       Req.post(api_url() <> "/internal/sessions/#{session_id}/llm-turn-stream",
         json: body,
         headers: headers(),
-        into: into
+        into: into,
+        receive_timeout: llm_turn_timeout_ms()
       )
 
     state = Process.get(key)
