@@ -1,6 +1,6 @@
 # ADR 0052 — O dev agent espera a aprovação no meio do laço
 
-- **Status:** Proposto
+- **Status:** Aceito — implementado e provado por teste na fase A
 - **Data:** 2026-08-05
 - **Contexto:** FASE 13b — primeira execução real do dev agent com modelo de API
 

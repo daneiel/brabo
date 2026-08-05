@@ -3,7 +3,7 @@ id: adr-index
 title: Decisões arquiteturais (ADR)
 sidebar_label: Índice de ADRs
 sidebar_position: 0
-description: Os 48 registros de decisão arquitetural do Brabo, agrupados por fase, com o que cada um decidiu.
+description: Os 54 registros de decisão arquitetural do Brabo, agrupados por fase, com o que cada um decidiu.
 keywords: [ADR, decisão arquitetural, arquitetura, histórico]
 ---
 
@@ -20,7 +20,7 @@ atual.** Para o estado atual, use [Regras de negócio](../business-rules.md),
 [Arquitetura](../architecture.md) e o [Runbook](../runbook.md). Para o
 raciocínio, venha aqui.
 
-Todos os 48 estão com status **aceito**.
+Dos 54, todos estão **aceitos** menos os que ainda esperam implementação — hoje o [0053](0053-dev-lead-e-paralelismo-autorizado.md) e o [0054](0054-gates-como-registro-declarativo.md), marcados **propostos** no próprio arquivo. Nenhum check confere esta frase: ela envelheceu dizendo 48 quando já eram 54, e é o argumento do ADR 0029 (`gerar > verificar > lembrar`) se confirmando contra si mesmo.
 
 ## Fase 2 — Git
 
