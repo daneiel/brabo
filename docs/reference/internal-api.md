@@ -103,6 +103,21 @@ Toda chamada de modelo passa pela api. Não é indireção gratuita: é onde o
 metering acontece e onde o orçamento pode **recusar** a chamada. Um engine que
 falasse direto com o provedor tornaria o teto de gasto inaplicável.
 
+Os **dois** caminhos usam o mesmo teto de tempo, `LLM_TURN_TIMEOUT_MS` (default
+300 000 ms). Um turno de LLM não é uma chamada de API comum: com modelo local o
+primeiro turno ainda carrega vários GB de pesos antes do primeiro token, e com
+provider de API o contexto grande demora. Em `/llm-turn-stream` o valor vale por
+CHUNK recebido, ou seja, é o teto de INATIVIDADE que o
+[ADR 0041](../adr/0041-base-openai-compativel-e-contrato-de-llm-providers.md)
+pede — não o da
+resposta inteira.
+
+O teto precisa ser explícito nos dois: sem passá-lo, o `Req` usa o default dele,
+de 15 segundos. Enquanto só o caminho não-streamado o passava, os quatro agentes
+conversacionais — que usam apenas o streamado — falhavam a 15s com
+`%Req.TransportError{reason: :timeout}`, classificado como origem `infra`. Com
+modelo local o turno cabia nos 15s e o defeito não aparecia.
+
 ### Ciclo de vida da sessão
 
 | método | caminho |
