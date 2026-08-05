@@ -108,7 +108,8 @@ Os **dois** caminhos usam o mesmo teto de tempo, `LLM_TURN_TIMEOUT_MS` (default
 primeiro turno ainda carrega vários GB de pesos antes do primeiro token, e com
 provider de API o contexto grande demora. Em `/llm-turn-stream` o valor vale por
 CHUNK recebido, ou seja, é o teto de INATIVIDADE que o
-[ADR 0041](../adr/0041-suite-de-contrato-de-llmprovider.md) pede — não o da
+[ADR 0041](../adr/0041-base-openai-compativel-e-contrato-de-llm-providers.md)
+pede — não o da
 resposta inteira.
 
 O teto precisa ser explícito nos dois: sem passá-lo, o `Req` usa o default dele,
