@@ -64,7 +64,15 @@ defmodule Engine.Outbox.Drain do
        do: [Engine.Workers.SessionLifecycleWorker, Engine.Workers.PsychologistWorker]
 
   defp handlers_for(event_type)
-       when event_type in ["task.gate_resolved", "task.became_claimable", "task.pr_settled"],
+       when event_type in [
+              "task.gate_resolved",
+              "task.became_claimable",
+              "task.pr_settled",
+              # ADR 0052: solta o dev agent que parou esperando a decisão de
+              # uma ação. Sem esta linha o evento é emitido, fica no outbox e
+              # nunca vira job — o agente espera para sempre.
+              "task.action_settled"
+            ],
        do: [Engine.Workers.DevAgentWakeWorker]
 
   defp handlers_for(_), do: [Engine.Workers.SessionLifecycleWorker]
