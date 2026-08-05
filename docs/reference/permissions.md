@@ -207,6 +207,31 @@ A diferença entre um teto e um default: o default é o que acontece quando
 ninguém configurou nada; o teto é o que acontece **independente** do que foi
 configurado.
 
+## O que acontece com o agente enquanto a decisão não vem
+
+Uma ação `pending` não é só uma linha esperando clique: do outro lado há um
+agente parado.
+
+Quando a ferramenta que ele chamou fica pendente, o laço dele **suspende**
+retendo task, worktree e o histórico da conversa, e ele entra em
+`awaiting_approval`. Sua decisão emite `task.action_settled`, que o acorda: o
+resultado real do comando ocupa o lugar onde estaria a resposta, e o laço retoma
+do ponto em que parou.
+
+**Recusar também responde.** O motivo entra no lugar do resultado, e o agente
+aprende que aquele caminho está fechado em vez de esperar para sempre — negar
+não o deixa travado.
+
+Isso importa para quem opera: aprovar tarde não desperdiça o trabalho já feito,
+e a fila de aprovações não é assíncrona por conveniência — ela é o que o agente
+está literalmente esperando. Antes disso, o `pending` voltava como se fosse a
+resposta do comando, e o agente gastava o teto de iterações tentando outra coisa
+até a task morrer sem uma linha escrita
+([RN-073](../business-rules.md#rn-073)).
+
+A auto-aprovação não passa por aqui: ela executa na proposta e o resultado volta
+no mesmo turno — que é justamente o valor de ter os padrões da seção anterior.
+
 ## O que fica escrito de cada decisão
 
 Toda ação proposta e toda decisão sobre ela viram **evento de domínio** em
