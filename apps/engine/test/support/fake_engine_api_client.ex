@@ -87,8 +87,31 @@ defmodule Engine.Sessions.FakeEngineApiClient do
     notify({:module_map_created, modules})
 
     case Process.get(:fake_module_map_error) do
-      nil -> reply(:fake_module_map, %{"id" => "mm-#{unique()}", "version" => 1})
-      reason -> {:error, reason}
+      nil ->
+        # `modules` vem na resposta porque a api devolve o mapa GRAVADO, e é de
+        # lá que o tool-result tira os nomes canônicos (RN-066). Sem esta chave
+        # o fake exercitaria só o caminho de fallback, e o eco dos nomes ficaria
+        # sem prova. `:fake_module_map_sem_modulos` existe para exercitar de
+        # propósito esse fallback.
+        base = %{"id" => "mm-#{unique()}", "version" => 1}
+
+        corpo =
+          if Process.get(:fake_module_map_sem_modulos) do
+            base
+          else
+            Map.put(
+              base,
+              "modules",
+              Enum.map(modules, fn m ->
+                %{"name" => Map.get(m, :name) || Map.get(m, "name")}
+              end)
+            )
+          end
+
+        reply(:fake_module_map, corpo)
+
+      reason ->
+        {:error, reason}
     end
   end
 
