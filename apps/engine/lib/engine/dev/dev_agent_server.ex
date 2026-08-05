@@ -126,7 +126,11 @@ defmodule Engine.Dev.DevAgentServer do
       impl: @impl_tag,
       task_budget_micros: task_budget_micros,
       max_gate_corrections: max_gate_corrections,
-      max_consecutive_blocked: max_consecutive_blocked
+      max_consecutive_blocked: max_consecutive_blocked,
+      # O laço suspenso à espera de aprovação (ADR 0052). Só em memória: o
+      # agente continua vivo enquanto espera, e restart cai no caminho de
+      # bloqueio com diagnóstico que já existe.
+      laco_pendente: nil
     }
 
     state = AgentIo.resume_state(base, resume)
@@ -223,6 +227,44 @@ defmodule Engine.Dev.DevAgentServer do
   end
 
   def handle_info({:gate_resolved, _}, state), do: {:noreply, state}
+
+  # A ação que segurava o laço teve desfecho (ADR 0052). O resultado de verdade
+  # entra no lugar onde estaria a palavra "pending", e o laço RETOMA do ponto em
+  # que parou — o histórico inteiro estava guardado no `ctx`.
+  #
+  # Recusa também é resposta: o agente lê o motivo, aprende que aquele caminho
+  # está fechado e tenta outro, em vez de esperar para sempre.
+  def handle_info(
+        {:action_settled, %{action_id: action_id} = desfecho},
+        %{status: :awaiting_approval, laco_pendente: %{action_id: action_id} = pendente} = state
+      ) do
+    ctx =
+      Map.update!(pendente.ctx, :messages, fn messages ->
+        messages ++
+          [
+            %{
+              "role" => "tool",
+              "content" => texto_do_desfecho(desfecho),
+              "toolCallId" => pendente.tool_call_id,
+              "name" => pendente.tool_name,
+              :pinned => false
+            }
+          ]
+      end)
+
+    state = %{state | status: :working, laco_pendente: nil}
+    AgentIo.persist(state)
+
+    {:noreply,
+     ctx
+     |> ToolLoop.run()
+     |> handle_outcome(state, pendente.task, pendente.story)}
+  end
+
+  # Desfecho de OUTRA ação, ou o agente já não está esperando: ignora em vez de
+  # derrubar. A entrega é por agente, e nada garante que só chegue o que se
+  # espera.
+  def handle_info({:action_settled, _}, state), do: {:noreply, state}
 
   # Só age se estiver livre (`:idle`) — em `:working`/`:awaiting_gate` a fila
   # já está sendo atendida ou o agente está no meio de outra coisa;
@@ -365,6 +407,28 @@ defmodule Engine.Dev.DevAgentServer do
     |> ToolLoop.run()
     |> handle_outcome(state, task, story)
   end
+
+  # O que o modelo lê no lugar da palavra "pending".
+  #
+  # Aprovada e executada: a saída real do comando, no mesmo formato que o
+  # tool-result teria trazido se a ação fosse auto-aprovada — o modelo não
+  # precisa saber que houve uma espera no meio.
+  defp texto_do_desfecho(%{status: "executed", execution_result: %{} = exec}) do
+    "exit #{Map.get(exec, "exitCode", "?")}\n#{Map.get(exec, "stdout", "")}"
+  end
+
+  defp texto_do_desfecho(%{status: "failed", execution_result: %{} = exec}) do
+    "falhou: #{Map.get(exec, "stderr", "")}#{Map.get(exec, "stdout", "")}"
+  end
+
+  # Recusa é RESPOSTA, não silêncio: o motivo entra no lugar do resultado, para
+  # o agente aprender que aquele caminho está fechado e tentar outro.
+  defp texto_do_desfecho(%{status: "denied"} = desfecho) do
+    motivo = Map.get(desfecho, :rejection_reason) || "sem motivo informado"
+    "recusado pelo usuário: #{motivo}"
+  end
+
+  defp texto_do_desfecho(%{status: status}), do: "desfecho da ação: #{status}"
 
   defp dev_hooks do
     Hooks.new()
@@ -509,6 +573,47 @@ defmodule Engine.Dev.DevAgentServer do
 
   defp trigger_gate_recheck(state, "secops"),
     do: :ok = Dispatcher.run_secops(state.project_id, state.task_id)
+
+  # A ferramenta ficou pendente de aprovação (ADR 0052). O agente PARA e retém
+  # tudo — worktree, task e o `ctx` do laço, com o histórico de mensagens —, do
+  # mesmo jeito que já retém em `awaiting_gate`.
+  #
+  # O `ctx` fica em MEMÓRIA, não no banco: o agente continua vivo, só ocioso.
+  # Restart durante a espera cai no caminho de bloqueio com diagnóstico que já
+  # existe, e persistir histórico de mensagens é problema à parte.
+  defp handle_outcome(
+         {:halted, {:awaiting_approval, action_id, tool_call_id, tool_name}, ctx},
+         state,
+         task,
+         story
+       ) do
+    state = %{
+      state
+      | status: :awaiting_approval,
+        laco_pendente: %{
+          ctx: ctx,
+          action_id: action_id,
+          tool_call_id: tool_call_id,
+          tool_name: tool_name,
+          # `task` e `story` viajam junto porque o desfecho do laço precisa
+          # deles (abrir PR, por exemplo) — e na retomada não há de onde
+          # buscá-los sem ir ao banco de novo.
+          task: task,
+          story: story
+        }
+    }
+
+    AgentIo.persist(state)
+
+    AgentIo.emit(state, "dev.awaiting_approval", %{
+      agentId: state.agent_id,
+      taskId: state.task_id,
+      actionId: action_id,
+      tool: tool_name
+    })
+
+    state
+  end
 
   defp handle_outcome({:halted, {"report_done", %{summary: summary}}, _ctx}, state, task, story) do
     desfechos = [

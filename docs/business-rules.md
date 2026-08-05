@@ -1197,6 +1197,43 @@ ninguém pedir.
   (`ocupa o vazio`; `NÃO sobrepõe escolha explícita de %s`)
 - **Origem:** achados B e O da execução real (FASE 13c, fase A)
 
+### RN-073 — Aprovação pendente SUSPENDE o laço, não o gasta {#rn-073}
+
+Quando uma ferramenta de pipeline volta `pending`, o ToolLoop **para** e o dev
+agent entra em `:awaiting_approval` retendo task, worktree e o histórico do
+laço. A decisão do usuário emite `task.action_settled`, que o acorda: o
+resultado de verdade ocupa o lugar onde estaria a palavra "pending", e o laço
+retoma do ponto em que parou.
+
+Duas propriedades que o teste fixa:
+
+- **Nada é gravado enquanto se espera.** O lugar da mensagem de ferramenta fica
+  vago. Gravar "pending" ali seria dizer ao modelo que o comando respondeu
+  isso — que era exatamente o defeito.
+- **Recusa é resposta.** O motivo entra no lugar do resultado e o agente aprende
+  que aquele caminho fechou, em vez de esperar para sempre por algo que ninguém
+  vai aprovar. É o mesmo princípio do `pr_settled` com `opened: false`
+  ([RN-047](#rn-047)), um nível abaixo.
+
+O que isso conserta: `pending` voltava como RESULTADO da ferramenta e o laço
+seguia. O modelo lia aquilo como resposta do comando, não aprendia nada, tentava
+outra coisa — e cada tentativa queimava uma iteração até
+`toolloop.limit_reached {iteration: 8, max_iterations: 8}`, com a task bloqueada
+por "limite de iterações atingido" sem uma linha escrita. As aprovações
+concedidas chegavam depois do laço esgotado e eram inúteis.
+
+A allowlist de terminal ([RN-068](#rn-068)) continua valendo, mas deixa de ser a
+única defesa: ela é lista de comandos previstos, e o modelo inventa comandos.
+
+- **Onde:** `apps/engine/lib/engine/harness/hooks/action_pipeline.ex`,
+  `harness/tool_loop.ex`, `dev/dev_agent_server.ex`,
+  `workers/dev_agent_wake_worker.ex`; emissão em
+  `apps/api/src/application/use-cases/actions/{approve,deny}-action.use-case.ts`
+- **Teste:** `apps/engine/test/engine/dev/dev_agent_awaiting_approval_test.exs`
+  (`ação pendente PARA o agente`; `aprovada: retoma o laço com a saída REAL`)
+- **Origem:** [ADR 0052](adr/0052-dev-agent-espera-aprovacao-no-meio-do-laco.md),
+  fase A da triagem
+
 ### RN-064 — Heartbeat não encerra sessão com trabalho pendente {#rn-064}
 
 O timeout de heartbeat mede inatividade da **aba**, não do **trabalho**. Antes

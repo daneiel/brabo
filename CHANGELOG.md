@@ -77,6 +77,15 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api,engine**: o dev agent passa a **esperar** a aprovação em vez de queimar
+  iterações. Ferramenta pendente suspendia o agente em nada: o `pending` voltava
+  como resultado, o modelo lia como resposta do comando, e cada tentativa
+  gastava uma iteração até a task morrer no teto sem uma linha escrita — com as
+  aprovações do usuário chegando tarde demais para servir. Agora o laço para
+  retendo worktree e histórico, e a decisão o retoma com o resultado de verdade
+  no lugar certo. Recusa também retoma, com o motivo: o agente aprende que o
+  caminho fechou em vez de esperar para sempre
+
 - **api**: sessão nova e dev agent param de nascer no modelo local do
   workspace. Quando ninguém configurou nada para o projeto, o modelo herdado
   passa a ser o do **Criativo** — ele é a porta de entrada, e o binding dele
