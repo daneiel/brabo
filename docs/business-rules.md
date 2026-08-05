@@ -1166,6 +1166,37 @@ apontando para o vazio.
   `apps/api/test/domain/actions/decide.spec.ts`
 - **Origem:** FASE 15a (ADR 0054)
 
+### RN-072 — Sem escolha explícita, o modelo é o do Criativo {#rn-072}
+
+Quando a cascata de binding pousa no default do **workspace** — isto é, ninguém
+decidiu nada para este projeto —, o modelo herdado é o do **Criativo**, e não o
+default global.
+
+O Criativo é sempre a porta de entrada de um projeto: é com ele que a primeira
+conversa acontece, e é o binding dele que representa "o modelo que este projeto
+usa para pensar".
+
+A herança ocupa o **vazio**, nunca sobrepõe: binding de sessão, de agente ou de
+projeto são escolhas explícitas de alguém e continuam vencendo. É por isso que
+ela é um passo DEPOIS da cascata e não um escopo novo dentro dela — não compete
+por precedência. E o modelo herdado passa pelos mesmos filtros: sumido do
+catálogo ou sem tool calling não é herdado, pelo mesmo motivo que a cascata os
+pula ([RN-043](#rn-043)).
+
+O que isso conserta: o default de workspace é global e costuma ser um modelo
+local pequeno. Sessão nova e dev agent — que não têm binding próprio — nasciam
+nele, e o [ADR 0020](adr/0020-destravar-gates-qa-secops.md) proíbe modelo local
+pequeno no passo semântico. Numa execução real foi preciso trocar o modelo à
+mão em toda sessão aberta, e os três dev agents subiram em `llama3.2:1b` sem
+ninguém pedir.
+
+- **Onde:** `apps/api/src/domain/llm/binding-resolver.ts`
+  (`herdarModeloDeStart`), aplicado em
+  `application/use-cases/llm/resolve-model-binding.use-case.ts`
+- **Teste:** `apps/api/test/domain/llm/binding-resolver.spec.ts`
+  (`ocupa o vazio`; `NÃO sobrepõe escolha explícita de %s`)
+- **Origem:** achados B e O da execução real (FASE 13c, fase A)
+
 ### RN-064 — Heartbeat não encerra sessão com trabalho pendente {#rn-064}
 
 O timeout de heartbeat mede inatividade da **aba**, não do **trabalho**. Antes
