@@ -82,6 +82,7 @@ Uma linha em `session_events`, append-only, com `seq` densa por sessão
 | `backlog.story_promotion_proposed` | o PO terminou uma história COMPLETA num projeto em modo `manual`: ela fica `draft` aguardando a decisão do usuário, e nenhuma tarefa dela é pegável até lá ([RN-048](../business-rules.md#rn-048)) |
 | `backlog.story_promotion_returned` | o usuário RECUSOU promover e devolveu a história ao PO com um motivo — que vira mensagem fixada na sessão dele, como a devolução de um gate ao dev ([RN-048](../business-rules.md#rn-048)) |
 | `backlog.story_demoted` | módulo sumiu do `module_map`; a história voltou para `draft` ([RN-012](../business-rules.md#rn-012)) |
+| `backlog.story_overlap_warned` | a história foi criada, mas TODAS as regras que ela cita já estavam cobertas por outra — aviso, não bloqueio: quem julga se é sobreposição é o usuário ([RN-081](../business-rules.md#rn-081)) |
 | `backlog.story_modules_assigned` | vínculo história ↔ módulo |
 | `backlog.task_created` | — |
 | `backlog.task_claimed` | um dev agent pegou a task |
@@ -168,6 +169,7 @@ Os schemas são fechados: campo faltando reprova a emissão
 |---|---|
 | `psychologist.analysis_completed` | — |
 | `psychologist.analysis_failed` | com causa classificada: `infra`, `modelo`, `código` ou `política` |
+| `psychologist.analysis_skipped` | a sessão não tinha evento ANALISÁVEL e a análise não rodou — `payload.analisaveis` e `payload.eventCount` mostram a diferença ([RN-079](../business-rules.md#rn-079)) |
 | `psychologist.hypothesis_proposed` | hipótese com `evidenceEventIds` válidos ([RN-021](../business-rules.md#rn-021)) |
 | `psychologist.hypothesis_accepted` | — |
 | `psychologist.hypothesis_dismissed` | — |
@@ -273,7 +275,7 @@ respeito.
 
 > ⚠️ Bloco gerado por `pnpm docs:generate`. Não edite à mão — o próximo build sobrescreve.
 
-Extraído dos pontos de emissão: **77 identificadores**, dos quais **1** não aparecem descritos acima.
+Extraído dos pontos de emissão: **79 identificadores**, dos quais **1** não aparecem descritos acima.
 
 - `action.failed` <sub>(apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts)</sub>
 - `agent.activated` <sub>(apps/api/src/application/use-cases/agents/activate-agent.use-case.ts)</sub>
@@ -296,6 +298,7 @@ Extraído dos pontos de emissão: **77 identificadores**, dos quais **1** não a
 - `backlog.story_created` <sub>(apps/api/src/application/use-cases/backlog/create-story.use-case.ts)</sub>
 - `backlog.story_demoted` <sub>(apps/api/src/application/use-cases/architecture/create-module-map.use-case.ts)</sub>
 - `backlog.story_modules_assigned` <sub>(apps/api/src/application/use-cases/architecture/assign-story-modules.use-case.ts)</sub>
+- `backlog.story_overlap_warned` <sub>(apps/api/src/application/use-cases/backlog/create-story.use-case.ts)</sub>
 - `backlog.story_promotion_proposed` <sub>(apps/api/src/application/use-cases/backlog/create-story.use-case.ts)</sub>
 - `backlog.story_promotion_returned` <sub>(apps/api/src/application/use-cases/backlog/return-story.use-case.ts)</sub>
 - `backlog.story_transitioned` <sub>(apps/api/src/application/use-cases/backlog/transition-story.use-case.ts)</sub>
@@ -340,6 +343,7 @@ Extraído dos pontos de emissão: **77 identificadores**, dos quais **1** não a
 - `proposed_action.executed` <sub>(apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts)</sub>
 - `psychologist.analysis_completed` <sub>(apps/api/src/application/use-cases/execution/propose-hypotheses.use-case.ts)</sub>
 - `psychologist.analysis_failed` <sub>(apps/engine/lib/engine/workers/psychologist_worker.ex)</sub>
+- `psychologist.analysis_skipped` <sub>(apps/engine/lib/engine/workers/psychologist_worker.ex)</sub>
 - `psychologist.hypothesis_accepted` <sub>(apps/api/src/application/use-cases/execution/accept-hypothesis.use-case.ts)</sub>
 - `psychologist.hypothesis_accepted_for_anamnese` <sub>(apps/api/src/application/use-cases/execution/accept-hypothesis.use-case.ts)</sub>
 - `psychologist.hypothesis_dismissed` <sub>(apps/api/src/application/use-cases/execution/dismiss-hypothesis.use-case.ts)</sub>

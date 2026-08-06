@@ -380,6 +380,18 @@ export function classifyEvent(event: SessionEvent): ActivityDisplay {
       text: `história rebaixada a draft (módulo removido do module_map)`,
     };
   }
+  // Achado R. É AVISO, não erro: a história foi criada e segue o fluxo —
+  // por isso `warning` e não `danger`, e por isso o texto nomeia a outra
+  // história, que é o que permite ao usuário julgar em um olhar.
+  if (type === 'backlog.story_overlap_warned') {
+    return {
+      kind: 'generic',
+      icon: StackIcon,
+      color: 'var(--warning)',
+      bad: false,
+      text: `história "${payloadField(payload, 'title') ?? 'nova'}" não acrescenta cobertura sobre "${payloadField(payload, 'sobrepoeTitulo') ?? 'outra'}"`,
+    };
+  }
   if (type.startsWith('adr.')) {
     return {
       kind: 'pr',
@@ -533,7 +545,13 @@ export function classifyEvent(event: SessionEvent): ActivityDisplay {
               ? `hipótese encaminhada para a Anamnese`
               : type === 'psychologist.analysis_completed'
                 ? `análise do Psicólogo concluída (${payloadField(payload, 'tier') ?? 'triagem'})`
-                : `atividade em ${actorLabel}`;
+                : // Dispensada NÃO é falha: a sessão não tinha o que analisar.
+                  // Pintar de `bad` treinaria quem lê o log a ignorar o
+                  // evento de falha de verdade (mesma razão do
+                  // `anamnese.run_skipped`).
+                  type === 'psychologist.analysis_skipped'
+                  ? `análise do Psicólogo dispensada: sessão sem eventos a analisar`
+                  : `atividade em ${actorLabel}`;
     return {
       kind: 'hypothesis',
       icon: HypothesisIcon,

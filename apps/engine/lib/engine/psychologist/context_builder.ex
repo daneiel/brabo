@@ -6,12 +6,17 @@ defmodule Engine.Psychologist.ContextBuilder do
   mais o event log da sessão, lido direto do Postgres (read-only) — mais
   barato que uma ida HTTP.
 
-  **Contagem e leitura são separadas de propósito.** `fetch/2` traz só o
-  `event_count` (COUNT, não carrega linha), porque é ele que decide a
-  triagem; só depois, já sabendo o tier, o worker chama
+  **Contagem e leitura são separadas de propósito.** `fetch/2` traz só as
+  contagens (COUNT, não carrega linha), porque são elas que decidem se e
+  como analisar; só depois, já sabendo o tier, o worker chama
   `recent_events/2` com o teto daquele tier. Carregar o log inteiro pra
   contar era desperdício em sessão longa — e o log inteiro nunca cabe no
   prompt de qualquer jeito (ver `Engine.Psychologist.Triage`).
+
+  São DUAS contagens, e elas não se substituem: `event_count` é o log
+  cru e dimensiona o trabalho (qual tier); `analisaveis` desconta o que
+  os analistas escreveram e o provisionamento de repositório, e responde
+  se há trabalho (ver `Engine.SessionEvents.Event.count_analisaveis/1`).
   """
 
   alias Engine.Sessions.EngineApiClient
@@ -22,7 +27,8 @@ defmodule Engine.Psychologist.ContextBuilder do
           termination_reason: String.t() | nil,
           business_rules: [map()],
           prior_hypotheses: [map()],
-          event_count: non_neg_integer()
+          event_count: non_neg_integer(),
+          analisaveis: non_neg_integer()
         }
 
   @spec fetch(String.t(), String.t()) :: {:ok, t()} | {:error, term()}
@@ -62,7 +68,8 @@ defmodule Engine.Psychologist.ContextBuilder do
       termination_reason: Map.get(ctx, "terminationReason"),
       business_rules: Map.get(ctx, "businessRules", []),
       prior_hypotheses: Map.get(ctx, "priorHypotheses", []),
-      event_count: Engine.SessionEvents.Event.count(session_id)
+      event_count: Engine.SessionEvents.Event.count(session_id),
+      analisaveis: Engine.SessionEvents.Event.count_analisaveis(session_id)
     }
   end
 end
