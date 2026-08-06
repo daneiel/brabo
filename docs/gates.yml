@@ -230,10 +230,10 @@ gates:
     evidencia:
       tipo: ci
       workflow: .github/workflows/promotion-check.yml
-      # Aponta para o SCRIPT porque este gate não tem spec própria, ao
-      # contrário dos irmãos (pr-police e approval-ladder têm). Lacuna real,
-      # registrada aqui e levada à triagem — não corrigida de passagem.
-      arquivo: scripts/ci/promotion-check.ts
+      # A lacuna que este comentário registrava — gate required sem spec
+      # própria — foi fechada pela triagem que ele mesmo alimentou. Agora
+      # aponta para a spec, como os irmãos.
+      arquivo: scripts/ci/promotion-check.spec.ts
       onde: scripts/ci/promotion-check.ts
 
   - id: paralelismo-autorizado # FASE 14d — entra active quando ela fechar
