@@ -118,10 +118,12 @@ ninguém estava vendo:
 - o julgamento de QA e SecOps sobre PR de **infra**, que tem caminho próprio
   (`infra.gate_changed`, sem task de backlog por trás) e não estava na
   especificação;
-- `promotion-check` é check required **sem spec própria**, ao contrário de
-  `pr-police` e `approval-ladder`. A evidência dele aponta para o script, com a
+- `promotion-check` era check required **sem spec própria**, ao contrário de
+  `pr-police` e `approval-ladder`. A evidência apontava para o script, com a
   lacuna escrita ali, e o item foi para a triagem — a fase declara e mede, não
-  conserta.
+  conserta. **A triagem o fechou:** `scripts/ci/promotion-check.spec.ts` existe,
+  e a evidência do gate passou a apontar para ela. É o ciclo funcionando como
+  desenhado — enumerar achou, a triagem priorizou, outra fase consertou.
 
 O terceiro achado veio da primeira execução do medidor: o filtro de
 `story-promovida` apontava para `actor_kind`, que é **coluna** e não payload, e
