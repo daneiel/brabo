@@ -31,7 +31,7 @@ ou apaga evidência custa mais tarde do que hoje; um cosmético custa igual.
 | ~~C — A UI não pode mentir sobre agentes~~ | ~~C, I, H, L, G~~ | **FEITA** | — | os cinco itens |
 | D — Wizard diz a verdade e tem saída | D, E, F | P2 | P | baixo |
 | ~~G — O desfecho de falha diz a verdade~~ | ~~P, Q, T~~ | **FEITA** | — | RN-077 |
-| H — Estado de sessão não mente | V | P2 | M | médio — envenena toda medição |
+| ~~H — Estado de sessão não mente~~ | ~~V~~ | **FEITA** | — | RN-064 ampliada |
 | E — Qualidade do que os agentes produzem | K, R, J | P3 | M | baixo |
 | — avulso | promotion-check sem spec | P3 | P | baixo |
 
@@ -199,17 +199,36 @@ reconheceu esta forma* — lacuna do nosso código —, e `codigo` é a origem q
 aponta a ação certa. `indeterminada` não apontava nenhuma, que era exatamente a
 queixa do achado.
 
-## Fase H — Estado de sessão não mente (P2)
+## Fase H — Estado de sessão não mente (P2) — **FEITA**
 
-**V** — a sessão `1f94de49` consta `closed` desde 23:34:42 e a execução seguiu
-até 00:56. A UI diz "não é possível enviar mensagens" e ao mesmo tempo renderiza
-cards de aprovação que funcionam: aprovar numa sessão fechada executa comando de
-verdade.
+**V** — a sessão `1f94de49` constava `closed` desde 23:34:42 e a execução seguiu
+até 00:56.
 
-Contraria a máquina de estados declarada no CLAUDE.md, em que `closed` é
-terminal. **Risco de esperar: médio** — envenena toda métrica por sessão
-(duração, custo, "quantas terminaram bem"), que é exatamente o instrumento que a
-FASE 13b existe para construir.
+A causa não era a máquina de estados: era **o heartbeat**. A sessão nasceu
+23:34:12 e fechou 23:34:42 — exatamente os 30s de `SESSION_HEARTBEAT_TIMEOUT_MS`.
+A [RN-064](../business-rules.md#rn-064) já mandava perguntar se havia trabalho
+pendente antes de encerrar, mas "trabalho pendente" era só **handoff `offered`**
+— e havia uma ação `pending` desde 23:34:13, criada um segundo depois de a
+sessão nascer.
+
+Ação aguardando decisão passou a contar. É o mesmo defeito do handoff um nível
+abaixo: alguém está esperando **você**, e um agente pode estar suspenso
+esperando o desfecho ([RN-073](../business-rules.md#rn-073)).
+
+**A versão anterior da regra dizia, por escrito, que incluir trabalho de agente
+"sem um teste que prove a interação seria adivinhar".** A execução produziu a
+prova, e é isso que separa este conserto de um palpite.
+
+### O que a Fase H NÃO fechou
+
+- **Task `in_progress` sem ação pendente nem handoff.** O sinal exigiria a api
+  ler `dev_agent_states`, que é do engine — decisão de fronteira, não conserto
+  de passagem.
+- **`closed` continuar aceitando aprovação.** Com o heartbeat corrigido, a
+  sessão deixa de fechar com ação pendurada, então o caso fica raro. Bloquear a
+  decisão numa sessão fechada é mudança de comportamento com consequência
+  própria: uma ação órfã de uma sessão já encerrada ficaria sem ninguém para
+  decidi-la.
 
 ## Fase E — Qualidade do que os agentes produzem (P3)
 
