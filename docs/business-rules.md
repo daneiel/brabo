@@ -1435,16 +1435,39 @@ Fechar sessão é sobre o trabalho ter acabado, não sobre quem está olhando.
 mesmo, com aviso no log. Trocar sessão órfã por sessão imortal seria trocar um
 defeito por outro.
 
-Hoje "trabalho pendente" é **handoff `offered`**. Task em andamento ficou de
-fora de propósito: o dev agent tem máquina de estados própria (Fase 12b) e
-retém o worktree por conta dele — incluí-la sem um teste que prove a interação
-seria adivinhar.
+"Trabalho pendente" são **dois** sinais, e o segundo entrou pelo achado V:
+
+1. **handoff `offered`** — o caso original acima;
+2. **`proposed_action` com status `pending`** — alguém está esperando a SUA
+   decisão, e um agente pode estar suspenso esperando o desfecho
+   ([RN-073](#rn-073)).
+
+O segundo é o mesmo defeito do primeiro um nível abaixo, e a execução do
+`hello-limpo` mostrou o custo: a sessão nasceu 23:34:12, uma ação ficou
+`pending` às 23:34:13, e o heartbeat a fechou às **23:34:42 — exatamente os 30s
+do timeout**. O dev agent seguiu trabalhando por mais de uma hora numa sessão
+que o banco dava por encerrada, e isso envenena toda métrica por sessão:
+duração, custo e "quantas terminaram bem" passam a ler um estado que não
+descreve o que houve.
+
+A versão anterior desta regra dizia, por escrito, que incluir trabalho de agente
+"sem um teste que prove a interação seria adivinhar". A execução produziu a
+prova, e o teste agora existe.
+
+**O que continua fora:** task `in_progress` sem ação pendente nem handoff. O dev
+agent tem máquina de estados própria e retém o worktree por conta dele; o sinal
+que a api possui e que a execução comprovou é a ação pendente. Incluir a task
+exigiria a api ler `dev_agent_states`, que é do engine — decisão de fronteira,
+não conserto de passagem.
 
 - **Onde:** `apps/api/src/application/use-cases/sessions/get-session-pending-work.use-case.ts`,
   `apps/engine/lib/engine/sessions/session_server.ex` (`handle_info(:heartbeat_timeout, …)`)
 - **Teste:** `apps/engine/test/engine/sessions/session_lifecycle_test.exs`
-  (`heartbeat NÃO encerra sessão com trabalho pendente` e o caso oposto)
-- **Origem:** execução real da FASE 13b
+  (`heartbeat NÃO encerra sessão com trabalho pendente` e o caso oposto) e
+  `apps/api/test/application/use-cases/sessions/get-session-pending-work.use-case.spec.ts`
+  (os dois sinais, a ação já decidida que NÃO segura, e o escopo por sessão)
+- **Origem:** execução real da FASE 13b; achado V, Fase H do
+  [backlog](explanation/backlog.md)
 
 ### RN-063 — Encerrar sem produzir é desfecho, não falha {#rn-063}
 
