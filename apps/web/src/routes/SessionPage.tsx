@@ -193,7 +193,6 @@ export function SessionPage({
     refetchInterval: 5000,
   });
 
-  const allModels = modelsByCategory ? [...Object.values(modelsByCategory.local).flat(), ...Object.values(modelsByCategory.cloud).flat()] : [];
   // O agente que está streamando agora, quando o delta disse quem é (achado C).
   const agenteFalando = streamingAgent
     ? AGENTS[streamingAgent as keyof typeof AGENTS]
