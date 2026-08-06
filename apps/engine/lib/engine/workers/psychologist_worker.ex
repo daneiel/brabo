@@ -18,6 +18,12 @@ defmodule Engine.Workers.PsychologistWorker do
   Oban). Reprocessamento explícito (`triggeredBy: "manual"`) sempre roda
   e supersede a anterior (sem apagar).
 
+  **Sessão sem material**: antes de gastar qualquer coisa, checa se há
+  evento ANALISÁVEL (`Triage.should_run?/1`). Sem isso, uma sessão cujo
+  log inteiro é provisionamento de repositório rendia análise, e o
+  modelo — sem nada para citar — inventava seq inexistentes até a
+  validação rejeitar e ele desistir, com o orçamento já gasto.
+
   **Kill pós-restart**: quem devolve um job morto em `executing` para
   `available` é o `Oban.Plugins.Lifeline` (ver `config/config.exs`) — sem
   ele o job ficaria órfão para sempre e a retentativa aqui nunca
@@ -83,6 +89,40 @@ defmodule Engine.Workers.PsychologistWorker do
   end
 
   defp analyze(project_id, session_id, triggered_by, context) do
+    if Triage.should_run?(context.analisaveis) do
+      analisar_de_fato(project_id, session_id, triggered_by, context)
+    else
+      pular_sem_material(project_id, session_id, context)
+    end
+  end
+
+  # Sessão sem nada a analisar: pular é o desfecho CERTO, e vale também
+  # para `triggeredBy: "manual"` — reprocessar não cria material, e quem
+  # clicou recebe uma resposta honesta em vez de uma hipótese inventada
+  # sobre um log que não existe.
+  #
+  # Vira evento, ao contrário do skip da Anamnese (que é Logger porque
+  # roda a cada 15 min e viraria ruído): o Psicólogo roda UMA vez por
+  # fechamento de sessão, então uma análise ausente sem nada narrado é
+  # indiagnosticável — mesma razão do `analysis_failed`.
+  defp pular_sem_material(project_id, session_id, context) do
+    tier = Triage.decide(context.event_count)
+
+    EngineApiClient.append_event(project_id, session_id, %{
+      type: "psychologist.analysis_skipped",
+      actorKind: "agent",
+      actorId: Triage.agent_for(tier),
+      payload: %{
+        reason: "sessão sem eventos analisáveis",
+        analisaveis: context.analisaveis,
+        eventCount: context.event_count
+      }
+    })
+
+    :ok
+  end
+
+  defp analisar_de_fato(project_id, session_id, triggered_by, context) do
     event_count = context.event_count
     tier = Triage.decide(event_count)
 

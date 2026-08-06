@@ -32,7 +32,7 @@ ou apaga evidência custa mais tarde do que hoje; um cosmético custa igual.
 | ~~D — Wizard diz a verdade e tem saída~~ | ~~D, E, F~~ | **FEITA** | — | RN-078; E e F já estavam feitos |
 | ~~G — O desfecho de falha diz a verdade~~ | ~~P, Q, T~~ | **FEITA** | — | RN-077 |
 | ~~H — Estado de sessão não mente~~ | ~~V~~ | **FEITA** | — | RN-064 ampliada |
-| E — Qualidade do que os agentes produzem | K, R, J | P3 | M | baixo |
+| ~~E — Qualidade do que os agentes produzem~~ | ~~K, R, J~~ | **FEITA** | — | RN-079, RN-080 e RN-081 |
 | ~~— avulso~~ | ~~promotion-check sem spec~~ | **FEITO** | — | 10 casos, verificados por mutação |
 
 **Cobertura: 19 de 19.** As letras de fase (A–H) e as de achado (B–V) colidem
@@ -247,9 +247,28 @@ prova, e é isso que separa este conserto de um palpite.
 | **R** | o PO gerou duas histórias cobrindo o mesmo endpoint |
 | **J** | o Psicólogo roda em sessão recém-aberta com as hipóteses da anterior e o log vazio, tenta citar eventos inexistentes e desiste |
 
-São problemas de prompt e de validação de artefato, não de mecanismo. **J** tem
-o consolo de que a validação de evidência segurou a invenção — o desperdício é
-de dinheiro, não de verdade.
+**FEITA**, com um corte declarado no meio.
+
+**J era mecanismo, ao contrário do que esta seção supunha.** Log vazio é
+condição verificável, e o defeito estava na contagem que decidia se valia a
+pena: ela somava os passos de máquina do bootstrap e — pior — o rastro que o
+próprio Psicólogo deixa na sessão enquanto a analisa, o que fazia uma sessão
+vazia parecer povoada a partir da primeira análise, e mais povoada a cada
+retentativa. Fechado por [RN-079](../business-rules.md#rn-079), com a sessão do
+achado reproduzida como teste.
+
+**K e R eram mesmo prompt, e por isso fecharam só até onde código alcança.**
+Duplicata EXATA de regra é recusada na emissão
+([RN-080](../business-rules.md#rn-080)); história com título idêntico é recusada
+e história que não acrescenta cobertura vira aviso
+([RN-081](../business-rules.md#rn-081)) — aviso, e não bloqueio, porque um
+segundo recorte da mesma regra pode ser legítimo e quem julga é o usuário.
+
+O que **não** foi resolvido, e está escrito nas três RNs em vez de subentendido:
+duplicata semântica. O par exato do achado R — "Endpoint público de saudação
+determinística" e "Endpoint público GET /hello que responde saudação imediata" —
+continua passando, porque nada mecânico liga os dois. Há teste afirmando esse
+limite, para que ele seja uma decisão visível e não uma lacuna esquecida.
 
 ## Avulso
 

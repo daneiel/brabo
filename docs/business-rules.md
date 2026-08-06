@@ -1452,6 +1452,103 @@ que exatamente foi dispensado.
   (destrava; a decisão no log com o ator; e a recusa para falha anterior)
 - **Origem:** achado D, Fase D do [backlog](explanation/backlog.md)
 
+### RN-079 — O Psicólogo não analisa sessão sem evento analisável {#rn-079}
+
+Antes de gastar um turno de modelo, a análise pergunta se há o que analisar. Não
+havendo, ela **não roda** e o desfecho vira `psychologist.analysis_skipped`.
+
+**Analisável exclui duas coisas, por motivos diferentes:**
+
+- **o rastro dos próprios analistas.** O Psicólogo grava o turno dele no log da
+  sessão que está analisando (`agent.response`, `tool.call`, `tool.result`, a
+  hipótese). Contar isso faria uma sessão vazia parecer povoada **a partir da
+  primeira análise**, e cada retentativa a encheria mais — o critério nunca mais
+  reprovaria. Vale igual para a Anamnese;
+- **`bootstrap.*`**, que é provisionamento de repositório rodando sozinho: nove
+  passos de máquina não dizem nada sobre a pessoa.
+
+Tudo o mais conta, inclusive `proposed_action.*` — o usuário aprovando e negando
+sem escrever mensagem nenhuma **é** comportamento, lição que a Anamnese já tinha
+aprendido ([RN-063](#rn-063)).
+
+**São duas contagens, e elas não se substituem.** A crua dimensiona o trabalho
+(quanto log ler, logo qual tier de triagem, leve ou pesado); a analisável decide
+se há trabalho. Confundi-las é o defeito: uma sessão só de bootstrap passava por "20
+eventos" sem ter nenhum, ganhava a análise, e o modelo — sem nada para citar —
+inventava `seq` inexistentes até a validação de evidência rejeitar e ele
+desistir, com o orçamento já gasto.
+
+**Pular vale também para reprocessamento manual.** Reprocessar não fabrica
+material: quem clicou recebe o motivo no log em vez de uma hipótese inventada
+sobre um log que não existe.
+
+O skip vira **evento**, ao contrário do da Anamnese, que é só log — aquele roda
+a cada 15 min e viraria ruído, este roda uma vez por fechamento de sessão, e uma
+análise ausente sem nada narrado é indiagnosticável.
+
+- **Onde:** `apps/engine/lib/engine/session_events/event.ex` (`count_analisaveis/1`),
+  `apps/engine/lib/engine/psychologist/triage.ex` (`should_run?/1`),
+  `apps/engine/lib/engine/workers/psychologist_worker.ex`
+- **Teste:** `apps/engine/test/engine/session_events/event_analisaveis_test.exs`
+  (inclui a reprodução da sessão do achado: 14 eventos, nenhum analisável),
+  `apps/engine/test/engine/workers/psychologist_worker_test.exs`
+- **Origem:** achado J, Fase E do [backlog](explanation/backlog.md)
+
+### RN-080 — Regra de negócio duplicada é recusada na entrada {#rn-080}
+
+`business_rule` cujo título já existe **no projeto** não é gravada. A recusa
+volta ao modelo pelo mesmo caminho de um payload inválido, e ele segue para a
+próxima regra em vez de parar.
+
+**Na entrada porque não há outro lugar.** Não existe tabela de regras: o
+artefato É o evento `artifact.business_rule`, e evento de domínio não é apagado
+nem editado. Deixar entrar significa conviver com a duplicata para sempre.
+
+**Escopo de projeto, não de sessão** — é entre sessões que a duplicata nasce.
+Rodar o Criativo de novo abre sessão nova, e uma checagem por sessão não veria a
+rodada anterior, que é exatamente o caso do achado.
+
+A comparação normaliza caixa, acento e espaço redundante; pontuação fica.
+**Duplicata semântica continua passando, e isso é declarado, não esquecido:**
+"Saudação com nome" e "Quem chama pode se identificar" seguem sendo duas regras,
+porque separá-las é julgamento e não cabe num `if`.
+
+- **Onde:** `apps/engine/lib/engine/harness/artifact_dedupe.ex`,
+  `apps/engine/lib/engine/harness/tools/emit_artifact.ex`,
+  `apps/engine/lib/engine/session_events/event.ex` (`titulos_de_regras/1`)
+- **Teste:** `apps/engine/test/engine/harness/artifact_dedupe_test.exs`,
+  `apps/engine/test/engine/harness/emit_artifact_dedupe_test.exs`
+- **Origem:** achado K, Fase E do [backlog](explanation/backlog.md)
+
+### RN-081 — História repetida: título igual recusa, justificativa igual avisa {#rn-081}
+
+Duas respostas diferentes para dois problemas diferentes:
+
+- **título idêntico** no projeto é erro, não escolha: a história é **recusada** e
+  nada é criado;
+- **mesma justificativa** — todas as regras de negócio que a história cita já
+  estavam cobertas por outra — é suspeita, não erro. A história **é criada** e
+  sai um `backlog.story_overlap_warned`. Um segundo recorte da mesma regra pode
+  ser legítimo, então quem julga é o usuário; o produto só se recusa a deixar
+  passar despercebido.
+
+**Contido, não intersecção.** Duas histórias compartilharem uma regra é normal, e
+avisar disso viraria ruído que ninguém lê. O sinal só existe quando a nova não
+acrescenta cobertura nenhuma. História que não cita regra alguma não gera aviso:
+tratar o conjunto vazio como subconjunto de tudo acusaria todas.
+
+**O limite é o mesmo da [RN-080](#rn-080), e o par do achado o atravessa:**
+"Endpoint público de saudação determinística" e "Endpoint público GET /hello que
+responde saudação imediata" cobrem o mesmo endpoint com títulos e justificativas
+diferentes — nada mecânico os liga, e eles continuam passando. Há teste
+afirmando isso, para o limite ficar visível em vez de implícito.
+
+- **Onde:** `apps/api/src/domain/backlog/story-overlap.ts`,
+  `apps/api/src/application/use-cases/backlog/create-story.use-case.ts`
+- **Teste:** `apps/api/test/domain/backlog/story-overlap.spec.ts`,
+  `apps/api/test/application/use-cases/backlog/create-story.use-case.spec.ts`
+- **Origem:** achado R, Fase E do [backlog](explanation/backlog.md)
+
 ### RN-064 — Heartbeat não encerra sessão com trabalho pendente {#rn-064}
 
 O timeout de heartbeat mede inatividade da **aba**, não do **trabalho**. Antes

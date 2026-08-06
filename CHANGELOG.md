@@ -113,6 +113,36 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **engine**: o Psicólogo parou de analisar sessão **sem nada a analisar**. Uma
+  sessão cujo log inteiro era provisionamento de repositório passava pelo
+  critério de tamanho, ganhava a análise, e o modelo — sem evento algum para
+  citar — inventava `seq` inexistentes até a validação de evidência rejeitar e
+  ele desistir, com o orçamento já gasto. A contagem que decide se vale a pena
+  agora desconta os passos de máquina do bootstrap e o rastro que os próprios
+  analistas deixam na sessão: contar o turno anterior do Psicólogo fazia uma
+  sessão vazia parecer povoada a partir da primeira análise, e cada retentativa
+  a enchia mais. Não havendo material, a análise não roda e o desfecho fica no
+  log como `psychologist.analysis_skipped` — inclusive no reprocessamento
+  manual, onde quem clicou recebe o motivo em vez de uma hipótese inventada
+
+- **engine**: regra de negócio com título já registrado **no projeto** passa a
+  ser recusada na emissão. Rodar o Criativo duas vezes deixava as mesmas regras
+  duplicadas, metade delas órfãs; como o artefato é um evento de domínio, e
+  evento não é apagado nem editado, a entrada é o único momento em que dá para
+  recusar. A checagem é por projeto e não por sessão, que é onde a duplicata
+  nasce — a segunda rodada abre sessão nova. O erro volta ao modelo, que segue
+  para a próxima regra
+
+- **api**: o PO parou de criar história com título idêntico a uma que já existe
+  no projeto, e passa a **avisar** quando uma história nova não acrescenta
+  cobertura nenhuma — todas as regras que ela cita já estavam cobertas por
+  outra. São respostas diferentes de propósito: título repetido é erro e
+  bloqueia; justificativa repetida é suspeita e vira
+  `backlog.story_overlap_warned`, porque um segundo recorte da mesma regra pode
+  ser legítimo e quem julga isso é o usuário. Sobreposição **semântica** — dois
+  títulos diferentes para o mesmo endpoint — continua passando, e há teste
+  afirmando esse limite em vez de deixá-lo implícito
+
 - **api**: o bootstrap de Gitflow morria no primeiro passo em **todo projeto
   GitHub novo**. Repositório recém-criado não tem commit nenhum, e aí a Git
   Data API inteira do GitHub responde `409 Git Repository is empty` — o

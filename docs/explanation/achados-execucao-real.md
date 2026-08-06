@@ -89,12 +89,25 @@ Trocar o modelo da sessão reescreve retroativamente o rótulo dos cards de aç�
 antigas. O `token_usage` congela o preço certo; é só a tela.
 
 ### J. Psicólogo roda em sessão vazia
+
+> **FECHADO** — virou [RN-079](../business-rules.md#rn-079). A análise só roda
+> havendo evento ANALISÁVEL, e "analisável" desconta os passos de máquina do
+> bootstrap e o rastro dos próprios analistas — sem esse segundo desconto, a
+> primeira análise tornaria a sessão povoada para sempre. Sem material, sai
+> `psychologist.analysis_skipped` e nada é gasto. A sessão do achado está
+> reproduzida como teste (14 eventos, nenhum analisável).
 Na sessão `b2fceb9e`, recém-aberta: recebeu as hipóteses da sessão anterior com
 o log da nova (vazio), tentou citar `seq 60-78` inexistentes, teve a evidência
 rejeitada 2x e desistiu (`psychologist.analysis_failed`). A validação segurou a
 invenção — mas rodar análise em sessão sem evento é gasto à toa.
 
 ### K. Regra de negócio duplicada não é deduplicada
+
+> **FECHADO PARCIALMENTE** — virou [RN-080](../business-rules.md#rn-080).
+> Duplicata EXATA (mesmo título, ignorando caixa, acento e espaço) é recusada na
+> emissão, com escopo de projeto — é entre sessões que ela nasce. Duplicata
+> **semântica** segue aberta e assim declarada: separar "Saudação com nome" de
+> "Quem chama pode se identificar" é julgamento, não `if`.
 Rodar o Criativo duas vezes no mesmo projeto deixou 10 regras, 5 órfãs
 ("descoberta — sem história"). Efeito do meu roteiro, não do produto, mas
 mostra que não há dedupe nem aviso.
@@ -203,6 +216,13 @@ RN-059 funcionou (erro durável, agente falou, retomada limpa), mas
 que o ADR 0020 proíbe.
 
 ### R. PO gerou histórias sobrepostas
+
+> **FECHADO PARCIALMENTE** — virou [RN-081](../business-rules.md#rn-081). Título
+> idêntico recusa; história que não acrescenta cobertura sobre as regras que cita
+> vira `backlog.story_overlap_warned`, aviso e não bloqueio. **O par exato deste
+> achado continua passando** — títulos e justificativas diferentes para o mesmo
+> endpoint não têm nada mecânico que os ligue. Há teste afirmando esse limite,
+> para ele ficar visível em vez de implícito.
 "Endpoint público de saudação determinística" e "Endpoint público GET /hello que
 responde saudação imediata" cobrem o mesmo endpoint. Sem dedupe nem aviso.
 
