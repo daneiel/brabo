@@ -328,6 +328,14 @@ valida a **forma** (nome, origem, destino); este valida o **estado**:
 Verificação que **não pôde ser feita** conta como reprovada, nunca como
 aprovada — uma ref que não resolve é ignorância, não permissão.
 
+As duas primeiras conferências são exercitadas por
+`scripts/ci/promotion-check.spec.ts`, no mesmo espírito das specs do
+`pr-police` e do `approval-ladder`. O que ela fixa não é a implementação e sim
+a regra: qual carimbo cada destino cobra, e que o carimbo tem de ser **daquele
+commit** — tag de outro commit, de outro estágio, ou que não resolveu sha não
+valem. Aceitar qualquer uma delas deixaria `qa` receber código que nunca passou
+por `dev`.
+
 A exceção é a leitura da **configuração de merge**: o token do workflow
 legitimamente não tem permissão para lê-la, e travar toda promoção por isso
 seria pior que a falha que se quer evitar. Ali a impossibilidade vira **aviso**,
