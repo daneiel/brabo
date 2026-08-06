@@ -297,15 +297,15 @@ defmodule Engine.Dev.DevAgentServerTest do
     assert {:noreply, _new_state} = DevAgentServer.handle_cast(:work, state)
 
     assert_received {:event_appended, _, _,
-                     %{
-                       type: "dev.blocked",
-                       payload: %{
-                         reason: "orçamento de tokens excedido",
-                         # POLÍTICA: o teto foi decidido por quem configurou, e
-                         # recusar é o produto cumprindo a regra. Nada quebrou.
-                         origem: "politica"
-                       }
-                     }}
+     %{
+       type: "dev.blocked",
+       payload: %{
+         reason: "orçamento de tokens excedido",
+         # POLÍTICA: o teto foi decidido por quem configurou, e
+         # recusar é o produto cumprindo a regra. Nada quebrou.
+         origem: "politica"
+       }
+     }}
 
     assert_received {:task_blocked, "task-cara", "orçamento de tokens excedido", diagnosis,
                      "dev-api"}
