@@ -171,4 +171,43 @@ defmodule Engine.Dev.DevAgentAwaitingApprovalTest do
     assert ainda_parado.status == :awaiting_approval
     assert ainda_parado.laco_pendente.action_id == "pa-77"
   end
+
+  @doc """
+  O laço suspenso vive em MEMÓRIA, e o restart o leva. O ADR 0052 previu a
+  perda e disse que ela cairia no caminho de bloqueio com diagnóstico — mas não
+  caía: o agente reidratava em `awaiting_approval` sem laço, o
+  `{:action_settled, ...}` era ignorado pela cláusula de guarda, e ele esperava
+  PARA SEMPRE. Sem erro, sem bloqueio, sem diagnóstico.
+
+  Falha silenciosa é o que esta fase existe para acabar; ela não pode voltar um
+  degrau acima. Encontrado na primeira execução real com o mecanismo ligado.
+  """
+  test "restart durante a espera BLOQUEIA a task em vez de esperar para sempre", %{
+    state: state
+  } do
+    # Simula o que o rehydrator entrega depois do restart: o estado durável diz
+    # `awaiting_approval`, e o laço em memória não existe mais.
+    resume = %{
+      status: "awaiting_approval",
+      task_id: "task-abc12345",
+      worktree_path: "/tmp/wt",
+      consecutive_blocked: 0
+    }
+
+    {:ok, reidratado, {:continue, continuacao}} =
+      DevAgentServer.init(
+        {state.project_id, "dev-api", "api", state.session_id, nil, nil, nil, resume}
+      )
+
+    assert continuacao == {:restart_recovery, "awaiting_approval"}
+    assert reidratado.laco_pendente == nil
+
+    assert {:noreply, _} = DevAgentServer.handle_continue(continuacao, reidratado)
+
+    # A task volta para a fila com diagnóstico, e a origem é `infra` — quem
+    # derrubou o turno foi o processo reiniciando.
+    assert_received {:task_blocked, "task-abc12345", motivo, _diagnostico, "dev-api"}
+    assert motivo =~ "esperava aprovação"
+    assert_received {:task_blocked_origin, "task-abc12345", "infra"}
+  end
 end

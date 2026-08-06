@@ -146,21 +146,44 @@ defmodule Engine.Dev.DevAgentServer do
     # 503 e o Kubernetes matava o pod), e qualquer exceção derrubava a
     # reidratação de TODOS os outros agentes. Com `handle_continue` o `init`
     # volta a ser instantâneo e a recuperação acontece já supervisionada.
-    if resume && resume.status == "working" do
-      {:ok, state, {:continue, :restart_recovery}}
+    # `awaiting_approval` entra aqui pelo MESMO motivo que `working`: o laço
+    # suspenso vive em memória (`laco_pendente`), e o restart o levou. Sem esta
+    # linha o agente reidratava esperando um desfecho que não teria como
+    # aplicar — e como `handle_info({:action_settled, _}, state)` ignora quem
+    # não tem laço, ele esperaria PARA SEMPRE, sem erro, sem bloqueio e sem
+    # diagnóstico. Falha silenciosa é o que o ADR 0052 existe para acabar; ela
+    # não pode voltar um degrau acima.
+    if resume && resume.status in ["working", "awaiting_approval"] do
+      {:ok, state, {:continue, {:restart_recovery, resume.status}}}
     else
       {:ok, state}
     end
   end
 
   @impl true
-  def handle_continue(:restart_recovery, state) do
+  def handle_continue({:restart_recovery, "awaiting_approval"}, state) do
+    {:noreply,
+     state
+     |> AgentIo.block_task(
+       "engine reiniciou enquanto a task esperava aprovação",
+       "o laço estava suspenso esperando a decisão de uma ação, e o contexto " <>
+         "dele só existia em memória — aprovar agora não teria onde ser " <>
+         "aplicado. A task volta para a fila; a ação decidida fica no log.",
+       # `infra`: quem derrubou o turno foi o processo reiniciando, não o
+       # modelo, não o código do agente e não uma política.
+       "infra"
+     )
+     |> finish_restart_recovery()}
+  end
+
+  def handle_continue({:restart_recovery, _}, state) do
     {:noreply,
      state
      |> AgentIo.block_task(
        "engine reiniciou durante a task",
        "o ToolLoop não pôde ser retomado após o restart — turno, mensagens " <>
-         "e edições do worktree só existiam em memória"
+         "e edições do worktree só existiam em memória",
+       "infra"
      )
      |> finish_restart_recovery()}
   end

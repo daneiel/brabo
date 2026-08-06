@@ -1214,6 +1214,18 @@ Duas propriedades que o teste fixa:
   que aquele caminho fechou, em vez de esperar para sempre por algo que ninguém
   vai aprovar. É o mesmo princípio do `pr_settled` com `opened: false`
   ([RN-047](#rn-047)), um nível abaixo.
+- **O wake precisa CHEGAR.** `task.action_settled` nasce no agregado `task`, e
+  não no `proposed_action` que o nome da tabela sugere: o dreno do engine lê uma
+  lista fechada de agregados (`session` e `task`). Emitido fora dela, o evento é
+  gravado com sucesso, fica com `processed_at` nulo e nunca é sequer lido —
+  nenhum job, nenhum erro, nenhum log, e o agente espera para sempre. O contrato
+  atravessa duas linguagens e por isso é fixado dos dois lados.
+
+Se o engine **reiniciar** durante a espera, a regra não vale mais para aquela
+task: o laço suspenso só existe em memória, então ela volta para a fila
+bloqueada com origem `infra`, e a decisão tomada depois não tem onde ser
+aplicada. Bloquear com diagnóstico é deliberado — a alternativa era a espera
+eterna silenciosa, que é o que esta regra existe para acabar.
 
 O que isso conserta: `pending` voltava como RESULTADO da ferramenta e o laço
 seguia. O modelo lia aquilo como resposta do comando, não aprendia nada, tentava
@@ -1230,7 +1242,13 @@ A allowlist de terminal ([RN-068](#rn-068)) continua valendo, mas deixa de ser a
   `workers/dev_agent_wake_worker.ex`; emissão em
   `apps/api/src/application/use-cases/actions/{approve,deny}-action.use-case.ts`
 - **Teste:** `apps/engine/test/engine/dev/dev_agent_awaiting_approval_test.exs`
-  (`ação pendente PARA o agente`; `aprovada: retoma o laço com a saída REAL`)
+  (`ação pendente PARA o agente`; `aprovada: retoma o laço com a saída REAL`;
+  `restart durante a espera BLOQUEIA a task`) e
+  `apps/engine/test/engine/dev/wake_do_outbox_ao_agente_test.exs`, que percorre
+  a corrente inteira — outbox, dreno, fila e processo — porque os testes por
+  elo ficavam todos verdes com a entrega quebrada; o agregado é fixado do lado
+  da api em
+  `apps/api/test/application/use-cases/actions/approve-deny-action.use-case.spec.ts`
 - **Origem:** [ADR 0052](adr/0052-dev-agent-espera-aprovacao-no-meio-do-laco.md),
   fase A da triagem
 

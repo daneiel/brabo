@@ -229,6 +229,13 @@ resposta do comando, e o agente gastava o teto de iterações tentando outra coi
 até a task morrer sem uma linha escrita
 ([RN-073](../business-rules.md#rn-073)).
 
+**Com uma exceção: reinício do engine.** O laço suspenso vive em memória, então
+um restart o leva junto. Nesse caso a task **não** fica esperando: ela volta
+para a fila bloqueada, com o motivo e origem `infra` no event log, e uma decisão
+tomada depois disso não tem mais onde ser aplicada — a ação decidida fica
+registrada, mas o turno que a esperava não existe mais. Se você aprovou e nada
+aconteceu, é esse o primeiro lugar para olhar.
+
 A auto-aprovação não passa por aqui: ela executa na proposta e o resultado volta
 no mesmo turno — que é justamente o valor de ter os padrões da seção anterior.
 
