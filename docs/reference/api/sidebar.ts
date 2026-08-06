@@ -96,6 +96,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/git-controller-reconhecer-falha-de-protecao",
+          label: "Reconhece a falha ao proteger as branches e segue",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/git-controller-plan",
           label: "Devolve o plano de bootstrap e o que foi decidido sobre ele",
           className: "api-method get",

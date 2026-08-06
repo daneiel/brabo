@@ -241,6 +241,7 @@ o componente `d` da JWK, travado por teste.
 | GET | `/projects/:projectId/git/bootstrap/plan` | role:viewer |
 | POST | `/projects/:projectId/git/bootstrap/plan/approve` | role:maintainer |
 | POST | `/projects/:projectId/git/bootstrap/plan/skip` | role:maintainer |
+| POST | `/projects/:projectId/git/bootstrap/acknowledge-protection-failure` | role:maintainer |
 | GET | `/projects/:projectId/git/repository` | role:viewer |
 | GET | `/projects/:projectId/hypotheses` | role:viewer |
 | POST | `/projects/:projectId/hypotheses/:hypothesisId/accept` | role:developer |

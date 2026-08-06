@@ -1417,6 +1417,41 @@ que se contradizia, com `diagnosis` dizendo `{413, …}` e `origem` dizendo
   [achados-execucao-real.md](explanation/achados-execucao-real.md), Fase G do
   [backlog](explanation/backlog.md)
 
+### RN-078 — Falha em proteger branches pode ser reconhecida, e só ela {#rn-078}
+
+`protect_branches` falha em repositório privado no plano gratuito do GitHub — e
+o wizard **avisa isso antes de começar**. O usuário pode reconhecer a falha e
+seguir; o bootstrap fecha e o projeto passa a ser alcançável.
+
+**O que isso destrava é maior do que parece.** O único botão oferecido depois da
+falha era "Tentar novamente", que falha sempre pelo mesmo motivo. E
+`provision_failed` faz o dashboard **redirecionar o clique do projeto de volta
+para a página de provisionamento** — o projeto ficava inalcançável para sempre,
+preso num passo que não tem como suceder.
+
+**Só a proteção pode ser reconhecida.** Ela é o ÚLTIMO passo e a única cuja
+falha deixa um repositório utilizável: o repo existe, os arquivos foram
+commitados, as branches foram criadas. Falhar em criar o repositório ou em
+commitar é outra coisa — ali "seguir" produziria um projeto sem onde trabalhar,
+e o botão seria uma segunda mentira em cima da primeira. A recusa diz isso, em
+vez de só negar.
+
+**A garantia do produto não muda.** A trava de merge ([RN-006](#rn-006)) é
+aplicada em `decide.ts`, não pela proteção do provider. Seguir sem ela remove a
+segunda camada, a do GitHub — não a do Brabo. É o que torna esta saída honesta
+em vez de um atalho.
+
+A decisão vai para o event log com o **usuário** como ator e o erro original no
+payload: seguir sem proteção é escolha dele, e quem ler depois precisa saber o
+que exatamente foi dispensado.
+
+- **Onde:** `apps/api/src/application/use-cases/git/acknowledge-protection-failure.use-case.ts`,
+  rota em `interfaces/http/git/git.controller.ts`, botão em
+  `apps/web/src/routes/ProvisioningPage.tsx`
+- **Teste:** `apps/api/test/application/use-cases/git/acknowledge-protection-failure.use-case.spec.ts`
+  (destrava; a decisão no log com o ator; e a recusa para falha anterior)
+- **Origem:** achado D, Fase D do [backlog](explanation/backlog.md)
+
 ### RN-064 — Heartbeat não encerra sessão com trabalho pendente {#rn-064}
 
 O timeout de heartbeat mede inatividade da **aba**, não do **trabalho**. Antes

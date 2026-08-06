@@ -29,7 +29,7 @@ ou apaga evidência custa mais tarde do que hoje; um cosmético custa igual.
 | ~~B — Engine em provider remoto~~ | ~~N~~ | **FEITA** | — | RN-076; ADR 0056 aceito |
 | ~~F — Fronteira e teto do executor~~ | ~~S, U~~ | **FEITA** | — | RN-074 e RN-075; ADR 0055 aceito |
 | ~~C — A UI não pode mentir sobre agentes~~ | ~~C, I, H, L, G~~ | **FEITA** | — | os cinco itens |
-| D — Wizard diz a verdade e tem saída | D, E, F | P2 | P | baixo |
+| ~~D — Wizard diz a verdade e tem saída~~ | ~~D, E, F~~ | **FEITA** | — | RN-078; E e F já estavam feitos |
 | ~~G — O desfecho de falha diz a verdade~~ | ~~P, Q, T~~ | **FEITA** | — | RN-077 |
 | ~~H — Estado de sessão não mente~~ | ~~V~~ | **FEITA** | — | RN-064 ampliada |
 | E — Qualidade do que os agentes produzem | K, R, J | P3 | M | baixo |
@@ -163,18 +163,27 @@ com o passo traduzido para português, e só `step_failed` é marcado como ruim 
 a ignorar o vermelho. `create_rc_branch` continua traduzido mesmo aposentado
 (ADR 0030), porque projetos bootstrapados antes têm o evento no log.
 
-## Fase D — Wizard diz a verdade e tem saída (P2, custo P)
+## Fase D — Wizard diz a verdade e tem saída (P2) — **FEITA**
 
-Três itens do mesmo passo do produto: o wizard afirma coisas erradas e não
-oferece saída quando falha.
+| item | o que era | como fechou |
+|---|---|---|
+| **D** | `Proteger branches` falha em repo privado no plano gratuito, e o wizard **avisa isso antes**. A única ação oferecida depois era "Tentar novamente", que falha sempre | [RN-078](../business-rules.md#rn-078) |
+| **E** | o preview do repositório mentia: `repo: brabo/{slug}` hardcoded, com o owner real vindo do PAT | já estava feito (commit `4dd7a073`) — o rótulo passou a mostrar só o slug, que é o que se sabe |
+| **F** | o passo "Política de branches" listava `rc` nas permanentes | já estava feito (commit `4dd7a073`) |
 
-| item | o que é |
-|---|---|
-| **D** | `Proteger branches` falha em repo privado no plano gratuito, e o wizard **avisa isso antes**. A única ação oferecida depois é "Tentar novamente", que vai falhar sempre |
-| **E** | o preview do repositório mente: `NewProjectWizard.tsx:331` tem `repo: brabo/{slug}` hardcoded, e o owner real vem do PAT. O erro chega à tela de **confirmação** |
-| **F** | o passo "Política de branches" lista `rc` nas permanentes e `rc ← qa` na cascata; a política vigente tem só `dev`/`qa`/`main` |
+**E e F já estavam corrigidos** quando fui atacá-los, num commit que fechou
+quatro achados de uma vez. Descobrir isso custou uma leitura; o backlog não
+sabia porque foi escrito antes.
 
-Pequenos e isolados; podem entrar como carona de qualquer fase de UI.
+**O item D era maior do que a descrição sugeria.** Não era só "tela sem saída":
+`provision_failed` faz o dashboard **redirecionar o clique do projeto de volta
+para a página de provisionamento**, então o projeto ficava inalcançável para
+sempre, preso num passo que não tem como suceder. A saída precisou de rota,
+caso de uso e evento — não só de um botão.
+
+**Só a proteção pode ser reconhecida**, e essa é a decisão que importa: ela é o
+último passo e o único cuja falha deixa um repositório utilizável. Oferecer
+"seguir" numa falha anterior seria uma segunda mentira em cima da primeira.
 
 ## Fase G — O desfecho de falha diz a verdade (P2) — **FEITA**
 
