@@ -329,9 +329,9 @@ que uma variável nova não fique documentada em lugar nenhum sem ninguém notar
 
 > ⚠️ Bloco gerado por `pnpm docs:generate`. Não edite à mão — o próximo build sobrescreve.
 
-Inventário extraído do código: **94 variáveis** lidas em tempo de execução. Todas têm descrição nas tabelas acima.
+Inventário extraído do código: **93 variáveis** lidas em tempo de execução. Todas têm descrição nas tabelas acima.
 
-**api** — 42 variáveis
+**api** — 41 variáveis
 
 - `API_PUBLIC_URL` <sub>(apps/api/src/application/use-cases/git/start-git-oauth.use-case.ts)</sub>
 - `AUTH_ACCESS_TOKEN_TTL_MS` <sub>(apps/api/src/infrastructure/security/ed25519-access-token-issuer.ts)</sub>
@@ -369,7 +369,6 @@ Inventário extraído do código: **94 variáveis** lidas em tempo de execução
 - `MIGRATIONS_FOLDER` <sub>(apps/api/src/db/migrate.ts)</sub>
 - `NODE_ENV` <sub>(apps/api/src/infrastructure/observability/logger.config.ts)</sub>
 - `OLLAMA_HOST` <sub>(apps/api/src/infrastructure/llm/ollama-provider.ts)</sub>
-- `PROJECT_WORKSPACES_ROOT` <sub>(apps/api/src/infrastructure/filesystem/fs-permissions-file-store.ts)</sub>
 - `RATE_LIMIT_ENABLED` <sub>(apps/api/src/interfaces/http/shared/rate-limit.guard.ts)</sub>
 - `RATE_LIMIT_IP` <sub>(apps/api/src/interfaces/http/shared/rate-limit.guard.ts)</sub>
 - `RATE_LIMIT_USER` <sub>(apps/api/src/interfaces/http/shared/rate-limit.guard.ts)</sub>

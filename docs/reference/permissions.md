@@ -157,11 +157,49 @@ flowchart TD
   F -->|deny| D3[deny]
   F -->|allow/ask| G[adota o veredito do arquivo]
   F -->|nenhum| G2[mantém o anterior]
-  G --> H{merge em branch protegida<br/>ou instruction_patch?}
-  G2 --> H
+  G --> S{terminal toca caminho<br/>fora da pasta do projeto?}
+  G2 --> S
+  S -->|sim, e estava auto_approve| I2[TETO: require_approval]
+  S -->|não| H{merge em branch protegida<br/>ou instruction_patch?}
   H -->|sim, e estava auto_approve| I[TETO: require_approval]
   H -->|não| J[veredito final]
 ```
+
+## Escopo de caminho
+
+Um comando de `terminal` é avaliado também por **onde ele toca**, não só pelo
+verbo ([ADR 0055](../adr/0055-escopo-de-caminho-na-politica-de-terminal.md),
+[RN-075](../business-rules.md#rn-075)). A pasta do projeto —
+`<PROJECT_WORKSPACES_ROOT>/<projectId>`, onde vivem o `permissions.json` e todos
+os worktrees de agente — é o **escopo**.
+
+O escopo faz duas coisas opostas, e é a combinação que importa:
+
+**Aperta.** Um comando que toca caminho de fora nunca é auto-aprovado, por mais
+que o verbo esteja em `allow`. Sem isto, `Terminal(cat)` liberado auto-executava
+`cat /workspace/apps/engine/lib/engine/actions/git_executor.ex` — o código da
+plataforma que executa o agente — e alcançava o worktree de outros projetos.
+
+**Afrouxa.** Dentro do escopo, `cd` deixa de ser um verbo que precisa de
+permissão: ele é a própria declaração de escopo. Sem isto, o dev agent, que
+emite sempre `cd <caminho> && <verbo>`, esbarrava na regra do comando composto
+— todo segmento precisa casar — e **todo** comando parava para aprovação, por
+mais que o verbo estivesse liberado.
+
+Três limites que valem entender:
+
+- **Escopo permite, não isenta.** Estar na pasta do projeto não torna
+  `curl … | sh` seguro: verbo fora do `allow` continua pedindo aprovação.
+- **Fora do escopo é `require_approval`, não `deny`.** O agente pode ter razão
+  legítima para olhar fora; quem decide continua sendo você.
+- **A normalização é léxica, não `realpath`.** `<raiz>/../..` é resolvido e
+  reprovado; um link simbólico dentro do projeto apontando para fora **não** é
+  detectado. Escopo é política, não isolamento.
+
+Quais tokens são verificados: os **absolutos** (começam com `/`) e os que
+contêm `..`. Um relativo sem `..` resolve sob o `cwd`, que já foi verificado —
+e tratar `-maxdepth`, `4` ou `*.ex` como caminho reprovaria comando legítimo
+sem ganhar segurança.
 
 Duas propriedades que caem daí:
 

@@ -372,4 +372,10 @@ duras do produto.
 - (FASE 15) Nenhum gate NOVO e nenhuma mudança de comportamento de
   gate existente — a fase só DECLARA e MEDE o que já existe
 - (FASE 13) Nenhuma feature nova e nenhum fix: a fase produz
-  execuções, medições e um plano — achado novo entra na triagem
+  execuções, medições e um plano — achado novo entra na triagem.
+  EXCEÇÃO ABERTA PELO USUÁRIO em 2026-08-06: a Fase F do backlog
+  (achados S e U) foi implementada, porque a escada de aprovação e o
+  contexto sem teto impediam QUALQUER execução de chegar ao fim — a
+  medição que a 13b pede não era alcançável sem isso. O congelamento
+  segue valendo para o resto: as demais fases do backlog continuam
+  esperando decisão de prioridade

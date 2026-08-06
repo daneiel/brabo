@@ -1292,6 +1292,48 @@ tende a repetir o mesmo comando.
   [achados-execucao-real.md](explanation/achados-execucao-real.md), Fase F do
   [backlog](explanation/backlog.md)
 
+### RN-075 — Comando de terminal é avaliado por onde toca, não só pelo verbo {#rn-075}
+
+A pasta do projeto (`<PROJECT_WORKSPACES_ROOT>/<projectId>`) é o **escopo**.
+Um comando de `terminal` que toca qualquer caminho fora dela **nunca** é
+auto-aprovado, por mais que o verbo esteja em `allow`. Dentro dela, `cd` deixa
+de exigir permissão — ele é a declaração de escopo, não um verbo.
+
+Quatro propriedades que os testes fixam:
+
+- **Aperta:** `Terminal(cat)` liberado deixa de auto-executar
+  `cat /workspace/apps/engine/.../git_executor.ex`. Era o achado U: o
+  casamento é por VERBO, então o agente lia o código da plataforma que o
+  executava, e alcançava o worktree de outros projetos.
+- **Afrouxa:** `cd <dentro> && cat README.md` vira `auto_approve`. Era o
+  defeito mais caro da escada — o dev agent emite sempre `cd <caminho> &&
+  <verbo>`, `cd` não estava em `allow` nenhum, e comando composto exige que
+  TODOS os segmentos casem.
+- **Permite sem isentar:** dentro do escopo, verbo fora do `allow` continua
+  pedindo. Estar na pasta do projeto não torna `curl … | sh` seguro.
+- **Fora do escopo é `require_approval`, nunca `deny`:** o agente pode ter
+  razão legítima para olhar fora, e a decisão continua sendo do usuário.
+
+`deny` continua vencendo primeiro, e os dois tetos ([RN-006](#rn-006),
+[RN-007](#rn-007)) seguem intocados. Sem raiz informada ao `decide()`, o
+veredito é o de antes desta regra — nenhum chamador tem comportamento alterado
+por omissão.
+
+A normalização é **léxica**, não `realpath`: `<raiz>/../..` é resolvido e
+reprovado, mas link simbólico de dentro apontando para fora não é detectado.
+`decide()` é puro por contrato e resolver symlink exigiria IO no domínio.
+Escopo é política; isolamento é outro problema, declarado em aberto no ADR.
+
+- **Onde:** `apps/api/src/domain/actions/path-scope.ts`,
+  `domain/actions/decide.ts` (teto do escopo e o `cd` no escopo),
+  raiz derivada em
+  `infrastructure/filesystem/project-workspaces-root.ts`
+- **Teste:** `apps/api/test/domain/actions/path-scope.spec.ts` e
+  `apps/api/test/domain/actions/decide.spec.ts`
+  (describe `decide — escopo de caminho`)
+- **Origem:** [ADR 0055](adr/0055-escopo-de-caminho-na-politica-de-terminal.md),
+  achado U, Fase F do [backlog](explanation/backlog.md)
+
 ### RN-064 — Heartbeat não encerra sessão com trabalho pendente {#rn-064}
 
 O timeout de heartbeat mede inatividade da **aba**, não do **trabalho**. Antes

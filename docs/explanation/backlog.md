@@ -27,7 +27,7 @@ ou apaga evidência custa mais tarde do que hoje; um cosmético custa igual.
 |---|---|---|---|---|
 | A — Destravar a task | O/B | **P1** | M | **alto** — nada a jusante roda |
 | B — Engine em provider remoto | N | **P1** | G | alto — a 13b não fecha como escrita |
-| F — Fronteira e teto do executor | S, U (+ ADR 0055) | **P1** | G | **alto** — mata a execução e vaza o alcance |
+| ~~F — Fronteira e teto do executor~~ | ~~S, U~~ | **FEITA** | — | RN-074 e RN-075; ADR 0055 aceito |
 | C — A UI não pode mentir sobre agentes | C, I, H, L, G | P2 | M | médio |
 | D — Wizard diz a verdade e tem saída | D, E, F | P2 | P | baixo |
 | G — O desfecho de falha diz a verdade | P, Q (+ T) | P2 | P | médio — apaga a causa raiz |
@@ -88,27 +88,36 @@ Custo **G**: exige clone, credencial dentro do engine e push — feature com ADR
 para continuar esbarrando no barato: o agente chegaria ao worktree remoto e
 morreria no mesmo teto de iterações.
 
-## Fase F — Fronteira e teto do executor (P1)
+## Fase F — Fronteira e teto do executor (P1) — **FEITA**
 
-A execução do `hello-limpo` morreu aqui, e os dois itens têm a mesma origem: o
-executor de terminal não tem limite — nem de **onde** o comando alcança, nem de
-**quanto** ele devolve.
+A execução do `hello-limpo` morreu aqui, e os dois itens tinham a mesma origem:
+o executor de terminal não tinha limite — nem de **onde** o comando alcança, nem
+de **quanto** ele devolve.
 
-| item | o que é |
-|---|---|
-| **S** | o contexto acumulado estoura o limite de bytes do provider e a chamada volta `413`. Cada saída de terminal fica no histórico e viaja em todo turno seguinte. Não há teto no `ContextManager` (que corta por idade, não por tamanho) nem no executor |
-| **U** | `/workspace` dentro do executor é o monorepo do **próprio Brabo**, e `/data/project-workspaces/*/` dá acesso ao worktree de outros projetos. O agente leu o código do engine achando que era o projeto dele |
+| item | o que era | como fechou |
+|---|---|---|
+| **S** | o contexto acumulado estourava o limite de bytes do provider e a chamada voltava `413`. Cada saída de terminal ficava no histórico e viajava em todo turno seguinte | teto de bytes no executor, com marca endereçada ao modelo ([RN-074](../business-rules.md#rn-074)) |
+| **U** | `/workspace` dentro do executor é o monorepo do **próprio Brabo**, e `/data/project-workspaces/*/` dá acesso ao worktree de outros projetos | escopo de caminho na decisão ([RN-075](../business-rules.md#rn-075), [ADR 0055](../adr/0055-escopo-de-caminho-na-politica-de-terminal.md) aceito) |
 
-O [ADR 0055](../adr/0055-escopo-de-caminho-na-politica-de-terminal.md) já desenha
-a política de escopo por caminho, e declara explicitamente que **não** resolve
-isolamento — essa metade é o **U**. Implementá-lo exige levantar o congelamento
-da FASE 13, que é decisão do usuário.
+O escopo fechou os dois lados de uma vez: **apertou** (verbo liberado apontando
+para fora deixou de auto-aprovar) e **afrouxou** (o `cd` para dentro deixou de
+reprovar o comando composto, que era o defeito mais caro da escada).
 
-**Risco de esperar: alto**, e por dois motivos independentes. O **S** encerra a
-execução antes da primeira linha de código: 18 turnos, 292.211 tokens de entrada
-e US$ 0,0275 gastos para terminar em erro do provider. O **U** é confidencialidade
-— hoje é o mesmo usuário lendo os próprios projetos, num deploy multi-inquilino
-seria o repositório de outro cliente.
+### O que a Fase F NÃO fechou
+
+Fica registrado em vez de ser dado como pronto:
+
+- **Isolamento.** O ADR 0055 é política, e diz isso de si mesmo. Enquanto o
+  monorepo do Brabo estiver montado no container que executa os comandos, a
+  fronteira depende de a regra acertar. A normalização é léxica: `..` é
+  reprovado, symlink de dentro apontando para fora não é detectado.
+- **Ponto 6 do ADR — "Sempre permitir" generalizar.** Continua gravando o
+  comando literal, que nunca volta a casar. Não entrou porque generalizar
+  EXPANDE o que um clique autoriza (aprovar `cat foo` passaria a liberar
+  `cat` em qualquer coisa), e essa é uma decisão de produto que merece
+  escrutínio próprio em vez de carona.
+- **Ponto 7 do ADR — o evento registrar qual escopo autorizou.** O motivo da
+  decisão já diz, mas não é persistido em `proposed_action.created`.
 
 ## Fase C — A UI não pode mentir sobre agentes (P2)
 
