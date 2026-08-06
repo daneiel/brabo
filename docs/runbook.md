@@ -1239,9 +1239,9 @@ A medição de passagem NÃO roda em produção: é
 ## Ambiente de inferência {#ambiente-de-inferencia}
 
 Quando o agente responde vazio, truncado, lentíssimo, ou "esquece" as próprias
-instruções, o problema quase nunca está no código de domínio — está aqui. Estas
-cinco causas foram levantadas em nove execuções seguidas do demo de gates e
-estão registradas no
+instruções, o problema quase nunca está no código de domínio — está aqui. As
+cinco primeiras causas foram levantadas em nove execuções seguidas do demo de
+gates e estão registradas no
 [ADR 0020](adr/0020-destravar-gates-qa-secops.md); todas as variáveis estão
 expostas no `docker-compose.yml`.
 
@@ -1252,6 +1252,7 @@ expostas no `docker-compose.yml`.
 | `OLLAMA_MAX_LOADED_MODELS` | com `OLLAMA_KEEP_ALIVE` alto os modelos acumulam: 15,2 GB de pesos residentes numa máquina de 15 GB, e o agente respondendo vazio por falta de memória |
 | `OLLAMA_REQUEST_TIMEOUT_MS` | timeout curto demais para um modelo grande num prompt longo |
 | `START_OUTBOX_DRAIN` / `START_ANAMNESE` | Psicólogo e Anamnese consomem turnos de LLM em paralelo com os agentes de execução e derrubam a conexão do dev no meio do ciclo |
+| `TERMINAL_OUTPUT_MAX_BYTES` | subir demais traz de volta o modo de falha que o teto existe para impedir: a saída de cada comando fica no histórico do laço e viaja em TODO turno seguinte, até o provider recusar a requisição com **HTTP 413** (`request entity too large`). O sintoma engana — parece o modelo travando, e é o corpo da requisição estourando. Não é janela de contexto: a maior chamada bem-sucedida da execução que morreu assim tinha só 28.993 tokens de entrada ([RN-074](business-rules.md#rn-074)) |
 
 > **Atenção — o guard não limpa a fila.** `START_ANAMNESE=false` impede
 > **novos** enfileiramentos, não os antigos. Chegou a haver 20 `AnamneseWorker`

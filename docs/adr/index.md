@@ -20,7 +20,7 @@ atual.** Para o estado atual, use [Regras de negócio](../business-rules.md),
 [Arquitetura](../architecture.md) e o [Runbook](../runbook.md). Para o
 raciocínio, venha aqui.
 
-Dos 55, todos estão **aceitos** menos os que ainda esperam implementação — hoje o [0053](0053-dev-lead-e-paralelismo-autorizado.md), o [0054](0054-gates-como-registro-declarativo.md) e o [0055](0055-escopo-de-caminho-na-politica-de-terminal.md), marcados **propostos** no próprio arquivo. Nenhum check confere esta frase: ela envelheceu dizendo 48 quando já eram 54, e é o argumento do ADR 0029 (`gerar > verificar > lembrar`) se confirmando contra si mesmo.
+Dos 55, todos estão **aceitos** menos os que ainda esperam implementação — hoje o [0053](0053-dev-lead-e-paralelismo-autorizado.md) e o [0054](0054-gates-como-registro-declarativo.md), marcados **propostos** no próprio arquivo. O [0055](0055-escopo-de-caminho-na-politica-de-terminal.md) foi aceito ao ser implementado na Fase F. Nenhum check confere esta frase: ela envelheceu dizendo 48 quando já eram 54, e é o argumento do ADR 0029 (`gerar > verificar > lembrar`) se confirmando contra si mesmo.
 
 ## Fase 2 — Git
 

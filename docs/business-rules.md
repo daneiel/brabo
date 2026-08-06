@@ -1252,6 +1252,88 @@ A allowlist de terminal ([RN-068](#rn-068)) continua valendo, mas deixa de ser a
 - **Origem:** [ADR 0052](adr/0052-dev-agent-espera-aprovacao-no-meio-do-laco.md),
   fase A da triagem
 
+### RN-074 — A saída de terminal tem teto de bytes {#rn-074}
+
+A saída de um comando é cortada em `TERMINAL_OUTPUT_MAX_BYTES` (default 32 KiB)
+antes de virar resultado da ferramenta, e o corte deixa uma **marca** dizendo os
+dois tamanhos e o que fazer:
+
+```
+[saída truncada: 32768 de 1048576 bytes. Refine o comando (head, grep,
+-maxdepth) para ver o que falta.]
+```
+
+Três propriedades que o teste fixa:
+
+- **O teto é `>`, não `>=`.** Saída que cabe exatamente no limite passa
+  intacta — marcá-la faria o modelo refinar um comando que já deu tudo.
+- **O corte não parte caractere multibyte.** `binary_part/3` corta por byte;
+  cair no meio de um `é` produz binário inválido que quebra a serialização
+  JSON antes de o resultado chegar ao modelo.
+- **`raw_bytes` continua sendo o tamanho REAL produzido**, não o truncado. É
+  medição, e mentir nela esconderia justamente o comportamento que motivou o
+  teto. Quem quiser detectar truncagem compara `byte_size(stdout)` com
+  `raw_bytes`.
+
+O que isso conserta: a saída de cada comando fica no histórico do laço e viaja
+em **todo** turno seguinte. Sem teto, um `find` numa árvore grande basta — a
+execução do `hello-limpo` morreu com `{413, "request entity too large"}` no
+turno 18, sem uma linha escrita. O estouro é de **bytes da requisição**, não de
+janela de contexto: a maior chamada bem-sucedida tinha 28.993 tokens de entrada.
+
+A marca é endereçada ao **modelo**, não ao humano — sem dizer o que fazer, ele
+tende a repetir o mesmo comando.
+
+- **Onde:** `apps/engine/lib/engine/actions/terminal_executor.ex`
+  (`truncate/2`), teto em `apps/engine/config/runtime.exs`
+- **Teste:** `apps/engine/test/engine/actions/terminal_executor_test.exs`
+  (describe `teto de bytes da saída`)
+- **Origem:** achado S de
+  [achados-execucao-real.md](explanation/achados-execucao-real.md), Fase F do
+  [backlog](explanation/backlog.md)
+
+### RN-075 — Comando de terminal é avaliado por onde toca, não só pelo verbo {#rn-075}
+
+A pasta do projeto (`<PROJECT_WORKSPACES_ROOT>/<projectId>`) é o **escopo**.
+Um comando de `terminal` que toca qualquer caminho fora dela **nunca** é
+auto-aprovado, por mais que o verbo esteja em `allow`. Dentro dela, `cd` deixa
+de exigir permissão — ele é a declaração de escopo, não um verbo.
+
+Quatro propriedades que os testes fixam:
+
+- **Aperta:** `Terminal(cat)` liberado deixa de auto-executar
+  `cat /workspace/apps/engine/.../git_executor.ex`. Era o achado U: o
+  casamento é por VERBO, então o agente lia o código da plataforma que o
+  executava, e alcançava o worktree de outros projetos.
+- **Afrouxa:** `cd <dentro> && cat README.md` vira `auto_approve`. Era o
+  defeito mais caro da escada — o dev agent emite sempre `cd <caminho> &&
+  <verbo>`, `cd` não estava em `allow` nenhum, e comando composto exige que
+  TODOS os segmentos casem.
+- **Permite sem isentar:** dentro do escopo, verbo fora do `allow` continua
+  pedindo. Estar na pasta do projeto não torna `curl … | sh` seguro.
+- **Fora do escopo é `require_approval`, nunca `deny`:** o agente pode ter
+  razão legítima para olhar fora, e a decisão continua sendo do usuário.
+
+`deny` continua vencendo primeiro, e os dois tetos ([RN-006](#rn-006),
+[RN-007](#rn-007)) seguem intocados. Sem raiz informada ao `decide()`, o
+veredito é o de antes desta regra — nenhum chamador tem comportamento alterado
+por omissão.
+
+A normalização é **léxica**, não `realpath`: `<raiz>/../..` é resolvido e
+reprovado, mas link simbólico de dentro apontando para fora não é detectado.
+`decide()` é puro por contrato e resolver symlink exigiria IO no domínio.
+Escopo é política; isolamento é outro problema, declarado em aberto no ADR.
+
+- **Onde:** `apps/api/src/domain/actions/path-scope.ts`,
+  `domain/actions/decide.ts` (teto do escopo e o `cd` no escopo),
+  raiz derivada em
+  `infrastructure/filesystem/project-workspaces-root.ts`
+- **Teste:** `apps/api/test/domain/actions/path-scope.spec.ts` e
+  `apps/api/test/domain/actions/decide.spec.ts`
+  (describe `decide — escopo de caminho`)
+- **Origem:** [ADR 0055](adr/0055-escopo-de-caminho-na-politica-de-terminal.md),
+  achado U, Fase F do [backlog](explanation/backlog.md)
+
 ### RN-064 — Heartbeat não encerra sessão com trabalho pendente {#rn-064}
 
 O timeout de heartbeat mede inatividade da **aba**, não do **trabalho**. Antes

@@ -2,7 +2,16 @@
 
 ## Status
 
-Proposto
+Aceito — implementado e provado por teste na Fase F do backlog.
+
+Uma correção do que este documento dizia, feita ANTES do aceite e não depois:
+a decisão original falava em `realpath`. A implementação normaliza
+**lexicamente** (`posix.normalize`), porque `decide()` é puro por contrato —
+"zero IO" — e resolver link simbólico exigiria tocar o sistema de arquivos
+dentro do domínio. O léxico mata o vetor que a decisão descreve (`<raiz>/../..`
+começa com a raiz e sai dela) e deixa um em aberto: symlink DENTRO do projeto
+apontando para fora não é detectado. Fechar esse é isolamento, não política —
+a mesma metade que a seção de consequências já declara fora de escopo.
 
 ## Contexto
 
