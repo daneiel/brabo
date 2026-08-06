@@ -194,6 +194,75 @@ que o ADR 0020 proíbe.
 "Endpoint público de saudação determinística" e "Endpoint público GET /hello que
 responde saudação imediata" cobrem o mesmo endpoint. Sem dedupe nem aviso.
 
+## Execução do hello-limpo (projeto `9c7c84f0`, sessão `1f94de49`) — 2026-08-06
+
+Dev agent real, DeepSeek V4 Flash via OpenRouter, com o pipeline de aprovação
+ligado e cada ação decidida à mão. A task era "Expor rota GET pública
+/api/saudacao". Ela nunca começou: **18 turnos, 292.211 tokens de entrada,
+US$ 0,0275 e zero linha escrita**, e a rodada terminou em erro do provider.
+
+### S. O contexto acumulado estoura o limite do provider e MATA a execução (P1)
+
+No turno 18 a chamada ao modelo voltou
+`{413, %{"message" => "request entity too large", "statusCode" => 413}}`, o
+`ToolLoop` não teve como seguir e a task foi bloqueada (`dev.blocked`,
+`artifact.task_blocked`, seq 151–152).
+
+A causa é mecânica e cumulativa: cada comando de terminal despeja a saída
+inteira no histórico do laço, e o histórico vai junto em **todo** turno
+seguinte. A maior requisição BEM-SUCEDIDA registrada em `token_usage` foi de
+28.993 tokens de entrada; a que falhou não chegou a registrar uso. O estouro é
+de **tamanho da requisição em bytes**, não de janela de contexto — um `find` ou
+um `git ls-files` com saída longa pesa muito mais em bytes do que em tokens
+úteis.
+
+Isto liga diretamente ao [ADR 0055](../adr/0055-escopo-de-caminho-na-politica-de-terminal.md),
+por um ângulo que o ADR não previu: a escada de aprovação não só encarece a
+execução, ela a **mata**. Cada pergunta ao usuário empurra o agente a mais um
+comando exploratório, cuja saída entra no histórico para sempre. A corrida
+termina em 413 antes de a primeira linha de código ser escrita.
+
+O que a triagem precisa decidir é de quem é o conserto — do `ContextManager`
+(compactar ou truncar saída de ferramenta por tamanho, não só por idade), do
+executor de terminal (teto de bytes por saída, com marca de truncagem) ou dos
+dois. Hoje não há teto em lugar nenhum do caminho.
+
+- **Evidência:** `session_events` seq 150–152 da sessão `1f94de49`;
+  `token_usage` do ator `dev-http-api`.
+
+### T. A origem da falha continua fora das quatro (recorrência de P e Q)
+
+O `dev.blocked` do achado S gravou:
+
+```json
+{
+  "origem": "indeterminada",
+  "reason": "parou sem concluir nem reportar bloqueio",
+  "diagnosis": "falha na chamada ao modelo: {413, %{\"message\" => \"request entity too large\", \"statusCode\" => 413}}"
+}
+```
+
+Não é achado novo: é a **terceira** ocorrência da mesma regra violada, e por
+isso fica registrada como recorrência em vez de item separado. O [P](#p-evento-de-bloqueio-sem-origem)
+pegou `origin: null` num `dev.blocked`; o [Q](#q-agenterror-com-origem-indeterminada)
+pegou `"indeterminada"` num `agent.error`. Aqui os dois se encontram: evento de
+bloqueio, valor `"indeterminada"`.
+
+O que esta ocorrência acrescenta, e que torna o caso mais forte que os
+anteriores: **a origem era trivialmente derivável**. Um status HTTP conhecido
+do provider é `modelo`, sem qualquer ambiguidade — o próprio campo `diagnosis`
+o nomeia na mesma linha em que `origem` desiste. Não é um caso de fronteira,
+é o caminho de erro não olhando para o que ele mesmo acabou de escrever.
+
+O `reason` também mente: "parou sem concluir nem reportar bloqueio" descreve
+silêncio, e o que houve foi uma falha com causa identificada. Quem ler só o
+`reason` no painel conclui que o modelo se perdeu.
+
+- **Evidência:** `session_events` seq 151 da sessão `1f94de49`.
+- **Regra violada:** CLAUDE.md ("todo desfecho de falha registra a ORIGEM —
+  infra | modelo | código | política — nunca diagnóstico por eliminação"),
+  origem no [ADR 0020](../adr/0020-destravar-gates-qa-secops.md).
+
 ## Confirmado em produção nesta rodada
 - **RN-066** (cegueira do Arquiteto): 4 chamadas de `assign_story_modules` em vez
   de 18, zero nome inventado, 1 module_map em vez de 4, cada história no módulo
