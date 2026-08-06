@@ -248,15 +248,23 @@ defmodule Engine.Dev.AgentIo do
   reivindicada órfã, sem dono vivo e invisível pro claim (que só pega `todo`).
   Devolve o `state` pra encadear no fluxo do GenServer.
 
-  A ORIGEM é obrigatória em espírito: o default existe só para quem ainda não
-  sabe, e é `"indeterminada"` — nunca `nil`.
+  A ORIGEM é obrigatória — **sem default**, e é aí que está a correção.
 
-  O evento de bloqueio saía com `"origin": null`, que não é nenhuma das quatro
-  origens do ADR 0020 e nem a recusa honesta de escolher. `nil` é ausência de
-  pensamento; `"indeterminada"` é a afirmação de que não se sabe, que é o que
-  `Engine.Agents.FalhaDeTurno` já usa para o mesmo problema.
+  Ela já era "obrigatória em espírito", com `"indeterminada"` de default. Não
+  funcionou: o desfecho mais caro da execução real (o `413` que encerrou a
+  rodada) saiu como `"indeterminada"` justamente porque o call site não passou
+  nada, enquanto o campo `diagnosis` ao lado nomeava a causa na mesma linha.
+  Default é um convite a esquecer, e ninguém percebe o esquecimento — o evento
+  fica sintaticamente válido e semanticamente vazio.
+
+  Sem default, esquecer vira erro de compilação. É a única forma de garantia
+  que não depende de alguém lembrar (achados P, Q e T).
+
+  O valor precisa ser uma das quatro origens do ADR 0020 —
+  `infra | modelo | codigo | politica`. `Engine.Agents.FalhaDeTurno.origem/1`
+  deriva a origem de um erro; use-a em vez de decidir no olho.
   """
-  def block_task(state, reason, diagnosis, origem \\ "indeterminada") do
+  def block_task(state, reason, diagnosis, origem) do
     emit(state, "dev.blocked", %{
       agentId: state.agent_id,
       taskId: state.task_id,

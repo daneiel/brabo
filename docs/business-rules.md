@@ -1334,6 +1334,50 @@ Escopo é política; isolamento é outro problema, declarado em aberto no ADR.
 - **Origem:** [ADR 0055](adr/0055-escopo-de-caminho-na-politica-de-terminal.md),
   achado U, Fase F do [backlog](explanation/backlog.md)
 
+### RN-077 — A origem da falha é sempre uma das quatro {#rn-077}
+
+Todo desfecho de falha nomeia a ORIGEM no vocabulário **fechado** do
+[ADR 0020](adr/0020-destravar-gates-qa-secops.md) —
+`infra | modelo | codigo | politica`. Não há quinto valor: `null` e
+`"indeterminada"` deixaram de ser possíveis.
+
+Duas garantias estruturais, e nenhuma depende de alguém lembrar:
+
+- **`AgentIo.block_task/4` não tem default para a origem.** Ela era
+  "obrigatória em espírito", com `"indeterminada"` de default — e o desfecho
+  mais caro da execução real saiu exatamente assim, porque o call site não
+  passou nada. Sem default, esquecer vira erro de compilação.
+- **`FalhaDeTurno.origem/1` sempre devolve uma das quatro**, e há teste de
+  tabela que falha se alguma entrada — inclusive uma forma nunca vista —
+  produzir outra coisa.
+
+**Por que `indeterminada` saiu.** Ela existiu com um argumento razoável: não
+chutar seria mais honesto que escolher no escuro. O efeito real foi o oposto —
+`indeterminada` **não aponta ação nenhuma**, e quem triava a rodada seguinte
+recomeçava a investigação do zero. O que ela significava de fato era *o
+classificador não reconheceu esta forma*, que é lacuna do nosso código: `codigo`
+é a origem que aponta a ação certa (acrescentar a cláusula que falta). O
+diagnóstico continua indo verbatim, então nada se perde.
+
+**As origens não são chute.** Cada desfecho do ToolLoop diz quem decidiu parar:
+`report_blocked` e teto de iterações são do **modelo** (ele decidiu, ou gastou o
+que tinha); orçamento e PR não aprovada são **política** (foi uma decisão, nada
+quebrou); restart e falha ao montar contexto são **infra**; e quando há
+`last_error`, a origem sai do MESMO erro que o diagnóstico narra — era esse par
+que se contradizia, com `diagnosis` dizendo `{413, …}` e `origem` dizendo
+"indeterminada" na mesma linha.
+
+- **Onde:** `apps/engine/lib/engine/agents/falha_de_turno.ex`,
+  `engine/dev/agent_io.ex` (`block_task/4`, sem default),
+  `engine/dev/dev_agent_server.ex` (`origem_da_parada/1`)
+- **Teste:** `apps/engine/test/engine/agents/falha_de_turno_test.exs`
+  (`o vocabulário é fechado`) e
+  `apps/engine/test/engine/dev/dev_agent_server_test.exs`, que afirma a origem
+  no evento emitido
+- **Origem:** achados P, Q e T de
+  [achados-execucao-real.md](explanation/achados-execucao-real.md), Fase G do
+  [backlog](explanation/backlog.md)
+
 ### RN-064 — Heartbeat não encerra sessão com trabalho pendente {#rn-064}
 
 O timeout de heartbeat mede inatividade da **aba**, não do **trabalho**. Antes
