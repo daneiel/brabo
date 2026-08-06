@@ -94,7 +94,9 @@ defmodule Engine.Dev.NoopDevAgentServer do
       AgentIo.block_task(
         state,
         "engine reiniciou durante a task",
-        "o trabalho do NoopDevAgent não pôde ser retomado após o restart"
+        "o trabalho do NoopDevAgent não pôde ser retomado após o restart",
+        # Quem derrubou o turno foi o processo reiniciando.
+        "infra"
       )
 
     # SEM passar por `finish_task/3`: reiniciar o engine não é o agente
@@ -120,7 +122,10 @@ defmodule Engine.Dev.NoopDevAgentServer do
      AgentIo.block_task(
        state,
        "NoopDevAgent não corrige devolução de gate",
-       "gate: #{inspect(Map.get(findings, :gate))}"
+       "gate: #{inspect(Map.get(findings, :gate))}",
+       # Limite conhecido do PRODUTO, não falha de execução: o Noop não tem LLM
+       # e nunca soube corrigir.
+       "codigo"
      )}
   end
 
@@ -231,7 +236,9 @@ defmodule Engine.Dev.NoopDevAgentServer do
 
       {:error, reason} ->
         AgentIo.emit(state, "dev.error", %{agentId: state.agent_id, reason: inspect(reason)})
-        AgentIo.block_task(state, "falha ao preparar o worktree", inspect(reason))
+        # O achado P: saía com `origin: null`. A origem é `codigo` — provider
+        # não suportado é limite conhecido do produto, não falha de infra.
+        AgentIo.block_task(state, "falha ao preparar o worktree", inspect(reason), "codigo")
     end
   end
 

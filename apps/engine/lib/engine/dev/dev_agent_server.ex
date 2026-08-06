@@ -69,6 +69,7 @@ defmodule Engine.Dev.DevAgentServer do
 
   use GenServer, restart: :temporary
 
+  alias Engine.Agents.FalhaDeTurno
   alias Engine.Dev.{AgentIo, ContextBuilder, Tools, Wake}
   alias Engine.Dev.Hooks.Termination
   alias Engine.Gates.Dispatcher
@@ -227,7 +228,10 @@ defmodule Engine.Dev.DevAgentServer do
          state
          |> AgentIo.block_task(
            "falha ao montar contexto da correção",
-           inspect(reason)
+           inspect(reason),
+           # Montar contexto é chamada à api; falhar aqui é infraestrutura,
+           # não o modelo (que nem chegou a ser chamado).
+           "infra"
          )
          |> finish_task(:blocked)}
     end
@@ -314,7 +318,10 @@ defmodule Engine.Dev.DevAgentServer do
       AgentIo.block_task(
         state,
         "a PR não foi aberta",
-        "as ações git da task não foram aprovadas — o trabalho ficou no worktree e o gate nunca abriu"
+        "as ações git da task não foram aprovadas — o trabalho ficou no worktree e o gate nunca abriu",
+        # `politica`: foi uma DECISÃO — o usuário negou, ou a política recusou.
+        # Nada quebrou.
+        "politica"
       )
 
     {:noreply,
@@ -557,19 +564,25 @@ defmodule Engine.Dev.DevAgentServer do
     state
   end
 
+  # Mesmas origens do caminho normal — a correção pós-gate é o mesmo laço com
+  # outro prompt, e o que decidiu parar é o mesmo.
   defp handle_correction_outcome(
          {:halted, {"report_blocked", %{reason: reason, diagnosis: diagnosis}}, _ctx},
          state,
          _findings
        ) do
     state
-    |> AgentIo.block_task(reason, diagnosis)
+    |> AgentIo.block_task(reason, diagnosis, "modelo")
     |> finish_task(:blocked)
   end
 
   defp handle_correction_outcome({:limit_reached, ctx}, state, _findings) do
     state
-    |> AgentIo.block_task("limite de iterações atingido (correção)", last_terminal_output(ctx))
+    |> AgentIo.block_task(
+      "limite de iterações atingido (correção)",
+      last_terminal_output(ctx),
+      "modelo"
+    )
     |> finish_task(:blocked)
   end
 
@@ -577,7 +590,8 @@ defmodule Engine.Dev.DevAgentServer do
     state
     |> AgentIo.block_task(
       "orçamento de tokens excedido (correção)",
-      "gasto: #{ctx.tokens_spent_micros} micro-USD (teto: #{ctx.token_budget_micros})"
+      "gasto: #{ctx.tokens_spent_micros} micro-USD (teto: #{ctx.token_budget_micros})",
+      "politica"
     )
     |> finish_task(:blocked)
   end
@@ -586,7 +600,8 @@ defmodule Engine.Dev.DevAgentServer do
     state
     |> AgentIo.block_task(
       "parou sem concluir nem reportar bloqueio (correção)",
-      stop_diagnosis(ctx)
+      stop_diagnosis(ctx),
+      origem_da_parada(ctx)
     )
     |> finish_task(:blocked)
   end
@@ -661,6 +676,11 @@ defmodule Engine.Dev.DevAgentServer do
     end
   end
 
+  # As origens abaixo NÃO são chute: cada desfecho do ToolLoop diz quem
+  # decidiu parar, e é isso que a origem nomeia (achados P/Q/T).
+  #
+  # `report_blocked` é o MODELO declarando que não consegue — foi ele que
+  # decidiu, com o diagnóstico que ele mesmo escreveu.
   defp handle_outcome(
          {:halted, {"report_blocked", %{reason: reason, diagnosis: diagnosis}}, _ctx},
          state,
@@ -668,28 +688,39 @@ defmodule Engine.Dev.DevAgentServer do
          _story
        ) do
     state
-    |> AgentIo.block_task(reason, diagnosis)
+    |> AgentIo.block_task(reason, diagnosis, "modelo")
     |> finish_task(:blocked)
   end
 
+  # Teto de iterações: o modelo gastou o que tinha sem concluir.
   defp handle_outcome({:limit_reached, ctx}, state, _task, _story) do
     state
-    |> AgentIo.block_task("limite de iterações atingido", last_terminal_output(ctx))
+    |> AgentIo.block_task("limite de iterações atingido", last_terminal_output(ctx), "modelo")
     |> finish_task(:blocked)
   end
 
+  # Orçamento é POLÍTICA: o teto foi decidido por quem configurou, e a recusa é
+  # o produto cumprindo a regra — não uma falha do modelo nem do código.
   defp handle_outcome({:budget_exceeded, ctx}, state, _task, _story) do
     state
     |> AgentIo.block_task(
       "orçamento de tokens excedido",
-      "gasto: #{ctx.tokens_spent_micros} micro-USD (teto: #{ctx.token_budget_micros})"
+      "gasto: #{ctx.tokens_spent_micros} micro-USD (teto: #{ctx.token_budget_micros})",
+      "politica"
     )
     |> finish_task(:blocked)
   end
 
+  # O caminho do achado T. Quando há `last_error`, a origem sai do MESMO erro
+  # que o diagnóstico já narra — antes, `diagnosis` dizia "falha na chamada ao
+  # modelo: {413, …}" e `origem` dizia "indeterminada", na mesma linha.
   defp handle_outcome({:ok, ctx}, state, _task, _story) do
     state
-    |> AgentIo.block_task("parou sem concluir nem reportar bloqueio", stop_diagnosis(ctx))
+    |> AgentIo.block_task(
+      "parou sem concluir nem reportar bloqueio",
+      stop_diagnosis(ctx),
+      origem_da_parada(ctx)
+    )
     |> finish_task(:blocked)
   end
 
@@ -742,6 +773,20 @@ defmodule Engine.Dev.DevAgentServer do
     case Map.get(ctx, :last_error) do
       nil -> "o modelo encerrou o turno sem chamar report_done nem report_blocked"
       error -> "falha na chamada ao modelo: #{error}"
+    end
+  end
+
+  # A origem da MESMA parada que `stop_diagnosis/1` narra — as duas leem
+  # `last_error`, e é isso que impede o par diagnóstico/origem de se
+  # contradizer, que foi o achado T.
+  #
+  # Sem `last_error` a parada é do modelo: ele encerrou o turno sem chamar
+  # `report_done` nem `report_blocked`, o que é decisão dele e não falha de
+  # ninguém mais.
+  defp origem_da_parada(ctx) do
+    case Map.get(ctx, :last_error) do
+      nil -> "modelo"
+      error -> FalhaDeTurno.origem(error)
     end
   end
 
