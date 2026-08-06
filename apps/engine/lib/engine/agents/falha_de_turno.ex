@@ -12,18 +12,37 @@ defmodule Engine.Agents.FalhaDeTurno do
 
   1. **A falha vira evento durável** (`agent.error`), com a ORIGEM no
      vocabulário do ADR 0020 — nunca por eliminação: cada padrão abaixo tem um
-     motivo escrito, e o que não casa com nenhum sai como `indeterminada`, que
-     é mais honesto que chutar uma das quatro.
+     motivo escrito.
+
+  ## Por que `indeterminada` saiu
+
+  Ela existiu com um argumento razoável: não chutar seria mais honesto que
+  escolher uma das quatro no escuro. A execução real mostrou que o efeito é
+  outro — `indeterminada` **não aponta ação nenhuma**. Quem tria a rodada
+  seguinte lê "indeterminada" e recomeça a investigação do zero, que é o
+  oposito de honesto.
+
+  O que ela realmente significava: *o classificador não reconheceu esta forma*.
+  Isso é uma lacuna do NOSSO código, e `codigo` é exatamente a origem que aponta
+  a ação certa — acrescentar uma cláusula aqui. O diagnóstico continua indo
+  verbatim junto, então nada de informação se perde no caminho.
+
+  O valor devolvido é SEMPRE uma das quatro do ADR 0020, e há teste que falha se
+  algum dia deixar de ser (achados P, Q e T).
   2. **O agente FALA** — a mensagem vai no mesmo evento, em português, para
      quem está na conversa não precisar abrir log nenhum.
   """
 
-  @typedoc "Vocabulário do ADR 0020, mais `indeterminada` para o que não se sabe."
+  @typedoc "O vocabulário fechado do ADR 0020. Não há quinto valor."
   @type origem :: String.t()
 
+  @doc "As quatro origens do ADR 0020 — o conjunto que o teste verifica."
+  @spec origens() :: [origem()]
+  def origens, do: ["infra", "modelo", "codigo", "politica"]
+
   @doc """
-  Origem da falha. Cada cláusula existe por um caso observado, e a última
-  recusa-se a adivinhar.
+  Origem da falha. Cada cláusula existe por um caso observado; a última não
+  adivinha — ela nomeia a própria lacuna, que é de código.
   """
   @spec origem(term()) :: origem()
   # A api respondeu, mas o stream acabou sem frame final: conexão morreu no
@@ -50,11 +69,16 @@ defmodule Engine.Agents.FalhaDeTurno do
       texto =~ ~r/credencial/iu -> "politica"
       texto =~ ~r/modelo vinculado|binding/iu -> "politica"
       texto =~ ~r/provider|upstream|rate.?limit|401|429/iu -> "modelo"
-      true -> "indeterminada"
+      # Texto que a api narrou e que nenhum padrão acima reconhece: a lacuna é
+      # deste classificador. O diagnóstico vai junto, verbatim, com o texto
+      # exato que falta cobrir.
+      true -> "codigo"
     end
   end
 
-  def origem(_qualquer), do: "indeterminada"
+  # Forma que este módulo não conhece. Mesma leitura: quem não soube classificar
+  # foi o nosso código, e é aqui que a cláusula que falta deve nascer.
+  def origem(_qualquer), do: "codigo"
 
   @doc """
   A frase que o agente diz no fio. Sempre nomeia o que falhou e o que NÃO

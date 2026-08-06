@@ -30,7 +30,7 @@ ou apaga evidência custa mais tarde do que hoje; um cosmético custa igual.
 | ~~F — Fronteira e teto do executor~~ | ~~S, U~~ | **FEITA** | — | RN-074 e RN-075; ADR 0055 aceito |
 | C — A UI não pode mentir sobre agentes | C, I, H, L, G | P2 | M | médio |
 | D — Wizard diz a verdade e tem saída | D, E, F | P2 | P | baixo |
-| G — O desfecho de falha diz a verdade | P, Q (+ T) | P2 | P | médio — apaga a causa raiz |
+| ~~G — O desfecho de falha diz a verdade~~ | ~~P, Q, T~~ | **FEITA** | — | RN-077 |
 | H — Estado de sessão não mente | V | P2 | M | médio — envenena toda medição |
 | E — Qualidade do que os agentes produzem | K, R, J | P3 | M | baixo |
 | — avulso | promotion-check sem spec | P3 | P | baixo |
@@ -162,24 +162,28 @@ oferece saída quando falha.
 
 Pequenos e isolados; podem entrar como carona de qualquer fase de UI.
 
-## Fase G — O desfecho de falha diz a verdade (P2, custo P)
+## Fase G — O desfecho de falha diz a verdade (P2) — **FEITA**
 
-A mesma regra do CLAUDE.md violada três vezes: todo desfecho de falha registra a
-ORIGEM (`infra | modelo | código | política`), nunca diagnóstico por eliminação.
+A mesma regra do CLAUDE.md violada três vezes: **P** (`dev.blocked` com
+`origin: null`), **Q** (`agent.error` com `"indeterminada"`) e **T**
+(recorrência: `dev.blocked` com `"indeterminada"` numa falha cujo campo
+`diagnosis` nomeava a causa na MESMA linha).
 
-| item | o que é |
-|---|---|
-| **P** | `dev.blocked` com `origin: null` numa falha cuja origem era `código` |
-| **Q** | `agent.error` com `"origem indeterminada"`, que não é uma das quatro |
-| **T** | recorrência: `dev.blocked` com `"indeterminada"` numa falha cuja origem era `modelo` — um status HTTP do provider, nomeado pelo próprio campo `diagnosis` na mesma linha |
+Fechou pela [RN-077](../business-rules.md#rn-077), e o diagnóstico da causa foi
+o que mudou a forma do conserto: **o classificador já existia e já acertaria**
+— `FalhaDeTurno.origem/1` mapeia status ≥ 400 para `codigo`, o que classifica o
+`413` do achado T corretamente. O defeito nunca foi falta de regra; era
+`block_task` ter `"indeterminada"` como **default**, e os call sites não
+passarem nada.
 
-Custo **P** porque não é mecanismo novo: os desfechos já carregam `diagnosis`
-com a causa. O que falta é derivar a origem dela em vez de desistir — e falhar
-o teste quando o valor não for uma das quatro.
+Então o conserto é estrutural, não mais uma regra: **o default saiu**. Esquecer
+a origem agora é erro de compilação, e não um evento sintaticamente válido e
+semanticamente vazio.
 
-**Risco de esperar: médio.** Não quebra nada hoje, mas apaga a causa raiz de
-tudo que vier depois: quem triar a próxima rodada lê "indeterminada" e recomeça
-a investigação do zero.
+`indeterminada` deixou de existir. Ela significava *o classificador não
+reconheceu esta forma* — lacuna do nosso código —, e `codigo` é a origem que
+aponta a ação certa. `indeterminada` não apontava nenhuma, que era exatamente a
+queixa do achado.
 
 ## Fase H — Estado de sessão não mente (P2)
 
