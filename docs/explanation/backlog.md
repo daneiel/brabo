@@ -25,7 +25,7 @@ ou apaga evidência custa mais tarde do que hoje; um cosmético custa igual.
 
 | fase proposta | itens | prio | custo | risco de esperar |
 |---|---|---|---|---|
-| A — Destravar a task | O/B | **P1** | M | **alto** — nada a jusante roda |
+| ~~A — Destravar a task~~ | ~~ADR 0052, O/B~~ | **FEITA** | — | RN-072 e RN-073 |
 | B — Engine em provider remoto | N | **P1** | G | alto — a 13b não fecha como escrita |
 | ~~F — Fronteira e teto do executor~~ | ~~S, U~~ | **FEITA** | — | RN-074 e RN-075; ADR 0055 aceito |
 | C — A UI não pode mentir sobre agentes | C, I, H, L, G | P2 | M | médio |
@@ -50,22 +50,26 @@ prioridade atribuída: são decisões de produto, não defeitos.
 
 ---
 
-## Fase A — Destravar a task (P1)
+## Fase A — Destravar a task (P1) — **FEITA**
 
-**Nenhum dev agent jamais terminou uma task.** É o fato que ordena tudo: o
+**Nenhum dev agent jamais terminou uma task.** Era o fato que ordenava tudo: o
 registro de gates da FASE 15a mostra `qa-verificada`, `secops-segura` e os dois
 de infra como *"nunca passou"* — não por falta de execução, mas porque nunca
 existiu PR para gate nenhum julgar.
 
-| item | o que é |
-|---|---|
-| ~~**ADR 0052**~~ | **FEITO.** A aprovação pendente parava o laço em vez de queimar iteração; a entrega do desfecho foi corrigida depois (o evento nascia num agregado que o dreno do engine não lê) e o caminho está coberto de ponta a ponta |
-| **O / B** | sessão e dev agents nascem no `llama3.2:1b` local, que o ADR 0020 proíbe no passo semântico. Tive de trocar à mão em toda sessão desta rodada. Desenho já decidido: modelo de start configurável, herdando o do Criativo |
+| item | o que era | como fechou |
+|---|---|---|
+| **ADR 0052** | aprovação pendente devolvia `status pending` como resultado da ferramenta e queimava uma iteração; o agente morria no teto sem escrever nada | o laço SUSPENDE e retoma ([RN-073](../business-rules.md#rn-073)); a entrega do desfecho foi corrigida depois — o evento nascia num agregado que o dreno do engine não lê — e o caminho está coberto de ponta a ponta |
+| **O / B** | sessão e dev agents nasciam no `llama3.2:1b` local, que o ADR 0020 proíbe no passo semântico | quando a cascata pousa no default do workspace, o modelo herdado é o do **Criativo** ([RN-072](../business-rules.md#rn-072)) |
 
-Com o ADR 0052 fechado, a fase se reduz ao modelo. E o que a execução seguinte
-mostrou é que destravar o laço **não** foi suficiente: o agente passou a andar,
-e morreu de outra coisa (Fase F). "Nenhum dev agent jamais terminou uma task"
-continua verdadeiro.
+A herança ocupa o **vazio** e nunca sobrepõe: binding de sessão, de agente ou de
+projeto são escolhas explícitas e continuam vencendo. E o modelo herdado passa
+pelos mesmos filtros da cascata — sumido do catálogo ou sem tool calling não é
+herdado.
+
+Fechar esta fase **não** foi suficiente, e isso é o achado mais útil dela: o
+agente passou a andar e morreu de outra coisa (Fase F, o `413`). *"Nenhum dev
+agent jamais terminou uma task"* continua verdadeiro — o que mudou é o motivo.
 
 **Risco de esperar: alto.** Enquanto isso não fecha, PR remota, gates de
 QA/SecOps e a medição da 13b ficam represados atrás — e cada rodada de
