@@ -118,7 +118,7 @@ e pipeline de aprovação de ações com autoridade final do usuário.
 ## Escopo da FASE 13 (ativa — provar de verdade e triar os achados)
 Nenhuma feature nova. A fase fecha as pendências declaradas, prova o
 que a validação Local/Noop declaradamente não prova, e transforma os
-18 achados abertos em plano priorizado. Lição incorporada: a tabela
+19 achados abertos em plano priorizado. Lição incorporada: a tabela
 manual da Fase 10 nunca foi preenchida — nesta fase TODA métrica é
 extraída por script do event log/token_usage, nunca anotada à mão.
 
@@ -150,9 +150,9 @@ extraída por script do event log/token_usage, nunca anotada à mão.
    tabela extraída; achado novo vai para a triagem da 13c como item,
    nunca como fix (a disciplina de sempre).
 
-### 13c — Triagem dos 18 achados abertos
+### 13c — Triagem dos 19 achados abertos
 6. Sessão de triagem: ler docs/explanation/primeiro-dogfooding.md e
-   classificar os 18 achados em P1/P2/P3 com proposta de agrupamento
+   classificar os 19 achados em P1/P2/P3 com proposta de agrupamento
    em fases coesas (por tema e dependência entre eles), custo relativo
    estimado (P/M/G) e risco de esperar. A saída é PROPOSTA — a
    decisão de prioridade é do usuário.
@@ -366,7 +366,7 @@ duras do produto.
 - Não refatorar código de fase concluída sem pedido explícito
 - Não ativar modelo descoberto automaticamente: curadoria manual
   sempre (ADR 0042)
-- Não corrigir de passagem os 18 achados abertos, hoje em
+- Não corrigir de passagem os 19 achados abertos, hoje em
   docs/explanation/achados-execucao-real.md — cada um espera a fase que
   o endereça, e corrigir fora dela apaga a evidência de por que existia
 - (FASE 15) Nenhum gate NOVO e nenhuma mudança de comportamento de
