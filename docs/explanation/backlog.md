@@ -33,7 +33,7 @@ ou apaga evidência custa mais tarde do que hoje; um cosmético custa igual.
 | ~~G — O desfecho de falha diz a verdade~~ | ~~P, Q, T~~ | **FEITA** | — | RN-077 |
 | ~~H — Estado de sessão não mente~~ | ~~V~~ | **FEITA** | — | RN-064 ampliada |
 | E — Qualidade do que os agentes produzem | K, R, J | P3 | M | baixo |
-| — avulso | promotion-check sem spec | P3 | P | baixo |
+| ~~— avulso~~ | ~~promotion-check sem spec~~ | **FEITO** | — | 10 casos, verificados por mutação |
 
 **Cobertura: 19 de 19.** As letras de fase (A–H) e as de achado (B–V) colidem
 por herança das duas listas; onde houver ambiguidade o texto diz "achado".
@@ -253,9 +253,16 @@ de dinheiro, não de verdade.
 
 ## Avulso
 
-**`promotion-check` sem spec própria** — é check required, ao contrário de
-`pr-police` e `approval-ladder` que têm teste. Encontrado ao escrever o registro
-de gates (FASE 15a, PR #145). Custo P.
+~~**`promotion-check` sem spec própria**~~ — **FEITO**. Era o único check
+required da família sem teste (`pr-police`, `approval-ladder` e `gate` têm).
+Encontrado ao escrever o registro de gates (FASE 15a, PR #145).
+
+`scripts/ci/promotion-check.spec.ts` cobre as duas funções puras, afirmando a
+REGRA e não a implementação: qual carimbo cada destino cobra (`qa` cobra `dev`,
+`main` cobra `qa`, `dev` não cobra nada), e o que conta como carimbo **daquele**
+commit — tag de outro commit não vale, tag de outro estágio não vale, e tag que
+não resolveu sha não vira carimbo por omissão. É esse conjunto que impede `qa`
+de receber código que nunca passou por `dev`.
 
 ---
 
