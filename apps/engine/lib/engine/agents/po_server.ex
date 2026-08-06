@@ -134,7 +134,8 @@ defmodule Engine.Agents.PoServer do
   defp run_turn(state, remaining) when remaining <= 0, do: state
 
   defp run_turn(state, remaining) do
-    on_delta = fn text -> broadcast(state, "agent.delta", %{text: text}) end
+    # Ver o comentário em `criativo_server.ex`: quem fala é o agente (achado C).
+    on_delta = fn text -> broadcast(state, "agent.delta", %{text: text, agent: @agent}) end
     wire = Enum.map(state.messages, &to_wire/1)
 
     case EngineApiClient.llm_turn_stream(

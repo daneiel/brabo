@@ -73,6 +73,12 @@ export function SessionPage({
   const [draft, setDraft] = useState('');
   const [streaming, setStreaming] = useState(false);
   const [streamingText, setStreamingText] = useState('');
+  // QUEM está falando (achado C). O delta passou a carregar o agente; sem ele
+  // a tela rotulava a bolha com o nome do MODELO, que é detalhe de execução.
+  const [streamingAgent, setStreamingAgent] = useState<string | null>(null);
+  // Espelho do `streaming` para os handlers do canal: eles são registrados uma
+  // vez e enxergariam sempre o valor inicial do state.
+  const streamingRef = useRef(false);
   const [optimisticUser, setOptimisticUser] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   useEffect(() => () => abortRef.current?.abort(), []);
@@ -138,13 +144,17 @@ export function SessionPage({
   useEffect(() => {
     if (session?.status !== 'active') return;
     const disconnect = connectSessionHeartbeat(sessionId, {
-      onAgentDelta: (text) => {
+      onAgentDelta: (text, agent) => {
+        streamingRef.current = true;
         setStreaming(true);
         setStreamingText((t) => t + text);
+        if (agent) setStreamingAgent(agent);
       },
       onAgentDone: () => {
+        streamingRef.current = false;
         setStreaming(false);
         setStreamingText('');
+        setStreamingAgent(null);
         setOptimisticUser(null);
         queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
         queryClient.invalidateQueries({ queryKey: ['session-handoffs', projectId, sessionId] });
@@ -154,7 +164,13 @@ export function SessionPage({
       // (Dev/QA/SecOps/Infra) antecipa o refetch do polling — reaproveita o
       // parsing/cache já existente (useSessionEvents), só antecipa quando o
       // dado muda em vez de esperar o intervalo do poll.
+      // Enquanto um turno conversacional está streamando, NÃO antecipa o
+      // refetch: a bolha ao vivo é uma prévia do `agent.response` que está para
+      // ser persistido, e trazer o evento antes de `agent.done` põe as duas na
+      // tela ao mesmo tempo — a duplicação do achado C. `onAgentDone` invalida
+      // logo em seguida, então nada se perde; só deixa de aparecer duas vezes.
       onEvent: () => {
+        if (streamingRef.current) return;
         queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
       },
     });
@@ -179,6 +195,23 @@ export function SessionPage({
 
   const allModels = modelsByCategory ? [...Object.values(modelsByCategory.local).flat(), ...Object.values(modelsByCategory.cloud).flat()] : [];
   const selectedModel = allModels.find((m) => m.id === resolvedBinding?.modelId);
+  // O agente que está streamando agora, quando o delta disse quem é (achado C).
+  const agenteFalando = streamingAgent
+    ? AGENTS[streamingAgent as keyof typeof AGENTS]
+    : undefined;
+
+  // A CONVERSA começou? (achado G) — e não "o fio está vazio", que era a
+  // condição anterior. Num projeto CRIADO o fio já nasce com os cards do
+  // bootstrap, então o convite do Criativo nunca aparecia justamente para quem
+  // mais precisa dele: quem acabou de provisionar um repositório e não sabe
+  // que a vez é sua. Card de bootstrap não é conversa.
+  const conversaComecou = events.some(
+    (e) => e.type === 'chat.message' || e.type === 'agent.response',
+  );
+
+  // A prontidão já foi declarada? (achado L) O handoff que sai do Criativo é a
+  // consequência dela — existindo, o botão não tem mais o que oferecer.
+  const prontidaoJaDeclarada = handoffs.some((h) => h.fromAgent === 'criativo');
 
   const invalidateActions = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['session-actions', projectId, sessionId] });
@@ -479,7 +512,7 @@ export function SessionPage({
                   mensagem. Sem isto a tela ficava em branco depois de "Iniciar
                   ideação", e quem chega não tem como saber que a vez é dele.
                   Convite em vez de turno automático: informa sem gastar token. */}
-              {timeline.length === 0 && !optimisticUser && !streaming && (
+              {!conversaComecou && !optimisticUser && !streaming && (
                 <div className={styles.convite}>
                   <h2 className={styles.conviteTitulo}>A vez é sua</h2>
                   <p className={styles.conviteTexto}>
@@ -533,12 +566,30 @@ export function SessionPage({
 
               {streaming && (
                 <div className={styles.message}>
-                  <span className={styles.avatar} style={{ ['--msg-color' as string]: 'var(--accent)' } as CSSProperties}>
-                    <ModelIcon size={15} />
+                  <span
+                    className={styles.avatar}
+                    style={
+                      {
+                        ['--msg-color' as string]:
+                          agenteFalando?.color ?? 'var(--accent)',
+                      } as CSSProperties
+                    }
+                  >
+                    {agenteFalando ? <agenteFalando.icon size={15} /> : <ModelIcon size={15} />}
                   </span>
                   <div className={styles.messageBody}>
                     <div className={styles.messageHeader}>
-                      <span className={styles.messageName}>{selectedModel?.displayName ?? 'modelo'}</span>
+                      {/*
+                        Quem fala é o AGENTE (achado C). O modelo é detalhe de
+                        execução e aparecia aqui como se fosse o interlocutor —
+                        depois trocava para o agente quando o evento persistido
+                        chegava, o que também mudava o nome na cara do usuário.
+                        Sem o agente no delta, degrada para "agente" genérico,
+                        nunca para o nome do modelo.
+                      */}
+                      <span className={styles.messageName}>
+                        {agenteFalando?.name ?? 'agente'}
+                      </span>
                     </div>
                     {streamingText ? (
                       <div className={styles.bubble}>{streamingText}</div>
@@ -568,7 +619,14 @@ export function SessionPage({
               <Button onClick={handleSend} disabled={streaming || !draft.trim()}>
                 Enviar
               </Button>
-              {criativoActive && (
+              {/*
+                Some depois que o Criativo passou a bola (achado L). O botão
+                dependia só de o Criativo estar ativo, e continuava oferecendo
+                "Estou pronto para produzir" DEPOIS do handoff — convidando a
+                declarar de novo uma prontidão que já foi declarada, e cuja
+                consequência (o handoff para o PO) já está na tela.
+              */}
+              {criativoActive && !prontidaoJaDeclarada && (
                 <Button variant="success" onClick={handleReadiness} disabled={streaming}>
                   Estou pronto para produzir
                 </Button>

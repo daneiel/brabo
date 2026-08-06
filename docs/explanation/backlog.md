@@ -124,13 +124,20 @@ Fica registrado em vez de ser dado como pronto:
 Cinco itens com a mesma raiz: a tela conta uma história diferente da do event
 log.
 
-| item | o que a tela faz |
-|---|---|
-| **C** | a bolha ao vivo vem rotulada com o **modelo**; o agente só aparece quando o evento persistido chega — e a mensagem fica duplicada até o reload |
-| **I** | trocar o modelo da sessão reescreve retroativamente o rótulo de ações antigas |
-| **H** | os eventos do bootstrap aparecem todos como "atividade em system" |
-| **L** | o botão do rodapé continua "Estou pronto para produzir" depois do handoff |
-| **G** | o convite do Criativo não aparece em projeto criado, porque o fio já tem os cards do bootstrap |
+| item | o que a tela faz | estado |
+|---|---|---|
+| **C** | a bolha ao vivo vem rotulada com o **modelo**; o agente só aparece quando o evento persistido chega — e a mensagem fica duplicada até o reload | **FEITO** — o delta passou a carregar o agente, e o refetch é adiado enquanto o turno streama |
+| **G** | o convite do Criativo não aparece em projeto criado, porque o fio já tem os cards do bootstrap | **FEITO** — a condição passou a ser "a conversa começou", não "o fio está vazio" |
+| **L** | o botão do rodapé continua "Estou pronto para produzir" depois do handoff | **FEITO** — some quando existe handoff saindo do Criativo |
+| **H** | os eventos do bootstrap aparecem todos como "atividade em system" | aberto |
+| **I** | trocar o modelo da sessão reescreve retroativamente o rótulo de ações antigas | aberto |
+
+**H e I continuam abertos**, e o que já se sabe deles: **H** cai no fallback
+`atividade em ${actorLabel}` de `activity.ts:215` porque os tipos de evento do
+bootstrap não estão no catálogo — o conserto é enumerá-los e escrever a
+descrição de cada um, que é trabalho de redação, não de mecanismo. **I** é o
+rótulo do modelo sendo resolvido no RENDER a partir do binding atual, em vez de
+vir do evento; ainda não investigado a fundo.
 
 **C** é o mais grave dos cinco e foi apontado por você durante a execução: quem
 fala é o agente, o modelo é detalhe de execução.

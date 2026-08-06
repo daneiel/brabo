@@ -141,11 +141,18 @@ defmodule Engine.Agents.CriativoServerTest do
     assert {:reply, :ok, _} =
              CriativoServer.handle_call({:user_message, "oi"}, self(), state)
 
-    assert_received %Phoenix.Socket.Broadcast{event: "agent.delta", payload: %{text: "Oi"}}
+    # O `agent` viaja em TODO delta (achado C). Sem ele a tela não tem como
+    # saber quem está falando, e rotulava a bolha ao vivo com o nome do MODELO —
+    # que trocava para o nome do agente quando o evento persistido chegava,
+    # mudando o interlocutor na cara de quem estava lendo.
+    assert_received %Phoenix.Socket.Broadcast{
+      event: "agent.delta",
+      payload: %{text: "Oi", agent: "criativo"}
+    }
 
     assert_received %Phoenix.Socket.Broadcast{
       event: "agent.delta",
-      payload: %{text: " tudo bem?"}
+      payload: %{text: " tudo bem?", agent: "criativo"}
     }
 
     assert_received %Phoenix.Socket.Broadcast{event: "agent.done"}
