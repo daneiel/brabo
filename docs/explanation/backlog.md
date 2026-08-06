@@ -25,12 +25,25 @@ ou apaga evidência custa mais tarde do que hoje; um cosmético custa igual.
 
 | fase proposta | itens | prio | custo | risco de esperar |
 |---|---|---|---|---|
-| A — Destravar a task | ADR 0052, O/B | **P1** | M | **alto** — nada a jusante roda |
+| A — Destravar a task | O/B | **P1** | M | **alto** — nada a jusante roda |
 | B — Engine em provider remoto | N | **P1** | G | alto — a 13b não fecha como escrita |
+| F — Fronteira e teto do executor | S, U (+ ADR 0055) | **P1** | G | **alto** — mata a execução e vaza o alcance |
 | C — A UI não pode mentir sobre agentes | C, I, H, L, G | P2 | M | médio |
-| D — Wizard sem beco sem saída | D | P2 | P | baixo |
+| D — Wizard diz a verdade e tem saída | D, E, F | P2 | P | baixo |
+| G — O desfecho de falha diz a verdade | P, Q (+ T) | P2 | P | médio — apaga a causa raiz |
+| H — Estado de sessão não mente | V | P2 | M | médio — envenena toda medição |
 | E — Qualidade do que os agentes produzem | K, R, J | P3 | M | baixo |
 | — avulso | promotion-check sem spec | P3 | P | baixo |
+
+**Cobertura: 19 de 19.** As letras de fase (A–H) e as de achado (B–V) colidem
+por herança das duas listas; onde houver ambiguidade o texto diz "achado".
+
+Dois saíram da lista de abertos desde a primeira triagem: **A**
+([RN-067](../business-rules.md#rn-067)) e **M**
+([RN-066](../business-rules.md#rn-066)), ambos fechados e confirmados em
+produção. E o **ADR 0052**, que era metade da Fase A, foi implementado e provado
+por teste — a entrega do wake foi corrigida e coberta de ponta a ponta depois
+disso.
 
 O resto (itens antigos) está em [Backlog anterior](#backlog-anterior), sem
 prioridade atribuída: são decisões de produto, não defeitos.
@@ -46,11 +59,13 @@ existiu PR para gate nenhum julgar.
 
 | item | o que é |
 |---|---|
-| **ADR 0052** | aprovação pendente devolve `status pending` como resultado da ferramenta e queima uma iteração; o agente morre no teto sem escrever nada. Cinco peças mapeadas, desenho fechado, e o padrão já existe (`pr_settled`) |
+| ~~**ADR 0052**~~ | **FEITO.** A aprovação pendente parava o laço em vez de queimar iteração; a entrega do desfecho foi corrigida depois (o evento nascia num agregado que o dreno do engine não lê) e o caminho está coberto de ponta a ponta |
 | **O / B** | sessão e dev agents nascem no `llama3.2:1b` local, que o ADR 0020 proíbe no passo semântico. Tive de trocar à mão em toda sessão desta rodada. Desenho já decidido: modelo de start configurável, herdando o do Criativo |
 
-Por que juntas: destravar o laço sem resolver o modelo entrega um agente que
-consegue trabalhar e escreve mal. As duas juntas são a primeira task completa.
+Com o ADR 0052 fechado, a fase se reduz ao modelo. E o que a execução seguinte
+mostrou é que destravar o laço **não** foi suficiente: o agente passou a andar,
+e morreu de outra coisa (Fase F). "Nenhum dev agent jamais terminou uma task"
+continua verdadeiro.
 
 **Risco de esperar: alto.** Enquanto isso não fecha, PR remota, gates de
 QA/SecOps e a medição da 13b ficam represados atrás — e cada rodada de
@@ -73,6 +88,28 @@ Custo **G**: exige clone, credencial dentro do engine e push — feature com ADR
 para continuar esbarrando no barato: o agente chegaria ao worktree remoto e
 morreria no mesmo teto de iterações.
 
+## Fase F — Fronteira e teto do executor (P1)
+
+A execução do `hello-limpo` morreu aqui, e os dois itens têm a mesma origem: o
+executor de terminal não tem limite — nem de **onde** o comando alcança, nem de
+**quanto** ele devolve.
+
+| item | o que é |
+|---|---|
+| **S** | o contexto acumulado estoura o limite de bytes do provider e a chamada volta `413`. Cada saída de terminal fica no histórico e viaja em todo turno seguinte. Não há teto no `ContextManager` (que corta por idade, não por tamanho) nem no executor |
+| **U** | `/workspace` dentro do executor é o monorepo do **próprio Brabo**, e `/data/project-workspaces/*/` dá acesso ao worktree de outros projetos. O agente leu o código do engine achando que era o projeto dele |
+
+O [ADR 0055](../adr/0055-escopo-de-caminho-na-politica-de-terminal.md) já desenha
+a política de escopo por caminho, e declara explicitamente que **não** resolve
+isolamento — essa metade é o **U**. Implementá-lo exige levantar o congelamento
+da FASE 13, que é decisão do usuário.
+
+**Risco de esperar: alto**, e por dois motivos independentes. O **S** encerra a
+execução antes da primeira linha de código: 18 turnos, 292.211 tokens de entrada
+e US$ 0,0275 gastos para terminar em erro do provider. O **U** é confidencialidade
+— hoje é o mesmo usuário lendo os próprios projetos, num deploy multi-inquilino
+seria o repositório de outro cliente.
+
 ## Fase C — A UI não pode mentir sobre agentes (P2)
 
 Cinco itens com a mesma raiz: a tela conta uma história diferente da do event
@@ -92,13 +129,49 @@ fala é o agente, o modelo é detalhe de execução.
 **Risco de esperar: médio.** Não corrompe dado, mas ensina errado — quem usa o
 produto aprende a desconfiar da tela, e aí para de reportar defeito de verdade.
 
-## Fase D — Wizard sem beco sem saída (P2, custo P)
+## Fase D — Wizard diz a verdade e tem saída (P2, custo P)
 
-**D** — `Proteger branches` falha em repo privado no plano gratuito, e o próprio
-wizard **avisa isso antes**. Mas a única ação oferecida depois é "Tentar
-novamente", que vai falhar sempre. Falta reconhecer e seguir.
+Três itens do mesmo passo do produto: o wizard afirma coisas erradas e não
+oferece saída quando falha.
 
-Pequeno e isolado; pode entrar como carona de qualquer fase de UI.
+| item | o que é |
+|---|---|
+| **D** | `Proteger branches` falha em repo privado no plano gratuito, e o wizard **avisa isso antes**. A única ação oferecida depois é "Tentar novamente", que vai falhar sempre |
+| **E** | o preview do repositório mente: `NewProjectWizard.tsx:331` tem `repo: brabo/{slug}` hardcoded, e o owner real vem do PAT. O erro chega à tela de **confirmação** |
+| **F** | o passo "Política de branches" lista `rc` nas permanentes e `rc ← qa` na cascata; a política vigente tem só `dev`/`qa`/`main` |
+
+Pequenos e isolados; podem entrar como carona de qualquer fase de UI.
+
+## Fase G — O desfecho de falha diz a verdade (P2, custo P)
+
+A mesma regra do CLAUDE.md violada três vezes: todo desfecho de falha registra a
+ORIGEM (`infra | modelo | código | política`), nunca diagnóstico por eliminação.
+
+| item | o que é |
+|---|---|
+| **P** | `dev.blocked` com `origin: null` numa falha cuja origem era `código` |
+| **Q** | `agent.error` com `"origem indeterminada"`, que não é uma das quatro |
+| **T** | recorrência: `dev.blocked` com `"indeterminada"` numa falha cuja origem era `modelo` — um status HTTP do provider, nomeado pelo próprio campo `diagnosis` na mesma linha |
+
+Custo **P** porque não é mecanismo novo: os desfechos já carregam `diagnosis`
+com a causa. O que falta é derivar a origem dela em vez de desistir — e falhar
+o teste quando o valor não for uma das quatro.
+
+**Risco de esperar: médio.** Não quebra nada hoje, mas apaga a causa raiz de
+tudo que vier depois: quem triar a próxima rodada lê "indeterminada" e recomeça
+a investigação do zero.
+
+## Fase H — Estado de sessão não mente (P2)
+
+**V** — a sessão `1f94de49` consta `closed` desde 23:34:42 e a execução seguiu
+até 00:56. A UI diz "não é possível enviar mensagens" e ao mesmo tempo renderiza
+cards de aprovação que funcionam: aprovar numa sessão fechada executa comando de
+verdade.
+
+Contraria a máquina de estados declarada no CLAUDE.md, em que `closed` é
+terminal. **Risco de esperar: médio** — envenena toda métrica por sessão
+(duração, custo, "quantas terminaram bem"), que é exatamente o instrumento que a
+FASE 13b existe para construir.
 
 ## Fase E — Qualidade do que os agentes produzem (P3)
 

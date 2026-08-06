@@ -24,6 +24,13 @@ privado. Sessão do wizard: `f15b0cc9`. Sessão saudável: `36abf7e7`.
 ## Abertos — para a triagem da 13c
 
 ### A. Sessão do provisionamento nasce sem processo no engine (GRAVE)
+
+> **FECHADO** — virou [RN-067](../business-rules.md#rn-067). Os quatro call
+> sites citados abaixo passaram a criar sessão pelo `CreateSessionUseCase`
+> (`provision-repository:119` e `:125`, `adopt-repository`, `activate-execution`),
+> e a regra declara que ele é o **único** lugar que cria sessão. Fica registrado
+> porque a prova por contraste abaixo é o que tornou o defeito visível.
+
 `CreateSessionUseCase` é o único lugar que emite `session.created` no outbox.
 Criam sessão direto no repositório, pulando isso:
 - `apps/api/src/application/use-cases/git/provision-repository.use-case.ts:112` e `:121`
@@ -106,6 +113,11 @@ Continua "Estou pronto para produzir" depois que o fio já passou ao PO.
 - Progresso ao vivo do bootstrap, com a falha mostrando a mensagem do GitHub.
 
 ### M. O ARQUITETO É CEGO AO PRÓPRIO module_map (P1 — a falha da rodada)
+
+> **FECHADO** — virou [RN-066](../business-rules.md#rn-066) e está confirmado em
+> produção na seção final desta página: 4 chamadas de `assign_story_modules` em
+> vez de 18, zero nome inventado, 1 module_map em vez de 4.
+
 Sessão `36abf7e7`, seq 80-131. O Arquiteto emitiu o mapa (módulos `saudacao` e
 `api_http`) e em seguida **não conseguiu relê-lo**. Não há ferramenta para ler o
 module_map vigente, e a recusa do `assign_story_modules` não devolve os nomes
@@ -262,6 +274,57 @@ silêncio, e o que houve foi uma falha com causa identificada. Quem ler só o
 - **Regra violada:** CLAUDE.md ("todo desfecho de falha registra a ORIGEM —
   infra | modelo | código | política — nunca diagnóstico por eliminação"),
   origem no [ADR 0020](../adr/0020-destravar-gates-qa-secops.md).
+
+### U. O executor de terminal não tem fronteira de projeto (P1)
+
+Dentro do container que executa as ações, `/workspace` é o **monorepo do próprio
+Brabo** — não o worktree do projeto, que fica em
+`/data/project-workspaces/<projectId>/.worktrees/<agentId>`.
+
+O dev agent do `hello-limpo` gastou turnos ali achando que era o projeto dele:
+leu `apps/engine/mix.exs`, e chegou a propor `cat lib/engine/actions/git_executor.ex`
+e `sed -n '1,120p' lib/engine/dev/context_builder.ex` — o executor de git e o
+construtor de contexto da plataforma que o executava.
+
+E o alcance não para no Brabo. Um `for` sobre `/data/project-workspaces/*/`
+listou o worktree de **outro projeto** (`dbd3e508-e0c7-4e29-b134-5d393f518269`)
+com seus commits e arquivos; o passo seguinte que o agente propôs era entrar
+nele para ler `git remote -v` e o `git log`. Foi recusado à mão.
+
+Nada disso é malícia do modelo: ele está procurando o próprio projeto e o
+sistema de arquivos não diz onde ele acaba. Num deploy multi-inquilino, o mesmo
+comando leria o repositório de outro cliente.
+
+O [ADR 0055](../adr/0055-escopo-de-caminho-na-politica-de-terminal.md) desenha a
+metade de POLÍTICA disso e diz explicitamente que não resolve a outra: escopo de
+caminho depende de a regra acertar, e o que falta é **isolamento** — montagem
+por projeto, ou container por projeto. Este achado é a metade que o ADR deixou
+declarada em aberto.
+
+- **Evidência:** `proposed_actions` `d1bfeda3` (recusada) e `56374def`
+  (aprovada, listou o outro projeto) da sessão `1f94de49`.
+
+### V. Sessão consta `closed` enquanto a execução continua (P2)
+
+`sessions.status` da `1f94de49` é `closed` desde **23:34:42**, trinta segundos
+depois de nascer. A execução seguiu até **00:56** — mais de uma hora de agente
+trabalhando, propondo ações e gastando token numa sessão que o banco dá por
+encerrada.
+
+Os dois lados ficam incoerentes ao mesmo tempo: a UI mostra "Sessão closed — não
+é possível enviar mensagens" **e** renderiza os cards de aprovação, que
+funcionam normalmente. Aprovar numa sessão fechada executa comando de verdade.
+
+Contraria a máquina de estados que o CLAUDE.md declara
+(`created → active → closing → closed | closed_abnormally`): `closed` deveria
+ser terminal. Também envenena qualquer medição por sessão — duração, custo e
+"quantas sessões terminaram bem" leem um estado que não descreve o que houve.
+
+Não investiguei quem escreveu o `closed` nem por quê; isso é trabalho da fase
+que endereçar, não da triagem.
+
+- **Evidência:** `sessions.updated_at` = 23:34:42 com `status = closed`;
+  `session_events` da mesma sessão até seq 152, às 00:56:46.
 
 ## Confirmado em produção nesta rodada
 - **RN-066** (cegueira do Arquiteto): 4 chamadas de `assign_story_modules` em vez
