@@ -287,6 +287,18 @@ export const getRepository = (projectId: string) =>
 export const getBootstrapStatus = (projectId: string) =>
   get<RepoBootstrapStatus>(`/projects/${projectId}/git/bootstrap`);
 
+/**
+ * "Sei que as branches não ficaram protegidas, e quero seguir" (achado D).
+ *
+ * Só vale para a falha em `protect_branches` — a api recusa qualquer outra, e
+ * a recusa diz por quê. Ver `acknowledge-protection-failure.use-case.ts`.
+ */
+export const acknowledgeProtectionFailure = (projectId: string) =>
+  post<{ status: string | null }>(
+    `/projects/${projectId}/git/bootstrap/acknowledge-protection-failure`,
+    {},
+  );
+
 // Adoção (Fase 12a): `adopt` NÃO cria nada e NÃO executa nada — devolve o
 // plano (dry-run). Só `approvePlan` roda o bootstrap; `skipPlan` dispensa.
 export const adoptRepository = (
