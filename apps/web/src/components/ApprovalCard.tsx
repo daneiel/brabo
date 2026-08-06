@@ -71,7 +71,6 @@ function readFiles(payload: Record<string, unknown>): DiffFile[] | undefined {
 
 interface ApprovalCardProps {
   action: ProposedAction;
-  meta?: string;
   urgency?: ApprovalUrgency;
   variant?: 'chat' | 'queue';
   selectable?: boolean;
@@ -84,7 +83,6 @@ interface ApprovalCardProps {
 
 export function ApprovalCard({
   action,
-  meta,
   urgency,
   variant = 'chat',
   selectable,
@@ -124,7 +122,6 @@ export function ApprovalCard({
           <div className={styles.title}>
             <b>{actorLabel}</b> {ACTION_VERB[action.actionType]}
           </div>
-          {meta && <div className={styles.meta}>{meta}</div>}
         </div>
         {urgency && (
           <span className={styles.urgency} style={{ ['--urgency-color' as string]: URGENCY_COLOR[urgency] }}>

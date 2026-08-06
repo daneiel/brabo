@@ -194,7 +194,6 @@ export function SessionPage({
   });
 
   const allModels = modelsByCategory ? [...Object.values(modelsByCategory.local).flat(), ...Object.values(modelsByCategory.cloud).flat()] : [];
-  const selectedModel = allModels.find((m) => m.id === resolvedBinding?.modelId);
   // O agente que está streamando agora, quando o delta disse quem é (achado C).
   const agenteFalando = streamingAgent
     ? AGENTS[streamingAgent as keyof typeof AGENTS]
@@ -332,12 +331,17 @@ export function SessionPage({
     for (const action of actions) {
       items.push({
         seq: action.seq,
+        // Sem `meta` com o modelo (achado I). O card recebia o modelo ATUAL da
+        // sessão, então trocar o binding reescrevia retroativamente o rótulo de
+        // TODA ação antiga — inclusive das que rodaram com outro modelo. Não há
+        // fonte verdadeira: `proposed_actions` não guarda o modelo, e
+        // `token_usage` não se liga à ação. Quem propôs já está no card, em
+        // negrito, e é o AGENTE — que é o que não muda.
         node: (
           <ApprovalCard
             key={action.id}
             action={action}
             variant="chat"
-            meta={selectedModel ? `${selectedModel.displayName} · sessão` : undefined}
             onApprove={() => approveAction(projectId, sessionId, action.id).then(invalidateActions)}
             onDeny={() => denyAction(projectId, sessionId, action.id).then(invalidateActions)}
             onAlwaysAllow={() =>
@@ -352,7 +356,7 @@ export function SessionPage({
     }
 
     return items.sort((a, b) => a.seq - b.seq);
-  }, [events, actions, selectedModel, projectId, sessionId, user.name, queryClient, invalidateActions]);
+  }, [events, actions, projectId, sessionId, user.name, queryClient, invalidateActions]);
 
   async function handleActivate() {
     await transitionSession(projectId, sessionId, 'active');

@@ -72,6 +72,35 @@ function payloadField(payload: unknown, key: string): string | undefined {
   return undefined;
 }
 
+/**
+ * Os passos do bootstrap de Gitflow em português (achado H).
+ *
+ * Escritos, não derivados do identificador: `create_qa_branch` viraria "create
+ * qa branch", que é o mesmo identificador com espaços — e a queixa era
+ * exatamente que a tela mostrava identificador interno em vez de dizer o que
+ * aconteceu.
+ *
+ * `create_rc_branch` continua aqui mesmo tendo sido APOSENTADO (o degrau `rc`
+ * saiu da política, ADR 0030): projetos bootstrapados por versões anteriores
+ * têm o evento no log, e traduzi-lo é a diferença entre ler a história deles ou
+ * ver "atividade em system".
+ */
+const PASSO_DO_BOOTSTRAP: Record<string, string> = {
+  commit_pr_template: 'template de PR',
+  commit_branching_policy: 'política de branches',
+  create_dev_branch: 'branch dev',
+  create_qa_branch: 'branch qa',
+  create_rc_branch: 'branch rc',
+  protect_branches: 'proteção das branches',
+};
+
+/** O motivo da falha, quando o evento o trouxe — senão, silêncio. */
+function motivoDoBootstrap(payload: unknown): string {
+  const motivo =
+    payloadField(payload, 'reason') ?? payloadField(payload, 'error');
+  return motivo ? `: ${motivo}` : '';
+}
+
 // Classifica eventos do event log em algo exibível — o backend guarda
 // `type` como string livre (ver AppendSessionEventUseCase), então o
 // mapeamento é por prefixo/valor conhecido, com fallback genérico.
@@ -213,6 +242,39 @@ export function classifyEvent(event: SessionEvent): ActivityDisplay {
                 : type === 'dev.rearmed'
                   ? `${actorLabel} rearmou ${payloadField(payload, 'agentId') ?? 'o agente'}`
                   : `atividade em ${actorLabel}`,
+    };
+  }
+  // O bootstrap de Gitflow (achado H). Os cinco tipos caíam no fallback final e
+  // apareciam como "atividade em system" — cinco linhas idênticas e mudas
+  // justamente na PRIMEIRA coisa que alguém vê num projeto recém-provisionado,
+  // que é quando mais se quer saber o que está acontecendo.
+  //
+  // O `step` é o que dá conteúdo à linha; sem traduzi-lo, "passo concluído"
+  // repetido seis vezes não é melhor que o genérico.
+  if (type.startsWith('bootstrap.')) {
+    const passo = PASSO_DO_BOOTSTRAP[payloadField(payload, 'step') ?? ''];
+    const alvo = passo ?? 'um passo do bootstrap';
+
+    return {
+      kind: 'session',
+      icon: StackIcon,
+      color: 'var(--accent)',
+      // Só `step_failed` é ruim. `degraded` e `skipped` são desfechos
+      // PREVISTOS — provider sem a capability, ou passo já feito —, e pintá-los
+      // de erro ensinaria a ignorar o vermelho.
+      bad: type === 'bootstrap.step_failed',
+      text:
+        type === 'bootstrap.step_started'
+          ? `bootstrap: ${alvo}`
+          : type === 'bootstrap.step_completed'
+            ? `bootstrap: ${alvo} — pronto`
+            : type === 'bootstrap.step_failed'
+              ? `bootstrap: ${alvo} falhou${motivoDoBootstrap(payload)}`
+              : type === 'bootstrap.step_degraded'
+                ? `bootstrap: ${alvo} não é suportado por ${payloadField(payload, 'provider') ?? 'este provider'}`
+                : type === 'bootstrap.step_skipped'
+                  ? `bootstrap: ${alvo} já estava feito`
+                  : `bootstrap: ${alvo}`,
     };
   }
   if (type.startsWith('execution.')) {
