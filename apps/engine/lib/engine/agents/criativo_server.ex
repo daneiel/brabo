@@ -121,7 +121,10 @@ defmodule Engine.Agents.CriativoServer do
   end
 
   defp run_turn_capturing(state) do
-    on_delta = fn text -> broadcast(state, "agent.delta", %{text: text}) end
+    # O `agent` viaja junto do texto (achado C): a tela rotulava a bolha ao vivo
+    # com o nome do MODELO porque o delta não dizia quem estava falando, e o
+    # agente só aparecia quando o evento persistido chegava.
+    on_delta = fn text -> broadcast(state, "agent.delta", %{text: text, agent: @agent}) end
     wire = Enum.map(state.messages, &to_wire/1)
 
     case EngineApiClient.llm_turn_stream(
