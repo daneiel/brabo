@@ -149,7 +149,19 @@ defmodule Engine.Actions.TerminalExecutorTest do
     assert result.estimated_tokens_compressed > 0
   end
 
-  test "provider não-local (github/gitlab): falha claramente, sem executar nada" do
+  # ADR 0056. Este teste afirmava `unsupported_provider` — o comportamento que a
+  # Fase B existe para REMOVER: era ele que fazia todo comando falhar em projeto
+  # do GitHub. Agora o provider remoto resolve pela api, e o que se afirma é o
+  # caminho de FALHA dela, que é o novo modo de erro possível.
+  test "provider remoto: falha nomeia que o remoto não veio, não o provider" do
+    Application.put_env(:engine, :engine_api_client, Engine.Sessions.FakeEngineApiClient)
+    Application.put_env(:engine, :fake_git_remote, %{origin: nil})
+
+    on_exit(fn ->
+      Application.delete_env(:engine, :engine_api_client)
+      Application.delete_env(:engine, :fake_git_remote)
+    end)
+
     project_id = unique_project_id()
     insert_project_repository!(project_id, "github", "org/repo")
 
@@ -157,7 +169,10 @@ defmodule Engine.Actions.TerminalExecutorTest do
 
     assert result.exit_code == nil
     assert result.stdout == ""
-    assert result.stderr =~ "unsupported_provider"
+    # O diagnóstico diz o que faltou — remoto —, e não "provider não suportado",
+    # que mandava procurar no lugar errado.
+    assert result.stderr =~ "remoto_indisponivel"
+    refute result.stderr =~ "unsupported_provider"
   end
 
   test "projeto nunca provisionado: falha claramente, sem executar nada" do

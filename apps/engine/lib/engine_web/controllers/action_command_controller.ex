@@ -30,8 +30,11 @@ defmodule EngineWeb.ActionCommandController do
     end
   end
 
-  def execute_git(conn, %{"type" => "git_push", "payload" => payload}) do
-    case GitExecutor.push(payload) do
+  # `projectId` já vinha no corpo desde sempre — o ADR 0056 é que passou a
+  # precisar dele: sem saber o projeto não há como pedir o remoto de trabalho, e
+  # o push num provider remoto falharia por falta de credencial.
+  def execute_git(conn, %{"type" => "git_push", "projectId" => project_id, "payload" => payload}) do
+    case GitExecutor.push(project_id, payload) do
       {:ok, %{branch: branch}} -> json(conn, %{branch: branch})
       {:error, out} -> conn |> put_status(422) |> json(%{error: to_string(out)})
     end

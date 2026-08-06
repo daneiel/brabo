@@ -36,10 +36,15 @@ defmodule Engine.Actions.TerminalExecutor do
   end
 
   defp run_in_project_workspace(project_id, command, timeout) do
-    case ProjectRepository.get_local_repo_path(project_id) do
-      {:ok, bare_repo_path, default_branch} ->
-        dir = Workspace.ensure!(project_id, bare_repo_path, default_branch)
-        execute(dir, command, timeout)
+    # `remoto_de_trabalho/1` cobre provider local E remoto (ADR 0056) — antes,
+    # todo comando falhava em projeto do GitHub porque o executor só sabia
+    # resolver bare repo local.
+    case ProjectRepository.remoto_de_trabalho(project_id) do
+      {:ok, remoto} ->
+        case Workspace.ensure_remoto(project_id, remoto) do
+          {:ok, dir} -> execute(dir, command, timeout)
+          {:error, reason} -> failed_result("workspace indisponível: #{reason}")
+        end
 
       {:error, reason} ->
         failed_result("workspace indisponível: #{inspect(reason)}")

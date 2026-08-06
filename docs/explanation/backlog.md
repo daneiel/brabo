@@ -26,7 +26,7 @@ ou apaga evidência custa mais tarde do que hoje; um cosmético custa igual.
 | fase proposta | itens | prio | custo | risco de esperar |
 |---|---|---|---|---|
 | ~~A — Destravar a task~~ | ~~ADR 0052, O/B~~ | **FEITA** | — | RN-072 e RN-073 |
-| B — Engine em provider remoto | N | **P1** | G | alto — a 13b não fecha como escrita |
+| ~~B — Engine em provider remoto~~ | ~~N~~ | **FEITA** | — | RN-076; ADR 0056 aceito |
 | ~~F — Fronteira e teto do executor~~ | ~~S, U~~ | **FEITA** | — | RN-074 e RN-075; ADR 0055 aceito |
 | C — A UI não pode mentir sobre agentes | C, I, H, L, G | P2 | M | médio |
 | D — Wizard diz a verdade e tem saída | D, E, F | P2 | P | baixo |
@@ -75,22 +75,33 @@ agent jamais terminou uma task"* continua verdadeiro — o que mudou é o motivo
 QA/SecOps e a medição da 13b ficam represados atrás — e cada rodada de
 dogfooding gasta dinheiro para reconfirmar o mesmo bloqueio.
 
-## Fase B — Engine em provider remoto (P1)
+## Fase B — Engine em provider remoto (P1) — **FEITA**
 
-**N** — `get_local_repo_path/1` devolve `{:error, {:unsupported_provider, "github"}}`
-para tudo que não é `local`. Cinco call sites dependem dele: worktree do dev,
-executor de terminal, o diff que QA e SecOps leem, e o contexto de projeto.
+**N** — `get_local_repo_path/1` devolvia `unsupported_provider` para tudo que
+não era `local`, e quatro consumidores paravam junto. A **api** fala GitHub por
+HTTP; o **engine** trabalha no sistema de arquivos e só conhecia bare repo
+local, então projeto remoto fazia a metade conversacional e parava na de
+construção.
 
-A assimetria é a chave: a **api** fala GitHub por HTTP (criou o repo, commitou,
-criou as branches); o **engine** trabalha no sistema de arquivos e só conhece
-bare repo local. Projeto no GitHub faz a metade conversacional e o bootstrap,
-mas não a metade de construção.
+Fechou pelo [ADR 0056](../adr/0056-o-engine-trabalha-em-repositorio-remoto.md) e
+pela [RN-076](../business-rules.md#rn-076): o engine pede o remoto de trabalho à
+api, que é quem tem a chave mestra, e a credencial entra **por invocação** — a
+origem gravada no `.git/config` é limpa.
 
-Custo **G**: exige clone, credencial dentro do engine e push — feature com ADR.
+**A descoberta que encolheu o problema:** dois dos quatro consumidores nunca
+precisaram de credencial. `Diff` e `ProjectContext` só usam o NOME da branch —
+paravam por dano colateral de uma função que devolvia mais do que eles pediam.
 
-**Depende da Fase A?** Não tecnicamente, mas fazer B antes de A é pagar o caro
-para continuar esbarrando no barato: o agente chegaria ao worktree remoto e
-morreria no mesmo teto de iterações.
+### O que a Fase B NÃO fechou
+
+- **Isolamento**, de novo. O token saiu do disco, mas o agente segue no mesmo
+  container que o monorepo do Brabo. É a mesma pendência que o ADR 0055 já
+  declarava, e ela agora tem duas fases apontando para si.
+- **Prova contra um GitHub de verdade.** `fetch` e `push` passam por `GitAuth`,
+  e os testes cobrem o caminho local de ponta a ponta (push que chega no bare
+  do outro lado) e os erros nomeados. O que nenhum teste pode dar é um
+  repositório remoto real com token real — isso é a execução da 13b, que agora
+  tem como acontecer.
 
 ## Fase F — Fronteira e teto do executor (P1) — **FEITA**
 

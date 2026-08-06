@@ -7,7 +7,8 @@ defmodule Engine.Actions.GitExecutor do
   quem garante que uma falha nunca chega vazia.
   """
 
-  alias Engine.Actions.GitCmd
+  alias Engine.Actions.{GitAuth, GitCmd}
+  alias Engine.Projects.ProjectRepository
 
   @doc """
   `git add -A` + commit no worktree, com author bot + Co-authored-by. `payload`
@@ -42,14 +43,28 @@ defmodule Engine.Actions.GitExecutor do
     end
   end
 
-  @doc "Push da branch pro origin (o bare repo local). `payload` precisa de `worktree` e `branch`."
-  def push(payload) do
+  @doc """
+  Push da branch pro `origin`. `payload` precisa de `worktree` e `branch`.
+
+  A credencial entra por invocação (ADR 0056): o `origin` do worktree é a URL
+  LIMPA, então empurrar num provider remoto sem passar por `GitAuth` falharia
+  por autenticação. Para `local` não há token e o caminho é o de sempre.
+  """
+  def push(project_id, payload) do
     worktree = Map.fetch!(payload, "worktree")
     branch = Map.fetch!(payload, "branch")
 
-    case git(worktree, ["push", "origin", branch]) do
-      {:ok, _} -> {:ok, %{branch: branch}}
-      error -> error
+    case ProjectRepository.remoto_de_trabalho(project_id) do
+      {:ok, remoto} ->
+        case GitAuth.run(worktree, ["push", "origin", branch], remoto) do
+          {:ok, _} -> {:ok, %{branch: branch}}
+          error -> error
+        end
+
+      {:error, reason} ->
+        # Origem `infra`, e dita: token ausente ou api fora não é falha do
+        # modelo nem do código do agente (CLAUDE.md, achados P/Q/T).
+        {:error, "push não executou: remoto de trabalho indisponível (#{inspect(reason)})"}
     end
   end
 

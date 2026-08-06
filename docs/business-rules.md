@@ -1334,6 +1334,45 @@ Escopo é política; isolamento é outro problema, declarado em aberto no ADR.
 - **Origem:** [ADR 0055](adr/0055-escopo-de-caminho-na-politica-de-terminal.md),
   achado U, Fase F do [backlog](explanation/backlog.md)
 
+### RN-076 — A credencial de git nunca é escrita em arquivo {#rn-076}
+
+O engine trabalha em repositório remoto pedindo o **remoto de trabalho** à api
+(`GET /internal/projects/:projectId/git-remote`), que devolve a origem **limpa**
+e o token do owner à parte. O token entra na invocação do git pelo **ambiente do
+processo filho** e em nenhum outro lugar:
+
+- **não no `origin`** — é a URL limpa que fica gravada no `.git/config`;
+- **não em argv** — `ps` mostra a linha de comando de qualquer processo;
+- **não em arquivo** — nem helper persistido, nem `~/.git-credentials`.
+
+O helper de credencial é passado por `-c`, vale só para aquele processo, e vem
+depois de um `credential.helper=` vazio: helpers são acumulativos e o primeiro a
+responder ganha, então sem zerar antes um helper do host responderia no lugar.
+
+**Por que isso é regra e não preferência.** Escrever
+`https://x-access-token:TOKEN@github.com/…` no `origin` — o que quase todo
+tutorial ensina — grava a credencial em texto puro **dentro da pasta do
+projeto**, exatamente onde a [RN-075](#rn-075) dá ao dev agent leitura
+**auto-aprovada**. Um `cat .git/config` devolveria o token sem passar por
+aprovação nenhuma, e ele viajaria ao provider de LLM no histórico do laço. O
+escopo de caminho protege contra o agente ler para FORA do projeto; não tem como
+proteger contra um segredo que o próprio produto colocou DENTRO.
+
+A credencial é a do **owner do workspace**, pelo mesmo resolvedor da
+[RN-058](#rn-058) — duas regras de "de quem é a credencial" divergiriam.
+Provider `local` não tem token nem consulta a api: é resolvido direto do banco,
+e é o caminho que o `pnpm dev` e a suite inteira exercitam.
+
+- **Onde:** `apps/engine/lib/engine/actions/git_auth.ex`,
+  `engine/projects/project_repository.ex` (`remoto_de_trabalho/1`),
+  `apps/api/src/application/use-cases/git/get-project-git-remote.use-case.ts`
+- **Teste:** `apps/engine/test/engine/actions/git_auth_test.exs` (o token não
+  aparece em argv nem no helper) e
+  `apps/api/test/application/use-cases/git/get-project-git-remote.use-case.spec.ts`
+  (a origem devolvida não contém o token nem `@`)
+- **Origem:** [ADR 0056](adr/0056-o-engine-trabalha-em-repositorio-remoto.md),
+  achado N, Fase B do [backlog](explanation/backlog.md)
+
 ### RN-077 — A origem da falha é sempre uma das quatro {#rn-077}
 
 Todo desfecho de falha nomeia a ORIGEM no vocabulário **fechado** do

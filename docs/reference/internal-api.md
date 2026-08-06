@@ -166,7 +166,8 @@ O mecanismo inteiro está em
 |---|---|
 | POST | `/internal/models/sync` (**não** é session-scoped) |
 
-A única rota `engine → api` fora de `/internal/sessions/:sessionId/`, porque o
+Uma das duas rotas `engine → api` fora de `/internal/sessions/:sessionId/` (a
+outra é o [remoto de trabalho](#remoto-de-trabalho-do-projeto)), porque o
 sync de catálogo não pertence a sessão nem a workspace nenhum: o catálogo é
 GLOBAL — nome, preço, janela e capabilities são fato do provider, iguais para
 todo mundo. Desde o [ADR 0051](../adr/0051-facetas-de-capability-e-curadoria-por-uso.md)
@@ -198,6 +199,40 @@ Duas coisas que esta rota **não** faz, e que já foram diferentes:
   como está, e toda troca que o sync faz grava uma linha em
   `model_price_changes` com origem `sync` — na mesma transação da escrita
   ([RN-044](../business-rules.md#rn-044), [RN-051](../business-rules.md#rn-051)).
+
+### Remoto de trabalho do projeto
+
+| método | caminho |
+|---|---|
+| GET | `/internal/projects/:projectId/git-remote` (**não** é session-scoped) |
+
+A segunda rota `engine → api` fora de `/internal/sessions/:sessionId/`, e a
+**única do produto que devolve um segredo decifrado**
+([ADR 0056](../adr/0056-o-engine-trabalha-em-repositorio-remoto.md)).
+
+Ela existe pela mesma divisão do sync de catálogo, aplicada a outro recurso:
+quem trabalha no sistema de arquivos é o engine, quem tem a chave mestra é a
+api. Sem ela, projeto em provider remoto fazia a metade conversacional e parava
+na de construção — `get_local_repo_path/1` recusava tudo que não fosse `local`,
+e worktree, terminal, diff de gate e contexto paravam junto.
+
+Responde com a origem **limpa** (`origin`), a branch default e, para provider
+remoto, `token` e `username` à parte. A separação não é estética:
+
+> **O `origin` nunca carrega credencial.** É esse valor que fica gravado no
+> `.git/config` do workspace, **dentro da pasta onde o dev agent tem leitura
+> auto-aprovada** ([RN-075](../business-rules.md#rn-075)). Uma URL do tipo
+> `https://x-access-token:TOKEN@…` ali seria um `cat .git/config` de distância
+> de virar contexto de LLM.
+
+Quem consome tem a obrigação simétrica: injetar o token **por invocação**, no
+ambiente do processo filho de cada chamada do git, e nunca em argv nem em
+arquivo ([RN-076](../business-rules.md#rn-076), `Engine.Actions.GitAuth`).
+
+A credencial é a do **owner do workspace**, pelo mesmo resolvedor da
+[RN-058](../business-rules.md#rn-058). Provider `local` **não chega aqui**: é
+resolvido direto do banco pelo engine, não tem token e não depende de a api
+estar no ar — é o caminho que o `pnpm dev` e a suite inteira exercitam.
 
 ### Contexto por agente
 
