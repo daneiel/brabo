@@ -61,7 +61,7 @@ defmodule Engine.Actions.TerminalExecutor do
     {compressed_bytes, estimated_tokens_compressed} = compression_estimate(raw_bytes)
 
     %{
-      stdout: output,
+      stdout: truncate(output, raw_bytes),
       stderr: "",
       exit_code: exit_code,
       timed_out: timed_out,
@@ -84,6 +84,60 @@ defmodule Engine.Actions.TerminalExecutor do
       estimated_tokens_compressed: nil
     }
   end
+
+  @doc false
+  # Teto de bytes da saída (achado S).
+  #
+  # A saída de CADA comando fica no histórico do laço e viaja em TODO turno
+  # seguinte. Sem teto, um `find` numa árvore grande basta: a execução do
+  # hello-limpo morreu com `{413, "request entity too large"}` no turno 18,
+  # antes de escrever uma linha. O estouro é de BYTES da requisição, não de
+  # janela de contexto — a maior chamada bem-sucedida tinha só 28.993 tokens
+  # de entrada.
+  #
+  # `raw_bytes` continua sendo o tamanho REAL produzido, não o truncado: é
+  # medição, e mentir nela esconderia exatamente o comportamento que motivou
+  # o teto. Quem quiser detectar truncagem compara `byte_size(stdout)` com
+  # `raw_bytes` — ou lê a marca, que é o que o MODELO faz.
+  def truncate(output, raw_bytes) do
+    max = max_output_bytes()
+
+    if raw_bytes <= max do
+      output
+    else
+      output
+      |> binary_part(0, max)
+      |> cortar_utf8_incompleto()
+      |> Kernel.<>(marca_de_truncagem(max, raw_bytes))
+    end
+  end
+
+  # A marca é endereçada ao modelo, não ao humano: diz o que sumiu E o que
+  # fazer a respeito. Sem a segunda metade ele tende a repetir o mesmo comando.
+  defp marca_de_truncagem(max, raw_bytes) do
+    "\n\n[saída truncada: #{max} de #{raw_bytes} bytes. " <>
+      "Refine o comando (head, grep, -maxdepth) para ver o que falta.]"
+  end
+
+  # `binary_part/3` corta por BYTE e pode partir um caractere multibyte ao
+  # meio, produzindo binário inválido que quebra a serialização JSON do
+  # resultado. Recua até 3 bytes — o máximo de uma sequência UTF-8 incompleta.
+  defp cortar_utf8_incompleto(bin), do: cortar_utf8_incompleto(bin, 3)
+
+  defp cortar_utf8_incompleto(bin, 0), do: bin
+
+  defp cortar_utf8_incompleto(bin, tentativas) do
+    if String.valid?(bin) do
+      bin
+    else
+      bin
+      |> binary_part(0, byte_size(bin) - 1)
+      |> cortar_utf8_incompleto(tentativas - 1)
+    end
+  end
+
+  defp max_output_bytes,
+    do: Application.get_env(:engine, :terminal_output_max_bytes, 32_768)
 
   # Nunca reexecuta o comando real só pra medir compressão (perigoso pra
   # comandos com efeito colateral) — só consulta o `rtk gain`, read-only,

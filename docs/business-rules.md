@@ -1252,6 +1252,46 @@ A allowlist de terminal ([RN-068](#rn-068)) continua valendo, mas deixa de ser a
 - **Origem:** [ADR 0052](adr/0052-dev-agent-espera-aprovacao-no-meio-do-laco.md),
   fase A da triagem
 
+### RN-074 — A saída de terminal tem teto de bytes {#rn-074}
+
+A saída de um comando é cortada em `TERMINAL_OUTPUT_MAX_BYTES` (default 32 KiB)
+antes de virar resultado da ferramenta, e o corte deixa uma **marca** dizendo os
+dois tamanhos e o que fazer:
+
+```
+[saída truncada: 32768 de 1048576 bytes. Refine o comando (head, grep,
+-maxdepth) para ver o que falta.]
+```
+
+Três propriedades que o teste fixa:
+
+- **O teto é `>`, não `>=`.** Saída que cabe exatamente no limite passa
+  intacta — marcá-la faria o modelo refinar um comando que já deu tudo.
+- **O corte não parte caractere multibyte.** `binary_part/3` corta por byte;
+  cair no meio de um `é` produz binário inválido que quebra a serialização
+  JSON antes de o resultado chegar ao modelo.
+- **`raw_bytes` continua sendo o tamanho REAL produzido**, não o truncado. É
+  medição, e mentir nela esconderia justamente o comportamento que motivou o
+  teto. Quem quiser detectar truncagem compara `byte_size(stdout)` com
+  `raw_bytes`.
+
+O que isso conserta: a saída de cada comando fica no histórico do laço e viaja
+em **todo** turno seguinte. Sem teto, um `find` numa árvore grande basta — a
+execução do `hello-limpo` morreu com `{413, "request entity too large"}` no
+turno 18, sem uma linha escrita. O estouro é de **bytes da requisição**, não de
+janela de contexto: a maior chamada bem-sucedida tinha 28.993 tokens de entrada.
+
+A marca é endereçada ao **modelo**, não ao humano — sem dizer o que fazer, ele
+tende a repetir o mesmo comando.
+
+- **Onde:** `apps/engine/lib/engine/actions/terminal_executor.ex`
+  (`truncate/2`), teto em `apps/engine/config/runtime.exs`
+- **Teste:** `apps/engine/test/engine/actions/terminal_executor_test.exs`
+  (describe `teto de bytes da saída`)
+- **Origem:** achado S de
+  [achados-execucao-real.md](explanation/achados-execucao-real.md), Fase F do
+  [backlog](explanation/backlog.md)
+
 ### RN-064 — Heartbeat não encerra sessão com trabalho pendente {#rn-064}
 
 O timeout de heartbeat mede inatividade da **aba**, não do **trabalho**. Antes

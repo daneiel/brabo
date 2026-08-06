@@ -166,4 +166,76 @@ defmodule Engine.Actions.TerminalExecutorTest do
     assert result.exit_code == nil
     assert result.stderr =~ "not_found"
   end
+
+  # O teto de bytes da saída (achado S).
+  #
+  # A regressão que isto pega custou uma execução real inteira: sem teto, a
+  # saída de cada comando ficava no histórico do laço e viajava em TODO turno
+  # seguinte, até o provider recusar a requisição com
+  # `{413, "request entity too large"}` no turno 18 — antes de o agente
+  # escrever uma linha de código.
+  describe "teto de bytes da saída" do
+    setup do
+      on_exit(fn -> Application.delete_env(:engine, :terminal_output_max_bytes) end)
+      :ok
+    end
+
+    test "saída menor que o teto passa intacta, sem marca" do
+      Application.put_env(:engine, :terminal_output_max_bytes, 1_000)
+
+      assert TerminalExecutor.truncate("oi\n", 3) == "oi\n"
+    end
+
+    test "saída no limite exato NÃO é truncada" do
+      # `>` e não `>=`: cortar no limite exato marcaria como truncada uma saída
+      # que coube inteira, e o modelo tentaria refinar um comando que já deu
+      # tudo o que tinha.
+      Application.put_env(:engine, :terminal_output_max_bytes, 4)
+
+      assert TerminalExecutor.truncate("abcd", 4) == "abcd"
+    end
+
+    test "saída maior que o teto é cortada e a marca diz os dois tamanhos" do
+      Application.put_env(:engine, :terminal_output_max_bytes, 10)
+      saida = String.duplicate("x", 100)
+
+      resultado = TerminalExecutor.truncate(saida, 100)
+
+      assert String.starts_with?(resultado, String.duplicate("x", 10))
+      assert resultado =~ "saída truncada: 10 de 100 bytes"
+      # A marca diz o que FAZER — sem isso o modelo repete o mesmo comando.
+      assert resultado =~ "Refine o comando"
+    end
+
+    test "corte não parte caractere multibyte ao meio" do
+      # `binary_part/3` corta por byte. "é" ocupa 2 bytes; um teto ímpar cai
+      # no meio dele e produziria binário inválido, que quebra a serialização
+      # JSON do resultado antes de chegar ao modelo.
+      Application.put_env(:engine, :terminal_output_max_bytes, 3)
+      saida = "aéé"
+
+      resultado = TerminalExecutor.truncate(saida, byte_size(saida))
+
+      assert String.valid?(resultado)
+      assert String.starts_with?(resultado, "aé")
+    end
+
+    test "o resultado do comando real carrega a saída truncada, e raw_bytes o tamanho REAL" do
+      Application.put_env(:engine, :terminal_output_max_bytes, 50)
+      force_rtk_unavailable!()
+      bare = create_bare_repo_with_commit!()
+      project_id = unique_project_id()
+      insert_project_repository!(project_id, bare)
+
+      # 2000 bytes de saída, muito acima do teto de 50.
+      result = TerminalExecutor.run(project_id, "printf 'x%.0s' $(seq 1 2000)")
+
+      assert result.exit_code == 0
+      assert result.stdout =~ "saída truncada"
+      assert byte_size(result.stdout) < 200
+      # Medição não mente: raw_bytes é o que o comando PRODUZIU, não o que
+      # sobrou depois do corte.
+      assert result.raw_bytes == 2000
+    end
+  end
 end
