@@ -2,7 +2,15 @@
 
 ## Status
 
-Proposto
+Aceito — implementado e provado por teste na Fase B do backlog
+([RN-076](../business-rules.md#rn-076)).
+
+Uma descoberta da implementação, registrada porque muda o tamanho do problema:
+**dois dos quatro consumidores nunca precisaram de credencial**.
+`Engine.Gates.Diff` e `Engine.Harness.ProjectContext` só usam o NOME da branch
+default — eles paravam em provider remoto por dano colateral de uma função que
+devolvia mais do que eles pediam. Separar `default_branch/1` de
+`remoto_de_trabalho/1` destravou os dois sem token nenhum.
 
 ## Contexto
 

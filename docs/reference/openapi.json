@@ -395,6 +395,49 @@
         ]
       }
     },
+    "/internal/projects/{projectId}/git-remote": {
+      "get": {
+        "description": "Devolve a origem limpa (sem credencial embutida) e, para provider remoto, o token do OWNER do workspace (RN-058) decifrado na hora. Quem consome injeta o token por invocação e NUNCA o escreve em arquivo — o `.git/config` fica dentro da pasta onde a RN-075 dá leitura auto-aprovada ao dev agent.",
+        "operationId": "InternalProjectsController_gitRemote",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectGitRemoteResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Service token ausente ou diferente do compartilhado."
+          },
+          "404": {
+            "description": "Projeto sem repositório provisionado, ou owner do workspace sem credencial cadastrada para o provider do repositório."
+          }
+        },
+        "security": [
+          {
+            "service-token": []
+          }
+        ],
+        "summary": "O remoto de trabalho do projeto, para buscar e empurrar",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
     "/internal/sessions/{sessionId}/actions": {
       "post": {
         "description": "A porta ÚNICA pela qual um agente toca git, terminal ou gasto. O `permissions.json` decide na criação, e `deny` vence qualquer autonomia concedida ao agente.",
@@ -11190,6 +11233,45 @@
         "required": [
           "projectId",
           "blockedTaskCount"
+        ]
+      },
+      "ProjectGitRemoteResponseDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "example": "remote",
+            "enum": [
+              "local",
+              "remote"
+            ],
+            "description": "`local` é caminho de bare repo no disco e não tem credencial; `remote` é URL que exige autenticação."
+          },
+          "origin": {
+            "type": "string",
+            "example": "https://github.com/daneiel/hello-api.git",
+            "description": "O que vira `git remote add origin <isto>`. **Sem credencial embutida**, de propósito: é este valor que fica gravado no `.git/config` do workspace, legível por quem tiver acesso ao diretório do projeto."
+          },
+          "defaultBranch": {
+            "type": "string",
+            "example": "main"
+          },
+          "token": {
+            "type": "string",
+            "nullable": true,
+            "description": "Só em `remote`. Token do OWNER do workspace (RN-058), decifrado no momento da chamada. Quem recebe injeta por invocação e descarta."
+          },
+          "username": {
+            "type": "string",
+            "nullable": true,
+            "example": "x-access-token",
+            "description": "Usuário do par HTTP Basic; o token é a senha."
+          }
+        },
+        "required": [
+          "kind",
+          "origin",
+          "defaultBranch"
         ]
       },
       "ProjectMemberComUsuarioResponseDto": {

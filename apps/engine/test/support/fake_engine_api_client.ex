@@ -363,6 +363,21 @@ defmodule Engine.Sessions.FakeEngineApiClient do
   defp unique, do: System.unique_integer([:positive])
 
   @impl true
+  def get_git_remote(_project_id) do
+    # Application env pelo mesmo motivo do `session_pending_work`: quem chama é
+    # o dev agent, em processo próprio. Default é o provider `local`, que é o
+    # comportamento de toda a suite anterior ao ADR 0056.
+    {:ok,
+     Application.get_env(:engine, :fake_git_remote, %{
+       kind: "local",
+       origin: nil,
+       default_branch: "main",
+       token: nil,
+       username: nil
+     })}
+  end
+
+  @impl true
   def session_pending_work(_session_id) do
     # Application env, e NÃO dicionário de processo: quem chama isto é o
     # `SessionServer`, que roda em processo próprio (spawnado pelo supervisor)

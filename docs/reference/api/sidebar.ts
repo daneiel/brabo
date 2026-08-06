@@ -162,6 +162,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/internal-projects-controller-git-remote",
+          label: "O remoto de trabalho do projeto, para buscar e empurrar",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/internal-sessions-controller-create-action",
           label: "Propõe uma ação com efeito externo em nome de um agente",
           className: "api-method post",

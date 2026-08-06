@@ -67,6 +67,17 @@ defmodule Engine.Sessions.EngineApiClient do
               {:ok, %{pending: boolean(), motivo: String.t() | nil}} | {:error, term()}
 
   @doc """
+  O remoto de trabalho de um projeto (ADR 0056): `%{kind, origin, default_branch,
+  token, username}`.
+
+  O engine não tem a chave mestra e não deve ter — quem decifra é a api. Quem
+  consome o `token` injeta por invocação e NUNCA o escreve em arquivo; ver
+  `Engine.Actions.GitAuth`.
+  """
+  @callback get_git_remote(project_id :: String.t()) ::
+              {:ok, map()} | {:error, term()}
+
+  @doc """
   Cria um handoff (offered) na api — o Criativo oferece ao PO ao emitir o
   product_brief. Retorna `{:ok, handoff_map}` ou `{:error, term}`.
   """
@@ -372,6 +383,8 @@ defmodule Engine.Sessions.EngineApiClient do
     do: impl().llm_turn_stream(project_id, session_id, agent, messages, tools, on_delta)
 
   def session_pending_work(session_id), do: impl().session_pending_work(session_id)
+
+  def get_git_remote(project_id), do: impl().get_git_remote(project_id)
 
   def create_handoff(project_id, session_id, from_agent, to_agent, artifact_id),
     do: impl().create_handoff(project_id, session_id, from_agent, to_agent, artifact_id)
@@ -733,6 +746,29 @@ defmodule Engine.Sessions.EngineApiClient.Live do
     case Req.get(url, headers: headers()) do
       {:ok, %Req.Response{status: status, body: body}} when status in 200..299 ->
         {:ok, %{pending: Map.get(body, "pending", false), motivo: Map.get(body, "motivo")}}
+
+      {:ok, %Req.Response{status: status, body: resp}} ->
+        {:error, {status, resp}}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  @impl true
+  def get_git_remote(project_id) do
+    url = api_url() <> "/internal/projects/#{project_id}/git-remote"
+
+    case Req.get(url, headers: headers()) do
+      {:ok, %Req.Response{status: status, body: body}} when status in 200..299 ->
+        {:ok,
+         %{
+           kind: Map.get(body, "kind"),
+           origin: Map.get(body, "origin"),
+           default_branch: Map.get(body, "defaultBranch"),
+           token: Map.get(body, "token"),
+           username: Map.get(body, "username")
+         }}
 
       {:ok, %Req.Response{status: status, body: resp}} ->
         {:error, {status, resp}}

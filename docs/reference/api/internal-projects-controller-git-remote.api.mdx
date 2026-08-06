@@ -1,0 +1,69 @@
+---
+id: internal-projects-controller-git-remote
+title: "O remoto de trabalho do projeto, para buscar e empurrar"
+description: "Devolve a origem limpa (sem credencial embutida) e, para provider remoto, o token do OWNER do workspace (RN-058) decifrado na hora. Quem consome injeta o token por invocação e NUNCA o escreve em arquivo — o `.git/config` fica dentro da pasta onde a RN-075 dá leitura auto-aprovada ao dev agent."
+sidebar_label: "O remoto de trabalho do projeto, para buscar e empurrar"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "get api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"O remoto de trabalho do projeto, para buscar e empurrar"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/internal/projects/{projectId}/git-remote"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Devolve a origem limpa (sem credencial embutida) e, para provider remoto, o token do OWNER do workspace (RN-058) decifrado na hora. Quem consome injeta o token por invocação e NUNCA o escreve em arquivo — o `.git/config` fica dentro da pasta onde a RN-075 dá leitura auto-aprovada ao dev agent.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./internal-projects-controller-git-remote.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./internal-projects-controller-git-remote.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./internal-projects-controller-git-remote.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

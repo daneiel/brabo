@@ -27,8 +27,9 @@ defmodule Engine.Harness.ProjectContext do
   end
 
   defp repo_line(project_id) do
-    case ProjectRepository.get_local_repo_path(project_id) do
-      {:ok, _path, branch} -> "Repositório local · branch #{branch}"
+    # Só o nome da branch — ver o comentário gêmeo em `Engine.Gates.Diff`.
+    case ProjectRepository.default_branch(project_id) do
+      {:ok, branch} -> "Repositório · branch #{branch}"
       _ -> nil
     end
   end
