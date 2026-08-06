@@ -28,7 +28,7 @@ ou apaga evidência custa mais tarde do que hoje; um cosmético custa igual.
 | ~~A — Destravar a task~~ | ~~ADR 0052, O/B~~ | **FEITA** | — | RN-072 e RN-073 |
 | ~~B — Engine em provider remoto~~ | ~~N~~ | **FEITA** | — | RN-076; ADR 0056 aceito |
 | ~~F — Fronteira e teto do executor~~ | ~~S, U~~ | **FEITA** | — | RN-074 e RN-075; ADR 0055 aceito |
-| C — A UI não pode mentir sobre agentes | C, I, H, L, G | P2 | M | médio |
+| ~~C — A UI não pode mentir sobre agentes~~ | ~~C, I, H, L, G~~ | **FEITA** | — | os cinco itens |
 | D — Wizard diz a verdade e tem saída | D, E, F | P2 | P | baixo |
 | ~~G — O desfecho de falha diz a verdade~~ | ~~P, Q, T~~ | **FEITA** | — | RN-077 |
 | H — Estado de sessão não mente | V | P2 | M | médio — envenena toda medição |
@@ -134,9 +134,9 @@ Fica registrado em vez de ser dado como pronto:
 - **Ponto 7 do ADR — o evento registrar qual escopo autorizou.** O motivo da
   decisão já diz, mas não é persistido em `proposed_action.created`.
 
-## Fase C — A UI não pode mentir sobre agentes (P2)
+## Fase C — A UI não pode mentir sobre agentes (P2) — **FEITA**
 
-Cinco itens com a mesma raiz: a tela conta uma história diferente da do event
+Cinco itens com a mesma raiz: a tela contava uma história diferente da do event
 log.
 
 | item | o que a tela faz | estado |
@@ -144,21 +144,24 @@ log.
 | **C** | a bolha ao vivo vem rotulada com o **modelo**; o agente só aparece quando o evento persistido chega — e a mensagem fica duplicada até o reload | **FEITO** — o delta passou a carregar o agente, e o refetch é adiado enquanto o turno streama |
 | **G** | o convite do Criativo não aparece em projeto criado, porque o fio já tem os cards do bootstrap | **FEITO** — a condição passou a ser "a conversa começou", não "o fio está vazio" |
 | **L** | o botão do rodapé continua "Estou pronto para produzir" depois do handoff | **FEITO** — some quando existe handoff saindo do Criativo |
-| **H** | os eventos do bootstrap aparecem todos como "atividade em system" | aberto |
-| **I** | trocar o modelo da sessão reescreve retroativamente o rótulo de ações antigas | aberto |
+| **H** | os eventos do bootstrap aparecem todos como "atividade em system" | **FEITO** — os cinco tipos ganharam família própria, com o passo traduzido |
+| **I** | trocar o modelo da sessão reescreve retroativamente o rótulo de ações antigas | **FEITO** — o card deixou de afirmar um modelo que não tem como saber |
 
-**H e I continuam abertos**, e o que já se sabe deles: **H** cai no fallback
-`atividade em ${actorLabel}` de `activity.ts:215` porque os tipos de evento do
-bootstrap não estão no catálogo — o conserto é enumerá-los e escrever a
-descrição de cada um, que é trabalho de redação, não de mecanismo. **I** é o
-rótulo do modelo sendo resolvido no RENDER a partir do binding atual, em vez de
-vir do evento; ainda não investigado a fundo.
+**C** era o mais grave dos cinco e foi apontado por você durante a execução:
+quem fala é o agente, o modelo é detalhe de execução.
 
-**C** é o mais grave dos cinco e foi apontado por você durante a execução: quem
-fala é o agente, o modelo é detalhe de execução.
+**I mereceu uma decisão, não só um conserto.** O card recebia o modelo ATUAL da
+sessão, e não existe fonte verdadeira do modelo por ação — `proposed_actions`
+não o guarda, e `token_usage` não se liga à ação. Entre inventar uma e parar de
+afirmar, a segunda é a única honesta: quem propôs já está no card, em negrito, e
+é o **agente**, que é o que não muda. O rótulo saiu junto com a prop, que ficou
+sem nenhum outro consumidor.
 
-**Risco de esperar: médio.** Não corrompe dado, mas ensina errado — quem usa o
-produto aprende a desconfiar da tela, e aí para de reportar defeito de verdade.
+**H** virou redação: os cinco tipos `bootstrap.step_*` ganharam família própria
+com o passo traduzido para português, e só `step_failed` é marcado como ruim —
+`degraded` e `skipped` são desfechos previstos, e pintá-los de vermelho ensinaria
+a ignorar o vermelho. `create_rc_branch` continua traduzido mesmo aposentado
+(ADR 0030), porque projetos bootstrapados antes têm o evento no log.
 
 ## Fase D — Wizard diz a verdade e tem saída (P2, custo P)
 

@@ -326,3 +326,97 @@ describe('classifyEvent — reagendamento e circuit breaker (Fase 12b)', () => {
     expect(c.bad).toBe(false);
   });
 });
+
+/**
+ * O bootstrap de Gitflow (achado H).
+ *
+ * Os cinco tipos caíam no fallback e viravam "atividade em system" — cinco
+ * linhas idênticas e mudas na PRIMEIRA coisa que alguém vê num projeto
+ * recém-provisionado. O que estes testes travam não é a redação exata, e sim
+ * que o feed diga QUAL passo e o que aconteceu com ele.
+ */
+describe('classifyEvent — bootstrap de Gitflow', () => {
+  it('nunca mais cai em "atividade em system"', () => {
+    for (const tipo of [
+      'bootstrap.step_started',
+      'bootstrap.step_completed',
+      'bootstrap.step_failed',
+      'bootstrap.step_degraded',
+      'bootstrap.step_skipped',
+    ]) {
+      const c = classifyEvent(ev(tipo, 'system', { step: 'create_dev_branch' }));
+      expect(c.text).not.toContain('atividade em');
+    }
+  });
+
+  it('traduz o passo em vez de mostrar o identificador interno', () => {
+    const c = classifyEvent(
+      ev('bootstrap.step_completed', 'system', { step: 'commit_pr_template' }),
+    );
+
+    expect(c.text).toContain('template de PR');
+    expect(c.text).not.toContain('commit_pr_template');
+  });
+
+  it('só a FALHA é ruim — degraded e skipped são desfechos previstos', () => {
+    // Pintar de vermelho o que é normal ensina a ignorar o vermelho.
+    expect(
+      classifyEvent(ev('bootstrap.step_failed', 'system', { step: 'protect_branches' })).bad,
+    ).toBe(true);
+
+    expect(
+      classifyEvent(
+        ev('bootstrap.step_degraded', 'system', {
+          step: 'protect_branches',
+          provider: 'github',
+        }),
+      ).bad,
+    ).toBe(false);
+
+    expect(
+      classifyEvent(ev('bootstrap.step_skipped', 'system', { step: 'create_qa_branch' })).bad,
+    ).toBe(false);
+  });
+
+  it('degradado diz QUEM não suporta', () => {
+    const c = classifyEvent(
+      ev('bootstrap.step_degraded', 'system', {
+        step: 'protect_branches',
+        provider: 'github',
+      }),
+    );
+
+    expect(c.text).toContain('proteção das branches');
+    expect(c.text).toContain('github');
+  });
+
+  it('falha carrega o motivo quando o evento o trouxe', () => {
+    const c = classifyEvent(
+      ev('bootstrap.step_failed', 'system', {
+        step: 'create_dev_branch',
+        reason: 'repositório vazio',
+      }),
+    );
+
+    expect(c.text).toContain('repositório vazio');
+  });
+
+  it('passo aposentado ainda é traduzido — o log antigo continua legível', () => {
+    // `create_rc_branch` saiu da política (ADR 0030), mas projetos
+    // bootstrapados antes têm o evento no log.
+    const c = classifyEvent(
+      ev('bootstrap.step_completed', 'system', { step: 'create_rc_branch' }),
+    );
+
+    expect(c.text).toContain('branch rc');
+  });
+
+  it('passo desconhecido degrada sem vazar identificador', () => {
+    const c = classifyEvent(
+      ev('bootstrap.step_started', 'system', { step: 'passo_do_futuro' }),
+    );
+
+    expect(c.text).not.toContain('passo_do_futuro');
+    expect(c.text).toContain('bootstrap');
+  });
+});
