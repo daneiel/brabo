@@ -410,6 +410,48 @@ const sidebar: SidebarsConfig = {
     },
     {
       type: "category",
+      label: "execução",
+      items: [
+        {
+          type: "doc",
+          id: "docs/reference/api/execution-controller-list-areas",
+          label: "As áreas de agente do projeto, com o teto de cada lead",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/execution-controller-set-max-parallel",
+          label: "Muda o teto de paralelismo de uma área",
+          className: "api-method patch",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/execution-controller-activate",
+          label: "Ativa a fase de execução e sobe um dev agent por módulo",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/execution-controller-rearm",
+          label: "Rearma um dev agent travado pelo circuit breaker",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/execution-controller-parallelize",
+          label: "Pede mais um dev agent para um módulo",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/execution-controller-unblock",
+          label: "Destrava uma tarefa bloqueada",
+          className: "api-method post",
+        },
+      ],
+    },
+    {
+      type: "category",
       label: "ações",
       items: [
         {
@@ -692,36 +734,6 @@ const sidebar: SidebarsConfig = {
           type: "doc",
           id: "docs/reference/api/backlog-controller-promote",
           label: "Promove a `ready` as histórias que o PO propôs",
-          className: "api-method post",
-        },
-      ],
-    },
-    {
-      type: "category",
-      label: "execução",
-      items: [
-        {
-          type: "doc",
-          id: "docs/reference/api/execution-controller-activate",
-          label: "Ativa a fase de execução e sobe um dev agent por módulo",
-          className: "api-method post",
-        },
-        {
-          type: "doc",
-          id: "docs/reference/api/execution-controller-rearm",
-          label: "Rearma um dev agent travado pelo circuit breaker",
-          className: "api-method post",
-        },
-        {
-          type: "doc",
-          id: "docs/reference/api/execution-controller-parallelize",
-          label: "Aceita paralelizar um módulo com um dev agent dedicado",
-          className: "api-method post",
-        },
-        {
-          type: "doc",
-          id: "docs/reference/api/execution-controller-unblock",
-          label: "Destrava uma tarefa bloqueada",
           className: "api-method post",
         },
       ],

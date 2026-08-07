@@ -342,7 +342,7 @@ Treze rotas de comando, mais as de saúde. Sob `/internal` com `VerifyServiceTok
 | POST | `/sessions/:id/agent/revise` | devolve ao PO uma história que o usuário recusou promover (Fase 12c — RN-048); **404 se o PO não está de pé**, e isso não é erro para a api |
 | POST | `/sessions/:id/agent/offer-infra-handoff` | oferta de handoff ao Infra |
 | POST | `/sessions/:id/execution/start` | ativa a fase de execução |
-| POST | `/sessions/:id/execution/parallelize` | cria subagentes |
+| POST | `/sessions/:id/execution/parallelize` | cria subagentes — **executa, não decide** (ver abaixo) |
 | POST | `/sessions/:id/dev-agents/:agentId/rearm` | rearma um dev agent travado (Fase 12b — RN-047); 404 se não existe, **409 se não está `idle_tripped`** |
 | POST | `/sessions/:id/psychologist/reanalyze` | reanálise sob demanda |
 | POST | `/projects/:id/anamnese/run` | execução da Anamnese |
@@ -352,6 +352,17 @@ Treze rotas de comando, mais as de saúde. Sob `/internal` com `VerifyServiceTok
 `/actions/execute` merece atenção: ele executa, não decide. A decisão já
 aconteceu na api. Se o engine pudesse decidir, o pipeline de aprovação teria
 uma porta dos fundos.
+
+**`execution/parallelize` é o mesmo caso, e desde a FASE 14d isso é visível.**
+A rota PÚBLICA de mesmo nome (`POST /projects/:projectId/sessions/:sessionId/execution/parallelize`)
+passa antes pelo teto da área ([RN-083](../business-rules.md#rn-083)): dentro
+dele o agente sobe na hora; acima dele a api cria uma `proposed_action` e **não
+chama o engine**. Quando o engine recebe este comando, a decisão já foi tomada
+— por teto ou por você.
+
+Vale reparar que o nome repetido nos dois lados esconde a assimetria: a rota
+pública é o PORTÃO, a interna é o EXECUTOR. É a mesma divisão de
+`/actions/execute`, e a razão de ela existir é idêntica.
 
 ### Saúde e métricas
 
