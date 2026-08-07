@@ -180,6 +180,24 @@ defmodule Engine.Dev.NoopDevAgentServerTest do
     refute_received {:gate_opened, _t, _a}
   end
 
+  test "claim com corpo VAZIO vira idle, não derruba o agente", %{state: state} do
+    # O defeito real, achado por execução: com a fila vazia, a rota de claim
+    # responde `201` com `content-length: 0`. O `Req` entrega `""` — que não é
+    # `nil` — e o `AgentIo.try_claim/2` casava com a cláusula de task
+    # encontrada, chamando `run_task("")`: BadMapError, processo
+    # `restart: :temporary` morto de vez, estado apagado pelo Monitor.
+    #
+    # A guarda vive no `AgentIo`, compartilhado com o `DevAgentServer` REAL —
+    # o Noop aqui é só o veículo mais barato de exercitá-la.
+    Process.put(:fake_tasks, [""])
+
+    assert {:noreply, s} = NoopDevAgentServer.handle_cast(:work, state)
+
+    assert s.status == :idle
+    assert_received {:event_appended, _, _, %{type: "dev.idle"}}
+    refute_received {:propose_action, _, _, _}
+  end
+
   test "falha no worktree devolve a task em vez de deixá-la órfã", %{state: state} do
     Process.put(:fake_tasks, [
       %{"id" => "aaaa1111-2222-4333-8444-555555555555", "title" => "Cadastro"}

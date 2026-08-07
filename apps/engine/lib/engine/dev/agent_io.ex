@@ -111,7 +111,14 @@ defmodule Engine.Dev.AgentIo do
   """
   def try_claim(state, run_task) when is_function(run_task, 2) do
     case claim_task(state) do
-      {:ok, nil} ->
+      # `""` junto com `nil` de propósito. Quem normaliza o corpo vazio é o
+      # `EngineApiClient.claim_task/4`, na fronteira; esta cláusula é a guarda
+      # do CONTRATO — "sem task" é o que leva a `idle`, e é aqui que a
+      # violação matava o processo (`run_task("")` → BadMapError → agente
+      # `restart: :temporary` morto de vez, no momento mais comum que existe:
+      # a fila do módulo esvaziando). Uma rota nova que responda vazio não
+      # derruba mais o agente.
+      {:ok, corpo} when corpo in [nil, ""] ->
         state = %{state | status: :idle}
         persist(state)
         emit(state, "dev.idle", %{agentId: state.agent_id, reason: "sem task pegável"})
