@@ -95,6 +95,35 @@ defmodule Engine.Dev.NoopDevAgentServerTest do
     refute_received {:dev_context_fetched, _, _}
   end
 
+  test "abre o gate de verdade, e não só entra em awaiting_gate", %{state: state} do
+    # O Noop marcava a task `in_review` e parava aí: `tasks.gate_status` ficava
+    # NULL e não havia gate para julgar. A validação da Fase 12 travava
+    # esperando esse campo — o defeito morava no instrumento de medida.
+    Process.put(:fake_tasks, [
+      %{"id" => "aaaa1111-2222-4333-8444-555555555555", "title" => "Cadastro"}
+    ])
+
+    assert {:noreply, s} = NoopDevAgentServer.handle_cast(:work, state)
+
+    assert s.status == :awaiting_gate
+    assert_received {:gate_opened, "aaaa1111-2222-4333-8444-555555555555", "dev-api"}
+  end
+
+  test "sem PR (ação pendente) o gate NÃO abre — RN-050", %{state: state} do
+    # Sem PR não há o que julgar. Abrir o gate aqui criaria um gate sobre
+    # coisa nenhuma, que é justamente o que a RN-050 proíbe.
+    Process.put(:fake_tasks, [
+      %{"id" => "aaaa1111-2222-4333-8444-555555555555", "title" => "Cadastro"}
+    ])
+
+    Process.put(:fake_propose_action, %{"id" => "pa-77", "status" => "pending"})
+
+    assert {:noreply, s} = NoopDevAgentServer.handle_cast(:work, state)
+
+    assert s.status == :awaiting_approval
+    refute_received {:gate_opened, _task_id, _agent}
+  end
+
   test "falha no worktree devolve a task em vez de deixá-la órfã", %{state: state} do
     Process.put(:fake_tasks, [
       %{"id" => "aaaa1111-2222-4333-8444-555555555555", "title" => "Cadastro"}

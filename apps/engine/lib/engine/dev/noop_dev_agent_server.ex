@@ -224,6 +224,28 @@ defmodule Engine.Dev.NoopDevAgentServer do
             do: :awaiting_gate,
             else: :awaiting_approval
 
+        # ABRIR o gate, e não só entrar em `awaiting_gate`. O agente real faz
+        # isto em `DevAgentServer.abrir_gate/1`; o Noop marcava a task como
+        # `in_review` e parava aí, então `tasks.gate_status` ficava NULL e não
+        # havia gate para julgar — `awaiting_gate` sem gate aberto.
+        #
+        # É a armadilha do achado #10 outra vez, e no mesmo lugar: um defeito
+        # sobrevivendo DENTRO do instrumento de medida. A validação da Fase 12
+        # travava aqui, esperando um `gate_status` que nunca ia existir.
+        #
+        # O que NÃO vem junto é o `Dispatcher.run_qa/2` do agente real: quem
+        # emite o veredito na validação é o script, pelo `RecordGateVerdict`,
+        # justamente para não depender de julgamento de LLM (ADR 0020).
+        if status == :awaiting_gate do
+          _ =
+            EngineApiClient.open_gate(
+              state.project_id,
+              state.session_id,
+              task_id,
+              state.agent_id
+            )
+        end
+
         state = %{state | status: status}
         AgentIo.persist(state)
 
