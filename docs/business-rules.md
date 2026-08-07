@@ -1764,6 +1764,50 @@ que você leu ao decidir.
   rotina`, `uma NEGACAO derruba o sinal`)
 - **Origem:** [ADR 0053](adr/0053-dev-lead-e-paralelismo-autorizado.md), FASE 14d
 
+### RN-087 — O Dev Lead é o único endereço externo da execução {#rn-087}
+
+Existe um agente `dev-lead`, conversacional, que recebe o handoff do Arquiteto
+e propõe o **plano de execução**: quantos agentes por módulo e por quê. Ele não
+escreve código — distribui trabalho e responde por ele.
+
+**Antes dele, a frase "quem decide é o lead" da [RN-083](#rn-083) não tinha
+dono.** O Arquiteto terminava e a execução subia por um botão, sem ninguém no
+meio para avaliar quanto trabalho havia.
+
+**Os `dev-<modulo>` deixaram de ser endereçáveis por handoff.** Isso não é
+exceção nova: é a regra do [ADR 0038](adr/0038-hierarquia-de-agentes.md) —
+handoff externo endereça só lead de área ou agente sem área — passando a valer
+para o dev como já valia para QA e Infra. Enquanto não havia Dev Lead, eles
+eram agentes SEM área e por isso alvos válidos; virando membros, deixam de ser.
+
+**A área de `dev` é a primeira DINÂMICA**, e é o que forçou o predicado: os
+membros são um por módulo do `module_map`, decididos pelo Arquiteto e
+diferentes em cada projeto, então não há lista a enumerar. `dev-lead` casa com
+o mesmo prefixo `dev-` dos membros, e quem o exclui é a regra genérica **o lead
+nunca é membro da própria área** — que vale para qualquer área e vive num lugar
+só. A primeira versão repetia essa exclusão em três pontos, e a verificação por
+mutação mostrou que nenhuma das cópias era alcançável por teste: cada uma
+sobrevivia à mutação da outra.
+
+**O plano é EVENTO, não `proposed_action`.** Propor não tem efeito externo: o
+gasto acontece quando os agentes sobem, e é lá que o teto cobra autorização.
+Transformar a proposta em ação a decidir faria você decidir duas vezes a mesma
+coisa.
+
+Um plano vazio, ou com zero agente num módulo, é recusado **antes de gravar
+qualquer coisa** — o event log é imutável, e um plano meio gravado não teria
+como ser retratado.
+
+- **Onde:** `apps/engine/lib/engine/agents/dev_lead_server.ex` e
+  `dev_lead_tools.ex`; a regra de endereçamento em
+  `apps/api/src/domain/agents/agent-areas.ts`; o handoff em
+  `application/use-cases/agents/offer-infra-handoff.use-case.ts`
+- **Teste:** `apps/engine/test/engine/agents/dev_lead_tools_test.exs`,
+  `apps/api/test/domain/agents/agent-areas.spec.ts` (`o dev de módulo DEIXOU de
+  ser endereçável`, `` `dev-lead` É endereçável, apesar do prefixo ``) e
+  `test/application/use-cases/agents/offer-infra-handoff.use-case.spec.ts`
+- **Origem:** [ADR 0053](adr/0053-dev-lead-e-paralelismo-autorizado.md), FASE 14d
+
 ### RN-064 — Heartbeat não encerra sessão com trabalho pendente {#rn-064}
 
 O timeout de heartbeat mede inatividade da **aba**, não do **trabalho**. Antes

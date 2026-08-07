@@ -6,6 +6,17 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **engine,api**: existe um **Dev Lead**. Quando você confirma que a
+  arquitetura está pronta, ele recebe o trabalho junto com o Infra e propõe o
+  plano de execução: quantos agentes em cada módulo e por quê. Antes, o
+  Arquiteto terminava e a execução subia por um botão, sem ninguém no meio
+  avaliando quanto trabalho havia — o teto de agentes já existia, mas a frase
+  "quem decide é o lead" não tinha a quem se referir. Ele não escreve código.
+  Como consequência, os dev de módulo deixam de receber handoff direto: quem
+  fala com a execução de fora passa a ser o lead, como já acontecia com QA e
+  Infra
+
+
 - **engine**: quantas voltas um agente pode dar antes de desistir deixa de ser
   um número só para todos e passa a depender do trabalho que ele faz. O limite
   de 8 tinha nascido para agente de conversa, e era o mesmo do dev agent: numa

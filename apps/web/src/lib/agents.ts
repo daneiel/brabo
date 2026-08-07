@@ -28,6 +28,7 @@ export type AgentKey =
   | 'criativo'
   | 'arquiteto'
   | 'po'
+  | 'dev-lead'
   | 'dev-backend'
   | 'dev-frontend'
   | 'infra'
@@ -103,6 +104,14 @@ export const AGENTS: Record<AgentKey, AgentDef> = {
     role: 'Priorização e backlog',
     color: '#9C7BE0',
     icon: UserIcon,
+  },
+  'dev-lead': {
+    key: 'dev-lead',
+    name: 'Dev Lead',
+    initials: 'DL',
+    role: 'Distribui o trabalho de implementação e responde por ele',
+    color: 'var(--success)',
+    icon: LayoutSidebarIcon,
   },
   'dev-backend': {
     key: 'dev-backend',
@@ -186,6 +195,16 @@ export interface AreaDef {
 }
 
 export const AREAS: Record<string, AreaDef> = {
+  // FASE 14d / ADR 0053 — a primeira área DINÂMICA: os membros são um por
+  // módulo do `module_map`, decididos pelo Arquiteto, e por isso `members`
+  // fica VAZIO aqui. A fonte deles é `agent_areas`/`agent_area_members`, por
+  // projeto. Quem endereça a execução de fora é o lead.
+  dev: {
+    key: 'dev',
+    label: 'Dev',
+    lead: 'dev-lead',
+    members: [],
+  },
   qa: {
     key: 'qa',
     label: 'QA',

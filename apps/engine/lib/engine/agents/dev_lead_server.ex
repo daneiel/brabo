@@ -1,25 +1,43 @@
-defmodule Engine.Agents.ArquitetoServer do
+defmodule Engine.Agents.DevLeadServer do
   @moduledoc """
-  Agente Arquiteto conversacional no harness (Fase 3b — fecha a Fase 3).
-  Ativado pelo handoff aceito do PO, consome o product_brief + business_rules +
-  o backlog e produz: um `module_map` (validado contra ciclos na api), ADRs
-  (via `propose_adr` → proposed_action `open_adr_pr`, aprovada pelo usuário e
-  aberta como PR real), e `insight`s de tensão regra↔arquitetura. Também vincula
-  módulos às stories (validação cruzada).
+  Dev Lead conversacional (FASE 14d item 5, [ADR 0053]).
 
-  Espelha o `PoServer`: GenServer por sessão, estado + rehydration + streaming +
-  loop bounded de tool use (injeta o resultado da ferramenta de volta pro modelo
-  encadear). Kickoff no start fresco.
+  Ativado pelo handoff aceito do Arquiteto, consome o `module_map` e o backlog
+  e propõe o PLANO de execução: quantos agentes por módulo e por quê. Ele **não
+  escreve código** — distribui trabalho e responde por ele.
+
+  Espelha o `Engine.Agents.ArquitetoServer` e o `Engine.Infra.InfraLeadServer`:
+  GenServer por sessão, estado + rehydration + streaming + loop bounded de tool
+  use. Kickoff no start fresco.
+
+  ## Por que ele existe
+
+  Antes, o Arquiteto terminava e a execução subia por um botão, **sem ninguém
+  no meio para avaliar o trabalho**. O teto de paralelismo da
+  [RN-083](../../../../docs/business-rules.md) dizia "quem decide é o lead", e o
+  lead não existia — a frase não tinha dono.
+
+  ## Por que ele é o único endereço externo da execução
+
+  Ao virarem membros da área de `dev`, os `dev-<modulo>` deixaram de ser
+  endereçáveis por handoff (`agent-areas.ts` na api). Isso não é exceção nova:
+  é a regra de handoff do ADR 0038 passando a valer para o dev como já valia
+  para QA e Infra.
+
+  Sem `Terminal` e sem `write_file` — restrição ESTRUTURAL, não de política: um
+  lead que escrevesse código faria o trabalho que delegou.
   """
 
   use GenServer, restart: :temporary
 
   alias Engine.Harness.{ContextBuilder, PromptAssembler, ContextManager, ToolCallRecovery}
-  alias Engine.Agents.FalhaDeTurno
-  alias Engine.Harness.Tools.{CreateModuleMap, AssignStoryModules, ProposeAdr, EmitInsight}
+  alias Engine.Agents.{DevLeadTools, FalhaDeTurno}
   alias Engine.Sessions.{EngineApiClient, LiveBroadcast}
 
-  @agent "arquiteto"
+  @agent "dev-lead"
+
+  # Conversacional: o teto do TIPO (RN-085) vale para o laço do harness; este
+  # servidor tem laço próprio, e 14 é o mesmo do Arquiteto e do Infra Lead.
   @max_iterations 14
 
   # --- API pública ---
@@ -29,26 +47,12 @@ defmodule Engine.Agents.ArquitetoServer do
   end
 
   def via(session_id),
-    do: {:via, Registry, {Engine.Sessions.Registry, "arquiteto:" <> session_id}}
+    do: {:via, Registry, {Engine.Sessions.Registry, "dev-lead:" <> session_id}}
 
   def kickoff(session_id), do: GenServer.cast(via(session_id), :kickoff)
 
   def user_message(session_id, text),
     do: GenServer.call(via(session_id), {:user_message, text}, 180_000)
-
-  def offer_infra_handoff(session_id),
-    do: GenServer.call(via(session_id), :offer_infra_handoff, 180_000)
-
-  @doc """
-  Oferece o handoff ao Dev Lead (FASE 14d — ADR 0053).
-
-  SEPARADO do de Infra de propósito, e não porque sejam dois momentos: os dois
-  saem da mesma confirmação de arquitetura pronta. É que são duas áreas
-  diferentes, com desfechos diferentes — juntá-los numa chamada só faria a
-  falha de uma derrubar a outra.
-  """
-  def offer_dev_handoff(session_id),
-    do: GenServer.call(via(session_id), :offer_dev_handoff, 180_000)
 
   # --- Callbacks ---
 
@@ -68,12 +72,7 @@ defmodule Engine.Agents.ArquitetoServer do
        project_id: project_id,
        agent: @agent,
        messages: [system_msg | history],
-       tool_specs: [
-         CreateModuleMap.spec(),
-         AssignStoryModules.spec(),
-         ProposeAdr.spec(),
-         EmitInsight.spec()
-       ]
+       tool_specs: [DevLeadTools.spec()]
      }}
   end
 
@@ -104,52 +103,6 @@ defmodule Engine.Agents.ArquitetoServer do
 
     broadcast(state, "agent.done", %{})
     broadcast(state, "agent.status", %{status: "idle"})
-    {:reply, :ok, state}
-  end
-
-  # O usuário confirmou que a arquitetura está pronta (Fase 4a — fechamento):
-  # roda um turno de fechamento (sem ferramenta nova esperada) e OFERECE o
-  # handoff ao InfraAgent — mirror de `confirm_readiness` do Criativo (que
-  # oferece ao PO), mas server-side/explícito, não inferido pelo modelo.
-  @impl true
-  def handle_call(:offer_infra_handoff, _from, state) do
-    broadcast(state, "agent.status", %{status: "working"})
-
-    instruction =
-      user_msg(
-        "O usuário confirmou que a arquitetura está pronta. Finalize " <>
-          "quaisquer considerações pendentes — o handoff para o InfraAgent " <>
-          "será oferecido em seguida."
-      )
-
-    state =
-      state
-      |> append(instruction)
-      |> compact()
-      |> run_turn(@max_iterations)
-
-    {:ok, _handoff} =
-      EngineApiClient.create_handoff(state.project_id, state.session_id, @agent, "infra", nil)
-
-    broadcast(state, "agent.done", %{})
-    broadcast(state, "agent.status", %{status: "idle"})
-    {:reply, :ok, state}
-  end
-
-  @impl true
-  def handle_call(:offer_dev_handoff, _from, state) do
-    # Sem turno de LLM: o Arquiteto já falou no `offer_infra_handoff`, que sai
-    # da MESMA confirmação. Um segundo turno só para dizer a mesma coisa
-    # gastaria tokens para repetir.
-    {:ok, _handoff} =
-      EngineApiClient.create_handoff(
-        state.project_id,
-        state.session_id,
-        @agent,
-        "dev-lead",
-        nil
-      )
-
     {:reply, :ok, state}
   end
 
@@ -223,10 +176,7 @@ defmodule Engine.Agents.ArquitetoServer do
     })
   end
 
-  defp run_tool("create_module_map", args, state), do: CreateModuleMap.run(args, state)
-  defp run_tool("assign_story_modules", args, state), do: AssignStoryModules.run(args, state)
-  defp run_tool("propose_adr", args, state), do: ProposeAdr.run(args, state)
-  defp run_tool("emit_insight", args, state), do: EmitInsight.run(args, state)
+  defp run_tool("propose_execution_plan", args, state), do: DevLeadTools.run(args, state)
   defp run_tool(name, _args, _state), do: {:error, "ferramenta desconhecida: #{name}"}
 
   # --- Kickoff ---
@@ -234,29 +184,24 @@ defmodule Engine.Agents.ArquitetoServer do
   defp kickoff_instruction(state) do
     case EngineApiClient.list_events(state.project_id, state.session_id) do
       {:ok, events} -> build_kickoff(events)
-      _ -> "Defina a arquitetura do produto (module_map, ADRs, insights)."
+      _ -> "Proponha o plano de execução (propose_execution_plan)."
     end
   end
 
   defp build_kickoff(events) do
-    brief =
+    modulos =
       events
-      |> Enum.filter(&(Map.get(&1, "type") == "artifact.product_brief"))
+      |> Enum.filter(&(Map.get(&1, "type") == "architecture.module_map_created"))
       |> List.last()
+      |> case do
+        %{"payload" => %{"modules" => mods}} when is_list(mods) ->
+          Enum.map_join(mods, "\n", fn m ->
+            "- #{Map.get(m, "name")} (#{Map.get(m, "stack", "?")}): #{Map.get(m, "responsibility", "")}"
+          end)
 
-    summary =
-      case brief do
-        %{"payload" => %{"summary" => s}} when is_binary(s) -> s
-        _ -> "(sem product brief)"
+        _ ->
+          "(sem module_map)"
       end
-
-    rules =
-      events
-      |> Enum.filter(&(Map.get(&1, "type") == "artifact.business_rule"))
-      |> Enum.map_join("\n", fn r ->
-        p = Map.get(r, "payload", %{})
-        "- #{Map.get(p, "title", "")}: #{Map.get(p, "description", "")}"
-      end)
 
     stories =
       events
@@ -267,21 +212,20 @@ defmodule Engine.Agents.ArquitetoServer do
       end)
 
     """
-    Você recebeu o produto do PO. Defina a ARQUITETURA:
-    1. create_module_map: proponha os módulos (name, stack, responsibility, depends_on) SEM
-       ciclos de dependência.
-    2. assign_story_modules: vincule a cada história os módulos que a realizam (use os
-       story_id abaixo) — assim ela referencia módulos válidos.
-    3. propose_adr: proponha ao menos 1 ADR (decisão arquitetural relevante) — vira uma PR
-       pro usuário aprovar.
-    4. emit_insight: registre tensões entre as regras e a arquitetura (ex.: um RNF sem
-       módulo que o atenda).
+    Você recebeu a arquitetura do Arquiteto. Avalie o trabalho e proponha o
+    PLANO DE EXECUÇÃO com `propose_execution_plan`.
 
-    PRODUCT BRIEF:
-    #{summary}
+    Você NÃO escreve código. Decide quantos agentes valem a pena para o
+    trabalho em mão, e responde por essa escolha.
 
-    REGRAS DE NEGÓCIO:
-    #{rules}
+    Um agente por módulo é o começo razoável. Peça mais de um SÓ quando o
+    backlog daquele módulo justificar — mais agentes num módulo com duas
+    histórias não acelera nada e custa o dobro. Acima do teto da área, o
+    usuário precisa autorizar, então o `porque` de cada módulo é o que ele vai
+    ler para decidir.
+
+    MÓDULOS:
+    #{modulos}
 
     HISTÓRIAS DO BACKLOG:
     #{stories}
