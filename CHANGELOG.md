@@ -13,6 +13,15 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **api**: o aceite do OpenRouter contra a API real voltou a funcionar. Ele
+  nunca tinha rodado — sem chave, a suite inteira é pulada — e por isso tinha
+  apodrecido em silêncio contra a mudança que levou a curadoria de modelo para
+  o escopo de workspace: afirmava um campo que não existe mais no catálogo
+  global e montava dois casos de uso com assinaturas antigas. Nada disso era
+  detectável por CI, porque o typecheck da api não cobre os testes. Agora
+  afirma a regra pelo caminho certo — modelo descoberto nasce desligado
+  naquele workspace, e desligado é a ausência de linha
+
 - **engine**: o dev agent **morria** quando a fila do módulo esvaziava, em vez
   de ficar ocioso. Com nada a reivindicar, a rota de claim responde `201` sem
   corpo — o caso de uso devolve `null`, mas isso vira resposta vazia, e o

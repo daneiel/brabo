@@ -129,12 +129,11 @@ extraída por script do event log/token_usage, nunca anotada à mão.
    (a cobaia nascia em /tmp, invisível ao engine; o Noop não abria o
    gate; o Noop morria em `pr_settled`) e uma do PRODUTO (achado W: o
    dev agent morria quando a fila esvaziava).
-2. Smokes com credencial real da Fase 11: rodar os que houver
-   `<PROVIDER>_TEST_KEY` exportada (custo em centavos, autorização
-   explícita do usuário antes); resultado datado — quais rodaram,
-   quais pularam e por quê — registrado em
-   docs/explanation/aceite-providers.md (ADR 0043 não é editado; o
-   documento o referencia).
+2. PARCIAL em 2026-08-07: o smoke do **OpenRouter** rodou com credencial
+   real e fechou (custo real US$ 0,000005, lido do `token_usage`). Os
+   outros cinco seguem pulados — não há chave deles no ambiente. O smoke
+   estava apodrecido contra o ADR 0049 e nunca tinha rodado; corrigido
+   junto. Resultado datado em docs/explanation/aceite-providers.md
 
 ### 13b — Validação REAL: GitHub remoto + gates por LLM, MEDIDA
 3. Repetir o roteiro da validação num projeto ADOTADO do fork via
