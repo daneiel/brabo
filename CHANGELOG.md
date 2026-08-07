@@ -13,6 +13,14 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **api**: nenhum dev agent conseguia abrir PR em repositório remoto quando a
+  autonomia estava ligada. A credencial de git vinha de quem DECIDIU a ação — e
+  ação auto-aprovada por política não tem decisor, então o token ficava vazio e
+  o GitHub recusava. Agora vem do dono do workspace, pela mesma regra que já
+  valia para as chaves de modelo. O contraste que expôs o defeito estava dentro
+  de uma execução só: o push funcionava e a PR falhava, porque cada um resolvia
+  a credencial por um caminho diferente
+
 - **engine**: a busca no workspace deixa de dizer a mesma coisa quando não
   encontra e quando não há o que encontrar. Num projeto novo, o dev agent lia
   "nenhum resultado" como "refine a busca" e repetia buscas até esgotar o teto

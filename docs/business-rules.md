@@ -1549,6 +1549,37 @@ afirmando isso, para o limite ficar visível em vez de implícito.
   `apps/api/test/application/use-cases/backlog/create-story.use-case.spec.ts`
 - **Origem:** achado R, Fase E do [backlog](explanation/backlog.md)
 
+### RN-082 — A credencial de git de uma ação é a do OWNER do workspace {#rn-082}
+
+Quando a api executa uma ação de git contra provider remoto (`pr_open`,
+`git_merge`), o token vem do **owner do workspace** — o mesmo resolvedor da
+[RN-058](#rn-058), não de quem decidiu a ação.
+
+**Resolver por quem decidiu só funcionava com clique humano.** Ação
+auto-aprovada por política não tem decisor: `decided_by` fica `NULL`, o token
+fica `undefined`, e o GitHub responde `Requires authentication`. Na prática,
+com autonomia ligada — que é o modo que o ADR 0055 existe para viabilizar —
+**nenhum dev agent conseguia abrir PR em provider remoto**.
+
+**O contraste que expôs o defeito** aconteceu dentro de uma execução só: no
+mesmo run, `git_push` passou e `pr_open` falhou. O push é executado pelo
+ENGINE, que já injetava a credencial do owner
+([RN-076](#rn-076)); a PR é aberta pela API, que estava fora de simetria.
+
+Não apareceu antes porque toda validação anterior usou o `LocalGitProvider`,
+onde o token nem é consultado.
+
+O princípio é o mesmo da RN-058, e vale repetir porque é o que impede as duas
+regras de divergirem com o tempo: **quem banca a conta banca os agentes**, e
+isso não muda conforme quem clica. Por isso o resolvedor é REUSADO em vez de
+reimplementado.
+
+- **Onde:** `apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts`,
+  reusando `application/use-cases/llm/resolve-credential-owner.use-case.ts`
+- **Teste:** `apps/api/test/application/use-cases/actions/execute-git-action.use-case.spec.ts`
+  (`pr_open` auto-aprovado, com `decidedBy: null`, pede a credencial do owner)
+- **Origem:** achado AA, [validação real da 13b](explanation/validacao-real.md)
+
 ### RN-064 — Heartbeat não encerra sessão com trabalho pendente {#rn-064}
 
 O timeout de heartbeat mede inatividade da **aba**, não do **trabalho**. Antes

@@ -463,6 +463,10 @@ qualquer asserção do script: a ausência de `tool.call` de terminal, e o
 
 ### AA. `pr_open` auto-aprovado não tem credencial e sempre falha em remoto (P1)
 
+> **FECHADO** — virou [RN-082](../business-rules.md#rn-082). A api passou a
+> resolver a credencial de git pelo OWNER do workspace, reusando o mesmo
+> resolvedor da RN-058 em vez de reimplementar a regra. Verificado por mutação.
+
 Achado na 5ª execução da 13b, a primeira em que a cadeia chegou até a PR.
 
 `ExecuteGitActionUseCase` resolve o token de git a partir de
