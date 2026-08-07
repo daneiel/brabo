@@ -318,6 +318,44 @@ gate por LLM não passa por afrouxar política.** Passa por fazer o agente
 esperar a decisão em vez de morrer (achado AB), que é o que o ADR 0052 já fez
 para o dev agent.
 
+## A décima execução: a cadeia fecha no veredito
+
+Com o teto em 60 e o [ADR 0057](../adr/0057-o-gate-espera-a-aprovacao.md) no
+lugar, a execução atravessou:
+
+| etapa | evento |
+|---|---|
+| dev agent escreve, commita, empurra | PR remota aberta |
+| gate abre | `pr.gate_changed` → `awaiting_qa` |
+| área delega | `delegation.dispensed` (perf/segurança, com justificativa) |
+| subagente esbarra em aprovação | **suspende** — sem `failed`, sem task bloqueada, sem `origin: infra` |
+| usuário decide | **recusa**, com motivo |
+| laço retoma | `delegation.completed` |
+| **veredito** | **`changes_requested`** |
+
+### A recusa provou mais que a aprovação teria provado
+
+A ação pendente era o `qa-automacao` querendo **editar o `package.json` do
+código que estava julgando** (e fazer backup em `/tmp`, fora do escopo). O
+prompt dele diz o contrário com todas as letras: *"Você NÃO escreve código: só
+lê, roda a suite e emite um parecer"*.
+
+Aprovar teria feito o gate concluir sobre código que o próprio revisor
+consertou — um `approved` sem valor nenhum como medição. **Recusar exercitou o
+caminho completo** do ADR 0057: o motivo entra no lugar do resultado, o agente
+lê, entende que aquele caminho fechou, e emite o veredito.
+
+E o veredito está **certo**, escrito pelo modelo sem ninguém apontar:
+
+> A suite de testes não executa (exit 127 — jest não encontrado) e o
+> `npm install` falha (ETARGET: não existe versão de `supertest@^6.4.3` no
+> registro), deixando a regra da story sem cobertura executável. O arquivo
+> `saudacao.test.js` existe e descreve o cenário feliz, mas o gate não pode
+> aprovar…
+
+Ele achou os dois defeitos reais do que o dev agent produziu — dependência
+inexistente e jest ausente — e recusou aprovar sem cobertura verificável.
+
 ## O que esta validação ainda NÃO prova
 
 Honestidade sobre o alcance, como na irmã dela:

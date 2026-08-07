@@ -607,3 +607,34 @@ Duas direções para a triagem, e são diferentes em natureza:
 2. **Política por perfil de agente.** Um dev agent num worktree isolado é
    diferente de um agente que toca o workspace do usuário. Hoje os dois usam o
    mesmo `permissions.json`. Isto é decisão de produto com ADR.
+
+### AE. O agente de QA tenta CONSERTAR o código que está julgando
+
+Observado na 10ª execução, quando o gate finalmente rodou até o fim. A ação que
+o `qa-automacao` propôs foi:
+
+```
+cp package.json /tmp/package.json.bak
+sed -i 's/"supertest": "\^6.4.3"/"supertest": "6.3.3"/' package.json
+npm install
+```
+
+O dev agent tinha escrito uma dependência que não existe; o `npm install`
+quebrou; e o REVISOR tentou corrigir para conseguir rodar a suite.
+
+O prompt dele diz o oposto com todas as letras: *"Você NÃO escreve código: só
+lê, roda a suite e emite um parecer"*. Nenhum teste pega isso — é
+comportamento de modelo contra instrução, e só aparece em execução.
+
+**Duas barreiras o impediram, e as duas por motivos independentes:** `cp` e
+`sed` não estão no allowlist, e `/tmp/package.json.bak` está fora do escopo do
+projeto ([RN-075](../business-rules.md#rn-075)). A política segurou o que o
+prompt não segurou.
+
+Vale registrar o que aconteceu depois, porque é o desfecho certo: **recusada** a
+ação, o agente leu o motivo e emitiu `changes_requested` apontando exatamente os
+defeitos reais (dependência inexistente, jest ausente). O comportamento errado
+foi contido e o julgamento certo saiu.
+
+Item para triagem: reforçar no prompt, ou remover a ferramenta de escrita do
+conjunto do gate — hoje ele tem `terminal`, que é escrita por outro caminho.
