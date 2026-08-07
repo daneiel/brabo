@@ -130,6 +130,49 @@ primeiras chamadas devolveram `nenhum resultado`, o que o agente leu como
 "procure melhor" em vez de "não há nada aqui". O Psicólogo chegou à mesma
 conclusão sozinho.
 
+## A segunda execução: a correção do Y NÃO fechou o X
+
+Depois de fechar o achado Y, a mesma execução rodou de novo — mesma story,
+mesmo repositório, mesmo modelo. **Só a frase da ferramenta mudou entre as
+duas.**
+
+| | 1ª execução | 2ª execução |
+|---|---|---|
+| chamadas do dev-api | 8 | 8 |
+| tokens de saída | 205 | 248 |
+| desfecho | `limite de iterações atingido` | `limite de iterações atingido` |
+| PR | nenhuma | nenhuma |
+
+O comportamento mudou de forma observável — **uma** busca em vez de cinco,
+seguida de `read_file` — e o desfecho não. A mensagem nova chegou ao agente e
+foi a correta para o caso (`o workspace tem 2 arquivo(s), então a busca
+funcionou`), porque o repositório tinha o template do Gitflow e não estava
+vazio.
+
+**A hipótese registrada aqui estava errada.** O texto anterior dizia *"a
+correção é a frase, não o teto"*. A evidência diz outra coisa: das oito
+iterações, sete foram exploração. Sobra UMA para escrever o arquivo, commitar,
+dar push e abrir a PR — nem um agente perfeito fecharia isso.
+
+`TOOL_LOOP_MAX_ITERATIONS` é `8` por default
+(`apps/engine/config/runtime.exs:100`). O número nasceu para agente
+conversacional, e nunca foi reavaliado para um dev agent que precisa explorar
+um repositório antes de agir.
+
+O Psicólogo, de novo, foi mais preciso que a asserção do script:
+
+> o workspace não contém o código do projeto: não há package.json, nem src,
+> nem README
+
+> ficou apenas em modo leitura/exploração
+
+### O que isso ensina sobre medir
+
+Registrar o resultado negativo é o ponto. Se a segunda execução não tivesse
+sido feita, o achado Y — que é real e está coberto por teste — seria fácil de
+confundir com a solução do X. Foi uma correção correta que **não** produziu o
+efeito esperado, e só a execução mostrou isso.
+
 ## O que esta validação ainda NÃO prova
 
 Honestidade sobre o alcance, como na irmã dela:

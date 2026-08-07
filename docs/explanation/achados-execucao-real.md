@@ -424,8 +424,16 @@ achado X.
 > (só `.github/` e `docs/` do bootstrap) NÃO é vazio: há teste afirmando que
 > ali a resposta certa é a contagem, não a instrução de criar.
 >
-> O achado **X segue aberto**: que a frase nova quebre o laço de verdade só se
-> prova numa execução paga nova.
+> **A execução nova foi feita, e o X NÃO fechou.** Mesmo desfecho —
+> `limite de iterações atingido`, 8 chamadas, nenhuma PR. O comportamento
+> mudou (uma busca em vez de cinco), o resultado não. A hipótese de que a
+> frase era a causa estava ERRADA: das oito iterações, sete são exploração, e
+> sobra uma para escrever, commitar, dar push e abrir PR.
+>
+> O suspeito agora é o teto: `TOOL_LOOP_MAX_ITERATIONS=8`
+> (`apps/engine/config/runtime.exs:100`), um número que nasceu para agente
+> conversacional e nunca foi reavaliado para dev agent que explora antes de
+> agir. Segue como hipótese, não como conclusão — provar exige outra execução.
 
 ### Funcionou como projetado (registrar também)
 
