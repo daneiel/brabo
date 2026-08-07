@@ -2,6 +2,112 @@
 
 Gerado dos conventional commits por `scripts/changelog.mjs`.
 
+## v2.3.0 — 2026-08-07
+
+### Novidades
+
+- **api**: amplia o allowlist do roteiro com critério explícito (a2d92a61)
+- **api**: as fases backlog e execucao da validação real (e5d0edc9)
+- **api**: a validação REAL da 13b começa, e a adoção remota está provada (f2882efa)
+- reconhecer a falha ao proteger branches e seguir (Fase D, achado D) (82ef9a7e)
+- o engine trabalha em repositório remoto (ADR 0056, achado N) (5efbbc6f)
+- **api**: escopo de caminho na política de terminal (ADR 0055, achado U) (7c743982)
+- **api**: sem escolha explícita, o modelo é o do Criativo (50ea7136)
+- **api**: GET /internal/gates, e o registro dentro da imagem (1422629e)
+- **api**: loader e medidor dos gates, com RN-070 e RN-071 (815af274)
+- **docs**: os gates de CI no registro, e infra partido em dois (505ed78e)
+- **api,docs**: FASE 15 e o registro declarativo de gates (7d766c4d)
+- **web**: linha do tempo do time em árvore, e a FASE 14 no CLAUDE.md (19c86b5b)
+- **web**: validação automática de contraste e de layout (62298567)
+- **api,web**: o owner vê quanto as chaves dele gastaram (1ef1e71b)
+- **engine,web**: falha de turno vira evento durável, e o agente fala (53bc32ee)
+
+### Correções
+
+- **api**: ReDoS polinomial no escopo de caminho (CodeQL HIGH) (17edbf9d)
+- **api**: remove asserção redundante que o lint do CI pegou (9defddf3)
+- **api**: redirecionamento não encadeia comando, e /dev/null não é caminho (67736ddd)
+- **engine**: ação pendente num gate é origem POLITICA, não infra (b737874f)
+- **api**: a credencial de git é do OWNER, não de quem decidiu a ação (c714d986)
+- **engine**: a busca dizia a mesma coisa para "não achei" e "não há o que achar" (4f37e5a4)
+- **api**: o medidor reprovava execução passada por restart posterior a ela (2bff2d6c)
+- **api**: o aceite do OpenRouter rodou com credencial real, e estava podre (106c697d)
+- **engine**: dev agent morria em vez de ir para idle quando a fila esvaziava (1a4c6dc5)
+- **engine**: o Noop morria ao receber task.pr_settled, e a validação parava na 2ª task (a3874ffb)
+- **api,engine**: o instrumento da validação da Fase 12 não conseguia chegar ao fim (a5867502)
+- **engine,api**: os artefatos dos agentes param de nascer duplicados e a análise vazia (3c77de14)
+- **api**: ação aguardando decisão segura a sessão (Fase H, achado V) (ef922005)
+- **web**: remover `allModels`, que ficou órfão ao sair o `selectedModel` (9846410a)
+- **web**: o feed narra o bootstrap, e o card para de inventar o modelo (12641ed7)
+- **web,engine**: quem fala é o agente, e o convite e o rodapé param de mentir (26bc9ada)
+- **engine**: a origem da falha é sempre uma das quatro (Fase G) (02c48dd1)
+- **engine**: teto de bytes na saída de terminal, que sem ele mata a execução (445efb1e)
+- **api**: o desfecho da ação nascia num agregado que o engine não lê (2ba5d14e)
+- **engine**: a espera perdida no restart bloqueava em silêncio (09cd39f7)
+- **api,engine**: o dev agent não conseguia explorar nem retentar (73e30e69)
+- **api**: sessão criada fora do use case nascia sem processo no engine (6d665b70)
+- **api,engine**: o Arquiteto adivinhava nome de módulo por força bruta (a69d6377)
+- **web**: ActionType incompleto derrubava a tela da sessão (0d341cd5)
+- **engine**: o turno em streaming caía no timeout default do Req (91d801ee)
+- **api**: o medidor lia o ator do evento em vez do agente (a5af9765)
+- **api**: o Arquiteto reemitia o module_map em laço (9e13020c)
+- **api,engine**: heartbeat matava sessão com trabalho pendente (131c7289)
+- **engine**: a Anamnese não tinha como dizer "não há nada a emitir" (b673d886)
+- **engine**: três defeitos que só a execução real revelou (fae389c2)
+- **api**: nenhum agente conseguia usar provider com credencial (376f53a6)
+- **api,web**: o bootstrap morria em todo projeto GitHub novo (ee4f5b13)
+
+### Documentação
+
+- achado AD — o allowlist de verbos não converge, e a 13b conclui isso (b8f451a8)
+- achado AC — redirecionamento torna qualquer comando inaprovável (f11dc942)
+- a PR abriu no GitHub, e o gate não sabe esperar aprovação (5c5eaca6)
+- permissions.md diz com qual credencial a ação auto-aprovada executa (d3837829)
+- conserta o link do ADR 0052 que eu inventei (781ef443)
+- a 5ª execução chega ao GitHub, e o pr_open auto-aprovado não tem credencial (abc25adf)
+- o teto era a causa do achado X, e a Fase F não fecha a escada (9f2840f8)
+- a correção do achado Y não fechou o X, e isso está registrado (42829b61)
+- a validação real da 13b, executada e medida (41e1fb0b)
+- o contrato do claim diz que fila vazia é 201 sem corpo (225f50a2)
+- a validação da Fase 12 executada, com os event ids do banco (1d051fad)
+- o glossário diz o segundo motivo de recusa de um artefato (549d6947)
+- gates.md deixa de afirmar uma lacuna que foi fechada (c3217af3)
+- a política e o registro de gates apontam a spec do promotion-check (6ad781f0)
+- o remoto de trabalho no contrato api↔engine (86962106)
+- ADR 0056 — o engine trabalha em repositório remoto (21b07147)
+- a Fase A já estava feita, e o backlog não sabia (e71d6274)
+- os dois achados que faltavam, e o quadro cobrindo os 19 (436f25ac)
+- o 413 que matou a execução, e a origem que continua fora das quatro (d9f1d2eb)
+- ADR 0055 — escopo de caminho na política de terminal (b8de978f)
+- o wake precisa chegar, e o restart é a exceção que a página não dizia (baeb39a0)
+- o que acontece com o agente enquanto a decisão não vem (592a24e2)
+- RN-073, o ADR 0052 aceito, e duas frases podres no índice (1f477e03)
+- FASE 13c — a triagem dos achados e o backlog consolidado (b4a5087d)
+- ADR 0053 — o Dev Lead é agente conversacional na cadeia de handoff (1369969d)
+- ADR 0053 — Dev Lead como área, e paralelismo autorizado (c57f3ad8)
+- RN-068 e RN-069, e a allowlist do dev em permissions.md (d325c3fc)
+- índice e contagens de ADR com o 0052 (cff3bedd)
+- ADR 0052 — o dev agent espera a aprovação no meio do laço (985921b0)
+- o link do ADR 0041 tinha o nome de arquivo errado (535c4d24)
+- a colheita da primeira execução com modelo de API (62d23221)
+- **changelog**: a versão do README acompanha o corte da v2.2.0 (6d2fafd6)
+- **changelog**: v2.2.0 (5b83391b)
+
+### Testes
+
+- **ci**: spec do promotion-check, o único check required sem teste (9e0d625e)
+- **engine**: a corrente do outbox até o agente, provada de ponta a ponta (fdba5f73)
+- **engine**: a suspensão e a retomada do laço, provadas (d3e1e11a)
+
+### Manutenção
+
+- **ci**: o teto do nome de função sobe de 15 para 30 caracteres (344f6089)
+- **engine**: postgrex 0.22.4 fecha a advisory EEF-CVE-2026-66838 (cea7e837)
+- o inventário de config e a formatação que só o CI pegou (21198d6e)
+- os achados da execução real em docs/, e quatro deles corrigidos (4dd7a073)
+- **engine,docs**: formato do Elixir e as três docs que o drift cobrava (e01ee61f)
+- **ci**: o release passa a escrever a versão do README junto do CHANGELOG (41f02548)
+
 ## v2.2.0 — 2026-08-04
 
 ### Novidades
@@ -12,6 +118,16 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - **api,web**: credencial sempre cifrada; verificar vira ação à parte (99b9fa72)
 
 ### Correções
+
+- **engine**: um agente de gate que esbarra numa aprovação pendente deixa de
+  matar o gate. Ele agora **espera** — como o dev agent já fazia — e a decisão o
+  retoma de onde parou, com o resultado de verdade no lugar onde estava a
+  palavra "pendente". Antes a suspensão era classificada como falha de
+  infraestrutura, a tarefa era bloqueada por uma decisão que ninguém tinha
+  tomado, e o clique do usuário chegava tarde demais para servir. Enquanto está
+  esperando, a área de QA não consolida, não emite veredito e não bloqueia nada.
+  Recusa também retoma: o motivo entra no lugar do resultado, e o agente aprende
+  que aquele caminho fechou em vez de esperar para sempre
 
 - **api**: comando com redirecionamento deixa de exigir aprovação sempre.
   `2>/dev/null` é idioma — modelos o usam o tempo todo para silenciar erro

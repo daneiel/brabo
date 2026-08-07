@@ -202,4 +202,83 @@ defmodule Engine.Gates.QaLeadServerTest do
       assert diagnosis =~ "emit_qa_verdict"
     end
   end
+
+  # --- achado AB da FASE 13b -------------------------------------------
+  #
+  # Na 6ª execução real, o `qa-automacao` esbarrou num comando que precisava
+  # de aprovação. O gate MORRIA: a suspensão virava `origin: infra` e a task
+  # era bloqueada por uma decisão que ninguém tinha tomado.
+  describe "aprovação pendente no meio do gate" do
+    test "a área PARA sem consolidar, e nada é decidido", %{state: state} do
+      Process.put(:fake_dev_context, dev_context([]))
+      Process.put(:fake_propose_action, %{"id" => "pa-99", "status" => "pending"})
+
+      Process.put(:fake_llm_turns, [
+        FakeEngineApiClient.tool_call_response("terminal", %{"command" => "npm test"})
+      ])
+
+      assert {:noreply, novo} = QaLeadServer.handle_cast({:run, "task-abc12345"}, state)
+
+      # O estado em voo ficou guardado, chaveado pela ação que segura o laço.
+      assert novo.pendente.action_id == "pa-99"
+      assert novo.pendente.delegacao.subagent == "qa-automacao"
+
+      # O que NÃO pode acontecer: veredito, bloqueio de task, ou a delegação
+      # registrada como falha. Nada foi decidido — só está esperando.
+      refute_received {:gate_verdict_recorded, _, _, _, _, _, _}
+      refute_received {:task_blocked, _, _, _, _}
+      refute_received {:delegation_recorded, %{status: "failed"}}
+    end
+
+    test "a decisão RETOMA o laço e a área conclui", %{state: state} do
+      Process.put(:fake_dev_context, dev_context([]))
+      Process.put(:fake_propose_action, %{"id" => "pa-99", "status" => "pending"})
+
+      Process.put(:fake_llm_turns, [
+        FakeEngineApiClient.tool_call_response("terminal", %{"command" => "npm test"})
+      ])
+
+      assert {:noreply, suspenso} = QaLeadServer.handle_cast({:run, "task-abc12345"}, state)
+
+      # Chega o desfecho: a suite rodou e passou.
+      Process.put(:fake_propose_action, nil)
+
+      Process.put(:fake_llm_turns, [
+        FakeEngineApiClient.tool_call_response("emit_qa_verdict", %{
+          "veredito" => "approved",
+          "resumo" => "suite verde",
+          "itens" => [],
+          "coverageMatrix" => []
+        })
+      ])
+
+      assert {:noreply, retomado} =
+               QaLeadServer.handle_info(
+                 {:action_settled,
+                  %{
+                    action_id: "pa-99",
+                    status: "executed",
+                    execution_result: %{"exitCode" => 0, "stdout" => "ok"}
+                  }},
+                 suspenso
+               )
+
+      assert retomado.pendente == nil
+      # E agora sim o gate decide — o que a suspensão tinha impedido.
+      assert_received {:gate_verdict_recorded, _, _, _, _, _, _}
+      refute_received {:task_blocked, _, _, _, _}
+    end
+
+    test "desfecho de OUTRA ação não derruba nem retoma", %{state: state} do
+      suspenso = %{state | pendente: %{action_id: "pa-99"}}
+
+      assert {:noreply, igual} =
+               QaLeadServer.handle_info(
+                 {:action_settled, %{action_id: "outra", status: "executed"}},
+                 suspenso
+               )
+
+      assert igual.pendente.action_id == "pa-99"
+    end
+  end
 end
