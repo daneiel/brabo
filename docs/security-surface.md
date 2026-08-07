@@ -192,6 +192,7 @@ o componente `d` da JWK, travado por teste.
 | GET | `/internal/sessions/:sessionId/infra-context` | engine-service |
 | POST | `/internal/sessions/:sessionId/infra-gates/verdict` | engine-service |
 | POST | `/internal/sessions/:sessionId/instruction-patches` | engine-service |
+| POST | `/internal/sessions/:sessionId/max-parallel-proposals` | engine-service |
 | POST | `/internal/sessions/:sessionId/llm-turn` | engine-service |
 | POST | `/internal/sessions/:sessionId/llm-turn-stream` | engine-service |
 | POST | `/internal/sessions/:sessionId/module-map` | engine-service |

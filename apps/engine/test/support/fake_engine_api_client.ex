@@ -350,6 +350,16 @@ defmodule Engine.Sessions.FakeEngineApiClient do
     end
   end
 
+  @impl true
+  def propose_max_parallel(_project_id, _session_id, payload) do
+    notify({:max_parallel_proposed, payload})
+
+    case Process.get(:fake_max_parallel_error) do
+      nil -> reply(:fake_max_parallel, %{"id" => "act-2", "status" => "pending"})
+      reason -> {:error, reason}
+    end
+  end
+
   # Um valor scriptado já em forma de `{:error, _}` passa direto — assim um
   # teste consegue simular "a api está fora" no MESMO idioma dos scripts de
   # sucesso, sem uma chave separada por endpoint.

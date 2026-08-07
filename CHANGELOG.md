@@ -6,6 +6,17 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api,engine**: a Anamnese passou a reparar quando autorizar mais um agente
+  virou rotina. Se você aprovou o mesmo pedido três vezes na janela e não negou
+  nenhuma, ela propõe subir o teto daquela área — com o número de aprovações
+  como justificativa. Uma única negação derruba a proposta: se você recusou
+  alguma vez, o teto está fazendo o trabalho dele. A proposta **nunca se aprova
+  sozinha**, e nem a de ultrapassar o teto: as duas ações que mexem em quanto o
+  produto gasta sem perguntar agora são intocáveis por qualquer configuração de
+  autonomia. Sem isso, um `permissions.json` permissivo tornaria o limite
+  decorativo — e o produto poderia elevar o próprio teto de gasto
+
+
 - **api,web**: o teto de agentes de cada área virou configurável em
   Configurações, e — mais importante — passou a valer de verdade. A regra do
   teto tinha entrado antes, mas nenhuma tela a consultava: o botão de subir mais

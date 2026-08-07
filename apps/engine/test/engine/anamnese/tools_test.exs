@@ -4,7 +4,7 @@ defmodule Engine.Anamnese.ToolsTest do
   use ExUnit.Case, async: false
 
   alias Engine.Anamnese.Tools
-  alias Engine.Anamnese.Tools.{EmitProficiency, ProposeInstructionPatch}
+  alias Engine.Anamnese.Tools.{EmitProficiency, ProposeInstructionPatch, ProposeMaxParallel}
   alias Engine.Sessions.FakeEngineApiClient
 
   setup do
@@ -122,6 +122,53 @@ defmodule Engine.Anamnese.ToolsTest do
       assert "propose_instruction_patch" in names
       refute "terminal" in names
       refute "write_file" in names
+    end
+  end
+  describe "propose_max_parallel" do
+    test "sucesso: manda area, teto proposto e razao", %{ctx: ctx} do
+      assert {:ok, msg} =
+               ProposeMaxParallel.run(
+                 %{
+                   "area" => "dev",
+                   "proposto" => 4,
+                   "rationale" => "quatro aprovacoes na janela, nenhuma negacao"
+                 },
+                 ctx
+               )
+
+      assert msg =~ "aguardando o usuário decidir"
+
+      assert_received {:max_parallel_proposed, payload}
+      assert payload.area == "dev"
+      assert payload.proposto == 4
+      assert payload.rationale =~ "quatro aprovacoes"
+    end
+
+    test "a recusa da api volta VERBATIM pro modelo corrigir", %{ctx: ctx} do
+      # A api recusa propor um teto que nao sobe nada. A mensagem dela e o que
+      # guia o proximo turno — virar `inspect/1` de tuple perderia isso.
+      Process.put(
+        :fake_max_parallel_error,
+        {400, %{"message" => "o teto da área \"dev\" já é 4; propor 3 não sobe nada"}}
+      )
+
+      assert {:error, msg} =
+               ProposeMaxParallel.run(
+                 %{"area" => "dev", "proposto" => 3, "rationale" => "porque sim"},
+                 ctx
+               )
+
+      assert msg =~ "já é 4"
+    end
+
+    test "sem os campos obrigatorios: erro que diz QUAIS", %{ctx: ctx} do
+      assert {:error, msg} = ProposeMaxParallel.run(%{"area" => "dev"}, ctx)
+      assert msg =~ "proposto"
+      assert msg =~ "rationale"
+    end
+
+    test "esta no registro da Anamnese" do
+      assert ProposeMaxParallel in Tools.registry()
     end
   end
 end

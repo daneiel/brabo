@@ -323,11 +323,19 @@ por trás de uma PR de infra).
 | POST | `/hypotheses` |
 | POST | `/proficiency` |
 | POST | `/instruction-patches` |
+| POST | `/max-parallel-proposals` |
 
 A validação de evidência ([RN-021](../business-rules.md#rn-021)) e o catálogo
 fechado de competências ([RN-024](../business-rules.md#rn-024)) são aplicados
 **aqui**, na api. O engine não consegue gravar uma hipótese sem evidência
 válida nem perfilar uma competência fora do catálogo, ainda que o modelo peça.
+
+`/max-parallel-proposals` (FASE 14d) segue a mesma divisão: a Anamnese propõe
+subir o teto de paralelismo de uma área, e é a **api** que recusa uma proposta
+que não sobe nada — a Anamnese roda periodicamente, e sem essa recusa
+reproporia a mesma coisa a cada rodada. A ação que nasce daí **nunca é
+auto-aprovável** ([RN-086](../business-rules.md#rn-086)): automatizar o ajuste
+seria o produto elevando o próprio limite de gasto.
 
 ## api → engine
 
