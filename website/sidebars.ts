@@ -117,6 +117,7 @@ const sidebars: SidebarsConfig = {
         'explanation/achados-execucao-real',
         'explanation/backlog',
         'explanation/validacao-fase-12',
+        'explanation/validacao-real',
         'explanation/aceite-providers',
         'explanation/gates',
       ],

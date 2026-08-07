@@ -385,3 +385,37 @@ real expõe** — que é, literalmente, a tese desta fase.
 > `""` junto com `nil`), sem mexer no status HTTP da rota. Exceção ao
 > congelamento da FASE 13 autorizada pelo usuário, pelo mesmo motivo da Fase F:
 > a medição não era alcançável sem isto. Verificado por mutação.
+
+## Execução real com GitHub remoto (FASE 13b) — 2026-08-07
+
+Primeira execução contra repositório remoto de verdade (`daneiel/test`), com
+dev agent real e `openai/gpt-5-mini`. A cadeia até a promoção passou inteira; o
+dev agent não. Detalhe e medição em [validacao-real.md](validacao-real.md).
+
+### X. O dev agent queima o teto de iterações em repositório vazio (P1)
+
+Task *"Expor GET /saudacao"* num repositório recém-provisionado — só o template
+do Gitflow, sem código. O agente gastou as oito iterações em
+`search_workspace`/`read_file` procurando "onde está o projeto", **nunca rodou
+um comando e nunca escreveu um arquivo**. Bloqueio: `limite de iterações
+atingido`, origem `modelo`, diagnóstico `(nenhum terminal rodado)`.
+
+A origem `modelo` é tecnicamente verdadeira e praticamente inútil: o modelo não
+errou um julgamento, ele nunca chegou a julgar. Custo: 8 chamadas, 205 tokens
+de saída.
+
+É o **primeiro** cenário em que o dev agent começa do zero absoluto — todo teste
+e toda demo partiram de workspace com código.
+
+### Y. `search_workspace` não distingue "vazio" de "não encontrei"
+
+As cinco primeiras chamadas devolveram `nenhum resultado`, e o agente leu isso
+como "procure melhor" em vez de "não há nada aqui". Provável peça acionável
+do achado X.
+
+### Funcionou como projetado (registrar também)
+
+O **Psicólogo diagnosticou sozinho**, em tier pesado, lendo o event log da
+execução fracassada — e nomeou as duas causas com precisão maior que a de
+qualquer asserção do script: a ausência de `tool.call` de terminal, e o
+`search_workspace` enganando o agente. A introspecção do produto funciona.

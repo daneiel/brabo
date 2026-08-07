@@ -34,8 +34,11 @@ ou apaga evidência custa mais tarde do que hoje; um cosmético custa igual.
 | ~~H — Estado de sessão não mente~~ | ~~V~~ | **FEITA** | — | RN-064 ampliada |
 | ~~E — Qualidade do que os agentes produzem~~ | ~~K, R, J~~ | **FEITA** | — | RN-079, RN-080 e RN-081 |
 | ~~— avulso~~ | ~~promotion-check sem spec~~ | **FEITO** | — | 10 casos, verificados por mutação |
+| I — O dev agent começa do zero | X, Y | P1 | M | bloqueia qualquer dogfooding em repo novo |
 
-**Cobertura: 19 de 19.** As letras de fase (A–H) e as de achado (B–V) colidem
+**Cobertura: 19 de 19** dos achados da execução real, mais **2 novos** (X e
+Y) vindos da validação da FASE 13b — ver
+[validacao-real.md](validacao-real.md). As letras de fase (A–H) e as de achado (B–V) colidem
 por herança das duas listas; onde houver ambiguidade o texto diz "achado".
 
 Dois saíram da lista de abertos desde a primeira triagem: **A**
