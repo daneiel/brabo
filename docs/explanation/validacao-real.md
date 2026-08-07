@@ -194,7 +194,7 @@ antes de agir.
 **E o motivo de parar mudou completamente.** Não houve bloqueio: a ação de
 terminal virou `proposed_action` com `require_approval` e o agente entrou em
 `dev.awaiting_approval` — suspenso, retendo worktree e histórico, como o
-[ADR 0052](../adr/0052-o-laco-do-agente-espera-a-aprovacao.md) desenhou. Ele
+[ADR 0052](../adr/0052-dev-agent-espera-aprovacao-no-meio-do-laco.md) desenhou. Ele
 parou e esperou, em vez de queimar iterações batendo na porta.
 
 ## A quarta execução, e o que ela revelou sobre a Fase F
