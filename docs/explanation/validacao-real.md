@@ -290,6 +290,34 @@ fechada e o modelo inventa comandos; ampliar a lista é remendo. A 7ª execuçã
 prova isso de forma difícil de contestar: 25 verbos, e travou pela FORMA do
 comando, não pelo verbo.
 
+## A oitava execução, e o argumento que ela fecha
+
+Com Y, AA, AB e AC corrigidos, o dev agent fez uma única chamada:
+`bash -lc npm test --silent`. Verbo `bash`, fora da lista, `require_approval`.
+
+**A recusa está certa** — liberar `bash` anularia o allowlist inteiro, inclusive
+os `deny` embutidos. Mas as três últimas execuções, juntas, dizem uma coisa que
+nenhuma delas dizia sozinha:
+
+| execução | travou por | categoria |
+|---|---|---|
+| 6ª | `head` | **verbo** |
+| 7ª | `2>/dev/null` | **forma** |
+| 8ª | `bash -lc` | **invocação** |
+
+Três categorias distintas em três rodadas. Ampliar a lista resolve a primeira e
+não toca nas outras duas. **O allowlist de verbos não converge** contra um
+agente que escolhe livremente como invocar o que quer rodar.
+
+Isso não é defeito do allowlist: ele cumpre o que promete, e a recusa do `bash`
+é a prova de que a fronteira segura. É um limite de ESCOPO — ele não foi
+desenhado para viabilizar autonomia, e não viabiliza.
+
+A conclusão prática da 13b é essa, e vale mais que a PR: **o caminho para o
+gate por LLM não passa por afrouxar política.** Passa por fazer o agente
+esperar a decisão em vez de morrer (achado AB), que é o que o ADR 0052 já fez
+para o dev agent.
+
 ## O que esta validação ainda NÃO prova
 
 Honestidade sobre o alcance, como na irmã dela:

@@ -593,3 +593,46 @@ Duas peças distintas para triar:
   redirecionamento não é composição de comandos como `&&` e `|`);
 - o teto de escopo tratando `/dev/null` como caminho de usuário
   (`path-scope.ts`, da Fase F).
+
+### AD. O agente embrulha comandos em `bash -lc`, e o allowlist não tem resposta (P1)
+
+Oitava execução da 13b, com os achados Y, AA, AB e AC já corrigidos. O dev
+agent fez UMA chamada de ferramenta:
+
+```
+bash -lc npm test --silent
+```
+
+O verbo é `bash`. Não está em `allow`, e virou `require_approval`.
+
+**A recusa está certa, e é importante que esteja.** Liberar `bash` anularia o
+allowlist inteiro: `bash -lc <qualquer coisa>` passa por cima da checagem de
+verbo, incluindo os `deny` embutidos. Um allowlist que aceita `bash` não é um
+allowlist.
+
+Mas isso fecha o argumento que as execuções 6, 7 e 8 vinham construindo:
+
+| execução | o que travou | o que eu fiz |
+|---|---|---|
+| 6ª | `head` fora da lista | ampliei para 25 verbos |
+| 7ª | `2>/dev/null` (FORMA, não verbo) | corrigi o parser e o escopo (AC) |
+| 8ª | `bash -lc` (INVOCAÇÃO) | — |
+
+Cada rodada revelou uma categoria nova, e nenhuma delas era "faltou um verbo".
+**O allowlist de verbos não converge** contra um agente que escolhe livremente
+como invocar o que quer rodar — e as três formas (verbo, forma, invocação) são
+espaços diferentes, não pontos de uma lista.
+
+O que isso NÃO significa: que o allowlist esteja errado. Ele faz exatamente o
+que promete, e a recusa do `bash` prova que a fronteira funciona. O que ele não
+faz é viabilizar autonomia de agente sem intervenção humana.
+
+Duas direções para a triagem, e são diferentes em natureza:
+
+1. **Agentes de gate suspensíveis** (achado AB, metade aberta). Não elimina a
+   aprovação — faz o agente ESPERAR por ela em vez de morrer, e aí o clique do
+   usuário destrava em vez de reprovar. É o caminho que o ADR 0052 já abriu
+   para o dev agent.
+2. **Política por perfil de agente.** Um dev agent num worktree isolado é
+   diferente de um agente que toca o workspace do usuário. Hoje os dois usam o
+   mesmo `permissions.json`. Isto é decisão de produto com ADR.
