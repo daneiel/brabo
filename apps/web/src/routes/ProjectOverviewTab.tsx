@@ -30,6 +30,7 @@ import { ChevronDownIcon, ChevronRightIcon } from '../components/ui/icons';
 import { deriveExecutionProgress, formatMicros } from '../lib/execution';
 import { connectSessionHeartbeat } from '../lib/session-channel';
 import { AgentCard, type AutonomyMode } from '../components/AgentCard';
+import { AgentTimelineTree } from '../components/AgentTimelineTree';
 import { ActivityFeed } from '../components/ActivityFeed';
 import { Badge, type BadgeTone } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -286,6 +287,18 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
             );
           })}
         </div>
+
+        {/* A árvore vem LOGO ABAIXO dos cards do time, e não na coluna de
+            atividade: os cards dizem quem existe e em que estado está; a
+            árvore diz o que cada um fez e está fazendo. São a mesma pergunta
+            em duas profundidades, e separá-las em colunas diferentes obrigava
+            a olhar duas vezes. */}
+        <div className={styles.sectionHeader}>Linha do tempo do time</div>
+        <div className={styles.sectionSub}>
+          Um ramo por agente, do primeiro marco ao que ele está fazendo agora.
+          Quem está ativo abre sozinho.
+        </div>
+        <AgentTimelineTree events={events} />
 
         <ExecutionSection
           projectId={projectId}

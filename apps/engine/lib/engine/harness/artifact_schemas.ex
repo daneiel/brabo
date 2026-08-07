@@ -62,6 +62,15 @@ defmodule Engine.Harness.ArtifactSchemas do
   def known, do: @tool_emittable
 
   @doc """
+  Campos obrigatórios de um tipo. Existe para a DESCRIÇÃO da ferramenta poder
+  nomeá-los ao modelo: um modelo conversando em português emitiu `titulo`,
+  `descricao` e `comportamento` contra um schema que exige `title`,
+  `description` e `origin` — as quatro regras de negócio da conversa foram
+  recusadas, e ninguém ficou sabendo.
+  """
+  def required(type), do: Map.get(@schemas, type, [])
+
+  @doc """
   Valida `payload` (map com chaves string) contra o schema do `type`.
   `:ok` | `{:error, reason}` (tipo desconhecido, chaves faltando, ou
   validação extra do tipo).

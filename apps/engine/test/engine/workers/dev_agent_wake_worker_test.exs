@@ -54,6 +54,65 @@ defmodule Engine.Workers.DevAgentWakeWorkerTest do
     end
   end
 
+  describe "task.action_settled (ADR 0052)" do
+    test "entrega {:action_settled, ...} só pro agente do payload, com o resultado REAL" do
+      project_id = Ecto.UUID.generate()
+      :ok = Wake.subscribe(project_id, "dev-api")
+
+      DevAgentWakeWorker.perform(
+        job("task.action_settled", %{
+          "projectId" => project_id,
+          "actionId" => "a1",
+          "agentId" => "dev-api",
+          "status" => "executed",
+          "executionResult" => %{"exitCode" => 0, "stdout" => "ok"}
+        })
+      )
+
+      assert_receive {:action_settled,
+                      %{
+                        action_id: "a1",
+                        status: "executed",
+                        execution_result: %{"exitCode" => 0, "stdout" => "ok"},
+                        rejection_reason: nil
+                      }}
+    end
+
+    test "recusa entrega o motivo — é resposta, não silêncio" do
+      project_id = Ecto.UUID.generate()
+      :ok = Wake.subscribe(project_id, "dev-api")
+
+      DevAgentWakeWorker.perform(
+        job("task.action_settled", %{
+          "projectId" => project_id,
+          "actionId" => "a1",
+          "agentId" => "dev-api",
+          "status" => "denied",
+          "rejectionReason" => "esse comando não"
+        })
+      )
+
+      assert_receive {:action_settled,
+                      %{action_id: "a1", status: "denied", rejection_reason: "esse comando não"}}
+    end
+
+    test "não entrega a outro agente do mesmo projeto" do
+      project_id = Ecto.UUID.generate()
+      :ok = Wake.subscribe(project_id, "dev-web")
+
+      DevAgentWakeWorker.perform(
+        job("task.action_settled", %{
+          "projectId" => project_id,
+          "actionId" => "a1",
+          "agentId" => "dev-api",
+          "status" => "executed"
+        })
+      )
+
+      refute_receive {:action_settled, _}, 100
+    end
+  end
+
   describe "task.became_claimable" do
     test "acorda todo agente IDLE do módulo, incluindo o extra de paralelização" do
       project_id = Ecto.UUID.generate()

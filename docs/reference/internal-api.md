@@ -77,7 +77,7 @@ nova neste contrato, use o funil: é o que garante que ela não nasça órfã.
 
 ## engine → api
 
-Vinte e sete rotas, todas sob `/internal/sessions/:sessionId/` salvo indicação.
+Vinte e oito rotas, todas sob `/internal/sessions/:sessionId/` salvo indicação.
 Agrupadas pelo que fazem:
 
 ### Event log e ações
@@ -103,13 +103,71 @@ Toda chamada de modelo passa pela api. Não é indireção gratuita: é onde o
 metering acontece e onde o orçamento pode **recusar** a chamada. Um engine que
 falasse direto com o provedor tornaria o teto de gasto inaplicável.
 
+Os **dois** caminhos usam o mesmo teto de tempo, `LLM_TURN_TIMEOUT_MS` (default
+300 000 ms). Um turno de LLM não é uma chamada de API comum: com modelo local o
+primeiro turno ainda carrega vários GB de pesos antes do primeiro token, e com
+provider de API o contexto grande demora. Em `/llm-turn-stream` o valor vale por
+CHUNK recebido, ou seja, é o teto de INATIVIDADE que o
+[ADR 0041](../adr/0041-base-openai-compativel-e-contrato-de-llm-providers.md)
+pede — não o da
+resposta inteira.
+
+O teto precisa ser explícito nos dois: sem passá-lo, o `Req` usa o default dele,
+de 15 segundos. Enquanto só o caminho não-streamado o passava, os quatro agentes
+conversacionais — que usam apenas o streamado — falhavam a 15s com
+`%Req.TransportError{reason: :timeout}`, classificado como origem `infra`. Com
+modelo local o turno cabia nos 15s e o defeito não aparecia.
+
+### Ciclo de vida da sessão
+
+| método | caminho |
+|---|---|
+| GET | `/internal/sessions/:id/pending-work` (**não** é session-scoped no sentido dos demais: é sobre a sessão, não dentro dela) |
+
+O `SessionServer` pergunta antes de encerrar por heartbeat. O timeout mede
+inatividade da ABA — 30 segundos —, e fechar sessão é sobre o TRABALHO ter
+acabado, não sobre quem está olhando. Numa execução real isso prendeu um
+handoff `offered` para o Arquiteto dentro de uma sessão fechada
+([RN-064](../business-rules.md#rn-064)).
+
+Resposta: `{ pending, motivo }`. `motivo` vai para o log do engine — sessão que
+se recusa a fechar sem dizer por quê é indiagnosticável. E api fora do ar
+**não** impede o encerramento: trocar sessão órfã por sessão imortal seria
+trocar um defeito por outro.
+
+### Registro de gates
+
+| método | caminho |
+|---|---|
+| GET | `/internal/gates` (**não** é session-scoped) |
+
+Leitura do registro declarativo de `docs/gates.yml`
+([ADR 0054](../adr/0054-gates-como-registro-declarativo.md)). Não é
+session-scoped pelo mesmo motivo do catálogo de modelos: o registro é global —
+quais gates existem é fato do produto, igual para todo projeto.
+
+Read-only, e sem rota de escrita **de propósito**: o registro muda por PR
+revisado, não em runtime. Uma rota de escrita transformaria uma decisão de
+engenharia em configuração de produção, que é o que o ADR recusou ao escolher
+YAML em vez de tabela.
+
+O arquivo viaja dentro da imagem (`COPY docs/gates.yml` em
+`docker/api/Dockerfile.prod`), como as migrations: o loader sobe de
+`__dirname` até achá-lo, e em produção o encontra em `/app/docs/gates.yml`. A
+carga é preguiçosa — arquivo ilegível responde erro nesta rota, em vez de
+impedir a api de subir.
+
+O mecanismo inteiro está em
+[docs/explanation/gates.md](../explanation/gates.md).
+
 ### Catálogo de modelos
 
 | método | caminho |
 |---|---|
 | POST | `/internal/models/sync` (**não** é session-scoped) |
 
-A única rota `engine → api` fora de `/internal/sessions/:sessionId/`, porque o
+Uma das duas rotas `engine → api` fora de `/internal/sessions/:sessionId/` (a
+outra é o [remoto de trabalho](#remoto-de-trabalho-do-projeto)), porque o
 sync de catálogo não pertence a sessão nem a workspace nenhum: o catálogo é
 GLOBAL — nome, preço, janela e capabilities são fato do provider, iguais para
 todo mundo. Desde o [ADR 0051](../adr/0051-facetas-de-capability-e-curadoria-por-uso.md)
@@ -141,6 +199,40 @@ Duas coisas que esta rota **não** faz, e que já foram diferentes:
   como está, e toda troca que o sync faz grava uma linha em
   `model_price_changes` com origem `sync` — na mesma transação da escrita
   ([RN-044](../business-rules.md#rn-044), [RN-051](../business-rules.md#rn-051)).
+
+### Remoto de trabalho do projeto
+
+| método | caminho |
+|---|---|
+| GET | `/internal/projects/:projectId/git-remote` (**não** é session-scoped) |
+
+A segunda rota `engine → api` fora de `/internal/sessions/:sessionId/`, e a
+**única do produto que devolve um segredo decifrado**
+([ADR 0056](../adr/0056-o-engine-trabalha-em-repositorio-remoto.md)).
+
+Ela existe pela mesma divisão do sync de catálogo, aplicada a outro recurso:
+quem trabalha no sistema de arquivos é o engine, quem tem a chave mestra é a
+api. Sem ela, projeto em provider remoto fazia a metade conversacional e parava
+na de construção — `get_local_repo_path/1` recusava tudo que não fosse `local`,
+e worktree, terminal, diff de gate e contexto paravam junto.
+
+Responde com a origem **limpa** (`origin`), a branch default e, para provider
+remoto, `token` e `username` à parte. A separação não é estética:
+
+> **O `origin` nunca carrega credencial.** É esse valor que fica gravado no
+> `.git/config` do workspace, **dentro da pasta onde o dev agent tem leitura
+> auto-aprovada** ([RN-075](../business-rules.md#rn-075)). Uma URL do tipo
+> `https://x-access-token:TOKEN@…` ali seria um `cat .git/config` de distância
+> de virar contexto de LLM.
+
+Quem consome tem a obrigação simétrica: injetar o token **por invocação**, no
+ambiente do processo filho de cada chamada do git, e nunca em argv nem em
+arquivo ([RN-076](../business-rules.md#rn-076), `Engine.Actions.GitAuth`).
+
+A credencial é a do **owner do workspace**, pelo mesmo resolvedor da
+[RN-058](../business-rules.md#rn-058). Provider `local` **não chega aqui**: é
+resolvido direto do banco pelo engine, não tem token e não depende de a api
+estar no ar — é o caminho que o `pnpm dev` e a suite inteira exercitam.
 
 ### Contexto por agente
 
@@ -176,6 +268,18 @@ agente" — ver [RN-037](../business-rules.md#rn-037)). **Não** é
 
 `tasks/claim` é atômico do lado da api — é o que impede dois dev agents de
 pegarem a mesma task.
+
+**Sem task pegável, a resposta é `201` com corpo VAZIO**, não `null` no corpo: o
+caso de uso devolve `null` e o NestJS serializa isso como `content-length: 0`.
+Quem consome precisa tratar corpo vazio como "nada a reivindicar" — e é
+justamente o que o `EngineApiClient.claim_task/4` faz, normalizando para `nil`
+antes de entregar ao `AgentIo`.
+
+Vale escrever porque a suposição contrária custou caro: o cliente assumia
+`null` decodificado, recebia `""`, e o dev agent tratava a string vazia como se
+fosse uma task — morrendo no momento mais comum que existe, o da fila do módulo
+esvaziando (achado W, em
+[achados-execucao-real.md](../explanation/achados-execucao-real.md)).
 
 ### Gates
 

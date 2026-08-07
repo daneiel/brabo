@@ -56,6 +56,28 @@ defmodule Engine.Sessions.EngineApiClient do
               {:ok, map()} | {:error, term()}
 
   @doc """
+  A sessão tem trabalho pendente que impeça encerrá-la por heartbeat?
+
+  Fechar sessão é sobre o TRABALHO ter acabado, não sobre quem está olhando. O
+  timeout de 30s matava a sessão assim que a aba saía da tela — e numa execução
+  real deixou um handoff `offered` para o Arquiteto preso numa sessão fechada,
+  com épico e quatro histórias prontos e a cadeia sem como seguir.
+  """
+  @callback session_pending_work(session_id :: String.t()) ::
+              {:ok, %{pending: boolean(), motivo: String.t() | nil}} | {:error, term()}
+
+  @doc """
+  O remoto de trabalho de um projeto (ADR 0056): `%{kind, origin, default_branch,
+  token, username}`.
+
+  O engine não tem a chave mestra e não deve ter — quem decifra é a api. Quem
+  consome o `token` injeta por invocação e NUNCA o escreve em arquivo; ver
+  `Engine.Actions.GitAuth`.
+  """
+  @callback get_git_remote(project_id :: String.t()) ::
+              {:ok, map()} | {:error, term()}
+
+  @doc """
   Cria um handoff (offered) na api — o Criativo oferece ao PO ao emitir o
   product_brief. Retorna `{:ok, handoff_map}` ou `{:error, term}`.
   """
@@ -360,6 +382,10 @@ defmodule Engine.Sessions.EngineApiClient do
   def llm_turn_stream(project_id, session_id, agent, messages, tools, on_delta),
     do: impl().llm_turn_stream(project_id, session_id, agent, messages, tools, on_delta)
 
+  def session_pending_work(session_id), do: impl().session_pending_work(session_id)
+
+  def get_git_remote(project_id), do: impl().get_git_remote(project_id)
+
   def create_handoff(project_id, session_id, from_agent, to_agent, artifact_id),
     do: impl().create_handoff(project_id, session_id, from_agent, to_agent, artifact_id)
 
@@ -615,12 +641,31 @@ defmodule Engine.Sessions.EngineApiClient.Live do
 
   @impl true
   def claim_task(project_id, session_id, module, agent_id) do
-    # `null` (sem task pegável) volta como {:ok, nil} — não é erro.
-    post_returning("/internal/sessions/#{session_id}/tasks/claim", %{
-      projectId: project_id,
-      module: module,
-      agentId: agent_id
-    })
+    # Sem task pegável NÃO é erro — e não chega como `null`.
+    #
+    # O caso de uso devolve `null`, mas o NestJS serializa isso como resposta
+    # VAZIA: `201` com `content-length: 0`. O `Req` entrega `body: ""`, que não
+    # é `nil` — então `AgentIo.try_claim/2` casava com a cláusula de task
+    # encontrada e chamava `run_task("")`, estourando `BadMapError` em
+    # `Map.get("", "id", nil)`. Como o server é `restart: :temporary`, o agente
+    # morria de vez e o `Monitor` apagava a linha de estado logo atrás.
+    #
+    # O efeito é o oposto do que a Fase 12b entregou: em vez de `dev.idle`
+    # supervisionado e acordável por evento, processo morto — e no momento MAIS
+    # comum que existe, o da fila do módulo esvaziando. Vale para o dev agent
+    # REAL, não só para o Noop: `try_claim/2` mora no `AgentIo` compartilhado.
+    #
+    # Normalizado aqui, no consumidor, e não mudando o status HTTP da rota:
+    # corpo vazio é "nada pegável" venha de onde vier, e o contrato que outros
+    # consumidores observam fica intocado.
+    case post_returning("/internal/sessions/#{session_id}/tasks/claim", %{
+           projectId: project_id,
+           module: module,
+           agentId: agent_id
+         }) do
+      {:ok, corpo} when corpo in ["", nil] -> {:ok, nil}
+      outro -> outro
+    end
   end
 
   @impl true
@@ -704,6 +749,45 @@ defmodule Engine.Sessions.EngineApiClient.Live do
     case Req.get(url, headers: headers()) do
       {:ok, %Req.Response{status: status, body: body}} when status in 200..299 ->
         {:ok, body}
+
+      {:ok, %Req.Response{status: status, body: resp}} ->
+        {:error, {status, resp}}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  @impl true
+  def session_pending_work(session_id) do
+    url = api_url() <> "/internal/sessions/#{session_id}/pending-work"
+
+    case Req.get(url, headers: headers()) do
+      {:ok, %Req.Response{status: status, body: body}} when status in 200..299 ->
+        {:ok, %{pending: Map.get(body, "pending", false), motivo: Map.get(body, "motivo")}}
+
+      {:ok, %Req.Response{status: status, body: resp}} ->
+        {:error, {status, resp}}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  @impl true
+  def get_git_remote(project_id) do
+    url = api_url() <> "/internal/projects/#{project_id}/git-remote"
+
+    case Req.get(url, headers: headers()) do
+      {:ok, %Req.Response{status: status, body: body}} when status in 200..299 ->
+        {:ok,
+         %{
+           kind: Map.get(body, "kind"),
+           origin: Map.get(body, "origin"),
+           default_branch: Map.get(body, "defaultBranch"),
+           token: Map.get(body, "token"),
+           username: Map.get(body, "username")
+         }}
 
       {:ok, %Req.Response{status: status, body: resp}} ->
         {:error, {status, resp}}
@@ -855,11 +939,21 @@ defmodule Engine.Sessions.EngineApiClient.Live do
       {:cont, {req, resp}}
     end
 
+    # O MESMO teto do `llm_turn/5`. Sem ele valia o default do Req (15s), e o
+    # turno dos quatro agentes conversacionais — que só passam por aqui —
+    # morria com `%Req.TransportError{reason: :timeout}` antes do modelo
+    # responder. Com Ollama local o turno cabia nos 15s e o defeito não
+    # aparecia; com provider de API e contexto grande, não cabe.
+    #
+    # Em resposta streamada o `receive_timeout` do Req vale por CHUNK, então
+    # aqui ele é o teto de inatividade que o ADR 0041 pede — não o da resposta
+    # inteira.
     result =
       Req.post(api_url() <> "/internal/sessions/#{session_id}/llm-turn-stream",
         json: body,
         headers: headers(),
-        into: into
+        into: into,
+        receive_timeout: llm_turn_timeout_ms()
       )
 
     state = Process.get(key)

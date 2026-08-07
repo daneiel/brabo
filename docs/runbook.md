@@ -1199,12 +1199,49 @@ notificação configurado.
 
 ---
 
+## Registro de gates {#registro-de-gates}
+
+Os gates do fluxo são declarados em `docs/gates.yml`
+([ADR 0054](adr/0054-gates-como-registro-declarativo.md)). Duas coisas de
+operação valem saber.
+
+**O arquivo viaja dentro da imagem.** `docker/api/Dockerfile.prod` o copia nos
+dois estágios, como faz com as migrations, e `.dockerignore` o reinclui
+explicitamente — `docs/` inteiro é ignorado, e este é o único arquivo de lá que
+é dado de produção, não documentação. Em runtime ele fica em
+`/app/docs/gates.yml`; o loader sobe de `__dirname` até achá-lo, sem variável
+de ambiente.
+
+**Arquivo ilegível não derruba a api.** A carga é preguiçosa: quem pedir
+`GET /internal/gates` recebe o erro, e o resto do processo segue. Se a rota
+responder erro, confira que o arquivo chegou:
+
+```bash
+kubectl -n brabo exec deploy/api -- cat /app/docs/gates.yml | head -5
+```
+
+Vazio ou ausente quer dizer que a imagem foi construída sem ele — provável
+`.dockerignore` mexido, ou build a partir de um contexto que não tem `docs/`.
+
+Para ver o registro como a api o enxerga, já validado:
+
+```bash
+kubectl -n brabo exec deploy/api -- \
+  curl -sH "x-brabo-service-token: $BRABO_SERVICE_TOKEN" localhost:3000/internal/gates
+```
+
+A medição de passagem NÃO roda em produção: é
+`pnpm --filter api validacao:gates`, do repositório, contra o banco. Ver
+[docs/explanation/gates.md](explanation/gates.md).
+
+---
+
 ## Ambiente de inferência {#ambiente-de-inferencia}
 
 Quando o agente responde vazio, truncado, lentíssimo, ou "esquece" as próprias
-instruções, o problema quase nunca está no código de domínio — está aqui. Estas
-cinco causas foram levantadas em nove execuções seguidas do demo de gates e
-estão registradas no
+instruções, o problema quase nunca está no código de domínio — está aqui. As
+cinco primeiras causas foram levantadas em nove execuções seguidas do demo de
+gates e estão registradas no
 [ADR 0020](adr/0020-destravar-gates-qa-secops.md); todas as variáveis estão
 expostas no `docker-compose.yml`.
 
@@ -1215,6 +1252,7 @@ expostas no `docker-compose.yml`.
 | `OLLAMA_MAX_LOADED_MODELS` | com `OLLAMA_KEEP_ALIVE` alto os modelos acumulam: 15,2 GB de pesos residentes numa máquina de 15 GB, e o agente respondendo vazio por falta de memória |
 | `OLLAMA_REQUEST_TIMEOUT_MS` | timeout curto demais para um modelo grande num prompt longo |
 | `START_OUTBOX_DRAIN` / `START_ANAMNESE` | Psicólogo e Anamnese consomem turnos de LLM em paralelo com os agentes de execução e derrubam a conexão do dev no meio do ciclo |
+| `TERMINAL_OUTPUT_MAX_BYTES` | subir demais traz de volta o modo de falha que o teto existe para impedir: a saída de cada comando fica no histórico do laço e viaja em TODO turno seguinte, até o provider recusar a requisição com **HTTP 413** (`request entity too large`). O sintoma engana — parece o modelo travando, e é o corpo da requisição estourando. Não é janela de contexto: a maior chamada bem-sucedida da execução que morreu assim tinha só 28.993 tokens de entrada ([RN-074](business-rules.md#rn-074)) |
 
 > **Atenção — o guard não limpa a fila.** `START_ANAMNESE=false` impede
 > **novos** enfileiramentos, não os antigos. Chegou a haver 20 `AnamneseWorker`

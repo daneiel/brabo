@@ -332,3 +332,75 @@
   color: var(--text-muted);
   margin-bottom: 6px;
 }
+
+/* O balão de falha. Mesma forma do balão normal — é o agente falando —, com a
+   borda em `danger` para não se confundir com resposta do modelo. */
+.bubbleFalha {
+  border: 1px solid color-mix(in srgb, var(--danger) 45%, transparent);
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+  color: var(--text-primary);
+}
+
+/* O convite que ocupa o chat vazio. Não é erro nem aviso: é a explicação de
+   quem fala primeiro, que antes só existia na cabeça de quem construiu. */
+.convite {
+  max-width: 560px;
+  margin: 48px auto;
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-1);
+}
+
+.conviteTitulo {
+  margin: 0 0 12px;
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.conviteTexto {
+  margin: 0 0 12px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+/* O exemplo é clicável: preenche o campo em vez de mandar a pessoa digitar. */
+.conviteExemplo {
+  display: block;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.6;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 120ms ease, color 120ms ease;
+}
+
+.conviteExemplo:hover {
+  border-color: var(--accent);
+  color: var(--text-primary);
+}
+
+.conviteRodape {
+  margin: 16px 0 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+/* O balão de resposta vazia herdada. Discreto de propósito: é arqueologia, não
+   um problema para resolver agora. */
+.bubbleVazio {
+  border: 1px dashed var(--border-strong);
+  background: transparent;
+  color: var(--text-muted);
+  font-style: italic;
+}

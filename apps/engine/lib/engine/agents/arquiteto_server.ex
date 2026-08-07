@@ -15,6 +15,7 @@ defmodule Engine.Agents.ArquitetoServer do
   use GenServer, restart: :temporary
 
   alias Engine.Harness.{ContextBuilder, PromptAssembler, ContextManager, ToolCallRecovery}
+  alias Engine.Agents.FalhaDeTurno
   alias Engine.Harness.Tools.{CreateModuleMap, AssignStoryModules, ProposeAdr, EmitInsight}
   alias Engine.Sessions.{EngineApiClient, LiveBroadcast}
 
@@ -129,7 +130,8 @@ defmodule Engine.Agents.ArquitetoServer do
   defp run_turn(state, remaining) when remaining <= 0, do: state
 
   defp run_turn(state, remaining) do
-    on_delta = fn text -> broadcast(state, "agent.delta", %{text: text}) end
+    # Ver o comentário em `criativo_server.ex`: quem fala é o agente (achado C).
+    on_delta = fn text -> broadcast(state, "agent.delta", %{text: text, agent: @agent}) end
     wire = Enum.map(state.messages, &to_wire/1)
 
     case EngineApiClient.llm_turn_stream(
@@ -140,6 +142,13 @@ defmodule Engine.Agents.ArquitetoServer do
            state.tool_specs,
            on_delta
          ) do
+      # A api narra a falha no PRÓPRIO frame final (budget, credencial, binding).
+      # Isto não caía no `{:error, _}` abaixo e não emitia evento nenhum: o
+      # turno terminava em silêncio absoluto, pior que o balão vazio.
+      {:ok, %{"error" => erro}} when is_binary(erro) and erro != "" ->
+        emit_falha(state, {:final, erro})
+        {state, ""}
+
       {:ok, %{"message" => message}} ->
         content = Map.get(message, "content", "")
         state = append(state, assistant_msg(content))
@@ -155,8 +164,11 @@ defmodule Engine.Agents.ArquitetoServer do
         end
 
       {:error, reason} ->
-        emit_response(state, "")
-        broadcast(state, "agent.error", %{reason: inspect(reason)})
+        # NUNCA mais `agent.response` vazio aqui: no event log ele é
+        # indistinguível de sucesso, e o motivo real ia só por broadcast, que
+        # é efêmero. A falha vira evento durável COM origem, e o agente diz o
+        # que houve no próprio fio.
+        emit_falha(state, reason)
         state
     end
   end
@@ -307,6 +319,21 @@ defmodule Engine.Agents.ArquitetoServer do
 
   defp emit_response(state, content),
     do: emit(state, "agent.response", %{content: content})
+
+  # A falha, gravada e DITA. O `broadcast` continua, para quem está com a aba
+  # aberta ver na hora — mas ele deixou de ser a única fonte.
+  defp emit_falha(state, reason) do
+    origem = FalhaDeTurno.origem(reason)
+    mensagem = FalhaDeTurno.mensagem(reason)
+
+    emit(state, "agent.error", %{
+      origem: origem,
+      mensagem: mensagem,
+      reason: inspect(reason)
+    })
+
+    broadcast(state, "agent.error", %{origem: origem, mensagem: mensagem})
+  end
 
   defp emit(state, type, payload) do
     EngineApiClient.append_event(state.project_id, state.session_id, %{

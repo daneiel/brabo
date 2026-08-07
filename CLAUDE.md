@@ -118,20 +118,22 @@ e pipeline de aprovação de ações com autoridade final do usuário.
 ## Escopo da FASE 13 (ativa — provar de verdade e triar os achados)
 Nenhuma feature nova. A fase fecha as pendências declaradas, prova o
 que a validação Local/Noop declaradamente não prova, e transforma os
-14 achados abertos em plano priorizado. Lição incorporada: a tabela
+19 achados abertos em plano priorizado. Lição incorporada: a tabela
 manual da Fase 10 nunca foi preenchida — nesta fase TODA métrica é
 extraída por script do event log/token_usage, nunca anotada à mão.
 
 ### 13a — Fechar as pendências declaradas
-1. Rodar `pnpm --filter api validacao:fase-12` e preencher a tabela de
-   event ids em docs/explanation/validacao-fase-12.md (o TODO(humano)
-   do próprio arquivo sai).
-2. Smokes com credencial real da Fase 11: rodar os que houver
-   `<PROVIDER>_TEST_KEY` exportada (custo em centavos, autorização
-   explícita do usuário antes); resultado datado — quais rodaram,
-   quais pularam e por quê — registrado em
-   docs/explanation/aceite-providers.md (ADR 0043 não é editado; o
-   documento o referencia).
+1. CONCLUÍDO em 2026-08-07: `pnpm --filter api validacao:fase-12` sai `0`
+   e a tabela de event ids está em docs/explanation/validacao-fase-12.md
+   (o TODO(humano) saiu). Custou quatro correções — três do INSTRUMENTO
+   (a cobaia nascia em /tmp, invisível ao engine; o Noop não abria o
+   gate; o Noop morria em `pr_settled`) e uma do PRODUTO (achado W: o
+   dev agent morria quando a fila esvaziava).
+2. PARCIAL em 2026-08-07: o smoke do **OpenRouter** rodou com credencial
+   real e fechou (custo real US$ 0,000005, lido do `token_usage`). Os
+   outros cinco seguem pulados — não há chave deles no ambiente. O smoke
+   estava apodrecido contra o ADR 0049 e nunca tinha rodado; corrigido
+   junto. Resultado datado em docs/explanation/aceite-providers.md
 
 ### 13b — Validação REAL: GitHub remoto + gates por LLM, MEDIDA
 3. Repetir o roteiro da validação num projeto ADOTADO do fork via
@@ -150,21 +152,110 @@ extraída por script do event log/token_usage, nunca anotada à mão.
    tabela extraída; achado novo vai para a triagem da 13c como item,
    nunca como fix (a disciplina de sempre).
 
-### 13c — Triagem dos 14 achados abertos
+### 13c — Triagem dos 19 achados abertos
 6. Sessão de triagem: ler docs/explanation/primeiro-dogfooding.md e
-   classificar os 14 achados em P1/P2/P3 com proposta de agrupamento
+   classificar os 19 achados em P1/P2/P3 com proposta de agrupamento
    em fases coesas (por tema e dependência entre eles), custo relativo
    estimado (P/M/G) e risco de esperar. A saída é PROPOSTA — a
    decisão de prioridade é do usuário.
 7. Consolidar o backlog completo num documento vivo
    (docs/explanation/backlog.md ou equivalente): achados triados +
-   itens antigos — aparato genérico de áreas e budget por área
-   (ADR 0038), Dev Lead e áreas via module_map (ADR 0038), handoff
-   manual a agente à escolha, MFA/social/OIDC/federação (ADR 0031),
+   itens antigos — budget por área (ADR 0038; o aparato de áreas e o
+   Dev Lead saíram do backlog com o ADR 0053, que a FASE 14d
+   implementa), handoff manual a agente à escolha,
+   MFA/social/OIDC/federação (ADR 0031),
    SMTP real no MailSender, deploy (DEPLOY_ENABLED + Environments),
    volta da rc/rcfix (ADR 0030), modo community do approval-ladder,
    "N agentes online" no dashboard, preferência de moeda com taxa
    manual.
+
+## FASE 14 (ativa em paralelo à 13 — o que a execução real exigiu)
+A execução do hello world não passou do primeiro turno e revelou defeitos que
+nenhuma suite pegava, porque tudo antes rodou com modelo LOCAL. As correções
+já entraram; o que sobra é feature decidida pelo usuário durante a execução.
+
+### 14a — Operabilidade dos agentes (CONCLUÍDA)
+- Falha de turno virou `agent.error` DURÁVEL com origem, e o agente FALA no
+  fio; os quatro conversacionais paravam de gravar `agent.response` vazio
+  (RN-059). O caminho do erro narrado no frame final, que não emitia evento
+  nenhum, também fechou.
+- O chat do Criativo abre com convite em vez de vazio: ele é ativado e espera
+  o usuário falar primeiro, e a tela agora diz isso — incluindo que tecnologia
+  e código NÃO são dele.
+- A chave que o agente gasta é a do OWNER do workspace (RN-058). Antes o turno
+  procurava a credencial pelo SLUG do agente numa coluna UUID: nenhum agente
+  jamais usou provider com credencial, e só `ollama` funcionava.
+- Relatório de gasto das chaves, só para o owner, com agente separado de
+  pessoa (RN-060).
+- Bootstrap de Gitflow no GitHub: repo recém-criado responde 409 em toda a Git
+  Data API, e o primeiro commit passa pela Contents API. O backend falso dos
+  testes mentia (404 onde o GitHub responde 409) — corrigido junto, é o que
+  fazia a suite ficar verde com o produto quebrado.
+
+### 14b — Linha do tempo em árvore (CONCLUÍDA)
+Um ramo por agente, do primeiro marco ao que ele está fazendo AGORA, derivado
+100% do event log que a tela já busca. Ativos abrem sozinhos; quem terminou
+nasce fechado. O feed cronológico continua, na coluna de atividade: ele
+responde "o que aconteceu", a árvore responde "quem está fazendo o quê".
+
+### 14c — Validação automática de UI (CONCLUÍDA)
+Contraste virou teste sobre `design/tokens.css`, com a dívida conhecida medida
+e travada; layout (texto cortado, menu fora da viewport, dropdown recortado
+por ancestral, alvo < 24px) virou verificador de navegador em
+`scripts/dev/validacao-visual.js`. Sem dependência nova.
+
+### 14d — Paralelismo decidido pelo LEAD, com autorização do usuário (A FAZER)
+Decisão do usuário, tomada durante a execução — substitui a ideia de teto fixo:
+
+1. **Quem decide é o lead.** Ele avalia quantos agentes valem a pena para o
+   trabalho em mão, em vez de um número fixo no código.
+2. **Acima de 2, pede autorização.** Passar de dois agentes na sessão vira
+   `proposed_action` — o mesmo pipeline de aprovação de toda ação com efeito
+   externo. O usuário decide, e a decisão fica no event log.
+3. **Configurável por lead**, na tela de Configurações: cada lead tem um máximo
+   próprio, com 2 como default.
+4. **A Anamnese propõe subir o limite** quando perceber que a autorização é
+   RECORRENTE — mesma mecânica de hipótese que ela já usa, com o usuário
+   decidindo. Automatizar sem isso seria o produto elevando o próprio teto de
+   gasto, que é exatamente o que o pipeline de aprovação existe para impedir.
+
+Ainda não implementado. O que existe hoje continua: um agente por módulo no
+`start`, e um extra por módulo (`dev-<modulo>-2`) via aceite de um clique, sem
+teto de sessão.
+
+O desenho está fechado no ADR 0053, que revoga três cortes de uma vez (Dev
+Lead, áreas dinâmicas via module_map e o aparato genérico de áreas) — os três
+caem juntos porque os membros da área de dev são um por módulo do module_map,
+decididos pelo Arquiteto e diferentes em cada projeto, logo não são
+hardcodáveis como qa e infra.
+
+## FASE 15 (paralela à 13 — gates como dado)
+Nenhum gate NOVO. A fase extrai para docs/gates.yml os gates que JÁ
+existem implícitos no produto, com verificação por script e severidade,
+no mesmo espírito do docs/.docmap.yml. Gate de agente que não existe
+(dev-lead, platform) entra como `status: planned` referenciando o
+backlog — nunca ativo. O contrato externo dos gates NÃO muda.
+
+### 15a — Registro declarativo
+1. docs/gates.yml com os gates existentes (ver ADR 0054, que estende o
+   ADR 0048 — a decisão no event log é o que torna a passagem de um
+   gate mensurável), schema validado por teste.
+2. Loader na api lendo o registro; endpoint interno de leitura.
+3. Script `pnpm --filter api validacao:gates` que extrai do event log
+   a última passagem de cada gate ativo e sai != 0 se algum gate
+   `block` não tem evidência de verificação por script.
+
+Nem todo gate tem prova no event log, e o registro diz onde ela mora:
+`merge-protegida` é garantido por TESTE (a trava em decide.ts não emite
+evento próprio) e `backmerge` é CI, com estado em .release/gate.json.
+Por isso cada gate declara `evidencia: event_log | teste | ci` com o
+localizador — rebaixá-los a `warn` seria mentir sobre as travas mais
+duras do produto.
+
+### 15b — Consumo
+4. Painel do time exibe o gate que cada story/PR está aguardando,
+   derivado do registro (não hardcoded).
+5. docs/explanation/gates.md explicando o mecanismo, no docmap.
 
 ## Stack (decidida — não proponha alternativas)
 - `apps/api`: NestJS 11 + Drizzle ORM + PostgreSQL 16 + pgvector
@@ -188,7 +279,7 @@ extraída por script do event log/token_usage, nunca anotada à mão.
   Trabalho nasce de dev com a taxonomia da política (breaking/,
   feature/, bugfix/, perf/, refactor/, chore/, docs/, test/);
   hotfix/ nasce de main. Formato funcao/descritivo,
-  regex ^.{0,15}/\S{0,32}$. Commits em conventional commits, pt-BR.
+  regex ^.{0,30}/\S{0,32}$. Commits em conventional commits, pt-BR.
 - Toda mudança entra por PR — push direto em permanente é bloqueado;
   únicas exceções de push: tags (bot de release) e .release/gate.json
   (bot do gate).
@@ -216,7 +307,11 @@ extraída por script do event log/token_usage, nunca anotada à mão.
   como co-author.
 - Todo desfecho de falha de agente registra a ORIGEM da falha
   (infra | modelo | código | política) — nunca diagnóstico por
-  eliminação (lição do ADR 0020).
+  eliminação (lição do ADR 0020). Falha NUNCA vira resposta vazia no
+  event log, e o motivo NUNCA fica só em broadcast: `agent.error` é
+  durável e o agente diz o que houve no fio (RN-059).
+- A chave de LLM que um agente gasta é a do OWNER do workspace
+  (RN-058); o relatório desse gasto é do owner e só dele (RN-060).
 - Métrica de execução de agentes é extraída do event log/token_usage
   por script, nunca anotada manualmente (lição da Fase 10/13).
 - Testes: vitest (api/web/scripts de CI), ExUnit (engine). Nenhuma
@@ -226,7 +321,10 @@ extraída por script do event log/token_usage, nunca anotada à mão.
   declara-se false e degrada (regra dos ADRs 0041/0042, vale para git
   e LLM).
 - UI: fidelidade estrita ao design system em design/ (tokens, tipografia
-  Space Grotesk/Archivo/IBM Plex Mono, dark mode primário).
+  Space Grotesk/Archivo/IBM Plex Mono, dark mode primário). Contraste é
+  medido por teste sobre os tokens e layout é verificado no navegador
+  por scripts/dev/validacao-visual.js — as duas validações estão
+  explicadas em design/README.md.
 - Segredos de usuário (API keys de LLM e tokens de git) criptografados
   com envelope encryption; nunca em plaintext no banco ou em logs.
 - Decisões arquiteturais relevantes registradas em docs/adr/.
@@ -261,17 +359,36 @@ extraída por script do event log/token_usage, nunca anotada à mão.
 - Não usar Redis (filas ficam no Postgres via Oban)
 - Não implementar MFA, login social, OIDC provider ou federação
   (backlog do ADR 0031)
-- Não implementar Dev Lead nem áreas dinâmicas via module_map (backlog
-  do ADR 0038)
-- Não implementar o aparato genérico de áreas (agent_areas/budget por
-  área) — corte registrado da Fase 8
+- Dev Lead, áreas dinâmicas via module_map e o aparato genérico de
+  áreas (agent_areas) DEIXARAM de ser proibidos: o ADR 0053 revogou os
+  três cortes (do ADR 0038 e da Fase 8) e a FASE 14d os implementa.
+  Fora da 14d, continuam valendo — não abra área nova de passagem
 - Não versionar à mão: toda tag nasce de workflow
 - Não instalar libs sem justificar no plano
 - Não refatorar código de fase concluída sem pedido explícito
 - Não ativar modelo descoberto automaticamente: curadoria manual
   sempre (ADR 0042)
-- Não corrigir de passagem os 14 achados abertos do dogfooding — cada
-  um espera a fase que o endereça, e corrigir fora dela apaga a
-  evidência de por que existia
+- Não corrigir de passagem os 19 achados abertos, hoje em
+  docs/explanation/achados-execucao-real.md — cada um espera a fase que
+  o endereça, e corrigir fora dela apaga a evidência de por que existia
+- (FASE 15) Nenhum gate NOVO e nenhuma mudança de comportamento de
+  gate existente — a fase só DECLARA e MEDE o que já existe
 - (FASE 13) Nenhuma feature nova e nenhum fix: a fase produz
-  execuções, medições e um plano — achado novo entra na triagem
+  execuções, medições e um plano — achado novo entra na triagem.
+  EXCEÇÃO ABERTA PELO USUÁRIO em 2026-08-06: a Fase F do backlog
+  (achados S e U) foi implementada, porque a escada de aprovação e o
+  contexto sem teto impediam QUALQUER execução de chegar ao fim — a
+  medição que a 13b pede não era alcançável sem isso. O congelamento
+  segue valendo para o resto: as demais fases do backlog continuam
+  esperando decisão de prioridade.
+  SEGUNDA EXCEÇÃO, em 2026-08-07: o achado W (dev agent morria em vez de
+  ir para `idle` quando a fila do módulo esvaziava — corpo vazio no claim
+  virando `run_task("")`) foi corrigido durante a 13a.1, pelo mesmo
+  critério: o passo 5 da validação não fechava sem ele. As três outras
+  correções da mesma rodada são do INSTRUMENTO (o script e o Noop), não
+  do produto, e não precisavam de exceção.
+  TERCEIRA EXCEÇÃO, em 2026-08-07: o achado Y (`search_workspace` dizendo
+  a mesma frase para "não achei" e "não há o que achar") foi corrigido a
+  pedido do usuário, pelo mesmo critério — sem ele o dev agent queima o
+  teto de iterações em repositório novo, nenhuma PR nasce, e a metade da
+  13b que mede gates por LLM fica inalcançável

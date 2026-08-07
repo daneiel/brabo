@@ -126,6 +126,62 @@ defmodule Engine.Outbox.DrainTest do
       )
     end
 
+    test "task.action_settled roteia pro DevAgentWakeWorker (ADR 0052)" do
+      row =
+        insert_outbox_event!(%{
+          aggregate_type: "task",
+          event_type: "task.action_settled",
+          payload: %{
+            "projectId" => "p1",
+            "actionId" => "a1",
+            "agentId" => "dev-api",
+            "status" => "executed"
+          }
+        })
+
+      Drain.run_once()
+
+      reloaded = Repo.get!(Event, row.id)
+      assert reloaded.processed_at != nil
+
+      assert_enqueued(
+        worker: Engine.Workers.DevAgentWakeWorker,
+        args: %{
+          "event_type" => "task.action_settled",
+          "aggregate_id" => row.aggregate_id,
+          "payload" => %{
+            "projectId" => "p1",
+            "actionId" => "a1",
+            "agentId" => "dev-api",
+            "status" => "executed"
+          }
+        }
+      )
+    end
+
+    test "o MESMO evento sob aggregate_type proposed_action é invisível — o agente espera para sempre" do
+      # A regressão que custou uma execução inteira: a api emitia
+      # `task.action_settled` no agregado `proposed_action`, e o `where` deste
+      # dreno só lê `session`/`task`. O evento nascia, ficava com
+      # `processed_at` nulo e NUNCA era sequer lido — nenhum job, nenhum erro,
+      # nenhum log. O agente ficava em `awaiting_approval` em silêncio.
+      #
+      # Metade do contrato mora aqui; a outra metade é o `aggregateType: 'task'`
+      # fixado em approve-deny-action.use-case.spec.ts, do lado da api. Nenhum
+      # dos dois lados sozinho pega a divergência — por isso os dois existem.
+      row =
+        insert_outbox_event!(%{
+          aggregate_type: "proposed_action",
+          event_type: "task.action_settled",
+          payload: %{"projectId" => "p1", "actionId" => "a1", "agentId" => "dev-api"}
+        })
+
+      Drain.run_once()
+
+      assert Repo.get!(Event, row.id).processed_at == nil
+      refute_enqueued(worker: Engine.Workers.DevAgentWakeWorker)
+    end
+
     test "task de event_type desconhecido cai no catch-all (SessionLifecycleWorker), não no DevAgentWakeWorker" do
       # `aggregate_type` entrou na lista de lidos pela Fase 12b, mas
       # `handlers_for/1` só tem regra explícita pros dois tipos conhecidos —

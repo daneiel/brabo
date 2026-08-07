@@ -105,6 +105,36 @@ defmodule Engine.Gates.QaAutomacaoAgentTest do
     assert info.origin == "modelo"
   end
 
+  test "ação pendente é origem POLITICA, não infra (achado AB)", %{
+    dev_state: dev_state,
+    dev_context: dev_context
+  } do
+    # O caso real da 6ª execução da FASE 13b: o agente rodou
+    # `ls -la && find … | head -50`. `head` não estava no `allow`, e comando
+    # composto só é auto-aprovado quando TODO segmento está liberado — a regra
+    # está certa. O ToolLoop suspendeu em `awaiting_approval`.
+    #
+    # O defeito era o que se fazia com isso: caía no catch-all e virava
+    # `origin: infra`, culpando a infraestrutura por uma decisão pendente.
+    Process.put(:fake_propose_action, %{"id" => "pa-99", "status" => "pending"})
+
+    Process.put(:fake_llm_turns, [
+      FakeEngineApiClient.tool_call_response("terminal", %{
+        "command" => "ls -la && find . -name package.json | head -50"
+      })
+    ])
+
+    assert {:blocked, %{diagnosis: diagnosis, origin: origin}} =
+             run(dev_state, dev_context)
+
+    # A origem é a verdade: ninguém decidiu ainda. Nada quebrou.
+    assert origin == "politica"
+    # E o diagnóstico nomeia a ação, para que dê para decidi-la.
+    assert diagnosis =~ "pendente de aprovação"
+    assert diagnosis =~ "pa-99"
+    assert diagnosis =~ "terminal"
+  end
+
   test "não conclui -> {:blocked, ...} com origem, sem chamar a api", %{
     dev_state: dev_state,
     dev_context: dev_context

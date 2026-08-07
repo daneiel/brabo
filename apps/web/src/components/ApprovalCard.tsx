@@ -14,12 +14,24 @@ const URGENCY_COLOR: Record<ApprovalUrgency, string> = {
   normal: 'var(--text-muted)',
 };
 
+// Os dois mapas são exaustivos sobre `ActionType` de propósito: é o compilador
+// que cobra a entrada quando o backend ganha um tipo novo. Enquanto a união do
+// web era um subconjunto, os tipos do bootstrap de Gitflow caíam num
+// `undefined` que derrubava a tela — o "fallback genérico" existia só no
+// comentário.
 const ACTION_VERB: Record<ActionType, string> = {
   terminal: 'quer executar comando',
   git_commit: 'propõe alteração',
   git_push: 'quer enviar alterações',
   pr_open: 'abriu pull request',
   spend: 'solicita gasto extra',
+  git_repo_create: 'quer criar o repositório',
+  git_branch_create: 'quer criar uma branch',
+  git_branch_protect: 'quer proteger uma branch',
+  write_file: 'propõe escrever um arquivo',
+  open_adr_pr: 'abriu pull request de ADR',
+  open_infra_pr: 'abriu pull request de infra',
+  git_merge: 'quer fazer merge',
   instruction_patch: 'propõe ajustar a instrução de um agente',
 };
 
@@ -29,6 +41,13 @@ const ACTION_ICON: Record<ActionType, typeof DiffIcon> = {
   git_push: DiffIcon,
   pr_open: PrIcon,
   spend: AlertIcon,
+  git_repo_create: DiffIcon,
+  git_branch_create: DiffIcon,
+  git_branch_protect: AlertIcon,
+  write_file: DiffIcon,
+  open_adr_pr: PrIcon,
+  open_infra_pr: PrIcon,
+  git_merge: PrIcon,
   instruction_patch: DiffIcon,
 };
 
@@ -52,7 +71,6 @@ function readFiles(payload: Record<string, unknown>): DiffFile[] | undefined {
 
 interface ApprovalCardProps {
   action: ProposedAction;
-  meta?: string;
   urgency?: ApprovalUrgency;
   variant?: 'chat' | 'queue';
   selectable?: boolean;
@@ -65,7 +83,6 @@ interface ApprovalCardProps {
 
 export function ApprovalCard({
   action,
-  meta,
   urgency,
   variant = 'chat',
   selectable,
@@ -105,7 +122,6 @@ export function ApprovalCard({
           <div className={styles.title}>
             <b>{actorLabel}</b> {ACTION_VERB[action.actionType]}
           </div>
-          {meta && <div className={styles.meta}>{meta}</div>}
         </div>
         {urgency && (
           <span className={styles.urgency} style={{ ['--urgency-color' as string]: URGENCY_COLOR[urgency] }}>

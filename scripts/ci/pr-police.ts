@@ -51,7 +51,7 @@ export const FUNCOES_DE_CORRECAO_ALTA = {
   hotfix: 'main',
 } as const satisfies Record<string, Permanente>;
 
-export const FORMATO_DA_BRANCH = /^.{0,15}\/\S{0,32}$/;
+export const FORMATO_DA_BRANCH = /^.{0,30}\/\S{0,32}$/;
 
 export type Familia = 'trabalho' | 'promocao' | 'retropropagacao' | 'correcao-alta';
 
@@ -316,8 +316,8 @@ export function avaliarPr(entrada: EntradaPr): Veredito {
       codigo: 'NOME-FORA-DO-FORMATO',
       observado: `a branch \`${head}\` não tem o formato funcao/descritivo`,
       regra:
-        'Nome de branch de trabalho casa com ^.{0,15}/\\S{0,32}$ — uma função, ' +
-        'uma barra, um descritivo sem espaços (até 15 e 32 caracteres).',
+        'Nome de branch de trabalho casa com ^.{0,30}/\\S{0,32}$ — uma função, ' +
+        'uma barra, um descritivo sem espaços (até 30 e 32 caracteres).',
       porque:
         'A função antes da barra decide destino, aprovadores e o impacto na ' +
         'versão do ciclo. Sem ela, nada disso é calculável.',

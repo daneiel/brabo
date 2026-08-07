@@ -1,0 +1,86 @@
+defmodule Engine.Harness.Tools.SearchWorkspaceTest do
+  @moduledoc """
+  O achado X da FASE 13b, na frase que o causou.
+
+  Numa task sobre repositório recém-provisionado (só o template do Gitflow,
+  sem código), o dev agent leu `nenhum resultado` como "refine a busca".
+  Repetiu cinco buscas, queimou as oito iterações e foi bloqueado sem NUNCA
+  rodar um comando nem escrever um arquivo — diagnóstico `(nenhum terminal
+  rodado)`.
+
+  O que estes testes afirmam não é a busca, que já funcionava: é que as duas
+  situações — "procurei e não achei" e "não há o que procurar" — deixaram de
+  dizer a mesma coisa.
+  """
+
+  use ExUnit.Case, async: true
+
+  alias Engine.Harness.Tools.SearchWorkspace
+
+  setup do
+    root =
+      Path.join(
+        System.tmp_dir!(),
+        "brabo-search-#{System.os_time(:microsecond)}-#{System.unique_integer([:positive])}"
+      )
+
+    File.mkdir_p!(root)
+    on_exit(fn -> File.rm_rf!(root) end)
+
+    %{root: root, ctx: %{workspace_root: root, project_id: "proj-1"}}
+  end
+
+  test "workspace VAZIO diz que está vazio, e manda criar", %{ctx: ctx} do
+    assert {:ok, texto} = SearchWorkspace.run(%{"query" => "saudacao"}, ctx)
+
+    assert texto =~ "VAZIO"
+    # A instrução é o que quebra o laço: sem ela o agente continua buscando.
+    assert texto =~ "CRIE"
+    assert texto =~ "write_file"
+  end
+
+  test "workspace COM arquivos e sem casar diz que a busca funcionou", %{
+    root: root,
+    ctx: ctx
+  } do
+    File.write!(Path.join(root, "app.ts"), "export const x = 1;")
+    File.write!(Path.join(root, "README.md"), "projeto")
+
+    assert {:ok, texto} = SearchWorkspace.run(%{"query" => "saudacao"}, ctx)
+
+    refute texto =~ "VAZIO"
+    # O número é o que distingue: diz ao agente que há material, e que o termo
+    # é que não aparece.
+    assert texto =~ "2 arquivo(s)"
+    assert texto =~ "saudacao"
+  end
+
+  test "só o template do Gitflow NÃO conta como vazio", %{root: root, ctx: ctx} do
+    # O caso EXATO do achado X: o repositório tinha `.github/` e `docs/` do
+    # bootstrap, e nenhum código. Não é vazio — e a mensagem certa é a de
+    # "busca funcionou", não a de "crie os arquivos".
+    File.mkdir_p!(Path.join(root, ".github"))
+    File.write!(Path.join(root, ".github/pull_request_template.md"), "## O quê")
+    File.mkdir_p!(Path.join(root, "docs"))
+    File.write!(Path.join(root, "docs/branching-policy.md"), "dev, qa, main")
+
+    assert {:ok, texto} = SearchWorkspace.run(%{"query" => "saudacao"}, ctx)
+
+    refute texto =~ "VAZIO"
+    assert texto =~ "2 arquivo(s)"
+  end
+
+  test "achou continua respondendo o que achou", %{root: root, ctx: ctx} do
+    File.write!(Path.join(root, "saudacao.ts"), "export const oi = 1;")
+
+    assert {:ok, texto} = SearchWorkspace.run(%{"query" => "saudacao"}, ctx)
+
+    assert texto =~ "1 resultado(s)"
+    assert texto =~ "saudacao.ts"
+  end
+
+  test "sem query continua sendo erro de argumento", %{ctx: ctx} do
+    assert {:error, motivo} = SearchWorkspace.run(%{}, ctx)
+    assert motivo =~ "query"
+  end
+end

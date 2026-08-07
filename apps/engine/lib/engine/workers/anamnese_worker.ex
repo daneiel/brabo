@@ -83,6 +83,20 @@ defmodule Engine.Workers.AnamneseWorker do
   defp handle_outcome({:halted, {"emit_proficiency", _}, _ctx}, _project_id, _session_id),
     do: :ok
 
+  # Encerrar sem perfil é DESFECHO, não falha: vira `anamnese.run_skipped` com
+  # o motivo, e não `run_failed`. Narrar como falha uma rodada que fez a coisa
+  # certa treina quem lê o log a ignorar o evento de falha.
+  defp handle_outcome({:halted, {"skip_proficiency", motivo}, _ctx}, project_id, session_id) do
+    EngineApiClient.append_event(project_id, session_id, %{
+      type: "anamnese.run_skipped",
+      actorKind: "agent",
+      actorId: Triage.agent(),
+      payload: %{motivo: motivo}
+    })
+
+    :ok
+  end
+
   defp handle_outcome(outcome, project_id, session_id) do
     emit_failure(project_id, session_id, reason_for(outcome))
     :ok

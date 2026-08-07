@@ -25,6 +25,7 @@ defmodule Engine.Agents.CriativoServer do
     ToolCallRecovery
   }
 
+  alias Engine.Agents.FalhaDeTurno
   alias Engine.Harness.Tools.EmitArtifact
   alias Engine.Sessions.{EngineApiClient, LiveBroadcast}
 
@@ -120,7 +121,10 @@ defmodule Engine.Agents.CriativoServer do
   end
 
   defp run_turn_capturing(state) do
-    on_delta = fn text -> broadcast(state, "agent.delta", %{text: text}) end
+    # O `agent` viaja junto do texto (achado C): a tela rotulava a bolha ao vivo
+    # com o nome do MODELO porque o delta não dizia quem estava falando, e o
+    # agente só aparecia quando o evento persistido chegava.
+    on_delta = fn text -> broadcast(state, "agent.delta", %{text: text, agent: @agent}) end
     wire = Enum.map(state.messages, &to_wire/1)
 
     case EngineApiClient.llm_turn_stream(
@@ -131,6 +135,13 @@ defmodule Engine.Agents.CriativoServer do
            state.tool_specs,
            on_delta
          ) do
+      # A api narra a falha no PRÓPRIO frame final (budget, credencial, binding).
+      # Isto não caía no `{:error, _}` abaixo e não emitia evento nenhum: o
+      # turno terminava em silêncio absoluto, pior que o balão vazio.
+      {:ok, %{"error" => erro}} when is_binary(erro) and erro != "" ->
+        emit_falha(state, {:final, erro})
+        {state, ""}
+
       {:ok, %{"message" => message}} ->
         content = Map.get(message, "content", "")
         state = append(state, assistant_msg(content))
@@ -139,8 +150,11 @@ defmodule Engine.Agents.CriativoServer do
         {state, content}
 
       {:error, reason} ->
-        emit_response(state, "")
-        broadcast(state, "agent.error", %{reason: inspect(reason)})
+        # NUNCA mais `agent.response` vazio aqui: no event log ele é
+        # indistinguível de sucesso, e o motivo real ia só por broadcast, que
+        # é efêmero. A falha vira evento durável COM origem, e o agente diz o
+        # que houve no próprio fio.
+        emit_falha(state, reason)
         {state, ""}
     end
   end
@@ -148,13 +162,50 @@ defmodule Engine.Agents.CriativoServer do
   # emit_artifact é a única ferramenta do Criativo; o guardrail (product_brief
   # bloqueado) vive dentro de EmitArtifact.run. Rodamos direto (tool :direct),
   # sem pipeline/hooks — o Criativo não toca terminal/arquivos.
-  defp dispatch_tool(%{"name" => "emit_artifact", "arguments" => args}, state) do
+  defp dispatch_tool(%{"name" => "emit_artifact", "arguments" => args} = call, state) do
     emit(state, "tool.call", %{tool: "emit_artifact", args: args})
-    _ = EmitArtifact.run(args, state)
-    state
+
+    # O resultado era DESCARTADO (`_ =`). Um payload recusado pelo schema — o
+    # modelo emitiu `titulo`/`descricao` contra `title`/`description` — sumia
+    # sem evento, sem aviso e sem chegar ao modelo: o Criativo dizia "registrei
+    # as regras", quatro regras iam para o lixo e o painel ficava vazio.
+    case EmitArtifact.run(args, state) do
+      {:ok, texto} ->
+        emit(state, "tool.result", %{tool: "emit_artifact", ok: true})
+        realimentar(state, call, texto)
+
+      {:error, motivo} ->
+        emit(state, "tool.result", %{
+          tool: "emit_artifact",
+          ok: false,
+          erro: to_string(motivo)
+        })
+
+        # O agente FALA (RN-059) e o erro VOLTA para o modelo: no próximo turno
+        # ele lê o motivo e reemite corrigido, que é como um tool loop deve
+        # funcionar — erro é entrada, não fim de linha.
+        emit_response(
+          state,
+          "Não consegui registrar isso: #{motivo}. Vou corrigir e tentar de novo."
+        )
+
+        realimentar(state, call, "ERRO: #{motivo}")
+    end
   end
 
   defp dispatch_tool(_other, state), do: state
+
+  # Devolve o resultado da ferramenta ao histórico, no papel `tool` — é o que
+  # o PO e o Arquiteto já faziam, e o que faltava aqui.
+  defp realimentar(state, call, texto) do
+    append(state, %{
+      "role" => "tool",
+      "content" => to_string(texto),
+      "toolCallId" => Map.get(call, "id"),
+      "name" => "emit_artifact",
+      :pinned => false
+    })
+  end
 
   # --- product_brief (server-emitted) ---
 
@@ -257,6 +308,21 @@ defmodule Engine.Agents.CriativoServer do
 
   defp emit_response(state, content),
     do: emit(state, "agent.response", %{content: content})
+
+  # A falha, gravada e DITA. O `broadcast` continua, para quem está com a aba
+  # aberta ver na hora — mas ele deixou de ser a única fonte.
+  defp emit_falha(state, reason) do
+    origem = FalhaDeTurno.origem(reason)
+    mensagem = FalhaDeTurno.mensagem(reason)
+
+    emit(state, "agent.error", %{
+      origem: origem,
+      mensagem: mensagem,
+      reason: inspect(reason)
+    })
+
+    broadcast(state, "agent.error", %{origem: origem, mensagem: mensagem})
+  end
 
   defp emit(state, type, payload) do
     EngineApiClient.append_event(state.project_id, state.session_id, %{

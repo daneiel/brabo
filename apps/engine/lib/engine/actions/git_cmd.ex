@@ -21,10 +21,15 @@ defmodule Engine.Actions.GitCmd do
   `{:ok, saída}` no status 0. `{:error, diagnóstico}` em qualquer outro caso —
   inclusive diretório inexistente, que nem chega a executar.
   """
-  @spec run(Path.t(), [String.t()]) :: {:ok, String.t()} | {:error, String.t()}
-  def run(cd, args) do
+  @spec run(Path.t(), [String.t()], keyword()) :: {:ok, String.t()} | {:error, String.t()}
+  def run(cd, args, opts \\ []) do
     if File.dir?(cd) do
-      case System.cmd("git", args, cd: cd, stderr_to_stdout: true) do
+      # `env` existe pelo ADR 0056: a credencial de um remoto autenticado viaja
+      # no ambiente do processo FILHO, e não em argv (que aparece em `ps`) nem
+      # em arquivo (que o dev agent lê com aprovação automática, RN-075).
+      cmd_opts = [cd: cd, stderr_to_stdout: true] ++ Keyword.take(opts, [:env])
+
+      case System.cmd("git", args, cmd_opts) do
         {out, 0} -> {:ok, out}
         {out, status} -> {:error, diagnostico(cd, args, out, status)}
       end

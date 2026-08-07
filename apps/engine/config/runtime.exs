@@ -84,6 +84,13 @@ config :engine,
     System.get_env("PROJECT_WORKSPACES_ROOT", "/tmp/brabo-project-workspaces"),
   terminal_action_timeout_ms:
     String.to_integer(System.get_env("TERMINAL_ACTION_TIMEOUT_MS", "15000")),
+  # Teto de BYTES da saída de um comando (achado S). A saída fica no histórico
+  # do laço e viaja em todo turno seguinte; sem teto, um `find` numa árvore
+  # grande derruba a execução inteira com 413 do provider. 32 KiB ≈ 8k tokens
+  # estimados por comando — folgado para leitura de arquivo, apertado o
+  # bastante para não acumular. Ver Engine.Actions.TerminalExecutor.truncate/2.
+  terminal_output_max_bytes:
+    String.to_integer(System.get_env("TERMINAL_OUTPUT_MAX_BYTES", "32768")),
   # Teto por scanner de segurança (gitleaks/semgrep) nos gates de SecOps.
   # Bem mais folgado que o terminal: o semgrep varre a árvore inteira e pode
   # baixar regras da rede (`--config auto`). Sem esse teto, um scanner

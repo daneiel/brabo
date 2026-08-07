@@ -46,7 +46,17 @@ defmodule Engine.Harness.ToolsTest do
     assert File.read!(Path.join(Workspace.workspace_dir(pid), "scratch/n.txt")) == "oi"
   end
 
-  test "write_file fora da whitelist vira proposed_action pending (via hook)", %{ctx_base: base} do
+  @doc """
+  Antes este teste afirmava que a ferramenta pendente devolvia um RESULTADO com
+  a palavra "pending". Era o defeito do ADR 0052: o modelo lia aquilo como se
+  fosse a resposta do comando, não aprendia nada, e cada tentativa queimava uma
+  iteração até a task morrer no teto.
+
+  Agora o hook sinaliza espera, e quem para é o ToolLoop.
+  """
+  test "write_file fora da whitelist SUSPENDE o laço em vez de responder 'pending'", %{
+    ctx_base: base
+  } do
     Process.put(:fake_propose_action, %{"id" => "pa-9", "status" => "pending"})
 
     ctx =
@@ -55,8 +65,11 @@ defmodule Engine.Harness.ToolsTest do
       |> Map.put(:args, %{"path" => "src/app.ex", "content" => "x"})
 
     assert {:cont, out} = ActionPipeline.call(ctx)
-    assert out[:result] =~ "pa-9"
-    assert out[:result] =~ "pending"
+
+    # Marca de espera, e NENHUM resultado: o lugar da mensagem de ferramenta
+    # fica vago para o desfecho de verdade ocupar na retomada.
+    assert out[:aguardando_aprovacao] == "pa-9"
+    refute Map.has_key?(out, :result)
 
     assert_received {:propose_action, "write_file", %{kind: "agent", id: "echo"},
                      %{path: "src/app.ex", content: "x"}}

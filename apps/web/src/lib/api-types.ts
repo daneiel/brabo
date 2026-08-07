@@ -121,16 +121,31 @@ export interface Page<T> {
   nextCursor: number | null;
 }
 
-// NOTA: o backend tem 12 ActionTypes; esta união cobre os que a UI
-// renderiza de forma dedicada (os demais caem no fallback genérico do
-// ApprovalCard). Dívida pré-existente — `instruction_patch` entrou
-// porque tem renderização própria (diff + badge de origem).
+// Os 13 do backend (`apps/api/src/domain/actions/decide.ts`), na mesma ordem.
+//
+// Esta união já foi um subconjunto — só os que a UI renderiza de forma
+// dedicada —, com a nota de que "os demais caem no fallback genérico do
+// ApprovalCard". Esse fallback não existia: o `ACTION_ICON[actionType]` do
+// ApprovalCard devolvia `undefined` e derrubava a tela inteira da sessão.
+// Como o bootstrap de Gitflow propõe `git_repo_create`, `git_branch_create` e
+// `git_branch_protect`, TODO projeto criado num provider ficava com a sessão
+// impossível de abrir — e o tipo estreito impedia o compilador de ver isso.
+//
+// Com a união completa os mapas do ApprovalCard voltam a ser exaustivos, e é o
+// compilador que cobra a entrada de qualquer tipo novo.
 export type ActionType =
   | 'terminal'
   | 'git_commit'
   | 'git_push'
   | 'pr_open'
   | 'spend'
+  | 'git_repo_create'
+  | 'git_branch_create'
+  | 'git_branch_protect'
+  | 'write_file'
+  | 'open_adr_pr'
+  | 'git_merge'
+  | 'open_infra_pr'
   | 'instruction_patch';
 
 export type ActionStatus =
@@ -790,4 +805,36 @@ export interface Architecture {
 export interface ExecutionActivation {
   sessionId: string;
   modules: string[];
+}
+
+/**
+ * Gasto das chaves do owner (RN-060). Nunca traz segredo — só quanto cada
+ * provider consumiu, separando o que saiu por AGENTE do que saiu por pessoa,
+ * porque desde a RN-058 as duas coisas saem da MESMA chave.
+ */
+export interface CredentialSpendPorMes {
+  mes: string;
+  costMicros: number;
+  chamadas: number;
+}
+
+export interface CredentialSpendPorProvider {
+  provider: string;
+  /** A credencial existe hoje. `false` é gasto de chave já removida. */
+  temCredencial: boolean;
+  costMicros: number;
+  inputTokens: number;
+  outputTokens: number;
+  chamadas: number;
+  costMicrosAgentes: number;
+  costMicrosPessoas: number;
+  porMes: CredentialSpendPorMes[];
+}
+
+export interface CredentialSpend {
+  workspaceId: string;
+  ownerId: string;
+  meses: number;
+  totalMicros: number;
+  porProvider: CredentialSpendPorProvider[];
 }

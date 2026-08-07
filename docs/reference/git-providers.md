@@ -120,6 +120,33 @@ declara `protectBranch: true` precisa passar nos testes de proteção; um que
 declara `false` precisa levantar `GitNotSupportedError`. Declarar errado quebra
 a suite nos dois sentidos.
 
+:::caution O fake precisa mentir igual ao remoto
+A suite roda contra backends falsos (msw) nos providers remotos, e um fake mais
+GENEROSO que a API real deixa a suite verde enquanto o produto quebra. Foi o
+que aconteceu com o repositório vazio: o fake do GitHub respondia `404` a uma
+ref inexistente, o GitHub responde **`409 Git Repository is empty`**, e o
+bootstrap morria no primeiro passo de todo projeto GitHub novo — com a suite
+inteira verde. Ao acrescentar caso ao fake, confira a resposta contra a API
+viva, não contra o que parece razoável.
+:::
+
+### O primeiro commit num repositório vazio
+
+Repositório recém-criado no GitHub não tem commit nenhum (`auto_init: false`), e
+aí a **Git Data API inteira** responde `409` — refs, blobs, trees, commits. Não
+há como montar o primeiro commit por ela. Quem funciona é a Contents API
+(`PUT /repos/:owner/:repo/contents/:path`), que cria arquivo, commit e branch de
+uma vez; é o que `commitFiles` usa quando detecta o repo vazio.
+
+Com **um** arquivo — o caso do bootstrap, que commita um por passo — sai
+exatamente um commit, como o contrato promete. Com mais de um, o primeiro nasce
+pela Contents API (é ele que cria a branch) e o resto vai num segundo commit
+pelo caminho normal: dois commits em vez de um, degradação declarada porque a
+alternativa seria recusar o commit inicial multiarquivo.
+
+O `LocalGitProvider` não passa por nada disso: o `git init --bare` dele aceita o
+primeiro commit pelo caminho comum.
+
 ## Bootstrap de Gitflow
 
 Cinco passos que preparam o repositório do projeto: branches permanentes

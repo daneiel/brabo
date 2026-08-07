@@ -69,6 +69,7 @@ defmodule Engine.Dev.DevAgentServer do
 
   use GenServer, restart: :temporary
 
+  alias Engine.Agents.FalhaDeTurno
   alias Engine.Dev.{AgentIo, ContextBuilder, Tools, Wake}
   alias Engine.Dev.Hooks.Termination
   alias Engine.Gates.Dispatcher
@@ -126,7 +127,11 @@ defmodule Engine.Dev.DevAgentServer do
       impl: @impl_tag,
       task_budget_micros: task_budget_micros,
       max_gate_corrections: max_gate_corrections,
-      max_consecutive_blocked: max_consecutive_blocked
+      max_consecutive_blocked: max_consecutive_blocked,
+      # O laço suspenso à espera de aprovação (ADR 0052). Só em memória: o
+      # agente continua vivo enquanto espera, e restart cai no caminho de
+      # bloqueio com diagnóstico que já existe.
+      laco_pendente: nil
     }
 
     state = AgentIo.resume_state(base, resume)
@@ -142,21 +147,44 @@ defmodule Engine.Dev.DevAgentServer do
     # 503 e o Kubernetes matava o pod), e qualquer exceção derrubava a
     # reidratação de TODOS os outros agentes. Com `handle_continue` o `init`
     # volta a ser instantâneo e a recuperação acontece já supervisionada.
-    if resume && resume.status == "working" do
-      {:ok, state, {:continue, :restart_recovery}}
+    # `awaiting_approval` entra aqui pelo MESMO motivo que `working`: o laço
+    # suspenso vive em memória (`laco_pendente`), e o restart o levou. Sem esta
+    # linha o agente reidratava esperando um desfecho que não teria como
+    # aplicar — e como `handle_info({:action_settled, _}, state)` ignora quem
+    # não tem laço, ele esperaria PARA SEMPRE, sem erro, sem bloqueio e sem
+    # diagnóstico. Falha silenciosa é o que o ADR 0052 existe para acabar; ela
+    # não pode voltar um degrau acima.
+    if resume && resume.status in ["working", "awaiting_approval"] do
+      {:ok, state, {:continue, {:restart_recovery, resume.status}}}
     else
       {:ok, state}
     end
   end
 
   @impl true
-  def handle_continue(:restart_recovery, state) do
+  def handle_continue({:restart_recovery, "awaiting_approval"}, state) do
+    {:noreply,
+     state
+     |> AgentIo.block_task(
+       "engine reiniciou enquanto a task esperava aprovação",
+       "o laço estava suspenso esperando a decisão de uma ação, e o contexto " <>
+         "dele só existia em memória — aprovar agora não teria onde ser " <>
+         "aplicado. A task volta para a fila; a ação decidida fica no log.",
+       # `infra`: quem derrubou o turno foi o processo reiniciando, não o
+       # modelo, não o código do agente e não uma política.
+       "infra"
+     )
+     |> finish_restart_recovery()}
+  end
+
+  def handle_continue({:restart_recovery, _}, state) do
     {:noreply,
      state
      |> AgentIo.block_task(
        "engine reiniciou durante a task",
        "o ToolLoop não pôde ser retomado após o restart — turno, mensagens " <>
-         "e edições do worktree só existiam em memória"
+         "e edições do worktree só existiam em memória",
+       "infra"
      )
      |> finish_restart_recovery()}
   end
@@ -200,7 +228,10 @@ defmodule Engine.Dev.DevAgentServer do
          state
          |> AgentIo.block_task(
            "falha ao montar contexto da correção",
-           inspect(reason)
+           inspect(reason),
+           # Montar contexto é chamada à api; falhar aqui é infraestrutura,
+           # não o modelo (que nem chegou a ser chamado).
+           "infra"
          )
          |> finish_task(:blocked)}
     end
@@ -223,6 +254,44 @@ defmodule Engine.Dev.DevAgentServer do
   end
 
   def handle_info({:gate_resolved, _}, state), do: {:noreply, state}
+
+  # A ação que segurava o laço teve desfecho (ADR 0052). O resultado de verdade
+  # entra no lugar onde estaria a palavra "pending", e o laço RETOMA do ponto em
+  # que parou — o histórico inteiro estava guardado no `ctx`.
+  #
+  # Recusa também é resposta: o agente lê o motivo, aprende que aquele caminho
+  # está fechado e tenta outro, em vez de esperar para sempre.
+  def handle_info(
+        {:action_settled, %{action_id: action_id} = desfecho},
+        %{status: :awaiting_approval, laco_pendente: %{action_id: action_id} = pendente} = state
+      ) do
+    ctx =
+      Map.update!(pendente.ctx, :messages, fn messages ->
+        messages ++
+          [
+            %{
+              "role" => "tool",
+              "content" => texto_do_desfecho(desfecho),
+              "toolCallId" => pendente.tool_call_id,
+              "name" => pendente.tool_name,
+              :pinned => false
+            }
+          ]
+      end)
+
+    state = %{state | status: :working, laco_pendente: nil}
+    AgentIo.persist(state)
+
+    {:noreply,
+     ctx
+     |> ToolLoop.run()
+     |> handle_outcome(state, pendente.task, pendente.story)}
+  end
+
+  # Desfecho de OUTRA ação, ou o agente já não está esperando: ignora em vez de
+  # derrubar. A entrega é por agente, e nada garante que só chegue o que se
+  # espera.
+  def handle_info({:action_settled, _}, state), do: {:noreply, state}
 
   # Só age se estiver livre (`:idle`) — em `:working`/`:awaiting_gate` a fila
   # já está sendo atendida ou o agente está no meio de outra coisa;
@@ -249,7 +318,10 @@ defmodule Engine.Dev.DevAgentServer do
       AgentIo.block_task(
         state,
         "a PR não foi aberta",
-        "as ações git da task não foram aprovadas — o trabalho ficou no worktree e o gate nunca abriu"
+        "as ações git da task não foram aprovadas — o trabalho ficou no worktree e o gate nunca abriu",
+        # `politica`: foi uma DECISÃO — o usuário negou, ou a política recusou.
+        # Nada quebrou.
+        "politica"
       )
 
     {:noreply,
@@ -323,7 +395,7 @@ defmodule Engine.Dev.DevAgentServer do
 
           {:error, reason} ->
             state
-            |> AgentIo.block_task("falha ao montar contexto da task", inspect(reason))
+            |> AgentIo.block_task("falha ao montar contexto da task", inspect(reason), "infra")
             |> finish_task(:blocked)
         end
 
@@ -331,7 +403,7 @@ defmodule Engine.Dev.DevAgentServer do
         AgentIo.emit(state, "dev.error", %{agentId: state.agent_id, reason: inspect(reason)})
 
         state
-        |> AgentIo.block_task("falha ao preparar o worktree", inspect(reason))
+        |> AgentIo.block_task("falha ao preparar o worktree", inspect(reason), "codigo")
         |> finish_task(:blocked)
     end
   end
@@ -365,6 +437,28 @@ defmodule Engine.Dev.DevAgentServer do
     |> ToolLoop.run()
     |> handle_outcome(state, task, story)
   end
+
+  # O que o modelo lê no lugar da palavra "pending".
+  #
+  # Aprovada e executada: a saída real do comando, no mesmo formato que o
+  # tool-result teria trazido se a ação fosse auto-aprovada — o modelo não
+  # precisa saber que houve uma espera no meio.
+  defp texto_do_desfecho(%{status: "executed", execution_result: %{} = exec}) do
+    "exit #{Map.get(exec, "exitCode", "?")}\n#{Map.get(exec, "stdout", "")}"
+  end
+
+  defp texto_do_desfecho(%{status: "failed", execution_result: %{} = exec}) do
+    "falhou: #{Map.get(exec, "stderr", "")}#{Map.get(exec, "stdout", "")}"
+  end
+
+  # Recusa é RESPOSTA, não silêncio: o motivo entra no lugar do resultado, para
+  # o agente aprender que aquele caminho está fechado e tentar outro.
+  defp texto_do_desfecho(%{status: "denied"} = desfecho) do
+    motivo = Map.get(desfecho, :rejection_reason) || "sem motivo informado"
+    "recusado pelo usuário: #{motivo}"
+  end
+
+  defp texto_do_desfecho(%{status: status}), do: "desfecho da ação: #{status}"
 
   defp dev_hooks do
     Hooks.new()
@@ -470,19 +564,25 @@ defmodule Engine.Dev.DevAgentServer do
     state
   end
 
+  # Mesmas origens do caminho normal — a correção pós-gate é o mesmo laço com
+  # outro prompt, e o que decidiu parar é o mesmo.
   defp handle_correction_outcome(
          {:halted, {"report_blocked", %{reason: reason, diagnosis: diagnosis}}, _ctx},
          state,
          _findings
        ) do
     state
-    |> AgentIo.block_task(reason, diagnosis)
+    |> AgentIo.block_task(reason, diagnosis, "modelo")
     |> finish_task(:blocked)
   end
 
   defp handle_correction_outcome({:limit_reached, ctx}, state, _findings) do
     state
-    |> AgentIo.block_task("limite de iterações atingido (correção)", last_terminal_output(ctx))
+    |> AgentIo.block_task(
+      "limite de iterações atingido (correção)",
+      last_terminal_output(ctx),
+      "modelo"
+    )
     |> finish_task(:blocked)
   end
 
@@ -490,7 +590,8 @@ defmodule Engine.Dev.DevAgentServer do
     state
     |> AgentIo.block_task(
       "orçamento de tokens excedido (correção)",
-      "gasto: #{ctx.tokens_spent_micros} micro-USD (teto: #{ctx.token_budget_micros})"
+      "gasto: #{ctx.tokens_spent_micros} micro-USD (teto: #{ctx.token_budget_micros})",
+      "politica"
     )
     |> finish_task(:blocked)
   end
@@ -499,7 +600,8 @@ defmodule Engine.Dev.DevAgentServer do
     state
     |> AgentIo.block_task(
       "parou sem concluir nem reportar bloqueio (correção)",
-      stop_diagnosis(ctx)
+      stop_diagnosis(ctx),
+      origem_da_parada(ctx)
     )
     |> finish_task(:blocked)
   end
@@ -509,6 +611,47 @@ defmodule Engine.Dev.DevAgentServer do
 
   defp trigger_gate_recheck(state, "secops"),
     do: :ok = Dispatcher.run_secops(state.project_id, state.task_id)
+
+  # A ferramenta ficou pendente de aprovação (ADR 0052). O agente PARA e retém
+  # tudo — worktree, task e o `ctx` do laço, com o histórico de mensagens —, do
+  # mesmo jeito que já retém em `awaiting_gate`.
+  #
+  # O `ctx` fica em MEMÓRIA, não no banco: o agente continua vivo, só ocioso.
+  # Restart durante a espera cai no caminho de bloqueio com diagnóstico que já
+  # existe, e persistir histórico de mensagens é problema à parte.
+  defp handle_outcome(
+         {:halted, {:awaiting_approval, action_id, tool_call_id, tool_name}, ctx},
+         state,
+         task,
+         story
+       ) do
+    state = %{
+      state
+      | status: :awaiting_approval,
+        laco_pendente: %{
+          ctx: ctx,
+          action_id: action_id,
+          tool_call_id: tool_call_id,
+          tool_name: tool_name,
+          # `task` e `story` viajam junto porque o desfecho do laço precisa
+          # deles (abrir PR, por exemplo) — e na retomada não há de onde
+          # buscá-los sem ir ao banco de novo.
+          task: task,
+          story: story
+        }
+    }
+
+    AgentIo.persist(state)
+
+    AgentIo.emit(state, "dev.awaiting_approval", %{
+      agentId: state.agent_id,
+      taskId: state.task_id,
+      actionId: action_id,
+      tool: tool_name
+    })
+
+    state
+  end
 
   defp handle_outcome({:halted, {"report_done", %{summary: summary}}, _ctx}, state, task, story) do
     desfechos = [
@@ -533,6 +676,11 @@ defmodule Engine.Dev.DevAgentServer do
     end
   end
 
+  # As origens abaixo NÃO são chute: cada desfecho do ToolLoop diz quem
+  # decidiu parar, e é isso que a origem nomeia (achados P/Q/T).
+  #
+  # `report_blocked` é o MODELO declarando que não consegue — foi ele que
+  # decidiu, com o diagnóstico que ele mesmo escreveu.
   defp handle_outcome(
          {:halted, {"report_blocked", %{reason: reason, diagnosis: diagnosis}}, _ctx},
          state,
@@ -540,28 +688,39 @@ defmodule Engine.Dev.DevAgentServer do
          _story
        ) do
     state
-    |> AgentIo.block_task(reason, diagnosis)
+    |> AgentIo.block_task(reason, diagnosis, "modelo")
     |> finish_task(:blocked)
   end
 
+  # Teto de iterações: o modelo gastou o que tinha sem concluir.
   defp handle_outcome({:limit_reached, ctx}, state, _task, _story) do
     state
-    |> AgentIo.block_task("limite de iterações atingido", last_terminal_output(ctx))
+    |> AgentIo.block_task("limite de iterações atingido", last_terminal_output(ctx), "modelo")
     |> finish_task(:blocked)
   end
 
+  # Orçamento é POLÍTICA: o teto foi decidido por quem configurou, e a recusa é
+  # o produto cumprindo a regra — não uma falha do modelo nem do código.
   defp handle_outcome({:budget_exceeded, ctx}, state, _task, _story) do
     state
     |> AgentIo.block_task(
       "orçamento de tokens excedido",
-      "gasto: #{ctx.tokens_spent_micros} micro-USD (teto: #{ctx.token_budget_micros})"
+      "gasto: #{ctx.tokens_spent_micros} micro-USD (teto: #{ctx.token_budget_micros})",
+      "politica"
     )
     |> finish_task(:blocked)
   end
 
+  # O caminho do achado T. Quando há `last_error`, a origem sai do MESMO erro
+  # que o diagnóstico já narra — antes, `diagnosis` dizia "falha na chamada ao
+  # modelo: {413, …}" e `origem` dizia "indeterminada", na mesma linha.
   defp handle_outcome({:ok, ctx}, state, _task, _story) do
     state
-    |> AgentIo.block_task("parou sem concluir nem reportar bloqueio", stop_diagnosis(ctx))
+    |> AgentIo.block_task(
+      "parou sem concluir nem reportar bloqueio",
+      stop_diagnosis(ctx),
+      origem_da_parada(ctx)
+    )
     |> finish_task(:blocked)
   end
 
@@ -614,6 +773,20 @@ defmodule Engine.Dev.DevAgentServer do
     case Map.get(ctx, :last_error) do
       nil -> "o modelo encerrou o turno sem chamar report_done nem report_blocked"
       error -> "falha na chamada ao modelo: #{error}"
+    end
+  end
+
+  # A origem da MESMA parada que `stop_diagnosis/1` narra — as duas leem
+  # `last_error`, e é isso que impede o par diagnóstico/origem de se
+  # contradizer, que foi o achado T.
+  #
+  # Sem `last_error` a parada é do modelo: ele encerrou o turno sem chamar
+  # `report_done` nem `report_blocked`, o que é decisão dele e não falha de
+  # ninguém mais.
+  defp origem_da_parada(ctx) do
+    case Map.get(ctx, :last_error) do
+      nil -> "modelo"
+      error -> FalhaDeTurno.origem(error)
     end
   end
 

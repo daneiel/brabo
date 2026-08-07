@@ -30,6 +30,27 @@ defmodule Engine.Psychologist.TriageTest do
     assert Triage.max_payload_chars() > 0
   end
 
+  test "sem evento analisável, a análise não roda" do
+    refute Triage.should_run?(0)
+    assert Triage.should_run?(1)
+  end
+
+  test "o corte de material é independente do limiar de tier" do
+    # Uma sessão pode ter material de sobra e ainda ser LEVE. Confundir as
+    # duas perguntas foi o que fez uma sessão só de bootstrap ganhar
+    # análise: ela passava por "20 eventos" sem ter nenhum.
+    assert Triage.should_run?(1)
+    assert Triage.decide(1) == :leve
+  end
+
+  test "mínimo de analisáveis é knob de operador" do
+    Application.put_env(:engine, :psychologist_min_analisaveis, 3)
+    on_exit(fn -> Application.delete_env(:engine, :psychologist_min_analisaveis) end)
+
+    refute Triage.should_run?(2)
+    assert Triage.should_run?(3)
+  end
+
   test "limiar é knob de operador, não constante de código" do
     Application.put_env(:engine, :psychologist_triage_threshold, 2)
     on_exit(fn -> Application.delete_env(:engine, :psychologist_triage_threshold) end)

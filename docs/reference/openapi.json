@@ -333,6 +333,37 @@
         ]
       }
     },
+    "/internal/gates": {
+      "get": {
+        "description": "O registro DESCREVE, não executa: nenhum gate passa a ser aplicado por causa dele, e mudar um campo aqui não muda comportamento nenhum. Cada gate diz onde mora a prova de que passou (`evidencia`), porque nem toda prova está no event log.",
+        "operationId": "InternalGatesController_ler",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GateRegistryResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Service token ausente ou diferente do compartilhado."
+          }
+        },
+        "security": [
+          {
+            "service-token": []
+          }
+        ],
+        "summary": "Lê o registro declarativo de gates",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
     "/internal/models/sync": {
       "post": {
         "description": "Nunca falha por causa de um provider: cada um responde por si no relatório, com o motivo do pulo e a origem da falha quando houve. Um provider que não respondeu é PULADO, não indisponibilizado.",
@@ -359,6 +390,49 @@
           }
         ],
         "summary": "Sincroniza o catálogo de modelos de todos os providers",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
+    "/internal/projects/{projectId}/git-remote": {
+      "get": {
+        "description": "Devolve a origem limpa (sem credencial embutida) e, para provider remoto, o token do OWNER do workspace (RN-058) decifrado na hora. Quem consome injeta o token por invocação e NUNCA o escreve em arquivo — o `.git/config` fica dentro da pasta onde a RN-075 dá leitura auto-aprovada ao dev agent.",
+        "operationId": "InternalProjectsController_gitRemote",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectGitRemoteResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Service token ausente ou diferente do compartilhado."
+          },
+          "404": {
+            "description": "Projeto sem repositório provisionado, ou owner do workspace sem credencial cadastrada para o provider do repositório."
+          }
+        },
+        "security": [
+          {
+            "service-token": []
+          }
+        ],
+        "summary": "O remoto de trabalho do projeto, para buscar e empurrar",
         "tags": [
           "internal"
         ]
@@ -1312,6 +1386,52 @@
           }
         ],
         "summary": "Publica uma versão nova do module_map",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
+    "/internal/sessions/{sessionId}/pending-work": {
+      "get": {
+        "description": "Consultada pelo `SessionServer` do engine no timeout de heartbeat. `pending: true` faz o timeout ser reagendado em vez de encerrar, e o `motivo` vai para o log do engine — sessão que não fecha sem dizer por que é indiagnosticável.",
+        "operationId": "InternalSessionsController_pendingWork",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionPendingWorkResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Corpo inválido."
+          },
+          "403": {
+            "description": "Service token ausente ou diferente do compartilhado."
+          },
+          "404": {
+            "description": "Sessão, projeto ou recurso inexistente."
+          }
+        },
+        "security": [
+          {
+            "service-token": []
+          }
+        ],
+        "summary": "A sessão tem trabalho pendente que impede encerrá-la?",
         "tags": [
           "internal"
         ]
@@ -3208,6 +3328,58 @@
           }
         ],
         "summary": "Devolve o estado do bootstrap de Gitflow",
+        "tags": [
+          "git"
+        ]
+      }
+    },
+    "/projects/{projectId}/git/bootstrap/acknowledge-protection-failure": {
+      "post": {
+        "description": "`protect_branches` falha em repositório privado no plano gratuito, e o wizard avisa isso ANTES. Sem esta saída o único botão era \"Tentar novamente\", que falha sempre pelo mesmo motivo — e `provision_failed` faz o dashboard redirecionar o projeto de volta para a página de provisionamento, deixando-o inalcançável para sempre. Só a falha em PROTEGER pode ser reconhecida: ela é o último passo e o único cujo fracasso deixa um repositório utilizável. A trava de merge do produto (RN-006) não depende da proteção do provider e continua valendo.",
+        "operationId": "GitController_reconhecerFalhaDeProtecao",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReconhecerFalhaDeProtecaoResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto inexistente."
+          },
+          "409": {
+            "description": "O bootstrap não falhou, ou falhou num passo anterior à proteção — seguir ali deixaria o projeto sem repositório utilizável."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reconhece a falha ao proteger as branches e segue",
         "tags": [
           "git"
         ]
@@ -6788,6 +6960,63 @@
         ]
       }
     },
+    "/workspaces/{workspaceId}/credential-spend": {
+      "get": {
+        "description": "Existe porque a chave que os agentes gastam é a do OWNER do workspace (RN-058) — quem paga a conta precisa ver a conta. Agrupa por provider porque é essa a unidade da credencial, e separa o que saiu por AGENTE do que saiu por pessoa no chat: as duas coisas saem da mesma chave e respondem perguntas diferentes. Não devolve segredo nenhum.",
+        "operationId": "BudgetsController_getCredentialSpend",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "meses",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CredentialSpendResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Exige `owner` no workspace."
+          },
+          "404": {
+            "description": "Projeto ou sessão inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Quanto as chaves do owner gastaram, por provider e por mês",
+        "tags": [
+          "llm"
+        ]
+      }
+    },
     "/workspaces/{workspaceId}/members": {
       "post": {
         "description": "Só `owner` mexe no quadro de membros. O papel aqui é herdado por TODOS os projetos do workspace.",
@@ -8904,6 +9133,123 @@
           "slug"
         ]
       },
+      "CredentialSpendPorMesResponseDto": {
+        "type": "object",
+        "properties": {
+          "mes": {
+            "type": "string",
+            "example": "2026-08-01T00:00:00.000Z",
+            "format": "date-time"
+          },
+          "costMicros": {
+            "type": "number",
+            "example": 1250000
+          },
+          "chamadas": {
+            "type": "number",
+            "example": 42
+          }
+        },
+        "required": [
+          "mes",
+          "costMicros",
+          "chamadas"
+        ]
+      },
+      "CredentialSpendPorProviderResponseDto": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string",
+            "example": "openrouter"
+          },
+          "temCredencial": {
+            "type": "boolean",
+            "example": true,
+            "description": "A credencial existe HOJE. `false` é gasto histórico de uma chave já removida — o consumo aconteceu e não some do relatório por isso."
+          },
+          "costMicros": {
+            "type": "number",
+            "example": 1250000
+          },
+          "inputTokens": {
+            "type": "number",
+            "example": 120000
+          },
+          "outputTokens": {
+            "type": "number",
+            "example": 35000
+          },
+          "chamadas": {
+            "type": "number",
+            "example": 42
+          },
+          "costMicrosAgentes": {
+            "type": "number",
+            "example": 900000,
+            "description": "Parte gasta por AGENTES — a conta que a RN-058 passou a debitar do owner."
+          },
+          "costMicrosPessoas": {
+            "type": "number",
+            "example": 350000,
+            "description": "Parte gasta por PESSOAS no chat. Sai da mesma chave, e a pergunta é outra."
+          },
+          "porMes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CredentialSpendPorMesResponseDto"
+            }
+          }
+        },
+        "required": [
+          "provider",
+          "temCredencial",
+          "costMicros",
+          "inputTokens",
+          "outputTokens",
+          "chamadas",
+          "costMicrosAgentes",
+          "costMicrosPessoas",
+          "porMes"
+        ]
+      },
+      "CredentialSpendResponseDto": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "example": "9b1c2d3e-4f50-4a61-8b72-0c3d4e5f6a7b",
+            "format": "uuid"
+          },
+          "ownerId": {
+            "type": "string",
+            "example": "9b1c2d3e-4f50-4a61-8b72-0c3d4e5f6a7b",
+            "format": "uuid",
+            "description": "Dono das chaves — quem banca os agentes deste workspace (RN-058)."
+          },
+          "meses": {
+            "type": "number",
+            "example": 6
+          },
+          "totalMicros": {
+            "type": "number",
+            "example": 1250000
+          },
+          "porProvider": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CredentialSpendPorProviderResponseDto"
+            }
+          }
+        },
+        "required": [
+          "workspaceId",
+          "ownerId",
+          "meses",
+          "totalMicros",
+          "porProvider"
+        ]
+      },
       "CredentialTestResultResponseDto": {
         "type": "object",
         "properties": {
@@ -9295,6 +9641,110 @@
         },
         "required": [
           "gateStatus"
+        ]
+      },
+      "GateRegistryResponseDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number",
+            "example": 1
+          },
+          "gates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GateResponseDto"
+            }
+          }
+        },
+        "required": [
+          "version",
+          "gates"
+        ]
+      },
+      "GateResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "qa-verificada"
+          },
+          "fluxo": {
+            "type": "string",
+            "example": "pr"
+          },
+          "dono": {
+            "type": "string",
+            "example": "area-qa"
+          },
+          "entrada": {
+            "example": [
+              "pr-aberta"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "entregavel": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            ],
+            "example": "veredito-qa"
+          },
+          "verificacao": {
+            "type": "string",
+            "enum": [
+              "script",
+              "humana"
+            ]
+          },
+          "severidade": {
+            "type": "string",
+            "enum": [
+              "block",
+              "warn"
+            ]
+          },
+          "aprovacao_humana": {
+            "type": "boolean",
+            "description": "A decisão é do usuário — direta no clique, ou delegada por política que ele escreveu. Invariante nos quatro gates constitucionalmente manuais (RN-071)."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "planned"
+            ]
+          },
+          "evidencia": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Onde mora a prova de que o gate passou: `event_log` (tipos + filtro de payload), `teste` ou `ci` (caminho do alvo). Ausente em gate `planned`."
+          },
+          "backlog": {
+            "type": "string",
+            "example": "ADR 0053"
+          }
+        },
+        "required": [
+          "id",
+          "fluxo",
+          "dono",
+          "entrada",
+          "entregavel",
+          "verificacao",
+          "severidade",
+          "aprovacao_humana",
+          "status"
         ]
       },
       "GateVerdictResponseDto": {
@@ -10837,6 +11287,45 @@
           "blockedTaskCount"
         ]
       },
+      "ProjectGitRemoteResponseDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "example": "remote",
+            "enum": [
+              "local",
+              "remote"
+            ],
+            "description": "`local` é caminho de bare repo no disco e não tem credencial; `remote` é URL que exige autenticação."
+          },
+          "origin": {
+            "type": "string",
+            "example": "https://github.com/daneiel/hello-api.git",
+            "description": "O que vira `git remote add origin <isto>`. **Sem credencial embutida**, de propósito: é este valor que fica gravado no `.git/config` do workspace, legível por quem tiver acesso ao diretório do projeto."
+          },
+          "defaultBranch": {
+            "type": "string",
+            "example": "main"
+          },
+          "token": {
+            "type": "string",
+            "nullable": true,
+            "description": "Só em `remote`. Token do OWNER do workspace (RN-058), decifrado no momento da chamada. Quem recebe injeta por invocação e descarta."
+          },
+          "username": {
+            "type": "string",
+            "nullable": true,
+            "example": "x-access-token",
+            "description": "Usuário do par HTTP Basic; o token é a senha."
+          }
+        },
+        "required": [
+          "kind",
+          "origin",
+          "defaultBranch"
+        ]
+      },
       "ProjectMemberComUsuarioResponseDto": {
         "type": "object",
         "properties": {
@@ -11603,6 +12092,19 @@
           "priorHypotheses"
         ]
       },
+      "ReconhecerFalhaDeProtecaoResponseDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "object",
+            "example": "provisioned",
+            "description": "Como `protect_branches` é o ÚLTIMO passo, reconhecer a falha dele fecha o bootstrap — o projeto passa a ser alcançável pelo dashboard."
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
       "RecordDelegationInternalDto": {
         "type": "object",
         "properties": {
@@ -12307,6 +12809,26 @@
           "actor",
           "payload",
           "createdAt"
+        ]
+      },
+      "SessionPendingWorkResponseDto": {
+        "type": "object",
+        "properties": {
+          "pending": {
+            "type": "boolean",
+            "example": true,
+            "description": "Há trabalho que impede encerrar por inatividade da aba. Hoje: handoff `offered` aguardando aceite."
+          },
+          "motivo": {
+            "type": "object",
+            "example": "handoff po → arquiteto aguardando aceite",
+            "nullable": true,
+            "description": "O que está pendurado. `null` quando não há nada."
+          }
+        },
+        "required": [
+          "pending",
+          "motivo"
         ]
       },
       "SessionResponseDto": {

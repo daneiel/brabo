@@ -87,8 +87,31 @@ defmodule Engine.Sessions.FakeEngineApiClient do
     notify({:module_map_created, modules})
 
     case Process.get(:fake_module_map_error) do
-      nil -> reply(:fake_module_map, %{"id" => "mm-#{unique()}", "version" => 1})
-      reason -> {:error, reason}
+      nil ->
+        # `modules` vem na resposta porque a api devolve o mapa GRAVADO, e é de
+        # lá que o tool-result tira os nomes canônicos (RN-066). Sem esta chave
+        # o fake exercitaria só o caminho de fallback, e o eco dos nomes ficaria
+        # sem prova. `:fake_module_map_sem_modulos` existe para exercitar de
+        # propósito esse fallback.
+        base = %{"id" => "mm-#{unique()}", "version" => 1}
+
+        corpo =
+          if Process.get(:fake_module_map_sem_modulos) do
+            base
+          else
+            Map.put(
+              base,
+              "modules",
+              Enum.map(modules, fn m ->
+                %{"name" => Map.get(m, :name) || Map.get(m, "name")}
+              end)
+            )
+          end
+
+        reply(:fake_module_map, corpo)
+
+      reason ->
+        {:error, reason}
     end
   end
 
@@ -340,6 +363,30 @@ defmodule Engine.Sessions.FakeEngineApiClient do
   defp unique, do: System.unique_integer([:positive])
 
   @impl true
+  def get_git_remote(_project_id) do
+    # Application env pelo mesmo motivo do `session_pending_work`: quem chama é
+    # o dev agent, em processo próprio. Default é o provider `local`, que é o
+    # comportamento de toda a suite anterior ao ADR 0056.
+    {:ok,
+     Application.get_env(:engine, :fake_git_remote, %{
+       kind: "local",
+       origin: nil,
+       default_branch: "main",
+       token: nil,
+       username: nil
+     })}
+  end
+
+  @impl true
+  def session_pending_work(_session_id) do
+    # Application env, e NÃO dicionário de processo: quem chama isto é o
+    # `SessionServer`, que roda em processo próprio (spawnado pelo supervisor)
+    # — um `Process.put` do teste nunca chegaria lá. Default é "nada pendente",
+    # para todo teste que não se importa manter o comportamento antigo.
+    {:ok, Application.get_env(:engine, :fake_pending_work, %{pending: false, motivo: nil})}
+  end
+
+  @impl true
   def llm_turn_stream(_project_id, _session_id, agent, messages, tools, on_delta) do
     notify({:llm_turn_stream, agent, messages, tools})
 
@@ -362,7 +409,13 @@ defmodule Engine.Sessions.FakeEngineApiClient do
           end
       end
 
-    {:ok, resp}
+    # Mesmo idioma do `reply/2`: um script já em forma de `{:error, _}` passa
+    # direto, para o teste simular "a api caiu no meio do stream" sem uma
+    # chave separada só para isso.
+    case resp do
+      {:error, _} = erro -> erro
+      valor -> {:ok, valor}
+    end
   end
 
   @impl true

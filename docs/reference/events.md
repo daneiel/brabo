@@ -82,6 +82,7 @@ Uma linha em `session_events`, append-only, com `seq` densa por sessão
 | `backlog.story_promotion_proposed` | o PO terminou uma história COMPLETA num projeto em modo `manual`: ela fica `draft` aguardando a decisão do usuário, e nenhuma tarefa dela é pegável até lá ([RN-048](../business-rules.md#rn-048)) |
 | `backlog.story_promotion_returned` | o usuário RECUSOU promover e devolveu a história ao PO com um motivo — que vira mensagem fixada na sessão dele, como a devolução de um gate ao dev ([RN-048](../business-rules.md#rn-048)) |
 | `backlog.story_demoted` | módulo sumiu do `module_map`; a história voltou para `draft` ([RN-012](../business-rules.md#rn-012)) |
+| `backlog.story_overlap_warned` | a história foi criada, mas TODAS as regras que ela cita já estavam cobertas por outra — aviso, não bloqueio: quem julga se é sobreposição é o usuário ([RN-081](../business-rules.md#rn-081)) |
 | `backlog.story_modules_assigned` | vínculo história ↔ módulo |
 | `backlog.task_created` | — |
 | `backlog.task_claimed` | um dev agent pegou a task |
@@ -168,6 +169,7 @@ Os schemas são fechados: campo faltando reprova a emissão
 |---|---|
 | `psychologist.analysis_completed` | — |
 | `psychologist.analysis_failed` | com causa classificada: `infra`, `modelo`, `código` ou `política` |
+| `psychologist.analysis_skipped` | a sessão não tinha evento ANALISÁVEL e a análise não rodou — `payload.analisaveis` e `payload.eventCount` mostram a diferença ([RN-079](../business-rules.md#rn-079)) |
 | `psychologist.hypothesis_proposed` | hipótese com `evidenceEventIds` válidos ([RN-021](../business-rules.md#rn-021)) |
 | `psychologist.hypothesis_accepted` | — |
 | `psychologist.hypothesis_dismissed` | — |
@@ -179,6 +181,7 @@ Os schemas são fechados: campo faltando reprova a emissão
 |---|---|
 | `anamnese.run_completed` | — |
 | `anamnese.run_failed` | — |
+| `anamnese.run_skipped` | a rodada encerrou SEM perfil, de propósito — `payload.motivo` diz por quê ([RN-063](../business-rules.md#rn-063)) |
 | `anamnese.profile_updated` | o `proficiency_profile` mudou |
 | `instruction.rolled_back` | reversão de versão de instrução — cria versão nova, não apaga ([RN-027](../business-rules.md#rn-027)) |
 
@@ -272,7 +275,7 @@ respeito.
 
 > ⚠️ Bloco gerado por `pnpm docs:generate`. Não edite à mão — o próximo build sobrescreve.
 
-Extraído dos pontos de emissão: **75 identificadores**, todos descritos acima.
+Extraído dos pontos de emissão: **79 identificadores**, dos quais **1** não aparecem descritos acima.
 
 - `action.failed` <sub>(apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts)</sub>
 - `agent.activated` <sub>(apps/api/src/application/use-cases/agents/activate-agent.use-case.ts)</sub>
@@ -285,6 +288,7 @@ Extraído dos pontos de emissão: **75 identificadores**, todos descritos acima.
 - `anamnese.profile_updated` <sub>(apps/api/src/application/use-cases/anamnese/record-proficiency.use-case.ts)</sub>
 - `anamnese.run_completed` <sub>(apps/api/src/application/use-cases/anamnese/record-proficiency.use-case.ts)</sub>
 - `anamnese.run_failed` <sub>(apps/engine/lib/engine/workers/anamnese_worker.ex)</sub>
+- `anamnese.run_skipped` <sub>(apps/engine/lib/engine/workers/anamnese_worker.ex)</sub>
 - `architecture.readiness_confirmed` <sub>(apps/api/src/application/use-cases/agents/offer-infra-handoff.use-case.ts)</sub>
 - `artifact.business_rule` <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub>
 - `artifact.insight` <sub>(apps/engine/lib/engine/harness/tools/emit_insight.ex)</sub>
@@ -294,6 +298,7 @@ Extraído dos pontos de emissão: **75 identificadores**, todos descritos acima.
 - `backlog.story_created` <sub>(apps/api/src/application/use-cases/backlog/create-story.use-case.ts)</sub>
 - `backlog.story_demoted` <sub>(apps/api/src/application/use-cases/architecture/create-module-map.use-case.ts)</sub>
 - `backlog.story_modules_assigned` <sub>(apps/api/src/application/use-cases/architecture/assign-story-modules.use-case.ts)</sub>
+- `backlog.story_overlap_warned` <sub>(apps/api/src/application/use-cases/backlog/create-story.use-case.ts)</sub>
 - `backlog.story_promotion_proposed` <sub>(apps/api/src/application/use-cases/backlog/create-story.use-case.ts)</sub>
 - `backlog.story_promotion_returned` <sub>(apps/api/src/application/use-cases/backlog/return-story.use-case.ts)</sub>
 - `backlog.story_transitioned` <sub>(apps/api/src/application/use-cases/backlog/transition-story.use-case.ts)</sub>
@@ -305,6 +310,7 @@ Extraído dos pontos de emissão: **75 identificadores**, todos descritos acima.
 - `bootstrap.adopted_as_is` <sub>(apps/api/src/application/use-cases/git/decide-bootstrap-plan.use-case.ts)</sub>
 - `bootstrap.plan_approved` <sub>(apps/api/src/application/use-cases/git/decide-bootstrap-plan.use-case.ts)</sub>
 - `bootstrap.repository_adopted` <sub>(apps/api/src/application/use-cases/git/adopt-repository.use-case.ts)</sub>
+- `bootstrap.step_acknowledged` — ⚠️ **não descrito acima** <sub>(apps/api/src/application/use-cases/git/acknowledge-protection-failure.use-case.ts)</sub>
 - `bootstrap.step_completed` <sub>(apps/api/src/application/use-cases/git/bootstrap-runner.ts)</sub>
 - `bootstrap.step_degraded` <sub>(apps/api/src/application/use-cases/git/bootstrap-runner.ts)</sub>
 - `bootstrap.step_failed` <sub>(apps/api/src/application/use-cases/git/bootstrap-runner.ts)</sub>
@@ -337,6 +343,7 @@ Extraído dos pontos de emissão: **75 identificadores**, todos descritos acima.
 - `proposed_action.executed` <sub>(apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts)</sub>
 - `psychologist.analysis_completed` <sub>(apps/api/src/application/use-cases/execution/propose-hypotheses.use-case.ts)</sub>
 - `psychologist.analysis_failed` <sub>(apps/engine/lib/engine/workers/psychologist_worker.ex)</sub>
+- `psychologist.analysis_skipped` <sub>(apps/engine/lib/engine/workers/psychologist_worker.ex)</sub>
 - `psychologist.hypothesis_accepted` <sub>(apps/api/src/application/use-cases/execution/accept-hypothesis.use-case.ts)</sub>
 - `psychologist.hypothesis_accepted_for_anamnese` <sub>(apps/api/src/application/use-cases/execution/accept-hypothesis.use-case.ts)</sub>
 - `psychologist.hypothesis_dismissed` <sub>(apps/api/src/application/use-cases/execution/dismiss-hypothesis.use-case.ts)</sub>
@@ -348,7 +355,7 @@ Extraído dos pontos de emissão: **75 identificadores**, todos descritos acima.
 - `session.created` <sub>(apps/api/src/application/use-cases/sessions/create-session.use-case.ts)</sub>
 - `session.draining` <sub>(apps/engine/lib/engine/shutdown.ex)</sub>
 - `tool.call` <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub>
-- `tool.result` <sub>(apps/engine/lib/engine/harness/hooks/event_log.ex)</sub>
+- `tool.result` <sub>(apps/engine/lib/engine/agents/criativo_server.ex)</sub>
 <!-- END:GENERATED:eventos-inventario -->
 
 ---

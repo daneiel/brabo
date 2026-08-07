@@ -28,3 +28,39 @@ por esses dois arquivos, o projeto original permanece acessível via
 Toda implementação de UI deve referenciar sempre os tokens semânticos
 (`var(--surface-*)`, `var(--text-*)`, `var(--accent)` etc.) — nunca a
 paleta bruta nem valores de cor/espaçamento inventados.
+
+## As duas validações da UI
+
+Fidelidade ao desenho é conferida no olho. Duas classes de defeito, porém,
+foram para o automático porque escapam de qualquer revisão visual — quem
+escreveu já sabe onde olhar, e o monitor de quem escreveu é sempre o melhor.
+
+**Contraste** é aritmética e virou teste:
+`apps/web/src/lib/contraste.test.ts` lê ESTE `tokens.css`, resolve os `var()`
+até a cor literal e mede a razão WCAG dos pares que a interface usa. Ele
+também trava a **dívida conhecida** — pares em uso que não atingem 4,5:1 para
+texto normal, medidos e registrados um a um. Não estão escondidos nem
+quebrando o CI: mudar a paleta é decisão do dono do design system, e o teste
+avisa se o número piorar (ou melhorar).
+
+| par | razão | serve como |
+|---|---|---|
+| `--text-muted` sobre `--surface-1` | 3,89:1 | elemento de interface, não texto corrido |
+| `--text-muted` sobre `--surface-2` | 3,10:1 | idem — é o cabeçalho de tabela |
+| `--accent` / `--danger` sobre `--surface-1` | 3,88:1 | realce e erro dentro de card |
+| `--success` sobre `--surface-2` | 4,41:1 | a um passo do piso |
+
+**Layout** depende de medida real — largura de fonte, quebra de linha, posição
+calculada — e nenhum ambiente de teste do repositório faz layout (jsdom não
+mede nada). Então roda no navegador, contra a aplicação de pé:
+`scripts/dev/validacao-visual.js`, colado no console ou executado pelo agente.
+Ele acusa quatro coisas:
+
+1. **texto cortado** — conteúdo maior que a caixa, com overflow não rolável;
+2. **fora da viewport** — menu, dropdown ou tooltip cujo retângulo sai da tela;
+3. **recortado por ancestral** — o clássico dropdown dentro de um container com
+   `overflow: hidden`, que existe, tem tamanho e some;
+4. **alvo pequeno** — botão ou link abaixo de 24px (WCAG 2.2 AA).
+
+Sem dependência nova de propósito: um verificador que exige instalar runtime
+não é rodado. A saída é JSON, para virar achado — nunca correção automática.

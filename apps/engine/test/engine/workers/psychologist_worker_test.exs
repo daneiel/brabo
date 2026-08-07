@@ -28,7 +28,16 @@ defmodule Engine.Workers.PsychologistWorkerTest do
       Engine.GlobalSessionTestLock.release()
     end)
 
-    %{project_id: Ecto.UUID.generate(), session_id: Ecto.UUID.generate()}
+    session_id = Ecto.UUID.generate()
+
+    # UM evento analisável, porque o worker agora RECUSA sessão sem
+    # material (achado J) — antes desta linha, quase toda a suite usava o
+    # log vazio como fixture conveniente e passava a testar exatamente o
+    # caso que o produto não deve mais aceitar. Os testes que falam do
+    # critério em si semeiam (ou não) o que precisam, explicitamente.
+    seed_events!(session_id, 1)
+
+    %{project_id: Ecto.UUID.generate(), session_id: session_id}
   end
 
   defp job(session_id, project_id, extra_payload \\ %{}) do
@@ -91,6 +100,29 @@ defmodule Engine.Workers.PsychologistWorkerTest do
     end
   end
 
+  # Semeia UM evento com tipo/ator escolhidos — é o que permite montar um
+  # log "cheio mas sem sinal" (bootstrap, rastro do próprio analista).
+  defp seed_event!(session_id, type, actor_kind, actor_id) do
+    Engine.Repo.insert_all("session_events", [
+      %{
+        id: "evt-#{System.unique_integer([:positive])}",
+        session_id: Ecto.UUID.dump!(session_id),
+        seq: System.unique_integer([:positive, :monotonic]),
+        type: type,
+        actor_kind: actor_kind,
+        actor_id: actor_id,
+        payload: %{},
+        created_at: DateTime.utc_now() |> DateTime.truncate(:second)
+      }
+    ])
+  end
+
+  defp limpar_log!(session_id) do
+    Engine.Repo.delete_all(
+      from(e in "session_events", where: e.session_id == ^Ecto.UUID.dump!(session_id))
+    )
+  end
+
   defp prompt_content do
     assert_received {:llm_turn, _agent, messages, _tools}
     Enum.map_join(messages, "\n", &Map.get(&1, "content", ""))
@@ -127,7 +159,7 @@ defmodule Engine.Workers.PsychologistWorkerTest do
     assert_received {:hypotheses_proposed, _tier, "manual", _count, _cause, [_h]}
   end
 
-  test "sessão trivial (sem eventos) usa triagem LEVE — agent psicologo-leve", %{
+  test "sessão trivial (abaixo do limiar) usa triagem LEVE — agent psicologo-leve", %{
     project_id: project_id,
     session_id: session_id
   } do
@@ -142,7 +174,114 @@ defmodule Engine.Workers.PsychologistWorkerTest do
     assert :ok = PsychologistWorker.perform(job(session_id, project_id))
 
     assert_received {:llm_turn, "psicologo-leve", _messages, _tools}
-    assert_received {:hypotheses_proposed, "leve", "auto", 0, "normal", [_h]}
+    assert_received {:hypotheses_proposed, "leve", "auto", 1, "normal", [_h]}
+  end
+
+  # --- Sessão sem material (achado J) ---------------------------------
+  #
+  # O caso real: sessão recém-aberta cujo log inteiro era provisionamento
+  # de repositório. O Psicólogo analisou, não tinha o que citar, inventou
+  # seq inexistentes, teve a evidência rejeitada 2x e desistiu — com o
+  # orçamento gasto.
+
+  test "sessão só com passos de bootstrap não gasta LLM e narra o skip", %{
+    project_id: project_id,
+    session_id: session_id
+  } do
+    limpar_log!(session_id)
+
+    for _ <- 1..9,
+        do: seed_event!(session_id, "bootstrap.step_completed", "system", "git-bootstrap")
+
+    Process.put(:fake_psychologist_context, context())
+
+    assert :ok = PsychologistWorker.perform(job(session_id, project_id))
+
+    refute_received {:llm_turn, _agent, _messages, _tools}
+    refute_received {:hypotheses_proposed, _, _, _, _, _}
+
+    assert_received {:event_appended, ^project_id, ^session_id,
+                     %{type: "psychologist.analysis_skipped", payload: payload}}
+
+    # O log CRU tinha 9 eventos: o número que reprova é o outro.
+    assert payload.analisaveis == 0
+    assert payload.eventCount == 9
+  end
+
+  test "log formado só pelo rastro do PRÓPRIO analista não conta como material", %{
+    project_id: project_id,
+    session_id: session_id
+  } do
+    limpar_log!(session_id)
+
+    # Exatamente o que uma análise anterior deixa para trás. Sem descontar
+    # o autor, a primeira rodada tornaria a sessão "povoada" para sempre e
+    # toda retentativa gastaria de novo.
+    seed_event!(session_id, "agent.response", "agent", "psicologo-leve")
+    seed_event!(session_id, "tool.call", "agent", "psicologo-leve")
+    seed_event!(session_id, "tool.result", "agent", "psicologo-leve")
+    seed_event!(session_id, "psychologist.hypothesis_proposed", "agent", "psicologo-leve")
+    seed_event!(session_id, "anamnese.run_skipped", "agent", "anamnese")
+
+    Process.put(:fake_psychologist_context, context())
+
+    assert :ok = PsychologistWorker.perform(job(session_id, project_id))
+
+    refute_received {:llm_turn, _agent, _messages, _tools}
+
+    assert_received {:event_appended, ^project_id, ^session_id,
+                     %{type: "psychologist.analysis_skipped", payload: payload}}
+
+    assert payload.analisaveis == 0
+    assert payload.eventCount == 5
+  end
+
+  test "decisão do usuário é material, mesmo sem mensagem trocada", %{
+    project_id: project_id,
+    session_id: session_id
+  } do
+    limpar_log!(session_id)
+
+    for _ <- 1..4,
+        do: seed_event!(session_id, "bootstrap.step_completed", "system", "git-bootstrap")
+
+    # Uma aprovação e nada mais: a pessoa AGIU. Descartar isso como vazio
+    # é o erro que a Anamnese já cometeu e corrigiu.
+    seed_event!(session_id, "proposed_action.approved", "user", "u-1")
+
+    Process.put(:fake_psychologist_context, context())
+
+    Process.put(:fake_llm_turns, [
+      FakeEngineApiClient.tool_call_response("emit_hypotheses", %{
+        "hypotheses" => [hypothesis()]
+      })
+    ])
+
+    assert :ok = PsychologistWorker.perform(job(session_id, project_id))
+
+    assert_received {:llm_turn, "psicologo-leve", _messages, _tools}
+    refute_received {:event_appended, _p, _s, %{type: "psychologist.analysis_skipped"}}
+  end
+
+  test "reprocessamento manual também pula quando não há o que analisar", %{
+    project_id: project_id,
+    session_id: session_id
+  } do
+    limpar_log!(session_id)
+    seed_event!(session_id, "bootstrap.step_started", "system", "git-bootstrap")
+
+    Process.put(:fake_psychologist_context, context())
+
+    # Manual força rodar por cima de análise já existente (o teste acima),
+    # mas não fabrica material: reprocessar um log vazio devolveria a mesma
+    # invenção. Quem clicou recebe o motivo no log.
+    assert :ok =
+             PsychologistWorker.perform(job(session_id, project_id, %{"triggeredBy" => "manual"}))
+
+    refute_received {:llm_turn, _agent, _messages, _tools}
+
+    assert_received {:event_appended, ^project_id, ^session_id,
+                     %{type: "psychologist.analysis_skipped"}}
   end
 
   test "sessão no limiar usa triagem PESADA — agent psicologo e tetos maiores", %{
@@ -150,7 +289,9 @@ defmodule Engine.Workers.PsychologistWorkerTest do
     session_id: session_id
   } do
     # A contagem vem de um COUNT no event log real, não do tamanho da lista
-    # que entra no prompt — por isso o teste semeia o banco.
+    # que entra no prompt — por isso o teste semeia o banco. Limpa antes
+    # para semear EXATAMENTE o limiar: o `setup` já deixou um evento lá.
+    limpar_log!(session_id)
     seed_events!(session_id, Engine.Psychologist.Triage.threshold())
 
     Process.put(:fake_psychologist_context, context())
@@ -374,6 +515,8 @@ defmodule Engine.Workers.PsychologistWorkerTest do
       project_id: project_id,
       session_id: session_id
     } do
+      # Limpa o evento do `setup`: aqui a contagem exata é a asserção.
+      limpar_log!(session_id)
       seed_events!(session_id, 5, %{"texto" => String.duplicate("x", 200)})
 
       Process.put(:fake_psychologist_context, context())

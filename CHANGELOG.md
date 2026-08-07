@@ -2,6 +2,106 @@
 
 Gerado dos conventional commits por `scripts/changelog.mjs`.
 
+## v2.2.0 — 2026-08-04
+
+### Novidades
+
+- **api,web**: facetas de capability lidas do provider e curadoria por uso (e722470b)
+- **web**: catálogo agrupa hub por fabricante, com colapso (88a1169a)
+- **web,api**: Configurações segue o mockup e ganha custo por agente (ba0f2d3c)
+- **api,web**: credencial sempre cifrada; verificar vira ação à parte (99b9fa72)
+
+### Correções
+
+- **api**: comando com redirecionamento deixa de exigir aprovação sempre.
+  `2>/dev/null` é idioma — modelos o usam o tempo todo para silenciar erro
+  esperado —, mas o parser tratava `>` como se encadeasse um comando novo, e o
+  alvo virava um segmento cujo "verbo" era o próprio caminho. Como comando
+  composto só é auto-aprovado quando todo segmento está liberado, qualquer
+  redirecionamento caía em aprovação, e a autonomia ficava inútil na prática.
+  Agora `>`, `>>` e `<` não quebram segmento, e os fluxos padrão e o
+  `/dev/null` deixam de contar como caminho de usuário. **O que não mudou:**
+  redirecionar para fora da pasta do projeto continua barrado, `/dev` não foi
+  liberado inteiro, e `&&`, `|` e `;` continuam separando — cada uma dessas
+  três garantias tem teste próprio
+
+- **engine**: um agente de gate que esbarra numa ação pendente de aprovação
+  deixa de registrar "falha de infraestrutura". Nada quebrou — a decisão apenas
+  não foi tomada, e o log agora diz isso, nomeando a ação e a ferramenta para
+  que dê para encontrá-la e decidi-la. O gate ainda bloqueia a task: o laço dos
+  agentes de gate é síncrono e não sabe retomar de onde parou, ao contrário do
+  dev agent. O que muda é parar de culpar a infraestrutura por uma decisão
+  pendente
+
+- **api**: nenhum dev agent conseguia abrir PR em repositório remoto quando a
+  autonomia estava ligada. A credencial de git vinha de quem DECIDIU a ação — e
+  ação auto-aprovada por política não tem decisor, então o token ficava vazio e
+  o GitHub recusava. Agora vem do dono do workspace, pela mesma regra que já
+  valia para as chaves de modelo. O contraste que expôs o defeito estava dentro
+  de uma execução só: o push funcionava e a PR falhava, porque cada um resolvia
+  a credencial por um caminho diferente
+
+- **engine**: a busca no workspace deixa de dizer a mesma coisa quando não
+  encontra e quando não há o que encontrar. Num projeto novo, o dev agent lia
+  "nenhum resultado" como "refine a busca" e repetia buscas até esgotar o teto
+  de iterações — bloqueado sem ter rodado um comando nem escrito uma linha.
+  Agora um workspace sem arquivo nenhum responde que está vazio e manda criar;
+  um workspace com arquivos responde quantos tem, deixando claro que a busca
+  funcionou e o termo é que não aparece. A correção é a frase, não o teto: o
+  agente não precisava de mais iterações, precisava saber que não havia o que
+  procurar
+
+- **api**: o aceite do OpenRouter contra a API real voltou a funcionar. Ele
+  nunca tinha rodado — sem chave, a suite inteira é pulada — e por isso tinha
+  apodrecido em silêncio contra a mudança que levou a curadoria de modelo para
+  o escopo de workspace: afirmava um campo que não existe mais no catálogo
+  global e montava dois casos de uso com assinaturas antigas. Nada disso era
+  detectável por CI, porque o typecheck da api não cobre os testes. Agora
+  afirma a regra pelo caminho certo — modelo descoberto nasce desligado
+  naquele workspace, e desligado é a ausência de linha
+
+- **engine**: o dev agent **morria** quando a fila do módulo esvaziava, em vez
+  de ficar ocioso. Com nada a reivindicar, a rota de claim responde `201` sem
+  corpo — o caso de uso devolve `null`, mas isso vira resposta vazia, e o
+  cliente entregava `""` no lugar de `nil`. O agente tratava a string vazia
+  como se fosse uma task e estourava, e como o processo não é reiniciável, ele
+  morria de vez, com o estado apagado logo atrás. É o oposto do que a Fase 12b
+  entregou: em vez de um agente ocioso, supervisionado e acordável por evento,
+  processo morto — e no desfecho mais comum que existe, o da fila acabando.
+  Nenhum teste pegava porque o dublê da suite devolvia o valor certo; só
+  execução real expôs
+
+- **engine**: o dev agent de validação (sem LLM) não abria o gate depois de
+  publicar a PR — marcava a tarefa como em revisão e parava aí, deixando o
+  gate sem nada para julgar. E morria ao receber o aviso de que a PR foi
+  resolvida, quando o gate já estava aberto. As duas coisas faziam a validação
+  da Fase 12 travar sem dizer por quê
+
+- **api**: o roteiro de validação da Fase 12 criava o repositório-cobaia num
+  diretório temporário local, invisível para o processo que precisa cloná-lo.
+  Passa a criá-lo no volume compartilhado, que é o pré-requisito que o próprio
+  roteiro já declarava, e limpa os restos das corridas anteriores
+
+- **web**: fixture do ModelPicker sem as facetas novas quebrava o build (00a23381)
+- **api,docs**: o DTO da resposta do teste de credencial e a contagem de ADR (5021192c)
+- **web**: corpo vazio da api e rolagem da lista de modelos (7be6b29d)
+- **api**: o decorator de tracing perdia listModels e matava o sync de catálogo (429a3228)
+- **api**: o CSRF nascia em /auth e o refresh nunca funcionou no browser (b5430acf)
+
+### Refatorações
+
+- **web**: as @font-face saem do index.css para um arquivo próprio (59b78632)
+
+### Documentação
+
+- o README anuncia a versão de verdade, e o CI passa a cobrar isso (265055c0)
+- CHANGELOG da rodada e o escopo da FASE 13 (5696bdf0)
+- **changelog**: v2.1.0 (becec969)
+
+### Manutenção
+
+- **design-sync**: re-sync do design system — 66 componentes no Claude Design (3c9b6ad8)
+
 ## v2.1.0 — 2026-08-03
 
 ### Novidades
@@ -43,6 +143,92 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - **branching**: o CHANGELOG volta por PR depois do release (fc570b6)
 
 ## Unreleased
+
+### Novidades
+
+- **api,engine**: o dev agent passa a **esperar** a aprovação em vez de queimar
+  iterações. Ferramenta pendente suspendia o agente em nada: o `pending` voltava
+  como resultado, o modelo lia como resposta do comando, e cada tentativa
+  gastava uma iteração até a task morrer no teto sem uma linha escrita — com as
+  aprovações do usuário chegando tarde demais para servir. Agora o laço para
+  retendo worktree e histórico, e a decisão o retoma com o resultado de verdade
+  no lugar certo. Recusa também retoma, com o motivo: o agente aprende que o
+  caminho fechou em vez de esperar para sempre
+
+- **api**: sessão nova e dev agent param de nascer no modelo local do
+  workspace. Quando ninguém configurou nada para o projeto, o modelo herdado
+  passa a ser o do **Criativo** — ele é a porta de entrada, e o binding dele
+  representa o modelo que o projeto usa para pensar. A herança ocupa o vazio e
+  nunca sobrepõe: escolha explícita de sessão, agente ou projeto continua
+  vencendo. Antes era preciso trocar o modelo à mão em toda sessão aberta, e os
+  dev agents subiam em `llama3.2:1b`, que o ADR 0020 proíbe no passo semântico
+
+- **api,docs**: os gates do fluxo viram **registro declarativo** em
+  `docs/gates.yml` — treze deles, que até agora só existiam espalhados entre
+  regra pura, use case, teste e workflow. O registro descreve e não executa:
+  trocar um campo nele não muda comportamento nenhum. O que ele compra é os
+  gates ficarem enumeráveis, e com isso mensuráveis por
+  `pnpm --filter api validacao:gates`, que extrai do event log a última
+  passagem de cada um. Cada gate diz ONDE mora a prova dele
+  (`event_log | teste | ci`), porque nem toda prova está no log: a trava de
+  merge é garantida por teste e o backmerge é CI. Enumerar já rendeu três
+  achados antes de medir qualquer coisa — o gate de PR de infra, que ninguém
+  tinha listado; um check required sem teste próprio; e um filtro que apontava
+  para coluna em vez de payload, fazendo um gate parecer nunca ter passado
+- **api**: `GET /internal/gates` devolve o registro validado. O arquivo passa a
+  viajar dentro da imagem de produção — sem isso a rota funcionaria em
+  desenvolvimento e responderia erro só em produção, porque `docs/` inteiro é
+  ignorado no build
+
+### Correções
+
+- **engine**: o Psicólogo parou de analisar sessão **sem nada a analisar**. Uma
+  sessão cujo log inteiro era provisionamento de repositório passava pelo
+  critério de tamanho, ganhava a análise, e o modelo — sem evento algum para
+  citar — inventava `seq` inexistentes até a validação de evidência rejeitar e
+  ele desistir, com o orçamento já gasto. A contagem que decide se vale a pena
+  agora desconta os passos de máquina do bootstrap e o rastro que os próprios
+  analistas deixam na sessão: contar o turno anterior do Psicólogo fazia uma
+  sessão vazia parecer povoada a partir da primeira análise, e cada retentativa
+  a enchia mais. Não havendo material, a análise não roda e o desfecho fica no
+  log como `psychologist.analysis_skipped` — inclusive no reprocessamento
+  manual, onde quem clicou recebe o motivo em vez de uma hipótese inventada
+
+- **engine**: regra de negócio com título já registrado **no projeto** passa a
+  ser recusada na emissão. Rodar o Criativo duas vezes deixava as mesmas regras
+  duplicadas, metade delas órfãs; como o artefato é um evento de domínio, e
+  evento não é apagado nem editado, a entrada é o único momento em que dá para
+  recusar. A checagem é por projeto e não por sessão, que é onde a duplicata
+  nasce — a segunda rodada abre sessão nova. O erro volta ao modelo, que segue
+  para a próxima regra
+
+- **api**: o PO parou de criar história com título idêntico a uma que já existe
+  no projeto, e passa a **avisar** quando uma história nova não acrescenta
+  cobertura nenhuma — todas as regras que ela cita já estavam cobertas por
+  outra. São respostas diferentes de propósito: título repetido é erro e
+  bloqueia; justificativa repetida é suspeita e vira
+  `backlog.story_overlap_warned`, porque um segundo recorte da mesma regra pode
+  ser legítimo e quem julga isso é o usuário. Sobreposição **semântica** — dois
+  títulos diferentes para o mesmo endpoint — continua passando, e há teste
+  afirmando esse limite em vez de deixá-lo implícito
+
+- **api**: o bootstrap de Gitflow morria no primeiro passo em **todo projeto
+  GitHub novo**. Repositório recém-criado não tem commit nenhum, e aí a Git
+  Data API inteira do GitHub responde `409 Git Repository is empty` — o
+  provider tratava só `404` e nunca alcançava o próprio caminho de "primeiro
+  commit" que já tinha escrito. Agora o commit inicial sai pela Contents API,
+  que é a única que funciona em repo vazio. O backend falso dos testes também
+  foi corrigido: ele respondia `404` onde o GitHub responde `409`, e era por
+  isso que a suite ficava verde enquanto o produto quebrava
+- **web**: o wizard avisa, ao escolher **repositório privado no GitHub**, que o
+  plano gratuito não aceita proteção de branch — antes a limitação só aparecia
+  no último passo do bootstrap, com o repositório já criado e a mensagem crua
+  da API na tela
+
+- **ci**: a PR de changelog que o release abre passa a trazer junto a versão
+  anunciada no `README.md`. Sem isso, o check de versão (novo nesta rodada)
+  reprovaria toda PR de release — que é aberta pelo bot e só toca o CHANGELOG,
+  então nasceria vermelha esperando uma mão humana que a política não prevê
 
 ### ⚠ Mudanças incompatíveis
 

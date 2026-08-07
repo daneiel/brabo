@@ -26,6 +26,35 @@ defmodule Engine.Psychologist.Triage do
   @doc "Limiar de eventos abaixo do qual a análise é leve."
   def threshold, do: Application.get_env(:engine, :psychologist_triage_threshold, 20)
 
+  @doc """
+  Mínimo de eventos ANALISÁVEIS para a análise valer a pena.
+
+  Default 1: o corte é literalmente "não há nada para ler", não uma
+  política de custo — quem gradua custo é o tier. Fica em `get_env` pelo
+  mesmo motivo que o resto deste módulo: controle de custo é knob de
+  operador, não constante de código.
+  """
+  def min_analisaveis,
+    do: Application.get_env(:engine, :psychologist_min_analisaveis, 1)
+
+  @doc """
+  A análise tem material?
+
+  Note que o parâmetro é a contagem ANALISÁVEL
+  (`Engine.SessionEvents.Event.count_analisaveis/1`), não a crua. Os dois
+  números respondem perguntas diferentes e por isso não se substituem:
+  a crua dimensiona o trabalho (quanto log ler, logo qual tier), esta
+  decide se há trabalho.
+
+  Sem esta pergunta, uma sessão cujo log inteiro é provisionamento de
+  repositório passava por "20 eventos" e ganhava análise — o modelo então
+  citava seq que não existiam, tinha a evidência rejeitada pela validação
+  e desistia, depois de gastar o orçamento inteiro (achado J).
+  """
+  @spec should_run?(non_neg_integer()) :: boolean()
+  def should_run?(analisaveis) when is_integer(analisaveis),
+    do: analisaveis >= min_analisaveis()
+
   @spec decide(non_neg_integer()) :: tier()
   def decide(event_count) when is_integer(event_count) do
     if event_count < threshold(), do: :leve, else: :pesada

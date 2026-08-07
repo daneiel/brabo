@@ -111,7 +111,14 @@ defmodule Engine.Dev.AgentIo do
   """
   def try_claim(state, run_task) when is_function(run_task, 2) do
     case claim_task(state) do
-      {:ok, nil} ->
+      # `""` junto com `nil` de propósito. Quem normaliza o corpo vazio é o
+      # `EngineApiClient.claim_task/4`, na fronteira; esta cláusula é a guarda
+      # do CONTRATO — "sem task" é o que leva a `idle`, e é aqui que a
+      # violação matava o processo (`run_task("")` → BadMapError → agente
+      # `restart: :temporary` morto de vez, no momento mais comum que existe:
+      # a fila do módulo esvaziando). Uma rota nova que responda vazio não
+      # derruba mais o agente.
+      {:ok, corpo} when corpo in [nil, ""] ->
         state = %{state | status: :idle}
         persist(state)
         emit(state, "dev.idle", %{agentId: state.agent_id, reason: "sem task pegável"})
@@ -247,13 +254,30 @@ defmodule Engine.Dev.AgentIo do
   Devolve a task com diagnóstico (`blocked`) — nunca deixa uma task
   reivindicada órfã, sem dono vivo e invisível pro claim (que só pega `todo`).
   Devolve o `state` pra encadear no fluxo do GenServer.
+
+  A ORIGEM é obrigatória — **sem default**, e é aí que está a correção.
+
+  Ela já era "obrigatória em espírito", com `"indeterminada"` de default. Não
+  funcionou: o desfecho mais caro da execução real (o `413` que encerrou a
+  rodada) saiu como `"indeterminada"` justamente porque o call site não passou
+  nada, enquanto o campo `diagnosis` ao lado nomeava a causa na mesma linha.
+  Default é um convite a esquecer, e ninguém percebe o esquecimento — o evento
+  fica sintaticamente válido e semanticamente vazio.
+
+  Sem default, esquecer vira erro de compilação. É a única forma de garantia
+  que não depende de alguém lembrar (achados P, Q e T).
+
+  O valor precisa ser uma das quatro origens do ADR 0020 —
+  `infra | modelo | codigo | politica`. `Engine.Agents.FalhaDeTurno.origem/1`
+  deriva a origem de um erro; use-a em vez de decidir no olho.
   """
-  def block_task(state, reason, diagnosis) do
+  def block_task(state, reason, diagnosis, origem) do
     emit(state, "dev.blocked", %{
       agentId: state.agent_id,
       taskId: state.task_id,
       reason: reason,
-      diagnosis: diagnosis
+      diagnosis: diagnosis,
+      origem: origem
     })
 
     # Artefato do desfecho, além do evento de narrativa acima: é o registro
@@ -274,7 +298,8 @@ defmodule Engine.Dev.AgentIo do
         state.task_id,
         reason,
         diagnosis,
-        state.agent_id
+        state.agent_id,
+        origem
       )
 
     state

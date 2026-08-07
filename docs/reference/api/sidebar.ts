@@ -96,6 +96,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/git-controller-reconhecer-falha-de-protecao",
+          label: "Reconhece a falha ao proteger as branches e segue",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/git-controller-plan",
           label: "Devolve o plano de bootstrap e o que foi decidido sobre ele",
           className: "api-method get",
@@ -150,9 +156,21 @@ const sidebar: SidebarsConfig = {
       items: [
         {
           type: "doc",
+          id: "docs/reference/api/internal-gates-controller-ler",
+          label: "Lê o registro declarativo de gates",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/internal-models-controller-sync",
           label: "Sincroniza o catálogo de modelos de todos os providers",
           className: "api-method post",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/internal-projects-controller-git-remote",
+          label: "O remoto de trabalho do projeto, para buscar e empurrar",
+          className: "api-method get",
         },
         {
           type: "doc",
@@ -255,6 +273,12 @@ const sidebar: SidebarsConfig = {
           id: "docs/reference/api/internal-sessions-controller-module-map",
           label: "Publica uma versão nova do module_map",
           className: "api-method post",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/internal-sessions-controller-pending-work",
+          label: "A sessão tem trabalho pendente que impede encerrá-la?",
+          className: "api-method get",
         },
         {
           type: "doc",
@@ -506,6 +530,12 @@ const sidebar: SidebarsConfig = {
           type: "doc",
           id: "docs/reference/api/budgets-controller-get-session-token-usage",
           label: "Quebra o gasto da sessão por agente",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/budgets-controller-get-credential-spend",
+          label: "Quanto as chaves do owner gastaram, por provider e por mês",
           className: "api-method get",
         },
         {

@@ -9,7 +9,9 @@ defmodule Engine.Sessions.SessionServer do
 
   use GenServer, restart: :temporary
 
-  alias Engine.Sessions.SessionState
+  require Logger
+
+  alias Engine.Sessions.{EngineApiClient, SessionState}
 
   def start_link({session_id, project_id}) do
     start_link({session_id, project_id, nil})
@@ -84,11 +86,38 @@ defmodule Engine.Sessions.SessionServer do
 
   @impl true
   def handle_info(:heartbeat_timeout, state) do
-    SessionState.mark_closing!(state.session_id, "heartbeat_timeout")
-    # {:shutdown, reason} em vez do átomo cru — é um encerramento
-    # sancionado (ninguém do outro lado), não um crash; evita o log de
-    # erro padrão do OTP que um :stop com razão arbitrária geraria.
-    {:stop, {:shutdown, :heartbeat_timeout}, state}
+    # Antes de morrer, pergunta se sobrou TRABALHO. O timeout mede inatividade
+    # da ABA (30s), não do trabalho: sair da sessão para o Backlog já bastava
+    # para matá-la. Numa execução real isso prendeu um handoff `offered` para o
+    # Arquiteto numa sessão fechada — épico e quatro histórias prontos, e a
+    # cadeia sem como seguir, porque não há onde aceitar handoff de sessão
+    # morta.
+    case EngineApiClient.session_pending_work(state.session_id) do
+      {:ok, %{pending: true, motivo: motivo}} ->
+        Logger.info(
+          "sessão #{state.session_id}: heartbeat expirou mas há trabalho pendente " <>
+            "(#{motivo}) — reagendando em vez de encerrar"
+        )
+
+        {:noreply, %{state | heartbeat_ref: schedule_heartbeat_timeout()}}
+
+      outro ->
+        # `{:error, _}` cai aqui de propósito: api fora do ar não pode impedir
+        # o encerramento para sempre — seria trocar sessão órfã por sessão
+        # imortal. O log diz qual dos dois casos foi.
+        if match?({:error, _}, outro) do
+          Logger.warning(
+            "sessão #{state.session_id}: não consegui checar trabalho pendente " <>
+              "(#{inspect(outro)}) — encerrando por heartbeat"
+          )
+        end
+
+        SessionState.mark_closing!(state.session_id, "heartbeat_timeout")
+        # {:shutdown, reason} em vez do átomo cru — é um encerramento
+        # sancionado (ninguém do outro lado), não um crash; evita o log de
+        # erro padrão do OTP que um :stop com razão arbitrária geraria.
+        {:stop, {:shutdown, :heartbeat_timeout}, state}
+    end
   end
 
   defp schedule_heartbeat_timeout do
