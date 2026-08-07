@@ -6,6 +6,17 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api**: quantos agentes sobem numa sessão deixa de ser um número fixo no
+  código e passa a ser decisão do lead da área — com um teto acima do qual você
+  autoriza. Até o teto (2 por padrão) ele sobe e segue; acima disso vira uma
+  ação pendente de aprovação, como toda ação com efeito externo, e a decisão
+  fica registrada com o seu nome. O teto é da SESSÃO e não do módulo: contar
+  por módulo permitiria muitos agentes sem autorização nenhuma, que era o
+  buraco anterior com outro nome. As áreas de agente viram dado por projeto,
+  no lugar da lista fixa em código — o que forçou a mudança foi a área de dev,
+  cujos membros são um por módulo decidido pelo Arquiteto e portanto
+  diferentes em cada projeto
+
 - **engine**: o agente de gate espera a aprovação, como o dev espera (95ae7074)
 
 ### Documentação
