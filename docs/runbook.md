@@ -28,6 +28,7 @@ arquivo. Comece pela triagem.
 | não sei que versão está rodando | [Que versão está no ar](#que-versao-esta-no-ar) |
 | `blocked by CORS policy` no console do navegador | [Erro de CORS](#erro-de-cors) |
 | agente respondendo vazio, truncado ou lentíssimo | [Ambiente de inferência](#ambiente-de-inferencia) |
+| agente parando com `limite de iterações atingido` sem ter entregado | [Ambiente de inferência](#ambiente-de-inferencia) |
 | quero acrescentar um provider de LLM compatível com a OpenAI | [Adicionando um provider compatível](#adicionando-um-provider-compativel) |
 
 Duas coisas que valem antes de qualquer procedimento:
@@ -1252,6 +1253,7 @@ expostas no `docker-compose.yml`.
 | `OLLAMA_MAX_LOADED_MODELS` | com `OLLAMA_KEEP_ALIVE` alto os modelos acumulam: 15,2 GB de pesos residentes numa máquina de 15 GB, e o agente respondendo vazio por falta de memória |
 | `OLLAMA_REQUEST_TIMEOUT_MS` | timeout curto demais para um modelo grande num prompt longo |
 | `START_OUTBOX_DRAIN` / `START_ANAMNESE` | Psicólogo e Anamnese consomem turnos de LLM em paralelo com os agentes de execução e derrubam a conexão do dev no meio do ciclo |
+| `TOOL_LOOP_MAX_ITERATIONS*` | teto BAIXO demais e o agente para sem entregar, com `limite de iterações atingido` e origem `modelo` — que engana, porque o modelo não errou julgamento nenhum, ele não chegou a julgar. O teto é por TIPO ([RN-085](business-rules.md#rn-085)): `8` para quem conversa, `60` para dev agent e QA. Antes de subir, confira se o agente TEM `token_budget_micros`; sem ele o teto é a única trava de custo que existe |
 | `TERMINAL_OUTPUT_MAX_BYTES` | subir demais traz de volta o modo de falha que o teto existe para impedir: a saída de cada comando fica no histórico do laço e viaja em TODO turno seguinte, até o provider recusar a requisição com **HTTP 413** (`request entity too large`). O sintoma engana — parece o modelo travando, e é o corpo da requisição estourando. Não é janela de contexto: a maior chamada bem-sucedida da execução que morreu assim tinha só 28.993 tokens de entrada ([RN-074](business-rules.md#rn-074)) |
 
 > **Atenção — o guard não limpa a fila.** `START_ANAMNESE=false` impede

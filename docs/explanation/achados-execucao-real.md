@@ -440,6 +440,13 @@ achado X.
 > este agente"**. O conserto de produto NÃO é subir o default global — o
 > Criativo não precisa de 25 iterações para conversar. É um teto por tipo de
 > agente, e isso é decisão de produto: fica na triagem.
+>
+> **FECHADO na FASE 14d** ([RN-085](../business-rules.md#rn-085)). O teto virou
+> por tipo em `Engine.Harness.Iteracoes`: `8` para quem conversa, `60` para dev
+> agent e subagente de QA. O critério de quem sobe não é "trabalha muito" — é
+> ter `token_budget_micros` por baixo segurando o gasto, e por isso
+> `infra-workflows` usa ferramenta pesada e **fica em 8**: ele roda sem budget,
+> e para ele o teto é a única trava que existe.
 
 ### Z. O allowlist de terminal governa o VERBO; o escopo protege só o CAMINHO
 

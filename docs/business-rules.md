@@ -1673,6 +1673,49 @@ Três decisões de borda, todas para a tela **degradar** em vez de sumir:
   sabe desenhar é IGNORADO`, `sem registro, mostra a esteira completa`)
 - **Origem:** [ADR 0054](adr/0054-gates-como-registro-declarativo.md), FASE 15b
 
+### RN-085 — O teto de iterações é por TIPO de agente {#rn-085}
+
+Quantas voltas um agente pode dar no laço de ferramenta depende do trabalho que
+ele faz: **8** para quem conversa, **60** para o dev agent e para os subagentes
+de QA. Não há mais um número único.
+
+**O teto de 8 nasceu de agente conversacional e foi herdado por quem trabalha.**
+Na validação real da 13b isso apareceu como bloqueio: o dev agent gastou as
+oito voltas explorando um repositório recém-provisionado e **nunca escreveu um
+arquivo**; com 25, escreveu três e rodou os testes. O desfecho registrado era
+`limite de iterações atingido` com origem `modelo` — tecnicamente verdade e
+praticamente inútil, porque o modelo nunca chegou a julgar nada.
+
+**Subir o default global seria a correção errada**, e é isso que a regra
+protege: o Criativo não precisa de 60 voltas para conversar, e o teto também é
+a trava contra laço infinito.
+
+**Quem pode subir não é "quem trabalha muito", é quem tem trava de gasto por
+baixo.** O teto de iterações protege contra laço infinito; quem protege o
+BOLSO é o `token_budget_micros`. Dev agents e subagentes de QA rodam com o
+`task_budget_micros` da task, então afrouxar as voltas não afrouxa a conta.
+`infra-workflows` usa ferramenta pesada e mesmo assim **fica em 8**: ele roda
+sem budget, e para ele o teto é a única trava que existe.
+
+Duas bordas com teste próprio:
+
+- **`dev-lead` é conversacional**, apesar do prefixo `dev-` que identifica os
+  dev agents (`dev-<modulo>`, `dev-<modulo>-2`). O lead decide e delega, e sem
+  a cláusula explícita nasceria com o teto do trabalho pesado por acidente de
+  nomenclatura.
+- **Agente desconhecido cai no teto mais baixo.** Errar para o lado barato:
+  quem precisa de mais voltas aparece como `limite de iterações atingido` e é
+  corrigido; quem ganha 60 por engano gasta calado.
+
+- **Onde:** `apps/engine/lib/engine/harness/iteracoes.ex`, aplicado em
+  `apps/engine/lib/engine/harness/tool_loop.ex` (`init/1`)
+- **Teste:** `apps/engine/test/engine/harness/iteracoes_test.exs` e
+  `apps/engine/test/engine/harness/tool_loop_test.exs`
+  (`o teto vem do TIPO do agente quando o chamador não passa um`,
+  `teto explícito do chamador VENCE o do tipo`)
+- **Origem:** achado X, [validação real da 13b](explanation/validacao-real.md);
+  [ADR 0053](adr/0053-dev-lead-e-paralelismo-autorizado.md), FASE 14d
+
 ### RN-086 — Gastar com mais agentes nunca se auto-aprova {#rn-086}
 
 As duas ações que mexem em **quanto o produto pode gastar sozinho** —
