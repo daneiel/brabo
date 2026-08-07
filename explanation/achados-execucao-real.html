@@ -1,0 +1,596 @@
+<!doctype html><html lang=pt-BR dir=ltr class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-explanation/achados-execucao-real" data-has-hydrated=false><head><meta charset=UTF-8><meta name=generator content="Docusaurus v3.10.2"><title data-rh=true>Achados da execução real da esteira | Brabo</title><meta data-rh=true name=viewport content="width=device-width, initial-scale=1.0"/><meta data-rh=true name=twitter:card content=summary_large_image /><meta data-rh=true property=og:url content=https://daneiel.github.io/brabo/explanation/achados-execucao-real /><meta data-rh=true property=og:locale content=pt_BR /><meta data-rh=true name=docusaurus_locale content=pt-BR /><meta data-rh=true name=docsearch:language content=pt-BR /><meta data-rh=true name=docusaurus_version content=current /><meta data-rh=true name=docusaurus_tag content=docs-default-current /><meta data-rh=true name=docsearch:version content=current /><meta data-rh=true name=docsearch:docusaurus_tag content=docs-default-current /><meta data-rh=true property=og:title content="Achados da execução real da esteira | Brabo"/><meta data-rh=true name=description content="Levantado numa sessão de execução conduzida pelo navegador em 2026-08-05,"/><meta data-rh=true property=og:description content="Levantado numa sessão de execução conduzida pelo navegador em 2026-08-05,"/><link data-rh=true rel=icon href=/brabo/img/favicon.ico /><link data-rh=true rel=canonical href=https://daneiel.github.io/brabo/explanation/achados-execucao-real /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/explanation/achados-execucao-real hreflang=pt-BR /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/explanation/achados-execucao-real hreflang=x-default /><script data-rh=true type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","item":"https://daneiel.github.io/brabo/explanation/achados-execucao-real","name":"Achados da execução real da esteira","position":1}]}</script><link rel=stylesheet href=/brabo/assets/css/styles.b2fce81b.css /><script src=/brabo/assets/js/runtime~main.3f049cca.js defer></script><script src=/brabo/assets/js/main.a33616de.js defer></script></head><body><svg style="display: none;"><defs>
+<symbol id=theme-svg-external-link viewBox="0 0 24 24"><path fill=currentColor d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
+</defs></svg>
+<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme-b05")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")),document.documentElement.setAttribute("data-theme-choice",t||"system")}(),function(){try{for(var[t,e]of new URLSearchParams(window.location.search).entries())if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id=__docusaurus><link rel=preload as=image href=/brabo/img/logo.svg /><div role=region aria-label="Pular para o conteúdo principal"><a class=skipToContent_vTaE href=#__docusaurus_skipToContent_fallback>Pular para o conteúdo principal</a></div><nav aria-label="Navegação principal" class="theme-layout-navbar navbar navbar--fixed-top"><div class=navbar__inner><div class="theme-layout-navbar-left navbar__items"><button aria-label="Alternar painel de navegação" aria-expanded=false class="navbar__toggle clean-btn" type=button><svg width=30 height=30 viewBox="0 0 30 30" aria-hidden=true><path stroke=currentColor stroke-linecap=round stroke-miterlimit=10 stroke-width=2 d="M4 7h22M4 15h22M4 23h22"/></svg></button><a class=navbar__brand href=/brabo/><div class=navbar__logo><img src=/brabo/img/logo.svg alt=Brabo class="themedComponent_MRFi themedComponent--light_L7lV"/><img src=/brabo/img/logo.svg alt=Brabo class="themedComponent_MRFi themedComponent--dark_IOSi"/></div><b class="navbar__title text--truncate">Brabo</b></a><a aria-current=page class="navbar__item navbar__link navbar__link--active" href=/brabo/>Documentação</a><a class="navbar__item navbar__link" href=/brabo/runbook>Runbook</a><a class="navbar__item navbar__link" href=/brabo/adr>ADRs</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_7k9y><use href=#theme-svg-external-link /></svg></a><div class="toggle_U6bG colorModeToggle_T9um"><button class="clean-btn toggleButton_g_PR toggleButtonDisabled_Ngeu" type=button disabled title="modo do sistema" aria-label="Mudar entre modo claro e escuro (modo do sistema está ativo)"><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_z_rx lightToggleIcon_McQy"><path fill=currentColor d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_z_rx darkToggleIcon_Ys4Y"><path fill=currentColor d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_z_rx systemToggleIcon_p3nf"><path fill=currentColor d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"/></svg></button></div><div class=navbarSearchContainer_x4Ld><div class="navbar__search searchBarContainer_eC8_" dir=ltr><input placeholder=Search aria-label=Search class="navbar__search-input searchInput_kJYU" value="" /><div class="loadingRing_DQ9P searchBarLoadingRing_Y6ag"><div></div><div></div><div></div><div></div></div></div></div></div></div><div role=presentation class=navbar-sidebar__backdrop></div></nav><div id=__docusaurus_skipToContent_fallback class="theme-layout-main main-wrapper mainWrapper_esxj"><div class=docsWrapper_Ty4Q><button aria-label="Voltar para o topo" class="clean-btn theme-back-to-top-button backToTopButton_L3CF" type=button></button><div class=docRoot_loR7><aside class="theme-doc-sidebar-container docSidebarContainer_ywCD"><div class=sidebarViewport_eMS9><div class=sidebar_uBd7><nav aria-label="Painel lateral de documentos" class="menu thin-scrollbar menu_3GWd"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_Eiy3 menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/><span class=categoryLinkLabel_u8BQ>🚀 Comece aqui</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/><span class=linkLabel__cP1>Introdução</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/getting-started><span class=linkLabel__cP1>Primeiros passos</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_Eiy3 menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/architecture><span class=categoryLinkLabel_u8BQ>🏗️ Arquitetura</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/architecture><span class=linkLabel__cP1>Arquitetura</span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_Eiy3 menu__link menu__link--sublist" tabindex=0 href=/brabo/adr><span class=categoryLinkLabel_u8BQ>Decisões (ADR)</span></a><button aria-label="Expandir a categoria 'Decisões (ADR)'" aria-expanded=false type=button class="clean-btn menu__caret"></button></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_Eiy3 menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/business-rules><span class=categoryLinkLabel_u8BQ>📐 Regras</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/business-rules><span class=linkLabel__cP1>Regras de negócio</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_Eiy3 menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/reference/configuration><span class=categoryLinkLabel_u8BQ>📖 Referência</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/reference/configuration><span class=linkLabel__cP1>Configuração</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/reference/events><span class=linkLabel__cP1>Eventos</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/reference/permissions><span class=linkLabel__cP1>Permissões</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/reference/artifacts><span class=linkLabel__cP1>Artefatos</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/reference/git-providers><span class=linkLabel__cP1>Providers de git</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/reference/internal-api><span class=linkLabel__cP1>API interna</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/reference/scripts><span class=linkLabel__cP1>Scripts</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/reference/rulesets><span class=linkLabel__cP1>Rulesets</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/security-surface><span class=linkLabel__cP1>Superfície exposta da api</span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_Eiy3 menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/reference/api/brabo-api><span class=categoryLinkLabel_u8BQ>Referência da API</span></a></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_Eiy3 menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role=button aria-expanded=true href=/brabo/explanation/documentation-workflow><span class=categoryLinkLabel_u8BQ>💡 Explicação</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/explanation/documentation-workflow><span class=linkLabel__cP1>Sincronização de docs</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/explanation/branching-policy><span class=linkLabel__cP1>Política de branches</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/explanation/observability><span class=linkLabel__cP1>Observabilidade</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/explanation/primeiro-dogfooding><span class=linkLabel__cP1>Primeiro dogfooding</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/explanation/execucao-real-hello-world><span class=linkLabel__cP1>Execução real (hello world)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link menu__link--active" aria-current=page tabindex=0 href=/brabo/explanation/achados-execucao-real><span class=linkLabel__cP1>Achados da execução real da esteira</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/explanation/backlog><span class=linkLabel__cP1>Backlog triado</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/explanation/validacao-fase-12><span class=linkLabel__cP1>Validação da Fase 12</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/explanation/validacao-real><span class=linkLabel__cP1>Validação real (13b)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/explanation/aceite-providers><span class=linkLabel__cP1>Aceite dos providers</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/explanation/gates><span class=linkLabel__cP1>Os gates, e como eles são medidos</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_Eiy3 menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/runbook><span class=categoryLinkLabel_u8BQ>🛠️ Operação</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/runbook><span class=linkLabel__cP1>Runbook</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_Eiy3 menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/glossary><span class=categoryLinkLabel_u8BQ>📚 Vocabulário</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/glossary><span class=linkLabel__cP1>Glossário</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="categoryLink_Eiy3 menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true><span class=categoryLinkLabel_u8BQ>🤝 Contribuir</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Sk2I" tabindex=0><span class=linkLabel__cP1>Como contribuir</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_7k9y><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Sk2I" tabindex=0><span class=linkLabel__cP1>Onde pedir ajuda</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_7k9y><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Sk2I" tabindex=0><span class=linkLabel__cP1>Reportar vulnerabilidade</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_7k9y><use href=#theme-svg-external-link /></svg></a></ul></ul></nav></div></div></aside><main class=docMainContainer_SV68><div class="container padding-top--md padding-bottom--lg"><div class=row><div class="col docItemCol_rx8r"><div class=docItemContainer_F5u4><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_fBVE" aria-label=Trilha><ul class=breadcrumbs><li class=breadcrumbs__item><a aria-label="Página Inicial" class=breadcrumbs__link href=/brabo/><svg viewBox="0 0 24 24" class=breadcrumbHomeIcon_ukF7><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill=currentColor /></svg></a><li class=breadcrumbs__item><span class=breadcrumbs__link>💡 Explicação</span><li class="breadcrumbs__item breadcrumbs__item--active"><span class=breadcrumbs__link>Achados da execução real da esteira</span></ul></nav><div class="tocCollapsible_leAO theme-doc-toc-mobile tocMobile_jGlV"><button type=button class="clean-btn tocCollapsibleButton_zzRU">Nesta página</button></div><div class="theme-doc-markdown markdown"><div class=row><div class="col col--12 markdown"><header><h1>Achados da execução real da esteira</h1></header>
+<blockquote>
+<p>Levantado numa sessão de execução conduzida pelo navegador em <strong>2026-08-05</strong>,
+com modelo de API (não local) e provider de git de verdade. É o insumo da
+triagem da FASE 13c: cada item tem arquivo:linha ou evento que o comprova, e
+nenhum foi corrigido "de passagem" — os que foram fechados têm PR nomeada.</p>
+</blockquote>
+<p>Projeto CRIADO (não adotado) no GitHub via wizard. Repo real: <code>daneiel/hello-api</code>,
+privado. Sessão do wizard: <code>f15b0cc9</code>. Sessão saudável: <code>36abf7e7</code>.</p>
+<h2 class="anchor anchorTargetStickyNavbar_K8W5" id=corrigidos-durante-a-execução-bloqueavam>Corrigidos durante a execução (bloqueavam)<a href=#corrigidos-durante-a-execução-bloqueavam class=hash-link aria-label="Link direto para Corrigidos durante a execução (bloqueavam)" title="Link direto para Corrigidos durante a execução (bloqueavam)" translate=no>​</a></h2>
+<ol>
+<li class=""><strong>Medidor não media</strong> (PR #136, mergeada) — <code>db.execute</code> destruturado como
+array + agente lido do ator do evento em vez do payload.</li>
+<li class=""><strong><code>llm_turn_stream</code> sem <code>receive_timeout</code></strong> (PR #137, mergeada) — caía nos
+15s default do Req; os 4 agentes conversacionais só passam por ali.</li>
+<li class=""><strong><code>ApprovalCard</code> derrubava a tela da sessão</strong> (a commitar) — <code>ActionType</code> do
+web era subconjunto do backend; <code>ACTION_ICON[actionType]</code> → <code>undefined</code> para
+<code>git_repo_create</code>/<code>git_branch_create</code>/<code>git_branch_protect</code>, que é o que TODO
+projeto criado num provider gera. O "fallback genérico" existia só no
+comentário. Só não aparecia em projeto ADOTADO (sem bootstrap).</li>
+</ol>
+<h2 class="anchor anchorTargetStickyNavbar_K8W5" id=abertos--para-a-triagem-da-13c>Abertos — para a triagem da 13c<a href=#abertos--para-a-triagem-da-13c class=hash-link aria-label="Link direto para Abertos — para a triagem da 13c" title="Link direto para Abertos — para a triagem da 13c" translate=no>​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_K8W5" id=a-sessão-do-provisionamento-nasce-sem-processo-no-engine-grave>A. Sessão do provisionamento nasce sem processo no engine (GRAVE)<a href=#a-sessão-do-provisionamento-nasce-sem-processo-no-engine-grave class=hash-link aria-label="Link direto para A. Sessão do provisionamento nasce sem processo no engine (GRAVE)" title="Link direto para A. Sessão do provisionamento nasce sem processo no engine (GRAVE)" translate=no>​</a></h3>
+<blockquote>
+<p><strong>FECHADO</strong> — virou <a class="" href=/brabo/business-rules#rn-067>RN-067</a>. Os quatro call
+sites citados abaixo passaram a criar sessão pelo <code>CreateSessionUseCase</code>
+(<code>provision-repository:119</code> e <code>:125</code>, <code>adopt-repository</code>, <code>activate-execution</code>),
+e a regra declara que ele é o <strong>único</strong> lugar que cria sessão. Fica registrado
+porque a prova por contraste abaixo é o que tornou o defeito visível.</p>
+</blockquote>
+<p><code>CreateSessionUseCase</code> é o único lugar que emite <code>session.created</code> no outbox.
+Criam sessão direto no repositório, pulando isso:</p>
+<ul>
+<li class=""><code>apps/api/src/application/use-cases/git/provision-repository.use-case.ts:112</code> e <code>:121</code></li>
+<li class=""><code>apps/api/src/application/use-cases/git/adopt-repository.use-case.ts:176</code></li>
+<li class=""><code>apps/api/src/application/use-cases/execution/activate-execution.use-case.ts:156</code>
+← esta é a sessão em que os DEV AGENTS rodam</li>
+</ul>
+<p>Efeito: engine nunca sabe que a sessão existe → <code>REFUSED JOIN</code> eterno, sem
+canal, sem atualização ao vivo, sem heartbeat, e a sessão <strong>nunca fecha</strong>
+(fica <code>active</code> para sempre). A UI só reclama no console.</p>
+<p>Prova por contraste:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>sessão<th><code>session.created</code><th><code>engine.session_states</code><th>canal<tbody><tr><td>wizard <code>f15b0cc9</code><td>não<td>vazio<td><code>REFUSED JOIN</code><tr><td>rota normal <code>36abf7e7</code><td>sim<td><code>active</code><td><code>JOINED</code></table>
+<h3 class="anchor anchorTargetStickyNavbar_K8W5" id=b-modelo-de-start-decisão-do-usuário>B. Modelo de start (DECISÃO DO USUÁRIO)<a href=#b-modelo-de-start-decisão-do-usuário class=hash-link aria-label="Link direto para B. Modelo de start (DECISÃO DO USUÁRIO)" title="Link direto para B. Modelo de start (DECISÃO DO USUÁRIO)" translate=no>​</a></h3>
+<p>Sessão sempre nasce no default do workspace (<code>llama3.2:1b</code>, local) — o ADR 0020
+proíbe 7B/1B local no passo semântico, e foi preciso trocar à mão nas duas
+sessões. Pedido: modelo de start configurável, herdando o do <strong>Criativo</strong> neste
+cenário, porque ele é sempre a porta de entrada do projeto.</p>
+<h3 class="anchor anchorTargetStickyNavbar_K8W5" id=c-quem-fala-é-o-modelo-não-o-agente-defeito-apontado-pelo-usuário>C. Quem fala é o modelo, não o agente (DEFEITO, apontado pelo usuário)<a href=#c-quem-fala-é-o-modelo-não-o-agente-defeito-apontado-pelo-usuário class=hash-link aria-label="Link direto para C. Quem fala é o modelo, não o agente (DEFEITO, apontado pelo usuário)" title="Link direto para C. Quem fala é o modelo, não o agente (DEFEITO, apontado pelo usuário)" translate=no>​</a></h3>
+<p>A bolha transmitida ao vivo vem rotulada com o nome do MODELO
+("DeepSeek V4 Flash Latest"); só quando o evento persistido chega é que aparece
+o agente (<code>po</code>). Efeitos: o nome errado aparece primeiro, e a mensagem fica
+DUPLICADA na tela (bolha do stream + bolha do evento). O stream não é
+reconciliado com o evento persistido.</p>
+<h3 class="anchor anchorTargetStickyNavbar_K8W5" id=d-passo-impossível-trava-o-wizard-sem-saída>D. Passo impossível trava o wizard sem saída<a href=#d-passo-impossível-trava-o-wizard-sem-saída class=hash-link aria-label="Link direto para D. Passo impossível trava o wizard sem saída" title="Link direto para D. Passo impossível trava o wizard sem saída" translate=no>​</a></h3>
+<p><code>Proteger branches</code> falha em repo privado no plano gratuito — o próprio wizard
+AVISA isso antes. Mas a única ação oferecida depois é "Tentar novamente", que
+vai falhar sempre. Falta reconhecer e seguir.</p>
+<h3 class="anchor anchorTargetStickyNavbar_K8W5" id=e-preview-do-repositório-mente>E. Preview do repositório mente<a href=#e-preview-do-repositório-mente class=hash-link aria-label="Link direto para E. Preview do repositório mente" title="Link direto para E. Preview do repositório mente" translate=no>​</a></h3>
+<p><code>apps/web/src/routes/NewProjectWizard.tsx:331</code> tem <code>repo: brabo/{slug}</code>
+hardcoded. O owner real vem do PAT (<code>createForAuthenticatedUser</code>), ou seja
+<code>daneiel/hello-api</code>. O erro chega até a tela de CONFIRMAÇÃO.</p>
+<h3 class="anchor anchorTargetStickyNavbar_K8W5" id=f-wizard-anuncia-rc>F. Wizard anuncia <code>rc</code><a href=#f-wizard-anuncia-rc class=hash-link aria-label="Link direto para f-wizard-anuncia-rc" title="Link direto para f-wizard-anuncia-rc" translate=no>​</a></h3>
+<p>Passo "Política de branches" lista <code>rc</code> nas permanentes e <code>rc ← qa</code> na cascata.
+A política vigente tem só <code>dev</code>/<code>qa</code>/<code>main</code>; a volta da <code>rc</code> está no backlog do
+ADR 0030.</p>
+<h3 class="anchor anchorTargetStickyNavbar_K8W5" id=g-convite-do-criativo-não-aparece-em-projeto-criado>G. Convite do Criativo não aparece em projeto criado<a href=#g-convite-do-criativo-não-aparece-em-projeto-criado class=hash-link aria-label="Link direto para G. Convite do Criativo não aparece em projeto criado" title="Link direto para G. Convite do Criativo não aparece em projeto criado" translate=no>​</a></h3>
+<p>O empty-state "A vez é sua" só renderiza com fio vazio. Em projeto criado o fio
+já tem os cards do bootstrap, então o usuário não recebe convite nenhum.</p>
+<h3 class="anchor anchorTargetStickyNavbar_K8W5" id=h-feed-de-atividade-genérico>H. Feed de atividade genérico<a href=#h-feed-de-atividade-genérico class=hash-link aria-label="Link direto para H. Feed de atividade genérico" title="Link direto para H. Feed de atividade genérico" translate=no>​</a></h3>
+<p>Os 10 eventos do bootstrap aparecem todos como "atividade em system", sem dizer
+o que aconteceu.</p>
+<h3 class="anchor anchorTargetStickyNavbar_K8W5" id=i-card-de-ação-mostra-o-modelo-atual-da-sessão>I. Card de ação mostra o modelo ATUAL da sessão<a href=#i-card-de-ação-mostra-o-modelo-atual-da-sessão class=hash-link aria-label="Link direto para I. Card de ação mostra o modelo ATUAL da sessão" title="Link direto para I. Card de ação mostra o modelo ATUAL da sessão" translate=no>​</a></h3>
+<p>Trocar o modelo da sessão reescreve retroativamente o rótulo dos cards de ações
+antigas. O <code>token_usage</code> congela o preço certo; é só a tela.</p>
+<h3 class="anchor anchorTargetStickyNavbar_K8W5" id=j-psicólogo-roda-em-sessão-vazia>J. Psicólogo roda em sessão vazia<a href=#j-psicólogo-roda-em-sessão-vazia class=hash-link aria-label="Link direto para J. Psicólogo roda em sessão vazia" title="Link direto para J. Psicólogo roda em sessão vazia" translate=no>​</a></h3>
+<blockquote>
+<p><strong>FECHADO</strong> — virou <a class="" href=/brabo/business-rules#rn-079>RN-079</a>. A análise só roda
+havendo evento ANALISÁVEL, e "analisável" desconta os passos de máquina do
+bootstrap e o rastro dos próprios analistas — sem esse segundo desconto, a
+primeira análise tornaria a sessão povoada para sempre. Sem material, sai
+<code>psychologist.analysis_skipped</code> e nada é gasto. A sessão do achado está
+reproduzida como teste (14 eventos, nenhum analisável).
+Na sessão <code>b2fceb9e</code>, recém-aberta: recebeu as hipóteses da sessão anterior com
+o log da nova (vazio), tentou citar <code>seq 60-78</code> inexistentes, teve a evidência
+rejeitada 2x e desistiu (<code>psychologist.analysis_failed</code>). A validação segurou a
+invenção — mas rodar análise em sessão sem evento é gasto à toa.</p>
+</blockquote>
+<h3 class="anchor anchorTargetStickyNavbar_K8W5" id=k-regra-de-negócio-duplicada-não-é-deduplicada>K. Regra de negócio duplicada não é deduplicada<a href=#k-regra-de-negócio-duplicada-não-é-deduplicada class=hash-link aria-label="Link direto para K. Regra de negócio duplicada não é deduplicada" title="Link direto para K. Regra de negócio duplicada não é deduplicada" translate=no>​</a></h3>
+<blockquote>
+<p><strong>FECHADO PARCIALMENTE</strong> — virou <a class="" href=/brabo/business-rules#rn-080>RN-080</a>.
+Duplicata EXATA (mesmo título, ignorando caixa, acento e espaço) é recusada na
+emissão, com escopo de projeto — é entre sessões que ela nasce. Duplicata
+<strong>semântica</strong> segue aberta e assim declarada: separar "Saudação com nome" de
+"Quem chama pode se identificar" é julgamento, não <code>if</code>.
+Rodar o Criativo duas vezes no mesmo projeto deixou 10 regras, 5 órfãs
+("descoberta — sem história"). Efeito do meu roteiro, não do produto, mas
+mostra que não há dedupe nem aviso.</p>
+</blockquote>
+<h3 class="anchor anchorTargetStickyNavbar_K8W5" id=l-botão-do-rodapé-fica-obsoleto>L. Botão do rodapé fica obsoleto<a href=#l-botão-do-rodapé-fica-obsoleto class=hash-link aria-label="Link direto para L. Botão do rodapé fica obsoleto" title="Link direto para L. Botão do rodapé fica obsoleto" translate=no>​</a></h3>
+<p>Continua "Estou pronto para produzir" depois que o fio já passou ao PO.</p>
+<h2 class="anchor anchorTargetStickyNavbar_K8W5" id=funcionou-como-projetado-registrar-também>Funcionou como projetado (registrar também)<a href=#funcionou-como-projetado-registrar-também class=hash-link aria-label="Link direto para Funcionou como projetado (registrar também)" title="Link direto para Funcionou como projetado (registrar também)" translate=no>​</a></h2>
+<ul>
+<li class="">RN-059: <code>agent.error</code> durável, com <code>origem: infra</code>, agente falando no fio e
+voltando a <code>idle</code> (visto 2x nos timeouts de 15s).</li>
+<li class="">Validação de evidência do Psicólogo rejeitando event ids inventados.</li>
+<li class="">Bootstrap de Gitflow no GitHub: 4/5 passos, repo real com <code>main</code>/<code>dev</code>/<code>qa</code>.</li>
+<li class="">Pipeline de proposed_action: 6 ações do bootstrap, auto-aprovadas pela política.</li>
+<li class="">12c: promoção manual como default, <code>story_promotion_proposed</code> como proposta.</li>
+<li class="">Rastreabilidade regra ↔ história, separando coberta de descoberta.</li>
+<li class="">Progresso ao vivo do bootstrap, com a falha mostrando a mensagem do GitHub.</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_K8W5" id=m-o-arquiteto-é-cego-ao-próprio-module_map-p1--a-falha-da-rodada>M. O ARQUITETO É CEGO AO PRÓPRIO module_map (P1 — a falha da rodada)<a href=#m-o-arquiteto-é-cego-ao-próprio-module_map-p1--a-falha-da-rodada class=hash-link aria-label="Link direto para M. O ARQUITETO É CEGO AO PRÓPRIO module_map (P1 — a falha da rodada)" title="Link direto para M. O ARQUITETO É CEGO AO PRÓPRIO module_map (P1 — a falha da rodada)" translate=no>​</a></h3>
+<blockquote>
+<p><strong>FECHADO</strong> — virou <a class="" href=/brabo/business-rules#rn-066>RN-066</a> e está confirmado em
+produção na seção final desta página: 4 chamadas de <code>assign_story_modules</code> em
+vez de 18, zero nome inventado, 1 module_map em vez de 4.</p>
+</blockquote>
+<p>Sessão <code>36abf7e7</code>, seq 80-131. O Arquiteto emitiu o mapa (módulos <code>saudacao</code> e
+<code>api_http</code>) e em seguida <strong>não conseguiu relê-lo</strong>. Não há ferramenta para ler o
+module_map vigente, e a recusa do <code>assign_story_modules</code> não devolve os nomes
+válidos. Resultado: força bruta.</p>
+<p>18+ chutes: <code>api</code>, <code>core</code>, <code>http</code>, <code>greeting</code>, <code>domain</code>, <code>web</code>, <code>hello-api</code>,
+<code>hello</code>, <code>greeting-api</code>, <code>saudacao</code> (acertou por sorte), <code>app</code>, <code>server</code>,
+<code>publico</code>, <code>public-api</code>, <code>api-publica</code>, …</p>
+<p>Nas próprias palavras dele (seq 94, 99, 124):</p>
+<blockquote>
+<p>"os nomes que tentei (<code>api</code>, <code>core</code>) não batem. Vou <strong>descobrir os nomes
+válidos testando candidatos plausíveis</strong>"
+"Preciso <strong>descobrir os nomes reais</strong> dos 2 módulos. Vou <strong>testar candidatos
+adicionais</strong>."</p>
+</blockquote>
+<p>Três consequências, em ordem de gravidade:</p>
+<ol>
+<li class=""><strong>Dado errado, declarado certo.</strong> As 4 histórias ficaram em <code>["saudacao"]</code>,
+inclusive a do ENDPOINT. <code>api_http</code> ficou sem história nenhuma. E o desfecho
+(seq 130) afirma: "Todas as 4 histórias foram vinculadas com sucesso aos
+módulos." O log termina com uma mentira confiante.</li>
+<li class=""><strong>Quebra a execução a jusante.</strong> <code>activate-execution</code> sobe um dev agent por
+MÓDULO. Com tudo em <code>saudacao</code>, o módulo <code>api_http</code> não recebe agente e a
+arquitetura desenhada não é a que será construída.</li>
+<li class=""><strong>Nenhum <code>tool.result</code> é gravado</strong> para <code>assign_story_modules</code>. O laço inteiro
+é invisível no event log — só dá para inferir pelos <code>tool.call</code> repetidos.</li>
+</ol>
+<p>Custo do laço: 9 chamadas de LLM do arquiteto, 27.804 in / 8.012 out.
+Total da sessão: 7.271 micros (US$ 0,007) — barato só porque é modelo flash.</p>
+<p>O laço do module_map (PR #135) era SINTOMA disto: o Arquiteto reemitia o mapa
+justamente para tentar fixar nomes que ele não conseguia ler. O #135 fechou a
+corrupção de dado; a cegueira continua.</p>
+<h2 class="anchor anchorTargetStickyNavbar_K8W5" id=execução-projeto-17229425-sessão-de-execução-dbb84ce8--2026-08-05>Execução (projeto 17229425, sessão de execução dbb84ce8) — 2026-08-05<a href=#execução-projeto-17229425-sessão-de-execução-dbb84ce8--2026-08-05 class=hash-link aria-label="Link direto para Execução (projeto 17229425, sessão de execução dbb84ce8) — 2026-08-05" title="Link direto para Execução (projeto 17229425, sessão de execução dbb84ce8) — 2026-08-05" translate=no>​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_K8W5" id=n-a-metade-de-execução-só-funciona-com-provider-local-p1-bloqueia-a-13b>N. A METADE DE EXECUÇÃO SÓ FUNCIONA COM PROVIDER <code>local</code> (P1, bloqueia a 13b)<a href=#n-a-metade-de-execução-só-funciona-com-provider-local-p1-bloqueia-a-13b class=hash-link aria-label="Link direto para n-a-metade-de-execução-só-funciona-com-provider-local-p1-bloqueia-a-13b" title="Link direto para n-a-metade-de-execução-só-funciona-com-provider-local-p1-bloqueia-a-13b" translate=no>​</a></h3>
+<p><code>Engine.Projects.ProjectRepository.get_local_repo_path/1</code> devolve
+<code>{:error, {:unsupported_provider, "github"}}</code> para qualquer provider que não
+seja <code>local</code>. Está documentado como corte de escopo no próprio moduledoc:</p>
+<blockquote>
+<p>"Só suporta o provider 'local' (github/gitlab remotos ficam fora de escopo do
+executor de terminal por ora)"
+— <code>apps/engine/lib/engine/projects/project_repository.ex:25-27</code></p>
+</blockquote>
+<p>Cinco call sites dependem dele:</p>
+<ul>
+<li class=""><code>lib/engine/dev/worktree_manager.ex:20</code> — worktree do dev agent</li>
+<li class=""><code>lib/engine/actions/terminal_executor.ex:39</code> — execução de comando</li>
+<li class=""><code>lib/engine/gates/diff.ex:17</code> — o diff que QA e SecOps leem</li>
+<li class=""><code>lib/engine/harness/project_context.ex:30</code> — contexto de projeto</li>
+</ul>
+<p>Efeito observado: ativei a execução no projeto GitHub, os 3 dev agents subiram,
+pegaram uma task cada e os 3 foram bloqueados no mesmo segundo com
+<code>falha ao preparar o worktree</code>.</p>
+<p>A assimetria é a chave: a <strong>api</strong> fala GitHub por HTTP (foi ela que criou o
+repo, commitou o template e criou dev/qa). O <strong>engine</strong> trabalha no sistema de
+arquivos e só conhece bare repo local. Então projeto no GitHub faz a metade
+CONVERSACIONAL (Criativo, PO, Arquiteto) e o bootstrap, mas não a metade de
+CONSTRUÇÃO.</p>
+<p>Consequência para a FASE 13b: o roteiro do CLAUDE.md ("projeto ADOTADO do fork
+via GithubProvider remoto, DevAgent real, dev implementa → PR remota → gates")
+<strong>não é executável hoje</strong>. Não é bug de passagem: suportar remoto exige clone,
+credencial dentro do engine e push — feature com ADR.</p>
+<h3 class="anchor anchorTargetStickyNavbar_K8W5" id=o-dev-agent-nasce-no-modelo-local-mesma-raiz-do-achado-b>O. Dev agent nasce no modelo local (mesma raiz do achado B)<a href=#o-dev-agent-nasce-no-modelo-local-mesma-raiz-do-achado-b class=hash-link aria-label="Link direto para O. Dev agent nasce no modelo local (mesma raiz do achado B)" title="Link direto para O. Dev agent nasce no modelo local (mesma raiz do achado B)" translate=no>​</a></h3>
+<p>Os três dev agents subiram com <code>Llama 3.2 1B (local)</code>, herdado do default do
+workspace. O ADR 0020 proíbe modelo local pequeno no passo semântico, e dev
+agent escrevendo código é o passo semântico mais caro que existe.</p>
+<h3 class="anchor anchorTargetStickyNavbar_K8W5" id=p-evento-de-bloqueio-sem-origem>P. Evento de bloqueio sem origem<a href=#p-evento-de-bloqueio-sem-origem class=hash-link aria-label="Link direto para P. Evento de bloqueio sem origem" title="Link direto para P. Evento de bloqueio sem origem" translate=no>​</a></h3>
+<p><code>{"origin": null, "reason": "falha ao preparar o worktree", "diagnosis": "{:unsupported_provider, \"github\"}"}</code>. O CLAUDE.md exige que todo desfecho de
+falha registre a ORIGEM (infra | modelo | código | política). Aqui é <code>código</code>
+(limite conhecido do produto) e veio <code>null</code>. O diagnóstico salvou o dia, mas a
+regra não foi cumprida.</p>
+<h3 class="anchor anchorTargetStickyNavbar_K8W5" id=q-agenterror-com-origem-indeterminada>Q. <code>agent.error</code> com "origem indeterminada"<a href=#q-agenterror-com-origem-indeterminada class=hash-link aria-label="Link direto para q-agenterror-com-origem-indeterminada" title="Link direto para q-agenterror-com-origem-indeterminada" translate=no>​</a></h3>
+<p>No Criativo, turno abortado: o fio mostrou <code>falha · origem indeterminada</code>.
+RN-059 funcionou (erro durável, agente falou, retomada limpa), mas
+"indeterminada" não é uma das quatro origens — é diagnóstico por eliminação,
+que o ADR 0020 proíbe.</p>
+<h3 class="anchor anchorTargetStickyNavbar_K8W5" id=r-po-gerou-histórias-sobrepostas>R. PO gerou histórias sobrepostas<a href=#r-po-gerou-histórias-sobrepostas class=hash-link aria-label="Link direto para R. PO gerou histórias sobrepostas" title="Link direto para R. PO gerou histórias sobrepostas" translate=no>​</a></h3>
+<blockquote>
+<p><strong>FECHADO PARCIALMENTE</strong> — virou <a class="" href=/brabo/business-rules#rn-081>RN-081</a>. Título
+idêntico recusa; história que não acrescenta cobertura sobre as regras que cita
+vira <code>backlog.story_overlap_warned</code>, aviso e não bloqueio. <strong>O par exato deste
+achado continua passando</strong> — títulos e justificativas diferentes para o mesmo
+endpoint não têm nada mecânico que os ligue. Há teste afirmando esse limite,
+para ele ficar visível em vez de implícito.
+"Endpoint público de saudação determinística" e "Endpoint público GET /hello que
+responde saudação imediata" cobrem o mesmo endpoint. Sem dedupe nem aviso.</p>
+</blockquote>
+<h2 class="anchor anchorTargetStickyNavbar_K8W5" id=execução-do-hello-limpo-projeto-9c7c84f0-sessão-1f94de49--2026-08-06>Execução do hello-limpo (projeto <code>9c7c84f0</code>, sessão <code>1f94de49</code>) — 2026-08-06<a href=#execução-do-hello-limpo-projeto-9c7c84f0-sessão-1f94de49--2026-08-06 class=hash-link aria-label="Link direto para execução-do-hello-limpo-projeto-9c7c84f0-sessão-1f94de49--2026-08-06" title="Link direto para execução-do-hello-limpo-projeto-9c7c84f0-sessão-1f94de49--2026-08-06" translate=no>​</a></h2>
+<p>Dev agent real, DeepSeek V4 Flash via OpenRouter, com o pipeline de aprovação
+ligado e cada ação decidida à mão. A task era "Expor rota GET pública
+/api/saudacao". Ela nunca começou: <strong>18 turnos, 292.211 tokens de entrada,
+US$ 0,0275 e zero linha escrita</strong>, e a rodada terminou em erro do provider.</p>
+<h3 class="anchor anchorTargetStickyNavbar_K8W5" id=s-o-contexto-acumulado-estoura-o-limite-do-provider-e-mata-a-execução-p1>S. O contexto acumulado estoura o limite do provider e MATA a execução (P1)<a href=#s-o-contexto-acumulado-estoura-o-limite-do-provider-e-mata-a-execução-p1 class=hash-link aria-label="Link direto para S. O contexto acumulado estoura o limite do provider e MATA a execução (P1)" title="Link direto para S. O contexto acumulado estoura o limite do provider e MATA a execução (P1)" translate=no>​</a></h3>
+<p>No turno 18 a chamada ao modelo voltou
+<code>{413, %{"message" => "request entity too large", "statusCode" => 413}}</code>, o
+<code>ToolLoop</code> não teve como seguir e a task foi bloqueada (<code>dev.blocked</code>,
+<code>artifact.task_blocked</code>, seq 151–152).</p>
+<p>A causa é mecânica e cumulativa: cada comando de terminal despeja a saída
+inteira no histórico do laço, e o histórico vai junto em <strong>todo</strong> turno
+seguinte. A maior requisição BEM-SUCEDIDA registrada em <code>token_usage</code> foi de
+28.993 tokens de entrada; a que falhou não chegou a registrar uso. O estouro é
+de <strong>tamanho da requisição em bytes</strong>, não de janela de contexto — um <code>find</code> ou
+um <code>git ls-files</code> com saída longa pesa muito mais em bytes do que em tokens
+úteis.</p>
+<p>Isto liga diretamente ao <a class="" href=/brabo/adr/0055-escopo-de-caminho-na-politica-de-terminal>ADR 0055</a>,
+por um ângulo que o ADR não previu: a escada de aprovação não só encarece a
+execução, ela a <strong>mata</strong>. Cada pergunta ao usuário empurra o agente a mais um
+comando exploratório, cuja saída entra no histórico para sempre. A corrida
+termina em 413 antes de a primeira linha de código ser escrita.</p>
+<p>O que a triagem precisa decidir é de quem é o conserto — do <code>ContextManager</code>
+(compactar ou truncar saída de ferramenta por tamanho, não só por idade), do
+executor de terminal (teto de bytes por saída, com marca de truncagem) ou dos
+dois. Hoje não há teto em lugar nenhum do caminho.</p>
+<ul>
+<li class=""><strong>Evidência:</strong> <code>session_events</code> seq 150–152 da sessão <code>1f94de49</code>;
+<code>token_usage</code> do ator <code>dev-http-api</code>.</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_K8W5" id=t-a-origem-da-falha-continua-fora-das-quatro-recorrência-de-p-e-q>T. A origem da falha continua fora das quatro (recorrência de P e Q)<a href=#t-a-origem-da-falha-continua-fora-das-quatro-recorrência-de-p-e-q class=hash-link aria-label="Link direto para T. A origem da falha continua fora das quatro (recorrência de P e Q)" title="Link direto para T. A origem da falha continua fora das quatro (recorrência de P e Q)" translate=no>​</a></h3>
+<p>O <code>dev.blocked</code> do achado S gravou:</p>
+<div class="language-json codeBlockContainer_jMok theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_PNkN><pre tabindex=0 class="prism-code language-json codeBlock_yR6B thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_qUOc><div class=token-line style=color:#F8F8F2><span class="token punctuation" style="color:rgb(248, 248, 242)">{</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  </span><span class="token property">"origem"</span><span class="token operator">:</span><span class="token plain"> </span><span class="token string" style="color:rgb(255, 121, 198)">"indeterminada"</span><span class="token punctuation" style="color:rgb(248, 248, 242)">,</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  </span><span class="token property">"reason"</span><span class="token operator">:</span><span class="token plain"> </span><span class="token string" style="color:rgb(255, 121, 198)">"parou sem concluir nem reportar bloqueio"</span><span class="token punctuation" style="color:rgb(248, 248, 242)">,</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  </span><span class="token property">"diagnosis"</span><span class="token operator">:</span><span class="token plain"> </span><span class="token string" style="color:rgb(255, 121, 198)">"falha na chamada ao modelo: {413, %{\"message\" => \"request entity too large\", \"statusCode\" => 413}}"</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain"></span><span class="token punctuation" style="color:rgb(248, 248, 242)">}</span><br/></div></code></pre></div></div>
+<p>Não é achado novo: é a <strong>terceira</strong> ocorrência da mesma regra violada, e por
+isso fica registrada como recorrência em vez de item separado. O <a href=#p-evento-de-bloqueio-sem-origem class="">P</a>
+pegou <code>origin: null</code> num <code>dev.blocked</code>; o <a href=#q-agenterror-com-origem-indeterminada class="">Q</a>
+pegou <code>"indeterminada"</code> num <code>agent.error</code>. Aqui os dois se encontram: evento de
+bloqueio, valor <code>"indeterminada"</code>.</p>
+<p>O que esta ocorrência acrescenta, e que torna o caso mais forte que os
+anteriores: <strong>a origem era trivialmente derivável</strong>. Um status HTTP conhecido
+do provider é <code>modelo</code>, sem qualquer ambiguidade — o próprio campo <code>diagnosis</code>
+o nomeia na mesma linha em que <code>origem</code> desiste. Não é um caso de fronteira,
+é o caminho de erro não olhando para o que ele mesmo acabou de escrever.</p>
+<p>O <code>reason</code> também mente: "parou sem concluir nem reportar bloqueio" descreve
+silêncio, e o que houve foi uma falha com causa identificada. Quem ler só o
+<code>reason</code> no painel conclui que o modelo se perdeu.</p>
+<ul>
+<li class=""><strong>Evidência:</strong> <code>session_events</code> seq 151 da sessão <code>1f94de49</code>.</li>
+<li class=""><strong>Regra violada:</strong> CLAUDE.md ("todo desfecho de falha registra a ORIGEM —
+infra | modelo | código | política — nunca diagnóstico por eliminação"),
+origem no <a class="" href=/brabo/adr/0020-destravar-gates-qa-secops>ADR 0020</a>.</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_K8W5" id=u-o-executor-de-terminal-não-tem-fronteira-de-projeto-p1>U. O executor de terminal não tem fronteira de projeto (P1)<a href=#u-o-executor-de-terminal-não-tem-fronteira-de-projeto-p1 class=hash-link aria-label="Link direto para U. O executor de terminal não tem fronteira de projeto (P1)" title="Link direto para U. O executor de terminal não tem fronteira de projeto (P1)" translate=no>​</a></h3>
+<p>Dentro do container que executa as ações, <code>/workspace</code> é o <strong>monorepo do próprio
+Brabo</strong> — não o worktree do projeto, que fica em
+<code>/data/project-workspaces/&lt;projectId>/.worktrees/&lt;agentId></code>.</p>
+<p>O dev agent do <code>hello-limpo</code> gastou turnos ali achando que era o projeto dele:
+leu <code>apps/engine/mix.exs</code>, e chegou a propor <code>cat lib/engine/actions/git_executor.ex</code>
+e <code>sed -n '1,120p' lib/engine/dev/context_builder.ex</code> — o executor de git e o
+construtor de contexto da plataforma que o executava.</p>
+<p>E o alcance não para no Brabo. Um <code>for</code> sobre <code>/data/project-workspaces/*/</code>
+listou o worktree de <strong>outro projeto</strong> (<code>dbd3e508-e0c7-4e29-b134-5d393f518269</code>)
+com seus commits e arquivos; o passo seguinte que o agente propôs era entrar
+nele para ler <code>git remote -v</code> e o <code>git log</code>. Foi recusado à mão.</p>
+<p>Nada disso é malícia do modelo: ele está procurando o próprio projeto e o
+sistema de arquivos não diz onde ele acaba. Num deploy multi-inquilino, o mesmo
+comando leria o repositório de outro cliente.</p>
+<p>O <a class="" href=/brabo/adr/0055-escopo-de-caminho-na-politica-de-terminal>ADR 0055</a> desenha a
+metade de POLÍTICA disso e diz explicitamente que não resolve a outra: escopo de
+caminho depende de a regra acertar, e o que falta é <strong>isolamento</strong> — montagem
+por projeto, ou container por projeto. Este achado é a metade que o ADR deixou
+declarada em aberto.</p>
+<ul>
+<li class=""><strong>Evidência:</strong> <code>proposed_actions</code> <code>d1bfeda3</code> (recusada) e <code>56374def</code>
+(aprovada, listou o outro projeto) da sessão <code>1f94de49</code>.</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_K8W5" id=v-sessão-consta-closed-enquanto-a-execução-continua-p2>V. Sessão consta <code>closed</code> enquanto a execução continua (P2)<a href=#v-sessão-consta-closed-enquanto-a-execução-continua-p2 class=hash-link aria-label="Link direto para v-sessão-consta-closed-enquanto-a-execução-continua-p2" title="Link direto para v-sessão-consta-closed-enquanto-a-execução-continua-p2" translate=no>​</a></h3>
+<p><code>sessions.status</code> da <code>1f94de49</code> é <code>closed</code> desde <strong>23:34:42</strong>, trinta segundos
+depois de nascer. A execução seguiu até <strong>00:56</strong> — mais de uma hora de agente
+trabalhando, propondo ações e gastando token numa sessão que o banco dá por
+encerrada.</p>
+<p>Os dois lados ficam incoerentes ao mesmo tempo: a UI mostra "Sessão closed — não
+é possível enviar mensagens" <strong>e</strong> renderiza os cards de aprovação, que
+funcionam normalmente. Aprovar numa sessão fechada executa comando de verdade.</p>
+<p>Contraria a máquina de estados que o CLAUDE.md declara
+(<code>created → active → closing → closed | closed_abnormally</code>): <code>closed</code> deveria
+ser terminal. Também envenena qualquer medição por sessão — duração, custo e
+"quantas sessões terminaram bem" leem um estado que não descreve o que houve.</p>
+<p>Não investiguei quem escreveu o <code>closed</code> nem por quê; isso é trabalho da fase
+que endereçar, não da triagem.</p>
+<ul>
+<li class=""><strong>Evidência:</strong> <code>sessions.updated_at</code> = 23:34:42 com <code>status = closed</code>;
+<code>session_events</code> da mesma sessão até seq 152, às 00:56:46.</li>
+</ul>
+<h2 class="anchor anchorTargetStickyNavbar_K8W5" id=confirmado-em-produção-nesta-rodada>Confirmado em produção nesta rodada<a href=#confirmado-em-produção-nesta-rodada class=hash-link aria-label="Link direto para Confirmado em produção nesta rodada" title="Link direto para Confirmado em produção nesta rodada" translate=no>​</a></h2>
+<ul>
+<li class=""><strong>RN-066</strong> (cegueira do Arquiteto): 4 chamadas de <code>assign_story_modules</code> em vez
+de 18, zero nome inventado, 1 module_map em vez de 4, cada história no módulo
+semanticamente certo. Custo da sessão caiu de 7.271 para 3.259 micros.</li>
+<li class=""><strong>RN-067</strong> (sessão sem processo): a sessão de execução <code>dbb84ce8</code> aparece em
+<code>sessions</code> E em <code>engine.session_states</code> — antes a de <code>activate-execution</code>
+nascia órfã.</li>
+</ul>
+<h2 class="anchor anchorTargetStickyNavbar_K8W5" id=execução-da-validação-da-fase-12--2026-08-07>Execução da validação da Fase 12 — 2026-08-07<a href=#execução-da-validação-da-fase-12--2026-08-07 class=hash-link aria-label="Link direto para Execução da validação da Fase 12 — 2026-08-07" title="Link direto para Execução da validação da Fase 12 — 2026-08-07" translate=no>​</a></h2>
+<p>Primeira corrida real de <code>pnpm --filter api validacao:fase-12</code>, a pendência
+13a.1. O critério fechou (saída <code>0</code>), mas só depois de quatro correções — três
+no INSTRUMENTO e uma no PRODUTO. As do instrumento estão contadas em
+<a class="" href=/brabo/explanation/validacao-fase-12>validacao-fase-12.md</a>; esta é a do produto.</p>
+<h3 class="anchor anchorTargetStickyNavbar_K8W5" id=w-dev-agent-morre-quando-a-fila-do-módulo-esvazia-p1--fechado>W. Dev agent MORRE quando a fila do módulo esvazia (P1) — FECHADO<a href=#w-dev-agent-morre-quando-a-fila-do-módulo-esvazia-p1--fechado class=hash-link aria-label="Link direto para W. Dev agent MORRE quando a fila do módulo esvazia (P1) — FECHADO" title="Link direto para W. Dev agent MORRE quando a fila do módulo esvazia (P1) — FECHADO" translate=no>​</a></h3>
+<p>Com a fila vazia, <code>POST /internal/sessions/:id/tasks/claim</code> responde <code>201</code> com
+<code>content-length: 0</code>. O caso de uso devolve <code>null</code>, mas o NestJS serializa isso
+como corpo VAZIO — o <code>Req</code> entrega <code>""</code>, que não é <code>nil</code>.</p>
+<p><code>AgentIo.try_claim/2</code> casava com a cláusula de task encontrada e chamava
+<code>run_task("")</code>, estourando <code>BadMapError</code> em <code>Map.get("", "id", nil)</code>. Como o
+server é <code>restart: :temporary</code>, o agente morria de vez, com o <code>Monitor</code>
+apagando a linha de estado logo atrás.</p>
+<p><strong>Vale para o dev agent REAL</strong>, não só para o Noop: <code>try_claim/2</code> mora no
+<code>AgentIo</code> compartilhado. E dispara no desfecho mais comum que existe — a fila
+acabando. O efeito é o oposto exato do que a Fase 12b entregou: em vez de
+<code>dev.idle</code> supervisionado e acordável por evento, processo morto.</p>
+<p>A suite nunca pegou porque o fake devolve <code>nil</code> corretamente. <strong>Só execução
+real expõe</strong> — que é, literalmente, a tese desta fase.</p>
+<blockquote>
+<p><strong>FECHADO</strong> — corrigido na fronteira (<code>EngineApiClient.claim_task/4</code>
+normaliza corpo vazio) e guardado no contrato (<code>AgentIo.try_claim/2</code> aceita
+<code>""</code> junto com <code>nil</code>), sem mexer no status HTTP da rota. Exceção ao
+congelamento da FASE 13 autorizada pelo usuário, pelo mesmo motivo da Fase F:
+a medição não era alcançável sem isto. Verificado por mutação.</p>
+</blockquote>
+<h2 class="anchor anchorTargetStickyNavbar_K8W5" id=execução-real-com-github-remoto-fase-13b--2026-08-07>Execução real com GitHub remoto (FASE 13b) — 2026-08-07<a href=#execução-real-com-github-remoto-fase-13b--2026-08-07 class=hash-link aria-label="Link direto para Execução real com GitHub remoto (FASE 13b) — 2026-08-07" title="Link direto para Execução real com GitHub remoto (FASE 13b) — 2026-08-07" translate=no>​</a></h2>
+<p>Primeira execução contra repositório remoto de verdade (<code>daneiel/test</code>), com
+dev agent real e <code>openai/gpt-5-mini</code>. A cadeia até a promoção passou inteira; o
+dev agent não. Detalhe e medição em <a class="" href=/brabo/explanation/validacao-real>validacao-real.md</a>.</p>
+<h3 class="anchor anchorTargetStickyNavbar_K8W5" id=x-o-dev-agent-queima-o-teto-de-iterações-em-repositório-vazio-p1>X. O dev agent queima o teto de iterações em repositório vazio (P1)<a href=#x-o-dev-agent-queima-o-teto-de-iterações-em-repositório-vazio-p1 class=hash-link aria-label="Link direto para X. O dev agent queima o teto de iterações em repositório vazio (P1)" title="Link direto para X. O dev agent queima o teto de iterações em repositório vazio (P1)" translate=no>​</a></h3>
+<p>Task <em>"Expor GET /saudacao"</em> num repositório recém-provisionado — só o template
+do Gitflow, sem código. O agente gastou as oito iterações em
+<code>search_workspace</code>/<code>read_file</code> procurando "onde está o projeto", <strong>nunca rodou
+um comando e nunca escreveu um arquivo</strong>. Bloqueio: <code>limite de iterações atingido</code>, origem <code>modelo</code>, diagnóstico <code>(nenhum terminal rodado)</code>.</p>
+<p>A origem <code>modelo</code> é tecnicamente verdadeira e praticamente inútil: o modelo não
+errou um julgamento, ele nunca chegou a julgar. Custo: 8 chamadas, 205 tokens
+de saída.</p>
+<p>É o <strong>primeiro</strong> cenário em que o dev agent começa do zero absoluto — todo teste
+e toda demo partiram de workspace com código.</p>
+<h3 class="anchor anchorTargetStickyNavbar_K8W5" id=y-search_workspace-não-distingue-vazio-de-não-encontrei--fechado>Y. <code>search_workspace</code> não distingue "vazio" de "não encontrei" — FECHADO<a href=#y-search_workspace-não-distingue-vazio-de-não-encontrei--fechado class=hash-link aria-label="Link direto para y-search_workspace-não-distingue-vazio-de-não-encontrei--fechado" title="Link direto para y-search_workspace-não-distingue-vazio-de-não-encontrei--fechado" translate=no>​</a></h3>
+<p>As cinco primeiras chamadas devolveram <code>nenhum resultado</code>, e o agente leu isso
+como "procure melhor" em vez de "não há nada aqui". Era a peça acionável do
+achado X.</p>
+<blockquote>
+<p><strong>FECHADO</strong> — a ferramenta passou a responder coisas diferentes para
+situações diferentes. Workspace sem arquivo nenhum devolve <em>"o workspace
+está VAZIO […] CRIE os arquivos necessários (write_file) em vez de continuar
+procurando"</em>; workspace com arquivos devolve a contagem, dizendo que a busca
+funcionou e o termo é que não aparece.</p>
+<p><strong>A correção é a frase, não o teto.</strong> O agente não precisava de mais
+iterações — precisava saber que não havia o que procurar. E o caso do achado
+(só <code>.github/</code> e <code>docs/</code> do bootstrap) NÃO é vazio: há teste afirmando que
+ali a resposta certa é a contagem, não a instrução de criar.</p>
+<p><strong>A execução nova foi feita, e o X NÃO fechou.</strong> Mesmo desfecho —
+<code>limite de iterações atingido</code>, 8 chamadas, nenhuma PR. O comportamento
+mudou (uma busca em vez de cinco), o resultado não. A hipótese de que a
+frase era a causa estava ERRADA: das oito iterações, sete são exploração, e
+sobra uma para escrever, commitar, dar push e abrir PR.</p>
+<p><strong>O teto ERA a causa.</strong> Com <code>TOOL_LOOP_MAX_ITERATIONS=25</code> o dev agent
+explorou, escreveu TRÊS arquivos e rodou <code>npm test</code> — e parou em
+<code>dev.awaiting_approval</code>, não em bloqueio. O teto de 8 nasceu para agente
+conversacional e não cabe num dev agent que precisa entender o repositório
+antes de agir (<code>apps/engine/config/runtime.exs:100</code>).</p>
+<p>O X deixa de ser "queima o teto explorando" e vira <strong>"o teto é o errado para
+este agente"</strong>. O conserto de produto NÃO é subir o default global — o
+Criativo não precisa de 25 iterações para conversar. É um teto por tipo de
+agente, e isso é decisão de produto: fica na triagem.</p>
+</blockquote>
+<h3 class="anchor anchorTargetStickyNavbar_K8W5" id=z-o-allowlist-de-terminal-governa-o-verbo-o-escopo-protege-só-o-caminho>Z. O allowlist de terminal governa o VERBO; o escopo protege só o CAMINHO<a href=#z-o-allowlist-de-terminal-governa-o-verbo-o-escopo-protege-só-o-caminho class=hash-link aria-label="Link direto para Z. O allowlist de terminal governa o VERBO; o escopo protege só o CAMINHO" title="Link direto para Z. O allowlist de terminal governa o VERBO; o escopo protege só o CAMINHO" translate=no>​</a></h3>
+<p>Com o teto resolvido, a execução passou a parar em aprovação de terminal. O
+pedido de 2026-08-06 foi <em>"permita sempre comandos desde que seja na pasta do
+projeto"</em>; o ADR 0055 entregou um TETO (fora da pasta nunca auto-aprova), e o
+verbo continua governado por lista fechada.</p>
+<p>Liberar <code>npm</code>/<code>pnpm</code>/<code>node</code>/<code>npx</code> não bastou: o agente rodou <code>ls -la</code>. Cada
+verbo novo cai em <code>require_approval</code>.</p>
+<p>Não é defeito do ADR 0055, que nunca prometeu promover verbo — é a lacuna
+entre o que foi pedido e o que foi entregue, e ela mantém a escada de pé.</p>
+<h3 class="anchor anchorTargetStickyNavbar_K8W5" id=funcionou-como-projetado-registrar-também-1>Funcionou como projetado (registrar também)<a href=#funcionou-como-projetado-registrar-também-1 class=hash-link aria-label="Link direto para Funcionou como projetado (registrar também)" title="Link direto para Funcionou como projetado (registrar também)" translate=no>​</a></h3>
+<p>O <strong>Psicólogo diagnosticou sozinho</strong>, em tier pesado, lendo o event log da
+execução fracassada — e nomeou as duas causas com precisão maior que a de
+qualquer asserção do script: a ausência de <code>tool.call</code> de terminal, e o
+<code>search_workspace</code> enganando o agente. A introspecção do produto funciona.</p>
+<h3 class="anchor anchorTargetStickyNavbar_K8W5" id=aa-pr_open-auto-aprovado-não-tem-credencial-e-sempre-falha-em-remoto-p1>AA. <code>pr_open</code> auto-aprovado não tem credencial e sempre falha em remoto (P1)<a href=#aa-pr_open-auto-aprovado-não-tem-credencial-e-sempre-falha-em-remoto-p1 class=hash-link aria-label="Link direto para aa-pr_open-auto-aprovado-não-tem-credencial-e-sempre-falha-em-remoto-p1" title="Link direto para aa-pr_open-auto-aprovado-não-tem-credencial-e-sempre-falha-em-remoto-p1" translate=no>​</a></h3>
+<blockquote>
+<p><strong>FECHADO</strong> — virou <a class="" href=/brabo/business-rules#rn-082>RN-082</a>. A api passou a
+resolver a credencial de git pelo OWNER do workspace, reusando o mesmo
+resolvedor da RN-058 em vez de reimplementar a regra. Verificado por mutação.</p>
+</blockquote>
+<p>Achado na 5ª execução da 13b, a primeira em que a cadeia chegou até a PR.</p>
+<p><code>ExecuteGitActionUseCase</code> resolve o token de git a partir de
+<strong><code>action.decidedBy</code></strong> — o usuário que DECIDIU a ação
+(<code>execute-git-action.use-case.ts:100</code>). Quando a política auto-aprova, ninguém
+decide: <code>decided_by</code> fica NULL, <code>accessToken</code> fica <code>undefined</code>, e o GitHub
+responde <code>Requires authentication</code>.</p>
+<p>O contraste no mesmo run é a prova:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>ação<th>quem executa<th>credencial<th>desfecho<tbody><tr><td><code>git_push</code><td><strong>engine</strong><td>injetada do owner (<code>git_auth.ex</code>, RN-076)<td>✅ executed<tr><td><code>pr_open</code><td><strong>api</strong><td><code>action.decidedBy</code> → NULL<td>❌ failed</table>
+<p>O push chegou ao GitHub — a branch <code>feature/task-d4b36a5b</code> existe no remoto. O
+que falhou foi só a chamada REST que abre a PR.</p>
+<p>É a mesma classe do que a <a class="" href=/brabo/business-rules#rn-058>RN-058</a> corrigiu para
+LLM ("a chave que o agente gasta é a do OWNER"): o caminho de git da api ainda
+resolve por "quem decidiu", e não por "de quem é o workspace".</p>
+<p><strong>Consequência prática:</strong> com autonomia configurada — que é o modo que a Fase F
+existe para viabilizar — nenhum dev agent consegue abrir PR em provider
+remoto. O caminho só funciona quando um humano clica em cada PR, que é
+exatamente a escada declarada inviável.</p>
+<h3 class="anchor anchorTargetStickyNavbar_K8W5" id=ab-o-agente-de-gate-não-sabe-esperar-aprovação--vira-falha-infra-p1>AB. O agente de GATE não sabe esperar aprovação — vira falha <code>infra</code> (P1)<a href=#ab-o-agente-de-gate-não-sabe-esperar-aprovação--vira-falha-infra-p1 class=hash-link aria-label="Link direto para ab-o-agente-de-gate-não-sabe-esperar-aprovação--vira-falha-infra-p1" title="Link direto para ab-o-agente-de-gate-não-sabe-esperar-aprovação--vira-falha-infra-p1" translate=no>​</a></h3>
+<blockquote>
+<p><strong>FECHADO PELA METADE, e a metade importa.</strong> A origem agora é <code>politica</code> e o
+diagnóstico NOMEIA a ação pendente e a ferramenta — dá para achar e decidir.
+Antes o log dizia <code>infra</code>, culpando a infraestrutura por algo que não
+quebrou, o que contraria a regra do ADR 0020 de que origem é nomeada e nunca
+obtida por eliminação.</p>
+<p><strong>O gate continua bloqueando.</strong> O laço dos agentes de gate é síncrono e não
+sabe retomar. Torná-los suspensíveis como o dev agent
+(<a class="" href=/brabo/adr/0052-dev-agent-espera-aprovacao-no-meio-do-laco>ADR 0052</a>) é o
+conserto de verdade — mesma cirurgia que a Fase A fez, com ADR próprio, e
+por isso fica na triagem em vez de virar ajuste de passagem.</p>
+</blockquote>
+<p>Achado na 6ª execução da 13b, a primeira em que a PR abriu e os gates rodaram.</p>
+<p>O <code>qa-automacao</code> chamou <code>terminal</code> com um comando COMPOSTO
+(<code>ls -la && find … | head -50</code>). <code>head</code> não estava no <code>allow</code>, e a regra é
+correta: todo segmento precisa estar liberado, senão o comando inteiro vira
+<code>require_approval</code>. O ToolLoop então suspendeu em
+<code>{:halted, {:awaiting_approval, …}}</code>.</p>
+<p><strong>O problema não é a suspensão — é o que o lead faz com ela.</strong> O <code>QaLeadServer</code>
+não tem cláusula para esse desfecho e o classifica como <em>"desfecho inesperado
+do ToolLoop"</em>, com <code>failureOrigin: infra</code>. A task é bloqueada, o gate morre, e
+o event log culpa a infraestrutura por uma decisão de POLÍTICA que está
+simplesmente pendente.</p>
+<p>É exatamente o defeito que o <a class="" href=/brabo/adr/0052-dev-agent-espera-aprovacao-no-meio-do-laco>ADR 0052</a>
+corrigiu para o dev agent na Fase A — o laço SUSPENDE e retoma quando a decisão
+chega (<a class="" href=/brabo/business-rules#rn-073>RN-073</a>). Os agentes de GATE ficaram de
+fora daquela correção.</p>
+<p>Duas consequências, e a segunda é pior:</p>
+<ol>
+<li class="">qualquer comando do gate que caia em aprovação mata o gate;</li>
+<li class="">a origem registrada é <code>infra</code>, o que é <strong>falso</strong> — nada quebrou. Contraria
+a regra do produto de que a origem da falha nunca é diagnóstico por
+eliminação (lição do ADR 0020).</li>
+</ol>
+<p>O <code>qa-performance-seguranca</code> foi dispensado corretamente na mesma rodada
+(<code>delegation.dispensed</code>, justificativa "story sem RNF"), então a área de QA
+funciona — o que falta é o lead saber que "esperando você decidir" não é falha.</p>
+<h3 class="anchor anchorTargetStickyNavbar_K8W5" id=ac-redirecionamento-2devnull-torna-qualquer-comando-inaprovável-p1>AC. Redirecionamento (<code>2>/dev/null</code>) torna qualquer comando inaprovável (P1)<a href=#ac-redirecionamento-2devnull-torna-qualquer-comando-inaprovável-p1 class=hash-link aria-label="Link direto para ac-redirecionamento-2devnull-torna-qualquer-comando-inaprovável-p1" title="Link direto para ac-redirecionamento-2devnull-torna-qualquer-comando-inaprovável-p1" translate=no>​</a></h3>
+<blockquote>
+<p><strong>FECHADO nas duas peças.</strong></p>
+<ol>
+<li class=""><code>parseCommand</code> deixou de tratar <code>></code>/<code>>></code>/<code>&lt;</code> como separador — eles não
+encadeiam comando nenhum. O alvo continua como TOKEN do segmento, de
+propósito: é assim que <code>echo x > /etc/passwd</code> segue barrado pelo teto de
+escopo. O verbo ficou correto sem o caminho ficar livre.</li>
+<li class=""><code>/dev/null</code>, <code>/dev/stdin</code>, <code>/dev/stdout</code> e <code>/dev/stderr</code> deixaram de
+contar como caminho de usuário. A lista é essa e <strong>não</strong> <code>/dev</code> inteiro —
+há teste afirmando que <code>/dev/sda</code> continua fora do escopo, porque liberar
+<code>/dev</code> trocaria um incômodo por um buraco.</li>
+</ol>
+<p>Verificado por mutação nos dois sentidos: afrouxar <code>/dev</code> derruba o teste do
+disco, e desligar o encadeamento derruba 11 testes.</p>
+</blockquote>
+<p>Achado na 7ª execução da 13b, depois de ampliar o allowlist com 25 verbos. O
+agente de QA rodou:</p>
+<div class="language-text codeBlockContainer_jMok theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_PNkN><pre tabindex=0 class="prism-code language-text codeBlock_yR6B thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_qUOc><div class=token-line style=color:#F8F8F2><span class="token plain">ls -la && echo "---" && cat package.json 2>/dev/null; echo "---"; ls *.md 2>/dev/null</span><br/></div></code></pre></div></div>
+<p><strong>Todos os verbos estavam liberados</strong> — <code>ls</code>, <code>echo</code>, <code>cat</code>. Mesmo assim virou
+<code>require_approval</code>. Rodando as funções puras contra o comando:</p>
+<div class="language-text codeBlockContainer_jMok theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_PNkN><pre tabindex=0 class="prism-code language-text codeBlock_yR6B thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_qUOc><div class=token-line style=color:#F8F8F2><span class="token plain">segmentos: [["ls","-la"],["echo","---"],["cat","package.json","2"],["/dev/null"],…]</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">tokens de caminho: ["/dev/null","/dev/null"]</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">no escopo? false</span><br/></div></code></pre></div></div>
+<p><code>parseCommand</code> trata <code>></code> como separador de segmento, então <code>2>/dev/null</code> vira
+<strong>um segmento próprio</strong>. Isso quebra de duas formas independentes:</p>
+<ol>
+<li class="">o segmento <code>/dev/null</code> tem como "verbo" o próprio <code>/dev/null</code>, que nunca
+estará em <code>allow</code> — e comando composto exige TODO segmento liberado;</li>
+<li class=""><code>/dev/null</code> é token de caminho ABSOLUTO fora da pasta do projeto, então o
+teto da <a class="" href=/brabo/business-rules#rn-075>RN-075</a> rebaixa <code>auto_approve</code>.</li>
+</ol>
+<p><strong>O impacto é grande porque <code>2>/dev/null</code> é idiomático.</strong> Modelos o usam o
+tempo todo para silenciar erro esperado. Na prática, qualquer comando com
+redirecionamento de saída é inaprovável por política — só passa com clique
+humano.</p>
+<p>Não é falha de um verbo faltando na lista: é a <strong>forma</strong> do comando. Ampliar o
+allowlist não resolve, e a 7ª execução é a prova — 25 verbos liberados, e
+travou mesmo assim.</p>
+<p>Duas peças distintas para triar:</p>
+<ul>
+<li class="">a segmentação por <code>></code> em <code>command-matcher.ts</code> (pré-existente, e discutível:
+redirecionamento não é composição de comandos como <code>&&</code> e <code>|</code>);</li>
+<li class="">o teto de escopo tratando <code>/dev/null</code> como caminho de usuário
+(<code>path-scope.ts</code>, da Fase F).</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_K8W5" id=ad-o-agente-embrulha-comandos-em-bash--lc-e-o-allowlist-não-tem-resposta-p1>AD. O agente embrulha comandos em <code>bash -lc</code>, e o allowlist não tem resposta (P1)<a href=#ad-o-agente-embrulha-comandos-em-bash--lc-e-o-allowlist-não-tem-resposta-p1 class=hash-link aria-label="Link direto para ad-o-agente-embrulha-comandos-em-bash--lc-e-o-allowlist-não-tem-resposta-p1" title="Link direto para ad-o-agente-embrulha-comandos-em-bash--lc-e-o-allowlist-não-tem-resposta-p1" translate=no>​</a></h3>
+<p>Oitava execução da 13b, com os achados Y, AA, AB e AC já corrigidos. O dev
+agent fez UMA chamada de ferramenta:</p>
+<div class="language-text codeBlockContainer_jMok theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_PNkN><pre tabindex=0 class="prism-code language-text codeBlock_yR6B thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_qUOc><div class=token-line style=color:#F8F8F2><span class="token plain">bash -lc npm test --silent</span><br/></div></code></pre></div></div>
+<p>O verbo é <code>bash</code>. Não está em <code>allow</code>, e virou <code>require_approval</code>.</p>
+<p><strong>A recusa está certa, e é importante que esteja.</strong> Liberar <code>bash</code> anularia o
+allowlist inteiro: <code>bash -lc &lt;qualquer coisa></code> passa por cima da checagem de
+verbo, incluindo os <code>deny</code> embutidos. Um allowlist que aceita <code>bash</code> não é um
+allowlist.</p>
+<p>Mas isso fecha o argumento que as execuções 6, 7 e 8 vinham construindo:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>execução<th>o que travou<th>o que eu fiz<tbody><tr><td>6ª<td><code>head</code> fora da lista<td>ampliei para 25 verbos<tr><td>7ª<td><code>2>/dev/null</code> (FORMA, não verbo)<td>corrigi o parser e o escopo (AC)<tr><td>8ª<td><code>bash -lc</code> (INVOCAÇÃO)<td>—</table>
+<p>Cada rodada revelou uma categoria nova, e nenhuma delas era "faltou um verbo".
+<strong>O allowlist de verbos não converge</strong> contra um agente que escolhe livremente
+como invocar o que quer rodar — e as três formas (verbo, forma, invocação) são
+espaços diferentes, não pontos de uma lista.</p>
+<p>O que isso NÃO significa: que o allowlist esteja errado. Ele faz exatamente o
+que promete, e a recusa do <code>bash</code> prova que a fronteira funciona. O que ele não
+faz é viabilizar autonomia de agente sem intervenção humana.</p>
+<p>Duas direções para a triagem, e são diferentes em natureza:</p>
+<ol>
+<li class=""><strong>Agentes de gate suspensíveis</strong> (achado AB, metade aberta). Não elimina a
+aprovação — faz o agente ESPERAR por ela em vez de morrer, e aí o clique do
+usuário destrava em vez de reprovar. É o caminho que o ADR 0052 já abriu
+para o dev agent.</li>
+<li class=""><strong>Política por perfil de agente.</strong> Um dev agent num worktree isolado é
+diferente de um agente que toca o workspace do usuário. Hoje os dois usam o
+mesmo <code>permissions.json</code>. Isto é decisão de produto com ADR.</li>
+</ol></div></div></div><div class=row><div class="col col--12"><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_aQxr"><a href=https://github.com/daneiel/brabo/blob/dev/docs/explanation/achados-execucao-real.md target=_blank rel="noopener noreferrer" class=theme-edit-this-page><svg fill=currentColor height=20 width=20 viewBox="0 0 40 40" class=iconEdit_V7pD aria-hidden=true><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"/></g></svg>Editar esta página</a></div><div class="col lastUpdated_KApo"><span class=theme-last-updated>Última atualização<!-- --> em <b><time datetime=2026-08-07T05:48:12.000Z itemprop=dateModified>7 de ago. de 2026</time></b> por <b>Daniel Souza</b></span></div></div></footer></div></div></article><div class=row><div class="col col--12"><nav class="docusaurus-mt-lg pagination-nav" aria-label="Páginas de documento"><a class="pagination-nav__link pagination-nav__link--prev" href=/brabo/explanation/execucao-real-hello-world><div class=pagination-nav__sublabel>Anterior</div><div class=pagination-nav__label>Execução real (hello world)</div></a><a class="pagination-nav__link pagination-nav__link--next" href=/brabo/explanation/backlog><div class=pagination-nav__sublabel>Próxima</div><div class=pagination-nav__label>Backlog triado</div></a></nav></div></div></div></div><div class="col col--3"><div class="tableOfContents_a7aG thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href=#corrigidos-durante-a-execução-bloqueavam class="table-of-contents__link toc-highlight">Corrigidos durante a execução (bloqueavam)</a><li><a href=#abertos--para-a-triagem-da-13c class="table-of-contents__link toc-highlight">Abertos — para a triagem da 13c</a><ul><li><a href=#a-sessão-do-provisionamento-nasce-sem-processo-no-engine-grave class="table-of-contents__link toc-highlight">A. Sessão do provisionamento nasce sem processo no engine (GRAVE)</a><li><a href=#b-modelo-de-start-decisão-do-usuário class="table-of-contents__link toc-highlight">B. Modelo de start (DECISÃO DO USUÁRIO)</a><li><a href=#c-quem-fala-é-o-modelo-não-o-agente-defeito-apontado-pelo-usuário class="table-of-contents__link toc-highlight">C. Quem fala é o modelo, não o agente (DEFEITO, apontado pelo usuário)</a><li><a href=#d-passo-impossível-trava-o-wizard-sem-saída class="table-of-contents__link toc-highlight">D. Passo impossível trava o wizard sem saída</a><li><a href=#e-preview-do-repositório-mente class="table-of-contents__link toc-highlight">E. Preview do repositório mente</a><li><a href=#f-wizard-anuncia-rc class="table-of-contents__link toc-highlight">F. Wizard anuncia <code>rc</code></a><li><a href=#g-convite-do-criativo-não-aparece-em-projeto-criado class="table-of-contents__link toc-highlight">G. Convite do Criativo não aparece em projeto criado</a><li><a href=#h-feed-de-atividade-genérico class="table-of-contents__link toc-highlight">H. Feed de atividade genérico</a><li><a href=#i-card-de-ação-mostra-o-modelo-atual-da-sessão class="table-of-contents__link toc-highlight">I. Card de ação mostra o modelo ATUAL da sessão</a><li><a href=#j-psicólogo-roda-em-sessão-vazia class="table-of-contents__link toc-highlight">J. Psicólogo roda em sessão vazia</a><li><a href=#k-regra-de-negócio-duplicada-não-é-deduplicada class="table-of-contents__link toc-highlight">K. Regra de negócio duplicada não é deduplicada</a><li><a href=#l-botão-do-rodapé-fica-obsoleto class="table-of-contents__link toc-highlight">L. Botão do rodapé fica obsoleto</a></ul><li><a href=#funcionou-como-projetado-registrar-também class="table-of-contents__link toc-highlight">Funcionou como projetado (registrar também)</a><ul><li><a href=#m-o-arquiteto-é-cego-ao-próprio-module_map-p1--a-falha-da-rodada class="table-of-contents__link toc-highlight">M. O ARQUITETO É CEGO AO PRÓPRIO module_map (P1 — a falha da rodada)</a></ul><li><a href=#execução-projeto-17229425-sessão-de-execução-dbb84ce8--2026-08-05 class="table-of-contents__link toc-highlight">Execução (projeto 17229425, sessão de execução dbb84ce8) — 2026-08-05</a><ul><li><a href=#n-a-metade-de-execução-só-funciona-com-provider-local-p1-bloqueia-a-13b class="table-of-contents__link toc-highlight">N. A METADE DE EXECUÇÃO SÓ FUNCIONA COM PROVIDER <code>local</code> (P1, bloqueia a 13b)</a><li><a href=#o-dev-agent-nasce-no-modelo-local-mesma-raiz-do-achado-b class="table-of-contents__link toc-highlight">O. Dev agent nasce no modelo local (mesma raiz do achado B)</a><li><a href=#p-evento-de-bloqueio-sem-origem class="table-of-contents__link toc-highlight">P. Evento de bloqueio sem origem</a><li><a href=#q-agenterror-com-origem-indeterminada class="table-of-contents__link toc-highlight">Q. <code>agent.error</code> com "origem indeterminada"</a><li><a href=#r-po-gerou-histórias-sobrepostas class="table-of-contents__link toc-highlight">R. PO gerou histórias sobrepostas</a></ul><li><a href=#execução-do-hello-limpo-projeto-9c7c84f0-sessão-1f94de49--2026-08-06 class="table-of-contents__link toc-highlight">Execução do hello-limpo (projeto <code>9c7c84f0</code>, sessão <code>1f94de49</code>) — 2026-08-06</a><ul><li><a href=#s-o-contexto-acumulado-estoura-o-limite-do-provider-e-mata-a-execução-p1 class="table-of-contents__link toc-highlight">S. O contexto acumulado estoura o limite do provider e MATA a execução (P1)</a><li><a href=#t-a-origem-da-falha-continua-fora-das-quatro-recorrência-de-p-e-q class="table-of-contents__link toc-highlight">T. A origem da falha continua fora das quatro (recorrência de P e Q)</a><li><a href=#u-o-executor-de-terminal-não-tem-fronteira-de-projeto-p1 class="table-of-contents__link toc-highlight">U. O executor de terminal não tem fronteira de projeto (P1)</a><li><a href=#v-sessão-consta-closed-enquanto-a-execução-continua-p2 class="table-of-contents__link toc-highlight">V. Sessão consta <code>closed</code> enquanto a execução continua (P2)</a></ul><li><a href=#confirmado-em-produção-nesta-rodada class="table-of-contents__link toc-highlight">Confirmado em produção nesta rodada</a><li><a href=#execução-da-validação-da-fase-12--2026-08-07 class="table-of-contents__link toc-highlight">Execução da validação da Fase 12 — 2026-08-07</a><ul><li><a href=#w-dev-agent-morre-quando-a-fila-do-módulo-esvazia-p1--fechado class="table-of-contents__link toc-highlight">W. Dev agent MORRE quando a fila do módulo esvazia (P1) — FECHADO</a></ul><li><a href=#execução-real-com-github-remoto-fase-13b--2026-08-07 class="table-of-contents__link toc-highlight">Execução real com GitHub remoto (FASE 13b) — 2026-08-07</a><ul><li><a href=#x-o-dev-agent-queima-o-teto-de-iterações-em-repositório-vazio-p1 class="table-of-contents__link toc-highlight">X. O dev agent queima o teto de iterações em repositório vazio (P1)</a><li><a href=#y-search_workspace-não-distingue-vazio-de-não-encontrei--fechado class="table-of-contents__link toc-highlight">Y. <code>search_workspace</code> não distingue "vazio" de "não encontrei" — FECHADO</a><li><a href=#z-o-allowlist-de-terminal-governa-o-verbo-o-escopo-protege-só-o-caminho class="table-of-contents__link toc-highlight">Z. O allowlist de terminal governa o VERBO; o escopo protege só o CAMINHO</a><li><a href=#funcionou-como-projetado-registrar-também-1 class="table-of-contents__link toc-highlight">Funcionou como projetado (registrar também)</a><li><a href=#aa-pr_open-auto-aprovado-não-tem-credencial-e-sempre-falha-em-remoto-p1 class="table-of-contents__link toc-highlight">AA. <code>pr_open</code> auto-aprovado não tem credencial e sempre falha em remoto (P1)</a><li><a href=#ab-o-agente-de-gate-não-sabe-esperar-aprovação--vira-falha-infra-p1 class="table-of-contents__link toc-highlight">AB. O agente de GATE não sabe esperar aprovação — vira falha <code>infra</code> (P1)</a><li><a href=#ac-redirecionamento-2devnull-torna-qualquer-comando-inaprovável-p1 class="table-of-contents__link toc-highlight">AC. Redirecionamento (<code>2>/dev/null</code>) torna qualquer comando inaprovável (P1)</a><li><a href=#ad-o-agente-embrulha-comandos-em-bash--lc-e-o-allowlist-não-tem-resposta-p1 class="table-of-contents__link toc-highlight">AD. O agente embrulha comandos em <code>bash -lc</code>, e o allowlist não tem resposta (P1)</a></ul></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Documentação</div><ul class="footer__items clean-list"><li class=footer__item><a class=footer__link-item href=/brabo/getting-started>Primeiros passos</a><li class=footer__item><a class=footer__link-item href=/brabo/architecture>Arquitetura</a><li class=footer__item><a class=footer__link-item href=/brabo/business-rules>Regras de negócio</a><li class=footer__item><a class=footer__link-item href=/brabo/runbook>Runbook</a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Comunidade</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class=footer__link-item>Como contribuir<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_7k9y><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class=footer__link-item>Onde pedir ajuda<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_7k9y><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class=footer__link-item>Segurança<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_7k9y><use href=#theme-svg-external-link /></svg></a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Mais</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class=footer__link-item>GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_7k9y><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CHANGELOG.md target=_blank rel="noopener noreferrer" class=footer__link-item>CHANGELOG<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_7k9y><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/LICENSE target=_blank rel="noopener noreferrer" class=footer__link-item>Licença MIT<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_7k9y><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/THIRD_PARTY_NOTICES.md target=_blank rel="noopener noreferrer" class=footer__link-item>Avisos de terceiros<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_7k9y><use href=#theme-svg-external-link /></svg></a></ul></div></div><div class="footer__bottom text--center"><div class=footer__copyright>Copyright © 2026 Daniel Souza. Licenciado sob a MIT. Ferramentas de terceiros mantêm as próprias licenças — ver Avisos de terceiros.</div></div></div></footer></div></body>
