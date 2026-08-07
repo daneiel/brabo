@@ -6,6 +6,17 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **engine**: quantas voltas um agente pode dar antes de desistir deixa de ser
+  um número só para todos e passa a depender do trabalho que ele faz. O limite
+  de 8 tinha nascido para agente de conversa, e era o mesmo do dev agent: numa
+  execução real ele gastou as oito procurando onde ficava o projeto num
+  repositório recém-criado e não chegou a escrever nada, terminando com uma
+  mensagem que culpava o modelo por algo que o modelo nunca teve chance de
+  fazer. Agora quem escreve código e quem revisa PR têm folga, e quem conversa
+  continua no mesmo lugar — subir o limite de todo mundo teria feito o agente
+  de conversa gastar mais sem motivo. Quem ganha folga é só quem já tem um
+  teto de custo próprio por baixo
+
 - **api,web**: a esteira de gates no painel deixa de repetir a lista de etapas
   e passa a derivá-la do registro. O ganho não é visual: gate que sai do
   registro sai da tela sozinho — antes, desativar um deixava uma etapa morta

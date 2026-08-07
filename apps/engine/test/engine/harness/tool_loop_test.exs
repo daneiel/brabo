@@ -52,6 +52,28 @@ defmodule Engine.Harness.ToolLoopTest do
                      %{type: "toolloop.limit_reached", payload: %{iteration: 3}}}
   end
 
+  test "o teto vem do TIPO do agente quando o chamador não passa um", %{ctx: ctx} do
+    # O dev agent e os gates não passam `max_iterations` — caíam no default
+    # global de 8, que nasceu para agente conversacional (achado X, FASE 14d).
+    Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("pronto")])
+
+    assert {:ok, out} = ToolLoop.run(Map.put(ctx, :agent, "dev-api"))
+
+    assert out.max_iterations == Engine.Harness.Iteracoes.teto("dev-api")
+    assert out.max_iterations > 8
+  end
+
+  test "teto explícito do chamador VENCE o do tipo", %{ctx: ctx} do
+    # PO, Arquiteto e Infra Lead já passam o seu. A mudança não pode
+    # atropelá-los.
+    Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("pronto")])
+
+    assert {:ok, out} =
+             ToolLoop.run(ctx |> Map.put(:agent, "dev-api") |> Map.put(:max_iterations, 5))
+
+    assert out.max_iterations == 5
+  end
+
   test "caminho feliz: resposta final imediata, sem tool calls", %{ctx: ctx} do
     Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("tudo pronto")])
 
