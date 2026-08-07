@@ -17,6 +17,25 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   de conversa gastar mais sem motivo. Quem ganha folga é só quem já tem um
   teto de custo próprio por baixo
 
+- **api,engine**: a Anamnese passou a reparar quando autorizar mais um agente
+  virou rotina. Se você aprovou o mesmo pedido três vezes na janela e não negou
+  nenhuma, ela propõe subir o teto daquela área — com o número de aprovações
+  como justificativa. Uma única negação derruba a proposta: se você recusou
+  alguma vez, o teto está fazendo o trabalho dele. A proposta **nunca se aprova
+  sozinha**, e nem a de ultrapassar o teto: as duas ações que mexem em quanto o
+  produto gasta sem perguntar agora são intocáveis por qualquer configuração de
+  autonomia. Sem isso, um `permissions.json` permissivo tornaria o limite
+  decorativo — e o produto poderia elevar o próprio teto de gasto
+
+
+- **api,web**: o teto de agentes de cada área virou configurável em
+  Configurações, e — mais importante — passou a valer de verdade. A regra do
+  teto tinha entrado antes, mas nenhuma tela a consultava: o botão de subir mais
+  um agente ainda ia direto, sem passar por ela. Agora o pedido passa, e quando
+  ele estoura o teto a tela diz que **nada subiu** e que a decisão está
+  esperando você em Aprovações — antes ela teria dito que o agente entrou, e
+  você só descobriria que não pelo trabalho que não anda
+
 - **api,web**: a esteira de gates no painel deixa de repetir a lista de etapas
   e passa a derivá-la do registro. O ganho não é visual: gate que sai do
   registro sai da tela sozinho — antes, desativar um deixava uma etapa morta

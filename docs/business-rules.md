@@ -1618,10 +1618,29 @@ no caminho direto quanto quando a ação é aprovada. Absorvê-lo por dentro, em
 de reescrevê-lo, é o que mantém a suite da Fase 4 verde sem modificação — que é
 a prova de que a troca não vazou para o contrato externo.
 
+**O teto é configurável por área, e só por você.** `PATCH
+/projects/:projectId/agent-areas/:key/max-parallel` exige `maintainer` — o mesmo
+papel de ativar a execução, e pelo mesmo motivo: mudar o teto é decidir quanto o
+produto pode gastar sem perguntar. Não existe caminho automático de subi-lo. A
+Anamnese pode PROPOR, quando notar que a autorização virou rotina, e a proposta
+continua passando por esta rota depois que você aceita — um produto que eleva o
+próprio teto de gasto é exatamente o que o pipeline de aprovação existe para
+impedir.
+
+Mudar o teto vale para os PRÓXIMOS pedidos. O que já está aguardando decisão
+continua aguardando: a ação carrega no payload o teto vigente quando foi criada,
+e reinterpretá-la sob o teto novo mudaria o que você está prestes a decidir
+depois de ler.
+
 - **Onde:** `apps/api/src/domain/execution/paralelismo.ts` (a regra pura),
-  `application/use-cases/execution/request-parallelization.use-case.ts`
-- **Teste:** `apps/api/test/domain/execution/paralelismo.spec.ts` e
-  `test/application/use-cases/execution/request-parallelization.use-case.spec.ts`
+  `application/use-cases/execution/request-parallelization.use-case.ts`,
+  `application/use-cases/execution/set-area-max-parallel.use-case.ts`,
+  exposto em `interfaces/http/execution/execution.controller.ts` e configurado
+  em `apps/web/src/routes/ProjectSettingsTab.tsx` (`ParallelismSection`)
+- **Teste:** `apps/api/test/domain/execution/paralelismo.spec.ts`,
+  `test/application/use-cases/execution/request-parallelization.use-case.spec.ts`,
+  `test/application/use-cases/execution/set-area-max-parallel.use-case.spec.ts`
+  e `apps/web/src/routes/ProjectSettingsTab.test.tsx` (`ParallelismSection`)
 - **Origem:** [ADR 0053](adr/0053-dev-lead-e-paralelismo-autorizado.md), FASE 14d
 
 ### RN-084 — A esteira exibida deriva do registro de gates {#rn-084}
@@ -1696,6 +1715,54 @@ Duas bordas com teste próprio:
   `teto explícito do chamador VENCE o do tipo`)
 - **Origem:** achado X, [validação real da 13b](explanation/validacao-real.md);
   [ADR 0053](adr/0053-dev-lead-e-paralelismo-autorizado.md), FASE 14d
+
+### RN-086 — Gastar com mais agentes nunca se auto-aprova {#rn-086}
+
+As duas ações que mexem em **quanto o produto pode gastar sozinho** —
+`parallelize` (ultrapassar o teto agora) e `raise_max_parallel` (mudar o teto)
+— nunca são auto-aprováveis. Nem por `agent_autonomy`, nem por
+`permissions.json`. É a mesma classe de garantia da trava de merge e do teto do
+patch de instrução.
+
+**Sem isto o teto da [RN-083](#rn-083) seria decorativo.** Um `permissions.json`
+com `Parallelize()` no `allow` faria toda ultrapassagem se aprovar sozinha — a
+regra que existe para EXIGIR a decisão do usuário passaria a dispensá-la. E
+`raise_max_parallel` é o caso mais grave: seria o produto elevando o próprio
+limite de gasto, exatamente o que o pipeline de aprovação existe para impedir.
+
+**A Anamnese pode PROPOR, e é isso que ela faz.** Quando autorizar mais um
+agente vira rotina, o teto está errado, e quem percebe primeiro é quem lê o
+histórico. O sinal já chegava a ela: as decisões do usuário na janela vêm de
+`proposed_actions`, com `actionType` e `status`.
+
+O limiar é **três aprovações e nenhuma negação**, e as duas metades importam:
+
+- **duas não são rotina — são duas.** Três é o que separa "aconteceu" de "está
+  acontecendo sempre";
+- **uma negação derruba o sinal inteiro**, por mais aprovações que haja. Se o
+  usuário recusou alguma vez, o teto está fazendo o trabalho dele, e propor
+  subi-lo seria ler o sinal ao contrário.
+
+Propor um teto **igual ou menor** que o vigente é recusado pela api: a Anamnese
+roda periodicamente e reproporia a mesma coisa a cada rodada, enchendo de ruído
+uma fila que o usuário precisa ler.
+
+Aprovar aplica o valor do **payload**, não um recalculado na hora — é o número
+que você leu ao decidir.
+
+- **Onde:** `apps/api/src/domain/actions/decide.ts` (o teto),
+  `application/use-cases/execution/propose-max-parallel.use-case.ts`,
+  `execute-max-parallel-raise.use-case.ts`,
+  `apps/engine/lib/engine/anamnese/tools/propose_max_parallel.ex` e o limiar em
+  `apps/engine/lib/engine/workers/anamnese_worker.ex` (`nota_de_paralelismo/1`)
+- **Teste:** `apps/api/test/domain/actions/decide.spec.ts`
+  (`decide — teto do paralelismo`),
+  `test/application/use-cases/execution/propose-max-parallel.use-case.spec.ts`,
+  `execute-max-parallel-raise.use-case.spec.ts`,
+  `apps/engine/test/engine/anamnese/tools_test.exs` e
+  `test/engine/workers/anamnese_worker_test.exs` (`duas aprovacoes NAO sao
+  rotina`, `uma NEGACAO derruba o sinal`)
+- **Origem:** [ADR 0053](adr/0053-dev-lead-e-paralelismo-autorizado.md), FASE 14d
 
 ### RN-064 — Heartbeat não encerra sessão com trabalho pendente {#rn-064}
 
