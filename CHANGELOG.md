@@ -2,6 +2,16 @@
 
 Gerado dos conventional commits por `scripts/changelog.mjs`.
 
+## v2.4.0 — 2026-08-07
+
+### Novidades
+
+- **engine**: o agente de gate espera a aprovação, como o dev espera (95ae7074)
+
+### Documentação
+
+- **changelog**: v2.3.0 (6f6f5be4)
+
 ## v2.3.0 — 2026-08-07
 
 ### Novidades
