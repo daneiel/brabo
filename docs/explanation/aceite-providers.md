@@ -22,6 +22,57 @@ provada. Enquanto um smoke não rodou contra chave real, o que existe sobre
 aquele provider é leitura de documentação oficial — boa, verificada linha a
 linha na Fase 11, e ainda assim não é execução.
 
+## Estado em 2026-08-07
+
+Primeira execução paga desta lista. **OpenRouter fechou**; os outros cinco
+seguem pulados por falta de chave — não há credencial deles em lugar nenhum do
+ambiente, e o produto só tem a do OpenRouter cadastrada (a mesma usada na
+execução do hello-limpo).
+
+| provider | rodou? | resultado |
+|---|---|---|
+| OpenRouter | ✅ **sim** | roteiro completo verde, uma chamada paga |
+| Together AI | ❌ pulado | `TOGETHER_TEST_KEY` ausente |
+| DeepInfra | ❌ pulado | `DEEPINFRA_TEST_KEY` ausente |
+| NVIDIA NIM | ❌ pulado | `NVIDIA_NIM_TEST_KEY` ausente |
+| Bitdeer | ❌ pulado | `BITDEER_TEST_KEY` ausente |
+| Vultr | ❌ pulado | `VULTR_TEST_KEY` ausente |
+
+**Custo real, lido do `token_usage` do banco de teste:**
+
+| provider | modelo | in | out | `cost_micros` | preço congelado | `estimated` |
+|---|---|---|---|---|---|---|
+| openrouter | `openai/gpt-4o-mini` | 20 | 3 | **5** | 150.000 /milhão | `false` |
+
+Cinco micro-USD — **US$ 0,000005**, duas ordens de grandeza abaixo da
+estimativa de "< US$ 0,001" da seção acima. `estimated: false` é o que importa
+aqui: o consumo veio do provider, não do estimador local, e o preço gravado é o
+congelado no momento do uso ([RN-044](../business-rules.md#rn-044)) — não o da
+tabela `models` de hoje.
+
+### O que o smoke encontrou no caminho
+
+Ele **nunca tinha rodado**, e por isso tinha apodrecido em silêncio contra o
+[ADR 0049](../adr/0049-curadoria-de-modelo-por-workspace.md), que moveu a
+curadoria de `models.is_active` para `workspace_models`:
+
+- afirmava `alvo.isActive === false` sobre o catálogo global — campo que não
+  existe mais, e que vinha `undefined`. A afirmação certa da
+  [RN-043](../business-rules.md#rn-043) hoje é `workspaceModels.isActive(...)`,
+  porque **ausência de linha é o desligado**;
+- montava `SetModelsActiveUseCase` e `SetModelBindingUseCase` com as assinaturas
+  antigas, sem `workspaceId`/`curatedBy` e sem o repositório de curadoria.
+
+Nada disso era detectável por CI: sem a chave, o `describe.skipIf` pula o
+arquivo inteiro, e o typecheck da api roda sobre `tsconfig.build.json`, que
+exclui `test/`. **Um aceite que nunca roda não é um aceite** — é o mesmo
+mecanismo que deixou a tabela da Fase 10 como "não medido", e a lição vale
+igual aqui.
+
+Corrigido junto com a execução: o smoke agora afirma a RN-043 pelo caminho do
+ADR 0049. Quando as outras cinco chaves existirem, os cinco smokes restantes
+provavelmente terão apodrecido do mesmo jeito, e pelo mesmo motivo.
+
 ## Estado em 2026-08-03
 
 Varredura do ambiente nesta data: **nenhuma** das seis variáveis está
