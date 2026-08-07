@@ -13,6 +13,16 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **engine**: um agente de gate que esbarra numa aprovação pendente deixa de
+  matar o gate. Ele agora **espera** — como o dev agent já fazia — e a decisão o
+  retoma de onde parou, com o resultado de verdade no lugar onde estava a
+  palavra "pendente". Antes a suspensão era classificada como falha de
+  infraestrutura, a tarefa era bloqueada por uma decisão que ninguém tinha
+  tomado, e o clique do usuário chegava tarde demais para servir. Enquanto está
+  esperando, a área de QA não consolida, não emite veredito e não bloqueia nada.
+  Recusa também retoma: o motivo entra no lugar do resultado, e o agente aprende
+  que aquele caminho fechou em vez de esperar para sempre
+
 - **api**: comando com redirecionamento deixa de exigir aprovação sempre.
   `2>/dev/null` é idioma — modelos o usam o tempo todo para silenciar erro
   esperado —, mas o parser tratava `>` como se encadeasse um comando novo, e o

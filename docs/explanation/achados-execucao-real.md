@@ -496,47 +496,18 @@ exatamente a escada declarada inviável.
 
 ### AB. O agente de GATE não sabe esperar aprovação — vira falha `infra` (P1)
 
-> **FECHADO PELA METADE, e a metade importa.** A origem agora é `politica` e o
-> diagnóstico NOMEIA a ação pendente e a ferramenta — dá para achar e decidir.
-> Antes o log dizia `infra`, culpando a infraestrutura por algo que não
-> quebrou, o que contraria a regra do ADR 0020 de que origem é nomeada e nunca
-> obtida por eliminação.
+> **FECHADO** — [ADR 0057](../adr/0057-o-gate-espera-a-aprovacao.md). Os agentes
+> de gate agora SUSPENDEM e retomam, como o dev agent desde o ADR 0052: o
+> subagente devolve `{:awaiting, ...}` com o `ctx` inteiro, e o `QaLeadServer`
+> guarda o estado em voo, assina o `Wake` pelos subagentes e continua a área do
+> ponto em que parou quando a decisão chega.
 >
-> **O gate continua bloqueando.** O laço dos agentes de gate é síncrono e não
-> sabe retomar. Torná-los suspensíveis como o dev agent
-> ([ADR 0052](../adr/0052-dev-agent-espera-aprovacao-no-meio-do-laco.md)) é o
-> conserto de verdade — mesma cirurgia que a Fase A fez, com ADR próprio, e
-> por isso fica na triagem em vez de virar ajuste de passagem.
-
-Achado na 6ª execução da 13b, a primeira em que a PR abriu e os gates rodaram.
-
-O `qa-automacao` chamou `terminal` com um comando COMPOSTO
-(`ls -la && find … | head -50`). `head` não estava no `allow`, e a regra é
-correta: todo segmento precisa estar liberado, senão o comando inteiro vira
-`require_approval`. O ToolLoop então suspendeu em
-`{:halted, {:awaiting_approval, …}}`.
-
-**O problema não é a suspensão — é o que o lead faz com ela.** O `QaLeadServer`
-não tem cláusula para esse desfecho e o classifica como *"desfecho inesperado
-do ToolLoop"*, com `failureOrigin: infra`. A task é bloqueada, o gate morre, e
-o event log culpa a infraestrutura por uma decisão de POLÍTICA que está
-simplesmente pendente.
-
-É exatamente o defeito que o [ADR 0052](../adr/0052-dev-agent-espera-aprovacao-no-meio-do-laco.md)
-corrigiu para o dev agent na Fase A — o laço SUSPENDE e retoma quando a decisão
-chega ([RN-073](../business-rules.md#rn-073)). Os agentes de GATE ficaram de
-fora daquela correção.
-
-Duas consequências, e a segunda é pior:
-
-1. qualquer comando do gate que caia em aprovação mata o gate;
-2. a origem registrada é `infra`, o que é **falso** — nada quebrou. Contraria
-   a regra do produto de que a origem da falha nunca é diagnóstico por
-   eliminação (lição do ADR 0020).
-
-O `qa-performance-seguranca` foi dispensado corretamente na mesma rodada
-(`delegation.dispensed`, justificativa "story sem RNF"), então a área de QA
-funciona — o que falta é o lead saber que "esperando você decidir" não é falha.
+> Enquanto pendente, a área **não** consolida, não emite veredito e não bloqueia
+> task — ela espera. Recusa também retoma, com o motivo no lugar do resultado.
+>
+> Limite declarado: restart no meio da espera perde o laço, porque o `pendente`
+> vive na memória do lead. O gate roda de novo pelo `Dispatcher` quando a task
+> voltar ao ciclo.
 
 ### AC. Redirecionamento (`2>/dev/null`) torna qualquer comando inaprovável (P1)
 
