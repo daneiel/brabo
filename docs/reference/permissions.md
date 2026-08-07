@@ -199,6 +199,12 @@ verbo ([ADR 0055](../adr/0055-escopo-de-caminho-na-politica-de-terminal.md),
 `<PROJECT_WORKSPACES_ROOT>/<projectId>`, onde vivem o `permissions.json` e todos
 os worktrees de agente — é o **escopo**.
 
+A comparação de caminho é **léxica e sem regex sobre a entrada**: o corte de
+barras finais é varredura O(n), não `.replace(/\/+$/, '')`. O padrão antigo foi
+apontado pelo CodeQL como ReDoS polinomial (HIGH) — ele obriga o motor a tentar
+cada posição inicial, e degrada em O(n²) com muitas barras. A entrada aqui vem
+de comando de agente, então não é lugar de regex que retrocede.
+
 O escopo faz duas coisas opostas, e é a combinação que importa:
 
 **Aperta.** Um comando que toca caminho de fora nunca é auto-aprovado, por mais
