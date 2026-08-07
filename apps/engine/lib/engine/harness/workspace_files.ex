@@ -47,6 +47,17 @@ defmodule Engine.Harness.WorkspaceFiles do
   end
 
   @doc """
+  Quantos arquivos buscáveis o workspace tem (mesmo walk da `search/2`).
+
+  Existe para a `search_workspace` poder dizer a diferença entre "procurei e
+  não achei" e "não há nada para procurar". Sem isso as duas situações
+  produziam a MESMA frase, e um agente num repositório recém-provisionado lia
+  "nenhum resultado" como "refine a busca" — repetindo a busca até queimar o
+  teto de iterações sem nunca escrever uma linha (achado X da FASE 13b).
+  """
+  def count(dir), do: dir |> walk() |> length()
+
+  @doc """
   Busca `query` (substring, case-insensitive) nos NOMES e no CONTEÚDO dos
   arquivos dentro de `dir`. Walk recursivo pulando `.git`. Retorna lista de
   `%{path, matched_name, matched_content}` (paths relativos a `dir`).

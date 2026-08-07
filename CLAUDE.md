@@ -386,4 +386,9 @@ duras do produto.
   virando `run_task("")`) foi corrigido durante a 13a.1, pelo mesmo
   critério: o passo 5 da validação não fechava sem ele. As três outras
   correções da mesma rodada são do INSTRUMENTO (o script e o Noop), não
-  do produto, e não precisavam de exceção
+  do produto, e não precisavam de exceção.
+  TERCEIRA EXCEÇÃO, em 2026-08-07: o achado Y (`search_workspace` dizendo
+  a mesma frase para "não achei" e "não há o que achar") foi corrigido a
+  pedido do usuário, pelo mesmo critério — sem ele o dev agent queima o
+  teto de iterações em repositório novo, nenhuma PR nasce, e a metade da
+  13b que mede gates por LLM fica inalcançável

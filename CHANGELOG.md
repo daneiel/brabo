@@ -13,6 +13,16 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **engine**: a busca no workspace deixa de dizer a mesma coisa quando não
+  encontra e quando não há o que encontrar. Num projeto novo, o dev agent lia
+  "nenhum resultado" como "refine a busca" e repetia buscas até esgotar o teto
+  de iterações — bloqueado sem ter rodado um comando nem escrito uma linha.
+  Agora um workspace sem arquivo nenhum responde que está vazio e manda criar;
+  um workspace com arquivos responde quantos tem, deixando claro que a busca
+  funcionou e o termo é que não aparece. A correção é a frase, não o teto: o
+  agente não precisava de mais iterações, precisava saber que não havia o que
+  procurar
+
 - **api**: o aceite do OpenRouter contra a API real voltou a funcionar. Ele
   nunca tinha rodado — sem chave, a suite inteira é pulada — e por isso tinha
   apodrecido em silêncio contra a mudança que levou a curadoria de modelo para

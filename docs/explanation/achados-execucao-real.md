@@ -407,11 +407,25 @@ de saída.
 É o **primeiro** cenário em que o dev agent começa do zero absoluto — todo teste
 e toda demo partiram de workspace com código.
 
-### Y. `search_workspace` não distingue "vazio" de "não encontrei"
+### Y. `search_workspace` não distingue "vazio" de "não encontrei" — FECHADO
 
 As cinco primeiras chamadas devolveram `nenhum resultado`, e o agente leu isso
-como "procure melhor" em vez de "não há nada aqui". Provável peça acionável
-do achado X.
+como "procure melhor" em vez de "não há nada aqui". Era a peça acionável do
+achado X.
+
+> **FECHADO** — a ferramenta passou a responder coisas diferentes para
+> situações diferentes. Workspace sem arquivo nenhum devolve *"o workspace
+> está VAZIO […] CRIE os arquivos necessários (write_file) em vez de continuar
+> procurando"*; workspace com arquivos devolve a contagem, dizendo que a busca
+> funcionou e o termo é que não aparece.
+>
+> **A correção é a frase, não o teto.** O agente não precisava de mais
+> iterações — precisava saber que não havia o que procurar. E o caso do achado
+> (só `.github/` e `docs/` do bootstrap) NÃO é vazio: há teste afirmando que
+> ali a resposta certa é a contagem, não a instrução de criar.
+>
+> O achado **X segue aberto**: que a frase nova quebre o laço de verdade só se
+> prova numa execução paga nova.
 
 ### Funcionou como projetado (registrar também)
 
