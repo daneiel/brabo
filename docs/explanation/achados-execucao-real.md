@@ -493,3 +493,35 @@ resolve por "quem decidiu", e não por "de quem é o workspace".
 existe para viabilizar — nenhum dev agent consegue abrir PR em provider
 remoto. O caminho só funciona quando um humano clica em cada PR, que é
 exatamente a escada declarada inviável.
+
+### AB. O agente de GATE não sabe esperar aprovação — vira falha `infra` (P1)
+
+Achado na 6ª execução da 13b, a primeira em que a PR abriu e os gates rodaram.
+
+O `qa-automacao` chamou `terminal` com um comando COMPOSTO
+(`ls -la && find … | head -50`). `head` não estava no `allow`, e a regra é
+correta: todo segmento precisa estar liberado, senão o comando inteiro vira
+`require_approval`. O ToolLoop então suspendeu em
+`{:halted, {:awaiting_approval, …}}`.
+
+**O problema não é a suspensão — é o que o lead faz com ela.** O `QaLeadServer`
+não tem cláusula para esse desfecho e o classifica como *"desfecho inesperado
+do ToolLoop"*, com `failureOrigin: infra`. A task é bloqueada, o gate morre, e
+o event log culpa a infraestrutura por uma decisão de POLÍTICA que está
+simplesmente pendente.
+
+É exatamente o defeito que o [ADR 0052](../adr/0052-dev-agent-espera-aprovacao-no-meio-do-laco.md)
+corrigiu para o dev agent na Fase A — o laço SUSPENDE e retoma quando a decisão
+chega ([RN-073](../business-rules.md#rn-073)). Os agentes de GATE ficaram de
+fora daquela correção.
+
+Duas consequências, e a segunda é pior:
+
+1. qualquer comando do gate que caia em aprovação mata o gate;
+2. a origem registrada é `infra`, o que é **falso** — nada quebrou. Contraria
+   a regra do produto de que a origem da falha nunca é diagnóstico por
+   eliminação (lição do ADR 0020).
+
+O `qa-performance-seguranca` foi dispensado corretamente na mesma rodada
+(`delegation.dispensed`, justificativa "story sem RNF"), então a área de QA
+funciona — o que falta é o lead saber que "esperando você decidir" não é falha.

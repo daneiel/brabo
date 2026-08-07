@@ -250,6 +250,27 @@ a api resolve o token de git por `action.decidedBy`, que é NULL quando a
 política auto-aprova. O push funcionou porque quem empurra é o engine, que
 injeta a credencial do owner (RN-076).
 
+## A sexta execução: a PR abriu no GitHub
+
+Com a [RN-082](../business-rules.md#rn-082) no lugar, a cadeia fechou até a PR:
+
+> **PR #1 — "Rota pública de saudação — Expor GET /saudacao"**,
+> de `feature/task-636ef1aa`, aberta em `daneiel/test`.
+
+Código escrito por um modelo, commitado como `dev-api[bot]`, empurrado e
+publicado como pull request num repositório remoto de verdade. **O gate abriu**
+(`pr.gate_changed`, `gateStatus: awaiting_qa`) e a área de QA rodou.
+
+O `qa-performance-seguranca` foi **dispensado corretamente**
+(`delegation.dispensed`, justificativa *"story sem RNF"*) — dispensa com
+justificativa, nunca silêncio, como o ADR 0038 desenhou.
+
+O `qa-automacao` falhou, e virou o **achado AB**: ele chamou um comando
+composto cujo último segmento (`head`) não estava no `allow`, o ToolLoop
+suspendeu em `awaiting_approval`, e o QA Lead classificou a suspensão como
+*"desfecho inesperado"* com origem `infra`. É o defeito que o ADR 0052 corrigiu
+para o dev agent e que não alcançou os agentes de gate.
+
 ## O que esta validação ainda NÃO prova
 
 Honestidade sobre o alcance, como na irmã dela:
