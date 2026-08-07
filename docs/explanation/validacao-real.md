@@ -271,6 +271,25 @@ suspendeu em `awaiting_approval`, e o QA Lead classificou a suspensão como
 *"desfecho inesperado"* com origem `infra`. É o defeito que o ADR 0052 corrigiu
 para o dev agent e que não alcançou os agentes de gate.
 
+## A sétima execução: ampliar o allowlist não bastou, e isso era previsível
+
+Com 25 verbos liberados — critério explícito: o que LÊ ou CONSTRÓI, nunca o que
+busca na rede ou destrói — o gate travou de novo. E não por falta de verbo:
+
+```
+ls -la && echo "---" && cat package.json 2>/dev/null; …
+```
+
+`ls`, `echo` e `cat` estavam todos em `allow`. O que barra é `2>/dev/null`, e
+vira o **achado AC**: o parser trata `>` como separador, o redirecionamento
+vira um segmento cujo verbo é `/dev/null`, e o mesmo token ainda é um caminho
+absoluto fora do projeto.
+
+**A previsão registrada antes da execução se confirmou.** O allowlist é lista
+fechada e o modelo inventa comandos; ampliar a lista é remendo. A 7ª execução
+prova isso de forma difícil de contestar: 25 verbos, e travou pela FORMA do
+comando, não pelo verbo.
+
 ## O que esta validação ainda NÃO prova
 
 Honestidade sobre o alcance, como na irmã dela:

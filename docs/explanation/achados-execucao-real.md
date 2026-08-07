@@ -537,3 +537,45 @@ Duas consequências, e a segunda é pior:
 O `qa-performance-seguranca` foi dispensado corretamente na mesma rodada
 (`delegation.dispensed`, justificativa "story sem RNF"), então a área de QA
 funciona — o que falta é o lead saber que "esperando você decidir" não é falha.
+
+### AC. Redirecionamento (`2>/dev/null`) torna qualquer comando inaprovável (P1)
+
+Achado na 7ª execução da 13b, depois de ampliar o allowlist com 25 verbos. O
+agente de QA rodou:
+
+```
+ls -la && echo "---" && cat package.json 2>/dev/null; echo "---"; ls *.md 2>/dev/null
+```
+
+**Todos os verbos estavam liberados** — `ls`, `echo`, `cat`. Mesmo assim virou
+`require_approval`. Rodando as funções puras contra o comando:
+
+```
+segmentos: [["ls","-la"],["echo","---"],["cat","package.json","2"],["/dev/null"],…]
+tokens de caminho: ["/dev/null","/dev/null"]
+no escopo? false
+```
+
+`parseCommand` trata `>` como separador de segmento, então `2>/dev/null` vira
+**um segmento próprio**. Isso quebra de duas formas independentes:
+
+1. o segmento `/dev/null` tem como "verbo" o próprio `/dev/null`, que nunca
+   estará em `allow` — e comando composto exige TODO segmento liberado;
+2. `/dev/null` é token de caminho ABSOLUTO fora da pasta do projeto, então o
+   teto da [RN-075](../business-rules.md#rn-075) rebaixa `auto_approve`.
+
+**O impacto é grande porque `2>/dev/null` é idiomático.** Modelos o usam o
+tempo todo para silenciar erro esperado. Na prática, qualquer comando com
+redirecionamento de saída é inaprovável por política — só passa com clique
+humano.
+
+Não é falha de um verbo faltando na lista: é a **forma** do comando. Ampliar o
+allowlist não resolve, e a 7ª execução é a prova — 25 verbos liberados, e
+travou mesmo assim.
+
+Duas peças distintas para triar:
+
+- a segmentação por `>` em `command-matcher.ts` (pré-existente, e discutível:
+  redirecionamento não é composição de comandos como `&&` e `|`);
+- o teto de escopo tratando `/dev/null` como caminho de usuário
+  (`path-scope.ts`, da Fase F).
