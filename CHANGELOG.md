@@ -13,6 +13,14 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **engine**: um agente de gate que esbarra numa ação pendente de aprovação
+  deixa de registrar "falha de infraestrutura". Nada quebrou — a decisão apenas
+  não foi tomada, e o log agora diz isso, nomeando a ação e a ferramenta para
+  que dê para encontrá-la e decidi-la. O gate ainda bloqueia a task: o laço dos
+  agentes de gate é síncrono e não sabe retomar de onde parou, ao contrário do
+  dev agent. O que muda é parar de culpar a infraestrutura por uma decisão
+  pendente
+
 - **api**: nenhum dev agent conseguia abrir PR em repositório remoto quando a
   autonomia estava ligada. A credencial de git vinha de quem DECIDIU a ação — e
   ação auto-aprovada por política não tem decisor, então o token ficava vazio e

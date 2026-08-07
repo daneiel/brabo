@@ -496,6 +496,18 @@ exatamente a escada declarada inviável.
 
 ### AB. O agente de GATE não sabe esperar aprovação — vira falha `infra` (P1)
 
+> **FECHADO PELA METADE, e a metade importa.** A origem agora é `politica` e o
+> diagnóstico NOMEIA a ação pendente e a ferramenta — dá para achar e decidir.
+> Antes o log dizia `infra`, culpando a infraestrutura por algo que não
+> quebrou, o que contraria a regra do ADR 0020 de que origem é nomeada e nunca
+> obtida por eliminação.
+>
+> **O gate continua bloqueando.** O laço dos agentes de gate é síncrono e não
+> sabe retomar. Torná-los suspensíveis como o dev agent
+> ([ADR 0052](../adr/0052-dev-agent-espera-aprovacao-no-meio-do-laco.md)) é o
+> conserto de verdade — mesma cirurgia que a Fase A fez, com ADR próprio, e
+> por isso fica na triagem em vez de virar ajuste de passagem.
+
 Achado na 6ª execução da 13b, a primeira em que a PR abriu e os gates rodaram.
 
 O `qa-automacao` chamou `terminal` com um comando COMPOSTO
