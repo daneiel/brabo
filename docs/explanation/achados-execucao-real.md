@@ -353,3 +353,35 @@ que endereçar, não da triagem.
 - **RN-067** (sessão sem processo): a sessão de execução `dbb84ce8` aparece em
   `sessions` E em `engine.session_states` — antes a de `activate-execution`
   nascia órfã.
+
+## Execução da validação da Fase 12 — 2026-08-07
+
+Primeira corrida real de `pnpm --filter api validacao:fase-12`, a pendência
+13a.1. O critério fechou (saída `0`), mas só depois de quatro correções — três
+no INSTRUMENTO e uma no PRODUTO. As do instrumento estão contadas em
+[validacao-fase-12.md](validacao-fase-12.md); esta é a do produto.
+
+### W. Dev agent MORRE quando a fila do módulo esvazia (P1) — FECHADO
+
+Com a fila vazia, `POST /internal/sessions/:id/tasks/claim` responde `201` com
+`content-length: 0`. O caso de uso devolve `null`, mas o NestJS serializa isso
+como corpo VAZIO — o `Req` entrega `""`, que não é `nil`.
+
+`AgentIo.try_claim/2` casava com a cláusula de task encontrada e chamava
+`run_task("")`, estourando `BadMapError` em `Map.get("", "id", nil)`. Como o
+server é `restart: :temporary`, o agente morria de vez, com o `Monitor`
+apagando a linha de estado logo atrás.
+
+**Vale para o dev agent REAL**, não só para o Noop: `try_claim/2` mora no
+`AgentIo` compartilhado. E dispara no desfecho mais comum que existe — a fila
+acabando. O efeito é o oposto exato do que a Fase 12b entregou: em vez de
+`dev.idle` supervisionado e acordável por evento, processo morto.
+
+A suite nunca pegou porque o fake devolve `nil` corretamente. **Só execução
+real expõe** — que é, literalmente, a tese desta fase.
+
+> **FECHADO** — corrigido na fronteira (`EngineApiClient.claim_task/4`
+> normaliza corpo vazio) e guardado no contrato (`AgentIo.try_claim/2` aceita
+> `""` junto com `nil`), sem mexer no status HTTP da rota. Exceção ao
+> congelamento da FASE 13 autorizada pelo usuário, pelo mesmo motivo da Fase F:
+> a medição não era alcançável sem isto. Verificado por mutação.

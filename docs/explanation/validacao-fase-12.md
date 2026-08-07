@@ -76,16 +76,76 @@ pelo `task.gate_resolved` da volta anterior.
 Cole aqui a tabela que o script imprime. Cada linha é um `session_events.id`
 (ULID) que existe no banco e pode ser consultado depois.
 
-> **TODO(humano):** rodar `pnpm --filter api validacao:fase-12` de dentro do
-> container da api, com a stack de dev de pé, e colar a saída da seção
-> "evidência" abaixo. O script já emite a tabela em Markdown, pronta para
-> substituir este bloco.
+Executada em **2026-08-07**, saída `0`, com a stack de dev de pé e o script
+rodando de dentro do container da api. Os ids abaixo saíram do banco na própria
+corrida — projeto `f84f7226`, sessão de backlog `680ab9e9`, sessão de execução
+`91f384fa`.
 
-```
 | etapa | evento | id | seq |
 |---|---|---|---|
-| (ainda não executado) |  |  |  |
-```
+| 1. adoção | `bootstrap.repository_adopted` | `01KZCW6SBGZZ5J2DTNKR35EQPC` | 1 |
+| 1. adoção (como está) | `bootstrap.adopted_as_is` | `01KZCW6SETRNVJEX5V018GY5Q0` | 2 |
+| 2. o PO propõe | `backlog.story_promotion_proposed` | `01KZCW6SGJJQX623FW4TQ28ZV3` | 3 |
+| 3. você promove | `backlog.story_transitioned` | `01KZCW6SH7F14Y1QCJQHNJNF50` | 4 |
+| 4. dev reivindica | `dev.working` | `01KZCW6SWFY33TF8DDX9MYHG40` | 5 |
+| 4. PR aberta, esperando o gate | `dev.awaiting_gate` | `01KZCW6TB712EMZCC29WDK7YJC` | 14 |
+| 4. dev reivindica | `dev.working` | `01KZCW6VAYQD1R0XH6J3VKKKJ9` | 18 |
+| 4. PR aberta, esperando o gate | `dev.awaiting_gate` | `01KZCW6VQ3TZSH72CHAECBHZSX` | 27 |
+| 4. dev reivindica | `dev.working` | `01KZCW6XA40AVK9N71PPRWKG4N` | 31 |
+| 4. PR aberta, esperando o gate | `dev.awaiting_gate` | `01KZCW6XKXYTNW6ARDWF4VRW42` | 40 |
+| 5. fila vazia, agente ocioso | `dev.idle` | `01KZCW6Y812HAPVG3ZYS2CM6WA` | 43 |
+
+Os três pares `dev.working` → `dev.awaiting_gate` são as três tasks, **com um
+agente só e sem restart do engine entre elas** — o achado #10, provado por
+execução em vez de por teste unitário. O `dev.idle` final é o passo 5: fila
+vazia com o processo vivo, não morto.
+
+## O que a primeira execução custou
+
+A tabela acima levou **quatro correções** para existir, e vale registrar quais,
+porque três delas eram do INSTRUMENTO e uma era do PRODUTO — a distinção é o
+ponto.
+
+**No instrumento** (o script e o `NoopDevAgentServer`):
+
+1. A cobaia nascia em `os.tmpdir()`, local ao container. Quem adota é a api;
+   quem clona para montar o worktree é o dev agent, que roda no engine. O bare
+   ficava em `/tmp` da api e o engine não o enxergava. Passou a nascer em
+   `GIT_LOCAL_REPOS_ROOT`, que é o volume compartilhado — e que o cabeçalho do
+   próprio script já declarava como pré-requisito.
+2. O Noop marcava a task `in_review` e parava aí, sem chamar `open_gate`:
+   `tasks.gate_status` ficava NULL. `awaiting_gate` sem gate aberto, e nada
+   para julgar.
+3. `{:pr_settled, %{opened: true}}` chegando com o agente já em
+   `:awaiting_gate` não tinha cláusula no Noop. `FunctionClauseError`, e como o
+   server é `restart: :temporary`, o processo morria de vez.
+
+As três são a mesma história: o Noop foi alinhado ao agente real na Fase 12d,
+mas não acompanhou o que veio depois. É exatamente o risco que este documento
+já nomeava — *"o achado #10 sobrevivia dentro do próprio instrumento de
+medida"* — agora em três instâncias novas.
+
+**No produto**, e este é o achado que só execução real encontra:
+
+4. Com a fila vazia, `POST /internal/sessions/:id/tasks/claim` responde `201`
+   com `content-length: 0`. O caso de uso devolve `null`, mas o NestJS
+   serializa isso como corpo VAZIO; o `Req` entrega `""`, que não é `nil`, e o
+   `AgentIo.try_claim/2` casava com a cláusula de task encontrada — chamando
+   `run_task("")` e estourando `BadMapError`.
+
+   `try_claim/2` mora no `AgentIo`, **compartilhado com o `DevAgentServer`
+   real**: todo dev agent morria no momento em que a fila do módulo esvaziava,
+   que é o desfecho mais comum que existe. E morria de vez — server
+   `restart: :temporary`, com o `Monitor` apagando a linha de estado atrás. O
+   oposto exato do que a Fase 12b entregou: em vez de `dev.idle` supervisionado
+   e acordável por evento, processo morto.
+
+   A suite nunca pegou porque o fake devolve `nil` corretamente. Está corrigido
+   na fronteira (`claim_task/4`) e guardado no contrato (`try_claim/2`), sem
+   mexer no status HTTP da rota.
+
+O achado 4 é a resposta empírica à pergunta que esta fase existe para fazer: o
+que a execução real prova que o teste não prova.
 
 O script se recusa a terminar com sucesso se alguma etapa que ele afirmou ter
 exercitado não deixar evidência no event log — sem essa checagem, uma consulta
