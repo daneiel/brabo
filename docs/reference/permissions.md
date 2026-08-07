@@ -37,6 +37,21 @@ Três listas, três significados:
 Nenhuma lista bate? A ação fica `pending` por default. **A ausência de regra
 nunca vira permissão.**
 
+### Com qual credencial a ação auto-aprovada executa
+
+`auto_approve` significa que **ninguém decidiu** — `proposed_actions.decided_by`
+fica `NULL`. Isso importa para quem executa: uma ação de git contra provider
+remoto precisa de token, e "o token de quem decidiu" não existe neste caminho.
+
+A resposta é o **owner do workspace** ([RN-082](../business-rules.md#rn-082)),
+o mesmo da chave de LLM ([RN-058](../business-rules.md#rn-058)) — quem banca a
+conta banca os agentes, e isso não muda conforme quem clica.
+
+Vale saber porque a alternativa falha em silêncio: enquanto a api resolvia por
+`decided_by`, **toda PR auto-aprovada em repositório remoto morria** com
+`Requires authentication`, e só quando um humano clicava em cada uma é que o
+caminho funcionava — exatamente a escada que a autonomia existe para evitar.
+
 ## O formato do padrão
 
 ```
