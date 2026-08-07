@@ -130,6 +130,41 @@ O terceiro achado veio da primeira execução do medidor: o filtro de
 o gate aparecia como "nunca passou" num banco onde ele tinha passado horas
 antes. Um registro que ninguém roda é um registro que mente.
 
+## Consumo: a tela deriva, não repete
+
+A esteira de PR no painel — Dev → QA → SecOps → Você — era uma lista escrita no
+componente. Desde a FASE 15b ela vem do registro, por `GET /gates`.
+
+O que muda na prática é uma propriedade, não a aparência: **gate que sai do
+registro sai da tela sozinho**. Antes, desativar o SecOps deixava uma etapa
+morta na esteira até alguém lembrar de editar o código — que é exatamente a
+forma de envelhecimento que motivou o registro existir.
+
+Três decisões que valem explicação:
+
+**A rota é separada da interna.** `/internal/gates` é service-to-service, com
+token de serviço, e serve o script de medição; `/gates` é do usuário logado e
+serve a tela. Mesmo registro, públicos diferentes.
+
+**Sem `projectId`.** O registro é fato do PRODUTO: os mesmos gates valem para
+todos os projetos. Pendurá-lo num projeto sugeriria que dá para ter gates
+diferentes por projeto, que é o que o ADR 0054 deliberadamente não decidiu.
+
+**Só gate `active`.** Gate `planned` descreve papel futuro (dev-lead, platform).
+Numa tela que diz o que está acontecendo agora, ele apareceria como se
+estivesse acontecendo.
+
+### O que a tela ainda decide sozinha
+
+O **rótulo** de cada etapa (`QA`, `Você`) e **qual etapa cada gate representa**
+continuam no componente. Não é inconsistência: o registro descreve política, e
+como chamar as coisas para o usuário é decisão de tela. O que saiu de lá foi a
+LISTA — quais etapas existem.
+
+Um gate de PR que o registro traga e a tela ainda não saiba desenhar é
+**ignorado**, com teste afirmando isso: uma etapa `undefined` no meio da esteira
+seria pior que a ausência dela.
+
 ## Referências
 
 - [ADR 0054](../adr/0054-gates-como-registro-declarativo.md) — a decisão

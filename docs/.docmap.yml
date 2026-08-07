@@ -172,6 +172,11 @@ rules:
       - "apps/api/src/domain/gates/**"
       - "apps/api/src/infrastructure/gates/**"
       - "apps/api/scripts/validacao-gates.ts"
+      # FASE 15b — o CONSUMO. A regra observava só quem produz o registro; a
+      # tela podia passar a mostrar outra coisa sem ninguém ser cobrado, que
+      # é a forma de envelhecimento que o registro existe para impedir.
+      - "apps/api/src/interfaces/http/gates/**"
+      - "apps/web/src/components/PrGateTimeline.tsx"
     docs: ["docs/explanation/gates.md", "docs/business-rules.md"]
     severity: block
 
