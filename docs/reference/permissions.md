@@ -76,10 +76,17 @@ qualquer push, e `GitPush(algo)` não casa nada.
 | `open_infra_pr` | `OpenInfraPr` | maintainer |
 | `git_merge` | `GitMerge` | maintainer |
 | `instruction_patch` | `InstructionPatch` | maintainer |
+| `parallelize` | `Parallelize` | maintainer |
 | `spend` | `Spend` | **owner** |
 
 O papel mínimo é verificado **antes** do arquivo. Sem ele, `deny` — o
 `permissions.json` não consegue conceder o que o IAM nega
+
+`parallelize` (FASE 14d) é a única cujo efeito não é tocar em código ou
+repositório: ela pede mais AGENTES. Está em `maintainer` pelo mesmo motivo de
+`spend` — quem autoriza custo é quem responde pelo projeto. Ela só existe acima
+do teto do lead; dentro dele não há ação, porque não há o que decidir
+([RN-083](../business-rules.md#rn-083))
 ([RN-005](../business-rules.md#rn-005)).
 
 ## Como um padrão casa com um comando
