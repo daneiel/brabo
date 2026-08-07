@@ -6,9 +6,14 @@ const ENGINE_URL = runtimeConfig.engineUrl;
 const PING_INTERVAL_MS = 10_000;
 
 export interface SessionChannelHandlers {
-  // Deltas token-a-token da resposta de um agente conversacional (Criativo),
-  // rebroadcastados pelo CriativoServer (Fase 3b).
-  onAgentDelta?: (text: string) => void;
+  // Deltas token-a-token da resposta de um agente conversacional (Criativo,
+  // PO, Arquiteto, Infra), rebroadcastados pelo server do agente (Fase 3b).
+  //
+  // `agent` viaja junto desde o achado C: sem ele a tela não tinha como saber
+  // QUEM estava falando e rotulava a bolha com o nome do modelo. É opcional
+  // porque um engine anterior a esta mudança não o envia — nesse caso a tela
+  // degrada para "agente", nunca para o nome do modelo.
+  onAgentDelta?: (text: string, agent?: string) => void;
   // Fim de um turno do agente — hora de reconciliar com o event log.
   onAgentDone?: () => void;
   // Working/idle nos limites de turno dos agentes conversacionais
@@ -68,8 +73,13 @@ export function connectSessionHeartbeat(
     );
 
   if (handlers.onAgentDelta) {
-    channel.on('agent.delta', (payload: { text?: string }) => {
-      if (typeof payload?.text === 'string') handlers.onAgentDelta!(payload.text);
+    channel.on('agent.delta', (payload: { text?: string; agent?: string }) => {
+      if (typeof payload?.text === 'string') {
+        handlers.onAgentDelta!(
+          payload.text,
+          typeof payload.agent === 'string' ? payload.agent : undefined,
+        );
+      }
     });
   }
   if (handlers.onAgentDone) {

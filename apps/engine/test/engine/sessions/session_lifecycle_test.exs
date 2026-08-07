@@ -36,6 +36,39 @@ defmodule Engine.Sessions.SessionLifecycleTest do
     refute_receive {:termination_reported, _, _, _, _}, 200
   end
 
+  # O heartbeat mede inatividade da ABA (30s), não do TRABALHO. Numa execução
+  # real isso matou a sessão assim que a tela saiu dela para o Backlog, e
+  # prendeu um handoff `offered` para o Arquiteto numa sessão fechada — épico e
+  # quatro histórias prontos, e a cadeia sem como seguir.
+  test "heartbeat NÃO encerra sessão com trabalho pendente" do
+    session_id = unique_id()
+
+    Application.put_env(:engine, :fake_pending_work, %{
+      pending: true,
+      motivo: "handoff po → arquiteto"
+    })
+
+    on_exit(fn -> Application.delete_env(:engine, :fake_pending_work) end)
+    {:ok, pid} = SessionSupervisor.start_session(session_id, "project-1")
+
+    send(pid, :heartbeat_timeout)
+
+    refute_receive {:termination_reported, _, ^session_id, "heartbeat_timeout", _}, 300
+    assert Process.alive?(pid)
+  end
+
+  test "heartbeat encerra normalmente quando não há trabalho pendente" do
+    session_id = unique_id()
+    Application.put_env(:engine, :fake_pending_work, %{pending: false, motivo: nil})
+    on_exit(fn -> Application.delete_env(:engine, :fake_pending_work) end)
+    {:ok, pid} = SessionSupervisor.start_session(session_id, "project-1")
+
+    send(pid, :heartbeat_timeout)
+
+    assert_receive {:termination_reported, "project-1", ^session_id, "heartbeat_timeout",
+                    "closed"}
+  end
+
   test "parada normal SEM expect_stop dispara callback (defensivo, closed_abnormally)" do
     session_id = unique_id()
     {:ok, pid} = SessionSupervisor.start_session(session_id, "project-1")

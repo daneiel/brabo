@@ -97,6 +97,18 @@ o componente `d` da JWK, travado por teste.
   (`src/app.controller.ts`). Está atrás do guard e não vaza nada, mas não serve
   a nada — candidata a remoção. Ficou registrada aqui em vez de removida por
   ser decisão de produto, fora do escopo desta sessão.
+- **`GET /internal/projects/:projectId/git-remote` é a única rota do produto que
+  devolve um segredo DECIFRADO** — o token de git do owner do workspace
+  ([ADR 0056](adr/0056-o-engine-trabalha-em-repositorio-remoto.md)). Ela existe
+  porque o engine trabalha no sistema de arquivos e não tem a chave mestra;
+  replicá-la no engine dobraria o raio de explosão do segredo mais sensível do
+  produto. Duas propriedades a mantêm defensável: o `origin` que ela devolve é
+  **limpo** (a credencial vem em campo separado, e nunca embutida na URL), e
+  quem consome tem a obrigação de injetá-la por invocação, nunca em arquivo —
+  ver `Engine.Actions.GitAuth` e o porquê disso na
+  [RN-076](business-rules.md#rn-076). Se algum dia esta rota passar a devolver
+  a URL já autenticada, o token vai parar no `.git/config`, dentro da pasta
+  onde o dev agent tem leitura auto-aprovada.
 - **As rotas `engine-service` não são "internas" por convenção de nome.** O que
   as protege é o `EngineServiceGuard` comparando o `X-Brabo-Service-Token` com
   o segredo compartilhado em tempo constante, mais a NetworkPolicy. O prefixo
@@ -170,6 +182,7 @@ o componente `d` da JWK, travado por teste.
 | GET | `/internal/sessions/:sessionId/dev-context` | engine-service |
 | POST | `/internal/sessions/:sessionId/epics` | engine-service |
 | GET | `/internal/sessions/:sessionId/events` | engine-service |
+| GET | `/internal/sessions/:sessionId/pending-work` | engine-service |
 | POST | `/internal/sessions/:sessionId/events` | engine-service |
 | POST | `/internal/sessions/:sessionId/gates/verdict` | engine-service |
 | POST | `/internal/sessions/:sessionId/handoffs` | engine-service |
@@ -183,6 +196,8 @@ o componente `d` da JWK, travado por teste.
 | POST | `/internal/sessions/:sessionId/module-map` | engine-service |
 | POST | `/internal/sessions/:sessionId/proficiency` | engine-service |
 | POST | `/internal/models/sync` | engine-service |
+| GET | `/internal/gates` | engine-service |
+| GET | `/internal/projects/:projectId/git-remote` | engine-service |
 | GET | `/internal/sessions/:sessionId/psychologist-context` | engine-service |
 | POST | `/internal/sessions/:sessionId/stories` | engine-service |
 | POST | `/internal/sessions/:sessionId/story-modules` | engine-service |
@@ -226,6 +241,7 @@ o componente `d` da JWK, travado por teste.
 | GET | `/projects/:projectId/git/bootstrap/plan` | role:viewer |
 | POST | `/projects/:projectId/git/bootstrap/plan/approve` | role:maintainer |
 | POST | `/projects/:projectId/git/bootstrap/plan/skip` | role:maintainer |
+| POST | `/projects/:projectId/git/bootstrap/acknowledge-protection-failure` | role:maintainer |
 | GET | `/projects/:projectId/git/repository` | role:viewer |
 | GET | `/projects/:projectId/hypotheses` | role:viewer |
 | POST | `/projects/:projectId/hypotheses/:hypothesisId/accept` | role:developer |
@@ -279,6 +295,7 @@ o componente `d` da JWK, travado por teste.
 | POST | `/workspaces/:workspaceId/members` | role:owner |
 | GET | `/workspaces/:workspaceId/model-binding` | role:viewer |
 | PUT | `/workspaces/:workspaceId/model-binding` | role:maintainer |
+| GET | `/workspaces/:workspaceId/credential-spend` | role:owner |
 | POST | `/workspaces/:workspaceId/models/activate` | role:owner |
 | GET | `/workspaces/:workspaceId/models/catalog` | role:maintainer |
 | POST | `/workspaces/:workspaceId/models/sync` | role:owner |

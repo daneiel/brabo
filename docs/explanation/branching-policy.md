@@ -328,6 +328,14 @@ valida a **forma** (nome, origem, destino); este valida o **estado**:
 Verificação que **não pôde ser feita** conta como reprovada, nunca como
 aprovada — uma ref que não resolve é ignorância, não permissão.
 
+As duas primeiras conferências são exercitadas por
+`scripts/ci/promotion-check.spec.ts`, no mesmo espírito das specs do
+`pr-police` e do `approval-ladder`. O que ela fixa não é a implementação e sim
+a regra: qual carimbo cada destino cobra, e que o carimbo tem de ser **daquele
+commit** — tag de outro commit, de outro estágio, ou que não resolveu sha não
+valem. Aceitar qualquer uma delas deixaria `qa` receber código que nunca passou
+por `dev`.
+
 A exceção é a leitura da **configuração de merge**: o token do workflow
 legitimamente não tem permissão para lê-la, e travar toda promoção por isso
 seria pior que a falha que se quer evitar. Ali a impossibilidade vira **aviso**,
@@ -433,7 +441,16 @@ procedimento está em [Rulesets](../reference/rulesets.md#republicar-uma-tag-que
 ### O CHANGELOG volta por PR, e por que não por push
 
 Publicada a Release, o `release.yml` abre uma PR `chore/changelog-<tag>` para
-**`dev`** com o corte da versão no `CHANGELOG.md`.
+**`dev`** com o corte da versão no `CHANGELOG.md` — e, no mesmo commit, com a
+versão que o `README.md` anuncia, reescrita por `scripts/ci/readme-version.ts`.
+
+As duas coisas andam juntas de propósito. A versão do README é **gerável** (o
+release sabe qual é), e o drift check confere que ela bate com o corte mais
+recente do CHANGELOG; separar as duas faria toda PR de changelog nascer
+vermelha, aberta pelo bot e esperando uma mão humana que a política não prevê.
+Frase não encontrada REPROVA o passo em vez de passar batido — a regex deste
+script e a de `scripts/docs/generate.mjs` são os dois lados do mesmo contrato,
+e um teste guarda o acordo.
 
 Por PR, e não por push, porque nenhum dos caminhos diretos existe: `main` só
 aceita tag (bot de release) e `.release/gate.json` (bot do gate), e commitar em

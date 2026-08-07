@@ -192,8 +192,14 @@ defmodule Engine.Dev.DevAgentServerTest do
 
     assert {:noreply, new_state} = DevAgentServer.handle_cast(:work, state)
 
+    # A origem vem junto e é `modelo`: o teto foi gasto pelo modelo, que
+    # continuou pedindo ferramenta sem concluir. Antes o evento saía com
+    # `"indeterminada"`, que não aponta ação nenhuma (Fase G, achados P/Q/T).
     assert_received {:event_appended, _, _,
-                     %{type: "dev.blocked", payload: %{reason: "limite de iterações atingido"}}}
+                     %{
+                       type: "dev.blocked",
+                       payload: %{reason: "limite de iterações atingido", origem: "modelo"}
+                     }}
 
     assert_received {:task_blocked, "task-impossivel", "limite de iterações atingido", _,
                      "dev-api"}
@@ -291,7 +297,15 @@ defmodule Engine.Dev.DevAgentServerTest do
     assert {:noreply, _new_state} = DevAgentServer.handle_cast(:work, state)
 
     assert_received {:event_appended, _, _,
-                     %{type: "dev.blocked", payload: %{reason: "orçamento de tokens excedido"}}}
+     %{
+       type: "dev.blocked",
+       payload: %{
+         reason: "orçamento de tokens excedido",
+         # POLÍTICA: o teto foi decidido por quem configurou, e
+         # recusar é o produto cumprindo a regra. Nada quebrou.
+         origem: "politica"
+       }
+     }}
 
     assert_received {:task_blocked, "task-cara", "orçamento de tokens excedido", diagnosis,
                      "dev-api"}

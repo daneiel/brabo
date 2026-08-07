@@ -51,17 +51,43 @@ defmodule EngineWeb.AgentCommandController do
     |> json(%{error: "agente não suportado como conversacional: #{agent}"})
   end
 
-  def message(conn, %{"sessionId" => session_id, "agent" => "po", "text" => text}) do
+  # REIDRATA ANTES DE FALAR. O comentário de `revise/2` abaixo dizia que um
+  # agente morto nesta rota "é um bug" — e é, mas acontece o tempo todo: basta
+  # o engine reiniciar. A sessão sobrevive, o processo do agente não, e a
+  # próxima mensagem morria com `GenServer.call ... exited` sem nada na tela.
+  #
+  # O `start_agent` é idempotente (devolve o pid se já existe) e o `init` do
+  # servidor já reconstrói o histórico do event log — faltava só quem o
+  # chamasse. É a mesma garantia que a Fase 12b deu aos dev agents, aplicada
+  # aos conversacionais.
+  def message(conn, %{
+        "sessionId" => session_id,
+        "projectId" => project_id,
+        "agent" => "po",
+        "text" => text
+      }) do
+    {:ok, _pid, _origin} = PoSupervisor.start_agent(session_id, project_id)
     :ok = PoServer.user_message(session_id, text)
     send_resp(conn, 202, "")
   end
 
-  def message(conn, %{"sessionId" => session_id, "agent" => "arquiteto", "text" => text}) do
+  def message(conn, %{
+        "sessionId" => session_id,
+        "projectId" => project_id,
+        "agent" => "arquiteto",
+        "text" => text
+      }) do
+    {:ok, _pid, _origin} = ArquitetoSupervisor.start_agent(session_id, project_id)
     :ok = ArquitetoServer.user_message(session_id, text)
     send_resp(conn, 202, "")
   end
 
-  def message(conn, %{"sessionId" => session_id, "text" => text}) do
+  def message(conn, %{
+        "sessionId" => session_id,
+        "projectId" => project_id,
+        "text" => text
+      }) do
+    {:ok, _pid} = CriativoSupervisor.start_agent(session_id, project_id)
     :ok = CriativoServer.user_message(session_id, text)
     send_resp(conn, 202, "")
   end

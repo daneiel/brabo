@@ -54,8 +54,20 @@ defmodule Engine.Harness.Hooks.ActionPipeline do
            actor,
            payload
          ) do
-      {:ok, action} -> {:cont, Map.put(ctx, :result, result_fun.(action))}
-      {:error, reason} -> {:cont, Map.put(ctx, :result, "falha no pipeline: #{inspect(reason)}")}
+      # Pendente de aprovação: o laço PARA aqui em vez de seguir com a palavra
+      # "pending" como resultado (ADR 0052). Antes, o modelo lia "pending", não
+      # aprendia nada sobre o comando, tentava outra coisa — e cada tentativa
+      # queimava uma iteração até a task morrer no teto sem uma linha escrita.
+      #
+      # Quem retoma é o dev agent, ao receber `task.action_settled`.
+      {:ok, %{"status" => "pending"} = action} ->
+        {:cont, Map.put(ctx, :aguardando_aprovacao, Map.get(action, "id"))}
+
+      {:ok, action} ->
+        {:cont, Map.put(ctx, :result, result_fun.(action))}
+
+      {:error, reason} ->
+        {:cont, Map.put(ctx, :result, "falha no pipeline: #{inspect(reason)}")}
     end
   end
 

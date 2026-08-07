@@ -21,6 +21,7 @@ import { CredentialStep } from '../components/wizard/CredentialStep';
 import { Modal } from '../components/ui/Modal';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { Alert } from '../components/ui/Alert';
 import { useToast } from '../components/ui/ToastProvider';
 import { GitHubIcon, GitLabIcon, LocalRepoIcon, PlusIcon } from '../components/ui/icons';
 import styles from './NewProjectWizard.module.css';
@@ -327,7 +328,11 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
               placeholder="Ex.: Loja Online"
               autoFocus
             />
-            {slug && <div className={styles.slugPreview}>repo: brabo/{slug}</div>}
+            {/* Sem dono no rótulo: quem provisiona é o backend, com o dono da
+                CREDENCIAL (`createForAuthenticatedUser`). Dizia `brabo/<slug>`,
+                fixo no código — e o nome errado ia até a tela de confirmação,
+                onde o usuário aprova. Melhor mostrar só o que se sabe. */}
+            {slug && <div className={styles.slugPreview}>repo: {slug}</div>}
           </div>
           <div className={styles.field}>
             <span className={styles.fieldLabel}>Visibilidade</span>
@@ -343,6 +348,21 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
                 </button>
               ))}
             </div>
+            {/* O plano gratuito do GitHub só protege branch em repositório
+                PÚBLICO. Sem este aviso, a escolha "Privado" leva a um
+                bootstrap que falha no último passo com a mensagem crua da API
+                — e o usuário descobre a limitação do plano dele já com o
+                repositório criado. */}
+            {provider === 'github' && visibility === 'private' && (
+              <Alert tone="warning">
+                No plano gratuito do GitHub, <strong>repositório privado não
+                aceita proteção de branch</strong>. O projeto funciona e as
+                branches são criadas, mas o passo "Proteger branches" vai
+                falhar, e o GitHub não impedirá push direto em{' '}
+                <code>main</code>, <code>qa</code> e <code>dev</code> — a trava
+                de merge do Brabo continua valendo, a do GitHub não.
+              </Alert>
+            )}
           </div>
         </div>
       )}
@@ -358,18 +378,20 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
             ))}
           </ol>
           <div className={styles.branchPills}>
-            {['main', 'dev', 'qa', 'rc'].map((b) => (
+            {/* Sem `rc`: as permanentes hoje são main, dev e qa — a volta da
+                rc/rcfix está no backlog do ADR 0030. */}
+            {['main', 'dev', 'qa'].map((b) => (
               <span key={b} className={styles.pill}>
                 {b}
               </span>
             ))}
           </div>
           <p className={styles.policyNote}>
-            Cascata de promoção: <code>dev ← main</code>, <code>qa ← dev</code>,{' '}
-            <code>rc ← qa</code>. As permanentes recebem proteção
+            Cascata de promoção: <code>dev ← main</code>, <code>qa ← dev</code>.
+            As permanentes recebem proteção
             {provider === 'local'
               ? ' — exceto no Local, que não tem proteção de branch (o passo é pulado com aviso).'
-              : ' (main, rc, qa, dev).'}
+              : ' (main, qa, dev).'}
           </p>
         </div>
       )}
@@ -391,7 +413,7 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
             </>
           ) : (
             <>
-              <SummaryRow label="Repositório" value={`brabo/${slug}`} mono />
+              <SummaryRow label="Repositório" value={slug} mono />
               <SummaryRow label="Visibilidade" value={visibility === 'private' ? 'Privado' : 'Público'} />
               <SummaryRow label="Bootstrap" value={`${BOOTSTRAP_STEPS.length} passos de Gitflow`} />
             </>

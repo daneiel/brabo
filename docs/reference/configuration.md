@@ -13,6 +13,15 @@ Toda a configuração é por **variável de ambiente**. Não há arquivo de conf
 aplicação — o que existe é o `permissions.json`, que é política de projeto, não
 configuração de processo.
 
+Dois arquivos versionados são lidos em runtime e não são configuração, embora
+seja fácil confundi-los com ela: o `permissions.json` acima, e `docs/gates.yml`
+([ADR 0054](../adr/0054-gates-como-registro-declarativo.md)), o registro
+declarativo de gates. Nenhum dos dois tem variável de ambiente para apontar
+caminho — o registro é encontrado subindo de `__dirname` — e nenhum muda
+comportamento por edição em produção: o registro DESCREVE os gates, não os
+aplica. Ele viaja dentro da imagem da api; ver
+[runbook](../runbook.md#registro-de-gates).
+
 Os defaults abaixo foram extraídos do código, não de documentação anterior. A
 coluna **quando dá errado** é a parte que economiza tempo: quase toda variável
 tem um default que funciona em desenvolvimento e um modo de falha específico em
@@ -189,6 +198,7 @@ possível sem downtime ([RN-035](../business-rules.md#rn-035)).
 | `CONTEXT_COMPACTION_THRESHOLD` | `0.7` | fração da janela que dispara compactação |
 | `LLM_TURN_TIMEOUT_MS` | `300000` | 5 min por turno |
 | `TERMINAL_ACTION_TIMEOUT_MS` | `15000` | teto de um comando de terminal |
+| `TERMINAL_OUTPUT_MAX_BYTES` | `32768` | teto de BYTES da saída de um comando ([RN-074](../business-rules.md#rn-074)). A saída fica no histórico do laço e viaja em todo turno seguinte; sem teto, um `find` numa árvore grande derruba a execução inteira com `413` do provider |
 | `SECOPS_SCAN_TIMEOUT_MS` | `180000` | 3 min para o scanner do SecOps |
 
 ### Psicólogo
@@ -319,7 +329,7 @@ que uma variável nova não fique documentada em lugar nenhum sem ninguém notar
 
 > ⚠️ Bloco gerado por `pnpm docs:generate`. Não edite à mão — o próximo build sobrescreve.
 
-Inventário extraído do código: **93 variáveis** lidas em tempo de execução. Todas têm descrição nas tabelas acima.
+Inventário extraído do código: **94 variáveis** lidas em tempo de execução. Todas têm descrição nas tabelas acima.
 
 **api** — 42 variáveis
 
@@ -359,14 +369,14 @@ Inventário extraído do código: **93 variáveis** lidas em tempo de execução
 - `MIGRATIONS_FOLDER` <sub>(apps/api/src/db/migrate.ts)</sub>
 - `NODE_ENV` <sub>(apps/api/src/infrastructure/observability/logger.config.ts)</sub>
 - `OLLAMA_HOST` <sub>(apps/api/src/infrastructure/llm/ollama-provider.ts)</sub>
-- `PROJECT_WORKSPACES_ROOT` <sub>(apps/api/src/infrastructure/filesystem/fs-permissions-file-store.ts)</sub>
+- `PROJECT_WORKSPACES_ROOT` <sub>(apps/api/src/infrastructure/filesystem/project-workspaces-root.ts)</sub>
 - `RATE_LIMIT_ENABLED` <sub>(apps/api/src/interfaces/http/shared/rate-limit.guard.ts)</sub>
 - `RATE_LIMIT_IP` <sub>(apps/api/src/interfaces/http/shared/rate-limit.guard.ts)</sub>
 - `RATE_LIMIT_USER` <sub>(apps/api/src/interfaces/http/shared/rate-limit.guard.ts)</sub>
 - `RATE_LIMIT_WINDOW_MS` <sub>(apps/api/src/infrastructure/observability/domain-gauges.collector.ts)</sub>
 - `WEB_ORIGIN` <sub>(apps/api/src/infrastructure/security/cors-origins.ts)</sub>
 
-**engine** — 47 variáveis
+**engine** — 48 variáveis
 
 - `ANAMNESE_BUDGET_MICROS` <sub>(apps/engine/config/runtime.exs)</sub>
 - `ANAMNESE_INITIAL_WINDOW_DAYS` <sub>(apps/engine/config/runtime.exs)</sub>
@@ -413,6 +423,7 @@ Inventário extraído do código: **93 variáveis** lidas em tempo de execução
 - `START_MODEL_SYNC` <sub>(apps/engine/config/runtime.exs)</sub>
 - `START_OUTBOX_DRAIN` <sub>(apps/engine/config/runtime.exs)</sub>
 - `TERMINAL_ACTION_TIMEOUT_MS` <sub>(apps/engine/config/runtime.exs)</sub>
+- `TERMINAL_OUTPUT_MAX_BYTES` <sub>(apps/engine/config/runtime.exs)</sub>
 - `TOOL_LOOP_MAX_ITERATIONS` <sub>(apps/engine/config/runtime.exs)</sub>
 - `WEB_ORIGIN` <sub>(apps/engine/config/runtime.exs)</sub>
 

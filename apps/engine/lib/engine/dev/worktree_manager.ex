@@ -17,8 +17,8 @@ defmodule Engine.Dev.WorktreeManager do
   Retorna `{:ok, %{path, branch}}` ou `{:error, reason}`.
   """
   def create(project_id, agent_id, task_slug) do
-    with {:ok, bare, default_branch} <- ProjectRepository.get_local_repo_path(project_id),
-         {:ok, work_dir} <- Workspace.ensure(project_id, bare, default_branch) do
+    with {:ok, remoto} <- ProjectRepository.remoto_de_trabalho(project_id),
+         {:ok, work_dir} <- Workspace.ensure_remoto(project_id, remoto) do
       add_worktree(work_dir, agent_id, task_slug)
     end
   end
@@ -33,7 +33,19 @@ defmodule Engine.Dev.WorktreeManager do
     branch = "feature/#{task_slug}"
     _ = remove_worktree(work_dir, path)
 
-    case git(work_dir, ["worktree", "add", path, "-b", branch]) do
+    # `-B` e não `-b`: cria a branch OU redefine a existente.
+    #
+    # `remove_worktree/2` limpava o diretório e deixava a branch para trás. Como
+    # o nome vem do slug da task, retentar a MESMA task caía sempre em
+    # `fatal: a branch named 'feature/<slug>' already exists` — a task ficava
+    # presa para sempre, e o circuit breaker desarmava sem que destravar
+    # adiantasse. Numa execução real foi o que aconteceu depois do primeiro
+    # bloqueio, e só saiu com cirurgia manual no git.
+    #
+    # Redefinir é o certo aqui: o worktree anterior já foi removido, o trabalho
+    # daquela tentativa não vale (a task voltou para a fila) e a branch tem que
+    # renascer do ponto atual do work_dir.
+    case git(work_dir, ["worktree", "add", path, "-B", branch]) do
       {:ok, _} -> {:ok, %{path: path, branch: branch}}
       {:error, out} -> {:error, out}
     end

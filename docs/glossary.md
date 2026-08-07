@@ -105,7 +105,10 @@ porque o destino e o motivo ficam registrados no event log, em vez de um agente
 **Artefato** — saída estruturada e validada de um agente. Sete schemas fechados
 (`note`, `business_rule`, `product_brief`, `task_blocked`, `qa_verdict`,
 `secops_verdict`, `infra_delegation_files`): campo faltando reprova a
-emissão. É como o parecer de um gate vira dado, não texto.
+emissão. É como o parecer de um gate vira dado, não texto. `business_rule`
+reprova por um segundo motivo: título já registrado no projeto
+([RN-080](business-rules.md#rn-080)) — como artefato é evento imutável, a
+emissão é o único momento em que dá para recusar uma duplicata.
 
 **Worktree** — `git worktree`: uma cópia de trabalho isolada por dev agent,
 sobre o mesmo repositório. Dois devs mexem em branches diferentes sem se

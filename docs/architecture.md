@@ -12,7 +12,7 @@ keywords: [arquitetura, code map, invariantes, harness, event log]
 Este documento é o mapa para quem vai **mexer** no código. Ele diz por onde
 começar a ler, o que cada fronteira promete, e o que já se sabe que está torto.
 
-Decisões e o porquê delas ficam nos [ADRs](adr/index.md) — 51 deles, vários
+Decisões e o porquê delas ficam nos [ADRs](adr/index.md) — 56 deles, vários
 registrando defeito real encontrado em execução. Aqui não repetimos a
 argumentação: apontamos.
 
@@ -127,6 +127,24 @@ está ali, e é o melhor arquivo para entender o que roda.
 ler primeiro: o primeiro é o contrato com a api, o segundo classifica os 40
 tipos de evento do log em algo exibível — é a melhor fonte de verdade sobre o
 que cada evento significa.
+
+Três derivações do mesmo event log, com perguntas diferentes:
+
+| arquivo | responde |
+|---|---|
+| `lib/activity.ts` | "o que aconteceu" — o feed cronológico |
+| `lib/agent-status.ts` | "quem existe e em que estado está" — os cards do time |
+| `lib/timeline-tree.ts` | "o que cada agente fez, e o que está fazendo AGORA" — a árvore |
+
+A árvore inverte o eixo do feed (agente primeiro, tempo depois) porque numa
+sessão com Criativo, PO, Arquiteto e N devs a coluna cronológica não respondia
+quem estava fazendo o quê. Nenhuma das três tem estado ou rota própria — todas
+derivam dos mesmos eventos, e um evento que não está no log não aparece em
+nenhuma.
+
+Duas validações de UI são automáticas: contraste (`lib/contraste.ts`, teste
+sobre `design/tokens.css`) e layout (`scripts/dev/validacao-visual.js`, rodado
+no navegador). Estão explicadas em `design/README.md`.
 
 ### Fora das aplicações
 

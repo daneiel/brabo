@@ -4,6 +4,7 @@ import { childSpan, logger, newTraceContext } from './logger';
 import type { LlmCredentialProvider } from './models';
 import type {
   AgentAutonomyRule,
+  CredentialSpend,
   UsoDeModelo,
   AgentTokenUsage,
   ActionType,
@@ -285,6 +286,18 @@ export const getRepository = (projectId: string) =>
   get<ProvisionedRepository | null>(`/projects/${projectId}/git/repository`);
 export const getBootstrapStatus = (projectId: string) =>
   get<RepoBootstrapStatus>(`/projects/${projectId}/git/bootstrap`);
+
+/**
+ * "Sei que as branches não ficaram protegidas, e quero seguir" (achado D).
+ *
+ * Só vale para a falha em `protect_branches` — a api recusa qualquer outra, e
+ * a recusa diz por quê. Ver `acknowledge-protection-failure.use-case.ts`.
+ */
+export const acknowledgeProtectionFailure = (projectId: string) =>
+  post<{ status: string | null }>(
+    `/projects/${projectId}/git/bootstrap/acknowledge-protection-failure`,
+    {},
+  );
 
 // Adoção (Fase 12a): `adopt` NÃO cria nada e NÃO executa nada — devolve o
 // plano (dry-run). Só `approvePlan` roda o bootstrap; `skipPlan` dispensa.
@@ -575,6 +588,15 @@ export const setModelsActive = (
  * A curadoria por USO — substitui a lista, não soma (ADR 0051). Lista vazia é
  * como se desmarca tudo, e por isso não há rota de "remover uso".
  */
+/**
+ * Gasto das chaves do owner. A rota exige `owner` no workspace (RN-060) — a
+ * tela só a chama quando o papel confere, para não pedir um 403 de propósito.
+ */
+export const getCredentialSpend = (workspaceId: string, meses?: number) =>
+  get<CredentialSpend>(
+    `/workspaces/${workspaceId}/credential-spend${meses ? `?meses=${meses}` : ''}`,
+  );
+
 export const setModelUses = (
   workspaceId: string,
   input: { modelIds: string[]; uses: UsoDeModelo[] },

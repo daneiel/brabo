@@ -17,6 +17,8 @@ defmodule Engine.Actions.Workspace do
   paralelo. Ver `ensure/3` pro caminho sem exceção.
   """
 
+  alias Engine.Actions.GitAuth
+
   @doc """
   Versão que não levanta: devolve `{:ok, dir}` ou `{:error, mensagem}`.
   Preferida por quem roda dentro de um processo supervisionado (dev agents)
@@ -29,7 +31,20 @@ defmodule Engine.Actions.Workspace do
     e -> {:error, Exception.message(e)}
   end
 
-  def ensure!(project_id, bare_repo_path, default_branch \\ "main") do
+  @doc """
+  Versão que fala o vocabulário do ADR 0056: recebe o **remoto de trabalho**
+  (`%{origin, default_branch, token, username}`) em vez de um caminho.
+
+  A origem gravada no `origin` é sempre a LIMPA — a credencial entra por
+  invocação, via `Engine.Actions.GitAuth`, e não sobra no `.git/config`.
+  """
+  def ensure_remoto(project_id, remoto) do
+    {:ok, ensure!(project_id, remoto.origin, remoto.default_branch || "main", remoto)}
+  rescue
+    e -> {:error, Exception.message(e)}
+  end
+
+  def ensure!(project_id, bare_repo_path, default_branch \\ "main", remoto \\ %{}) do
     dir = workspace_dir(project_id)
     File.mkdir_p!(dir)
 
@@ -41,7 +56,7 @@ defmodule Engine.Actions.Workspace do
       # esperou o lock encontra o working tree já pronto e não refaz nada.
       :global.trans({{__MODULE__, project_id}, self()}, fn ->
         unless git_dir?(dir) do
-          init_from_bare!(dir, bare_repo_path, default_branch)
+          init_from_bare!(dir, bare_repo_path, default_branch, remoto)
         end
       end)
 
@@ -55,16 +70,19 @@ defmodule Engine.Actions.Workspace do
     Path.join(Application.fetch_env!(:engine, :project_workspaces_root), project_id)
   end
 
-  defp init_from_bare!(dir, bare_repo_path, default_branch) do
+  defp init_from_bare!(dir, bare_repo_path, default_branch, remoto) do
     {_, 0} = System.cmd("git", ["init"], cd: dir, stderr_to_stdout: true)
 
+    # A origem gravada é a LIMPA: é este valor que fica no `.git/config`, dentro
+    # da pasta onde o dev agent tem leitura auto-aprovada (RN-075). A credencial
+    # entra só na invocação do `fetch`, abaixo — ADR 0056, decisão 2.
     {_, 0} =
       System.cmd("git", ["remote", "add", "origin", bare_repo_path],
         cd: dir,
         stderr_to_stdout: true
       )
 
-    {_, 0} = System.cmd("git", ["fetch", "origin"], cd: dir, stderr_to_stdout: true)
+    {:ok, _} = GitAuth.run(dir, ["fetch", "origin"], remoto)
 
     case System.cmd("git", ["checkout", "-B", default_branch, "origin/#{default_branch}"],
            cd: dir,

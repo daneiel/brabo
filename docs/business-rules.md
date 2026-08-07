@@ -925,6 +925,861 @@ Três regras derivadas:
   (`ativar num workspace NÃO liga o modelo no vizinho`)
 - **Origem:** [ADR 0049](adr/0049-curadoria-de-modelo-por-workspace.md)
 
+### RN-061 — Falha de FERRAMENTA também é evento, e volta para o modelo {#rn-061}
+
+O resultado de uma tool call nunca é descartado. Ele vira `tool.result` no
+event log (`ok` e, quando falha, `erro`), o agente **diz** o que houve no fio, e
+o motivo **volta ao modelo** no papel `tool` — para ele corrigir e reemitir no
+turno seguinte. Erro de ferramenta é entrada do laço, não fim de linha.
+
+O Criativo era o único que descartava (`_ = EmitArtifact.run(args, state)`) — o
+PO e o Arquiteto já realimentavam. Numa execução real o modelo emitiu
+`titulo`/`descricao` contra um schema que exige `title`/`description`/`origin`:
+as **quatro regras de negócio da conversa foram recusadas**, nenhum evento foi
+gravado, e ele seguiu dizendo "registrei as regras" com o painel vazio.
+
+A descrição da ferramenta passou a NOMEAR os campos obrigatórios de cada tipo,
+em inglês e com exemplo preenchido — inclusive que `business_rule.origin` é uma
+**lista não-vazia** de `seq` das mensagens que originaram a regra, não texto
+livre. Sem isso o modelo adivinha, e adivinha no idioma da conversa.
+
+É a mesma regra da [RN-059](#rn-059) aplicada ao outro caminho de falha: duas
+políticas para o mesmo problema seriam duas chances de engolir o erro.
+
+- **Onde:** `apps/engine/lib/engine/agents/criativo_server.ex` (`dispatch_tool`,
+  `realimentar`), `apps/engine/lib/engine/harness/tools/emit_artifact.ex`
+  (`descricao/0`), `apps/engine/lib/engine/harness/artifact_schemas.ex`
+  (`required/1`)
+- **Teste:** `apps/engine/test/engine/agents/criativo_server_test.exs`
+  (`ferramenta recusada vira tool.result com erro, e o agente fala`)
+- **Origem:** execução real da FASE 13b
+
+### RN-065 — Um module_map por SESSÃO; revisão é outra sessão {#rn-065}
+
+`create_module_map` recusa a segunda emissão **na mesma sessão**, com uma
+mensagem que diz o próximo passo. Entre sessões o mapa continua versionando
+(`version + 1`, `findCurrent` devolve o maior) — revisar arquitetura é
+comportamento desejado.
+
+A distinção é o ponto: entre sessões, uma emissão nova é **revisão**; dentro da
+mesma, é o modelo **redecidindo do zero**. Numa execução real o Arquiteto
+emitiu quatro mapas seguidos, com nomes e recortes diferentes a cada volta —
+`greeting`, `hello_core`, `greeting`, `hello-api-core` — e o laço só terminou
+porque a rede caiu (`%Req.TransportError{reason: :timeout}`).
+
+A recusa volta ao modelo pelo tool-result ([RN-061](#rn-061)): ele lê que já
+existe e segue para `assign_story_modules`, que é o passo 2 do kickoff dele. Por
+isso **não** se encerra o turno ao emitir o mapa — o Arquiteto ainda tem três
+passos pela frente (vincular histórias, propor ADR, registrar tensões), e
+terminar ali mataria os três.
+
+- **Onde:** `apps/api/src/application/use-cases/architecture/create-module-map.use-case.ts`
+- **Teste:** `test/application/use-cases/architecture/create-module-map.use-case.spec.ts`
+  (`recusa o SEGUNDO mapa da mesma sessão`; e o versionamento entre sessões
+  continua provado ao lado)
+- **Origem:** execução real da FASE 13b
+
+### RN-066 — Toda resposta sobre módulos carrega os nomes canônicos {#rn-066}
+
+O Arquiteto **não tem ferramenta para ler** o module_map vigente. Por isso as
+três respostas que ele recebe sobre módulos precisam dizer os nomes:
+
+1. `create_module_map` bem-sucedido devolve os módulos **como a api os gravou**
+   — não só a versão.
+2. `assign_story_modules` recusado lista os módulos **válidos**, além dos
+   inexistentes.
+3. `create_module_map` recusado por [RN-065](#rn-065) diz **quais** módulos a
+   sessão já definiu, não quantos.
+
+Sem mapa nenhum não há nomes a oferecer, e uma lista vazia lê-se como "chute de
+novo": esse caminho nomeia o problema real — falta o passo 1 do kickoff.
+
+O motivo é concreto. Numa execução real o Arquiteto emitiu o mapa
+(`saudacao`, `api_http`), não conseguiu relê-lo, e partiu para força bruta: 18
+chutes em sequência — `api`, `core`, `http`, `greeting`, `domain`, `web`,
+`hello-api`, `hello`, `greeting-api`, `saudacao`, `app`, `server`, `publico`,
+`public-api`, `api-publica` — até acertar **um por sorte**. Nas palavras dele no
+event log: *"vou descobrir os nomes válidos testando candidatos plausíveis"*.
+
+O estrago não foi o desperdício, foi o resultado: as **quatro** histórias
+terminaram no mesmo módulo (`saudacao`), inclusive a do endpoint, `api_http`
+ficou sem história nenhuma, e o desfecho afirmou *"Todas as 4 histórias foram
+vinculadas com sucesso aos módulos"*. Como a execução sobe **um dev agent por
+módulo**, a arquitetura desenhada não seria a construída.
+
+O laço de [RN-065](#rn-065) era sintoma disto: o Arquiteto reemitia o mapa
+justamente para tentar fixar nomes que não conseguia ler.
+
+- **Onde:** `apps/api/src/application/use-cases/architecture/assign-story-modules.use-case.ts`,
+  `apps/api/src/application/use-cases/architecture/create-module-map.use-case.ts`,
+  `apps/engine/lib/engine/harness/tools/create_module_map.ex`
+- **Teste:** `test/application/use-cases/architecture/assign-story-modules.use-case.spec.ts`
+  (`a recusa lista os módulos VÁLIDOS`; `sem module_map, manda criar o mapa`) e
+  `create-module-map.use-case.spec.ts` (`a recusa diz QUAIS são os módulos`)
+- **Origem:** execução real da FASE 13b
+
+### RN-067 — Toda sessão nasce emitindo `session.created` {#rn-067}
+
+`CreateSessionUseCase` é o **único** lugar que cria sessão. Ele emite
+`session.created` no outbox **na mesma transação** do insert, e é esse evento
+que faz o engine subir o `SessionServer` da sessão.
+
+Quem chamasse `sessions.create(...)` direto produzia uma sessão que o engine
+nunca conhecia. O efeito é uma cascata silenciosa:
+
+- o canal Phoenix responde `REFUSED JOIN` para sempre — a UI só reclama no
+  console e segue tentando de 10 em 10 segundos;
+- sem canal não há atualização ao vivo: o fio fica preso no indicador de
+  digitação, mesmo com o agente já `idle`;
+- ninguém bate heartbeat e, como é o heartbeat que encerra a sessão
+  ([RN-064](#rn-064)), ela fica `active` **para sempre**.
+
+Três caminhos faziam isso: `provision-repository` (duas chamadas),
+`adopt-repository` e `activate-execution` — este último cria a sessão em que os
+**dev agents** rodam.
+
+A prova por contraste, de uma execução real: a sessão do wizard não tinha
+`session.created`, tinha `engine.session_states` vazia e `REFUSED JOIN`; a
+sessão aberta pela rota normal tinha o evento, a linha de estado e `JOINED`.
+
+O teste é sobre a FONTE de propósito: um teste de comportamento provaria um
+caminho de cada vez, e o defeito aqui é o caminho em que ninguém pensou.
+
+- **Onde:** `apps/api/src/application/use-cases/sessions/create-session.use-case.ts`
+  (o dono), `git/provision-repository.use-case.ts`,
+  `git/adopt-repository.use-case.ts`,
+  `execution/activate-execution.use-case.ts` (os chamadores)
+- **Teste:** `test/application/use-cases/sessions/toda-sessao-emite-created.spec.ts`
+  (`só o CreateSessionUseCase chama sessions.create`)
+- **Origem:** execução real da FASE 13b
+
+### RN-068 — O dev agent lê o worktree sem pedir licença {#rn-068}
+
+Ativar a execução semeia no `allow` do projeto duas famílias de comando: as de
+**leitura do próprio worktree** (`ls`, `pwd`, `find`, `cat`, `head`, `tail`,
+`grep`, `wc`, `echo`, `git status`, `git diff`, `git log`) e as de **build e
+teste**.
+
+A segunda já existia: `ReportDone` só deixa abrir PR depois de um `terminal`
+com `exit 0`. A primeira entrou porque o agente **olha antes de construir**, e
+sem ela não conseguia começar.
+
+O motivo é concreto. Ferramenta `:pipeline` pendente devolve
+`proposed_action <id> status pending` como RESULTADO — não a saída do comando —
+e o ToolLoop segue. Num repositório recém-provisionado, cada `ls -la` do agente
+caía em aprovação, não ensinava nada e queimava uma iteração. Numa execução real
+o desfecho foi `toolloop.limit_reached {iteration: 8, max_iterations: 8}`, task
+bloqueada por "limite de iterações atingido", sem uma linha escrita — e as
+aprovações concedidas pelo usuário chegaram depois do laço esgotado.
+
+Liberar leitura não afrouxa o pipeline, e é isso que o teste afirma: `deny`
+vence `allow`, os `BUILTIN_DENY_PATTERNS` seguem ativos, o casamento é por
+prefixo de TOKEN (`ls` liberado não libera `lsof`) e comando composto exige que
+CADA segmento case — `ls && rm -rf /` não passa por causa do `ls`.
+
+A allowlist é mitigação, não solução: é lista de comandos previstos e o modelo
+inventa comandos. A correção estrutural — o agente ESPERAR a decisão em vez de
+queimar iterações — está no [ADR 0052](adr/0052-dev-agent-espera-aprovacao-no-meio-do-laco.md).
+
+- **Onde:** `apps/api/src/domain/actions/dev-terminal-patterns.ts`,
+  semeado por `application/use-cases/execution/activate-execution.use-case.ts`
+- **Teste:** `test/domain/actions/dev-terminal-patterns.spec.ts`
+  (`libera ls -la`; `comando composto não passa carona no segmento liberado`)
+- **Origem:** execução real da FASE 13b
+
+### RN-069 — Retentar uma task recria a branch, não falha {#rn-069}
+
+`WorktreeManager.add_worktree/3` usa `git worktree add -B` (cria **ou**
+redefine), não `-b`. Ele já removia o diretório do worktree anterior, mas
+deixava a branch para trás — e como o nome dela vem do slug da task, a segunda
+tentativa da MESMA task caía sempre em
+`fatal: a branch named 'feature/<slug>' already exists`.
+
+O efeito era permanente: destravar a task não adiantava, reativar a execução não
+adiantava, e o circuit breaker desarmava sem saída. Numa execução real só saiu
+com `git worktree prune` manual no workspace do projeto.
+
+Redefinir é o certo: o worktree anterior já foi removido, o trabalho daquela
+tentativa não vale (a task voltou para a fila) e a branch renasce do ponto atual
+do work_dir.
+
+- **Onde:** `apps/engine/lib/engine/dev/worktree_manager.ex`
+- **Teste:** `apps/engine/test/engine/dev/worktree_manager_test.exs`
+  (`retentar a MESMA task recria o worktree em vez de falhar`)
+- **Origem:** execução real da FASE 13b
+
+### RN-070 — Todo gate declarado aponta para a evidência que o prova {#rn-070}
+
+Nenhuma entrada de `docs/gates.yml` existe sem `evidencia`, e o registro não
+pode afirmar mais do que verifica: gate `block` exige `verificacao: script`, e
+gate `planned` não carrega evidência de algo que ainda não aconteceu.
+
+A evidência é um **localizador**, não prosa: `event_log` traz os tipos de evento
+e o filtro de payload que os distingue dos vizinhos; `teste` e `ci` trazem o
+caminho, e alvo que sumiu REPROVA. É o mesmo modo de falha que o docmap chama de
+glob morto — regra que nunca dispara e finge cobertura.
+
+Três tipos porque nem todo gate mora no event log:
+[`merge-protegida`](#rn-014) é um teto em regra pura que não emite evento
+próprio (o que o garante é teste) e `backmerge` é CI com estado em
+`.release/gate.json`. Rebaixá-los a `warn` por isso mentiria sobre as travas
+mais duras do produto.
+
+O filtro importa tanto quanto o tipo: `qa-verificada` e `secops-segura` gravam o
+MESMO `pr.gate_changed`, e o mesmo tipo sai na ABERTURA do gate sem `veredito` —
+sem o filtro, abertura contaria como passagem. Vale igual para os dois gates de
+PR de infra. Por isso nenhum par (`event_types` + `filtro`) pode se repetir.
+
+O filtro só alcança o PAYLOAD, de propósito: aceitar coluna arbitrária abriria a
+consulta inteira. Quem promoveu uma story (humano ou o PO) vive na coluna
+`actor_kind` e fica fora do vocabulário declarativo.
+
+- **Onde:** `apps/api/src/domain/gates/gate-registry.ts`, registro em
+  `docs/gates.yml`, medição em `apps/api/scripts/validacao-gates.ts`
+- **Teste:** `apps/api/test/domain/gates/gate-registry.spec.ts`
+  (`é válido: nenhum problema acumulado`; `nenhum par (event_types + filtro) se
+  repete entre gates`)
+- **Origem:** FASE 15a (ADR 0054)
+
+### RN-071 — Os quatro gates de autoridade do usuário não podem ser declarados automáticos {#rn-071}
+
+`acao-aprovada`, `story-promovida`, `plano-de-adocao` e `merge-protegida` têm
+`aprovacao_humana: true` por construção. A lista mora no DOMÍNIO
+(`GATES_HUMANOS_IMUTAVEIS`), não no teste: mexer nela tem que ser ato
+deliberado, revisado como código.
+
+`aprovacao_humana: true` quer dizer que a decisão é do usuário — direta no
+clique, ou delegada por política que ele mesmo escreveu no `permissions.json`. É
+isso que deixa `acao-aprovada` conviver com `status: auto_approved`: a política
+decidindo sozinha é o usuário decidindo antes. `merge-protegida` é o caso onde
+nem a delegação existe — o teto rebaixa `auto_approve` para `require_approval`
+mesmo com autonomia ligada.
+
+O contrário também reprova: id na lista sem gate correspondente é regra morta,
+apontando para o vazio.
+
+- **Onde:** `apps/api/src/domain/gates/gate-registry.ts`
+  (`GATES_HUMANOS_IMUTAVEIS`); o teto em
+  `apps/api/src/domain/actions/decide.ts`
+- **Teste:** `apps/api/test/domain/gates/gate-registry.spec.ts`
+  (`%s não pode ter aprovacao_humana false`); o teto em
+  `apps/api/test/domain/actions/decide.spec.ts`
+- **Origem:** FASE 15a (ADR 0054)
+
+### RN-072 — Sem escolha explícita, o modelo é o do Criativo {#rn-072}
+
+Quando a cascata de binding pousa no default do **workspace** — isto é, ninguém
+decidiu nada para este projeto —, o modelo herdado é o do **Criativo**, e não o
+default global.
+
+O Criativo é sempre a porta de entrada de um projeto: é com ele que a primeira
+conversa acontece, e é o binding dele que representa "o modelo que este projeto
+usa para pensar".
+
+A herança ocupa o **vazio**, nunca sobrepõe: binding de sessão, de agente ou de
+projeto são escolhas explícitas de alguém e continuam vencendo. É por isso que
+ela é um passo DEPOIS da cascata e não um escopo novo dentro dela — não compete
+por precedência. E o modelo herdado passa pelos mesmos filtros: sumido do
+catálogo ou sem tool calling não é herdado, pelo mesmo motivo que a cascata os
+pula ([RN-043](#rn-043)).
+
+O que isso conserta: o default de workspace é global e costuma ser um modelo
+local pequeno. Sessão nova e dev agent — que não têm binding próprio — nasciam
+nele, e o [ADR 0020](adr/0020-destravar-gates-qa-secops.md) proíbe modelo local
+pequeno no passo semântico. Numa execução real foi preciso trocar o modelo à
+mão em toda sessão aberta, e os três dev agents subiram em `llama3.2:1b` sem
+ninguém pedir.
+
+- **Onde:** `apps/api/src/domain/llm/binding-resolver.ts`
+  (`herdarModeloDeStart`), aplicado em
+  `application/use-cases/llm/resolve-model-binding.use-case.ts`
+- **Teste:** `apps/api/test/domain/llm/binding-resolver.spec.ts`
+  (`ocupa o vazio`; `NÃO sobrepõe escolha explícita de %s`)
+- **Origem:** achados B e O da execução real (FASE 13c, fase A)
+
+### RN-073 — Aprovação pendente SUSPENDE o laço, não o gasta {#rn-073}
+
+Quando uma ferramenta de pipeline volta `pending`, o ToolLoop **para** e o dev
+agent entra em `:awaiting_approval` retendo task, worktree e o histórico do
+laço. A decisão do usuário emite `task.action_settled`, que o acorda: o
+resultado de verdade ocupa o lugar onde estaria a palavra "pending", e o laço
+retoma do ponto em que parou.
+
+Duas propriedades que o teste fixa:
+
+- **Nada é gravado enquanto se espera.** O lugar da mensagem de ferramenta fica
+  vago. Gravar "pending" ali seria dizer ao modelo que o comando respondeu
+  isso — que era exatamente o defeito.
+- **Recusa é resposta.** O motivo entra no lugar do resultado e o agente aprende
+  que aquele caminho fechou, em vez de esperar para sempre por algo que ninguém
+  vai aprovar. É o mesmo princípio do `pr_settled` com `opened: false`
+  ([RN-047](#rn-047)), um nível abaixo.
+- **O wake precisa CHEGAR.** `task.action_settled` nasce no agregado `task`, e
+  não no `proposed_action` que o nome da tabela sugere: o dreno do engine lê uma
+  lista fechada de agregados (`session` e `task`). Emitido fora dela, o evento é
+  gravado com sucesso, fica com `processed_at` nulo e nunca é sequer lido —
+  nenhum job, nenhum erro, nenhum log, e o agente espera para sempre. O contrato
+  atravessa duas linguagens e por isso é fixado dos dois lados.
+
+Se o engine **reiniciar** durante a espera, a regra não vale mais para aquela
+task: o laço suspenso só existe em memória, então ela volta para a fila
+bloqueada com origem `infra`, e a decisão tomada depois não tem onde ser
+aplicada. Bloquear com diagnóstico é deliberado — a alternativa era a espera
+eterna silenciosa, que é o que esta regra existe para acabar.
+
+O que isso conserta: `pending` voltava como RESULTADO da ferramenta e o laço
+seguia. O modelo lia aquilo como resposta do comando, não aprendia nada, tentava
+outra coisa — e cada tentativa queimava uma iteração até
+`toolloop.limit_reached {iteration: 8, max_iterations: 8}`, com a task bloqueada
+por "limite de iterações atingido" sem uma linha escrita. As aprovações
+concedidas chegavam depois do laço esgotado e eram inúteis.
+
+A allowlist de terminal ([RN-068](#rn-068)) continua valendo, mas deixa de ser a
+única defesa: ela é lista de comandos previstos, e o modelo inventa comandos.
+
+- **Onde:** `apps/engine/lib/engine/harness/hooks/action_pipeline.ex`,
+  `harness/tool_loop.ex`, `dev/dev_agent_server.ex`,
+  `workers/dev_agent_wake_worker.ex`; emissão em
+  `apps/api/src/application/use-cases/actions/{approve,deny}-action.use-case.ts`
+- **Teste:** `apps/engine/test/engine/dev/dev_agent_awaiting_approval_test.exs`
+  (`ação pendente PARA o agente`; `aprovada: retoma o laço com a saída REAL`;
+  `restart durante a espera BLOQUEIA a task`) e
+  `apps/engine/test/engine/dev/wake_do_outbox_ao_agente_test.exs`, que percorre
+  a corrente inteira — outbox, dreno, fila e processo — porque os testes por
+  elo ficavam todos verdes com a entrega quebrada; o agregado é fixado do lado
+  da api em
+  `apps/api/test/application/use-cases/actions/approve-deny-action.use-case.spec.ts`
+- **Origem:** [ADR 0052](adr/0052-dev-agent-espera-aprovacao-no-meio-do-laco.md),
+  fase A da triagem
+
+### RN-074 — A saída de terminal tem teto de bytes {#rn-074}
+
+A saída de um comando é cortada em `TERMINAL_OUTPUT_MAX_BYTES` (default 32 KiB)
+antes de virar resultado da ferramenta, e o corte deixa uma **marca** dizendo os
+dois tamanhos e o que fazer:
+
+```
+[saída truncada: 32768 de 1048576 bytes. Refine o comando (head, grep,
+-maxdepth) para ver o que falta.]
+```
+
+Três propriedades que o teste fixa:
+
+- **O teto é `>`, não `>=`.** Saída que cabe exatamente no limite passa
+  intacta — marcá-la faria o modelo refinar um comando que já deu tudo.
+- **O corte não parte caractere multibyte.** `binary_part/3` corta por byte;
+  cair no meio de um `é` produz binário inválido que quebra a serialização
+  JSON antes de o resultado chegar ao modelo.
+- **`raw_bytes` continua sendo o tamanho REAL produzido**, não o truncado. É
+  medição, e mentir nela esconderia justamente o comportamento que motivou o
+  teto. Quem quiser detectar truncagem compara `byte_size(stdout)` com
+  `raw_bytes`.
+
+O que isso conserta: a saída de cada comando fica no histórico do laço e viaja
+em **todo** turno seguinte. Sem teto, um `find` numa árvore grande basta — a
+execução do `hello-limpo` morreu com `{413, "request entity too large"}` no
+turno 18, sem uma linha escrita. O estouro é de **bytes da requisição**, não de
+janela de contexto: a maior chamada bem-sucedida tinha 28.993 tokens de entrada.
+
+A marca é endereçada ao **modelo**, não ao humano — sem dizer o que fazer, ele
+tende a repetir o mesmo comando.
+
+- **Onde:** `apps/engine/lib/engine/actions/terminal_executor.ex`
+  (`truncate/2`), teto em `apps/engine/config/runtime.exs`
+- **Teste:** `apps/engine/test/engine/actions/terminal_executor_test.exs`
+  (describe `teto de bytes da saída`)
+- **Origem:** achado S de
+  [achados-execucao-real.md](explanation/achados-execucao-real.md), Fase F do
+  [backlog](explanation/backlog.md)
+
+### RN-075 — Comando de terminal é avaliado por onde toca, não só pelo verbo {#rn-075}
+
+A pasta do projeto (`<PROJECT_WORKSPACES_ROOT>/<projectId>`) é o **escopo**.
+Um comando de `terminal` que toca qualquer caminho fora dela **nunca** é
+auto-aprovado, por mais que o verbo esteja em `allow`. Dentro dela, `cd` deixa
+de exigir permissão — ele é a declaração de escopo, não um verbo.
+
+Quatro propriedades que os testes fixam:
+
+- **Aperta:** `Terminal(cat)` liberado deixa de auto-executar
+  `cat /workspace/apps/engine/.../git_executor.ex`. Era o achado U: o
+  casamento é por VERBO, então o agente lia o código da plataforma que o
+  executava, e alcançava o worktree de outros projetos.
+- **Afrouxa:** `cd <dentro> && cat README.md` vira `auto_approve`. Era o
+  defeito mais caro da escada — o dev agent emite sempre `cd <caminho> &&
+  <verbo>`, `cd` não estava em `allow` nenhum, e comando composto exige que
+  TODOS os segmentos casem.
+- **Permite sem isentar:** dentro do escopo, verbo fora do `allow` continua
+  pedindo. Estar na pasta do projeto não torna `curl … | sh` seguro.
+- **Fora do escopo é `require_approval`, nunca `deny`:** o agente pode ter
+  razão legítima para olhar fora, e a decisão continua sendo do usuário.
+
+`deny` continua vencendo primeiro, e os dois tetos ([RN-006](#rn-006),
+[RN-007](#rn-007)) seguem intocados. Sem raiz informada ao `decide()`, o
+veredito é o de antes desta regra — nenhum chamador tem comportamento alterado
+por omissão.
+
+A normalização é **léxica**, não `realpath`: `<raiz>/../..` é resolvido e
+reprovado, mas link simbólico de dentro apontando para fora não é detectado.
+`decide()` é puro por contrato e resolver symlink exigiria IO no domínio.
+Escopo é política; isolamento é outro problema, declarado em aberto no ADR.
+
+- **Onde:** `apps/api/src/domain/actions/path-scope.ts`,
+  `domain/actions/decide.ts` (teto do escopo e o `cd` no escopo),
+  raiz derivada em
+  `infrastructure/filesystem/project-workspaces-root.ts`
+- **Teste:** `apps/api/test/domain/actions/path-scope.spec.ts` e
+  `apps/api/test/domain/actions/decide.spec.ts`
+  (describe `decide — escopo de caminho`)
+- **Origem:** [ADR 0055](adr/0055-escopo-de-caminho-na-politica-de-terminal.md),
+  achado U, Fase F do [backlog](explanation/backlog.md)
+
+### RN-076 — A credencial de git nunca é escrita em arquivo {#rn-076}
+
+O engine trabalha em repositório remoto pedindo o **remoto de trabalho** à api
+(`GET /internal/projects/:projectId/git-remote`), que devolve a origem **limpa**
+e o token do owner à parte. O token entra na invocação do git pelo **ambiente do
+processo filho** e em nenhum outro lugar:
+
+- **não no `origin`** — é a URL limpa que fica gravada no `.git/config`;
+- **não em argv** — `ps` mostra a linha de comando de qualquer processo;
+- **não em arquivo** — nem helper persistido, nem `~/.git-credentials`.
+
+O helper de credencial é passado por `-c`, vale só para aquele processo, e vem
+depois de um `credential.helper=` vazio: helpers são acumulativos e o primeiro a
+responder ganha, então sem zerar antes um helper do host responderia no lugar.
+
+**Por que isso é regra e não preferência.** Escrever
+`https://x-access-token:TOKEN@github.com/…` no `origin` — o que quase todo
+tutorial ensina — grava a credencial em texto puro **dentro da pasta do
+projeto**, exatamente onde a [RN-075](#rn-075) dá ao dev agent leitura
+**auto-aprovada**. Um `cat .git/config` devolveria o token sem passar por
+aprovação nenhuma, e ele viajaria ao provider de LLM no histórico do laço. O
+escopo de caminho protege contra o agente ler para FORA do projeto; não tem como
+proteger contra um segredo que o próprio produto colocou DENTRO.
+
+A credencial é a do **owner do workspace**, pelo mesmo resolvedor da
+[RN-058](#rn-058) — duas regras de "de quem é a credencial" divergiriam.
+Provider `local` não tem token nem consulta a api: é resolvido direto do banco,
+e é o caminho que o `pnpm dev` e a suite inteira exercitam.
+
+- **Onde:** `apps/engine/lib/engine/actions/git_auth.ex`,
+  `engine/projects/project_repository.ex` (`remoto_de_trabalho/1`),
+  `apps/api/src/application/use-cases/git/get-project-git-remote.use-case.ts`
+- **Teste:** `apps/engine/test/engine/actions/git_auth_test.exs` (o token não
+  aparece em argv nem no helper) e
+  `apps/api/test/application/use-cases/git/get-project-git-remote.use-case.spec.ts`
+  (a origem devolvida não contém o token nem `@`)
+- **Origem:** [ADR 0056](adr/0056-o-engine-trabalha-em-repositorio-remoto.md),
+  achado N, Fase B do [backlog](explanation/backlog.md)
+
+### RN-077 — A origem da falha é sempre uma das quatro {#rn-077}
+
+Todo desfecho de falha nomeia a ORIGEM no vocabulário **fechado** do
+[ADR 0020](adr/0020-destravar-gates-qa-secops.md) —
+`infra | modelo | codigo | politica`. Não há quinto valor: `null` e
+`"indeterminada"` deixaram de ser possíveis.
+
+Duas garantias estruturais, e nenhuma depende de alguém lembrar:
+
+- **`AgentIo.block_task/4` não tem default para a origem.** Ela era
+  "obrigatória em espírito", com `"indeterminada"` de default — e o desfecho
+  mais caro da execução real saiu exatamente assim, porque o call site não
+  passou nada. Sem default, esquecer vira erro de compilação.
+- **`FalhaDeTurno.origem/1` sempre devolve uma das quatro**, e há teste de
+  tabela que falha se alguma entrada — inclusive uma forma nunca vista —
+  produzir outra coisa.
+
+**Por que `indeterminada` saiu.** Ela existiu com um argumento razoável: não
+chutar seria mais honesto que escolher no escuro. O efeito real foi o oposto —
+`indeterminada` **não aponta ação nenhuma**, e quem triava a rodada seguinte
+recomeçava a investigação do zero. O que ela significava de fato era *o
+classificador não reconheceu esta forma*, que é lacuna do nosso código: `codigo`
+é a origem que aponta a ação certa (acrescentar a cláusula que falta). O
+diagnóstico continua indo verbatim, então nada se perde.
+
+**As origens não são chute.** Cada desfecho do ToolLoop diz quem decidiu parar:
+`report_blocked` e teto de iterações são do **modelo** (ele decidiu, ou gastou o
+que tinha); orçamento e PR não aprovada são **política** (foi uma decisão, nada
+quebrou); restart e falha ao montar contexto são **infra**; e quando há
+`last_error`, a origem sai do MESMO erro que o diagnóstico narra — era esse par
+que se contradizia, com `diagnosis` dizendo `{413, …}` e `origem` dizendo
+"indeterminada" na mesma linha.
+
+- **Onde:** `apps/engine/lib/engine/agents/falha_de_turno.ex`,
+  `engine/dev/agent_io.ex` (`block_task/4`, sem default),
+  `engine/dev/dev_agent_server.ex` (`origem_da_parada/1`)
+- **Teste:** `apps/engine/test/engine/agents/falha_de_turno_test.exs`
+  (`o vocabulário é fechado`) e
+  `apps/engine/test/engine/dev/dev_agent_server_test.exs`, que afirma a origem
+  no evento emitido
+- **Origem:** achados P, Q e T de
+  [achados-execucao-real.md](explanation/achados-execucao-real.md), Fase G do
+  [backlog](explanation/backlog.md)
+
+### RN-078 — Falha em proteger branches pode ser reconhecida, e só ela {#rn-078}
+
+`protect_branches` falha em repositório privado no plano gratuito do GitHub — e
+o wizard **avisa isso antes de começar**. O usuário pode reconhecer a falha e
+seguir; o bootstrap fecha e o projeto passa a ser alcançável.
+
+**O que isso destrava é maior do que parece.** O único botão oferecido depois da
+falha era "Tentar novamente", que falha sempre pelo mesmo motivo. E
+`provision_failed` faz o dashboard **redirecionar o clique do projeto de volta
+para a página de provisionamento** — o projeto ficava inalcançável para sempre,
+preso num passo que não tem como suceder.
+
+**Só a proteção pode ser reconhecida.** Ela é o ÚLTIMO passo e a única cuja
+falha deixa um repositório utilizável: o repo existe, os arquivos foram
+commitados, as branches foram criadas. Falhar em criar o repositório ou em
+commitar é outra coisa — ali "seguir" produziria um projeto sem onde trabalhar,
+e o botão seria uma segunda mentira em cima da primeira. A recusa diz isso, em
+vez de só negar.
+
+**A garantia do produto não muda.** A trava de merge ([RN-006](#rn-006)) é
+aplicada em `decide.ts`, não pela proteção do provider. Seguir sem ela remove a
+segunda camada, a do GitHub — não a do Brabo. É o que torna esta saída honesta
+em vez de um atalho.
+
+A decisão vai para o event log com o **usuário** como ator e o erro original no
+payload: seguir sem proteção é escolha dele, e quem ler depois precisa saber o
+que exatamente foi dispensado.
+
+- **Onde:** `apps/api/src/application/use-cases/git/acknowledge-protection-failure.use-case.ts`,
+  rota em `interfaces/http/git/git.controller.ts`, botão em
+  `apps/web/src/routes/ProvisioningPage.tsx`
+- **Teste:** `apps/api/test/application/use-cases/git/acknowledge-protection-failure.use-case.spec.ts`
+  (destrava; a decisão no log com o ator; e a recusa para falha anterior)
+- **Origem:** achado D, Fase D do [backlog](explanation/backlog.md)
+
+### RN-079 — O Psicólogo não analisa sessão sem evento analisável {#rn-079}
+
+Antes de gastar um turno de modelo, a análise pergunta se há o que analisar. Não
+havendo, ela **não roda** e o desfecho vira `psychologist.analysis_skipped`.
+
+**Analisável exclui duas coisas, por motivos diferentes:**
+
+- **o rastro dos próprios analistas.** O Psicólogo grava o turno dele no log da
+  sessão que está analisando (`agent.response`, `tool.call`, `tool.result`, a
+  hipótese). Contar isso faria uma sessão vazia parecer povoada **a partir da
+  primeira análise**, e cada retentativa a encheria mais — o critério nunca mais
+  reprovaria. Vale igual para a Anamnese;
+- **`bootstrap.*`**, que é provisionamento de repositório rodando sozinho: nove
+  passos de máquina não dizem nada sobre a pessoa.
+
+Tudo o mais conta, inclusive `proposed_action.*` — o usuário aprovando e negando
+sem escrever mensagem nenhuma **é** comportamento, lição que a Anamnese já tinha
+aprendido ([RN-063](#rn-063)).
+
+**São duas contagens, e elas não se substituem.** A crua dimensiona o trabalho
+(quanto log ler, logo qual tier de triagem, leve ou pesado); a analisável decide
+se há trabalho. Confundi-las é o defeito: uma sessão só de bootstrap passava por "20
+eventos" sem ter nenhum, ganhava a análise, e o modelo — sem nada para citar —
+inventava `seq` inexistentes até a validação de evidência rejeitar e ele
+desistir, com o orçamento já gasto.
+
+**Pular vale também para reprocessamento manual.** Reprocessar não fabrica
+material: quem clicou recebe o motivo no log em vez de uma hipótese inventada
+sobre um log que não existe.
+
+O skip vira **evento**, ao contrário do da Anamnese, que é só log — aquele roda
+a cada 15 min e viraria ruído, este roda uma vez por fechamento de sessão, e uma
+análise ausente sem nada narrado é indiagnosticável.
+
+- **Onde:** `apps/engine/lib/engine/session_events/event.ex` (`count_analisaveis/1`),
+  `apps/engine/lib/engine/psychologist/triage.ex` (`should_run?/1`),
+  `apps/engine/lib/engine/workers/psychologist_worker.ex`
+- **Teste:** `apps/engine/test/engine/session_events/event_analisaveis_test.exs`
+  (inclui a reprodução da sessão do achado: 14 eventos, nenhum analisável),
+  `apps/engine/test/engine/workers/psychologist_worker_test.exs`
+- **Origem:** achado J, Fase E do [backlog](explanation/backlog.md)
+
+### RN-080 — Regra de negócio duplicada é recusada na entrada {#rn-080}
+
+`business_rule` cujo título já existe **no projeto** não é gravada. A recusa
+volta ao modelo pelo mesmo caminho de um payload inválido, e ele segue para a
+próxima regra em vez de parar.
+
+**Na entrada porque não há outro lugar.** Não existe tabela de regras: o
+artefato É o evento `artifact.business_rule`, e evento de domínio não é apagado
+nem editado. Deixar entrar significa conviver com a duplicata para sempre.
+
+**Escopo de projeto, não de sessão** — é entre sessões que a duplicata nasce.
+Rodar o Criativo de novo abre sessão nova, e uma checagem por sessão não veria a
+rodada anterior, que é exatamente o caso do achado.
+
+A comparação normaliza caixa, acento e espaço redundante; pontuação fica.
+**Duplicata semântica continua passando, e isso é declarado, não esquecido:**
+"Saudação com nome" e "Quem chama pode se identificar" seguem sendo duas regras,
+porque separá-las é julgamento e não cabe num `if`.
+
+- **Onde:** `apps/engine/lib/engine/harness/artifact_dedupe.ex`,
+  `apps/engine/lib/engine/harness/tools/emit_artifact.ex`,
+  `apps/engine/lib/engine/session_events/event.ex` (`titulos_de_regras/1`)
+- **Teste:** `apps/engine/test/engine/harness/artifact_dedupe_test.exs`,
+  `apps/engine/test/engine/harness/emit_artifact_dedupe_test.exs`
+- **Origem:** achado K, Fase E do [backlog](explanation/backlog.md)
+
+### RN-081 — História repetida: título igual recusa, justificativa igual avisa {#rn-081}
+
+Duas respostas diferentes para dois problemas diferentes:
+
+- **título idêntico** no projeto é erro, não escolha: a história é **recusada** e
+  nada é criado;
+- **mesma justificativa** — todas as regras de negócio que a história cita já
+  estavam cobertas por outra — é suspeita, não erro. A história **é criada** e
+  sai um `backlog.story_overlap_warned`. Um segundo recorte da mesma regra pode
+  ser legítimo, então quem julga é o usuário; o produto só se recusa a deixar
+  passar despercebido.
+
+**Contido, não intersecção.** Duas histórias compartilharem uma regra é normal, e
+avisar disso viraria ruído que ninguém lê. O sinal só existe quando a nova não
+acrescenta cobertura nenhuma. História que não cita regra alguma não gera aviso:
+tratar o conjunto vazio como subconjunto de tudo acusaria todas.
+
+**O limite é o mesmo da [RN-080](#rn-080), e o par do achado o atravessa:**
+"Endpoint público de saudação determinística" e "Endpoint público GET /hello que
+responde saudação imediata" cobrem o mesmo endpoint com títulos e justificativas
+diferentes — nada mecânico os liga, e eles continuam passando. Há teste
+afirmando isso, para o limite ficar visível em vez de implícito.
+
+- **Onde:** `apps/api/src/domain/backlog/story-overlap.ts`,
+  `apps/api/src/application/use-cases/backlog/create-story.use-case.ts`
+- **Teste:** `apps/api/test/domain/backlog/story-overlap.spec.ts`,
+  `apps/api/test/application/use-cases/backlog/create-story.use-case.spec.ts`
+- **Origem:** achado R, Fase E do [backlog](explanation/backlog.md)
+
+### RN-082 — A credencial de git de uma ação é a do OWNER do workspace {#rn-082}
+
+Quando a api executa uma ação de git contra provider remoto (`pr_open`,
+`git_merge`), o token vem do **owner do workspace** — o mesmo resolvedor da
+[RN-058](#rn-058), não de quem decidiu a ação.
+
+**Resolver por quem decidiu só funcionava com clique humano.** Ação
+auto-aprovada por política não tem decisor: `decided_by` fica `NULL`, o token
+fica `undefined`, e o GitHub responde `Requires authentication`. Na prática,
+com autonomia ligada — que é o modo que o ADR 0055 existe para viabilizar —
+**nenhum dev agent conseguia abrir PR em provider remoto**.
+
+**O contraste que expôs o defeito** aconteceu dentro de uma execução só: no
+mesmo run, `git_push` passou e `pr_open` falhou. O push é executado pelo
+ENGINE, que já injetava a credencial do owner
+([RN-076](#rn-076)); a PR é aberta pela API, que estava fora de simetria.
+
+Não apareceu antes porque toda validação anterior usou o `LocalGitProvider`,
+onde o token nem é consultado.
+
+O princípio é o mesmo da RN-058, e vale repetir porque é o que impede as duas
+regras de divergirem com o tempo: **quem banca a conta banca os agentes**, e
+isso não muda conforme quem clica. Por isso o resolvedor é REUSADO em vez de
+reimplementado.
+
+- **Onde:** `apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts`,
+  reusando `application/use-cases/llm/resolve-credential-owner.use-case.ts`
+- **Teste:** `apps/api/test/application/use-cases/actions/execute-git-action.use-case.spec.ts`
+  (`pr_open` auto-aprovado, com `decidedBy: null`, pede a credencial do owner)
+- **Origem:** achado AA, [validação real da 13b](explanation/validacao-real.md)
+
+### RN-064 — Heartbeat não encerra sessão com trabalho pendente {#rn-064}
+
+O timeout de heartbeat mede inatividade da **aba**, não do **trabalho**. Antes
+de encerrar, o `SessionServer` pergunta à api se sobrou trabalho
+(`GET /internal/sessions/:id/pending-work`); havendo, reagenda o timeout e
+registra o motivo no log em vez de matar a sessão.
+
+O default são **30 segundos**. Sair da sessão para a aba de Backlog já bastava
+para matá-la — e numa execução real isso prendeu um handoff `offered` para o
+Arquiteto dentro de uma sessão fechada: épico e quatro histórias prontos, e a
+cadeia sem como seguir, porque não existe onde aceitar handoff de sessão morta.
+
+Fechar sessão é sobre o trabalho ter acabado, não sobre quem está olhando.
+
+**A api fora do ar NÃO impede o encerramento**: `{:error, _}` encerra assim
+mesmo, com aviso no log. Trocar sessão órfã por sessão imortal seria trocar um
+defeito por outro.
+
+"Trabalho pendente" são **dois** sinais, e o segundo entrou pelo achado V:
+
+1. **handoff `offered`** — o caso original acima;
+2. **`proposed_action` com status `pending`** — alguém está esperando a SUA
+   decisão, e um agente pode estar suspenso esperando o desfecho
+   ([RN-073](#rn-073)).
+
+O segundo é o mesmo defeito do primeiro um nível abaixo, e a execução do
+`hello-limpo` mostrou o custo: a sessão nasceu 23:34:12, uma ação ficou
+`pending` às 23:34:13, e o heartbeat a fechou às **23:34:42 — exatamente os 30s
+do timeout**. O dev agent seguiu trabalhando por mais de uma hora numa sessão
+que o banco dava por encerrada, e isso envenena toda métrica por sessão:
+duração, custo e "quantas terminaram bem" passam a ler um estado que não
+descreve o que houve.
+
+A versão anterior desta regra dizia, por escrito, que incluir trabalho de agente
+"sem um teste que prove a interação seria adivinhar". A execução produziu a
+prova, e o teste agora existe.
+
+**O que continua fora:** task `in_progress` sem ação pendente nem handoff. O dev
+agent tem máquina de estados própria e retém o worktree por conta dele; o sinal
+que a api possui e que a execução comprovou é a ação pendente. Incluir a task
+exigiria a api ler `dev_agent_states`, que é do engine — decisão de fronteira,
+não conserto de passagem.
+
+- **Onde:** `apps/api/src/application/use-cases/sessions/get-session-pending-work.use-case.ts`,
+  `apps/engine/lib/engine/sessions/session_server.ex` (`handle_info(:heartbeat_timeout, …)`)
+- **Teste:** `apps/engine/test/engine/sessions/session_lifecycle_test.exs`
+  (`heartbeat NÃO encerra sessão com trabalho pendente` e o caso oposto) e
+  `apps/api/test/application/use-cases/sessions/get-session-pending-work.use-case.spec.ts`
+  (os dois sinais, a ação já decidida que NÃO segura, e o escopo por sessão)
+- **Origem:** execução real da FASE 13b; achado V, Fase H do
+  [backlog](explanation/backlog.md)
+
+### RN-063 — Encerrar sem produzir é desfecho, não falha {#rn-063}
+
+A Anamnese tem uma ferramenta para dizer **"não há nada a emitir, e este é o
+motivo"** (`skip_proficiency`). A rodada encerra com `anamnese.run_skipped` e o
+motivo no payload — nunca com `anamnese.run_failed`.
+
+Antes ela não tinha esse verbo. A única ferramenta era `emit_proficiency`, que
+recusa lista vazia (com razão: perfil vazio não é perfil). Numa janela sem
+membro elegível a Anamnese descobria isso na PRIMEIRA iteração, escrevia em
+prosa "não há membros elegíveis", chamava `emit_proficiency` com `profiles: []`,
+era recusada — e repetia até o teto de iterações. Cada volta reenvia o
+histórico, que cresce a cada volta.
+
+Numa execução real isso custou **145 mil tokens de entrada e 4× o gasto do
+Criativo e do PO somados**, sem produzir nada. E voltava a cada tick do
+agendador, a cada 15 minutos, para sempre.
+
+O teto de iterações funcionava — não era laço infinito. O desperdício era **por
+rodada, repetido indefinidamente**, que é pior: um laço trava e alguém percebe;
+este sangrava devagar.
+
+Narrar `run_failed` para uma rodada que fez a coisa certa também é defeito: quem
+lê o log aprende a ignorar o evento de falha.
+
+- **Onde:** `apps/engine/lib/engine/anamnese/tools/skip_proficiency.ex`,
+  `apps/engine/lib/engine/anamnese/hooks/termination.ex`,
+  `apps/engine/lib/engine/workers/anamnese_worker.ex` (`handle_outcome`)
+- **Teste:** `apps/engine/test/engine/workers/anamnese_worker_test.exs`
+  (`encerrar sem perfis é DESFECHO: narra run_skipped com o motivo, não falha`)
+- **Origem:** execução real da FASE 13b
+
+### RN-062 — Mensagem a agente conversacional REIDRATA o processo {#rn-062}
+
+Uma mensagem endereçada a Criativo, PO ou Arquiteto sobe o processo se ele não
+estiver de pé, antes de entregar. O `init` de cada servidor já reconstrói o
+histórico do event log; faltava quem o chamasse.
+
+Antes, um restart do engine matava a conversa em silêncio: a sessão sobrevivia
+como `active`, o processo do agente não, e a próxima mensagem morria com
+`GenServer.call ... exited` — sem evento, sem erro na tela, sem nada. O usuário
+via a própria mensagem aparecer e nenhuma resposta chegar, para sempre.
+
+O comentário de `revise/2` dizia que agente morto nesta rota "é um bug". É — e
+basta o engine reiniciar para acontecer. É a mesma garantia que a Fase 12b deu
+aos dev agents, aplicada aos conversacionais.
+
+- **Onde:** `apps/engine/lib/engine_web/controllers/agent_command_controller.ex`
+  (`message/2`)
+- **Teste:** coberto pela suite de agentes; a prova de execução está em
+  docs/explanation/validacao-real.md
+- **Origem:** execução real da FASE 13b
+
+### RN-060 — O gasto das chaves é do owner, e só ele vê {#rn-060}
+
+O relatório de consumo por credencial (`GET /workspaces/:id/credential-spend`)
+exige **`owner`** no workspace. Não é `maintainer`: desde a
+[RN-058](#rn-058) os agentes de todos os projetos gastam a credencial do dono,
+e a fatura dele não é assunto de quem só opera um projeto.
+
+O relatório agrupa por **provider**, porque é essa a unidade da credencial —
+uma chave por provider, por pessoa. Um total único não bateria com fatura
+nenhuma.
+
+E separa **agente** de **pessoa**: as duas coisas saem da mesma chave desde a
+RN-058, e "meus agentes estão caros?" é uma pergunta diferente de "eu uso muito
+o chat?". Por isso este é o único agregado de custo do produto **sem** o filtro
+`actor_kind = 'agent'` da [RN-038](#rn-038) — aqui a pergunta é quanto saiu da
+chave, e o chat do próprio owner sai dela.
+
+Gasto de credencial **já removida** continua no relatório, marcado: o consumo
+aconteceu, e escondê-lo daria um total que não fecha com o extrato do provider.
+
+Nenhum segredo atravessa: a resposta tem provider, tokens e custo — nunca a
+chave, nem cifrada ([ADR 0050](adr/0050-credencial-sempre-cifrada-verificacao-explicita.md)).
+
+- **Onde:**
+  `apps/api/src/application/use-cases/llm/get-credential-spend.use-case.ts`,
+  `apps/api/src/interfaces/http/llm/budgets.controller.ts`,
+  `apps/web/src/components/CredentialSpendSection.tsx`
+- **Teste:** `test/application/use-cases/llm/get-credential-spend.use-case.spec.ts`
+  (agrupa por provider; separa agente de pessoa; chave removida fica marcada);
+  `apps/web/src/components/CredentialSpendSection.test.tsx`
+- **Origem:** decisão do usuário junto com a RN-058
+
+### RN-059 — Falha de turno é evento durável com origem, e o agente fala {#rn-059}
+
+Quando um turno de LLM falha, o agente grava **`agent.error`** no event log
+com três campos: `origem` (vocabulário do ADR 0020), `mensagem` em português e
+o `reason` bruto. E a mensagem aparece **no fio da conversa**, não só no log.
+
+Era o contrário, e o desfecho era o pior possível: os quatro agentes
+conversacionais gravavam `agent.response` com conteúdo **vazio** —
+indistinguível de sucesso no log imutável — e mandavam o motivo por
+`broadcast`, que é efêmero. Quem não estivesse com a aba aberta naquele
+segundo nunca saberia que houve erro; quem estivesse, via um balão em branco.
+
+Havia um segundo caminho, pior ainda: quando a api narrava a falha no PRÓPRIO
+frame final (budget, credencial ausente, binding faltando), o turno não caía no
+ramo de erro e **não emitia evento nenhum** — silêncio absoluto.
+
+A origem NUNCA é adivinhada: cada padrão em `FalhaDeTurno.origem/1` tem um
+motivo escrito, e o que não casa com nenhum sai como **`indeterminada`**, que é
+mais honesto que chutar uma das quatro (ADR 0020).
+
+Os eventos já gravados não se apagam — a tela os NOMEIA como resposta vazia
+anterior a esta regra, em vez de mostrar branco.
+
+- **Onde:** `apps/engine/lib/engine/agents/falha_de_turno.ex`,
+  `criativo_server.ex`, `po_server.ex`, `arquiteto_server.ex`,
+  `infra_lead_server.ex` (`emit_falha/2`),
+  `apps/web/src/lib/session-falha.ts`
+- **Teste:** `apps/engine/test/engine/agents/criativo_server_test.exs`
+  (evento durável com origem; nunca grava resposta vazia; erro narrado no frame
+  final também vira evento); `apps/web/src/lib/session-falha.test.ts`
+- **Origem:** execução real da FASE 13b
+
+### RN-058 — A chave que o AGENTE gasta é a do owner do workspace {#rn-058}
+
+Credencial de LLM pertence a uma pessoa (`user_credentials.user_id`), e agente
+não é pessoa. O turno de agente resolve a chave pelo **owner do workspace**
+(`workspaces.created_by`), não por quem abriu a sessão nem por quem criou o
+projeto: quem banca a conta banca os agentes, e isso não muda quando outra
+pessoa da equipe começa a sessão.
+
+`created_by` e não `workspace_members.role = 'owner'`: pode haver vários
+owners, e "qualquer um deles" faria a chave usada variar sem ninguém decidir.
+
+Antes disto o turno passava o **slug do agente** (`agentId ?? sessionId`) na
+coluna de usuário. A consulta ia ao banco com `user_id = 'criativo'`, o
+Postgres recusava o UUID inválido, e o erro virava **resposta vazia** no fio —
+sem métrica, sem evento de falha, sem nada na tela. O efeito prático, que só
+uma execução real revelou: **nenhum agente jamais usou um provider com
+credencial**. Só `ollama` funcionava, porque para ele a busca é pulada — e foi
+com modelo local que a Fase 4, o dogfooding da Fase 10 e todas as demos
+rodaram.
+
+O chat humano nunca teve o defeito: ele usa `actor.id`, que é o usuário de
+verdade.
+
+- **Onde:**
+  `apps/api/src/application/use-cases/llm/resolve-credential-owner.use-case.ts`,
+  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts`,
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts`
+- **Teste:** `test/application/use-cases/llm/resolve-credential-owner.use-case.spec.ts`
+  (o owner vence quem criou o projeto; a chave encontrada é a dele; projeto
+  inexistente é 404 e não erro de banco)
+- **Origem:** execução real da FASE 13b
+
 ### RN-056 — Faceta de capability vem do provider; silêncio preserva o que estava {#rn-056}
 
 `supports_vision`, `supports_reasoning` e `generates_image` são **fato do

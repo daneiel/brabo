@@ -12,6 +12,11 @@ defmodule Engine.SessionEvents.Event do
 
   alias Engine.Repo
 
+  # Agentes que ANALISAM a sessão em vez de participar dela. Ver
+  # `count_analisaveis/1`: o rastro que eles deixam é sobre a sessão, não
+  # dela.
+  @analistas ~w(psicologo psicologo-leve anamnese)
+
   @primary_key {:id, :string, autogenerate: false}
   @schema_prefix "public"
   schema "session_events" do
@@ -37,6 +42,68 @@ defmodule Engine.SessionEvents.Event do
   """
   def count(session_id) do
     Repo.aggregate(from(e in __MODULE__, where: e.session_id == ^session_id), :count, :id)
+  end
+
+  @doc """
+  Quantos eventos da sessão têm SINAL a analisar.
+
+  Duas famílias não contam, por motivos diferentes:
+
+    * **o que os analistas escrevem sobre a sessão não é a sessão.** O
+      Psicólogo grava o próprio turno no log (`agent.response`,
+      `tool.call`, `tool.result`, a hipótese). Contá-lo faz uma sessão
+      vazia parecer povoada a partir da PRIMEIRA análise — e cada
+      retentativa a enche mais, então o critério nunca mais reprova.
+      Vale igual para a Anamnese, que também narra rodada em sessão
+      alheia;
+    * **`bootstrap.*` é provisionamento rodando sozinho.** Nove passos
+      de máquina do `git-bootstrap` não dizem nada sobre a pessoa.
+
+  Tudo o mais conta — inclusive `proposed_action.*`, que é o usuário
+  decidindo sem escrever mensagem nenhuma (a mesma lição que a Anamnese
+  aprendeu ao descartar como vazia uma janela só de decisões).
+
+  `count/1` continua existindo e continua sendo quem DIMENSIONA a
+  análise — quanto log há para ler. Este responde outra pergunta: há
+  alguma coisa para ler.
+  """
+  def count_analisaveis(session_id) do
+    Repo.aggregate(
+      from(e in __MODULE__,
+        where: e.session_id == ^session_id,
+        where: not like(e.type, "bootstrap.%"),
+        # `actor_id` é NOT NULL na tabela, então o `not in` não tem o
+        # buraco de três-valores que descartaria linha silenciosamente.
+        where: e.actor_kind != "agent" or e.actor_id not in @analistas
+      ),
+      :count,
+      :id
+    )
+  end
+
+  @doc """
+  Títulos das regras de negócio já emitidas no PROJETO.
+
+  Escopo de projeto, não de sessão, porque é entre sessões que a
+  duplicata aparece: rodar o Criativo de novo e ele reemitir tudo (achado
+  K). Uma consulta por sessão nunca veria a primeira rodada.
+
+  Não há tabela de regra — o artefato é o evento `artifact.business_rule`,
+  imutável como todo evento de domínio. Por isso a deduplicação só pode
+  acontecer na ENTRADA: aqui se lê o que existe, e quem recusa é
+  `Engine.Harness.Tools.EmitArtifact`.
+  """
+  def titulos_de_regras(project_id) do
+    Repo.all(
+      from(e in __MODULE__,
+        join: s in Engine.Sessions.ProjectSession,
+        on: e.session_id == s.id,
+        where: s.project_id == type(^project_id, :binary_id),
+        where: e.type == "artifact.business_rule",
+        select: fragment("? ->> 'title'", e.payload)
+      )
+    )
+    |> Enum.reject(&is_nil/1)
   end
 
   @doc """

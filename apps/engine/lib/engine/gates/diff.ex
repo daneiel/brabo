@@ -14,8 +14,11 @@ defmodule Engine.Gates.Diff do
   repositório local resolvível ou o comando falhar.
   """
   def compute(project_id, worktree_path) do
-    case ProjectRepository.get_local_repo_path(project_id) do
-      {:ok, _bare_repo_path, default_branch} ->
+    # `default_branch/1` e não `get_local_repo_path/1`: o diff só precisa do
+    # NOME da branch, e pedir o caminho do bare repo fazia este gate parar em
+    # provider remoto sem nunca ter precisado do caminho (ADR 0056).
+    case ProjectRepository.default_branch(project_id) do
+      {:ok, default_branch} ->
         GitCmd.run(worktree_path, ["diff", "#{default_branch}...HEAD"])
 
       {:error, reason} ->

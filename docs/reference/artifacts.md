@@ -54,6 +54,19 @@ DevAgent que desiste não deveria poder decidir não registrar que desistiu.
 reprova: é a rastreabilidade da regra até onde ela foi dita, e sem ela a regra
 vira afirmação sem procedência.
 
+:::caution O modelo precisa SABER os nomes dos campos
+A descrição da ferramenta `emit_artifact` é gerada a partir destes schemas
+(`ArtifactSchemas.required/1`) e nomeia cada campo obrigatório, em inglês, com
+um exemplo preenchido.
+
+Não é zelo: a descrição anterior dizia apenas "emite um artefato tipado" e
+listava os tipos. Numa execução real o modelo — conversando em português —
+adivinhou `titulo`/`descricao`/`comportamento`, e as **quatro regras de negócio
+daquela conversa foram recusadas em silêncio**. `origin` como texto livre
+também reprova: precisa ser lista, e a descrição diz isso com todas as letras
+([RN-061](../business-rules.md#rn-061)).
+:::
+
 ### `product_brief` — servidor
 
 | campo | obrigatório |

@@ -163,6 +163,18 @@ rules:
     severity: warn
     note: "Atualizar só se mudou contrato de behaviour ou fluxo de gate. `infra/` (área de Infra, Fase 8c) entrou aqui de passagem — não tinha regra nenhuma até então; `dev/` e `agents/` entraram na 12d pelo mesmo motivo."
 
+  # O registro de gates é índice do que barra o trabalho. Gate novo, ou
+  # evidência que mudou de lugar, exige a linha no registro e a RN — senão o
+  # arquivo vira uma lista que descreve um produto que não existe mais.
+  - id: registro-de-gates
+    watch:
+      - "docs/gates.yml"
+      - "apps/api/src/domain/gates/**"
+      - "apps/api/src/infrastructure/gates/**"
+      - "apps/api/scripts/validacao-gates.ts"
+    docs: ["docs/explanation/gates.md", "docs/business-rules.md"]
+    severity: block
+
   # -------------------------------------------------------- infra e operação
 
   - id: boot-e-supervisao

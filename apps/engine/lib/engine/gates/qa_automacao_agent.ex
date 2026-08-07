@@ -146,6 +146,27 @@ defmodule Engine.Gates.QaAutomacaoAgent do
     {"QA de Automação não concluiu o parecer", reason, origin}
   end
 
+  # Ação de terminal PENDENTE não é falha de infraestrutura — é uma decisão
+  # que ainda não foi tomada. Sem esta cláusula caía no catch-all e o event
+  # log registrava `origin: infra`, culpando a infraestrutura por algo que
+  # não quebrou. Contraria a regra do ADR 0020: origem é NOMEADA, nunca
+  # obtida por eliminação.
+  #
+  # Observado na 6ª execução da FASE 13b (achado AB): o agente rodou
+  # `ls -la && find … | head -50`, `head` não estava no `allow`, e o comando
+  # composto virou `require_approval` — corretamente, porque todo segmento
+  # precisa estar liberado.
+  #
+  # O gate continua BLOQUEANDO: este laço é síncrono e não sabe retomar. O
+  # que muda é dizer a verdade sobre o motivo, e nomear a ação pendente para
+  # que dê para decidi-la. Tornar os agentes de gate suspensíveis como o dev
+  # agent (ADR 0052) é o conserto de verdade, e é fase própria.
+  defp falha_da_automacao({:halted, {:awaiting_approval, action_id, _call_id, tool}, _ctx}),
+    do:
+      {"QA de Automação não concluiu o parecer",
+       "a ferramenta `#{tool}` ficou pendente de aprovação (ação #{action_id}) " <>
+         "e o laço do gate não sabe esperar decisão", "politica"}
+
   defp falha_da_automacao(other),
     do:
       {"QA de Automação não concluiu o parecer",

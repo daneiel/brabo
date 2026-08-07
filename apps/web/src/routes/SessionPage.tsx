@@ -33,7 +33,13 @@ import { ApprovalCard } from '../components/ApprovalCard';
 import { ActivityFeed } from '../components/ActivityFeed';
 import { EventItem } from '../components/EventItem';
 import { Button } from '../components/ui/Button';
-import { LayoutSidebarIcon, ModelIcon, UserIcon } from '../components/ui/icons';
+import { lerFalhaDeTurno } from '../lib/session-falha';
+import {
+  AlertCircleIcon,
+  LayoutSidebarIcon,
+  ModelIcon,
+  UserIcon,
+} from '../components/ui/icons';
 import styles from './SessionPage.module.css';
 
 interface SessionPageProps {
@@ -67,6 +73,12 @@ export function SessionPage({
   const [draft, setDraft] = useState('');
   const [streaming, setStreaming] = useState(false);
   const [streamingText, setStreamingText] = useState('');
+  // QUEM está falando (achado C). O delta passou a carregar o agente; sem ele
+  // a tela rotulava a bolha com o nome do MODELO, que é detalhe de execução.
+  const [streamingAgent, setStreamingAgent] = useState<string | null>(null);
+  // Espelho do `streaming` para os handlers do canal: eles são registrados uma
+  // vez e enxergariam sempre o valor inicial do state.
+  const streamingRef = useRef(false);
   const [optimisticUser, setOptimisticUser] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   useEffect(() => () => abortRef.current?.abort(), []);
@@ -132,13 +144,17 @@ export function SessionPage({
   useEffect(() => {
     if (session?.status !== 'active') return;
     const disconnect = connectSessionHeartbeat(sessionId, {
-      onAgentDelta: (text) => {
+      onAgentDelta: (text, agent) => {
+        streamingRef.current = true;
         setStreaming(true);
         setStreamingText((t) => t + text);
+        if (agent) setStreamingAgent(agent);
       },
       onAgentDone: () => {
+        streamingRef.current = false;
         setStreaming(false);
         setStreamingText('');
+        setStreamingAgent(null);
         setOptimisticUser(null);
         queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
         queryClient.invalidateQueries({ queryKey: ['session-handoffs', projectId, sessionId] });
@@ -148,7 +164,13 @@ export function SessionPage({
       // (Dev/QA/SecOps/Infra) antecipa o refetch do polling — reaproveita o
       // parsing/cache já existente (useSessionEvents), só antecipa quando o
       // dado muda em vez de esperar o intervalo do poll.
+      // Enquanto um turno conversacional está streamando, NÃO antecipa o
+      // refetch: a bolha ao vivo é uma prévia do `agent.response` que está para
+      // ser persistido, e trazer o evento antes de `agent.done` põe as duas na
+      // tela ao mesmo tempo — a duplicação do achado C. `onAgentDone` invalida
+      // logo em seguida, então nada se perde; só deixa de aparecer duas vezes.
       onEvent: () => {
+        if (streamingRef.current) return;
         queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
       },
     });
@@ -171,8 +193,23 @@ export function SessionPage({
     refetchInterval: 5000,
   });
 
-  const allModels = modelsByCategory ? [...Object.values(modelsByCategory.local).flat(), ...Object.values(modelsByCategory.cloud).flat()] : [];
-  const selectedModel = allModels.find((m) => m.id === resolvedBinding?.modelId);
+  // O agente que está streamando agora, quando o delta disse quem é (achado C).
+  const agenteFalando = streamingAgent
+    ? AGENTS[streamingAgent as keyof typeof AGENTS]
+    : undefined;
+
+  // A CONVERSA começou? (achado G) — e não "o fio está vazio", que era a
+  // condição anterior. Num projeto CRIADO o fio já nasce com os cards do
+  // bootstrap, então o convite do Criativo nunca aparecia justamente para quem
+  // mais precisa dele: quem acabou de provisionar um repositório e não sabe
+  // que a vez é sua. Card de bootstrap não é conversa.
+  const conversaComecou = events.some(
+    (e) => e.type === 'chat.message' || e.type === 'agent.response',
+  );
+
+  // A prontidão já foi declarada? (achado L) O handoff que sai do Criativo é a
+  // consequência dela — existindo, o botão não tem mais o que oferecer.
+  const prontidaoJaDeclarada = handoffs.some((h) => h.fromAgent === 'criativo');
 
   const invalidateActions = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['session-actions', projectId, sessionId] });
@@ -235,7 +272,54 @@ export function SessionPage({
                   </span>
                   <span className={styles.messageMeta}>modelo</span>
                 </div>
-                <div className={styles.bubble}>{text}</div>
+                {/* Resposta vazia é evento ANTIGO: até a RN-059, falha de
+                    turno era gravada como `agent.response` com conteúdo "" —
+                    e a tela mostrava um balão em branco, indistinguível de um
+                    agente que não teve o que dizer. Os eventos já gravados não
+                    se apagam, então a tela os NOMEIA. */}
+                {text === '' ? (
+                  <div className={[styles.bubble, styles.bubbleVazio].join(' ')}>
+                    Resposta vazia — evento anterior à RN-059, quando falha de
+                    turno era gravada como resposta em branco. O motivo real
+                    não foi registrado.
+                  </div>
+                ) : (
+                  <div className={styles.bubble}>{text}</div>
+                )}
+              </div>
+            </div>
+          ),
+        });
+      } else if (event.type === 'agent.error') {
+        // O agente FALA a falha, no mesmo fio. Antes o motivo ia só por
+        // broadcast (efêmero) e o log guardava uma resposta vazia — quem
+        // abrisse a sessão depois via um balão em branco e nada mais.
+        const { mensagem, origem } = lerFalhaDeTurno(event.payload);
+        items.push({
+          seq: event.seq,
+          node: (
+            <div className={styles.message} key={event.id}>
+              <span
+                className={styles.avatar}
+                style={{ ['--msg-color' as string]: 'var(--danger)' } as CSSProperties}
+              >
+                <AlertCircleIcon size={15} />
+              </span>
+              <div className={styles.messageBody}>
+                <div className={styles.messageHeader}>
+                  <span
+                    className={styles.messageName}
+                    style={{ ['--msg-color' as string]: 'var(--danger)' }}
+                  >
+                    {event.actor.id}
+                  </span>
+                  {/* A ORIGEM fica visível: é ela que diz se o próximo passo é
+                      trocar a chave, esperar o provider ou abrir um bug. */}
+                  <span className={styles.messageMeta}>falha · origem {origem}</span>
+                </div>
+                <div className={[styles.bubble, styles.bubbleFalha].join(' ')}>
+                  {mensagem}
+                </div>
               </div>
             </div>
           ),
@@ -246,12 +330,17 @@ export function SessionPage({
     for (const action of actions) {
       items.push({
         seq: action.seq,
+        // Sem `meta` com o modelo (achado I). O card recebia o modelo ATUAL da
+        // sessão, então trocar o binding reescrevia retroativamente o rótulo de
+        // TODA ação antiga — inclusive das que rodaram com outro modelo. Não há
+        // fonte verdadeira: `proposed_actions` não guarda o modelo, e
+        // `token_usage` não se liga à ação. Quem propôs já está no card, em
+        // negrito, e é o AGENTE — que é o que não muda.
         node: (
           <ApprovalCard
             key={action.id}
             action={action}
             variant="chat"
-            meta={selectedModel ? `${selectedModel.displayName} · sessão` : undefined}
             onApprove={() => approveAction(projectId, sessionId, action.id).then(invalidateActions)}
             onDeny={() => denyAction(projectId, sessionId, action.id).then(invalidateActions)}
             onAlwaysAllow={() =>
@@ -266,7 +355,7 @@ export function SessionPage({
     }
 
     return items.sort((a, b) => a.seq - b.seq);
-  }, [events, actions, selectedModel, projectId, sessionId, user.name, queryClient, invalidateActions]);
+  }, [events, actions, projectId, sessionId, user.name, queryClient, invalidateActions]);
 
   async function handleActivate() {
     await transitionSession(projectId, sessionId, 'active');
@@ -422,6 +511,44 @@ export function SessionPage({
         <div className={styles.chatColumn}>
           <div className={styles.messages}>
             <div className={styles.messagesInner}>
+              {/* O Criativo é ativado e NÃO fala primeiro: ele espera a sua
+                  mensagem. Sem isto a tela ficava em branco depois de "Iniciar
+                  ideação", e quem chega não tem como saber que a vez é dele.
+                  Convite em vez de turno automático: informa sem gastar token. */}
+              {!conversaComecou && !optimisticUser && !streaming && (
+                <div className={styles.convite}>
+                  <h2 className={styles.conviteTitulo}>A vez é sua</h2>
+                  <p className={styles.conviteTexto}>
+                    O <strong>Criativo</strong> conduz a ideação: ele faz
+                    perguntas sobre o produto e registra as{' '}
+                    <strong>regras de negócio</strong> que saírem da conversa.
+                    Ele não decide tecnologia nem escreve código — isso é do
+                    Arquiteto e dos devs, mais adiante.
+                  </p>
+                  <p className={styles.conviteTexto}>
+                    Comece contando o que você quer construir e para quem. Por
+                    exemplo:
+                  </p>
+                  <button
+                    type="button"
+                    className={styles.conviteExemplo}
+                    onClick={() =>
+                      setDraft(
+                        'Quero uma API que responda uma saudação para quem chamar. É para eu validar o fluxo de ponta a ponta.',
+                      )
+                    }
+                  >
+                    “Quero uma API que responda uma saudação para quem chamar. É
+                    para eu validar o fluxo de ponta a ponta.”
+                  </button>
+                  <p className={styles.conviteRodape}>
+                    Quando as regras estiverem completas, use{' '}
+                    <strong>Estou pronto para produzir</strong> — é o que gera o
+                    brief e passa a bola ao PO.
+                  </p>
+                </div>
+              )}
+
               {timeline.map((entry) => (
                 <div key={entry.seq}>{entry.node}</div>
               ))}
@@ -442,12 +569,30 @@ export function SessionPage({
 
               {streaming && (
                 <div className={styles.message}>
-                  <span className={styles.avatar} style={{ ['--msg-color' as string]: 'var(--accent)' } as CSSProperties}>
-                    <ModelIcon size={15} />
+                  <span
+                    className={styles.avatar}
+                    style={
+                      {
+                        ['--msg-color' as string]:
+                          agenteFalando?.color ?? 'var(--accent)',
+                      } as CSSProperties
+                    }
+                  >
+                    {agenteFalando ? <agenteFalando.icon size={15} /> : <ModelIcon size={15} />}
                   </span>
                   <div className={styles.messageBody}>
                     <div className={styles.messageHeader}>
-                      <span className={styles.messageName}>{selectedModel?.displayName ?? 'modelo'}</span>
+                      {/*
+                        Quem fala é o AGENTE (achado C). O modelo é detalhe de
+                        execução e aparecia aqui como se fosse o interlocutor —
+                        depois trocava para o agente quando o evento persistido
+                        chegava, o que também mudava o nome na cara do usuário.
+                        Sem o agente no delta, degrada para "agente" genérico,
+                        nunca para o nome do modelo.
+                      */}
+                      <span className={styles.messageName}>
+                        {agenteFalando?.name ?? 'agente'}
+                      </span>
                     </div>
                     {streamingText ? (
                       <div className={styles.bubble}>{streamingText}</div>
@@ -477,7 +622,14 @@ export function SessionPage({
               <Button onClick={handleSend} disabled={streaming || !draft.trim()}>
                 Enviar
               </Button>
-              {criativoActive && (
+              {/*
+                Some depois que o Criativo passou a bola (achado L). O botão
+                dependia só de o Criativo estar ativo, e continuava oferecendo
+                "Estou pronto para produzir" DEPOIS do handoff — convidando a
+                declarar de novo uma prontidão que já foi declarada, e cuja
+                consequência (o handoff para o PO) já está na tela.
+              */}
+              {criativoActive && !prontidaoJaDeclarada && (
                 <Button variant="success" onClick={handleReadiness} disabled={streaming}>
                   Estou pronto para produzir
                 </Button>

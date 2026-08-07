@@ -122,7 +122,7 @@ merge em `main`, e por isso fica um ciclo de promoção atrás do que está em
 | [Artefatos](docs/reference/artifacts.md) | os seis schemas e quem pode emitir cada um |
 | [Providers de git](docs/reference/git-providers.md) | o contrato de dez operações e as capabilities |
 | [API interna](docs/reference/internal-api.md) | o contrato api ↔ engine |
-| [ADRs](docs/adr/index.md) | as 51 decisões e o porquê de cada uma |
+| [ADRs](docs/adr/index.md) | as 56 decisões e o porquê de cada uma |
 | [Segurança](SECURITY.md) | como reportar uma vulnerabilidade |
 | [Como contribuir](CONTRIBUTING.md) | fluxo, Definition of Done, o que é aceito |
 | [Onde pedir ajuda](SUPPORT.md) | qual canal para cada tipo de assunto |
@@ -343,7 +343,7 @@ fonte de sistema, e título e corpo ficavam indistinguíveis.
 
 ## Estado
 
-**Fases 1 a 12 concluídas**, versão **v2.1.0** ([CHANGELOG](CHANGELOG.md)).
+**Fases 1 a 12 concluídas**, versão **v2.2.0** ([CHANGELOG](CHANGELOG.md)).
 Esteira de release exercitada de ponta a ponta, auth first-party sem Keycloak,
 nove providers de LLM sobre uma base única e o primeiro dogfooding — o Brabo
 construindo o próprio Brabo — com a colheita escrita.

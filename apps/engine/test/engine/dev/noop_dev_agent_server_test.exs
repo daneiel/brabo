@@ -95,6 +95,109 @@ defmodule Engine.Dev.NoopDevAgentServerTest do
     refute_received {:dev_context_fetched, _, _}
   end
 
+  test "abre o gate de verdade, e não só entra em awaiting_gate", %{state: state} do
+    # O Noop marcava a task `in_review` e parava aí: `tasks.gate_status` ficava
+    # NULL e não havia gate para julgar. A validação da Fase 12 travava
+    # esperando esse campo — o defeito morava no instrumento de medida.
+    Process.put(:fake_tasks, [
+      %{"id" => "aaaa1111-2222-4333-8444-555555555555", "title" => "Cadastro"}
+    ])
+
+    assert {:noreply, s} = NoopDevAgentServer.handle_cast(:work, state)
+
+    assert s.status == :awaiting_gate
+    assert_received {:gate_opened, "aaaa1111-2222-4333-8444-555555555555", "dev-api"}
+  end
+
+  test "sem PR (ação pendente) o gate NÃO abre — RN-050", %{state: state} do
+    # Sem PR não há o que julgar. Abrir o gate aqui criaria um gate sobre
+    # coisa nenhuma, que é justamente o que a RN-050 proíbe.
+    Process.put(:fake_tasks, [
+      %{"id" => "aaaa1111-2222-4333-8444-555555555555", "title" => "Cadastro"}
+    ])
+
+    Process.put(:fake_propose_action, %{"id" => "pa-77", "status" => "pending"})
+
+    assert {:noreply, s} = NoopDevAgentServer.handle_cast(:work, state)
+
+    assert s.status == :awaiting_approval
+    refute_received {:gate_opened, _task_id, _agent}
+  end
+
+  test "pr_settled com o gate JÁ aberto é ignorado, não derruba o processo", %{state: state} do
+    # A mensagem exata que matava o agente: `opened: true` chegando quando ele
+    # já está em `:awaiting_gate`. Sem cláusula, o `handle_info/2` estourava
+    # FunctionClauseError; como o server é `restart: :temporary`, morria para
+    # sempre e a task seguinte nunca era reivindicada.
+    state = %{
+      state
+      | task_id: "aaaa1111-2222-4333-8444-555555555555",
+        status: :awaiting_gate
+    }
+
+    assert {:noreply, s} =
+             NoopDevAgentServer.handle_info(
+               {:pr_settled, %{task_id: state.task_id, opened: true}},
+               state
+             )
+
+    assert s.status == :awaiting_gate
+  end
+
+  test "PR aprovada depois de pendente abre o gate", %{state: state} do
+    state = %{
+      state
+      | task_id: "aaaa1111-2222-4333-8444-555555555555",
+        status: :awaiting_approval
+    }
+
+    assert {:noreply, s} =
+             NoopDevAgentServer.handle_info(
+               {:pr_settled, %{task_id: state.task_id, opened: true}},
+               state
+             )
+
+    assert s.status == :awaiting_gate
+    assert_received {:gate_opened, "aaaa1111-2222-4333-8444-555555555555", "dev-api"}
+  end
+
+  test "PR negada devolve a task com origem politica", %{state: state} do
+    state = %{
+      state
+      | task_id: "aaaa1111-2222-4333-8444-555555555555",
+        status: :awaiting_approval
+    }
+
+    assert {:noreply, _} =
+             NoopDevAgentServer.handle_info(
+               {:pr_settled, %{task_id: state.task_id, opened: false}},
+               state
+             )
+
+    assert_received {:task_blocked, "aaaa1111-2222-4333-8444-555555555555", "a PR não foi aberta",
+                     _, "dev-api"}
+
+    refute_received {:gate_opened, _t, _a}
+  end
+
+  test "claim com corpo VAZIO vira idle, não derruba o agente", %{state: state} do
+    # O defeito real, achado por execução: com a fila vazia, a rota de claim
+    # responde `201` com `content-length: 0`. O `Req` entrega `""` — que não é
+    # `nil` — e o `AgentIo.try_claim/2` casava com a cláusula de task
+    # encontrada, chamando `run_task("")`: BadMapError, processo
+    # `restart: :temporary` morto de vez, estado apagado pelo Monitor.
+    #
+    # A guarda vive no `AgentIo`, compartilhado com o `DevAgentServer` REAL —
+    # o Noop aqui é só o veículo mais barato de exercitá-la.
+    Process.put(:fake_tasks, [""])
+
+    assert {:noreply, s} = NoopDevAgentServer.handle_cast(:work, state)
+
+    assert s.status == :idle
+    assert_received {:event_appended, _, _, %{type: "dev.idle"}}
+    refute_received {:propose_action, _, _, _}
+  end
+
   test "falha no worktree devolve a task em vez de deixá-la órfã", %{state: state} do
     Process.put(:fake_tasks, [
       %{"id" => "aaaa1111-2222-4333-8444-555555555555", "title" => "Cadastro"}

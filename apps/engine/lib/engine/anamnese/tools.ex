@@ -7,9 +7,9 @@ defmodule Engine.Anamnese.Tools do
   Psicólogo.
   """
 
-  alias Engine.Anamnese.Tools.{EmitProficiency, ProposeInstructionPatch}
+  alias Engine.Anamnese.Tools.{EmitProficiency, ProposeInstructionPatch, SkipProficiency}
 
-  @registry [EmitProficiency, ProposeInstructionPatch]
+  @registry [EmitProficiency, ProposeInstructionPatch, SkipProficiency]
 
   def registry, do: @registry
 
