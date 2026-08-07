@@ -229,6 +229,27 @@ merece registro porque é reincidente: o script rodava **pelo host**, então
 outro caminho, no mesmo dia. O cabeçalho do script agora exige, com todas as
 letras, execução de dentro do container.
 
+## A quinta execução: a cadeia chega ao GitHub
+
+Rodando **de dentro do container** (a condição que faltava) e com os verbos de
+terminal liberados, a cadeia andou inteira:
+
+| ação | política | desfecho |
+|---|---|---|
+| `terminal` ×2 | `auto_approve` | ✅ executed |
+| `git_commit` | `auto_approve` | ✅ executed |
+| `git_push` | `auto_approve` | ✅ executed |
+| `pr_open` | `auto_approve` | ❌ **failed** |
+
+**A branch do agente existe no GitHub**: `feature/task-d4b36a5b`, ao lado de
+`dev`, `main` e `qa`. Código escrito por um modelo, commitado com a identidade
+`dev-api[bot]` e empurrado para um repositório remoto de verdade.
+
+O `pr_open` falhou com `Requires authentication`, e a causa é o **achado AA**:
+a api resolve o token de git por `action.decidedBy`, que é NULL quando a
+política auto-aprova. O push funcionou porque quem empurra é o engine, que
+injeta a credencial do owner (RN-076).
+
 ## O que esta validação ainda NÃO prova
 
 Honestidade sobre o alcance, como na irmã dela:

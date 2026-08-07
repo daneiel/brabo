@@ -460,3 +460,32 @@ O **Psicólogo diagnosticou sozinho**, em tier pesado, lendo o event log da
 execução fracassada — e nomeou as duas causas com precisão maior que a de
 qualquer asserção do script: a ausência de `tool.call` de terminal, e o
 `search_workspace` enganando o agente. A introspecção do produto funciona.
+
+### AA. `pr_open` auto-aprovado não tem credencial e sempre falha em remoto (P1)
+
+Achado na 5ª execução da 13b, a primeira em que a cadeia chegou até a PR.
+
+`ExecuteGitActionUseCase` resolve o token de git a partir de
+**`action.decidedBy`** — o usuário que DECIDIU a ação
+(`execute-git-action.use-case.ts:100`). Quando a política auto-aprova, ninguém
+decide: `decided_by` fica NULL, `accessToken` fica `undefined`, e o GitHub
+responde `Requires authentication`.
+
+O contraste no mesmo run é a prova:
+
+| ação | quem executa | credencial | desfecho |
+|---|---|---|---|
+| `git_push` | **engine** | injetada do owner (`git_auth.ex`, RN-076) | ✅ executed |
+| `pr_open` | **api** | `action.decidedBy` → NULL | ❌ failed |
+
+O push chegou ao GitHub — a branch `feature/task-d4b36a5b` existe no remoto. O
+que falhou foi só a chamada REST que abre a PR.
+
+É a mesma classe do que a [RN-058](../business-rules.md#rn-058) corrigiu para
+LLM ("a chave que o agente gasta é a do OWNER"): o caminho de git da api ainda
+resolve por "quem decidiu", e não por "de quem é o workspace".
+
+**Consequência prática:** com autonomia configurada — que é o modo que a Fase F
+existe para viabilizar — nenhum dev agent consegue abrir PR em provider
+remoto. O caminho só funciona quando um humano clica em cada PR, que é
+exatamente a escada declarada inviável.
