@@ -73,7 +73,7 @@ escada, só que começando do topo.
 ## Taxonomia
 
 Toda branch é `funcao/descritivo`, validada por
-`^.{0,15}/\S{0,32}$` — até 15 caracteres de função, até 32 de descritivo, sem
+`^.{0,30}/\S{0,32}$` — até 30 caracteres de função, até 32 de descritivo, sem
 espaço.
 
 ```
