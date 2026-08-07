@@ -62,6 +62,18 @@ const sidebar: SidebarsConfig = {
     },
     {
       type: "category",
+      label: "gates",
+      items: [
+        {
+          type: "doc",
+          id: "docs/reference/api/gates-controller-listar",
+          label: "O registro de gates ativos",
+          className: "api-method get",
+        },
+      ],
+    },
+    {
+      type: "category",
       label: "git",
       items: [
         {

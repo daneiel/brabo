@@ -160,6 +160,17 @@ impedir a api de subir.
 O mecanismo inteiro está em
 [docs/explanation/gates.md](../explanation/gates.md).
 
+**Há uma segunda rota para o mesmo registro, e ela NÃO é interna.** O painel do
+time (FASE 15b) lê `GET /gates`, autenticada por JWT de usuário como qualquer
+rota de produto. Não é duplicação por descuido: `/internal/*` é autenticada por
+**service token**, que o navegador não tem e não pode ter — entregá-lo ao front
+daria a ele a superfície interna inteira, não só os gates. As duas diferem
+também no que devolvem: a interna entrega o registro como está no YAML, a
+pública devolve **só os gates `active`**, porque um gate `planned` é
+planejamento de engenharia e não tem por que aparecer na tela de quem espera
+uma PR. A classificação das duas está em
+[docs/security-surface.md](../security-surface.md).
+
 ### Catálogo de modelos
 
 | método | caminho |

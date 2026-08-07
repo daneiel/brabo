@@ -1588,6 +1588,36 @@ reimplementado.
   (`pr_open` auto-aprovado, com `decidedBy: null`, pede a credencial do owner)
 - **Origem:** achado AA, [validação real da 13b](explanation/validacao-real.md)
 
+### RN-084 — A esteira exibida deriva do registro de gates {#rn-084}
+
+O painel do time mostra a etapa em que uma PR está **derivando-a de
+`docs/gates.yml`**, não de uma lista escrita na tela. Gate que sai do registro
+some da esteira; gate `planned` nunca aparece.
+
+**A regra existe por uma forma específica de envelhecimento.** Antes da FASE
+15b a tela tinha as etapas fixas no componente, e o registro (FASE 15a)
+descrevia os gates em outro lugar. Nada ligava os dois: acrescentar um gate ao
+YAML não mudava a tela, e remover um deixava a tela mostrando uma etapa que já
+não existia — sem nenhum teste falhar, porque as duas fontes estavam certas
+cada uma por si. É o mesmo apodrecimento que o `docs/.docmap.yml` existe para
+impedir, e a resposta é a mesma: uma fonte só, com o consumo cobrado.
+
+Três decisões de borda, todas para a tela **degradar** em vez de sumir:
+
+- gate de PR que a tela ainda não sabe desenhar é **ignorado**, não quebra o
+  render — o registro pode ganhar um gate antes de a tela ganhar o rótulo;
+- os **rótulos são de tela**, não do registro: o YAML descreve engenharia, e a
+  tela fala com quem espera uma PR;
+- **sem registro** (a rota falhou), mostra a esteira completa em vez de vazia —
+  uma esteira genérica informa mais que nada.
+
+- **Onde:** `apps/web/src/components/PrGateTimeline.tsx` (`etapasDaEsteira`),
+  lendo `GET /gates` (`apps/api/src/interfaces/http/gates/gates.controller.ts`)
+- **Teste:** `apps/web/src/components/PrGateTimeline.test.ts`
+  (`gate que SAI do registro some da tela`, `gate de PR que a tela ainda não
+  sabe desenhar é IGNORADO`, `sem registro, mostra a esteira completa`)
+- **Origem:** [ADR 0054](adr/0054-gates-como-registro-declarativo.md), FASE 15b
+
 ### RN-064 — Heartbeat não encerra sessão com trabalho pendente {#rn-064}
 
 O timeout de heartbeat mede inatividade da **aba**, não do **trabalho**. Antes

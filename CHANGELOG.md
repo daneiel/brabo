@@ -6,6 +6,15 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api,web**: a esteira de gates no painel deixa de repetir a lista de etapas
+  e passa a derivá-la do registro. O ganho não é visual: gate que sai do
+  registro sai da tela sozinho — antes, desativar um deixava uma etapa morta
+  até alguém lembrar de editar o código, que é exatamente o envelhecimento que
+  o registro existe para impedir. A rota nova é do usuário logado e separada da
+  interna, que serve o script de medição; ela devolve só os gates ativos,
+  porque um gate planejado numa tela que mostra o agora apareceria como se
+  estivesse acontecendo
+
 - **engine**: o agente de gate espera a aprovação, como o dev espera (95ae7074)
 
 ### Documentação

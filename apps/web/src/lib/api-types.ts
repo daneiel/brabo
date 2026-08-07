@@ -838,3 +838,25 @@ export interface CredentialSpend {
   totalMicros: number;
   porProvider: CredentialSpendPorProvider[];
 }
+
+/**
+ * O registro de gates (ADR 0054), como a tela o consome — FASE 15b.
+ *
+ * Só os campos que a tela usa. O registro carrega mais (`evidencia`,
+ * `verificacao`), e trazê-los para cá convidaria a tela a depender do que
+ * serve à MEDIÇÃO, não a ela.
+ */
+export interface GateResumo {
+  id: string;
+  fluxo: string;
+  dono: string;
+  entrada: string[];
+  entregavel: string | string[];
+  aprovacaoHumana: boolean;
+  severidade: string;
+}
+
+export interface RegistroDeGates {
+  version: number;
+  gates: GateResumo[];
+}
