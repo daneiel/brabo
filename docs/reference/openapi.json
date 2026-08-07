@@ -1369,6 +1369,62 @@
         ]
       }
     },
+    "/internal/sessions/{sessionId}/max-parallel-proposals": {
+      "post": {
+        "description": "Recusa propor um teto igual ou menor que o vigente: a Anamnese roda periodicamente, e reproporia a mesma coisa a cada rodada, enchendo de ruído uma fila que o usuário precisa ler.",
+        "operationId": "InternalSessionsController_maxParallelProposal",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProposeMaxParallelInternalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProposedActionResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Corpo inválido."
+          },
+          "403": {
+            "description": "Service token ausente ou diferente do compartilhado."
+          },
+          "404": {
+            "description": "Sessão, projeto ou recurso inexistente."
+          }
+        },
+        "security": [
+          {
+            "service-token": []
+          }
+        ],
+        "summary": "Propõe subir o teto de paralelismo de uma área",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
     "/internal/sessions/{sessionId}/module-map": {
       "post": {
         "description": "O histórico é imutável: cada publicação é uma versão a mais e a vigente é a de maior `version`. Um CICLO de dependência entre módulos faz o mapa ser REJEITADO com 400 — o grafo precisa ser acíclico.",
@@ -8162,7 +8218,8 @@
               "git_merge",
               "open_infra_pr",
               "instruction_patch",
-              "parallelize"
+              "parallelize",
+              "raise_max_parallel"
             ],
             "example": "terminal"
           },
@@ -9073,7 +9130,8 @@
               "git_merge",
               "open_infra_pr",
               "instruction_patch",
-              "parallelize"
+              "parallelize",
+              "raise_max_parallel"
             ],
             "example": "terminal"
           },
@@ -11863,7 +11921,8 @@
               "git_merge",
               "open_infra_pr",
               "instruction_patch",
-              "parallelize"
+              "parallelize",
+              "raise_max_parallel"
             ],
             "example": "terminal",
             "description": "Tipo da ação. Cada tipo tem papel mínimo próprio: `git_push`, `git_merge` e `git_branch_protect` exigem `maintainer`, o resto `developer`."
@@ -11928,7 +11987,8 @@
               "git_merge",
               "open_infra_pr",
               "instruction_patch",
-              "parallelize"
+              "parallelize",
+              "raise_max_parallel"
             ],
             "example": "terminal",
             "description": "O que a ação faria. `git_push` e `git_merge` exigem `maintainer`."
@@ -12135,6 +12195,38 @@
           "projectId",
           "agent",
           "proposedContent",
+          "rationale"
+        ]
+      },
+      "ProposeMaxParallelInternalDto": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "01JC4Z0000PROJETO0000000001"
+          },
+          "area": {
+            "type": "string",
+            "example": "dev",
+            "description": "A área cujo teto subiria."
+          },
+          "proposto": {
+            "type": "number",
+            "example": 4,
+            "minimum": 1,
+            "description": "O teto proposto. Precisa ser MAIOR que o vigente — propor o mesmo ou menos vira ruído numa fila que o usuário precisa ler, e a Anamnese roda periodicamente."
+          },
+          "rationale": {
+            "type": "string",
+            "example": "Você autorizou o mesmo pedido quatro vezes nesta janela, e nenhuma foi negada.",
+            "description": "Ancorado nas DECISÕES observadas, não em impressão."
+          }
+        },
+        "required": [
+          "projectId",
+          "area",
+          "proposto",
           "rationale"
         ]
       },
@@ -13253,7 +13345,8 @@
               "git_merge",
               "open_infra_pr",
               "instruction_patch",
-              "parallelize"
+              "parallelize",
+              "raise_max_parallel"
             ],
             "example": "terminal"
           },

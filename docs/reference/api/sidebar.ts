@@ -282,6 +282,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/internal-sessions-controller-max-parallel-proposal",
+          label: "Propõe subir o teto de paralelismo de uma área",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/internal-sessions-controller-module-map",
           label: "Publica uma versão nova do module_map",
           className: "api-method post",
