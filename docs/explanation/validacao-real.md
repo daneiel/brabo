@@ -173,6 +173,62 @@ sido feita, o achado Y — que é real e está coberto por teste — seria fáci
 confundir com a solução do X. Foi uma correção correta que **não** produziu o
 efeito esperado, e só a execução mostrou isso.
 
+## A terceira execução: o teto ERA a causa
+
+Com `TOOL_LOOP_MAX_ITERATIONS=25` no lugar de `8`, e nada mais mudado, o dev
+agent mudou de patamar:
+
+| ferramenta | 2ª execução (teto 8) | 3ª execução (teto 25) |
+|---|---|---|
+| `search_workspace` | 2 | 4 |
+| `read_file` | 5 | 6 |
+| **`write_file`** | **0** | **3** |
+| **`terminal`** | **0** | **1** |
+| desfecho | limite de iterações | `dev.awaiting_approval` |
+
+Ele explorou, **escreveu três arquivos** e chamou `npm test --silent`. A
+hipótese registrada acima estava certa: o teto de 8 — herdado do agente
+conversacional — não cabe num dev agent que precisa entender um repositório
+antes de agir.
+
+**E o motivo de parar mudou completamente.** Não houve bloqueio: a ação de
+terminal virou `proposed_action` com `require_approval` e o agente entrou em
+`dev.awaiting_approval` — suspenso, retendo worktree e histórico, como o
+[ADR 0052](../adr/0052-o-laco-do-agente-espera-a-aprovacao.md) desenhou. Ele
+parou e esperou, em vez de queimar iterações batendo na porta.
+
+## A quarta execução, e o que ela revelou sobre a Fase F
+
+Liberar `npm`, `pnpm`, `node` e `npx` no `allow` do projeto não destravou: o
+agente rodou **`ls -la`**, verbo que não estava na lista, e ficou pendente de
+novo.
+
+Isso expõe uma diferença entre o que a Fase F entregou e o que foi pedido. O
+pedido era *"permita sempre comandos desde que seja na pasta do projeto"*. O
+[ADR 0055](../adr/0055-escopo-de-caminho-na-politica-de-terminal.md) entregou
+um **teto**: comando que toca caminho fora da pasta nunca é auto-aprovável, por
+mais que o verbo esteja em `allow`. O teto protege o **caminho** — o **verbo**
+continua governado pelo allowlist, que é uma lista fechada por desenho.
+
+Consequência prática: cada comando novo que o agente inventa cai em
+`require_approval`. A escada continua existindo, só ficou mais segura.
+
+**Não trato isso como defeito**, e sim como escopo: o ADR 0055 nunca prometeu
+promover verbo. Mas a lacuna entre o pedido e a entrega é real, e vira item de
+triagem.
+
+### Uma armadilha do próprio instrumento
+
+A primeira tentativa de configurar a política não teve efeito nenhum, e a causa
+merece registro porque é reincidente: o script rodava **pelo host**, então
+`PROJECT_WORKSPACES_ROOT` caiu no default `/tmp/brabo-project-workspaces` e o
+`permissions.json` nasceu num filesystem que o engine não enxerga.
+
+É a mesma armadilha do repositório cobaia em `/tmp` que a
+[validação da Fase 12](./validacao-fase-12.md) já documenta — reaparecendo por
+outro caminho, no mesmo dia. O cabeçalho do script agora exige, com todas as
+letras, execução de dentro do container.
+
 ## O que esta validação ainda NÃO prova
 
 Honestidade sobre o alcance, como na irmã dela:

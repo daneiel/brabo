@@ -430,10 +430,29 @@ achado X.
 > frase era a causa estava ERRADA: das oito iterações, sete são exploração, e
 > sobra uma para escrever, commitar, dar push e abrir PR.
 >
-> O suspeito agora é o teto: `TOOL_LOOP_MAX_ITERATIONS=8`
-> (`apps/engine/config/runtime.exs:100`), um número que nasceu para agente
-> conversacional e nunca foi reavaliado para dev agent que explora antes de
-> agir. Segue como hipótese, não como conclusão — provar exige outra execução.
+> **O teto ERA a causa.** Com `TOOL_LOOP_MAX_ITERATIONS=25` o dev agent
+> explorou, escreveu TRÊS arquivos e rodou `npm test` — e parou em
+> `dev.awaiting_approval`, não em bloqueio. O teto de 8 nasceu para agente
+> conversacional e não cabe num dev agent que precisa entender o repositório
+> antes de agir (`apps/engine/config/runtime.exs:100`).
+>
+> O X deixa de ser "queima o teto explorando" e vira **"o teto é o errado para
+> este agente"**. O conserto de produto NÃO é subir o default global — o
+> Criativo não precisa de 25 iterações para conversar. É um teto por tipo de
+> agente, e isso é decisão de produto: fica na triagem.
+
+### Z. O allowlist de terminal governa o VERBO; o escopo protege só o CAMINHO
+
+Com o teto resolvido, a execução passou a parar em aprovação de terminal. O
+pedido de 2026-08-06 foi *"permita sempre comandos desde que seja na pasta do
+projeto"*; o ADR 0055 entregou um TETO (fora da pasta nunca auto-aprova), e o
+verbo continua governado por lista fechada.
+
+Liberar `npm`/`pnpm`/`node`/`npx` não bastou: o agente rodou `ls -la`. Cada
+verbo novo cai em `require_approval`.
+
+Não é defeito do ADR 0055, que nunca prometeu promover verbo — é a lacuna
+entre o que foi pedido e o que foi entregue, e ela mantém a escada de pé.
 
 ### Funcionou como projetado (registrar também)
 
