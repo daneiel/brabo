@@ -105,17 +105,17 @@ defmodule Engine.Gates.QaAutomacaoAgentTest do
     assert info.origin == "modelo"
   end
 
-  test "ação pendente é origem POLITICA, não infra (achado AB)", %{
+  test "ação pendente SUSPENDE o laço em vez de falhar (achado AB)", %{
     dev_state: dev_state,
     dev_context: dev_context
   } do
     # O caso real da 6ª execução da FASE 13b: o agente rodou
-    # `ls -la && find … | head -50`. `head` não estava no `allow`, e comando
-    # composto só é auto-aprovado quando TODO segmento está liberado — a regra
-    # está certa. O ToolLoop suspendeu em `awaiting_approval`.
+    # `ls -la && find … | head -50`, comando composto com um segmento fora do
+    # `allow`. O ToolLoop suspendeu esperando decisão.
     #
-    # O defeito era o que se fazia com isso: caía no catch-all e virava
-    # `origin: infra`, culpando a infraestrutura por uma decisão pendente.
+    # Antes isto caía no catch-all e virava `{:blocked, origin: infra}` — o
+    # gate morria e a task era bloqueada por uma decisão que ninguém tinha
+    # tomado. Agora devolve o suficiente para o Lead RETOMAR.
     Process.put(:fake_propose_action, %{"id" => "pa-99", "status" => "pending"})
 
     Process.put(:fake_llm_turns, [
@@ -124,15 +124,48 @@ defmodule Engine.Gates.QaAutomacaoAgentTest do
       })
     ])
 
-    assert {:blocked, %{diagnosis: diagnosis, origin: origin}} =
-             run(dev_state, dev_context)
+    assert {:awaiting, pendente} = run(dev_state, dev_context)
 
-    # A origem é a verdade: ninguém decidiu ainda. Nada quebrou.
-    assert origin == "politica"
-    # E o diagnóstico nomeia a ação, para que dê para decidi-la.
-    assert diagnosis =~ "pendente de aprovação"
-    assert diagnosis =~ "pa-99"
-    assert diagnosis =~ "terminal"
+    assert pendente.action_id == "pa-99"
+    assert pendente.tool_name == "terminal"
+    # O histórico inteiro viaja junto — é o que torna a retomada possível.
+    assert is_list(pendente.ctx.messages)
+    assert pendente.ctx.messages != []
+
+    # E NADA foi decidido: sem veredito, sem bloqueio de task.
+    refute_received {:gate_verdict_recorded, _, _, _, _, _, _}
+    refute_received {:task_blocked, _, _, _, _}
+  end
+
+  test "retomar continua do ponto em que parou e conclui o parecer", %{
+    dev_state: dev_state,
+    dev_context: dev_context
+  } do
+    Process.put(:fake_propose_action, %{"id" => "pa-99", "status" => "pending"})
+
+    Process.put(:fake_llm_turns, [
+      FakeEngineApiClient.tool_call_response("terminal", %{"command" => "npm test"})
+    ])
+
+    assert {:awaiting, pendente} = run(dev_state, dev_context)
+
+    # A decisão chega: o resultado REAL entra no lugar onde estava "pending",
+    # e o modelo então emite o parecer.
+    Process.put(:fake_propose_action, nil)
+
+    Process.put(:fake_llm_turns, [
+      FakeEngineApiClient.tool_call_response("emit_qa_verdict", %{
+        "veredito" => "approved",
+        "resumo" => "suite verde",
+        "itens" => [],
+        "coverageMatrix" => []
+      })
+    ])
+
+    assert {:ok, parecer} =
+             Engine.Gates.QaAutomacaoAgent.retomar(pendente, "exit 0\n", "task-1")
+
+    assert parecer.veredito == "approved"
   end
 
   test "não conclui -> {:blocked, ...} com origem, sem chamar a api", %{

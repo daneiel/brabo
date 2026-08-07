@@ -25,7 +25,9 @@ defmodule Engine.Gates.QaLeadServer do
 
   use GenServer, restart: :temporary
 
-  alias Engine.Dev.{ContextBuilder, DevAgentServer, DevAgentState}
+  @subagentes ["qa-automacao", "qa-performance-seguranca"]
+
+  alias Engine.Dev.{ContextBuilder, DevAgentServer, DevAgentState, Wake}
   alias Engine.Gates.{Dispatcher, QaAutomacaoAgent, QaLead, QaPerformanceSegurancaAgent}
   alias Engine.Harness.ArtifactEmitter
   alias Engine.Sessions.EngineApiClient
@@ -40,19 +42,47 @@ defmodule Engine.Gates.QaLeadServer do
   def run(project_id, task_id), do: GenServer.cast(via(project_id), {:run, task_id})
 
   @impl true
-  def init(project_id), do: {:ok, %{project_id: project_id}}
+  def init(project_id) do
+    # Assina pelos SUBAGENTES, não por "qa": `task.action_settled` chega
+    # chaveado pelo ator que PROPÔS a ação (`acao.actor.id`), e quem propõe é
+    # a subespecialidade que está rodando o laço.
+    for sub <- @subagentes, do: :ok = Wake.subscribe(project_id, sub)
+
+    {:ok, %{project_id: project_id, pendente: nil}}
+  end
 
   @impl true
   def handle_cast({:run, task_id}, state) do
     case DevAgentState.find_by_task_id(state.project_id, task_id) do
-      nil -> :ok
-      dev_state -> run_area(state.project_id, dev_state, task_id)
+      nil -> {:noreply, state}
+      dev_state -> {:noreply, run_area(state, dev_state, task_id)}
     end
-
-    {:noreply, state}
   end
 
-  defp run_area(project_id, dev_state, task_id) do
+  # A decisão que segurava o laço de um subagente chegou (ADR 0052, agora
+  # também para gates). Retoma DAQUELE subagente de onde parou e segue a área
+  # do ponto em que ela havia parado — as delegações já registradas e os
+  # resultados já colhidos continuam valendo.
+  @impl true
+  def handle_info(
+        {:action_settled, %{action_id: action_id} = desfecho},
+        %{pendente: %{action_id: action_id} = p} = state
+      ) do
+    resultado = agente(p.delegacao.subagent).retomar(p, texto_do_desfecho(desfecho), p.task_id)
+
+    state = %{state | pendente: nil}
+
+    {:noreply,
+     continuar_area(state, p.em_voo, [{p.delegacao, resultado} | p.colhidos], p.restantes)}
+  end
+
+  # Desfecho de OUTRA ação, ou o lead já não está esperando: ignora em vez de
+  # derrubar. A entrega é por agente, e nada garante que só chegue o esperado.
+  def handle_info({:action_settled, _}, state), do: {:noreply, state}
+  def handle_info(_msg, state), do: {:noreply, state}
+
+  defp run_area(state, dev_state, task_id) do
+    project_id = state.project_id
     session_id = dev_state.session_id
 
     case ContextBuilder.fetch(project_id, session_id, task_id) do
@@ -60,20 +90,87 @@ defmodule Engine.Gates.QaLeadServer do
         delegacoes = decidir_delegacoes(dev_context.story)
         registrar_dispensas(project_id, session_id, task_id, delegacoes)
 
-        resultados =
-          rodar_ativas(project_id, session_id, task_id, dev_state, dev_context, delegacoes)
+        emVoo = %{
+          project_id: project_id,
+          session_id: session_id,
+          task_id: task_id,
+          dev_state: dev_state,
+          dev_context: dev_context
+        }
 
-        registrar_resultados(project_id, session_id, task_id, resultados)
-
-        resultados
-        |> Enum.map(fn {d, resultado} -> {d.label, resultado} end)
-        |> QaLead.consolidar()
-        |> aplicar(project_id, dev_state, task_id)
+        continuar_area(state, emVoo, [], Enum.filter(delegacoes, & &1.ativo))
 
       {:error, _reason} ->
-        :ok
+        state
     end
   end
+
+  # Roda as delegações restantes UMA A UMA. Se alguma suspender esperando
+  # aprovação, o estado em voo é guardado e a área PARA — sem consolidar, sem
+  # bloquear a task. O que retoma é `{:action_settled, ...}`.
+  #
+  # Antes isto era um `Enum.map` que não tinha como parar no meio: a suspensão
+  # caía no catch-all do subagente, virava `origin: infra` e a task era
+  # bloqueada por uma decisão que ninguém tinha tomado (achado AB).
+  defp continuar_area(state, emVoo, colhidos, restantes) do
+    case restantes do
+      [] ->
+        finalizar_area(state, emVoo, Enum.reverse(colhidos))
+
+      [d | resto] ->
+        case agente(d.subagent).run(
+               emVoo.project_id,
+               emVoo.session_id,
+               emVoo.task_id,
+               emVoo.dev_state,
+               emVoo.dev_context
+             ) do
+          {:awaiting, pendente} ->
+            %{
+              state
+              | pendente:
+                  Map.merge(pendente, %{
+                    delegacao: d,
+                    colhidos: colhidos,
+                    restantes: resto,
+                    task_id: emVoo.task_id,
+                    em_voo: emVoo
+                  })
+            }
+
+          resultado ->
+            continuar_area(state, emVoo, [{d, resultado} | colhidos], resto)
+        end
+    end
+  end
+
+  defp finalizar_area(state, emVoo, resultados) do
+    registrar_resultados(emVoo.project_id, emVoo.session_id, emVoo.task_id, resultados)
+
+    resultados
+    |> Enum.map(fn {d, resultado} -> {d.label, resultado} end)
+    |> QaLead.consolidar()
+    |> aplicar(emVoo.project_id, emVoo.dev_state, emVoo.task_id)
+
+    state
+  end
+
+  # Mesma tradução do `DevAgentServer`: o desfecho vira o texto que entra no
+  # lugar onde estaria a palavra "pending". Recusa é RESPOSTA, não silêncio.
+  defp texto_do_desfecho(%{status: "executed", execution_result: %{} = exec}) do
+    "exit #{Map.get(exec, "exitCode", "?")}\n#{Map.get(exec, "stdout", "")}"
+  end
+
+  defp texto_do_desfecho(%{status: "failed", execution_result: %{} = exec}) do
+    "falhou: #{Map.get(exec, "stderr", "")}#{Map.get(exec, "stdout", "")}"
+  end
+
+  defp texto_do_desfecho(%{status: "denied"} = desfecho) do
+    motivo = Map.get(desfecho, :rejection_reason) || "sem motivo informado"
+    "recusado pelo usuário: #{motivo}"
+  end
+
+  defp texto_do_desfecho(%{status: status}), do: "desfecho da ação: #{status}"
 
   # Automação sempre; Performance/Segurança só com RNF pertinente — e a
   # decisão SEMPRE vira registro, dispensada ou não (nunca silêncio, ver
@@ -127,14 +224,6 @@ defmodule Engine.Gates.QaLeadServer do
   # A ORDEM da lista de entrada (Automação primeiro) é a mesma que
   # `QaLead.consolidar/1` usa pra priorizar qual falha reportar quando mais de
   # uma delegação bloqueia.
-  defp rodar_ativas(project_id, session_id, task_id, dev_state, dev_context, delegacoes) do
-    delegacoes
-    |> Enum.filter(& &1.ativo)
-    |> Enum.map(fn d ->
-      {d, agente(d.subagent).run(project_id, session_id, task_id, dev_state, dev_context)}
-    end)
-  end
-
   defp agente("qa-automacao"), do: QaAutomacaoAgent
   defp agente("qa-performance-seguranca"), do: QaPerformanceSegurancaAgent
 
