@@ -540,6 +540,20 @@ funciona — o que falta é o lead saber que "esperando você decidir" não é f
 
 ### AC. Redirecionamento (`2>/dev/null`) torna qualquer comando inaprovável (P1)
 
+> **FECHADO nas duas peças.**
+>
+> 1. `parseCommand` deixou de tratar `>`/`>>`/`<` como separador — eles não
+>    encadeiam comando nenhum. O alvo continua como TOKEN do segmento, de
+>    propósito: é assim que `echo x > /etc/passwd` segue barrado pelo teto de
+>    escopo. O verbo ficou correto sem o caminho ficar livre.
+> 2. `/dev/null`, `/dev/stdin`, `/dev/stdout` e `/dev/stderr` deixaram de
+>    contar como caminho de usuário. A lista é essa e **não** `/dev` inteiro —
+>    há teste afirmando que `/dev/sda` continua fora do escopo, porque liberar
+>    `/dev` trocaria um incômodo por um buraco.
+>
+> Verificado por mutação nos dois sentidos: afrouxar `/dev` derruba o teste do
+> disco, e desligar o encadeamento derruba 11 testes.
+
 Achado na 7ª execução da 13b, depois de ampliar o allowlist com 25 verbos. O
 agente de QA rodou:
 

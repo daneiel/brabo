@@ -13,6 +13,18 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **api**: comando com redirecionamento deixa de exigir aprovação sempre.
+  `2>/dev/null` é idioma — modelos o usam o tempo todo para silenciar erro
+  esperado —, mas o parser tratava `>` como se encadeasse um comando novo, e o
+  alvo virava um segmento cujo "verbo" era o próprio caminho. Como comando
+  composto só é auto-aprovado quando todo segmento está liberado, qualquer
+  redirecionamento caía em aprovação, e a autonomia ficava inútil na prática.
+  Agora `>`, `>>` e `<` não quebram segmento, e os fluxos padrão e o
+  `/dev/null` deixam de contar como caminho de usuário. **O que não mudou:**
+  redirecionar para fora da pasta do projeto continua barrado, `/dev` não foi
+  liberado inteiro, e `&&`, `|` e `;` continuam separando — cada uma dessas
+  três garantias tem teste próprio
+
 - **engine**: um agente de gate que esbarra numa ação pendente de aprovação
   deixa de registrar "falha de infraestrutura". Nada quebrou — a decisão apenas
   não foi tomada, e o log agora diz isso, nomeando a ação e a ferramenta para

