@@ -159,6 +159,63 @@ defmodule Engine.Dev.NoopDevAgentServer do
 
   def handle_info(:rearm, state), do: {:noreply, state}
 
+  # --- `task.pr_settled` (Fase 12e) ---
+  #
+  # As MESMAS três cláusulas do agente real, e pelo mesmo motivo. O Noop não
+  # tinha nenhuma: a mensagem chegava, o `handle_info/2` estourava
+  # `FunctionClauseError` e o processo morria — `restart: :temporary`, então
+  # para sempre, com o `Monitor` apagando o estado logo atrás. A validação da
+  # Fase 12 parava na 2ª task sem dizer por quê.
+  #
+  # O caso que derrubava era `opened: true` com o agente já em
+  # `:awaiting_gate`: no agente real ele cai no catch-all e é IGNORADO, porque
+  # o gate já foi aberto na hora da PR.
+
+  # A PR estava pendente de aprovação e foi aprovada: agora há o que julgar.
+  def handle_info(
+        {:pr_settled, %{task_id: task_id, opened: true}},
+        %{task_id: task_id, status: :awaiting_approval} = state
+      ) do
+    abrir_gate(state, task_id)
+
+    state = %{state | status: :awaiting_gate}
+    AgentIo.persist(state)
+
+    AgentIo.emit(state, "dev.awaiting_gate", %{agentId: state.agent_id, taskId: task_id})
+
+    {:noreply, state}
+  end
+
+  # Negada, ou a abertura falhou. Devolve com diagnóstico em vez de esperar
+  # para sempre por um gate que ninguém vai abrir. Origem `politica`: foi uma
+  # DECISÃO, nada quebrou.
+  def handle_info(
+        {:pr_settled, %{task_id: task_id, opened: false}},
+        %{task_id: task_id, status: :awaiting_approval} = state
+      ) do
+    state =
+      AgentIo.block_task(
+        state,
+        "a PR não foi aberta",
+        "as ações git da task não foram aprovadas — o trabalho ficou no worktree e o gate nunca abriu",
+        "politica"
+      )
+
+    {:noreply,
+     state
+     |> Map.merge(%{task_id: nil, worktree: nil, branch: nil})
+     |> try_claim()}
+  end
+
+  def handle_info({:pr_settled, _}, state), do: {:noreply, state}
+
+  defp abrir_gate(state, task_id) do
+    # Sem o `Dispatcher.run_qa/2` do agente real: na validação quem emite o
+    # veredito é o script, pelo `RecordGateVerdict` (ADR 0020).
+    _ = EngineApiClient.open_gate(state.project_id, state.session_id, task_id, state.agent_id)
+    :ok
+  end
+
   defp desfecho("done"), do: :approved
   defp desfecho(:done), do: :approved
   defp desfecho(_), do: :blocked
@@ -236,15 +293,7 @@ defmodule Engine.Dev.NoopDevAgentServer do
         # O que NÃO vem junto é o `Dispatcher.run_qa/2` do agente real: quem
         # emite o veredito na validação é o script, pelo `RecordGateVerdict`,
         # justamente para não depender de julgamento de LLM (ADR 0020).
-        if status == :awaiting_gate do
-          _ =
-            EngineApiClient.open_gate(
-              state.project_id,
-              state.session_id,
-              task_id,
-              state.agent_id
-            )
-        end
+        if status == :awaiting_gate, do: abrir_gate(state, task_id)
 
         state = %{state | status: status}
         AgentIo.persist(state)
