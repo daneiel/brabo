@@ -304,5 +304,4 @@ defmodule Engine.Harness.ToolLoop.Default do
 
   defp stringify(reason) when is_binary(reason), do: reason
   defp stringify(reason), do: inspect(reason)
-
 end
