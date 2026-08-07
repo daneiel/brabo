@@ -75,9 +75,10 @@ defmodule Engine.Harness.IteracoesTest do
       anterior = Application.get_env(:engine, :tool_loop_max_iterations)
       Application.put_env(:engine, :tool_loop_max_iterations, 3)
 
-      on_exit(fn ->
-        Application.put_env(:engine, :tool_loop_max_iterations, anterior)
-      end)
+      # `put_env(..., nil)` NÃO restaura: a chave passa a existir valendo `nil`,
+      # e `get_env/3` devolve `nil` em vez do default. Isso vazava para os
+      # outros testes conforme a ordem do seed.
+      on_exit(fn -> restaurar(:tool_loop_max_iterations, anterior) end)
 
       assert Iteracoes.teto("criativo") == 3
     end
@@ -86,12 +87,14 @@ defmodule Engine.Harness.IteracoesTest do
       anterior = Application.get_env(:engine, :tool_loop_max_iterations_execucao)
       Application.put_env(:engine, :tool_loop_max_iterations_execucao, 99)
 
-      on_exit(fn ->
-        Application.put_env(:engine, :tool_loop_max_iterations_execucao, anterior)
-      end)
+      on_exit(fn -> restaurar(:tool_loop_max_iterations_execucao, anterior) end)
 
       assert Iteracoes.teto("dev-api") == 99
       assert Iteracoes.teto("criativo") == 8
     end
   end
+
+  # Sem valor anterior, a chave tem de SUMIR — não voltar existindo como `nil`.
+  defp restaurar(chave, nil), do: Application.delete_env(:engine, chave)
+  defp restaurar(chave, valor), do: Application.put_env(:engine, chave, valor)
 end
