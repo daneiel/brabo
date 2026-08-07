@@ -1588,6 +1588,42 @@ reimplementado.
   (`pr_open` auto-aprovado, com `decidedBy: null`, pede a credencial do owner)
 - **Origem:** achado AA, [validação real da 13b](explanation/validacao-real.md)
 
+### RN-083 — O lead decide o paralelismo; acima do teto, você autoriza {#rn-083}
+
+Quantos agentes sobem deixa de ser um número no código: quem avalia é o **lead
+da área**. Mas a decisão dele não é soberana sobre GASTO — até
+`agent_areas.max_parallel` (default **2**) ele sobe e segue; **acima disso vira
+`proposed_action` do tipo `parallelize`**, pelo mesmo pipeline de toda ação com
+efeito externo.
+
+**O teto é da SESSÃO, não do módulo.** É a única parte da regra que não é
+óbvia, e a que um refactor desatento desfaz: contar por módulo permitiria N
+módulos × 2 agentes sem autorização nenhuma — o buraco anterior com outro nome.
+Há teste afirmando exatamente isso.
+
+**Teto zero ou negativo é configuração inválida, não "sem limite".** Tratá-lo
+como ilimitado transformaria um erro de digitação em gasto irrestrito, que é o
+oposto do que o pipeline existe para fazer.
+
+**Quem PEDE é o lead; quem DECIDE é você.** A `proposed_action` nasce com o
+lead como ator, e a decisão fica no event log com o seu nome — é essa distinção
+que faz a história ser reconstituível depois ([ADR 0048](adr/0048-decisao-no-log-e-a-ordem-do-gate.md)).
+
+O motivo viaja no payload IMUTÁVEL, com os três números (quantos há, quantos
+pede, qual o teto): quem ler daqui a seis meses precisa entender o que foi
+autorizado sem reconstruir o estado da sessão.
+
+`AcceptParallelizationUseCase` não muda: ele continua sendo quem EXECUTA, tanto
+no caminho direto quanto quando a ação é aprovada. Absorvê-lo por dentro, em vez
+de reescrevê-lo, é o que mantém a suite da Fase 4 verde sem modificação — que é
+a prova de que a troca não vazou para o contrato externo.
+
+- **Onde:** `apps/api/src/domain/execution/paralelismo.ts` (a regra pura),
+  `application/use-cases/execution/request-parallelization.use-case.ts`
+- **Teste:** `apps/api/test/domain/execution/paralelismo.spec.ts` e
+  `test/application/use-cases/execution/request-parallelization.use-case.spec.ts`
+- **Origem:** [ADR 0053](adr/0053-dev-lead-e-paralelismo-autorizado.md), FASE 14d
+
 ### RN-084 — A esteira exibida deriva do registro de gates {#rn-084}
 
 O painel do time mostra a etapa em que uma PR está **derivando-a de

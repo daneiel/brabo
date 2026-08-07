@@ -356,6 +356,8 @@ erDiagram
   epics ||--o{ stories : ""
   stories ||--o{ tasks : ""
   tasks |o--o{ delegations : "área de QA (8b) / Infra (8c, task_id nullable)"
+  projects ||--o{ agent_areas : "área por projeto (14d)"
+  agent_areas ||--o{ agent_area_members : compõe
   projects ||--o{ budgets : limita
   sessions ||--o{ token_usage : mede
   projects ||--o{ agent_instructions : configura
@@ -364,7 +366,7 @@ erDiagram
   psychologist_analyses ||--o{ psychologist_hypotheses : produz
 ```
 
-36 tabelas no total. **As constraints são regra de negócio**: a unique
+44 tabelas no total. **As constraints são regra de negócio**: a unique
 `(session_id, seq)` do event log, o `check` que exige exatamente um escopo em
 `budgets` (projeto **ou** sessão, nunca os dois), os índices parciais que
 garantem idempotência das análises — e, desde a Fase 8b, os três `check` de
@@ -374,6 +376,15 @@ garantem idempotência das análises — e, desde a Fase 8b, os três `check` de
 task_id` nasceu `NOT NULL` e virou nullable na Fase 8c — a área de Infra
 delega sobre a sessão, sem task de backlog por trás de uma PR de infra (ver
 [RN-037](business-rules.md#rn-037)).
+
+`agent_areas` (FASE 14d, [ADR 0053](adr/0053-dev-lead-e-paralelismo-autorizado.md))
+é o que a Fase 8 tinha cortado. Voltou porque a área de **dev** não é
+enumerável em código: `qa` e `infra` cabiam numa lista fixa, mas os membros de
+dev são um por módulo do `module_map`, decididos pelo Arquiteto e diferentes em
+cada projeto. A unique `(project_id, key)` é o que faz o seeding ser
+idempotente, e `max_parallel` (default 2) é o teto que o lead usa sem
+perguntar — acima dele, `proposed_action`
+(ver [RN-083](business-rules.md#rn-083)).
 
 **Migrations:** Drizzle na api (`src/db/migrations/`, aplicadas por um Job
 one-shot — réplicas **não** migram no boot, senão competem pela mesma
