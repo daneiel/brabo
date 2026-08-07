@@ -1324,6 +1324,14 @@ reprovado, mas link simbólico de dentro apontando para fora não é detectado.
 `decide()` é puro por contrato e resolver symlink exigiria IO no domínio.
 Escopo é política; isolamento é outro problema, declarado em aberto no ADR.
 
+**Sem regex sobre a entrada, de propósito.** Tirar as barras finais da raiz era
+`.replace(/\/+$/, '')`, e o CodeQL apontou ReDoS polinomial
+(`js/polynomial-redos`, HIGH): o padrão obriga o motor a tentar cada posição
+inicial e varrer até o fim, degradando em O(n²). Hoje é varredura O(n),
+equivalente inclusive no caso degenerado — a raiz `/` vira string vazia nos
+dois, e é isso que faz `startsWith('/')` valer para todo caminho absoluto.
+Quem for "simplificar" de volta para regex reabre o alerta.
+
 - **Onde:** `apps/api/src/domain/actions/path-scope.ts`,
   `domain/actions/decide.ts` (teto do escopo e o `cd` no escopo),
   raiz derivada em

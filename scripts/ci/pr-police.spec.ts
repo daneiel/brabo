@@ -64,12 +64,29 @@ describe('formato do nome', () => {
     expect(avaliarPr(pr({ head })).ok).toBe(false);
   });
 
-  it('reprova função com 16 caracteres e aceita com 15', () => {
-    expect(avaliarPr(pr({ head: `${'a'.repeat(16)}/b` })).ok).toBe(false);
-    // 15 caracteres passa o regex, mas cai na lista fechada — o importante é
-    // que a violação seja de FUNÇÃO, não de formato.
-    const v = avaliarPr(pr({ head: `${'a'.repeat(15)}/b` }));
+  it('reprova função com 31 caracteres e aceita com 30', () => {
+    expect(avaliarPr(pr({ head: `${'a'.repeat(31)}/b` })).ok).toBe(false);
+    // 30 caracteres passam o regex, mas caem na lista fechada — o importante
+    // é que a violação seja de FUNÇÃO, não de formato. O teto de comprimento
+    // é secundário: quem decide o que é função válida é a lista.
+    const v = avaliarPr(pr({ head: `${'a'.repeat(30)}/b` }));
     expect(v.violacoes[0]!.codigo).toBe('FUNCAO-DESCONHECIDA');
+  });
+
+  it('as funções da taxonomia continuam cabendo com folga', () => {
+    // A maior é `refactor`, com 8. O teto existe para barrar lixo, não para
+    // apertar a lista — subir de 15 para 30 não muda nada para elas.
+    //
+    // Afirma só o que este teste é sobre: nenhuma delas reprova por FORMATO
+    // nem por FUNÇÃO. Origem e destino são outra regra (`hotfix` nasce de
+    // `main`, por exemplo), e cobrá-las aqui misturaria os assuntos.
+    for (const f of ['breaking', 'feature', 'bugfix', 'refactor', 'hotfix']) {
+      const codigos = avaliarPr(pr({ head: `${f}/descritivo` })).violacoes.map(
+        (v) => v.codigo,
+      );
+      expect(codigos).not.toContain('NOME-FORA-DO-FORMATO');
+      expect(codigos).not.toContain('FUNCAO-DESCONHECIDA');
+    }
   });
 
   it('reprova descritivo com 33 caracteres e aceita com 32', () => {

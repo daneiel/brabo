@@ -279,7 +279,7 @@ duras do produto.
   Trabalho nasce de dev com a taxonomia da política (breaking/,
   feature/, bugfix/, perf/, refactor/, chore/, docs/, test/);
   hotfix/ nasce de main. Formato funcao/descritivo,
-  regex ^.{0,15}/\S{0,32}$. Commits em conventional commits, pt-BR.
+  regex ^.{0,30}/\S{0,32}$. Commits em conventional commits, pt-BR.
 - Toda mudança entra por PR — push direto em permanente é bloqueado;
   únicas exceções de push: tags (bot de release) e .release/gate.json
   (bot do gate).
