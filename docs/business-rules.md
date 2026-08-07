@@ -1618,10 +1618,29 @@ no caminho direto quanto quando a ação é aprovada. Absorvê-lo por dentro, em
 de reescrevê-lo, é o que mantém a suite da Fase 4 verde sem modificação — que é
 a prova de que a troca não vazou para o contrato externo.
 
+**O teto é configurável por área, e só por você.** `PATCH
+/projects/:projectId/agent-areas/:key/max-parallel` exige `maintainer` — o mesmo
+papel de ativar a execução, e pelo mesmo motivo: mudar o teto é decidir quanto o
+produto pode gastar sem perguntar. Não existe caminho automático de subi-lo. A
+Anamnese pode PROPOR, quando notar que a autorização virou rotina, e a proposta
+continua passando por esta rota depois que você aceita — um produto que eleva o
+próprio teto de gasto é exatamente o que o pipeline de aprovação existe para
+impedir.
+
+Mudar o teto vale para os PRÓXIMOS pedidos. O que já está aguardando decisão
+continua aguardando: a ação carrega no payload o teto vigente quando foi criada,
+e reinterpretá-la sob o teto novo mudaria o que você está prestes a decidir
+depois de ler.
+
 - **Onde:** `apps/api/src/domain/execution/paralelismo.ts` (a regra pura),
-  `application/use-cases/execution/request-parallelization.use-case.ts`
-- **Teste:** `apps/api/test/domain/execution/paralelismo.spec.ts` e
-  `test/application/use-cases/execution/request-parallelization.use-case.spec.ts`
+  `application/use-cases/execution/request-parallelization.use-case.ts`,
+  `application/use-cases/execution/set-area-max-parallel.use-case.ts`,
+  exposto em `interfaces/http/execution/execution.controller.ts` e configurado
+  em `apps/web/src/routes/ProjectSettingsTab.tsx` (`ParallelismSection`)
+- **Teste:** `apps/api/test/domain/execution/paralelismo.spec.ts`,
+  `test/application/use-cases/execution/request-parallelization.use-case.spec.ts`,
+  `test/application/use-cases/execution/set-area-max-parallel.use-case.spec.ts`
+  e `apps/web/src/routes/ProjectSettingsTab.test.tsx` (`ParallelismSection`)
 - **Origem:** [ADR 0053](adr/0053-dev-lead-e-paralelismo-autorizado.md), FASE 14d
 
 ### RN-084 — A esteira exibida deriva do registro de gates {#rn-084}

@@ -6,6 +6,15 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api,web**: o teto de agentes de cada área virou configurável em
+  Configurações, e — mais importante — passou a valer de verdade. A regra do
+  teto tinha entrado antes, mas nenhuma tela a consultava: o botão de subir mais
+  um agente ainda ia direto, sem passar por ela. Agora o pedido passa, e quando
+  ele estoura o teto a tela diz que **nada subiu** e que a decisão está
+  esperando você em Aprovações — antes ela teria dito que o agente entrou, e
+  você só descobriria que não pelo trabalho que não anda
+
+
 - **api,web**: a esteira de gates no painel deixa de repetir a lista de etapas
   e passa a derivá-la do registro. O ganho não é visual: gate que sai do
   registro sai da tela sozinho — antes, desativar um deixava uma etapa morta

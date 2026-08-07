@@ -232,6 +232,8 @@ o componente `d` da JWK, travado por teste.
 | GET | `/projects/:projectId/backlog` | role:viewer |
 | GET | `/projects/:projectId/budget` | role:maintainer |
 | PUT | `/projects/:projectId/budget` | role:maintainer |
+| GET | `/projects/:projectId/agent-areas` | role:developer |
+| PATCH | `/projects/:projectId/agent-areas/:key/max-parallel` | role:maintainer |
 | GET | `/projects/:projectId/coverage` | role:viewer |
 | GET | `/projects/:projectId/events/:eventId` | role:viewer |
 | POST | `/projects/:projectId/execution/activate` | role:maintainer |
