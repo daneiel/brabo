@@ -97,7 +97,18 @@ config :engine,
   # pendurado congela o gate do projeto (ver Engine.Gates.Scanner).
   secops_scan_timeout_ms: String.to_integer(System.get_env("SECOPS_SCAN_TIMEOUT_MS", "180000")),
   # Harness — ToolLoop / ContextManager (Fase 3a, sessão 2).
+  #
+  # O teto é POR TIPO DE AGENTE desde a FASE 14d (achado X): `8` é o do agente
+  # CONVERSACIONAL, e quem trabalha com ferramenta pesada tem o seu. A chave
+  # antiga continua sendo a do conversacional de propósito — quem já ajustava
+  # o teto global não tem o ajuste ignorado em silêncio.
+  # Quem pode subir e por quê está em `Engine.Harness.Iteracoes`: só sobe quem
+  # tem `token_budget_micros` por baixo segurando o gasto.
   tool_loop_max_iterations: String.to_integer(System.get_env("TOOL_LOOP_MAX_ITERATIONS", "8")),
+  tool_loop_max_iterations_execucao:
+    String.to_integer(System.get_env("TOOL_LOOP_MAX_ITERATIONS_EXECUCAO", "60")),
+  tool_loop_max_iterations_gate:
+    String.to_integer(System.get_env("TOOL_LOOP_MAX_ITERATIONS_GATE", "60")),
   # Um turno de LLM não é uma chamada de API comum: com modelo local o
   # PRIMEIRO turno ainda carrega os pesos na memória antes do primeiro token.
   # No default do Req isso estoura e a task morre bloqueada sem diagnóstico.

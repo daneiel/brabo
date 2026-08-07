@@ -60,6 +60,7 @@ defmodule Engine.Harness.ToolLoop.Default do
   }
 
   alias Engine.Harness.Hooks.{ActionPipeline, EventLog}
+  alias Engine.Harness.Iteracoes
   alias Engine.Sessions.EngineApiClient
   alias Engine.Telemetry.Span
 
@@ -85,7 +86,7 @@ defmodule Engine.Harness.ToolLoop.Default do
     ctx =
       ctx
       |> Map.put_new(:iteration, 0)
-      |> Map.put_new(:max_iterations, default_max_iterations())
+      |> Map.put_new(:max_iterations, Iteracoes.teto(Map.get(ctx, :agent)))
       |> Map.put_new(:tokens_spent_micros, 0)
       |> Map.put_new(:token_budget_micros, nil)
       |> Map.put_new(:hooks, default_hooks())
@@ -304,6 +305,4 @@ defmodule Engine.Harness.ToolLoop.Default do
   defp stringify(reason) when is_binary(reason), do: reason
   defp stringify(reason), do: inspect(reason)
 
-  defp default_max_iterations,
-    do: Application.get_env(:engine, :tool_loop_max_iterations, 8)
 end

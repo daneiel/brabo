@@ -193,7 +193,9 @@ possível sem downtime ([RN-035](../business-rules.md#rn-035)).
 
 | variável | default | nota |
 |---|---|---|
-| `TOOL_LOOP_MAX_ITERATIONS` | `8` | teto de voltas do laço de ferramenta. Esgotado, o agente encerra com artefato de bloqueio |
+| `TOOL_LOOP_MAX_ITERATIONS` | `8` | teto de voltas do laço para o agente **conversacional**. Esgotado, o agente encerra com artefato de bloqueio |
+| `TOOL_LOOP_MAX_ITERATIONS_EXECUCAO` | `60` | teto dos **dev agents**. Maior porque eles exploram o repositório antes de escrever — e porque o `task_budget_micros` segura o gasto por baixo |
+| `TOOL_LOOP_MAX_ITERATIONS_GATE` | `60` | teto dos subagentes de **QA**, pelo mesmo motivo |
 | `DEFAULT_CONTEXT_WINDOW` | `8192` | usado quando o modelo não declara a janela |
 | `CONTEXT_COMPACTION_THRESHOLD` | `0.7` | fração da janela que dispara compactação |
 | `LLM_TURN_TIMEOUT_MS` | `300000` | 5 min por turno |
