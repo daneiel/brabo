@@ -13,6 +13,28 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **engine**: o dev agent **morria** quando a fila do módulo esvaziava, em vez
+  de ficar ocioso. Com nada a reivindicar, a rota de claim responde `201` sem
+  corpo — o caso de uso devolve `null`, mas isso vira resposta vazia, e o
+  cliente entregava `""` no lugar de `nil`. O agente tratava a string vazia
+  como se fosse uma task e estourava, e como o processo não é reiniciável, ele
+  morria de vez, com o estado apagado logo atrás. É o oposto do que a Fase 12b
+  entregou: em vez de um agente ocioso, supervisionado e acordável por evento,
+  processo morto — e no desfecho mais comum que existe, o da fila acabando.
+  Nenhum teste pegava porque o dublê da suite devolvia o valor certo; só
+  execução real expôs
+
+- **engine**: o dev agent de validação (sem LLM) não abria o gate depois de
+  publicar a PR — marcava a tarefa como em revisão e parava aí, deixando o
+  gate sem nada para julgar. E morria ao receber o aviso de que a PR foi
+  resolvida, quando o gate já estava aberto. As duas coisas faziam a validação
+  da Fase 12 travar sem dizer por quê
+
+- **api**: o roteiro de validação da Fase 12 criava o repositório-cobaia num
+  diretório temporário local, invisível para o processo que precisa cloná-lo.
+  Passa a criá-lo no volume compartilhado, que é o pré-requisito que o próprio
+  roteiro já declarava, e limpa os restos das corridas anteriores
+
 - **web**: fixture do ModelPicker sem as facetas novas quebrava o build (00a23381)
 - **api,docs**: o DTO da resposta do teste de credencial e a contagem de ADR (5021192c)
 - **web**: corpo vazio da api e rolagem da lista de modelos (7be6b29d)

@@ -123,9 +123,12 @@ manual da Fase 10 nunca foi preenchida — nesta fase TODA métrica é
 extraída por script do event log/token_usage, nunca anotada à mão.
 
 ### 13a — Fechar as pendências declaradas
-1. Rodar `pnpm --filter api validacao:fase-12` e preencher a tabela de
-   event ids em docs/explanation/validacao-fase-12.md (o TODO(humano)
-   do próprio arquivo sai).
+1. CONCLUÍDO em 2026-08-07: `pnpm --filter api validacao:fase-12` sai `0`
+   e a tabela de event ids está em docs/explanation/validacao-fase-12.md
+   (o TODO(humano) saiu). Custou quatro correções — três do INSTRUMENTO
+   (a cobaia nascia em /tmp, invisível ao engine; o Noop não abria o
+   gate; o Noop morria em `pr_settled`) e uma do PRODUTO (achado W: o
+   dev agent morria quando a fila esvaziava).
 2. Smokes com credencial real da Fase 11: rodar os que houver
    `<PROVIDER>_TEST_KEY` exportada (custo em centavos, autorização
    explícita do usuário antes); resultado datado — quais rodaram,
@@ -378,4 +381,10 @@ duras do produto.
   contexto sem teto impediam QUALQUER execução de chegar ao fim — a
   medição que a 13b pede não era alcançável sem isso. O congelamento
   segue valendo para o resto: as demais fases do backlog continuam
-  esperando decisão de prioridade
+  esperando decisão de prioridade.
+  SEGUNDA EXCEÇÃO, em 2026-08-07: o achado W (dev agent morria em vez de
+  ir para `idle` quando a fila do módulo esvaziava — corpo vazio no claim
+  virando `run_task("")`) foi corrigido durante a 13a.1, pelo mesmo
+  critério: o passo 5 da validação não fechava sem ele. As três outras
+  correções da mesma rodada são do INSTRUMENTO (o script e o Noop), não
+  do produto, e não precisavam de exceção

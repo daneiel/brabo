@@ -641,12 +641,31 @@ defmodule Engine.Sessions.EngineApiClient.Live do
 
   @impl true
   def claim_task(project_id, session_id, module, agent_id) do
-    # `null` (sem task pegável) volta como {:ok, nil} — não é erro.
-    post_returning("/internal/sessions/#{session_id}/tasks/claim", %{
-      projectId: project_id,
-      module: module,
-      agentId: agent_id
-    })
+    # Sem task pegável NÃO é erro — e não chega como `null`.
+    #
+    # O caso de uso devolve `null`, mas o NestJS serializa isso como resposta
+    # VAZIA: `201` com `content-length: 0`. O `Req` entrega `body: ""`, que não
+    # é `nil` — então `AgentIo.try_claim/2` casava com a cláusula de task
+    # encontrada e chamava `run_task("")`, estourando `BadMapError` em
+    # `Map.get("", "id", nil)`. Como o server é `restart: :temporary`, o agente
+    # morria de vez e o `Monitor` apagava a linha de estado logo atrás.
+    #
+    # O efeito é o oposto do que a Fase 12b entregou: em vez de `dev.idle`
+    # supervisionado e acordável por evento, processo morto — e no momento MAIS
+    # comum que existe, o da fila do módulo esvaziando. Vale para o dev agent
+    # REAL, não só para o Noop: `try_claim/2` mora no `AgentIo` compartilhado.
+    #
+    # Normalizado aqui, no consumidor, e não mudando o status HTTP da rota:
+    # corpo vazio é "nada pegável" venha de onde vier, e o contrato que outros
+    # consumidores observam fica intocado.
+    case post_returning("/internal/sessions/#{session_id}/tasks/claim", %{
+           projectId: project_id,
+           module: module,
+           agentId: agent_id
+         }) do
+      {:ok, corpo} when corpo in ["", nil] -> {:ok, nil}
+      outro -> outro
+    end
   end
 
   @impl true

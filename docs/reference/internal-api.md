@@ -269,6 +269,18 @@ agente" — ver [RN-037](../business-rules.md#rn-037)). **Não** é
 `tasks/claim` é atômico do lado da api — é o que impede dois dev agents de
 pegarem a mesma task.
 
+**Sem task pegável, a resposta é `201` com corpo VAZIO**, não `null` no corpo: o
+caso de uso devolve `null` e o NestJS serializa isso como `content-length: 0`.
+Quem consome precisa tratar corpo vazio como "nada a reivindicar" — e é
+justamente o que o `EngineApiClient.claim_task/4` faz, normalizando para `nil`
+antes de entregar ao `AgentIo`.
+
+Vale escrever porque a suposição contrária custou caro: o cliente assumia
+`null` decodificado, recebia `""`, e o dev agent tratava a string vazia como se
+fosse uma task — morrendo no momento mais comum que existe, o da fila do módulo
+esvaziando (achado W, em
+[achados-execucao-real.md](../explanation/achados-execucao-real.md)).
+
 ### Gates
 
 | método | caminho |
