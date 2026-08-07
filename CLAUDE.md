@@ -115,7 +115,7 @@ e pipeline de aprovação de ações com autoridade final do usuário.
   absorvidas pela FASE 13.
 - Não refatore o que está pronto sem pedido explícito.
 
-## Escopo da FASE 13 (ativa — provar de verdade e triar os achados)
+## FASE 13 — CONCLUÍDA em 2026-08-07 (provar de verdade e triar)
 Nenhuma feature nova. A fase fecha as pendências declaradas, prova o
 que a validação Local/Noop declaradamente não prova, e transforma os
 19 achados abertos em plano priorizado. Lição incorporada: a tabela
@@ -135,24 +135,50 @@ extraída por script do event log/token_usage, nunca anotada à mão.
    estava apodrecido contra o ADR 0049 e nunca tinha rodado; corrigido
    junto. Resultado datado em docs/explanation/aceite-providers.md
 
-### 13b — Validação REAL: GitHub remoto + gates por LLM, MEDIDA
-3. Repetir o roteiro da validação num projeto ADOTADO do fork via
-   GithubProvider remoto, DevAgent real (modelo de API forte) e gates
-   por LLM (nunca 7B local no passo semântico — ADR 0020): adoção sem
-   seed → promoção manual de UMA story → dev implementa → PR remota →
-   gates com julgamento real → merge manual do usuário. Zero restart
-   do engine.
-4. Medição por script (scripts/ci/ ou apps/api/scripts): extrai do
-   event log e do token_usage a tabela que a Fase 10 deixou como "não
-   medido" — restarts, intervenções (proposed_actions decididas pelo
-   usuário, com tipo), voltas de gate, custo por task e por agente,
-   duração por etapa. O script é reutilizável: vira o instrumento
-   padrão de qualquer dogfooding futuro.
-5. Resultado em docs/explanation/validacao-real.md com event ids e a
-   tabela extraída; achado novo vai para a triagem da 13c como item,
-   nunca como fix (a disciplina de sempre).
+### 13b — CONCLUÍDA em 2026-08-07 (v2.4.0)
+A cadeia inteira provada contra GitHub REAL (`daneiel/test`), em dez
+execuções: adoção remota → plano com decisão do usuário → promoção
+manual de UMA story → dev agent real escrevendo código → commit, push e
+PR REMOTA → gate abre → área delega e dispensa com justificativa →
+subagente SUSPENDE em aprovação → a recusa do usuário RETOMA o laço →
+veredito `changes_requested` por LLM. Zero restart do engine. Merge
+fora, por desenho (RN-014).
+3. O roteiro é `pnpm --filter api validacao:real`, com fases separadas
+   por CUSTO (`--ate adocao|backlog|execucao`) — a barata roda sozinha
+   primeiro, e foi assim que erros de configuração apareceram antes de
+   custar dinheiro. Exige execução DE DENTRO do container da api: a
+   política é arquivo em volume compartilhado, e pelo host ela nasce
+   num filesystem que o engine não enxerga.
+4. `pnpm --filter api medir:execucao` é o instrumento, e está PROVADO:
+   reproduz sozinho os números que o dogfooding anterior anotara à mão
+   (18 chamadas, 292.211 tokens, ~US$ 0,03).
+5. Resultado em docs/explanation/validacao-real.md, com as dez
+   execuções e o que cada uma ensinou.
 
-### 13c — Triagem dos 19 achados abertos
+SETE P1 fechados no caminho, todos achados por EXECUÇÃO e nenhum por
+teste: W (dev agent morria com a fila vazia), Y (a busca não distinguia
+vazio de não-encontrado), AA (credencial de git resolvida por quem
+clica, não por quem paga — RN-082), AB (gate chamava decisão pendente
+de falha de infra — ADR 0057), AC (redirecionamento tornava qualquer
+comando inaprovável), o ReDoS no escopo de caminho (CodeQL HIGH), e a
+CVE do postgrex.
+
+TRÊS achados seguem abertos, e o argumento deles vale mais que os
+números: X (o teto de iterações não cabe no trabalho real — conserto é
+teto por tipo de agente, ADR 0053), Z e AD (o allowlist de verbos NÃO
+converge: verbo, forma e invocação são espaços distintos, e as
+execuções 6/7/8 travaram em um de cada), AE (o agente de QA tenta
+consertar o código que julga, contra o próprio prompt — contido por
+duas barreiras independentes, allowlist e escopo).
+
+A conclusão que a fase entrega, e que importa mais que a PR: o caminho
+para autonomia NÃO passa por afrouxar política. Passa por o agente
+ESPERAR a decisão em vez de morrer — o que o ADR 0057 fez para os
+gates, estendendo o 0052.
+
+### 13c — CONCLUÍDA: a triagem virou docs/explanation/backlog.md
+Os 19 achados estão fechados (19 de 19). O documento segue vivo e
+recebeu os achados novos da 13b.
 6. Sessão de triagem: ler docs/explanation/primeiro-dogfooding.md e
    classificar os 19 achados em P1/P2/P3 com proposta de agrupamento
    em fases coesas (por tema e dependência entre eles), custo relativo
@@ -169,7 +195,7 @@ extraída por script do event log/token_usage, nunca anotada à mão.
    "N agentes online" no dashboard, preferência de moeda com taxa
    manual.
 
-## FASE 14 (ativa em paralelo à 13 — o que a execução real exigiu)
+## FASE 14 (ativa — o que a execução real exigiu; só a 14d falta)
 A execução do hello world não passou do primeiro turno e revelou defeitos que
 nenhuma suite pegava, porque tudo antes rodou com modelo LOCAL. As correções
 já entraram; o que sobra é feature decidida pelo usuário durante a execução.
@@ -205,6 +231,15 @@ por ancestral, alvo < 24px) virou verificador de navegador em
 `scripts/dev/validacao-visual.js`. Sem dependência nova.
 
 ### 14d — Paralelismo decidido pelo LEAD, com autorização do usuário (A FAZER)
+A FASE 13b deu a esta fase um segundo motivo, mais concreto que o
+original. O achado X: `TOOL_LOOP_MAX_ITERATIONS` é global e vale 8 — um
+número que nasceu para agente conversacional e não cabe num dev agent
+que precisa entender um repositório, escrever código e rodar testes.
+Com 8 ele nem escrevia; com 25 escrevia e não chegava à PR; com 60
+chegou. Subir o default global está errado — o Criativo não precisa de
+60 iterações para conversar. É teto POR TIPO DE AGENTE, que é a mesma
+natureza do que esta fase decide para paralelismo, e por isso cabe aqui.
+
 Decisão do usuário, tomada durante a execução — substitui a ideia de teto fixo:
 
 1. **Quem decide é o lead.** Ele avalia quantos agentes valem a pena para o
@@ -229,14 +264,14 @@ caem juntos porque os membros da área de dev são um por módulo do module_map,
 decididos pelo Arquiteto e diferentes em cada projeto, logo não são
 hardcodáveis como qa e infra.
 
-## FASE 15 (paralela à 13 — gates como dado)
+## FASE 15 (ativa — gates como dado; só a 15b falta)
 Nenhum gate NOVO. A fase extrai para docs/gates.yml os gates que JÁ
 existem implícitos no produto, com verificação por script e severidade,
 no mesmo espírito do docs/.docmap.yml. Gate de agente que não existe
 (dev-lead, platform) entra como `status: planned` referenciando o
 backlog — nunca ativo. O contrato externo dos gates NÃO muda.
 
-### 15a — Registro declarativo
+### 15a — CONCLUÍDA: registro declarativo
 1. docs/gates.yml com os gates existentes (ver ADR 0054, que estende o
    ADR 0048 — a decisão no event log é o que torna a passagem de um
    gate mensurável), schema validado por teste.
@@ -252,7 +287,7 @@ Por isso cada gate declara `evidencia: event_log | teste | ci` com o
 localizador — rebaixá-los a `warn` seria mentir sobre as travas mais
 duras do produto.
 
-### 15b — Consumo
+### 15b — Consumo (A FAZER — é o que resta da FASE 15)
 4. Painel do time exibe o gate que cada story/PR está aguardando,
    derivado do registro (não hardcoded).
 5. docs/explanation/gates.md explicando o mecanismo, no docmap.
@@ -373,22 +408,12 @@ duras do produto.
   o endereça, e corrigir fora dela apaga a evidência de por que existia
 - (FASE 15) Nenhum gate NOVO e nenhuma mudança de comportamento de
   gate existente — a fase só DECLARA e MEDE o que já existe
-- (FASE 13) Nenhuma feature nova e nenhum fix: a fase produz
-  execuções, medições e um plano — achado novo entra na triagem.
-  EXCEÇÃO ABERTA PELO USUÁRIO em 2026-08-06: a Fase F do backlog
-  (achados S e U) foi implementada, porque a escada de aprovação e o
-  contexto sem teto impediam QUALQUER execução de chegar ao fim — a
-  medição que a 13b pede não era alcançável sem isso. O congelamento
-  segue valendo para o resto: as demais fases do backlog continuam
-  esperando decisão de prioridade.
-  SEGUNDA EXCEÇÃO, em 2026-08-07: o achado W (dev agent morria em vez de
-  ir para `idle` quando a fila do módulo esvaziava — corpo vazio no claim
-  virando `run_task("")`) foi corrigido durante a 13a.1, pelo mesmo
-  critério: o passo 5 da validação não fechava sem ele. As três outras
-  correções da mesma rodada são do INSTRUMENTO (o script e o Noop), não
-  do produto, e não precisavam de exceção.
-  TERCEIRA EXCEÇÃO, em 2026-08-07: o achado Y (`search_workspace` dizendo
-  a mesma frase para "não achei" e "não há o que achar") foi corrigido a
-  pedido do usuário, pelo mesmo critério — sem ele o dev agent queima o
-  teto de iterações em repositório novo, nenhuma PR nasce, e a metade da
-  13b que mede gates por LLM fica inalcançável
+- (FASE 13 — CONCLUÍDA) O congelamento valeu enquanto a fase corria, e
+  vale registrar como terminou, porque a regra funcionou: quatro exceções,
+  todas pelo MESMO critério — só o que impedia a própria medição de
+  acontecer. Fase F (achados S e U), achado W, achado Y e achado AB. As
+  correções de INSTRUMENTO (o script da validação, o Noop, o medidor) não
+  precisaram de exceção, e a distinção entre instrumento e produto se
+  provou útil o tempo todo. O que a disciplina evitou está registrado: a
+  nona execução podia ter passado liberando `bash` no allowlist, e isso
+  teria destruído a garantia para fazer o teste passar
