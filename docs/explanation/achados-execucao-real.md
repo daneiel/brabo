@@ -385,3 +385,254 @@ real expõe** — que é, literalmente, a tese desta fase.
 > `""` junto com `nil`), sem mexer no status HTTP da rota. Exceção ao
 > congelamento da FASE 13 autorizada pelo usuário, pelo mesmo motivo da Fase F:
 > a medição não era alcançável sem isto. Verificado por mutação.
+
+## Execução real com GitHub remoto (FASE 13b) — 2026-08-07
+
+Primeira execução contra repositório remoto de verdade (`daneiel/test`), com
+dev agent real e `openai/gpt-5-mini`. A cadeia até a promoção passou inteira; o
+dev agent não. Detalhe e medição em [validacao-real.md](validacao-real.md).
+
+### X. O dev agent queima o teto de iterações em repositório vazio (P1)
+
+Task *"Expor GET /saudacao"* num repositório recém-provisionado — só o template
+do Gitflow, sem código. O agente gastou as oito iterações em
+`search_workspace`/`read_file` procurando "onde está o projeto", **nunca rodou
+um comando e nunca escreveu um arquivo**. Bloqueio: `limite de iterações
+atingido`, origem `modelo`, diagnóstico `(nenhum terminal rodado)`.
+
+A origem `modelo` é tecnicamente verdadeira e praticamente inútil: o modelo não
+errou um julgamento, ele nunca chegou a julgar. Custo: 8 chamadas, 205 tokens
+de saída.
+
+É o **primeiro** cenário em que o dev agent começa do zero absoluto — todo teste
+e toda demo partiram de workspace com código.
+
+### Y. `search_workspace` não distingue "vazio" de "não encontrei" — FECHADO
+
+As cinco primeiras chamadas devolveram `nenhum resultado`, e o agente leu isso
+como "procure melhor" em vez de "não há nada aqui". Era a peça acionável do
+achado X.
+
+> **FECHADO** — a ferramenta passou a responder coisas diferentes para
+> situações diferentes. Workspace sem arquivo nenhum devolve *"o workspace
+> está VAZIO […] CRIE os arquivos necessários (write_file) em vez de continuar
+> procurando"*; workspace com arquivos devolve a contagem, dizendo que a busca
+> funcionou e o termo é que não aparece.
+>
+> **A correção é a frase, não o teto.** O agente não precisava de mais
+> iterações — precisava saber que não havia o que procurar. E o caso do achado
+> (só `.github/` e `docs/` do bootstrap) NÃO é vazio: há teste afirmando que
+> ali a resposta certa é a contagem, não a instrução de criar.
+>
+> **A execução nova foi feita, e o X NÃO fechou.** Mesmo desfecho —
+> `limite de iterações atingido`, 8 chamadas, nenhuma PR. O comportamento
+> mudou (uma busca em vez de cinco), o resultado não. A hipótese de que a
+> frase era a causa estava ERRADA: das oito iterações, sete são exploração, e
+> sobra uma para escrever, commitar, dar push e abrir PR.
+>
+> **O teto ERA a causa.** Com `TOOL_LOOP_MAX_ITERATIONS=25` o dev agent
+> explorou, escreveu TRÊS arquivos e rodou `npm test` — e parou em
+> `dev.awaiting_approval`, não em bloqueio. O teto de 8 nasceu para agente
+> conversacional e não cabe num dev agent que precisa entender o repositório
+> antes de agir (`apps/engine/config/runtime.exs:100`).
+>
+> O X deixa de ser "queima o teto explorando" e vira **"o teto é o errado para
+> este agente"**. O conserto de produto NÃO é subir o default global — o
+> Criativo não precisa de 25 iterações para conversar. É um teto por tipo de
+> agente, e isso é decisão de produto: fica na triagem.
+
+### Z. O allowlist de terminal governa o VERBO; o escopo protege só o CAMINHO
+
+Com o teto resolvido, a execução passou a parar em aprovação de terminal. O
+pedido de 2026-08-06 foi *"permita sempre comandos desde que seja na pasta do
+projeto"*; o ADR 0055 entregou um TETO (fora da pasta nunca auto-aprova), e o
+verbo continua governado por lista fechada.
+
+Liberar `npm`/`pnpm`/`node`/`npx` não bastou: o agente rodou `ls -la`. Cada
+verbo novo cai em `require_approval`.
+
+Não é defeito do ADR 0055, que nunca prometeu promover verbo — é a lacuna
+entre o que foi pedido e o que foi entregue, e ela mantém a escada de pé.
+
+### Funcionou como projetado (registrar também)
+
+O **Psicólogo diagnosticou sozinho**, em tier pesado, lendo o event log da
+execução fracassada — e nomeou as duas causas com precisão maior que a de
+qualquer asserção do script: a ausência de `tool.call` de terminal, e o
+`search_workspace` enganando o agente. A introspecção do produto funciona.
+
+### AA. `pr_open` auto-aprovado não tem credencial e sempre falha em remoto (P1)
+
+> **FECHADO** — virou [RN-082](../business-rules.md#rn-082). A api passou a
+> resolver a credencial de git pelo OWNER do workspace, reusando o mesmo
+> resolvedor da RN-058 em vez de reimplementar a regra. Verificado por mutação.
+
+Achado na 5ª execução da 13b, a primeira em que a cadeia chegou até a PR.
+
+`ExecuteGitActionUseCase` resolve o token de git a partir de
+**`action.decidedBy`** — o usuário que DECIDIU a ação
+(`execute-git-action.use-case.ts:100`). Quando a política auto-aprova, ninguém
+decide: `decided_by` fica NULL, `accessToken` fica `undefined`, e o GitHub
+responde `Requires authentication`.
+
+O contraste no mesmo run é a prova:
+
+| ação | quem executa | credencial | desfecho |
+|---|---|---|---|
+| `git_push` | **engine** | injetada do owner (`git_auth.ex`, RN-076) | ✅ executed |
+| `pr_open` | **api** | `action.decidedBy` → NULL | ❌ failed |
+
+O push chegou ao GitHub — a branch `feature/task-d4b36a5b` existe no remoto. O
+que falhou foi só a chamada REST que abre a PR.
+
+É a mesma classe do que a [RN-058](../business-rules.md#rn-058) corrigiu para
+LLM ("a chave que o agente gasta é a do OWNER"): o caminho de git da api ainda
+resolve por "quem decidiu", e não por "de quem é o workspace".
+
+**Consequência prática:** com autonomia configurada — que é o modo que a Fase F
+existe para viabilizar — nenhum dev agent consegue abrir PR em provider
+remoto. O caminho só funciona quando um humano clica em cada PR, que é
+exatamente a escada declarada inviável.
+
+### AB. O agente de GATE não sabe esperar aprovação — vira falha `infra` (P1)
+
+> **FECHADO PELA METADE, e a metade importa.** A origem agora é `politica` e o
+> diagnóstico NOMEIA a ação pendente e a ferramenta — dá para achar e decidir.
+> Antes o log dizia `infra`, culpando a infraestrutura por algo que não
+> quebrou, o que contraria a regra do ADR 0020 de que origem é nomeada e nunca
+> obtida por eliminação.
+>
+> **O gate continua bloqueando.** O laço dos agentes de gate é síncrono e não
+> sabe retomar. Torná-los suspensíveis como o dev agent
+> ([ADR 0052](../adr/0052-dev-agent-espera-aprovacao-no-meio-do-laco.md)) é o
+> conserto de verdade — mesma cirurgia que a Fase A fez, com ADR próprio, e
+> por isso fica na triagem em vez de virar ajuste de passagem.
+
+Achado na 6ª execução da 13b, a primeira em que a PR abriu e os gates rodaram.
+
+O `qa-automacao` chamou `terminal` com um comando COMPOSTO
+(`ls -la && find … | head -50`). `head` não estava no `allow`, e a regra é
+correta: todo segmento precisa estar liberado, senão o comando inteiro vira
+`require_approval`. O ToolLoop então suspendeu em
+`{:halted, {:awaiting_approval, …}}`.
+
+**O problema não é a suspensão — é o que o lead faz com ela.** O `QaLeadServer`
+não tem cláusula para esse desfecho e o classifica como *"desfecho inesperado
+do ToolLoop"*, com `failureOrigin: infra`. A task é bloqueada, o gate morre, e
+o event log culpa a infraestrutura por uma decisão de POLÍTICA que está
+simplesmente pendente.
+
+É exatamente o defeito que o [ADR 0052](../adr/0052-dev-agent-espera-aprovacao-no-meio-do-laco.md)
+corrigiu para o dev agent na Fase A — o laço SUSPENDE e retoma quando a decisão
+chega ([RN-073](../business-rules.md#rn-073)). Os agentes de GATE ficaram de
+fora daquela correção.
+
+Duas consequências, e a segunda é pior:
+
+1. qualquer comando do gate que caia em aprovação mata o gate;
+2. a origem registrada é `infra`, o que é **falso** — nada quebrou. Contraria
+   a regra do produto de que a origem da falha nunca é diagnóstico por
+   eliminação (lição do ADR 0020).
+
+O `qa-performance-seguranca` foi dispensado corretamente na mesma rodada
+(`delegation.dispensed`, justificativa "story sem RNF"), então a área de QA
+funciona — o que falta é o lead saber que "esperando você decidir" não é falha.
+
+### AC. Redirecionamento (`2>/dev/null`) torna qualquer comando inaprovável (P1)
+
+> **FECHADO nas duas peças.**
+>
+> 1. `parseCommand` deixou de tratar `>`/`>>`/`<` como separador — eles não
+>    encadeiam comando nenhum. O alvo continua como TOKEN do segmento, de
+>    propósito: é assim que `echo x > /etc/passwd` segue barrado pelo teto de
+>    escopo. O verbo ficou correto sem o caminho ficar livre.
+> 2. `/dev/null`, `/dev/stdin`, `/dev/stdout` e `/dev/stderr` deixaram de
+>    contar como caminho de usuário. A lista é essa e **não** `/dev` inteiro —
+>    há teste afirmando que `/dev/sda` continua fora do escopo, porque liberar
+>    `/dev` trocaria um incômodo por um buraco.
+>
+> Verificado por mutação nos dois sentidos: afrouxar `/dev` derruba o teste do
+> disco, e desligar o encadeamento derruba 11 testes.
+
+Achado na 7ª execução da 13b, depois de ampliar o allowlist com 25 verbos. O
+agente de QA rodou:
+
+```
+ls -la && echo "---" && cat package.json 2>/dev/null; echo "---"; ls *.md 2>/dev/null
+```
+
+**Todos os verbos estavam liberados** — `ls`, `echo`, `cat`. Mesmo assim virou
+`require_approval`. Rodando as funções puras contra o comando:
+
+```
+segmentos: [["ls","-la"],["echo","---"],["cat","package.json","2"],["/dev/null"],…]
+tokens de caminho: ["/dev/null","/dev/null"]
+no escopo? false
+```
+
+`parseCommand` trata `>` como separador de segmento, então `2>/dev/null` vira
+**um segmento próprio**. Isso quebra de duas formas independentes:
+
+1. o segmento `/dev/null` tem como "verbo" o próprio `/dev/null`, que nunca
+   estará em `allow` — e comando composto exige TODO segmento liberado;
+2. `/dev/null` é token de caminho ABSOLUTO fora da pasta do projeto, então o
+   teto da [RN-075](../business-rules.md#rn-075) rebaixa `auto_approve`.
+
+**O impacto é grande porque `2>/dev/null` é idiomático.** Modelos o usam o
+tempo todo para silenciar erro esperado. Na prática, qualquer comando com
+redirecionamento de saída é inaprovável por política — só passa com clique
+humano.
+
+Não é falha de um verbo faltando na lista: é a **forma** do comando. Ampliar o
+allowlist não resolve, e a 7ª execução é a prova — 25 verbos liberados, e
+travou mesmo assim.
+
+Duas peças distintas para triar:
+
+- a segmentação por `>` em `command-matcher.ts` (pré-existente, e discutível:
+  redirecionamento não é composição de comandos como `&&` e `|`);
+- o teto de escopo tratando `/dev/null` como caminho de usuário
+  (`path-scope.ts`, da Fase F).
+
+### AD. O agente embrulha comandos em `bash -lc`, e o allowlist não tem resposta (P1)
+
+Oitava execução da 13b, com os achados Y, AA, AB e AC já corrigidos. O dev
+agent fez UMA chamada de ferramenta:
+
+```
+bash -lc npm test --silent
+```
+
+O verbo é `bash`. Não está em `allow`, e virou `require_approval`.
+
+**A recusa está certa, e é importante que esteja.** Liberar `bash` anularia o
+allowlist inteiro: `bash -lc <qualquer coisa>` passa por cima da checagem de
+verbo, incluindo os `deny` embutidos. Um allowlist que aceita `bash` não é um
+allowlist.
+
+Mas isso fecha o argumento que as execuções 6, 7 e 8 vinham construindo:
+
+| execução | o que travou | o que eu fiz |
+|---|---|---|
+| 6ª | `head` fora da lista | ampliei para 25 verbos |
+| 7ª | `2>/dev/null` (FORMA, não verbo) | corrigi o parser e o escopo (AC) |
+| 8ª | `bash -lc` (INVOCAÇÃO) | — |
+
+Cada rodada revelou uma categoria nova, e nenhuma delas era "faltou um verbo".
+**O allowlist de verbos não converge** contra um agente que escolhe livremente
+como invocar o que quer rodar — e as três formas (verbo, forma, invocação) são
+espaços diferentes, não pontos de uma lista.
+
+O que isso NÃO significa: que o allowlist esteja errado. Ele faz exatamente o
+que promete, e a recusa do `bash` prova que a fronteira funciona. O que ele não
+faz é viabilizar autonomia de agente sem intervenção humana.
+
+Duas direções para a triagem, e são diferentes em natureza:
+
+1. **Agentes de gate suspensíveis** (achado AB, metade aberta). Não elimina a
+   aprovação — faz o agente ESPERAR por ela em vez de morrer, e aí o clique do
+   usuário destrava em vez de reprovar. É o caminho que o ADR 0052 já abriu
+   para o dev agent.
+2. **Política por perfil de agente.** Um dev agent num worktree isolado é
+   diferente de um agente que toca o workspace do usuário. Hoje os dois usam o
+   mesmo `permissions.json`. Isto é decisão de produto com ADR.

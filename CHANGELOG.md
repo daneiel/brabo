@@ -13,6 +13,44 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **api**: comando com redirecionamento deixa de exigir aprovação sempre.
+  `2>/dev/null` é idioma — modelos o usam o tempo todo para silenciar erro
+  esperado —, mas o parser tratava `>` como se encadeasse um comando novo, e o
+  alvo virava um segmento cujo "verbo" era o próprio caminho. Como comando
+  composto só é auto-aprovado quando todo segmento está liberado, qualquer
+  redirecionamento caía em aprovação, e a autonomia ficava inútil na prática.
+  Agora `>`, `>>` e `<` não quebram segmento, e os fluxos padrão e o
+  `/dev/null` deixam de contar como caminho de usuário. **O que não mudou:**
+  redirecionar para fora da pasta do projeto continua barrado, `/dev` não foi
+  liberado inteiro, e `&&`, `|` e `;` continuam separando — cada uma dessas
+  três garantias tem teste próprio
+
+- **engine**: um agente de gate que esbarra numa ação pendente de aprovação
+  deixa de registrar "falha de infraestrutura". Nada quebrou — a decisão apenas
+  não foi tomada, e o log agora diz isso, nomeando a ação e a ferramenta para
+  que dê para encontrá-la e decidi-la. O gate ainda bloqueia a task: o laço dos
+  agentes de gate é síncrono e não sabe retomar de onde parou, ao contrário do
+  dev agent. O que muda é parar de culpar a infraestrutura por uma decisão
+  pendente
+
+- **api**: nenhum dev agent conseguia abrir PR em repositório remoto quando a
+  autonomia estava ligada. A credencial de git vinha de quem DECIDIU a ação — e
+  ação auto-aprovada por política não tem decisor, então o token ficava vazio e
+  o GitHub recusava. Agora vem do dono do workspace, pela mesma regra que já
+  valia para as chaves de modelo. O contraste que expôs o defeito estava dentro
+  de uma execução só: o push funcionava e a PR falhava, porque cada um resolvia
+  a credencial por um caminho diferente
+
+- **engine**: a busca no workspace deixa de dizer a mesma coisa quando não
+  encontra e quando não há o que encontrar. Num projeto novo, o dev agent lia
+  "nenhum resultado" como "refine a busca" e repetia buscas até esgotar o teto
+  de iterações — bloqueado sem ter rodado um comando nem escrito uma linha.
+  Agora um workspace sem arquivo nenhum responde que está vazio e manda criar;
+  um workspace com arquivos responde quantos tem, deixando claro que a busca
+  funcionou e o termo é que não aparece. A correção é a frase, não o teto: o
+  agente não precisava de mais iterações, precisava saber que não havia o que
+  procurar
+
 - **api**: o aceite do OpenRouter contra a API real voltou a funcionar. Ele
   nunca tinha rodado — sem chave, a suite inteira é pulada — e por isso tinha
   apodrecido em silêncio contra a mudança que levou a curadoria de modelo para
