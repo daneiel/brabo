@@ -240,6 +240,40 @@
         ]
       }
     },
+    "/gates": {
+      "get": {
+        "description": "Índice declarativo dos gates do fluxo (ADR 0054). A tela deriva daqui quais etapas existem e quem julga cada uma, em vez de repetir a lista no código — que era como ela envelhecia sem ninguém perceber.",
+        "operationId": "GatesController_listar",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GatesResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "O registro de gates ativos",
+        "tags": [
+          "gates"
+        ]
+      }
+    },
     "/git/oauth/{provider}/callback": {
       "get": {
         "description": "Pública porque quem chega é o BROWSER do usuário vindo do provider, sem sessão da api. Não é irrestrita: o `state` é verificado por HMAC e sem ele válido a chamada é recusada. Nunca responde JSON — sempre redireciona, porque um corpo de erro cru numa navegação de browser seria péssima experiência.",
@@ -9747,6 +9781,83 @@
           "severidade",
           "aprovacao_humana",
           "status"
+        ]
+      },
+      "GateResumoResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "qa-verificada"
+          },
+          "fluxo": {
+            "type": "string",
+            "example": "pr",
+            "description": "Fluxo a que o gate pertence."
+          },
+          "dono": {
+            "type": "string",
+            "example": "area-qa",
+            "description": "Quem julga."
+          },
+          "entrada": {
+            "example": [
+              "pr-aberta"
+            ],
+            "description": "O que precisa existir para o gate abrir.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "entregavel": {
+            "type": "object",
+            "example": "veredito-qa",
+            "description": "O que o gate produz quando passa."
+          },
+          "aprovacaoHumana": {
+            "type": "boolean",
+            "example": true,
+            "description": "A decisão é do usuário — direta no clique OU delegada por política que ele mesmo escreveu (ver RN-071)."
+          },
+          "severidade": {
+            "type": "string",
+            "example": "block",
+            "enum": [
+              "block",
+              "warn"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "fluxo",
+          "dono",
+          "entrada",
+          "entregavel",
+          "aprovacaoHumana",
+          "severidade"
+        ]
+      },
+      "GatesResponseDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number",
+            "example": 1,
+            "description": "Versão do formato do registro."
+          },
+          "gates": {
+            "description": "Só os gates ATIVOS. Gate `planned` descreve papel futuro e não deve aparecer numa tela que diz o que está acontecendo agora.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GateResumoResponseDto"
+            }
+          }
+        },
+        "required": [
+          "version",
+          "gates"
         ]
       },
       "GateVerdictResponseDto": {

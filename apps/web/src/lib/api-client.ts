@@ -51,6 +51,7 @@ import type {
   Workspace,
   WorkspaceSummary,
   WorkspaceWithRole,
+  RegistroDeGates,
 } from './api-types';
 
 export const API_URL = runtimeConfig.apiUrl;
@@ -689,5 +690,13 @@ export const setSessionBudget = (
   sessionId: string,
   input: { limitUsd: number; policy: BudgetPolicy },
 ) => put<Budget>(`/projects/${projectId}/sessions/${sessionId}/budget`, input);
+
+/**
+ * O registro de gates ATIVOS (FASE 15b).
+ *
+ * Global, sem `projectId`: os mesmos gates valem para todo projeto, e
+ * pendurá-lo num sugeriria o contrário.
+ */
+export const getRegistroDeGates = () => get<RegistroDeGates>('/gates');
 
 export type { ModelBindingScope };

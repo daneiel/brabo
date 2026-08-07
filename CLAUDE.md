@@ -264,7 +264,7 @@ caem juntos porque os membros da área de dev são um por módulo do module_map,
 decididos pelo Arquiteto e diferentes em cada projeto, logo não são
 hardcodáveis como qa e infra.
 
-## FASE 15 (ativa — gates como dado; só a 15b falta)
+## FASE 15 — CONCLUÍDA em 2026-08-07 (gates como dado)
 Nenhum gate NOVO. A fase extrai para docs/gates.yml os gates que JÁ
 existem implícitos no produto, com verificação por script e severidade,
 no mesmo espírito do docs/.docmap.yml. Gate de agente que não existe
@@ -287,7 +287,7 @@ Por isso cada gate declara `evidencia: event_log | teste | ci` com o
 localizador — rebaixá-los a `warn` seria mentir sobre as travas mais
 duras do produto.
 
-### 15b — Consumo (A FAZER — é o que resta da FASE 15)
+### 15b — CONCLUÍDA: consumo
 4. Painel do time exibe o gate que cada story/PR está aguardando,
    derivado do registro (não hardcoded).
 5. docs/explanation/gates.md explicando o mecanismo, no docmap.

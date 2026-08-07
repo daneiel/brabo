@@ -1,6 +1,6 @@
 {
   "_": "Gerado por `pnpm docs:generate`. Não edite — é a trava do que está em docs/reference/api/.",
-  "openapiSha256": "cd0df127248f53fbc17cf5657e61bd7b034d18b895c4d148dbc73d3c9f70cb85",
+  "openapiSha256": "c530ac856362b28d98324992905f91937fd5baa36c5575df602bdbb3487a6a62",
   "arquivos": {
     "actions-controller-approve-always.ParamsDetails.json": "f51f6d74f8b4a7e9c8f70cef93e0d026d63e77123672029da660c802def3ad0e",
     "actions-controller-approve-always.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
@@ -203,6 +203,10 @@
     "execution-controller-unblock.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
     "execution-controller-unblock.StatusCodes.json": "c0b5c892bd795b94a0543d6105e2ee97e9df4a56d27cda97cd740212c9034b1f",
     "execution-controller-unblock.api.mdx": "0bb866b266b46756d272409ca030bb442a21a6b7e398e03780249dec9d3f0edf",
+    "gates-controller-listar.ParamsDetails.json": "c7c69ffea7e3e6af99994c9347a2f29c4a558bdf8854ac3b61df817cbadcd1f7",
+    "gates-controller-listar.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
+    "gates-controller-listar.StatusCodes.json": "cd62651a24011c3973c9f4862334aeafe24764c1687a916c43ff8510def01dbe",
+    "gates-controller-listar.api.mdx": "364d1a777d416382cc31758d544e336a0dd8e230e501df1b8c2f24e287cc8553",
     "git-controller-adopt.ParamsDetails.json": "386a9237e05fd1810fa3e309353fa8153c8e323008540d10084bfeb725ce33ea",
     "git-controller-adopt.RequestSchema.json": "adf6d99c54f6ab7d7456252ce59ebfaee5dcf121fee8d4bc0a3b490d5534af84",
     "git-controller-adopt.StatusCodes.json": "f4db506a2eb90a5a8926d251ab2a7edf046dce426bddb3b86772ff4d76bc5701",
@@ -527,7 +531,7 @@
     "sessions-controller-transition.RequestSchema.json": "1a1741c5ed6c1e8c653b079f28c80327bfe57363efc50b9673ed8fa755c256f3",
     "sessions-controller-transition.StatusCodes.json": "ad65603d00aa842175d178e0d998a25b55da05f723c870ecf304bca643783cf4",
     "sessions-controller-transition.api.mdx": "537d042f310b6554fda50ed8cbb6f32f80f5bb688d6e41e2b281d5d25310ac76",
-    "sidebar.ts": "68bd3fb509a8d7b2d74cd5e2497b53500da58d418cddcdd3405cc38a8bc6134c",
+    "sidebar.ts": "5df6fc6b9c15a156fda7a242cd1dd281093a3ff1d45980087ceb62f16322fe4f",
     "workspaces-controller-add-member.ParamsDetails.json": "56d669b72315e3339a75e1873f3cf2543f5b2ba3552994ad2fb69d673da7192b",
     "workspaces-controller-add-member.RequestSchema.json": "c17baeb1beca0020e67b7b40d66d88fbf644c7d3d24276560d0d58149ac2249a",
     "workspaces-controller-add-member.StatusCodes.json": "6a3de2295117fd5c898f85528f29d667fcbe398fa244bbf3c3f32f8ca71aa339",

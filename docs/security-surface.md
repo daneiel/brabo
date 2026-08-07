@@ -172,6 +172,7 @@ o componente `d` da JWK, travado por teste.
 | POST | `/auth/request-password-reset` | public |
 | POST | `/auth/reset-password` | public |
 | POST | `/auth/verify-email` | public |
+| GET | `/gates` | jwt |
 | GET | `/git/oauth/:provider/callback` | public |
 | GET | `/health` | public |
 | GET | `/live` | public |
