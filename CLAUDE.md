@@ -304,6 +304,46 @@ duras do produto.
    derivado do registro (não hardcoded).
 5. docs/explanation/gates.md explicando o mecanismo, no docmap.
 
+## PÓS-FASE 15 — CONCLUÍDO em 2026-08-08 (v2.5.0 e v2.5.1)
+Não é fase planejada: é o que o USO encontrou depois da 15, e está aqui
+porque a origem de cada item importa. Nada disto veio de roteiro — veio
+de navegar a app no Chrome e de ler o painel de segurança.
+
+**Defeitos de UI, achados navegando** (RN-088..091):
+- `429` virava TELA BRANCA e a app respondia com mais tráfego. A regra
+  virou geral: toda tela distingue TRÊS estados — carregando, erro (com
+  `trace_id` e botão) e vazio. `if (!dado) return null` colapsa os três.
+- Dashboard fazia uma requisição por projeto: **3.824 → 12 req/min**, com
+  `GET /workspaces/:id/projects-summary`. O sino era a metade que
+  faltava: **289 → uma** requisição por ciclo (RN-090/091).
+
+**Endurecimento de segurança, com os dois painéis a ZERO**:
+- ADR 0058 — CSP fechado na api (`default-src 'none'`), revisando o item
+  7 do ADR 0027; e o `projectId` contido na raiz (RN-092), que atingia
+  não só o `permissions.json` como o escopo que AUTORIZA terminal.
+- ADR 0059 — `GIT_OAUTH_STATE_SECRET` sem default em produção (RN-093).
+  O default era PÚBLICO (`.env.example`) e o compose de produção o supria
+  como fallback: exigir "não vazia" não teria pego nada, porque no caminho
+  real de erro a variável estava DEFINIDA.
+- Alerta que não se sustentava foi DISPENSADO com justificativa escrita,
+  nunca silenciado — e dispensar é decisão do usuário, não do agente.
+
+**Três lições operacionais que custaram ciclo de CI, e valem como regra:**
+1. **CodeQL verde numa PR não prova que alerta antigo fechou** — o check
+   de PR reporta alerta NOVO. Alerta fecha na varredura do branch DEFAULT,
+   isto é, só depois de a correção chegar em `main`.
+2. **Gitleaks varre commits alcançáveis de `refs/heads/*`, não a árvore.**
+   Um valor de alta entropia commitado uma vez reprova o CI para sempre
+   naquele branch; corrigir por cima NÃO limpa. A saída é o commit deixar
+   de ser alcançável (reconstruir a partir de `dev` e APAGAR o branch
+   antigo ANTES de abrir a PR nova) — nunca allowlist, que cega o scanner
+   naquele caminho para todos os commits. Refs de PR não entram no escopo.
+   Fixture que representa segredo nasce SEM entropia.
+3. **Barreira que mora em outra função o CodeQL não enxerga** — daí os
+   três `js/path-injection` sobreviverem à correção. Manteve-se a checagem
+   centralizada (RN-092) e pagou-se o preço no painel: duplicá-la em cada
+   chamador seria checagem que um dia diverge.
+
 ## Stack (decidida — não proponha alternativas)
 - `apps/api`: NestJS 11 + Drizzle ORM + PostgreSQL 16 + pgvector
 - `apps/engine`: Elixir/OTP + Phoenix (canais) + Oban (filas no Postgres)
@@ -327,6 +367,13 @@ duras do produto.
   feature/, bugfix/, perf/, refactor/, chore/, docs/, test/);
   hotfix/ nasce de main. Formato funcao/descritivo,
   regex ^.{0,30}/\S{0,32}$. Commits em conventional commits, pt-BR.
+  A FUNÇÃO da branch decide a VERSÃO (scripts/ci/version.ts): breaking/
+  sobe MAJOR, feature/ sobe MINOR, todo o resto é PATCH. Mudança que
+  exige ação do operador antes do deploy nasce em breaking/ mesmo quando
+  o conteúdo é correção — o v2.5.1 saiu patch porque a chave obrigatória
+  do OAuth nasceu em bugfix/, e um patch diz "atualize sem pensar".
+  Versão não se corrige à mão depois: o valor de ela ser calculada vem de
+  não ser negociada caso a caso.
 - Toda mudança entra por PR — push direto em permanente é bloqueado;
   únicas exceções de push: tags (bot de release) e .release/gate.json
   (bot do gate).
@@ -419,8 +466,11 @@ duras do produto.
 - Não corrigir de passagem os 19 achados abertos, hoje em
   docs/explanation/achados-execucao-real.md — cada um espera a fase que
   o endereça, e corrigir fora dela apaga a evidência de por que existia
-- (FASE 15) Nenhum gate NOVO e nenhuma mudança de comportamento de
-  gate existente — a fase só DECLARA e MEDE o que já existe
+- (FASE 15 — CONCLUÍDA) O congelamento de gates valeu enquanto a fase
+  corria — nenhum gate NOVO, nenhuma mudança de comportamento de gate
+  existente — e terminou sem exceção nenhuma: a fase só DECLAROU e MEDIU
+  o que já existia. Segue valendo a regra permanente de que gate novo é
+  decisão de produto, com ADR
 - (FASE 13 — CONCLUÍDA) O congelamento valeu enquanto a fase corria, e
   vale registrar como terminou, porque a regra funcionou: quatro exceções,
   todas pelo MESMO critério — só o que impedia a própria medição de
