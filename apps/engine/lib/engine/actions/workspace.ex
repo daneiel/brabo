@@ -48,21 +48,50 @@ defmodule Engine.Actions.Workspace do
     dir = workspace_dir(project_id)
     File.mkdir_p!(dir)
 
-    if git_dir?(dir) do
+    if pronto?(dir) do
       dir
     else
       # O lock é por projeto: dois projetos diferentes inicializam em
       # paralelo normalmente. Recheca dentro da seção crítica — quem
       # esperou o lock encontra o working tree já pronto e não refaz nada.
       :global.trans({{__MODULE__, project_id}, self()}, fn ->
-        unless git_dir?(dir) do
-          init_from_bare!(dir, bare_repo_path, default_branch, remoto)
+        cond do
+          pronto?(dir) ->
+            :ok
+
+          # Workspace de ANTES da marca: já é repo utilizável, e re-inicializar
+          # apagaria trabalho. Só ganha a marca.
+          git_dir?(dir) ->
+            marcar_pronto!(dir)
+
+          true ->
+            init_from_bare!(dir, bare_repo_path, default_branch, remoto)
+            marcar_pronto!(dir)
         end
       end)
 
       dir
     end
   end
+
+  @marca ".brabo-workspace-pronto"
+
+  # O caminho rápido SEM lock precisa de um critério que só seja verdadeiro no
+  # FIM da inicialização.
+  #
+  # Era `.git` existir — e `init_from_bare!` começa com `git init`, que cria o
+  # `.git` na PRIMEIRA linha, antes do fetch e do checkout. Quem chegasse nessa
+  # janela via "pronto", pulava o lock inteiro e rodava `git worktree add` num
+  # repositório pela metade: `fatal: not a git repository`.
+  #
+  # Só aparece com DOIS dev agents subindo juntos, o que exige duas entradas no
+  # module_map — por isso atravessou todas as execuções de um módulo só.
+  #
+  # O lock continua onde estava. O que muda é a guarda que decide se vale a
+  # pena pegá-lo.
+  defp pronto?(dir), do: File.regular?(Path.join(dir, @marca))
+
+  defp marcar_pronto!(dir), do: File.write!(Path.join(dir, @marca), "")
 
   defp git_dir?(dir), do: File.dir?(Path.join(dir, ".git"))
 
