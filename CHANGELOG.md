@@ -2,6 +2,21 @@
 
 Gerado dos conventional commits por `scripts/changelog.mjs`.
 
+## Unreleased
+
+### Correções
+
+- **deps**: cinco alertas do Dependabot fechados por `pnpm.overrides` em
+  `pnpm-workspace.yaml` — todos transitivos, nenhum tocado por bump direto de
+  `package.json`. `js-yaml` (HIGH, GHSA-5p4m-2wfm-xmqj, DoS em `!!omap`) teve
+  a faixa existente ampliada de `<4.3.0` para `<4.3.1`; `mermaid` (3
+  MODERATE + 1 LOW, via `@docusaurus/theme-mermaid`); `postcss` (MODERATE,
+  CVE-2026-69153, via a árvore `@csstools/postcss-*`); `fast-uri` (HIGH,
+  CVE-2026-18446, via `ajv`/`@redocly/ajv`); `undici` (HIGH + 3 MODERATE,
+  via `cheerio` e `jsdom`). Nenhum dos cinco chega no runtime da api ou do
+  web em produção — são tooling do `website` (Docusaurus) e devDependency de
+  teste (`jsdom`). Ver `pnpm-workspace.yaml` para o detalhe de cada faixa.
+
 ## v2.4.0 — 2026-08-07
 
 ### Novidades
