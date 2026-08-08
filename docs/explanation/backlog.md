@@ -36,13 +36,28 @@ ou apaga evidência custa mais tarde do que hoje; um cosmético custa igual.
 | ~~— avulso~~ | ~~promotion-check sem spec~~ | **FEITO** | — | 10 casos, verificados por mutação |
 | ~~I — O dev agent começa do zero~~ | ~~X, Y~~ | **FEITA** | — | RN-085; Y fechado na 13b, X na FASE 14d |
 
-**Cobertura: 19 de 19** dos achados da execução real, mais **2 novos** (X e
-Y) vindos da validação da FASE 13b — ver
-[validacao-real.md](validacao-real.md). **Os dois estão fechados**: Y na própria
-13b, X pela FASE 14d ([RN-085](../business-rules.md#rn-085)) — o teto de
-iterações virou por TIPO de agente, que era a forma que a triagem tinha
-proposto e a decisão de produto que faltava. As letras de fase (A–H) e as de achado (B–V) colidem
-por herança das duas listas; onde houver ambiguidade o texto diz "achado".
+**Cobertura: 19 de 19** dos achados da execução real, mais **oito novos**
+(W, X, Y, Z, AA, AB, AC, AD, AE) vindos da validação da FASE 13b — ver
+[validacao-real.md](validacao-real.md).
+
+Destes, **cinco fecharam**: W, Y, AA, AB e AC na própria 13b, e X pela FASE 14d
+([RN-085](../business-rules.md#rn-085)) — o teto de iterações virou por TIPO de
+agente, que era a forma que a triagem tinha proposto e a decisão de produto que
+faltava.
+
+**Três seguem abertos**, e nenhum é bug a corrigir:
+
+| achado | o que é | por que não é conserto |
+|---|---|---|
+| **Z** e **AD** | o allowlist de verbos não converge — verbo, forma e invocação são espaços distintos | o allowlist cumpre o que promete, e a recusa do `bash` prova que a fronteira segura. É decisão de PRODUTO sobre política por perfil de agente, com ADR |
+| **AE** | o agente de QA tenta consertar o código que julga | nada vazou: barrado por duas barreiras independentes. O dado é a divergência entre o que o prompt pede e o que o modelo faz |
+
+A conclusão prática da 13b já foi implementada e não espera nada: o caminho não
+é afrouxar política, é o agente ESPERAR a decisão em vez de morrer
+([ADR 0057](../adr/0057-o-gate-espera-a-aprovacao.md), estendendo o 0052).
+
+As letras de fase (A–H) e as de achado (B–V) colidem por herança das duas
+listas; onde houver ambiguidade o texto diz "achado".
 
 Dois saíram da lista de abertos desde a primeira triagem: **A**
 ([RN-067](../business-rules.md#rn-067)) e **M**
@@ -298,7 +313,7 @@ produto adiadas — por isso sem prioridade aqui.
 
 | item | onde foi decidido |
 |---|---|
-| Budget por área | corte da Fase 8; o aparato de áreas saiu do backlog com o [ADR 0053](../adr/0053-dev-lead-e-paralelismo-autorizado.md) |
+| Budget por área | corte da Fase 8; **a um passo** — `agent_areas` passou a existir na FASE 14d ([ADR 0053](../adr/0053-dev-lead-e-paralelismo-autorizado.md)), a tabela que faltava |
 | Dev Lead e áreas via `module_map` | **saiu do backlog**: ADR 0053, implementado pela FASE 14d |
 | Handoff manual a agente à escolha | — |
 | MFA, login social, OIDC, federação | [ADR 0031](../adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.md) |
@@ -308,7 +323,6 @@ produto adiadas — por isso sem prioridade aqui.
 | Modo community do approval-ladder | vira mudança de `aprovacao_humana` no registro de gates (ADR 0054, PR #145) |
 | "N agentes online" no dashboard | — |
 | Preferência de moeda com taxa manual | — |
-| FASE 15b — painel lendo o registro de gates | metade restante da FASE 15 |
 
 ## O que esta triagem NÃO faz
 
