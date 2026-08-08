@@ -173,6 +173,33 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   mão em três lugares (api, web e engine), e agora tem uma fonte só, com as
   outras duas geradas por `pnpm --filter api gerar:areas`. Ver RN-094
 
+### Refatorações
+
+- **web**: as telas de **Projeto** e **Sessão** passam a seguir o handoff de
+  design (`design_handoff_brabo/`, seções 4 e 5). Nenhuma regra de negócio
+  muda, e nenhuma tela ganha ou perde informação — o que muda é a forma. No
+  Projeto: cabeçalho e régua de abas viram uma faixa só, com uma divisória em
+  vez das duas que apareciam empilhadas; o repositório se apresenta em um chip
+  (`local · privado`) e a branch padrão ganha o ícone e o destaque que o desenho
+  pede; e a coluna de Atividade deixa de ser um card boiando a 24px da borda
+  para virar o trilho de 360px do desenho, com rolagem própria — antes a página
+  rolava inteira e o feed sumia de vista assim que a lista de agentes crescia.
+  Na Sessão: a barra de topo ganha o fundo que a distinguia do chat, o balão de
+  mensagem ganha contorno, o avatar ganha o anel na cor do agente, e a marca de
+  passagem de bastão vira a frase que o desenho escreve (`Criativo → passou o
+  bastão ao PO`) em vez do `handoff → po` cru — os dois nomes já estavam no
+  evento, e metade se perdia. O painel de contexto se nomeia ("Contexto da
+  sessão") e separa as seções por divisória. Três correções vieram junto, todas
+  achadas ao comparar com o desenho: o **ponto de estado** era verde fixo, então
+  uma sessão encerrada exibia o mesmo sinal de "ao vivo" de uma em curso (agora
+  ele acompanha a máquina de estados e tem rótulo para quem não vê cor); o
+  agente respondendo aparecia pelo **id** (`criativo`) depois de o evento
+  persistir e pelo **nome** (`Criativo`) enquanto falava; e o título do convite
+  do Criativo pedia `--font-display`, que não existe em `design/tokens.css`, e
+  caía na fonte do navegador. Botão "Encerrar" passa a ter a aparência
+  destrutiva que o desenho lhe dá. Verificado no navegador com
+  `scripts/dev/validacao-visual.js`: nenhum achado de layout nas duas telas
+
 ### Manutenção
 
 - **design**: o handoff de design passa a viver no repositório

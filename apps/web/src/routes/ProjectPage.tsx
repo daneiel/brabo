@@ -12,7 +12,7 @@ import { TokenMeter } from '../components/TokenMeter';
 import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
 import { Skeleton } from '../components/ui/Skeleton';
 import { Tabs } from '../components/ui/Tabs';
-import { GitHubIcon, GitLabIcon, LocalRepoIcon } from '../components/ui/icons';
+import { BranchIcon, GitHubIcon, GitLabIcon, LocalRepoIcon } from '../components/ui/icons';
 import { aguardandoPromocao } from './ProjectBacklogTab';
 import {
   ABAS_DO_PROJETO,
@@ -24,6 +24,9 @@ import {
 import styles from './ProjectPage.module.css';
 
 const PROVIDER_ICON = { github: GitHubIcon, gitlab: GitLabIcon, local: LocalRepoIcon } as const;
+
+/** O chip ao lado do nome diz o que o repositório É, em pt-BR (handoff, seção 4). */
+const VISIBILIDADE = { public: 'público', private: 'privado' } as const;
 
 interface ProjectPageProps {
   projectId: string;
@@ -101,62 +104,81 @@ export function ProjectPage({ projectId, initialTab }: ProjectPageProps) {
   const ProviderIcon = PROVIDER_ICON[repository?.provider ?? 'local'];
   // O painel sai do registro, não de uma cadeia de `&&`: era ali que uma aba
   // nova entrava na régua e no `?tab=` sem nunca renderizar nada.
-  const PainelDaAba = abaPorChave(tab).component;
+  const aba = abaPorChave(tab);
+  const PainelDaAba = aba.component;
 
   return (
     <div className={styles.wrapper}>
-      <div className={styles.header}>
-        <div className={styles.headerLeft}>
-          <span className={styles.providerIcon}>
-            <ProviderIcon size={18} />
-          </span>
-          <div>
-            <div className={styles.titleRow}>
-              <span className={styles.name}>{project.name}</span>
-            </div>
-            <div className={styles.meta}>
-              {repository
-                ? [
-                    repository.provider,
-                    repository.visibility,
-                    repository.defaultBranch,
-                    // Fase 12a: adotado é fato permanente do projeto, e
-                    // saber que o repo veio de fora muda como se lê tudo
-                    // o mais (a política de branches é dele, não nossa).
-                    repository.origin === 'adopted' ? 'adotado' : null,
-                  ]
-                    .filter(Boolean)
-                    .join(' · ')
-                : 'repositório não provisionado'}
+      {/* A régua vive DENTRO do cabeçalho, e o cabeçalho é uma faixa
+          `surface-1` com uma única divisória embaixo (handoff, seção 4). Eram
+          dois blocos com `border-bottom` cada um, e a régua no fundo da
+          página: duas linhas de 1px separadas por 40px de nada. */}
+      <header className={styles.header}>
+        <div className={styles.headerTop}>
+          <div className={styles.headerLeft}>
+            <span className={styles.providerIcon}>
+              <ProviderIcon size={19} />
+            </span>
+            <div className={styles.identity}>
+              <div className={styles.titleRow}>
+                <h1 className={styles.name}>{project.name}</h1>
+                {repository && (
+                  <span className={styles.repoChip}>
+                    {repository.provider} · {VISIBILIDADE[repository.visibility]}
+                  </span>
+                )}
+              </div>
+              <div className={styles.meta}>
+                {repository ? (
+                  <>
+                    <BranchIcon size={13} />
+                    <span className={styles.metaStrong}>{repository.defaultBranch}</span>
+                    {/* Fase 12a: adotado é fato permanente do projeto, e
+                        saber que o repo veio de fora muda como se lê tudo
+                        o mais (a política de branches é dele, não nossa). */}
+                    {repository.origin === 'adopted' && (
+                      <>
+                        <span className={styles.metaSep} />
+                        <span>adotado</span>
+                      </>
+                    )}
+                  </>
+                ) : (
+                  'repositório não provisionado'
+                )}
+              </div>
             </div>
           </div>
+
+          {budget && (
+            <TokenMeter
+              variant="compact"
+              unitLabel="USD"
+              used={budget.spentMicros / 1_000_000}
+              limit={budget.limitMicros / 1_000_000}
+              costBRL={0}
+              costUSD={budget.spentMicros / 1_000_000}
+            />
+          )}
         </div>
 
-        {budget && (
-          <TokenMeter
-            variant="compact"
-            unitLabel="USD"
-            used={budget.spentMicros / 1_000_000}
-            limit={budget.limitMicros / 1_000_000}
-            costBRL={0}
-            costUSD={budget.spentMicros / 1_000_000}
+        <div className={styles.tabsRow}>
+          <Tabs
+            active={tab}
+            onChange={(key) => setTab(key as ChaveDeAba)}
+            items={ABAS_DO_PROJETO.map((aba) => ({
+              key: aba.key,
+              label: aba.label,
+              count: aba.count?.(contagens),
+            }))}
           />
-        )}
-      </div>
+        </div>
+      </header>
 
-      <div className={styles.tabsRow}>
-        <Tabs
-          active={tab}
-          onChange={(key) => setTab(key as ChaveDeAba)}
-          items={ABAS_DO_PROJETO.map((aba) => ({
-            key: aba.key,
-            label: aba.label,
-            count: aba.count?.(contagens),
-          }))}
-        />
-      </div>
-
-      <div className={styles.body}>
+      {/* Quem manda no respiro é o REGISTRO, não um `tab === 'overview'`
+          escrito aqui: a Visão geral desenha as próprias regiões até a borda
+          (o feed é um trilho com divisória à esquerda, não um card solto). */}
+      <div className={[styles.body, aba.semRespiro && styles.bodyRente].filter(Boolean).join(' ')}>
         <PainelDaAba projectId={projectId} />
       </div>
     </div>

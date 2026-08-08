@@ -2,15 +2,25 @@
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-height: 0;
 }
 
+/* Faixa `surface-1` com UMA divisória embaixo — cabeçalho e régua são o mesmo
+   bloco no handoff (seção 4), e eram dois blocos separados aqui, cada um com
+   sua linha de 1px. */
 .header {
+  flex-shrink: 0;
+  background: var(--surface-1);
+  border-bottom: 1px solid var(--border);
+}
+
+.headerTop {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 20px;
-  padding: 20px 24px;
-  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+  padding: 16px 24px 14px;
 }
 
 .headerLeft {
@@ -23,8 +33,9 @@
 .providerIcon {
   width: 36px;
   height: 36px;
-  border-radius: 9px;
+  border-radius: var(--radius-md);
   background: var(--surface-2);
+  border: 1px solid var(--border);
   color: var(--text-secondary);
   display: flex;
   align-items: center;
@@ -32,29 +43,87 @@
   flex-shrink: 0;
 }
 
+.identity {
+  min-width: 0;
+}
+
 .titleRow {
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
 }
 
 .name {
+  margin: 0;
   font-family: var(--font-heading);
   font-weight: 700;
   font-size: 20px;
+  letter-spacing: -0.02em;
   color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* `github · privado` — o que o repositório É, ao lado do nome. */
+.repoChip {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 2px 7px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 3px;
   font-family: var(--font-mono);
-  font-size: 11.5px;
+  font-size: 11px;
   color: var(--text-muted);
-  margin-top: 4px;
 }
 
+/* A branch padrão é o dado que se lê primeiro nesta linha. */
+.metaStrong {
+  color: var(--text-secondary);
+}
+
+.metaSep {
+  width: 1px;
+  height: 11px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+/*
+ * A régua, adaptada ao handoff sem tocar na primitiva `Tabs`.
+ *
+ * O desenho pede aba com respiro PRÓPRIO (11px × 14px) e 2px entre elas, com o
+ * sublinhado da ativa cobrindo a aba inteira; a primitiva desenha texto solto
+ * com 20px de intervalo e um sublinhado do tamanho do rótulo. E a divisória é
+ * uma só, a do cabeçalho — a da lista fica logo acima e as duas apareciam
+ * empilhadas.
+ *
+ * Está aqui por CSS de descendente, e não em `components/ui/Tabs.module.css`,
+ * porque a primitiva é de outro dono nesta onda. Quando ela puder mudar, o
+ * lugar disto é lá — está na PR como pendência declarada.
+ */
 .tabsRow {
   padding: 0 24px;
-  border-bottom: 1px solid var(--border);
+}
+
+.tabsRow [role='tablist'] {
+  gap: 2px;
+  border-bottom: none;
+}
+
+.tabsRow [role='tab'] {
+  padding: 11px 14px;
 }
 
 /* O lugar onde a tela fala quando não há projeto para mostrar — erro de carga
@@ -66,6 +135,16 @@
 
 .body {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: 24px;
+}
+
+/* Aba que desenha até a borda (`semRespiro` no registro): quem rola é ela, e
+   por região — a Visão geral rola a coluna do time e o trilho de atividade
+   separadamente, como o handoff mostra. */
+.body.bodyRente {
+  padding: 0;
+  overflow: hidden;
+  display: flex;
 }
