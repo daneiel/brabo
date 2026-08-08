@@ -176,18 +176,109 @@ function gateStatus(events: SessionEvent[], gate: 'qa' | 'secops'): AgentStatus 
 // inclusive dispensada: dispensa é decisão registrada, não silêncio, e o
 // painel deve mostrar isso). Mesmo critério que já vale pra `qa`/`secops`/
 // `infra` (só aparecem quando algo realmente aconteceu).
-function pushAreaMembers(roster: RosterEntry[], events: SessionEvent[], areaKey: string): void {
+function pushAreaMembers(
+  roster: RosterEntry[],
+  delegatedSubagents: readonly string[],
+  areaKey: string,
+  statusOf: (agentId: string) => AgentStatus,
+): void {
   const area = AREAS[areaKey];
   if (!area) return;
 
   for (const member of area.members) {
-    const teveDelegacao = events.some(
-      (e) => e.type.startsWith('delegation.') && (e.payload as DelegationEventPayload).subagent === member,
-    );
-    if (teveDelegacao) {
-      roster.push({ id: member, def: AGENTS[member], status: subagentStatus(events, member) });
+    if (delegatedSubagents.includes(member)) {
+      roster.push({ id: member, def: AGENTS[member], status: statusOf(member) });
     }
   }
+}
+
+/**
+ * Os FATOS que decidem QUEM está na roster — separados de qual status cada um
+ * tem.
+ *
+ * A separação existe porque as duas telas que montam roster pedem coisas
+ * diferentes: o painel do time precisa de status ao vivo (e por isso paga os
+ * eventos da sessão), enquanto o card do dashboard só desenha o chip do agente
+ * e nunca lê status nenhum. Com os fatos isolados, o card se alimenta do
+ * resumo do workspace (uma requisição para a grade toda) sem que exista uma
+ * SEGUNDA regra de presença — `deriveAgentRoster` e o card passam pelo mesmo
+ * `rosterFromFacts` abaixo. Duas regras divergiriam no primeiro agente novo.
+ */
+export interface RosterFacts {
+  executionActivated: boolean;
+  moduleNames: string[];
+  gatesEverOpened: boolean;
+  delegatedSubagents: string[];
+  infraActive: boolean;
+}
+
+/** Extrai os fatos de presença do event log (caminho do painel do time). */
+export function rosterFactsFromEvents(
+  events: SessionEvent[],
+  moduleMap: ModuleMap | null | undefined,
+  executionActivated: boolean,
+  handoffs: Handoff[],
+): RosterFacts {
+  const delegatedSubagents = [
+    ...new Set(
+      events
+        .filter((e) => e.type.startsWith('delegation.'))
+        .map((e) => (e.payload as DelegationEventPayload).subagent)
+        .filter((s): s is string => !!s),
+    ),
+  ];
+
+  return {
+    executionActivated,
+    moduleNames: (moduleMap?.modules ?? []).map((m) => m.name),
+    gatesEverOpened: events.some(
+      (e) => e.type === 'pr.gate_changed' || e.type === 'infra.gate_changed',
+    ),
+    delegatedSubagents,
+    infraActive: handoffs.some(
+      (h) => h.toAgent === 'infra' && h.status === 'accepted',
+    ),
+  };
+}
+
+/**
+ * A REGRA DE PRESENÇA, única no app: criativo/po/arquiteto sempre;
+ * dev-<modulo> por módulo quando a execução foi ativada; qa/secops quando
+ * algum gate já abriu; membros de área com delegação registrada; infra quando
+ * o handoff foi aceito.
+ *
+ * `statusOf` é de quem chama: o painel do time resolve pelo event log, o card
+ * do dashboard devolve `ocioso` porque não exibe status.
+ */
+export function rosterFromFacts(
+  facts: RosterFacts,
+  statusOf: (agentId: string) => AgentStatus,
+): RosterEntry[] {
+  const roster: RosterEntry[] = [
+    { id: 'criativo', def: AGENTS.criativo, status: statusOf('criativo') },
+    { id: 'po', def: AGENTS.po, status: statusOf('po') },
+    { id: 'arquiteto', def: AGENTS.arquiteto, status: statusOf('arquiteto') },
+  ];
+
+  if (facts.executionActivated) {
+    for (const name of facts.moduleNames) {
+      const id = devAgentId(name);
+      roster.push({ id, def: syntheticDevDef(id, name), status: statusOf(id) });
+    }
+  }
+
+  if (facts.gatesEverOpened) {
+    roster.push({ id: 'qa', def: AGENTS.qa, status: statusOf('qa') });
+    roster.push({ id: 'secops', def: AGENTS.secops, status: statusOf('secops') });
+    pushAreaMembers(roster, facts.delegatedSubagents, 'qa', statusOf);
+  }
+
+  if (facts.infraActive) {
+    roster.push({ id: 'infra', def: AGENTS.infra, status: statusOf('infra') });
+    pushAreaMembers(roster, facts.delegatedSubagents, 'infra', statusOf);
+  }
+
+  return roster;
 }
 
 /**
@@ -213,34 +304,26 @@ export function deriveAgentRoster(
   pendingActionAgentIds: ReadonlySet<string> = new Set(),
 ): RosterEntry[] {
   const pendentes = new Set(pendingActionAgentIds);
-
-  const roster: RosterEntry[] = [
-    { id: 'criativo', def: AGENTS.criativo, status: conversationalStatus(events, 'criativo') },
-    { id: 'po', def: AGENTS.po, status: conversationalStatus(events, 'po') },
-    { id: 'arquiteto', def: AGENTS.arquiteto, status: conversationalStatus(events, 'arquiteto') },
-  ];
-
-  if (executionActivated && moduleMap) {
-    for (const m of moduleMap.modules) {
-      const id = devAgentId(m.name);
-      roster.push({ id, def: syntheticDevDef(id, m.name), status: devStatus(events, id) });
-    }
-  }
-
-  const gatesEverOpened = events.some(
-    (e) => e.type === 'pr.gate_changed' || e.type === 'infra.gate_changed',
+  const facts = rosterFactsFromEvents(
+    events,
+    moduleMap,
+    executionActivated && !!moduleMap,
+    handoffs,
   );
-  if (gatesEverOpened) {
-    roster.push({ id: 'qa', def: AGENTS.qa, status: gateStatus(events, 'qa') });
-    roster.push({ id: 'secops', def: AGENTS.secops, status: gateStatus(events, 'secops') });
-    pushAreaMembers(roster, events, 'qa');
-  }
 
-  const infraActive = handoffs.some((h) => h.toAgent === 'infra' && h.status === 'accepted');
-  if (infraActive) {
-    roster.push({ id: 'infra', def: AGENTS.infra, status: conversationalStatus(events, 'infra') });
-    pushAreaMembers(roster, events, 'infra');
-  }
+  // Cada família de agente narra o próprio estado de um jeito, e é isto que o
+  // card do dashboard NÃO precisa — ele desenha o chip, não o status.
+  const statusOf = (agentId: string): AgentStatus => {
+    if (agentId === 'qa') return gateStatus(events, 'qa');
+    if (agentId === 'secops') return gateStatus(events, 'secops');
+    const area = areaFor(agentId);
+    // Membro de área (nunca o lead): quem narra é a delegação, não o agente.
+    if (area && area.lead !== agentId) return subagentStatus(events, agentId);
+    if (agentId.startsWith('dev-')) return devStatus(events, agentId);
+    return conversationalStatus(events, agentId);
+  };
+
+  const roster = rosterFromFacts(facts, statusOf);
 
   // Aplicado por último e sobrepondo: esperar aprovação humana é o estado mais
   // informativo que um agente pode ter no painel. `falhou` continua vencendo —
