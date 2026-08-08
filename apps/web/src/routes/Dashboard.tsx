@@ -111,14 +111,18 @@ export function Dashboard() {
   const cards = cardsQuery.data;
   const [search, setSearch] = useState('');
   const [wizardOpen, setWizardOpen] = useState(false);
-  // O `open` do sino mora aqui porque decide se as consultas da gaveta saem —
+  // O `open` do sino mora aqui porque decide se a consulta da gaveta sai —
   // ver `useNotificationGroups`.
   const [sinoAberto, setSinoAberto] = useState(false);
 
   const cardPorProjeto = new Map((cards ?? []).map((c) => [c.projectId, c]));
 
   const unread = useProjectsUnread(projects, cards);
-  const notificationGroups = useNotificationGroups(unread, sinoAberto);
+  const notificationGroups = useNotificationGroups(
+    unread,
+    sinoAberto,
+    workspace?.id,
+  );
   // Duas fontes, um número. As promoções pendentes (Fase 12c) NÃO entram em
   // `unreadCount`: aquele é consumido por `seq`, e o `onMarkRead` abaixo o
   // zeraria — abrir o sino cancelaria a fila de decisões do usuário.

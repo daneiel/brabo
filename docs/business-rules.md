@@ -2208,9 +2208,11 @@ Duas fronteiras que a regra fixa, e que não são detalhe de implementação:
   viram um chip continua sendo do web — e a regra de PRESENÇA é uma só
   (`rosterFromFacts`), compartilhada com o painel do time, para que um agente
   novo não apareça num lugar e falte no outro.
-- **A gaveta do sino é a única leitura que continua por projeto**, e só busca
-  quando aberta: o corte de "onde parei de ler" é `seq` guardado no navegador
-  (`read-state`), que o servidor não conhece.
+- **A gaveta do sino só busca quando aberta.** Ela era, até a
+  [RN-091](#rn-091), a única leitura que continuava sendo uma requisição por
+  projeto — o corte de "onde parei de ler" é `seq` guardado no navegador
+  (`read-state`), que o servidor não conhece. Hoje o navegador **manda** esse
+  corte, e a gaveta também é uma requisição só.
 
 Efeito colateral aceito e desejado: `gatesEverOpened` e `delegatedSubagents`
 passam a cobrir a sessão INTEIRA. O cliente derivava dos últimos 200 eventos e
@@ -2233,6 +2235,64 @@ perdia chips em sessão longa (ver
   chips que o event log)
 - **Origem:** dashboard de 23 projetos medido no navegador — 3.824 req/min
   antes, 12 depois
+
+### RN-091 — O navegador manda onde parou de ler; o sino é uma requisição {#rn-091}
+
+Com a gaveta de notificações **aberta**, o conteúdo dela sai de **uma**
+requisição por ciclo — `POST /workspaces/:workspaceId/unread-events` — e o
+número de requisições **não cresce com a quantidade de projetos**.
+
+É a metade que faltava da [RN-090](#rn-090). Aquela derrubou o dashboard de
+3.824 para 12 req/min, mas o sino continuou buscando um projeto de cada vez:
+23 projetos com a gaveta aberta mediam **286 req/min** contra o limite de 300
+(`RateLimitGuard`). Passava, e sumia com um projeto a mais.
+
+**O obstáculo, e por que a saída é esta.** Não existe "marcar como lido" no
+servidor, de propósito: o corte é um `seq` por projeto guardado no
+`localStorage` de cada navegador (`read-state`). Havia duas saídas, e a
+diferença entre elas é de PRODUTO:
+
+- parar de repolar enquanto a gaveta está aberta muda a atualidade do que o
+  usuário vê — **recusada**, ninguém pediu essa troca;
+- o navegador **mandar** o mapa `projeto → afterSeq` devolve exatamente os
+  mesmos dados na mesma cadência. **É batelamento puro: nada muda para quem
+  olha a tela**, nem a frescura nem o conteúdo.
+
+**É `POST` sem mutar nada**, e a api responde `200` (nunca `201`) para dizer
+isso. O verbo foi escolhido por ser o único com CORPO: são dezenas de pares, e
+em query string isso vira URL longa — que proxy trunca — além de pôr id de
+projeto do usuário em log de acesso, contra a regra de não passar dado pessoal
+por query string.
+
+Três garantias de semântica que a rota fixa, porque batelar leituras com cortes
+diferentes é onde o erro fácil mora:
+
+- **mapa vazio devolve vazio**, e sem tocar no banco. "Não perguntei nada" não
+  é "me dê tudo";
+- **cada projeto respeita o SEU corte** — `seq` estritamente maior que o dele;
+- **o teto de 50 eventos é por projeto**, o mesmo que `GET .../events` aplica
+  sem `limit`. Um limite na resposta inteira deixaria o projeto barulhento
+  comer a cota dos calados.
+
+Cursor apontando para projeto de outro workspace é **ignorado**, não recusado:
+ele vem do armazenamento local de quem chama e pode ser sobra de um workspace
+antigo.
+
+- **Onde:**
+  `apps/api/src/application/ports/projects-summary-repository.port.ts`
+  (`unreadEventsForWorkspace`),
+  `apps/api/src/infrastructure/persistence/drizzle/projects-summary.repository.ts`,
+  `apps/api/src/interfaces/http/iam/workspaces.controller.ts`
+  (`getUnreadEvents`), `apps/api/src/interfaces/http/iam/dto/unread-events.dto.ts`,
+  `apps/web/src/lib/notifications.ts` (`useNotificationGroups`),
+  `apps/web/src/lib/api-client.ts` (`getUnreadEvents`)
+- **Teste:** `apps/web/src/routes/Dashboard.fanout.test.tsx` (com a gaveta
+  ABERTA: uma requisição, e 30 projetos custam o mesmo que 3);
+  `apps/api/test/infrastructure/persistence/drizzle/projects-summary.repository.spec.ts`
+  (o número de consultas ao banco não cresce com N; mapa vazio, corte por
+  projeto, teto por projeto e isolamento de workspace)
+- **Origem:** residual medido da [RN-090](#rn-090) — 286 req/min com a gaveta
+  aberta num workspace de 23 projetos
 
 ---
 

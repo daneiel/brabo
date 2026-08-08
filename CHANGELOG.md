@@ -17,6 +17,13 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   A tela mostra exatamente o que mostrava. A gaveta do sino passa a buscar as
   notificações quando você a abre, em vez de o tempo todo
 
+- **web,api**: o painel de notificações também deixa de perguntar um projeto de
+  cada vez. Com a gaveta aberta num workspace de 23 projetos ele fazia 286
+  requisições por minuto, contra um limite de 300 — passava por pouco, e sumia
+  com um projeto a mais. Agora o navegador diz de uma vez até onde já leu cada
+  projeto e recebe tudo numa resposta: 12 requisições por minuto, sem mudar nem
+  o conteúdo da gaveta nem a rapidez com que ele se atualiza
+
 - **deps**: cinco alertas do Dependabot fechados por `pnpm.overrides` em
   `pnpm-workspace.yaml` — todos transitivos, nenhum tocado por bump direto de
   `package.json`. `js-yaml` (HIGH, GHSA-5p4m-2wfm-xmqj, DoS em `!!omap`) teve

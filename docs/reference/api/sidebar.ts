@@ -976,6 +976,12 @@ const sidebar: SidebarsConfig = {
           label: "Resumo agregado do workspace",
           className: "api-method get",
         },
+        {
+          type: "doc",
+          id: "docs/reference/api/workspaces-controller-get-unread-events",
+          label: "Os eventos não lidos de vários projetos, numa chamada",
+          className: "api-method post",
+        },
       ],
     },
   ],

@@ -109,6 +109,22 @@ export interface ProjectCardSummary {
   };
 }
 
+/**
+ * Onde a leitura de um projeto parou, do ponto de vista DESTE navegador —
+ * o que a gaveta do sino manda no corpo para receber os não lidos de todos os
+ * projetos numa chamada (RN-091).
+ */
+export interface UnreadCursor {
+  projectId: string;
+  afterSeq: number;
+}
+
+export interface ProjectUnreadEvents {
+  projectId: string;
+  sessionId: string;
+  events: SessionEvent[];
+}
+
 export interface ProjectMemberWithUser {
   userId: string;
   role: Role;
