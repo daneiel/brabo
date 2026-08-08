@@ -357,17 +357,20 @@ O ADR 0038 pediu esta validação nomeando o lugar — `CreateHandoffUseCase` é
 `to_agent` como string livre, então até aqui nada impedia um agente de furar a
 hierarquia.
 
-**Área, lead e membros continuam hardcoded**, em três lugares (web, engine,
-api): o aparato genérico do ADR 0038 (`agent_areas`/`agent_area_members`) é
-corte de escopo registrado da Fase 8, e esta regra não o desfaz. O que a
-impede de divergir em silêncio é teste, não tabela: a lista da api é comparada
-com a do web, e acrescentar um subagente só de um lado reprova.
+**Área, lead e membros têm UMA fonte** desde a FASE 18:
+`apps/api/src/domain/agents/agent-areas.ts`. A lista estava escrita à mão em
+três lugares (api, web, engine) e o teste comparava só api contra web — o
+engine divergia calado. Agora `apps/web/src/lib/agent-areas.generated.ts` e
+`apps/engine/lib/engine/agents/areas.ex` saem de
+`pnpm --filter api gerar:areas`, e o teste reprova o que estiver velho em
+disco. A lista continua sendo o CATÁLOGO; `agent_areas` é o ESTADO por projeto
+(RN-094), e as duas respondem perguntas diferentes.
 
 - **Onde:** `apps/api/src/domain/agents/agent-areas.ts`
   (`assertHandoffTargetAllowed`, `HandoffToSubagentError`),
   `apps/api/src/application/use-cases/agents/create-handoff.use-case.ts`
 - **Teste:** `test/domain/agents/agent-areas.spec.ts` (a regra + a checagem de
-  divergência contra o web),
+  que as cópias derivadas não divergem da fonte),
   `test/application/use-cases/agents/create-handoff.use-case.spec.ts`
   (recusa sem linha e sem evento)
 - **Origem:** [ADR 0038](adr/0038-hierarquia-de-agentes.md), fechado a partir
@@ -1702,6 +1705,54 @@ depois de ler.
   `test/application/use-cases/execution/set-area-max-parallel.use-case.spec.ts`
   e `apps/web/src/routes/ProjectSettingsTab.test.tsx` (`ParallelismSection`)
 - **Origem:** [ADR 0053](adr/0053-dev-lead-e-paralelismo-autorizado.md), FASE 14d
+
+### RN-094 — A área de agentes nasce com o projeto {#rn-094}
+
+Criar um projeto grava as três áreas (`dev`, `qa`, `infra`) em `agent_areas`,
+com o lead de cada uma e os membros **enumeráveis** em `agent_area_members` —
+na MESMA transação da criação. Se o seeding falha, o projeto não nasce: projeto
+sem área é projeto onde a RN-083 lê tabela vazia e cai no default sem que
+ninguém tenha decidido nada.
+
+**Isto é a correção de um defeito, não uma capacidade nova.** `agent_areas`
+existe desde a FASE 14d e nunca foi gravada — `AgentAreaRepository.upsert`
+tinha teste e não tinha NENHUM chamador. Em produção a tabela estava vazia,
+`GET /projects/:projectId/agent-areas` devolvia `[]`, e os quatro casos de uso
+que a leem operavam sobre o nada. É a mesma falha da própria FASE 14d, escrita
+no CLAUDE.md: **testar a peça não é testar o caminho até ela**. Por isso o
+teste desta regra entra pelo caso de uso que a rota chama, com repositório
+real: um fake aqui provaria exatamente o que já estava provado e quebrado.
+
+**Semeia em DOIS lugares, e cada um responde uma pergunta diferente.** A
+criação do projeto faz a área EXISTIR — a tela de Configurações lê num projeto
+que nunca executou. A ativação da execução diz quem são os MEMBROS da área de
+`dev`: um `dev-<modulo>` por módulo do `module_map`, que não existia quando o
+projeto nasceu. Enquanto não há membros gravados, quem sustenta a regra de
+endereçamento (RN-087) é o predicado `ehDevDeModulo`, que não consulta o banco.
+
+**O seeding nunca manda `max_parallel`.** A ativação é repetível, e mandar o
+default faria um teto que você subiu para 5 voltar para 2 em silêncio — o
+produto desfazendo a sua decisão. O mesmo vale para a migração de backfill: ela
+faz a área existir e para aí.
+
+Projetos criados antes disto são cobertos pela migração `0038`, com `ON
+CONFLICT DO NOTHING` nas duas tabelas. Sem ela, o defeito ficaria corrigido só
+para quem começasse do zero.
+
+- **Onde:**
+  `apps/api/src/application/use-cases/agents/seed-agent-areas.use-case.ts`,
+  chamado por `application/use-cases/iam/create-project.use-case.ts` e
+  `application/use-cases/execution/activate-execution.use-case.ts`;
+  lista canônica em `apps/api/src/domain/agents/agent-areas.ts`;
+  backfill em `apps/api/src/db/migrations/0038_wandering_lila_cheney.sql`
+- **Teste:**
+  `test/application/use-cases/iam/create-project-semeia-areas.spec.ts` (o
+  caminho, contra o banco, incluindo a falha que derruba a criação),
+  `test/db/agent-areas-backfill.spec.ts` (a migração rodada de verdade, duas
+  vezes) e `test/application/use-cases/execution/activate-execution.use-case.spec.ts`
+  (os membros de dev, e o teto nunca enviado)
+- **Origem:** FASE 18, defeito achado na investigação do programa 16–26;
+  a tabela vem do [ADR 0053](adr/0053-dev-lead-e-paralelismo-autorizado.md)
 
 ### RN-084 — A esteira exibida deriva do registro de gates {#rn-084}
 

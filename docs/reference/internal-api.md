@@ -337,6 +337,14 @@ reproporia a mesma coisa a cada rodada. A ação que nasce daí **nunca é
 auto-aprovável** ([RN-086](../business-rules.md#rn-086)): automatizar o ajuste
 seria o produto elevando o próprio limite de gasto.
 
+Esta rota **respondia `400` em todo projeto** até a FASE 18, e nada no contrato
+denunciava isso: a validação `área "<key>" não existe neste projeto` é a
+primeira coisa que ela faz, e `agent_areas` nunca era gravada — o `upsert` do
+repositório não tinha chamador nenhum. Agora a área nasce com o projeto
+([RN-094](../business-rules.md#rn-094)) e a recusa volta a significar o que
+diz: chave de área inexistente. Projetos anteriores à correção são cobertos
+pela migração de backfill.
+
 ## api → engine
 
 Quatorze rotas de comando, mais as de saúde. Sob `/internal` com `VerifyServiceToken`:
