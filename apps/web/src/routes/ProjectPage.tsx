@@ -13,25 +13,25 @@ import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
 import { Skeleton } from '../components/ui/Skeleton';
 import { Tabs } from '../components/ui/Tabs';
 import { GitHubIcon, GitLabIcon, LocalRepoIcon } from '../components/ui/icons';
-import { ProjectOverviewTab } from './ProjectOverviewTab';
-import { ProjectSessionsTab } from './ProjectSessionsTab';
-import { ProjectApprovalsTab } from './ProjectApprovalsTab';
-import { ProjectBacklogTab, aguardandoPromocao } from './ProjectBacklogTab';
-import { ProjectInsightsTab } from './ProjectInsightsTab';
-import { ProjectSettingsTab } from './ProjectSettingsTab';
+import { aguardandoPromocao } from './ProjectBacklogTab';
+import {
+  ABAS_DO_PROJETO,
+  ABA_PADRAO,
+  abaPorChave,
+  type ChaveDeAba,
+  type ContagensDeAba,
+} from './project-tabs';
 import styles from './ProjectPage.module.css';
 
 const PROVIDER_ICON = { github: GitHubIcon, gitlab: GitLabIcon, local: LocalRepoIcon } as const;
 
-type TabKey = 'overview' | 'sessions' | 'backlog' | 'approvals' | 'insights' | 'settings';
-
 interface ProjectPageProps {
   projectId: string;
-  initialTab?: TabKey;
+  initialTab?: ChaveDeAba;
 }
 
 export function ProjectPage({ projectId, initialTab }: ProjectPageProps) {
-  const [tab, setTab] = useState<TabKey>(initialTab ?? 'overview');
+  const [tab, setTab] = useState<ChaveDeAba>(initialTab ?? ABA_PADRAO);
 
   const projectQuery = useQuery({ queryKey: ['project', projectId], queryFn: () => getProject(projectId) });
   const project = projectQuery.data;
@@ -57,7 +57,15 @@ export function ProjectPage({ projectId, initialTab }: ProjectPageProps) {
     (h) => h.status === 'proposed',
   ).length;
 
+  const contagens: ContagensDeAba = {
+    promocoesPendentes,
+    aprovacoesPendentes: pendingCount,
+    hipotesesPendentes,
+  };
+
   useEffect(() => {
+    // Literal de propósito: quem marca o projeto como lido é a Visão geral —
+    // não "a aba padrão, seja ela qual for".
     if (tab === 'overview' && latestSession) {
       setLastSeenSeq(projectId, latestSession.nextSeq - 1);
     }
@@ -91,6 +99,9 @@ export function ProjectPage({ projectId, initialTab }: ProjectPageProps) {
   }
 
   const ProviderIcon = PROVIDER_ICON[repository?.provider ?? 'local'];
+  // O painel sai do registro, não de uma cadeia de `&&`: era ali que uma aba
+  // nova entrava na régua e no `?tab=` sem nunca renderizar nada.
+  const PainelDaAba = abaPorChave(tab).component;
 
   return (
     <div className={styles.wrapper}>
@@ -136,25 +147,17 @@ export function ProjectPage({ projectId, initialTab }: ProjectPageProps) {
       <div className={styles.tabsRow}>
         <Tabs
           active={tab}
-          onChange={(key) => setTab(key as TabKey)}
-          items={[
-            { key: 'overview', label: 'Visão geral' },
-            { key: 'sessions', label: 'Sessões' },
-            { key: 'backlog', label: 'Backlog', count: promocoesPendentes || undefined },
-            { key: 'approvals', label: 'Aprovações', count: pendingCount || undefined },
-            { key: 'insights', label: 'Insights', count: hipotesesPendentes || undefined },
-            { key: 'settings', label: 'Configurações' },
-          ]}
+          onChange={(key) => setTab(key as ChaveDeAba)}
+          items={ABAS_DO_PROJETO.map((aba) => ({
+            key: aba.key,
+            label: aba.label,
+            count: aba.count?.(contagens),
+          }))}
         />
       </div>
 
       <div className={styles.body}>
-        {tab === 'overview' && <ProjectOverviewTab projectId={projectId} />}
-        {tab === 'sessions' && <ProjectSessionsTab projectId={projectId} />}
-        {tab === 'backlog' && <ProjectBacklogTab projectId={projectId} />}
-        {tab === 'approvals' && <ProjectApprovalsTab projectId={projectId} />}
-        {tab === 'insights' && <ProjectInsightsTab projectId={projectId} />}
-        {tab === 'settings' && <ProjectSettingsTab projectId={projectId} />}
+        <PainelDaAba projectId={projectId} />
       </div>
     </div>
   );
