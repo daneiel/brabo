@@ -164,13 +164,15 @@ de falha de infra — ADR 0057), AC (redirecionamento tornava qualquer
 comando inaprovável), o ReDoS no escopo de caminho (CodeQL HIGH), e a
 CVE do postgrex.
 
-TRÊS achados seguem abertos, e o argumento deles vale mais que os
-números: X (o teto de iterações não cabe no trabalho real — conserto é
-teto por tipo de agente, ADR 0053), Z e AD (o allowlist de verbos NÃO
-converge: verbo, forma e invocação são espaços distintos, e as
-execuções 6/7/8 travaram em um de cada), AE (o agente de QA tenta
+Dos achados que a fase abriu, X fechou depois (FASE 14d, RN-085 — o
+teto de iterações virou por TIPO de agente). DOIS seguem abertos, e o
+argumento deles vale mais que os números: Z e AD (o allowlist de verbos
+NÃO converge: verbo, forma e invocação são espaços distintos, e as
+execuções 6/7/8 travaram em um de cada), e AE (o agente de QA tenta
 consertar o código que julga, contra o próprio prompt — contido por
-duas barreiras independentes, allowlist e escopo).
+duas barreiras independentes, allowlist e escopo). Nenhum dos dois é
+bug a corrigir: são decisão de produto, e estão em
+docs/explanation/achados-execucao-real.md.
 
 A conclusão que a fase entrega, e que importa mais que a PR: o caminho
 para autonomia NÃO passa por afrouxar política. Passa por o agente
