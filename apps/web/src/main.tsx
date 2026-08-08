@@ -15,6 +15,7 @@ import { restaurarSessao } from './lib/auth';
 import { ToastProvider } from './components/ui/ToastProvider';
 import { logger } from './lib/logger';
 import { ApiError } from './lib/api-client';
+import { deveRetentar } from './lib/query-policy';
 
 /**
  * Captura global de erro (Fase 5, item 6).
@@ -39,6 +40,12 @@ function logFailure(scope: string, error: unknown): void {
 }
 
 const queryClient = new QueryClient({
+  defaultOptions: {
+    // 4xx não se retenta (ver `query-policy.ts`). O default do TanStack são 3
+    // tentativas para QUALQUER erro, e contra o rate limit da api isso
+    // quadruplicava o tráfego exatamente quando o servidor pedia menos.
+    queries: { retry: deveRetentar },
+  },
   // Os dois caches são os únicos ganchos que veem TODA falha de dado da app —
   // um try/catch por chamada deixaria passar o que o react-query engole.
   queryCache: new QueryCache({

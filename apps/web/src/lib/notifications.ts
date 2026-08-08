@@ -1,6 +1,7 @@
 import { useQueries } from '@tanstack/react-query';
 import { listBacklog, listSessionEvents, listSessions } from './api-client';
 import { getLastSeenSeq } from './read-state';
+import { pollQueParaNoErro } from './query-policy';
 import type { Project, Session } from './api-types';
 
 function latestOf(sessions: Session[]): Session | undefined {
@@ -19,7 +20,7 @@ export function useProjectsUnread(projects: Project[] | undefined): ProjectUnrea
     queries: (projects ?? []).map((project) => ({
       queryKey: ['sessions', project.id],
       queryFn: () => listSessions(project.id),
-      refetchInterval: 5000,
+      refetchInterval: pollQueParaNoErro(5000),
     })),
   });
 
@@ -50,7 +51,7 @@ export function useStoriesAwaitingPromotion(
     queries: (projects ?? []).map((project) => ({
       queryKey: ['backlog', project.id],
       queryFn: () => listBacklog(project.id),
-      refetchInterval: 5000,
+      refetchInterval: pollQueParaNoErro(5000),
     })),
   });
 
@@ -78,7 +79,7 @@ export function useNotificationGroups(unread: ProjectUnread[]): NotificationGrou
     queries: withUnread.map((u) => ({
       queryKey: ['session-events', u.project.id, u.latestSession!.id, 'unread', getLastSeenSeq(u.project.id)],
       queryFn: () => listSessionEvents(u.project.id, u.latestSession!.id, { afterSeq: getLastSeenSeq(u.project.id) }),
-      refetchInterval: 5000,
+      refetchInterval: pollQueParaNoErro(5000),
     })),
   });
 

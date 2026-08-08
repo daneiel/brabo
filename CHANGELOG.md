@@ -369,6 +369,32 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **web**: erro de carregamento parou de virar **tela branca**. Abrir um projeto
+  com a api limitando por `429` devolvia a área principal inteiramente vazia —
+  sem mensagem, sem estado de erro, sem esqueleto —, porque a tela testava
+  `if (!project) return null` e com isso tratava "a api recusou" e "ainda não
+  chegou" como a mesma coisa. Agora a tela DIZ o que houve, com a frase que a
+  api mandou (é ela que sabe a diferença entre "tente em instantes" e "você não
+  tem acesso"), o `trace_id` para quem for investigar e um botão de tentar de
+  novo. No dashboard o defeito era pior que branco: `!projects` também era
+  verdadeiro no erro, então a tela convidava a **criar o primeiro projeto** de
+  um workspace que podia ter vinte. A barra lateral também fala, com o texto
+  cabendo nos 248px que ela tem (RN-088)
+- **web**: a app parou de responder ao rate limit da api com **mais tráfego**.
+  Uma sessão real acumulou 1128 erros `429` num console só: o TanStack Query
+  retentava três vezes cada falha e os ~25 polls de 3 a 5 segundos seguiam
+  batendo na mesma porta, num laço que impedia a janela deslizante do limite de
+  se refazer. Agora 4xx não se retenta — 429 é literalmente o servidor pedindo
+  para parar, e 401 já renovou a sessão por dentro — e todo poll para quando a
+  query erra, voltando sozinho no foco da janela, na remontagem da tela ou no
+  botão de tentar de novo. 5xx e falha de rede continuam com as três
+  tentativas, que ali é a reação certa
+- **web**: projetos de **mesmo nome** deixam de ser indistinguíveis na barra
+  lateral. Uma execução de validação criou vinte `validacao-real`, e as vinte
+  linhas eram idênticas. Quem repete nome passa a mostrar o id abreviado e a
+  data de criação, que já vinham no payload; nome único não ganha legenda
+  nenhuma, porque desempate em toda linha seria ruído no lugar com menos espaço
+  da tela
 - **engine**: o Psicólogo parou de analisar sessão **sem nada a analisar**. Uma
   sessão cujo log inteiro era provisionamento de repositório passava pelo
   critério de tamanho, ganhava a análise, e o modelo — sem evento algum para
