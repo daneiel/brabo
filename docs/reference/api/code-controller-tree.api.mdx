@@ -1,0 +1,69 @@
+---
+id: code-controller-tree
+title: "Lista UM nível da árvore do repositório"
+description: "Não é recursivo, por desenho do contrato: a aba navega sob demanda, e pedir a árvore inteira de um repositório grande é o amplificador de tráfego que a fase proíbe. `truncated` avisa quando o nível passou do teto de entradas."
+sidebar_label: "Lista UM nível da árvore do repositório"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "get api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Lista UM nível da árvore do repositório"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/projects/{projectId}/code/tree"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Não é recursivo, por desenho do contrato: a aba navega sob demanda, e pedir a árvore inteira de um repositório grande é o amplificador de tráfego que a fase proíbe. `truncated` avisa quando o nível passou do teto de entradas.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./code-controller-tree.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./code-controller-tree.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./code-controller-tree.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

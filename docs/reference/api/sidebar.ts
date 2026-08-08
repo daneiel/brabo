@@ -84,6 +84,30 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/code-controller-file",
+          label: "Devolve o conteúdo de um arquivo",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/code-controller-diff",
+          label: "Devolve o diff de uma PR, normalizado por provider",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/code-controller-search",
+          label: "Busca texto no repositório, com orçamento",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/code-controller-tree",
+          label: "Lista UM nível da árvore do repositório",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/git-controller-connect",
           label: "Começa o OAuth com o provider de git",
           className: "api-method get",

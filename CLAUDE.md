@@ -540,6 +540,11 @@ seguinte, e quando vier, escrita é efeito externo: nasce `proposed_action`.
   created → active → closing → closed | closed_abnormally
 - Toda ação com efeito externo (git, terminal, gasto) nasce como
   proposed_action e respeita permissions.json; deny sempre vence allow.
+  LER não é efeito externo e NÃO vira proposed_action — encheria a fila de
+  ruído até ninguém mais ler as de verdade. O que a leitura deve é ser
+  CONTIDA e ter TETO: caminho vindo do cliente passa pela checagem central
+  (RN-092/RN-095), e leitura composta que chama o provider N vezes tem
+  orçamento e cache, senão vira amplificador de tráfego (ADR 0060).
 - Agentes rodam SEMPRE dentro de um Harness; nenhuma chamada de LLM ou
   ferramenta fora dele.
 - Handoff externo endereça só LEAD de área ou agente sem área;

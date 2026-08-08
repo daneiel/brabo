@@ -63,6 +63,31 @@ arquivos por diff) e **não** em `packages/shared`, que é 100% tipo — um
 `export const` lá sobrevive ao `tsc` e quebra o boot da api em produção
 (travado por `apps/api/test/packages-shared-so-tipos.spec.ts`).
 
+### O teto da CHAMADA, e o teto do CONSUMO (FASE 26b)
+
+Os dois números acima limitam o que um provider devolve em **uma** chamada. A
+superfície HTTP que os consome tem tetos próprios, no mesmo arquivo, e eles
+respondem outra pergunta: quantas CHAMADAS uma requisição do cliente pode
+provocar. `listTree` é barato uma vez e caro mil vezes.
+
+Quem obriga a distinção é a **busca da aba Code**, que **não é operação deste
+contrato** — nenhum dos três providers a tem. GitHub e GitLab têm code search
+de plataforma, com semânticas e limites próprios; o `LocalGitProvider` é um
+bare repo e não tem nada disso. Declará-la aqui seria ou uma 13ª operação com
+capability `false` no local (uma aba que some num provider), ou o vocabulário
+de uma plataforma vazando para dentro do contrato normalizado que existe
+justamente para impedir isso.
+
+Então ela fica **composta na camada de aplicação**
+(`application/use-cases/git/read-project-code.use-case.ts`), sobre `listTree` +
+`getFileContent`, com três orçamentos — diretórios percorridos, arquivos
+abertos e casamentos devolvidos — mais um cache de TTL curto
+(`domain/git/git-read-cache.ts`) para navegar e buscar não repetirem as mesmas
+chamadas. Quem paga é a credencial do **owner do workspace**
+([RN-058](../business-rules.md#rn-058)/[RN-082](../business-rules.md#rn-082)),
+e o rate limit é do provider — ver [RN-095](../business-rules.md#rn-095) e o
+[ADR 0060](../adr/0060-superficie-de-leitura-de-codigo.md).
+
 ## Capabilities
 
 Nem todo backend faz tudo, e isso é **declarado**, não descoberto na falha:
@@ -170,7 +195,13 @@ A saída para uma fase entregar contrato antes das rotas é estreita e nomeada:
 o mapa `SEM_CONSUMIDOR_AINDA`, com a fase que consome escrita ao lado de cada
 operação. Ela se fecha sozinha — assim que a operação ganha consumidor, a
 entrada passa a **reprovar**, obrigando quem escreveu a rota a apagá-la.
-`listTree` e `getPullRequestDiff` estão ali, apontando para a 26b.
+
+**O mapa está vazio desde a FASE 26b**, e foi esvaziado pelo mecanismo e não
+pela memória de alguém: assim que
+`application/use-cases/git/read-project-code.use-case.ts` passou a chamar
+`listTree` e `getPullRequestDiff`, o segundo teste reprovou apontando as duas
+entradas pelo nome. Vazio, e não removido — a saída continua disponível para o
+próximo contrato que nascer antes do consumidor.
 
 :::caution O fake precisa mentir igual ao remoto
 A suite roda contra backends falsos (msw) nos providers remotos, e um fake mais
@@ -300,4 +331,7 @@ operações, declarar as capabilities honestamente e passar na suite de contrato
 
 **Escrita pela aba Code também não existe.** `listTree` e `getPullRequestDiff`
 são leitura, e só. Salvar arquivo pela aba é fase seguinte, e quando vier,
-escrita é efeito externo: nasce `proposed_action`, como toda mutação de git.
+escrita é efeito externo: nasce `proposed_action`, como toda mutação de git. O
+que torna isso verificável em vez de intenção é o controller da FASE 26b não
+ter **um único** verbo de escrita — nem `@Post`, nem `@Put`, nem `@Patch`, nem
+`@Delete`.

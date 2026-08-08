@@ -138,6 +138,22 @@ o componente `d` da JWK, travado por teste.
   volta a ser o que a FASE 14d quis: **ler** o teto é trabalho de quem executa;
   **mudá-lo** é decidir quanto o produto gasta sem perguntar, e por isso exige
   o mesmo papel de ativar a execução.
+- **As quatro rotas `/projects/:projectId/code/*` são `role:viewer` e SÓ
+  LEITURA** (FASE 26b). Ver o código do projeto é a mesma permissão que ver o
+  projeto — o mesmo corte de `GET /projects/:id/git/repository`. Três coisas
+  fazem essa folga aparente ser decisão e não descuido:
+  - **não há verbo de escrita no controller**, e não pode haver: a aba Code é de
+    leitura, e escrita é efeito externo, que nasce `proposed_action` e é fase
+    seguinte. Um `@Post` neste arquivo é mudança de fase, não de rota;
+  - **o caminho é contido em UM lugar** ([RN-095](business-rules.md#rn-095)),
+    pela mesma checagem central da [RN-092](business-rules.md#rn-092) — e a
+    contenção importa aqui mais que o papel, porque nos providers remotos o
+    caminho vira segmento de URL da API do provider e um `../` troca de
+    **endpoint**, não de arquivo;
+  - **a credencial gasta é a do owner do workspace**
+    ([RN-058](business-rules.md#rn-058)/[RN-082](business-rules.md#rn-082)),
+    como na escrita. Ler custa rate limit do provider, e é por isso que a busca
+    tem orçamento: sem teto, um `viewer` pagaria a conta do owner à vontade.
 - **`jwt` sem papel não significa sem autorização.** Em `/users/me/*` o escopo é
   o próprio usuário; em `GET /workspaces` a listagem já é filtrada pela
   associação de quem chamou.
@@ -250,6 +266,10 @@ o componente `d` da JWK, travado por teste.
 | PUT | `/projects/:projectId/budget` | role:maintainer |
 | GET | `/projects/:projectId/agent-areas` | role:developer |
 | PATCH | `/projects/:projectId/agent-areas/:key/max-parallel` | role:maintainer |
+| GET | `/projects/:projectId/code/file` | role:viewer |
+| GET | `/projects/:projectId/code/pull-requests/:pullRequestId/diff` | role:viewer |
+| GET | `/projects/:projectId/code/search` | role:viewer |
+| GET | `/projects/:projectId/code/tree` | role:viewer |
 | GET | `/projects/:projectId/coverage` | role:viewer |
 | GET | `/projects/:projectId/events/:eventId` | role:viewer |
 | POST | `/projects/:projectId/execution/activate` | role:maintainer |
