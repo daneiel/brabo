@@ -136,7 +136,7 @@ function formatarCustoMicros(micros: number): string {
  * distintivo lado a lado. As MAIÚSCULAS do nome distinguem (`OA` e `OR`), e
  * quando só há uma (Anthropic, Vultr) valem as duas primeiras letras.
  */
-export function siglaDoConector(label: string): string {
+function siglaDoConector(label: string): string {
   const maiusculas = label.replace(/[^A-Za-z]/gu, '').match(/[A-Z]/gu) ?? [];
   const letras =
     maiusculas.length >= 2 ? maiusculas.slice(0, 2).join('') : label.slice(0, 2);
