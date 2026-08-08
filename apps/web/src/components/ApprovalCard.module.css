@@ -1,11 +1,19 @@
+/*
+ * Métricas de `design_handoff_brabo/designs/Brabo Approvals.dc.html` (seção 6
+ * do README do handoff).
+ *
+ * A diferença estrutural em relação à versão anterior: o card não tem mais
+ * padding próprio e `gap` entre blocos. Ele RECORTA (`overflow: hidden`) e cada
+ * região tem o padding e a divisória dela — cabeçalho 14×16 com borda embaixo,
+ * corpo colado nas bordas, ações 12×16 com borda em cima. É o que faz o corpo
+ * de terminal e de diff encostarem no card, como o desenho mostra; com padding
+ * no card eles flutuavam numa moldura de 16px que o desenho não tem.
+ */
 .card {
   background: var(--surface-1);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg, 12px);
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
 }
 
 .card.critical {
@@ -14,23 +22,68 @@
 
 .header {
   display: flex;
-  align-items: flex-start;
-  gap: 10px;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
 }
 
+/*
+ * Continua sendo um `<input type="checkbox">` — trocar por botão custaria a
+ * semântica que o leitor de tela e o teste usam. O que muda é a aparência: o
+ * desenho pede um quadrado de 20px com raio 6, e o checkbox nativo não aceita
+ * raio sem `appearance: none`.
+ */
 .checkbox {
-  margin-top: 2px;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  margin: 0;
+  border-radius: 6px;
+  border: 1.5px solid var(--border-strong);
+  background: var(--surface-0);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition:
+    background 0.12s,
+    border-color 0.12s;
+}
+
+.checkbox::after {
+  content: '';
+  width: 10px;
+  height: 6px;
+  border: 2px solid transparent;
+  border-top: none;
+  border-right: none;
+  transform: translateY(-1px) rotate(-45deg);
+}
+
+.checkbox:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.checkbox:checked::after {
+  border-color: var(--on-accent);
+}
+
+.checkbox:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .headerIcon {
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   flex-shrink: 0;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  border-radius: var(--radius-md);
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 34%, transparent);
   color: var(--accent);
 }
 
@@ -39,20 +92,36 @@
   min-width: 0;
 }
 
+/*
+ * Duas tipografias na mesma linha, como no desenho: o nome do agente em
+ * Space Grotesk 600/14 e o verbo em corpo 12 `text-muted`. Antes era uma frase
+ * só em 13,5px com um `<b>`, e o nome do agente não se destacava de quem lê a
+ * fila de cima para baixo procurando QUEM pediu.
+ */
 .title {
-  font-size: 13.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.actorName {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 14px;
   color: var(--text-primary);
 }
 
-.title b {
-  font-weight: 600;
+.verb {
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
 .meta {
   font-family: var(--font-mono);
   font-size: 11px;
   color: var(--text-muted);
-  margin-top: 3px;
+  margin-top: 1px;
 }
 
 .urgency {
@@ -61,9 +130,10 @@
   gap: 6px;
   font-family: var(--font-mono);
   font-size: 10px;
+  font-weight: 600;
   border-radius: var(--radius-full);
-  padding: 3px 8px;
-  align-self: flex-start;
+  padding: 3px 9px;
+  align-self: center;
   flex-shrink: 0;
   color: var(--urgency-color);
   background: color-mix(in srgb, var(--urgency-color) 14%, transparent);
@@ -78,22 +148,34 @@
 }
 
 .urgencyDot.pulsing {
-  animation: bpulse 1.4s ease-in-out infinite;
+  animation: bpulse 2.4s ease-in-out infinite;
 }
 
+/*
+ * O corpo NÃO é code-bg por padrão. No desenho só terminal e diff ficam sobre
+ * `--code-bg`; o corpo de PR é texto sobre a superfície do card. Enquanto a
+ * regra era única, o resumo da PR aparecia dentro de uma caixa de código que
+ * ninguém tinha desenhado.
+ */
 .body {
+  min-width: 0;
+}
+
+.bodyCode {
   background: var(--code-bg);
-  border-radius: var(--radius-md);
-  overflow: hidden;
 }
 
 .commandLine {
   font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--text-primary);
-  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  padding: 14px 16px;
   white-space: pre-wrap;
   word-break: break-all;
+}
+
+.prompt {
+  color: var(--text-muted);
 }
 
 .outputBlock {
@@ -104,7 +186,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 12px;
+  padding: 6px 16px;
   font-family: var(--font-mono);
   font-size: 10px;
   color: var(--text-muted);
@@ -116,30 +198,39 @@
   font-family: var(--font-mono);
   font-size: 11px;
   color: var(--text-secondary);
-  padding: 0 12px 10px;
+  padding: 0 16px 10px;
   white-space: pre-wrap;
   max-height: 180px;
   overflow-y: auto;
 }
 
+/*
+ * A linha do arquivo é a FAIXA que abre o diff, e no desenho ela vive sobre
+ * `--surface-2` — é o que a distingue do diff em si, que fica em `--code-bg`.
+ */
 .fileRow {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
+  gap: 9px;
+  width: 100%;
+  padding: 10px 16px;
+  background: var(--surface-2);
+  border: none;
+  border-bottom: 1px solid var(--border);
   cursor: pointer;
+  text-align: left;
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-secondary);
 }
 
-.fileRow:not(:first-child) {
-  border-top: 1px solid var(--border);
+.fileRow:hover {
+  background: color-mix(in srgb, var(--border-strong) 30%, var(--surface-2));
 }
 
 .chevron {
   display: inline-flex;
-  transition: transform 0.12s;
+  transition: transform 0.15s;
   color: var(--text-muted);
 }
 
@@ -150,11 +241,17 @@
 .filePath {
   flex: 1;
   min-width: 0;
-  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-secondary);
 }
 
 .diffStat {
+  display: inline-flex;
+  gap: 6px;
   white-space: nowrap;
+  font-size: 10px;
 }
 
 .diffAdd {
@@ -166,15 +263,16 @@
 }
 
 .diffLines {
-  border-top: 1px solid var(--border);
+  background: var(--code-bg);
+  padding: 6px 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.75;
+  overflow-x: auto;
 }
 
 .diffLine {
   display: flex;
-  gap: 10px;
-  font-family: var(--font-mono);
-  font-size: 11.5px;
-  padding: 1px 12px;
 }
 
 .diffLine.add {
@@ -187,13 +285,15 @@
 
 .lineNo {
   opacity: 0.6;
-  width: 26px;
+  width: 34px;
+  padding-right: 10px;
   flex-shrink: 0;
   text-align: right;
+  color: var(--text-muted);
 }
 
 .sign {
-  width: 10px;
+  width: 14px;
   flex-shrink: 0;
 }
 
@@ -205,50 +305,86 @@
   color: var(--danger);
 }
 
+.diffContent {
+  white-space: pre;
+  color: var(--text-secondary);
+}
+
 .prTitle {
   font-family: var(--font-heading);
   font-weight: 600;
   font-size: 14px;
   color: var(--text-primary);
-  padding: 12px 12px 6px;
+  padding: 14px 16px 8px;
 }
 
 .prBranches {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0 12px 10px;
+  padding: 0 16px 10px;
   font-family: var(--font-mono);
   font-size: 11px;
+  color: var(--text-secondary);
+  flex-wrap: wrap;
 }
 
+.arrow {
+  color: var(--text-muted);
+  display: inline-flex;
+}
+
+/* Retângulo com borda (raio 6), não pílula: é o que o desenho mostra. */
 .branchPill {
   background: var(--surface-2);
-  border-radius: var(--radius-full);
-  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px 8px;
   color: var(--text-secondary);
 }
 
 .prSummary {
-  padding: 0 12px 12px;
-  font-size: 12.5px;
+  padding: 0 16px 14px;
+  font-size: 13px;
   color: var(--text-secondary);
+  text-wrap: pretty;
 }
 
+/*
+ * O fallback genérico é feio de propósito e a FASE 19 é dona dele — aqui ele só
+ * herda o padding das outras regiões, sem mudar o que despeja.
+ */
 .genericLine {
   font-family: var(--font-mono);
   font-size: 12px;
   color: var(--text-secondary);
-  padding: 4px 12px;
+  padding: 4px 16px;
+  word-break: break-all;
+}
+
+.genericLine:first-child {
+  padding-top: 12px;
+}
+
+.genericLine:last-child {
+  padding-bottom: 12px;
 }
 
 .actions {
   display: flex;
   gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
 }
 
-.actions > :first-child,
-.actions > :nth-child(2) {
+/*
+ * Só no chat os dois primeiros esticam. Na fila os botões têm largura natural,
+ * como no desenho — esticar dentro de um card de 960px transformava "Aprovar"
+ * numa faixa de 400px.
+ */
+.card.chat .actions > :first-child,
+.card.chat .actions > :nth-child(2) {
   flex: 1;
 }
 
@@ -259,6 +395,7 @@
   font-family: var(--font-mono);
   font-size: 11px;
   color: var(--text-muted);
+  padding: 0 16px 12px;
 }
 
 .decided {
@@ -266,6 +403,8 @@
   align-items: center;
   gap: 8px;
   font-size: 13px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
 }
 
 .decidedDot {

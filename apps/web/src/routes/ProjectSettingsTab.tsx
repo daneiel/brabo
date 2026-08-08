@@ -59,7 +59,7 @@ import { ModelPicker } from '../components/ModelPicker';
 import { ModelCatalogSection } from '../components/ModelCatalogSection';
 import { CredentialSpendSection } from '../components/CredentialSpendSection';
 import { useCurrentWorkspaceWithRole } from '../lib/hooks';
-import { ClockIcon, TrashIcon } from '../components/ui/icons';
+import { BranchIcon, ClockIcon, TrashIcon } from '../components/ui/icons';
 import { useToast } from '../components/ui/ToastProvider';
 import styles from './ProjectSettingsTab.module.css';
 
@@ -127,6 +127,41 @@ function formatarCustoMicros(micros: number): string {
   if (usd < 0.01) return `< ${usdFmt.format(0.01)}`;
   return usdFmt.format(usd);
 }
+
+/**
+ * A sigla de duas letras do chip do conector (handoff, seção 7 item 4).
+ *
+ * NÃO é `iniciaisDe`: aquela quebra por espaço, e "OpenAI" e "OpenRouter" são
+ * uma palavra só — as duas saíam como `OP`, dois conectores com o mesmo
+ * distintivo lado a lado. As MAIÚSCULAS do nome distinguem (`OA` e `OR`), e
+ * quando só há uma (Anthropic, Vultr) valem as duas primeiras letras.
+ */
+function siglaDoConector(label: string): string {
+  const maiusculas = label.replace(/[^A-Za-z]/gu, '').match(/[A-Z]/gu) ?? [];
+  const letras =
+    maiusculas.length >= 2 ? maiusculas.slice(0, 2).join('') : label.slice(0, 2);
+  return letras.toUpperCase();
+}
+
+/**
+ * A cor da borda esquerda de cada conector (handoff, seção 7 item 4). Só tokens
+ * semânticos — o handoff nomeia terracota para a Anthropic e teal para a
+ * OpenAI, e os demais seguem o mesmo repertório de quatro acentos.
+ *
+ * `Record<LlmCredentialProvider, …>` de propósito: provider novo entra na lista
+ * derivando de `ROTULO_DO_PROVIDER`, e é o compilador que cobra a cor aqui em
+ * vez de ele nascer sem borda nenhuma.
+ */
+const COR_DO_CONECTOR: Record<LlmCredentialProvider, string> = {
+  anthropic: 'var(--accent)',
+  openai: 'var(--success)',
+  openrouter: 'var(--violet)',
+  'nvidia-nim': 'var(--success)',
+  together: 'var(--warning)',
+  deepinfra: 'var(--violet)',
+  bitdeer: 'var(--accent)',
+  vultr: 'var(--warning)',
+};
 
 const LEVEL_TONE: Record<ProficiencyLevel, BadgeTone> = {
   iniciante: 'muted',
@@ -272,17 +307,28 @@ export function ModelsSection({ projectId }: { projectId: string }) {
     queryClient.invalidateQueries({ queryKey: ['agent-binding', projectId, agentKey] });
   }
 
+  // As proporções são as do handoff (seção 7, item 6): `1.4fr 1.9fr .8fr 1.4fr
+  // .9fr`. Estavam próximas, não iguais, e a diferença aparecia na primeira
+  // coluna — "Psicólogo (leve)" truncava em "Psicóo…".
   const columns: TableColumn<(typeof AGENT_LIST)[number]>[] = [
     {
       key: 'agent',
+      // "Agente", e não "Agente · capacidades" como no desenho: as capacidades
+      // exigidas por agente não existem no domínio, e prometer uma coluna que
+      // não tem conteúdo é pior que não prometer.
       label: 'Agente',
-      width: '1.3fr',
+      width: '1.4fr',
       render: (agent) => (
         <span className={styles.agentCell}>
           <span className={styles.agentAvatar} style={{ ['--agent-color' as string]: agent.color } as CSSProperties}>
             {agent.initials}
           </span>
-          <span className={styles.agentNome}>{agent.name}</span>
+          {/* `title` porque a coluna ELIPSA por desenho: "QA de Performance e
+              Segurança" cabe em 71px como "QA de Perf…", e sem o title o nome
+              inteiro não existe em lugar nenhum da tela. */}
+          <span className={styles.agentNome} title={agent.name}>
+            {agent.name}
+          </span>
         </span>
       ),
     },
@@ -306,7 +352,7 @@ export function ModelsSection({ projectId }: { projectId: string }) {
     {
       key: 'origin',
       label: 'Origem',
-      width: '0.9fr',
+      width: '0.8fr',
       render: (agent) => {
         const index = AGENT_LIST.indexOf(agent);
         const resolved = bindingQueries[index]?.data;
@@ -337,7 +383,7 @@ export function ModelsSection({ projectId }: { projectId: string }) {
     {
       key: 'fallback',
       label: 'Fallback',
-      width: '1.5fr',
+      width: '1.4fr',
       render: (agent) => {
         const index = AGENT_LIST.indexOf(agent);
         const nome = fallbackDe(bindingQueries[index]?.data?.origin);
@@ -351,7 +397,7 @@ export function ModelsSection({ projectId }: { projectId: string }) {
     {
       key: 'estimate',
       label: 'Est. mês',
-      width: '1fr',
+      width: '0.9fr',
       render: (agent) => {
         const micros = custoPorAgente.get(agent.key);
         // Agente que nunca rodou não vem na resposta, e traço é diferente de
@@ -557,9 +603,15 @@ function RepositorySection({ projectId }: { projectId: string }) {
           : 'Criado pelo Brabo, com o bootstrap de Gitflow aplicado.'}
       </div>
 
-      <div className={styles.repoMeta}>
-        <code>{repository.externalId}</code>
-        <span>
+      {/* Faixa do repositório como no handoff (seção 7, item 1): ícone, caminho
+          em mono e a origem/branch ao lado, dentro de um card — não três nós
+          soltos sobre o fundo da aba. O selo "sincronizado" do desenho NÃO
+          entra: não existe fato de sincronismo no `repository`, e um selo teal
+          fixo afirmaria algo que ninguém mediu. */}
+      <div className={styles.repoCard}>
+        <BranchIcon size={16} className={styles.repoIcone} />
+        <code className={styles.repoPath}>{repository.externalId}</code>
+        <span className={styles.repoMeta}>
           {repository.provider} · {repository.defaultBranch}
         </span>
       </div>
@@ -639,19 +691,20 @@ export function ExecutionSection({ projectId }: { projectId: string }) {
         execução, não afeta agentes já rodando.
       </div>
 
-      <div className={styles.credentialCard}>
-        <div className={styles.credentialInfo}>
-          <div className={styles.credentialProvider}>
+      <div className={styles.ajusteCard}>
+        <div className={styles.ajusteInfo}>
+          <div className={styles.ajusteTitulo}>
             Tasks blocked seguidas até parar
           </div>
-          <div className={styles.credentialStatus}>
+          <div className={styles.ajusteHint}>
             {project.maxConsecutiveBlocked === null
               ? `Sem valor próprio — usa o default (${DEFAULT_MAX_CONSECUTIVE_BLOCKED})`
               : 'Configurado para este projeto'}
           </div>
         </div>
-        <div className={styles.credentialInput}>
+        <div className={styles.ajusteNumero}>
           <Input
+            mono
             type="number"
             min={1}
             value={valorExibido}
@@ -734,18 +787,19 @@ export function ParallelismSection({ projectId }: { projectId: string }) {
           const valido = Number.isInteger(numero) && numero >= 1;
 
           return (
-            <div key={area.key} className={styles.credentialCard}>
-              <div className={styles.credentialInfo}>
-                <div className={styles.credentialProvider}>Área {area.key}</div>
-                <div className={styles.credentialStatus}>
+            <div key={area.key} className={styles.ajusteCard}>
+              <div className={styles.ajusteInfo}>
+                <div className={styles.ajusteTitulo}>Área {area.key}</div>
+                <div className={styles.ajusteHint}>
                   Lead: {area.leadAgentId}
                   {area.members.length > 0
                     ? ` — ${area.members.length} membro(s)`
                     : ' — sem membros ainda'}
                 </div>
               </div>
-              <div className={styles.credentialInput}>
+              <div className={styles.ajusteNumero}>
                 <Input
+                  mono
                   type="number"
                   min={1}
                   aria-label={`Teto de agentes da área ${area.key}`}
@@ -819,16 +873,16 @@ export function PromotionSection({ projectId }: { projectId: string }) {
         histórias; as que já estão propostas continuam esperando você.
       </div>
 
-      <div className={styles.credentialCard}>
-        <div className={styles.credentialInfo}>
-          <div className={styles.credentialProvider}>Quem promove</div>
-          <div className={styles.credentialStatus}>
+      <div className={styles.ajusteCard}>
+        <div className={styles.ajusteInfo}>
+          <div className={styles.ajusteTitulo}>Quem promove</div>
+          <div className={styles.ajusteHint}>
             {project.storyPromotion === 'manual'
               ? 'O PO deixa a história completa e ela aguarda você no Backlog. Nenhuma tarefa dela é pegável até lá.'
               : 'O PO promove sozinho ao terminar uma história completa — era o comportamento anterior à Fase 12c, mantido como opção.'}
           </div>
         </div>
-        <div className={styles.credentialInput}>
+        <div className={styles.ajusteControle}>
           <Select
             value={project.storyPromotion}
             disabled={saving}
@@ -857,33 +911,35 @@ function MatrixSection() {
         Tabela informativa — reflete os papéis mínimos por tipo de ação hoje aplicados no backend; algumas linhas ainda não têm checagem
         granular própria e usam a aproximação mais próxima.
       </p>
-      <table className={styles.matrixTable}>
-        <thead>
-          <tr>
-            <th>Ação</th>
-            <th>owner</th>
-            <th>maintainer</th>
-            <th>developer</th>
-            <th>viewer</th>
-          </tr>
-        </thead>
-        <tbody>
-          {MATRIX_ROWS.map((row) => (
-            <tr key={row.label}>
-              <td>{row.label}</td>
-              {(['owner', 'maintainer', 'developer', 'viewer'] as Role[]).map((role) => (
-                <td key={role}>
-                  {ROLE_ORDER.indexOf(role) >= ROLE_ORDER.indexOf(row.minRole) ? (
-                    <span className={styles.check}>✓</span>
-                  ) : (
-                    <span className={styles.dash}>—</span>
-                  )}
-                </td>
-              ))}
+      <div className={styles.matrixWrap}>
+        <table className={styles.matrixTable}>
+          <thead>
+            <tr>
+              <th>Ação</th>
+              <th>owner</th>
+              <th>maintainer</th>
+              <th>developer</th>
+              <th>viewer</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {MATRIX_ROWS.map((row) => (
+              <tr key={row.label}>
+                <td>{row.label}</td>
+                {(['owner', 'maintainer', 'developer', 'viewer'] as Role[]).map((role) => (
+                  <td key={role}>
+                    {ROLE_ORDER.indexOf(role) >= ROLE_ORDER.indexOf(row.minRole) ? (
+                      <span className={styles.check}>✓</span>
+                    ) : (
+                      <span className={styles.dash}>—</span>
+                    )}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       {/* A legenda do desenho: sem ela, ✓ e — são dois símbolos sem contrato. */}
       <div className={styles.matrixLegenda}>
         <span className={styles.matrixLegendaItem}>
@@ -993,26 +1049,54 @@ export function CredentialsSection() {
         cifrada e devolve só o veredito.
       </div>
 
-      {CREDENCIAIS_DE_LLM.map(({ id, label, kind }) => {
-        const existing = credentials?.find((c) => c.provider === id);
-        const rascunho = drafts[id]?.trim() ?? '';
-        const ocupado = emVoo === id;
-        return (
-          <div key={id} className={styles.credentialCard}>
-            <div className={styles.credentialInfo}>
-              <div className={styles.credentialProvider}>
-                {label}
-                {/* Um hub roteia para provedores de terceiros: o custo e a
-                    disponibilidade dependem de quem serve por baixo. */}
-                {kind === 'hub' && <Badge tone="muted">hub</Badge>}
+      {/* Grid de conectores do handoff (seção 7, item 4): um card por
+          provider, borda esquerda na cor dele, sigla de duas letras, tipo em
+          mono e ponto de status pulsante. Era uma pilha de nove faixas de
+          largura total, e o desenho pede
+          `repeat(auto-fill, minmax(300px, 1fr))`. */}
+      <div className={styles.conectorGrid}>
+        {CREDENCIAIS_DE_LLM.map(({ id, label, kind }) => {
+          const existing = credentials?.find((c) => c.provider === id);
+          const rascunho = drafts[id]?.trim() ?? '';
+          const ocupado = emVoo === id;
+          const cor = COR_DO_CONECTOR[id];
+          return (
+            <div
+              key={id}
+              className={styles.conectorCard}
+              style={{ ['--conector-cor' as string]: cor } as CSSProperties}
+            >
+              <div className={styles.conectorTopo}>
+                <span className={styles.conectorSigla}>{siglaDoConector(label)}</span>
+                <div className={styles.conectorIdent}>
+                  <div className={styles.conectorNome}>{label}</div>
+                  <div className={styles.conectorTipo}>
+                    {/* Um hub roteia para provedores de terceiros: o custo e a
+                        disponibilidade dependem de quem serve por baixo. */}
+                    {kind === 'hub' ? 'hub de providers' : 'credencial de provider'}
+                  </div>
+                </div>
+                <span
+                  className={[styles.conectorStatus, existing && styles.conectorAtivo]
+                    .filter(Boolean)
+                    .join(' ')}
+                >
+                  <span className={styles.conectorPonto} />
+                  {existing ? 'configurada' : 'sem chave'}
+                </span>
               </div>
-              <div className={styles.credentialStatus}>
-                {existing ? `Configurado em ${new Date(existing.updatedAt).toLocaleDateString('pt-BR')}` : 'Nenhuma credencial salva'}
+
+              {/* O desenho mostra a chave mascarada. Aqui ela NÃO existe: a
+                  credencial é write-only e nunca volta do servidor (ADR 0050).
+                  Mostrar `sk-••••` seria inventar um prefixo que ninguém leu. */}
+              <div className={styles.conectorNota}>
+                {existing
+                  ? `Configurada em ${new Date(existing.updatedAt).toLocaleDateString('pt-BR')} · nunca reexibida`
+                  : 'Nenhuma credencial salva'}
               </div>
-            </div>
-            {/* O input fica SEMPRE visível: com credencial salva ele é o
-                caminho da troca, que antes só existia removendo primeiro. */}
-            <div className={styles.credentialInput}>
+
+              {/* O input fica SEMPRE visível: com credencial salva ele é o
+                  caminho da troca, que antes só existia removendo primeiro. */}
               <Input
                 mono
                 type="password"
@@ -1021,39 +1105,42 @@ export function CredentialsSection() {
                 value={drafts[id] ?? ''}
                 onChange={(e) => setDrafts((d) => ({ ...d, [id]: e.target.value }))}
               />
+
+              <div className={styles.conectorAcoes}>
+                {/* Nome acessível com o provider: são oito cards com botões de
+                    texto idêntico, e "Salvar" sozinho não diz salvar o quê. */}
+                <Button
+                  aria-label={`${existing ? 'Trocar' : 'Salvar'} chave de ${label}`}
+                  disabled={ocupado || rascunho.length === 0}
+                  onClick={() => handleSave(id)}
+                >
+                  {existing ? 'Trocar' : 'Salvar'}
+                </Button>
+                {existing && (
+                  <>
+                    <Button
+                      variant="secondary"
+                      aria-label={`Testar chave de ${label}`}
+                      disabled={ocupado}
+                      onClick={() => handleTest(id)}
+                    >
+                      Testar
+                    </Button>
+                    <Button
+                      variant="danger"
+                      aria-label={`Remover chave de ${label}`}
+                      disabled={ocupado}
+                      onClick={() => handleRemove(id)}
+                    >
+                      Remover
+                    </Button>
+                  </>
+                )}
+              </div>
             </div>
-            {/* Nome acessível com o provider: são nove cards com botões de
-                texto idêntico, e "Salvar" sozinho não diz salvar o quê. */}
-            <Button
-              aria-label={`${existing ? 'Trocar' : 'Salvar'} chave de ${label}`}
-              disabled={ocupado || rascunho.length === 0}
-              onClick={() => handleSave(id)}
-            >
-              {existing ? 'Trocar' : 'Salvar'}
-            </Button>
-            {existing && (
-              <>
-                <Button
-                  variant="secondary"
-                  aria-label={`Testar chave de ${label}`}
-                  disabled={ocupado}
-                  onClick={() => handleTest(id)}
-                >
-                  Testar
-                </Button>
-                <Button
-                  variant="danger"
-                  aria-label={`Remover chave de ${label}`}
-                  disabled={ocupado}
-                  onClick={() => handleRemove(id)}
-                >
-                  Remover
-                </Button>
-              </>
-            )}
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }

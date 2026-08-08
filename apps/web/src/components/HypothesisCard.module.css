@@ -12,10 +12,18 @@
   opacity: 0.62;
 }
 
+/*
+ * `flex-wrap` e `min-width: 0` porque o card vive num grid estreito (a coluna
+ * de `moduleGrid` fica em ~390px): com o alvo em badge e "62% de confiança"
+ * numa linha rígida, a confiança VAZAVA para fora do card e era desenhada por
+ * cima do card vizinho. Achado da validação visual desta fase.
+ */
 .header {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
+  min-width: 0;
 }
 
 .headerIcon {
@@ -26,8 +34,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: color-mix(in srgb, #9c7be0 18%, transparent);
-  color: #9c7be0;
+  /* `--violet` é o token de agentes/IA desde a FASE 16. Era `#9c7be0` cru aqui
+     porque não havia o que referenciar — e cru ele não seguia o tema claro. */
+  background: color-mix(in srgb, var(--violet) 18%, transparent);
+  color: var(--violet);
 }
 
 .confidence {
@@ -35,6 +45,7 @@
   font-family: var(--font-mono);
   font-size: 11.5px;
   color: var(--text-secondary);
+  white-space: nowrap;
 }
 
 .hipotese {
@@ -71,11 +82,16 @@
   align-items: center;
 }
 
+/* `min-height: 24px`: é botão de navegação, e a WCAG 2.2 AA cobra o piso de
+   alvo de toque que a validação visual mede. Media 22px. */
 .chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
   font-family: var(--font-mono);
   font-size: 11px;
-  padding: 3px 7px;
-  border-radius: 999px;
+  padding: 3px 9px;
+  border-radius: var(--radius-full);
   border: 1px solid var(--border);
   background: var(--surface-2);
   color: var(--text-secondary);

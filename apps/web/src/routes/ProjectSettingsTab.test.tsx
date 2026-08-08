@@ -11,6 +11,7 @@ import {
 } from './ProjectSettingsTab';
 import { ToastProvider } from '../components/ui/ToastProvider';
 import { ApiError } from '../lib/api-client';
+import { CREDENCIAIS_DE_LLM } from '../lib/models';
 import type { Project, UserCredentialMetadata } from '../lib/api-types';
 
 const getProject = vi.fn();
@@ -406,6 +407,28 @@ describe('CredentialsSection (ADR 0050)', () => {
     expect(
       screen.getByRole('button', { name: 'Salvar chave de OpenRouter' }),
     ).toBeDisabled();
+  });
+
+  /**
+   * O chip de duas letras do handoff, conferido na TELA e não na função: o que
+   * importa é que dois cards vizinhos não tragam o mesmo distintivo. Quebrar
+   * por espaço dava `OP` para "OpenAI" e para "OpenRouter", que são uma palavra
+   * só cada.
+   */
+  it('cada conector tem uma sigla própria no chip', async () => {
+    montarSecao(<CredentialsSection />);
+    await campoDoOpenrouter();
+
+    expect(screen.getByText('OA')).toBeInTheDocument();
+    expect(screen.getByText('OR')).toBeInTheDocument();
+    // Uma maiúscula só cai nas duas primeiras letras.
+    expect(screen.getByText('AN')).toBeInTheDocument();
+
+    const siglas = screen
+      .getAllByText(/^[A-Z]{2}$/)
+      .map((el) => el.textContent);
+    expect(siglas).toHaveLength(CREDENCIAIS_DE_LLM.length);
+    expect(new Set(siglas).size).toBe(siglas.length);
   });
 });
 

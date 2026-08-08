@@ -10,6 +10,7 @@ import { areaFor } from '../lib/agents';
 import { formatMicros } from '../lib/execution';
 import { idCurtoDaSessao } from '../lib/session-label';
 import { HypothesisCard } from '../components/HypothesisCard';
+import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
 import { Badge } from '../components/ui/Badge';
 import { useToast } from '../components/ui/ToastProvider';
 // Mesmo módulo de estilo da Visão geral, de propósito: a seção saiu de lá
@@ -33,10 +34,10 @@ import styles from './ProjectOverviewTab.module.css';
 export function ProjectInsightsTab({ projectId }: { projectId: string }) {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
-  const { data: hypotheses } = useHypotheses(projectId);
+  const hypothesesQuery = useHypotheses(projectId);
   const { data: analyses } = usePsychologistAnalyses(projectId);
 
-  const all = hypotheses ?? [];
+  const all = hypothesesQuery.data ?? [];
   const pending = all.filter((h) => h.status === 'proposed');
   const runs = analyses ?? [];
 
@@ -93,7 +94,19 @@ export function ProjectInsightsTab({ projectId }: { projectId: string }) {
   return (
     <div className={styles.arch}>
       <div className={styles.sectionHeader}>Insights</div>
-      {all.length === 0 ? (
+      {/* Os três estados da RN-088, com o ERRO antes do vazio: `data ?? []`
+          seguido de `length === 0` fazia a api respondendo 429 dizer "sem
+          hipóteses ainda", que é indistinguível de um projeto que o Psicólogo
+          nunca analisou. */}
+      {hypothesesQuery.isError ? (
+        <ErroDeCarregamento
+          titulo="Não foi possível carregar as hipóteses."
+          erro={hypothesesQuery.error}
+          onTentarDeNovo={() => void hypothesesQuery.refetch()}
+        />
+      ) : hypothesesQuery.data === undefined ? (
+        <div className={styles.sectionSub}>Carregando as hipóteses…</div>
+      ) : all.length === 0 ? (
         <div className={styles.sectionSub}>
           Sem hipóteses ainda — o Psicólogo analisa cada sessão encerrada.
         </div>

@@ -1,12 +1,33 @@
 .wrapper {
   position: relative;
   display: inline-block;
+  min-width: 0;
+}
+
+/*
+ * Dentro da tabela de bindings o gatilho ocupa a CÉLULA inteira, como no
+ * handoff (seção 7, item 6) — fundo `--surface-0` para se destacar da linha e
+ * raio 7. Antes ele era `inline-block` sobre `--surface-1`, a mesma cor do
+ * hover da linha, e sobrava um vão à direita que não pertencia a nada.
+ */
+.wrapper.inline,
+.wrapper.inline .trigger {
+  display: flex;
+  width: 100%;
+}
+
+.wrapper.inline .trigger {
+  background: var(--surface-0);
+  border-radius: 7px;
+  padding: 7px 10px;
+  text-align: left;
 }
 
 .trigger {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
   background: var(--surface-1);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
@@ -21,6 +42,14 @@
   border-color: var(--border-strong);
 }
 
+.triggerLabel {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .triggerIcon {
   color: var(--text-muted);
   display: flex;
@@ -30,6 +59,7 @@
   color: var(--text-muted);
   display: flex;
   margin-left: 2px;
+  flex-shrink: 0;
 }
 
 .dropdown {

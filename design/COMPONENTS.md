@@ -231,19 +231,31 @@ radius 12px.
     separado "terminal · output", com badge opcional `rtk −N%` quando
     houver compressão real).
   - **PR**: título (Space Grotesk 600), `{branch-origem} → {branch-destino}`
-    (pílulas mono) + status, resumo (texto secundário).
-- Ações (estado pendente): 3 botões lado a lado — **Aprovar** (flex:1,
-  bg `var(--success)`, texto branco), **Negar** (flex:1, ghost com borda
+    (retângulos mono de raio 6 com borda `var(--border)`, não pílulas) +
+    status, resumo (texto secundário).
+- Ações (estado pendente): 3 botões lado a lado — **Aprovar** (bg
+  `var(--success)`, texto branco), **Negar** (ghost com borda
   `color-mix(var(--danger) 45%)`, texto `var(--danger)`), **Sempre
-  permitir** (secondary, não flex — largura de conteúdo). Abaixo, no chat:
-  nota fixa (ícone de alerta + mono 11px, `text-muted`):
+  permitir** (secondary). Os dois primeiros esticam (`flex:1`) só na
+  variante **chat**, onde a coluna é estreita; na **fila de Aprovações**
+  têm largura de conteúdo, como no handoff. Abaixo, no chat: nota fixa
+  (ícone de alerta + mono 11px, `text-muted`):
   `"'Sempre permitir' grava a regra em .brabo/permissions.json"`.
 - Estado decidido: some os botões, mostra uma linha com dot colorido +
   texto (`"Aprovado · comando em execução"` verde / `"Negado"` vermelho /
   `"Sempre permitido · gravado em permissions.json"` accent).
 - Fila de Aprovações também tem seleção em lote: checkbox por card (canto
-  superior esquerdo do header) + barra de ação flutuante quando há seleção
-  (`"{N} selecionadas"` + botão "Aprovar selecionados").
+  superior esquerdo do header) + barra de ação no CABEÇALHO DA SEÇÃO
+  quando há seleção (`"{N} selecionadas"` + "Aprovar selecionados" +
+  "Limpar"). No cabeçalho, e não numa faixa própria acima da fila: a faixa
+  empurrava a lista 44px para baixo no primeiro clique de cada seleção.
+
+**Estrutura do card (handoff, seção 6):** o card RECORTA
+(`overflow: hidden`) e não tem padding próprio — cada região traz o seu e a
+divisória: cabeçalho 14×16 com borda embaixo, corpo colado nas bordas
+(terminal e diff sobre `var(--code-bg)`, PR sobre a superfície do card),
+ações 12×16 com borda em cima. A faixa que abre o diff fica sobre
+`var(--surface-2)`.
 
 ## ModelPicker
 
