@@ -547,6 +547,12 @@ seguinte, e quando vier, escrita é efeito externo: nasce `proposed_action`.
   silenciosa — reporta origem ao lead, que decide e registra evento.
 - O contrato externo dos gates é estável: quem consome vê um veredito
   por gate, independente da estrutura interna da área.
+- A lista de áreas tem UMA fonte —
+  `apps/api/src/domain/agents/agent-areas.ts`. As cópias do web e do
+  engine são GERADAS por `pnpm --filter api gerar:areas` e reprovam em
+  teste se estiverem velhas; nunca as edite à mão (FASE 18). Área nova
+  continua sendo decisão de produto, com ADR. A lista é o CATÁLOGO; a
+  tabela `agent_areas` é o ESTADO por projeto, e nasce com ele (RN-094).
 - Merge em branch protegida (dev/qa/main) é SEMPRE manual do
   usuário — sem opção de automatizar, garantido por teste.
 - O produto NUNCA sobrescreve configuração de repositório do usuário

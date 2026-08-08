@@ -1,6 +1,6 @@
 {
   "_": "Gerado por `pnpm docs:generate`. Não edite — é a trava do que está em docs/reference/api/.",
-  "openapiSha256": "3af1a16b5574a61bb16218832e108d6c57ed42c897b66acb35aba665b93f7a1d",
+  "openapiSha256": "50fc28c356ba58dc1b1a7482a6c1693f03778353096282f380135c8561180cd8",
   "arquivos": {
     "actions-controller-approve-always.ParamsDetails.json": "f51f6d74f8b4a7e9c8f70cef93e0d026d63e77123672029da660c802def3ad0e",
     "actions-controller-approve-always.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
@@ -194,7 +194,7 @@
     "execution-controller-list-areas.ParamsDetails.json": "f1cf321fa2c84a7ad647e71995c44bdb32efe0baf7ce03ee78703c9e1a2ea0e3",
     "execution-controller-list-areas.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
     "execution-controller-list-areas.StatusCodes.json": "ad30202bf59902dfd0b5bc6ae430ee97453527d4a3735275e7a9db3a67765277",
-    "execution-controller-list-areas.api.mdx": "82dfe898e24068e776323f638edc8be0036d6ff83b4a6fedb112b6c444850dbf",
+    "execution-controller-list-areas.api.mdx": "d7dfd6d53460d5a606b947f4cbe7a3a03f6721aa19a67ac452992afe1f453f01",
     "execution-controller-parallelize.ParamsDetails.json": "4e5efb20e1409eeb815c23b3b0bb5f88ddd8dee4944337c72d226e3093b7b4ba",
     "execution-controller-parallelize.RequestSchema.json": "c421ee1e87804ca094698beedf3ca962f1e14490904223c4263776793af0cd8c",
     "execution-controller-parallelize.StatusCodes.json": "a9cb19d2f1ea6d640056d65dd1651e51612f55f780d4fdc3853fe4644820a9c9",

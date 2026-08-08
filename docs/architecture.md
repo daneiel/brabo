@@ -381,7 +381,7 @@ erDiagram
   epics ||--o{ stories : ""
   stories ||--o{ tasks : ""
   tasks |o--o{ delegations : "área de QA (8b) / Infra (8c, task_id nullable)"
-  projects ||--o{ agent_areas : "área por projeto (14d)"
+  projects ||--o{ agent_areas : "área por projeto (14d), semeada na criação (RN-094)"
   agent_areas ||--o{ agent_area_members : compõe
   projects ||--o{ budgets : limita
   sessions ||--o{ token_usage : mede

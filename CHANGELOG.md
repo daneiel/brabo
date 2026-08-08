@@ -142,6 +142,19 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   não há versão corrigida publicada, a última do registry é a vulnerável — entra
   por `@docusaurus/mdx-loader` e só lê imagens versionadas neste repositório
 
+- **api**: as áreas de agentes (`dev`, `qa`, `infra`) passam a existir de fato
+  em cada projeto — antes a tabela nunca era gravada. A tela de Configurações
+  listava vazio, a proposta da Anamnese para subir o teto de paralelismo era
+  recusada com "área não existe neste projeto" em TODO projeto, e o teto que
+  decide quantos agentes o produto sobe sem perguntar caía num default que
+  ninguém tinha escolhido. Agora a área nasce junto com o projeto, na mesma
+  transação, e a ativação da execução acrescenta os membros da área de dev (um
+  por módulo). Projetos criados antes disso são corrigidos por migração, sem
+  ação sua e sem mexer em teto que você já tenha alterado. Junto vai o fim de
+  uma duplicação que sustentava o defeito: a lista de áreas existia escrita à
+  mão em três lugares (api, web e engine), e agora tem uma fonte só, com as
+  outras duas geradas por `pnpm --filter api gerar:areas`. Ver RN-094
+
 ## v2.4.0 — 2026-08-07
 
 ### Novidades

@@ -25,7 +25,10 @@ defmodule Engine.Gates.QaLeadServer do
 
   use GenServer, restart: :temporary
 
-  @subagentes ["qa-automacao", "qa-performance-seguranca"]
+  # DERIVADO da lista canônica da api (FASE 18) — era a terceira cópia escrita
+  # à mão, e a única que nenhum teste travava: subagente novo lá dentro passava
+  # a existir sem que este `Wake.subscribe` soubesse.
+  @subagentes Engine.Agents.Areas.membros("qa")
 
   alias Engine.Dev.{ContextBuilder, DevAgentServer, DevAgentState, Wake}
   alias Engine.Gates.{Dispatcher, QaAutomacaoAgent, QaLead, QaPerformanceSegurancaAgent}

@@ -129,6 +129,15 @@ o componente `d` da JWK, travado por teste.
   (`main.ts`), são públicas, e servem o mesmo documento que a
   [referência gerada](reference/api/brabo-api) publica. Registrado aqui em vez
   de omitido: o que o teste não alcança precisa estar na prosa.
+- **`GET /projects/:projectId/agent-areas` passou a devolver dados de verdade,
+  e a classificação não mudou** — continua `role:developer`, enquanto o `PATCH`
+  do teto continua `role:maintainer`. Até a FASE 18 a tabela `agent_areas`
+  nunca era gravada e a rota respondia `[]` a todo mundo, o que fazia a
+  classificação parecer folgada por acidente e não por decisão. Com a área
+  nascendo junto com o projeto ([RN-094](business-rules.md#rn-094)), o corte
+  volta a ser o que a FASE 14d quis: **ler** o teto é trabalho de quem executa;
+  **mudá-lo** é decidir quanto o produto gasta sem perguntar, e por isso exige
+  o mesmo papel de ativar a execução.
 - **`jwt` sem papel não significa sem autorização.** Em `/users/me/*` o escopo é
   o próprio usuário; em `GET /workspaces` a listagem já é filtrada pela
   associação de quem chamou.
