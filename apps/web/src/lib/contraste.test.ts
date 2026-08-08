@@ -24,6 +24,7 @@ const css = readFileSync(resolve(process.cwd(), '../../design/tokens.css'), 'utf
  * o que precisa fechar.
  */
 const dark = lerTokens(css, ':root');
+const claro = lerTokens(css, `\\[data-theme='light'\\]`);
 
 /** Os pares que a interface realmente usa, escritos um a um. */
 const PARES: { texto: string; fundo: string; piso: number; onde: string }[] = [
@@ -34,6 +35,14 @@ const PARES: { texto: string; fundo: string; piso: number; onde: string }[] = [
   { texto: '--text-secondary', fundo: '--surface-1', piso: AA_TEXTO_NORMAL, onde: 'texto de apoio em card' },
   { texto: '--accent', fundo: '--surface-0', piso: AA_NAO_TEXTO, onde: 'link e realce' },
   { texto: '--danger', fundo: '--surface-0', piso: AA_NAO_TEXTO, onde: 'erro sobre o fundo' },
+  // `--violet` entrou na FASE 16 (agentes/IA). Vai medido nos três fundos em
+  // que a UI o usa como ELEMENTO — dot de status, badge, avatar de agente —
+  // mais o `--code-bg`, onde ele é TEXTO de verdade (número e decorator no
+  // realce de sintaxe) e por isso responde pelo piso de texto normal.
+  { texto: '--violet', fundo: '--surface-0', piso: AA_NAO_TEXTO, onde: 'acento de agente na página' },
+  { texto: '--violet', fundo: '--surface-1', piso: AA_NAO_TEXTO, onde: 'acento de agente em card' },
+  { texto: '--violet', fundo: '--surface-2', piso: AA_NAO_TEXTO, onde: 'acento de agente em cabeçalho' },
+  { texto: '--violet', fundo: '--code-bg', piso: AA_TEXTO_NORMAL, onde: 'número/decorator no código' },
 ];
 
 describe('contraste dos tokens (dark, o modo primário)', () => {
@@ -88,6 +97,50 @@ describe('dívida de contraste conhecida', () => {
       expect(razao).toBeGreaterThanOrEqual(AA_NAO_TEXTO);
     });
   }
+});
+
+/**
+ * O tema claro não pode perder um token semântico de cor.
+ *
+ * `[data-theme='light']` sobrescreve TODOS os tokens de cor do `:root` — se um
+ * token novo entra só no escuro, ele não some: ele VAZA o valor calibrado pro
+ * escuro para dentro do tema claro, e o defeito aparece como "essa cor está
+ * ilegível no claro", longe do commit que a causou. É a falha que este bloco
+ * pega, e foi ela que a entrada de `--violet` na FASE 16 poderia ter
+ * introduzido.
+ *
+ * A lista é DERIVADA, não escrita à mão: token novo entra sozinho na
+ * verificação. Fora ficam a paleta bruta (que é fonte, não semântica, e o
+ * claro referencia por `var()`) e tudo que não resolve para cor literal —
+ * sombra, fonte, espaçamento e radius não têm contraparte clara.
+ */
+describe('paridade de tokens entre os dois temas', () => {
+  const RAMPA = /^--(terracota|teal|petroleo|areia)-\d+$/;
+  const semanticosDeCor = Object.keys(dark).filter(
+    (nome) => !RAMPA.test(nome) && resolverToken(nome, dark) !== null,
+  );
+
+  it('o bloco do tema claro foi lido — o parser não passa vazio', () => {
+    expect(Object.keys(claro).length).toBeGreaterThan(10);
+    expect(semanticosDeCor.length).toBeGreaterThan(10);
+    expect(semanticosDeCor).toContain('--violet');
+  });
+
+  for (const nome of semanticosDeCor) {
+    it(`${nome} tem valor próprio no tema claro`, () => {
+      expect(
+        resolverToken(nome, { ...dark, ...claro }),
+        `${nome} existe no :root e não em [data-theme='light']`,
+      ).not.toBeNull();
+      expect(claro[nome], `${nome} não é redeclarado no tema claro`).toBeDefined();
+    });
+  }
+
+  it('--violet do tema claro serve como elemento de interface', () => {
+    const violeta = resolverToken('--violet', { ...dark, ...claro })!;
+    const fundo = resolverToken('--surface-0', { ...dark, ...claro })!;
+    expect(razaoDeContraste(violeta, fundo)).toBeGreaterThanOrEqual(AA_NAO_TEXTO);
+  });
 });
 
 describe('a aritmética', () => {

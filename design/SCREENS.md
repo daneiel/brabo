@@ -5,6 +5,46 @@ componentes citados abaixo). Este arquivo cobre a COMPOSIÇÃO de cada tela
 — quais regiões existem, como se organizam, e o comportamento de estado
 de cada uma.
 
+## A referência viva é `design_handoff_brabo/` (desde 2026-08-08, FASE 16)
+
+O handoff está **versionado no repositório**: um `README.md` com a
+especificação completa (cores, tipografia, alturas, raios, transições, marca)
+e oito `.dc.html` de alta fidelidade em `designs/`. Ele substitui o
+`DesignSync(get_file)` como forma de reconferir um detalhe — a fonte não é
+mais um serviço externo que pode sumir.
+
+Os `.dc.html` são **referência de design, não código de produção**: estilos
+inline por construção do protótipo, e `designs/support.js` é o runtime do
+protótipo, que o README do handoff marca explicitamente como **não portar**.
+
+Cobertura, comparada com este arquivo:
+
+| arquivo do handoff | tela | composição escrita aqui |
+|---|---|---|
+| `Brabo Login.dc.html` | login e telas irmãs | sim — seção "Auth" |
+| `Brabo App.dc.html` | lista de projetos | sim — "App shell + Dashboard" |
+| `Brabo Project.dc.html` | visão de projeto | sim — "Projeto" |
+| `Brabo Session.dc.html` | sessão com agentes | sim — "Sessão / Chat" |
+| `Brabo Approvals.dc.html` | fila de aprovações | sim — "Aprovações" |
+| `Brabo Settings.dc.html` | configurações (IA + IAM) | sim — "Configurações" |
+| `Brabo Design System.dc.html` | fundação visual e componentes | é `COMPONENTS.md`, não tela |
+| `Brabo Code.dc.html` | aba de código (IDE) | **não** — ver abaixo |
+
+**Aba de código (IDE):** o handoff a especifica inteira (rail 48px, explorador
+252px, editor com minimapa overlay de 64px, painel inferior, status bar 24px,
+seletor de branch, realce de sintaxe). A composição **não** foi transcrita para
+cá porque o terminal dessa tela virou decisão de arquitetura — container por
+projeto, com a imagem decidida pelo Arquiteto — e escrever o layout antes da
+decisão seria fixar uma tela que a decisão pode mover. Enquanto isso, a
+referência é o `.dc.html`.
+
+**Divergência de marca a resolver:** o handoff tem **um** símbolo, o monograma
+B (ver `COMPONENTS.md`). O produto tem dois — o `LogoMark` das telas de auth,
+que é o monograma, e o `BrandIcon` do app shell, que é um cubo isométrico sem
+contraparte no handoff. Pendência declarada da fidelidade visual das telas, não
+corrigida aqui: esta fase é fundação, e trocar o símbolo do shell mexe nas
+telas.
+
 ## App shell + Dashboard (`Brabo App.dc.html`)
 
 Layout: `display:flex;height:100vh` — sidebar fixa (248px) + coluna
