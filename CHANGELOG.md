@@ -2,18 +2,6 @@
 
 Gerado dos conventional commits por `scripts/changelog.mjs`.
 
-## Unreleased
-
-### Novidades
-
-- **api,shared**: o contrato de git ganha `listTree` e `getPullRequestDiff`, a
-  11ª e a 12ª operações, como capabilities declaradas só porque a suite de
-  contrato as prova nos três providers. São LEITURA e só: `listTree` devolve um
-  nível da árvore (nunca a árvore inteira) e `getPullRequestDiff` normaliza o
-  diff de uma PR, ambos com teto e `truncated`. Junto, a trava do item 33 da
-  FASE 26 — operação de contrato sem consumidor em `src/` reprova o CI, com uma
-  saída nomeada e auto-expirável para as duas, cujas rotas chegam na 26b.
-
 ## v2.5.1 — 2026-08-08
 
 ### Correções
@@ -79,6 +67,24 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - **deps**: fecha 5 alertas do Dependabot com overrides escopados (50efe887)
 
 ## Unreleased
+
+### Novidades
+
+- **api,shared**: o contrato de git ganha `listTree` e `getPullRequestDiff`, a
+  11ª e a 12ª operações, que a aba Code (FASE 26) vai precisar. Entram como
+  capability, e são `true` nos três providers só porque a **suite de contrato
+  única as prova nos três** — o critério dos ADRs 0041/0042, que vale para git:
+  sem prova, declara-se `false` e degrada. São LEITURA e só: `listTree` devolve
+  UM nível da árvore, nunca a árvore inteira, e `getPullRequestDiff` normaliza o
+  diff de uma PR (`status`, `additions`, `deletions`, `patch`). As duas cortam
+  com teto e avisam por `truncated`, para a aba não virar amplificador de
+  tráfego; os números moram em `apps/api/src/domain/git/git-read-limits.ts`, e
+  não no `packages/shared`, que é 100% tipo. Ausência é `null`, o mesmo
+  vocabulário de `getFileContent`. Junto vem a trava do item 33 da fase:
+  **operação de contrato sem consumidor em `src/` reprova o CI**, com uma saída
+  estreita e nomeada para as duas — ela se fecha sozinha, porque passa a
+  reprovar assim que a rota da 26b existir. Uma degradação declarada: o GitLab
+  não traz tamanho de arquivo na árvore, então `size` vem `null` ali.
 
 ### Correções
 
