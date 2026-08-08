@@ -38,6 +38,7 @@ describe('corpoDaPromocao', () => {
     funcao: 'feature',
     impacto: 'minor' as const,
     titulo,
+    branch: 'feature/algo',
   });
 
   it('a tabela tem uma linha por PR, com as quatro colunas', () => {
