@@ -143,4 +143,72 @@ defmodule Engine.Actions.WorkspaceTest do
     assert dir1 == dir2
     assert File.exists?(Path.join(dir1, "README.md"))
   end
+
+  describe "a corrida de dois dev agents (achado da 1ª execução com 2 módulos)" do
+    test "um `.git` recém-criado NÃO conta como pronto", %{} do
+      # A guarda do caminho rápido era `.git` existir, e `init_from_bare!`
+      # começa com `git init` — o `.git` nasce na PRIMEIRA linha, antes do
+      # fetch e do checkout. O segundo agente via "pronto", pulava o lock e
+      # rodava `git worktree add` num repositório pela metade.
+      #
+      # Este teste reproduz exatamente esse estado: repo iniciado, inicialização
+      # NÃO concluída.
+      project_id = Ecto.UUID.generate()
+      dir = Workspace.workspace_dir(project_id)
+      File.mkdir_p!(dir)
+      {_, 0} = System.cmd("git", ["init"], cd: dir, stderr_to_stdout: true)
+
+      refute File.regular?(Path.join(dir, ".brabo-workspace-pronto")),
+             "o repo meio-inicializado não pode ter a marca de pronto"
+
+      # Com a guarda antiga (`.git` existe), `ensure!` devolveria o diretório
+      # sem nunca completar a inicialização. Com a marca, ele passa pelo lock,
+      # reconhece o workspace pré-marca e o conclui.
+      bare = create_bare_repo!(true)
+      assert Workspace.ensure!(project_id, bare) == dir
+
+      assert File.regular?(Path.join(dir, ".brabo-workspace-pronto")),
+             "depois do ensure! o workspace tem de estar marcado como pronto"
+    end
+
+    test "workspace JÁ inicializado por versão anterior não é re-inicializado" do
+      # Migração: quem já tem repo utilizável e nenhuma marca só ganha a marca.
+      # Re-inicializar apagaria trabalho.
+      project_id = Ecto.UUID.generate()
+      bare = create_bare_repo!(true)
+      dir = Workspace.ensure!(project_id, bare)
+
+      testemunha = Path.join(dir, "nao-me-apague.txt")
+      File.write!(testemunha, "trabalho do agente")
+      File.rm!(Path.join(dir, ".brabo-workspace-pronto"))
+
+      assert Workspace.ensure!(project_id, bare) == dir
+      assert File.read!(testemunha) == "trabalho do agente"
+      assert File.regular?(Path.join(dir, ".brabo-workspace-pronto"))
+    end
+
+    test "dois `ensure!` concorrentes terminam com UM workspace pronto" do
+      # O caso real: a ativação sobe um dev agent por módulo, e os dois chamam
+      # `ensure!` ao mesmo tempo.
+      project_id = Ecto.UUID.generate()
+      bare = create_bare_repo!(true)
+
+      resultados =
+        [1, 2]
+        |> Enum.map(fn _ -> Task.async(fn -> Workspace.ensure!(project_id, bare) end) end)
+        |> Enum.map(&Task.await(&1, 30_000))
+
+      dir = Workspace.workspace_dir(project_id)
+      assert resultados == [dir, dir]
+      assert File.regular?(Path.join(dir, ".brabo-workspace-pronto"))
+
+      # E o repositório está utilizável: é o que o `git worktree add` do
+      # segundo agente exige, e o que falhava antes.
+      assert {_, 0} =
+               System.cmd("git", ["rev-parse", "--is-inside-work-tree"],
+                 cd: dir,
+                 stderr_to_stdout: true
+               )
+    end
+  end
 end
