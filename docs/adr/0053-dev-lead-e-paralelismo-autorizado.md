@@ -1,6 +1,6 @@
 # ADR 0053 — Dev Lead como área, e paralelismo autorizado pelo usuário
 
-- **Status:** Proposto
+- **Status:** Aceito (implementado na FASE 14d, 2026-08-07)
 - **Data:** 2026-08-05
 - **Contexto:** FASE 14d
 - **Revoga cortes de:** [ADR 0038](0038-hierarquia-de-agentes.md) (o
