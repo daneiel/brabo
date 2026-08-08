@@ -198,3 +198,24 @@ describe('Shell — nav global inerte', () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * A marca da sidebar (FASE 17a).
+ *
+ * O cabeçalho usava o `BrandIcon` — um cubo isométrico —, enquanto as telas de
+ * auth usavam o monograma B. Eram duas marcas no mesmo produto, e a troca
+ * acontecia exatamente na passagem do login para o app. O handoff é explícito em
+ * que o monograma é o único asset de marca; o teste guarda isso pela haste de
+ * traço 3.4, que é o que distingue um desenho do outro.
+ */
+describe('Shell — marca', () => {
+  it('o cabeçalho usa o monograma B, e não outro desenho', () => {
+    const { container } = renderShell();
+
+    expect(container.querySelector('aside svg path[stroke-width="3.4"]')).not.toBeNull();
+    // O cubo isométrico do `BrandIcon`: se ele voltar, este path reaparece.
+    expect(
+      container.querySelector('aside svg path[d="M12 3l7 4v10l-7 4-7-4V7z"]'),
+    ).toBeNull();
+  });
+});

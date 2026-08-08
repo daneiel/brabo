@@ -26,6 +26,7 @@ import type {
   BusinessRulePayload,
   ProposedAction,
   SessionEvent,
+  SessionStatus,
 } from '../lib/api-types';
 import { useToast } from '../components/ui/ToastProvider';
 import { TokenMeter } from '../components/TokenMeter';
@@ -38,8 +39,10 @@ import { lerFalhaDeTurno } from '../lib/session-falha';
 import { hashtagDaSessao, rotuloDaSessao } from '../lib/session-label';
 import {
   AlertCircleIcon,
+  ChevronRightIcon,
   LayoutSidebarIcon,
   ModelIcon,
+  StopSquareIcon,
   UserIcon,
 } from '../components/ui/icons';
 import styles from './SessionPage.module.css';
@@ -54,6 +57,47 @@ interface SessionPageProps {
 interface TimelineEntry {
   seq: number;
   node: ReactNode;
+}
+
+/**
+ * O ponto de estado da barra de topo, derivado da máquina de estados da sessão
+ * (`created → active → closing → closed | closed_abnormally`).
+ *
+ * Uma entrada por estado, sem `default` embutido: estado novo na máquina passa
+ * a exigir uma decisão aqui em vez de herdar calado a aparência de "ao vivo".
+ */
+const PONTO_DA_SESSAO: Record<
+  SessionStatus,
+  { classe: 'pulsing' | 'statusDotParado' | 'statusDotFalha'; rotulo: string }
+> = {
+  created: { classe: 'statusDotParado', rotulo: 'ainda não ativada' },
+  active: { classe: 'pulsing', rotulo: 'ativa' },
+  closing: { classe: 'statusDotParado', rotulo: 'encerrando' },
+  closed: { classe: 'statusDotParado', rotulo: 'encerrada' },
+  closed_abnormally: { classe: 'statusDotFalha', rotulo: 'encerrada anormalmente' },
+};
+
+export function pontoDaSessao(status: SessionStatus | undefined) {
+  // Sem sessão carregada ainda não é "encerrada": é desconhecido, e o ponto
+  // fica apagado até o dado chegar.
+  return status ? PONTO_DA_SESSAO[status] : { classe: 'statusDotParado' as const, rotulo: 'carregando' };
+}
+
+/** Nome de exibição do agente; degrada para o id quando ele não está no roster. */
+function nomeDoAgente(id: string | undefined): string {
+  if (!id) return 'agente';
+  return AGENTS[id as keyof typeof AGENTS]?.name ?? id;
+}
+
+/**
+ * Cor do agente — a mesma do card, do avatar e da marca de handoff.
+ *
+ * O fallback é `--accent` porque nem todo ator é agente do roster: no chat sem
+ * agente ativo quem responde é o MODELO, e `actor.id` é o slug dele.
+ */
+function corDoAgente(id: string | undefined): CSSProperties {
+  const cor = id ? AGENTS[id as keyof typeof AGENTS]?.color : undefined;
+  return { ['--msg-color' as string]: cor ?? 'var(--accent)' } as CSSProperties;
 }
 
 export function SessionPage({
@@ -225,15 +269,17 @@ export function SessionPage({
         items.push({
           seq: event.seq,
           node: (
-            <div className={styles.message} key={event.id}>
+            <div
+              className={styles.message}
+              key={event.id}
+              style={{ ['--msg-color' as string]: 'var(--accent)' } as CSSProperties}
+            >
               <span className={[styles.avatar, styles.user].join(' ')}>
                 <UserIcon size={15} />
               </span>
               <div className={styles.messageBody}>
                 <div className={styles.messageHeader}>
-                  <span className={styles.messageName} style={{ ['--msg-color' as string]: 'var(--accent)' }}>
-                    {user.name ?? 'Você'}
-                  </span>
+                  <span className={styles.messageName}>{user.name ?? 'Você'}</span>
                 </div>
                 <div className={styles.bubble}>{text}</div>
               </div>
@@ -241,13 +287,24 @@ export function SessionPage({
           ),
         });
       } else if (event.type === 'handoff.offered') {
+        // Quem PASSOU é o ator do evento (`create-handoff.use-case.ts` grava o
+        // `fromAgent` como actor); o payload traz só o destino. Os dois já
+        // estavam no evento — a régua mostrava um `handoff → po` cru e perdia
+        // metade da frase, que é justamente quem largou a bola.
         const payload = event.payload as { toAgent?: string };
         items.push({
           seq: event.seq,
           node: (
             <div className={styles.handoffDivider} key={event.id}>
               <span className={styles.handoffPill}>
-                handoff → {payload?.toAgent ?? 'PO'}
+                <span className={styles.handoffAgent} style={corDoAgente(event.actor.id)}>
+                  {nomeDoAgente(event.actor.id)}
+                </span>
+                <ChevronRightIcon size={13} />
+                passou o bastão ao
+                <span className={styles.handoffAgent} style={corDoAgente(payload?.toAgent)}>
+                  {nomeDoAgente(payload?.toAgent)}
+                </span>
               </span>
             </div>
           ),
@@ -263,15 +320,13 @@ export function SessionPage({
         items.push({
           seq: event.seq,
           node: (
-            <div className={styles.message} key={event.id}>
-              <span className={styles.avatar} style={{ ['--msg-color' as string]: 'var(--accent)' } as CSSProperties}>
+            <div className={styles.message} key={event.id} style={corDoAgente(event.actor.id)}>
+              <span className={styles.avatar}>
                 <ModelIcon size={15} />
               </span>
               <div className={styles.messageBody}>
                 <div className={styles.messageHeader}>
-                  <span className={styles.messageName} style={{ ['--msg-color' as string]: 'var(--accent)' }}>
-                    {event.actor.id}
-                  </span>
+                  <span className={styles.messageName}>{nomeDoAgente(event.actor.id)}</span>
                   <span className={styles.messageMeta}>modelo</span>
                 </div>
                 {/* Resposta vazia é evento ANTIGO: até a RN-059, falha de
@@ -300,21 +355,17 @@ export function SessionPage({
         items.push({
           seq: event.seq,
           node: (
-            <div className={styles.message} key={event.id}>
-              <span
-                className={styles.avatar}
-                style={{ ['--msg-color' as string]: 'var(--danger)' } as CSSProperties}
-              >
+            <div
+              className={styles.message}
+              key={event.id}
+              style={{ ['--msg-color' as string]: 'var(--danger)' } as CSSProperties}
+            >
+              <span className={styles.avatar}>
                 <AlertCircleIcon size={15} />
               </span>
               <div className={styles.messageBody}>
                 <div className={styles.messageHeader}>
-                  <span
-                    className={styles.messageName}
-                    style={{ ['--msg-color' as string]: 'var(--danger)' }}
-                  >
-                    {event.actor.id}
-                  </span>
+                  <span className={styles.messageName}>{nomeDoAgente(event.actor.id)}</span>
                   {/* A ORIGEM fica visível: é ela que diz se o próximo passo é
                       trocar a chave, esperar o provider ou abrir um bug. */}
                   <span className={styles.messageMeta}>falha · origem {origem}</span>
@@ -460,15 +511,37 @@ export function SessionPage({
   const rotulo = rotuloDaSessao(sessionId);
   const hashtag = hashtagDaSessao(sessionId);
   const isActive = session?.status === 'active';
+  const metaDaSessao = [
+    project?.name ?? '…',
+    hashtag,
+    session ? new Date(session.createdAt).toLocaleTimeString('pt-BR') : '',
+  ]
+    .filter(Boolean)
+    .join(' · ');
 
   return (
     <div className={styles.wrapper}>
       <div className={styles.topbar}>
-        <span className={[styles.statusDot, isActive && styles.pulsing].filter(Boolean).join(' ')} />
+        {/* O ponto DIZ o estado da sessão. Era verde sempre — só o pulso
+            mudava —, então uma sessão encerrada exibia o mesmo sinal de "ao
+            vivo" de uma em curso. E era mudo para quem não vê cor: agora tem
+            rótulo. */}
+        <span
+          className={[styles.statusDot, styles[pontoDaSessao(session?.status).classe]]
+            .filter(Boolean)
+            .join(' ')}
+          role="status"
+          aria-label={`Sessão ${pontoDaSessao(session?.status).rotulo}`}
+        />
+        {/* Título e metadados em UMA linha cada, como o desenho — e por isso
+            com reticências quando a barra aperta. `title` porque texto
+            truncado sem forma de ler o resto é informação perdida. */}
         <div className={styles.titleBlock}>
-          <div className={styles.title}>Sessão {rotulo}</div>
-          <div className={styles.meta}>
-            {project?.name ?? '…'} · {hashtag} · {session ? new Date(session.createdAt).toLocaleTimeString('pt-BR') : ''}
+          <div className={styles.title} title={`Sessão ${rotulo}`}>
+            Sessão {rotulo}
+          </div>
+          <div className={styles.meta} title={metaDaSessao}>
+            {metaDaSessao}
           </div>
         </div>
         <div className={styles.spacer} />
@@ -504,11 +577,22 @@ export function SessionPage({
             Aceitar handoff e iniciar {offeredHandoff.toAgent}
           </Button>
         )}
-        <Button variant="ghost" onClick={handleClose} disabled={!session || session.status === 'closed'}>
+        {/* Encerrar é destrutivo e o desenho o marca como tal: contorno em
+            `danger`, não um botão fantasma indistinguível dos outros. */}
+        <Button variant="danger" onClick={handleClose} disabled={!session || session.status === 'closed'}>
+          <StopSquareIcon size={15} />
           Encerrar
         </Button>
-        <button type="button" className={styles.toggleAside} onClick={() => setAsideOpen((v) => !v)} aria-label="Alternar painel de contexto">
-          <LayoutSidebarIcon size={16} />
+        <button
+          type="button"
+          className={[styles.toggleAside, asideOpen && styles.toggleAsideOn]
+            .filter(Boolean)
+            .join(' ')}
+          onClick={() => setAsideOpen((v) => !v)}
+          aria-pressed={asideOpen}
+          aria-label="Alternar painel de contexto"
+        >
+          <LayoutSidebarIcon size={17} />
         </button>
       </div>
 
@@ -559,7 +643,10 @@ export function SessionPage({
               ))}
 
               {optimisticUser && (
-                <div className={styles.message}>
+                <div
+                  className={styles.message}
+                  style={{ ['--msg-color' as string]: 'var(--accent)' } as CSSProperties}
+                >
                   <span className={[styles.avatar, styles.user].join(' ')}>
                     <UserIcon size={15} />
                   </span>
@@ -573,16 +660,16 @@ export function SessionPage({
               )}
 
               {streaming && (
-                <div className={styles.message}>
-                  <span
-                    className={styles.avatar}
-                    style={
-                      {
-                        ['--msg-color' as string]:
-                          agenteFalando?.color ?? 'var(--accent)',
-                      } as CSSProperties
-                    }
-                  >
+                <div
+                  className={styles.message}
+                  style={
+                    {
+                      ['--msg-color' as string]:
+                        agenteFalando?.color ?? 'var(--accent)',
+                    } as CSSProperties
+                  }
+                >
+                  <span className={styles.avatar}>
                     {agenteFalando ? <agenteFalando.icon size={15} /> : <ModelIcon size={15} />}
                   </span>
                   <div className={styles.messageBody}>
@@ -707,6 +794,12 @@ function ContextAside({
 
   return (
     <aside className={styles.aside}>
+      {/* O trilho se nomeia (handoff, seção 5). Sem isto, quem abre o painel vê
+          quatro rótulos mono soltos e nenhuma pista do que os junta. */}
+      <div className={styles.asideTitleBar}>
+        <h2 className={styles.asideTitle}>Contexto da sessão</h2>
+      </div>
+
       <div className={styles.asideSection}>
         <div className={styles.asideHeader}>Regras de negócio</div>
         {businessRules.length === 0 ? (
@@ -747,13 +840,10 @@ function ContextAside({
         ) : (
           filesTouched.map((file) => (
             <div key={file.path} className={styles.asideItem}>
-              <span className={styles.fileLetter} style={{ color: 'var(--warning)' }}>
-                M
-              </span>
-              {file.path}
-              <span style={{ marginLeft: 'auto', fontFamily: 'var(--font-mono)', fontSize: 11 }}>
-                +{file.additions} −{file.deletions}
-              </span>
+              <span className={styles.fileLetter}>M</span>
+              <span className={styles.filePath}>{file.path}</span>
+              <span className={styles.fileAdd}>+{file.additions}</span>
+              <span className={styles.fileDel}>−{file.deletions}</span>
             </div>
           ))
         )}
@@ -764,9 +854,9 @@ function ContextAside({
       <div className={styles.asideSection}>
         <button
           type="button"
-          className={styles.asideHeader}
+          className={[styles.asideHeader, styles.asideToggle].join(' ')}
           onClick={onToggleLog}
-          style={{ cursor: 'pointer', background: 'none', border: 'none', padding: 0, width: '100%', textAlign: 'left' }}
+          aria-expanded={logOpen}
         >
           Log de eventos ({events.length}) {logOpen ? '−' : '+'}
         </button>

@@ -61,19 +61,24 @@
 
 /*
  * Campo preenchido (ADR 0036) — a segunda anatomia de campo do design system, a
- * do mock de login.
+ * do handoff de login.
  *
  * Não é só o fundo: naquele spec o campo é mais alto (42px) e o texto maior
  * (14px) que o campo default. As três coisas vêm da mesma especificação e viajam
  * juntas, porque metade dela dá um campo que não existe em lugar nenhum.
  *
- * O fundo é um degrau ACIMA da superfície do card, não abaixo: sobre um card
- * `--surface-1`, o fundo default do campo é o MESMO do card, e só a borda de 1px
- * os separa. (O mock afunda o campo com `--code-bg`; aqui ele sobe. É divergência
- * deliberada, registrada no ADR.)
+ * ## O campo afunda, e deixou de subir (FASE 17a)
+ *
+ * Era `--surface-2` — um degrau ACIMA do card, escolhido porque o fundo default
+ * do campo é o MESMO do card `--surface-1` e só 1px de borda os separava. O
+ * problema estava certo; a solução divergia do handoff, que afunda o campo em
+ * `--code-bg`. Afundar resolve o mesmo problema (o campo se separa do card),
+ * segue a referência versionada e ainda MELHORA o contraste: `--text-primary`
+ * sobre `--code-bg` é o par mais alto do tema, contra os 11,1:1 do
+ * `--surface-2`. Não havia motivo para manter a divergência.
  */
 .preenchido {
-  background: var(--surface-2);
+  background: var(--code-bg);
   height: 42px;
   padding: 0 13px;
   font-size: 14px;
@@ -93,8 +98,9 @@
  * Placeholder do campo preenchido em `--text-secondary`.
  *
  * O `--text-muted` do `.input::placeholder` genérico dá 3.10:1 sobre
- * `--surface-2` — reprova o AA, e placeholder é texto como qualquer outro. Fica
- * mais presente que no mock; a alternativa era não ter placeholder, e
+ * `--surface-2` e 5.65:1 sobre `--code-bg` — passava a fechar o AA com o campo
+ * afundado, mas `--text-secondary` fica: placeholder é texto como qualquer
+ * outro, e a razão de ele estar mais presente que no handoff não mudou —
  * "voce@empresa.com" diz algo que o rótulo "E-mail" não diz.
  */
 .preenchido::placeholder {

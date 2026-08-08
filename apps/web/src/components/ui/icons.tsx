@@ -155,6 +155,15 @@ export const SettingsIcon = (props: IconProps) =>
 export const ChatIcon = (props: IconProps) =>
   base(['M21 11.5a8.4 8.4 0 0 1-9 8.4L3 21l1.1-3.6A8.4 8.4 0 1 1 21 11.5z'], props);
 
+/**
+ * Cubo isométrico. **Não é a marca do Brabo** — a marca é o `LogoMark` no fim
+ * deste arquivo, o monograma B, e o handoff é explícito em que ela é o único
+ * asset de marca do produto.
+ *
+ * Este desenho ocupava o cabeçalho da sidebar até a FASE 17a e é genérico:
+ * serve como ícone de "pacote"/"artefato" onde fizer sentido. Não o use para
+ * representar o produto.
+ */
 export const BrandIcon = (props: IconProps) =>
   base(['M12 3l7 4v10l-7 4-7-4V7z', 'M12 3v18M5 7l7 4 7-4'], props);
 
@@ -212,15 +221,19 @@ export const EyeOffIcon = (props: IconProps) =>
   );
 
 /**
- * A marca do Brabo: uma barra e dois chevrons, extraída do mock de login
- * (`Brabo Login.dc.html`).
+ * A marca do Brabo, e a ÚNICA: haste vertical sólida e dois chevrons. De perto é
+ * a letra B; de longe lê-se `>>` — agentes avançando em cadeia. Os paths são os
+ * canônicos do `design_handoff_brabo/README.md`, seção "Marca".
  *
- * Não confundir com o `BrandIcon` acima, que é outro desenho — o cubo isométrico
- * usado no cabeçalho do app. Este é o do quadrado terracota das telas de auth.
+ * Aplicação: ladrilho `--accent` com traço `--on-accent` e raio ≈28% do lado
+ * (32px→9px na sidebar, 40px→11px nas telas de auth). Nunca girar, esticar,
+ * contornar nem aplicar gradiente. Abaixo de 16px o chevron inferior sobe para
+ * .7 de opacidade.
  *
  * Foge do `base()` de propósito: os três traços têm espessuras diferentes (3.4 e
- * 2.8) e o segundo chevron tem opacidade própria, e é isso que dá a sensação de
- * profundidade. Um `stroke-width` único achataria o desenho.
+ * 2.8) e o segundo chevron tem opacidade própria (.58, que é o handoff ainda em
+ * execução) — é isso que dá a sensação de profundidade. Um `stroke-width` único
+ * achataria o desenho.
  */
 export const LogoMark = ({ size = 24, ...rest }: IconProps) => (
   <svg

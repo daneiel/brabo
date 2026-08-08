@@ -108,7 +108,7 @@ export function ForgotPasswordPage({
           onChange={(e) => setEmail(e.target.value)}
         />
         <div className={styles.acoes}>
-          <Button type="submit" fullWidth loading={enviando}>
+          <Button type="submit" fullWidth size="lg" loading={enviando}>
             {enviando ? 'Enviando…' : 'Enviar link'}
           </Button>
         </div>

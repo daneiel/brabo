@@ -15,10 +15,12 @@
   background: var(--surface-2);
 }
 
-/* Alvo da navegação de evidência do Psicólogo (Fase 4b). */
+/* Alvo da navegação de evidência do Psicólogo (Fase 4b). A cor é `--violet`,
+   o token de agentes/IA que a FASE 16 criou — estava literal aqui porque até
+   então não havia o que referenciar. */
 .row.highlighted {
-  background: color-mix(in srgb, #9c7be0 14%, transparent);
-  box-shadow: inset 2px 0 0 #9c7be0;
+  background: color-mix(in srgb, var(--violet) 14%, transparent);
+  box-shadow: inset 2px 0 0 var(--violet);
 }
 
 .icon {

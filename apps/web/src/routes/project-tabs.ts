@@ -55,6 +55,20 @@ export interface AbaDoProjeto {
   count?: (contagens: ContagensDeAba) => number | undefined;
   /** Posição na régua. Explícita para que inserir uma aba no meio seja um número, não um diff de array. */
   ordem: number;
+  /**
+   * A aba desenha até a borda e cuida do próprio respiro/rolagem.
+   *
+   * O default (`false`) é a moldura pôr 24px em volta e rolar o painel
+   * inteiro — o que serve para as abas em forma de documento. A Visão geral
+   * não é uma: ela tem três regiões, e a da direita é um TRILHO com divisória
+   * à esquerda e rolagem própria (handoff, seção 4). Com o respiro da moldura
+   * esse trilho vira um card flutuando a 24px da borda.
+   *
+   * Mora no registro em vez de num `tab === 'overview'` dentro da moldura pelo
+   * mesmo motivo do resto deste arquivo: quem sabe como a aba se desenha é a
+   * aba, e uma condição escrita na moldura envelhece calada.
+   */
+  semRespiro?: boolean;
 }
 
 /**
@@ -67,6 +81,7 @@ const REGISTRO = [
     key: 'overview',
     label: 'Visão geral',
     component: ProjectOverviewTab,
+    semRespiro: true,
     ordem: 10,
   },
   {

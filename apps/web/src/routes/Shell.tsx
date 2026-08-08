@@ -20,7 +20,7 @@ import { ROLE_LABEL } from '../lib/roles';
 import { desempateDoProjeto, nomesRepetidos } from '../lib/project-label';
 import type { ProjectCardSummary } from '../lib/api-types';
 import { Badge } from '../components/ui/Badge';
-import { BrandIcon, ChatIcon, SettingsIcon } from '../components/ui/icons';
+import { ChatIcon, LogoMark, SettingsIcon } from '../components/ui/icons';
 import styles from './Shell.module.css';
 
 // Iniciais do e-mail (não há campo de nome no JWT nem endpoint de perfil —
@@ -94,9 +94,14 @@ export function Shell() {
   return (
     <div className={styles.layout}>
       <aside className={styles.sidebar}>
+        {/* O monograma B no ladrilho terracota — a MESMA marca das telas de
+            auth, e a única que o handoff reconhece. Até a FASE 17a aqui morava
+            o `BrandIcon`, um cubo isométrico sem parentesco nenhum com ela: o
+            app tinha duas marcas, e quem entrava pelo login via a segunda
+            trocar pela primeira. */}
         <div className={styles.brand}>
-          <span className={styles.brandIcon}>
-            <BrandIcon size={20} />
+          <span className={styles.brandTile} aria-hidden="true">
+            <LogoMark size={18} />
           </span>
           <span className={styles.brandName}>Brabo</span>
         </div>

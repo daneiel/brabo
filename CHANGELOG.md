@@ -190,6 +190,32 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   jsdom não mede layout. Junto, dois alvos de clique que estavam abaixo do piso
   de 24px da WCAG 2.2 AA (os chips de evidência da hipótese e o de diff no
   histórico de instruções)
+### Refatorações
+
+- **web**: as telas de **Projeto** e **Sessão** passam a seguir o handoff de
+  design (`design_handoff_brabo/`, seções 4 e 5). Nenhuma regra de negócio
+  muda, e nenhuma tela ganha ou perde informação — o que muda é a forma. No
+  Projeto: cabeçalho e régua de abas viram uma faixa só, com uma divisória em
+  vez das duas que apareciam empilhadas; o repositório se apresenta em um chip
+  (`local · privado`) e a branch padrão ganha o ícone e o destaque que o desenho
+  pede; e a coluna de Atividade deixa de ser um card boiando a 24px da borda
+  para virar o trilho de 360px do desenho, com rolagem própria — antes a página
+  rolava inteira e o feed sumia de vista assim que a lista de agentes crescia.
+  Na Sessão: a barra de topo ganha o fundo que a distinguia do chat, o balão de
+  mensagem ganha contorno, o avatar ganha o anel na cor do agente, e a marca de
+  passagem de bastão vira a frase que o desenho escreve (`Criativo → passou o
+  bastão ao PO`) em vez do `handoff → po` cru — os dois nomes já estavam no
+  evento, e metade se perdia. O painel de contexto se nomeia ("Contexto da
+  sessão") e separa as seções por divisória. Três correções vieram junto, todas
+  achadas ao comparar com o desenho: o **ponto de estado** era verde fixo, então
+  uma sessão encerrada exibia o mesmo sinal de "ao vivo" de uma em curso (agora
+  ele acompanha a máquina de estados e tem rótulo para quem não vê cor); o
+  agente respondendo aparecia pelo **id** (`criativo`) depois de o evento
+  persistir e pelo **nome** (`Criativo`) enquanto falava; e o título do convite
+  do Criativo pedia `--font-display`, que não existe em `design/tokens.css`, e
+  caía na fonte do navegador. Botão "Encerrar" passa a ter a aparência
+  destrutiva que o desenho lhe dá. Verificado no navegador com
+  `scripts/dev/validacao-visual.js`: nenhum achado de layout nas duas telas
 
 ### Manutenção
 
@@ -231,6 +257,26 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   ordenação por urgência (nada no domínio classifica urgência de uma ação) e a
   seção "Melhores modelos por capacidade" (não há métrica de qualidade por
   modelo). Estão escritas em `design/SCREENS.md`
+- **web**: o login e a lista de projetos passam a seguir o handoff, e o produto
+  volta a ter **uma** marca só. A sidebar exibia um cubo isométrico enquanto as
+  telas de auth exibiam o monograma B: o símbolo trocava exatamente na passagem
+  do login para o app, e agora é o monograma nos dois lugares (o cubo continua
+  disponível como ícone genérico, dito no código que não é a marca). No login, o
+  campo de e-mail e senha afunda em `--code-bg` como na referência — divergência
+  que o ADR 0036 registrara e que não se sustentava, já que afundar separa o
+  campo do card igual e ainda melhora o contraste —, o card e o selo passam à
+  sombra grande (`--shadow-lg`, que a FASE 16 trouxe justamente para isso) e o
+  botão "Entrar" ganha os 44px que o handoff pede para a ação principal de uma
+  tela; ele media 33px. Na lista de projetos, o medidor de tokens de cada card
+  deixa de ter o mesmo fundo do card que o contém — a caixa desaparecia e
+  sobrava a borda —, a última atividade ganha o fio que a separa do medidor e sai
+  de `--text-muted` (3.89:1, a dívida conhecida) para `--text-secondary`, e o
+  respiro do card, o raio dos avatares e o título da barra de topo (que virou um
+  `<h1>` de verdade) alinham com a referência. Nenhuma regra de negócio muda; os
+  três estados da RN-088 e a economia de requisições da RN-090/091 seguem como
+  estavam. Duas coisas do handoff **não** entraram porque são comportamento e
+  não pintura, e seguem declaradas: o "Continuar com GitHub" do login e o
+  indicador "N agentes online"
 
 ## v2.4.0 — 2026-08-07
 

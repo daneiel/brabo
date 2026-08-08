@@ -36,6 +36,34 @@ describe('Button', () => {
     });
   });
 
+  /**
+   * `size` entrou na FASE 17a: o handoff pede 44px no submit de tela inteira e o
+   * botão do produto é denso (28–36px). O submit do login media 33px.
+   */
+  describe('size', () => {
+    it('lg aplica a classe de 44px', () => {
+      render(
+        <Button size="lg">Entrar</Button>,
+      );
+      expect(screen.getByRole('button')).toHaveClass(styles.lg);
+    });
+
+    it('o default é denso — nenhum botão do produto muda de altura sozinho', () => {
+      render(<Button>Salvar</Button>);
+      expect(screen.getByRole('button')).not.toHaveClass(styles.lg);
+    });
+
+    it('size é independente de fullWidth', () => {
+      // As duas props andam juntas nas telas de auth, e o teste existe para que
+      // continuem SEPARÁVEIS: amarrar 44px a `fullWidth` faria o primeiro botão
+      // largo fora de auth herdar uma altura que ninguém pediu.
+      render(<Button fullWidth>Entrar</Button>);
+      const botao = screen.getByRole('button');
+      expect(botao).toHaveClass(styles.fullWidth);
+      expect(botao).not.toHaveClass(styles.lg);
+    });
+  });
+
   describe('loading', () => {
     it('desabilita e anuncia aria-busy', () => {
       render(<Button loading>Autenticando…</Button>);
