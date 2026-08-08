@@ -47,6 +47,12 @@ O browser do usuário chega aqui vindo do provider, sem sessão da api. Não é
 irrestrita: o parâmetro `state` é validado por HMAC
 (`GIT_OAUTH_STATE_SECRET`), e sem `state` válido a chamada é recusada.
 
+Essa garantia vale exatamente o quanto vale a chave, e por isso ela deixou de
+ter default: em produção a api **não sobe** com a chave de exemplo do
+repositório, que é pública (ADR 0059, [RN-093](business-rules.md#rn-093)). Com
+a chave conhecida, esta rota volta a ser irrestrita na prática — qualquer um
+assina um `state` para o projeto que quiser.
+
 ### Auth first-party
 
 As sete rotas de `/auth/*` mais o JWKS. **Todas precisam ser públicas pela

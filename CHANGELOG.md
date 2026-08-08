@@ -57,6 +57,17 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **api,docker**: `GIT_OAUTH_STATE_SECRET` deixa de ter default em produção — a
+  api **não sobe** sem ela, com a chave de exemplo do repositório, ou com menos
+  de 16 caracteres. Essa chave assina o `state` do OAuth de git, e o `state` é o
+  que impede o callback de ser forjado; o default era público (está no
+  `.env.example`), e o `docker-compose.prod.yml` o supria como fallback, então
+  esquecer a variável subia produção assinando com uma chave conhecida — sem
+  nenhum sinal. Rejeitar só o valor vazio não resolveria: no caminho real de
+  erro a variável estava definida. **Quebra deliberada**: quem sobe o compose de
+  produção precisa exportar a variável (o README mostra como; o `smoke.sh` gera
+  a dele). Em Kubernetes nada muda. Ver ADR 0059 e RN-093
+
 - **api**: a api passa a mandar `Content-Security-Policy` em toda resposta, e em
   produção ele nega tudo (`default-src 'none'`, mais `frame-ancestors`,
   `base-uri` e `form-action` em `'none'`). Antes o cabeçalho não era mandado —

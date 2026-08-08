@@ -122,7 +122,7 @@ merge em `main`, e por isso fica um ciclo de promoção atrás do que está em
 | [Artefatos](docs/reference/artifacts.md) | os seis schemas e quem pode emitir cada um |
 | [Providers de git](docs/reference/git-providers.md) | o contrato de dez operações e as capabilities |
 | [API interna](docs/reference/internal-api.md) | o contrato api ↔ engine |
-| [ADRs](docs/adr/index.md) | as 58 decisões e o porquê de cada uma |
+| [ADRs](docs/adr/index.md) | as 59 decisões e o porquê de cada uma |
 | [Segurança](SECURITY.md) | como reportar uma vulnerabilidade |
 | [Como contribuir](CONTRIBUTING.md) | fluxo, Definition of Done, o que é aceito |
 | [Onde pedir ajuda](SUPPORT.md) | qual canal para cada tipo de assunto |
@@ -244,6 +244,11 @@ Imagens multi-stage, **non-root**, rootfs read-only, sem bind mount:
 engine roda um `mix release` (sem Mix, sem código-fonte) e o web sai por nginx.
 
 ```bash
+# Obrigatória: este compose roda com NODE_ENV=production, e a api recusa subir
+# com a chave de exemplo do repositório (ADR 0059) — ela assina o `state` do
+# OAuth de git. O `smoke.sh` gera a dele sozinho.
+export GIT_OAUTH_STATE_SECRET="$(openssl rand -base64 32)"
+
 docker compose -f docker/docker-compose.prod.yml up -d --build --wait
 bash docker/smoke.sh
 docker compose -f docker/docker-compose.prod.yml down -v
