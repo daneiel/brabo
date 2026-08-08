@@ -45,6 +45,51 @@ contraparte no handoff. Pendência declarada da fidelidade visual das telas, nã
 corrigida aqui: esta fase é fundação, e trocar o símbolo do shell mexe nas
 telas.
 
+## Divergências deliberadas de Projeto e Sessão (FASE 17b)
+
+As duas telas foram reescritas contra `Brabo Project.dc.html` e
+`Brabo Session.dc.html`. O que segue **não** foi portado, e cada item tem
+motivo — a lista existe para que a próxima leitura do handoff não trate como
+esquecimento o que foi decisão.
+
+**O logo no cabeçalho da tela.** Os dois `.dc.html` abrem com o monograma de
+30px (Projeto) e 28px (Sessão) seguido de uma divisória vertical. Os protótipos
+são telas ISOLADAS, sem o shell; no produto as duas vivem dentro dele, e a marca
+já está na sidebar. Repeti-la a 250px de distância é ruído, não fidelidade.
+
+**Dados que não existem.** O cabeçalho do Projeto mostra a cadeia da política
+(`dev → qa → rc → main`), o hash do commit corrente e `↑3 ↓1`; a barra da Sessão
+mostra a duração (`24min`). Nada disso está no que a api devolve hoje —
+`ProvisionedRepository` traz `defaultBranch` e mais nada de estado do repo. O
+que existe é mostrado; o resto é pendência, não invenção.
+
+**O estado vazio do time de agentes** ("Nenhum agente no time ainda" + botão
+"Adicionar agentes") é **inalcançável** no produto: a presença de agente é uma
+REGRA, não uma lista editável — `rosterFromFacts` sempre devolve pelo menos
+Criativo, PO e Arquiteto. Um estado vazio que nenhum caminho produz é código
+morto, e o botão prometeria uma ação que não existe.
+
+**Blocos de código e de terminal dentro da bolha** (header com nome do arquivo,
+corpo mono sobre `--code-bg`, badge `rtk −78%`) dependem de a resposta do agente
+ser estruturada. Ela é texto hoje. Pendência.
+
+**A cor do texto da bolha** fica em `--text-primary`, e o handoff pede
+`--text-secondary`. O conteúdo da mensagem é a superfície de leitura mais densa
+do produto, e o par `--text-secondary` sobre `--surface-1` fica na fronteira do
+piso AA medido em `apps/web/src/lib/contraste.test.ts`.
+
+**O selo numérico da régua de abas** continua sólido (`--accent` com
+`--on-accent`), e o handoff o pede tingido (`--accent` a 18% com texto em
+`--accent`). O tingido usa um par que já está na dívida de contraste registrada
+(3,88:1), e o selo é texto de 10px.
+
+**A régua de abas foi ajustada por CSS do chamador**, em
+`ProjectPage.module.css`, e não na primitiva `components/ui/Tabs`: respiro por
+aba (11px × 14px), 2px de intervalo e a divisória da lista desligada, porque
+quem a desenha é o cabeçalho. O lugar disso é a primitiva — a régua do handoff
+é a régua do design system, não a do Projeto. Migrar para lá é mudança de outro
+dono, e continua pendente.
+
 ## App shell + Dashboard (`Brabo App.dc.html`)
 
 Layout: `display:flex;height:100vh` — sidebar fixa (248px) + coluna

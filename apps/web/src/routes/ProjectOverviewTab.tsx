@@ -250,9 +250,11 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
   return (
     <div className={styles.layout}>
       <div className={styles.main}>
-        <div className={styles.sectionHeader}>Time de agentes</div>
-        <div className={styles.sectionSub}>
-          {roster.length} agentes · {workingCount} trabalhando · {waitingCount} aguardando
+        <div className={styles.sectionRow}>
+          <h2 className={styles.sectionHeader}>Time de agentes</h2>
+          <span className={styles.sectionCount}>
+            {roster.length} agentes · {workingCount} trabalhando · {waitingCount} aguardando
+          </span>
         </div>
         <div className={styles.grid}>
           {rosterGroups.map((group) => {
@@ -293,7 +295,7 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
             árvore diz o que cada um fez e está fazendo. São a mesma pergunta
             em duas profundidades, e separá-las em colunas diferentes obrigava
             a olhar duas vezes. */}
-        <div className={styles.sectionHeader}>Linha do tempo do time</div>
+        <h2 className={styles.sectionHeader}>Linha do tempo do time</h2>
         <div className={styles.sectionSub}>
           Um ramo por agente, do primeiro marco ao que ele está fazendo agora.
           Quem está ativo abre sozinho.
@@ -312,8 +314,10 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
       </div>
 
       <aside className={styles.aside}>
-        <div className={styles.sectionHeader}>Atividade</div>
-        <div className={styles.sectionSub}>{events.length} eventos</div>
+        <div className={styles.sectionRow}>
+          <h2 className={styles.sectionHeader}>Atividade</h2>
+          <span className={styles.sectionCount}>{events.length} eventos</span>
+        </div>
         <ActivityFeed
           events={events}
           agentOptions={roster.map((r) => ({ id: r.id, label: r.def.name }))}
