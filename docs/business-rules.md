@@ -1377,6 +1377,69 @@ O caminho feliz não muda — todo id real é UUID vindo do banco.
 - **Origem:** [ADR 0058](adr/0058-csp-fechado-na-api-e-escopo-de-projeto-contido.md),
   alertas `js/path-injection` do CodeQL
 
+### RN-095 — A leitura de repositório é contida ao projeto e limitada {#rn-095}
+
+A superfície de leitura de código (`GET /projects/:projectId/code/{tree,file,search}`
+e o diff de PR) tem **duas** garantias, e as duas são do mesmo tipo: o produto
+recusando fazer o que o cliente pediu.
+
+**Contenção.** Todo caminho de arquivo vindo do cliente passa por
+`caminhoDeRepositorioContido()`, que ancora o pedido na pasta do projeto e
+recusa o que sair dela — `../`, absoluto, ou byte NUL. Ela é uma função só, no
+mesmo arquivo do `projectScopeRoot` da [RN-092](#rn-092), reusando as primitivas
+do escopo de terminal (`normalizarCaminho`/`dentroDoEscopo`). **Nenhuma rota
+valida caminho por conta própria**, e é isso que a regra afirma: quatro
+implementações da mesma contenção seriam quatro chances de divergir, e o
+CLAUDE.md já registra que a decisão foi manter a checagem central e pagar o
+preço no painel do CodeQL (barreira em outra função ele não enxerga).
+
+Ela devolve o caminho **normalizado**, e o chamador usa o que voltou. Devolver o
+original permitiria conferir `b` e mandar `a/../b` ao provider — a forma mais
+comum de a contenção existir e não valer.
+
+O vetor não é "ler o arquivo errado". Em `github`/`gitlab` o caminho vira
+segmento de URL da API do provider, então um `../` **troca de endpoint** com a
+credencial do owner do workspace na mão ([RN-058](#rn-058)/[RN-082](#rn-082)).
+Em `local` ele vira o lado direito de `git show <ref>:<path>`. A `ref` é
+conferida no mesmo lugar, pelo mesmo motivo, e `..` nela é recusado porque para
+o git `dev..main` é intervalo de commits, não revisão.
+
+**Limite.** Árvore e diff já vêm cortados pelo contrato
+(`GIT_TREE_ENTRY_LIMIT`, `GIT_DIFF_FILE_LIMIT`, FASE 26a). A **busca** não: ela
+não é operação do contrato — é composta sobre `listTree` e `getFileContent`, e
+é a única leitura cujo custo cresce com o TAMANHO do repositório em vez do
+tamanho do pedido. Três orçamentos a param (diretórios percorridos, arquivos
+abertos, casamentos devolvidos), um cache de TTL curto evita repetir as mesmas
+chamadas, e `truncated` diz que o corte aconteceu. Sem eles, um `viewer`
+gastaria a credencial e o rate limit do owner à vontade — a mesma família de
+defeito dos 3.824 req/min do dashboard ([RN-090](#rn-090)).
+
+Cortar é sempre **visível**: toda resposta que pode ter sido cortada diz isso
+num campo. `filesScanned` vai junto na busca porque o custo que ninguém vê é o
+que ninguém corrige.
+
+**Ler não vira `proposed_action`.** Leitura não é efeito externo, e transformá-la
+em ação de aprovação encheria a fila de ruído até ninguém mais ler as de
+verdade. O congelamento da fase é o outro lado disso: a aba é só leitura, e
+escrita — quando vier — nasce `proposed_action`.
+
+- **Onde:**
+  `apps/api/src/infrastructure/filesystem/project-workspaces-root.ts`
+  (`caminhoDeRepositorioContido`),
+  `apps/api/src/application/use-cases/git/read-project-code.use-case.ts`,
+  `apps/api/src/domain/git/git-read-limits.ts`,
+  `apps/api/src/domain/git/git-read-cache.ts`,
+  `apps/api/src/interfaces/http/git/code.controller.ts`
+- **Teste:**
+  `apps/api/test/infrastructure/filesystem/project-workspaces-root.spec.ts`
+  (a contenção isolada),
+  `apps/api/test/application/use-cases/git/read-project-code.use-case.spec.ts`
+  (o caminho malicioso recusado nas três rotas **antes** de o provider ser
+  chamado, e cada um dos três orçamentos parando a busca),
+  `apps/api/test/domain/git/git-read-cache.spec.ts`
+- **Origem:** FASE 26b, item 34 do programa 16–26; a contenção estende a
+  [RN-092](#rn-092) ([ADR 0058](adr/0058-csp-fechado-na-api-e-escopo-de-projeto-contido.md))
+
 ### RN-093 — Em produção, a api não sobe com a chave de exemplo do `state` de OAuth {#rn-093}
 
 `resolveOauthStateSecret()` **derruba o boot** quando `NODE_ENV === 'production'`

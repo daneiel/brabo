@@ -1,0 +1,69 @@
+---
+id: code-controller-diff
+title: "Devolve o diff de uma PR, normalizado por provider"
+description: "Um `patch` nulo distingue o caso em que o provider não entregou o texto (binário, ou patch grande demais) do caso em que o texto veio vazio. Colapsar os dois faria a tela dizer que um binário alterado não mudou. O campo `truncated` avisa quando a lista de arquivos passou do teto."
+sidebar_label: "Devolve o diff de uma PR, normalizado por provider"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "get api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Devolve o diff de uma PR, normalizado por provider"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/projects/{projectId}/code/pull-requests/{pullRequestId}/diff"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Um `patch` nulo distingue o caso em que o provider não entregou o texto (binário, ou patch grande demais) do caso em que o texto veio vazio. Colapsar os dois faria a tela dizer que um binário alterado não mudou. O campo `truncated` avisa quando a lista de arquivos passou do teto.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./code-controller-diff.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./code-controller-diff.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./code-controller-diff.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

@@ -245,6 +245,21 @@ A credencial é a do **owner do workspace**, pelo mesmo resolvedor da
 resolvido direto do banco pelo engine, não tem token e não depende de a api
 estar no ar — é o caminho que o `pnpm dev` e a suite inteira exercitam.
 
+#### A aba Code NÃO passa por aqui, e a assimetria é o ponto
+
+A superfície de leitura de código da FASE 26b (`/projects/:projectId/code/*`)
+**não tem contraparte interna**, e é útil dizer por quê — a rota acima existe
+para o caso oposto, e as duas juntas mostram a divisão.
+
+O engine precisa de `git-remote` porque ele trabalha no **sistema de arquivos**:
+clona, cria worktree, roda comando. A aba Code não trabalha em lugar nenhum —
+ela pergunta ao **provider** pelo conteúdo de uma ref, pela api, com a
+credencial que a api já tem. Nada nesse caminho precisa de segredo decifrado
+atravessando processo, e por isso nada nesse caminho abre rota interna.
+
+A consequência prática é a que importa: a única rota do produto que devolve
+segredo decifrado continua sendo UMA. Ler código não a multiplicou.
+
 ### Contexto por agente
 
 | método | caminho |

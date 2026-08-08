@@ -85,6 +85,27 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   estreita e nomeada para as duas — ela se fecha sozinha, porque passa a
   reprovar assim que a rota da 26b existir. Uma degradação declarada: o GitLab
   não traz tamanho de arquivo na árvore, então `size` vem `null` ali.
+- **api**: a superfície HTTP de **leitura** de código que a aba Code consome —
+  árvore, arquivo, busca e diff de PR, em quatro `GET` sob
+  `/projects/:projectId/code/`, todas `role:viewer`. **Nenhuma escreve, e o
+  controller não tem um único verbo de escrita**: ler não é efeito externo e não
+  vira `proposed_action`; escrita é fase seguinte, e vai nascer como uma. A
+  trava da 26a fechou junto — `listTree` e `getPullRequestDiff` deixaram de
+  estar na lista de operações sem consumidor, porque agora têm um.
+  **Contenção (RN-095)**: todo caminho vindo do cliente passa por UMA função, no
+  mesmo arquivo do `projectScopeRoot` da RN-092, reusando as primitivas de
+  escopo do ADR 0055 — `../`, absoluto e byte NUL são recusados com 400
+  **antes** de o provider ser chamado, e o que volta é o caminho normalizado,
+  porque conferir uma string e mandar outra é o jeito de a contenção existir e
+  não valer. Não é sobre ler o arquivo errado: em GitHub/GitLab o caminho vira
+  segmento de URL da API do provider, e um `..` troca de **endpoint** com o
+  token do owner do workspace na mão. **Teto**: a busca não é operação do
+  contrato de git (nenhum dos três providers a tem) — é composta sobre a árvore
+  e o conteúdo, com três orçamentos que a param, cache de TTL curto e
+  `truncated`/`filesScanned` na resposta, senão a aba viraria a mesma família de
+  defeito dos 3.824 req/min do dashboard. A credencial gasta é a do **owner**
+  (RN-058/RN-082), como na escrita. Ver [ADR
+  0060](docs/adr/0060-superficie-de-leitura-de-codigo.md).
 
 ### Correções
 

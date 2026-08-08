@@ -3111,6 +3111,297 @@
         ]
       }
     },
+    "/projects/{projectId}/code/file": {
+      "get": {
+        "description": "UTF-8, cortado no teto de bytes com `truncated: true` quando passa. Um caminho que sai da pasta do projeto é recusado com 400 pela checagem central da RN-095 — nunca com 404, que convidaria a procurar.",
+        "operationId": "CodeController_file",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "path",
+            "required": true,
+            "in": "query",
+            "description": "Caminho do arquivo.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ref",
+            "required": false,
+            "in": "query",
+            "description": "Branch, tag ou sha.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CodeFileResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Caminho fora do escopo do projeto (RN-095), ref malformada, ou busca com termo curto/longo demais."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto sem repositório provisionado, ou ref/caminho/PR inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          },
+          "501": {
+            "description": "O provider do projeto não declara a capability da operação — `listTree` ou `pullRequestDiff`. Capability só é declarada quando provada pela suite de contrato, então isto é resposta legítima e não defeito."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Devolve o conteúdo de um arquivo",
+        "tags": [
+          "git"
+        ]
+      }
+    },
+    "/projects/{projectId}/code/pull-requests/{pullRequestId}/diff": {
+      "get": {
+        "description": "Um `patch` nulo distingue o caso em que o provider não entregou o texto (binário, ou patch grande demais) do caso em que o texto veio vazio. Colapsar os dois faria a tela dizer que um binário alterado não mudou. O campo `truncated` avisa quando a lista de arquivos passou do teto.",
+        "operationId": "CodeController_diff",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pullRequestId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CodeDiffResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Caminho fora do escopo do projeto (RN-095), ref malformada, ou busca com termo curto/longo demais."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto sem repositório provisionado, ou ref/caminho/PR inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          },
+          "501": {
+            "description": "O provider do projeto não declara a capability da operação — `listTree` ou `pullRequestDiff`. Capability só é declarada quando provada pela suite de contrato, então isto é resposta legítima e não defeito."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Devolve o diff de uma PR, normalizado por provider",
+        "tags": [
+          "git"
+        ]
+      }
+    },
+    "/projects/{projectId}/code/search": {
+      "get": {
+        "description": "A busca NÃO é operação do contrato de git: ela é composta sobre a árvore e o conteúdo, e por isso é a única leitura cujo custo cresce com o tamanho do repositório. Três orçamentos a param — diretórios percorridos, arquivos abertos e casamentos devolvidos — e `truncated` diz que ela parou. `filesScanned` mostra o custo que ela teve.",
+        "operationId": "CodeController_search",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "required": true,
+            "in": "query",
+            "description": "Termo, 2 a 200 caracteres.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ref",
+            "required": false,
+            "in": "query",
+            "description": "Branch, tag ou sha.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "path",
+            "required": false,
+            "in": "query",
+            "description": "Subárvore em que buscar. Refinar aqui é o que evita o corte.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CodeSearchResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Caminho fora do escopo do projeto (RN-095), ref malformada, ou busca com termo curto/longo demais."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto sem repositório provisionado, ou ref/caminho/PR inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          },
+          "501": {
+            "description": "O provider do projeto não declara a capability da operação — `listTree` ou `pullRequestDiff`. Capability só é declarada quando provada pela suite de contrato, então isto é resposta legítima e não defeito."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Busca texto no repositório, com orçamento",
+        "tags": [
+          "git"
+        ]
+      }
+    },
+    "/projects/{projectId}/code/tree": {
+      "get": {
+        "description": "Não é recursivo, por desenho do contrato: a aba navega sob demanda, e pedir a árvore inteira de um repositório grande é o amplificador de tráfego que a fase proíbe. `truncated` avisa quando o nível passou do teto de entradas.",
+        "operationId": "CodeController_tree",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ref",
+            "required": false,
+            "in": "query",
+            "description": "Branch, tag ou sha. Ausente usa a branch padrão do repositório.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "path",
+            "required": false,
+            "in": "query",
+            "description": "Diretório a listar. Ausente ou vazio é a raiz.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CodeTreeResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Caminho fora do escopo do projeto (RN-095), ref malformada, ou busca com termo curto/longo demais."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto sem repositório provisionado, ou ref/caminho/PR inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          },
+          "501": {
+            "description": "O provider do projeto não declara a capability da operação — `listTree` ou `pullRequestDiff`. Capability só é declarada quando provada pela suite de contrato, então isto é resposta legítima e não defeito."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Lista UM nível da árvore do repositório",
+        "tags": [
+          "git"
+        ]
+      }
+    },
     "/projects/{projectId}/coverage": {
       "get": {
         "description": "Cruza as regras do projeto com o `businessRuleIds` das histórias. Regra sem história nenhuma é uma DESCOBERTA — pendência do PO, não erro.",
@@ -9201,6 +9492,247 @@
           "projectId",
           "module",
           "agentId"
+        ]
+      },
+      "CodeDiffFileResponseDto": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "example": "apps/api/src/main.ts",
+            "description": "Caminho DEPOIS da mudança (para `removed`, o que sumiu)."
+          },
+          "previousPath": {
+            "type": "string",
+            "nullable": true,
+            "example": null,
+            "description": "Caminho anterior; só preenchido quando `status` é `renamed`."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "added",
+              "modified",
+              "removed",
+              "renamed"
+            ],
+            "example": "modified"
+          },
+          "additions": {
+            "type": "number",
+            "example": 12
+          },
+          "deletions": {
+            "type": "number",
+            "example": 3
+          },
+          "patch": {
+            "type": "string",
+            "nullable": true,
+            "example": "@@ -1,3 +1,4 @@\n+import x\n",
+            "description": "Diff unificado do arquivo. `null` quando o provider não o entrega (binário, ou patch grande demais) — distinto de `\"\"`, que é \"veio vazio\". Sem essa distinção a tela diria \"sem mudanças\" num binário alterado."
+          }
+        },
+        "required": [
+          "path",
+          "previousPath",
+          "status",
+          "additions",
+          "deletions",
+          "patch"
+        ]
+      },
+      "CodeDiffResponseDto": {
+        "type": "object",
+        "properties": {
+          "pullRequestId": {
+            "type": "string",
+            "example": "pr-1"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CodeDiffFileResponseDto"
+            }
+          },
+          "truncated": {
+            "type": "boolean",
+            "example": false,
+            "description": "A lista foi cortada no teto de arquivos por diff."
+          }
+        },
+        "required": [
+          "pullRequestId",
+          "files",
+          "truncated"
+        ]
+      },
+      "CodeFileResponseDto": {
+        "type": "object",
+        "properties": {
+          "ref": {
+            "type": "string",
+            "example": "dev"
+          },
+          "path": {
+            "type": "string",
+            "example": "apps/api/src/main.ts"
+          },
+          "content": {
+            "type": "string",
+            "example": "import { NestFactory } from '@nestjs/core';\n",
+            "description": "Conteúdo em UTF-8. Binário não é servido por esta rota."
+          },
+          "truncated": {
+            "type": "boolean",
+            "example": false,
+            "description": "O arquivo passou do teto de bytes e `content` é o começo dele. A aba é de leitura: cortar e avisar é melhor que recusar o arquivo."
+          },
+          "bytes": {
+            "type": "number",
+            "example": 1284,
+            "description": "Bytes DEVOLVIDOS — depois do corte, não antes."
+          }
+        },
+        "required": [
+          "ref",
+          "path",
+          "content",
+          "truncated",
+          "bytes"
+        ]
+      },
+      "CodeSearchMatchResponseDto": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "example": "apps/api/src/main.ts"
+          },
+          "line": {
+            "type": "number",
+            "example": 12,
+            "description": "1-based, como todo editor mostra."
+          },
+          "text": {
+            "type": "string",
+            "example": "  const app = await NestFactory.create(AppModule);",
+            "description": "A linha inteira, cortada para não devolver arquivo minificado."
+          }
+        },
+        "required": [
+          "path",
+          "line",
+          "text"
+        ]
+      },
+      "CodeSearchResponseDto": {
+        "type": "object",
+        "properties": {
+          "ref": {
+            "type": "string",
+            "example": "dev"
+          },
+          "path": {
+            "type": "string",
+            "example": "",
+            "description": "Subárvore em que a busca correu."
+          },
+          "query": {
+            "type": "string",
+            "example": "NestFactory"
+          },
+          "matches": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CodeSearchMatchResponseDto"
+            }
+          },
+          "filesScanned": {
+            "type": "number",
+            "example": 87,
+            "description": "Arquivos efetivamente abertos. É o custo real da busca, e está na resposta para não ficar invisível."
+          },
+          "truncated": {
+            "type": "boolean",
+            "example": true,
+            "description": "A varredura parou por orçamento (diretórios, arquivos ou casamentos) antes de acabar a árvore. Refine o `path` ou o termo."
+          }
+        },
+        "required": [
+          "ref",
+          "path",
+          "query",
+          "matches",
+          "filesScanned",
+          "truncated"
+        ]
+      },
+      "CodeTreeEntryResponseDto": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "example": "apps/api/src/main.ts",
+            "description": "Caminho completo a partir da raiz do repositório."
+          },
+          "name": {
+            "type": "string",
+            "example": "main.ts",
+            "description": "Último segmento de `path`."
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "file",
+              "dir"
+            ],
+            "example": "file"
+          },
+          "size": {
+            "type": "number",
+            "nullable": true,
+            "example": 1284,
+            "description": "Bytes. `null` para diretório e quando o provider não informa — distinguir de `0` importa para a tela não afirmar \"arquivo vazio\"."
+          }
+        },
+        "required": [
+          "path",
+          "name",
+          "type",
+          "size"
+        ]
+      },
+      "CodeTreeResponseDto": {
+        "type": "object",
+        "properties": {
+          "ref": {
+            "type": "string",
+            "example": "dev",
+            "description": "Branch, tag ou sha lido."
+          },
+          "path": {
+            "type": "string",
+            "example": "apps/api",
+            "description": "Diretório listado; `\"\"` é a raiz."
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CodeTreeEntryResponseDto"
+            }
+          },
+          "truncated": {
+            "type": "boolean",
+            "example": false,
+            "description": "A listagem foi cortada no teto de entradas por nível. Há mais coisa no diretório do que veio aqui."
+          }
+        },
+        "required": [
+          "ref",
+          "path",
+          "entries",
+          "truncated"
         ]
       },
       "CoverageReportResponseDto": {
