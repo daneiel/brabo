@@ -157,7 +157,7 @@ export function RegisterPage({ onRegistrar, irPara }: RegisterPageProps) {
           hint={`Pelo menos ${MINIMO_DE_SENHA} caracteres. Uma frase longa vale mais que símbolos.`}
         />
         <div className={styles.acoes}>
-          <Button type="submit" fullWidth loading={enviando}>
+          <Button type="submit" fullWidth size="lg" loading={enviando}>
             {enviando ? 'Criando…' : 'Criar conta'}
           </Button>
         </div>

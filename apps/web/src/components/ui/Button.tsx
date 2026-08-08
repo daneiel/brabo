@@ -8,9 +8,23 @@ export type ButtonVariant =
   | 'danger'
   | 'success';
 
+export type ButtonSize = 'md' | 'lg';
+
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
   fullWidth?: boolean;
+  /**
+   * Altura do botão. `md` (default) é o botão denso do produto, na faixa de
+   * 28–36px que o handoff usa em barra de topo, tabela e diálogo; `lg` é o
+   * botão de 44px que ele especifica para a AÇÃO PRINCIPAL de uma tela inteira
+   * — hoje, o submit das quatro telas de auth.
+   *
+   * É prop separada de `fullWidth` de propósito, ainda que hoje as duas andem
+   * juntas: largura e altura respondem a perguntas diferentes, e amarrar 44px a
+   * `fullWidth` significaria que o primeiro botão largo fora de auth herda uma
+   * altura que ninguém pediu.
+   */
+  size?: ButtonSize;
   /**
    * Ação em andamento: mostra o spinner, desabilita o botão e anuncia
    * `aria-busy` (ADR 0036).
@@ -30,6 +44,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 export function Button({
   variant = 'primary',
   fullWidth,
+  size = 'md',
   loading,
   disabled,
   className,
@@ -39,6 +54,7 @@ export function Button({
   const classes = [
     styles.button,
     styles[variant],
+    size === 'lg' && styles.lg,
     fullWidth && styles.fullWidth,
     className,
   ]

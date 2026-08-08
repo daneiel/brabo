@@ -12,10 +12,26 @@
   border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
 }
 
+/*
+ * O medidor compacto vive DENTRO de um card `--surface-1` (o do dashboard, o
+ * cabeçalho do projeto). Herdando `--surface-1` do `.card` ele tinha o mesmo
+ * fundo do que o contém e a caixa desaparecia — sobrava a borda de 1px. O
+ * handoff afunda a caixa em `--surface-0`, um degrau ABAIXO, e é o que a faz
+ * ler como painel embutido.
+ */
 .card.compact {
+  background: var(--surface-0);
   border-radius: var(--radius-md, 8px);
-  padding: 12px;
-  gap: 8px;
+  padding: 10px 12px;
+  gap: 7px;
+}
+
+/* Com a caixa em `--surface-0`, o trilho da barra sobe para `--surface-2` — na
+   variante cheia ele desce para `--surface-0`, e nos dois casos o contraste com
+   o preenchimento vem do mesmo salto de um degrau. */
+.compact .barTrack {
+  height: 6px;
+  background: var(--surface-2);
 }
 
 .topRow {
@@ -94,8 +110,9 @@
 }
 
 /* `--text-secondary`, não `--text-muted` — mesma razão do `.hint` de
-   `Input.module.css`: `--text-muted` sobre `--surface-1` reprova o AA (ver
-   `design-contraste.test.ts`), e este é texto de leitura normal. */
+   `Input.module.css`: este é texto de leitura normal (ver
+   `design-contraste.test.ts`). Desde a FASE 17a o fundo é `--surface-0`, onde
+   `--text-secondary` dá 12,4:1. */
 .compactFooter {
   display: flex;
   align-items: baseline;

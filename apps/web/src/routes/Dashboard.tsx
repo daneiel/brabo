@@ -135,7 +135,7 @@ export function Dashboard() {
   return (
     <>
       <div className={styles.topbar}>
-        <span className={styles.title}>Projetos</span>
+        <h1 className={styles.title}>Projetos</h1>
         <div className={styles.search}>
           <Input placeholder="Buscar projetos…" icon={<SearchIcon size={14} />} value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>

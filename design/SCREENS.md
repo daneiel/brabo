@@ -38,12 +38,12 @@ projeto, com a imagem decidida pelo Arquiteto — e escrever o layout antes da
 decisão seria fixar uma tela que a decisão pode mover. Enquanto isso, a
 referência é o `.dc.html`.
 
-**Divergência de marca a resolver:** o handoff tem **um** símbolo, o monograma
-B (ver `COMPONENTS.md`). O produto tem dois — o `LogoMark` das telas de auth,
-que é o monograma, e o `BrandIcon` do app shell, que é um cubo isométrico sem
-contraparte no handoff. Pendência declarada da fidelidade visual das telas, não
-corrigida aqui: esta fase é fundação, e trocar o símbolo do shell mexe nas
-telas.
+**Divergência de marca — RESOLVIDA na FASE 17a.** O handoff tem **um** símbolo,
+o monograma B (ver `COMPONENTS.md`), e o produto tinha dois: o `LogoMark` das
+telas de auth, que é o monograma, e o `BrandIcon` do app shell, um cubo
+isométrico sem contraparte no handoff. A troca acontecia na passagem do login
+para o app. O shell passou a usar o `LogoMark`; o `BrandIcon` continua exportado
+como ícone genérico de artefato, com a advertência de que **não** é a marca.
 
 ## App shell + Dashboard (`Brabo App.dc.html`)
 
@@ -55,8 +55,10 @@ label "PROJETOS" (mono uppercase, muted); lista de projetos (nav, cada
 item = dot de cor + nome mono truncado + badge de não-lidos condicional,
 ativo = fundo `surface-2`); rodapé fixo com 2 botões ("Chat global",
 "Configurações" — fora do escopo desta implementação, é navegação
-global) + card do usuário logado (avatar gradiente com iniciais, nome +
-`"{senioridade} · {papel}"`, chevron).
+global) + card do usuário logado (avatar 34×34 radius 8px com iniciais, nome +
+papel RBAC). O avatar é `var(--accent)` SÓLIDO, não o gradiente do handoff: a
+mistura com `--warning` derruba o contraste das iniciais para 2.10:1, e o
+handoff não especifica senioridade que o produto tenha para mostrar.
 
 **Topbar** (60px, `border-bottom`): título "Projetos" à esquerda; busca
 (input com ícone, 260px); `NotificationBell`; botão primary "+ Novo
@@ -229,14 +231,16 @@ Container `max-width:412px`, entrada `bfade .4s ease both` (zerada em
 
 **Cabeçalho de marca** (flex, gap 12px, `margin-bottom:26px`): selo 40×40
 radius 11px em `var(--accent)` com o glyph 23px em `var(--on-accent)`
-(`LogoMark` — barra vertical + dois chevrons, o segundo a `opacity:.58`;
-é desenho DIFERENTE do `BrandIcon` do app shell, que é o cubo isométrico),
+(`LogoMark` — barra vertical + dois chevrons, o segundo a `opacity:.58`; é o
+MESMO símbolo do app shell desde a FASE 17a, lá num selo 32×32 radius 9px),
 depois wordmark "Brabo" (Space Grotesk 700, 24px, `letter-spacing:-.035em`,
 `line-height:1.1`) com a tagline abaixo (IBM Plex Mono 10px,
 `letter-spacing:.12em`, uppercase, `var(--text-muted)`).
 
 **Card**: `var(--surface-1)`, `1px var(--border)`, radius 12px,
-`var(--shadow)`, `overflow:hidden` (é o que faz o rodapé respeitar o raio).
+`var(--shadow-lg)`, `overflow:hidden` (é o que faz o rodapé respeitar o raio).
+A sombra do login é a grande (`0 24px 60px`), não a padrão — o selo de marca
+usa a mesma.
 Três regiões:
 
 1. **cabeça** — padding `26px 28px 8px`: `<h1>` (Space Grotesk 600, 19px,

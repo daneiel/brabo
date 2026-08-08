@@ -116,6 +116,15 @@ Wordmark: Space Grotesk 700, `letter-spacing:-.045em`.
   `font-size:13px` Archivo. Hover: bg/border `var(--accent-hover)`. Focus:
   outline 2px `var(--accent)` offset 2px. Disabled: bg `var(--surface-2)`,
   texto `var(--text-muted)`, opacity .6, `cursor:not-allowed`.
+
+**Tamanho** (`size`, FASE 17a): o default é o botão denso acima, na faixa de
+28–36px da tabela de alturas. `lg` é a **ação principal de uma tela inteira** —
+`height: 44px`, `padding: 0 16px`, `font-size:14px`,
+`letter-spacing:.01em` —, hoje o submit das quatro telas de auth. É `height`
+fixa e não mais padding porque o rótulo troca em `loading` ("Entrar" →
+"Autenticando…") e a caixa não pode mudar de altura quando o spinner entra.
+`size` é independente de `fullWidth`: largura e altura respondem a perguntas
+diferentes.
 - **secondary**: bg `var(--surface-2)`, texto `var(--text-primary)`,
   border `var(--border)`. Hover: border `var(--border-strong)`. Disabled:
   bg transparent, opacity .5.
@@ -374,19 +383,22 @@ o elemento **fica**, porque removê-lo mudaria o layout do botão.
 O `Inputs/selects` acima segue valendo como default. Esta é a variante do
 mockup de login, e é **opt-in**: as telas fora de auth continuam no default.
 
-`background: var(--surface-2)`, `height: 42px`, `padding: 0 13px`,
+`background: var(--code-bg)`, `height: 42px`, `padding: 0 13px`,
 `font-size: 14px`. As três coisas vêm da mesma especificação e viajam
 juntas — metade dela dá um campo que não existe em lugar nenhum.
 
-O mockup usa `var(--code-bg)` (campo **afundado**); a implementação usa
-`var(--surface-2)` (campo **elevado**) — divergência registrada no ADR 0036.
-Sobre um card `var(--surface-1)`, o fundo default do campo é o MESMO do card,
-separados só por 1px de borda; o problema é real e as outras telas o têm.
+O campo é **afundado**, como no handoff. Foi `var(--surface-2)` (campo
+**elevado**) até a FASE 17a, divergência que o ADR 0036 registrara: sobre um
+card `var(--surface-1)`, o fundo default do campo é o MESMO do card, separados
+só por 1px de borda. O problema era real e continua valendo para as telas fora
+de auth; afundar o resolve igual, segue a referência versionada e ainda melhora
+o contraste.
 
 **Senha**: `var(--font-mono)` 13.5px `letter-spacing: .02em` (mono a 14px ao
 lado de Archivo a 14px lê como corpo maior). Placeholder em
-`var(--text-secondary)`, não `var(--text-muted)` — este dá 3.10:1 sobre
-`--surface-2` e reprova o AA.
+`var(--text-secondary)`, não `var(--text-muted)`: sobre `--code-bg` o muted
+passaria (5.65:1), mas placeholder é texto de leitura e a razão de ele estar
+mais presente que no handoff não mudou.
 
 **Botão de revelar**: 32×32 absoluto, `right: 5px`, centrado vertical,
 radius 4px, `color: var(--text-muted)`; hover `var(--text-secondary)` +
