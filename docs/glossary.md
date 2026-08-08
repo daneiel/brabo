@@ -255,7 +255,7 @@ nova em vez de apagar ([RN-027](business-rules.md#rn-027)).
 
 ## Git e segredos
 
-**GitProvider** — o contrato normalizado de dez operações que Local, GitHub e
+**GitProvider** — o contrato normalizado de doze operações que Local, GitHub e
 GitLab implementam. Uma suite de contrato única roda contra os três.
 
 **Capability** — declaração do que aquele provider suporta. Operação não

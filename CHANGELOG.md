@@ -2,6 +2,18 @@
 
 Gerado dos conventional commits por `scripts/changelog.mjs`.
 
+## Unreleased
+
+### Novidades
+
+- **api,shared**: o contrato de git ganha `listTree` e `getPullRequestDiff`, a
+  11ª e a 12ª operações, como capabilities declaradas só porque a suite de
+  contrato as prova nos três providers. São LEITURA e só: `listTree` devolve um
+  nível da árvore (nunca a árvore inteira) e `getPullRequestDiff` normaliza o
+  diff de uma PR, ambos com teto e `truncated`. Junto, a trava do item 33 da
+  FASE 26 — operação de contrato sem consumidor em `src/` reprova o CI, com uma
+  saída nomeada e auto-expirável para as duas, cujas rotas chegam na 26b.
+
 ## v2.5.1 — 2026-08-08
 
 ### Correções
