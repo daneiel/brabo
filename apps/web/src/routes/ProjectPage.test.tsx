@@ -77,7 +77,7 @@ beforeEach(() => {
  * principal COMPLETAMENTE em branco — sem mensagem, sem estado de erro, sem
  * esqueleto — porque `if (!project) return null` tratava "a api recusou" e
  * "ainda não chegou" como a mesma coisa. O motivo existia só no console, em
- * 1128 linhas de 429 (RN-083).
+ * 1128 linhas de 429 (RN-088).
  */
 describe('ProjectPage — falha de carga não vira tela branca', () => {
   it('429 vira mensagem na tela, com a frase que a api mandou', async () => {

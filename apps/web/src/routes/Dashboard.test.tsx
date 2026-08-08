@@ -122,7 +122,7 @@ describe('Dashboard — estados', () => {
 
   // O caso perigoso não é o branco: é a tela AFIRMANDO o contrário. Com a api
   // limitando, `!projects` era verdadeiro e o dashboard convidava a criar o
-  // primeiro projeto de um workspace que podia ter vinte (RN-083).
+  // primeiro projeto de um workspace que podia ter vinte (RN-088).
   it('erro na lista: diz o que a api respondeu, e não "nenhum projeto ainda"', () => {
     useProjectsMock.mockReturnValue({
       data: undefined,

@@ -379,7 +379,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   novo. No dashboard o defeito era pior que branco: `!projects` também era
   verdadeiro no erro, então a tela convidava a **criar o primeiro projeto** de
   um workspace que podia ter vinte. A barra lateral também fala, com o texto
-  cabendo nos 248px que ela tem (RN-083)
+  cabendo nos 248px que ela tem (RN-088)
 - **web**: a app parou de responder ao rate limit da api com **mais tráfego**.
   Uma sessão real acumulou 1128 erros `429` num console só: o TanStack Query
   retentava três vezes cada falha e os ~25 polls de 3 a 5 segundos seguiam

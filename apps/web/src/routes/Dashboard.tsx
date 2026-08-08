@@ -174,7 +174,7 @@ export function Dashboard() {
           // verdadeiro nos dois casos, então uma api recusando com 429
           // convidava o usuário a "criar o primeiro projeto" de um workspace
           // que pode ter vinte. Errar calado é ruim; errar afirmando o
-          // contrário é pior (RN-083).
+          // contrário é pior (RN-088).
           <div className={styles.empty}>
             <ErroDeCarregamento
               titulo="Não foi possível carregar seus projetos."

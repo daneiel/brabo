@@ -2127,7 +2127,7 @@ olhar, não algo a esconder atrás de "sem atividade".
 - **Teste:** `apps/web/src/lib/project-status.test.ts`
 - **Origem:** fidelidade do dashboard de projetos ao design aprovado
 
-### RN-083 — Falha de carregamento é dita na tela; 429 não se retenta {#rn-083}
+### RN-088 — Falha de carregamento é dita na tela; 429 não se retenta {#rn-088}
 
 Toda tela que carrega dado da api distingue três estados, e nunca dois:
 **carregando** (esqueleto), **erro** (a mensagem que a api mandou, com o
@@ -2169,7 +2169,7 @@ tentativas, onde repetir é a reação certa.
   de ficar vazia)
 - **Origem:** navegação real em `/projects/:id` com 1128 erros 429 no console
 
-### RN-084 — Projeto de nome repetido se desempata na barra lateral {#rn-084}
+### RN-089 — Projeto de nome repetido se desempata na barra lateral {#rn-089}
 
 Nome de projeto **não é único** — nada no domínio impede. Quando dois ou mais
 projetos da lista têm o mesmo nome, cada um deles mostra na sidebar o id
@@ -2489,7 +2489,7 @@ verificação, para a rotação não ter janela de indisponibilidade.
 | Duas decisões concorrentes na mesma hipótese | conflito explícito (RN-022) |
 | Réplica do engine cai | sessão é adotada por outra ou encerra como `closed_abnormally / node_shutdown` — nunca fica órfã |
 | Rate limit indisponível | a requisição **passa**: o guard protege contra abuso, não contra acesso indevido |
-| Rate limit **estourado** (429) | a tela diz o que a api respondeu e o poll para; a app nunca responde ao limite com mais tráfego (RN-083) |
+| Rate limit **estourado** (429) | a tela diz o que a api respondeu e o poll para; a app nunca responde ao limite com mais tráfego (RN-088) |
 | Credencial errada, conta inexistente ou conta bloqueada | **a mesma** resposta 401, com o mesmo custo de argon2 (RN-032) |
 | Refresh já usado reapresentado | família revogada e evento de segurança; o usuário legítimo também é deslogado (RN-030) |
 | Tráfego interno sem o segredo de serviço | 403 na api, 401 no engine — nunca alcança o controller (RN-035) |

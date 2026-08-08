@@ -63,7 +63,7 @@ export function ProjectPage({ projectId, initialTab }: ProjectPageProps) {
     }
   }, [tab, latestSession, projectId]);
 
-  // Falha de carga DIZ o que houve, e a frase é a da api (RN-083).
+  // Falha de carga DIZ o que houve, e a frase é a da api (RN-088).
   //
   // Era `if (!project) return null` — uma linha que tratava "a api recusou"
   // igual a "ainda não chegou". Com a api limitando por 429, a tela inteira

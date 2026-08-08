@@ -96,7 +96,7 @@ export function Shell() {
         <div className={styles.navLabel}>Projetos</div>
         <nav className={styles.nav}>
           {/* A lista falhou: a sidebar DIZ, em vez de ficar vazia como se o
-              workspace não tivesse projeto nenhum (RN-083). Aqui não cabe o
+              workspace não tivesse projeto nenhum (RN-088). Aqui não cabe o
               `ErroDeCarregamento` inteiro — são 248px —, mas cabe o essencial:
               o que houve e como tentar de novo. */}
           {projectsQuery.isError && (
