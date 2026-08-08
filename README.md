@@ -120,7 +120,7 @@ merge em `main`, e por isso fica um ciclo de promoção atrás do que está em
 | [Eventos](docs/reference/events.md) | os tipos do event log, broadcasts e spans |
 | [Permissões](docs/reference/permissions.md) | o formato do `permissions.json` e a ordem da decisão |
 | [Artefatos](docs/reference/artifacts.md) | os seis schemas e quem pode emitir cada um |
-| [Providers de git](docs/reference/git-providers.md) | o contrato de dez operações e as capabilities |
+| [Providers de git](docs/reference/git-providers.md) | o contrato de doze operações e as capabilities |
 | [API interna](docs/reference/internal-api.md) | o contrato api ↔ engine |
 | [ADRs](docs/adr/index.md) | as 59 decisões e o porquê de cada uma |
 | [Segurança](SECURITY.md) | como reportar uma vulnerabilidade |

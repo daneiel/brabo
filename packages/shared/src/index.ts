@@ -215,12 +215,26 @@ export type GitProviderName = "local" | "github" | "gitlab";
 // vazar o shape de Octokit/Gitbeaker. Os 3 providers (Local/Github/Gitlab)
 // implementam o contrato por completo — ver docs/adr/0001 (histórico da
 // decisão de shape) e docs/adr/0005 (a 9ª operação, `getFileContent`,
-// acrescentada na sessão do bootstrap de Gitflow).
+// acrescentada na sessão do bootstrap de Gitflow). A 10ª (`commentOnPull
+// Request`) veio com os gates da Fase 4a; a 11ª e a 12ª (`listTree` e
+// `getPullRequestDiff`) com a aba Code da FASE 26.
 
 export interface GitProviderCapabilities {
   readonly protectBranch: boolean;
   readonly pullRequests: boolean;
+  /** `listTree` — a 11ª operação (aba Code, FASE 26). */
+  readonly listTree: boolean;
+  /** `getPullRequestDiff` — a 12ª operação (aba Code, FASE 26). */
+  readonly pullRequestDiff: boolean;
 }
+
+// Os TETOS das duas operações de leitura (FASE 26 item 34: "buscar em
+// repositório grande GASTA") não moram aqui: `packages/shared` é 100% tipo,
+// e um `export const` sobrevive ao `tsc` e quebra o boot da api em produção
+// (ver apps/api/test/packages-shared-so-tipos.spec.ts). Eles ficam no
+// consumidor, em apps/api/src/domain/git/git-read-limits.ts — o mesmo
+// caminho que `llm-provider-names.ts` já seguia. Quem cortou avisa por
+// `truncated`, que É parte do contrato.
 
 export interface GitRepo {
   externalId: string;
@@ -322,6 +336,74 @@ export interface GetFileContentInput {
   accessToken?: string;
 }
 
+// --- Árvore e diff (FASE 26 — aba Code, só leitura) ---
+
+/**
+ * Uma entrada de UM nível da árvore. `listTree` é deliberadamente NÃO
+ * recursivo: a aba Code navega sob demanda, e pedir a árvore inteira de um
+ * repositório grande é exatamente o amplificador de tráfego que a fase
+ * proíbe. Quem quiser o conteúdo de um arquivo chama `getFileContent`.
+ */
+export interface GitTreeEntry {
+  /** Caminho completo a partir da raiz do repositório. */
+  path: string;
+  /** Último segmento de `path` — o que a árvore mostra. */
+  name: string;
+  type: "file" | "dir";
+  /** Bytes; `null` para diretório e quando o provider não informa. */
+  size: number | null;
+}
+
+export interface GitTree {
+  ref: string;
+  /** Diretório listado; `""` é a raiz. */
+  path: string;
+  entries: GitTreeEntry[];
+  /** `true` quando a listagem foi cortada em `GIT_TREE_ENTRY_LIMIT`. */
+  truncated: boolean;
+}
+
+export interface ListTreeInput {
+  externalId: string;
+  /** Branch, tag ou sha. */
+  ref: string;
+  /** Diretório a listar; ausente ou `""` é a raiz. */
+  path?: string;
+  accessToken?: string;
+}
+
+export type GitDiffFileStatus = "added" | "modified" | "removed" | "renamed";
+
+export interface GitPullRequestDiffFile {
+  /** Caminho DEPOIS da mudança (para `removed`, o caminho que sumiu). */
+  path: string;
+  /** Caminho anterior; só preenchido quando `status` é `renamed`. */
+  previousPath: string | null;
+  status: GitDiffFileStatus;
+  additions: number;
+  deletions: number;
+  /**
+   * Diff unificado do arquivo. `null` quando o provider não o entrega —
+   * arquivo binário, ou patch grande demais para a resposta. Distinguir
+   * `null` (não veio) de `""` (veio vazio) é o que impede a tela de dizer
+   * "sem mudanças" para um binário alterado.
+   */
+  patch: string | null;
+}
+
+export interface GitPullRequestDiff {
+  pullRequestId: string;
+  files: GitPullRequestDiffFile[];
+  /** `true` quando a lista foi cortada em `GIT_DIFF_FILE_LIMIT`. */
+  truncated: boolean;
+}
+
+export interface GetPullRequestDiffInput {
+  externalId: string;
+  pullRequestId: string;
+  accessToken?: string;
+}
+
 export interface GitProviderContract {
   readonly name: GitProviderName;
   readonly capabilities: GitProviderCapabilities;
@@ -338,6 +420,28 @@ export interface GitProviderContract {
   // 10ª operação (Fase 4a — gates de PR): comenta o parecer de QA/SecOps na
   // PR. Respeita `capabilities.pullRequests` como as demais operações de PR.
   commentOnPullRequest(input: CommentOnPullRequestInput): Promise<void>;
+  /**
+   * 11ª operação (FASE 26 — aba Code): UM nível da árvore em `ref`.
+   *
+   * `null` quando não há árvore ali — ref inexistente, caminho inexistente,
+   * ou caminho que resolve para um ARQUIVO. É o mesmo contrato de ausência
+   * de `getFileContent`, deliberadamente: as duas são leituras da aba Code e
+   * dois vocabulários de "não existe" fariam a tela tratar o mesmo caso de
+   * duas formas.
+   *
+   * Rejeita com `GitNotSupportedError` quando `capabilities.listTree` é
+   * `false`.
+   */
+  listTree(input: ListTreeInput): Promise<GitTree | null>;
+  /**
+   * 12ª operação (FASE 26 — aba Code): o diff de uma PR, normalizado.
+   *
+   * `null` quando a PR não existe. Rejeita com `GitNotSupportedError`
+   * quando `capabilities.pullRequestDiff` é `false`.
+   */
+  getPullRequestDiff(
+    input: GetPullRequestDiffInput,
+  ): Promise<GitPullRequestDiff | null>;
 }
 
 // --- Credenciais de git do usuário (Fase 2, sessão 2) ---
