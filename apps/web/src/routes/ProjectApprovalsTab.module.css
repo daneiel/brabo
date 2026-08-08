@@ -1,75 +1,134 @@
+/*
+ * Métricas de `design_handoff_brabo/designs/Brabo Approvals.dc.html` (seção 6
+ * do README do handoff).
+ */
+
 .section {
-  margin-bottom: 32px;
+  margin-bottom: 48px;
 }
 
+/*
+ * Título e legenda dividem a MESMA linha de base — o mesmo padrão de
+ * `ProjectSettingsTab.module.css`. Antes o subtítulo ficava EMBAIXO do título,
+ * em duas linhas, e a fila começava 20px mais para baixo do que no desenho.
+ */
 .sectionHeader {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
 }
 
 .title {
   font-family: var(--font-heading);
   font-weight: 600;
-  font-size: 14px;
+  font-size: 17px;
   color: var(--text-primary);
+  margin: 0;
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
 .subtitle {
-  font-size: 12px;
-  color: var(--text-muted);
-  margin-top: 2px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0 0 14px;
+}
+
+.espacador {
+  flex: 1;
 }
 
 .queue {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
+/*
+ * A barra de lote vive DENTRO do cabeçalho da seção, à direita, e não numa
+ * faixa própria empurrando a fila para baixo — é o que o desenho mostra, e o
+ * que evita a tela pular 44px a cada primeiro clique numa caixa de seleção.
+ */
 .selectionBar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  background: var(--surface-2);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md);
-  padding: 10px 14px;
-  margin-bottom: 12px;
-  font-size: 13px;
-  color: var(--text-primary);
+  gap: 10px;
+  animation: bfade 0.14s ease-out;
 }
 
+.selectionCount {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* Vazio de bloco secundário: uma linha, sem moldura. */
 .clean {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 40px;
+  padding: 24px 0;
   color: var(--text-muted);
   font-size: 13px;
 }
 
+/*
+ * O vazio da FILA é o estado que o desenho desenhou: moldura tracejada, tile de
+ * 48px com o check em teal e uma frase que diz o que isso significa.
+ */
+.vazioCard {
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-lg);
+  padding: 44px 24px;
+  text-align: center;
+}
+
+.vazioIcone {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--success) 14%, transparent);
+  display: grid;
+  place-items: center;
+  margin: 0 auto 14px;
+  color: var(--success);
+}
+
+.vazioTexto {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
 .banner {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 10px;
-  background: color-mix(in srgb, var(--warning) 12%, transparent);
-  border: 1px solid color-mix(in srgb, var(--warning) 30%, transparent);
+  background: color-mix(in srgb, var(--warning) 8%, var(--surface-1));
+  border: 1px solid color-mix(in srgb, var(--warning) 30%, var(--border));
   border-radius: var(--radius-md);
-  padding: 12px 14px;
+  padding: 10px 14px;
   font-size: 12.5px;
   color: var(--text-secondary);
-  margin-bottom: 14px;
+  margin-bottom: 16px;
+}
+
+.bannerIcone {
+  color: var(--warning);
+  flex-shrink: 0;
 }
 
 .deny {
   color: var(--danger);
+  font-family: var(--font-mono);
 }
 
 .allow {
   color: var(--success);
+  font-family: var(--font-mono);
 }
 
 .searchRow {
@@ -77,16 +136,36 @@
   max-width: 340px;
 }
 
+.pattern {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-primary);
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Botão quadrado só de ícone, como em `ProjectSettingsTab` — 28px, acima do
+   piso de 24px que a validação visual cobra. */
 .revoke {
-  background: none;
-  border: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: transparent;
+  border: 1px solid var(--border);
   color: var(--text-muted);
   cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
+  display: grid;
+  place-items: center;
+  margin: 0 auto;
+  transition:
+    color 0.12s,
+    border-color 0.12s;
 }
 
 .revoke:hover {
   color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 50%, transparent);
 }

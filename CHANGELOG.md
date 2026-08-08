@@ -173,6 +173,24 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   mão em três lugares (api, web e engine), e agora tem uma fonte só, com as
   outras duas geradas por `pnpm --filter api gerar:areas`. Ver RN-094
 
+- **web**: a aba Insights deixa de dizer "sem hipóteses ainda" quando a busca
+  FALHOU. Era o mesmo `data ?? []` seguido de `length === 0` que a RN-088
+  descreve: uma api respondendo 429 ficava indistinguível de um projeto que o
+  Psicólogo nunca analisou. Agora a aba distingue carregando, erro (com a frase
+  da api, o `trace_id` e o botão de tentar de novo) e vazio — nessa ordem, com o
+  erro ANTES do vazio. A aba Aprovações ganha o mesmo tratamento nos seus quatro
+  blocos, e o mais caro deles é a fila: "Tudo limpo — nenhuma aprovação
+  pendente" sobre uma busca que falhou é a mentira mais cara que essa tela pode
+  contar. A busca de regras que não acha nada agora diz "nenhuma regra
+  corresponde à busca" em vez de "nenhuma regra configurada ainda"
+
+- **web**: no card de hipótese, a confiança ("62% de confiança") vazava para
+  fora do card e era desenhada por cima do card vizinho quando a coluna da grade
+  ficava estreita. Achado pela validação visual no navegador, não por teste —
+  jsdom não mede layout. Junto, dois alvos de clique que estavam abaixo do piso
+  de 24px da WCAG 2.2 AA (os chips de evidência da hipótese e o de diff no
+  histórico de instruções)
+
 ### Manutenção
 
 - **design**: o handoff de design passa a viver no repositório
@@ -192,6 +210,27 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   handoff, que pede o `<link>` do Google Fonts — seguir esse item reintroduz a
   falha que o ADR 0036 fechou, porque a CSP do nginx bloqueia a folha e os
   arquivos
+
+- **web**: **Aprovações** e **Configurações** passam a seguir o handoff
+  versionado (`design_handoff_brabo`, seções 6 e 7). Só aparência: quem pode
+  aprovar, o que a política decide e o pipeline de `proposed_action` não mudam.
+  No card de aprovação, o card recorta e cada região traz a sua divisória —
+  cabeçalho, corpo e ações deixam de flutuar dentro de uma moldura de 16px; o
+  nome do agente ganha peso de título, a faixa que abre o diff vai para
+  `--surface-2`, e o resumo da PR sai da caixa de código onde não deveria estar.
+  Na fila, o vazio vira a moldura tracejada do desenho e a barra de seleção em
+  lote sobe para o cabeçalho da seção, com "Limpar" — a faixa antiga empurrava a
+  lista 44px a cada primeiro clique. Em Configurações, o repositório vira um
+  card com o caminho em mono, as credenciais viram o **grid de conectores**
+  (borda esquerda na cor do provider, sigla de duas letras, tipo e status
+  pulsante) e o seletor de modelo ocupa a célula inteira da tabela, com o nome
+  completo no `title` porque ali ele elipsa. `--violet` deixa de estar
+  hard-coded no card de hipótese. **O que NÃO foi feito, e por quê**: a chave
+  mascarada do desenho (é write-only, ADR 0050), "Selecionar todas" na fila
+  (transformar aprovação em massa num clique é decisão de produto), a
+  ordenação por urgência (nada no domínio classifica urgência de uma ação) e a
+  seção "Melhores modelos por capacidade" (não há métrica de qualidade por
+  modelo). Estão escritas em `design/SCREENS.md`
 
 ## v2.4.0 — 2026-08-07
 

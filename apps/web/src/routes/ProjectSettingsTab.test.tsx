@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import {
   CredentialsSection,
+  siglaDoConector,
   ExecutionSection,
   ModelsSection,
   ParallelismSection,
@@ -406,6 +407,23 @@ describe('CredentialsSection (ADR 0050)', () => {
     expect(
       screen.getByRole('button', { name: 'Salvar chave de OpenRouter' }),
     ).toBeDisabled();
+  });
+
+  /**
+   * O chip de duas letras do handoff. O caso que motiva o teste é a COLISÃO:
+   * `OpenAI` e `OpenRouter` são uma palavra só cada, e quebrar por espaço dava
+   * `OP` para os dois — dois cards vizinhos com o mesmo distintivo.
+   */
+  it('a sigla do conector não colide entre providers', () => {
+    expect(siglaDoConector('OpenAI')).toBe('OA');
+    expect(siglaDoConector('OpenRouter')).toBe('OR');
+    // Uma maiúscula só cai nas duas primeiras letras.
+    expect(siglaDoConector('Anthropic')).toBe('AN');
+
+    const siglas = ['Anthropic', 'OpenAI', 'OpenRouter', 'NVIDIA NIM', 'Together AI', 'DeepInfra', 'Bitdeer', 'Vultr'].map(
+      siglaDoConector,
+    );
+    expect(new Set(siglas).size).toBe(siglas.length);
   });
 });
 

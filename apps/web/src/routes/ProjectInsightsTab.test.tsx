@@ -15,14 +15,20 @@ vi.mock('@tanstack/react-router', () => ({
   Link: ({ children }: { children?: React.ReactNode }) => <a>{children}</a>,
 }));
 
-vi.mock('../lib/api-client', () => ({
-  listHypotheses: (...args: unknown[]) => listHypotheses(...args),
-  listPsychologistAnalyses: (...args: unknown[]) =>
-    listPsychologistAnalyses(...args),
-  acceptHypothesis: vi.fn(),
-  dismissHypothesis: vi.fn(),
-  reanalyzeSession: vi.fn(),
-}));
+// `importOriginal` porque `ApiError`/`mensagemDaApi` continuam valendo: é deles
+// que `ErroDeCarregamento` tira a frase da api e o `trace_id`.
+vi.mock('../lib/api-client', async (importOriginal) => {
+  const original = await importOriginal<typeof import('../lib/api-client')>();
+  return {
+    ...original,
+    listHypotheses: (...args: unknown[]) => listHypotheses(...args),
+    listPsychologistAnalyses: (...args: unknown[]) =>
+      listPsychologistAnalyses(...args),
+    acceptHypothesis: vi.fn(),
+    dismissHypothesis: vi.fn(),
+    reanalyzeSession: vi.fn(),
+  };
+});
 
 function hipotese(over: Partial<PsychologistHypothesis> = {}): PsychologistHypothesis {
   return {
@@ -116,6 +122,18 @@ describe('ProjectInsightsTab — aba própria (achado #15)', () => {
     // seções soltas que escondem que são a mesma área.
     expect(await screen.findByText('QA')).toBeTruthy();
     expect(screen.queryByText('qa-automacao')).toBeNull();
+  });
+
+  it('falha de carregamento NÃO vira "sem hipóteses ainda" (RN-088)', async () => {
+    listHypotheses.mockRejectedValue(new Error('limite de requisições excedido'));
+    montar();
+
+    expect(
+      await screen.findByText('Não foi possível carregar as hipóteses.'),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(/o Psicólogo analisa cada sessão encerrada/),
+    ).toBeNull();
   });
 
   it('mostra a faixa de análises com o custo da triagem', async () => {

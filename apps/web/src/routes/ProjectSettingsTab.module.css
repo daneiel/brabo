@@ -254,6 +254,17 @@
   border-color: color-mix(in srgb, var(--danger) 50%, transparent);
 }
 
+/*
+ * A matriz mora dentro de uma moldura de raio 12 que RECORTA, como todas as
+ * tabelas do desenho. Sem a moldura ela era a única tabela da aba sem borda
+ * externa, e o cabeçalho em `--surface-2` flutuava com os cantos quadrados.
+ */
+.matrixWrap {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
 .matrixTable {
   width: 100%;
   border-collapse: collapse;
@@ -262,9 +273,17 @@
 
 .matrixTable th,
 .matrixTable td {
-  padding: 8px 10px;
-  border-top: 1px solid var(--border);
+  padding: 11px 8px;
+  border-left: 1px solid var(--border);
   text-align: center;
+}
+
+.matrixTable tbody tr {
+  border-top: 1px solid var(--border);
+}
+
+.matrixTable tbody tr:hover {
+  background: var(--surface-1);
 }
 
 .matrixTable th {
@@ -279,8 +298,11 @@
 
 .matrixTable td:first-child,
 .matrixTable th:first-child {
+  padding-left: 14px;
+  padding-right: 14px;
+  border-left: none;
   text-align: left;
-  color: var(--text-primary);
+  color: var(--text-secondary);
 }
 
 /*
@@ -318,39 +340,59 @@
   gap: 4px;
 }
 
-.credentialCard {
+/*
+ * Linha de AJUSTE: rótulo à esquerda, controle e botão à direita. É a forma dos
+ * itens 2 e 3 do handoff (execução e promoção de histórias) — raio 10, padding
+ * 16×18 e `flex-wrap`, porque em tela estreita o controle desce em vez de
+ * espremer o rótulo até ele quebrar letra a letra.
+ *
+ * Chamava-se `credential*` porque nasceu na seção de credenciais; ela virou
+ * grid de conectores, e o nome antigo passou a descrever o que a classe NÃO
+ * estiliza mais.
+ */
+.ajusteCard {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 14px;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 16px 18px;
   background: var(--surface-1);
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: 10px;
   margin-bottom: 10px;
 }
 
-.credentialInfo {
+.ajusteInfo {
   flex: 1;
-  min-width: 0;
+  min-width: 260px;
 }
 
-.credentialProvider {
+.ajusteTitulo {
   display: flex;
   align-items: center;
   gap: 6px;
+  font-family: var(--font-heading);
   font-weight: 600;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-primary);
 }
 
-.credentialStatus {
-  font-size: 12px;
+.ajusteHint {
+  font-size: 12.5px;
   color: var(--text-muted);
   margin-top: 2px;
+  max-width: 62ch;
+  text-wrap: pretty;
 }
 
-.credentialInput {
+.ajusteControle {
   width: 260px;
+}
+
+/* Campo NUMÉRICO: 150px no desenho, e um `<input type=number>` de 260px é uma
+   caixa quase vazia ao lado de um número de um dígito. */
+.ajusteNumero {
+  width: 150px;
 }
 
 /* --- Anamnese (Fase 4b) --- */
@@ -398,11 +440,19 @@
   margin-top: 4px;
 }
 
+/*
+ * `min-height: 24px` é o piso de alvo de toque da WCAG 2.2 AA, que a validação
+ * visual cobra: com `padding: 2px 6px` o chip media 20px de altura e entrava na
+ * lista de achados em toda passada por esta aba.
+ */
 .evidenceChip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
   font-family: var(--font-mono);
   font-size: 11px;
-  padding: 2px 6px;
-  border-radius: 999px;
+  padding: 2px 9px;
+  border-radius: var(--radius-full);
   border: 1px solid var(--border);
   background: var(--surface-2);
   color: var(--text-secondary);
@@ -488,18 +538,153 @@
 
 /* --- Repositório do projeto (Fase 12a) --- */
 
+/* Faixa do repositório do handoff: card raio 10, padding 12×14, tudo numa
+   linha só (com quebra quando o caminho é longo). */
+.repoCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+}
+
+.repoIcone {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.repoPath {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-primary);
+  min-width: 0;
+  word-break: break-all;
+}
+
 .repoMeta {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* --- Conectores de IA (handoff, seção 7 item 4) --- */
+
+.conectorGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 12px;
+}
+
+/*
+ * A borda esquerda de 2px na cor do conector é o que dá a leitura de "fonte de
+ * modelos" a um card que, fora isso, é igual a todos os outros da aba.
+ */
+.conectorCard {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--conector-cor);
+  border-radius: 10px;
+  padding: 14px 15px;
+  transition: border-color 0.12s;
+}
+
+.conectorCard:hover {
+  border-color: var(--border-strong);
+  border-left-color: var(--conector-cor);
+}
+
+.conectorTopo {
   display: flex;
   align-items: center;
   gap: 10px;
-  flex-wrap: wrap;
-  margin-bottom: 10px;
-  font-size: 12px;
-  color: var(--text-secondary);
 }
 
-.repoMeta code {
+.conectorSigla {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-md);
+  display: grid;
+  place-items: center;
   font-family: var(--font-mono);
-  font-size: 11.5px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--conector-cor);
+  background: color-mix(in srgb, var(--conector-cor) 13%, transparent);
+  border: 1px solid color-mix(in srgb, var(--conector-cor) 34%, transparent);
+  flex-shrink: 0;
+}
+
+.conectorIdent {
+  flex: 1;
+  min-width: 0;
+}
+
+.conectorNome {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 14px;
   color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.conectorTipo {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.conectorStatus {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.conectorAtivo {
+  color: var(--success);
+}
+
+.conectorPonto {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* O pulso é só de quem está ATIVO — pulsar em cinza anunciaria vida onde não
+   há chave nenhuma. */
+.conectorAtivo .conectorPonto {
+  animation: bpulse 2.4s ease-in-out infinite;
+}
+
+.conectorNota {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 9px;
+}
+
+.conectorAcoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
 }

@@ -142,18 +142,32 @@ export function ModelPicker({
   }
 
   return (
-    <div className={styles.wrapper} ref={wrapperRef}>
+    <div
+      className={[styles.wrapper, variant === 'inline' && styles.inline].filter(Boolean).join(' ')}
+      ref={wrapperRef}
+    >
       <button
         type="button"
         ref={triggerRef}
         className={styles.trigger}
+        // O nome elipsa dentro da célula; o `title` é o que devolve o nome
+        // INTEIRO sem abrir o dropdown. `deepseek-v4-flash-latest` e
+        // `deepseek-v4-flash-preview` são indistinguíveis truncados.
+        title={selected?.displayName}
         onClick={() => setOpen((v) => !v)}
       >
         <span className={styles.triggerIcon}>
-          <ModelIcon size={14} />
+          <ModelIcon size={variant === 'inline' ? 13 : 14} />
         </span>
-        {selected ? selected.displayName : 'Selecionar modelo'}
-        {variant === 'topbar' && (
+        {/* O nome ELIPSA em vez de esticar o gatilho: dentro da célula da
+            tabela de bindings, um `displayName` longo empurrava as colunas de
+            origem e fallback para fora da grade. */}
+        <span className={styles.triggerLabel}>
+          {selected ? selected.displayName : 'Selecionar modelo'}
+        </span>
+        {/* Chevron também no `inline`: no desenho o seletor de modelo da tabela
+            tem chevron, e sem ele o botão não se anuncia como abrível. */}
+        {variant !== 'standalone' && (
           <span className={styles.chevron}>
             <ChevronDownIcon size={13} />
           </span>

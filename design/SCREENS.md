@@ -143,12 +143,28 @@ streaming.
 Layout: coluna única, `max-width:960px` centralizada. Header do projeto
 (mesmo padrão de nome+badge) + tabs (mesmas 5, "Aprovações" ativa).
 
-**Seção "Pendentes"**: header com contagem + texto "ordenadas por
-urgência"; barra de seleção em lote (aparece só com seleção ativa, ver
-`COMPONENTS.md`) ou botão "Selecionar todas" (sem seleção); lista de
-`ApprovalCard` (variante com checkbox + badge de urgência), ordenada
-crítico→alta→normal; estado "tudo limpo" quando não há pendências (ícone
-de check + mensagem).
+**Seção "Pendentes"**: header com título (Space Grotesk 600/17) e a legenda
+mono "ordenadas por urgência" na MESMA linha de base; barra de seleção em
+lote à direita do header (aparece só com seleção ativa, ver
+`COMPONENTS.md`); lista de `ApprovalCard` (variante com checkbox + badge de
+urgência); estado vazio em moldura tracejada com tile de 48px e a frase
+"Nenhuma aprovação pendente. O time está fluindo.".
+
+Três divergências deliberadas em relação ao `.dc.html`, todas por falta de
+dado ou por decisão de produto:
+
+1. **"Selecionar todas"** (o botão que o mockup mostra quando não há
+   seleção) NÃO existe. Selecionar tudo seguido de "Aprovar selecionados"
+   torna a aprovação em massa um clique — e quantas aprovações cabem num
+   gesto é decisão de produto, não de fidelidade visual. "Limpar" entrou;
+   este não.
+2. **A urgência não é derivada.** O `ApprovalCard` sabe desenhar a pílula
+   (`crítico`/`alta`/`normal`), mas nada no domínio classifica uma
+   `proposed_action` por urgência, então a fila não passa a prop e a
+   ordenação continua por `seq`. A legenda "ordenadas por urgência" segue o
+   texto do desenho e hoje descreve uma intenção, não o que acontece.
+3. **As colunas CONCEDIDO POR e QUANDO** da tabela de regras não existem:
+   `permissions.json` guarda padrões, não autoria nem data.
 
 **Seção "Permissões do projeto"**: header + subtítulo referenciando
 `.brabo/permissions.json`; banner fixo de aviso (ícone + texto):
@@ -192,12 +208,28 @@ git_push/pr_open≥maintainer, spend≥owner — mas as linhas "Merge/PR" e
 implementada no backend hoje; manter a tabela como informativa, não
 editável).
 
-**Seção "Credenciais de provider"** (não estava explícita no mockup de
-Settings extraído, mas faz parte do pedido — item 6): formulário
-write-only por provider (Anthropic/OpenAI): campo de API key (nunca
-preenchido de volta, só "Configurado em {data}" quando já existe uma
-credencial salva) + botão salvar/remover. Seguir o mesmo padrão visual
-de inputs/botões já documentado.
+**Seção "Credenciais de provider"** — é a "Conectores de IA" do handoff
+(seção 7, item 4), com o mesmo desenho: grid
+`repeat(auto-fill, minmax(300px, 1fr))`, um card por provider com borda
+esquerda de 2px na cor do conector, chip de 28px com a sigla de duas
+letras, nome (Space Grotesk 600/14), tipo em mono 10 uppercase
+(`credencial de provider` / `hub de providers`) e ponto de status —
+pulsante em `var(--success)` quando há chave, apagado quando não há.
+
+A sigla sai das MAIÚSCULAS do nome (`OA`, `OR`, `NV`), e não da primeira
+letra de cada palavra: "OpenAI" e "OpenRouter" são uma palavra só cada e
+davam `OP` os dois.
+
+**A divergência:** onde o mockup mostra a credencial mascarada
+(`sk-ant-api03-••••7f2c`), a implementação mostra "Configurada em {data} ·
+nunca reexibida" ou "Nenhuma credencial salva". A chave é write-only e
+nunca volta do servidor (ADR 0050) — o prefixo mascarado exigiria guardar
+em claro um pedaço dela. O card mantém a mesma caixa mono sobre
+`var(--code-bg)`, o campo de troca e os botões salvar/testar/remover.
+
+**Ainda não existe:** a seção "Melhores modelos por capacidade" (ranking
+por capacidade com score e "usado por"). Ela depende de uma métrica de
+qualidade por modelo que o produto não calcula.
 
 ## Auth — Login e telas irmãs (`Brabo Login.dc.html`)
 

@@ -104,7 +104,11 @@ export function ApprovalCard({
   const payload = action.payload;
 
   return (
-    <div className={[styles.card, isCritical && styles.critical].filter(Boolean).join(' ')}>
+    <div
+      className={[styles.card, variant === 'chat' && styles.chat, isCritical && styles.critical]
+        .filter(Boolean)
+        .join(' ')}
+    >
       <div className={styles.header}>
         {selectable && (
           <input
@@ -119,8 +123,12 @@ export function ApprovalCard({
           <Icon size={15} />
         </span>
         <div className={styles.headerText}>
+          {/* O verbo continua saindo de `ACTION_VERB` sem alteração — a FASE 19
+              é dona do CONTEÚDO deste bloco. Aqui muda só a tipografia: nome do
+              agente em título, verbo em corpo apagado, como no handoff. */}
           <div className={styles.title}>
-            <b>{actorLabel}</b> {ACTION_VERB[action.actionType]}
+            <span className={styles.actorName}>{actorLabel}</span>
+            <span className={styles.verb}>{ACTION_VERB[action.actionType]}</span>
           </div>
         </div>
         {urgency && (
@@ -205,6 +213,39 @@ function DecidedLine({ action }: { action: ProposedAction }) {
   );
 }
 
+/**
+ * As linhas do diff no formato unificado do handoff (seção 6): número à
+ * direita numa calha de 34px, coluna de sinal de 14px, conteúdo em `pre`.
+ *
+ * Uma implementação só porque havia duas idênticas — a de `instruction_patch` e
+ * a de `git_commit`/`git_push` —, e é assim que elas voltavam a divergir a cada
+ * ajuste de medida.
+ */
+function DiffLines({ lines }: { lines: NonNullable<DiffFile['lines']> }) {
+  return (
+    <div className={styles.diffLines}>
+      {lines.map((line, index) => (
+        <div
+          key={index}
+          className={[styles.diffLine, line.kind === 'add' && styles.add, line.kind === 'del' && styles.del]
+            .filter(Boolean)
+            .join(' ')}
+        >
+          <span className={styles.lineNo}>{line.lineNo ?? ''}</span>
+          <span
+            className={[styles.sign, line.kind === 'add' && styles.add, line.kind === 'del' && styles.del]
+              .filter(Boolean)
+              .join(' ')}
+          >
+            {line.kind === 'add' ? '+' : line.kind === 'del' ? '-' : ''}
+          </span>
+          <span className={styles.diffContent}>{line.content}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 interface ApprovalBodyProps {
   actionType: ActionType;
   payload: Record<string, unknown>;
@@ -222,8 +263,10 @@ function ApprovalBody({ actionType, payload, executionResult, expandedFile, onTo
         : null;
 
     return (
-      <div className={styles.body}>
-        <div className={styles.commandLine}>$ {command}</div>
+      <div className={`${styles.body} ${styles.bodyCode}`}>
+        <div className={styles.commandLine}>
+          <span className={styles.prompt}>$</span> {command}
+        </div>
         {executionResult && (
           <div className={styles.outputBlock}>
             <div className={styles.outputHeader}>
@@ -248,7 +291,9 @@ function ApprovalBody({ actionType, payload, executionResult, expandedFile, onTo
         <div className={styles.prTitle}>{title}</div>
         <div className={styles.prBranches}>
           <span className={styles.branchPill}>{source}</span>
-          →
+          <span className={styles.arrow} aria-hidden="true">
+            →
+          </span>
           <span className={styles.branchPill}>{target}</span>
         </div>
         {summary && <div className={styles.prSummary}>{summary}</div>}
@@ -292,24 +337,7 @@ function ApprovalBody({ actionType, payload, executionResult, expandedFile, onTo
             {files.length > 1 && (
               <div className={styles.prSummary}>{file.path}</div>
             )}
-            {file.lines && (
-              <div className={styles.diffLines}>
-                {file.lines.map((line, index) => (
-                  <div
-                    key={index}
-                    className={[styles.diffLine, line.kind === 'add' && styles.add, line.kind === 'del' && styles.del]
-                      .filter(Boolean)
-                      .join(' ')}
-                  >
-                    <span className={styles.lineNo}>{line.lineNo ?? ''}</span>
-                    <span className={[styles.sign, line.kind === 'add' && styles.add, line.kind === 'del' && styles.del].filter(Boolean).join(' ')}>
-                      {line.kind === 'add' ? '+' : line.kind === 'del' ? '-' : ''}
-                    </span>
-                    <span>{line.content}</span>
-                  </div>
-                ))}
-              </div>
-            )}
+            {file.lines && <DiffLines lines={file.lines} />}
           </div>
         ))}
       </div>
@@ -325,33 +353,25 @@ function ApprovalBody({ actionType, payload, executionResult, expandedFile, onTo
             const open = expandedFile === file.path;
             return (
               <div key={file.path}>
-                <div className={styles.fileRow} onClick={() => onToggleFile(file.path)}>
+                {/* `<button>` e não `<div onClick>`: a faixa abre e fecha o
+                    diff, e como div ela ficava fora da ordem de tabulação e
+                    inacessível pelo teclado. */}
+                <button
+                  type="button"
+                  className={styles.fileRow}
+                  aria-expanded={open}
+                  onClick={() => onToggleFile(file.path)}
+                >
                   <span className={[styles.chevron, open && styles.open].filter(Boolean).join(' ')}>
-                    <ChevronRightIcon size={13} />
+                    <ChevronRightIcon size={14} />
                   </span>
                   <span className={styles.filePath}>{file.path}</span>
                   <span className={styles.diffStat}>
-                    <span className={styles.diffAdd}>+{file.additions}</span> <span className={styles.diffDel}>−{file.deletions}</span>
+                    <span className={styles.diffAdd}>+{file.additions}</span>
+                    <span className={styles.diffDel}>−{file.deletions}</span>
                   </span>
-                </div>
-                {open && file.lines && (
-                  <div className={styles.diffLines}>
-                    {file.lines.map((line, index) => (
-                      <div
-                        key={index}
-                        className={[styles.diffLine, line.kind === 'add' && styles.add, line.kind === 'del' && styles.del]
-                          .filter(Boolean)
-                          .join(' ')}
-                      >
-                        <span className={styles.lineNo}>{line.lineNo ?? ''}</span>
-                        <span className={[styles.sign, line.kind === 'add' && styles.add, line.kind === 'del' && styles.del].filter(Boolean).join(' ')}>
-                          {line.kind === 'add' ? '+' : line.kind === 'del' ? '-' : ''}
-                        </span>
-                        <span>{line.content}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                </button>
+                {open && file.lines && <DiffLines lines={file.lines} />}
               </div>
             );
           })}
@@ -360,7 +380,7 @@ function ApprovalBody({ actionType, payload, executionResult, expandedFile, onTo
     }
     const message = readString(payload, 'message') ?? readString(payload, 'branch') ?? '';
     return (
-      <div className={styles.body}>
+      <div className={`${styles.body} ${styles.bodyCode}`}>
         <div className={styles.commandLine}>{message || 'Sem detalhes adicionais.'}</div>
       </div>
     );
