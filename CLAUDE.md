@@ -57,12 +57,13 @@ e pipeline de aprovação de ações com autoridade final do usuário.
   da Fase 4 verde sem modificação); Infra como área com subagente
   Workflows gerando CI por provider; painel do time por área e
   Psicólogo/Anamnese mirando subagentes (ADR 0038).
-  CORTE DE ESCOPO, não implementado: `agent_areas`/`agent_area_members`
-  (o aparato genérico do ADR 0038) — área, lead e membros são
-  HARDCODED em apps/web/src/lib/agents.ts e no engine, não há rota
-  para ativar área num projeto, e não existe budget por área. Está
-  dito no schema (apps/api/src/db/schema.ts:781-786). Tetos de
-  orçamento reais: projeto, sessão e task.
+  CORTE DE ESCOPO da época, REVOGADO pela FASE 14d:
+  `agent_areas`/`agent_area_members` existem desde então, por projeto,
+  com `max_parallel` configurável — foi a área de dev, a primeira
+  DINÂMICA, que forçou. O que segue cortado é só o **budget por área**
+  (tetos de orçamento reais continuam sendo projeto, sessão e task).
+  A lista de `apps/web/src/lib/agents.ts` sobreviveu para cor, ícone e
+  a REGRA de endereçamento; os membros de dev vêm da tabela.
 - FASE 9 — CONCLUÍDA: suite de contrato de LLMProvider rodando
   contra os existentes, base OpenAICompatibleProvider sobre
   node:http com timeout de INATIVIDADE, erro normalizado por `code`,
@@ -187,15 +188,15 @@ recebeu os achados novos da 13b.
 7. Consolidar o backlog completo num documento vivo
    (docs/explanation/backlog.md ou equivalente): achados triados +
    itens antigos — budget por área (ADR 0038; o aparato de áreas e o
-   Dev Lead saíram do backlog com o ADR 0053, que a FASE 14d
-   implementa), handoff manual a agente à escolha,
+   Dev Lead saíram do backlog com o ADR 0053, implementado
+   pela FASE 14d), handoff manual a agente à escolha,
    MFA/social/OIDC/federação (ADR 0031),
    SMTP real no MailSender, deploy (DEPLOY_ENABLED + Environments),
    volta da rc/rcfix (ADR 0030), modo community do approval-ladder,
    "N agentes online" no dashboard, preferência de moeda com taxa
    manual.
 
-## FASE 14 (ativa — o que a execução real exigiu; só a 14d falta)
+## FASE 14 — CONCLUÍDA em 2026-08-07 (o que a execução real exigiu)
 A execução do hello world não passou do primeiro turno e revelou defeitos que
 nenhuma suite pegava, porque tudo antes rodou com modelo LOCAL. As correções
 já entraram; o que sobra é feature decidida pelo usuário durante a execução.
@@ -230,39 +231,48 @@ e travada; layout (texto cortado, menu fora da viewport, dropdown recortado
 por ancestral, alvo < 24px) virou verificador de navegador em
 `scripts/dev/validacao-visual.js`. Sem dependência nova.
 
-### 14d — Paralelismo decidido pelo LEAD, com autorização do usuário (A FAZER)
-A FASE 13b deu a esta fase um segundo motivo, mais concreto que o
-original. O achado X: `TOOL_LOOP_MAX_ITERATIONS` é global e vale 8 — um
-número que nasceu para agente conversacional e não cabe num dev agent
-que precisa entender um repositório, escrever código e rodar testes.
-Com 8 ele nem escrevia; com 25 escrevia e não chegava à PR; com 60
-chegou. Subir o default global está errado — o Criativo não precisa de
-60 iterações para conversar. É teto POR TIPO DE AGENTE, que é a mesma
-natureza do que esta fase decide para paralelismo, e por isso cabe aqui.
+### 14d — CONCLUÍDA: paralelismo decidido pelo LEAD, autorizado por você
+Entregue em quatro PRs (#181, #182, #183, #184). O ADR 0053 passou a
+ACEITO, revogando de vez os três cortes (Dev Lead, áreas dinâmicas via
+module_map e o aparato genérico de áreas).
 
-Decisão do usuário, tomada durante a execução — substitui a ideia de teto fixo:
+1. **Áreas viraram dado**: `agent_areas`/`agent_area_members` por
+   projeto, com `max_parallel` default 2. O que forçou foi a área de
+   **dev** — a primeira DINÂMICA, cujos membros são um por módulo do
+   module_map. O que não é enumerável em código tem de ser dado.
+2. **O teto é da SESSÃO, não do módulo** (RN-083). Contar por módulo
+   permitiria N módulos × 2 sem autorização nenhuma — o buraco anterior
+   com outro nome. Acima do teto vira `proposed_action`.
+3. **Configurável por área** em Configurações, exigindo `maintainer`
+   pelo mesmo motivo de ativar execução: mudar o teto é decidir quanto
+   o produto gasta sem perguntar.
+4. **A Anamnese propõe subir** quando autorizar virou rotina — três
+   aprovações e NENHUMA negação (RN-086). Uma negação derruba o sinal:
+   se você recusou alguma vez, o teto está fazendo o trabalho dele.
+5. **O Dev Lead existe** (RN-087), conversacional, recebendo o handoff
+   do Arquiteto na mesma confirmação que já entrega ao Infra, e
+   propondo o plano: quantos agentes por módulo e por quê. Os
+   `dev-<modulo>` deixaram de ser endereçáveis por handoff — a regra do
+   ADR 0038 passando a valer para o dev como já valia para QA e Infra.
 
-1. **Quem decide é o lead.** Ele avalia quantos agentes valem a pena para o
-   trabalho em mão, em vez de um número fixo no código.
-2. **Acima de 2, pede autorização.** Passar de dois agentes na sessão vira
-   `proposed_action` — o mesmo pipeline de aprovação de toda ação com efeito
-   externo. O usuário decide, e a decisão fica no event log.
-3. **Configurável por lead**, na tela de Configurações: cada lead tem um máximo
-   próprio, com 2 como default.
-4. **A Anamnese propõe subir o limite** quando perceber que a autorização é
-   RECORRENTE — mesma mecânica de hipótese que ela já usa, com o usuário
-   decidindo. Automatizar sem isso seria o produto elevando o próprio teto de
-   gasto, que é exatamente o que o pipeline de aprovação existe para impedir.
+O **achado X** foi fechado aqui (RN-085): `TOOL_LOOP_MAX_ITERATIONS`
+virou teto POR TIPO — 8 conversacional, 60 execução e gate. O critério
+de quem sobe NÃO é "quem trabalha muito": é quem tem
+`token_budget_micros` por baixo segurando o gasto. `infra-workflows`
+usa ferramenta pesada e fica em 8, porque roda sem budget.
 
-Ainda não implementado. O que existe hoje continua: um agente por módulo no
-`start`, e um extra por módulo (`dev-<modulo>-2`) via aceite de um clique, sem
-teto de sessão.
+**Três lacunas da própria fase, achadas por mim ao escrever a fatia
+seguinte, e todas a mesma falha**: a regra do teto entrou com testes
+verdes e o produto não a exercitava — nenhuma rota chamava o caso de
+uso, aprovar a ação não executava nada, e o tipo podia ser
+auto-aprovado por permissions.json (fechado pela RN-086). Testar a peça
+não é testar o caminho até ela.
 
-O desenho está fechado no ADR 0053, que revoga três cortes de uma vez (Dev
-Lead, áreas dinâmicas via module_map e o aparato genérico de áreas) — os três
-caem juntos porque os membros da área de dev são um por módulo do module_map,
-decididos pelo Arquiteto e diferentes em cada projeto, logo não são
-hardcodáveis como qa e infra.
+**Fora do escopo, por decisão declarada** (ADR 0053 item 5, não
+implementado): o botão "Ativar execução" mudar de dono, e a delegação
+Dev Lead → `dev-<modulo>` pela tabela `delegations` com `area = "dev"`.
+As duas são reversíveis; a execução continua no caminho atual, e a
+correção pós-gate continua indo direto ao dev que abriu a PR.
 
 ## FASE 15 — CONCLUÍDA em 2026-08-07 (gates como dado)
 Nenhum gate NOVO. A fase extrai para docs/gates.yml os gates que JÁ
@@ -395,9 +405,10 @@ duras do produto.
 - Não implementar MFA, login social, OIDC provider ou federação
   (backlog do ADR 0031)
 - Dev Lead, áreas dinâmicas via module_map e o aparato genérico de
-  áreas (agent_areas) DEIXARAM de ser proibidos: o ADR 0053 revogou os
-  três cortes (do ADR 0038 e da Fase 8) e a FASE 14d os implementa.
-  Fora da 14d, continuam valendo — não abra área nova de passagem
+  áreas (agent_areas) deixaram de ser proibidos e estão IMPLEMENTADOS
+  (ADR 0053 aceito, FASE 14d). O que continua valendo é o resto da
+  regra: não abra área nova de passagem — área nova é decisão de
+  produto, com ADR
 - Não versionar à mão: toda tag nasce de workflow
 - Não instalar libs sem justificar no plano
 - Não refatorar código de fase concluída sem pedido explícito
