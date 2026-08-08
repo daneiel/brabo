@@ -511,6 +511,13 @@ export function SessionPage({
   const rotulo = rotuloDaSessao(sessionId);
   const hashtag = hashtagDaSessao(sessionId);
   const isActive = session?.status === 'active';
+  const metaDaSessao = [
+    project?.name ?? '…',
+    hashtag,
+    session ? new Date(session.createdAt).toLocaleTimeString('pt-BR') : '',
+  ]
+    .filter(Boolean)
+    .join(' · ');
 
   return (
     <div className={styles.wrapper}>
@@ -526,10 +533,15 @@ export function SessionPage({
           role="status"
           aria-label={`Sessão ${pontoDaSessao(session?.status).rotulo}`}
         />
+        {/* Título e metadados em UMA linha cada, como o desenho — e por isso
+            com reticências quando a barra aperta. `title` porque texto
+            truncado sem forma de ler o resto é informação perdida. */}
         <div className={styles.titleBlock}>
-          <div className={styles.title}>Sessão {rotulo}</div>
-          <div className={styles.meta}>
-            {project?.name ?? '…'} · {hashtag} · {session ? new Date(session.createdAt).toLocaleTimeString('pt-BR') : ''}
+          <div className={styles.title} title={`Sessão ${rotulo}`}>
+            Sessão {rotulo}
+          </div>
+          <div className={styles.meta} title={metaDaSessao}>
+            {metaDaSessao}
           </div>
         </div>
         <div className={styles.spacer} />
