@@ -27,6 +27,7 @@ arquivo. Comece pela triagem.
 | painel vazio, sem trace, sem log | [Observabilidade](#observabilidade) |
 | não sei que versão está rodando | [Que versão está no ar](#que-versao-esta-no-ar) |
 | `blocked by CORS policy` no console do navegador | [Erro de CORS](#erro-de-cors) |
+| a api sai no boot reclamando de `GIT_OAUTH_STATE_SECRET` | [A api recusa subir por segredo de OAuth](#segredo-de-oauth-no-boot) |
 | agente respondendo vazio, truncado ou lentíssimo | [Ambiente de inferência](#ambiente-de-inferencia) |
 | agente parando com `limite de iterações atingido` sem ter entregado | [Ambiente de inferência](#ambiente-de-inferencia) |
 | quero acrescentar um provider de LLM compatível com a OpenAI | [Adicionando um provider compatível](#adicionando-um-provider-compativel) |
@@ -213,6 +214,34 @@ Três coisas que **não** são problema de CORS, por mais que pareçam:
   aparece no log do engine — não no console do navegador como erro de CORS.
 - **`/metrics` do engine bloqueado no navegador.** É deliberado: métrica interna
   não é legível por JavaScript de página. Use `curl`.
+
+### A api recusa subir por segredo de OAuth {#segredo-de-oauth-no-boot}
+
+Sintoma: com `NODE_ENV=production`, a api morre no start com uma mensagem sobre
+`GIT_OAUTH_STATE_SECRET` — ausente, com o valor de exemplo do repositório, ou
+curta demais.
+
+**Não é regressão, e não contorne.** Essa chave assina o `state` do OAuth de
+git, e o `state` é o que impede o callback público de ser forjado. Antes do
+[ADR 0059](adr/0059-segredo-do-state-de-oauth-sem-default.md) a api subia com um
+default que está publicado neste repositório — quem vê este erro estava, até
+agora, com o fluxo de conexão de git aberto a qualquer um. O boot falhar é o
+aviso chegando, tarde.
+
+```bash
+export GIT_OAUTH_STATE_SECRET="$(openssl rand -base64 32)"
+```
+
+Em Kubernetes o valor vem de `brabo-secrets`, pela chave de mesmo nome já
+declarada em `deploy/k8s/base/common/externalsecrets.yaml` — se o erro apareceu
+lá, o problema é o cofre não estar entregando a chave, e o caminho é o
+[Diagnóstico do deploy](#diagnostico-do-deploy).
+
+Trocar a chave **invalida os `state` em voo**: quem estiver no meio de um
+"conectar GitHub" naquele instante recebe recusa e refaz o fluxo. Como o TTL do
+`state` é de 10 minutos, a janela é essa — não há migração a fazer, e nenhuma
+conexão **já estabelecida** é afetada (o token guardado não depende desta
+chave).
 
 ### k3d é o padrão mesmo com kind instalado
 
