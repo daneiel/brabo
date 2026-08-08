@@ -152,6 +152,15 @@ consultas em poll por card, 3.824 req/min com 23 projetos contra um limite de
 (git, orçamento, sessão, backlog, arquitetura) e cujo número de idas ao banco
 não cresce com a quantidade de projetos ([RN-090](business-rules.md#rn-090)).
 
+A gaveta do sino segue o mesmo recorte, com uma diferença que vale registrar:
+ela precisa do corte de leitura de cada projeto, e esse corte é um `seq`
+guardado no navegador de quem está olhando (`lib/read-state.ts`) — o servidor
+não tem, nem terá, um "marcar como lido". Por isso o cliente **manda** o mapa
+`projeto → afterSeq` no corpo de `POST /workspaces/:id/unread-events`, que é
+leitura apesar do verbo e responde `200` ([RN-091](business-rules.md#rn-091)).
+O verbo é consequência do corpo, não de mutação: são dezenas de pares, e query
+string desse tamanho quebra em proxy além de pôr id de projeto em log de acesso.
+
 Esse endpoint devolve FATOS do event log, nunca componentes montados:
 `lib/agents.ts` (quem é lead, ícone, cor) e `rosterFromFacts`
 (`lib/agent-status.ts`) continuam sendo do web, e a regra de presença é a mesma

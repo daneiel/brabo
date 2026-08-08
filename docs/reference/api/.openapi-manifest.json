@@ -1,6 +1,6 @@
 {
   "_": "Gerado por `pnpm docs:generate`. Não edite — é a trava do que está em docs/reference/api/.",
-  "openapiSha256": "f08ef0c700215c279bda0a2a2fe40c59c77a4fa1ca76c2f0e7dc47a794bc748d",
+  "openapiSha256": "3af1a16b5574a61bb16218832e108d6c57ed42c897b66acb35aba665b93f7a1d",
   "arquivos": {
     "actions-controller-approve-always.ParamsDetails.json": "f51f6d74f8b4a7e9c8f70cef93e0d026d63e77123672029da660c802def3ad0e",
     "actions-controller-approve-always.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
@@ -543,7 +543,7 @@
     "sessions-controller-transition.RequestSchema.json": "1a1741c5ed6c1e8c653b079f28c80327bfe57363efc50b9673ed8fa755c256f3",
     "sessions-controller-transition.StatusCodes.json": "ad65603d00aa842175d178e0d998a25b55da05f723c870ecf304bca643783cf4",
     "sessions-controller-transition.api.mdx": "537d042f310b6554fda50ed8cbb6f32f80f5bb688d6e41e2b281d5d25310ac76",
-    "sidebar.ts": "1e9aedbf1e7f2e3c51bc7de09c3141ecdd3ef5d63afc7038be23732620c872a5",
+    "sidebar.ts": "5c5663c1835f471b89a976360e7f186700801c05a70ae1b4aaf68fcfc94a7c06",
     "workspaces-controller-add-member.ParamsDetails.json": "56d669b72315e3339a75e1873f3cf2543f5b2ba3552994ad2fb69d673da7192b",
     "workspaces-controller-add-member.RequestSchema.json": "c17baeb1beca0020e67b7b40d66d88fbf644c7d3d24276560d0d58149ac2249a",
     "workspaces-controller-add-member.StatusCodes.json": "6a3de2295117fd5c898f85528f29d667fcbe398fa244bbf3c3f32f8ca71aa339",
@@ -568,6 +568,10 @@
     "workspaces-controller-get-summary.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
     "workspaces-controller-get-summary.StatusCodes.json": "4599eab08dfb9ed663fd64ccb42cd6041f7635c28ceca7f064339479667d3204",
     "workspaces-controller-get-summary.api.mdx": "3be6416d50af3fbe5c64bc9ede83245dd813d9e08d94fdc10e2cfad6b3cb9bf4",
+    "workspaces-controller-get-unread-events.ParamsDetails.json": "56d669b72315e3339a75e1873f3cf2543f5b2ba3552994ad2fb69d673da7192b",
+    "workspaces-controller-get-unread-events.RequestSchema.json": "99ca74a80a7ab2fd7da2d6cdb599970ee190b7c005e5148e11bcfbf09920d671",
+    "workspaces-controller-get-unread-events.StatusCodes.json": "8ed56a28507f731c743142320e4175a081aaeff63cbcd2808f2559b78ef19085",
+    "workspaces-controller-get-unread-events.api.mdx": "5e9b54834eae306f1f3b99ce7c06ff41c568c9d4bc256eb797f3d8fb1c1d7dcc",
     "workspaces-controller-get.ParamsDetails.json": "56d669b72315e3339a75e1873f3cf2543f5b2ba3552994ad2fb69d673da7192b",
     "workspaces-controller-get.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
     "workspaces-controller-get.StatusCodes.json": "63b66fbb7578635a18cf75ee14875e90749c660e86fba9dcf50c12aad8701d10",

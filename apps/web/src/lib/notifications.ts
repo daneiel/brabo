@@ -1,8 +1,12 @@
-import { useQueries } from '@tanstack/react-query';
-import { listSessionEvents } from './api-client';
+import { useQuery } from '@tanstack/react-query';
+import { getUnreadEvents } from './api-client';
 import { getLastSeenSeq } from './read-state';
 import { pollQueParaNoErro } from './query-policy';
-import type { Project, ProjectCardSummary } from './api-types';
+import type {
+  Project,
+  ProjectCardSummary,
+  UnreadCursor,
+} from './api-types';
 
 export interface ProjectUnread {
   project: Project;
@@ -72,46 +76,63 @@ export interface NotificationGroupData {
 }
 
 /**
- * O conteúdo da gaveta do sino: os eventos não lidos, por projeto.
+ * O conteúdo da gaveta do sino: os eventos não lidos, por projeto — numa
+ * requisição só, quantos projetos forem (RN-091).
  *
- * É a única leitura do dashboard que continua sendo POR PROJETO, e é
- * irredutível: o corte de onde começar a ler é o `seq` que cada navegador
- * guarda em `read-state`, que o servidor não conhece.
+ * Isto era a última leitura do dashboard que crescia com N. O obstáculo era
+ * real: o corte de onde começar a ler é o `seq` que cada navegador guarda em
+ * `read-state`, e o servidor não o conhece. A saída não foi o servidor
+ * adivinhar — foi o cliente MANDAR o mapa `projeto → afterSeq` no corpo. Os
+ * dados que voltam são exatamente os mesmos, na mesma cadência: é batelamento
+ * puro, e nada muda para quem olha a tela.
  *
- * `aberto` resolve o resto. A gaveta só é RENDERIZADA quando aberta, então
- * buscar antes disso era pagar N requisições por uma lista que ninguém está
- * vendo — agora elas saem no clique. O badge não depende daqui: o número vem
- * de `latestSeq`, que já está no resumo.
+ * `aberto` continua valendo. A gaveta só é RENDERIZADA quando aberta, então
+ * buscar antes disso é pagar por uma lista que ninguém está vendo. O badge não
+ * depende daqui: o número vem de `latestSeq`, que já está no resumo.
  */
 export function useNotificationGroups(
   unread: ProjectUnread[],
   aberto: boolean,
+  workspaceId: string | undefined,
 ): NotificationGroupData[] {
   const withUnread = unread.filter(
     (u) => u.unreadCount > 0 && u.latestSessionId,
   );
 
-  const eventQueries = useQueries({
-    queries: withUnread.map((u) => ({
-      queryKey: [
-        'session-events',
-        u.project.id,
-        u.latestSessionId!,
-        'unread',
-        getLastSeenSeq(u.project.id),
-      ],
-      queryFn: () =>
-        listSessionEvents(u.project.id, u.latestSessionId!, {
-          afterSeq: getLastSeenSeq(u.project.id),
-        }),
-      enabled: aberto,
-      refetchInterval: pollQueParaNoErro(5000),
-    })),
+  const cursors: UnreadCursor[] = withUnread.map((u) => ({
+    projectId: u.project.id,
+    afterSeq: getLastSeenSeq(u.project.id),
+  }));
+
+  const query = useQuery({
+    // O corte de cada projeto entra na CHAVE: "marcar lidas" grava um `seq`
+    // novo no `read-state`, e sem isso o React Query devolveria a resposta
+    // anterior — os mesmos eventos que acabaram de ser dados por lidos.
+    queryKey: ['unread-events', workspaceId, chaveDosCursores(cursors)],
+    queryFn: () => getUnreadEvents(workspaceId!, cursors),
+    // Lista vazia não vira requisição: o servidor responderia vazio de todo
+    // jeito, e pedir isso a cada 5s é tráfego por nada.
+    enabled: aberto && !!workspaceId && cursors.length > 0,
+    refetchInterval: pollQueParaNoErro(5000),
   });
 
-  return withUnread.map((u, index) => ({
+  const eventosDe = new Map(
+    (query.data ?? []).map((g) => [g.projectId, g.events] as const),
+  );
+
+  // A ordem e os nomes continuam vindo do cliente: a api responde só o que
+  // aconteceu em cada projeto, não como a gaveta se desenha.
+  return withUnread.map((u) => ({
     projectId: u.project.id,
     projectName: u.project.name,
-    events: eventQueries[index]?.data?.items ?? [],
+    events: eventosDe.get(u.project.id) ?? [],
   }));
+}
+
+/** Chave estável para o React Query — mesmo conteúdo, mesma string. */
+function chaveDosCursores(cursors: UnreadCursor[]): string {
+  return cursors
+    .map((c) => `${c.projectId}:${c.afterSeq}`)
+    .sort()
+    .join('|');
 }

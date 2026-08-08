@@ -8018,6 +8018,71 @@
           "workspaces"
         ]
       }
+    },
+    "/workspaces/{workspaceId}/unread-events": {
+      "post": {
+        "description": "A gaveta do sino, para o workspace inteiro (RN-091). Cada cursor diz até que `seq` aquele projeto já foi lido, e a resposta traz o que veio depois disso na sessão mais recente de cada um.\n\n**É POST porque é o único verbo com CORPO, não porque muda estado.** O servidor não sabe onde cada leitor parou: \"lido até aqui\" é um `seq` por projeto guardado no navegador, e não existe (de propósito) endpoint de marcar como lido. Logo o corte precisa VIAJAR no pedido, e são dezenas de pares — em query string isso vira URL longa, que proxy trunca, e ainda colocaria id de projeto do usuário em log de acesso. A rota é idempotente e sem efeito colateral: responde `200`, nunca `201`.\n\nSubstitui uma requisição POR PROJETO com a gaveta aberta — 23 projetos custavam 286 req/min contra um limite de 300.",
+        "operationId": "WorkspacesController_getUnreadEvents",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnreadEventsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProjectUnreadEventsResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no workspace."
+          },
+          "404": {
+            "description": "Workspace inexistente ou invisível para quem chamou."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Os eventos não lidos de vários projetos, numa chamada",
+        "tags": [
+          "workspaces"
+        ]
+      }
     }
   },
   "info": {
@@ -11991,6 +12056,32 @@
           "updatedAt"
         ]
       },
+      "ProjectUnreadEventsResponseDto": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "example": "01JC4Z0000PROJETO0000000001"
+          },
+          "sessionId": {
+            "type": "string",
+            "example": "01JC4Z0000SESSAO00000000001",
+            "description": "A sessão MAIS RECENTE do projeto — a mesma que `projects-summary` reporta em `latestSessionId`."
+          },
+          "events": {
+            "description": "Em ordem crescente de `seq`, no máximo os 50 primeiros depois do corte — o mesmo teto que `GET .../events` aplica sem `limit`.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SessionEventResponseDto"
+            }
+          }
+        },
+        "required": [
+          "projectId",
+          "sessionId",
+          "events"
+        ]
+      },
       "PromocaoRecusadaResponseDto": {
         "type": "object",
         "properties": {
@@ -14249,6 +14340,42 @@
         },
         "required": [
           "status"
+        ]
+      },
+      "UnreadCursorDto": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "01JC4Z0000PROJETO0000000001"
+          },
+          "afterSeq": {
+            "type": "number",
+            "example": 41,
+            "minimum": 0,
+            "description": "Último `seq` que ESTE navegador já viu neste projeto. Devolve os eventos com `seq` estritamente maior. `0` significa \"nunca vi nada\" e traz o começo da sessão mais recente."
+          }
+        },
+        "required": [
+          "projectId",
+          "afterSeq"
+        ]
+      },
+      "UnreadEventsDto": {
+        "type": "object",
+        "properties": {
+          "cursors": {
+            "maxItems": 200,
+            "description": "Um cursor por projeto que se quer consultar. Lista VAZIA devolve lista vazia — \"não perguntei nada\" não é \"me dê tudo\". Projeto de outro workspace é ignorado em silêncio, porque o cursor vem do armazenamento local de quem chama e pode ter sobra de um workspace antigo.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UnreadCursorDto"
+            }
+          }
+        },
+        "required": [
+          "cursors"
         ]
       },
       "UpdateModelPricingDto": {

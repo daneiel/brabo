@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Dashboard } from './Dashboard';
 import type { Project, ProjectCardSummary } from '../lib/api-types';
@@ -125,6 +125,31 @@ vi.mock('../lib/api-client', async () => {
         Array.from({ length: estado.projetos }, (_, i) => resumo(i)),
       );
     },
+    // A gaveta do sino em LOTE (RN-091): recebe o mapa `projeto → afterSeq` e
+    // devolve os não lidos de todos de uma vez. Uma chamada, N projetos.
+    getUnreadEvents: (
+      _workspaceId: string,
+      cursors: { projectId: string; afterSeq: number }[],
+    ) => {
+      chamadas.getUnreadEvents = (chamadas.getUnreadEvents ?? 0) + 1;
+      return Promise.resolve(
+        cursors.map((c) => ({
+          projectId: c.projectId,
+          sessionId: `session-${c.projectId}`,
+          events: [
+            {
+              id: `evt-${c.projectId}`,
+              sessionId: `session-${c.projectId}`,
+              seq: c.afterSeq + 1,
+              type: 'chat.message',
+              actor: { kind: 'user' as const, id: 'user-1' },
+              payload: {},
+              createdAt: new Date().toISOString(),
+            },
+          ],
+        })),
+      );
+    },
   };
 });
 
@@ -172,6 +197,72 @@ describe('Dashboard — fan-out de requisições', () => {
     expect(comTrinta).toBe(comTres);
     // Guarda de sanidade: se as duas medidas fossem 0, a igualdade acima
     // passaria sem provar nada.
+    expect(comTres).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * A GAVETA ABERTA — o que sobrou da PR #196 e o que esta corrige (RN-091).
+ *
+ * Aquela PR tirou o dashboard de 3.824 para 12 req/min, mas deixou o sino
+ * buscando UM projeto de cada vez: com a gaveta aberta e 23 projetos, 286
+ * req/min contra um limite de 300. Passava, e sumia com um projeto a mais.
+ *
+ * O obstáculo era o `afterSeq`, que mora no `localStorage` e o servidor não
+ * conhece. A saída foi MANDAR o mapa no corpo — mesmos dados, mesma cadência.
+ * E é por isso que o teste abre a gaveta de verdade em vez de chamar o hook:
+ * o que se está afirmando é sobre a tela, não sobre a função.
+ */
+describe('Dashboard — fan-out com a gaveta do sino ABERTA', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  async function abrirGaveta(n: number): Promise<number> {
+    estado.projetos = n;
+    for (const k of Object.keys(chamadas)) delete chamadas[k];
+
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, refetchInterval: false } },
+    });
+    const { unmount } = render(
+      <QueryClientProvider client={client}>
+        <Dashboard />
+      </QueryClientProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/^Projeto \d+$/)).toHaveLength(n);
+    });
+
+    // `read-state` limpo: todo projeto tem `latestSeq` 10 e nada visto, então
+    // os N entram na gaveta com pendência — o pior caso, que é o medido.
+    fireEvent.click(screen.getByLabelText('Notificações'));
+
+    // A gaveta só carrega DEPOIS do clique. Esperar o conteúdo é o que
+    // garante que a medição não pegou a tela no meio do caminho.
+    await waitFor(() => {
+      expect(screen.getAllByText('Projeto 0')).toHaveLength(2);
+    });
+
+    const total = Object.values(chamadas).reduce((s, v) => s + v, 0);
+    unmount();
+    client.clear();
+    return total;
+  }
+
+  it('a gaveta é UMA requisição, não uma por projeto', async () => {
+    await abrirGaveta(12);
+
+    expect(chamadas.getUnreadEvents).toBe(1);
+    expect(chamadas.listSessionEvents ?? 0).toBe(0);
+  });
+
+  it('30 projetos na gaveta custam o MESMO que 3', async () => {
+    const comTres = await abrirGaveta(3);
+    const comTrinta = await abrirGaveta(30);
+
+    expect(comTrinta).toBe(comTres);
     expect(comTres).toBeGreaterThan(0);
   });
 });
