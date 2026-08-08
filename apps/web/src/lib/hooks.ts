@@ -1,6 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { getArchitecture, getCoverage, getProjectsStatus, getSessionEvent, getWorkspaceSummary, listActions, listBacklog, listHandoffs, listHypotheses, listInfraArtifacts, listProficiency, listProjects, listPsychologistAnalyses, listSessionEvents, listSessions, listWorkspaces, getSessionTokenUsage } from './api-client';
 import { classifyEvent } from './activity';
+// Todo poll deste arquivo passa por aqui: um `refetchInterval` numérico não
+// sabe parar, e a api limita 300 req/min por usuário (ver `query-policy.ts`).
+import { pollQueParaNoErro } from './query-policy';
 import { formatRelativeTime } from './time';
 import { ATIVIDADE_RECENTE_JANELA_MS } from './project-status';
 
@@ -64,7 +67,7 @@ export function useProjectSessions(projectId: string | undefined) {
     queryKey: ['sessions', projectId],
     queryFn: () => listSessions(projectId!),
     enabled: !!projectId,
-    refetchInterval: 5000,
+    refetchInterval: pollQueParaNoErro(5000),
   });
 }
 
@@ -91,7 +94,7 @@ export function useSessionEvents(projectId: string | undefined, sessionId: strin
     queryFn: () =>
       listSessionEvents(projectId!, sessionId!, { limit: 200, latest: true }),
     enabled: !!projectId && !!sessionId,
-    refetchInterval: intervalMs,
+    refetchInterval: pollQueParaNoErro(intervalMs),
   });
 }
 
@@ -106,7 +109,7 @@ export function useSessionTokenUsage(
     queryKey: ['session-token-usage', projectId, sessionId],
     queryFn: () => getSessionTokenUsage(projectId!, sessionId!),
     enabled: !!projectId && !!sessionId,
-    refetchInterval: 5000,
+    refetchInterval: pollQueParaNoErro(5000),
   });
 }
 
@@ -121,7 +124,7 @@ export function useProjectLastActivity(projectId: string): string {
     queryKey: ['last-event', projectId, session?.id, latestSeq],
     queryFn: () => listSessionEvents(projectId, session!.id, { afterSeq: Math.max(0, latestSeq - 1), limit: 1 }),
     enabled: !!session && latestSeq > 0,
-    refetchInterval: 5000,
+    refetchInterval: pollQueParaNoErro(5000),
   });
 
   const event = eventsQuery.data?.items[0];
@@ -155,7 +158,7 @@ export function usePendingActions(projectId: string | undefined, sessionId: stri
     queryKey: ['session-actions', projectId, sessionId],
     queryFn: () => listActions(projectId!, sessionId!, { limit: 200 }),
     enabled: !!projectId && !!sessionId,
-    refetchInterval: intervalMs,
+    refetchInterval: pollQueParaNoErro(intervalMs),
   });
 }
 
@@ -165,7 +168,7 @@ export function useHandoffs(projectId: string | undefined, sessionId: string | u
     queryKey: ['session-handoffs', projectId, sessionId],
     queryFn: () => listHandoffs(projectId!, sessionId!),
     enabled: !!projectId && !!sessionId,
-    refetchInterval: intervalMs,
+    refetchInterval: pollQueParaNoErro(intervalMs),
   });
 }
 
@@ -176,7 +179,7 @@ export function useBacklog(projectId: string | undefined, intervalMs = 4000) {
     queryKey: ['backlog', projectId],
     queryFn: () => listBacklog(projectId!),
     enabled: !!projectId,
-    refetchInterval: intervalMs,
+    refetchInterval: pollQueParaNoErro(intervalMs),
   });
 }
 
@@ -186,7 +189,7 @@ export function useCoverage(projectId: string | undefined, intervalMs = 4000) {
     queryKey: ['coverage', projectId],
     queryFn: () => getCoverage(projectId!),
     enabled: !!projectId,
-    refetchInterval: intervalMs,
+    refetchInterval: pollQueParaNoErro(intervalMs),
   });
 }
 
@@ -196,7 +199,7 @@ export function useArchitecture(projectId: string | undefined, intervalMs = 4000
     queryKey: ['architecture', projectId],
     queryFn: () => getArchitecture(projectId!),
     enabled: !!projectId,
-    refetchInterval: intervalMs,
+    refetchInterval: pollQueParaNoErro(intervalMs),
   });
 }
 
@@ -207,7 +210,7 @@ export function useInfraArtifacts(projectId: string | undefined, intervalMs = 30
     queryKey: ['infra-artifacts', projectId],
     queryFn: () => listInfraArtifacts(projectId!),
     enabled: !!projectId,
-    refetchInterval: intervalMs,
+    refetchInterval: pollQueParaNoErro(intervalMs),
   });
 }
 
@@ -218,7 +221,7 @@ export function useProficiency(projectId: string | undefined, intervalMs = 15000
     queryKey: ['proficiency', projectId],
     queryFn: () => listProficiency(projectId!),
     enabled: !!projectId,
-    refetchInterval: intervalMs,
+    refetchInterval: pollQueParaNoErro(intervalMs),
   });
 }
 
@@ -230,7 +233,7 @@ export function useHypotheses(projectId: string | undefined, intervalMs = 8000) 
     queryKey: ['hypotheses', projectId],
     queryFn: () => listHypotheses(projectId!),
     enabled: !!projectId,
-    refetchInterval: intervalMs,
+    refetchInterval: pollQueParaNoErro(intervalMs),
   });
 }
 
@@ -244,7 +247,7 @@ export function usePsychologistAnalyses(
     queryKey: ['psychologist-analyses', projectId],
     queryFn: () => listPsychologistAnalyses(projectId!),
     enabled: !!projectId,
-    refetchInterval: intervalMs,
+    refetchInterval: pollQueParaNoErro(intervalMs),
   });
 }
 

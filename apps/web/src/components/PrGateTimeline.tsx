@@ -3,6 +3,7 @@ import type {
   CoverageMatrixRow,
   ProposedAction,
   PrGateStatus,
+  RegistroDeGates,
 } from '../lib/api-types';
 import { Badge } from './ui/Badge';
 import { Table, type TableColumn } from './ui/Table';
@@ -53,23 +54,75 @@ interface PrGateTimelineProps {
   task: GateSubject;
   prAction?: ProposedAction;
   verdicts: GateVerdict[];
+  /**
+   * O registro de gates. Opcional de propósito: a esteira é informativa, e
+   * escondê-la enquanto a requisição não volta seria pior que mostrá-la sem
+   * a curadoria do registro.
+   */
+  registro?: RegistroDeGates;
 }
 
 type GateStepState = 'done' | 'current' | 'blocked' | 'pending';
 
-const STEPS: { key: 'dev' | 'qa' | 'secops' | 'user'; label: string }[] = [
-  { key: 'dev', label: 'Dev' },
-  { key: 'qa', label: 'QA' },
-  { key: 'secops', label: 'SecOps' },
-  { key: 'user', label: 'Você' },
-];
+type StepKey = 'dev' | 'qa' | 'secops' | 'user';
+
+/**
+ * Rótulo de cada etapa. NÃO é a lista de etapas — essa vem do registro
+ * (`GET /gates`, ADR 0054). Aqui só mora como a etapa se CHAMA para o
+ * usuário, que é decisão de tela e não de política.
+ */
+const ROTULOS: Record<StepKey, string> = {
+  dev: 'Dev',
+  qa: 'QA',
+  secops: 'SecOps',
+  user: 'Você',
+};
+
+/** Qual etapa da tela cada gate do registro representa. */
+const ETAPA_DO_GATE: Record<string, StepKey> = {
+  'qa-verificada': 'qa',
+  'secops-segura': 'secops',
+  'merge-protegida': 'user',
+};
+
+/**
+ * As etapas da esteira de PR, DERIVADAS do registro (FASE 15b).
+ *
+ * `dev` sempre abre a linha: não é gate, é quem produz o que os gates julgam.
+ * As demais saem dos gates de `fluxo: pr` que o registro traz como ativos — e
+ * é por isso que um gate desativado, ou um que ainda não existe
+ * (`status: planned`), some da tela sozinho em vez de virar uma etapa morta
+ * que ninguém lembra de tirar.
+ *
+ * Sem registro (ainda carregando, ou a chamada falhou), cai na lista completa:
+ * a esteira é informativa, e escondê-la por causa de uma requisição seria
+ * pior que mostrá-la sem a curadoria do registro.
+ */
+export function etapasDaEsteira(
+  registro: RegistroDeGates | undefined,
+): { key: StepKey; label: string }[] {
+  const chaves: StepKey[] =
+    registro == null
+      ? ['dev', 'qa', 'secops', 'user']
+      : [
+          'dev',
+          ...registro.gates
+            .filter((g) => g.fluxo === 'pr')
+            .map((g) => ETAPA_DO_GATE[g.id])
+            .filter((k): k is StepKey => k != null),
+        ];
+
+  // `Set` porque QA e SecOps de infra compartilham a mesma etapa de tela, e a
+  // ordem do registro é a ordem da esteira.
+  return [...new Set(chaves)].map((key) => ({ key, label: ROTULOS[key] }));
+}
 
 function lastGate(verdicts: GateVerdict[]): 'qa' | 'secops' | null {
   return verdicts.length > 0 ? verdicts[verdicts.length - 1].gate : null;
 }
 
 function stepState(
-  step: (typeof STEPS)[number]['key'],
+  step: StepKey,
   task: GateSubject,
   verdicts: GateVerdict[],
 ): GateStepState {
@@ -103,8 +156,14 @@ function StepIcon({ state }: { state: GateStepState }) {
  * + os pareceres (session_events `artifact.qa_verdict`/`artifact.secops_verdict`)
  * expansíveis, com a coverage_matrix do QA renderizada quando presente.
  */
-export function PrGateTimeline({ task, prAction, verdicts }: PrGateTimelineProps) {
+export function PrGateTimeline({
+  task,
+  prAction,
+  verdicts,
+  registro,
+}: PrGateTimelineProps) {
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
+  const steps = etapasDaEsteira(registro);
 
   function toggle(seq: number) {
     setExpanded((current) => {
@@ -135,7 +194,7 @@ export function PrGateTimeline({ task, prAction, verdicts }: PrGateTimelineProps
       </div>
 
       <div className={styles.steps}>
-        {STEPS.map((step, i) => {
+        {steps.map((step, i) => {
           const state = stepState(step.key, task, verdicts);
           return (
             <div key={step.key} className={styles.stepWrap}>
@@ -145,7 +204,7 @@ export function PrGateTimeline({ task, prAction, verdicts }: PrGateTimelineProps
                 </span>
                 <span className={styles.stepLabel}>{step.label}</span>
               </div>
-              {i < STEPS.length - 1 && <span className={styles.connector} />}
+              {i < steps.length - 1 && <span className={styles.connector} />}
             </div>
           );
         })}

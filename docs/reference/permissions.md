@@ -76,10 +76,18 @@ qualquer push, e `GitPush(algo)` não casa nada.
 | `open_infra_pr` | `OpenInfraPr` | maintainer |
 | `git_merge` | `GitMerge` | maintainer |
 | `instruction_patch` | `InstructionPatch` | maintainer |
+| `parallelize` | `Parallelize` | maintainer |
+| `raise_max_parallel` | `RaiseMaxParallel` | maintainer |
 | `spend` | `Spend` | **owner** |
 
 O papel mínimo é verificado **antes** do arquivo. Sem ele, `deny` — o
 `permissions.json` não consegue conceder o que o IAM nega
+
+`parallelize` (FASE 14d) é a única cujo efeito não é tocar em código ou
+repositório: ela pede mais AGENTES. Está em `maintainer` pelo mesmo motivo de
+`spend` — quem autoriza custo é quem responde pelo projeto. Ela só existe acima
+do teto do lead; dentro dele não há ação, porque não há o que decidir
+([RN-083](../business-rules.md#rn-083))
 ([RN-005](../business-rules.md#rn-005)).
 
 ## Como um padrão casa com um comando
@@ -243,7 +251,7 @@ imediatamente. Não existe configuração que reverta um `deny`.
 resultado continua `auto_approve` — o arquivo não "vota contra" por omissão.
 Cada estágio só pode subir a permissividade do anterior.
 
-## Os dois tetos
+## Os tetos
 
 Aplicados **por último**, depois de todo o resto:
 
@@ -251,6 +259,7 @@ Aplicados **por último**, depois de todo o resto:
 |---|---|---|
 | `git_merge` com destino em `dev`, `qa`, `rc` ou `main` | `auto_approve` → `require_approval` | merge em branch protegida é sempre decisão sua ([RN-006](../business-rules.md#rn-006)) |
 | `instruction_patch` | `auto_approve` → `require_approval` | você precisa ver o diff antes que um agente mude o comportamento de outro ([RN-007](../business-rules.md#rn-007)) |
+| `parallelize` e `raise_max_parallel` | `auto_approve` → `require_approval` | gastar com mais agentes é decisão sua; sem este teto o limite do lead seria decorativo, e subir o próprio teto seria o produto elevando o limite de gasto dele mesmo ([RN-086](../business-rules.md#rn-086)) |
 
 Um teto rebaixa `auto_approve` para `require_approval`; ele **não** transforma
 `deny` em outra coisa, porque `deny` já teria retornado antes.

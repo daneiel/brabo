@@ -14,7 +14,9 @@ defmodule EngineWeb.AgentCommandController do
     PoSupervisor,
     PoServer,
     ArquitetoSupervisor,
-    ArquitetoServer
+    ArquitetoServer,
+    DevLeadSupervisor,
+    DevLeadServer
   }
 
   alias Engine.Infra.{InfraLeadSupervisor, InfraLeadServer}
@@ -35,6 +37,14 @@ defmodule EngineWeb.AgentCommandController do
   def start(conn, %{"sessionId" => session_id, "projectId" => project_id, "agent" => "arquiteto"}) do
     {:ok, _pid, origin} = ArquitetoSupervisor.start_agent(session_id, project_id)
     if origin == :started, do: ArquitetoServer.kickoff(session_id)
+    send_resp(conn, 201, "")
+  end
+
+  def start(conn, %{"sessionId" => session_id, "projectId" => project_id, "agent" => "dev-lead"}) do
+    # Ativado pelo handoff aceito do Arquiteto (FASE 14d — ADR 0053). Kickoff
+    # só num start FRESCO: restart não regera o plano.
+    {:ok, _pid, origin} = DevLeadSupervisor.start_agent(session_id, project_id)
+    if origin == :started, do: DevLeadServer.kickoff(session_id)
     send_resp(conn, 201, "")
   end
 
@@ -68,6 +78,17 @@ defmodule EngineWeb.AgentCommandController do
       }) do
     {:ok, _pid, _origin} = PoSupervisor.start_agent(session_id, project_id)
     :ok = PoServer.user_message(session_id, text)
+    send_resp(conn, 202, "")
+  end
+
+  def message(conn, %{
+        "sessionId" => session_id,
+        "projectId" => project_id,
+        "agent" => "dev-lead",
+        "text" => text
+      }) do
+    {:ok, _pid, _origin} = DevLeadSupervisor.start_agent(session_id, project_id)
+    :ok = DevLeadServer.user_message(session_id, text)
     send_resp(conn, 202, "")
   end
 
@@ -126,6 +147,11 @@ defmodule EngineWeb.AgentCommandController do
 
   def offer_infra_handoff(conn, %{"sessionId" => session_id}) do
     :ok = ArquitetoServer.offer_infra_handoff(session_id)
+    send_resp(conn, 202, "")
+  end
+
+  def offer_dev_handoff(conn, %{"sessionId" => session_id}) do
+    :ok = ArquitetoServer.offer_dev_handoff(session_id)
     send_resp(conn, 202, "")
   end
 end

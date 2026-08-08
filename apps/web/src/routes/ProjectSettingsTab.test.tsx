@@ -6,6 +6,7 @@ import {
   CredentialsSection,
   ExecutionSection,
   ModelsSection,
+  ParallelismSection,
   PromotionSection,
 } from './ProjectSettingsTab';
 import { ToastProvider } from '../components/ui/ToastProvider';
@@ -24,6 +25,8 @@ const getProjectModelBinding = vi.fn();
 const getWorkspaceModelBinding = vi.fn();
 const getProjectAgentCosts = vi.fn();
 const setAgentModelBinding = vi.fn();
+const listAgentAreas = vi.fn();
+const setAreaMaxParallel = vi.fn();
 
 vi.mock('../lib/api-client', async () => {
   // `mensagemDaApi` e `ApiError` entram de verdade: é justamente a extração da
@@ -48,6 +51,8 @@ vi.mock('../lib/api-client', async () => {
       getWorkspaceModelBinding(...args),
     getProjectAgentCosts: (...args: unknown[]) => getProjectAgentCosts(...args),
     setAgentModelBinding: (...args: unknown[]) => setAgentModelBinding(...args),
+    listAgentAreas: (...args: unknown[]) => listAgentAreas(...args),
+    setAreaMaxParallel: (...args: unknown[]) => setAreaMaxParallel(...args),
   };
 });
 
@@ -92,6 +97,8 @@ beforeEach(() => {
   getProjectAgentCosts.mockResolvedValue([]);
   upsertCredential.mockResolvedValue({});
   deleteCredential.mockResolvedValue({ ok: true });
+  listAgentAreas.mockResolvedValue([]);
+  setAreaMaxParallel.mockResolvedValue({});
 });
 
 function credencial(over: Partial<UserCredentialMetadata> = {}): UserCredentialMetadata {
@@ -108,6 +115,97 @@ function credencial(over: Partial<UserCredentialMetadata> = {}): UserCredentialM
 async function campoDoOpenrouter() {
   return await screen.findByLabelText('API key de OpenRouter');
 }
+
+function area(over: Record<string, unknown> = {}) {
+  return {
+    id: 'area-1',
+    projectId: 'proj-1',
+    key: 'dev',
+    leadAgentId: 'dev-lead',
+    maxParallel: 2,
+    members: ['dev-api', 'dev-web'],
+    ...over,
+  };
+}
+
+describe('ParallelismSection', () => {
+  it('sem áreas: explica DE ONDE elas vêm em vez de sumir', async () => {
+    // Seção que desaparece parece bug, e o motivo (as áreas nascem do
+    // module_map, na ativação) não é adivinhável por quem olha a tela.
+    listAgentAreas.mockResolvedValue([]);
+    montarSecao(<ParallelismSection projectId="proj-1" />);
+
+    expect(
+      await screen.findByText(/nascem quando você ativa a execução/i),
+    ).toBeInTheDocument();
+  });
+
+  it('mostra o teto atual da área, pré-preenchido', async () => {
+    listAgentAreas.mockResolvedValue([area({ maxParallel: 4 })]);
+    montarSecao(<ParallelismSection projectId="proj-1" />);
+
+    const campo = await screen.findByLabelText('Teto de agentes da área dev');
+    expect(campo).toHaveValue(4);
+  });
+
+  it('salva o teto novo', async () => {
+    listAgentAreas.mockResolvedValue([area()]);
+    setAreaMaxParallel.mockResolvedValue(area({ maxParallel: 5 }));
+    montarSecao(<ParallelismSection projectId="proj-1" />);
+
+    const campo = await screen.findByLabelText('Teto de agentes da área dev');
+    fireEvent.change(campo, { target: { value: '5' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+
+    await waitFor(() =>
+      expect(setAreaMaxParallel).toHaveBeenCalledWith('proj-1', 'dev', 5),
+    );
+  });
+
+  it('zero NÃO salva: o botão fica desabilitado', async () => {
+    // Zero não é "sem limite" — é configuração inválida, e a api recusa. Barrar
+    // aqui evita mandar um pedido que já se sabe que volta 400.
+    listAgentAreas.mockResolvedValue([area()]);
+    montarSecao(<ParallelismSection projectId="proj-1" />);
+
+    const campo = await screen.findByLabelText('Teto de agentes da área dev');
+    fireEvent.change(campo, { target: { value: '0' } });
+
+    expect(screen.getByRole('button', { name: 'Salvar' })).toBeDisabled();
+    expect(setAreaMaxParallel).not.toHaveBeenCalled();
+  });
+
+  it('cada área tem o seu campo, e editar uma não mexe na outra', async () => {
+    // O teto é da ÁREA: um rascunho compartilhado faria digitar em dev alterar
+    // o número exibido em qa.
+    listAgentAreas.mockResolvedValue([
+      area(),
+      area({ id: 'area-2', key: 'qa', leadAgentId: 'qa-lead', maxParallel: 3 }),
+    ]);
+    montarSecao(<ParallelismSection projectId="proj-1" />);
+
+    const devInput = await screen.findByLabelText('Teto de agentes da área dev');
+    fireEvent.change(devInput, { target: { value: '7' } });
+
+    expect(screen.getByLabelText('Teto de agentes da área qa')).toHaveValue(3);
+  });
+
+  it('a api recusando mostra a mensagem DELA, não uma genérica', async () => {
+    listAgentAreas.mockResolvedValue([area()]);
+    setAreaMaxParallel.mockRejectedValue(
+      new ApiError(400, { message: 'max_parallel precisa ser inteiro >= 1' }),
+    );
+    montarSecao(<ParallelismSection projectId="proj-1" />);
+
+    const campo = await screen.findByLabelText('Teto de agentes da área dev');
+    fireEvent.change(campo, { target: { value: '9' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+
+    expect(
+      await screen.findByText(/max_parallel precisa ser inteiro/i),
+    ).toBeInTheDocument();
+  });
+});
 
 describe('ExecutionSection', () => {
   it('sem valor próprio: mostra o default (3), pré-preenchido no campo', async () => {

@@ -338,6 +338,82 @@ defmodule Engine.Workers.AnamneseWorkerTest do
     assert content =~ "não roda migration em prod"
   end
 
+  # A regra que decide QUANDO o produto pede para gastar mais. Ela precisa de
+  # teste próprio: um limiar errado aqui vira ou ruído constante na fila de
+  # aprovações, ou um sinal que nunca dispara.
+  defp decisoes_parallelize(aprovadas, negadas) do
+    aprovadas_lista =
+      for i <- 1..aprovadas//1 do
+        %{
+          "actionType" => "parallelize",
+          "status" => "approved",
+          "rejectionReason" => nil,
+          "decidedBy" => "user-1",
+          "decidedAt" => "2026-07-2#{i}T10:00:00Z"
+        }
+      end
+
+    negadas_lista =
+      for _ <- 1..negadas//1 do
+        %{
+          "actionType" => "parallelize",
+          "status" => "rejected",
+          "rejectionReason" => "dois já bastam",
+          "decidedBy" => "user-1",
+          "decidedAt" => "2026-07-28T10:00:00Z"
+        }
+      end
+
+    aprovadas_lista ++ negadas_lista
+  end
+
+  defp prompt_com_decisoes(project_id, session_id, decisions) do
+    Application.put_env(:engine, :anamnese_min_events, 1)
+    on_exit(fn -> Application.delete_env(:engine, :anamnese_min_events) end)
+
+    Process.put(:fake_anamnese_context, context(%{"decisions" => decisions}))
+
+    Process.put(:fake_llm_turns, [
+      FakeEngineApiClient.tool_call_response("emit_proficiency", %{
+        "profiles" => [profile()]
+      })
+    ])
+
+    assert :ok = AnamneseWorker.perform(job(project_id, session_id))
+    assert_received {:llm_turn, "anamnese", messages, _tools}
+    Enum.map_join(messages, "\n", &Map.get(&1, "content", ""))
+  end
+
+  test "tres aprovacoes sem negacao: o prompt sugere propor subir o teto", %{
+    project_id: project_id,
+    session_id: session_id
+  } do
+    content = prompt_com_decisoes(project_id, session_id, decisoes_parallelize(3, 0))
+
+    assert content =~ "AUTORIZAR MAIS AGENTES VIROU ROTINA"
+    assert content =~ "propose_max_parallel"
+  end
+
+  test "duas aprovacoes NAO sao rotina — sao duas", %{
+    project_id: project_id,
+    session_id: session_id
+  } do
+    content = prompt_com_decisoes(project_id, session_id, decisoes_parallelize(2, 0))
+
+    refute content =~ "AUTORIZAR MAIS AGENTES VIROU ROTINA"
+  end
+
+  test "uma NEGACAO derruba o sinal, por mais aprovacoes que haja", %{
+    project_id: project_id,
+    session_id: session_id
+  } do
+    # Se o usuario recusou alguma vez, o teto esta fazendo o trabalho dele.
+    # Propor subi-lo seria ler o sinal ao contrario.
+    content = prompt_com_decisoes(project_id, session_id, decisoes_parallelize(5, 1))
+
+    refute content =~ "AUTORIZAR MAIS AGENTES VIROU ROTINA"
+  end
+
   test "janela só de decisões roda (não é descartada como vazia)", %{
     project_id: project_id,
     session_id: session_id

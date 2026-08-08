@@ -149,7 +149,7 @@ Alguns passos podem sair como **`skipped`** (já estava feito) ou
 **`degraded`** (concluiu sem uma capability). Os dois são sucesso. Com o
 provider Local, a proteção de branch sempre sai `degraded` — não há plataforma
 para aplicá-la, e isso não enfraquece nada: quem impede merge indevido é o
-[teto no domínio](reference/permissions.md#os-dois-tetos), não a plataforma.
+[teto no domínio](reference/permissions.md#os-tetos), não a plataforma.
 
 Se um passo falhar, corrija a causa e mande retomar: o bootstrap continua de
 onde parou, não recomeça

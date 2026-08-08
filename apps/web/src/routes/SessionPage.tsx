@@ -19,6 +19,7 @@ import {
 import { streamChatMessage } from '../lib/chat-stream';
 import { connectSessionHeartbeat } from '../lib/session-channel';
 import { useSessionEvents, useSessionEvent, usePendingActions, useHandoffs } from '../lib/hooks';
+import { pollQueParaNoErro } from '../lib/query-policy';
 import { emailDaSessao } from '../lib/auth';
 import { AGENTS } from '../lib/agents';
 import type {
@@ -87,7 +88,7 @@ export function SessionPage({
   const { data: session } = useQuery({
     queryKey: ['session', projectId, sessionId],
     queryFn: () => getSession(projectId, sessionId),
-    refetchInterval: 5000,
+    refetchInterval: pollQueParaNoErro(5000),
   });
 
   const eventsQuery = useSessionEvents(projectId, sessionId, 3000);
@@ -190,7 +191,7 @@ export function SessionPage({
   const { data: budget } = useQuery({
     queryKey: ['session-budget', projectId, sessionId],
     queryFn: () => getSessionBudget(projectId, sessionId),
-    refetchInterval: 5000,
+    refetchInterval: pollQueParaNoErro(5000),
   });
 
   // O agente que está streamando agora, quando o delta disse quem é (achado C).

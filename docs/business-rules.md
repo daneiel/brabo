@@ -1588,6 +1588,241 @@ reimplementado.
   (`pr_open` auto-aprovado, com `decidedBy: null`, pede a credencial do owner)
 - **Origem:** achado AA, [validação real da 13b](explanation/validacao-real.md)
 
+### RN-083 — O lead decide o paralelismo; acima do teto, você autoriza {#rn-083}
+
+Quantos agentes sobem deixa de ser um número no código: quem avalia é o **lead
+da área**. Mas a decisão dele não é soberana sobre GASTO — até
+`agent_areas.max_parallel` (default **2**) ele sobe e segue; **acima disso vira
+`proposed_action` do tipo `parallelize`**, pelo mesmo pipeline de toda ação com
+efeito externo.
+
+**O teto é da SESSÃO, não do módulo.** É a única parte da regra que não é
+óbvia, e a que um refactor desatento desfaz: contar por módulo permitiria N
+módulos × 2 agentes sem autorização nenhuma — o buraco anterior com outro nome.
+Há teste afirmando exatamente isso.
+
+**Teto zero ou negativo é configuração inválida, não "sem limite".** Tratá-lo
+como ilimitado transformaria um erro de digitação em gasto irrestrito, que é o
+oposto do que o pipeline existe para fazer.
+
+**Quem PEDE é o lead; quem DECIDE é você.** A `proposed_action` nasce com o
+lead como ator, e a decisão fica no event log com o seu nome — é essa distinção
+que faz a história ser reconstituível depois ([ADR 0048](adr/0048-decisao-no-log-e-a-ordem-do-gate.md)).
+
+O motivo viaja no payload IMUTÁVEL, com os três números (quantos há, quantos
+pede, qual o teto): quem ler daqui a seis meses precisa entender o que foi
+autorizado sem reconstruir o estado da sessão.
+
+`AcceptParallelizationUseCase` não muda: ele continua sendo quem EXECUTA, tanto
+no caminho direto quanto quando a ação é aprovada. Absorvê-lo por dentro, em vez
+de reescrevê-lo, é o que mantém a suite da Fase 4 verde sem modificação — que é
+a prova de que a troca não vazou para o contrato externo.
+
+**O teto é configurável por área, e só por você.** `PATCH
+/projects/:projectId/agent-areas/:key/max-parallel` exige `maintainer` — o mesmo
+papel de ativar a execução, e pelo mesmo motivo: mudar o teto é decidir quanto o
+produto pode gastar sem perguntar. Não existe caminho automático de subi-lo. A
+Anamnese pode PROPOR, quando notar que a autorização virou rotina, e a proposta
+continua passando por esta rota depois que você aceita — um produto que eleva o
+próprio teto de gasto é exatamente o que o pipeline de aprovação existe para
+impedir.
+
+Mudar o teto vale para os PRÓXIMOS pedidos. O que já está aguardando decisão
+continua aguardando: a ação carrega no payload o teto vigente quando foi criada,
+e reinterpretá-la sob o teto novo mudaria o que você está prestes a decidir
+depois de ler.
+
+- **Onde:** `apps/api/src/domain/execution/paralelismo.ts` (a regra pura),
+  `application/use-cases/execution/request-parallelization.use-case.ts`,
+  `application/use-cases/execution/set-area-max-parallel.use-case.ts`,
+  exposto em `interfaces/http/execution/execution.controller.ts` e configurado
+  em `apps/web/src/routes/ProjectSettingsTab.tsx` (`ParallelismSection`)
+- **Teste:** `apps/api/test/domain/execution/paralelismo.spec.ts`,
+  `test/application/use-cases/execution/request-parallelization.use-case.spec.ts`,
+  `test/application/use-cases/execution/set-area-max-parallel.use-case.spec.ts`
+  e `apps/web/src/routes/ProjectSettingsTab.test.tsx` (`ParallelismSection`)
+- **Origem:** [ADR 0053](adr/0053-dev-lead-e-paralelismo-autorizado.md), FASE 14d
+
+### RN-084 — A esteira exibida deriva do registro de gates {#rn-084}
+
+O painel do time mostra a etapa em que uma PR está **derivando-a de
+`docs/gates.yml`**, não de uma lista escrita na tela. Gate que sai do registro
+some da esteira; gate `planned` nunca aparece.
+
+**A regra existe por uma forma específica de envelhecimento.** Antes da FASE
+15b a tela tinha as etapas fixas no componente, e o registro (FASE 15a)
+descrevia os gates em outro lugar. Nada ligava os dois: acrescentar um gate ao
+YAML não mudava a tela, e remover um deixava a tela mostrando uma etapa que já
+não existia — sem nenhum teste falhar, porque as duas fontes estavam certas
+cada uma por si. É o mesmo apodrecimento que o `docs/.docmap.yml` existe para
+impedir, e a resposta é a mesma: uma fonte só, com o consumo cobrado.
+
+Três decisões de borda, todas para a tela **degradar** em vez de sumir:
+
+- gate de PR que a tela ainda não sabe desenhar é **ignorado**, não quebra o
+  render — o registro pode ganhar um gate antes de a tela ganhar o rótulo;
+- os **rótulos são de tela**, não do registro: o YAML descreve engenharia, e a
+  tela fala com quem espera uma PR;
+- **sem registro** (a rota falhou), mostra a esteira completa em vez de vazia —
+  uma esteira genérica informa mais que nada.
+
+- **Onde:** `apps/web/src/components/PrGateTimeline.tsx` (`etapasDaEsteira`),
+  lendo `GET /gates` (`apps/api/src/interfaces/http/gates/gates.controller.ts`)
+- **Teste:** `apps/web/src/components/PrGateTimeline.test.ts`
+  (`gate que SAI do registro some da tela`, `gate de PR que a tela ainda não
+  sabe desenhar é IGNORADO`, `sem registro, mostra a esteira completa`)
+- **Origem:** [ADR 0054](adr/0054-gates-como-registro-declarativo.md), FASE 15b
+
+### RN-085 — O teto de iterações é por TIPO de agente {#rn-085}
+
+Quantas voltas um agente pode dar no laço de ferramenta depende do trabalho que
+ele faz: **8** para quem conversa, **60** para o dev agent e para os subagentes
+de QA. Não há mais um número único.
+
+**O teto de 8 nasceu de agente conversacional e foi herdado por quem trabalha.**
+Na validação real da 13b isso apareceu como bloqueio: o dev agent gastou as
+oito voltas explorando um repositório recém-provisionado e **nunca escreveu um
+arquivo**; com 25, escreveu três e rodou os testes. O desfecho registrado era
+`limite de iterações atingido` com origem `modelo` — tecnicamente verdade e
+praticamente inútil, porque o modelo nunca chegou a julgar nada.
+
+**Subir o default global seria a correção errada**, e é isso que a regra
+protege: o Criativo não precisa de 60 voltas para conversar, e o teto também é
+a trava contra laço infinito.
+
+**Quem pode subir não é "quem trabalha muito", é quem tem trava de gasto por
+baixo.** O teto de iterações protege contra laço infinito; quem protege o
+BOLSO é o `token_budget_micros`. Dev agents e subagentes de QA rodam com o
+`task_budget_micros` da task, então afrouxar as voltas não afrouxa a conta.
+`infra-workflows` usa ferramenta pesada e mesmo assim **fica em 8**: ele roda
+sem budget, e para ele o teto é a única trava que existe.
+
+Duas bordas com teste próprio:
+
+- **`dev-lead` é conversacional**, apesar do prefixo `dev-` que identifica os
+  dev agents (`dev-<modulo>`, `dev-<modulo>-2`). O lead decide e delega, e sem
+  a cláusula explícita nasceria com o teto do trabalho pesado por acidente de
+  nomenclatura.
+- **Agente desconhecido cai no teto mais baixo.** Errar para o lado barato:
+  quem precisa de mais voltas aparece como `limite de iterações atingido` e é
+  corrigido; quem ganha 60 por engano gasta calado.
+
+- **Onde:** `apps/engine/lib/engine/harness/iteracoes.ex`, aplicado em
+  `apps/engine/lib/engine/harness/tool_loop.ex` (`init/1`)
+- **Teste:** `apps/engine/test/engine/harness/iteracoes_test.exs` e
+  `apps/engine/test/engine/harness/tool_loop_test.exs`
+  (`o teto vem do TIPO do agente quando o chamador não passa um`,
+  `teto explícito do chamador VENCE o do tipo`)
+- **Origem:** achado X, [validação real da 13b](explanation/validacao-real.md);
+  [ADR 0053](adr/0053-dev-lead-e-paralelismo-autorizado.md), FASE 14d
+
+### RN-086 — Gastar com mais agentes nunca se auto-aprova {#rn-086}
+
+As duas ações que mexem em **quanto o produto pode gastar sozinho** —
+`parallelize` (ultrapassar o teto agora) e `raise_max_parallel` (mudar o teto)
+— nunca são auto-aprováveis. Nem por `agent_autonomy`, nem por
+`permissions.json`. É a mesma classe de garantia da trava de merge e do teto do
+patch de instrução.
+
+**Sem isto o teto da [RN-083](#rn-083) seria decorativo.** Um `permissions.json`
+com `Parallelize()` no `allow` faria toda ultrapassagem se aprovar sozinha — a
+regra que existe para EXIGIR a decisão do usuário passaria a dispensá-la. E
+`raise_max_parallel` é o caso mais grave: seria o produto elevando o próprio
+limite de gasto, exatamente o que o pipeline de aprovação existe para impedir.
+
+**A Anamnese pode PROPOR, e é isso que ela faz.** Quando autorizar mais um
+agente vira rotina, o teto está errado, e quem percebe primeiro é quem lê o
+histórico. O sinal já chegava a ela: as decisões do usuário na janela vêm de
+`proposed_actions`, com `actionType` e `status`.
+
+O limiar é **três aprovações e nenhuma negação**, e as duas metades importam:
+
+- **duas não são rotina — são duas.** Três é o que separa "aconteceu" de "está
+  acontecendo sempre";
+- **uma negação derruba o sinal inteiro**, por mais aprovações que haja. Se o
+  usuário recusou alguma vez, o teto está fazendo o trabalho dele, e propor
+  subi-lo seria ler o sinal ao contrário.
+
+Propor um teto **igual ou menor** que o vigente é recusado pela api: a Anamnese
+roda periodicamente e reproporia a mesma coisa a cada rodada, enchendo de ruído
+uma fila que o usuário precisa ler.
+
+Aprovar aplica o valor do **payload**, não um recalculado na hora — é o número
+que você leu ao decidir.
+
+- **Onde:** `apps/api/src/domain/actions/decide.ts` (o teto),
+  `application/use-cases/execution/propose-max-parallel.use-case.ts`,
+  `execute-max-parallel-raise.use-case.ts`,
+  `apps/engine/lib/engine/anamnese/tools/propose_max_parallel.ex` e o limiar em
+  `apps/engine/lib/engine/workers/anamnese_worker.ex` (`nota_de_paralelismo/1`)
+- **Teste:** `apps/api/test/domain/actions/decide.spec.ts`
+  (`decide — teto do paralelismo`),
+  `test/application/use-cases/execution/propose-max-parallel.use-case.spec.ts`,
+  `execute-max-parallel-raise.use-case.spec.ts`,
+  `apps/engine/test/engine/anamnese/tools_test.exs` e
+  `test/engine/workers/anamnese_worker_test.exs` (`duas aprovacoes NAO sao
+  rotina`, `uma NEGACAO derruba o sinal`)
+- **Origem:** [ADR 0053](adr/0053-dev-lead-e-paralelismo-autorizado.md), FASE 14d
+
+### RN-087 — O Dev Lead é o único endereço externo da execução {#rn-087}
+
+Existe um agente `dev-lead`, conversacional, que recebe o handoff do Arquiteto
+e propõe o **plano de execução**: quantos agentes por módulo e por quê. Ele não
+escreve código — distribui trabalho e responde por ele.
+
+**Antes dele, a frase "quem decide é o lead" da [RN-083](#rn-083) não tinha
+dono.** O Arquiteto terminava e a execução subia por um botão, sem ninguém no
+meio para avaliar quanto trabalho havia.
+
+**Os `dev-<modulo>` deixaram de ser endereçáveis por handoff.** Isso não é
+exceção nova: é a regra do [ADR 0038](adr/0038-hierarquia-de-agentes.md) —
+handoff externo endereça só lead de área ou agente sem área — passando a valer
+para o dev como já valia para QA e Infra. Enquanto não havia Dev Lead, eles
+eram agentes SEM área e por isso alvos válidos; virando membros, deixam de ser.
+
+**A área de `dev` é a primeira DINÂMICA**, e é o que forçou o predicado: os
+membros são um por módulo do `module_map`, decididos pelo Arquiteto e
+diferentes em cada projeto, então não há lista a enumerar. `dev-lead` casa com
+o mesmo prefixo `dev-` dos membros, e quem o exclui é a regra genérica **o lead
+nunca é membro da própria área** — que vale para qualquer área e vive num lugar
+só. A primeira versão repetia essa exclusão em três pontos, e a verificação por
+mutação mostrou que nenhuma das cópias era alcançável por teste: cada uma
+sobrevivia à mutação da outra.
+
+**O plano é EVENTO, não `proposed_action`.** Propor não tem efeito externo: o
+gasto acontece quando os agentes sobem, e é lá que o teto cobra autorização.
+Transformar a proposta em ação a decidir faria você decidir duas vezes a mesma
+coisa.
+
+**O plano BEM-SUCEDIDO encerra o turno.** Na primeira execução real o Dev Lead
+registrou **dois** `execution.plan_proposed` na mesma sessão — textos
+diferentes, mesmo total —, porque o laço voltava ao modelo e ele propunha de
+novo. O event log é imutável: ficaram duas propostas e nada dizendo qual valia.
+A instrução "use uma vez" no spec da ferramenta é pedido, não garantia; quem
+garante é o laço parar.
+
+**Bem-sucedido, e não "chamou a ferramenta"**: um plano recusado (vazio, ou com
+zero agente num módulo) deixa o laço seguir, senão a recusa vira fim de turno e
+o modelo nunca chega a corrigir. A primeira versão desta guarda olhava só o
+nome da ferramenta e tinha esse defeito — encontrado pelo teste comportamental,
+não pela leitura.
+
+Um plano vazio, ou com zero agente num módulo, é recusado **antes de gravar
+qualquer coisa** — o event log é imutável, e um plano meio gravado não teria
+como ser retratado.
+
+- **Onde:** `apps/engine/lib/engine/agents/dev_lead_server.ex` e
+  `dev_lead_tools.ex`; a regra de endereçamento em
+  `apps/api/src/domain/agents/agent-areas.ts`; o handoff em
+  `application/use-cases/agents/offer-infra-handoff.use-case.ts`
+- **Teste:** `apps/engine/test/engine/agents/dev_lead_tools_test.exs`,
+  `dev_lead_server_test.exs` (`o plano ENCERRA o turno`, `o plano recusado NÃO
+  encerra o turno`),
+  `apps/api/test/domain/agents/agent-areas.spec.ts` (`o dev de módulo DEIXOU de
+  ser endereçável`, `` `dev-lead` É endereçável, apesar do prefixo ``) e
+  `test/application/use-cases/agents/offer-infra-handoff.use-case.spec.ts`
+- **Origem:** [ADR 0053](adr/0053-dev-lead-e-paralelismo-autorizado.md), FASE 14d
+
 ### RN-064 — Heartbeat não encerra sessão com trabalho pendente {#rn-064}
 
 O timeout de heartbeat mede inatividade da **aba**, não do **trabalho**. Antes
@@ -1892,6 +2127,65 @@ olhar, não algo a esconder atrás de "sem atividade".
 - **Teste:** `apps/web/src/lib/project-status.test.ts`
 - **Origem:** fidelidade do dashboard de projetos ao design aprovado
 
+### RN-088 — Falha de carregamento é dita na tela; 429 não se retenta {#rn-088}
+
+Toda tela que carrega dado da api distingue três estados, e nunca dois:
+**carregando** (esqueleto), **erro** (a mensagem que a api mandou, com o
+`trace_id` e um botão de tentar de novo) e **vazio** (o texto de lista vazia).
+`if (!dado) return null` colapsa os três, e o desfecho observado foi o pior
+possível: com a api limitando por `429`, a área principal de `/projects/:id`
+ficava **completamente em branco** — sem mensagem, sem erro, sem esqueleto — e
+o motivo existia só no console. No dashboard era pior que branco: `!projects`
+também era verdadeiro no erro, então a tela convidava a criar o **primeiro**
+projeto de um workspace que podia ter vinte.
+
+É a [RN-059](#rn-059) do outro lado do fio: falha nunca vira resposta vazia.
+Quem falha, diz.
+
+A frase é a **da api**, extraída por `mensagemDaApi` — a mesma função que o
+caminho de mutação já usava nos toasts. Um texto genérico nosso não sabe a
+diferença entre "limite de requisições excedido, tente em instantes" (espere) e
+"acesso negado" (não adianta esperar).
+
+O outro lado da mesma regra é não responder ao limite com mais tráfego. **4xx
+não se retenta**: `429` é literalmente o servidor mandando parar, e `401` já
+foi renovado uma vez dentro de `request()`. E **poll para quando a query erra**
+— volta no foco da janela, na remontagem ou no botão. Antes eram três
+retentativas por falha somadas a ~25 polls de 3 a 5 segundos que não sabiam
+parar: uma sessão real acumulou **1128 erros 429** contra um limite de 300
+requisições por minuto por usuário (`RateLimitGuard`), e o laço impedia a
+janela deslizante de se refazer. 5xx e falha de rede continuam com as três
+tentativas, onde repetir é a reação certa.
+
+- **Onde:** `apps/web/src/lib/query-policy.ts` (`deveRetentar`,
+  `pollQueParaNoErro`), `apps/web/src/components/ErroDeCarregamento.tsx`,
+  `apps/web/src/routes/ProjectPage.tsx`, `apps/web/src/routes/Dashboard.tsx`,
+  `apps/web/src/routes/Shell.tsx`, `apps/web/src/main.tsx`
+- **Teste:** `apps/web/src/lib/query-policy.test.ts`;
+  `apps/web/src/routes/ProjectPage.test.tsx` (429 vira mensagem com a frase da
+  api; 403 mostra o motivo do 403; carregando não é erro);
+  `apps/web/src/routes/Dashboard.test.tsx` (erro na lista não vira "nenhum
+  projeto ainda"); `apps/web/src/routes/Shell.test.tsx` (a sidebar diz em vez
+  de ficar vazia)
+- **Origem:** navegação real em `/projects/:id` com 1128 erros 429 no console
+
+### RN-089 — Projeto de nome repetido se desempata na barra lateral {#rn-089}
+
+Nome de projeto **não é único** — nada no domínio impede. Quando dois ou mais
+projetos da lista têm o mesmo nome, cada um deles mostra na sidebar o id
+abreviado e a data de criação (`#a1b2c3d4 · 07/08 14:32`), os dois já presentes
+no payload do projeto. Quem tem nome único não mostra nada: a legenda em toda
+linha seria ruído no lugar com menos espaço da tela.
+
+Origem concreta: uma execução de validação criou vinte projetos chamados
+`validacao-real`, e as vinte linhas da sidebar eram visualmente idênticas.
+
+- **Onde:** `apps/web/src/lib/project-label.ts` (`nomesRepetidos`,
+  `desempateDoProjeto`), `apps/web/src/routes/Shell.tsx`
+- **Teste:** `apps/web/src/routes/Shell.test.tsx` (nome repetido ganha
+  desempate, nome único não)
+- **Origem:** navegação real com a sidebar cheia de projetos de validação
+
 ---
 
 ## Psicólogo e Anamnese
@@ -2195,6 +2489,7 @@ verificação, para a rotação não ter janela de indisponibilidade.
 | Duas decisões concorrentes na mesma hipótese | conflito explícito (RN-022) |
 | Réplica do engine cai | sessão é adotada por outra ou encerra como `closed_abnormally / node_shutdown` — nunca fica órfã |
 | Rate limit indisponível | a requisição **passa**: o guard protege contra abuso, não contra acesso indevido |
+| Rate limit **estourado** (429) | a tela diz o que a api respondeu e o poll para; a app nunca responde ao limite com mais tráfego (RN-088) |
 | Credencial errada, conta inexistente ou conta bloqueada | **a mesma** resposta 401, com o mesmo custo de argon2 (RN-032) |
 | Refresh já usado reapresentado | família revogada e evento de segurança; o usuário legítimo também é deslogado (RN-030) |
 | Tráfego interno sem o segredo de serviço | 403 na api, 401 no engine — nunca alcança o controller (RN-035) |

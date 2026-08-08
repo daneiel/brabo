@@ -10,6 +10,8 @@ import type {
   ActionType,
   Architecture,
   StoryPromotionMode,
+  AgentArea,
+  ParallelizationRequest,
   InfraArtifact,
   PsychologistHypothesis,
   PsychologistAnalysis,
@@ -51,6 +53,7 @@ import type {
   Workspace,
   WorkspaceSummary,
   WorkspaceWithRole,
+  RegistroDeGates,
 } from './api-types';
 
 export const API_URL = runtimeConfig.apiUrl;
@@ -489,15 +492,34 @@ export const reanalyzeSession = (projectId: string, sessionId: string) =>
 
 export const activateExecution = (projectId: string) =>
   post<ExecutionActivation>(`/projects/${projectId}/execution/activate`);
-export const acceptParallelization = (
+/**
+ * Pede mais um dev agent para um módulo (RN-083).
+ *
+ * Não é mais "aceitar": o pedido passa pelo teto da área. Dentro dele o agente
+ * sobe na hora; acima dele volta `aguardando_autorizacao` e NADA subiu — quem
+ * chama precisa dizer isso ao usuário, senão a tela mente que subiu.
+ */
+export const requestParallelization = (
   projectId: string,
   sessionId: string,
   module: string,
 ) =>
-  post<{ ok: true }>(
+  post<ParallelizationRequest>(
     `/projects/${projectId}/sessions/${sessionId}/execution/parallelize`,
     { module },
   );
+
+export const listAgentAreas = (projectId: string) =>
+  get<AgentArea[]>(`/projects/${projectId}/agent-areas`);
+
+export const setAreaMaxParallel = (
+  projectId: string,
+  key: string,
+  maxParallel: number,
+) =>
+  patch<AgentArea>(`/projects/${projectId}/agent-areas/${key}/max-parallel`, {
+    maxParallel,
+  });
 // Libera uma task que o dev agent devolveu bloqueada, depois de o usuário ler
 // o diagnóstico. Enquanto `blocked`, ela é excluída do claim atômico — sem
 // isto uma task impossível ficaria parada pra sempre.
@@ -689,5 +711,13 @@ export const setSessionBudget = (
   sessionId: string,
   input: { limitUsd: number; policy: BudgetPolicy },
 ) => put<Budget>(`/projects/${projectId}/sessions/${sessionId}/budget`, input);
+
+/**
+ * O registro de gates ATIVOS (FASE 15b).
+ *
+ * Global, sem `projectId`: os mesmos gates valem para todo projeto, e
+ * pendurá-lo num sugeriria o contrário.
+ */
+export const getRegistroDeGates = () => get<RegistroDeGates>('/gates');
 
 export type { ModelBindingScope };

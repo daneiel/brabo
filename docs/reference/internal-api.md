@@ -160,6 +160,17 @@ impedir a api de subir.
 O mecanismo inteiro está em
 [docs/explanation/gates.md](../explanation/gates.md).
 
+**Há uma segunda rota para o mesmo registro, e ela NÃO é interna.** O painel do
+time (FASE 15b) lê `GET /gates`, autenticada por JWT de usuário como qualquer
+rota de produto. Não é duplicação por descuido: `/internal/*` é autenticada por
+**service token**, que o navegador não tem e não pode ter — entregá-lo ao front
+daria a ele a superfície interna inteira, não só os gates. As duas diferem
+também no que devolvem: a interna entrega o registro como está no YAML, a
+pública devolve **só os gates `active`**, porque um gate `planned` é
+planejamento de engenharia e não tem por que aparecer na tela de quem espera
+uma PR. A classificação das duas está em
+[docs/security-surface.md](../security-surface.md).
+
 ### Catálogo de modelos
 
 | método | caminho |
@@ -312,15 +323,23 @@ por trás de uma PR de infra).
 | POST | `/hypotheses` |
 | POST | `/proficiency` |
 | POST | `/instruction-patches` |
+| POST | `/max-parallel-proposals` |
 
 A validação de evidência ([RN-021](../business-rules.md#rn-021)) e o catálogo
 fechado de competências ([RN-024](../business-rules.md#rn-024)) são aplicados
 **aqui**, na api. O engine não consegue gravar uma hipótese sem evidência
 válida nem perfilar uma competência fora do catálogo, ainda que o modelo peça.
 
+`/max-parallel-proposals` (FASE 14d) segue a mesma divisão: a Anamnese propõe
+subir o teto de paralelismo de uma área, e é a **api** que recusa uma proposta
+que não sobe nada — a Anamnese roda periodicamente, e sem essa recusa
+reproporia a mesma coisa a cada rodada. A ação que nasce daí **nunca é
+auto-aprovável** ([RN-086](../business-rules.md#rn-086)): automatizar o ajuste
+seria o produto elevando o próprio limite de gasto.
+
 ## api → engine
 
-Treze rotas de comando, mais as de saúde. Sob `/internal` com `VerifyServiceToken`:
+Quatorze rotas de comando, mais as de saúde. Sob `/internal` com `VerifyServiceToken`:
 
 | método | caminho | o que dispara |
 |---|---|---|
@@ -330,17 +349,35 @@ Treze rotas de comando, mais as de saúde. Sob `/internal` com `VerifyServiceTok
 | POST | `/sessions/:id/agent/readiness` | confirmação de prontidão |
 | POST | `/sessions/:id/agent/revise` | devolve ao PO uma história que o usuário recusou promover (Fase 12c — RN-048); **404 se o PO não está de pé**, e isso não é erro para a api |
 | POST | `/sessions/:id/agent/offer-infra-handoff` | oferta de handoff ao Infra |
+| POST | `/sessions/:id/agent/offer-dev-handoff` | oferta de handoff ao **Dev Lead** (FASE 14d — [RN-087](../business-rules.md#rn-087)) |
 | POST | `/sessions/:id/execution/start` | ativa a fase de execução |
-| POST | `/sessions/:id/execution/parallelize` | cria subagentes |
+| POST | `/sessions/:id/execution/parallelize` | cria subagentes — **executa, não decide** (ver abaixo) |
 | POST | `/sessions/:id/dev-agents/:agentId/rearm` | rearma um dev agent travado (Fase 12b — RN-047); 404 se não existe, **409 se não está `idle_tripped`** |
 | POST | `/sessions/:id/psychologist/reanalyze` | reanálise sob demanda |
 | POST | `/projects/:id/anamnese/run` | execução da Anamnese |
 | POST | `/projects/:id/agents/:agent/instructions/invalidate` | invalida o cache de instrução |
 | POST | `/actions/execute` · `/actions/execute-git` | executa uma ação **já aprovada** |
 
+As duas ofertas de handoff saem da **mesma** confirmação de arquitetura
+pronta, e são rotas separadas de propósito: Infra e Dev são áreas com desfechos
+independentes, e uma chamada só faria a falha de uma derrubar a outra. A ordem
+importa — Infra primeiro, porque o event log é imutável e um handoff já
+ofertado não teria como ser retratado.
+
 `/actions/execute` merece atenção: ele executa, não decide. A decisão já
 aconteceu na api. Se o engine pudesse decidir, o pipeline de aprovação teria
 uma porta dos fundos.
+
+**`execution/parallelize` é o mesmo caso, e desde a FASE 14d isso é visível.**
+A rota PÚBLICA de mesmo nome (`POST /projects/:projectId/sessions/:sessionId/execution/parallelize`)
+passa antes pelo teto da área ([RN-083](../business-rules.md#rn-083)): dentro
+dele o agente sobe na hora; acima dele a api cria uma `proposed_action` e **não
+chama o engine**. Quando o engine recebe este comando, a decisão já foi tomada
+— por teto ou por você.
+
+Vale reparar que o nome repetido nos dois lados esconde a assimetria: a rota
+pública é o PORTÃO, a interna é o EXECUTOR. É a mesma divisão de
+`/actions/execute`, e a razão de ela existir é idêntica.
 
 ### Saúde e métricas
 

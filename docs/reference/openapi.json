@@ -240,6 +240,40 @@
         ]
       }
     },
+    "/gates": {
+      "get": {
+        "description": "Índice declarativo dos gates do fluxo (ADR 0054). A tela deriva daqui quais etapas existem e quem julga cada uma, em vez de repetir a lista no código — que era como ela envelhecia sem ninguém perceber.",
+        "operationId": "GatesController_listar",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GatesResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "O registro de gates ativos",
+        "tags": [
+          "gates"
+        ]
+      }
+    },
     "/git/oauth/{provider}/callback": {
       "get": {
         "description": "Pública porque quem chega é o BROWSER do usuário vindo do provider, sem sessão da api. Não é irrestrita: o `state` é verificado por HMAC e sem ele válido a chamada é recusada. Nunca responde JSON — sempre redireciona, porque um corpo de erro cru numa navegação de browser seria péssima experiência.",
@@ -1335,6 +1369,62 @@
         ]
       }
     },
+    "/internal/sessions/{sessionId}/max-parallel-proposals": {
+      "post": {
+        "description": "Recusa propor um teto igual ou menor que o vigente: a Anamnese roda periodicamente, e reproporia a mesma coisa a cada rodada, enchendo de ruído uma fila que o usuário precisa ler.",
+        "operationId": "InternalSessionsController_maxParallelProposal",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProposeMaxParallelInternalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProposedActionResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Corpo inválido."
+          },
+          "403": {
+            "description": "Service token ausente ou diferente do compartilhado."
+          },
+          "404": {
+            "description": "Sessão, projeto ou recurso inexistente."
+          }
+        },
+        "security": [
+          {
+            "service-token": []
+          }
+        ],
+        "summary": "Propõe subir o teto de paralelismo de uma área",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
     "/internal/sessions/{sessionId}/module-map": {
       "post": {
         "description": "O histórico é imutável: cada publicação é uma versão a mais e a vigente é a de maior `version`. Um CICLO de dependência entre módulos faz o mapa ser REJEITADO com 400 — o grafo precisa ser acíclico.",
@@ -2221,6 +2311,128 @@
         "summary": "Remove o projeto",
         "tags": [
           "projetos"
+        ]
+      }
+    },
+    "/projects/{projectId}/agent-areas": {
+      "get": {
+        "description": "Vazio para projeto que nunca ativou execução, e isso NÃO é erro: as áreas nascem no seeding da ativação, porque os membros da área de dev vêm do `module_map`.",
+        "operationId": "ExecutionController_listAreas",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AreaDeAgentesResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto, sessão ou tarefa inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "As áreas de agente do projeto, com o teto de cada lead",
+        "tags": [
+          "execução"
+        ]
+      }
+    },
+    "/projects/{projectId}/agent-areas/{key}/max-parallel": {
+      "patch": {
+        "description": "Exige `maintainer`, e não `developer`, pelo mesmo motivo de ativar a execução: subir o teto é decidir quanto o produto pode gastar sem perguntar. Vale para os PRÓXIMOS pedidos — o que já está aguardando sua decisão continua aguardando.",
+        "operationId": "ExecutionController_setMaxParallel",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "key",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetMaxParallelDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AreaDeAgentesResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`maxParallel` não é inteiro >= 1."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto, sessão ou tarefa inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Muda o teto de paralelismo de uma área",
+        "tags": [
+          "execução"
         ]
       }
     },
@@ -5730,7 +5942,7 @@
     },
     "/projects/{projectId}/sessions/{sessionId}/execution/parallelize": {
       "post": {
-        "description": "Sobe mais um agente, em worktree próprio, para o módulo indicado.",
+        "description": "Passa pelo TETO da área de dev (RN-083): dentro dele o agente sobe na hora, em worktree próprio; acima dele a resposta é uma `proposed_action` do tipo `parallelize` aguardando a sua decisão, e NADA sobe até você decidir. O que o teto vale é configurável por lead em Configurações.",
         "operationId": "ExecutionController_parallelize",
         "parameters": [
           {
@@ -5766,7 +5978,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OkResponseDto"
+                  "$ref": "#/components/schemas/PedidoDeParalelismoResponseDto"
                 }
               }
             }
@@ -5792,7 +6004,7 @@
             "bearer": []
           }
         ],
-        "summary": "Aceita paralelizar um módulo com um dev agent dedicado",
+        "summary": "Pede mais um dev agent para um módulo",
         "tags": [
           "execução"
         ]
@@ -8005,7 +8217,9 @@
               "open_adr_pr",
               "git_merge",
               "open_infra_pr",
-              "instruction_patch"
+              "instruction_patch",
+              "parallelize",
+              "raise_max_parallel"
             ],
             "example": "terminal"
           },
@@ -8479,6 +8693,53 @@
           "pendencies"
         ]
       },
+      "AreaDeAgentesResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01JC4Z8QK3M7YV2N5T9B0PXHRA"
+          },
+          "projectId": {
+            "type": "string",
+            "example": "01JC4Z8QK3M7YV2N5T9B0PXHRA"
+          },
+          "key": {
+            "type": "string",
+            "example": "dev",
+            "description": "Identificador da área. Único dentro do projeto."
+          },
+          "leadAgentId": {
+            "type": "string",
+            "example": "dev-lead",
+            "description": "O lead da área — o único contato externo dela."
+          },
+          "maxParallel": {
+            "type": "number",
+            "example": 2,
+            "description": "Quantos agentes o lead pode ter na SESSÃO sem pedir autorização. Acima disso, `proposed_action`. O teto é da sessão e não do módulo: contar por módulo permitiria N módulos × N agentes sem autorização nenhuma."
+          },
+          "members": {
+            "example": [
+              "dev-api",
+              "dev-web"
+            ],
+            "description": "Os membros. Na área de dev vêm do `module_map`, um por módulo — é o que impede a área de ser uma lista fixa em código.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "projectId",
+          "key",
+          "leadAgentId",
+          "maxParallel",
+          "members"
+        ]
+      },
       "AssignStoryModulesInternalDto": {
         "type": "object",
         "properties": {
@@ -8868,7 +9129,9 @@
               "open_adr_pr",
               "git_merge",
               "open_infra_pr",
-              "instruction_patch"
+              "instruction_patch",
+              "parallelize",
+              "raise_max_parallel"
             ],
             "example": "terminal"
           },
@@ -9745,6 +10008,83 @@
           "severidade",
           "aprovacao_humana",
           "status"
+        ]
+      },
+      "GateResumoResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "qa-verificada"
+          },
+          "fluxo": {
+            "type": "string",
+            "example": "pr",
+            "description": "Fluxo a que o gate pertence."
+          },
+          "dono": {
+            "type": "string",
+            "example": "area-qa",
+            "description": "Quem julga."
+          },
+          "entrada": {
+            "example": [
+              "pr-aberta"
+            ],
+            "description": "O que precisa existir para o gate abrir.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "entregavel": {
+            "type": "object",
+            "example": "veredito-qa",
+            "description": "O que o gate produz quando passa."
+          },
+          "aprovacaoHumana": {
+            "type": "boolean",
+            "example": true,
+            "description": "A decisão é do usuário — direta no clique OU delegada por política que ele mesmo escreveu (ver RN-071)."
+          },
+          "severidade": {
+            "type": "string",
+            "example": "block",
+            "enum": [
+              "block",
+              "warn"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "fluxo",
+          "dono",
+          "entrada",
+          "entregavel",
+          "aprovacaoHumana",
+          "severidade"
+        ]
+      },
+      "GatesResponseDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number",
+            "example": 1,
+            "description": "Versão do formato do registro."
+          },
+          "gates": {
+            "description": "Só os gates ATIVOS. Gate `planned` descreve papel futuro e não deve aparecer numa tela que diz o que está acontecendo agora.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GateResumoResponseDto"
+            }
+          }
+        },
+        "required": [
+          "version",
+          "gates"
         ]
       },
       "GateVerdictResponseDto": {
@@ -11046,6 +11386,43 @@
           "status"
         ]
       },
+      "PedidoDeParalelismoResponseDto": {
+        "type": "object",
+        "properties": {
+          "estado": {
+            "type": "string",
+            "enum": [
+              "executado",
+              "aguardando_autorizacao",
+              "recusado"
+            ],
+            "example": "aguardando_autorizacao",
+            "description": "`executado`: o agente subiu, dentro do teto do lead. `aguardando_autorizacao`: o pedido virou `proposed_action` e NADA subiu até você decidir. `recusado`: a área tem `max_parallel` inválido."
+          },
+          "actionId": {
+            "type": "string",
+            "example": "01JC4Z8QK3M7YV2N5T9B0PXHRA",
+            "description": "A ação a decidir. Só em `aguardando_autorizacao`."
+          },
+          "ativosNaSessao": {
+            "type": "number",
+            "example": 2,
+            "description": "Dev agents já de pé NA SESSÃO, somando todos os módulos."
+          },
+          "maxParallel": {
+            "type": "number",
+            "example": 2,
+            "description": "O teto que o lead usa sem perguntar."
+          },
+          "motivo": {
+            "type": "string",
+            "description": "Por que o pedido foi recusado. Só em `recusado`."
+          }
+        },
+        "required": [
+          "estado"
+        ]
+      },
       "PerfilApagadoResponseDto": {
         "type": "object",
         "properties": {
@@ -11543,7 +11920,9 @@
               "open_adr_pr",
               "git_merge",
               "open_infra_pr",
-              "instruction_patch"
+              "instruction_patch",
+              "parallelize",
+              "raise_max_parallel"
             ],
             "example": "terminal",
             "description": "Tipo da ação. Cada tipo tem papel mínimo próprio: `git_push`, `git_merge` e `git_branch_protect` exigem `maintainer`, o resto `developer`."
@@ -11607,7 +11986,9 @@
               "open_adr_pr",
               "git_merge",
               "open_infra_pr",
-              "instruction_patch"
+              "instruction_patch",
+              "parallelize",
+              "raise_max_parallel"
             ],
             "example": "terminal",
             "description": "O que a ação faria. `git_push` e `git_merge` exigem `maintainer`."
@@ -11814,6 +12195,38 @@
           "projectId",
           "agent",
           "proposedContent",
+          "rationale"
+        ]
+      },
+      "ProposeMaxParallelInternalDto": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "01JC4Z0000PROJETO0000000001"
+          },
+          "area": {
+            "type": "string",
+            "example": "dev",
+            "description": "A área cujo teto subiria."
+          },
+          "proposto": {
+            "type": "number",
+            "example": 4,
+            "minimum": 1,
+            "description": "O teto proposto. Precisa ser MAIOR que o vigente — propor o mesmo ou menos vira ruído numa fila que o usuário precisa ler, e a Anamnese roda periodicamente."
+          },
+          "rationale": {
+            "type": "string",
+            "example": "Você autorizou o mesmo pedido quatro vezes nesta janela, e nenhuma foi negada.",
+            "description": "Ancorado nas DECISÕES observadas, não em impressão."
+          }
+        },
+        "required": [
+          "projectId",
+          "area",
+          "proposto",
           "rationale"
         ]
       },
@@ -12931,7 +13344,9 @@
               "open_adr_pr",
               "git_merge",
               "open_infra_pr",
-              "instruction_patch"
+              "instruction_patch",
+              "parallelize",
+              "raise_max_parallel"
             ],
             "example": "terminal"
           },
@@ -12950,6 +13365,20 @@
           "agentId",
           "actionType",
           "mode"
+        ]
+      },
+      "SetMaxParallelDto": {
+        "type": "object",
+        "properties": {
+          "maxParallel": {
+            "type": "number",
+            "example": 4,
+            "minimum": 1,
+            "description": "Quantos agentes o lead da área pode ter na sessão SEM pedir sua autorização. Mínimo 1 — zero não significa \"sem limite\", significa configuração inválida, e tratá-lo como ilimitado transformaria um erro de digitação em gasto irrestrito."
+          }
+        },
+        "required": [
+          "maxParallel"
         ]
       },
       "SetModelBindingDto": {

@@ -38,6 +38,31 @@ export interface Project {
 
 export type StoryPromotionMode = 'manual' | 'auto';
 
+/** Uma área de agente e seu teto de paralelismo (FASE 14d, ADR 0053). */
+export interface AgentArea {
+  id: string;
+  projectId: string;
+  key: string;
+  leadAgentId: string;
+  /** Quantos agentes o lead sobe na SESSÃO sem pedir autorização. */
+  maxParallel: number;
+  members: string[];
+}
+
+/**
+ * O desfecho de um pedido de paralelismo (RN-083).
+ *
+ * `estado` é o discriminador — não infira pela presença do `actionId`. Em
+ * `aguardando_autorizacao` NADA subiu: existe uma ação esperando você.
+ */
+export interface ParallelizationRequest {
+  estado: 'executado' | 'aguardando_autorizacao' | 'recusado';
+  actionId?: string;
+  ativosNaSessao?: number;
+  maxParallel?: number;
+  motivo?: string;
+}
+
 /**
  * O resultado de um lote de promoção (Fase 12c — RN-048). NÃO é
  * all-or-nothing: `failed` pode vir preenchido numa resposta de sucesso.
@@ -837,4 +862,26 @@ export interface CredentialSpend {
   meses: number;
   totalMicros: number;
   porProvider: CredentialSpendPorProvider[];
+}
+
+/**
+ * O registro de gates (ADR 0054), como a tela o consome — FASE 15b.
+ *
+ * Só os campos que a tela usa. O registro carrega mais (`evidencia`,
+ * `verificacao`), e trazê-los para cá convidaria a tela a depender do que
+ * serve à MEDIÇÃO, não a ela.
+ */
+export interface GateResumo {
+  id: string;
+  fluxo: string;
+  dono: string;
+  entrada: string[];
+  entregavel: string | string[];
+  aprovacaoHumana: boolean;
+  severidade: string;
+}
+
+export interface RegistroDeGates {
+  version: number;
+  gates: GateResumo[];
 }

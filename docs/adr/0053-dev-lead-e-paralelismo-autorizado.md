@@ -1,6 +1,6 @@
 # ADR 0053 — Dev Lead como área, e paralelismo autorizado pelo usuário
 
-- **Status:** Proposto
+- **Status:** Aceito (implementado na FASE 14d, 2026-08-07)
 - **Data:** 2026-08-05
 - **Contexto:** FASE 14d
 - **Revoga cortes de:** [ADR 0038](0038-hierarquia-de-agentes.md) (o
@@ -122,10 +122,11 @@ Consequências diretas:
   backlog pegável e o teto vigente. Ele não escreve código: distribui trabalho e
   responde por ele.
 
-> **TODO(humano):** o Dev Lead conduz também a correção pós-gate (hoje o
-> veredito volta direto ao `dev-<modulo>` que abriu a PR), ou o gate continua
-> falando com o dev? Manter como está preserva a suite da Fase 4 intacta;
-> passar pelo lead é mais coerente com a hierarquia e mexe no contrato interno.
+> **RESPONDIDO em 2026-08-07:** a correção pós-gate continua indo **direto ao
+> `dev-<modulo>`** que abriu a PR. Preserva a suite da Fase 4 intacta e o
+> contrato interno atual; é menos coerente com a hierarquia, e é reversível —
+> dá para passar pelo lead depois, quando ele existir e estiver provado.
+> Decidir agora, sem o Dev Lead implementado, seria escolher no escuro.
 
 ## Consequências
 

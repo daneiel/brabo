@@ -172,6 +172,7 @@ o componente `d` da JWK, travado por teste.
 | POST | `/auth/request-password-reset` | public |
 | POST | `/auth/reset-password` | public |
 | POST | `/auth/verify-email` | public |
+| GET | `/gates` | jwt |
 | GET | `/git/oauth/:provider/callback` | public |
 | GET | `/health` | public |
 | GET | `/live` | public |
@@ -191,6 +192,7 @@ o componente `d` da JWK, travado por teste.
 | GET | `/internal/sessions/:sessionId/infra-context` | engine-service |
 | POST | `/internal/sessions/:sessionId/infra-gates/verdict` | engine-service |
 | POST | `/internal/sessions/:sessionId/instruction-patches` | engine-service |
+| POST | `/internal/sessions/:sessionId/max-parallel-proposals` | engine-service |
 | POST | `/internal/sessions/:sessionId/llm-turn` | engine-service |
 | POST | `/internal/sessions/:sessionId/llm-turn-stream` | engine-service |
 | POST | `/internal/sessions/:sessionId/module-map` | engine-service |
@@ -231,6 +233,8 @@ o componente `d` da JWK, travado por teste.
 | GET | `/projects/:projectId/backlog` | role:viewer |
 | GET | `/projects/:projectId/budget` | role:maintainer |
 | PUT | `/projects/:projectId/budget` | role:maintainer |
+| GET | `/projects/:projectId/agent-areas` | role:developer |
+| PATCH | `/projects/:projectId/agent-areas/:key/max-parallel` | role:maintainer |
 | GET | `/projects/:projectId/coverage` | role:viewer |
 | GET | `/projects/:projectId/events/:eventId` | role:viewer |
 | POST | `/projects/:projectId/execution/activate` | role:maintainer |
