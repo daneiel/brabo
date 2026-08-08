@@ -343,7 +343,7 @@ fonte de sistema, e título e corpo ficavam indistinguíveis.
 
 ## Estado
 
-**Fases 1 a 12 concluídas**, versão **v2.4.0** ([CHANGELOG](CHANGELOG.md)).
+**Fases 1 a 12 concluídas**, versão **v2.5.0** ([CHANGELOG](CHANGELOG.md)).
 Esteira de release exercitada de ponta a ponta, auth first-party sem Keycloak,
 nove providers de LLM sobre uma base única e o primeiro dogfooding — o Brabo
 construindo o próprio Brabo — com a colheita escrita.
