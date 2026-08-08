@@ -1794,6 +1794,19 @@ gasto acontece quando os agentes sobem, e é lá que o teto cobra autorização.
 Transformar a proposta em ação a decidir faria você decidir duas vezes a mesma
 coisa.
 
+**O plano BEM-SUCEDIDO encerra o turno.** Na primeira execução real o Dev Lead
+registrou **dois** `execution.plan_proposed` na mesma sessão — textos
+diferentes, mesmo total —, porque o laço voltava ao modelo e ele propunha de
+novo. O event log é imutável: ficaram duas propostas e nada dizendo qual valia.
+A instrução "use uma vez" no spec da ferramenta é pedido, não garantia; quem
+garante é o laço parar.
+
+**Bem-sucedido, e não "chamou a ferramenta"**: um plano recusado (vazio, ou com
+zero agente num módulo) deixa o laço seguir, senão a recusa vira fim de turno e
+o modelo nunca chega a corrigir. A primeira versão desta guarda olhava só o
+nome da ferramenta e tinha esse defeito — encontrado pelo teste comportamental,
+não pela leitura.
+
 Um plano vazio, ou com zero agente num módulo, é recusado **antes de gravar
 qualquer coisa** — o event log é imutável, e um plano meio gravado não teria
 como ser retratado.
@@ -1803,6 +1816,8 @@ como ser retratado.
   `apps/api/src/domain/agents/agent-areas.ts`; o handoff em
   `application/use-cases/agents/offer-infra-handoff.use-case.ts`
 - **Teste:** `apps/engine/test/engine/agents/dev_lead_tools_test.exs`,
+  `dev_lead_server_test.exs` (`o plano ENCERRA o turno`, `o plano recusado NÃO
+  encerra o turno`),
   `apps/api/test/domain/agents/agent-areas.spec.ts` (`o dev de módulo DEIXOU de
   ser endereçável`, `` `dev-lead` É endereçável, apesar do prefixo ``) e
   `test/application/use-cases/agents/offer-infra-handoff.use-case.spec.ts`
