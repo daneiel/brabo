@@ -142,6 +142,26 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   não há versão corrigida publicada, a última do registry é a vulnerável — entra
   por `@docusaurus/mdx-loader` e só lê imagens versionadas neste repositório
 
+### Manutenção
+
+- **design**: o handoff de design passa a viver no repositório
+  (`design_handoff_brabo/`: especificação + 8 telas de alta fidelidade), e
+  `design/tokens.css` fecha contra ele. Entra `--violet` (`#9c7be0`, agentes/IA)
+  — a última cor do handoff sem token, já hard-coded em quatro lugares do web
+  justamente porque não havia o que referenciar — e `--shadow-lg`, a sombra
+  grande do login, que cada tela que precisasse dela ia acabar escrevendo por
+  conta. **Mudança visível**: `--shadow` estava mais rasa que a especificada
+  (`0 8px 24px` a .35) e passa ao valor do handoff (`0 12px 32px` a .45), o que
+  aprofunda a sombra de todo card, modal e dropdown. O teste de contraste cobre
+  `--violet` nos quatro fundos em que ele é usado e ganha uma trava nova de
+  paridade entre os temas: token semântico de cor declarado só no escuro não
+  some no claro — ele VAZA, e o defeito aparece longe do commit que o causou. A
+  dívida conhecida de contraste segue intocada, nos mesmos 4 pares. As fontes
+  continuam **auto-hospedadas**: é a única divergência deliberada em relação ao
+  handoff, que pede o `<link>` do Google Fonts — seguir esse item reintroduz a
+  falha que o ADR 0036 fechou, porque a CSP do nginx bloqueia a folha e os
+  arquivos
+
 ## v2.4.0 — 2026-08-07
 
 ### Novidades
