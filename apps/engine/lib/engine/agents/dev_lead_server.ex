@@ -140,8 +140,29 @@ defmodule Engine.Agents.DevLeadServer do
             state
 
           calls ->
-            state = Enum.reduce(calls, state, &dispatch_tool/2)
-            run_turn(state, remaining - 1)
+            {state, planou} =
+              Enum.reduce(calls, {state, false}, fn call, {st, acc} ->
+                {st, ok} = dispatch_tool(call, st)
+                {st, acc or ok}
+              end)
+
+            # O plano BEM-SUCEDIDO encerra o turno, como o `propose_infra_pr`
+            # encerra o do Infra Lead. Sem isto o laço volta ao modelo, que
+            # propõe de novo: na primeira execução real ele registrou DOIS
+            # planos, com textos diferentes e o mesmo total — e o event log é
+            # imutável, então nada dizia qual valia. A instrução "use UMA vez"
+            # no spec é pedido, não garantia; quem garante é o laço parar.
+            #
+            # BEM-SUCEDIDO, e não "chamou a ferramenta": um plano RECUSADO
+            # (vazio, ou com zero agente num módulo) precisa deixar o laço
+            # seguir, senão a recusa vira fim de turno e o modelo nunca chega
+            # a corrigir. A primeira versão desta guarda olhava só o nome da
+            # ferramenta e tinha esse defeito.
+            if planou do
+              state
+            else
+              run_turn(state, remaining - 1)
+            end
         end
 
       {:error, reason} ->
@@ -154,6 +175,8 @@ defmodule Engine.Agents.DevLeadServer do
     end
   end
 
+  # Devolve `{state, plano_registrado?}` — o segundo elemento é o que decide se
+  # o laço para.
   defp dispatch_tool(call, state) do
     name = Map.get(call, "name")
     args = Map.get(call, "arguments", %{})
@@ -161,19 +184,22 @@ defmodule Engine.Agents.DevLeadServer do
 
     emit(state, "tool.call", %{tool: name, args: args})
 
-    text =
+    {text, ok} =
       case run_tool(name, args, state) do
-        {:ok, s} -> s
-        {:error, s} -> s
+        {:ok, s} -> {s, name == "propose_execution_plan"}
+        {:error, s} -> {s, false}
       end
 
-    append(state, %{
-      "role" => "tool",
-      "content" => text,
-      "toolCallId" => id,
-      "name" => name,
-      :pinned => false
-    })
+    state =
+      append(state, %{
+        "role" => "tool",
+        "content" => text,
+        "toolCallId" => id,
+        "name" => name,
+        :pinned => false
+      })
+
+    {state, ok}
   end
 
   defp run_tool("propose_execution_plan", args, state), do: DevLeadTools.run(args, state)
