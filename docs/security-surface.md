@@ -309,4 +309,6 @@ o componente `d` da JWK, travado por teste.
 | GET | `/workspaces/:workspaceId/projects` | role:viewer |
 | POST | `/workspaces/:workspaceId/projects` | role:maintainer |
 | GET | `/workspaces/:workspaceId/projects-status` | role:viewer |
+| GET | `/workspaces/:workspaceId/projects-summary` | role:viewer |
 | GET | `/workspaces/:workspaceId/summary` | role:viewer |
+| POST | `/workspaces/:workspaceId/unread-events` | role:viewer |

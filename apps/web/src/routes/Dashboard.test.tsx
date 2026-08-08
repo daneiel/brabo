@@ -30,24 +30,19 @@ vi.mock('../lib/hooks', () => ({
   useCurrentWorkspace: () => ({ data: { id: 'ws-1', name: 'Acme', slug: 'acme' } }),
   useProjects: () => useProjectsMock(),
   useWorkspaceSummary: () => useWorkspaceSummaryMock(),
-  useProjectLastActivity: () => 'sem atividade ainda',
-  useLatestSession: () => ({ latest: undefined }),
-  useSessionEvents: () => ({ data: undefined }),
-  useArchitecture: () => ({ data: undefined }),
-  useHandoffs: () => ({ data: undefined }),
-  usePendingActions: () => ({ data: undefined }),
+  useProjectsSummary: () => ({ data: [], isLoading: false }),
 }));
 
 vi.mock('../lib/notifications', () => ({
   useProjectsUnread: (projects: Project[] | undefined) =>
     (projects ?? []).map((project) => ({
       project,
-      latestSession: undefined,
+      latestSessionId: null,
       latestSeq: 0,
       unreadCount: 0,
     })),
   useNotificationGroups: () => [],
-  useStoriesAwaitingPromotion: () => 0,
+  storiesAwaitingPromotion: () => 0,
 }));
 
 vi.mock('../lib/api-client', async () => {
@@ -58,9 +53,6 @@ vi.mock('../lib/api-client', async () => {
   return {
     ApiError: real.ApiError,
     mensagemDaApi: real.mensagemDaApi,
-    getRepository: () => Promise.resolve(null),
-    getProjectBudget: () => Promise.resolve(null),
-    getBootstrapStatus: () => Promise.resolve(null),
   };
 });
 

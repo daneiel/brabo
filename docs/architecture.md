@@ -142,6 +142,31 @@ quem estava fazendo o quê. Nenhuma das três tem estado ou rota própria — to
 derivam dos mesmos eventos, e um evento que não está no log não aparece em
 nenhuma.
 
+**Escopo de leitura: tela de projeto pede por sessão, tela de lista pede por
+workspace.** Dentro de um projeto as queries são por sessão e por projeto, que
+é o recorte natural do que está aberto. Já o dashboard e a barra lateral
+mostram TODOS os projetos, e ali o recorte por projeto vira N+1: eram sete
+consultas em poll por card, 3.824 req/min com 23 projetos contra um limite de
+300, e a tela derrubava a si mesma em 429. As duas leem de
+`GET /workspaces/:id/projects-summary` — um read model que atravessa agregados
+(git, orçamento, sessão, backlog, arquitetura) e cujo número de idas ao banco
+não cresce com a quantidade de projetos ([RN-090](business-rules.md#rn-090)).
+
+A gaveta do sino segue o mesmo recorte, com uma diferença que vale registrar:
+ela precisa do corte de leitura de cada projeto, e esse corte é um `seq`
+guardado no navegador de quem está olhando (`lib/read-state.ts`) — o servidor
+não tem, nem terá, um "marcar como lido". Por isso o cliente **manda** o mapa
+`projeto → afterSeq` no corpo de `POST /workspaces/:id/unread-events`, que é
+leitura apesar do verbo e responde `200` ([RN-091](business-rules.md#rn-091)).
+O verbo é consequência do corpo, não de mutação: são dezenas de pares, e query
+string desse tamanho quebra em proxy além de pôr id de projeto em log de acesso.
+
+Esse endpoint devolve FATOS do event log, nunca componentes montados:
+`lib/agents.ts` (quem é lead, ícone, cor) e `rosterFromFacts`
+(`lib/agent-status.ts`) continuam sendo do web, e a regra de presença é a mesma
+que o painel do time usa. É a mesma fronteira das três derivações acima — a api
+diz o que aconteceu, o web decide o que se desenha com isso.
+
 Duas validações de UI são automáticas: contraste (`lib/contraste.ts`, teste
 sobre `design/tokens.css`) e layout (`scripts/dev/validacao-visual.js`, rodado
 no navegador). Estão explicadas em `design/README.md`.

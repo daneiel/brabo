@@ -2186,6 +2186,114 @@ Origem concreta: uma execução de validação criou vinte projetos chamados
   desempate, nome único não)
 - **Origem:** navegação real com a sidebar cheia de projetos de validação
 
+### RN-090 — O dashboard lê o workspace, não um projeto de cada vez {#rn-090}
+
+A grade de cards e os dots da barra lateral se alimentam de **uma** requisição
+por ciclo — `GET /workspaces/:workspaceId/projects-summary` —, e o número de
+requisições **não cresce com a quantidade de projetos**.
+
+O card mostra provedor de git, status de provisionamento, orçamento, chips de
+agentes e última atividade; a sidebar mostra o dot de status e o contador de
+não lidos. Tudo isso vinha de sete consultas em POLL por projeto, o que fazia
+23 projetos custarem 3.824 requisições por minuto contra um limite de 300
+(`RateLimitGuard`) — a tela derrubava a si mesma em 429 antes de terminar de
+carregar. A [RN-088](#rn-088) fez a app parar de insistir quando isso acontece;
+esta reduz o pedido.
+
+Duas fronteiras que a regra fixa, e que não são detalhe de implementação:
+
+- **A api responde fatos, não roster.** `roster` traz o que aconteceu no event
+  log (execução ativada, módulos, gate já aberto, subagentes delegados, infra
+  aceita). Quem é lead de área, que ícone cada agente tem e como os membros
+  viram um chip continua sendo do web — e a regra de PRESENÇA é uma só
+  (`rosterFromFacts`), compartilhada com o painel do time, para que um agente
+  novo não apareça num lugar e falte no outro.
+- **A gaveta do sino só busca quando aberta.** Ela era, até a
+  [RN-091](#rn-091), a única leitura que continuava sendo uma requisição por
+  projeto — o corte de "onde parei de ler" é `seq` guardado no navegador
+  (`read-state`), que o servidor não conhece. Hoje o navegador **manda** esse
+  corte, e a gaveta também é uma requisição só.
+
+Efeito colateral aceito e desejado: `gatesEverOpened` e `delegatedSubagents`
+passam a cobrir a sessão INTEIRA. O cliente derivava dos últimos 200 eventos e
+perdia chips em sessão longa (ver
+[ADR 0021](adr/0021-fechamento-4a-infra-e-painel.md)) — o texto de
+`deriveAgentRoster` sempre disse "já abriu alguma vez".
+
+- **Onde:**
+  `apps/api/src/application/ports/projects-summary-repository.port.ts`,
+  `apps/api/src/infrastructure/persistence/drizzle/projects-summary.repository.ts`,
+  `apps/api/src/interfaces/http/iam/workspaces.controller.ts`
+  (`getProjectsSummary`), `apps/web/src/lib/hooks.ts` (`useProjectsSummary`),
+  `apps/web/src/lib/agent-status.ts` (`rosterFromFacts`),
+  `apps/web/src/routes/Dashboard.tsx`, `apps/web/src/routes/Shell.tsx`
+- **Teste:** `apps/web/src/routes/Dashboard.fanout.test.tsx` (30 projetos
+  custam o mesmo que 3; nenhum endpoint por projeto é chamado);
+  `apps/api/test/infrastructure/persistence/drizzle/projects-summary.repository.spec.ts`
+  (o número de consultas ao banco não cresce com N);
+  `apps/web/src/lib/agent-status.test.ts` (os fatos da api produzem os mesmos
+  chips que o event log)
+- **Origem:** dashboard de 23 projetos medido no navegador — 3.824 req/min
+  antes, 12 depois
+
+### RN-091 — O navegador manda onde parou de ler; o sino é uma requisição {#rn-091}
+
+Com a gaveta de notificações **aberta**, o conteúdo dela sai de **uma**
+requisição por ciclo — `POST /workspaces/:workspaceId/unread-events` — e o
+número de requisições **não cresce com a quantidade de projetos**.
+
+É a metade que faltava da [RN-090](#rn-090). Aquela derrubou o dashboard de
+3.824 para 12 req/min, mas o sino continuou buscando um projeto de cada vez:
+23 projetos com a gaveta aberta mediam **286 req/min** contra o limite de 300
+(`RateLimitGuard`). Passava, e sumia com um projeto a mais.
+
+**O obstáculo, e por que a saída é esta.** Não existe "marcar como lido" no
+servidor, de propósito: o corte é um `seq` por projeto guardado no
+`localStorage` de cada navegador (`read-state`). Havia duas saídas, e a
+diferença entre elas é de PRODUTO:
+
+- parar de repolar enquanto a gaveta está aberta muda a atualidade do que o
+  usuário vê — **recusada**, ninguém pediu essa troca;
+- o navegador **mandar** o mapa `projeto → afterSeq` devolve exatamente os
+  mesmos dados na mesma cadência. **É batelamento puro: nada muda para quem
+  olha a tela**, nem a frescura nem o conteúdo.
+
+**É `POST` sem mutar nada**, e a api responde `200` (nunca `201`) para dizer
+isso. O verbo foi escolhido por ser o único com CORPO: são dezenas de pares, e
+em query string isso vira URL longa — que proxy trunca — além de pôr id de
+projeto do usuário em log de acesso, contra a regra de não passar dado pessoal
+por query string.
+
+Três garantias de semântica que a rota fixa, porque batelar leituras com cortes
+diferentes é onde o erro fácil mora:
+
+- **mapa vazio devolve vazio**, e sem tocar no banco. "Não perguntei nada" não
+  é "me dê tudo";
+- **cada projeto respeita o SEU corte** — `seq` estritamente maior que o dele;
+- **o teto de 50 eventos é por projeto**, o mesmo que `GET .../events` aplica
+  sem `limit`. Um limite na resposta inteira deixaria o projeto barulhento
+  comer a cota dos calados.
+
+Cursor apontando para projeto de outro workspace é **ignorado**, não recusado:
+ele vem do armazenamento local de quem chama e pode ser sobra de um workspace
+antigo.
+
+- **Onde:**
+  `apps/api/src/application/ports/projects-summary-repository.port.ts`
+  (`unreadEventsForWorkspace`),
+  `apps/api/src/infrastructure/persistence/drizzle/projects-summary.repository.ts`,
+  `apps/api/src/interfaces/http/iam/workspaces.controller.ts`
+  (`getUnreadEvents`), `apps/api/src/interfaces/http/iam/dto/unread-events.dto.ts`,
+  `apps/web/src/lib/notifications.ts` (`useNotificationGroups`),
+  `apps/web/src/lib/api-client.ts` (`getUnreadEvents`)
+- **Teste:** `apps/web/src/routes/Dashboard.fanout.test.tsx` (com a gaveta
+  ABERTA: uma requisição, e 30 projetos custam o mesmo que 3);
+  `apps/api/test/infrastructure/persistence/drizzle/projects-summary.repository.spec.ts`
+  (o número de consultas ao banco não cresce com N; mapa vazio, corte por
+  projeto, teto por projeto e isolamento de workspace)
+- **Origem:** residual medido da [RN-090](#rn-090) — 286 req/min com a gaveta
+  aberta num workspace de 23 projetos
+
 ---
 
 ## Psicólogo e Anamnese

@@ -35,7 +35,9 @@ import type {
   PermissionsFile,
   Project,
   ProjectBlockedStatus,
+  ProjectCardSummary,
   ProjectMemberWithUser,
+  ProjectUnreadEvents,
   ProposedAction,
   ProvisionedRepository,
   ProvisionRepositoryResult,
@@ -49,6 +51,7 @@ import type {
   SessionEvent,
   CredentialProviderName,
   CredentialTestResult,
+  UnreadCursor,
   UserCredentialMetadata,
   Workspace,
   WorkspaceSummary,
@@ -231,6 +234,25 @@ export const getWorkspaceSummary = (workspaceId: string) =>
   get<WorkspaceSummary>(`/workspaces/${workspaceId}/summary`);
 export const getProjectsStatus = (workspaceId: string) =>
   get<ProjectBlockedStatus[]>(`/workspaces/${workspaceId}/projects-status`);
+export const getProjectsSummary = (workspaceId: string) =>
+  get<ProjectCardSummary[]>(`/workspaces/${workspaceId}/projects-summary`);
+/**
+ * Os eventos não lidos de VÁRIOS projetos numa chamada (RN-091) — o conteúdo
+ * da gaveta do sino.
+ *
+ * `POST` sem mutar nada, e a api responde 200 justamente por isso. O corte de
+ * leitura é um `seq` por projeto que só este navegador conhece (`read-state`),
+ * então ele precisa viajar no PEDIDO; são dezenas de pares, e query string
+ * dessa altura quebra em proxy além de pôr id de projeto do usuário em log de
+ * acesso. Mapa vazio devolve vazio.
+ */
+export const getUnreadEvents = (
+  workspaceId: string,
+  cursors: UnreadCursor[],
+) =>
+  post<ProjectUnreadEvents[]>(`/workspaces/${workspaceId}/unread-events`, {
+    cursors,
+  });
 export const createProject = (
   workspaceId: string,
   input: { name: string; slug: string },

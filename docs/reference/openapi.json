@@ -7918,6 +7918,58 @@
         ]
       }
     },
+    "/workspaces/{workspaceId}/projects-summary": {
+      "get": {
+        "description": "Uma linha por projeto do workspace com provedor de git, status de provisionamento, orçamento, última atividade, histórias aguardando promoção e os fatos que decidem a roster de agentes (RN-090).\n\nMesma ideia de `projects-status`, um andar acima: a grade de cards é uma leitura do WORKSPACE, não N leituras de projeto. O caminho anterior fazia sete consultas em poll por card, e com 23 projetos o dashboard sozinho estourava o rate limit de 300 req/min.",
+        "operationId": "WorkspacesController_getProjectsSummary",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProjectCardSummaryResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no workspace."
+          },
+          "404": {
+            "description": "Workspace inexistente ou invisível para quem chamou."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Tudo que os cards do dashboard desenham, numa chamada",
+        "tags": [
+          "workspaces"
+        ]
+      }
+    },
     "/workspaces/{workspaceId}/summary": {
       "get": {
         "description": "Contagem de projetos, agentes que gastaram tokens neste mês e o gasto do mês — alimenta a linha de resumo do dashboard de projetos.",
@@ -7962,6 +8014,71 @@
           }
         ],
         "summary": "Resumo agregado do workspace",
+        "tags": [
+          "workspaces"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/unread-events": {
+      "post": {
+        "description": "A gaveta do sino, para o workspace inteiro (RN-091). Cada cursor diz até que `seq` aquele projeto já foi lido, e a resposta traz o que veio depois disso na sessão mais recente de cada um.\n\n**É POST porque é o único verbo com CORPO, não porque muda estado.** O servidor não sabe onde cada leitor parou: \"lido até aqui\" é um `seq` por projeto guardado no navegador, e não existe (de propósito) endpoint de marcar como lido. Logo o corte precisa VIAJAR no pedido, e são dezenas de pares — em query string isso vira URL longa, que proxy trunca, e ainda colocaria id de projeto do usuário em log de acesso. A rota é idempotente e sem efeito colateral: responde `200`, nunca `201`.\n\nSubstitui uma requisição POR PROJETO com a gaveta aberta — 23 projetos custavam 286 req/min contra um limite de 300.",
+        "operationId": "WorkspacesController_getUnreadEvents",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnreadEventsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProjectUnreadEventsResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no workspace."
+          },
+          "404": {
+            "description": "Workspace inexistente ou invisível para quem chamou."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Os eventos não lidos de vários projetos, numa chamada",
         "tags": [
           "workspaces"
         ]
@@ -11664,6 +11781,103 @@
           "blockedTaskCount"
         ]
       },
+      "ProjectCardBudgetResponseDto": {
+        "type": "object",
+        "properties": {
+          "limitMicros": {
+            "type": "number",
+            "example": 50000000
+          },
+          "spentMicros": {
+            "type": "number",
+            "example": 12500000
+          }
+        },
+        "required": [
+          "limitMicros",
+          "spentMicros"
+        ]
+      },
+      "ProjectCardSummaryResponseDto": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "example": "01JC4Z0000PROJETO0000000001"
+          },
+          "provider": {
+            "type": "string",
+            "enum": [
+              "local",
+              "github",
+              "gitlab"
+            ],
+            "example": "github",
+            "description": "`local` quando o projeto ainda não tem repositório provisionado."
+          },
+          "provisioningStatus": {
+            "type": "string",
+            "enum": [
+              "provisioning",
+              "provisioned",
+              "provision_failed",
+              "awaiting_plan_decision"
+            ],
+            "nullable": true,
+            "example": "provisioned",
+            "description": "`null` quando o bootstrap nunca começou. Derivado do cursor."
+          },
+          "budget": {
+            "nullable": true,
+            "description": "`null` quando o projeto NUNCA teve orçamento definido — distinto de uma linha zerada, e é o que faz o card oferecer \"Definir orçamento\".",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ProjectCardBudgetResponseDto"
+              }
+            ]
+          },
+          "latestSessionId": {
+            "type": "object",
+            "example": "01JC4Z0000SESSAO00000000001",
+            "nullable": true
+          },
+          "latestSeq": {
+            "type": "number",
+            "example": 41,
+            "description": "Último `seq` já gravado na sessão mais recente (`nextSeq - 1`); 0 quando não há sessão. O web compara com o que já foi visto para contar não lidos."
+          },
+          "lastEvent": {
+            "nullable": true,
+            "description": "Último evento da sessão mais recente — a linha de rodapé do card.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SessionEventResponseDto"
+              }
+            ]
+          },
+          "storiesAwaitingPromotion": {
+            "type": "number",
+            "example": 2,
+            "description": "Histórias que o PO terminou e que aguardam a promoção do usuário (RN-048)."
+          },
+          "roster": {
+            "$ref": "#/components/schemas/RosterFactsResponseDto"
+          }
+        },
+        "required": [
+          "projectId",
+          "provider",
+          "provisioningStatus",
+          "budget",
+          "latestSessionId",
+          "latestSeq",
+          "lastEvent",
+          "storiesAwaitingPromotion",
+          "roster"
+        ]
+      },
       "ProjectGitRemoteResponseDto": {
         "type": "object",
         "properties": {
@@ -11840,6 +12054,32 @@
           "storyPromotion",
           "createdAt",
           "updatedAt"
+        ]
+      },
+      "ProjectUnreadEventsResponseDto": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "example": "01JC4Z0000PROJETO0000000001"
+          },
+          "sessionId": {
+            "type": "string",
+            "example": "01JC4Z0000SESSAO00000000001",
+            "description": "A sessão MAIS RECENTE do projeto — a mesma que `projects-summary` reporta em `latestSessionId`."
+          },
+          "events": {
+            "description": "Em ordem crescente de `seq`, no máximo os 50 primeiros depois do corte — o mesmo teto que `GET .../events` aplica sem `limit`.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SessionEventResponseDto"
+            }
+          }
+        },
+        "required": [
+          "projectId",
+          "sessionId",
+          "events"
         ]
       },
       "PromocaoRecusadaResponseDto": {
@@ -13055,6 +13295,54 @@
           "cacheInvalidated"
         ]
       },
+      "RosterFactsResponseDto": {
+        "type": "object",
+        "properties": {
+          "executionActivated": {
+            "type": "boolean",
+            "example": true,
+            "description": "A sessão mais recente já registrou `execution.activated` — é o que faz os dev agents por módulo entrarem na roster."
+          },
+          "moduleNames": {
+            "example": [
+              "api",
+              "web"
+            ],
+            "description": "Nomes dos módulos do module_map VIGENTE (maior `version`). Um dev agent por módulo, quando a execução foi ativada.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "gatesEverOpened": {
+            "type": "boolean",
+            "example": true,
+            "description": "Algum gate de PR (dev ou infra) já abriu ALGUMA VEZ nesta sessão — é o que traz QA e SecOps para a roster. Cobre a sessão inteira, não uma janela dos últimos N eventos."
+          },
+          "delegatedSubagents": {
+            "example": [
+              "qa-automacao"
+            ],
+            "description": "Subagentes com pelo menos uma delegação registrada na sessão, qualquer que seja o desfecho — dispensa é decisão registrada, não silêncio.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "infraActive": {
+            "type": "boolean",
+            "example": false,
+            "description": "Existe handoff `accepted` para `infra` na sessão mais recente."
+          }
+        },
+        "required": [
+          "executionActivated",
+          "moduleNames",
+          "gatesEverOpened",
+          "delegatedSubagents",
+          "infraActive"
+        ]
+      },
       "RuleCoverageResponseDto": {
         "type": "object",
         "properties": {
@@ -14052,6 +14340,42 @@
         },
         "required": [
           "status"
+        ]
+      },
+      "UnreadCursorDto": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "01JC4Z0000PROJETO0000000001"
+          },
+          "afterSeq": {
+            "type": "number",
+            "example": 41,
+            "minimum": 0,
+            "description": "Último `seq` que ESTE navegador já viu neste projeto. Devolve os eventos com `seq` estritamente maior. `0` significa \"nunca vi nada\" e traz o começo da sessão mais recente."
+          }
+        },
+        "required": [
+          "projectId",
+          "afterSeq"
+        ]
+      },
+      "UnreadEventsDto": {
+        "type": "object",
+        "properties": {
+          "cursors": {
+            "maxItems": 200,
+            "description": "Um cursor por projeto que se quer consultar. Lista VAZIA devolve lista vazia — \"não perguntei nada\" não é \"me dê tudo\". Projeto de outro workspace é ignorado em silêncio, porque o cursor vem do armazenamento local de quem chama e pode ter sobra de um workspace antigo.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UnreadCursorDto"
+            }
+          }
+        },
+        "required": [
+          "cursors"
         ]
       },
       "UpdateModelPricingDto": {
