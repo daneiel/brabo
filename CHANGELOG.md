@@ -2,9 +2,95 @@
 
 Gerado dos conventional commits por `scripts/changelog.mjs`.
 
+## v2.5.0 — 2026-08-08
+
+### Novidades
+
+- **engine,api**: o Dev Lead existe, e e o unico endereco externo da execucao (ba62b6eb)
+- **api,engine**: a Anamnese propoe subir o teto, e gastar nunca se auto-aprova (73fb8426)
+- **api,web**: o teto de paralelismo configuravel, e enfim consultado (44cdc2f1)
+- **api**: o lead decide o paralelismo, e acima do teto você autoriza (daa3ab3f)
+- **api,web**: o painel deriva a esteira do registro de gates (d55ccd7d)
+
+### Correções
+
+- **api,docs**: lint da api e o contrato web na arquitetura (87a2d701)
+- **web**: renumera as regras para RN-088 e RN-089 (24c168b7)
+- **web**: 429 virava tela branca, e a app respondia com mais tráfego (7dfdd8e6)
+- **engine**: a corrida do worktree entre dois dev agents (58be13d1)
+- **validacao**: a assercao afirma a REGRA, e o Arquiteto decide os modulos (93e4e753)
+- **validacao**: --historias nao chegava ao resto do script (a214f593)
+- **engine**: o plano do Dev Lead encerra o turno (9bd97241)
+- mix format no tool_loop e o inventario de variaveis regenerado (9d34d4da)
+- **engine**: o teto de iteracoes e por TIPO de agente (fb3a1975)
+
+### Desempenho
+
+- **web,api**: o sino manda onde parou de ler, e pergunta uma vez só (0eeb87be)
+- **web,api**: o dashboard lê o workspace, não um projeto de cada vez (a3cee5ab)
+
+### Documentação
+
+- registra o achado AE e corrige a contabilidade do backlog (6663209c)
+- CLAUDE.md com o estado real das fases 14 e 15 (97fa990a)
+- a rota de handoff ao Dev Lead na api interna (4ab8e3a8)
+- regenera a referencia OpenAPI (43042a88)
+- as rotas de area e a assimetria do parallelize (f77bb229)
+- **runbook**: o sintoma de teto de iteracoes baixo demais (18ee7233)
+- a rota publica de gates e a RN-084 da esteira derivada (88e68500)
+- architecture.md registra agent_areas no modelo de dados (04bd39b9)
+- permissions.md documenta o tipo de ação parallelize (86e4090b)
+- CLAUDE.md com o estado real das fases depois da v2.4.0 (457af4f7)
+- **changelog**: v2.4.0 (d266af6e)
+
+### Testes
+
+- **validacao**: --modulos 2, para o paralelismo FAZER sentido (510c5855)
+- **validacao**: duas historias no mesmo modulo, e o teto exercitado (80287a06)
+- **engine**: restaurar env com nil apagava o default (de0ab417)
+
+### Manutenção
+
+- **deps**: fecha 5 alertas do Dependabot com overrides escopados (50efe887)
+
 ## Unreleased
 
 ### Correções
+
+- **api,docker**: `GIT_OAUTH_STATE_SECRET` deixa de ter default em produção — a
+  api **não sobe** sem ela, com a chave de exemplo do repositório, ou com menos
+  de 16 caracteres. Essa chave assina o `state` do OAuth de git, e o `state` é o
+  que impede o callback de ser forjado; o default era público (está no
+  `.env.example`), e o `docker-compose.prod.yml` o supria como fallback, então
+  esquecer a variável subia produção assinando com uma chave conhecida — sem
+  nenhum sinal. Rejeitar só o valor vazio não resolveria: no caminho real de
+  erro a variável estava definida. **Quebra deliberada**: quem sobe o compose de
+  produção precisa exportar a variável (o README mostra como; o `smoke.sh` gera
+  a dele). Em Kubernetes nada muda. Ver ADR 0059 e RN-093
+
+- **api**: a api passa a mandar `Content-Security-Policy` em toda resposta, e em
+  produção ele nega tudo (`default-src 'none'`, mais `frame-ancestors`,
+  `base-uri` e `form-action` em `'none'`). Antes o cabeçalho não era mandado —
+  o argumento registrado no ADR 0027 era que o CSP é da web, o que continua
+  verdade e não é o ponto: uma rota da api aberta DIRETO no browser (link
+  colado, redirect) é renderizada na origem da api, onde o CSP da web não vale,
+  e `frame-ancestors` só tem efeito no documento emoldurado. Fora de produção o
+  perfil afrouxa apenas o que o Swagger UI de `/docs` exige. Nada muda para a
+  web, que consome JSON: `Cross-Origin-Resource-Policy` segue permitindo outra
+  origem, agora dito (`cross-origin`) em vez de omitido. Ver ADR 0058
+
+- **api**: um `projectId` malformado deixa de escapar da raiz dos workspaces. O
+  id chega do parâmetro de rota já com o percent-encoding decodificado pelo
+  Express, então `..%2F..%2Fetc` chegava como `../../etc` e o caminho resolvia
+  para fora — o que atingia tanto a leitura e ESCRITA do `permissions.json`
+  quanto o escopo que autoriza comando de terminal (ADR 0055), isto é, a
+  política de aprovação apontando para o lugar errado. Agora a raiz do escopo
+  recusa o que não for segmento de caminho simples. O caminho feliz não muda:
+  todo id real é UUID vindo do banco
+
+- **ci**: o corpo do PR de promoção não quebra mais a tabela quando um título de
+  PR termina em contrabarra antes de um pipe — escapar só o pipe produzia
+  `\\|`, que o GFM lê como contrabarra escapada seguida de delimitador de coluna
 
 - **web,api**: o dashboard não derruba mais a si mesmo quando o workspace tem
   muitos projetos. Cada card pedia sete coisas à api por conta própria e ficava
@@ -34,6 +120,14 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   via `cheerio` e `jsdom`). Nenhum dos cinco chega no runtime da api ou do
   web em produção — são tooling do `website` (Docusaurus) e devDependency de
   teste (`jsdom`). Ver `pnpm-workspace.yaml` para o detalhe de cada faixa.
+
+- **deps**: mais dois alertas fechados pelo mesmo mecanismo. `nanoid` (HIGH,
+  CVE-2026-67213 — laço infinito com `size` zero), que entra por `postcss`; e
+  `dompurify` (MODERATE — `IN_PLACE` deixa subárvore destacada executável,
+  reabrindo XSS), que entra por `mermaid`. Os dois pais já eram alvo de override
+  próprio. Segue aberto `image-size` (2 HIGH, DoS nos parsers ICNS/JXL/HEIF):
+  não há versão corrigida publicada, a última do registry é a vulnerável — entra
+  por `@docusaurus/mdx-loader` e só lê imagens versionadas neste repositório
 
 ## v2.4.0 — 2026-08-07
 
