@@ -2,6 +2,19 @@
 
 Gerado dos conventional commits por `scripts/changelog.mjs`.
 
+## v2.5.1 — 2026-08-08
+
+### Correções
+
+- **api,docker**: a chave que assina o state do OAuth perde o default (ce212fc5)
+- **scripts**: o fixture do teste de promoção sem o campo `branch` (2298a284)
+- **api**: CSP fechado na api e escopo de projeto contido na raiz (3ec2cb37)
+
+### Documentação
+
+- **branching**: a ordem do escape da célula, na política (06e3d61c)
+- **changelog**: v2.5.0 (b3cc60e6)
+
 ## v2.5.0 — 2026-08-08
 
 ### Novidades
