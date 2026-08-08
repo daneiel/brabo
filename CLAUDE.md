@@ -344,6 +344,161 @@ de navegar a app no Chrome e de ler o painel de segurança.
    centralizada (RN-092) e pagou-se o preço no painel: duplicá-la em cada
    chamador seria checagem que um dia diverge.
 
+## PROGRAMA 16–26 — o que a navegação pediu (em execução)
+Onze pedidos nascidos da PRIMEIRA navegação real na app depois do reset do
+banco. Não é roteiro: é uso. Três descobertas da investigação definiram o
+tamanho e a ORDEM do programa, e vale registrar cada uma, porque nenhuma
+estava no pedido original:
+
+1. Existe um handoff de design COMPLETO em `design_handoff_brabo/` — 8 telas
+   de alta fidelidade, tokens, tipografia e marca. A decisão foi adotá-lo
+   INTEIRO e PRIMEIRO: assim os onze pedidos nascem no visual novo em vez de
+   serem feitos duas vezes.
+2. O terminal da aba Code virou decisão de ARQUITETURA. Cada projeto passa a
+   ter container próprio, e é o ARQUITETO quem decide a imagem. Dentro dele o
+   agente é livre; `git push`, PR e deploy continuam humanos. Isso paga a
+   maior dívida aberta do produto — hoje o agente executa no MESMO container
+   que o monorepo do Brabo, e o ADR 0055 diz de si que é política, não
+   isolamento.
+3. Dois defeitos reais apareceram no caminho, e nenhum foi pedido:
+   `agent_areas` NUNCA é gravada (`upsert` sem chamador, a API devolve `[]`),
+   e a gaveta do sino ordena `seq ASC` no SQL — mostra os mais ANTIGOS.
+
+Teto de execução: no máximo QUATRO subagentes em paralelo. As fases foram
+cortadas por ARQUIVO DISPUTADO, não por tema — é o que torna o paralelismo
+possível. O limitador do backend é `apps/api/src/db/migrations/meta/_journal.json`
+e os snapshots do drizzle: UMA migration por onda, porque resolver conflito de
+snapshot à mão é caminho para schema divergente. Faixas de RN e números de ADR
+são PRÉ-ALOCADOS antes de a onda começar: duas fases paralelas escrevendo
+`RN-094` fazem uma renumerar no merge, e RN renumerada quebra os links
+`#rn-0xx` que o `pnpm docs:check` reprova.
+
+### FASE 16 — Fundações (destravar o paralelismo)
+Nenhum dos onze pedidos entrega aqui. A fase existe porque três deles tocam
+os MESMOS quatro pontos de `router.tsx`/`ProjectPage.tsx`, e outros três
+esbarram na falta de peça comum. Sem ela, as ondas colapsam para execução
+serial.
+1. `design/tokens.css` recebe `--violet` (agentes/IA) e o que mais o handoff
+   define. As fontes CONTINUAM self-hosted — seguir o handoff aí quebraria a
+   app sob o CSP do nginx (ADR 0036). O teste de contraste cobre os pares
+   novos, e a dívida conhecida de 4 pares segue travada.
+2. A aba deixa de ser lista fechada em DOIS lugares: registro único de onde
+   `PROJECT_TABS`, `type TabKey`, a régua e o render passam a derivar. Teste
+   que reprova chave num lugar e ausente no outro — é o defeito real.
+3. `Disclosure` no design system, com a semântica da implementação mais
+   completa que já existe (`ModelCatalogSection`). COMPONENTE SÓ: nenhuma das
+   seis implementações ad-hoc migra aqui, senão a fase abriria os três
+   arquivos mais disputados do programa.
+4. Rótulo de sessão vira helper e os cinco `slice(0, 8)` inline migram. É
+   esta migração que impede a FASE 20 de colidir com a 19.
+5. `CLAUDE.md` entra na definição de pronto (ver a seção de Documentação), com
+   regra `warn` no docmap — hoje ele tem ZERO cobertura.
+
+### FASE 17 — As 8 telas conforme o handoff
+Fidelidade visual ANTES do comportamento, para não refazer trabalho. Nenhuma
+regra de negócio muda: se uma tela precisar de dado que não existe, isso vira
+pendência declarada, não feature de carona.
+6. Login e App/lista de projetos.
+7. Projeto e Sessão, preservando os três estados da RN-088 (erro antes de vazio).
+8. Aprovações e Configurações — Aprovações é a base visual da FASE 19.
+9. Prova de que a fidelidade aconteceu: contraste medido sobre os tokens e
+   layout verificado por `scripts/dev/validacao-visual.js` em TODAS as telas
+   tocadas. O `.dc.html` é referência, NÃO código para copiar — o próprio
+   README do handoff diz isso.
+
+### FASE 18 — A área existe no banco (defeito, corrigido antes)
+10. `AgentAreaRepository.upsert` não tem NENHUM chamador, então quatro casos
+    de uso operam sobre tabela vazia. Provisionar na criação do projeto +
+    backfill, com teste que prova que projeto recém-criado TEM áreas — é a
+    mesma falha da FASE 14d: testar a peça não é testar o caminho até ela.
+11. Colapsar as TRÊS cópias da lista de áreas (api, web, engine) em uma fonte.
+
+### FASE 19 — Aprovação que se lê
+12. Matar o fallback genérico do `ApprovalCard`, que despeja
+    `chave: JSON.stringify(valor)` — a causa provável do "difícil de ler".
+    Todo tipo ganha FRASE em pt-BR; tipo sem frase mostra verbo + "ver
+    detalhes" e o payload cru nasce COLAPSADO, nunca despejado.
+13. Colapso nos TRÊS lugares: Aprovações, Insights e o card no chat, com verbo
+    e frase saindo de UM módulo.
+14. Restrição de projeto: o colapso NÃO introduz prop nova obrigatória em
+    `ApprovalCard`. É isso que mantém `SessionPage.tsx` intocado e tira a
+    aresta com a FASE 20.
+
+### FASE 20 — A sessão ganha identidade
+15. `sessions` ganha `kind` e `name` na MESMA migration — duas migrations
+    sobre a mesma tabela colidem no journal e nos snapshots.
+16. Reconciliar com a derivação por evento: `kind` classifica a INTENÇÃO de
+    criação, `execution.activated` continua classificando ESTADO de execução,
+    e nenhum reescreve o outro. `execution.activated` em sessão consultiva é
+    erro explícito, não conversão silenciosa.
+17. Renomear preservando a hashtag; sem nome, degrada para ela sozinha.
+18. Botão de voltar ao dashboard — hoje `SessionPage.tsx` não importa `Link`
+    nem `useNavigate`, e NENHUMA navegação sai da tela.
+
+### FASE 21 — O volume de eventos
+19. `useSessionEvents` pede sempre a cauda de 200 e alimenta CINCO consumidores.
+    Separar estado atual (continua `latest`) de histórico paginado (só as
+    Atividades), usando o cursor que o endpoint JÁ devolve. Nenhuma rota nova.
+20. O sino só se corrige no SQL: a ordem `ASC` é deliberada e corta em 50 por
+    projeto, então `.sort()` no front ordenaria por recência os 50 mais
+    ANTIGOS. Junto vem o corte de "lido", que é `seq` no localStorage e não
+    tem endpoint de propósito — ler do topo faria o corte avançar sobre
+    eventos nunca vistos.
+21. A economia da RN-090/091 (289 → 1 requisição) NÃO pode regredir.
+
+### FASE 22 — Gasto com duas audiências
+22. `token_usage` já tem todas as colunas; faltam as AGREGAÇÕES — não há por
+    modelo, por projeto dentro do workspace, por sessão nem por pessoa.
+23. Sem lib de gráficos, e não instalar sem justificar: SVG inline cobre.
+24. Colisão com a RN-060, a mais dura do lote: o gasto das chaves é do owner e
+    só dele, e o membro gasta a chave DO OWNER (RN-058). A saída é separar as
+    perguntas — relatório por CREDENCIAL segue exclusivo do owner; a visão do
+    membro é por ATOR, sem quebrar por credencial.
+
+### FASE 23 — Modelo herdável por área
+25. Escopo `area` na cascata de binding, entre `agent` e `project`.
+26. Incoerência a resolver ANTES de codar: o binding de agente é GLOBAL por
+    decisão intencional, e área é por projeto. Ou o binding de agente passa a
+    ser por projeto, ou a área fica abaixo dele — e isso contraria "padrão
+    herdável". Decisão de produto, com ADR.
+27. A UI mostra quem HERDA e quem DIVERGIU; voltar a herdar é APAGAR o binding
+    do agente, não gravar o modelo da área nele. Papel mínimo `maintainer`,
+    pelo mesmo motivo do teto de paralelismo: mudar o modelo é decidir gasto.
+
+### FASE 24 — Chat e Criativo como lugares
+28. Duas abas na tela de PROJETO, cada uma listando as sessões do seu `kind`.
+    A Sessão continua tela própria — a aba não vira contêiner de chat.
+29. Colisão de produto: a aba "Sessões" já existe. Ou ela sai, ou o produto
+    ganha três entradas para a mesma lista.
+
+### FASE 25 — Container por projeto (a fronteira deixa de ser só política)
+A maior mudança arquitetural do programa, e a que paga a dívida que as Fases B
+e F já apontavam separadamente.
+30. O ARQUITETO decide qual imagem sobe para o projeto, como artefato dele —
+    versionado e auditável, não configuração escondida. Enquanto ele não
+    decidir, o container não sobe e a aba Code não libera.
+31. Ciclo de vida por projeto (provisionar, reciclar, limpar, teto de
+    recursos), com o worktree do agente vivendo dentro do container.
+32. DENTRO, o agente é livre — e é isto que fecha os achados Z e AD, o
+    allowlist de verbos que não converge porque verbo, forma e invocação são
+    espaços distintos. FORA continua humano: `git push`, PR e deploy nascem
+    `proposed_action`, e merge em protegida segue manual (RN-014). Rede e
+    gasto merecem veredito próprio: sair para a internet não é "dentro".
+
+### FASE 26 — Code, só leitura
+33. `GitProviderContract` não tem `listTree` nem diff de PR. Entram como
+    capability, declarada SÓ quando provada pela suite, e método de contrato
+    sem chamador reprova o CI.
+34. Superfície de leitura contida pela checagem CENTRALIZADA da RN-092, não
+    por validação nova em cada rota. Buscar em repositório grande GASTA: teto
+    e cache, senão a aba vira amplificador de tráfego.
+35. A UI conforme `Brabo Code.dc.html`. Destaque de sintaxe é dependência
+    nova — não instalar sem justificar. Terminal INTERATIVO só depois da 25.
+
+**Congelamento do programa:** cada fase declara o que não faz, e o mais duro é
+o da 26 — SÓ LEITURA de código, nenhum salvamento pela aba. A edição é fase
+seguinte, e quando vier, escrita é efeito externo: nasce `proposed_action`.
+
 ## Stack (decidida — não proponha alternativas)
 - `apps/api`: NestJS 11 + Drizzle ORM + PostgreSQL 16 + pgvector
 - `apps/engine`: Elixir/OTP + Phoenix (canais) + Oban (filas no Postgres)
@@ -440,6 +595,13 @@ de navegar a app no Chrome e de ler o painel de segurança.
   ADR aceito NUNCA é editado: o novo referencia o antigo.
 - Regra de negócio nova → RN-XXX em docs/business-rules.md com
   arquivo:linha e o teste que a cobre.
+- TODA mudança verifica se ESTE arquivo precisa mudar — Stack, Convenções,
+  "O que NÃO fazer" e o estado das fases. Não pergunte se deve: verifique.
+  O gatilho é o mesmo do docmap, e o motivo é que o CLAUDE.md é o único
+  documento lido em TODA sessão: desatualizado, ele não é neutro, ele
+  ensina errado. Ele tem regra `warn` no docmap (não `block`, porque não
+  mora sob docs/ e o checker valida glob e link dentro de docs/ — promover
+  sem estender o checker criaria regra que se burla com `docs-not-needed`).
 - Antes de finalizar: pnpm docs:check e pnpm docs:build verdes (glob
   morto, gerado fora de dia e link quebrado reprovam).
 - Nunca inventar conteúdo de doc: sem informação suficiente, use
