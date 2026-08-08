@@ -9,6 +9,7 @@ import type { GitProviderName } from './lib/api-types';
 import { Shell } from './routes/Shell';
 import { Dashboard } from './routes/Dashboard';
 import { ProjectPage } from './routes/ProjectPage';
+import { ehChaveDeAba, type ChaveDeAba } from './routes/project-tabs';
 import { SessionPage } from './routes/SessionPage';
 import { ProvisioningPage } from './routes/ProvisioningPage';
 import { AdoptionPlanPage } from './routes/AdoptionPlanPage';
@@ -131,22 +132,11 @@ const indexRoute = createRoute({
   component: Dashboard,
 });
 
-const PROJECT_TABS = [
-  'overview',
-  'sessions',
-  'backlog',
-  'approvals',
-  'insights',
-  'settings',
-] as const;
-type ProjectTab = (typeof PROJECT_TABS)[number];
-
+// A lista de abas mora em `routes/project-tabs.ts` — aqui só se pergunta se a
+// chave existe. Enquanto a lista era copiada neste arquivo, aceitar `?tab=x`
+// e ter painel para `x` eram duas decisões independentes.
 interface ProjectSearch {
-  tab?: ProjectTab;
-}
-
-function ehProjectTab(valor: unknown): valor is ProjectTab {
-  return typeof valor === 'string' && (PROJECT_TABS as readonly string[]).includes(valor);
+  tab?: ChaveDeAba;
 }
 
 const projectRoute = createRoute({
@@ -156,7 +146,7 @@ const projectRoute = createRoute({
   // dashboard indo direto pra Configurações) — a navegação normal entre
   // abas continua em estado local, sem escrever na URL a cada clique.
   validateSearch: (search: Record<string, unknown>): ProjectSearch => ({
-    tab: ehProjectTab(search.tab) ? search.tab : undefined,
+    tab: ehChaveDeAba(search.tab) ? search.tab : undefined,
   }),
   component: () => {
     const { projectId } = projectRoute.useParams();
