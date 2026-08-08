@@ -175,7 +175,7 @@ no navegador). Estão explicadas em `design/README.md`.
 
 | diretório | o que é |
 |---|---|
-| `packages/shared/` | o contrato `GitProviderContract` (tipos, sem runtime) |
+| `packages/shared/` | o contrato `GitProviderContract` — doze operações, **tipos e só**: valor que sobrevive ao `tsc` quebra o boot da api (travado por teste), então constante mora no consumidor |
 | `docker/` | imagens de dev e de produção; `smoke.sh` |
 | `deploy/k8s/` | Kustomize base + overlays (local, staging, prod) |
 | `design/` | design system: tokens, tipografia, componentes |

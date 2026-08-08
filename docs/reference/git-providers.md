@@ -3,7 +3,7 @@ id: git-providers
 title: Providers de git
 sidebar_label: Providers de git
 sidebar_position: 5
-description: O contrato de dez operações que torna Local, GitHub e GitLab intercambiáveis, com capabilities, erros normalizados e política de retry.
+description: O contrato de doze operações que torna Local, GitHub e GitLab intercambiáveis, com capabilities, erros normalizados e política de retry.
 keywords: [git, GitProvider, GitHub, GitLab, capabilities, retry]
 ---
 
@@ -19,8 +19,9 @@ Decisões nos ADRs [0001](../adr/0001-git-provider-contract-shape.md) a
 
 ## O contrato
 
-`GitProviderContract`, em `packages/shared/src/index.ts`. **Dez operações** — a
-décima entrou na Fase 4a, com os gates de PR:
+`GitProviderContract`, em `packages/shared/src/index.ts`. **Doze operações** — a
+décima entrou na Fase 4a, com os gates de PR; a 11ª e a 12ª na FASE 26, com a
+aba Code (só leitura):
 
 | operação | devolve |
 |---|---|
@@ -34,8 +35,33 @@ décima entrou na Fase 4a, com os gates de PR:
 | `openPullRequest` | `GitPullRequest` |
 | `mergePullRequest` | `GitPullRequest` |
 | `commentOnPullRequest` | — (parecer de QA/SecOps na PR) |
+| `listTree` | `GitTree \| null` — `null` se a ref ou o caminho não existem |
+| `getPullRequestDiff` | `GitPullRequestDiff \| null` — `null` se a PR não existe |
 
 Mais dois campos: `name` e `capabilities`.
+
+### As duas operações de leitura (FASE 26)
+
+`listTree` lista **um nível** da árvore, nunca a árvore inteira: a aba Code
+navega sob demanda, e pedir tudo de um repositório grande é o amplificador de
+tráfego que a fase proíbe. `path` ausente ou `""` é a raiz; cada entrada traz
+`path` completo e `name` (a folha).
+
+`getPullRequestDiff` normaliza o diff em `status`
+(`added|modified|removed|renamed`), `additions`, `deletions` e `patch`. O
+`patch` é `string | null`, e a distinção importa: `null` significa **não veio**
+(binário, ou patch grande demais para a resposta), enquanto `""` significaria
+"veio vazio". Colapsar os dois faria a tela dizer "sem mudanças" para um
+binário alterado.
+
+As duas ausências seguem o vocabulário que `getFileContent` já usava — `null`,
+não exceção — para que a aba Code trate "não existe" de um jeito só.
+
+**Tetos.** Ambas cortam, e avisam por `truncated: true`. Os números vivem em
+`apps/api/src/domain/git/git-read-limits.ts` (1000 entradas por nível, 300
+arquivos por diff) e **não** em `packages/shared`, que é 100% tipo — um
+`export const` lá sobrevive ao `tsc` e quebra o boot da api em produção
+(travado por `apps/api/test/packages-shared-so-tipos.spec.ts`).
 
 ## Capabilities
 
@@ -45,14 +71,27 @@ Nem todo backend faz tudo, e isso é **declarado**, não descoberto na falha:
 interface GitProviderCapabilities {
   readonly protectBranch: boolean;
   readonly pullRequests: boolean;
+  readonly listTree: boolean;
+  readonly pullRequestDiff: boolean;
 }
 ```
 
-| provider | `protectBranch` | `pullRequests` |
-|---|---|---|
-| Local | ❌ | ✅ |
-| GitHub | ✅ | ✅ |
-| GitLab | ✅ | ✅ |
+| provider | `protectBranch` | `pullRequests` | `listTree` | `pullRequestDiff` |
+|---|---|---|---|---|
+| Local | ❌ | ✅ | ✅ | ✅ |
+| GitHub | ✅ | ✅ | ✅ | ✅ |
+| GitLab | ✅ | ✅ | ✅ | ✅ |
+
+As duas capabilities da FASE 26 são `true` nos três porque a **suite de
+contrato as exercita nos três** — é o critério dos ADRs 0041/0042, que vale
+para git: capability só é declarada quando provada, e sem prova declara-se
+`false` e degrada. O Local as cumpre com `git ls-tree` e `git diff` no bare
+repo, sem plataforma nenhuma por trás.
+
+Uma degradação declarada, e ela é de DADO, não de operação: o GitLab não traz
+tamanho de arquivo na listagem da árvore (`RepositoryTreeSchema` não tem o
+campo, e pedi-lo por entrada custaria uma requisição por arquivo), então
+`size` vem `null` ali. A operação existe e funciona; o que falta é uma coluna.
 
 O provider Local implementa PRs internamente (não há servidor para hospedá-las,
 mas o fluxo existe) e **não** implementa proteção de branch — não há plataforma
@@ -119,6 +158,19 @@ Ela também é o mecanismo que mantém as `capabilities` honestas: um provider q
 declara `protectBranch: true` precisa passar nos testes de proteção; um que
 declara `false` precisa levantar `GitNotSupportedError`. Declarar errado quebra
 a suite nos dois sentidos.
+
+Duas travas acompanham a suite, em
+`apps/api/test/contract/git-provider-contract-callers.spec.ts`. A primeira
+verifica que o cabeçalho da suite lista exatamente quem a invoca. A segunda é
+o item 33 da FASE 26: **operação de contrato sem consumidor em `src/` reprova
+o CI** — operação que os três providers implementam e ninguém chama é peso
+permanente, e nada prova que ela funciona no caminho real.
+
+A saída para uma fase entregar contrato antes das rotas é estreita e nomeada:
+o mapa `SEM_CONSUMIDOR_AINDA`, com a fase que consome escrita ao lado de cada
+operação. Ela se fecha sozinha — assim que a operação ganha consumidor, a
+entrada passa a **reprovar**, obrigando quem escreveu a rota a apagá-la.
+`listTree` e `getPullRequestDiff` estão ali, apontando para a 26b.
 
 :::caution O fake precisa mentir igual ao remoto
 A suite roda contra backends falsos (msw) nos providers remotos, e um fake mais
@@ -243,5 +295,9 @@ configurados; sem eles, só PAT
 ## O que não existe
 
 Bitbucket e um `GenericGitProvider` estão **fora de escopo** — não são backlog
-esquecido, são decisão. Adicionar um provider novo significa implementar as dez
+esquecido, são decisão. Adicionar um provider novo significa implementar as doze
 operações, declarar as capabilities honestamente e passar na suite de contrato.
+
+**Escrita pela aba Code também não existe.** `listTree` e `getPullRequestDiff`
+são leitura, e só. Salvar arquivo pela aba é fase seguinte, e quando vier,
+escrita é efeito externo: nasce `proposed_action`, como toda mutação de git.

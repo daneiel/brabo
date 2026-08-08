@@ -8,6 +8,7 @@ import {
 } from '../lib/api-client';
 import { areaFor } from '../lib/agents';
 import { formatMicros } from '../lib/execution';
+import { idCurtoDaSessao } from '../lib/session-label';
 import { HypothesisCard } from '../components/HypothesisCard';
 import { Badge } from '../components/ui/Badge';
 import { useToast } from '../components/ui/ToastProvider';
@@ -116,7 +117,7 @@ export function ProjectInsightsTab({ projectId }: { projectId: string }) {
                     params={{ projectId, sessionId: run.sessionId }}
                     className={styles.analysisSession}
                   >
-                    sessão {run.sessionId.slice(0, 8)}
+                    sessão {idCurtoDaSessao(run.sessionId)}
                   </Link>
                   <span className={styles.analysisMeta}>
                     {run.eventCountAtAnalysis} evento(s) · {run.hypothesisCount}{' '}

@@ -2483,7 +2483,16 @@ tabela de versões é append-only.
 Operação não suportada (proteção de branch no provider local) é declarada em
 `capabilities` e rejeitada com `GitNotSupportedError` — nunca falha silenciosa.
 
-- **Onde:** `packages/shared/src/index.ts` (`GitProviderCapabilities`)
+São **quatro** capabilities: `protectBranch` e `pullRequests` desde a Fase 2, e
+`listTree` e `pullRequestDiff` desde a FASE 26 (aba Code, só leitura). A regra
+não mudou com elas — mudou o alcance. E o critério de declarar continua sendo
+prova: capability só é `true` quando a suite a exercita naquele provider; sem
+prova, declara-se `false` e degrada (mesmo critério dos ADRs 0041/0042).
+
+- **Onde:** `packages/shared/src/index.ts` (`GitProviderCapabilities`); os
+  tetos das duas operações de leitura em
+  `apps/api/src/domain/git/git-read-limits.ts`, fora do shared porque ele é
+  100% tipo
 - **Teste:** suite de contrato única, `test/contract/git-provider.contract.ts`,
   rodada contra os três providers
 - **Origem:** [ADR 0001](adr/0001-git-provider-contract-shape.md)

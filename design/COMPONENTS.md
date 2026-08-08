@@ -6,18 +6,108 @@ Fonte: projeto claude.ai/design `1c960ca8-5e00-4558-8ced-80dfbdf01027`
 (`Brabo App/Project/Session/Approvals/Settings.dc.html`), extraídos via
 `DesignSync` em 2026-07-23. Esses `.dc.html` usam a sintaxe de template do
 canvas do claude.ai/design (`sc-for`, `sc-if`, `{{ }}`, atributos
-`style-hover`/`style-focus`) — não são código executável, e não foram
-copiados verbatim pro repo (conteúdo grande, sem valor extra sobre esta
-extração curada; o projeto original permanece acessível via
-`DesignSync(get_file)` se for preciso reconferir algum detalhe). Este
+`style-hover`/`style-focus`) — não são código executável. Este
 arquivo é a base pra implementação real em React/TSX — todo valor de cor/
 espaçamento referencia os tokens de `tokens.css`, nunca hex cru.
 
-Convenção geral confirmada em todas as telas: ícones outline (stroke 1.6,
-grid 24px, `currentColor`), botões com 3 variantes (primary/secondary/
-ghost) × 4 estados (default/hover/focus/disabled), `:hover`/`:focus` real
-via CSS (o `style-hover` do mockup não existe em CSS/React — precisa de
-CSS Modules ou styled approach equivalente, nunca inline-only).
+**Desde 2026-08-08 (FASE 16) a referência viva é o handoff versionado em
+`design_handoff_brabo/`** — README com a especificação e 8 arquivos `.dc.html`
+de alta fidelidade. O que este arquivo diz continua valendo; o que o handoff
+acrescenta está nas três seções de fundação abaixo. Regra que o próprio README
+do handoff estabelece e que vale aqui: os `.dc.html` são **referência de
+design, não código de produção para copiar** — a implementação usa os padrões
+do `apps/web`.
+
+Convenção geral confirmada em todas as telas: ícones outline (stroke 1.6–2.0,
+grid 24px, `currentColor`, `stroke-linecap`/`stroke-linejoin: round`), botões
+com 3 variantes (primary/secondary/ghost) × 4 estados (default/hover/focus/
+disabled), `:hover`/`:focus` real via CSS (o `style-hover` do mockup não existe
+em CSS/React — precisa de CSS Modules ou styled approach equivalente, nunca
+inline-only). Nenhum asset binário: todo ícone é SVG inline, e o único asset de
+marca é o monograma documentado abaixo — que é **componente, nunca imagem
+rasterizada**.
+
+## Tipografia — a escala do handoff
+
+As três famílias e o que cada uma carrega. A carga é auto-hospedada
+(`@font-face` em `apps/web/src/index.css` apontando para `public/fonts/`); o
+handoff pede o `<link>` do Google Fonts e **essa é a única divergência
+deliberada** — ver o ADR 0036 e o cabeçalho de `tokens.css`.
+
+- **Space Grotesk** (`var(--font-heading)`) — títulos, nomes de agente e de
+  projeto, wordmark. Pesos 600/700. Título de seção 18px/600; H1 22px/700
+  `letter-spacing:-.02em`; wordmark 700 `letter-spacing:-.045em`.
+- **Archivo** (`var(--font-body)`) — corpo, labels, botões. Pesos 400/500/600.
+  Corpo 13px, label 12px, botão 13px/600.
+- **IBM Plex Mono** (`var(--font-mono)`) — código, diffs, terminal, contadores
+  de token, caminhos, chaves, IDs e badges de status. 10–13px. Label de
+  cabeçalho de tabela: 10px/600, `letter-spacing:.05em`, uppercase.
+
+A regra por trás da lista: mono não é só para código. Ele marca **valor que a
+pessoa vai comparar, copiar ou digitar** — hash, path, id, contagem. É o que
+mantém título e dado distinguíveis mesmo em 10px.
+
+## Alturas, raios, sombras e transições
+
+Grade de 8px. Padding de card 14–18px; padding de célula de tabela 10–11px ×
+14px.
+
+| altura | onde |
+|---|---|
+| 44px | barra de topo; botão primário do login |
+| 42px | input; botão secundário do login |
+| 36px | aba do editor |
+| 28–36px | botão em contexto denso |
+| 28px | breadcrumb |
+| 24px | status bar |
+| 21px | linha de código |
+
+Raios: 4–5px (badge mono), 6–7px (input pequeno, botão de ícone), 8px (botão,
+input, card pequeno — `var(--radius-md)`), 10–12px (card, tabela —
+`var(--radius-lg)`), 22px (tile de marca grande). Os tokens cobrem os três
+degraus que a UI usa em volume (`--radius-sm` 4px, `--radius-md` 8px,
+`--radius-lg` 12px, `--radius-full`); 6–7px e 22px são valores de contexto
+único e ficam escritos onde são usados.
+
+Sombras: `var(--shadow)` é a padrão (`0 1px 2px rgba(0,0,0,.4), 0 12px 32px
+rgba(0,0,0,.45)`); `var(--shadow-lg)` é a do card de login
+(`0 24px 60px rgba(0,0,0,.55)`).
+
+Transições: 120–130ms para cor e borda; `bfade` .13s ease-out para dropdowns;
+caret do terminal 1.05s step-end; pulso ao vivo `bpulse` 2.4s ease-in-out
+infinite (opacidade 1 → .35); spinner `bspin` .7s linear. Toda animação
+contínua para em `prefers-reduced-motion` — o elemento fica, só o movimento
+sai (ver "Botão com `loading`").
+
+Cores derivadas saem sempre de `color-mix(in srgb, <token> N%, transparent)` —
+tipicamente 11–15% para fundo de chip e 34–45% para borda de chip. Nunca um
+hex novo inventado para "a versão clara de".
+
+## Marca — o monograma B
+
+Haste vertical sólida + dois chevrons. De perto é a letra B; de longe lê-se
+`>>` — agentes avançando em cadeia. O chevron inferior fica a **58% de
+opacidade**, e isso é semântico: é o handoff ainda em execução.
+
+SVG canônico (`viewBox="0 0 24 24"`, `fill:none`, `stroke-linecap` e
+`stroke-linejoin: round`):
+
+```html
+<path d="M5.4 3.6v16.8" stroke-width="3.4"/>
+<path d="M10.4 4.6l5.6 3.8-5.6 3.8" stroke-width="2.8"/>
+<path d="M10.4 12l5.6 3.8-5.6 3.8" stroke-width="2.8" opacity=".58"/>
+```
+
+Aplicação padrão: tile `var(--accent)` com stroke `var(--on-accent)`, raio ≈
+28% do lado (32px→9px, 40px→11px, 96px→22px). Tamanho mínimo 16px — e nesse
+tamanho o chevron inferior sobe para `opacity:.7`, senão some.
+
+Variantes permitidas: tile terracota; terracota sobre superfície; teal sobre
+fundo escuro (estado ativo); monocromático. **Nunca** girar, esticar, contornar
+ou aplicar gradiente. Respiro mínimo = a largura da haste (3.4 unidades da
+grade de 24).
+
+Wordmark: Space Grotesk 700, `letter-spacing:-.045em`.
 
 ## Botões (base)
 
@@ -55,11 +145,11 @@ card também tem um toggle de autonomia manual/auto (pill de 2 botões).
 **Roster fixo dos 9 agentes** (CLAUDE.md): Psicólogo, Anamnese, Criativo,
 Arquiteto, PO, Dev Backend, Dev Frontend, Infra, QA, SecOps — cada um com
 uma cor de acento própria usada no avatar/nome ao longo de toda a UI
-(consistente entre chat e overview): Psicólogo `#9C7BE0`, Anamnese
-`var(--success)` `#37B3A4`, Criativo `var(--warning)` `#E0982F`, Arquiteto
-`var(--accent)` `#D6633A`, PO `#9C7BE0`, Dev Backend `var(--success)`
-`#37B3A4`, Dev Frontend `#5EBEB1`, Infra `var(--warning)` `#E0982F`, QA
-`var(--danger)` `#E05A3E`, SecOps `#8AA6AE`.
+(consistente entre chat e overview): Psicólogo `var(--violet)` `#9C7BE0`,
+Anamnese `var(--success)` `#37B3A4`, Criativo `var(--warning)` `#E0982F`,
+Arquiteto `var(--accent)` `#D6633A`, PO `var(--violet)` `#9C7BE0`, Dev
+Backend `var(--success)` `#37B3A4`, Dev Frontend `#5EBEB1`, Infra
+`var(--warning)` `#E0982F`, QA `var(--danger)` `#E05A3E`, SecOps `#8AA6AE`.
 
 ## TokenMeter
 
@@ -103,7 +193,7 @@ tempo relativo à direita (11px mono, `text-muted`, `white-space:nowrap`).
 Hover de linha: `background: var(--surface-2)`. Borda entre itens:
 `border-top: 1px solid var(--border)`.
 Cores por tipo de evento: commit → `text-secondary`; PR/pull request →
-`var(--accent)`; hypothesis (psicólogo) → `#9C7BE0`; session (encerramento
+`var(--accent)`; hypothesis (psicólogo) → `var(--violet)`; session (encerramento
 anormal) → `var(--danger)`; permission (concedida/negada) → `var(--success)`
 (negada usa `var(--danger)` via um flag `bad` separado do tipo).
 No feed da tela Project: filtro por agente (select) + chips de tipo

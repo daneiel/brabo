@@ -68,6 +68,24 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ## Unreleased
 
+### Novidades
+
+- **api,shared**: o contrato de git ganha `listTree` e `getPullRequestDiff`, a
+  11ª e a 12ª operações, que a aba Code (FASE 26) vai precisar. Entram como
+  capability, e são `true` nos três providers só porque a **suite de contrato
+  única as prova nos três** — o critério dos ADRs 0041/0042, que vale para git:
+  sem prova, declara-se `false` e degrada. São LEITURA e só: `listTree` devolve
+  UM nível da árvore, nunca a árvore inteira, e `getPullRequestDiff` normaliza o
+  diff de uma PR (`status`, `additions`, `deletions`, `patch`). As duas cortam
+  com teto e avisam por `truncated`, para a aba não virar amplificador de
+  tráfego; os números moram em `apps/api/src/domain/git/git-read-limits.ts`, e
+  não no `packages/shared`, que é 100% tipo. Ausência é `null`, o mesmo
+  vocabulário de `getFileContent`. Junto vem a trava do item 33 da fase:
+  **operação de contrato sem consumidor em `src/` reprova o CI**, com uma saída
+  estreita e nomeada para as duas — ela se fecha sozinha, porque passa a
+  reprovar assim que a rota da 26b existir. Uma degradação declarada: o GitLab
+  não traz tamanho de arquivo na árvore, então `size` vem `null` ali.
+
 ### Correções
 
 - **api,docker**: `GIT_OAUTH_STATE_SECRET` deixa de ter default em produção — a
@@ -154,6 +172,26 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   uma duplicação que sustentava o defeito: a lista de áreas existia escrita à
   mão em três lugares (api, web e engine), e agora tem uma fonte só, com as
   outras duas geradas por `pnpm --filter api gerar:areas`. Ver RN-094
+
+### Manutenção
+
+- **design**: o handoff de design passa a viver no repositório
+  (`design_handoff_brabo/`: especificação + 8 telas de alta fidelidade), e
+  `design/tokens.css` fecha contra ele. Entra `--violet` (`#9c7be0`, agentes/IA)
+  — a última cor do handoff sem token, já hard-coded em quatro lugares do web
+  justamente porque não havia o que referenciar — e `--shadow-lg`, a sombra
+  grande do login, que cada tela que precisasse dela ia acabar escrevendo por
+  conta. **Mudança visível**: `--shadow` estava mais rasa que a especificada
+  (`0 8px 24px` a .35) e passa ao valor do handoff (`0 12px 32px` a .45), o que
+  aprofunda a sombra de todo card, modal e dropdown. O teste de contraste cobre
+  `--violet` nos quatro fundos em que ele é usado e ganha uma trava nova de
+  paridade entre os temas: token semântico de cor declarado só no escuro não
+  some no claro — ele VAZA, e o defeito aparece longe do commit que o causou. A
+  dívida conhecida de contraste segue intocada, nos mesmos 4 pares. As fontes
+  continuam **auto-hospedadas**: é a única divergência deliberada em relação ao
+  handoff, que pede o `<link>` do Google Fonts — seguir esse item reintroduz a
+  falha que o ADR 0036 fechou, porque a CSP do nginx bloqueia a folha e os
+  arquivos
 
 ## v2.4.0 — 2026-08-07
 
