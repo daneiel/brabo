@@ -30,6 +30,24 @@ const ROTULO_DO_IMPACTO = {
   patch: 'patch',
 } as const;
 
+/**
+ * Escapa um texto para caber numa CÉLULA de tabela GFM (CodeQL
+ * `js/incomplete-sanitization`).
+ *
+ * A ordem é o ponto inteiro: escapar só o `|` deixa passar um título terminado
+ * em contrabarra. `a\` seguido de `|` vira `a\` + `\|` = `a\\|`, e o parser de
+ * tabela do GFM lê isso como contrabarra-escapada seguida de um DELIMITADOR de
+ * coluna — a linha ganha uma célula a mais e a tabela do corpo do PR quebra.
+ * Escapar a contrabarra ANTES do pipe é o que fecha isso.
+ *
+ * Vale para célula de TEXTO. Numa célula que é code span (entre crases), a
+ * contrabarra é literal e escapá-la renderizaria `\\` visível — por isso esta
+ * função não é usada nas colunas `\`funcao\`` e afins.
+ */
+export function celulaDeTabela(texto: string): string {
+  return texto.replace(/\\/g, '\\\\').replace(/\|/g, '\\|');
+}
+
 /** O corpo do PR: cada PR do ciclo, seu impacto, e a versão proposta. */
 export function corpoDaPromocao(
   de: string,
@@ -57,7 +75,7 @@ export function corpoDaPromocao(
   for (const pr of prs) {
     const marca = pr.impacto === 'patch' ? '' : ' ⬅';
     l.push(
-      `| #${pr.numero} | \`${pr.funcao}\` | ${ROTULO_DO_IMPACTO[pr.impacto]}${marca} | ${pr.titulo.replace(/\|/g, '\\|')} |`,
+      `| #${pr.numero} | \`${pr.funcao}\` | ${ROTULO_DO_IMPACTO[pr.impacto]}${marca} | ${celulaDeTabela(pr.titulo)} |`,
     );
   }
   l.push('');

@@ -1342,6 +1342,38 @@ Quem for "simplificar" de volta para regex reabre o alerta.
 - **Origem:** [ADR 0055](adr/0055-escopo-de-caminho-na-politica-de-terminal.md),
   achado U, Fase F do [backlog](explanation/backlog.md)
 
+O escopo só vale enquanto ele próprio estiver dentro da raiz — quem garante isso
+é a [RN-092](#rn-092).
+
+### RN-092 — O `projectId` é segmento de caminho, e o escopo nunca sai da raiz {#rn-092}
+
+`projectScopeRoot()` **recusa** um `projectId` que não seja segmento de caminho
+simples (`^[A-Za-z0-9_-]{1,64}$`), lançando em vez de montar o caminho.
+
+O motivo é que o id chega de `@Param('projectId')` sem pipe de validação, e o
+Express **decodifica o percent-encoding do segmento antes de entregá-lo**: um
+`..%2F..%2Fetc` chega como `../../etc`, e o `join` resolveria para fora da raiz
+sem reclamar. Os dois consumidores da função sofrem, e o segundo é o grave:
+
+- o `permissions.json` seria lido **e escrito** em caminho arbitrário;
+- o escopo da [RN-075](#rn-075) autoriza comando de `terminal` sob essa pasta.
+  Um escopo que escapa da raiz é a política de aprovação apontando para o lugar
+  errado — falha de SEGURANÇA, não de arquivo não encontrado.
+
+A checagem é deliberadamente **mais larga que UUID** (aceita letra, dígito,
+hífen e sublinhado) para não amarrar o formato do id, e estreita o bastante para
+que o resultado nunca escape. E fica **onde a raiz é derivada**, não em cada
+chamador, pela mesma razão que fez a função existir: as duas derivações têm que
+concordar, e checagem duplicada é checagem que um dia diverge.
+
+O caminho feliz não muda — todo id real é UUID vindo do banco.
+
+- **Onde:** `apps/api/src/infrastructure/filesystem/project-workspaces-root.ts`
+  (`projectScopeRoot`)
+- **Teste:** `apps/api/test/infrastructure/filesystem/project-workspaces-root.spec.ts`
+- **Origem:** [ADR 0058](adr/0058-csp-fechado-na-api-e-escopo-de-projeto-contido.md),
+  alertas `js/path-injection` do CodeQL
+
 ### RN-076 — A credencial de git nunca é escrita em arquivo {#rn-076}
 
 O engine trabalha em repositório remoto pedindo o **remoto de trabalho** à api

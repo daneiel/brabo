@@ -6,6 +6,30 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **api**: a api passa a mandar `Content-Security-Policy` em toda resposta, e em
+  produção ele nega tudo (`default-src 'none'`, mais `frame-ancestors`,
+  `base-uri` e `form-action` em `'none'`). Antes o cabeçalho não era mandado —
+  o argumento registrado no ADR 0027 era que o CSP é da web, o que continua
+  verdade e não é o ponto: uma rota da api aberta DIRETO no browser (link
+  colado, redirect) é renderizada na origem da api, onde o CSP da web não vale,
+  e `frame-ancestors` só tem efeito no documento emoldurado. Fora de produção o
+  perfil afrouxa apenas o que o Swagger UI de `/docs` exige. Nada muda para a
+  web, que consome JSON: `Cross-Origin-Resource-Policy` segue permitindo outra
+  origem, agora dito (`cross-origin`) em vez de omitido. Ver ADR 0058
+
+- **api**: um `projectId` malformado deixa de escapar da raiz dos workspaces. O
+  id chega do parâmetro de rota já com o percent-encoding decodificado pelo
+  Express, então `..%2F..%2Fetc` chegava como `../../etc` e o caminho resolvia
+  para fora — o que atingia tanto a leitura e ESCRITA do `permissions.json`
+  quanto o escopo que autoriza comando de terminal (ADR 0055), isto é, a
+  política de aprovação apontando para o lugar errado. Agora a raiz do escopo
+  recusa o que não for segmento de caminho simples. O caminho feliz não muda:
+  todo id real é UUID vindo do banco
+
+- **ci**: o corpo do PR de promoção não quebra mais a tabela quando um título de
+  PR termina em contrabarra antes de um pipe — escapar só o pipe produzia
+  `\\|`, que o GFM lê como contrabarra escapada seguida de delimitador de coluna
+
 - **web,api**: o dashboard não derruba mais a si mesmo quando o workspace tem
   muitos projetos. Cada card pedia sete coisas à api por conta própria e ficava
   repetindo o pedido a cada poucos segundos; com 23 projetos isso dava quase
@@ -34,6 +58,14 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   via `cheerio` e `jsdom`). Nenhum dos cinco chega no runtime da api ou do
   web em produção — são tooling do `website` (Docusaurus) e devDependency de
   teste (`jsdom`). Ver `pnpm-workspace.yaml` para o detalhe de cada faixa.
+
+- **deps**: mais dois alertas fechados pelo mesmo mecanismo. `nanoid` (HIGH,
+  CVE-2026-67213 — laço infinito com `size` zero), que entra por `postcss`; e
+  `dompurify` (MODERATE — `IN_PLACE` deixa subárvore destacada executável,
+  reabrindo XSS), que entra por `mermaid`. Os dois pais já eram alvo de override
+  próprio. Segue aberto `image-size` (2 HIGH, DoS nos parsers ICNS/JXL/HEIF):
+  não há versão corrigida publicada, a última do registry é a vulnerável — entra
+  por `@docusaurus/mdx-loader` e só lê imagens versionadas neste repositório
 
 ## v2.4.0 — 2026-08-07
 
