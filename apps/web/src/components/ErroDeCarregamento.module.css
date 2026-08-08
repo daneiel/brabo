@@ -1,0 +1,26 @@
+/*
+ * Só o que o `Alert` não dá: a linha do trace e o espaço acima do botão. O
+ * resto (fundo, borda, ícone, tipografia) é do `Alert` de propósito — repetir
+ * a anatomia aqui é como as classes `.banner`/`.aviso` divergiram antes do
+ * ADR 0036.
+ *
+ * São `div` e não `p` no TSX porque `Alert.module.css` zera a margem de todo
+ * `p` que ele contém, com especificidade maior que uma classe solta daqui.
+ */
+
+/*
+ * `--text-secondary` e não `--text-muted`: dentro do alerta o fundo é tingido
+ * de `--danger`, e o par muted/superfície já é dívida conhecida de contraste
+ * (3.89:1, ver `contraste.test.ts`). Não se abre dívida nova por uma legenda.
+ */
+.trace {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: var(--space-1);
+  word-break: break-all;
+}
+
+.acao {
+  margin-top: var(--space-2);
+}

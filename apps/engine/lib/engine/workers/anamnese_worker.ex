@@ -255,7 +255,36 @@ defmodule Engine.Workers.AnamneseWorker do
 
     DECISÕES DO USUÁRIO NA JANELA (o que aprovou e negou — e por quê):
     #{Enum.map_join(decisions, "\n", &format_decision/1)}
+    #{nota_de_paralelismo(decisions)}
     """
+  end
+
+  # O sinal do teto de paralelismo (FASE 14d, item 4) mora AQUI, e não numa
+  # instrução solta: ele só existe quando há decisões de `parallelize` na
+  # janela, e a nota é dita ao lado dos números que a sustentam.
+  #
+  # Duas aprovações não são rotina — são duas. O piso de três é o que separa
+  # "aconteceu" de "está acontecendo sempre", e uma NEGAÇÃO derruba a nota
+  # inteira: se o usuário recusou alguma vez, o teto está fazendo o trabalho
+  # dele, e propor subi-lo seria ler o sinal ao contrário.
+  defp nota_de_paralelismo(decisions) do
+    pedidos = Enum.filter(decisions, &(&1["actionType"] == "parallelize"))
+    aprovados = Enum.count(pedidos, &(&1["status"] == "approved"))
+    negados = Enum.count(pedidos, &(&1["status"] == "rejected"))
+
+    if aprovados >= 3 and negados == 0 do
+      """
+
+      ATENÇÃO — AUTORIZAR MAIS AGENTES VIROU ROTINA: #{aprovados} aprovações de
+      `parallelize` nesta janela e nenhuma negação. Isso sugere que o teto da
+      área está baixo demais para o trabalho real. Considere chamar
+      `propose_max_parallel` ANTES de fechar a rodada, com o número de
+      aprovações no `rationale`. O usuário decide — a proposta nunca se aprova
+      sozinha.
+      """
+    else
+      ""
+    end
   end
 
   defp format_decision(d) do

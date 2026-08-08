@@ -19,16 +19,19 @@ import {
   getWorkspaceModelBinding,
   listCredentials,
   listModels,
+  listAgentAreas,
   listProjectMembers,
   removeProjectMember,
   mensagemDaApi,
   setAgentModelBinding,
+  setAreaMaxParallel,
   testCredential,
   updateProject,
   upsertCredential,
 } from '../lib/api-client';
 import { AGENT_LIST } from '../lib/agents';
 import { useProficiency } from '../lib/hooks';
+import { pollQueParaNoErro } from '../lib/query-policy';
 import { ROLE_LABEL, ROLE_ORDER } from '../lib/roles';
 import type {
   Model,
@@ -140,6 +143,7 @@ export function ProjectSettingsTab({ projectId }: ProjectSettingsTabProps) {
     <div>
       <RepositorySection projectId={projectId} />
       <ExecutionSection projectId={projectId} />
+      <ParallelismSection projectId={projectId} />
       <PromotionSection projectId={projectId} />
       <ModelsSection projectId={projectId} />
       <CatalogoDeModelos projectId={projectId} />
@@ -663,6 +667,109 @@ export function ExecutionSection({ projectId }: { projectId: string }) {
 }
 
 /**
+ * O teto de paralelismo de cada lead (FASE 14d — RN-083, ADR 0053).
+ *
+ * Uma linha por ÁREA, e não um número único do projeto: o trabalho de dev e o
+ * de QA têm custos e formatos diferentes, e foi por isso que o ADR pôs o teto
+ * na área. Tem botão de salvar, ao contrário do seletor de promoção logo
+ * abaixo — é um número digitado, e salvar a cada tecla mandaria `1` a caminho
+ * de `12`.
+ *
+ * Vazio para projeto que nunca ativou execução, e a tela DIZ isso em vez de
+ * sumir: seção que desaparece parece bug, e o motivo (as áreas nascem do
+ * `module_map`) não é adivinhável.
+ */
+export function ParallelismSection({ projectId }: { projectId: string }) {
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+  const { data: areas } = useQuery({
+    queryKey: ['agent-areas', projectId],
+    queryFn: () => listAgentAreas(projectId),
+  });
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState<string | null>(null);
+
+  async function handleSave(key: string, valor: number) {
+    setSaving(key);
+    try {
+      await setAreaMaxParallel(projectId, key, valor);
+      await queryClient.invalidateQueries({
+        queryKey: ['agent-areas', projectId],
+      });
+      setDrafts((d) => {
+        const { [key]: _, ...resto } = d;
+        return resto;
+      });
+      showToast({ title: `Teto da área ${key} salvo`, tone: 'success' });
+    } catch (erro) {
+      showToast({ title: mensagemDaApi(erro, 'Não foi possível salvar'), tone: 'danger' });
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  return (
+    <div className={styles.section}>
+      <div className={styles.sectionHead}>
+        <h2 className={styles.title}>Paralelismo por área</h2>
+        <span className={styles.eyebrow}>quantos agentes sem perguntar</span>
+      </div>
+      <div className={styles.subtitle}>
+        Quantos agentes o lead de cada área pode ter <strong>na sessão</strong>{' '}
+        sem pedir sua autorização. Acima do teto ele não sobe nada: o pedido
+        vira uma ação em Aprovações, com o motivo, e espera você. O teto é da
+        sessão inteira e não de cada módulo — contar por módulo deixaria muitos
+        agentes subirem sem autorização nenhuma.
+      </div>
+
+      {!areas || areas.length === 0 ? (
+        <div className={styles.subtitle}>
+          Nenhuma área ainda. Elas nascem quando você ativa a execução, porque
+          os membros da área de dev vêm do <code>module_map</code> do Arquiteto.
+        </div>
+      ) : (
+        areas.map((area) => {
+          const exibido = drafts[area.key] ?? String(area.maxParallel);
+          const numero = Number(exibido);
+          const valido = Number.isInteger(numero) && numero >= 1;
+
+          return (
+            <div key={area.key} className={styles.credentialCard}>
+              <div className={styles.credentialInfo}>
+                <div className={styles.credentialProvider}>Área {area.key}</div>
+                <div className={styles.credentialStatus}>
+                  Lead: {area.leadAgentId}
+                  {area.members.length > 0
+                    ? ` — ${area.members.length} membro(s)`
+                    : ' — sem membros ainda'}
+                </div>
+              </div>
+              <div className={styles.credentialInput}>
+                <Input
+                  type="number"
+                  min={1}
+                  aria-label={`Teto de agentes da área ${area.key}`}
+                  value={exibido}
+                  onChange={(e) =>
+                    setDrafts((d) => ({ ...d, [area.key]: e.target.value }))
+                  }
+                />
+              </div>
+              <Button
+                onClick={() => handleSave(area.key, numero)}
+                disabled={!valido || saving === area.key}
+              >
+                {saving === area.key ? 'Salvando…' : 'Salvar'}
+              </Button>
+            </div>
+          );
+        })
+      )}
+    </div>
+  );
+}
+
+/**
  * Quem promove história a `ready` (Fase 12c — RN-048).
  *
  * Salva no `onChange`, sem botão, como o seletor de papel em `MembersSection`:
@@ -1148,7 +1255,7 @@ function InstructionVersionsSection({ projectId }: { projectId: string }) {
   const { data: historico } = useQuery({
     queryKey: ['instruction-versions', projectId],
     queryFn: () => listProjectInstructionVersions(projectId),
-    refetchInterval: 15000,
+    refetchInterval: pollQueParaNoErro(15000),
   });
 
   // Um clique é o que o enunciado pede — mas revertendo DUAS vezes por duplo

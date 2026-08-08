@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
-import { getArchitecture, getCoverage, getProjectsStatus, getSessionEvent, getWorkspaceSummary, listActions, listBacklog, listHandoffs, listHypotheses, listInfraArtifacts, listProficiency, listProjects, listPsychologistAnalyses, listSessionEvents, listSessions, listWorkspaces, getSessionTokenUsage } from './api-client';
-import { classifyEvent } from './activity';
-import { formatRelativeTime } from './time';
-import { ATIVIDADE_RECENTE_JANELA_MS } from './project-status';
+import { getArchitecture, getCoverage, getProjectsStatus, getProjectsSummary, getSessionEvent, getWorkspaceSummary, listActions, listBacklog, listHandoffs, listHypotheses, listInfraArtifacts, listProficiency, listProjects, listPsychologistAnalyses, listSessionEvents, listSessions, listWorkspaces, getSessionTokenUsage } from './api-client';
+// Todo poll deste arquivo passa por aqui: um `refetchInterval` numérico não
+// sabe parar, e a api limita 300 req/min por usuário (ver `query-policy.ts`).
+import { pollQueParaNoErro } from './query-policy';
 
 // App opera sobre o primeiro workspace do usuário — sem UI de troca de
 // workspace ainda (nunca especificado nos mockups, ver design/COMPONENTS.md).
@@ -59,12 +59,37 @@ export function useProjectsStatus(workspaceId: string | undefined) {
   });
 }
 
+/**
+ * A GRADE INTEIRA de cards do dashboard numa requisição (RN-090).
+ *
+ * Substitui sete consultas em POLL por card — repositório, orçamento,
+ * bootstrap, sessões, último evento, arquitetura, handoffs, ações pendentes e
+ * backlog. Com 23 projetos aquilo dava 3.824 req/min contra um limite de 300,
+ * e a tela inteira voltava 429 (a PR #193 fez a app PARAR de sangrar; esta
+ * reduz o pedido).
+ *
+ * 5s, a cadência mais lenta entre as que ele substitui: o card é leitura
+ * periférica — quem quer o segundo a segundo abre o projeto, e lá as queries
+ * por sessão continuam exatamente como eram.
+ */
+export function useProjectsSummary(
+  workspaceId: string | undefined,
+  intervalMs = 5000,
+) {
+  return useQuery({
+    queryKey: ['projects-summary', workspaceId],
+    queryFn: () => getProjectsSummary(workspaceId!),
+    enabled: !!workspaceId,
+    refetchInterval: pollQueParaNoErro(intervalMs),
+  });
+}
+
 export function useProjectSessions(projectId: string | undefined) {
   return useQuery({
     queryKey: ['sessions', projectId],
     queryFn: () => listSessions(projectId!),
     enabled: !!projectId,
-    refetchInterval: 5000,
+    refetchInterval: pollQueParaNoErro(5000),
   });
 }
 
@@ -91,7 +116,7 @@ export function useSessionEvents(projectId: string | undefined, sessionId: strin
     queryFn: () =>
       listSessionEvents(projectId!, sessionId!, { limit: 200, latest: true }),
     enabled: !!projectId && !!sessionId,
-    refetchInterval: intervalMs,
+    refetchInterval: pollQueParaNoErro(intervalMs),
   });
 }
 
@@ -106,56 +131,22 @@ export function useSessionTokenUsage(
     queryKey: ['session-token-usage', projectId, sessionId],
     queryFn: () => getSessionTokenUsage(projectId!, sessionId!),
     enabled: !!projectId && !!sessionId,
-    refetchInterval: 5000,
+    refetchInterval: pollQueParaNoErro(5000),
   });
 }
 
-// Texto de "última atividade" pro ProjectCard — busca só o último evento
-// da sessão mais recente (afterSeq = latestSeq-1, limit 1), evitando
-// paginar o log inteiro só pra exibir uma linha.
-export function useProjectLastActivity(projectId: string): string {
-  const { latest: session } = useLatestSession(projectId);
-  const latestSeq = session ? session.nextSeq - 1 : 0;
-
-  const eventsQuery = useQuery({
-    queryKey: ['last-event', projectId, session?.id, latestSeq],
-    queryFn: () => listSessionEvents(projectId, session!.id, { afterSeq: Math.max(0, latestSeq - 1), limit: 1 }),
-    enabled: !!session && latestSeq > 0,
-    refetchInterval: 5000,
-  });
-
-  const event = eventsQuery.data?.items[0];
-  if (!event) return 'Sem atividade ainda';
-  return `${classifyEvent(event).text} · ${formatRelativeTime(event.createdAt)}`;
-}
-
-// Booleano pro dot de status da sidebar (RN-039) — MESMA queryKey de
-// `useProjectLastActivity`, de propósito: quando o Dashboard está montado
-// (e mantém a query fresca a cada 5s), a sidebar se beneficia de graça, sem
-// poll próprio. Sem `refetchInterval` aqui: o Shell é global (toda rota), e
-// um dot que atualiza minutos depois é imperceptível — mount + refetch no
-// foco basta.
-export function useProjectHasRecentActivity(projectId: string): boolean {
-  const { latest: session } = useLatestSession(projectId);
-  const latestSeq = session ? session.nextSeq - 1 : 0;
-
-  const eventsQuery = useQuery({
-    queryKey: ['last-event', projectId, session?.id, latestSeq],
-    queryFn: () => listSessionEvents(projectId, session!.id, { afterSeq: Math.max(0, latestSeq - 1), limit: 1 }),
-    enabled: !!session && latestSeq > 0,
-  });
-
-  const event = eventsQuery.data?.items[0];
-  if (!event) return false;
-  return Date.now() - new Date(event.createdAt).getTime() < ATIVIDADE_RECENTE_JANELA_MS;
-}
+// `useProjectLastActivity` e `useProjectHasRecentActivity` viviam aqui e
+// foram REMOVIDOS com o resumo do workspace (RN-090): os dois buscavam o
+// último evento da sessão mais recente de UM projeto, e o card e o dot da
+// sidebar — os únicos consumidores — leem isso de `lastEvent`, que já vem na
+// linha do projeto. Não voltem: reintroduzi-los é reintroduzir o N+1.
 
 export function usePendingActions(projectId: string | undefined, sessionId: string | undefined, intervalMs = 3000) {
   return useQuery({
     queryKey: ['session-actions', projectId, sessionId],
     queryFn: () => listActions(projectId!, sessionId!, { limit: 200 }),
     enabled: !!projectId && !!sessionId,
-    refetchInterval: intervalMs,
+    refetchInterval: pollQueParaNoErro(intervalMs),
   });
 }
 
@@ -165,7 +156,7 @@ export function useHandoffs(projectId: string | undefined, sessionId: string | u
     queryKey: ['session-handoffs', projectId, sessionId],
     queryFn: () => listHandoffs(projectId!, sessionId!),
     enabled: !!projectId && !!sessionId,
-    refetchInterval: intervalMs,
+    refetchInterval: pollQueParaNoErro(intervalMs),
   });
 }
 
@@ -176,7 +167,7 @@ export function useBacklog(projectId: string | undefined, intervalMs = 4000) {
     queryKey: ['backlog', projectId],
     queryFn: () => listBacklog(projectId!),
     enabled: !!projectId,
-    refetchInterval: intervalMs,
+    refetchInterval: pollQueParaNoErro(intervalMs),
   });
 }
 
@@ -186,7 +177,7 @@ export function useCoverage(projectId: string | undefined, intervalMs = 4000) {
     queryKey: ['coverage', projectId],
     queryFn: () => getCoverage(projectId!),
     enabled: !!projectId,
-    refetchInterval: intervalMs,
+    refetchInterval: pollQueParaNoErro(intervalMs),
   });
 }
 
@@ -196,7 +187,7 @@ export function useArchitecture(projectId: string | undefined, intervalMs = 4000
     queryKey: ['architecture', projectId],
     queryFn: () => getArchitecture(projectId!),
     enabled: !!projectId,
-    refetchInterval: intervalMs,
+    refetchInterval: pollQueParaNoErro(intervalMs),
   });
 }
 
@@ -207,7 +198,7 @@ export function useInfraArtifacts(projectId: string | undefined, intervalMs = 30
     queryKey: ['infra-artifacts', projectId],
     queryFn: () => listInfraArtifacts(projectId!),
     enabled: !!projectId,
-    refetchInterval: intervalMs,
+    refetchInterval: pollQueParaNoErro(intervalMs),
   });
 }
 
@@ -218,7 +209,7 @@ export function useProficiency(projectId: string | undefined, intervalMs = 15000
     queryKey: ['proficiency', projectId],
     queryFn: () => listProficiency(projectId!),
     enabled: !!projectId,
-    refetchInterval: intervalMs,
+    refetchInterval: pollQueParaNoErro(intervalMs),
   });
 }
 
@@ -230,7 +221,7 @@ export function useHypotheses(projectId: string | undefined, intervalMs = 8000) 
     queryKey: ['hypotheses', projectId],
     queryFn: () => listHypotheses(projectId!),
     enabled: !!projectId,
-    refetchInterval: intervalMs,
+    refetchInterval: pollQueParaNoErro(intervalMs),
   });
 }
 
@@ -244,7 +235,7 @@ export function usePsychologistAnalyses(
     queryKey: ['psychologist-analyses', projectId],
     queryFn: () => listPsychologistAnalyses(projectId!),
     enabled: !!projectId,
-    refetchInterval: intervalMs,
+    refetchInterval: pollQueParaNoErro(intervalMs),
   });
 }
 

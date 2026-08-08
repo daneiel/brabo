@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Dashboard } from './Dashboard';
+import { ApiError } from '../lib/api-client';
 import type { Project, WorkspaceSummary } from '../lib/api-types';
 
 const PROJECT: Project = {
@@ -29,31 +30,31 @@ vi.mock('../lib/hooks', () => ({
   useCurrentWorkspace: () => ({ data: { id: 'ws-1', name: 'Acme', slug: 'acme' } }),
   useProjects: () => useProjectsMock(),
   useWorkspaceSummary: () => useWorkspaceSummaryMock(),
-  useProjectLastActivity: () => 'sem atividade ainda',
-  useLatestSession: () => ({ latest: undefined }),
-  useSessionEvents: () => ({ data: undefined }),
-  useArchitecture: () => ({ data: undefined }),
-  useHandoffs: () => ({ data: undefined }),
-  usePendingActions: () => ({ data: undefined }),
+  useProjectsSummary: () => ({ data: [], isLoading: false }),
 }));
 
 vi.mock('../lib/notifications', () => ({
   useProjectsUnread: (projects: Project[] | undefined) =>
     (projects ?? []).map((project) => ({
       project,
-      latestSession: undefined,
+      latestSessionId: null,
       latestSeq: 0,
       unreadCount: 0,
     })),
   useNotificationGroups: () => [],
-  useStoriesAwaitingPromotion: () => 0,
+  storiesAwaitingPromotion: () => 0,
 }));
 
-vi.mock('../lib/api-client', () => ({
-  getRepository: () => Promise.resolve(null),
-  getProjectBudget: () => Promise.resolve(null),
-  getBootstrapStatus: () => Promise.resolve(null),
-}));
+vi.mock('../lib/api-client', async () => {
+  // `ApiError`/`mensagemDaApi` reais: é a frase da api que precisa chegar à
+  // tela no caminho de erro.
+  const real =
+    await vi.importActual<typeof import('../lib/api-client')>('../lib/api-client');
+  return {
+    ApiError: real.ApiError,
+    mensagemDaApi: real.mensagemDaApi,
+  };
+});
 
 vi.mock('./NewProjectWizard', () => ({
   NewProjectWizard: () => <div data-testid="wizard-stub" />,
@@ -109,6 +110,30 @@ describe('Dashboard — estados', () => {
       screen.getByText('Nenhum projeto encontrado para "não existe".'),
     ).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Criar projeto/ })).not.toBeInTheDocument();
+  });
+
+  // O caso perigoso não é o branco: é a tela AFIRMANDO o contrário. Com a api
+  // limitando, `!projects` era verdadeiro e o dashboard convidava a criar o
+  // primeiro projeto de um workspace que podia ter vinte (RN-088).
+  it('erro na lista: diz o que a api respondeu, e não "nenhum projeto ainda"', () => {
+    useProjectsMock.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      error: new ApiError(429, {
+        message: 'Limite de requisições excedido. Tente novamente em instantes.',
+      }),
+      refetch: vi.fn(),
+    });
+
+    renderDashboard();
+
+    const alerta = screen.getByRole('alert');
+    expect(alerta).toHaveTextContent('Não foi possível carregar seus projetos.');
+    expect(alerta).toHaveTextContent(
+      'Limite de requisições excedido. Tente novamente em instantes.',
+    );
+    expect(screen.queryByText('Nenhum projeto por aqui ainda.')).toBeNull();
   });
 
   it('erro no resumo do workspace não derruba a grade de cards', () => {

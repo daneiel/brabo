@@ -331,6 +331,13 @@ defmodule Engine.Sessions.EngineApiClient do
             ) ::
               {:ok, map()} | {:error, term()}
 
+  @callback propose_max_parallel(
+              project_id :: String.t(),
+              session_id :: String.t(),
+              payload :: map()
+            ) ::
+              {:ok, map()} | {:error, term()}
+
   @doc """
   Um turno de LLM pro harness (ToolLoop/ContextManager) — o engine nunca
   fala com provider direto. `messages`/`tools` no formato do contrato
@@ -477,6 +484,9 @@ defmodule Engine.Sessions.EngineApiClient do
 
   def propose_instruction_patch(project_id, session_id, payload),
     do: impl().propose_instruction_patch(project_id, session_id, payload)
+
+  def propose_max_parallel(project_id, session_id, payload),
+    do: impl().propose_max_parallel(project_id, session_id, payload)
 
   def propose_hypotheses(
         project_id,
@@ -882,6 +892,14 @@ defmodule Engine.Sessions.EngineApiClient.Live do
   def propose_instruction_patch(project_id, session_id, payload) do
     post_returning(
       "/internal/sessions/#{session_id}/instruction-patches",
+      Map.put(payload, :projectId, project_id)
+    )
+  end
+
+  @impl true
+  def propose_max_parallel(project_id, session_id, payload) do
+    post_returning(
+      "/internal/sessions/#{session_id}/max-parallel-proposals",
       Map.put(payload, :projectId, project_id)
     )
   end

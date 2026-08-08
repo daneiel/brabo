@@ -41,7 +41,33 @@ overrides:
   # HIGH · GHSA-52cp-r559-cp3m (mais duas moderadas na mesma linha). Entra por
   # `openapi-to-postmanv2`, do subárvore de geração de snippets do
   # docusaurus-theme-openapi-docs. A 4.3.0 já estava na árvore.
-  js-yaml@>=4.0.0 <4.3.0: 4.3.0
+  #
+  # HIGH · GHSA-5p4m-2wfm-xmqj (alerta #27, sem CVE ainda) — consumo
+  # quadrático de CPU ao resolver `!!omap` (DoS). A faixa `4.3.0` acima já não
+  # bastava: a correção saiu na 4.3.1, então o teto virou 4.3.1 e a faixa
+  # cresceu para cobrir a 4.3.0 também.
+  js-yaml@>=4.0.0 <4.3.1: 4.3.1
+  # MODERATE/LOW · alertas #22-#26 (CVE-2026-71436, -71437, -71438, -71439,
+  # -50159). Entra por `@docusaurus/theme-mermaid`, que o `website` declara
+  # direto — mas o `theme-mermaid` fixa a faixa dele (`>=11.6.0`, sem teto) e
+  # é quem resolve a versão real. Faixa presa em `11.0.0-alpha.1` para cobrir
+  # a mais larga das cinco advisories.
+  mermaid@>=11.0.0-alpha.1 <11.16.1: 11.16.1
+  # MODERATE · CVE-2026-69153 (alerta #21). Entra pela árvore inteira de
+  # plugins `@csstools/postcss-*` do `postcss-preset-env` (transitivo do
+  # docusaurus-theme-openapi-docs) — todos pedem `postcss: ^8.4`, então
+  # qualquer 8.5.23 serve.
+  postcss@<8.5.23: 8.5.23
+  # HIGH · CVE-2026-18446 (alerta #20). Entra por `ajv`/`@redocly/ajv`
+  # (`fast-uri: ^3.0.1` nos dois) — só uma das duas versões na árvore estava
+  # desatualizada, a outra já era 3.1.5.
+  fast-uri@>=3.0.0 <3.1.5: 3.1.5
+  # HIGH + 3 MODERATE · CVE-2026-13697, -14643, -15157, -16728, -16729
+  # (alertas #15-#19). Entra por `cheerio` (busca local do Docusaurus) e por
+  # `jsdom` — devDependency direta de `apps/web` para o ambiente de teste do
+  # vitest. Ambos pedem `undici` em faixa `^7.x`, então 7.29.0 satisfaz os
+  # dois sem tocar o `jsdom` em si.
+  undici@>=7.0.0 <7.29.0: 7.29.0
   # HIGH · GHSA-r5fr-rjxr-66jc. A versão corrigida que o aviso cita (4.17.24)
   # NÃO existe no registry — a linha 4.17 parou na 4.17.23 e a correção saiu na
   # 4.18.0. Daí o alvo ser a 4.18.1, que o `@nestjs/swagger` já traz.

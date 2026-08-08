@@ -39,6 +39,17 @@ defmodule Engine.Agents.ArquitetoServer do
   def offer_infra_handoff(session_id),
     do: GenServer.call(via(session_id), :offer_infra_handoff, 180_000)
 
+  @doc """
+  Oferece o handoff ao Dev Lead (FASE 14d — ADR 0053).
+
+  SEPARADO do de Infra de propósito, e não porque sejam dois momentos: os dois
+  saem da mesma confirmação de arquitetura pronta. É que são duas áreas
+  diferentes, com desfechos diferentes — juntá-los numa chamada só faria a
+  falha de uma derrubar a outra.
+  """
+  def offer_dev_handoff(session_id),
+    do: GenServer.call(via(session_id), :offer_dev_handoff, 180_000)
+
   # --- Callbacks ---
 
   @impl true
@@ -122,6 +133,23 @@ defmodule Engine.Agents.ArquitetoServer do
 
     broadcast(state, "agent.done", %{})
     broadcast(state, "agent.status", %{status: "idle"})
+    {:reply, :ok, state}
+  end
+
+  @impl true
+  def handle_call(:offer_dev_handoff, _from, state) do
+    # Sem turno de LLM: o Arquiteto já falou no `offer_infra_handoff`, que sai
+    # da MESMA confirmação. Um segundo turno só para dizer a mesma coisa
+    # gastaria tokens para repetir.
+    {:ok, _handoff} =
+      EngineApiClient.create_handoff(
+        state.project_id,
+        state.session_id,
+        @agent,
+        "dev-lead",
+        nil
+      )
+
     {:reply, :ok, state}
   end
 

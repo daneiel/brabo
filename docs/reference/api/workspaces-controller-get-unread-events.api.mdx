@@ -1,0 +1,73 @@
+---
+id: workspaces-controller-get-unread-events
+title: "Os eventos não lidos de vários projetos, numa chamada"
+description: "A gaveta do sino, para o workspace inteiro (RN-091). Cada cursor diz até que `seq` aquele projeto já foi lido, e a resposta traz o que veio depois disso na sessão mais recente de cada um."
+sidebar_label: "Os eventos não lidos de vários projetos, numa chamada"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "post api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Os eventos não lidos de vários projetos, numa chamada"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/workspaces/{workspaceId}/unread-events"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+A gaveta do sino, para o workspace inteiro (RN-091). Cada cursor diz até que `seq` aquele projeto já foi lido, e a resposta traz o que veio depois disso na sessão mais recente de cada um.
+
+**É POST porque é o único verbo com CORPO, não porque muda estado.** O servidor não sabe onde cada leitor parou: "lido até aqui" é um `seq` por projeto guardado no navegador, e não existe (de propósito) endpoint de marcar como lido. Logo o corte precisa VIAJAR no pedido, e são dezenas de pares — em query string isso vira URL longa, que proxy trunca, e ainda colocaria id de projeto do usuário em log de acesso. A rota é idempotente e sem efeito colateral: responde `200`, nunca `201`.
+
+Substitui uma requisição POR PROJETO com a gaveta aberta — 23 projetos custavam 286 req/min contra um limite de 300.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./workspaces-controller-get-unread-events.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./workspaces-controller-get-unread-events.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./workspaces-controller-get-unread-events.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

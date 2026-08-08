@@ -38,6 +38,31 @@ export interface Project {
 
 export type StoryPromotionMode = 'manual' | 'auto';
 
+/** Uma área de agente e seu teto de paralelismo (FASE 14d, ADR 0053). */
+export interface AgentArea {
+  id: string;
+  projectId: string;
+  key: string;
+  leadAgentId: string;
+  /** Quantos agentes o lead sobe na SESSÃO sem pedir autorização. */
+  maxParallel: number;
+  members: string[];
+}
+
+/**
+ * O desfecho de um pedido de paralelismo (RN-083).
+ *
+ * `estado` é o discriminador — não infira pela presença do `actionId`. Em
+ * `aguardando_autorizacao` NADA subiu: existe uma ação esperando você.
+ */
+export interface ParallelizationRequest {
+  estado: 'executado' | 'aguardando_autorizacao' | 'recusado';
+  actionId?: string;
+  ativosNaSessao?: number;
+  maxParallel?: number;
+  motivo?: string;
+}
+
 /**
  * O resultado de um lote de promoção (Fase 12c — RN-048). NÃO é
  * all-or-nothing: `failed` pode vir preenchido numa resposta de sucesso.
@@ -56,6 +81,48 @@ export interface WorkspaceSummary {
 export interface ProjectBlockedStatus {
   projectId: string;
   blockedTaskCount: number;
+}
+
+/**
+ * Tudo que UM card do dashboard desenha, vindo do resumo do workspace
+ * (RN-090) — a grade inteira numa requisição em vez de sete por card.
+ *
+ * `roster` são FATOS, não a roster montada: quem é lead, que ícone cada
+ * agente tem e como os membros viram um chip continua sendo decisão do web
+ * (`lib/agents.ts` + `rosterFromFacts` em `lib/agent-status.ts`).
+ */
+export interface ProjectCardSummary {
+  projectId: string;
+  provider: GitProviderName;
+  provisioningStatus: ProvisioningStatus | null;
+  budget: { limitMicros: number; spentMicros: number } | null;
+  latestSessionId: string | null;
+  latestSeq: number;
+  lastEvent: SessionEvent | null;
+  storiesAwaitingPromotion: number;
+  roster: {
+    executionActivated: boolean;
+    moduleNames: string[];
+    gatesEverOpened: boolean;
+    delegatedSubagents: string[];
+    infraActive: boolean;
+  };
+}
+
+/**
+ * Onde a leitura de um projeto parou, do ponto de vista DESTE navegador —
+ * o que a gaveta do sino manda no corpo para receber os não lidos de todos os
+ * projetos numa chamada (RN-091).
+ */
+export interface UnreadCursor {
+  projectId: string;
+  afterSeq: number;
+}
+
+export interface ProjectUnreadEvents {
+  projectId: string;
+  sessionId: string;
+  events: SessionEvent[];
 }
 
 export interface ProjectMemberWithUser {
@@ -837,4 +904,26 @@ export interface CredentialSpend {
   meses: number;
   totalMicros: number;
   porProvider: CredentialSpendPorProvider[];
+}
+
+/**
+ * O registro de gates (ADR 0054), como a tela o consome — FASE 15b.
+ *
+ * Só os campos que a tela usa. O registro carrega mais (`evidencia`,
+ * `verificacao`), e trazê-los para cá convidaria a tela a depender do que
+ * serve à MEDIÇÃO, não a ela.
+ */
+export interface GateResumo {
+  id: string;
+  fluxo: string;
+  dono: string;
+  entrada: string[];
+  entregavel: string | string[];
+  aprovacaoHumana: boolean;
+  severidade: string;
+}
+
+export interface RegistroDeGates {
+  version: number;
+  gates: GateResumo[];
 }

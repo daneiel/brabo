@@ -1,23 +1,24 @@
 import type { CSSProperties } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
 import { emailDaSessao, sair } from '../lib/auth';
-import { getProjectBudget } from '../lib/api-client';
+import { mensagemDaApi } from '../lib/api-client';
 import {
   useCurrentWorkspace,
   useCurrentWorkspaceWithRole,
-  useProjectHasRecentActivity,
   useProjects,
   useProjectsStatus,
+  useProjectsSummary,
 } from '../lib/hooks';
 import { useProjectsUnread } from '../lib/notifications';
 import {
+  ATIVIDADE_RECENTE_JANELA_MS,
   deriveProjectStatus,
   PROJECT_STATUS_COLOR,
   PROJECT_STATUS_LABEL,
 } from '../lib/project-status';
 import { ROLE_LABEL } from '../lib/roles';
-import type { Project } from '../lib/api-types';
+import { desempateDoProjeto, nomesRepetidos } from '../lib/project-label';
+import type { ProjectCardSummary } from '../lib/api-types';
 import { Badge } from '../components/ui/Badge';
 import { BrandIcon, ChatIcon, SettingsIcon } from '../components/ui/icons';
 import styles from './Shell.module.css';
@@ -35,27 +36,31 @@ function iniciaisDoEmail(email: string): string {
 }
 
 /**
- * Dot de status por projeto (RN-039) — busca o próprio orçamento (MESMA
- * queryKey do card do Dashboard, dedup de graça quando os dois estão
- * montados) e a atividade recente; a contagem de bloqueio vem de fora (uma
- * query só pro workspace inteiro, ver `useProjectsStatus`).
+ * Dot de status por projeto (RN-039) — SEM consulta própria: orçamento e
+ * última atividade vêm da linha do projeto no resumo do workspace (RN-090), e
+ * a contagem de bloqueio de `useProjectsStatus`. Todas são leituras do
+ * workspace inteiro.
+ *
+ * Antes o dot custava duas queries POR PROJETO, e o Shell é montado em TODA
+ * rota: a sidebar sozinha pollava o workspace inteiro mesmo numa tela de
+ * configurações. Era metade do tráfego que estourava o rate limit.
  */
 function NavStatusDot({
-  project,
+  summary,
   blockedTaskCount,
 }: {
-  project: Project;
+  summary: ProjectCardSummary | undefined;
   blockedTaskCount: number;
 }) {
-  const { data: budget } = useQuery({
-    queryKey: ['budget', project.id],
-    queryFn: () => getProjectBudget(project.id),
-  });
-  const hasRecentActivity = useProjectHasRecentActivity(project.id);
+  const budget = summary?.budget ?? null;
   const budgetPct =
     budget && budget.limitMicros > 0
       ? (budget.spentMicros / budget.limitMicros) * 100
       : 0;
+  const hasRecentActivity = summary?.lastEvent
+    ? Date.now() - new Date(summary.lastEvent.createdAt).getTime() <
+      ATIVIDADE_RECENTE_JANELA_MS
+    : false;
   const status = deriveProjectStatus({ budgetPct, blockedTaskCount, hasRecentActivity });
 
   return (
@@ -71,12 +76,18 @@ export function Shell() {
   const navigate = useNavigate();
   const { data: workspace } = useCurrentWorkspace();
   const { data: workspaceWithRole } = useCurrentWorkspaceWithRole();
-  const { data: projects } = useProjects(workspace?.id);
-  const unread = useProjectsUnread(projects);
+  const projectsQuery = useProjects(workspace?.id);
+  const projects = projectsQuery.data;
+  // MESMA queryKey do Dashboard: montados juntos, o React Query deduplica e o
+  // resumo é buscado uma vez só (RN-090).
+  const { data: cards } = useProjectsSummary(workspace?.id);
+  const unread = useProjectsUnread(projects, cards);
   const { data: projectsStatus } = useProjectsStatus(workspace?.id);
+  const repetidos = nomesRepetidos(projects);
   const blockedByProject = new Map(
     (projectsStatus ?? []).map((p) => [p.projectId, p.blockedTaskCount]),
   );
+  const cardPorProjeto = new Map((cards ?? []).map((c) => [c.projectId, c]));
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const email = emailDaSessao();
 
@@ -92,6 +103,22 @@ export function Shell() {
 
         <div className={styles.navLabel}>Projetos</div>
         <nav className={styles.nav}>
+          {/* A lista falhou: a sidebar DIZ, em vez de ficar vazia como se o
+              workspace não tivesse projeto nenhum (RN-088). Aqui não cabe o
+              `ErroDeCarregamento` inteiro — são 248px —, mas cabe o essencial:
+              o que houve e como tentar de novo. */}
+          {projectsQuery.isError && (
+            <div className={styles.navErro} role="alert">
+              <span>{mensagemDaApi(projectsQuery.error, 'Não foi possível carregar os projetos.')}</span>
+              <button
+                type="button"
+                className={styles.navErroBotao}
+                onClick={() => void projectsQuery.refetch()}
+              >
+                tentar de novo
+              </button>
+            </div>
+          )}
           {unread.map(({ project, unreadCount }) => (
             <Link
               key={project.id}
@@ -102,10 +129,18 @@ export function Shell() {
                 .join(' ')}
             >
               <NavStatusDot
-                project={project}
+                summary={cardPorProjeto.get(project.id)}
                 blockedTaskCount={blockedByProject.get(project.id) ?? 0}
               />
-              <span className={styles.navName}>{project.name}</span>
+              <span className={styles.navText}>
+                <span className={styles.navName}>{project.name}</span>
+                {/* Só quando o nome se repete — ver `project-label.ts`. */}
+                {repetidos.has(project.name) && (
+                  <span className={styles.navDesempate}>
+                    {desempateDoProjeto(project)}
+                  </span>
+                )}
+              </span>
               {unreadCount > 0 && (
                 <Badge tone="accent" square>
                   {unreadCount}

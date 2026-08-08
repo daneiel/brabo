@@ -3,6 +3,8 @@ import {
   breakerReasonFor,
   deriveAgentRoster,
   groupRosterByArea,
+  rosterFactsFromEvents,
+  rosterFromFacts,
   type RosterEntry,
 } from './agent-status';
 import { AGENTS } from './agents';
@@ -362,5 +364,71 @@ describe('groupRosterByArea', () => {
 
   it('roster vazia devolve lista vazia', () => {
     expect(groupRosterByArea([])).toEqual([]);
+  });
+});
+
+/**
+ * A regra de PRESENÇA é uma só (RN-090).
+ *
+ * O card do dashboard monta os chips a partir dos fatos que a api devolve, e
+ * o painel do time monta a roster a partir do event log. São dois caminhos —
+ * mas têm de passar pela MESMA regra, senão o primeiro agente novo aparece
+ * num e não no outro. Estes testes fixam a equivalência.
+ */
+describe('rosterFromFacts — a mesma regra nos dois caminhos', () => {
+  const eventos = [
+    ev('execution.activated', 'sistema'),
+    ev('pr.gate_changed', 'qa', { gateStatus: 'awaiting_qa' }),
+    ev('delegation.completed', 'qa', { subagent: 'qa-automacao' }),
+  ];
+
+  it('os fatos extraídos do event log reproduzem a roster do painel', () => {
+    const doPainel = deriveAgentRoster(eventos, moduleMap, true, [handoffInfra]);
+
+    const fatos = rosterFactsFromEvents(eventos, moduleMap, true, [handoffInfra]);
+    const doCard = rosterFromFacts(fatos, () => 'ocioso');
+
+    // Mesmos agentes, na mesma ordem — o que muda é só o status, que o card
+    // não desenha.
+    expect(doCard.map((r) => r.id)).toEqual(doPainel.map((r) => r.id));
+  });
+
+  it('os fatos que a api devolve produzem os mesmos chips', () => {
+    const doPainel = deriveAgentRoster(eventos, moduleMap, true, [handoffInfra]);
+
+    // Exatamente o formato de `roster` em `ProjectCardSummary`.
+    const daApi = rosterFromFacts(
+      {
+        executionActivated: true,
+        moduleNames: ['core'],
+        gatesEverOpened: true,
+        delegatedSubagents: ['qa-automacao'],
+        infraActive: true,
+      },
+      () => 'ocioso',
+    );
+
+    expect(daApi.map((r) => r.id)).toEqual(doPainel.map((r) => r.id));
+    expect(groupRosterByArea(daApi).map((g) => g.kind)).toEqual(
+      groupRosterByArea(doPainel).map((g) => g.kind),
+    );
+  });
+
+  it('sem fato nenhum: só os três conversacionais, como no painel', () => {
+    const daApi = rosterFromFacts(
+      {
+        executionActivated: false,
+        moduleNames: [],
+        gatesEverOpened: false,
+        delegatedSubagents: [],
+        infraActive: false,
+      },
+      () => 'ocioso',
+    );
+
+    expect(daApi.map((r) => r.id)).toEqual(['criativo', 'po', 'arquiteto']);
+    expect(daApi.map((r) => r.id)).toEqual(
+      deriveAgentRoster([], null, false, []).map((r) => r.id),
+    );
   });
 });

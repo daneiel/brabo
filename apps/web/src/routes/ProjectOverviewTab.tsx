@@ -11,7 +11,7 @@ import {
 } from '../lib/hooks';
 import {
   activateExecution,
-  acceptParallelization,
+  requestParallelization,
   getAgentModelBinding,
   listAgentAutonomy,
   listModels,
@@ -402,10 +402,24 @@ function ExecutionSection({
   async function handleAccept(module: string) {
     if (!sessionId) return;
     try {
-      await acceptParallelization(projectId, sessionId, module);
+      const r = await requestParallelization(projectId, sessionId, module);
       await queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
+
+      // Acima do teto NADA subiu (RN-083). Sem esta distinção a tela diria que
+      // o agente entrou, e o usuário só descobriria que não pelo trabalho que
+      // não anda — que é exatamente o modo de falha que o pipeline de
+      // aprovação existe para tornar visível.
+      if (r.estado === 'aguardando_autorizacao') {
+        showToast({
+          title: 'Precisa da sua autorização',
+          message: `A sessão já tem ${r.ativosNaSessao} agente(s), o teto do lead é ${r.maxParallel}. O pedido está em Aprovações.`,
+          tone: 'warning',
+        });
+      } else if (r.estado === 'recusado') {
+        showToast({ title: 'Pedido recusado', message: r.motivo, tone: 'danger' });
+      }
     } catch {
-      showToast({ title: 'Erro', message: 'Não foi possível aceitar', tone: 'danger' });
+      showToast({ title: 'Erro', message: 'Não foi possível pedir', tone: 'danger' });
     }
   }
 

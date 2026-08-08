@@ -193,7 +193,9 @@ possível sem downtime ([RN-035](../business-rules.md#rn-035)).
 
 | variável | default | nota |
 |---|---|---|
-| `TOOL_LOOP_MAX_ITERATIONS` | `8` | teto de voltas do laço de ferramenta. Esgotado, o agente encerra com artefato de bloqueio |
+| `TOOL_LOOP_MAX_ITERATIONS` | `8` | teto de voltas do laço para o agente **conversacional**. Esgotado, o agente encerra com artefato de bloqueio |
+| `TOOL_LOOP_MAX_ITERATIONS_EXECUCAO` | `60` | teto dos **dev agents**. Maior porque eles exploram o repositório antes de escrever — e porque o `task_budget_micros` segura o gasto por baixo |
+| `TOOL_LOOP_MAX_ITERATIONS_GATE` | `60` | teto dos subagentes de **QA**, pelo mesmo motivo |
 | `DEFAULT_CONTEXT_WINDOW` | `8192` | usado quando o modelo não declara a janela |
 | `CONTEXT_COMPACTION_THRESHOLD` | `0.7` | fração da janela que dispara compactação |
 | `LLM_TURN_TIMEOUT_MS` | `300000` | 5 min por turno |
@@ -329,7 +331,7 @@ que uma variável nova não fique documentada em lugar nenhum sem ninguém notar
 
 > ⚠️ Bloco gerado por `pnpm docs:generate`. Não edite à mão — o próximo build sobrescreve.
 
-Inventário extraído do código: **94 variáveis** lidas em tempo de execução. Todas têm descrição nas tabelas acima.
+Inventário extraído do código: **96 variáveis** lidas em tempo de execução. Todas têm descrição nas tabelas acima.
 
 **api** — 42 variáveis
 
@@ -376,7 +378,7 @@ Inventário extraído do código: **94 variáveis** lidas em tempo de execução
 - `RATE_LIMIT_WINDOW_MS` <sub>(apps/api/src/infrastructure/observability/domain-gauges.collector.ts)</sub>
 - `WEB_ORIGIN` <sub>(apps/api/src/infrastructure/security/cors-origins.ts)</sub>
 
-**engine** — 48 variáveis
+**engine** — 50 variáveis
 
 - `ANAMNESE_BUDGET_MICROS` <sub>(apps/engine/config/runtime.exs)</sub>
 - `ANAMNESE_INITIAL_WINDOW_DAYS` <sub>(apps/engine/config/runtime.exs)</sub>
@@ -425,6 +427,8 @@ Inventário extraído do código: **94 variáveis** lidas em tempo de execução
 - `TERMINAL_ACTION_TIMEOUT_MS` <sub>(apps/engine/config/runtime.exs)</sub>
 - `TERMINAL_OUTPUT_MAX_BYTES` <sub>(apps/engine/config/runtime.exs)</sub>
 - `TOOL_LOOP_MAX_ITERATIONS` <sub>(apps/engine/config/runtime.exs)</sub>
+- `TOOL_LOOP_MAX_ITERATIONS_EXECUCAO` <sub>(apps/engine/config/runtime.exs)</sub>
+- `TOOL_LOOP_MAX_ITERATIONS_GATE` <sub>(apps/engine/config/runtime.exs)</sub>
 - `WEB_ORIGIN` <sub>(apps/engine/config/runtime.exs)</sub>
 
 **web** — 4 variáveis

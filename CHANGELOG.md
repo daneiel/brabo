@@ -2,6 +2,110 @@
 
 Gerado dos conventional commits por `scripts/changelog.mjs`.
 
+## Unreleased
+
+### Correções
+
+- **web,api**: o dashboard não derruba mais a si mesmo quando o workspace tem
+  muitos projetos. Cada card pedia sete coisas à api por conta própria e ficava
+  repetindo o pedido a cada poucos segundos; com 23 projetos isso dava quase
+  3.900 requisições por minuto contra um limite de 300, e a tela voltava cheia
+  de erro antes de terminar de carregar — o mesmo valia para a barra lateral,
+  que fazia isso em toda tela do app, não só no dashboard. Agora a grade
+  inteira chega numa resposta só, e o custo deixa de crescer com o número de
+  projetos: medido no navegador, caiu de 3.824 para 12 requisições por minuto.
+  A tela mostra exatamente o que mostrava. A gaveta do sino passa a buscar as
+  notificações quando você a abre, em vez de o tempo todo
+
+- **web,api**: o painel de notificações também deixa de perguntar um projeto de
+  cada vez. Com a gaveta aberta num workspace de 23 projetos ele fazia 286
+  requisições por minuto, contra um limite de 300 — passava por pouco, e sumia
+  com um projeto a mais. Agora o navegador diz de uma vez até onde já leu cada
+  projeto e recebe tudo numa resposta: 12 requisições por minuto, sem mudar nem
+  o conteúdo da gaveta nem a rapidez com que ele se atualiza
+
+- **deps**: cinco alertas do Dependabot fechados por `pnpm.overrides` em
+  `pnpm-workspace.yaml` — todos transitivos, nenhum tocado por bump direto de
+  `package.json`. `js-yaml` (HIGH, GHSA-5p4m-2wfm-xmqj, DoS em `!!omap`) teve
+  a faixa existente ampliada de `<4.3.0` para `<4.3.1`; `mermaid` (3
+  MODERATE + 1 LOW, via `@docusaurus/theme-mermaid`); `postcss` (MODERATE,
+  CVE-2026-69153, via a árvore `@csstools/postcss-*`); `fast-uri` (HIGH,
+  CVE-2026-18446, via `ajv`/`@redocly/ajv`); `undici` (HIGH + 3 MODERATE,
+  via `cheerio` e `jsdom`). Nenhum dos cinco chega no runtime da api ou do
+  web em produção — são tooling do `website` (Docusaurus) e devDependency de
+  teste (`jsdom`). Ver `pnpm-workspace.yaml` para o detalhe de cada faixa.
+
+## v2.4.0 — 2026-08-07
+
+### Novidades
+
+- **engine,api**: existe um **Dev Lead**. Quando você confirma que a
+  arquitetura está pronta, ele recebe o trabalho junto com o Infra e propõe o
+  plano de execução: quantos agentes em cada módulo e por quê. Antes, o
+  Arquiteto terminava e a execução subia por um botão, sem ninguém no meio
+  avaliando quanto trabalho havia — o teto de agentes já existia, mas a frase
+  "quem decide é o lead" não tinha a quem se referir. Ele não escreve código.
+  Como consequência, os dev de módulo deixam de receber handoff direto: quem
+  fala com a execução de fora passa a ser o lead, como já acontecia com QA e
+  Infra
+
+
+- **engine**: quantas voltas um agente pode dar antes de desistir deixa de ser
+  um número só para todos e passa a depender do trabalho que ele faz. O limite
+  de 8 tinha nascido para agente de conversa, e era o mesmo do dev agent: numa
+  execução real ele gastou as oito procurando onde ficava o projeto num
+  repositório recém-criado e não chegou a escrever nada, terminando com uma
+  mensagem que culpava o modelo por algo que o modelo nunca teve chance de
+  fazer. Agora quem escreve código e quem revisa PR têm folga, e quem conversa
+  continua no mesmo lugar — subir o limite de todo mundo teria feito o agente
+  de conversa gastar mais sem motivo. Quem ganha folga é só quem já tem um
+  teto de custo próprio por baixo
+
+- **api,engine**: a Anamnese passou a reparar quando autorizar mais um agente
+  virou rotina. Se você aprovou o mesmo pedido três vezes na janela e não negou
+  nenhuma, ela propõe subir o teto daquela área — com o número de aprovações
+  como justificativa. Uma única negação derruba a proposta: se você recusou
+  alguma vez, o teto está fazendo o trabalho dele. A proposta **nunca se aprova
+  sozinha**, e nem a de ultrapassar o teto: as duas ações que mexem em quanto o
+  produto gasta sem perguntar agora são intocáveis por qualquer configuração de
+  autonomia. Sem isso, um `permissions.json` permissivo tornaria o limite
+  decorativo — e o produto poderia elevar o próprio teto de gasto
+
+
+- **api,web**: o teto de agentes de cada área virou configurável em
+  Configurações, e — mais importante — passou a valer de verdade. A regra do
+  teto tinha entrado antes, mas nenhuma tela a consultava: o botão de subir mais
+  um agente ainda ia direto, sem passar por ela. Agora o pedido passa, e quando
+  ele estoura o teto a tela diz que **nada subiu** e que a decisão está
+  esperando você em Aprovações — antes ela teria dito que o agente entrou, e
+  você só descobriria que não pelo trabalho que não anda
+
+- **api,web**: a esteira de gates no painel deixa de repetir a lista de etapas
+  e passa a derivá-la do registro. O ganho não é visual: gate que sai do
+  registro sai da tela sozinho — antes, desativar um deixava uma etapa morta
+  até alguém lembrar de editar o código, que é exatamente o envelhecimento que
+  o registro existe para impedir. A rota nova é do usuário logado e separada da
+  interna, que serve o script de medição; ela devolve só os gates ativos,
+  porque um gate planejado numa tela que mostra o agora apareceria como se
+  estivesse acontecendo
+
+- **api**: quantos agentes sobem numa sessão deixa de ser um número fixo no
+  código e passa a ser decisão do lead da área — com um teto acima do qual você
+  autoriza. Até o teto (2 por padrão) ele sobe e segue; acima disso vira uma
+  ação pendente de aprovação, como toda ação com efeito externo, e a decisão
+  fica registrada com o seu nome. O teto é da SESSÃO e não do módulo: contar
+  por módulo permitiria muitos agentes sem autorização nenhuma, que era o
+  buraco anterior com outro nome. As áreas de agente viram dado por projeto,
+  no lugar da lista fixa em código — o que forçou a mudança foi a área de dev,
+  cujos membros são um por módulo decidido pelo Arquiteto e portanto
+  diferentes em cada projeto
+
+- **engine**: o agente de gate espera a aprovação, como o dev espera (95ae7074)
+
+### Documentação
+
+- **changelog**: v2.3.0 (6f6f5be4)
+
 ## v2.3.0 — 2026-08-07
 
 ### Novidades
@@ -298,6 +402,32 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **web**: erro de carregamento parou de virar **tela branca**. Abrir um projeto
+  com a api limitando por `429` devolvia a área principal inteiramente vazia —
+  sem mensagem, sem estado de erro, sem esqueleto —, porque a tela testava
+  `if (!project) return null` e com isso tratava "a api recusou" e "ainda não
+  chegou" como a mesma coisa. Agora a tela DIZ o que houve, com a frase que a
+  api mandou (é ela que sabe a diferença entre "tente em instantes" e "você não
+  tem acesso"), o `trace_id` para quem for investigar e um botão de tentar de
+  novo. No dashboard o defeito era pior que branco: `!projects` também era
+  verdadeiro no erro, então a tela convidava a **criar o primeiro projeto** de
+  um workspace que podia ter vinte. A barra lateral também fala, com o texto
+  cabendo nos 248px que ela tem (RN-088)
+- **web**: a app parou de responder ao rate limit da api com **mais tráfego**.
+  Uma sessão real acumulou 1128 erros `429` num console só: o TanStack Query
+  retentava três vezes cada falha e os ~25 polls de 3 a 5 segundos seguiam
+  batendo na mesma porta, num laço que impedia a janela deslizante do limite de
+  se refazer. Agora 4xx não se retenta — 429 é literalmente o servidor pedindo
+  para parar, e 401 já renovou a sessão por dentro — e todo poll para quando a
+  query erra, voltando sozinho no foco da janela, na remontagem da tela ou no
+  botão de tentar de novo. 5xx e falha de rede continuam com as três
+  tentativas, que ali é a reação certa
+- **web**: projetos de **mesmo nome** deixam de ser indistinguíveis na barra
+  lateral. Uma execução de validação criou vinte `validacao-real`, e as vinte
+  linhas eram idênticas. Quem repete nome passa a mostrar o id abreviado e a
+  data de criação, que já vinham no payload; nome único não ganha legenda
+  nenhuma, porque desempate em toda linha seria ruído no lugar com menos espaço
+  da tela
 - **engine**: o Psicólogo parou de analisar sessão **sem nada a analisar**. Uma
   sessão cujo log inteiro era provisionamento de repositório passava pelo
   critério de tamanho, ganhava a análise, e o modelo — sem evento algum para

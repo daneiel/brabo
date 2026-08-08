@@ -142,6 +142,31 @@ quem estava fazendo o quê. Nenhuma das três tem estado ou rota própria — to
 derivam dos mesmos eventos, e um evento que não está no log não aparece em
 nenhuma.
 
+**Escopo de leitura: tela de projeto pede por sessão, tela de lista pede por
+workspace.** Dentro de um projeto as queries são por sessão e por projeto, que
+é o recorte natural do que está aberto. Já o dashboard e a barra lateral
+mostram TODOS os projetos, e ali o recorte por projeto vira N+1: eram sete
+consultas em poll por card, 3.824 req/min com 23 projetos contra um limite de
+300, e a tela derrubava a si mesma em 429. As duas leem de
+`GET /workspaces/:id/projects-summary` — um read model que atravessa agregados
+(git, orçamento, sessão, backlog, arquitetura) e cujo número de idas ao banco
+não cresce com a quantidade de projetos ([RN-090](business-rules.md#rn-090)).
+
+A gaveta do sino segue o mesmo recorte, com uma diferença que vale registrar:
+ela precisa do corte de leitura de cada projeto, e esse corte é um `seq`
+guardado no navegador de quem está olhando (`lib/read-state.ts`) — o servidor
+não tem, nem terá, um "marcar como lido". Por isso o cliente **manda** o mapa
+`projeto → afterSeq` no corpo de `POST /workspaces/:id/unread-events`, que é
+leitura apesar do verbo e responde `200` ([RN-091](business-rules.md#rn-091)).
+O verbo é consequência do corpo, não de mutação: são dezenas de pares, e query
+string desse tamanho quebra em proxy além de pôr id de projeto em log de acesso.
+
+Esse endpoint devolve FATOS do event log, nunca componentes montados:
+`lib/agents.ts` (quem é lead, ícone, cor) e `rosterFromFacts`
+(`lib/agent-status.ts`) continuam sendo do web, e a regra de presença é a mesma
+que o painel do time usa. É a mesma fronteira das três derivações acima — a api
+diz o que aconteceu, o web decide o que se desenha com isso.
+
 Duas validações de UI são automáticas: contraste (`lib/contraste.ts`, teste
 sobre `design/tokens.css`) e layout (`scripts/dev/validacao-visual.js`, rodado
 no navegador). Estão explicadas em `design/README.md`.
@@ -356,6 +381,8 @@ erDiagram
   epics ||--o{ stories : ""
   stories ||--o{ tasks : ""
   tasks |o--o{ delegations : "área de QA (8b) / Infra (8c, task_id nullable)"
+  projects ||--o{ agent_areas : "área por projeto (14d)"
+  agent_areas ||--o{ agent_area_members : compõe
   projects ||--o{ budgets : limita
   sessions ||--o{ token_usage : mede
   projects ||--o{ agent_instructions : configura
@@ -364,7 +391,7 @@ erDiagram
   psychologist_analyses ||--o{ psychologist_hypotheses : produz
 ```
 
-36 tabelas no total. **As constraints são regra de negócio**: a unique
+44 tabelas no total. **As constraints são regra de negócio**: a unique
 `(session_id, seq)` do event log, o `check` que exige exatamente um escopo em
 `budgets` (projeto **ou** sessão, nunca os dois), os índices parciais que
 garantem idempotência das análises — e, desde a Fase 8b, os três `check` de
@@ -374,6 +401,15 @@ garantem idempotência das análises — e, desde a Fase 8b, os três `check` de
 task_id` nasceu `NOT NULL` e virou nullable na Fase 8c — a área de Infra
 delega sobre a sessão, sem task de backlog por trás de uma PR de infra (ver
 [RN-037](business-rules.md#rn-037)).
+
+`agent_areas` (FASE 14d, [ADR 0053](adr/0053-dev-lead-e-paralelismo-autorizado.md))
+é o que a Fase 8 tinha cortado. Voltou porque a área de **dev** não é
+enumerável em código: `qa` e `infra` cabiam numa lista fixa, mas os membros de
+dev são um por módulo do `module_map`, decididos pelo Arquiteto e diferentes em
+cada projeto. A unique `(project_id, key)` é o que faz o seeding ser
+idempotente, e `max_parallel` (default 2) é o teto que o lead usa sem
+perguntar — acima dele, `proposed_action`
+(ver [RN-083](business-rules.md#rn-083)).
 
 **Migrations:** Drizzle na api (`src/db/migrations/`, aplicadas por um Job
 one-shot — réplicas **não** migram no boot, senão competem pela mesma

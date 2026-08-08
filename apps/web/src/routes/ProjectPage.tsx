@@ -9,6 +9,8 @@ import {
 } from '../lib/hooks';
 import { setLastSeenSeq } from '../lib/read-state';
 import { TokenMeter } from '../components/TokenMeter';
+import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
+import { Skeleton } from '../components/ui/Skeleton';
 import { Tabs } from '../components/ui/Tabs';
 import { GitHubIcon, GitLabIcon, LocalRepoIcon } from '../components/ui/icons';
 import { ProjectOverviewTab } from './ProjectOverviewTab';
@@ -31,7 +33,8 @@ interface ProjectPageProps {
 export function ProjectPage({ projectId, initialTab }: ProjectPageProps) {
   const [tab, setTab] = useState<TabKey>(initialTab ?? 'overview');
 
-  const { data: project } = useQuery({ queryKey: ['project', projectId], queryFn: () => getProject(projectId) });
+  const projectQuery = useQuery({ queryKey: ['project', projectId], queryFn: () => getProject(projectId) });
+  const project = projectQuery.data;
   const { data: repository } = useQuery({ queryKey: ['repository', projectId], queryFn: () => getRepository(projectId) });
   const { data: budget } = useQuery({ queryKey: ['budget', projectId], queryFn: () => getProjectBudget(projectId) });
 
@@ -60,7 +63,32 @@ export function ProjectPage({ projectId, initialTab }: ProjectPageProps) {
     }
   }, [tab, latestSession, projectId]);
 
-  if (!project) return null;
+  // Falha de carga DIZ o que houve, e a frase é a da api (RN-088).
+  //
+  // Era `if (!project) return null` — uma linha que tratava "a api recusou"
+  // igual a "ainda não chegou". Com a api limitando por 429, a tela inteira
+  // ficava BRANCA: sem mensagem, sem erro, sem esqueleto, e o motivo só no
+  // console. É a RN-059 do outro lado do fio: falha nunca vira vazio.
+  if (projectQuery.isError) {
+    return (
+      <div className={styles.falha}>
+        <ErroDeCarregamento
+          titulo="Não foi possível abrir este projeto."
+          erro={projectQuery.error}
+          onTentarDeNovo={() => void projectQuery.refetch()}
+        />
+      </div>
+    );
+  }
+
+  // Só aqui é carregamento de verdade: pediu, não errou, ainda não voltou.
+  if (!project) {
+    return (
+      <div className={styles.falha}>
+        <Skeleton width={260} height={20} />
+      </div>
+    );
+  }
 
   const ProviderIcon = PROVIDER_ICON[repository?.provider ?? 'local'];
 

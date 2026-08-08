@@ -34,6 +34,7 @@ defmodule Engine.Application do
       Engine.Agents.CriativoSupervisor,
       Engine.Agents.PoSupervisor,
       Engine.Agents.ArquitetoSupervisor,
+      Engine.Agents.DevLeadSupervisor,
       # Infra Lead (Fase 4a; área — Fase 8c) — mesma família session-scoped
       # dos demais, ativado por handoff aceito do Arquiteto.
       Engine.Infra.InfraLeadSupervisor,

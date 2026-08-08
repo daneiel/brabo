@@ -11,6 +11,7 @@ import type {
 } from '../lib/api-types';
 import { ApprovalCard } from '../components/ApprovalCard';
 import { PrGateTimeline, type GateVerdict } from '../components/PrGateTimeline';
+import { getRegistroDeGates } from '../lib/api-client';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Table, type TableColumn } from '../components/ui/Table';
@@ -193,6 +194,16 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
     queryFn: () => getProjectPermissions(projectId),
   });
 
+  // O registro de gates (ADR 0054) — FASE 15b. SEM `projectId` na chave: o
+  // registro é fato do produto, e cachear por projeto criaria N cópias do
+  // mesmo. `staleTime` alto pelo mesmo motivo: ele muda quando o produto
+  // muda, não durante a sessão de alguém.
+  const gatesQuery = useQuery({
+    queryKey: ['registro-de-gates'],
+    queryFn: getRegistroDeGates,
+    staleTime: 60 * 60 * 1000,
+  });
+
   const pending = (actionsQuery.data?.items ?? []).filter((a) => a.status === 'pending');
 
   function invalidateActions() {
@@ -332,6 +343,7 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
                 task={task}
                 prAction={prActionFor(task.id)}
                 verdicts={verdictsFor(task.id)}
+                registro={gatesQuery.data}
               />
             ))}
           </div>

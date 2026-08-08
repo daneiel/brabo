@@ -62,6 +62,18 @@ const sidebar: SidebarsConfig = {
     },
     {
       type: "category",
+      label: "gates",
+      items: [
+        {
+          type: "doc",
+          id: "docs/reference/api/gates-controller-listar",
+          label: "O registro de gates ativos",
+          className: "api-method get",
+        },
+      ],
+    },
+    {
+      type: "category",
       label: "git",
       items: [
         {
@@ -270,6 +282,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/internal-sessions-controller-max-parallel-proposal",
+          label: "Propõe subir o teto de paralelismo de uma área",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/internal-sessions-controller-module-map",
           label: "Publica uma versão nova do module_map",
           className: "api-method post",
@@ -393,6 +411,48 @@ const sidebar: SidebarsConfig = {
           id: "docs/reference/api/projects-controller-set-permissions",
           label: "Reescreve o permissions.json do projeto",
           className: "api-method put",
+        },
+      ],
+    },
+    {
+      type: "category",
+      label: "execução",
+      items: [
+        {
+          type: "doc",
+          id: "docs/reference/api/execution-controller-list-areas",
+          label: "As áreas de agente do projeto, com o teto de cada lead",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/execution-controller-set-max-parallel",
+          label: "Muda o teto de paralelismo de uma área",
+          className: "api-method patch",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/execution-controller-activate",
+          label: "Ativa a fase de execução e sobe um dev agent por módulo",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/execution-controller-rearm",
+          label: "Rearma um dev agent travado pelo circuit breaker",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/execution-controller-parallelize",
+          label: "Pede mais um dev agent para um módulo",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/execution-controller-unblock",
+          label: "Destrava uma tarefa bloqueada",
+          className: "api-method post",
         },
       ],
     },
@@ -686,36 +746,6 @@ const sidebar: SidebarsConfig = {
     },
     {
       type: "category",
-      label: "execução",
-      items: [
-        {
-          type: "doc",
-          id: "docs/reference/api/execution-controller-activate",
-          label: "Ativa a fase de execução e sobe um dev agent por módulo",
-          className: "api-method post",
-        },
-        {
-          type: "doc",
-          id: "docs/reference/api/execution-controller-rearm",
-          label: "Rearma um dev agent travado pelo circuit breaker",
-          className: "api-method post",
-        },
-        {
-          type: "doc",
-          id: "docs/reference/api/execution-controller-parallelize",
-          label: "Aceita paralelizar um módulo com um dev agent dedicado",
-          className: "api-method post",
-        },
-        {
-          type: "doc",
-          id: "docs/reference/api/execution-controller-unblock",
-          label: "Destrava uma tarefa bloqueada",
-          className: "api-method post",
-        },
-      ],
-    },
-    {
-      type: "category",
       label: "psicólogo",
       items: [
         {
@@ -936,9 +966,21 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/workspaces-controller-get-projects-summary",
+          label: "Tudo que os cards do dashboard desenham, numa chamada",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/workspaces-controller-get-summary",
           label: "Resumo agregado do workspace",
           className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/workspaces-controller-get-unread-events",
+          label: "Os eventos não lidos de vários projetos, numa chamada",
+          className: "api-method post",
         },
       ],
     },

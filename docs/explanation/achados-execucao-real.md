@@ -440,6 +440,13 @@ achado X.
 > este agente"**. O conserto de produto NÃO é subir o default global — o
 > Criativo não precisa de 25 iterações para conversar. É um teto por tipo de
 > agente, e isso é decisão de produto: fica na triagem.
+>
+> **FECHADO na FASE 14d** ([RN-085](../business-rules.md#rn-085)). O teto virou
+> por tipo em `Engine.Harness.Iteracoes`: `8` para quem conversa, `60` para dev
+> agent e subagente de QA. O critério de quem sobe não é "trabalha muito" — é
+> ter `token_budget_micros` por baixo segurando o gasto, e por isso
+> `infra-workflows` usa ferramenta pesada e **fica em 8**: ele roda sem budget,
+> e para ele o teto é a única trava que existe.
 
 ### Z. O allowlist de terminal governa o VERBO; o escopo protege só o CAMINHO
 
@@ -607,3 +614,42 @@ Duas direções para a triagem, e são diferentes em natureza:
 2. **Política por perfil de agente.** Um dev agent num worktree isolado é
    diferente de um agente que toca o workspace do usuário. Hoje os dois usam o
    mesmo `permissions.json`. Isto é decisão de produto com ADR.
+
+### AE. O agente de QA tenta consertar o código que julga (P2)
+
+Nas execuções finais da 13b, com os gates por LLM enfim rodando, o subagente de
+QA **tentou corrigir o código que estava avaliando** — contra o próprio papel.
+Quem julga não conserta: um gate que edita o que analisa deixa de ser gate e
+vira mais um autor, e o veredito passa a ser sobre o trabalho dele mesmo.
+
+**Ele não conseguiu, e o motivo é estrutural antes de ser político.** O
+registro de ferramentas do QA é
+`[ReadFile, SearchWorkspace, Terminal, EmitQaVerdict]`
+(`apps/engine/lib/engine/gates/qa_tools.ex:10`): **não existe `write_file`**.
+Para escrever, ele teria de passar pelo `terminal` — e aí encontra as duas
+barreiras que já existiam por outros motivos:
+
+1. o **allowlist de verbos**, que governa o que pode rodar
+   ([RN-075](../business-rules.md#rn-075) e os achados Z/AD);
+2. o **teto de escopo de caminho**, que rebaixa para `require_approval`
+   qualquer comando fora da pasta do projeto.
+
+São barreiras **independentes**: nenhuma foi desenhada para este caso, e é por
+isso que a contenção é confiável — não depende de o prompt convencer o modelo.
+
+**Por que é P2 e não P1.** Nada vazou: o comportamento foi tentado e barrado. O
+que o achado registra é uma **divergência entre o que o prompt pede e o que o
+modelo faz**, e essa divergência é o dado — ela diz que a instrução sozinha não
+segura o papel, e que a barreira estrutural é o que segura.
+
+**O que não está medido.** Quantas vezes tentou, em que execução exatamente, e
+com que comando: as execuções 9 e 10 não têm o detalhe registrado em
+[validacao-real.md](validacao-real.md), que cobre até a oitava. Registrar o
+achado sem esses números é deliberado — a alternativa era inventá-los, e a
+lição da Fase 10 foi justamente que número anotado de memória não vale.
+
+**Direção para a triagem**, e é a mesma da "política por perfil de agente" do
+achado AD: a ferramenta certa para um gate não é a mesma de um autor. Hoje a
+diferença é obtida por omissão (o registro do QA não inclui `write_file`), o
+que funciona mas não está declarado em lugar nenhum como garantia — some no dia
+em que alguém acrescentar a ferramenta "para facilitar".
