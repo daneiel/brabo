@@ -314,6 +314,16 @@ sendo ato manual, como toda entrada em permanente.
 | 3 | **versão do ciclo** — calculada dos PRs mergeados desde a última tag final |
 | 4 | **PR aberto** — corpo listando cada PR, sua função, seu impacto e a versão proposta |
 
+O corpo do passo 4 é uma **tabela markdown**, e o título de um PR é texto que
+ninguém controla — então ele é escapado antes de virar célula
+(`celulaDeTabela`, em `scripts/ci/promote.ts`). Escapar o `|` não basta: a
+contrabarra tem que ser escapada **antes**, senão um título terminado em `\`
+logo antes de um `|` produz `\\|`, que o GFM lê como contrabarra escapada
+seguida de um DELIMITADOR de coluna — a linha ganha uma célula a mais e a
+tabela quebra. É por isso que a ordem das duas substituições é load-bearing, e
+o teste em `promote.spec.ts` conta os delimitadores REAIS da linha em vez de
+comparar a string inteira.
+
 ### O check de promoção
 
 Um PR de promoção passa por um check próprio, separado do `pr-police`. Aquele
