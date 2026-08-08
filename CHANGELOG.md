@@ -2,6 +2,57 @@
 
 Gerado dos conventional commits por `scripts/changelog.mjs`.
 
+## v2.5.0 — 2026-08-08
+
+### Novidades
+
+- **engine,api**: o Dev Lead existe, e e o unico endereco externo da execucao (ba62b6eb)
+- **api,engine**: a Anamnese propoe subir o teto, e gastar nunca se auto-aprova (73fb8426)
+- **api,web**: o teto de paralelismo configuravel, e enfim consultado (44cdc2f1)
+- **api**: o lead decide o paralelismo, e acima do teto você autoriza (daa3ab3f)
+- **api,web**: o painel deriva a esteira do registro de gates (d55ccd7d)
+
+### Correções
+
+- **api,docs**: lint da api e o contrato web na arquitetura (87a2d701)
+- **web**: renumera as regras para RN-088 e RN-089 (24c168b7)
+- **web**: 429 virava tela branca, e a app respondia com mais tráfego (7dfdd8e6)
+- **engine**: a corrida do worktree entre dois dev agents (58be13d1)
+- **validacao**: a assercao afirma a REGRA, e o Arquiteto decide os modulos (93e4e753)
+- **validacao**: --historias nao chegava ao resto do script (a214f593)
+- **engine**: o plano do Dev Lead encerra o turno (9bd97241)
+- mix format no tool_loop e o inventario de variaveis regenerado (9d34d4da)
+- **engine**: o teto de iteracoes e por TIPO de agente (fb3a1975)
+
+### Desempenho
+
+- **web,api**: o sino manda onde parou de ler, e pergunta uma vez só (0eeb87be)
+- **web,api**: o dashboard lê o workspace, não um projeto de cada vez (a3cee5ab)
+
+### Documentação
+
+- registra o achado AE e corrige a contabilidade do backlog (6663209c)
+- CLAUDE.md com o estado real das fases 14 e 15 (97fa990a)
+- a rota de handoff ao Dev Lead na api interna (4ab8e3a8)
+- regenera a referencia OpenAPI (43042a88)
+- as rotas de area e a assimetria do parallelize (f77bb229)
+- **runbook**: o sintoma de teto de iteracoes baixo demais (18ee7233)
+- a rota publica de gates e a RN-084 da esteira derivada (88e68500)
+- architecture.md registra agent_areas no modelo de dados (04bd39b9)
+- permissions.md documenta o tipo de ação parallelize (86e4090b)
+- CLAUDE.md com o estado real das fases depois da v2.4.0 (457af4f7)
+- **changelog**: v2.4.0 (d266af6e)
+
+### Testes
+
+- **validacao**: --modulos 2, para o paralelismo FAZER sentido (510c5855)
+- **validacao**: duas historias no mesmo modulo, e o teto exercitado (80287a06)
+- **engine**: restaurar env com nil apagava o default (de0ab417)
+
+### Manutenção
+
+- **deps**: fecha 5 alertas do Dependabot com overrides escopados (50efe887)
+
 ## Unreleased
 
 ### Correções
