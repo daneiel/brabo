@@ -35,6 +35,7 @@ import { ActivityFeed } from '../components/ActivityFeed';
 import { EventItem } from '../components/EventItem';
 import { Button } from '../components/ui/Button';
 import { lerFalhaDeTurno } from '../lib/session-falha';
+import { hashtagDaSessao, rotuloDaSessao } from '../lib/session-label';
 import {
   AlertCircleIcon,
   LayoutSidebarIcon,
@@ -454,7 +455,10 @@ export function SessionPage({
     }
   }
 
-  const shortId = sessionId.slice(0, 8);
+  // O rótulo composto já aceita nome amigável e degrada para a hashtag sozinha
+  // enquanto ele não existe — a sessão não tem esse campo hoje.
+  const rotulo = rotuloDaSessao(sessionId);
+  const hashtag = hashtagDaSessao(sessionId);
   const isActive = session?.status === 'active';
 
   return (
@@ -462,9 +466,9 @@ export function SessionPage({
       <div className={styles.topbar}>
         <span className={[styles.statusDot, isActive && styles.pulsing].filter(Boolean).join(' ')} />
         <div className={styles.titleBlock}>
-          <div className={styles.title}>Sessão #{shortId}</div>
+          <div className={styles.title}>Sessão {rotulo}</div>
           <div className={styles.meta}>
-            {project?.name ?? '…'} · #{shortId} · {session ? new Date(session.createdAt).toLocaleTimeString('pt-BR') : ''}
+            {project?.name ?? '…'} · {hashtag} · {session ? new Date(session.createdAt).toLocaleTimeString('pt-BR') : ''}
           </div>
         </div>
         <div className={styles.spacer} />

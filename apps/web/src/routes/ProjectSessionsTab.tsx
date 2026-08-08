@@ -10,6 +10,7 @@ import {
 } from '../lib/approvals';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
+import { hashtagDaSessao } from '../lib/session-label';
 import type { SessionStatus } from '../lib/api-types';
 import styles from './ProjectSessionsTab.module.css';
 
@@ -95,7 +96,7 @@ export function ProjectSessionsTab({ projectId }: ProjectSessionsTabProps) {
                 className={styles.row}
                 onClick={() => navigate({ to: '/projects/$projectId/sessions/$sessionId', params: { projectId, sessionId: session.id } })}
               >
-                <span className={styles.rowId}>#{session.id.slice(0, 8)}</span>
+                <span className={styles.rowId}>{hashtagDaSessao(session.id)}</span>
                 <Badge tone={STATUS_TONE[session.status]} dot>
                   {session.status}
                 </Badge>
