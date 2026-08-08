@@ -1342,6 +1342,66 @@ Quem for "simplificar" de volta para regex reabre o alerta.
 - **Origem:** [ADR 0055](adr/0055-escopo-de-caminho-na-politica-de-terminal.md),
   achado U, Fase F do [backlog](explanation/backlog.md)
 
+O escopo só vale enquanto ele próprio estiver dentro da raiz — quem garante isso
+é a [RN-092](#rn-092).
+
+### RN-092 — O `projectId` é segmento de caminho, e o escopo nunca sai da raiz {#rn-092}
+
+`projectScopeRoot()` **recusa** um `projectId` que não seja segmento de caminho
+simples (`^[A-Za-z0-9_-]{1,64}$`), lançando em vez de montar o caminho.
+
+O motivo é que o id chega de `@Param('projectId')` sem pipe de validação, e o
+Express **decodifica o percent-encoding do segmento antes de entregá-lo**: um
+`..%2F..%2Fetc` chega como `../../etc`, e o `join` resolveria para fora da raiz
+sem reclamar. Os dois consumidores da função sofrem, e o segundo é o grave:
+
+- o `permissions.json` seria lido **e escrito** em caminho arbitrário;
+- o escopo da [RN-075](#rn-075) autoriza comando de `terminal` sob essa pasta.
+  Um escopo que escapa da raiz é a política de aprovação apontando para o lugar
+  errado — falha de SEGURANÇA, não de arquivo não encontrado.
+
+A checagem é deliberadamente **mais larga que UUID** (aceita letra, dígito,
+hífen e sublinhado) para não amarrar o formato do id, e estreita o bastante para
+que o resultado nunca escape. E fica **onde a raiz é derivada**, não em cada
+chamador, pela mesma razão que fez a função existir: as duas derivações têm que
+concordar, e checagem duplicada é checagem que um dia diverge.
+
+O caminho feliz não muda — todo id real é UUID vindo do banco.
+
+- **Onde:** `apps/api/src/infrastructure/filesystem/project-workspaces-root.ts`
+  (`projectScopeRoot`)
+- **Teste:** `apps/api/test/infrastructure/filesystem/project-workspaces-root.spec.ts`
+- **Origem:** [ADR 0058](adr/0058-csp-fechado-na-api-e-escopo-de-projeto-contido.md),
+  alertas `js/path-injection` do CodeQL
+
+### RN-093 — Em produção, a api não sobe com a chave de exemplo do `state` de OAuth {#rn-093}
+
+`resolveOauthStateSecret()` **derruba o boot** quando `NODE_ENV === 'production'`
+e `GIT_OAUTH_STATE_SECRET` está ausente, é igual ao literal de exemplo do
+repositório, ou tem menos de 16 caracteres. Fora de produção o default de
+desenvolvimento continua valendo.
+
+Essa chave assina o `state` do OAuth de git, e o `state` é o único que impede o
+callback `GET /git/oauth/:provider/callback` — rota pública, por necessidade —
+de ser forjado. Com a chave conhecida, qualquer um assina um `state` para
+`{projectId, userId, provider}` à escolha e faz o callback gravar, no projeto
+apontado por esse payload, o token de git obtido do provider.
+
+**Por que rejeitar o literal, e não só o vazio.** O default estava no
+`.env.example` de um repositório open source — é segredo publicado, não segredo
+fraco. E o `docker-compose.prod.yml` o supria como fallback, então no caminho
+real de erro a variável estava **definida**: uma verificação de "não vazia"
+passaria por cima do defeito inteiro.
+
+A resolução fica em função única, e não em cada chamador, pela mesma razão da
+[RN-092](#rn-092) — eram duas cópias do mesmo literal, e cópias divergem.
+Divergindo aqui, o callback recusaria todo `state` legítimo.
+
+- **Onde:** `apps/api/src/infrastructure/security/oauth-state-secret.ts`
+  (`resolveOauthStateSecret`), chamada no boot em `apps/api/src/main.ts`
+- **Teste:** `apps/api/test/infrastructure/security/oauth-state-secret.spec.ts`
+- **Origem:** [ADR 0059](adr/0059-segredo-do-state-de-oauth-sem-default.md)
+
 ### RN-076 — A credencial de git nunca é escrita em arquivo {#rn-076}
 
 O engine trabalha em repositório remoto pedindo o **remoto de trabalho** à api
