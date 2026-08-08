@@ -6,6 +6,17 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **web,api**: o dashboard não derruba mais a si mesmo quando o workspace tem
+  muitos projetos. Cada card pedia sete coisas à api por conta própria e ficava
+  repetindo o pedido a cada poucos segundos; com 23 projetos isso dava quase
+  3.900 requisições por minuto contra um limite de 300, e a tela voltava cheia
+  de erro antes de terminar de carregar — o mesmo valia para a barra lateral,
+  que fazia isso em toda tela do app, não só no dashboard. Agora a grade
+  inteira chega numa resposta só, e o custo deixa de crescer com o número de
+  projetos: medido no navegador, caiu de 3.824 para 12 requisições por minuto.
+  A tela mostra exatamente o que mostrava. A gaveta do sino passa a buscar as
+  notificações quando você a abre, em vez de o tempo todo
+
 - **deps**: cinco alertas do Dependabot fechados por `pnpm.overrides` em
   `pnpm-workspace.yaml` — todos transitivos, nenhum tocado por bump direto de
   `package.json`. `js-yaml` (HIGH, GHSA-5p4m-2wfm-xmqj, DoS em `!!omap`) teve

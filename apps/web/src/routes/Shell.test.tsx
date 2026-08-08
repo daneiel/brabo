@@ -58,14 +58,14 @@ vi.mock('../lib/hooks', () => ({
   useCurrentWorkspaceWithRole: () => ({ data: WORKSPACE_WITH_ROLE }),
   useProjects: () => ({ data: estado.projects, ...estado.projectsQuery }),
   useProjectsStatus: () => ({ data: [] }),
-  useProjectHasRecentActivity: () => true,
+  useProjectsSummary: () => ({ data: [] }),
 }));
 
 vi.mock('../lib/notifications', () => ({
   useProjectsUnread: () =>
     estado.projects.map((project) => ({
       project,
-      latestSession: undefined,
+      latestSessionId: null,
       latestSeq: 0,
       unreadCount: 0,
     })),
@@ -79,7 +79,6 @@ vi.mock('../lib/api-client', async () => {
   return {
     ApiError: real.ApiError,
     mensagemDaApi: real.mensagemDaApi,
-    getProjectBudget: () => Promise.resolve(null),
   };
 });
 

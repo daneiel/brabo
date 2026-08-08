@@ -2186,6 +2186,54 @@ Origem concreta: uma execução de validação criou vinte projetos chamados
   desempate, nome único não)
 - **Origem:** navegação real com a sidebar cheia de projetos de validação
 
+### RN-090 — O dashboard lê o workspace, não um projeto de cada vez {#rn-090}
+
+A grade de cards e os dots da barra lateral se alimentam de **uma** requisição
+por ciclo — `GET /workspaces/:workspaceId/projects-summary` —, e o número de
+requisições **não cresce com a quantidade de projetos**.
+
+O card mostra provedor de git, status de provisionamento, orçamento, chips de
+agentes e última atividade; a sidebar mostra o dot de status e o contador de
+não lidos. Tudo isso vinha de sete consultas em POLL por projeto, o que fazia
+23 projetos custarem 3.824 requisições por minuto contra um limite de 300
+(`RateLimitGuard`) — a tela derrubava a si mesma em 429 antes de terminar de
+carregar. A [RN-088](#rn-088) fez a app parar de insistir quando isso acontece;
+esta reduz o pedido.
+
+Duas fronteiras que a regra fixa, e que não são detalhe de implementação:
+
+- **A api responde fatos, não roster.** `roster` traz o que aconteceu no event
+  log (execução ativada, módulos, gate já aberto, subagentes delegados, infra
+  aceita). Quem é lead de área, que ícone cada agente tem e como os membros
+  viram um chip continua sendo do web — e a regra de PRESENÇA é uma só
+  (`rosterFromFacts`), compartilhada com o painel do time, para que um agente
+  novo não apareça num lugar e falte no outro.
+- **A gaveta do sino é a única leitura que continua por projeto**, e só busca
+  quando aberta: o corte de "onde parei de ler" é `seq` guardado no navegador
+  (`read-state`), que o servidor não conhece.
+
+Efeito colateral aceito e desejado: `gatesEverOpened` e `delegatedSubagents`
+passam a cobrir a sessão INTEIRA. O cliente derivava dos últimos 200 eventos e
+perdia chips em sessão longa (ver
+[ADR 0021](adr/0021-fechamento-4a-infra-e-painel.md)) — o texto de
+`deriveAgentRoster` sempre disse "já abriu alguma vez".
+
+- **Onde:**
+  `apps/api/src/application/ports/projects-summary-repository.port.ts`,
+  `apps/api/src/infrastructure/persistence/drizzle/projects-summary.repository.ts`,
+  `apps/api/src/interfaces/http/iam/workspaces.controller.ts`
+  (`getProjectsSummary`), `apps/web/src/lib/hooks.ts` (`useProjectsSummary`),
+  `apps/web/src/lib/agent-status.ts` (`rosterFromFacts`),
+  `apps/web/src/routes/Dashboard.tsx`, `apps/web/src/routes/Shell.tsx`
+- **Teste:** `apps/web/src/routes/Dashboard.fanout.test.tsx` (30 projetos
+  custam o mesmo que 3; nenhum endpoint por projeto é chamado);
+  `apps/api/test/infrastructure/persistence/drizzle/projects-summary.repository.spec.ts`
+  (o número de consultas ao banco não cresce com N);
+  `apps/web/src/lib/agent-status.test.ts` (os fatos da api produzem os mesmos
+  chips que o event log)
+- **Origem:** dashboard de 23 projetos medido no navegador — 3.824 req/min
+  antes, 12 depois
+
 ---
 
 ## Psicólogo e Anamnese

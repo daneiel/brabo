@@ -7918,6 +7918,58 @@
         ]
       }
     },
+    "/workspaces/{workspaceId}/projects-summary": {
+      "get": {
+        "description": "Uma linha por projeto do workspace com provedor de git, status de provisionamento, orçamento, última atividade, histórias aguardando promoção e os fatos que decidem a roster de agentes (RN-090).\n\nMesma ideia de `projects-status`, um andar acima: a grade de cards é uma leitura do WORKSPACE, não N leituras de projeto. O caminho anterior fazia sete consultas em poll por card, e com 23 projetos o dashboard sozinho estourava o rate limit de 300 req/min.",
+        "operationId": "WorkspacesController_getProjectsSummary",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProjectCardSummaryResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no workspace."
+          },
+          "404": {
+            "description": "Workspace inexistente ou invisível para quem chamou."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Tudo que os cards do dashboard desenham, numa chamada",
+        "tags": [
+          "workspaces"
+        ]
+      }
+    },
     "/workspaces/{workspaceId}/summary": {
       "get": {
         "description": "Contagem de projetos, agentes que gastaram tokens neste mês e o gasto do mês — alimenta a linha de resumo do dashboard de projetos.",
@@ -11664,6 +11716,103 @@
           "blockedTaskCount"
         ]
       },
+      "ProjectCardBudgetResponseDto": {
+        "type": "object",
+        "properties": {
+          "limitMicros": {
+            "type": "number",
+            "example": 50000000
+          },
+          "spentMicros": {
+            "type": "number",
+            "example": 12500000
+          }
+        },
+        "required": [
+          "limitMicros",
+          "spentMicros"
+        ]
+      },
+      "ProjectCardSummaryResponseDto": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "example": "01JC4Z0000PROJETO0000000001"
+          },
+          "provider": {
+            "type": "string",
+            "enum": [
+              "local",
+              "github",
+              "gitlab"
+            ],
+            "example": "github",
+            "description": "`local` quando o projeto ainda não tem repositório provisionado."
+          },
+          "provisioningStatus": {
+            "type": "string",
+            "enum": [
+              "provisioning",
+              "provisioned",
+              "provision_failed",
+              "awaiting_plan_decision"
+            ],
+            "nullable": true,
+            "example": "provisioned",
+            "description": "`null` quando o bootstrap nunca começou. Derivado do cursor."
+          },
+          "budget": {
+            "nullable": true,
+            "description": "`null` quando o projeto NUNCA teve orçamento definido — distinto de uma linha zerada, e é o que faz o card oferecer \"Definir orçamento\".",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ProjectCardBudgetResponseDto"
+              }
+            ]
+          },
+          "latestSessionId": {
+            "type": "object",
+            "example": "01JC4Z0000SESSAO00000000001",
+            "nullable": true
+          },
+          "latestSeq": {
+            "type": "number",
+            "example": 41,
+            "description": "Último `seq` já gravado na sessão mais recente (`nextSeq - 1`); 0 quando não há sessão. O web compara com o que já foi visto para contar não lidos."
+          },
+          "lastEvent": {
+            "nullable": true,
+            "description": "Último evento da sessão mais recente — a linha de rodapé do card.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SessionEventResponseDto"
+              }
+            ]
+          },
+          "storiesAwaitingPromotion": {
+            "type": "number",
+            "example": 2,
+            "description": "Histórias que o PO terminou e que aguardam a promoção do usuário (RN-048)."
+          },
+          "roster": {
+            "$ref": "#/components/schemas/RosterFactsResponseDto"
+          }
+        },
+        "required": [
+          "projectId",
+          "provider",
+          "provisioningStatus",
+          "budget",
+          "latestSessionId",
+          "latestSeq",
+          "lastEvent",
+          "storiesAwaitingPromotion",
+          "roster"
+        ]
+      },
       "ProjectGitRemoteResponseDto": {
         "type": "object",
         "properties": {
@@ -13053,6 +13202,54 @@
           "restoredFrom",
           "toVersion",
           "cacheInvalidated"
+        ]
+      },
+      "RosterFactsResponseDto": {
+        "type": "object",
+        "properties": {
+          "executionActivated": {
+            "type": "boolean",
+            "example": true,
+            "description": "A sessão mais recente já registrou `execution.activated` — é o que faz os dev agents por módulo entrarem na roster."
+          },
+          "moduleNames": {
+            "example": [
+              "api",
+              "web"
+            ],
+            "description": "Nomes dos módulos do module_map VIGENTE (maior `version`). Um dev agent por módulo, quando a execução foi ativada.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "gatesEverOpened": {
+            "type": "boolean",
+            "example": true,
+            "description": "Algum gate de PR (dev ou infra) já abriu ALGUMA VEZ nesta sessão — é o que traz QA e SecOps para a roster. Cobre a sessão inteira, não uma janela dos últimos N eventos."
+          },
+          "delegatedSubagents": {
+            "example": [
+              "qa-automacao"
+            ],
+            "description": "Subagentes com pelo menos uma delegação registrada na sessão, qualquer que seja o desfecho — dispensa é decisão registrada, não silêncio.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "infraActive": {
+            "type": "boolean",
+            "example": false,
+            "description": "Existe handoff `accepted` para `infra` na sessão mais recente."
+          }
+        },
+        "required": [
+          "executionActivated",
+          "moduleNames",
+          "gatesEverOpened",
+          "delegatedSubagents",
+          "infraActive"
         ]
       },
       "RuleCoverageResponseDto": {

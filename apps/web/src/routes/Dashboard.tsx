@@ -1,28 +1,23 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
-import { getBootstrapStatus, getProjectBudget, getRepository } from '../lib/api-client';
 import {
-  useArchitecture,
   useCurrentWorkspace,
-  useHandoffs,
-  useLatestSession,
-  usePendingActions,
-  useProjectLastActivity,
   useProjects,
-  useSessionEvents,
+  useProjectsSummary,
   useWorkspaceSummary,
 } from '../lib/hooks';
 import {
   useProjectsUnread,
   useNotificationGroups,
-  useStoriesAwaitingPromotion,
+  storiesAwaitingPromotion,
 } from '../lib/notifications';
 import { setLastSeenSeq } from '../lib/read-state';
-import { deriveAgentRoster, groupRosterByArea } from '../lib/agent-status';
+import { groupRosterByArea, rosterFromFacts } from '../lib/agent-status';
+import { classifyEvent } from '../lib/activity';
+import { formatRelativeTime } from '../lib/time';
 import { contagemAgentes, contagemProjetos } from '../lib/pluralize';
 import { microsParaUsd, usdFmt } from '../lib/currency';
-import type { Project } from '../lib/api-types';
+import type { Project, ProjectCardSummary } from '../lib/api-types';
 import { ProjectCard, ProjectCardSkeleton } from '../components/ProjectCard';
 import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
 import { NotificationBell } from '../components/NotificationBell';
@@ -33,57 +28,44 @@ import { PlusIcon, SearchIcon } from '../components/ui/icons';
 import { NewProjectWizard } from './NewProjectWizard';
 import styles from './Dashboard.module.css';
 
-function ProjectCardContainer({ project }: { project: Project }) {
+/**
+ * O card não faz consulta nenhuma: tudo que ele desenha vem da linha do
+ * projeto no resumo do workspace (RN-090).
+ *
+ * O padrão N+1-por-card que existia aqui — sete consultas em poll por card,
+ * incluindo a cadeia inteira do painel do time só pra tirar quatro chips —
+ * estourava o rate limit sozinho a partir de ~5 projetos. `summary` é
+ * `undefined` só enquanto a primeira resposta não chegou.
+ */
+function ProjectCardContainer({
+  project,
+  summary,
+  carregando,
+}: {
+  project: Project;
+  summary: ProjectCardSummary | undefined;
+  carregando: boolean;
+}) {
   const navigate = useNavigate();
-  const { data: repository } = useQuery({
-    queryKey: ['repository', project.id],
-    queryFn: () => getRepository(project.id),
-  });
-  const budgetQuery = useQuery({
-    queryKey: ['budget', project.id],
-    queryFn: () => getProjectBudget(project.id),
-  });
-  const budget = budgetQuery.data;
-  // `getProjectBudget` devolve `null` (não uma linha zerada) quando o
-  // projeto nunca teve orçamento definido — distinto de "ainda carregando"
-  // (`data === undefined`). Só o segundo é "sem orçamento" de verdade.
-  const noBudget = budgetQuery.isSuccess && budget === null;
-  const { data: bootstrap } = useQuery({
-    queryKey: ['bootstrap', project.id],
-    queryFn: () => getBootstrapStatus(project.id),
-    // Segue pollando enquanto provisiona pra o badge do card atualizar
-    // sozinho; para quando converge ou falha.
-    refetchInterval: (query) =>
-      query.state.data?.status === 'provisioning' ? 3000 : false,
-  });
-  const provisioningStatus = bootstrap?.status ?? null;
-  const provider = repository?.provider ?? 'local';
-  const lastActivityText = useProjectLastActivity(project.id);
 
-  // Roster do PROJETO pro chip de agentes do card — mesma cadeia que
-  // ProjectOverviewTab usa pro painel do time (não existe roster por
-  // projeto no backend, só por SESSÃO). ~5 queries a mais por card, mesmo
-  // padrão N+1-por-card já estabelecido neste dashboard.
-  const { latest: latestSession } = useLatestSession(project.id);
-  const sessionId = latestSession?.id;
-  const eventsQuery = useSessionEvents(project.id, sessionId);
-  const events = eventsQuery.data?.items ?? [];
-  const { data: architecture } = useArchitecture(project.id);
-  const handoffsQuery = useHandoffs(project.id, sessionId);
-  const actionsQuery = usePendingActions(project.id, sessionId);
-  const pendingActionAgentIds = new Set(
-    (actionsQuery.data?.items ?? [])
-      .filter((a) => a.status === 'pending')
-      .map((a) => a.actor.id),
-  );
-  const roster = deriveAgentRoster(
-    events,
-    architecture?.moduleMap,
-    events.some((e) => e.type === 'execution.activated'),
-    handoffsQuery.data ?? [],
-    pendingActionAgentIds,
-  );
-  const rosterGroups = groupRosterByArea(roster);
+  const provisioningStatus = summary?.provisioningStatus ?? null;
+  const provider = summary?.provider ?? 'local';
+  const budget = summary?.budget ?? null;
+  // `budget` vem `null` (não uma linha zerada) quando o projeto nunca teve
+  // orçamento definido — distinto de "ainda carregando". Só o primeiro é
+  // "sem orçamento" de verdade, e é o que oferece "Definir orçamento".
+  const noBudget = !carregando && !!summary && budget === null;
+
+  // Os chips saem dos MESMOS fatos e da MESMA regra de presença que o painel
+  // do time usa (`rosterFromFacts`); o que o card não pede é o status de cada
+  // agente, porque não desenha nenhum.
+  const rosterGroups = summary
+    ? groupRosterByArea(rosterFromFacts(summary.roster, () => 'ocioso'))
+    : [];
+
+  const lastActivityText = summary?.lastEvent
+    ? `${classifyEvent(summary.lastEvent).text} · ${formatRelativeTime(summary.lastEvent.createdAt)}`
+    : 'Sem atividade ainda';
 
   return (
     <ProjectCard
@@ -122,15 +104,25 @@ export function Dashboard() {
   const projectsQuery = useProjects(workspace?.id);
   const projects = projectsQuery.data;
   const summaryQuery = useWorkspaceSummary(workspace?.id);
+  // A grade INTEIRA numa requisição (RN-090). Mesma queryKey que o Shell usa
+  // para os dots da sidebar: montados juntos, o React Query deduplica e o
+  // dashboard custa um poll, não um por card.
+  const cardsQuery = useProjectsSummary(workspace?.id);
+  const cards = cardsQuery.data;
   const [search, setSearch] = useState('');
   const [wizardOpen, setWizardOpen] = useState(false);
+  // O `open` do sino mora aqui porque decide se as consultas da gaveta saem —
+  // ver `useNotificationGroups`.
+  const [sinoAberto, setSinoAberto] = useState(false);
 
-  const unread = useProjectsUnread(projects);
-  const notificationGroups = useNotificationGroups(unread);
+  const cardPorProjeto = new Map((cards ?? []).map((c) => [c.projectId, c]));
+
+  const unread = useProjectsUnread(projects, cards);
+  const notificationGroups = useNotificationGroups(unread, sinoAberto);
   // Duas fontes, um número. As promoções pendentes (Fase 12c) NÃO entram em
   // `unreadCount`: aquele é consumido por `seq`, e o `onMarkRead` abaixo o
   // zeraria — abrir o sino cancelaria a fila de decisões do usuário.
-  const aguardandoPromocao = useStoriesAwaitingPromotion(projects);
+  const aguardandoPromocao = storiesAwaitingPromotion(cards);
   const totalUnread =
     unread.reduce((sum, u) => sum + u.unreadCount, 0) + aguardandoPromocao;
 
@@ -147,6 +139,8 @@ export function Dashboard() {
         <NotificationBell
           groups={notificationGroups}
           unreadCount={totalUnread}
+          open={sinoAberto}
+          onOpenChange={setSinoAberto}
           onMarkRead={() => {
             for (const u of unread) {
               if (u.latestSeq > 0) setLastSeenSeq(u.project.id, u.latestSeq);
@@ -205,7 +199,12 @@ export function Dashboard() {
         ) : (
           <div className={styles.grid}>
             {filtered.map((project) => (
-              <ProjectCardContainer key={project.id} project={project} />
+              <ProjectCardContainer
+                key={project.id}
+                project={project}
+                summary={cardPorProjeto.get(project.id)}
+                carregando={cardsQuery.isLoading}
+              />
             ))}
           </div>
         )}

@@ -1,24 +1,24 @@
 import type { CSSProperties } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
 import { emailDaSessao, sair } from '../lib/auth';
-import { getProjectBudget, mensagemDaApi } from '../lib/api-client';
+import { mensagemDaApi } from '../lib/api-client';
 import {
   useCurrentWorkspace,
   useCurrentWorkspaceWithRole,
-  useProjectHasRecentActivity,
   useProjects,
   useProjectsStatus,
+  useProjectsSummary,
 } from '../lib/hooks';
 import { useProjectsUnread } from '../lib/notifications';
 import {
+  ATIVIDADE_RECENTE_JANELA_MS,
   deriveProjectStatus,
   PROJECT_STATUS_COLOR,
   PROJECT_STATUS_LABEL,
 } from '../lib/project-status';
 import { ROLE_LABEL } from '../lib/roles';
 import { desempateDoProjeto, nomesRepetidos } from '../lib/project-label';
-import type { Project } from '../lib/api-types';
+import type { ProjectCardSummary } from '../lib/api-types';
 import { Badge } from '../components/ui/Badge';
 import { BrandIcon, ChatIcon, SettingsIcon } from '../components/ui/icons';
 import styles from './Shell.module.css';
@@ -36,27 +36,31 @@ function iniciaisDoEmail(email: string): string {
 }
 
 /**
- * Dot de status por projeto (RN-039) — busca o próprio orçamento (MESMA
- * queryKey do card do Dashboard, dedup de graça quando os dois estão
- * montados) e a atividade recente; a contagem de bloqueio vem de fora (uma
- * query só pro workspace inteiro, ver `useProjectsStatus`).
+ * Dot de status por projeto (RN-039) — SEM consulta própria: orçamento e
+ * última atividade vêm da linha do projeto no resumo do workspace (RN-090), e
+ * a contagem de bloqueio de `useProjectsStatus`. Todas são leituras do
+ * workspace inteiro.
+ *
+ * Antes o dot custava duas queries POR PROJETO, e o Shell é montado em TODA
+ * rota: a sidebar sozinha pollava o workspace inteiro mesmo numa tela de
+ * configurações. Era metade do tráfego que estourava o rate limit.
  */
 function NavStatusDot({
-  project,
+  summary,
   blockedTaskCount,
 }: {
-  project: Project;
+  summary: ProjectCardSummary | undefined;
   blockedTaskCount: number;
 }) {
-  const { data: budget } = useQuery({
-    queryKey: ['budget', project.id],
-    queryFn: () => getProjectBudget(project.id),
-  });
-  const hasRecentActivity = useProjectHasRecentActivity(project.id);
+  const budget = summary?.budget ?? null;
   const budgetPct =
     budget && budget.limitMicros > 0
       ? (budget.spentMicros / budget.limitMicros) * 100
       : 0;
+  const hasRecentActivity = summary?.lastEvent
+    ? Date.now() - new Date(summary.lastEvent.createdAt).getTime() <
+      ATIVIDADE_RECENTE_JANELA_MS
+    : false;
   const status = deriveProjectStatus({ budgetPct, blockedTaskCount, hasRecentActivity });
 
   return (
@@ -74,12 +78,16 @@ export function Shell() {
   const { data: workspaceWithRole } = useCurrentWorkspaceWithRole();
   const projectsQuery = useProjects(workspace?.id);
   const projects = projectsQuery.data;
-  const unread = useProjectsUnread(projects);
+  // MESMA queryKey do Dashboard: montados juntos, o React Query deduplica e o
+  // resumo é buscado uma vez só (RN-090).
+  const { data: cards } = useProjectsSummary(workspace?.id);
+  const unread = useProjectsUnread(projects, cards);
   const { data: projectsStatus } = useProjectsStatus(workspace?.id);
   const repetidos = nomesRepetidos(projects);
   const blockedByProject = new Map(
     (projectsStatus ?? []).map((p) => [p.projectId, p.blockedTaskCount]),
   );
+  const cardPorProjeto = new Map((cards ?? []).map((c) => [c.projectId, c]));
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const email = emailDaSessao();
 
@@ -121,7 +129,7 @@ export function Shell() {
                 .join(' ')}
             >
               <NavStatusDot
-                project={project}
+                summary={cardPorProjeto.get(project.id)}
                 blockedTaskCount={blockedByProject.get(project.id) ?? 0}
               />
               <span className={styles.navText}>

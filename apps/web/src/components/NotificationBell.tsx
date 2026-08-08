@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import type { SessionEvent } from '../lib/api-types';
 import { EventItem } from './EventItem';
 import { BellIcon } from './ui/icons';
@@ -13,18 +12,30 @@ export interface NotificationGroup {
 interface NotificationBellProps {
   groups: NotificationGroup[];
   unreadCount: number;
+  /**
+   * CONTROLADO por quem monta o sino, e não estado interno: abrir a gaveta é
+   * o que dispara a busca dos eventos não lidos (uma consulta por projeto com
+   * pendência). Com o estado aqui dentro, quem faz as consultas não tinha como
+   * saber que ninguém estava olhando — e pagava por todas o tempo todo.
+   */
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   onMarkRead: () => void;
 }
 
-export function NotificationBell({ groups, unreadCount, onMarkRead }: NotificationBellProps) {
-  const [open, setOpen] = useState(false);
-
+export function NotificationBell({
+  groups,
+  unreadCount,
+  open,
+  onOpenChange,
+  onMarkRead,
+}: NotificationBellProps) {
   return (
     <div className={styles.wrapper}>
       <button
         type="button"
         className={styles.button}
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => onOpenChange(!open)}
         aria-label="Notificações"
       >
         <BellIcon size={17} />

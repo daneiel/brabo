@@ -83,6 +83,32 @@ export interface ProjectBlockedStatus {
   blockedTaskCount: number;
 }
 
+/**
+ * Tudo que UM card do dashboard desenha, vindo do resumo do workspace
+ * (RN-090) — a grade inteira numa requisição em vez de sete por card.
+ *
+ * `roster` são FATOS, não a roster montada: quem é lead, que ícone cada
+ * agente tem e como os membros viram um chip continua sendo decisão do web
+ * (`lib/agents.ts` + `rosterFromFacts` em `lib/agent-status.ts`).
+ */
+export interface ProjectCardSummary {
+  projectId: string;
+  provider: GitProviderName;
+  provisioningStatus: ProvisioningStatus | null;
+  budget: { limitMicros: number; spentMicros: number } | null;
+  latestSessionId: string | null;
+  latestSeq: number;
+  lastEvent: SessionEvent | null;
+  storiesAwaitingPromotion: number;
+  roster: {
+    executionActivated: boolean;
+    moduleNames: string[];
+    gatesEverOpened: boolean;
+    delegatedSubagents: string[];
+    infraActive: boolean;
+  };
+}
+
 export interface ProjectMemberWithUser {
   userId: string;
   role: Role;

@@ -35,6 +35,7 @@ import type {
   PermissionsFile,
   Project,
   ProjectBlockedStatus,
+  ProjectCardSummary,
   ProjectMemberWithUser,
   ProposedAction,
   ProvisionedRepository,
@@ -231,6 +232,8 @@ export const getWorkspaceSummary = (workspaceId: string) =>
   get<WorkspaceSummary>(`/workspaces/${workspaceId}/summary`);
 export const getProjectsStatus = (workspaceId: string) =>
   get<ProjectBlockedStatus[]>(`/workspaces/${workspaceId}/projects-status`);
+export const getProjectsSummary = (workspaceId: string) =>
+  get<ProjectCardSummary[]>(`/workspaces/${workspaceId}/projects-summary`);
 export const createProject = (
   workspaceId: string,
   input: { name: string; slug: string },
