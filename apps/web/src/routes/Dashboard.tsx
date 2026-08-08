@@ -24,6 +24,7 @@ import { contagemAgentes, contagemProjetos } from '../lib/pluralize';
 import { microsParaUsd, usdFmt } from '../lib/currency';
 import type { Project } from '../lib/api-types';
 import { ProjectCard, ProjectCardSkeleton } from '../components/ProjectCard';
+import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
 import { NotificationBell } from '../components/NotificationBell';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
@@ -168,7 +169,20 @@ export function Dashboard() {
           )}
         </div>
 
-        {projectsQuery.isLoading ? (
+        {projectsQuery.isError ? (
+          // ANTES do teste de lista vazia, e não depois: `!projects` é
+          // verdadeiro nos dois casos, então uma api recusando com 429
+          // convidava o usuário a "criar o primeiro projeto" de um workspace
+          // que pode ter vinte. Errar calado é ruim; errar afirmando o
+          // contrário é pior (RN-083).
+          <div className={styles.empty}>
+            <ErroDeCarregamento
+              titulo="Não foi possível carregar seus projetos."
+              erro={projectsQuery.error}
+              onTentarDeNovo={() => void projectsQuery.refetch()}
+            />
+          </div>
+        ) : projectsQuery.isLoading ? (
           <div className={styles.grid}>
             {Array.from({ length: 6 }).map((_, i) => (
               <ProjectCardSkeleton key={i} />

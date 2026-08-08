@@ -79,13 +79,75 @@
   flex-shrink: 0;
 }
 
-.navName {
+/* Falha ao carregar a lista de projetos. Texto, não card: são 248px de
+   largura, e o alerta cheio (borda, ícone, respiro) comeria a coluna inteira.
+   `--danger` sobre `--surface-1` é dívida conhecida de contraste (3.88:1), por
+   isso a MENSAGEM fica em `--text-secondary` e só o realce de que algo falhou
+   fica na borda. */
+.navErro {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0 8px 8px;
+  padding: 10px;
+  border-radius: var(--radius-md);
+  border-left: 2px solid var(--danger);
+  background: var(--surface-2);
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-secondary);
+}
+
+/*
+ * `--text-primary` sublinhado, e NÃO `--accent`: accent sobre `--surface-2` dá
+ * 3.09:1 e reprova o 4.5:1 do AA para texto (medido contra `design/tokens.css`,
+ * mesma conta de `contraste.test.ts`). O sublinhado carrega a afordância que a
+ * cor deixaria de carregar — que é o certo de qualquer jeito, já que cor
+ * sozinha nunca deve ser o único sinal.
+ */
+.navErroBotao {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-primary);
+  text-decoration: underline;
+}
+
+/* O nome e, quando ele se repete, a linha de desempate — empilhados. O `flex`
+   saiu de `.navName` e veio para cá: quem ocupa a sobra da linha agora é o
+   bloco, senão a segunda linha nasceria fora do espaço do item. */
+.navText {
   flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.navName {
   min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   font-family: var(--font-mono);
+}
+
+/*
+ * `--text-secondary`, não `--text-muted`, pelo mesmo motivo já registrado em
+ * `.userRole` logo abaixo: muted sobre `--surface-1` dá 3.89:1 e reprova o AA.
+ * A informação existe para ser LIDA — é ela que distingue um projeto do outro.
+ */
+.navDesempate {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .globalNav {

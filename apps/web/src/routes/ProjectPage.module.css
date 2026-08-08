@@ -57,6 +57,13 @@
   border-bottom: 1px solid var(--border);
 }
 
+/* O lugar onde a tela fala quando não há projeto para mostrar — erro de carga
+   ou esqueleto. Mesmo respiro do `.body`, para a mensagem não nascer colada no
+   canto da área principal. */
+.falha {
+  padding: 24px;
+}
+
 .body {
   flex: 1;
   overflow-y: auto;

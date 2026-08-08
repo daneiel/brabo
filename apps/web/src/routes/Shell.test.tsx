@@ -2,10 +2,18 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Shell } from './Shell';
+import { ApiError } from '../lib/api-client';
 import type { Project, WorkspaceWithRole } from '../lib/api-types';
 
 const navigate = vi.fn();
 const sair = vi.fn(() => Promise.resolve());
+
+// Mutável porque a sidebar muda de comportamento com a LISTA (nome repetido
+// ganha desempate, nome único não), e os mocks de módulo são hoisted.
+const estado = vi.hoisted(() => ({
+  projects: [] as unknown[],
+  projectsQuery: {} as Record<string, unknown>,
+}));
 
 const PROJECT: Project = {
   id: 'project-1',
@@ -48,20 +56,32 @@ vi.mock('../lib/auth', () => ({
 vi.mock('../lib/hooks', () => ({
   useCurrentWorkspace: () => ({ data: WORKSPACE_WITH_ROLE.workspace }),
   useCurrentWorkspaceWithRole: () => ({ data: WORKSPACE_WITH_ROLE }),
-  useProjects: () => ({ data: [PROJECT] }),
+  useProjects: () => ({ data: estado.projects, ...estado.projectsQuery }),
   useProjectsStatus: () => ({ data: [] }),
   useProjectHasRecentActivity: () => true,
 }));
 
 vi.mock('../lib/notifications', () => ({
-  useProjectsUnread: () => [
-    { project: PROJECT, latestSession: undefined, latestSeq: 0, unreadCount: 0 },
-  ],
+  useProjectsUnread: () =>
+    estado.projects.map((project) => ({
+      project,
+      latestSession: undefined,
+      latestSeq: 0,
+      unreadCount: 0,
+    })),
 }));
 
-vi.mock('../lib/api-client', () => ({
-  getProjectBudget: () => Promise.resolve(null),
-}));
+vi.mock('../lib/api-client', async () => {
+  // `mensagemDaApi` real: o que o teste do caminho de erro prova é que a FRASE
+  // da api chega à sidebar.
+  const real =
+    await vi.importActual<typeof import('../lib/api-client')>('../lib/api-client');
+  return {
+    ApiError: real.ApiError,
+    mensagemDaApi: real.mensagemDaApi,
+    getProjectBudget: () => Promise.resolve(null),
+  };
+});
 
 function renderShell() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -75,6 +95,8 @@ function renderShell() {
 beforeEach(() => {
   navigate.mockClear();
   sair.mockClear();
+  estado.projects = [PROJECT];
+  estado.projectsQuery = {};
 });
 
 describe('Shell — rodapé', () => {
@@ -94,6 +116,68 @@ describe('Shell — rodapé', () => {
     screen.getByRole('button', { name: 'sair' }).click();
 
     await vi.waitFor(() => expect(sair).toHaveBeenCalledOnce());
+  });
+});
+
+/**
+ * Uma execução de validação criou vinte projetos chamados `validacao-real`. Na
+ * sidebar eram vinte linhas idênticas — nada dizia qual era qual.
+ */
+describe('Shell — projetos de mesmo nome na sidebar', () => {
+  it('nome repetido ganha id abreviado e data; o nome único não ganha nada', () => {
+    estado.projects = [
+      { ...PROJECT, id: 'aaaaaaaa-1111-4000-8000-000000000001', name: 'validacao-real' },
+      { ...PROJECT, id: 'bbbbbbbb-2222-4000-8000-000000000002', name: 'validacao-real' },
+      { ...PROJECT, id: 'cccccccc-3333-4000-8000-000000000003', name: 'Core API' },
+    ];
+
+    renderShell();
+
+    expect(screen.getAllByText('validacao-real')).toHaveLength(2);
+    expect(screen.getByText(/^#aaaaaaaa · /)).toBeInTheDocument();
+    expect(screen.getByText(/^#bbbbbbbb · /)).toBeInTheDocument();
+    // O de nome único fica limpo: desempate em toda linha seria ruído no
+    // lugar com menos espaço da tela.
+    expect(screen.queryByText(/^#cccccccc/)).toBeNull();
+  });
+
+  it('lista sem repetição nenhuma não mostra desempate', () => {
+    estado.projects = [
+      { ...PROJECT, id: 'aaaaaaaa-1111-4000-8000-000000000001', name: 'Core API' },
+      { ...PROJECT, id: 'bbbbbbbb-2222-4000-8000-000000000002', name: 'Web' },
+    ];
+
+    renderShell();
+
+    expect(screen.queryByText(/^#[0-9a-f]{8} · /)).toBeNull();
+  });
+});
+
+describe('Shell — lista de projetos que não carrega', () => {
+  it('429 na lista vira mensagem na sidebar, não sidebar vazia', () => {
+    estado.projects = [];
+    estado.projectsQuery = {
+      isError: true,
+      error: new ApiError(429, {
+        message: 'Limite de requisições excedido. Tente novamente em instantes.',
+      }),
+      refetch: vi.fn(),
+    };
+
+    renderShell();
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Limite de requisições excedido. Tente novamente em instantes.',
+    );
+    expect(
+      screen.getByRole('button', { name: 'tentar de novo' }),
+    ).toBeInTheDocument();
+  });
+
+  it('lista carregada não mostra alerta nenhum', () => {
+    renderShell();
+
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 });
 

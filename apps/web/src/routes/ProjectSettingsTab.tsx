@@ -31,6 +31,7 @@ import {
 } from '../lib/api-client';
 import { AGENT_LIST } from '../lib/agents';
 import { useProficiency } from '../lib/hooks';
+import { pollQueParaNoErro } from '../lib/query-policy';
 import { ROLE_LABEL, ROLE_ORDER } from '../lib/roles';
 import type {
   Model,
@@ -1254,7 +1255,7 @@ function InstructionVersionsSection({ projectId }: { projectId: string }) {
   const { data: historico } = useQuery({
     queryKey: ['instruction-versions', projectId],
     queryFn: () => listProjectInstructionVersions(projectId),
-    refetchInterval: 15000,
+    refetchInterval: pollQueParaNoErro(15000),
   });
 
   // Um clique é o que o enunciado pede — mas revertendo DUAS vezes por duplo

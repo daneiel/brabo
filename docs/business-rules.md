@@ -2127,6 +2127,65 @@ olhar, não algo a esconder atrás de "sem atividade".
 - **Teste:** `apps/web/src/lib/project-status.test.ts`
 - **Origem:** fidelidade do dashboard de projetos ao design aprovado
 
+### RN-083 — Falha de carregamento é dita na tela; 429 não se retenta {#rn-083}
+
+Toda tela que carrega dado da api distingue três estados, e nunca dois:
+**carregando** (esqueleto), **erro** (a mensagem que a api mandou, com o
+`trace_id` e um botão de tentar de novo) e **vazio** (o texto de lista vazia).
+`if (!dado) return null` colapsa os três, e o desfecho observado foi o pior
+possível: com a api limitando por `429`, a área principal de `/projects/:id`
+ficava **completamente em branco** — sem mensagem, sem erro, sem esqueleto — e
+o motivo existia só no console. No dashboard era pior que branco: `!projects`
+também era verdadeiro no erro, então a tela convidava a criar o **primeiro**
+projeto de um workspace que podia ter vinte.
+
+É a [RN-059](#rn-059) do outro lado do fio: falha nunca vira resposta vazia.
+Quem falha, diz.
+
+A frase é a **da api**, extraída por `mensagemDaApi` — a mesma função que o
+caminho de mutação já usava nos toasts. Um texto genérico nosso não sabe a
+diferença entre "limite de requisições excedido, tente em instantes" (espere) e
+"acesso negado" (não adianta esperar).
+
+O outro lado da mesma regra é não responder ao limite com mais tráfego. **4xx
+não se retenta**: `429` é literalmente o servidor mandando parar, e `401` já
+foi renovado uma vez dentro de `request()`. E **poll para quando a query erra**
+— volta no foco da janela, na remontagem ou no botão. Antes eram três
+retentativas por falha somadas a ~25 polls de 3 a 5 segundos que não sabiam
+parar: uma sessão real acumulou **1128 erros 429** contra um limite de 300
+requisições por minuto por usuário (`RateLimitGuard`), e o laço impedia a
+janela deslizante de se refazer. 5xx e falha de rede continuam com as três
+tentativas, onde repetir é a reação certa.
+
+- **Onde:** `apps/web/src/lib/query-policy.ts` (`deveRetentar`,
+  `pollQueParaNoErro`), `apps/web/src/components/ErroDeCarregamento.tsx`,
+  `apps/web/src/routes/ProjectPage.tsx`, `apps/web/src/routes/Dashboard.tsx`,
+  `apps/web/src/routes/Shell.tsx`, `apps/web/src/main.tsx`
+- **Teste:** `apps/web/src/lib/query-policy.test.ts`;
+  `apps/web/src/routes/ProjectPage.test.tsx` (429 vira mensagem com a frase da
+  api; 403 mostra o motivo do 403; carregando não é erro);
+  `apps/web/src/routes/Dashboard.test.tsx` (erro na lista não vira "nenhum
+  projeto ainda"); `apps/web/src/routes/Shell.test.tsx` (a sidebar diz em vez
+  de ficar vazia)
+- **Origem:** navegação real em `/projects/:id` com 1128 erros 429 no console
+
+### RN-084 — Projeto de nome repetido se desempata na barra lateral {#rn-084}
+
+Nome de projeto **não é único** — nada no domínio impede. Quando dois ou mais
+projetos da lista têm o mesmo nome, cada um deles mostra na sidebar o id
+abreviado e a data de criação (`#a1b2c3d4 · 07/08 14:32`), os dois já presentes
+no payload do projeto. Quem tem nome único não mostra nada: a legenda em toda
+linha seria ruído no lugar com menos espaço da tela.
+
+Origem concreta: uma execução de validação criou vinte projetos chamados
+`validacao-real`, e as vinte linhas da sidebar eram visualmente idênticas.
+
+- **Onde:** `apps/web/src/lib/project-label.ts` (`nomesRepetidos`,
+  `desempateDoProjeto`), `apps/web/src/routes/Shell.tsx`
+- **Teste:** `apps/web/src/routes/Shell.test.tsx` (nome repetido ganha
+  desempate, nome único não)
+- **Origem:** navegação real com a sidebar cheia de projetos de validação
+
 ---
 
 ## Psicólogo e Anamnese
@@ -2430,6 +2489,7 @@ verificação, para a rotação não ter janela de indisponibilidade.
 | Duas decisões concorrentes na mesma hipótese | conflito explícito (RN-022) |
 | Réplica do engine cai | sessão é adotada por outra ou encerra como `closed_abnormally / node_shutdown` — nunca fica órfã |
 | Rate limit indisponível | a requisição **passa**: o guard protege contra abuso, não contra acesso indevido |
+| Rate limit **estourado** (429) | a tela diz o que a api respondeu e o poll para; a app nunca responde ao limite com mais tráfego (RN-083) |
 | Credencial errada, conta inexistente ou conta bloqueada | **a mesma** resposta 401, com o mesmo custo de argon2 (RN-032) |
 | Refresh já usado reapresentado | família revogada e evento de segurança; o usuário legítimo também é deslogado (RN-030) |
 | Tráfego interno sem o segredo de serviço | 403 na api, 401 no engine — nunca alcança o controller (RN-035) |
