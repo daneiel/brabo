@@ -339,7 +339,7 @@ seria o produto elevando o próprio limite de gasto.
 
 ## api → engine
 
-Treze rotas de comando, mais as de saúde. Sob `/internal` com `VerifyServiceToken`:
+Quatorze rotas de comando, mais as de saúde. Sob `/internal` com `VerifyServiceToken`:
 
 | método | caminho | o que dispara |
 |---|---|---|
@@ -349,6 +349,7 @@ Treze rotas de comando, mais as de saúde. Sob `/internal` com `VerifyServiceTok
 | POST | `/sessions/:id/agent/readiness` | confirmação de prontidão |
 | POST | `/sessions/:id/agent/revise` | devolve ao PO uma história que o usuário recusou promover (Fase 12c — RN-048); **404 se o PO não está de pé**, e isso não é erro para a api |
 | POST | `/sessions/:id/agent/offer-infra-handoff` | oferta de handoff ao Infra |
+| POST | `/sessions/:id/agent/offer-dev-handoff` | oferta de handoff ao **Dev Lead** (FASE 14d — [RN-087](../business-rules.md#rn-087)) |
 | POST | `/sessions/:id/execution/start` | ativa a fase de execução |
 | POST | `/sessions/:id/execution/parallelize` | cria subagentes — **executa, não decide** (ver abaixo) |
 | POST | `/sessions/:id/dev-agents/:agentId/rearm` | rearma um dev agent travado (Fase 12b — RN-047); 404 se não existe, **409 se não está `idle_tripped`** |
@@ -356,6 +357,12 @@ Treze rotas de comando, mais as de saúde. Sob `/internal` com `VerifyServiceTok
 | POST | `/projects/:id/anamnese/run` | execução da Anamnese |
 | POST | `/projects/:id/agents/:agent/instructions/invalidate` | invalida o cache de instrução |
 | POST | `/actions/execute` · `/actions/execute-git` | executa uma ação **já aprovada** |
+
+As duas ofertas de handoff saem da **mesma** confirmação de arquitetura
+pronta, e são rotas separadas de propósito: Infra e Dev são áreas com desfechos
+independentes, e uma chamada só faria a falha de uma derrubar a outra. A ordem
+importa — Infra primeiro, porque o event log é imutável e um handoff já
+ofertado não teria como ser retratado.
 
 `/actions/execute` merece atenção: ele executa, não decide. A decisão já
 aconteceu na api. Se o engine pudesse decidir, o pipeline de aprovação teria
