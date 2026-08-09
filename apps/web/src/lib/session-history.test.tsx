@@ -218,7 +218,11 @@ describe('useSessionEventHistory — o custo', () => {
       .findAll({ queryKey: ['session-events-page'] });
     expect(paginas.length).toBeGreaterThan(0);
     for (const p of paginas) {
-      expect(p.options.refetchInterval ?? false).toBe(false);
+      // `QueryOptions` não declara `refetchInterval` (ele é de
+      // `QueryObserverOptions`), e o cache guarda o tipo largo — daí a leitura
+      // estrutural em vez de pelo tipo nominal.
+      const opcoes = p.options as { refetchInterval?: unknown };
+      expect(opcoes.refetchInterval ?? false).toBe(false);
     }
 
     // `staleTime: Infinity` é o que segura: invalidar TUDO deixa a página
