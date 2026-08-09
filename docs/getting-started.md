@@ -88,6 +88,16 @@ tinha acesso mais livre e fora dele já pedia aprovação (RN-075) — só o que
 antes ficava invisível dentro do volume passa a estar numa pasta que você
 pode abrir com seu próprio editor e `git`.
 
+Os containers de `api` e `engine` rodam como **root** em desenvolvimento
+(mesma situação já conhecida do `node_modules`/`apps/api/dist` — ver o aviso
+no topo deste repositório). Todo arquivo que o agente escrever na pasta
+local sai dono de `root` no seu disco — para editar/apagar sem `sudo`
+depois, rode uma vez `sudo chown -R $USER ~/brabo-projetos`
+(ajuste o caminho para o que você escolheu). Confirmado por execução: um
+`docker run` escrevendo num bind mount de teste deixou o arquivo
+inacessível ao usuário comum até um segundo container (rodando como root)
+removê-lo.
+
 Só testado em Linux/macOS. Bind mount de host no Docker Desktop para Windows
 tem armadilhas conhecidas (permissão/dono entre NTFS e o usuário do
 container, e NTFS não distingue maiúscula de minúscula onde `git worktree`
