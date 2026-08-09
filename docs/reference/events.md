@@ -203,6 +203,17 @@ recarrega a página não as recupera — recupera o event log.
 
 Um evento de domínio quase sempre gera um `event.appended`; o inverso não vale.
 
+### Quem pode ouvir (RN-108)
+
+Entrar no canal `session:<id>` — e portanto receber qualquer um destes
+broadcasts — exige um ticket opaco de uso único emitido por
+`POST /projects/:projectId/sessions/:sessionId/socket-ticket` (TTL de 30s).
+Até a RN-108 o `connect/3` do socket Phoenix não checava nada além do
+`session_id` existir: quem descobrisse o UUID entrava e ouvia tudo. O ticket
+não é persistido/lido no event log — mora em `session_socket_tickets`,
+verificado e consumido pelo próprio engine — então não aparece no inventário
+de eventos de domínio abaixo. Ver [RN-108](../business-rules.md#rn-108).
+
 ## Span
 
 Nomes de span OpenTelemetry. Uma sessão é uma **trace raiz** atravessando api e

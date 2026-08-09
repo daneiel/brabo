@@ -3299,6 +3299,67 @@ estável seria a mesma família de tráfego desnecessário da PÓS-FASE 15.
   o caso comum de mostrar o editor vazio por um instante.
 - **Origem:** [ADR 0065](adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md)
 
+### RN-108 — O socket da sessão exige um ticket opaco de uso único, não o JWT reaproveitado {#rn-108}
+
+`EngineWeb.SessionSocket.connect/3` recusava a conexão inteira só com o
+`session_id` (UUID) precisando existir no Registry — quem descobrisse o UUID
+entrava no canal `session:<id>` e recebia todos os broadcasts ao vivo da
+sessão. Fechar isso era limitação deliberada documentada no próprio módulo
+desde a Fase 3.
+
+`POST /projects/:projectId/sessions/:sessionId/socket-ticket` (`scope:
+"heartbeat"|"terminal"`) emite um ticket opaco (32 bytes de CSPRNG,
+`TokenFactory`), TTL de **30 segundos**, uso único. `scope: "heartbeat"` exige
+papel `viewer`; `scope: "terminal"` exige `developer` — o mesmo papel mínimo
+de `MIN_ROLE_FOR_ACTION_TYPE.terminal` em `domain/actions/decide.ts` (hoje
+nenhum caminho pede `terminal` de verdade; o valor nasce certo para a FASE 25,
+o terminal interativo). A api persiste só o HASH (SHA-256 **puro**, não
+`hashDeToken`/HMAC — o engine não tem o pepper da api, e um token de 256 bits
+de CSPRNG não precisa de pepper contra dicionário, mesmo raciocínio que o
+próprio `hashDeToken` já registra), nunca o token bruto.
+
+O consumo é do ENGINE, que lê `session_socket_tickets` direto (mesmo padrão de
+`Engine.Outbox.Event` sobre `outbox_events` — nunca changeset/insert, só a
+escrita estreita que o uso único exige) em DUAS etapas:
+`SocketTicket.validar/1` (peek, sem marcar nada — chamado por `connect/3`,
+que ainda não sabe qual `session_id` vai ser pedido) e
+`SocketTicket.consumir/2` (`UPDATE` condicional exigindo o `session_id` do
+tópico bater com o da linha — chamado por `SessionChannel.join/3`, que
+também confere o `project_id` do ticket contra o da sessão, defesa em
+profundidade contra ticket de um projeto abrindo canal de outro). Sem ticket,
+ou com um inválido: a conexão inteira é recusada (`{:error, %{reason:
+"unauthorized"}}`), não só o join do canal.
+
+O web (`session-channel.ts`) busca um ticket NOVO antes de TODA
+`socket.connect()` — inclusive em reconexão automática, que existe. O
+reconnect nativo do `Phoenix.Socket` reusaria o mesmo `params` da construção
+(o ticket velho, já expirado ou consumido), então ele é neutralizado
+(`reconnectAfterMs` que praticamente nunca dispara) e a reconexão passa a ser
+inteiramente manual, com busca de ticket fresco a cada tentativa.
+
+- **Onde:** `apps/api/src/db/schema.ts` (`sessionSocketTickets`),
+  `apps/api/src/domain/sessions/socket-ticket-scope.ts`,
+  `apps/api/src/application/use-cases/sessions/create-socket-ticket.use-case.ts`,
+  `apps/api/src/interfaces/http/sessions/sessions.controller.ts` (rota
+  `socket-ticket`), `apps/engine/lib/engine/sessions/socket_ticket.ex`,
+  `apps/engine/lib/engine_web/channels/session_socket.ex`,
+  `apps/engine/lib/engine_web/channels/session_channel.ex`,
+  `apps/web/src/lib/session-channel.ts`
+- **Teste:**
+  `apps/api/test/application/use-cases/sessions/create-socket-ticket.use-case.spec.ts`,
+  `apps/api/test/domain/sessions/socket-ticket-scope.spec.ts`,
+  `apps/api/test/infrastructure/persistence/session-socket-ticket.repository.spec.ts`,
+  `apps/engine/test/engine/sessions/socket_ticket_test.exs` (reuso falha,
+  session_id errado falha, corrida concorrente só um vence),
+  `apps/engine/test/engine_web/channels/session_socket_test.exs` (sem ticket
+  a conexão é recusada),
+  `apps/engine/test/engine_web/channels/session_channel_test.exs` (ticket de
+  outro projeto: join falha), `apps/web/src/lib/session-channel.test.ts`
+- **Borda:** o ticket NÃO é o JWT reaproveitado — TTL curto, uso único, escopo
+  fechado, e nasce de uma rota própria que já checa papel efetivo, não de
+  decodificar o access token existente.
+- **Origem:** sem ADR — extração/hardening pontual, não mudança estrutural.
+
 ---
 
 ## Quando dá errado

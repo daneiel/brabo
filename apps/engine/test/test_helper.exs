@@ -114,6 +114,25 @@ CREATE TABLE IF NOT EXISTS public.sessions (
 )
 """)
 
+# Mesmo motivo dos fixtures acima — session_socket_tickets também é
+# gerenciada pela api (Drizzle, schema "public"). RN-108: é o que
+# Engine.Sessions.SocketTicket lê e consome pra autenticar connect/3 de
+# EngineWeb.SessionSocket. Enum socket_ticket_scope simplificado pra text —
+# só a api valida o vocabulário fechado na emissão.
+Engine.Repo.query!("""
+CREATE TABLE IF NOT EXISTS public.session_socket_tickets (
+  id uuid PRIMARY KEY,
+  session_id uuid NOT NULL,
+  project_id uuid NOT NULL,
+  user_id uuid NOT NULL,
+  scope text NOT NULL,
+  ticket_hash text NOT NULL,
+  expires_at timestamptz NOT NULL,
+  consumed_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now()
+)
+""")
+
 Engine.Repo.query!("""
 CREATE TABLE IF NOT EXISTS public.agent_instructions (
   id uuid PRIMARY KEY,

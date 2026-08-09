@@ -7075,6 +7075,76 @@
         ]
       }
     },
+    "/projects/{projectId}/sessions/{sessionId}/socket-ticket": {
+      "post": {
+        "description": "O ticket autentica `connect/3` do socket Phoenix `session:<id>` no engine — NÃO é o JWT reaproveitado. TTL de 30s e uso único: cada reconexão (inclusive automática) pede um ticket novo. `scope: \"heartbeat\"` exige papel `viewer`; `scope: \"terminal\"` exige `developer`, o mesmo papel mínimo de ações de terminal.",
+        "operationId": "SessionsController_issueSocketTicket",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSocketTicketDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SocketTicketResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente para o escopo pedido."
+          },
+          "404": {
+            "description": "Projeto ou sessão inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Emite um ticket opaco de uso único para o socket da sessão",
+        "tags": [
+          "sessões"
+        ]
+      }
+    },
     "/projects/{projectId}/sessions/{sessionId}/tasks/{taskId}/unblock": {
       "post": {
         "description": "Zera o contador de correções de gate e devolve a tarefa ao agente. É a saída humana do teto de correções — não existe destrave automático.",
@@ -10462,6 +10532,23 @@
         },
         "required": [
           "kind"
+        ]
+      },
+      "CreateSocketTicketDto": {
+        "type": "object",
+        "properties": {
+          "scope": {
+            "type": "string",
+            "enum": [
+              "heartbeat",
+              "terminal"
+            ],
+            "example": "heartbeat",
+            "description": "`heartbeat` exige papel `viewer`; `terminal` exige `developer` — o mesmo papel mínimo de `MIN_ROLE_FOR_ACTION_TYPE.terminal`."
+          }
+        },
+        "required": [
+          "scope"
         ]
       },
       "CreateStoryInternalDto": {
@@ -15150,6 +15237,24 @@
           "scope",
           "modelId",
           "reason"
+        ]
+      },
+      "SocketTicketResponseDto": {
+        "type": "object",
+        "properties": {
+          "ticket": {
+            "type": "string",
+            "description": "Token opaco de uso único, base64url. TTL de 30s e uso único: some depois do primeiro `connect/3` bem-sucedido, ou quando expira."
+          },
+          "expiresAt": {
+            "type": "string",
+            "example": "2026-08-09T12:00:30.000Z",
+            "description": "Quando o ticket expira (ISO 8601)."
+          }
+        },
+        "required": [
+          "ticket",
+          "expiresAt"
         ]
       },
       "SpendLinhaResponseDto": {

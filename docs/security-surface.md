@@ -154,6 +154,16 @@ o componente `d` da JWK, travado por teste.
     ([RN-058](business-rules.md#rn-058)/[RN-082](business-rules.md#rn-082)),
     como na escrita. Ler custa rate limit do provider, e é por isso que a busca
     tem orçamento: sem teto, um `viewer` pagaria a conta do owner à vontade.
+- **`POST /projects/:projectId/sessions/:sessionId/socket-ticket` é
+  `role:viewer` na tabela, mas isso é o PISO, não o teto** (RN-108). O
+  `@RequireRole('viewer')` cobre `scope: "heartbeat"` — o socket de
+  heartbeat/eventos ao vivo que já existe; `scope: "terminal"` exige
+  `developer`, checado DENTRO do `CreateSocketTicketUseCase` contra
+  `request.effectiveRole` (o mesmo que o `RolesGuard` já resolveu), porque o
+  papel mínimo depende do CORPO da requisição, não só da rota — o mesmo padrão
+  de `MIN_ROLE_FOR_ACTION_TYPE.terminal` em `domain/actions/decide.ts`. Hoje
+  nenhum caminho pede `scope: "terminal"` de verdade (o socket de terminal
+  interativo é FASE 25); o valor já nasce certo para quando existir.
 - **`jwt` sem papel não significa sem autorização.** Em `/users/me/*` o escopo é
   o próprio usuário; em `GET /workspaces` a listagem já é filtrada pela
   associação de quem chamou.
@@ -330,6 +340,7 @@ o componente `d` da JWK, travado por teste.
 | PUT | `/projects/:projectId/sessions/:sessionId/model-binding` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/psychologist/reanalyze` | role:maintainer |
 | POST | `/projects/:projectId/sessions/:sessionId/readiness` | role:developer |
+| POST | `/projects/:projectId/sessions/:sessionId/socket-ticket` | role:viewer |
 | POST | `/projects/:projectId/sessions/:sessionId/tasks/:taskId/unblock` | role:developer |
 | GET | `/projects/:projectId/sessions/:sessionId/token-usage` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/transition` | role:developer |

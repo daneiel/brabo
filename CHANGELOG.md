@@ -47,6 +47,16 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   container (provisionar, reciclar, limpar) fica para a fase seguinte, que tem
   o slot de migration desta onda (ADR 0065, revisa o ADR 0055)
 
+### Correções
+
+- **api,engine,web**: o socket Phoenix da sessão (`session:<id>`) exigia só o
+  `session_id` existir — quem descobrisse o UUID entrava no canal e recebia
+  todos os broadcasts ao vivo. `connect/3` passa a exigir um ticket opaco de
+  uso único (TTL de 30s, `POST .../sessions/:sessionId/socket-ticket`),
+  consumido atomicamente pelo engine contra o `session_id` do tópico pedido, e
+  o join confere também o `project_id` — reconexão (inclusive automática)
+  sempre busca um ticket novo (RN-108)
+
 ## v2.5.1 — 2026-08-08
 
 ### Correções

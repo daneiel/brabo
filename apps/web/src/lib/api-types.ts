@@ -165,6 +165,19 @@ export type SessionStatus =
  */
 export type SessionKind = 'consultiva' | 'criativa';
 
+/**
+ * Escopo do ticket opaco de uso único que autentica `connect/3` do socket
+ * Phoenix da sessão (RN-108). Hoje o web só pede `heartbeat` — `terminal` é
+ * FASE 25 (terminal interativo), mas o valor já existe no backend.
+ */
+export type SocketTicketScope = 'heartbeat' | 'terminal';
+
+export interface SocketTicket {
+  ticket: string;
+  /** ISO 8601. TTL de 30s — reconexão sem buscar um ticket novo vai falhar. */
+  expiresAt: string;
+}
+
 export interface Session {
   id: string;
   projectId: string;

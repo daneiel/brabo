@@ -56,6 +56,8 @@ import type {
   Session,
   SessionEvent,
   SessionKind,
+  SocketTicket,
+  SocketTicketScope,
   CredentialProviderName,
   CredentialTestResult,
   UnreadCursor,
@@ -440,6 +442,21 @@ export const getSessionEvent = (
 ) =>
   get<SessionEvent>(
     `/projects/${projectId}/sessions/${sessionId}/events/${eventId}`,
+  );
+/**
+ * Ticket opaco de uso único pra autenticar o socket Phoenix da sessão
+ * (RN-108). TTL de 30s — `session-channel.ts` chama isto antes de TODA
+ * `socket.connect()`, inclusive em reconexão automática, nunca reusa um
+ * ticket velho.
+ */
+export const createSocketTicket = (
+  projectId: string,
+  sessionId: string,
+  scope: SocketTicketScope,
+) =>
+  post<SocketTicket>(
+    `/projects/${projectId}/sessions/${sessionId}/socket-ticket`,
+    { scope },
   );
 
 // --- Agentes conversacionais / handoffs (Fase 3b) ---

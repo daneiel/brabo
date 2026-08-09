@@ -430,7 +430,10 @@ erDiagram
   psychologist_analyses ||--o{ psychologist_hypotheses : produz
 ```
 
-44 tabelas no total. **As constraints são regra de negócio**: a unique
+45 tabelas no total (a mais recente, `session_socket_tickets`, é o ticket de
+uso único que autentica o socket da sessão — RN-108; fora do diagrama pelo
+mesmo motivo de `refresh_tokens`/`account_tokens`: mecanismo de auth, não
+relação de domínio). **As constraints são regra de negócio**: a unique
 `(session_id, seq)` do event log, o `check` que exige exatamente um escopo em
 `budgets` (projeto **ou** sessão, nunca os dois), os índices parciais que
 garantem idempotência das análises — e, desde a Fase 8b, os três `check` de
