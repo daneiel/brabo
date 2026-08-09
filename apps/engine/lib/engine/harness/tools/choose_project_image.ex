@@ -35,8 +35,7 @@ defmodule Engine.Harness.Tools.ChooseProjectImage do
         "properties" => %{
           "image" => %{
             "type" => "string",
-            "description" =>
-              "Referência OCI com tag ou digest, ex.: \"node:22-bookworm-slim\"."
+            "description" => "Referência OCI com tag ou digest, ex.: \"node:22-bookworm-slim\"."
           },
           "rationale" => %{
             "type" => "string",

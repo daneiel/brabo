@@ -16,6 +16,7 @@ defmodule Engine.Agents.ArquitetoServer do
 
   alias Engine.Harness.{ContextBuilder, PromptAssembler, ContextManager, ToolCallRecovery}
   alias Engine.Agents.FalhaDeTurno
+
   alias Engine.Harness.Tools.{
     CreateModuleMap,
     AssignStoryModules,
@@ -23,6 +24,7 @@ defmodule Engine.Agents.ArquitetoServer do
     ProposeAdr,
     EmitInsight
   }
+
   alias Engine.Sessions.{EngineApiClient, LiveBroadcast}
 
   @agent "arquiteto"
