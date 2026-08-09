@@ -22,12 +22,23 @@ interface ActivityFeedProps {
   agentOptions?: { id: string; label: string }[];
   /** Evento a destacar (navegação de evidência do Psicólogo, Fase 4b). */
   highlightEventId?: string;
+  /**
+   * Paginação do histórico (RN-099) — OPCIONAL, e é isso que mantém o outro
+   * call site (a tela de sessão) sem mudança nenhuma: sem estas props o feed
+   * renderiza exatamente o que recebe, como sempre fez.
+   */
+  onLoadOlder?: () => void;
+  hasOlder?: boolean;
+  loadingOlder?: boolean;
 }
 
 export function ActivityFeed({
   events,
   agentOptions = [],
   highlightEventId,
+  onLoadOlder,
+  hasOlder = false,
+  loadingOlder = false,
 }: ActivityFeedProps) {
   const [agentFilter, setAgentFilter] = useState<string>('');
   const [kindFilter, setKindFilter] = useState<ActivityKind | null>(null);
@@ -81,6 +92,33 @@ export function ActivityFeed({
           ))}
         </div>
       </div>
+
+      {/* O controle de "mais antigos" fica ACIMA da lista porque a lista é
+          crescente: o passado está em cima, e um botão no rodapé pediria para
+          rolar na direção contrária à que ele carrega.
+
+          "N de M carregados" é a resposta honesta ao filtro: ele roda sobre a
+          PÁGINA, não sobre a sessão, e um "12 resultados" seco afirmaria sobre
+          um total que esta tela não conhece. Levar o filtro ao servidor daria
+          o total verdadeiro — e mexeria no repositório de eventos, que não é
+          desta fase. */}
+      {onLoadOlder && (
+        <div className={styles.pager}>
+          <span className={styles.pagerCount}>
+            {filtered.length} de {events.length} carregados
+          </span>
+          {hasOlder && (
+            <button
+              type="button"
+              className={styles.pagerButton}
+              onClick={onLoadOlder}
+              disabled={loadingOlder}
+            >
+              {loadingOlder ? 'Carregando…' : 'Carregar mais antigos'}
+            </button>
+          )}
+        </div>
+      )}
 
       {filtered.length === 0 ? (
         <div className={styles.empty}>

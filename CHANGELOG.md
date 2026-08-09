@@ -6,8 +6,17 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
-- **web**: toda aprovação diz em português o que vai acontecer, e o payload cru
-  nasce colapsado nas três telas de decisão (RN-096)
+- **web**: Atividades pagina o passado por cursor, sem repolar o que não muda
+  (RN-099) — a coluna abre numa janela de 100 eventos ancorada na cauda e
+  desce de página em página com o `afterSeq` que a rota já devolvia; o custo
+  por ciclo de poll continua sendo uma requisição
+
+### Correções
+
+- **api,web**: o sino ordena do mais recente para o mais antigo (RN-100) — a
+  ordenação é do SQL porque o teto de 50 por projeto decide QUAIS eventos
+  sobrevivem, e a gaveta passa a declarar quantos não lidos ficaram fora da
+  janela em vez de engoli-los no "marcar lidas"
 
 ## v2.5.1 — 2026-08-08
 

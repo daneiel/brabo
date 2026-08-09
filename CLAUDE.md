@@ -435,16 +435,27 @@ pendência declarada, não feature de carona.
 18. Botão de voltar ao dashboard — hoje `SessionPage.tsx` não importa `Link`
     nem `useNavigate`, e NENHUMA navegação sai da tela.
 
-### FASE 21 — O volume de eventos
-19. `useSessionEvents` pede sempre a cauda de 200 e alimenta CINCO consumidores.
-    Separar estado atual (continua `latest`) de histórico paginado (só as
-    Atividades), usando o cursor que o endpoint JÁ devolve. Nenhuma rota nova.
-20. O sino só se corrige no SQL: a ordem `ASC` é deliberada e corta em 50 por
-    projeto, então `.sort()` no front ordenaria por recência os 50 mais
-    ANTIGOS. Junto vem o corte de "lido", que é `seq` no localStorage e não
-    tem endpoint de propósito — ler do topo faria o corte avançar sobre
-    eventos nunca vistos.
-21. A economia da RN-090/091 (289 → 1 requisição) NÃO pode regredir.
+### FASE 21 — CONCLUÍDA: o volume de eventos (RN-099/100)
+19. `useSessionEvents` continua sendo o ESTADO ATUAL (`latest`, quatro
+    consumidores: roster, árvore, execução, Aprovações). O HISTÓRICO virou
+    `useSessionEventHistory`, só para as Atividades, com o `afterSeq` que o
+    endpoint já devolvia. Nenhuma rota nova, nenhum parâmetro novo.
+    A âncora é a CAUDA, e não o começo da sessão: o endpoint pagina para
+    frente e não existe `beforeSeq`, mas abrir o feed no evento nº 1 de uma
+    sessão de milhares entrega a tela errada. Então a primeira página é a
+    mesma leitura `latest` (MESMA `queryKey`, deduplicada) e cada clique desce
+    uma janela fixa para trás.
+20. O sino ordena `DESC` no SQL. O corte de "lido" NÃO mudou de semântica, e
+    por isso não há ADR: um corte por `seq` marca um PREFIXO e a gaveta mostra
+    um SUFIXO, então "marcar as 50 exibidas" é inexprimível sem tabela de
+    lidos por evento. O que mudou é a gaveta parar de esconder o que o avanço
+    engole — total por projeto, `+ N mais antigos`, e o botão dizendo quantas
+    marca. O número que falta sai de SUBTRAÇÃO (`latestSeq` menos o corte),
+    não de requisição.
+21. A economia da RN-090/091 não regrediu: uma requisição por ciclo, e o
+    primeiro "carregar mais antigos" custa ZERO — a leitura `latest` traz 200
+    e a janela mostra 100. Página antiga tem `staleTime: Infinity` e nenhum
+    `refetchInterval`: janela fechada de `seq` sobre evento imutável não muda.
 
 ### FASE 22 — Gasto com duas audiências
 22. `token_usage` já tem todas as colunas; faltam as AGREGAÇÕES — não há por

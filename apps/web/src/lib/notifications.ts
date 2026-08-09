@@ -72,7 +72,18 @@ export function storiesAwaitingPromotion(
 export interface NotificationGroupData {
   projectId: string;
   projectName: string;
+  /** Do MAIS RECENTE para o mais antigo, como a api devolve (RN-100). */
   events: import('./api-types').SessionEvent[];
+  /** Total de não lidos do projeto, incluindo o que não coube na janela. */
+  unreadCount: number;
+  /**
+   * Quantos não lidos ficaram FORA da janela de 50 — sempre os mais antigos.
+   *
+   * Subtração, não requisição: `unreadCount` já vem do resumo do workspace
+   * (RN-090) e a janela é o que a gaveta devolveu. É este número que impede a
+   * gaveta de mentir por omissão quando o teto por projeto corta.
+   */
+  olderCount: number;
 }
 
 /**
@@ -89,6 +100,11 @@ export interface NotificationGroupData {
  * `aberto` continua valendo. A gaveta só é RENDERIZADA quando aberta, então
  * buscar antes disso é pagar por uma lista que ninguém está vendo. O badge não
  * depende daqui: o número vem de `latestSeq`, que já está no resumo.
+ *
+ * A ORDEM dos eventos vem da api e é usada como veio (RN-100). Não há
+ * `.sort()` aqui, e não pode haver: a consulta corta em 50 POR PROJETO, então
+ * ordenar do lado de cá reordenaria uma janela já escolhida — e num projeto
+ * com 300 não lidos mostraria o 251º evento como se fosse o mais recente.
  */
 export function useNotificationGroups(
   unread: ProjectUnread[],
@@ -120,13 +136,19 @@ export function useNotificationGroups(
     (query.data ?? []).map((g) => [g.projectId, g.events] as const),
   );
 
-  // A ordem e os nomes continuam vindo do cliente: a api responde só o que
-  // aconteceu em cada projeto, não como a gaveta se desenha.
-  return withUnread.map((u) => ({
-    projectId: u.project.id,
-    projectName: u.project.name,
-    events: eventosDe.get(u.project.id) ?? [],
-  }));
+  // O agrupamento e os nomes continuam vindo do cliente: a api responde só o
+  // que aconteceu em cada projeto, não como a gaveta se desenha. A ORDEM
+  // dentro do grupo, não — essa é da api, ver o cabeçalho.
+  return withUnread.map((u) => {
+    const events = eventosDe.get(u.project.id) ?? [];
+    return {
+      projectId: u.project.id,
+      projectName: u.project.name,
+      events,
+      unreadCount: u.unreadCount,
+      olderCount: Math.max(0, u.unreadCount - events.length),
+    };
+  });
 }
 
 /** Chave estável para o React Query — mesmo conteúdo, mesma string. */
