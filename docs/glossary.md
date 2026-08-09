@@ -197,6 +197,13 @@ dev agents existem (um por módulo) e a quem cada história pertence. Não pode 
 ciclo ([RN-013](business-rules.md#rn-013)); módulo removido rebaixa as
 histórias que dependiam dele ([RN-012](business-rules.md#rn-012)).
 
+**Imagem do projeto (`artifact.project_image`)** — a decisão do Arquiteto
+sobre qual container roda o código do projeto: imagem OCI (tag explícita
+obrigatória, `latest` recusado), postura de rede (`none` por default,
+`egress` autorizado) e teto de recursos. Versionada no event log, como o
+`module_map`. Enquanto não existe, é o estado `sem_decisao` que fecha a aba
+Code ([RN-105](business-rules.md#rn-105)).
+
 ---
 
 ## Custo

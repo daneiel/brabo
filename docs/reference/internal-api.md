@@ -314,12 +314,25 @@ agente" — ver [RN-037](../business-rules.md#rn-037)). **Não** é
 | POST | `/epics` · `/stories` · `/tasks` |
 | POST | `/story-modules` |
 | POST | `/module-map` |
+| POST | `/project-image` |
 | POST | `/tasks/claim` |
 | POST | `/tasks/:taskId/status` |
 | POST | `/tasks/:taskId/block` |
 
 `tasks/claim` é atômico do lado da api — é o que impede dois dev agents de
 pegarem a mesma task.
+
+`/project-image` é a ferramenta `choose_project_image` do Arquiteto (FASE 25a,
+[ADR 0065](../adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md)):
+fixa a imagem de container do projeto. Do mesmo calibre de `/module-map` — o
+artefato É o evento `artifact.project_image`, sem tabela própria, versionado
+(o vigente é o de maior `version`). Imagem sem tag explícita (`latest`
+recusado), `rationale` curto ou recurso acima do teto voltam `400`, com o
+motivo inteiro no corpo — é isso que permite ao modelo corrigir pelo
+tool-result em vez de reemitir igual ([RN-061](../business-rules.md#rn-061)).
+Enquanto nenhuma versão existe, `GET /projects/:projectId/container` (rota
+pública, `role:viewer`) devolve `status: "sem_decisao"`, e é o mesmo estado que
+faz a aba Code responder `409` ([RN-105](../business-rules.md#rn-105)).
 
 **Sem task pegável, a resposta é `201` com corpo VAZIO**, não `null` no corpo: o
 caso de uso devolve `null` e o NestJS serializa isso como `content-length: 0`.
@@ -473,7 +486,7 @@ específico ou a todos os `idle` de um módulo. Ver
 
 ## Onde o contrato vive
 
-Desde a Fase 7b existe **OpenAPI** para o sentido engine → api: as 26 rotas
+Desde a Fase 7b existe **OpenAPI** para o sentido engine → api: as 32 rotas
 abaixo estão na [referência gerada](api/brabo-api), sob a tag `internal`, com
 corpo de request, corpo de response e códigos de erro. O documento sai do
 código por `pnpm docs:generate` e o `docs:check` reprova quando ele

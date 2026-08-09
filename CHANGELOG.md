@@ -27,6 +27,16 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   PROJETO — pré-condição para a área não competir com um escopo mais amplo
   que ela mesma (ADR 0064, RN-102/103)
 
+- **api,engine**: o Arquiteto decide qual imagem de container sobe para cada
+  projeto — artefato versionado no event log (`artifact.project_image`), tag
+  OCI explícita obrigatória (`latest` recusado) e teto de recursos que recusa
+  em vez de rebaixar em silêncio. Enquanto ele não decide, a aba Code responde
+  409 (RN-105). Dentro do container o agente é livre; `git push`, PR e deploy
+  continuam nascendo `proposed_action` mesmo pelo terminal, agora garantido por
+  `deny` — não só combinado (RN-106). Corte declarado: o ciclo de vida do
+  container (provisionar, reciclar, limpar) fica para a fase seguinte, que tem
+  o slot de migration desta onda (ADR 0065, revisa o ADR 0055)
+
 ## v2.5.1 — 2026-08-08
 
 ### Correções

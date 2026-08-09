@@ -12,7 +12,7 @@ keywords: [arquitetura, code map, invariantes, harness, event log]
 Este documento é o mapa para quem vai **mexer** no código. Ele diz por onde
 começar a ler, o que cada fronteira promete, e o que já se sabe que está torto.
 
-Decisões e o porquê delas ficam nos [ADRs](adr/index.md) — 63 deles, vários
+Decisões e o porquê delas ficam nos [ADRs](adr/index.md) — 64 deles, vários
 registrando defeito real encontrado em execução. Aqui não repetimos a
 argumentação: apontamos.
 
@@ -277,6 +277,20 @@ nunca diagnóstico por eliminação. Lição cara do
 [ADR 0020](adr/0020-destravar-gates-qa-secops.md): uma queda de provider foi
 registrada como "o modelo parou sem sinalizar", e o sistema culpou o modelo por
 um problema de infraestrutura.
+
+**8. O container do projeto é decidido, nunca implícito.** A aba Code só
+libera depois que o Arquiteto emite `artifact.project_image` — enquanto o
+estado for `sem_decisao`, a leitura de código responde `409`
+([RN-105](business-rules.md#rn-105)). E `git push`, abertura de PR e deploy
+não saem pelo terminal, mesmo dentro do escopo do projeto: `decide()` os
+reconhece por prefixo de comando e retorna `deny` ANTES de qualquer estágio
+permissivo — não `require_approval`, porque "sempre permitir" gravaria o
+padrão em `allow` e reabriria a porta ([RN-106](business-rules.md#rn-106),
+[ADR 0065](adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md)).
+O ciclo de vida do container (provisionar, reciclar, limpar) ainda não
+existe — corte declarado da FASE 25, registrado no CLAUDE.md — então esta
+invariante convive, por ora, com a política de escopo de caminho do
+[ADR 0055](adr/0055-escopo-de-caminho-na-politica-de-terminal.md).
 
 ## Assuntos transversais
 

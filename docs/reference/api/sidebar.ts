@@ -330,6 +330,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/internal-sessions-controller-project-image",
+          label: "Fixa a imagem de container do projeto",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/internal-sessions-controller-psychologist-context",
           label: "Monta o contexto de uma rodada do Psicólogo",
           className: "api-method get",
@@ -405,6 +411,12 @@ const sidebar: SidebarsConfig = {
           id: "docs/reference/api/projects-controller-remove",
           label: "Remove o projeto",
           className: "api-method delete",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/containers-controller-estado",
+          label: "Estado do container do projeto (a decisão de imagem vigente)",
+          className: "api-method get",
         },
         {
           type: "doc",

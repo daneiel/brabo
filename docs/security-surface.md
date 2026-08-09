@@ -227,6 +227,7 @@ o componente `d` da JWK, travado por teste.
 | POST | `/internal/sessions/:sessionId/llm-turn` | engine-service |
 | POST | `/internal/sessions/:sessionId/llm-turn-stream` | engine-service |
 | POST | `/internal/sessions/:sessionId/module-map` | engine-service |
+| POST | `/internal/sessions/:sessionId/project-image` | engine-service |
 | POST | `/internal/sessions/:sessionId/proficiency` | engine-service |
 | POST | `/internal/models/sync` | engine-service |
 | GET | `/internal/gates` | engine-service |
@@ -274,6 +275,7 @@ o componente `d` da JWK, travado por teste.
 | GET | `/projects/:projectId/code/pull-requests/:pullRequestId/diff` | role:viewer |
 | GET | `/projects/:projectId/code/search` | role:viewer |
 | GET | `/projects/:projectId/code/tree` | role:viewer |
+| GET | `/projects/:projectId/container` | role:viewer |
 | GET | `/projects/:projectId/coverage` | role:viewer |
 | GET | `/projects/:projectId/events/:eventId` | role:viewer |
 | POST | `/projects/:projectId/execution/activate` | role:maintainer |

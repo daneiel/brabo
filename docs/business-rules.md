@@ -3186,7 +3186,7 @@ resposta. O access token, de 15 minutos, fica em memória no cliente e viaja no
 
 ### RN-035 — O tráfego interno engine ↔ api exige o segredo de serviço {#rn-035}
 
-As 26 rotas `/internal/*` são `@ServiceRoute()`: ficam fora do JWT de usuário e
+As 32 rotas `/internal/*` são `@ServiceRoute()`: ficam fora do JWT de usuário e
 fora do rate limit. Quem autentica é o `EngineServiceGuard`, comparando
 `X-Brabo-Service-Token` com `BRABO_SERVICE_TOKEN` em tempo constante. O mesmo
 segredo vale nos dois sentidos, e `BRABO_SERVICE_TOKEN_PREVIOUS` é aceito só na
@@ -3201,6 +3201,76 @@ verificação, para a rotação não ter janela de indisponibilidade.
   `RateLimitGuard` é `APP_GUARD` e roda antes de qualquer guard de controller —
   quando ele decide, o `EngineServiceGuard` ainda não rodou.
 - **Origem:** [ADR 0032](adr/0032-corte-do-keycloak-e-sessao-em-cookie.md)
+
+### RN-105 — Sem imagem decidida pelo Arquiteto, o container não sobe e o Code não abre {#rn-105}
+
+A aba Code (`GET /projects/:id/code/*`, [ADR 0060](adr/0060-superficie-de-leitura-de-codigo.md))
+responde **409** enquanto o projeto estiver em `sem_decisao` — o estado inicial
+de todo projeto. `sem_decisao` vira `decidido` só quando o Arquiteto emite
+`artifact.project_image` pela ferramenta `choose_project_image`, com imagem OCI
+de tag explícita (`latest` recusado), `rationale` e postura de rede.
+
+A checagem mora no MESMO funil que a contenção de caminho da
+[RN-095](#rn-095) (`ReadProjectCodeUseCase.alvo`), e não em cada uma das quatro
+rotas — checagem duplicada em quatro chamadores é checagem que um dia diverge
+em um deles ([ADR 0058](adr/0058-csp-fechado-na-api-e-escopo-de-projeto-contido.md)).
+
+O artefato não tem tabela: é o próprio evento no event log, versionado
+(`version` cresce a cada emissão, o vigente é o de maior `version`), do mesmo
+jeito que `artifact.module_map`. Revisar a imagem é emitir uma versão nova,
+nunca sobrescrever a anterior.
+
+- **Onde:** `apps/api/src/domain/containers/project-container.ts`,
+  `apps/api/src/application/use-cases/containers/decidir-imagem-do-projeto.use-case.ts`,
+  `apps/api/src/application/use-cases/containers/obter-container-do-projeto.use-case.ts`,
+  `apps/api/src/application/use-cases/git/read-project-code.use-case.ts` (método
+  `portaoDoContainer`), `apps/engine/lib/engine/harness/tools/choose_project_image.ex`
+- **Teste:**
+  `apps/api/test/domain/containers/project-container.spec.ts`,
+  `apps/api/test/application/use-cases/containers/container-do-projeto.use-case.spec.ts`,
+  `apps/api/test/application/use-cases/git/read-project-code.use-case.spec.ts`
+  (bloco "o portão do container")
+- **Borda:** 409 e não 403 — nada está errado com quem pediu nem com a
+  permissão dele; o recurso ainda não existe NESTE ESTADO. E não é 404: a aba
+  existe, só não está liberada. A mensagem diz o que falta, para a tela mostrar
+  o motivo em vez de um erro mudo (RN-088).
+- **Origem:** [ADR 0065](adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md)
+
+### RN-106 — `git push`, PR e deploy não saem pelo terminal — mesmo dentro do escopo do projeto {#rn-106}
+
+Dentro do container do projeto o agente é livre (ADR 0065): o allowlist de
+verbos do [ADR 0055](adr/0055-escopo-de-caminho-na-politica-de-terminal.md) não
+converge (achados Z e AD — verbo, forma e invocação são espaços distintos), e a
+saída é a parede, não uma lista mais longa. Mas três efeitos atravessam a
+parede e chegam no mundo, e a decisão do usuário foi textual: *"agente livre
+para o que quiser desde que não seja comandos de git ligado ao deploy e ao PR —
+estas ações ainda devem ser humanas"*.
+
+`decide()` reconhece `git push`, `git remote add/set-url`, `git merge`, os CLIs
+de provider (`gh pr create`, `gh pr merge`, `glab mr create/merge`, releases e
+workflow dispatch) e os comandos de deploy comuns (`kubectl apply`, `helm
+upgrade`, `terraform apply`, `docker push`, `npm publish`, ...) por PREFIXO de
+tokens, ignorando flags globais no meio (`git -C /tmp push` casa). Qualquer
+segmento do comando composto que case é **`deny`** — não `require_approval`:
+"sempre permitir" grava o padrão em `allow`, e um clique bastaria para a
+segunda porta ficar aberta para sempre. `deny` vence `allow` em qualquer
+estágio, e é aplicado ANTES de qualquer estágio permissivo em `decide()`.
+
+Negar não tira poder do agente: a mensagem redireciona para a ação TIPADA
+(`git_push`, `git_merge`, `pr_open`) — que nasce `proposed_action`, tem papel
+mínimo próprio e registra no event log o que foi empurrado e para onde. É o
+caminho que o dev agent já usa (`agent_io.ex` propõe `git_push`); o que muda é
+que agora está garantido por `deny`, não só combinado por convenção.
+
+- **Onde:** `apps/api/src/domain/actions/external-effect.ts`,
+  `apps/api/src/domain/actions/decide.ts` (bloco "FRONTEIRA DO CONTAINER")
+- **Teste:** `apps/api/test/domain/actions/external-effect.spec.ts`,
+  `apps/api/test/domain/actions/decide.spec.ts` (describe "a fronteira do
+  container")
+- **Borda:** a fronteira NÃO se sobrepõe à trava de merge em branch protegida
+  (RN-014, sempre manual) nem ao escopo de caminho (RN-095/ADR 0055) — as três
+  regras coexistem, cada uma vetando por um motivo diferente.
+- **Origem:** [ADR 0065](adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md)
 
 ---
 
