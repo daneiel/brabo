@@ -498,19 +498,35 @@ tiver o slot.
 29. Colisão de produto: a aba "Sessões" já existe. Ou ela sai, ou o produto
     ganha três entradas para a mesma lista.
 
-### FASE 25 — Container por projeto (a fronteira deixa de ser só política)
+### FASE 25 — CONCLUÍDA COM CORTE: Container por projeto (a fronteira deixa de ser só política)
 A maior mudança arquitetural do programa, e a que paga a dívida que as Fases B
-e F já apontavam separadamente.
-30. O ARQUITETO decide qual imagem sobe para o projeto, como artefato dele —
-    versionado e auditável, não configuração escondida. Enquanto ele não
-    decidir, o container não sobe e a aba Code não libera.
-31. Ciclo de vida por projeto (provisionar, reciclar, limpar, teto de
-    recursos), com o worktree do agente vivendo dentro do container.
-32. DENTRO, o agente é livre — e é isto que fecha os achados Z e AD, o
-    allowlist de verbos que não converge porque verbo, forma e invocação são
-    espaços distintos. FORA continua humano: `git push`, PR e deploy nascem
-    `proposed_action`, e merge em protegida segue manual (RN-014). Rede e
-    gasto merecem veredito próprio: sair para a internet não é "dentro".
+e F já apontavam separadamente. Entregue 25a (a decisão do Arquiteto e o
+portão) e 25c (a fronteira de efeito externo); 25b (o ciclo de vida do
+container) ficou CORTADA e declarada — não meio-implementada (ADR 0065, RN-105
+e RN-106).
+30. CONCLUÍDO: o ARQUITETO decide qual imagem sobe para o projeto, como
+    artefato dele (`artifact.project_image` no event log, versionado, sem
+    tabela) — auditável, não configuração escondida. Enquanto ele não
+    decidir, a aba Code responde 409 e não libera (RN-105).
+31. NÃO ENTREGUE, declarado: ciclo de vida por projeto (provisionar, reciclar,
+    limpar, teto de recursos aplicado de verdade), com o worktree do agente
+    vivendo dentro do container. Estado de container é MUTÁVEL e pede tabela
+    própria — improvisá-lo no event log só para não esperar o slot de
+    migration produziria a correção logo depois. Consequência honesta: a
+    metade "dentro o agente é livre" da política de terminal AINDA NÃO mudou
+    — o ADR 0055 continua valendo como está até o container subir de
+    verdade.
+32. CONCLUÍDO: a fronteira de efeito externo. `git push`, PR e deploy não
+    saem pelo terminal — nem dentro do escopo do projeto —, e a regra é
+    `deny` (não `require_approval`, por causa do "sempre permitir"), com a
+    mensagem redirecionando para a ação TIPADA (`git_push`/`git_merge`/
+    `pr_open`), que nasce `proposed_action` (RN-106). Merge em protegida
+    segue manual (RN-014), intocado. Rede e gasto têm veredito próprio no
+    ARTEFATO da imagem (`network: none`/`egress`, teto de cpus/memória/pids
+    que recusa em vez de rebaixar em silêncio) — decidido UMA vez, não
+    comando a comando, pelo mesmo motivo que Z e AD provaram que allowlist de
+    verbo não converge. O fechamento de Z e AD em si depende de 25b (a
+    parede física), que ainda não subiu.
 
 ### FASE 26 — Code, só leitura
 33. `GitProviderContract` não tem `listTree` nem diff de PR. Entram como
@@ -578,6 +594,16 @@ seguinte, e quando vier, escrita é efeito externo: nasce `proposed_action`.
   CONTIDA e ter TETO: caminho vindo do cliente passa pela checagem central
   (RN-092/RN-095), e leitura composta que chama o provider N vezes tem
   orçamento e cache, senão vira amplificador de tráfego (ADR 0060).
+- A imagem de container de um projeto é ARTEFATO do ARQUITETO
+  (`artifact.project_image`, versionado, sem tabela), nunca configuração
+  escondida. Enquanto ele não decide, a aba Code responde 409 (RN-105).
+  `git push`, abertura de PR e deploy NÃO saem pelo terminal — a regra é
+  `deny`, não `require_approval`, mesmo dentro do escopo do projeto e mesmo
+  com "sempre permitir" (RN-106, ADR 0065). O ciclo de vida do container
+  (provisionar, reciclar, limpar) ainda não existe — corte declarado da
+  FASE 25 —, então a política de terminal do ADR 0055 (escopo de caminho,
+  allowlist estreito) segue valendo como está até o container subir de
+  verdade.
 - Agentes rodam SEMPRE dentro de um Harness; nenhuma chamada de LLM ou
   ferramenta fora dele.
 - Handoff externo endereça só LEAD de área ou agente sem área;

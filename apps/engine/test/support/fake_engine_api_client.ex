@@ -126,6 +126,25 @@ defmodule Engine.Sessions.FakeEngineApiClient do
   end
 
   @impl true
+  def decide_project_image(_project_id, _session_id, decisao) do
+    notify({:project_image_decided, decisao})
+
+    case Process.get(:fake_project_image_error) do
+      nil ->
+        reply(:fake_project_image, %{
+          "version" => 1,
+          "decisao" => %{
+            "image" => Map.get(decisao, :image),
+            "network" => Map.get(decisao, :network, "none")
+          }
+        })
+
+      reason ->
+        {:error, reason}
+    end
+  end
+
+  @impl true
   def claim_task(_project_id, _session_id, module, agent_id) do
     # Atraso opcional via Application env (NÃO dicionário de processo): o
     # agente reidratado roda no processo DELE, então `Process.put` do teste

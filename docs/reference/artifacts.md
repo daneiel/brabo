@@ -155,6 +155,7 @@ porque são emitidos pela **api**, não pelo engine:
 |---|---|
 | `artifact.module_map` | o Arquiteto, via caso de uso na api |
 | `artifact.insight` | análise, via caso de uso na api |
+| `artifact.project_image` | o Arquiteto, via caso de uso na api ([ADR 0065](../adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md), [RN-105](../business-rules.md#rn-105)) |
 
 Eles têm as próprias validações no domínio da api. A assimetria é histórica, e
 está anotada como

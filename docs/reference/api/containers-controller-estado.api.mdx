@@ -1,0 +1,69 @@
+---
+id: containers-controller-estado
+title: "Estado do container do projeto (a decisão de imagem vigente)"
+description: "Enquanto o status for `sem_decisao`, o container do projeto não sobe e a aba Code responde 409 — é o portão da RN-105. Ver o estado é a mesma permissão que ver o projeto, então `viewer`."
+sidebar_label: "Estado do container do projeto (a decisão de imagem vigente)"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "get api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Estado do container do projeto (a decisão de imagem vigente)"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/projects/{projectId}/container"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Enquanto o status for `sem_decisao`, o container do projeto não sobe e a aba Code responde 409 — é o portão da RN-105. Ver o estado é a mesma permissão que ver o projeto, então `viewer`.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./containers-controller-estado.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./containers-controller-estado.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./containers-controller-estado.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

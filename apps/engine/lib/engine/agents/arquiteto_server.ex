@@ -16,7 +16,13 @@ defmodule Engine.Agents.ArquitetoServer do
 
   alias Engine.Harness.{ContextBuilder, PromptAssembler, ContextManager, ToolCallRecovery}
   alias Engine.Agents.FalhaDeTurno
-  alias Engine.Harness.Tools.{CreateModuleMap, AssignStoryModules, ProposeAdr, EmitInsight}
+  alias Engine.Harness.Tools.{
+    CreateModuleMap,
+    AssignStoryModules,
+    ChooseProjectImage,
+    ProposeAdr,
+    EmitInsight
+  }
   alias Engine.Sessions.{EngineApiClient, LiveBroadcast}
 
   @agent "arquiteto"
@@ -71,6 +77,7 @@ defmodule Engine.Agents.ArquitetoServer do
        tool_specs: [
          CreateModuleMap.spec(),
          AssignStoryModules.spec(),
+         ChooseProjectImage.spec(),
          ProposeAdr.spec(),
          EmitInsight.spec()
        ]
@@ -225,6 +232,7 @@ defmodule Engine.Agents.ArquitetoServer do
 
   defp run_tool("create_module_map", args, state), do: CreateModuleMap.run(args, state)
   defp run_tool("assign_story_modules", args, state), do: AssignStoryModules.run(args, state)
+  defp run_tool("choose_project_image", args, state), do: ChooseProjectImage.run(args, state)
   defp run_tool("propose_adr", args, state), do: ProposeAdr.run(args, state)
   defp run_tool("emit_insight", args, state), do: EmitInsight.run(args, state)
   defp run_tool(name, _args, _state), do: {:error, "ferramenta desconhecida: #{name}"}
@@ -272,9 +280,13 @@ defmodule Engine.Agents.ArquitetoServer do
        ciclos de dependência.
     2. assign_story_modules: vincule a cada história os módulos que a realizam (use os
        story_id abaixo) — assim ela referencia módulos válidos.
-    3. propose_adr: proponha ao menos 1 ADR (decisão arquitetural relevante) — vira uma PR
+    3. choose_project_image: escolha a IMAGEM de container em que este projeto vai rodar,
+       coerente com a stack que você acabou de definir. Enquanto você não escolher, o
+       container do projeto não sobe e a aba Code fica fechada — é decisão sua, e ninguém
+       a toma no seu lugar.
+    4. propose_adr: proponha ao menos 1 ADR (decisão arquitetural relevante) — vira uma PR
        pro usuário aprovar.
-    4. emit_insight: registre tensões entre as regras e a arquitetura (ex.: um RNF sem
+    5. emit_insight: registre tensões entre as regras e a arquitetura (ex.: um RNF sem
        módulo que o atenda).
 
     PRODUCT BRIEF:
