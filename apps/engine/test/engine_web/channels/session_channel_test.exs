@@ -110,6 +110,7 @@ defmodule EngineWeb.SessionChannelTest do
     insert_ticket!(ticket, %{session_id: session_id, project_id: project_id})
 
     socket1 = socket_com_assigns(%{ticket: ticket, project_id: project_id})
+
     assert {:ok, _reply, _joined} =
              Phoenix.ChannelTest.subscribe_and_join(socket1, "session:#{session_id}", %{})
 

@@ -102,6 +102,7 @@ defmodule Engine.Sessions.SocketTicketTest do
 
     test "ticket expirado falha mesmo com session_id certo" do
       ticket = "ticket-expirado-consumo"
+
       linha =
         insert_ticket!(ticket, %{expires_at: DateTime.add(DateTime.utc_now(), -1, :second)})
 
@@ -126,7 +127,9 @@ defmodule Engine.Sessions.SocketTicketTest do
         |> Enum.map(&Task.await/1)
 
       sucessos = Enum.count(resultados, &match?({:ok, _}, &1))
-      assert sucessos == 1, "esperava exatamente 1 sucesso, teve #{sucessos}: #{inspect(resultados)}"
+
+      assert sucessos == 1,
+             "esperava exatamente 1 sucesso, teve #{sucessos}: #{inspect(resultados)}"
     end
   end
 end
