@@ -318,18 +318,132 @@ gate por LLM não passa por afrouxar política.** Passa por fazer o agente
 esperar a decisão em vez de morrer (achado AB), que é o que o ADR 0052 já fez
 para o dev agent.
 
+## A nona execução: a correção barata que teria destruído a garantia
+
+A nona travou no mesmo `bash` da oitava, e o conserto óbvio estava a uma linha
+de distância: pôr `bash` no `allow` e ver a esteira ficar verde.
+
+**Não foi feito, e essa é a entrega da execução.** Liberar `bash` não amplia o
+allowlist — ele o *anula*, porque todo comando barrado passa a ter uma forma
+permitida de ser invocado, inclusive os `deny` embutidos. A rodada teria passado
+e a garantia teria acabado, sem que nada no resultado indicasse a troca.
+
+O que a nona fixou, então, foi o diagnóstico: o problema nunca foi *qual* verbo
+está na lista, e sim que **o agente de gate morria** quando a política mandava
+perguntar. Daí saiu o [ADR 0057](../adr/0057-o-gate-espera-a-aprovacao.md), estendendo
+ao gate o que o [ADR 0052](../adr/0052-dev-agent-espera-aprovacao-no-meio-do-laco.md) já fizera para o dev
+agent: diante de uma ação que exige decisão, **suspender e esperar** em vez de
+classificar a própria suspensão como falha de infra (o achado AB).
+
+## A décima execução: a cadeia inteira, ponta a ponta
+
+Com o ADR 0057 no lugar, a décima fechou tudo o que as nove anteriores tinham
+deixado em aberto, **sem um único restart do engine**:
+
+| etapa | desfecho |
+|---|---|
+| adoção remota | `origin: adopted` contra `daneiel/test` |
+| plano de repositório | executado só depois da **sua** decisão |
+| promoção da story | manual, com o usuário como ator |
+| dev agent real | escreveu código, commitou como `<agente>[bot]` |
+| push e **PR remota** | publicada no GitHub |
+| gate | abriu (`pr.gate_changed`) |
+| área de QA | delegou e **dispensou com justificativa** |
+| subagente | **suspendeu** em aprovação, e não morreu |
+| sua recusa | **retomou** o laço em vez de encerrá-lo |
+| veredito | `changes_requested`, julgado por LLM |
+
+As duas linhas que importam são as duas últimas. O subagente parar e continuar
+vivo é o ADR 0057 funcionando; a **recusa do usuário retomar o laço** é o ponto
+que nenhuma execução anterior tinha alcançado — a decisão humana entra no meio
+do trabalho do agente e ele segue dali, em vez de recomeçar ou desistir.
+
+E o veredito não foi escrito pelo script: saiu do julgamento do modelo sobre uma
+PR real. É a diferença exata que esta validação existe para cobrir em relação à
+[irmã determinística](./validacao-fase-12.md).
+
+> **TODO(humano):** o custo em dólares e a contagem de chamadas destas duas
+> execuções não foram extraídos com `medir:execucao` na época. Se ainda houver
+> `token_usage` das sessões, vale preencher — as demais medições deste documento
+> vêm todas de script, e estas duas são a exceção.
+
+## As execuções com dois módulos: o paralelismo posto à prova
+
+As dez primeiras rodaram com **um módulo**. Isso basta para provar a cadeia, e
+não basta para provar o paralelismo: com uma história só, o Dev Lead **recusa**
+paralelizar — "esbarrariam nos mesmos arquivos" — e está certo. O teto da
+[RN-083](../business-rules.md#rn-083) nunca chegava a ser consultado por
+trabalho real.
+
+Vieram então três rodadas com `--modulos 2` (uma história em `api`, uma em
+`web`). As duas primeiras estão contadas no
+[achado AF](./achados-execucao-real.md) — a que quebrou e a que provou a
+correção. O que segue é a **terceira**, que existe para medir.
+
+O Dev Lead planejou sozinho:
+
+> **2 agentes em 2 módulos** — *"cada módulo tem exatamente uma história, então
+> um agente por módulo é o mínimo justificável sem desperdício."*
+
+E a rodada fechou, medida por `medir:execucao` e não à mão:
+
+| | |
+|---|---|
+| duração | **3m56s**, 182 eventos em 3 sessões |
+| chamadas | **33** (dev-api 10, dev-web 9, arquiteto 7, qa-automacao 6, dev-lead 1) |
+| custo | **< US$ 0,01** |
+| restart do engine | **não** |
+| turnos mudos | **nenhum** |
+| gates | `qa` **approved**, `secops` **approved** |
+
+**O teto cobrou a decisão.** Com os dois agentes de pé, o pedido seguinte parou
+em `aguardando_autorizacao` com a ação `parallelize` **pendente no banco** — 2
+ativos, teto 2. Nada subiu: se tivesse subido, a autorização seria teatro.
+
+### O que os dois módulos quebraram, antes desta rodada
+
+Esta rodada saiu limpa, mas ela é a **terceira** com dois módulos, e as duas
+primeiras é que pagaram o preço. Na primeira, o `dev-web` pegou a task e morreu
+em `fatal: not a git repository` **antes do primeiro turno** — zero token gasto,
+task bloqueada. É o [achado AF](./achados-execucao-real.md): a guarda do caminho
+rápido de `Workspace.ensure!/4` perguntava se `.git` existia, e `git init` cria
+o `.git` antes do `fetch`; o segundo agente lia "pronto" e pulava o lock.
+
+O lock existia desde a Fase 4 e estava correto. O que estava errado era o
+critério que decidia se valia a pena pegá-lo — e **nenhuma das dez execuções
+anteriores podia tê-lo mostrado**, porque nenhuma teve um segundo agente.
+Corrigido, o `dev-web` passou de 0 para 16 chamadas na rodada seguinte, e é daí
+que esta terceira herda o direito de ser só uma medição.
+
+O instrumento também aprendeu: a asserção do teto afirmava o **número** (o 3º
+pedido pede autorização), o que valia para um módulo e reprovou uma execução em
+que o produto agiu certo — com dois módulos a ativação já enche o teto. Agora
+ela afirma a **regra**: enquanto couber, sobe sem perguntar; quando não couber,
+para.
+
 ## O que esta validação ainda NÃO prova
 
 Honestidade sobre o alcance, como na irmã dela:
 
-- **Os gates por LLM.** Sem PR, nada chegou a QA ou SecOps. O julgamento real
-  de gate continua sem execução remota que o prove.
-- **A PR remota.** `pr_open` nunca foi proposta.
-- **Merge.** Continua fora por desenho ([RN-014](../business-rules.md#rn-014)),
-  e continuará.
+- **Merge.** Continua fora por desenho
+  ([RN-014](../business-rules.md#rn-014)), e continuará: quem aperta o botão
+  numa branch protegida é você.
+- **Os outros cinco providers.** Só o OpenRouter rodou com credencial real; os
+  demais seguem sem smoke por falta de chave, e o que vale para um provider não
+  se transfere para os outros por argumento.
+- **Isolamento.** O agente executa no mesmo container que este monorepo. O
+  [ADR 0055](../adr/0055-escopo-de-caminho-na-politica-de-terminal.md) diz de si que é *política*, não
+  isolamento — `..` reprova, mas symlink de dentro para fora não é detectado.
+- **Autonomia sem política no caminho.** O allowlist de verbos **não converge**
+  (achados Z e AD), e isso é limite de escopo, não bug a corrigir.
+- **O teto de paralelismo pedido pelo PRÓPRIO Dev Lead.** Com dois módulos ele
+  planejou 2 agentes e o teto é 2 — coube. Quem estourou o teto foi o roteiro,
+  chamando o caso de uso direto. Para ver o *lead* pedir mais do que pode seriam
+  precisos 3+ módulos, e isso ainda não rodou.
 
-A cadeia até a promoção está provada contra rede real. Do dev agent em diante,
-não — e a razão não é a rede, é o achado X.
+A cadeia em si — da adoção ao veredito de gate por LLM — **está provada contra
+rede real**. O que continua em aberto acima não é a cadeia: é o ambiente em que
+ela roda e a superfície que ela cobre.
 
 ## Referências
 
