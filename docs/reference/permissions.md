@@ -234,8 +234,12 @@ caminho, garantido por código.
 Um comando de `terminal` é avaliado também por **onde ele toca**, não só pelo
 verbo ([ADR 0055](../adr/0055-escopo-de-caminho-na-politica-de-terminal.md),
 [RN-075](../business-rules.md#rn-075)). A pasta do projeto —
-`<PROJECT_WORKSPACES_ROOT>/<projectId>`, onde vivem o `permissions.json` e todos
-os worktrees de agente — é o **escopo**.
+`<PROJECT_WORKSPACES_ROOT>/<workspace_dir_name>`, onde vivem o
+`permissions.json` e todos os worktrees de agente — é o **escopo**.
+`workspace_dir_name` ([ADR 0066](../adr/0066-nome-de-pasta-legivel-do-workspace.md),
+[RN-109](../business-rules.md#rn-109)) é o nome de pasta congelado na
+criação do projeto — legível (`<slug>-<8 chars do id>`) num projeto novo, o
+UUID puro num projeto de antes dessa mudança.
 
 A comparação de caminho é **léxica e sem regex sobre a entrada**: o corte de
 barras finais é varredura O(n), não `.replace(/\/+$/, '')`. O padrão antigo foi

@@ -80,8 +80,17 @@ GIT_LOCAL_REPOS_HOST_DIR=~/brabo-projetos-bare
 As duas juntas, sempre — `api` e `engine` leem o mesmo caminho, e valores
 diferentes fariam os dois enxergarem árvores diferentes do mesmo
 repositório. A pasta escolhida vira a raiz de **todos** os projetos desta
-instância (cada um em `<pasta>/<project_id>`) — não aponte para `$HOME`
-inteiro nem para uma pasta com outros segredos seus.
+instância — não aponte para `$HOME` inteiro nem para uma pasta com outros
+segredos seus.
+
+Dentro dela, cada projeto tem sua própria subpasta, nomeada por
+`workspace_dir_name` (RN-109): projeto criado a partir desta mudança ganha
+um nome LEGÍVEL, `<pasta>/<slug>-<8 chars do id>` (ex.: `<pasta>/checkout-
+3f2b1c8e`), em vez do UUID puro — mais fácil de reconhecer abrindo a pasta no
+Finder/Explorer. Projeto criado ANTES desta mudança continua com a pasta
+nomeada pelo UUID puro (`<pasta>/<project_id>`): o nome é decidido uma única
+vez, na criação, e nunca é recalculado — nem quando o slug do projeto muda
+depois nas Configurações.
 
 Nada na política de aprovação muda: dentro do escopo do projeto o agente já
 tinha acesso mais livre e fora dele já pedia aprovação (RN-075) — só o que

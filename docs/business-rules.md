@@ -1421,7 +1421,9 @@ tende a repetir o mesmo comando.
 
 ### RN-075 — Comando de terminal é avaliado por onde toca, não só pelo verbo {#rn-075}
 
-A pasta do projeto (`<PROJECT_WORKSPACES_ROOT>/<projectId>`) é o **escopo**.
+A pasta do projeto (`<PROJECT_WORKSPACES_ROOT>/<workspace_dir_name>` — o
+UUID puro num projeto de antes do [RN-109](#rn-109), `<slug>-<8 chars do
+id>` num projeto novo) é o **escopo**.
 Um comando de `terminal` que toca qualquer caminho fora dela **nunca** é
 auto-aprovado, por mais que o verbo esteja em `allow`. Dentro dela, `cd` deixa
 de exigir permissão — ele é a declaração de escopo, não um verbo.
@@ -3359,6 +3361,65 @@ inteiramente manual, com busca de ticket fresco a cada tentativa.
   fechado, e nasce de uma rota própria que já checa papel efetivo, não de
   decodificar o access token existente.
 - **Origem:** sem ADR — extração/hardening pontual, não mudança estrutural.
+
+### RN-109 — O nome de pasta do workspace é congelado na criação, e projeto antigo mantém o UUID {#rn-109}
+
+A pasta física de um projeto em `PROJECT_WORKSPACES_ROOT` era o UUID puro —
+ilegível ao abrir no disco. `projects.workspace_dir_name` (NOT NULL, UNIQUE)
+passou a guardar o nome de verdade: `<slug>-<8 chars do id>` para projeto
+NOVO (`workspaceDirNameFor` em
+`apps/api/src/infrastructure/filesystem/project-workspaces-root.ts`), gerado
+em código — o id nasce de `crypto.randomUUID()` no
+`CreateProjectUseCase`, não do `defaultRandom()` do Postgres, porque o nome
+da pasta precisa do id ANTES do insert. Os 8 caracteres seguem a mesma
+convenção do rótulo de sessão (`apps/web/src/lib/session-label.ts`).
+
+O nome é CONGELADO no momento da criação e nunca recalculado: `UpdateProjectUseCase`
+permite editar o `slug` depois, e isso NÃO toca `workspace_dir_name` — reservar a
+pasta física, com working tree e worktrees de agente possivelmente abertos, é
+risco real que a decisão evita por construção, não por disciplina de quem
+chama.
+
+Projeto criado ANTES desta migração (0042) manteve a pasta física que já
+tinha: o backfill grava `workspace_dir_name = id` para toda linha existente —
+o mesmo valor que já era verdade no disco — e NUNCA renomeia diretório
+nenhum. Um trigger `BEFORE INSERT` (`projects_workspace_dir_name_default_trg`)
+aplica o MESMO fallback (`id::text`) para qualquer insert que chegue sem o
+campo — rede de segurança para quem esquecer de gravá-lo (nunca o caminho
+principal, que sempre grava explícito), e o que mantém as dezenas de
+fixtures de teste existentes, que não conhecem este conceito, funcionando
+sem precisar reescrever cada uma.
+
+A derivação de caminho a partir do nome (`projectScopeRoot`, RN-092/RN-075)
+passou a receber `workspace_dir_name` em vez do `projectId` cru — mesma
+validação de charset, mesma pureza. O engine lê a MESMA coluna
+(`Engine.Projects.Project.workspace_dir_name/1`) para resolver
+`Engine.Actions.Workspace.workspace_dir/1`, nunca recomputando o nome a
+partir do id: as duas derivações (api e engine) são, na prática, a mesma
+leitura contra o mesmo banco — é o que garante que RN-075 (escopo de
+terminal) e RN-092 (leitura de código) continuam apontando para a MESMA
+pasta que o engine realmente usa.
+
+- **Onde:** `apps/api/src/db/schema.ts` (`projects.workspaceDirName`),
+  `apps/api/src/db/migrations/0042_tough_captain_midlands.sql`,
+  `apps/api/src/infrastructure/filesystem/project-workspaces-root.ts`
+  (`workspaceDirNameFor`, `projectScopeRoot`),
+  `apps/api/src/application/use-cases/iam/create-project.use-case.ts`,
+  `apps/engine/lib/engine/projects/project.ex`
+  (`workspace_dir_name/1`, `all_workspace_dirs/0`),
+  `apps/engine/lib/engine/actions/workspace.ex` (`workspace_dir/1,2`),
+  `apps/engine/lib/engine/dev/worktree_cleanup.ex`
+- **Teste:**
+  `apps/api/test/db/workspace-dir-name-migration.spec.ts` (trigger, backfill
+  equivalente, unicidade),
+  `apps/api/test/application/use-cases/iam/create-project-semeia-areas.spec.ts`
+  (`workspaceDirName` nasce `<slug>-<8 chars>`, dois projetos com o mesmo
+  slug em workspaces diferentes não colidem de pasta),
+  `apps/api/test/infrastructure/filesystem/project-workspaces-root.spec.ts`
+- **Borda:** o teto de paralelismo e o gate de merge não mudam — RN-109 é só
+  NOME de pasta, nunca política. Renomear o slug depois da criação não
+  renomeia a pasta; a pasta só se lê pelo `workspace_dir_name` gravado.
+- **Origem:** ADR 0066 (revisa o ADR 0055).
 
 ---
 

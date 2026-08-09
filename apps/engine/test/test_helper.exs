@@ -89,19 +89,29 @@ CREATE TABLE IF NOT EXISTS public.project_repositories (
 
 # Mesmo motivo dos fixtures acima — projects e agent_instructions são
 # gerenciadas pela api (Drizzle, schema "public"). O harness lê projects
-# (nome/slug pra camada de contexto) e agent_instructions (arquivo de agente
-# do banco pro InstructionFiles). Só as colunas que o engine lê.
+# (nome/slug pra camada de contexto, workspace_dir_name pra RN-109) e
+# agent_instructions (arquivo de agente do banco pro InstructionFiles). Só as
+# colunas que o engine lê.
 Engine.Repo.query!("""
 CREATE TABLE IF NOT EXISTS public.projects (
   id uuid PRIMARY KEY,
   workspace_id uuid,
   name text NOT NULL,
   slug text NOT NULL,
+  workspace_dir_name text,
   created_by uuid,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 )
 """)
+
+# `CREATE TABLE IF NOT EXISTS` não acrescenta coluna numa tabela que já
+# existe — mesmo motivo do ALTER idempotente de outbox_events acima.
+# NULLABLE de propósito, ao contrário da api (NOT NULL lá): dezenas de specs
+# no engine inserem em "projects" sem saber do conceito de nome de pasta, e
+# `Engine.Projects.Project.workspace_dir_name/1` já degrada pra `nil` (que
+# quem chama trata como "usa o project_id cru").
+Engine.Repo.query!("ALTER TABLE public.projects ADD COLUMN IF NOT EXISTS workspace_dir_name text")
 
 # sessions: lida pela Anamnese (Fase 4b) — pra achar a sessão do projeto
 # onde narrar a rodada, e pra filtrar a janela de eventos por projeto

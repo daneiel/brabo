@@ -29,6 +29,23 @@ defmodule Engine.Dev.WorktreeCleanupTest do
     work_dir = Path.join(root, project_id)
     File.mkdir_p!(work_dir)
 
+    # RN-109: `WorktreeCleanup.run/0` não trata mais nome de pasta como
+    # project_id — ele resolve `{id, workspace_dir_name}` de TODOS os
+    # projetos numa consulta (`Project.all_workspace_dirs/0`). Sem esta linha
+    # o projeto deste teste não apareceria na consulta e a pasta acima nunca
+    # seria varrida — o cenário que estes testes existem pra provar
+    # simplesmente não rodaria.
+    Engine.Repo.insert_all("projects", [
+      %{
+        id: Ecto.UUID.dump!(project_id),
+        name: "cobaia-wtc",
+        slug: "cobaia-wtc-#{System.unique_integer([:positive])}",
+        workspace_dir_name: project_id,
+        created_at: DateTime.utc_now() |> DateTime.truncate(:second),
+        updated_at: DateTime.utc_now() |> DateTime.truncate(:second)
+      }
+    ])
+
     git(work_dir, ["init"])
     git(work_dir, ["config", "user.email", "t@brabo.dev"])
     git(work_dir, ["config", "user.name", "t"])
