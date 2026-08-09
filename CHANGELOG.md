@@ -47,6 +47,13 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   container (provisionar, reciclar, limpar) fica para a fase seguinte, que tem
   o slot de migration desta onda (ADR 0065, revisa o ADR 0055)
 
+- **api,engine**: a pasta do workspace de um projeto NOVO nasce com nome
+  legível (`<slug>-<8 chars do id>`) em vez do UUID puro — mais fácil de
+  reconhecer abrindo `PROJECT_WORKSPACES_HOST_DIR` no disco. Congelado na
+  criação: editar o slug depois não renomeia a pasta. Projeto criado antes
+  desta mudança mantém a pasta física que já tinha, sem nenhum rename (ADR
+  0066, revisa o ADR 0055, RN-109)
+
 ### Correções
 
 - **api,engine,web**: o socket Phoenix da sessão (`session:<id>`) exigia só o

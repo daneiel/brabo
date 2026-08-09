@@ -53,14 +53,23 @@ defmodule Engine.Dev.WorktreeManager do
 
   @doc "Remove o worktree do agente (best-effort) — opera no working tree do projeto."
   def remove(project_id, agent_id) do
-    work_dir = Workspace.workspace_dir(project_id)
+    remove_at(Workspace.workspace_dir(project_id), agent_id)
+  end
+
+  @doc "Mesmo que `remove/2`, com o `work_dir` já resolvido — sem consulta ao banco."
+  def remove_at(work_dir, agent_id) do
     if File.dir?(work_dir), do: remove_worktree(work_dir, worktree_path(work_dir, agent_id))
     :ok
   end
 
   @doc "Lista os agent_ids que têm worktree no projeto."
   def list(project_id) do
-    dir = worktrees_dir(Workspace.workspace_dir(project_id))
+    list_at(Workspace.workspace_dir(project_id))
+  end
+
+  @doc "Mesmo que `list/1`, com o `work_dir` já resolvido — sem consulta ao banco."
+  def list_at(work_dir) do
+    dir = worktrees_dir(work_dir)
 
     case File.ls(dir) do
       {:ok, entries} -> Enum.filter(entries, &File.dir?(Path.join(dir, &1)))
@@ -74,12 +83,22 @@ defmodule Engine.Dev.WorktreeManager do
   Retorna a lista de agent_ids removidos.
   """
   def cleanup_orphans(project_id, live_agent_ids) do
+    cleanup_orphans_at(Workspace.workspace_dir(project_id), live_agent_ids)
+  end
+
+  @doc """
+  Mesmo que `cleanup_orphans/2`, com o `work_dir` já resolvido — sem consulta
+  ao banco. Usado por `Engine.Dev.WorktreeCleanup`, que já resolveu o
+  `work_dir` de TODOS os projetos numa consulta só (RN-109) e chamar
+  `cleanup_orphans/2` de novo aqui dentro re-consultaria por projeto.
+  """
+  def cleanup_orphans_at(work_dir, live_agent_ids) do
     live = MapSet.new(live_agent_ids)
 
-    list(project_id)
+    list_at(work_dir)
     |> Enum.reject(&MapSet.member?(live, &1))
     |> Enum.map(fn agent_id ->
-      remove(project_id, agent_id)
+      remove_at(work_dir, agent_id)
       agent_id
     end)
   end

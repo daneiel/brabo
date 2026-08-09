@@ -13366,6 +13366,11 @@
             "example": "checkout",
             "description": "Único dentro do workspace."
           },
+          "workspaceDirName": {
+            "type": "string",
+            "example": "checkout-3f2b1c8e",
+            "description": "Nome da pasta física do workspace deste projeto em PROJECT_WORKSPACES_ROOT (RN-109). `<slug>-<8 chars do id>` num projeto novo; o UUID puro num projeto criado antes desta coluna existir. Congelado na criação — editar `slug` depois não recalcula."
+          },
           "createdBy": {
             "type": "string",
             "example": "01JC4Z0000USUARIO0000000001"
@@ -13407,6 +13412,7 @@
           "workspaceId",
           "name",
           "slug",
+          "workspaceDirName",
           "createdBy",
           "taskBudgetMicros",
           "maxConsecutiveBlocked",

@@ -1,12 +1,23 @@
 defmodule Engine.Actions.Workspace do
   @moduledoc """
-  Garante o working tree do projeto em <PROJECT_WORKSPACES_ROOT>/<project_id>/,
-  derivado do bare repo local já provisionado (Fase 2). O diretório pode já
-  existir sem ser um working tree git ainda (por exemplo, porque a api
-  gravou permissions.json ali antes de qualquer execução) — por isso nunca
-  usa `git clone` direto (falha em diretório não-vazio); em vez disso, faz
-  init + remote add + fetch + checkout dentro do diretório, só na primeira
-  vez (sem auto-pull depois — "por ora", ver plano).
+  Garante o working tree do projeto em
+  <PROJECT_WORKSPACES_ROOT>/<workspace_dir_name>/, derivado do bare repo
+  local já provisionado (Fase 2). O diretório pode já existir sem ser um
+  working tree git ainda (por exemplo, porque a api gravou permissions.json
+  ali antes de qualquer execução) — por isso nunca usa `git clone` direto
+  (falha em diretório não-vazio); em vez disso, faz init + remote add +
+  fetch + checkout dentro do diretório, só na primeira vez (sem auto-pull
+  depois — "por ora", ver plano).
+
+  `workspace_dir_name` (RN-109) é o nome de pasta legível
+  (`<slug>-<8 chars do id>` pra projeto novo, o UUID puro pra projeto de
+  antes dessa coluna existir) — a MESMA coluna que a api lê em
+  `project-workspaces-root.ts`. `workspace_dir/1` resolve o nome a partir do
+  `project_id` via `Engine.Projects.Project.workspace_dir_name/1` (uma
+  consulta), e é por isso que esta função NÃO é hot path: quem chama por
+  ferramenta de agente (search/read/write_file) já recebe `ctx[:workspace_root]`
+  PRONTO — resolvido uma vez, na criação do worktree do agente
+  (`Engine.Dev.WorktreeManager`) — e só cai aqui como fallback.
 
   A inicialização é SERIALIZADA por projeto (`:global.trans`): na ativação
   da execução, N dev agents do mesmo projeto chamam `ensure!/3` em paralelo
@@ -18,6 +29,7 @@ defmodule Engine.Actions.Workspace do
   """
 
   alias Engine.Actions.GitAuth
+  alias Engine.Projects.Project
 
   @doc """
   Versão que não levanta: devolve `{:ok, dir}` ou `{:error, mensagem}`.
@@ -95,8 +107,24 @@ defmodule Engine.Actions.Workspace do
 
   defp git_dir?(dir), do: File.dir?(Path.join(dir, ".git"))
 
+  @doc """
+  A pasta do workspace, a partir do `project_id`. Faz UMA consulta pra
+  resolver `workspace_dir_name` (RN-109) — aceitável aqui porque nenhum
+  chamador desta aridade está no hot path do laço de ferramentas (ver
+  `@moduledoc`); quem está usa `workspace_dir/2` com o nome já em mãos.
+  """
   def workspace_dir(project_id) do
-    Path.join(Application.fetch_env!(:engine, :project_workspaces_root), project_id)
+    workspace_dir(project_id, Project.workspace_dir_name(project_id))
+  end
+
+  @doc """
+  A pasta do workspace, com `workspace_dir_name` JÁ resolvido — sem consulta
+  nenhuma. `nil` degrada para o `project_id` cru (mesmo comportamento de
+  antes da RN-109), o que só acontece se o projeto não existir mais no banco.
+  """
+  def workspace_dir(project_id, workspace_dir_name) do
+    nome = workspace_dir_name || project_id
+    Path.join(Application.fetch_env!(:engine, :project_workspaces_root), nome)
   end
 
   defp init_from_bare!(dir, bare_repo_path, default_branch, remoto) do
