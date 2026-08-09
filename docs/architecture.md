@@ -12,7 +12,7 @@ keywords: [arquitetura, code map, invariantes, harness, event log]
 Este documento é o mapa para quem vai **mexer** no código. Ele diz por onde
 começar a ler, o que cada fronteira promete, e o que já se sabe que está torto.
 
-Decisões e o porquê delas ficam nos [ADRs](adr/index.md) — 61 deles, vários
+Decisões e o porquê delas ficam nos [ADRs](adr/index.md) — 62 deles, vários
 registrando defeito real encontrado em execução. Aqui não repetimos a
 argumentação: apontamos.
 
@@ -135,6 +135,19 @@ Três derivações do mesmo event log, com perguntas diferentes:
 | `lib/activity.ts` | "o que aconteceu" — o feed cronológico |
 | `lib/agent-status.ts` | "quem existe e em que estado está" — os cards do time |
 | `lib/timeline-tree.ts` | "o que cada agente fez, e o que está fazendo AGORA" — a árvore |
+
+`lib/aprovacoes.ts` responde a quarta pergunta, e ela não vem do event log:
+"o que acontece se eu aprovar". Verbo e frase de cada tipo de `proposed_action`
+moram ali, e as três telas de decisão os consomem — a fila de Aprovações, o
+card dentro do chat e a aba Insights ([RN-096](business-rules.md#rn-096)).
+
+**A união `ActionType` é uma cópia, e cópia envelhece.** A lista canônica é
+`ACTION_TYPES` em `apps/api/src/domain/actions/decide.ts`, e `apps/api` não é
+dependência de `apps/web` — o compilador não tem como cobrar a divergência.
+Ela já apareceu duas vezes em produção (os três tipos do bootstrap de Gitflow;
+depois `parallelize`/`raise_max_parallel`). Quem cobra hoje é
+`lib/aprovacoes.test.ts`, que **lê o `decide.ts`** e reprova tipo sem frase;
+e, na dúvida, a UI degrada em vez de derrubar a árvore do React.
 
 A árvore inverte o eixo do feed (agente primeiro, tempo depois) porque numa
 sessão com Criativo, PO, Arquiteto e N devs a coluna cronológica não respondia

@@ -618,6 +618,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/spend-controller-get-my-spend",
+          label: "O meu consumo neste projeto, por sessão e por dia",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/budgets-controller-get-credential-spend",
           label: "Quanto as chaves do owner gastaram, por provider e por mês",
           className: "api-method get",
@@ -669,6 +675,12 @@ const sidebar: SidebarsConfig = {
           id: "docs/reference/api/models-controller-uses",
           label: "Marca para que o workspace usa cada modelo (lote)",
           className: "api-method post",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/spend-controller-get-workspace-spend-report",
+          label: "Quebra o gasto do workspace por modelo, projeto, ator e dia",
+          className: "api-method get",
         },
       ],
     },

@@ -435,25 +435,52 @@ pendência declarada, não feature de carona.
 18. Botão de voltar ao dashboard — hoje `SessionPage.tsx` não importa `Link`
     nem `useNavigate`, e NENHUMA navegação sai da tela.
 
-### FASE 21 — O volume de eventos
-19. `useSessionEvents` pede sempre a cauda de 200 e alimenta CINCO consumidores.
-    Separar estado atual (continua `latest`) de histórico paginado (só as
-    Atividades), usando o cursor que o endpoint JÁ devolve. Nenhuma rota nova.
-20. O sino só se corrige no SQL: a ordem `ASC` é deliberada e corta em 50 por
-    projeto, então `.sort()` no front ordenaria por recência os 50 mais
-    ANTIGOS. Junto vem o corte de "lido", que é `seq` no localStorage e não
-    tem endpoint de propósito — ler do topo faria o corte avançar sobre
-    eventos nunca vistos.
-21. A economia da RN-090/091 (289 → 1 requisição) NÃO pode regredir.
+### FASE 21 — CONCLUÍDA: o volume de eventos (RN-099/100)
+19. `useSessionEvents` continua sendo o ESTADO ATUAL (`latest`, quatro
+    consumidores: roster, árvore, execução, Aprovações). O HISTÓRICO virou
+    `useSessionEventHistory`, só para as Atividades, com o `afterSeq` que o
+    endpoint já devolvia. Nenhuma rota nova, nenhum parâmetro novo.
+    A âncora é a CAUDA, e não o começo da sessão: o endpoint pagina para
+    frente e não existe `beforeSeq`, mas abrir o feed no evento nº 1 de uma
+    sessão de milhares entrega a tela errada. Então a primeira página é a
+    mesma leitura `latest` (MESMA `queryKey`, deduplicada) e cada clique desce
+    uma janela fixa para trás.
+20. O sino ordena `DESC` no SQL. O corte de "lido" NÃO mudou de semântica, e
+    por isso não há ADR: um corte por `seq` marca um PREFIXO e a gaveta mostra
+    um SUFIXO, então "marcar as 50 exibidas" é inexprimível sem tabela de
+    lidos por evento. O que mudou é a gaveta parar de esconder o que o avanço
+    engole — total por projeto, `+ N mais antigos`, e o botão dizendo quantas
+    marca. O número que falta sai de SUBTRAÇÃO (`latestSeq` menos o corte),
+    não de requisição.
+21. A economia da RN-090/091 não regrediu: uma requisição por ciclo, e o
+    primeiro "carregar mais antigos" custa ZERO — a leitura `latest` traz 200
+    e a janela mostra 100. Página antiga tem `staleTime: Infinity` e nenhum
+    `refetchInterval`: janela fechada de `seq` sobre evento imutável não muda.
 
-### FASE 22 — Gasto com duas audiências
-22. `token_usage` já tem todas as colunas; faltam as AGREGAÇÕES — não há por
-    modelo, por projeto dentro do workspace, por sessão nem por pessoa.
-23. Sem lib de gráficos, e não instalar sem justificar: SVG inline cobre.
-24. Colisão com a RN-060, a mais dura do lote: o gasto das chaves é do owner e
-    só dele, e o membro gasta a chave DO OWNER (RN-058). A saída é separar as
-    perguntas — relatório por CREDENCIAL segue exclusivo do owner; a visão do
-    membro é por ATOR, sem quebrar por credencial.
+### FASE 22 — CONCLUÍDA em 2026-08-09 (gasto com duas audiências)
+Entregue como a aba **Gastos** (ADR 0063, RN-101).
+22. As AGREGAÇÕES que faltavam entraram num método só —
+    `sumGroupedBy(dimensao, escopo)` com `model`, `project`, `actor`,
+    `session` e `day`. `provider` NÃO é dimensão dele, e a ausência é
+    estrutural: quebrar por provider é quebrar por CREDENCIAL, e é isso
+    que impede a visão do membro de ganhar o eixo por descuido — não há
+    argumento a passar.
+23. Sem lib de gráficos: barras diárias e ranking em SVG inline. A série
+    diária vem DENSA da api (dia sem gasto entra com zero), senão três
+    chamadas em três semanas viram três barras coladas.
+24. A colisão foi resolvida separando as PERGUNTAS, não os filtros. O
+    relatório por CREDENCIAL segue exclusivo do owner (RN-060) e ganhou
+    ao lado a quebra do workspace por modelo/projeto/ator/dia, também
+    `owner`. A visão do membro é por ATOR, em tokens e custo estimado,
+    sem provider e sem credencial — e o ator sai do TOKEN autenticado,
+    sem parâmetro onde escrever o id de outra pessoa. Agente não entra na
+    conta do membro: `token_usage` registra quem gastou, não quem mandou
+    gastar.
+
+Sem migration, mas COM medição: a 525 mil linhas as consultas saem em
+55 ms e 38 ms por seq scan, e um índice em `token_usage(created_at)` as
+levaria a 32 ms e 19 ms. O número está no ADR; o índice entra na onda que
+tiver o slot.
 
 ### FASE 23 — Modelo herdável por área
 25. Escopo `area` na cascata de binding, entre `agent` e `project`.
@@ -577,7 +604,10 @@ seguinte, e quando vier, escrita é efeito externo: nasce `proposed_action`.
   event log, e o motivo NUNCA fica só em broadcast: `agent.error` é
   durável e o agente diz o que houve no fio (RN-059).
 - A chave de LLM que um agente gasta é a do OWNER do workspace
-  (RN-058); o relatório desse gasto é do owner e só dele (RN-060).
+  (RN-058); o relatório desse gasto é do owner e só dele (RN-060). O
+  membro vê o PRÓPRIO consumo por ATOR, em tokens e custo estimado, e
+  NUNCA quebrado por provider ou credencial — as duas leituras respondem
+  perguntas diferentes e nenhuma é recorte da outra (RN-101/ADR 0063).
 - Métrica de execução de agentes é extraída do event log/token_usage
   por script, nunca anotada manualmente (lição da Fase 10/13).
 - Testes: vitest (api/web/scripts de CI), ExUnit (engine). Nenhuma
@@ -591,6 +621,12 @@ seguinte, e quando vier, escrita é efeito externo: nasce `proposed_action`.
   medido por teste sobre os tokens e layout é verificado no navegador
   por scripts/dev/validacao-visual.js — as duas validações estão
   explicadas em design/README.md.
+- Tipo novo de `proposed_action` nasce com FRASE em pt-BR em
+  `apps/web/src/lib/aprovacoes.ts` — verbo e frase têm UMA fonte, e as
+  três telas de decisão (Aprovações, chat da sessão, Insights) a
+  consomem. `apps/web/src/lib/aprovacoes.test.ts` lê `ACTION_TYPES` do
+  `decide.ts` e reprova tipo sem frase; payload cru nunca é despejado,
+  nasce colapsado (RN-096).
 - Segredos de usuário (API keys de LLM e tokens de git) criptografados
   com envelope encryption; nunca em plaintext no banco ou em logs.
 - Decisões arquiteturais relevantes registradas em docs/adr/.

@@ -2203,6 +2203,51 @@ chave, nem cifrada ([ADR 0050](adr/0050-credencial-sempre-cifrada-verificacao-ex
   `apps/web/src/components/CredentialSpendSection.test.tsx`
 - **Origem:** decisão do usuário junto com a RN-058
 
+### RN-101 — O mesmo gasto, duas audiências: a fatura é do owner, o consumo é de quem gastou {#rn-101}
+
+O produto responde **duas perguntas diferentes** sobre `token_usage`, e nenhuma
+é recorte da outra.
+
+**A do owner é por CREDENCIAL.** `GET /workspaces/:id/credential-spend` continua
+como a [RN-060](#rn-060) o deixou — por provider, exigindo `owner`, respondendo
+"quanto saiu da minha chave". Junto dele, `GET /workspaces/:id/spend-report`
+(também `owner`) quebra o workspace por **modelo, projeto, ator e dia**. O owner
+vê os dois porque é a única pessoa que pode ver os dois.
+
+**A do membro é por ATOR.** `GET /projects/:id/spend/me` (papel `viewer`)
+devolve, em tokens e custo **estimado**, o que **quem chamou** consumiu naquele
+projeto, por sessão e por dia. Ela **não quebra por provider nem por
+credencial** — a chave que rodou é a do owner ([RN-058](#rn-058)), e uma fatia
+da fatura dele não é o que o membro está perguntando.
+
+O ator **não é parâmetro**: sai do usuário autenticado, e não existe onde
+escrever o id de outra pessoa. "Membro não vê linha de outro ator" é propriedade
+da assinatura do caso de uso, não uma checagem que alguém pode esquecer de
+chamar.
+
+**Agente não entra na conta do membro.** `token_usage` registra quem GASTOU, não
+quem mandou gastar; atribuir o agente a quem o iniciou seria inventar um dado
+que a tabela não tem. Gasto de agente aparece no relatório do owner, de quem é a
+chave.
+
+**A agregação nova não tem eixo de `provider`.** As cinco dimensões de
+`sumGroupedBy` são `model`, `project`, `actor`, `session` e `day` — e só. A
+ausência é o que impede a visão do membro de ganhar esse eixo por descuido: não
+há argumento a passar. Pelo mesmo motivo, dois providers servindo o mesmo nome
+de modelo caem numa linha só.
+
+- **Onde:**
+  `apps/api/src/application/use-cases/llm/get-my-spend.use-case.ts`,
+  `apps/api/src/application/use-cases/llm/get-workspace-spend-report.use-case.ts`,
+  `apps/api/src/application/ports/token-usage-repository.port.ts`,
+  `apps/api/src/interfaces/http/llm/spend.controller.ts`,
+  `apps/web/src/routes/ProjectSpendTab.tsx`
+- **Teste:** `apps/api/test/application/use-cases/llm/spend-audiencias.use-case.spec.ts`
+  (o membro não enxerga linha de outro ator, nem de agente, nem do owner; o
+  filtro é pelo par `(kind, id)`; a resposta não carrega provider);
+  `apps/web/src/routes/ProjectSpendTab.test.tsx`
+- **Origem:** [ADR 0063](adr/0063-duas-audiencias-para-o-mesmo-gasto.md) (FASE 22)
+
 ### RN-059 — Falha de turno é evento durável com origem, e o agente fala {#rn-059}
 
 Quando um turno de LLM falha, o agente grava **`agent.error`** no event log
@@ -2537,6 +2582,185 @@ antigo.
   projeto, teto por projeto e isolamento de workspace)
 - **Origem:** residual medido da [RN-090](#rn-090) — 286 req/min com a gaveta
   aberta num workspace de 23 projetos
+
+### RN-099 — Atividades pagina o passado sem repolar o que não muda {#rn-099}
+
+A coluna de **Atividade** da Visão geral mostra uma **janela** de 100 eventos
+ancorada na **cauda** da sessão, e desce no passado de página em página. Cada
+página usa o `afterSeq`/`nextCursor` que
+`GET /projects/:p/sessions/:s/events` **já** devolve: nenhuma rota nova,
+nenhum parâmetro novo.
+
+**Duas perguntas, duas queries.** `useSessionEvents` responde "como está
+agora" — os últimos 200 em poll — e alimenta o painel do time, a linha do
+tempo em árvore, a seção de execução e a aba de Aprovações. Nenhuma delas
+pagina. A de Atividades responde "o que aconteceu", e era a única que fazia
+essa pergunta com a resposta da outra: 200 itens de uma vez, sem começo nem
+fim, e ainda assim sem alcançar o início de uma sessão longa.
+
+**A âncora é a cauda, não o começo da sessão.** O endpoint pagina para
+FRENTE, e não existe `beforeSeq` — inventar um seria contrato novo. Mas abrir
+o feed no evento nº 1 de uma sessão de milhares entrega a tela errada: quem
+abre Atividades quer o que acabou de acontecer. Então a primeira página é a
+mesma leitura `latest` que a tela já faz, com a **mesma `queryKey`** (o React
+Query serve as duas com UMA busca), e cada clique desce uma janela fixa com
+`afterSeq`.
+
+**O que a paginação não pode custar.** Uma requisição por ciclo de poll — a
+mesma de antes, e a economia da [RN-090](#rn-090)/[RN-091](#rn-091) não
+regride. Três peças garantem isso:
+
+- a cauda é a query que a tela já tinha, compartilhada por `queryKey`;
+- o primeiro clique **não** vira requisição: a leitura `latest` traz 200 e a
+  janela mostra 100, então revelar o que já se pagou vem antes de pedir de
+  novo;
+- página antiga é uma janela **fechada** de `seq` sobre eventos **imutáveis**
+  (nunca há UPDATE em tabela de evento): `staleTime: Infinity` e
+  **nenhum** `refetchInterval`. Um poll ali seria pagar N requisições para
+  receber N respostas idênticas.
+
+**A contagem é honesta sobre o que ela sabe.** Os filtros por agente e por
+tipo rodam sobre a **página carregada**, não sobre a sessão — então a UI diz
+`N de M carregados`, e não "N resultados". Levar o filtro ao servidor daria o
+total verdadeiro e mexeria no repositório de eventos; não é desta fase, e
+dizer o total errado seria pior que dizer menos.
+
+Os três estados da [RN-088](#rn-088) valem aqui: **erro antes de vazio** — a
+coluna dizia "nenhuma atividade" quando a api tinha recusado.
+
+- **Onde:** `apps/web/src/lib/hooks.ts` (`useSessionEventHistory`,
+  `EVENTOS_POR_PAGINA`), `apps/web/src/components/ActivityFeed.tsx`,
+  `apps/web/src/routes/ProjectOverviewTab.tsx`,
+  `apps/api/src/infrastructure/persistence/drizzle/session-event.repository.ts`
+  (`listPaginated`, já existente)
+- **Teste:** `apps/web/src/lib/session-history.test.tsx` (abre na cauda; o
+  primeiro clique não custa requisição; o seguinte pagina com `afterSeq`
+  contíguo; o laço termina no começo da sessão; montado junto com o estado
+  atual a cauda é UMA busca; página antiga não repolla);
+  `apps/web/src/components/ActivityFeed.test.tsx` (o "N de M carregados"
+  acompanha o filtro; sem as props de paginação nada muda)
+- **Origem:** pedido do usuário na primeira navegação real — "Atividades na
+  aba Visão Geral deve ser paginada, para não ficar infinita"
+
+### RN-100 — A ordem do sino é do SQL, não do front {#rn-100}
+
+A gaveta de notificações mostra os eventos **do mais recente para o mais
+antigo**, e quando um projeto tem mais não lidos que o teto de 50 os que
+aparecem são os **mais NOVOS**.
+
+**A ordenação é do banco por necessidade, não por gosto.** A consulta corta em
+50 **por projeto** com uma função de janela
+(`row_number() OVER (PARTITION BY session_id ORDER BY seq DESC)`), e é ela que
+decide **quais** 50 eventos sobrevivem — não só em que ordem eles saem. Com
+`ASC` sobreviviam os 50 mais **antigos**, e um `.sort()` no cliente ordenaria
+por recência justamente a janela que a consulta já tinha escolhido errado:
+num projeto com 300 não lidos, o 251º evento apareceria como "o mais recente".
+É por isso que não há ordenação nenhuma no caminho do front, e o comentário no
+componente diz que não pode haver.
+
+**A consequência, e por que o corte de leitura não mudou.** O corte é um `seq`
+por projeto no `localStorage`, e **não existe endpoint de marcar lido**, por
+decisão registrada na [RN-091](#rn-091). Um corte por `seq` marca um
+**prefixo**; a gaveta agora mostra um **sufixo**. Marcar como lidas "as 50
+exibidas" é inexprimível sem um conjunto de lidos **por evento** — tabela nova,
+fora de escopo. Os dois únicos cortes expressáveis continuam sendo "nada" e
+"tudo até agora".
+
+A saída não foi mudar a semântica (ela continua avançando para o último `seq`,
+exatamente como antes), foi **parar de esconder o que esse avanço engole**:
+
+- cada projeto mostra o **total** de não lidos, não o tamanho da janela, e
+  declara quantos ficaram de fora (`+ N mais antigos`);
+- o botão passa a dizer o que faz — `marcar as N como lidas` — quando há algo
+  fora da janela;
+- o número que falta sai de **subtração**, não de requisição: `latestSeq`
+  menos o corte já vem no resumo do workspace ([RN-090](#rn-090)).
+
+Como a semântica do corte não mudou, **não há ADR** nesta regra: o que mudou
+foi qual janela a consulta escolhe e o que a gaveta declara sobre ela.
+
+- **Onde:**
+  `apps/api/src/infrastructure/persistence/drizzle/projects-summary.repository.ts`
+  (`unreadEventsForWorkspace`),
+  `apps/api/src/application/ports/projects-summary-repository.port.ts`,
+  `apps/api/src/interfaces/http/iam/dto/iam.response.dto.ts`
+  (`ProjectUnreadEventsResponseDto`),
+  `apps/web/src/lib/notifications.ts` (`useNotificationGroups`),
+  `apps/web/src/components/NotificationBell.tsx`
+- **Teste:**
+  `apps/api/test/infrastructure/persistence/drizzle/projects-summary.repository.spec.ts`
+  ("com mais não lidos que o teto, voltam os MAIS RECENTES, do novo para o
+  velho" — afirma o CONJUNTO antes da ordem);
+  `apps/web/src/components/NotificationBell.test.tsx` (renderiza na ordem
+  recebida, sem reordenar; o contador é o total; o botão diz quantas marca);
+  `apps/web/src/lib/notifications.test.tsx` (o que ficou fora da janela sai
+  por subtração, sem segunda requisição);
+  `apps/web/src/routes/Dashboard.fanout.test.tsx` (a gaveta continua sendo
+  UMA requisição)
+- **Origem:** pedido do usuário na primeira navegação real — "Sino e
+  notificações devem sempre ordenar para última data modificada em descendente
+  para a mais antiga"
+
+---
+
+### RN-096 — Toda decisão diz em português o que acontece; o payload cru nasce colapsado {#rn-096}
+
+Todo tipo de `proposed_action` tem uma **frase em português** que descreve o
+efeito de aprovar, e ela é a primeira coisa visível no card — antes de qualquer
+detalhe, nas três telas onde uma decisão é pedida (a fila de Aprovações, o card
+dentro do chat da sessão e a aba Insights). O payload cru continua acessível,
+**dentro de um colapso que nasce fechado**, e nunca é despejado na tela.
+
+**O que existia era um despejo.** Todo tipo sem corpo visual próprio caía num
+`Object.entries(payload).map(([k, v]) => k + ': ' + JSON.stringify(v))`, sempre
+aberto. Quem abria a fila lia `worktree: /workspaces/dev-api`,
+`coAuthor: Brabo User <user@brabo.dev>` e `proposto: 4` — e tinha de deduzir o
+que ia acontecer se clicasse em Aprovar. Aprovação que exige dedução é
+aprovação que se dá no automático, e o produto inteiro se apoia em o usuário
+ser a autoridade final.
+
+**A frase degrada, e é isso que a torna confiável.** Nenhuma delas assume que
+uma chave do payload existe: com payload vazio a frase continua sendo uma frase
+verdadeira, só menos específica ("Registra um commit no repositório do
+projeto."). O payload vem do engine e de dez casos de uso diferentes, e nenhum
+deles promete um formato — frase que só funciona com a fixture certa é frase
+que quebra na primeira aprovação real.
+
+**Tipo que o web ainda não conhece não é caso teórico.** A união `ActionType`
+do web já ficou defasada duas vezes: primeiro com os três tipos do bootstrap de
+Gitflow, e de novo com `parallelize`/`raise_max_parallel`, que entraram na FASE
+14d. O compilador não pega: a lista canônica está em `apps/api`, que o web não
+importa. Por isso duas coisas ao mesmo tempo — o card **degrada** (verbo neutro
++ "ver detalhes", com o payload colapsado, em vez do `undefined` no mapa de
+ícones que derrubava a árvore inteira do React), e o **teste lê o `decide.ts`
+do backend** e reprova quando um tipo entra sem frase.
+
+**O default de aberto/fechado é derivado, não configurado.** A regra é uma só —
+abre o que ainda espera decisão de quem está olhando: no chat, ação `pending`;
+na fila, nunca (são N cards, e N detalhes abertos são a mesma parede de texto);
+em Insights, hipótese `proposed`. E o payload CRU não abre em variante nenhuma.
+A consequência de projeto é que `ApprovalCard` **não ganhou prop nova
+obrigatória**: o default sai de `variant` e `status`, que já existiam.
+
+**Verbo e frase saem de um módulo só**, consumido pelas três telas. A hipótese
+do Psicólogo usa literalmente o verbo do `instruction_patch` em vez de um
+vocabulário paralelo — e a frase dela diz o que o accept faz de verdade
+(enfileira para a Anamnese, que **pode** propor o ajuste, que ainda vem para
+aprovação), nunca "a instrução será alterada".
+
+- **Onde:** `apps/web/src/lib/aprovacoes.ts` (`VERBO_DA_ACAO`, `fraseDaAcao`,
+  `descreverAcao`, `descreverHipotese`), consumido por
+  `apps/web/src/components/ApprovalCard.tsx` (Aprovações + chat da sessão) e
+  `apps/web/src/components/HypothesisCard.tsx` (Insights); colapso pelo
+  `Disclosure` de `apps/web/src/components/ui/Disclosure.tsx`
+- **Teste:** `apps/web/src/lib/aprovacoes.test.ts` (lê `ACTION_TYPES` de
+  `apps/api/src/domain/actions/decide.ts` e exige verbo + frase para cada tipo,
+  com payload vazio); `apps/web/src/components/ApprovalCard.test.tsx`
+  (`frase e colapso` — payload colapsado nas duas variantes, JSON legível ao
+  abrir, tipo desconhecido não derruba a tela);
+  `apps/web/src/components/HypothesisCard.test.tsx` (`frase e colapso`)
+- **Origem:** FASE 19 do programa 16–26, do pedido "hoje está muito difícil a
+  leitura" na primeira navegação real depois do reset do banco
 
 ---
 

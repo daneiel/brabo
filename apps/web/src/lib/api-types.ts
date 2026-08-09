@@ -201,7 +201,7 @@ export interface Page<T> {
   nextCursor: number | null;
 }
 
-// Os 13 do backend (`apps/api/src/domain/actions/decide.ts`), na mesma ordem.
+// Os 15 do backend (`apps/api/src/domain/actions/decide.ts`), na mesma ordem.
 //
 // Esta união já foi um subconjunto — só os que a UI renderiza de forma
 // dedicada —, com a nota de que "os demais caem no fallback genérico do
@@ -213,6 +213,13 @@ export interface Page<T> {
 //
 // Com a união completa os mapas do ApprovalCard voltam a ser exaustivos, e é o
 // compilador que cobra a entrada de qualquer tipo novo.
+//
+// E a união VOLTOU a ficar defasada: `parallelize` e `raise_max_parallel`
+// entraram no backend com a FASE 14d e ninguém as trouxe para cá, porque o
+// compilador só cobra o que ele consegue ver — a lista do backend é um arquivo
+// que o web não importa. Por isso o teste da FASE 19
+// (`aprovacoes.test.ts`) lê `ACTION_TYPES` do decide.ts e reprova quando os
+// dois lados divergem, em vez de confiar numa lista escrita à mão.
 export type ActionType =
   | 'terminal'
   | 'git_commit'
@@ -226,7 +233,9 @@ export type ActionType =
   | 'open_adr_pr'
   | 'git_merge'
   | 'open_infra_pr'
-  | 'instruction_patch';
+  | 'instruction_patch'
+  | 'parallelize'
+  | 'raise_max_parallel';
 
 export type ActionStatus =
   | 'pending'

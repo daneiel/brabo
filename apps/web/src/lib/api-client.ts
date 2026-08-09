@@ -2,6 +2,7 @@ import { renovarSessao, tokenAtual } from './auth';
 import { runtimeConfig } from './runtime-config';
 import { childSpan, logger, newTraceContext } from './logger';
 import type { LlmCredentialProvider } from './models';
+import type { MySpend, WorkspaceSpendReport } from './spend';
 import type {
   AgentAutonomyRule,
   CredentialSpend,
@@ -754,3 +755,21 @@ export const setSessionBudget = (
 export const getRegistroDeGates = () => get<RegistroDeGates>('/gates');
 
 export type { ModelBindingScope };
+
+/**
+ * As duas audiências do gasto (FASE 22, ADR 0063, RN-101).
+ *
+ * Chamadas separadas porque as perguntas são separadas, e porque quem pode
+ * fazer cada uma é outra pessoa: a de workspace exige `owner`, a de projeto
+ * basta ser membro. A tela nunca dispara a primeira sem o papel — pedir um 403
+ * de propósito é ruído no log de segurança.
+ */
+export const getWorkspaceSpendReport = (workspaceId: string, dias?: number) =>
+  get<WorkspaceSpendReport>(
+    `/workspaces/${workspaceId}/spend-report${dias ? `?dias=${dias}` : ''}`,
+  );
+
+export const getMySpend = (projectId: string, dias?: number) =>
+  get<MySpend>(
+    `/projects/${projectId}/spend/me${dias ? `?dias=${dias}` : ''}`,
+  );

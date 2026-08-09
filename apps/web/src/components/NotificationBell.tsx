@@ -6,7 +6,20 @@ import styles from './NotificationBell.module.css';
 export interface NotificationGroup {
   projectId: string;
   projectName: string;
+  /**
+   * Já ORDENADOS pela api, do mais recente para o mais antigo (RN-100) — e
+   * renderizados nessa ordem, sem `.sort()` aqui.
+   *
+   * Não é preciosismo: a consulta corta em 50 por projeto escolhendo os mais
+   * NOVOS, então a lista que chega é uma janela, não uma amostra reordenável.
+   * Ordenar de novo aqui só teria efeito se a api tivesse escolhido errado —
+   * e aí o erro estaria escondido, não corrigido.
+   */
   events: SessionEvent[];
+  /** Total de não lidos do projeto, inclusive o que não coube na janela. */
+  unreadCount: number;
+  /** Quantos ficaram fora da janela — sempre os mais antigos. */
+  olderCount: number;
 }
 
 interface NotificationBellProps {
@@ -30,6 +43,21 @@ export function NotificationBell({
   onOpenChange,
   onMarkRead,
 }: NotificationBellProps) {
+  // O que o botão "marcar lidas" REALMENTE faz, dito antes de ele ser clicado.
+  //
+  // O corte de leitura é UM `seq` por projeto no `localStorage`, e não existe
+  // endpoint de marcar lido, por decisão registrada (RN-091). Um corte por
+  // `seq` marca um PREFIXO; a gaveta mostra um SUFIXO (os mais recentes). Os
+  // dois únicos cortes que ele consegue expressar são "nada" e "tudo até
+  // agora" — não há como marcar lidos só os 50 exibidos sem inventar um
+  // conjunto de lidos por evento, que é tabela nova e está fora de escopo.
+  //
+  // Então a semântica NÃO muda (continua avançando para o último `seq`), e o
+  // que muda é a gaveta parar de esconder o que esse avanço engole: o total
+  // aparece no botão, e cada projeto diz quantos ficaram fora da janela.
+  const ocultos = groups.reduce((total, g) => total + g.olderCount, 0);
+  const totalNaGaveta = groups.reduce((total, g) => total + g.unreadCount, 0);
+
   return (
     <div className={styles.wrapper}>
       <button
@@ -47,9 +75,19 @@ export function NotificationBell({
           <div className={styles.header}>
             <span className={styles.headerTitle}>Notificações</span>
             <button type="button" className={styles.markRead} onClick={onMarkRead}>
-              marcar lidas
+              {ocultos > 0
+                ? `marcar as ${totalNaGaveta} como lidas`
+                : 'marcar lidas'}
             </button>
           </div>
+
+          {ocultos > 0 && (
+            <div className={styles.windowNote}>
+              Mostrando os mais recentes de cada projeto. {ocultos} mais
+              {ocultos === 1 ? ' antigo' : ' antigos'} não {ocultos === 1 ? 'cabe' : 'cabem'} aqui
+              — abrir o projeto é o caminho para eles.
+            </div>
+          )}
 
           {groups.length === 0 && <div className={styles.empty}>Nenhuma notificação por aqui ainda.</div>}
 
@@ -58,13 +96,18 @@ export function NotificationBell({
               <div className={styles.groupHeader}>
                 <span className={styles.groupDot} />
                 {group.projectName}
-                <span className={styles.groupCount}>{group.events.length}</span>
+                <span className={styles.groupCount}>{group.unreadCount}</span>
               </div>
               <div className={styles.list}>
                 {group.events.map((event) => (
                   <EventItem key={event.id} event={event} />
                 ))}
               </div>
+              {group.olderCount > 0 && (
+                <div className={styles.older}>
+                  + {group.olderCount} mais {group.olderCount === 1 ? 'antigo' : 'antigos'}
+                </div>
+              )}
             </div>
           ))}
         </div>
