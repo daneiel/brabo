@@ -1,0 +1,69 @@
+---
+id: model-bindings-controller-set-area-binding
+title: "Define o modelo padrão de uma área"
+description: "Vale para o lead e para todo subagente da área que não tenha binding próprio (RN-102). Exige `maintainer` porque alcança a área inteira de uma vez, e escolher modelo é decidir gasto — o mesmo motivo do teto de paralelismo."
+sidebar_label: "Define o modelo padrão de uma área"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "put api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Define o modelo padrão de uma área"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"put"}
+  path={"/projects/{projectId}/area-bindings/{areaKey}"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Vale para o lead e para todo subagente da área que não tenha binding próprio (RN-102). Exige `maintainer` porque alcança a área inteira de uma vez, e escolher modelo é decidir gasto — o mesmo motivo do teto de paralelismo.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./model-bindings-controller-set-area-binding.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./model-bindings-controller-set-area-binding.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./model-bindings-controller-set-area-binding.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

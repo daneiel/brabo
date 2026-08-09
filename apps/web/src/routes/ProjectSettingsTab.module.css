@@ -50,8 +50,12 @@
   color: var(--warning);
 }
 
-.nivelAgent {
+.nivelArea {
   color: var(--accent);
+}
+
+.nivelAgent {
+  color: var(--success);
 }
 
 /* Card de custo do time, acima da tabela de modelos. */
@@ -338,6 +342,25 @@
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
+  align-items: center;
+}
+
+/* "voltar a herdar" (RN-102) — link discreto, não botão cheio: é uma ação
+   secundária que só aparece quando o agente DIVERGIU, e não deve competir
+   visualmente com o ModelPicker da linha. */
+.voltarHerdar {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  padding: 0;
+  text-decoration: underline dotted;
+  cursor: pointer;
+}
+
+.voltarHerdar:hover {
+  color: var(--text-secondary);
 }
 
 /*

@@ -2599,7 +2599,7 @@
     },
     "/projects/{projectId}/agent-bindings/{agentSlug}": {
       "get": {
-        "description": "Cascata agente → projeto → workspace, SEM sessão: é a configuração do agente no projeto, não a de uma conversa específica.",
+        "description": "Cascata agente → área → projeto → workspace, SEM sessão: é a configuração do agente no projeto, não a de uma conversa específica. `origin: \"agent\"` quer dizer que este agente DIVERGIU do padrão da área dele; qualquer outra origem quer dizer que ele herda.",
         "operationId": "ModelBindingsController_getAgentBinding",
         "parameters": [
           {
@@ -2655,7 +2655,7 @@
         ]
       },
       "put": {
-        "description": "Vale para todas as sessões que não tenham binding próprio. É como se dá um modelo barato ao Psicólogo e um caro ao Arquiteto no mesmo projeto.",
+        "description": "Vale para todas as sessões deste projeto que não tenham binding próprio, e só para elas — até o ADR 0064 o binding era global e alcançava os outros projetos. É como se dá um modelo barato ao Psicólogo e um caro ao Arquiteto no mesmo projeto, e é também como um agente DIVERGE do padrão da área dele.",
         "operationId": "ModelBindingsController_setAgentBinding",
         "parameters": [
           {
@@ -2718,7 +2718,56 @@
             "bearer": []
           }
         ],
-        "summary": "Fixa o modelo de um agente no projeto",
+        "summary": "Fixa o modelo de um agente NESTE projeto",
+        "tags": [
+          "llm"
+        ]
+      },
+      "delete": {
+        "description": "APAGA o binding do agente — não copia para ele o modelo da área. Copiar pareceria o mesmo na tela e não é: viraria uma cópia, e a próxima mudança da área deixaria este agente para trás em silêncio. 404 quando ele já herda.",
+        "operationId": "ModelBindingsController_clearAgentBinding",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "agentSlug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "example": "dev-api",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "O agente voltou a herdar. Sem corpo."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no escopo."
+          },
+          "404": {
+            "description": "Escopo inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Faz o agente voltar a herdar o modelo da área",
         "tags": [
           "llm"
         ]
@@ -3003,6 +3052,182 @@
         "summary": "Devolve o module_map vigente, as ADRs e as pendências",
         "tags": [
           "backlog"
+        ]
+      }
+    },
+    "/projects/{projectId}/area-bindings/{areaKey}": {
+      "get": {
+        "description": "O padrão que o lead e os subagentes da área compartilham. `origin: \"area\"` quer dizer que alguém o escolheu para esta área; qualquer outra origem quer dizer que a própria área herda do projeto ou do workspace.",
+        "operationId": "ModelBindingsController_getAreaBinding",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "areaKey",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "example": "qa",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResolvedBindingResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no escopo."
+          },
+          "404": {
+            "description": "Escopo inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Resolve qual modelo é o padrão de uma área, e de onde ele veio",
+        "tags": [
+          "llm"
+        ]
+      },
+      "put": {
+        "description": "Vale para o lead e para todo subagente da área que não tenha binding próprio (RN-102). Exige `maintainer` porque alcança a área inteira de uma vez, e escolher modelo é decidir gasto — o mesmo motivo do teto de paralelismo.",
+        "operationId": "ModelBindingsController_setAreaBinding",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "areaKey",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "example": "qa",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetModelBindingDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelBindingResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no escopo."
+          },
+          "404": {
+            "description": "Escopo inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Define o modelo padrão de uma área",
+        "tags": [
+          "llm"
+        ]
+      },
+      "delete": {
+        "description": "A área deixa de ter padrão próprio e passa a herdar do projeto (ou do workspace). Os agentes que divergiram continuam divergindo: o binding deles é outro, e apagar este não pode decidir por eles.",
+        "operationId": "ModelBindingsController_clearAreaBinding",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "areaKey",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "example": "qa",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "A área voltou a herdar. Sem corpo."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no escopo."
+          },
+          "404": {
+            "description": "Escopo inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Faz a área voltar a herdar o modelo do projeto",
+        "tags": [
+          "llm"
         ]
       }
     },
@@ -11953,6 +12178,7 @@
             "enum": [
               "workspace",
               "project",
+              "area",
               "agent",
               "session"
             ],
@@ -11961,7 +12187,7 @@
           "scopeId": {
             "type": "string",
             "example": "01JC4Z0000PROJETO0000000001",
-            "description": "Id do workspace, projeto, agente ou sessão a que o binding se prende."
+            "description": "Id do workspace, projeto ou sessão a que o binding se prende. Nos escopos `agent` e `area`, que existem POR PROJETO, é composto: `<projectId>:<slug do agente|chave da área>` (ADR 0064)."
           },
           "modelId": {
             "type": "string",
@@ -14256,6 +14482,7 @@
             "enum": [
               "workspace",
               "project",
+              "area",
               "agent",
               "session"
             ],
@@ -14899,6 +15126,7 @@
             "enum": [
               "workspace",
               "project",
+              "area",
               "agent",
               "session"
             ],

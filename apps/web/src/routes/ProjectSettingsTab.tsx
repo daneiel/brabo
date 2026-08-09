@@ -11,7 +11,10 @@ import {
   runAnamnese,
   rollbackInstruction,
   deleteCredential,
+  clearAgentModelBinding,
+  clearAreaModelBinding,
   getAgentModelBinding,
+  getAreaModelBinding,
   getBootstrapPlan,
   getProjectAgentCosts,
   getProjectModelBinding,
@@ -24,12 +27,13 @@ import {
   removeProjectMember,
   mensagemDaApi,
   setAgentModelBinding,
+  setAreaModelBinding,
   setAreaMaxParallel,
   testCredential,
   updateProject,
   upsertCredential,
 } from '../lib/api-client';
-import { AGENT_LIST } from '../lib/agents';
+import { AGENT_LIST, AREAS, areaFor } from '../lib/agents';
 import { useProficiency } from '../lib/hooks';
 import { pollQueParaNoErro } from '../lib/query-policy';
 import { ROLE_LABEL, ROLE_ORDER } from '../lib/roles';
@@ -66,7 +70,8 @@ import styles from './ProjectSettingsTab.module.css';
 const ORIGIN_TONE: Record<ModelBindingScope, BadgeTone> = {
   workspace: 'muted',
   project: 'warning',
-  agent: 'accent',
+  area: 'accent',
+  agent: 'success',
   session: 'success',
 };
 
@@ -181,6 +186,7 @@ export function ProjectSettingsTab({ projectId }: ProjectSettingsTabProps) {
       <ParallelismSection projectId={projectId} />
       <PromotionSection projectId={projectId} />
       <ModelsSection projectId={projectId} />
+      <AreaModelsSection projectId={projectId} />
       <CatalogoDeModelos projectId={projectId} />
       <MembersSection projectId={projectId} />
       <ProficiencySection projectId={projectId} />
@@ -253,6 +259,19 @@ export function ModelsSection({ projectId }: { projectId: string }) {
     })),
   });
 
+  // O padrão de cada ÁREA (ADR 0064, RN-102) — uma busca por área, não por
+  // agente: lead e subagentes de uma mesma área compartilham a mesma pergunta.
+  const areaKeys = Object.keys(AREAS);
+  const areaBindingQueries = useQueries({
+    queries: areaKeys.map((key) => ({
+      queryKey: ['area-binding', projectId, key],
+      queryFn: () => getAreaModelBinding(projectId, key),
+    })),
+  });
+  const bindingDaAreaPorChave = new Map(
+    areaKeys.map((key, index) => [key, areaBindingQueries[index]?.data]),
+  );
+
   // Os dois níveis de cima da cascata, buscados UMA vez — é deles que sai a
   // coluna FALLBACK de todas as linhas.
   const { data: bindingDoProjeto } = useQuery({
@@ -279,12 +298,32 @@ export function ModelsSection({ projectId }: { projectId: string }) {
 
   /**
    * O que valeria se o binding vigente sumisse — a precedência é
-   * `session > agent > project > workspace` (`domain/llm/binding-resolver.ts`),
-   * então o fallback é o binding do nível imediatamente inferior à origem
-   * resolvida. Origem `workspace` já é o último nível: não há para onde cair.
+   * `session > agent > area > project > workspace`
+   * (`domain/llm/binding-resolver.ts`), então o fallback é o binding do nível
+   * imediatamente inferior à origem resolvida. Origem `workspace` já é o
+   * último nível: não há para onde cair.
+   *
+   * `area` entrou na FASE 23 (ADR 0064) ENTRE agente e projeto, e por isso
+   * precisa do AGENTE da linha — áreas diferentes têm padrões diferentes, ao
+   * contrário de projeto e workspace, que valem para a tabela inteira.
    */
-  function fallbackDe(origin: ResolvedBinding['origin'] | undefined) {
+  function fallbackDe(
+    agentKey: string,
+    origin: ResolvedBinding['origin'] | undefined,
+  ) {
+    const areaDoAgente = areaFor(agentKey);
+    const bindingDaArea = areaDoAgente
+      ? bindingDaAreaPorChave.get(areaDoAgente.key)
+      : undefined;
+
     if (origin === 'session' || origin === 'agent') {
+      return (
+        nomeDoModelo(bindingDaArea?.modelId) ??
+        nomeDoModelo(bindingDoProjeto?.modelId) ??
+        nomeDoModelo(bindingDoWorkspace?.modelId)
+      );
+    }
+    if (origin === 'area') {
       return (
         nomeDoModelo(bindingDoProjeto?.modelId) ??
         nomeDoModelo(bindingDoWorkspace?.modelId)
@@ -304,6 +343,16 @@ export function ModelsSection({ projectId }: { projectId: string }) {
 
   async function handleModelChange(agentKey: string, model: Model) {
     await setAgentModelBinding(projectId, agentKey, model.id);
+    queryClient.invalidateQueries({ queryKey: ['agent-binding', projectId, agentKey] });
+  }
+
+  /**
+   * "Voltar a herdar" (RN-102) — APAGA o binding do agente, nunca grava nele
+   * o modelo da área: gravar viraria cópia, e a próxima mudança da área
+   * deixaria este agente para trás em silêncio.
+   */
+  async function handleClearAgentBinding(agentKey: string) {
+    await clearAgentModelBinding(projectId, agentKey);
     queryClient.invalidateQueries({ queryKey: ['agent-binding', projectId, agentKey] });
   }
 
@@ -361,9 +410,24 @@ export function ModelsSection({ projectId }: { projectId: string }) {
         // A cascata pode ter PULADO o binding mais específico (Fase 9c). Sem
         // dizer isso, o modelo do agente teria trocado sozinho e em silêncio.
         const pulado = resolved.skipped?.[0];
+        const areaDoAgente = areaFor(agent.key);
+        // `origin === 'agent'` é o agente DIVERGINDO — de uma área, quando ele
+        // tem uma, ou do projeto/workspace, quando não tem (RN-102). Nos dois
+        // casos "voltar a herdar" é apagar o binding dele, e é isso que o
+        // botão faz — nunca copia o modelo do nível de baixo para cá.
+        const divergiu = resolved.origin === 'agent';
         return (
           <span className={styles.origem}>
-            <Badge tone={ORIGIN_TONE[resolved.origin]}>{resolved.origin}</Badge>
+            <Badge
+              tone={ORIGIN_TONE[resolved.origin]}
+              title={
+                resolved.origin === 'area' && areaDoAgente
+                  ? `Padrão da área ${areaDoAgente.label}.`
+                  : undefined
+              }
+            >
+              {resolved.origin}
+            </Badge>
             {pulado && (
               <Badge
                 tone="warning"
@@ -376,6 +440,20 @@ export function ModelsSection({ projectId }: { projectId: string }) {
                 {pulado.scope} pulado
               </Badge>
             )}
+            {divergiu && (
+              <button
+                type="button"
+                className={styles.voltarHerdar}
+                onClick={() => handleClearAgentBinding(agent.key)}
+                title={
+                  areaDoAgente
+                    ? `Apaga o modelo próprio deste agente — ele volta a usar o padrão da área ${areaDoAgente.label}.`
+                    : 'Apaga o modelo próprio deste agente — ele volta a herdar do projeto ou do workspace.'
+                }
+              >
+                voltar a herdar
+              </button>
+            )}
           </span>
         );
       },
@@ -386,7 +464,7 @@ export function ModelsSection({ projectId }: { projectId: string }) {
       width: '1.4fr',
       render: (agent) => {
         const index = AGENT_LIST.indexOf(agent);
-        const nome = fallbackDe(bindingQueries[index]?.data?.origin);
+        const nome = fallbackDe(agent.key, bindingQueries[index]?.data?.origin);
         return nome ? (
           <span className={styles.fallback}>{nome}</span>
         ) : (
@@ -421,9 +499,12 @@ export function ModelsSection({ projectId }: { projectId: string }) {
         A origem indica onde o valor é resolvido:{' '}
         <span className={`${styles.nivel} ${styles.nivelWorkspace}`}>workspace</span> →{' '}
         <span className={`${styles.nivel} ${styles.nivelProject}`}>project</span> →{' '}
+        <span className={`${styles.nivel} ${styles.nivelArea}`}>area</span> →{' '}
         <span className={`${styles.nivel} ${styles.nivelAgent}`}>agent</span> →{' '}
         <span className={`${styles.nivel} ${styles.nivelAgent}`}>session</span>. O mais
-        específico vence.
+        específico vence. <strong>área</strong> é o padrão que o lead e os
+        subagentes compartilham (RN-102) — configure em{' '}
+        <em>Modelo por área</em>, logo abaixo.
       </p>
 
       <div className={styles.custoCard}>
@@ -439,6 +520,124 @@ export function ModelsSection({ projectId }: { projectId: string }) {
 
       <Table columns={columns} rows={AGENT_LIST} rowKey={(a) => a.key} emptyMessage="Nenhum agente configurado." />
       {allModels.length === 0 && <div className={styles.subtitle}>Nenhum modelo disponível ainda.</div>}
+    </div>
+  );
+}
+
+/**
+ * O modelo PADRÃO de cada área — o que o lead e os subagentes compartilham
+ * até que um deles divirja (ADR 0064, RN-102).
+ *
+ * `maintainer`, e não `developer` como na linha de agente: o modelo da área
+ * alcança o lead e todos os subagentes de uma vez, e escolher modelo é
+ * decidir quanto o produto gasta sem perguntar — o mesmo motivo do teto de
+ * paralelismo (`ParallelismSection`, RN-083).
+ */
+export function AreaModelsSection({ projectId }: { projectId: string }) {
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+  const { data: comPapel } = useCurrentWorkspaceWithRole();
+  const podeEditar = comPapel?.role === 'owner' || comPapel?.role === 'maintainer';
+
+  const { data: modelsByCategory } = useQuery({
+    queryKey: ['models', projectId],
+    queryFn: () => listModels(projectId),
+  });
+
+  const areaKeys = Object.keys(AREAS);
+  const bindingQueries = useQueries({
+    queries: areaKeys.map((key) => ({
+      queryKey: ['area-binding', projectId, key],
+      queryFn: () => getAreaModelBinding(projectId, key),
+    })),
+  });
+
+  function invalidate(areaKey: string) {
+    queryClient.invalidateQueries({ queryKey: ['area-binding', projectId, areaKey] });
+    // Todo agente da área pode ter herdado o valor — a coluna Origem da
+    // tabela de cima também precisa reler.
+    queryClient.invalidateQueries({ queryKey: ['agent-binding', projectId] });
+  }
+
+  async function handleSet(areaKey: string, model: Model) {
+    try {
+      await setAreaModelBinding(projectId, areaKey, model.id);
+      invalidate(areaKey);
+    } catch (erro) {
+      showToast({ title: mensagemDaApi(erro, 'Não foi possível salvar'), tone: 'danger' });
+    }
+  }
+
+  async function handleClear(areaKey: string) {
+    try {
+      await clearAreaModelBinding(projectId, areaKey);
+      invalidate(areaKey);
+      showToast({ title: `Área ${areaKey} voltou a herdar`, tone: 'success' });
+    } catch (erro) {
+      showToast({ title: mensagemDaApi(erro, 'Não foi possível salvar'), tone: 'danger' });
+    }
+  }
+
+  return (
+    <div className={styles.section}>
+      <div className={styles.sectionHead}>
+        <h2 className={styles.title}>Modelo por área</h2>
+        <span className={styles.eyebrow}>padrão herdável · lead + subagentes</span>
+      </div>
+      <p className={styles.subtitle}>
+        O modelo que vale para o lead e para todo subagente da área que não
+        tenha divergido — divergir é escolher outro modelo NA LINHA do agente,
+        acima. "Voltar a herdar" apaga o padrão da área; não muda o que cada
+        agente já divergiu.
+        {!podeEditar && ' Exige papel maintainer para alterar.'}
+      </p>
+
+      {areaKeys.map((key, index) => {
+        const area = AREAS[key];
+        const resolved = bindingQueries[index]?.data;
+        const divergiuDoProjeto = resolved?.origin === 'area';
+
+        return (
+          <div key={key} className={styles.ajusteCard}>
+            <div className={styles.ajusteInfo}>
+              <div className={styles.ajusteTitulo}>
+                <span>Área {area.label}</span>
+                <Badge tone={resolved ? ORIGIN_TONE[resolved.origin] : 'muted'}>
+                  {resolved?.origin ?? '—'}
+                </Badge>
+              </div>
+              <div className={styles.ajusteHint}>
+                Lead: {area.lead}
+                {area.members.length > 0
+                  ? ` — subagentes: ${area.members.join(', ')}`
+                  : ' — subagentes dinâmicos (por módulo)'}
+              </div>
+            </div>
+
+            {modelsByCategory && (
+              <div className={styles.ajusteControle}>
+                <ModelPicker
+                  models={modelsByCategory}
+                  selectedModelId={resolved?.modelId}
+                  onSelect={(model) => handleSet(key, model)}
+                  variant="inline"
+                  disabled={!podeEditar}
+                />
+              </div>
+            )}
+
+            {divergiuDoProjeto && (
+              <Button
+                variant="ghost"
+                disabled={!podeEditar}
+                onClick={() => handleClear(key)}
+              >
+                Voltar a herdar
+              </Button>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

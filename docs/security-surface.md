@@ -255,8 +255,12 @@ o componente `d` da JWK, travado por teste.
 | GET | `/projects/:projectId/models` | role:viewer |
 | GET | `/projects/:projectId/agent-autonomy` | role:maintainer |
 | PUT | `/projects/:projectId/agent-autonomy` | role:maintainer |
+| DELETE | `/projects/:projectId/agent-bindings/:agentSlug` | role:developer |
 | GET | `/projects/:projectId/agent-bindings/:agentSlug` | role:viewer |
 | PUT | `/projects/:projectId/agent-bindings/:agentSlug` | role:developer |
+| DELETE | `/projects/:projectId/area-bindings/:areaKey` | role:maintainer |
+| GET | `/projects/:projectId/area-bindings/:areaKey` | role:viewer |
+| PUT | `/projects/:projectId/area-bindings/:areaKey` | role:maintainer |
 | GET | `/projects/:projectId/agent-costs` | role:developer |
 | GET | `/projects/:projectId/agents/:agent/instruction-versions` | role:viewer |
 | POST | `/projects/:projectId/agents/:agent/instruction-versions/:version/rollback` | role:maintainer |

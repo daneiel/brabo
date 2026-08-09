@@ -19,6 +19,14 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   morar dentro do convite enquanto ele está na tela — antes o convite apontava
   para a topbar (RN-104)
 
+- **api,web**: o modelo de LLM virou padrão herdável por ÁREA — a cascata
+  ganha o nível `sessão > agente > área > projeto > workspace`, o lead e os
+  subagentes de uma área compartilham o mesmo modelo até um agente divergir
+  explicitamente, e "voltar a herdar" apaga o binding do agente em vez de
+  copiar o da área. O binding de agente, que era GLOBAL, passou a ser POR
+  PROJETO — pré-condição para a área não competir com um escopo mais amplo
+  que ela mesma (ADR 0064, RN-102/103)
+
 - **api,engine**: o Arquiteto decide qual imagem de container sobe para cada
   projeto — artefato versionado no event log (`artifact.project_image`), tag
   OCI explícita obrigatória (`latest` recusado) e teto de recursos que recusa
