@@ -11,7 +11,7 @@ import {
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Input } from '../components/ui/Input';
-import { rotuloDaSessao } from '../lib/session-label';
+import { LIMITE_DO_NOME, rotuloDaSessao } from '../lib/session-label';
 import {
   KINDS_DE_SESSAO,
   KIND_PRE_SELECIONADO,
@@ -138,7 +138,7 @@ export function ProjectSessionsTab({ projectId }: ProjectSessionsTabProps) {
             label="Nome (opcional)"
             value={nome}
             onChange={(e) => setNome(e.target.value)}
-            maxLength={80}
+            maxLength={LIMITE_DO_NOME}
             placeholder="Checkout do carrinho"
             hint="A hashtag do id continua aparecendo — o nome só se soma a ela."
           />

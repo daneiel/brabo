@@ -40,7 +40,11 @@ import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Disclosure } from '../components/ui/Disclosure';
 import { lerFalhaDeTurno } from '../lib/session-falha';
-import { hashtagDaSessao, rotuloDaSessao } from '../lib/session-label';
+import {
+  LIMITE_DO_NOME,
+  hashtagDaSessao,
+  rotuloDaSessao,
+} from '../lib/session-label';
 import { TIPOS_DE_SESSAO } from '../lib/session-kind';
 import {
   AlertCircleIcon,
@@ -589,7 +593,7 @@ export function SessionPage({
               className={styles.tituloEditavel}
               value={rascunhoDoNome}
               autoFocus
-              maxLength={80}
+              maxLength={LIMITE_DO_NOME}
               aria-label="Nome da sessão"
               placeholder={`Sem nome — a sessão fica ${hashtag}`}
               onChange={(e) => setRascunhoDoNome(e.target.value)}

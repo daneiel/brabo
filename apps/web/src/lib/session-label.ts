@@ -24,6 +24,17 @@
 const CARACTERES = 8;
 
 /**
+ * Teto do nome amigável, em caracteres.
+ *
+ * Quem RECUSA é a api (`LIMITE_NOME_DA_SESSAO` no DTO): aqui o número serve
+ * para o campo parar de aceitar antes de o servidor dizer não — digitar 200
+ * caracteres e levar 400 no fim é pior que não caber. Vive num lugar só no
+ * web pelo motivo de sempre: dois `maxLength={80}` inline divergem no dia em
+ * que o teto mudar.
+ */
+export const LIMITE_DO_NOME = 80;
+
+/**
  * O prefixo cru do id, sem cerquilha.
  *
  * Existe separado da hashtag porque a faixa de análises dos Insights escreve
