@@ -9,11 +9,15 @@
  * arquivos, e que basta esquecer um para a mesma sessão aparecer com dois
  * rótulos diferentes em duas telas.
  *
- * A porta para o NOME AMIGÁVEL já está aberta aqui (`rotuloDaSessao` aceita um
- * nome opcional e degrada para a hashtag sozinha quando não há), mas o tipo
- * `Session` NÃO ganhou campo nenhum: quem preenche esse nome é a fase que
- * cria a coluna. O ponto de centralizar antes é justamente esse — quando o
- * nome chegar, muda-se a IMPLEMENTAÇÃO deste arquivo e nenhuma tela.
+ * A porta para o NOME AMIGÁVEL foi aberta aqui pela FASE 16 (`rotuloDaSessao`
+ * aceita um nome opcional e degrada para a hashtag sozinha quando não há), e a
+ * FASE 20 a atravessou: `sessions.name` existe no banco (RN-098) e chega ao
+ * `Session` do `api-types`. A aposta de centralizar antes se confirmou — a
+ * composição já estava escrita e testada aqui, e a fase do nome só teve de
+ * PASSAR o campo nas telas em que ele aparece, sem tocar na regra.
+ *
+ * O que NÃO mudou, e é o ponto da RN-098: a hashtag nunca sai. Um nome
+ * escolhido por pessoa não é único e não se cola numa URL.
  */
 
 /** Quantos caracteres do uuid entram no rótulo. */

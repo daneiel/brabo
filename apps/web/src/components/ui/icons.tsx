@@ -137,6 +137,11 @@ export const TrashIcon = (props: IconProps) =>
 
 export const ArrowUpIcon = (props: IconProps) => base(['M12 20V4', 'M5 11l7-7 7 7'], props);
 
+// FASE 20 — a seta de VOLTAR. A tela de sessão não tinha saída nenhuma: nem
+// `Link`, nem `useNavigate`, e nenhum caminho de volta ao dashboard.
+export const ArrowLeftIcon = (props: IconProps) =>
+  base(['M20 12H4', 'M11 19l-7-7 7-7'], props);
+
 export const LayoutSidebarIcon = (props: IconProps) =>
   base(['M3 4h18v16H3z', 'M15 4v16'], props);
 

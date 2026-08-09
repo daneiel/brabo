@@ -538,6 +538,12 @@ seguinte, e quando vier, escrita é efeito externo: nasce `proposed_action`.
 - Todo evento de domínio é imutável: nunca UPDATE em tabelas de eventos.
 - Estados de sessão são máquina de estados explícita:
   created → active → closing → closed | closed_abnormally
+- A sessão tem DUAS classificações, e elas não se sobrescrevem: `kind`
+  (`consultiva|criativa`) é a INTENÇÃO de criação, gravada e imutável; o
+  evento `execution.activated` é o ESTADO de execução, e continua sendo
+  ele que `findActiveExecutionSession` procura. `execution.activated` em
+  sessão consultiva é 409, nunca conversão silenciosa (ADR 0061, RN-097).
+  Não faça a derivação por evento olhar `kind`
 - Toda ação com efeito externo (git, terminal, gasto) nasce como
   proposed_action e respeita permissions.json; deny sempre vence allow.
   LER não é efeito externo e NÃO vira proposed_action — encheria a fila de

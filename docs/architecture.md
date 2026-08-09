@@ -12,7 +12,7 @@ keywords: [arquitetura, code map, invariantes, harness, event log]
 Este documento é o mapa para quem vai **mexer** no código. Ele diz por onde
 começar a ler, o que cada fronteira promete, e o que já se sabe que está torto.
 
-Decisões e o porquê delas ficam nos [ADRs](adr/index.md) — 60 deles, vários
+Decisões e o porquê delas ficam nos [ADRs](adr/index.md) — 61 deles, vários
 registrando defeito real encontrado em execução. Aqui não repetimos a
 argumentação: apontamos.
 
@@ -374,7 +374,7 @@ ADR 0038) não virou artefato de verdade — QA e Infra reusam `qa_verdict`/
 ```mermaid
 erDiagram
   workspaces ||--o{ projects : contém
-  projects ||--o{ sessions : tem
+  projects ||--o{ sessions : "tem (`kind` é intenção de criação, RN-097)"
   sessions ||--o{ session_events : "log imutável (seq densa)"
   sessions ||--o{ proposed_actions : propõe
   projects ||--o{ epics : ""

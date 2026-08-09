@@ -301,6 +301,7 @@ o componente `d` da JWK, travado por teste.
 | GET | `/projects/:projectId/sessions` | role:viewer |
 | POST | `/projects/:projectId/sessions` | role:developer |
 | GET | `/projects/:projectId/sessions/:sessionId` | role:viewer |
+| PATCH | `/projects/:projectId/sessions/:sessionId` | role:developer |
 | GET | `/projects/:projectId/sessions/:sessionId/actions` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/actions` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/actions/:actionId/approve` | role:developer |

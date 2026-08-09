@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
+import { Link } from '@tanstack/react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   acceptHandoff,
@@ -11,6 +12,7 @@ import {
   getSessionBudget,
   getSessionModelBinding,
   listModels,
+  renameSession,
   sendAgentMessage,
   setSessionModelBinding,
   startAgent,
@@ -35,10 +37,14 @@ import { ApprovalCard } from '../components/ApprovalCard';
 import { ActivityFeed } from '../components/ActivityFeed';
 import { EventItem } from '../components/EventItem';
 import { Button } from '../components/ui/Button';
+import { Badge } from '../components/ui/Badge';
+import { Disclosure } from '../components/ui/Disclosure';
 import { lerFalhaDeTurno } from '../lib/session-falha';
 import { hashtagDaSessao, rotuloDaSessao } from '../lib/session-label';
+import { TIPOS_DE_SESSAO } from '../lib/session-kind';
 import {
   AlertCircleIcon,
+  ArrowLeftIcon,
   ChevronRightIcon,
   LayoutSidebarIcon,
   ModelIcon,
@@ -126,6 +132,10 @@ export function SessionPage({
   // vez e enxergariam sempre o valor inicial do state.
   const streamingRef = useRef(false);
   const [optimisticUser, setOptimisticUser] = useState<string | null>(null);
+  // Renomear (RN-098). `null` fora de edição — e não string vazia — porque
+  // vazio é um nome que se está digitando, e nenhum campo aberto é outro
+  // estado.
+  const [rascunhoDoNome, setRascunhoDoNome] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   useEffect(() => () => abortRef.current?.abort(), []);
 
@@ -422,6 +432,23 @@ export function SessionPage({
     queryClient.invalidateQueries({ queryKey: ['sessions', projectId] });
   }
 
+  async function handleRename() {
+    if (rascunhoDoNome === null) return;
+    // Em branco APAGA o nome: `null` no corpo é o caminho de desfazer, e a
+    // sessão volta a se identificar só pela hashtag.
+    const nome = rascunhoDoNome.trim() || null;
+    setRascunhoDoNome(null);
+    try {
+      await renameSession(projectId, sessionId, nome);
+      await queryClient.invalidateQueries({ queryKey: ['session', projectId, sessionId] });
+      // A lista da aba Sessões mostra o mesmo rótulo — sem isto, o nome novo
+      // só apareceria lá no próximo carregamento da tela.
+      queryClient.invalidateQueries({ queryKey: ['sessions', projectId] });
+    } catch {
+      showToast({ title: 'Erro', message: 'Não foi possível renomear a sessão', tone: 'danger' });
+    }
+  }
+
   async function handleStartIdeation() {
     try {
       await startAgent(projectId, sessionId, 'criativo');
@@ -506,10 +533,14 @@ export function SessionPage({
     }
   }
 
-  // O rótulo composto já aceita nome amigável e degrada para a hashtag sozinha
-  // enquanto ele não existe — a sessão não tem esse campo hoje.
-  const rotulo = rotuloDaSessao(sessionId);
+  // O rótulo composto: nome + hashtag, degradando para a hashtag sozinha
+  // quando a sessão não tem nome (RN-098). A hashtag nunca sai.
+  const rotulo = rotuloDaSessao(sessionId, session?.name);
   const hashtag = hashtagDaSessao(sessionId);
+  const tipo = session ? TIPOS_DE_SESSAO[session.kind] : undefined;
+  // Enquanto a sessão não carregou, NÃO é consultiva: é desconhecida. Tratar a
+  // ausência como "consultiva" faria o botão de ideação piscar fora e dentro.
+  const sessaoCriativa = session?.kind === 'criativa';
   const isActive = session?.status === 'active';
   const metaDaSessao = [
     project?.name ?? '…',
@@ -522,6 +553,19 @@ export function SessionPage({
   return (
     <div className={styles.wrapper}>
       <div className={styles.topbar}>
+        {/* A SAÍDA da tela (FASE 20). Até aqui `SessionPage` não importava
+            `Link` nem `useNavigate`: entrar numa sessão era um beco, e o único
+            caminho de volta era o botão do navegador. É `Link`, e não um
+            `onClick` que navega, porque voltar ao dashboard é um destino —
+            abrir em outra aba e ver o alvo na barra de status são de graça. */}
+        <Link
+          to="/"
+          className={styles.voltar}
+          aria-label="Voltar ao dashboard"
+          title="Voltar ao dashboard"
+        >
+          <ArrowLeftIcon size={17} />
+        </Link>
         {/* O ponto DIZ o estado da sessão. Era verde sempre — só o pulso
             mudava —, então uma sessão encerrada exibia o mesmo sinal de "ao
             vivo" de uma em curso. E era mudo para quem não vê cor: agora tem
@@ -537,13 +581,46 @@ export function SessionPage({
             com reticências quando a barra aperta. `title` porque texto
             truncado sem forma de ler o resto é informação perdida. */}
         <div className={styles.titleBlock}>
-          <div className={styles.title} title={`Sessão ${rotulo}`}>
-            Sessão {rotulo}
-          </div>
+          {rascunhoDoNome !== null ? (
+            /* Renomear no LUGAR do título, e não num diálogo: o campo ocupa a
+               posição exata do texto que ele muda. Enter confirma, Esc
+               desiste — as duas teclas que já valem no composer logo abaixo. */
+            <input
+              className={styles.tituloEditavel}
+              value={rascunhoDoNome}
+              autoFocus
+              maxLength={80}
+              aria-label="Nome da sessão"
+              placeholder={`Sem nome — a sessão fica ${hashtag}`}
+              onChange={(e) => setRascunhoDoNome(e.target.value)}
+              onBlur={handleRename}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleRename();
+                if (e.key === 'Escape') setRascunhoDoNome(null);
+              }}
+            />
+          ) : (
+            <button
+              type="button"
+              className={styles.title}
+              title={`Sessão ${rotulo} — clique para renomear`}
+              onClick={() => setRascunhoDoNome(session?.name ?? '')}
+              disabled={!session}
+            >
+              Sessão {rotulo}
+            </button>
+          )}
           <div className={styles.meta} title={metaDaSessao}>
             {metaDaSessao}
           </div>
         </div>
+        {/* O tipo, VISÍVEL e imutável (RN-097). É ele que diz por que esta
+            sessão tem — ou não tem — o botão de iniciar a ideação. */}
+        {tipo && (
+          <Badge tone={tipo.tom} title={tipo.explicacao}>
+            {tipo.rotulo}
+          </Badge>
+        )}
         <div className={styles.spacer} />
         {modelsByCategory && (
           <ModelPicker
@@ -567,10 +644,13 @@ export function SessionPage({
             costUSD={budget.spentMicros / 1_000_000}
           />
         )}
-        {isActive && !criativoActive && (
-          <Button variant="secondary" onClick={handleStartIdeation}>
-            Iniciar ideação
-          </Button>
+        {/* O botão existe SÓ na sessão criativa (RN-097). Antes ele aparecia em
+            qualquer sessão, e era a única maneira de chegar ao Criativo —
+            descobrir isso depois de a sessão existir foi o que o usuário
+            relatou como pouco claro. Agora a escolha aconteceu na criação, e a
+            sessão consultiva não oferece o que ela não faz. */}
+        {isActive && sessaoCriativa && !criativoActive && (
+          <Button onClick={handleStartIdeation}>Iniciar ideação</Button>
         )}
         {isActive && offeredHandoff && (
           <Button variant="success" onClick={() => handleAcceptHandoff(offeredHandoff.id)}>
@@ -604,38 +684,64 @@ export function SessionPage({
                   mensagem. Sem isto a tela ficava em branco depois de "Iniciar
                   ideação", e quem chega não tem como saber que a vez é dele.
                   Convite em vez de turno automático: informa sem gastar token. */}
-              {!conversaComecou && !optimisticUser && !streaming && (
-                <div className={styles.convite}>
-                  <h2 className={styles.conviteTitulo}>A vez é sua</h2>
-                  <p className={styles.conviteTexto}>
-                    O <strong>Criativo</strong> conduz a ideação: ele faz
-                    perguntas sobre o produto e registra as{' '}
-                    <strong>regras de negócio</strong> que saírem da conversa.
-                    Ele não decide tecnologia nem escreve código — isso é do
-                    Arquiteto e dos devs, mais adiante.
-                  </p>
-                  <p className={styles.conviteTexto}>
-                    Comece contando o que você quer construir e para quem. Por
-                    exemplo:
-                  </p>
-                  <button
-                    type="button"
-                    className={styles.conviteExemplo}
-                    onClick={() =>
-                      setDraft(
-                        'Quero uma API que responda uma saudação para quem chamar. É para eu validar o fluxo de ponta a ponta.',
-                      )
-                    }
-                  >
-                    “Quero uma API que responda uma saudação para quem chamar. É
-                    para eu validar o fluxo de ponta a ponta.”
-                  </button>
-                  <p className={styles.conviteRodape}>
-                    Quando as regras estiverem completas, use{' '}
-                    <strong>Estou pronto para produzir</strong> — é o que gera o
-                    brief e passa a bola ao PO.
-                  </p>
-                </div>
+              {/* O convite fala do tipo que a sessão É (RN-097). Ele era um só,
+                  e prometia o Criativo em toda sessão — inclusive nas que
+                  nunca o teriam. */}
+              {!conversaComecou && !optimisticUser && !streaming && session && (
+                sessaoCriativa ? (
+                  <div className={styles.convite}>
+                    <h2 className={styles.conviteTitulo}>A vez é sua</h2>
+                    <p className={styles.conviteTexto}>
+                      Esta é uma sessão <strong>criativa</strong>. O{' '}
+                      <strong>Criativo</strong> conduz a ideação: ele faz
+                      perguntas sobre o produto e registra as{' '}
+                      <strong>regras de negócio</strong> que saírem da conversa.
+                      Ele não decide tecnologia nem escreve código — isso é do
+                      Arquiteto e dos devs, mais adiante.
+                    </p>
+                    {!criativoActive && (
+                      <p className={styles.conviteTexto}>
+                        Ele ainda não entrou: use{' '}
+                        <strong>Iniciar ideação</strong>, no alto da tela.
+                      </p>
+                    )}
+                    <p className={styles.conviteTexto}>
+                      Comece contando o que você quer construir e para quem. Por
+                      exemplo:
+                    </p>
+                    <button
+                      type="button"
+                      className={styles.conviteExemplo}
+                      onClick={() =>
+                        setDraft(
+                          'Quero uma API que responda uma saudação para quem chamar. É para eu validar o fluxo de ponta a ponta.',
+                        )
+                      }
+                    >
+                      “Quero uma API que responda uma saudação para quem chamar. É
+                      para eu validar o fluxo de ponta a ponta.”
+                    </button>
+                    <p className={styles.conviteRodape}>
+                      Quando as regras estiverem completas, use{' '}
+                      <strong>Estou pronto para produzir</strong> — é o que gera o
+                      brief e passa a bola ao PO.
+                    </p>
+                  </div>
+                ) : (
+                  <div className={styles.convite}>
+                    <h2 className={styles.conviteTitulo}>Sessão consultiva</h2>
+                    <p className={styles.conviteTexto}>
+                      Aqui é conversa com o modelo: pergunte, peça contexto,
+                      tire dúvidas. <strong>Nenhum agente é ativado</strong>, o
+                      Criativo não entra e esta sessão não vai para execução.
+                    </p>
+                    <p className={styles.conviteRodape}>
+                      Quando for para <strong>produzir</strong>, abra uma sessão{' '}
+                      <strong>criativa</strong> na aba Sessões do projeto — o
+                      tipo é escolhido na criação e não muda depois.
+                    </p>
+                  </div>
+                )
               )}
 
               {timeline.map((entry) => (
@@ -850,40 +956,43 @@ function ContextAside({
       </div>
 
       {/* Log completo de eventos — o alvo da navegação de evidência do
-          Psicólogo (Fase 4b). Colapsável pra não competir com o chat. */}
+          Psicólogo (Fase 4b). Colapsável pra não competir com o chat.
+
+          Migrado para o `Disclosure` do design system na FASE 20, a fase que
+          abre este arquivo. O colapso ad-hoc daqui era um `button` com
+          `aria-expanded` e um `−`/`+` de texto, sem `aria-controls` e sem
+          região nomeada: o leitor de tela anunciava um botão expandido sem
+          dizer o que ele expandia. A contagem virou `trailing`, que fica dentro
+          do alvo de clique — a linha inteira alterna, como nas outras seis. */}
       <div className={styles.asideSection}>
-        <button
-          type="button"
-          className={[styles.asideHeader, styles.asideToggle].join(' ')}
-          onClick={onToggleLog}
-          aria-expanded={logOpen}
+        <Disclosure
+          titulo="Log de eventos"
+          trailing={events.length}
+          aberto={logOpen}
+          onAlternar={onToggleLog}
+          classNameCabecalho={styles.asideHeader}
         >
-          Log de eventos ({events.length}) {logOpen ? '−' : '+'}
-        </button>
-        {logOpen && (
-          <>
-            {/* Evento citado FIXADO no topo: garante que a evidência chega
-                no evento independente de paginação e dos filtros do feed. */}
-            {highlightEvent && citedEvent && (
-              <div className={styles.citedEvent}>
-                <div className={styles.citedEventLabel}>
-                  Evento citado
-                </div>
-                <EventItem event={citedEvent} highlighted />
+          {/* Evento citado FIXADO no topo: garante que a evidência chega
+              no evento independente de paginação e dos filtros do feed. */}
+          {highlightEvent && citedEvent && (
+            <div className={styles.citedEvent}>
+              <div className={styles.citedEventLabel}>
+                Evento citado
               </div>
-            )}
-            {highlightEvent && citedEventMissing && (
-              <div className={styles.asideEmpty}>
-                O evento citado não foi encontrado nesta sessão.
-              </div>
-            )}
-            <ActivityFeed
-              events={events}
-              agentOptions={agentOptions}
-              highlightEventId={highlightEvent}
-            />
-          </>
-        )}
+              <EventItem event={citedEvent} highlighted />
+            </div>
+          )}
+          {highlightEvent && citedEventMissing && (
+            <div className={styles.asideEmpty}>
+              O evento citado não foi encontrado nesta sessão.
+            </div>
+          )}
+          <ActivityFeed
+            events={events}
+            agentOptions={agentOptions}
+            highlightEventId={highlightEvent}
+          />
+        </Disclosure>
       </div>
     </aside>
   );

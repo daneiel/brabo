@@ -10,8 +10,14 @@ import {
 } from '../lib/approvals';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
-import { hashtagDaSessao } from '../lib/session-label';
-import type { SessionStatus } from '../lib/api-types';
+import { Input } from '../components/ui/Input';
+import { rotuloDaSessao } from '../lib/session-label';
+import {
+  KINDS_DE_SESSAO,
+  KIND_PRE_SELECIONADO,
+  TIPOS_DE_SESSAO,
+} from '../lib/session-kind';
+import type { SessionKind, SessionStatus } from '../lib/api-types';
 import styles from './ProjectSessionsTab.module.css';
 
 const STATUS_TONE: Record<SessionStatus, 'success' | 'warning' | 'muted' | 'danger'> = {
@@ -29,13 +35,26 @@ interface ProjectSessionsTabProps {
 export function ProjectSessionsTab({ projectId }: ProjectSessionsTabProps) {
   const { data: sessions } = useProjectSessions(projectId);
   const [creating, setCreating] = useState(false);
+  // O formulário é um PASSO, não um atalho: até a FASE 20 o botão abria a
+  // sessão direto e o tipo não existia — quem quisesse o Criativo tinha de
+  // descobrir um botão na barra de topo DEPOIS, que é o que o usuário relatou
+  // como pouco claro. A escolha agora acontece antes, com as duas explicações
+  // à vista.
+  const [abrindoForm, setAbrindoForm] = useState(false);
+  const [kind, setKind] = useState<SessionKind>(KIND_PRE_SELECIONADO);
+  const [nome, setNome] = useState('');
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   async function handleCreate() {
     setCreating(true);
     try {
-      const session = await createSession(projectId);
+      const session = await createSession(projectId, {
+        kind,
+        // Nome em branco não vai no corpo: ausência é `null` no banco, e a
+        // tela degrada para a hashtag sozinha (RN-098).
+        name: nome.trim() || undefined,
+      });
       await transitionSession(projectId, session.id, 'active');
       await queryClient.invalidateQueries({ queryKey: ['sessions', projectId] });
       navigate({ to: '/projects/$projectId/sessions/$sessionId', params: { projectId, sessionId: session.id } });
@@ -70,10 +89,67 @@ export function ProjectSessionsTab({ projectId }: ProjectSessionsTabProps) {
     <div>
       <div className={styles.header}>
         <span className={styles.title}>Sessões</span>
-        <Button onClick={handleCreate} disabled={creating}>
-          {creating ? 'Criando…' : '+ Nova sessão'}
+        <Button
+          onClick={() => setAbrindoForm((v) => !v)}
+          variant={abrindoForm ? 'ghost' : 'primary'}
+          aria-expanded={abrindoForm}
+        >
+          {abrindoForm ? 'Cancelar' : '+ Nova sessão'}
         </Button>
       </div>
+
+      {abrindoForm && (
+        <div className={styles.novaSessao}>
+          {/* `fieldset` + rádios NATIVOS, e não dois botões que parecem
+              selecionáveis: a escolha é entre alternativas exclusivas, e só
+              assim o leitor de tela anuncia "1 de 2" e as setas navegam entre
+              elas. A explicação vive DENTRO do `label`, então é lida junto com
+              a opção — é ela que a fase existe para tornar visível. */}
+          <fieldset className={styles.tipos}>
+            <legend className={styles.tiposLegenda}>Tipo da sessão</legend>
+            {KINDS_DE_SESSAO.map((opcao) => {
+              const tipo = TIPOS_DE_SESSAO[opcao];
+              const marcado = kind === opcao;
+              return (
+                <label
+                  key={opcao}
+                  className={[styles.tipo, marcado && styles.tipoMarcado]
+                    .filter(Boolean)
+                    .join(' ')}
+                >
+                  <input
+                    type="radio"
+                    name="session-kind"
+                    value={opcao}
+                    checked={marcado}
+                    onChange={() => setKind(opcao)}
+                    className={styles.tipoRadio}
+                  />
+                  <span className={styles.tipoTexto}>
+                    <span className={styles.tipoRotulo}>{tipo.rotulo}</span>
+                    <span className={styles.tipoExplicacao}>{tipo.explicacao}</span>
+                  </span>
+                </label>
+              );
+            })}
+          </fieldset>
+
+          <Input
+            label="Nome (opcional)"
+            value={nome}
+            onChange={(e) => setNome(e.target.value)}
+            maxLength={80}
+            placeholder="Checkout do carrinho"
+            hint="A hashtag do id continua aparecendo — o nome só se soma a ela."
+          />
+
+          <div className={styles.novaSessaoAcoes}>
+            <Button onClick={handleCreate} disabled={creating}>
+              {creating ? 'Abrindo…' : `Abrir sessão ${TIPOS_DE_SESSAO[kind].rotulo.toLowerCase()}`}
+            </Button>
+          </div>
+        </div>
+      )}
 
       {totalDoProjeto.total > 0 && (
         <div className={styles.subtitle}>
@@ -96,7 +172,14 @@ export function ProjectSessionsTab({ projectId }: ProjectSessionsTabProps) {
                 className={styles.row}
                 onClick={() => navigate({ to: '/projects/$projectId/sessions/$sessionId', params: { projectId, sessionId: session.id } })}
               >
-                <span className={styles.rowId}>{hashtagDaSessao(session.id)}</span>
+                <span className={styles.rowId}>
+                  {rotuloDaSessao(session.id, session.name)}
+                </span>
+                {/* O tipo é visível na LISTA, e não só dentro da sessão: é
+                    aqui que se escolhe qual retomar. */}
+                <Badge tone={TIPOS_DE_SESSAO[session.kind].tom}>
+                  {TIPOS_DE_SESSAO[session.kind].rotulo}
+                </Badge>
                 <Badge tone={STATUS_TONE[session.status]} dot>
                   {session.status}
                 </Badge>

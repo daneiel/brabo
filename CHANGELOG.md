@@ -2,6 +2,15 @@
 
 Gerado dos conventional commits por `scripts/changelog.mjs`.
 
+## Unreleased
+
+### Novidades
+
+- **api,web**: a sessão nasce com tipo escolhido (`consultiva` ou `criativa`),
+  pode ser renomeada preservando a hashtag, e a tela dela tem um caminho de
+  volta ao dashboard. `execution.activated` numa sessão consultiva passa a
+  responder 409 em vez de convertê-la em silêncio (ADR 0061, RN-097/098)
+
 ## v2.5.1 — 2026-08-08
 
 ### Correções

@@ -49,6 +49,7 @@ import type {
   Role,
   Session,
   SessionEvent,
+  SessionKind,
   CredentialProviderName,
   CredentialTestResult,
   UnreadCursor,
@@ -362,8 +363,18 @@ export const registerGitCredential = (input: {
 
 // --- Sessions ---
 
-export const createSession = (projectId: string) =>
-  post<Session>(`/projects/${projectId}/sessions`);
+// O corpo é OBRIGATÓRIO desde a FASE 20: o tipo da sessão é escolha de quem a
+// abre (RN-097), e um parâmetro opcional aqui devolveria a escolha ao esquecimento.
+export const createSession = (
+  projectId: string,
+  body: { kind: SessionKind; name?: string },
+) => post<Session>(`/projects/${projectId}/sessions`, body);
+/** `null` tira o nome e a sessão volta a se identificar só pela hashtag (RN-098). */
+export const renameSession = (
+  projectId: string,
+  sessionId: string,
+  name: string | null,
+) => patch<Session>(`/projects/${projectId}/sessions/${sessionId}`, { name });
 export const listSessions = (projectId: string) =>
   get<Session[]>(`/projects/${projectId}/sessions`);
 export const getSession = (projectId: string, sessionId: string) =>

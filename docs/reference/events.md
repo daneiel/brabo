@@ -95,7 +95,7 @@ Uma linha em `session_events`, append-only, com `seq` densa por sessão
 | tipo | quando |
 |---|---|
 | `execution.plan_proposed` | o Dev Lead propôs o plano: quantos agentes por módulo e por quê (FASE 14d) |
-| `execution.activated` | a fase de execução começou |
+| `execution.activated` | a fase de execução começou. **Só entra em sessão `criativa`** — numa `consultiva` o append responde 409 ([RN-097](../business-rules.md#rn-097)). Continua sendo ele, e não a coluna `sessions.kind`, quem diz que uma sessão ESTÁ executando |
 | `execution.parallelization_suggested` | o sistema propôs paralelizar |
 | `execution.parallelization_accepted` | aceita — o subagente herda o teto do agente base |
 | `dev.started` | o dev agent começou o ciclo (ativação, paralelização — NÃO reidratação, que nunca redispara) |

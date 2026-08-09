@@ -44,6 +44,33 @@
   min-width: 0;
 }
 
+/* A saída da tela (FASE 20). 32px de lado — acima do piso de 24px do WCAG 2.2
+   AA (2.5.8) que `scripts/dev/validacao-visual.js` mede. */
+.voltar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.voltar:hover {
+  background: var(--surface-2);
+  color: var(--text-primary);
+}
+
+.voltar:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* `.title` é um `button` desde a FASE 20 (clicar renomeia), então o reset do
+   botão vem junto: sem ele o navegador aplica fundo, borda e a fonte dele, e a
+   barra de topo muda de cara. */
 .title {
   font-family: var(--font-heading);
   font-weight: 600;
@@ -53,6 +80,47 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  display: block;
+  max-width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.title:disabled {
+  cursor: default;
+}
+
+.title:hover:not(:disabled) {
+  color: var(--accent);
+}
+
+.title:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* O campo ocupa a posição EXATA do título que ele muda — mesma fonte, mesmo
+   tamanho, mesma linha. Um campo com outra métrica faria a barra saltar no
+   instante em que se clica para renomear. */
+.tituloEditavel {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 1.15;
+  color: var(--text-primary);
+  width: 100%;
+  padding: 2px 6px;
+  background: var(--code-bg);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+}
+
+.tituloEditavel:focus {
+  outline: none;
 }
 
 .meta {
@@ -295,25 +363,6 @@
   letter-spacing: 0.08em;
   color: var(--text-muted);
   margin-bottom: 11px;
-}
-
-/* O cabeçalho que também é botão (log de eventos). O alvo cobre a largura da
-   seção e tem 24px de altura — o piso da WCAG 2.2 que
-   `scripts/dev/validacao-visual.js` mede. */
-.asideToggle {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  min-height: 24px;
-  padding: 0;
-  background: none;
-  border: none;
-  text-align: left;
-  cursor: pointer;
-}
-
-.asideToggle:hover {
-  color: var(--text-secondary);
 }
 
 .asideEmpty {
