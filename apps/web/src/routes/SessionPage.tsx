@@ -546,6 +546,12 @@ export function SessionPage({
   // ausência como "consultiva" faria o botão de ideação piscar fora e dentro.
   const sessaoCriativa = session?.kind === 'criativa';
   const isActive = session?.status === 'active';
+  // O convite ocupa o fio inteiro enquanto a conversa não começou. Vira
+  // variável na FASE 24 porque a topbar passou a DEPENDER dele: as duas
+  // condições precisam ser a mesma pergunta, ou "Iniciar ideação" aparece
+  // duas vezes — ou nenhuma.
+  const conviteVisivel =
+    !conversaComecou && !optimisticUser && !streaming && !!session;
   const metaDaSessao = [
     project?.name ?? '…',
     hashtag,
@@ -652,8 +658,16 @@ export function SessionPage({
             qualquer sessão, e era a única maneira de chegar ao Criativo —
             descobrir isso depois de a sessão existir foi o que o usuário
             relatou como pouco claro. Agora a escolha aconteceu na criação, e a
-            sessão consultiva não oferece o que ela não faz. */}
-        {isActive && sessaoCriativa && !criativoActive && (
+            sessão consultiva não oferece o que ela não faz.
+
+            FASE 24: e ele some da topbar enquanto o CONVITE está na tela, onde
+            a mesma ação agora é oferecida (RN-104). O convite antes APONTAVA
+            para cá — "use Iniciar ideação, no alto da tela" —, que é a versão
+            literal do problema que originou a FASE 20: a ação num lugar e a
+            explicação em outro. Uma ação, um lugar de cada vez; a topbar segue
+            sendo a saída para quem já digitou algo e nunca chamou o Criativo,
+            que é o caso em que o convite não está mais lá. */}
+        {isActive && sessaoCriativa && !criativoActive && !conviteVisivel && (
           <Button onClick={handleStartIdeation}>Iniciar ideação</Button>
         )}
         {isActive && offeredHandoff && (
@@ -691,7 +705,7 @@ export function SessionPage({
               {/* O convite fala do tipo que a sessão É (RN-097). Ele era um só,
                   e prometia o Criativo em toda sessão — inclusive nas que
                   nunca o teriam. */}
-              {!conversaComecou && !optimisticUser && !streaming && session && (
+              {conviteVisivel && (
                 sessaoCriativa ? (
                   <div className={styles.convite}>
                     <h2 className={styles.conviteTitulo}>A vez é sua</h2>
@@ -703,11 +717,19 @@ export function SessionPage({
                       Ele não decide tecnologia nem escreve código — isso é do
                       Arquiteto e dos devs, mais adiante.
                     </p>
+                    {/* A AÇÃO, e não uma seta apontando para ela (FASE 24).
+                        Ativar o Criativo continua sendo um clique explícito:
+                        é a partir dele que a chave do owner passa a ser
+                        gasta (RN-058), e ninguém entra na sessão sozinho. */}
                     {!criativoActive && (
-                      <p className={styles.conviteTexto}>
-                        Ele ainda não entrou: use{' '}
-                        <strong>Iniciar ideação</strong>, no alto da tela.
-                      </p>
+                      <div className={styles.conviteAcao}>
+                        <Button onClick={handleStartIdeation} disabled={!isActive}>
+                          Iniciar ideação
+                        </Button>
+                        <span className={styles.conviteAcaoNota}>
+                          Ele ainda não entrou — é este clique que o traz.
+                        </span>
+                      </div>
                     )}
                     <p className={styles.conviteTexto}>
                       Comece contando o que você quer construir e para quem. Por

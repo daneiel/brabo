@@ -13,6 +13,12 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   volta ao dashboard. `execution.activated` numa sessão consultiva passa a
   responder 409 em vez de convertê-la em silêncio (ADR 0061, RN-097/098)
 
+- **web**: o projeto ganha duas abas de sessão, **Criativo** e **Chat**, cada
+  uma listando e criando o seu tipo sem perguntar de novo; a aba "Sessões" sai,
+  e `?tab=sessions` de um link antigo abre no Chat. "Iniciar ideação" passa a
+  morar dentro do convite enquanto ele está na tela — antes o convite apontava
+  para a topbar (RN-104)
+
 - **api,web**: o modelo de LLM virou padrão herdável por ÁREA — a cascata
   ganha o nível `sessão > agente > área > projeto > workspace`, o lead e os
   subagentes de uma área compartilham o mesmo modelo até um agente divergir

@@ -501,11 +501,24 @@ tiver o slot.
     mudança da área. Papel `maintainer` para mudar o modelo da área (mesma
     régua do teto de paralelismo, RN-083); o do agente continua `developer`.
 
-### FASE 24 — Chat e Criativo como lugares
-28. Duas abas na tela de PROJETO, cada uma listando as sessões do seu `kind`.
-    A Sessão continua tela própria — a aba não vira contêiner de chat.
-29. Colisão de produto: a aba "Sessões" já existe. Ou ela sai, ou o produto
-    ganha três entradas para a mesma lista.
+### FASE 24 — CONCLUÍDA: Chat e Criativo como lugares (RN-104)
+28. Duas abas na tela de PROJETO, cada uma listando as sessões do seu `kind` e
+    criando naquele `kind` sem perguntar de novo. A Sessão continua tela
+    própria — a aba não virou contêiner de chat.
+29. A colisão foi resolvida com "Sessões" SAINDO da régua. O que ficou dela é
+    a CHAVE de deep-link: o Chat carrega `key: 'sessions'`, e é isso que faz um
+    `?tab=sessions` antigo abrir no Chat com a aba MARCADA. Alias resolvido só
+    no painel abriria o painel certo e deixaria a régua sem seleção, porque
+    `Tabs` compara `active` com `key` e quem escreve `active` é o
+    `ProjectPage` — um dos dois arquivos que a onda manteve fechados.
+30. **Veredito sobre "Iniciar ideação"**: ele FICA. Metade do problema já tinha
+    fechado na FASE 20 (o botão sumiu da sessão consultiva, RN-097), e a outra
+    metade não era redundância: é ele que traz o Criativo, e é daí em diante
+    que a chave do owner é gasta (RN-058). O que estava errado era o LUGAR — o
+    convite gastava um parágrafo apontando para a topbar. Agora a ação mora
+    DENTRO do convite enquanto ele está na tela, e volta à topbar quando não
+    está; `conviteVisivel` é a única pergunta que os dois compartilham, para
+    que não apareça em dobro nem desapareça.
 
 ### FASE 25 — Container por projeto (a fronteira deixa de ser só política)
 A maior mudança arquitetural do programa, e a que paga a dívida que as Fases B

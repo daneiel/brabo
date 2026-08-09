@@ -533,6 +533,22 @@
   color: var(--text-secondary);
 }
 
+/* A ação de trazer o Criativo, DENTRO do convite (FASE 24). Ela morava só na
+   topbar, e o convite gastava um parágrafo apontando para lá. */
+.conviteAcao {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 0 0 16px;
+}
+
+.conviteAcaoNota {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
 /* O exemplo é clicável: preenche o campo em vez de mandar a pessoa digitar. */
 .conviteExemplo {
   display: block;

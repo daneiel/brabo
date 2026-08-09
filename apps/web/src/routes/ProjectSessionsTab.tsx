@@ -11,12 +11,10 @@ import {
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Input } from '../components/ui/Input';
+import { Skeleton } from '../components/ui/Skeleton';
+import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
 import { LIMITE_DO_NOME, rotuloDaSessao } from '../lib/session-label';
-import {
-  KINDS_DE_SESSAO,
-  KIND_PRE_SELECIONADO,
-  TIPOS_DE_SESSAO,
-} from '../lib/session-kind';
+import { TIPOS_DE_SESSAO } from '../lib/session-kind';
 import type { SessionKind, SessionStatus } from '../lib/api-types';
 import styles from './ProjectSessionsTab.module.css';
 
@@ -28,28 +26,75 @@ const STATUS_TONE: Record<SessionStatus, 'success' | 'warning' | 'muted' | 'dang
   closed_abnormally: 'danger',
 };
 
+/**
+ * A copy de cada aba (FASE 24, RN-104).
+ *
+ * Uma entrada por `kind`, sem `default`, pelo mesmo motivo de
+ * `TIPOS_DE_SESSAO`: tipo novo passa a exigir uma decisão de copy aqui, em vez
+ * de aparecer na régua como o slug cru do banco.
+ *
+ * O que sumiu daqui é tão importante quanto o que entrou: **não há mais
+ * escolha de tipo**. Até a FASE 20 a escolha acontecia num `fieldset` no
+ * formulário; agora ela aconteceu quando a pessoa clicou na ABA, e perguntar
+ * de novo seria oferecer a chance de contradizer o lugar em que ela está.
+ */
+const ABA_DO_KIND: Record<
+  SessionKind,
+  { titulo: string; abrir: string; confirmar: string; vazio: string }
+> = {
+  criativa: {
+    titulo: 'Criativo',
+    abrir: '+ Nova ideação',
+    confirmar: 'Abrir sessão criativa',
+    vazio:
+      'Nenhuma ideação ainda. Abra uma para o Criativo levantar com você as ' +
+      'regras de negócio do produto.',
+  },
+  consultiva: {
+    titulo: 'Chat',
+    abrir: '+ Nova conversa',
+    confirmar: 'Abrir sessão consultiva',
+    vazio:
+      'Nenhuma conversa ainda. Abra uma para perguntar e pedir contexto sem ' +
+      'ativar agente nenhum.',
+  },
+};
+
 interface ProjectSessionsTabProps {
   projectId: string;
+  /**
+   * O tipo que esta aba É. Não é filtro de conveniência: é a identidade do
+   * lugar — o que ele lista e o que ele cria.
+   */
+  kind: SessionKind;
 }
 
-export function ProjectSessionsTab({ projectId }: ProjectSessionsTabProps) {
-  const { data: sessions } = useProjectSessions(projectId);
+/**
+ * A lista de sessões de UM tipo (FASE 24, RN-104).
+ *
+ * Era uma aba só, "Sessões", listando tudo misturado, com a escolha do tipo
+ * num formulário. O pedido do usuário foi separar: "deveriam ser duas abas
+ * distintas, ou seja uma Criativo/Chat". A separação não é cosmética — ela
+ * torna o tipo, que é IMUTÁVEL depois de criado (RN-097), a coordenada de
+ * navegação em vez de um campo escondido num passo de criação.
+ */
+export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps) {
+  const sessionsQuery = useProjectSessions(projectId);
   const [creating, setCreating] = useState(false);
-  // O formulário é um PASSO, não um atalho: até a FASE 20 o botão abria a
-  // sessão direto e o tipo não existia — quem quisesse o Criativo tinha de
-  // descobrir um botão na barra de topo DEPOIS, que é o que o usuário relatou
-  // como pouco claro. A escolha agora acontece antes, com as duas explicações
-  // à vista.
   const [abrindoForm, setAbrindoForm] = useState(false);
-  const [kind, setKind] = useState<SessionKind>(KIND_PRE_SELECIONADO);
   const [nome, setNome] = useState('');
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  const copy = ABA_DO_KIND[kind];
+  const tipo = TIPOS_DE_SESSAO[kind];
 
   async function handleCreate() {
     setCreating(true);
     try {
       const session = await createSession(projectId, {
+        // O `kind` vem da ABA, não de um controle na tela: é isto que fecha o
+        // item 3 da fase — o CTA cria o tipo do lugar, sem perguntar de novo.
         kind,
         // Nome em branco não vai no corpo: ausência é `null` no banco, e a
         // tela degrada para a hashtag sozinha (RN-098).
@@ -63,7 +108,11 @@ export function ProjectSessionsTab({ projectId }: ProjectSessionsTabProps) {
     }
   }
 
-  const sorted = [...(sessions ?? [])].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  // O filtro pelo tipo GRAVADO. A aba não infere o tipo de evento nenhum: ela
+  // lê `sessions.kind`, que é a intenção de criação e não muda (RN-097).
+  const sorted = (sessionsQuery.data ?? [])
+    .filter((session) => session.kind === kind)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
   // Aprovações POR SESSÃO (achado #16 do primeiro dogfooding). Tudo o que
   // existia estava preso à sessão mais recente — `usePendingActions` exige um
@@ -73,6 +122,11 @@ export function ProjectSessionsTab({ projectId }: ProjectSessionsTabProps) {
   // A rota de ações é escopada por sessão, e continua assim: a soma é feita
   // aqui, uma consulta por linha já listada. Sessões de um projeto são poucas,
   // e o TanStack Query as cacheia junto com as da aba de aprovações.
+  //
+  // O hook roda SEMPRE, mesmo em erro ou carregamento: com a lista vazia ele
+  // não dispara consulta nenhuma, e é o que permite os três estados abaixo
+  // serem render condicional em vez de `return` antecipado — `return` antes de
+  // um hook muda a ordem dos hooks entre renders.
   const acoesPorSessao = useQueries({
     queries: sorted.map((session) => ({
       queryKey: ['session-actions', projectId, session.id],
@@ -81,59 +135,31 @@ export function ProjectSessionsTab({ projectId }: ProjectSessionsTabProps) {
   });
   const resumoDe = (indice: number): ResumoDeAprovacoes =>
     resumirAcoes(acoesPorSessao[indice]?.data?.items);
-  const totalDoProjeto = somarResumos(
+  const totalDaAba = somarResumos(
     acoesPorSessao.map((q) => resumirAcoes(q.data?.items)),
   );
 
   return (
     <div>
       <div className={styles.header}>
-        <span className={styles.title}>Sessões</span>
+        <div className={styles.headerTexto}>
+          <span className={styles.title}>{copy.titulo}</span>
+          {/* A explicação do tipo mora AQUI agora, permanente. Antes ela só
+              existia dentro do rádio do formulário — visível no instante da
+              escolha e nunca mais. */}
+          <span className={styles.subtitleTipo}>{tipo.explicacao}</span>
+        </div>
         <Button
           onClick={() => setAbrindoForm((v) => !v)}
           variant={abrindoForm ? 'ghost' : 'primary'}
           aria-expanded={abrindoForm}
         >
-          {abrindoForm ? 'Cancelar' : '+ Nova sessão'}
+          {abrindoForm ? 'Cancelar' : copy.abrir}
         </Button>
       </div>
 
       {abrindoForm && (
         <div className={styles.novaSessao}>
-          {/* `fieldset` + rádios NATIVOS, e não dois botões que parecem
-              selecionáveis: a escolha é entre alternativas exclusivas, e só
-              assim o leitor de tela anuncia "1 de 2" e as setas navegam entre
-              elas. A explicação vive DENTRO do `label`, então é lida junto com
-              a opção — é ela que a fase existe para tornar visível. */}
-          <fieldset className={styles.tipos}>
-            <legend className={styles.tiposLegenda}>Tipo da sessão</legend>
-            {KINDS_DE_SESSAO.map((opcao) => {
-              const tipo = TIPOS_DE_SESSAO[opcao];
-              const marcado = kind === opcao;
-              return (
-                <label
-                  key={opcao}
-                  className={[styles.tipo, marcado && styles.tipoMarcado]
-                    .filter(Boolean)
-                    .join(' ')}
-                >
-                  <input
-                    type="radio"
-                    name="session-kind"
-                    value={opcao}
-                    checked={marcado}
-                    onChange={() => setKind(opcao)}
-                    className={styles.tipoRadio}
-                  />
-                  <span className={styles.tipoTexto}>
-                    <span className={styles.tipoRotulo}>{tipo.rotulo}</span>
-                    <span className={styles.tipoExplicacao}>{tipo.explicacao}</span>
-                  </span>
-                </label>
-              );
-            })}
-          </fieldset>
-
           <Input
             label="Nome (opcional)"
             value={nome}
@@ -145,23 +171,38 @@ export function ProjectSessionsTab({ projectId }: ProjectSessionsTabProps) {
 
           <div className={styles.novaSessaoAcoes}>
             <Button onClick={handleCreate} disabled={creating}>
-              {creating ? 'Abrindo…' : `Abrir sessão ${TIPOS_DE_SESSAO[kind].rotulo.toLowerCase()}`}
+              {creating ? 'Abrindo…' : copy.confirmar}
             </Button>
           </div>
         </div>
       )}
 
-      {totalDoProjeto.total > 0 && (
+      {totalDaAba.total > 0 && (
         <div className={styles.subtitle}>
-          {totalDoProjeto.total} ação(ões) proposta(s) no projeto ·{' '}
-          {totalDoProjeto.decididasPorVoce} decidida(s) por você ·{' '}
-          {totalDoProjeto.autoAprovadas} auto-aprovada(s) pela política ·{' '}
-          {totalDoProjeto.pendentes} aguardando
+          {totalDaAba.total} ação(ões) proposta(s) nestas sessões ·{' '}
+          {totalDaAba.decididasPorVoce} decidida(s) por você ·{' '}
+          {totalDaAba.autoAprovadas} auto-aprovada(s) pela política ·{' '}
+          {totalDaAba.pendentes} aguardando
         </div>
       )}
 
-      {sorted.length === 0 ? (
-        <div className={styles.empty}>Nenhuma sessão ainda. Crie uma pra começar a conversar com um modelo.</div>
+      {/* Os TRÊS estados, com ERRO antes de vazio (RN-088). A ordem é a regra:
+          `sorted.length === 0` também é verdade quando a api recusou, e uma
+          aba que dissesse "nenhuma ideação ainda" depois de um 429 estaria
+          mentindo — a pessoa tem sessões, o que não chegou foi a lista. */}
+      {sessionsQuery.isError ? (
+        <ErroDeCarregamento
+          titulo="Não foi possível carregar as sessões deste projeto."
+          erro={sessionsQuery.error}
+          onTentarDeNovo={() => void sessionsQuery.refetch()}
+        />
+      ) : sessionsQuery.isPending ? (
+        <div className={styles.list} aria-busy="true">
+          <Skeleton height={44} />
+          <Skeleton height={44} />
+        </div>
+      ) : sorted.length === 0 ? (
+        <div className={styles.empty}>{copy.vazio}</div>
       ) : (
         <div className={styles.list}>
           {sorted.map((session, indice) => {
@@ -175,11 +216,6 @@ export function ProjectSessionsTab({ projectId }: ProjectSessionsTabProps) {
                 <span className={styles.rowId}>
                   {rotuloDaSessao(session.id, session.name)}
                 </span>
-                {/* O tipo é visível na LISTA, e não só dentro da sessão: é
-                    aqui que se escolhe qual retomar. */}
-                <Badge tone={TIPOS_DE_SESSAO[session.kind].tom}>
-                  {TIPOS_DE_SESSAO[session.kind].rotulo}
-                </Badge>
                 <Badge tone={STATUS_TONE[session.status]} dot>
                   {session.status}
                 </Badge>
@@ -204,4 +240,21 @@ export function ProjectSessionsTab({ projectId }: ProjectSessionsTabProps) {
       )}
     </div>
   );
+}
+
+/**
+ * As duas abas que o registro monta.
+ *
+ * Existem porque `AbaDoProjeto.component` recebe UM prop (`projectId`) — a
+ * moldura não sabe, nem deve saber, que estas duas se distinguem por um
+ * segundo. O `kind` fica preso aqui, e não numa prop opcional com default:
+ * default significaria que uma aba mal-registrada lista o tipo errado em
+ * silêncio.
+ */
+export function ProjectCriativoTab({ projectId }: { projectId: string }) {
+  return <ProjectSessionsTab projectId={projectId} kind="criativa" />;
+}
+
+export function ProjectChatTab({ projectId }: { projectId: string }) {
+  return <ProjectSessionsTab projectId={projectId} kind="consultiva" />;
 }

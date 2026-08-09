@@ -34,7 +34,10 @@ vi.mock('../lib/hooks', () => ({
 // As abas são inteiras demais para montar aqui, e nenhuma delas é o assunto:
 // o defeito estava na moldura, antes de qualquer aba renderizar.
 vi.mock('./ProjectOverviewTab', () => ({ ProjectOverviewTab: () => <div>aba visão geral</div> }));
-vi.mock('./ProjectSessionsTab', () => ({ ProjectSessionsTab: () => null }));
+vi.mock('./ProjectSessionsTab', () => ({
+  ProjectCriativoTab: () => null,
+  ProjectChatTab: () => null,
+}));
 vi.mock('./ProjectApprovalsTab', () => ({ ProjectApprovalsTab: () => null }));
 vi.mock('./ProjectBacklogTab', () => ({
   ProjectBacklogTab: () => null,
