@@ -354,20 +354,60 @@
  * O fallback genérico é feio de propósito e a FASE 19 é dona dele — aqui ele só
  * herda o padding das outras regiões, sem mudar o que despeja.
  */
-.genericLine {
+/*
+ * A FRASE (FASE 19, RN-096). Fonte de CORPO e não mono: ela é uma frase em
+ * português, e o mono a fazia parecer mais um pedaço de payload — que é
+ * exatamente o que ela veio substituir. `--text-primary` porque é a linha mais
+ * importante do card: o verbo no cabeçalho fica apagado justamente para ela
+ * ganhar o contraste.
+ */
+.frase {
+  margin: 0;
+  padding: 12px 16px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-primary);
+}
+
+/*
+ * O colapso. A margem de 16px vai no CABEÇALHO, não no bloco: os corpos ricos
+ * (comando, diff, PR) já trazem o próprio `padding: … 16px`, e um padding no
+ * bloco somaria com o deles — o diff ficaria recuado 32px do card enquanto o
+ * cabeçalho ficaria em 16.
+ */
+.detalhes {
+  border-top: 1px solid var(--border);
+}
+
+.detalhesCabecalho {
+  padding: 8px 16px;
+}
+
+/*
+ * O payload cru, quando alguém abre o colapso: indentado e num bloco de código
+ * de verdade. `overflow-x: auto` porque valor longo (um `content` de arquivo,
+ * um comando de 300 caracteres) rolava a página inteira na horizontal em vez do
+ * próprio bloco.
+ */
+.payloadCru {
+  margin: 0 16px 12px;
+  padding: 12px;
+  background: var(--code-bg);
+  border-radius: var(--radius-sm);
   font-family: var(--font-mono);
   font-size: 12px;
+  line-height: 1.6;
   color: var(--text-secondary);
-  padding: 4px 16px;
-  word-break: break-all;
+  white-space: pre;
+  overflow-x: auto;
 }
 
-.genericLine:first-child {
-  padding-top: 12px;
-}
-
-.genericLine:last-child {
-  padding-bottom: 12px;
+.semPayload {
+  padding: 0 16px 12px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
 .actions {

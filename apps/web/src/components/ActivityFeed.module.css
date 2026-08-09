@@ -25,6 +25,9 @@
   font-family: var(--font-mono);
   font-size: 10px;
   border-radius: var(--radius-full);
+  /* 23px de altura reprovavam no piso de alvo de toque (WCAG 2.2 AA) que o
+     `scripts/dev/validacao-visual.js` cobra — um pixel, e ele acha. */
+  min-height: 24px;
   padding: 4px 10px;
   border: 1px solid var(--border);
   background: var(--surface-1);
@@ -36,6 +39,43 @@
   background: var(--accent);
   border-color: var(--accent);
   color: var(--on-accent);
+}
+
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pagerCount {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.pagerButton {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  border-radius: var(--radius-full);
+  /* 24px é o alvo mínimo que `scripts/dev/validacao-visual.js` cobra. */
+  min-height: 24px;
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  background: var(--surface-1);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.pagerButton:hover:not(:disabled) {
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+
+.pagerButton:disabled {
+  cursor: progress;
+  color: var(--text-muted);
 }
 
 .list {
