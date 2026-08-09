@@ -541,14 +541,38 @@ const sidebar: SidebarsConfig = {
         {
           type: "doc",
           id: "docs/reference/api/model-bindings-controller-set-agent-binding",
-          label: "Fixa o modelo de um agente no projeto",
+          label: "Fixa o modelo de um agente NESTE projeto",
           className: "api-method put",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/model-bindings-controller-clear-agent-binding",
+          label: "Faz o agente voltar a herdar o modelo da área",
+          className: "api-method delete",
         },
         {
           type: "doc",
           id: "docs/reference/api/budgets-controller-get-project-agent-costs",
           label: "Quebra o gasto do projeto por agente, nos últimos 30 dias",
           className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/model-bindings-controller-get-area-binding",
+          label: "Resolve qual modelo é o padrão de uma área, e de onde ele veio",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/model-bindings-controller-set-area-binding",
+          label: "Define o modelo padrão de uma área",
+          className: "api-method put",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/model-bindings-controller-clear-area-binding",
+          label: "Faz a área voltar a herdar o modelo do projeto",
+          className: "api-method delete",
         },
         {
           type: "doc",

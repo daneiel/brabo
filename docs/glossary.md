@@ -212,9 +212,10 @@ ambos ([RN-017](business-rules.md#rn-017)). Notifica em 70/90/100% sem repetir.
 comum de "o orçamento não segurou" ([RN-019](business-rules.md#rn-019)).
 
 **Binding** — a amarração entre um escopo e um modelo de LLM. Resolve em
-cascata: **sessão > agente > projeto > workspace**, o primeiro que existir
-([RN-020](business-rules.md#rn-020)). É por isso que dá para pôr um modelo caro
-só no QA.
+cascata: **sessão > agente > área > projeto > workspace**, o primeiro que
+existir ([RN-020](business-rules.md#rn-020)). É por isso que dá para pôr um
+modelo caro só no QA. `área` é o PADRÃO que lead e subagentes de uma área
+compartilham, e o agente pode divergir ([RN-102](business-rules.md#rn-102)).
 
 **Faceta de capability** — o que o **provider declara** sobre um modelo: lê
 imagem, gera imagem, faz thinking, aceita `tools`. Vem do catálogo remoto no

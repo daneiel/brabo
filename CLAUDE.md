@@ -482,15 +482,24 @@ Sem migration, mas COM medição: a 525 mil linhas as consultas saem em
 levaria a 32 ms e 19 ms. O número está no ADR; o índice entra na onda que
 tiver o slot.
 
-### FASE 23 — Modelo herdável por área
-25. Escopo `area` na cascata de binding, entre `agent` e `project`.
-26. Incoerência a resolver ANTES de codar: o binding de agente é GLOBAL por
-    decisão intencional, e área é por projeto. Ou o binding de agente passa a
-    ser por projeto, ou a área fica abaixo dele — e isso contraria "padrão
-    herdável". Decisão de produto, com ADR.
-27. A UI mostra quem HERDA e quem DIVERGIU; voltar a herdar é APAGAR o binding
-    do agente, não gravar o modelo da área nele. Papel mínimo `maintainer`,
-    pelo mesmo motivo do teto de paralelismo: mudar o modelo é decidir gasto.
+### FASE 23 — CONCLUÍDA em 2026-08-09 (modelo herdável por área)
+25. Escopo `area` entrou na cascata (`sessão > agente > área > projeto >
+    workspace`), ENTRE agente e projeto: é o padrão que lead e subagentes
+    compartilham, e o agente diverge sobrepondo-o (ADR 0064, RN-102).
+26. A incoerência resolvida ANTES de codar: o binding de agente era GLOBAL
+    (`scope_id` = slug puro, `:projectId` da rota ignorado desde a Fase 9a) e
+    área é por projeto desde o ADR 0053. Escopo por projeto acima de escopo
+    global faria o mesmo agente resolver modelos diferentes só onde houvesse
+    área. Decisão: o binding de agente passou a ser por projeto também —
+    `scope_id` de `agent`/`area` virou composto, `<projectId>:<slug|chave>`
+    (RN-103) — e não a área abaixo do agente, que contrariaria "padrão
+    herdável" (quase todo binding hoje é de agente).
+27. A UI mostra quem HERDA e quem DIVERGIU (`AreaModelsSection` e a coluna
+    Origem de `ModelsSection`, em `ProjectSettingsTab.tsx`); "voltar a
+    herdar" é `DELETE` no binding do agente/área, nunca grava nele o modelo
+    do nível de baixo — copiar viraria cópia que diverge sozinha na próxima
+    mudança da área. Papel `maintainer` para mudar o modelo da área (mesma
+    régua do teto de paralelismo, RN-083); o do agente continua `developer`.
 
 ### FASE 24 — Chat e Criativo como lugares
 28. Duas abas na tela de PROJETO, cada uma listando as sessões do seu `kind`.

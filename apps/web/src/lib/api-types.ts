@@ -387,7 +387,14 @@ export interface SyncModelCatalogResult {
   porProvider: ResultadoDoSync[];
 }
 
-export type ModelBindingScope = 'workspace' | 'project' | 'agent' | 'session';
+// `area` entrou na FASE 23 (ADR 0064) entre `project` e `agent`: é o padrão
+// que lead e subagentes de uma área compartilham, e o agente pode divergir.
+export type ModelBindingScope =
+  | 'workspace'
+  | 'project'
+  | 'area'
+  | 'agent'
+  | 'session';
 
 export interface ModelBinding {
   id: string;
