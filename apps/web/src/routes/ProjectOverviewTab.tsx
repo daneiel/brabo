@@ -6,6 +6,7 @@ import {
   useHandoffs,
   useLatestSession,
   usePendingActions,
+  useSessionEventHistory,
   useSessionEvents,
   useSessionTokenUsage,
 } from '../lib/hooks';
@@ -32,6 +33,8 @@ import { connectSessionHeartbeat } from '../lib/session-channel';
 import { AgentCard, type AutonomyMode } from '../components/AgentCard';
 import { AgentTimelineTree } from '../components/AgentTimelineTree';
 import { ActivityFeed } from '../components/ActivityFeed';
+import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
+import { Skeleton } from '../components/ui/Skeleton';
 import { Badge, type BadgeTone } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { useToast } from '../components/ui/ToastProvider';
@@ -63,8 +66,14 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
   const { showToast } = useToast();
   const { latest: latestSession } = useLatestSession(projectId);
   const sessionId = latestSession?.id;
+  // ESTADO ATUAL — a cauda em poll, que alimenta a roster, a árvore e a
+  // seção de execução. Continua `latest` de propósito: as três perguntam
+  // "como está agora", e nenhuma delas pagina.
   const eventsQuery = useSessionEvents(projectId, sessionId);
   const events = eventsQuery.data?.items ?? [];
+  // HISTÓRICO — o que a coluna de Atividade mostra, em páginas (RN-099).
+  // Mesma `queryKey` da cauda por dentro: nenhuma requisição a mais por ciclo.
+  const historico = useSessionEventHistory(projectId, sessionId);
   const actionsQuery = usePendingActions(projectId, sessionId);
   const actions = actionsQuery.data?.items ?? [];
   const { data: architecture } = useArchitecture(projectId);
@@ -316,12 +325,30 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
       <aside className={styles.aside}>
         <div className={styles.sectionRow}>
           <h2 className={styles.sectionHeader}>Atividade</h2>
-          <span className={styles.sectionCount}>{events.length} eventos</span>
+          <span className={styles.sectionCount}>
+            {historico.carregados} eventos
+          </span>
         </div>
-        <ActivityFeed
-          events={events}
-          agentOptions={roster.map((r) => ({ id: r.id, label: r.def.name }))}
-        />
+        {/* Os três estados, e o ERRO antes do vazio (RN-088): `!dados` é
+            verdadeiro nos três, e colapsá-los era o que fazia a coluna dizer
+            "nenhuma atividade" quando na verdade a api tinha recusado. */}
+        {historico.isError ? (
+          <ErroDeCarregamento
+            titulo="Não foi possível carregar a atividade."
+            erro={historico.error}
+            onTentarDeNovo={historico.refetch}
+          />
+        ) : historico.isPending ? (
+          <Skeleton height={180} />
+        ) : (
+          <ActivityFeed
+            events={historico.events}
+            agentOptions={roster.map((r) => ({ id: r.id, label: r.def.name }))}
+            onLoadOlder={historico.carregarMaisAntigos}
+            hasOlder={historico.temMaisAntigos}
+            loadingOlder={historico.carregandoMaisAntigos}
+          />
+        )}
       </aside>
     </div>
   );

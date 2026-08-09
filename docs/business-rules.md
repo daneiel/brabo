@@ -2468,6 +2468,124 @@ antigo.
 - **Origem:** residual medido da [RN-090](#rn-090) — 286 req/min com a gaveta
   aberta num workspace de 23 projetos
 
+### RN-099 — Atividades pagina o passado sem repolar o que não muda {#rn-099}
+
+A coluna de **Atividade** da Visão geral mostra uma **janela** de 100 eventos
+ancorada na **cauda** da sessão, e desce no passado de página em página. Cada
+página usa o `afterSeq`/`nextCursor` que
+`GET /projects/:p/sessions/:s/events` **já** devolve: nenhuma rota nova,
+nenhum parâmetro novo.
+
+**Duas perguntas, duas queries.** `useSessionEvents` responde "como está
+agora" — os últimos 200 em poll — e alimenta o painel do time, a linha do
+tempo em árvore, a seção de execução e a aba de Aprovações. Nenhuma delas
+pagina. A de Atividades responde "o que aconteceu", e era a única que fazia
+essa pergunta com a resposta da outra: 200 itens de uma vez, sem começo nem
+fim, e ainda assim sem alcançar o início de uma sessão longa.
+
+**A âncora é a cauda, não o começo da sessão.** O endpoint pagina para
+FRENTE, e não existe `beforeSeq` — inventar um seria contrato novo. Mas abrir
+o feed no evento nº 1 de uma sessão de milhares entrega a tela errada: quem
+abre Atividades quer o que acabou de acontecer. Então a primeira página é a
+mesma leitura `latest` que a tela já faz, com a **mesma `queryKey`** (o React
+Query serve as duas com UMA busca), e cada clique desce uma janela fixa com
+`afterSeq`.
+
+**O que a paginação não pode custar.** Uma requisição por ciclo de poll — a
+mesma de antes, e a economia da [RN-090](#rn-090)/[RN-091](#rn-091) não
+regride. Três peças garantem isso:
+
+- a cauda é a query que a tela já tinha, compartilhada por `queryKey`;
+- o primeiro clique **não** vira requisição: a leitura `latest` traz 200 e a
+  janela mostra 100, então revelar o que já se pagou vem antes de pedir de
+  novo;
+- página antiga é uma janela **fechada** de `seq` sobre eventos **imutáveis**
+  (nunca há UPDATE em tabela de evento): `staleTime: Infinity` e
+  **nenhum** `refetchInterval`. Um poll ali seria pagar N requisições para
+  receber N respostas idênticas.
+
+**A contagem é honesta sobre o que ela sabe.** Os filtros por agente e por
+tipo rodam sobre a **página carregada**, não sobre a sessão — então a UI diz
+`N de M carregados`, e não "N resultados". Levar o filtro ao servidor daria o
+total verdadeiro e mexeria no repositório de eventos; não é desta fase, e
+dizer o total errado seria pior que dizer menos.
+
+Os três estados da [RN-088](#rn-088) valem aqui: **erro antes de vazio** — a
+coluna dizia "nenhuma atividade" quando a api tinha recusado.
+
+- **Onde:** `apps/web/src/lib/hooks.ts` (`useSessionEventHistory`,
+  `EVENTOS_POR_PAGINA`), `apps/web/src/components/ActivityFeed.tsx`,
+  `apps/web/src/routes/ProjectOverviewTab.tsx`,
+  `apps/api/src/infrastructure/persistence/drizzle/session-event.repository.ts`
+  (`listPaginated`, já existente)
+- **Teste:** `apps/web/src/lib/session-history.test.tsx` (abre na cauda; o
+  primeiro clique não custa requisição; o seguinte pagina com `afterSeq`
+  contíguo; o laço termina no começo da sessão; montado junto com o estado
+  atual a cauda é UMA busca; página antiga não repolla);
+  `apps/web/src/components/ActivityFeed.test.tsx` (o "N de M carregados"
+  acompanha o filtro; sem as props de paginação nada muda)
+- **Origem:** pedido do usuário na primeira navegação real — "Atividades na
+  aba Visão Geral deve ser paginada, para não ficar infinita"
+
+### RN-100 — A ordem do sino é do SQL, não do front {#rn-100}
+
+A gaveta de notificações mostra os eventos **do mais recente para o mais
+antigo**, e quando um projeto tem mais não lidos que o teto de 50 os que
+aparecem são os **mais NOVOS**.
+
+**A ordenação é do banco por necessidade, não por gosto.** A consulta corta em
+50 **por projeto** com uma função de janela
+(`row_number() OVER (PARTITION BY session_id ORDER BY seq DESC)`), e é ela que
+decide **quais** 50 eventos sobrevivem — não só em que ordem eles saem. Com
+`ASC` sobreviviam os 50 mais **antigos**, e um `.sort()` no cliente ordenaria
+por recência justamente a janela que a consulta já tinha escolhido errado:
+num projeto com 300 não lidos, o 251º evento apareceria como "o mais recente".
+É por isso que não há ordenação nenhuma no caminho do front, e o comentário no
+componente diz que não pode haver.
+
+**A consequência, e por que o corte de leitura não mudou.** O corte é um `seq`
+por projeto no `localStorage`, e **não existe endpoint de marcar lido**, por
+decisão registrada na [RN-091](#rn-091). Um corte por `seq` marca um
+**prefixo**; a gaveta agora mostra um **sufixo**. Marcar como lidas "as 50
+exibidas" é inexprimível sem um conjunto de lidos **por evento** — tabela nova,
+fora de escopo. Os dois únicos cortes expressáveis continuam sendo "nada" e
+"tudo até agora".
+
+A saída não foi mudar a semântica (ela continua avançando para o último `seq`,
+exatamente como antes), foi **parar de esconder o que esse avanço engole**:
+
+- cada projeto mostra o **total** de não lidos, não o tamanho da janela, e
+  declara quantos ficaram de fora (`+ N mais antigos`);
+- o botão passa a dizer o que faz — `marcar as N como lidas` — quando há algo
+  fora da janela;
+- o número que falta sai de **subtração**, não de requisição: `latestSeq`
+  menos o corte já vem no resumo do workspace ([RN-090](#rn-090)).
+
+Como a semântica do corte não mudou, **não há ADR** nesta regra: o que mudou
+foi qual janela a consulta escolhe e o que a gaveta declara sobre ela.
+
+- **Onde:**
+  `apps/api/src/infrastructure/persistence/drizzle/projects-summary.repository.ts`
+  (`unreadEventsForWorkspace`),
+  `apps/api/src/application/ports/projects-summary-repository.port.ts`,
+  `apps/api/src/interfaces/http/iam/dto/iam.response.dto.ts`
+  (`ProjectUnreadEventsResponseDto`),
+  `apps/web/src/lib/notifications.ts` (`useNotificationGroups`),
+  `apps/web/src/components/NotificationBell.tsx`
+- **Teste:**
+  `apps/api/test/infrastructure/persistence/drizzle/projects-summary.repository.spec.ts`
+  ("com mais não lidos que o teto, voltam os MAIS RECENTES, do novo para o
+  velho" — afirma o CONJUNTO antes da ordem);
+  `apps/web/src/components/NotificationBell.test.tsx` (renderiza na ordem
+  recebida, sem reordenar; o contador é o total; o botão diz quantas marca);
+  `apps/web/src/lib/notifications.test.tsx` (o que ficou fora da janela sai
+  por subtração, sem segunda requisição);
+  `apps/web/src/routes/Dashboard.fanout.test.tsx` (a gaveta continua sendo
+  UMA requisição)
+- **Origem:** pedido do usuário na primeira navegação real — "Sino e
+  notificações devem sempre ordenar para última data modificada em descendente
+  para a mais antiga"
+
 ---
 
 ## Psicólogo e Anamnese
