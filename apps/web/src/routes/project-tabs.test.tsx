@@ -45,7 +45,11 @@ vi.mock('./ProjectOverviewTab', () => ({
   ProjectOverviewTab: () => <div>painel de overview</div>,
 }));
 vi.mock('./ProjectSessionsTab', () => ({
-  ProjectSessionsTab: () => <div>painel de sessions</div>,
+  // FASE 24: duas abas saem deste módulo, uma por `kind`. A frase de cada uma
+  // é a CHAVE do registro, para que a asserção genérica lá embaixo continue
+  // provando qual painel renderizou.
+  ProjectCriativoTab: () => <div>painel de criativo</div>,
+  ProjectChatTab: () => <div>painel de sessions</div>,
 }));
 vi.mock('./ProjectApprovalsTab', () => ({
   ProjectApprovalsTab: () => <div>painel de approvals</div>,
@@ -154,6 +158,36 @@ describe('abas do projeto derivam de um registro só', () => {
     expect(ehChaveDeAba(42)).toBe(false);
     expect(abaPorChave('code').key).toBe('overview');
     expect(abaPorChave(undefined).key).toBe('overview');
+  });
+
+  /**
+   * FASE 24 — a colisão que a fase teve de resolver (RN-104).
+   *
+   * Com Chat e Criativo filtrando por tipo, manter "Sessões" daria TRÊS
+   * entradas para a mesma lista. Ela saiu; o que ficou é a CHAVE de deep-link,
+   * que agora é a do Chat — um `?tab=sessions` guardado em link antigo abre no
+   * Chat, e a asserção que importa é a segunda: a aba fica MARCADA na régua.
+   * Resolver `sessions` como alias só no painel deixaria a régua sem seleção
+   * nenhuma, porque `Tabs` compara `active` com `key`.
+   */
+  it('nenhuma aba lista os dois tipos juntos — "Sessões" saiu da régua', async () => {
+    montar();
+
+    await screen.findAllByRole('tab');
+    expect(screen.queryByRole('tab', { name: 'Sessões' })).toBeNull();
+    expect(screen.getByRole('tab', { name: 'Criativo' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Chat' })).toBeInTheDocument();
+  });
+
+  it('o deep-link antigo `?tab=sessions` abre no Chat, com a aba marcada', async () => {
+    expect(ehChaveDeAba('sessions')).toBe(true);
+    expect(abaPorChave('sessions').label).toBe('Chat');
+
+    montar('sessions' as never);
+
+    const chat = await screen.findByRole('tab', { name: 'Chat' });
+    expect(chat.getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByText('painel de sessions')).toBeInTheDocument();
   });
 
   it('ordem é única — duas abas no mesmo lugar seria régua instável', () => {

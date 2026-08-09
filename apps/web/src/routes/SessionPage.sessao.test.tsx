@@ -19,6 +19,10 @@ import type { Session } from '../lib/api-types';
 
 const renameSession = vi.fn();
 const getSession = vi.fn();
+const startAgent = vi.fn();
+/** Os eventos da sessão, controláveis por teste (FASE 24: é `chat.message` que
+ *  tira o convite da tela e devolve o botão à topbar). */
+const eventos = vi.fn<() => { items: unknown[] }>(() => ({ items: [] }));
 
 vi.mock('@tanstack/react-router', () => ({
   // `Link` vira uma âncora de verdade: é o `href` que este teste afirma.
@@ -30,7 +34,7 @@ vi.mock('@tanstack/react-router', () => ({
 }));
 
 vi.mock('../lib/hooks', () => ({
-  useSessionEvents: () => ({ data: { items: [] } }),
+  useSessionEvents: () => ({ data: eventos() }),
   useSessionEvent: () => ({ data: undefined, isError: false }),
   usePendingActions: () => ({ data: { items: [] } }),
   useHandoffs: () => ({ data: [] }),
@@ -56,7 +60,7 @@ vi.mock('../lib/api-client', () => ({
   denyAction: vi.fn(),
   sendAgentMessage: vi.fn(),
   setSessionModelBinding: vi.fn(),
-  startAgent: vi.fn(),
+  startAgent: (...args: unknown[]) => startAgent(...args),
   transitionSession: vi.fn(),
 }));
 
@@ -98,8 +102,10 @@ function montar() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  eventos.mockReturnValue({ items: [] });
   getSession.mockResolvedValue(sessao());
   renameSession.mockResolvedValue(sessao({ name: 'Checkout' }));
+  startAgent.mockResolvedValue({});
 });
 
 describe('SessionPage — a saída da tela', () => {
@@ -186,5 +192,68 @@ describe('SessionPage — nome e tipo', () => {
     expect(await screen.findByText('Consultiva')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Iniciar ideação' })).toBeNull();
     expect(screen.getByText(/Nenhum agente é ativado/)).toBeTruthy();
+  });
+});
+
+/**
+ * FASE 24 — o veredito sobre "Iniciar ideação" (RN-104).
+ *
+ * O botão NÃO é redundante: é ele que emite `agent.activated` para o Criativo,
+ * e é a partir daí que a chave do owner passa a ser gasta (RN-058). Ninguém
+ * entra na sessão sozinho.
+ *
+ * O que estava errado era o LUGAR. Ele morava só na topbar, e o convite —
+ * que ocupa a tela inteira exatamente quando ainda não há Criativo — gastava
+ * um parágrafo apontando para lá ("use Iniciar ideação, no alto da tela").
+ * Essa é a versão literal do problema que originou a FASE 20: a ação num lugar
+ * e a explicação em outro.
+ *
+ * A regra virou: uma ação, UM lugar de cada vez. Os dois testes abaixo prendem
+ * as duas metades — e o `getAllBy` é o que reprova se as duas condições
+ * voltarem a ser perguntas independentes e o botão aparecer em dobro.
+ */
+describe('SessionPage — onde mora "Iniciar ideação"', () => {
+  it('com o convite na tela, o botão está NELE, e só uma vez', async () => {
+    montar();
+
+    const botoes = await screen.findAllByRole('button', {
+      name: 'Iniciar ideação',
+    });
+    expect(botoes).toHaveLength(1);
+    // Dentro do convite, e não na topbar: o ancestral é o mesmo bloco que
+    // explica o que o Criativo faz.
+    expect(botoes[0].closest('div')?.textContent).toContain(
+      'é este clique que o traz',
+    );
+
+    fireEvent.click(botoes[0]);
+    await vi.waitFor(() => expect(startAgent).toHaveBeenCalled());
+    expect(startAgent).toHaveBeenCalledWith('proj-1', ID, 'criativo');
+  });
+
+  it('conversa começada sem Criativo: o botão volta à topbar, ainda uma vez só', async () => {
+    // O caso que impede simplesmente APAGAR o botão da topbar: dá para digitar
+    // numa sessão criativa sem nunca ter chamado o Criativo, e aí o convite
+    // sai de cena levando junto a única saída.
+    eventos.mockReturnValue({
+      items: [
+        {
+          id: 'e1',
+          seq: 1,
+          type: 'chat.message',
+          actor: { kind: 'user', id: 'user-1' },
+          payload: { text: 'oi' },
+          createdAt: '2026-08-09T12:00:01.000Z',
+        },
+      ],
+    });
+
+    montar();
+
+    const botoes = await screen.findAllByRole('button', {
+      name: 'Iniciar ideação',
+    });
+    expect(botoes).toHaveLength(1);
+    expect(screen.queryByText(/é este clique que o traz/)).toBeNull();
   });
 });
