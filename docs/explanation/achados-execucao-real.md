@@ -653,3 +653,74 @@ achado AD: a ferramenta certa para um gate não é a mesma de um autor. Hoje a
 diferença é obtida por omissão (o registro do QA não inclui `write_file`), o
 que funciona mas não está declarado em lugar nenhum como garantia — some no dia
 em que alguém acrescentar a ferramenta "para facilitar".
+
+## Execuções com DOIS módulos — 2026-08-08 e 2026-08-09
+
+Duas histórias, uma em `api` e uma em `web`, dois dev agents subindo **ao mesmo
+tempo**. Rodar assim importa porque o teto de paralelismo da
+[RN-083](../business-rules.md#rn-083) só significa alguma coisa quando há
+trabalho independente de verdade — com um módulo só, o Dev Lead recusa
+paralelizar, e com razão.
+
+Foram três rodadas, e a ordem delas é o argumento:
+
+1. **2026-08-08, a que quebrou.** O `dev-web` pegou a task e morreu em
+   `fatal: not a git repository` **antes do primeiro turno**: zero token gasto,
+   task bloqueada, agente `idle`. É o achado AF abaixo.
+2. **2026-08-08, logo depois da correção.** O `dev-web` passou de **0 para 16
+   chamadas**, e os dois módulos foram implementados em paralelo.
+3. **2026-08-09 (projeto `9443f1f1`, sessão `94428b1f`), a medida.** Rodada
+   limpa com a correção já em pé, extraída inteira por `medir:execucao`:
+   **3m56s, 33 chamadas, < US$ 0,01**, sem restart do engine, sem turno mudo, e
+   os dois gates (`qa` e `secops`) aprovando. Serve como linha de base do custo
+   de uma execução de dois módulos.
+
+### AF. Dois dev agents subindo juntos corrompem o workspace um do outro (P1)
+
+`Engine.Actions.Workspace.ensure!/4` serializa a inicialização do working tree
+por projeto com `:global.trans` — exatamente para o caso de N dev agents
+subindo na ativação da execução. O lock estava certo. **A guarda que decidia se
+valia a pena pegá-lo, não.**
+
+O caminho rápido, sem lock, perguntava se `.git` existia
+(`apps/engine/lib/engine/actions/workspace.ex:51`). E `init_from_bare!` começa
+com `git init`, que cria o `.git` na **primeira linha** — antes do
+`fetch` e antes do `checkout`. Quem chegasse nessa janela lia "pronto", pulava
+o lock inteiro e rodava `git worktree add` contra um repositório pela metade:
+
+```
+fatal: not a git repository
+```
+
+**Por que atravessou dez execuções sem aparecer.** A janela só existe se um
+segundo agente chegar *durante* a inicialização, e a ativação só sobe um agente
+por módulo. Com uma entrada no `module_map` nunca houve segundo agente. O
+defeito é da Fase 14d (paralelismo) e precisou da primeira execução que
+realmente paralelizasse para se mostrar.
+
+**A correção** é uma marca em disco, `.brabo-workspace-pronto`, escrita só no
+**fim** da inicialização; o caminho rápido passa a perguntar por ela. O lock não
+mudou de lugar — mudou o critério de "já está pronto", que agora só é verdadeiro
+quando de fato está. Workspace criado antes da marca existir é **adotado e
+carimbado**, nunca re-inicializado: re-inicializar apagaria trabalho não
+commitado.
+
+**O que isso ensina sobre o teste que não pegou.** Já existia um teste de 8
+`ensure/3` concorrentes, e ele **passava com o bug**. Todos os 8 partem juntos,
+todos veem o diretório vazio, todos vão para o lock — a janela nunca é
+exercitada. Tentar reproduzi-la por tempo também não funciona: contra um bare
+local o `fetch` termina rápido demais, e um teste que corre atrás da janela
+passa sempre sem provar nada.
+
+O que fechou o buraco em
+`apps/engine/test/engine/actions/workspace_test.exs` foi **construir o estado
+intermediário à mão** em vez de tentar cronometrá-lo: um `git init` no
+diretório, sem fetch e sem checkout, que é exatamente o que o segundo agente
+enxergava. Com a guarda antiga o `ensure!` devolve o diretório e nunca escreve
+a marca — e é a ausência da marca que a asserção cobra. Os outros dois testes
+guardam a migração (workspace pré-marca não é re-inicializado) e o caso real de
+dois `ensure!` concorrentes.
+
+É o mesmo padrão das três lacunas da própria Fase 14d, registrado lá: **testar a
+peça não é testar o caminho até ela.** Aqui a peça (o lock) estava correta e
+testada; o caminho até ela é que decidia errado.
