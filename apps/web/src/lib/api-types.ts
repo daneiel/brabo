@@ -155,11 +155,24 @@ export type SessionStatus =
   | 'closed'
   | 'closed_abnormally';
 
+/**
+ * A INTENÇÃO com que a sessão foi aberta (FASE 20, RN-097).
+ *
+ * `consultiva` é só conversa. `criativa` é a que produz: abre a ideação com o
+ * Criativo e é a única que entra em execução. É escolhida na criação e não
+ * muda — não confundir com o ESTADO de execução, que continua sendo o evento
+ * `execution.activated` no log.
+ */
+export type SessionKind = 'consultiva' | 'criativa';
+
 export interface Session {
   id: string;
   projectId: string;
   createdBy: string;
   status: SessionStatus;
+  kind: SessionKind;
+  /** Nome amigável (RN-098), ou `null`. Nunca substitui a hashtag do id. */
+  name: string | null;
   nextSeq: number;
   createdAt: string;
   updatedAt: string;

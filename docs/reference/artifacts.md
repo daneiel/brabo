@@ -33,6 +33,14 @@ O motivo é o mesmo em todos os casos: quando o artefato é o **registro de um
 desfecho**, deixar o modelo escolher emiti-lo significa deixar que ele omita. Um
 DevAgent que desiste não deveria poder decidir não registrar que desistiu.
 
+**O tipo da sessão não filtra artefato nenhum.** A [RN-097](../business-rules.md#rn-097)
+deu à sessão um `kind` (`consultiva` | `criativa`) e pôs uma trava no append de
+eventos, mas ela alcança **um** tipo — `execution.activated` — e artefato não é
+ele. Uma sessão consultiva grava `artifact.business_rule` igual: o que ela não
+faz é entrar em execução. Quem chega pela regra do tipo tende a supor o
+contrário, e a suposição errada aqui apagaria o registro de uma conversa
+inteira.
+
 ## Os schemas
 
 ### `note` — ferramenta

@@ -840,6 +840,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/sessions-controller-rename",
+          label: "Dá ou tira o nome amigável da sessão",
+          className: "api-method patch",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/sessions-controller-list-events",
           label: "Pagina o event log da sessão",
           className: "api-method get",

@@ -80,6 +80,76 @@ Nunca há `UPDATE` em `session_events`. A `seq` é única por sessão
 - **Por quê:** é o que torna a evidência do Psicólogo rastreável e o backup
   verificável. Estado que precisa mudar vive em tabela própria, ao lado.
 
+### RN-097 — O tipo da sessão é intenção de criação; a execução continua sendo evento {#rn-097}
+
+A sessão nasce `consultiva` ou `criativa`, escolhido por **quem a abre** e
+gravado em `sessions.kind`. `consultiva` é só conversa; `criativa` é a que
+produz — abre a ideação com o Criativo e é a **única** que entra em execução.
+O tipo **não muda**: não existe rota que o troque.
+
+O risco desta regra não é o campo, é a **segunda fonte de verdade**. O produto
+já sabia dizer se uma sessão está executando, e sabia por outro caminho:
+`findActiveExecutionSession` procura a sessão `active` que carrega o evento
+`execution.activated` (é o que faz reativar cair na sessão onde os dev agents
+já estão, achado #11 do primeiro dogfooding). As duas coexistem sob uma regra
+que as impede de brigar:
+
+- **`kind` classifica a INTENÇÃO de criação.** Uma sessão `criativa` que nunca
+  ativou execução **não** é a sessão de execução vigente, e a derivação por
+  evento continua sem olhar `kind` — se passasse a olhar, toda sessão criativa
+  aberta viraria candidata a receber os dev agents.
+- **O evento classifica o ESTADO de execução**, como sempre.
+- **`execution.activated` numa sessão `consultiva` é ERRO** (409), nunca
+  conversão silenciosa. É este ponto que decide qual das duas fontes manda:
+  deixar o evento promover o tipo seria exatamente tê-las escrevendo uma sobre
+  a outra.
+
+A trava mora no **funil** — `AppendSessionEventUseCase` —, e não no
+`ActivateExecutionUseCase`, porque os dois caminhos que gravam evento (a rota
+do usuário e a `/internal/*` do engine) passam por ele. A leitura extra da
+sessão é paga só quando o evento é o de execução. A recusa acontece **antes**
+do `incrementSeq`: uma tentativa recusada não pode consumir `seq`, ou a
+[RN-002](#rn-002) cairia.
+
+O DEFAULT da coluna é `consultiva` — o tipo que pode **menos**: linha que
+chegue por caminho que não passa pela rota (migração, SQL de manutenção) não
+ganha o direito de executar. O **backfill** da migração faz o contrário e é
+dirigido, pelo raciocínio da 0033: no instante em que ela roda, toda sessão é
+anterior à distinção, e algumas são as sessões em que os dev agents estão
+trabalhando — acordar `consultiva` faria a reativação de um projeto em
+andamento falhar sem ninguém ter decidido nada.
+
+- **Onde:** `apps/api/src/domain/sessions/session-kind.ts:50`
+  (`podeAtivarExecucao`), `apps/api/src/db/schema.ts:392` (a coluna),
+  `apps/api/src/application/use-cases/sessions/append-session-event.use-case.ts:53`
+  (a trava)
+- **Teste:** `apps/api/test/application/use-cases/sessions/session-kind-e-nome.spec.ts`
+- **Origem:** [ADR 0061](adr/0061-tipo-da-sessao-na-criacao.md)
+
+### RN-098 — O nome da sessão se soma à hashtag, nunca a substitui {#rn-098}
+
+A sessão pode receber um nome amigável (`sessions.name`, opcional), na criação
+ou depois, por `PATCH /projects/:projectId/sessions/:sessionId`. O rótulo na
+tela é **composto**: `<nome> · #<8 primeiros caracteres do id>`. Sem nome,
+degrada para a **hashtag sozinha**.
+
+A hashtag nunca sai, e o motivo é operacional: é ela que se cola numa URL, num
+comando ou numa conversa, e um nome escolhido por pessoa **não é único** — duas
+sessões chamadas "Checkout" são normais. Nome em branco (ou só espaço) conta
+como **ausência**, na criação e na renomeação: gravar `''` faria o rótulo virar
+`" · #a1b2c3d4"`, pior que a hashtag sozinha. `null` no corpo do `PATCH` é o
+caminho de **desfazer**.
+
+Renomear **não** é evento de sessão. O event log é o que a sessão viveu, e o
+nome é rótulo de navegação, trocado quantas vezes se quiser — N eventos de
+renomeação empurrariam para fora da cauda de 200 exatamente o que interessa.
+
+- **Onde:** `apps/web/src/lib/session-label.ts:50` (`rotuloDaSessao`),
+  `apps/api/src/application/ports/session-repository.port.ts:52` (`rename`)
+- **Teste:** `apps/web/src/lib/session-label.test.ts`,
+  `apps/api/test/application/use-cases/sessions/session-kind-e-nome.spec.ts`
+- **Origem:** [ADR 0061](adr/0061-tipo-da-sessao-na-criacao.md)
+
 ---
 
 ## Aprovação de ações
@@ -2630,6 +2700,67 @@ foi qual janela a consulta escolhe e o que a gaveta declara sobre ela.
 - **Origem:** pedido do usuário na primeira navegação real — "Sino e
   notificações devem sempre ordenar para última data modificada em descendente
   para a mais antiga"
+
+---
+
+### RN-096 — Toda decisão diz em português o que acontece; o payload cru nasce colapsado {#rn-096}
+
+Todo tipo de `proposed_action` tem uma **frase em português** que descreve o
+efeito de aprovar, e ela é a primeira coisa visível no card — antes de qualquer
+detalhe, nas três telas onde uma decisão é pedida (a fila de Aprovações, o card
+dentro do chat da sessão e a aba Insights). O payload cru continua acessível,
+**dentro de um colapso que nasce fechado**, e nunca é despejado na tela.
+
+**O que existia era um despejo.** Todo tipo sem corpo visual próprio caía num
+`Object.entries(payload).map(([k, v]) => k + ': ' + JSON.stringify(v))`, sempre
+aberto. Quem abria a fila lia `worktree: /workspaces/dev-api`,
+`coAuthor: Brabo User <user@brabo.dev>` e `proposto: 4` — e tinha de deduzir o
+que ia acontecer se clicasse em Aprovar. Aprovação que exige dedução é
+aprovação que se dá no automático, e o produto inteiro se apoia em o usuário
+ser a autoridade final.
+
+**A frase degrada, e é isso que a torna confiável.** Nenhuma delas assume que
+uma chave do payload existe: com payload vazio a frase continua sendo uma frase
+verdadeira, só menos específica ("Registra um commit no repositório do
+projeto."). O payload vem do engine e de dez casos de uso diferentes, e nenhum
+deles promete um formato — frase que só funciona com a fixture certa é frase
+que quebra na primeira aprovação real.
+
+**Tipo que o web ainda não conhece não é caso teórico.** A união `ActionType`
+do web já ficou defasada duas vezes: primeiro com os três tipos do bootstrap de
+Gitflow, e de novo com `parallelize`/`raise_max_parallel`, que entraram na FASE
+14d. O compilador não pega: a lista canônica está em `apps/api`, que o web não
+importa. Por isso duas coisas ao mesmo tempo — o card **degrada** (verbo neutro
++ "ver detalhes", com o payload colapsado, em vez do `undefined` no mapa de
+ícones que derrubava a árvore inteira do React), e o **teste lê o `decide.ts`
+do backend** e reprova quando um tipo entra sem frase.
+
+**O default de aberto/fechado é derivado, não configurado.** A regra é uma só —
+abre o que ainda espera decisão de quem está olhando: no chat, ação `pending`;
+na fila, nunca (são N cards, e N detalhes abertos são a mesma parede de texto);
+em Insights, hipótese `proposed`. E o payload CRU não abre em variante nenhuma.
+A consequência de projeto é que `ApprovalCard` **não ganhou prop nova
+obrigatória**: o default sai de `variant` e `status`, que já existiam.
+
+**Verbo e frase saem de um módulo só**, consumido pelas três telas. A hipótese
+do Psicólogo usa literalmente o verbo do `instruction_patch` em vez de um
+vocabulário paralelo — e a frase dela diz o que o accept faz de verdade
+(enfileira para a Anamnese, que **pode** propor o ajuste, que ainda vem para
+aprovação), nunca "a instrução será alterada".
+
+- **Onde:** `apps/web/src/lib/aprovacoes.ts` (`VERBO_DA_ACAO`, `fraseDaAcao`,
+  `descreverAcao`, `descreverHipotese`), consumido por
+  `apps/web/src/components/ApprovalCard.tsx` (Aprovações + chat da sessão) e
+  `apps/web/src/components/HypothesisCard.tsx` (Insights); colapso pelo
+  `Disclosure` de `apps/web/src/components/ui/Disclosure.tsx`
+- **Teste:** `apps/web/src/lib/aprovacoes.test.ts` (lê `ACTION_TYPES` de
+  `apps/api/src/domain/actions/decide.ts` e exige verbo + frase para cada tipo,
+  com payload vazio); `apps/web/src/components/ApprovalCard.test.tsx`
+  (`frase e colapso` — payload colapsado nas duas variantes, JSON legível ao
+  abrir, tipo desconhecido não derruba a tela);
+  `apps/web/src/components/HypothesisCard.test.tsx` (`frase e colapso`)
+- **Origem:** FASE 19 do programa 16–26, do pedido "hoje está muito difícil a
+  leitura" na primeira navegação real depois do reset do banco
 
 ---
 

@@ -9,15 +9,30 @@
  * arquivos, e que basta esquecer um para a mesma sessão aparecer com dois
  * rótulos diferentes em duas telas.
  *
- * A porta para o NOME AMIGÁVEL já está aberta aqui (`rotuloDaSessao` aceita um
- * nome opcional e degrada para a hashtag sozinha quando não há), mas o tipo
- * `Session` NÃO ganhou campo nenhum: quem preenche esse nome é a fase que
- * cria a coluna. O ponto de centralizar antes é justamente esse — quando o
- * nome chegar, muda-se a IMPLEMENTAÇÃO deste arquivo e nenhuma tela.
+ * A porta para o NOME AMIGÁVEL foi aberta aqui pela FASE 16 (`rotuloDaSessao`
+ * aceita um nome opcional e degrada para a hashtag sozinha quando não há), e a
+ * FASE 20 a atravessou: `sessions.name` existe no banco (RN-098) e chega ao
+ * `Session` do `api-types`. A aposta de centralizar antes se confirmou — a
+ * composição já estava escrita e testada aqui, e a fase do nome só teve de
+ * PASSAR o campo nas telas em que ele aparece, sem tocar na regra.
+ *
+ * O que NÃO mudou, e é o ponto da RN-098: a hashtag nunca sai. Um nome
+ * escolhido por pessoa não é único e não se cola numa URL.
  */
 
 /** Quantos caracteres do uuid entram no rótulo. */
 const CARACTERES = 8;
+
+/**
+ * Teto do nome amigável, em caracteres.
+ *
+ * Quem RECUSA é a api (`LIMITE_NOME_DA_SESSAO` no DTO): aqui o número serve
+ * para o campo parar de aceitar antes de o servidor dizer não — digitar 200
+ * caracteres e levar 400 no fim é pior que não caber. Vive num lugar só no
+ * web pelo motivo de sempre: dois `maxLength={80}` inline divergem no dia em
+ * que o teto mudar.
+ */
+export const LIMITE_DO_NOME = 80;
 
 /**
  * O prefixo cru do id, sem cerquilha.
