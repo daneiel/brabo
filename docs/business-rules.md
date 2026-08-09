@@ -150,6 +150,58 @@ renomeação empurrariam para fora da cauda de 200 exatamente o que interessa.
   `apps/api/test/application/use-cases/sessions/session-kind-e-nome.spec.ts`
 - **Origem:** [ADR 0061](adr/0061-tipo-da-sessao-na-criacao.md)
 
+### RN-104 — A aba deriva do tipo gravado, e cria naquele tipo {#rn-104}
+
+O projeto tem **duas** abas de sessão — **Criativo** e **Chat** —, e cada uma é
+um `kind`: ela lista as sessões cujo `sessions.kind` é o dela e o CTA dela cria
+naquele `kind`, **sem perguntar de novo**. Não existe terceira aba listando os
+dois juntos.
+
+O tipo já era imutável ([RN-097](#rn-097)), e é isso que o torna uma coordenada
+de navegação legítima em vez de um filtro salvo: uma sessão nunca troca de aba.
+A aba lê o campo **gravado** — não deriva o tipo de evento nenhum, pelo mesmo
+motivo da RN-097: `execution.activated` classifica ESTADO de execução, e uma
+aba que olhasse para ele mudaria de lugar sozinha.
+
+Duas consequências que a regra fixa, e que não são detalhe de tela:
+
+- **A escolha de tipo sai do formulário.** Ela existia num `fieldset` de
+  rádios, e agora aconteceu quando a pessoa clicou na aba. Manter os dois
+  ofereceria a chance de criar uma sessão que contradiz o lugar em que se está.
+  O que sobrou no formulário é o **nome**, que segue opcional
+  ([RN-098](#rn-098)).
+- **Uma ação, um lugar de cada vez.** "Iniciar ideação" continua existindo —
+  ele é o que traz o Criativo para a sessão, e a partir daí a chave do owner
+  passa a ser gasta ([RN-058](#rn-058)); ninguém entra sozinho. O que mudou é
+  onde ele mora: **dentro do convite** enquanto o convite está na tela, e na
+  topbar quando ele não está. O convite antes APONTAVA para a topbar ("use
+  Iniciar ideação, no alto da tela"), que é a versão literal do problema que
+  originou a [RN-097](#rn-097) — a ação num lugar e a explicação em outro. A
+  topbar não pode simplesmente perder o botão: dá para digitar numa sessão
+  criativa sem nunca ter chamado o Criativo, e aí o convite sai de cena.
+
+As três telas respeitam os três estados da [RN-088](#rn-088), com **erro antes
+de vazio**: a lista filtrada está vazia nos dois casos, e dizer "nenhuma
+ideação ainda" depois de um 429 seria mentir sobre o que aconteceu.
+
+A chave de deep-link do Chat continua sendo `sessions`, e não `chat`. É o que
+faz um `?tab=sessions` guardado em link antigo abrir no Chat **com a aba
+marcada na régua** — resolver a chave velha como alias só no painel deixaria a
+régua sem seleção nenhuma, porque `Tabs` compara `active` com `key` e quem
+escreve `active` recebe a chave crua do `validateSearch`.
+
+- **Onde:** `apps/web/src/routes/project-tabs.ts:95` (as duas entradas),
+  `apps/web/src/routes/ProjectSessionsTab.tsx:114` (o filtro pelo `kind`
+  gravado) e `:98` (o CTA criando no `kind` da aba),
+  `apps/web/src/routes/SessionPage.tsx:553` (`conviteVisivel`, a única pergunta
+  que a topbar e o convite compartilham)
+- **Teste:** `apps/web/src/routes/ProjectSessionsTab.test.tsx`,
+  `apps/web/src/routes/project-tabs.test.tsx`,
+  `apps/web/src/routes/SessionPage.sessao.test.tsx`
+- **Borda:** projeto sem nenhuma sessão daquele tipo mostra o vazio DO TIPO,
+  mesmo tendo sessões do outro — é informação, não erro.
+- **Origem:** [ADR 0061](adr/0061-tipo-da-sessao-na-criacao.md)
+
 ---
 
 ## Aprovação de ações

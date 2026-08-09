@@ -1,6 +1,6 @@
 import type { ComponentType } from 'react';
 import { ProjectOverviewTab } from './ProjectOverviewTab';
-import { ProjectSessionsTab } from './ProjectSessionsTab';
+import { ProjectChatTab, ProjectCriativoTab } from './ProjectSessionsTab';
 import { ProjectBacklogTab } from './ProjectBacklogTab';
 import { ProjectApprovalsTab } from './ProjectApprovalsTab';
 import { ProjectInsightsTab } from './ProjectInsightsTab';
@@ -85,11 +85,38 @@ const REGISTRO = [
     semRespiro: true,
     ordem: 10,
   },
+  // FASE 24 — o tipo da sessão vira LUGAR (RN-104). Era uma aba só, "Sessões",
+  // listando os dois tipos misturados; o tipo é imutável depois de criado
+  // (RN-097), então ele serve como coordenada de navegação e não como campo
+  // escondido num passo de criação.
+  //
+  // Criativo vem antes de Chat pelo mesmo motivo que `KIND_PRE_SELECIONADO` é
+  // `criativa`: é o caminho que produz, e o outro é o de tirar dúvidas.
   {
-    key: 'sessions',
-    label: 'Sessões',
-    component: ProjectSessionsTab,
+    key: 'criativo',
+    label: 'Criativo',
+    component: ProjectCriativoTab,
     ordem: 20,
+  },
+  {
+    // A CHAVE continua `sessions`, e o rótulo é que mudou para "Chat". É isto
+    // que faz um `?tab=sessions` guardado num link antigo abrir no Chat — com
+    // a aba MARCADA na régua, não só com o painel certo.
+    //
+    // A alternativa seria `key: 'chat'` com `sessions` resolvido como alias em
+    // `abaPorChave`. Ela abre o painel certo e deixa a régua SEM seleção
+    // nenhuma: `Tabs` compara `active` com `key`, e quem escreve `active` é o
+    // `ProjectPage`, que recebe a chave crua do `validateSearch`. Corrigir por
+    // ali exigiria normalizar em `router.tsx`/`ProjectPage.tsx` — os dois
+    // arquivos que esta onda mantém fechados, e cuja disputa é a razão de a
+    // FASE 16 ter criado este registro.
+    //
+    // Chat é a aba consultiva: uma entrada por tipo, e nenhuma terceira
+    // listando os dois de novo.
+    key: 'sessions',
+    label: 'Chat',
+    component: ProjectChatTab,
+    ordem: 25,
   },
   {
     key: 'backlog',
