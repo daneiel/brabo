@@ -4,6 +4,7 @@ import { ProjectSessionsTab } from './ProjectSessionsTab';
 import { ProjectBacklogTab } from './ProjectBacklogTab';
 import { ProjectApprovalsTab } from './ProjectApprovalsTab';
 import { ProjectInsightsTab } from './ProjectInsightsTab';
+import { ProjectSpendTab } from './ProjectSpendTab';
 import { ProjectSettingsTab } from './ProjectSettingsTab';
 
 /**
@@ -110,6 +111,15 @@ const REGISTRO = [
     component: ProjectInsightsTab,
     count: (c: ContagensDeAba) => c.hipotesesPendentes || undefined,
     ordem: 50,
+  },
+  // FASE 22 — o mesmo gasto para duas audiências (ADR 0063): o owner vê a
+  // conta do workspace, o membro vê o que ele consumiu. Antes de Configurações
+  // porque é leitura, não ajuste.
+  {
+    key: 'spend',
+    label: 'Gastos',
+    component: ProjectSpendTab,
+    ordem: 55,
   },
   {
     key: 'settings',

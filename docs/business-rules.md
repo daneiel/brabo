@@ -2133,6 +2133,51 @@ chave, nem cifrada ([ADR 0050](adr/0050-credencial-sempre-cifrada-verificacao-ex
   `apps/web/src/components/CredentialSpendSection.test.tsx`
 - **Origem:** decisão do usuário junto com a RN-058
 
+### RN-101 — O mesmo gasto, duas audiências: a fatura é do owner, o consumo é de quem gastou {#rn-101}
+
+O produto responde **duas perguntas diferentes** sobre `token_usage`, e nenhuma
+é recorte da outra.
+
+**A do owner é por CREDENCIAL.** `GET /workspaces/:id/credential-spend` continua
+como a [RN-060](#rn-060) o deixou — por provider, exigindo `owner`, respondendo
+"quanto saiu da minha chave". Junto dele, `GET /workspaces/:id/spend-report`
+(também `owner`) quebra o workspace por **modelo, projeto, ator e dia**. O owner
+vê os dois porque é a única pessoa que pode ver os dois.
+
+**A do membro é por ATOR.** `GET /projects/:id/spend/me` (papel `viewer`)
+devolve, em tokens e custo **estimado**, o que **quem chamou** consumiu naquele
+projeto, por sessão e por dia. Ela **não quebra por provider nem por
+credencial** — a chave que rodou é a do owner ([RN-058](#rn-058)), e uma fatia
+da fatura dele não é o que o membro está perguntando.
+
+O ator **não é parâmetro**: sai do usuário autenticado, e não existe onde
+escrever o id de outra pessoa. "Membro não vê linha de outro ator" é propriedade
+da assinatura do caso de uso, não uma checagem que alguém pode esquecer de
+chamar.
+
+**Agente não entra na conta do membro.** `token_usage` registra quem GASTOU, não
+quem mandou gastar; atribuir o agente a quem o iniciou seria inventar um dado
+que a tabela não tem. Gasto de agente aparece no relatório do owner, de quem é a
+chave.
+
+**A agregação nova não tem eixo de `provider`.** As cinco dimensões de
+`sumGroupedBy` são `model`, `project`, `actor`, `session` e `day` — e só. A
+ausência é o que impede a visão do membro de ganhar esse eixo por descuido: não
+há argumento a passar. Pelo mesmo motivo, dois providers servindo o mesmo nome
+de modelo caem numa linha só.
+
+- **Onde:**
+  `apps/api/src/application/use-cases/llm/get-my-spend.use-case.ts`,
+  `apps/api/src/application/use-cases/llm/get-workspace-spend-report.use-case.ts`,
+  `apps/api/src/application/ports/token-usage-repository.port.ts`,
+  `apps/api/src/interfaces/http/llm/spend.controller.ts`,
+  `apps/web/src/routes/ProjectSpendTab.tsx`
+- **Teste:** `apps/api/test/application/use-cases/llm/spend-audiencias.use-case.spec.ts`
+  (o membro não enxerga linha de outro ator, nem de agente, nem do owner; o
+  filtro é pelo par `(kind, id)`; a resposta não carrega provider);
+  `apps/web/src/routes/ProjectSpendTab.test.tsx`
+- **Origem:** [ADR 0063](adr/0063-duas-audiencias-para-o-mesmo-gasto.md) (FASE 22)
+
 ### RN-059 — Falha de turno é evento durável com origem, e o agente fala {#rn-059}
 
 Quando um turno de LLM falha, o agente grava **`agent.error`** no event log

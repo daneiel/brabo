@@ -6857,6 +6857,61 @@
         ]
       }
     },
+    "/projects/{projectId}/spend/me": {
+      "get": {
+        "description": "A audiência do MEMBRO. Só as linhas de quem chama — o ator sai do token autenticado e não há parâmetro para trocá-lo. Em tokens e custo ESTIMADO, sem quebrar por provider nem por credencial: a chave que rodou é a do owner (RN-058) e a fatura dela é dele (RN-060). Agente não entra: `token_usage` registra quem gastou, não quem mandou gastar.",
+        "operationId": "SpendController_getMySpend",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "dias",
+            "required": false,
+            "in": "query",
+            "description": "Janela deslizante. Padrão 30, máximo 180.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MySpendResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "O meu consumo neste projeto, por sessão e por dia",
+        "tags": [
+          "llm"
+        ]
+      }
+    },
     "/projects/{projectId}/stories/{storyId}/return": {
       "post": {
         "description": "A história sai da fila de propostas e o motivo vira mensagem fixada na sessão do PO — mesmo padrão da devolução de um gate ao dev. Se o PO daquela sessão não estiver mais de pé, a devolução é gravada assim mesmo: a decisão é do usuário e não depende de haver agente ouvindo.",
@@ -8258,6 +8313,61 @@
         "summary": "Tudo que os cards do dashboard desenham, numa chamada",
         "tags": [
           "workspaces"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/spend-report": {
+      "get": {
+        "description": "A audiência do OWNER. Complementa `credential-spend`, que responde a pergunta da FATURA (por provider, que é a unidade da credencial) e continua exclusiva dele pela RN-060. Aqui não há eixo de provider: quebrar por provider é quebrar por credencial. Janela deslizante em dias, e a série diária vem DENSA — dia sem gasto entra com zero, senão a sparkline mente sobre o ritmo.",
+        "operationId": "SpendController_getWorkspaceSpendReport",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "dias",
+            "required": false,
+            "in": "query",
+            "description": "Janela deslizante. Padrão 30, máximo 180.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceSpendReportResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Exige `owner` no workspace."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Quebra o gasto do workspace por modelo, projeto, ator e dia",
+        "tags": [
+          "llm"
         ]
       }
     },
@@ -11931,6 +12041,65 @@
           "dependsOn"
         ]
       },
+      "MySpendResponseDto": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "example": "9b1c2d3e-4f50-4a61-8b72-0c3d4e5f6a7b",
+            "format": "uuid"
+          },
+          "dias": {
+            "type": "number",
+            "example": 30
+          },
+          "actorId": {
+            "type": "string",
+            "example": "9b1c2d3e-4f50-4a61-8b72-0c3d4e5f6a7b",
+            "format": "uuid",
+            "description": "O ator do relatório — sempre quem chamou. Linha de outro ator não entra."
+          },
+          "totalMicros": {
+            "type": "number",
+            "example": 1250000
+          },
+          "inputTokens": {
+            "type": "number",
+            "example": 120000
+          },
+          "outputTokens": {
+            "type": "number",
+            "example": 35000
+          },
+          "chamadas": {
+            "type": "number",
+            "example": 42
+          },
+          "porSessao": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SpendLinhaResponseDto"
+            }
+          },
+          "porDia": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SpendPorDiaResponseDto"
+            }
+          }
+        },
+        "required": [
+          "projectId",
+          "dias",
+          "actorId",
+          "totalMicros",
+          "inputTokens",
+          "outputTokens",
+          "chamadas",
+          "porSessao",
+          "porDia"
+        ]
+      },
       "OkResponseDto": {
         "type": "object",
         "properties": {
@@ -14353,6 +14522,76 @@
           "reason"
         ]
       },
+      "SpendLinhaResponseDto": {
+        "type": "object",
+        "properties": {
+          "chave": {
+            "type": "string",
+            "example": "anthropic/claude-sonnet-4",
+            "description": "A chave do agrupamento: nome do modelo, id do projeto, id do ator ou id da sessão, conforme a lista em que a linha aparece."
+          },
+          "rotulo": {
+            "type": "object",
+            "example": "Loja",
+            "nullable": true,
+            "description": "Nome legível, quando existe tabela com nome (projeto). `null` quando a chave já é o rótulo."
+          },
+          "actorKind": {
+            "type": "object",
+            "example": "agent",
+            "nullable": true,
+            "description": "Só a lista `porAtor` preenche; nas outras é `null`."
+          },
+          "costMicros": {
+            "type": "number",
+            "example": 1250000
+          },
+          "inputTokens": {
+            "type": "number",
+            "example": 120000
+          },
+          "outputTokens": {
+            "type": "number",
+            "example": 35000
+          },
+          "chamadas": {
+            "type": "number",
+            "example": 42
+          }
+        },
+        "required": [
+          "chave",
+          "rotulo",
+          "actorKind",
+          "costMicros",
+          "inputTokens",
+          "outputTokens",
+          "chamadas"
+        ]
+      },
+      "SpendPorDiaResponseDto": {
+        "type": "object",
+        "properties": {
+          "dia": {
+            "type": "string",
+            "example": "2026-08-09",
+            "description": "Dia em UTC. A série é DENSA: dia sem gasto vem com zero."
+          },
+          "costMicros": {
+            "type": "number",
+            "example": 1250000
+          },
+          "chamadas": {
+            "type": "number",
+            "example": 42
+          }
+        },
+        "required": [
+          "dia",
+          "costMicros",
+          "chamadas"
+        ]
+      },
       "StoryComTarefasResponseDto": {
         "type": "object",
         "properties": {
@@ -15166,6 +15405,83 @@
           "createdBy",
           "createdAt",
           "updatedAt"
+        ]
+      },
+      "WorkspaceSpendReportResponseDto": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "example": "9b1c2d3e-4f50-4a61-8b72-0c3d4e5f6a7b",
+            "format": "uuid"
+          },
+          "ownerId": {
+            "type": "string",
+            "example": "9b1c2d3e-4f50-4a61-8b72-0c3d4e5f6a7b",
+            "format": "uuid",
+            "description": "Dono das chaves que bancaram este gasto (RN-058)."
+          },
+          "dias": {
+            "type": "number",
+            "example": 30,
+            "description": "Janela deslizante, em dias."
+          },
+          "totalMicros": {
+            "type": "number",
+            "example": 1250000
+          },
+          "inputTokens": {
+            "type": "number",
+            "example": 120000
+          },
+          "outputTokens": {
+            "type": "number",
+            "example": 35000
+          },
+          "chamadas": {
+            "type": "number",
+            "example": 42
+          },
+          "porModelo": {
+            "description": "Por MODELO. Dois providers servindo o mesmo nome caem na mesma linha — separá-los reintroduziria o eixo de credencial por outro nome.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SpendLinhaResponseDto"
+            }
+          },
+          "porProjeto": {
+            "description": "Por PROJETO dentro do workspace.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SpendLinhaResponseDto"
+            }
+          },
+          "porAtor": {
+            "description": "Por ATOR — agente e pessoa na mesma lista, distintos por `actorKind`.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SpendLinhaResponseDto"
+            }
+          },
+          "porDia": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SpendPorDiaResponseDto"
+            }
+          }
+        },
+        "required": [
+          "workspaceId",
+          "ownerId",
+          "dias",
+          "totalMicros",
+          "inputTokens",
+          "outputTokens",
+          "chamadas",
+          "porModelo",
+          "porProjeto",
+          "porAtor",
+          "porDia"
         ]
       },
       "WorkspaceSummaryResponseDto": {

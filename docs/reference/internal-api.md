@@ -118,6 +118,23 @@ conversacionais — que usam apenas o streamado — falhavam a 15s com
 `%Req.TransportError{reason: :timeout}`, classificado como origem `infra`. Com
 modelo local o turno cabia nos 15s e o defeito não aparecia.
 
+#### Os relatórios de gasto NÃO passam por aqui
+
+O metering é escrito **neste** caminho: cada `/llm-turn` grava uma linha em
+`token_usage` antes de a resposta voltar ao engine. A LEITURA desse dado — a
+fatura do owner (`/workspaces/:id/credential-spend` e
+`/workspaces/:id/spend-report`) e o consumo do membro
+(`/projects/:id/spend/me`) — é superfície **externa**, autenticada por JWT e
+classificada em [security-surface.md](../security-surface.md).
+
+Não é detalhe de organização: essas três rotas ramificam por **papel de
+pessoa** — `owner` para a fatura, `viewer` para o próprio consumo
+([RN-101](../business-rules.md#rn-101)). O `X-Brabo-Service-Token` não carrega
+pessoa nenhuma, então uma contraparte interna teria de escolher entre não
+distinguir as audiências ou receber o id do ator como parâmetro — que é
+exatamente o que o [ADR 0063](../adr/0063-duas-audiencias-para-o-mesmo-gasto.md)
+recusa. O engine escreve o gasto; quem o lê é gente.
+
 ### Ciclo de vida da sessão
 
 | método | caminho |

@@ -6,17 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
-- **web**: Atividades pagina o passado por cursor, sem repolar o que não muda
-  (RN-099) — a coluna abre numa janela de 100 eventos ancorada na cauda e
-  desce de página em página com o `afterSeq` que a rota já devolvia; o custo
-  por ciclo de poll continua sendo uma requisição
-
-### Correções
-
-- **api,web**: o sino ordena do mais recente para o mais antigo (RN-100) — a
-  ordenação é do SQL porque o teto de 50 por projeto decide QUAIS eventos
-  sobrevivem, e a gaveta passa a declarar quantos não lidos ficaram fora da
-  janela em vez de engoli-los no "marcar lidas"
+- **api,web**: aba de Gastos com duas audiências — o owner vê a quebra do workspace por modelo, projeto, ator e dia (mais a fatura por credencial, que já existia); o membro vê só o próprio consumo, por sessão e por dia, sem provider e sem credencial (ADR 0063, RN-101)
 
 ## v2.5.1 — 2026-08-08
 
