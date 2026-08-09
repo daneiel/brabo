@@ -92,6 +92,17 @@
      histórico de versões inventou cor de texto no lugar. */
   --diff-add: #0e2e24;
   --diff-del: #331a16;
+  /* Realce de sintaxe da aba Code (FASE 26). Keyword/string/número/tipo
+     REUSAM tokens semânticos que já existem (accent/warning/violet/success) —
+     só função, comentário e operador precisavam de valor próprio, porque
+     nenhum token existente cobria aquele tom sem colidir com outro papel.
+     Os três são calibrados para 4,5:1 contra --code-bg NOS DOIS temas (medido
+     em apps/web/src/lib/contraste.test.ts) — os quatro reusados só têm essa
+     garantia no tema escuro, o mesmo status que --violet já tinha antes desta
+     fase. */
+  --syntax-function: #5ebeb1;
+  --syntax-comment: #7f9aa4;
+  --syntax-operator: #8fb0ba;
   /* Os dois valores do handoff, literais. O `--shadow` estava mais raso
      (8px/24px a .35) que a sombra padrão especificada, e a sombra grande do
      login não existia em lugar nenhum — cada tela que precisasse dela ia
@@ -144,6 +155,12 @@
   /* Mesma função no tema claro (o par do spec é calibrado pro escuro). */
   --diff-add: #d6ead9;
   --diff-del: #f4d9d2;
+  /* Mesma função no tema claro — valor próprio, e não um `color-mix` do
+     escuro: --code-bg vira claro neste tema, e um teal/azul calibrado pro
+     fundo quase preto do escuro reprova 4,5:1 aqui (medido). */
+  --syntax-function: #186158;
+  --syntax-comment: #4a6873;
+  --syntax-operator: #456570;
   --shadow:
     0 1px 2px rgba(10, 46, 61, 0.08),
     0 12px 32px rgba(10, 46, 61, 0.12);

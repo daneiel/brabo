@@ -1,0 +1,172 @@
+.editor {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--code-bg);
+}
+
+.abas {
+  flex-shrink: 0;
+  height: 36px;
+  display: flex;
+  align-items: stretch;
+  background: var(--surface-1);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+}
+
+.aba {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  border-right: 1px solid var(--border);
+  border-top: 2px solid transparent;
+  background: var(--surface-1);
+  color: var(--text-secondary);
+}
+
+.abaAtiva {
+  background: var(--code-bg);
+  border-top-color: var(--accent);
+  color: var(--text-primary);
+}
+
+.abaBotao {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px 0 12px;
+  height: 100%;
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.abaNome {
+  font-family: var(--font-mono);
+}
+
+.abaFechar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* 24px é o piso de alvo de toque da WCAG 2.2 AA (2.5.8) — a mesma régua
+     que scripts/dev/validacao-visual.js aplica no navegador. Era 22px. */
+  width: 24px;
+  height: 24px;
+  margin-right: 6px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.abaFechar:hover {
+  background: var(--surface-2);
+  color: var(--text-primary);
+}
+
+.breadcrumb {
+  flex-shrink: 0;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  gap: 2px;
+  background: var(--surface-1);
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.breadcrumbSegmento {
+  display: inline-flex;
+  align-items: center;
+}
+
+.breadcrumbSep {
+  margin: 0 4px;
+  color: var(--text-muted);
+}
+
+.conteudo {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.vazio {
+  padding: 24px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.carregando {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.erro {
+  padding: 16px;
+  color: var(--danger);
+  font-size: 13px;
+}
+
+.aviso {
+  padding: 8px 14px;
+  background: color-mix(in srgb, var(--warning) 12%, transparent);
+  border-bottom: 1px solid var(--border);
+  color: var(--warning);
+  font-size: 11.5px;
+}
+
+.pre {
+  margin: 0;
+  padding: 8px 0 24px;
+}
+
+.linhaCodigo {
+  display: flex;
+  min-width: 100%;
+  width: max-content;
+  height: 21px;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  white-space: pre;
+}
+
+.gutter {
+  flex-shrink: 0;
+  width: 52px;
+  padding-right: 14px;
+  text-align: right;
+  color: var(--text-muted);
+  user-select: none;
+}
+
+.linhaTexto {
+  padding-right: 24px;
+}
+
+/* Tokens de sintaxe — ver `--syntax-*` em design/tokens.css. Keyword,
+   string, número e tipo REUSAM tokens semânticos que já existem; só função,
+   comentário e operador nasceram nesta fase. */
+.tkKeyword { color: var(--accent); }
+.tkFunction { color: var(--syntax-function); }
+.tkString { color: var(--warning); }
+.tkNumber { color: var(--violet); }
+.tkComment { color: var(--syntax-comment); }
+.tkType { color: var(--success); }
+.tkOperator { color: var(--syntax-operator); }
+.tkText { color: var(--text-primary); }

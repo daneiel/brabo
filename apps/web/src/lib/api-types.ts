@@ -956,3 +956,109 @@ export interface RegistroDeGates {
   version: number;
   gates: GateResumo[];
 }
+
+// --- Container do projeto (FASE 25a) — espelha
+// apps/api/src/domain/containers/project-container.ts +
+// interfaces/http/containers/dto/containers.response.dto.ts ---
+
+export type PosturaDeRede = 'none' | 'egress';
+
+export interface RecursosDoContainer {
+  cpus: number;
+  memoryMb: number;
+  pidsLimit: number;
+}
+
+export interface DecisaoDeImagem {
+  image: string;
+  rationale: string;
+  network: PosturaDeRede;
+  resources: RecursosDoContainer;
+}
+
+/**
+ * `sem_decisao` é o portão da RN-105: enquanto o Arquiteto não decide a
+ * imagem, o container do projeto não sobe e a aba Code não libera.
+ */
+export interface EstadoDoContainer {
+  status: 'sem_decisao' | 'decidido';
+  decisao: DecisaoDeImagem | null;
+  version: number;
+  eventId: string | null;
+  decidedAt: string | null;
+}
+
+// --- Aba Code, só leitura (FASE 26) — espelha
+// apps/api/src/application/use-cases/git/read-project-code.use-case.ts +
+// interfaces/http/git/dto/code.response.dto.ts ---
+
+export interface CodeTreeEntry {
+  path: string;
+  name: string;
+  type: 'file' | 'dir';
+  /** `null` para diretório e quando o provider não informa. */
+  size: number | null;
+}
+
+export interface CodeTree {
+  ref: string;
+  /** Diretório listado; `''` é a raiz. */
+  path: string;
+  entries: CodeTreeEntry[];
+  /** A listagem foi cortada no teto de entradas por nível. */
+  truncated: boolean;
+}
+
+export interface CodeFile {
+  ref: string;
+  path: string;
+  /** UTF-8. Binário não é servido por esta rota. */
+  content: string;
+  /** O arquivo passou do teto de bytes e `content` é o começo dele. */
+  truncated: boolean;
+  /** Bytes DEVOLVIDOS, não os do arquivo — o corte já aconteceu. */
+  bytes: number;
+}
+
+export interface CodeSearchMatch {
+  path: string;
+  /** 1-based, como todo editor mostra. */
+  line: number;
+  text: string;
+}
+
+export interface CodeSearchResult {
+  ref: string;
+  path: string;
+  query: string;
+  matches: CodeSearchMatch[];
+  /** Arquivos efetivamente abertos — o custo real da busca. */
+  filesScanned: number;
+  /** A varredura parou por orçamento antes de acabar a árvore. */
+  truncated: boolean;
+}
+
+export type CodeDiffFileStatus = 'added' | 'modified' | 'removed' | 'renamed';
+
+export interface CodeDiffFile {
+  /** Caminho DEPOIS da mudança (para `removed`, o que sumiu). */
+  path: string;
+  /** Só preenchido quando `status` é `renamed`. */
+  previousPath: string | null;
+  status: CodeDiffFileStatus;
+  additions: number;
+  deletions: number;
+  /**
+   * `null` quando o provider não entrega o texto (binário, ou patch grande
+   * demais) — distinto de `''`, que é "veio vazio". A tela nunca trata os
+   * dois como a mesma coisa.
+   */
+  patch: string | null;
+}
+
+export interface CodeDiff {
+  pullRequestId: string;
+  files: CodeDiffFile[];
+  /** A lista foi cortada no teto de arquivos por diff. */
+  truncated: boolean;
+}

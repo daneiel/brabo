@@ -3272,6 +3272,33 @@ que agora está garantido por `deny`, não só combinado por convenção.
   regras coexistem, cada uma vetando por um motivo diferente.
 - **Origem:** [ADR 0065](adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md)
 
+### RN-107 — A aba Code tem um QUARTO estado: bloqueada por decisão pendente {#rn-107}
+
+Os três estados da [RN-088](#rn-088) (carregando/erro/vazio) não descrevem
+`sem_decisao` ([RN-105](#rn-105)): não é carregando (a api já respondeu), não é
+erro (ela respondeu CERTO) e não é vazio (não falta dado — falta uma DECISÃO,
+que é outra coisa). Tratar `sem_decisao` como "vazio" mostraria um editor sem
+arquivos, convidando a pensar que o repositório está vazio; tratar como "erro"
+faria a tela sugerir "tentar de novo" para algo que só o Arquiteto resolve.
+
+A aba pergunta o estado do container ANTES de tentar ler código
+(`GET /projects/:id/container`), em vez de esperar a primeira árvore ou
+arquivo devolver 409 — a mesma checagem que a api já faz no funil de
+`ReadProjectCodeUseCase` (RN-105), só que perguntada primeiro, para o quarto
+estado nascer como mensagem própria e não como o rodapé de um erro genérico.
+Enquanto bloqueada, a tela reconsulta sozinha a cada 15s — depois de decidida
+a imagem não muda sem ação humana nova, e ficar reconsultando um estado
+estável seria a mesma família de tráfego desnecessário da PÓS-FASE 15.
+
+- **Onde:** `apps/web/src/routes/ProjectCodeTab.tsx`,
+  `apps/web/src/routes/ProjectCodeTab.module.css`
+- **Teste:** `apps/web/src/routes/ProjectCodeTab.test.tsx` ("o gate")
+- **Borda:** a checagem no front NÃO substitui a da api — é conveniência de
+  UX. Se a api mudar de estado entre a consulta do gate e a leitura de
+  verdade, a rota de leitura ainda recusa com 409 (RN-105); o front só evita
+  o caso comum de mostrar o editor vazio por um instante.
+- **Origem:** [ADR 0065](adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md)
+
 ---
 
 ## Quando dá errado

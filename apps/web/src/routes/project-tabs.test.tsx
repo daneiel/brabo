@@ -51,6 +51,9 @@ vi.mock('./ProjectSessionsTab', () => ({
   ProjectCriativoTab: () => <div>painel de criativo</div>,
   ProjectChatTab: () => <div>painel de sessions</div>,
 }));
+vi.mock('./ProjectCodeTab', () => ({
+  ProjectCodeTab: () => <div>painel de code</div>,
+}));
 vi.mock('./ProjectApprovalsTab', () => ({
   ProjectApprovalsTab: () => <div>painel de approvals</div>,
 }));
@@ -151,12 +154,15 @@ describe('abas do projeto derivam de um registro só', () => {
   });
 
   it('chave desconhecida NÃO é aceita e cai na aba padrão', () => {
-    // O caso de falha do deep-link: `?tab=code` de uma fase futura, ou um
-    // link velho. Nada de tela em branco — volta para a Visão geral.
-    expect(ehChaveDeAba('code')).toBe(false);
+    // O caso de falha do deep-link: uma chave que nunca existiu, ou um link
+    // velho de uma aba que saiu do registro. Nada de tela em branco — volta
+    // para a Visão geral. `code` era o exemplo aqui até a FASE 26 criar a
+    // aba de verdade; agora ela é testada como as demais, no `it.each` lá em
+    // cima.
+    expect(ehChaveDeAba('nao-existe')).toBe(false);
     expect(ehChaveDeAba(undefined)).toBe(false);
     expect(ehChaveDeAba(42)).toBe(false);
-    expect(abaPorChave('code').key).toBe('overview');
+    expect(abaPorChave('nao-existe').key).toBe('overview');
     expect(abaPorChave(undefined).key).toBe('overview');
   });
 

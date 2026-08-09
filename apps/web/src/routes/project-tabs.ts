@@ -1,6 +1,7 @@
 import type { ComponentType } from 'react';
 import { ProjectOverviewTab } from './ProjectOverviewTab';
 import { ProjectChatTab, ProjectCriativoTab } from './ProjectSessionsTab';
+import { ProjectCodeTab } from './ProjectCodeTab';
 import { ProjectBacklogTab } from './ProjectBacklogTab';
 import { ProjectApprovalsTab } from './ProjectApprovalsTab';
 import { ProjectInsightsTab } from './ProjectInsightsTab';
@@ -117,6 +118,17 @@ const REGISTRO = [
     label: 'Chat',
     component: ProjectChatTab,
     ordem: 25,
+  },
+  // FASE 26 — a aba Code, só leitura. Fica logo depois do Chat, antes do
+  // Backlog: é onde o código que os agentes escreveram vira leitura navegável,
+  // e o "quarto estado" (RN-107, bloqueado por decisão pendente do Arquiteto)
+  // mora dentro do próprio painel — não no registro.
+  {
+    key: 'code',
+    label: 'Code',
+    component: ProjectCodeTab,
+    semRespiro: true,
+    ordem: 27,
   },
   {
     key: 'backlog',
