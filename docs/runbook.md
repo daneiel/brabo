@@ -260,7 +260,15 @@ escopo. O smoke avisa quando o cluster não faz enforcement.
    emissão do access token e os cookies de sessão.
 4. `workspace → projeto → sessão`. Este passo atravessa as NetworkPolicies
    inteiras: criar sessão faz a api chamar o engine por HTTP interno, com o
-   service token.
+   service token. A sessão é criada com `kind: consultiva` — obrigatório desde
+   a FASE 20 ([RN-097](business-rules.md#rn-097)) — e é `consultiva` de
+   propósito: o smoke exercita criar → ativar → encerrar e nunca ativa
+   execução, que numa consultiva responde `409`.
+
+   **É este passo que prova que a rota tem consumidor fora do web.** Quando o
+   `kind` nasceu obrigatório, a suite da api passou com 1562 testes e foi o
+   smoke que reprovou, porque é o único que chama a rota como cliente externo,
+   sem mock e contra a imagem de produção.
 5. Probes distintas (`/live` e `/ready` do engine, `/live` da api) e o
    `/config.js` do web apontando para as URLs do cluster.
 6. `oban_queue_depth` com os rótulos `queue` e `state` em `/metrics`.
