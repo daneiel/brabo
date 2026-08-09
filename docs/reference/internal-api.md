@@ -92,6 +92,15 @@ Agrupadas pelo que fazem:
 O engine nunca escreve na tabela de eventos direto — ele **pede** à api, que é
 quem controla a `seq` e a atomicidade com o outbox.
 
+E é por isso que a trava do tipo de sessão mora no caso de uso do append, e não
+no `ActivateExecutionUseCase`: `POST /events` daqui e a rota do usuário caem no
+mesmo funil. Desde a FASE 20, `execution.activated` numa sessão `consultiva`
+responde **409** por este caminho também — o tipo é intenção de criação e o
+evento não o promove ([RN-097](../business-rules.md#rn-097)). Nenhuma outra
+mudança de contrato: os demais tipos de evento seguem idênticos, e a recusa
+acontece **antes** do `incrementSeq`, então tentativa recusada não abre buraco
+na `seq`.
+
 ### LLM
 
 | método | caminho |
