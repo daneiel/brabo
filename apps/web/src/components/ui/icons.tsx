@@ -202,6 +202,13 @@ export const UserIcon = (props: IconProps) =>
 export const CodeIcon = (props: IconProps) =>
   base(['M9 8 4 12l5 4', 'M15 8l5 4-5 4'], props);
 
+/** Explorador de arquivos da aba Code (FASE 26). */
+export const FolderIcon = (props: IconProps) =>
+  base(['M3 6h6l2 2h10v11H3z'], props);
+
+export const FileIcon = (props: IconProps) =>
+  base(['M6 2h9l5 5v15H6z', 'M15 2v5h5'], props);
+
 export const ServerIcon = (props: IconProps) =>
   base(['M4 4h16v6H4z', 'M4 14h16v6H4z', 'M7 7h.01M7 17h.01'], props);
 

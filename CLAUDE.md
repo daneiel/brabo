@@ -373,7 +373,7 @@ são PRÉ-ALOCADOS antes de a onda começar: duas fases paralelas escrevendo
 `RN-094` fazem uma renumerar no merge, e RN renumerada quebra os links
 `#rn-0xx` que o `pnpm docs:check` reprova.
 
-### FASE 16 — Fundações (destravar o paralelismo)
+### FASE 16 — CONCLUÍDA: fundações (destravar o paralelismo)
 Nenhum dos onze pedidos entrega aqui. A fase existe porque três deles tocam
 os MESMOS quatro pontos de `router.tsx`/`ProjectPage.tsx`, e outros três
 esbarram na falta de peça comum. Sem ela, as ondas colapsam para execução
@@ -394,7 +394,7 @@ serial.
 5. `CLAUDE.md` entra na definição de pronto (ver a seção de Documentação), com
    regra `warn` no docmap — hoje ele tem ZERO cobertura.
 
-### FASE 17 — As 8 telas conforme o handoff
+### FASE 17 — CONCLUÍDA: as 8 telas conforme o handoff
 Fidelidade visual ANTES do comportamento, para não refazer trabalho. Nenhuma
 regra de negócio muda: se uma tela precisar de dado que não existe, isso vira
 pendência declarada, não feature de carona.
@@ -406,14 +406,14 @@ pendência declarada, não feature de carona.
    tocadas. O `.dc.html` é referência, NÃO código para copiar — o próprio
    README do handoff diz isso.
 
-### FASE 18 — A área existe no banco (defeito, corrigido antes)
+### FASE 18 — CONCLUÍDA: a área existe no banco (defeito, corrigido antes)
 10. `AgentAreaRepository.upsert` não tem NENHUM chamador, então quatro casos
     de uso operam sobre tabela vazia. Provisionar na criação do projeto +
     backfill, com teste que prova que projeto recém-criado TEM áreas — é a
     mesma falha da FASE 14d: testar a peça não é testar o caminho até ela.
 11. Colapsar as TRÊS cópias da lista de áreas (api, web, engine) em uma fonte.
 
-### FASE 19 — Aprovação que se lê
+### FASE 19 — CONCLUÍDA: aprovação que se lê
 12. Matar o fallback genérico do `ApprovalCard`, que despeja
     `chave: JSON.stringify(valor)` — a causa provável do "difícil de ler".
     Todo tipo ganha FRASE em pt-BR; tipo sem frase mostra verbo + "ver
@@ -424,7 +424,7 @@ pendência declarada, não feature de carona.
     `ApprovalCard`. É isso que mantém `SessionPage.tsx` intocado e tira a
     aresta com a FASE 20.
 
-### FASE 20 — A sessão ganha identidade
+### FASE 20 — CONCLUÍDA: a sessão ganha identidade
 15. `sessions` ganha `kind` e `name` na MESMA migration — duas migrations
     sobre a mesma tabela colidem no journal e nos snapshots.
 16. Reconciliar com a derivação por evento: `kind` classifica a INTENÇÃO de
@@ -550,15 +550,34 @@ e RN-106).
     verbo não converge. O fechamento de Z e AD em si depende de 25b (a
     parede física), que ainda não subiu.
 
-### FASE 26 — Code, só leitura
-33. `GitProviderContract` não tem `listTree` nem diff de PR. Entram como
-    capability, declarada SÓ quando provada pela suite, e método de contrato
-    sem chamador reprova o CI.
-34. Superfície de leitura contida pela checagem CENTRALIZADA da RN-092, não
-    por validação nova em cada rota. Buscar em repositório grande GASTA: teto
-    e cache, senão a aba vira amplificador de tráfego.
-35. A UI conforme `Brabo Code.dc.html`. Destaque de sintaxe é dependência
-    nova — não instalar sem justificar. Terminal INTERATIVO só depois da 25.
+### FASE 26 — CONCLUÍDA: Code, só leitura
+33. CONCLUÍDO (26a): `GitProviderContract` ganhou `listTree` e diff de PR
+    (11ª/12ª operação), capability declarada SÓ quando provada pela suite.
+34. CONCLUÍDO (26b): as quatro rotas de `code.controller.ts` — árvore,
+    arquivo, busca e diff — atrás da checagem CENTRALIZADA da RN-092/095, com
+    teto e cache na busca (que é COMPOSTA, não operação do contrato).
+35. CONCLUÍDO: a tela (`ProjectCodeTab`/`code/*`), registrada em
+    `project-tabs.ts` sem tocar `router.tsx`/`ProjectPage.tsx`. Rail
+    (Explorador/Buscar — os únicos com dado real), explorador carregado por
+    DIRETÓRIO, abas de editor com breadcrumb, busca real com
+    `filesScanned`/`truncated`, diff de PR por id conhecido (com
+    `patch: null` tratado como "sem texto", nunca "sem mudança"). Realce de
+    sintaxe é tokenizer PRÓPRIO por regex (`code/highlight.ts`) — ZERO
+    dependência nova, contra os 15-90 KB de Prism/highlight.js/Shiki para o
+    que a aba precisa; três tokens novos de cor (`--syntax-function/
+    -comment/-operator`) calibrados a 4,5:1 contra `--code-bg` nos DOIS
+    temas. O quarto estado da RN-088 — bloqueada por decisão pendente do
+    Arquiteto (RN-105) — virou RN-107, perguntado ANTES de tentar ler
+    código, com reconsulta própria a cada 15s enquanto bloqueada.
+
+    Pendências DECLARADAS, sem dado real por trás: terminal interativo
+    (FASE 25b, que segue cortada — estado vazio honesto na aba), blame,
+    dropdown rico de branches (`ahead`/`behind`, badge de PR — vira campo de
+    texto simples), lista de PRs dentro da aba (o diff só é alcançável por id
+    conhecido, vindo de Aprovações) e painel de Problemas/lint/testes.
+    Virtualização de linha também ficou de fora — o próprio handoff chama a
+    aba de código "a mais custosa do programa"; o teto de 512 KB por arquivo
+    (`GIT_BLOB_MAX_BYTES`) limita o pior caso por ora.
 
 **Congelamento do programa:** cada fase declara o que não faz, e o mais duro é
 o da 26 — SÓ LEITURA de código, nenhum salvamento pela aba. A edição é fase

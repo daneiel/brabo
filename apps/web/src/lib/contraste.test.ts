@@ -68,6 +68,60 @@ describe('contraste dos tokens (dark, o modo primário)', () => {
 });
 
 /**
+ * A paleta de sintaxe da aba Code (FASE 26, item 35), testada contra
+ * `--code-bg` — onde ela SEMPRE aparece.
+ *
+ * Keyword/string/número/tipo REUSAM tokens semânticos que já existem
+ * (accent/warning/violet/success) e por isso herdam a mesma garantia que o
+ * resto deste arquivo já dá a eles: só o tema ESCURO, o primário. Medir o
+ * claro aqui reprovaria por uma dívida que não é desta fase (--accent,
+ * --warning e --success contra --code-bg claro já ficam abaixo de 4,5:1 hoje,
+ * fora do escopo do que esta PR calibrou).
+ *
+ * `--syntax-function`, `--syntax-comment` e `--syntax-operator` são os TRÊS
+ * tokens que nasceram nesta fase — não existiam antes, e por isso não
+ * carregam dívida herdada. Nasceram calibrados para os DOIS temas, e são os
+ * únicos medidos nos dois abaixo.
+ */
+describe('contraste — paleta de sintaxe da aba Code sobre --code-bg (tema escuro)', () => {
+  const TOKENS_DE_SINTAXE = [
+    '--accent', // keyword
+    '--warning', // string
+    '--violet', // número/decorator
+    '--success', // tipo/classe
+    '--syntax-function',
+    '--syntax-comment',
+    '--syntax-operator',
+    '--text-primary', // texto plano do código
+  ];
+
+  for (const nome of TOKENS_DE_SINTAXE) {
+    it(`${nome} sobre --code-bg atinge 4,5:1`, () => {
+      const razao = razaoDeContraste(
+        resolverToken(nome, dark)!,
+        resolverToken('--code-bg', dark)!,
+      );
+      expect(Number(razao.toFixed(2))).toBeGreaterThanOrEqual(AA_TEXTO_NORMAL);
+    });
+  }
+});
+
+describe('contraste — os TRÊS tokens novos de sintaxe, também no tema claro', () => {
+  const TOKENS_NOVOS = ['--syntax-function', '--syntax-comment', '--syntax-operator'];
+
+  for (const nome of TOKENS_NOVOS) {
+    it(`${nome} sobre --code-bg atinge 4,5:1 no claro`, () => {
+      const claroCompleto = { ...dark, ...claro };
+      const razao = razaoDeContraste(
+        resolverToken(nome, claroCompleto)!,
+        resolverToken('--code-bg', claroCompleto)!,
+      );
+      expect(Number(razao.toFixed(2))).toBeGreaterThanOrEqual(AA_TEXTO_NORMAL);
+    });
+  }
+});
+
+/**
  * A dívida de contraste, MEDIDA e registrada.
  *
  * Estes pares estão em uso e NÃO atingem 4,5:1 para texto normal. Não os

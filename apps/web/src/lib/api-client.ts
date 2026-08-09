@@ -20,8 +20,13 @@ import type {
   AgentInstructionVersion,
   Budget,
   BudgetPolicy,
+  CodeDiff,
+  CodeFile,
+  CodeSearchResult,
+  CodeTree,
   CoverageReport,
   Epic,
+  EstadoDoContainer,
   ExecutionActivation,
   Handoff,
   Model,
@@ -361,6 +366,38 @@ export const registerGitCredential = (input: {
   provider: 'github' | 'gitlab';
   token: string;
 }) => post<UserCredentialMetadata>('/users/me/git-credentials', input);
+
+// --- Container do projeto (FASE 25a) ---
+
+export const getContainerState = (projectId: string) =>
+  get<EstadoDoContainer>(`/projects/${projectId}/container`);
+
+// --- Aba Code, só leitura (FASE 26) ---
+//
+// As quatro rotas de `apps/api/src/interfaces/http/git/code.controller.ts`.
+// `role:viewer`, 400 quando o caminho sai do escopo do projeto (RN-095), 409
+// enquanto o container não tem imagem decidida (RN-105), 501 quando o
+// provider não declara a capability.
+
+export const getCodeTree = (
+  projectId: string,
+  opts: { ref?: string; path?: string } = {},
+) => get<CodeTree>(`/projects/${projectId}/code/tree${qs(opts)}`);
+
+export const getCodeFile = (
+  projectId: string,
+  opts: { path: string; ref?: string },
+) => get<CodeFile>(`/projects/${projectId}/code/file${qs(opts)}`);
+
+export const searchCode = (
+  projectId: string,
+  opts: { q: string; ref?: string; path?: string },
+) => get<CodeSearchResult>(`/projects/${projectId}/code/search${qs(opts)}`);
+
+export const getCodeDiff = (projectId: string, pullRequestId: string) =>
+  get<CodeDiff>(
+    `/projects/${projectId}/code/pull-requests/${pullRequestId}/diff`,
+  );
 
 // --- Sessions ---
 

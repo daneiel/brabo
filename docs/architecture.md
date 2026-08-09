@@ -184,6 +184,18 @@ Duas validações de UI são automáticas: contraste (`lib/contraste.ts`, teste
 sobre `design/tokens.css`) e layout (`scripts/dev/validacao-visual.js`, rodado
 no navegador). Estão explicadas em `design/README.md`.
 
+**A aba Code (FASE 26) é o mesmo padrão de leitura**, aplicado a código em vez
+de evento: `getContainerState`/`getCodeTree`/`getCodeFile`/`searchCode`/
+`getCodeDiff` em `lib/api-client.ts` espelham as cinco rotas de leitura da api
+(`container` + as quatro de `code.controller.ts`), com os tipos em
+`lib/api-types.ts` (`EstadoDoContainer`, `CodeTree`, `CodeFile`,
+`CodeSearchResult`, `CodeDiff`) copiados dos DTOs — a mesma convenção do
+resto do arquivo, sem importar `apps/api`. `routes/code/highlight.ts` é um
+tokenizer por regex PRÓPRIO para o realce de sintaxe, zero dependência nova.
+O gate de `ProjectCodeTab.tsx` (RN-107) pergunta o estado do container ANTES
+de tentar ler código, para nascer como mensagem própria e não como o rodapé
+de um 409.
+
 ### Fora das aplicações
 
 | diretório | o que é |
