@@ -203,7 +203,7 @@ export function SessionPage({
   // fim do turno. A persistência (agent.response + artefatos) chega pelo poll.
   useEffect(() => {
     if (session?.status !== 'active') return;
-    const disconnect = connectSessionHeartbeat(sessionId, {
+    const disconnect = connectSessionHeartbeat(projectId, sessionId, {
       onAgentDelta: (text, agent) => {
         streamingRef.current = true;
         setStreaming(true);

@@ -142,7 +142,7 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
   // o refetch do polling — mesmo princípio de SessionPage.tsx.
   useEffect(() => {
     if (!sessionId || latestSession?.status !== 'active') return;
-    const disconnect = connectSessionHeartbeat(sessionId, {
+    const disconnect = connectSessionHeartbeat(projectId, sessionId, {
       onEvent: () => {
         queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
         // O backlog também: tasks bloqueadas vêm dele, não do event log —

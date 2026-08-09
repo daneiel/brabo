@@ -900,6 +900,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/sessions-controller-issue-socket-ticket",
+          label: "Emite um ticket opaco de uso único para o socket da sessão",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/sessions-controller-transition",
           label: "Move a sessão para outro estado",
           className: "api-method post",

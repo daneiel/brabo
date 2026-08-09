@@ -58,6 +58,17 @@ defmodule Engine.Sessions.SessionServer do
     GenServer.call(via(session_id), :heartbeat)
   end
 
+  @doc """
+  `project_id` da sessão — chamado por `SessionChannel.join/3` (RN-108) pra
+  conferir que o ticket do socket é do MESMO projeto da sessão pedida no
+  tópico, sem o que um ticket do projeto A abriria canal de sessão do
+  projeto B. Assume que o chamador já confirmou o pid via `whereis/1`
+  (mesma suposição de `heartbeat/1`).
+  """
+  def project_id(session_id) do
+    GenServer.call(via(session_id), :project_id)
+  end
+
   @impl true
   def init({session_id, project_id}), do: init({session_id, project_id, nil})
 
@@ -77,6 +88,11 @@ defmodule Engine.Sessions.SessionServer do
   def handle_call(:heartbeat, _from, state) do
     Process.cancel_timer(state.heartbeat_ref)
     {:reply, :ok, %{state | heartbeat_ref: schedule_heartbeat_timeout()}}
+  end
+
+  @impl true
+  def handle_call(:project_id, _from, state) do
+    {:reply, state.project_id, state}
   end
 
   @impl true

@@ -660,6 +660,11 @@ seguinte, e quando vier, escrita é efeito externo: nasce `proposed_action`.
   tabela `agent_areas` é o ESTADO por projeto, e nasce com ele (RN-094).
 - Merge em branch protegida (dev/qa/main) é SEMPRE manual do
   usuário — sem opção de automatizar, garantido por teste.
+- Socket Phoenix da sessão (`session:<id>`) exige ticket opaco de uso
+  único (TTL de 30s, `POST .../sessions/:sessionId/socket-ticket`) em
+  `connect/3` — NÃO o JWT reaproveitado. O engine consome o ticket lendo
+  `session_socket_tickets` direto (mesmo padrão de `outbox_events`);
+  reconexão, inclusive automática, sempre busca ticket novo (RN-108).
 - O produto NUNCA sobrescreve configuração de repositório do usuário
   (proteções, branches) sem plano aprovado explicitamente (regra da
   FASE 12, origem no ADR 0028).
