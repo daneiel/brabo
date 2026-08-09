@@ -579,7 +579,9 @@ Cada limiar dispara **uma vez**; o último notificado fica persistido em
 
 ### RN-020 — O modelo é resolvido em cascata, do mais específico ao mais geral {#rn-020}
 
-`sessão > agente > projeto > workspace`. O primeiro que existir vence.
+`sessão > agente > área > projeto > workspace`. O primeiro que existir vence.
+`área` entrou na FASE 23 — ver [RN-102](#rn-102) para a posição dela e o que
+muda em quem já lia esta cascata.
 
 - **Onde:** `apps/api/src/domain/llm/binding-resolver.ts`
 - **Teste:** `test/domain/llm/binding-resolver.spec.ts`
@@ -2299,6 +2301,93 @@ de modelo caem numa linha só.
   filtro é pelo par `(kind, id)`; a resposta não carrega provider);
   `apps/web/src/routes/ProjectSpendTab.test.tsx`
 - **Origem:** [ADR 0063](adr/0063-duas-audiencias-para-o-mesmo-gasto.md) (FASE 22)
+
+### RN-102 — O modelo da área é padrão herdável; divergir é decisão do agente, e voltar a herdar apaga a decisão {#rn-102}
+
+A cascata de binding ganhou um nível: `sessão > agente > **área** > projeto >
+workspace`. `area` fica ENTRE agente e projeto — é o PADRÃO que o lead e os
+subagentes de uma área compartilham (`qa`/`qa-automacao`/
+`qa-performance-seguranca`, `infra`/`infra-workflows`, `dev`/`dev-<módulo>`), e
+o binding do próprio agente é a DIVERGÊNCIA que o sobrepõe. Se a área viesse
+ACIMA do agente ela venceria sempre, e "padrão herdável" seria, na prática,
+"padrão imposto" — nenhum agente conseguiria escolher outro modelo.
+
+O nível novo entra na MESMA revalidação de capability da
+[RN-041](#rn-041)/[RN-043](#rn-043): modelo da área que sumiu do provider ou
+que não faz tool calling é PULADO e registrado em `skipped`, exatamente como
+`agent` já era. `assertModelFitsBindingScope` (RN-040) passou a exigir
+`supports_tool_calling` também no escopo `area` — ela nunca é lida por chat
+humano, só por agente, então deixá-la passar adiaria a mesma falha silenciosa
+em um nível.
+
+**"Voltar a herdar" apaga o binding, nunca copia o modelo do nível de baixo
+para o de cima.** Gravar no agente o modelo que a área decidiu pareceria igual
+na tela e não é: viraria uma CÓPIA, e a próxima mudança da área deixaria esse
+agente para trás sem ninguém notar. Herdar é a AUSÊNCIA de decisão própria, e
+desfazer uma divergência é remover a linha — `DELETE
+/projects/:id/agent-bindings/:slug` e `DELETE
+/projects/:id/area-bindings/:key`, ambos 204, ambos 404 quando o escopo já
+herda (idempotência que MENTIRIA se fosse 204 silencioso: apagar o que não
+existia e apagar de verdade são respostas diferentes para a mesma tela).
+
+Mudar o modelo da ÁREA exige `maintainer`, e não `developer` como o do agente
+individual — pelo mesmo motivo do teto de paralelismo
+([RN-083](#rn-083)): o binding da área alcança o lead e TODOS os subagentes de
+uma vez, e escolher modelo é decidir quanto o produto gasta sem perguntar.
+
+- **Onde:** `apps/api/src/domain/llm/binding-resolver.ts` (precedência),
+  `apps/api/src/domain/llm/model-capabilities.ts` (capability de `area`),
+  `apps/api/src/application/use-cases/llm/resolve-model-binding.use-case.ts`
+  (a área do agente sai do catálogo `agent-areas.ts`, sem round-trip ao
+  banco), `apps/api/src/application/use-cases/llm/clear-model-binding.use-case.ts`,
+  `apps/api/src/interfaces/http/llm/model-bindings.controller.ts`
+  (`area-bindings`, `DELETE` em `agent-bindings` e `area-bindings`),
+  `apps/web/src/routes/ProjectSettingsTab.tsx` (`AreaModelsSection`, coluna
+  Origem com "voltar a herdar")
+- **Teste:** `test/domain/llm/binding-resolver.spec.ts`,
+  `test/domain/llm/model-capabilities.spec.ts`,
+  `test/application/use-cases/llm/resolve-model-binding.use-case.spec.ts`,
+  `test/application/use-cases/llm/clear-model-binding.use-case.spec.ts`,
+  `apps/web/src/routes/ProjectSettingsTab.test.tsx`
+- **Origem:** [ADR 0064](adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global.md) (FASE 23)
+
+### RN-103 — O binding de agente é POR PROJETO, não mais global {#rn-103}
+
+Até a FASE 23, `scope = 'agent'` guardava um SLUG global
+(`scope_id = 'qa'`), e `PUT /projects/:id/agent-bindings/:slug` recebia
+`:projectId` na rota e o DESCARTAVA de propósito — escolher o modelo do
+Arquiteto na tela de um projeto mudava o modelo dele em TODOS os projetos.
+Isso deixou de se sustentar quando a área virou padrão herdável (RN-102): a
+área é por projeto, e um binding de agente global ACIMA de um padrão por
+projeto faria o mesmo agente resolver modelos diferentes só onde existisse
+área — e faria "voltar a herdar" apagar uma decisão que alcançava projetos
+que ninguém está olhando.
+
+A saída foi tornar `agent` por projeto também, e não rebaixar a área para
+abaixo do agente: `scope_id` de `agent` e de `area` virou COMPOSTO —
+`<projectId>:<slug do agente|chave da área>` — em vez de inventar uma tabela
+nova só para guardar um projeto por binding. UUID de projeto e slug de agente
+nunca contêm `:`, o que torna o primeiro `:` um separador não ambíguo; a
+leitura corta nele, e não em todos, para um slug com `:` (nenhum existe hoje,
+mas nada impede) não virar três pedaços.
+
+`scope_id` sem o projeto (o formato antigo) é RECUSADO na escrita, não aceito
+e ignorado: gravá-lo criaria um binding que a cascata nunca mais encontraria
+— invisível, e não um erro. A migração 0040 espalha cada binding de agente
+global existente para uma linha por projeto (preservando o que cada projeto
+resolvia antes da mudança) e apaga o formato antigo; é ESPALHAR e não
+apagar porque a linha global nunca guardou informação de a quem "pertencia" —
+inventar um projeto dono seria inventar dado que não existia.
+
+- **Onde:** `apps/api/src/domain/llm/binding-scope-id.ts` (formato e
+  validação), `apps/api/src/application/use-cases/llm/set-model-binding.use-case.ts`
+  (`workspaceDoEscopo` passou a derivar o workspace de `agent`/`area` também —
+  a curadoria da RN-043 não era verificável neles antes), `apps/api/src/db/migrations/0040_tearful_night_nurse.sql`
+- **Teste:** `test/domain/llm/binding-scope-id.spec.ts`,
+  `test/application/use-cases/llm/set-model-binding.use-case.spec.ts`,
+  `test/application/use-cases/llm/resolve-model-binding.use-case.spec.ts`
+  ("o binding de agente é POR PROJETO: o vizinho não o enxerga")
+- **Origem:** [ADR 0064](adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global.md) (FASE 23)
 
 ### RN-059 — Falha de turno é evento durável com origem, e o agente fala {#rn-059}
 

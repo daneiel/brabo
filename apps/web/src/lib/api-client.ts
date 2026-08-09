@@ -707,6 +707,23 @@ export const setAgentModelBinding = (
   agentSlug: string,
   modelId: string,
 ) => put<void>(`/projects/${projectId}/agent-bindings/${agentSlug}`, { modelId });
+/**
+ * "Voltar a herdar" (ADR 0064, RN-102) — APAGA o binding do agente, nunca
+ * grava nele o modelo da área. Copiar pareceria igual na tela e viraria uma
+ * cópia que diverge sozinha na próxima mudança da área.
+ */
+export const clearAgentModelBinding = (projectId: string, agentSlug: string) =>
+  del<void>(`/projects/${projectId}/agent-bindings/${agentSlug}`);
+
+export const getAreaModelBinding = (projectId: string, areaKey: string) =>
+  get<ResolvedBinding | null>(`/projects/${projectId}/area-bindings/${areaKey}`);
+export const setAreaModelBinding = (
+  projectId: string,
+  areaKey: string,
+  modelId: string,
+) => put<void>(`/projects/${projectId}/area-bindings/${areaKey}`, { modelId });
+export const clearAreaModelBinding = (projectId: string, areaKey: string) =>
+  del<void>(`/projects/${projectId}/area-bindings/${areaKey}`);
 
 export const listCredentials = () =>
   get<UserCredentialMetadata[]>('/users/me/credentials');

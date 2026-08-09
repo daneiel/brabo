@@ -1,0 +1,1 @@
+{"responses":{"204":{"description":"A área voltou a herdar. Sem corpo."},"401":{"description":"Sem token, token expirado ou assinatura inválida."},"403":{"description":"Papel insuficiente no escopo."},"404":{"description":"Escopo inexistente."},"429":{"description":"Rate limit por usuário ou por IP."}}}
