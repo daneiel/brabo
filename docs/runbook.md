@@ -31,6 +31,7 @@ arquivo. Comece pela triagem.
 | agente respondendo vazio, truncado ou lentíssimo | [Ambiente de inferência](#ambiente-de-inferencia) |
 | agente parando com `limite de iterações atingido` sem ter entregado | [Ambiente de inferência](#ambiente-de-inferencia) |
 | quero acrescentar um provider de LLM compatível com a OpenAI | [Adicionando um provider compatível](#adicionando-um-provider-compativel) |
+| quero migrar meus workspaces do volume Docker para uma pasta real | [Migrar workspaces para pasta local](#migrar-workspaces-pasta-local) |
 
 Duas coisas que valem antes de qualquer procedimento:
 
@@ -39,6 +40,34 @@ Duas coisas que valem antes de qualquer procedimento:
   Grafana fora do ar significa nenhum aviso, não nenhum problema.
 - **Matar o pod não fecha sessão.** `kubectl delete pod` sem drain cria órfã.
   O caminho é sempre a transição normal.
+
+### Migrar workspaces para pasta local {#migrar-workspaces-pasta-local}
+
+Definir `PROJECT_WORKSPACES_HOST_DIR`/`GIT_LOCAL_REPOS_HOST_DIR`
+([Primeiros passos](getting-started.md#pasta-local-dos-workspaces)) troca o
+volume Docker pela pasta indicada — mas **não copia** o que já existia no
+volume antigo. Quem já tem projetos criados e não quer perder o trabalho
+precisa copiar o conteúdo antes de trocar:
+
+```bash
+pnpm dev:down
+docker run --rm \
+  -v brabo_project_workspaces:/de \
+  -v "$(realpath ~/brabo-projetos)":/para \
+  alpine sh -c 'cp -a /de/. /para/'
+docker run --rm \
+  -v brabo_git_local_repos:/de \
+  -v "$(realpath ~/brabo-projetos-bare)":/para \
+  alpine sh -c 'cp -a /de/. /para/'
+# defina as duas variáveis no .env, depois:
+pnpm dev
+```
+
+O nome do volume (`brabo_project_workspaces`) tem o prefixo do projeto
+Compose (`name: brabo` em `docker/docker-compose.yml`) — confirme com
+`docker volume ls` se você renomeou o projeto. O volume antigo continua
+existindo depois (Compose não apaga volume que saiu de uso); remova com
+`docker volume rm` se tiver certeza de que a cópia funcionou.
 
 ---
 

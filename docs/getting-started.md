@@ -66,6 +66,43 @@ make k8s-down && pnpm dev     # do modo validação para o de desenvolvimento
 
 Para saber em qual você está sem adivinhar: `pnpm dev:preflight`.
 
+### Pasta local dos workspaces
+
+Por padrão, os arquivos que os agentes escrevem vivem num volume Docker
+gerenciado — não é uma pasta que você abre no Finder/Explorer. Para trocar
+por uma pasta real do seu disco, defina no `.env`:
+
+```bash
+PROJECT_WORKSPACES_HOST_DIR=~/brabo-projetos
+GIT_LOCAL_REPOS_HOST_DIR=~/brabo-projetos-bare
+```
+
+As duas juntas, sempre — `api` e `engine` leem o mesmo caminho, e valores
+diferentes fariam os dois enxergarem árvores diferentes do mesmo
+repositório. A pasta escolhida vira a raiz de **todos** os projetos desta
+instância (cada um em `<pasta>/<project_id>`) — não aponte para `$HOME`
+inteiro nem para uma pasta com outros segredos seus.
+
+Nada na política de aprovação muda: dentro do escopo do projeto o agente já
+tinha acesso mais livre e fora dele já pedia aprovação (RN-075) — só o que
+antes ficava invisível dentro do volume passa a estar numa pasta que você
+pode abrir com seu próprio editor e `git`.
+
+Os containers de `api` e `engine` rodam como **root** em desenvolvimento
+(mesma situação já conhecida do `node_modules`/`apps/api/dist` — ver o aviso
+no topo deste repositório). Todo arquivo que o agente escrever na pasta
+local sai dono de `root` no seu disco — para editar/apagar sem `sudo`
+depois, rode uma vez `sudo chown -R $USER ~/brabo-projetos`
+(ajuste o caminho para o que você escolheu). Confirmado por execução: um
+`docker run` escrevendo num bind mount de teste deixou o arquivo
+inacessível ao usuário comum até um segundo container (rodando como root)
+removê-lo.
+
+Só testado em Linux/macOS. Bind mount de host no Docker Desktop para Windows
+tem armadilhas conhecidas (permissão/dono entre NTFS e o usuário do
+container, e NTFS não distingue maiúscula de minúscula onde `git worktree`
+espera que distinga) — não habilite lá ainda.
+
 **Se não subir:**
 
 | sintoma | causa |
