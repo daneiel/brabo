@@ -126,4 +126,49 @@ describe('HypothesisCard', () => {
     renderCard();
     expect(screen.queryByText(/Término anormal/)).toBeNull();
   });
+
+  /**
+   * FASE 19 (RN-096) — Insights fala a mesma língua das aprovações: a frase de
+   * `lib/aprovacoes.ts` diz o que acontece se você aceitar, e a fundamentação
+   * desce para o colapso com o mesmo default dos outros dois lugares (abre o
+   * que ainda espera decisão).
+   */
+  describe('frase e colapso', () => {
+    it('diz o que acontece ao aceitar — e não promete o que o accept não faz', () => {
+      renderCard();
+
+      const frase = screen.getByText(/Aceitar manda esta hipótese/);
+      // Aceitar enfileira para a Anamnese; o ajuste da instrução ainda vem
+      // para aprovação. Prometer "a instrução será alterada" seria mentira.
+      expect(frase.textContent).toContain('Anamnese');
+      expect(frase.textContent).toContain('aprovar');
+    });
+
+    it('proposta: a fundamentação nasce ABERTA — é ela que sustenta a decisão', () => {
+      renderCard();
+
+      const cabecalho = screen.getByRole('button', { name: /No que o Psicólogo se baseou/ });
+      expect(cabecalho.getAttribute('aria-expanded')).toBe('true');
+      expect(screen.getByText('pediu ajuda três vezes na mesma task')).toBeTruthy();
+    });
+
+    it('decidida: nasce FECHADA, e a frase diz o desfecho', () => {
+      renderCard(makeHypothesis({ status: 'dismissed' }));
+
+      const cabecalho = screen.getByRole('button', { name: /No que o Psicólogo se baseou/ });
+      expect(cabecalho.getAttribute('aria-expanded')).toBe('false');
+      expect(screen.queryByText('pediu ajuda três vezes na mesma task')).toBeNull();
+      expect(screen.getByText(/nada mudou na instrução/)).toBeTruthy();
+    });
+
+    it('fechada, abrir revela a fundamentação inteira', () => {
+      renderCard(makeHypothesis({ status: 'accepted' }));
+
+      fireEvent.click(screen.getByRole('button', { name: /No que o Psicólogo se baseou/ }));
+      expect(screen.getByText('pediu ajuda três vezes na mesma task')).toBeTruthy();
+      expect(
+        screen.getByText('exigir critério de aceite explícito antes do ready'),
+      ).toBeTruthy();
+    });
+  });
 });

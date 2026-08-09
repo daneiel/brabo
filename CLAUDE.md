@@ -585,6 +585,12 @@ seguinte, e quando vier, escrita é efeito externo: nasce `proposed_action`.
   medido por teste sobre os tokens e layout é verificado no navegador
   por scripts/dev/validacao-visual.js — as duas validações estão
   explicadas em design/README.md.
+- Tipo novo de `proposed_action` nasce com FRASE em pt-BR em
+  `apps/web/src/lib/aprovacoes.ts` — verbo e frase têm UMA fonte, e as
+  três telas de decisão (Aprovações, chat da sessão, Insights) a
+  consomem. `apps/web/src/lib/aprovacoes.test.ts` lê `ACTION_TYPES` do
+  `decide.ts` e reprova tipo sem frase; payload cru nunca é despejado,
+  nasce colapsado (RN-096).
 - Segredos de usuário (API keys de LLM e tokens de git) criptografados
   com envelope encryption; nunca em plaintext no banco ou em logs.
 - Decisões arquiteturais relevantes registradas em docs/adr/.

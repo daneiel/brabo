@@ -2,6 +2,13 @@
 
 Gerado dos conventional commits por `scripts/changelog.mjs`.
 
+## Unreleased
+
+### Novidades
+
+- **web**: toda aprovação diz em português o que vai acontecer, e o payload cru
+  nasce colapsado nas três telas de decisão (RN-096)
+
 ## v2.5.1 — 2026-08-08
 
 ### Correções
