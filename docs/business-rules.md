@@ -2468,6 +2468,65 @@ antigo.
 - **Origem:** residual medido da [RN-090](#rn-090) — 286 req/min com a gaveta
   aberta num workspace de 23 projetos
 
+### RN-096 — Toda decisão diz em português o que acontece; o payload cru nasce colapsado {#rn-096}
+
+Todo tipo de `proposed_action` tem uma **frase em português** que descreve o
+efeito de aprovar, e ela é a primeira coisa visível no card — antes de qualquer
+detalhe, nas três telas onde uma decisão é pedida (a fila de Aprovações, o card
+dentro do chat da sessão e a aba Insights). O payload cru continua acessível,
+**dentro de um colapso que nasce fechado**, e nunca é despejado na tela.
+
+**O que existia era um despejo.** Todo tipo sem corpo visual próprio caía num
+`Object.entries(payload).map(([k, v]) => k + ': ' + JSON.stringify(v))`, sempre
+aberto. Quem abria a fila lia `worktree: /workspaces/dev-api`,
+`coAuthor: Brabo User <user@brabo.dev>` e `proposto: 4` — e tinha de deduzir o
+que ia acontecer se clicasse em Aprovar. Aprovação que exige dedução é
+aprovação que se dá no automático, e o produto inteiro se apoia em o usuário
+ser a autoridade final.
+
+**A frase degrada, e é isso que a torna confiável.** Nenhuma delas assume que
+uma chave do payload existe: com payload vazio a frase continua sendo uma frase
+verdadeira, só menos específica ("Registra um commit no repositório do
+projeto."). O payload vem do engine e de dez casos de uso diferentes, e nenhum
+deles promete um formato — frase que só funciona com a fixture certa é frase
+que quebra na primeira aprovação real.
+
+**Tipo que o web ainda não conhece não é caso teórico.** A união `ActionType`
+do web já ficou defasada duas vezes: primeiro com os três tipos do bootstrap de
+Gitflow, e de novo com `parallelize`/`raise_max_parallel`, que entraram na FASE
+14d. O compilador não pega: a lista canônica está em `apps/api`, que o web não
+importa. Por isso duas coisas ao mesmo tempo — o card **degrada** (verbo neutro
++ "ver detalhes", com o payload colapsado, em vez do `undefined` no mapa de
+ícones que derrubava a árvore inteira do React), e o **teste lê o `decide.ts`
+do backend** e reprova quando um tipo entra sem frase.
+
+**O default de aberto/fechado é derivado, não configurado.** A regra é uma só —
+abre o que ainda espera decisão de quem está olhando: no chat, ação `pending`;
+na fila, nunca (são N cards, e N detalhes abertos são a mesma parede de texto);
+em Insights, hipótese `proposed`. E o payload CRU não abre em variante nenhuma.
+A consequência de projeto é que `ApprovalCard` **não ganhou prop nova
+obrigatória**: o default sai de `variant` e `status`, que já existiam.
+
+**Verbo e frase saem de um módulo só**, consumido pelas três telas. A hipótese
+do Psicólogo usa literalmente o verbo do `instruction_patch` em vez de um
+vocabulário paralelo — e a frase dela diz o que o accept faz de verdade
+(enfileira para a Anamnese, que **pode** propor o ajuste, que ainda vem para
+aprovação), nunca "a instrução será alterada".
+
+- **Onde:** `apps/web/src/lib/aprovacoes.ts` (`VERBO_DA_ACAO`, `fraseDaAcao`,
+  `descreverAcao`, `descreverHipotese`), consumido por
+  `apps/web/src/components/ApprovalCard.tsx` (Aprovações + chat da sessão) e
+  `apps/web/src/components/HypothesisCard.tsx` (Insights); colapso pelo
+  `Disclosure` de `apps/web/src/components/ui/Disclosure.tsx`
+- **Teste:** `apps/web/src/lib/aprovacoes.test.ts` (lê `ACTION_TYPES` de
+  `apps/api/src/domain/actions/decide.ts` e exige verbo + frase para cada tipo,
+  com payload vazio); `apps/web/src/components/ApprovalCard.test.tsx`
+  (`frase e colapso` — payload colapsado nas duas variantes, JSON legível ao
+  abrir, tipo desconhecido não derruba a tela);
+  `apps/web/src/components/HypothesisCard.test.tsx` (`frase e colapso`)
+- **Origem:** FASE 19 do programa 16–26, do pedido "hoje está muito difícil a
+  leitura" na primeira navegação real depois do reset do banco
+
 ---
 
 ## Psicólogo e Anamnese
