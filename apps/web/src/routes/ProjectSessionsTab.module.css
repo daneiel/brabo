@@ -1,8 +1,25 @@
 .header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
+  gap: 24px;
   margin-bottom: 16px;
+}
+
+/* FASE 24: o cabeçalho ganhou uma segunda linha — a explicação do tipo, que
+   antes só existia dentro do rádio do formulário de criação. */
+.headerTexto {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.subtitleTipo {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-muted);
+  max-width: 62ch;
 }
 
 .title {
@@ -12,8 +29,8 @@
   color: var(--text-primary);
 }
 
-/* Formulário de abertura (FASE 20): o tipo é escolhido ANTES de a sessão
-   existir, e as duas explicações ficam à vista na hora de escolher. */
+/* Formulário de abertura. Na FASE 20 ele carregava o `fieldset` de tipo; na
+   FASE 24 o tipo é a ABA, e o que sobrou é o nome opcional (RN-104). */
 .novaSessao {
   display: flex;
   flex-direction: column;
@@ -23,69 +40,6 @@
   background: var(--surface-1);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-}
-
-.tipos {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  border: 0;
-  margin: 0;
-  padding: 0;
-}
-
-.tiposLegenda {
-  font-family: var(--font-heading);
-  font-weight: 600;
-  font-size: 12px;
-  color: var(--text-primary);
-  padding: 0;
-  margin-bottom: 4px;
-}
-
-.tipo {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  /* 12px de padding + a linha do rótulo mantêm o alvo acima dos 24px do
-     WCAG 2.2 AA (2.5.8), a mesma régua de scripts/dev/validacao-visual.js. */
-  padding: 12px;
-  background: var(--surface-0);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-}
-
-.tipo:hover {
-  border-color: var(--border-strong);
-}
-
-.tipoMarcado {
-  border-color: var(--accent);
-}
-
-.tipoRadio {
-  margin-top: 2px;
-  accent-color: var(--accent);
-}
-
-.tipoTexto {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.tipoRotulo {
-  font-family: var(--font-heading);
-  font-weight: 600;
-  font-size: 13px;
-  color: var(--text-primary);
-}
-
-.tipoExplicacao {
-  font-size: 12px;
-  line-height: 1.45;
-  color: var(--text-muted);
 }
 
 .novaSessaoAcoes {
