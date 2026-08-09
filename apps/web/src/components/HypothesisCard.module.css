@@ -54,6 +54,29 @@
   line-height: 1.45;
 }
 
+/*
+ * A frase da FASE 19 (RN-096) — o que acontece se você aceitar. Vem antes do
+ * colapso e some do caminho de leitura tudo que é fundamentação.
+ */
+.frase {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+/*
+ * O card é `flex` com `gap: 10px`, e a região do `Disclosure` é um flex próprio
+ * sem gap — sem isto os três blocos de fundamentação ficavam colados. O seletor
+ * pelo `role` e não por classe porque o `Disclosure` expõe `className` só do
+ * bloco: inventar uma prop de classe para a região seria alargar o componente
+ * do design system para resolver espaçamento de um call site.
+ */
+.detalhes [role='region'] {
+  gap: 10px;
+  padding-top: 2px;
+}
+
 .label {
   font-size: 11px;
   text-transform: uppercase;
