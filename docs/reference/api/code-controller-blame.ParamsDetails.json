@@ -1,0 +1,1 @@
+{"parameters":[{"name":"projectId","required":true,"in":"path","schema":{"type":"string"}},{"name":"path","required":true,"in":"query","description":"Caminho do arquivo a anotar.","schema":{"type":"string"}},{"name":"ref","required":false,"in":"query","description":"Branch, tag ou sha. Ausente usa a branch padrão do repositório.","schema":{"type":"string"}}]}

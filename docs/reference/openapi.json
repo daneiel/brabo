@@ -3392,6 +3392,134 @@
         ]
       }
     },
+    "/projects/{projectId}/code/blame": {
+      "get": {
+        "description": "Fundação da pendência declarada de blame (FASE 26b) — a UI que anota o editor linha a linha ainda não existe. `truncated` avisa quando o arquivo passou do teto de linhas anotadas.",
+        "operationId": "CodeController_blame",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "path",
+            "required": true,
+            "in": "query",
+            "description": "Caminho do arquivo a anotar.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ref",
+            "required": false,
+            "in": "query",
+            "description": "Branch, tag ou sha. Ausente usa a branch padrão do repositório.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CodeBlameResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Caminho fora do escopo do projeto (RN-095), ref malformada, ou busca com termo curto/longo demais."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto sem repositório provisionado, ou ref/caminho/PR inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          },
+          "501": {
+            "description": "O provider do projeto não declara a capability da operação — `listTree`, `pullRequestDiff`, `blame`, `pullRequestsList` ou `branchesDetailed`. Capability só é declarada quando provada pela suite de contrato, então isto é resposta legítima e não defeito."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Anota cada linha de um arquivo com o commit que a tocou",
+        "tags": [
+          "git"
+        ]
+      }
+    },
+    "/projects/{projectId}/code/branches": {
+      "get": {
+        "description": "Fundação do dropdown rico (FASE 26b) — hoje o seletor de ref é campo de texto simples. `ahead`/`behind` são relativos à branch DEFAULT do repositório; `null` quando o provider não consegue computar (degradação honesta, não erro). NÃO é `listBranches` (que o bootstrap de Gitflow usa) — é operação própria, porque enriquecer custa uma chamada extra ao provider POR BRANCH.",
+        "operationId": "CodeController_branches",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CodeBranchDetailListResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Caminho fora do escopo do projeto (RN-095), ref malformada, ou busca com termo curto/longo demais."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto sem repositório provisionado, ou ref/caminho/PR inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          },
+          "501": {
+            "description": "O provider do projeto não declara a capability da operação — `listTree`, `pullRequestDiff`, `blame`, `pullRequestsList` ou `branchesDetailed`. Capability só é declarada quando provada pela suite de contrato, então isto é resposta legítima e não defeito."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Lista as branches com ahead/behind e a PR aberta associada",
+        "tags": [
+          "git"
+        ]
+      }
+    },
     "/projects/{projectId}/code/file": {
       "get": {
         "description": "UTF-8, cortado no teto de bytes com `truncated: true` quando passa. Um caminho que sai da pasta do projeto é recusado com 400 pela checagem central da RN-095 — nunca com 404, que convidaria a procurar.",
@@ -3451,7 +3579,7 @@
             "description": "Rate limit por usuário ou por IP."
           },
           "501": {
-            "description": "O provider do projeto não declara a capability da operação — `listTree` ou `pullRequestDiff`. Capability só é declarada quando provada pela suite de contrato, então isto é resposta legítima e não defeito."
+            "description": "O provider do projeto não declara a capability da operação — `listTree`, `pullRequestDiff`, `blame`, `pullRequestsList` ou `branchesDetailed`. Capability só é declarada quando provada pela suite de contrato, então isto é resposta legítima e não defeito."
           }
         },
         "security": [
@@ -3460,6 +3588,75 @@
           }
         ],
         "summary": "Devolve o conteúdo de um arquivo",
+        "tags": [
+          "git"
+        ]
+      }
+    },
+    "/projects/{projectId}/code/pull-requests": {
+      "get": {
+        "description": "Fundação da lista navegável (FASE 26b) — hoje o diff só é alcançável por id conhecido (ex.: vindo de Aprovações); esta rota resolve como chegar ao id sem precisar saber de cor. `truncated` avisa quando a lista passou do teto por chamada.",
+        "operationId": "CodeController_pullRequests",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "required": false,
+            "in": "query",
+            "description": "Ausente lista todos os estados.",
+            "schema": {
+              "enum": [
+                "open",
+                "merged",
+                "closed"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CodePullRequestListResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Caminho fora do escopo do projeto (RN-095), ref malformada, ou busca com termo curto/longo demais."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto sem repositório provisionado, ou ref/caminho/PR inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          },
+          "501": {
+            "description": "O provider do projeto não declara a capability da operação — `listTree`, `pullRequestDiff`, `blame`, `pullRequestsList` ou `branchesDetailed`. Capability só é declarada quando provada pela suite de contrato, então isto é resposta legítima e não defeito."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Lista as PRs/MRs do repositório",
         "tags": [
           "git"
         ]
@@ -3514,7 +3711,7 @@
             "description": "Rate limit por usuário ou por IP."
           },
           "501": {
-            "description": "O provider do projeto não declara a capability da operação — `listTree` ou `pullRequestDiff`. Capability só é declarada quando provada pela suite de contrato, então isto é resposta legítima e não defeito."
+            "description": "O provider do projeto não declara a capability da operação — `listTree`, `pullRequestDiff`, `blame`, `pullRequestsList` ou `branchesDetailed`. Capability só é declarada quando provada pela suite de contrato, então isto é resposta legítima e não defeito."
           }
         },
         "security": [
@@ -3596,7 +3793,7 @@
             "description": "Rate limit por usuário ou por IP."
           },
           "501": {
-            "description": "O provider do projeto não declara a capability da operação — `listTree` ou `pullRequestDiff`. Capability só é declarada quando provada pela suite de contrato, então isto é resposta legítima e não defeito."
+            "description": "O provider do projeto não declara a capability da operação — `listTree`, `pullRequestDiff`, `blame`, `pullRequestsList` ou `branchesDetailed`. Capability só é declarada quando provada pela suite de contrato, então isto é resposta legítima e não defeito."
           }
         },
         "security": [
@@ -3669,7 +3866,7 @@
             "description": "Rate limit por usuário ou por IP."
           },
           "501": {
-            "description": "O provider do projeto não declara a capability da operação — `listTree` ou `pullRequestDiff`. Capability só é declarada quando provada pela suite de contrato, então isto é resposta legítima e não defeito."
+            "description": "O provider do projeto não declara a capability da operação — `listTree`, `pullRequestDiff`, `blame`, `pullRequestsList` ou `branchesDetailed`. Capability só é declarada quando provada pela suite de contrato, então isto é resposta legítima e não defeito."
           }
         },
         "security": [
@@ -10082,6 +10279,157 @@
           "agentId"
         ]
       },
+      "CodeBlameLineResponseDto": {
+        "type": "object",
+        "properties": {
+          "line": {
+            "type": "number",
+            "example": 12,
+            "description": "1-based, como todo editor mostra."
+          },
+          "commitSha": {
+            "type": "string",
+            "example": "0f3e8181fbd010b10c78db17b90ecb35fb8cc89c"
+          },
+          "author": {
+            "type": "string",
+            "example": "Daniel Souza"
+          },
+          "authorDate": {
+            "type": "string",
+            "example": "2026-08-04T12:00:00.000Z"
+          },
+          "summary": {
+            "type": "string",
+            "example": "fix(api): corrige o resolvedor de credencial"
+          }
+        },
+        "required": [
+          "line",
+          "commitSha",
+          "author",
+          "authorDate",
+          "summary"
+        ]
+      },
+      "CodeBlameResponseDto": {
+        "type": "object",
+        "properties": {
+          "ref": {
+            "type": "string",
+            "example": "dev"
+          },
+          "path": {
+            "type": "string",
+            "example": "apps/api/src/main.ts"
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CodeBlameLineResponseDto"
+            }
+          },
+          "truncated": {
+            "type": "boolean",
+            "example": false,
+            "description": "O arquivo passou do teto de linhas anotadas por chamada."
+          }
+        },
+        "required": [
+          "ref",
+          "path",
+          "lines",
+          "truncated"
+        ]
+      },
+      "CodeBranchDetailListResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CodeBranchDetailResponseDto"
+            }
+          },
+          "truncated": {
+            "type": "boolean",
+            "example": false,
+            "description": "A lista foi cortada no teto de branches enriquecidas."
+          }
+        },
+        "required": [
+          "items",
+          "truncated"
+        ]
+      },
+      "CodeBranchDetailResponseDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "feature/x"
+          },
+          "commitSha": {
+            "type": "string",
+            "example": "0f3e8181fbd010b10c78db17b90ecb35fb8cc89c"
+          },
+          "protected": {
+            "type": "boolean",
+            "example": false
+          },
+          "ahead": {
+            "type": "number",
+            "nullable": true,
+            "example": 3,
+            "description": "Commits à frente da branch default. `null` quando não computável."
+          },
+          "behind": {
+            "type": "number",
+            "nullable": true,
+            "example": 0,
+            "description": "Commits atrás da branch default."
+          },
+          "pullRequest": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CodeBranchPullRequestRefResponseDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "commitSha",
+          "protected",
+          "ahead",
+          "behind",
+          "pullRequest"
+        ]
+      },
+      "CodeBranchPullRequestRefResponseDto": {
+        "type": "object",
+        "properties": {
+          "number": {
+            "type": "number",
+            "example": 42
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "open",
+              "merged",
+              "closed"
+            ],
+            "example": "open"
+          }
+        },
+        "required": [
+          "number",
+          "state"
+        ]
+      },
       "CodeDiffFileResponseDto": {
         "type": "object",
         "properties": {
@@ -10188,6 +10536,87 @@
           "content",
           "truncated",
           "bytes"
+        ]
+      },
+      "CodePullRequestListResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CodePullRequestSummaryResponseDto"
+            }
+          },
+          "truncated": {
+            "type": "boolean",
+            "example": false,
+            "description": "A lista foi cortada no teto de PRs por chamada."
+          }
+        },
+        "required": [
+          "items",
+          "truncated"
+        ]
+      },
+      "CodePullRequestSummaryResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "2401938475"
+          },
+          "number": {
+            "type": "number",
+            "example": 42
+          },
+          "title": {
+            "type": "string",
+            "example": "fix(api): a área de agentes nasce com o projeto"
+          },
+          "url": {
+            "type": "string",
+            "example": "https://github.com/acme/repo/pull/42"
+          },
+          "author": {
+            "type": "string",
+            "nullable": true,
+            "example": "daneiel",
+            "description": "Login/username de quem abriu. `null` quando o provider não informa."
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "open",
+              "merged",
+              "closed"
+            ],
+            "example": "open"
+          },
+          "sourceBranch": {
+            "type": "string",
+            "example": "feature/x"
+          },
+          "targetBranch": {
+            "type": "string",
+            "example": "dev"
+          },
+          "updatedAt": {
+            "type": "string",
+            "nullable": true,
+            "example": "2026-08-04T12:00:00.000Z",
+            "description": "`null` quando o provider não informa."
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "title",
+          "url",
+          "author",
+          "state",
+          "sourceBranch",
+          "targetBranch",
+          "updatedAt"
         ]
       },
       "CodeSearchMatchResponseDto": {

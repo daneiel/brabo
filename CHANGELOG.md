@@ -16,6 +16,12 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   declarados como pendência — dependem de fases que ainda não subiram (FASE
   26, item 35)
 
+- **api**: fundação de blame, PRs navegáveis e branch rica para a aba Code —
+  `GET /projects/:id/code/{blame,pull-requests,branches}`, sem UI
+  consumindo ainda (as três telas são a onda seguinte). `GitProviderContract`
+  ganha a 13ª/14ª/15ª operação, provadas pela suite de contrato nos três
+  providers (RN-110/111/112)
+
 - **api,web**: aba de Gastos com duas audiências — o owner vê a quebra do workspace por modelo, projeto, ator e dia (mais a fatura por credencial, que já existia); o membro vê só o próprio consumo, por sessão e por dia, sem provider e sem credencial (ADR 0063, RN-101)
 
 - **api,web**: a sessão nasce com tipo escolhido (`consultiva` ou `criativa`),

@@ -20,8 +20,12 @@ import type {
   AgentInstructionVersion,
   Budget,
   BudgetPolicy,
+  CodeBlame,
+  CodeBranchDetailList,
   CodeDiff,
   CodeFile,
+  CodePullRequestList,
+  CodePullRequestState,
   CodeSearchResult,
   CodeTree,
   CoverageReport,
@@ -400,6 +404,28 @@ export const getCodeDiff = (projectId: string, pullRequestId: string) =>
   get<CodeDiff>(
     `/projects/${projectId}/code/pull-requests/${pullRequestId}/diff`,
   );
+
+// --- Fundação de blame, PRs navegáveis e branch rica (FASE 26b) ---
+//
+// As três rotas novas de `code.controller.ts` — mesmo `role:viewer`, mesmos
+// 400/404/409/501 das quatro de cima. Sem tela consumindo ainda; a UI é onda
+// seguinte, em três agentes separados.
+
+export const getCodeBlame = (
+  projectId: string,
+  opts: { path: string; ref?: string },
+) => get<CodeBlame>(`/projects/${projectId}/code/blame${qs(opts)}`);
+
+export const getCodePullRequests = (
+  projectId: string,
+  opts: { state?: CodePullRequestState } = {},
+) =>
+  get<CodePullRequestList>(
+    `/projects/${projectId}/code/pull-requests${qs(opts)}`,
+  );
+
+export const getCodeBranches = (projectId: string) =>
+  get<CodeBranchDetailList>(`/projects/${projectId}/code/branches`);
 
 // --- Sessions ---
 

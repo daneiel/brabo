@@ -13,9 +13,11 @@ const ROTULO_STATUS: Record<CodeDiffFile['status'], string> = {
 };
 
 /**
- * Diff de uma PR, alcançado por ID CONHECIDO — não há lista de PRs aqui
- * (declarado como pendência: a PR já aparece em Aprovações, e inventar um
- * seletor duplicaria essa lista sem dado próprio). Quem sabe o id cola aqui.
+ * Diff de uma PR, alcançado por ID CONHECIDO — não há lista de PRs AQUI ainda
+ * (a fundação chegou na FASE 26b: `GET /projects/:id/code/pull-requests` via
+ * `getCodePullRequests` em `api-client.ts`, resumo por PR com id/título/
+ * autor/estado/branches. Esta tela ainda não a consome — trocar o campo de
+ * id por uma lista clicável é da onda seguinte). Quem sabe o id cola aqui.
  */
 export function CodeDiffPanel({ projectId }: { projectId: string }) {
   const [idDigitado, setIdDigitado] = useState('');

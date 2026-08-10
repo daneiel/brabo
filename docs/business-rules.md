@@ -3301,6 +3301,102 @@ estável seria a mesma família de tráfego desnecessário da PÓS-FASE 15.
   o caso comum de mostrar o editor vazio por um instante.
 - **Origem:** [ADR 0065](adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md)
 
+### RN-110 — `blame` é a 13ª operação do `GitProviderContract`, com o mesmo vocabulário de ausência das outras leituras {#rn-110}
+
+Fundação da pendência de blame declarada na FASE 26 (nenhuma tela consome
+ainda — vem na onda seguinte). `blame(ref, path)` devolve `GitBlame | null`,
+`null` significando exatamente o que já significa em `getFileContent`/
+`listTree`: arquivo ausente naquela ref, ou ref inexistente. Dois vocabulários
+de "não existe" para a mesma aba fariam a tela tratar o mesmo caso de duas
+formas — a mesma razão que já valia para as duas operações anteriores.
+
+Cada provider computa por meios PRÓPRIOS, porque não há endpoint comum: o
+GitHub não tem blame na REST (só GraphQL — a única operação do provider que
+fala GraphQL), o GitLab tem `repository/files/:path/blame`, e o local sai de
+`git blame --porcelain`, o único dos três testado contra um repositório de
+verdade nesta sessão (os outros dois só contra os backends fake do teste de
+contrato — sem `GITHUB_TEST_TOKEN`/`GITLAB_TEST_TOKEN` no ambiente, quem prova
+contra a API real é o smoke manual). `GIT_BLAME_LINE_LIMIT` (2000) corta
+arquivo genuinamente enorme — já cortado por bytes na rota de conteúdo, mas
+`blame` lê o arquivo inteiro do provider antes de decidir.
+
+- **Onde:** `packages/shared/src/index.ts` (`BlameInput`, `GitBlame`,
+  `GitBlameLine`, capability `blame`),
+  `apps/api/src/infrastructure/git/{github,gitlab,local}-provider.ts`,
+  `apps/api/src/domain/git/git-read-limits.ts` (`GIT_BLAME_LINE_LIMIT`),
+  `apps/api/src/application/use-cases/git/read-project-code.use-case.ts`
+  (método `blame`), `apps/api/src/interfaces/http/git/code.controller.ts`
+  (`GET /projects/:id/code/blame`)
+- **Teste:** `apps/api/test/contract/git-provider.contract.ts` (bloco "blame"),
+  exercitado pelos três specs de provider — o do `local` contra git de
+  verdade — e `read-project-code.use-case.spec.ts` (bloco "blame")
+- **Origem:** FASE 26b (fundação das pendências declaradas da FASE 26/
+  [ADR 0060](adr/0060-superficie-de-leitura-de-codigo.md))
+
+### RN-111 — `listPullRequests` é a 14ª operação do `GitProviderContract`; o diff continua alcançado por id {#rn-111}
+
+Fundação da lista de PRs navegável declarada como pendência em
+`CodeDiffPanel.tsx` — hoje o diff só é alcançável por id CONHECIDO, vindo de
+Aprovações. `listPullRequests(state?)` devolve um RESUMO por PR
+(`GitPullRequestSummary`: id, número, título, autor, estado, branches,
+`updatedAt`) — não `GitPullRequest`, que é o tipo de ESCREVER (abrir/mesclar) e
+nunca teve título nem autor porque nenhuma das duas operações precisava. Um
+tipo próprio evita que a escrita ganhe campos que só a leitura usa.
+
+O `local` TEM PR — o store sidecar da Fase 4a já é a fonte, e a suposição do
+enunciado ("PR não existe no conceito de repositório local puro") não se
+sustentou: o self-contained dos dev agents criou PR local desde então. As três
+capabilities são `true`. `GIT_PR_LIST_LIMIT` (100) é uma página só, sem
+paginação de seguimento — navegação humana, não sincronização de histórico.
+
+- **Onde:** `packages/shared/src/index.ts` (`ListPullRequestsInput`,
+  `GitPullRequestSummary`, `GitPullRequestList`, capability
+  `pullRequestsList`), `apps/api/src/infrastructure/git/{github,gitlab,
+  local}-provider.ts`, `apps/api/src/domain/git/git-read-limits.ts`
+  (`GIT_PR_LIST_LIMIT`), `read-project-code.use-case.ts` (método
+  `pullRequests`), `code.controller.ts` (`GET /projects/:id/code/pull-requests`)
+- **Teste:** `git-provider.contract.ts` (bloco "listPullRequests"),
+  `read-project-code.use-case.spec.ts` (bloco "lista de PRs")
+- **Origem:** FASE 26b
+
+### RN-112 — `listBranchesDetailed` é operação PRÓPRIA, separada de `listBranches` {#rn-112}
+
+Fundação do dropdown rico declarado como pendência em `CodeShell.tsx`
+(`ahead`/`behind`, badge de PR). A decisão foi NÃO estender `listBranches` — a
+13ª operação original, que o bootstrap de Gitflow chama sem precisar de nada
+disso: enriquecer custa uma chamada extra ao provider POR BRANCH (duas no
+GitLab, que não tem endpoint que devolva os dois lados de uma comparação numa
+chamada só, ao contrário de `compareCommitsWithBasehead` do GitHub e de `git
+rev-list --left-right --count` no local). Encostar esse custo em toda
+adoção/criação de branch transformaria o bootstrap numa varredura cara. As
+duas operações convivem no contrato: `listBranches` pro bootstrap,
+`listBranchesDetailed` (a 15ª) pra aba Code — `GitBranchDetail` estende
+`GitBranch` só na FORMA, nunca no CONTRATO de quem chama.
+
+`ahead`/`behind` são sempre relativos à branch DEFAULT do repositório
+(`ListBranchesDetailedInput.defaultBranch`, que o chamador já sabe — pedi-la
+de novo ao provider seria uma chamada a mais só pra redescobrir o que já
+tinha). `null` nos dois quando o provider não consegue computar (branch órfã,
+histórico não relacionado) é degradação honesta, nunca um número inventado.
+`GIT_BRANCH_DETAIL_LIMIT` (30) corta pelas mesmas razões de tráfego do item 34
+da FASE 26 — sem ele, um repositório com centenas de branches viraria centenas
+de chamadas por abertura do dropdown.
+
+- **Onde:** `packages/shared/src/index.ts` (`ListBranchesDetailedInput`,
+  `GitBranchDetail`, `GitBranchDetailList`, `GitBranchPullRequestRef`,
+  capability `branchesDetailed`), `apps/api/src/infrastructure/git/{github,
+  gitlab,local}-provider.ts`, `git-read-limits.ts`
+  (`GIT_BRANCH_DETAIL_LIMIT`), `read-project-code.use-case.ts` (método
+  `branches`), `code.controller.ts` (`GET /projects/:id/code/branches`)
+- **Teste:** `git-provider.contract.ts` (bloco "listBranchesDetailed"),
+  `read-project-code.use-case.spec.ts` (bloco "branches detalhadas")
+- **Borda:** o método `branches()` mora no MESMO caso de uso das outras seis
+  leituras (`ReadProjectCodeUseCase`), não perto do bootstrap — é uma LEITURA
+  da aba Code, com a mesma resolução de credencial e o mesmo portão de
+  container (RN-105) que as demais; tratá-la como operação de bootstrap
+  duplicaria os dois.
+- **Origem:** FASE 26b
+
 ### RN-108 — O socket da sessão exige um ticket opaco de uso único, não o JWT reaproveitado {#rn-108}
 
 `EngineWeb.SessionSocket.connect/3` recusava a conexão inteira só com o
