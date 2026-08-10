@@ -766,9 +766,17 @@ export const getProjectModelBinding = (projectId: string) =>
 export const setProjectModelBinding = (projectId: string, modelId: string) =>
   put<void>(`/projects/${projectId}/model-binding`, { modelId });
 
-export const getSessionModelBinding = (projectId: string, sessionId: string) =>
+// `agentId` é o agente REALMENTE ativo na sessão (ex.: depois de um handoff
+// pro PO/Arquiteto/Dev Lead) — sem ele, a api só enxerga sessão→projeto→
+// workspace e cai no fallback fixo do Criativo (`herdarModeloDeStart`),
+// mostrando o modelo errado na topbar assim que outro agente assume.
+export const getSessionModelBinding = (
+  projectId: string,
+  sessionId: string,
+  agentId?: string,
+) =>
   get<ResolvedBinding>(
-    `/projects/${projectId}/sessions/${sessionId}/model-binding`,
+    `/projects/${projectId}/sessions/${sessionId}/model-binding${qs({ agentId })}`,
   );
 export const setSessionModelBinding = (
   projectId: string,

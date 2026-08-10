@@ -155,6 +155,28 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `agent.status` (persistido no event log) de cada ator é `working` sem `idle`
   posterior — genérico por tipo de agente, não hardcoded pro PO (RN-064)
 
+- **api,web**: cinco defeitos de consistência em `SessionPage.tsx`, achados na
+  mesma investigação. **(1)** a topbar continuava mostrando o modelo do
+  CRIATIVO mesmo depois de um handoff pro PO/Arquiteto/Dev Lead — a rota de
+  model-binding da sessão não recebia agente nenhum e caía sempre no fallback
+  fixo do Criativo; agora manda `agentId` (o agente REALMENTE ativo) e a
+  cascata completa `sessão→agente→área→projeto→workspace` roda pra ele
+  (RN-119). **(2/7)** mensagem do usuário e resposta do agente apareciam
+  DUPLICADAS quando o poll de 3s de `useSessionEvents` caía no meio de um
+  turno em streaming; o hook ganha `pausarPoll` (default `false`, sem afetar
+  os outros consumidores), pausado só enquanto o turno está em curso — a
+  invalidação explícita no fim do turno continua buscando o dado fresco
+  (RN-120). **(3)** sessão criativa exigia o clique separado em "Iniciar
+  ideação" antes da primeira mensagem, e digitar direto caía num chat SSE
+  genérico sem histórico nem regra de negócio — a primeira mensagem agora
+  ativa o Criativo sozinha, pelo caminho real (RN-118). **(9)** depois de
+  aceitar um handoff pro Dev Lead, a mensagem seguinte continuava indo pro
+  Arquiteto — `activeAgent` usava uma cadeia de precedência FIXA
+  (arquiteto > po > criativo) que nunca "desligava"; agora é sempre o
+  `agent.activated` mais RECENTE, sem ordem fixa nenhuma (RN-119). **(10)**
+  sessão com histórico abria no TOPO (mensagens mais antigas primeiro), sem
+  nenhum scroll automático — agora abre sempre no fim
+
 ## v2.5.1 — 2026-08-08
 
 ### Correções

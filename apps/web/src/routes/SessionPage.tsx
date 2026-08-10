@@ -94,6 +94,30 @@ export function pontoDaSessao(status: SessionStatus | undefined) {
   return status ? PONTO_DA_SESSAO[status] : { classe: 'statusDotParado' as const, rotulo: 'carregando' };
 }
 
+/**
+ * Agentes que participam do fluxo de CHAT do composer (achado 9-fix) —
+ * quem tem rota de `message` wireada no engine, não só `start`.
+ *
+ * Conferido em `agent_command_controller.ex`: há cláusula própria pra
+ * po/dev-lead/arquiteto, e a última cláusula (sem guarda de agente) trata
+ * qualquer outro valor — incluindo `"infra"` — como se fosse o Criativo.
+ * Infra Lead nunca teve `message` wireada, só `start`; incluí-lo aqui faria
+ * o composer mandar mensagens que o engine rotearia em silêncio pro agente
+ * errado. Ele é propositivo (CLAUDE.md Fase 4), não conversacional pelo
+ * composer.
+ */
+const AGENTES_DE_CHAT = ['criativo', 'po', 'arquiteto', 'dev-lead'] as const;
+
+/**
+ * `scrollIntoView` com guarda de existência (achado 10) — jsdom (ambiente de
+ * teste) não implementa o método; chamá-lo direto quebra qualquer teste que
+ * monte a tela com eventos na lista. Nos navegadores de verdade o método
+ * sempre existe, então a guarda nunca muda o comportamento visível.
+ */
+function rolarParaOFim(el: HTMLElement | null) {
+  el?.scrollIntoView?.({ block: 'end' });
+}
+
 /** Nome de exibição do agente; degrada para o id quando ele não está no roster. */
 function nomeDoAgente(id: string | undefined): string {
   if (!id) return 'agente';
@@ -160,6 +184,12 @@ export function SessionPage({
   const [rascunhoDoNome, setRascunhoDoNome] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   useEffect(() => () => abortRef.current?.abort(), []);
+  // Achado 10: sentinela no fim da lista de mensagens — a sessão abre nela,
+  // em vez de abrir no TOPO (mais antigas primeiro), que era o comportamento
+  // sem NENHUM scroll automático.
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const abriuNoFimRef = useRef(false);
 
   const { data: project } = useQuery({ queryKey: ['project', projectId], queryFn: () => getProject(projectId) });
   const { data: session } = useQuery({
@@ -168,7 +198,14 @@ export function SessionPage({
     refetchInterval: pollQueParaNoErro(5000),
   });
 
-  const eventsQuery = useSessionEvents(projectId, sessionId, 3000);
+  // Achados 2/7: o poll pausa ENQUANTO um turno está em streaming — buscar
+  // eventos já persistidos no meio do turno duplicava a bolha (o dado novo
+  // renderiza ao lado do estado otimista/streaming que ainda está na tela).
+  // O fim do turno (`finalizarTurnoDoAgente`, nos dois caminhos: canal e rede
+  // de segurança do `handleSend`) já invalida esta query explicitamente —
+  // pausar o TIMER não perde dado, só evita buscar de novo o que a
+  // invalidação busca de qualquer forma.
+  const eventsQuery = useSessionEvents(projectId, sessionId, 3000, streaming);
   const events = eventsQuery.data?.items ?? [];
 
   // O evento CITADO buscado pelo id. A listagem traz só os últimos 200 e o
@@ -189,10 +226,34 @@ export function SessionPage({
       ?.scrollIntoView({ block: 'center', behavior: 'smooth' });
   }, [highlightEvent, logOpen, events.length]);
 
+  // Achado 10: a sessão abre sempre na ÚLTIMA mensagem. Roda uma vez, assim
+  // que a primeira leva de eventos chega — a navegação de evidência do
+  // Psicólogo (efeito acima) tem prioridade quando existe `highlightEvent`,
+  // e por isso este nem tenta rolar nesse caso.
+  useEffect(() => {
+    if (highlightEvent || abriuNoFimRef.current || events.length === 0) return;
+    rolarParaOFim(messagesEndRef.current);
+    abriuNoFimRef.current = true;
+  }, [highlightEvent, events.length]);
+
+  // Mensagem nova (evento persistido ou delta de streaming) acompanha o fim
+  // SE o usuário já estava lá — não arranca o scroll de quem subiu pra reler
+  // o histórico. Só entra em jogo depois da abertura inicial.
+  useEffect(() => {
+    if (!abriuNoFimRef.current) return;
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    const pertoDoFim =
+      container.scrollHeight - container.scrollTop - container.clientHeight < 120;
+    if (pertoDoFim) rolarParaOFim(messagesEndRef.current);
+  }, [events.length, streamingText]);
+
   const handoffsQuery = useHandoffs(projectId, sessionId, 3000);
   const handoffs = handoffsQuery.data ?? [];
 
   // Um agente está ativo se houve um agent.activated pra ele nesta sessão.
+  // Isto é EXISTÊNCIA histórica ("já entrou alguma vez"), não "é ele quem
+  // fala AGORA" — os dois viram perguntas diferentes logo abaixo.
   const activeFor = (agent: string) =>
     events.some(
       (e) =>
@@ -200,17 +261,31 @@ export function SessionPage({
         (e.payload as { agent?: string })?.agent === agent,
     );
   const criativoActive = useMemo(() => activeFor('criativo'), [events]);
-  const poActive = useMemo(() => activeFor('po'), [events]);
-  const arquitetoActive = useMemo(() => activeFor('arquiteto'), [events]);
-  // O agente que recebe as mensagens do composer (o mais avançado do fluxo
-  // ativo tem precedência).
-  const activeAgent = arquitetoActive
-    ? 'arquiteto'
-    : poActive
-      ? 'po'
-      : criativoActive
-        ? 'criativo'
-        : null;
+
+  // O agente que recebe as mensagens do composer: o de `agent.activated`
+  // mais RECENTE (por `seq`) entre os `AGENTES_DE_CHAT` (achado 9-fix).
+  // Antes era uma cadeia de PRECEDÊNCIA fixa (arquiteto > po > criativo) que
+  // nunca "desligava" — uma vez que o Arquiteto atuasse, ele ficava com
+  // prioridade PARA SEMPRE, então mesmo depois de aceitar um handoff pro Dev
+  // Lead a mensagem seguinte continuava indo pro Arquiteto. `dev-lead` nem
+  // estava na cadeia; acrescentar mais um nome no fim só adiaria o mesmo bug
+  // pro próximo agente. "Mais recente vence" não precisa de ordem nenhuma.
+  const activeAgent = useMemo(() => {
+    let maisRecente: { agent: string; seq: number } | null = null;
+    for (const e of events) {
+      if (e.type !== 'agent.activated') continue;
+      const agent = (e.payload as { agent?: string })?.agent;
+      if (
+        !agent ||
+        !(AGENTES_DE_CHAT as readonly string[]).includes(agent)
+      ) {
+        continue;
+      }
+      if (!maisRecente || e.seq > maisRecente.seq) maisRecente = { agent, seq: e.seq };
+    }
+    return maisRecente?.agent ?? null;
+  }, [events]);
+
   // Primeiro handoff oferecido ainda não aceito → botão de aceitar (qualquer
   // agente: po, arquiteto…).
   const offeredHandoff = handoffs.find(
@@ -288,9 +363,16 @@ export function SessionPage({
     queryKey: ['models', projectId],
     queryFn: () => listModels(projectId),
   });
+  // Achado 1: `agentId` viaja na query pra a cascata rodar pro agente
+  // REALMENTE ativo (sessão→agente→área→projeto→workspace, ver
+  // `RunLlmTurnUseCase`) — sem ele a api só enxerga sessão→projeto→workspace
+  // (mais o fallback fixo pro Criativo) e a topbar continuava mostrando o
+  // modelo do Criativo depois de um handoff pro PO/Arquiteto/Dev Lead.
+  // `activeAgent` entra na queryKey pra a troca de agente ativo refazer a
+  // busca em vez de servir o binding do agente anterior do cache.
   const { data: resolvedBinding } = useQuery({
-    queryKey: ['session-model-binding', projectId, sessionId],
-    queryFn: () => getSessionModelBinding(projectId, sessionId),
+    queryKey: ['session-model-binding', projectId, sessionId, activeAgent],
+    queryFn: () => getSessionModelBinding(projectId, sessionId, activeAgent ?? undefined),
   });
   const { data: budget } = useQuery({
     queryKey: ['session-budget', projectId, sessionId],
@@ -551,12 +633,33 @@ export function SessionPage({
     setStreaming(true);
     setStreamingText('');
 
-    // Sessão com um agente ativo (Criativo ou PO): o turno roda no engine
-    // (harness); os deltas e o fim chegam pelo canal Phoenix. Senão, chat
-    // humano stateless via SSE.
-    if (activeAgent) {
+    // Achado 3: sessão CRIATIVA sem o Criativo ativo ainda — a primeira
+    // mensagem TAMBÉM o ativa (decisão do usuário: ninguém deveria precisar
+    // de um clique separado em "Iniciar ideação" antes de falar). Ativa e
+    // ESPERA terminar antes de mandar a mensagem pelo caminho real
+    // (`sendAgentMessage`) — nunca pelo SSE genérico mais abaixo, que não
+    // tem histórico, system prompt nem a tool `emit_artifact`, e por isso
+    // não registra regra de negócio nenhuma.
+    let agentParaEnviar = activeAgent;
+    if (!agentParaEnviar && session?.kind === 'criativa') {
       try {
-        await sendAgentMessage(projectId, sessionId, activeAgent, text);
+        await startAgent(projectId, sessionId, 'criativo');
+        await queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
+        agentParaEnviar = 'criativo';
+      } catch {
+        setStreaming(false);
+        setOptimisticUser(null);
+        showToast({ title: 'Erro', message: 'Não foi possível iniciar a ideação', tone: 'danger' });
+        return;
+      }
+    }
+
+    // Sessão com um agente ativo (Criativo, PO, Arquiteto, Dev Lead…): o
+    // turno roda no engine (harness); os deltas e o fim chegam pelo canal
+    // Phoenix. Senão (sessão consultiva), chat humano stateless via SSE.
+    if (agentParaEnviar) {
+      try {
+        await sendAgentMessage(projectId, sessionId, agentParaEnviar, text);
         // Rede de segurança contra o canal perder o `agent.done` (achado da
         // duplicata + botão preso): a conexão do canal (ticket + join, RN-108)
         // é assíncrona e pode não ter terminado quando o turno acaba — nesse
@@ -799,7 +902,7 @@ export function SessionPage({
 
       <div className={styles.body}>
         <div className={styles.chatColumn}>
-          <div className={styles.messages}>
+          <div className={styles.messages} ref={scrollContainerRef}>
             <div className={styles.messagesInner}>
               {/* O Criativo é ativado e NÃO fala primeiro: ele espera a sua
                   mensagem. Sem isto a tela ficava em branco depois de "Iniciar
@@ -945,6 +1048,9 @@ export function SessionPage({
                   </div>
                 </div>
               )}
+              {/* Sentinela do achado 10 — alvo do scroll de abertura e do
+                  "acompanha o fim" enquanto o usuário está perto dele. */}
+              <div ref={messagesEndRef} />
             </div>
           </div>
 
