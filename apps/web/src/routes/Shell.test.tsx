@@ -42,8 +42,15 @@ const WORKSPACE_WITH_ROLE: WorkspaceWithRole = {
 };
 
 vi.mock('@tanstack/react-router', () => ({
-  Link: ({ children, to, params }: { children: React.ReactNode; to: string; params?: unknown }) => (
-    <a href={`${to}-${JSON.stringify(params)}`}>{children}</a>
+  Link: ({
+    children,
+    to,
+    params,
+    ...rest
+  }: { children: React.ReactNode; to: string; params?: unknown } & Record<string, unknown>) => (
+    <a href={params ? `${to}-${JSON.stringify(params)}` : to} {...rest}>
+      {children}
+    </a>
   ),
   Outlet: () => null,
   useNavigate: () => navigate,
@@ -228,6 +235,20 @@ describe('Shell — marca', () => {
     expect(
       container.querySelector('aside svg path[d="M12 3l7 4v10l-7 4-7-4V7z"]'),
     ).toBeNull();
+  });
+
+  // A marca era `<div>` sem navegação nenhuma — clicar não fazia nada,
+  // mesmo sendo o topo da sidebar persistente em toda rota. Agora é o
+  // atalho de volta ao dashboard, o mesmo destino do botão de
+  // `SessionPage.tsx` (aria-label="Voltar ao dashboard").
+  it('é um link para o dashboard raiz, mesmo dentro de um projeto aberto', () => {
+    estado.pathname = '/projects/project-1';
+
+    renderShell();
+
+    const marca = screen.getByLabelText('Ir para o dashboard');
+    expect(marca.tagName).toBe('A');
+    expect(marca).toHaveAttribute('href', '/');
   });
 });
 

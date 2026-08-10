@@ -107,12 +107,12 @@ export function Shell() {
             o `BrandIcon`, um cubo isométrico sem parentesco nenhum com ela: o
             app tinha duas marcas, e quem entrava pelo login via a segunda
             trocar pela primeira. */}
-        <div className={styles.brand}>
+        <Link to="/" className={styles.brand} aria-label="Ir para o dashboard">
           <span className={styles.brandTile} aria-hidden="true">
             <LogoMark size={18} />
           </span>
           <span className={styles.brandName}>Brabo</span>
-        </div>
+        </Link>
 
         <div className={styles.navLabelRow}>
           <span className={styles.navLabel}>Projetos</span>
