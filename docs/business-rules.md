@@ -145,9 +145,15 @@ nome é rótulo de navegação, trocado quantas vezes se quiser — N eventos de
 renomeação empurrariam para fora da cauda de 200 exatamente o que interessa.
 
 - **Onde:** `apps/web/src/lib/session-label.ts:50` (`rotuloDaSessao`),
-  `apps/api/src/application/ports/session-repository.port.ts:52` (`rename`)
+  `apps/api/src/application/ports/session-repository.port.ts:52` (`rename`).
+  Alcançável tanto de dentro da sessão
+  (`apps/web/src/routes/SessionPage.tsx:445`, `handleRename`) quanto da lista
+  do projeto, sem precisar abrir a sessão primeiro
+  (`apps/web/src/routes/ProjectSessionsTab.tsx:101`, `handleRenomear`) — as
+  duas telas chamam o mesmo `renameSession` e a mesma `rotuloDaSessao`.
 - **Teste:** `apps/web/src/lib/session-label.test.ts`,
-  `apps/api/test/application/use-cases/sessions/session-kind-e-nome.spec.ts`
+  `apps/api/test/application/use-cases/sessions/session-kind-e-nome.spec.ts`,
+  `apps/web/src/routes/ProjectSessionsTab.test.tsx`
 - **Origem:** [ADR 0061](adr/0061-tipo-da-sessao-na-criacao.md)
 
 ### RN-104 — A aba deriva do tipo gravado, e cria naquele tipo {#rn-104}

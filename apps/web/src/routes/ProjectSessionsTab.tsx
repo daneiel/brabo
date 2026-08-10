@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, type KeyboardEvent, type MouseEvent } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useQueries, useQueryClient } from '@tanstack/react-query';
-import { createSession, listActions, transitionSession } from '../lib/api-client';
+import { createSession, listActions, renameSession, transitionSession } from '../lib/api-client';
 import { useProjectSessions } from '../lib/hooks';
 import {
   resumirAcoes,
@@ -13,7 +13,9 @@ import { Badge } from '../components/ui/Badge';
 import { Input } from '../components/ui/Input';
 import { Skeleton } from '../components/ui/Skeleton';
 import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
-import { LIMITE_DO_NOME, rotuloDaSessao } from '../lib/session-label';
+import { useToast } from '../components/ui/ToastProvider';
+import { PencilIcon } from '../components/ui/icons';
+import { LIMITE_DO_NOME, hashtagDaSessao, rotuloDaSessao } from '../lib/session-label';
 import { TIPOS_DE_SESSAO } from '../lib/session-kind';
 import type { SessionKind, SessionStatus } from '../lib/api-types';
 import styles from './ProjectSessionsTab.module.css';
@@ -85,9 +87,29 @@ export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps)
   const [nome, setNome] = useState('');
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { showToast } = useToast();
 
   const copy = ABA_DO_KIND[kind];
   const tipo = TIPOS_DE_SESSAO[kind];
+
+  // Renomear DIRETO da lista, sem abrir a sessão (RN-098 já existia só dentro
+  // dela). Mesmo mecanismo de `SessionPage.tsx`: rascunho por id, Enter
+  // confirma, Esc desiste, blur confirma. `rascunho` guarda QUAL linha está em
+  // edição — a lista tem várias, a sessão só tem uma.
+  const [rascunho, setRascunho] = useState<{ id: string; valor: string } | null>(null);
+
+  async function handleRenomear(sessionId: string) {
+    if (!rascunho || rascunho.id !== sessionId) return;
+    // Em branco APAGA o nome, mesma regra de `SessionPage` (RN-098).
+    const nomeNovo = rascunho.valor.trim() || null;
+    setRascunho(null);
+    try {
+      await renameSession(projectId, sessionId, nomeNovo);
+      await queryClient.invalidateQueries({ queryKey: ['sessions', projectId] });
+    } catch {
+      showToast({ title: 'Erro', message: 'Não foi possível renomear a sessão', tone: 'danger' });
+    }
+  }
 
   async function handleCreate() {
     setCreating(true);
@@ -213,9 +235,46 @@ export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps)
                 className={styles.row}
                 onClick={() => navigate({ to: '/projects/$projectId/sessions/$sessionId', params: { projectId, sessionId: session.id } })}
               >
-                <span className={styles.rowId}>
-                  {rotuloDaSessao(session.id, session.name)}
-                </span>
+                {rascunho?.id === session.id ? (
+                  // O campo ocupa o LUGAR do rótulo, mesma ideia da
+                  // `SessionPage`. `stopPropagation` no clique é o que
+                  // impede o clique de posicionar o cursor e navegar pra
+                  // dentro da sessão ao mesmo tempo.
+                  <input
+                    className={styles.rowIdEditavel}
+                    value={rascunho.valor}
+                    autoFocus
+                    maxLength={LIMITE_DO_NOME}
+                    aria-label="Nome da sessão"
+                    placeholder={`Sem nome — a sessão fica ${hashtagDaSessao(session.id)}`}
+                    onClick={(e: MouseEvent<HTMLInputElement>) => e.stopPropagation()}
+                    onChange={(e) => setRascunho({ id: session.id, valor: e.target.value })}
+                    onBlur={() => handleRenomear(session.id)}
+                    onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => {
+                      if (e.key === 'Enter') handleRenomear(session.id);
+                      if (e.key === 'Escape') setRascunho(null);
+                    }}
+                  />
+                ) : (
+                  // Botão, não `span`: clicar no nome (ou no lápis) abre a
+                  // edição SEM navegar — `stopPropagation` impede o clique
+                  // de também disparar o `onClick` da linha, que abre a
+                  // sessão. Só clicar fora deste controle navega.
+                  <button
+                    type="button"
+                    className={styles.rowId}
+                    title={`Sessão ${rotuloDaSessao(session.id, session.name)} — clique para renomear`}
+                    onClick={(e: MouseEvent<HTMLButtonElement>) => {
+                      e.stopPropagation();
+                      setRascunho({ id: session.id, valor: session.name ?? '' });
+                    }}
+                  >
+                    <span className={styles.rowIdTexto}>
+                      {rotuloDaSessao(session.id, session.name)}
+                    </span>
+                    <PencilIcon size={12} className={styles.rowIdPencil} />
+                  </button>
+                )}
                 <Badge tone={STATUS_TONE[session.status]} dot>
                   {session.status}
                 </Badge>
