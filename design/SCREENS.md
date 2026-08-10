@@ -105,6 +105,15 @@ papel RBAC). O avatar é `var(--accent)` SÓLIDO, não o gradiente do handoff: a
 mistura com `--warning` derruba o contraste das iniciais para 2.10:1, e o
 handoff não especifica senioridade que o produto tenha para mostrar.
 
+Divergência do mock, deliberada: um botão "+" (ícone só, 22×22px) ao lado do
+label "PROJETOS", que abre o MESMO `NewProjectWizard` do botão da topbar. O
+mock só desenha "Novo projeto" na topbar do Dashboard, mas a sidebar é o
+layout PERSISTENTE (`Shell.tsx`, montado em toda rota `/projects/$projectId/**`)
+— sem ele, criar um segundo projeto estando dentro de um já aberto exigia
+voltar manualmente para `/`. Os dois convivem de propósito: moram em regiões
+visuais distintas, e não há redundância perceptível na única tela onde ambos
+aparecem (o dashboard).
+
 **Topbar** (60px, `border-bottom`): título "Projetos" à esquerda; busca
 (input com ícone, 260px); `NotificationBell`; botão primary "+ Novo
 projeto" (abre o wizard, ver `COMPONENTS.md`).

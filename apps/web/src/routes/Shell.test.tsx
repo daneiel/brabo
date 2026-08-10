@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Shell } from './Shell';
 import { ApiError } from '../lib/api-client';
@@ -9,10 +9,12 @@ const navigate = vi.fn();
 const sair = vi.fn(() => Promise.resolve());
 
 // Mutável porque a sidebar muda de comportamento com a LISTA (nome repetido
-// ganha desempate, nome único não), e os mocks de módulo são hoisted.
+// ganha desempate, nome único não) e com a ROTA atual, e os mocks de módulo
+// são hoisted.
 const estado = vi.hoisted(() => ({
   projects: [] as unknown[],
   projectsQuery: {} as Record<string, unknown>,
+  pathname: '/',
 }));
 
 const PROJECT: Project = {
@@ -45,7 +47,8 @@ vi.mock('@tanstack/react-router', () => ({
   ),
   Outlet: () => null,
   useNavigate: () => navigate,
-  useRouterState: () => '/',
+  useRouterState: (opts?: { select?: (s: { location: { pathname: string } }) => unknown }) =>
+    opts?.select ? opts.select({ location: { pathname: estado.pathname } }) : estado.pathname,
 }));
 
 vi.mock('../lib/auth', () => ({
@@ -82,6 +85,13 @@ vi.mock('../lib/api-client', async () => {
   };
 });
 
+// Stub, mesmo padrão do `Dashboard.test.tsx`: o wizard de verdade puxa
+// react-query/ToastProvider/api-client — o que a sidebar precisa provar é só
+// que ela ABRE o mesmo componente, não o comportamento dele.
+vi.mock('./NewProjectWizard', () => ({
+  NewProjectWizard: () => <div data-testid="wizard-stub" />,
+}));
+
 function renderShell() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
@@ -96,6 +106,7 @@ beforeEach(() => {
   sair.mockClear();
   estado.projects = [PROJECT];
   estado.projectsQuery = {};
+  estado.pathname = '/';
 });
 
 describe('Shell — rodapé', () => {
@@ -217,5 +228,36 @@ describe('Shell — marca', () => {
     expect(
       container.querySelector('aside svg path[d="M12 3l7 4v10l-7 4-7-4V7z"]'),
     ).toBeNull();
+  });
+});
+
+/**
+ * Antes disto, "Novo projeto" só existia no topbar do Dashboard
+ * (`Dashboard.tsx`). Dentro de um projeto aberto (`/projects/$projectId/**`)
+ * não havia NENHUM jeito de criar outro — só voltar ao `/` manualmente. A
+ * sidebar é montada em toda rota, então o botão aqui é o que fecha essa
+ * lacuna.
+ */
+describe('Shell — novo projeto na sidebar', () => {
+  it('o botão aparece e abre o mesmo wizard estando DENTRO de um projeto aberto', () => {
+    estado.pathname = '/projects/project-1';
+
+    renderShell();
+
+    expect(screen.queryByTestId('wizard-stub')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Novo projeto' }));
+
+    expect(screen.getByTestId('wizard-stub')).toBeInTheDocument();
+  });
+
+  it('também aparece no dashboard — as duas entradas convivem, uma na topbar (Dashboard) e outra na sidebar (aqui)', () => {
+    estado.pathname = '/';
+
+    renderShell();
+
+    expect(
+      screen.getByRole('button', { name: 'Novo projeto' }),
+    ).toBeInTheDocument();
   });
 });
