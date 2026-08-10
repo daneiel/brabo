@@ -97,6 +97,18 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **web**: mensagem duplicada e "Iniciar ideação" preso na topbar depois de
+  enviar a primeira mensagem a um agente ativo (Criativo/PO/Arquiteto). A
+  conexão do canal Phoenix (ticket + join, RN-108) é assíncrona e podia não
+  ter terminado quando o turno acabava — o `agent.done` que a tela dependia
+  para resetar `streaming`/a mensagem otimista se perdia sem ninguém ouvindo
+  do outro lado, e como nada mais reconciliava esse caminho, o cliente ficava
+  preso. `handleSend` passa a reconciliar o mesmo estado quando a própria
+  chamada `POST .../agents/:agent/message` resolve — ela só retorna depois
+  que o engine termina o turno inteiro (`GenServer.call` síncrono no
+  `CriativoServer.user_message/2`), sinal de conclusão tão confiável quanto
+  `agent.done`, e idempotente com ele
+
 - **api,engine,web**: o socket Phoenix da sessão (`session:<id>`) exigia só o
   `session_id` existir — quem descobrisse o UUID entrava no canal e recebia
   todos os broadcasts ao vivo. `connect/3` passa a exigir um ticket opaco de
