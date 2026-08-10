@@ -8,6 +8,7 @@ import {
   ExecutionSection,
   ModelsSection,
   ParallelismSection,
+  ProficiencySection,
   PromotionSection,
 } from './ProjectSettingsTab';
 import { ToastProvider } from '../components/ui/ToastProvider';
@@ -34,6 +35,7 @@ const setAgentModelBinding = vi.fn();
 const listAgentAreas = vi.fn();
 const setAreaMaxParallel = vi.fn();
 const useCurrentWorkspaceWithRole = vi.fn();
+const runAnamnese = vi.fn();
 
 vi.mock('../lib/hooks', () => ({
   useCurrentWorkspaceWithRole: (...args: unknown[]) =>
@@ -72,6 +74,7 @@ vi.mock('../lib/api-client', async () => {
     setAgentModelBinding: (...args: unknown[]) => setAgentModelBinding(...args),
     listAgentAreas: (...args: unknown[]) => listAgentAreas(...args),
     setAreaMaxParallel: (...args: unknown[]) => setAreaMaxParallel(...args),
+    runAnamnese: (...args: unknown[]) => runAnamnese(...args),
   };
 });
 
@@ -123,6 +126,7 @@ beforeEach(() => {
   listAgentAreas.mockResolvedValue([]);
   setAreaMaxParallel.mockResolvedValue({});
   useCurrentWorkspaceWithRole.mockReturnValue({ data: { role: 'maintainer' } });
+  runAnamnese.mockResolvedValue(undefined);
 });
 
 function credencial(over: Partial<UserCredentialMetadata> = {}): UserCredentialMetadata {
@@ -729,5 +733,65 @@ describe('AreaModelsSection — padrão herdável da área (ADR 0064, RN-102)', 
     expect(
       screen.getByText(/Exige papel maintainer para alterar/),
     ).toBeInTheDocument();
+  });
+});
+
+/**
+ * A Anamnese pode estar pausada GLOBALMENTE (decisão do usuário em
+ * 2026-08-10, não bug — ver docs/explanation/backlog.md). Não confundir com o
+ * opt-in/opt-out POR MEMBRO ("Voltar a ser perfilado"), que é outro conceito e
+ * não muda aqui.
+ */
+describe('ProficiencySection — Anamnese pausada globalmente', () => {
+  function montarProficiencia() {
+    return montarSecao(<ProficiencySection projectId="proj-1" />);
+  }
+
+  it('rodar agora com sucesso avisa e não desabilita o botão', async () => {
+    montarProficiencia();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rodar agora' }));
+
+    expect(await screen.findByText('Rodada enfileirada')).toBeInTheDocument();
+    expect(runAnamnese).toHaveBeenCalledWith('proj-1');
+    expect(screen.getByRole('button', { name: 'Rodar agora' })).not.toBeDisabled();
+  });
+
+  it('503 (desativada globalmente) é distinto de erro genérico: some toast claro, o botão desabilita e a explicação fica na tela', async () => {
+    runAnamnese.mockRejectedValue(
+      new ApiError(503, {
+        message: 'A Anamnese está desativada globalmente por decisão do usuário — aguardando refinamento futuro.',
+        reason: 'anamnese_disabled',
+      }),
+    );
+    montarProficiencia();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rodar agora' }));
+
+    expect(await screen.findByText('Anamnese pausada')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'A Anamnese está desativada globalmente por decisão do usuário — aguardando refinamento futuro.',
+      ),
+    ).toBeInTheDocument();
+
+    // Persistente na tela, não só o toast (RN-088: nunca falha silenciosa ou
+    // confusa) — e o botão para de convidar um clique que sabidamente falha.
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Rodar agora' })).toBeDisabled(),
+    );
+    expect(
+      screen.getByText(/A Anamnese está pausada globalmente por decisão do time/),
+    ).toBeInTheDocument();
+  });
+
+  it('erro genérico (não 503) não mexe no botão — só o toast de erro comum', async () => {
+    runAnamnese.mockRejectedValue(new ApiError(500, { message: 'boom' }));
+    montarProficiencia();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rodar agora' }));
+
+    expect(await screen.findByText('Erro')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Rodar agora' })).not.toBeDisabled();
   });
 });

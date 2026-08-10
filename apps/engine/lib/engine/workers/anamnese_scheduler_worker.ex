@@ -23,6 +23,21 @@ defmodule Engine.Workers.AnamneseSchedulerWorker do
   defp interval_seconds,
     do: Application.get_env(:engine, :anamnese_interval_seconds, 900)
 
+  @doc """
+  Flag de PRODUTO (não confundir com `start_anamnese?`, que é a chave de
+  teste que decide se o `kickoff/0` é chamado no boot — ver
+  `Engine.Application`): decide se uma rodada NOVA da Anamnese pode
+  acontecer, periódica ou sob demanda. Desativado não apaga nada — hipóteses,
+  perfis de proficiência e patches de instrução já gravados continuam
+  intactos e visíveis.
+
+  Default DESLIGADO a partir de agora: decisão do usuário em 2026-08-10
+  ("hoje ele não está trazendo dados de muito valor"), documentada em
+  docs/explanation/backlog.md — não é bug, é pausa reversível. Ligar de
+  volta é `ANAMNESE_ENABLED=true` e reiniciar o engine.
+  """
+  def enabled?, do: Application.get_env(:engine, :anamnese_enabled?, false)
+
   @impl true
   def perform(_job) do
     enqueue_projects()
@@ -34,11 +49,29 @@ defmodule Engine.Workers.AnamneseSchedulerWorker do
     :ok
   end
 
-  @doc "Chamado uma vez no boot (ver Engine.Application)."
+  @doc """
+  Chamado uma vez no boot (ver Engine.Application).
+
+  Desativado (`enabled?/0` falso), NÃO agenda o job periódico — em vez de
+  agendar e deixar `perform/1` no-opar a cada tick. Mais barato (a fila do
+  Oban não recebe um job a cada `interval_seconds` só para não fazer nada) e
+  mais claro para quem inspeciona a fila: Anamnese desativada não deixa
+  rastro nenhum de tentativa. `perform/1` continua incondicional de
+  propósito — os testes existentes chamam `perform_job/2` direto, sem passar
+  por `kickoff/0`, e a corrente entre rodadas não deve carregar a decisão de
+  ligar/desligar consigo (quem religa reinicia o engine, que chama
+  `kickoff/0` de novo).
+  """
   def kickoff do
-    %{}
-    |> new(unique: [period: interval_seconds() * 2, states: [:available, :scheduled, :retryable]])
-    |> Oban.insert()
+    if enabled?() do
+      %{}
+      |> new(
+        unique: [period: interval_seconds() * 2, states: [:available, :scheduled, :retryable]]
+      )
+      |> Oban.insert()
+    else
+      {:ok, :anamnese_desativada}
+    end
   end
 
   defp enqueue_projects do

@@ -3,6 +3,7 @@ import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import {
   addProjectMember,
+  ApiError,
   deleteMyProficiency,
   getProject,
   getProjectEvent,
@@ -1350,13 +1351,22 @@ export function CredentialsSection() {
  * O usuário pode apagar o PRÓPRIO perfil — o que também registra o
  * opt-out (senão a rodada seguinte re-derivaria tudo).
  */
-function ProficiencySection({ projectId }: { projectId: string }) {
+// Exportada para o teste, como ExecutionSection e PromotionSection.
+export function ProficiencySection({ projectId }: { projectId: string }) {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const navigate = useNavigate();
   const { data: profiles } = useProficiency(projectId);
   const [confirmandoDelete, setConfirmandoDelete] = useState(false);
   const [emVoo, setEmVoo] = useState(false);
+  // A Anamnese pode estar pausada GLOBALMENTE (decisão do usuário em
+  // 2026-08-10, não bug — ver docs/explanation/backlog.md). Não há hoje um
+  // jeito de saber isso ANTES de clicar (o estado é do engine, não vem em
+  // nenhuma leitura desta tela); "Rodar agora" descobre no primeiro clique e
+  // o botão fica desabilitado dali em diante, com a explicação PERSISTENTE
+  // na tela — não só um toast que some (RN-088: nunca falha silenciosa ou
+  // confusa).
+  const [anamneseDesativada, setAnamneseDesativada] = useState(false);
 
   const all = profiles ?? [];
   const byUser = new Map<string, typeof all>();
@@ -1405,12 +1415,24 @@ function ProficiencySection({ projectId }: { projectId: string }) {
         message: 'A Anamnese vai analisar a janela agora.',
         tone: 'success',
       });
-    } catch {
-      showToast({
-        title: 'Erro',
-        message: 'Não foi possível enfileirar a rodada',
-        tone: 'danger',
-      });
+    } catch (erro) {
+      if (erro instanceof ApiError && erro.status === 503) {
+        // Distinto de "projeto sem sessão" (409) — a api já manda a frase
+        // pronta em `body.message` (ServiceUnavailableException do
+        // RunAnamneseUseCase).
+        setAnamneseDesativada(true);
+        showToast({
+          title: 'Anamnese pausada',
+          message: mensagemDaApi(erro, 'A Anamnese está desativada globalmente.'),
+          tone: 'warning',
+        });
+      } else {
+        showToast({
+          title: 'Erro',
+          message: 'Não foi possível enfileirar a rodada',
+          tone: 'danger',
+        });
+      }
     } finally {
       setEmVoo(false);
     }
@@ -1484,7 +1506,7 @@ function ProficiencySection({ projectId }: { projectId: string }) {
         ))
       )}
 
-      <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+      <div style={{ display: 'flex', gap: 8, marginTop: 14, alignItems: 'center' }}>
         <Button
           variant="danger"
           disabled={emVoo}
@@ -1495,10 +1517,25 @@ function ProficiencySection({ projectId }: { projectId: string }) {
         <Button variant="ghost" disabled={emVoo} onClick={handleOptIn}>
           Voltar a ser perfilado
         </Button>
-        <Button variant="secondary" disabled={emVoo} onClick={handleRunNow}>
+        <Button
+          variant="secondary"
+          disabled={emVoo || anamneseDesativada}
+          onClick={handleRunNow}
+          title={anamneseDesativada ? 'A Anamnese está pausada globalmente' : undefined}
+        >
           Rodar agora
         </Button>
       </div>
+
+      {/* Pausa GLOBAL (não é o opt-out por membro acima) — decisão do
+          usuário em 2026-08-10, aguardando refinamento futuro. Fica visível
+          de propósito, não só um toast que some (RN-088). */}
+      {anamneseDesativada && (
+        <div className={styles.subtitle} style={{ marginTop: 8 }}>
+          A Anamnese está pausada globalmente por decisão do time — sem
+          rodada nova por enquanto. O que já foi derivado continua aqui.
+        </div>
+      )}
 
       {/* Apagar é irreversível (e grava opt-out) — um clique cru era demais
           para uma ação que não tem como desfazer o que foi apagado. */}

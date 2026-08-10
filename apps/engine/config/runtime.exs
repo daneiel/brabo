@@ -159,6 +159,12 @@ config :engine,
   # Anamnese (Fase 4b) — mesma racional dos knobs do Psicólogo acima: teto de
   # custo é coisa que o operador aperta por ambiente, não constante de código.
   # O tick é global e faz fan-out por projeto (ver AnamneseSchedulerWorker).
+  #
+  # `anamnese_enabled?` é decisão de PRODUTO, não teto de custo: pausa rodada
+  # NOVA (periódica e sob demanda) sem apagar nada do que já existe. Default
+  # DESLIGADO a partir de agora — decisão do usuário em 2026-08-10 ("hoje ele
+  # não está trazendo dados de muito valor"), ver docs/explanation/backlog.md.
+  anamnese_enabled?: System.get_env("ANAMNESE_ENABLED", "false") == "true",
   anamnese_interval_seconds:
     String.to_integer(System.get_env("ANAMNESE_INTERVAL_SECONDS", "900")),
   anamnese_initial_window_days:
