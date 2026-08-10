@@ -2987,6 +2987,57 @@ foi qual janela a consulta escolhe e o que a gaveta declara sobre ela.
 
 ---
 
+### RN-118 — A árvore do time expõe detalhe de execução por marco, e abre os "5 últimos" {#rn-118}
+
+`AgentTimelineTree`/`timeline-tree.ts` (FASE 14b) já agrupava o event log por
+agente, mas com três lacunas: o critério de abrir um ramo era só
+ativo/parado (sem relação com quantos agentes existiam), o contador do
+cabeçalho era o TOTAL de marcos (nunca "o que é novo"), e `tool.call`/
+`tool.result`/`agent.response` viravam marco mostrando só o nome da
+ferramenta — `args`, `result` e `iteration`, que o event log já grava,
+nunca chegavam na tela.
+
+**Abertura padrão** passa a ser "os 5 agentes de atividade mais recente
+(maior `seq` do último marco)", com ativo mantendo prioridade sobre
+recência — não se soma: como `montarArvore` já ordena ativos primeiro e,
+dentro de cada grupo, do mais recente pro mais antigo, os dois critérios
+colapsam numa fatia só (`ramosAbertosPorPadrao`, os primeiros
+`max(nº de ativos, 5)` ramos). Mais de 5 ativos: todos abrem, sem corte.
+
+**Contador de novidade** por agente usa o MESMO mecanismo do sino
+(`read-state.ts`, `localStorage`), granular por `projectId:agentId` em vez
+de só `projectId` — não existia "último visto" nessa granularidade antes.
+Ramo colapsado com marco de `seq` maior que o último visto daquele agente
+mostra a contagem de NOVIDADE no lugar do total; abrir o ramo (automático
+ou manual) marca como visto até o `seq` mais recente.
+
+**Detalhe expansível** é por MARCO, não por ramo — só `tool.call`,
+`tool.result` e `agent.response` (`EVENTOS_EXPANSIVEIS`) viram botão
+individual, porque só eles carregam payload que vale expandir. O
+agrupamento visual por ITERAÇÃO usa `iteration` do payload de
+`agent.response` quando existe (ToolLoop — `tool.call`/`tool.result`
+herdam a iteração da resposta que os despachou, porque no ToolLoop eles
+são emitidos DEPOIS dela); agentes fora do ToolLoop (PO, Criativo, sem
+`iteration` no payload) ganham um contador PRÓPRIO por agente, incrementado
+a cada resposta — inferência por proximidade de `seq`, não um campo novo no
+event log.
+
+- **Onde:** `apps/web/src/lib/timeline-tree.ts` (`Marco.iteracao`,
+  `Marco.eventType`, `Marco.payload`, `ramosAbertosPorPadrao`,
+  `marcoExpansivel`), `apps/web/src/components/AgentTimelineTree.tsx`,
+  `apps/web/src/lib/read-state.ts` (`getAgentLastSeenSeq`/
+  `setAgentLastSeenSeq`)
+- **Teste:** `apps/web/src/lib/timeline-tree.test.ts` (agrupamento por
+  iteração real e inferida, `ramosAbertosPorPadrao` com ativo/recência/sem
+  corte), `apps/web/src/components/AgentTimelineTree.test.tsx` (abertura
+  padrão, contador de novidade aparecendo/sumindo, marco expandindo com
+  args/resultado/iteração)
+- **Origem:** pedido do usuário — lacunas confirmadas por investigação no
+  componente existente da FASE 14b; sem ADR, mesma semântica de "não visto"
+  do sino, só granularidade nova
+
+---
+
 ### RN-096 — Toda decisão diz em português o que acontece; o payload cru nasce colapsado {#rn-096}
 
 Todo tipo de `proposed_action` tem uma **frase em português** que descreve o
