@@ -199,6 +199,21 @@ export function SessionPage({
     (h) => h.status === 'offered' && !activeFor(h.toAgent),
   );
 
+  // Reconciliação de fim de turno do `activeAgent` — o que `onAgentDone` (canal)
+  // faz, extraído pra também servir de REDE DE SEGURANÇA em `handleSend` (ver
+  // abaixo). Idempotente: chamar duas vezes pro mesmo turno (canal E fallback)
+  // só reseta estado que já estava resetado e invalida query que já está fresca.
+  const finalizarTurnoDoAgente = useCallback(() => {
+    streamingRef.current = false;
+    setStreaming(false);
+    setStreamingText('');
+    setStreamingAgent(null);
+    setOptimisticUser(null);
+    queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
+    queryClient.invalidateQueries({ queryKey: ['session-handoffs', projectId, sessionId] });
+    queryClient.invalidateQueries({ queryKey: ['session-budget', projectId, sessionId] });
+  }, [queryClient, projectId, sessionId]);
+
   // Canal Phoenix: recebe os deltas do Criativo (streaming token-a-token) e o
   // fim do turno. A persistência (agent.response + artefatos) chega pelo poll.
   useEffect(() => {
@@ -210,16 +225,7 @@ export function SessionPage({
         setStreamingText((t) => t + text);
         if (agent) setStreamingAgent(agent);
       },
-      onAgentDone: () => {
-        streamingRef.current = false;
-        setStreaming(false);
-        setStreamingText('');
-        setStreamingAgent(null);
-        setOptimisticUser(null);
-        queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
-        queryClient.invalidateQueries({ queryKey: ['session-handoffs', projectId, sessionId] });
-        queryClient.invalidateQueries({ queryKey: ['session-budget', projectId, sessionId] });
-      },
+      onAgentDone: finalizarTurnoDoAgente,
       // Fase 4a — painel do time ao vivo: qualquer evento persistido
       // (Dev/QA/SecOps/Infra) antecipa o refetch do polling — reaproveita o
       // parsing/cache já existente (useSessionEvents), só antecipa quando o
@@ -235,7 +241,7 @@ export function SessionPage({
       },
     });
     return disconnect;
-  }, [session?.status, sessionId, projectId, queryClient]);
+  }, [session?.status, sessionId, projectId, queryClient, finalizarTurnoDoAgente]);
 
   const { data: modelsByCategory } = useQuery({
     // A chave carrega o projeto porque a lista é do WORKSPACE dele (ADR 0049):
@@ -499,6 +505,26 @@ export function SessionPage({
     if (activeAgent) {
       try {
         await sendAgentMessage(projectId, sessionId, activeAgent, text);
+        // Rede de segurança contra o canal perder o `agent.done` (achado da
+        // duplicata + botão preso): a conexão do canal (ticket + join, RN-108)
+        // é assíncrona e pode não ter terminado quando o turno acaba — nesse
+        // caso o broadcast de fim de turno não tem ninguém ouvindo do outro
+        // lado e se perde pra sempre, e como só `onAgentDone` resetava
+        // `streaming`/`optimisticUser` no caminho de sucesso, o cliente ficava
+        // preso: a mensagem otimista nunca some (daí a duplicata quando o
+        // evento persistido chega por outra via) e o convite/botão de
+        // "Iniciar ideação" nunca voltam a refletir o estado real.
+        //
+        // Esta chamada só RESOLVE depois que o engine termina o turno inteiro
+        // — a rota é síncrona no engine (`GenServer.call` com timeout de
+        // 120s em `CriativoServer.user_message`/2, ver
+        // `agent_command_controller.ex`), então "resolveu" é sinal tão
+        // confiável de "turno acabou" quanto `agent.done`. Na maioria das
+        // vezes `onAgentDone` chega primeiro (empurrado direto pelo canal,
+        // sem o salto extra de volta pela api) e este reset roda de novo sem
+        // efeito — é por isso que `finalizarTurnoDoAgente` é seguro de
+        // chamar duas vezes.
+        finalizarTurnoDoAgente();
       } catch {
         setStreaming(false);
         setOptimisticUser(null);
