@@ -12,15 +12,19 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   conhecido). Um QUARTO estado, além dos três da RN-088, aparece quando o
   Arquiteto ainda não decidiu a imagem do container: "bloqueada por decisão
   pendente" (RN-107), nem carregando, nem erro, nem vazio. Terminal
-  interativo, blame, lista rica de branches e lista de PRs ficam de fora,
-  declarados como pendência — dependem de fases que ainda não subiram (FASE
-  26, item 35)
+  interativo, blame e lista rica de branches ficam de fora, declarados como
+  pendência — dependem de fases que ainda não subiram (FASE 26, item 35)
 
 - **api**: fundação de blame, PRs navegáveis e branch rica para a aba Code —
-  `GET /projects/:id/code/{blame,pull-requests,branches}`, sem UI
-  consumindo ainda (as três telas são a onda seguinte). `GitProviderContract`
+  `GET /projects/:id/code/{blame,pull-requests,branches}`. `GitProviderContract`
   ganha a 13ª/14ª/15ª operação, provadas pela suite de contrato nos três
   providers (RN-110/111/112)
+
+- **web**: o painel "Diff de PR" da aba Code ganha lista navegável de pull
+  requests (id, título, autor, estado, branches, filtro por estado),
+  consumindo `listPullRequests` (RN-111); clicar num item abre o mesmo fluxo
+  de diff por id que já existia. Quem já sabe o id continua podendo colar
+  direto
 
 - **api,web**: aba de Gastos com duas audiências — o owner vê a quebra do workspace por modelo, projeto, ator e dia (mais a fatura por credencial, que já existia); o membro vê só o próprio consumo, por sessão e por dia, sem provider e sem credencial (ADR 0063, RN-101)
 

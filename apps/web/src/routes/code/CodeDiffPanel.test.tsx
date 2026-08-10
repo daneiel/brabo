@@ -3,9 +3,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { CodeDiffPanel } from './CodeDiffPanel';
-import type { CodeDiff } from '../../lib/api-types';
+import type { CodeDiff, CodePullRequestList } from '../../lib/api-types';
 
 const getCodeDiff = vi.fn();
+const getCodePullRequests = vi.fn();
 
 vi.mock('../../lib/api-client', async () => {
   const real = await vi.importActual<typeof import('../../lib/api-client')>('../../lib/api-client');
@@ -13,6 +14,7 @@ vi.mock('../../lib/api-client', async () => {
     ApiError: real.ApiError,
     mensagemDaApi: real.mensagemDaApi,
     getCodeDiff: (...args: unknown[]) => getCodeDiff(...args),
+    getCodePullRequests: (...args: unknown[]) => getCodePullRequests(...args),
   };
 });
 
@@ -25,23 +27,86 @@ function montar() {
   );
 }
 
-async function pedirDiff(id: string) {
+async function pedirDiffPeloId(id: string) {
   const user = userEvent.setup();
-  await user.type(screen.getByLabelText('Id da PR'), id);
+  await user.type(screen.getByLabelText('Já sabe o id?'), id);
   await user.click(screen.getByRole('button', { name: 'Ver diff' }));
 }
 
+const listaVazia: CodePullRequestList = { items: [], truncated: false };
+
 beforeEach(() => {
   vi.clearAllMocks();
+  getCodePullRequests.mockResolvedValue(listaVazia);
 });
 
-describe('CodeDiffPanel', () => {
-  it('sem id digitado, não pede nada — não há lista de PRs para escolher', () => {
+describe('CodeDiffPanel — lista de PRs', () => {
+  it('carrega a lista de PRs abertas por padrão', async () => {
     montar();
-    expect(screen.getByText(/Sem lista de PRs aqui/)).toBeInTheDocument();
-    expect(getCodeDiff).not.toHaveBeenCalled();
+    expect(await screen.findByText('Nenhuma PR aberta neste repositório.')).toBeInTheDocument();
+    expect(getCodePullRequests).toHaveBeenCalledWith('p-1', { state: 'open' });
   });
 
+  it('lista PRs reais e clicar numa delas abre o diff certo', async () => {
+    const lista: CodePullRequestList = {
+      items: [
+        {
+          id: 'pr-218',
+          number: 218,
+          title: 'feat: aba code',
+          url: 'https://example.com/pr/218',
+          author: 'daneiel',
+          state: 'open',
+          sourceBranch: 'feature/aba-code',
+          targetBranch: 'dev',
+          updatedAt: null,
+        },
+      ],
+      truncated: false,
+    };
+    getCodePullRequests.mockResolvedValue(lista);
+
+    const diff: CodeDiff = { pullRequestId: 'pr-218', files: [], truncated: false };
+    getCodeDiff.mockResolvedValue(diff);
+
+    montar();
+    expect(await screen.findByText('#218 feat: aba code')).toBeInTheDocument();
+    expect(screen.getByText('daneiel · feature/aba-code → dev')).toBeInTheDocument();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Abrir PR #218: feat: aba code' }));
+
+    expect(getCodeDiff).toHaveBeenCalledWith('p-1', 'pr-218');
+    expect(await screen.findByText('Esta PR não mudou nenhum arquivo.')).toBeInTheDocument();
+    expect(screen.getByText('#218 feat: aba code')).toBeInTheDocument();
+    expect(screen.getByText('feature/aba-code → dev')).toBeInTheDocument();
+
+    // Voltar à lista limpa a PR selecionada e mostra a lista de novo.
+    await user.click(screen.getByRole('button', { name: 'Voltar à lista' }));
+    expect(await screen.findByText('#218 feat: aba code')).toBeInTheDocument();
+  });
+
+  it('filtro de estado troca a chamada à api', async () => {
+    montar();
+    await screen.findByText('Nenhuma PR aberta neste repositório.');
+    getCodePullRequests.mockClear();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('tab', { name: 'Mescladas' }));
+
+    expect(getCodePullRequests).toHaveBeenCalledWith('p-1', { state: 'merged' });
+    expect(await screen.findByText('Nenhuma PR mesclada neste repositório.')).toBeInTheDocument();
+  });
+
+  it('erro ao listar tem mensagem e botão de tentar de novo', async () => {
+    getCodePullRequests.mockRejectedValue(new Error('boom'));
+    montar();
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(screen.getByText('Tentar de novo')).toBeInTheDocument();
+  });
+});
+
+describe('CodeDiffPanel — diff por id conhecido', () => {
   it('patch nulo é "sem texto disponível" — nunca "sem mudança"', async () => {
     const diff: CodeDiff = {
       pullRequestId: '218',
@@ -59,7 +124,8 @@ describe('CodeDiffPanel', () => {
     };
     getCodeDiff.mockResolvedValue(diff);
     montar();
-    await pedirDiff('218');
+    await screen.findByText('Nenhuma PR aberta neste repositório.');
+    await pedirDiffPeloId('218');
 
     expect(await screen.findByText('apps/api/assets/logo.png')).toBeInTheDocument();
     // O corpo do disclosure só monta quando aberto — abrir para conferir a frase.
@@ -88,7 +154,8 @@ describe('CodeDiffPanel', () => {
     };
     getCodeDiff.mockResolvedValue(diff);
     montar();
-    await pedirDiff('219');
+    await screen.findByText('Nenhuma PR aberta neste repositório.');
+    await pedirDiffPeloId('219');
 
     const user = userEvent.setup();
     await screen.findByText('apps/api/mode.sh');
@@ -101,14 +168,16 @@ describe('CodeDiffPanel', () => {
   it('PR sem arquivos mudados é "vazio", não erro', async () => {
     getCodeDiff.mockResolvedValue({ pullRequestId: '1', files: [], truncated: false });
     montar();
-    await pedirDiff('1');
+    await screen.findByText('Nenhuma PR aberta neste repositório.');
+    await pedirDiffPeloId('1');
     expect(await screen.findByText('Esta PR não mudou nenhum arquivo.')).toBeInTheDocument();
   });
 
   it('erro tem mensagem e botão de tentar de novo', async () => {
     getCodeDiff.mockRejectedValue(new Error('boom'));
     montar();
-    await pedirDiff('1');
+    await screen.findByText('Nenhuma PR aberta neste repositório.');
+    await pedirDiffPeloId('1');
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     expect(screen.getByText('Tentar de novo')).toBeInTheDocument();
   });

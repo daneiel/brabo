@@ -7,7 +7,8 @@ type PainelInferior = 'terminal' | 'diff';
 
 /**
  * Painel inferior: Terminal (estado vazio HONESTO — interativo é FASE 25b,
- * que ainda não subiu) e Diff (funcional, por id de PR conhecido).
+ * que ainda não subiu) e Diff (lista navegável de PRs — RN-111 — que abre o
+ * diff por id ao clicar; quem já sabe o id continua podendo colar direto).
  *
  * "Problemas" e "Saída" do handoff FICARAM DE FORA: não há integração de
  * lint/testes nem stream de comando algum — mostrar as abas vazias sem nada
