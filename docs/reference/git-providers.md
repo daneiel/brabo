@@ -3,7 +3,7 @@ id: git-providers
 title: Providers de git
 sidebar_label: Providers de git
 sidebar_position: 5
-description: O contrato de doze operações que torna Local, GitHub e GitLab intercambiáveis, com capabilities, erros normalizados e política de retry.
+description: O contrato de quinze operações que torna Local, GitHub e GitLab intercambiáveis, com capabilities, erros normalizados e política de retry.
 keywords: [git, GitProvider, GitHub, GitLab, capabilities, retry]
 ---
 
@@ -19,9 +19,11 @@ Decisões nos ADRs [0001](../adr/0001-git-provider-contract-shape.md) a
 
 ## O contrato
 
-`GitProviderContract`, em `packages/shared/src/index.ts`. **Doze operações** — a
-décima entrou na Fase 4a, com os gates de PR; a 11ª e a 12ª na FASE 26, com a
-aba Code (só leitura):
+`GitProviderContract`, em `packages/shared/src/index.ts`. **Quinze operações** —
+a décima entrou na Fase 4a, com os gates de PR; a 11ª e a 12ª na FASE 26, com a
+aba Code (só leitura); a 13ª, a 14ª e a 15ª na FASE 26b, fundação das
+pendências declaradas da mesma aba (blame, PRs navegáveis, branch rica —
+nenhuma UI consumindo ainda):
 
 | operação | devolve |
 |---|---|
@@ -37,6 +39,9 @@ aba Code (só leitura):
 | `commentOnPullRequest` | — (parecer de QA/SecOps na PR) |
 | `listTree` | `GitTree \| null` — `null` se a ref ou o caminho não existem |
 | `getPullRequestDiff` | `GitPullRequestDiff \| null` — `null` se a PR não existe |
+| `blame` | `GitBlame \| null` — `null` se o arquivo (ou a ref) não existe |
+| `listPullRequests` | `GitPullRequestList` — resumo por PR, não `GitPullRequest[]` |
+| `listBranchesDetailed` | `GitBranchDetailList` — `ahead`/`behind`/PR associada por branch |
 
 Mais dois campos: `name` e `capabilities`.
 
@@ -62,6 +67,36 @@ não exceção — para que a aba Code trate "não existe" de um jeito só.
 arquivos por diff) e **não** em `packages/shared`, que é 100% tipo — um
 `export const` lá sobrevive ao `tsc` e quebra o boot da api em produção
 (travado por `apps/api/test/packages-shared-so-tipos.spec.ts`).
+
+### As três operações de fundação (FASE 26b — RN-110/111/112)
+
+Fundação das três pendências declaradas da aba Code (blame, dropdown rico de
+branches, lista navegável de PRs) — a UI de cada uma é onda seguinte, em três
+agentes separados. As três seguem o vocabulário de ausência que `getFileContent`/
+`listTree`/`getPullRequestDiff` já usavam: `null`, nunca exceção, quando o
+recurso não existe.
+
+`blame(ref, path)` anota cada linha com o commit que a tocou por último — sha,
+autor, data, primeira linha da mensagem. É a **única** operação que fala
+GraphQL: a REST do GitHub não tem blame, só a GraphQL API
+(`repository.object(expression:).blame(path:)`). GitLab usa
+`RepositoryFiles.allFileBlames`; o Local, `git blame --porcelain`. Corta em
+`GIT_BLAME_LINE_LIMIT` (2000 linhas).
+
+`listPullRequests(state?)` devolve `GitPullRequestSummary[]` — id, número,
+título, autor, estado, branches, `updatedAt` — **não** `GitPullRequest[]`, que
+é o tipo de ESCREVER (abrir/mesclar) e nunca teve título nem autor. O `local`
+lista a partir do MESMO store de PR sidecar da Fase 4a. Corta em
+`GIT_PR_LIST_LIMIT` (100, uma página, sem paginação de seguimento).
+
+`listBranchesDetailed(defaultBranch)` é operação **própria**, não extensão de
+`listBranches` — ver a tabela de capabilities abaixo para o porquê. Cada
+branch enriquecida ganha `ahead`/`behind` (relativos a `defaultBranch`, que
+o CHAMADOR já sabe e passa — pedi-lo de novo ao provider seria uma chamada a
+mais) e a PR aberta associada, se houver. `null` nos dois números quando o
+provider não consegue computar (branch órfã, histórico não relacionado) —
+degradação honesta, nunca um número inventado. Corta em
+`GIT_BRANCH_DETAIL_LIMIT` (30 branches).
 
 ### O teto da CHAMADA, e o teto do CONSUMO (FASE 26b)
 
@@ -98,20 +133,34 @@ interface GitProviderCapabilities {
   readonly pullRequests: boolean;
   readonly listTree: boolean;
   readonly pullRequestDiff: boolean;
+  readonly blame: boolean;
+  readonly pullRequestsList: boolean;
+  readonly branchesDetailed: boolean;
 }
 ```
 
-| provider | `protectBranch` | `pullRequests` | `listTree` | `pullRequestDiff` |
-|---|---|---|---|---|
-| Local | ❌ | ✅ | ✅ | ✅ |
-| GitHub | ✅ | ✅ | ✅ | ✅ |
-| GitLab | ✅ | ✅ | ✅ | ✅ |
+| provider | `protectBranch` | `pullRequests` | `listTree` | `pullRequestDiff` | `blame` | `pullRequestsList` | `branchesDetailed` |
+|---|---|---|---|---|---|---|---|
+| Local | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| GitHub | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| GitLab | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 
-As duas capabilities da FASE 26 são `true` nos três porque a **suite de
-contrato as exercita nos três** — é o critério dos ADRs 0041/0042, que vale
-para git: capability só é declarada quando provada, e sem prova declara-se
-`false` e degrada. O Local as cumpre com `git ls-tree` e `git diff` no bare
-repo, sem plataforma nenhuma por trás.
+As duas capabilities da FASE 26, e as três da FASE 26b, são `true` nos três
+porque a **suite de contrato as exercita nos três** — é o critério dos ADRs
+0041/0042, que vale para git: capability só é declarada quando provada, e sem
+prova declara-se `false` e degrada. O Local as cumpre com `git ls-tree`/`git
+diff`/`git blame --porcelain`/`git rev-list --left-right --count` no bare
+repo, sem plataforma nenhuma por trás — é o único dos três providers testado
+contra git DE VERDADE (`local-git-provider.contract.spec.ts`); GitHub e GitLab
+rodam contra os backends fake do msw, e os smokes reais
+(`{github,gitlab}-provider.smoke.spec.ts`) seguem pulados sem
+`GITHUB_TEST_TOKEN`/`GITLAB_TEST_TOKEN` no ambiente — mesma situação já
+documentada na FASE 13a para os providers de LLM.
+
+`pullRequestsList` merece nota à parte: a suposição original era que o
+`local` não teria PR, "conceito de repositório único não tem PR" — não se
+sustentou. O store de PR sidecar da Fase 4a (self-contained pros dev agents)
+já é a fonte, e as três capabilities do `local` acabaram `true`.
 
 Uma degradação declarada, e ela é de DADO, não de operação: o GitLab não traz
 tamanho de arquivo na listagem da árvore (`RepositoryTreeSchema` não tem o
@@ -326,12 +375,15 @@ configurados; sem eles, só PAT
 ## O que não existe
 
 Bitbucket e um `GenericGitProvider` estão **fora de escopo** — não são backlog
-esquecido, são decisão. Adicionar um provider novo significa implementar as doze
-operações, declarar as capabilities honestamente e passar na suite de contrato.
+esquecido, são decisão. Adicionar um provider novo significa implementar as
+quinze operações, declarar as capabilities honestamente e passar na suite de
+contrato.
 
-**Escrita pela aba Code também não existe.** `listTree` e `getPullRequestDiff`
-são leitura, e só. Salvar arquivo pela aba é fase seguinte, e quando vier,
-escrita é efeito externo: nasce `proposed_action`, como toda mutação de git. O
-que torna isso verificável em vez de intenção é o controller da FASE 26b não
-ter **um único** verbo de escrita — nem `@Post`, nem `@Put`, nem `@Patch`, nem
-`@Delete`.
+**Escrita pela aba Code também não existe.** As sete operações de leitura
+(`listTree`, `getPullRequestDiff`, `blame`, `listPullRequests`,
+`listBranchesDetailed`, mais `getFileContent` e a busca composta) são
+leitura, e só. Salvar arquivo pela aba é fase seguinte, e quando vier, escrita
+é efeito externo: nasce `proposed_action`, como toda mutação de git. O que
+torna isso verificável em vez de intenção é o `CodeController` não ter **um
+único** verbo de escrita — nem `@Post`, nem `@Put`, nem `@Patch`, nem
+`@Delete` — mesmo depois da FASE 26b acrescentar três rotas a ele.
