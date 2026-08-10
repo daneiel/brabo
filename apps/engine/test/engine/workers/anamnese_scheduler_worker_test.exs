@@ -13,6 +13,13 @@ defmodule Engine.Workers.AnamneseSchedulerWorkerTest do
   setup do
     Engine.GlobalSessionTestLock.acquire()
     on_exit(fn -> Engine.GlobalSessionTestLock.release() end)
+
+    # Default do ambiente é DESATIVADO (RN-115); os testes daqui pra baixo
+    # exercitam o comportamento de fan-out/reagendamento de uma corrente
+    # LIGADA — a corrente desligada tem describe própria mais abaixo.
+    Application.put_env(:engine, :anamnese_enabled?, true)
+    on_exit(fn -> Application.delete_env(:engine, :anamnese_enabled?) end)
+
     :ok
   end
 
@@ -110,6 +117,44 @@ defmodule Engine.Workers.AnamneseSchedulerWorkerTest do
       Application.delete_env(:engine, :anamnese_enabled?)
 
       refute AnamneseSchedulerWorker.enabled?()
+    end
+  end
+
+  describe "perform/1 — flag global desligada NO MEIO da corrente (RN-115, bug real)" do
+    setup do
+      # Job já agendado ANTES de a flag existir (ou de alguém desligá-la)
+      # dispara mesmo assim — é exatamente esse caminho que precisa se
+      # AUTO-CURAR aqui, sem depender de kickoff/0 ter sido chamado.
+      Application.put_env(:engine, :anamnese_enabled?, false)
+      on_exit(fn -> Application.delete_env(:engine, :anamnese_enabled?) end)
+
+      # Mesmo remédio do describe de kickoff/0 acima, e pelo mesmo motivo:
+      # a fila `:default` não está vazia em regime normal, então
+      # refute_enqueued/assert_enqueued sem escopo próprio ficaria refém de
+      # jobs REAIS deste worker inseridos fora da sandbox (boot de execução
+      # anterior da suite).
+      Repo.delete_all(
+        from(j in "oban_jobs", where: j.worker == "Engine.Workers.AnamneseSchedulerWorker"),
+        prefix: "engine"
+      )
+
+      :ok
+    end
+
+    test "desativada: não faz fan-out de projeto nenhum" do
+      com = seed_projeto!(true)
+
+      assert :ok = perform_job(AnamneseSchedulerWorker, %{})
+
+      refute_enqueued(worker: AnamneseWorker, args: %{project_id: com})
+    end
+
+    test "desativada: não reagenda o próprio tick — a corrente morre ali" do
+      seed_projeto!(true)
+
+      assert :ok = perform_job(AnamneseSchedulerWorker, %{})
+
+      refute_enqueued(worker: AnamneseSchedulerWorker)
     end
   end
 end
