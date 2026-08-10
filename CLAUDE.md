@@ -223,9 +223,18 @@ já entraram; o que sobra é feature decidida pelo usuário durante a execução
 
 ### 14b — Linha do tempo em árvore (CONCLUÍDA)
 Um ramo por agente, do primeiro marco ao que ele está fazendo AGORA, derivado
-100% do event log que a tela já busca. Ativos abrem sozinhos; quem terminou
-nasce fechado. O feed cronológico continua, na coluna de atividade: ele
-responde "o que aconteceu", a árvore responde "quem está fazendo o quê".
+100% do event log que a tela já busca. O feed cronológico continua, na coluna
+de atividade: ele responde "o que aconteceu", a árvore responde "quem está
+fazendo o quê".
+
+Revisitado depois da FASE 26 (sem fase nova, mesmo espírito de correção
+pontual da 12d/PÓS-FASE 15): o critério de abertura padrão passou de só
+"ativo/parado" para os 5 agentes de atividade mais RECENTE — ativo continua
+com prioridade (RN-118); cada ramo colapsado ganhou contador de NOVIDADE
+próprio, com "último visto" por agente em `read-state.ts` (mesmo mecanismo
+do sino, agora granular); e `tool.call`/`tool.result`/`agent.response`
+passaram a expandir INDIVIDUALMENTE (args, resultado, iteração), agrupados
+por fronteira de iteração do ToolLoop.
 
 ### 14c — Validação automática de UI (CONCLUÍDA)
 Contraste virou teste sobre `design/tokens.css`, com a dívida conhecida medida

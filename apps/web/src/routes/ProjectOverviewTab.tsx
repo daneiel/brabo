@@ -307,9 +307,10 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
         <h2 className={styles.sectionHeader}>Linha do tempo do time</h2>
         <div className={styles.sectionSub}>
           Um ramo por agente, do primeiro marco ao que ele está fazendo agora.
-          Quem está ativo abre sozinho.
+          Quem está ativo, ou entre os 5 mais recentes, abre sozinho — o resto
+          fica a um clique, com a contagem de marcos novos no cabeçalho.
         </div>
-        <AgentTimelineTree events={events} />
+        <AgentTimelineTree events={events} projectId={projectId} />
 
         <ExecutionSection
           projectId={projectId}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { montarArvore } from './timeline-tree';
+import { marcoExpansivel, montarArvore, ramosAbertosPorPadrao } from './timeline-tree';
 import type { SessionEvent } from './api-types';
 
 let seq = 0;
@@ -113,5 +113,119 @@ describe('montarArvore', () => {
 
   it('sessão sem evento nenhum devolve árvore vazia, não quebra', () => {
     expect(montarArvore([])).toEqual({ ramos: [], tronco: [] });
+  });
+
+  /**
+   * `tool.call`/`tool.result` não carregam `iteration` no payload (só
+   * `agent.response` carrega, via ToolLoop) — o agrupamento por iteração é
+   * inferido pela PROXIMIDADE de `seq`: os marcos de ferramenta pertencem à
+   * resposta imediatamente ANTERIOR, porque é ela quem os despachou.
+   */
+  it('agrupa tool.call/tool.result na iteração do agent.response que os despachou', () => {
+    const { ramos } = montarArvore([
+      evento('agent.response', agente('dev-backend'), { iteration: 0 }),
+      evento('tool.call', agente('dev-backend'), { tool: 'read_file', args: { path: 'a.ex' } }),
+      evento('tool.result', agente('dev-backend'), { tool: 'read_file', ok: true, result: 'conteúdo' }),
+      evento('agent.response', agente('dev-backend'), { iteration: 1 }),
+      evento('tool.call', agente('dev-backend'), { tool: 'write_file', args: { path: 'b.ex' } }),
+    ]);
+
+    const marcos = ramos[0].marcos;
+    expect(marcos.map((m) => m.iteracao)).toEqual([0, 0, 0, 1, 1]);
+  });
+
+  /** Agente fora do ToolLoop (PO/Criativo) não tem `iteration` no payload —
+   * ganha um contador PRÓPRIO, incrementado a cada resposta, pra ainda dar
+   * pra desenhar a fronteira entre turnos. */
+  it('infere iteração por um contador próprio quando o payload não carrega `iteration`', () => {
+    const { ramos } = montarArvore([
+      evento('agent.response', agente('po'), { content: 'primeiro turno' }),
+      evento('tool.call', agente('po'), { tool: 'create_story' }),
+      evento('agent.response', agente('po'), { content: 'segundo turno' }),
+    ]);
+
+    expect(ramos[0].marcos.map((m) => m.iteracao)).toEqual([0, 0, 1]);
+  });
+
+  it('marco sem dono de iteração (antes da primeira resposta) fica sem `iteracao`', () => {
+    const { ramos } = montarArvore([
+      evento('agent.activated', agente('criativo')),
+    ]);
+
+    expect(ramos[0].marcos[0].iteracao).toBeUndefined();
+  });
+
+  it('só tool.call/tool.result/agent.response são expansíveis', () => {
+    const { ramos } = montarArvore([
+      evento('agent.activated', agente('a')),
+      evento('agent.response', agente('a'), { iteration: 0 }),
+      evento('tool.call', agente('a'), { tool: 'x' }),
+      evento('handoff.offered', agente('a'), { toAgent: 'po' }),
+    ]);
+
+    const porTipo = new Map(ramos[0].marcos.map((m) => [m.eventType, marcoExpansivel(m)]));
+    expect(porTipo.get('agent.activated')).toBe(false);
+    expect(porTipo.get('agent.response')).toBe(true);
+    expect(porTipo.get('tool.call')).toBe(true);
+    expect(porTipo.get('handoff.offered')).toBe(false);
+  });
+});
+
+describe('ramosAbertosPorPadrao', () => {
+  /**
+   * Critério A: os 5 agentes com atividade mais RECENTE abrem por padrão.
+   * `montarArvore` já ordena os ramos com os mais recentes primeiro (dentro
+   * de cada grupo ativo/parado) — a função só corta a fatia.
+   */
+  it('abre os 5 mais recentes quando ninguém está ativo', () => {
+    const eventos: SessionEvent[] = [];
+    const nomes = ['a', 'b', 'c', 'd', 'e', 'f', 'g'];
+    for (const nome of nomes) {
+      eventos.push(evento('agent.activated', agente(nome)));
+      eventos.push(evento('agent.response', agente(nome), {})); // encerra o ramo — todos "parados"
+    }
+    const { ramos } = montarArvore(eventos);
+
+    // 7 agentes criados em ordem a..g — g é o de maior `seq` (mais recente),
+    // a é o de menor. Os 5 últimos são c, d, e, f, g; a e b ficam de fora.
+    expect(ramosAbertosPorPadrao(ramos)).toEqual(new Set(['c', 'd', 'e', 'f', 'g']));
+  });
+
+  it('agente ATIVO sempre abre, mesmo sendo o mais ANTIGO — prioridade sobre recência', () => {
+    const eventos: SessionEvent[] = [
+      evento('agent.activated', agente('velho-ativo')),
+      evento('tool.call', agente('velho-ativo'), { tool: 'x' }), // segue ativo
+    ];
+    for (const nome of ['a', 'b', 'c', 'd', 'e']) {
+      eventos.push(evento('agent.activated', agente(nome)));
+      eventos.push(evento('agent.response', agente(nome), {})); // parado
+    }
+    const { ramos } = montarArvore(eventos);
+
+    // Total aberto continua 5 (o "5 últimos" não vira "5 + os ativos"), mas
+    // quem preenche a fatia muda: o ativo entra garantido mesmo sendo o mais
+    // ANTIGO de todos, empurrando pra fora o parado mais antigo (`a`).
+    const abertos = ramosAbertosPorPadrao(ramos);
+    expect(abertos).toEqual(new Set(['velho-ativo', 'b', 'c', 'd', 'e']));
+  });
+
+  it('mais de 5 agentes ativos: todos abrem, sem corte', () => {
+    const eventos: SessionEvent[] = [];
+    for (const nome of ['a', 'b', 'c', 'd', 'e', 'f']) {
+      eventos.push(evento('agent.activated', agente(nome)));
+      eventos.push(evento('tool.call', agente(nome), { tool: 'x' })); // todos ATIVOS
+    }
+    const { ramos } = montarArvore(eventos);
+
+    expect(ramosAbertosPorPadrao(ramos)).toEqual(new Set(['a', 'b', 'c', 'd', 'e', 'f']));
+  });
+
+  it('com poucos agentes, todos abrem — não há corte artificial', () => {
+    const { ramos } = montarArvore([
+      evento('agent.activated', agente('a')),
+      evento('agent.activated', agente('b')),
+    ]);
+
+    expect(ramosAbertosPorPadrao(ramos)).toEqual(new Set(['a', 'b']));
   });
 });
