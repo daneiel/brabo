@@ -59,9 +59,21 @@ defmodule Engine.Outbox.Drain do
   defp traceparent(_), do: nil
 
   # Ponto de roteamento explícito — extensível pra futuros handlers.
+  #
+  # PsychologistWorker só entra na lista quando `enabled?/0` é true (flag
+  # global, decisão do usuário em 2026-08-10, mesmo padrão da Anamnese — ver
+  # o moduledoc de Engine.Workers.PsychologistWorker e
+  # docs/explanation/backlog.md). Desativado, o job nem nasce: mais barato
+  # que criar e deixar `perform/1` no-opar, e mais claro para quem inspeciona
+  # a fila. SessionLifecycleWorker roda sempre — a pausa é só do Psicólogo.
   defp handlers_for(event_type)
-       when event_type in ["session.closed", "session.closed_abnormally"],
-       do: [Engine.Workers.SessionLifecycleWorker, Engine.Workers.PsychologistWorker]
+       when event_type in ["session.closed", "session.closed_abnormally"] do
+    if Engine.Workers.PsychologistWorker.enabled?() do
+      [Engine.Workers.SessionLifecycleWorker, Engine.Workers.PsychologistWorker]
+    else
+      [Engine.Workers.SessionLifecycleWorker]
+    end
+  end
 
   defp handlers_for(event_type)
        when event_type in [

@@ -1,9 +1,12 @@
+import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { useHypotheses, usePsychologistAnalyses } from '../lib/hooks';
 import {
   acceptHypothesis,
+  ApiError,
   dismissHypothesis,
+  mensagemDaApi,
   reanalyzeSession,
 } from '../lib/api-client';
 import { areaFor } from '../lib/agents';
@@ -36,6 +39,14 @@ export function ProjectInsightsTab({ projectId }: { projectId: string }) {
   const { showToast } = useToast();
   const hypothesesQuery = useHypotheses(projectId);
   const { data: analyses } = usePsychologistAnalyses(projectId);
+  // O Psicólogo pode estar pausado GLOBALMENTE (decisão do usuário em
+  // 2026-08-10, não bug — ver docs/explanation/backlog.md). Não há hoje um
+  // jeito de saber isso ANTES de clicar (o estado é do engine, não vem em
+  // nenhuma leitura desta tela); "Reanalisar" descobre no primeiro clique e
+  // os botões ficam desabilitados dali em diante, com a explicação
+  // PERSISTENTE na tela — não só um toast que some (RN-088: nunca falha
+  // silenciosa ou confusa). Mesmo padrão de `ProficiencySection` (Anamnese).
+  const [psicologoDesativado, setPsicologoDesativado] = useState(false);
 
   const all = hypothesesQuery.data ?? [];
   const pending = all.filter((h) => h.status === 'proposed');
@@ -82,12 +93,24 @@ export function ProjectInsightsTab({ projectId }: { projectId: string }) {
         title: 'Reanálise enfileirada',
         message: 'O Psicólogo vai analisar esta sessão de novo.',
       });
-    } catch {
-      showToast({
-        title: 'Erro',
-        message: 'Não foi possível enfileirar a reanálise',
-        tone: 'danger',
-      });
+    } catch (erro) {
+      if (erro instanceof ApiError && erro.status === 503) {
+        // Distinto de qualquer outra falha — a api já manda a frase pronta
+        // em `body.message` (ServiceUnavailableException do
+        // ReanalyzeSessionUseCase).
+        setPsicologoDesativado(true);
+        showToast({
+          title: 'Psicólogo pausado',
+          message: mensagemDaApi(erro, 'O Psicólogo está desativado globalmente.'),
+          tone: 'warning',
+        });
+      } else {
+        showToast({
+          title: 'Erro',
+          message: 'Não foi possível enfileirar a reanálise',
+          tone: 'danger',
+        });
+      }
     }
   }
 
@@ -143,12 +166,28 @@ export function ProjectInsightsTab({ projectId }: { projectId: string }) {
                     type="button"
                     className={styles.analysisReanalyze}
                     onClick={() => reanalyze(run.sessionId)}
-                    title="Roda a análise de novo e gasta orçamento; a anterior fica no histórico"
+                    disabled={psicologoDesativado}
+                    title={
+                      psicologoDesativado
+                        ? 'O Psicólogo está pausado globalmente'
+                        : 'Roda a análise de novo e gasta orçamento; a anterior fica no histórico'
+                    }
                   >
                     Reanalisar
                   </button>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Pausa GLOBAL — decisão do usuário em 2026-08-10, aguardando
+              refinamento futuro. Fica visível de propósito, não só um toast
+              que some (RN-088). */}
+          {psicologoDesativado && (
+            <div className={styles.sectionSub} style={{ marginTop: 8 }}>
+              O Psicólogo está pausado globalmente por decisão do time — sem
+              reanálise nova por enquanto. As hipóteses já emitidas continuam
+              aqui.
             </div>
           )}
 

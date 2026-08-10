@@ -3590,6 +3590,62 @@ que some (RN-088: nunca falha silenciosa ou confusa).
 - **Origem:** sem ADR — decisão de produto reversível, não mudança estrutural
   de arquitetura. Ver docs/explanation/backlog.md.
 
+### RN-117 — O Psicólogo pode ser pausado globalmente; a pausa é do PRODUTO, nunca apaga dado {#rn-117}
+
+`PSYCHOLOGIST_ENABLED` (env var do engine, boolean, default `false`) decide
+se uma rodada NOVA do Psicólogo pode acontecer — automática (fechamento de
+sessão, roteado pelo `Engine.Outbox.Drain`) ou sob demanda
+(`PsychologistCommandController.reanalyze/2`). Mesma decisão de PRODUTO do
+usuário em 2026-08-10 já aplicada à Anamnese (RN-115, "hoje ele não está
+trazendo dados de muito valor") — não bug, ver docs/explanation/backlog.md.
+Desativado, NENHUM dado existente é tocado: análises e hipóteses já
+emitidas continuam intactas e visíveis.
+
+Diferente da Anamnese (cujo gatilho automático é um TICK periódico que a
+própria flag decide se reagenda), o gatilho automático do Psicólogo é o
+fechamento de sessão — o `Engine.Outbox.Drain` roteia
+`session.closed`/`session.closed_abnormally` pra `PsychologistWorker` só
+quando `PsychologistWorker.enabled?/0` é true (`Drain.handlers_for/1`);
+desativado, só `SessionLifecycleWorker` roda, e o job do Psicólogo nem
+nasce. `PsychologistWorker.perform/1` continua incondicional de propósito,
+mesmo padrão do `AnamneseWorker`: quem decide é quem CRIA o job, não quem o
+executa — por isso a suite pré-existente de `PsychologistWorker` (que chama
+`perform/1` direto) não precisou mudar.
+
+`PsychologistCommandController.reanalyze/2` (rota sob demanda,
+"Reanalisar" na aba Insights) responde **503** com corpo
+`{"error": "psicologo_desativado"}` quando desativado, sem sequer criar o
+job. `ReanalyzeSessionUseCase`, do lado api, converte o 503 do engine em
+`ServiceUnavailableException` com `reason: "psychologist_disabled"` no
+corpo — nunca um 500 genérico. A web (`ProjectInsightsTab.tsx`) descobre o
+estado no primeiro clique de "Reanalisar" (não há hoje uma leitura prévia
+do estado global) e, a partir daí, desabilita os botões e mantém a
+explicação VISÍVEL na tela — não só um toast que some (RN-088: nunca falha
+silenciosa ou confusa).
+
+- **Onde:** `apps/engine/lib/engine/workers/psychologist_worker.ex`
+  (`enabled?/0`), `apps/engine/lib/engine/outbox/drain.ex`
+  (`handlers_for/1`),
+  `apps/engine/lib/engine_web/controllers/psychologist_command_controller.ex`,
+  `apps/engine/config/runtime.exs`,
+  `apps/api/src/domain/psychologist/psychologist-disabled.error.ts`,
+  `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts`
+  (`reanalyzeSession`),
+  `apps/api/src/application/use-cases/execution/reanalyze-session.use-case.ts`,
+  `apps/web/src/routes/ProjectInsightsTab.tsx`
+- **Teste:**
+  `apps/engine/test/engine/outbox/drain_test.exs` (`session.closed` só
+  enfileira o Psicólogo quando ativado),
+  `apps/engine/test/engine_web/controllers/psychologist_command_controller_test.exs`
+  (503 sem criar job, 202 com job enfileirado quando ativado),
+  `apps/api/test/application/use-cases/execution/reanalyze-session.use-case.spec.ts`,
+  `apps/web/src/routes/ProjectInsightsTab.test.tsx`
+- **Borda:** a flag é GLOBAL (todos os projetos/workspaces), como a da
+  Anamnese. Ligar de volta é `PSYCHOLOGIST_ENABLED=true` e reiniciar o
+  engine; não há botão na UI para isso.
+- **Origem:** sem ADR — decisão de produto reversível, não mudança estrutural
+  de arquitetura. Ver docs/explanation/backlog.md.
+
 ### RN-108 — O socket da sessão exige um ticket opaco de uso único, não o JWT reaproveitado {#rn-108}
 
 `EngineWeb.SessionSocket.connect/3` recusava a conexão inteira só com o

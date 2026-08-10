@@ -6,6 +6,15 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api,engine,web**: o Psicólogo pode ser pausado GLOBALMENTE
+  (`PSYCHOLOGIST_ENABLED`, default `false` a partir de agora) — mesma
+  decisão de produto já aplicada à Anamnese ("hoje ele não está trazendo
+  dados de muito valor"), não bug, e não apaga nada do que já existe
+  (RN-117). O gatilho automático (fechamento de sessão) para de enfileirar
+  rodada nova; a rota "Reanalisar" na aba Insights responde 503; os botões
+  correspondentes descobrem o estado no primeiro clique e mantêm a
+  explicação visível na tela
+
 - **web**: a aba **Code** — leitura do repositório do projeto no padrão IDE
   (explorador de arquivos carregado por diretório, busca no conteúdo, abas de
   editor com realce de sintaxe sem dependência nova, e diff de PR por id

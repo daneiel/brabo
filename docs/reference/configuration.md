@@ -214,6 +214,7 @@ possível sem downtime ([RN-035](../business-rules.md#rn-035)).
 
 | variável | default | nota |
 |---|---|---|
+| `PSYCHOLOGIST_ENABLED` | `false` | pausa GLOBAL de rodada NOVA (automática e sob demanda) — decisão de produto do usuário em 2026-08-10, não bug, mesmo padrão de `ANAMNESE_ENABLED` abaixo. Não apaga nada do que já existe. Ligar exige reiniciar o engine ([RN-117](../business-rules.md#rn-117)) |
 | `PSYCHOLOGIST_TRIAGE_THRESHOLD` | `20` | eventos na sessão que separam análise **leve** de **pesada** |
 | `PSYCHOLOGIST_MAX_ITERATIONS_LEVE` / `_PESADA` | `4` / `8` | — |
 | `PSYCHOLOGIST_BUDGET_MICROS_LEVE` / `_PESADA` | `50000` / `300000` | USD 0,05 e USD 0,30 por análise |
@@ -339,7 +340,7 @@ que uma variável nova não fique documentada em lugar nenhum sem ninguém notar
 
 > ⚠️ Bloco gerado por `pnpm docs:generate`. Não edite à mão — o próximo build sobrescreve.
 
-Inventário extraído do código: **97 variáveis** lidas em tempo de execução. Todas têm descrição nas tabelas acima.
+Inventário extraído do código: **98 variáveis** lidas em tempo de execução. Todas têm descrição nas tabelas acima.
 
 **api** — 42 variáveis
 
@@ -386,7 +387,7 @@ Inventário extraído do código: **97 variáveis** lidas em tempo de execução
 - `RATE_LIMIT_WINDOW_MS` <sub>(apps/api/src/infrastructure/observability/domain-gauges.collector.ts)</sub>
 - `WEB_ORIGIN` <sub>(apps/api/src/infrastructure/security/cors-origins.ts)</sub>
 
-**engine** — 51 variáveis
+**engine** — 52 variáveis
 
 - `ANAMNESE_BUDGET_MICROS` <sub>(apps/engine/config/runtime.exs)</sub>
 - `ANAMNESE_ENABLED` <sub>(apps/engine/config/runtime.exs)</sub>
@@ -418,6 +419,7 @@ Inventário extraído do código: **97 variáveis** lidas em tempo de execução
 - `PROJECT_WORKSPACES_ROOT` <sub>(apps/engine/config/runtime.exs)</sub>
 - `PSYCHOLOGIST_BUDGET_MICROS_LEVE` <sub>(apps/engine/config/runtime.exs)</sub>
 - `PSYCHOLOGIST_BUDGET_MICROS_PESADA` <sub>(apps/engine/config/runtime.exs)</sub>
+- `PSYCHOLOGIST_ENABLED` <sub>(apps/engine/config/runtime.exs)</sub>
 - `PSYCHOLOGIST_MAX_ITERATIONS_LEVE` <sub>(apps/engine/config/runtime.exs)</sub>
 - `PSYCHOLOGIST_MAX_ITERATIONS_PESADA` <sub>(apps/engine/config/runtime.exs)</sub>
 - `PSYCHOLOGIST_MAX_PAYLOAD_CHARS` <sub>(apps/engine/config/runtime.exs)</sub>

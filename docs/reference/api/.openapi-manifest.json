@@ -1,6 +1,6 @@
 {
   "_": "Gerado por `pnpm docs:generate`. Não edite — é a trava do que está em docs/reference/api/.",
-  "openapiSha256": "17ce792850aa433f7895acdda5d2cd953a3b122084180f44d4e982c6a188afdf",
+  "openapiSha256": "2dfa76b5201e60164918b518e4e2a0808f5119294f5aa2661efc43fd72304325",
   "arquivos": {
     "actions-controller-approve-always.ParamsDetails.json": "f51f6d74f8b4a7e9c8f70cef93e0d026d63e77123672029da660c802def3ad0e",
     "actions-controller-approve-always.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
@@ -565,8 +565,8 @@
     "psychologist-controller-hypotheses.api.mdx": "db92764d35e3453b72b6e0b83121824d060cd1cc49b18d1fd82601c7610de68c",
     "psychologist-controller-reanalyze.ParamsDetails.json": "4e5efb20e1409eeb815c23b3b0bb5f88ddd8dee4944337c72d226e3093b7b4ba",
     "psychologist-controller-reanalyze.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
-    "psychologist-controller-reanalyze.StatusCodes.json": "c6e63e58bd28d2fed6ee8c4bff467456ced92a9b764864c8c6d140018d5bcd0c",
-    "psychologist-controller-reanalyze.api.mdx": "6582d3ed9a25c462183580d68f30de8d044a82a4efcbf1fed804685a5a7d7193",
+    "psychologist-controller-reanalyze.StatusCodes.json": "2ca5c3178047371abf900f1c9d1a501c24acdd129e2536d297b8045c8ce9d23d",
+    "psychologist-controller-reanalyze.api.mdx": "5d3dd9860c113bf81f83b29ea186e890890170eb7d03172e9673d06095a000cd",
     "sessions-controller-append-event.ParamsDetails.json": "4e5efb20e1409eeb815c23b3b0bb5f88ddd8dee4944337c72d226e3093b7b4ba",
     "sessions-controller-append-event.RequestSchema.json": "3e9882357a058bcfeff44178fb0ef0a4ee5067a90ea716e20f9e259597fc9b43",
     "sessions-controller-append-event.StatusCodes.json": "2effef18bd4c09d01e2daace68faa00b1efaed0c3f67641526120d80f792842f",
