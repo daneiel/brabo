@@ -3386,11 +3386,15 @@ arquivo genuinamente enorme — já cortado por bytes na rota de conteúdo, mas
 - **Origem:** FASE 26b (fundação das pendências declaradas da FASE 26/
   [ADR 0060](adr/0060-superficie-de-leitura-de-codigo.md))
 
-### RN-111 — `listPullRequests` é a 14ª operação do `GitProviderContract`; o diff continua alcançado por id {#rn-111}
+### RN-111 — `listPullRequests` é a 14ª operação do `GitProviderContract`; a lista navegável abre o mesmo diff por id {#rn-111}
 
-Fundação da lista de PRs navegável declarada como pendência em
-`CodeDiffPanel.tsx` — hoje o diff só é alcançável por id CONHECIDO, vindo de
-Aprovações. `listPullRequests(state?)` devolve um RESUMO por PR
+`CodeDiffPanel.tsx` consome `listPullRequests(state?)` numa lista clicável
+(id/número/título/autor/estado/branches, com filtro por estado); clicar num
+item reusa o MESMO fluxo de diff por id que já existia — não há caminho novo
+de leitura, só como CHEGAR ao id sem precisar saber de cor. Quem já sabe o id
+(ex.: veio de Aprovações) continua podendo colar direto.
+
+`listPullRequests(state?)` devolve um RESUMO por PR
 (`GitPullRequestSummary`: id, número, título, autor, estado, branches,
 `updatedAt`) — não `GitPullRequest`, que é o tipo de ESCREVER (abrir/mesclar) e
 nunca teve título nem autor porque nenhuma das duas operações precisava. Um
@@ -3407,9 +3411,12 @@ paginação de seguimento — navegação humana, não sincronização de histó
   `pullRequestsList`), `apps/api/src/infrastructure/git/{github,gitlab,
   local}-provider.ts`, `apps/api/src/domain/git/git-read-limits.ts`
   (`GIT_PR_LIST_LIMIT`), `read-project-code.use-case.ts` (método
-  `pullRequests`), `code.controller.ts` (`GET /projects/:id/code/pull-requests`)
+  `pullRequests`), `code.controller.ts` (`GET /projects/:id/code/pull-requests`),
+  `apps/web/src/routes/code/CodeDiffPanel.tsx` (lista clicável, filtro por
+  estado, reuso do fluxo de diff por id)
 - **Teste:** `git-provider.contract.ts` (bloco "listPullRequests"),
-  `read-project-code.use-case.spec.ts` (bloco "lista de PRs")
+  `read-project-code.use-case.spec.ts` (bloco "lista de PRs"),
+  `apps/web/src/routes/code/CodeDiffPanel.test.tsx`
 - **Origem:** FASE 26b
 
 ### RN-112 — `listBranchesDetailed` é operação PRÓPRIA, separada de `listBranches` {#rn-112}
