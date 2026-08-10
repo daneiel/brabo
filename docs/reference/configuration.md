@@ -29,8 +29,12 @@ produção.
 
 > **Defaults de desenvolvimento são inseguros de propósito.** Valores como
 > `dev-master-key-change-me` existem para o `pnpm dev` subir sem cerimônia. Em
-> produção eles precisam ser trocados — e três deles a api **recusa** subir sem
-> trocar (marcados com 🔒).
+> produção eles precisam ser trocados — e seis deles o processo **recusa**
+> subir sem trocar (api ou engine, marcados com 🔒). Cinco seguem o padrão do
+> [ADR 0059](../adr/0059-segredo-do-state-de-oauth-sem-default.md)/[RN-093](../business-rules.md#rn-093):
+> ausente, com o literal público de exemplo, ou curto demais derruba o boot.
+> Ver [RN-110](../business-rules.md#rn-110) para os quatro que se juntaram ao
+> `GIT_OAUTH_STATE_SECRET` original.
 
 ## api
 
@@ -50,7 +54,7 @@ produção.
 
 | variável | default | quando dá errado |
 |---|---|---|
-| `CREDENTIALS_MASTER_KEY` 🔒 | `dev-master-key-change-me` | embrulha os DEKs. Trocar sem re-embrulhar torna **toda** credencial ilegível, sem erro no boot — a falha aparece no primeiro uso. Ver [rotação](../runbook.md#rotacao-da-chave-mestra) |
+| `CREDENTIALS_MASTER_KEY` 🔒 | `dev-master-key-change-me` **só fora de produção** | embrulha os DEKs. **Em produção a api recusa subir** ausente, com o default acima (público — está no `.env.example`) ou com menos de 16 caracteres (RN-110). Isso é só a checagem de BOOT: trocar por uma chave **válida, mas diferente**, sem re-embrulhar, ainda torna toda credencial ilegível sem erro nenhum — a falha aparece no primeiro uso. Ver [rotação](../runbook.md#rotacao-da-chave-mestra) |
 | `CREDENTIALS_MASTER_KEY_PREVIOUS` | — | só durante a rotação. Presente = a api tenta a chave anterior quando a atual falha |
 | `GIT_OAUTH_STATE_SECRET` 🔒 | `dev-oauth-state-secret-change-me` **só fora de produção** | assina o `state` do OAuth; fraco = CSRF no fluxo de conexão de git. **Em produção a api recusa subir** sem ela, com o default acima (que é público — está no `.env.example`) ou com menos de 16 caracteres. Gere com `openssl rand -base64 32`. Ver [ADR 0059](../adr/0059-segredo-do-state-de-oauth-sem-default.md) e [RN-093](../business-rules.md#rn-093) |
 | `WEB_ORIGIN` 🔒 | `http://localhost:${WEB_PORT}` | **em produção a api recusa subir** se estiver ausente ou for `*`. CORS é estrito por ambiente. **A porta faz parte do valor**: a web em `:5174` é outra origem e é barrada — ver [ADR 0037](../adr/0037-cors-do-engine-e-a-porta-como-contrato.md). Nos composes o default **deriva de `WEB_PORT`**, então mudar a porta leva o CORS junto; definir `WEB_ORIGIN` à mão sobrepõe a derivação e volta a ser sua responsabilidade mantê-la coerente |
@@ -64,7 +68,7 @@ em [ADR 0031](../adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.md) e
 
 | variável | default | o que faz |
 |---|---|---|
-| `AUTH_JWT_SECRET` | `dev-auth-jwt-secret-change-me` | passphrase de onde o par Ed25519 do access token é **derivado** por scrypt — nenhuma chave privada é commitada |
+| `AUTH_JWT_SECRET` 🔒 | `dev-auth-jwt-secret-change-me` **só fora de produção** | passphrase de onde o par Ed25519 do access token é **derivado** por scrypt — nenhuma chave privada é commitada. **Em produção a api recusa subir** ausente, com o default acima (público — está no `.env.example`) ou com menos de 16 caracteres (RN-110) |
 | `AUTH_JWT_SECRET_PREVIOUS` | — | aceita **só na verificação**, durante a rotação; entra no JWKS e nunca assina |
 | `AUTH_TOKEN_PEPPER` | `AUTH_JWT_SECRET` | chave HMAC do hash dos tokens opacos e da chave do balde de lockout |
 | `AUTH_ACCESS_TOKEN_TTL_MS` | `900000` | 15 min |
@@ -128,12 +132,15 @@ possível sem downtime ([RN-035](../business-rules.md#rn-035)).
 
 | variável | default | o que faz |
 |---|---|---|
-| `BRABO_SERVICE_TOKEN` | `dev-service-token-change-me` | vai no cabeçalho `X-Brabo-Service-Token` e é o que o `EngineServiceGuard` compara em tempo constante |
+| `BRABO_SERVICE_TOKEN` 🔒 | `dev-service-token-change-me` **só fora de produção** | vai no cabeçalho `X-Brabo-Service-Token` e é o que o `EngineServiceGuard` compara em tempo constante. **Em produção a api recusa subir** ausente, com o default acima (público — está no `.env.example`) ou com menos de 16 caracteres (RN-110) |
 | `BRABO_SERVICE_TOKEN_PREVIOUS` | — | aceito **só na verificação**, durante a rotação |
 
-> Defini-la só de um lado não quebra o boot de ninguém: o sintoma é `403` no
-> `/internal/*` e `401` nas chamadas da api para o engine. Procedimento no
-> [runbook](../runbook.md#rotacao-das-chaves-do-auth).
+> Definir só o valor NOVO de um lado (sem passar pela dança do `_PREVIOUS`)
+> não quebra o boot de ninguém: o sintoma é `403` no `/internal/*` e `401` nas
+> chamadas da api para o engine. Procedimento no
+> [runbook](../runbook.md#rotacao-das-chaves-do-auth). A checagem de BOOT
+> acima (RN-110) é outra coisa: ela reprova só o default público ou uma
+> variável ausente/curta, não uma divergência entre os dois lados.
 
 ### Git
 
@@ -175,7 +182,7 @@ possível sem downtime ([RN-035](../business-rules.md#rn-035)).
 | `POOL_SIZE` | — | pool esgotado trava o Oban e a fila para de ser consumida |
 | `PORT` | `4000` | — |
 | `PHX_HOST` / `PHX_SERVER` | — | `PHX_SERVER=true` é o que faz o release servir HTTP |
-| `SECRET_KEY_BASE` 🔒 | — | obrigatória no release |
+| `SECRET_KEY_BASE` 🔒 | — | obrigatória no release (`runtime.exs`, bloco `:prod`, `raise` padrão do Phoenix). Até RN-110, o `docker-compose.prod.yml` supria um literal público como fallback e mascarava esse `raise` — a variável chegava sempre DEFINIDA. O `raise` em si não mudou |
 | `API_URL` | `http://localhost:3000` | o engine chama a api de volta por aqui |
 | `ECTO_IPV6` | — | — |
 | `SKIP_MIGRATIONS` | — | usada pelo Job de migração |
@@ -238,7 +245,7 @@ possível sem downtime ([RN-035](../business-rules.md#rn-035)).
 
 | variável | default |
 |---|---|
-| `BRABO_SERVICE_TOKEN` 🔒 | `dev-service-token-change-me` — **o mesmo valor da api** |
+| `BRABO_SERVICE_TOKEN` 🔒 | `dev-service-token-change-me` — **o mesmo valor da api**. A checagem de BOOT (RN-110) roda do lado da api; o engine em si sobe com qualquer valor (inclusive vazio), mas nesse cenário a api já recusou subir primeiro |
 | `BRABO_SERVICE_TOKEN_PREVIOUS` 🔒 | — aceito só na verificação, durante a rotação |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | — o exporter do Elixir fala **HTTP/protobuf na 4318**, não gRPC na 4317. Ausente desliga só a exportação (`traces_exporter: :none`), não a instrumentação — ver ADR 0035 |
 | `WEB_ORIGIN` | — **a mesma variável da api**, e ela alimenta DUAS coisas aqui: o `check_origin` do socket Phoenix (o painel do time ao vivo) e o CORS HTTP das rotas de health, que o navegador precisa para ler `/health` ([ADR 0037](../adr/0037-cors-do-engine-e-a-porta-como-contrato.md)). Ausente em produção fecha o CORS e mantém o `check_origin` no default estrito do Phoenix — o engine **sobe** de qualquer forma, diferente da api |

@@ -28,6 +28,7 @@ arquivo. Comece pela triagem.
 | não sei que versão está rodando | [Que versão está no ar](#que-versao-esta-no-ar) |
 | `blocked by CORS policy` no console do navegador | [Erro de CORS](#erro-de-cors) |
 | a api sai no boot reclamando de `GIT_OAUTH_STATE_SECRET` | [A api recusa subir por segredo de OAuth](#segredo-de-oauth-no-boot) |
+| a api ou o engine saem no boot reclamando de `AUTH_JWT_SECRET`, `BRABO_SERVICE_TOKEN`, `CREDENTIALS_MASTER_KEY` ou `SECRET_KEY_BASE` | [Os quatro segredos irmãos também não sobem com o default](#segredos-irmaos-no-boot) |
 | agente respondendo vazio, truncado ou lentíssimo | [Ambiente de inferência](#ambiente-de-inferencia) |
 | agente parando com `limite de iterações atingido` sem ter entregado | [Ambiente de inferência](#ambiente-de-inferencia) |
 | quero acrescentar um provider de LLM compatível com a OpenAI | [Adicionando um provider compatível](#adicionando-um-provider-compativel) |
@@ -271,6 +272,47 @@ Trocar a chave **invalida os `state` em voo**: quem estiver no meio de um
 `state` é de 10 minutos, a janela é essa — não há migração a fazer, e nenhuma
 conexão **já estabelecida** é afetada (o token guardado não depende desta
 chave).
+
+### Os quatro segredos irmãos também não sobem com o default {#segredos-irmaos-no-boot}
+
+Sintoma: com `NODE_ENV=production`, a api (ou, para `SECRET_KEY_BASE`, o
+engine) morre no start com uma mensagem sobre `AUTH_JWT_SECRET`,
+`BRABO_SERVICE_TOKEN`, `CREDENTIALS_MASTER_KEY` ou `SECRET_KEY_BASE` —
+ausente, com o valor de exemplo do repositório, ou curta demais.
+
+**Mesma causa do segredo de OAuth acima, e mesma orientação: não é regressão,
+e não contorne.** O [ADR 0059](adr/0059-segredo-do-state-de-oauth-sem-default.md)
+já declarava esses quatro como pendência — o mesmo padrão, só ainda não
+replicado — e a [RN-110](business-rules.md#rn-110) fechou. Cada um protege
+algo diferente:
+
+- `AUTH_JWT_SECRET` público = qualquer um deriva o par que assina o access
+  token e forja um token válido.
+- `BRABO_SERVICE_TOKEN` público = qualquer um chama `/internal/*` sem passar
+  pelo `EngineServiceGuard`.
+- `CREDENTIALS_MASTER_KEY` público = qualquer um decripta o acervo de
+  credenciais do usuário (chaves de LLM, tokens de git).
+- `SECRET_KEY_BASE` (engine) já tinha `raise` no `runtime.exs` — o defeito era
+  só o compose mascarar esse `raise` com um fallback público.
+
+```bash
+export AUTH_JWT_SECRET="$(openssl rand -base64 32)"
+export BRABO_SERVICE_TOKEN="$(openssl rand -base64 32)"
+export CREDENTIALS_MASTER_KEY="$(openssl rand -base64 32)"
+export SECRET_KEY_BASE="$(openssl rand -base64 64)"
+```
+
+Em Kubernetes nada muda, pelo mesmo motivo do `GIT_OAUTH_STATE_SECRET`: os
+quatro já vinham de `brabo-secrets`, pela chave de mesmo nome, em
+`deploy/k8s/base/common/externalsecrets.yaml`.
+
+Trocar `AUTH_JWT_SECRET` ou `BRABO_SERVICE_TOKEN` sem a dança do `_PREVIOUS`
+tem o mesmo efeito que já era documentado em
+[Rotação das chaves do auth](#rotacao-das-chaves-do-auth); trocar
+`CREDENTIALS_MASTER_KEY` sem re-embrulhar tem o mesmo efeito já documentado em
+[Rotação da chave mestra](#rotacao-da-chave-mestra). Esta checagem de BOOT não
+muda nenhum dos dois procedimentos — ela só impede que a chave chegue à
+produção sendo o literal público deste repositório.
 
 ### k3d é o padrão mesmo com kind instalado
 
