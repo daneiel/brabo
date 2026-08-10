@@ -23,8 +23,10 @@ const RAIL_DESABILITADO: { rotulo: string; motivo: string }[] = [
   {
     rotulo: 'Controle de versão',
     motivo:
-      'Não há rota de status de working tree nem lista de branches com ahead/behind. ' +
-      'Fabricar o painel sem esse dado mostraria um número que não existe.',
+      'A FASE 26b entregou a fundação (GET /projects/:id/code/branches, ' +
+      'ahead/behind e PR associada por branch — ver getCodeBranches em ' +
+      'api-client.ts), mas nenhuma tela ainda consome. Não há rota de ' +
+      'status de working tree; o painel segue desabilitado até a UI vir.',
   },
   {
     rotulo: 'Agentes',
@@ -118,8 +120,10 @@ export function CodeShell({ projectId }: { projectId: string }) {
         >
           Ir
         </button>
-        {/* Sem dropdown rico de branches (ahead/behind, badge de PR): a rota
-            não existe, e fingir que existe seria pior que um campo simples. */}
+        {/* Sem dropdown rico de branches (ahead/behind, badge de PR) AINDA:
+            a rota já existe (getCodeBranches, FASE 26b) mas esta tela não a
+            consome — trocar o campo de texto por um seletor rico é da onda
+            seguinte, e fingir aqui seria pior que um campo simples. */}
         <span className={styles.topoBranch}>
           <BranchIcon size={13} />
           {refEfetiva || 'sem branch padrão'}

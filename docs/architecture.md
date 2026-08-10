@@ -196,11 +196,19 @@ O gate de `ProjectCodeTab.tsx` (RN-107) pergunta o estado do container ANTES
 de tentar ler código, para nascer como mensagem própria e não como o rodapé
 de um 409.
 
+**FASE 26b acrescentou três funções/tipos ao mesmo padrão, sem tela
+consumindo ainda**: `getCodeBlame`/`getCodePullRequests`/`getCodeBranches`
+em `lib/api-client.ts`, com `CodeBlame`/`CodePullRequestList`/
+`CodeBranchDetailList` em `lib/api-types.ts` — fundação das três pendências
+declaradas da aba Code (RN-110/111/112), pronta para os três agentes da onda
+seguinte consumirem. `CodeShell.tsx`/`CodeDiffPanel.tsx` não mudaram de
+comportamento, só o comentário que documenta que a fundação já existe.
+
 ### Fora das aplicações
 
 | diretório | o que é |
 |---|---|
-| `packages/shared/` | o contrato `GitProviderContract` — doze operações, **tipos e só**: valor que sobrevive ao `tsc` quebra o boot da api (travado por teste), então constante mora no consumidor |
+| `packages/shared/` | o contrato `GitProviderContract` — quinze operações, **tipos e só**: valor que sobrevive ao `tsc` quebra o boot da api (travado por teste), então constante mora no consumidor |
 | `docker/` | imagens de dev e de produção; `smoke.sh` |
 | `deploy/k8s/` | Kustomize base + overlays (local, staging, prod) |
 | `design/` | design system: tokens, tipografia, componentes |

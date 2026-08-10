@@ -579,6 +579,32 @@ e RN-106).
     aba de código "a mais custosa do programa"; o teto de 512 KB por arquivo
     (`GIT_BLOB_MAX_BYTES`) limita o pior caso por ora.
 
+### FASE 26b — CONCLUÍDA: fundação de blame, PRs navegáveis e branch rica
+Só a camada de API — nenhuma UI. As três pendências declaradas de blame,
+dropdown rico de branches e lista de PRs tocariam os MESMOS arquivos
+(contrato, os três providers, o caso de uso, o controller, a suite de
+contrato) se atacadas separadamente por agentes em paralelo; a decisão foi
+entregar as três juntas, de uma vez, e deixar a UI de cada uma para três
+agentes seguintes sem risco de colisão.
+36. `GitProviderContract` ganhou `blame`, `listPullRequests` e
+    `listBranchesDetailed` (13ª, 14ª e 15ª operação — RN-110/111/112),
+    capability declarada só quando provada pela suite de contrato contra os
+    três providers (`local` contra git de verdade; `github`/`gitlab`
+    mockados — os smokes reais seguem pulados sem
+    `GITHUB_TEST_TOKEN`/`GITLAB_TEST_TOKEN` no ambiente, mesma situação da
+    FASE 13a). `listBranchesDetailed` é operação PRÓPRIA, não extensão de
+    `listBranches` (RN-112) — enriquecer custa uma chamada extra ao provider
+    POR BRANCH, e `listBranches` continua sendo a do bootstrap de Gitflow,
+    que não paga esse custo.
+37. Três rotas novas em `code.controller.ts` (`GET .../code/blame`,
+    `GET .../code/pull-requests`, `GET .../code/branches`), mesmo `role:
+    viewer` e a mesma checagem central de caminho (RN-095) das quatro
+    anteriores. `apps/web/src/lib/api-client.ts`/`api-types.ts` ganharam as
+    funções e tipos correspondentes (`getCodeBlame`, `getCodePullRequests`,
+    `getCodeBranches`) para a onda seguinte consumir — `CodeShell.tsx` e
+    `CodeDiffPanel.tsx` NÃO foram tocados além do comentário que documenta
+    que a fundação já existe.
+
 **Congelamento do programa:** cada fase declara o que não faz, e o mais duro é
 o da 26 — SÓ LEITURA de código, nenhum salvamento pela aba. A edição é fase
 seguinte, e quando vier, escrita é efeito externo: nasce `proposed_action`.

@@ -1075,3 +1075,73 @@ export interface CodeDiff {
   /** A lista foi cortada no teto de arquivos por diff. */
   truncated: boolean;
 }
+
+// --- Fundação de blame, PRs navegáveis e branch rica (FASE 26b) ---
+//
+// API pronta, sem UI consumindo ainda — as três pendências declaradas da aba
+// Code (ver CodeShell.tsx e CodeDiffPanel.tsx) viram tela na onda seguinte,
+// em três agentes separados.
+
+export interface CodeBlameLine {
+  /** 1-based, como todo editor mostra. */
+  line: number;
+  commitSha: string;
+  author: string;
+  /** ISO 8601. */
+  authorDate: string;
+  /** Primeira linha da mensagem do commit. */
+  summary: string;
+}
+
+export interface CodeBlame {
+  ref: string;
+  path: string;
+  lines: CodeBlameLine[];
+  /** O arquivo passou do teto de linhas anotadas por chamada. */
+  truncated: boolean;
+}
+
+export type CodePullRequestState = 'open' | 'merged' | 'closed';
+
+export interface CodePullRequestSummary {
+  id: string;
+  number: number;
+  title: string;
+  url: string;
+  /** Login/username de quem abriu. `null` quando o provider não informa. */
+  author: string | null;
+  state: CodePullRequestState;
+  sourceBranch: string;
+  targetBranch: string;
+  /** ISO 8601. `null` quando o provider não informa. */
+  updatedAt: string | null;
+}
+
+export interface CodePullRequestList {
+  items: CodePullRequestSummary[];
+  /** A lista foi cortada no teto de PRs por chamada. */
+  truncated: boolean;
+}
+
+export interface CodeBranchPullRequestRef {
+  number: number;
+  state: CodePullRequestState;
+}
+
+export interface CodeBranchDetail {
+  name: string;
+  commitSha: string;
+  protected: boolean;
+  /** Commits à frente da branch default. `null` quando não computável. */
+  ahead: number | null;
+  /** Commits atrás da branch default. */
+  behind: number | null;
+  /** PR aberta com esta branch como origem, se houver. */
+  pullRequest: CodeBranchPullRequestRef | null;
+}
+
+export interface CodeBranchDetailList {
+  items: CodeBranchDetail[];
+  /** A lista foi cortada no teto de branches enriquecidas. */
+  truncated: boolean;
+}

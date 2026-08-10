@@ -281,7 +281,10 @@ o componente `d` da JWK, travado por teste.
 | PUT | `/projects/:projectId/budget` | role:maintainer |
 | GET | `/projects/:projectId/agent-areas` | role:developer |
 | PATCH | `/projects/:projectId/agent-areas/:key/max-parallel` | role:maintainer |
+| GET | `/projects/:projectId/code/blame` | role:viewer |
+| GET | `/projects/:projectId/code/branches` | role:viewer |
 | GET | `/projects/:projectId/code/file` | role:viewer |
+| GET | `/projects/:projectId/code/pull-requests` | role:viewer |
 | GET | `/projects/:projectId/code/pull-requests/:pullRequestId/diff` | role:viewer |
 | GET | `/projects/:projectId/code/search` | role:viewer |
 | GET | `/projects/:projectId/code/tree` | role:viewer |

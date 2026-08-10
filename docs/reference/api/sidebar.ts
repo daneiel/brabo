@@ -84,8 +84,26 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/code-controller-blame",
+          label: "Anota cada linha de um arquivo com o commit que a tocou",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/code-controller-branches",
+          label: "Lista as branches com ahead/behind e a PR aberta associada",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/code-controller-file",
           label: "Devolve o conteúdo de um arquivo",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/code-controller-pull-requests",
+          label: "Lista as PRs/MRs do repositório",
           className: "api-method get",
         },
         {

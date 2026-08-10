@@ -217,7 +217,11 @@ export type GitProviderName = "local" | "github" | "gitlab";
 // decisão de shape) e docs/adr/0005 (a 9ª operação, `getFileContent`,
 // acrescentada na sessão do bootstrap de Gitflow). A 10ª (`commentOnPull
 // Request`) veio com os gates da Fase 4a; a 11ª e a 12ª (`listTree` e
-// `getPullRequestDiff`) com a aba Code da FASE 26.
+// `getPullRequestDiff`) com a aba Code da FASE 26. A 13ª, 14ª e 15ª
+// (`blame`, `listPullRequests` e `listBranchesDetailed`) vieram da FASE 26b —
+// a FUNDAÇÃO das três pendências declaradas da aba Code (blame, dropdown de
+// branch rico e lista de PRs), entregue só nesta camada: a UI é onda
+// seguinte, em três agentes separados.
 
 export interface GitProviderCapabilities {
   readonly protectBranch: boolean;
@@ -226,6 +230,12 @@ export interface GitProviderCapabilities {
   readonly listTree: boolean;
   /** `getPullRequestDiff` — a 12ª operação (aba Code, FASE 26). */
   readonly pullRequestDiff: boolean;
+  /** `blame` — a 13ª operação (aba Code, FASE 26b). */
+  readonly blame: boolean;
+  /** `listPullRequests` — a 14ª operação (aba Code, FASE 26b). */
+  readonly pullRequestsList: boolean;
+  /** `listBranchesDetailed` — a 15ª operação (aba Code, FASE 26b). */
+  readonly branchesDetailed: boolean;
 }
 
 // Os TETOS das duas operações de leitura (FASE 26 item 34: "buscar em
@@ -250,6 +260,42 @@ export interface GitBranch {
   protected: boolean;
 }
 
+/**
+ * PR/MR aberta associada a uma branch, como a 15ª operação a enxerga — sem
+ * título nem autor, que já vêm inteiros de `listPullRequests` quando quem
+ * navega precisa deles. Aqui é só o suficiente pra um badge na branch.
+ */
+export interface GitBranchPullRequestRef {
+  number: number;
+  state: "open" | "merged" | "closed";
+}
+
+/**
+ * Uma branch com o que o dropdown rico da aba Code precisa além do que
+ * `GitBranch` já tem (FASE 26b, item 2 — `listBranchesDetailed`, a 15ª
+ * operação).
+ *
+ * NÃO estende `GitBranch` por acidente de shape: é decisão. `ahead`/`behind`
+ * e `pullRequest` custam uma chamada extra ao provider POR BRANCH (duas no
+ * GitLab, que não tem um endpoint que devolva os dois lados de uma vez como
+ * o GitHub) — encostar esse custo em `listBranches`, que o bootstrap chama
+ * sem precisar de nada disso, transformaria toda adoção/criação de branch
+ * numa varredura cara. As duas operações convivem no contrato: `listBranches`
+ * pro bootstrap, `listBranchesDetailed` pra aba Code.
+ */
+export interface GitBranchDetail extends GitBranch {
+  /**
+   * Commits à frente da branch DEFAULT do repositório. `null` só quando o
+   * provider não consegue computar (nunca para as branches que o contrato
+   * promete — é degradação honesta, não o caso comum).
+   */
+  ahead: number | null;
+  /** Commits atrás da branch default. */
+  behind: number | null;
+  /** PR aberta com esta branch como ORIGEM, se houver. `null` sem uma. */
+  pullRequest: GitBranchPullRequestRef | null;
+}
+
 export interface GitCommitResult {
   sha: string;
   branch: string;
@@ -267,6 +313,35 @@ export interface GitPullRequest {
   sourceBranch: string;
   targetBranch: string;
   state: "open" | "merged" | "closed";
+}
+
+/**
+ * Resumo de UMA PR/MR, o suficiente para popular uma lista clicável que leva
+ * ao diff já existente por id (`getPullRequestDiff`) — 14ª operação
+ * (`listPullRequests`, FASE 26b, item 3: a lista navegável que faltava).
+ *
+ * Não é `GitPullRequest` com campos a mais: título e autor não existem lá
+ * porque abrir/mesclar PR nunca precisou deles. Um tipo próprio evita que a
+ * escrita ganhe campos que só a leitura usa.
+ */
+export interface GitPullRequestSummary {
+  id: string;
+  number: number;
+  title: string;
+  url: string;
+  /** Login/username de quem abriu. `null` quando o provider não informa. */
+  author: string | null;
+  state: "open" | "merged" | "closed";
+  sourceBranch: string;
+  targetBranch: string;
+  /** ISO 8601. `null` quando o provider não informa. */
+  updatedAt: string | null;
+}
+
+export interface GitPullRequestList {
+  items: GitPullRequestSummary[];
+  /** `true` quando a lista foi cortada no teto de PRs por chamada. */
+  truncated: boolean;
 }
 
 export interface CreateRepoInput {
@@ -404,6 +479,66 @@ export interface GetPullRequestDiffInput {
   accessToken?: string;
 }
 
+// --- Blame, PRs navegáveis e branch rica (FASE 26b — aba Code, fundação) ---
+//
+// A UI das três pendências declaradas da FASE 26 é a onda SEGUINTE, em três
+// agentes separados sem risco de colisão — esta sessão entrega só o que eles
+// vão consumir: os tipos, os providers, o caso de uso e a rota HTTP.
+
+/** UMA linha anotada de um arquivo, na ordem em que aparece nele. */
+export interface GitBlameLine {
+  /** 1-based, como toda linha de editor. */
+  line: number;
+  commitSha: string;
+  /** Nome de quem autorou o commit — não login/username, que nem todo provider dá por linha. */
+  author: string;
+  /** ISO 8601. */
+  authorDate: string;
+  /** Primeira linha da mensagem do commit — contexto pro hover, sem o corpo inteiro. */
+  summary: string;
+}
+
+export interface GitBlame {
+  ref: string;
+  path: string;
+  lines: GitBlameLine[];
+  /** `true` quando o arquivo passou do teto de linhas anotadas. */
+  truncated: boolean;
+}
+
+export interface BlameInput {
+  externalId: string;
+  /** Branch, tag ou sha. */
+  ref: string;
+  path: string;
+  accessToken?: string;
+}
+
+export interface ListPullRequestsInput {
+  externalId: string;
+  /** Ausente lista todos os estados. */
+  state?: "open" | "merged" | "closed";
+  accessToken?: string;
+}
+
+export interface ListBranchesDetailedInput {
+  externalId: string;
+  /**
+   * Branch DEFAULT do repositório — referência para `ahead`/`behind` de cada
+   * entrada. Quem chama já sabe (é o mesmo `GitRepo.defaultBranch`), e pedir
+   * de novo ao provider seria uma chamada a mais só pra redescobrir o que o
+   * chamador já tinha.
+   */
+  defaultBranch: string;
+  accessToken?: string;
+}
+
+export interface GitBranchDetailList {
+  items: GitBranchDetail[];
+  /** `true` quando a lista foi cortada no teto de branches enriquecidas. */
+  truncated: boolean;
+}
+
 export interface GitProviderContract {
   readonly name: GitProviderName;
   readonly capabilities: GitProviderCapabilities;
@@ -442,6 +577,35 @@ export interface GitProviderContract {
   getPullRequestDiff(
     input: GetPullRequestDiffInput,
   ): Promise<GitPullRequestDiff | null>;
+  /**
+   * 13ª operação (FASE 26b — aba Code): anota cada linha de um arquivo com o
+   * commit que a tocou por último.
+   *
+   * `null` quando o arquivo não existe naquela ref (mesmo vocabulário de
+   * `getFileContent`/`listTree`). Rejeita com `GitNotSupportedError` quando
+   * `capabilities.blame` é `false`.
+   */
+  blame(input: BlameInput): Promise<GitBlame | null>;
+  /**
+   * 14ª operação (FASE 26b — aba Code): lista de PRs/MRs do repositório, o
+   * suficiente pra popular uma lista clicável — o diff de cada uma continua
+   * vindo de `getPullRequestDiff`, por id.
+   *
+   * Rejeita com `GitNotSupportedError` quando `capabilities.pullRequestsList`
+   * é `false`.
+   */
+  listPullRequests(input: ListPullRequestsInput): Promise<GitPullRequestList>;
+  /**
+   * 15ª operação (FASE 26b — aba Code): branches com `ahead`/`behind` contra
+   * a default e a PR aberta associada, quando houver — o dropdown rico que
+   * `listBranches` (bootstrap) nunca precisou ser.
+   *
+   * Rejeita com `GitNotSupportedError` quando `capabilities.branchesDetailed`
+   * é `false`.
+   */
+  listBranchesDetailed(
+    input: ListBranchesDetailedInput,
+  ): Promise<GitBranchDetailList>;
 }
 
 // --- Credenciais de git do usuário (Fase 2, sessão 2) ---
