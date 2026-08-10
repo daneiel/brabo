@@ -38,13 +38,25 @@ defmodule Engine.Workers.AnamneseSchedulerWorker do
   """
   def enabled?, do: Application.get_env(:engine, :anamnese_enabled?, false)
 
+  @doc """
+  Confere `enabled?/0` a cada tick, não só no boot (RN-115): sem essa
+  checagem aqui, uma corrente já agendada ANTES de alguém desativar a flag
+  (ou de antes de a flag existir) se reagenda pra sempre, rodando Anamnese
+  de verdade com a flag dizendo `false` — foi exatamente o que aconteceu em
+  dev (achado real, não hipótese), remediado manualmente cancelando os jobs
+  agendados. Desativado, nem `enqueue_projects/0` nem o reagendamento
+  acontecem: a corrente morre ali, e um job antigo que ainda dispara uma vez
+  se AUTO-CURA sozinho, sem intervenção manual.
+  """
   @impl true
   def perform(_job) do
-    enqueue_projects()
+    if enabled?() do
+      enqueue_projects()
 
-    %{}
-    |> new(schedule_in: interval_seconds())
-    |> Oban.insert()
+      %{}
+      |> new(schedule_in: interval_seconds())
+      |> Oban.insert()
+    end
 
     :ok
   end
@@ -56,11 +68,9 @@ defmodule Engine.Workers.AnamneseSchedulerWorker do
   agendar e deixar `perform/1` no-opar a cada tick. Mais barato (a fila do
   Oban não recebe um job a cada `interval_seconds` só para não fazer nada) e
   mais claro para quem inspeciona a fila: Anamnese desativada não deixa
-  rastro nenhum de tentativa. `perform/1` continua incondicional de
-  propósito — os testes existentes chamam `perform_job/2` direto, sem passar
-  por `kickoff/0`, e a corrente entre rodadas não deve carregar a decisão de
-  ligar/desligar consigo (quem religa reinicia o engine, que chama
-  `kickoff/0` de novo).
+  rastro nenhum de tentativa. `perform/1` agora confere a MESMA flag (ver
+  moduledoc acima) — as duas pontas (nascer e reagendar) respeitam
+  `enabled?/0`, e nenhuma delas precisa da outra pra ficar correta.
   """
   def kickoff do
     if enabled?() do

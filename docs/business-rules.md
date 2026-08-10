@@ -3551,9 +3551,18 @@ perfilamento individual.
 job periódico quando desativado, em vez de agendar e deixar `perform/1`
 no-opar a cada tick — mais barato (a fila do Oban não recebe um job a cada
 `ANAMNESE_INTERVAL_SECONDS` só para não fazer nada) e mais claro para quem
-inspeciona a fila. `perform/1` continua incondicional de propósito: a
-corrente entre rodadas não carrega a decisão de ligar/desligar consigo, e
-quem religa reinicia o engine, que chama `kickoff/0` de novo.
+inspeciona a fila. **Correção em 2026-08-10** (achado real em execução, não
+hipótese): a versão original desta regra deixava `perform/1` incondicional
+de propósito, para a corrente entre rodadas não carregar a decisão de
+ligar/desligar consigo — mas isso significava que uma corrente já agendada
+ANTES de a flag existir (ou de alguém desativá-la) continuava se
+reagendando pra sempre, rodando Anamnese de verdade com a flag dizendo
+`false`. Foi exatamente o que aconteceu num Postgres de dev mais antigo que
+o PR original, remediado manualmente cancelando os jobs agendados.
+`perform/1` agora confere `enabled?/0` a cada tick, igual `kickoff/0`: se
+desativado, nem `enqueue_projects/0` nem o reagendamento acontecem, e a
+corrente morre ali — o que também AUTO-CURA sozinho o cenário de job antigo
+que ainda dispara uma vez, sem precisar de intervenção manual.
 
 `AnamneseCommandController.run/2` (rota sob demanda, "reanalisar agora" nas
 Configurações) responde **503** com corpo `{"error": "anamnese_desativada"}`
@@ -3577,7 +3586,8 @@ que some (RN-088: nunca falha silenciosa ou confusa).
   `apps/web/src/routes/ProjectSettingsTab.tsx` (`ProficiencySection`)
 - **Teste:**
   `apps/engine/test/engine/workers/anamnese_scheduler_worker_test.exs`
-  (`kickoff/0` não agenda desativado, agenda ativado, default desligado),
+  (`kickoff/0` não agenda desativado, agenda ativado, default desligado;
+  `perform/1` desativado no meio da corrente não faz fan-out nem reagenda),
   `apps/engine/test/engine_web/controllers/anamnese_command_controller_test.exs`
   (503 distinto de 409, com e sem sessão),
   `apps/api/test/application/use-cases/anamnese/run-anamnese.use-case.spec.ts`,
@@ -3607,10 +3617,17 @@ fechamento de sessão — o `Engine.Outbox.Drain` roteia
 `session.closed`/`session.closed_abnormally` pra `PsychologistWorker` só
 quando `PsychologistWorker.enabled?/0` é true (`Drain.handlers_for/1`);
 desativado, só `SessionLifecycleWorker` roda, e o job do Psicólogo nem
-nasce. `PsychologistWorker.perform/1` continua incondicional de propósito,
-mesmo padrão do `AnamneseWorker`: quem decide é quem CRIA o job, não quem o
-executa — por isso a suite pré-existente de `PsychologistWorker` (que chama
-`perform/1` direto) não precisou mudar.
+nasce. `PsychologistWorker.perform/1` continua incondicional de propósito —
+mas NÃO é mais "o mesmo padrão" do `AnamneseSchedulerWorker` (ver a correção
+de 2026-08-10 na RN-115 acima): lá `perform/1` passou a conferir a flag
+porque ele PRÓPRIO reagenda a corrente a cada tick, e um job antigo
+disparando incondicionalmente reabria a Anamnese com a flag desligada. O
+Psicólogo não tem corrente nenhuma que se reagende sozinha — cada job nasce
+de UM evento (`session.closed`), e quem decide é o `Drain` no momento em que
+RECEBE o evento, não o worker no momento em que RODA; um job de Psicólogo
+já enfileirado antes de desligar a flag é, no máximo, a última rodada
+pendente, nunca uma corrente infinita. Por isso a suite pré-existente de
+`PsychologistWorker` (que chama `perform/1` direto) não precisou mudar.
 
 `PsychologistCommandController.reanalyze/2` (rota sob demanda,
 "Reanalisar" na aba Insights) responde **503** com corpo

@@ -97,6 +97,18 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **engine**: `AnamneseSchedulerWorker.perform/1` não conferia a flag
+  `ANAMNESE_ENABLED` — só `kickoff/0` (a inserção inicial do job no boot)
+  conferia. Uma corrente já agendada ANTES de alguém desativar a flag (ou de
+  antes de ela existir) se reagendava pra sempre e rodava rodadas reais da
+  Anamnese com a flag dizendo `false`. `perform/1` agora confere `enabled?/0`
+  a cada tick: desativado, nem enfileira rodada por projeto nem se reagenda,
+  e a corrente morre ali — job antigo que ainda dispara uma vez se auto-cura
+  sozinho, sem intervenção manual (RN-115). Conferido: o Psicólogo
+  (`PSYCHOLOGIST_ENABLED`) não tem esse problema — o gate dele fica no
+  roteamento do evento pelo `Engine.Outbox.Drain`, não numa corrente que se
+  reagenda sozinha
+
 - **api,engine,web**: o socket Phoenix da sessão (`session:<id>`) exigia só o
   `session_id` existir — quem descobrisse o UUID entrava no canal e recebia
   todos os broadcasts ao vivo. `connect/3` passa a exigir um ticket opaco de
