@@ -120,14 +120,30 @@ export function useLatestSession(projectId: string | undefined) {
  * `useSessionEventHistory` abaixo (RN-099). Eram a mesma query, e por isso o
  * feed de Atividades despejava 200 itens sem fim e ainda assim não alcançava
  * o começo de uma sessão longa.
+ *
+ * `pausarPoll` (achados 2/7 — duplicata de mensagem): o poll incondicional
+ * buscava eventos já persistidos (`chat.message`/`agent.response`) ENQUANTO
+ * um turno ainda estava em streaming na tela, e o resultado renderizava ao
+ * lado do estado otimista/streaming — duplicata visual. `SessionPage` passa
+ * `true` durante o turno; o fim dele já invalida esta query explicitamente
+ * (`finalizarTurnoDoAgente`), então pausar o TIMER não perde dado — só evita
+ * buscar de novo o que a invalidação vai buscar de qualquer forma. Default
+ * `false`: os outros consumidores deste hook (Overview, Code, Provisioning,
+ * AdoptionPlan) não têm turno conversacional em andamento e continuam como
+ * estavam.
  */
-export function useSessionEvents(projectId: string | undefined, sessionId: string | undefined, intervalMs = 3000) {
+export function useSessionEvents(
+  projectId: string | undefined,
+  sessionId: string | undefined,
+  intervalMs = 3000,
+  pausarPoll = false,
+) {
   return useQuery({
     queryKey: ['session-events', projectId, sessionId],
     queryFn: () =>
       listSessionEvents(projectId!, sessionId!, { limit: 200, latest: true }),
     enabled: !!projectId && !!sessionId,
-    refetchInterval: pollQueParaNoErro(intervalMs),
+    refetchInterval: pausarPoll ? false : pollQueParaNoErro(intervalMs),
   });
 }
 

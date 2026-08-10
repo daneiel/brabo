@@ -208,6 +208,84 @@ escreve `active` recebe a chave crua do `validateSearch`.
   mesmo tendo sessões do outro — é informação, não erro.
 - **Origem:** [ADR 0061](adr/0061-tipo-da-sessao-na-criacao.md)
 
+### RN-118 — Sessão criativa sem o Criativo ativo: a primeira mensagem TAMBÉM o ativa {#rn-118}
+
+Numa sessão `kind: 'criativa'` ([RN-097](#rn-097)) sem `agent.activated`
+nenhum ainda, mandar a primeira mensagem pelo composer ativa o Criativo
+primeiro (aguardando a ativação terminar) e só depois entrega essa mensagem a
+ele pelo caminho real (`sendAgentMessage` — histórico, system prompt, tool
+`emit_artifact`). Antes desta regra, quem escrevia sem clicar em "Iniciar
+ideação" caía num chat SSE genérico sem histórico nem regras de negócio: NÃO
+era o Criativo de verdade, e a conversa não registrava nada no domínio.
+
+O clique em "Iniciar ideação" continua existindo ([RN-104](#rn-104)) — é ele
+que segue disparando a ativação quando a pessoa prefere o gesto explícito, e é
+dele que a chave do owner ([RN-058](#rn-058)) passa a ser gasta em qualquer um
+dos dois caminhos. O que mudou é que a PRIMEIRA MENSAGEM também conta como
+esse gesto: ninguém deveria precisar de um clique separado antes de falar com
+quem a tela já convidou a falar.
+
+- **Onde:** `apps/web/src/routes/SessionPage.tsx:627` (`handleSend`)
+- **Teste:** `apps/web/src/routes/SessionPage.ideacao-automatica.test.tsx`
+- **Borda:** sessão `consultiva` não tem Criativo — a regra não se aplica, e o
+  caminho SSE genérico continua sendo o certo pra ela.
+
+### RN-119 — O agente ATIVO da sessão é o de `agent.activated` mais recente — nunca uma cadeia fixa {#rn-119}
+
+`SessionPage` decide duas coisas a partir do MESMO agente: pra quem a
+mensagem do composer vai, e de qual agente a topbar resolve o modelo exibido
+(a cascata completa sessão→agente→área→projeto→workspace, a mesma que
+`RunLlmTurnUseCase` usa pra rodar o turno de verdade). As duas perguntas
+tinham respostas DIFERENTES antes desta regra: o roteamento usava uma cadeia
+de precedência fixa (arquiteto > po > criativo, baseada em EXISTÊNCIA
+histórica — "já ativou alguma vez", que nunca "desligava"), e o modelo
+exibido nem sabia quem estava ativo — a rota de model-binding não recebia
+agente nenhum e caía sempre no fallback fixo do Criativo
+(`herdarModeloDeStart`), mesmo depois de um handoff pro PO, Arquiteto ou Dev
+Lead.
+
+A definição única: o agente ATIVO é o de `agent.activated` mais RECENTE (por
+`seq`), entre os agentes conversacionais do fluxo de chat (Criativo, PO,
+Arquiteto, Dev Lead). **Infra Lead fica de fora**: `agent_command_controller.ex`
+(engine) só tem rota de `message` pra po/dev-lead/arquiteto (mais Criativo,
+como fallback implícito da última cláusula) — Infra nunca teve `message`
+wireada, só `start`. Mandar mensagem pra "infra" hoje cairia em silêncio no
+Criativo; tratá-lo como agente ativo do composer reabriria essa armadilha em
+vez de fechar uma.
+
+- **Onde:** `apps/web/src/routes/SessionPage.tsx:273` (`activeAgent`),
+  `apps/web/src/lib/api-client.ts:773` (`getSessionModelBinding`, o
+  `agentId`), `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:147`
+  (`getSessionBinding`, `@Query('agentId')`)
+- **Teste:** `apps/web/src/routes/SessionPage.agente-mais-recente.test.tsx`,
+  `apps/web/src/routes/SessionPage.modelo-do-agente-ativo.test.tsx`,
+  `apps/api/test/application/use-cases/llm/resolve-model-binding.use-case.spec.ts`
+- **Borda:** Infra Lead não participa do roteamento do composer nem da
+  definição de "agente ativo" — ele é propositivo (Fase 4), não
+  conversacional pelo composer.
+
+### RN-120 — O poll de eventos da sessão pausa durante um turno em andamento {#rn-120}
+
+`useSessionEvents` buscava eventos a cada poucos segundos SEM nenhuma
+consciência de turno em andamento. Se o poll caísse DURANTE um turno (comum —
+turnos costumam durar mais que o intervalo), ele trazia `chat.message`/
+`agent.response` já persistidos, que renderizavam AO LADO do estado
+otimista/streaming ainda em tela: a mesma mensagem, duas vezes.
+
+A correção pausa só o TIMER (`refetchInterval`) enquanto `streaming` é
+`true` — a query continua `enabled`, então a invalidação explícita que já
+dispara no fim do turno (`finalizarTurnoDoAgente`) continua buscando o dado
+fresco na hora certa. `pausarPoll` é parâmetro OPCIONAL, default `false`: os
+outros consumidores do hook (Overview, Code, Provisioning, AdoptionPlan) não
+têm turno conversacional em andamento e continuam como estavam.
+
+- **Onde:** `apps/web/src/lib/hooks.ts:135` (`useSessionEvents`),
+  `apps/web/src/routes/SessionPage.tsx:208` (`eventsQuery`)
+- **Teste:** `apps/web/src/lib/hooks.pausar-poll.test.tsx`
+- **Borda:** pausar o timer não é desligar a query — a invalidação explícita
+  continua funcionando, e é dela que a correção depende pra nunca perder
+  dado.
+
 ---
 
 ## Aprovação de ações

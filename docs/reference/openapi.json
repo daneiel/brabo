@@ -7038,7 +7038,7 @@
     },
     "/projects/{projectId}/sessions/{sessionId}/model-binding": {
       "get": {
-        "description": "Devolve o binding RESOLVIDO pela cascata, não o binding cru da sessão: uma sessão sem binding próprio usa o do projeto, e responder `null` aqui seria a resposta errada para a pergunta certa. O campo `origin` diz de qual escopo o valor veio.",
+        "description": "Devolve o binding RESOLVIDO pela cascata, não o binding cru da sessão: uma sessão sem binding próprio usa o do projeto, e responder `null` aqui seria a resposta errada para a pergunta certa. O campo `origin` diz de qual escopo o valor veio.\n\n`agentId` é opcional e é o agente REALMENTE ativo na sessão agora (o mesmo que `RunLlmTurnUseCase` usa pra rodar o turno) — sem ele, a cascata só enxerga sessão→projeto→workspace (mais o fallback fixo pro Criativo) e nunca reflete PO/Arquiteto/Dev Lead/área depois de um handoff.",
         "operationId": "ModelBindingsController_getSessionBinding",
         "parameters": [
           {
@@ -7053,6 +7053,15 @@
             "name": "sessionId",
             "required": true,
             "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "agentId",
+            "required": false,
+            "in": "query",
+            "description": "Agente ativo agora nesta sessão (ex.: \"po\", \"arquiteto\", \"dev-lead\").",
             "schema": {
               "type": "string"
             }

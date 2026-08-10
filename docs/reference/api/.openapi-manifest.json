@@ -1,6 +1,6 @@
 {
   "_": "Gerado por `pnpm docs:generate`. Não edite — é a trava do que está em docs/reference/api/.",
-  "openapiSha256": "2dfa76b5201e60164918b518e4e2a0808f5119294f5aa2661efc43fd72304325",
+  "openapiSha256": "4d37df49b36f6e567e02180f0523baa16d042cce67e53d0f2faadaf7705ab5a0",
   "arquivos": {
     "actions-controller-approve-always.ParamsDetails.json": "f51f6d74f8b4a7e9c8f70cef93e0d026d63e77123672029da660c802def3ad0e",
     "actions-controller-approve-always.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
@@ -459,10 +459,10 @@
     "model-bindings-controller-get-project-binding.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
     "model-bindings-controller-get-project-binding.StatusCodes.json": "66c0701f00058be877f5575056fbe9758236d2512fec9147525a5ce8215502d1",
     "model-bindings-controller-get-project-binding.api.mdx": "fdc8f302b50307feec762f01b81a5ac28e9e250974b4eda7c5c975d50cfe558f",
-    "model-bindings-controller-get-session-binding.ParamsDetails.json": "4e5efb20e1409eeb815c23b3b0bb5f88ddd8dee4944337c72d226e3093b7b4ba",
+    "model-bindings-controller-get-session-binding.ParamsDetails.json": "848172533838d6ffeaa06da20c864d302dcd29729c2c3d83585e9ca715c3e9ac",
     "model-bindings-controller-get-session-binding.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
     "model-bindings-controller-get-session-binding.StatusCodes.json": "6493d9b2a4707d5fdb50ea5decc67aca04db32448282514e8f73e714aec03066",
-    "model-bindings-controller-get-session-binding.api.mdx": "d24913245b44dabae445b81b84695893f925d34cc4425e6ad79f7dc8e20ff540",
+    "model-bindings-controller-get-session-binding.api.mdx": "f93c485634582077627c749544007cc1de2fea3507d1c84dfdf396fb0360a2ec",
     "model-bindings-controller-get-workspace-binding.ParamsDetails.json": "56d669b72315e3339a75e1873f3cf2543f5b2ba3552994ad2fb69d673da7192b",
     "model-bindings-controller-get-workspace-binding.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
     "model-bindings-controller-get-workspace-binding.StatusCodes.json": "66c0701f00058be877f5575056fbe9758236d2512fec9147525a5ce8215502d1",
