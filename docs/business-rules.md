@@ -3450,6 +3450,29 @@ de chamadas por abertura do dropdown.
   duplicaria os dois.
 - **Origem:** FASE 26b
 
+### RN-113 — Blame no editor é anotação SOB DEMANDA — um toggle, nunca embutida na leitura do arquivo {#rn-113}
+
+A UI que consome a fundação da [RN-110](#rn-110) entra aqui: o editor da aba
+Code (`CodeEditor.tsx`) só chama `getCodeBlame` quando o usuário liga o toggle
+"Blame" — nunca junto da leitura de arquivo, que já dispara sozinha ao abrir
+uma aba. O motivo é o mesmo dos orçamentos de leitura composta (ADR 0060):
+blame é uma SEGUNDA chamada ao provider por arquivo aberto, e um arquivo perto
+do teto (`GIT_BLAME_LINE_LIMIT`, 2000 linhas) já é caro o bastante para não
+pagá-lo de graça em toda navegação. `truncated` (que a RN-110 já expõe) vira
+aviso visível, no mesmo padrão do aviso de `fileQuery.data.truncated`.
+
+Linhas consecutivas do MESMO commit mostram autor e sha curto só na PRIMEIRA
+linha do bloco — repetir o mesmo texto em cada linha de um bloco de dezenas
+de linhas seria ruído, não anotação; a linha só some do texto, nunca some da
+anotação (o `title` do elemento continua com data completa e resumo do
+commit em qualquer linha do bloco).
+
+- **Onde:** `apps/web/src/routes/code/CodeEditor.tsx`,
+  `apps/web/src/routes/code/CodeEditor.module.css`
+- **Teste:** `apps/web/src/routes/code/CodeEditor.test.tsx`
+- **Origem:** onda de UI da FASE 26b (blame — dropdown rico de branches e
+  lista de PRs são UI de outros dois agentes, sem risco de colisão)
+
 ### RN-108 — O socket da sessão exige um ticket opaco de uso único, não o JWT reaproveitado {#rn-108}
 
 `EngineWeb.SessionSocket.connect/3` recusava a conexão inteira só com o
