@@ -304,21 +304,28 @@ commit — tag de outro commit não vale, tag de outro estágio não vale, e tag
 não resolveu sha não vira carimbo por omissão. É esse conjunto que impede `qa`
 de receber código que nunca passou por `dev`.
 
-**Os quatro segredos irmãos do compose de produção** — `AUTH_JWT_SECRET`,
-`BRABO_SERVICE_TOKEN`, `CREDENTIALS_MASTER_KEY` e `SECRET_KEY_BASE` ainda têm
+~~**Os quatro segredos irmãos do compose de produção**~~ — **FEITO**
+([RN-110](../business-rules.md#rn-110)). `AUTH_JWT_SECRET`,
+`BRABO_SERVICE_TOKEN`, `CREDENTIALS_MASTER_KEY` e `SECRET_KEY_BASE` tinham
 default de desenvolvimento em `docker/docker-compose.prod.yml`, que roda com
-`NODE_ENV=production`. É o mesmo padrão que o
-[ADR 0059](../adr/0059-segredo-do-state-de-oauth-sem-default.md) acabou de
-fechar para o `GIT_OAUTH_STATE_SECRET`, e pelo mesmo motivo: o valor é público,
-está neste repositório.
+`NODE_ENV=production` — o mesmo padrão que o
+[ADR 0059](../adr/0059-segredo-do-state-de-oauth-sem-default.md) fechara para
+o `GIT_OAUTH_STATE_SECRET`, pelo mesmo motivo: o valor é público, está neste
+repositório.
 
-Não foram tocados junto **de propósito**. Cada um tem raio de quebra próprio e
-merece a própria decisão: `CREDENTIALS_MASTER_KEY` é a chave de envelope das
-credenciais já gravadas, então trocá-la não é configurar, é **perder dado** —
-pede caminho de rotação, não uma exceção no boot. `SECRET_KEY_BASE` é do engine,
-onde a verificação teria de nascer no `runtime.exs`, não em TypeScript. Fechar
-os quatro de passagem, num commit sobre a chave do OAuth, esconderia que são
-quatro decisões distintas.
+O receio registrado abaixo — que cada um merecia decisão própria — não
+apontava para quatro DECISÕES diferentes, só para três checagens em lugares
+diferentes: `passphraseAtual()` (`auth-key-material.ts`),
+`tokenDeServicoAtual()` (`service-token.ts`) e o construtor de
+`EnvelopeEncryptionService`, cada um com a MESMA regra do
+`resolveOauthStateSecret()` (ausente/exemplo/curto derruba o boot em
+produção). `CREDENTIALS_MASTER_KEY` recusar o BOOT não é o mesmo problema que
+temia — não mexe em rotação nenhuma, essa continua existindo via
+`CREDENTIALS_MASTER_KEY_PREVIOUS` + `rewrap-deks.ts`; a checagem só impede que
+a chave de exemplo chegue a produção. `SECRET_KEY_BASE` já tinha o `raise`
+certo no `runtime.exs` — o defeito real era o compose mascará-lo com um
+fallback público, e a correção foi só remover esse fallback, sem tocar
+Elixir nenhum.
 
 ---
 

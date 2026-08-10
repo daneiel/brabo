@@ -244,10 +244,14 @@ Imagens multi-stage, **non-root**, rootfs read-only, sem bind mount:
 engine roda um `mix release` (sem Mix, sem código-fonte) e o web sai por nginx.
 
 ```bash
-# Obrigatória: este compose roda com NODE_ENV=production, e a api recusa subir
-# com a chave de exemplo do repositório (ADR 0059) — ela assina o `state` do
-# OAuth de git. O `smoke.sh` gera a dele sozinho.
+# Obrigatórias: este compose roda com NODE_ENV=production, e a api recusa
+# subir com a chave de exemplo do repositório para nenhum destes quatro
+# segredos (ADR 0059, RN-093/RN-110). O `smoke.sh` gera os dele sozinho.
 export GIT_OAUTH_STATE_SECRET="$(openssl rand -base64 32)"
+export AUTH_JWT_SECRET="$(openssl rand -base64 32)"
+export BRABO_SERVICE_TOKEN="$(openssl rand -base64 32)"
+export CREDENTIALS_MASTER_KEY="$(openssl rand -base64 32)"
+export SECRET_KEY_BASE="$(openssl rand -base64 64)"
 
 docker compose -f docker/docker-compose.prod.yml up -d --build --wait
 bash docker/smoke.sh

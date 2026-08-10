@@ -1594,6 +1594,59 @@ Divergindo aqui, o callback recusaria todo `state` legítimo.
 - **Teste:** `apps/api/test/infrastructure/security/oauth-state-secret.spec.ts`
 - **Origem:** [ADR 0059](adr/0059-segredo-do-state-de-oauth-sem-default.md)
 
+### RN-110 — Os quatro segredos irmãos do `GIT_OAUTH_STATE_SECRET` também não sobem em produção com o valor de exemplo {#rn-110}
+
+O [ADR 0059](adr/0059-segredo-do-state-de-oauth-sem-default.md) fechou o
+padrão para `GIT_OAUTH_STATE_SECRET` e deixou declaradamente aberto que o
+mesmo modo de falha valia para quatro segredos irmãos, todos com default de
+desenvolvimento no `docker-compose.prod.yml`: `AUTH_JWT_SECRET`,
+`BRABO_SERVICE_TOKEN`, `CREDENTIALS_MASTER_KEY` e `SECRET_KEY_BASE`. Esta RN
+fecha os quatro, replicando exatamente a mesma regra — não é decisão nova,
+é a mesma decisão aplicada aos irmãos.
+
+Em produção (`NODE_ENV === 'production'`), cada resolutor **derruba o boot**
+quando a variável está ausente/só com espaços, é igual ao literal de exemplo
+do repositório (que é público — está no `.env.example`), ou tem menos de 16
+caracteres. Fora de produção o default de desenvolvimento continua valendo,
+porque `docker compose up` sem `.env` tem que funcionar.
+
+- `AUTH_JWT_SECRET` — deriva o par Ed25519 que assina o access token. Com o
+  default público, qualquer um forja um access token válido.
+- `BRABO_SERVICE_TOKEN` — autentica o tráfego interno api ↔ engine. Com o
+  default público, qualquer um chama as rotas `/internal/*` sem passar pelo
+  `EngineServiceGuard`.
+- `CREDENTIALS_MASTER_KEY` — embrulha os DEKs que cifram as credenciais do
+  usuário (chaves de LLM, tokens de git). Com o default público, qualquer um
+  decripta o acervo. **Fora de escopo aqui**: qualquer mecanismo de rotação —
+  esse já existe (`CREDENTIALS_MASTER_KEY_PREVIOUS` +
+  `src/scripts/rewrap-deks.ts`) e não muda; esta é só a checagem de BOOT.
+- `SECRET_KEY_BASE` (engine) — já derrubava o boot sem a variável
+  (`runtime.exs`, bloco `:prod`, boilerplate padrão do Phoenix). O defeito
+  real não era falta de checagem no Elixir: era o `docker-compose.prod.yml`
+  suprir o literal público como fallback, o que fazia a variável chegar
+  sempre DEFINIDA e mascarava o `raise` que já existia. A correção aqui foi
+  só remover o fallback do compose — nenhuma linha de Elixir mudou.
+
+Vale a mesma razão do ADR 0059 para rejeitar o literal, e não só o vazio: o
+`docker-compose.prod.yml` supria os quatro literais como fallback, então no
+caminho real de erro as variáveis estavam **definidas** — uma verificação de
+"não vazia" passaria por cima do defeito inteiro.
+
+- **Onde:** `apps/api/src/infrastructure/security/auth-key-material.ts`
+  (`passphraseAtual`), `apps/api/src/infrastructure/security/service-token.ts`
+  (`tokenDeServicoAtual`) e
+  `apps/api/src/infrastructure/security/envelope-encryption.service.ts`
+  (`EnvelopeEncryptionService`, checagem no construtor) — os dois primeiros
+  chamados no boot em `apps/api/src/main.ts`, o terceiro exercitado quando o
+  `NestFactory.create` monta o grafo de providers. `SECRET_KEY_BASE` em
+  `apps/engine/config/runtime.exs` (inalterado) com o fallback removido de
+  `docker/docker-compose.prod.yml`
+- **Teste:** `apps/api/test/infrastructure/security/auth-key-material.spec.ts`,
+  `apps/api/test/infrastructure/security/service-token.spec.ts` e o describe
+  `validação de produção` em
+  `apps/api/test/infrastructure/security/envelope-encryption.service.spec.ts`
+- **Origem:** [ADR 0059](adr/0059-segredo-do-state-de-oauth-sem-default.md)
+
 ### RN-076 — A credencial de git nunca é escrita em arquivo {#rn-076}
 
 O engine trabalha em repositório remoto pedindo o **remoto de trabalho** à api
