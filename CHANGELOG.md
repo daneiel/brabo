@@ -12,9 +12,14 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   conhecido). Um QUARTO estado, além dos três da RN-088, aparece quando o
   Arquiteto ainda não decidiu a imagem do container: "bloqueada por decisão
   pendente" (RN-107), nem carregando, nem erro, nem vazio. Terminal
-  interativo, blame, lista rica de branches e lista de PRs ficam de fora,
-  declarados como pendência — dependem de fases que ainda não subiram (FASE
-  26, item 35)
+  interativo, blame e lista de PRs ficam de fora, declarados como pendência —
+  dependem de fases que ainda não subiram (FASE 26, item 35)
+
+- **web**: a aba Code ganha o dropdown rico de branches (`CodeBranchPicker`),
+  substituindo o campo de texto simples — cada linha mostra `ahead`/`behind`
+  relativos à branch default e a PR associada, quando houver (RN-112). Ref
+  fora da lista (tag ou sha) continua alcançável por um campo manual no
+  rodapé do dropdown
 
 - **api**: fundação de blame, PRs navegáveis e branch rica para a aba Code —
   `GET /projects/:id/code/{blame,pull-requests,branches}`, sem UI
