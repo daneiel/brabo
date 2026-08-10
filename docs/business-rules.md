@@ -3421,8 +3421,9 @@ paginação de seguimento — navegação humana, não sincronização de histó
 
 ### RN-112 — `listBranchesDetailed` é operação PRÓPRIA, separada de `listBranches` {#rn-112}
 
-Fundação do dropdown rico declarado como pendência em `CodeShell.tsx`
-(`ahead`/`behind`, badge de PR). A decisão foi NÃO estender `listBranches` — a
+Fundação do dropdown rico, agora consumida por `CodeBranchPicker.tsx`
+(`ahead`/`behind`, badge de PR — a onda seguinte à FASE 26b fechou a
+pendência que `CodeShell.tsx` declarava). A decisão foi NÃO estender `listBranches` — a
 13ª operação original, que o bootstrap de Gitflow chama sem precisar de nada
 disso: enriquecer custa uma chamada extra ao provider POR BRANCH (duas no
 GitLab, que não tem endpoint que devolva os dois lados de uma comparação numa
@@ -3447,15 +3448,44 @@ de chamadas por abertura do dropdown.
   capability `branchesDetailed`), `apps/api/src/infrastructure/git/{github,
   gitlab,local}-provider.ts`, `git-read-limits.ts`
   (`GIT_BRANCH_DETAIL_LIMIT`), `read-project-code.use-case.ts` (método
-  `branches`), `code.controller.ts` (`GET /projects/:id/code/branches`)
+  `branches`), `code.controller.ts` (`GET /projects/:id/code/branches`);
+  no web, `apps/web/src/lib/api-client.ts` (`getCodeBranches`) e
+  `apps/web/src/routes/code/CodeBranchPicker.tsx` — o dropdown em si, aberto
+  a partir de `CodeShell.tsx`
 - **Teste:** `git-provider.contract.ts` (bloco "listBranchesDetailed"),
-  `read-project-code.use-case.spec.ts` (bloco "branches detalhadas")
+  `read-project-code.use-case.spec.ts` (bloco "branches detalhadas"),
+  `apps/web/src/routes/code/CodeBranchPicker.test.tsx`
 - **Borda:** o método `branches()` mora no MESMO caso de uso das outras seis
   leituras (`ReadProjectCodeUseCase`), não perto do bootstrap — é uma LEITURA
   da aba Code, com a mesma resolução de credencial e o mesmo portão de
   container (RN-105) que as demais; tratá-la como operação de bootstrap
-  duplicaria os dois.
-- **Origem:** FASE 26b
+  duplicaria os dois. Uma ref fora da lista de branches (tag ou sha) segue
+  alcançável — o rodapé do dropdown tem um campo manual, porque
+  `listBranchesDetailed` não enumera essas duas coisas.
+- **Origem:** FASE 26b (fundação); onda seguinte fechou a UI
+
+### RN-113 — Blame no editor é anotação SOB DEMANDA — um toggle, nunca embutida na leitura do arquivo {#rn-113}
+
+A UI que consome a fundação da [RN-110](#rn-110) entra aqui: o editor da aba
+Code (`CodeEditor.tsx`) só chama `getCodeBlame` quando o usuário liga o toggle
+"Blame" — nunca junto da leitura de arquivo, que já dispara sozinha ao abrir
+uma aba. O motivo é o mesmo dos orçamentos de leitura composta (ADR 0060):
+blame é uma SEGUNDA chamada ao provider por arquivo aberto, e um arquivo perto
+do teto (`GIT_BLAME_LINE_LIMIT`, 2000 linhas) já é caro o bastante para não
+pagá-lo de graça em toda navegação. `truncated` (que a RN-110 já expõe) vira
+aviso visível, no mesmo padrão do aviso de `fileQuery.data.truncated`.
+
+Linhas consecutivas do MESMO commit mostram autor e sha curto só na PRIMEIRA
+linha do bloco — repetir o mesmo texto em cada linha de um bloco de dezenas
+de linhas seria ruído, não anotação; a linha só some do texto, nunca some da
+anotação (o `title` do elemento continua com data completa e resumo do
+commit em qualquer linha do bloco).
+
+- **Onde:** `apps/web/src/routes/code/CodeEditor.tsx`,
+  `apps/web/src/routes/code/CodeEditor.module.css`
+- **Teste:** `apps/web/src/routes/code/CodeEditor.test.tsx`
+- **Origem:** onda de UI da FASE 26b (blame — dropdown rico de branches e
+  lista de PRs são UI de outros dois agentes, sem risco de colisão)
 
 ### RN-108 — O socket da sessão exige um ticket opaco de uso único, não o JWT reaproveitado {#rn-108}
 

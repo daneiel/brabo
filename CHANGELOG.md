@@ -14,6 +14,14 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   pendente" (RN-107), nem carregando, nem erro, nem vazio. Terminal
   interativo, blame e lista rica de branches ficam de fora, declarados como
   pendência — dependem de fases que ainda não subiram (FASE 26, item 35)
+  interativo, blame e lista de PRs ficam de fora, declarados como pendência —
+  dependem de fases que ainda não subiram (FASE 26, item 35)
+
+- **web**: a aba Code ganha o dropdown rico de branches (`CodeBranchPicker`),
+  substituindo o campo de texto simples — cada linha mostra `ahead`/`behind`
+  relativos à branch default e a PR associada, quando houver (RN-112). Ref
+  fora da lista (tag ou sha) continua alcançável por um campo manual no
+  rodapé do dropdown
 
 - **api**: fundação de blame, PRs navegáveis e branch rica para a aba Code —
   `GET /projects/:id/code/{blame,pull-requests,branches}`. `GitProviderContract`
@@ -25,6 +33,11 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   consumindo `listPullRequests` (RN-111); clicar num item abre o mesmo fluxo
   de diff por id que já existia. Quem já sabe o id continua podendo colar
   direto
+- **web**: o editor da aba Code ganha anotação de blame — toggle "Blame" no
+  breadcrumb liga a anotação linha a linha (commit, autor e data) SOB
+  DEMANDA, nunca em toda leitura de arquivo; linhas consecutivas do mesmo
+  commit não repetem o texto, e os três estados (carregando, erro com
+  "tentar de novo", vazio) seguem a RN-088 (RN-113)
 
 - **api,web**: aba de Gastos com duas audiências — o owner vê a quebra do workspace por modelo, projeto, ator e dia (mais a fatura por credencial, que já existia); o membro vê só o próprio consumo, por sessão e por dia, sem provider e sem credencial (ADR 0063, RN-101)
 

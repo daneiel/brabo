@@ -572,8 +572,7 @@ e RN-106).
 
     Pendências DECLARADAS, sem dado real por trás: terminal interativo
     (FASE 25b, que segue cortada — estado vazio honesto na aba), blame,
-    dropdown rico de branches (`ahead`/`behind`, badge de PR — vira campo de
-    texto simples), lista de PRs dentro da aba (o diff só é alcançável por id
+    lista de PRs dentro da aba (o diff só é alcançável por id
     conhecido, vindo de Aprovações) e painel de Problemas/lint/testes.
     Virtualização de linha também ficou de fora — o próprio handoff chama a
     aba de código "a mais custosa do programa"; o teto de 512 KB por arquivo
@@ -604,6 +603,12 @@ agentes seguintes sem risco de colisão.
     `getCodeBranches`) para a onda seguinte consumir — `CodeShell.tsx` e
     `CodeDiffPanel.tsx` NÃO foram tocados além do comentário que documenta
     que a fundação já existe.
+38. CONCLUÍDO: o dropdown rico de branches (RN-112) — `CodeBranchPicker.tsx`,
+    aberto a partir de `CodeShell.tsx`, troca o campo de texto simples por um
+    seletor listando cada branch com `ahead`/`behind` relativos à default e a
+    PR associada, quando houver (`aberta`/`mesclada`/`fechada`). Ref fora da
+    lista (tag ou sha) continua alcançável — `listBranchesDetailed` não
+    enumera essas duas, então o rodapé do dropdown tem um campo manual.
 
 **Congelamento do programa:** cada fase declara o que não faz, e o mais duro é
 o da 26 — SÓ LEITURA de código, nenhum salvamento pela aba. A edição é fase

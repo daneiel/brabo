@@ -7,8 +7,8 @@
   background: var(--surface-0);
 }
 
-/* Barra de topo: sem dropdown rico de branch (achado declarado), só o campo
-   de ref e o nome corrente. 44px como o handoff especifica. */
+/* Barra de topo: rótulo "ref" + o dropdown rico de branch (CodeBranchPicker,
+   nome + ahead/behind + PR associada). 44px como o handoff especifica. */
 .topo {
   flex-shrink: 0;
   height: 44px;
@@ -26,49 +26,6 @@
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--text-muted);
-}
-
-.refInput {
-  height: 28px;
-  width: 220px;
-  padding: 0 8px;
-  background: var(--code-bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  color: var(--text-primary);
-  font-family: var(--font-mono);
-  font-size: 12px;
-}
-
-.refInput:focus-visible {
-  outline: none;
-  border-color: var(--border-strong);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
-}
-
-.refBotao {
-  height: 28px;
-  padding: 0 10px;
-  background: var(--surface-2);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  color: var(--text-secondary);
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.refBotao:hover {
-  background: var(--surface-1);
-}
-
-.topoBranch {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-family: var(--font-mono);
-  font-size: 11.5px;
-  color: var(--success);
 }
 
 .corpo {
