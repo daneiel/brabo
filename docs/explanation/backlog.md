@@ -346,6 +346,7 @@ produto adiadas — por isso sem prioridade aqui.
 | Modo community do approval-ladder | vira mudança de `aprovacao_humana` no registro de gates (ADR 0054, PR #145) |
 | "N agentes online" no dashboard | — |
 | Preferência de moeda com taxa manual | — |
+| Reativar a Anamnese (`ANAMNESE_ENABLED=true`) | pausada por decisão do usuário em 2026-08-10 — "hoje ele não está trazendo dados de muito valor" ([RN-114](../business-rules.md#rn-114)). Nenhum dado apagado (hipóteses, perfis de proficiência, patches de instrução seguem intactos e visíveis); a pausa é só do CAMINHO de rodada nova, aguardando um refinamento futuro do que a Anamnese deriva antes de religar |
 
 ## O que esta triagem NÃO faz
 

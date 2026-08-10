@@ -1,6 +1,6 @@
 {
   "_": "Gerado por `pnpm docs:generate`. Não edite — é a trava do que está em docs/reference/api/.",
-  "openapiSha256": "bb4d18e3ec5b6ee2d8db2332674057cd2b50e711c8408c1efe8326cf08f5b7fc",
+  "openapiSha256": "17ce792850aa433f7895acdda5d2cd953a3b122084180f44d4e982c6a188afdf",
   "arquivos": {
     "actions-controller-approve-always.ParamsDetails.json": "f51f6d74f8b4a7e9c8f70cef93e0d026d63e77123672029da660c802def3ad0e",
     "actions-controller-approve-always.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
@@ -80,8 +80,8 @@
     "anamnese-controller-rollback-version.api.mdx": "92baabac91eaa0f3eeb4a6a2ef5e9131e43f919035d6eb1eb5e57bc3d7fcc58b",
     "anamnese-controller-run.ParamsDetails.json": "f1cf321fa2c84a7ad647e71995c44bdb32efe0baf7ce03ee78703c9e1a2ea0e3",
     "anamnese-controller-run.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
-    "anamnese-controller-run.StatusCodes.json": "9d6cbd9d849930fe245c2bf304b53c56a74c7e3768ac2b96f370bc3f475a6393",
-    "anamnese-controller-run.api.mdx": "e1f26d8b9b0aa727450f0889c05e30fa9f3f32f078a3b77823917189efd9577f",
+    "anamnese-controller-run.StatusCodes.json": "f3e67797b9fb9a3fac2495c860c0c97cb14a14bde4bdb98cd6dd240be62f7a1d",
+    "anamnese-controller-run.api.mdx": "e9ecb01a362ba836b345dc60e009a628a135029ebbf2671a8ea6716457cf6362",
     "anamnese-controller-versions.ParamsDetails.json": "81b40d2b90d26687edea762e059dfeee4275eee120f8f0a7b7406b8de0784a04",
     "anamnese-controller-versions.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
     "anamnese-controller-versions.StatusCodes.json": "e9a5419d9c8a6f785b1c88a5b7e578243bb42326b1a8729eefa3c801ea04ef89",

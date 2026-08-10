@@ -3487,6 +3487,61 @@ commit em qualquer linha do bloco).
 - **Origem:** onda de UI da FASE 26b (blame — dropdown rico de branches e
   lista de PRs são UI de outros dois agentes, sem risco de colisão)
 
+### RN-114 — A Anamnese pode ser pausada globalmente; a pausa é do PRODUTO, nunca apaga dado {#rn-114}
+
+`ANAMNESE_ENABLED` (env var do engine, boolean, default `false` a partir
+desta regra) decide se uma rodada NOVA da Anamnese pode acontecer — periódica
+(`AnamneseSchedulerWorker`) ou sob demanda (`AnamneseCommandController`).
+Decisão de PRODUTO do usuário em 2026-08-10 ("hoje ele não está trazendo
+dados de muito valor"), não bug — ver docs/explanation/backlog.md. Desativada,
+NENHUM dado existente é tocado: hipóteses, perfis de proficiência e patches
+de instrução já gravados continuam intactos e visíveis, e o opt-out POR
+MEMBRO (RN-025) continua um conceito separado — a pausa é do SISTEMA, não do
+perfilamento individual.
+
+`AnamneseSchedulerWorker.kickoff/0` (chamado uma vez no boot) NÃO agenda o
+job periódico quando desativado, em vez de agendar e deixar `perform/1`
+no-opar a cada tick — mais barato (a fila do Oban não recebe um job a cada
+`ANAMNESE_INTERVAL_SECONDS` só para não fazer nada) e mais claro para quem
+inspeciona a fila. `perform/1` continua incondicional de propósito: a
+corrente entre rodadas não carrega a decisão de ligar/desligar consigo, e
+quem religa reinicia o engine, que chama `kickoff/0` de novo.
+
+`AnamneseCommandController.run/2` (rota sob demanda, "reanalisar agora" nas
+Configurações) responde **503** com corpo `{"error": "anamnese_desativada"}`
+quando desativado — distinto de propósito do 409 vazio que já existia para
+"projeto sem sessão" (os dois eram fáceis de confundir num 409 puro, e são
+causas bem diferentes). `RunAnamneseUseCase`, do lado api, converte o 503 do
+engine em `ServiceUnavailableException` com `reason: "anamnese_disabled"` no
+corpo — nunca um 500 genérico nem um 409 reaproveitado. A web
+(`ProjectSettingsTab.tsx`) descobre o estado no primeiro clique de "Rodar
+agora" (não há hoje uma leitura prévia do estado global) e, a partir daí,
+desabilita o botão e mantém a explicação VISÍVEL na tela — não só um toast
+que some (RN-088: nunca falha silenciosa ou confusa).
+
+- **Onde:** `apps/engine/lib/engine/workers/anamnese_scheduler_worker.ex`
+  (`enabled?/0`, `kickoff/0`),
+  `apps/engine/lib/engine_web/controllers/anamnese_command_controller.ex`,
+  `apps/engine/config/runtime.exs`,
+  `apps/api/src/domain/anamnese/anamnese-disabled.error.ts`,
+  `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts`
+  (`runAnamnese`), `apps/api/src/application/use-cases/anamnese/run-anamnese.use-case.ts`,
+  `apps/web/src/routes/ProjectSettingsTab.tsx` (`ProficiencySection`)
+- **Teste:**
+  `apps/engine/test/engine/workers/anamnese_scheduler_worker_test.exs`
+  (`kickoff/0` não agenda desativado, agenda ativado, default desligado),
+  `apps/engine/test/engine_web/controllers/anamnese_command_controller_test.exs`
+  (503 distinto de 409, com e sem sessão),
+  `apps/api/test/application/use-cases/anamnese/run-anamnese.use-case.spec.ts`,
+  `apps/web/src/routes/ProjectSettingsTab.test.tsx` (`ProficiencySection`)
+- **Borda:** a flag é GLOBAL (todos os projetos/workspaces), não por projeto
+  — ao contrário do teto de paralelismo (RN-083) ou do modelo herdável por
+  área (RN-102), que são decisões por escopo. Ligar de volta é
+  `ANAMNESE_ENABLED=true` e reiniciar o engine; não há botão na UI para isso
+  (é operacional, não uma preferência de projeto).
+- **Origem:** sem ADR — decisão de produto reversível, não mudança estrutural
+  de arquitetura. Ver docs/explanation/backlog.md.
+
 ### RN-108 — O socket da sessão exige um ticket opaco de uso único, não o JWT reaproveitado {#rn-108}
 
 `EngineWeb.SessionSocket.connect/3` recusava a conexão inteira só com o
