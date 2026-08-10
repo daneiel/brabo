@@ -43,6 +43,17 @@
   color: var(--text-primary);
 }
 
+/* Rótulo + botão de criar, na mesma linha: era a única forma de criar um
+   projeto novo estando DENTRO de um projeto aberto — antes disso o único
+   caminho era voltar ao dashboard (`/`), sem nenhuma pista de que era
+   preciso. */
+.navLabelRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 8px 6px 12px;
+}
+
 .navLabel {
   font-family: var(--font-mono);
   font-size: 10px;
@@ -50,7 +61,30 @@
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--text-muted);
-  padding: 14px 12px 6px;
+}
+
+.newProjectButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.newProjectButton:hover {
+  background: var(--surface-2);
+  color: var(--text-primary);
+}
+
+.newProjectButton:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
 .nav {
