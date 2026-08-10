@@ -2200,12 +2200,15 @@ Fechar sessão é sobre o trabalho ter acabado, não sobre quem está olhando.
 mesmo, com aviso no log. Trocar sessão órfã por sessão imortal seria trocar um
 defeito por outro.
 
-"Trabalho pendente" são **dois** sinais, e o segundo entrou pelo achado V:
+"Trabalho pendente" são **três** sinais — o segundo entrou pelo achado V, o
+terceiro pelo bug real do Criativo→PO→Arquiteto:
 
 1. **handoff `offered`** — o caso original acima;
 2. **`proposed_action` com status `pending`** — alguém está esperando a SUA
    decisão, e um agente pode estar suspenso esperando o desfecho
-   ([RN-073](#rn-073)).
+   ([RN-073](#rn-073));
+3. **agente ATIVADO ainda em turno** — o último `agent.status` de cada ator
+   que já falou na sessão é `working` sem um `idle` posterior.
 
 O segundo é o mesmo defeito do primeiro um nível abaixo, e a execução do
 `hello-limpo` mostrou o custo: a sessão nasceu 23:34:12, uma ação ficou
@@ -2215,24 +2218,55 @@ que o banco dava por encerrada, e isso envenena toda métrica por sessão:
 duração, custo e "quantas terminaram bem" passam a ler um estado que não
 descreve o que houve.
 
+O terceiro é a mesma janela, um passo antes de qualquer um dos dois primeiros
+existir: `AcceptHandoffUseCase` marca o handoff antigo como `accepted` e ativa
+o próximo agente na hora, mas a ativação no engine é `GenServer.cast`
+fire-and-forget — responde 201 antes de o agente sequer começar. O PO ativado
+pelo handoff do Criativo roda um kickoff de até 12 iterações de LLM usando só
+ferramentas `category: :direct` (`create_epic`/`create_story`/`create_task`),
+que nunca geram `proposed_action`, e só oferece o handoff seguinte (o sinal 1)
+no FIM do turno inteiro. Entre a ativação e esse fim, nem o sinal 1 nem o sinal
+2 existiam — só o ping do canal Phoenix a cada 10s segurava a sessão, e
+qualquer atraso maior que os 30s do timeout fechava a sessão com o PO ainda
+gerando o backlog, quebrando a cadeia de handoff pela raiz: o handoff seguinte
+acabava sendo oferecido numa sessão já `closed`, que não aceita mais nada.
+
+`agent.status` (`working`/`idle`) é o que todo agente conversacional
+(Criativo/PO/Arquiteto/Dev Lead/Infra) já narra nos limites de turno, e é
+PERSISTIDO no event log, não só broadcastado no canal
+(`Engine.Sessions.LiveBroadcast.agent_status/4`, [ADR 0021](adr/0021-fechamento-4a-infra-e-painel.md))
+— o mesmo sinal que o painel do time já lê para derivar o roster
+(`conversationalStatus` em `apps/web/src/lib/agent-status.ts`). Reaproveitá-lo
+aqui não exigiu evento novo nenhum: o terceiro sinal é o último `agent.status`
+de CADA ator que já falou na sessão, e é genérico por tipo de evento — cobre
+qualquer agente ativado por handoff, não só o PO.
+
 A versão anterior desta regra dizia, por escrito, que incluir trabalho de agente
 "sem um teste que prove a interação seria adivinhar". A execução produziu a
 prova, e o teste agora existe.
 
-**O que continua fora:** task `in_progress` sem ação pendente nem handoff. O dev
-agent tem máquina de estados própria e retém o worktree por conta dele; o sinal
-que a api possui e que a execução comprovou é a ação pendente. Incluir a task
-exigiria a api ler `dev_agent_states`, que é do engine — decisão de fronteira,
-não conserto de passagem.
+**O que continua fora:** task `in_progress` sem ação pendente nem handoff nem
+turno em aberto. O dev agent tem máquina de estados própria e retém o worktree
+por conta dele; o sinal que a api possui e que a execução comprovou é a ação
+pendente. Incluir a task exigiria a api ler `dev_agent_states`, que é do
+engine — decisão de fronteira, não conserto de passagem. Os dev agents também
+não emitem `agent.status` (rodam com máquina de estados própria, não com o
+loop conversacional de turno) — o terceiro sinal não os cobre, e não precisa:
+a ação pendente já cobre o caminho deles.
 
 - **Onde:** `apps/api/src/application/use-cases/sessions/get-session-pending-work.use-case.ts`,
-  `apps/engine/lib/engine/sessions/session_server.ex` (`handle_info(:heartbeat_timeout, …)`)
+  `apps/api/src/application/ports/session-event-repository.port.ts`
+  (`listByTypeInSession`), `apps/engine/lib/engine/sessions/session_server.ex`
+  (`handle_info(:heartbeat_timeout, …)`)
 - **Teste:** `apps/engine/test/engine/sessions/session_lifecycle_test.exs`
   (`heartbeat NÃO encerra sessão com trabalho pendente` e o caso oposto) e
   `apps/api/test/application/use-cases/sessions/get-session-pending-work.use-case.spec.ts`
-  (os dois sinais, a ação já decidida que NÃO segura, e o escopo por sessão)
+  (os três sinais, a ação já decidida que NÃO segura, o `idle` que libera, o
+  isolamento por ator, a genericidade por tipo de agente e o escopo por
+  sessão)
 - **Origem:** execução real da FASE 13b; achado V, Fase H do
-  [backlog](explanation/backlog.md)
+  [backlog](explanation/backlog.md); bug real do encadeamento
+  Criativo→PO→Arquiteto
 
 ### RN-063 — Encerrar sem produzir é desfecho, não falha {#rn-063}
 

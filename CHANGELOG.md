@@ -144,6 +144,17 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   o join confere também o `project_id` — reconexão (inclusive automática)
   sempre busca um ticket novo (RN-108)
 
+- **api**: o heartbeat podia fechar a sessão com um agente ativado por handoff
+  ainda no meio do turno — `AcceptHandoffUseCase` ativa o próximo agente por
+  `GenServer.cast` fire-and-forget, e entre a ativação e o agente oferecer o
+  handoff seguinte (ou terminar), nem handoff `offered` nem `proposed_action`
+  pendente existiam para segurar a sessão. Na cadeia Criativo→PO→Arquiteto
+  isso quebrava o encadeamento: o handoff PO→Arquiteto acabava sendo oferecido
+  numa sessão já `closed`, que o front não deixa mais aceitar.
+  `GetSessionPendingWorkUseCase` ganha um terceiro sinal — o último
+  `agent.status` (persistido no event log) de cada ator é `working` sem `idle`
+  posterior — genérico por tipo de agente, não hardcoded pro PO (RN-064)
+
 ## v2.5.1 — 2026-08-08
 
 ### Correções
