@@ -22,6 +22,12 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   ganha a 13ª/14ª/15ª operação, provadas pela suite de contrato nos três
   providers (RN-110/111/112)
 
+- **web**: o editor da aba Code ganha anotação de blame — toggle "Blame" no
+  breadcrumb liga a anotação linha a linha (commit, autor e data) SOB
+  DEMANDA, nunca em toda leitura de arquivo; linhas consecutivas do mesmo
+  commit não repetem o texto, e os três estados (carregando, erro com
+  "tentar de novo", vazio) seguem a RN-088 (RN-113)
+
 - **api,web**: aba de Gastos com duas audiências — o owner vê a quebra do workspace por modelo, projeto, ator e dia (mais a fatura por credencial, que já existia); o membro vê só o próprio consumo, por sessão e por dia, sem provider e sem credencial (ADR 0063, RN-101)
 
 - **api,web**: a sessão nasce com tipo escolhido (`consultiva` ou `criativa`),
