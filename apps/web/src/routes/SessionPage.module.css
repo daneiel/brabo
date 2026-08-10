@@ -136,6 +136,28 @@
   flex: 1;
 }
 
+/* A pista ao lado do botão "pelado" da topbar — visível quando a conversa já
+   começou (`conversaComecou`) sem o convite ter aparecido nunca (mandar
+   mensagem antes de "Iniciar ideação"). Mesma cor do Criativo no fio
+   (`--warning`), pra a pista e a futura bolha dele lerem como o mesmo ator. */
+.iniciarIdeacaoComPista {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.iniciarIdeacaoIcone {
+  color: var(--warning);
+  flex-shrink: 0;
+}
+
+.iniciarIdeacaoDica {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
 .toggleAside {
   width: 38px;
   height: 38px;

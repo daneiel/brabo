@@ -49,6 +49,7 @@ import { TIPOS_DE_SESSAO } from '../lib/session-kind';
 import {
   AlertCircleIcon,
   ArrowLeftIcon,
+  BulbIcon,
   ChevronRightIcon,
   LayoutSidebarIcon,
   ModelIcon,
@@ -135,6 +136,23 @@ export function SessionPage({
   // Espelho do `streaming` para os handlers do canal: eles são registrados uma
   // vez e enxergariam sempre o valor inicial do state.
   const streamingRef = useRef(false);
+  // Achado B: o engine avisa "comecei a trabalhar" (`agent.status` "working")
+  // bem antes do primeiro delta — handoff aceito dispara um kickoff
+  // ASSÍNCRONO (`GenServer.cast`) no engine, ao contrário de handleSend/
+  // handleReadiness, que são síncronos e já ligam `streaming` na hora. Sem
+  // isto, entre aceitar o handoff e o agente responder a tela não mostra
+  // nada — só o silêncio, que é indistinguível de "não vai acontecer nada".
+  //
+  // `turnoAgentRef` guarda QUEM está prestes a responder, fixado no clique
+  // que disparou o turno (`handleAcceptHandoff`) — não no roster derivado dos
+  // eventos (`activeAgent`), que só reflete o `agent.activated` persistido
+  // depois de um round-trip e podia perder a corrida com o broadcast do
+  // canal, que é bem mais rápido.
+  const turnoAgentRef = useRef<string | null>(null);
+  // Agente identificado pelo `agent.status` "working" enquanto NENHUM delta
+  // chegou ainda pra este turno. `null` assim que o primeiro delta chega (o
+  // bloco de streaming já cobre) ou o turno termina.
+  const [statusAgent, setStatusAgent] = useState<string | null>(null);
   const [optimisticUser, setOptimisticUser] = useState<string | null>(null);
   // Renomear (RN-098). `null` fora de edição — e não string vazia — porque
   // vazio é um nome que se está digitando, e nenhum campo aberto é outro
@@ -209,6 +227,11 @@ export function SessionPage({
     setStreamingText('');
     setStreamingAgent(null);
     setOptimisticUser(null);
+    // Fim do turno também encerra o indicador de "comecei a trabalhar"
+    // (achado B) — senão ele sobrevive a um turno que nunca chegou a
+    // streamar texto nenhum (só ferramentas, por exemplo).
+    turnoAgentRef.current = null;
+    setStatusAgent(null);
     queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
     queryClient.invalidateQueries({ queryKey: ['session-handoffs', projectId, sessionId] });
     queryClient.invalidateQueries({ queryKey: ['session-budget', projectId, sessionId] });
@@ -224,8 +247,24 @@ export function SessionPage({
         setStreaming(true);
         setStreamingText((t) => t + text);
         if (agent) setStreamingAgent(agent);
+        // O delta é o streaming de verdade — o indicador de "comecei a
+        // trabalhar" (achado B) já cumpriu o papel dele.
+        setStatusAgent(null);
       },
       onAgentDone: finalizarTurnoDoAgente,
+      // Achado B: `agent.status` "working" chega bem antes do primeiro
+      // delta quando o turno é disparado por um kickoff ASSÍNCRONO no engine
+      // (handoff aceito, `GenServer.cast`) — ao contrário de handleSend/
+      // handleReadiness, que já ligam `streaming` na hora por serem
+      // síncronos. Só vira indicador se NENHUM delta chegou ainda pra este
+      // turno (`streamingRef`); senão o bloco de streaming já cobre.
+      onAgentStatus: (payload) => {
+        if (payload.status === 'working') {
+          if (!streamingRef.current) setStatusAgent(turnoAgentRef.current);
+        } else {
+          setStatusAgent(null);
+        }
+      },
       // Fase 4a — painel do time ao vivo: qualquer evento persistido
       // (Dev/QA/SecOps/Infra) antecipa o refetch do polling — reaproveita o
       // parsing/cache já existente (useSessionEvents), só antecipa quando o
@@ -263,6 +302,13 @@ export function SessionPage({
   const agenteFalando = streamingAgent
     ? AGENTS[streamingAgent as keyof typeof AGENTS]
     : undefined;
+  // O agente exibido no indicador — delta tem prioridade (é o dado mais
+  // recente); na ausência dele, o `agent.status` "working" (achado B), que
+  // pode ter chegado sem streamingAgent nenhum ainda. Degrada para "agente"
+  // genérico nos dois casos — nunca para o nome do modelo.
+  const agenteExibido =
+    agenteFalando ??
+    (statusAgent ? AGENTS[statusAgent as keyof typeof AGENTS] : undefined);
 
   // A CONVERSA começou? (achado G) — e não "o fio está vazio", que era a
   // condição anterior. Num projeto CRIADO o fio já nasce com os cards do
@@ -480,12 +526,18 @@ export function SessionPage({
     }
   }
 
-  async function handleAcceptHandoff(handoffId: string) {
+  async function handleAcceptHandoff(handoffId: string, toAgent: string) {
+    // Fixado ANTES do `await` (achado B): o kickoff do agente no engine é um
+    // `GenServer.cast` assíncrono, e o `agent.status` "working" pode chegar
+    // pelo canal antes mesmo desta chamada resolver. Sem o ref pronto agora,
+    // o handler perderia a corrida e o indicador nasceria sem saber quem é.
+    turnoAgentRef.current = toAgent;
     try {
       await acceptHandoff(projectId, sessionId, handoffId);
       await queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
       queryClient.invalidateQueries({ queryKey: ['session-handoffs', projectId, sessionId] });
     } catch {
+      turnoAgentRef.current = null;
       showToast({ title: 'Erro', message: 'Não foi possível aceitar o handoff', tone: 'danger' });
     }
   }
@@ -692,12 +744,37 @@ export function SessionPage({
             literal do problema que originou a FASE 20: a ação num lugar e a
             explicação em outro. Uma ação, um lugar de cada vez; a topbar segue
             sendo a saída para quem já digitou algo e nunca chamou o Criativo,
-            que é o caso em que o convite não está mais lá. */}
+            que é o caso em que o convite não está mais lá.
+
+            E quando chega aqui SEM o convite ter aparecido nunca — quem
+            manda uma mensagem antes de clicar em "Iniciar ideação" nunca vê
+            o texto do convite, porque `conviteVisivel` depende de
+            `!conversaComecou`, que não volta a `false` — o botão sozinho não
+            dizia o que fazia. A pista (ícone + nota do Criativo, mesma cor
+            da bolha dele no fio, e `title` pro hover) fica ao lado dele. */}
         {isActive && sessaoCriativa && !criativoActive && !conviteVisivel && (
-          <Button onClick={handleStartIdeation}>Iniciar ideação</Button>
+          <span className={styles.iniciarIdeacaoComPista}>
+            <BulbIcon
+              size={14}
+              className={styles.iniciarIdeacaoIcone}
+              aria-hidden="true"
+            />
+            <span className={styles.iniciarIdeacaoDica}>
+              traz o Criativo pra conversa
+            </span>
+            <Button
+              onClick={handleStartIdeation}
+              title="Traz o Criativo para conduzir a ideação desta sessão — ele ainda não entrou"
+            >
+              Iniciar ideação
+            </Button>
+          </span>
         )}
         {isActive && offeredHandoff && (
-          <Button variant="success" onClick={() => handleAcceptHandoff(offeredHandoff.id)}>
+          <Button
+            variant="success"
+            onClick={() => handleAcceptHandoff(offeredHandoff.id, offeredHandoff.toAgent)}
+          >
             Aceitar handoff e iniciar {offeredHandoff.toAgent}
           </Button>
         )}
@@ -817,18 +894,24 @@ export function SessionPage({
                 </div>
               )}
 
-              {streaming && (
+              {/* `statusAgent` cobre o intervalo entre o `agent.status`
+                  "working" (achado B) e o primeiro delta — sem ele, aceitar
+                  um handoff cujo kickoff é assíncrono no engine não mostrava
+                  nada até o agente terminar de pensar. Reaproveita o MESMO
+                  indicador do streaming por delta; `agenteExibido` escolhe a
+                  fonte mais recente entre os dois. */}
+              {(streaming || statusAgent) && (
                 <div
                   className={styles.message}
                   style={
                     {
                       ['--msg-color' as string]:
-                        agenteFalando?.color ?? 'var(--accent)',
+                        agenteExibido?.color ?? 'var(--accent)',
                     } as CSSProperties
                   }
                 >
                   <span className={styles.avatar}>
-                    {agenteFalando ? <agenteFalando.icon size={15} /> : <ModelIcon size={15} />}
+                    {agenteExibido ? <agenteExibido.icon size={15} /> : <ModelIcon size={15} />}
                   </span>
                   <div className={styles.messageBody}>
                     <div className={styles.messageHeader}>
@@ -839,9 +922,15 @@ export function SessionPage({
                         chegava, o que também mudava o nome na cara do usuário.
                         Sem o agente no delta, degrada para "agente" genérico,
                         nunca para o nome do modelo.
+
+                        "está escrevendo…" só antes de haver texto — é o que
+                        deixa explícito que o silêncio é trabalho em curso, não
+                        ausência de resposta (achado B).
                       */}
                       <span className={styles.messageName}>
-                        {agenteFalando?.name ?? 'agente'}
+                        {streamingText
+                          ? (agenteExibido?.name ?? 'agente')
+                          : `${agenteExibido?.name ?? 'Agente'} está escrevendo…`}
                       </span>
                     </div>
                     {streamingText ? (
@@ -959,23 +1048,34 @@ function ContextAside({
       </div>
 
       <div className={styles.asideSection}>
-        <div className={styles.asideHeader}>Regras de negócio</div>
-        {businessRules.length === 0 ? (
-          <div className={styles.asideEmpty}>Nada ainda.</div>
-        ) : (
-          businessRules.map((e) => {
-            const rule = e.payload as BusinessRulePayload;
-            return (
-              <div key={e.id} className={styles.ruleCard}>
-                <div className={styles.ruleTitle}>{rule.title}</div>
-                <div className={styles.ruleDescription}>{rule.description}</div>
-                <div className={styles.ruleOrigin}>
-                  origem: {Array.isArray(rule.origin) ? rule.origin.length : 0} ref(s)
+        {/* Contador exposto com o MESMO padrão do Log de eventos (`Disclosure`
+            + `trailing`) — antes o cabeçalho era um `div` mudo e o rodapé
+            estático do convite ("Quando as regras estiverem completas…")
+            não tinha como saber quantas já existiam. Sem threshold: o ganho
+            é mostrar o número real, não decidir por um mínimo. */}
+        <Disclosure
+          titulo="Regras de negócio"
+          trailing={businessRules.length}
+          padraoAberto
+          classNameCabecalho={styles.asideHeader}
+        >
+          {businessRules.length === 0 ? (
+            <div className={styles.asideEmpty}>Nada ainda.</div>
+          ) : (
+            businessRules.map((e) => {
+              const rule = e.payload as BusinessRulePayload;
+              return (
+                <div key={e.id} className={styles.ruleCard}>
+                  <div className={styles.ruleTitle}>{rule.title}</div>
+                  <div className={styles.ruleDescription}>{rule.description}</div>
+                  <div className={styles.ruleOrigin}>
+                    origem: {Array.isArray(rule.origin) ? rule.origin.length : 0} ref(s)
+                  </div>
                 </div>
-              </div>
-            );
-          })
-        )}
+              );
+            })
+          )}
+        </Disclosure>
       </div>
 
       <div className={styles.asideSection}>
