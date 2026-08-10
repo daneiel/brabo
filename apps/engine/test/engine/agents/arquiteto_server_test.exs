@@ -121,6 +121,58 @@ defmodule Engine.Agents.ArquitetoServerTest do
     assert_received %Phoenix.Socket.Broadcast{event: "agent.done"}
   end
 
+  test "offer_infra_handoff: roda o turno de fechamento e oferece o handoff ao infra", %{
+    state: state,
+    session_id: session_id
+  } do
+    Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("Arquitetura fechada.")])
+
+    assert {:reply, :ok, _} = ArquitetoServer.handle_call(:offer_infra_handoff, self(), state)
+
+    assert_received {:handoff_created, _, ^session_id, "arquiteto", "infra", nil}
+  end
+
+  test "offer_dev_handoff: oferece o handoff ao dev-lead sem rodar turno de LLM", %{
+    state: state,
+    session_id: session_id
+  } do
+    assert {:reply, :ok, _} = ArquitetoServer.handle_call(:offer_dev_handoff, self(), state)
+
+    assert_received {:handoff_created, _, ^session_id, "arquiteto", "dev-lead", nil}
+  end
+
+  # RN-116: mesmo achado do Criativo → PO (`criativo_server_test.exs`), aqui
+  # nos dois handoffs do Arquiteto. `{:ok, _handoff} = ...` era um match
+  # rígido — a api recusando o handoff derrubava o GenServer inteiro.
+  test "offer_infra_handoff: falha ao criar o handoff NÃO derruba o processo, e vira agent.error",
+       %{state: state, session_id: session_id} do
+    Phoenix.PubSub.subscribe(Engine.PubSub, "session:" <> session_id)
+    Process.put(:fake_handoff_error, {500, %{"message" => "erro interno"}})
+    Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("Arquitetura fechada.")])
+
+    assert {:reply, :ok, _} = ArquitetoServer.handle_call(:offer_infra_handoff, self(), state)
+
+    assert_received {:event_appended, _, ^session_id, %{type: "agent.error", payload: payload}}
+    assert payload.origem == "infra"
+    assert payload.mensagem =~ "Não consegui oferecer o handoff ao infra"
+
+    assert_received %Phoenix.Socket.Broadcast{event: "agent.error"}
+  end
+
+  test "offer_dev_handoff: falha ao criar o handoff NÃO derruba o processo, e vira agent.error",
+       %{state: state, session_id: session_id} do
+    Phoenix.PubSub.subscribe(Engine.PubSub, "session:" <> session_id)
+    Process.put(:fake_handoff_error, {500, %{"message" => "erro interno"}})
+
+    assert {:reply, :ok, _} = ArquitetoServer.handle_call(:offer_dev_handoff, self(), state)
+
+    assert_received {:event_appended, _, ^session_id, %{type: "agent.error", payload: payload}}
+    assert payload.origem == "infra"
+    assert payload.mensagem =~ "Não consegui oferecer o handoff ao dev-lead"
+
+    assert_received %Phoenix.Socket.Broadcast{event: "agent.error"}
+  end
+
   test "rehydration: reconstrói o histórico do event log no init", %{} do
     Process.put(:fake_events, [
       %{"type" => "chat.message", "payload" => %{"text" => "oi"}},

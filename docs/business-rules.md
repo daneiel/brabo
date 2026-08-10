@@ -2476,6 +2476,54 @@ anterior a esta regra, em vez de mostrar branco.
   final também vira evento); `apps/web/src/lib/session-falha.test.ts`
 - **Origem:** execução real da FASE 13b
 
+### RN-116 — Falha ao CRIAR um handoff não derruba o agente {#rn-116}
+
+`confirm_readiness` (Criativo → PO) e `offer_infra_handoff`/`offer_dev_handoff`
+(Arquiteto → Infra/Dev Lead) chamam a api pra criar o handoff DEPOIS de o
+turno já ter rodado — no caso do Criativo, depois de o `product_brief` já
+estar gravado no event log. Se essa chamada falhar (api fora, 5xx, etc.), o
+handoff não existe, mas isso NUNCA derruba o GenServer do agente: a falha vira
+`agent.error` durável, com `origem` (`FalhaDeTurno.origem/1`) e uma mensagem
+que diz o que JÁ foi salvo (o product_brief, as regras) e o que não foi (o
+handoff) — para o usuário saber que confirmar de novo é seguro, não repete
+trabalho.
+
+Era o oposto: as três chamadas usavam `{:ok, _handoff} = EngineApiClient.create_handoff(...)`
+— um match rígido. `{:error, _}` virava `MatchError`, e como os três agentes
+sobem com `restart: :temporary` num `DynamicSupervisor` `:one_for_one`, o
+processo simplesmente SUMIA — sem `agent.error`, sem resposta no fio, só
+silêncio. Do lado de quem observava: a informação (regras, product brief)
+parecia ter "passado" (estava gravada), mas nada iniciava do lado do agente
+seguinte, porque o handoff nunca chegou a existir. Reabrir a conversa não
+resolvia sozinho — só uma NOVA mensagem reativa o processo (rehidratando do
+event log), e só uma nova confirmação de prontidão tenta o handoff de novo.
+
+A mensagem NÃO reusa `FalhaDeTurno.mensagem/1` (a de `RN-059`, "não consegui
+completar este turno... nada foi gasto"): nos três call sites o trabalho já
+rodou (ou nem precisava rodar, no caso de `offer_dev_handoff`) — dizer "nada
+foi gasto" seria falso quando tokens já tinham sido gastos no turno de
+consolidação. Reusa só `FalhaDeTurno.origem/1`, que classifica pelo FORMATO
+do motivo (status HTTP, exceção de transporte), não por ser turno de LLM.
+
+O `Engine.Harness.Tools.OfferHandoff` (a ferramenta que o PO usa via tool
+call, dentro do ToolLoop) já tratava `{:error, reason}` sem crashar — o
+defeito era só nestes três handlers server-driven, que chamam
+`EngineApiClient.create_handoff/5` DIRETO em vez de passar pela ferramenta.
+
+- **Onde:** `apps/engine/lib/engine/agents/criativo_server.ex`
+  (`handle_call(:confirm_readiness, ...)`, `emit_falha_handoff/3`),
+  `apps/engine/lib/engine/agents/arquiteto_server.ex`
+  (`handle_call(:offer_infra_handoff, ...)`, `handle_call(:offer_dev_handoff, ...)`,
+  `emit_falha_handoff/3`)
+- **Teste:** `apps/engine/test/engine/agents/criativo_server_test.exs`
+  ("prontidão: falha ao criar o handoff NÃO derruba o processo, e vira
+  agent.error durável"); `apps/engine/test/engine/agents/arquiteto_server_test.exs`
+  (as quatro variantes de `offer_infra_handoff`/`offer_dev_handoff`, sucesso e
+  falha)
+- **Origem:** relato de uso real no projeto `exp-001` (Criativo → PO); a
+  mesma falha estrutural foi achada por leitura de código nos dois handoffs
+  do Arquiteto, sem reprodução separada para eles
+
 ### RN-058 — A chave que o AGENTE gasta é a do owner do workspace {#rn-058}
 
 Credencial de LLM pertence a uma pessoa (`user_credentials.user_id`), e agente
@@ -3682,6 +3730,7 @@ pasta que o engine realmente usa.
 | Provider recusa a chave durante o sync de catálogo | provider **pulado** com a origem da falha; nenhum modelo é marcado como sumido (RN-041) |
 | Modelo do binding some do provider | a cascata cai para o nível de baixo e AVISA qual escopo pulou — nunca troca o modelo em silêncio (RN-041) |
 | Preço do modelo muda | vale daqui em diante; o custo gravado e o preço que o produziu ficam intocados (RN-042) |
+| Criar o handoff falha (Criativo→PO, Arquiteto→Infra/Dev Lead) | `agent.error` durável, o processo do agente CONTINUA vivo; o que já foi gravado antes (product_brief, regras) não se perde (RN-116) |
 
 > **TODO(humano):** as RNs acima foram extraídas do código e dos testes. Falta
 > confirmar se existe regra de negócio **não implementada** que deveria estar

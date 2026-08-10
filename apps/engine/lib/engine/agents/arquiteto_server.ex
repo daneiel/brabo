@@ -137,8 +137,22 @@ defmodule Engine.Agents.ArquitetoServer do
       |> compact()
       |> run_turn(@max_iterations)
 
-    {:ok, _handoff} =
-      EngineApiClient.create_handoff(state.project_id, state.session_id, @agent, "infra", nil)
+    # Era `{:ok, _handoff} = ...`: um `MatchError` no `{:error, _}` derrubava
+    # o GenServer inteiro (`restart: :temporary`, sem reinício automático),
+    # DEPOIS do turno de fechamento já ter rodado — sem `agent.error`, sem
+    # resposta no fio, só o processo sumindo (RN-116, mesmo achado do
+    # Criativo → PO em `criativo_server.ex`).
+    state =
+      case EngineApiClient.create_handoff(
+             state.project_id,
+             state.session_id,
+             @agent,
+             "infra",
+             nil
+           ) do
+        {:ok, _handoff} -> state
+        {:error, reason} -> emit_falha_handoff(state, "infra", reason)
+      end
 
     broadcast(state, "agent.done", %{})
     broadcast(state, "agent.status", %{status: "idle"})
@@ -150,14 +164,17 @@ defmodule Engine.Agents.ArquitetoServer do
     # Sem turno de LLM: o Arquiteto já falou no `offer_infra_handoff`, que sai
     # da MESMA confirmação. Um segundo turno só para dizer a mesma coisa
     # gastaria tokens para repetir.
-    {:ok, _handoff} =
-      EngineApiClient.create_handoff(
-        state.project_id,
-        state.session_id,
-        @agent,
-        "dev-lead",
-        nil
-      )
+    state =
+      case EngineApiClient.create_handoff(
+             state.project_id,
+             state.session_id,
+             @agent,
+             "dev-lead",
+             nil
+           ) do
+        {:ok, _handoff} -> state
+        {:error, reason} -> emit_falha_handoff(state, "dev-lead", reason)
+      end
 
     {:reply, :ok, state}
   end
@@ -375,6 +392,28 @@ defmodule Engine.Agents.ArquitetoServer do
     })
 
     broadcast(state, "agent.error", %{origem: origem, mensagem: mensagem})
+  end
+
+  # Diferente de `emit_falha/2`: aqui o TURNO (quando há um) já rodou — o que
+  # falhou é só a CRIAÇÃO do handoff, num passo seguinte. Reusar
+  # `FalhaDeTurno.mensagem/1` diria "nada foi gasto nesta tentativa", o que
+  # seria falso quando `offer_infra_handoff` chegou a rodar turno (RN-116).
+  # Mesmo padrão de `criativo_server.ex`.
+  defp emit_falha_handoff(state, to_agent, reason) do
+    origem = FalhaDeTurno.origem(reason)
+
+    mensagem =
+      "Não consegui oferecer o handoff ao #{to_agent}: #{inspect(reason)}. " <>
+        "Tente confirmar de novo."
+
+    emit(state, "agent.error", %{
+      origem: origem,
+      mensagem: mensagem,
+      reason: inspect(reason)
+    })
+
+    broadcast(state, "agent.error", %{origem: origem, mensagem: mensagem})
+    state
   end
 
   defp emit(state, type, payload) do
