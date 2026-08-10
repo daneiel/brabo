@@ -14,20 +14,13 @@ import { CodeExplorer } from './CodeExplorer';
 import { CodeSearchPanel } from './CodeSearchPanel';
 import { CodeEditor } from './CodeEditor';
 import { CodeBottomPanel } from './CodeBottomPanel';
+import { CodeBranchPicker } from './CodeBranchPicker';
 import styles from './CodeShell.module.css';
 
 type RailView = 'explorer' | 'search';
 
 /** Itens do rail SEM dado real por trás — desabilitados, e o tooltip diz por quê. */
 const RAIL_DESABILITADO: { rotulo: string; motivo: string }[] = [
-  {
-    rotulo: 'Controle de versão',
-    motivo:
-      'A FASE 26b entregou a fundação (GET /projects/:id/code/branches, ' +
-      'ahead/behind e PR associada por branch — ver getCodeBranches em ' +
-      'api-client.ts), mas nenhuma tela ainda consome. Não há rota de ' +
-      'status de working tree; o painel segue desabilitado até a UI vir.',
-  },
   {
     rotulo: 'Agentes',
     motivo:
@@ -48,7 +41,6 @@ const RAIL_DESABILITADO: { rotulo: string; motivo: string }[] = [
 export function CodeShell({ projectId }: { projectId: string }) {
   const [railView, setRailView] = useState<RailView>('explorer');
   const [ref, setRef] = useState('');
-  const [refInput, setRefInput] = useState('');
   const [openTabs, setOpenTabs] = useState<string[]>([]);
   const [activePath, setActivePath] = useState<string | null>(null);
   const [bottomOpen, setBottomOpen] = useState(false);
@@ -103,31 +95,7 @@ export function CodeShell({ projectId }: { projectId: string }) {
     <div className={styles.shell}>
       <div className={styles.topo}>
         <span className={styles.topoRotulo}>ref</span>
-        <input
-          className={styles.refInput}
-          value={refInput}
-          placeholder={refEfetiva || 'branch, tag ou sha'}
-          onChange={(e) => setRefInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') setRef(refInput.trim());
-          }}
-          aria-label="Ref a navegar (branch, tag ou sha)"
-        />
-        <button
-          type="button"
-          className={styles.refBotao}
-          onClick={() => setRef(refInput.trim())}
-        >
-          Ir
-        </button>
-        {/* Sem dropdown rico de branches (ahead/behind, badge de PR) AINDA:
-            a rota já existe (getCodeBranches, FASE 26b) mas esta tela não a
-            consome — trocar o campo de texto por um seletor rico é da onda
-            seguinte, e fingir aqui seria pior que um campo simples. */}
-        <span className={styles.topoBranch}>
-          <BranchIcon size={13} />
-          {refEfetiva || 'sem branch padrão'}
-        </span>
+        <CodeBranchPicker projectId={projectId} currentRef={refEfetiva} onSelect={setRef} />
       </div>
 
       <div className={styles.corpo}>

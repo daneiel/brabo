@@ -35,6 +35,9 @@ vi.mock('./CodeEditor', () => ({
 vi.mock('./CodeBottomPanel', () => ({
   CodeBottomPanel: () => <div>painel inferior</div>,
 }));
+vi.mock('./CodeBranchPicker', () => ({
+  CodeBranchPicker: ({ currentRef }: { currentRef: string }) => <div>branch: {currentRef}</div>,
+}));
 
 function montar() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
