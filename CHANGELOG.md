@@ -97,6 +97,22 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **web**: dois defeitos de UX em `SessionPage.tsx`. Mandar mensagem antes de
+  clicar "Iniciar ideação" fazia o convite do Criativo (título, papel, nota)
+  sumir PRA SEMPRE — `conviteVisivel` depende de `conversaComecou`, que não
+  volta a `false` —, deixando só um botão pelado na topbar sem explicação
+  nenhuma; agora uma pista (ícone e nota do Criativo, mesma cor da bolha dele
+  no fio, `title` no hover) fica ao lado dele. O contador de regras de
+  negócio no painel de contexto passa a usar o mesmo `<Disclosure
+  trailing={n}>` do Log de eventos, em vez de um cabeçalho mudo. E entre
+  aceitar um handoff e o próximo agente responder a tela não mostrava nada —
+  o kickoff do agente no engine é um `GenServer.cast` assíncrono, e o
+  `agent.status` "working" que ele já emitia nunca estava plugado
+  (`onAgentStatus` existia em `session-channel.ts` desde a RN-108/Fase 4a mas
+  nenhum handler de `SessionPage` o usava); agora ele reaproveita o indicador
+  de digitação já existente, identificando o agente pelo handoff que acabou
+  de ser aceito
+
 - **engine**: `AnamneseSchedulerWorker.perform/1` não conferia a flag
   `ANAMNESE_ENABLED` — só `kickoff/0` (a inserção inicial do job no boot)
   conferia. Uma corrente já agendada ANTES de alguém desativar a flag (ou de
