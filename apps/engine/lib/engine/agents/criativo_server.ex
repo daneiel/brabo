@@ -105,8 +105,23 @@ defmodule Engine.Agents.CriativoServer do
 
     brief_id = emit_product_brief(state, summary)
 
-    {:ok, _handoff} =
-      EngineApiClient.create_handoff(state.project_id, state.session_id, @agent, "po", brief_id)
+    # Era `{:ok, _handoff} = ...`: um `MatchError` no `{:error, _}` derrubava
+    # o GenServer inteiro (`restart: :temporary`, sem reinício automático) —
+    # DEPOIS do turno já ter rodado e do product_brief já ter sido gravado.
+    # A informação "passava" (estava no event log), mas o handoff nunca
+    # existia e ninguém saberia por quê: nem `agent.error`, nem resposta no
+    # fio, só o processo sumindo (RN-116).
+    state =
+      case EngineApiClient.create_handoff(
+             state.project_id,
+             state.session_id,
+             @agent,
+             "po",
+             brief_id
+           ) do
+        {:ok, _handoff} -> state
+        {:error, reason} -> emit_falha_handoff(state, "po", reason)
+      end
 
     broadcast(state, "agent.done", %{})
     broadcast(state, "agent.status", %{status: "idle"})
@@ -322,6 +337,30 @@ defmodule Engine.Agents.CriativoServer do
     })
 
     broadcast(state, "agent.error", %{origem: origem, mensagem: mensagem})
+  end
+
+  # Diferente de `emit_falha/2`: aqui o TURNO já rodou e o product_brief já
+  # foi gravado — o que falhou é só a CRIAÇÃO do handoff, num passo seguinte.
+  # Reusar `FalhaDeTurno.mensagem/1` diria "nada foi gasto nesta tentativa",
+  # o que seria falso (RN-116). Reusa só `origem/1`, que classifica pelo
+  # FORMATO do motivo, não por ser turno de LLM.
+  defp emit_falha_handoff(state, to_agent, reason) do
+    origem = FalhaDeTurno.origem(reason)
+
+    mensagem =
+      "Consolidei o product brief, mas não consegui oferecer o handoff ao " <>
+        "#{to_agent}: #{inspect(reason)}. As regras de negócio já registradas " <>
+        "continuam salvas — confirme a prontidão de novo para tentar oferecer " <>
+        "o handoff outra vez."
+
+    emit(state, "agent.error", %{
+      origem: origem,
+      mensagem: mensagem,
+      reason: inspect(reason)
+    })
+
+    broadcast(state, "agent.error", %{origem: origem, mensagem: mensagem})
+    state
   end
 
   defp emit(state, type, payload) do

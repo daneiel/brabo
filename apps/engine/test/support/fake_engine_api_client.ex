@@ -47,14 +47,22 @@ defmodule Engine.Sessions.FakeEngineApiClient do
   def create_handoff(project_id, session_id, from_agent, to_agent, artifact_id) do
     notify({:handoff_created, project_id, session_id, from_agent, to_agent, artifact_id})
 
-    {:ok,
-     Process.get(:fake_handoff, %{
-       "id" => "ho-1",
-       "fromAgent" => from_agent,
-       "toAgent" => to_agent,
-       "artifactId" => artifact_id,
-       "status" => "offered"
-     })}
+    # Erro scriptável (RN-116: a api recusou o handoff) via :fake_handoff_error
+    # — mesmo padrão de :fake_story_error, abaixo.
+    case Process.get(:fake_handoff_error) do
+      nil ->
+        {:ok,
+         Process.get(:fake_handoff, %{
+           "id" => "ho-1",
+           "fromAgent" => from_agent,
+           "toAgent" => to_agent,
+           "artifactId" => artifact_id,
+           "status" => "offered"
+         })}
+
+      reason ->
+        {:error, reason}
+    end
   end
 
   @impl true
