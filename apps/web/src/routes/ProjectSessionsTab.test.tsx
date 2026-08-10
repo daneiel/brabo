@@ -6,15 +6,22 @@ import {
   ProjectCriativoTab,
   ProjectSessionsTab,
 } from './ProjectSessionsTab';
+import { ToastProvider } from '../components/ui/ToastProvider';
 import type { ProposedAction, Session, SessionKind } from '../lib/api-types';
 
 const listSessions = vi.fn();
 const listActions = vi.fn();
 const createSession = vi.fn();
 const transitionSession = vi.fn();
+const renameSession = vi.fn();
+
+// Um SÓ mock de navegação, compartilhado entre chamadas de `useNavigate` —
+// é o que permite os testes de "não navega ao editar" / "navega fora do
+// controle" afirmarem sobre a MESMA função que o componente chamou.
+const { navigateMock } = vi.hoisted(() => ({ navigateMock: vi.fn() }));
 
 vi.mock('@tanstack/react-router', () => ({
-  useNavigate: () => vi.fn(),
+  useNavigate: () => navigateMock,
 }));
 
 vi.mock('../lib/api-client', async () => {
@@ -30,6 +37,7 @@ vi.mock('../lib/api-client', async () => {
     listActions: (...args: unknown[]) => listActions(...args),
     createSession: (...args: unknown[]) => createSession(...args),
     transitionSession: (...args: unknown[]) => transitionSession(...args),
+    renameSession: (...args: unknown[]) => renameSession(...args),
   };
 });
 
@@ -82,7 +90,9 @@ function montar(kind: SessionKind = 'consultiva') {
   });
   return render(
     <QueryClientProvider client={client}>
-      <ProjectSessionsTab projectId="proj-1" kind={kind} />
+      <ToastProvider>
+        <ProjectSessionsTab projectId="proj-1" kind={kind} />
+      </ToastProvider>
     </QueryClientProvider>,
   );
 }
@@ -93,12 +103,16 @@ function montarAba(Aba: typeof ProjectChatTab) {
   });
   return render(
     <QueryClientProvider client={client}>
-      <Aba projectId="proj-1" />
+      <ToastProvider>
+        <Aba projectId="proj-1" />
+      </ToastProvider>
     </QueryClientProvider>,
   );
 }
 
 beforeEach(() => {
+  // `navigateMock` também é `vi.fn()`: `clearAllMocks` já limpa as chamadas
+  // dele entre testes.
   vi.clearAllMocks();
 });
 
@@ -168,6 +182,103 @@ describe('ProjectSessionsTab — aprovações por sessão', () => {
 
     expect(await screen.findByText('#11111111')).toBeTruthy();
     expect(screen.queryByText(/decidida\(s\) por você/)).toBeNull();
+  });
+});
+
+/**
+ * A lacuna que RN-098 deixava: renomear só era alcançável DENTRO da sessão
+ * (`SessionPage.tsx`). Aqui o mesmo mecanismo — rascunho inline, Enter
+ * confirma, Esc desiste — fica alcançável a partir da LISTA, sem abrir a
+ * sessão primeiro. `renameSession` é o mesmo `PATCH` que `SessionPage.tsx`
+ * já chama; nenhum endpoint novo.
+ */
+describe('ProjectSessionsTab — renomear direto da lista', () => {
+  beforeEach(() => {
+    listActions.mockResolvedValue({ items: [], nextCursor: null });
+  });
+
+  it('editar e confirmar com Enter chama renameSession e o rótulo novo aparece', async () => {
+    listSessions
+      .mockResolvedValueOnce([
+        sessao('11111111-aaaa', '2026-08-01T00:00:00.000Z'),
+      ])
+      // Depois de renomear, a invalidação refaz a busca — é ESTE retorno
+      // que prova que a tela lê a mesma fonte que `SessionPage` usaria.
+      .mockResolvedValueOnce([
+        sessao('11111111-aaaa', '2026-08-01T00:00:00.000Z', {
+          name: 'Onboarding',
+        }),
+      ]);
+    renameSession.mockResolvedValue({ id: '11111111-aaaa' });
+
+    montar();
+
+    const botao = await screen.findByTitle(/clique para renomear/);
+    fireEvent.click(botao);
+
+    const campo = screen.getByLabelText('Nome da sessão');
+    fireEvent.change(campo, { target: { value: 'Onboarding' } });
+    fireEvent.keyDown(campo, { key: 'Enter' });
+
+    await vi.waitFor(() =>
+      expect(renameSession).toHaveBeenCalledWith(
+        'proj-1',
+        '11111111-aaaa',
+        'Onboarding',
+      ),
+    );
+    expect(await screen.findByText('Onboarding · #11111111')).toBeTruthy();
+  });
+
+  it('clicar no controle de edição (nome ou lápis) NÃO navega pra dentro da sessão', async () => {
+    listSessions.mockResolvedValue([
+      sessao('11111111-aaaa', '2026-08-01T00:00:00.000Z'),
+    ]);
+
+    montar();
+
+    const botao = await screen.findByTitle(/clique para renomear/);
+    fireEvent.click(botao);
+    expect(navigateMock).not.toHaveBeenCalled();
+
+    // O campo aberto também não navega ao ser clicado — é o que evita
+    // posicionar o cursor E entrar na sessão no mesmo clique.
+    const campo = screen.getByLabelText('Nome da sessão');
+    fireEvent.click(campo);
+    expect(navigateMock).not.toHaveBeenCalled();
+  });
+
+  it('clicar fora do controle de edição (na linha) continua navegando', async () => {
+    listSessions.mockResolvedValue([
+      sessao('11111111-aaaa', '2026-08-01T00:00:00.000Z'),
+    ]);
+
+    montar();
+
+    // `status` do dublê de sessão é `closed` por padrão — clicar no badge
+    // é clicar na LINHA, fora do controle de renomear.
+    fireEvent.click(await screen.findByText('closed'));
+
+    expect(navigateMock).toHaveBeenCalledWith({
+      to: '/projects/$projectId/sessions/$sessionId',
+      params: { projectId: 'proj-1', sessionId: '11111111-aaaa' },
+    });
+  });
+
+  it('Esc desiste da edição sem chamar renameSession', async () => {
+    listSessions.mockResolvedValue([
+      sessao('11111111-aaaa', '2026-08-01T00:00:00.000Z'),
+    ]);
+
+    montar();
+
+    fireEvent.click(await screen.findByTitle(/clique para renomear/));
+    const campo = screen.getByLabelText('Nome da sessão');
+    fireEvent.change(campo, { target: { value: 'Rascunho perdido' } });
+    fireEvent.keyDown(campo, { key: 'Escape' });
+
+    expect(screen.queryByLabelText('Nome da sessão')).toBeNull();
+    expect(renameSession).not.toHaveBeenCalled();
   });
 });
 

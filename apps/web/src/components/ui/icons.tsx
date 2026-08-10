@@ -135,6 +135,14 @@ export const SessionIcon = (props: IconProps) =>
 export const TrashIcon = (props: IconProps) =>
   base(['M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14'], props);
 
+// FASE PROGRAMA 16-26 — afordância de RENOMEAR fora da tela de sessão
+// (lista de sessões do projeto, RN-098 alcançável sem abrir a sessão).
+export const PencilIcon = (props: IconProps) =>
+  base(
+    ['M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z', 'M14.5 5.5l3 3'],
+    props,
+  );
+
 export const ArrowUpIcon = (props: IconProps) => base(['M12 20V4', 'M5 11l7-7 7 7'], props);
 
 // FASE 20 — a seta de VOLTAR. A tela de sessão não tinha saída nenhuma: nem
