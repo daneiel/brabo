@@ -224,7 +224,7 @@ possível sem downtime ([RN-035](../business-rules.md#rn-035)).
 
 | variável | default | nota |
 |---|---|---|
-| `ANAMNESE_ENABLED` | `false` | pausa GLOBAL de rodada NOVA (periódica e sob demanda) — decisão de produto do usuário em 2026-08-10, não bug. Não apaga nada do que já existe. Ligar exige reiniciar o engine ([RN-114](../business-rules.md#rn-114)) |
+| `ANAMNESE_ENABLED` | `false` | pausa GLOBAL de rodada NOVA (periódica e sob demanda) — decisão de produto do usuário em 2026-08-10, não bug. Não apaga nada do que já existe. Ligar exige reiniciar o engine ([RN-115](../business-rules.md#rn-115)) |
 | `ANAMNESE_INTERVAL_SECONDS` | `900` | 15 min entre execuções |
 | `ANAMNESE_MIN_EVENTS` | `10` | abaixo disso não roda — evita perfilar com ruído |
 | `ANAMNESE_INITIAL_WINDOW_DAYS` | `30` | janela da primeira execução |

@@ -3487,7 +3487,7 @@ commit em qualquer linha do bloco).
 - **Origem:** onda de UI da FASE 26b (blame — dropdown rico de branches e
   lista de PRs são UI de outros dois agentes, sem risco de colisão)
 
-### RN-114 — A Anamnese pode ser pausada globalmente; a pausa é do PRODUTO, nunca apaga dado {#rn-114}
+### RN-115 — A Anamnese pode ser pausada globalmente; a pausa é do PRODUTO, nunca apaga dado {#rn-115}
 
 `ANAMNESE_ENABLED` (env var do engine, boolean, default `false` a partir
 desta regra) decide se uma rodada NOVA da Anamnese pode acontecer — periódica

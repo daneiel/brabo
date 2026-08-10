@@ -80,7 +80,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - **api,engine,web**: a Anamnese pode ser pausada GLOBALMENTE
   (`ANAMNESE_ENABLED`, default `false` a partir de agora) — decisão de
   produto do usuário ("hoje ele não está trazendo dados de muito valor"),
-  não bug, e não apaga nada do que já existe (RN-114). O scheduler
+  não bug, e não apaga nada do que já existe (RN-115). O scheduler
   periódico para de agendar rodada nova; a rota "reanalisar agora" responde
   503 (distinto do 409 de "projeto sem sessão"); o botão correspondente nas
   Configurações do projeto descobre o estado no primeiro clique e mantém a
