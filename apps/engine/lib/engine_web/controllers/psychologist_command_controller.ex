@@ -8,20 +8,31 @@ defmodule EngineWeb.PsychologistCommandController do
 
   Sem outbox: é um gatilho direto e síncrono, mesmo padrão de
   `ExecutionCommandController`/`AgentCommandController`.
+
+  Desligável globalmente (`PsychologistWorker.enabled?/0` — decisão do
+  usuário em 2026-08-10, mesmo padrão da Anamnese, ver
+  docs/explanation/backlog.md): 503 com um corpo JSON, sem sequer criar o
+  job — de propósito, mesmo padrão do `AnamneseCommandController`.
   """
 
   use EngineWeb, :controller
 
   def reanalyze(conn, %{"sessionId" => session_id, "projectId" => project_id}) do
-    {:ok, _job} =
-      %{
-        event_type: "session.closed",
-        aggregate_id: session_id,
-        payload: %{"projectId" => project_id, "triggeredBy" => "manual"}
-      }
-      |> Engine.Workers.PsychologistWorker.new()
-      |> Oban.insert()
+    if Engine.Workers.PsychologistWorker.enabled?() do
+      {:ok, _job} =
+        %{
+          event_type: "session.closed",
+          aggregate_id: session_id,
+          payload: %{"projectId" => project_id, "triggeredBy" => "manual"}
+        }
+        |> Engine.Workers.PsychologistWorker.new()
+        |> Oban.insert()
 
-    send_resp(conn, 202, "")
+      send_resp(conn, 202, "")
+    else
+      conn
+      |> put_status(503)
+      |> json(%{error: "psicologo_desativado"})
+    end
   end
 end

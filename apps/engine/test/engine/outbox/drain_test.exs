@@ -4,6 +4,18 @@ defmodule Engine.Outbox.DrainTest do
 
   alias Engine.Outbox.{Event, Drain}
 
+  # A maior parte destes testes precede a flag `psychologist_enabled?`
+  # (default `false` a partir de 2026-08-10 — mesmo padrão da Anamnese, ver
+  # docs/explanation/backlog.md) e assume o Psicólogo roteado normalmente.
+  # Liga aqui por default e a `describe` de baixo desliga explicitamente para
+  # as próprias asserções — nenhum outro arquivo async mexe nesta flag (só
+  # ela decide o roteamento em `Drain.handlers_for/1`), então não há corrida.
+  setup do
+    Application.put_env(:engine, :psychologist_enabled?, true)
+    on_exit(fn -> Application.delete_env(:engine, :psychologist_enabled?) end)
+    :ok
+  end
+
   defp insert_outbox_event!(attrs) do
     defaults = %{
       id: Ecto.UUID.generate(),
@@ -65,6 +77,48 @@ defmodule Engine.Outbox.DrainTest do
       worker: Engine.Workers.PsychologistWorker,
       args: %{"aggregate_id" => row.aggregate_id}
     )
+  end
+
+  describe "Psicólogo desativado globalmente (PSYCHOLOGIST_ENABLED=false)" do
+    setup do
+      Application.put_env(:engine, :psychologist_enabled?, false)
+      :ok
+    end
+
+    test "session.closed enfileira só SessionLifecycleWorker — o job do Psicólogo nem nasce" do
+      row =
+        insert_outbox_event!(%{
+          aggregate_type: "session",
+          event_type: "session.closed",
+          payload: %{"projectId" => "project-1"}
+        })
+
+      Drain.run_once()
+
+      reloaded = Repo.get!(Event, row.id)
+      assert reloaded.processed_at != nil
+
+      assert_enqueued(
+        worker: Engine.Workers.SessionLifecycleWorker,
+        args: %{"aggregate_id" => row.aggregate_id}
+      )
+
+      refute_enqueued(worker: Engine.Workers.PsychologistWorker)
+    end
+
+    test "session.closed_abnormally também não enfileira o Psicólogo" do
+      row =
+        insert_outbox_event!(%{
+          aggregate_type: "session",
+          event_type: "session.closed_abnormally",
+          payload: %{"projectId" => "project-1"}
+        })
+
+      Drain.run_once()
+
+      assert Repo.get!(Event, row.id).processed_at != nil
+      refute_enqueued(worker: Engine.Workers.PsychologistWorker)
+    end
   end
 
   test "linha de outro aggregate_type e ignorada (nao processa, nao enfileira)" do

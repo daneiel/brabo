@@ -7205,6 +7205,9 @@
           },
           "429": {
             "description": "Rate limit por usuário ou por IP."
+          },
+          "503": {
+            "description": "O Psicólogo está desativado globalmente por decisão do usuário (não é bug) — corpo com `reason: \"psychologist_disabled\"`."
           }
         },
         "security": [

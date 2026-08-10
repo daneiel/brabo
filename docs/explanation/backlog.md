@@ -347,6 +347,7 @@ produto adiadas — por isso sem prioridade aqui.
 | "N agentes online" no dashboard | — |
 | Preferência de moeda com taxa manual | — |
 | Reativar a Anamnese (`ANAMNESE_ENABLED=true`) | pausada por decisão do usuário em 2026-08-10 — "hoje ele não está trazendo dados de muito valor" ([RN-115](../business-rules.md#rn-115)). Nenhum dado apagado (hipóteses, perfis de proficiência, patches de instrução seguem intactos e visíveis); a pausa é só do CAMINHO de rodada nova, aguardando um refinamento futuro do que a Anamnese deriva antes de religar |
+| Reativar o Psicólogo (`PSYCHOLOGIST_ENABLED=true`) | pausado por decisão do usuário em 2026-08-10, mesmo motivo e mesmo padrão da Anamnese acima ([RN-117](../business-rules.md#rn-117)). Nenhum dado apagado (análises e hipóteses já emitidas seguem intactas e visíveis); a pausa é só do CAMINHO de rodada nova (automática e sob demanda) |
 
 ## O que esta triagem NÃO faz
 
