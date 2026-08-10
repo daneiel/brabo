@@ -246,7 +246,7 @@ engine roda um `mix release` (sem Mix, sem código-fonte) e o web sai por nginx.
 ```bash
 # Obrigatórias: este compose roda com NODE_ENV=production, e a api recusa
 # subir com a chave de exemplo do repositório para nenhum destes quatro
-# segredos (ADR 0059, RN-093/RN-110). O `smoke.sh` gera os dele sozinho.
+# segredos (ADR 0059, RN-093/RN-114). O `smoke.sh` gera os dele sozinho.
 export GIT_OAUTH_STATE_SECRET="$(openssl rand -base64 32)"
 export AUTH_JWT_SECRET="$(openssl rand -base64 32)"
 export BRABO_SERVICE_TOKEN="$(openssl rand -base64 32)"

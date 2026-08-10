@@ -1594,7 +1594,7 @@ Divergindo aqui, o callback recusaria todo `state` legítimo.
 - **Teste:** `apps/api/test/infrastructure/security/oauth-state-secret.spec.ts`
 - **Origem:** [ADR 0059](adr/0059-segredo-do-state-de-oauth-sem-default.md)
 
-### RN-110 — Os quatro segredos irmãos do `GIT_OAUTH_STATE_SECRET` também não sobem em produção com o valor de exemplo {#rn-110}
+### RN-114 — Os quatro segredos irmãos do `GIT_OAUTH_STATE_SECRET` também não sobem em produção com o valor de exemplo {#rn-114}
 
 O [ADR 0059](adr/0059-segredo-do-state-de-oauth-sem-default.md) fechou o
 padrão para `GIT_OAUTH_STATE_SECRET` e deixou declaradamente aberto que o

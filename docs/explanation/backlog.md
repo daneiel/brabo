@@ -305,7 +305,7 @@ não resolveu sha não vira carimbo por omissão. É esse conjunto que impede `q
 de receber código que nunca passou por `dev`.
 
 ~~**Os quatro segredos irmãos do compose de produção**~~ — **FEITO**
-([RN-110](../business-rules.md#rn-110)). `AUTH_JWT_SECRET`,
+([RN-114](../business-rules.md#rn-114)). `AUTH_JWT_SECRET`,
 `BRABO_SERVICE_TOKEN`, `CREDENTIALS_MASTER_KEY` e `SECRET_KEY_BASE` tinham
 default de desenvolvimento em `docker/docker-compose.prod.yml`, que roda com
 `NODE_ENV=production` — o mesmo padrão que o
