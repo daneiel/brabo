@@ -3177,6 +3177,60 @@ aprovação), nunca "a instrução será alterada".
 
 ---
 
+### RN-121 — Dev agent e QA são "executores": aba própria, fora do "Time de agentes" {#rn-121}
+
+O grid "Time de agentes" e a "Linha do tempo do time" da Visão geral
+misturavam Criativo/PO/Arquiteto/Infra com dev-`<módulo>` e QA (lead +
+`qa-automacao`/`qa-performance-seguranca`) — sete, oito agentes na mesma
+grade, sem distinguir quem CRIA/DECIDE de quem IMPLEMENTA/VERIFICA. A aba
+**Executores** isola os dois últimos, com a MESMA renderização da Visão
+geral (`AgentCard`, o grid de área — extraído para `AgentTeamGrid.tsx` — e
+`AgentTimelineTree`), nunca um card reinventado.
+
+**A regra de separação é uma função só**, `isExecutorGroup`/
+`isExecutorAgentId` (`lib/agent-status.ts`): `dev-lead`/`dev-<qualquer
+módulo>` e a área `qa` inteira (lead + subespecialidades) são executor;
+o resto não é. As DUAS telas filtram o MESMO `groupRosterByArea` com essa
+função — a Visão geral com `!isExecutorGroup`, Executores com
+`isExecutorGroup` — então um agente não pode aparecer nos dois nem sumir
+dos dois: é sempre exatamente um lado.
+
+**A árvore não duplica**: cada aba filtra os EVENTOS antes de passar para
+`AgentTimelineTree` (por `actor.id` pertencer ou não ao conjunto de
+executores), então o ramo de um dev agent aparece só em Executores, nunca
+também na Visão geral. A coluna de Atividade (`ActivityFeed`, RN-099/100)
+NÃO foi filtrada — ela responde "o que aconteceu" na sessão inteira,
+dev/QA inclusive, e o filtro por agente do próprio componente já lista
+todo mundo que falou; só o grid e a árvore de "quem está fazendo o quê"
+mudam de lugar.
+
+- **Onde:** `apps/web/src/lib/agent-status.ts` (`isExecutorGroup`,
+  `isExecutorAgentId`, `autonomyActionTypeFor` — movido de
+  `ProjectOverviewTab.tsx`), `apps/web/src/components/AgentTeamGrid.tsx`
+  (extraído do grid que já existia), `apps/web/src/routes/
+  ProjectExecutorsTab.tsx`, `apps/web/src/routes/ProjectOverviewTab.tsx`,
+  `apps/web/src/routes/project-tabs.ts` (`key: 'executores'`, `ordem: 12`
+  — logo depois da Visão geral, antes de Criativo/Chat/Code)
+- **Teste:** `apps/web/src/lib/agent-status.test.ts` (`isExecutorAgentId`/
+  `isExecutorGroup` — dev-`<módulo>`, `dev-lead`, área `qa` inteira são
+  executor; criativo/po/arquiteto/infra/secops não são);
+  `apps/web/src/routes/ProjectExecutorsTab.test.tsx` (mostra só dev/QA,
+  estado vazio sem os dois, contagem do cabeçalho);
+  `apps/web/src/routes/ProjectOverviewTab.test.tsx` (dev-backend/QA somem
+  do grid, o resto do time continua); `apps/web/src/routes/
+  project-tabs.test.tsx` (a aba nova entra na varredura genérica do
+  registro — régua, painel, deep-link, ordem única)
+- **Borda:** SecOps NÃO é executor — ele entra na roster pelo MESMO
+  `pr.gate_changed` que traz QA (Fase 4a, `rosterFactsFromEvents`), mas
+  fica na Visão geral. `dev-lead` está na lista de executores por
+  completude (RN-087 o descreve como conversacional), embora hoje nenhum
+  caminho o instancie na roster da sessão (a delegação Dev Lead →
+  `dev-<módulo>` segue fora de escopo, ADR 0053 item 5).
+- **Origem:** pedido do usuário — "Executores" própria pra dev agent e QA,
+  fora do grid misturado da Visão geral.
+
+---
+
 ## Psicólogo e Anamnese
 
 ### RN-021 — Hipótese sem evidência válida não é gravada {#rn-021}
