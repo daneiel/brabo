@@ -283,7 +283,7 @@ ausente, com o valor de exemplo do repositório, ou curta demais.
 **Mesma causa do segredo de OAuth acima, e mesma orientação: não é regressão,
 e não contorne.** O [ADR 0059](adr/0059-segredo-do-state-de-oauth-sem-default.md)
 já declarava esses quatro como pendência — o mesmo padrão, só ainda não
-replicado — e a [RN-110](business-rules.md#rn-110) fechou. Cada um protege
+replicado — e a [RN-114](business-rules.md#rn-114) fechou. Cada um protege
 algo diferente:
 
 - `AUTH_JWT_SECRET` público = qualquer um deriva o par que assina o access
