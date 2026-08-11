@@ -2,6 +2,215 @@
 
 Gerado dos conventional commits por `scripts/changelog.mjs`.
 
+## Unreleased
+
+### Novidades
+
+- **web**: o aceite de handoff passa a viver DENTRO do fio da sessão
+  (RN-125) — o divisor "X passou o bastão ao Y" vira um card acionável,
+  com o botão embutido, quando representa a oferta pendente ATUAL; o
+  botão da topbar saiu, pra não duplicar o mesmo texto na tela. O card
+  pro **Dev Lead** ganha um link extra, "Acompanhe a execução em
+  Executores". Separadamente, criar épico ou história pelo PO
+  (`backlog.epic_created`/`backlog.story_created`) passa a narrar no
+  fio, com um link "Ver no Backlog" (RN-124) — antes, criar história não
+  deixava rastro nenhum na conversa
+- **api,engine,web**: botão **"Parar"** no composer da sessão cancela DE
+  VERDADE o turno em curso do agente conversacional (RN-122) — não só para de
+  renderizar no cliente. O engine parava de atender qualquer mensagem
+  (inclusive cancelar) enquanto processava um turno, porque o turno inteiro
+  rodava dentro de um `GenServer.call` síncrono; os quatro agentes
+  conversacionais (Criativo, PO, Arquiteto, Dev Lead) passaram a rodar o
+  turno numa Task supervisionada (`Engine.Agents.TurnoAssincrono`), liberando
+  o processo pra atender `:cancel` enquanto o turno roda. Cancelar mata a
+  Task (`Task.shutdown/2`, `:brutal_kill`), o que derruba a conexão SSE com a
+  api no meio — é isso que economiza token de verdade — e grava um
+  `agent.error` terminal com origem "politica"
+
+- **api,engine,web**: o Psicólogo pode ser pausado GLOBALMENTE
+  (`PSYCHOLOGIST_ENABLED`, default `false` a partir de agora) — mesma
+  decisão de produto já aplicada à Anamnese ("hoje ele não está trazendo
+  dados de muito valor"), não bug, e não apaga nada do que já existe
+  (RN-117). O gatilho automático (fechamento de sessão) para de enfileirar
+  rodada nova; a rota "Reanalisar" na aba Insights responde 503; os botões
+  correspondentes descobrem o estado no primeiro clique e mantêm a
+  explicação visível na tela
+
+- **web**: a aba **Code** — leitura do repositório do projeto no padrão IDE
+  (explorador de arquivos carregado por diretório, busca no conteúdo, abas de
+  editor com realce de sintaxe sem dependência nova, e diff de PR por id
+  conhecido). Um QUARTO estado, além dos três da RN-088, aparece quando o
+  Arquiteto ainda não decidiu a imagem do container: "bloqueada por decisão
+  pendente" (RN-107), nem carregando, nem erro, nem vazio. Terminal
+  interativo, blame e lista rica de branches ficam de fora, declarados como
+  pendência — dependem de fases que ainda não subiram (FASE 26, item 35)
+  interativo, blame e lista de PRs ficam de fora, declarados como pendência —
+  dependem de fases que ainda não subiram (FASE 26, item 35)
+
+- **web**: a aba Code ganha o dropdown rico de branches (`CodeBranchPicker`),
+  substituindo o campo de texto simples — cada linha mostra `ahead`/`behind`
+  relativos à branch default e a PR associada, quando houver (RN-112). Ref
+  fora da lista (tag ou sha) continua alcançável por um campo manual no
+  rodapé do dropdown
+
+- **api**: fundação de blame, PRs navegáveis e branch rica para a aba Code —
+  `GET /projects/:id/code/{blame,pull-requests,branches}`. `GitProviderContract`
+  ganha a 13ª/14ª/15ª operação, provadas pela suite de contrato nos três
+  providers (RN-110/111/112)
+
+- **web**: o painel "Diff de PR" da aba Code ganha lista navegável de pull
+  requests (id, título, autor, estado, branches, filtro por estado),
+  consumindo `listPullRequests` (RN-111); clicar num item abre o mesmo fluxo
+  de diff por id que já existia. Quem já sabe o id continua podendo colar
+  direto
+- **web**: o editor da aba Code ganha anotação de blame — toggle "Blame" no
+  breadcrumb liga a anotação linha a linha (commit, autor e data) SOB
+  DEMANDA, nunca em toda leitura de arquivo; linhas consecutivas do mesmo
+  commit não repetem o texto, e os três estados (carregando, erro com
+  "tentar de novo", vazio) seguem a RN-088 (RN-113)
+
+- **api,web**: aba de Gastos com duas audiências — o owner vê a quebra do workspace por modelo, projeto, ator e dia (mais a fatura por credencial, que já existia); o membro vê só o próprio consumo, por sessão e por dia, sem provider e sem credencial (ADR 0063, RN-101)
+
+- **api,web**: a sessão nasce com tipo escolhido (`consultiva` ou `criativa`),
+  pode ser renomeada preservando a hashtag, e a tela dela tem um caminho de
+  volta ao dashboard. `execution.activated` numa sessão consultiva passa a
+  responder 409 em vez de convertê-la em silêncio (ADR 0061, RN-097/098)
+
+- **web**: o projeto ganha duas abas de sessão, **Criativo** e **Chat**, cada
+  uma listando e criando o seu tipo sem perguntar de novo; a aba "Sessões" sai,
+  e `?tab=sessions` de um link antigo abre no Chat. "Iniciar ideação" passa a
+  morar dentro do convite enquanto ele está na tela — antes o convite apontava
+  para a topbar (RN-104)
+
+- **api,web**: o modelo de LLM virou padrão herdável por ÁREA — a cascata
+  ganha o nível `sessão > agente > área > projeto > workspace`, o lead e os
+  subagentes de uma área compartilham o mesmo modelo até um agente divergir
+  explicitamente, e "voltar a herdar" apaga o binding do agente em vez de
+  copiar o da área. O binding de agente, que era GLOBAL, passou a ser POR
+  PROJETO — pré-condição para a área não competir com um escopo mais amplo
+  que ela mesma (ADR 0064, RN-102/103)
+
+- **api,engine**: o Arquiteto decide qual imagem de container sobe para cada
+  projeto — artefato versionado no event log (`artifact.project_image`), tag
+  OCI explícita obrigatória (`latest` recusado) e teto de recursos que recusa
+  em vez de rebaixar em silêncio. Enquanto ele não decide, a aba Code responde
+  409 (RN-105). Dentro do container o agente é livre; `git push`, PR e deploy
+  continuam nascendo `proposed_action` mesmo pelo terminal, agora garantido por
+  `deny` — não só combinado (RN-106). Corte declarado: o ciclo de vida do
+  container (provisionar, reciclar, limpar) fica para a fase seguinte, que tem
+  o slot de migration desta onda (ADR 0065, revisa o ADR 0055)
+
+- **api,engine**: a pasta do workspace de um projeto NOVO nasce com nome
+  legível (`<slug>-<8 chars do id>`) em vez do UUID puro — mais fácil de
+  reconhecer abrindo `PROJECT_WORKSPACES_HOST_DIR` no disco. Congelado na
+  criação: editar o slug depois não renomeia a pasta. Projeto criado antes
+  desta mudança mantém a pasta física que já tinha, sem nenhum rename (ADR
+  0066, revisa o ADR 0055, RN-109)
+
+- **api,engine,web**: a Anamnese pode ser pausada GLOBALMENTE
+  (`ANAMNESE_ENABLED`, default `false` a partir de agora) — decisão de
+  produto do usuário ("hoje ele não está trazendo dados de muito valor"),
+  não bug, e não apaga nada do que já existe (RN-115). O scheduler
+  periódico para de agendar rodada nova; a rota "reanalisar agora" responde
+  503 (distinto do 409 de "projeto sem sessão"); o botão correspondente nas
+  Configurações do projeto descobre o estado no primeiro clique e mantém a
+  explicação visível na tela
+
+### Correções
+
+- **web**: dois defeitos de UX em `SessionPage.tsx`. Mandar mensagem antes de
+  clicar "Iniciar ideação" fazia o convite do Criativo (título, papel, nota)
+  sumir PRA SEMPRE — `conviteVisivel` depende de `conversaComecou`, que não
+  volta a `false` —, deixando só um botão pelado na topbar sem explicação
+  nenhuma; agora uma pista (ícone e nota do Criativo, mesma cor da bolha dele
+  no fio, `title` no hover) fica ao lado dele. O contador de regras de
+  negócio no painel de contexto passa a usar o mesmo `<Disclosure
+  trailing={n}>` do Log de eventos, em vez de um cabeçalho mudo. E entre
+  aceitar um handoff e o próximo agente responder a tela não mostrava nada —
+  o kickoff do agente no engine é um `GenServer.cast` assíncrono, e o
+  `agent.status` "working" que ele já emitia nunca estava plugado
+  (`onAgentStatus` existia em `session-channel.ts` desde a RN-108/Fase 4a mas
+  nenhum handler de `SessionPage` o usava); agora ele reaproveita o indicador
+  de digitação já existente, identificando o agente pelo handoff que acabou
+  de ser aceito
+
+- **engine**: `AnamneseSchedulerWorker.perform/1` não conferia a flag
+  `ANAMNESE_ENABLED` — só `kickoff/0` (a inserção inicial do job no boot)
+  conferia. Uma corrente já agendada ANTES de alguém desativar a flag (ou de
+  antes de ela existir) se reagendava pra sempre e rodava rodadas reais da
+  Anamnese com a flag dizendo `false`. `perform/1` agora confere `enabled?/0`
+  a cada tick: desativado, nem enfileira rodada por projeto nem se reagenda,
+  e a corrente morre ali — job antigo que ainda dispara uma vez se auto-cura
+  sozinho, sem intervenção manual (RN-115). Conferido: o Psicólogo
+  (`PSYCHOLOGIST_ENABLED`) não tem esse problema — o gate dele fica no
+  roteamento do evento pelo `Engine.Outbox.Drain`, não numa corrente que se
+  reagenda sozinha
+- **web**: mensagem duplicada e "Iniciar ideação" preso na topbar depois de
+  enviar a primeira mensagem a um agente ativo (Criativo/PO/Arquiteto). A
+  conexão do canal Phoenix (ticket + join, RN-108) é assíncrona e podia não
+  ter terminado quando o turno acabava — o `agent.done` que a tela dependia
+  para resetar `streaming`/a mensagem otimista se perdia sem ninguém ouvindo
+  do outro lado, e como nada mais reconciliava esse caminho, o cliente ficava
+  preso. `handleSend` passa a reconciliar o mesmo estado quando a própria
+  chamada `POST .../agents/:agent/message` resolve — ela só retorna depois
+  que o engine termina o turno inteiro (`GenServer.call` síncrono no
+  `CriativoServer.user_message/2`), sinal de conclusão tão confiável quanto
+  `agent.done`, e idempotente com ele
+
+- **api,engine,web**: o socket Phoenix da sessão (`session:<id>`) exigia só o
+  `session_id` existir — quem descobrisse o UUID entrava no canal e recebia
+  todos os broadcasts ao vivo. `connect/3` passa a exigir um ticket opaco de
+  uso único (TTL de 30s, `POST .../sessions/:sessionId/socket-ticket`),
+  consumido atomicamente pelo engine contra o `session_id` do tópico pedido, e
+  o join confere também o `project_id` — reconexão (inclusive automática)
+  sempre busca um ticket novo (RN-108)
+
+- **api**: o heartbeat podia fechar a sessão com um agente ativado por handoff
+  ainda no meio do turno — `AcceptHandoffUseCase` ativa o próximo agente por
+  `GenServer.cast` fire-and-forget, e entre a ativação e o agente oferecer o
+  handoff seguinte (ou terminar), nem handoff `offered` nem `proposed_action`
+  pendente existiam para segurar a sessão. Na cadeia Criativo→PO→Arquiteto
+  isso quebrava o encadeamento: o handoff PO→Arquiteto acabava sendo oferecido
+  numa sessão já `closed`, que o front não deixa mais aceitar.
+  `GetSessionPendingWorkUseCase` ganha um terceiro sinal — o último
+  `agent.status` (persistido no event log) de cada ator é `working` sem `idle`
+  posterior — genérico por tipo de agente, não hardcoded pro PO (RN-064)
+
+- **api,web**: cinco defeitos de consistência em `SessionPage.tsx`, achados na
+  mesma investigação. **(1)** a topbar continuava mostrando o modelo do
+  CRIATIVO mesmo depois de um handoff pro PO/Arquiteto/Dev Lead — a rota de
+  model-binding da sessão não recebia agente nenhum e caía sempre no fallback
+  fixo do Criativo; agora manda `agentId` (o agente REALMENTE ativo) e a
+  cascata completa `sessão→agente→área→projeto→workspace` roda pra ele
+  (RN-119). **(2/7)** mensagem do usuário e resposta do agente apareciam
+  DUPLICADAS quando o poll de 3s de `useSessionEvents` caía no meio de um
+  turno em streaming; o hook ganha `pausarPoll` (default `false`, sem afetar
+  os outros consumidores), pausado só enquanto o turno está em curso — a
+  invalidação explícita no fim do turno continua buscando o dado fresco
+  (RN-120). **(3)** sessão criativa exigia o clique separado em "Iniciar
+  ideação" antes da primeira mensagem, e digitar direto caía num chat SSE
+  genérico sem histórico nem regra de negócio — a primeira mensagem agora
+  ativa o Criativo sozinha, pelo caminho real (RN-123). **(9)** depois de
+  aceitar um handoff pro Dev Lead, a mensagem seguinte continuava indo pro
+  Arquiteto — `activeAgent` usava uma cadeia de precedência FIXA
+  (arquiteto > po > criativo) que nunca "desligava"; agora é sempre o
+  `agent.activated` mais RECENTE, sem ordem fixa nenhuma (RN-119). **(10)**
+  sessão com histórico abria no TOPO (mensagens mais antigas primeiro), sem
+  nenhum scroll automático — agora abre sempre no fim
+
+## v2.5.1 — 2026-08-08
+
+### Correções
+
+- **api,docker**: a chave que assina o state do OAuth perde o default (ce212fc5)
+- **scripts**: o fixture do teste de promoção sem o campo `branch` (2298a284)
+- **api**: CSP fechado na api e escopo de projeto contido na raiz (3ec2cb37)
+
+### Documentação
+
+- **branching**: a ordem do escape da célula, na política (06e3d61c)
+- **changelog**: v2.5.0 (b3cc60e6)
+
 ## v2.5.0 — 2026-08-08
 
 ### Novidades
@@ -54,6 +263,45 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - **deps**: fecha 5 alertas do Dependabot com overrides escopados (50efe887)
 
 ## Unreleased
+
+### Novidades
+
+- **api,shared**: o contrato de git ganha `listTree` e `getPullRequestDiff`, a
+  11ª e a 12ª operações, que a aba Code (FASE 26) vai precisar. Entram como
+  capability, e são `true` nos três providers só porque a **suite de contrato
+  única as prova nos três** — o critério dos ADRs 0041/0042, que vale para git:
+  sem prova, declara-se `false` e degrada. São LEITURA e só: `listTree` devolve
+  UM nível da árvore, nunca a árvore inteira, e `getPullRequestDiff` normaliza o
+  diff de uma PR (`status`, `additions`, `deletions`, `patch`). As duas cortam
+  com teto e avisam por `truncated`, para a aba não virar amplificador de
+  tráfego; os números moram em `apps/api/src/domain/git/git-read-limits.ts`, e
+  não no `packages/shared`, que é 100% tipo. Ausência é `null`, o mesmo
+  vocabulário de `getFileContent`. Junto vem a trava do item 33 da fase:
+  **operação de contrato sem consumidor em `src/` reprova o CI**, com uma saída
+  estreita e nomeada para as duas — ela se fecha sozinha, porque passa a
+  reprovar assim que a rota da 26b existir. Uma degradação declarada: o GitLab
+  não traz tamanho de arquivo na árvore, então `size` vem `null` ali.
+- **api**: a superfície HTTP de **leitura** de código que a aba Code consome —
+  árvore, arquivo, busca e diff de PR, em quatro `GET` sob
+  `/projects/:projectId/code/`, todas `role:viewer`. **Nenhuma escreve, e o
+  controller não tem um único verbo de escrita**: ler não é efeito externo e não
+  vira `proposed_action`; escrita é fase seguinte, e vai nascer como uma. A
+  trava da 26a fechou junto — `listTree` e `getPullRequestDiff` deixaram de
+  estar na lista de operações sem consumidor, porque agora têm um.
+  **Contenção (RN-095)**: todo caminho vindo do cliente passa por UMA função, no
+  mesmo arquivo do `projectScopeRoot` da RN-092, reusando as primitivas de
+  escopo do ADR 0055 — `../`, absoluto e byte NUL são recusados com 400
+  **antes** de o provider ser chamado, e o que volta é o caminho normalizado,
+  porque conferir uma string e mandar outra é o jeito de a contenção existir e
+  não valer. Não é sobre ler o arquivo errado: em GitHub/GitLab o caminho vira
+  segmento de URL da API do provider, e um `..` troca de **endpoint** com o
+  token do owner do workspace na mão. **Teto**: a busca não é operação do
+  contrato de git (nenhum dos três providers a tem) — é composta sobre a árvore
+  e o conteúdo, com três orçamentos que a param, cache de TTL curto e
+  `truncated`/`filesScanned` na resposta, senão a aba viraria a mesma família de
+  defeito dos 3.824 req/min do dashboard. A credencial gasta é a do **owner**
+  (RN-058/RN-082), como na escrita. Ver [ADR
+  0060](docs/adr/0060-superficie-de-leitura-de-codigo.md).
 
 ### Correções
 
@@ -128,6 +376,124 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   próprio. Segue aberto `image-size` (2 HIGH, DoS nos parsers ICNS/JXL/HEIF):
   não há versão corrigida publicada, a última do registry é a vulnerável — entra
   por `@docusaurus/mdx-loader` e só lê imagens versionadas neste repositório
+
+- **api**: as áreas de agentes (`dev`, `qa`, `infra`) passam a existir de fato
+  em cada projeto — antes a tabela nunca era gravada. A tela de Configurações
+  listava vazio, a proposta da Anamnese para subir o teto de paralelismo era
+  recusada com "área não existe neste projeto" em TODO projeto, e o teto que
+  decide quantos agentes o produto sobe sem perguntar caía num default que
+  ninguém tinha escolhido. Agora a área nasce junto com o projeto, na mesma
+  transação, e a ativação da execução acrescenta os membros da área de dev (um
+  por módulo). Projetos criados antes disso são corrigidos por migração, sem
+  ação sua e sem mexer em teto que você já tenha alterado. Junto vai o fim de
+  uma duplicação que sustentava o defeito: a lista de áreas existia escrita à
+  mão em três lugares (api, web e engine), e agora tem uma fonte só, com as
+  outras duas geradas por `pnpm --filter api gerar:areas`. Ver RN-094
+
+- **web**: a aba Insights deixa de dizer "sem hipóteses ainda" quando a busca
+  FALHOU. Era o mesmo `data ?? []` seguido de `length === 0` que a RN-088
+  descreve: uma api respondendo 429 ficava indistinguível de um projeto que o
+  Psicólogo nunca analisou. Agora a aba distingue carregando, erro (com a frase
+  da api, o `trace_id` e o botão de tentar de novo) e vazio — nessa ordem, com o
+  erro ANTES do vazio. A aba Aprovações ganha o mesmo tratamento nos seus quatro
+  blocos, e o mais caro deles é a fila: "Tudo limpo — nenhuma aprovação
+  pendente" sobre uma busca que falhou é a mentira mais cara que essa tela pode
+  contar. A busca de regras que não acha nada agora diz "nenhuma regra
+  corresponde à busca" em vez de "nenhuma regra configurada ainda"
+
+- **web**: no card de hipótese, a confiança ("62% de confiança") vazava para
+  fora do card e era desenhada por cima do card vizinho quando a coluna da grade
+  ficava estreita. Achado pela validação visual no navegador, não por teste —
+  jsdom não mede layout. Junto, dois alvos de clique que estavam abaixo do piso
+  de 24px da WCAG 2.2 AA (os chips de evidência da hipótese e o de diff no
+  histórico de instruções)
+### Refatorações
+
+- **web**: as telas de **Projeto** e **Sessão** passam a seguir o handoff de
+  design (`design_handoff_brabo/`, seções 4 e 5). Nenhuma regra de negócio
+  muda, e nenhuma tela ganha ou perde informação — o que muda é a forma. No
+  Projeto: cabeçalho e régua de abas viram uma faixa só, com uma divisória em
+  vez das duas que apareciam empilhadas; o repositório se apresenta em um chip
+  (`local · privado`) e a branch padrão ganha o ícone e o destaque que o desenho
+  pede; e a coluna de Atividade deixa de ser um card boiando a 24px da borda
+  para virar o trilho de 360px do desenho, com rolagem própria — antes a página
+  rolava inteira e o feed sumia de vista assim que a lista de agentes crescia.
+  Na Sessão: a barra de topo ganha o fundo que a distinguia do chat, o balão de
+  mensagem ganha contorno, o avatar ganha o anel na cor do agente, e a marca de
+  passagem de bastão vira a frase que o desenho escreve (`Criativo → passou o
+  bastão ao PO`) em vez do `handoff → po` cru — os dois nomes já estavam no
+  evento, e metade se perdia. O painel de contexto se nomeia ("Contexto da
+  sessão") e separa as seções por divisória. Três correções vieram junto, todas
+  achadas ao comparar com o desenho: o **ponto de estado** era verde fixo, então
+  uma sessão encerrada exibia o mesmo sinal de "ao vivo" de uma em curso (agora
+  ele acompanha a máquina de estados e tem rótulo para quem não vê cor); o
+  agente respondendo aparecia pelo **id** (`criativo`) depois de o evento
+  persistir e pelo **nome** (`Criativo`) enquanto falava; e o título do convite
+  do Criativo pedia `--font-display`, que não existe em `design/tokens.css`, e
+  caía na fonte do navegador. Botão "Encerrar" passa a ter a aparência
+  destrutiva que o desenho lhe dá. Verificado no navegador com
+  `scripts/dev/validacao-visual.js`: nenhum achado de layout nas duas telas
+
+### Manutenção
+
+- **design**: o handoff de design passa a viver no repositório
+  (`design_handoff_brabo/`: especificação + 8 telas de alta fidelidade), e
+  `design/tokens.css` fecha contra ele. Entra `--violet` (`#9c7be0`, agentes/IA)
+  — a última cor do handoff sem token, já hard-coded em quatro lugares do web
+  justamente porque não havia o que referenciar — e `--shadow-lg`, a sombra
+  grande do login, que cada tela que precisasse dela ia acabar escrevendo por
+  conta. **Mudança visível**: `--shadow` estava mais rasa que a especificada
+  (`0 8px 24px` a .35) e passa ao valor do handoff (`0 12px 32px` a .45), o que
+  aprofunda a sombra de todo card, modal e dropdown. O teste de contraste cobre
+  `--violet` nos quatro fundos em que ele é usado e ganha uma trava nova de
+  paridade entre os temas: token semântico de cor declarado só no escuro não
+  some no claro — ele VAZA, e o defeito aparece longe do commit que o causou. A
+  dívida conhecida de contraste segue intocada, nos mesmos 4 pares. As fontes
+  continuam **auto-hospedadas**: é a única divergência deliberada em relação ao
+  handoff, que pede o `<link>` do Google Fonts — seguir esse item reintroduz a
+  falha que o ADR 0036 fechou, porque a CSP do nginx bloqueia a folha e os
+  arquivos
+
+- **web**: **Aprovações** e **Configurações** passam a seguir o handoff
+  versionado (`design_handoff_brabo`, seções 6 e 7). Só aparência: quem pode
+  aprovar, o que a política decide e o pipeline de `proposed_action` não mudam.
+  No card de aprovação, o card recorta e cada região traz a sua divisória —
+  cabeçalho, corpo e ações deixam de flutuar dentro de uma moldura de 16px; o
+  nome do agente ganha peso de título, a faixa que abre o diff vai para
+  `--surface-2`, e o resumo da PR sai da caixa de código onde não deveria estar.
+  Na fila, o vazio vira a moldura tracejada do desenho e a barra de seleção em
+  lote sobe para o cabeçalho da seção, com "Limpar" — a faixa antiga empurrava a
+  lista 44px a cada primeiro clique. Em Configurações, o repositório vira um
+  card com o caminho em mono, as credenciais viram o **grid de conectores**
+  (borda esquerda na cor do provider, sigla de duas letras, tipo e status
+  pulsante) e o seletor de modelo ocupa a célula inteira da tabela, com o nome
+  completo no `title` porque ali ele elipsa. `--violet` deixa de estar
+  hard-coded no card de hipótese. **O que NÃO foi feito, e por quê**: a chave
+  mascarada do desenho (é write-only, ADR 0050), "Selecionar todas" na fila
+  (transformar aprovação em massa num clique é decisão de produto), a
+  ordenação por urgência (nada no domínio classifica urgência de uma ação) e a
+  seção "Melhores modelos por capacidade" (não há métrica de qualidade por
+  modelo). Estão escritas em `design/SCREENS.md`
+- **web**: o login e a lista de projetos passam a seguir o handoff, e o produto
+  volta a ter **uma** marca só. A sidebar exibia um cubo isométrico enquanto as
+  telas de auth exibiam o monograma B: o símbolo trocava exatamente na passagem
+  do login para o app, e agora é o monograma nos dois lugares (o cubo continua
+  disponível como ícone genérico, dito no código que não é a marca). No login, o
+  campo de e-mail e senha afunda em `--code-bg` como na referência — divergência
+  que o ADR 0036 registrara e que não se sustentava, já que afundar separa o
+  campo do card igual e ainda melhora o contraste —, o card e o selo passam à
+  sombra grande (`--shadow-lg`, que a FASE 16 trouxe justamente para isso) e o
+  botão "Entrar" ganha os 44px que o handoff pede para a ação principal de uma
+  tela; ele media 33px. Na lista de projetos, o medidor de tokens de cada card
+  deixa de ter o mesmo fundo do card que o contém — a caixa desaparecia e
+  sobrava a borda —, a última atividade ganha o fio que a separa do medidor e sai
+  de `--text-muted` (3.89:1, a dívida conhecida) para `--text-secondary`, e o
+  respiro do card, o raio dos avatares e o título da barra de topo (que virou um
+  `<h1>` de verdade) alinham com a referência. Nenhuma regra de negócio muda; os
+  três estados da RN-088 e a economia de requisições da RN-090/091 seguem como
+  estavam. Duas coisas do handoff **não** entraram porque são comportamento e
+  não pintura, e seguem declaradas: o "Continuar com GitHub" do login e o
+  indicador "N agentes online"
 
 ## v2.4.0 — 2026-08-07
 

@@ -223,9 +223,18 @@ já entraram; o que sobra é feature decidida pelo usuário durante a execução
 
 ### 14b — Linha do tempo em árvore (CONCLUÍDA)
 Um ramo por agente, do primeiro marco ao que ele está fazendo AGORA, derivado
-100% do event log que a tela já busca. Ativos abrem sozinhos; quem terminou
-nasce fechado. O feed cronológico continua, na coluna de atividade: ele
-responde "o que aconteceu", a árvore responde "quem está fazendo o quê".
+100% do event log que a tela já busca. O feed cronológico continua, na coluna
+de atividade: ele responde "o que aconteceu", a árvore responde "quem está
+fazendo o quê".
+
+Revisitado depois da FASE 26 (sem fase nova, mesmo espírito de correção
+pontual da 12d/PÓS-FASE 15): o critério de abertura padrão passou de só
+"ativo/parado" para os 5 agentes de atividade mais RECENTE — ativo continua
+com prioridade (RN-118); cada ramo colapsado ganhou contador de NOVIDADE
+próprio, com "último visto" por agente em `read-state.ts` (mesmo mecanismo
+do sino, agora granular); e `tool.call`/`tool.result`/`agent.response`
+passaram a expandir INDIVIDUALMENTE (args, resultado, iteração), agrupados
+por fronteira de iteração do ToolLoop.
 
 ### 14c — Validação automática de UI (CONCLUÍDA)
 Contraste virou teste sobre `design/tokens.css`, com a dívida conhecida medida
@@ -304,6 +313,316 @@ duras do produto.
    derivado do registro (não hardcoded).
 5. docs/explanation/gates.md explicando o mecanismo, no docmap.
 
+## PÓS-FASE 15 — CONCLUÍDO em 2026-08-08 (v2.5.0 e v2.5.1)
+Não é fase planejada: é o que o USO encontrou depois da 15, e está aqui
+porque a origem de cada item importa. Nada disto veio de roteiro — veio
+de navegar a app no Chrome e de ler o painel de segurança.
+
+**Defeitos de UI, achados navegando** (RN-088..091):
+- `429` virava TELA BRANCA e a app respondia com mais tráfego. A regra
+  virou geral: toda tela distingue TRÊS estados — carregando, erro (com
+  `trace_id` e botão) e vazio. `if (!dado) return null` colapsa os três.
+- Dashboard fazia uma requisição por projeto: **3.824 → 12 req/min**, com
+  `GET /workspaces/:id/projects-summary`. O sino era a metade que
+  faltava: **289 → uma** requisição por ciclo (RN-090/091).
+
+**Endurecimento de segurança, com os dois painéis a ZERO**:
+- ADR 0058 — CSP fechado na api (`default-src 'none'`), revisando o item
+  7 do ADR 0027; e o `projectId` contido na raiz (RN-092), que atingia
+  não só o `permissions.json` como o escopo que AUTORIZA terminal.
+- ADR 0059 — `GIT_OAUTH_STATE_SECRET` sem default em produção (RN-093).
+  O default era PÚBLICO (`.env.example`) e o compose de produção o supria
+  como fallback: exigir "não vazia" não teria pego nada, porque no caminho
+  real de erro a variável estava DEFINIDA.
+- Alerta que não se sustentava foi DISPENSADO com justificativa escrita,
+  nunca silenciado — e dispensar é decisão do usuário, não do agente.
+
+**Três lições operacionais que custaram ciclo de CI, e valem como regra:**
+1. **CodeQL verde numa PR não prova que alerta antigo fechou** — o check
+   de PR reporta alerta NOVO. Alerta fecha na varredura do branch DEFAULT,
+   isto é, só depois de a correção chegar em `main`.
+2. **Gitleaks varre commits alcançáveis de `refs/heads/*`, não a árvore.**
+   Um valor de alta entropia commitado uma vez reprova o CI para sempre
+   naquele branch; corrigir por cima NÃO limpa. A saída é o commit deixar
+   de ser alcançável (reconstruir a partir de `dev` e APAGAR o branch
+   antigo ANTES de abrir a PR nova) — nunca allowlist, que cega o scanner
+   naquele caminho para todos os commits. Refs de PR não entram no escopo.
+   Fixture que representa segredo nasce SEM entropia.
+3. **Barreira que mora em outra função o CodeQL não enxerga** — daí os
+   três `js/path-injection` sobreviverem à correção. Manteve-se a checagem
+   centralizada (RN-092) e pagou-se o preço no painel: duplicá-la em cada
+   chamador seria checagem que um dia diverge.
+
+## PROGRAMA 16–26 — o que a navegação pediu (em execução)
+Onze pedidos nascidos da PRIMEIRA navegação real na app depois do reset do
+banco. Não é roteiro: é uso. Três descobertas da investigação definiram o
+tamanho e a ORDEM do programa, e vale registrar cada uma, porque nenhuma
+estava no pedido original:
+
+1. Existe um handoff de design COMPLETO em `design_handoff_brabo/` — 8 telas
+   de alta fidelidade, tokens, tipografia e marca. A decisão foi adotá-lo
+   INTEIRO e PRIMEIRO: assim os onze pedidos nascem no visual novo em vez de
+   serem feitos duas vezes.
+2. O terminal da aba Code virou decisão de ARQUITETURA. Cada projeto passa a
+   ter container próprio, e é o ARQUITETO quem decide a imagem. Dentro dele o
+   agente é livre; `git push`, PR e deploy continuam humanos. Isso paga a
+   maior dívida aberta do produto — hoje o agente executa no MESMO container
+   que o monorepo do Brabo, e o ADR 0055 diz de si que é política, não
+   isolamento.
+3. Dois defeitos reais apareceram no caminho, e nenhum foi pedido:
+   `agent_areas` NUNCA é gravada (`upsert` sem chamador, a API devolve `[]`),
+   e a gaveta do sino ordena `seq ASC` no SQL — mostra os mais ANTIGOS.
+
+Teto de execução: no máximo QUATRO subagentes em paralelo. As fases foram
+cortadas por ARQUIVO DISPUTADO, não por tema — é o que torna o paralelismo
+possível. O limitador do backend é `apps/api/src/db/migrations/meta/_journal.json`
+e os snapshots do drizzle: UMA migration por onda, porque resolver conflito de
+snapshot à mão é caminho para schema divergente. Faixas de RN e números de ADR
+são PRÉ-ALOCADOS antes de a onda começar: duas fases paralelas escrevendo
+`RN-094` fazem uma renumerar no merge, e RN renumerada quebra os links
+`#rn-0xx` que o `pnpm docs:check` reprova.
+
+### FASE 16 — CONCLUÍDA: fundações (destravar o paralelismo)
+Nenhum dos onze pedidos entrega aqui. A fase existe porque três deles tocam
+os MESMOS quatro pontos de `router.tsx`/`ProjectPage.tsx`, e outros três
+esbarram na falta de peça comum. Sem ela, as ondas colapsam para execução
+serial.
+1. `design/tokens.css` recebe `--violet` (agentes/IA) e o que mais o handoff
+   define. As fontes CONTINUAM self-hosted — seguir o handoff aí quebraria a
+   app sob o CSP do nginx (ADR 0036). O teste de contraste cobre os pares
+   novos, e a dívida conhecida de 4 pares segue travada.
+2. A aba deixa de ser lista fechada em DOIS lugares: registro único de onde
+   `PROJECT_TABS`, `type TabKey`, a régua e o render passam a derivar. Teste
+   que reprova chave num lugar e ausente no outro — é o defeito real.
+3. `Disclosure` no design system, com a semântica da implementação mais
+   completa que já existe (`ModelCatalogSection`). COMPONENTE SÓ: nenhuma das
+   seis implementações ad-hoc migra aqui, senão a fase abriria os três
+   arquivos mais disputados do programa.
+4. Rótulo de sessão vira helper e os cinco `slice(0, 8)` inline migram. É
+   esta migração que impede a FASE 20 de colidir com a 19.
+5. `CLAUDE.md` entra na definição de pronto (ver a seção de Documentação), com
+   regra `warn` no docmap — hoje ele tem ZERO cobertura.
+
+### FASE 17 — CONCLUÍDA: as 8 telas conforme o handoff
+Fidelidade visual ANTES do comportamento, para não refazer trabalho. Nenhuma
+regra de negócio muda: se uma tela precisar de dado que não existe, isso vira
+pendência declarada, não feature de carona.
+6. Login e App/lista de projetos.
+7. Projeto e Sessão, preservando os três estados da RN-088 (erro antes de vazio).
+8. Aprovações e Configurações — Aprovações é a base visual da FASE 19.
+9. Prova de que a fidelidade aconteceu: contraste medido sobre os tokens e
+   layout verificado por `scripts/dev/validacao-visual.js` em TODAS as telas
+   tocadas. O `.dc.html` é referência, NÃO código para copiar — o próprio
+   README do handoff diz isso.
+
+### FASE 18 — CONCLUÍDA: a área existe no banco (defeito, corrigido antes)
+10. `AgentAreaRepository.upsert` não tem NENHUM chamador, então quatro casos
+    de uso operam sobre tabela vazia. Provisionar na criação do projeto +
+    backfill, com teste que prova que projeto recém-criado TEM áreas — é a
+    mesma falha da FASE 14d: testar a peça não é testar o caminho até ela.
+11. Colapsar as TRÊS cópias da lista de áreas (api, web, engine) em uma fonte.
+
+### FASE 19 — CONCLUÍDA: aprovação que se lê
+12. Matar o fallback genérico do `ApprovalCard`, que despeja
+    `chave: JSON.stringify(valor)` — a causa provável do "difícil de ler".
+    Todo tipo ganha FRASE em pt-BR; tipo sem frase mostra verbo + "ver
+    detalhes" e o payload cru nasce COLAPSADO, nunca despejado.
+13. Colapso nos TRÊS lugares: Aprovações, Insights e o card no chat, com verbo
+    e frase saindo de UM módulo.
+14. Restrição de projeto: o colapso NÃO introduz prop nova obrigatória em
+    `ApprovalCard`. É isso que mantém `SessionPage.tsx` intocado e tira a
+    aresta com a FASE 20.
+
+### FASE 20 — CONCLUÍDA: a sessão ganha identidade
+15. `sessions` ganha `kind` e `name` na MESMA migration — duas migrations
+    sobre a mesma tabela colidem no journal e nos snapshots.
+16. Reconciliar com a derivação por evento: `kind` classifica a INTENÇÃO de
+    criação, `execution.activated` continua classificando ESTADO de execução,
+    e nenhum reescreve o outro. `execution.activated` em sessão consultiva é
+    erro explícito, não conversão silenciosa.
+17. Renomear preservando a hashtag; sem nome, degrada para ela sozinha.
+18. Botão de voltar ao dashboard — hoje `SessionPage.tsx` não importa `Link`
+    nem `useNavigate`, e NENHUMA navegação sai da tela.
+
+### FASE 21 — CONCLUÍDA: o volume de eventos (RN-099/100)
+19. `useSessionEvents` continua sendo o ESTADO ATUAL (`latest`, quatro
+    consumidores: roster, árvore, execução, Aprovações). O HISTÓRICO virou
+    `useSessionEventHistory`, só para as Atividades, com o `afterSeq` que o
+    endpoint já devolvia. Nenhuma rota nova, nenhum parâmetro novo.
+    A âncora é a CAUDA, e não o começo da sessão: o endpoint pagina para
+    frente e não existe `beforeSeq`, mas abrir o feed no evento nº 1 de uma
+    sessão de milhares entrega a tela errada. Então a primeira página é a
+    mesma leitura `latest` (MESMA `queryKey`, deduplicada) e cada clique desce
+    uma janela fixa para trás.
+20. O sino ordena `DESC` no SQL. O corte de "lido" NÃO mudou de semântica, e
+    por isso não há ADR: um corte por `seq` marca um PREFIXO e a gaveta mostra
+    um SUFIXO, então "marcar as 50 exibidas" é inexprimível sem tabela de
+    lidos por evento. O que mudou é a gaveta parar de esconder o que o avanço
+    engole — total por projeto, `+ N mais antigos`, e o botão dizendo quantas
+    marca. O número que falta sai de SUBTRAÇÃO (`latestSeq` menos o corte),
+    não de requisição.
+21. A economia da RN-090/091 não regrediu: uma requisição por ciclo, e o
+    primeiro "carregar mais antigos" custa ZERO — a leitura `latest` traz 200
+    e a janela mostra 100. Página antiga tem `staleTime: Infinity` e nenhum
+    `refetchInterval`: janela fechada de `seq` sobre evento imutável não muda.
+
+### FASE 22 — CONCLUÍDA em 2026-08-09 (gasto com duas audiências)
+Entregue como a aba **Gastos** (ADR 0063, RN-101).
+22. As AGREGAÇÕES que faltavam entraram num método só —
+    `sumGroupedBy(dimensao, escopo)` com `model`, `project`, `actor`,
+    `session` e `day`. `provider` NÃO é dimensão dele, e a ausência é
+    estrutural: quebrar por provider é quebrar por CREDENCIAL, e é isso
+    que impede a visão do membro de ganhar o eixo por descuido — não há
+    argumento a passar.
+23. Sem lib de gráficos: barras diárias e ranking em SVG inline. A série
+    diária vem DENSA da api (dia sem gasto entra com zero), senão três
+    chamadas em três semanas viram três barras coladas.
+24. A colisão foi resolvida separando as PERGUNTAS, não os filtros. O
+    relatório por CREDENCIAL segue exclusivo do owner (RN-060) e ganhou
+    ao lado a quebra do workspace por modelo/projeto/ator/dia, também
+    `owner`. A visão do membro é por ATOR, em tokens e custo estimado,
+    sem provider e sem credencial — e o ator sai do TOKEN autenticado,
+    sem parâmetro onde escrever o id de outra pessoa. Agente não entra na
+    conta do membro: `token_usage` registra quem gastou, não quem mandou
+    gastar.
+
+Sem migration, mas COM medição: a 525 mil linhas as consultas saem em
+55 ms e 38 ms por seq scan, e um índice em `token_usage(created_at)` as
+levaria a 32 ms e 19 ms. O número está no ADR; o índice entra na onda que
+tiver o slot.
+
+### FASE 23 — CONCLUÍDA em 2026-08-09 (modelo herdável por área)
+25. Escopo `area` entrou na cascata (`sessão > agente > área > projeto >
+    workspace`), ENTRE agente e projeto: é o padrão que lead e subagentes
+    compartilham, e o agente diverge sobrepondo-o (ADR 0064, RN-102).
+26. A incoerência resolvida ANTES de codar: o binding de agente era GLOBAL
+    (`scope_id` = slug puro, `:projectId` da rota ignorado desde a Fase 9a) e
+    área é por projeto desde o ADR 0053. Escopo por projeto acima de escopo
+    global faria o mesmo agente resolver modelos diferentes só onde houvesse
+    área. Decisão: o binding de agente passou a ser por projeto também —
+    `scope_id` de `agent`/`area` virou composto, `<projectId>:<slug|chave>`
+    (RN-103) — e não a área abaixo do agente, que contrariaria "padrão
+    herdável" (quase todo binding hoje é de agente).
+27. A UI mostra quem HERDA e quem DIVERGIU (`AreaModelsSection` e a coluna
+    Origem de `ModelsSection`, em `ProjectSettingsTab.tsx`); "voltar a
+    herdar" é `DELETE` no binding do agente/área, nunca grava nele o modelo
+    do nível de baixo — copiar viraria cópia que diverge sozinha na próxima
+    mudança da área. Papel `maintainer` para mudar o modelo da área (mesma
+    régua do teto de paralelismo, RN-083); o do agente continua `developer`.
+
+### FASE 24 — CONCLUÍDA: Chat e Criativo como lugares (RN-104)
+28. Duas abas na tela de PROJETO, cada uma listando as sessões do seu `kind` e
+    criando naquele `kind` sem perguntar de novo. A Sessão continua tela
+    própria — a aba não virou contêiner de chat.
+29. A colisão foi resolvida com "Sessões" SAINDO da régua. O que ficou dela é
+    a CHAVE de deep-link: o Chat carrega `key: 'sessions'`, e é isso que faz um
+    `?tab=sessions` antigo abrir no Chat com a aba MARCADA. Alias resolvido só
+    no painel abriria o painel certo e deixaria a régua sem seleção, porque
+    `Tabs` compara `active` com `key` e quem escreve `active` é o
+    `ProjectPage` — um dos dois arquivos que a onda manteve fechados.
+30. **Veredito sobre "Iniciar ideação"**: ele FICA. Metade do problema já tinha
+    fechado na FASE 20 (o botão sumiu da sessão consultiva, RN-097), e a outra
+    metade não era redundância: é ele que traz o Criativo, e é daí em diante
+    que a chave do owner é gasta (RN-058). O que estava errado era o LUGAR — o
+    convite gastava um parágrafo apontando para a topbar. Agora a ação mora
+    DENTRO do convite enquanto ele está na tela, e volta à topbar quando não
+    está; `conviteVisivel` é a única pergunta que os dois compartilham, para
+    que não apareça em dobro nem desapareça.
+
+### FASE 25 — CONCLUÍDA COM CORTE: Container por projeto (a fronteira deixa de ser só política)
+A maior mudança arquitetural do programa, e a que paga a dívida que as Fases B
+e F já apontavam separadamente. Entregue 25a (a decisão do Arquiteto e o
+portão) e 25c (a fronteira de efeito externo); 25b (o ciclo de vida do
+container) ficou CORTADA e declarada — não meio-implementada (ADR 0065, RN-105
+e RN-106).
+30. CONCLUÍDO: o ARQUITETO decide qual imagem sobe para o projeto, como
+    artefato dele (`artifact.project_image` no event log, versionado, sem
+    tabela) — auditável, não configuração escondida. Enquanto ele não
+    decidir, a aba Code responde 409 e não libera (RN-105).
+31. NÃO ENTREGUE, declarado: ciclo de vida por projeto (provisionar, reciclar,
+    limpar, teto de recursos aplicado de verdade), com o worktree do agente
+    vivendo dentro do container. Estado de container é MUTÁVEL e pede tabela
+    própria — improvisá-lo no event log só para não esperar o slot de
+    migration produziria a correção logo depois. Consequência honesta: a
+    metade "dentro o agente é livre" da política de terminal AINDA NÃO mudou
+    — o ADR 0055 continua valendo como está até o container subir de
+    verdade.
+32. CONCLUÍDO: a fronteira de efeito externo. `git push`, PR e deploy não
+    saem pelo terminal — nem dentro do escopo do projeto —, e a regra é
+    `deny` (não `require_approval`, por causa do "sempre permitir"), com a
+    mensagem redirecionando para a ação TIPADA (`git_push`/`git_merge`/
+    `pr_open`), que nasce `proposed_action` (RN-106). Merge em protegida
+    segue manual (RN-014), intocado. Rede e gasto têm veredito próprio no
+    ARTEFATO da imagem (`network: none`/`egress`, teto de cpus/memória/pids
+    que recusa em vez de rebaixar em silêncio) — decidido UMA vez, não
+    comando a comando, pelo mesmo motivo que Z e AD provaram que allowlist de
+    verbo não converge. O fechamento de Z e AD em si depende de 25b (a
+    parede física), que ainda não subiu.
+
+### FASE 26 — CONCLUÍDA: Code, só leitura
+33. CONCLUÍDO (26a): `GitProviderContract` ganhou `listTree` e diff de PR
+    (11ª/12ª operação), capability declarada SÓ quando provada pela suite.
+34. CONCLUÍDO (26b): as quatro rotas de `code.controller.ts` — árvore,
+    arquivo, busca e diff — atrás da checagem CENTRALIZADA da RN-092/095, com
+    teto e cache na busca (que é COMPOSTA, não operação do contrato).
+35. CONCLUÍDO: a tela (`ProjectCodeTab`/`code/*`), registrada em
+    `project-tabs.ts` sem tocar `router.tsx`/`ProjectPage.tsx`. Rail
+    (Explorador/Buscar — os únicos com dado real), explorador carregado por
+    DIRETÓRIO, abas de editor com breadcrumb, busca real com
+    `filesScanned`/`truncated`, diff de PR por id conhecido (com
+    `patch: null` tratado como "sem texto", nunca "sem mudança"). Realce de
+    sintaxe é tokenizer PRÓPRIO por regex (`code/highlight.ts`) — ZERO
+    dependência nova, contra os 15-90 KB de Prism/highlight.js/Shiki para o
+    que a aba precisa; três tokens novos de cor (`--syntax-function/
+    -comment/-operator`) calibrados a 4,5:1 contra `--code-bg` nos DOIS
+    temas. O quarto estado da RN-088 — bloqueada por decisão pendente do
+    Arquiteto (RN-105) — virou RN-107, perguntado ANTES de tentar ler
+    código, com reconsulta própria a cada 15s enquanto bloqueada.
+
+    Pendências DECLARADAS, sem dado real por trás: terminal interativo
+    (FASE 25b, que segue cortada — estado vazio honesto na aba), blame,
+    lista de PRs dentro da aba (o diff só é alcançável por id
+    conhecido, vindo de Aprovações) e painel de Problemas/lint/testes.
+    Virtualização de linha também ficou de fora — o próprio handoff chama a
+    aba de código "a mais custosa do programa"; o teto de 512 KB por arquivo
+    (`GIT_BLOB_MAX_BYTES`) limita o pior caso por ora.
+
+### FASE 26b — CONCLUÍDA: fundação de blame, PRs navegáveis e branch rica
+Só a camada de API — nenhuma UI. As três pendências declaradas de blame,
+dropdown rico de branches e lista de PRs tocariam os MESMOS arquivos
+(contrato, os três providers, o caso de uso, o controller, a suite de
+contrato) se atacadas separadamente por agentes em paralelo; a decisão foi
+entregar as três juntas, de uma vez, e deixar a UI de cada uma para três
+agentes seguintes sem risco de colisão.
+36. `GitProviderContract` ganhou `blame`, `listPullRequests` e
+    `listBranchesDetailed` (13ª, 14ª e 15ª operação — RN-110/111/112),
+    capability declarada só quando provada pela suite de contrato contra os
+    três providers (`local` contra git de verdade; `github`/`gitlab`
+    mockados — os smokes reais seguem pulados sem
+    `GITHUB_TEST_TOKEN`/`GITLAB_TEST_TOKEN` no ambiente, mesma situação da
+    FASE 13a). `listBranchesDetailed` é operação PRÓPRIA, não extensão de
+    `listBranches` (RN-112) — enriquecer custa uma chamada extra ao provider
+    POR BRANCH, e `listBranches` continua sendo a do bootstrap de Gitflow,
+    que não paga esse custo.
+37. Três rotas novas em `code.controller.ts` (`GET .../code/blame`,
+    `GET .../code/pull-requests`, `GET .../code/branches`), mesmo `role:
+    viewer` e a mesma checagem central de caminho (RN-095) das quatro
+    anteriores. `apps/web/src/lib/api-client.ts`/`api-types.ts` ganharam as
+    funções e tipos correspondentes (`getCodeBlame`, `getCodePullRequests`,
+    `getCodeBranches`) para a onda seguinte consumir — `CodeShell.tsx` e
+    `CodeDiffPanel.tsx` NÃO foram tocados além do comentário que documenta
+    que a fundação já existe.
+38. CONCLUÍDO: o dropdown rico de branches (RN-112) — `CodeBranchPicker.tsx`,
+    aberto a partir de `CodeShell.tsx`, troca o campo de texto simples por um
+    seletor listando cada branch com `ahead`/`behind` relativos à default e a
+    PR associada, quando houver (`aberta`/`mesclada`/`fechada`). Ref fora da
+    lista (tag ou sha) continua alcançável — `listBranchesDetailed` não
+    enumera essas duas, então o rodapé do dropdown tem um campo manual.
+
+**Congelamento do programa:** cada fase declara o que não faz, e o mais duro é
+o da 26 — SÓ LEITURA de código, nenhum salvamento pela aba. A edição é fase
+seguinte, e quando vier, escrita é efeito externo: nasce `proposed_action`.
+
 ## Stack (decidida — não proponha alternativas)
 - `apps/api`: NestJS 11 + Drizzle ORM + PostgreSQL 16 + pgvector
 - `apps/engine`: Elixir/OTP + Phoenix (canais) + Oban (filas no Postgres)
@@ -327,6 +646,13 @@ duras do produto.
   feature/, bugfix/, perf/, refactor/, chore/, docs/, test/);
   hotfix/ nasce de main. Formato funcao/descritivo,
   regex ^.{0,30}/\S{0,32}$. Commits em conventional commits, pt-BR.
+  A FUNÇÃO da branch decide a VERSÃO (scripts/ci/version.ts): breaking/
+  sobe MAJOR, feature/ sobe MINOR, todo o resto é PATCH. Mudança que
+  exige ação do operador antes do deploy nasce em breaking/ mesmo quando
+  o conteúdo é correção — o v2.5.1 saiu patch porque a chave obrigatória
+  do OAuth nasceu em bugfix/, e um patch diz "atualize sem pensar".
+  Versão não se corrige à mão depois: o valor de ela ser calculada vem de
+  não ser negociada caso a caso.
 - Toda mudança entra por PR — push direto em permanente é bloqueado;
   únicas exceções de push: tags (bot de release) e .release/gate.json
   (bot do gate).
@@ -336,8 +662,29 @@ duras do produto.
 - Todo evento de domínio é imutável: nunca UPDATE em tabelas de eventos.
 - Estados de sessão são máquina de estados explícita:
   created → active → closing → closed | closed_abnormally
+- A sessão tem DUAS classificações, e elas não se sobrescrevem: `kind`
+  (`consultiva|criativa`) é a INTENÇÃO de criação, gravada e imutável; o
+  evento `execution.activated` é o ESTADO de execução, e continua sendo
+  ele que `findActiveExecutionSession` procura. `execution.activated` em
+  sessão consultiva é 409, nunca conversão silenciosa (ADR 0061, RN-097).
+  Não faça a derivação por evento olhar `kind`
 - Toda ação com efeito externo (git, terminal, gasto) nasce como
   proposed_action e respeita permissions.json; deny sempre vence allow.
+  LER não é efeito externo e NÃO vira proposed_action — encheria a fila de
+  ruído até ninguém mais ler as de verdade. O que a leitura deve é ser
+  CONTIDA e ter TETO: caminho vindo do cliente passa pela checagem central
+  (RN-092/RN-095), e leitura composta que chama o provider N vezes tem
+  orçamento e cache, senão vira amplificador de tráfego (ADR 0060).
+- A imagem de container de um projeto é ARTEFATO do ARQUITETO
+  (`artifact.project_image`, versionado, sem tabela), nunca configuração
+  escondida. Enquanto ele não decide, a aba Code responde 409 (RN-105).
+  `git push`, abertura de PR e deploy NÃO saem pelo terminal — a regra é
+  `deny`, não `require_approval`, mesmo dentro do escopo do projeto e mesmo
+  com "sempre permitir" (RN-106, ADR 0065). O ciclo de vida do container
+  (provisionar, reciclar, limpar) ainda não existe — corte declarado da
+  FASE 25 —, então a política de terminal do ADR 0055 (escopo de caminho,
+  allowlist estreito) segue valendo como está até o container subir de
+  verdade.
 - Agentes rodam SEMPRE dentro de um Harness; nenhuma chamada de LLM ou
   ferramenta fora dele.
 - Handoff externo endereça só LEAD de área ou agente sem área;
@@ -345,8 +692,19 @@ duras do produto.
   silenciosa — reporta origem ao lead, que decide e registra evento.
 - O contrato externo dos gates é estável: quem consome vê um veredito
   por gate, independente da estrutura interna da área.
+- A lista de áreas tem UMA fonte —
+  `apps/api/src/domain/agents/agent-areas.ts`. As cópias do web e do
+  engine são GERADAS por `pnpm --filter api gerar:areas` e reprovam em
+  teste se estiverem velhas; nunca as edite à mão (FASE 18). Área nova
+  continua sendo decisão de produto, com ADR. A lista é o CATÁLOGO; a
+  tabela `agent_areas` é o ESTADO por projeto, e nasce com ele (RN-094).
 - Merge em branch protegida (dev/qa/main) é SEMPRE manual do
   usuário — sem opção de automatizar, garantido por teste.
+- Socket Phoenix da sessão (`session:<id>`) exige ticket opaco de uso
+  único (TTL de 30s, `POST .../sessions/:sessionId/socket-ticket`) em
+  `connect/3` — NÃO o JWT reaproveitado. O engine consome o ticket lendo
+  `session_socket_tickets` direto (mesmo padrão de `outbox_events`);
+  reconexão, inclusive automática, sempre busca ticket novo (RN-108).
 - O produto NUNCA sobrescreve configuração de repositório do usuário
   (proteções, branches) sem plano aprovado explicitamente (regra da
   FASE 12, origem no ADR 0028).
@@ -358,7 +716,10 @@ duras do produto.
   event log, e o motivo NUNCA fica só em broadcast: `agent.error` é
   durável e o agente diz o que houve no fio (RN-059).
 - A chave de LLM que um agente gasta é a do OWNER do workspace
-  (RN-058); o relatório desse gasto é do owner e só dele (RN-060).
+  (RN-058); o relatório desse gasto é do owner e só dele (RN-060). O
+  membro vê o PRÓPRIO consumo por ATOR, em tokens e custo estimado, e
+  NUNCA quebrado por provider ou credencial — as duas leituras respondem
+  perguntas diferentes e nenhuma é recorte da outra (RN-101/ADR 0063).
 - Métrica de execução de agentes é extraída do event log/token_usage
   por script, nunca anotada manualmente (lição da Fase 10/13).
 - Testes: vitest (api/web/scripts de CI), ExUnit (engine). Nenhuma
@@ -372,6 +733,12 @@ duras do produto.
   medido por teste sobre os tokens e layout é verificado no navegador
   por scripts/dev/validacao-visual.js — as duas validações estão
   explicadas em design/README.md.
+- Tipo novo de `proposed_action` nasce com FRASE em pt-BR em
+  `apps/web/src/lib/aprovacoes.ts` — verbo e frase têm UMA fonte, e as
+  três telas de decisão (Aprovações, chat da sessão, Insights) a
+  consomem. `apps/web/src/lib/aprovacoes.test.ts` lê `ACTION_TYPES` do
+  `decide.ts` e reprova tipo sem frase; payload cru nunca é despejado,
+  nasce colapsado (RN-096).
 - Segredos de usuário (API keys de LLM e tokens de git) criptografados
   com envelope encryption; nunca em plaintext no banco ou em logs.
 - Decisões arquiteturais relevantes registradas em docs/adr/.
@@ -393,6 +760,13 @@ duras do produto.
   ADR aceito NUNCA é editado: o novo referencia o antigo.
 - Regra de negócio nova → RN-XXX em docs/business-rules.md com
   arquivo:linha e o teste que a cobre.
+- TODA mudança verifica se ESTE arquivo precisa mudar — Stack, Convenções,
+  "O que NÃO fazer" e o estado das fases. Não pergunte se deve: verifique.
+  O gatilho é o mesmo do docmap, e o motivo é que o CLAUDE.md é o único
+  documento lido em TODA sessão: desatualizado, ele não é neutro, ele
+  ensina errado. Ele tem regra `warn` no docmap (não `block`, porque não
+  mora sob docs/ e o checker valida glob e link dentro de docs/ — promover
+  sem estender o checker criaria regra que se burla com `docs-not-needed`).
 - Antes de finalizar: pnpm docs:check e pnpm docs:build verdes (glob
   morto, gerado fora de dia e link quebrado reprovam).
 - Nunca inventar conteúdo de doc: sem informação suficiente, use
@@ -419,8 +793,11 @@ duras do produto.
 - Não corrigir de passagem os 19 achados abertos, hoje em
   docs/explanation/achados-execucao-real.md — cada um espera a fase que
   o endereça, e corrigir fora dela apaga a evidência de por que existia
-- (FASE 15) Nenhum gate NOVO e nenhuma mudança de comportamento de
-  gate existente — a fase só DECLARA e MEDE o que já existe
+- (FASE 15 — CONCLUÍDA) O congelamento de gates valeu enquanto a fase
+  corria — nenhum gate NOVO, nenhuma mudança de comportamento de gate
+  existente — e terminou sem exceção nenhuma: a fase só DECLAROU e MEDIU
+  o que já existia. Segue valendo a regra permanente de que gate novo é
+  decisão de produto, com ADR
 - (FASE 13 — CONCLUÍDA) O congelamento valeu enquanto a fase corria, e
   vale registrar como terminou, porque a regra funcionou: quatro exceções,
   todas pelo MESMO critério — só o que impedia a própria medição de

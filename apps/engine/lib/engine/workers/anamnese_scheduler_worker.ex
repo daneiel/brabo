@@ -23,22 +23,65 @@ defmodule Engine.Workers.AnamneseSchedulerWorker do
   defp interval_seconds,
     do: Application.get_env(:engine, :anamnese_interval_seconds, 900)
 
+  @doc """
+  Flag de PRODUTO (não confundir com `start_anamnese?`, que é a chave de
+  teste que decide se o `kickoff/0` é chamado no boot — ver
+  `Engine.Application`): decide se uma rodada NOVA da Anamnese pode
+  acontecer, periódica ou sob demanda. Desativado não apaga nada — hipóteses,
+  perfis de proficiência e patches de instrução já gravados continuam
+  intactos e visíveis.
+
+  Default DESLIGADO a partir de agora: decisão do usuário em 2026-08-10
+  ("hoje ele não está trazendo dados de muito valor"), documentada em
+  docs/explanation/backlog.md — não é bug, é pausa reversível. Ligar de
+  volta é `ANAMNESE_ENABLED=true` e reiniciar o engine.
+  """
+  def enabled?, do: Application.get_env(:engine, :anamnese_enabled?, false)
+
+  @doc """
+  Confere `enabled?/0` a cada tick, não só no boot (RN-115): sem essa
+  checagem aqui, uma corrente já agendada ANTES de alguém desativar a flag
+  (ou de antes de a flag existir) se reagenda pra sempre, rodando Anamnese
+  de verdade com a flag dizendo `false` — foi exatamente o que aconteceu em
+  dev (achado real, não hipótese), remediado manualmente cancelando os jobs
+  agendados. Desativado, nem `enqueue_projects/0` nem o reagendamento
+  acontecem: a corrente morre ali, e um job antigo que ainda dispara uma vez
+  se AUTO-CURA sozinho, sem intervenção manual.
+  """
   @impl true
   def perform(_job) do
-    enqueue_projects()
+    if enabled?() do
+      enqueue_projects()
 
-    %{}
-    |> new(schedule_in: interval_seconds())
-    |> Oban.insert()
+      %{}
+      |> new(schedule_in: interval_seconds())
+      |> Oban.insert()
+    end
 
     :ok
   end
 
-  @doc "Chamado uma vez no boot (ver Engine.Application)."
+  @doc """
+  Chamado uma vez no boot (ver Engine.Application).
+
+  Desativado (`enabled?/0` falso), NÃO agenda o job periódico — em vez de
+  agendar e deixar `perform/1` no-opar a cada tick. Mais barato (a fila do
+  Oban não recebe um job a cada `interval_seconds` só para não fazer nada) e
+  mais claro para quem inspeciona a fila: Anamnese desativada não deixa
+  rastro nenhum de tentativa. `perform/1` agora confere a MESMA flag (ver
+  moduledoc acima) — as duas pontas (nascer e reagendar) respeitam
+  `enabled?/0`, e nenhuma delas precisa da outra pra ficar correta.
+  """
   def kickoff do
-    %{}
-    |> new(unique: [period: interval_seconds() * 2, states: [:available, :scheduled, :retryable]])
-    |> Oban.insert()
+    if enabled?() do
+      %{}
+      |> new(
+        unique: [period: interval_seconds() * 2, states: [:available, :scheduled, :retryable]]
+      )
+      |> Oban.insert()
+    else
+      {:ok, :anamnese_desativada}
+    end
   end
 
   defp enqueue_projects do

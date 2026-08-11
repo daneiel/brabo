@@ -3,6 +3,7 @@ import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import {
   addProjectMember,
+  ApiError,
   deleteMyProficiency,
   getProject,
   getProjectEvent,
@@ -11,7 +12,10 @@ import {
   runAnamnese,
   rollbackInstruction,
   deleteCredential,
+  clearAgentModelBinding,
+  clearAreaModelBinding,
   getAgentModelBinding,
+  getAreaModelBinding,
   getBootstrapPlan,
   getProjectAgentCosts,
   getProjectModelBinding,
@@ -24,12 +28,13 @@ import {
   removeProjectMember,
   mensagemDaApi,
   setAgentModelBinding,
+  setAreaModelBinding,
   setAreaMaxParallel,
   testCredential,
   updateProject,
   upsertCredential,
 } from '../lib/api-client';
-import { AGENT_LIST } from '../lib/agents';
+import { AGENT_LIST, AREAS, areaFor } from '../lib/agents';
 import { useProficiency } from '../lib/hooks';
 import { pollQueParaNoErro } from '../lib/query-policy';
 import { ROLE_LABEL, ROLE_ORDER } from '../lib/roles';
@@ -59,14 +64,15 @@ import { ModelPicker } from '../components/ModelPicker';
 import { ModelCatalogSection } from '../components/ModelCatalogSection';
 import { CredentialSpendSection } from '../components/CredentialSpendSection';
 import { useCurrentWorkspaceWithRole } from '../lib/hooks';
-import { ClockIcon, TrashIcon } from '../components/ui/icons';
+import { BranchIcon, ClockIcon, TrashIcon } from '../components/ui/icons';
 import { useToast } from '../components/ui/ToastProvider';
 import styles from './ProjectSettingsTab.module.css';
 
 const ORIGIN_TONE: Record<ModelBindingScope, BadgeTone> = {
   workspace: 'muted',
   project: 'warning',
-  agent: 'accent',
+  area: 'accent',
+  agent: 'success',
   session: 'success',
 };
 
@@ -128,6 +134,41 @@ function formatarCustoMicros(micros: number): string {
   return usdFmt.format(usd);
 }
 
+/**
+ * A sigla de duas letras do chip do conector (handoff, seção 7 item 4).
+ *
+ * NÃO é `iniciaisDe`: aquela quebra por espaço, e "OpenAI" e "OpenRouter" são
+ * uma palavra só — as duas saíam como `OP`, dois conectores com o mesmo
+ * distintivo lado a lado. As MAIÚSCULAS do nome distinguem (`OA` e `OR`), e
+ * quando só há uma (Anthropic, Vultr) valem as duas primeiras letras.
+ */
+function siglaDoConector(label: string): string {
+  const maiusculas = label.replace(/[^A-Za-z]/gu, '').match(/[A-Z]/gu) ?? [];
+  const letras =
+    maiusculas.length >= 2 ? maiusculas.slice(0, 2).join('') : label.slice(0, 2);
+  return letras.toUpperCase();
+}
+
+/**
+ * A cor da borda esquerda de cada conector (handoff, seção 7 item 4). Só tokens
+ * semânticos — o handoff nomeia terracota para a Anthropic e teal para a
+ * OpenAI, e os demais seguem o mesmo repertório de quatro acentos.
+ *
+ * `Record<LlmCredentialProvider, …>` de propósito: provider novo entra na lista
+ * derivando de `ROTULO_DO_PROVIDER`, e é o compilador que cobra a cor aqui em
+ * vez de ele nascer sem borda nenhuma.
+ */
+const COR_DO_CONECTOR: Record<LlmCredentialProvider, string> = {
+  anthropic: 'var(--accent)',
+  openai: 'var(--success)',
+  openrouter: 'var(--violet)',
+  'nvidia-nim': 'var(--success)',
+  together: 'var(--warning)',
+  deepinfra: 'var(--violet)',
+  bitdeer: 'var(--accent)',
+  vultr: 'var(--warning)',
+};
+
 const LEVEL_TONE: Record<ProficiencyLevel, BadgeTone> = {
   iniciante: 'muted',
   intermediario: 'warning',
@@ -146,6 +187,7 @@ export function ProjectSettingsTab({ projectId }: ProjectSettingsTabProps) {
       <ParallelismSection projectId={projectId} />
       <PromotionSection projectId={projectId} />
       <ModelsSection projectId={projectId} />
+      <AreaModelsSection projectId={projectId} />
       <CatalogoDeModelos projectId={projectId} />
       <MembersSection projectId={projectId} />
       <ProficiencySection projectId={projectId} />
@@ -218,6 +260,19 @@ export function ModelsSection({ projectId }: { projectId: string }) {
     })),
   });
 
+  // O padrão de cada ÁREA (ADR 0064, RN-102) — uma busca por área, não por
+  // agente: lead e subagentes de uma mesma área compartilham a mesma pergunta.
+  const areaKeys = Object.keys(AREAS);
+  const areaBindingQueries = useQueries({
+    queries: areaKeys.map((key) => ({
+      queryKey: ['area-binding', projectId, key],
+      queryFn: () => getAreaModelBinding(projectId, key),
+    })),
+  });
+  const bindingDaAreaPorChave = new Map(
+    areaKeys.map((key, index) => [key, areaBindingQueries[index]?.data]),
+  );
+
   // Os dois níveis de cima da cascata, buscados UMA vez — é deles que sai a
   // coluna FALLBACK de todas as linhas.
   const { data: bindingDoProjeto } = useQuery({
@@ -244,12 +299,32 @@ export function ModelsSection({ projectId }: { projectId: string }) {
 
   /**
    * O que valeria se o binding vigente sumisse — a precedência é
-   * `session > agent > project > workspace` (`domain/llm/binding-resolver.ts`),
-   * então o fallback é o binding do nível imediatamente inferior à origem
-   * resolvida. Origem `workspace` já é o último nível: não há para onde cair.
+   * `session > agent > area > project > workspace`
+   * (`domain/llm/binding-resolver.ts`), então o fallback é o binding do nível
+   * imediatamente inferior à origem resolvida. Origem `workspace` já é o
+   * último nível: não há para onde cair.
+   *
+   * `area` entrou na FASE 23 (ADR 0064) ENTRE agente e projeto, e por isso
+   * precisa do AGENTE da linha — áreas diferentes têm padrões diferentes, ao
+   * contrário de projeto e workspace, que valem para a tabela inteira.
    */
-  function fallbackDe(origin: ResolvedBinding['origin'] | undefined) {
+  function fallbackDe(
+    agentKey: string,
+    origin: ResolvedBinding['origin'] | undefined,
+  ) {
+    const areaDoAgente = areaFor(agentKey);
+    const bindingDaArea = areaDoAgente
+      ? bindingDaAreaPorChave.get(areaDoAgente.key)
+      : undefined;
+
     if (origin === 'session' || origin === 'agent') {
+      return (
+        nomeDoModelo(bindingDaArea?.modelId) ??
+        nomeDoModelo(bindingDoProjeto?.modelId) ??
+        nomeDoModelo(bindingDoWorkspace?.modelId)
+      );
+    }
+    if (origin === 'area') {
       return (
         nomeDoModelo(bindingDoProjeto?.modelId) ??
         nomeDoModelo(bindingDoWorkspace?.modelId)
@@ -272,17 +347,38 @@ export function ModelsSection({ projectId }: { projectId: string }) {
     queryClient.invalidateQueries({ queryKey: ['agent-binding', projectId, agentKey] });
   }
 
+  /**
+   * "Voltar a herdar" (RN-102) — APAGA o binding do agente, nunca grava nele
+   * o modelo da área: gravar viraria cópia, e a próxima mudança da área
+   * deixaria este agente para trás em silêncio.
+   */
+  async function handleClearAgentBinding(agentKey: string) {
+    await clearAgentModelBinding(projectId, agentKey);
+    queryClient.invalidateQueries({ queryKey: ['agent-binding', projectId, agentKey] });
+  }
+
+  // As proporções são as do handoff (seção 7, item 6): `1.4fr 1.9fr .8fr 1.4fr
+  // .9fr`. Estavam próximas, não iguais, e a diferença aparecia na primeira
+  // coluna — "Psicólogo (leve)" truncava em "Psicóo…".
   const columns: TableColumn<(typeof AGENT_LIST)[number]>[] = [
     {
       key: 'agent',
+      // "Agente", e não "Agente · capacidades" como no desenho: as capacidades
+      // exigidas por agente não existem no domínio, e prometer uma coluna que
+      // não tem conteúdo é pior que não prometer.
       label: 'Agente',
-      width: '1.3fr',
+      width: '1.4fr',
       render: (agent) => (
         <span className={styles.agentCell}>
           <span className={styles.agentAvatar} style={{ ['--agent-color' as string]: agent.color } as CSSProperties}>
             {agent.initials}
           </span>
-          <span className={styles.agentNome}>{agent.name}</span>
+          {/* `title` porque a coluna ELIPSA por desenho: "QA de Performance e
+              Segurança" cabe em 71px como "QA de Perf…", e sem o title o nome
+              inteiro não existe em lugar nenhum da tela. */}
+          <span className={styles.agentNome} title={agent.name}>
+            {agent.name}
+          </span>
         </span>
       ),
     },
@@ -306,7 +402,7 @@ export function ModelsSection({ projectId }: { projectId: string }) {
     {
       key: 'origin',
       label: 'Origem',
-      width: '0.9fr',
+      width: '0.8fr',
       render: (agent) => {
         const index = AGENT_LIST.indexOf(agent);
         const resolved = bindingQueries[index]?.data;
@@ -315,9 +411,24 @@ export function ModelsSection({ projectId }: { projectId: string }) {
         // A cascata pode ter PULADO o binding mais específico (Fase 9c). Sem
         // dizer isso, o modelo do agente teria trocado sozinho e em silêncio.
         const pulado = resolved.skipped?.[0];
+        const areaDoAgente = areaFor(agent.key);
+        // `origin === 'agent'` é o agente DIVERGINDO — de uma área, quando ele
+        // tem uma, ou do projeto/workspace, quando não tem (RN-102). Nos dois
+        // casos "voltar a herdar" é apagar o binding dele, e é isso que o
+        // botão faz — nunca copia o modelo do nível de baixo para cá.
+        const divergiu = resolved.origin === 'agent';
         return (
           <span className={styles.origem}>
-            <Badge tone={ORIGIN_TONE[resolved.origin]}>{resolved.origin}</Badge>
+            <Badge
+              tone={ORIGIN_TONE[resolved.origin]}
+              title={
+                resolved.origin === 'area' && areaDoAgente
+                  ? `Padrão da área ${areaDoAgente.label}.`
+                  : undefined
+              }
+            >
+              {resolved.origin}
+            </Badge>
             {pulado && (
               <Badge
                 tone="warning"
@@ -330,6 +441,20 @@ export function ModelsSection({ projectId }: { projectId: string }) {
                 {pulado.scope} pulado
               </Badge>
             )}
+            {divergiu && (
+              <button
+                type="button"
+                className={styles.voltarHerdar}
+                onClick={() => handleClearAgentBinding(agent.key)}
+                title={
+                  areaDoAgente
+                    ? `Apaga o modelo próprio deste agente — ele volta a usar o padrão da área ${areaDoAgente.label}.`
+                    : 'Apaga o modelo próprio deste agente — ele volta a herdar do projeto ou do workspace.'
+                }
+              >
+                voltar a herdar
+              </button>
+            )}
           </span>
         );
       },
@@ -337,10 +462,10 @@ export function ModelsSection({ projectId }: { projectId: string }) {
     {
       key: 'fallback',
       label: 'Fallback',
-      width: '1.5fr',
+      width: '1.4fr',
       render: (agent) => {
         const index = AGENT_LIST.indexOf(agent);
-        const nome = fallbackDe(bindingQueries[index]?.data?.origin);
+        const nome = fallbackDe(agent.key, bindingQueries[index]?.data?.origin);
         return nome ? (
           <span className={styles.fallback}>{nome}</span>
         ) : (
@@ -351,7 +476,7 @@ export function ModelsSection({ projectId }: { projectId: string }) {
     {
       key: 'estimate',
       label: 'Est. mês',
-      width: '1fr',
+      width: '0.9fr',
       render: (agent) => {
         const micros = custoPorAgente.get(agent.key);
         // Agente que nunca rodou não vem na resposta, e traço é diferente de
@@ -375,9 +500,12 @@ export function ModelsSection({ projectId }: { projectId: string }) {
         A origem indica onde o valor é resolvido:{' '}
         <span className={`${styles.nivel} ${styles.nivelWorkspace}`}>workspace</span> →{' '}
         <span className={`${styles.nivel} ${styles.nivelProject}`}>project</span> →{' '}
+        <span className={`${styles.nivel} ${styles.nivelArea}`}>area</span> →{' '}
         <span className={`${styles.nivel} ${styles.nivelAgent}`}>agent</span> →{' '}
         <span className={`${styles.nivel} ${styles.nivelAgent}`}>session</span>. O mais
-        específico vence.
+        específico vence. <strong>área</strong> é o padrão que o lead e os
+        subagentes compartilham (RN-102) — configure em{' '}
+        <em>Modelo por área</em>, logo abaixo.
       </p>
 
       <div className={styles.custoCard}>
@@ -393,6 +521,124 @@ export function ModelsSection({ projectId }: { projectId: string }) {
 
       <Table columns={columns} rows={AGENT_LIST} rowKey={(a) => a.key} emptyMessage="Nenhum agente configurado." />
       {allModels.length === 0 && <div className={styles.subtitle}>Nenhum modelo disponível ainda.</div>}
+    </div>
+  );
+}
+
+/**
+ * O modelo PADRÃO de cada área — o que o lead e os subagentes compartilham
+ * até que um deles divirja (ADR 0064, RN-102).
+ *
+ * `maintainer`, e não `developer` como na linha de agente: o modelo da área
+ * alcança o lead e todos os subagentes de uma vez, e escolher modelo é
+ * decidir quanto o produto gasta sem perguntar — o mesmo motivo do teto de
+ * paralelismo (`ParallelismSection`, RN-083).
+ */
+export function AreaModelsSection({ projectId }: { projectId: string }) {
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+  const { data: comPapel } = useCurrentWorkspaceWithRole();
+  const podeEditar = comPapel?.role === 'owner' || comPapel?.role === 'maintainer';
+
+  const { data: modelsByCategory } = useQuery({
+    queryKey: ['models', projectId],
+    queryFn: () => listModels(projectId),
+  });
+
+  const areaKeys = Object.keys(AREAS);
+  const bindingQueries = useQueries({
+    queries: areaKeys.map((key) => ({
+      queryKey: ['area-binding', projectId, key],
+      queryFn: () => getAreaModelBinding(projectId, key),
+    })),
+  });
+
+  function invalidate(areaKey: string) {
+    queryClient.invalidateQueries({ queryKey: ['area-binding', projectId, areaKey] });
+    // Todo agente da área pode ter herdado o valor — a coluna Origem da
+    // tabela de cima também precisa reler.
+    queryClient.invalidateQueries({ queryKey: ['agent-binding', projectId] });
+  }
+
+  async function handleSet(areaKey: string, model: Model) {
+    try {
+      await setAreaModelBinding(projectId, areaKey, model.id);
+      invalidate(areaKey);
+    } catch (erro) {
+      showToast({ title: mensagemDaApi(erro, 'Não foi possível salvar'), tone: 'danger' });
+    }
+  }
+
+  async function handleClear(areaKey: string) {
+    try {
+      await clearAreaModelBinding(projectId, areaKey);
+      invalidate(areaKey);
+      showToast({ title: `Área ${areaKey} voltou a herdar`, tone: 'success' });
+    } catch (erro) {
+      showToast({ title: mensagemDaApi(erro, 'Não foi possível salvar'), tone: 'danger' });
+    }
+  }
+
+  return (
+    <div className={styles.section}>
+      <div className={styles.sectionHead}>
+        <h2 className={styles.title}>Modelo por área</h2>
+        <span className={styles.eyebrow}>padrão herdável · lead + subagentes</span>
+      </div>
+      <p className={styles.subtitle}>
+        O modelo que vale para o lead e para todo subagente da área que não
+        tenha divergido — divergir é escolher outro modelo NA LINHA do agente,
+        acima. "Voltar a herdar" apaga o padrão da área; não muda o que cada
+        agente já divergiu.
+        {!podeEditar && ' Exige papel maintainer para alterar.'}
+      </p>
+
+      {areaKeys.map((key, index) => {
+        const area = AREAS[key];
+        const resolved = bindingQueries[index]?.data;
+        const divergiuDoProjeto = resolved?.origin === 'area';
+
+        return (
+          <div key={key} className={styles.ajusteCard}>
+            <div className={styles.ajusteInfo}>
+              <div className={styles.ajusteTitulo}>
+                <span>Área {area.label}</span>
+                <Badge tone={resolved ? ORIGIN_TONE[resolved.origin] : 'muted'}>
+                  {resolved?.origin ?? '—'}
+                </Badge>
+              </div>
+              <div className={styles.ajusteHint}>
+                Lead: {area.lead}
+                {area.members.length > 0
+                  ? ` — subagentes: ${area.members.join(', ')}`
+                  : ' — subagentes dinâmicos (por módulo)'}
+              </div>
+            </div>
+
+            {modelsByCategory && (
+              <div className={styles.ajusteControle}>
+                <ModelPicker
+                  models={modelsByCategory}
+                  selectedModelId={resolved?.modelId}
+                  onSelect={(model) => handleSet(key, model)}
+                  variant="inline"
+                  disabled={!podeEditar}
+                />
+              </div>
+            )}
+
+            {divergiuDoProjeto && (
+              <Button
+                variant="ghost"
+                disabled={!podeEditar}
+                onClick={() => handleClear(key)}
+              >
+                Voltar a herdar
+              </Button>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -557,9 +803,15 @@ function RepositorySection({ projectId }: { projectId: string }) {
           : 'Criado pelo Brabo, com o bootstrap de Gitflow aplicado.'}
       </div>
 
-      <div className={styles.repoMeta}>
-        <code>{repository.externalId}</code>
-        <span>
+      {/* Faixa do repositório como no handoff (seção 7, item 1): ícone, caminho
+          em mono e a origem/branch ao lado, dentro de um card — não três nós
+          soltos sobre o fundo da aba. O selo "sincronizado" do desenho NÃO
+          entra: não existe fato de sincronismo no `repository`, e um selo teal
+          fixo afirmaria algo que ninguém mediu. */}
+      <div className={styles.repoCard}>
+        <BranchIcon size={16} className={styles.repoIcone} />
+        <code className={styles.repoPath}>{repository.externalId}</code>
+        <span className={styles.repoMeta}>
           {repository.provider} · {repository.defaultBranch}
         </span>
       </div>
@@ -639,19 +891,20 @@ export function ExecutionSection({ projectId }: { projectId: string }) {
         execução, não afeta agentes já rodando.
       </div>
 
-      <div className={styles.credentialCard}>
-        <div className={styles.credentialInfo}>
-          <div className={styles.credentialProvider}>
+      <div className={styles.ajusteCard}>
+        <div className={styles.ajusteInfo}>
+          <div className={styles.ajusteTitulo}>
             Tasks blocked seguidas até parar
           </div>
-          <div className={styles.credentialStatus}>
+          <div className={styles.ajusteHint}>
             {project.maxConsecutiveBlocked === null
               ? `Sem valor próprio — usa o default (${DEFAULT_MAX_CONSECUTIVE_BLOCKED})`
               : 'Configurado para este projeto'}
           </div>
         </div>
-        <div className={styles.credentialInput}>
+        <div className={styles.ajusteNumero}>
           <Input
+            mono
             type="number"
             min={1}
             value={valorExibido}
@@ -734,18 +987,19 @@ export function ParallelismSection({ projectId }: { projectId: string }) {
           const valido = Number.isInteger(numero) && numero >= 1;
 
           return (
-            <div key={area.key} className={styles.credentialCard}>
-              <div className={styles.credentialInfo}>
-                <div className={styles.credentialProvider}>Área {area.key}</div>
-                <div className={styles.credentialStatus}>
+            <div key={area.key} className={styles.ajusteCard}>
+              <div className={styles.ajusteInfo}>
+                <div className={styles.ajusteTitulo}>Área {area.key}</div>
+                <div className={styles.ajusteHint}>
                   Lead: {area.leadAgentId}
                   {area.members.length > 0
                     ? ` — ${area.members.length} membro(s)`
                     : ' — sem membros ainda'}
                 </div>
               </div>
-              <div className={styles.credentialInput}>
+              <div className={styles.ajusteNumero}>
                 <Input
+                  mono
                   type="number"
                   min={1}
                   aria-label={`Teto de agentes da área ${area.key}`}
@@ -819,16 +1073,16 @@ export function PromotionSection({ projectId }: { projectId: string }) {
         histórias; as que já estão propostas continuam esperando você.
       </div>
 
-      <div className={styles.credentialCard}>
-        <div className={styles.credentialInfo}>
-          <div className={styles.credentialProvider}>Quem promove</div>
-          <div className={styles.credentialStatus}>
+      <div className={styles.ajusteCard}>
+        <div className={styles.ajusteInfo}>
+          <div className={styles.ajusteTitulo}>Quem promove</div>
+          <div className={styles.ajusteHint}>
             {project.storyPromotion === 'manual'
               ? 'O PO deixa a história completa e ela aguarda você no Backlog. Nenhuma tarefa dela é pegável até lá.'
               : 'O PO promove sozinho ao terminar uma história completa — era o comportamento anterior à Fase 12c, mantido como opção.'}
           </div>
         </div>
-        <div className={styles.credentialInput}>
+        <div className={styles.ajusteControle}>
           <Select
             value={project.storyPromotion}
             disabled={saving}
@@ -857,33 +1111,35 @@ function MatrixSection() {
         Tabela informativa — reflete os papéis mínimos por tipo de ação hoje aplicados no backend; algumas linhas ainda não têm checagem
         granular própria e usam a aproximação mais próxima.
       </p>
-      <table className={styles.matrixTable}>
-        <thead>
-          <tr>
-            <th>Ação</th>
-            <th>owner</th>
-            <th>maintainer</th>
-            <th>developer</th>
-            <th>viewer</th>
-          </tr>
-        </thead>
-        <tbody>
-          {MATRIX_ROWS.map((row) => (
-            <tr key={row.label}>
-              <td>{row.label}</td>
-              {(['owner', 'maintainer', 'developer', 'viewer'] as Role[]).map((role) => (
-                <td key={role}>
-                  {ROLE_ORDER.indexOf(role) >= ROLE_ORDER.indexOf(row.minRole) ? (
-                    <span className={styles.check}>✓</span>
-                  ) : (
-                    <span className={styles.dash}>—</span>
-                  )}
-                </td>
-              ))}
+      <div className={styles.matrixWrap}>
+        <table className={styles.matrixTable}>
+          <thead>
+            <tr>
+              <th>Ação</th>
+              <th>owner</th>
+              <th>maintainer</th>
+              <th>developer</th>
+              <th>viewer</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {MATRIX_ROWS.map((row) => (
+              <tr key={row.label}>
+                <td>{row.label}</td>
+                {(['owner', 'maintainer', 'developer', 'viewer'] as Role[]).map((role) => (
+                  <td key={role}>
+                    {ROLE_ORDER.indexOf(role) >= ROLE_ORDER.indexOf(row.minRole) ? (
+                      <span className={styles.check}>✓</span>
+                    ) : (
+                      <span className={styles.dash}>—</span>
+                    )}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       {/* A legenda do desenho: sem ela, ✓ e — são dois símbolos sem contrato. */}
       <div className={styles.matrixLegenda}>
         <span className={styles.matrixLegendaItem}>
@@ -993,26 +1249,54 @@ export function CredentialsSection() {
         cifrada e devolve só o veredito.
       </div>
 
-      {CREDENCIAIS_DE_LLM.map(({ id, label, kind }) => {
-        const existing = credentials?.find((c) => c.provider === id);
-        const rascunho = drafts[id]?.trim() ?? '';
-        const ocupado = emVoo === id;
-        return (
-          <div key={id} className={styles.credentialCard}>
-            <div className={styles.credentialInfo}>
-              <div className={styles.credentialProvider}>
-                {label}
-                {/* Um hub roteia para provedores de terceiros: o custo e a
-                    disponibilidade dependem de quem serve por baixo. */}
-                {kind === 'hub' && <Badge tone="muted">hub</Badge>}
+      {/* Grid de conectores do handoff (seção 7, item 4): um card por
+          provider, borda esquerda na cor dele, sigla de duas letras, tipo em
+          mono e ponto de status pulsante. Era uma pilha de nove faixas de
+          largura total, e o desenho pede
+          `repeat(auto-fill, minmax(300px, 1fr))`. */}
+      <div className={styles.conectorGrid}>
+        {CREDENCIAIS_DE_LLM.map(({ id, label, kind }) => {
+          const existing = credentials?.find((c) => c.provider === id);
+          const rascunho = drafts[id]?.trim() ?? '';
+          const ocupado = emVoo === id;
+          const cor = COR_DO_CONECTOR[id];
+          return (
+            <div
+              key={id}
+              className={styles.conectorCard}
+              style={{ ['--conector-cor' as string]: cor } as CSSProperties}
+            >
+              <div className={styles.conectorTopo}>
+                <span className={styles.conectorSigla}>{siglaDoConector(label)}</span>
+                <div className={styles.conectorIdent}>
+                  <div className={styles.conectorNome}>{label}</div>
+                  <div className={styles.conectorTipo}>
+                    {/* Um hub roteia para provedores de terceiros: o custo e a
+                        disponibilidade dependem de quem serve por baixo. */}
+                    {kind === 'hub' ? 'hub de providers' : 'credencial de provider'}
+                  </div>
+                </div>
+                <span
+                  className={[styles.conectorStatus, existing && styles.conectorAtivo]
+                    .filter(Boolean)
+                    .join(' ')}
+                >
+                  <span className={styles.conectorPonto} />
+                  {existing ? 'configurada' : 'sem chave'}
+                </span>
               </div>
-              <div className={styles.credentialStatus}>
-                {existing ? `Configurado em ${new Date(existing.updatedAt).toLocaleDateString('pt-BR')}` : 'Nenhuma credencial salva'}
+
+              {/* O desenho mostra a chave mascarada. Aqui ela NÃO existe: a
+                  credencial é write-only e nunca volta do servidor (ADR 0050).
+                  Mostrar `sk-••••` seria inventar um prefixo que ninguém leu. */}
+              <div className={styles.conectorNota}>
+                {existing
+                  ? `Configurada em ${new Date(existing.updatedAt).toLocaleDateString('pt-BR')} · nunca reexibida`
+                  : 'Nenhuma credencial salva'}
               </div>
-            </div>
-            {/* O input fica SEMPRE visível: com credencial salva ele é o
-                caminho da troca, que antes só existia removendo primeiro. */}
-            <div className={styles.credentialInput}>
+
+              {/* O input fica SEMPRE visível: com credencial salva ele é o
+                  caminho da troca, que antes só existia removendo primeiro. */}
               <Input
                 mono
                 type="password"
@@ -1021,39 +1305,42 @@ export function CredentialsSection() {
                 value={drafts[id] ?? ''}
                 onChange={(e) => setDrafts((d) => ({ ...d, [id]: e.target.value }))}
               />
+
+              <div className={styles.conectorAcoes}>
+                {/* Nome acessível com o provider: são oito cards com botões de
+                    texto idêntico, e "Salvar" sozinho não diz salvar o quê. */}
+                <Button
+                  aria-label={`${existing ? 'Trocar' : 'Salvar'} chave de ${label}`}
+                  disabled={ocupado || rascunho.length === 0}
+                  onClick={() => handleSave(id)}
+                >
+                  {existing ? 'Trocar' : 'Salvar'}
+                </Button>
+                {existing && (
+                  <>
+                    <Button
+                      variant="secondary"
+                      aria-label={`Testar chave de ${label}`}
+                      disabled={ocupado}
+                      onClick={() => handleTest(id)}
+                    >
+                      Testar
+                    </Button>
+                    <Button
+                      variant="danger"
+                      aria-label={`Remover chave de ${label}`}
+                      disabled={ocupado}
+                      onClick={() => handleRemove(id)}
+                    >
+                      Remover
+                    </Button>
+                  </>
+                )}
+              </div>
             </div>
-            {/* Nome acessível com o provider: são nove cards com botões de
-                texto idêntico, e "Salvar" sozinho não diz salvar o quê. */}
-            <Button
-              aria-label={`${existing ? 'Trocar' : 'Salvar'} chave de ${label}`}
-              disabled={ocupado || rascunho.length === 0}
-              onClick={() => handleSave(id)}
-            >
-              {existing ? 'Trocar' : 'Salvar'}
-            </Button>
-            {existing && (
-              <>
-                <Button
-                  variant="secondary"
-                  aria-label={`Testar chave de ${label}`}
-                  disabled={ocupado}
-                  onClick={() => handleTest(id)}
-                >
-                  Testar
-                </Button>
-                <Button
-                  variant="danger"
-                  aria-label={`Remover chave de ${label}`}
-                  disabled={ocupado}
-                  onClick={() => handleRemove(id)}
-                >
-                  Remover
-                </Button>
-              </>
-            )}
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -1064,13 +1351,22 @@ export function CredentialsSection() {
  * O usuário pode apagar o PRÓPRIO perfil — o que também registra o
  * opt-out (senão a rodada seguinte re-derivaria tudo).
  */
-function ProficiencySection({ projectId }: { projectId: string }) {
+// Exportada para o teste, como ExecutionSection e PromotionSection.
+export function ProficiencySection({ projectId }: { projectId: string }) {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const navigate = useNavigate();
   const { data: profiles } = useProficiency(projectId);
   const [confirmandoDelete, setConfirmandoDelete] = useState(false);
   const [emVoo, setEmVoo] = useState(false);
+  // A Anamnese pode estar pausada GLOBALMENTE (decisão do usuário em
+  // 2026-08-10, não bug — ver docs/explanation/backlog.md). Não há hoje um
+  // jeito de saber isso ANTES de clicar (o estado é do engine, não vem em
+  // nenhuma leitura desta tela); "Rodar agora" descobre no primeiro clique e
+  // o botão fica desabilitado dali em diante, com a explicação PERSISTENTE
+  // na tela — não só um toast que some (RN-088: nunca falha silenciosa ou
+  // confusa).
+  const [anamneseDesativada, setAnamneseDesativada] = useState(false);
 
   const all = profiles ?? [];
   const byUser = new Map<string, typeof all>();
@@ -1119,12 +1415,24 @@ function ProficiencySection({ projectId }: { projectId: string }) {
         message: 'A Anamnese vai analisar a janela agora.',
         tone: 'success',
       });
-    } catch {
-      showToast({
-        title: 'Erro',
-        message: 'Não foi possível enfileirar a rodada',
-        tone: 'danger',
-      });
+    } catch (erro) {
+      if (erro instanceof ApiError && erro.status === 503) {
+        // Distinto de "projeto sem sessão" (409) — a api já manda a frase
+        // pronta em `body.message` (ServiceUnavailableException do
+        // RunAnamneseUseCase).
+        setAnamneseDesativada(true);
+        showToast({
+          title: 'Anamnese pausada',
+          message: mensagemDaApi(erro, 'A Anamnese está desativada globalmente.'),
+          tone: 'warning',
+        });
+      } else {
+        showToast({
+          title: 'Erro',
+          message: 'Não foi possível enfileirar a rodada',
+          tone: 'danger',
+        });
+      }
     } finally {
       setEmVoo(false);
     }
@@ -1198,7 +1506,7 @@ function ProficiencySection({ projectId }: { projectId: string }) {
         ))
       )}
 
-      <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+      <div style={{ display: 'flex', gap: 8, marginTop: 14, alignItems: 'center' }}>
         <Button
           variant="danger"
           disabled={emVoo}
@@ -1209,10 +1517,25 @@ function ProficiencySection({ projectId }: { projectId: string }) {
         <Button variant="ghost" disabled={emVoo} onClick={handleOptIn}>
           Voltar a ser perfilado
         </Button>
-        <Button variant="secondary" disabled={emVoo} onClick={handleRunNow}>
+        <Button
+          variant="secondary"
+          disabled={emVoo || anamneseDesativada}
+          onClick={handleRunNow}
+          title={anamneseDesativada ? 'A Anamnese está pausada globalmente' : undefined}
+        >
           Rodar agora
         </Button>
       </div>
+
+      {/* Pausa GLOBAL (não é o opt-out por membro acima) — decisão do
+          usuário em 2026-08-10, aguardando refinamento futuro. Fica visível
+          de propósito, não só um toast que some (RN-088). */}
+      {anamneseDesativada && (
+        <div className={styles.subtitle} style={{ marginTop: 8 }}>
+          A Anamnese está pausada globalmente por decisão do time — sem
+          rodada nova por enquanto. O que já foi derivado continua aqui.
+        </div>
+      )}
 
       {/* Apagar é irreversível (e grava opt-out) — um clique cru era demais
           para uma ação que não tem como desfazer o que foi apagado. */}

@@ -1,5 +1,7 @@
-import { useQuery } from '@tanstack/react-query';
+import { useCallback, useEffect, useState } from 'react';
+import { useQueries, useQuery } from '@tanstack/react-query';
 import { getArchitecture, getCoverage, getProjectsStatus, getProjectsSummary, getSessionEvent, getWorkspaceSummary, listActions, listBacklog, listHandoffs, listHypotheses, listInfraArtifacts, listProficiency, listProjects, listPsychologistAnalyses, listSessionEvents, listSessions, listWorkspaces, getSessionTokenUsage } from './api-client';
+import type { SessionEvent } from './api-types';
 // Todo poll deste arquivo passa por aqui: um `refetchInterval` numérico não
 // sabe parar, e a api limita 300 req/min por usuário (ver `query-policy.ts`).
 import { pollQueParaNoErro } from './query-policy';
@@ -105,19 +107,184 @@ export function useLatestSession(projectId: string | undefined) {
   return { ...sessionsQuery, latest };
 }
 
-export function useSessionEvents(projectId: string | undefined, sessionId: string | undefined, intervalMs = 3000) {
+/**
+ * ESTADO ATUAL da sessão: os últimos 200 eventos, em poll.
+ *
+ * `latest`: os ÚLTIMOS 200, não os primeiros. Os consumidores deste hook
+ * (painel do time, linha do tempo em árvore, seção de execução, tab de
+ * Aprovações) derivam estado ATUAL — com os primeiros 200 tudo congelava no
+ * começo da sessão assim que ela passava desse tamanho, o que uma execução
+ * real faz fácil (ver ADR 0021).
+ *
+ * O que ele NÃO responde mais é "o que aconteceu antes disso": esse é o
+ * `useSessionEventHistory` abaixo (RN-099). Eram a mesma query, e por isso o
+ * feed de Atividades despejava 200 itens sem fim e ainda assim não alcançava
+ * o começo de uma sessão longa.
+ *
+ * `pausarPoll` (achados 2/7 — duplicata de mensagem): o poll incondicional
+ * buscava eventos já persistidos (`chat.message`/`agent.response`) ENQUANTO
+ * um turno ainda estava em streaming na tela, e o resultado renderizava ao
+ * lado do estado otimista/streaming — duplicata visual. `SessionPage` passa
+ * `true` durante o turno; o fim dele já invalida esta query explicitamente
+ * (`finalizarTurnoDoAgente`), então pausar o TIMER não perde dado — só evita
+ * buscar de novo o que a invalidação vai buscar de qualquer forma. Default
+ * `false`: os outros consumidores deste hook (Overview, Code, Provisioning,
+ * AdoptionPlan) não têm turno conversacional em andamento e continuam como
+ * estavam.
+ */
+export function useSessionEvents(
+  projectId: string | undefined,
+  sessionId: string | undefined,
+  intervalMs = 3000,
+  pausarPoll = false,
+) {
   return useQuery({
     queryKey: ['session-events', projectId, sessionId],
-    // `latest`: os ÚLTIMOS 200, não os primeiros. Todo consumidor deste hook
-    // (painel do time, seção de execução, feed, tab de Aprovações) deriva
-    // estado ATUAL — com os primeiros 200 tudo congelava no começo da sessão
-    // assim que ela passava desse tamanho, o que uma execução real faz fácil
-    // (ver ADR 0021).
     queryFn: () =>
       listSessionEvents(projectId!, sessionId!, { limit: 200, latest: true }),
     enabled: !!projectId && !!sessionId,
-    refetchInterval: pollQueParaNoErro(intervalMs),
+    refetchInterval: pausarPoll ? false : pollQueParaNoErro(intervalMs),
   });
+}
+
+/** Quantos eventos crus entram em cada página do histórico de Atividades. */
+export const EVENTOS_POR_PAGINA = 100;
+
+export interface HistoricoDeEventos {
+  /** A janela visível, em ordem crescente de `seq` (o mais novo por último). */
+  events: SessionEvent[];
+  /** Quantos eventos CRUS a janela tem — o `M` do "N de M carregados". */
+  carregados: number;
+  /** Há sessão anterior à janela, seja já baixada ou ainda por baixar. */
+  temMaisAntigos: boolean;
+  carregarMaisAntigos: () => void;
+  carregandoMaisAntigos: boolean;
+  /** RN-088: os três estados, e o erro ANTES do vazio. */
+  isPending: boolean;
+  isError: boolean;
+  error: unknown;
+  refetch: () => void;
+}
+
+/**
+ * HISTÓRICO paginado da sessão, ancorado na cauda (RN-099).
+ *
+ * Duas perguntas diferentes precisavam de duas queries: `useSessionEvents`
+ * responde "como está agora", este responde "o que aconteceu". O feed de
+ * Atividades era o único consumidor que fazia a segunda pergunta com a
+ * resposta da primeira — 200 itens de uma vez, sem começo nem fim.
+ *
+ * **Por que a âncora é a CAUDA, e não o começo da sessão.** O endpoint pagina
+ * para FRENTE (`afterSeq` devolve o que veio depois, com `nextCursor`), e não
+ * existe `beforeSeq` — nem se inventa um aqui, que seria contrato novo. Mas
+ * abrir o feed no evento nº 1 de uma sessão de milhares é entregar a tela
+ * errada: quem abre Atividades quer o que acabou de acontecer. Então a
+ * primeira página é a mesma leitura `latest` que a tela já faz — MESMA
+ * `queryKey`, deduplicada pelo React Query, ZERO requisição a mais — e cada
+ * clique em "carregar mais antigos" desce uma janela fixa com `afterSeq`.
+ *
+ * **Por que a janela fecha sem buraco.** O cursor de cada página é
+ * `piso - 1 - PAGINA`, e a resposta traz os primeiros `PAGINA` eventos depois
+ * dele. Sem lacuna em `seq`, isso é exatamente `[piso - PAGINA, piso - 1]`.
+ * Com lacuna (uma transação que reservou `seq` e abortou), a página cobre um
+ * intervalo MAIOR e no máximo repete o que já estava carregado — nunca pula,
+ * porque o banco devolve os primeiros N depois do corte, não uma fatia por
+ * aritmética. Repetição some no `Map` por `id`; e o piso passa a ser
+ * `cursor + 1` por construção, o que faz o laço terminar em `0` mesmo quando
+ * a página volta vazia.
+ *
+ * **Custo.** Uma requisição por ciclo de poll, a da cauda — a mesma de antes.
+ * Página antiga é uma janela FECHADA de `seq` sobre eventos IMUTÁVEIS
+ * (convenção do projeto: nunca UPDATE em tabela de evento), então ela não tem
+ * intervalo para guardar: `staleTime: Infinity` e nenhum poll. É esse par que
+ * impede a paginação de virar o N+1 que a RN-090 matou.
+ */
+export function useSessionEventHistory(
+  projectId: string | undefined,
+  sessionId: string | undefined,
+  intervalMs = 3000,
+): HistoricoDeEventos {
+  // A cauda ao vivo. Mesma `queryKey` de `useSessionEvents`: quando os dois
+  // estão montados na mesma tela, o React Query serve os dois com UMA busca.
+  const cauda = useSessionEvents(projectId, sessionId, intervalMs);
+
+  // Cursores das páginas antigas já pedidas, do mais novo para o mais velho.
+  const [cursores, setCursores] = useState<number[]>([]);
+  // Quantos eventos crus a janela mostra. Cresce de página em página.
+  const [janela, setJanela] = useState(EVENTOS_POR_PAGINA);
+
+  // Sessão trocou: a janela é da sessão, não da tela.
+  useEffect(() => {
+    setCursores([]);
+    setJanela(EVENTOS_POR_PAGINA);
+  }, [sessionId]);
+
+  const antigas = useQueries({
+    queries: cursores.map((afterSeq) => ({
+      queryKey: ['session-events-page', projectId, sessionId, afterSeq],
+      queryFn: () =>
+        listSessionEvents(projectId!, sessionId!, {
+          afterSeq,
+          limit: EVENTOS_POR_PAGINA,
+        }),
+      enabled: !!projectId && !!sessionId,
+      // Sem `refetchInterval` NENHUM — nem através de `pollQueParaNoErro`:
+      // uma janela fechada de eventos imutáveis não muda, e repolá-la seria
+      // pagar por N requisições para receber N respostas idênticas.
+      staleTime: Infinity,
+    })),
+  });
+
+  // Deduplicação por `id` + ordenação por `seq`: as páginas podem se sobrepor
+  // (ver a nota sobre lacunas acima) e chegam fora de ordem entre si.
+  const porId = new Map(
+    antigas
+      .flatMap((q) => q.data?.items ?? [])
+      .concat(cauda.data?.items ?? [])
+      .map((e) => [e.id, e] as const),
+  );
+  const todos = [...porId.values()].sort((a, b) => a.seq - b.seq);
+
+  const events = todos.slice(Math.max(0, todos.length - janela));
+  const menorSeqBaixado = todos[0]?.seq ?? 0;
+  const menorCursor = cursores.length > 0 ? cursores[cursores.length - 1] : null;
+
+  // Ainda há passado quando a janela não mostra tudo que já veio, OU quando o
+  // que já veio não alcança o começo da sessão. `menorCursor === 0` é a prova
+  // de que alcançou: aquela página pediu tudo a partir do primeiro `seq`.
+  const temMaisAntigos =
+    janela < todos.length || (menorCursor !== 0 && menorSeqBaixado > 1);
+
+  const carregarMaisAntigos = useCallback(() => {
+    setJanela((atual) => atual + EVENTOS_POR_PAGINA);
+
+    // Uma REQUISIÇÃO só quando a janela já esgotou o que está em memória: a
+    // leitura `latest` traz 200 e a janela mostra 100, então o primeiro clique
+    // não custa nada — revelar o que já se pagou vem antes de pedir de novo.
+    if (janela < todos.length) return;
+
+    setCursores((atuais) => {
+      // Depois de uma página com cursor `c`, tudo a partir de `c + 1` está
+      // coberto — é daí que sai o piso da próxima, e é o que faz o laço
+      // terminar em 0 mesmo se uma página voltar vazia.
+      const base =
+        atuais.length > 0 ? atuais[atuais.length - 1] + 1 : menorSeqBaixado;
+      if (base <= 1) return atuais;
+      return [...atuais, Math.max(0, base - 1 - EVENTOS_POR_PAGINA)];
+    });
+  }, [janela, todos.length, menorSeqBaixado]);
+
+  return {
+    events,
+    carregados: events.length,
+    temMaisAntigos,
+    carregarMaisAntigos,
+    carregandoMaisAntigos: antigas.some((q) => q.isFetching),
+    isPending: cauda.isPending,
+    isError: cauda.isError,
+    error: cauda.error,
+    refetch: () => void cauda.refetch(),
+  };
 }
 
 // Custo por agente na sessão — alimenta os tokens de cada AgentCard no painel

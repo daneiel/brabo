@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
 import { emailDaSessao, sair } from '../lib/auth';
 import { mensagemDaApi } from '../lib/api-client';
@@ -20,7 +20,8 @@ import { ROLE_LABEL } from '../lib/roles';
 import { desempateDoProjeto, nomesRepetidos } from '../lib/project-label';
 import type { ProjectCardSummary } from '../lib/api-types';
 import { Badge } from '../components/ui/Badge';
-import { BrandIcon, ChatIcon, SettingsIcon } from '../components/ui/icons';
+import { ChatIcon, LogoMark, PlusIcon, SettingsIcon } from '../components/ui/icons';
+import { NewProjectWizard } from './NewProjectWizard';
 import styles from './Shell.module.css';
 
 // Iniciais do e-mail (não há campo de nome no JWT nem endpoint de perfil —
@@ -76,6 +77,13 @@ export function Shell() {
   const navigate = useNavigate();
   const { data: workspace } = useCurrentWorkspace();
   const { data: workspaceWithRole } = useCurrentWorkspaceWithRole();
+  // Só a sidebar: dentro de um projeto não havia NENHUM jeito de criar outro
+  // sem voltar ao dashboard primeiro. O Dashboard mantém o próprio botão —
+  // dois "Novo projeto" na mesma tela (topbar + sidebar) é aceitável porque
+  // moram em regiões visuais distintas, e esconder o daqui só quando
+  // `pathname === '/'` trocaria uma redundância pequena por um botão que
+  // muda de lugar conforme a rota.
+  const [wizardOpen, setWizardOpen] = useState(false);
   const projectsQuery = useProjects(workspace?.id);
   const projects = projectsQuery.data;
   // MESMA queryKey do Dashboard: montados juntos, o React Query deduplica e o
@@ -94,14 +102,30 @@ export function Shell() {
   return (
     <div className={styles.layout}>
       <aside className={styles.sidebar}>
-        <div className={styles.brand}>
-          <span className={styles.brandIcon}>
-            <BrandIcon size={20} />
+        {/* O monograma B no ladrilho terracota — a MESMA marca das telas de
+            auth, e a única que o handoff reconhece. Até a FASE 17a aqui morava
+            o `BrandIcon`, um cubo isométrico sem parentesco nenhum com ela: o
+            app tinha duas marcas, e quem entrava pelo login via a segunda
+            trocar pela primeira. */}
+        <Link to="/" className={styles.brand} aria-label="Ir para o dashboard">
+          <span className={styles.brandTile} aria-hidden="true">
+            <LogoMark size={18} />
           </span>
           <span className={styles.brandName}>Brabo</span>
-        </div>
+        </Link>
 
-        <div className={styles.navLabel}>Projetos</div>
+        <div className={styles.navLabelRow}>
+          <span className={styles.navLabel}>Projetos</span>
+          <button
+            type="button"
+            className={styles.newProjectButton}
+            onClick={() => setWizardOpen(true)}
+            title="Novo projeto"
+            aria-label="Novo projeto"
+          >
+            <PlusIcon size={12} />
+          </button>
+        </div>
         <nav className={styles.nav}>
           {/* A lista falhou: a sidebar DIZ, em vez de ficar vazia como se o
               workspace não tivesse projeto nenhum (RN-088). Aqui não cabe o
@@ -187,6 +211,10 @@ export function Shell() {
       <main className={styles.main}>
         <Outlet />
       </main>
+
+      {wizardOpen && workspace && (
+        <NewProjectWizard workspaceId={workspace.id} onClose={() => setWizardOpen(false)} />
+      )}
     </div>
   );
 }

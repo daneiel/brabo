@@ -28,6 +28,19 @@ defmodule Engine.Workers.PsychologistWorker do
   `available` é o `Oban.Plugins.Lifeline` (ver `config/config.exs`) — sem
   ele o job ficaria órfão para sempre e a retentativa aqui nunca
   aconteceria.
+
+  **Flag global (`PSYCHOLOGIST_ENABLED`, decisão do usuário em 2026-08-10,
+  mesmo padrão da Anamnese — ver `Engine.Workers.AnamneseSchedulerWorker` e
+  docs/explanation/backlog.md)**: `enabled?/0` decide se uma rodada NOVA
+  pode nascer, mas o `perform/1` deste módulo continua incondicional, como
+  o da Anamnese — quem gate-keeps é quem CRIA o job, não quem o executa.
+  Caminho automático: `Engine.Outbox.Drain` só roteia
+  `session.closed`/`session.closed_abnormally` pra este worker quando
+  `enabled?/0` é true (senão só `SessionLifecycleWorker` roda — ver
+  `Drain.handlers_for/1`). Caminho manual: o
+  `PsychologistCommandController` recusa com 503 antes de inserir o job.
+  Sem isso o job já nasceria e o `max_attempts: 5` retentaria um trabalho
+  que a pausa pediu para não acontecer.
   """
 
   use Oban.Worker, queue: :default, max_attempts: 5
@@ -39,6 +52,20 @@ defmodule Engine.Workers.PsychologistWorker do
   alias Engine.Psychologist.Hooks.Termination
   alias Engine.Sessions.EngineApiClient
   alias Engine.Telemetry.Span
+
+  @doc """
+  Flag de PRODUTO (não confundir com tetos de custo, como
+  `psychologist_triage_threshold`): decide se uma rodada NOVA do Psicólogo
+  pode acontecer, automática ou sob demanda. Desativado não apaga nada —
+  análises e hipóteses já gravadas continuam intactas e visíveis.
+
+  Default DESLIGADO a partir de agora: mesma decisão do usuário em
+  2026-08-10 já aplicada à Anamnese ("hoje ele não está trazendo dados de
+  muito valor"), documentada em docs/explanation/backlog.md — não é bug, é
+  pausa reversível. Ligar de volta é `PSYCHOLOGIST_ENABLED=true` e
+  reiniciar o engine.
+  """
+  def enabled?, do: Application.get_env(:engine, :psychologist_enabled?, false)
 
   @impl true
   def perform(%Oban.Job{

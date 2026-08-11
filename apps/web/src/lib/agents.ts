@@ -1,4 +1,5 @@
 import type { ComponentType } from 'react';
+import { AREAS } from './agent-areas.generated';
 import {
   BulbIcon,
   ClockIcon,
@@ -194,30 +195,20 @@ export interface AreaDef {
   members: AgentKey[];
 }
 
-export const AREAS: Record<string, AreaDef> = {
-  // FASE 14d / ADR 0053 — a primeira área DINÂMICA: os membros são um por
-  // módulo do `module_map`, decididos pelo Arquiteto, e por isso `members`
-  // fica VAZIO aqui. A fonte deles é `agent_areas`/`agent_area_members`, por
-  // projeto. Quem endereça a execução de fora é o lead.
-  dev: {
-    key: 'dev',
-    label: 'Dev',
-    lead: 'dev-lead',
-    members: [],
-  },
-  qa: {
-    key: 'qa',
-    label: 'QA',
-    lead: 'qa',
-    members: ['qa-automacao', 'qa-performance-seguranca'],
-  },
-  infra: {
-    key: 'infra',
-    label: 'Infra',
-    lead: 'infra',
-    members: ['infra-workflows'],
-  },
-};
+/**
+ * As áreas, DERIVADAS da api (FASE 18).
+ *
+ * A lista era escrita aqui à mão e travada por teste contra a cópia da api —
+ * duas listas que combinavam de não divergir. Agora a fonte é
+ * `apps/api/src/domain/agents/agent-areas.ts` e este módulo só reexporta o que
+ * `pnpm --filter api gerar:areas` escreveu: editar à mão é reprovado.
+ *
+ * A área de `dev` continua com `members` vazio, e não é omissão — os membros
+ * dela são um por módulo do `module_map`, por projeto, e vêm de
+ * `agent_areas`/`agent_area_members` (RN-094). Quem endereça a execução de
+ * fora é o lead.
+ */
+export { AREAS };
 
 /**
  * Área de um agente, se houver — pelo `AgentKey` do LEAD ou de um MEMBRO

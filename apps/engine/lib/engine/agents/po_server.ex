@@ -15,9 +15,9 @@ defmodule Engine.Agents.PoServer do
   use GenServer, restart: :temporary
 
   alias Engine.Harness.{ContextBuilder, PromptAssembler, ContextManager, ToolCallRecovery}
-  alias Engine.Agents.FalhaDeTurno
+  alias Engine.Agents.{FalhaDeTurno, TurnoAssincrono}
   alias Engine.Harness.Tools.{CreateEpic, CreateStory, CreateTask, OfferHandoff}
-  alias Engine.Sessions.{EngineApiClient, LiveBroadcast}
+  alias Engine.Sessions.EngineApiClient
 
   @agent "po"
   @max_iterations 12
@@ -80,53 +80,46 @@ defmodule Engine.Agents.PoServer do
          CreateStory.spec(),
          CreateTask.spec(),
          OfferHandoff.spec()
-       ]
+       ],
+       # Guardado enquanto o turno roda numa Task supervisionada, fora do
+       # handler que bloqueava o processo inteiro — é o que permite um
+       # `:cancel` chegar e ser atendido (RN-122). Ver `TurnoAssincrono`.
+       turno_assincrono: nil
      }}
   end
 
+  # O turno passou a rodar numa Task (`TurnoAssincrono`), fora deste
+  # handler: antes o processo inteiro ficava bloqueado até o turno terminar,
+  # e um `:cancel` nunca era atendido nesse meio tempo (RN-122).
   @impl true
   def handle_cast(:kickoff, state) do
-    broadcast(state, "agent.status", %{status: "working"})
-
-    state =
-      state
-      |> append(user_msg(kickoff_instruction(state)))
-      |> compact()
-      |> run_turn(@max_iterations)
-
-    broadcast(state, "agent.done", %{})
-    broadcast(state, "agent.status", %{status: "idle"})
-    {:noreply, state}
+    work = state |> append(user_msg(kickoff_instruction(state))) |> compact()
+    TurnoAssincrono.iniciar(state, nil, fn -> run_turn(work, @max_iterations) end)
   end
 
   @impl true
-  def handle_call({:user_message, text}, _from, state) do
-    broadcast(state, "agent.status", %{status: "working"})
-
-    state =
-      state
-      |> append(user_msg(text))
-      |> compact()
-      |> run_turn(@max_iterations)
-
-    broadcast(state, "agent.done", %{})
-    broadcast(state, "agent.status", %{status: "idle"})
-    {:reply, :ok, state}
+  def handle_cast(:cancel, state) do
+    {:noreply, TurnoAssincrono.cancelar(state)}
   end
 
   @impl true
-  def handle_call({:revise, story}, _from, state) do
-    broadcast(state, "agent.status", %{status: "working"})
+  def handle_call({:user_message, text}, from, state) do
+    work = state |> append(user_msg(text)) |> compact()
+    TurnoAssincrono.iniciar(state, from, fn -> run_turn(work, @max_iterations) end)
+  end
 
-    state =
-      state
-      |> append(revision_message(story))
-      |> compact()
-      |> run_turn(@max_iterations)
+  @impl true
+  def handle_call({:revise, story}, from, state) do
+    work = state |> append(revision_message(story)) |> compact()
+    TurnoAssincrono.iniciar(state, from, fn -> run_turn(work, @max_iterations) end)
+  end
 
-    broadcast(state, "agent.done", %{})
-    broadcast(state, "agent.status", %{status: "idle"})
-    {:reply, :ok, state}
+  @impl true
+  def handle_info(msg, state) do
+    case TurnoAssincrono.tratar_resultado(msg, state) do
+      {:ok, novo_state} -> {:noreply, novo_state}
+      :ignorado -> {:noreply, state}
+    end
   end
 
   # --- Turno com loop bounded de tool use ---
@@ -381,13 +374,10 @@ defmodule Engine.Agents.PoServer do
     })
   end
 
-  # `agent.status` PRECISA ser persistido, não só broadcastado: o painel do
-  # time deriva o roster do event log buscado por HTTP (ver
-  # Engine.Sessions.LiveBroadcast.agent_status/4 e o ADR 0021).
-  defp broadcast(state, "agent.status", %{status: status}) do
-    LiveBroadcast.agent_status(state.project_id, state.session_id, @agent, status)
-  end
-
+  # `agent.status` (o único evento que PRECISA ser persistido, não só
+  # broadcastado — ver ADR 0021) passou a ser emitido por
+  # `Engine.Agents.TurnoAssincrono`, que envolve o `handle_call`/`handle_cast`
+  # de cada turno desde RN-122. O que sobra aqui é só o broadcast efêmero.
   defp broadcast(state, event, payload) do
     EngineWeb.Endpoint.broadcast("session:" <> state.session_id, event, payload)
   end

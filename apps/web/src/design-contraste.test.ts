@@ -27,6 +27,7 @@ interface Tema {
   success: string;
   warning: string;
   danger: string;
+  codeBg: string;
 }
 
 const ESCURO: Tema = {
@@ -42,6 +43,7 @@ const ESCURO: Tema = {
   success: '#37b3a4',
   warning: '#e0982f',
   danger: '#e05a3e',
+  codeBg: '#03141b',
 };
 
 const CLARO: Tema = {
@@ -57,6 +59,7 @@ const CLARO: Tema = {
   success: '#217e73',
   warning: '#b5701c',
   danger: '#b33a26',
+  codeBg: '#efe4d2',
 };
 
 function hexParaRgb(hex: string): [number, number, number] {
@@ -98,15 +101,27 @@ describe.each([
     expect(contraste(tema.textSecondary, tema.surface1)).toBeGreaterThanOrEqual(AA_TEXTO);
   });
 
-  it('TokenMeter compact: gasto/saldo (--text-secondary, mono 11px) sobre --surface-1', () => {
+  it('TokenMeter compact: gasto/saldo (--text-secondary, mono 11px) sobre --surface-0', () => {
     // Item 2 da fidelidade do dashboard: rodapé novo do compact. --text-muted
     // reprovaria aqui (mesma razão documentada em Input.module.css pro
-    // `.hint`) — por isso o componente usa --text-secondary.
-    expect(contraste(tema.textSecondary, tema.surface1)).toBeGreaterThanOrEqual(AA_TEXTO);
+    // `.hint`) — por isso o componente usa --text-secondary. O fundo passou de
+    // --surface-1 a --surface-0 na FASE 17a, quando a caixa afundou.
+    expect(contraste(tema.textSecondary, tema.surface0)).toBeGreaterThanOrEqual(AA_TEXTO);
   });
 
-  it('TokenMeter: CTA "Definir orçamento" (--text-secondary) sobre --surface-1', () => {
-    expect(contraste(tema.textSecondary, tema.surface1)).toBeGreaterThanOrEqual(AA_TEXTO);
+  it('TokenMeter: CTA "Definir orçamento" (--text-secondary) sobre --surface-0', () => {
+    expect(contraste(tema.textSecondary, tema.surface0)).toBeGreaterThanOrEqual(AA_TEXTO);
+  });
+
+  it('login: campo preenchido (--text-primary) sobre --code-bg', () => {
+    // FASE 17a: o campo de auth afundou em --code-bg, como no handoff. O par
+    // é o mais alto do tema, e o teste existe para que uma mudança futura de
+    // --code-bg não o derrube em silêncio.
+    expect(contraste(tema.textPrimary, tema.codeBg)).toBeGreaterThanOrEqual(AA_TEXTO);
+  });
+
+  it('login: placeholder do campo preenchido (--text-secondary) sobre --code-bg', () => {
+    expect(contraste(tema.textSecondary, tema.codeBg)).toBeGreaterThanOrEqual(AA_TEXTO);
   });
 
   it('ProjectCard: badge de contagem de área (--text-primary) sobre --surface-2', () => {

@@ -47,14 +47,22 @@ defmodule Engine.Sessions.FakeEngineApiClient do
   def create_handoff(project_id, session_id, from_agent, to_agent, artifact_id) do
     notify({:handoff_created, project_id, session_id, from_agent, to_agent, artifact_id})
 
-    {:ok,
-     Process.get(:fake_handoff, %{
-       "id" => "ho-1",
-       "fromAgent" => from_agent,
-       "toAgent" => to_agent,
-       "artifactId" => artifact_id,
-       "status" => "offered"
-     })}
+    # Erro scriptável (RN-116: a api recusou o handoff) via :fake_handoff_error
+    # — mesmo padrão de :fake_story_error, abaixo.
+    case Process.get(:fake_handoff_error) do
+      nil ->
+        {:ok,
+         Process.get(:fake_handoff, %{
+           "id" => "ho-1",
+           "fromAgent" => from_agent,
+           "toAgent" => to_agent,
+           "artifactId" => artifact_id,
+           "status" => "offered"
+         })}
+
+      reason ->
+        {:error, reason}
+    end
   end
 
   @impl true
@@ -122,6 +130,25 @@ defmodule Engine.Sessions.FakeEngineApiClient do
     case Process.get(:fake_assign_error) do
       nil -> reply(:fake_story, %{"id" => Map.get(fields, :storyId)})
       reason -> {:error, reason}
+    end
+  end
+
+  @impl true
+  def decide_project_image(_project_id, _session_id, decisao) do
+    notify({:project_image_decided, decisao})
+
+    case Process.get(:fake_project_image_error) do
+      nil ->
+        reply(:fake_project_image, %{
+          "version" => 1,
+          "decisao" => %{
+            "image" => Map.get(decisao, :image),
+            "network" => Map.get(decisao, :network, "none")
+          }
+        })
+
+      reason ->
+        {:error, reason}
     end
   end
 
@@ -399,6 +426,20 @@ defmodule Engine.Sessions.FakeEngineApiClient do
   @impl true
   def llm_turn_stream(_project_id, _session_id, agent, messages, tools, on_delta) do
     notify({:llm_turn_stream, agent, messages, tools})
+
+    # `:fake_llm_turn_stream_hang` — o turno FICA parado aqui, como uma
+    # chamada SSE de verdade presa no meio do stream. Existe só para provar
+    # que `Task.shutdown/2` (`:brutal_kill`, RN-122) mata a task DE VERDADE
+    # no meio de uma chamada em andamento — sem isto, todo turno fake
+    # retorna instantâneo e "cancelar no meio" nunca teria um "meio" real
+    # para interromper. Avisa `:turno_pendurado` antes de travar, para o
+    # teste saber exatamente quando o turno "começou a gastar" — e nunca
+    # manda mensagem nenhuma depois: se a task NÃO for morta, o teste que
+    # espera silêncio (`refute_receive`) prova a diferença.
+    if Process.get(:fake_llm_turn_stream_hang) do
+      if pid = Application.get_env(:engine, :test_pid), do: send(pid, :turno_pendurado)
+      Process.sleep(:infinity)
+    end
 
     # Deltas scriptados (opcional) — rebroadcastados pelo on_delta.
     for delta <- Process.get(:fake_deltas, []), do: on_delta.(delta)

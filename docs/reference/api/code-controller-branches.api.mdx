@@ -1,0 +1,69 @@
+---
+id: code-controller-branches
+title: "Lista as branches com ahead/behind e a PR aberta associada"
+description: "Fundação do dropdown rico (FASE 26b) — hoje o seletor de ref é campo de texto simples. `ahead`/`behind` são relativos à branch DEFAULT do repositório; `null` quando o provider não consegue computar (degradação honesta, não erro). NÃO é `listBranches` (que o bootstrap de Gitflow usa) — é operação própria, porque enriquecer custa uma chamada extra ao provider POR BRANCH."
+sidebar_label: "Lista as branches com ahead/behind e a PR aberta associada"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "get api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Lista as branches com ahead/behind e a PR aberta associada"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/projects/{projectId}/code/branches"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Fundação do dropdown rico (FASE 26b) — hoje o seletor de ref é campo de texto simples. `ahead`/`behind` são relativos à branch DEFAULT do repositório; `null` quando o provider não consegue computar (degradação honesta, não erro). NÃO é `listBranches` (que o bootstrap de Gitflow usa) — é operação própria, porque enriquecer custa uma chamada extra ao provider POR BRANCH.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./code-controller-branches.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./code-controller-branches.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./code-controller-branches.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

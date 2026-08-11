@@ -1,0 +1,69 @@
+---
+id: code-controller-pull-requests
+title: "Lista as PRs/MRs do repositório"
+description: "Fundação da lista navegável (FASE 26b) — hoje o diff só é alcançável por id conhecido (ex.: vindo de Aprovações); esta rota resolve como chegar ao id sem precisar saber de cor. `truncated` avisa quando a lista passou do teto por chamada."
+sidebar_label: "Lista as PRs/MRs do repositório"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "get api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Lista as PRs/MRs do repositório"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/projects/{projectId}/code/pull-requests"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Fundação da lista navegável (FASE 26b) — hoje o diff só é alcançável por id conhecido (ex.: vindo de Aprovações); esta rota resolve como chegar ao id sem precisar saber de cor. `truncated` avisa quando a lista passou do teto por chamada.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./code-controller-pull-requests.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./code-controller-pull-requests.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./code-controller-pull-requests.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

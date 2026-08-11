@@ -12,7 +12,7 @@ keywords: [arquitetura, code map, invariantes, harness, event log]
 Este documento é o mapa para quem vai **mexer** no código. Ele diz por onde
 começar a ler, o que cada fronteira promete, e o que já se sabe que está torto.
 
-Decisões e o porquê delas ficam nos [ADRs](adr/index.md) — 59 deles, vários
+Decisões e o porquê delas ficam nos [ADRs](adr/index.md) — 65 deles, vários
 registrando defeito real encontrado em execução. Aqui não repetimos a
 argumentação: apontamos.
 
@@ -115,7 +115,7 @@ entre imports rodaria tarde demais).
 | `infra/` (9) | área de Infra (Lead conversacional session-scoped + subespecialidade Workflows via ToolLoop — duas famílias arquiteturais na mesma área, ver RN-037) | `infra/infra_lead_server.ex` |
 | `sessions/` (9) | ciclo de vida da sessão, registro `:global` | `sessions/session_server.ex` |
 | `actions/` (9) | executores de terminal e git, detectors de lint/scanner | `actions/git_executor.ex` |
-| `agents/` (7) | Criativo, PO, Arquiteto | — |
+| `agents/` (13) | Criativo, PO, Arquiteto, Dev Lead — cada turno roda numa Task supervisionada (`TurnoAssincrono`, RN-122), não mais dentro do `handle_call`, pra um `:cancel` poder interrompê-lo de verdade | `agents/turno_assincrono.ex` |
 | `psychologist/` (6) · `anamnese/` (6) | análise e melhoria do time | — |
 
 **Entrypoint:** `lib/engine/application.ex` — a árvore de supervisão inteira
@@ -135,6 +135,19 @@ Três derivações do mesmo event log, com perguntas diferentes:
 | `lib/activity.ts` | "o que aconteceu" — o feed cronológico |
 | `lib/agent-status.ts` | "quem existe e em que estado está" — os cards do time |
 | `lib/timeline-tree.ts` | "o que cada agente fez, e o que está fazendo AGORA" — a árvore |
+
+`lib/aprovacoes.ts` responde a quarta pergunta, e ela não vem do event log:
+"o que acontece se eu aprovar". Verbo e frase de cada tipo de `proposed_action`
+moram ali, e as três telas de decisão os consomem — a fila de Aprovações, o
+card dentro do chat e a aba Insights ([RN-096](business-rules.md#rn-096)).
+
+**A união `ActionType` é uma cópia, e cópia envelhece.** A lista canônica é
+`ACTION_TYPES` em `apps/api/src/domain/actions/decide.ts`, e `apps/api` não é
+dependência de `apps/web` — o compilador não tem como cobrar a divergência.
+Ela já apareceu duas vezes em produção (os três tipos do bootstrap de Gitflow;
+depois `parallelize`/`raise_max_parallel`). Quem cobra hoje é
+`lib/aprovacoes.test.ts`, que **lê o `decide.ts`** e reprova tipo sem frase;
+e, na dúvida, a UI degrada em vez de derrubar a árvore do React.
 
 A árvore inverte o eixo do feed (agente primeiro, tempo depois) porque numa
 sessão com Criativo, PO, Arquiteto e N devs a coluna cronológica não respondia
@@ -171,11 +184,31 @@ Duas validações de UI são automáticas: contraste (`lib/contraste.ts`, teste
 sobre `design/tokens.css`) e layout (`scripts/dev/validacao-visual.js`, rodado
 no navegador). Estão explicadas em `design/README.md`.
 
+**A aba Code (FASE 26) é o mesmo padrão de leitura**, aplicado a código em vez
+de evento: `getContainerState`/`getCodeTree`/`getCodeFile`/`searchCode`/
+`getCodeDiff` em `lib/api-client.ts` espelham as cinco rotas de leitura da api
+(`container` + as quatro de `code.controller.ts`), com os tipos em
+`lib/api-types.ts` (`EstadoDoContainer`, `CodeTree`, `CodeFile`,
+`CodeSearchResult`, `CodeDiff`) copiados dos DTOs — a mesma convenção do
+resto do arquivo, sem importar `apps/api`. `routes/code/highlight.ts` é um
+tokenizer por regex PRÓPRIO para o realce de sintaxe, zero dependência nova.
+O gate de `ProjectCodeTab.tsx` (RN-107) pergunta o estado do container ANTES
+de tentar ler código, para nascer como mensagem própria e não como o rodapé
+de um 409.
+
+**FASE 26b acrescentou três funções/tipos ao mesmo padrão, sem tela
+consumindo ainda**: `getCodeBlame`/`getCodePullRequests`/`getCodeBranches`
+em `lib/api-client.ts`, com `CodeBlame`/`CodePullRequestList`/
+`CodeBranchDetailList` em `lib/api-types.ts` — fundação das três pendências
+declaradas da aba Code (RN-110/111/112), pronta para os três agentes da onda
+seguinte consumirem. `CodeShell.tsx`/`CodeDiffPanel.tsx` não mudaram de
+comportamento, só o comentário que documenta que a fundação já existe.
+
 ### Fora das aplicações
 
 | diretório | o que é |
 |---|---|
-| `packages/shared/` | o contrato `GitProviderContract` (tipos, sem runtime) |
+| `packages/shared/` | o contrato `GitProviderContract` — quinze operações, **tipos e só**: valor que sobrevive ao `tsc` quebra o boot da api (travado por teste), então constante mora no consumidor |
 | `docker/` | imagens de dev e de produção; `smoke.sh` |
 | `deploy/k8s/` | Kustomize base + overlays (local, staging, prod) |
 | `design/` | design system: tokens, tipografia, componentes |
@@ -264,6 +297,20 @@ nunca diagnóstico por eliminação. Lição cara do
 [ADR 0020](adr/0020-destravar-gates-qa-secops.md): uma queda de provider foi
 registrada como "o modelo parou sem sinalizar", e o sistema culpou o modelo por
 um problema de infraestrutura.
+
+**8. O container do projeto é decidido, nunca implícito.** A aba Code só
+libera depois que o Arquiteto emite `artifact.project_image` — enquanto o
+estado for `sem_decisao`, a leitura de código responde `409`
+([RN-105](business-rules.md#rn-105)). E `git push`, abertura de PR e deploy
+não saem pelo terminal, mesmo dentro do escopo do projeto: `decide()` os
+reconhece por prefixo de comando e retorna `deny` ANTES de qualquer estágio
+permissivo — não `require_approval`, porque "sempre permitir" gravaria o
+padrão em `allow` e reabriria a porta ([RN-106](business-rules.md#rn-106),
+[ADR 0065](adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md)).
+O ciclo de vida do container (provisionar, reciclar, limpar) ainda não
+existe — corte declarado da FASE 25, registrado no CLAUDE.md — então esta
+invariante convive, por ora, com a política de escopo de caminho do
+[ADR 0055](adr/0055-escopo-de-caminho-na-politica-de-terminal.md).
 
 ## Assuntos transversais
 
@@ -374,14 +421,14 @@ ADR 0038) não virou artefato de verdade — QA e Infra reusam `qa_verdict`/
 ```mermaid
 erDiagram
   workspaces ||--o{ projects : contém
-  projects ||--o{ sessions : tem
+  projects ||--o{ sessions : "tem (`kind` é intenção de criação, RN-097)"
   sessions ||--o{ session_events : "log imutável (seq densa)"
   sessions ||--o{ proposed_actions : propõe
   projects ||--o{ epics : ""
   epics ||--o{ stories : ""
   stories ||--o{ tasks : ""
   tasks |o--o{ delegations : "área de QA (8b) / Infra (8c, task_id nullable)"
-  projects ||--o{ agent_areas : "área por projeto (14d)"
+  projects ||--o{ agent_areas : "área por projeto (14d), semeada na criação (RN-094)"
   agent_areas ||--o{ agent_area_members : compõe
   projects ||--o{ budgets : limita
   sessions ||--o{ token_usage : mede
@@ -391,7 +438,10 @@ erDiagram
   psychologist_analyses ||--o{ psychologist_hypotheses : produz
 ```
 
-44 tabelas no total. **As constraints são regra de negócio**: a unique
+45 tabelas no total (a mais recente, `session_socket_tickets`, é o ticket de
+uso único que autentica o socket da sessão — RN-108; fora do diagrama pelo
+mesmo motivo de `refresh_tokens`/`account_tokens`: mecanismo de auth, não
+relação de domínio). **As constraints são regra de negócio**: a unique
 `(session_id, seq)` do event log, o `check` que exige exatamente um escopo em
 `budgets` (projeto **ou** sessão, nunca os dois), os índices parciais que
 garantem idempotência das análises — e, desde a Fase 8b, os três `check` de

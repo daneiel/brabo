@@ -131,6 +131,15 @@ config :engine,
   start_model_sync?: System.get_env("START_MODEL_SYNC", "true") == "true",
   model_sync_interval_seconds:
     String.to_integer(System.get_env("MODEL_SYNC_INTERVAL_SECONDS", "21600")),
+  # `psychologist_enabled?` é decisão de PRODUTO, não teto de custo (mesmo
+  # racional de `anamnese_enabled?` abaixo): pausa rodada NOVA do Psicólogo
+  # — automática (fechamento de sessão) e sob demanda
+  # (`PsychologistCommandController.reanalyze/2`) — sem apagar nada do que
+  # já existe (análises e hipóteses já emitidas continuam intactas e
+  # visíveis). Default DESLIGADO a partir de agora — decisão do usuário em
+  # 2026-08-10, mesmo motivo da Anamnese ("hoje ele não está trazendo dados
+  # de muito valor"), ver docs/explanation/backlog.md.
+  psychologist_enabled?: System.get_env("PSYCHOLOGIST_ENABLED", "false") == "true",
   # Triagem de custo do Psicólogo (Fase 4b) — abaixo do limiar a sessão é
   # analisada pelo agente `psicologo-leve` (modelo barato, tetos menores).
   # Os defaults são os valores do ADR 0015; ficam aqui, e não como atributo
@@ -159,6 +168,12 @@ config :engine,
   # Anamnese (Fase 4b) — mesma racional dos knobs do Psicólogo acima: teto de
   # custo é coisa que o operador aperta por ambiente, não constante de código.
   # O tick é global e faz fan-out por projeto (ver AnamneseSchedulerWorker).
+  #
+  # `anamnese_enabled?` é decisão de PRODUTO, não teto de custo: pausa rodada
+  # NOVA (periódica e sob demanda) sem apagar nada do que já existe. Default
+  # DESLIGADO a partir de agora — decisão do usuário em 2026-08-10 ("hoje ele
+  # não está trazendo dados de muito valor"), ver docs/explanation/backlog.md.
+  anamnese_enabled?: System.get_env("ANAMNESE_ENABLED", "false") == "true",
   anamnese_interval_seconds:
     String.to_integer(System.get_env("ANAMNESE_INTERVAL_SECONDS", "900")),
   anamnese_initial_window_days:

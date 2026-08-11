@@ -1,8 +1,10 @@
 import { useNavigate } from '@tanstack/react-router';
 import type { PsychologistHypothesis } from '../lib/api-types';
 import { AGENTS } from '../lib/agents';
+import { descreverHipotese } from '../lib/aprovacoes';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
+import { Disclosure } from './ui/Disclosure';
 import { HypothesisIcon } from './ui/icons';
 import styles from './HypothesisCard.module.css';
 
@@ -18,6 +20,13 @@ interface HypothesisCardProps {
  * sugestão, análise de término (quando a sessão caiu de forma anormal) e
  * as evidências CLICÁVEIS — cada chip navega até o evento na sessão
  * ANALISADA (que pode não ser a sessão aberta agora).
+ *
+ * A FASE 19 pôs a hipótese na mesma língua da aprovação: a FRASE de
+ * `lib/aprovacoes.ts` diz o que acontece se você aceitar, e o resto —
+ * observação, sugestão, término, evidências — desce para um colapso. O default
+ * segue a regra dos outros dois lugares: abre o que ainda espera decisão. Aqui
+ * isso é `status === 'proposed'`, o análogo de `pending`; hipótese já decidida
+ * nasce fechada, como o ramo do agente que já terminou (FASE 14b).
  */
 export function HypothesisCard({
   hypothesis,
@@ -27,6 +36,7 @@ export function HypothesisCard({
 }: HypothesisCardProps) {
   const navigate = useNavigate();
   const decided = hypothesis.status !== 'proposed';
+  const { frase } = descreverHipotese(hypothesis);
 
   function goToEvidence(eventId: string) {
     navigate({
@@ -61,45 +71,56 @@ export function HypothesisCard({
 
       <div className={styles.hipotese}>{hypothesis.hipotese}</div>
 
-      <div>
-        <div className={styles.label}>Observação</div>
-        <div className={styles.body}>{hypothesis.observacao}</div>
-      </div>
+      {/* O que acontece se você aceitar — a mesma pergunta que a frase do
+          ApprovalCard responde, do mesmo módulo. */}
+      <p className={styles.frase}>{frase}</p>
 
-      <div>
-        <div className={styles.label}>Sugestão</div>
-        <div className={styles.body}>{hypothesis.sugestao}</div>
-      </div>
+      <Disclosure
+        titulo="No que o Psicólogo se baseou"
+        padraoAberto={!decided}
+        className={styles.detalhes}
+        trailing={`${hypothesis.evidenceEventIds.length} evidência(s)`}
+      >
+        <div>
+          <div className={styles.label}>Observação</div>
+          <div className={styles.body}>{hypothesis.observacao}</div>
+        </div>
 
-      {hypothesis.terminationAnalysis && (
-        <div className={styles.termination}>
-          <div className={styles.label}>
-            Término anormal · {hypothesis.terminationAnalysis.causa}
+        <div>
+          <div className={styles.label}>Sugestão</div>
+          <div className={styles.body}>{hypothesis.sugestao}</div>
+        </div>
+
+        {hypothesis.terminationAnalysis && (
+          <div className={styles.termination}>
+            <div className={styles.label}>
+              Término anormal · {hypothesis.terminationAnalysis.causa}
+            </div>
+            <div className={styles.body}>
+              {hypothesis.terminationAnalysis.analise}
+            </div>
+            <div className={styles.body}>
+              Estado no momento: {hypothesis.terminationAnalysis.estadoDaSessao}
+            </div>
           </div>
-          <div className={styles.body}>
-            {hypothesis.terminationAnalysis.analise}
-          </div>
-          <div className={styles.body}>
-            Estado no momento: {hypothesis.terminationAnalysis.estadoDaSessao}
+        )}
+
+        <div>
+          <div className={styles.label}>Evidências</div>
+          <div className={styles.evidence}>
+            {hypothesis.evidenceEventIds.map((eventId) => (
+              <button
+                key={eventId}
+                type="button"
+                className={styles.chip}
+                onClick={() => goToEvidence(eventId)}
+              >
+                {eventId.slice(-8)}
+              </button>
+            ))}
           </div>
         </div>
-      )}
-
-      <div>
-        <div className={styles.label}>Evidências</div>
-        <div className={styles.evidence}>
-          {hypothesis.evidenceEventIds.map((eventId) => (
-            <button
-              key={eventId}
-              type="button"
-              className={styles.chip}
-              onClick={() => goToEvidence(eventId)}
-            >
-              {eventId.slice(-8)}
-            </button>
-          ))}
-        </div>
-      </div>
+      </Disclosure>
 
       {!decided && (
         <div className={styles.actions}>

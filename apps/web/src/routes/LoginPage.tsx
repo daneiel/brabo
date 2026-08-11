@@ -137,7 +137,7 @@ export function LoginPage({ onEntrar, irPara }: LoginPageProps) {
           }
         />
         <div className={styles.acoes}>
-          <Button type="submit" fullWidth loading={enviando}>
+          <Button type="submit" fullWidth size="lg" loading={enviando}>
             {enviando ? 'Autenticando…' : 'Entrar'}
           </Button>
         </div>

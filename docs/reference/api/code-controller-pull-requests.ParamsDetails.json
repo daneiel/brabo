@@ -1,0 +1,1 @@
+{"parameters":[{"name":"projectId","required":true,"in":"path","schema":{"type":"string"}},{"name":"state","required":false,"in":"query","description":"Ausente lista todos os estados.","schema":{"enum":["open","merged","closed"],"type":"string"}}]}

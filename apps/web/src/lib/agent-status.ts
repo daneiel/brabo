@@ -337,6 +337,42 @@ export function deriveAgentRoster(
   );
 }
 
+// actionType representativo de cada agente, pra resumir a autonomia num
+// toggle só (auto_approve vira "auto"). Vivia só em `ProjectOverviewTab.tsx`;
+// a FASE 27 move pra cá porque a aba Executores (`ProjectExecutorsTab.tsx`)
+// passou a montar o MESMO card de lead pelos mesmos dois lugares.
+const AUTONOMY_ACTION_TYPE: Record<string, string> = {
+  infra: 'open_infra_pr',
+  criativo: 'write_file',
+  po: 'write_file',
+  arquiteto: 'open_adr_pr',
+  qa: 'terminal',
+  secops: 'terminal',
+};
+export function autonomyActionTypeFor(agentId: string): string {
+  return AUTONOMY_ACTION_TYPE[agentId] ?? (agentId.startsWith('dev-') ? 'pr_open' : 'terminal');
+}
+
+/**
+ * "Executor" (FASE 27, RN-121): dev agent (lead sintético `dev-lead` — hoje
+ * nunca instanciado na roster, ver `agent-areas.ts` — e os `dev-<modulo>`
+ * dinâmicos, que HOJE saem como grupos `solo` porque `dev-lead` não é
+ * emitido) e a área `qa` (lead + `qa-automacao`/`qa-performance-seguranca`).
+ * É o que separa a aba Executores da Visão geral: implementação e
+ * verificação de um lado, o resto do time (Criativo/PO/Arquiteto/Infra) do
+ * outro — nenhuma das duas telas edita `AREAS`, só filtra o que ele já
+ * devolve.
+ */
+export function isExecutorAgentId(agentId: string): boolean {
+  return agentId === 'dev-lead' || agentId.startsWith('dev-') || areaFor(agentId)?.key === 'qa';
+}
+
+export function isExecutorGroup(group: RosterGroup): boolean {
+  return group.kind === 'area'
+    ? group.areaKey === 'qa' || group.areaKey === 'dev'
+    : isExecutorAgentId(group.entry.id);
+}
+
 export type RosterGroup =
   | { kind: 'solo'; entry: RosterEntry }
   | { kind: 'area'; areaKey: string; lead: RosterEntry; members: RosterEntry[] };

@@ -92,6 +92,15 @@ Agrupadas pelo que fazem:
 O engine nunca escreve na tabela de eventos direto — ele **pede** à api, que é
 quem controla a `seq` e a atomicidade com o outbox.
 
+E é por isso que a trava do tipo de sessão mora no caso de uso do append, e não
+no `ActivateExecutionUseCase`: `POST /events` daqui e a rota do usuário caem no
+mesmo funil. Desde a FASE 20, `execution.activated` numa sessão `consultiva`
+responde **409** por este caminho também — o tipo é intenção de criação e o
+evento não o promove ([RN-097](../business-rules.md#rn-097)). Nenhuma outra
+mudança de contrato: os demais tipos de evento seguem idênticos, e a recusa
+acontece **antes** do `incrementSeq`, então tentativa recusada não abre buraco
+na `seq`.
+
 ### LLM
 
 | método | caminho |
@@ -117,6 +126,23 @@ de 15 segundos. Enquanto só o caminho não-streamado o passava, os quatro agent
 conversacionais — que usam apenas o streamado — falhavam a 15s com
 `%Req.TransportError{reason: :timeout}`, classificado como origem `infra`. Com
 modelo local o turno cabia nos 15s e o defeito não aparecia.
+
+#### Os relatórios de gasto NÃO passam por aqui
+
+O metering é escrito **neste** caminho: cada `/llm-turn` grava uma linha em
+`token_usage` antes de a resposta voltar ao engine. A LEITURA desse dado — a
+fatura do owner (`/workspaces/:id/credential-spend` e
+`/workspaces/:id/spend-report`) e o consumo do membro
+(`/projects/:id/spend/me`) — é superfície **externa**, autenticada por JWT e
+classificada em [security-surface.md](../security-surface.md).
+
+Não é detalhe de organização: essas três rotas ramificam por **papel de
+pessoa** — `owner` para a fatura, `viewer` para o próprio consumo
+([RN-101](../business-rules.md#rn-101)). O `X-Brabo-Service-Token` não carrega
+pessoa nenhuma, então uma contraparte interna teria de escolher entre não
+distinguir as audiências ou receber o id do ator como parâmetro — que é
+exatamente o que o [ADR 0063](../adr/0063-duas-audiencias-para-o-mesmo-gasto.md)
+recusa. O engine escreve o gasto; quem o lê é gente.
 
 ### Ciclo de vida da sessão
 
@@ -245,6 +271,21 @@ A credencial é a do **owner do workspace**, pelo mesmo resolvedor da
 resolvido direto do banco pelo engine, não tem token e não depende de a api
 estar no ar — é o caminho que o `pnpm dev` e a suite inteira exercitam.
 
+#### A aba Code NÃO passa por aqui, e a assimetria é o ponto
+
+A superfície de leitura de código da FASE 26b (`/projects/:projectId/code/*`)
+**não tem contraparte interna**, e é útil dizer por quê — a rota acima existe
+para o caso oposto, e as duas juntas mostram a divisão.
+
+O engine precisa de `git-remote` porque ele trabalha no **sistema de arquivos**:
+clona, cria worktree, roda comando. A aba Code não trabalha em lugar nenhum —
+ela pergunta ao **provider** pelo conteúdo de uma ref, pela api, com a
+credencial que a api já tem. Nada nesse caminho precisa de segredo decifrado
+atravessando processo, e por isso nada nesse caminho abre rota interna.
+
+A consequência prática é a que importa: a única rota do produto que devolve
+segredo decifrado continua sendo UMA. Ler código não a multiplicou.
+
 ### Contexto por agente
 
 | método | caminho |
@@ -273,12 +314,25 @@ agente" — ver [RN-037](../business-rules.md#rn-037)). **Não** é
 | POST | `/epics` · `/stories` · `/tasks` |
 | POST | `/story-modules` |
 | POST | `/module-map` |
+| POST | `/project-image` |
 | POST | `/tasks/claim` |
 | POST | `/tasks/:taskId/status` |
 | POST | `/tasks/:taskId/block` |
 
 `tasks/claim` é atômico do lado da api — é o que impede dois dev agents de
 pegarem a mesma task.
+
+`/project-image` é a ferramenta `choose_project_image` do Arquiteto (FASE 25a,
+[ADR 0065](../adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md)):
+fixa a imagem de container do projeto. Do mesmo calibre de `/module-map` — o
+artefato É o evento `artifact.project_image`, sem tabela própria, versionado
+(o vigente é o de maior `version`). Imagem sem tag explícita (`latest`
+recusado), `rationale` curto ou recurso acima do teto voltam `400`, com o
+motivo inteiro no corpo — é isso que permite ao modelo corrigir pelo
+tool-result em vez de reemitir igual ([RN-061](../business-rules.md#rn-061)).
+Enquanto nenhuma versão existe, `GET /projects/:projectId/container` (rota
+pública, `role:viewer`) devolve `status: "sem_decisao"`, e é o mesmo estado que
+faz a aba Code responder `409` ([RN-105](../business-rules.md#rn-105)).
 
 **Sem task pegável, a resposta é `201` com corpo VAZIO**, não `null` no corpo: o
 caso de uso devolve `null` e o NestJS serializa isso como `content-length: 0`.
@@ -337,15 +391,24 @@ reproporia a mesma coisa a cada rodada. A ação que nasce daí **nunca é
 auto-aprovável** ([RN-086](../business-rules.md#rn-086)): automatizar o ajuste
 seria o produto elevando o próprio limite de gasto.
 
+Esta rota **respondia `400` em todo projeto** até a FASE 18, e nada no contrato
+denunciava isso: a validação `área "<key>" não existe neste projeto` é a
+primeira coisa que ela faz, e `agent_areas` nunca era gravada — o `upsert` do
+repositório não tinha chamador nenhum. Agora a área nasce com o projeto
+([RN-094](../business-rules.md#rn-094)) e a recusa volta a significar o que
+diz: chave de área inexistente. Projetos anteriores à correção são cobertos
+pela migração de backfill.
+
 ## api → engine
 
-Quatorze rotas de comando, mais as de saúde. Sob `/internal` com `VerifyServiceToken`:
+Quinze rotas de comando, mais as de saúde. Sob `/internal` com `VerifyServiceToken`:
 
 | método | caminho | o que dispara |
 |---|---|---|
 | POST | `/sessions` | sobe o `SessionServer` |
 | POST | `/sessions/:id/agent/start` | inicia um turno de agente |
 | POST | `/sessions/:id/agent/message` | mensagem do usuário no fio |
+| POST | `/sessions/:id/agent/cancel` | cancela o turno em curso do agente ativo ([RN-122](../business-rules.md#rn-122)) — mata a Task que segura a chamada ao LLM (`Task.shutdown/2`, `:brutal_kill`); idempotente, NO-OP sem turno em curso |
 | POST | `/sessions/:id/agent/readiness` | confirmação de prontidão |
 | POST | `/sessions/:id/agent/revise` | devolve ao PO uma história que o usuário recusou promover (Fase 12c — RN-048); **404 se o PO não está de pé**, e isso não é erro para a api |
 | POST | `/sessions/:id/agent/offer-infra-handoff` | oferta de handoff ao Infra |
@@ -424,7 +487,7 @@ específico ou a todos os `idle` de um módulo. Ver
 
 ## Onde o contrato vive
 
-Desde a Fase 7b existe **OpenAPI** para o sentido engine → api: as 26 rotas
+Desde a Fase 7b existe **OpenAPI** para o sentido engine → api: as 32 rotas
 abaixo estão na [referência gerada](api/brabo-api), sob a tag `internal`, com
 corpo de request, corpo de response e códigos de erro. O documento sai do
 código por `pnpm docs:generate` e o `docs:check` reprova quando ele

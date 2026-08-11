@@ -5,6 +5,91 @@ componentes citados abaixo). Este arquivo cobre a COMPOSIÇÃO de cada tela
 — quais regiões existem, como se organizam, e o comportamento de estado
 de cada uma.
 
+## A referência viva é `design_handoff_brabo/` (desde 2026-08-08, FASE 16)
+
+O handoff está **versionado no repositório**: um `README.md` com a
+especificação completa (cores, tipografia, alturas, raios, transições, marca)
+e oito `.dc.html` de alta fidelidade em `designs/`. Ele substitui o
+`DesignSync(get_file)` como forma de reconferir um detalhe — a fonte não é
+mais um serviço externo que pode sumir.
+
+Os `.dc.html` são **referência de design, não código de produção**: estilos
+inline por construção do protótipo, e `designs/support.js` é o runtime do
+protótipo, que o README do handoff marca explicitamente como **não portar**.
+
+Cobertura, comparada com este arquivo:
+
+| arquivo do handoff | tela | composição escrita aqui |
+|---|---|---|
+| `Brabo Login.dc.html` | login e telas irmãs | sim — seção "Auth" |
+| `Brabo App.dc.html` | lista de projetos | sim — "App shell + Dashboard" |
+| `Brabo Project.dc.html` | visão de projeto | sim — "Projeto" |
+| `Brabo Session.dc.html` | sessão com agentes | sim — "Sessão / Chat" |
+| `Brabo Approvals.dc.html` | fila de aprovações | sim — "Aprovações" |
+| `Brabo Settings.dc.html` | configurações (IA + IAM) | sim — "Configurações" |
+| `Brabo Design System.dc.html` | fundação visual e componentes | é `COMPONENTS.md`, não tela |
+| `Brabo Code.dc.html` | aba de código (IDE) | **não** — ver abaixo |
+
+**Aba de código (IDE):** o handoff a especifica inteira (rail 48px, explorador
+252px, editor com minimapa overlay de 64px, painel inferior, status bar 24px,
+seletor de branch, realce de sintaxe). A composição **não** foi transcrita para
+cá porque o terminal dessa tela virou decisão de arquitetura — container por
+projeto, com a imagem decidida pelo Arquiteto — e escrever o layout antes da
+decisão seria fixar uma tela que a decisão pode mover. Enquanto isso, a
+referência é o `.dc.html`.
+
+**Divergência de marca — RESOLVIDA na FASE 17a.** O handoff tem **um** símbolo,
+o monograma B (ver `COMPONENTS.md`), e o produto tinha dois: o `LogoMark` das
+telas de auth, que é o monograma, e o `BrandIcon` do app shell, um cubo
+isométrico sem contraparte no handoff. A troca acontecia na passagem do login
+para o app. O shell passou a usar o `LogoMark`; o `BrandIcon` continua exportado
+como ícone genérico de artefato, com a advertência de que **não** é a marca.
+
+## Divergências deliberadas de Projeto e Sessão (FASE 17b)
+
+As duas telas foram reescritas contra `Brabo Project.dc.html` e
+`Brabo Session.dc.html`. O que segue **não** foi portado, e cada item tem
+motivo — a lista existe para que a próxima leitura do handoff não trate como
+esquecimento o que foi decisão.
+
+**O logo no cabeçalho da tela.** Os dois `.dc.html` abrem com o monograma de
+30px (Projeto) e 28px (Sessão) seguido de uma divisória vertical. Os protótipos
+são telas ISOLADAS, sem o shell; no produto as duas vivem dentro dele, e a marca
+já está na sidebar. Repeti-la a 250px de distância é ruído, não fidelidade.
+
+**Dados que não existem.** O cabeçalho do Projeto mostra a cadeia da política
+(`dev → qa → rc → main`), o hash do commit corrente e `↑3 ↓1`; a barra da Sessão
+mostra a duração (`24min`). Nada disso está no que a api devolve hoje —
+`ProvisionedRepository` traz `defaultBranch` e mais nada de estado do repo. O
+que existe é mostrado; o resto é pendência, não invenção.
+
+**O estado vazio do time de agentes** ("Nenhum agente no time ainda" + botão
+"Adicionar agentes") é **inalcançável** no produto: a presença de agente é uma
+REGRA, não uma lista editável — `rosterFromFacts` sempre devolve pelo menos
+Criativo, PO e Arquiteto. Um estado vazio que nenhum caminho produz é código
+morto, e o botão prometeria uma ação que não existe.
+
+**Blocos de código e de terminal dentro da bolha** (header com nome do arquivo,
+corpo mono sobre `--code-bg`, badge `rtk −78%`) dependem de a resposta do agente
+ser estruturada. Ela é texto hoje. Pendência.
+
+**A cor do texto da bolha** fica em `--text-primary`, e o handoff pede
+`--text-secondary`. O conteúdo da mensagem é a superfície de leitura mais densa
+do produto, e o par `--text-secondary` sobre `--surface-1` fica na fronteira do
+piso AA medido em `apps/web/src/lib/contraste.test.ts`.
+
+**O selo numérico da régua de abas** continua sólido (`--accent` com
+`--on-accent`), e o handoff o pede tingido (`--accent` a 18% com texto em
+`--accent`). O tingido usa um par que já está na dívida de contraste registrada
+(3,88:1), e o selo é texto de 10px.
+
+**A régua de abas foi ajustada por CSS do chamador**, em
+`ProjectPage.module.css`, e não na primitiva `components/ui/Tabs`: respiro por
+aba (11px × 14px), 2px de intervalo e a divisória da lista desligada, porque
+quem a desenha é o cabeçalho. O lugar disso é a primitiva — a régua do handoff
+é a régua do design system, não a do Projeto. Migrar para lá é mudança de outro
+dono, e continua pendente.
+
 ## App shell + Dashboard (`Brabo App.dc.html`)
 
 Layout: `display:flex;height:100vh` — sidebar fixa (248px) + coluna
@@ -15,8 +100,19 @@ label "PROJETOS" (mono uppercase, muted); lista de projetos (nav, cada
 item = dot de cor + nome mono truncado + badge de não-lidos condicional,
 ativo = fundo `surface-2`); rodapé fixo com 2 botões ("Chat global",
 "Configurações" — fora do escopo desta implementação, é navegação
-global) + card do usuário logado (avatar gradiente com iniciais, nome +
-`"{senioridade} · {papel}"`, chevron).
+global) + card do usuário logado (avatar 34×34 radius 8px com iniciais, nome +
+papel RBAC). O avatar é `var(--accent)` SÓLIDO, não o gradiente do handoff: a
+mistura com `--warning` derruba o contraste das iniciais para 2.10:1, e o
+handoff não especifica senioridade que o produto tenha para mostrar.
+
+Divergência do mock, deliberada: um botão "+" (ícone só, 22×22px) ao lado do
+label "PROJETOS", que abre o MESMO `NewProjectWizard` do botão da topbar. O
+mock só desenha "Novo projeto" na topbar do Dashboard, mas a sidebar é o
+layout PERSISTENTE (`Shell.tsx`, montado em toda rota `/projects/$projectId/**`)
+— sem ele, criar um segundo projeto estando dentro de um já aberto exigia
+voltar manualmente para `/`. Os dois convivem de propósito: moram em regiões
+visuais distintas, e não há redundância perceptível na única tela onde ambos
+aparecem (o dashboard).
 
 **Topbar** (60px, `border-bottom`): título "Projetos" à esquerda; busca
 (input com ícone, 260px); `NotificationBell`; botão primary "+ Novo
@@ -103,12 +199,28 @@ streaming.
 Layout: coluna única, `max-width:960px` centralizada. Header do projeto
 (mesmo padrão de nome+badge) + tabs (mesmas 5, "Aprovações" ativa).
 
-**Seção "Pendentes"**: header com contagem + texto "ordenadas por
-urgência"; barra de seleção em lote (aparece só com seleção ativa, ver
-`COMPONENTS.md`) ou botão "Selecionar todas" (sem seleção); lista de
-`ApprovalCard` (variante com checkbox + badge de urgência), ordenada
-crítico→alta→normal; estado "tudo limpo" quando não há pendências (ícone
-de check + mensagem).
+**Seção "Pendentes"**: header com título (Space Grotesk 600/17) e a legenda
+mono "ordenadas por urgência" na MESMA linha de base; barra de seleção em
+lote à direita do header (aparece só com seleção ativa, ver
+`COMPONENTS.md`); lista de `ApprovalCard` (variante com checkbox + badge de
+urgência); estado vazio em moldura tracejada com tile de 48px e a frase
+"Nenhuma aprovação pendente. O time está fluindo.".
+
+Três divergências deliberadas em relação ao `.dc.html`, todas por falta de
+dado ou por decisão de produto:
+
+1. **"Selecionar todas"** (o botão que o mockup mostra quando não há
+   seleção) NÃO existe. Selecionar tudo seguido de "Aprovar selecionados"
+   torna a aprovação em massa um clique — e quantas aprovações cabem num
+   gesto é decisão de produto, não de fidelidade visual. "Limpar" entrou;
+   este não.
+2. **A urgência não é derivada.** O `ApprovalCard` sabe desenhar a pílula
+   (`crítico`/`alta`/`normal`), mas nada no domínio classifica uma
+   `proposed_action` por urgência, então a fila não passa a prop e a
+   ordenação continua por `seq`. A legenda "ordenadas por urgência" segue o
+   texto do desenho e hoje descreve uma intenção, não o que acontece.
+3. **As colunas CONCEDIDO POR e QUANDO** da tabela de regras não existem:
+   `permissions.json` guarda padrões, não autoria nem data.
 
 **Seção "Permissões do projeto"**: header + subtítulo referenciando
 `.brabo/permissions.json`; banner fixo de aviso (ícone + texto):
@@ -152,12 +264,28 @@ git_push/pr_open≥maintainer, spend≥owner — mas as linhas "Merge/PR" e
 implementada no backend hoje; manter a tabela como informativa, não
 editável).
 
-**Seção "Credenciais de provider"** (não estava explícita no mockup de
-Settings extraído, mas faz parte do pedido — item 6): formulário
-write-only por provider (Anthropic/OpenAI): campo de API key (nunca
-preenchido de volta, só "Configurado em {data}" quando já existe uma
-credencial salva) + botão salvar/remover. Seguir o mesmo padrão visual
-de inputs/botões já documentado.
+**Seção "Credenciais de provider"** — é a "Conectores de IA" do handoff
+(seção 7, item 4), com o mesmo desenho: grid
+`repeat(auto-fill, minmax(300px, 1fr))`, um card por provider com borda
+esquerda de 2px na cor do conector, chip de 28px com a sigla de duas
+letras, nome (Space Grotesk 600/14), tipo em mono 10 uppercase
+(`credencial de provider` / `hub de providers`) e ponto de status —
+pulsante em `var(--success)` quando há chave, apagado quando não há.
+
+A sigla sai das MAIÚSCULAS do nome (`OA`, `OR`, `NV`), e não da primeira
+letra de cada palavra: "OpenAI" e "OpenRouter" são uma palavra só cada e
+davam `OP` os dois.
+
+**A divergência:** onde o mockup mostra a credencial mascarada
+(`sk-ant-api03-••••7f2c`), a implementação mostra "Configurada em {data} ·
+nunca reexibida" ou "Nenhuma credencial salva". A chave é write-only e
+nunca volta do servidor (ADR 0050) — o prefixo mascarado exigiria guardar
+em claro um pedaço dela. O card mantém a mesma caixa mono sobre
+`var(--code-bg)`, o campo de troca e os botões salvar/testar/remover.
+
+**Ainda não existe:** a seção "Melhores modelos por capacidade" (ranking
+por capacidade com score e "usado por"). Ela depende de uma métrica de
+qualidade por modelo que o produto não calcula.
 
 ## Auth — Login e telas irmãs (`Brabo Login.dc.html`)
 
@@ -189,14 +317,16 @@ Container `max-width:412px`, entrada `bfade .4s ease both` (zerada em
 
 **Cabeçalho de marca** (flex, gap 12px, `margin-bottom:26px`): selo 40×40
 radius 11px em `var(--accent)` com o glyph 23px em `var(--on-accent)`
-(`LogoMark` — barra vertical + dois chevrons, o segundo a `opacity:.58`;
-é desenho DIFERENTE do `BrandIcon` do app shell, que é o cubo isométrico),
+(`LogoMark` — barra vertical + dois chevrons, o segundo a `opacity:.58`; é o
+MESMO símbolo do app shell desde a FASE 17a, lá num selo 32×32 radius 9px),
 depois wordmark "Brabo" (Space Grotesk 700, 24px, `letter-spacing:-.035em`,
 `line-height:1.1`) com a tagline abaixo (IBM Plex Mono 10px,
 `letter-spacing:.12em`, uppercase, `var(--text-muted)`).
 
 **Card**: `var(--surface-1)`, `1px var(--border)`, radius 12px,
-`var(--shadow)`, `overflow:hidden` (é o que faz o rodapé respeitar o raio).
+`var(--shadow-lg)`, `overflow:hidden` (é o que faz o rodapé respeitar o raio).
+A sombra do login é a grande (`0 24px 60px`), não a padrão — o selo de marca
+usa a mesma.
 Três regiões:
 
 1. **cabeça** — padding `26px 28px 8px`: `<h1>` (Space Grotesk 600, 19px,

@@ -181,7 +181,9 @@ meio.
 flowchart TD
   A[proposed_action] --> B{papel >= mínimo?}
   B -->|não| D1[deny: IAM insuficiente]
-  B -->|sim| C[base: require_approval]
+  B -->|sim| Z{terminal pede git push,<br/>PR ou deploy?}
+  Z -->|sim| D4[deny: fronteira do container<br/>use a ação tipada — RN-106]
+  Z -->|não| C[base: require_approval]
   C --> D{agent_autonomy tem opinião?}
   D -->|deny| D2[deny]
   D -->|outra| E[adota a opinião]
@@ -199,13 +201,45 @@ flowchart TD
   H -->|não| J[veredito final]
 ```
 
+## A fronteira do container (RN-106)
+
+Aplicada **antes** de qualquer estágio permissivo, e não como teto no fim: `git
+push`, `git remote add`/`set-url`, `git merge`, os CLIs de provider (`gh pr
+create`, `gh pr merge`, `glab mr create`/`merge`, releases e workflow dispatch)
+e os comandos de deploy comuns (`kubectl apply`, `helm upgrade`, `terraform
+apply`, `docker push`, `npm publish`, ...) num comando `terminal` são **`deny`
+imediato**, qualquer que seja o `permissions.json` ou o `agent_autonomy`
+([ADR 0065](../adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md)).
+
+Não é `require_approval` de propósito: existe "sempre permitir", que grava o
+padrão em `allow` — bastaria um clique para essa segunda porta ficar aberta
+para sempre. `deny` vence `allow` em qualquer estágio, e é a única forma que
+não pode ser contornada por um clique só.
+
+O casamento é por **prefixo de tokens** (`apps/api/src/domain/actions/external-effect.ts`),
+ignorando flags globais no meio — `git -C /tmp push` casa `git push`. Cada
+segmento de um comando composto é verificado: `pnpm test && git push origin
+main` é barrado pelo segundo segmento, do mesmo jeito que o comando composto já
+exige que todo segmento case para virar `auto_approve`.
+
+Negar não tira poder do agente: a mensagem de erro diz qual ação **tipada**
+usar — `git_push`, `git_merge` ou `pr_open` — que nasce `proposed_action`,
+segue o pipeline normal (papel mínimo, decisão do usuário) e registra no event
+log o que foi empurrado e para onde. É o caminho que o dev agent já usa hoje
+para propor push (`agent_io.ex`); o que muda é que agora ele é o **único**
+caminho, garantido por código.
+
 ## Escopo de caminho
 
 Um comando de `terminal` é avaliado também por **onde ele toca**, não só pelo
 verbo ([ADR 0055](../adr/0055-escopo-de-caminho-na-politica-de-terminal.md),
 [RN-075](../business-rules.md#rn-075)). A pasta do projeto —
-`<PROJECT_WORKSPACES_ROOT>/<projectId>`, onde vivem o `permissions.json` e todos
-os worktrees de agente — é o **escopo**.
+`<PROJECT_WORKSPACES_ROOT>/<workspace_dir_name>`, onde vivem o
+`permissions.json` e todos os worktrees de agente — é o **escopo**.
+`workspace_dir_name` ([ADR 0066](../adr/0066-nome-de-pasta-legivel-do-workspace.md),
+[RN-109](../business-rules.md#rn-109)) é o nome de pasta congelado na
+criação do projeto — legível (`<slug>-<8 chars do id>`) num projeto novo, o
+UUID puro num projeto de antes dessa mudança.
 
 A comparação de caminho é **léxica e sem regex sobre a entrada**: o corte de
 barras finais é varredura O(n), não `.replace(/\/+$/, '')`. O padrão antigo foi

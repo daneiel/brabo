@@ -95,7 +95,7 @@ Uma linha em `session_events`, append-only, com `seq` densa por sessão
 | tipo | quando |
 |---|---|
 | `execution.plan_proposed` | o Dev Lead propôs o plano: quantos agentes por módulo e por quê (FASE 14d) |
-| `execution.activated` | a fase de execução começou |
+| `execution.activated` | a fase de execução começou. **Só entra em sessão `criativa`** — numa `consultiva` o append responde 409 ([RN-097](../business-rules.md#rn-097)). Continua sendo ele, e não a coluna `sessions.kind`, quem diz que uma sessão ESTÁ executando |
 | `execution.parallelization_suggested` | o sistema propôs paralelizar |
 | `execution.parallelization_accepted` | aceita — o subagente herda o teto do agente base |
 | `dev.started` | o dev agent começou o ciclo (ativação, paralelização — NÃO reidratação, que nunca redispara) |
@@ -203,6 +203,17 @@ recarrega a página não as recupera — recupera o event log.
 
 Um evento de domínio quase sempre gera um `event.appended`; o inverso não vale.
 
+### Quem pode ouvir (RN-108)
+
+Entrar no canal `session:<id>` — e portanto receber qualquer um destes
+broadcasts — exige um ticket opaco de uso único emitido por
+`POST /projects/:projectId/sessions/:sessionId/socket-ticket` (TTL de 30s).
+Até a RN-108 o `connect/3` do socket Phoenix não checava nada além do
+`session_id` existir: quem descobrisse o UUID entrava e ouvia tudo. O ticket
+não é persistido/lido no event log — mora em `session_socket_tickets`,
+verificado e consumido pelo próprio engine — então não aparece no inventário
+de eventos de domínio abaixo. Ver [RN-108](../business-rules.md#rn-108).
+
 ## Span
 
 Nomes de span OpenTelemetry. Uma sessão é uma **trace raiz** atravessando api e
@@ -281,10 +292,10 @@ Extraído dos pontos de emissão: **81 identificadores**, dos quais **2** não a
 - `action.failed` <sub>(apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts)</sub>
 - `agent.activated` <sub>(apps/api/src/application/use-cases/agents/activate-agent.use-case.ts)</sub>
 - `agent.delta` <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub>
-- `agent.done` <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub>
+- `agent.done` <sub>(apps/engine/lib/engine/agents/turno_assincrono.ex)</sub>
 - `agent.error` <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub>
 - `agent.response` <sub>(apps/api/src/application/use-cases/llm/send-chat-message.use-case.ts)</sub>
-- `agent.status` <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub>
+- `agent.status` <sub>(apps/engine/lib/engine/agents/turno_assincrono.ex)</sub>
 - `agent.turn` <sub>(apps/engine/lib/engine/harness/tool_loop.ex)</sub>
 - `anamnese.profile_updated` <sub>(apps/api/src/application/use-cases/anamnese/record-proficiency.use-case.ts)</sub>
 - `anamnese.run_completed` <sub>(apps/api/src/application/use-cases/anamnese/record-proficiency.use-case.ts)</sub>

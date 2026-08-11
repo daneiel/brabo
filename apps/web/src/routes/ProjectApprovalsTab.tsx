@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { approveAction, approveAlwaysAction, denyAction, getProjectPermissions, setProjectPermissions } from '../lib/api-client';
 import { useBacklog, useInfraArtifacts, useLatestSession, usePendingActions, useSessionEvents } from '../lib/hooks';
@@ -16,10 +16,57 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Table, type TableColumn } from '../components/ui/Table';
 import { Badge } from '../components/ui/Badge';
-import { CheckIcon, SearchIcon, TrashIcon } from '../components/ui/icons';
+import { AlertCircleIcon, CheckIcon, SearchIcon, TrashIcon } from '../components/ui/icons';
+import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
 import { AGENTS, AREAS } from '../lib/agents';
 import type { DelegationEventPayload } from '../lib/api-types';
 import styles from './ProjectApprovalsTab.module.css';
+
+/** O mínimo de uma query do TanStack que o bloco abaixo consome. */
+interface EstadoDaQuery<T> {
+  data: T | undefined;
+  isLoading: boolean;
+  isError: boolean;
+  error: unknown;
+  refetch: () => unknown;
+}
+
+/**
+ * Os três estados da RN-088 em UMA peça, com o ERRO antes do vazio.
+ *
+ * Cada bloco desta aba tem query própria, e todos colapsavam os três: `data ??
+ * []` seguido de `length === 0` fazia a api respondendo 429 dizer "Tudo limpo —
+ * nenhuma aprovação pendente", que é a mentira mais cara que esta tela
+ * específica pode contar.
+ *
+ * Só carregando e erro moram aqui. O VAZIO fica com quem chama, porque a frase
+ * do vazio é diferente em cada bloco e é ela que explica de onde o dado viria.
+ */
+function BlocoDeDados<T>({
+  query,
+  titulo,
+  carregando = 'Carregando…',
+  children,
+}: {
+  query: EstadoDaQuery<T>;
+  titulo: string;
+  carregando?: string;
+  children: (dado: T) => ReactNode;
+}) {
+  if (query.isError) {
+    return (
+      <ErroDeCarregamento
+        titulo={titulo}
+        erro={query.error}
+        onTentarDeNovo={() => void query.refetch()}
+      />
+    );
+  }
+  if (query.data === undefined) {
+    return <div className={styles.clean}>{carregando}</div>;
+  }
+  return <>{children(query.data)}</>;
+}
 
 interface PermissionRow {
   pattern: string;
@@ -31,11 +78,13 @@ interface ProjectApprovalsTabProps {
 }
 
 export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
-  const { latest: latestSession } = useLatestSession(projectId);
+  const sessionsQuery = useLatestSession(projectId);
+  const latestSession = sessionsQuery.latest;
   const actionsQuery = usePendingActions(projectId, latestSession?.id);
   const eventsQuery = useSessionEvents(projectId, latestSession?.id);
-  const { data: epics } = useBacklog(projectId);
-  const { data: infraArtifacts } = useInfraArtifacts(projectId);
+  const backlogQuery = useBacklog(projectId);
+  const infraQuery = useInfraArtifacts(projectId);
+  const epics = backlogQuery.data;
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState('');
@@ -261,20 +310,34 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
   const filteredRows = rows.filter((r) => r.pattern.toLowerCase().includes(search.toLowerCase()) || r.list.includes(search.toLowerCase()));
 
   const columns: TableColumn<PermissionRow>[] = [
-    { key: 'pattern', label: 'Padrão', width: '2fr', render: (r) => <span style={{ fontFamily: 'var(--font-mono)' }}>{r.pattern}</span> },
+    { key: 'pattern', label: 'Padrão', width: '2.4fr', render: (r) => <span className={styles.pattern}>{r.pattern}</span> },
     {
       key: 'type',
       label: 'Tipo',
-      width: '110px',
-      render: (r) => <Badge tone={r.list === 'deny' ? 'danger' : r.list === 'allow' ? 'success' : 'warning'}>{r.list}</Badge>,
+      width: '0.9fr',
+      render: (r) => (
+        <Badge square tone={r.list === 'deny' ? 'danger' : r.list === 'allow' ? 'success' : 'warning'}>
+          {r.list}
+        </Badge>
+      ),
     },
     {
       key: 'action',
       label: 'Ação',
-      width: '90px',
+      width: '64px',
+      // Botão QUADRADO só de ícone, como no desenho — o rótulo "revogar" ao
+      // lado do ícone comia a largura de uma coluna inteira. O nome acessível
+      // carrega o padrão porque "Revogar" sozinho, repetido por linha, não diz
+      // revogar o quê.
       render: (r) => (
-        <button type="button" className={styles.revoke} onClick={() => revokeRule(r)}>
-          <TrashIcon size={14} /> revogar
+        <button
+          type="button"
+          className={styles.revoke}
+          title="Revogar"
+          aria-label={`Revogar ${r.pattern}`}
+          onClick={() => revokeRule(r)}
+        >
+          <TrashIcon size={14} />
         </button>
       ),
     },
@@ -284,110 +347,180 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
     <div>
       <div className={styles.section}>
         <div className={styles.sectionHeader}>
-          <div>
-            <div className={styles.title}>Pendentes</div>
-            <div className={styles.subtitle}>{pending.length} ordenadas por urgência</div>
-          </div>
+          <h2 className={styles.title}>Pendentes</h2>
+          <span className={styles.eyebrow}>ordenadas por urgência</span>
+          <span className={styles.espacador} />
+          {selected.size > 0 && (
+            <div className={styles.selectionBar}>
+              <span className={styles.selectionCount}>{selected.size} selecionadas</span>
+              <Button variant="success" onClick={approveSelected}>
+                <CheckIcon size={15} />
+                Aprovar selecionados
+              </Button>
+              <Button variant="secondary" onClick={() => setSelected(new Set())}>
+                Limpar
+              </Button>
+            </div>
+          )}
         </div>
 
-        {selected.size > 0 && (
-          <div className={styles.selectionBar}>
-            <span>{selected.size} selecionadas</span>
-            <Button variant="success" onClick={approveSelected}>
-              Aprovar selecionados
-            </Button>
-          </div>
-        )}
-
-        {pending.length === 0 ? (
-          <div className={styles.clean}>
-            <CheckIcon size={22} />
-            Tudo limpo — nenhuma aprovação pendente.
-          </div>
-        ) : (
-          <div className={styles.queue}>
-            {pending.map((action) => (
-              <ApprovalCard
-                key={action.id}
-                action={action}
-                variant="queue"
-                selectable
-                selected={selected.has(action.id)}
-                onToggleSelect={() => toggleSelect(action.id)}
-                onApprove={() => handleApprove(action.id)}
-                onDeny={() => handleDeny(action.id)}
-                onAlwaysAllow={() => handleAlwaysAllow(action.id)}
-              />
-            ))}
-          </div>
-        )}
+        <BlocoDeDados
+          query={sessionsQuery}
+          titulo="Não foi possível abrir as sessões do projeto."
+          carregando="Procurando a sessão do projeto…"
+        >
+          {() =>
+            !latestSession ? (
+              <div className={styles.clean}>
+                Nenhuma sessão ainda — as aprovações nascem do que os agentes propõem numa sessão.
+              </div>
+            ) : (
+              <BlocoDeDados
+                query={actionsQuery}
+                titulo="Não foi possível carregar a fila de aprovações."
+                carregando="Carregando a fila…"
+              >
+                {() =>
+                  pending.length === 0 ? (
+                    <div className={styles.vazioCard}>
+                      <span className={styles.vazioIcone}>
+                        <CheckIcon size={24} />
+                      </span>
+                      <p className={styles.vazioTexto}>
+                        Nenhuma aprovação pendente. O time está fluindo.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className={styles.queue}>
+                      {pending.map((action) => (
+                        <ApprovalCard
+                          key={action.id}
+                          action={action}
+                          variant="queue"
+                          selectable
+                          selected={selected.has(action.id)}
+                          onToggleSelect={() => toggleSelect(action.id)}
+                          onApprove={() => handleApprove(action.id)}
+                          onDeny={() => handleDeny(action.id)}
+                          onAlwaysAllow={() => handleAlwaysAllow(action.id)}
+                        />
+                      ))}
+                    </div>
+                  )
+                }
+              </BlocoDeDados>
+            )
+          }
+        </BlocoDeDados>
       </div>
 
       <div className={styles.section}>
         <div className={styles.sectionHeader}>
-          <div>
-            <div className={styles.title}>PRs em revisão</div>
-            <div className={styles.subtitle}>
-              {gateTasks.length} PR(s) de dev agents passando pelos gates de QA/SecOps
-            </div>
-          </div>
+          <h2 className={styles.title}>PRs em revisão</h2>
+          <span className={styles.eyebrow}>
+            {gateTasks.length} de dev agents nos gates de QA/SecOps
+          </span>
         </div>
 
-        {gateTasks.length === 0 ? (
-          <div className={styles.clean}>Nenhuma PR de dev agent em revisão ainda.</div>
-        ) : (
-          <div className={styles.queue}>
-            {gateTasks.map((task) => (
-              <PrGateTimeline
-                key={task.id}
-                task={task}
-                prAction={prActionFor(task.id)}
-                verdicts={verdictsFor(task.id)}
-                registro={gatesQuery.data}
-              />
-            ))}
-          </div>
-        )}
+        <BlocoDeDados
+          query={backlogQuery}
+          titulo="Não foi possível carregar o backlog."
+          carregando="Carregando as PRs em revisão…"
+        >
+          {() =>
+            gateTasks.length === 0 ? (
+              <div className={styles.clean}>Nenhuma PR de dev agent em revisão ainda.</div>
+            ) : (
+              <div className={styles.queue}>
+                {gateTasks.map((task) => (
+                  <PrGateTimeline
+                    key={task.id}
+                    task={task}
+                    prAction={prActionFor(task.id)}
+                    verdicts={verdictsFor(task.id)}
+                    registro={gatesQuery.data}
+                  />
+                ))}
+              </div>
+            )
+          }
+        </BlocoDeDados>
       </div>
 
       <div className={styles.section}>
         <div className={styles.sectionHeader}>
-          <div>
-            <div className={styles.title}>PRs de infra em revisão</div>
-            <div className={styles.subtitle}>
-              {(infraArtifacts ?? []).length} PR(s) de infra passando pelos gates de QA/SecOps
-            </div>
-          </div>
+          <h2 className={styles.title}>PRs de infra em revisão</h2>
+          <span className={styles.eyebrow}>
+            {(infraQuery.data ?? []).length} de infra nos gates de QA/SecOps
+          </span>
         </div>
 
-        {(infraArtifacts ?? []).length === 0 ? (
-          <div className={styles.clean}>Nenhuma PR de infra em revisão ainda.</div>
-        ) : (
-          <div className={styles.queue}>
-            {(infraArtifacts ?? []).map((artifact) => (
-              <PrGateTimeline
-                key={artifact.id}
-                task={artifact}
-                prAction={infraPrActionFor(artifact.prActionId)}
-                verdicts={infraVerdictsFor(artifact.prActionId)}
-              />
-            ))}
-          </div>
-        )}
+        <BlocoDeDados
+          query={infraQuery}
+          titulo="Não foi possível carregar as PRs de infra."
+          carregando="Carregando as PRs de infra…"
+        >
+          {(infraArtifacts) =>
+            infraArtifacts.length === 0 ? (
+              <div className={styles.clean}>Nenhuma PR de infra em revisão ainda.</div>
+            ) : (
+              <div className={styles.queue}>
+                {infraArtifacts.map((artifact) => (
+                  <PrGateTimeline
+                    key={artifact.id}
+                    task={artifact}
+                    prAction={infraPrActionFor(artifact.prActionId)}
+                    verdicts={infraVerdictsFor(artifact.prActionId)}
+                  />
+                ))}
+              </div>
+            )
+          }
+        </BlocoDeDados>
       </div>
 
       <div className={styles.section}>
-        <div className={styles.title}>Permissões do projeto</div>
-        <div className={styles.subtitle} style={{ marginBottom: 12 }}>
-          Regras gravadas em .brabo/permissions.json
+        <div className={styles.sectionHeader}>
+          <h2 className={styles.title}>Permissões do projeto</h2>
+          <span className={styles.eyebrow}>.brabo/permissions.json</span>
         </div>
+        <p className={styles.subtitle}>
+          Regras aplicadas antes de cada ação dos agentes. Revogue por linha.
+        </p>
         <div className={styles.banner}>
-          Ordem de avaliação: <b className={styles.deny}>deny</b> sempre vence <b className={styles.allow}>allow</b>, independente da ordem no arquivo.
+          <AlertCircleIcon size={15} className={styles.bannerIcone} />
+          <span>
+            Ordem de avaliação: <b className={styles.deny}>deny</b> sempre vence{' '}
+            <b className={styles.allow}>allow</b>, independente da ordem no arquivo.
+          </span>
         </div>
         <div className={styles.searchRow}>
-          <Input placeholder="Buscar por padrão ou tipo…" icon={<SearchIcon size={14} />} value={search} onChange={(e) => setSearch(e.target.value)} />
+          <Input
+            mono
+            placeholder="Buscar regra ou padrão…"
+            icon={<SearchIcon size={15} />}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </div>
-        <Table columns={columns} rows={filteredRows} rowKey={(r) => `${r.list}:${r.pattern}`} emptyMessage="Nenhuma regra configurada ainda." />
+        <BlocoDeDados
+          query={permissionsQuery}
+          titulo="Não foi possível carregar as permissões do projeto."
+          carregando="Lendo o permissions.json…"
+        >
+          {() => (
+            <Table
+              columns={columns}
+              rows={filteredRows}
+              rowKey={(r) => `${r.list}:${r.pattern}`}
+              emptyMessage={
+                rows.length === 0
+                  ? 'Nenhuma regra configurada ainda.'
+                  : 'Nenhuma regra corresponde à busca.'
+              }
+            />
+          )}
+        </BlocoDeDados>
       </div>
     </div>
   );

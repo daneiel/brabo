@@ -1,0 +1,69 @@
+---
+id: agents-controller-cancel
+title: "Cancela o turno em curso do agente ativo"
+description: "O botão 'Parar' do composer (RN-122): mata a chamada ao LLM em curso no engine, cortando a conexão no meio — economiza token de verdade, não só para de renderizar no cliente. Idempotente: sem turno em curso, é aceito sem efeito."
+sidebar_label: "Cancela o turno em curso do agente ativo"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "post api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Cancela o turno em curso do agente ativo"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/projects/{projectId}/sessions/{sessionId}/agents/{agent}/cancel"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+O botão "Parar" do composer (RN-122): mata a chamada ao LLM em curso no engine, cortando a conexão no meio — economiza token de verdade, não só para de renderizar no cliente. Idempotente: sem turno em curso, é aceito sem efeito.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./agents-controller-cancel.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./agents-controller-cancel.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./agents-controller-cancel.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

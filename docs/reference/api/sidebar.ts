@@ -84,6 +84,48 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/code-controller-blame",
+          label: "Anota cada linha de um arquivo com o commit que a tocou",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/code-controller-branches",
+          label: "Lista as branches com ahead/behind e a PR aberta associada",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/code-controller-file",
+          label: "Devolve o conteúdo de um arquivo",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/code-controller-pull-requests",
+          label: "Lista as PRs/MRs do repositório",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/code-controller-diff",
+          label: "Devolve o diff de uma PR, normalizado por provider",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/code-controller-search",
+          label: "Busca texto no repositório, com orçamento",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/code-controller-tree",
+          label: "Lista UM nível da árvore do repositório",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/git-controller-connect",
           label: "Começa o OAuth com o provider de git",
           className: "api-method get",
@@ -306,6 +348,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/internal-sessions-controller-project-image",
+          label: "Fixa a imagem de container do projeto",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/internal-sessions-controller-psychologist-context",
           label: "Monta o contexto de uma rodada do Psicólogo",
           className: "api-method get",
@@ -381,6 +429,12 @@ const sidebar: SidebarsConfig = {
           id: "docs/reference/api/projects-controller-remove",
           label: "Remove o projeto",
           className: "api-method delete",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/containers-controller-estado",
+          label: "Estado do container do projeto (a decisão de imagem vigente)",
+          className: "api-method get",
         },
         {
           type: "doc",
@@ -517,14 +571,38 @@ const sidebar: SidebarsConfig = {
         {
           type: "doc",
           id: "docs/reference/api/model-bindings-controller-set-agent-binding",
-          label: "Fixa o modelo de um agente no projeto",
+          label: "Fixa o modelo de um agente NESTE projeto",
           className: "api-method put",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/model-bindings-controller-clear-agent-binding",
+          label: "Faz o agente voltar a herdar o modelo da área",
+          className: "api-method delete",
         },
         {
           type: "doc",
           id: "docs/reference/api/budgets-controller-get-project-agent-costs",
           label: "Quebra o gasto do projeto por agente, nos últimos 30 dias",
           className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/model-bindings-controller-get-area-binding",
+          label: "Resolve qual modelo é o padrão de uma área, e de onde ele veio",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/model-bindings-controller-set-area-binding",
+          label: "Define o modelo padrão de uma área",
+          className: "api-method put",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/model-bindings-controller-clear-area-binding",
+          label: "Faz a área voltar a herdar o modelo do projeto",
+          className: "api-method delete",
         },
         {
           type: "doc",
@@ -594,6 +672,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/spend-controller-get-my-spend",
+          label: "O meu consumo neste projeto, por sessão e por dia",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/budgets-controller-get-credential-spend",
           label: "Quanto as chaves do owner gastaram, por provider e por mês",
           className: "api-method get",
@@ -645,6 +729,12 @@ const sidebar: SidebarsConfig = {
           id: "docs/reference/api/models-controller-uses",
           label: "Marca para que o workspace usa cada modelo (lote)",
           className: "api-method post",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/spend-controller-get-workspace-spend-report",
+          label: "Quebra o gasto do workspace por modelo, projeto, ator e dia",
+          className: "api-method get",
         },
       ],
     },
@@ -804,6 +894,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/sessions-controller-rename",
+          label: "Dá ou tira o nome amigável da sessão",
+          className: "api-method patch",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/sessions-controller-list-events",
           label: "Pagina o event log da sessão",
           className: "api-method get",
@@ -822,6 +918,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/sessions-controller-issue-socket-ticket",
+          label: "Emite um ticket opaco de uso único para o socket da sessão",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/sessions-controller-transition",
           label: "Move a sessão para outro estado",
           className: "api-method post",
@@ -832,6 +934,12 @@ const sidebar: SidebarsConfig = {
       type: "category",
       label: "agentes",
       items: [
+        {
+          type: "doc",
+          id: "docs/reference/api/agents-controller-cancel",
+          label: "Cancela o turno em curso do agente ativo",
+          className: "api-method post",
+        },
         {
           type: "doc",
           id: "docs/reference/api/agents-controller-message",

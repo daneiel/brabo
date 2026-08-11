@@ -1,0 +1,69 @@
+---
+id: code-controller-search
+title: "Busca texto no repositório, com orçamento"
+description: "A busca NÃO é operação do contrato de git: ela é composta sobre a árvore e o conteúdo, e por isso é a única leitura cujo custo cresce com o tamanho do repositório. Três orçamentos a param — diretórios percorridos, arquivos abertos e casamentos devolvidos — e `truncated` diz que ela parou. `filesScanned` mostra o custo que ela teve."
+sidebar_label: "Busca texto no repositório, com orçamento"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "get api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Busca texto no repositório, com orçamento"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/projects/{projectId}/code/search"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+A busca NÃO é operação do contrato de git: ela é composta sobre a árvore e o conteúdo, e por isso é a única leitura cujo custo cresce com o tamanho do repositório. Três orçamentos a param — diretórios percorridos, arquivos abertos e casamentos devolvidos — e `truncated` diz que ela parou. `filesScanned` mostra o custo que ela teve.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./code-controller-search.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./code-controller-search.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./code-controller-search.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

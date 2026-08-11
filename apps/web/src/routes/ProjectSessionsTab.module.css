@@ -1,8 +1,25 @@
 .header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
+  gap: 24px;
   margin-bottom: 16px;
+}
+
+/* FASE 24: o cabeçalho ganhou uma segunda linha — a explicação do tipo, que
+   antes só existia dentro do rádio do formulário de criação. */
+.headerTexto {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.subtitleTipo {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-muted);
+  max-width: 62ch;
 }
 
 .title {
@@ -10,6 +27,24 @@
   font-weight: 600;
   font-size: 14px;
   color: var(--text-primary);
+}
+
+/* Formulário de abertura. Na FASE 20 ele carregava o `fieldset` de tipo; na
+   FASE 24 o tipo é a ABA, e o que sobrou é o nome opcional (RN-104). */
+.novaSessao {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  margin-bottom: 16px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.novaSessaoAcoes {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .list {
@@ -33,11 +68,63 @@
   border-color: var(--border-strong);
 }
 
+/* `.rowId` é um `button` — renomear direto da lista, sem abrir a sessão.
+   Reset de botão junto, senão o navegador aplica fundo e borda dele e a
+   linha muda de cara (mesma lição do `.title` de `SessionPage.module.css`). */
 .rowId {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-family: var(--font-mono);
   font-size: 12px;
   color: var(--text-primary);
   flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.rowId:hover .rowIdPencil {
+  opacity: 1;
+}
+
+.rowId:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+.rowIdTexto {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rowIdPencil {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  opacity: 0;
+}
+
+/* Campo ocupa o lugar exato do rótulo — mesma métrica de fonte, senão a
+   linha salta no instante em que se clica para renomear. */
+.rowIdEditavel {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-primary);
+  flex: 1;
+  min-width: 0;
+  padding: 2px 6px;
+  background: var(--code-bg);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+}
+
+.rowIdEditavel:focus {
+  outline: none;
 }
 
 .rowDate {

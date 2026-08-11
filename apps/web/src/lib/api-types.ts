@@ -155,11 +155,37 @@ export type SessionStatus =
   | 'closed'
   | 'closed_abnormally';
 
+/**
+ * A INTENÇÃO com que a sessão foi aberta (FASE 20, RN-097).
+ *
+ * `consultiva` é só conversa. `criativa` é a que produz: abre a ideação com o
+ * Criativo e é a única que entra em execução. É escolhida na criação e não
+ * muda — não confundir com o ESTADO de execução, que continua sendo o evento
+ * `execution.activated` no log.
+ */
+export type SessionKind = 'consultiva' | 'criativa';
+
+/**
+ * Escopo do ticket opaco de uso único que autentica `connect/3` do socket
+ * Phoenix da sessão (RN-108). Hoje o web só pede `heartbeat` — `terminal` é
+ * FASE 25 (terminal interativo), mas o valor já existe no backend.
+ */
+export type SocketTicketScope = 'heartbeat' | 'terminal';
+
+export interface SocketTicket {
+  ticket: string;
+  /** ISO 8601. TTL de 30s — reconexão sem buscar um ticket novo vai falhar. */
+  expiresAt: string;
+}
+
 export interface Session {
   id: string;
   projectId: string;
   createdBy: string;
   status: SessionStatus;
+  kind: SessionKind;
+  /** Nome amigável (RN-098), ou `null`. Nunca substitui a hashtag do id. */
+  name: string | null;
   nextSeq: number;
   createdAt: string;
   updatedAt: string;
@@ -188,7 +214,7 @@ export interface Page<T> {
   nextCursor: number | null;
 }
 
-// Os 13 do backend (`apps/api/src/domain/actions/decide.ts`), na mesma ordem.
+// Os 15 do backend (`apps/api/src/domain/actions/decide.ts`), na mesma ordem.
 //
 // Esta união já foi um subconjunto — só os que a UI renderiza de forma
 // dedicada —, com a nota de que "os demais caem no fallback genérico do
@@ -200,6 +226,13 @@ export interface Page<T> {
 //
 // Com a união completa os mapas do ApprovalCard voltam a ser exaustivos, e é o
 // compilador que cobra a entrada de qualquer tipo novo.
+//
+// E a união VOLTOU a ficar defasada: `parallelize` e `raise_max_parallel`
+// entraram no backend com a FASE 14d e ninguém as trouxe para cá, porque o
+// compilador só cobra o que ele consegue ver — a lista do backend é um arquivo
+// que o web não importa. Por isso o teste da FASE 19
+// (`aprovacoes.test.ts`) lê `ACTION_TYPES` do decide.ts e reprova quando os
+// dois lados divergem, em vez de confiar numa lista escrita à mão.
 export type ActionType =
   | 'terminal'
   | 'git_commit'
@@ -213,7 +246,9 @@ export type ActionType =
   | 'open_adr_pr'
   | 'git_merge'
   | 'open_infra_pr'
-  | 'instruction_patch';
+  | 'instruction_patch'
+  | 'parallelize'
+  | 'raise_max_parallel';
 
 export type ActionStatus =
   | 'pending'
@@ -365,7 +400,14 @@ export interface SyncModelCatalogResult {
   porProvider: ResultadoDoSync[];
 }
 
-export type ModelBindingScope = 'workspace' | 'project' | 'agent' | 'session';
+// `area` entrou na FASE 23 (ADR 0064) entre `project` e `agent`: é o padrão
+// que lead e subagentes de uma área compartilham, e o agente pode divergir.
+export type ModelBindingScope =
+  | 'workspace'
+  | 'project'
+  | 'area'
+  | 'agent'
+  | 'session';
 
 export interface ModelBinding {
   id: string;
@@ -926,4 +968,180 @@ export interface GateResumo {
 export interface RegistroDeGates {
   version: number;
   gates: GateResumo[];
+}
+
+// --- Container do projeto (FASE 25a) — espelha
+// apps/api/src/domain/containers/project-container.ts +
+// interfaces/http/containers/dto/containers.response.dto.ts ---
+
+export type PosturaDeRede = 'none' | 'egress';
+
+export interface RecursosDoContainer {
+  cpus: number;
+  memoryMb: number;
+  pidsLimit: number;
+}
+
+export interface DecisaoDeImagem {
+  image: string;
+  rationale: string;
+  network: PosturaDeRede;
+  resources: RecursosDoContainer;
+}
+
+/**
+ * `sem_decisao` é o portão da RN-105: enquanto o Arquiteto não decide a
+ * imagem, o container do projeto não sobe e a aba Code não libera.
+ */
+export interface EstadoDoContainer {
+  status: 'sem_decisao' | 'decidido';
+  decisao: DecisaoDeImagem | null;
+  version: number;
+  eventId: string | null;
+  decidedAt: string | null;
+}
+
+// --- Aba Code, só leitura (FASE 26) — espelha
+// apps/api/src/application/use-cases/git/read-project-code.use-case.ts +
+// interfaces/http/git/dto/code.response.dto.ts ---
+
+export interface CodeTreeEntry {
+  path: string;
+  name: string;
+  type: 'file' | 'dir';
+  /** `null` para diretório e quando o provider não informa. */
+  size: number | null;
+}
+
+export interface CodeTree {
+  ref: string;
+  /** Diretório listado; `''` é a raiz. */
+  path: string;
+  entries: CodeTreeEntry[];
+  /** A listagem foi cortada no teto de entradas por nível. */
+  truncated: boolean;
+}
+
+export interface CodeFile {
+  ref: string;
+  path: string;
+  /** UTF-8. Binário não é servido por esta rota. */
+  content: string;
+  /** O arquivo passou do teto de bytes e `content` é o começo dele. */
+  truncated: boolean;
+  /** Bytes DEVOLVIDOS, não os do arquivo — o corte já aconteceu. */
+  bytes: number;
+}
+
+export interface CodeSearchMatch {
+  path: string;
+  /** 1-based, como todo editor mostra. */
+  line: number;
+  text: string;
+}
+
+export interface CodeSearchResult {
+  ref: string;
+  path: string;
+  query: string;
+  matches: CodeSearchMatch[];
+  /** Arquivos efetivamente abertos — o custo real da busca. */
+  filesScanned: number;
+  /** A varredura parou por orçamento antes de acabar a árvore. */
+  truncated: boolean;
+}
+
+export type CodeDiffFileStatus = 'added' | 'modified' | 'removed' | 'renamed';
+
+export interface CodeDiffFile {
+  /** Caminho DEPOIS da mudança (para `removed`, o que sumiu). */
+  path: string;
+  /** Só preenchido quando `status` é `renamed`. */
+  previousPath: string | null;
+  status: CodeDiffFileStatus;
+  additions: number;
+  deletions: number;
+  /**
+   * `null` quando o provider não entrega o texto (binário, ou patch grande
+   * demais) — distinto de `''`, que é "veio vazio". A tela nunca trata os
+   * dois como a mesma coisa.
+   */
+  patch: string | null;
+}
+
+export interface CodeDiff {
+  pullRequestId: string;
+  files: CodeDiffFile[];
+  /** A lista foi cortada no teto de arquivos por diff. */
+  truncated: boolean;
+}
+
+// --- Fundação de blame, PRs navegáveis e branch rica (FASE 26b) ---
+//
+// API pronta, sem UI consumindo ainda — as três pendências declaradas da aba
+// Code (ver CodeShell.tsx e CodeDiffPanel.tsx) viram tela na onda seguinte,
+// em três agentes separados.
+
+export interface CodeBlameLine {
+  /** 1-based, como todo editor mostra. */
+  line: number;
+  commitSha: string;
+  author: string;
+  /** ISO 8601. */
+  authorDate: string;
+  /** Primeira linha da mensagem do commit. */
+  summary: string;
+}
+
+export interface CodeBlame {
+  ref: string;
+  path: string;
+  lines: CodeBlameLine[];
+  /** O arquivo passou do teto de linhas anotadas por chamada. */
+  truncated: boolean;
+}
+
+export type CodePullRequestState = 'open' | 'merged' | 'closed';
+
+export interface CodePullRequestSummary {
+  id: string;
+  number: number;
+  title: string;
+  url: string;
+  /** Login/username de quem abriu. `null` quando o provider não informa. */
+  author: string | null;
+  state: CodePullRequestState;
+  sourceBranch: string;
+  targetBranch: string;
+  /** ISO 8601. `null` quando o provider não informa. */
+  updatedAt: string | null;
+}
+
+export interface CodePullRequestList {
+  items: CodePullRequestSummary[];
+  /** A lista foi cortada no teto de PRs por chamada. */
+  truncated: boolean;
+}
+
+export interface CodeBranchPullRequestRef {
+  number: number;
+  state: CodePullRequestState;
+}
+
+export interface CodeBranchDetail {
+  name: string;
+  commitSha: string;
+  protected: boolean;
+  /** Commits à frente da branch default. `null` quando não computável. */
+  ahead: number | null;
+  /** Commits atrás da branch default. */
+  behind: number | null;
+  /** PR aberta com esta branch como origem, se houver. */
+  pullRequest: CodeBranchPullRequestRef | null;
+}
+
+export interface CodeBranchDetailList {
+  items: CodeBranchDetail[];
+  /** A lista foi cortada no teto de branches enriquecidas. */
+  truncated: boolean;
 }

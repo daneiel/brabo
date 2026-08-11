@@ -40,6 +40,11 @@ defmodule EngineWeb.Router do
     post "/sessions/:sessionId/agent/readiness", AgentCommandController, :readiness
     post "/sessions/:sessionId/agent/revise", AgentCommandController, :revise
 
+    # RN-122: cancela o turno em curso do agente conversacional daquela
+    # sessão — mesmo padrão de `agent/message` (o "agent" vem do corpo, não
+    # da URL, porque um endpoint só cobre os quatro conversacionais).
+    post "/sessions/:sessionId/agent/cancel", AgentCommandController, :cancel
+
     post "/sessions/:sessionId/agent/offer-infra-handoff",
          AgentCommandController,
          :offer_infra_handoff

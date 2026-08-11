@@ -1,8 +1,10 @@
 import { useState, type CSSProperties } from 'react';
 import type { ActionType, ProposedAction } from '../lib/api-types';
 import { AGENTS } from '../lib/agents';
+import { SEM_FRASE, descreverAcao } from '../lib/aprovacoes';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
+import { Disclosure } from './ui/Disclosure';
 import { AlertIcon, ChevronRightIcon, DiffIcon, PrIcon, TerminalIcon } from './ui/icons';
 import styles from './ApprovalCard.module.css';
 
@@ -14,27 +16,15 @@ const URGENCY_COLOR: Record<ApprovalUrgency, string> = {
   normal: 'var(--text-muted)',
 };
 
-// Os dois mapas são exaustivos sobre `ActionType` de propósito: é o compilador
-// que cobra a entrada quando o backend ganha um tipo novo. Enquanto a união do
-// web era um subconjunto, os tipos do bootstrap de Gitflow caíam num
-// `undefined` que derrubava a tela — o "fallback genérico" existia só no
-// comentário.
-const ACTION_VERB: Record<ActionType, string> = {
-  terminal: 'quer executar comando',
-  git_commit: 'propõe alteração',
-  git_push: 'quer enviar alterações',
-  pr_open: 'abriu pull request',
-  spend: 'solicita gasto extra',
-  git_repo_create: 'quer criar o repositório',
-  git_branch_create: 'quer criar uma branch',
-  git_branch_protect: 'quer proteger uma branch',
-  write_file: 'propõe escrever um arquivo',
-  open_adr_pr: 'abriu pull request de ADR',
-  open_infra_pr: 'abriu pull request de infra',
-  git_merge: 'quer fazer merge',
-  instruction_patch: 'propõe ajustar a instrução de um agente',
-};
-
+// O mapa é exaustivo sobre `ActionType` de propósito: é o compilador que cobra
+// a entrada quando o backend ganha um tipo novo. Enquanto a união do web era um
+// subconjunto, os tipos do bootstrap de Gitflow caíam num `undefined` que
+// derrubava a tela — e como a união VOLTOU a ficar defasada (`parallelize`,
+// `raise_max_parallel`), a leitura também tem fallback: o compilador cobra o
+// que ele enxerga, e a lista do backend está num arquivo que o web não importa.
+//
+// O verbo saiu daqui: mora em `lib/aprovacoes.ts` junto com a frase, porque
+// quem consome os dois são três telas e não só este card (FASE 19).
 const ACTION_ICON: Record<ActionType, typeof DiffIcon> = {
   terminal: TerminalIcon,
   git_commit: DiffIcon,
@@ -49,7 +39,22 @@ const ACTION_ICON: Record<ActionType, typeof DiffIcon> = {
   open_infra_pr: PrIcon,
   git_merge: PrIcon,
   instruction_patch: DiffIcon,
+  parallelize: AlertIcon,
+  raise_max_parallel: AlertIcon,
 };
+
+/**
+ * Os tipos com corpo visual PRÓPRIO — diff, comando, branches da PR. Para eles
+ * o colapso guarda um detalhe rico; para o resto guarda o payload cru, e é o
+ * default de aberto/fechado que muda entre os dois casos.
+ */
+const COM_CORPO_PROPRIO: ReadonlySet<string> = new Set<ActionType>([
+  'terminal',
+  'pr_open',
+  'instruction_patch',
+  'git_commit',
+  'git_push',
+]);
 
 interface DiffFile {
   path: string;
@@ -96,15 +101,37 @@ export function ApprovalCard({
 
   const actor = AGENTS[action.actor.id as keyof typeof AGENTS];
   const actorLabel = actor?.name ?? action.actor.id;
-  const Icon = ACTION_ICON[action.actionType];
+  // Tipo que o web ainda não conhece não pode devolver `undefined` aqui: o
+  // React trata isso como componente inválido e derruba a ÁRVORE, não o card.
+  const Icon = ACTION_ICON[action.actionType] ?? AlertIcon;
   const isPending = action.status === 'pending';
   const podeSemprePermitir = action.actionType !== 'instruction_patch';
   const isCritical = urgency === 'critico';
 
   const payload = action.payload;
+  const { verbo, frase } = descreverAcao(action.actionType, payload);
+  const temCorpoProprio = COM_CORPO_PROPRIO.has(action.actionType);
+
+  /*
+   * O default do colapso sai de `variant` e `status`, que JÁ existem — nenhuma
+   * prop nova (FASE 19, item 14). Não é economia de digitação: prop nova
+   * obrigatória obrigaria a abrir os dois call sites, e um deles
+   * (`SessionPage.tsx`) pertence a outra fase da mesma onda.
+   *
+   * A regra que os dois defaults expressam é uma só: abre o que ainda espera
+   * decisão de quem está olhando. No chat a ação pendente é o assunto do
+   * momento; na fila são N cards, e N detalhes abertos são de novo a parede de
+   * texto que esta fase existe para desfazer. E o payload CRU nunca nasce
+   * aberto, em variante nenhuma — despejar JSON é o defeito, não a densidade.
+   */
+  const detalheAberto = temCorpoProprio && variant === 'chat' && isPending;
 
   return (
-    <div className={[styles.card, isCritical && styles.critical].filter(Boolean).join(' ')}>
+    <div
+      className={[styles.card, variant === 'chat' && styles.chat, isCritical && styles.critical]
+        .filter(Boolean)
+        .join(' ')}
+    >
       <div className={styles.header}>
         {selectable && (
           <input
@@ -119,8 +146,12 @@ export function ApprovalCard({
           <Icon size={15} />
         </span>
         <div className={styles.headerText}>
+          {/* Tipografia do handoff: nome do agente em título, verbo em corpo
+              apagado. O verbo vem de `lib/aprovacoes.ts` — mesma fonte que a
+              frase logo abaixo e que a aba Insights. */}
           <div className={styles.title}>
-            <b>{actorLabel}</b> {ACTION_VERB[action.actionType]}
+            <span className={styles.actorName}>{actorLabel}</span>
+            <span className={styles.verb}>{verbo}</span>
           </div>
         </div>
         {urgency && (
@@ -131,13 +162,28 @@ export function ApprovalCard({
         )}
       </div>
 
-      <ApprovalBody
-        actionType={action.actionType}
-        payload={payload}
-        executionResult={action.executionResult}
-        expandedFile={expandedFile}
-        onToggleFile={(path) => setExpandedFile((current) => (current === path ? null : path))}
-      />
+      {/* A FRASE é a linha que responde "o que acontece se eu aprovar" — sempre
+          visível, sempre antes de qualquer detalhe. Tipo que o web ainda não
+          conhece não tem frase: aí a linha degrada para verbo + "ver detalhes",
+          e o detalhe é o payload cru COLAPSADO. O que nunca mais acontece é o
+          despejo de `chave: JSON.stringify(valor)` que estava aqui. */}
+      <p className={styles.frase}>{frase ?? `${verbo} — ${SEM_FRASE}.`}</p>
+
+      <Disclosure
+        titulo={temCorpoProprio ? 'Detalhes' : 'Payload cru'}
+        padraoAberto={detalheAberto}
+        className={styles.detalhes}
+        classNameCabecalho={styles.detalhesCabecalho}
+        trailing={temCorpoProprio ? undefined : `${Object.keys(payload).length} campo(s)`}
+      >
+        <ApprovalBody
+          actionType={action.actionType}
+          payload={payload}
+          executionResult={action.executionResult}
+          expandedFile={expandedFile}
+          onToggleFile={(path) => setExpandedFile((current) => (current === path ? null : path))}
+        />
+      </Disclosure>
 
       {isPending ? (
         <>
@@ -205,6 +251,39 @@ function DecidedLine({ action }: { action: ProposedAction }) {
   );
 }
 
+/**
+ * As linhas do diff no formato unificado do handoff (seção 6): número à
+ * direita numa calha de 34px, coluna de sinal de 14px, conteúdo em `pre`.
+ *
+ * Uma implementação só porque havia duas idênticas — a de `instruction_patch` e
+ * a de `git_commit`/`git_push` —, e é assim que elas voltavam a divergir a cada
+ * ajuste de medida.
+ */
+function DiffLines({ lines }: { lines: NonNullable<DiffFile['lines']> }) {
+  return (
+    <div className={styles.diffLines}>
+      {lines.map((line, index) => (
+        <div
+          key={index}
+          className={[styles.diffLine, line.kind === 'add' && styles.add, line.kind === 'del' && styles.del]
+            .filter(Boolean)
+            .join(' ')}
+        >
+          <span className={styles.lineNo}>{line.lineNo ?? ''}</span>
+          <span
+            className={[styles.sign, line.kind === 'add' && styles.add, line.kind === 'del' && styles.del]
+              .filter(Boolean)
+              .join(' ')}
+          >
+            {line.kind === 'add' ? '+' : line.kind === 'del' ? '-' : ''}
+          </span>
+          <span className={styles.diffContent}>{line.content}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 interface ApprovalBodyProps {
   actionType: ActionType;
   payload: Record<string, unknown>;
@@ -222,8 +301,10 @@ function ApprovalBody({ actionType, payload, executionResult, expandedFile, onTo
         : null;
 
     return (
-      <div className={styles.body}>
-        <div className={styles.commandLine}>$ {command}</div>
+      <div className={`${styles.body} ${styles.bodyCode}`}>
+        <div className={styles.commandLine}>
+          <span className={styles.prompt}>$</span> {command}
+        </div>
         {executionResult && (
           <div className={styles.outputBlock}>
             <div className={styles.outputHeader}>
@@ -248,7 +329,9 @@ function ApprovalBody({ actionType, payload, executionResult, expandedFile, onTo
         <div className={styles.prTitle}>{title}</div>
         <div className={styles.prBranches}>
           <span className={styles.branchPill}>{source}</span>
-          →
+          <span className={styles.arrow} aria-hidden="true">
+            →
+          </span>
           <span className={styles.branchPill}>{target}</span>
         </div>
         {summary && <div className={styles.prSummary}>{summary}</div>}
@@ -292,24 +375,7 @@ function ApprovalBody({ actionType, payload, executionResult, expandedFile, onTo
             {files.length > 1 && (
               <div className={styles.prSummary}>{file.path}</div>
             )}
-            {file.lines && (
-              <div className={styles.diffLines}>
-                {file.lines.map((line, index) => (
-                  <div
-                    key={index}
-                    className={[styles.diffLine, line.kind === 'add' && styles.add, line.kind === 'del' && styles.del]
-                      .filter(Boolean)
-                      .join(' ')}
-                  >
-                    <span className={styles.lineNo}>{line.lineNo ?? ''}</span>
-                    <span className={[styles.sign, line.kind === 'add' && styles.add, line.kind === 'del' && styles.del].filter(Boolean).join(' ')}>
-                      {line.kind === 'add' ? '+' : line.kind === 'del' ? '-' : ''}
-                    </span>
-                    <span>{line.content}</span>
-                  </div>
-                ))}
-              </div>
-            )}
+            {file.lines && <DiffLines lines={file.lines} />}
           </div>
         ))}
       </div>
@@ -325,33 +391,25 @@ function ApprovalBody({ actionType, payload, executionResult, expandedFile, onTo
             const open = expandedFile === file.path;
             return (
               <div key={file.path}>
-                <div className={styles.fileRow} onClick={() => onToggleFile(file.path)}>
+                {/* `<button>` e não `<div onClick>`: a faixa abre e fecha o
+                    diff, e como div ela ficava fora da ordem de tabulação e
+                    inacessível pelo teclado. */}
+                <button
+                  type="button"
+                  className={styles.fileRow}
+                  aria-expanded={open}
+                  onClick={() => onToggleFile(file.path)}
+                >
                   <span className={[styles.chevron, open && styles.open].filter(Boolean).join(' ')}>
-                    <ChevronRightIcon size={13} />
+                    <ChevronRightIcon size={14} />
                   </span>
                   <span className={styles.filePath}>{file.path}</span>
                   <span className={styles.diffStat}>
-                    <span className={styles.diffAdd}>+{file.additions}</span> <span className={styles.diffDel}>−{file.deletions}</span>
+                    <span className={styles.diffAdd}>+{file.additions}</span>
+                    <span className={styles.diffDel}>−{file.deletions}</span>
                   </span>
-                </div>
-                {open && file.lines && (
-                  <div className={styles.diffLines}>
-                    {file.lines.map((line, index) => (
-                      <div
-                        key={index}
-                        className={[styles.diffLine, line.kind === 'add' && styles.add, line.kind === 'del' && styles.del]
-                          .filter(Boolean)
-                          .join(' ')}
-                      >
-                        <span className={styles.lineNo}>{line.lineNo ?? ''}</span>
-                        <span className={[styles.sign, line.kind === 'add' && styles.add, line.kind === 'del' && styles.del].filter(Boolean).join(' ')}>
-                          {line.kind === 'add' ? '+' : line.kind === 'del' ? '-' : ''}
-                        </span>
-                        <span>{line.content}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                </button>
+                {open && file.lines && <DiffLines lines={file.lines} />}
               </div>
             );
           })}
@@ -360,20 +418,37 @@ function ApprovalBody({ actionType, payload, executionResult, expandedFile, onTo
     }
     const message = readString(payload, 'message') ?? readString(payload, 'branch') ?? '';
     return (
-      <div className={styles.body}>
+      <div className={`${styles.body} ${styles.bodyCode}`}>
         <div className={styles.commandLine}>{message || 'Sem detalhes adicionais.'}</div>
       </div>
     );
   }
 
-  // spend e demais tipos sem variante visual específica no spec
+  /*
+   * O resto — e o tipo que o web ainda não conhece.
+   *
+   * Aqui morava o defeito que a FASE 19 veio matar: uma linha por chave, com
+   * `JSON.stringify` no valor, SEMPRE visível. Quem abria a fila de aprovações
+   * lia `worktree: /workspaces/dev-api` e `coAuthor: Brabo User <…>` antes de
+   * qualquer coisa que dissesse o que ia acontecer.
+   *
+   * A informação não some — some do caminho de leitura. Quem precisa do payload
+   * abre o colapso; quem precisa decidir lê a frase e clica. E o JSON vem
+   * INDENTADO, num bloco de código, porque o objetivo de mostrá-lo é ele ser
+   * lido, não ocupar espaço.
+   */
+  const chaves = Object.keys(payload);
+  if (chaves.length === 0) {
+    return (
+      <div className={styles.body}>
+        <div className={styles.semPayload}>Esta ação não carrega payload.</div>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.body}>
-      {Object.entries(payload).map(([key, value]) => (
-        <div key={key} className={styles.genericLine}>
-          {key}: {typeof value === 'object' ? JSON.stringify(value) : String(value)}
-        </div>
-      ))}
+      <pre className={styles.payloadCru}>{JSON.stringify(payload, null, 2)}</pre>
     </div>
   );
 }
