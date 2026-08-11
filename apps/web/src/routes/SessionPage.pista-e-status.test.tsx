@@ -39,7 +39,7 @@ const HANDOFF: Handoff = {
   updatedAt: '2026-08-10T12:00:00.000Z',
 };
 
-// O evento `handoff.offered` correspondente a HANDOFF (RN-123): desde que o
+// O evento `handoff.offered` correspondente a HANDOFF (RN-125): desde que o
 // aceite virou um card inline no fio, o botão só existe quando este evento
 // está no event log — não basta o registro de `handoffs` sozinho.
 const HANDOFF_OFERECIDO_EVENT = {

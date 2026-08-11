@@ -200,7 +200,7 @@ export function SessionPage({
     refetchInterval: pollQueParaNoErro(5000),
   });
   // Extraído para cima do bloco de rótulo/hashtag/tipo (onde vivia antes): o
-  // card de handoff inline no fio (RN-123) precisa da mesma pergunta antes
+  // card de handoff inline no fio (RN-125) precisa da mesma pergunta antes
   // de a timeline ser montada, e computá-la duas vezes criaria duas fontes
   // da mesma verdade.
   const isActive = session?.status === 'active';
@@ -420,7 +420,7 @@ export function SessionPage({
     const items: TimelineEntry[] = [];
     // O evento que representa a oferta de handoff ATUAL (ainda não aceita) —
     // o `handoff.offered` mais RECENTE com o mesmo par fromAgent/toAgent de
-    // `offeredHandoff` (RN-123). O payload do evento não carrega o id do
+    // `offeredHandoff` (RN-125). O payload do evento não carrega o id do
     // handoff, então o par + "mais recente" é o jeito de achar QUAL entrada
     // da timeline vira o card acionável, sem reabrir um convite de aceite
     // que uma oferta mais antiga pro mesmo par já tenha resolvido.
@@ -465,7 +465,7 @@ export function SessionPage({
         const toAgent = payload?.toAgent;
         // O card fica ACIONÁVEL quando esta é a oferta pendente ATUAL — a
         // mesma pergunta que decidia o botão da topbar antes de sair de lá
-        // (RN-123). Dois botões com o texto IDÊNTICO visíveis ao mesmo
+        // (RN-125). Dois botões com o texto IDÊNTICO visíveis ao mesmo
         // tempo (um na topbar, um no fio) seria o mesmo problema que
         // `ApprovalCard` já evita ao nunca duplicar a ação fora do fio.
         const isOfertaAtual = isActive && event.seq === offeredHandoffEventSeq;
@@ -490,7 +490,7 @@ export function SessionPage({
                 Aceitar handoff e iniciar {offeredHandoff!.toAgent}
               </Button>
               {/* Handoff pro Dev Lead é o início da EXECUÇÃO — quem aceita
-                  precisa saber onde acompanhar depois (RN-123). As outras
+                  precisa saber onde acompanhar depois (RN-125). As outras
                   ofertas (PO, Arquiteto…) continuam na própria sessão, então
                   não ganham o link: não há "onde mais olhar" pra elas. */}
               {toAgent === 'dev-lead' && (
@@ -1014,7 +1014,7 @@ export function SessionPage({
             </Button>
           </span>
         )}
-        {/* O botão de aceitar handoff SAIU daqui (RN-123): mora dentro do
+        {/* O botão de aceitar handoff SAIU daqui (RN-125): mora dentro do
             fio agora, embutido no PRÓPRIO card que já anunciava "X passou o
             bastão ao Y" — contextual, no lugar onde a passagem aconteceu, em
             vez de um botão solto na topbar sem relação visual com o evento

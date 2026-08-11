@@ -3284,7 +3284,7 @@ mudam de lugar.
 
 ---
 
-### RN-123 — O aceite de handoff é INLINE no fio, com CTA pro Dev Lead apontando pra Executores {#rn-123}
+### RN-125 — O aceite de handoff é INLINE no fio, com CTA pro Dev Lead apontando pra Executores {#rn-125}
 
 O divisor "X passou o bastão ao Y" que já existia na timeline (`handoff.offered`)
 vira um **card acionável** — com o botão de aceitar embutido — sempre que
