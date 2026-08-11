@@ -498,6 +498,38 @@
   text-overflow: ellipsis;
 }
 
+/* O card ACIONÁVEL de handoff (RN-123) — a oferta pendente ganha a mesma
+   pílula do divisor, mas em caixa, com a ação embutida: aceitar deixa de
+   ser um botão pelado longe do evento que o motivou. */
+.handoffCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin: 4px 0;
+  padding: 16px;
+  border: 1px solid color-mix(in srgb, var(--success) 45%, var(--border));
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--success) 8%, var(--surface-1));
+}
+
+/* Link que navega pra outra aba do projeto a partir do fio — o CTA pra
+   Executores no card de handoff pro Dev Lead (RN-123) e o link pro Backlog
+   no chip de épico/história criados pelo PO (RN-124). */
+.timelineLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.timelineLink:hover {
+  text-decoration: underline;
+}
+
 /* Evento citado por uma hipótese do Psicólogo, fixado no topo do log
    (Fase 4b) — a garantia de que a evidência CHEGA no evento, independente
    da janela de paginação e dos filtros do feed. */

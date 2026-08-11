@@ -39,6 +39,18 @@ const HANDOFF: Handoff = {
   updatedAt: '2026-08-10T12:00:00.000Z',
 };
 
+// O evento `handoff.offered` correspondente a HANDOFF (RN-123): desde que o
+// aceite virou um card inline no fio, o botão só existe quando este evento
+// está no event log — não basta o registro de `handoffs` sozinho.
+const HANDOFF_OFERECIDO_EVENT = {
+  id: 'ev-handoff-1',
+  seq: 1,
+  type: 'handoff.offered',
+  actor: { kind: 'agent', id: 'criativo' },
+  payload: { toAgent: 'po' },
+  createdAt: '2026-08-10T12:00:00.000Z',
+};
+
 const eventos = vi.fn<() => { items: unknown[] }>(() => ({ items: [] }));
 const handoffsMock = vi.fn<() => Handoff[]>(() => []);
 
@@ -221,6 +233,7 @@ describe('SessionPage — achado A: contador de regras de negócio', () => {
 describe('SessionPage — achado B: indicador entre aceitar o handoff e o primeiro delta', () => {
   it('agent.status "working" mostra o indicador de digitação antes de qualquer delta, e some no primeiro delta', async () => {
     handoffsMock.mockReturnValue([HANDOFF]);
+    eventos.mockReturnValue({ items: [HANDOFF_OFERECIDO_EVENT] });
     let resolverAceite: () => void = () => {};
     acceptHandoff.mockImplementation(
       () =>
@@ -258,6 +271,7 @@ describe('SessionPage — achado B: indicador entre aceitar o handoff e o primei
 
   it('agent.status "idle" sem delta nenhum encerra o indicador (turno sem texto)', async () => {
     handoffsMock.mockReturnValue([HANDOFF]);
+    eventos.mockReturnValue({ items: [HANDOFF_OFERECIDO_EVENT] });
     acceptHandoff.mockResolvedValue(undefined);
 
     montar();
@@ -279,6 +293,7 @@ describe('SessionPage — achado B: indicador entre aceitar o handoff e o primei
 
   it('CASO DE FALHA: erro ao aceitar o handoff não deixa indicador nenhum preso', async () => {
     handoffsMock.mockReturnValue([HANDOFF]);
+    eventos.mockReturnValue({ items: [HANDOFF_OFERECIDO_EVENT] });
     acceptHandoff.mockRejectedValue(new Error('rede caiu'));
 
     montar();

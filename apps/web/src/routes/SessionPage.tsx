@@ -54,6 +54,7 @@ import {
   ChevronRightIcon,
   LayoutSidebarIcon,
   ModelIcon,
+  StackIcon,
   StopSquareIcon,
   UserIcon,
 } from '../components/ui/icons';
@@ -198,6 +199,11 @@ export function SessionPage({
     queryFn: () => getSession(projectId, sessionId),
     refetchInterval: pollQueParaNoErro(5000),
   });
+  // Extraído para cima do bloco de rótulo/hashtag/tipo (onde vivia antes): o
+  // card de handoff inline no fio (RN-123) precisa da mesma pergunta antes
+  // de a timeline ser montada, e computá-la duas vezes criaria duas fontes
+  // da mesma verdade.
+  const isActive = session?.status === 'active';
 
   // Achados 2/7: o poll pausa ENQUANTO um turno está em streaming — buscar
   // eventos já persistidos no meio do turno duplicava a bolha (o dado novo
@@ -412,6 +418,21 @@ export function SessionPage({
 
   const timeline = useMemo<TimelineEntry[]>(() => {
     const items: TimelineEntry[] = [];
+    // O evento que representa a oferta de handoff ATUAL (ainda não aceita) —
+    // o `handoff.offered` mais RECENTE com o mesmo par fromAgent/toAgent de
+    // `offeredHandoff` (RN-123). O payload do evento não carrega o id do
+    // handoff, então o par + "mais recente" é o jeito de achar QUAL entrada
+    // da timeline vira o card acionável, sem reabrir um convite de aceite
+    // que uma oferta mais antiga pro mesmo par já tenha resolvido.
+    const offeredHandoffEventSeq = offeredHandoff
+      ? events.reduce((maisRecente, e) => {
+          const paraOMesmoPar =
+            e.type === 'handoff.offered' &&
+            e.actor.id === offeredHandoff.fromAgent &&
+            (e.payload as { toAgent?: string })?.toAgent === offeredHandoff.toAgent;
+          return paraOMesmoPar ? Math.max(maisRecente, e.seq) : maisRecente;
+        }, -1)
+      : -1;
     for (const event of events) {
       if (event.type === 'chat.message') {
         const text = typeof (event.payload as { text?: unknown })?.text === 'string' ? (event.payload as { text: string }).text : '';
@@ -441,9 +462,50 @@ export function SessionPage({
         // estavam no evento — a régua mostrava um `handoff → po` cru e perdia
         // metade da frase, que é justamente quem largou a bola.
         const payload = event.payload as { toAgent?: string };
+        const toAgent = payload?.toAgent;
+        // O card fica ACIONÁVEL quando esta é a oferta pendente ATUAL — a
+        // mesma pergunta que decidia o botão da topbar antes de sair de lá
+        // (RN-123). Dois botões com o texto IDÊNTICO visíveis ao mesmo
+        // tempo (um na topbar, um no fio) seria o mesmo problema que
+        // `ApprovalCard` já evita ao nunca duplicar a ação fora do fio.
+        const isOfertaAtual = isActive && event.seq === offeredHandoffEventSeq;
         items.push({
           seq: event.seq,
-          node: (
+          node: isOfertaAtual ? (
+            <div className={styles.handoffCard} key={event.id}>
+              <span className={styles.handoffPill}>
+                <span className={styles.handoffAgent} style={corDoAgente(event.actor.id)}>
+                  {nomeDoAgente(event.actor.id)}
+                </span>
+                <ChevronRightIcon size={13} />
+                passou o bastão ao
+                <span className={styles.handoffAgent} style={corDoAgente(toAgent)}>
+                  {nomeDoAgente(toAgent)}
+                </span>
+              </span>
+              <Button
+                variant="success"
+                onClick={() => handleAcceptHandoff(offeredHandoff!.id, offeredHandoff!.toAgent)}
+              >
+                Aceitar handoff e iniciar {offeredHandoff!.toAgent}
+              </Button>
+              {/* Handoff pro Dev Lead é o início da EXECUÇÃO — quem aceita
+                  precisa saber onde acompanhar depois (RN-123). As outras
+                  ofertas (PO, Arquiteto…) continuam na própria sessão, então
+                  não ganham o link: não há "onde mais olhar" pra elas. */}
+              {toAgent === 'dev-lead' && (
+                <Link
+                  to="/projects/$projectId"
+                  params={{ projectId }}
+                  search={{ tab: 'executores' }}
+                  className={styles.timelineLink}
+                >
+                  Acompanhe a execução em Executores
+                  <ChevronRightIcon size={11} />
+                </Link>
+              )}
+            </div>
+          ) : (
             <div className={styles.handoffDivider} key={event.id}>
               <span className={styles.handoffPill}>
                 <span className={styles.handoffAgent} style={corDoAgente(event.actor.id)}>
@@ -451,10 +513,53 @@ export function SessionPage({
                 </span>
                 <ChevronRightIcon size={13} />
                 passou o bastão ao
-                <span className={styles.handoffAgent} style={corDoAgente(payload?.toAgent)}>
-                  {nomeDoAgente(payload?.toAgent)}
+                <span className={styles.handoffAgent} style={corDoAgente(toAgent)}>
+                  {nomeDoAgente(toAgent)}
                 </span>
               </span>
+            </div>
+          ),
+        });
+      } else if (
+        event.type === 'backlog.epic_created' ||
+        event.type === 'backlog.story_created'
+      ) {
+        // O PO narra o que criou (RN-124) — sem isto, criar épico/história
+        // não deixava rastro NENHUM no fio: só aparecia na aba Backlog, pra
+        // quem já soubesse ir olhar lá. Mesmo corpo de `.message`/`.bubble`
+        // das outras entradas do agente — só o conteúdo (título + link) é
+        // novo.
+        const payload = event.payload as { title?: unknown };
+        const titulo = typeof payload?.title === 'string' ? payload.title : '(sem título)';
+        const rotuloDoTipo =
+          event.type === 'backlog.epic_created' ? 'Épico criado' : 'História criada';
+        items.push({
+          seq: event.seq,
+          node: (
+            <div className={styles.message} key={event.id} style={corDoAgente(event.actor.id)}>
+              <span className={styles.avatar}>
+                <StackIcon size={15} />
+              </span>
+              <div className={styles.messageBody}>
+                <div className={styles.messageHeader}>
+                  <span className={styles.messageName}>{nomeDoAgente(event.actor.id)}</span>
+                  <span className={styles.messageMeta}>{rotuloDoTipo}</span>
+                </div>
+                <div className={styles.bubble}>
+                  {titulo}
+                  <div>
+                    <Link
+                      to="/projects/$projectId"
+                      params={{ projectId }}
+                      search={{ tab: 'backlog' }}
+                      className={styles.timelineLink}
+                    >
+                      Ver no Backlog
+                      <ChevronRightIcon size={11} />
+                    </Link>
+                  </div>
+                </div>
+              </div>
             </div>
           ),
         });
@@ -557,7 +662,7 @@ export function SessionPage({
     }
 
     return items.sort((a, b) => a.seq - b.seq);
-  }, [events, actions, projectId, sessionId, user.name, queryClient, invalidateActions]);
+  }, [events, actions, projectId, sessionId, user.name, queryClient, invalidateActions, offeredHandoff, isActive]);
 
   async function handleActivate() {
     await transitionSession(projectId, sessionId, 'active');
@@ -762,7 +867,7 @@ export function SessionPage({
   // Enquanto a sessão não carregou, NÃO é consultiva: é desconhecida. Tratar a
   // ausência como "consultiva" faria o botão de ideação piscar fora e dentro.
   const sessaoCriativa = session?.kind === 'criativa';
-  const isActive = session?.status === 'active';
+  // `isActive` mora lá em cima, junto de `session` — ver o comentário lá.
   // O convite ocupa o fio inteiro enquanto a conversa não começou. Vira
   // variável na FASE 24 porque a topbar passou a DEPENDER dele: as duas
   // condições precisam ser a mesma pergunta, ou "Iniciar ideação" aparece
@@ -909,14 +1014,12 @@ export function SessionPage({
             </Button>
           </span>
         )}
-        {isActive && offeredHandoff && (
-          <Button
-            variant="success"
-            onClick={() => handleAcceptHandoff(offeredHandoff.id, offeredHandoff.toAgent)}
-          >
-            Aceitar handoff e iniciar {offeredHandoff.toAgent}
-          </Button>
-        )}
+        {/* O botão de aceitar handoff SAIU daqui (RN-123): mora dentro do
+            fio agora, embutido no PRÓPRIO card que já anunciava "X passou o
+            bastão ao Y" — contextual, no lugar onde a passagem aconteceu, em
+            vez de um botão solto na topbar sem relação visual com o evento
+            que o originou. Manter os dois puxaria dois botões com o MESMO
+            texto visíveis ao mesmo tempo na tela. */}
         {/* Encerrar é destrutivo e o desenho o marca como tal: contorno em
             `danger`, não um botão fantasma indistinguível dos outros. */}
         <Button variant="danger" onClick={handleClose} disabled={!session || session.status === 'closed'}>

@@ -6,6 +6,15 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **web**: o aceite de handoff passa a viver DENTRO do fio da sessão
+  (RN-123) — o divisor "X passou o bastão ao Y" vira um card acionável,
+  com o botão embutido, quando representa a oferta pendente ATUAL; o
+  botão da topbar saiu, pra não duplicar o mesmo texto na tela. O card
+  pro **Dev Lead** ganha um link extra, "Acompanhe a execução em
+  Executores". Separadamente, criar épico ou história pelo PO
+  (`backlog.epic_created`/`backlog.story_created`) passa a narrar no
+  fio, com um link "Ver no Backlog" (RN-124) — antes, criar história não
+  deixava rastro nenhum na conversa
 - **api,engine,web**: botão **"Parar"** no composer da sessão cancela DE
   VERDADE o turno em curso do agente conversacional (RN-122) — não só para de
   renderizar no cliente. O engine parava de atender qualquer mensagem
