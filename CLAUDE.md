@@ -442,7 +442,10 @@ pendência declarada, não feature de carona.
     erro explícito, não conversão silenciosa.
 17. Renomear preservando a hashtag; sem nome, degrada para ela sozinha.
 18. Botão de voltar ao dashboard — hoje `SessionPage.tsx` não importa `Link`
-    nem `useNavigate`, e NENHUMA navegação sai da tela.
+    nem `useNavigate`, e NENHUMA navegação sai da tela. Destino revisto numa
+    rodada posterior: o botão volta ao PROJETO da sessão
+    (`/projects/:projectId`), não mais ao dashboard raiz — a sessão sempre
+    nasce dentro de um projeto.
 
 ### FASE 21 — CONCLUÍDA: o volume de eventos (RN-099/100)
 19. `useSessionEvents` continua sendo o ESTADO ATUAL (`latest`, quatro

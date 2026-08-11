@@ -9,8 +9,11 @@ import type { Session } from '../lib/api-types';
  *
  * 1. **Uma saída.** `SessionPage` não importava `Link` nem `useNavigate`:
  *    entrar numa sessão era um beco sem saída, e o único caminho de volta era
- *    o botão do navegador. A asserção é sobre o DESTINO (`/`), não sobre o
- *    ícone — um botão que não navega passaria por qualquer teste de aparência.
+ *    o botão do navegador. A asserção é sobre o DESTINO — um botão que não
+ *    navega passaria por qualquer teste de aparência. O destino virou o
+ *    PROJETO (não mais a raiz `/`) numa rodada posterior; a cobertura
+ *    detalhada mora em `SessionPage.promocao-inline-e-volta.test.tsx`, e o
+ *    caso aqui segue só como fumaça.
  * 2. **Nome, sem perder a hashtag** (RN-098).
  * 3. **O tipo governa o que a tela OFERECE** (RN-097): "Iniciar ideação" só
  *    existe na sessão criativa. Era esse botão, disponível em qualquer sessão
@@ -26,8 +29,19 @@ const eventos = vi.fn<() => { items: unknown[] }>(() => ({ items: [] }));
 
 vi.mock('@tanstack/react-router', () => ({
   // `Link` vira uma âncora de verdade: é o `href` que este teste afirma.
-  Link: ({ to, children, ...rest }: { to: string; children: ReactNode }) => (
-    <a href={to} {...rest}>
+  // `params` é resolvido pra o `href` refletir o destino de verdade — o
+  // botão de voltar usa `params={{ projectId }}`.
+  Link: ({
+    to,
+    params,
+    children,
+    ...rest
+  }: {
+    to: string;
+    params?: Record<string, string>;
+    children: ReactNode;
+  }) => (
+    <a href={to.replace('$projectId', params?.projectId ?? '')} {...rest}>
       {children}
     </a>
   ),
@@ -109,10 +123,10 @@ beforeEach(() => {
 });
 
 describe('SessionPage — a saída da tela', () => {
-  it('há um caminho de volta ao dashboard, e ele aponta para a raiz', async () => {
+  it('há um caminho de volta, e ele aponta para o PROJETO', async () => {
     montar();
-    const voltar = await screen.findByLabelText('Voltar ao dashboard');
-    expect(voltar.getAttribute('href')).toBe('/');
+    const voltar = await screen.findByLabelText('Voltar ao projeto');
+    expect(voltar.getAttribute('href')).toBe('/projects/proj-1');
   });
 });
 
