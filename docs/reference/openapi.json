@@ -6166,6 +6166,73 @@
         ]
       }
     },
+    "/projects/{projectId}/sessions/{sessionId}/agents/{agent}/cancel": {
+      "post": {
+        "description": "O botão \"Parar\" do composer (RN-121): mata a chamada ao LLM em curso no engine, cortando a conexão no meio — economiza token de verdade, não só para de renderizar no cliente. Idempotente: sem turno em curso, é aceito sem efeito.",
+        "operationId": "AgentsController_cancel",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "agent",
+            "required": true,
+            "in": "path",
+            "description": "Slug do agente ativo.",
+            "schema": {
+              "example": "po",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto, sessão ou handoff inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cancela o turno em curso do agente ativo",
+        "tags": [
+          "agentes"
+        ]
+      }
+    },
     "/projects/{projectId}/sessions/{sessionId}/agents/{agent}/message": {
       "post": {
         "description": "A resposta é só o aceite. O que o agente responde chega pelo event log da sessão e pelo SSE de chat — não por esta chamada.",

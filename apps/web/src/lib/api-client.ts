@@ -501,6 +501,18 @@ export const sendAgentMessage = (
     `/projects/${projectId}/sessions/${sessionId}/agents/${agent}/message`,
     { text },
   );
+// RN-121: o botão "Parar" do composer — mata a chamada ao LLM em curso no
+// engine (Task.shutdown, brutal_kill), cortando a conexão no meio pra
+// economizar token de verdade. Idempotente: sem turno em curso, é aceito sem
+// efeito.
+export const cancelAgentTurn = (
+  projectId: string,
+  sessionId: string,
+  agent: string,
+) =>
+  post<{ ok: true }>(
+    `/projects/${projectId}/sessions/${sessionId}/agents/${agent}/cancel`,
+  );
 export const confirmReadiness = (projectId: string, sessionId: string) =>
   post<{ ok: true }>(`/projects/${projectId}/sessions/${sessionId}/readiness`);
 export const listHandoffs = (projectId: string, sessionId: string) =>

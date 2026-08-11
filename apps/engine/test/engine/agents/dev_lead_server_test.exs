@@ -6,6 +6,7 @@ defmodule Engine.Agents.DevLeadServerTest do
 
   alias Engine.Agents.DevLeadServer
   alias Engine.Sessions.FakeEngineApiClient
+  import Engine.Agents.TurnoAssincronoCase, only: [sync_cast: 3]
 
   setup do
     root =
@@ -81,7 +82,7 @@ defmodule Engine.Agents.DevLeadServerTest do
     # vários eventos.
     Process.put(:fake_llm_always, plano_turn("um agente na api"))
 
-    assert {:noreply, _} = DevLeadServer.handle_cast(:kickoff, state)
+    assert {:noreply, _} = sync_cast(DevLeadServer, :kickoff, state)
 
     assert length(eventos_de_plano()) == 1,
            "o laço voltou ao modelo depois do plano e ele propôs de novo"
@@ -111,7 +112,7 @@ defmodule Engine.Agents.DevLeadServerTest do
       FakeEngineApiClient.final_response("plano registrado")
     ])
 
-    assert {:noreply, _} = DevLeadServer.handle_cast(:kickoff, state)
+    assert {:noreply, _} = sync_cast(DevLeadServer, :kickoff, state)
 
     # UM evento: o inválido não gravou nada, o válido gravou e parou.
     assert length(eventos_de_plano()) == 1

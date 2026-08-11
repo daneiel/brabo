@@ -286,6 +286,59 @@ têm turno conversacional em andamento e continuam como estavam.
   continua funcionando, e é dela que a correção depende pra nunca perder
   dado.
 
+### RN-121 — O botão "Parar" cancela o turno DE VERDADE, matando a task que segura a chamada ao LLM {#rn-121}
+
+Até aqui não existia cancelamento em lugar nenhum. A raiz era estrutural:
+`agent_command_controller.ex` atendia a mensagem do usuário com
+`GenServer.call(pid, {:user_message, texto}, ...)` — SÍNCRONO — e o turno
+inteiro (loop de ferramentas + chamada SSE ao LLM) rodava DENTRO do
+`handle_call`. O processo do agente ficava bloqueado até o turno acabar e não
+atendia NENHUMA outra mensagem nesse meio tempo — nem um futuro comando de
+cancelar.
+
+A correção: o `handle_call`/`handle_cast` de turno dos quatro agentes
+conversacionais (Criativo, PO, Arquiteto, Dev Lead) sobe uma
+`Task.Supervisor.async_nolink/2` (`Engine.Agents.TurnoAssincrono`, novo,
+compartilhado pelos quatro) com o trabalho pesado e devolve `{:noreply,
+state}` — a resposta ao `GenServer.call` original fica ADIADA até a task
+terminar (`GenServer.reply/2`, disparado quando `{ref, resultado}` chega em
+`handle_info`). Como o processo do agente PARA de ficar bloqueado, um novo
+`handle_cast(:cancel, state)` chega e é atendido enquanto o turno roda:
+`Task.shutdown/2` no modo `:brutal_kill` mata a task, o que derruba a conexão
+HTTP (SSE) que ela segura com a api — é isso que faz o cancelamento economizar
+token de verdade, e não só parar de renderizar no cliente. O `from` original
+recebe `{:error, :cancelado}`, e um `agent.error` TERMINAL é gravado com
+origem `"politica"` (a mesma origem de orçamento/credencial/binding — cancelar
+é uma decisão do usuário de não gastar mais token, não um quinto valor do
+vocabulário fechado do ADR 0020) — sem ele, `GetSessionPendingWorkUseCase`
+veria `agent.activated` sem `agent.response`/`agent.error` posterior e a
+sessão ficaria pendurada pro sinal de pendência.
+
+Duas mensagens concorrentes pro mesmo agente (usuário manda de novo enquanto
+um turno já roda) nunca sobem uma segunda task: `TurnoAssincrono.iniciar/3`
+responde `{:error, :turno_em_andamento}` na hora.
+
+- **Onde:** `apps/engine/lib/engine/agents/turno_assincrono.ex` (o
+  mecanismo), `apps/engine/lib/engine/agents/{criativo,po,arquiteto,dev_lead}_server.ex`
+  (os quatro `handle_call`/`handle_cast` de turno), `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:170`
+  (`cancel/2`), `apps/engine/lib/engine_web/router.ex` (`POST
+  /internal/sessions/:sessionId/agent/cancel`),
+  `apps/api/src/application/use-cases/agents/cancel-agent-turn.use-case.ts`,
+  `apps/api/src/interfaces/http/agents/agents.controller.ts` (`POST
+  /projects/:projectId/sessions/:sessionId/agents/:agent/cancel`),
+  `apps/web/src/routes/SessionPage.tsx` (`handleCancel`, botão "Parar" no
+  composer)
+- **Teste:** `apps/engine/test/engine/agents/turno_assincrono_test.exs` (a
+  task morre DE VERDADE — `Process.alive?/1` antes e depois — e não só
+  "parou de importar o resultado"), `apps/api/test/application/use-cases/agents/cancel-agent-turn.use-case.spec.ts`
+- **Borda:** cancelar sem turno em curso é NO-OP idempotente — não existe
+  task para matar nem `from` pendente para responder. O cancelamento NÃO
+  desfaz efeito colateral que já tenha rodado ANTES de a task morrer (ex.:
+  uma ferramenta que já tinha sido despachada e gravado seu evento) — só
+  interrompe o que ainda não aconteceu.
+- **Origem:** investigação desta sessão; sem ADR próprio (mudança de padrão
+  de concorrência DENTRO do harness, não de fronteira de camada/banco).
+
 ---
 
 ## Aprovação de ações

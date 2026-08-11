@@ -15,7 +15,7 @@ defmodule Engine.Agents.ArquitetoServer do
   use GenServer, restart: :temporary
 
   alias Engine.Harness.{ContextBuilder, PromptAssembler, ContextManager, ToolCallRecovery}
-  alias Engine.Agents.FalhaDeTurno
+  alias Engine.Agents.{FalhaDeTurno, TurnoAssincrono}
 
   alias Engine.Harness.Tools.{
     CreateModuleMap,
@@ -25,7 +25,7 @@ defmodule Engine.Agents.ArquitetoServer do
     EmitInsight
   }
 
-  alias Engine.Sessions.{EngineApiClient, LiveBroadcast}
+  alias Engine.Sessions.EngineApiClient
 
   @agent "arquiteto"
   @max_iterations 14
@@ -82,38 +82,32 @@ defmodule Engine.Agents.ArquitetoServer do
          ChooseProjectImage.spec(),
          ProposeAdr.spec(),
          EmitInsight.spec()
-       ]
+       ],
+       # Guardado enquanto o turno roda numa Task supervisionada, fora do
+       # handler que bloqueava o processo inteiro — é o que permite um
+       # `:cancel` chegar e ser atendido (RN-121). Ver `TurnoAssincrono`.
+       turno_assincrono: nil
      }}
   end
 
+  # O turno passou a rodar numa Task (`TurnoAssincrono`), fora deste
+  # handler: antes o processo inteiro ficava bloqueado até o turno terminar,
+  # e um `:cancel` nunca era atendido nesse meio tempo (RN-121).
   @impl true
   def handle_cast(:kickoff, state) do
-    broadcast(state, "agent.status", %{status: "working"})
-
-    state =
-      state
-      |> append(user_msg(kickoff_instruction(state)))
-      |> compact()
-      |> run_turn(@max_iterations)
-
-    broadcast(state, "agent.done", %{})
-    broadcast(state, "agent.status", %{status: "idle"})
-    {:noreply, state}
+    work = state |> append(user_msg(kickoff_instruction(state))) |> compact()
+    TurnoAssincrono.iniciar(state, nil, fn -> run_turn(work, @max_iterations) end)
   end
 
   @impl true
-  def handle_call({:user_message, text}, _from, state) do
-    broadcast(state, "agent.status", %{status: "working"})
+  def handle_cast(:cancel, state) do
+    {:noreply, TurnoAssincrono.cancelar(state)}
+  end
 
-    state =
-      state
-      |> append(user_msg(text))
-      |> compact()
-      |> run_turn(@max_iterations)
-
-    broadcast(state, "agent.done", %{})
-    broadcast(state, "agent.status", %{status: "idle"})
-    {:reply, :ok, state}
+  @impl true
+  def handle_call({:user_message, text}, from, state) do
+    work = state |> append(user_msg(text)) |> compact()
+    TurnoAssincrono.iniciar(state, from, fn -> run_turn(work, @max_iterations) end)
   end
 
   # O usuário confirmou que a arquitetura está pronta (Fase 4a — fechamento):
@@ -121,9 +115,44 @@ defmodule Engine.Agents.ArquitetoServer do
   # handoff ao InfraAgent — mirror de `confirm_readiness` do Criativo (que
   # oferece ao PO), mas server-side/explícito, não inferido pelo modelo.
   @impl true
-  def handle_call(:offer_infra_handoff, _from, state) do
-    broadcast(state, "agent.status", %{status: "working"})
+  def handle_call(:offer_infra_handoff, from, state) do
+    TurnoAssincrono.iniciar(state, from, fn -> executar_offer_infra_handoff(state) end)
+  end
 
+  # Sem turno de LLM: o Arquiteto já falou no `offer_infra_handoff`, que sai
+  # da MESMA confirmação. Continua síncrono — é só uma chamada HTTP rápida
+  # de criação de handoff, não uma chamada ao LLM, então não precisa da
+  # Task/cancelamento de `TurnoAssincrono`.
+  @impl true
+  def handle_call(:offer_dev_handoff, _from, state) do
+    state =
+      case EngineApiClient.create_handoff(
+             state.project_id,
+             state.session_id,
+             @agent,
+             "dev-lead",
+             nil
+           ) do
+        {:ok, _handoff} -> state
+        {:error, reason} -> emit_falha_handoff(state, "dev-lead", reason)
+      end
+
+    {:reply, :ok, state}
+  end
+
+  @impl true
+  def handle_info(msg, state) do
+    case TurnoAssincrono.tratar_resultado(msg, state) do
+      {:ok, novo_state} -> {:noreply, novo_state}
+      :ignorado -> {:noreply, state}
+    end
+  end
+
+  # O usuário confirmou que a arquitetura está pronta: turno de fechamento +
+  # oferta do handoff ao InfraAgent, tudo dentro da Task de `TurnoAssincrono`
+  # — cancelar no meio impede o handoff de nascer, igual ao
+  # `executar_confirm_readiness/1` do Criativo.
+  defp executar_offer_infra_handoff(state) do
     instruction =
       user_msg(
         "O usuário confirmou que a arquitetura está pronta. Finalize " <>
@@ -142,41 +171,16 @@ defmodule Engine.Agents.ArquitetoServer do
     # DEPOIS do turno de fechamento já ter rodado — sem `agent.error`, sem
     # resposta no fio, só o processo sumindo (RN-116, mesmo achado do
     # Criativo → PO em `criativo_server.ex`).
-    state =
-      case EngineApiClient.create_handoff(
-             state.project_id,
-             state.session_id,
-             @agent,
-             "infra",
-             nil
-           ) do
-        {:ok, _handoff} -> state
-        {:error, reason} -> emit_falha_handoff(state, "infra", reason)
-      end
-
-    broadcast(state, "agent.done", %{})
-    broadcast(state, "agent.status", %{status: "idle"})
-    {:reply, :ok, state}
-  end
-
-  @impl true
-  def handle_call(:offer_dev_handoff, _from, state) do
-    # Sem turno de LLM: o Arquiteto já falou no `offer_infra_handoff`, que sai
-    # da MESMA confirmação. Um segundo turno só para dizer a mesma coisa
-    # gastaria tokens para repetir.
-    state =
-      case EngineApiClient.create_handoff(
-             state.project_id,
-             state.session_id,
-             @agent,
-             "dev-lead",
-             nil
-           ) do
-        {:ok, _handoff} -> state
-        {:error, reason} -> emit_falha_handoff(state, "dev-lead", reason)
-      end
-
-    {:reply, :ok, state}
+    case EngineApiClient.create_handoff(
+           state.project_id,
+           state.session_id,
+           @agent,
+           "infra",
+           nil
+         ) do
+      {:ok, _handoff} -> state
+      {:error, reason} -> emit_falha_handoff(state, "infra", reason)
+    end
   end
 
   # --- Turno com loop bounded de tool use ---
@@ -425,13 +429,10 @@ defmodule Engine.Agents.ArquitetoServer do
     })
   end
 
-  # `agent.status` PRECISA ser persistido, não só broadcastado: o painel do
-  # time deriva o roster do event log buscado por HTTP (ver
-  # Engine.Sessions.LiveBroadcast.agent_status/4 e o ADR 0021).
-  defp broadcast(state, "agent.status", %{status: status}) do
-    LiveBroadcast.agent_status(state.project_id, state.session_id, @agent, status)
-  end
-
+  # `agent.status` (o único evento que PRECISA ser persistido, não só
+  # broadcastado — ver ADR 0021) passou a ser emitido por
+  # `Engine.Agents.TurnoAssincrono`, que envolve o `handle_call`/`handle_cast`
+  # de cada turno desde RN-121. O que sobra aqui é só o broadcast efêmero.
   defp broadcast(state, event, payload) do
     EngineWeb.Endpoint.broadcast("session:" <> state.session_id, event, payload)
   end

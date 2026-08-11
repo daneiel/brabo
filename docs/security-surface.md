@@ -326,6 +326,7 @@ o componente `d` da JWK, travado por teste.
 | POST | `/projects/:projectId/sessions/:sessionId/actions/:actionId/approve` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/actions/:actionId/approve_always` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/actions/:actionId/deny` | role:developer |
+| POST | `/projects/:projectId/sessions/:sessionId/agents/:agent/cancel` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/agents/:agent/message` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/agents/:agent/start` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/agents/:agentId/rearm` | role:developer |

@@ -98,6 +98,15 @@ o modelo pede uma ferramenta → a ferramenta vira `proposed_action` → políti
 decide → executa → resultado volta ao contexto. Tem teto de iterações; esgotado,
 o agente encerra com artefato de bloqueio.
 
+**Turno (agente conversacional)** — uma rodada de trabalho de um dos quatro
+agentes conversacionais session-scoped (Criativo, PO, Arquiteto, Dev Lead):
+uma chamada streamada ao LLM mais o loop de ferramentas que ela dispara.
+Desde [RN-121](business-rules.md#rn-121) roda numa `Task` supervisionada
+(`Engine.Agents.TurnoAssincrono`), não mais dentro do `handle_call` que
+recebia a mensagem — é o que permite o botão **"Parar"** do composer
+cancelar o turno DE VERDADE (mata a task, corta a conexão com a api) em vez
+de só parar de renderizar no cliente.
+
 **Handoff** — passagem explícita de trabalho de um agente para outro. Explícita
 porque o destino e o motivo ficam registrados no event log, em vez de um agente
 "assumir" o contexto do outro implicitamente.
