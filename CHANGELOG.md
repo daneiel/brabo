@@ -7,7 +7,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 ### Novidades
 
 - **api,engine,web**: botão **"Parar"** no composer da sessão cancela DE
-  VERDADE o turno em curso do agente conversacional (RN-121) — não só para de
+  VERDADE o turno em curso do agente conversacional (RN-122) — não só para de
   renderizar no cliente. O engine parava de atender qualquer mensagem
   (inclusive cancelar) enquanto processava um turno, porque o turno inteiro
   rodava dentro de um `GenServer.call` síncrono; os quatro agentes

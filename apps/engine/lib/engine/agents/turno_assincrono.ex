@@ -4,7 +4,7 @@ defmodule Engine.Agents.TurnoAssincrono do
   supervisionada, para o GenServer do agente conversacional (Criativo, PO,
   Arquiteto, Dev Lead) parar de ficar bloqueado dentro do próprio
   `handle_call` — era isso que impedia um comando `:cancel` de sequer ser
-  atendido enquanto o turno rodava (RN-121).
+  atendido enquanto o turno rodava (RN-122).
 
   Os quatro `*Server` compartilhavam a MESMA estrutura de `handle_call`
   síncrono (broadcast "working" -> roda o turno inline -> broadcast "done" /

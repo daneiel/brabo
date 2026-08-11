@@ -77,7 +77,7 @@ defmodule EngineWeb.AgentCommandController do
         "text" => text
       }) do
     {:ok, _pid, _origin} = PoSupervisor.start_agent(session_id, project_id)
-    # O retorno já não é sempre `:ok` (RN-121): um `:cancel` concorrente pode
+    # O retorno já não é sempre `:ok` (RN-122): um `:cancel` concorrente pode
     # ter interrompido o turno (`{:error, :cancelado}`), ou uma segunda
     # mensagem pode ter chegado com outra já em curso (`{:error,
     # :turno_em_andamento}`). Nos dois casos o desfecho de verdade já está
@@ -162,7 +162,7 @@ defmodule EngineWeb.AgentCommandController do
 
   @doc """
   Cancela o turno em curso do agente conversacional ativo na sessão
-  (RN-121) — o botão "Parar" do composer. Idempotente por natureza:
+  (RN-122) — o botão "Parar" do composer. Idempotente por natureza:
   `GenServer.cast` num `{:via, ...}` sem processo registrado (agente já
   encerrado, ou sem turno algum em curso) é NO-OP, então esta rota nunca
   falha por "não havia o quê cancelar".

@@ -286,7 +286,7 @@ têm turno conversacional em andamento e continuam como estavam.
   continua funcionando, e é dela que a correção depende pra nunca perder
   dado.
 
-### RN-121 — O botão "Parar" cancela o turno DE VERDADE, matando a task que segura a chamada ao LLM {#rn-121}
+### RN-122 — O botão "Parar" cancela o turno DE VERDADE, matando a task que segura a chamada ao LLM {#rn-122}
 
 Até aqui não existia cancelamento em lugar nenhum. A raiz era estrutural:
 `agent_command_controller.ex` atendia a mensagem do usuário com

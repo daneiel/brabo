@@ -1,6 +1,6 @@
 {
   "_": "Gerado por `pnpm docs:generate`. Não edite — é a trava do que está em docs/reference/api/.",
-  "openapiSha256": "c1a95385ce6eab67a75d2da9a9eb607a6f9f55a47808b7fbc1e94b9b308829e5",
+  "openapiSha256": "f8f4046456d4e37fb61f08f86947ac2299965e4cfc3652d4dec0937f1abaca1a",
   "arquivos": {
     "actions-controller-approve-always.ParamsDetails.json": "f51f6d74f8b4a7e9c8f70cef93e0d026d63e77123672029da660c802def3ad0e",
     "actions-controller-approve-always.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
@@ -37,7 +37,7 @@
     "agents-controller-cancel.ParamsDetails.json": "3236e89a0eba7ed2c0c52c7d28c9d3ca61a60c1aa5f9885c527f74245cf0686d",
     "agents-controller-cancel.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
     "agents-controller-cancel.StatusCodes.json": "10cf57aad417f499e41df8e13d6202e98aae95ff5e8aa3e23b9864868094ea6b",
-    "agents-controller-cancel.api.mdx": "195388c7df5a8ab466c1014392e1cb4f00d9fa4d9ecfd5301cbfa03d09285055",
+    "agents-controller-cancel.api.mdx": "789b1653d39ad8fedff142259d5f09f08b4a2a802132cce80b30b3b2c02f76a1",
     "agents-controller-handoff-infra.ParamsDetails.json": "4e5efb20e1409eeb815c23b3b0bb5f88ddd8dee4944337c72d226e3093b7b4ba",
     "agents-controller-handoff-infra.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
     "agents-controller-handoff-infra.StatusCodes.json": "10cf57aad417f499e41df8e13d6202e98aae95ff5e8aa3e23b9864868094ea6b",
