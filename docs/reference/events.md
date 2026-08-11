@@ -292,10 +292,10 @@ Extraído dos pontos de emissão: **81 identificadores**, dos quais **2** não a
 - `action.failed` <sub>(apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts)</sub>
 - `agent.activated` <sub>(apps/api/src/application/use-cases/agents/activate-agent.use-case.ts)</sub>
 - `agent.delta` <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub>
-- `agent.done` <sub>(apps/engine/lib/engine/infra/infra_lead_server.ex)</sub>
+- `agent.done` <sub>(apps/engine/lib/engine/agents/turno_assincrono.ex)</sub>
 - `agent.error` <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub>
 - `agent.response` <sub>(apps/api/src/application/use-cases/llm/send-chat-message.use-case.ts)</sub>
-- `agent.status` <sub>(apps/engine/lib/engine/infra/infra_lead_server.ex)</sub>
+- `agent.status` <sub>(apps/engine/lib/engine/agents/turno_assincrono.ex)</sub>
 - `agent.turn` <sub>(apps/engine/lib/engine/harness/tool_loop.ex)</sub>
 - `anamnese.profile_updated` <sub>(apps/api/src/application/use-cases/anamnese/record-proficiency.use-case.ts)</sub>
 - `anamnese.run_completed` <sub>(apps/api/src/application/use-cases/anamnese/record-proficiency.use-case.ts)</sub>
