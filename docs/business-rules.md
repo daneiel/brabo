@@ -3284,6 +3284,75 @@ mudam de lugar.
 
 ---
 
+### RN-123 — O aceite de handoff é INLINE no fio, com CTA pro Dev Lead apontando pra Executores {#rn-123}
+
+O divisor "X passou o bastão ao Y" que já existia na timeline (`handoff.offered`)
+vira um **card acionável** — com o botão de aceitar embutido — sempre que
+representa a oferta pendente **atual** (a mesma que `offeredHandoff` já
+resolvia para o botão da topbar). O botão da topbar **saiu**: com o aceite
+morando dentro do fio, no lugar exato onde a passagem aconteceu, manter os
+dois puxaria dois botões com o texto IDÊNTICO visíveis ao mesmo tempo — o
+mesmo problema que `ApprovalCard` já evita ao nunca duplicar a ação fora do
+fio (RN-096).
+
+**Qual evento vira o card é decidido por PAR, não por id.** O payload de
+`handoff.offered` carrega só `toAgent`; o `fromAgent` é o `actor` do evento
+(RN-054 já usava essa leitura para o texto do divisor). Sem o id do handoff
+no evento, "esta é a oferta atual" é respondido achando o `handoff.offered`
+mais RECENTE (maior `seq`) com o MESMO par `fromAgent`/`toAgent` de
+`offeredHandoff` — o que impede reabrir um convite de aceite que uma oferta
+mais antiga pro mesmo par já tenha resolvido (aceita, recusada ou superada
+por uma oferta nova).
+
+**O card pro Dev Lead ganha um segundo link**, "Acompanhe a execução em
+Executores", pra aba que já existe (RN-121) — é o início da EXECUÇÃO, e quem
+aceita precisa saber onde olhar depois. As outras ofertas (PO, Arquiteto…)
+não ganham o link: a sessão delas segue sendo o próprio lugar de acompanhar,
+não há "onde mais olhar".
+
+- **Onde:** `apps/web/src/routes/SessionPage.tsx` (`timeline` — bloco
+  `handoff.offered`, `offeredHandoffEventSeq`; `isActive` subiu para antes do
+  `useMemo`), `apps/web/src/routes/SessionPage.module.css` (`.handoffCard`,
+  `.timelineLink`)
+- **Teste:** `apps/web/src/routes/SessionPage.handoff-inline-e-links.test.tsx`
+  (card acionável só na oferta atual, oferta antiga do mesmo par fica muda,
+  handoff já aceito não mostra botão nenhum, link de Executores só no
+  `dev-lead`); `apps/web/src/routes/SessionPage.pista-e-status.test.tsx`
+  atualizado para o botão inline (não mais na topbar)
+- **Verificado por execução real:** aceitar um handoff pro PO numa sessão
+  criativa contra um build isolado (stack Docker próprio, projeto/sessão
+  reais) — o card vira divisor mudo e o log de eventos avança assim que o
+  clique volta da api; o CTA pro Dev Lead navega pra `?tab=executores` de
+  verdade.
+- **Origem:** pedido do usuário — aceite de handoff também inline no fio,
+  não só na topbar.
+
+### RN-124 — O PO narra épico/história criados no fio, com link direto pro Backlog {#rn-124}
+
+`backlog.epic_created`/`backlog.story_created` — que o PO já gravava no
+event log (`CreateEpicUseCase`/`CreateStoryUseCase`) — não tinham
+tratamento nenhum na timeline da sessão: criar história não deixava rastro
+NENHUM no fio, só na aba Backlog, pra quem já soubesse ir olhar lá. Os dois
+tipos ganham entrada na timeline, no MESMO corpo visual das outras
+mensagens do agente (`.message`/`.bubble`) — nenhuma classe nova pro chip
+em si, só o link.
+
+O link ("Ver no Backlog") reusa o deep-link genérico da aba (`?tab=backlog`,
+o mesmo mecanismo do CTA "Definir orçamento" do card do dashboard) — não
+tenta realçar a história recém-criada dentro da aba, que é fora de escopo.
+
+- **Onde:** `apps/web/src/routes/SessionPage.tsx` (`timeline` — bloco
+  `backlog.epic_created`/`backlog.story_created`)
+- **Teste:** `apps/web/src/routes/SessionPage.handoff-inline-e-links.test.tsx`
+  (`item 2`)
+- **Verificado por execução real:** épico e história inseridos no event log
+  de uma sessão real aparecem como "Épico criado"/"História criada" com o
+  título, e o link navega pra `?tab=backlog` de verdade.
+- **Origem:** pedido do usuário — link do PO pras histórias criadas, direto
+  pro Backlog.
+
+---
+
 ## Psicólogo e Anamnese
 
 ### RN-021 — Hipótese sem evidência válida não é gravada {#rn-021}
