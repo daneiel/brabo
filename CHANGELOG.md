@@ -181,7 +181,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   (RN-120). **(3)** sessão criativa exigia o clique separado em "Iniciar
   ideação" antes da primeira mensagem, e digitar direto caía num chat SSE
   genérico sem histórico nem regra de negócio — a primeira mensagem agora
-  ativa o Criativo sozinha, pelo caminho real (RN-118). **(9)** depois de
+  ativa o Criativo sozinha, pelo caminho real (RN-123). **(9)** depois de
   aceitar um handoff pro Dev Lead, a mensagem seguinte continuava indo pro
   Arquiteto — `activeAgent` usava uma cadeia de precedência FIXA
   (arquiteto > po > criativo) que nunca "desligava"; agora é sempre o

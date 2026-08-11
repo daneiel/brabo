@@ -208,7 +208,7 @@ escreve `active` recebe a chave crua do `validateSearch`.
   mesmo tendo sessões do outro — é informação, não erro.
 - **Origem:** [ADR 0061](adr/0061-tipo-da-sessao-na-criacao.md)
 
-### RN-118 — Sessão criativa sem o Criativo ativo: a primeira mensagem TAMBÉM o ativa {#rn-118}
+### RN-123 — Sessão criativa sem o Criativo ativo: a primeira mensagem TAMBÉM o ativa {#rn-123}
 
 Numa sessão `kind: 'criativa'` ([RN-097](#rn-097)) sem `agent.activated`
 nenhum ainda, mandar a primeira mensagem pelo composer ativa o Criativo
