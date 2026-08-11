@@ -9,13 +9,13 @@ import type { Handoff, Session } from '../lib/api-types';
  * mensagens + card de handoff), TRÊS itens que colidiriam se fossem agentes
  * separados:
  *
- * 1. **Aceite de handoff INLINE no fio** (RN-123) — o divisor
+ * 1. **Aceite de handoff INLINE no fio** (RN-125) — o divisor
  *    "X passou o bastão ao Y" vira CARD acionável quando representa a oferta
  *    PENDENTE atual, com o botão embutido. O botão da TOPBAR saiu: os dois
  *    visíveis ao mesmo tempo duplicariam o mesmo texto na tela.
  * 2. **Link do PO pras histórias criadas** (RN-124) — `backlog.epic_created`/
  *    `backlog.story_created` ganham chip no fio, com link pra aba Backlog.
- * 3. **CTA de handoff pro Dev Lead** (RN-123) — o MESMO card do item 1 ganha
+ * 3. **CTA de handoff pro Dev Lead** (RN-125) — o MESMO card do item 1 ganha
  *    um link extra pra aba Executores quando `toAgent === 'dev-lead'`.
  */
 

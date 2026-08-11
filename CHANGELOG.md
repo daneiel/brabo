@@ -7,7 +7,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 ### Novidades
 
 - **web**: o aceite de handoff passa a viver DENTRO do fio da sessão
-  (RN-123) — o divisor "X passou o bastão ao Y" vira um card acionável,
+  (RN-125) — o divisor "X passou o bastão ao Y" vira um card acionável,
   com o botão embutido, quando representa a oferta pendente ATUAL; o
   botão da topbar saiu, pra não duplicar o mesmo texto na tela. O card
   pro **Dev Lead** ganha um link extra, "Acompanhe a execução em
