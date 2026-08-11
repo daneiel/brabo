@@ -25,9 +25,9 @@ defmodule Engine.Agents.CriativoServer do
     ToolCallRecovery
   }
 
-  alias Engine.Agents.FalhaDeTurno
+  alias Engine.Agents.{FalhaDeTurno, TurnoAssincrono}
   alias Engine.Harness.Tools.EmitArtifact
-  alias Engine.Sessions.{EngineApiClient, LiveBroadcast}
+  alias Engine.Sessions.EngineApiClient
 
   @agent "criativo"
 
@@ -66,31 +66,48 @@ defmodule Engine.Agents.CriativoServer do
        project_id: project_id,
        agent: @agent,
        messages: [system_msg | history],
-       tool_specs: [EmitArtifact.spec()]
+       tool_specs: [EmitArtifact.spec()],
+       # Guardado enquanto o turno roda numa Task supervisionada, fora do
+       # `handle_call` que bloqueava o processo inteiro — é o que permite um
+       # `:cancel` chegar e ser atendido (RN-121). Ver `TurnoAssincrono`.
+       turno_assincrono: nil
      }}
   end
 
+  # O turno passou a rodar numa Task (`TurnoAssincrono`), fora deste
+  # `handle_call`: antes o processo inteiro ficava bloqueado até o turno
+  # terminar, e um `:cancel` nunca era atendido nesse meio tempo (RN-121).
   @impl true
-  def handle_call({:user_message, text}, _from, state) do
-    broadcast(state, "agent.status", %{status: "working"})
-
-    state =
-      state
-      |> append(user_msg(text))
-      |> compact()
-      |> run_turn()
-
-    broadcast(state, "agent.done", %{})
-    broadcast(state, "agent.status", %{status: "idle"})
-    {:reply, :ok, state}
+  def handle_call({:user_message, text}, from, state) do
+    work = state |> append(user_msg(text)) |> compact()
+    TurnoAssincrono.iniciar(state, from, fn -> run_turn(work) end)
   end
 
   @impl true
-  def handle_call(:confirm_readiness, _from, state) do
-    broadcast(state, "agent.status", %{status: "working"})
-    # Turno dedicado: o modelo consolida as regras num resumo executivo. O
-    # servidor então emite o product_brief (server-emitted, fora da whitelist
-    # de tool) e oferece o handoff ao PO.
+  def handle_call(:confirm_readiness, from, state) do
+    TurnoAssincrono.iniciar(state, from, fn -> executar_confirm_readiness(state) end)
+  end
+
+  @impl true
+  def handle_cast(:cancel, state) do
+    {:noreply, TurnoAssincrono.cancelar(state)}
+  end
+
+  @impl true
+  def handle_info(msg, state) do
+    case TurnoAssincrono.tratar_resultado(msg, state) do
+      {:ok, novo_state} -> {:noreply, novo_state}
+      :ignorado -> {:noreply, state}
+    end
+  end
+
+  # Turno dedicado: o modelo consolida as regras num resumo executivo. O
+  # servidor então emite o product_brief (server-emitted, fora da whitelist
+  # de tool) e oferece o handoff ao PO. Roda inteiro dentro da Task de
+  # `TurnoAssincrono` — inclusive a criação do handoff, então cancelar no
+  # meio também impede o handoff de nascer (o que já rodou do turno até ali
+  # fica registrado; o resto, não).
+  defp executar_confirm_readiness(state) do
     instruction =
       user_msg(
         "O usuário confirmou que está pronto para produzir. Consolide as regras " <>
@@ -111,21 +128,16 @@ defmodule Engine.Agents.CriativoServer do
     # A informação "passava" (estava no event log), mas o handoff nunca
     # existia e ninguém saberia por quê: nem `agent.error`, nem resposta no
     # fio, só o processo sumindo (RN-116).
-    state =
-      case EngineApiClient.create_handoff(
-             state.project_id,
-             state.session_id,
-             @agent,
-             "po",
-             brief_id
-           ) do
-        {:ok, _handoff} -> state
-        {:error, reason} -> emit_falha_handoff(state, "po", reason)
-      end
-
-    broadcast(state, "agent.done", %{})
-    broadcast(state, "agent.status", %{status: "idle"})
-    {:reply, :ok, state}
+    case EngineApiClient.create_handoff(
+           state.project_id,
+           state.session_id,
+           @agent,
+           "po",
+           brief_id
+         ) do
+      {:ok, _handoff} -> state
+      {:error, reason} -> emit_falha_handoff(state, "po", reason)
+    end
   end
 
   # --- Turno ---
@@ -372,13 +384,10 @@ defmodule Engine.Agents.CriativoServer do
     })
   end
 
-  # `agent.status` PRECISA ser persistido, não só broadcastado: o painel do
-  # time deriva o roster do event log buscado por HTTP (ver
-  # Engine.Sessions.LiveBroadcast.agent_status/4 e o ADR 0021).
-  defp broadcast(state, "agent.status", %{status: status}) do
-    LiveBroadcast.agent_status(state.project_id, state.session_id, @agent, status)
-  end
-
+  # `agent.status` (o único evento que PRECISA ser persistido, não só
+  # broadcastado — ver ADR 0021) passou a ser emitido por
+  # `Engine.Agents.TurnoAssincrono`, que envolve o `handle_call`/`handle_cast`
+  # de cada turno desde RN-121. O que sobra aqui é só o broadcast efêmero.
   defp broadcast(state, event, payload) do
     EngineWeb.Endpoint.broadcast("session:" <> state.session_id, event, payload)
   end

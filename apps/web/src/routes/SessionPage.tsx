@@ -5,6 +5,7 @@ import {
   acceptHandoff,
   approveAction,
   approveAlwaysAction,
+  cancelAgentTurn,
   confirmReadiness,
   denyAction,
   getProject,
@@ -711,6 +712,41 @@ export function SessionPage({
     }
   }
 
+  // Botão "Parar" do composer (RN-121): interrompe DE VERDADE o turno em
+  // curso no engine — mata a Task que segura a chamada ao LLM, cortando a
+  // conexão no meio pra economizar token, não só para de renderizar aqui.
+  // Só faz sentido enquanto `streaming` é true (ver o `disabled` do botão).
+  async function handleCancel() {
+    if (!streaming) return;
+
+    // O mesmo agente que `handleSend` teria mandado a mensagem: o ativo, ou
+    // 'criativo' quando a sessão é criativa e ainda não tem ninguém ativo
+    // (a primeira mensagem também ativa o Criativo).
+    const agentAlvo = activeAgent ?? (session?.kind === 'criativa' ? 'criativo' : null);
+
+    if (!agentAlvo) {
+      // Chat consultivo sem agente (SSE genérico da api) — cancelamento é
+      // client-side, pelo mesmo AbortController que `handleSend` já usa
+      // nesse caminho.
+      abortRef.current?.abort();
+      return;
+    }
+
+    try {
+      await cancelAgentTurn(projectId, sessionId, agentAlvo);
+    } catch {
+      showToast({ title: 'Erro', message: 'Não foi possível cancelar o turno', tone: 'danger' });
+      return;
+    }
+
+    // `finalizarTurnoDoAgente` é idempotente (mesmo padrão de `handleSend`):
+    // o canal também vai reconciliar via `onAgentDone`/`agent.error`, mas
+    // chamar aqui reseta a tela na hora em vez de esperar o round-trip do
+    // `GenServer.call` original (que só desbloqueia quando o engine
+    // termina de processar o cancelamento).
+    finalizarTurnoDoAgente();
+  }
+
   function handleComposerKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -1067,6 +1103,13 @@ export function SessionPage({
               <Button onClick={handleSend} disabled={streaming || !draft.trim()}>
                 Enviar
               </Button>
+              {/* RN-121: só existe (habilitado) enquanto há turno em curso —
+                  fora disso não há o que parar. */}
+              {streaming && (
+                <Button variant="danger" onClick={handleCancel}>
+                  Parar
+                </Button>
+              )}
               {/*
                 Some depois que o Criativo passou a bola (achado L). O botão
                 dependia só de o Criativo estar ativo, e continuava oferecendo

@@ -936,6 +936,12 @@ const sidebar: SidebarsConfig = {
       items: [
         {
           type: "doc",
+          id: "docs/reference/api/agents-controller-cancel",
+          label: "Cancela o turno em curso do agente ativo",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/agents-controller-message",
           label: "Envia uma mensagem ao agente ativo",
           className: "api-method post",

@@ -427,6 +427,20 @@ defmodule Engine.Sessions.FakeEngineApiClient do
   def llm_turn_stream(_project_id, _session_id, agent, messages, tools, on_delta) do
     notify({:llm_turn_stream, agent, messages, tools})
 
+    # `:fake_llm_turn_stream_hang` — o turno FICA parado aqui, como uma
+    # chamada SSE de verdade presa no meio do stream. Existe só para provar
+    # que `Task.shutdown/2` (`:brutal_kill`, RN-121) mata a task DE VERDADE
+    # no meio de uma chamada em andamento — sem isto, todo turno fake
+    # retorna instantâneo e "cancelar no meio" nunca teria um "meio" real
+    # para interromper. Avisa `:turno_pendurado` antes de travar, para o
+    # teste saber exatamente quando o turno "começou a gastar" — e nunca
+    # manda mensagem nenhuma depois: se a task NÃO for morta, o teste que
+    # espera silêncio (`refute_receive`) prova a diferença.
+    if Process.get(:fake_llm_turn_stream_hang) do
+      if pid = Application.get_env(:engine, :test_pid), do: send(pid, :turno_pendurado)
+      Process.sleep(:infinity)
+    end
+
     # Deltas scriptados (opcional) — rebroadcastados pelo on_delta.
     for delta <- Process.get(:fake_deltas, []), do: on_delta.(delta)
 

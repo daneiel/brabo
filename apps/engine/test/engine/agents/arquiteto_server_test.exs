@@ -6,6 +6,7 @@ defmodule Engine.Agents.ArquitetoServerTest do
 
   alias Engine.Agents.ArquitetoServer
   alias Engine.Sessions.FakeEngineApiClient
+  import Engine.Agents.TurnoAssincronoCase, only: [sync_call: 3, sync_cast: 3]
 
   setup do
     root =
@@ -77,7 +78,7 @@ defmodule Engine.Agents.ArquitetoServerTest do
       FakeEngineApiClient.final_response("Arquitetura pronta.")
     ])
 
-    assert {:noreply, _new_state} = ArquitetoServer.handle_cast(:kickoff, state)
+    assert {:noreply, _new_state} = sync_cast(ArquitetoServer, :kickoff, state)
 
     assert_received {:module_map_created, _modules}
     assert_received {:story_modules_assigned, %{storyId: "st-1", moduleIds: ["api"]}}
@@ -99,7 +100,7 @@ defmodule Engine.Agents.ArquitetoServerTest do
       FakeEngineApiClient.final_response("ok")
     ])
 
-    assert {:noreply, new_state} = ArquitetoServer.handle_cast(:kickoff, state)
+    assert {:noreply, new_state} = sync_cast(ArquitetoServer, :kickoff, state)
 
     tool_msgs = Enum.filter(new_state.messages, &(&1["role"] == "tool"))
     assert Enum.any?(tool_msgs, &String.contains?(&1["content"], "falha ao criar module_map"))
@@ -111,7 +112,7 @@ defmodule Engine.Agents.ArquitetoServerTest do
     Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("feito")])
 
     assert {:reply, :ok, _} =
-             ArquitetoServer.handle_call({:user_message, "defina a arquitetura"}, self(), state)
+             sync_call(ArquitetoServer, {:user_message, "defina a arquitetura"}, state)
 
     assert_received %Phoenix.Socket.Broadcast{
       event: "agent.delta",
@@ -127,7 +128,7 @@ defmodule Engine.Agents.ArquitetoServerTest do
   } do
     Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("Arquitetura fechada.")])
 
-    assert {:reply, :ok, _} = ArquitetoServer.handle_call(:offer_infra_handoff, self(), state)
+    assert {:reply, :ok, _} = sync_call(ArquitetoServer, :offer_infra_handoff, state)
 
     assert_received {:handoff_created, _, ^session_id, "arquiteto", "infra", nil}
   end
@@ -150,7 +151,7 @@ defmodule Engine.Agents.ArquitetoServerTest do
     Process.put(:fake_handoff_error, {500, %{"message" => "erro interno"}})
     Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("Arquitetura fechada.")])
 
-    assert {:reply, :ok, _} = ArquitetoServer.handle_call(:offer_infra_handoff, self(), state)
+    assert {:reply, :ok, _} = sync_call(ArquitetoServer, :offer_infra_handoff, state)
 
     assert_received {:event_appended, _, ^session_id, %{type: "agent.error", payload: payload}}
     assert payload.origem == "infra"

@@ -6,6 +6,18 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api,engine,web**: botão **"Parar"** no composer da sessão cancela DE
+  VERDADE o turno em curso do agente conversacional (RN-121) — não só para de
+  renderizar no cliente. O engine parava de atender qualquer mensagem
+  (inclusive cancelar) enquanto processava um turno, porque o turno inteiro
+  rodava dentro de um `GenServer.call` síncrono; os quatro agentes
+  conversacionais (Criativo, PO, Arquiteto, Dev Lead) passaram a rodar o
+  turno numa Task supervisionada (`Engine.Agents.TurnoAssincrono`), liberando
+  o processo pra atender `:cancel` enquanto o turno roda. Cancelar mata a
+  Task (`Task.shutdown/2`, `:brutal_kill`), o que derruba a conexão SSE com a
+  api no meio — é isso que economiza token de verdade — e grava um
+  `agent.error` terminal com origem "politica"
+
 - **api,engine,web**: o Psicólogo pode ser pausado GLOBALMENTE
   (`PSYCHOLOGIST_ENABLED`, default `false` a partir de agora) — mesma
   decisão de produto já aplicada à Anamnese ("hoje ele não está trazendo
