@@ -13,7 +13,9 @@ import {
   getSessionBudget,
   getSessionModelBinding,
   listModels,
+  promoteStories,
   renameSession,
+  returnStory,
   sendAgentMessage,
   setSessionModelBinding,
   startAgent,
@@ -40,6 +42,8 @@ import { EventItem } from '../components/EventItem';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Disclosure } from '../components/ui/Disclosure';
+import { Modal } from '../components/ui/Modal';
+import { Textarea } from '../components/ui/Textarea';
 import { lerFalhaDeTurno } from '../lib/session-falha';
 import {
   LIMITE_DO_NOME,
@@ -184,6 +188,15 @@ export function SessionPage({
   // vazio é um nome que se está digitando, e nenhum campo aberto é outro
   // estado.
   const [rascunhoDoNome, setRascunhoDoNome] = useState<string | null>(null);
+  // Promoção inline de história (RN-126) — o mesmo mecanismo de
+  // `PromotionQueue` (ProjectBacklogTab.tsx), só que disparado a partir do
+  // card no fio em vez da aba Backlog. `promovendoStoryId` é o id em voo (só
+  // um por vez, como o resto da tela); `recusandoStory` abre o modal de
+  // motivo, espelhando o padrão do backlog.
+  const [promovendoStoryId, setPromovendoStoryId] = useState<string | null>(null);
+  const [recusandoStory, setRecusandoStory] = useState<{ id: string; title: string } | null>(null);
+  const [motivoRecusa, setMotivoRecusa] = useState('');
+  const [enviandoRecusa, setEnviandoRecusa] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   useEffect(() => () => abortRef.current?.abort(), []);
   // Achado 10: sentinela no fim da lista de mensagens — a sessão abre nela,
@@ -563,6 +576,108 @@ export function SessionPage({
             </div>
           ),
         });
+      } else if (event.type === 'backlog.story_promotion_proposed') {
+        // Promoção inline (RN-126) — a decisão que RN-048 já resolve na aba
+        // Backlog ganha um segundo lugar: o fio da própria sessão do PO, onde
+        // a história nasceu. Mesmo mecanismo (`promoteStories`/`returnStory`),
+        // sem endpoint novo. O card fica ACIONÁVEL só enquanto NENHUM evento
+        // posterior já decidiu o destino desta história — promovida
+        // (`backlog.story_transitioned`, que `PromoteStoriesUseCase` emite via
+        // `TransitionStoryUseCase`) ou devolvida
+        // (`backlog.story_promotion_returned`). Sem esta checagem, promover ou
+        // devolver deixaria os mesmos dois botões plantados no fio, oferecendo
+        // a mesma decisão de novo sobre uma história que já saiu da fila.
+        const payload = event.payload as { storyId?: unknown; title?: unknown };
+        const storyId = typeof payload?.storyId === 'string' ? payload.storyId : undefined;
+        const titulo = typeof payload?.title === 'string' ? payload.title : '(sem título)';
+        const resolvida =
+          !storyId ||
+          events.some(
+            (e) =>
+              e.seq > event.seq &&
+              ((e.type === 'backlog.story_transitioned' &&
+                (e.payload as { storyId?: unknown })?.storyId === storyId) ||
+                (e.type === 'backlog.story_promotion_returned' &&
+                  (e.payload as { storyId?: unknown })?.storyId === storyId)),
+          );
+        items.push({
+          seq: event.seq,
+          node:
+            !resolvida && storyId ? (
+              <div className={styles.handoffCard} key={event.id}>
+                <span className={styles.handoffPill}>
+                  <StackIcon size={13} />
+                  história &quot;{titulo}&quot; pronta, aguardando sua promoção
+                </span>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <Button
+                    variant="success"
+                    disabled={promovendoStoryId === storyId}
+                    loading={promovendoStoryId === storyId}
+                    onClick={() => handlePromoteStory(storyId)}
+                  >
+                    Promover
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    disabled={promovendoStoryId === storyId}
+                    onClick={() => {
+                      setRecusandoStory({ id: storyId, title: titulo });
+                      setMotivoRecusa('');
+                    }}
+                  >
+                    Devolver
+                  </Button>
+                </div>
+                <Link
+                  to="/projects/$projectId"
+                  params={{ projectId }}
+                  search={{ tab: 'backlog' }}
+                  className={styles.timelineLink}
+                >
+                  Ver no Backlog
+                  <ChevronRightIcon size={11} />
+                </Link>
+              </div>
+            ) : (
+              <div className={styles.handoffDivider} key={event.id}>
+                <span className={styles.handoffPill}>
+                  <StackIcon size={13} />
+                  história &quot;{titulo}&quot; esteve aguardando sua promoção
+                </span>
+              </div>
+            ),
+        });
+      } else if (event.type === 'backlog.story_promotion_returned') {
+        // Narração simétrica ao card acima (RN-126) — mesma frase que
+        // `activity.ts` já usa no log colapsado da sidebar, reaproveitada
+        // aqui em vez de reinventada.
+        const payload = event.payload as { title?: unknown; reason?: unknown };
+        const titulo = typeof payload?.title === 'string' ? payload.title : 'uma história';
+        const motivo = typeof payload?.reason === 'string' ? payload.reason : 'sem motivo';
+        items.push({
+          seq: event.seq,
+          node: (
+            <div
+              className={styles.message}
+              key={event.id}
+              style={{ ['--msg-color' as string]: 'var(--danger)' } as CSSProperties}
+            >
+              <span className={styles.avatar}>
+                <StackIcon size={15} />
+              </span>
+              <div className={styles.messageBody}>
+                <div className={styles.messageHeader}>
+                  <span className={styles.messageName}>{user.name ?? 'Você'}</span>
+                  <span className={styles.messageMeta}>devolveu ao PO</span>
+                </div>
+                <div className={styles.bubble}>
+                  &quot;{titulo}&quot;: {motivo}
+                </div>
+              </div>
+            </div>
+          ),
+        });
       } else if (event.type === 'agent.response') {
         const payload = event.payload as { content?: unknown; text?: unknown };
         const text =
@@ -662,7 +777,18 @@ export function SessionPage({
     }
 
     return items.sort((a, b) => a.seq - b.seq);
-  }, [events, actions, projectId, sessionId, user.name, queryClient, invalidateActions, offeredHandoff, isActive]);
+  }, [
+    events,
+    actions,
+    projectId,
+    sessionId,
+    user.name,
+    queryClient,
+    invalidateActions,
+    offeredHandoff,
+    isActive,
+    promovendoStoryId,
+  ]);
 
   async function handleActivate() {
     await transitionSession(projectId, sessionId, 'active');
@@ -727,6 +853,51 @@ export function SessionPage({
     } catch {
       turnoAgentRef.current = null;
       showToast({ title: 'Erro', message: 'Não foi possível aceitar o handoff', tone: 'danger' });
+    }
+  }
+
+  // Promoção inline (RN-126) — mesmos `promoteStories`/`returnStory` que
+  // `PromotionQueue` já chama; só o gatilho muda, do botão na aba Backlog
+  // pro card no fio. `promoteStories` é sempre lote (mesmo pra uma história),
+  // e a resposta traz `failed` com o motivo do domínio quando recusa — o
+  // toast reaproveita essa informação em vez de um "erro" genérico.
+  async function handlePromoteStory(storyId: string) {
+    if (promovendoStoryId) return;
+    setPromovendoStoryId(storyId);
+    try {
+      const r = await promoteStories(projectId, [storyId]);
+      await queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
+      queryClient.invalidateQueries({ queryKey: ['backlog', projectId] });
+      if (r.failed.length > 0) {
+        showToast({
+          title: 'Não foi possível promover',
+          message: r.failed[0]?.reason,
+          tone: 'danger',
+        });
+      } else {
+        showToast({ title: 'História promovida', tone: 'success' });
+      }
+    } catch {
+      showToast({ title: 'Erro', message: 'Não foi possível promover a história', tone: 'danger' });
+    } finally {
+      setPromovendoStoryId(null);
+    }
+  }
+
+  async function handleReturnStory() {
+    if (!recusandoStory || motivoRecusa.trim() === '' || enviandoRecusa) return;
+    setEnviandoRecusa(true);
+    try {
+      await returnStory(projectId, recusandoStory.id, motivoRecusa.trim());
+      setRecusandoStory(null);
+      setMotivoRecusa('');
+      await queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
+      queryClient.invalidateQueries({ queryKey: ['backlog', projectId] });
+      showToast({ title: 'História devolvida ao PO', tone: 'success' });
+    } catch {
+      showToast({ title: 'Erro', message: 'Não foi possível devolver a história', tone: 'danger' });
+    } finally {
+      setEnviandoRecusa(false);
     }
   }
 
@@ -888,13 +1059,16 @@ export function SessionPage({
         {/* A SAÍDA da tela (FASE 20). Até aqui `SessionPage` não importava
             `Link` nem `useNavigate`: entrar numa sessão era um beco, e o único
             caminho de volta era o botão do navegador. É `Link`, e não um
-            `onClick` que navega, porque voltar ao dashboard é um destino —
-            abrir em outra aba e ver o alvo na barra de status são de graça. */}
+            `onClick` que navega, porque voltar ao PROJETO é um destino —
+            abrir em outra aba e ver o alvo na barra de status são de graça.
+            Volta ao PROJETO, não ao dashboard raiz: a sessão sempre nasce
+            dentro de um projeto, e é lá que quem sai dela quer estar. */}
         <Link
-          to="/"
+          to="/projects/$projectId"
+          params={{ projectId }}
           className={styles.voltar}
-          aria-label="Voltar ao dashboard"
-          title="Voltar ao dashboard"
+          aria-label="Voltar ao projeto"
+          title="Voltar ao projeto"
         >
           <ArrowLeftIcon size={17} />
         </Link>
@@ -1252,6 +1426,37 @@ export function SessionPage({
           />
         )}
       </div>
+
+      {/* Modal de motivo da devolução (RN-126) — mesmo padrão de
+          `PromotionQueue` em ProjectBacklogTab.tsx, disparado a partir do
+          card inline em vez da aba Backlog. */}
+      {recusandoStory && (
+        <Modal
+          title={`Devolver "${recusandoStory.title}" ao PO?`}
+          onClose={() => setRecusandoStory(null)}
+        >
+          <Textarea
+            label="Motivo"
+            value={motivoRecusa}
+            onChange={(e) => setMotivoRecusa(e.target.value)}
+            hint="Vai como mensagem fixada na sessão do PO. Diga o que falta — é com isto que ele reescreve a história."
+            placeholder="Ex.: os critérios de aceite não cobrem a recusa do pagamento."
+          />
+          <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+            <Button
+              variant="danger"
+              loading={enviandoRecusa}
+              disabled={motivoRecusa.trim() === ''}
+              onClick={handleReturnStory}
+            >
+              Devolver ao PO
+            </Button>
+            <Button variant="ghost" onClick={() => setRecusandoStory(null)}>
+              Cancelar
+            </Button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

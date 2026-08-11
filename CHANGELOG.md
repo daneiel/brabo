@@ -6,6 +6,15 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **web**: o botão "Voltar" da sessão passa a levar de volta ao PROJETO
+  (`/projects/:projectId`), não mais ao dashboard raiz — a sessão sempre
+  nasce dentro de um projeto, e é lá que quem sai dela quer estar.
+  Separadamente, a promoção de história (RN-048) ganha um segundo lugar
+  pra ser decidida: `backlog.story_promotion_proposed` vira um card
+  acionável INLINE no fio da sessão do PO, com os botões "Promover" e
+  "Devolver" chamando os mesmos endpoints que a aba Backlog já usa
+  (RN-126); "Devolver" pede o motivo e a devolução narra no fio, com o
+  motivo, quando decidida
 - **web**: o aceite de handoff passa a viver DENTRO do fio da sessão
   (RN-125) — o divisor "X passou o bastão ao Y" vira um card acionável,
   com o botão embutido, quando representa a oferta pendente ATUAL; o

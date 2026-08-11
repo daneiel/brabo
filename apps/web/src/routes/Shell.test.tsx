@@ -239,8 +239,9 @@ describe('Shell — marca', () => {
 
   // A marca era `<div>` sem navegação nenhuma — clicar não fazia nada,
   // mesmo sendo o topo da sidebar persistente em toda rota. Agora é o
-  // atalho de volta ao dashboard, o mesmo destino do botão de
-  // `SessionPage.tsx` (aria-label="Voltar ao dashboard").
+  // atalho de volta ao dashboard raiz — destino diferente do botão de
+  // `SessionPage.tsx` (aria-label="Voltar ao projeto"), que volta ao
+  // PROJETO da sessão, não ao dashboard.
   it('é um link para o dashboard raiz, mesmo dentro de um projeto aberto', () => {
     estado.pathname = '/projects/project-1';
 
