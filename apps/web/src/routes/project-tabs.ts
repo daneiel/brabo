@@ -2,6 +2,7 @@ import type { ComponentType } from 'react';
 import { ProjectOverviewTab } from './ProjectOverviewTab';
 import { ProjectChatTab, ProjectCriativoTab } from './ProjectSessionsTab';
 import { ProjectCodeTab } from './ProjectCodeTab';
+import { ProjectExecutorsTab } from './ProjectExecutorsTab';
 import { ProjectBacklogTab } from './ProjectBacklogTab';
 import { ProjectApprovalsTab } from './ProjectApprovalsTab';
 import { ProjectInsightsTab } from './ProjectInsightsTab';
@@ -85,6 +86,16 @@ const REGISTRO = [
     component: ProjectOverviewTab,
     semRespiro: true,
     ordem: 10,
+  },
+  // FASE 27 — dev agent e QA saem do grid misturado da Visão geral para uma
+  // aba própria (RN-121). Logo depois da Visão geral, e antes de
+  // Criativo/Chat/Code: quem olha "como está a execução" vem daqui primeiro,
+  // e só desce para conversar com um agente ou ler código depois.
+  {
+    key: 'executores',
+    label: 'Executores',
+    component: ProjectExecutorsTab,
+    ordem: 12,
   },
   // FASE 24 — o tipo da sessão vira LUGAR (RN-104). Era uma aba só, "Sessões",
   // listando os dois tipos misturados; o tipo é imutável depois de criado

@@ -54,6 +54,9 @@ vi.mock('./ProjectSessionsTab', () => ({
 vi.mock('./ProjectCodeTab', () => ({
   ProjectCodeTab: () => <div>painel de code</div>,
 }));
+vi.mock('./ProjectExecutorsTab', () => ({
+  ProjectExecutorsTab: () => <div>painel de executores</div>,
+}));
 vi.mock('./ProjectApprovalsTab', () => ({
   ProjectApprovalsTab: () => <div>painel de approvals</div>,
 }));
