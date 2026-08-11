@@ -1,6 +1,6 @@
 defmodule Engine.Agents.TurnoAssincronoTest do
   @moduledoc """
-  RN-121: o turno de um agente conversacional passou a rodar numa Task
+  RN-122: o turno de um agente conversacional passou a rodar numa Task
   supervisionada, fora do `handle_call`/`handle_cast` que antes bloqueava o
   processo inteiro — é o que permite `:cancel` chegar e ser atendido.
 

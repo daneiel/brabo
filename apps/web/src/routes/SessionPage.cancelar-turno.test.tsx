@@ -6,7 +6,7 @@ import type { Session } from '../lib/api-types';
 import type { SessionChannelHandlers } from '../lib/session-channel';
 
 /**
- * RN-121: o botão "Parar" do composer chama a nova rota de cancelamento
+ * RN-122: o botão "Parar" do composer chama a nova rota de cancelamento
  * (`cancelAgentTurn`) pro agente ativo — só existe enquanto `streaming` é
  * `true`. O cancelamento DE VERDADE acontece no engine (mata a Task que
  * segura o LLM); este teste cobre só o contrato do CLIENTE: o botão aparece
@@ -135,7 +135,7 @@ beforeEach(() => {
   getSession.mockResolvedValue(sessao());
 });
 
-describe('SessionPage — botão "Parar" (RN-121)', () => {
+describe('SessionPage — botão "Parar" (RN-122)', () => {
   it('não existe enquanto não há turno em curso', async () => {
     sendAgentMessage.mockResolvedValue(undefined);
     montar();

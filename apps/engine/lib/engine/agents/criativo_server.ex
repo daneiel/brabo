@@ -69,14 +69,14 @@ defmodule Engine.Agents.CriativoServer do
        tool_specs: [EmitArtifact.spec()],
        # Guardado enquanto o turno roda numa Task supervisionada, fora do
        # `handle_call` que bloqueava o processo inteiro — é o que permite um
-       # `:cancel` chegar e ser atendido (RN-121). Ver `TurnoAssincrono`.
+       # `:cancel` chegar e ser atendido (RN-122). Ver `TurnoAssincrono`.
        turno_assincrono: nil
      }}
   end
 
   # O turno passou a rodar numa Task (`TurnoAssincrono`), fora deste
   # `handle_call`: antes o processo inteiro ficava bloqueado até o turno
-  # terminar, e um `:cancel` nunca era atendido nesse meio tempo (RN-121).
+  # terminar, e um `:cancel` nunca era atendido nesse meio tempo (RN-122).
   @impl true
   def handle_call({:user_message, text}, from, state) do
     work = state |> append(user_msg(text)) |> compact()
@@ -387,7 +387,7 @@ defmodule Engine.Agents.CriativoServer do
   # `agent.status` (o único evento que PRECISA ser persistido, não só
   # broadcastado — ver ADR 0021) passou a ser emitido por
   # `Engine.Agents.TurnoAssincrono`, que envolve o `handle_call`/`handle_cast`
-  # de cada turno desde RN-121. O que sobra aqui é só o broadcast efêmero.
+  # de cada turno desde RN-122. O que sobra aqui é só o broadcast efêmero.
   defp broadcast(state, event, payload) do
     EngineWeb.Endpoint.broadcast("session:" <> state.session_id, event, payload)
   end

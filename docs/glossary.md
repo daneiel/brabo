@@ -101,7 +101,7 @@ o agente encerra com artefato de bloqueio.
 **Turno (agente conversacional)** — uma rodada de trabalho de um dos quatro
 agentes conversacionais session-scoped (Criativo, PO, Arquiteto, Dev Lead):
 uma chamada streamada ao LLM mais o loop de ferramentas que ela dispara.
-Desde [RN-121](business-rules.md#rn-121) roda numa `Task` supervisionada
+Desde [RN-122](business-rules.md#rn-122) roda numa `Task` supervisionada
 (`Engine.Agents.TurnoAssincrono`), não mais dentro do `handle_call` que
 recebia a mensagem — é o que permite o botão **"Parar"** do composer
 cancelar o turno DE VERDADE (mata a task, corta a conexão com a api) em vez

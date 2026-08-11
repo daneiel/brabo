@@ -408,7 +408,7 @@ Quinze rotas de comando, mais as de saúde. Sob `/internal` com `VerifyServiceTo
 | POST | `/sessions` | sobe o `SessionServer` |
 | POST | `/sessions/:id/agent/start` | inicia um turno de agente |
 | POST | `/sessions/:id/agent/message` | mensagem do usuário no fio |
-| POST | `/sessions/:id/agent/cancel` | cancela o turno em curso do agente ativo ([RN-121](../business-rules.md#rn-121)) — mata a Task que segura a chamada ao LLM (`Task.shutdown/2`, `:brutal_kill`); idempotente, NO-OP sem turno em curso |
+| POST | `/sessions/:id/agent/cancel` | cancela o turno em curso do agente ativo ([RN-122](../business-rules.md#rn-122)) — mata a Task que segura a chamada ao LLM (`Task.shutdown/2`, `:brutal_kill`); idempotente, NO-OP sem turno em curso |
 | POST | `/sessions/:id/agent/readiness` | confirmação de prontidão |
 | POST | `/sessions/:id/agent/revise` | devolve ao PO uma história que o usuário recusou promover (Fase 12c — RN-048); **404 se o PO não está de pé**, e isso não é erro para a api |
 | POST | `/sessions/:id/agent/offer-infra-handoff` | oferta de handoff ao Infra |

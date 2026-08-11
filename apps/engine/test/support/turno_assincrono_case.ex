@@ -1,6 +1,6 @@
 defmodule Engine.Agents.TurnoAssincronoCase do
   @moduledoc """
-  Helper de teste pros quatro agentes conversacionais depois da RN-121: o
+  Helper de teste pros quatro agentes conversacionais depois da RN-122: o
   turno passou a rodar numa `Task`, então `handle_call`/`handle_cast` não
   devolve mais a resposta na hora — ela chega via `handle_info/2` quando a
   task termina (ver `Engine.Agents.TurnoAssincrono`).

@@ -3,7 +3,7 @@ defmodule Engine.Agents.CriativoServerTest do
   # banco. async: false por causa do Application env global. Os callbacks são
   # exercitados DIRETO no processo de teste (init/1 + handle_call/3), então o
   # fake scriptado por dicionário de processo funciona (mesmo padrão do
-  # tool_loop_test) — desde RN-121 o turno de verdade roda numa Task, e
+  # tool_loop_test) — desde RN-122 o turno de verdade roda numa Task, e
   # `sync_call/3` (Engine.Agents.TurnoAssincronoCase) leva o dicionário
   # scriptado pra dentro dela e devolve a MESMA forma de tupla de antes.
   use Engine.DataCase, async: false

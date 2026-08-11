@@ -712,7 +712,7 @@ export function SessionPage({
     }
   }
 
-  // Botão "Parar" do composer (RN-121): interrompe DE VERDADE o turno em
+  // Botão "Parar" do composer (RN-122): interrompe DE VERDADE o turno em
   // curso no engine — mata a Task que segura a chamada ao LLM, cortando a
   // conexão no meio pra economizar token, não só para de renderizar aqui.
   // Só faz sentido enquanto `streaming` é true (ver o `disabled` do botão).
@@ -1103,7 +1103,7 @@ export function SessionPage({
               <Button onClick={handleSend} disabled={streaming || !draft.trim()}>
                 Enviar
               </Button>
-              {/* RN-121: só existe (habilitado) enquanto há turno em curso —
+              {/* RN-122: só existe (habilitado) enquanto há turno em curso —
                   fora disso não há o que parar. */}
               {streaming && (
                 <Button variant="danger" onClick={handleCancel}>

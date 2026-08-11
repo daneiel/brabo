@@ -429,7 +429,7 @@ defmodule Engine.Sessions.FakeEngineApiClient do
 
     # `:fake_llm_turn_stream_hang` — o turno FICA parado aqui, como uma
     # chamada SSE de verdade presa no meio do stream. Existe só para provar
-    # que `Task.shutdown/2` (`:brutal_kill`, RN-121) mata a task DE VERDADE
+    # que `Task.shutdown/2` (`:brutal_kill`, RN-122) mata a task DE VERDADE
     # no meio de uma chamada em andamento — sem isto, todo turno fake
     # retorna instantâneo e "cancelar no meio" nunca teria um "meio" real
     # para interromper. Avisa `:turno_pendurado` antes de travar, para o
