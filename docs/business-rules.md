@@ -3551,6 +3551,118 @@ de fora dessa correção, e sem ela a bolha do agente ficava presa vazia
 - **Origem:** investigação AO VIVO do produto no Chrome — os três reproduzidos
   manualmente antes da correção.
 
+### RN-136 — O card acionável de handoff no chat só considera quem CONVERSA nesta tela {#rn-136}
+
+`OfferInfraHandoffUseCase` oferece o handoff pro Infra e, na MESMA
+confirmação, oferece pro Dev Lead logo em seguida (FASE 14d) — duas chamadas
+separadas, a de Infra primeiro. `handoffs` (o que `SessionPage.tsx` lê de
+`useHandoffs`) vem ordenado por `createdAt` ASC
+(`DrizzleHandoffRepository#findBySession`), e o `offeredHandoff` que decide
+qual card vira "acionável" resolvia com um `.find()` puro — sempre o
+`offered` mais **antigo**. Como o Infra Lead não é conversacional (não está
+em `AGENTES_DE_CHAT`, e nunca é aceito por esta tela), o card do Dev Lead só
+ficaria acionável depois de alguém aceitar o de Infra num lugar que esta
+tela não mostra — na prática, nunca: o usuário só via "aceitar handoff de
+Infra" e o convite pro Dev Lead ficava invisível atrás dele.
+
+O filtro restringe `offeredHandoff` a handoffs endereçados a um agente de
+`AGENTES_DE_CHAT`. O handoff pro Infra continua **narrado** no fio — o
+`handoff.offered` dele vira divisor mudo, como qualquer oferta que não é "a
+atual" — só o card com botão é que passa a ignorá-lo: Infra nunca teve (nem
+precisa ter) um jeito de ser aceito por aqui.
+
+- **Onde:** `apps/web/src/routes/SessionPage.tsx` (`offeredHandoff`)
+- **Teste:**
+  `apps/web/src/routes/SessionPage.handoff-devlead-e-colapso.test.tsx`,
+  describe "problema 1" — Infra mais antigo + Dev Lead mais novo resolve pro
+  card do Dev Lead, nunca pro de Infra; só Infra `offered` não mostra card
+  nenhum
+- **Origem:** investigação de código + teste ao vivo no Chrome — o handoff
+  pro Dev Lead nunca ficava acionável depois da FASE 14d
+
+### RN-137 — "Ativar execução" tem atalho inline no card do Dev Lead, sem baixar a exigência de papel {#rn-137}
+
+O card de aceite do handoff pro Dev Lead ganhou um botão "Ativar execução"
+ao lado do link "Acompanhe a execução em Executores" — atalho pra quem já
+sabe o que quer, sem passar pela conversa. Chama a MESMA
+`activateExecution` que a Visão Geral usa, agora com `sessionId` (a sessão
+de chat aberta) como `originSessionId` — sem isto a sessão que trouxe o
+Dev Lead ficava `active` para sempre, mesmo com a execução (numa sessão
+SEPARADA) já tendo decolado por este atalho ([RN-135](#rn-135)).
+
+**A rota continua exigindo `maintainer`** — DELIBERADAMENTE não alinhada ao
+`developer` que já basta pra aceitar o handoff no mesmo card. Quem ativa
+vira `session.createdBy` da sessão de execução, e é esse papel que
+`ProposeActionUseCase` resolve (`ResolveEffectiveRoleUseCase.forProject`)
+como o EFETIVO de todo `git_commit`/`git_push`/`pr_open` que os dev agents
+propuserem dali em diante — é o mesmo motivo que já justificava o
+`maintainer` do botão da Visão Geral
+(`ExecutionController#activate`). Baixar a exigência aqui inverteria essa
+resolução em silêncio: toda PR que a execução abrisse passaria de
+`auto_approve` para `require_approval` sempre que quem clicou fosse
+`developer`, sem ninguém ter decidido isso. Quem não é `maintainer` recebe
+a frase real da api ("Papel insuficiente para esta ação", via
+`mensagemDaApi`) em vez de um erro genérico.
+
+Sem gate de `module_map` client-side: quando este card existe, o Arquiteto
+já o definiu — é o artefato que precede a oferta do handoff pro Dev Lead —,
+então replicar o `disabled={!hasModuleMap}` da Visão Geral travaria o botão
+à toa. O caso raro (sessão inconsistente) cai no mesmo catch que trata
+403/outros erros.
+
+- **Onde:** `apps/web/src/routes/SessionPage.tsx`
+  (`handleActivateExecution`), `apps/web/src/lib/api-client.ts`
+  (`activateExecution` ganhou `originSessionId`)
+- **Teste:**
+  `apps/web/src/routes/SessionPage.handoff-devlead-e-colapso.test.tsx`,
+  describe "problema 2" — clique chama `activateExecution` com
+  `sessionId`; 403 mostra a frase real da api; o botão convive com o de
+  aceitar o handoff e com o link de Executores
+- **Origem:** investigação de código + teste ao vivo no Chrome — pedido de
+  atalho, com a divergência de papel confirmada e mantida por decisão
+  (não corrigida por alinhamento automático)
+
+### RN-138 — Mensagens de um agente colapsam depois que ele passa o bastão {#rn-138}
+
+A timeline do chat mostrava tudo sempre expandido, sem agrupar por autor —
+numa sessão longa com Criativo, PO e Arquiteto se revezando, o histórico de
+quem já saiu de cena competia por espaço com quem está falando agora. Cada
+entrada da timeline ganhou um `agentId` (o `actor.id` de quem a gerou,
+quando é um agente — `agent.response`, `agent.error`, épico/história
+criados pelo PO, card de aprovação); entradas de usuário e as que marcam
+uma TRANSIÇÃO (handoff, promoção de história) ficam sem `agentId` de
+propósito, porque são pontos de corte por natureza.
+
+Uma sequência CONSECUTIVA do mesmo `agentId` vira cabeçalho colapsável
+(`Disclosure` do design system, fechado por padrão — nome do agente +
+contagem, reabre com um clique) quando as duas condições valem:
+
+1. **o agente já passou o bastão** — existe um handoff dele (`fromAgent`)
+   com `status: 'accepted'` (a mesma verdade que o `handoff.accepted` do
+   event log grava, sem precisar reconstruir por junção de evento); e
+2. **nenhuma ação dele está `pending`** — a checagem é por `actor.id` em
+   TODAS as `actions` da sessão, não só nas da sequência corrente: uma
+   corrida de aprovação em aberto não pode ficar escondida atrás de um
+   clique em NENHUM ponto do fio.
+
+Uma sequência de 1 entrada nunca colapsa — "Fulano · 1 mensagem" no lugar
+da própria mensagem não ganha nada. Qualquer entrada sem `agentId`, ou de
+um agente diferente, quebra a sequência corrente exatamente como uma troca
+de agente quebra — só agrupa o que é realmente consecutivo.
+
+- **Onde:** `apps/web/src/routes/SessionPage.tsx` (`TimelineEntry.agentId`,
+  `timelineAgrupada`), `apps/web/src/routes/SessionPage.module.css`
+  (`.agentGroup*`)
+- **Teste:**
+  `apps/web/src/routes/SessionPage.handoff-devlead-e-colapso.test.tsx`,
+  describe "problema 3" — colapsa com bastão passado e sem ação pendente;
+  não colapsa sem handoff aceito; não colapsa com ação pendente do mesmo
+  agente; mensagem de outro autor no meio quebra o agrupamento
+- **Origem:** investigação de código + teste ao vivo no Chrome — pedido de
+  colapso, com `AgentTimelineTree`/`timeline-tree.ts` como referência de
+  FORMA (agrupar por agente, nome + contagem, aberto/fechado), adaptada à
+  timeline heterogênea intercalada do chat
+
 ---
 
 ## Psicólogo e Anamnese

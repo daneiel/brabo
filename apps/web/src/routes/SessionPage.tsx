@@ -3,6 +3,7 @@ import { Link } from '@tanstack/react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   acceptHandoff,
+  activateExecution,
   approveAction,
   approveAlwaysAction,
   cancelAgentTurn,
@@ -13,6 +14,7 @@ import {
   getSessionBudget,
   getSessionModelBinding,
   listModels,
+  mensagemDaApi,
   promoteStories,
   renameSession,
   returnStory,
@@ -74,6 +76,16 @@ interface SessionPageProps {
 interface TimelineEntry {
   seq: number;
   node: ReactNode;
+  /**
+   * Autor-agente desta entrada (colapso por agente, RN-138) — só populado
+   * para entradas que representam FALA/AÇÃO de um agente específico
+   * (`agent.response`, `agent.error`, épico/história criados pelo PO, card
+   * de aprovação). Ausente em entrada de usuário e em divisores/cards que
+   * marcam uma TRANSIÇÃO (handoff, promoção de história): são pontos de
+   * corte por natureza, e por isso sempre quebram um agrupamento em vez de
+   * participar dele.
+   */
+  agentId?: string;
 }
 
 /**
@@ -204,6 +216,9 @@ export function SessionPage({
   const [recusandoStory, setRecusandoStory] = useState<{ id: string; title: string } | null>(null);
   const [motivoRecusa, setMotivoRecusa] = useState('');
   const [enviandoRecusa, setEnviandoRecusa] = useState(false);
+  // Ativação inline da execução, a partir do card de aceite do handoff pro
+  // Dev Lead (achado do problema 2) — mesmo padrão de `promovendoStoryId`.
+  const [ativandoExecucao, setAtivandoExecucao] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   useEffect(() => () => abortRef.current?.abort(), []);
   // Achado 10: sentinela no fim da lista de mensagens — a sessão abre nela,
@@ -313,10 +328,24 @@ export function SessionPage({
     return maisRecente?.agent ?? null;
   }, [events]);
 
-  // Primeiro handoff oferecido ainda não aceito → botão de aceitar (qualquer
-  // agente: po, arquiteto…).
+  // Handoff oferecido ainda não aceito → botão de aceitar, restrito a quem
+  // CONVERSA nesta tela (RN-136). `handoffs` vem ordenado por `createdAt`
+  // ASC (mais antigo primeiro — ver `DrizzleHandoffRepository#findBySession`),
+  // e `OfferInfraHandoffUseCase` oferece o handoff pro Infra ANTES do Dev
+  // Lead, na MESMA confirmação (FASE 14d) — um `.find()` sem este filtro
+  // resolvia sempre pro mais antigo ainda pendente, e como Infra nunca é
+  // aceito por AQUI (ele não é conversacional, nem está em
+  // `AGENTES_DE_CHAT`), o card do Dev Lead só virava acionável DEPOIS de
+  // alguém aceitar o de Infra num lugar que esta tela não mostra — na
+  // prática, nunca. O handoff pro Infra continua NARRADO no fio (o
+  // `handoff.offered` dele vira divisor mudo, já que nunca é "a oferta
+  // atual"); só o card ACIONÁVEL é que fica restrito a quem sabe responder
+  // aqui.
   const offeredHandoff = handoffs.find(
-    (h) => h.status === 'offered' && !activeFor(h.toAgent),
+    (h) =>
+      h.status === 'offered' &&
+      !activeFor(h.toAgent) &&
+      (AGENTES_DE_CHAT as readonly string[]).includes(h.toAgent),
   );
 
   // Reconciliação de fim de turno do `activeAgent` — o que `onAgentDone` (canal)
@@ -535,15 +564,27 @@ export function SessionPage({
                   ofertas (PO, Arquiteto…) continuam na própria sessão, então
                   não ganham o link: não há "onde mais olhar" pra elas. */}
               {toAgent === 'dev-lead' && (
-                <Link
-                  to="/projects/$projectId"
-                  params={{ projectId }}
-                  search={{ tab: 'executores' }}
-                  className={styles.timelineLink}
-                >
-                  Acompanhe a execução em Executores
-                  <ChevronRightIcon size={11} />
-                </Link>
+                <>
+                  {/* Atalho pra quem já sabe o que quer (RN-137): ativa a
+                      execução direto daqui, sem passar pela conversa com o
+                      Dev Lead — mesma `activateExecution` da Visão Geral. */}
+                  <Button
+                    variant="primary"
+                    loading={ativandoExecucao}
+                    onClick={handleActivateExecution}
+                  >
+                    Ativar execução
+                  </Button>
+                  <Link
+                    to="/projects/$projectId"
+                    params={{ projectId }}
+                    search={{ tab: 'executores' }}
+                    className={styles.timelineLink}
+                  >
+                    Acompanhe a execução em Executores
+                    <ChevronRightIcon size={11} />
+                  </Link>
+                </>
               )}
             </div>
           ) : (
@@ -576,6 +617,7 @@ export function SessionPage({
           event.type === 'backlog.epic_created' ? 'Épico criado' : 'História criada';
         items.push({
           seq: event.seq,
+          agentId: event.actor.kind === 'agent' ? event.actor.id : undefined,
           node: (
             <div className={styles.message} key={event.id} style={corDoAgente(event.actor.id)}>
               <span className={styles.avatar}>
@@ -716,6 +758,7 @@ export function SessionPage({
               : '';
         items.push({
           seq: event.seq,
+          agentId: event.actor.kind === 'agent' ? event.actor.id : undefined,
           node: (
             <div className={styles.message} key={event.id} style={corDoAgente(event.actor.id)}>
               <span className={styles.avatar}>
@@ -751,6 +794,7 @@ export function SessionPage({
         const { mensagem, origem } = lerFalhaDeTurno(event.payload);
         items.push({
           seq: event.seq,
+          agentId: event.actor.kind === 'agent' ? event.actor.id : undefined,
           node: (
             <div
               className={styles.message}
@@ -780,6 +824,7 @@ export function SessionPage({
     for (const action of actions) {
       items.push({
         seq: action.seq,
+        agentId: action.actor.kind === 'agent' ? action.actor.id : undefined,
         // Sem `meta` com o modelo (achado I). O card recebia o modelo ATUAL da
         // sessão, então trocar o binding reescrevia retroativamente o rótulo de
         // TODA ação antiga — inclusive das que rodaram com outro modelo. Não há
@@ -816,7 +861,81 @@ export function SessionPage({
     offeredHandoff,
     isActive,
     promovendoStoryId,
+    ativandoExecucao,
   ]);
+
+  // Colapso de mensagens por agente depois que ele passa o bastão (RN-138) —
+  // segunda passagem sobre `timeline`, agrupando entradas CONSECUTIVAS do
+  // MESMO `agentId`. Um agente só é elegível quando (a) ele já ofereceu um
+  // handoff ACEITO (bastão passado — `handoffs`, não o event log: o status
+  // já É a mesma verdade, e sem round-trip por evento) e (b) nenhuma ação
+  // dele segue `pending` (a corrida de aprovação não pode ficar escondida
+  // atrás de um clique). Entradas sem `agentId` (usuário, divisores/cards de
+  // transição) sempre quebram a sequência corrente, exatamente como uma
+  // troca de agente quebra.
+  const timelineAgrupada = useMemo(() => {
+    const passaramBastao = new Set(
+      handoffs.filter((h) => h.status === 'accepted').map((h) => h.fromAgent),
+    );
+    const comAcaoPendente = new Set(
+      actions.filter((a) => a.status === 'pending').map((a) => a.actor.id),
+    );
+    const colapsavel = (agentId: string) =>
+      passaramBastao.has(agentId) && !comAcaoPendente.has(agentId);
+
+    const resultado: { key: string; node: ReactNode }[] = [];
+    let corrente: TimelineEntry[] = [];
+
+    function fecharCorrente() {
+      if (corrente.length === 0) return;
+      const agentId = corrente[0].agentId;
+      // Só vira cabeçalho colapsável com 2+ entradas — uma sozinha não ganha
+      // nada em virar "Fulano · 1 mensagem" no lugar da própria mensagem.
+      if (agentId && corrente.length >= 2 && colapsavel(agentId)) {
+        const grupo = corrente;
+        resultado.push({
+          key: `grupo-${agentId}-${grupo[0].seq}`,
+          node: (
+            <div style={corDoAgente(agentId)}>
+              <Disclosure
+                titulo={nomeDoAgente(agentId)}
+                trailing={`${grupo.length} mensagens`}
+                classNameCabecalho={styles.agentGroupCabecalho}
+                className={styles.agentGroup}
+              >
+                <div className={styles.agentGroupRegiao}>
+                  {grupo.map((e) => (
+                    <div key={e.seq}>{e.node}</div>
+                  ))}
+                </div>
+              </Disclosure>
+            </div>
+          ),
+        });
+      } else {
+        for (const e of corrente) {
+          resultado.push({ key: String(e.seq), node: e.node });
+        }
+      }
+      corrente = [];
+    }
+
+    for (const entry of timeline) {
+      if (entry.agentId && corrente[0]?.agentId === entry.agentId) {
+        corrente.push(entry);
+        continue;
+      }
+      fecharCorrente();
+      if (entry.agentId) {
+        corrente = [entry];
+      } else {
+        resultado.push({ key: String(entry.seq), node: entry.node });
+      }
+    }
+    fecharCorrente();
+
+    return resultado;
+  }, [timeline, handoffs, actions]);
 
   async function handleActivate() {
     await transitionSession(projectId, sessionId, 'active');
@@ -893,6 +1012,52 @@ export function SessionPage({
     } catch {
       turnoAgentRef.current = null;
       showToast({ title: 'Erro', message: 'Não foi possível aceitar o handoff', tone: 'danger' });
+    }
+  }
+
+  /**
+   * Atalho de ativação da execução, embutido no próprio card de aceite do
+   * handoff pro Dev Lead (RN-137) — MESMA `activateExecution` que a Visão
+   * Geral já chama, e não uma rota nova.
+   *
+   * `sessionId` viaja como `originSessionId` (RN-135/PR #266): sem ele a
+   * sessão de chat que trouxe o Dev Lead ficava `active` para sempre, mesmo
+   * com a execução (numa sessão SEPARADA) já tendo decolado sozinha por
+   * este atalho.
+   *
+   * Autorização: `POST .../execution/activate` continua exigindo
+   * `maintainer` no backend — DELIBERADAMENTE não alinhada ao `developer`
+   * que basta pra aceitar o handoff. Quem ativa vira `session.createdBy` da
+   * sessão de execução, e `ProposeActionUseCase` resolve o papel EFETIVO
+   * dos `git_commit`/`git_push`/`pr_open` dos dev agents a partir dele (ver
+   * o comentário em `ExecutionController#activate`) — soltar a exigência
+   * aqui inverteria essa resolução em silêncio: as PRs que a execução abre
+   * passariam de `auto_approve` para `require_approval` sempre que quem
+   * clicou for `developer`, e ninguém decidiu isso explicitamente. Quem não
+   * é maintainer recebe a frase real da api (`mensagemDaApi`, "Papel
+   * insuficiente para esta ação"), não um erro genérico.
+   *
+   * module_map: sem gate próprio aqui. Quando este card existe, o
+   * Arquiteto já o definiu — é o artefato que precede a oferta do handoff
+   * pro Dev Lead —, então replicar o `disabled={!hasModuleMap}` da Visão
+   * Geral travaria o botão à toa; o caso raro cai no catch abaixo.
+   */
+  async function handleActivateExecution() {
+    if (ativandoExecucao) return;
+    setAtivandoExecucao(true);
+    try {
+      await activateExecution(projectId, sessionId);
+      await queryClient.invalidateQueries({ queryKey: ['session', projectId, sessionId] });
+      queryClient.invalidateQueries({ queryKey: ['sessions', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['session-handoffs', projectId, sessionId] });
+      showToast({ title: 'Execução ativada', tone: 'success' });
+    } catch (erro) {
+      showToast({
+        title: mensagemDaApi(erro, 'Não foi possível ativar a execução'),
+        tone: 'danger',
+      });
+    } finally {
+      setAtivandoExecucao(false);
     }
   }
 
@@ -1336,8 +1501,8 @@ export function SessionPage({
                 )
               )}
 
-              {timeline.map((entry) => (
-                <div key={entry.seq}>{entry.node}</div>
+              {timelineAgrupada.map((entry) => (
+                <div key={entry.key}>{entry.node}</div>
               ))}
 
               {optimisticUser && (

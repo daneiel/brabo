@@ -137,6 +137,22 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `null`); a aba troca de fonte (`useActiveExecutionSession`) e ganha um
   indicador de QUAL sessão está sendo exibida, nos três estados da RN-088 —
   carregando, erro (com `trace_id`) e "nenhuma execução ativa" (RN-139)
+- **web**: três correções no fio da sessão, achadas por investigação de
+  código + teste ao vivo no Chrome. (1) O card ACIONÁVEL de handoff
+  resolvia sempre pro `offered` mais antigo — como o Arquiteto oferece o
+  handoff pro Infra ANTES do Dev Lead na mesma confirmação, e Infra não é
+  conversacional nesta tela, o card do Dev Lead nunca ficava acionável na
+  prática; agora só handoffs endereçados a quem conversa aqui
+  (`AGENTES_DE_CHAT`) viram card, e o de Infra continua narrado como
+  divisor mudo (RN-136). (2) O card de aceite do handoff pro Dev Lead
+  ganha um botão "Ativar execução" ao lado do link pra Executores — mesma
+  `activateExecution` da Visão Geral, agora com `originSessionId` (fecha o
+  chat de origem, RN-135); a rota continua exigindo `maintainer`, decisão
+  mantida por causa do papel que os dev agents herdam pra abrir PR
+  (RN-137). (3) Mensagens consecutivas do mesmo agente colapsam num
+  cabeçalho com nome + contagem depois que ele passa o bastão e não tem
+  ação pendente — `Disclosure` do design system, fechado por padrão
+  (RN-138)
 - **api**: `ActivateExecutionUseCase` nunca fechava a sessão de CHAT que
   originou o pedido de ativação — ela ficava `active` para sempre, mesmo
   com a execução já correndo sozinha numa sessão SEPARADA. `execute()`
