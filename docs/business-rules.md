@@ -4919,6 +4919,61 @@ estável para isso. Sem `id`, ou agente fora do roster, degrada para
 - **Origem:** investigação de código — `Disclosure` já aceitava `ReactNode`
   em `titulo`; faltava passar o avatar junto do nome
 
+### RN-148 — Histórias com promoção pendente ao mesmo tempo viram carrossel, não N cards {#rn-148}
+
+O PO cria histórias uma a uma, e cada `backlog.story_promotion_proposed`
+([RN-126](#rn-126)) virava um card avulso na timeline — numa leva de várias
+histórias, isso empilhava N cards idênticos disputando o mesmo espaço,
+misturados com o resto da narração.
+
+Uma **leva** é o conjunto de propostas de promoção AINDA PENDENTES na
+sessão, avaliado a cada render — não "criadas em sequência sem
+interrupção". O critério é o MESMO que cada card avulso já usava sozinho
+para decidir se virou card acionável ou divisor (nenhum
+`backlog.story_transitioned`/`backlog.story_promotion_returned` posterior
+com o mesmo `storyId`), só que olhado de uma vez para a sessão inteira:
+
+- **0 ou 1 pendente:** nada muda — card avulso de sempre (a degradação é
+  deliberada: um carrossel de um slide só não ganha nada virando carrossel).
+- **2+ pendentes ao mesmo tempo:** viram UM `Carousel` (novo no design
+  system, `apps/web/src/components/ui/Carousel.tsx`), inserido na posição
+  da PRIMEIRA proposta ainda pendente; as demais somem como card
+  individual — cada uma vira um SLIDE dele. Cada slide mostra a mesma
+  frase do card avulso ("história … pronta, aguardando sua promoção"), um
+  resumo/RF se o payload trouxer (hoje não traz — ver abaixo), e os botões
+  Promover/Devolver daquela história específica, chamando os MESMOS
+  `promoteStories`/`returnStory` de sempre.
+- **"Aprovar todas"** no cabeçalho do carrossel chama `promoteStories` com
+  os ids de TODAS as pendentes numa chamada só — o endpoint já era lote
+  (`promoteStories(projectId, storyIds[])`, RN-048), então não houve mudança
+  de contrato nenhuma, só de quem monta a lista.
+- Uma história resolvida (promovida ou devolvida) enquanto o carrossel está
+  aberto sai da leva no próximo render (a query de eventos é invalidada nas
+  duas ações) — se sobrar só 1 pendente, o carrossel se desfaz sozinho e o
+  card volta a ser avulso.
+
+`resumo`/RF no slide é campo PRONTO, não usado: `CreateStoryUseCase` hoje só
+grava `storyId`/`epicId`/`title` no payload de `backlog.story_promotion_proposed`
+— sem descrição nem requisitos funcionais. O slide já sabe exibir
+`description`/`rf` se o payload um dia carregar (degrada pro título sozinho
+até lá); estender o payload ficou fora desta entrega, por não ter sido
+pedido.
+
+- **Onde:** `apps/web/src/components/ui/Carousel.tsx` (componente novo,
+  navegação genérica), `apps/web/src/routes/SessionPage.tsx`
+  (`promocoesPendentes`, `ehLevaDeHistorias`, `StorySlide`,
+  `handlePromoteAll`), `apps/web/src/routes/SessionPage.module.css`
+  (`.storySlide`)
+- **Teste:** `apps/web/src/components/ui/Carousel.test.tsx` (navegação,
+  ARIA, só o slide atual montado, índice clampado quando a lista encolhe),
+  `apps/web/src/routes/SessionPage.carrossel-historias.test.tsx` (3+
+  pendentes viram carrossel; "Aprovar todas" manda o lote inteiro; promoção
+  e devolução unitárias continuam funcionando a partir de um slide
+  navegado; 1 pendente degrada pro card simples; história resolvida sai da
+  leva e o carrossel recalcula a contagem)
+- **Origem:** pedido do usuário — histórias produzidas em lote pelo PO
+  ficavam difíceis de decidir uma por uma no fio
+
 ---
 
 ## Quando dá errado

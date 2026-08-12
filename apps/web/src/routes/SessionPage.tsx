@@ -44,6 +44,7 @@ import { ActivityFeed } from '../components/ActivityFeed';
 import { EventItem } from '../components/EventItem';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
+import { Carousel, type CarouselSlide } from '../components/ui/Carousel';
 import { Disclosure } from '../components/ui/Disclosure';
 import { Modal } from '../components/ui/Modal';
 import { Textarea } from '../components/ui/Textarea';
@@ -178,6 +179,66 @@ function AvatarDoAgente({ id }: { id: string | undefined }) {
   );
 }
 
+/**
+ * Um slide do carrossel de histórias aguardando promoção (RN-148) — o mesmo
+ * conteúdo do card avulso de `backlog.story_promotion_proposed` (RN-126),
+ * sem a caixa em volta: quem dá a caixa é o `Carousel`.
+ *
+ * `resumo` é opcional de propósito: `CreateStoryUseCase` hoje só grava
+ * storyId/epicId/title no evento — nem descrição, nem RF. O slide já sabe
+ * mostrar o campo quando ele existir no payload; até lá, degrada pro título
+ * sozinho.
+ */
+function StorySlide({
+  projectId,
+  titulo,
+  resumo,
+  promovendo,
+  desabilitado,
+  onPromover,
+  onDevolver,
+}: {
+  projectId: string;
+  titulo: string;
+  resumo?: string;
+  promovendo: boolean;
+  desabilitado: boolean;
+  onPromover: () => void;
+  onDevolver: () => void;
+}) {
+  return (
+    <div className={styles.storySlide}>
+      <span className={styles.handoffPill}>
+        <StackIcon size={13} />
+        história &quot;{titulo}&quot; pronta, aguardando sua promoção
+      </span>
+      {resumo && <p className={styles.storySlideResumo}>{resumo}</p>}
+      <div style={{ display: 'flex', gap: 8 }}>
+        <Button
+          variant="success"
+          disabled={desabilitado}
+          loading={promovendo}
+          onClick={onPromover}
+        >
+          Promover
+        </Button>
+        <Button variant="ghost" disabled={desabilitado} onClick={onDevolver}>
+          Devolver
+        </Button>
+      </div>
+      <Link
+        to="/projects/$projectId"
+        params={{ projectId }}
+        search={{ tab: 'backlog' }}
+        className={styles.timelineLink}
+      >
+        Ver no Backlog
+        <ChevronRightIcon size={11} />
+      </Link>
+    </div>
+  );
+}
+
 export function SessionPage({
   projectId,
   sessionId,
@@ -241,6 +302,12 @@ export function SessionPage({
   const [recusandoStory, setRecusandoStory] = useState<{ id: string; title: string } | null>(null);
   const [motivoRecusa, setMotivoRecusa] = useState('');
   const [enviandoRecusa, setEnviandoRecusa] = useState(false);
+  // Carrossel de histórias (RN-148) — "Aprovar todas" promove o LOTE inteiro
+  // numa chamada só (`promoteStories` já é lote por natureza); estado
+  // separado de `promovendoStoryId` porque as duas ações podem existir na
+  // mesma tela (um slide promovendo sozinho enquanto o lote não foi
+  // acionado) e cada botão desabilita só o que é dele.
+  const [promovendoTodas, setPromovendoTodas] = useState(false);
   // Ativação inline da execução, a partir do card de aceite do handoff pro
   // Dev Lead (achado do problema 2) — mesmo padrão de `promovendoStoryId`.
   const [ativandoExecucao, setAtivandoExecucao] = useState(false);
@@ -550,6 +617,58 @@ export function SessionPage({
           return paraOMesmoPar ? Math.max(maisRecente, e.seq) : maisRecente;
         }, -1)
       : -1;
+
+    // Carrossel de histórias (RN-148) — pré-passada pra saber, ANTES de
+    // decidir como cada `backlog.story_promotion_proposed` aparece, se as
+    // pendentes formam uma LEVA (2+ ao mesmo tempo). Mesmo critério de
+    // "resolvida" que o card avulso já checa por evento (`_transitioned`/
+    // `_promotion_returned` posterior com o mesmo storyId), olhado de uma
+    // vez só pra sessão inteira.
+    const promocoesPendentes = events
+      .filter((e) => e.type === 'backlog.story_promotion_proposed')
+      .map((e) => {
+        const payload = e.payload as {
+          storyId?: unknown;
+          title?: unknown;
+          description?: unknown;
+          rf?: unknown;
+        };
+        const storyId = typeof payload?.storyId === 'string' ? payload.storyId : undefined;
+        const titulo = typeof payload?.title === 'string' ? payload.title : '(sem título)';
+        // `resumo` degrada pro título sozinho: `CreateStoryUseCase` hoje só
+        // grava storyId/epicId/title no evento — sem descrição nem RF. Fica
+        // pronto pra quando o payload ganhar o campo, em vez de reinventado
+        // nessa hora (requisito da tarefa: "se disponível no payload").
+        const resumo =
+          typeof payload?.description === 'string' && payload.description !== ''
+            ? payload.description
+            : Array.isArray(payload?.rf) &&
+                payload.rf.length > 0 &&
+                payload.rf.every((r) => typeof r === 'string')
+              ? (payload.rf as string[]).join(' · ')
+              : undefined;
+        return { seq: e.seq, storyId, titulo, resumo };
+      })
+      .filter(
+        (p): p is { seq: number; storyId: string; titulo: string; resumo: string | undefined } =>
+          typeof p.storyId === 'string' &&
+          !events.some(
+            (e2) =>
+              e2.seq > p.seq &&
+              ((e2.type === 'backlog.story_transitioned' &&
+                (e2.payload as { storyId?: unknown })?.storyId === p.storyId) ||
+                (e2.type === 'backlog.story_promotion_returned' &&
+                  (e2.payload as { storyId?: unknown })?.storyId === p.storyId)),
+          ),
+      );
+    // 1 história pendente não ganha nada virando carrossel de um slide só —
+    // o card simples de sempre já resolve (degradação decidida, requisito 4
+    // da tarefa). 0 nem chega a ser pergunta.
+    const ehLevaDeHistorias = promocoesPendentes.length >= 2;
+    const primeiraDaLeva = ehLevaDeHistorias
+      ? Math.min(...promocoesPendentes.map((p) => p.seq))
+      : -1;
+
     for (const event of events) {
       if (event.type === 'chat.message') {
         const text = typeof (event.payload as { text?: unknown })?.text === 'string' ? (event.payload as { text: string }).text : '';
@@ -717,6 +836,59 @@ export function SessionPage({
                 (e.type === 'backlog.story_promotion_returned' &&
                   (e.payload as { storyId?: unknown })?.storyId === storyId)),
           );
+
+        if (ehLevaDeHistorias && storyId && !resolvida) {
+          // Faz parte da LEVA (RN-148): o carrossel entra uma vez só, na
+          // posição da primeira proposta ainda pendente — as demais não
+          // viram card avulso aqui, porque já estão representadas como
+          // slide dele. `continue` em vez de `items.push`: nada nasce nesta
+          // volta do loop para as pendentes que não são a primeira.
+          if (event.seq === primeiraDaLeva) {
+            const slides: CarouselSlide[] = promocoesPendentes.map((p) => ({
+              key: p.storyId,
+              label: p.titulo,
+              node: (
+                <StorySlide
+                  key={p.storyId}
+                  projectId={projectId}
+                  titulo={p.titulo}
+                  resumo={p.resumo}
+                  promovendo={promovendoStoryId === p.storyId}
+                  desabilitado={promovendoStoryId !== null || promovendoTodas}
+                  onPromover={() => handlePromoteStory(p.storyId)}
+                  onDevolver={() => {
+                    setRecusandoStory({ id: p.storyId, title: p.titulo });
+                    setMotivoRecusa('');
+                  }}
+                />
+              ),
+            }));
+            items.push({
+              seq: event.seq,
+              node: (
+                <Carousel
+                  key="carrossel-historias"
+                  ariaLabel={`${promocoesPendentes.length} histórias aguardando promoção`}
+                  slides={slides}
+                  headerActions={
+                    <Button
+                      variant="success"
+                      loading={promovendoTodas}
+                      disabled={promovendoStoryId !== null}
+                      onClick={() =>
+                        handlePromoteAll(promocoesPendentes.map((p) => p.storyId))
+                      }
+                    >
+                      Aprovar todas
+                    </Button>
+                  }
+                />
+              ),
+            });
+          }
+          continue;
+        }
+
         items.push({
           seq: event.seq,
           node:
@@ -921,6 +1093,7 @@ export function SessionPage({
     offeredHandoff,
     isActive,
     promovendoStoryId,
+    promovendoTodas,
     ativandoExecucao,
   ]);
 
@@ -1159,7 +1332,7 @@ export function SessionPage({
   // e a resposta traz `failed` com o motivo do domínio quando recusa — o
   // toast reaproveita essa informação em vez de um "erro" genérico.
   async function handlePromoteStory(storyId: string) {
-    if (promovendoStoryId) return;
+    if (promovendoStoryId || promovendoTodas) return;
     setPromovendoStoryId(storyId);
     try {
       const r = await promoteStories(projectId, [storyId]);
@@ -1178,6 +1351,42 @@ export function SessionPage({
       showToast({ title: 'Erro', message: 'Não foi possível promover a história', tone: 'danger' });
     } finally {
       setPromovendoStoryId(null);
+    }
+  }
+
+  // "Aprovar todas" do carrossel (RN-148) — uma chamada só de `promoteStories`
+  // com o LOTE inteiro, em vez de N chamadas em série. A resposta tem a mesma
+  // forma da unitária (`promoted`/`failed`), e o toast soma: sucesso total,
+  // parcial (com o motivo da primeira falha) ou falha total.
+  async function handlePromoteAll(storyIds: string[]) {
+    if (promovendoStoryId || promovendoTodas || storyIds.length === 0) return;
+    setPromovendoTodas(true);
+    try {
+      const r = await promoteStories(projectId, storyIds);
+      await queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
+      queryClient.invalidateQueries({ queryKey: ['backlog', projectId] });
+      if (r.failed.length === 0) {
+        showToast({
+          title: r.promoted.length === 1 ? 'História promovida' : `${r.promoted.length} histórias promovidas`,
+          tone: 'success',
+        });
+      } else if (r.promoted.length > 0) {
+        showToast({
+          title: `${r.promoted.length} de ${storyIds.length} promovidas`,
+          message: r.failed[0]?.reason,
+          tone: 'warning',
+        });
+      } else {
+        showToast({
+          title: 'Não foi possível promover',
+          message: r.failed[0]?.reason,
+          tone: 'danger',
+        });
+      }
+    } catch {
+      showToast({ title: 'Erro', message: 'Não foi possível promover as histórias', tone: 'danger' });
+    } finally {
+      setPromovendoTodas(false);
     }
   }
 

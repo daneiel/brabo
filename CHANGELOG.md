@@ -6,6 +6,16 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **web**: histórias com promoção pendente ao mesmo tempo (2+) viram um
+  CARROSSEL no fio da sessão do PO, em vez de N cards avulsos disputando o
+  mesmo espaço (RN-148) — `Carousel`, primeiro componente de navegação
+  item-por-item do design system, com setas, dots e teclado (ARIA
+  `role="group"`/`aria-roledescription`). Cada slide mostra a mesma frase
+  do card avulso, com Promover/Devolver daquela história específica; o
+  cabeçalho ganha "Aprovar todas", que promove o lote inteiro numa chamada
+  só (`promoteStories` já era lote, RN-048). Uma única história pendente
+  continua o card simples de sempre — carrossel de um slide só não ganha
+  nada
 - **api,engine,web**: o Arquiteto ganha o botão "Confirmar arquitetura
   pronta" (RN-145) — `OfferInfraHandoffUseCase` já existia e já oferecia o
   handoff ao Infra e ao Dev Lead na mesma confirmação, mas nenhum lugar do
