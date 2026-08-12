@@ -127,6 +127,15 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **api**: `ActivateExecutionUseCase` nunca fechava a sessão de CHAT que
+  originou o pedido de ativação — ela ficava `active` para sempre, mesmo
+  com a execução já correndo sozinha numa sessão SEPARADA. `execute()`
+  ganha `originSessionId` opcional (chamador antigo, sem o parâmetro,
+  continua idêntico); informado, fecha a sessão de origem ao final, mas
+  nunca a própria sessão de execução, e só quando
+  `GetSessionPendingWorkUseCase` — a mesma trava do heartbeat de
+  inatividade — confirma que não há handoff/ação/turno pendurado ali
+  (RN-135)
 - **api**: quatro alertas CRÍTICOS do CodeQL, duas classes reais de
   vulnerabilidade. `@Query('ref')`/`@Query('path')` da aba Code (RN-095)
   chegam sem DTO no meio, e o `ValidationPipe` global não protege tipo
