@@ -131,6 +131,18 @@ config :engine,
   start_model_sync?: System.get_env("START_MODEL_SYNC", "true") == "true",
   model_sync_interval_seconds:
     String.to_integer(System.get_env("MODEL_SYNC_INTERVAL_SECONDS", "21600")),
+  # Resgate de ciclos de gate (QA/SecOps) órfãos (ADR 0067) — o que o
+  # ADR 0057 tinha declarado como limite conhecido. Desligável por ambiente
+  # pelo mesmo motivo dos outros ticks periódicos.
+  start_gate_rescue?: System.get_env("START_GATE_RESCUE", "true") == "true",
+  gate_rescue_interval_seconds:
+    String.to_integer(System.get_env("GATE_RESCUE_INTERVAL_SECONDS", "300")),
+  # Generoso de propósito: o ToolLoop de um subagente de QA pode rodar
+  # legitimamente até `tool_loop_max_iterations_gate` (60) iterações antes de
+  # concluir — um limiar curto resgataria (e duplicaria) um ciclo só lento,
+  # não um órfão de verdade.
+  gate_rescue_stale_after_seconds:
+    String.to_integer(System.get_env("GATE_RESCUE_STALE_AFTER_SECONDS", "900")),
   # `psychologist_enabled?` é decisão de PRODUTO, não teto de custo (mesmo
   # racional de `anamnese_enabled?` abaixo): pausa rodada NOVA do Psicólogo
   # — automática (fechamento de sessão) e sob demanda

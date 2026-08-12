@@ -242,6 +242,9 @@ possível sem downtime ([RN-035](../business-rules.md#rn-035)).
 | `START_ANAMNESE` | `true` | guard de CARGA de teste/dev: impede o `kickoff/0` de sequer ser chamado no boot, mas não decide nada de produto — não confundir com `ANAMNESE_ENABLED` (produto: pausa GLOBAL, sobrevive a qualquer valor deste). Desligar impede **novos** enfileiramentos, **não limpa a fila**. Jobs acumulados rodam no boot seguinte — a fila precisa ser purgada. Ver [ambiente de inferência](../runbook.md#ambiente-de-inferencia) |
 | `START_MODEL_SYNC` | `true` | tick periódico do sync de catálogo de modelos. Desligá-lo não congela nada: o botão "Atualizar catálogo" da tela de configurações chama o mesmo caso de uso ([RN-043](../business-rules.md#rn-043)) |
 | `MODEL_SYNC_INTERVAL_SECONDS` | `21600` (6h) | catálogo de provider muda em escala de dias, e cada rodada gasta uma chamada de API por provider — daí o default folgado |
+| `START_GATE_RESCUE` | `true` | tick periódico do resgate de ciclos de gate (`Engine.Gates.GateRescuer`, [RN-140](../business-rules.md#rn-140)). Desligá-lo não muda o boot: o resgate roda uma vez lá de qualquer forma |
+| `GATE_RESCUE_INTERVAL_SECONDS` | `300` (5 min) | um gate preso trava a PR inteira do usuário — intervalo bem menor que o de Anamnese/model sync, e cada tick custa só uma query quase sempre vazia |
+| `GATE_RESCUE_STALE_AFTER_SECONDS` | `900` (15 min) | generoso de propósito: o ToolLoop de um subagente de QA pode rodar legitimamente até `TOOL_LOOP_MAX_ITERATIONS_GATE` (60) iterações, e um limiar curto resgataria — e duplicaria — um ciclo só lento |
 
 ### Tráfego interno e observabilidade
 
@@ -340,7 +343,7 @@ que uma variável nova não fique documentada em lugar nenhum sem ninguém notar
 
 > ⚠️ Bloco gerado por `pnpm docs:generate`. Não edite à mão — o próximo build sobrescreve.
 
-Inventário extraído do código: **98 variáveis** lidas em tempo de execução. Todas têm descrição nas tabelas acima.
+Inventário extraído do código: **101 variáveis** lidas em tempo de execução. Todas têm descrição nas tabelas acima.
 
 **api** — 42 variáveis
 
@@ -387,7 +390,7 @@ Inventário extraído do código: **98 variáveis** lidas em tempo de execução
 - `RATE_LIMIT_WINDOW_MS` <sub>(apps/api/src/infrastructure/observability/domain-gauges.collector.ts)</sub>
 - `WEB_ORIGIN` <sub>(apps/api/src/infrastructure/security/cors-origins.ts)</sub>
 
-**engine** — 52 variáveis
+**engine** — 55 variáveis
 
 - `ANAMNESE_BUDGET_MICROS` <sub>(apps/engine/config/runtime.exs)</sub>
 - `ANAMNESE_ENABLED` <sub>(apps/engine/config/runtime.exs)</sub>
@@ -405,6 +408,8 @@ Inventário extraído do código: **98 variáveis** lidas em tempo de execução
 - `DEFAULT_CONTEXT_WINDOW` <sub>(apps/engine/config/runtime.exs)</sub>
 - `DNS_CLUSTER_QUERY` <sub>(apps/engine/config/runtime.exs)</sub>
 - `ECTO_IPV6` <sub>(apps/engine/config/runtime.exs)</sub>
+- `GATE_RESCUE_INTERVAL_SECONDS` <sub>(apps/engine/config/runtime.exs)</sub>
+- `GATE_RESCUE_STALE_AFTER_SECONDS` <sub>(apps/engine/config/runtime.exs)</sub>
 - `LLM_TURN_TIMEOUT_MS` <sub>(apps/engine/config/runtime.exs)</sub>
 - `MIX_TEST_PARTITION` <sub>(apps/engine/config/test.exs)</sub>
 - `MODEL_SYNC_INTERVAL_SECONDS` <sub>(apps/engine/config/runtime.exs)</sub>
@@ -433,6 +438,7 @@ Inventário extraído do código: **98 variáveis** lidas em tempo de execução
 - `SOME_APP_SSL_CERT_PATH` <sub>(apps/engine/config/runtime.exs)</sub>
 - `SOME_APP_SSL_KEY_PATH` <sub>(apps/engine/config/runtime.exs)</sub>
 - `START_ANAMNESE` <sub>(apps/engine/config/runtime.exs)</sub>
+- `START_GATE_RESCUE` <sub>(apps/engine/config/runtime.exs)</sub>
 - `START_MODEL_SYNC` <sub>(apps/engine/config/runtime.exs)</sub>
 - `START_OUTBOX_DRAIN` <sub>(apps/engine/config/runtime.exs)</sub>
 - `TERMINAL_ACTION_TIMEOUT_MS` <sub>(apps/engine/config/runtime.exs)</sub>

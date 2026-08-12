@@ -28,7 +28,7 @@ defmodule Engine.Gates.SecOpsAgentServer do
   use GenServer, restart: :temporary
 
   alias Engine.Dev.{ContextBuilder, DevAgentServer, DevAgentState}
-  alias Engine.Gates.{Diff, Scanner}
+  alias Engine.Gates.{Diff, GateState, Scanner}
   alias Engine.Harness.ArtifactEmitter
   alias Engine.Sessions.EngineApiClient
 
@@ -61,6 +61,18 @@ defmodule Engine.Gates.SecOpsAgentServer do
   end
 
   defp run_secops(project_id, dev_state, task_id) do
+    # ADR 0067: mesma disciplina do QaLeadServer — o ciclo entra em voo ANTES
+    # de rodar os scanners, pra o `Engine.Gates.GateRescuer` achar um ciclo
+    # cujo processo caiu no meio (ex.: durante `Scanner.run/3`) e nunca
+    # chegou a registrar veredito.
+    GateState.upsert!(%{
+      project_id: project_id,
+      task_id: task_id,
+      gate: "secops",
+      session_id: dev_state.session_id,
+      step: "in_progress"
+    })
+
     worktree = dev_state.worktree_path
 
     diff_note =
@@ -144,14 +156,29 @@ defmodule Engine.Gates.SecOpsAgentServer do
 
     case result do
       {:ok, %{"nextAction" => "correct"}} ->
-        DevAgentServer.correct(project_id, dev_state.agent_id, %{
+        # Mesma disciplina do QaLeadServer (ADR 0067): veredito já durável,
+        # persiste o dispatch pendente ANTES de chamar `DevAgentServer.correct`
+        # e apaga DEPOIS — a chamada em si é local, sem I/O de rede no meio.
+        findings = %{gate: "secops", reason: resumo, diagnosis: Enum.join(itens, "; ")}
+
+        GateState.upsert!(%{
+          project_id: project_id,
+          task_id: task_id,
           gate: "secops",
-          reason: resumo,
-          diagnosis: Enum.join(itens, "; ")
+          session_id: dev_state.session_id,
+          step: "dispatch_pending",
+          next_action: "correct",
+          correction_reason: resumo,
+          correction_diagnosis: findings.diagnosis
         })
 
+        DevAgentServer.correct(project_id, dev_state.agent_id, findings)
+        GateState.delete(project_id, task_id, "secops")
+
       _ ->
-        :ok
+        # `done`, ou erro/estado inesperado da api — nos dois casos não há
+        # dispatch pendente (mesmo raciocínio do QaLeadServer).
+        GateState.delete(project_id, task_id, "secops")
     end
   end
 end
