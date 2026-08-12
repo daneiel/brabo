@@ -147,7 +147,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   que torna a leitura inequívoca — nunca pelo verbo pelado — pra não abrir a
   mesma forma truncada que os irmãos MUTANTES aceitam (`git branch -D`, `git
   remote add`, `git worktree add`, `git config <chave> <valor>` continuam
-  exigindo aprovação) (RN-141)
+  exigindo aprovação) (RN-143)
 - **api,web**: a aba Executores lia a sessão `createdAt` mais recente do
   projeto (`useLatestSession`) para buscar os eventos de dev agent/QA — que
   É a sessão de execução só por COINCIDÊNCIA. Qualquer sessão nova depois

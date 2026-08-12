@@ -159,7 +159,7 @@ São duas famílias:
 - **leitura de histórico/remoto/config do git** — `git branch
   -a/-r/-v/--list/--show-current`, `git remote -v`, `git remote show`, `git
   worktree list`, `git show`, `git for-each-ref`, `git ls-tree`, `git
-  rev-parse`, `git config --get` (ver [RN-141](../business-rules.md#rn-141));
+  rev-parse`, `git config --get` (ver [RN-143](../business-rules.md#rn-143));
 - **build e teste** — `pnpm install`, `pnpm test`, `npm run`, `npx vitest`,
   `mix test`, `pytest`, `go test`, `cargo test`, entre outros.
 

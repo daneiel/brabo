@@ -1408,7 +1408,7 @@ queimar iterações — está no [ADR 0052](adr/0052-dev-agent-espera-aprovacao-
   (`libera ls -la`; `comando composto não passa carona no segmento liberado`)
 - **Origem:** execução real da FASE 13b
 
-### RN-141 — Subcomando git de leitura só entra ancorado pela flag que torna a leitura inequívoca, nunca pelo verbo pelado {#rn-141}
+### RN-143 — Subcomando git de leitura só entra ancorado pela flag que torna a leitura inequívoca, nunca pelo verbo pelado {#rn-143}
 
 Consultando o banco de uma execução real, dev agents gastaram dezenas de
 aprovações manuais em subcomandos de exploração — `git branch -a`, `git
