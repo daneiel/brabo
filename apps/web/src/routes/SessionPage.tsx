@@ -7,6 +7,7 @@ import {
   approveAction,
   approveAlwaysAction,
   cancelAgentTurn,
+  confirmArchitectureReadiness,
   confirmReadiness,
   denyAction,
   getProject,
@@ -151,6 +152,30 @@ function nomeDoAgente(id: string | undefined): string {
 function corDoAgente(id: string | undefined): CSSProperties {
   const cor = id ? AGENTS[id as keyof typeof AGENTS]?.color : undefined;
   return { ['--msg-color' as string]: cor ?? 'var(--accent)' } as CSSProperties;
+}
+
+/**
+ * O avatar do agente — mesma caixa `.avatar` que toda mensagem expandida já
+ * usa (achado do problema 3: o cabeçalho do grupo colapsado tinha só o nome,
+ * sem o ícone que identifica visualmente quem está falando).
+ *
+ * O ícone é o do ROSTER (`AGENTS[id].icon`), a mesma fonte que já identifica
+ * "quem está falando" no indicador de streaming (`agenteExibido.icon`) — e
+ * não o ícone por TIPO de evento que cada entrada expandida usa (`ModelIcon`
+ * em `agent.response`, `StackIcon` em `backlog.*_created`, `AlertCircleIcon`
+ * em `agent.error`). Um grupo colapsado mistura esses tipos: o cabeçalho
+ * representa o AGENTE, não a última entrada dele, e só o ícone do roster é
+ * estável para isso. Sem `id`, ou agente fora do roster, degrada para
+ * `ModelIcon` — nunca para uma caixa vazia.
+ */
+function AvatarDoAgente({ id }: { id: string | undefined }) {
+  const Icon =
+    (id ? AGENTS[id as keyof typeof AGENTS]?.icon : undefined) ?? ModelIcon;
+  return (
+    <span className={styles.avatar}>
+      <Icon size={15} />
+    </span>
+  );
 }
 
 export function SessionPage({
@@ -303,6 +328,12 @@ export function SessionPage({
         (e.payload as { agent?: string })?.agent === agent,
     );
   const criativoActive = useMemo(() => activeFor('criativo'), [events]);
+  // Mesmo padrão do Criativo, para o botão de prontidão da arquitetura
+  // (achado do problema 1) — o Arquiteto não tinha NENHUM jeito de o usuário
+  // disparar `OfferInfraHandoffUseCase`: o endpoint já existia
+  // (`POST .../agents/arquiteto/handoff-infra`), mas nenhum lugar do
+  // frontend o chamava.
+  const arquitetoActive = useMemo(() => activeFor('arquiteto'), [events]);
 
   // A garantia de VERDADE é o guardrail no engine — `CriativoServer` recusa
   // `confirm_readiness` (e narra a recusa como `agent.error` no fio) quando
@@ -492,6 +523,11 @@ export function SessionPage({
   // A prontidão já foi declarada? (achado L) O handoff que sai do Criativo é a
   // consequência dela — existindo, o botão não tem mais o que oferecer.
   const prontidaoJaDeclarada = handoffs.some((h) => h.fromAgent === 'criativo');
+  // Espelho de `prontidaoJaDeclarada`, para o Arquiteto (problema 1):
+  // `OfferInfraHandoffUseCase` oferece o handoff ao Infra (e ao Dev Lead) na
+  // MESMA confirmação — a existência de QUALQUER handoff saindo do Arquiteto
+  // já prova que a confirmação aconteceu.
+  const arquiteturaJaDeclarada = handoffs.some((h) => h.fromAgent === 'arquiteto');
 
   const invalidateActions = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['session-actions', projectId, sessionId] });
@@ -760,13 +796,26 @@ export function SessionPage({
           ),
         });
       } else if (event.type === 'agent.response') {
-        const payload = event.payload as { content?: unknown; text?: unknown };
+        const payload = event.payload as {
+          content?: unknown;
+          text?: unknown;
+          modelName?: unknown;
+        };
         const text =
           typeof payload?.content === 'string'
             ? payload.content
             : typeof payload?.text === 'string'
               ? payload.text
               : '';
+        // Nome do modelo que gerou a resposta (achado do problema 2,
+        // RN-146) — evento GRAVADO antes desta mudança não tem a chave, e
+        // `payload.modelName` também pode chegar `null` (turno cuja api não
+        // resolveu modelo nenhum antes de falhar). Os dois degradam para o
+        // rótulo genérico "modelo", nunca para `undefined`/`null` na tela.
+        const modelName =
+          typeof payload?.modelName === 'string' && payload.modelName !== ''
+            ? payload.modelName
+            : undefined;
         items.push({
           seq: event.seq,
           agentId: event.actor.kind === 'agent' ? event.actor.id : undefined,
@@ -778,7 +827,7 @@ export function SessionPage({
               <div className={styles.messageBody}>
                 <div className={styles.messageHeader}>
                   <span className={styles.messageName}>{nomeDoAgente(event.actor.id)}</span>
-                  <span className={styles.messageMeta}>modelo</span>
+                  <span className={styles.messageMeta}>{modelName ?? 'modelo'}</span>
                 </div>
                 {/* Resposta vazia é evento ANTIGO: até a RN-059, falha de
                     turno era gravada como `agent.response` com conteúdo "" —
@@ -909,7 +958,12 @@ export function SessionPage({
           node: (
             <div style={corDoAgente(agentId)}>
               <Disclosure
-                titulo={nomeDoAgente(agentId)}
+                titulo={
+                  <span className={styles.agentGroupTitulo}>
+                    <AvatarDoAgente id={agentId} />
+                    {nomeDoAgente(agentId)}
+                  </span>
+                }
                 trailing={`${grupo.length} mensagens`}
                 classNameCabecalho={styles.agentGroupCabecalho}
                 className={styles.agentGroup}
@@ -1007,6 +1061,33 @@ export function SessionPage({
     } catch {
       setStreaming(false);
       showToast({ title: 'Erro', message: 'Não foi possível confirmar prontidão', tone: 'danger' });
+    }
+  }
+
+  /**
+   * Mirror de `handleReadiness`, para o Arquiteto (achado do problema 1):
+   * dispara `OfferInfraHandoffUseCase`, que oferece o handoff ao Infra e ao
+   * Dev Lead na MESMA confirmação (FASE 14d) — o Arquiteto narra a arquitetura
+   * pronta no fio, e os dois handoffs nascem em seguida. Mesma rede de
+   * segurança do `handleReadiness`: `confirmArchitectureReadiness` também é
+   * um `GenServer.call` síncrono no engine, e o canal Phoenix pode não ter
+   * terminado de conectar quando o turno acaba — resolver esta chamada é
+   * sinal de fim de turno tão confiável quanto `agent.done`, e
+   * `finalizarTurnoDoAgente` é idempotente.
+   */
+  async function handleArchitectureReadiness() {
+    try {
+      setStreaming(true);
+      setStreamingText('');
+      await confirmArchitectureReadiness(projectId, sessionId);
+      finalizarTurnoDoAgente();
+    } catch {
+      setStreaming(false);
+      showToast({
+        title: 'Erro',
+        message: 'Não foi possível confirmar a arquitetura',
+        tone: 'danger',
+      });
     }
   }
 
@@ -1635,6 +1716,20 @@ export function SessionPage({
                   }
                 >
                   Estou pronto para produzir
+                </Button>
+              )}
+              {/*
+                Mirror do botão acima, para o Arquiteto (achado do problema 1)
+                — some depois que ele já ofereceu o handoff, pelo mesmo motivo
+                que o do Criativo some depois de `prontidaoJaDeclarada`.
+              */}
+              {arquitetoActive && !arquiteturaJaDeclarada && (
+                <Button
+                  variant="success"
+                  onClick={handleArchitectureReadiness}
+                  disabled={streaming}
+                >
+                  Confirmar arquitetura pronta
                 </Button>
               )}
             </div>

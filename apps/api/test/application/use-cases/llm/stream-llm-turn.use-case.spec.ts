@@ -26,7 +26,10 @@ import { CheckBudgetGateUseCase } from '../../../../src/application/use-cases/ll
 import { ResolveCredentialOwnerUseCase } from '../../../../src/application/use-cases/llm/resolve-credential-owner.use-case';
 import { DrizzleWorkspaceRepository } from '../../../../src/infrastructure/persistence/drizzle/workspace.repository';
 import { RecordLlmUsageUseCase } from '../../../../src/application/use-cases/llm/record-llm-usage.use-case';
-import { RunLlmTurnUseCase } from '../../../../src/application/use-cases/llm/run-llm-turn.use-case';
+import {
+  StreamLlmTurnUseCase,
+  type LlmTurnStreamEvent,
+} from '../../../../src/application/use-cases/llm/stream-llm-turn.use-case';
 import type { LLMProvider } from '../../../../src/application/ports/llm-provider.port';
 import type { LLMProviderRegistry } from '../../../../src/application/ports/llm-provider-registry.port';
 import type { ChatStreamChunk, LLMProviderName } from '@brabo/shared';
@@ -74,22 +77,12 @@ class FakeProvider implements LLMProvider {
   }
 }
 
-class ThrowingProvider implements LLMProvider {
-  name: LLMProviderName = 'ollama';
-  readonly capabilities = { streaming: true, toolCalling: true };
-  async *chat(): AsyncGenerator<ChatStreamChunk> {
-    await Promise.resolve();
-    yield { type: 'text_delta', text: 'parcial' };
-    throw new Error('provider caiu');
-  }
-}
-
 function registryWith(provider: LLMProvider): LLMProviderRegistry {
   return { get: () => provider };
 }
 
 function buildUseCase(provider: LLMProvider) {
-  return new RunLlmTurnUseCase(
+  return new StreamLlmTurnUseCase(
     unitOfWork,
     modelRepo,
     credentialRepo,
@@ -103,14 +96,22 @@ function buildUseCase(provider: LLMProvider) {
   );
 }
 
+async function coletar(
+  gen: AsyncGenerator<LlmTurnStreamEvent>,
+): Promise<LlmTurnStreamEvent[]> {
+  const eventos: LlmTurnStreamEvent[] = [];
+  for await (const evento of gen) eventos.push(evento);
+  return eventos;
+}
+
 async function setup() {
   const [owner] = await db
     .insert(users)
-    .values({ keycloakSub: 'sub-turn', email: 'turn@brabo.dev' })
+    .values({ keycloakSub: 'sub-stream-turn', email: 'stream-turn@brabo.dev' })
     .returning();
   const [workspace] = await db
     .insert(workspaces)
-    .values({ name: 'acme', slug: 'acme', createdBy: owner.id })
+    .values({ name: 'acme-stream', slug: 'acme-stream', createdBy: owner.id })
     .returning();
   const [project] = await db
     .insert(projects)
@@ -133,8 +134,6 @@ async function setup() {
       displayName: 'Llama 3.2 3B',
       inputPricePerMillionMicros: 0,
       outputPricePerMillionMicros: 0,
-      // Os turnos daqui mandam `tools`, e desde a Fase 9c a cascata recusa
-      // candidato sem tool calling quando o turno pede ferramentas.
       supportsToolCalling: true,
     })
     .returning();
@@ -155,55 +154,38 @@ afterAll(async () => {
   await pool.end();
 });
 
-describe('RunLlmTurnUseCase', () => {
-  it('caminho feliz: retorna tool_calls, grava token_usage e NÃO grava session_events', async () => {
+describe('StreamLlmTurnUseCase', () => {
+  it('caminho feliz: o frame final carrega o nome do modelo (RN-146)', async () => {
     const { project, session } = await setup();
     const provider = new FakeProvider([
-      { type: 'text_delta', text: 'vou ler ' },
-      { type: 'text_delta', text: 'o arquivo' },
-      {
-        type: 'tool_calls',
-        toolCalls: [
-          { id: 'tc1', name: 'read_file', arguments: { path: 'README.md' } },
-        ],
-      },
-      { type: 'usage', inputTokens: 12, outputTokens: 4, estimated: false },
+      { type: 'text_delta', text: 'Oi! ' },
+      { type: 'text_delta', text: 'tudo bem?' },
+      { type: 'usage', inputTokens: 10, outputTokens: 3, estimated: false },
     ]);
 
-    const result = await buildUseCase(provider).execute({
-      projectId: project.id,
-      sessionId: session.id,
-      agentId: 'echo',
-      messages: [{ role: 'user', content: 'leia o README' }],
-      tools: [{ name: 'read_file', description: 'lê arquivo', parameters: {} }],
-    });
+    const eventos = await coletar(
+      buildUseCase(provider).execute({
+        projectId: project.id,
+        sessionId: session.id,
+        agentId: 'criativo',
+        messages: [{ role: 'user', content: 'oi' }],
+      }),
+    );
 
-    expect(result.error).toBeNull();
-    expect(result.message.content).toBe('vou ler o arquivo');
-    expect(result.message.toolCalls).toEqual([
-      { id: 'tc1', name: 'read_file', arguments: { path: 'README.md' } },
-    ]);
-    expect(result.usage).toMatchObject({
-      inputTokens: 12,
-      outputTokens: 4,
-      estimated: false,
-    });
-    // Achado do problema 2 (RN-146): o nome do modelo viaja no resultado —
-    // antes só existia em `token_usage`, sem vínculo com o turno específico.
-    expect(result.modelName).toBe('llama3.2:3b');
+    const final = eventos.at(-1);
+    if (final?.type !== 'final') throw new Error('esperava um frame final');
 
-    // Metering gravado.
+    expect(final.error).toBeNull();
+    expect(final.message.content).toBe('Oi! tudo bem?');
+    // Achado do problema 2 — antes o nome do modelo só existia em
+    // `token_usage`, sem vínculo com o `agent.response` específico.
+    expect(final.modelName).toBe('llama3.2:3b');
+
     const usageRows = await db
       .select()
       .from(tokenUsage)
       .where(eq(tokenUsage.sessionId, session.id));
     expect(usageRows).toHaveLength(1);
-    expect(usageRows[0]).toMatchObject({
-      actorKind: 'agent',
-      actorId: 'echo',
-      inputTokens: 12,
-      outputTokens: 4,
-    });
 
     // NÃO grava session_events (o engine narra o event log).
     const events = await db
@@ -213,49 +195,23 @@ describe('RunLlmTurnUseCase', () => {
     expect(events).toHaveLength(0);
   });
 
-  it('erro do provider: ainda grava metering estimado e retorna o erro no campo', async () => {
+  it('borda: sem binding de modelo, o frame final vem com modelName nulo', async () => {
     const { project, session } = await setup();
-
-    const result = await buildUseCase(new ThrowingProvider()).execute({
-      projectId: project.id,
-      sessionId: session.id,
-      agentId: 'echo',
-      messages: [{ role: 'user', content: 'oi' }],
-    });
-
-    expect(result.error).toContain('provider caiu');
-    // Sem usage do provider -> estimativa marcada.
-    expect(result.usage.estimated).toBe(true);
-    // O modelo já tinha sido resolvido ANTES do provider falhar — o nome
-    // viaja mesmo no caminho de erro (RN-146).
-    expect(result.modelName).toBe('llama3.2:3b');
-    const usageRows = await db
-      .select()
-      .from(tokenUsage)
-      .where(eq(tokenUsage.sessionId, session.id));
-    expect(usageRows).toHaveLength(1);
-    expect(usageRows[0].estimated).toBe(true);
-  });
-
-  it('sem binding de modelo: retorna erro, sem gravar metering', async () => {
-    const { project, session } = await setup();
-    // Remove o binding pra forçar o erro.
     await db.delete(modelBindings);
 
-    const result = await buildUseCase(new FakeProvider([])).execute({
-      projectId: project.id,
-      sessionId: session.id,
-      messages: [{ role: 'user', content: 'oi' }],
-    });
+    const eventos = await coletar(
+      buildUseCase(new FakeProvider([])).execute({
+        projectId: project.id,
+        sessionId: session.id,
+        agentId: 'criativo',
+        messages: [{ role: 'user', content: 'oi' }],
+      }),
+    );
 
-    expect(result.error).toMatch(/modelo vinculado/i);
-    // Borda (RN-146): sem binding, nenhum modelo foi resolvido — `modelName`
-    // é `null`, nunca undefined nem o nome de um modelo que não existiu.
-    expect(result.modelName).toBeNull();
-    const usageRows = await db
-      .select()
-      .from(tokenUsage)
-      .where(eq(tokenUsage.sessionId, session.id));
-    expect(usageRows).toHaveLength(0);
+    const final = eventos.at(-1);
+    if (final?.type !== 'final') throw new Error('esperava um frame final');
+
+    expect(final.error).toMatch(/modelo vinculado/i);
+    expect(final.modelName).toBeNull();
   });
 });

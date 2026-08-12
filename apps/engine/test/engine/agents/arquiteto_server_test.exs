@@ -122,6 +122,23 @@ defmodule Engine.Agents.ArquitetoServerTest do
     assert_received %Phoenix.Socket.Broadcast{event: "agent.done"}
   end
 
+  # Achado do problema 2 (RN-146): o `agent.response` carrega o nome do
+  # modelo que gerou a resposta, extraído do frame `final` da api.
+  test "agent.response carrega o nome do modelo", %{state: state, session_id: session_id} do
+    Process.put(:fake_llm_turns, [
+      FakeEngineApiClient.final_response("Arquitetura pronta.", "gpt-4o-mini")
+    ])
+
+    assert {:reply, :ok, _} =
+             sync_call(ArquitetoServer, {:user_message, "defina a arquitetura"}, state)
+
+    assert_received {:event_appended, _, ^session_id,
+                     %{
+                       type: "agent.response",
+                       payload: %{content: "Arquitetura pronta.", modelName: "gpt-4o-mini"}
+                     }}
+  end
+
   test "offer_infra_handoff: roda o turno de fechamento e oferece o handoff ao infra", %{
     state: state,
     session_id: session_id

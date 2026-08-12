@@ -6,6 +6,16 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api,engine,web**: o Arquiteto ganha o botão "Confirmar arquitetura
+  pronta" (RN-145) — `OfferInfraHandoffUseCase` já existia e já oferecia o
+  handoff ao Infra e ao Dev Lead na mesma confirmação, mas nenhum lugar do
+  frontend chamava o endpoint. Separadamente, `agent.response` passa a
+  carregar o nome do MODELO que gerou a resposta (RN-146) — antes só existia
+  em `token_usage`, sem vínculo com o evento específico; `SessionPage.tsx`
+  mostrava a string fixa "modelo" e agora mostra o nome real, com fallback
+  para evento gravado antes desta mudança. E o cabeçalho do grupo de
+  mensagens colapsado (RN-138) ganha o ÍCONE do agente ao lado do nome
+  (RN-147), reusando a mesma fonte do indicador de streaming
 - **engine**: um ciclo de gate (QA/SecOps) morto no meio — por um restart do
   processo, entre o veredito já gravado na api e a chamada em processo que
   aplicaria o próximo passo — não prendia mais a PR pra sempre (RN-140).

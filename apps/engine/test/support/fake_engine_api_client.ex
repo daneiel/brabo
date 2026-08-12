@@ -519,8 +519,14 @@ defmodule Engine.Sessions.FakeEngineApiClient do
     {:ok, resposta}
   end
 
-  @doc "Resposta que só devolve texto final, sem tool calls (encerra o loop)."
-  def final_response(content \\ "pronto") do
+  @doc """
+  Resposta que só devolve texto final, sem tool calls (encerra o loop).
+
+  `model_name` (achado do problema 2, RN-146) — default `nil`, o mesmo
+  comportamento de sempre: quem não passa continua exercitando o caminho de
+  evento ANTIGO (sem `modelName` no payload de `agent.response`).
+  """
+  def final_response(content \\ "pronto", model_name \\ nil) do
     %{
       "message" => %{"role" => "assistant", "content" => content, "toolCalls" => []},
       "usage" => %{
@@ -529,7 +535,8 @@ defmodule Engine.Sessions.FakeEngineApiClient do
         "costMicros" => 0,
         "estimated" => true
       },
-      "error" => nil
+      "error" => nil,
+      "modelName" => model_name
     }
   end
 

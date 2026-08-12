@@ -544,6 +544,16 @@
   font-family: var(--font-mono);
 }
 
+/* O avatar (achado do problema 3) entra na FRENTE do nome, dentro do
+   `titulo` do Disclosure — `.titulo` já é `flex: 1`, então só falta alinhar
+   os dois na mesma linha. */
+.agentGroupTitulo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
 .agentGroupRegiao {
   display: flex;
   flex-direction: column;

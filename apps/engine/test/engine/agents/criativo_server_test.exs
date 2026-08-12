@@ -97,6 +97,43 @@ defmodule Engine.Agents.CriativoServerTest do
     assert Enum.any?(new_state.messages, &(&1["role"] == "assistant"))
   end
 
+  # Achado do problema 2 (RN-146): o `agent.response` carrega o nome do
+  # modelo que gerou a resposta, extraído do frame `final` da api.
+  test "agent.response carrega o nome do modelo", %{state: state, session_id: session_id} do
+    Process.put(:fake_llm_turns, [
+      FakeEngineApiClient.final_response("Oi! Me conta sobre o produto.", "llama3.2:3b")
+    ])
+
+    assert {:reply, :ok, _} =
+             sync_call(CriativoServer, {:user_message, "oi"}, state)
+
+    assert_received {:event_appended, _, ^session_id,
+                     %{
+                       type: "agent.response",
+                       payload: %{
+                         content: "Oi! Me conta sobre o produto.",
+                         modelName: "llama3.2:3b"
+                       }
+                     }}
+  end
+
+  # Borda: a api pode não mandar `modelName` (versão antiga durante rollout, ou
+  # frame `final` sem o campo) — o engine não deve quebrar, só gravar `nil`. É
+  # o mesmo caminho que produz o payload de um evento GRAVADO antes desta
+  # mudança, que `SessionPage.tsx` sabe degradar para o rótulo genérico.
+  test "sem modelName no frame final: grava modelName nil, sem quebrar", %{
+    state: state,
+    session_id: session_id
+  } do
+    Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("oi")])
+
+    assert {:reply, :ok, _} =
+             sync_call(CriativoServer, {:user_message, "oi"}, state)
+
+    assert_received {:event_appended, _, ^session_id,
+                     %{type: "agent.response", payload: %{content: "oi", modelName: nil}}}
+  end
+
   test "guardrail: turno normal NÃO emite product_brief nem por tool call", %{state: state} do
     Process.put(:fake_llm_turns, [product_brief_tool_turn()])
 
