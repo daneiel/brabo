@@ -178,6 +178,12 @@
   color: var(--text-muted);
 }
 
+/* Mensagem de payload malformado (comando/conteúdo vazio) — texto normal
+ * apagado, nunca o prompt `$ ` em branco que parece bug de renderização. */
+.vazio {
+  color: var(--text-muted);
+}
+
 .outputBlock {
   border-top: 1px solid var(--border);
 }

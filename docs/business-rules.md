@@ -3253,16 +3253,36 @@ vocabulário paralelo — e a frase dela diz o que o accept faz de verdade
 (enfileira para a Anamnese, que **pode** propor o ajuste, que ainda vem para
 aprovação), nunca "a instrução será alterada".
 
+**`write_file` tinha frase, mas não corpo.** Ele nasceu de fora de
+`COM_CORPO_PROPRIO`: a frase mostrava só o `path`, e o detalhe caía no mesmo
+despejo de JSON cru colapsado que esta RN existe para evitar — então um write
+que genuinamente pedia aprovação (fora do prefixo `dev-`, ou caminho fora do
+escopo do agente) exigia um clique a mais para ver o `content`. Entrou em
+`COM_CORPO_PROPRIO` com corpo próprio: `path` e um preview do `content` (até
+25 linhas/4.000 caracteres, com aviso de truncamento — nunca o arquivo
+inteiro, mesma regra do payload cru), aberto por padrão no chat enquanto
+pendente, igual `terminal`.
+
+**Payload vazio não é payload ausente.** `command` (terminal) ou
+`path`/`content` (write_file) chegando como string vazia — tool-call
+malformada do modelo, não bug de renderização — degradava para um prompt
+`$ ` ou um preview em branco, que o usuário lia como defeito da tela. Os dois
+corpos agora distinguem os dois casos e mostram "o modelo não produziu um
+X válido para esta ação" em vez de um branco.
+
 - **Onde:** `apps/web/src/lib/aprovacoes.ts` (`VERBO_DA_ACAO`, `fraseDaAcao`,
   `descreverAcao`, `descreverHipotese`), consumido por
-  `apps/web/src/components/ApprovalCard.tsx` (Aprovações + chat da sessão) e
+  `apps/web/src/components/ApprovalCard.tsx` (Aprovações + chat da sessão,
+  `COM_CORPO_PROPRIO`, `previewConteudo` para o `content` de `write_file`) e
   `apps/web/src/components/HypothesisCard.tsx` (Insights); colapso pelo
   `Disclosure` de `apps/web/src/components/ui/Disclosure.tsx`
 - **Teste:** `apps/web/src/lib/aprovacoes.test.ts` (lê `ACTION_TYPES` de
   `apps/api/src/domain/actions/decide.ts` e exige verbo + frase para cada tipo,
   com payload vazio); `apps/web/src/components/ApprovalCard.test.tsx`
   (`frase e colapso` — payload colapsado nas duas variantes, JSON legível ao
-  abrir, tipo desconhecido não derruba a tela);
+  abrir, tipo desconhecido não derruba a tela, `write_file` com corpo próprio
+  aberto por padrão e truncamento do preview, `command`/`path`/`content`
+  vazios mostrando a mensagem de fallback);
   `apps/web/src/components/HypothesisCard.test.tsx` (`frase e colapso`)
 - **Origem:** FASE 19 do programa 16–26, do pedido "hoje está muito difícil a
   leitura" na primeira navegação real depois do reset do banco

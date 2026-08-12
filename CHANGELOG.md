@@ -160,6 +160,17 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   nenhum handler de `SessionPage` o usava); agora ele reaproveita o indicador
   de digitação já existente, identificando o agente pelo handoff que acabou
   de ser aceito
+- **web**: `write_file` ganha corpo próprio no card de aprovação (RN-096) —
+  antes caía no fallback genérico e despejava `path`/`content` como JSON cru
+  COLAPSADO, então um write que genuinamente pedia aprovação (fora do
+  prefixo `dev-`, ou caminho fora do escopo do agente) exigia um clique
+  extra pra ver o que seria escrito. Agora mostra o `path` e um preview do
+  `content` (até 25 linhas/4.000 caracteres, com aviso de truncamento),
+  aberto por padrão no chat enquanto pendente — mesmo comportamento que
+  `terminal` já tinha. Separadamente, `command` (terminal) ou
+  `path`/`content` (write_file) vazios — tool-call malformada do modelo —
+  agora mostram "o modelo não produziu um X válido para esta ação" em vez
+  de um prompt `$ ` ou preview em branco, que lia como bug de renderização
 
 - **engine**: `AnamneseSchedulerWorker.perform/1` não conferia a flag
   `ANAMNESE_ENABLED` — só `kickoff/0` (a inserção inicial do job no boot)
