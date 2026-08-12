@@ -313,6 +313,18 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   equivalente: chamar `finalizarTurnoDoAgente()` assim que
   `confirmReadiness` resolve, independente do canal
 
+### Correções
+
+- **engine,web**: confirmar prontidão ("Estou pronto para produzir") numa
+  conversa sem NENHUMA regra de negócio capturada criava o `product_brief`
+  e oferecia o handoff ao PO mesmo assim (RN-141). `CriativoServer` agora
+  recusa a confirmação ANTES de subir o turno de consolidação — sem brief,
+  sem handoff —, narrando o motivo como `agent.error` durável no fio da
+  sessão (origem "politica"), já que a rota HTTP sempre responde 202
+  (mesmo padrão do cancelamento, RN-122). O botão nasce `disabled` com a
+  dica do porquê, lendo a mesma fonte que já alimenta o painel "Regras de
+  negócio"
+
 ## v2.5.1 — 2026-08-08
 
 ### Correções
