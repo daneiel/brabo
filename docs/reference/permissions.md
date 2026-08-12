@@ -156,20 +156,41 @@ São duas famílias:
 
 - **leitura do próprio worktree** — `ls`, `pwd`, `find`, `cat`, `head`, `tail`,
   `grep`, `wc`, `echo`, `git status`, `git diff`, `git log`;
+- **leitura de histórico/remoto/config do git** — `git branch
+  -a/-r/-v/--list/--show-current`, `git remote -v`, `git remote show`, `git
+  worktree list`, `git show`, `git for-each-ref`, `git ls-tree`, `git
+  rev-parse`, `git config --get` (ver [RN-141](../business-rules.md#rn-141));
 - **build e teste** — `pnpm install`, `pnpm test`, `npm run`, `npx vitest`,
   `mix test`, `pytest`, `go test`, `cargo test`, entre outros.
 
-A segunda família existe porque `ReportDone` só deixa abrir PR depois de um
+A terceira família existe porque `ReportDone` só deixa abrir PR depois de um
 `terminal` com `exit 0` no histórico. A primeira existe porque o agente **olha
 antes de construir**: sem ela, cada `ls -la` num repositório recém-provisionado
 caía em aprovação, voltava como `status pending` — e não como a saída do
 comando — e queimava uma iteração do ToolLoop até a task morrer por limite
-(ver [RN-068](../business-rules.md#rn-068)).
+(ver [RN-068](../business-rules.md#rn-068)). A segunda existe porque `git
+status`/`diff`/`log` bastam pra olhar o worktree, mas não pra o agente se
+orientar no histórico e nos remotos de um repositório recém-adotado — uma
+sessão real gastou dezenas de aprovações manuais em subcomandos como `git
+branch -a` ou `git worktree list` que caíam fora do `allow` e reprovavam para
+aprovação manual qualquer comando composto em que aparecessem.
 
 Isto NÃO afrouxa nada do que está acima. Continua valendo que `deny` vence
 `allow`, que os padrões embutidos seguem ativos, que o casamento é por prefixo
 de **token** (`ls` liberado não libera `lsof`) e que comando composto exige que
 CADA segmento case — então `ls && rm -rf /` não passa por causa do `ls`.
+
+A segunda família tem um cuidado a mais, porque o casamento por prefixo
+permite QUALQUER coisa depois do prefixo que bateu: um padrão pelado
+`Terminal(git branch)` bateria tanto em `git branch -D nome` (apaga) quanto em
+`git branch nome-nova` (cria) quanto na listagem sozinha, porque ele não
+enxerga o que vem depois. Por isso `branch`, `remote`, `worktree` e `config` —
+os quatro que têm irmão MUTANTE — só entraram ANCORADOS pela flag que torna a
+leitura inequívoca (`-a`/`-v`/`show`/`list`/`--get`), nunca pelo verbo pelado;
+`git branch -D/-d/-m/-M`, `git remote add/remove/set-url`, `git worktree
+add/remove/prune` e `git config <chave> <valor>` (sem `--get`) continuam
+exigindo aprovação. `show`, `log`, `for-each-ref`, `ls-tree` e `rev-parse`
+não precisaram de âncora: nenhuma continuação deles muta o repositório.
 
 Auto-aprovar `terminal` por `agent_autonomy` seria diferente e não é o que se
 faz: liberaria QUALQUER comando dentro do container do engine, sem o arquivo no
