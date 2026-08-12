@@ -124,6 +124,26 @@ defmodule Engine.Sessions.FakeEngineApiClient do
   end
 
   @impl true
+  def create_c4_diagram(_project_id, _session_id, entrada) do
+    notify({:c4_diagram_created, entrada})
+
+    case Process.get(:fake_c4_diagram_error) do
+      nil ->
+        reply(:fake_c4_diagram, %{
+          "version" => 1,
+          "diagrama" => %{
+            "systemName" => Map.get(entrada, :systemName),
+            "contextDiagram" => "C4Context\n  title fake",
+            "containerDiagram" => "C4Container\n  title fake"
+          }
+        })
+
+      reason ->
+        {:error, reason}
+    end
+  end
+
+  @impl true
   def assign_story_modules(_project_id, _session_id, fields) do
     notify({:story_modules_assigned, fields})
 

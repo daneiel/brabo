@@ -259,6 +259,7 @@ o componente `d` da JWK, travado por teste.
 | POST | `/internal/sessions/:sessionId/max-parallel-proposals` | engine-service |
 | POST | `/internal/sessions/:sessionId/llm-turn` | engine-service |
 | POST | `/internal/sessions/:sessionId/llm-turn-stream` | engine-service |
+| POST | `/internal/sessions/:sessionId/c4-diagram` | engine-service |
 | POST | `/internal/sessions/:sessionId/module-map` | engine-service |
 | POST | `/internal/sessions/:sessionId/project-image` | engine-service |
 | POST | `/internal/sessions/:sessionId/proficiency` | engine-service |

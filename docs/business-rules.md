@@ -4974,6 +4974,57 @@ pedido.
 - **Origem:** pedido do usuário — histórias produzidas em lote pelo PO
   ficavam difíceis de decidir uma por uma no fio
 
+### RN-149 — O Container level do diagrama C4 é derivado do module_map, nunca redigitado pelo modelo {#rn-149}
+
+`create_c4_diagram` (ferramenta nova do Arquiteto) gera as duas sintaxes
+Mermaid do diagrama C4 (Context + Container, modelo de Simon Brown). O tool
+call carrega só `system_name`/`system_description`/`actors` — os módulos e
+as dependências do nível Container NÃO fazem parte da entrada: o caso de uso
+busca o `module_map` VIGENTE do projeto (`ModuleMapRepository.findCurrent`,
+mesma leitura de `GetArchitectureUseCase`) e deriva o Container level dele,
+com os MESMOS nomes e dependências que `create_module_map` já validou sem
+ciclo.
+
+A alternativa óbvia — deixar o modelo descrever os módulos de novo no tool
+call do diagrama, como ele já faz para `create_module_map` — foi descartada
+de propósito: um segundo lugar onde o modelo escreve "os módulos são X, Y,
+Z" é um segundo lugar onde essa lista pode divergir da primeira, e a
+divergência seria SILENCIOSA — nada recusaria um diagrama com um módulo que
+não existe mais no mapa real. Derivar do repositório fecha essa divergência
+por construção: o diagrama pode ficar DESATUALIZADO se o `module_map` mudar
+depois (reemitir é gerar de novo, sem trava — ver ADR 0068), mas nunca
+MENTE sobre o que existia no momento em que foi gerado.
+
+Sem `module_map` vigente, `create_c4_diagram` é recusado com 400 — não há
+Container level sem módulos para desenhar, e a mensagem de erro instrui o
+Arquiteto a chamar `create_module_map` primeiro (RN-061: a recusa volta
+pelo tool-result, com o motivo inteiro).
+
+O artefato `artifact.c4_diagram` é versionado no event log sem tabela
+própria — mesmo desenho de `artifact.project_image` (ADR 0065): o vigente é
+o de maior `version`, e revisar é gerar de novo, nunca sobrescrever.
+
+- **Onde:** `apps/api/src/domain/architecture/c4-diagram.ts`
+  (`gerarDiagramaContexto`/`gerarDiagramaContainer`, puras),
+  `apps/api/src/application/use-cases/architecture/create-c4-diagram.use-case.ts`,
+  `apps/api/src/application/use-cases/architecture/get-c4-diagram.use-case.ts`,
+  `apps/engine/lib/engine/harness/tools/create_c4_diagram.ex`,
+  `apps/web/src/components/C4DiagramView.tsx` (renderização, três estados —
+  RN-088), `apps/web/src/lib/mermaid-render.ts` (o `mermaid` fica isolado
+  aqui, `import()` dinâmico)
+- **Teste:** `apps/api/test/domain/architecture/c4-diagram.spec.ts` (sintaxe
+  Mermaid válida a partir de um `module_map` de exemplo, aresta pendurada
+  ignorada, ids deduplicados),
+  `apps/api/test/application/use-cases/architecture/create-c4-diagram.use-case.spec.ts`
+  (sem module_map recusa com 400 e não grava nada; Container reflete os
+  módulos/dependências reais; versiona ao reemitir),
+  `apps/engine/test/engine/harness/tools/create_c4_diagram_test.exs`,
+  `apps/web/src/components/C4DiagramView.test.tsx` (sucesso vira SVG, erro
+  de sintaxe vira Alert legível sem quebrar a tela, diagrama vazio não tenta
+  renderizar)
+- **Origem:** pedido do usuário — diagrama C4 do Arquiteto na Visão Geral do
+  projeto (ADR 0068)
+
 ---
 
 ## Quando dá errado

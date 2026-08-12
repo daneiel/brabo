@@ -343,6 +343,7 @@ agente" — ver [RN-037](../business-rules.md#rn-037)). **Não** é
 | POST | `/epics` · `/stories` · `/tasks` |
 | POST | `/story-modules` |
 | POST | `/module-map` |
+| POST | `/c4-diagram` |
 | POST | `/project-image` |
 | POST | `/tasks/claim` |
 | POST | `/tasks/:taskId/status` |
@@ -362,6 +363,21 @@ tool-result em vez de reemitir igual ([RN-061](../business-rules.md#rn-061)).
 Enquanto nenhuma versão existe, `GET /projects/:projectId/container` (rota
 pública, `role:viewer`) devolve `status: "sem_decisao"`, e é o mesmo estado que
 faz a aba Code responder `409` ([RN-105](../business-rules.md#rn-105)).
+
+`/c4-diagram` é a ferramenta `create_c4_diagram` do Arquiteto
+([RN-149](../business-rules.md#rn-149),
+[ADR 0068](../adr/0068-diagrama-c4-do-arquiteto.md)): gera as sintaxes
+Mermaid dos níveis Context e Container do diagrama C4 (modelo de Simon
+Brown). Mesmo calibre de `/module-map`/`/project-image` — o artefato É o
+evento `artifact.c4_diagram`, sem tabela, versionado (o vigente é o de
+maior `version`, revisar é gerar de novo). O corpo carrega só
+`system_name`/`system_description`/`actors` — os módulos do nível
+Container NÃO vêm no corpo: o caso de uso busca o `module_map` VIGENTE do
+projeto e o deriva de lá, nunca do que o modelo redigita. Sem module_map
+vigente, `400` (não há Container level sem módulos). `GET
+/projects/:projectId/architecture` (rota pública, `role:viewer`) devolve o
+diagrama vigente em `c4Diagram`, no mesmo objeto que já traz `moduleMap` e
+`adrs`.
 
 **Sem task pegável, a resposta é `201` com corpo VAZIO**, não `null` no corpo: o
 caso de uso devolve `null` e o NestJS serializa isso como `content-length: 0`.

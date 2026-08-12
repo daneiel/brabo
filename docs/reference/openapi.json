@@ -574,6 +574,62 @@
         ]
       }
     },
+    "/internal/sessions/{sessionId}/c4-diagram": {
+      "post": {
+        "description": "O artefato É o evento `artifact.c4_diagram`: imutável, versionado e com autor, ao lado de `artifact.module_map`. Exige module_map vigente — sem ele não há Container level para desenhar (400).",
+        "operationId": "InternalSessionsController_c4Diagram",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateC4DiagramInternalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C4DiagramaGeradoResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`system_name` ausente, ator inválido, ou sem module_map vigente."
+          },
+          "403": {
+            "description": "Service token ausente ou diferente do compartilhado."
+          },
+          "404": {
+            "description": "Sessão, projeto ou recurso inexistente."
+          }
+        },
+        "security": [
+          {
+            "service-token": []
+          }
+        ],
+        "summary": "Gera uma versão nova do diagrama C4 (Context + Container)",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
     "/internal/sessions/{sessionId}/delegations": {
       "post": {
         "description": "`completed` (com o parecer), `failed` (com a origem) ou `dispensed` (com a justificativa) — o lead nunca chama esta rota com um desfecho a meio caminho: cada delegação nasce aqui já resolvida.",
@@ -10014,12 +10070,16 @@
             "items": {
               "$ref": "#/components/schemas/ArchitecturePendencyResponseDto"
             }
+          },
+          "c4Diagram": {
+            "$ref": "#/components/schemas/EstadoDoC4DiagramaResponseDto"
           }
         },
         "required": [
           "moduleMap",
           "adrs",
-          "pendencies"
+          "pendencies",
+          "c4Diagram"
         ]
       },
       "AreaDeAgentesResponseDto": {
@@ -10340,6 +10400,110 @@
           "lastThresholdNotified",
           "createdAt",
           "updatedAt"
+        ]
+      },
+      "C4AtorInternalDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Usuário"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "person",
+              "external_system"
+            ],
+            "default": "person",
+            "example": "person",
+            "description": "`person` (default) para quem opera o sistema; `external_system` para outro sistema com o qual ele conversa (ex.: um provedor de Git)."
+          },
+          "description": {
+            "type": "string",
+            "example": "Quem opera o produto pela web."
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "C4AtorResponseDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Usuário"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "person",
+              "external_system"
+            ],
+            "example": "person"
+          },
+          "description": {
+            "type": "string",
+            "example": "Quem opera o produto pela web."
+          }
+        },
+        "required": [
+          "name",
+          "type",
+          "description"
+        ]
+      },
+      "C4DiagramaGeradoResponseDto": {
+        "type": "object",
+        "properties": {
+          "diagrama": {
+            "$ref": "#/components/schemas/C4DiagramaResponseDto"
+          },
+          "version": {
+            "type": "number",
+            "example": 1
+          }
+        },
+        "required": [
+          "diagrama",
+          "version"
+        ]
+      },
+      "C4DiagramaResponseDto": {
+        "type": "object",
+        "properties": {
+          "systemName": {
+            "type": "string",
+            "example": "Brabo"
+          },
+          "systemDescription": {
+            "type": "string",
+            "example": "Plataforma de engenharia orquestrada por agentes."
+          },
+          "actors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/C4AtorResponseDto"
+            }
+          },
+          "contextDiagram": {
+            "type": "string",
+            "example": "C4Context\n  title Diagrama de Contexto -- Brabo\n  ...",
+            "description": "Sintaxe Mermaid `C4Context` — o sistema e os atores externos."
+          },
+          "containerDiagram": {
+            "type": "string",
+            "example": "C4Container\n  title Diagrama de Container -- Brabo\n  ...",
+            "description": "Sintaxe Mermaid `C4Container` — os módulos do module_map vigente e as dependências entre eles."
+          }
+        },
+        "required": [
+          "systemName",
+          "systemDescription",
+          "actors",
+          "contextDiagram",
+          "containerDiagram"
         ]
       },
       "ChatSseEventResponseDto": {
@@ -10958,6 +11122,35 @@
           "actionType",
           "actor",
           "payload"
+        ]
+      },
+      "CreateC4DiagramInternalDto": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "systemName": {
+            "type": "string",
+            "example": "Brabo",
+            "description": "Nome do sistema/projeto, para o rótulo do diagrama."
+          },
+          "systemDescription": {
+            "type": "string",
+            "example": "Plataforma de engenharia orquestrada por agentes."
+          },
+          "actors": {
+            "description": "Atores externos do nível Context (Simon Brown). Os containers do nível Container NÃO entram aqui: vêm do module_map vigente do projeto.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/C4AtorInternalDto"
+            }
+          }
+        },
+        "required": [
+          "projectId",
+          "systemName"
         ]
       },
       "CreateEpicInternalDto": {
@@ -11780,6 +11973,52 @@
           "description",
           "createdAt",
           "updatedAt"
+        ]
+      },
+      "EstadoDoC4DiagramaResponseDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "sem_diagrama",
+              "gerado"
+            ],
+            "example": "sem_diagrama",
+            "description": "`sem_diagrama` é o estado inicial: o Arquiteto ainda não gerou nenhum."
+          },
+          "diagrama": {
+            "nullable": true,
+            "description": "O diagrama vigente, ou `null` enquanto não há nenhum.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/C4DiagramaResponseDto"
+              }
+            ]
+          },
+          "version": {
+            "type": "number",
+            "example": 0,
+            "description": "Versão do artefato vigente; 0 quando não há diagrama. Revisar é gerar de novo — o histórico não é reescrito."
+          },
+          "eventId": {
+            "type": "object",
+            "nullable": true,
+            "example": "01JC4Z0000EVENTO000000002"
+          },
+          "createdAt": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "status",
+          "diagrama",
+          "version",
+          "eventId",
+          "createdAt"
         ]
       },
       "EstadoDoContainerResponseDto": {
