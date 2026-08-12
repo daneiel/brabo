@@ -135,6 +135,19 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **api**: consultando o banco de uma sessão real, dev agents gastavam
+  dezenas de aprovações manuais em subcomandos de exploração — `git branch
+  -a`, `git remote -v`, `git worktree list`, `git show`, `git for-each-ref`,
+  `git ls-tree`, `git rev-parse`, `git config --get` —, nenhum coberto pela
+  allowlist que já libera `git status`/`diff`/`log` (RN-068). Como o
+  casamento por prefixo de token exige que TODO segmento de um comando
+  composto esteja em `allow`, uma cadeia de exploração longa caía inteira em
+  aprovação assim que UM desses subcomandos aparecia no meio.
+  `DEV_TERMINAL_ALLOW_PATTERNS` ganha os oito, cada um ANCORADO pela flag
+  que torna a leitura inequívoca — nunca pelo verbo pelado — pra não abrir a
+  mesma forma truncada que os irmãos MUTANTES aceitam (`git branch -D`, `git
+  remote add`, `git worktree add`, `git config <chave> <valor>` continuam
+  exigindo aprovação) (RN-143)
 - **web**: a aba Criativo listava a sessão de execução VIGENTE misturada com
   ideações de verdade — ela nasce `kind: 'criativa'` (RN-097 exige isso para
   `execution.activated` ser aceito), então o filtro por `kind` sozinho não
