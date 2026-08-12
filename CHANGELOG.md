@@ -169,6 +169,16 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **api**: CodeQL marcava "Server-side request forgery" em
+  `reanalyzeSession`/`runAnamnese` de `HttpApiToEngineClient`, apesar da
+  validação de segmento de URL interna (RN-128) já rodar antes do `fetch` —
+  falso-negativo de reconhecimento: o analisador de taint só trata uma
+  função como sanitizadora quando o valor validado é REATRIBUÍDO a partir
+  do retorno dela, e a chamada existente descartava o retorno de
+  `garantirSegmentoDeUrlInterna`, usando a função só pelo efeito colateral
+  de lançar. `sessionId`/`projectId` passam a ser reatribuídos a partir do
+  retorno; nenhuma mudança de comportamento (a função já devolvia o mesmo
+  valor recebido)
 - **api**: consultando o banco de uma sessão real, dev agents gastavam
   dezenas de aprovações manuais em subcomandos de exploração — `git branch
   -a`, `git remote -v`, `git worktree list`, `git show`, `git for-each-ref`,
