@@ -3425,6 +3425,67 @@ usava só no log colapsado da sidebar.
 - **Origem:** pedido do usuário — promoção de história inline no fio, opção
   barata reusando RN-048 em vez de gatear a criação da história.
 
+### RN-131 — Três corridas confirmadas AO VIVO no fio da sessão: convite por cima do histórico, indicador ansioso e turno preso em `handleReadiness` {#rn-131}
+
+Três defeitos achados navegando `SessionPage.tsx` de verdade no Chrome, não
+por teste — e os três eram condição de corrida ou critério incompleto
+disfarçado de decisão de produto.
+
+**1. `conversaComecou` virou "existe QUALQUER evento", não "existe
+`chat.message`/`agent.response`".** O critério anterior (achado G) nasceu
+pra não confundir os cards do bootstrap do git com conversa, mas tinha o
+efeito contrário: uma sessão criada pelo `git-bootstrap` (ações de
+commit/branch já aprovadas, zero `chat.message`) mostrava o convite por
+cima delas, e o mesmo acontecia — de forma bem mais grave — na sessão que a
+ativação de execução usa, com dezenas de eventos reais (`tool.call`,
+`tool.result`, eventos de task) e nenhum `chat.message`/`agent.response`: o
+convite cobria o histórico de execução **inteiro**. Sessão nova é a única
+sem nenhum evento — essa é a pergunta certa.
+
+**2. `conviteVisivel` espera `useSessionEvents` terminar de carregar.** Em
+cache frio (reload de página), `session` podia chegar enquanto `events`
+ainda era `[]` — o default de `data?.items`, indistinguível de "sessão
+vazia de verdade" até o primeiro fetch resolver. Sem o gate
+`!eventsQuery.isPending`, o convite piscava por cima de sessões com
+histórico grande.
+
+**3. O indicador de "pensando" (bolha com os 3 pontinhos) só liga depois de
+5s sem nenhum texto chegar.** Antes ele ligava no instante em que
+`streaming`/`statusAgent` virava truthy — ruído visual na maioria dos
+turnos, que respondem em menos de um segundo. Um `useEffect` arma um
+`setTimeout(…, 5000)` quando o turno começa sem texto ainda, e o desarma (via
+cleanup) assim que o primeiro delta chega ou o turno termina antes do prazo.
+Texto de verdade (`streamingText`) continua aparecendo **na hora**, nunca
+espera o timer — só o indicador vazio é que ganhou paciência.
+
+**4. `handleReadiness` ganhou a mesma rede de segurança que `handleSend` já
+tinha.** `confirmReadiness` é, como `sendAgentMessage`, um `GenServer.call`
+síncrono no engine (até 120s) — e o canal Phoenix pode não ter terminado de
+conectar (ticket + join, RN-108) quando o turno acaba, perdendo o broadcast
+de `agent.done` pra sempre. `handleSend` já chamava
+`finalizarTurnoDoAgente()` assim que a chamada síncrona resolvia,
+independente do canal ter entregue o evento; `handleReadiness` tinha ficado
+de fora dessa correção, e sem ela a bolha do agente ficava presa vazia
+(`streaming: true`, sem texto) até a página recarregar.
+
+- **Onde:** `apps/web/src/routes/SessionPage.tsx` (`conversaComecou`,
+  `conviteVisivel`, o `useEffect` de `pensandoVisivel` logo abaixo de
+  `agenteExibido`, e o bloco de sucesso de `handleReadiness`)
+- **Teste:**
+  `apps/web/src/routes/SessionPage.convite-so-em-sessao-vazia.test.tsx`
+  (sessão vazia mostra o convite; sessão com eventos de git-bootstrap ou com
+  dezenas de `tool.call`/`tool.result` esconde; `eventsQuery.isPending`
+  segura o convite até o primeiro fetch resolver),
+  `apps/web/src/routes/SessionPage.pista-e-status.test.tsx` (achado B —
+  indicador não aparece antes de 5s, aparece depois, some no primeiro delta
+  e nunca aparece quando o turno termina antes do prazo), e
+  `apps/web/src/routes/SessionPage.readiness-turno-preso.test.tsx`
+  (`confirmReadiness` resolvendo sem `onAgentDone` reconcilia o estado do
+  mesmo jeito que `SessionPage.turno-preso.test.tsx` já prova pra
+  `handleSend`)
+- **Origem:** investigação AO VIVO do produto no Chrome — os três reproduzidos
+  manualmente antes da correção.
+
 ---
 
 ## Psicólogo e Anamnese

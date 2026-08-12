@@ -219,6 +219,27 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   sessão com histórico abria no TOPO (mensagens mais antigas primeiro), sem
   nenhum scroll automático — agora abre sempre no fim
 
+- **web**: três corridas confirmadas AO VIVO navegando `SessionPage.tsx` no
+  Chrome (RN-131). **(1)** o convite de boas-vindas do Criativo reaparecia
+  por cima de sessões com histórico real — `conversaComecou` olhava só
+  `chat.message`/`agent.response`, então uma sessão criada pelo
+  `git-bootstrap` (ações de commit/branch já aprovadas) ou a sessão que a
+  ativação de execução usa (dezenas de `tool.call`/`tool.result`) mostravam
+  o convite por cima do que já tinha acontecido; agora o critério é
+  "existe QUALQUER evento". Separadamente, `conviteVisivel` ganha o gate
+  `!eventsQuery.isPending`, fechando uma race de cache frio em que o convite
+  piscava antes do primeiro fetch de eventos resolver. **(2)** o indicador
+  de "pensando" (bolha com os 3 pontinhos) ligava imediatamente a cada
+  turno, mesmo nos que respondiam em menos de um segundo — agora só aparece
+  depois de 5s sem nenhum texto chegar, e desarma na hora assim que o
+  primeiro delta chega ou o turno termina antes do prazo; texto de verdade
+  continua aparecendo sem esperar. **(3)** `handleReadiness` (o clique em
+  "Estou pronto para produzir") podia deixar a bolha do agente presa vazia
+  pra sempre se o canal Phoenix não entregasse `agent.done` a tempo — o
+  mesmo bug que `handleSend` já corrigira ganhando uma rede de segurança
+  equivalente: chamar `finalizarTurnoDoAgente()` assim que
+  `confirmReadiness` resolve, independente do canal
+
 ## v2.5.1 — 2026-08-08
 
 ### Correções
