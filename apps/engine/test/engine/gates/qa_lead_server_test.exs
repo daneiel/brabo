@@ -17,7 +17,7 @@ defmodule Engine.Gates.QaLeadServerTest do
   use Engine.DataCase, async: false
 
   alias Engine.Dev.DevAgentState
-  alias Engine.Gates.{FakeGateDispatcher, QaLeadServer}
+  alias Engine.Gates.{FakeGateDispatcher, GateState, QaLeadServer}
   alias Engine.Sessions.FakeEngineApiClient
 
   setup do
@@ -76,7 +76,8 @@ defmodule Engine.Gates.QaLeadServerTest do
 
   describe "story sem RNF de performance" do
     test "delega só Automação; Performance/Segurança fica dispensed, nunca em silêncio", %{
-      state: state
+      state: state,
+      project_id: project_id
     } do
       Process.put(:fake_dev_context, dev_context([]))
       Process.put(:fake_propose_action, terminal_ok())
@@ -114,11 +115,18 @@ defmodule Engine.Gates.QaLeadServerTest do
                        nil}
 
       assert_received {:gate_dispatch, :secops, _project_id, "task-abc12345"}
+
+      # ADR 0067: o ciclo concluiu (mão de bastão pro SecOps já entregue) —
+      # nada fica em voo pra este gate.
+      assert GateState.get(project_id, "task-abc12345", "qa") == nil
     end
   end
 
   describe "story com RNF de performance" do
-    test "delega as duas; consolida com itens rastreados por subespecialidade", %{state: state} do
+    test "delega as duas; consolida com itens rastreados por subespecialidade", %{
+      state: state,
+      project_id: project_id
+    } do
       Process.put(
         :fake_dev_context,
         dev_context(["Tempo de resposta abaixo de 200ms"])
@@ -166,12 +174,17 @@ defmodule Engine.Gates.QaLeadServerTest do
       # DevAgentServer.correct/3 é chamado (nextAction "correct") — não há
       # mensagem própria pra isso no fake; a ausência de erro já é o sinal
       # de que o pipeline completo rodou sem levantar.
+
+      # ADR 0067: dispatch aplicado (mesmo que fire-and-forget) — nada fica
+      # em voo.
+      assert GateState.get(project_id, "task-abc12345", "qa") == nil
     end
   end
 
   describe "falha de subagente" do
     test "não conclui -> bloqueia com a origem, NUNCA chama record_gate_verdict", %{
-      state: state
+      state: state,
+      project_id: project_id
     } do
       Process.put(:fake_dev_context, dev_context([]))
       # Nenhum turno scriptado: a Automação esgota sem emit_qa_verdict.
@@ -200,6 +213,10 @@ defmodule Engine.Gates.QaLeadServerTest do
       assert_received {:task_blocked_origin, "task-abc12345", "modelo"}
       assert reason =~ "QA de Automação"
       assert diagnosis =~ "emit_qa_verdict"
+
+      # ADR 0067: bloqueado é terminal — `mark_task_blocked` já é durável e
+      # já acorda o dev agent, nada mais a resgatar.
+      assert GateState.get(project_id, "task-abc12345", "qa") == nil
     end
   end
 
@@ -209,7 +226,10 @@ defmodule Engine.Gates.QaLeadServerTest do
   # de aprovação. O gate MORRIA: a suspensão virava `origin: infra` e a task
   # era bloqueada por uma decisão que ninguém tinha tomado.
   describe "aprovação pendente no meio do gate" do
-    test "a área PARA sem consolidar, e nada é decidido", %{state: state} do
+    test "a área PARA sem consolidar, e nada é decidido", %{
+      state: state,
+      project_id: project_id
+    } do
       Process.put(:fake_dev_context, dev_context([]))
       Process.put(:fake_propose_action, %{"id" => "pa-99", "status" => "pending"})
 
@@ -228,9 +248,15 @@ defmodule Engine.Gates.QaLeadServerTest do
       refute_received {:gate_verdict_recorded, _, _, _, _, _, _}
       refute_received {:task_blocked, _, _, _, _}
       refute_received {:delegation_recorded, %{status: "failed"}}
+
+      # ADR 0067: a espera é DURÁVEL — se o processo cair agora, o
+      # GateRescuer acha esta linha e reinicia a área.
+      row = GateState.get(project_id, "task-abc12345", "qa")
+      assert row.step == "in_progress"
+      assert row.subagent == "qa-automacao"
     end
 
-    test "a decisão RETOMA o laço e a área conclui", %{state: state} do
+    test "a decisão RETOMA o laço e a área conclui", %{state: state, project_id: project_id} do
       Process.put(:fake_dev_context, dev_context([]))
       Process.put(:fake_propose_action, %{"id" => "pa-99", "status" => "pending"})
 
@@ -267,6 +293,9 @@ defmodule Engine.Gates.QaLeadServerTest do
       # E agora sim o gate decide — o que a suspensão tinha impedido.
       assert_received {:gate_verdict_recorded, _, _, _, _, _, _}
       refute_received {:task_blocked, _, _, _, _}
+
+      # ADR 0067: concluiu — a linha em voo não sobrevive à retomada.
+      assert GateState.get(project_id, "task-abc12345", "qa") == nil
     end
 
     test "desfecho de OUTRA ação não derruba nem retoma", %{state: state} do

@@ -6,6 +6,14 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **engine**: um ciclo de gate (QA/SecOps) morto no meio — por um restart do
+  processo, entre o veredito já gravado na api e a chamada em processo que
+  aplicaria o próximo passo — não prendia mais a PR pra sempre (RN-136).
+  `gate_states` grava o ciclo em voo nos mesmos pontos onde as transições já
+  aconteciam, e `Engine.Gates.GateRescuer` (chamado no boot e por um tick
+  Oban a cada 5 min) reinicia a área do zero ou reenvia exatamente a chamada
+  perdida — sem intervenção manual. Fecha o limite que o ADR 0057 já
+  declarava ("restart no meio da espera perde o laço"); ver ADR 0067
 - **web**: o botão "Voltar" da sessão passa a levar de volta ao PROJETO
   (`/projects/:projectId`), não mais ao dashboard raiz — a sessão sempre
   nasce dentro de um projeto, e é lá que quem sai dela quer estar.

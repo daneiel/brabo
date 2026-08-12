@@ -690,6 +690,63 @@ delegações da área — mesmo registro `AREAS`/`areaFor` de
 
 ---
 
+### RN-136 — Um ciclo de gate morto no meio é retomado sozinho, sem intervenção manual {#rn-136}
+
+`QaLeadServer`/`SecOpsAgentServer` são `restart: :temporary`, e as
+transições intermediárias do gate (`DevAgentServer.correct/3`,
+`Dispatcher.run_secops/2`) são chamada direta em memória — feitas DEPOIS de
+`record_gate_verdict` já ter avançado o `gate_status` de forma durável na
+api. Um crash entre as duas prendia a PR pra sempre em `awaiting_qa`/
+`awaiting_secops`: nada sabia que aquele passo tinha ficado pendente, e
+nenhum restart do engine consertava — o próprio [ADR 0057](adr/0057-o-gate-espera-a-aprovacao.md)
+já declarava a suspensão em `{:awaiting, ...}` como limite conhecido, e
+investigar de novo achou que a janela entre veredito gravado e dispatch
+chamado é, na prática, mais fácil de acontecer.
+
+`gate_states` (schema `engine`, chave `{project_id, task_id, gate}`) grava
+o ciclo em voo nos MESMOS pontos onde as transições já aconteciam —
+`"in_progress"` antes de qualquer subagente/scanner rodar,
+`"dispatch_pending"` logo depois de `record_gate_verdict` voltar
+`correct`/`run_secops` e antes da chamada em processo. `Engine.Gates.GateRescuer`
+varre linhas paradas há mais de 15 minutos (configurável,
+`GATE_RESCUE_STALE_AFTER_SECONDS`) — generoso de propósito, porque o
+ToolLoop de um subagente de QA roda legitimamente até
+`TOOL_LOOP_MAX_ITERATIONS_GATE` (60) iterações, e um limiar curto
+resgataria (e duplicaria) um ciclo só lento — e retoma: `"in_progress"`
+reinicia a área inteira (sem retomada cirúrgica do `ctx`, que não sobrevive
+a um restart, mesma escolha do dev agent); `"dispatch_pending"` reenvia
+exatamente a chamada perdida. Chamado no boot e por tick Oban
+auto-reagendado a cada 5 minutos (`GATE_RESCUE_INTERVAL_SECONDS`),
+`Engine.Workers.GateRescueSchedulerWorker` — mesmo idioma do
+`ModelSyncSchedulerWorker`/`AnamneseSchedulerWorker`.
+
+Duas guardas contra duplicar trabalho: um processo vivo NO MESMO nó
+(`Registry.lookup`) nunca é perturbado, e o limiar de staleness cobre o que
+a guarda local não alcança (réplica remota — `Registry` é local ao nó,
+mesma ressalva do `Engine.Dev.Wake` desde o [ADR 0045](adr/0045-reagendamento-por-evento-do-dev-agent.md)).
+O pior desfecho de uma corrida residual é trabalho duplicado e barato — a
+api rejeita um segundo `record_gate_verdict` pro gate que já não é mais
+dono do `gate_status` (`nextGateStatus`), e `DevAgentServer.correct/3` já é
+idempotente por guarda de estado desde o ADR 0052 — nunca dado
+inconsistente.
+
+- **Onde:** `apps/engine/lib/engine/gates/gate_state.ex`,
+  `gate_rescuer.ex`, os pontos de escrita em `qa_lead_server.ex`
+  (`run_area/3`, `apply_gate_result/6`) e `secops_agent_server.ex`
+  (`run_secops/3`, `apply_verdict/6`), e
+  `apps/engine/lib/engine/workers/gate_rescue_scheduler_worker.ex`
+- **Teste:** `apps/engine/test/engine/gates/gate_rescuer_test.exs` — mata um
+  `QaLeadServer` real com o ciclo em voo (`DynamicSupervisor.terminate_child/2`,
+  linha durável sobrevivendo ao processo) e prova que `GateRescuer.run/0`
+  religa a área sozinho até um desfecho real; o cenário do enunciado
+  (`run_secops` perdido) e a devolução `correct` perdida, os dois com
+  processo e dispatch REAIS, sem `FakeGateDispatcher`; e as duas guardas
+  (processo vivo local não é perturbado; linha recente não é tocada)
+- **Origem:** [ADR 0067](adr/0067-o-gate-sobrevive-ao-restart.md), que
+  estende o [ADR 0057](adr/0057-o-gate-espera-a-aprovacao.md)
+
+---
+
 ## Custo
 
 ### RN-017 — Orçamento tem escopo exclusivo: projeto **ou** sessão {#rn-017}
@@ -4419,6 +4476,7 @@ não módulo por módulo:
 | Provider de LLM cai no meio | registrado como falha de **infra**, nunca "o modelo parou" (RN-023) |
 | Duas decisões concorrentes na mesma hipótese | conflito explícito (RN-022) |
 | Réplica do engine cai | sessão é adotada por outra ou encerra como `closed_abnormally / node_shutdown` — nunca fica órfã |
+| `QaLeadServer`/`SecOpsAgentServer` cai no meio de um ciclo de gate | `Engine.Gates.GateRescuer` retoma sozinho — reinicia a área (nenhum veredito gravado) ou reenvia a chamada perdida (veredito já gravado) — sem intervenção manual (RN-136) |
 | Rate limit indisponível | a requisição **passa**: o guard protege contra abuso, não contra acesso indevido |
 | Rate limit **estourado** (429) | a tela diz o que a api respondeu e o poll para; a app nunca responde ao limite com mais tráfego (RN-088) |
 | Credencial errada, conta inexistente ou conta bloqueada | **a mesma** resposta 401, com o mesmo custo de argon2 (RN-032) |

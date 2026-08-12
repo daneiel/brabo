@@ -12,7 +12,7 @@ keywords: [arquitetura, code map, invariantes, harness, event log]
 Este documento é o mapa para quem vai **mexer** no código. Ele diz por onde
 começar a ler, o que cada fronteira promete, e o que já se sabe que está torto.
 
-Decisões e o porquê delas ficam nos [ADRs](adr/index.md) — 65 deles, vários
+Decisões e o porquê delas ficam nos [ADRs](adr/index.md) — 66 deles, vários
 registrando defeito real encontrado em execução. Aqui não repetimos a
 argumentação: apontamos.
 
@@ -82,6 +82,17 @@ sobreviveria à queda de quem esperava a resposta.
 `dev_agent_states` ganhou `consecutive_blocked`/`max_consecutive_blocked`
 (o circuit breaker, [RN-047](business-rules.md#rn-047)); decisão completa
 no [ADR 0045](adr/0045-reagendamento-por-evento-do-dev-agent.md).
+
+Os agentes de gate (`QaLeadServer`/`SecOpsAgentServer`) não passam pelo
+outbox nas transições intermediárias (`correct`/`run_secops` continuam
+chamada direta em memória — a prova mecânica está no comentário de
+`record-gate-verdict.use-case.ts`: só desfechos TERMINAIS, `done`/`blocked`,
+viajam por outbox), então ganharam a MESMA rede de segurança que os dev
+agents já tinham: `gate_states`, mais um `GateRescuer` que varre ciclos
+parados e retoma sozinho — sem tabela nova pro caminho outbox, porque o
+problema não era falta de outbox, era falta de estado durável pro que
+acontece ENTRE duas chamadas em processo. Ver
+[RN-136](business-rules.md#rn-136), [ADR 0067](adr/0067-o-gate-sobrevive-ao-restart.md).
 
 ## Code map
 
