@@ -101,6 +101,15 @@ mudança de contrato: os demais tipos de evento seguem idênticos, e a recusa
 acontece **antes** do `incrementSeq`, então tentativa recusada não abre buraco
 na `seq`.
 
+`ActivateExecutionUseCase` ganhou um segundo efeito colateral que **não** passa
+por nenhuma rota deste documento ([RN-135](../business-rules.md#rn-135)): ao
+final da ativação, se a rota do usuário informar `originSessionId` (a sessão de
+CHAT de onde partiu o clique), ele fecha essa sessão via
+`TransitionSessionUseCase` — o mesmo caminho que o `POST /termination` desta
+página usa para o engine reportar término, mas disparado pela api, sem viagem
+nenhuma ao engine. Nenhuma rota nova, nenhuma mudança no contrato `engine → api`
+existente.
+
 ### LLM
 
 | método | caminho |

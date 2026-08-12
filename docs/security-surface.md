@@ -198,6 +198,16 @@ o componente `d` da JWK, travado por teste.
   (`gates/verdict` pro QA, `open_infra_pr` pro Infra). Session-scoped, não
   task-scoped — `taskId` é opcional no corpo. Delegação nunca é visível como
   handoff.
+- **`POST /projects/:projectId/execution/activate` ganhou `originSessionId`
+  opcional no corpo, e a classificação não mudou** — continua `role:maintainer`
+  (RN-135). O campo deixa quem já tem esse papel fechar a sessão de CHAT que
+  originou o pedido, mas com duas contenções que impedem usá-lo pra fechar
+  sessão alheia: `findInProject(projectId, originSessionId)` recusa silenciosamente
+  um id que não pertença ao PRÓPRIO projeto do path, e o fechamento só acontece
+  se `GetSessionPendingWorkUseCase` (a mesma trava do heartbeat de inatividade,
+  [RN-073](business-rules.md#rn-073)) confirmar que não há handoff, ação ou
+  turno pendurado ali. Nunca fecha a sessão de execução que a própria chamada
+  acabou de ativar.
 
 ## Tabela
 

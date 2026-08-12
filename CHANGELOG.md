@@ -127,6 +127,15 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **api**: `ActivateExecutionUseCase` nunca fechava a sessão de CHAT que
+  originou o pedido de ativação — ela ficava `active` para sempre, mesmo
+  com a execução já correndo sozinha numa sessão SEPARADA. `execute()`
+  ganha `originSessionId` opcional (chamador antigo, sem o parâmetro,
+  continua idêntico); informado, fecha a sessão de origem ao final, mas
+  nunca a própria sessão de execução, e só quando
+  `GetSessionPendingWorkUseCase` — a mesma trava do heartbeat de
+  inatividade — confirma que não há handoff/ação/turno pendurado ali
+  (RN-135)
 - **api**: a sessão que o bootstrap de Git abre automaticamente (Fase 2 —
   criar repositório, `dev`/`qa`, os dois primeiros commits) nasce com o nome
   default `"git-bootstrap"` (RN-130), em vez de `null`. Antes, a lista de

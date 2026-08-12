@@ -1516,6 +1516,51 @@ A allowlist de terminal ([RN-068](#rn-068)) continua valendo, mas deixa de ser a
 - **Origem:** [ADR 0052](adr/0052-dev-agent-espera-aprovacao-no-meio-do-laco.md),
   fase A da triagem
 
+### RN-135 — Ativar execução fecha a sessão de CHAT que originou o pedido {#rn-135}
+
+`ActivateExecutionUseCase` sempre resolvia a sessão de EXECUÇÃO
+(`findActiveExecutionSession`, ou cria uma nova `criativa`), mas nunca
+transicionava a sessão de CHAT de onde partiu o clique em "ativar
+execução" — o Dev Lead/PO conversando numa sessão separada. Ela ficava
+`active` para sempre, mesmo com a execução já correndo sozinha em outra
+sessão, e continuava aparecendo como conversa em aberto na lista.
+
+`execute()` ganhou `originSessionId`, opcional e por último — chamador
+antigo (hoje só a ativação pela Visão Geral, sem contexto de sessão)
+continua funcionando IDÊNTICO, sem fechar nada. Informado, ao FINAL do
+método (depois de tudo o resto ter acontecido: module_map, áreas,
+autonomia, `startExecution`, `execution.activated`):
+
+- **nunca fecha a própria sessão de execução** — se `originSessionId` for
+  igual à sessão que acabou de receber `execution.activated`, o fechamento
+  é pulado, porque fechá-la destruiria o processo que os dev agents
+  acabaram de ganhar;
+- **só fecha o que está `active`** — mesma cautela de
+  `decide-bootstrap-plan.use-case.ts#fecharSessao`, nada a fazer se a
+  sessão já não existir ou já não estiver aberta;
+- **reusa `GetSessionPendingWorkUseCase`** ([RN-073](#rn-073)) — a MESMA
+  trava que segura o fechamento por heartbeat de inatividade: handoff
+  `offered`, `proposed_action` pendente ou agente `working` sem `idle`
+  posterior impedem o fechamento;
+- passa por `closing` antes de `closed` — a máquina de estados
+  (`active -> closing -> closed`) não permite o salto direto.
+
+Falha ou pendência aqui NUNCA propaga para quem chamou `execute()`: a
+ativação da execução já aconteceu e é o efeito principal; fechar o chat de
+origem é um efeito colateral *best-effort*.
+
+- **Onde:** `apps/api/src/application/use-cases/execution/activate-execution.use-case.ts`
+  (`closeOriginSession`), `apps/api/src/interfaces/http/execution/dto/activate-execution.dto.ts`
+  (`originSessionId`), `apps/api/src/interfaces/http/execution/execution.controller.ts`
+- **Teste:** `apps/api/test/application/use-cases/execution/activate-execution.use-case.spec.ts`,
+  describe `fecha a sessão de origem (RN-135)` — fecha sem pendência,
+  NÃO fecha com pendência, NÃO fecha sessão já não-`active`, chamador
+  antigo sem o parâmetro não fecha nada, e nunca fecha a própria sessão de
+  execução mesmo se `originSessionId` coincidir com ela
+- **Origem:** achado de investigação de código — sessão criativa com
+  execução ativada continuava `active` na lista mesmo com 35 eventos de
+  dev agents dentro dela
+
 ### RN-074 — A saída de terminal tem teto de bytes {#rn-074}
 
 A saída de um comando é cortada em `TERMINAL_OUTPUT_MAX_BYTES` (default 32 KiB)
