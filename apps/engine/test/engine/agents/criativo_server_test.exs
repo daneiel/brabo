@@ -138,6 +138,12 @@ defmodule Engine.Agents.CriativoServerTest do
        %{state: state, session_id: session_id} do
     Phoenix.PubSub.subscribe(Engine.PubSub, "session:" <> session_id)
     Process.put(:fake_handoff_error, {500, %{"message" => "erro interno"}})
+    # O guardrail de zero regra de negócio roda ANTES: sem isto a recusa dele
+    # dispara primeiro, e o teste nunca alcançaria o cenário de falha do
+    # handoff que é o assunto aqui.
+    Process.put(:fake_events, [
+      %{"id" => "evt-a", "type" => "artifact.business_rule", "payload" => %{}}
+    ])
 
     Process.put(:fake_llm_turns, [
       FakeEngineApiClient.final_response("Resumo executivo do produto")
@@ -157,6 +163,41 @@ defmodule Engine.Agents.CriativoServerTest do
     refute payload.mensagem =~ "Nada foi gasto"
 
     assert_received %Phoenix.Socket.Broadcast{event: "agent.error"}
+  end
+
+  # Confirmar prontidão sem NENHUMA regra de negócio capturada é recusado
+  # ANTES de subir a Task: nem o turno de consolidação roda, nem o
+  # product_brief, nem o handoff nascem. O controller ignora o retorno deste
+  # `GenServer.call` e sempre responde 202 (RN-122) — a única forma do
+  # usuário saber é o `agent.error` durável no fio.
+  test "prontidão: recusa quando NENHUMA regra de negócio foi capturada", %{
+    state: state,
+    session_id: session_id
+  } do
+    Phoenix.PubSub.subscribe(Engine.PubSub, "session:" <> session_id)
+    # Sem `Process.put(:fake_events, ...)` — a fila default é [], simulando
+    # uma conversa em que o usuário clicou "Estou pronto para produzir" sem
+    # ter capturado regra nenhuma.
+
+    assert {:reply, {:error, :sem_regra_de_negocio}, ^state} =
+             sync_call(CriativoServer, :confirm_readiness, state)
+
+    # Nem o turno de consolidação rodou (nenhuma chamada ao LLM), nem o
+    # brief, nem o handoff.
+    refute_received {:llm_turn_stream, _, _, _}
+    refute_received {:event_appended, _, ^session_id, %{type: "artifact.product_brief"}}
+    refute_received {:handoff_created, _, ^session_id, "criativo", "po", _artifact_id}
+
+    # A recusa É narrada — durável no event log e no canal, com origem
+    # "politica" (é decisão de produto, não falha de infra/modelo/código).
+    assert_received {:event_appended, _, ^session_id, %{type: "agent.error", payload: payload}}
+    assert payload.origem == "politica"
+    assert payload.mensagem =~ "regra de negócio"
+
+    assert_received %Phoenix.Socket.Broadcast{
+      event: "agent.error",
+      payload: %{origem: "politica"}
+    }
   end
 
   test "deltas são rebroadcastados no canal Phoenix da sessão", %{

@@ -30,6 +30,18 @@ const EVENTOS_CRIATIVO_ATIVO = [
     payload: { agent: 'criativo' },
     createdAt: '2026-08-11T12:00:00.000Z',
   },
+  // O botão desabilita sem regra de negócio nenhuma (guardrail do engine em
+  // `CriativoServer` + a UX complementar em `SessionPage.tsx`) — o assunto
+  // deste arquivo é a rede de segurança do PRÓPRIO `handleReadiness`, então a
+  // fixture precisa do botão HABILITADO pra não confundir os dois.
+  {
+    id: 'e1',
+    seq: 2,
+    type: 'artifact.business_rule',
+    actor: { kind: 'agent', id: 'criativo' },
+    payload: { title: 'Só maiores de 18', description: 'Idade >= 18', origin: [1] },
+    createdAt: '2026-08-11T12:00:30.000Z',
+  },
 ];
 
 const eventos = vi.fn<() => { items: unknown[] }>(() => ({

@@ -135,6 +135,15 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **web**: a aba Criativo listava a sessão de execução VIGENTE misturada com
+  ideações de verdade — ela nasce `kind: 'criativa'` (RN-097 exige isso para
+  `execution.activated` ser aceito), então o filtro por `kind` sozinho não
+  bastava. Abrir essa sessão mostrava uma timeline inteira de tool-calls de
+  dev agent, parecendo "o dev escrevendo no chat do Criativo" — achado ao
+  vivo numa sessão com 35+ eventos. A aba Criativo agora exclui da lista a
+  sessão que `useActiveExecutionSession` devolve (RN-139); a aba Chat nunca
+  chama essa busca. Escopo deliberado: execuções ANTIGAS já `closed` não são
+  filtradas — o badge `closed` já deixa a diferença clara (RN-144)
 - **api,web**: a aba Executores lia a sessão `createdAt` mais recente do
   projeto (`useLatestSession`) para buscar os eventos de dev agent/QA — que
   É a sessão de execução só por COINCIDÊNCIA. Qualquer sessão nova depois
@@ -322,6 +331,18 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   com arquivo grande (lockfile, bundle, gerado). O conteúdo agora corta em
   `READ_FILE_MAX_BYTES` (default 32 KiB), com marca dizendo o arquivo e os
   dois tamanhos (RN-141)
+
+### Correções
+
+- **engine,web**: confirmar prontidão ("Estou pronto para produzir") numa
+  conversa sem NENHUMA regra de negócio capturada criava o `product_brief`
+  e oferecia o handoff ao PO mesmo assim (RN-142). `CriativoServer` agora
+  recusa a confirmação ANTES de subir o turno de consolidação — sem brief,
+  sem handoff —, narrando o motivo como `agent.error` durável no fio da
+  sessão (origem "politica"), já que a rota HTTP sempre responde 202
+  (mesmo padrão do cancelamento, RN-122). O botão nasce `disabled` com a
+  dica do porquê, lendo a mesma fonte que já alimenta o painel "Regras de
+  negócio"
 
 ## v2.5.1 — 2026-08-08
 
