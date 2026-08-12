@@ -50,6 +50,8 @@ defmodule Engine.Harness.ToolLoop.Default do
 
   @behaviour Engine.Harness.ToolLoop
 
+  alias Engine.Agents.FalhaDeTurno
+
   alias Engine.Harness.{
     ContextBuilder,
     PromptAssembler,
@@ -133,13 +135,27 @@ defmodule Engine.Harness.ToolLoop.Default do
         # diagnostica "o modelo parou sem sinalizar" para uma falha de
         # infraestrutura. Mesma armadilha do ADR 0019, outro caminho.
         ctx = registra_erro(ctx, Map.get(resp, "error"))
+        content = Map.get(message, "content", "")
 
-        emit(ctx, "agent.response", %{
-          content: Map.get(message, "content", ""),
-          error: Map.get(resp, "error"),
-          iteration: ctx.iteration,
-          tokensSpentMicros: ctx.tokens_spent_micros
-        })
+        # Mesmo guard-rail da RN-059 (Fase 14a), aplicado aqui — o ToolLoop é
+        # o ponto ESTRUTURAL comum de todo consumidor (dev agents, QA,
+        # SecOps, Infra-Workflows, Anamnese, Psicólogo): iteração sem texto
+        # (só tool call, ou o modelo que simplesmente não produziu nada) NÃO
+        # grava `agent.response` vazio no event log. A tela trata conteúdo
+        # vazio como evento PRÉ-RN-059 (balão de compatibilidade) — gravar um
+        # vazio HOJE reabre exatamente o defeito que a RN-059 fechou, só que
+        # num caminho diferente. Nada se perde: quem chamou tool já narra por
+        # `tool.call`/`tool.result`, e quem terminou sem tool call nem texto
+        # decide o desfecho (e o evento durável correspondente) a partir de
+        # `ctx.last_error`/`{:ok, ctx}` — ver `DevAgentServer.handle_outcome/4`.
+        if content != "" do
+          emit(ctx, "agent.response", %{
+            content: content,
+            error: Map.get(resp, "error"),
+            iteration: ctx.iteration,
+            tokensSpentMicros: ctx.tokens_spent_micros
+          })
+        end
 
         # `toolCalls` vazio não significa necessariamente "o modelo parou":
         # modelo local pequeno costuma descrever a chamada em TEXTO em vez de
@@ -156,13 +172,26 @@ defmodule Engine.Harness.ToolLoop.Default do
         end
 
       {:error, reason} ->
-        emit(ctx, "agent.response", %{error: inspect(reason)})
+        # NUNCA `agent.response` vazio aqui: sem `content`, a tela mostrava o
+        # balão de compatibilidade da RN-059 como se este fosse um evento
+        # ANTIGO — quando é uma falha acontecendo AGORA. Vira `agent.error`
+        # durável, com a ORIGEM (mesmo vocabulário do ADR 0020, mesmo helper
+        # que os quatro agentes conversacionais usam — `FalhaDeTurno`).
+        emit_falha(ctx, reason)
         # Guarda o erro no ctx: sem isso o chamador só vê `{:ok, ctx}` e não
         # distingue "o modelo parou sem sinalizar" de "o provider falhou" —
         # a task era bloqueada com diagnóstico VAZIO, sem nada pro operador
         # agir em cima.
         {:ok, Map.put(ctx, :last_error, inspect(reason))}
     end
+  end
+
+  defp emit_falha(ctx, reason) do
+    emit(ctx, "agent.error", %{
+      origem: FalhaDeTurno.origem(reason),
+      mensagem: FalhaDeTurno.mensagem(reason),
+      reason: inspect(reason)
+    })
   end
 
   defp registra_erro(ctx, nil), do: ctx
