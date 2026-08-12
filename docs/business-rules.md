@@ -4302,6 +4302,32 @@ pasta que o engine realmente usa.
   renomeia a pasta; a pasta só se lê pelo `workspace_dir_name` gravado.
 - **Origem:** ADR 0066 (revisa o ADR 0055).
 
+### RN-130 — A sessão do bootstrap de Git nasce com nome default "git-bootstrap" {#rn-130}
+
+O bootstrap de Gitflow (Fase 2 — criar repositório, criar `dev`/`qa`, os dois
+primeiros commits) roda dentro de uma sessão `criativa` aberta automaticamente
+pelo `ProvisionRepositoryUseCase`, sem o usuário interagir. Ela nascia com
+`name: null` como qualquer outra sessão ([RN-098](#rn-098)) e a lista de
+sessões do Criativo degradava para a hashtag — indistinguível, a olho, das
+sessões que o usuário abre de propósito.
+
+O nome é **fixo e reconhecível** (`"git-bootstrap"`), não gerado
+dinamicamente: o objetivo é reconhecer a sessão automática de cara, sem abrir
+cada uma para ler o event log. Vale só para as duas sessões que este caso de
+uso abre (repo novo e o caminho defensivo de bootstrap sem sessão prévia,
+Fase 12a). Sessão aberta pelo usuário (`POST .../sessions`, `+ Nova
+ideação`) continua nascendo `null` quando o campo vem em branco — o default
+não se espalhou para lá.
+
+- **Onde:**
+  `apps/api/src/application/use-cases/git/provision-repository.use-case.ts`
+  (`BOOTSTRAP_SESSION_NAME`, os dois `createSession.execute`).
+- **Teste:**
+  `apps/api/test/application/use-cases/git/provision-repository.use-case.spec.ts`
+  ("a sessão do bootstrap nasce com nome default...").
+- **Origem:** [RN-098](#rn-098) (o campo já existia); esta regra só fixa o
+  valor default de um chamador específico.
+
 ---
 
 ## Quando dá errado

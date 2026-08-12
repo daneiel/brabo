@@ -127,6 +127,12 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **api**: a sessão que o bootstrap de Git abre automaticamente (Fase 2 —
+  criar repositório, `dev`/`qa`, os dois primeiros commits) nasce com o nome
+  default `"git-bootstrap"` (RN-130), em vez de `null`. Antes, a lista de
+  sessões do Criativo degradava pra hashtag sozinha e não dava pra distinguir
+  a sessão automática das abertas pelo usuário sem abrir cada uma. Sessão
+  criada manualmente continua sem nome quando o campo vem em branco.
 - **api**: quatro alertas CRÍTICOS do CodeQL, duas classes reais de
   vulnerabilidade. `@Query('ref')`/`@Query('path')` da aba Code (RN-095)
   chegam sem DTO no meio, e o `ValidationPipe` global não protege tipo
