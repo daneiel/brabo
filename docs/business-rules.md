@@ -1703,6 +1703,45 @@ escrita — quando vier — nasce `proposed_action`.
 - **Origem:** FASE 26b, item 34 do programa 16–26; a contenção estende a
   [RN-092](#rn-092) ([ADR 0058](adr/0058-csp-fechado-na-api-e-escopo-de-projeto-contido.md))
 
+### RN-127 — `ref`/`path` da aba Code recusam chegar como ARRAY, não só como caminho fora do escopo {#rn-127}
+
+`@Query('ref') ref?: string` e `@Query('path') path?: string`
+(`code.controller.ts`) extraem o valor cru sem DTO/`class-validator` no
+meio, e o `ValidationPipe` global (`main.ts`) não ajuda: ele pula tipo
+primitivo nativo (`String`) por desenho do Nest, então nada intercepta
+`ref`/`path` antes de chegarem como argumento de método. O Express entrega
+`?ref=a&ref=b` como **array**, não string — a anotação `string` do
+TypeScript só existe em compile-time.
+
+Um array escapava das DUAS checagens que a [RN-095](#rn-095) já fazia
+tratando o valor como string: `ref.includes('..')` tem semântica de
+ELEMENTO EXATO (não substring) em array, e `REF_VALIDO.test(ref)` chama
+`.toString()` no array antes de casar — um valor como `['x/../y']`
+continha `..` e ainda assim passaria pelas duas.
+
+`garantirQueryEscalar(valor, criarErro)` recusa o array ANTES de qualquer
+outra checagem, num lugar só, reusado pelos DOIS pontos que tratavam query
+como string: `caminhoDeRepositorioContido` (mesmo arquivo da RN-092/095) e
+`ReadProjectCodeUseCase.alvo` (`ref`). O erro concreto (`CaminhoForaDoEscopoError`
+ou `BadRequestException`) é decidido por quem chama, passado como fábrica —
+a função central não decide o tipo de erro, só a forma da checagem.
+
+O caminho feliz não muda: todo `ref`/`path` legítimo já era string.
+
+- **Onde:** `apps/api/src/infrastructure/filesystem/project-workspaces-root.ts`
+  (`garantirQueryEscalar`, usada em `caminhoDeRepositorioContido`),
+  `apps/api/src/application/use-cases/git/read-project-code.use-case.ts`
+  (`alvo`, `ref`)
+- **Teste:**
+  `apps/api/test/infrastructure/filesystem/project-workspaces-root.spec.ts`
+  (`garantirQueryEscalar` isolada e `caminhoDeRepositorioContido` recusando
+  array), `apps/api/test/application/use-cases/git/read-project-code.use-case.spec.ts`
+  (`ref`/`path` como array são 400 em `tree`, que todas as outras rotas
+  reusam via `alvo`)
+- **Origem:** alerta CRÍTICO do CodeQL (confusão de tipo em query param HTTP)
+  bloqueando a promoção qa→main, achado durante a PR #256; estende a
+  [RN-095](#rn-095)
+
 ### RN-093 — Em produção, a api não sobe com a chave de exemplo do `state` de OAuth {#rn-093}
 
 `resolveOauthStateSecret()` **derruba o boot** quando `NODE_ENV === 'production'`
@@ -3684,6 +3723,45 @@ verificação, para a rotação não ter janela de indisponibilidade.
   `RateLimitGuard` é `APP_GUARD` e roda antes de qualquer guard de controller —
   quando ele decide, o `EngineServiceGuard` ainda não rodou.
 - **Origem:** [ADR 0032](adr/0032-corte-do-keycloak-e-sessao-em-cookie.md)
+
+### RN-128 — `sessionId`/`projectId`/`agent`/`agentId` são validados ANTES de virar segmento de URL da requisição interna ao engine {#rn-128}
+
+`HttpApiToEngineClient` interpola estes valores em template string pra
+montar a URL de `/internal/*` — sem DTO/`class-validator` no meio, igual
+à [RN-127](#rn-127): eles chegam de `@Param`/lookup de sessão sem pipe de
+validação em algum ponto da cadeia, e nada garante a forma deles antes da
+interpolação. Um valor malicioso poderia injetar segmento de path extra
+ou caracteres que quebram a URL montada — o `EngineServiceGuard` autentica
+o CHAMADOR (RN-035), não CONFERE o que o chamador manda na URL.
+
+`garantirSegmentoDeUrlInterna` reusa a mesma largura de
+`NOME_DE_PASTA_VALIDO` (RN-092/109) — hex, hífen e sublinhado, 1 a 64
+chars — e é chamada em DOIS lugares, cobrindo TODOS os métodos que
+interpolam id em URL, não só os que o CodeQL reportou:
+
+- dentro de `postCommand`, que a maioria dos métodos já usa
+  (`startAgent`, `sendAgentMessage`, `confirmReadiness`, `cancelAgentTurn`,
+  `offerInfraHandoff`, `offerDevHandoff`, `invalidateInstructions`,
+  `startExecution`, `acceptParallelization`, `rearmDevAgent`,
+  `reviseStory`) — o chamador lista as tuplas `(nome, valor)` que já
+  interpolou no `path`, e `postCommand` valida TODAS antes de montar a
+  requisição;
+- direto em `reanalyzeSession`/`runAnamnese`, que não passam por
+  `postCommand` (precisam distinguir 503 de falha de transporte) e por
+  isso eram os dois únicos pontos que o CodeQL alcançou.
+
+O caminho feliz não muda: `sessionId`/`projectId` são sempre UUID vindo do
+banco, e `agent`/`agentId` são sempre slug curto.
+
+- **Onde:** `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts`
+  (`garantirSegmentoDeUrlInterna`, `postCommand`)
+- **Teste:** `apps/api/test/infrastructure/http-clients/api-to-engine-client.spec.ts`
+  (id malformado é recusado ANTES de tocar a rede — provado apontando
+  `ENGINE_URL` pra uma porta que nada escuta — e o caminho feliz chega a
+  fazer a requisição)
+- **Origem:** alerta CRÍTICO do CodeQL (URL de requisição interna montada
+  com valor não validado) bloqueando a promoção qa→main, achado durante a
+  PR #256; mesmo padrão do [RN-092](#rn-092)
 
 ### RN-105 — Sem imagem decidida pelo Arquiteto, o container não sobe e o Code não abre {#rn-105}
 
