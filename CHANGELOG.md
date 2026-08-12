@@ -136,6 +136,12 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `GetSessionPendingWorkUseCase` — a mesma trava do heartbeat de
   inatividade — confirma que não há handoff/ação/turno pendurado ali
   (RN-135)
+- **api**: a sessão que o bootstrap de Git abre automaticamente (Fase 2 —
+  criar repositório, `dev`/`qa`, os dois primeiros commits) nasce com o nome
+  default `"git-bootstrap"` (RN-130), em vez de `null`. Antes, a lista de
+  sessões do Criativo degradava pra hashtag sozinha e não dava pra distinguir
+  a sessão automática das abertas pelo usuário sem abrir cada uma. Sessão
+  criada manualmente continua sem nome quando o campo vem em branco.
 - **api**: quatro alertas CRÍTICOS do CodeQL, duas classes reais de
   vulnerabilidade. `@Query('ref')`/`@Query('path')` da aba Code (RN-095)
   chegam sem DTO no meio, e o `ValidationPipe` global não protege tipo
@@ -163,6 +169,30 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   nenhum handler de `SessionPage` o usava); agora ele reaproveita o indicador
   de digitação já existente, identificando o agente pelo handoff que acabou
   de ser aceito
+- **web**: `write_file` ganha corpo próprio no card de aprovação (RN-096) —
+  antes caía no fallback genérico e despejava `path`/`content` como JSON cru
+  COLAPSADO, então um write que genuinamente pedia aprovação (fora do
+  prefixo `dev-`, ou caminho fora do escopo do agente) exigia um clique
+  extra pra ver o que seria escrito. Agora mostra o `path` e um preview do
+  `content` (até 25 linhas/4.000 caracteres, com aviso de truncamento),
+  aberto por padrão no chat enquanto pendente — mesmo comportamento que
+  `terminal` já tinha. Separadamente, `command` (terminal) ou
+  `path`/`content` (write_file) vazios — tool-call malformada do modelo —
+  agora mostram "o modelo não produziu um X válido para esta ação" em vez
+  de um prompt `$ ` ou preview em branco, que lia como bug de renderização
+
+- **engine**: `Engine.Harness.ToolLoop` (o loop compartilhado por dev agents,
+  QA Automação/Performance-Segurança, Infra-Workflows, Anamnese e Psicólogo)
+  gravava `agent.response` com conteúdo VAZIO — iteração que só chamava
+  ferramenta sem texto, ou turno que terminava sem produzir nada — e a tela
+  mostrava o balão de compatibilidade da RN-059 como se fosse evento ANTIGO,
+  achado ao vivo numa sessão de execução real com dev agents rodando. Falha
+  de transporte (provider fora do ar) tinha o mesmo sintoma: virava
+  `agent.response` sem `content` em vez de `agent.error`. Estende a RN-059
+  (que já cobria os quatro agentes conversacionais, que não passam pelo
+  ToolLoop) para este ponto estrutural comum: conteúdo vazio nunca vira
+  `agent.response`, e falha de transporte grava `agent.error` durável com a
+  origem, pelo mesmo `FalhaDeTurno.origem/1` (RN-129)
 
 - **engine**: `AnamneseSchedulerWorker.perform/1` não conferia a flag
   `ANAMNESE_ENABLED` — só `kickoff/0` (a inserção inicial do job no boot)
@@ -227,6 +257,27 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `agent.activated` mais RECENTE, sem ordem fixa nenhuma (RN-119). **(10)**
   sessão com histórico abria no TOPO (mensagens mais antigas primeiro), sem
   nenhum scroll automático — agora abre sempre no fim
+
+- **web**: três corridas confirmadas AO VIVO navegando `SessionPage.tsx` no
+  Chrome (RN-131). **(1)** o convite de boas-vindas do Criativo reaparecia
+  por cima de sessões com histórico real — `conversaComecou` olhava só
+  `chat.message`/`agent.response`, então uma sessão criada pelo
+  `git-bootstrap` (ações de commit/branch já aprovadas) ou a sessão que a
+  ativação de execução usa (dezenas de `tool.call`/`tool.result`) mostravam
+  o convite por cima do que já tinha acontecido; agora o critério é
+  "existe QUALQUER evento". Separadamente, `conviteVisivel` ganha o gate
+  `!eventsQuery.isPending`, fechando uma race de cache frio em que o convite
+  piscava antes do primeiro fetch de eventos resolver. **(2)** o indicador
+  de "pensando" (bolha com os 3 pontinhos) ligava imediatamente a cada
+  turno, mesmo nos que respondiam em menos de um segundo — agora só aparece
+  depois de 5s sem nenhum texto chegar, e desarma na hora assim que o
+  primeiro delta chega ou o turno termina antes do prazo; texto de verdade
+  continua aparecendo sem esperar. **(3)** `handleReadiness` (o clique em
+  "Estou pronto para produzir") podia deixar a bolha do agente presa vazia
+  pra sempre se o canal Phoenix não entregasse `agent.done` a tempo — o
+  mesmo bug que `handleSend` já corrigira ganhando uma rede de segurança
+  equivalente: chamar `finalizarTurnoDoAgente()` assim que
+  `confirmReadiness` resolve, independente do canal
 
 ## v2.5.1 — 2026-08-08
 

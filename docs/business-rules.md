@@ -3298,16 +3298,36 @@ vocabulário paralelo — e a frase dela diz o que o accept faz de verdade
 (enfileira para a Anamnese, que **pode** propor o ajuste, que ainda vem para
 aprovação), nunca "a instrução será alterada".
 
+**`write_file` tinha frase, mas não corpo.** Ele nasceu de fora de
+`COM_CORPO_PROPRIO`: a frase mostrava só o `path`, e o detalhe caía no mesmo
+despejo de JSON cru colapsado que esta RN existe para evitar — então um write
+que genuinamente pedia aprovação (fora do prefixo `dev-`, ou caminho fora do
+escopo do agente) exigia um clique a mais para ver o `content`. Entrou em
+`COM_CORPO_PROPRIO` com corpo próprio: `path` e um preview do `content` (até
+25 linhas/4.000 caracteres, com aviso de truncamento — nunca o arquivo
+inteiro, mesma regra do payload cru), aberto por padrão no chat enquanto
+pendente, igual `terminal`.
+
+**Payload vazio não é payload ausente.** `command` (terminal) ou
+`path`/`content` (write_file) chegando como string vazia — tool-call
+malformada do modelo, não bug de renderização — degradava para um prompt
+`$ ` ou um preview em branco, que o usuário lia como defeito da tela. Os dois
+corpos agora distinguem os dois casos e mostram "o modelo não produziu um
+X válido para esta ação" em vez de um branco.
+
 - **Onde:** `apps/web/src/lib/aprovacoes.ts` (`VERBO_DA_ACAO`, `fraseDaAcao`,
   `descreverAcao`, `descreverHipotese`), consumido por
-  `apps/web/src/components/ApprovalCard.tsx` (Aprovações + chat da sessão) e
+  `apps/web/src/components/ApprovalCard.tsx` (Aprovações + chat da sessão,
+  `COM_CORPO_PROPRIO`, `previewConteudo` para o `content` de `write_file`) e
   `apps/web/src/components/HypothesisCard.tsx` (Insights); colapso pelo
   `Disclosure` de `apps/web/src/components/ui/Disclosure.tsx`
 - **Teste:** `apps/web/src/lib/aprovacoes.test.ts` (lê `ACTION_TYPES` de
   `apps/api/src/domain/actions/decide.ts` e exige verbo + frase para cada tipo,
   com payload vazio); `apps/web/src/components/ApprovalCard.test.tsx`
   (`frase e colapso` — payload colapsado nas duas variantes, JSON legível ao
-  abrir, tipo desconhecido não derruba a tela);
+  abrir, tipo desconhecido não derruba a tela, `write_file` com corpo próprio
+  aberto por padrão e truncamento do preview, `command`/`path`/`content`
+  vazios mostrando a mensagem de fallback);
   `apps/web/src/components/HypothesisCard.test.tsx` (`frase e colapso`)
 - **Origem:** FASE 19 do programa 16–26, do pedido "hoje está muito difícil a
   leitura" na primeira navegação real depois do reset do banco
@@ -3469,6 +3489,67 @@ usava só no log colapsado da sidebar.
   narra com o motivo)
 - **Origem:** pedido do usuário — promoção de história inline no fio, opção
   barata reusando RN-048 em vez de gatear a criação da história.
+
+### RN-131 — Três corridas confirmadas AO VIVO no fio da sessão: convite por cima do histórico, indicador ansioso e turno preso em `handleReadiness` {#rn-131}
+
+Três defeitos achados navegando `SessionPage.tsx` de verdade no Chrome, não
+por teste — e os três eram condição de corrida ou critério incompleto
+disfarçado de decisão de produto.
+
+**1. `conversaComecou` virou "existe QUALQUER evento", não "existe
+`chat.message`/`agent.response`".** O critério anterior (achado G) nasceu
+pra não confundir os cards do bootstrap do git com conversa, mas tinha o
+efeito contrário: uma sessão criada pelo `git-bootstrap` (ações de
+commit/branch já aprovadas, zero `chat.message`) mostrava o convite por
+cima delas, e o mesmo acontecia — de forma bem mais grave — na sessão que a
+ativação de execução usa, com dezenas de eventos reais (`tool.call`,
+`tool.result`, eventos de task) e nenhum `chat.message`/`agent.response`: o
+convite cobria o histórico de execução **inteiro**. Sessão nova é a única
+sem nenhum evento — essa é a pergunta certa.
+
+**2. `conviteVisivel` espera `useSessionEvents` terminar de carregar.** Em
+cache frio (reload de página), `session` podia chegar enquanto `events`
+ainda era `[]` — o default de `data?.items`, indistinguível de "sessão
+vazia de verdade" até o primeiro fetch resolver. Sem o gate
+`!eventsQuery.isPending`, o convite piscava por cima de sessões com
+histórico grande.
+
+**3. O indicador de "pensando" (bolha com os 3 pontinhos) só liga depois de
+5s sem nenhum texto chegar.** Antes ele ligava no instante em que
+`streaming`/`statusAgent` virava truthy — ruído visual na maioria dos
+turnos, que respondem em menos de um segundo. Um `useEffect` arma um
+`setTimeout(…, 5000)` quando o turno começa sem texto ainda, e o desarma (via
+cleanup) assim que o primeiro delta chega ou o turno termina antes do prazo.
+Texto de verdade (`streamingText`) continua aparecendo **na hora**, nunca
+espera o timer — só o indicador vazio é que ganhou paciência.
+
+**4. `handleReadiness` ganhou a mesma rede de segurança que `handleSend` já
+tinha.** `confirmReadiness` é, como `sendAgentMessage`, um `GenServer.call`
+síncrono no engine (até 120s) — e o canal Phoenix pode não ter terminado de
+conectar (ticket + join, RN-108) quando o turno acaba, perdendo o broadcast
+de `agent.done` pra sempre. `handleSend` já chamava
+`finalizarTurnoDoAgente()` assim que a chamada síncrona resolvia,
+independente do canal ter entregue o evento; `handleReadiness` tinha ficado
+de fora dessa correção, e sem ela a bolha do agente ficava presa vazia
+(`streaming: true`, sem texto) até a página recarregar.
+
+- **Onde:** `apps/web/src/routes/SessionPage.tsx` (`conversaComecou`,
+  `conviteVisivel`, o `useEffect` de `pensandoVisivel` logo abaixo de
+  `agenteExibido`, e o bloco de sucesso de `handleReadiness`)
+- **Teste:**
+  `apps/web/src/routes/SessionPage.convite-so-em-sessao-vazia.test.tsx`
+  (sessão vazia mostra o convite; sessão com eventos de git-bootstrap ou com
+  dezenas de `tool.call`/`tool.result` esconde; `eventsQuery.isPending`
+  segura o convite até o primeiro fetch resolver),
+  `apps/web/src/routes/SessionPage.pista-e-status.test.tsx` (achado B —
+  indicador não aparece antes de 5s, aparece depois, some no primeiro delta
+  e nunca aparece quando o turno termina antes do prazo), e
+  `apps/web/src/routes/SessionPage.readiness-turno-preso.test.tsx`
+  (`confirmReadiness` resolvendo sem `onAgentDone` reconcilia o estado do
+  mesmo jeito que `SessionPage.turno-preso.test.tsx` já prova pra
+  `handleSend`)
+- **Origem:** investigação AO VIVO do produto no Chrome — os três reproduzidos
+  manualmente antes da correção.
 
 ---
 
@@ -4285,6 +4366,46 @@ pasta que o engine realmente usa.
   NOME de pasta, nunca política. Renomear o slug depois da criação não
   renomeia a pasta; a pasta só se lê pelo `workspace_dir_name` gravado.
 - **Origem:** ADR 0066 (revisa o ADR 0055).
+
+### RN-129 — O ToolLoop nunca grava `agent.response` vazio; falha de transporte vira `agent.error` durável {#rn-129}
+
+A [RN-059](#rn-059) fechou o balão vazio para os quatro agentes
+conversacionais, mas eles não passam pelo `Engine.Harness.ToolLoop` — cada um
+chama `EngineApiClient.llm_turn_stream/6` no próprio módulo. O `ToolLoop`
+(usado por dev agents, QA Automação/Performance-Segurança, Infra-Workflows,
+Anamnese e Psicólogo) tinha o MESMO defeito num caminho diferente: emitia
+`agent.response` a cada iteração, mesmo quando o modelo só chamou ferramenta
+sem texto, ou terminou o turno sem produzir nada — e a falha de transporte
+(provider fora do ar, timeout) virava `agent.response` com `content` ausente,
+igualmente indistinguível de sucesso.
+
+Achado ao vivo numa sessão de execução real (dev agents): duas bolhas com o
+texto de compatibilidade da RN-059 ("resposta vazia — evento anterior...")
+apareceram numa sessão criada minutos antes — não eram eventos antigos, eram
+o mesmo defeito acontecendo de novo, só que na aba de execução.
+
+Duas correções, no ponto ESTRUTURAL comum a todo consumidor do `ToolLoop`,
+não módulo por módulo:
+
+1. **Conteúdo vazio nunca vira `agent.response`.** Iteração que só chamou
+   ferramenta já está narrada por `tool.call`/`tool.result`; iteração que não
+   produziu nada (nem texto, nem tool call) deixa o desfecho para quem chamou
+   o loop decidir — `ctx.last_error`/`{:ok, ctx}` carregam a informação, e
+   quem consome (ex.: `DevAgentServer.handle_outcome/4`) já grava o evento
+   durável do PRÓPRIO domínio (`dev.blocked`, com `origem`).
+2. **Falha de transporte vira `agent.error` durável**, com `origem`
+   (`Engine.Agents.FalhaDeTurno.origem/1` — o MESMO helper que os quatro
+   agentes conversacionais usam, sem duplicar classificação) e `mensagem` em
+   português — nunca mais `agent.response` sem `content`.
+
+- **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex` (`loop/1`,
+  `emit_falha/2`)
+- **Teste:** `apps/engine/test/engine/harness/tool_loop_test.exs`
+  ("iteração só com tool call (sem texto) não grava agent.response vazio",
+  "modelo termina o turno sem texto e sem tool call...", "falha de
+  transporte... grava agent.error durável com origem")
+- **Origem:** RN-059 (regra que esta estende) — achado ao vivo numa sessão de
+  execução real com dev agents
 
 ---
 
