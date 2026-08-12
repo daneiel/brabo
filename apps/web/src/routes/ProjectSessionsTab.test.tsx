@@ -116,7 +116,7 @@ beforeEach(() => {
   // `navigateMock` também é `vi.fn()`: `clearAllMocks` já limpa as chamadas
   // dele entre testes.
   vi.clearAllMocks();
-  // Default: nenhuma execução vigente. Os testes de RN-141 sobrescrevem isto
+  // Default: nenhuma execução vigente. Os testes de RN-144 sobrescrevem isto
   // quando precisam de uma sessão de execução de verdade.
   getActiveExecutionSession.mockResolvedValue(null);
 });
@@ -392,7 +392,7 @@ describe('ProjectSessionsTab — cada aba é um tipo', () => {
 });
 
 /**
- * RN-141 — a sessão de execução VIGENTE não aparece na aba Criativo.
+ * RN-144 — a sessão de execução VIGENTE não aparece na aba Criativo.
  *
  * Ela nasce `kind: 'criativa'` (RN-097 exige isso para `execution.activated`
  * ser aceito), então o filtro por `kind` sozinho não bastava: uma sessão com

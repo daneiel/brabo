@@ -143,7 +143,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   vivo numa sessão com 35+ eventos. A aba Criativo agora exclui da lista a
   sessão que `useActiveExecutionSession` devolve (RN-139); a aba Chat nunca
   chama essa busca. Escopo deliberado: execuções ANTIGAS já `closed` não são
-  filtradas — o badge `closed` já deixa a diferença clara (RN-141)
+  filtradas — o badge `closed` já deixa a diferença clara (RN-144)
 - **api,web**: a aba Executores lia a sessão `createdAt` mais recente do
   projeto (`useLatestSession`) para buscar os eventos de dev agent/QA — que
   É a sessão de execução só por COINCIDÊNCIA. Qualquer sessão nova depois

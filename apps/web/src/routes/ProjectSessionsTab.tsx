@@ -82,7 +82,7 @@ interface ProjectSessionsTabProps {
  */
 export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps) {
   const sessionsQuery = useProjectSessions(projectId);
-  // A sessão de execução VIGENTE (RN-141) — só buscada na aba Criativo, que é
+  // A sessão de execução VIGENTE (RN-144) — só buscada na aba Criativo, que é
   // onde ela nasce (RN-097: `execution.activated` exige `kind: 'criativa'`).
   // `useActiveExecutionSession(undefined)` fica `enabled: false` na aba Chat,
   // então não dispara requisição nenhuma ali.
@@ -140,7 +140,7 @@ export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps)
   // O filtro pelo tipo GRAVADO. A aba não infere o tipo de evento nenhum: ela
   // lê `sessions.kind`, que é a intenção de criação e não muda (RN-097).
   //
-  // A VIGENTE fica de fora da lista (RN-141): ela nasce `kind: 'criativa'`
+  // A VIGENTE fica de fora da lista (RN-144): ela nasce `kind: 'criativa'`
   // (RN-097) mas o que ela CONTÉM é a timeline de tool-call de dev agent, não
   // uma ideação — misturada na lista, uma sessão com 35+ eventos de execução
   // parecia "o dev escrevendo no chat do Criativo". `useActiveExecutionSession`

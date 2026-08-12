@@ -4616,7 +4616,7 @@ o MESMO critério por HTTP, em vez de duplicá-lo no front:
   classe de defeito que a RN-088 fechou para 429, agora para "qual sessão a
   tela está olhando"
 
-### RN-141 — A aba Criativo não lista a sessão de execução vigente {#rn-141}
+### RN-144 — A aba Criativo não lista a sessão de execução vigente {#rn-144}
 
 A sessão que recebe `execution.activated` e os eventos de tool-call dos dev
 agents precisa nascer com `kind: 'criativa'` — regra estrutural (RN-097,
