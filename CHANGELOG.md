@@ -127,6 +127,16 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **api,web**: a aba Executores lia a sessão `createdAt` mais recente do
+  projeto (`useLatestSession`) para buscar os eventos de dev agent/QA — que
+  É a sessão de execução só por COINCIDÊNCIA. Qualquer sessão nova depois
+  (uma ideação, um chat) fazia a aba passar a olhar, em silêncio, uma sessão
+  vazia de eventos de execução. `GET /projects/:projectId/execution/session`
+  (`role:viewer`) expõe por HTTP o MESMO critério que `ActivateExecutionUseCase`
+  já usava internamente (`active` com `execution.activated` gravado, ou
+  `null`); a aba troca de fonte (`useActiveExecutionSession`) e ganha um
+  indicador de QUAL sessão está sendo exibida, nos três estados da RN-088 —
+  carregando, erro (com `trace_id`) e "nenhuma execução ativa" (RN-136)
 - **api**: `ActivateExecutionUseCase` nunca fechava a sessão de CHAT que
   originou o pedido de ativação — ela ficava `active` para sempre, mesmo
   com a execução já correndo sozinha numa sessão SEPARADA. `execute()`

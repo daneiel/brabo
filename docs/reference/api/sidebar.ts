@@ -492,6 +492,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/execution-controller-get-session",
+          label: "Devolve a sessão de execução vigente do projeto, ou nada",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/execution-controller-rearm",
           label: "Rearma um dev agent travado pelo circuit breaker",
           className: "api-method post",

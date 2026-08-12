@@ -4407,6 +4407,46 @@ não módulo por módulo:
 - **Origem:** RN-059 (regra que esta estende) — achado ao vivo numa sessão de
   execução real com dev agents
 
+### RN-136 — A aba Executores lê a sessão de execução VIGENTE, nunca a mais recente do projeto {#rn-136}
+
+`ProjectExecutorsTab` buscava os eventos de dev agent/QA pela sessão que
+`useLatestSession` devolvia — a de `createdAt` mais recente do projeto, sem
+filtrar por `kind` nem exigir `execution.activated`. Funcionava só por
+**coincidência**: a sessão de execução costuma ser a mais nova. Assim que
+qualquer sessão nasce depois dela — uma ideação nova, um chat consultivo — a
+aba passa a olhar essa sessão nova, vazia de eventos de execução, em
+silêncio: nenhuma pista na tela dizia qual sessão estava sendo exibida.
+
+A leitura correta já existia no backend: `findActiveExecutionSession`
+(`SessionRepository`) — a sessão `active` mais recente que carrega
+`execution.activated` — mas só era usada internamente por
+`ActivateExecutionUseCase` para decidir se reativa ou cria. A correção expõe
+o MESMO critério por HTTP, em vez de duplicá-lo no front:
+
+- **`GET /projects/:projectId/execution/session`** (`role:viewer`) devolve a
+  sessão vigente ou `null` — nunca infere pela mais recente;
+- `ProjectExecutorsTab` troca `useLatestSession` por `useActiveExecutionSession`
+  (novo hook sobre a rota acima) como fonte da sessão que a aba inteira lê;
+- o cabeçalho da aba sempre mostra QUAL sessão está sendo exibida — o rótulo
+  dela (hashtag + nome) linkando para `SessionPage`, ou "Nenhuma execução
+  ativa" quando `null` — nunca mais implícito. Os três estados da
+  [RN-088](#rn-088) se aplicam à própria busca da sessão: carregando, erro
+  (com `trace_id`) e vazio (`null`) são três renders distintos, nunca um
+  `if (!sessão) return null` que os colapsa.
+
+- **Onde:**
+  `apps/api/src/application/use-cases/execution/get-active-execution-session.use-case.ts`,
+  `apps/api/src/interfaces/http/execution/execution.controller.ts` (`getSession`),
+  `apps/web/src/lib/hooks.ts` (`useActiveExecutionSession`),
+  `apps/web/src/routes/ProjectExecutorsTab.tsx`
+- **Teste:**
+  `apps/web/src/routes/ProjectExecutorsTab.test.tsx` — mostra a sessão de
+  execução mesmo com sessão mais recente existindo no projeto, estado
+  "nenhuma execução ativa" explícito, e erro de rede tratado (não em branco)
+- **Origem:** achado de investigação de código + teste ao vivo — a mesma
+  classe de defeito que a RN-088 fechou para 429, agora para "qual sessão a
+  tela está olhando"
+
 ---
 
 ## Quando dá errado

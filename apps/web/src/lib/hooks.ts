@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useQueries, useQuery } from '@tanstack/react-query';
-import { getArchitecture, getCoverage, getProjectsStatus, getProjectsSummary, getSessionEvent, getWorkspaceSummary, listActions, listBacklog, listHandoffs, listHypotheses, listInfraArtifacts, listProficiency, listProjects, listPsychologistAnalyses, listSessionEvents, listSessions, listWorkspaces, getSessionTokenUsage } from './api-client';
+import { getActiveExecutionSession, getArchitecture, getCoverage, getProjectsStatus, getProjectsSummary, getSessionEvent, getWorkspaceSummary, listActions, listBacklog, listHandoffs, listHypotheses, listInfraArtifacts, listProficiency, listProjects, listPsychologistAnalyses, listSessionEvents, listSessions, listWorkspaces, getSessionTokenUsage } from './api-client';
 import type { SessionEvent } from './api-types';
 // Todo poll deste arquivo passa por aqui: um `refetchInterval` numérico não
 // sabe parar, e a api limita 300 req/min por usuário (ver `query-policy.ts`).
@@ -105,6 +105,34 @@ export function useLatestSession(projectId: string | undefined) {
     ? [...sessionsQuery.data].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0]
     : undefined;
   return { ...sessionsQuery, latest };
+}
+
+/**
+ * A sessão de execução VIGENTE do projeto (RN-136) — `null` quando não há
+ * nenhuma. NÃO é `useLatestSession`: aquela pega a sessão `createdAt` mais
+ * recente do projeto, que só É a de execução por COINCIDÊNCIA — assim que
+ * outra sessão nasce depois (uma ideação, um chat), `useLatestSession` passa
+ * a apontar para ela, silenciosamente vazia de eventos de dev/QA. Esta usa o
+ * MESMO critério que o backend usa para reativar (`findActiveExecutionSession`
+ * — `active` com `execution.activated` gravado), via
+ * `GET /projects/:projectId/execution/session`.
+ *
+ * `session` é `undefined` enquanto carrega, `null` quando não há execução
+ * ativa, e a `Session` vigente nos demais casos — os TRÊS estados que
+ * `ProjectExecutorsTab` precisa distinguir (RN-088) vêm prontos de
+ * `isPending`/`isError`/`error` do `useQuery` por baixo.
+ */
+export function useActiveExecutionSession(
+  projectId: string | undefined,
+  intervalMs = 5000,
+) {
+  const query = useQuery({
+    queryKey: ['execution-session', projectId],
+    queryFn: () => getActiveExecutionSession(projectId!),
+    enabled: !!projectId,
+    refetchInterval: pollQueParaNoErro(intervalMs),
+  });
+  return { ...query, session: query.data };
 }
 
 /**
