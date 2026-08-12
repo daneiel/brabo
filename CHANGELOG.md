@@ -6,6 +6,20 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api,engine,web**: o Arquiteto ganha um diagrama C4 (Context + Container,
+  modelo de Simon Brown), renderizado na Visão Geral do projeto (RN-149,
+  ADR 0068) — nova ferramenta `create_c4_diagram`, que gera as duas sintaxes
+  Mermaid a partir do `module_map` vigente (o Container level é DERIVADO
+  dele pelo caso de uso, nunca redigitado pelo modelo, para não abrir uma
+  segunda fonte que diverge da primeira); artefato `artifact.c4_diagram`
+  versionado no event log, sem tabela, mesmo desenho de
+  `artifact.project_image` (ADR 0065). `mermaid` entra como dependência de
+  RUNTIME nova do `apps/web` — a primeira do tipo — isolada atrás de
+  `lib/mermaid-render.ts` com `import()` dinâmico (só quem abre um diagrama
+  gerado paga o bundle); os três estados de sempre (carregando, erro,
+  vazio — RN-088), com a sintaxe crua acessível quando o Mermaid não
+  consegue desenhar. CSP fechado do ADR 0058 confirmado intacto, sem
+  mudança de configuração
 - **web**: histórias com promoção pendente ao mesmo tempo (2+) viram um
   CARROSSEL no fio da sessão do PO, em vez de N cards avulsos disputando o
   mesmo espaço (RN-148) — `Carousel`, primeiro componente de navegação

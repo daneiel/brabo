@@ -640,10 +640,27 @@ conjunto das promoções AINDA PENDENTES na sessão, não "criadas em sequência
 sem interrupção" — para que resolver uma história no meio do carrossel
 recalcule a leva sozinho, sem estado próprio a sincronizar.
 
+**Diagrama C4 do Arquiteto (RN-149, ADR 0068).** Entregável novo:
+`create_c4_diagram` gera Context + Container (Simon Brown) em Mermaid,
+renderizado na Visão Geral. O Container level é DERIVADO do `module_map`
+vigente pelo caso de uso — nunca redigitado pelo modelo — para não abrir
+uma segunda fonte que diverge da primeira; só o Context (nome do sistema e
+atores externos) vem do tool call. `artifact.c4_diagram` é artefato sem
+tabela, versionado no event log, mesmo desenho do `artifact.project_image`
+(ADR 0065). `mermaid` entrou como dependência de RUNTIME nova do
+`apps/web` — a primeira do tipo (o site de docs já usa Mermaid, mas em
+build-time) — isolada atrás de `apps/web/src/lib/mermaid-render.ts` com
+`import()` dinâmico; `vite build` confirmou que só o entrypoint carrega
+eager e os chunks pesados do Mermaid ficam sob demanda, e nenhum deles usa
+`eval`/`new Function` — o CSP fechado do ADR 0058 seguiu intacto, sem
+mudança de configuração.
+
 ## Stack (decidida — não proponha alternativas)
 - `apps/api`: NestJS 11 + Drizzle ORM + PostgreSQL 16 + pgvector
 - `apps/engine`: Elixir/OTP + Phoenix (canais) + Oban (filas no Postgres)
-- `apps/web`: React 19 + Vite + TanStack Query/Router
+- `apps/web`: React 19 + Vite + TanStack Query/Router; `mermaid` (runtime,
+  ADR 0068) para o diagrama C4 do Arquiteto, isolado atrás de
+  `lib/mermaid-render.ts` com `import()` dinâmico
 - Monorepo pnpm (TS) com apps/engine Elixir ao lado; Docker Compose para dev
 - Auth: first-party no domínio da api (argon2id + access JWT curto +
   refresh opaco com rotação); autorização RBAC no domínio da api
@@ -702,6 +719,12 @@ recalcule a leva sozinho, sem estado próprio a sincronizar.
   FASE 25 —, então a política de terminal do ADR 0055 (escopo de caminho,
   allowlist estreito) segue valendo como está até o container subir de
   verdade.
+- O diagrama C4 (Context + Container) também é ARTEFATO do ARQUITETO
+  (`artifact.c4_diagram`, versionado, sem tabela — RN-149, ADR 0068),
+  mesmo desenho do `artifact.project_image`. O Container level é DERIVADO
+  do `module_map` vigente pelo caso de uso, nunca redigitado pelo modelo
+  na ferramenta `create_c4_diagram` — só o Context (nome do sistema e
+  atores externos) vem do tool call.
 - Agentes rodam SEMPRE dentro de um Harness; nenhuma chamada de LLM ou
   ferramenta fora dele.
 - Handoff externo endereça só LEAD de área ou agente sem área;

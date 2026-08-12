@@ -903,10 +903,37 @@ export interface ArchitecturePendency {
   missing: string[];
 }
 
+// --- Diagrama C4 (Context + Container, modelo de Simon Brown) ---
+
+export interface C4Ator {
+  name: string;
+  type: 'person' | 'external_system';
+  description: string;
+}
+
+export interface C4Diagrama {
+  systemName: string;
+  systemDescription: string;
+  actors: C4Ator[];
+  /** Sintaxe Mermaid `C4Context` — o sistema e os atores externos. */
+  contextDiagram: string;
+  /** Sintaxe Mermaid `C4Container` — os módulos do module_map vigente e as dependências. */
+  containerDiagram: string;
+}
+
+export interface EstadoDoC4Diagrama {
+  status: 'sem_diagrama' | 'gerado';
+  diagrama: C4Diagrama | null;
+  version: number;
+  eventId: string | null;
+  createdAt: string | null;
+}
+
 export interface Architecture {
   moduleMap: ModuleMap | null;
   adrs: AdrRef[];
   pendencies: ArchitecturePendency[];
+  c4Diagram: EstadoDoC4Diagrama;
 }
 
 // --- Execução (Fase 4a — dev agents) ---

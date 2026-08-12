@@ -31,6 +31,7 @@ import type { AutonomyMode } from '../components/AgentCard';
 import { AgentTeamGrid } from '../components/AgentTeamGrid';
 import { AgentTimelineTree } from '../components/AgentTimelineTree';
 import { ActivityFeed } from '../components/ActivityFeed';
+import { C4DiagramView } from '../components/C4DiagramView';
 import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
 import { Skeleton } from '../components/ui/Skeleton';
 import { Badge, type BadgeTone } from '../components/ui/Badge';
@@ -489,6 +490,7 @@ function ArchitectureSection({ architecture }: { architecture?: Architecture }) 
   const moduleMap = architecture?.moduleMap;
   const adrs = architecture?.adrs ?? [];
   const pendencies = architecture?.pendencies ?? [];
+  const c4Diagram = architecture?.c4Diagram;
 
   const isEmpty = !moduleMap && adrs.length === 0 && pendencies.length === 0;
 
@@ -524,6 +526,18 @@ function ArchitectureSection({ architecture }: { architecture?: Architecture }) 
                   )}
                 </div>
               ))}
+            </div>
+          )}
+
+          <div className={styles.archLabel}>
+            Diagrama C4 {c4Diagram?.status === 'gerado' ? `· v${c4Diagram.version}` : ''}
+          </div>
+          {c4Diagram?.status === 'gerado' && c4Diagram.diagrama ? (
+            <C4DiagramView diagrama={c4Diagram.diagrama} />
+          ) : (
+            <div className={styles.sectionSub}>
+              Sem diagrama ainda — o Arquiteto gera o Context + Container a partir do
+              module_map (create_c4_diagram).
             </div>
           )}
 
