@@ -95,8 +95,7 @@ config :engine,
   # S (413 do provider), pela porta do read_file em vez do terminal. Const
   # PRÓPRIA, não a mesma var de terminal_output_max_bytes: hoje coincide em
   # valor, não em acoplamento. Ver Engine.Harness.Tools.ReadFile.truncate/2.
-  read_file_max_bytes:
-    String.to_integer(System.get_env("READ_FILE_MAX_BYTES", "32768")),
+  read_file_max_bytes: String.to_integer(System.get_env("READ_FILE_MAX_BYTES", "32768")),
   # Teto por scanner de segurança (gitleaks/semgrep) nos gates de SecOps.
   # Bem mais folgado que o terminal: o semgrep varre a árvore inteira e pode
   # baixar regras da rede (`--config auto`). Sem esse teto, um scanner
