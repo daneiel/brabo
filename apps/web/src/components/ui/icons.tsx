@@ -42,6 +42,10 @@ export const ChevronDownIcon = (props: IconProps) => base(['M6 9l6 6 6-6'], prop
 
 export const ChevronRightIcon = (props: IconProps) => base(['M9 6l6 6-6 6'], props);
 
+// Carrossel (RN-148) — o par que faltava do `ChevronRightIcon` para
+// navegação "anterior".
+export const ChevronLeftIcon = (props: IconProps) => base(['M15 6l-6 6 6 6'], props);
+
 export const XIcon = (props: IconProps) => base(['M6 6l12 12M18 6L6 18'], props);
 
 export const CheckIcon = (props: IconProps) => base(['M20 6L9 17l-5-5'], props);

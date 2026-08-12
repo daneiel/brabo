@@ -626,6 +626,20 @@ agentes seguintes sem risco de colisão.
 o da 26 — SÓ LEITURA de código, nenhum salvamento pela aba. A edição é fase
 seguinte, e quando vier, escrita é efeito externo: nasce `proposed_action`.
 
+## PÓS-PROGRAMA 16–26 — o que o uso pediu depois (RN-148)
+Mesmo espírito da PÓS-FASE 15: não é fase planejada, é o que o USO pediu.
+Histórias com promoção pendente ao mesmo tempo (RN-048/RN-126) viravam N
+cards avulsos na timeline da sessão do PO quando ele produzia várias numa
+leva. `Carousel` (`apps/web/src/components/ui/Carousel.tsx`) é o primeiro
+componente de navegação item-por-item do design system — 2+ pendentes
+viram UM carrossel navegável (setas, dots, teclado), com "Aprovar todas"
+promovendo o lote inteiro numa chamada só (`promoteStories` já era lote,
+sem mudança de contrato); 1 pendente continua o card simples de sempre. A
+decisão de quando uma "leva" se forma é reavaliada a cada render — o
+conjunto das promoções AINDA PENDENTES na sessão, não "criadas em sequência
+sem interrupção" — para que resolver uma história no meio do carrossel
+recalcule a leva sozinho, sem estado próprio a sincronizar.
+
 ## Stack (decidida — não proponha alternativas)
 - `apps/api`: NestJS 11 + Drizzle ORM + PostgreSQL 16 + pgvector
 - `apps/engine`: Elixir/OTP + Phoenix (canais) + Oban (filas no Postgres)

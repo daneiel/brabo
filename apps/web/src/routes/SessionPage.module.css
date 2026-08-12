@@ -513,6 +513,25 @@
   background: color-mix(in srgb, var(--success) 8%, var(--surface-1));
 }
 
+/* Um slide do carrossel de histórias (RN-148) — mesmo miolo do
+   `.handoffCard` acima, mas SEM caixa própria: o `Carousel` já dá a borda e
+   o fundo, e duplicar aqui empilharia duas caixas uma dentro da outra. */
+.storySlide {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.storySlideResumo {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  max-width: 48ch;
+}
+
 /* Link que navega pra outra aba do projeto a partir do fio — o CTA pra
    Executores no card de handoff pro Dev Lead (RN-125) e o link pro Backlog
    no chip de épico/história criados pelo PO (RN-124). */
