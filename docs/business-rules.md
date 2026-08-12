@@ -690,7 +690,7 @@ delegações da área — mesmo registro `AREAS`/`areaFor` de
 
 ---
 
-### RN-136 — Um ciclo de gate morto no meio é retomado sozinho, sem intervenção manual {#rn-136}
+### RN-140 — Um ciclo de gate morto no meio é retomado sozinho, sem intervenção manual {#rn-140}
 
 `QaLeadServer`/`SecOpsAgentServer` são `restart: :temporary`, e as
 transições intermediárias do gate (`DevAgentServer.correct/3`,
@@ -4476,7 +4476,7 @@ não módulo por módulo:
 | Provider de LLM cai no meio | registrado como falha de **infra**, nunca "o modelo parou" (RN-023) |
 | Duas decisões concorrentes na mesma hipótese | conflito explícito (RN-022) |
 | Réplica do engine cai | sessão é adotada por outra ou encerra como `closed_abnormally / node_shutdown` — nunca fica órfã |
-| `QaLeadServer`/`SecOpsAgentServer` cai no meio de um ciclo de gate | `Engine.Gates.GateRescuer` retoma sozinho — reinicia a área (nenhum veredito gravado) ou reenvia a chamada perdida (veredito já gravado) — sem intervenção manual (RN-136) |
+| `QaLeadServer`/`SecOpsAgentServer` cai no meio de um ciclo de gate | `Engine.Gates.GateRescuer` retoma sozinho — reinicia a área (nenhum veredito gravado) ou reenvia a chamada perdida (veredito já gravado) — sem intervenção manual (RN-140) |
 | Rate limit indisponível | a requisição **passa**: o guard protege contra abuso, não contra acesso indevido |
 | Rate limit **estourado** (429) | a tela diz o que a api respondeu e o poll para; a app nunca responde ao limite com mais tráfego (RN-088) |
 | Credencial errada, conta inexistente ou conta bloqueada | **a mesma** resposta 401, com o mesmo custo de argon2 (RN-032) |

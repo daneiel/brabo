@@ -92,7 +92,7 @@ agents já tinham: `gate_states`, mais um `GateRescuer` que varre ciclos
 parados e retoma sozinho — sem tabela nova pro caminho outbox, porque o
 problema não era falta de outbox, era falta de estado durável pro que
 acontece ENTRE duas chamadas em processo. Ver
-[RN-136](business-rules.md#rn-136), [ADR 0067](adr/0067-o-gate-sobrevive-ao-restart.md).
+[RN-140](business-rules.md#rn-140), [ADR 0067](adr/0067-o-gate-sobrevive-ao-restart.md).
 
 ## Code map
 

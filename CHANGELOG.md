@@ -8,7 +8,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 - **engine**: um ciclo de gate (QA/SecOps) morto no meio — por um restart do
   processo, entre o veredito já gravado na api e a chamada em processo que
-  aplicaria o próximo passo — não prendia mais a PR pra sempre (RN-136).
+  aplicaria o próximo passo — não prendia mais a PR pra sempre (RN-140).
   `gate_states` grava o ciclo em voo nos mesmos pontos onde as transições já
   aconteciam, e `Engine.Gates.GateRescuer` (chamado no boot e por um tick
   Oban a cada 5 min) reinicia a área do zero ou reenvia exatamente a chamada
