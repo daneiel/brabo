@@ -1,6 +1,6 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import type { Handoff, Session } from '../lib/api-types';
 import type { SessionChannelHandlers } from '../lib/session-channel';
@@ -231,7 +231,21 @@ describe('SessionPage — achado A: contador de regras de negócio', () => {
 });
 
 describe('SessionPage — achado B: indicador entre aceitar o handoff e o primeiro delta', () => {
-  it('agent.status "working" mostra o indicador de digitação antes de qualquer delta, e some no primeiro delta', async () => {
+  // RN-131: o indicador só liga depois de 5s sem texto nenhum — os testes
+  // avançam o relógio explicitamente em vez de esperar 5s de parede.
+  // `shouldAdvanceTime` mantém o resto (query do react-query, os `findBy`/
+  // `waitFor` já existentes) fluindo normalmente enquanto o relógio está
+  // fake, e `vi.advanceTimersByTimeAsync` pula direto pro momento em que o
+  // `setTimeout` de 5000ms do indicador dispara.
+  beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('agent.status "working" NÃO mostra nada antes de 5s, mostra depois, e some no primeiro delta', async () => {
     handoffsMock.mockReturnValue([HANDOFF]);
     eventos.mockReturnValue({ items: [HANDOFF_OFERECIDO_EVENT] });
     let resolverAceite: () => void = () => {};
@@ -252,24 +266,30 @@ describe('SessionPage — achado B: indicador entre aceitar o handoff e o primei
     // O kickoff no engine é um `GenServer.cast` assíncrono — o `agent.status`
     // "working" pode chegar pelo canal ANTES de `acceptHandoff` resolver.
     await waitFor(() => expect(canalHandlers?.onAgentStatus).toBeTypeOf('function'));
-    canalHandlers!.onAgentStatus!({ status: 'working' });
+    act(() => canalHandlers!.onAgentStatus!({ status: 'working' }));
 
-    // Nenhum delta chegou ainda — o indicador aparece mesmo assim, e
-    // identifica o agente (achado do handoff: `po`).
-    expect(await screen.findByText('PO está escrevendo…')).toBeInTheDocument();
+    // Nenhum delta chegou ainda, e ainda não passaram 5s: nada aparece —
+    // é exatamente o ruído que RN-131 elimina.
+    expect(screen.queryByText('PO está escrevendo…')).not.toBeInTheDocument();
 
-    // O primeiro delta chega — o indicador cede lugar ao streaming normal.
-    canalHandlers!.onAgentDelta!('Olá', 'po');
-    await waitFor(() =>
-      expect(screen.queryByText('PO está escrevendo…')).not.toBeInTheDocument(),
-    );
+    // Passa dos 5s sem nenhum delta: agora sim o indicador aparece,
+    // identificando o agente (achado do handoff: `po`).
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000);
+    });
+    expect(screen.getByText('PO está escrevendo…')).toBeInTheDocument();
+
+    // O primeiro delta chega — o indicador cede lugar ao streaming normal,
+    // na hora, sem esperar timer nenhum.
+    act(() => canalHandlers!.onAgentDelta!('Olá', 'po'));
+    expect(screen.queryByText('PO está escrevendo…')).not.toBeInTheDocument();
     expect(screen.getByText('Olá')).toBeInTheDocument();
 
     resolverAceite();
-    canalHandlers!.onAgentDone!();
+    act(() => canalHandlers!.onAgentDone!());
   });
 
-  it('agent.status "idle" sem delta nenhum encerra o indicador (turno sem texto)', async () => {
+  it('resposta rápida (< 5s): agent.status "idle" antes do timer nunca liga o indicador', async () => {
     handoffsMock.mockReturnValue([HANDOFF]);
     eventos.mockReturnValue({ items: [HANDOFF_OFERECIDO_EVENT] });
     acceptHandoff.mockResolvedValue(undefined);
@@ -282,13 +302,17 @@ describe('SessionPage — achado B: indicador entre aceitar o handoff e o primei
     fireEvent.click(botaoAceitar);
 
     await waitFor(() => expect(canalHandlers?.onAgentStatus).toBeTypeOf('function'));
-    canalHandlers!.onAgentStatus!({ status: 'working' });
-    expect(await screen.findByText('PO está escrevendo…')).toBeInTheDocument();
+    act(() => canalHandlers!.onAgentStatus!({ status: 'working' }));
+    expect(screen.queryByText('PO está escrevendo…')).not.toBeInTheDocument();
 
-    canalHandlers!.onAgentStatus!({ status: 'idle' });
-    await waitFor(() =>
-      expect(screen.queryByText('PO está escrevendo…')).not.toBeInTheDocument(),
-    );
+    // O turno acaba ANTES dos 5s (resposta rápida, sem texto nenhum) — o
+    // timer é desarmado e o indicador NUNCA chega a aparecer.
+    act(() => canalHandlers!.onAgentStatus!({ status: 'idle' }));
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000);
+    });
+    expect(screen.queryByText('PO está escrevendo…')).not.toBeInTheDocument();
   });
 
   it('CASO DE FALHA: erro ao aceitar o handoff não deixa indicador nenhum preso', async () => {
@@ -305,9 +329,13 @@ describe('SessionPage — achado B: indicador entre aceitar o handoff e o primei
 
     await waitFor(() => expect(acceptHandoff).toHaveBeenCalled());
 
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000);
+    });
+
     // Mesmo que um "working" tardio chegasse depois da falha, não há mais
     // agente esperado (`turnoAgentRef` foi limpo) — mas o teste garante o
-    // caminho direto: nenhum indicador aparece.
+    // caminho direto: nenhum indicador aparece, mesmo depois dos 5s.
     expect(screen.queryByText(/está escrevendo…/)).not.toBeInTheDocument();
   });
 });
