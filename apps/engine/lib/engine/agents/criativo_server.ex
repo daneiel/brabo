@@ -12,7 +12,10 @@ defmodule Engine.Agents.CriativoServer do
   emit_artifact (com origem rastreável). O `product_brief` NUNCA sai por tool
   call — só quando o USUÁRIO confirma prontidão (`confirm_readiness`), o
   servidor consolida as regras num product_brief e oferece o handoff ao PO
-  (CLAUDE.md 3b.2/3b.3).
+  (CLAUDE.md 3b.2/3b.3). `confirm_readiness` RECUSA a confirmação — sem
+  subir a Task, sem product_brief, sem handoff — quando zero regras de
+  negócio foram capturadas na sessão: a garantia vive aqui, não só na UI
+  (`SessionPage.tsx` desabilita o botão, mas isso é só a UX complementar).
   """
 
   use GenServer, restart: :temporary
@@ -83,9 +86,24 @@ defmodule Engine.Agents.CriativoServer do
     TurnoAssincrono.iniciar(state, from, fn -> run_turn(work) end)
   end
 
+  # Guardrail: zero regras de negócio capturadas → recusa ANTES de subir a
+  # Task — nem o turno de consolidação roda, nem o product_brief, nem o
+  # handoff. Não passa por `TurnoAssincrono` porque não é um turno de LLM: é
+  # uma decisão do SERVIDOR, resolvida sem chamar o modelo. E como
+  # `agent_command_controller.ex#readiness/2` IGNORA o retorno deste
+  # `GenServer.call` e sempre responde 202 (mesmo padrão do `message/2` desde
+  # RN-122 — "esta resposta é só o aceite"), a ÚNICA forma do usuário saber
+  # por quê é o `agent.error` DURÁVEL no fio (RN-059), não o HTTP.
   @impl true
   def handle_call(:confirm_readiness, from, state) do
-    TurnoAssincrono.iniciar(state, from, fn -> executar_confirm_readiness(state) end)
+    case business_rule_refs(state) do
+      [] ->
+        emit_falha_sem_regra(state)
+        {:reply, {:error, :sem_regra_de_negocio}, state}
+
+      _refs ->
+        TurnoAssincrono.iniciar(state, from, fn -> executar_confirm_readiness(state) end)
+    end
   end
 
   @impl true
@@ -373,6 +391,31 @@ defmodule Engine.Agents.CriativoServer do
 
     broadcast(state, "agent.error", %{origem: origem, mensagem: mensagem})
     state
+  end
+
+  # A recusa do guardrail de prontidão (zero regra de negócio). "politica" —
+  # não `FalhaDeTurno.origem/1` — porque não há `reason` de turno nenhum pra
+  # classificar: é decisão de produto, resolvida antes de qualquer chamada ao
+  # modelo (mesmo raciocínio de `TurnoAssincrono.emitir_cancelamento/1`, que
+  # também hardcoda "politica" direto).
+  defp emit_falha_sem_regra(state) do
+    origem = "politica"
+    mensagem = no_business_rules_message()
+
+    emit(state, "agent.error", %{
+      origem: origem,
+      mensagem: mensagem,
+      reason: "sem_regra_de_negocio"
+    })
+
+    broadcast(state, "agent.error", %{origem: origem, mensagem: mensagem})
+    state
+  end
+
+  defp no_business_rules_message do
+    "ainda não há nenhuma regra de negócio registrada nesta conversa — continue " <>
+      "conversando com o Criativo até capturar pelo menos uma regra antes de " <>
+      "confirmar prontidão"
   end
 
   defp emit(state, type, payload) do

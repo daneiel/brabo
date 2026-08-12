@@ -339,6 +339,57 @@ responde `{:error, :turno_em_andamento}` na hora.
 - **Origem:** investigação desta sessão; sem ADR próprio (mudança de padrão
   de concorrência DENTRO do harness, não de fronteira de camada/banco).
 
+### RN-142 — Confirmar prontidão sem NENHUMA regra de negócio é recusado pelo engine, não só escondido na UI {#rn-142}
+
+Antes, clicar "Estou pronto para produzir" — ou chamar a rota direto —
+SEMPRE criava o `product_brief` e oferecia o handoff ao PO, mesmo numa
+conversa em que zero regras de negócio tivessem sido capturadas.
+`business_rule_refs(state)` já existia em `criativo_server.ex`, mas só para
+POPULAR o campo `"rules"` do brief — nunca como condição de bloqueio. Na UI,
+`SessionPage.tsx` desabilitava o botão apenas durante `streaming`, sem
+checar a contagem de regras.
+
+A garantia de verdade tinha que ficar no servidor, não na tela: quem chama a
+rota direto (ou um cliente futuro que não seja este frontend) não pode
+furar o guardrail só porque o botão está desenhado desabilitado.
+`CriativoServer.handle_call(:confirm_readiness, ...)` agora checa
+`business_rule_refs(state)` ANTES de subir a `Task` de
+`Engine.Agents.TurnoAssincrono` ([RN-122](#rn-122)) — vazio, recusa ali
+mesmo, sem rodar o turno de consolidação, sem `product_brief`, sem handoff.
+
+A recusa não vira 4xx HTTP: `agent_command_controller.ex#readiness/2` IGNORA
+o retorno deste `GenServer.call` e sempre responde 202, o mesmo padrão que
+`message/2` já usa desde a RN-122 ("esta resposta é só o aceite" — o
+desfecho de verdade vive no event log). Por isso a recusa é narrada como
+`agent.error` DURÁVEL (RN-059), com origem `"politica"` — é decisão de
+produto, não falha de infra/modelo/turno — e mensagem explicando por quê; o
+fio da sessão já sabe renderizar esse tipo de evento (`lerFalhaDeTurno`,
+mesmo balão vermelho de qualquer outra falha de turno).
+
+A UX complementar, em `SessionPage.tsx`: o botão nasce `disabled` (com
+`title` explicando o motivo) enquanto `events` não tem nenhum
+`artifact.business_rule` — a MESMA fonte que já alimenta o painel "Regras de
+negócio" (`ContextAside`), sem uma segunda leitura que pudesse divergir da
+primeira.
+
+- **Onde:** `apps/engine/lib/engine/agents/criativo_server.ex`
+  (`handle_call(:confirm_readiness, ...)`, `emit_falha_sem_regra/1`),
+  `apps/web/src/routes/SessionPage.tsx` (`hasBusinessRule`, o botão "Estou
+  pronto para produzir")
+- **Teste:**
+  `apps/engine/test/engine/agents/criativo_server_test.exs` ("prontidão:
+  recusa quando NENHUMA regra de negócio foi capturada" — nem turno, nem
+  brief, nem handoff; a recusa narrada com origem `"politica"`),
+  `apps/web/src/routes/SessionPage.readiness-exige-regra.test.tsx` (botão
+  desabilitado sem regra, habilitado com 1+)
+- **Borda:** a sessão já tinha `readiness.confirmed` gravado pela api
+  ANTES de sinalizar o engine (`ConfirmReadinessUseCase`) — isso não muda:
+  é o registro do CLIQUE do usuário, um fato que aconteceu independente do
+  engine aceitar ou recusar em seguida.
+- **Origem:** investigação de código confirmando um relato do usuário —
+  nenhum ADR (guardrail novo sobre fluxo já existente, sem mudança de
+  fronteira de camada/banco).
+
 ---
 
 ## Aprovação de ações
