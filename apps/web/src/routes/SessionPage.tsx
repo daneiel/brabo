@@ -304,6 +304,17 @@ export function SessionPage({
     );
   const criativoActive = useMemo(() => activeFor('criativo'), [events]);
 
+  // A garantia de VERDADE é o guardrail no engine — `CriativoServer` recusa
+  // `confirm_readiness` (e narra a recusa como `agent.error` no fio) quando
+  // a sessão não tem nenhuma `artifact.business_rule` (ver
+  // criativo_server.ex). Isto é só a UX complementar: desabilita o botão
+  // ANTES do clique, com a MESMA fonte que já alimenta o painel "Regras de
+  // negócio" em `ContextAside` — sem buscar de novo.
+  const hasBusinessRule = useMemo(
+    () => events.some((e) => e.type === 'artifact.business_rule'),
+    [events],
+  );
+
   // O agente que recebe as mensagens do composer: o de `agent.activated`
   // mais RECENTE (por `seq`) entre os `AGENTES_DE_CHAT` (achado 9-fix).
   // Antes era uma cadeia de PRECEDÊNCIA fixa (arquiteto > po > criativo) que
@@ -1613,7 +1624,16 @@ export function SessionPage({
                 consequência (o handoff para o PO) já está na tela.
               */}
               {criativoActive && !prontidaoJaDeclarada && (
-                <Button variant="success" onClick={handleReadiness} disabled={streaming}>
+                <Button
+                  variant="success"
+                  onClick={handleReadiness}
+                  disabled={streaming || !hasBusinessRule}
+                  title={
+                    !hasBusinessRule
+                      ? 'Registre pelo menos uma regra de negócio com o Criativo antes de confirmar prontidão'
+                      : undefined
+                  }
+                >
                   Estou pronto para produzir
                 </Button>
               )}
