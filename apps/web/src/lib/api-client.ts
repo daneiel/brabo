@@ -616,8 +616,16 @@ export const reanalyzeSession = (projectId: string, sessionId: string) =>
 
 // --- Execução (Fase 4a) ---
 
-export const activateExecution = (projectId: string) =>
-  post<ExecutionActivation>(`/projects/${projectId}/execution/activate`);
+/**
+ * `originSessionId` (RN-135, PR #266) é a sessão de CHAT de onde partiu o
+ * clique — a api fecha ela ao final, se não tiver handoff/ação/turno
+ * pendente. Omitido (chamador da Visão Geral, sem sessão de chat no
+ * contexto) preserva o comportamento de sempre: nenhuma sessão fecha.
+ */
+export const activateExecution = (projectId: string, originSessionId?: string) =>
+  post<ExecutionActivation>(`/projects/${projectId}/execution/activate`, {
+    originSessionId,
+  });
 /**
  * Pede mais um dev agent para um módulo (RN-083).
  *

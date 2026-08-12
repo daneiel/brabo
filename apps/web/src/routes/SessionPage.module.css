@@ -530,6 +530,27 @@
   text-decoration: underline;
 }
 
+/* Colapso de mensagens do MESMO agente depois que ele passa o bastão
+   (RN-138) — `Disclosure` do design system, fechado por padrão. `.agentGroup`
+   só existe para segurar `--msg-color` (fixado no elemento pai, RN-138) na
+   cor do agente, a mesma pista que o resto da bolha usa. */
+.agentGroup {
+  display: flex;
+  flex-direction: column;
+}
+
+.agentGroupCabecalho {
+  color: var(--msg-color);
+  font-family: var(--font-mono);
+}
+
+.agentGroupRegiao {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-top: 10px;
+}
+
 /* Evento citado por uma hipótese do Psicólogo, fixado no topo do log
    (Fase 4b) — a garantia de que a evidência CHEGA no evento, independente
    da janela de paginação e dos filtros do feed. */
