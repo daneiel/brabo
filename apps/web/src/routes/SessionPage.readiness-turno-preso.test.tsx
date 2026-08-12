@@ -6,7 +6,7 @@ import type { Session } from '../lib/api-types';
 import type { SessionChannelHandlers } from '../lib/session-channel';
 
 /**
- * RN-129 — mesmo bug do `SessionPage.turno-preso.test.tsx` (rede de
+ * RN-131 — mesmo bug do `SessionPage.turno-preso.test.tsx` (rede de
  * segurança contra o canal perder `agent.done`), desta vez em
  * `handleReadiness`. `confirmReadiness` também é um `GenServer.call`
  * síncrono no engine (até 120s) — `handleSend` já ganhou a rede de
@@ -127,7 +127,7 @@ beforeEach(() => {
   getSession.mockResolvedValue(sessao());
 });
 
-describe('SessionPage — handleReadiness ganha a mesma rede de segurança de handleSend (RN-129)', () => {
+describe('SessionPage — handleReadiness ganha a mesma rede de segurança de handleSend (RN-131)', () => {
   it('caminho feliz: confirmReadiness resolver reconcilia o estado mesmo sem onAgentDone', async () => {
     let resolverConfirmacao: () => void = () => {};
     confirmReadiness.mockImplementation(

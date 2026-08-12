@@ -3425,7 +3425,7 @@ usava só no log colapsado da sidebar.
 - **Origem:** pedido do usuário — promoção de história inline no fio, opção
   barata reusando RN-048 em vez de gatear a criação da história.
 
-### RN-129 — Três corridas confirmadas AO VIVO no fio da sessão: convite por cima do histórico, indicador ansioso e turno preso em `handleReadiness` {#rn-129}
+### RN-131 — Três corridas confirmadas AO VIVO no fio da sessão: convite por cima do histórico, indicador ansioso e turno preso em `handleReadiness` {#rn-131}
 
 Três defeitos achados navegando `SessionPage.tsx` de verdade no Chrome, não
 por teste — e os três eram condição de corrida ou critério incompleto

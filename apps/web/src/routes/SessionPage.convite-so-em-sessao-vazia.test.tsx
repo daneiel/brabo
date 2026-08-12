@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 import type { Session } from '../lib/api-types';
 
 /**
- * RN-129 — dois bugs confirmados por investigação AO VIVO no Chrome, os dois
+ * RN-131 — dois bugs confirmados por investigação AO VIVO no Chrome, os dois
  * em `conviteVisivel`/`conversaComecou`.
  *
  * A) `conversaComecou` olhava só `chat.message`/`agent.response` — critério
@@ -111,7 +111,7 @@ beforeEach(() => {
   getSession.mockResolvedValue(sessao());
 });
 
-describe('SessionPage — achado A (RN-129): "existe evento", não "existe mensagem"', () => {
+describe('SessionPage — achado A (RN-131): "existe evento", não "existe mensagem"', () => {
   it('caminho feliz: sessão realmente vazia mostra o convite', async () => {
     montar();
     expect(await screen.findByText('A vez é sua')).toBeInTheDocument();
@@ -173,7 +173,7 @@ describe('SessionPage — achado A (RN-129): "existe evento", não "existe mensa
   });
 });
 
-describe('SessionPage — achado B (RN-129): o convite espera `useSessionEvents` carregar', () => {
+describe('SessionPage — achado B (RN-131): o convite espera `useSessionEvents` carregar', () => {
   it('caminho feliz: eventsQuery ainda pendente (cache frio) NÃO mostra o convite, mesmo com `events` default vazio', async () => {
     useSessionEventsMock.mockReturnValue({ data: undefined, isPending: true });
 

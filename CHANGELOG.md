@@ -220,7 +220,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   nenhum scroll automático — agora abre sempre no fim
 
 - **web**: três corridas confirmadas AO VIVO navegando `SessionPage.tsx` no
-  Chrome (RN-129). **(1)** o convite de boas-vindas do Criativo reaparecia
+  Chrome (RN-131). **(1)** o convite de boas-vindas do Criativo reaparecia
   por cima de sessões com histórico real — `conversaComecou` olhava só
   `chat.message`/`agent.response`, então uma sessão criada pelo
   `git-bootstrap` (ações de commit/branch já aprovadas) ou a sessão que a

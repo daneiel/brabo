@@ -231,7 +231,7 @@ describe('SessionPage — achado A: contador de regras de negócio', () => {
 });
 
 describe('SessionPage — achado B: indicador entre aceitar o handoff e o primeiro delta', () => {
-  // RN-129: o indicador só liga depois de 5s sem texto nenhum — os testes
+  // RN-131: o indicador só liga depois de 5s sem texto nenhum — os testes
   // avançam o relógio explicitamente em vez de esperar 5s de parede.
   // `shouldAdvanceTime` mantém o resto (query do react-query, os `findBy`/
   // `waitFor` já existentes) fluindo normalmente enquanto o relógio está
@@ -269,7 +269,7 @@ describe('SessionPage — achado B: indicador entre aceitar o handoff e o primei
     act(() => canalHandlers!.onAgentStatus!({ status: 'working' }));
 
     // Nenhum delta chegou ainda, e ainda não passaram 5s: nada aparece —
-    // é exatamente o ruído que RN-129 elimina.
+    // é exatamente o ruído que RN-131 elimina.
     expect(screen.queryByText('PO está escrevendo…')).not.toBeInTheDocument();
 
     // Passa dos 5s sem nenhum delta: agora sim o indicador aparece,

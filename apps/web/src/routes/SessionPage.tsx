@@ -183,7 +183,7 @@ export function SessionPage({
   // chegou ainda pra este turno. `null` assim que o primeiro delta chega (o
   // bloco de streaming já cobre) ou o turno termina.
   const [statusAgent, setStatusAgent] = useState<string | null>(null);
-  // Indicador de "pensando" (bolha com os 3 pontinhos, RN-129) — só liga
+  // Indicador de "pensando" (bolha com os 3 pontinhos, RN-131) — só liga
   // depois de 5s SEM nenhum texto chegar, e não no instante em que o turno
   // começa. Antes ele piscava em toda mensagem, mesmo nas que respondiam em
   // menos de um segundo — ruído visual pra maioria dos turnos, que é o efeito
@@ -419,7 +419,7 @@ export function SessionPage({
     agenteFalando ??
     (statusAgent ? AGENTS[statusAgent as keyof typeof AGENTS] : undefined);
 
-  // Arma/desarma o timer de 5s do indicador de "pensando" (RN-129). Só conta
+  // Arma/desarma o timer de 5s do indicador de "pensando" (RN-131). Só conta
   // o tempo enquanto há turno em curso (`streaming`/`statusAgent`) E nenhum
   // texto chegou ainda — os dois viram `false` de novo assim que qualquer um
   // dos dois deixa de valer: texto chegando (streaming REAL não espera nada,
@@ -436,7 +436,7 @@ export function SessionPage({
     return () => clearTimeout(timer);
   }, [streaming, statusAgent, streamingText]);
 
-  // A CONVERSA começou? (achado G, revisto por investigação AO VIVO — RN-129)
+  // A CONVERSA começou? (achado G, revisto por investigação AO VIVO — RN-131)
   // O critério ERA "existe `chat.message`/`agent.response`", pra não confundir
   // os cards do bootstrap do git com conversa — mas isso tinha o efeito
   // contrário do pretendido: uma sessão criada pelo `git-bootstrap` (5 ações
@@ -863,7 +863,7 @@ export function SessionPage({
       await confirmReadiness(projectId, sessionId);
       // O product_brief + handoff chegam via o canal (agent.done) + poll.
       //
-      // Rede de segurança (RN-129), espelhando `handleSend` (ver o comentário
+      // Rede de segurança (RN-131), espelhando `handleSend` (ver o comentário
       // lá): `confirmReadiness` também é um `GenServer.call` síncrono no
       // engine (até 120s), e o canal Phoenix pode não ter terminado de
       // conectar (ticket + join, RN-108) quando o turno acaba — o broadcast
@@ -1084,7 +1084,7 @@ export function SessionPage({
   // condições precisam ser a mesma pergunta, ou "Iniciar ideação" aparece
   // duas vezes — ou nenhuma.
   //
-  // `!eventsQuery.isPending` (RN-129) fecha uma race de carregamento: em
+  // `!eventsQuery.isPending` (RN-131) fecha uma race de carregamento: em
   // cache frio (reload de página), `session` pode chegar enquanto `events`
   // ainda é `[]` — o default de `eventsQuery.data?.items`, indistinguível de
   // "sessão realmente vazia" até o primeiro fetch resolver. Sem este gate, o
@@ -1364,7 +1364,7 @@ export function SessionPage({
                   indicador do streaming por delta; `agenteExibido` escolhe a
                   fonte mais recente entre os dois.
 
-                  RN-129: a bolha só aparece SEM texto depois de 5s
+                  RN-131: a bolha só aparece SEM texto depois de 5s
                   (`pensandoVisivel`, armado pelo efeito acima) — texto de
                   verdade (`streamingText`) sempre aparece na hora, nunca
                   espera o timer. É por isso que a condição é "tem texto OU
