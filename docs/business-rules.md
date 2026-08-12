@@ -1408,6 +1408,57 @@ queimar iterações — está no [ADR 0052](adr/0052-dev-agent-espera-aprovacao-
   (`libera ls -la`; `comando composto não passa carona no segmento liberado`)
 - **Origem:** execução real da FASE 13b
 
+### RN-141 — Subcomando git de leitura só entra ancorado pela flag que torna a leitura inequívoca, nunca pelo verbo pelado {#rn-141}
+
+Consultando o banco de uma execução real, dev agents gastaram dezenas de
+aprovações manuais em subcomandos de exploração — `git branch -a`, `git
+remote -v`, `git worktree list`, `git show origin/dev --stat`, `git log
+--all --oneline --graph`, `git for-each-ref`, `git ls-tree -r origin/dev
+--name-only`, `git config user.name` — nenhum coberto pela [RN-068](#rn-068),
+que só liberava `git status`/`diff`/`log` (sem flags adicionais). Como o
+casamento por prefixo de token exige que TODO segmento de um comando composto
+esteja em `allow`, uma cadeia de exploração longa caía inteira em
+`require_approval` assim que UM desses subcomandos aparecia no meio.
+
+`DEV_TERMINAL_ALLOW_PATTERNS` ganhou `git branch -a/-r/-v/--list/--show-current`,
+`git remote -v`/`git remote show`, `git worktree list`, `git show`, `git
+for-each-ref`, `git ls-tree`, `git rev-parse` e `git config --get`. `git log`
+não precisou de padrão novo: o casamento já é por PREFIXO de tokens (tokens
+extras no final são permitidos), então `Terminal(git log)` já cobria `git log
+--all --graph --oneline --decorate`.
+
+**O cuidado é o mesmo que a RN-068 já demonstra para `ls`/`lsof`, aplicado a
+verbos com irmão MUTANTE que aceita a mesma forma truncada do padrão.**
+`Terminal(git branch)` bateria tanto em `git branch -D nome` (apaga) quanto em
+`git branch nome-nova` (cria) quanto em `git branch` sozinho — o padrão não
+enxerga o que vem DEPOIS do prefixo que ele checou. Por isso nenhum dos quatro
+verbos com mutação (`branch`, `remote`, `worktree`, `config`) entrou pelo verbo
+pelado; cada um foi ANCORADO pela flag que torna a leitura inequívoca
+independente de qualquer coisa que venha depois dela:
+
+- `git branch` — ancorado em `-a`/`-r`/`-v`/`--list`/`--show-current`, nunca
+  no verbo sozinho; `-D`/`-d`/`-m`/`-M` (apagar/renomear) e um nome de branch
+  solto (criar) continuam fora.
+- `git remote` — ancorado em `-v` e `show` (que só aceita nome de remote
+  depois, sempre leitura); `add`/`remove`/`set-url` continuam fora.
+- `git worktree` — ancorado em `list`; `add`/`remove`/`prune` continuam fora.
+- `git config` — só `--get` entrou, porque é a única flag que o próprio git
+  garante ser leitura independente do que vier depois (chave, ou chave +
+  padrão de valor). `git config user.name`/`git config user.email` SEM
+  `--get` ficaram de fora de propósito: um segundo token depois da chave
+  (`git config user.name "novo valor"`) é ESCRITA, e o casamento por prefixo
+  não distingue "sem mais tokens" de "com mais um token" sem inventar um
+  parser de contagem de argumentos novo — a mesma limitação que já
+  impede um `git branch` pelado. `--global`/`--system` nunca foram ancorados.
+
+- **Onde:** `apps/api/src/domain/actions/dev-terminal-patterns.ts`
+- **Teste:** `test/domain/actions/dev-terminal-patterns.spec.ts` (describe
+  `subcomandos git de leitura (achado ao vivo)` — cobre a cadeia composta
+  observada ao vivo auto-aprovando, e cada variante mutante com a MESMA
+  palavra de comando — `git branch -D`, `git remote add`, `git worktree add`,
+  `git config --global user.name` — continuando em `require_approval`)
+- **Origem:** consulta ao banco de uma sessão real, achado durante uso
+
 ### RN-069 — Retentar uma task recria a branch, não falha {#rn-069}
 
 `WorktreeManager.add_worktree/3` usa `git worktree add -B` (cria **ou**
