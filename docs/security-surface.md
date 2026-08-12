@@ -208,6 +208,12 @@ o componente `d` da JWK, travado por teste.
   [RN-073](business-rules.md#rn-073)) confirmar que não há handoff, ação ou
   turno pendurado ali. Nunca fecha a sessão de execução que a própria chamada
   acabou de ativar.
+- **`GET /projects/:projectId/execution/session` é `role:viewer`, o mesmo
+  papel de `GET /sessions/:sessionId`** ([RN-139](business-rules.md#rn-139)).
+  Devolve a sessão de execução VIGENTE do projeto — `active` com
+  `execution.activated` gravado — ou `null`; nunca a sessão mais recente do
+  projeto, que é o que a aba Executores lia antes e que muda de sessão em
+  silêncio assim que outra sessão nasce depois dela.
 
 ## Tabela
 
@@ -302,6 +308,7 @@ o componente `d` da JWK, travado por teste.
 | GET | `/projects/:projectId/coverage` | role:viewer |
 | GET | `/projects/:projectId/events/:eventId` | role:viewer |
 | POST | `/projects/:projectId/execution/activate` | role:maintainer |
+| GET | `/projects/:projectId/execution/session` | role:viewer |
 | GET | `/projects/:projectId/git/:provider/connect` | role:maintainer |
 | POST | `/projects/:projectId/git/:provider/repository` | role:maintainer |
 | POST | `/projects/:projectId/git/:provider/repository/adopt` | role:maintainer |

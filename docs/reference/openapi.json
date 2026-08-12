@@ -4100,6 +4100,55 @@
         ]
       }
     },
+    "/projects/{projectId}/execution/session": {
+      "get": {
+        "description": "A sessão `active` mais recente que já carrega `execution.activated` — o MESMO critério que `activate` usa para decidir se reativa ou cria (RN-139). `null` quando não há execução em curso. Existe para a aba Executores parar de inferir essa sessão pela mais recente do projeto, que muda de sessão em sessão nova sem pista nenhuma na tela.",
+        "operationId": "ExecutionController_getSession",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "`null` no corpo quando não há execução ativa.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto, sessão ou tarefa inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Devolve a sessão de execução vigente do projeto, ou nada",
+        "tags": [
+          "execução"
+        ]
+      }
+    },
     "/projects/{projectId}/git/{provider}/connect": {
       "get": {
         "description": "Não redireciona: devolve a URL para o cliente decidir quando mandar o browser. O `state` vai assinado por HMAC, e é o que impede o callback de ser forjado.",

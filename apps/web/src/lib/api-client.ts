@@ -627,6 +627,15 @@ export const activateExecution = (projectId: string, originSessionId?: string) =
     originSessionId,
   });
 /**
+ * A sessão de execução VIGENTE do projeto (RN-139) — `active` com
+ * `execution.activated` gravado — ou `null`. NUNCA a sessão mais recente do
+ * projeto: é o que `ProjectExecutorsTab` usava antes (`useLatestSession`) e
+ * que passa a olhar silenciosamente qualquer sessão nova (ex. uma ideação)
+ * criada depois da execução, ficando vazia de eventos de dev/QA.
+ */
+export const getActiveExecutionSession = (projectId: string) =>
+  get<Session | null>(`/projects/${projectId}/execution/session`);
+/**
  * Pede mais um dev agent para um módulo (RN-083).
  *
  * Não é mais "aceitar": o pedido passa pelo teto da área. Dentro dele o agente

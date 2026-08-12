@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
+import { Link } from '@tanstack/react-router';
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  useActiveExecutionSession,
   useArchitecture,
   useHandoffs,
-  useLatestSession,
   usePendingActions,
   useSessionEvents,
   useSessionTokenUsage,
@@ -18,9 +19,13 @@ import {
 import { deriveAgentRoster, groupRosterByArea, isExecutorAgentId, isExecutorGroup } from '../lib/agent-status';
 import { deriveExecutionProgress } from '../lib/execution';
 import { connectSessionHeartbeat } from '../lib/session-channel';
+import { rotuloDaSessao } from '../lib/session-label';
 import type { AutonomyMode } from '../components/AgentCard';
 import { AgentTeamGrid } from '../components/AgentTeamGrid';
 import { AgentTimelineTree } from '../components/AgentTimelineTree';
+import { Badge } from '../components/ui/Badge';
+import { Skeleton } from '../components/ui/Skeleton';
+import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
 import { useToast } from '../components/ui/ToastProvider';
 import type { ActionType } from '../lib/api-types';
 import styles from './ProjectOverviewTab.module.css';
@@ -46,12 +51,22 @@ import styles from './ProjectOverviewTab.module.css';
  * montadas uma de cada vez, e cada componente de rota resolve os próprios
  * hooks; o react-query dedup pela `queryKey` evita a requisição em dobro
  * quando as duas já rodaram na mesma sessão.
+ *
+ * A SESSÃO que a aba lê é a de execução VIGENTE (RN-139,
+ * `useActiveExecutionSession`) — `active` com `execution.activated` gravado —
+ * e NUNCA a mais recente do projeto. Era `useLatestSession` antes: funcionava
+ * só por coincidência (a sessão de execução costuma ser a mais nova) e
+ * silenciosamente passava a olhar qualquer sessão nova criada depois (uma
+ * ideação, um chat), vazia de eventos de dev/QA, sem pista nenhuma na tela. O
+ * indicador logo abaixo do título mostra sempre QUAL sessão está sendo
+ * exibida, nos três estados da RN-088.
  */
 export function ProjectExecutorsTab({ projectId }: { projectId: string }) {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
-  const { latest: latestSession } = useLatestSession(projectId);
-  const sessionId = latestSession?.id;
+  const executionSessionQuery = useActiveExecutionSession(projectId);
+  const executionSession = executionSessionQuery.session;
+  const sessionId = executionSession?.id;
   const eventsQuery = useSessionEvents(projectId, sessionId);
   const events = eventsQuery.data?.items ?? [];
   const actionsQuery = usePendingActions(projectId, sessionId);
@@ -117,7 +132,7 @@ export function ProjectExecutorsTab({ projectId }: { projectId: string }) {
   const waitingCount = executorRoster.filter((r) => r.status === 'aguardando').length;
 
   useEffect(() => {
-    if (!sessionId || latestSession?.status !== 'active') return;
+    if (!sessionId || executionSession?.status !== 'active') return;
     const disconnect = connectSessionHeartbeat(projectId, sessionId, {
       onEvent: () => {
         queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
@@ -127,7 +142,7 @@ export function ProjectExecutorsTab({ projectId }: { projectId: string }) {
       },
     });
     return disconnect;
-  }, [sessionId, latestSession?.status, projectId, queryClient]);
+  }, [sessionId, executionSession?.status, projectId, queryClient]);
 
   async function handleAutonomyChange(agentId: string, actionType: string, mode: AutonomyMode) {
     try {
@@ -168,44 +183,83 @@ export function ProjectExecutorsTab({ projectId }: { projectId: string }) {
     <div>
       <div className={styles.sectionRow}>
         <h2 className={styles.sectionHeader}>Executores</h2>
-        <span className={styles.sectionCount}>
-          {executorRoster.length} agentes · {workingCount} trabalhando · {waitingCount} aguardando
-        </span>
+        {sessionId && (
+          <span className={styles.sectionCount}>
+            {executorRoster.length} agentes · {workingCount} trabalhando · {waitingCount} aguardando
+          </span>
+        )}
       </div>
       <div className={styles.sectionSub}>
         Dev agent e QA — quem implementa e quem verifica. O resto do time está
         na Visão geral.
       </div>
 
-      {executorGroups.length === 0 ? (
+      {/* Indicador de QUAL sessão a aba está olhando (RN-139) — os três
+          estados da RN-088, erro antes de vazio: sem isto a troca silenciosa
+          de sessão (achado desta investigação) volta a acontecer, só que
+          desta vez escondida atrás de um indicador que mentiria "tudo bem". */}
+      {executionSessionQuery.isError ? (
+        <ErroDeCarregamento
+          titulo="Não foi possível descobrir a sessão de execução deste projeto."
+          erro={executionSessionQuery.error}
+          onTentarDeNovo={() => void executionSessionQuery.refetch()}
+        />
+      ) : executionSessionQuery.isPending ? (
+        <div className={styles.sectionSub} aria-busy="true">
+          <Skeleton width={220} height={18} />
+        </div>
+      ) : !executionSession ? (
         <div className={styles.sectionSub}>
-          Nenhum dev agent ou QA entrou em ação nesta sessão ainda.
+          Nenhuma execução ativa neste projeto no momento.
         </div>
       ) : (
-        <AgentTeamGrid
-          roster={roster}
-          groups={executorGroups}
-          events={events}
-          bindingQueries={bindingQueries}
-          allModels={allModels}
-          tokenUsage={tokenUsage}
-          autonomyRules={autonomyRules}
-          progressByAgent={progressByAgent}
-          collapsedAreas={collapsedAreas}
-          onToggleArea={toggleArea}
-          onAutonomyChange={handleAutonomyChange}
-          onRearm={handleRearm}
-        />
+        <div className={styles.sectionSub}>
+          Mostrando{' '}
+          <Link
+            to="/projects/$projectId/sessions/$sessionId"
+            params={{ projectId, sessionId: executionSession.id }}
+          >
+            {rotuloDaSessao(executionSession.id, executionSession.name)}
+          </Link>{' '}
+          <Badge tone="success" dot>
+            {executionSession.status}
+          </Badge>
+        </div>
       )}
 
-      <div className={styles.arch}>
-        <h2 className={styles.sectionHeader}>Linha do tempo</h2>
-      </div>
-      <div className={styles.sectionSub}>
-        Os ramos de dev agent e QA, do primeiro marco ao que estão fazendo
-        agora.
-      </div>
-      <AgentTimelineTree events={executorEvents} projectId={projectId} />
+      {sessionId && (
+        <>
+          {executorGroups.length === 0 ? (
+            <div className={styles.sectionSub}>
+              Nenhum dev agent ou QA entrou em ação nesta sessão ainda.
+            </div>
+          ) : (
+            <AgentTeamGrid
+              roster={roster}
+              groups={executorGroups}
+              events={events}
+              bindingQueries={bindingQueries}
+              allModels={allModels}
+              tokenUsage={tokenUsage}
+              autonomyRules={autonomyRules}
+              progressByAgent={progressByAgent}
+              collapsedAreas={collapsedAreas}
+              onToggleArea={toggleArea}
+              onAutonomyChange={handleAutonomyChange}
+              onRearm={handleRearm}
+            />
+          )}
+
+          <div className={styles.arch}>
+            <h2 className={styles.sectionHeader}>Linha do tempo</h2>
+          </div>
+          <div className={styles.sectionSub}>
+            Os ramos de dev agent e QA, do primeiro marco ao que estão fazendo
+            agora.
+          </div>
+          <AgentTimelineTree events={executorEvents} projectId={projectId} />
+        </>
+      )}
     </div>
   );
 }
