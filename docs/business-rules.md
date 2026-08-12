@@ -3351,6 +3351,41 @@ tenta realçar a história recém-criada dentro da aba, que é fora de escopo.
 - **Origem:** pedido do usuário — link do PO pras histórias criadas, direto
   pro Backlog.
 
+### RN-126 — Promoção de história é decidível INLINE no fio, com o mesmo mecanismo da aba Backlog {#rn-126}
+
+`backlog.story_promotion_proposed` (RN-048) ganha o mesmo tratamento que
+RN-125 deu ao handoff: o evento vira **card acionável** na timeline da
+sessão, com os botões "Promover" e "Devolver" chamando os MESMOS
+`promoteStories`/`returnStory` que `PromotionQueue`
+(`ProjectBacklogTab.tsx`) já usa — nenhum endpoint novo, nenhuma segunda
+fonte de verdade. A decisão continua acontecendo em UM lugar (o backend), só
+o gatilho ganhou um segundo caminho.
+
+**Resolução por evento posterior, não por status derivado à parte.** O card
+some sozinho (vira divisor mudo, sem botões) assim que um evento de seq
+MAIOR decidir o destino da MESMA história —
+`backlog.story_transitioned{storyId}` (promovida, emitido por
+`PromoteStoriesUseCase` via `TransitionStoryUseCase`) ou
+`backlog.story_promotion_returned{storyId}` (devolvida). Sem essa checagem,
+promover ou devolver deixaria os mesmos dois botões plantados no fio,
+oferecendo de novo uma decisão já tomada.
+
+`backlog.story_promotion_returned` ganha narração simétrica no fio (motivo
+incluído), reusando a mesma frase que `apps/web/src/lib/activity.ts` já
+usava só no log colapsado da sidebar.
+
+- **Onde:** `apps/web/src/routes/SessionPage.tsx` (`timeline` — blocos
+  `backlog.story_promotion_proposed`/`backlog.story_promotion_returned`,
+  `handlePromoteStory`/`handleReturnStory`, modal de motivo reusando
+  `Modal`/`Textarea`)
+- **Teste:** `apps/web/src/routes/SessionPage.promocao-inline-e-volta.test.tsx`
+  (card com os botões, promover chama `promoteStories` com o `storyId` do
+  payload, devolver exige motivo e chama `returnStory`, história resolvida
+  por `story_transitioned` posterior vira divisor mudo, `story_promotion_returned`
+  narra com o motivo)
+- **Origem:** pedido do usuário — promoção de história inline no fio, opção
+  barata reusando RN-048 em vez de gatear a criação da história.
+
 ---
 
 ## Psicólogo e Anamnese
