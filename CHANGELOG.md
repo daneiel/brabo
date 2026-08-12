@@ -127,6 +127,18 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **api**: quatro alertas CRÍTICOS do CodeQL, duas classes reais de
+  vulnerabilidade. `@Query('ref')`/`@Query('path')` da aba Code (RN-095)
+  chegam sem DTO no meio, e o `ValidationPipe` global não protege tipo
+  primitivo nativo — `?ref=a&ref=b` vira ARRAY no Express, e um array
+  escapava de `.includes('..')`/`REF_VALIDO.test(ref)` por ter semântica
+  diferente de string; `garantirQueryEscalar` recusa array ANTES de
+  qualquer outra checagem, reusada nos dois pontos que tratavam query como
+  string (RN-127). Em paralelo, `sessionId`/`projectId`/`agent`/`agentId`
+  viravam segmento de URL de requisição interna ao engine sem forma
+  validada — `garantirSegmentoDeUrlInterna`, aplicada dentro de
+  `postCommand` (cobrindo onze métodos, não só os dois que o CodeQL
+  reportou) e nos dois que não passam por ele (RN-128)
 - **web**: dois defeitos de UX em `SessionPage.tsx`. Mandar mensagem antes de
   clicar "Iniciar ideação" fazia o convite do Criativo (título, papel, nota)
   sumir PRA SEMPRE — `conviteVisivel` depende de `conversaComecou`, que não
