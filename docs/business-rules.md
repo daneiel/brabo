@@ -4322,31 +4322,45 @@ pasta que o engine realmente usa.
   renomeia a pasta; a pasta só se lê pelo `workspace_dir_name` gravado.
 - **Origem:** ADR 0066 (revisa o ADR 0055).
 
-### RN-130 — A sessão do bootstrap de Git nasce com nome default "git-bootstrap" {#rn-130}
+### RN-129 — O ToolLoop nunca grava `agent.response` vazio; falha de transporte vira `agent.error` durável {#rn-129}
 
-O bootstrap de Gitflow (Fase 2 — criar repositório, criar `dev`/`qa`, os dois
-primeiros commits) roda dentro de uma sessão `criativa` aberta automaticamente
-pelo `ProvisionRepositoryUseCase`, sem o usuário interagir. Ela nascia com
-`name: null` como qualquer outra sessão ([RN-098](#rn-098)) e a lista de
-sessões do Criativo degradava para a hashtag — indistinguível, a olho, das
-sessões que o usuário abre de propósito.
+A [RN-059](#rn-059) fechou o balão vazio para os quatro agentes
+conversacionais, mas eles não passam pelo `Engine.Harness.ToolLoop` — cada um
+chama `EngineApiClient.llm_turn_stream/6` no próprio módulo. O `ToolLoop`
+(usado por dev agents, QA Automação/Performance-Segurança, Infra-Workflows,
+Anamnese e Psicólogo) tinha o MESMO defeito num caminho diferente: emitia
+`agent.response` a cada iteração, mesmo quando o modelo só chamou ferramenta
+sem texto, ou terminou o turno sem produzir nada — e a falha de transporte
+(provider fora do ar, timeout) virava `agent.response` com `content` ausente,
+igualmente indistinguível de sucesso.
 
-O nome é **fixo e reconhecível** (`"git-bootstrap"`), não gerado
-dinamicamente: o objetivo é reconhecer a sessão automática de cara, sem abrir
-cada uma para ler o event log. Vale só para as duas sessões que este caso de
-uso abre (repo novo e o caminho defensivo de bootstrap sem sessão prévia,
-Fase 12a). Sessão aberta pelo usuário (`POST .../sessions`, `+ Nova
-ideação`) continua nascendo `null` quando o campo vem em branco — o default
-não se espalhou para lá.
+Achado ao vivo numa sessão de execução real (dev agents): duas bolhas com o
+texto de compatibilidade da RN-059 ("resposta vazia — evento anterior...")
+apareceram numa sessão criada minutos antes — não eram eventos antigos, eram
+o mesmo defeito acontecendo de novo, só que na aba de execução.
 
-- **Onde:**
-  `apps/api/src/application/use-cases/git/provision-repository.use-case.ts`
-  (`BOOTSTRAP_SESSION_NAME`, os dois `createSession.execute`).
-- **Teste:**
-  `apps/api/test/application/use-cases/git/provision-repository.use-case.spec.ts`
-  ("a sessão do bootstrap nasce com nome default...").
-- **Origem:** [RN-098](#rn-098) (o campo já existia); esta regra só fixa o
-  valor default de um chamador específico.
+Duas correções, no ponto ESTRUTURAL comum a todo consumidor do `ToolLoop`,
+não módulo por módulo:
+
+1. **Conteúdo vazio nunca vira `agent.response`.** Iteração que só chamou
+   ferramenta já está narrada por `tool.call`/`tool.result`; iteração que não
+   produziu nada (nem texto, nem tool call) deixa o desfecho para quem chamou
+   o loop decidir — `ctx.last_error`/`{:ok, ctx}` carregam a informação, e
+   quem consome (ex.: `DevAgentServer.handle_outcome/4`) já grava o evento
+   durável do PRÓPRIO domínio (`dev.blocked`, com `origem`).
+2. **Falha de transporte vira `agent.error` durável**, com `origem`
+   (`Engine.Agents.FalhaDeTurno.origem/1` — o MESMO helper que os quatro
+   agentes conversacionais usam, sem duplicar classificação) e `mensagem` em
+   português — nunca mais `agent.response` sem `content`.
+
+- **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex` (`loop/1`,
+  `emit_falha/2`)
+- **Teste:** `apps/engine/test/engine/harness/tool_loop_test.exs`
+  ("iteração só com tool call (sem texto) não grava agent.response vazio",
+  "modelo termina o turno sem texto e sem tool call...", "falha de
+  transporte... grava agent.error durável com origem")
+- **Origem:** RN-059 (regra que esta estende) — achado ao vivo numa sessão de
+  execução real com dev agents
 
 ---
 

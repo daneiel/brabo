@@ -172,6 +172,19 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   agora mostram "o modelo não produziu um X válido para esta ação" em vez
   de um prompt `$ ` ou preview em branco, que lia como bug de renderização
 
+- **engine**: `Engine.Harness.ToolLoop` (o loop compartilhado por dev agents,
+  QA Automação/Performance-Segurança, Infra-Workflows, Anamnese e Psicólogo)
+  gravava `agent.response` com conteúdo VAZIO — iteração que só chamava
+  ferramenta sem texto, ou turno que terminava sem produzir nada — e a tela
+  mostrava o balão de compatibilidade da RN-059 como se fosse evento ANTIGO,
+  achado ao vivo numa sessão de execução real com dev agents rodando. Falha
+  de transporte (provider fora do ar) tinha o mesmo sintoma: virava
+  `agent.response` sem `content` em vez de `agent.error`. Estende a RN-059
+  (que já cobria os quatro agentes conversacionais, que não passam pelo
+  ToolLoop) para este ponto estrutural comum: conteúdo vazio nunca vira
+  `agent.response`, e falha de transporte grava `agent.error` durável com a
+  origem, pelo mesmo `FalhaDeTurno.origem/1` (RN-129)
+
 - **engine**: `AnamneseSchedulerWorker.perform/1` não conferia a flag
   `ANAMNESE_ENABLED` — só `kickoff/0` (a inserção inicial do job no boot)
   conferia. Uma corrente já agendada ANTES de alguém desativar a flag (ou de
