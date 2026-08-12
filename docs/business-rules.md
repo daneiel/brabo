@@ -4616,6 +4616,50 @@ o MESMO critério por HTTP, em vez de duplicá-lo no front:
   classe de defeito que a RN-088 fechou para 429, agora para "qual sessão a
   tela está olhando"
 
+### RN-141 — A aba Criativo não lista a sessão de execução vigente {#rn-141}
+
+A sessão que recebe `execution.activated` e os eventos de tool-call dos dev
+agents precisa nascer com `kind: 'criativa'` — regra estrutural (RN-097,
+`garantirQuePodeAtivarExecucao`), sem isso o evento é recusado. Como
+`ProjectSessionsTab` (a aba Criativo, RN-104) lista sessões filtrando só por
+`session.kind === 'criativa'`, a sessão de execução aparecia MISTURADA na
+lista ao lado de ideações de verdade — abrir ela em `SessionPage.tsx` mostra
+uma timeline inteira de tool-calls de dev agent, parecendo (pro usuário) "o
+dev escrevendo no chat do Criativo". Confirmado ao vivo: uma sessão real com
+35+ eventos de dev agent aparecia normal na lista, ao lado de sessões reais
+de ideação.
+
+A correção reusa o sinal que a [RN-139](#rn-139) já expõe —
+`useActiveExecutionSession`/`GET /projects/:projectId/execution/session` — em
+vez de o backend calcular um campo novo por sessão (`hasExecutionActivated`
+ou equivalente). A aba Criativo busca a sessão vigente e a exclui da lista
+renderizada:
+
+- a busca só roda na aba Criativo (`enabled` desligado em `kind !==
+  'criativa'`) — a aba Chat nunca fez essa chamada e continua sem fazer;
+- o filtro é por `id`, depois do filtro por `kind` já existente — não muda o
+  que a lista É, só o que ela EXCLUI.
+
+**Decisão deliberada de escopo:** isto cobre só a execução VIGENTE, não
+execuções ANTIGAS já encerradas (`execution.activated` gravado numa sessão
+que hoje está `closed`). Calcular isso pediria o backend anotar, por sessão,
+se ela tem o evento gravado — mudança no repositório e no endpoint de
+listagem, para um caso residual: uma sessão de execução ANTIGA aparece com o
+badge `closed`, o que já sinaliza "não é uma ideação ativa" de um jeito bem
+menos ambíguo do que a vigente (que aparecia `active`, indistinguível de uma
+ideação em andamento). Se isso voltar a confundir na prática, a saída é o
+endpoint de listagem devolver o sinal por sessão — não um `filter` a mais no
+front por sessão antiga.
+
+- **Onde:** `apps/web/src/routes/ProjectSessionsTab.tsx`
+  (`ProjectSessionsTab`)
+- **Teste:** `apps/web/src/routes/ProjectSessionsTab.test.tsx` — a vigente
+  some da lista Criativo com sessões normais ao lado, a aba Chat não chama a
+  busca de execução vigente, e sem execução vigente (`null`) a lista aparece
+  inteira
+- **Origem:** achado de investigação de código + teste ao vivo — sessão real
+  com execução ativa aparecendo misturada na aba Criativo
+
 ---
 
 ## Quando dá errado
