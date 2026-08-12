@@ -317,7 +317,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 - **engine,web**: confirmar prontidão ("Estou pronto para produzir") numa
   conversa sem NENHUMA regra de negócio capturada criava o `product_brief`
-  e oferecia o handoff ao PO mesmo assim (RN-141). `CriativoServer` agora
+  e oferecia o handoff ao PO mesmo assim (RN-142). `CriativoServer` agora
   recusa a confirmação ANTES de subir o turno de consolidação — sem brief,
   sem handoff —, narrando o motivo como `agent.error` durável no fio da
   sessão (origem "politica"), já que a rota HTTP sempre responde 202

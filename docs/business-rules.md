@@ -339,7 +339,7 @@ responde `{:error, :turno_em_andamento}` na hora.
 - **Origem:** investigação desta sessão; sem ADR próprio (mudança de padrão
   de concorrência DENTRO do harness, não de fronteira de camada/banco).
 
-### RN-141 — Confirmar prontidão sem NENHUMA regra de negócio é recusado pelo engine, não só escondido na UI {#rn-141}
+### RN-142 — Confirmar prontidão sem NENHUMA regra de negócio é recusado pelo engine, não só escondido na UI {#rn-142}
 
 Antes, clicar "Estou pronto para produzir" — ou chamar a rota direto —
 SEMPRE criava o `product_brief` e oferecia o handoff ao PO, mesmo numa
