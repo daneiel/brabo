@@ -12705,12 +12705,19 @@
             "example": null,
             "nullable": true,
             "description": "Falha do provider. Vem no CORPO com 200, e não como erro HTTP, porque a contabilidade em `usage` continua válida — o turno gastou, mesmo falhando."
+          },
+          "modelName": {
+            "type": "object",
+            "example": "llama3.2:3b",
+            "nullable": true,
+            "description": "Nome do modelo que gerou a resposta (achado do problema 2) — `null` quando o turno falhou antes de resolver um modelo (sem binding, ou binding para modelo inexistente)."
           }
         },
         "required": [
           "message",
           "usage",
-          "error"
+          "error",
+          "modelName"
         ]
       },
       "LlmTurnStreamEventResponseDto": {
@@ -12736,6 +12743,12 @@
           "message": {
             "type": "string",
             "example": "provider indisponível"
+          },
+          "modelName": {
+            "type": "object",
+            "example": "llama3.2:3b",
+            "nullable": true,
+            "description": "Só no quadro `done`/`final` — nome do modelo que gerou a resposta (achado do problema 2). `null` quando o turno falhou antes de resolver um modelo."
           }
         },
         "required": [

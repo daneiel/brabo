@@ -214,6 +214,13 @@ o componente `d` da JWK, travado por teste.
   `execution.activated` gravado — ou `null`; nunca a sessão mais recente do
   projeto, que é o que a aba Executores lia antes e que muda de sessão em
   silêncio assim que outra sessão nasce depois dela.
+- **`POST .../llm-turn` e `POST .../llm-turn-stream` ganharam `modelName` no
+  corpo de resposta/frame final, e a classificação não mudou** — continuam
+  `engine-service` como sempre ([RN-146](business-rules.md#rn-146)). O nome
+  do modelo já era resolvido para chamar o provider; só passou a viajar de
+  volta ao engine, que o inclui no payload de `agent.response`. Nenhum dado
+  novo é lido, nenhuma credencial nova é exposta — é o mesmo nome que já sai
+  em `token_usage`.
 
 ## Tabela
 

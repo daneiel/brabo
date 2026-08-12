@@ -4805,6 +4805,120 @@ front por sessão antiga.
 - **Origem:** achado de investigação de código + teste ao vivo — sessão real
   com execução ativa aparecendo misturada na aba Criativo
 
+### RN-145 — O Arquiteto também tem um botão de prontidão, e a MESMA confirmação oferece Infra e Dev Lead {#rn-145}
+
+`OfferInfraHandoffUseCase` (`POST .../agents/arquiteto/handoff-infra`) já
+existia desde a Fase 4a — grava `architecture.readiness_confirmed` e chama o
+engine, que oferece o handoff ao Infra e, na MESMA confirmação, ao Dev Lead
+(FASE 14d/ADR 0053). O que faltava era o jeito de chegar até ele: nenhum
+lugar do frontend chamava o endpoint. O botão "Confirmar arquitetura pronta"
+existe pro Criativo desde sempre ("Estou pronto para produzir",
+[RN-131](#rn-131)/[RN-142](#rn-142)) — o Arquiteto não tinha equivalente
+nenhum, e sem o clique o handoff nunca nascia: a correção de prioridade do
+card no fio ([RN-125](#rn-125)) ficava sem efeito prático, porque não havia o
+que mostrar.
+
+`arquitetoActive` espelha `criativoActive` (existe um `agent.activated` pro
+Arquiteto nesta sessão) e `arquiteturaJaDeclarada` espelha
+`prontidaoJaDeclarada` (existe QUALQUER handoff saindo do Arquiteto — a prova
+de que a confirmação já aconteceu, já que `OfferInfraHandoffUseCase` cria
+pelo menos o de Infra na mesma chamada). O botão aparece no composer só
+quando o primeiro é verdadeiro e o segundo não é — some depois do clique
+pelo mesmo motivo que o do Criativo some depois da prontidão.
+
+Ao contrário do Criativo, o Arquiteto NÃO tem guardrail de servidor
+bloqueando a confirmação sem `module_map` — `ArquitetoServer.offer_infra_handoff`
+não recusa nada, diferente de `CriativoServer.confirm_readiness`
+([RN-142](#rn-142)). O botão só desabilita durante `streaming`; não replicar
+aqui o `disabled={!hasModuleMap}` da Visão Geral é decisão deliberada, pelo
+mesmo raciocínio que já vale para "Ativar execução" no card do Dev Lead
+([RN-137](#rn-137)) — quando este card existe, o Arquiteto já decidiu a
+arquitetura.
+
+- **Onde:** `apps/api/src/interfaces/http/agents/agents.controller.ts`
+  (`handoffInfra`, rota preexistente), `apps/web/src/lib/api-client.ts`
+  (`confirmArchitectureReadiness`), `apps/web/src/routes/SessionPage.tsx`
+  (`arquitetoActive`, `arquiteturaJaDeclarada`, `handleArchitectureReadiness`,
+  botão "Confirmar arquitetura pronta")
+- **Teste:**
+  `apps/web/src/routes/SessionPage.arquiteto-modelo-icone.test.tsx`, describe
+  "problema 1" — botão ausente sem o Arquiteto ativo, caminho feliz chama o
+  endpoint dedicado, falha mostra toast de erro, e o botão some com a
+  arquitetura já declarada
+- **Origem:** investigação de código — o endpoint e a lógica do engine
+  existiam desde a Fase 4a/14d sem NENHUM caminho de UI até eles
+
+### RN-146 — `agent.response` carrega o nome do modelo que gerou a resposta {#rn-146}
+
+O nome do modelo só existia em `token_usage`, sem vínculo com o evento
+`agent.response` específico que ele produziu — `SessionPage.tsx` mostrava a
+string FIXA `"modelo"` ao lado do nome do agente, nunca o nome real.
+
+A mudança atravessa as três camadas, todas com o MESMO nome de campo
+(`modelName`), para que não seja preciso traduzir entre elas:
+
+1. **api** — `StreamLlmTurnUseCase`/`RunLlmTurnUseCase` já resolviam o
+   modelo (`resolveModelBinding` → `models.findById`) para chamar o
+   provider; o frame `final`/`RunLlmTurnResult` ganham `modelName: string |
+   null`. `null` só quando o turno falhou ANTES de resolver um modelo (sem
+   binding, ou binding para modelo inexistente) — nos demais casos,
+   inclusive orçamento excedido, o binding já tinha resolvido e o nome
+   viaja mesmo no frame de erro.
+2. **engine** — os quatro agentes conversacionais (`criativo_server.ex`,
+   `po_server.ex`, `arquiteto_server.ex`, `dev_lead_server.ex`) extraem
+   `Map.get(frame, "modelName")` do frame `final` e o incluem no payload de
+   `emit_response`/`agent.response` (`%{content: content, modelName:
+   model_name}`).
+3. **web** — `SessionPage.tsx` lê `event.payload.modelName`. Evento
+   GRAVADO antes desta mudança não tem a chave (`undefined`), e um turno
+   cuja api não resolveu modelo nenhum grava `null` — os dois degradam para
+   o rótulo genérico `"modelo"`, nunca para `undefined`/`null` na tela; o
+   mesmo padrão que `text === ''` já usa para resposta anterior à RN-059.
+
+- **Onde:** `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts`
+  (`LlmTurnStreamEvent`), `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts`
+  (`RunLlmTurnResult`), `apps/api/src/interfaces/http/internal/dto/internal.response.dto.ts`
+  (`LlmTurnResponseDto`/`LlmTurnStreamEventResponseDto`),
+  `apps/engine/lib/engine/agents/{criativo,po,arquiteto,dev_lead}_server.ex`
+  (`emit_response/3`), `apps/web/src/routes/SessionPage.tsx` (bloco
+  `agent.response` da timeline)
+- **Teste:** `apps/api/test/application/use-cases/llm/run-llm-turn.use-case.spec.ts`,
+  `apps/api/test/application/use-cases/llm/stream-llm-turn.use-case.spec.ts`
+  (`modelName` no caminho feliz, no erro do provider e sem binding),
+  `apps/engine/test/engine/agents/{criativo,po,arquiteto,dev_lead}_server_test.exs`
+  (`agent.response` carrega o nome do modelo; borda do frame sem a chave),
+  `apps/web/src/routes/SessionPage.arquiteto-modelo-icone.test.tsx`, describe
+  "problema 2" — nome real, evento antigo sem a chave, `modelName: null`
+- **Origem:** investigação de código — confirmado que o dado já existia em
+  `token_usage`, mas nunca chegava ao payload do evento
+
+### RN-147 — O cabeçalho do grupo colapsado mostra o ícone do agente, não só o nome {#rn-147}
+
+O `Disclosure` de `timelineAgrupada` ([RN-138](#rn-138)) recebia só a STRING
+do nome em `titulo` — cada mensagem expandida já tem um avatar (`.avatar` +
+ícone), e o cabeçalho colapsado perdia essa pista visual justamente onde ela
+mais ajuda a escanear o fio.
+
+`AvatarDoAgente` reusa a MESMA caixa `.avatar` das mensagens expandidas, mas
+o ícone escolhido é o do ROSTER (`AGENTS[id].icon`) — a mesma fonte que já
+identifica "quem está falando" no indicador de streaming (`agenteExibido.icon`,
+[RN-131](#rn-131)) — e não o ícone por TIPO de evento que cada entrada
+expandida usa (`ModelIcon` em `agent.response`, `StackIcon` em
+`backlog.*_created`, `AlertCircleIcon` em `agent.error`). Um grupo colapsado
+pode misturar esses tipos de entrada de um mesmo agente; o cabeçalho
+representa o AGENTE, não a última entrada dele, e só o ícone do roster é
+estável para isso. Sem `id`, ou agente fora do roster, degrada para
+`ModelIcon` — nunca para uma caixa vazia.
+
+- **Onde:** `apps/web/src/routes/SessionPage.tsx` (`AvatarDoAgente`,
+  `timelineAgrupada`), `apps/web/src/routes/SessionPage.module.css`
+  (`.agentGroupTitulo`)
+- **Teste:** `apps/web/src/routes/SessionPage.arquiteto-modelo-icone.test.tsx`,
+  describe "problema 3" — o cabeçalho colapsado tem o PATH do ícone do PO
+  (`UserIcon`), não só um SVG decorativo genérico
+- **Origem:** investigação de código — `Disclosure` já aceitava `ReactNode`
+  em `titulo`; faltava passar o avatar junto do nome
+
 ---
 
 ## Quando dá errado

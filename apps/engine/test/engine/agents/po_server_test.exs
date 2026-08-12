@@ -120,6 +120,23 @@ defmodule Engine.Agents.PoServerTest do
     assert_received %Phoenix.Socket.Broadcast{event: "agent.done"}
   end
 
+  # Achado do problema 2 (RN-146): o `agent.response` carrega o nome do
+  # modelo que gerou a resposta, extraído do frame `final` da api.
+  test "agent.response carrega o nome do modelo", %{state: state, session_id: session_id} do
+    Process.put(:fake_llm_turns, [
+      FakeEngineApiClient.final_response("Backlog pronto.", "llama3.2:3b")
+    ])
+
+    assert {:reply, :ok, _} =
+             sync_call(PoServer, {:user_message, "gere o backlog"}, state)
+
+    assert_received {:event_appended, _, ^session_id,
+                     %{
+                       type: "agent.response",
+                       payload: %{content: "Backlog pronto.", modelName: "llama3.2:3b"}
+                     }}
+  end
+
   describe "revise/2 — devolução de história recusada (Fase 12c, RN-048)" do
     test "injeta a recusa como mensagem FIXADA e roda um turno", %{state: state} do
       Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("vou revisar")])

@@ -515,6 +515,17 @@ export const cancelAgentTurn = (
   );
 export const confirmReadiness = (projectId: string, sessionId: string) =>
   post<{ ok: true }>(`/projects/${projectId}/sessions/${sessionId}/readiness`);
+// Mirror de `confirmReadiness`, mas do Arquiteto (achado do problema 1):
+// dispara `OfferInfraHandoffUseCase`, que oferece o handoff ao Infra E ao Dev
+// Lead na MESMA confirmação (FASE 14d). Endpoint dedicado — não reaproveita
+// `readiness`, que é do Criativo.
+export const confirmArchitectureReadiness = (
+  projectId: string,
+  sessionId: string,
+) =>
+  post<{ ok: true }>(
+    `/projects/${projectId}/sessions/${sessionId}/agents/arquiteto/handoff-infra`,
+  );
 export const listHandoffs = (projectId: string, sessionId: string) =>
   get<Handoff[]>(`/projects/${projectId}/sessions/${sessionId}/handoffs`);
 export const acceptHandoff = (

@@ -143,6 +143,19 @@ conversacionais — que usam apenas o streamado — falhavam a 15s com
 `%Req.TransportError{reason: :timeout}`, classificado como origem `infra`. Com
 modelo local o turno cabia nos 15s e o defeito não aparecia.
 
+#### O frame final carrega o nome do modelo ([RN-146](../business-rules.md#rn-146))
+
+`RunLlmTurnResult` e o quadro `final` de `LlmTurnStreamEvent` ganham
+`modelName: string | null` — o nome do modelo que a api resolveu
+(`resolveModelBinding` → `models.findById`) antes de chamar o provider.
+`null` só quando o turno falhou ANTES de resolver um modelo nenhum (sem
+binding, ou binding para modelo que não existe mais); nos demais casos —
+inclusive orçamento excedido — o binding já tinha resolvido e o nome viaja
+mesmo no frame de erro. Os quatro agentes conversacionais do engine
+extraem o campo do frame e o incluem no payload de `agent.response`
+(`modelName`), que é o que `SessionPage.tsx` lê para mostrar o modelo ao
+lado do nome do agente.
+
 #### Os relatórios de gasto NÃO passam por aqui
 
 O metering é escrito **neste** caminho: cada `/llm-turn` grava uma linha em
