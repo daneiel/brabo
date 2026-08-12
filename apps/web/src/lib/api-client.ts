@@ -619,7 +619,7 @@ export const reanalyzeSession = (projectId: string, sessionId: string) =>
 export const activateExecution = (projectId: string) =>
   post<ExecutionActivation>(`/projects/${projectId}/execution/activate`);
 /**
- * A sessão de execução VIGENTE do projeto (RN-136) — `active` com
+ * A sessão de execução VIGENTE do projeto (RN-139) — `active` com
  * `execution.activated` gravado — ou `null`. NUNCA a sessão mais recente do
  * projeto: é o que `ProjectExecutorsTab` usava antes (`useLatestSession`) e
  * que passa a olhar silenciosamente qualquer sessão nova (ex. uma ideação)

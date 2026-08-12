@@ -52,7 +52,7 @@ import styles from './ProjectOverviewTab.module.css';
  * hooks; o react-query dedup pela `queryKey` evita a requisição em dobro
  * quando as duas já rodaram na mesma sessão.
  *
- * A SESSÃO que a aba lê é a de execução VIGENTE (RN-136,
+ * A SESSÃO que a aba lê é a de execução VIGENTE (RN-139,
  * `useActiveExecutionSession`) — `active` com `execution.activated` gravado —
  * e NUNCA a mais recente do projeto. Era `useLatestSession` antes: funcionava
  * só por coincidência (a sessão de execução costuma ser a mais nova) e
@@ -194,7 +194,7 @@ export function ProjectExecutorsTab({ projectId }: { projectId: string }) {
         na Visão geral.
       </div>
 
-      {/* Indicador de QUAL sessão a aba está olhando (RN-136) — os três
+      {/* Indicador de QUAL sessão a aba está olhando (RN-139) — os três
           estados da RN-088, erro antes de vazio: sem isto a troca silenciosa
           de sessão (achado desta investigação) volta a acontecer, só que
           desta vez escondida atrás de um indicador que mentiria "tudo bem". */}

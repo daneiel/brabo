@@ -136,7 +136,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   já usava internamente (`active` com `execution.activated` gravado, ou
   `null`); a aba troca de fonte (`useActiveExecutionSession`) e ganha um
   indicador de QUAL sessão está sendo exibida, nos três estados da RN-088 —
-  carregando, erro (com `trace_id`) e "nenhuma execução ativa" (RN-136)
+  carregando, erro (com `trace_id`) e "nenhuma execução ativa" (RN-139)
 - **api**: `ActivateExecutionUseCase` nunca fechava a sessão de CHAT que
   originou o pedido de ativação — ela ficava `active` para sempre, mesmo
   com a execução já correndo sozinha numa sessão SEPARADA. `execute()`

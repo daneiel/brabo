@@ -108,7 +108,7 @@ export function useLatestSession(projectId: string | undefined) {
 }
 
 /**
- * A sessão de execução VIGENTE do projeto (RN-136) — `null` quando não há
+ * A sessão de execução VIGENTE do projeto (RN-139) — `null` quando não há
  * nenhuma. NÃO é `useLatestSession`: aquela pega a sessão `createdAt` mais
  * recente do projeto, que só É a de execução por COINCIDÊNCIA — assim que
  * outra sessão nasce depois (uma ideação, um chat), `useLatestSession` passa

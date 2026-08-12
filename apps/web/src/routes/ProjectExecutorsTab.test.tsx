@@ -204,7 +204,7 @@ describe('ProjectExecutorsTab (FASE 27 — RN-121)', () => {
   });
 });
 
-describe('ProjectExecutorsTab — sessão de execução (RN-136)', () => {
+describe('ProjectExecutorsTab — sessão de execução (RN-139)', () => {
   it('mostra a sessão de execução vigente, mesmo com sessão mais recente existindo no projeto', async () => {
     // A aba não lista as sessões do projeto NEM escolhe a mais recente — ela
     // só confia no que `getActiveExecutionSession` devolve (o mesmo critério

@@ -110,7 +110,7 @@ página usa para o engine reportar término, mas disparado pela api, sem viagem
 nenhuma ao engine. Nenhuma rota nova, nenhuma mudança no contrato `engine → api`
 existente.
 
-`GET /projects/:projectId/execution/session` ([RN-136](../business-rules.md#rn-136))
+`GET /projects/:projectId/execution/session` ([RN-139](../business-rules.md#rn-139))
 é a mesma história ao contrário: expõe por HTTP externo uma leitura
 (`findActiveExecutionSession`) que já existia só dentro de
 `ActivateExecutionUseCase`. Nenhum caminho novo `engine → api`, nenhum efeito

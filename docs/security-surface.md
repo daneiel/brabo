@@ -209,7 +209,7 @@ o componente `d` da JWK, travado por teste.
   turno pendurado ali. Nunca fecha a sessão de execução que a própria chamada
   acabou de ativar.
 - **`GET /projects/:projectId/execution/session` é `role:viewer`, o mesmo
-  papel de `GET /sessions/:sessionId`** ([RN-136](business-rules.md#rn-136)).
+  papel de `GET /sessions/:sessionId`** ([RN-139](business-rules.md#rn-139)).
   Devolve a sessão de execução VIGENTE do projeto — `active` com
   `execution.activated` gravado — ou `null`; nunca a sessão mais recente do
   projeto, que é o que a aba Executores lia antes e que muda de sessão em

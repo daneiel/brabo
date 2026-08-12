@@ -1,6 +1,6 @@
 {
   "_": "Gerado por `pnpm docs:generate`. Não edite — é a trava do que está em docs/reference/api/.",
-  "openapiSha256": "5eca923e09828fd1be0ef9d10ae98a38a39acf85df8492995af5cf41810fd65f",
+  "openapiSha256": "d9f37f5b8e0cf479ba8d0859ec7f2197ce6552286bd46d3fc0cc405f2ee0b18a",
   "arquivos": {
     "actions-controller-approve-always.ParamsDetails.json": "f51f6d74f8b4a7e9c8f70cef93e0d026d63e77123672029da660c802def3ad0e",
     "actions-controller-approve-always.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
@@ -230,7 +230,7 @@
     "execution-controller-get-session.ParamsDetails.json": "f1cf321fa2c84a7ad647e71995c44bdb32efe0baf7ce03ee78703c9e1a2ea0e3",
     "execution-controller-get-session.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
     "execution-controller-get-session.StatusCodes.json": "e82dfd2b807439c9c2dd9cd011c66783f99891969bdd5837fd8cf44e57df8615",
-    "execution-controller-get-session.api.mdx": "f598aa318c610a90ec5b245fa9bafc1e03e9e6b659862d3565a4bec7edb33851",
+    "execution-controller-get-session.api.mdx": "5b5b37932083c3e8b366d2e6f4c9e3958635af6a427916c6b38945d4dc5715c9",
     "execution-controller-list-areas.ParamsDetails.json": "f1cf321fa2c84a7ad647e71995c44bdb32efe0baf7ce03ee78703c9e1a2ea0e3",
     "execution-controller-list-areas.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
     "execution-controller-list-areas.StatusCodes.json": "ad30202bf59902dfd0b5bc6ae430ee97453527d4a3735275e7a9db3a67765277",

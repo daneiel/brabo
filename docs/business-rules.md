@@ -4407,7 +4407,7 @@ não módulo por módulo:
 - **Origem:** RN-059 (regra que esta estende) — achado ao vivo numa sessão de
   execução real com dev agents
 
-### RN-136 — A aba Executores lê a sessão de execução VIGENTE, nunca a mais recente do projeto {#rn-136}
+### RN-139 — A aba Executores lê a sessão de execução VIGENTE, nunca a mais recente do projeto {#rn-139}
 
 `ProjectExecutorsTab` buscava os eventos de dev agent/QA pela sessão que
 `useLatestSession` devolvia — a de `createdAt` mais recente do projeto, sem
