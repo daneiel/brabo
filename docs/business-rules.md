@@ -4667,6 +4667,49 @@ o MESMO critério por HTTP, em vez de duplicá-lo no front:
   classe de defeito que a RN-088 fechou para 429, agora para "qual sessão a
   tela está olhando"
 
+### RN-141 — O conteúdo lido por `read_file` também tem teto de bytes {#rn-141}
+
+A [RN-074](#rn-074) travou a saída do **terminal** contra
+`{413, "request entity too large"}`, mas deixou aberta a mesma porta pelo
+`read_file`: ele lia o arquivo INTEIRO, sem teto, e esse conteúdo entrava no
+histórico do laço e viajava em todo turno seguinte. Um PR com arquivo grande
+(lockfile, bundle, arquivo gerado) bastava pra travar dev agents E o QA de
+Performance/Segurança — que só tem `ReadFile`/`SearchWorkspace` (sem
+`Terminal`, de propósito) pra investigar uma PR, então não tinha rota de
+escape nenhuma quando o arquivo era grande demais.
+
+O conteúdo é cortado em `READ_FILE_MAX_BYTES` (default 32 KiB, mesmo valor da
+RN-074 por coincidência de contexto, não por acoplamento — as duas variáveis
+são independentes) antes de virar resultado da ferramenta, com marca dizendo
+o arquivo e os dois tamanhos:
+
+```
+[arquivo package-lock.json truncado: mostrando 32768 de 1048576 bytes. Use
+search_workspace para localizar um trecho específico em vez de reler o
+arquivo inteiro.]
+```
+
+Mesmas três propriedades da RN-074 (teto é `>` não `>=`; corte não parte
+caractere multibyte; a marca é endereçada ao modelo, dizendo o que fazer). A
+truncagem mora na FERRAMENTA (`Engine.Harness.Tools.ReadFile`), não em
+`Engine.Harness.WorkspaceFiles.read_file/2` — essa é a base genérica de
+acesso a arquivo, compartilhada por `write_file`/`search_workspace`, e
+truncar ali cortaria conteúdo de quem não precisa desse teto.
+
+`search_workspace` não teve o mesmo tratamento: ele devolve só os PATHS que
+bateram (`matched_content` é booleano), nunca o conteúdo do arquivo — o vetor
+de estouro que motivou esta RN não se aplica a ele.
+
+- **Onde:** `apps/engine/lib/engine/harness/tools/read_file.ex`
+  (`truncate/2`), teto em `apps/engine/config/runtime.exs`
+  (`read_file_max_bytes`)
+- **Teste:** `apps/engine/test/engine/harness/tools/read_file_test.exs`
+  (describe `teto de bytes do conteúdo`)
+- **Origem:** achado ao vivo no event log de uma execução real — os 4 dev
+  agents de um projeto e os QA de Automação/Performance-Segurança bloqueados
+  com `{413, "request entity too large"}`, mesma causa raiz da RN-074, porta
+  diferente
+
 ### RN-144 — A aba Criativo não lista a sessão de execução vigente {#rn-144}
 
 A sessão que recebe `execution.activated` e os eventos de tool-call dos dev

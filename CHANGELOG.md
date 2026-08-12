@@ -321,6 +321,16 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   mesmo bug que `handleSend` já corrigira ganhando uma rede de segurança
   equivalente: chamar `finalizarTurnoDoAgente()` assim que
   `confirmReadiness` resolve, independente do canal
+- **engine**: `read_file` lia o arquivo INTEIRO, sem teto de bytes — a
+  RN-074 travou a saída do terminal contra `{413, "request entity too
+  large"}`, mas deixava essa porta aberta. Confirmado ao vivo no event log
+  de uma execução real: os 4 dev agents de um projeto e os QA de
+  Automação/Performance-Segurança bloqueados com o mesmo `413`, e sem
+  saída pro QA de Performance/Segurança — que só tem `ReadFile`/
+  `SearchWorkspace` (sem `Terminal`, de propósito) pra investigar uma PR
+  com arquivo grande (lockfile, bundle, gerado). O conteúdo agora corta em
+  `READ_FILE_MAX_BYTES` (default 32 KiB), com marca dizendo o arquivo e os
+  dois tamanhos (RN-141)
 
 ### Correções
 

@@ -208,6 +208,7 @@ possível sem downtime ([RN-035](../business-rules.md#rn-035)).
 | `LLM_TURN_TIMEOUT_MS` | `300000` | 5 min por turno |
 | `TERMINAL_ACTION_TIMEOUT_MS` | `15000` | teto de um comando de terminal |
 | `TERMINAL_OUTPUT_MAX_BYTES` | `32768` | teto de BYTES da saída de um comando ([RN-074](../business-rules.md#rn-074)). A saída fica no histórico do laço e viaja em todo turno seguinte; sem teto, um `find` numa árvore grande derruba a execução inteira com `413` do provider |
+| `READ_FILE_MAX_BYTES` | `32768` | teto de BYTES do conteúdo lido por `read_file` ([RN-141](../business-rules.md#rn-141)) — mesma classe de estouro da RN-074, pela porta do `read_file` em vez do terminal; variável independente, mesmo valor por coincidência de contexto |
 | `SECOPS_SCAN_TIMEOUT_MS` | `180000` | 3 min para o scanner do SecOps |
 
 ### Psicólogo
@@ -343,7 +344,7 @@ que uma variável nova não fique documentada em lugar nenhum sem ninguém notar
 
 > ⚠️ Bloco gerado por `pnpm docs:generate`. Não edite à mão — o próximo build sobrescreve.
 
-Inventário extraído do código: **101 variáveis** lidas em tempo de execução. Todas têm descrição nas tabelas acima.
+Inventário extraído do código: **102 variáveis** lidas em tempo de execução. Todas têm descrição nas tabelas acima.
 
 **api** — 42 variáveis
 
@@ -390,7 +391,7 @@ Inventário extraído do código: **101 variáveis** lidas em tempo de execuçã
 - `RATE_LIMIT_WINDOW_MS` <sub>(apps/api/src/infrastructure/observability/domain-gauges.collector.ts)</sub>
 - `WEB_ORIGIN` <sub>(apps/api/src/infrastructure/security/cors-origins.ts)</sub>
 
-**engine** — 55 variáveis
+**engine** — 56 variáveis
 
 - `ANAMNESE_BUDGET_MICROS` <sub>(apps/engine/config/runtime.exs)</sub>
 - `ANAMNESE_ENABLED` <sub>(apps/engine/config/runtime.exs)</sub>
@@ -431,6 +432,7 @@ Inventário extraído do código: **101 variáveis** lidas em tempo de execuçã
 - `PSYCHOLOGIST_MAX_PROMPT_EVENTS_LEVE` <sub>(apps/engine/config/runtime.exs)</sub>
 - `PSYCHOLOGIST_MAX_PROMPT_EVENTS_PESADA` <sub>(apps/engine/config/runtime.exs)</sub>
 - `PSYCHOLOGIST_TRIAGE_THRESHOLD` <sub>(apps/engine/config/runtime.exs)</sub>
+- `READ_FILE_MAX_BYTES` <sub>(apps/engine/config/runtime.exs)</sub>
 - `SECOPS_SCAN_TIMEOUT_MS` <sub>(apps/engine/config/runtime.exs)</sub>
 - `SECRET_KEY_BASE` <sub>(apps/engine/config/runtime.exs)</sub>
 - `SESSION_HEARTBEAT_TIMEOUT_MS` <sub>(apps/engine/config/runtime.exs)</sub>
