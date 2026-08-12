@@ -183,6 +183,13 @@ export function SessionPage({
   // chegou ainda pra este turno. `null` assim que o primeiro delta chega (o
   // bloco de streaming já cobre) ou o turno termina.
   const [statusAgent, setStatusAgent] = useState<string | null>(null);
+  // Indicador de "pensando" (bolha com os 3 pontinhos, RN-129) — só liga
+  // depois de 5s SEM nenhum texto chegar, e não no instante em que o turno
+  // começa. Antes ele piscava em toda mensagem, mesmo nas que respondiam em
+  // menos de um segundo — ruído visual pra maioria dos turnos, que é o efeito
+  // contrário do que um indicador de espera deveria ter. Ver o efeito que
+  // arma/desarma o timer, logo abaixo de `agenteExibido`.
+  const [pensandoVisivel, setPensandoVisivel] = useState(false);
   const [optimisticUser, setOptimisticUser] = useState<string | null>(null);
   // Renomear (RN-098). `null` fora de edição — e não string vazia — porque
   // vazio é um nome que se está digitando, e nenhum campo aberto é outro
@@ -412,14 +419,35 @@ export function SessionPage({
     agenteFalando ??
     (statusAgent ? AGENTS[statusAgent as keyof typeof AGENTS] : undefined);
 
-  // A CONVERSA começou? (achado G) — e não "o fio está vazio", que era a
-  // condição anterior. Num projeto CRIADO o fio já nasce com os cards do
-  // bootstrap, então o convite do Criativo nunca aparecia justamente para quem
-  // mais precisa dele: quem acabou de provisionar um repositório e não sabe
-  // que a vez é sua. Card de bootstrap não é conversa.
-  const conversaComecou = events.some(
-    (e) => e.type === 'chat.message' || e.type === 'agent.response',
-  );
+  // Arma/desarma o timer de 5s do indicador de "pensando" (RN-129). Só conta
+  // o tempo enquanto há turno em curso (`streaming`/`statusAgent`) E nenhum
+  // texto chegou ainda — os dois viram `false` de novo assim que qualquer um
+  // dos dois deixa de valer: texto chegando (streaming REAL não espera nada,
+  // aparece na hora) ou o turno terminando antes dos 5s (a resposta foi
+  // rápida, e o indicador nunca deveria ter existido). O timer é cancelado no
+  // cleanup do próprio efeito sempre que uma dessas dependências muda, então
+  // nunca liga `pensandoVisivel` depois do fato.
+  useEffect(() => {
+    if (!(streaming || statusAgent) || streamingText) {
+      setPensandoVisivel(false);
+      return;
+    }
+    const timer = setTimeout(() => setPensandoVisivel(true), 5000);
+    return () => clearTimeout(timer);
+  }, [streaming, statusAgent, streamingText]);
+
+  // A CONVERSA começou? (achado G, revisto por investigação AO VIVO — RN-129)
+  // O critério ERA "existe `chat.message`/`agent.response`", pra não confundir
+  // os cards do bootstrap do git com conversa — mas isso tinha o efeito
+  // contrário do pretendido: uma sessão criada pelo `git-bootstrap` (5 ações
+  // de commit/branch já aprovadas, ZERO chat.message) continuava com o
+  // convite por cima, e o mesmo acontecia — pior — na sessão que a ativação
+  // de execução usa, com dezenas de eventos reais (`tool.call`, `tool.result`,
+  // eventos de task) e nenhum `chat.message`/`agent.response`: o convite
+  // cobria o histórico de execução inteiro. A pergunta certa não é "existe
+  // MENSAGEM", é "esta sessão tem QUALQUER evento" — sessão nova é a única
+  // que não tem nenhum.
+  const conversaComecou = events.length > 0;
 
   // A prontidão já foi declarada? (achado L) O handoff que sai do Criativo é a
   // consequência dela — existindo, o botão não tem mais o que oferecer.
@@ -834,6 +862,18 @@ export function SessionPage({
       setStreamingText('');
       await confirmReadiness(projectId, sessionId);
       // O product_brief + handoff chegam via o canal (agent.done) + poll.
+      //
+      // Rede de segurança (RN-129), espelhando `handleSend` (ver o comentário
+      // lá): `confirmReadiness` também é um `GenServer.call` síncrono no
+      // engine (até 120s), e o canal Phoenix pode não ter terminado de
+      // conectar (ticket + join, RN-108) quando o turno acaba — o broadcast
+      // de `agent.done` se perde e, sem isto, a bolha do agente ficava presa
+      // vazia pra sempre, já que só `onAgentDone` resetava
+      // `streaming`/`streamingText`/`statusAgent` no caminho de sucesso.
+      // Resolver esta chamada é sinal de fim de turno tão confiável quanto
+      // `agent.done`, e `finalizarTurnoDoAgente` é idempotente — chamar de
+      // novo quando o canal também entrega o evento não tem efeito.
+      finalizarTurnoDoAgente();
     } catch {
       setStreaming(false);
       showToast({ title: 'Erro', message: 'Não foi possível confirmar prontidão', tone: 'danger' });
@@ -1043,8 +1083,15 @@ export function SessionPage({
   // variável na FASE 24 porque a topbar passou a DEPENDER dele: as duas
   // condições precisam ser a mesma pergunta, ou "Iniciar ideação" aparece
   // duas vezes — ou nenhuma.
+  //
+  // `!eventsQuery.isPending` (RN-129) fecha uma race de carregamento: em
+  // cache frio (reload de página), `session` pode chegar enquanto `events`
+  // ainda é `[]` — o default de `eventsQuery.data?.items`, indistinguível de
+  // "sessão realmente vazia" até o primeiro fetch resolver. Sem este gate, o
+  // convite pisca por cima de uma sessão com histórico grande até os eventos
+  // chegarem.
   const conviteVisivel =
-    !conversaComecou && !optimisticUser && !streaming && !!session;
+    !conversaComecou && !optimisticUser && !streaming && !!session && !eventsQuery.isPending;
   const metaDaSessao = [
     project?.name ?? '…',
     hashtag,
@@ -1315,8 +1362,14 @@ export function SessionPage({
                   um handoff cujo kickoff é assíncrono no engine não mostrava
                   nada até o agente terminar de pensar. Reaproveita o MESMO
                   indicador do streaming por delta; `agenteExibido` escolhe a
-                  fonte mais recente entre os dois. */}
-              {(streaming || statusAgent) && (
+                  fonte mais recente entre os dois.
+
+                  RN-129: a bolha só aparece SEM texto depois de 5s
+                  (`pensandoVisivel`, armado pelo efeito acima) — texto de
+                  verdade (`streamingText`) sempre aparece na hora, nunca
+                  espera o timer. É por isso que a condição é "tem texto OU
+                  já passou o prazo", nunca só "tem texto". */}
+              {(streamingText || (pensandoVisivel && (streaming || statusAgent))) && (
                 <div
                   className={styles.message}
                   style={
