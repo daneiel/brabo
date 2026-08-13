@@ -440,6 +440,12 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   estrutura de árvore (ramo por agente, marco por linha) e o comportamento
   de expandir/colapsar não mudam
 
+### Correções
+
+- **web**: Timeline da sessão: ordenação de cards de aprovação misturados
+  com eventos (RN-155), texto do indicador de espera de 5s (RN-156), e
+  formato de aviso da criação de épico/história pelo PO (RN-157)
+
 ## v2.5.1 — 2026-08-08
 
 ### Correções

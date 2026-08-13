@@ -5281,6 +5281,60 @@ nova — só o suficiente pra não ter onde a curinga furar.
 - **Origem:** restrição de design confirmada pelo usuário ao pedir o "auto
   mode" — os três tetos são a garantia que não pode regredir
 
+### RN-155 — ordenação da timeline usa o vínculo `proposed_action.created`, nunca `action.seq` cru {#rn-155}
+
+A `timeline` de `SessionPage.tsx` ordena eventos e ações propostas por um
+único eixo numérico comparável. Para eventos, é `event.seq` (gapless, por
+sessão). Para ações, é o `seq` do evento `proposed_action.created` correlato
+(achado por `payload.actionId === action.id`, gravado por
+`ProposeActionUseCase` na MESMA transação que cria a ação) — nunca
+`action.seq`, que é `bigserial` único e global de toda a tabela
+`proposed_actions`, compartilhado por todas as sessões e projetos do
+sistema, e portanto incomparável com `event.seq` (contraste deliberado, ver
+`apps/api/src/db/schema.ts`). Comparar os dois direto produzia ordem
+imprevisível toda vez que um `ApprovalCard` entrava na mistura com eventos
+normais. Ações sem esse vínculo (só o bootstrap de Gitflow —
+`git_repo_create`/`git_branch_create`, que gravam apenas outbox) degradam
+para uma posição interpolada por `createdAt`, ancorada no último evento
+anterior.
+
+- **Onde:** `apps/web/src/routes/SessionPage.tsx` (`ordemDaAcaoNaTimeline`)
+- **Teste:** `apps/web/src/routes/SessionPage.ordenacao-e-avisos.test.tsx`
+- **Origem:** achado de PR #286 — cards de aprovação apareciam fora de ordem
+  na timeline, misturados com eventos normais
+
+### RN-156 — indicador de espera de 5s tem texto fixo, sem interpolar o agente {#rn-156}
+
+O indicador que aparece depois de 5s sem resposta (`pensandoVisivel`) mostra
+a frase fixa "Reunindo informações...", sem o nome do agente interpolado —
+substitui o texto anterior "{Agente} está escrevendo…". O nome do agente já
+é visível no cabeçalho assim que o streaming de texto real começa; repeti-lo
+no indicador de espera não ajudava a leitura.
+
+- **Onde:** `apps/web/src/routes/SessionPage.tsx`
+- **Teste:** `apps/web/src/routes/SessionPage.pista-e-status.test.tsx`,
+  `apps/web/src/routes/SessionPage.ordenacao-e-avisos.test.tsx`
+- **Origem:** achado de PR #286 — o texto anterior nomeava um agente que já
+  estava visível no cabeçalho
+
+### RN-157 — criação de épico/história pelo PO vira aviso compacto, não bolha completa {#rn-157}
+
+Os eventos `backlog.epic_created`/`backlog.story_created` deixam de
+renderizar como bolha completa de mensagem (`.message`/`.bubble`, avatar de
+32px — o mesmo peso visual de uma resposta de agente de verdade) e passam a
+usar o mesmo formato de aviso compacto que `.handoffDivider`/`.handoffPill`
+já usa para a passagem de bastão: linha centralizada com filete horizontal e
+pílula compacta, mantendo o link "Ver no Backlog". `agentId` continua
+populado no `TimelineEntry` — ao contrário do divisor de handoff, isto não
+marca uma transição entre agentes, é uma ação do PO dentro do próprio turno
+dele, e segue elegível ao colapso por agente ([RN-138](#rn-138)).
+
+- **Onde:** `apps/web/src/routes/SessionPage.tsx`
+- **Teste:** `apps/web/src/routes/SessionPage.handoff-inline-e-links.test.tsx`,
+  `apps/web/src/routes/SessionPage.ordenacao-e-avisos.test.tsx`
+- **Origem:** achado de PR #286 — a bolha completa tinha peso visual igual a
+  uma resposta de agente de verdade, para uma ação de metadado do PO
+
 ---
 
 ## Quando dá errado
