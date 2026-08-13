@@ -508,6 +508,71 @@
   max-width: 48ch;
 }
 
+/* Formulário de `chat.structured_question` (RN-162) — mesmo miolo do
+   `.handoffCard`, mas alinhado à esquerda (é um formulário, não uma
+   confirmação) e sem o realce de sucesso: perguntar não é uma decisão do
+   usuário aprovar/negar. */
+.structuredQuestionCard {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 4px 0;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-1);
+  width: 100%;
+  max-width: 480px;
+}
+
+.structuredQuestionForm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.structuredQuestionField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.structuredQuestionFieldLabel {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+/* Estado somente-leitura, depois de enviado — pergunta e resposta lado a
+   lado, sem os campos de formulário. */
+.structuredQuestionAnswers {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  margin: 0;
+}
+
+.structuredQuestionAnswerRow {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.structuredQuestionAnswerRow dt {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.structuredQuestionAnswerRow dd {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
 /* Link que navega pra outra aba do projeto a partir do fio — o CTA pra
    Executores no card de handoff pro Dev Lead (RN-125) e o link pro Backlog
    no chip de épico/história criados pelo PO (RN-124). */

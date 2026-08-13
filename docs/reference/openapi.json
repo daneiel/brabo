@@ -6491,6 +6491,99 @@
         ]
       }
     },
+    "/projects/{projectId}/sessions/{sessionId}/agents/{agent}/structured-question/{questionSetId}/answer": {
+      "post": {
+        "description": "Grava `chat.structured_question_answered` e reenvia as respostas ao agente como uma mensagem normal. Um conjunto de perguntas só pode ser respondido uma vez.",
+        "operationId": "AgentsController_submitStructuredQuestionAnswer",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "agent",
+            "required": true,
+            "in": "path",
+            "description": "Slug do agente que fez as perguntas (e vai ler a resposta).",
+            "schema": {
+              "example": "criativo",
+              "type": "string"
+            }
+          },
+          {
+            "name": "questionSetId",
+            "required": true,
+            "in": "path",
+            "description": "Id do evento `chat.structured_question` respondido.",
+            "schema": {
+              "example": "01JC4Z0000EVENTO000000000001",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnswerStructuredQuestionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto, sessão ou handoff inexistente."
+          },
+          "409": {
+            "description": "Este conjunto de perguntas já foi respondido."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Responde a um conjunto de perguntas estruturadas do agente",
+        "tags": [
+          "agentes"
+        ]
+      }
+    },
     "/projects/{projectId}/sessions/{sessionId}/agents/{agentId}/rearm": {
       "post": {
         "description": "Zera o contador de tasks blocked consecutivas (RN-047) e devolve o agente a tentar reivindicar. É a única saída de `idle_tripped` — não existe destrave automático.",
@@ -9914,6 +10007,26 @@
           "hipotese",
           "sugestao",
           "confiancaPercent"
+        ]
+      },
+      "AnswerStructuredQuestionDto": {
+        "type": "object",
+        "properties": {
+          "answers": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "example": {
+              "nome": "Checkout Fácil",
+              "usuarios": "Lojistas de pequeno porte",
+              "plataforma": "Web"
+            },
+            "description": "Resposta por `id` de pergunta — o mesmo `id` que veio em `chat.structured_question`."
+          }
+        },
+        "required": [
+          "answers"
         ]
       },
       "AppendSessionEventDto": {

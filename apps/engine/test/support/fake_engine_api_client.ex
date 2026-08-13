@@ -28,7 +28,15 @@ defmodule Engine.Sessions.FakeEngineApiClient do
   @impl true
   def append_event(project_id, session_id, event) do
     notify({:event_appended, project_id, session_id, event})
-    :ok
+
+    # Erro scriptável via :fake_append_event_error — mesmo idioma de
+    # :fake_story_error e companhia. Existia caminho nenhum pra simular "a api
+    # recusou o append" antes de RN-162 precisar exercitar o `{:error, _}` de
+    # `EngineApiClient.append_event/3` dentro de um tool (AskStructuredQuestions).
+    case Process.get(:fake_append_event_error) do
+      nil -> :ok
+      reason -> {:error, reason}
+    end
   end
 
   @impl true

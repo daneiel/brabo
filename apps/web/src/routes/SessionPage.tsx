@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   acceptHandoff,
   activateExecution,
+  answerStructuredQuestion,
   approveAction,
   approveAlwaysAction,
   cancelAgentTurn,
@@ -37,6 +38,9 @@ import {
   type ProposedAction,
   type SessionEvent,
   type SessionStatus,
+  type StructuredQuestion,
+  type StructuredQuestionAnsweredPayload,
+  type StructuredQuestionPayload,
 } from '../lib/api-types';
 import { useToast } from '../components/ui/ToastProvider';
 import { TokenMeter } from '../components/TokenMeter';
@@ -50,7 +54,9 @@ import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Carousel, type CarouselSlide } from '../components/ui/Carousel';
 import { Disclosure } from '../components/ui/Disclosure';
+import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
+import { Select } from '../components/ui/Select';
 import { Textarea } from '../components/ui/Textarea';
 import { lerFalhaDeTurno } from '../lib/session-falha';
 import {
@@ -63,6 +69,7 @@ import {
   AlertCircleIcon,
   ArrowLeftIcon,
   BulbIcon,
+  ChatIcon,
   ChevronRightIcon,
   LayoutSidebarIcon,
   ModelIcon,
@@ -270,6 +277,155 @@ function StorySlide({
         Ver no Backlog
         <ChevronRightIcon size={11} />
       </Link>
+    </div>
+  );
+}
+
+/**
+ * Card de `chat.structured_question` (RN-162) — o formulário que o Criativo
+ * pede quando faz VÁRIAS perguntas de uma vez, em vez de texto livre que o
+ * usuário responderia item por item. `type` decide o input: `text`→`Input`,
+ * `textarea`→`Textarea`, `select`→`Select` com `options`.
+ *
+ * Depois de enviado, o card vira SOMENTE LEITURA (`respondida`, derivado de
+ * existir um `chat.structured_question_answered` posterior com o mesmo
+ * `questionSetId` — o mesmo padrão de "resolvida" que o card de promoção de
+ * história já usa) — reenviar não é possível, nem tentando de novo: o
+ * backend recusa com 409 (`AnswerStructuredQuestionUseCase`), e aqui o
+ * formulário nem chega a aparecer.
+ */
+function StructuredQuestionCard({
+  projectId,
+  sessionId,
+  agent,
+  questionSetId,
+  questions,
+  respondida,
+  respostasExistentes,
+}: {
+  projectId: string;
+  sessionId: string;
+  agent: string;
+  questionSetId: string;
+  questions: StructuredQuestion[];
+  respondida: boolean;
+  respostasExistentes: Record<string, string> | undefined;
+}) {
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+  const [respostas, setRespostas] = useState<Record<string, string>>({});
+  const [enviando, setEnviando] = useState(false);
+
+  if (respondida) {
+    return (
+      <div className={styles.structuredQuestionCard}>
+        <span className={styles.handoffPill}>
+          <ChatIcon size={13} />
+          perguntas do {nomeDoAgente(agent)} — respondidas
+        </span>
+        <dl className={styles.structuredQuestionAnswers}>
+          {questions.map((q) => (
+            <div key={q.id} className={styles.structuredQuestionAnswerRow}>
+              <dt>{q.label}</dt>
+              <dd>{respostasExistentes?.[q.id] ?? '—'}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+    );
+  }
+
+  const completo = questions.every((q) => (respostas[q.id] ?? '').trim() !== '');
+
+  async function handleSubmit() {
+    if (enviando || !completo) return;
+    setEnviando(true);
+    try {
+      await answerStructuredQuestion(projectId, sessionId, agent, questionSetId, respostas);
+      await queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
+      showToast({ title: 'Respostas enviadas', tone: 'success' });
+    } catch (erro) {
+      showToast({
+        title: mensagemDaApi(erro, 'Não foi possível enviar as respostas'),
+        tone: 'danger',
+      });
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  return (
+    <div className={styles.structuredQuestionCard}>
+      <span className={styles.handoffPill}>
+        <ChatIcon size={13} />
+        perguntas do {nomeDoAgente(agent)}
+      </span>
+      <div className={styles.structuredQuestionForm}>
+        {questions.map((q) => {
+          const value = respostas[q.id] ?? '';
+          const atualizar = (v: string) =>
+            setRespostas((atual) => ({ ...atual, [q.id]: v }));
+
+          if (q.type === 'textarea') {
+            return (
+              <Textarea
+                key={q.id}
+                label={q.label}
+                value={value}
+                disabled={enviando}
+                onChange={(e) => atualizar(e.target.value)}
+              />
+            );
+          }
+
+          if (q.type === 'select') {
+            // `htmlFor`/`id` explícitos: `Select` (design system) não tem a
+            // prop `label` que `Input`/`Textarea` têm — sem a associação, um
+            // leitor de tela não liga a pergunta ao campo.
+            const selectId = `sq-${questionSetId}-${q.id}`;
+            return (
+              <div key={q.id} className={styles.structuredQuestionField}>
+                <label className={styles.structuredQuestionFieldLabel} htmlFor={selectId}>
+                  {q.label}
+                </label>
+                <Select
+                  id={selectId}
+                  value={value}
+                  disabled={enviando}
+                  onChange={(e) => atualizar(e.target.value)}
+                >
+                  <option value="" disabled>
+                    Selecione
+                  </option>
+                  {q.options.map((opcao) => (
+                    <option key={opcao} value={opcao}>
+                      {opcao}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            );
+          }
+
+          return (
+            <Input
+              key={q.id}
+              label={q.label}
+              value={value}
+              disabled={enviando}
+              onChange={(e) => atualizar(e.target.value)}
+            />
+          );
+        })}
+      </div>
+      <Button
+        variant="success"
+        loading={enviando}
+        disabled={!completo || enviando}
+        onClick={handleSubmit}
+      >
+        Enviar respostas
+      </Button>
     </div>
   );
 }
@@ -758,6 +914,43 @@ export function SessionPage({
                 <div className={styles.bubble}>{text}</div>
               </div>
             </div>
+          ),
+        });
+      } else if (event.type === 'chat.structured_question') {
+        // RN-162: o Criativo pediu várias respostas de uma vez, num
+        // formulário. "respondida" é derivada de existir um
+        // `chat.structured_question_answered` posterior referenciando este
+        // MESMO evento por `questionSetId` — mesmo padrão de "resolvida" que
+        // `backlog.story_promotion_proposed` já usa. `chat.structured_
+        // question_answered` não vira um item PRÓPRIO na timeline: as
+        // respostas aparecem aqui, no card que virou somente leitura.
+        const payload = event.payload as StructuredQuestionPayload;
+        const questions: StructuredQuestion[] = Array.isArray(payload?.questions)
+          ? payload.questions
+          : [];
+        const respostaEvento = events.find(
+          (e) =>
+            e.type === 'chat.structured_question_answered' &&
+            (e.payload as StructuredQuestionAnsweredPayload)?.questionSetId === event.id,
+        );
+        items.push({
+          seq: event.seq,
+          agentId: event.actor.kind === 'agent' ? event.actor.id : undefined,
+          node: (
+            <StructuredQuestionCard
+              key={event.id}
+              projectId={projectId}
+              sessionId={sessionId}
+              agent={event.actor.id}
+              questionSetId={event.id}
+              questions={questions}
+              respondida={!!respostaEvento}
+              respostasExistentes={
+                respostaEvento
+                  ? (respostaEvento.payload as StructuredQuestionAnsweredPayload).answers
+                  : undefined
+              }
+            />
           ),
         });
       } else if (event.type === 'handoff.offered') {
