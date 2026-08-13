@@ -96,6 +96,18 @@ config :engine,
   # PRÓPRIA, não a mesma var de terminal_output_max_bytes: hoje coincide em
   # valor, não em acoplamento. Ver Engine.Harness.Tools.ReadFile.truncate/2.
   read_file_max_bytes: String.to_integer(System.get_env("READ_FILE_MAX_BYTES", "32768")),
+  # Teto de BYTES do texto final devolvido por search_workspace — mesmo
+  # incidente do achado S, pela porta da busca. Const PRÓPRIA, não reaproveita
+  # read_file_max_bytes/terminal_output_max_bytes: mesma classe de estouro,
+  # variável independente. Ver Engine.Harness.Tools.SearchWorkspace.truncate/3.
+  search_workspace_max_bytes:
+    String.to_integer(System.get_env("SEARCH_WORKSPACE_MAX_BYTES", "32768")),
+  # Teto de QUANTIDADE de hits que search_workspace coleta antes de montar a
+  # resposta — uma árvore com milhares de arquivos batendo o termo pagaria o
+  # I/O de ler o conteúdo de cada um deles antes mesmo de existir uma string
+  # pra truncar por bytes. Ver Engine.Harness.WorkspaceFiles.search/3.
+  search_workspace_max_hits:
+    String.to_integer(System.get_env("SEARCH_WORKSPACE_MAX_HITS", "500")),
   # Teto por scanner de segurança (gitleaks/semgrep) nos gates de SecOps.
   # Bem mais folgado que o terminal: o semgrep varre a árvore inteira e pode
   # baixar regras da rede (`--config auto`). Sem esse teto, um scanner

@@ -60,28 +60,67 @@ defmodule Engine.Harness.WorkspaceFiles do
   @doc """
   Busca `query` (substring, case-insensitive) nos NOMES e no CONTEÚDO dos
   arquivos dentro de `dir`. Walk recursivo pulando `.git`. Retorna lista de
-  `%{path, matched_name, matched_content}` (paths relativos a `dir`).
+  `%{path, matched_name, matched_content}` (paths relativos a `dir`), sem
+  teto — equivalente a `search/3` com `max_hits: nil`.
   """
-  def search(dir, query) do
+  def search(dir, query), do: dir |> search(query, []) |> elem(0)
+
+  @doc """
+  Mesma busca de `search/2`, com `opts[:max_hits]` opcional (inteiro ou
+  `nil`, o default). Retorna `{hits, truncated?}`.
+
+  Quando `max_hits` é um inteiro, a coleta PARA assim que encontra o
+  `max_hits`-ésimo hit — não só a lista devolvida fica menor, o WALK deixa de
+  LER O CONTEÚDO dos arquivos restantes (achado da revisão de PR: uma árvore
+  com milhares de arquivos batendo o termo pagava o I/O de ler cada um deles
+  antes mesmo de montar a string de resposta). Isso é possível porque o
+  pipeline de match roda sobre um `Stream` — `Enum.take/2` sobre stream só
+  consome da fonte o que precisa pra produzir os `max_hits + 1` primeiros
+  elementos, e o "+1" é o que permite dizer SE havia mais sem continuar
+  escaneando o resto pra contar o total exato (que custaria de novo o
+  I/O que o teto existe pra evitar).
+
+  O walk de DIRETÓRIOS (listar entradas, sem ler conteúdo) continua sendo
+  eager — é `File.ls/1` recursivo, ordem de grandeza mais barato que ler
+  bytes de arquivo, e não vale a complexidade de tornar `walk/1` lazy só
+  por isso.
+  """
+  def search(dir, query, opts) do
     needle = String.downcase(query)
+    max_hits = Keyword.get(opts, :max_hits)
 
-    dir
-    |> walk()
-    |> Enum.map(fn abs ->
-      rel = Path.relative_to(abs, dir)
-      content = File.read(abs)
+    matches =
+      dir
+      |> walk()
+      |> Stream.map(&match(&1, dir, needle))
+      |> Stream.filter(& &1)
 
-      matched_name = String.contains?(String.downcase(rel), needle)
+    case max_hits do
+      nil -> {Enum.to_list(matches), false}
+      n when is_integer(n) and n > 0 -> take_capped(matches, n)
+    end
+  end
 
-      matched_content =
-        case content do
-          {:ok, bin} -> String.valid?(bin) and String.contains?(String.downcase(bin), needle)
-          _ -> false
-        end
+  defp match(abs, dir, needle) do
+    rel = Path.relative_to(abs, dir)
+    matched_name = String.contains?(String.downcase(rel), needle)
 
+    matched_content =
+      case File.read(abs) do
+        {:ok, bin} -> String.valid?(bin) and String.contains?(String.downcase(bin), needle)
+        _ -> false
+      end
+
+    if matched_name or matched_content do
       %{path: rel, matched_name: matched_name, matched_content: matched_content}
-    end)
-    |> Enum.filter(&(&1.matched_name or &1.matched_content))
+    end
+  end
+
+  defp take_capped(matches_stream, max_hits) do
+    case Enum.take(matches_stream, max_hits + 1) do
+      hits when length(hits) > max_hits -> {Enum.take(hits, max_hits), true}
+      hits -> {hits, false}
+    end
   end
 
   # Walk recursivo de arquivos regulares (pula .git), mesmo padrão do
