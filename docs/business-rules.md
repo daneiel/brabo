@@ -5335,6 +5335,72 @@ dele, e segue elegível ao colapso por agente ([RN-138](#rn-138)).
 - **Origem:** achado de PR #286 — a bolha completa tinha peso visual igual a
   uma resposta de agente de verdade, para uma ação de metadado do PO
 
+### RN-158 — Markdown leve com highlight no chat {#rn-158}
+
+`agent.response` no fio da Sessão renderiza um subconjunto de Markdown
+(negrito `**texto**`, itálico `*texto*`/`_texto_`, código inline
+`` `texto` ``, cabeçalho `#`/`##`/`###`, lista `-`/`1.`, link
+`[texto](url)` e fence de código ```` ```linguagem ````), via parser
+próprio por regex (`apps/web/src/lib/markdown.ts`), sem dependência nova.
+`chat.message` (texto digitado pelo usuário) permanece literal — Markdown
+só se aplica à SAÍDA de um agente/LLM, nunca à entrada humana.
+
+Segurança: o parser nunca produz HTML — devolve uma árvore de dados que
+`MarkdownMessage.tsx` converte em elementos React diretamente (nunca
+`dangerouslySetInnerHTML`). Um link só vira `<a href>` clicável quando o
+esquema da URL é `http`, `https` ou relativo (`/...`, `#...`); qualquer
+outro esquema (`javascript:`, `data:`, etc.) degrada para o texto do link,
+nunca para um `href` executável.
+
+Código dentro de um fence ganha realce por token, reusando
+`highlightLine`/`highlightFile` de `apps/web/src/routes/code/highlight.ts`
+— a mesma função que já colore a aba Code. `sh`/`bash` ganharam
+vocabulário próprio de palavras-chave de shell (antes só tinham o
+comentário de linha `#` mapeado e caíam no fallback de JS). Fences
+```` ```sh ````/```` ```bash ```` ganham a estética visual de terminal
+(prompt `$` por linha de comando), consistente com o `$ comando` que
+`ApprovalCard` já usa para a ação `terminal`.
+
+- **Onde:** `apps/web/src/lib/markdown.ts`,
+  `apps/web/src/components/ui/MarkdownMessage.tsx`,
+  `apps/web/src/routes/code/highlight.ts`
+- **Teste:** `apps/web/src/lib/markdown.test.ts`,
+  `apps/web/src/components/ui/MarkdownMessage.test.tsx`,
+  `apps/web/src/routes/code/highlight.test.ts`,
+  `apps/web/src/routes/SessionPage.markdown-resposta.test.tsx`
+- **Origem:** PR #288 — respostas de agente com listas, código e links
+  chegavam como texto cru no fio, sem estrutura nenhuma
+
+### RN-159 — Artefatos Gerados agrupados por agente {#rn-159}
+
+O painel "Artefatos gerados" da Sessão (`ContextAside` em
+`SessionPage.tsx`) lista PR de dev (`pr_open`), PR de ADR do Arquiteto
+(`open_adr_pr`) e épico/história criados pelo PO
+(`backlog.epic_created`/`backlog.story_created`), agrupados por
+`agentId` — quem gerou cada artefato — com o mesmo padrão de
+`Disclosure` colapsável da [RN-138](#rn-138) (nome do agente + contagem,
+expansível pro título de cada artefato).
+
+Cada artefato navega pro lugar onde ele vive: PR (dev ou ADR) abre a URL
+real (`executionResult.pullRequestUrl`, mesmo campo que
+`ProjectOverviewTab.tsx` já lê para PR de ADR); épico/história navega
+para `/projects/:projectId?tab=backlog` (mesmo padrão `Link` já usado nos
+avisos compactos do PO no fio principal, [RN-124](#rn-124)/
+[RN-157](#rn-157)). PR ainda sem `pullRequestUrl` (execução pendente)
+aparece no painel sem virar link clicável.
+
+Fora de escopo, por decisão registrada em comentário no código
+(`ContextAside` em `SessionPage.tsx`): module_map/C4 — são estado
+VIGENTE do projeto (uma versão corrente, sobrescrita a cada geração), não
+um artefato datado por SESSÃO como PR/épico/história; a aba Visão Geral
+(`ProjectOverviewTab.tsx`) já é o lugar deles hoje, sem âncora própria —
+endereçar isso é fora do escopo desta entrega.
+
+- **Onde:** `apps/web/src/routes/SessionPage.tsx` (`ContextAside`)
+- **Teste:** `apps/web/src/routes/SessionPage.artefatos-gerados.test.tsx`
+- **Origem:** PR #288 — o painel não distinguia quem gerou cada artefato
+  nem cobria PR de ADR e épico/história, só PR de dev
+
 ---
 
 ## Quando dá errado

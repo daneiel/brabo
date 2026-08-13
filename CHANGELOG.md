@@ -6,6 +6,11 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **web**: Markdown leve (negrito, cabeçalho, lista, link, fence de código
+  com highlight) nas respostas dos agentes no chat da Sessão, e prompt de
+  terminal para blocos ```sh/```bash (RN-158).
+- **web**: painel "Artefatos gerados" da Sessão agora inclui PR de ADR e
+  épico/história do PO, agrupados por agente (RN-159).
 - **api,web**: aba Code — o dropdown de branches (`CodeBranchPicker`) mostra
   qual dev agent/módulo produziu cada branch de task
   (`feature/task-XXXXXXXX`), com ícone e cor do agente (RN-152) —
