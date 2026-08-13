@@ -159,6 +159,60 @@ function corDoAgente(id: string | undefined): CSSProperties {
 }
 
 /**
+ * Posição de uma `ProposedAction` na timeline (RN-155) — NUNCA `action.seq`
+ * cru. Ele é `bigserial` ÚNICO e GLOBAL da tabela `proposed_actions` inteira
+ * (contraste DELIBERADO com `session_events.seq`, documentado no próprio
+ * `apps/api/src/db/schema.ts`), compartilhado por TODAS as sessões e
+ * projetos do sistema — comparar os dois espaços numéricos direto (o que o
+ * código fazia antes) produzia ordem imprevisível toda vez que um
+ * `ApprovalCard` entrava na mistura com eventos normais: confirmado ao vivo,
+ * card de aprovação aparecendo antes do fim da resposta do agente, e
+ * mensagens de handoff/aprovação fora de ordem depois de handoffs.
+ *
+ * `ProposeActionUseCase` grava, na MESMA transação que cria a ação, um
+ * evento `proposed_action.created` no event log com `payload.actionId`
+ * apontando pra ela (`apps/api/.../actions/propose-action.use-case.ts`) — o
+ * `seq` DESSE evento é o eixo certo: gapless, por SESSÃO, o MESMO espaço
+ * numérico que todo o resto da timeline já usa. Empatar com o seq do evento
+ * que a originou é intencional: a ordenação de `Array.prototype.sort` é
+ * ESTÁVEL (garantida desde ES2019) e o código empurra os eventos pro array
+ * ANTES das ações, então o card sempre cai IMEDIATAMENTE DEPOIS do evento
+ * que o motivou, nunca antes nem misturado com outro turno.
+ *
+ * Duas rotas de criação (o bootstrap de Gitflow — `BootstrapRunner` e
+ * `ProvisionRepositoryUseCase`, para `git_repo_create`/`git_branch_create`
+ * etc.) gravam a ação sem esse evento — só outbox, que é transporte pro
+ * engine e não aparece aqui. Pra essas, degrada pra `createdAt`: ancora no
+ * último evento cujo `createdAt` não é depois do da ação (o único eixo que
+ * os dois lados têm em comum) — `+ 0.5` pra nunca empatar com o seq de um
+ * evento de verdade, o que preservaria a garantia de posição estrita só pra
+ * quem tem vínculo direto.
+ */
+export function ordemDaAcaoNaTimeline(
+  action: ProposedAction,
+  eventos: SessionEvent[],
+): number {
+  const eventoVinculado = eventos.find(
+    (e) =>
+      e.type === 'proposed_action.created' &&
+      (e.payload as { actionId?: unknown })?.actionId === action.id,
+  );
+  if (eventoVinculado) return eventoVinculado.seq;
+
+  const alvo = new Date(action.createdAt).getTime();
+  let ancoraSeq = 0;
+  let ancoraCreatedAt = -Infinity;
+  for (const e of eventos) {
+    const t = new Date(e.createdAt).getTime();
+    if (t <= alvo && t >= ancoraCreatedAt) {
+      ancoraCreatedAt = t;
+      ancoraSeq = e.seq;
+    }
+  }
+  return ancoraSeq + 0.5;
+}
+
+/**
  * Um slide do carrossel de histórias aguardando promoção (RN-148) — o mesmo
  * conteúdo do card avulso de `backlog.story_promotion_proposed` (RN-126),
  * sem a caixa em volta: quem dá a caixa é o `Carousel`.
@@ -760,41 +814,43 @@ export function SessionPage({
       ) {
         // O PO narra o que criou (RN-124) — sem isto, criar épico/história
         // não deixava rastro NENHUM no fio: só aparecia na aba Backlog, pra
-        // quem já soubesse ir olhar lá. Mesmo corpo de `.message`/`.bubble`
-        // das outras entradas do agente — só o conteúdo (título + link) é
-        // novo.
+        // quem já soubesse ir olhar lá.
+        //
+        // RN-157: virou AVISO COMPACTO, no mesmo formato de
+        // `.handoffDivider`/`.handoffPill` que a passagem de bastão já usa —
+        // não a bolha completa (`.message`/`.bubble`, avatar 32px, mesmo
+        // peso visual de uma resposta de agente de verdade). Criar um
+        // épico/história é uma notificação de que algo mudou EM OUTRO
+        // LUGAR (a aba Backlog), com um link pra lá — não uma fala do
+        // agente. `agentId` continua populado: ao contrário do divisor de
+        // handoff, isto não marca uma TRANSIÇÃO entre agentes, é uma ação
+        // do PO dentro do próprio turno dele, e segue elegível ao colapso
+        // por agente (RN-138).
         const payload = event.payload as { title?: unknown };
         const titulo = typeof payload?.title === 'string' ? payload.title : '(sem título)';
-        const rotuloDoTipo =
-          event.type === 'backlog.epic_created' ? 'Épico criado' : 'História criada';
+        const verbo =
+          event.type === 'backlog.epic_created' ? 'criou o épico' : 'criou a história';
         items.push({
           seq: event.seq,
           agentId: event.actor.kind === 'agent' ? event.actor.id : undefined,
           node: (
-            <div className={styles.message} key={event.id} style={corDoAgente(event.actor.id)}>
-              <span className={styles.avatar}>
-                <StackIcon size={15} />
+            <div className={styles.handoffDivider} key={event.id}>
+              <span className={styles.handoffPill}>
+                <StackIcon size={13} />
+                <span className={styles.handoffAgent} style={corDoAgente(event.actor.id)}>
+                  {nomeDoAgente(event.actor.id)}
+                </span>
+                {verbo} &quot;{titulo}&quot;
               </span>
-              <div className={styles.messageBody}>
-                <div className={styles.messageHeader}>
-                  <span className={styles.messageName}>{nomeDoAgente(event.actor.id)}</span>
-                  <span className={styles.messageMeta}>{rotuloDoTipo}</span>
-                </div>
-                <div className={styles.bubble}>
-                  {titulo}
-                  <div>
-                    <Link
-                      to="/projects/$projectId"
-                      params={{ projectId }}
-                      search={{ tab: 'backlog' }}
-                      className={styles.timelineLink}
-                    >
-                      Ver no Backlog
-                      <ChevronRightIcon size={11} />
-                    </Link>
-                  </div>
-                </div>
-              </div>
+              <Link
+                to="/projects/$projectId"
+                params={{ projectId }}
+                search={{ tab: 'backlog' }}
+                className={styles.timelineLink}
+              >
+                Ver no Backlog
+                <ChevronRightIcon size={11} />
+              </Link>
             </div>
           ),
         });
@@ -1041,7 +1097,9 @@ export function SessionPage({
 
     for (const action of actions) {
       items.push({
-        seq: action.seq,
+        // RN-155: NUNCA `action.seq` (bigserial global da tabela inteira,
+        // incomparável com `event.seq`) — ver `ordemDaAcaoNaTimeline`.
+        seq: ordemDaAcaoNaTimeline(action, events),
         agentId: action.actor.kind === 'agent' ? action.actor.id : undefined,
         // Sem `meta` com o modelo (achado I). O card recebia o modelo ATUAL da
         // sessão, então trocar o binding reescrevia retroativamente o rótulo de
@@ -1072,6 +1130,9 @@ export function SessionPage({
       });
     }
 
+    // Um único eixo numérico agora (RN-155): `event.seq` pros eventos, e a
+    // posição resolvida por `ordemDaAcaoNaTimeline` pras ações — nunca mais
+    // `action.seq` cru misturado com `event.seq`.
     return items.sort((a, b) => a.seq - b.seq);
   }, [
     events,
@@ -1873,14 +1934,17 @@ export function SessionPage({
                         Sem o agente no delta, degrada para "agente" genérico,
                         nunca para o nome do modelo.
 
-                        "está escrevendo…" só antes de haver texto — é o que
-                        deixa explícito que o silêncio é trabalho em curso, não
-                        ausência de resposta (achado B).
+                        RN-156: "Reunindo informações..." só antes de haver
+                        texto — é o que deixa explícito que o silêncio é
+                        trabalho em curso, não ausência de resposta (achado
+                        B). Frase fixa, sem o nome do agente interpolado: o
+                        nome já aparece no cabeçalho assim que o streaming
+                        real começa, e repeti-lo aqui não ajudava a leitura.
                       */}
                       <span className={styles.messageName}>
                         {streamingText
                           ? (agenteExibido?.name ?? 'agente')
-                          : `${agenteExibido?.name ?? 'Agente'} está escrevendo…`}
+                          : 'Reunindo informações...'}
                       </span>
                     </div>
                     {streamingText ? (

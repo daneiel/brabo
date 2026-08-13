@@ -332,8 +332,11 @@ describe('SessionPage — item 2: link do PO pras histórias criadas, direto pro
 
     montar();
 
-    expect(await screen.findByText('Épico criado')).toBeInTheDocument();
-    expect(screen.getByText('Autenticação de usuários')).toBeInTheDocument();
+    // RN-157: aviso COMPACTO (pill), não bolha grande — o verbo e o título
+    // vivem na mesma frase.
+    expect(
+      await screen.findByText('criou o épico "Autenticação de usuários"'),
+    ).toBeInTheDocument();
 
     const link = screen.getByRole('link', { name: /Ver no Backlog/ });
     expect(link).toHaveAttribute('href', '/projects/proj-1?tab=backlog');
@@ -361,8 +364,10 @@ describe('SessionPage — item 2: link do PO pras histórias criadas, direto pro
 
     montar();
 
-    expect(await screen.findByText('História criada')).toBeInTheDocument();
-    expect(screen.getByText('Login com e-mail e senha')).toBeInTheDocument();
+    // RN-157: mesmo formato compacto do épico, com o verbo próprio de história.
+    expect(
+      await screen.findByText('criou a história "Login com e-mail e senha"'),
+    ).toBeInTheDocument();
 
     const link = screen.getByRole('link', { name: /Ver no Backlog/ });
     expect(link).toHaveAttribute('href', '/projects/proj-1?tab=backlog');
