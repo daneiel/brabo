@@ -6,6 +6,10 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **engine,api,web**: o Criativo pode emitir perguntas estruturadas
+  (`ask_structured_questions`) quando faz várias perguntas de uma vez — o
+  usuário responde por um formulário em vez de texto livre item por item
+  (RN-162).
 - **web**: Markdown leve (negrito, cabeçalho, lista, link, fence de código
   com highlight) nas respostas dos agentes no chat da Sessão, e prompt de
   terminal para blocos ```sh/```bash (RN-158).
