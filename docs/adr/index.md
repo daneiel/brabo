@@ -3,7 +3,7 @@ id: adr-index
 title: Decisões arquiteturais (ADR)
 sidebar_label: Índice de ADRs
 sidebar_position: 0
-description: Os 63 registros de decisão arquitetural do Brabo, agrupados por fase, com o que cada um decidiu.
+description: Os 68 registros de decisão arquitetural do Brabo, agrupados por fase, com o que cada um decidiu.
 keywords: [ADR, decisão arquitetural, arquitetura, histórico]
 ---
 
