@@ -16,9 +16,13 @@ A autoridade final continua sendo sua — por construção, não por convenção
 
 ## O que é
 
-O Brabo orquestra agentes especializados — Criativo, PO, Arquiteto, devs por
-módulo, Infra, QA, SecOps, Psicólogo e Anamnese — trabalhando sobre um
+O Brabo orquestra agentes especializados — Criativo, PO, Arquiteto, Dev Lead e
+devs por módulo, Infra, QA, SecOps, Psicólogo e Anamnese — trabalhando sobre um
 repositório git real, com Gitflow provisionado automaticamente.
+
+Áreas (dev, QA, Infra) têm um **lead** como único endereço externo: quem manda um
+handoff fala com o lead, e a delegação para os subagentes é assunto interno da
+área.
 
 O que o separa de um assistente de código:
 
@@ -68,12 +72,64 @@ migrações. `pnpm --filter api seed` cria os usuários de demonstração.
 pnpm bootstrap
 ```
 
-Abre um menu de terminal com o que se faz no dia a dia — Docker, Kubernetes,
-banco e testes — navegado por dígito, `v` volta e `q` sai. Ele não reimplementa
-nada: cada item chama exatamente o `pnpm`, o `make` ou o script que já existe, e
-`pnpm bootstrap --print-commands` imprime a árvore inteira com o comando de cada
-folha, sem executar. Enquanto um comando roda, a tela mostra só que está
-rodando; `↓` revela a saída ao vivo e `↑` a esconde de novo.
+Os comandos do dia a dia moram em três lugares que não conversam: `package.json`
+(os scripts pnpm), o `Makefile` (os alvos de Kubernetes) e scripts soltos em
+`deploy/k8s/` e `docker/`. O menu é a porta única. Ele **não reimplementa nada** —
+cada item chama exatamente o `pnpm`, o `make` ou o script que já existe.
+
+| tecla | o que faz |
+|---|---|
+| `1`–`6` | escolhe o item, **sem Enter** |
+| `v` | volta um nível |
+| `q` | sai |
+| `↓` | durante a execução, mostra a saída ao vivo |
+| `↑` | volta para a tela "executando" |
+| `Ctrl+C` | aborta o comando em curso |
+
+Os atalhos válidos aparecem no rodapé da tela em que você está — não é preciso
+lembrar. O banner fica fixo no topo enquanto você navega, rola ou redimensiona a
+janela.
+
+**As quatro áreas.** `Create` provisiona o ambiente do zero, `Deploy` publica
+código num ambiente que já existe (por isso é o único com escolha por serviço) e
+`Destroy` derruba:
+
+| área | itens |
+|---|---|
+| **1. Docker** | `Deploy` → All · Api · Engine · Web — `Create` — `Destroy` |
+| **2. K8s** | `Deploy` → All — `Create` — `Destroy` |
+| **3. Database** | `Generate` — `Migrate` — `Delete` |
+| **4. Test** | All · Api · Engine · Web · Smoke · Docs |
+
+Três coisas que o menu faz e vale saber:
+
+- **`Docker › Destroy` preserva os volumes** (`down`, nunca `down -v`): destruir
+  containers não é destruir dados.
+- **No K8s só `All` funciona.** O bootstrap do cluster instala api, engine e web
+  juntos; Api/Engine/Web aparecem no menu **desabilitados**, com o motivo. Sumir
+  esconderia o limite; executar inventaria um caminho que não existe.
+- **`Database › Delete` é a única tela que pede Enter**, e exige digitar o nome
+  do banco. Ela zera o schema e **recria a extensão pgvector** — `init.sql` só
+  roda na primeira inicialização do volume, então um `DROP SCHEMA` puro faria a
+  migração seguinte falhar. Como o engine divide o mesmo banco, o script avisa
+  que recuperar exige `pnpm db:migrate` **e** `pnpm engine:migrate`.
+
+**Opções de linha de comando:**
+
+```bash
+pnpm bootstrap                                # abre o menu (precisa de terminal)
+pnpm bootstrap --print-commands               # imprime a árvore inteira e sai
+pnpm bootstrap --print-commands --path 1.1    # só uma subárvore
+pnpm bootstrap --help                         # o cabeçalho de uso
+```
+
+`--print-commands` resolve cada folha do menu para o comando real **sem executar
+nada** — é como se audita o que o menu faz, e é sobre ele que roda o teste
+(`scripts/dev/bootstrap.spec.ts`). Sem terminal interativo o menu recusa abrir e
+aponta para essa opção, em vez de travar esperando uma tecla que nunca vem.
+
+`NO_COLOR=1` desliga a cor; sem isso ele usa os tokens do design system em ANSI
+24-bit e degrada para 256 cores onde o terminal não suportar.
 
 > **`pnpm dev` e `make deploy-local` não coexistem.** Os dois publicam api e
 > engine nas mesmas portas — de propósito (ADR 0025), para o smoke test valer
@@ -125,15 +181,16 @@ merge em `main`, e por isso fica um ciclo de promoção atrás do que está em
 | [Introdução](docs/intro.md) | o panorama |
 | [Primeiros passos](docs/getting-started.md) | do clone ao primeiro turno de agente |
 | [Arquitetura](docs/architecture.md) | code map, fronteiras, invariantes, dívida técnica |
-| [Regras de negócio](docs/business-rules.md) | as 35 RNs, cada uma com `arquivo:linha` e o teste que a cobre |
+| [Regras de negócio](docs/business-rules.md) | as 158 RNs, cada uma com `arquivo:linha` e o teste que a cobre |
 | [Runbook](docs/runbook.md) | deploy, rollout, restore, rotação de chave, incidente de custo |
 | [Glossário](docs/glossary.md) | harness, gate, handoff, DEK, outbox, ciclo K |
 | [Observabilidade](docs/explanation/observability.md) | como se segue uma ação pelos três processos: trace, log e o caminho entre camadas |
 | [Configuração](docs/reference/configuration.md) | todas as variáveis de ambiente |
+| [Scripts](docs/reference/scripts.md) | todo comando `pnpm` e alvo do `Makefile`, extraídos da fonte |
 | [Eventos](docs/reference/events.md) | os tipos do event log, broadcasts e spans |
 | [Permissões](docs/reference/permissions.md) | o formato do `permissions.json` e a ordem da decisão |
-| [Artefatos](docs/reference/artifacts.md) | os seis schemas e quem pode emitir cada um |
-| [Providers de git](docs/reference/git-providers.md) | o contrato de doze operações e as capabilities |
+| [Artefatos](docs/reference/artifacts.md) | os sete schemas e quem pode emitir cada um |
+| [Providers de git](docs/reference/git-providers.md) | o contrato de quinze operações e as capabilities |
 | [API interna](docs/reference/internal-api.md) | o contrato api ↔ engine |
 | [ADRs](docs/adr/index.md) | as 68 decisões e o porquê de cada uma |
 | [Segurança](SECURITY.md) | como reportar uma vulnerabilidade |
@@ -147,7 +204,7 @@ merge em `main`, e por isso fica um ciclo de promoção atrás do que está em
 |---|---|
 | `apps/api` | NestJS 11 + Drizzle ORM + PostgreSQL 16 + pgvector |
 | `apps/engine` | Elixir/OTP + Phoenix (canais) + Oban (filas no Postgres) |
-| `apps/web` | React 19 + Vite + TanStack Query/Router |
+| `apps/web` | React 19 + Vite + TanStack Query/Router; `mermaid` em runtime (só o diagrama C4 do Arquiteto, atrás de `import()` dinâmico) |
 | auth | first-party na api (argon2id + access JWT Ed25519 + refresh opaco com rotação); RBAC no domínio da api |
 | deploy | Kubernetes via Kustomize; Docker Compose para desenvolvimento |
 
@@ -167,6 +224,11 @@ design/     design system — fonte de verdade de UI
 docker/     compose de dev e prod, Dockerfiles, smoke.sh
 deploy/k8s/ base + overlays local/staging/prod (Kustomize)
 docs/       esta documentação, incluindo os ADRs
+scripts/
+  ci/       automação de release e política de branch (testada com vitest)
+  dev/      ferramentas locais — o menu do `pnpm bootstrap` e o preflight
+  docs/     geração e verificação da documentação
+website/    Docusaurus, que lê de docs/ — nunca de website/docs/
 ```
 
 `apps/engine` fica fora do workspace pnpm (é um projeto Mix), com scripts na
@@ -330,9 +392,12 @@ rodapé ([ADR 0036](docs/adr/0036-telas-de-auth-fieis-ao-design-e-fontes-auto-ho
 Depois do login o app opera sobre o primeiro workspace do usuário:
 
 - **Dashboard** (`/`) — grid de projetos e o wizard "Novo projeto"
-- **Projeto** (`/projects/:id`) — Visão geral (time de agentes + feed de
-  atividade), Sessões, Aprovações (fila + tabela do `permissions.json`),
-  Configurações (modelos por agente, membros, credenciais)
+- **Projeto** (`/projects/:id`) — dez abas, derivadas de um registro único
+  (`apps/web/src/routes/project-tabs.ts`, e não de listas paralelas): Visão
+  geral (time de agentes, arquitetura e o diagrama C4), Executores, Criativo,
+  Chat, Code, Backlog, Aprovações (fila + tabela do `permissions.json`),
+  Insights, Gastos e Configurações (modelos por agente e por área, membros,
+  credenciais, teto de paralelismo)
 - **Sessão** (`/projects/:id/sessions/:sid`) — chat com streaming, seletor de
   modelo, `TokenMeter` ao vivo e aprovação de ações inline
 
@@ -365,18 +430,29 @@ fonte de sistema, e título e corpo ficavam indistinguíveis.
 
 ## Estado
 
-**Fases 1 a 12 concluídas**, versão **v3.0.0** ([CHANGELOG](CHANGELOG.md)).
+**Fases 1 a 26 concluídas**, versão **v3.0.0** ([CHANGELOG](CHANGELOG.md)).
 Esteira de release exercitada de ponta a ponta, auth first-party sem Keycloak,
-nove providers de LLM sobre uma base única e o primeiro dogfooding — o Brabo
-construindo o próprio Brabo — com a colheita escrita.
+nove providers de LLM sobre uma base única, e a cadeia inteira provada contra um
+GitHub real — adoção do repositório, promoção de história, dev agent escrevendo
+código, PR aberta, gate julgando e o veredito voltando.
 
-A **Fase 13** está em curso: nenhuma feature nova, e sim provar por execução o
-que a validação local não prova, medir por script (nunca à mão) e triar os 14
-achados abertos do dogfooding.
+O que veio depois das fases não saiu de roteiro: saiu de **usar o produto**. O
+programa 16–26 nasceu da primeira navegação real na app (as oito telas do
+handoff de design, a aba Code só-leitura, o container por projeto decidido pelo
+Arquiteto, o gasto com duas audiências), e as rodadas seguintes vieram de sessões
+de teste ao vivo, cada achado virando RN com `arquivo:linha` e teste.
 
-O que ainda não existe está dito onde importa: a
-[dívida técnica conhecida](docs/architecture.md#divida-tecnica) é uma seção da
-documentação, não uma omissão.
+O que ainda não existe está dito onde importa, e é para ser lido:
+
+- [dívida técnica conhecida](docs/architecture.md#divida-tecnica) — uma seção da
+  documentação, não uma omissão;
+- [achados da execução real](docs/explanation/achados-execucao-real.md) — o que
+  a execução contra GitHub real encontrou e o que segue aberto **por decisão**,
+  incluindo os dois casos em que a conclusão foi que o caminho para autonomia
+  não passa por afrouxar política;
+- o ciclo de vida do container por projeto é **corte declarado** da Fase 25, não
+  esquecimento: enquanto ele não sobe, a política de terminal do ADR 0055 segue
+  valendo como está.
 
 ## Licença
 

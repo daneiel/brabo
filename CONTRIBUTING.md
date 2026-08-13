@@ -8,7 +8,7 @@ processo funciona de verdade.
 
 **Com todas as letras: PR grande sem issue prévia provavelmente será
 recusado.** Não por burocracia — por respeito ao seu tempo. Este projeto tem
-decisões arquiteturais registradas em [28 ADRs](docs/adr/index.md), e uma
+decisões arquiteturais registradas em [68 ADRs](docs/adr/index.md), e uma
 mudança que contradiz uma delas custa muito trabalho para depois ser
 rejeitada.
 
@@ -25,10 +25,15 @@ pnpm install
 pnpm dev
 ```
 
-Depois: <http://localhost:5173>, login `admin` / `admin123`.
+Depois: <http://localhost:5173>. `pnpm --filter api seed` cria os usuários de
+demonstração — o login é `owner@brabo.dev` / `brabo12345678`.
+
+`pnpm bootstrap` abre um menu de terminal com o que se faz no dia a dia (Docker,
+Kubernetes, banco e testes), se você preferir não decorar comando. Ele só chama o
+que já existe, e `pnpm bootstrap --print-commands` mostra exatamente o quê.
 
 **Quanto tempo leva de verdade:** os comandos acima somam poucos minutos, mas a
-**primeira** subida baixa as imagens (Postgres, Keycloak, Elixir, Node) e o
+**primeira** subida baixa as imagens (Postgres, Elixir, Node) e o
 modelo padrão do Ollama. Numa conexão razoável, conte **10 a 20 minutos** na
 primeira vez e menos de um minuto nas seguintes. Precisa de ~6 GiB de RAM
 livres.
