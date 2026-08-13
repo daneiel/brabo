@@ -49,6 +49,7 @@ vi.mock('../lib/hooks', () => ({
   usePendingActions: () => ({ data: actionsMock() }),
   useHandoffs: () => ({ data: handoffsMock() }),
   useCurrentWorkspaceWithRole: () => ({ data: undefined }),
+  useBacklog: () => ({ data: [] }),
 }));
 
 vi.mock('../lib/chat-stream', () => ({ streamChatMessage: vi.fn() }));

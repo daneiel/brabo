@@ -27,7 +27,7 @@ import {
 } from '../lib/api-client';
 import { streamChatMessage } from '../lib/chat-stream';
 import { connectSessionHeartbeat } from '../lib/session-channel';
-import { useCurrentWorkspaceWithRole, useSessionEvents, useSessionEvent, usePendingActions, useHandoffs } from '../lib/hooks';
+import { useBacklog, useCurrentWorkspaceWithRole, useSessionEvents, useSessionEvent, usePendingActions, useHandoffs } from '../lib/hooks';
 import { pollQueParaNoErro } from '../lib/query-policy';
 import { emailDaSessao } from '../lib/auth';
 import { AGENTS } from '../lib/agents';
@@ -292,6 +292,16 @@ export function SessionPage({
   const { data: workspaceComPapel } = useCurrentWorkspaceWithRole();
   const podeAtivarAutoMode =
     workspaceComPapel?.role === 'owner' || workspaceComPapel?.role === 'maintainer';
+  // RN-161: MESMO papel EFETIVO que `POST .../execution/activate` já exige
+  // no backend (`RequireRole('maintainer')`, ver `ExecutionController`) —
+  // decide se aceitar o handoff pro Dev Lead encadeia a ativação sozinho
+  // (ver `handleAcceptHandoff`) ou se o segundo clique em "Ativar execução"
+  // continua necessário. Quem só é `developer` não perde nada: continua
+  // podendo aceitar o handoff, só não ganha o atalho — ativar exige
+  // `maintainer`/`owner` de qualquer forma, então encadear para um
+  // `developer` só produziria uma chamada fadada a 403.
+  const podeFundirHandoffComExecucao =
+    workspaceComPapel?.role === 'owner' || workspaceComPapel?.role === 'maintainer';
 
   const [asideOpen, setAsideOpen] = useState(true);
   // Log completo de eventos — fechado por padrão, mas abre sozinho quando
@@ -453,6 +463,22 @@ export function SessionPage({
   const hasBusinessRule = useMemo(
     () => events.some((e) => e.type === 'artifact.business_rule'),
     [events],
+  );
+
+  // RN-160: mirror do gate acima, para "Confirmar arquitetura pronta" — não
+  // basta ter regra de negócio capturada, precisa existir pelo menos 1
+  // história já PROMOVIDA (RN-048: `PromoteStoriesUseCase` move `draft` para
+  // `ready` via `TransitionStoryUseCase`; `in_progress`/`done` também contam,
+  // porque só se chega lá tendo passado por `ready`). A fonte é a MESMA que a
+  // aba Backlog já usa (`useBacklog`, `ProjectBacklogTab.tsx`, mesma
+  // queryKey `['backlog', projectId]`) — sem round-trip novo.
+  const backlogQuery = useBacklog(projectId);
+  const hasPromotedStory = useMemo(
+    () =>
+      (backlogQuery.data ?? []).some((epic) =>
+        epic.stories.some((s) => s.status !== 'draft'),
+      ),
+    [backlogQuery.data],
   );
 
   // O agente que recebe as mensagens do composer: o de `agent.activated`
@@ -1335,6 +1361,19 @@ export function SessionPage({
       await acceptHandoff(projectId, sessionId, handoffId);
       await queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
       queryClient.invalidateQueries({ queryKey: ['session-handoffs', projectId, sessionId] });
+      // RN-161: fusão condicional por papel EFETIVO. `maintainer`/`owner` já
+      // pode ativar a execução (mesma exigência do backend em
+      // `POST .../execution/activate`) — encadear aqui poupa o segundo
+      // clique em "Ativar execução". `handleActivateExecution` trata o
+      // próprio erro (toast + `mensagemDaApi`) e não relança, então um
+      // 403/409 dela nunca cai neste `catch` como "não foi possível aceitar
+      // o handoff", que seria a frase ERRADA (o aceite já tinha funcionado).
+      // Quem só é `developer` mantém o fluxo de hoje: aceitar sem encadear,
+      // com "Ativar execução" continuando disponível como segundo botão
+      // enquanto o card seguir na tela.
+      if (toAgent === 'dev-lead' && podeFundirHandoffComExecucao) {
+        await handleActivateExecution();
+      }
     } catch {
       turnoAgentRef.current = null;
       showToast({ title: 'Erro', message: 'Não foi possível aceitar o handoff', tone: 'danger' });
@@ -2023,7 +2062,12 @@ export function SessionPage({
                 <Button
                   variant="success"
                   onClick={handleArchitectureReadiness}
-                  disabled={streaming}
+                  disabled={streaming || !hasPromotedStory}
+                  title={
+                    !hasPromotedStory
+                      ? 'Promova pelo menos uma história no Backlog antes de confirmar a arquitetura'
+                      : undefined
+                  }
                 >
                   Confirmar arquitetura pronta
                 </Button>

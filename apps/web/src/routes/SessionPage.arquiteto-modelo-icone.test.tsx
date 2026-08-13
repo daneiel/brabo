@@ -44,6 +44,19 @@ vi.mock('../lib/hooks', () => ({
   usePendingActions: () => ({ data: { items: actionsMock() } }),
   useHandoffs: () => ({ data: handoffsMock() }),
   useCurrentWorkspaceWithRole: () => ({ data: undefined }),
+  // RN-160: gate por história promovida — este arquivo não é sobre o gate em
+  // si (ver `SessionPage.readiness-arquitetura-exige-historia.test.tsx`),
+  // então nasce com 1 história `ready` pra não quebrar os testes de
+  // "caminho feliz"/"clique falha" que já existiam.
+  useBacklog: () => ({
+    data: [
+      {
+        id: 'epic-1',
+        title: 'Épico',
+        stories: [{ id: 'story-1', status: 'ready' }],
+      },
+    ],
+  }),
 }));
 
 vi.mock('../lib/chat-stream', () => ({ streamChatMessage: vi.fn() }));
