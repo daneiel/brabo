@@ -11,6 +11,10 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   terminal para blocos ```sh/```bash (RN-158).
 - **web**: painel "Artefatos gerados" da Sessão agora inclui PR de ADR e
   épico/história do PO, agrupados por agente (RN-159).
+- **web**: "Confirmar arquitetura pronta" nasce desabilitado até existir
+  pelo menos 1 história promovida no backlog (RN-160); aceitar o handoff
+  pro Dev Lead encadeia a ativação de execução automaticamente quando quem
+  aceita já é `maintainer`/`owner` (RN-161, ADR 0069).
 - **api,web**: aba Code — o dropdown de branches (`CodeBranchPicker`) mostra
   qual dev agent/módulo produziu cada branch de task
   (`feature/task-XXXXXXXX`), com ícone e cor do agente (RN-152) —
