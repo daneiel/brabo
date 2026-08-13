@@ -13,7 +13,11 @@ defmodule Engine.Harness.Tools.SearchWorkspaceTest do
   dizer a mesma coisa.
   """
 
-  use ExUnit.Case, async: true
+  # async: false — o describe "teto de resultados" muta Application.env
+  # GLOBAL (:search_workspace_max_hits, :search_workspace_max_bytes), mesmo
+  # padrão de Engine.Harness.Tools.ReadFileTest e
+  # Engine.Actions.TerminalExecutorTest para seus próprios tetos.
+  use ExUnit.Case, async: false
 
   alias Engine.Harness.Tools.SearchWorkspace
 
@@ -82,5 +86,69 @@ defmodule Engine.Harness.Tools.SearchWorkspaceTest do
   test "sem query continua sendo erro de argumento", %{ctx: ctx} do
     assert {:error, motivo} = SearchWorkspace.run(%{}, ctx)
     assert motivo =~ "query"
+  end
+
+  # Os dois tetos independentes (achado da revisão de PR #272 em diante): a
+  # busca com muitos resultados estourava {413, "request entity too large"}
+  # do provider do mesmo jeito que terminal e read_file, só que pela porta da
+  # QUANTIDADE de hits em vez do tamanho de um arquivo só.
+  describe "teto de resultados" do
+    setup do
+      on_exit(fn ->
+        Application.delete_env(:engine, :search_workspace_max_hits)
+        Application.delete_env(:engine, :search_workspace_max_bytes)
+      end)
+
+      :ok
+    end
+
+    test "busca com poucos resultados não é alterada", %{root: root, ctx: ctx} do
+      Application.put_env(:engine, :search_workspace_max_hits, 500)
+
+      File.write!(Path.join(root, "alvo1.ts"), "x")
+      File.write!(Path.join(root, "alvo2.ts"), "x")
+
+      assert {:ok, texto} = SearchWorkspace.run(%{"query" => "alvo"}, ctx)
+
+      assert texto =~ "2 resultado(s):"
+      refute texto =~ "truncad"
+    end
+
+    test "busca com mais resultados que o teto é truncada com aviso claro", %{
+      root: root,
+      ctx: ctx
+    } do
+      Application.put_env(:engine, :search_workspace_max_hits, 3)
+
+      for i <- 1..10 do
+        File.write!(Path.join(root, "alvo#{i}.ts"), "x")
+      end
+
+      assert {:ok, texto} = SearchWorkspace.run(%{"query" => "alvo"}, ctx)
+
+      # Mostra só os 3 primeiros — o total exato NUNCA é fingido, porque foi
+      # exatamente o custo de contá-lo que o teto evitou pagar.
+      assert texto =~ "3 resultado(s):"
+      assert texto =~ "busca truncada"
+      assert texto =~ "3 primeiro(s) resultado(s)"
+      assert texto =~ "pode haver mais"
+      assert texto =~ "Refine a busca"
+      refute texto =~ "alvo4.ts"
+    end
+
+    test "texto final maior que o teto de bytes também é cortado, mesmo com poucos hits", %{
+      root: root,
+      ctx: ctx
+    } do
+      Application.put_env(:engine, :search_workspace_max_bytes, 20)
+
+      File.write!(Path.join(root, "alvo-com-um-nome-bem-comprido-de-verdade.ts"), "x")
+
+      assert {:ok, texto} = SearchWorkspace.run(%{"query" => "alvo"}, ctx)
+
+      assert byte_size(texto) < 200
+      assert texto =~ "busca truncada"
+      assert texto =~ "bytes"
+    end
   end
 end
