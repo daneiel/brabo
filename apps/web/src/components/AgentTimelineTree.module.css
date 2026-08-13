@@ -44,15 +44,6 @@
   color: var(--text-muted);
 }
 
-/* O pino carrega a cor do agente — o mesmo código de cor dos cards do time. */
-.pino {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--cor-agente);
-  flex: 0 0 auto;
-}
-
 .nome {
   font-weight: 600;
   flex: 0 0 auto;
@@ -204,12 +195,29 @@
   font-size: 11px;
 }
 
-/* O detalhe expandido de um marco — args, resultado ou conteúdo cru. */
+/*
+ * O detalhe expandido de um marco — args, resultado ou conteúdo cru.
+ *
+ * Porta o MESMO skin do chat do Criativo (`SessionPage.module.css`): avatar
+ * do agente + corpo com cabeçalho e bolha, via `composes` a partir de
+ * `../components/ui/ChatBubble.module.css` — não uma segunda cópia dos
+ * valores. A estrutura de ÁRVORE (ramo por agente, marco por linha) não
+ * muda; só o texto cru que vivia num `<pre>` ganha a aparência de fala.
+ */
 .marcoDetalhe {
-  margin-left: 19px;
-  padding: 8px 10px;
-  border-radius: var(--radius-sm);
-  background: var(--surface-2);
+  margin: 2px 0 2px 19px;
+}
+
+.detalheMensagem {
+  composes: message from '../components/ui/ChatBubble.module.css';
+}
+
+.detalheCorpo {
+  composes: messageBody from '../components/ui/ChatBubble.module.css';
+}
+
+.detalheCabecalho {
+  composes: messageHeader from '../components/ui/ChatBubble.module.css';
 }
 
 .detalheRotulo {
@@ -218,16 +226,14 @@
   font-size: 10.5px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  margin-bottom: 4px;
 }
 
-.detalhePre {
-  margin: 0;
-  color: var(--text-secondary);
+.detalheBolha {
+  composes: bubble from '../components/ui/ChatBubble.module.css';
+  /* O conteúdo é sempre mono aqui (args/resultado/JSON) — a bolha do chat
+     é Archivo por padrão; a árvore mostra dado técnico, não prosa. */
   font-family: var(--font-mono);
   font-size: 11.5px;
-  white-space: pre-wrap;
-  word-break: break-word;
 }
 
 .detalheErro {

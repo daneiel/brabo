@@ -91,6 +91,34 @@ describe('AgentTimelineTree', () => {
     expect(within(regiaoResposta).getByText(/vou ler o arquivo/)).toBeInTheDocument();
   });
 
+  it('ramo e detalhe expandido usam o skin de bolha do chat (avatar + bolha, sem <pre> cru)', () => {
+    const eventos: SessionEvent[] = [
+      evento('agent.activated', agente('dev-backend')),
+      evento('tool.call', agente('dev-backend'), {
+        tool: 'read_file',
+        args: { path: 'lib/foo.ex' },
+      }),
+    ];
+    const chamadaEv = eventos[1];
+
+    render(<AgentTimelineTree events={eventos} projectId={PROJECT_ID} />);
+
+    // O cabeçalho do ramo porta o avatar do agente (ícone), não mais o pino.
+    const cabecalhoRamo = screen.getByTestId('ramo-cabecalho-dev-backend');
+    expect(cabecalhoRamo.querySelector('svg')).toBeInTheDocument();
+
+    // O detalhe expandido do marco também ganha avatar, e o conteúdo deixa
+    // de ser um `<pre>` cru — vira a mesma bolha do chat.
+    const marcoFerramenta = screen.getByTestId(`marco-cabecalho-${chamadaEv.id}`);
+    fireEvent.click(marcoFerramenta);
+    const regiao = document.getElementById(
+      marcoFerramenta.getAttribute('aria-controls')!,
+    )!;
+    expect(regiao.querySelector('svg')).toBeInTheDocument();
+    expect(regiao.querySelector('pre')).not.toBeInTheDocument();
+    expect(within(regiao).getByText(/lib\/foo\.ex/)).toBeInTheDocument();
+  });
+
   it('marco não expansível (handoff, artefato…) não vira botão de expandir', () => {
     const eventos: SessionEvent[] = [
       evento('agent.activated', agente('po')),
