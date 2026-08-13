@@ -5025,6 +5025,117 @@ o de maior `version`, e revisar é gerar de novo, nunca sobrescrever.
 - **Origem:** pedido do usuário — diagrama C4 do Arquiteto na Visão Geral do
   projeto (ADR 0068)
 
+### RN-153 — "Auto mode": o `ApprovalCard` liga autonomia pra QUALQUER ação futura de um agente {#rn-153}
+
+Antes deste RN, `agent_autonomy` só sabia conceder autonomia por
+`(projeto, agente, TIPO de ação)` — uma linha por tipo, upsert de UMA regra
+por vez (`SetAgentAutonomyUseCase`,
+`apps/api/src/application/use-cases/actions/set-agent-autonomy.use-case.ts`).
+Confiar amplamente num agente exigia uma linha por tipo — `terminal`,
+`write_file`, `pr_open`… — e tipo novo nascia sem regra, de volta a
+`require_approval`.
+
+"Auto mode" é o valor especial `actionType: "*"` na MESMA tabela e no MESMO
+endpoint (`PUT /projects/:projectId/agent-autonomy`) — não é mecanismo novo,
+é a coluna existente (`agent_autonomy.action_type`, `text` livre, sem enum
+nem FK — `apps/api/src/db/schema.ts`) aceitando um valor a mais. A curinga
+significa "autonomia pra qualquer tipo de ação DESTE agente" e é resolvida
+em `DrizzleAgentAutonomyRepository.findMode`
+(`apps/api/src/infrastructure/persistence/drizzle/agent-autonomy.repository.ts`):
+busca a regra ESPECÍFICA e a curinga na mesma consulta, e a específica
+sempre vence — gravar `terminal: deny` com `"*": auto_approve` já ligado
+continua negando `terminal` desse agente, e liberando o resto. `decide()`
+(`apps/api/src/domain/actions/decide.ts`) não muda: ele recebe o
+`PermissionPolicy` já resolvido em `ctx.autonomyMode`, exatamente como antes
+da curinga existir — é por isso que os tetos absolutos valem sem precisar
+saber que "auto mode" existe (ver [RN-154](#rn-154)).
+
+O `ApprovalCard` (`apps/web/src/components/ApprovalCard.tsx`) ganha o botão
+"Modo automático" ao lado de "Sempre permitir", visível só quando: (a) a
+ação está `pending`, (b) quem propôs é um AGENTE (`actor.kind === 'agent'` —
+não há autonomia de agente para conceder a um usuário) e (c) quem chama
+(`ProjectApprovalsTab.tsx`/`SessionPage.tsx`) já confirmou papel
+`maintainer`/`owner` no workspace — mesma exigência do endpoint
+(`@RequireRole('maintainer')`, inalterado). O prop `onActivateAutoMode` é
+`undefined` para quem não tem o papel — o card ESCONDE o botão em vez de
+mostrá-lo desabilitado, e a checagem mora em quem chama, não no card
+(componente presentational, sem query própria).
+
+**Desligar** reusa o toggle manual/auto que o card do agente já tinha (Fase
+8d) — nenhuma tela nova. `AgentTeamGrid.tsx` passa a procurar a regra
+curinga do agente ANTES da representativa (`autonomyActionTypeFor`): se
+existir, o toggle do card reflete e edita a CURINGA, não mais o tipo
+representativo — desligar é gravar a mesma curinga como
+`require_approval`, e o toggle no card do agente é exatamente esse
+"desligar".
+
+- **Onde:** `apps/api/src/domain/actions/decide.ts`
+  (`AGENT_AUTONOMY_ALL_ACTIONS`, `AgentAutonomyActionType`),
+  `apps/api/src/infrastructure/persistence/drizzle/agent-autonomy.repository.ts`
+  (`findMode` com precedência específica > curinga),
+  `apps/api/src/interfaces/http/actions/dto/set-agent-autonomy.dto.ts`
+  (aceita `"*"`), `apps/web/src/components/ApprovalCard.tsx` (botão "Modo
+  automático"), `apps/web/src/components/AgentTeamGrid.tsx` (toggle
+  passa a priorizar a curinga), `apps/web/src/routes/ProjectApprovalsTab.tsx`
+  e `apps/web/src/routes/SessionPage.tsx` (`handleActivateAutoMode`, gate de
+  papel via `useCurrentWorkspaceWithRole`)
+- **Teste:**
+  `apps/api/test/infrastructure/persistence/drizzle/agent-autonomy.repository.spec.ts`
+  (precedência específica > curinga; curinga é por agente; desligar é
+  regravar a curinga como `require_approval`),
+  `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts`
+  (auto mode auto-aprova ação comum SEM bater em `permissions.json`; regra
+  específica em `deny` vence a curinga),
+  `apps/api/test/interfaces/http/actions/agent-autonomy.controller.spec.ts`
+  (`PUT`/`GET` continuam exigindo `maintainer`; DTO aceita `"*"` e recusa
+  string fora da lista), `apps/web/src/components/ApprovalCard.test.tsx`
+  (botão some sem `onActivateAutoMode`; clique chama o callback; nota
+  explica os tetos que continuam pedindo decisão)
+- **Origem:** pedido do usuário — "Sempre permitir" só grava um padrão de
+  comando específico, e `agent_autonomy` só cobria um tipo de ação por vez;
+  faltava confiar amplamente num agente com um clique só
+
+### RN-154 — Os três tetos absolutos continuam bloqueando MESMO com "auto mode" ligado {#rn-154}
+
+O desenho do "auto mode" ([RN-153](#rn-153)) é deliberadamente incapaz de
+furar os três tetos que já existiam em `decide()` — eles são aplicados por
+ÚLTIMO, sobre `current.policy`, sem olhar de onde veio a permissividade
+(`agent_autonomy` com tipo específico, curinga, ou `permissions.json` — a
+função nunca soube distinguir as origens, e continua sem saber):
+
+1. **Merge em branch protegida** (`git_merge` com destino em
+   `dev`/`qa`/`rc`/`main`, [RN-006](#rn-006)) — a trava de merge
+   (`isProtectedBranch`) rebaixa `auto_approve` para `require_approval`
+   sempre, mesmo com `"*": auto_approve` ligado pro agente.
+2. **`instruction_patch`** ([RN-007](#rn-007)) — mudar a instrução de outro
+   agente exige o humano ver o diff; auto mode não muda isso.
+3. **`parallelize`/`raise_max_parallel`** ([RN-086](#rn-086)) — subir o
+   teto de paralelismo, ou pedir mais agente acima dele, continua decisão
+   do usuário; um agente com auto mode ligado não consegue se auto-conceder
+   mais poder de gasto.
+
+A prova é por CONSTRUÇÃO, não por caso a caso: como os três tetos verificam
+só `current.policy === 'auto_approve'` — nunca a origem —, e "auto mode" só
+consegue chegar em `current.policy === 'auto_approve'` pelo MESMO caminho
+que uma regra específica de `agent_autonomy` já usava
+(`ctx.autonomyMode`), os tetos que já continham `agent_autonomy` continuam
+contendo a curinga sem precisar de código novo. O risco real não era o
+teto — era alguém, ao generalizar `agent_autonomy` pra aceitar `"*"`,
+inserir a checagem da curinga ANTES dos tetos e reabrir a porta; por isso
+`AGENT_AUTONOMY_ALL_ACTIONS` foi resolvido inteiramente no REPOSITÓRIO
+(antes de `decide()` rodar), e `decide()` em si não ganhou nenhuma linha
+nova — só o suficiente pra não ter onde a curinga furar.
+
+- **Onde:** `apps/api/src/domain/actions/decide.ts` (os três blocos de teto,
+  linhas ~207–258, inalterados por esta feature)
+- **Teste:**
+  `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts`
+  ("auto mode NÃO auto-aprova merge em branch protegida", "... instruction_patch",
+  "... parallelize/raise_max_parallel" — os três com `agent_autonomy` "*"
+  gravado como `auto_approve` e o veredito continuando `require_approval`)
+- **Origem:** restrição de design confirmada pelo usuário ao pedir o "auto
+  mode" — os três tetos são a garantia que não pode regredir
+
 ---
 
 ## Quando dá errado

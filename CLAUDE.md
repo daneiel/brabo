@@ -709,6 +709,15 @@ mudança de configuração.
   CONTIDA e ter TETO: caminho vindo do cliente passa pela checagem central
   (RN-092/RN-095), e leitura composta que chama o provider N vezes tem
   orçamento e cache, senão vira amplificador de tráfego (ADR 0060).
+- `agent_autonomy` aceita `actionType: "*"` — "auto mode" (RN-153):
+  autonomia pra QUALQUER tipo de ação do agente, ligada pelo `ApprovalCard`
+  ("Modo automático") e desligada pelo mesmo toggle manual/auto do card do
+  agente na Visão Geral/Executores. Regra específica sempre vence a
+  curinga; a resolução mora no repositório (`findMode`), nunca em
+  `decide()`. Três tetos continuam absolutos MESMO com auto mode ligado, e
+  não têm exceção configurável em lugar nenhum — merge em branch
+  protegida, `instruction_patch` e `parallelize`/`raise_max_parallel`
+  (RN-154).
 - A imagem de container de um projeto é ARTEFATO do ARQUITETO
   (`artifact.project_image`, versionado, sem tabela), nunca configuração
   escondida. Enquanto ele não decide, a aba Code responde 409 (RN-105).

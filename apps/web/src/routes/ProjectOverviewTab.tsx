@@ -37,7 +37,7 @@ import { Skeleton } from '../components/ui/Skeleton';
 import { Badge, type BadgeTone } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { useToast } from '../components/ui/ToastProvider';
-import type { ActionType, Architecture, ProposedAction, SessionEvent } from '../lib/api-types';
+import type { AgentAutonomyActionType, Architecture, ProposedAction, SessionEvent } from '../lib/api-types';
 import styles from './ProjectOverviewTab.module.css';
 
 interface ProjectOverviewTabProps {
@@ -149,7 +149,7 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
     try {
       await setAgentAutonomy(projectId, {
         agentId,
-        actionType: actionType as ActionType,
+        actionType: actionType as AgentAutonomyActionType,
         mode: mode === 'auto' ? 'auto_approve' : 'require_approval',
       });
       await queryClient.invalidateQueries({ queryKey: ['agent-autonomy', projectId] });

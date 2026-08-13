@@ -20,21 +20,23 @@ import {
   renameSession,
   returnStory,
   sendAgentMessage,
+  setAgentAutonomy,
   setSessionModelBinding,
   startAgent,
   transitionSession,
 } from '../lib/api-client';
 import { streamChatMessage } from '../lib/chat-stream';
 import { connectSessionHeartbeat } from '../lib/session-channel';
-import { useSessionEvents, useSessionEvent, usePendingActions, useHandoffs } from '../lib/hooks';
+import { useCurrentWorkspaceWithRole, useSessionEvents, useSessionEvent, usePendingActions, useHandoffs } from '../lib/hooks';
 import { pollQueParaNoErro } from '../lib/query-policy';
 import { emailDaSessao } from '../lib/auth';
 import { AGENTS } from '../lib/agents';
-import type {
-  BusinessRulePayload,
-  ProposedAction,
-  SessionEvent,
-  SessionStatus,
+import {
+  AGENT_AUTONOMY_ALL_ACTIONS,
+  type BusinessRulePayload,
+  type ProposedAction,
+  type SessionEvent,
+  type SessionStatus,
 } from '../lib/api-types';
 import { useToast } from '../components/ui/ToastProvider';
 import { TokenMeter } from '../components/TokenMeter';
@@ -250,6 +252,13 @@ export function SessionPage({
   // (Fase 7a). Para o rótulo de autoria da própria mensagem, o e-mail serve —
   // e o fallback cobre o instante entre o boot e a primeira renovação.
   const user = { name: emailDaSessao() };
+
+  // "Auto mode" (RN-153) exige `maintainer` no endpoint que grava a curinga —
+  // mesma aproximação de `ProjectApprovalsTab.tsx`/`ProjectSettingsTab.tsx`
+  // (papel de WORKSPACE; não existe hoje um papel de PROJETO no cliente).
+  const { data: workspaceComPapel } = useCurrentWorkspaceWithRole();
+  const podeAtivarAutoMode =
+    workspaceComPapel?.role === 'owner' || workspaceComPapel?.role === 'maintainer';
 
   const [asideOpen, setAsideOpen] = useState(true);
   // Log completo de eventos — fechado por padrão, mas abre sozinho quando
@@ -1076,6 +1085,11 @@ export function SessionPage({
                 queryClient.invalidateQueries({ queryKey: ['permissions', projectId] });
               })
             }
+            onActivateAutoMode={
+              podeAtivarAutoMode && action.actor.kind === 'agent'
+                ? () => handleActivateAutoMode(action.actor.id)
+                : undefined
+            }
           />
         ),
       });
@@ -1095,6 +1109,7 @@ export function SessionPage({
     promovendoStoryId,
     promovendoTodas,
     ativandoExecucao,
+    podeAtivarAutoMode,
   ]);
 
   // Colapso de mensagens por agente depois que ele passa o bastão (RN-138) —
@@ -1323,6 +1338,29 @@ export function SessionPage({
       });
     } finally {
       setAtivandoExecucao(false);
+    }
+  }
+
+  // "Auto mode" (RN-153) — grava a curinga `actionType: "*"` de
+  // `agent_autonomy` pro agente que propôs a ação do card. NÃO aprova a ação
+  // em si (isso é o botão Aprovar); liga a autonomia pras PRÓXIMAS. Mesma
+  // `queryKey` (`agent-autonomy`) que a Visão Geral/Executores leem pro
+  // toggle do card do agente — é ele que serve de "desligar" depois.
+  async function handleActivateAutoMode(agentId: string) {
+    try {
+      await setAgentAutonomy(projectId, {
+        agentId,
+        actionType: AGENT_AUTONOMY_ALL_ACTIONS,
+        mode: 'auto_approve',
+      });
+      await queryClient.invalidateQueries({ queryKey: ['agent-autonomy', projectId] });
+      showToast({ title: 'Modo automático ligado', message: agentId, tone: 'success' });
+    } catch (erro) {
+      showToast({
+        title: mensagemDaApi(erro, 'Não foi possível ligar o modo automático'),
+        message: agentId,
+        tone: 'danger',
+      });
     }
   }
 

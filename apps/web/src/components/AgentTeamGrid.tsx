@@ -14,6 +14,7 @@ import type {
   ResolvedBinding,
   SessionEvent,
 } from '../lib/api-types';
+import { AGENT_AUTONOMY_ALL_ACTIONS } from '../lib/api-types';
 import type { AgentProgress } from '../lib/execution';
 import { AgentCard, type AutonomyMode } from './AgentCard';
 import { ChevronDownIcon, ChevronRightIcon } from './ui/icons';
@@ -70,7 +71,17 @@ export function AgentTeamGrid({
     const modelId = bindingQueries[index]?.data?.modelId;
     const model = allModels.find((m) => m.id === modelId);
     const autonomyType = autonomyActionTypeFor(r.id);
-    const rule = autonomyRules?.find((a) => a.agentId === r.id && a.actionType === autonomyType);
+    // "Auto mode" (RN-153): a curinga `*`, quando gravada, é a regra que
+    // manda pra este agente — é ela que faz este MESMO toggle virar o jeito
+    // de DESLIGAR o modo automático que o ApprovalCard ligou (nenhuma tela
+    // nova; reusa o toggle que a Fase 8d já desenhou). Sem curinga, o card
+    // volta a mostrar/editar o tipo representativo de sempre.
+    const curinga = autonomyRules?.find(
+      (a) => a.agentId === r.id && a.actionType === AGENT_AUTONOMY_ALL_ACTIONS,
+    );
+    const rule =
+      curinga ?? autonomyRules?.find((a) => a.agentId === r.id && a.actionType === autonomyType);
+    const autonomyTypeParaMudar = curinga ? AGENT_AUTONOMY_ALL_ACTIONS : autonomyType;
     const progress = progressByAgent.get(r.id);
     const custo = tokenUsage?.find((u) => u.actorId === r.id)?.costMicros;
     return (
@@ -84,7 +95,7 @@ export function AgentTeamGrid({
         // "manual". Mostrar o toggle sempre é o que o design pede, e
         // é o que torna a autonomia AJUSTÁVEL daqui.
         autonomy={rule?.mode === 'auto_approve' ? 'auto' : 'manual'}
-        onAutonomyChange={(mode) => onAutonomyChange(r.id, autonomyType, mode)}
+        onAutonomyChange={(mode) => onAutonomyChange(r.id, autonomyTypeParaMudar, mode)}
         onRearm={r.status === 'travado' ? () => onRearm(r.id) : undefined}
         activity={
           r.status === 'travado'
