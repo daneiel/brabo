@@ -966,6 +966,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/agents-controller-submit-structured-question-answer",
+          label: "Responde a um conjunto de perguntas estruturadas do agente",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/agents-controller-handoff-infra",
           label: "Confirma que a arquitetura está pronta e oferece o handoff ao Infra",
           className: "api-method post",

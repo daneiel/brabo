@@ -637,6 +637,30 @@ export interface ProductBriefPayload {
   rules: unknown[];
 }
 
+// RN-162: o Criativo pode pedir VÁRIAS respostas de uma vez, num formulário,
+// pela ferramenta `ask_structured_questions` — em vez de texto livre que o
+// usuário teria que responder item por item. `type` decide o input
+// renderizado; `options` só é usado quando `type` é `select`.
+export type StructuredQuestionType = 'text' | 'textarea' | 'select';
+
+export interface StructuredQuestion {
+  id: string;
+  label: string;
+  type: StructuredQuestionType;
+  options: string[];
+}
+
+// Payload do session_event `chat.structured_question`.
+export interface StructuredQuestionPayload {
+  questions: StructuredQuestion[];
+}
+
+// Payload do session_event `chat.structured_question_answered`.
+export interface StructuredQuestionAnsweredPayload {
+  questionSetId: string;
+  answers: Record<string, string>;
+}
+
 // --- Backlog (Fase 3b — PO) ---
 
 export type StoryStatus = 'draft' | 'ready' | 'in_progress' | 'done';

@@ -55,6 +55,8 @@ Uma linha em `session_events`, append-only, com `seq` densa por sessão
 | tipo | quando |
 |---|---|
 | `chat.message` | mensagem no fio da sessão, do usuário ou do agente |
+| `chat.structured_question` | o Criativo pediu VÁRIAS respostas de uma vez, num formulário — ferramenta `ask_structured_questions` (RN-162) |
+| `chat.structured_question_answered` | o usuário respondeu o formulário; as respostas também voltam como `chat.message` para o agente ler |
 | `agent.activated` | um agente assumiu trabalho na sessão |
 | `agent.response` | resposta completa do agente, já consolidada |
 | `tool.result` | resultado de uma execução de ferramenta, gravado pelo hook `Engine.Harness.Hooks.EventLog` |

@@ -16,6 +16,12 @@ defmodule Engine.Agents.CriativoServer do
   subir a Task, sem product_brief, sem handoff — quando zero regras de
   negócio foram capturadas na sessão: a garantia vive aqui, não só na UI
   (`SessionPage.tsx` desabilita o botão, mas isso é só a UX complementar).
+
+  Segunda ferramenta (RN-162): `ask_structured_questions`, para quando o
+  modelo faz várias perguntas na mesma resposta e quer que o usuário
+  responda num formulário em vez de texto livre item por item. Emite
+  `chat.structured_question`; as respostas voltam num turno FUTURO, como
+  `chat.message` normal — não há um terceiro tool call "resposta".
   """
 
   use GenServer, restart: :temporary
@@ -29,7 +35,7 @@ defmodule Engine.Agents.CriativoServer do
   }
 
   alias Engine.Agents.{FalhaDeTurno, TurnoAssincrono}
-  alias Engine.Harness.Tools.EmitArtifact
+  alias Engine.Harness.Tools.{AskStructuredQuestions, EmitArtifact}
   alias Engine.Sessions.EngineApiClient
 
   @agent "criativo"
@@ -69,7 +75,7 @@ defmodule Engine.Agents.CriativoServer do
        project_id: project_id,
        agent: @agent,
        messages: [system_msg | history],
-       tool_specs: [EmitArtifact.spec()],
+       tool_specs: [EmitArtifact.spec(), AskStructuredQuestions.spec()],
        # Guardado enquanto o turno roda numa Task supervisionada, fora do
        # `handle_call` que bloqueava o processo inteiro — é o que permite um
        # `:cancel` chegar e ser atendido (RN-122). Ver `TurnoAssincrono`.
@@ -205,9 +211,10 @@ defmodule Engine.Agents.CriativoServer do
     end
   end
 
-  # emit_artifact é a única ferramenta do Criativo; o guardrail (product_brief
-  # bloqueado) vive dentro de EmitArtifact.run. Rodamos direto (tool :direct),
-  # sem pipeline/hooks — o Criativo não toca terminal/arquivos.
+  # emit_artifact e ask_structured_questions são as ferramentas do Criativo;
+  # o guardrail (product_brief bloqueado) vive dentro de EmitArtifact.run.
+  # Rodamos direto (tool :direct), sem pipeline/hooks — o Criativo não toca
+  # terminal/arquivos.
   defp dispatch_tool(%{"name" => "emit_artifact", "arguments" => args} = call, state) do
     emit(state, "tool.call", %{tool: "emit_artifact", args: args})
 
@@ -218,7 +225,7 @@ defmodule Engine.Agents.CriativoServer do
     case EmitArtifact.run(args, state) do
       {:ok, texto} ->
         emit(state, "tool.result", %{tool: "emit_artifact", ok: true})
-        realimentar(state, call, texto)
+        realimentar(state, call, texto, "emit_artifact")
 
       {:error, motivo} ->
         emit(state, "tool.result", %{
@@ -235,20 +242,55 @@ defmodule Engine.Agents.CriativoServer do
           "Não consegui registrar isso: #{motivo}. Vou corrigir e tentar de novo."
         )
 
-        realimentar(state, call, "ERRO: #{motivo}")
+        realimentar(state, call, "ERRO: #{motivo}", "emit_artifact")
+    end
+  end
+
+  # RN-162: o Criativo emite `chat.structured_question` quando quer que o
+  # usuário responda VÁRIAS perguntas de uma vez, por um formulário, em vez
+  # de texto livre. O resultado da ferramenta é só a confirmação de que a
+  # pergunta foi registrada — as respostas voltam num turno FUTURO, como
+  # `chat.message` normal (via `AnswerStructuredQuestionUseCase` na api),
+  # não por este tool call.
+  defp dispatch_tool(
+         %{"name" => "ask_structured_questions", "arguments" => args} = call,
+         state
+       ) do
+    emit(state, "tool.call", %{tool: "ask_structured_questions", args: args})
+
+    case AskStructuredQuestions.run(args, state) do
+      {:ok, texto} ->
+        emit(state, "tool.result", %{tool: "ask_structured_questions", ok: true})
+        realimentar(state, call, texto, "ask_structured_questions")
+
+      {:error, motivo} ->
+        emit(state, "tool.result", %{
+          tool: "ask_structured_questions",
+          ok: false,
+          erro: to_string(motivo)
+        })
+
+        emit_response(
+          state,
+          "Não consegui montar essas perguntas: #{motivo}. Vou corrigir e tentar de novo."
+        )
+
+        realimentar(state, call, "ERRO: #{motivo}", "ask_structured_questions")
     end
   end
 
   defp dispatch_tool(_other, state), do: state
 
   # Devolve o resultado da ferramenta ao histórico, no papel `tool` — é o que
-  # o PO e o Arquiteto já faziam, e o que faltava aqui.
-  defp realimentar(state, call, texto) do
+  # o PO e o Arquiteto já faziam, e o que faltava aqui. `tool_name` viaja à
+  # parte (e não fixo em "emit_artifact") desde que o Criativo ganhou uma
+  # segunda ferramenta (RN-162).
+  defp realimentar(state, call, texto, tool_name) do
     append(state, %{
       "role" => "tool",
       "content" => to_string(texto),
       "toolCallId" => Map.get(call, "id"),
-      "name" => "emit_artifact",
+      "name" => tool_name,
       :pinned => false
     })
   end

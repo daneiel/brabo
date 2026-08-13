@@ -363,6 +363,97 @@ defmodule Engine.Agents.CriativoServerTest do
                      }}
   end
 
+  # RN-162: o Criativo pode emitir várias perguntas de uma vez, num formato
+  # estruturado, em vez de deixar o usuário responder item por item em texto
+  # livre.
+  defp structured_question_turn do
+    %{
+      "message" => %{
+        "role" => "assistant",
+        "content" => "Preciso entender melhor o produto.",
+        "toolCalls" => [
+          %{
+            "id" => "tc3",
+            "name" => "ask_structured_questions",
+            "arguments" => %{
+              "questions" => [
+                %{"id" => "nome", "label" => "Qual o nome do produto?"},
+                %{
+                  "id" => "plataforma",
+                  "label" => "Qual plataforma?",
+                  "type" => "select",
+                  "options" => ["Web", "Mobile"]
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "usage" => %{"estimated" => true},
+      "error" => nil
+    }
+  end
+
+  test "ask_structured_questions: emite chat.structured_question com as perguntas", %{
+    state: state
+  } do
+    Process.put(:fake_llm_turns, [structured_question_turn()])
+
+    assert {:reply, :ok, new_state} =
+             sync_call(CriativoServer, {:user_message, "quero um app"}, state)
+
+    assert_received {:event_appended, _, _, %{type: "agent.response"}}
+
+    assert_received {:event_appended, _, _,
+                     %{type: "chat.structured_question", payload: payload}}
+
+    assert payload.questions == [
+             %{id: "nome", label: "Qual o nome do produto?", type: "text", options: []},
+             %{
+               id: "plataforma",
+               label: "Qual plataforma?",
+               type: "select",
+               options: ["Web", "Mobile"]
+             }
+           ]
+
+    # O tool call e o resultado entram no histórico como o resto do turno.
+    assert Enum.any?(new_state.messages, &(&1["role"] == "tool" and &1["name"] == "ask_structured_questions"))
+  end
+
+  test "ask_structured_questions recusado (sem label) vira tool.result de erro, e o agente fala",
+       %{state: state} do
+    Process.put(:fake_llm_turns, [
+      %{
+        "message" => %{
+          "role" => "assistant",
+          "content" => "",
+          "toolCalls" => [
+            %{
+              "id" => "tc4",
+              "name" => "ask_structured_questions",
+              "arguments" => %{"questions" => [%{"id" => "a"}]}
+            }
+          ]
+        }
+      }
+    ])
+
+    assert {:reply, :ok, _} =
+             sync_call(CriativoServer, {:user_message, "oi"}, state)
+
+    assert_received {:event_appended, _, _,
+                     %{type: "tool.result", payload: %{ok: false, erro: erro}}}
+
+    assert erro =~ "label"
+
+    assert_received {:event_appended, _, _,
+                     %{
+                       type: "agent.response",
+                       payload: %{content: "Não consegui montar essas perguntas" <> _}
+                     }}
+  end
+
   test "rehydration: reconstrói o histórico do event log no init", %{} do
     Process.put(:fake_events, [
       %{"type" => "chat.message", "payload" => %{"text" => "minha ideia é X"}},

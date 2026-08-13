@@ -527,6 +527,21 @@ export const confirmArchitectureReadiness = (
   post<{ ok: true }>(
     `/projects/${projectId}/sessions/${sessionId}/agents/arquiteto/handoff-infra`,
   );
+// RN-162: submissão do formulário de `chat.structured_question` — grava
+// `chat.structured_question_answered` e reenvia as respostas ao `agent` (o
+// que fez as perguntas) pelo mesmo caminho de `sendAgentMessage`. Um
+// conjunto de perguntas só pode ser respondido uma vez (409 na segunda).
+export const answerStructuredQuestion = (
+  projectId: string,
+  sessionId: string,
+  agent: string,
+  questionSetId: string,
+  answers: Record<string, string>,
+) =>
+  post<{ ok: true }>(
+    `/projects/${projectId}/sessions/${sessionId}/agents/${agent}/structured-question/${questionSetId}/answer`,
+    { answers },
+  );
 export const listHandoffs = (projectId: string, sessionId: string) =>
   get<Handoff[]>(`/projects/${projectId}/sessions/${sessionId}/handoffs`);
 export const acceptHandoff = (

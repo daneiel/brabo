@@ -1,6 +1,6 @@
 {
   "_": "Gerado por `pnpm docs:generate`. Não edite — é a trava do que está em docs/reference/api/.",
-  "openapiSha256": "3d23ca122d08c203619895c525ac2adf28f5577c3a419f6862b4818c7c7bd6de",
+  "openapiSha256": "a9f06d8f05715a08edc698590d0ed436b2c426fb3421401e76c6f56a48d2725e",
   "arquivos": {
     "actions-controller-approve-always.ParamsDetails.json": "f51f6d74f8b4a7e9c8f70cef93e0d026d63e77123672029da660c802def3ad0e",
     "actions-controller-approve-always.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
@@ -58,6 +58,10 @@
     "agents-controller-start.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
     "agents-controller-start.StatusCodes.json": "fc59b6de683537d157bece05828b42c9d53f8df11907c9805ebe146cbc8061bd",
     "agents-controller-start.api.mdx": "364aacbec9ac34e39f241193d2506b4be11d4b9f2e49188185b2c1de76f29a9e",
+    "agents-controller-submit-structured-question-answer.ParamsDetails.json": "7b00823bb738b6be9309852e8d7af42b89bf062960601a699ac76c678053506f",
+    "agents-controller-submit-structured-question-answer.RequestSchema.json": "d0674e330d3a3cc899391194f06c7a4bd5e2a80a8b112c898d04108518b01f31",
+    "agents-controller-submit-structured-question-answer.StatusCodes.json": "975731d6bae6ebf6586acae7e886a8b26101d5942b3a87db4c3d4139fc750c46",
+    "agents-controller-submit-structured-question-answer.api.mdx": "9548edc550fe7fe942f8f8890c3c4edadd02d520089c9963c808bf1daeab3002",
     "anamnese-controller-all-versions.ParamsDetails.json": "f1cf321fa2c84a7ad647e71995c44bdb32efe0baf7ce03ee78703c9e1a2ea0e3",
     "anamnese-controller-all-versions.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
     "anamnese-controller-all-versions.StatusCodes.json": "bcf21a8c640ee76c7d85525d74c638797de47bf4dcabd4f1d3c1fe156f8edfd4",
@@ -615,7 +619,7 @@
     "sessions-controller-transition.RequestSchema.json": "1a1741c5ed6c1e8c653b079f28c80327bfe57363efc50b9673ed8fa755c256f3",
     "sessions-controller-transition.StatusCodes.json": "ab61cede9a05d0dade6c33ed1cd97c0cbf4c5c2492aa1b220bef55d15127de21",
     "sessions-controller-transition.api.mdx": "868b17cad0943d53ce48a4cf38ef6cabce78a8f5ac7a8b1beb68025676d83a99",
-    "sidebar.ts": "4fc7d7bdb19f022e9969859a1fdb998e8a2fb5d9f2147caaa743f4ea061837e0",
+    "sidebar.ts": "092cd37c9e2b66e08af3a541ca541d41b415d370fde174c71dcd0766bff6710a",
     "spend-controller-get-my-spend.ParamsDetails.json": "ebc045268e31b2f32a8ed91e07a3f31c93ab7d591186a78532d1329b69f42d45",
     "spend-controller-get-my-spend.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
     "spend-controller-get-my-spend.StatusCodes.json": "0be99957ba5ddf4edbc262260a383669e3ea6b576b2dad60df2137d05b87ec9b",
