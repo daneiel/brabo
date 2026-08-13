@@ -250,12 +250,16 @@
 
 /* Tokens de sintaxe — ver `--syntax-*` em design/tokens.css. Keyword,
    string, número e tipo REUSAM tokens semânticos que já existem; só função,
-   comentário e operador nasceram nesta fase. */
-.tkKeyword { color: var(--accent); }
-.tkFunction { color: var(--syntax-function); }
-.tkString { color: var(--warning); }
-.tkNumber { color: var(--violet); }
-.tkComment { color: var(--syntax-comment); }
-.tkType { color: var(--success); }
-.tkOperator { color: var(--syntax-operator); }
-.tkText { color: var(--text-primary); }
+   comentário e operador nasceram na FASE 26.
+   RN-158: os sete valores viraram fonte única em
+   `components/ui/SyntaxTokens.module.css`, via `composes` (mesmo padrão de
+   `ChatBubble.module.css`) — é o que o Markdown do chat (`MarkdownMessage.tsx`)
+   reusa para colorir os fences ```lang sem duplicar as cores. */
+.tkKeyword { composes: tkKeyword from '../../components/ui/SyntaxTokens.module.css'; }
+.tkFunction { composes: tkFunction from '../../components/ui/SyntaxTokens.module.css'; }
+.tkString { composes: tkString from '../../components/ui/SyntaxTokens.module.css'; }
+.tkNumber { composes: tkNumber from '../../components/ui/SyntaxTokens.module.css'; }
+.tkComment { composes: tkComment from '../../components/ui/SyntaxTokens.module.css'; }
+.tkType { composes: tkType from '../../components/ui/SyntaxTokens.module.css'; }
+.tkOperator { composes: tkOperator from '../../components/ui/SyntaxTokens.module.css'; }
+.tkText { composes: tkText from '../../components/ui/SyntaxTokens.module.css'; }

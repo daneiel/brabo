@@ -666,3 +666,50 @@
   color: var(--text-muted);
   font-style: italic;
 }
+
+/* --- Painel "Artefatos gerados" agrupado por agente (RN-159) --- */
+
+/* A REGIÃO do `Disclosure` de cada agente — mesmo espaçamento vertical de
+   `.agentGroupRegiao` (RN-138), só que mais apertado: item de lista, não
+   bolha de mensagem. */
+.artefatoGrupoRegiao {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 6px;
+}
+
+.artefatoItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding: 4px 0;
+  text-decoration: none;
+}
+
+/* Só quando existe destino (PR com `pullRequestUrl`, ou o link pro Backlog)
+   — sem URL o item fica neutro, porque não há pra onde clicar. */
+.artefatoItemLink {
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.artefatoItemLink:hover {
+  text-decoration: underline;
+}
+
+.artefatoItemIcone {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.artefatoItemTitulo {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
