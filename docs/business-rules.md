@@ -5027,6 +5027,55 @@ o de maior `version`, e revisar é gerar de novo, nunca sobrescrever.
 
 ---
 
+### RN-152 — A branch de uma task diz de qual dev agent e módulo ela é, no dropdown da aba Code {#rn-152}
+
+`CodeBranchPicker` já listava toda branch do repositório, inclusive as dos
+dev agents (`feature/task-XXXXXXXX`, `Engine.Dev.AgentIo`), mas sem pista
+nenhuma de quem a criou — só o nome cru. `ReadProjectCodeUseCase.branches`
+resolve isso sem chamada a mais ao provider de git: os 8 chars depois de
+`feature/task-` são exatamente o primeiro grupo hifenizado do uuid da task
+(`"feature/task-" <> String.slice(to_string(row.task_id), 0, 8)`, não um
+substring arbitrário), então casam contra `TaskRepository
+.findByProjectAndIdPrefix` (join por PROJETO, pra prefixo de 8 chars nunca
+vazar task de outro projeto). O `assignedTo` da task é o agent_id
+(`dev-<modulo>`/`dev-<modulo>-2`, RN-087); o módulo é resolvido comparando
+contra o `module_map` VIGENTE do projeto pelas MESMAS funções que o geraram
+(`devAgentId`/`extraDevAgentId` em `activate-execution.use-case.ts`) — nunca
+por regex reversa, que degeneraria em ambiguidade pra nome de módulo com
+caractere especial.
+
+`producedBy: { agentId, moduleId } | null` é degradação honesta, do mesmo
+jeito que `ahead`/`behind` já são: `null` pra branch sem o padrão (manual do
+usuário, ou `main`/`dev`/`qa`), e também quando o padrão bate mas a
+task/módulo não são mais resolvíveis (task apagada, módulo removido do mapa
+vigente) — nunca um valor inventado. No dropdown, cada branch produzida por
+um dev ganha o ícone e a cor do agente (`AGENTS`/`agents.ts`, RN-087),
+reaproveitando a MESMA degradação que `apps/web/src/lib/agent-status.ts` já
+usa pro roster ao vivo: módulo sem chave fixa em `AGENTS` herda ícone/cor de
+`dev-backend`.
+
+- **Onde:** `apps/api/src/application/use-cases/git/read-project-code.use-case.ts`
+  (`branches`/`producedBy`/`moduloDoAgente`),
+  `apps/api/src/application/ports/backlog-repository.port.ts`
+  (`TaskRepository.findByProjectAndIdPrefix`),
+  `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts`,
+  `apps/api/src/interfaces/http/git/dto/code.response.dto.ts`
+  (`CodeBranchProducedByResponseDto`), `apps/web/src/lib/api-types.ts`
+  (`CodeBranchProducedBy`), `apps/web/src/routes/code/CodeBranchPicker.tsx`
+  (`IconeDoAgenteProdutor`/`defDoAgenteProdutor`)
+- **Teste:**
+  `apps/api/test/application/use-cases/git/read-project-code.use-case.spec.ts`
+  (describe "producedBy da branch de task" — task resolvida com módulo e com
+  o agente extra `-2`, branch fora do padrão nunca ganha `producedBy` mesmo
+  com task de prefixo casável, prefixo sem task no projeto, módulo removido
+  do mapa vigente e task sem dono ainda degradam pra `null`),
+  `apps/web/src/routes/code/CodeBranchPicker.test.tsx` (branch de task mostra
+  o selo do dev agent dono; branch sem padrão não ganha selo nenhum)
+- **Origem:** pedido do usuário — nenhuma pista visual de quem criou a
+  branch no dropdown rico da FASE 26b
+
+---
+
 ## Quando dá errado
 
 | situação | o que o sistema faz |

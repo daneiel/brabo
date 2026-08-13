@@ -1,6 +1,6 @@
 {
   "_": "Gerado por `pnpm docs:generate`. Não edite — é a trava do que está em docs/reference/api/.",
-  "openapiSha256": "24e6d44e587762210fa5d30a3ef31004e3023e12bd1063bb945e7cb331033b65",
+  "openapiSha256": "bb1a099d630876ceb767127fc2275a3c9f556734ba00e52ed5806bd915c0f308",
   "arquivos": {
     "actions-controller-approve-always.ParamsDetails.json": "f51f6d74f8b4a7e9c8f70cef93e0d026d63e77123672029da660c802def3ad0e",
     "actions-controller-approve-always.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
@@ -181,8 +181,8 @@
     "code-controller-blame.api.mdx": "6098bbd3f794434fd9433da55b6afcc2fb183b12618cbf19f9b8ac1f5bcb8b04",
     "code-controller-branches.ParamsDetails.json": "f1cf321fa2c84a7ad647e71995c44bdb32efe0baf7ce03ee78703c9e1a2ea0e3",
     "code-controller-branches.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
-    "code-controller-branches.StatusCodes.json": "1842181f2e5fe116e477cf1fbd6ecf272e42d6a270ac0a519d39abb5f7976c30",
-    "code-controller-branches.api.mdx": "ee6e4a5aaedb7e691933dda4d693bd9f91478f7a0dc2b59a82aa3ebd77ddd246",
+    "code-controller-branches.StatusCodes.json": "2ff64658e66c6c22bd89f7508a50e5b2549821b891ba0dd058fd4ab2cba994fa",
+    "code-controller-branches.api.mdx": "ea81ecfdde2af9d9a334988b7645c0501b20d45de8fe835c1e072d60037782da",
     "code-controller-diff.ParamsDetails.json": "ad95598438a391318b43f3ccdf7f73746dfc7767010a7f480a54e463e0cb70ef",
     "code-controller-diff.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
     "code-controller-diff.StatusCodes.json": "496c3132f20d90b26c32ebd70ba15557a1c8cb38d8a57fe5ffca2a0e992975c0",

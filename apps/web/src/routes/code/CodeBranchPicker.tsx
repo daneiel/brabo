@@ -1,7 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getCodeBranches, mensagemDaApi } from '../../lib/api-client';
-import type { CodeBranchDetail, CodePullRequestState } from '../../lib/api-types';
+import type {
+  CodeBranchDetail,
+  CodeBranchProducedBy,
+  CodePullRequestState,
+} from '../../lib/api-types';
+import { AGENTS, type AgentDef } from '../../lib/agents';
 import { BranchIcon, CheckIcon, ChevronDownIcon } from '../../components/ui/icons';
 import styles from './CodeBranchPicker.module.css';
 
@@ -136,6 +141,9 @@ export function CodeBranchPicker({ projectId, currentRef, onSelect }: CodeBranch
                     />
                     <span className={styles.corpo}>
                       <span className={styles.nomeLinha}>
+                        {branch.producedBy && (
+                          <IconeDoAgenteProdutor producedBy={branch.producedBy} />
+                        )}
                         {branch.name === currentRef && (
                           <CheckIcon size={11} className={styles.check} />
                         )}
@@ -173,6 +181,7 @@ export function CodeBranchPicker({ projectId, currentRef, onSelect }: CodeBranch
 
 function corDoPonto(branch: CodeBranchDetail, atual: boolean): string {
   if (atual) return 'var(--accent)';
+  if (branch.producedBy) return defDoAgenteProdutor(branch.producedBy.agentId).color;
   if (branch.pullRequest) return 'var(--violet)';
   return 'var(--success)';
 }
@@ -181,6 +190,7 @@ function metaDaBranch(branch: CodeBranchDetail, atual: boolean): string {
   const partes: string[] = [];
   if (atual) partes.push('atual');
   if (branch.protected) partes.push('protegida');
+  if (branch.producedBy) partes.push(branch.producedBy.agentId);
   if (branch.pullRequest) {
     const { number, state } = branch.pullRequest;
     partes.push(
@@ -190,6 +200,38 @@ function metaDaBranch(branch: CodeBranchDetail, atual: boolean): string {
   const aheadBehind = formatarAheadBehind(branch);
   if (aheadBehind) partes.push(aheadBehind);
   return partes.join(' · ') || '—';
+}
+
+/**
+ * `dev-<modulo>` dinâmico (RN-087) não está no roster fixo (`AGENTS`) — a
+ * mesma degradação que `apps/web/src/lib/agent-status.ts` já faz pro roster
+ * ao vivo: reaproveita ícone/cor de "dev-backend" pra qualquer módulo sem
+ * chave fixa, e só usa a entrada exata quando o `agentId` bate com uma (ex.:
+ * "dev-backend"/"dev-frontend").
+ */
+function defDoAgenteProdutor(agentId: string): AgentDef {
+  return (AGENTS as Record<string, AgentDef>)[agentId] ?? AGENTS['dev-backend'];
+}
+
+/**
+ * Selo visual de quem produziu a branch (RN-152) — ícone e cor do dev agent
+ * dono, reaproveitados de `apps/web/src/lib/agents.ts` (mesma paleta que já
+ * identifica o agente em todo o resto da UI). O texto completo (agentId +
+ * módulo) vai no `title` e em `metaDaBranch`; o ícone é só o atalho visual
+ * pra escanear a lista.
+ */
+function IconeDoAgenteProdutor({ producedBy }: { producedBy: CodeBranchProducedBy }) {
+  const def = defDoAgenteProdutor(producedBy.agentId);
+  const Icon = def.icon;
+  return (
+    <span
+      className={styles.agenteIcone}
+      style={{ color: def.color }}
+      title={`Branch do dev do módulo "${producedBy.moduleId}" (${producedBy.agentId})`}
+    >
+      <Icon size={11} />
+    </span>
+  );
 }
 
 function formatarAheadBehind(branch: CodeBranchDetail): string | null {
