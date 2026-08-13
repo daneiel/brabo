@@ -2,8 +2,10 @@ import { renovarSessao, tokenAtual } from './auth';
 import { runtimeConfig } from './runtime-config';
 import { childSpan, logger, newTraceContext } from './logger';
 import type { LlmCredentialProvider } from './models';
+import type { MySpend, WorkspaceSpendReport } from './spend';
 import type {
   AgentAutonomyRule,
+  AgentAutonomyActionType,
   CredentialSpend,
   UsoDeModelo,
   AgentTokenUsage,
@@ -19,8 +21,17 @@ import type {
   AgentInstructionVersion,
   Budget,
   BudgetPolicy,
+  CodeBlame,
+  CodeBranchDetailList,
+  CodeDiff,
+  CodeFile,
+  CodePullRequestList,
+  CodePullRequestState,
+  CodeSearchResult,
+  CodeTree,
   CoverageReport,
   Epic,
+  EstadoDoContainer,
   ExecutionActivation,
   Handoff,
   Model,
@@ -49,6 +60,9 @@ import type {
   Role,
   Session,
   SessionEvent,
+  SessionKind,
+  SocketTicket,
+  SocketTicketScope,
   CredentialProviderName,
   CredentialTestResult,
   UnreadCursor,
@@ -291,7 +305,7 @@ export const listAgentAutonomy = (projectId: string) =>
   get<AgentAutonomyRule[]>(`/projects/${projectId}/agent-autonomy`);
 export const setAgentAutonomy = (
   projectId: string,
-  input: { agentId: string; actionType: ActionType; mode: PermissionPolicy },
+  input: { agentId: string; actionType: AgentAutonomyActionType; mode: PermissionPolicy },
 ) => put<void>(`/projects/${projectId}/agent-autonomy`, input);
 
 // --- Git ---
@@ -360,10 +374,74 @@ export const registerGitCredential = (input: {
   token: string;
 }) => post<UserCredentialMetadata>('/users/me/git-credentials', input);
 
+// --- Container do projeto (FASE 25a) ---
+
+export const getContainerState = (projectId: string) =>
+  get<EstadoDoContainer>(`/projects/${projectId}/container`);
+
+// --- Aba Code, só leitura (FASE 26) ---
+//
+// As quatro rotas de `apps/api/src/interfaces/http/git/code.controller.ts`.
+// `role:viewer`, 400 quando o caminho sai do escopo do projeto (RN-095), 409
+// enquanto o container não tem imagem decidida (RN-105), 501 quando o
+// provider não declara a capability.
+
+export const getCodeTree = (
+  projectId: string,
+  opts: { ref?: string; path?: string } = {},
+) => get<CodeTree>(`/projects/${projectId}/code/tree${qs(opts)}`);
+
+export const getCodeFile = (
+  projectId: string,
+  opts: { path: string; ref?: string },
+) => get<CodeFile>(`/projects/${projectId}/code/file${qs(opts)}`);
+
+export const searchCode = (
+  projectId: string,
+  opts: { q: string; ref?: string; path?: string },
+) => get<CodeSearchResult>(`/projects/${projectId}/code/search${qs(opts)}`);
+
+export const getCodeDiff = (projectId: string, pullRequestId: string) =>
+  get<CodeDiff>(
+    `/projects/${projectId}/code/pull-requests/${pullRequestId}/diff`,
+  );
+
+// --- Fundação de blame, PRs navegáveis e branch rica (FASE 26b) ---
+//
+// As três rotas novas de `code.controller.ts` — mesmo `role:viewer`, mesmos
+// 400/404/409/501 das quatro de cima. Sem tela consumindo ainda; a UI é onda
+// seguinte, em três agentes separados.
+
+export const getCodeBlame = (
+  projectId: string,
+  opts: { path: string; ref?: string },
+) => get<CodeBlame>(`/projects/${projectId}/code/blame${qs(opts)}`);
+
+export const getCodePullRequests = (
+  projectId: string,
+  opts: { state?: CodePullRequestState } = {},
+) =>
+  get<CodePullRequestList>(
+    `/projects/${projectId}/code/pull-requests${qs(opts)}`,
+  );
+
+export const getCodeBranches = (projectId: string) =>
+  get<CodeBranchDetailList>(`/projects/${projectId}/code/branches`);
+
 // --- Sessions ---
 
-export const createSession = (projectId: string) =>
-  post<Session>(`/projects/${projectId}/sessions`);
+// O corpo é OBRIGATÓRIO desde a FASE 20: o tipo da sessão é escolha de quem a
+// abre (RN-097), e um parâmetro opcional aqui devolveria a escolha ao esquecimento.
+export const createSession = (
+  projectId: string,
+  body: { kind: SessionKind; name?: string },
+) => post<Session>(`/projects/${projectId}/sessions`, body);
+/** `null` tira o nome e a sessão volta a se identificar só pela hashtag (RN-098). */
+export const renameSession = (
+  projectId: string,
+  sessionId: string,
+  name: string | null,
+) => patch<Session>(`/projects/${projectId}/sessions/${sessionId}`, { name });
 export const listSessions = (projectId: string) =>
   get<Session[]>(`/projects/${projectId}/sessions`);
 export const getSession = (projectId: string, sessionId: string) =>
@@ -392,6 +470,21 @@ export const getSessionEvent = (
   get<SessionEvent>(
     `/projects/${projectId}/sessions/${sessionId}/events/${eventId}`,
   );
+/**
+ * Ticket opaco de uso único pra autenticar o socket Phoenix da sessão
+ * (RN-108). TTL de 30s — `session-channel.ts` chama isto antes de TODA
+ * `socket.connect()`, inclusive em reconexão automática, nunca reusa um
+ * ticket velho.
+ */
+export const createSocketTicket = (
+  projectId: string,
+  sessionId: string,
+  scope: SocketTicketScope,
+) =>
+  post<SocketTicket>(
+    `/projects/${projectId}/sessions/${sessionId}/socket-ticket`,
+    { scope },
+  );
 
 // --- Agentes conversacionais / handoffs (Fase 3b) ---
 
@@ -409,8 +502,46 @@ export const sendAgentMessage = (
     `/projects/${projectId}/sessions/${sessionId}/agents/${agent}/message`,
     { text },
   );
+// RN-122: o botão "Parar" do composer — mata a chamada ao LLM em curso no
+// engine (Task.shutdown, brutal_kill), cortando a conexão no meio pra
+// economizar token de verdade. Idempotente: sem turno em curso, é aceito sem
+// efeito.
+export const cancelAgentTurn = (
+  projectId: string,
+  sessionId: string,
+  agent: string,
+) =>
+  post<{ ok: true }>(
+    `/projects/${projectId}/sessions/${sessionId}/agents/${agent}/cancel`,
+  );
 export const confirmReadiness = (projectId: string, sessionId: string) =>
   post<{ ok: true }>(`/projects/${projectId}/sessions/${sessionId}/readiness`);
+// Mirror de `confirmReadiness`, mas do Arquiteto (achado do problema 1):
+// dispara `OfferInfraHandoffUseCase`, que oferece o handoff ao Infra E ao Dev
+// Lead na MESMA confirmação (FASE 14d). Endpoint dedicado — não reaproveita
+// `readiness`, que é do Criativo.
+export const confirmArchitectureReadiness = (
+  projectId: string,
+  sessionId: string,
+) =>
+  post<{ ok: true }>(
+    `/projects/${projectId}/sessions/${sessionId}/agents/arquiteto/handoff-infra`,
+  );
+// RN-162: submissão do formulário de `chat.structured_question` — grava
+// `chat.structured_question_answered` e reenvia as respostas ao `agent` (o
+// que fez as perguntas) pelo mesmo caminho de `sendAgentMessage`. Um
+// conjunto de perguntas só pode ser respondido uma vez (409 na segunda).
+export const answerStructuredQuestion = (
+  projectId: string,
+  sessionId: string,
+  agent: string,
+  questionSetId: string,
+  answers: Record<string, string>,
+) =>
+  post<{ ok: true }>(
+    `/projects/${projectId}/sessions/${sessionId}/agents/${agent}/structured-question/${questionSetId}/answer`,
+    { answers },
+  );
 export const listHandoffs = (projectId: string, sessionId: string) =>
   get<Handoff[]>(`/projects/${projectId}/sessions/${sessionId}/handoffs`);
 export const acceptHandoff = (
@@ -512,8 +643,25 @@ export const reanalyzeSession = (projectId: string, sessionId: string) =>
 
 // --- Execução (Fase 4a) ---
 
-export const activateExecution = (projectId: string) =>
-  post<ExecutionActivation>(`/projects/${projectId}/execution/activate`);
+/**
+ * `originSessionId` (RN-135, PR #266) é a sessão de CHAT de onde partiu o
+ * clique — a api fecha ela ao final, se não tiver handoff/ação/turno
+ * pendente. Omitido (chamador da Visão Geral, sem sessão de chat no
+ * contexto) preserva o comportamento de sempre: nenhuma sessão fecha.
+ */
+export const activateExecution = (projectId: string, originSessionId?: string) =>
+  post<ExecutionActivation>(`/projects/${projectId}/execution/activate`, {
+    originSessionId,
+  });
+/**
+ * A sessão de execução VIGENTE do projeto (RN-139) — `active` com
+ * `execution.activated` gravado — ou `null`. NUNCA a sessão mais recente do
+ * projeto: é o que `ProjectExecutorsTab` usava antes (`useLatestSession`) e
+ * que passa a olhar silenciosamente qualquer sessão nova (ex. uma ideação)
+ * criada depois da execução, ficando vazia de eventos de dev/QA.
+ */
+export const getActiveExecutionSession = (projectId: string) =>
+  get<Session | null>(`/projects/${projectId}/execution/session`);
 /**
  * Pede mais um dev agent para um módulo (RN-083).
  *
@@ -674,9 +822,17 @@ export const getProjectModelBinding = (projectId: string) =>
 export const setProjectModelBinding = (projectId: string, modelId: string) =>
   put<void>(`/projects/${projectId}/model-binding`, { modelId });
 
-export const getSessionModelBinding = (projectId: string, sessionId: string) =>
+// `agentId` é o agente REALMENTE ativo na sessão (ex.: depois de um handoff
+// pro PO/Arquiteto/Dev Lead) — sem ele, a api só enxerga sessão→projeto→
+// workspace e cai no fallback fixo do Criativo (`herdarModeloDeStart`),
+// mostrando o modelo errado na topbar assim que outro agente assume.
+export const getSessionModelBinding = (
+  projectId: string,
+  sessionId: string,
+  agentId?: string,
+) =>
   get<ResolvedBinding>(
-    `/projects/${projectId}/sessions/${sessionId}/model-binding`,
+    `/projects/${projectId}/sessions/${sessionId}/model-binding${qs({ agentId })}`,
   );
 export const setSessionModelBinding = (
   projectId: string,
@@ -695,6 +851,23 @@ export const setAgentModelBinding = (
   agentSlug: string,
   modelId: string,
 ) => put<void>(`/projects/${projectId}/agent-bindings/${agentSlug}`, { modelId });
+/**
+ * "Voltar a herdar" (ADR 0064, RN-102) — APAGA o binding do agente, nunca
+ * grava nele o modelo da área. Copiar pareceria igual na tela e viraria uma
+ * cópia que diverge sozinha na próxima mudança da área.
+ */
+export const clearAgentModelBinding = (projectId: string, agentSlug: string) =>
+  del<void>(`/projects/${projectId}/agent-bindings/${agentSlug}`);
+
+export const getAreaModelBinding = (projectId: string, areaKey: string) =>
+  get<ResolvedBinding | null>(`/projects/${projectId}/area-bindings/${areaKey}`);
+export const setAreaModelBinding = (
+  projectId: string,
+  areaKey: string,
+  modelId: string,
+) => put<void>(`/projects/${projectId}/area-bindings/${areaKey}`, { modelId });
+export const clearAreaModelBinding = (projectId: string, areaKey: string) =>
+  del<void>(`/projects/${projectId}/area-bindings/${areaKey}`);
 
 export const listCredentials = () =>
   get<UserCredentialMetadata[]>('/users/me/credentials');
@@ -743,3 +916,21 @@ export const setSessionBudget = (
 export const getRegistroDeGates = () => get<RegistroDeGates>('/gates');
 
 export type { ModelBindingScope };
+
+/**
+ * As duas audiências do gasto (FASE 22, ADR 0063, RN-101).
+ *
+ * Chamadas separadas porque as perguntas são separadas, e porque quem pode
+ * fazer cada uma é outra pessoa: a de workspace exige `owner`, a de projeto
+ * basta ser membro. A tela nunca dispara a primeira sem o papel — pedir um 403
+ * de propósito é ruído no log de segurança.
+ */
+export const getWorkspaceSpendReport = (workspaceId: string, dias?: number) =>
+  get<WorkspaceSpendReport>(
+    `/workspaces/${workspaceId}/spend-report${dias ? `?dias=${dias}` : ''}`,
+  );
+
+export const getMySpend = (projectId: string, dias?: number) =>
+  get<MySpend>(
+    `/projects/${projectId}/spend/me${dias ? `?dias=${dias}` : ''}`,
+  );

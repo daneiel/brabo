@@ -52,7 +52,8 @@ interface ProjectCardProps {
   noBudget?: boolean;
   onDefineBudget?: () => void;
   lastActivityText: string;
-  unreadCount?: number;
+  /** Aprovações pendentes do projeto (RN-151) — mesmo número do badge da sidebar. */
+  pendingApprovalsCount?: number;
   onClick: () => void;
 }
 
@@ -68,7 +69,7 @@ export function ProjectCard({
   noBudget,
   onDefineBudget,
   lastActivityText,
-  unreadCount,
+  pendingApprovalsCount,
   onClick,
 }: ProjectCardProps) {
   const ProviderIcon = PROVIDER_ICON[provider];
@@ -97,9 +98,9 @@ export function ProjectCard({
             {provisioningBadge.label}
           </Badge>
         )}
-        {!!unreadCount && (
+        {!!pendingApprovalsCount && (
           <Badge tone="accent" className={styles.unreadBadge}>
-            {unreadCount}
+            {pendingApprovalsCount}
           </Badge>
         )}
       </div>

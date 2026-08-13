@@ -199,4 +199,59 @@ defmodule Engine.Harness.ToolLoopTest do
     assert {:ok, out} = ToolLoop.run(ctx)
     refute Map.has_key?(out, :last_error)
   end
+
+  # --- RN-059 estendida: o mesmo guard-rail dos 4 agentes conversacionais,
+  # aplicado no ponto estrutural comum a TODO consumidor do ToolLoop (dev
+  # agents, QA, SecOps, Infra-Workflows, Anamnese, Psicólogo). Achado ao vivo:
+  # uma sessão de execução real (dev agents) gravou `agent.response` com
+  # conteúdo vazio para eventos NOVOS — a tela os rotula como se fossem
+  # pré-RN-059, escondendo uma falha ACONTECENDO agora.
+
+  test "iteração só com tool call (sem texto) não grava agent.response vazio", %{ctx: ctx} do
+    Process.put(:fake_llm_turns, [
+      FakeEngineApiClient.tool_call_response("search_workspace", %{"query" => "x"}),
+      FakeEngineApiClient.final_response("pronto")
+    ])
+
+    assert {:ok, _out} = ToolLoop.run(ctx)
+
+    refute_received {:event_appended, _, _, %{type: "agent.response", payload: %{content: ""}}}
+    # a segunda iteração TEM texto — essa grava normalmente.
+    assert_received {:event_appended, _, _,
+                     %{type: "agent.response", payload: %{content: "pronto"}}}
+  end
+
+  test "modelo termina o turno sem texto e sem tool call: nenhum agent.response vazio, ctx segue {:ok, _} para o chamador decidir o desfecho",
+       %{ctx: ctx} do
+    Process.put(:fake_llm_turns, [
+      %{
+        "message" => %{"role" => "assistant", "content" => "", "toolCalls" => []},
+        "usage" => %{"costMicros" => 0},
+        "error" => nil
+      }
+    ])
+
+    assert {:ok, _out} = ToolLoop.run(ctx)
+
+    refute_received {:event_appended, _, _, %{type: "agent.response"}}
+  end
+
+  test "falha de transporte (provider fora do ar): grava agent.error durável com origem, nunca agent.response vazio",
+       %{ctx: ctx} do
+    Process.put(:fake_llm_turn_error, :timeout)
+
+    assert {:ok, out} = ToolLoop.run(ctx)
+    assert out.last_error =~ "timeout"
+
+    refute_received {:event_appended, _, _, %{type: "agent.response"}}
+
+    assert_received {:event_appended, _, _,
+                     %{
+                       type: "agent.error",
+                       payload: %{origem: "infra", mensagem: mensagem, reason: reason}
+                     }}
+
+    assert mensagem =~ "Não consegui completar este turno"
+    assert reason =~ "timeout"
+  end
 end

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Shell } from './Shell';
 import { ApiError } from '../lib/api-client';
@@ -9,10 +9,13 @@ const navigate = vi.fn();
 const sair = vi.fn(() => Promise.resolve());
 
 // Mutável porque a sidebar muda de comportamento com a LISTA (nome repetido
-// ganha desempate, nome único não), e os mocks de módulo são hoisted.
+// ganha desempate, nome único não) e com a ROTA atual, e os mocks de módulo
+// são hoisted.
 const estado = vi.hoisted(() => ({
   projects: [] as unknown[],
   projectsQuery: {} as Record<string, unknown>,
+  summaries: [] as unknown[],
+  pathname: '/',
 }));
 
 const PROJECT: Project = {
@@ -40,12 +43,20 @@ const WORKSPACE_WITH_ROLE: WorkspaceWithRole = {
 };
 
 vi.mock('@tanstack/react-router', () => ({
-  Link: ({ children, to, params }: { children: React.ReactNode; to: string; params?: unknown }) => (
-    <a href={`${to}-${JSON.stringify(params)}`}>{children}</a>
+  Link: ({
+    children,
+    to,
+    params,
+    ...rest
+  }: { children: React.ReactNode; to: string; params?: unknown } & Record<string, unknown>) => (
+    <a href={params ? `${to}-${JSON.stringify(params)}` : to} {...rest}>
+      {children}
+    </a>
   ),
   Outlet: () => null,
   useNavigate: () => navigate,
-  useRouterState: () => '/',
+  useRouterState: (opts?: { select?: (s: { location: { pathname: string } }) => unknown }) =>
+    opts?.select ? opts.select({ location: { pathname: estado.pathname } }) : estado.pathname,
 }));
 
 vi.mock('../lib/auth', () => ({
@@ -58,17 +69,7 @@ vi.mock('../lib/hooks', () => ({
   useCurrentWorkspaceWithRole: () => ({ data: WORKSPACE_WITH_ROLE }),
   useProjects: () => ({ data: estado.projects, ...estado.projectsQuery }),
   useProjectsStatus: () => ({ data: [] }),
-  useProjectsSummary: () => ({ data: [] }),
-}));
-
-vi.mock('../lib/notifications', () => ({
-  useProjectsUnread: () =>
-    estado.projects.map((project) => ({
-      project,
-      latestSessionId: null,
-      latestSeq: 0,
-      unreadCount: 0,
-    })),
+  useProjectsSummary: () => ({ data: estado.summaries }),
 }));
 
 vi.mock('../lib/api-client', async () => {
@@ -81,6 +82,13 @@ vi.mock('../lib/api-client', async () => {
     mensagemDaApi: real.mensagemDaApi,
   };
 });
+
+// Stub, mesmo padrão do `Dashboard.test.tsx`: o wizard de verdade puxa
+// react-query/ToastProvider/api-client — o que a sidebar precisa provar é só
+// que ela ABRE o mesmo componente, não o comportamento dele.
+vi.mock('./NewProjectWizard', () => ({
+  NewProjectWizard: () => <div data-testid="wizard-stub" />,
+}));
 
 function renderShell() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -96,6 +104,8 @@ beforeEach(() => {
   sair.mockClear();
   estado.projects = [PROJECT];
   estado.projectsQuery = {};
+  estado.summaries = [];
+  estado.pathname = '/';
 });
 
 describe('Shell — rodapé', () => {
@@ -196,5 +206,106 @@ describe('Shell — nav global inerte', () => {
     chat.click();
     settings.click();
     expect(navigate).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * A marca da sidebar (FASE 17a).
+ *
+ * O cabeçalho usava o `BrandIcon` — um cubo isométrico —, enquanto as telas de
+ * auth usavam o monograma B. Eram duas marcas no mesmo produto, e a troca
+ * acontecia exatamente na passagem do login para o app. O handoff é explícito em
+ * que o monograma é o único asset de marca; o teste guarda isso pela haste de
+ * traço 3.4, que é o que distingue um desenho do outro.
+ */
+describe('Shell — marca', () => {
+  it('o cabeçalho usa o monograma B, e não outro desenho', () => {
+    const { container } = renderShell();
+
+    expect(container.querySelector('aside svg path[stroke-width="3.4"]')).not.toBeNull();
+    // O cubo isométrico do `BrandIcon`: se ele voltar, este path reaparece.
+    expect(
+      container.querySelector('aside svg path[d="M12 3l7 4v10l-7 4-7-4V7z"]'),
+    ).toBeNull();
+  });
+
+  // A marca era `<div>` sem navegação nenhuma — clicar não fazia nada,
+  // mesmo sendo o topo da sidebar persistente em toda rota. Agora é o
+  // atalho de volta ao dashboard raiz — destino diferente do botão de
+  // `SessionPage.tsx` (aria-label="Voltar ao projeto"), que volta ao
+  // PROJETO da sessão, não ao dashboard.
+  it('é um link para o dashboard raiz, mesmo dentro de um projeto aberto', () => {
+    estado.pathname = '/projects/project-1';
+
+    renderShell();
+
+    const marca = screen.getByLabelText('Ir para o dashboard');
+    expect(marca.tagName).toBe('A');
+    expect(marca).toHaveAttribute('href', '/');
+  });
+});
+
+/**
+ * Antes disto, "Novo projeto" só existia no topbar do Dashboard
+ * (`Dashboard.tsx`). Dentro de um projeto aberto (`/projects/$projectId/**`)
+ * não havia NENHUM jeito de criar outro — só voltar ao `/` manualmente. A
+ * sidebar é montada em toda rota, então o botão aqui é o que fecha essa
+ * lacuna.
+ */
+describe('Shell — novo projeto na sidebar', () => {
+  it('o botão aparece e abre o mesmo wizard estando DENTRO de um projeto aberto', () => {
+    estado.pathname = '/projects/project-1';
+
+    renderShell();
+
+    expect(screen.queryByTestId('wizard-stub')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Novo projeto' }));
+
+    expect(screen.getByTestId('wizard-stub')).toBeInTheDocument();
+  });
+
+  it('também aparece no dashboard — as duas entradas convivem, uma na topbar (Dashboard) e outra na sidebar (aqui)', () => {
+    estado.pathname = '/';
+
+    renderShell();
+
+    expect(
+      screen.getByRole('button', { name: 'Novo projeto' }),
+    ).toBeInTheDocument();
+  });
+});
+
+/**
+ * RN-151: o badge da sidebar é aprovações PENDENTES, não atividade não lida.
+ *
+ * Antes vinha de `latestSeq - seen` (`useProjectsUnread`) — qualquer evento
+ * novo contava, mesmo sem nenhuma decisão esperando o usuário. Um projeto com
+ * centenas de eventos de execução e zero pendência mostrava um número que não
+ * levava a lugar nenhum ao clicar.
+ */
+describe('Shell — badge de aprovações pendentes', () => {
+  it('mostra a contagem de pendingApprovalsCount quando > 0', () => {
+    estado.summaries = [{ projectId: PROJECT.id, pendingApprovalsCount: 8 }];
+
+    renderShell();
+
+    expect(screen.getByText('8')).toBeInTheDocument();
+  });
+
+  it('projeto sem nenhuma pendência não mostra badge', () => {
+    estado.summaries = [{ projectId: PROJECT.id, pendingApprovalsCount: 0 }];
+
+    renderShell();
+
+    expect(screen.queryByText('0')).toBeNull();
+  });
+
+  it('sem resumo carregado ainda, não mostra badge (undefined vira 0)', () => {
+    estado.summaries = [];
+
+    renderShell();
+
+    expect(screen.queryByText('0')).toBeNull();
   });
 });

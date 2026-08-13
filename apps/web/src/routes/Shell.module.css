@@ -15,30 +15,76 @@
 .brand {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 18px 16px;
+  gap: 11px;
+  padding: 16px 18px;
   border-bottom: 1px solid var(--border);
 }
 
-.brandIcon {
-  color: var(--accent);
-  display: flex;
+/*
+ * Ladrilho da marca. 32px com raio 9px é a aplicação canônica do handoff — o
+ * raio é ≈28% do lado, a mesma proporção do selo de 40px/11px das telas de auth.
+ */
+.brandTile {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 9px;
+  background: var(--accent);
+  color: var(--on-accent);
+  display: grid;
+  place-items: center;
 }
 
 .brandName {
   font-family: var(--font-heading);
-  font-weight: 600;
-  font-size: 15px;
+  font-weight: 700;
+  font-size: 17px;
+  letter-spacing: -0.02em;
   color: var(--text-primary);
+}
+
+/* Rótulo + botão de criar, na mesma linha: era a única forma de criar um
+   projeto novo estando DENTRO de um projeto aberto — antes disso o único
+   caminho era voltar ao dashboard (`/`), sem nenhuma pista de que era
+   preciso. */
+.navLabelRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 8px 6px 12px;
 }
 
 .navLabel {
   font-family: var(--font-mono);
   font-size: 10px;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   color: var(--text-muted);
-  padding: 16px 16px 6px;
+}
+
+.newProjectButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.newProjectButton:hover {
+  background: var(--surface-2);
+  color: var(--text-primary);
+}
+
+.newProjectButton:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
 .nav {
@@ -54,7 +100,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 8px;
+  padding: 8px 10px;
   border-radius: var(--radius-md);
   color: var(--text-secondary);
   font-size: 13px;
@@ -71,10 +117,16 @@
   color: var(--text-primary);
 }
 
+/*
+ * Quadrado de canto arredondado, não círculo: é a forma que o handoff dá ao
+ * marcador de projeto da sidebar, e é o que o distingue do ponto REDONDO de
+ * "ao vivo" que aparece nos cards e no rodapé do explorador. Duas formas, dois
+ * significados — estado do projeto e pulso de atividade.
+ */
 .navDot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
   background: var(--dot-color, var(--accent));
   flex-shrink: 0;
 }
@@ -158,20 +210,27 @@
   border-top: 1px solid var(--border);
 }
 
+/*
+ * Os dois itens sem rota. `--text-muted` e não o `--text-secondary` do handoff:
+ * lá os dois são navegação de verdade, aqui são presença visual ("em breve") e
+ * a cor é o que os diferencia de um item clicável. Peso e respiro seguem o
+ * handoff.
+ */
 .inertNavItem {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 8px;
+  padding: 9px 10px;
   border-radius: var(--radius-md);
   color: var(--text-muted);
   font-size: 13px;
+  font-weight: 500;
   cursor: default;
 }
 
 .footer {
   border-top: 1px solid var(--border);
-  padding: 12px 14px;
+  padding: 12px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -181,14 +240,14 @@
 .userCard {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 11px;
   min-width: 0;
 }
 
 .avatar {
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-full, 9999px);
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-md);
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -199,8 +258,8 @@
      `design-contraste.test.ts`. */
   background: var(--accent);
   color: var(--on-accent);
-  font-family: var(--font-mono);
-  font-size: 11px;
+  font-family: var(--font-heading);
+  font-size: 13px;
   font-weight: 700;
 }
 
@@ -212,7 +271,8 @@
 }
 
 .userName {
-  font-size: 12.5px;
+  font-size: 13px;
+  font-weight: 600;
   color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
@@ -227,7 +287,7 @@
  */
 .userRole {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 11px;
   color: var(--text-secondary);
 }
 

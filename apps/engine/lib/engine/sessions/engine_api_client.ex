@@ -122,6 +122,33 @@ defmodule Engine.Sessions.EngineApiClient do
               {:ok, map()} | {:error, term()}
 
   @doc """
+  Ferramenta `create_c4_diagram` do Arquiteto: gera o diagrama C4 (Context +
+  Container, modelo de Simon Brown) a partir do module_map vigente. `entrada`
+  carrega `system_name`/`system_description`/`actors` — o Container level é
+  DERIVADO do module_map na api, nunca redigitado aqui. `{:error, _}` quando
+  não há module_map vigente (400) ou a entrada é inválida.
+  """
+  @callback create_c4_diagram(
+              project_id :: String.t(),
+              session_id :: String.t(),
+              entrada :: map()
+            ) ::
+              {:ok, map()} | {:error, term()}
+
+  @doc """
+  Ferramenta `choose_project_image` do Arquiteto (FASE 25a, ADR 0065): fixa a
+  imagem de container do projeto. Imagem sem tag explícita, `latest`, rationale
+  curto ou recurso acima do teto voltam como `{:error, _}` — a regra é de
+  domínio na api, e o motivo chega inteiro ao modelo pelo tool-result.
+  """
+  @callback decide_project_image(
+              project_id :: String.t(),
+              session_id :: String.t(),
+              decisao :: map()
+            ) ::
+              {:ok, map()} | {:error, term()}
+
+  @doc """
   Ciclo de task dos dev agents (Fase 4a). `claim_task` pega a próxima task
   pegável do módulo (atômico na api) — retorna `{:ok, task_map}` ou `{:ok, nil}`
   se não há. `mark_task` atualiza o status.
@@ -408,8 +435,14 @@ defmodule Engine.Sessions.EngineApiClient do
   def create_module_map(project_id, session_id, modules),
     do: impl().create_module_map(project_id, session_id, modules)
 
+  def create_c4_diagram(project_id, session_id, entrada),
+    do: impl().create_c4_diagram(project_id, session_id, entrada)
+
   def assign_story_modules(project_id, session_id, fields),
     do: impl().assign_story_modules(project_id, session_id, fields)
+
+  def decide_project_image(project_id, session_id, decisao),
+    do: impl().decide_project_image(project_id, session_id, decisao)
 
   def claim_task(project_id, session_id, module, agent_id),
     do: impl().claim_task(project_id, session_id, module, agent_id)
@@ -642,10 +675,26 @@ defmodule Engine.Sessions.EngineApiClient.Live do
   end
 
   @impl true
+  def create_c4_diagram(project_id, session_id, entrada) do
+    post_returning(
+      "/internal/sessions/#{session_id}/c4-diagram",
+      Map.put(entrada, :projectId, project_id)
+    )
+  end
+
+  @impl true
   def assign_story_modules(project_id, session_id, fields) do
     post_returning(
       "/internal/sessions/#{session_id}/story-modules",
       Map.put(fields, :projectId, project_id)
+    )
+  end
+
+  @impl true
+  def decide_project_image(project_id, session_id, decisao) do
+    post_returning(
+      "/internal/sessions/#{session_id}/project-image",
+      Map.put(decisao, :projectId, project_id)
     )
   end
 

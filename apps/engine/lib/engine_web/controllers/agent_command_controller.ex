@@ -77,7 +77,12 @@ defmodule EngineWeb.AgentCommandController do
         "text" => text
       }) do
     {:ok, _pid, _origin} = PoSupervisor.start_agent(session_id, project_id)
-    :ok = PoServer.user_message(session_id, text)
+    # O retorno já não é sempre `:ok` (RN-122): um `:cancel` concorrente pode
+    # ter interrompido o turno (`{:error, :cancelado}`), ou uma segunda
+    # mensagem pode ter chegado com outra já em curso (`{:error,
+    # :turno_em_andamento}`). Nos dois casos o desfecho de verdade já está
+    # gravado no event log (`agent.error`) — esta resposta é só o aceite.
+    _ = PoServer.user_message(session_id, text)
     send_resp(conn, 202, "")
   end
 
@@ -88,7 +93,7 @@ defmodule EngineWeb.AgentCommandController do
         "text" => text
       }) do
     {:ok, _pid, _origin} = DevLeadSupervisor.start_agent(session_id, project_id)
-    :ok = DevLeadServer.user_message(session_id, text)
+    _ = DevLeadServer.user_message(session_id, text)
     send_resp(conn, 202, "")
   end
 
@@ -99,7 +104,7 @@ defmodule EngineWeb.AgentCommandController do
         "text" => text
       }) do
     {:ok, _pid, _origin} = ArquitetoSupervisor.start_agent(session_id, project_id)
-    :ok = ArquitetoServer.user_message(session_id, text)
+    _ = ArquitetoServer.user_message(session_id, text)
     send_resp(conn, 202, "")
   end
 
@@ -109,7 +114,7 @@ defmodule EngineWeb.AgentCommandController do
         "text" => text
       }) do
     {:ok, _pid} = CriativoSupervisor.start_agent(session_id, project_id)
-    :ok = CriativoServer.user_message(session_id, text)
+    _ = CriativoServer.user_message(session_id, text)
     send_resp(conn, 202, "")
   end
 
@@ -131,7 +136,7 @@ defmodule EngineWeb.AgentCommandController do
         "reason" => reason
       }) do
     if PoServer.vivo?(session_id) do
-      :ok = PoServer.revise(session_id, %{"id" => story_id, "title" => title, "reason" => reason})
+      _ = PoServer.revise(session_id, %{"id" => story_id, "title" => title, "reason" => reason})
       send_resp(conn, 202, "")
     else
       conn
@@ -141,12 +146,12 @@ defmodule EngineWeb.AgentCommandController do
   end
 
   def readiness(conn, %{"sessionId" => session_id}) do
-    :ok = CriativoServer.confirm_readiness(session_id)
+    _ = CriativoServer.confirm_readiness(session_id)
     send_resp(conn, 202, "")
   end
 
   def offer_infra_handoff(conn, %{"sessionId" => session_id}) do
-    :ok = ArquitetoServer.offer_infra_handoff(session_id)
+    _ = ArquitetoServer.offer_infra_handoff(session_id)
     send_resp(conn, 202, "")
   end
 
@@ -154,4 +159,35 @@ defmodule EngineWeb.AgentCommandController do
     :ok = ArquitetoServer.offer_dev_handoff(session_id)
     send_resp(conn, 202, "")
   end
+
+  @doc """
+  Cancela o turno em curso do agente conversacional ativo na sessão
+  (RN-122) — o botão "Parar" do composer. Idempotente por natureza:
+  `GenServer.cast` num `{:via, ...}` sem processo registrado (agente já
+  encerrado, ou sem turno algum em curso) é NO-OP, então esta rota nunca
+  falha por "não havia o quê cancelar".
+  """
+  def cancel(conn, %{"sessionId" => session_id, "agent" => agent}) do
+    case via_for(agent, session_id) do
+      {:ok, via} ->
+        GenServer.cast(via, :cancel)
+        send_resp(conn, 202, "")
+
+      :error ->
+        conn
+        |> put_status(422)
+        |> json(%{error: "agente não suportado como conversacional: #{agent}"})
+    end
+  end
+
+  # Sem "agent" no corpo: mesmo default do `message/2` de baixo — sem
+  # `"agent"`, o alvo é o Criativo (único que nasce sem handoff).
+  def cancel(conn, %{"sessionId" => session_id}),
+    do: cancel(conn, %{"sessionId" => session_id, "agent" => "criativo"})
+
+  defp via_for("criativo", session_id), do: {:ok, CriativoServer.via(session_id)}
+  defp via_for("po", session_id), do: {:ok, PoServer.via(session_id)}
+  defp via_for("arquiteto", session_id), do: {:ok, ArquitetoServer.via(session_id)}
+  defp via_for("dev-lead", session_id), do: {:ok, DevLeadServer.via(session_id)}
+  defp via_for(_agent, _session_id), do: :error
 end

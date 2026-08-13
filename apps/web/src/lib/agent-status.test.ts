@@ -3,6 +3,8 @@ import {
   breakerReasonFor,
   deriveAgentRoster,
   groupRosterByArea,
+  isExecutorAgentId,
+  isExecutorGroup,
   rosterFactsFromEvents,
   rosterFromFacts,
   type RosterEntry,
@@ -364,6 +366,66 @@ describe('groupRosterByArea', () => {
 
   it('roster vazia devolve lista vazia', () => {
     expect(groupRosterByArea([])).toEqual([]);
+  });
+});
+
+/**
+ * FASE 27 (RN-121) — a aba Executores mostra SÓ dev agent e QA; a Visão
+ * geral mostra o resto. As duas telas filtram o MESMO `groupRosterByArea`
+ * com `isExecutorGroup`/`!isExecutorGroup` — se a função errar, as duas
+ * telas erram junto (nunca uma mostra o que a outra esconde, ou vice-versa).
+ */
+describe('isExecutorAgentId / isExecutorGroup', () => {
+  function entry(id: keyof typeof AGENTS): RosterEntry {
+    return { id, def: AGENTS[id], status: 'ocioso' };
+  }
+
+  it('dev-<módulo> dinâmico é executor', () => {
+    expect(isExecutorAgentId('dev-backend')).toBe(true);
+    expect(isExecutorAgentId('dev-checkout-api')).toBe(true);
+  });
+
+  it('dev-lead é executor (mesmo hoje nunca instanciado na roster)', () => {
+    expect(isExecutorAgentId('dev-lead')).toBe(true);
+  });
+
+  it('qa (lead) e as subespecialidades são executores', () => {
+    expect(isExecutorAgentId('qa')).toBe(true);
+    expect(isExecutorAgentId('qa-automacao')).toBe(true);
+    expect(isExecutorAgentId('qa-performance-seguranca')).toBe(true);
+  });
+
+  it('criativo/po/arquiteto/infra/secops NÃO são executores', () => {
+    for (const id of ['criativo', 'po', 'arquiteto', 'infra', 'infra-workflows', 'secops'] as const) {
+      expect(isExecutorAgentId(id)).toBe(false);
+    }
+  });
+
+  it('grupo de área qa inteiro é executor', () => {
+    const roster = [entry('qa'), entry('qa-automacao'), entry('qa-performance-seguranca')];
+    const [grupo] = groupRosterByArea(roster);
+    expect(isExecutorGroup(grupo)).toBe(true);
+  });
+
+  it('grupo de área infra NÃO é executor', () => {
+    const roster = [entry('infra'), entry('infra-workflows')];
+    const [grupo] = groupRosterByArea(roster);
+    expect(isExecutorGroup(grupo)).toBe(false);
+  });
+
+  it('grupo solo de dev-<módulo> é executor; criativo/po/arquiteto não são', () => {
+    const devBackend: RosterEntry = {
+      id: 'dev-backend',
+      def: { ...AGENTS['dev-backend'], name: 'dev-backend' },
+      status: 'ocioso',
+    };
+    const grupos = groupRosterByArea([devBackend, entry('criativo'), entry('po')]);
+
+    expect(grupos.filter(isExecutorGroup)).toEqual([{ kind: 'solo', entry: devBackend }]);
+    expect(grupos.filter((g) => !isExecutorGroup(g))).toEqual([
+      { kind: 'solo', entry: entry('criativo') },
+      { kind: 'solo', entry: entry('po') },
+    ]);
   });
 });
 

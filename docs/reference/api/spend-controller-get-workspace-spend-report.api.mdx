@@ -1,0 +1,69 @@
+---
+id: spend-controller-get-workspace-spend-report
+title: "Quebra o gasto do workspace por modelo, projeto, ator e dia"
+description: "A audiência do OWNER. Complementa `credential-spend`, que responde a pergunta da FATURA (por provider, que é a unidade da credencial) e continua exclusiva dele pela RN-060. Aqui não há eixo de provider: quebrar por provider é quebrar por credencial. Janela deslizante em dias, e a série diária vem DENSA — dia sem gasto entra com zero, senão a sparkline mente sobre o ritmo."
+sidebar_label: "Quebra o gasto do workspace por modelo, projeto, ator e dia"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "get api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Quebra o gasto do workspace por modelo, projeto, ator e dia"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/workspaces/{workspaceId}/spend-report"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+A audiência do OWNER. Complementa `credential-spend`, que responde a pergunta da FATURA (por provider, que é a unidade da credencial) e continua exclusiva dele pela RN-060. Aqui não há eixo de provider: quebrar por provider é quebrar por credencial. Janela deslizante em dias, e a série diária vem DENSA — dia sem gasto entra com zero, senão a sparkline mente sobre o ritmo.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./spend-controller-get-workspace-spend-report.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./spend-controller-get-workspace-spend-report.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./spend-controller-get-workspace-spend-report.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

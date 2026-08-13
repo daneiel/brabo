@@ -6,6 +6,7 @@ defmodule Engine.Agents.ArquitetoServerTest do
 
   alias Engine.Agents.ArquitetoServer
   alias Engine.Sessions.FakeEngineApiClient
+  import Engine.Agents.TurnoAssincronoCase, only: [sync_call: 3, sync_cast: 3]
 
   setup do
     root =
@@ -77,7 +78,7 @@ defmodule Engine.Agents.ArquitetoServerTest do
       FakeEngineApiClient.final_response("Arquitetura pronta.")
     ])
 
-    assert {:noreply, _new_state} = ArquitetoServer.handle_cast(:kickoff, state)
+    assert {:noreply, _new_state} = sync_cast(ArquitetoServer, :kickoff, state)
 
     assert_received {:module_map_created, _modules}
     assert_received {:story_modules_assigned, %{storyId: "st-1", moduleIds: ["api"]}}
@@ -99,7 +100,7 @@ defmodule Engine.Agents.ArquitetoServerTest do
       FakeEngineApiClient.final_response("ok")
     ])
 
-    assert {:noreply, new_state} = ArquitetoServer.handle_cast(:kickoff, state)
+    assert {:noreply, new_state} = sync_cast(ArquitetoServer, :kickoff, state)
 
     tool_msgs = Enum.filter(new_state.messages, &(&1["role"] == "tool"))
     assert Enum.any?(tool_msgs, &String.contains?(&1["content"], "falha ao criar module_map"))
@@ -111,7 +112,7 @@ defmodule Engine.Agents.ArquitetoServerTest do
     Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("feito")])
 
     assert {:reply, :ok, _} =
-             ArquitetoServer.handle_call({:user_message, "defina a arquitetura"}, self(), state)
+             sync_call(ArquitetoServer, {:user_message, "defina a arquitetura"}, state)
 
     assert_received %Phoenix.Socket.Broadcast{
       event: "agent.delta",
@@ -119,6 +120,75 @@ defmodule Engine.Agents.ArquitetoServerTest do
     }
 
     assert_received %Phoenix.Socket.Broadcast{event: "agent.done"}
+  end
+
+  # Achado do problema 2 (RN-146): o `agent.response` carrega o nome do
+  # modelo que gerou a resposta, extraído do frame `final` da api.
+  test "agent.response carrega o nome do modelo", %{state: state, session_id: session_id} do
+    Process.put(:fake_llm_turns, [
+      FakeEngineApiClient.final_response("Arquitetura pronta.", "gpt-4o-mini")
+    ])
+
+    assert {:reply, :ok, _} =
+             sync_call(ArquitetoServer, {:user_message, "defina a arquitetura"}, state)
+
+    assert_received {:event_appended, _, ^session_id,
+                     %{
+                       type: "agent.response",
+                       payload: %{content: "Arquitetura pronta.", modelName: "gpt-4o-mini"}
+                     }}
+  end
+
+  test "offer_infra_handoff: roda o turno de fechamento e oferece o handoff ao infra", %{
+    state: state,
+    session_id: session_id
+  } do
+    Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("Arquitetura fechada.")])
+
+    assert {:reply, :ok, _} = sync_call(ArquitetoServer, :offer_infra_handoff, state)
+
+    assert_received {:handoff_created, _, ^session_id, "arquiteto", "infra", nil}
+  end
+
+  test "offer_dev_handoff: oferece o handoff ao dev-lead sem rodar turno de LLM", %{
+    state: state,
+    session_id: session_id
+  } do
+    assert {:reply, :ok, _} = ArquitetoServer.handle_call(:offer_dev_handoff, self(), state)
+
+    assert_received {:handoff_created, _, ^session_id, "arquiteto", "dev-lead", nil}
+  end
+
+  # RN-116: mesmo achado do Criativo → PO (`criativo_server_test.exs`), aqui
+  # nos dois handoffs do Arquiteto. `{:ok, _handoff} = ...` era um match
+  # rígido — a api recusando o handoff derrubava o GenServer inteiro.
+  test "offer_infra_handoff: falha ao criar o handoff NÃO derruba o processo, e vira agent.error",
+       %{state: state, session_id: session_id} do
+    Phoenix.PubSub.subscribe(Engine.PubSub, "session:" <> session_id)
+    Process.put(:fake_handoff_error, {500, %{"message" => "erro interno"}})
+    Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("Arquitetura fechada.")])
+
+    assert {:reply, :ok, _} = sync_call(ArquitetoServer, :offer_infra_handoff, state)
+
+    assert_received {:event_appended, _, ^session_id, %{type: "agent.error", payload: payload}}
+    assert payload.origem == "infra"
+    assert payload.mensagem =~ "Não consegui oferecer o handoff ao infra"
+
+    assert_received %Phoenix.Socket.Broadcast{event: "agent.error"}
+  end
+
+  test "offer_dev_handoff: falha ao criar o handoff NÃO derruba o processo, e vira agent.error",
+       %{state: state, session_id: session_id} do
+    Phoenix.PubSub.subscribe(Engine.PubSub, "session:" <> session_id)
+    Process.put(:fake_handoff_error, {500, %{"message" => "erro interno"}})
+
+    assert {:reply, :ok, _} = ArquitetoServer.handle_call(:offer_dev_handoff, self(), state)
+
+    assert_received {:event_appended, _, ^session_id, %{type: "agent.error", payload: payload}}
+    assert payload.origem == "infra"
+    assert payload.mensagem =~ "Não consegui oferecer o handoff ao dev-lead"
+
+    assert_received %Phoenix.Socket.Broadcast{event: "agent.error"}
   end
 
   test "rehydration: reconstrói o histórico do event log no init", %{} do

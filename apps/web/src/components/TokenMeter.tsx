@@ -85,7 +85,14 @@ export function TokenMeter({
 
   if (compact && noBudget) {
     return (
-      <div className={styles.card} data-testid="token-meter" data-threshold="ok">
+      // `compact` também aqui: sem ele o CTA nascia com o respiro e o raio da
+      // variante CHEIA dentro de um card do dashboard, mais alto que o próprio
+      // medidor que ele substitui.
+      <div
+        className={[styles.card, styles.compact].join(' ')}
+        data-testid="token-meter"
+        data-threshold="ok"
+      >
         <span
           role="button"
           tabIndex={0}

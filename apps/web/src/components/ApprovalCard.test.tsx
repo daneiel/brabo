@@ -4,9 +4,14 @@ import { ApprovalCard } from './ApprovalCard';
 import type { ActionType, ProposedAction } from '../lib/api-types';
 
 /**
- * Os 13 tipos do backend (`apps/api/src/domain/actions/decide.ts`). A lista é
- * escrita à mão de propósito: se o backend ganhar um tipo e ninguém acrescentar
- * aqui, é o `Record<ActionType, …>` do ApprovalCard que reprova na compilação.
+ * Os 15 tipos do backend (`apps/api/src/domain/actions/decide.ts`).
+ *
+ * A lista era "escrita à mão de propósito", confiando no `Record<ActionType, …>`
+ * para cobrar tipo novo na compilação. Não cobrou: `parallelize` e
+ * `raise_max_parallel` entraram na FASE 14d e ficaram fora dos dois lados ao
+ * mesmo tempo — do backend o compilador do web não sabe nada. Quem cobra a
+ * divergência agora é `src/lib/aprovacoes.test.ts`, que LÊ o decide.ts; esta
+ * lista continua aqui só como fixture de render.
  */
 const TODOS_OS_TIPOS: ActionType[] = [
   'terminal',
@@ -22,6 +27,8 @@ const TODOS_OS_TIPOS: ActionType[] = [
   'git_merge',
   'open_infra_pr',
   'instruction_patch',
+  'parallelize',
+  'raise_max_parallel',
 ];
 
 function makeAction(overrides: Partial<ProposedAction> = {}): ProposedAction {
@@ -76,6 +83,44 @@ describe('ApprovalCard', () => {
     expect(onAlwaysAllow).toHaveBeenCalledTimes(1);
   });
 
+  it('sem onActivateAutoMode, o botão "Modo automático" não aparece (RN-153 — sem papel maintainer)', () => {
+    render(
+      <ApprovalCard action={makeAction()} onApprove={vi.fn()} onDeny={vi.fn()} onAlwaysAllow={vi.fn()} />,
+    );
+    expect(screen.queryByRole('button', { name: 'Modo automático' })).toBeNull();
+  });
+
+  it('com onActivateAutoMode, chama ao clicar em "Modo automático"', () => {
+    const onActivateAutoMode = vi.fn();
+    render(
+      <ApprovalCard
+        action={makeAction()}
+        onApprove={vi.fn()}
+        onDeny={vi.fn()}
+        onAlwaysAllow={vi.fn()}
+        onActivateAutoMode={onActivateAutoMode}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Modo automático' }));
+    expect(onActivateAutoMode).toHaveBeenCalledTimes(1);
+  });
+
+  it('mostra a nota do "Modo automático" na variante chat, citando os tetos que continuam pedindo decisão', () => {
+    render(
+      <ApprovalCard
+        action={makeAction()}
+        variant="chat"
+        onApprove={vi.fn()}
+        onDeny={vi.fn()}
+        onAlwaysAllow={vi.fn()}
+        onActivateAutoMode={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/libera TODA ação futura/)).toBeInTheDocument();
+    expect(screen.getByText(/paralelismo/)).toBeInTheDocument();
+  });
+
   it('mostra a nota de permissions.json na variante chat', () => {
     render(<ApprovalCard action={makeAction()} variant="chat" onApprove={vi.fn()} onDeny={vi.fn()} onAlwaysAllow={vi.fn()} />);
     expect(screen.getByText(/permissions\.json/)).toBeInTheDocument();
@@ -119,7 +164,10 @@ describe('ApprovalCard', () => {
 
   it('renderiza o comando da ação terminal', () => {
     render(<ApprovalCard action={makeAction()} onApprove={vi.fn()} onDeny={vi.fn()} onAlwaysAllow={vi.fn()} />);
-    expect(screen.getByText(/rm -rf \/tmp\/build/)).toBeInTheDocument();
+    // Duas ocorrências desde a FASE 19, e as duas ganham o lugar delas: a FRASE
+    // (resumo, visível sempre — inclusive na fila, onde o detalhe nasce
+    // fechado) e a linha `$ comando` do corpo, que é o comando INTEIRO.
+    expect(screen.getAllByText(/rm -rf \/tmp\/build/).length).toBeGreaterThan(0);
   });
 
   it('permite seleção em lote quando selectable', () => {
@@ -280,6 +328,225 @@ describe('ApprovalCard', () => {
       // Um card de verdade, não uma casca: o botão só existe se o corpo
       // inteiro renderizou.
       expect(screen.getByRole('button', { name: 'Aprovar' })).toBeTruthy();
+    });
+  });
+
+  /**
+   * FASE 19 (RN-096) — o card diz o que vai acontecer, e o payload cru não é
+   * despejado.
+   *
+   * O defeito que isto tranca: `Object.entries(payload).map(...)` com
+   * `JSON.stringify` no valor, SEMPRE visível, para todo tipo sem corpo visual
+   * próprio. Reintroduzir aquele bloco faz os dois primeiros testes daqui
+   * morrerem — foi assim que eles foram verificados.
+   */
+  describe('frase e colapso', () => {
+    // Um tipo SEM corpo visual próprio — os que caíam no despejo. `atual` e
+    // `proposto` são números: o `String(value)` do bloco antigo os escrevia na
+    // tela sem uma palavra dizendo o que eram.
+    const acaoDeTeto = () =>
+      makeAction({
+        actionType: 'raise_max_parallel',
+        payload: { area: 'dev', atual: 2, proposto: 4, rationale: 'três autorizações seguidas' },
+      });
+
+    it('mostra a FRASE do que vai acontecer, não as chaves do payload', () => {
+      render(
+        <ApprovalCard action={acaoDeTeto()} variant="queue" onApprove={vi.fn()} onDeny={vi.fn()} onAlwaysAllow={vi.fn()} />,
+      );
+
+      expect(screen.getByText(/Sobe o teto de agentes em paralelo da área dev de 2 para 4/)).toBeTruthy();
+      // O despejo antigo escrevia isto na tela, sem pedir: chave, dois-pontos e
+      // o valor.
+      expect(screen.queryByText(/rationale:/)).toBeNull();
+      expect(screen.queryByText(/^proposto: 4$/)).toBeNull();
+    });
+
+    it('o payload cru nasce COLAPSADO — em qualquer variante', () => {
+      for (const variant of ['chat', 'queue'] as const) {
+        const { unmount } = render(
+          <ApprovalCard action={acaoDeTeto()} variant={variant} onApprove={vi.fn()} onDeny={vi.fn()} onAlwaysAllow={vi.fn()} />,
+        );
+
+        const cabecalho = screen.getByRole('button', { name: /Payload cru/ });
+        expect(cabecalho.getAttribute('aria-expanded')).toBe('false');
+        expect(screen.queryByText(/três autorizações seguidas/)).toBeNull();
+        unmount();
+      }
+    });
+
+    /*
+     * Aberto, o payload é JSON INDENTADO — não `chave: JSON.stringify(valor)`,
+     * uma linha por chave, que era o formato do despejo. A diferença importa
+     * mesmo dentro do colapso: com valor aninhado, o despejo achatava o objeto
+     * inteiro numa linha só (`remote: {"name":"origin","url":"…"}`) e o motivo
+     * de abrir o detalhe — LER o payload — não se cumpria.
+     *
+     * É esta asserção que mata o mutante. Sem ela, reintroduzir o bloco antigo
+     * dentro do `Disclosure` passa em tudo: colapsado, o texto some da tela de
+     * qualquer jeito.
+     */
+    it('abrir o colapso revela o payload como JSON legível, não como despejo', () => {
+      render(
+        <ApprovalCard action={acaoDeTeto()} variant="queue" onApprove={vi.fn()} onDeny={vi.fn()} onAlwaysAllow={vi.fn()} />,
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: /Payload cru/ }));
+
+      const bloco = screen.getByText(/três autorizações seguidas/);
+      expect(bloco.textContent).toContain('"area": "dev"');
+      expect(bloco.textContent).toContain('"proposto": 4');
+    });
+
+    /*
+     * O default do colapso é DERIVADO de `variant` + `status` (item 14 da
+     * fase): nenhuma prop nova, e por isso nenhum call site precisou mudar.
+     */
+    it('detalhe rico nasce ABERTO no chat enquanto a ação está pendente', () => {
+      render(<ApprovalCard action={makeAction()} variant="chat" onApprove={vi.fn()} onDeny={vi.fn()} onAlwaysAllow={vi.fn()} />);
+      expect(screen.getByRole('button', { name: /Detalhes/ }).getAttribute('aria-expanded')).toBe('true');
+    });
+
+    it('e nasce FECHADO na fila, onde são N cards de uma vez', () => {
+      render(<ApprovalCard action={makeAction()} variant="queue" onApprove={vi.fn()} onDeny={vi.fn()} onAlwaysAllow={vi.fn()} />);
+      expect(screen.getByRole('button', { name: /Detalhes/ }).getAttribute('aria-expanded')).toBe('false');
+    });
+
+    it('no chat, ação já decidida também nasce fechada — não espera mais nada', () => {
+      render(
+        <ApprovalCard
+          action={makeAction({ status: 'executed' })}
+          variant="chat"
+          onApprove={vi.fn()}
+          onDeny={vi.fn()}
+          onAlwaysAllow={vi.fn()}
+        />,
+      );
+      expect(screen.getByRole('button', { name: /Detalhes/ }).getAttribute('aria-expanded')).toBe('false');
+    });
+
+    /*
+     * O caminho do tipo que o web ainda não conhece — real, não teórico: a
+     * união do web já ficou defasada duas vezes. Antes o `ACTION_ICON`
+     * devolvia `undefined` e o React derrubava a ÁRVORE inteira.
+     */
+    /*
+     * `write_file` ganhou corpo próprio: antes caía no fallback genérico
+     * (JSON cru colapsado), então um write que genuinamente pedia aprovação
+     * exigia um clique extra para ver o que seria escrito.
+     */
+    it('write_file pendente no chat mostra path + preview do conteúdo, ABERTO por padrão', () => {
+      render(
+        <ApprovalCard
+          action={makeAction({
+            actionType: 'write_file',
+            payload: { path: 'apps/api/src/foo.ts', content: 'export const foo = 1;\n' },
+          })}
+          variant="chat"
+          onApprove={vi.fn()}
+          onDeny={vi.fn()}
+          onAlwaysAllow={vi.fn()}
+        />,
+      );
+
+      const cabecalho = screen.getByRole('button', { name: /Detalhes/ });
+      expect(cabecalho.getAttribute('aria-expanded')).toBe('true');
+      expect(screen.getByText('apps/api/src/foo.ts')).toBeTruthy();
+      expect(screen.getByText(/export const foo = 1;/)).toBeTruthy();
+      // Nem o payload cru genérico nem o rótulo dele aparecem — write_file
+      // tem corpo próprio agora, não cai mais no fallback.
+      expect(screen.queryByRole('button', { name: /Payload cru/ })).toBeNull();
+    });
+
+    it('write_file com conteúdo grande trunca o preview e avisa quantas linhas', () => {
+      const linhas = Array.from({ length: 40 }, (_, i) => `linha ${i + 1}`);
+      render(
+        <ApprovalCard
+          action={makeAction({
+            actionType: 'write_file',
+            payload: { path: 'apps/api/src/big.ts', content: linhas.join('\n') },
+          })}
+          variant="chat"
+          onApprove={vi.fn()}
+          onDeny={vi.fn()}
+          onAlwaysAllow={vi.fn()}
+        />,
+      );
+
+      // O bloco de preview é um texto só (uma linha por `\n`) — a asserção lê
+      // o `textContent` bruto porque o normalizador padrão do RTL colapsaria
+      // as quebras de linha e esconderia o corte.
+      const preview = screen.getByText(/linha 1 linha 2/);
+      expect(preview.textContent).toContain('linha 1');
+      expect(preview.textContent).toContain('linha 25');
+      expect(preview.textContent).not.toContain('linha 40');
+      expect(screen.getByText(/25 de 40 linha\(s\)/)).toBeTruthy();
+    });
+
+    it('write_file com content vazio mostra a mensagem de fallback, não um preview em branco', () => {
+      render(
+        <ApprovalCard
+          action={makeAction({
+            actionType: 'write_file',
+            payload: { path: 'apps/api/src/foo.ts', content: '' },
+          })}
+          variant="chat"
+          onApprove={vi.fn()}
+          onDeny={vi.fn()}
+          onAlwaysAllow={vi.fn()}
+        />,
+      );
+
+      expect(screen.getByText(/O modelo não produziu um conteúdo válido para esta ação\./)).toBeTruthy();
+    });
+
+    it('write_file sem path e sem content mostra a mensagem combinada', () => {
+      render(
+        <ApprovalCard
+          action={makeAction({ actionType: 'write_file', payload: {} })}
+          variant="chat"
+          onApprove={vi.fn()}
+          onDeny={vi.fn()}
+          onAlwaysAllow={vi.fn()}
+        />,
+      );
+
+      expect(screen.getByText(/O modelo não produziu um caminho e um conteúdo válidos para esta ação\./)).toBeTruthy();
+    });
+
+    it('terminal com command vazio mostra a mensagem de fallback, não "$ " em branco', () => {
+      render(
+        <ApprovalCard
+          action={makeAction({ actionType: 'terminal', payload: { command: '' } })}
+          variant="chat"
+          onApprove={vi.fn()}
+          onDeny={vi.fn()}
+          onAlwaysAllow={vi.fn()}
+        />,
+      );
+
+      expect(screen.getByText(/O modelo não produziu um comando válido para esta ação\./)).toBeTruthy();
+      expect(screen.queryByText('$')).toBeNull();
+    });
+
+    it('tipo desconhecido: verbo neutro + "ver detalhes", sem derrubar a tela', () => {
+      render(
+        <ApprovalCard
+          // O cast é o ponto do teste: representa o tipo que o BACKEND já
+          // propõe e a união do web ainda não conhece. Sem ele não dá para
+          // exercitar o caminho — o compilador impediria justamente o cenário
+          // que aconteceu duas vezes em produção.
+          action={makeAction({ actionType: 'deploy_producao' as ActionType, payload: { host: 'prod-1' } })}
+          variant="queue"
+          onApprove={vi.fn()}
+          onDeny={vi.fn()}
+          onAlwaysAllow={vi.fn()}
+        />,
+      );
+
+      expect(screen.getByText(/propõe uma ação — ver detalhes\./)).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'Aprovar' })).toBeTruthy();
+      expect(screen.queryByText(/prod-1/)).toBeNull();
     });
   });
 });

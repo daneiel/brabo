@@ -129,6 +129,41 @@ o componente `d` da JWK, travado por teste.
   (`main.ts`), são públicas, e servem o mesmo documento que a
   [referência gerada](reference/api/brabo-api) publica. Registrado aqui em vez
   de omitido: o que o teste não alcança precisa estar na prosa.
+- **`GET /projects/:projectId/agent-areas` passou a devolver dados de verdade,
+  e a classificação não mudou** — continua `role:developer`, enquanto o `PATCH`
+  do teto continua `role:maintainer`. Até a FASE 18 a tabela `agent_areas`
+  nunca era gravada e a rota respondia `[]` a todo mundo, o que fazia a
+  classificação parecer folgada por acidente e não por decisão. Com a área
+  nascendo junto com o projeto ([RN-094](business-rules.md#rn-094)), o corte
+  volta a ser o que a FASE 14d quis: **ler** o teto é trabalho de quem executa;
+  **mudá-lo** é decidir quanto o produto gasta sem perguntar, e por isso exige
+  o mesmo papel de ativar a execução.
+- **As quatro rotas `/projects/:projectId/code/*` são `role:viewer` e SÓ
+  LEITURA** (FASE 26b). Ver o código do projeto é a mesma permissão que ver o
+  projeto — o mesmo corte de `GET /projects/:id/git/repository`. Três coisas
+  fazem essa folga aparente ser decisão e não descuido:
+  - **não há verbo de escrita no controller**, e não pode haver: a aba Code é de
+    leitura, e escrita é efeito externo, que nasce `proposed_action` e é fase
+    seguinte. Um `@Post` neste arquivo é mudança de fase, não de rota;
+  - **o caminho é contido em UM lugar** ([RN-095](business-rules.md#rn-095)),
+    pela mesma checagem central da [RN-092](business-rules.md#rn-092) — e a
+    contenção importa aqui mais que o papel, porque nos providers remotos o
+    caminho vira segmento de URL da API do provider e um `../` troca de
+    **endpoint**, não de arquivo;
+  - **a credencial gasta é a do owner do workspace**
+    ([RN-058](business-rules.md#rn-058)/[RN-082](business-rules.md#rn-082)),
+    como na escrita. Ler custa rate limit do provider, e é por isso que a busca
+    tem orçamento: sem teto, um `viewer` pagaria a conta do owner à vontade.
+- **`POST /projects/:projectId/sessions/:sessionId/socket-ticket` é
+  `role:viewer` na tabela, mas isso é o PISO, não o teto** (RN-108). O
+  `@RequireRole('viewer')` cobre `scope: "heartbeat"` — o socket de
+  heartbeat/eventos ao vivo que já existe; `scope: "terminal"` exige
+  `developer`, checado DENTRO do `CreateSocketTicketUseCase` contra
+  `request.effectiveRole` (o mesmo que o `RolesGuard` já resolveu), porque o
+  papel mínimo depende do CORPO da requisição, não só da rota — o mesmo padrão
+  de `MIN_ROLE_FOR_ACTION_TYPE.terminal` em `domain/actions/decide.ts`. Hoje
+  nenhum caminho pede `scope: "terminal"` de verdade (o socket de terminal
+  interativo é FASE 25); o valor já nasce certo para quando existir.
 - **`jwt` sem papel não significa sem autorização.** Em `/users/me/*` o escopo é
   o próprio usuário; em `GET /workspaces` a listagem já é filtrada pela
   associação de quem chamou.
@@ -163,6 +198,47 @@ o componente `d` da JWK, travado por teste.
   (`gates/verdict` pro QA, `open_infra_pr` pro Infra). Session-scoped, não
   task-scoped — `taskId` é opcional no corpo. Delegação nunca é visível como
   handoff.
+- **`POST /projects/:projectId/execution/activate` ganhou `originSessionId`
+  opcional no corpo, e a classificação não mudou** — continua `role:maintainer`
+  (RN-135). O campo deixa quem já tem esse papel fechar a sessão de CHAT que
+  originou o pedido, mas com duas contenções que impedem usá-lo pra fechar
+  sessão alheia: `findInProject(projectId, originSessionId)` recusa silenciosamente
+  um id que não pertença ao PRÓPRIO projeto do path, e o fechamento só acontece
+  se `GetSessionPendingWorkUseCase` (a mesma trava do heartbeat de inatividade,
+  [RN-073](business-rules.md#rn-073)) confirmar que não há handoff, ação ou
+  turno pendurado ali. Nunca fecha a sessão de execução que a própria chamada
+  acabou de ativar.
+- **`GET /projects/:projectId/execution/session` é `role:viewer`, o mesmo
+  papel de `GET /sessions/:sessionId`** ([RN-139](business-rules.md#rn-139)).
+  Devolve a sessão de execução VIGENTE do projeto — `active` com
+  `execution.activated` gravado — ou `null`; nunca a sessão mais recente do
+  projeto, que é o que a aba Executores lia antes e que muda de sessão em
+  silêncio assim que outra sessão nasce depois dela.
+- **`POST .../llm-turn` e `POST .../llm-turn-stream` ganharam `modelName` no
+  corpo de resposta/frame final, e a classificação não mudou** — continuam
+  `engine-service` como sempre ([RN-146](business-rules.md#rn-146)). O nome
+  do modelo já era resolvido para chamar o provider; só passou a viajar de
+  volta ao engine, que o inclui no payload de `agent.response`. Nenhum dado
+  novo é lido, nenhuma credencial nova é exposta — é o mesmo nome que já sai
+  em `token_usage`.
+- **`PUT /projects/:projectId/agent-autonomy` passou a aceitar `actionType:
+  "*"` — "auto mode" ([RN-153](business-rules.md#rn-153)) —, e a
+  classificação não mudou:** continua `role:maintainer`, o mesmo do `GET`
+  ao lado. A diferença é o que o corpo agora AUTORIZA, não quem pode
+  chamar: a curinga concede autonomia pra QUALQUER tipo de ação do agente
+  de uma vez, em vez de um tipo por vez como antes. A resolução (uma regra
+  ESPECÍFICA sempre vence a curinga) mora inteira no repositório
+  (`DrizzleAgentAutonomyRepository.findMode`), nunca em `decide()` — que
+  segue recebendo só o `PermissionPolicy` já resolvido, exatamente como
+  antes da curinga existir. É por isso que os três tetos absolutos —
+  merge em branch protegida, `instruction_patch`,
+  `parallelize`/`raise_max_parallel` — continuam bloqueando mesmo com a
+  curinga em `auto_approve` ([RN-154](business-rules.md#rn-154)): eles
+  reagem a `current.policy === 'auto_approve'`, nunca à origem dela, e
+  nenhuma exceção precisou entrar em `decide()` pra isso continuar
+  valendo. `ApprovalCard.tsx` só oferece o botão que grava a curinga a
+  quem o cliente já sabe ter `maintainer`/`owner` — mas quem garante o
+  papel de verdade é este mesmo `@RequireRole('maintainer')`, inalterado.
 
 ## Tabela
 
@@ -201,7 +277,9 @@ o componente `d` da JWK, travado por teste.
 | POST | `/internal/sessions/:sessionId/max-parallel-proposals` | engine-service |
 | POST | `/internal/sessions/:sessionId/llm-turn` | engine-service |
 | POST | `/internal/sessions/:sessionId/llm-turn-stream` | engine-service |
+| POST | `/internal/sessions/:sessionId/c4-diagram` | engine-service |
 | POST | `/internal/sessions/:sessionId/module-map` | engine-service |
+| POST | `/internal/sessions/:sessionId/project-image` | engine-service |
 | POST | `/internal/sessions/:sessionId/proficiency` | engine-service |
 | POST | `/internal/models/sync` | engine-service |
 | GET | `/internal/gates` | engine-service |
@@ -229,8 +307,12 @@ o componente `d` da JWK, travado por teste.
 | GET | `/projects/:projectId/models` | role:viewer |
 | GET | `/projects/:projectId/agent-autonomy` | role:maintainer |
 | PUT | `/projects/:projectId/agent-autonomy` | role:maintainer |
+| DELETE | `/projects/:projectId/agent-bindings/:agentSlug` | role:developer |
 | GET | `/projects/:projectId/agent-bindings/:agentSlug` | role:viewer |
 | PUT | `/projects/:projectId/agent-bindings/:agentSlug` | role:developer |
+| DELETE | `/projects/:projectId/area-bindings/:areaKey` | role:maintainer |
+| GET | `/projects/:projectId/area-bindings/:areaKey` | role:viewer |
+| PUT | `/projects/:projectId/area-bindings/:areaKey` | role:maintainer |
 | GET | `/projects/:projectId/agent-costs` | role:developer |
 | GET | `/projects/:projectId/agents/:agent/instruction-versions` | role:viewer |
 | POST | `/projects/:projectId/agents/:agent/instruction-versions/:version/rollback` | role:maintainer |
@@ -241,9 +323,18 @@ o componente `d` da JWK, travado por teste.
 | PUT | `/projects/:projectId/budget` | role:maintainer |
 | GET | `/projects/:projectId/agent-areas` | role:developer |
 | PATCH | `/projects/:projectId/agent-areas/:key/max-parallel` | role:maintainer |
+| GET | `/projects/:projectId/code/blame` | role:viewer |
+| GET | `/projects/:projectId/code/branches` | role:viewer |
+| GET | `/projects/:projectId/code/file` | role:viewer |
+| GET | `/projects/:projectId/code/pull-requests` | role:viewer |
+| GET | `/projects/:projectId/code/pull-requests/:pullRequestId/diff` | role:viewer |
+| GET | `/projects/:projectId/code/search` | role:viewer |
+| GET | `/projects/:projectId/code/tree` | role:viewer |
+| GET | `/projects/:projectId/container` | role:viewer |
 | GET | `/projects/:projectId/coverage` | role:viewer |
 | GET | `/projects/:projectId/events/:eventId` | role:viewer |
 | POST | `/projects/:projectId/execution/activate` | role:maintainer |
+| GET | `/projects/:projectId/execution/session` | role:viewer |
 | GET | `/projects/:projectId/git/:provider/connect` | role:maintainer |
 | POST | `/projects/:projectId/git/:provider/repository` | role:maintainer |
 | POST | `/projects/:projectId/git/:provider/repository/adopt` | role:maintainer |
@@ -272,13 +363,16 @@ o componente `d` da JWK, travado por teste.
 | GET | `/projects/:projectId/sessions` | role:viewer |
 | POST | `/projects/:projectId/sessions` | role:developer |
 | GET | `/projects/:projectId/sessions/:sessionId` | role:viewer |
+| PATCH | `/projects/:projectId/sessions/:sessionId` | role:developer |
 | GET | `/projects/:projectId/sessions/:sessionId/actions` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/actions` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/actions/:actionId/approve` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/actions/:actionId/approve_always` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/actions/:actionId/deny` | role:developer |
+| POST | `/projects/:projectId/sessions/:sessionId/agents/:agent/cancel` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/agents/:agent/message` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/agents/:agent/start` | role:developer |
+| POST | `/projects/:projectId/sessions/:sessionId/agents/:agent/structured-question/:questionSetId/answer` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/agents/:agentId/rearm` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/agents/arquiteto/handoff-infra` | role:developer |
 | GET | `/projects/:projectId/sessions/:sessionId/budget` | role:developer |
@@ -294,9 +388,11 @@ o componente `d` da JWK, travado por teste.
 | PUT | `/projects/:projectId/sessions/:sessionId/model-binding` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/psychologist/reanalyze` | role:maintainer |
 | POST | `/projects/:projectId/sessions/:sessionId/readiness` | role:developer |
+| POST | `/projects/:projectId/sessions/:sessionId/socket-ticket` | role:viewer |
 | POST | `/projects/:projectId/sessions/:sessionId/tasks/:taskId/unblock` | role:developer |
 | GET | `/projects/:projectId/sessions/:sessionId/token-usage` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/transition` | role:developer |
+| GET | `/projects/:projectId/spend/me` | role:viewer |
 | POST | `/projects/:projectId/stories/:storyId/return` | role:developer |
 | POST | `/projects/:projectId/stories/promote` | role:developer |
 | DELETE | `/workspaces/:workspaceId` | role:owner |
@@ -306,6 +402,7 @@ o componente `d` da JWK, travado por teste.
 | GET | `/workspaces/:workspaceId/model-binding` | role:viewer |
 | PUT | `/workspaces/:workspaceId/model-binding` | role:maintainer |
 | GET | `/workspaces/:workspaceId/credential-spend` | role:owner |
+| GET | `/workspaces/:workspaceId/spend-report` | role:owner |
 | POST | `/workspaces/:workspaceId/models/activate` | role:owner |
 | GET | `/workspaces/:workspaceId/models/catalog` | role:maintainer |
 | POST | `/workspaces/:workspaceId/models/sync` | role:owner |

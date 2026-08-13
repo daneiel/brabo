@@ -16,6 +16,19 @@
     color 0.12s;
 }
 
+/*
+ * Botão de ação principal de tela (44px), o do handoff para o submit de login.
+ * `height` fixa em vez de mais padding: o botão de auth é `fullWidth` e o
+ * rótulo troca em `loading` ("Entrar" → "Autenticando…") — por padding, a caixa
+ * mudaria de altura junto com o texto quando o spinner entra.
+ */
+.lg {
+  height: 44px;
+  padding: 0 16px;
+  font-size: 14px;
+  letter-spacing: 0.01em;
+}
+
 .button:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;

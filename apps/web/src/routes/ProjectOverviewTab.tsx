@@ -6,6 +6,7 @@ import {
   useHandoffs,
   useLatestSession,
   usePendingActions,
+  useSessionEventHistory,
   useSessionEvents,
   useSessionTokenUsage,
 } from '../lib/hooks';
@@ -20,39 +21,24 @@ import {
   unblockTask,
 } from '../lib/api-client';
 import {
-  breakerReasonFor,
   deriveAgentRoster,
   groupRosterByArea,
-  subagentOutcomeLabel,
+  isExecutorGroup,
 } from '../lib/agent-status';
-import { AREAS } from '../lib/agents';
-import { ChevronDownIcon, ChevronRightIcon } from '../components/ui/icons';
 import { deriveExecutionProgress, formatMicros } from '../lib/execution';
 import { connectSessionHeartbeat } from '../lib/session-channel';
-import { AgentCard, type AutonomyMode } from '../components/AgentCard';
+import type { AutonomyMode } from '../components/AgentCard';
+import { AgentTeamGrid } from '../components/AgentTeamGrid';
 import { AgentTimelineTree } from '../components/AgentTimelineTree';
 import { ActivityFeed } from '../components/ActivityFeed';
+import { C4DiagramView } from '../components/C4DiagramView';
+import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
+import { Skeleton } from '../components/ui/Skeleton';
 import { Badge, type BadgeTone } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { useToast } from '../components/ui/ToastProvider';
-import type { ActionType, Architecture, ProposedAction, SessionEvent } from '../lib/api-types';
+import type { AgentAutonomyActionType, Architecture, ProposedAction, SessionEvent } from '../lib/api-types';
 import styles from './ProjectOverviewTab.module.css';
-
-// actionType representativo de cada agente, pra resumir a autonomia num
-// toggle só (auto_approve vira "auto"). TODO agente precisa de uma entrada:
-// antes só `infra` e `dev-*` tinham, então criativo/po/arquiteto/qa/secops
-// nunca recebiam a prop e o card saía sem o controle que o design pede.
-const AUTONOMY_ACTION_TYPE: Record<string, string> = {
-  infra: 'open_infra_pr',
-  criativo: 'write_file',
-  po: 'write_file',
-  arquiteto: 'open_adr_pr',
-  qa: 'terminal',
-  secops: 'terminal',
-};
-function autonomyActionTypeFor(agentId: string): string {
-  return AUTONOMY_ACTION_TYPE[agentId] ?? (agentId.startsWith('dev-') ? 'pr_open' : 'terminal');
-}
 
 interface ProjectOverviewTabProps {
   projectId: string;
@@ -63,8 +49,14 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
   const { showToast } = useToast();
   const { latest: latestSession } = useLatestSession(projectId);
   const sessionId = latestSession?.id;
+  // ESTADO ATUAL — a cauda em poll, que alimenta a roster, a árvore e a
+  // seção de execução. Continua `latest` de propósito: as três perguntam
+  // "como está agora", e nenhuma delas pagina.
   const eventsQuery = useSessionEvents(projectId, sessionId);
   const events = eventsQuery.data?.items ?? [];
+  // HISTÓRICO — o que a coluna de Atividade mostra, em páginas (RN-099).
+  // Mesma `queryKey` da cauda por dentro: nenhuma requisição a mais por ciclo.
+  const historico = useSessionEventHistory(projectId, sessionId);
   const actionsQuery = usePendingActions(projectId, sessionId);
   const actions = actionsQuery.data?.items ?? [];
   const { data: architecture } = useArchitecture(projectId);
@@ -133,7 +125,7 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
   // o refetch do polling — mesmo princípio de SessionPage.tsx.
   useEffect(() => {
     if (!sessionId || latestSession?.status !== 'active') return;
-    const disconnect = connectSessionHeartbeat(sessionId, {
+    const disconnect = connectSessionHeartbeat(projectId, sessionId, {
       onEvent: () => {
         queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
         // O backlog também: tasks bloqueadas vêm dele, não do event log —
@@ -157,7 +149,7 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
     try {
       await setAgentAutonomy(projectId, {
         agentId,
-        actionType: actionType as ActionType,
+        actionType: actionType as AgentAutonomyActionType,
         mode: mode === 'auto' ? 'auto_approve' : 'require_approval',
       });
       await queryClient.invalidateQueries({ queryKey: ['agent-autonomy', projectId] });
@@ -186,119 +178,63 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
     }
   }
 
-  const workingCount = roster.filter((r) => r.status === 'trabalhando').length;
-  const waitingCount = roster.filter((r) => r.status === 'aguardando').length;
-
-  // Card do LEAD (ou de um agente solo) — mesma renderização de sempre,
-  // com toggle de autonomia (é quem propõe ação/tem policy).
-  function renderLeadCard(index: number, badge?: string) {
-    const r = roster[index];
-    const modelId = bindingQueries[index]?.data?.modelId;
-    const model = allModels.find((m) => m.id === modelId);
-    const autonomyType = autonomyActionTypeFor(r.id);
-    const rule = autonomyRules?.find((a) => a.agentId === r.id && a.actionType === autonomyType);
-    const progress = progressByAgent.get(r.id);
-    const custo = tokenUsage?.find((u) => u.actorId === r.id)?.costMicros;
-    return (
-      <AgentCard
-        key={r.id}
-        agent={r.def}
-        status={r.status}
-        badge={badge}
-        model={model ? { name: model.displayName, provider: model.provider } : undefined}
-        // Sem regra gravada o default do domínio é require_approval —
-        // "manual". Mostrar o toggle sempre é o que o design pede, e
-        // é o que torna a autonomia AJUSTÁVEL daqui.
-        autonomy={rule?.mode === 'auto_approve' ? 'auto' : 'manual'}
-        onAutonomyChange={(mode) => handleAutonomyChange(r.id, autonomyType, mode)}
-        onRearm={r.status === 'travado' ? () => handleRearm(r.id) : undefined}
-        activity={
-          r.status === 'travado'
-            ? { label: breakerReasonFor(events, r.id) ?? 'circuit breaker disparado' }
-            : progress?.taskTitle
-              ? { label: progress.taskTitle, branch: progress.branch }
-              : undefined
-        }
-        tokensMicros={custo}
-      />
-    );
-  }
-
-  // Card de SUBAGENTE (Fase 8d) — compacto, sem toggle de autonomia (não
-  // propõe ação própria, não tem policy) e sem branch/task corrente (não
-  // trabalha em cima de uma) — a "atividade" aqui é o desfecho da
-  // delegação mais recente.
-  function renderMemberCard(index: number) {
-    const r = roster[index];
-    const modelId = bindingQueries[index]?.data?.modelId;
-    const model = allModels.find((m) => m.id === modelId);
-    const custo = tokenUsage?.find((u) => u.actorId === r.id)?.costMicros;
-    const outcome = subagentOutcomeLabel(events, r.id);
-    return (
-      <AgentCard
-        key={r.id}
-        agent={r.def}
-        status={r.status}
-        compact
-        model={model ? { name: model.displayName, provider: model.provider } : undefined}
-        activity={outcome ? { label: outcome } : undefined}
-        tokensMicros={custo}
-      />
-    );
-  }
+  // FASE 27 — dev/QA saem daqui para a aba Executores (RN-121); o resto do
+  // time (Criativo/PO/Arquiteto/Infra) continua na Visão geral. Contagem do
+  // cabeçalho e a árvore abaixo passam a refletir só o que a Visão geral
+  // ainda desenha — mostrar "10 agentes" com 6 cards na tela contaria dado
+  // que sumiu do grid.
+  const overviewGroups = rosterGroups.filter((group) => !isExecutorGroup(group));
+  const overviewRosterIds = new Set(
+    overviewGroups.flatMap((group) =>
+      group.kind === 'solo' ? [group.entry.id] : [group.lead.id, ...group.members.map((m) => m.id)],
+    ),
+  );
+  const overviewRoster = roster.filter((r) => overviewRosterIds.has(r.id));
+  const overviewEvents = events.filter(
+    (e) => e.actor.kind !== 'agent' || overviewRosterIds.has(e.actor.id),
+  );
+  const workingCount = overviewRoster.filter((r) => r.status === 'trabalhando').length;
+  const waitingCount = overviewRoster.filter((r) => r.status === 'aguardando').length;
 
   return (
     <div className={styles.layout}>
       <div className={styles.main}>
-        <div className={styles.sectionHeader}>Time de agentes</div>
-        <div className={styles.sectionSub}>
-          {roster.length} agentes · {workingCount} trabalhando · {waitingCount} aguardando
+        <div className={styles.sectionRow}>
+          <h2 className={styles.sectionHeader}>Time de agentes</h2>
+          <span className={styles.sectionCount}>
+            {overviewRoster.length} agentes · {workingCount} trabalhando · {waitingCount} aguardando
+          </span>
         </div>
-        <div className={styles.grid}>
-          {rosterGroups.map((group) => {
-            if (group.kind === 'solo') {
-              return renderLeadCard(roster.indexOf(group.entry));
-            }
-
-            const area = AREAS[group.areaKey];
-            const collapsed = collapsedAreas.has(group.areaKey);
-            return (
-              <div key={group.areaKey} className={styles.areaGroup}>
-                {renderLeadCard(roster.indexOf(group.lead), 'Lead')}
-                {group.members.length > 0 && (
-                  <div className={styles.areaMembers}>
-                    <button
-                      type="button"
-                      className={styles.areaToggle}
-                      onClick={() => toggleArea(group.areaKey)}
-                    >
-                      {collapsed ? <ChevronRightIcon size={13} /> : <ChevronDownIcon size={13} />}
-                      {area.label} · {group.members.length} subespecialidade
-                      {group.members.length > 1 ? 's' : ''}
-                    </button>
-                    {!collapsed && (
-                      <div className={styles.areaMembersList}>
-                        {group.members.map((m) => renderMemberCard(roster.indexOf(m)))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+        <AgentTeamGrid
+          roster={roster}
+          groups={overviewGroups}
+          events={events}
+          bindingQueries={bindingQueries}
+          allModels={allModels}
+          tokenUsage={tokenUsage}
+          autonomyRules={autonomyRules}
+          progressByAgent={progressByAgent}
+          collapsedAreas={collapsedAreas}
+          onToggleArea={toggleArea}
+          onAutonomyChange={handleAutonomyChange}
+          onRearm={handleRearm}
+        />
 
         {/* A árvore vem LOGO ABAIXO dos cards do time, e não na coluna de
             atividade: os cards dizem quem existe e em que estado está; a
             árvore diz o que cada um fez e está fazendo. São a mesma pergunta
             em duas profundidades, e separá-las em colunas diferentes obrigava
-            a olhar duas vezes. */}
-        <div className={styles.sectionHeader}>Linha do tempo do time</div>
+            a olhar duas vezes.
+            Os eventos vão FILTRADOS (sem dev/QA — RN-121): a aba Executores
+            tem a própria árvore, e mostrar os mesmos ramos nas duas telas
+            era duplicar a mesma pergunta sem ganhar nada. */}
+        <h2 className={styles.sectionHeader}>Linha do tempo do time</h2>
         <div className={styles.sectionSub}>
           Um ramo por agente, do primeiro marco ao que ele está fazendo agora.
-          Quem está ativo abre sozinho.
+          Quem está ativo, ou entre os 5 mais recentes, abre sozinho — o resto
+          fica a um clique, com a contagem de marcos novos no cabeçalho.
         </div>
-        <AgentTimelineTree events={events} />
+        <AgentTimelineTree events={overviewEvents} projectId={projectId} />
 
         <ExecutionSection
           projectId={projectId}
@@ -312,12 +248,32 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
       </div>
 
       <aside className={styles.aside}>
-        <div className={styles.sectionHeader}>Atividade</div>
-        <div className={styles.sectionSub}>{events.length} eventos</div>
-        <ActivityFeed
-          events={events}
-          agentOptions={roster.map((r) => ({ id: r.id, label: r.def.name }))}
-        />
+        <div className={styles.sectionRow}>
+          <h2 className={styles.sectionHeader}>Atividade</h2>
+          <span className={styles.sectionCount}>
+            {historico.carregados} eventos
+          </span>
+        </div>
+        {/* Os três estados, e o ERRO antes do vazio (RN-088): `!dados` é
+            verdadeiro nos três, e colapsá-los era o que fazia a coluna dizer
+            "nenhuma atividade" quando na verdade a api tinha recusado. */}
+        {historico.isError ? (
+          <ErroDeCarregamento
+            titulo="Não foi possível carregar a atividade."
+            erro={historico.error}
+            onTentarDeNovo={historico.refetch}
+          />
+        ) : historico.isPending ? (
+          <Skeleton height={180} />
+        ) : (
+          <ActivityFeed
+            events={historico.events}
+            agentOptions={roster.map((r) => ({ id: r.id, label: r.def.name }))}
+            onLoadOlder={historico.carregarMaisAntigos}
+            hasOlder={historico.temMaisAntigos}
+            loadingOlder={historico.carregandoMaisAntigos}
+          />
+        )}
       </aside>
     </div>
   );
@@ -534,6 +490,7 @@ function ArchitectureSection({ architecture }: { architecture?: Architecture }) 
   const moduleMap = architecture?.moduleMap;
   const adrs = architecture?.adrs ?? [];
   const pendencies = architecture?.pendencies ?? [];
+  const c4Diagram = architecture?.c4Diagram;
 
   const isEmpty = !moduleMap && adrs.length === 0 && pendencies.length === 0;
 
@@ -569,6 +526,18 @@ function ArchitectureSection({ architecture }: { architecture?: Architecture }) 
                   )}
                 </div>
               ))}
+            </div>
+          )}
+
+          <div className={styles.archLabel}>
+            Diagrama C4 {c4Diagram?.status === 'gerado' ? `· v${c4Diagram.version}` : ''}
+          </div>
+          {c4Diagram?.status === 'gerado' && c4Diagram.diagrama ? (
+            <C4DiagramView diagrama={c4Diagram.diagrama} />
+          ) : (
+            <div className={styles.sectionSub}>
+              Sem diagrama ainda — o Arquiteto gera o Context + Container a partir do
+              module_map (create_c4_diagram).
             </div>
           )}
 

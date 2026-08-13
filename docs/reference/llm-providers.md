@@ -241,6 +241,16 @@ violaria a [RN-040](../business-rules.md#rn-040) em silêncio: a falha só
 apareceria depois, no ToolLoop, como "o agente parou sozinho". O que foi pulado
 volta em `skipped`, e a UI mostra.
 
+A precedência é `sessão > agente > área > projeto > workspace`
+([RN-020](../business-rules.md#rn-020)). `área` entrou na FASE 23: é o
+PADRÃO que lead e subagentes de uma área compartilham, e o binding do próprio
+agente é a divergência que o sobrepõe — ela entra na mesma revalidação de
+capability acima, inclusive na exigência de tool calling
+([RN-102](../business-rules.md#rn-102)). Os escopos `agent` e `area` passaram
+a ser POR PROJETO (`scope_id` composto, `<projectId>:<slug|chave>`) — antes
+`agent` era um slug global e o mesmo binding valia para todo projeto
+([RN-103](../business-rules.md#rn-103), [ADR 0064](../adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global.md)).
+
 ### Quem agenda e quem executa
 
 O engine agenda (worker Oban auto-reagendado, `MODEL_SYNC_INTERVAL_SECONDS`,

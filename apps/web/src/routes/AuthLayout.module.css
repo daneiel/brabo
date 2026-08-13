@@ -12,17 +12,23 @@
  * token semântico, que é regra do `design/README.md`. Onde o mock escreveu `rgba`
  * literal, aqui está `color-mix` sobre o token.
  *
- * ## Duas divergências deliberadas em relação ao mock
+ * ## A sombra do login virou token (FASE 17a)
  *
- * 1. `--shadow` sai de `design/tokens.css` (`0 8px 24px`), não da redefinição
- *    mais pesada que o mock faz no seu `:root` (`0 24px 60px`). O mock é um
- *    arquivo solto e sobrescreveu o token; a fonte de verdade do token é o
- *    design system.
- * 2. O padding vertical da página é 32px (`--space-5`), não os 40px do mock —
- *    40 não é token, e a diferença só aparece em viewport curta.
+ * Até aqui esta folha usava `--shadow` e registrava como divergência que o mock
+ * redefinia o token no próprio `:root` para uma sombra mais pesada. O argumento
+ * era bom — arquivo solto não manda no design system —, mas a conclusão estava
+ * errada: o handoff versionado diz as DUAS sombras, a padrão e a do login
+ * (`0 24px 60px rgba(0,0,0,.55)`), e a FASE 16 as trouxe como `--shadow` e
+ * `--shadow-lg`. Com o token existindo, seguir o handoff deixou de custar um
+ * literal, e o card e o selo de marca usam `--shadow-lg`.
  *
- * As outras divergências (sem botão do GitHub, sem "N agentes online", campo
- * elevado em vez de afundado) estão no ADR 0036.
+ * ## A divergência que fica
+ *
+ * O padding vertical da página é 32px (`--space-5`), não os 40px do handoff —
+ * 40 não é token, e a diferença só aparece em viewport curta.
+ *
+ * As outras divergências (sem botão do GitHub, sem "N agentes online") estão no
+ * ADR 0036 e seguem valendo: as duas são COMPORTAMENTO, não pintura.
  */
 
 .tela {
@@ -107,7 +113,7 @@
   color: var(--on-accent);
   display: grid;
   place-items: center;
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-lg);
 }
 
 .nomes {
@@ -137,7 +143,7 @@
   background: var(--surface-1);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-lg);
   overflow: hidden;
 }
 

@@ -243,6 +243,9 @@ importers:
       '@tanstack/react-router':
         specifier: ^1.170.18
         version: 1.170.18(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      mermaid:
+        specifier: ^11.16.1
+        version: 11.16.1
       phoenix:
         specifier: ^1.8.9
         version: 1.8.9

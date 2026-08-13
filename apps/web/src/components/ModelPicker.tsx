@@ -22,6 +22,12 @@ interface ModelPickerProps {
    * filtro desde a Fase 9a, e até agora ele não existia.
    */
   filtroDeAgentesPadrao?: boolean;
+  /**
+   * Some sem o gatilho abrir (ADR 0064) — quem não tem `maintainer` VÊ o
+   * modelo vigente da área mas não consegue trocá-lo. Ficou no picker, e não
+   * num overlay do chamador, porque o overlay não bloquearia o teclado.
+   */
+  disabled?: boolean;
 }
 
 export function ModelPicker({
@@ -30,6 +36,7 @@ export function ModelPicker({
   onSelect,
   variant = 'standalone',
   filtroDeAgentesPadrao = false,
+  disabled = false,
 }: ModelPickerProps) {
   const [open, setOpen] = useState(false);
   const [soAptos, setSoAptos] = useState(filtroDeAgentesPadrao);
@@ -142,18 +149,33 @@ export function ModelPicker({
   }
 
   return (
-    <div className={styles.wrapper} ref={wrapperRef}>
+    <div
+      className={[styles.wrapper, variant === 'inline' && styles.inline].filter(Boolean).join(' ')}
+      ref={wrapperRef}
+    >
       <button
         type="button"
         ref={triggerRef}
         className={styles.trigger}
+        disabled={disabled}
+        // O nome elipsa dentro da célula; o `title` é o que devolve o nome
+        // INTEIRO sem abrir o dropdown. `deepseek-v4-flash-latest` e
+        // `deepseek-v4-flash-preview` são indistinguíveis truncados.
+        title={selected?.displayName}
         onClick={() => setOpen((v) => !v)}
       >
         <span className={styles.triggerIcon}>
-          <ModelIcon size={14} />
+          <ModelIcon size={variant === 'inline' ? 13 : 14} />
         </span>
-        {selected ? selected.displayName : 'Selecionar modelo'}
-        {variant === 'topbar' && (
+        {/* O nome ELIPSA em vez de esticar o gatilho: dentro da célula da
+            tabela de bindings, um `displayName` longo empurrava as colunas de
+            origem e fallback para fora da grade. */}
+        <span className={styles.triggerLabel}>
+          {selected ? selected.displayName : 'Selecionar modelo'}
+        </span>
+        {/* Chevron também no `inline`: no desenho o seletor de modelo da tabela
+            tem chevron, e sem ele o botão não se anuncia como abrível. */}
+        {variant !== 'standalone' && (
           <span className={styles.chevron}>
             <ChevronDownIcon size={13} />
           </span>

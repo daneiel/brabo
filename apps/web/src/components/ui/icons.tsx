@@ -42,6 +42,10 @@ export const ChevronDownIcon = (props: IconProps) => base(['M6 9l6 6 6-6'], prop
 
 export const ChevronRightIcon = (props: IconProps) => base(['M9 6l6 6-6 6'], props);
 
+// Carrossel (RN-148) — o par que faltava do `ChevronRightIcon` para
+// navegação "anterior".
+export const ChevronLeftIcon = (props: IconProps) => base(['M15 6l-6 6 6 6'], props);
+
 export const XIcon = (props: IconProps) => base(['M6 6l12 12M18 6L6 18'], props);
 
 export const CheckIcon = (props: IconProps) => base(['M20 6L9 17l-5-5'], props);
@@ -135,7 +139,20 @@ export const SessionIcon = (props: IconProps) =>
 export const TrashIcon = (props: IconProps) =>
   base(['M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14'], props);
 
+// FASE PROGRAMA 16-26 — afordância de RENOMEAR fora da tela de sessão
+// (lista de sessões do projeto, RN-098 alcançável sem abrir a sessão).
+export const PencilIcon = (props: IconProps) =>
+  base(
+    ['M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z', 'M14.5 5.5l3 3'],
+    props,
+  );
+
 export const ArrowUpIcon = (props: IconProps) => base(['M12 20V4', 'M5 11l7-7 7 7'], props);
+
+// FASE 20 — a seta de VOLTAR. A tela de sessão não tinha saída nenhuma: nem
+// `Link`, nem `useNavigate`, e nenhum caminho de volta ao dashboard.
+export const ArrowLeftIcon = (props: IconProps) =>
+  base(['M20 12H4', 'M11 19l-7-7 7-7'], props);
 
 export const LayoutSidebarIcon = (props: IconProps) =>
   base(['M3 4h18v16H3z', 'M15 4v16'], props);
@@ -155,6 +172,15 @@ export const SettingsIcon = (props: IconProps) =>
 export const ChatIcon = (props: IconProps) =>
   base(['M21 11.5a8.4 8.4 0 0 1-9 8.4L3 21l1.1-3.6A8.4 8.4 0 1 1 21 11.5z'], props);
 
+/**
+ * Cubo isométrico. **Não é a marca do Brabo** — a marca é o `LogoMark` no fim
+ * deste arquivo, o monograma B, e o handoff é explícito em que ela é o único
+ * asset de marca do produto.
+ *
+ * Este desenho ocupava o cabeçalho da sidebar até a FASE 17a e é genérico:
+ * serve como ícone de "pacote"/"artefato" onde fizer sentido. Não o use para
+ * representar o produto.
+ */
 export const BrandIcon = (props: IconProps) =>
   base(['M12 3l7 4v10l-7 4-7-4V7z', 'M12 3v18M5 7l7 4 7-4'], props);
 
@@ -188,6 +214,13 @@ export const UserIcon = (props: IconProps) =>
 export const CodeIcon = (props: IconProps) =>
   base(['M9 8 4 12l5 4', 'M15 8l5 4-5 4'], props);
 
+/** Explorador de arquivos da aba Code (FASE 26). */
+export const FolderIcon = (props: IconProps) =>
+  base(['M3 6h6l2 2h10v11H3z'], props);
+
+export const FileIcon = (props: IconProps) =>
+  base(['M6 2h9l5 5v15H6z', 'M15 2v5h5'], props);
+
 export const ServerIcon = (props: IconProps) =>
   base(['M4 4h16v6H4z', 'M4 14h16v6H4z', 'M7 7h.01M7 17h.01'], props);
 
@@ -212,15 +245,19 @@ export const EyeOffIcon = (props: IconProps) =>
   );
 
 /**
- * A marca do Brabo: uma barra e dois chevrons, extraída do mock de login
- * (`Brabo Login.dc.html`).
+ * A marca do Brabo, e a ÚNICA: haste vertical sólida e dois chevrons. De perto é
+ * a letra B; de longe lê-se `>>` — agentes avançando em cadeia. Os paths são os
+ * canônicos do `design_handoff_brabo/README.md`, seção "Marca".
  *
- * Não confundir com o `BrandIcon` acima, que é outro desenho — o cubo isométrico
- * usado no cabeçalho do app. Este é o do quadrado terracota das telas de auth.
+ * Aplicação: ladrilho `--accent` com traço `--on-accent` e raio ≈28% do lado
+ * (32px→9px na sidebar, 40px→11px nas telas de auth). Nunca girar, esticar,
+ * contornar nem aplicar gradiente. Abaixo de 16px o chevron inferior sobe para
+ * .7 de opacidade.
  *
  * Foge do `base()` de propósito: os três traços têm espessuras diferentes (3.4 e
- * 2.8) e o segundo chevron tem opacidade própria, e é isso que dá a sensação de
- * profundidade. Um `stroke-width` único achataria o desenho.
+ * 2.8) e o segundo chevron tem opacidade própria (.58, que é o handoff ainda em
+ * execução) — é isso que dá a sensação de profundidade. Um `stroke-width` único
+ * achataria o desenho.
  */
 export const LogoMark = ({ size = 24, ...rest }: IconProps) => (
   <svg

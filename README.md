@@ -133,9 +133,9 @@ merge em `main`, e por isso fica um ciclo de promoção atrás do que está em
 | [Eventos](docs/reference/events.md) | os tipos do event log, broadcasts e spans |
 | [Permissões](docs/reference/permissions.md) | o formato do `permissions.json` e a ordem da decisão |
 | [Artefatos](docs/reference/artifacts.md) | os seis schemas e quem pode emitir cada um |
-| [Providers de git](docs/reference/git-providers.md) | o contrato de dez operações e as capabilities |
+| [Providers de git](docs/reference/git-providers.md) | o contrato de doze operações e as capabilities |
 | [API interna](docs/reference/internal-api.md) | o contrato api ↔ engine |
-| [ADRs](docs/adr/index.md) | as 59 decisões e o porquê de cada uma |
+| [ADRs](docs/adr/index.md) | as 68 decisões e o porquê de cada uma |
 | [Segurança](SECURITY.md) | como reportar uma vulnerabilidade |
 | [Como contribuir](CONTRIBUTING.md) | fluxo, Definition of Done, o que é aceito |
 | [Onde pedir ajuda](SUPPORT.md) | qual canal para cada tipo de assunto |
@@ -257,10 +257,14 @@ Imagens multi-stage, **non-root**, rootfs read-only, sem bind mount:
 engine roda um `mix release` (sem Mix, sem código-fonte) e o web sai por nginx.
 
 ```bash
-# Obrigatória: este compose roda com NODE_ENV=production, e a api recusa subir
-# com a chave de exemplo do repositório (ADR 0059) — ela assina o `state` do
-# OAuth de git. O `smoke.sh` gera a dele sozinho.
+# Obrigatórias: este compose roda com NODE_ENV=production, e a api recusa
+# subir com a chave de exemplo do repositório para nenhum destes quatro
+# segredos (ADR 0059, RN-093/RN-114). O `smoke.sh` gera os dele sozinho.
 export GIT_OAUTH_STATE_SECRET="$(openssl rand -base64 32)"
+export AUTH_JWT_SECRET="$(openssl rand -base64 32)"
+export BRABO_SERVICE_TOKEN="$(openssl rand -base64 32)"
+export CREDENTIALS_MASTER_KEY="$(openssl rand -base64 32)"
+export SECRET_KEY_BASE="$(openssl rand -base64 64)"
 
 docker compose -f docker/docker-compose.prod.yml up -d --build --wait
 bash docker/smoke.sh
@@ -361,7 +365,7 @@ fonte de sistema, e título e corpo ficavam indistinguíveis.
 
 ## Estado
 
-**Fases 1 a 12 concluídas**, versão **v2.5.0** ([CHANGELOG](CHANGELOG.md)).
+**Fases 1 a 12 concluídas**, versão **v2.5.1** ([CHANGELOG](CHANGELOG.md)).
 Esteira de release exercitada de ponta a ponta, auth first-party sem Keycloak,
 nove providers de LLM sobre uma base única e o primeiro dogfooding — o Brabo
 construindo o próprio Brabo — com a colheita escrita.

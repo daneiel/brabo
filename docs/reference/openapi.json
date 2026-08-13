@@ -574,6 +574,62 @@
         ]
       }
     },
+    "/internal/sessions/{sessionId}/c4-diagram": {
+      "post": {
+        "description": "O artefato É o evento `artifact.c4_diagram`: imutável, versionado e com autor, ao lado de `artifact.module_map`. Exige module_map vigente — sem ele não há Container level para desenhar (400).",
+        "operationId": "InternalSessionsController_c4Diagram",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateC4DiagramInternalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C4DiagramaGeradoResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`system_name` ausente, ator inválido, ou sem module_map vigente."
+          },
+          "403": {
+            "description": "Service token ausente ou diferente do compartilhado."
+          },
+          "404": {
+            "description": "Sessão, projeto ou recurso inexistente."
+          }
+        },
+        "security": [
+          {
+            "service-token": []
+          }
+        ],
+        "summary": "Gera uma versão nova do diagrama C4 (Context + Container)",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
     "/internal/sessions/{sessionId}/delegations": {
       "post": {
         "description": "`completed` (com o parecer), `failed` (com a origem) ou `dispensed` (com a justificativa) — o lead nunca chama esta rota com um desfecho a meio caminho: cada delegação nasce aqui já resolvida.",
@@ -1583,6 +1639,62 @@
         ]
       }
     },
+    "/internal/sessions/{sessionId}/project-image": {
+      "post": {
+        "description": "O artefato É o evento `artifact.project_image`: imutável, versionado e com autor. Revisar é emitir uma versão nova, nunca sobrescrever. Enquanto não houver nenhuma, o container do projeto não sobe e a aba Code responde 409.",
+        "operationId": "InternalSessionsController_projectImage",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecideProjectImageInternalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImagemDecididaResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Imagem sem tag explícita (ou `latest`), `rationale` curto demais, `network` fora de {none, egress} ou recurso acima do teto."
+          },
+          "403": {
+            "description": "Service token ausente ou diferente do compartilhado."
+          },
+          "404": {
+            "description": "Sessão, projeto ou recurso inexistente."
+          }
+        },
+        "security": [
+          {
+            "service-token": []
+          }
+        ],
+        "summary": "Fixa a imagem de container do projeto",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
     "/internal/sessions/{sessionId}/psychologist-context": {
       "get": {
         "description": "O `alreadyAnalyzed` é o que dá IDEMPOTÊNCIA ao caminho automático: com `true` o worker curto-circuita sem gastar token. As hipóteses anteriores vão junto para a rodada não repetir a si mesma.",
@@ -2316,7 +2428,7 @@
     },
     "/projects/{projectId}/agent-areas": {
       "get": {
-        "description": "Vazio para projeto que nunca ativou execução, e isso NÃO é erro: as áreas nascem no seeding da ativação, porque os membros da área de dev vêm do `module_map`.",
+        "description": "O projeto nasce com as três áreas (RN-094), então a lista vem cheia mesmo antes de haver `module_map`. O que a ativação de execução acrescenta são os MEMBROS da área de dev, um por módulo.",
         "operationId": "ExecutionController_listAreas",
         "parameters": [
           {
@@ -2488,7 +2600,7 @@
         ]
       },
       "put": {
-        "description": "Upsert por (agente, tipo). NÃO sobrepõe o `permissions.json`: um padrão em `deny` continua bloqueado por mais autonomia que se conceda aqui.",
+        "description": "Upsert por (agente, tipo). NÃO sobrepõe o `permissions.json`: um padrão em `deny` continua bloqueado por mais autonomia que se conceda aqui. `actionType: \"*\"` é o \"auto mode\" (RN-153) — autonomia pra QUALQUER tipo de ação deste agente; uma regra específica gravada depois continua vencendo a curinga para aquele tipo.",
         "operationId": "AgentAutonomyController_set",
         "parameters": [
           {
@@ -2543,7 +2655,7 @@
     },
     "/projects/{projectId}/agent-bindings/{agentSlug}": {
       "get": {
-        "description": "Cascata agente → projeto → workspace, SEM sessão: é a configuração do agente no projeto, não a de uma conversa específica.",
+        "description": "Cascata agente → área → projeto → workspace, SEM sessão: é a configuração do agente no projeto, não a de uma conversa específica. `origin: \"agent\"` quer dizer que este agente DIVERGIU do padrão da área dele; qualquer outra origem quer dizer que ele herda.",
         "operationId": "ModelBindingsController_getAgentBinding",
         "parameters": [
           {
@@ -2599,7 +2711,7 @@
         ]
       },
       "put": {
-        "description": "Vale para todas as sessões que não tenham binding próprio. É como se dá um modelo barato ao Psicólogo e um caro ao Arquiteto no mesmo projeto.",
+        "description": "Vale para todas as sessões deste projeto que não tenham binding próprio, e só para elas — até o ADR 0064 o binding era global e alcançava os outros projetos. É como se dá um modelo barato ao Psicólogo e um caro ao Arquiteto no mesmo projeto, e é também como um agente DIVERGE do padrão da área dele.",
         "operationId": "ModelBindingsController_setAgentBinding",
         "parameters": [
           {
@@ -2662,7 +2774,56 @@
             "bearer": []
           }
         ],
-        "summary": "Fixa o modelo de um agente no projeto",
+        "summary": "Fixa o modelo de um agente NESTE projeto",
+        "tags": [
+          "llm"
+        ]
+      },
+      "delete": {
+        "description": "APAGA o binding do agente — não copia para ele o modelo da área. Copiar pareceria o mesmo na tela e não é: viraria uma cópia, e a próxima mudança da área deixaria este agente para trás em silêncio. 404 quando ele já herda.",
+        "operationId": "ModelBindingsController_clearAgentBinding",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "agentSlug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "example": "dev-api",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "O agente voltou a herdar. Sem corpo."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no escopo."
+          },
+          "404": {
+            "description": "Escopo inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Faz o agente voltar a herdar o modelo da área",
         "tags": [
           "llm"
         ]
@@ -2888,6 +3049,9 @@
           },
           "429": {
             "description": "Rate limit por usuário ou por IP."
+          },
+          "503": {
+            "description": "A Anamnese está desativada globalmente por decisão do usuário (não é bug) — corpo com `reason: \"anamnese_disabled\"`."
           }
         },
         "security": [
@@ -2947,6 +3111,182 @@
         "summary": "Devolve o module_map vigente, as ADRs e as pendências",
         "tags": [
           "backlog"
+        ]
+      }
+    },
+    "/projects/{projectId}/area-bindings/{areaKey}": {
+      "get": {
+        "description": "O padrão que o lead e os subagentes da área compartilham. `origin: \"area\"` quer dizer que alguém o escolheu para esta área; qualquer outra origem quer dizer que a própria área herda do projeto ou do workspace.",
+        "operationId": "ModelBindingsController_getAreaBinding",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "areaKey",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "example": "qa",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResolvedBindingResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no escopo."
+          },
+          "404": {
+            "description": "Escopo inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Resolve qual modelo é o padrão de uma área, e de onde ele veio",
+        "tags": [
+          "llm"
+        ]
+      },
+      "put": {
+        "description": "Vale para o lead e para todo subagente da área que não tenha binding próprio (RN-102). Exige `maintainer` porque alcança a área inteira de uma vez, e escolher modelo é decidir gasto — o mesmo motivo do teto de paralelismo.",
+        "operationId": "ModelBindingsController_setAreaBinding",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "areaKey",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "example": "qa",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetModelBindingDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelBindingResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no escopo."
+          },
+          "404": {
+            "description": "Escopo inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Define o modelo padrão de uma área",
+        "tags": [
+          "llm"
+        ]
+      },
+      "delete": {
+        "description": "A área deixa de ter padrão próprio e passa a herdar do projeto (ou do workspace). Os agentes que divergiram continuam divergindo: o binding deles é outro, e apagar este não pode decidir por eles.",
+        "operationId": "ModelBindingsController_clearAreaBinding",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "areaKey",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "example": "qa",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "A área voltou a herdar. Sem corpo."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no escopo."
+          },
+          "404": {
+            "description": "Escopo inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Faz a área voltar a herdar o modelo do projeto",
+        "tags": [
+          "llm"
         ]
       }
     },
@@ -3108,6 +3448,540 @@
         "summary": "Define o teto de gasto do projeto",
         "tags": [
           "llm"
+        ]
+      }
+    },
+    "/projects/{projectId}/code/blame": {
+      "get": {
+        "description": "Fundação da pendência declarada de blame (FASE 26b) — a UI que anota o editor linha a linha ainda não existe. `truncated` avisa quando o arquivo passou do teto de linhas anotadas.",
+        "operationId": "CodeController_blame",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "path",
+            "required": true,
+            "in": "query",
+            "description": "Caminho do arquivo a anotar.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ref",
+            "required": false,
+            "in": "query",
+            "description": "Branch, tag ou sha. Ausente usa a branch padrão do repositório.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CodeBlameResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Caminho fora do escopo do projeto (RN-095), ref malformada, ou busca com termo curto/longo demais."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto sem repositório provisionado, ou ref/caminho/PR inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          },
+          "501": {
+            "description": "O provider do projeto não declara a capability da operação — `listTree`, `pullRequestDiff`, `blame`, `pullRequestsList` ou `branchesDetailed`. Capability só é declarada quando provada pela suite de contrato, então isto é resposta legítima e não defeito."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Anota cada linha de um arquivo com o commit que a tocou",
+        "tags": [
+          "git"
+        ]
+      }
+    },
+    "/projects/{projectId}/code/branches": {
+      "get": {
+        "description": "Fundação do dropdown rico (FASE 26b) — hoje o seletor de ref é campo de texto simples. `ahead`/`behind` são relativos à branch DEFAULT do repositório; `null` quando o provider não consegue computar (degradação honesta, não erro). NÃO é `listBranches` (que o bootstrap de Gitflow usa) — é operação própria, porque enriquecer custa uma chamada extra ao provider POR BRANCH.",
+        "operationId": "CodeController_branches",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CodeBranchDetailListResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Caminho fora do escopo do projeto (RN-095), ref malformada, ou busca com termo curto/longo demais."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto sem repositório provisionado, ou ref/caminho/PR inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          },
+          "501": {
+            "description": "O provider do projeto não declara a capability da operação — `listTree`, `pullRequestDiff`, `blame`, `pullRequestsList` ou `branchesDetailed`. Capability só é declarada quando provada pela suite de contrato, então isto é resposta legítima e não defeito."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Lista as branches com ahead/behind e a PR aberta associada",
+        "tags": [
+          "git"
+        ]
+      }
+    },
+    "/projects/{projectId}/code/file": {
+      "get": {
+        "description": "UTF-8, cortado no teto de bytes com `truncated: true` quando passa. Um caminho que sai da pasta do projeto é recusado com 400 pela checagem central da RN-095 — nunca com 404, que convidaria a procurar.",
+        "operationId": "CodeController_file",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "path",
+            "required": true,
+            "in": "query",
+            "description": "Caminho do arquivo.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ref",
+            "required": false,
+            "in": "query",
+            "description": "Branch, tag ou sha.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CodeFileResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Caminho fora do escopo do projeto (RN-095), ref malformada, ou busca com termo curto/longo demais."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto sem repositório provisionado, ou ref/caminho/PR inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          },
+          "501": {
+            "description": "O provider do projeto não declara a capability da operação — `listTree`, `pullRequestDiff`, `blame`, `pullRequestsList` ou `branchesDetailed`. Capability só é declarada quando provada pela suite de contrato, então isto é resposta legítima e não defeito."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Devolve o conteúdo de um arquivo",
+        "tags": [
+          "git"
+        ]
+      }
+    },
+    "/projects/{projectId}/code/pull-requests": {
+      "get": {
+        "description": "Fundação da lista navegável (FASE 26b) — hoje o diff só é alcançável por id conhecido (ex.: vindo de Aprovações); esta rota resolve como chegar ao id sem precisar saber de cor. `truncated` avisa quando a lista passou do teto por chamada.",
+        "operationId": "CodeController_pullRequests",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "required": false,
+            "in": "query",
+            "description": "Ausente lista todos os estados.",
+            "schema": {
+              "enum": [
+                "open",
+                "merged",
+                "closed"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CodePullRequestListResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Caminho fora do escopo do projeto (RN-095), ref malformada, ou busca com termo curto/longo demais."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto sem repositório provisionado, ou ref/caminho/PR inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          },
+          "501": {
+            "description": "O provider do projeto não declara a capability da operação — `listTree`, `pullRequestDiff`, `blame`, `pullRequestsList` ou `branchesDetailed`. Capability só é declarada quando provada pela suite de contrato, então isto é resposta legítima e não defeito."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Lista as PRs/MRs do repositório",
+        "tags": [
+          "git"
+        ]
+      }
+    },
+    "/projects/{projectId}/code/pull-requests/{pullRequestId}/diff": {
+      "get": {
+        "description": "Um `patch` nulo distingue o caso em que o provider não entregou o texto (binário, ou patch grande demais) do caso em que o texto veio vazio. Colapsar os dois faria a tela dizer que um binário alterado não mudou. O campo `truncated` avisa quando a lista de arquivos passou do teto.",
+        "operationId": "CodeController_diff",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pullRequestId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CodeDiffResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Caminho fora do escopo do projeto (RN-095), ref malformada, ou busca com termo curto/longo demais."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto sem repositório provisionado, ou ref/caminho/PR inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          },
+          "501": {
+            "description": "O provider do projeto não declara a capability da operação — `listTree`, `pullRequestDiff`, `blame`, `pullRequestsList` ou `branchesDetailed`. Capability só é declarada quando provada pela suite de contrato, então isto é resposta legítima e não defeito."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Devolve o diff de uma PR, normalizado por provider",
+        "tags": [
+          "git"
+        ]
+      }
+    },
+    "/projects/{projectId}/code/search": {
+      "get": {
+        "description": "A busca NÃO é operação do contrato de git: ela é composta sobre a árvore e o conteúdo, e por isso é a única leitura cujo custo cresce com o tamanho do repositório. Três orçamentos a param — diretórios percorridos, arquivos abertos e casamentos devolvidos — e `truncated` diz que ela parou. `filesScanned` mostra o custo que ela teve.",
+        "operationId": "CodeController_search",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "required": true,
+            "in": "query",
+            "description": "Termo, 2 a 200 caracteres.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ref",
+            "required": false,
+            "in": "query",
+            "description": "Branch, tag ou sha.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "path",
+            "required": false,
+            "in": "query",
+            "description": "Subárvore em que buscar. Refinar aqui é o que evita o corte.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CodeSearchResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Caminho fora do escopo do projeto (RN-095), ref malformada, ou busca com termo curto/longo demais."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto sem repositório provisionado, ou ref/caminho/PR inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          },
+          "501": {
+            "description": "O provider do projeto não declara a capability da operação — `listTree`, `pullRequestDiff`, `blame`, `pullRequestsList` ou `branchesDetailed`. Capability só é declarada quando provada pela suite de contrato, então isto é resposta legítima e não defeito."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Busca texto no repositório, com orçamento",
+        "tags": [
+          "git"
+        ]
+      }
+    },
+    "/projects/{projectId}/code/tree": {
+      "get": {
+        "description": "Não é recursivo, por desenho do contrato: a aba navega sob demanda, e pedir a árvore inteira de um repositório grande é o amplificador de tráfego que a fase proíbe. `truncated` avisa quando o nível passou do teto de entradas.",
+        "operationId": "CodeController_tree",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ref",
+            "required": false,
+            "in": "query",
+            "description": "Branch, tag ou sha. Ausente usa a branch padrão do repositório.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "path",
+            "required": false,
+            "in": "query",
+            "description": "Diretório a listar. Ausente ou vazio é a raiz.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CodeTreeResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Caminho fora do escopo do projeto (RN-095), ref malformada, ou busca com termo curto/longo demais."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto sem repositório provisionado, ou ref/caminho/PR inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          },
+          "501": {
+            "description": "O provider do projeto não declara a capability da operação — `listTree`, `pullRequestDiff`, `blame`, `pullRequestsList` ou `branchesDetailed`. Capability só é declarada quando provada pela suite de contrato, então isto é resposta legítima e não defeito."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Lista UM nível da árvore do repositório",
+        "tags": [
+          "git"
+        ]
+      }
+    },
+    "/projects/{projectId}/container": {
+      "get": {
+        "description": "Enquanto o status for `sem_decisao`, o container do projeto não sobe e a aba Code responde 409 — é o portão da RN-105. Ver o estado é a mesma permissão que ver o projeto, então `viewer`.",
+        "operationId": "ContainersController_estado",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EstadoDoContainerResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Estado do container do projeto (a decisão de imagem vigente)",
+        "tags": [
+          "projetos"
         ]
       }
     },
@@ -3277,6 +4151,55 @@
           }
         ],
         "summary": "Ativa a fase de execução e sobe um dev agent por módulo",
+        "tags": [
+          "execução"
+        ]
+      }
+    },
+    "/projects/{projectId}/execution/session": {
+      "get": {
+        "description": "A sessão `active` mais recente que já carrega `execution.activated` — o MESMO critério que `activate` usa para decidir se reativa ou cria (RN-139). `null` quando não há execução em curso. Existe para a aba Executores parar de inferir essa sessão pela mais recente do projeto, que muda de sessão em sessão nova sem pista nenhuma na tela.",
+        "operationId": "ExecutionController_getSession",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "`null` no corpo quando não há execução ativa.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto, sessão ou tarefa inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Devolve a sessão de execução vigente do projeto, ou nada",
         "tags": [
           "execução"
         ]
@@ -4804,7 +5727,7 @@
         ]
       },
       "post": {
-        "description": "A sessão nasce em `created` e é o contêiner de tudo o que os agentes fazem: o event log, as ações propostas e o orçamento de tokens penduram nela.",
+        "description": "A sessão nasce em `created` e é o contêiner de tudo o que os agentes fazem: o event log, as ações propostas e o orçamento de tokens penduram nela. O `kind` é OBRIGATÓRIO e fica gravado: `consultiva` só conversa, `criativa` produz e é a única que aceita `execution.activated`.",
         "operationId": "SessionsController_create",
         "parameters": [
           {
@@ -4816,6 +5739,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSessionDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "",
@@ -4826,6 +5759,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Corpo sem `kind`, ou com um valor fora da lista."
           },
           "401": {
             "description": "Sem token, token expirado ou assinatura inválida."
@@ -4902,6 +5838,74 @@
           }
         ],
         "summary": "Devolve uma sessão pelo id",
+        "tags": [
+          "sessões"
+        ]
+      },
+      "patch": {
+        "description": "O nome é rótulo de navegação e NÃO substitui a hashtag do id — as telas compõem os dois, e sem nome degradam para a hashtag sozinha. `null` ou string em branco apaga o nome. Não há como trocar o `kind`: ele é a intenção de criação, e mudá-lo depois o tornaria estado.",
+        "operationId": "SessionsController_rename",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenameSessionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Corpo sem `name`, ou nome acima do limite de caracteres."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto ou sessão inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Dá ou tira o nome amigável da sessão",
         "tags": [
           "sessões"
         ]
@@ -5267,6 +6271,73 @@
         ]
       }
     },
+    "/projects/{projectId}/sessions/{sessionId}/agents/{agent}/cancel": {
+      "post": {
+        "description": "O botão \"Parar\" do composer (RN-122): mata a chamada ao LLM em curso no engine, cortando a conexão no meio — economiza token de verdade, não só para de renderizar no cliente. Idempotente: sem turno em curso, é aceito sem efeito.",
+        "operationId": "AgentsController_cancel",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "agent",
+            "required": true,
+            "in": "path",
+            "description": "Slug do agente ativo.",
+            "schema": {
+              "example": "po",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto, sessão ou handoff inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cancela o turno em curso do agente ativo",
+        "tags": [
+          "agentes"
+        ]
+      }
+    },
     "/projects/{projectId}/sessions/{sessionId}/agents/{agent}/message": {
       "post": {
         "description": "A resposta é só o aceite. O que o agente responde chega pelo event log da sessão e pelo SSE de chat — não por esta chamada.",
@@ -5415,6 +6486,99 @@
           }
         ],
         "summary": "Sobe um agente na sessão",
+        "tags": [
+          "agentes"
+        ]
+      }
+    },
+    "/projects/{projectId}/sessions/{sessionId}/agents/{agent}/structured-question/{questionSetId}/answer": {
+      "post": {
+        "description": "Grava `chat.structured_question_answered` e reenvia as respostas ao agente como uma mensagem normal. Um conjunto de perguntas só pode ser respondido uma vez.",
+        "operationId": "AgentsController_submitStructuredQuestionAnswer",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "agent",
+            "required": true,
+            "in": "path",
+            "description": "Slug do agente que fez as perguntas (e vai ler a resposta).",
+            "schema": {
+              "example": "criativo",
+              "type": "string"
+            }
+          },
+          {
+            "name": "questionSetId",
+            "required": true,
+            "in": "path",
+            "description": "Id do evento `chat.structured_question` respondido.",
+            "schema": {
+              "example": "01JC4Z0000EVENTO000000000001",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnswerStructuredQuestionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto, sessão ou handoff inexistente."
+          },
+          "409": {
+            "description": "Este conjunto de perguntas já foi respondido."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Responde a um conjunto de perguntas estruturadas do agente",
         "tags": [
           "agentes"
         ]
@@ -6139,7 +7303,7 @@
     },
     "/projects/{projectId}/sessions/{sessionId}/model-binding": {
       "get": {
-        "description": "Devolve o binding RESOLVIDO pela cascata, não o binding cru da sessão: uma sessão sem binding próprio usa o do projeto, e responder `null` aqui seria a resposta errada para a pergunta certa. O campo `origin` diz de qual escopo o valor veio.",
+        "description": "Devolve o binding RESOLVIDO pela cascata, não o binding cru da sessão: uma sessão sem binding próprio usa o do projeto, e responder `null` aqui seria a resposta errada para a pergunta certa. O campo `origin` diz de qual escopo o valor veio.\n\n`agentId` é opcional e é o agente REALMENTE ativo na sessão agora (o mesmo que `RunLlmTurnUseCase` usa pra rodar o turno) — sem ele, a cascata só enxerga sessão→projeto→workspace (mais o fallback fixo pro Criativo) e nunca reflete PO/Arquiteto/Dev Lead/área depois de um handoff.",
         "operationId": "ModelBindingsController_getSessionBinding",
         "parameters": [
           {
@@ -6154,6 +7318,15 @@
             "name": "sessionId",
             "required": true,
             "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "agentId",
+            "required": false,
+            "in": "query",
+            "description": "Agente ativo agora nesta sessão (ex.: \"po\", \"arquiteto\", \"dev-lead\").",
             "schema": {
               "type": "string"
             }
@@ -6306,6 +7479,9 @@
           },
           "429": {
             "description": "Rate limit por usuário ou por IP."
+          },
+          "503": {
+            "description": "O Psicólogo está desativado globalmente por decisão do usuário (não é bug) — corpo com `reason: \"psychologist_disabled\"`."
           }
         },
         "security": [
@@ -6373,6 +7549,76 @@
         "summary": "Confirma que o levantamento com o Criativo terminou",
         "tags": [
           "agentes"
+        ]
+      }
+    },
+    "/projects/{projectId}/sessions/{sessionId}/socket-ticket": {
+      "post": {
+        "description": "O ticket autentica `connect/3` do socket Phoenix `session:<id>` no engine — NÃO é o JWT reaproveitado. TTL de 30s e uso único: cada reconexão (inclusive automática) pede um ticket novo. `scope: \"heartbeat\"` exige papel `viewer`; `scope: \"terminal\"` exige `developer`, o mesmo papel mínimo de ações de terminal.",
+        "operationId": "SessionsController_issueSocketTicket",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSocketTicketDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SocketTicketResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente para o escopo pedido."
+          },
+          "404": {
+            "description": "Projeto ou sessão inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Emite um ticket opaco de uso único para o socket da sessão",
+        "tags": [
+          "sessões"
         ]
       }
     },
@@ -6563,6 +7809,61 @@
         "summary": "Move a sessão para outro estado",
         "tags": [
           "sessões"
+        ]
+      }
+    },
+    "/projects/{projectId}/spend/me": {
+      "get": {
+        "description": "A audiência do MEMBRO. Só as linhas de quem chama — o ator sai do token autenticado e não há parâmetro para trocá-lo. Em tokens e custo ESTIMADO, sem quebrar por provider nem por credencial: a chave que rodou é a do owner (RN-058) e a fatura dela é dele (RN-060). Agente não entra: `token_usage` registra quem gastou, não quem mandou gastar.",
+        "operationId": "SpendController_getMySpend",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "dias",
+            "required": false,
+            "in": "query",
+            "description": "Janela deslizante. Padrão 30, máximo 180.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MySpendResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "O meu consumo neste projeto, por sessão e por dia",
+        "tags": [
+          "llm"
         ]
       }
     },
@@ -7970,6 +9271,61 @@
         ]
       }
     },
+    "/workspaces/{workspaceId}/spend-report": {
+      "get": {
+        "description": "A audiência do OWNER. Complementa `credential-spend`, que responde a pergunta da FATURA (por provider, que é a unidade da credencial) e continua exclusiva dele pela RN-060. Aqui não há eixo de provider: quebrar por provider é quebrar por credencial. Janela deslizante em dias, e a série diária vem DENSA — dia sem gasto entra com zero, senão a sparkline mente sobre o ritmo.",
+        "operationId": "SpendController_getWorkspaceSpendReport",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "dias",
+            "required": false,
+            "in": "query",
+            "description": "Janela deslizante. Padrão 30, máximo 180.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceSpendReportResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Exige `owner` no workspace."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Quebra o gasto do workspace por modelo, projeto, ator e dia",
+        "tags": [
+          "llm"
+        ]
+      }
+    },
     "/workspaces/{workspaceId}/summary": {
       "get": {
         "description": "Contagem de projetos, agentes que gastaram tokens neste mês e o gasto do mês — alimenta a linha de resumo do dashboard de projetos.",
@@ -8165,6 +9521,11 @@
             "items": {
               "type": "string"
             }
+          },
+          "originSessionId": {
+            "type": "string",
+            "example": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+            "description": "Id da sessão de CHAT de onde partiu o clique em \"ativar execução\" — a sessão criativa/consultiva do Dev Lead/PO, nunca a de execução. Omitido (chamador antigo, ex. ativação pela Visão Geral sem contexto de sessão) não fecha sessão nenhuma, igual ao comportamento de antes. Informado, é fechada ao final — mas só se não tiver handoff/ação/turno pendente (RN-135), e nunca se for a própria sessão de execução."
           }
         }
       },
@@ -8321,24 +9682,8 @@
           },
           "actionType": {
             "type": "string",
-            "enum": [
-              "terminal",
-              "git_commit",
-              "git_push",
-              "pr_open",
-              "spend",
-              "git_repo_create",
-              "git_branch_create",
-              "git_branch_protect",
-              "write_file",
-              "open_adr_pr",
-              "git_merge",
-              "open_infra_pr",
-              "instruction_patch",
-              "parallelize",
-              "raise_max_parallel"
-            ],
-            "example": "terminal"
+            "example": "terminal",
+            "description": "O tipo de ação, ou `\"*\"` — \"auto mode\" (RN-153): autonomia pra QUALQUER tipo de ação deste agente."
           },
           "mode": {
             "type": "string",
@@ -8664,6 +10009,26 @@
           "confiancaPercent"
         ]
       },
+      "AnswerStructuredQuestionDto": {
+        "type": "object",
+        "properties": {
+          "answers": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "example": {
+              "nome": "Checkout Fácil",
+              "usuarios": "Lojistas de pequeno porte",
+              "plataforma": "Web"
+            },
+            "description": "Resposta por `id` de pergunta — o mesmo `id` que veio em `chat.structured_question`."
+          }
+        },
+        "required": [
+          "answers"
+        ]
+      },
       "AppendSessionEventDto": {
         "type": "object",
         "properties": {
@@ -8802,12 +10167,16 @@
             "items": {
               "$ref": "#/components/schemas/ArchitecturePendencyResponseDto"
             }
+          },
+          "c4Diagram": {
+            "$ref": "#/components/schemas/EstadoDoC4DiagramaResponseDto"
           }
         },
         "required": [
           "moduleMap",
           "adrs",
-          "pendencies"
+          "pendencies",
+          "c4Diagram"
         ]
       },
       "AreaDeAgentesResponseDto": {
@@ -9130,6 +10499,110 @@
           "updatedAt"
         ]
       },
+      "C4AtorInternalDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Usuário"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "person",
+              "external_system"
+            ],
+            "default": "person",
+            "example": "person",
+            "description": "`person` (default) para quem opera o sistema; `external_system` para outro sistema com o qual ele conversa (ex.: um provedor de Git)."
+          },
+          "description": {
+            "type": "string",
+            "example": "Quem opera o produto pela web."
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "C4AtorResponseDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Usuário"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "person",
+              "external_system"
+            ],
+            "example": "person"
+          },
+          "description": {
+            "type": "string",
+            "example": "Quem opera o produto pela web."
+          }
+        },
+        "required": [
+          "name",
+          "type",
+          "description"
+        ]
+      },
+      "C4DiagramaGeradoResponseDto": {
+        "type": "object",
+        "properties": {
+          "diagrama": {
+            "$ref": "#/components/schemas/C4DiagramaResponseDto"
+          },
+          "version": {
+            "type": "number",
+            "example": 1
+          }
+        },
+        "required": [
+          "diagrama",
+          "version"
+        ]
+      },
+      "C4DiagramaResponseDto": {
+        "type": "object",
+        "properties": {
+          "systemName": {
+            "type": "string",
+            "example": "Brabo"
+          },
+          "systemDescription": {
+            "type": "string",
+            "example": "Plataforma de engenharia orquestrada por agentes."
+          },
+          "actors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/C4AtorResponseDto"
+            }
+          },
+          "contextDiagram": {
+            "type": "string",
+            "example": "C4Context\n  title Diagrama de Contexto -- Brabo\n  ...",
+            "description": "Sintaxe Mermaid `C4Context` — o sistema e os atores externos."
+          },
+          "containerDiagram": {
+            "type": "string",
+            "example": "C4Container\n  title Diagrama de Container -- Brabo\n  ...",
+            "description": "Sintaxe Mermaid `C4Container` — os módulos do module_map vigente e as dependências entre eles."
+          }
+        },
+        "required": [
+          "systemName",
+          "systemDescription",
+          "actors",
+          "contextDiagram",
+          "containerDiagram"
+        ]
+      },
       "ChatSseEventResponseDto": {
         "type": "object",
         "properties": {
@@ -9203,6 +10676,509 @@
           "agentId"
         ]
       },
+      "CodeBlameLineResponseDto": {
+        "type": "object",
+        "properties": {
+          "line": {
+            "type": "number",
+            "example": 12,
+            "description": "1-based, como todo editor mostra."
+          },
+          "commitSha": {
+            "type": "string",
+            "example": "0f3e8181fbd010b10c78db17b90ecb35fb8cc89c"
+          },
+          "author": {
+            "type": "string",
+            "example": "Daniel Souza"
+          },
+          "authorDate": {
+            "type": "string",
+            "example": "2026-08-04T12:00:00.000Z"
+          },
+          "summary": {
+            "type": "string",
+            "example": "fix(api): corrige o resolvedor de credencial"
+          }
+        },
+        "required": [
+          "line",
+          "commitSha",
+          "author",
+          "authorDate",
+          "summary"
+        ]
+      },
+      "CodeBlameResponseDto": {
+        "type": "object",
+        "properties": {
+          "ref": {
+            "type": "string",
+            "example": "dev"
+          },
+          "path": {
+            "type": "string",
+            "example": "apps/api/src/main.ts"
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CodeBlameLineResponseDto"
+            }
+          },
+          "truncated": {
+            "type": "boolean",
+            "example": false,
+            "description": "O arquivo passou do teto de linhas anotadas por chamada."
+          }
+        },
+        "required": [
+          "ref",
+          "path",
+          "lines",
+          "truncated"
+        ]
+      },
+      "CodeBranchDetailListResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CodeBranchDetailResponseDto"
+            }
+          },
+          "truncated": {
+            "type": "boolean",
+            "example": false,
+            "description": "A lista foi cortada no teto de branches enriquecidas."
+          }
+        },
+        "required": [
+          "items",
+          "truncated"
+        ]
+      },
+      "CodeBranchDetailResponseDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "feature/x"
+          },
+          "commitSha": {
+            "type": "string",
+            "example": "0f3e8181fbd010b10c78db17b90ecb35fb8cc89c"
+          },
+          "protected": {
+            "type": "boolean",
+            "example": false
+          },
+          "ahead": {
+            "type": "number",
+            "nullable": true,
+            "example": 3,
+            "description": "Commits à frente da branch default. `null` quando não computável."
+          },
+          "behind": {
+            "type": "number",
+            "nullable": true,
+            "example": 0,
+            "description": "Commits atrás da branch default."
+          },
+          "pullRequest": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CodeBranchPullRequestRefResponseDto"
+              }
+            ]
+          },
+          "producedBy": {
+            "nullable": true,
+            "description": "Dev agent/módulo dono da branch (RN-152), quando o nome bate com `feature/task-XXXXXXXX` e a task/módulo ainda são resolvíveis. `null` pra branch manual do usuário ou pra `main`/`dev`/`qa`.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CodeBranchProducedByResponseDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "commitSha",
+          "protected",
+          "ahead",
+          "behind",
+          "pullRequest",
+          "producedBy"
+        ]
+      },
+      "CodeBranchProducedByResponseDto": {
+        "type": "object",
+        "properties": {
+          "agentId": {
+            "type": "string",
+            "example": "dev-pieces",
+            "description": "agent_id do dev que criou a branch (`dev-<modulo>`/`dev-<modulo>-2`, RN-087)."
+          },
+          "moduleId": {
+            "type": "string",
+            "example": "pieces",
+            "description": "Nome do módulo, do `module_map` vigente do projeto."
+          }
+        },
+        "required": [
+          "agentId",
+          "moduleId"
+        ]
+      },
+      "CodeBranchPullRequestRefResponseDto": {
+        "type": "object",
+        "properties": {
+          "number": {
+            "type": "number",
+            "example": 42
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "open",
+              "merged",
+              "closed"
+            ],
+            "example": "open"
+          }
+        },
+        "required": [
+          "number",
+          "state"
+        ]
+      },
+      "CodeDiffFileResponseDto": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "example": "apps/api/src/main.ts",
+            "description": "Caminho DEPOIS da mudança (para `removed`, o que sumiu)."
+          },
+          "previousPath": {
+            "type": "string",
+            "nullable": true,
+            "example": null,
+            "description": "Caminho anterior; só preenchido quando `status` é `renamed`."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "added",
+              "modified",
+              "removed",
+              "renamed"
+            ],
+            "example": "modified"
+          },
+          "additions": {
+            "type": "number",
+            "example": 12
+          },
+          "deletions": {
+            "type": "number",
+            "example": 3
+          },
+          "patch": {
+            "type": "string",
+            "nullable": true,
+            "example": "@@ -1,3 +1,4 @@\n+import x\n",
+            "description": "Diff unificado do arquivo. `null` quando o provider não o entrega (binário, ou patch grande demais) — distinto de `\"\"`, que é \"veio vazio\". Sem essa distinção a tela diria \"sem mudanças\" num binário alterado."
+          }
+        },
+        "required": [
+          "path",
+          "previousPath",
+          "status",
+          "additions",
+          "deletions",
+          "patch"
+        ]
+      },
+      "CodeDiffResponseDto": {
+        "type": "object",
+        "properties": {
+          "pullRequestId": {
+            "type": "string",
+            "example": "pr-1"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CodeDiffFileResponseDto"
+            }
+          },
+          "truncated": {
+            "type": "boolean",
+            "example": false,
+            "description": "A lista foi cortada no teto de arquivos por diff."
+          }
+        },
+        "required": [
+          "pullRequestId",
+          "files",
+          "truncated"
+        ]
+      },
+      "CodeFileResponseDto": {
+        "type": "object",
+        "properties": {
+          "ref": {
+            "type": "string",
+            "example": "dev"
+          },
+          "path": {
+            "type": "string",
+            "example": "apps/api/src/main.ts"
+          },
+          "content": {
+            "type": "string",
+            "example": "import { NestFactory } from '@nestjs/core';\n",
+            "description": "Conteúdo em UTF-8. Binário não é servido por esta rota."
+          },
+          "truncated": {
+            "type": "boolean",
+            "example": false,
+            "description": "O arquivo passou do teto de bytes e `content` é o começo dele. A aba é de leitura: cortar e avisar é melhor que recusar o arquivo."
+          },
+          "bytes": {
+            "type": "number",
+            "example": 1284,
+            "description": "Bytes DEVOLVIDOS — depois do corte, não antes."
+          }
+        },
+        "required": [
+          "ref",
+          "path",
+          "content",
+          "truncated",
+          "bytes"
+        ]
+      },
+      "CodePullRequestListResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CodePullRequestSummaryResponseDto"
+            }
+          },
+          "truncated": {
+            "type": "boolean",
+            "example": false,
+            "description": "A lista foi cortada no teto de PRs por chamada."
+          }
+        },
+        "required": [
+          "items",
+          "truncated"
+        ]
+      },
+      "CodePullRequestSummaryResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "2401938475"
+          },
+          "number": {
+            "type": "number",
+            "example": 42
+          },
+          "title": {
+            "type": "string",
+            "example": "fix(api): a área de agentes nasce com o projeto"
+          },
+          "url": {
+            "type": "string",
+            "example": "https://github.com/acme/repo/pull/42"
+          },
+          "author": {
+            "type": "string",
+            "nullable": true,
+            "example": "daneiel",
+            "description": "Login/username de quem abriu. `null` quando o provider não informa."
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "open",
+              "merged",
+              "closed"
+            ],
+            "example": "open"
+          },
+          "sourceBranch": {
+            "type": "string",
+            "example": "feature/x"
+          },
+          "targetBranch": {
+            "type": "string",
+            "example": "dev"
+          },
+          "updatedAt": {
+            "type": "string",
+            "nullable": true,
+            "example": "2026-08-04T12:00:00.000Z",
+            "description": "`null` quando o provider não informa."
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "title",
+          "url",
+          "author",
+          "state",
+          "sourceBranch",
+          "targetBranch",
+          "updatedAt"
+        ]
+      },
+      "CodeSearchMatchResponseDto": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "example": "apps/api/src/main.ts"
+          },
+          "line": {
+            "type": "number",
+            "example": 12,
+            "description": "1-based, como todo editor mostra."
+          },
+          "text": {
+            "type": "string",
+            "example": "  const app = await NestFactory.create(AppModule);",
+            "description": "A linha inteira, cortada para não devolver arquivo minificado."
+          }
+        },
+        "required": [
+          "path",
+          "line",
+          "text"
+        ]
+      },
+      "CodeSearchResponseDto": {
+        "type": "object",
+        "properties": {
+          "ref": {
+            "type": "string",
+            "example": "dev"
+          },
+          "path": {
+            "type": "string",
+            "example": "",
+            "description": "Subárvore em que a busca correu."
+          },
+          "query": {
+            "type": "string",
+            "example": "NestFactory"
+          },
+          "matches": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CodeSearchMatchResponseDto"
+            }
+          },
+          "filesScanned": {
+            "type": "number",
+            "example": 87,
+            "description": "Arquivos efetivamente abertos. É o custo real da busca, e está na resposta para não ficar invisível."
+          },
+          "truncated": {
+            "type": "boolean",
+            "example": true,
+            "description": "A varredura parou por orçamento (diretórios, arquivos ou casamentos) antes de acabar a árvore. Refine o `path` ou o termo."
+          }
+        },
+        "required": [
+          "ref",
+          "path",
+          "query",
+          "matches",
+          "filesScanned",
+          "truncated"
+        ]
+      },
+      "CodeTreeEntryResponseDto": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "example": "apps/api/src/main.ts",
+            "description": "Caminho completo a partir da raiz do repositório."
+          },
+          "name": {
+            "type": "string",
+            "example": "main.ts",
+            "description": "Último segmento de `path`."
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "file",
+              "dir"
+            ],
+            "example": "file"
+          },
+          "size": {
+            "type": "number",
+            "nullable": true,
+            "example": 1284,
+            "description": "Bytes. `null` para diretório e quando o provider não informa — distinguir de `0` importa para a tela não afirmar \"arquivo vazio\"."
+          }
+        },
+        "required": [
+          "path",
+          "name",
+          "type",
+          "size"
+        ]
+      },
+      "CodeTreeResponseDto": {
+        "type": "object",
+        "properties": {
+          "ref": {
+            "type": "string",
+            "example": "dev",
+            "description": "Branch, tag ou sha lido."
+          },
+          "path": {
+            "type": "string",
+            "example": "apps/api",
+            "description": "Diretório listado; `\"\"` é a raiz."
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CodeTreeEntryResponseDto"
+            }
+          },
+          "truncated": {
+            "type": "boolean",
+            "example": false,
+            "description": "A listagem foi cortada no teto de entradas por nível. Há mais coisa no diretório do que veio aqui."
+          }
+        },
+        "required": [
+          "ref",
+          "path",
+          "entries",
+          "truncated"
+        ]
+      },
       "CoverageReportResponseDto": {
         "type": "object",
         "properties": {
@@ -9273,6 +11249,35 @@
           "actionType",
           "actor",
           "payload"
+        ]
+      },
+      "CreateC4DiagramInternalDto": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "systemName": {
+            "type": "string",
+            "example": "Brabo",
+            "description": "Nome do sistema/projeto, para o rótulo do diagrama."
+          },
+          "systemDescription": {
+            "type": "string",
+            "example": "Plataforma de engenharia orquestrada por agentes."
+          },
+          "actors": {
+            "description": "Atores externos do nível Context (Simon Brown). Os containers do nível Container NÃO entram aqui: vêm do module_map vigente do projeto.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/C4AtorInternalDto"
+            }
+          }
+        },
+        "required": [
+          "projectId",
+          "systemName"
         ]
       },
       "CreateEpicInternalDto": {
@@ -9389,6 +11394,46 @@
         "required": [
           "name",
           "slug"
+        ]
+      },
+      "CreateSessionDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "consultiva",
+              "criativa"
+            ],
+            "example": "criativa",
+            "description": "A intenção da sessão. `consultiva` é só conversa; `criativa` é a que produz — abre a ideação com o Criativo e é a única que entra em execução. OBRIGATÓRIO: sem ele a resposta é 400, porque o tipo é escolha de quem abre e fica gravado."
+          },
+          "name": {
+            "type": "string",
+            "example": "Checkout do carrinho",
+            "maxLength": 80,
+            "description": "Nome amigável, opcional. Não substitui a hashtag do id — as telas compõem os dois. Em branco conta como ausente."
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "CreateSocketTicketDto": {
+        "type": "object",
+        "properties": {
+          "scope": {
+            "type": "string",
+            "enum": [
+              "heartbeat",
+              "terminal"
+            ],
+            "example": "heartbeat",
+            "description": "`heartbeat` exige papel `viewer`; `terminal` exige `developer` — o mesmo papel mínimo de `MIN_ROLE_FOR_ACTION_TYPE.terminal`."
+          }
+        },
+        "required": [
+          "scope"
         ]
       },
       "CreateStoryInternalDto": {
@@ -9687,6 +11732,82 @@
           "bootstrap"
         ]
       },
+      "DecideProjectImageInternalDto": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "image": {
+            "type": "string",
+            "example": "node:22-bookworm-slim",
+            "description": "Referência OCI com TAG explícita ou digest. `latest` é RECUSADO com 400 — a regra é de domínio."
+          },
+          "rationale": {
+            "type": "string",
+            "example": "O module_map é TypeScript sobre Node 22; a slim tem o runtime e nada mais.",
+            "description": "Por que esta imagem. Mínimo de 10 caracteres."
+          },
+          "network": {
+            "type": "string",
+            "enum": [
+              "none",
+              "egress"
+            ],
+            "default": "none",
+            "description": "Postura de rede do container. `none` é o default, e é o que torna \"dentro o agente é livre\" uma frase segura."
+          },
+          "resources": {
+            "type": "object",
+            "additionalProperties": true,
+            "example": {
+              "cpus": 2,
+              "memoryMb": 4096,
+              "pidsLimit": 512
+            },
+            "description": "Teto de recursos. Acima do máximo a decisão é RECUSADA, nunca rebaixada em silêncio."
+          }
+        },
+        "required": [
+          "projectId",
+          "image",
+          "rationale"
+        ]
+      },
+      "DecisaoDeImagemResponseDto": {
+        "type": "object",
+        "properties": {
+          "image": {
+            "type": "string",
+            "example": "node:22-bookworm-slim",
+            "description": "Referência OCI com TAG explícita ou digest. `latest` é recusado: o artefato precisa dizer a mesma coisa daqui a seis meses."
+          },
+          "rationale": {
+            "type": "string",
+            "example": "O module_map é todo TypeScript sobre Node; a slim basta e reduz superfície.",
+            "description": "Por que ESTA imagem. É o que torna a decisão revisável."
+          },
+          "network": {
+            "type": "string",
+            "enum": [
+              "none",
+              "egress"
+            ],
+            "example": "none",
+            "description": "Postura de rede do container, decidida UMA vez no artefato e não comando a comando. `egress` é gasto e superfície: o Arquiteto pede, o usuário autoriza no provisionamento."
+          },
+          "resources": {
+            "$ref": "#/components/schemas/RecursosDoContainerResponseDto"
+          }
+        },
+        "required": [
+          "image",
+          "rationale",
+          "network",
+          "resources"
+        ]
+      },
       "DelegationResponseDto": {
         "type": "object",
         "properties": {
@@ -9979,6 +12100,99 @@
           "description",
           "createdAt",
           "updatedAt"
+        ]
+      },
+      "EstadoDoC4DiagramaResponseDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "sem_diagrama",
+              "gerado"
+            ],
+            "example": "sem_diagrama",
+            "description": "`sem_diagrama` é o estado inicial: o Arquiteto ainda não gerou nenhum."
+          },
+          "diagrama": {
+            "nullable": true,
+            "description": "O diagrama vigente, ou `null` enquanto não há nenhum.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/C4DiagramaResponseDto"
+              }
+            ]
+          },
+          "version": {
+            "type": "number",
+            "example": 0,
+            "description": "Versão do artefato vigente; 0 quando não há diagrama. Revisar é gerar de novo — o histórico não é reescrito."
+          },
+          "eventId": {
+            "type": "object",
+            "nullable": true,
+            "example": "01JC4Z0000EVENTO000000002"
+          },
+          "createdAt": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "status",
+          "diagrama",
+          "version",
+          "eventId",
+          "createdAt"
+        ]
+      },
+      "EstadoDoContainerResponseDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "sem_decisao",
+              "decidido"
+            ],
+            "example": "sem_decisao",
+            "description": "`sem_decisao` é o estado inicial de todo projeto e é ele que fecha o portão da RN-105: sem imagem não há container, e a aba Code não libera."
+          },
+          "decisao": {
+            "nullable": true,
+            "description": "A decisão vigente, ou `null` quando ainda não há nenhuma.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DecisaoDeImagemResponseDto"
+              }
+            ]
+          },
+          "version": {
+            "type": "number",
+            "example": 0,
+            "description": "Versão do artefato vigente; 0 quando não há decisão. Revisar é emitir uma versão nova — o histórico não é reescrito."
+          },
+          "eventId": {
+            "type": "object",
+            "nullable": true,
+            "example": "01JC4Z0000EVENTO000000001",
+            "description": "Id do evento que fixou a decisão vigente, para auditoria."
+          },
+          "decidedAt": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "status",
+          "decisao",
+          "version",
+          "eventId",
+          "decidedAt"
         ]
       },
       "ExecucaoAtivadaResponseDto": {
@@ -10532,6 +12746,22 @@
           "analise"
         ]
       },
+      "ImagemDecididaResponseDto": {
+        "type": "object",
+        "properties": {
+          "decisao": {
+            "$ref": "#/components/schemas/DecisaoDeImagemResponseDto"
+          },
+          "version": {
+            "type": "number",
+            "example": 1
+          }
+        },
+        "required": [
+          "decisao",
+          "version"
+        ]
+      },
       "InfraArtifactResponseDto": {
         "type": "object",
         "properties": {
@@ -10841,12 +13071,19 @@
             "example": null,
             "nullable": true,
             "description": "Falha do provider. Vem no CORPO com 200, e não como erro HTTP, porque a contabilidade em `usage` continua válida — o turno gastou, mesmo falhando."
+          },
+          "modelName": {
+            "type": "object",
+            "example": "llama3.2:3b",
+            "nullable": true,
+            "description": "Nome do modelo que gerou a resposta (achado do problema 2) — `null` quando o turno falhou antes de resolver um modelo (sem binding, ou binding para modelo inexistente)."
           }
         },
         "required": [
           "message",
           "usage",
-          "error"
+          "error",
+          "modelName"
         ]
       },
       "LlmTurnStreamEventResponseDto": {
@@ -10872,6 +13109,12 @@
           "message": {
             "type": "string",
             "example": "provider indisponível"
+          },
+          "modelName": {
+            "type": "object",
+            "example": "llama3.2:3b",
+            "nullable": true,
+            "description": "Só no quadro `done`/`final` — nome do modelo que gerou a resposta (achado do problema 2). `null` quando o turno falhou antes de resolver um modelo."
           }
         },
         "required": [
@@ -10966,6 +13209,7 @@
             "enum": [
               "workspace",
               "project",
+              "area",
               "agent",
               "session"
             ],
@@ -10974,7 +13218,7 @@
           "scopeId": {
             "type": "string",
             "example": "01JC4Z0000PROJETO0000000001",
-            "description": "Id do workspace, projeto, agente ou sessão a que o binding se prende."
+            "description": "Id do workspace, projeto ou sessão a que o binding se prende. Nos escopos `agent` e `area`, que existem POR PROJETO, é composto: `<projectId>:<slug do agente|chave da área>` (ADR 0064)."
           },
           "modelId": {
             "type": "string",
@@ -11397,6 +13641,65 @@
           "stack",
           "responsibility",
           "dependsOn"
+        ]
+      },
+      "MySpendResponseDto": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "example": "9b1c2d3e-4f50-4a61-8b72-0c3d4e5f6a7b",
+            "format": "uuid"
+          },
+          "dias": {
+            "type": "number",
+            "example": 30
+          },
+          "actorId": {
+            "type": "string",
+            "example": "9b1c2d3e-4f50-4a61-8b72-0c3d4e5f6a7b",
+            "format": "uuid",
+            "description": "O ator do relatório — sempre quem chamou. Linha de outro ator não entra."
+          },
+          "totalMicros": {
+            "type": "number",
+            "example": 1250000
+          },
+          "inputTokens": {
+            "type": "number",
+            "example": 120000
+          },
+          "outputTokens": {
+            "type": "number",
+            "example": 35000
+          },
+          "chamadas": {
+            "type": "number",
+            "example": 42
+          },
+          "porSessao": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SpendLinhaResponseDto"
+            }
+          },
+          "porDia": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SpendPorDiaResponseDto"
+            }
+          }
+        },
+        "required": [
+          "projectId",
+          "dias",
+          "actorId",
+          "totalMicros",
+          "inputTokens",
+          "outputTokens",
+          "chamadas",
+          "porSessao",
+          "porDia"
         ]
       },
       "OkResponseDto": {
@@ -11862,6 +14165,11 @@
             "example": 2,
             "description": "Histórias que o PO terminou e que aguardam a promoção do usuário (RN-048)."
           },
+          "pendingApprovalsCount": {
+            "type": "number",
+            "example": 8,
+            "description": "`proposed_actions` com `status = pending` no projeto INTEIRO, todas as sessões — não só a mais recente. É o que a sidebar mostra como badge do projeto (RN-151)."
+          },
           "roster": {
             "$ref": "#/components/schemas/RosterFactsResponseDto"
           }
@@ -11875,6 +14183,7 @@
           "latestSeq",
           "lastEvent",
           "storiesAwaitingPromotion",
+          "pendingApprovalsCount",
           "roster"
         ]
       },
@@ -12007,6 +14316,11 @@
             "example": "checkout",
             "description": "Único dentro do workspace."
           },
+          "workspaceDirName": {
+            "type": "string",
+            "example": "checkout-3f2b1c8e",
+            "description": "Nome da pasta física do workspace deste projeto em PROJECT_WORKSPACES_ROOT (RN-109). `<slug>-<8 chars do id>` num projeto novo; o UUID puro num projeto criado antes desta coluna existir. Congelado na criação — editar `slug` depois não recalcula."
+          },
           "createdBy": {
             "type": "string",
             "example": "01JC4Z0000USUARIO0000000001"
@@ -12048,6 +14362,7 @@
           "workspaceId",
           "name",
           "slug",
+          "workspaceDirName",
           "createdBy",
           "taskBudgetMicros",
           "maxConsecutiveBlocked",
@@ -12069,7 +14384,7 @@
             "description": "A sessão MAIS RECENTE do projeto — a mesma que `projects-summary` reporta em `latestSessionId`."
           },
           "events": {
-            "description": "Em ordem crescente de `seq`, no máximo os 50 primeiros depois do corte — o mesmo teto que `GET .../events` aplica sem `limit`.",
+            "description": "Em ordem DECRESCENTE de `seq` — o primeiro item é o mais recente (RN-100). No máximo 50 por projeto, o mesmo teto que `GET .../events` aplica sem `limit`, e quando há mais não lidos que isso os que voltam são os mais NOVOS. Quantos ficaram de fora sai de `latestSeq` menos o corte, sem outra requisição.",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/SessionEventResponseDto"
@@ -12999,6 +15314,31 @@
           "profiles"
         ]
       },
+      "RecursosDoContainerResponseDto": {
+        "type": "object",
+        "properties": {
+          "cpus": {
+            "type": "number",
+            "example": 2,
+            "description": "CPUs, fração permitida."
+          },
+          "memoryMb": {
+            "type": "number",
+            "example": 4096,
+            "description": "Memória em MiB."
+          },
+          "pidsLimit": {
+            "type": "number",
+            "example": 512,
+            "description": "Teto de processos. É o que contém fork bomb sem depender de allowlist de verbo."
+          }
+        },
+        "required": [
+          "cpus",
+          "memoryMb",
+          "pidsLimit"
+        ]
+      },
       "RegisterDto": {
         "type": "object",
         "properties": {
@@ -13044,6 +15384,21 @@
         "required": [
           "provider",
           "token"
+        ]
+      },
+      "RenameSessionDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "object",
+            "example": "Checkout do carrinho",
+            "nullable": true,
+            "maxLength": 80,
+            "description": "O nome novo. `null` (ou string em branco) TIRA o nome e a sessão volta a se identificar só pela hashtag — é o caminho de desfazer, e por isso o campo aceita nulo em vez de exigir uma rota de remoção."
+          }
+        },
+        "required": [
+          "name"
         ]
       },
       "RepoBootstrapStatusResponseDto": {
@@ -13170,6 +15525,7 @@
             "enum": [
               "workspace",
               "project",
+              "area",
               "agent",
               "session"
             ],
@@ -13561,6 +15917,21 @@
             "example": "active",
             "description": "Máquina de estados explícita: created → active → closing → closed | closed_abnormally. Transição inválida responde 409."
           },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "consultiva",
+              "criativa"
+            ],
+            "example": "criativa",
+            "description": "A INTENÇÃO com que a sessão foi aberta, escolhida na criação e imutável. `consultiva` é só conversa; `criativa` produz e é a única que entra em execução. Não confundir com estado de execução, que continua sendo o evento `execution.activated` no log."
+          },
+          "name": {
+            "type": "object",
+            "example": "Checkout do carrinho",
+            "nullable": true,
+            "description": "Nome amigável, ou `null`. As telas o compõem com a hashtag do id; ele nunca a substitui."
+          },
           "nextSeq": {
             "type": "number",
             "example": 42,
@@ -13601,6 +15972,8 @@
           "projectId",
           "createdBy",
           "status",
+          "kind",
+          "name",
           "nextSeq",
           "createdAt",
           "updatedAt",
@@ -13634,9 +16007,11 @@
               "open_infra_pr",
               "instruction_patch",
               "parallelize",
-              "raise_max_parallel"
+              "raise_max_parallel",
+              "*"
             ],
-            "example": "terminal"
+            "example": "terminal",
+            "description": "Tipo de ação, ou `\"*\"` para TODO tipo de ação deste agente — o \"auto mode\" do ApprovalCard (RN-153). Uma regra ESPECÍFICA sempre vence a curinga: gravar `terminal: deny` com `\"*\": auto_approve` já ligado continua negando terminal."
           },
           "mode": {
             "type": "string",
@@ -13796,6 +16171,7 @@
             "enum": [
               "workspace",
               "project",
+              "area",
               "agent",
               "session"
             ],
@@ -13819,6 +16195,94 @@
           "scope",
           "modelId",
           "reason"
+        ]
+      },
+      "SocketTicketResponseDto": {
+        "type": "object",
+        "properties": {
+          "ticket": {
+            "type": "string",
+            "description": "Token opaco de uso único, base64url. TTL de 30s e uso único: some depois do primeiro `connect/3` bem-sucedido, ou quando expira."
+          },
+          "expiresAt": {
+            "type": "string",
+            "example": "2026-08-09T12:00:30.000Z",
+            "description": "Quando o ticket expira (ISO 8601)."
+          }
+        },
+        "required": [
+          "ticket",
+          "expiresAt"
+        ]
+      },
+      "SpendLinhaResponseDto": {
+        "type": "object",
+        "properties": {
+          "chave": {
+            "type": "string",
+            "example": "anthropic/claude-sonnet-4",
+            "description": "A chave do agrupamento: nome do modelo, id do projeto, id do ator ou id da sessão, conforme a lista em que a linha aparece."
+          },
+          "rotulo": {
+            "type": "object",
+            "example": "Loja",
+            "nullable": true,
+            "description": "Nome legível, quando existe tabela com nome (projeto). `null` quando a chave já é o rótulo."
+          },
+          "actorKind": {
+            "type": "object",
+            "example": "agent",
+            "nullable": true,
+            "description": "Só a lista `porAtor` preenche; nas outras é `null`."
+          },
+          "costMicros": {
+            "type": "number",
+            "example": 1250000
+          },
+          "inputTokens": {
+            "type": "number",
+            "example": 120000
+          },
+          "outputTokens": {
+            "type": "number",
+            "example": 35000
+          },
+          "chamadas": {
+            "type": "number",
+            "example": 42
+          }
+        },
+        "required": [
+          "chave",
+          "rotulo",
+          "actorKind",
+          "costMicros",
+          "inputTokens",
+          "outputTokens",
+          "chamadas"
+        ]
+      },
+      "SpendPorDiaResponseDto": {
+        "type": "object",
+        "properties": {
+          "dia": {
+            "type": "string",
+            "example": "2026-08-09",
+            "description": "Dia em UTC. A série é DENSA: dia sem gasto vem com zero."
+          },
+          "costMicros": {
+            "type": "number",
+            "example": 1250000
+          },
+          "chamadas": {
+            "type": "number",
+            "example": 42
+          }
+        },
+        "required": [
+          "dia",
+          "costMicros",
+          "chamadas"
         ]
       },
       "StoryComTarefasResponseDto": {
@@ -14634,6 +17098,83 @@
           "createdBy",
           "createdAt",
           "updatedAt"
+        ]
+      },
+      "WorkspaceSpendReportResponseDto": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "example": "9b1c2d3e-4f50-4a61-8b72-0c3d4e5f6a7b",
+            "format": "uuid"
+          },
+          "ownerId": {
+            "type": "string",
+            "example": "9b1c2d3e-4f50-4a61-8b72-0c3d4e5f6a7b",
+            "format": "uuid",
+            "description": "Dono das chaves que bancaram este gasto (RN-058)."
+          },
+          "dias": {
+            "type": "number",
+            "example": 30,
+            "description": "Janela deslizante, em dias."
+          },
+          "totalMicros": {
+            "type": "number",
+            "example": 1250000
+          },
+          "inputTokens": {
+            "type": "number",
+            "example": 120000
+          },
+          "outputTokens": {
+            "type": "number",
+            "example": 35000
+          },
+          "chamadas": {
+            "type": "number",
+            "example": 42
+          },
+          "porModelo": {
+            "description": "Por MODELO. Dois providers servindo o mesmo nome caem na mesma linha — separá-los reintroduziria o eixo de credencial por outro nome.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SpendLinhaResponseDto"
+            }
+          },
+          "porProjeto": {
+            "description": "Por PROJETO dentro do workspace.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SpendLinhaResponseDto"
+            }
+          },
+          "porAtor": {
+            "description": "Por ATOR — agente e pessoa na mesma lista, distintos por `actorKind`.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SpendLinhaResponseDto"
+            }
+          },
+          "porDia": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SpendPorDiaResponseDto"
+            }
+          }
+        },
+        "required": [
+          "workspaceId",
+          "ownerId",
+          "dias",
+          "totalMicros",
+          "inputTokens",
+          "outputTokens",
+          "chamadas",
+          "porModelo",
+          "porProjeto",
+          "porAtor",
+          "porDia"
         ]
       },
       "WorkspaceSummaryResponseDto": {

@@ -31,8 +31,8 @@ defmodule Engine.Agents.DevLeadServer do
   use GenServer, restart: :temporary
 
   alias Engine.Harness.{ContextBuilder, PromptAssembler, ContextManager, ToolCallRecovery}
-  alias Engine.Agents.{DevLeadTools, FalhaDeTurno}
-  alias Engine.Sessions.{EngineApiClient, LiveBroadcast}
+  alias Engine.Agents.{DevLeadTools, FalhaDeTurno, TurnoAssincrono}
+  alias Engine.Sessions.EngineApiClient
 
   @agent "dev-lead"
 
@@ -72,38 +72,40 @@ defmodule Engine.Agents.DevLeadServer do
        project_id: project_id,
        agent: @agent,
        messages: [system_msg | history],
-       tool_specs: [DevLeadTools.spec()]
+       tool_specs: [DevLeadTools.spec()],
+       # Guardado enquanto o turno roda numa Task supervisionada, fora do
+       # handler que bloqueava o processo inteiro — é o que permite um
+       # `:cancel` chegar e ser atendido (RN-122). Ver `TurnoAssincrono`.
+       turno_assincrono: nil
      }}
   end
 
+  # O turno passou a rodar numa Task (`TurnoAssincrono`), fora deste
+  # handler: antes o processo inteiro ficava bloqueado até o turno terminar,
+  # e um `:cancel` nunca era atendido nesse meio tempo (RN-122).
   @impl true
   def handle_cast(:kickoff, state) do
-    broadcast(state, "agent.status", %{status: "working"})
-
-    state =
-      state
-      |> append(user_msg(kickoff_instruction(state)))
-      |> compact()
-      |> run_turn(@max_iterations)
-
-    broadcast(state, "agent.done", %{})
-    broadcast(state, "agent.status", %{status: "idle"})
-    {:noreply, state}
+    work = state |> append(user_msg(kickoff_instruction(state))) |> compact()
+    TurnoAssincrono.iniciar(state, nil, fn -> run_turn(work, @max_iterations) end)
   end
 
   @impl true
-  def handle_call({:user_message, text}, _from, state) do
-    broadcast(state, "agent.status", %{status: "working"})
+  def handle_cast(:cancel, state) do
+    {:noreply, TurnoAssincrono.cancelar(state)}
+  end
 
-    state =
-      state
-      |> append(user_msg(text))
-      |> compact()
-      |> run_turn(@max_iterations)
+  @impl true
+  def handle_call({:user_message, text}, from, state) do
+    work = state |> append(user_msg(text)) |> compact()
+    TurnoAssincrono.iniciar(state, from, fn -> run_turn(work, @max_iterations) end)
+  end
 
-    broadcast(state, "agent.done", %{})
-    broadcast(state, "agent.status", %{status: "idle"})
-    {:reply, :ok, state}
+  @impl true
+  def handle_info(msg, state) do
+    case TurnoAssincrono.tratar_resultado(msg, state) do
+      {:ok, novo_state} -> {:noreply, novo_state}
+      :ignorado -> {:noreply, state}
+    end
   end
 
   # --- Turno com loop bounded de tool use ---
@@ -130,10 +132,11 @@ defmodule Engine.Agents.DevLeadServer do
         emit_falha(state, {:final, erro})
         {state, ""}
 
-      {:ok, %{"message" => message}} ->
+      {:ok, %{"message" => message} = frame} ->
         content = Map.get(message, "content", "")
+        model_name = Map.get(frame, "modelName")
         state = append(state, assistant_msg(content))
-        if content != "", do: emit_response(state, content)
+        if content != "", do: emit_response(state, content, model_name)
 
         case tool_calls(message, state.tool_specs) do
           [] ->
@@ -315,8 +318,10 @@ defmodule Engine.Agents.DevLeadServer do
     end
   end
 
-  defp emit_response(state, content),
-    do: emit(state, "agent.response", %{content: content})
+  # `model_name` viaja do frame `final` da api (achado do problema 2). Sem
+  # default: o único call site aqui sempre passa os 3 argumentos.
+  defp emit_response(state, content, model_name),
+    do: emit(state, "agent.response", %{content: content, modelName: model_name})
 
   # A falha, gravada e DITA. O `broadcast` continua, para quem está com a aba
   # aberta ver na hora — mas ele deixou de ser a única fonte.
@@ -342,13 +347,10 @@ defmodule Engine.Agents.DevLeadServer do
     })
   end
 
-  # `agent.status` PRECISA ser persistido, não só broadcastado: o painel do
-  # time deriva o roster do event log buscado por HTTP (ver
-  # Engine.Sessions.LiveBroadcast.agent_status/4 e o ADR 0021).
-  defp broadcast(state, "agent.status", %{status: status}) do
-    LiveBroadcast.agent_status(state.project_id, state.session_id, @agent, status)
-  end
-
+  # `agent.status` (o único evento que PRECISA ser persistido, não só
+  # broadcastado — ver ADR 0021) passou a ser emitido por
+  # `Engine.Agents.TurnoAssincrono`, que envolve o `handle_call`/`handle_cast`
+  # de cada turno desde RN-122. O que sobra aqui é só o broadcast efêmero.
   defp broadcast(state, event, payload) do
     EngineWeb.Endpoint.broadcast("session:" <> state.session_id, event, payload)
   end
