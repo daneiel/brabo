@@ -5442,6 +5442,43 @@ seja reportado como "não foi possível aceitar o handoff".
 - **Decisão arquitetural:** [ADR 0069](adr/0069-fusao-condicional-do-handoff-com-a-ativacao-de-execucao.md)
 - **Origem:** pedido do usuário (desenho aprovado)
 
+### RN-162 — Perguntas estruturadas do Criativo {#rn-162}
+
+O Criativo pode, quando faz VÁRIAS perguntas na mesma resposta, emitir a
+lista em formato ESTRUTURADO em vez de deixar o usuário responder item por
+item em texto livre — ferramenta nova `ask_structured_questions`
+(`apps/engine/lib/engine/harness/tools/ask_structured_questions.ex`,
+`:direct`), registrada ao lado de `emit_artifact`. Schema:
+`{ questions: [{ id, label, type?, options? }] }` — `id` único e não-vazio,
+`label` não-vazio, `type` ∈ `text|textarea|select` (default `text`),
+`options` obrigatório e não-vazio quando `type: select`. Grava
+`chat.structured_question`.
+
+O frontend (`StructuredQuestionCard`, `SessionPage.tsx`) renderiza um
+formulário com um campo por pergunta — `Input`/`Textarea`/`Select` do
+design system, conforme `type`. `POST .../agents/:agent/structured-
+question/:questionSetId/answer` (`AnswerStructuredQuestionUseCase`) valida
+que toda pergunta tem resposta não-vazia, grava
+`chat.structured_question_answered` (referenciando `questionSetId` = id do
+evento da pergunta) e REUSA `SendAgentMessageUseCase` — as respostas viram
+uma mensagem concatenada ("1. {label}: {resposta}\n2. ..."), como se o
+usuário tivesse digitado no fio; não há canal novo de "o agente lê a
+resposta estruturada". Um conjunto de perguntas só pode ser respondido
+UMA vez: reenvio é recusado com 409, e o formulário nem chega a
+reaparecer — o card vira somente leitura assim que existe um
+`chat.structured_question_answered` posterior com o mesmo `questionSetId`.
+
+- **Onde:** `apps/engine/lib/engine/harness/tools/ask_structured_questions.ex`,
+  `apps/engine/lib/engine/agents/criativo_server.ex`,
+  `apps/api/src/application/use-cases/agents/answer-structured-question.use-case.ts`,
+  `apps/api/src/interfaces/http/agents/agents.controller.ts`,
+  `apps/web/src/routes/SessionPage.tsx` (`StructuredQuestionCard`)
+- **Teste:** `apps/engine/test/engine/harness/tools/ask_structured_questions_test.exs`,
+  `apps/engine/test/engine/agents/criativo_server_test.exs`,
+  `apps/api/test/application/use-cases/agents/answer-structured-question.use-case.spec.ts`,
+  `apps/web/src/routes/SessionPage.perguntas-estruturadas.test.tsx`
+- **Origem:** pedido do usuário — sem precedente de input estruturado no chat
+
 ---
 
 ## Quando dá errado
