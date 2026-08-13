@@ -14,6 +14,7 @@ const sair = vi.fn(() => Promise.resolve());
 const estado = vi.hoisted(() => ({
   projects: [] as unknown[],
   projectsQuery: {} as Record<string, unknown>,
+  summaries: [] as unknown[],
   pathname: '/',
 }));
 
@@ -68,17 +69,7 @@ vi.mock('../lib/hooks', () => ({
   useCurrentWorkspaceWithRole: () => ({ data: WORKSPACE_WITH_ROLE }),
   useProjects: () => ({ data: estado.projects, ...estado.projectsQuery }),
   useProjectsStatus: () => ({ data: [] }),
-  useProjectsSummary: () => ({ data: [] }),
-}));
-
-vi.mock('../lib/notifications', () => ({
-  useProjectsUnread: () =>
-    estado.projects.map((project) => ({
-      project,
-      latestSessionId: null,
-      latestSeq: 0,
-      unreadCount: 0,
-    })),
+  useProjectsSummary: () => ({ data: estado.summaries }),
 }));
 
 vi.mock('../lib/api-client', async () => {
@@ -113,6 +104,7 @@ beforeEach(() => {
   sair.mockClear();
   estado.projects = [PROJECT];
   estado.projectsQuery = {};
+  estado.summaries = [];
   estado.pathname = '/';
 });
 
@@ -281,5 +273,39 @@ describe('Shell — novo projeto na sidebar', () => {
     expect(
       screen.getByRole('button', { name: 'Novo projeto' }),
     ).toBeInTheDocument();
+  });
+});
+
+/**
+ * RN-151: o badge da sidebar é aprovações PENDENTES, não atividade não lida.
+ *
+ * Antes vinha de `latestSeq - seen` (`useProjectsUnread`) — qualquer evento
+ * novo contava, mesmo sem nenhuma decisão esperando o usuário. Um projeto com
+ * centenas de eventos de execução e zero pendência mostrava um número que não
+ * levava a lugar nenhum ao clicar.
+ */
+describe('Shell — badge de aprovações pendentes', () => {
+  it('mostra a contagem de pendingApprovalsCount quando > 0', () => {
+    estado.summaries = [{ projectId: PROJECT.id, pendingApprovalsCount: 8 }];
+
+    renderShell();
+
+    expect(screen.getByText('8')).toBeInTheDocument();
+  });
+
+  it('projeto sem nenhuma pendência não mostra badge', () => {
+    estado.summaries = [{ projectId: PROJECT.id, pendingApprovalsCount: 0 }];
+
+    renderShell();
+
+    expect(screen.queryByText('0')).toBeNull();
+  });
+
+  it('sem resumo carregado ainda, não mostra badge (undefined vira 0)', () => {
+    estado.summaries = [];
+
+    renderShell();
+
+    expect(screen.queryByText('0')).toBeNull();
   });
 });

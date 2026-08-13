@@ -9,7 +9,6 @@ import {
   useProjectsStatus,
   useProjectsSummary,
 } from '../lib/hooks';
-import { useProjectsUnread } from '../lib/notifications';
 import {
   ATIVIDADE_RECENTE_JANELA_MS,
   deriveProjectStatus,
@@ -89,7 +88,6 @@ export function Shell() {
   // MESMA queryKey do Dashboard: montados juntos, o React Query deduplica e o
   // resumo é buscado uma vez só (RN-090).
   const { data: cards } = useProjectsSummary(workspace?.id);
-  const unread = useProjectsUnread(projects, cards);
   const { data: projectsStatus } = useProjectsStatus(workspace?.id);
   const repetidos = nomesRepetidos(projects);
   const blockedByProject = new Map(
@@ -143,35 +141,44 @@ export function Shell() {
               </button>
             </div>
           )}
-          {unread.map(({ project, unreadCount }) => (
-            <Link
-              key={project.id}
-              to="/projects/$projectId"
-              params={{ projectId: project.id }}
-              className={[styles.navItem, pathname.startsWith(`/projects/${project.id}`) && styles.active]
-                .filter(Boolean)
-                .join(' ')}
-            >
-              <NavStatusDot
-                summary={cardPorProjeto.get(project.id)}
-                blockedTaskCount={blockedByProject.get(project.id) ?? 0}
-              />
-              <span className={styles.navText}>
-                <span className={styles.navName}>{project.name}</span>
-                {/* Só quando o nome se repete — ver `project-label.ts`. */}
-                {repetidos.has(project.name) && (
-                  <span className={styles.navDesempate}>
-                    {desempateDoProjeto(project)}
-                  </span>
+          {(projects ?? []).map((project) => {
+            // Aprovações pendentes do projeto INTEIRO (RN-151) — não
+            // atividade não lida. Antes este badge vinha de `latestSeq -
+            // seen`, que contava QUALQUER evento novo; um projeto com
+            // centenas de eventos de execução mas zero decisão pendente
+            // mostrava um número que não correspondia a nada acionável.
+            const pendingApprovalsCount =
+              cardPorProjeto.get(project.id)?.pendingApprovalsCount ?? 0;
+            return (
+              <Link
+                key={project.id}
+                to="/projects/$projectId"
+                params={{ projectId: project.id }}
+                className={[styles.navItem, pathname.startsWith(`/projects/${project.id}`) && styles.active]
+                  .filter(Boolean)
+                  .join(' ')}
+              >
+                <NavStatusDot
+                  summary={cardPorProjeto.get(project.id)}
+                  blockedTaskCount={blockedByProject.get(project.id) ?? 0}
+                />
+                <span className={styles.navText}>
+                  <span className={styles.navName}>{project.name}</span>
+                  {/* Só quando o nome se repete — ver `project-label.ts`. */}
+                  {repetidos.has(project.name) && (
+                    <span className={styles.navDesempate}>
+                      {desempateDoProjeto(project)}
+                    </span>
+                  )}
+                </span>
+                {pendingApprovalsCount > 0 && (
+                  <Badge tone="accent" square>
+                    {pendingApprovalsCount}
+                  </Badge>
                 )}
-              </span>
-              {unreadCount > 0 && (
-                <Badge tone="accent" square>
-                  {unreadCount}
-                </Badge>
-              )}
-            </Link>
-          ))}
+              </Link>
+            );
+          })}
         </nav>
 
         {/* Sem rota real — não existe `/chat` nem `/settings` de workspace
