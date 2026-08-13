@@ -127,4 +127,4 @@ Fonte: os `package.json` de cada pacote e o `Makefile` da raiz.
 
 ---
 
-81 comandos no total. Alvo do Makefile sem anotação `## descrição` não aparece aqui — anote na fonte.
+82 comandos no total. Alvo do Makefile sem anotação `## descrição` não aparece aqui — anote na fonte.
