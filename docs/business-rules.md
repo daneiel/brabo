@@ -5025,6 +5025,61 @@ o de maior `version`, e revisar é gerar de novo, nunca sobrescrever.
 - **Origem:** pedido do usuário — diagrama C4 do Arquiteto na Visão Geral do
   projeto (ADR 0068)
 
+### RN-150 — `search_workspace` tem teto de QUANTIDADE de hits e de BYTES, cada um com sua marca {#rn-150}
+
+Achado numa revisão de PR: `search_workspace` (dev agents e os dois agentes
+de QA/gate, `qa_tools.ex` e `qa_performance_seguranca_agent.ex` — este
+último só tem `read_file`/`search_workspace`, sem `Terminal`, de propósito)
+devolvia TODOS os resultados da busca, sem teto nenhum — mesma classe do
+achado S (`Engine.Actions.TerminalExecutor.truncate/2`) e da correção de
+`read_file` (`Engine.Harness.Tools.ReadFile.truncate/2`): o resultado fica
+no histórico do laço e viaja em todo turno seguinte, e uma árvore grande
+basta pra estourar `{413, "request entity too large"}` do provider.
+
+Dois tetos independentes, porque a busca estoura de duas formas diferentes:
+
+1. **Quantidade de hits** — uma árvore com milhares de arquivos batendo o
+   termo produz milhares de linhas `- caminho` mesmo que nenhum arquivo
+   individual seja grande. Truncar só por BYTES no fim ainda pagaria o custo
+   de escanear e ler o conteúdo de cada um desses arquivos antes de montar a
+   string. Por isso o teto de quantidade (`SEARCH_WORKSPACE_MAX_HITS`,
+   default 500) vive em `WorkspaceFiles.search/3`, que já PARA de consumir a
+   busca assim que encontra hit suficiente — o pipeline roda sobre um
+   `Stream`, e `Enum.take(stream, max_hits + 1)` só lê da fonte o que
+   precisa pra produzir os `max_hits + 1` primeiros resultados. O "+1" é o
+   que permite dizer que HAVIA mais sem continuar escaneando o resto pra
+   contar o total exato — contar o total pagaria de novo o I/O que o teto
+   existe pra evitar, então a marca diz "mostrando os N primeiros" e nunca
+   inventa um total.
+2. **Bytes do texto final** — mesmo com hits limitados, caminhos muito
+   longos podem produzir uma string grande. Teto de bytes
+   (`SEARCH_WORKSPACE_MAX_BYTES`, default 32.768), mesmo padrão de
+   `terminal_output_max_bytes`/`read_file_max_bytes` — variável PRÓPRIA,
+   não reaproveita as outras duas: mesma classe de estouro, divergir uma não
+   deve exigir tocar as outras.
+
+A marca de truncagem é dirigida ao MODELO, não ao humano: diz o que foi
+cortado (hits e/ou bytes) e instrui a refinar o termo da busca — mesmo
+espírito das marcas de `TerminalExecutor`/`ReadFile`.
+
+- **Onde:** `apps/engine/lib/engine/harness/workspace_files.ex`
+  (`search/3`, `take_capped/2`),
+  `apps/engine/lib/engine/harness/tools/search_workspace.ex`
+  (`truncate/3`, `marca_de_truncagem/5`),
+  `apps/engine/config/runtime.exs` (`search_workspace_max_hits`,
+  `search_workspace_max_bytes`)
+- **Teste:** `apps/engine/test/engine/harness/workspace_files_test.exs`
+  (`search/3` com `max_hits` corta a QUANTIDADE e marca truncagem só
+  quando há mais que o teto),
+  `apps/engine/test/engine/harness/search_workspace_test.exs` (busca com
+  poucos resultados não é alterada; busca com mais hits que o teto é
+  truncada com aviso claro; texto final maior que o teto de bytes também é
+  cortado)
+- **Origem:** achado de revisão de PR — segunda causa real do 413 em
+  revisões, depois da correção de `read_file`
+
+---
+
 ### RN-151 — O badge de projeto na sidebar é aprovações pendentes, não atividade não lida {#rn-151}
 
 O número ao lado do nome de cada projeto em `Shell.tsx` vinha de
@@ -5065,6 +5120,55 @@ não o passava), e virou `pendingApprovalsCount` com o mesmo valor da sidebar
   `apps/web/src/routes/Shell.test.tsx` (badge de aprovações pendentes)
 - **Origem:** achado do usuário navegando a app — badge da sidebar mostrando
   "392" contra "8" de verdade na aba Aprovações do mesmo projeto
+
+---
+
+### RN-152 — A branch de uma task diz de qual dev agent e módulo ela é, no dropdown da aba Code {#rn-152}
+
+`CodeBranchPicker` já listava toda branch do repositório, inclusive as dos
+dev agents (`feature/task-XXXXXXXX`, `Engine.Dev.AgentIo`), mas sem pista
+nenhuma de quem a criou — só o nome cru. `ReadProjectCodeUseCase.branches`
+resolve isso sem chamada a mais ao provider de git: os 8 chars depois de
+`feature/task-` são exatamente o primeiro grupo hifenizado do uuid da task
+(`"feature/task-" <> String.slice(to_string(row.task_id), 0, 8)`, não um
+substring arbitrário), então casam contra `TaskRepository
+.findByProjectAndIdPrefix` (join por PROJETO, pra prefixo de 8 chars nunca
+vazar task de outro projeto). O `assignedTo` da task é o agent_id
+(`dev-<modulo>`/`dev-<modulo>-2`, RN-087); o módulo é resolvido comparando
+contra o `module_map` VIGENTE do projeto pelas MESMAS funções que o geraram
+(`devAgentId`/`extraDevAgentId` em `activate-execution.use-case.ts`) — nunca
+por regex reversa, que degeneraria em ambiguidade pra nome de módulo com
+caractere especial.
+
+`producedBy: { agentId, moduleId } | null` é degradação honesta, do mesmo
+jeito que `ahead`/`behind` já são: `null` pra branch sem o padrão (manual do
+usuário, ou `main`/`dev`/`qa`), e também quando o padrão bate mas a
+task/módulo não são mais resolvíveis (task apagada, módulo removido do mapa
+vigente) — nunca um valor inventado. No dropdown, cada branch produzida por
+um dev ganha o ícone e a cor do agente (`AGENTS`/`agents.ts`, RN-087),
+reaproveitando a MESMA degradação que `apps/web/src/lib/agent-status.ts` já
+usa pro roster ao vivo: módulo sem chave fixa em `AGENTS` herda ícone/cor de
+`dev-backend`.
+
+- **Onde:** `apps/api/src/application/use-cases/git/read-project-code.use-case.ts`
+  (`branches`/`producedBy`/`moduloDoAgente`),
+  `apps/api/src/application/ports/backlog-repository.port.ts`
+  (`TaskRepository.findByProjectAndIdPrefix`),
+  `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts`,
+  `apps/api/src/interfaces/http/git/dto/code.response.dto.ts`
+  (`CodeBranchProducedByResponseDto`), `apps/web/src/lib/api-types.ts`
+  (`CodeBranchProducedBy`), `apps/web/src/routes/code/CodeBranchPicker.tsx`
+  (`IconeDoAgenteProdutor`/`defDoAgenteProdutor`)
+- **Teste:**
+  `apps/api/test/application/use-cases/git/read-project-code.use-case.spec.ts`
+  (describe "producedBy da branch de task" — task resolvida com módulo e com
+  o agente extra `-2`, branch fora do padrão nunca ganha `producedBy` mesmo
+  com task de prefixo casável, prefixo sem task no projeto, módulo removido
+  do mapa vigente e task sem dono ainda degradam pra `null`),
+  `apps/web/src/routes/code/CodeBranchPicker.test.tsx` (branch de task mostra
+  o selo do dev agent dono; branch sem padrão não ganha selo nenhum)
+- **Origem:** pedido do usuário — nenhuma pista visual de quem criou a
+  branch no dropdown rico da FASE 26b
 
 ---
 

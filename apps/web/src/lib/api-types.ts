@@ -1160,6 +1160,16 @@ export interface CodeBranchPullRequestRef {
   state: CodePullRequestState;
 }
 
+/**
+ * Dev agent/módulo dono de uma branch `feature/task-XXXXXXXX` (RN-152).
+ * `agentId` é o `dev-<modulo>`/`dev-<modulo>-2` que a produziu; `moduleId` é
+ * o nome do módulo, do `module_map` vigente do projeto.
+ */
+export interface CodeBranchProducedBy {
+  agentId: string;
+  moduleId: string;
+}
+
 export interface CodeBranchDetail {
   name: string;
   commitSha: string;
@@ -1170,6 +1180,12 @@ export interface CodeBranchDetail {
   behind: number | null;
   /** PR aberta com esta branch como origem, se houver. */
   pullRequest: CodeBranchPullRequestRef | null;
+  /**
+   * Dev agent/módulo dono, quando o nome bate com `feature/task-XXXXXXXX` e
+   * a task/módulo ainda são resolvíveis. `null` pra branch manual do usuário
+   * ou pra `main`/`dev`/`qa`.
+   */
+  producedBy: CodeBranchProducedBy | null;
 }
 
 export interface CodeBranchDetailList {

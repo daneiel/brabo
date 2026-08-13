@@ -6,6 +6,19 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api,web**: aba Code — o dropdown de branches (`CodeBranchPicker`) mostra
+  qual dev agent/módulo produziu cada branch de task
+  (`feature/task-XXXXXXXX`), com ícone e cor do agente (RN-152) —
+  `ReadProjectCodeUseCase.branches` resolve pelo prefixo do uuid da task
+  contra `TaskRepository.findByProjectAndIdPrefix` e o `module_map`
+  vigente, sem chamada extra ao provider de git
+- **api,web**: `agent_autonomy` ganha a curinga `actionType: "*"` — "modo
+  automático" (RN-153) — autonomia pra QUALQUER tipo de ação de um agente,
+  ligada pelo botão "Modo automático" no `ApprovalCard` (exige
+  `maintainer`). Regra específica sempre vence a curinga; os três tetos
+  absolutos — merge em branch protegida, `instruction_patch`,
+  `parallelize`/`raise_max_parallel` — continuam bloqueando mesmo com o
+  modo ligado (RN-154)
 - **api,engine,web**: o Arquiteto ganha um diagrama C4 (Context + Container,
   modelo de Simon Brown), renderizado na Visão Geral do projeto (RN-149,
   ADR 0068) — nova ferramenta `create_c4_diagram`, que gera as duas sintaxes
@@ -169,6 +182,20 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **engine**: `search_workspace` devolvia TODOS os resultados da busca, sem
+  teto nenhum — segunda causa real do `413` em revisões de PR, atrás de dev
+  agents e dos agentes de QA/gate. Dois tetos independentes: por
+  QUANTIDADE de hits (`SEARCH_WORKSPACE_MAX_HITS`, default 500) e por
+  BYTES do texto final (`SEARCH_WORKSPACE_MAX_BYTES`, default 32768), cada
+  um com sua própria marca de truncagem dirigida ao modelo (RN-150)
+- **api,web**: o badge de projeto na sidebar mostrava `latestSeq - seen`
+  (atividade não lida) em vez de aprovações pendentes — um projeto de teste
+  chegava a mostrar "392" enquanto a aba Aprovações do MESMO projeto
+  mostrava "8" (RN-151). O read model do dashboard ganha
+  `pendingApprovalsCount` (`COUNT(*)` de `proposed_actions` com
+  `status='pending'`, agregado por projeto, sem N+1); o card do Dashboard
+  ganha o mesmo número — fio antes morto (`unreadCount` nunca tinha
+  chamador)
 - **api**: CodeQL marcava "Server-side request forgery" em
   `reanalyzeSession`/`runAnamnese` de `HttpApiToEngineClient`, apesar da
   validação de segmento de URL interna (RN-128) já rodar antes do `fetch` —
@@ -400,6 +427,18 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   (mesmo padrão do cancelamento, RN-122). O botão nasce `disabled` com a
   dica do porquê, lendo a mesma fonte que já alimenta o painel "Regras de
   negócio"
+
+### Refatorações
+
+- **web**: a árvore de Executores (`AgentTimelineTree`, detalhe expandido de
+  `tool.call`/`tool.result`/`agent.response`) passa a usar o mesmo skin
+  visual do chat do Criativo — avatar do agente e bolha de mensagem, em vez
+  de texto cru num `<pre>`. `ChatBubble.module.css` e `AvatarDoAgente.tsx`
+  (novos, em `components/ui/`) viram fonte única dos valores, compostos por
+  `SessionPage.module.css`/`AgentTimelineTree.module.css` (mesmo padrão de
+  `Textarea.module.css`/`Input.module.css`). Mudança puramente visual: a
+  estrutura de árvore (ramo por agente, marco por linha) e o comportamento
+  de expandir/colapsar não mudam
 
 ## v2.5.1 — 2026-08-08
 
