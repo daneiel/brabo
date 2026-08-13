@@ -17,6 +17,7 @@ Fonte: os `package.json` de cada pacote e o `Makefile` da raiz.
 
 | comando | executa |
 |---|---|
+| `pnpm bootstrap` | `bash scripts/dev/bootstrap.sh` |
 | `pnpm dev` | `node scripts/dev/preflight.mjs && docker compose -f docker/docker-compose.yml --env-file .env up` |
 | `pnpm dev:build` | `node scripts/dev/preflight.mjs && docker compose -f docker/docker-compose.yml --env-file .env up --build` |
 | `pnpm dev:down` | `docker compose -f docker/docker-compose.yml --env-file .env down` |
@@ -126,4 +127,4 @@ Fonte: os `package.json` de cada pacote e o `Makefile` da raiz.
 
 ---
 
-81 comandos no total. Alvo do Makefile sem anotação `## descrição` não aparece aqui — anote na fonte.
+82 comandos no total. Alvo do Makefile sem anotação `## descrição` não aparece aqui — anote na fonte.

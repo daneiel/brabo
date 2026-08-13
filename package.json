@@ -5,6 +5,7 @@
   "version": "0.1.0",
   "packageManager": "pnpm@11.3.0",
   "scripts": {
+    "bootstrap": "bash scripts/dev/bootstrap.sh",
     "dev": "node scripts/dev/preflight.mjs && docker compose -f docker/docker-compose.yml --env-file .env up",
     "dev:build": "node scripts/dev/preflight.mjs && docker compose -f docker/docker-compose.yml --env-file .env up --build",
     "dev:down": "docker compose -f docker/docker-compose.yml --env-file .env down",

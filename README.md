@@ -62,6 +62,19 @@ migrações. `pnpm --filter api seed` cria os usuários de demonstração.
 
 `pnpm dev:down` derruba tudo. `pnpm dev:build` força rebuild.
 
+### O menu, se você não quiser decorar comando
+
+```bash
+pnpm bootstrap
+```
+
+Abre um menu de terminal com o que se faz no dia a dia — Docker, Kubernetes,
+banco e testes — navegado por dígito, `v` volta e `q` sai. Ele não reimplementa
+nada: cada item chama exatamente o `pnpm`, o `make` ou o script que já existe, e
+`pnpm bootstrap --print-commands` imprime a árvore inteira com o comando de cada
+folha, sem executar. Enquanto um comando roda, a tela mostra só que está
+rodando; `↓` revela a saída ao vivo e `↑` a esconde de novo.
+
 > **`pnpm dev` e `make deploy-local` não coexistem.** Os dois publicam api e
 > engine nas mesmas portas — de propósito (ADR 0025), para o smoke test valer
 > nos dois. Com o cluster local de pé, a **5173 não
