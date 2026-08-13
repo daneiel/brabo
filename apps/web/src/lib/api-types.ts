@@ -100,6 +100,11 @@ export interface ProjectCardSummary {
   latestSeq: number;
   lastEvent: SessionEvent | null;
   storiesAwaitingPromotion: number;
+  /**
+   * `proposed_actions` pendentes no projeto INTEIRO, todas as sessões
+   * (RN-151) — o que a sidebar mostra como badge do projeto.
+   */
+  pendingApprovalsCount: number;
   roster: {
     executionActivated: boolean;
     moduleNames: string[];
@@ -142,9 +147,19 @@ export interface PermissionsFile {
 
 export type PermissionPolicy = 'auto_approve' | 'require_approval' | 'deny';
 
+/**
+ * Curinga de `agent_autonomy.action_type` — "auto mode" (RN-153): autonomia
+ * pra QUALQUER tipo de ação do agente, não um tipo específico. NÃO é um
+ * `ActionType` (não é avaliado por `decide()`; é resolvido antes, no
+ * repositório) — por isso fica fora da união e não entra em
+ * `aprovacoes.test.ts`, que lê só `ACTION_TYPES` do backend.
+ */
+export const AGENT_AUTONOMY_ALL_ACTIONS = '*' as const;
+export type AgentAutonomyActionType = ActionType | typeof AGENT_AUTONOMY_ALL_ACTIONS;
+
 export interface AgentAutonomyRule {
   agentId: string;
-  actionType: ActionType;
+  actionType: AgentAutonomyActionType;
   mode: PermissionPolicy;
 }
 
@@ -622,6 +637,30 @@ export interface ProductBriefPayload {
   rules: unknown[];
 }
 
+// RN-162: o Criativo pode pedir VÁRIAS respostas de uma vez, num formulário,
+// pela ferramenta `ask_structured_questions` — em vez de texto livre que o
+// usuário teria que responder item por item. `type` decide o input
+// renderizado; `options` só é usado quando `type` é `select`.
+export type StructuredQuestionType = 'text' | 'textarea' | 'select';
+
+export interface StructuredQuestion {
+  id: string;
+  label: string;
+  type: StructuredQuestionType;
+  options: string[];
+}
+
+// Payload do session_event `chat.structured_question`.
+export interface StructuredQuestionPayload {
+  questions: StructuredQuestion[];
+}
+
+// Payload do session_event `chat.structured_question_answered`.
+export interface StructuredQuestionAnsweredPayload {
+  questionSetId: string;
+  answers: Record<string, string>;
+}
+
 // --- Backlog (Fase 3b — PO) ---
 
 export type StoryStatus = 'draft' | 'ready' | 'in_progress' | 'done';
@@ -903,10 +942,37 @@ export interface ArchitecturePendency {
   missing: string[];
 }
 
+// --- Diagrama C4 (Context + Container, modelo de Simon Brown) ---
+
+export interface C4Ator {
+  name: string;
+  type: 'person' | 'external_system';
+  description: string;
+}
+
+export interface C4Diagrama {
+  systemName: string;
+  systemDescription: string;
+  actors: C4Ator[];
+  /** Sintaxe Mermaid `C4Context` — o sistema e os atores externos. */
+  contextDiagram: string;
+  /** Sintaxe Mermaid `C4Container` — os módulos do module_map vigente e as dependências. */
+  containerDiagram: string;
+}
+
+export interface EstadoDoC4Diagrama {
+  status: 'sem_diagrama' | 'gerado';
+  diagrama: C4Diagrama | null;
+  version: number;
+  eventId: string | null;
+  createdAt: string | null;
+}
+
 export interface Architecture {
   moduleMap: ModuleMap | null;
   adrs: AdrRef[];
   pendencies: ArchitecturePendency[];
+  c4Diagram: EstadoDoC4Diagrama;
 }
 
 // --- Execução (Fase 4a — dev agents) ---
@@ -1128,6 +1194,16 @@ export interface CodeBranchPullRequestRef {
   state: CodePullRequestState;
 }
 
+/**
+ * Dev agent/módulo dono de uma branch `feature/task-XXXXXXXX` (RN-152).
+ * `agentId` é o `dev-<modulo>`/`dev-<modulo>-2` que a produziu; `moduleId` é
+ * o nome do módulo, do `module_map` vigente do projeto.
+ */
+export interface CodeBranchProducedBy {
+  agentId: string;
+  moduleId: string;
+}
+
 export interface CodeBranchDetail {
   name: string;
   commitSha: string;
@@ -1138,6 +1214,12 @@ export interface CodeBranchDetail {
   behind: number | null;
   /** PR aberta com esta branch como origem, se houver. */
   pullRequest: CodeBranchPullRequestRef | null;
+  /**
+   * Dev agent/módulo dono, quando o nome bate com `feature/task-XXXXXXXX` e
+   * a task/módulo ainda são resolvíveis. `null` pra branch manual do usuário
+   * ou pra `main`/`dev`/`qa`.
+   */
+  producedBy: CodeBranchProducedBy | null;
 }
 
 export interface CodeBranchDetailList {

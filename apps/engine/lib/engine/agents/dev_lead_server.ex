@@ -132,10 +132,11 @@ defmodule Engine.Agents.DevLeadServer do
         emit_falha(state, {:final, erro})
         {state, ""}
 
-      {:ok, %{"message" => message}} ->
+      {:ok, %{"message" => message} = frame} ->
         content = Map.get(message, "content", "")
+        model_name = Map.get(frame, "modelName")
         state = append(state, assistant_msg(content))
-        if content != "", do: emit_response(state, content)
+        if content != "", do: emit_response(state, content, model_name)
 
         case tool_calls(message, state.tool_specs) do
           [] ->
@@ -317,8 +318,10 @@ defmodule Engine.Agents.DevLeadServer do
     end
   end
 
-  defp emit_response(state, content),
-    do: emit(state, "agent.response", %{content: content})
+  # `model_name` viaja do frame `final` da api (achado do problema 2). Sem
+  # default: o único call site aqui sempre passa os 3 argumentos.
+  defp emit_response(state, content, model_name),
+    do: emit(state, "agent.response", %{content: content, modelName: model_name})
 
   # A falha, gravada e DITA. O `broadcast` continua, para quem está com a aba
   # aberta ver na hora — mas ele deixou de ser a única fonte.

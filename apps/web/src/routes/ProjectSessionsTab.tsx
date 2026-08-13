@@ -2,7 +2,7 @@ import { useState, type KeyboardEvent, type MouseEvent } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useQueries, useQueryClient } from '@tanstack/react-query';
 import { createSession, listActions, renameSession, transitionSession } from '../lib/api-client';
-import { useProjectSessions } from '../lib/hooks';
+import { useActiveExecutionSession, useProjectSessions } from '../lib/hooks';
 import {
   resumirAcoes,
   somarResumos,
@@ -82,6 +82,13 @@ interface ProjectSessionsTabProps {
  */
 export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps) {
   const sessionsQuery = useProjectSessions(projectId);
+  // A sessão de execução VIGENTE (RN-144) — só buscada na aba Criativo, que é
+  // onde ela nasce (RN-097: `execution.activated` exige `kind: 'criativa'`).
+  // `useActiveExecutionSession(undefined)` fica `enabled: false` na aba Chat,
+  // então não dispara requisição nenhuma ali.
+  const executionSessionQuery = useActiveExecutionSession(
+    kind === 'criativa' ? projectId : undefined,
+  );
   const [creating, setCreating] = useState(false);
   const [abrindoForm, setAbrindoForm] = useState(false);
   const [nome, setNome] = useState('');
@@ -132,8 +139,15 @@ export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps)
 
   // O filtro pelo tipo GRAVADO. A aba não infere o tipo de evento nenhum: ela
   // lê `sessions.kind`, que é a intenção de criação e não muda (RN-097).
+  //
+  // A VIGENTE fica de fora da lista (RN-144): ela nasce `kind: 'criativa'`
+  // (RN-097) mas o que ela CONTÉM é a timeline de tool-call de dev agent, não
+  // uma ideação — misturada na lista, uma sessão com 35+ eventos de execução
+  // parecia "o dev escrevendo no chat do Criativo". `useActiveExecutionSession`
+  // é `undefined` na aba Chat (query desligada), então o filtro é um no-op lá.
   const sorted = (sessionsQuery.data ?? [])
     .filter((session) => session.kind === kind)
+    .filter((session) => session.id !== executionSessionQuery.session?.id)
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
   // Aprovações POR SESSÃO (achado #16 do primeiro dogfooding). Tudo o que

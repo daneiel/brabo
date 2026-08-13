@@ -5,6 +5,7 @@ import type { LlmCredentialProvider } from './models';
 import type { MySpend, WorkspaceSpendReport } from './spend';
 import type {
   AgentAutonomyRule,
+  AgentAutonomyActionType,
   CredentialSpend,
   UsoDeModelo,
   AgentTokenUsage,
@@ -304,7 +305,7 @@ export const listAgentAutonomy = (projectId: string) =>
   get<AgentAutonomyRule[]>(`/projects/${projectId}/agent-autonomy`);
 export const setAgentAutonomy = (
   projectId: string,
-  input: { agentId: string; actionType: ActionType; mode: PermissionPolicy },
+  input: { agentId: string; actionType: AgentAutonomyActionType; mode: PermissionPolicy },
 ) => put<void>(`/projects/${projectId}/agent-autonomy`, input);
 
 // --- Git ---
@@ -515,6 +516,32 @@ export const cancelAgentTurn = (
   );
 export const confirmReadiness = (projectId: string, sessionId: string) =>
   post<{ ok: true }>(`/projects/${projectId}/sessions/${sessionId}/readiness`);
+// Mirror de `confirmReadiness`, mas do Arquiteto (achado do problema 1):
+// dispara `OfferInfraHandoffUseCase`, que oferece o handoff ao Infra E ao Dev
+// Lead na MESMA confirmação (FASE 14d). Endpoint dedicado — não reaproveita
+// `readiness`, que é do Criativo.
+export const confirmArchitectureReadiness = (
+  projectId: string,
+  sessionId: string,
+) =>
+  post<{ ok: true }>(
+    `/projects/${projectId}/sessions/${sessionId}/agents/arquiteto/handoff-infra`,
+  );
+// RN-162: submissão do formulário de `chat.structured_question` — grava
+// `chat.structured_question_answered` e reenvia as respostas ao `agent` (o
+// que fez as perguntas) pelo mesmo caminho de `sendAgentMessage`. Um
+// conjunto de perguntas só pode ser respondido uma vez (409 na segunda).
+export const answerStructuredQuestion = (
+  projectId: string,
+  sessionId: string,
+  agent: string,
+  questionSetId: string,
+  answers: Record<string, string>,
+) =>
+  post<{ ok: true }>(
+    `/projects/${projectId}/sessions/${sessionId}/agents/${agent}/structured-question/${questionSetId}/answer`,
+    { answers },
+  );
 export const listHandoffs = (projectId: string, sessionId: string) =>
   get<Handoff[]>(`/projects/${projectId}/sessions/${sessionId}/handoffs`);
 export const acceptHandoff = (
@@ -616,8 +643,25 @@ export const reanalyzeSession = (projectId: string, sessionId: string) =>
 
 // --- Execução (Fase 4a) ---
 
-export const activateExecution = (projectId: string) =>
-  post<ExecutionActivation>(`/projects/${projectId}/execution/activate`);
+/**
+ * `originSessionId` (RN-135, PR #266) é a sessão de CHAT de onde partiu o
+ * clique — a api fecha ela ao final, se não tiver handoff/ação/turno
+ * pendente. Omitido (chamador da Visão Geral, sem sessão de chat no
+ * contexto) preserva o comportamento de sempre: nenhuma sessão fecha.
+ */
+export const activateExecution = (projectId: string, originSessionId?: string) =>
+  post<ExecutionActivation>(`/projects/${projectId}/execution/activate`, {
+    originSessionId,
+  });
+/**
+ * A sessão de execução VIGENTE do projeto (RN-139) — `active` com
+ * `execution.activated` gravado — ou `null`. NUNCA a sessão mais recente do
+ * projeto: é o que `ProjectExecutorsTab` usava antes (`useLatestSession`) e
+ * que passa a olhar silenciosamente qualquer sessão nova (ex. uma ideação)
+ * criada depois da execução, ficando vazia de eventos de dev/QA.
+ */
+export const getActiveExecutionSession = (projectId: string) =>
+  get<Session | null>(`/projects/${projectId}/execution/session`);
 /**
  * Pede mais um dev agent para um módulo (RN-083).
  *

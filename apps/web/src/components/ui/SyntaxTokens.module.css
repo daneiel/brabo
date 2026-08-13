@@ -1,0 +1,19 @@
+/*
+ * As cores de token do realce de sintaxe (`routes/code/highlight.ts`) — fonte
+ * ÚNICA, extraída de `routes/code/CodeEditor.module.css` (RN-158) para o
+ * Markdown do chat (`MarkdownMessage.tsx`) reusar via `composes`, no mesmo
+ * padrão que `ChatBubble.module.css` já usa para o skin de bolha (PR #279).
+ *
+ * Os dois lugares respondem perguntas diferentes (a aba Code é "ler um
+ * arquivo do repositório", o chat é "destacar um bloco de código numa
+ * resposta"), mas a COR de cada tipo de token é uma decisão só — duplicar os
+ * sete valores divergiria na primeira correção feita de um lado só.
+ */
+.tkKeyword { color: var(--accent); }
+.tkFunction { color: var(--syntax-function); }
+.tkString { color: var(--warning); }
+.tkNumber { color: var(--violet); }
+.tkComment { color: var(--syntax-comment); }
+.tkType { color: var(--success); }
+.tkOperator { color: var(--syntax-operator); }
+.tkText { color: var(--text-primary); }

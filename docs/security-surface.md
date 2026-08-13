@@ -198,6 +198,47 @@ o componente `d` da JWK, travado por teste.
   (`gates/verdict` pro QA, `open_infra_pr` pro Infra). Session-scoped, não
   task-scoped — `taskId` é opcional no corpo. Delegação nunca é visível como
   handoff.
+- **`POST /projects/:projectId/execution/activate` ganhou `originSessionId`
+  opcional no corpo, e a classificação não mudou** — continua `role:maintainer`
+  (RN-135). O campo deixa quem já tem esse papel fechar a sessão de CHAT que
+  originou o pedido, mas com duas contenções que impedem usá-lo pra fechar
+  sessão alheia: `findInProject(projectId, originSessionId)` recusa silenciosamente
+  um id que não pertença ao PRÓPRIO projeto do path, e o fechamento só acontece
+  se `GetSessionPendingWorkUseCase` (a mesma trava do heartbeat de inatividade,
+  [RN-073](business-rules.md#rn-073)) confirmar que não há handoff, ação ou
+  turno pendurado ali. Nunca fecha a sessão de execução que a própria chamada
+  acabou de ativar.
+- **`GET /projects/:projectId/execution/session` é `role:viewer`, o mesmo
+  papel de `GET /sessions/:sessionId`** ([RN-139](business-rules.md#rn-139)).
+  Devolve a sessão de execução VIGENTE do projeto — `active` com
+  `execution.activated` gravado — ou `null`; nunca a sessão mais recente do
+  projeto, que é o que a aba Executores lia antes e que muda de sessão em
+  silêncio assim que outra sessão nasce depois dela.
+- **`POST .../llm-turn` e `POST .../llm-turn-stream` ganharam `modelName` no
+  corpo de resposta/frame final, e a classificação não mudou** — continuam
+  `engine-service` como sempre ([RN-146](business-rules.md#rn-146)). O nome
+  do modelo já era resolvido para chamar o provider; só passou a viajar de
+  volta ao engine, que o inclui no payload de `agent.response`. Nenhum dado
+  novo é lido, nenhuma credencial nova é exposta — é o mesmo nome que já sai
+  em `token_usage`.
+- **`PUT /projects/:projectId/agent-autonomy` passou a aceitar `actionType:
+  "*"` — "auto mode" ([RN-153](business-rules.md#rn-153)) —, e a
+  classificação não mudou:** continua `role:maintainer`, o mesmo do `GET`
+  ao lado. A diferença é o que o corpo agora AUTORIZA, não quem pode
+  chamar: a curinga concede autonomia pra QUALQUER tipo de ação do agente
+  de uma vez, em vez de um tipo por vez como antes. A resolução (uma regra
+  ESPECÍFICA sempre vence a curinga) mora inteira no repositório
+  (`DrizzleAgentAutonomyRepository.findMode`), nunca em `decide()` — que
+  segue recebendo só o `PermissionPolicy` já resolvido, exatamente como
+  antes da curinga existir. É por isso que os três tetos absolutos —
+  merge em branch protegida, `instruction_patch`,
+  `parallelize`/`raise_max_parallel` — continuam bloqueando mesmo com a
+  curinga em `auto_approve` ([RN-154](business-rules.md#rn-154)): eles
+  reagem a `current.policy === 'auto_approve'`, nunca à origem dela, e
+  nenhuma exceção precisou entrar em `decide()` pra isso continuar
+  valendo. `ApprovalCard.tsx` só oferece o botão que grava a curinga a
+  quem o cliente já sabe ter `maintainer`/`owner` — mas quem garante o
+  papel de verdade é este mesmo `@RequireRole('maintainer')`, inalterado.
 
 ## Tabela
 
@@ -236,6 +277,7 @@ o componente `d` da JWK, travado por teste.
 | POST | `/internal/sessions/:sessionId/max-parallel-proposals` | engine-service |
 | POST | `/internal/sessions/:sessionId/llm-turn` | engine-service |
 | POST | `/internal/sessions/:sessionId/llm-turn-stream` | engine-service |
+| POST | `/internal/sessions/:sessionId/c4-diagram` | engine-service |
 | POST | `/internal/sessions/:sessionId/module-map` | engine-service |
 | POST | `/internal/sessions/:sessionId/project-image` | engine-service |
 | POST | `/internal/sessions/:sessionId/proficiency` | engine-service |
@@ -292,6 +334,7 @@ o componente `d` da JWK, travado por teste.
 | GET | `/projects/:projectId/coverage` | role:viewer |
 | GET | `/projects/:projectId/events/:eventId` | role:viewer |
 | POST | `/projects/:projectId/execution/activate` | role:maintainer |
+| GET | `/projects/:projectId/execution/session` | role:viewer |
 | GET | `/projects/:projectId/git/:provider/connect` | role:maintainer |
 | POST | `/projects/:projectId/git/:provider/repository` | role:maintainer |
 | POST | `/projects/:projectId/git/:provider/repository/adopt` | role:maintainer |
@@ -329,6 +372,7 @@ o componente `d` da JWK, travado por teste.
 | POST | `/projects/:projectId/sessions/:sessionId/agents/:agent/cancel` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/agents/:agent/message` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/agents/:agent/start` | role:developer |
+| POST | `/projects/:projectId/sessions/:sessionId/agents/:agent/structured-question/:questionSetId/answer` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/agents/:agentId/rearm` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/agents/arquiteto/handoff-infra` | role:developer |
 | GET | `/projects/:projectId/sessions/:sessionId/budget` | role:developer |

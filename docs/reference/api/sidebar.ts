@@ -240,6 +240,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/internal-sessions-controller-c-4-diagram",
+          label: "Gera uma versão nova do diagrama C4 (Context + Container)",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/internal-sessions-controller-record-delegation-outcome",
           label: "Registra o desfecho de uma delegação de área",
           className: "api-method post",
@@ -489,6 +495,12 @@ const sidebar: SidebarsConfig = {
           id: "docs/reference/api/execution-controller-activate",
           label: "Ativa a fase de execução e sobe um dev agent por módulo",
           className: "api-method post",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/execution-controller-get-session",
+          label: "Devolve a sessão de execução vigente do projeto, ou nada",
+          className: "api-method get",
         },
         {
           type: "doc",
@@ -950,6 +962,12 @@ const sidebar: SidebarsConfig = {
           type: "doc",
           id: "docs/reference/api/agents-controller-start",
           label: "Sobe um agente na sessão",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/agents-controller-submit-structured-question-answer",
+          label: "Responde a um conjunto de perguntas estruturadas do agente",
           className: "api-method post",
         },
         {

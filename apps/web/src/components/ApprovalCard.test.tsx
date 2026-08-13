@@ -83,6 +83,44 @@ describe('ApprovalCard', () => {
     expect(onAlwaysAllow).toHaveBeenCalledTimes(1);
   });
 
+  it('sem onActivateAutoMode, o botão "Modo automático" não aparece (RN-153 — sem papel maintainer)', () => {
+    render(
+      <ApprovalCard action={makeAction()} onApprove={vi.fn()} onDeny={vi.fn()} onAlwaysAllow={vi.fn()} />,
+    );
+    expect(screen.queryByRole('button', { name: 'Modo automático' })).toBeNull();
+  });
+
+  it('com onActivateAutoMode, chama ao clicar em "Modo automático"', () => {
+    const onActivateAutoMode = vi.fn();
+    render(
+      <ApprovalCard
+        action={makeAction()}
+        onApprove={vi.fn()}
+        onDeny={vi.fn()}
+        onAlwaysAllow={vi.fn()}
+        onActivateAutoMode={onActivateAutoMode}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Modo automático' }));
+    expect(onActivateAutoMode).toHaveBeenCalledTimes(1);
+  });
+
+  it('mostra a nota do "Modo automático" na variante chat, citando os tetos que continuam pedindo decisão', () => {
+    render(
+      <ApprovalCard
+        action={makeAction()}
+        variant="chat"
+        onApprove={vi.fn()}
+        onDeny={vi.fn()}
+        onAlwaysAllow={vi.fn()}
+        onActivateAutoMode={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/libera TODA ação futura/)).toBeInTheDocument();
+    expect(screen.getByText(/paralelismo/)).toBeInTheDocument();
+  });
+
   it('mostra a nota de permissions.json na variante chat', () => {
     render(<ApprovalCard action={makeAction()} variant="chat" onApprove={vi.fn()} onDeny={vi.fn()} onAlwaysAllow={vi.fn()} />);
     expect(screen.getByText(/permissions\.json/)).toBeInTheDocument();
@@ -392,6 +430,105 @@ describe('ApprovalCard', () => {
      * união do web já ficou defasada duas vezes. Antes o `ACTION_ICON`
      * devolvia `undefined` e o React derrubava a ÁRVORE inteira.
      */
+    /*
+     * `write_file` ganhou corpo próprio: antes caía no fallback genérico
+     * (JSON cru colapsado), então um write que genuinamente pedia aprovação
+     * exigia um clique extra para ver o que seria escrito.
+     */
+    it('write_file pendente no chat mostra path + preview do conteúdo, ABERTO por padrão', () => {
+      render(
+        <ApprovalCard
+          action={makeAction({
+            actionType: 'write_file',
+            payload: { path: 'apps/api/src/foo.ts', content: 'export const foo = 1;\n' },
+          })}
+          variant="chat"
+          onApprove={vi.fn()}
+          onDeny={vi.fn()}
+          onAlwaysAllow={vi.fn()}
+        />,
+      );
+
+      const cabecalho = screen.getByRole('button', { name: /Detalhes/ });
+      expect(cabecalho.getAttribute('aria-expanded')).toBe('true');
+      expect(screen.getByText('apps/api/src/foo.ts')).toBeTruthy();
+      expect(screen.getByText(/export const foo = 1;/)).toBeTruthy();
+      // Nem o payload cru genérico nem o rótulo dele aparecem — write_file
+      // tem corpo próprio agora, não cai mais no fallback.
+      expect(screen.queryByRole('button', { name: /Payload cru/ })).toBeNull();
+    });
+
+    it('write_file com conteúdo grande trunca o preview e avisa quantas linhas', () => {
+      const linhas = Array.from({ length: 40 }, (_, i) => `linha ${i + 1}`);
+      render(
+        <ApprovalCard
+          action={makeAction({
+            actionType: 'write_file',
+            payload: { path: 'apps/api/src/big.ts', content: linhas.join('\n') },
+          })}
+          variant="chat"
+          onApprove={vi.fn()}
+          onDeny={vi.fn()}
+          onAlwaysAllow={vi.fn()}
+        />,
+      );
+
+      // O bloco de preview é um texto só (uma linha por `\n`) — a asserção lê
+      // o `textContent` bruto porque o normalizador padrão do RTL colapsaria
+      // as quebras de linha e esconderia o corte.
+      const preview = screen.getByText(/linha 1 linha 2/);
+      expect(preview.textContent).toContain('linha 1');
+      expect(preview.textContent).toContain('linha 25');
+      expect(preview.textContent).not.toContain('linha 40');
+      expect(screen.getByText(/25 de 40 linha\(s\)/)).toBeTruthy();
+    });
+
+    it('write_file com content vazio mostra a mensagem de fallback, não um preview em branco', () => {
+      render(
+        <ApprovalCard
+          action={makeAction({
+            actionType: 'write_file',
+            payload: { path: 'apps/api/src/foo.ts', content: '' },
+          })}
+          variant="chat"
+          onApprove={vi.fn()}
+          onDeny={vi.fn()}
+          onAlwaysAllow={vi.fn()}
+        />,
+      );
+
+      expect(screen.getByText(/O modelo não produziu um conteúdo válido para esta ação\./)).toBeTruthy();
+    });
+
+    it('write_file sem path e sem content mostra a mensagem combinada', () => {
+      render(
+        <ApprovalCard
+          action={makeAction({ actionType: 'write_file', payload: {} })}
+          variant="chat"
+          onApprove={vi.fn()}
+          onDeny={vi.fn()}
+          onAlwaysAllow={vi.fn()}
+        />,
+      );
+
+      expect(screen.getByText(/O modelo não produziu um caminho e um conteúdo válidos para esta ação\./)).toBeTruthy();
+    });
+
+    it('terminal com command vazio mostra a mensagem de fallback, não "$ " em branco', () => {
+      render(
+        <ApprovalCard
+          action={makeAction({ actionType: 'terminal', payload: { command: '' } })}
+          variant="chat"
+          onApprove={vi.fn()}
+          onDeny={vi.fn()}
+          onAlwaysAllow={vi.fn()}
+        />,
+      );
+
+      expect(screen.getByText(/O modelo não produziu um comando válido para esta ação\./)).toBeTruthy();
+      expect(screen.queryByText('$')).toBeNull();
+    });
+
     it('tipo desconhecido: verbo neutro + "ver detalhes", sem derrubar a tela', () => {
       render(
         <ApprovalCard

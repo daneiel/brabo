@@ -1,8 +1,9 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { ProjectExecutorsTab } from './ProjectExecutorsTab';
 import { ToastProvider } from '../components/ui/ToastProvider';
+import { ApiError } from '../lib/api-client';
 import type {
   Architecture,
   Handoff,
@@ -10,7 +11,14 @@ import type {
   SessionEvent,
 } from '../lib/api-types';
 
-const listSessions = vi.fn();
+// `Link` sem router de verdade — mesmo padrão de `ProjectInsightsTab.test.tsx`:
+// os testes aqui não navegam, só conferem que o rótulo da sessão aparece.
+vi.mock('@tanstack/react-router', () => ({
+  useNavigate: () => vi.fn(),
+  Link: ({ children }: { children?: React.ReactNode }) => <a>{children}</a>,
+}));
+
+const getActiveExecutionSession = vi.fn();
 const listSessionEvents = vi.fn();
 const listHandoffs = vi.fn();
 const listActions = vi.fn();
@@ -25,7 +33,7 @@ vi.mock('../lib/api-client', async () => {
   return {
     ApiError: real.ApiError,
     mensagemDaApi: real.mensagemDaApi,
-    listSessions: (...args: unknown[]) => listSessions(...args),
+    getActiveExecutionSession: (...args: unknown[]) => getActiveExecutionSession(...args),
     listSessionEvents: (...args: unknown[]) => listSessionEvents(...args),
     listHandoffs: (...args: unknown[]) => listHandoffs(...args),
     listActions: (...args: unknown[]) => listActions(...args),
@@ -65,6 +73,7 @@ const ARQUITETURA: Architecture = {
   },
   adrs: [],
   pendencies: [],
+  c4Diagram: { status: 'sem_diagrama', diagrama: null, version: 0, eventId: null, createdAt: null },
 };
 
 const HANDOFF_INFRA: Handoff = {
@@ -144,7 +153,7 @@ function montar() {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  listSessions.mockResolvedValue([SESSAO]);
+  getActiveExecutionSession.mockResolvedValue(SESSAO);
   listSessionEvents.mockResolvedValue({ items: EVENTOS, nextCursor: null });
   listHandoffs.mockResolvedValue([HANDOFF_INFRA]);
   listActions.mockResolvedValue({ items: [], nextCursor: null });
@@ -193,5 +202,65 @@ describe('ProjectExecutorsTab (FASE 27 — RN-121)', () => {
     expect(
       await screen.findByText(/Nenhum dev agent ou QA entrou em ação nesta sessão ainda/),
     ).toBeInTheDocument();
+  });
+});
+
+describe('ProjectExecutorsTab — sessão de execução (RN-139)', () => {
+  it('mostra a sessão de execução vigente, mesmo com sessão mais recente existindo no projeto', async () => {
+    // A aba não lista as sessões do projeto NEM escolhe a mais recente — ela
+    // só confia no que `getActiveExecutionSession` devolve (o mesmo critério
+    // que `ActivateExecutionUseCase` usa no backend: `active` com
+    // `execution.activated` gravado). Uma sessão mais nova, consultiva ou
+    // criativa sem execução, nunca entra na jogada — não há sequer uma
+    // chamada a `listSessions` para ela poder vencer por `createdAt`.
+    montar();
+
+    expect(await screen.findByText('dev-backend')).toBeInTheDocument();
+    expect(listSessionEvents).toHaveBeenCalledWith(
+      'proj-1',
+      'sess-1',
+      expect.anything(),
+    );
+    // O indicador mostra a hashtag da sessão de execução — sem nome nesta
+    // fixture, degrada para ela sozinha (RN-098).
+    expect(screen.getByText('#sess-1')).toBeInTheDocument();
+  });
+
+  it('sem execução ativa, diz isso explicitamente — nunca um grid em branco', async () => {
+    getActiveExecutionSession.mockResolvedValue(null);
+
+    montar();
+
+    expect(
+      await screen.findByText('Nenhuma execução ativa neste projeto no momento.'),
+    ).toBeInTheDocument();
+    // Sem sessão, a aba não deve nem tentar buscar eventos/roster: o estado
+    // vazio da RN-088 é "não pergunte a pergunta seguinte", não "pergunte e
+    // finja que a resposta não importa".
+    await waitFor(() => expect(listSessionEvents).not.toHaveBeenCalled());
+    expect(screen.queryByText('dev-backend')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/Nenhum dev agent ou QA entrou em ação nesta sessão ainda/),
+    ).not.toBeInTheDocument();
+  });
+
+  it('erro de rede ao descobrir a sessão vira alerta com a frase da api, nunca tela em branco', async () => {
+    getActiveExecutionSession.mockRejectedValue(
+      new ApiError(429, { message: 'Limite de requisições excedido.' }, 'trace-exec-1'),
+    );
+
+    montar();
+
+    expect(
+      await screen.findByText('Não foi possível descobrir a sessão de execução deste projeto.'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Limite de requisições excedido.')).toBeInTheDocument();
+    expect(screen.getByText(/trace-exec-1/)).toBeInTheDocument();
+    // Nem o estado vazio nem o grid aparecem por cima do erro — o `if
+    // (!dado) return null` que a RN-088 proíbe colapsaria os três num só.
+    expect(
+      screen.queryByText('Nenhuma execução ativa neste projeto no momento.'),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText('dev-backend')).not.toBeInTheDocument();
   });
 });

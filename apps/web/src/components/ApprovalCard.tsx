@@ -54,6 +54,7 @@ const COM_CORPO_PROPRIO: ReadonlySet<string> = new Set<ActionType>([
   'instruction_patch',
   'git_commit',
   'git_push',
+  'write_file',
 ]);
 
 interface DiffFile {
@@ -66,6 +67,38 @@ interface DiffFile {
 function readString(payload: Record<string, unknown>, key: string): string | undefined {
   const value = payload[key];
   return typeof value === 'string' ? value : undefined;
+}
+
+/** Como `readString`, mas trata string vazia/só-espaço como ausente — é o que
+ *  distingue "o modelo não preencheu o campo" de um valor real. */
+function eValido(value: string | undefined): value is string {
+  return value !== undefined && value.trim() !== '';
+}
+
+const PREVIEW_MAX_LINHAS = 25;
+const PREVIEW_MAX_CARACTERES = 4000;
+
+/** Preview do `content` de `write_file`: corta por linha PRIMEIRO (é código,
+ *  não prosa) e por caractere depois, para uma única linha gigante não
+ *  estourar o card. Nunca despeja o arquivo inteiro — RN-096 vale para
+ *  qualquer payload, não só o genérico. */
+function previewConteudo(content: string): {
+  texto: string;
+  truncado: boolean;
+  totalLinhas: number;
+  linhasMostradas: number;
+} {
+  const linhas = content.split('\n');
+  const cortadoPorLinha = linhas.length > PREVIEW_MAX_LINHAS;
+  let texto = cortadoPorLinha ? linhas.slice(0, PREVIEW_MAX_LINHAS).join('\n') : content;
+  const cortadoPorCaractere = texto.length > PREVIEW_MAX_CARACTERES;
+  if (cortadoPorCaractere) texto = texto.slice(0, PREVIEW_MAX_CARACTERES);
+  return {
+    texto,
+    truncado: cortadoPorLinha || cortadoPorCaractere,
+    totalLinhas: linhas.length,
+    linhasMostradas: Math.min(PREVIEW_MAX_LINHAS, linhas.length),
+  };
 }
 
 function readFiles(payload: Record<string, unknown>): DiffFile[] | undefined {
@@ -84,6 +117,15 @@ interface ApprovalCardProps {
   onApprove: () => void;
   onDeny: (reason?: string) => void;
   onAlwaysAllow: () => void;
+  /**
+   * "Auto mode" (RN-153) — liga `agent_autonomy` com a curinga `actionType:
+   * "*"` pro AGENTE desta ação: nenhum comando FUTURO dele precisa de
+   * aprovação, até desligar. Ausente/`undefined` esconde o botão — é assim
+   * que quem chama trata "sem papel maintainer" (o mesmo papel que já
+   * protege `PUT .../agent-autonomy`): não passa o callback, sem duplicar a
+   * checagem de papel aqui dentro.
+   */
+  onActivateAutoMode?: () => void;
 }
 
 export function ApprovalCard({
@@ -96,6 +138,7 @@ export function ApprovalCard({
   onApprove,
   onDeny,
   onAlwaysAllow,
+  onActivateAutoMode,
 }: ApprovalCardProps) {
   const [expandedFile, setExpandedFile] = useState<string | null>(null);
 
@@ -202,11 +245,28 @@ export function ApprovalCard({
                 Sempre permitir
               </Button>
             )}
+            {/* "Auto mode" (RN-153) — só quando quem chama já confirmou papel
+                maintainer e passou o callback; ausente some o botão em vez de
+                desabilitar sem explicar (action.actor.kind === 'user' também
+                cai aqui: não há AGENTE pra confiar). */}
+            {onActivateAutoMode && (
+              <Button variant="ghost" onClick={onActivateAutoMode}>
+                Modo automático
+              </Button>
+            )}
           </div>
           {variant === 'chat' && podeSemprePermitir && (
             <span className={styles.note}>
               <AlertIcon size={12} />
               &quot;Sempre permitir&quot; grava a regra em .brabo/permissions.json
+            </span>
+          )}
+          {variant === 'chat' && onActivateAutoMode && (
+            <span className={styles.note}>
+              <AlertIcon size={12} />
+              &quot;Modo automático&quot; libera TODA ação futura de {actorLabel} sem perguntar —
+              exceto merge em branch protegida, patch de instrução e paralelismo, que continuam
+              sempre pedindo sua decisão. Dá pra desligar depois no card do agente.
             </span>
           )}
         </>
@@ -294,7 +354,8 @@ interface ApprovalBodyProps {
 
 function ApprovalBody({ actionType, payload, executionResult, expandedFile, onToggleFile }: ApprovalBodyProps) {
   if (actionType === 'terminal') {
-    const command = readString(payload, 'command') ?? '';
+    const command = readString(payload, 'command');
+    const comandoValido = eValido(command);
     const compressionPct =
       executionResult?.compressedBytes != null && executionResult.rawBytes > 0
         ? Math.round((1 - executionResult.compressedBytes / executionResult.rawBytes) * 100)
@@ -303,7 +364,17 @@ function ApprovalBody({ actionType, payload, executionResult, expandedFile, onTo
     return (
       <div className={`${styles.body} ${styles.bodyCode}`}>
         <div className={styles.commandLine}>
-          <span className={styles.prompt}>$</span> {command}
+          {comandoValido ? (
+            <>
+              <span className={styles.prompt}>$</span> {command}
+            </>
+          ) : (
+            // Payload malformado de verdade (o modelo produziu uma tool-call
+            // sem `command`) — um prompt "$ " em branco lia como bug de
+            // renderização, não como o que era: a ferramenta não recebeu
+            // argumento nenhum.
+            <span className={styles.vazio}>O modelo não produziu um comando válido para esta ação.</span>
+          )}
         </div>
         {executionResult && (
           <div className={styles.outputBlock}>
@@ -314,6 +385,55 @@ function ApprovalBody({ actionType, payload, executionResult, expandedFile, onTo
             <div className={styles.outputBody}>{executionResult.stdout || executionResult.stderr || '(sem saída)'}</div>
           </div>
         )}
+      </div>
+    );
+  }
+
+  if (actionType === 'write_file') {
+    const path = readString(payload, 'path');
+    const caminhoValido = eValido(path);
+    const content = readString(payload, 'content');
+    const conteudoValido = eValido(content);
+
+    // O corpo próprio existe para responder "o que vai ser escrito" sem um
+    // clique — mas só quando há o que mostrar. Payload malformado (path ou
+    // content ausente/vazio) degrada para a mesma mensagem clara do terminal,
+    // nunca para um preview em branco.
+    if (!caminhoValido || !conteudoValido) {
+      const mensagem =
+        !caminhoValido && !conteudoValido
+          ? 'O modelo não produziu um caminho e um conteúdo válidos para esta ação.'
+          : !caminhoValido
+            ? 'O modelo não produziu um caminho válido para esta ação.'
+            : 'O modelo não produziu um conteúdo válido para esta ação.';
+      return (
+        <div className={`${styles.body} ${styles.bodyCode}`}>
+          <div className={styles.commandLine}>
+            <span className={styles.vazio}>{mensagem}</span>
+          </div>
+        </div>
+      );
+    }
+
+    const { texto: preview, truncado, totalLinhas, linhasMostradas } = previewConteudo(content);
+
+    return (
+      <div className={`${styles.body} ${styles.bodyCode}`}>
+        <div className={styles.commandLine}>{path}</div>
+        <div className={styles.outputBlock}>
+          <div className={styles.outputHeader}>
+            <span>preview do conteúdo</span>
+            {truncado && (
+              <span>
+                {linhasMostradas} de {totalLinhas} linha(s)
+              </span>
+            )}
+          </div>
+          <div className={styles.outputBody}>
+            {preview}
+            {truncado ? '\n…' : ''}
+          </div>
+        </div>
       </div>
     );
   }

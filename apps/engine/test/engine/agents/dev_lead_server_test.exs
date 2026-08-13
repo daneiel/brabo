@@ -6,7 +6,7 @@ defmodule Engine.Agents.DevLeadServerTest do
 
   alias Engine.Agents.DevLeadServer
   alias Engine.Sessions.FakeEngineApiClient
-  import Engine.Agents.TurnoAssincronoCase, only: [sync_cast: 3]
+  import Engine.Agents.TurnoAssincronoCase, only: [sync_cast: 3, sync_call: 3]
 
   setup do
     root =
@@ -116,5 +116,24 @@ defmodule Engine.Agents.DevLeadServerTest do
 
     # UM evento: o inválido não gravou nada, o válido gravou e parou.
     assert length(eventos_de_plano()) == 1
+  end
+
+  # Achado do problema 2 (RN-146): o `agent.response` carrega o nome do
+  # modelo que gerou a resposta, extraído do frame `final` da api.
+  test "agent.response carrega o nome do modelo", %{state: state} do
+    Process.put(:fake_llm_turns, [
+      FakeEngineApiClient.final_response("Plano registrado.", "claude-haiku")
+    ])
+
+    assert {:reply, :ok, _} =
+             sync_call(DevLeadServer, {:user_message, "e aí?"}, state)
+
+    session_id = state.session_id
+
+    assert_received {:event_appended, _, ^session_id,
+                     %{
+                       type: "agent.response",
+                       payload: %{content: "Plano registrado.", modelName: "claude-haiku"}
+                     }}
   end
 end

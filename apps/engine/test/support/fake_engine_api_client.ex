@@ -28,7 +28,15 @@ defmodule Engine.Sessions.FakeEngineApiClient do
   @impl true
   def append_event(project_id, session_id, event) do
     notify({:event_appended, project_id, session_id, event})
-    :ok
+
+    # Erro scriptável via :fake_append_event_error — mesmo idioma de
+    # :fake_story_error e companhia. Existia caminho nenhum pra simular "a api
+    # recusou o append" antes de RN-162 precisar exercitar o `{:error, _}` de
+    # `EngineApiClient.append_event/3` dentro de um tool (AskStructuredQuestions).
+    case Process.get(:fake_append_event_error) do
+      nil -> :ok
+      reason -> {:error, reason}
+    end
   end
 
   @impl true
@@ -117,6 +125,26 @@ defmodule Engine.Sessions.FakeEngineApiClient do
           end
 
         reply(:fake_module_map, corpo)
+
+      reason ->
+        {:error, reason}
+    end
+  end
+
+  @impl true
+  def create_c4_diagram(_project_id, _session_id, entrada) do
+    notify({:c4_diagram_created, entrada})
+
+    case Process.get(:fake_c4_diagram_error) do
+      nil ->
+        reply(:fake_c4_diagram, %{
+          "version" => 1,
+          "diagrama" => %{
+            "systemName" => Map.get(entrada, :systemName),
+            "contextDiagram" => "C4Context\n  title fake",
+            "containerDiagram" => "C4Container\n  title fake"
+          }
+        })
 
       reason ->
         {:error, reason}
@@ -519,8 +547,14 @@ defmodule Engine.Sessions.FakeEngineApiClient do
     {:ok, resposta}
   end
 
-  @doc "Resposta que só devolve texto final, sem tool calls (encerra o loop)."
-  def final_response(content \\ "pronto") do
+  @doc """
+  Resposta que só devolve texto final, sem tool calls (encerra o loop).
+
+  `model_name` (achado do problema 2, RN-146) — default `nil`, o mesmo
+  comportamento de sempre: quem não passa continua exercitando o caminho de
+  evento ANTIGO (sem `modelName` no payload de `agent.response`).
+  """
+  def final_response(content \\ "pronto", model_name \\ nil) do
     %{
       "message" => %{"role" => "assistant", "content" => content, "toolCalls" => []},
       "usage" => %{
@@ -529,7 +563,8 @@ defmodule Engine.Sessions.FakeEngineApiClient do
         "costMicros" => 0,
         "estimated" => true
       },
-      "error" => nil
+      "error" => nil,
+      "modelName" => model_name
     }
   end
 

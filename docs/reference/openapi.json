@@ -574,6 +574,62 @@
         ]
       }
     },
+    "/internal/sessions/{sessionId}/c4-diagram": {
+      "post": {
+        "description": "O artefato É o evento `artifact.c4_diagram`: imutável, versionado e com autor, ao lado de `artifact.module_map`. Exige module_map vigente — sem ele não há Container level para desenhar (400).",
+        "operationId": "InternalSessionsController_c4Diagram",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateC4DiagramInternalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C4DiagramaGeradoResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`system_name` ausente, ator inválido, ou sem module_map vigente."
+          },
+          "403": {
+            "description": "Service token ausente ou diferente do compartilhado."
+          },
+          "404": {
+            "description": "Sessão, projeto ou recurso inexistente."
+          }
+        },
+        "security": [
+          {
+            "service-token": []
+          }
+        ],
+        "summary": "Gera uma versão nova do diagrama C4 (Context + Container)",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
     "/internal/sessions/{sessionId}/delegations": {
       "post": {
         "description": "`completed` (com o parecer), `failed` (com a origem) ou `dispensed` (com a justificativa) — o lead nunca chama esta rota com um desfecho a meio caminho: cada delegação nasce aqui já resolvida.",
@@ -2544,7 +2600,7 @@
         ]
       },
       "put": {
-        "description": "Upsert por (agente, tipo). NÃO sobrepõe o `permissions.json`: um padrão em `deny` continua bloqueado por mais autonomia que se conceda aqui.",
+        "description": "Upsert por (agente, tipo). NÃO sobrepõe o `permissions.json`: um padrão em `deny` continua bloqueado por mais autonomia que se conceda aqui. `actionType: \"*\"` é o \"auto mode\" (RN-153) — autonomia pra QUALQUER tipo de ação deste agente; uma regra específica gravada depois continua vencendo a curinga para aquele tipo.",
         "operationId": "AgentAutonomyController_set",
         "parameters": [
           {
@@ -4095,6 +4151,55 @@
           }
         ],
         "summary": "Ativa a fase de execução e sobe um dev agent por módulo",
+        "tags": [
+          "execução"
+        ]
+      }
+    },
+    "/projects/{projectId}/execution/session": {
+      "get": {
+        "description": "A sessão `active` mais recente que já carrega `execution.activated` — o MESMO critério que `activate` usa para decidir se reativa ou cria (RN-139). `null` quando não há execução em curso. Existe para a aba Executores parar de inferir essa sessão pela mais recente do projeto, que muda de sessão em sessão nova sem pista nenhuma na tela.",
+        "operationId": "ExecutionController_getSession",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "`null` no corpo quando não há execução ativa.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto, sessão ou tarefa inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Devolve a sessão de execução vigente do projeto, ou nada",
         "tags": [
           "execução"
         ]
@@ -6381,6 +6486,99 @@
           }
         ],
         "summary": "Sobe um agente na sessão",
+        "tags": [
+          "agentes"
+        ]
+      }
+    },
+    "/projects/{projectId}/sessions/{sessionId}/agents/{agent}/structured-question/{questionSetId}/answer": {
+      "post": {
+        "description": "Grava `chat.structured_question_answered` e reenvia as respostas ao agente como uma mensagem normal. Um conjunto de perguntas só pode ser respondido uma vez.",
+        "operationId": "AgentsController_submitStructuredQuestionAnswer",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "agent",
+            "required": true,
+            "in": "path",
+            "description": "Slug do agente que fez as perguntas (e vai ler a resposta).",
+            "schema": {
+              "example": "criativo",
+              "type": "string"
+            }
+          },
+          {
+            "name": "questionSetId",
+            "required": true,
+            "in": "path",
+            "description": "Id do evento `chat.structured_question` respondido.",
+            "schema": {
+              "example": "01JC4Z0000EVENTO000000000001",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnswerStructuredQuestionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto, sessão ou handoff inexistente."
+          },
+          "409": {
+            "description": "Este conjunto de perguntas já foi respondido."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Responde a um conjunto de perguntas estruturadas do agente",
         "tags": [
           "agentes"
         ]
@@ -9323,6 +9521,11 @@
             "items": {
               "type": "string"
             }
+          },
+          "originSessionId": {
+            "type": "string",
+            "example": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+            "description": "Id da sessão de CHAT de onde partiu o clique em \"ativar execução\" — a sessão criativa/consultiva do Dev Lead/PO, nunca a de execução. Omitido (chamador antigo, ex. ativação pela Visão Geral sem contexto de sessão) não fecha sessão nenhuma, igual ao comportamento de antes. Informado, é fechada ao final — mas só se não tiver handoff/ação/turno pendente (RN-135), e nunca se for a própria sessão de execução."
           }
         }
       },
@@ -9479,24 +9682,8 @@
           },
           "actionType": {
             "type": "string",
-            "enum": [
-              "terminal",
-              "git_commit",
-              "git_push",
-              "pr_open",
-              "spend",
-              "git_repo_create",
-              "git_branch_create",
-              "git_branch_protect",
-              "write_file",
-              "open_adr_pr",
-              "git_merge",
-              "open_infra_pr",
-              "instruction_patch",
-              "parallelize",
-              "raise_max_parallel"
-            ],
-            "example": "terminal"
+            "example": "terminal",
+            "description": "O tipo de ação, ou `\"*\"` — \"auto mode\" (RN-153): autonomia pra QUALQUER tipo de ação deste agente."
           },
           "mode": {
             "type": "string",
@@ -9822,6 +10009,26 @@
           "confiancaPercent"
         ]
       },
+      "AnswerStructuredQuestionDto": {
+        "type": "object",
+        "properties": {
+          "answers": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "example": {
+              "nome": "Checkout Fácil",
+              "usuarios": "Lojistas de pequeno porte",
+              "plataforma": "Web"
+            },
+            "description": "Resposta por `id` de pergunta — o mesmo `id` que veio em `chat.structured_question`."
+          }
+        },
+        "required": [
+          "answers"
+        ]
+      },
       "AppendSessionEventDto": {
         "type": "object",
         "properties": {
@@ -9960,12 +10167,16 @@
             "items": {
               "$ref": "#/components/schemas/ArchitecturePendencyResponseDto"
             }
+          },
+          "c4Diagram": {
+            "$ref": "#/components/schemas/EstadoDoC4DiagramaResponseDto"
           }
         },
         "required": [
           "moduleMap",
           "adrs",
-          "pendencies"
+          "pendencies",
+          "c4Diagram"
         ]
       },
       "AreaDeAgentesResponseDto": {
@@ -10288,6 +10499,110 @@
           "updatedAt"
         ]
       },
+      "C4AtorInternalDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Usuário"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "person",
+              "external_system"
+            ],
+            "default": "person",
+            "example": "person",
+            "description": "`person` (default) para quem opera o sistema; `external_system` para outro sistema com o qual ele conversa (ex.: um provedor de Git)."
+          },
+          "description": {
+            "type": "string",
+            "example": "Quem opera o produto pela web."
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "C4AtorResponseDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Usuário"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "person",
+              "external_system"
+            ],
+            "example": "person"
+          },
+          "description": {
+            "type": "string",
+            "example": "Quem opera o produto pela web."
+          }
+        },
+        "required": [
+          "name",
+          "type",
+          "description"
+        ]
+      },
+      "C4DiagramaGeradoResponseDto": {
+        "type": "object",
+        "properties": {
+          "diagrama": {
+            "$ref": "#/components/schemas/C4DiagramaResponseDto"
+          },
+          "version": {
+            "type": "number",
+            "example": 1
+          }
+        },
+        "required": [
+          "diagrama",
+          "version"
+        ]
+      },
+      "C4DiagramaResponseDto": {
+        "type": "object",
+        "properties": {
+          "systemName": {
+            "type": "string",
+            "example": "Brabo"
+          },
+          "systemDescription": {
+            "type": "string",
+            "example": "Plataforma de engenharia orquestrada por agentes."
+          },
+          "actors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/C4AtorResponseDto"
+            }
+          },
+          "contextDiagram": {
+            "type": "string",
+            "example": "C4Context\n  title Diagrama de Contexto -- Brabo\n  ...",
+            "description": "Sintaxe Mermaid `C4Context` — o sistema e os atores externos."
+          },
+          "containerDiagram": {
+            "type": "string",
+            "example": "C4Container\n  title Diagrama de Container -- Brabo\n  ...",
+            "description": "Sintaxe Mermaid `C4Container` — os módulos do module_map vigente e as dependências entre eles."
+          }
+        },
+        "required": [
+          "systemName",
+          "systemDescription",
+          "actors",
+          "contextDiagram",
+          "containerDiagram"
+        ]
+      },
       "ChatSseEventResponseDto": {
         "type": "object",
         "properties": {
@@ -10479,6 +10794,16 @@
                 "$ref": "#/components/schemas/CodeBranchPullRequestRefResponseDto"
               }
             ]
+          },
+          "producedBy": {
+            "nullable": true,
+            "description": "Dev agent/módulo dono da branch (RN-152), quando o nome bate com `feature/task-XXXXXXXX` e a task/módulo ainda são resolvíveis. `null` pra branch manual do usuário ou pra `main`/`dev`/`qa`.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CodeBranchProducedByResponseDto"
+              }
+            ]
           }
         },
         "required": [
@@ -10487,7 +10812,27 @@
           "protected",
           "ahead",
           "behind",
-          "pullRequest"
+          "pullRequest",
+          "producedBy"
+        ]
+      },
+      "CodeBranchProducedByResponseDto": {
+        "type": "object",
+        "properties": {
+          "agentId": {
+            "type": "string",
+            "example": "dev-pieces",
+            "description": "agent_id do dev que criou a branch (`dev-<modulo>`/`dev-<modulo>-2`, RN-087)."
+          },
+          "moduleId": {
+            "type": "string",
+            "example": "pieces",
+            "description": "Nome do módulo, do `module_map` vigente do projeto."
+          }
+        },
+        "required": [
+          "agentId",
+          "moduleId"
         ]
       },
       "CodeBranchPullRequestRefResponseDto": {
@@ -10904,6 +11249,35 @@
           "actionType",
           "actor",
           "payload"
+        ]
+      },
+      "CreateC4DiagramInternalDto": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "systemName": {
+            "type": "string",
+            "example": "Brabo",
+            "description": "Nome do sistema/projeto, para o rótulo do diagrama."
+          },
+          "systemDescription": {
+            "type": "string",
+            "example": "Plataforma de engenharia orquestrada por agentes."
+          },
+          "actors": {
+            "description": "Atores externos do nível Context (Simon Brown). Os containers do nível Container NÃO entram aqui: vêm do module_map vigente do projeto.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/C4AtorInternalDto"
+            }
+          }
+        },
+        "required": [
+          "projectId",
+          "systemName"
         ]
       },
       "CreateEpicInternalDto": {
@@ -11726,6 +12100,52 @@
           "description",
           "createdAt",
           "updatedAt"
+        ]
+      },
+      "EstadoDoC4DiagramaResponseDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "sem_diagrama",
+              "gerado"
+            ],
+            "example": "sem_diagrama",
+            "description": "`sem_diagrama` é o estado inicial: o Arquiteto ainda não gerou nenhum."
+          },
+          "diagrama": {
+            "nullable": true,
+            "description": "O diagrama vigente, ou `null` enquanto não há nenhum.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/C4DiagramaResponseDto"
+              }
+            ]
+          },
+          "version": {
+            "type": "number",
+            "example": 0,
+            "description": "Versão do artefato vigente; 0 quando não há diagrama. Revisar é gerar de novo — o histórico não é reescrito."
+          },
+          "eventId": {
+            "type": "object",
+            "nullable": true,
+            "example": "01JC4Z0000EVENTO000000002"
+          },
+          "createdAt": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "status",
+          "diagrama",
+          "version",
+          "eventId",
+          "createdAt"
         ]
       },
       "EstadoDoContainerResponseDto": {
@@ -12651,12 +13071,19 @@
             "example": null,
             "nullable": true,
             "description": "Falha do provider. Vem no CORPO com 200, e não como erro HTTP, porque a contabilidade em `usage` continua válida — o turno gastou, mesmo falhando."
+          },
+          "modelName": {
+            "type": "object",
+            "example": "llama3.2:3b",
+            "nullable": true,
+            "description": "Nome do modelo que gerou a resposta (achado do problema 2) — `null` quando o turno falhou antes de resolver um modelo (sem binding, ou binding para modelo inexistente)."
           }
         },
         "required": [
           "message",
           "usage",
-          "error"
+          "error",
+          "modelName"
         ]
       },
       "LlmTurnStreamEventResponseDto": {
@@ -12682,6 +13109,12 @@
           "message": {
             "type": "string",
             "example": "provider indisponível"
+          },
+          "modelName": {
+            "type": "object",
+            "example": "llama3.2:3b",
+            "nullable": true,
+            "description": "Só no quadro `done`/`final` — nome do modelo que gerou a resposta (achado do problema 2). `null` quando o turno falhou antes de resolver um modelo."
           }
         },
         "required": [
@@ -13732,6 +14165,11 @@
             "example": 2,
             "description": "Histórias que o PO terminou e que aguardam a promoção do usuário (RN-048)."
           },
+          "pendingApprovalsCount": {
+            "type": "number",
+            "example": 8,
+            "description": "`proposed_actions` com `status = pending` no projeto INTEIRO, todas as sessões — não só a mais recente. É o que a sidebar mostra como badge do projeto (RN-151)."
+          },
           "roster": {
             "$ref": "#/components/schemas/RosterFactsResponseDto"
           }
@@ -13745,6 +14183,7 @@
           "latestSeq",
           "lastEvent",
           "storiesAwaitingPromotion",
+          "pendingApprovalsCount",
           "roster"
         ]
       },
@@ -15568,9 +16007,11 @@
               "open_infra_pr",
               "instruction_patch",
               "parallelize",
-              "raise_max_parallel"
+              "raise_max_parallel",
+              "*"
             ],
-            "example": "terminal"
+            "example": "terminal",
+            "description": "Tipo de ação, ou `\"*\"` para TODO tipo de ação deste agente — o \"auto mode\" do ApprovalCard (RN-153). Uma regra ESPECÍFICA sempre vence a curinga: gravar `terminal: deny` com `\"*\": auto_approve` já ligado continua negando terminal."
           },
           "mode": {
             "type": "string",

@@ -217,24 +217,18 @@
 /* `--msg-color` vive na MENSAGEM, não em cada peça dela: avatar, nome e
    indicador de digitação são a mesma voz e antes cada um recebia (ou não)
    o próprio `style` inline — o indicador nunca recebia, e ficava cinza no
-   meio de um turno colorido. */
+   meio de um turno colorido.
+
+   O corpo destas regras foi extraído para `../components/ui/ChatBubble.module.css`
+   — é o mesmo skin que o detalhe expandido de `AgentTimelineTree` usa
+   (Executores), via `composes`. Mudar cor, padding ou raio ali muda os dois
+   lugares; não há segunda cópia dos valores pra divergir. */
 .message {
-  display: flex;
-  gap: 13px;
-  align-items: flex-start;
+  composes: message from '../components/ui/ChatBubble.module.css';
 }
 
 .avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-md);
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--msg-color);
-  background: color-mix(in srgb, var(--msg-color) 16%, var(--surface-2));
-  border: 1px solid color-mix(in srgb, var(--msg-color) 50%, transparent);
+  composes: avatar from '../components/ui/ChatBubble.module.css';
 }
 
 .avatar.user {
@@ -244,41 +238,23 @@
 }
 
 .messageBody {
-  flex: 1;
-  min-width: 0;
+  composes: messageBody from '../components/ui/ChatBubble.module.css';
 }
 
 .messageHeader {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  margin-bottom: 5px;
+  composes: messageHeader from '../components/ui/ChatBubble.module.css';
 }
 
 .messageName {
-  font-family: var(--font-heading);
-  font-weight: 600;
-  font-size: 13px;
-  color: var(--msg-color);
+  composes: messageName from '../components/ui/ChatBubble.module.css';
 }
 
 .messageMeta {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--text-muted);
+  composes: messageMeta from '../components/ui/ChatBubble.module.css';
 }
 
 .bubble {
-  background: var(--surface-1);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  border-top-left-radius: 2px;
-  padding: 12px 15px;
-  font-size: 14px;
-  line-height: 1.5;
-  color: var(--text-secondary);
-  white-space: pre-wrap;
-  word-break: break-word;
+  composes: bubble from '../components/ui/ChatBubble.module.css';
 }
 
 .typing {
@@ -513,6 +489,90 @@
   background: color-mix(in srgb, var(--success) 8%, var(--surface-1));
 }
 
+/* Um slide do carrossel de histórias (RN-148) — mesmo miolo do
+   `.handoffCard` acima, mas SEM caixa própria: o `Carousel` já dá a borda e
+   o fundo, e duplicar aqui empilharia duas caixas uma dentro da outra. */
+.storySlide {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.storySlideResumo {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  max-width: 48ch;
+}
+
+/* Formulário de `chat.structured_question` (RN-162) — mesmo miolo do
+   `.handoffCard`, mas alinhado à esquerda (é um formulário, não uma
+   confirmação) e sem o realce de sucesso: perguntar não é uma decisão do
+   usuário aprovar/negar. */
+.structuredQuestionCard {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 4px 0;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-1);
+  width: 100%;
+  max-width: 480px;
+}
+
+.structuredQuestionForm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.structuredQuestionField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.structuredQuestionFieldLabel {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+/* Estado somente-leitura, depois de enviado — pergunta e resposta lado a
+   lado, sem os campos de formulário. */
+.structuredQuestionAnswers {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  margin: 0;
+}
+
+.structuredQuestionAnswerRow {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.structuredQuestionAnswerRow dt {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.structuredQuestionAnswerRow dd {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
 /* Link que navega pra outra aba do projeto a partir do fio — o CTA pra
    Executores no card de handoff pro Dev Lead (RN-125) e o link pro Backlog
    no chip de épico/história criados pelo PO (RN-124). */
@@ -528,6 +588,37 @@
 
 .timelineLink:hover {
   text-decoration: underline;
+}
+
+/* Colapso de mensagens do MESMO agente depois que ele passa o bastão
+   (RN-138) — `Disclosure` do design system, fechado por padrão. `.agentGroup`
+   só existe para segurar `--msg-color` (fixado no elemento pai, RN-138) na
+   cor do agente, a mesma pista que o resto da bolha usa. */
+.agentGroup {
+  display: flex;
+  flex-direction: column;
+}
+
+.agentGroupCabecalho {
+  color: var(--msg-color);
+  font-family: var(--font-mono);
+}
+
+/* O avatar (achado do problema 3) entra na FRENTE do nome, dentro do
+   `titulo` do Disclosure — `.titulo` já é `flex: 1`, então só falta alinhar
+   os dois na mesma linha. */
+.agentGroupTitulo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.agentGroupRegiao {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-top: 10px;
 }
 
 /* Evento citado por uma hipótese do Psicólogo, fixado no topo do log
@@ -639,4 +730,51 @@
   background: transparent;
   color: var(--text-muted);
   font-style: italic;
+}
+
+/* --- Painel "Artefatos gerados" agrupado por agente (RN-159) --- */
+
+/* A REGIÃO do `Disclosure` de cada agente — mesmo espaçamento vertical de
+   `.agentGroupRegiao` (RN-138), só que mais apertado: item de lista, não
+   bolha de mensagem. */
+.artefatoGrupoRegiao {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 6px;
+}
+
+.artefatoItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding: 4px 0;
+  text-decoration: none;
+}
+
+/* Só quando existe destino (PR com `pullRequestUrl`, ou o link pro Backlog)
+   — sem URL o item fica neutro, porque não há pra onde clicar. */
+.artefatoItemLink {
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.artefatoItemLink:hover {
+  text-decoration: underline;
+}
+
+.artefatoItemIcone {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.artefatoItemTitulo {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

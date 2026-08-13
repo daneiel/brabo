@@ -14,6 +14,7 @@ const listActions = vi.fn();
 const createSession = vi.fn();
 const transitionSession = vi.fn();
 const renameSession = vi.fn();
+const getActiveExecutionSession = vi.fn();
 
 // Um SÓ mock de navegação, compartilhado entre chamadas de `useNavigate` —
 // é o que permite os testes de "não navega ao editar" / "navega fora do
@@ -38,6 +39,7 @@ vi.mock('../lib/api-client', async () => {
     createSession: (...args: unknown[]) => createSession(...args),
     transitionSession: (...args: unknown[]) => transitionSession(...args),
     renameSession: (...args: unknown[]) => renameSession(...args),
+    getActiveExecutionSession: (...args: unknown[]) => getActiveExecutionSession(...args),
   };
 });
 
@@ -114,6 +116,9 @@ beforeEach(() => {
   // `navigateMock` também é `vi.fn()`: `clearAllMocks` já limpa as chamadas
   // dele entre testes.
   vi.clearAllMocks();
+  // Default: nenhuma execução vigente. Os testes de RN-144 sobrescrevem isto
+  // quando precisam de uma sessão de execução de verdade.
+  getActiveExecutionSession.mockResolvedValue(null);
 });
 
 /**
@@ -383,6 +388,93 @@ describe('ProjectSessionsTab — cada aba é um tipo', () => {
       kind: 'consultiva',
       name: undefined,
     });
+  });
+});
+
+/**
+ * RN-144 — a sessão de execução VIGENTE não aparece na aba Criativo.
+ *
+ * Ela nasce `kind: 'criativa'` (RN-097 exige isso para `execution.activated`
+ * ser aceito), então o filtro por `kind` sozinho não bastava: uma sessão com
+ * dezenas de eventos de tool-call de dev agent aparecia misturada na lista ao
+ * lado de ideações de verdade, parecendo "o dev escrevendo no chat do
+ * Criativo" — achado de investigação de código + teste ao vivo. A correção
+ * reusa `useActiveExecutionSession`/`GET /projects/:projectId/execution/session`
+ * (RN-139, já existente para a aba Executores) em vez de o backend calcular
+ * um campo novo por sessão: mais barato, e cobre a vigente, que é o caso que
+ * confunde de verdade — uma execução ANTIGA já `closed` aparece com o badge
+ * `closed`, bem menos ambígua.
+ */
+describe('ProjectSessionsTab — a sessão de execução vigente não aparece', () => {
+  beforeEach(() => {
+    listActions.mockResolvedValue({ items: [], nextCursor: null });
+  });
+
+  it('some da lista quando é a vigente, sessões criativas normais continuam', async () => {
+    listSessions.mockResolvedValue([
+      sessao('11111111-aaaa', '2026-08-01T00:00:00.000Z', {
+        kind: 'criativa',
+        name: 'Ideação de verdade',
+      }),
+      sessao('22222222-bbbb', '2026-08-02T00:00:00.000Z', {
+        kind: 'criativa',
+        name: 'Execução em andamento',
+        status: 'active',
+      }),
+    ]);
+    getActiveExecutionSession.mockResolvedValue(
+      sessao('22222222-bbbb', '2026-08-02T00:00:00.000Z', {
+        kind: 'criativa',
+        status: 'active',
+      }),
+    );
+
+    montarAba(ProjectCriativoTab);
+
+    expect(
+      await screen.findByText('Ideação de verdade · #11111111'),
+    ).toBeTruthy();
+    expect(screen.queryByText(/Execução em andamento/)).toBeNull();
+  });
+
+  it('sessões de chat continuam aparecendo mesmo com execução vigente no projeto', async () => {
+    listSessions.mockResolvedValue([
+      sessao('33333333-cccc', '2026-08-03T00:00:00.000Z', {
+        kind: 'consultiva',
+        name: 'Dúvida rápida',
+      }),
+      sessao('44444444-dddd', '2026-08-04T00:00:00.000Z', {
+        kind: 'criativa',
+        status: 'active',
+      }),
+    ]);
+    getActiveExecutionSession.mockResolvedValue(
+      sessao('44444444-dddd', '2026-08-04T00:00:00.000Z', {
+        kind: 'criativa',
+        status: 'active',
+      }),
+    );
+
+    montarAba(ProjectChatTab);
+
+    expect(await screen.findByText('Dúvida rápida · #33333333')).toBeTruthy();
+    // A aba Chat nem deveria ter chamado a busca de execução vigente — ela é
+    // só da aba Criativo (query `enabled: false` quando `kind !== 'criativa'`).
+    expect(getActiveExecutionSession).not.toHaveBeenCalled();
+  });
+
+  it('sem execução vigente (`null`), a lista Criativo mostra tudo normalmente', async () => {
+    listSessions.mockResolvedValue([
+      sessao('55555555-eeee', '2026-08-05T00:00:00.000Z', {
+        kind: 'criativa',
+        name: 'Só ideação',
+      }),
+    ]);
+    getActiveExecutionSession.mockResolvedValue(null);
+
+    montarAba(ProjectCriativoTab);
+
+    expect(await screen.findByText('Só ideação · #55555555')).toBeTruthy();
   });
 });
 

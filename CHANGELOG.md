@@ -6,6 +6,74 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **engine,api,web**: o Criativo pode emitir perguntas estruturadas
+  (`ask_structured_questions`) quando faz várias perguntas de uma vez — o
+  usuário responde por um formulário em vez de texto livre item por item
+  (RN-162).
+- **web**: Markdown leve (negrito, cabeçalho, lista, link, fence de código
+  com highlight) nas respostas dos agentes no chat da Sessão, e prompt de
+  terminal para blocos ```sh/```bash (RN-158).
+- **web**: painel "Artefatos gerados" da Sessão agora inclui PR de ADR e
+  épico/história do PO, agrupados por agente (RN-159).
+- **web**: "Confirmar arquitetura pronta" nasce desabilitado até existir
+  pelo menos 1 história promovida no backlog (RN-160); aceitar o handoff
+  pro Dev Lead encadeia a ativação de execução automaticamente quando quem
+  aceita já é `maintainer`/`owner` (RN-161, ADR 0069).
+- **api,web**: aba Code — o dropdown de branches (`CodeBranchPicker`) mostra
+  qual dev agent/módulo produziu cada branch de task
+  (`feature/task-XXXXXXXX`), com ícone e cor do agente (RN-152) —
+  `ReadProjectCodeUseCase.branches` resolve pelo prefixo do uuid da task
+  contra `TaskRepository.findByProjectAndIdPrefix` e o `module_map`
+  vigente, sem chamada extra ao provider de git
+- **api,web**: `agent_autonomy` ganha a curinga `actionType: "*"` — "modo
+  automático" (RN-153) — autonomia pra QUALQUER tipo de ação de um agente,
+  ligada pelo botão "Modo automático" no `ApprovalCard` (exige
+  `maintainer`). Regra específica sempre vence a curinga; os três tetos
+  absolutos — merge em branch protegida, `instruction_patch`,
+  `parallelize`/`raise_max_parallel` — continuam bloqueando mesmo com o
+  modo ligado (RN-154)
+- **api,engine,web**: o Arquiteto ganha um diagrama C4 (Context + Container,
+  modelo de Simon Brown), renderizado na Visão Geral do projeto (RN-149,
+  ADR 0068) — nova ferramenta `create_c4_diagram`, que gera as duas sintaxes
+  Mermaid a partir do `module_map` vigente (o Container level é DERIVADO
+  dele pelo caso de uso, nunca redigitado pelo modelo, para não abrir uma
+  segunda fonte que diverge da primeira); artefato `artifact.c4_diagram`
+  versionado no event log, sem tabela, mesmo desenho de
+  `artifact.project_image` (ADR 0065). `mermaid` entra como dependência de
+  RUNTIME nova do `apps/web` — a primeira do tipo — isolada atrás de
+  `lib/mermaid-render.ts` com `import()` dinâmico (só quem abre um diagrama
+  gerado paga o bundle); os três estados de sempre (carregando, erro,
+  vazio — RN-088), com a sintaxe crua acessível quando o Mermaid não
+  consegue desenhar. CSP fechado do ADR 0058 confirmado intacto, sem
+  mudança de configuração
+- **web**: histórias com promoção pendente ao mesmo tempo (2+) viram um
+  CARROSSEL no fio da sessão do PO, em vez de N cards avulsos disputando o
+  mesmo espaço (RN-148) — `Carousel`, primeiro componente de navegação
+  item-por-item do design system, com setas, dots e teclado (ARIA
+  `role="group"`/`aria-roledescription`). Cada slide mostra a mesma frase
+  do card avulso, com Promover/Devolver daquela história específica; o
+  cabeçalho ganha "Aprovar todas", que promove o lote inteiro numa chamada
+  só (`promoteStories` já era lote, RN-048). Uma única história pendente
+  continua o card simples de sempre — carrossel de um slide só não ganha
+  nada
+- **api,engine,web**: o Arquiteto ganha o botão "Confirmar arquitetura
+  pronta" (RN-145) — `OfferInfraHandoffUseCase` já existia e já oferecia o
+  handoff ao Infra e ao Dev Lead na mesma confirmação, mas nenhum lugar do
+  frontend chamava o endpoint. Separadamente, `agent.response` passa a
+  carregar o nome do MODELO que gerou a resposta (RN-146) — antes só existia
+  em `token_usage`, sem vínculo com o evento específico; `SessionPage.tsx`
+  mostrava a string fixa "modelo" e agora mostra o nome real, com fallback
+  para evento gravado antes desta mudança. E o cabeçalho do grupo de
+  mensagens colapsado (RN-138) ganha o ÍCONE do agente ao lado do nome
+  (RN-147), reusando a mesma fonte do indicador de streaming
+- **engine**: um ciclo de gate (QA/SecOps) morto no meio — por um restart do
+  processo, entre o veredito já gravado na api e a chamada em processo que
+  aplicaria o próximo passo — não prendia mais a PR pra sempre (RN-140).
+  `gate_states` grava o ciclo em voo nos mesmos pontos onde as transições já
+  aconteciam, e `Engine.Gates.GateRescuer` (chamado no boot e por um tick
+  Oban a cada 5 min) reinicia a área do zero ou reenvia exatamente a chamada
+  perdida — sem intervenção manual. Fecha o limite que o ADR 0057 já
+  declarava ("restart no meio da espera perde o laço"); ver ADR 0067
 - **web**: o botão "Voltar" da sessão passa a levar de volta ao PROJETO
   (`/projects/:projectId`), não mais ao dashboard raiz — a sessão sempre
   nasce dentro de um projeto, e é lá que quem sai dela quer estar.
@@ -127,6 +195,93 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **engine**: `search_workspace` devolvia TODOS os resultados da busca, sem
+  teto nenhum — segunda causa real do `413` em revisões de PR, atrás de dev
+  agents e dos agentes de QA/gate. Dois tetos independentes: por
+  QUANTIDADE de hits (`SEARCH_WORKSPACE_MAX_HITS`, default 500) e por
+  BYTES do texto final (`SEARCH_WORKSPACE_MAX_BYTES`, default 32768), cada
+  um com sua própria marca de truncagem dirigida ao modelo (RN-150)
+- **api,web**: o badge de projeto na sidebar mostrava `latestSeq - seen`
+  (atividade não lida) em vez de aprovações pendentes — um projeto de teste
+  chegava a mostrar "392" enquanto a aba Aprovações do MESMO projeto
+  mostrava "8" (RN-151). O read model do dashboard ganha
+  `pendingApprovalsCount` (`COUNT(*)` de `proposed_actions` com
+  `status='pending'`, agregado por projeto, sem N+1); o card do Dashboard
+  ganha o mesmo número — fio antes morto (`unreadCount` nunca tinha
+  chamador)
+- **api**: CodeQL marcava "Server-side request forgery" em
+  `reanalyzeSession`/`runAnamnese` de `HttpApiToEngineClient`, apesar da
+  validação de segmento de URL interna (RN-128) já rodar antes do `fetch` —
+  falso-negativo de reconhecimento: o analisador de taint só trata uma
+  função como sanitizadora quando o valor validado é REATRIBUÍDO a partir
+  do retorno dela, e a chamada existente descartava o retorno de
+  `garantirSegmentoDeUrlInterna`, usando a função só pelo efeito colateral
+  de lançar. `sessionId`/`projectId` passam a ser reatribuídos a partir do
+  retorno; nenhuma mudança de comportamento (a função já devolvia o mesmo
+  valor recebido)
+- **api**: consultando o banco de uma sessão real, dev agents gastavam
+  dezenas de aprovações manuais em subcomandos de exploração — `git branch
+  -a`, `git remote -v`, `git worktree list`, `git show`, `git for-each-ref`,
+  `git ls-tree`, `git rev-parse`, `git config --get` —, nenhum coberto pela
+  allowlist que já libera `git status`/`diff`/`log` (RN-068). Como o
+  casamento por prefixo de token exige que TODO segmento de um comando
+  composto esteja em `allow`, uma cadeia de exploração longa caía inteira em
+  aprovação assim que UM desses subcomandos aparecia no meio.
+  `DEV_TERMINAL_ALLOW_PATTERNS` ganha os oito, cada um ANCORADO pela flag
+  que torna a leitura inequívoca — nunca pelo verbo pelado — pra não abrir a
+  mesma forma truncada que os irmãos MUTANTES aceitam (`git branch -D`, `git
+  remote add`, `git worktree add`, `git config <chave> <valor>` continuam
+  exigindo aprovação) (RN-143)
+- **web**: a aba Criativo listava a sessão de execução VIGENTE misturada com
+  ideações de verdade — ela nasce `kind: 'criativa'` (RN-097 exige isso para
+  `execution.activated` ser aceito), então o filtro por `kind` sozinho não
+  bastava. Abrir essa sessão mostrava uma timeline inteira de tool-calls de
+  dev agent, parecendo "o dev escrevendo no chat do Criativo" — achado ao
+  vivo numa sessão com 35+ eventos. A aba Criativo agora exclui da lista a
+  sessão que `useActiveExecutionSession` devolve (RN-139); a aba Chat nunca
+  chama essa busca. Escopo deliberado: execuções ANTIGAS já `closed` não são
+  filtradas — o badge `closed` já deixa a diferença clara (RN-144)
+- **api,web**: a aba Executores lia a sessão `createdAt` mais recente do
+  projeto (`useLatestSession`) para buscar os eventos de dev agent/QA — que
+  É a sessão de execução só por COINCIDÊNCIA. Qualquer sessão nova depois
+  (uma ideação, um chat) fazia a aba passar a olhar, em silêncio, uma sessão
+  vazia de eventos de execução. `GET /projects/:projectId/execution/session`
+  (`role:viewer`) expõe por HTTP o MESMO critério que `ActivateExecutionUseCase`
+  já usava internamente (`active` com `execution.activated` gravado, ou
+  `null`); a aba troca de fonte (`useActiveExecutionSession`) e ganha um
+  indicador de QUAL sessão está sendo exibida, nos três estados da RN-088 —
+  carregando, erro (com `trace_id`) e "nenhuma execução ativa" (RN-139)
+- **web**: três correções no fio da sessão, achadas por investigação de
+  código + teste ao vivo no Chrome. (1) O card ACIONÁVEL de handoff
+  resolvia sempre pro `offered` mais antigo — como o Arquiteto oferece o
+  handoff pro Infra ANTES do Dev Lead na mesma confirmação, e Infra não é
+  conversacional nesta tela, o card do Dev Lead nunca ficava acionável na
+  prática; agora só handoffs endereçados a quem conversa aqui
+  (`AGENTES_DE_CHAT`) viram card, e o de Infra continua narrado como
+  divisor mudo (RN-136). (2) O card de aceite do handoff pro Dev Lead
+  ganha um botão "Ativar execução" ao lado do link pra Executores — mesma
+  `activateExecution` da Visão Geral, agora com `originSessionId` (fecha o
+  chat de origem, RN-135); a rota continua exigindo `maintainer`, decisão
+  mantida por causa do papel que os dev agents herdam pra abrir PR
+  (RN-137). (3) Mensagens consecutivas do mesmo agente colapsam num
+  cabeçalho com nome + contagem depois que ele passa o bastão e não tem
+  ação pendente — `Disclosure` do design system, fechado por padrão
+  (RN-138)
+- **api**: `ActivateExecutionUseCase` nunca fechava a sessão de CHAT que
+  originou o pedido de ativação — ela ficava `active` para sempre, mesmo
+  com a execução já correndo sozinha numa sessão SEPARADA. `execute()`
+  ganha `originSessionId` opcional (chamador antigo, sem o parâmetro,
+  continua idêntico); informado, fecha a sessão de origem ao final, mas
+  nunca a própria sessão de execução, e só quando
+  `GetSessionPendingWorkUseCase` — a mesma trava do heartbeat de
+  inatividade — confirma que não há handoff/ação/turno pendurado ali
+  (RN-135)
+- **api**: a sessão que o bootstrap de Git abre automaticamente (Fase 2 —
+  criar repositório, `dev`/`qa`, os dois primeiros commits) nasce com o nome
+  default `"git-bootstrap"` (RN-130), em vez de `null`. Antes, a lista de
+  sessões do Criativo degradava pra hashtag sozinha e não dava pra distinguir
+  a sessão automática das abertas pelo usuário sem abrir cada uma. Sessão
+  criada manualmente continua sem nome quando o campo vem em branco.
 - **api**: quatro alertas CRÍTICOS do CodeQL, duas classes reais de
   vulnerabilidade. `@Query('ref')`/`@Query('path')` da aba Code (RN-095)
   chegam sem DTO no meio, e o `ValidationPipe` global não protege tipo
@@ -154,6 +309,30 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   nenhum handler de `SessionPage` o usava); agora ele reaproveita o indicador
   de digitação já existente, identificando o agente pelo handoff que acabou
   de ser aceito
+- **web**: `write_file` ganha corpo próprio no card de aprovação (RN-096) —
+  antes caía no fallback genérico e despejava `path`/`content` como JSON cru
+  COLAPSADO, então um write que genuinamente pedia aprovação (fora do
+  prefixo `dev-`, ou caminho fora do escopo do agente) exigia um clique
+  extra pra ver o que seria escrito. Agora mostra o `path` e um preview do
+  `content` (até 25 linhas/4.000 caracteres, com aviso de truncamento),
+  aberto por padrão no chat enquanto pendente — mesmo comportamento que
+  `terminal` já tinha. Separadamente, `command` (terminal) ou
+  `path`/`content` (write_file) vazios — tool-call malformada do modelo —
+  agora mostram "o modelo não produziu um X válido para esta ação" em vez
+  de um prompt `$ ` ou preview em branco, que lia como bug de renderização
+
+- **engine**: `Engine.Harness.ToolLoop` (o loop compartilhado por dev agents,
+  QA Automação/Performance-Segurança, Infra-Workflows, Anamnese e Psicólogo)
+  gravava `agent.response` com conteúdo VAZIO — iteração que só chamava
+  ferramenta sem texto, ou turno que terminava sem produzir nada — e a tela
+  mostrava o balão de compatibilidade da RN-059 como se fosse evento ANTIGO,
+  achado ao vivo numa sessão de execução real com dev agents rodando. Falha
+  de transporte (provider fora do ar) tinha o mesmo sintoma: virava
+  `agent.response` sem `content` em vez de `agent.error`. Estende a RN-059
+  (que já cobria os quatro agentes conversacionais, que não passam pelo
+  ToolLoop) para este ponto estrutural comum: conteúdo vazio nunca vira
+  `agent.response`, e falha de transporte grava `agent.error` durável com a
+  origem, pelo mesmo `FalhaDeTurno.origem/1` (RN-129)
 
 - **engine**: `AnamneseSchedulerWorker.perform/1` não conferia a flag
   `ANAMNESE_ENABLED` — só `kickoff/0` (a inserção inicial do job no boot)
@@ -218,6 +397,67 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `agent.activated` mais RECENTE, sem ordem fixa nenhuma (RN-119). **(10)**
   sessão com histórico abria no TOPO (mensagens mais antigas primeiro), sem
   nenhum scroll automático — agora abre sempre no fim
+
+- **web**: três corridas confirmadas AO VIVO navegando `SessionPage.tsx` no
+  Chrome (RN-131). **(1)** o convite de boas-vindas do Criativo reaparecia
+  por cima de sessões com histórico real — `conversaComecou` olhava só
+  `chat.message`/`agent.response`, então uma sessão criada pelo
+  `git-bootstrap` (ações de commit/branch já aprovadas) ou a sessão que a
+  ativação de execução usa (dezenas de `tool.call`/`tool.result`) mostravam
+  o convite por cima do que já tinha acontecido; agora o critério é
+  "existe QUALQUER evento". Separadamente, `conviteVisivel` ganha o gate
+  `!eventsQuery.isPending`, fechando uma race de cache frio em que o convite
+  piscava antes do primeiro fetch de eventos resolver. **(2)** o indicador
+  de "pensando" (bolha com os 3 pontinhos) ligava imediatamente a cada
+  turno, mesmo nos que respondiam em menos de um segundo — agora só aparece
+  depois de 5s sem nenhum texto chegar, e desarma na hora assim que o
+  primeiro delta chega ou o turno termina antes do prazo; texto de verdade
+  continua aparecendo sem esperar. **(3)** `handleReadiness` (o clique em
+  "Estou pronto para produzir") podia deixar a bolha do agente presa vazia
+  pra sempre se o canal Phoenix não entregasse `agent.done` a tempo — o
+  mesmo bug que `handleSend` já corrigira ganhando uma rede de segurança
+  equivalente: chamar `finalizarTurnoDoAgente()` assim que
+  `confirmReadiness` resolve, independente do canal
+- **engine**: `read_file` lia o arquivo INTEIRO, sem teto de bytes — a
+  RN-074 travou a saída do terminal contra `{413, "request entity too
+  large"}`, mas deixava essa porta aberta. Confirmado ao vivo no event log
+  de uma execução real: os 4 dev agents de um projeto e os QA de
+  Automação/Performance-Segurança bloqueados com o mesmo `413`, e sem
+  saída pro QA de Performance/Segurança — que só tem `ReadFile`/
+  `SearchWorkspace` (sem `Terminal`, de propósito) pra investigar uma PR
+  com arquivo grande (lockfile, bundle, gerado). O conteúdo agora corta em
+  `READ_FILE_MAX_BYTES` (default 32 KiB), com marca dizendo o arquivo e os
+  dois tamanhos (RN-141)
+
+### Correções
+
+- **engine,web**: confirmar prontidão ("Estou pronto para produzir") numa
+  conversa sem NENHUMA regra de negócio capturada criava o `product_brief`
+  e oferecia o handoff ao PO mesmo assim (RN-142). `CriativoServer` agora
+  recusa a confirmação ANTES de subir o turno de consolidação — sem brief,
+  sem handoff —, narrando o motivo como `agent.error` durável no fio da
+  sessão (origem "politica"), já que a rota HTTP sempre responde 202
+  (mesmo padrão do cancelamento, RN-122). O botão nasce `disabled` com a
+  dica do porquê, lendo a mesma fonte que já alimenta o painel "Regras de
+  negócio"
+
+### Refatorações
+
+- **web**: a árvore de Executores (`AgentTimelineTree`, detalhe expandido de
+  `tool.call`/`tool.result`/`agent.response`) passa a usar o mesmo skin
+  visual do chat do Criativo — avatar do agente e bolha de mensagem, em vez
+  de texto cru num `<pre>`. `ChatBubble.module.css` e `AvatarDoAgente.tsx`
+  (novos, em `components/ui/`) viram fonte única dos valores, compostos por
+  `SessionPage.module.css`/`AgentTimelineTree.module.css` (mesmo padrão de
+  `Textarea.module.css`/`Input.module.css`). Mudança puramente visual: a
+  estrutura de árvore (ramo por agente, marco por linha) e o comportamento
+  de expandir/colapsar não mudam
+
+### Correções
+
+- **web**: Timeline da sessão: ordenação de cards de aprovação misturados
+  com eventos (RN-155), texto do indicador de espera de 5s (RN-156), e
+  formato de aviso da criação de épico/história pelo PO (RN-157)
 
 ## v2.5.1 — 2026-08-08
 

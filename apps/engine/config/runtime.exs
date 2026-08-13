@@ -91,6 +91,23 @@ config :engine,
   # bastante para não acumular. Ver Engine.Actions.TerminalExecutor.truncate/2.
   terminal_output_max_bytes:
     String.to_integer(System.get_env("TERMINAL_OUTPUT_MAX_BYTES", "32768")),
+  # Teto de BYTES do conteúdo lido por read_file — mesmo incidente do achado
+  # S (413 do provider), pela porta do read_file em vez do terminal. Const
+  # PRÓPRIA, não a mesma var de terminal_output_max_bytes: hoje coincide em
+  # valor, não em acoplamento. Ver Engine.Harness.Tools.ReadFile.truncate/2.
+  read_file_max_bytes: String.to_integer(System.get_env("READ_FILE_MAX_BYTES", "32768")),
+  # Teto de BYTES do texto final devolvido por search_workspace — mesmo
+  # incidente do achado S, pela porta da busca. Const PRÓPRIA, não reaproveita
+  # read_file_max_bytes/terminal_output_max_bytes: mesma classe de estouro,
+  # variável independente. Ver Engine.Harness.Tools.SearchWorkspace.truncate/3.
+  search_workspace_max_bytes:
+    String.to_integer(System.get_env("SEARCH_WORKSPACE_MAX_BYTES", "32768")),
+  # Teto de QUANTIDADE de hits que search_workspace coleta antes de montar a
+  # resposta — uma árvore com milhares de arquivos batendo o termo pagaria o
+  # I/O de ler o conteúdo de cada um deles antes mesmo de existir uma string
+  # pra truncar por bytes. Ver Engine.Harness.WorkspaceFiles.search/3.
+  search_workspace_max_hits:
+    String.to_integer(System.get_env("SEARCH_WORKSPACE_MAX_HITS", "500")),
   # Teto por scanner de segurança (gitleaks/semgrep) nos gates de SecOps.
   # Bem mais folgado que o terminal: o semgrep varre a árvore inteira e pode
   # baixar regras da rede (`--config auto`). Sem esse teto, um scanner
@@ -131,6 +148,18 @@ config :engine,
   start_model_sync?: System.get_env("START_MODEL_SYNC", "true") == "true",
   model_sync_interval_seconds:
     String.to_integer(System.get_env("MODEL_SYNC_INTERVAL_SECONDS", "21600")),
+  # Resgate de ciclos de gate (QA/SecOps) órfãos (ADR 0067) — o que o
+  # ADR 0057 tinha declarado como limite conhecido. Desligável por ambiente
+  # pelo mesmo motivo dos outros ticks periódicos.
+  start_gate_rescue?: System.get_env("START_GATE_RESCUE", "true") == "true",
+  gate_rescue_interval_seconds:
+    String.to_integer(System.get_env("GATE_RESCUE_INTERVAL_SECONDS", "300")),
+  # Generoso de propósito: o ToolLoop de um subagente de QA pode rodar
+  # legitimamente até `tool_loop_max_iterations_gate` (60) iterações antes de
+  # concluir — um limiar curto resgataria (e duplicaria) um ciclo só lento,
+  # não um órfão de verdade.
+  gate_rescue_stale_after_seconds:
+    String.to_integer(System.get_env("GATE_RESCUE_STALE_AFTER_SECONDS", "900")),
   # `psychologist_enabled?` é decisão de PRODUTO, não teto de custo (mesmo
   # racional de `anamnese_enabled?` abaixo): pausa rodada NOVA do Psicólogo
   # — automática (fechamento de sessão) e sob demanda

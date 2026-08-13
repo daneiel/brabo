@@ -177,6 +177,12 @@
   color: var(--accent);
 }
 
+.agenteIcone {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
 .nome {
   min-width: 0;
   font-family: var(--font-mono);

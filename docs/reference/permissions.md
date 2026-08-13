@@ -156,20 +156,41 @@ São duas famílias:
 
 - **leitura do próprio worktree** — `ls`, `pwd`, `find`, `cat`, `head`, `tail`,
   `grep`, `wc`, `echo`, `git status`, `git diff`, `git log`;
+- **leitura de histórico/remoto/config do git** — `git branch
+  -a/-r/-v/--list/--show-current`, `git remote -v`, `git remote show`, `git
+  worktree list`, `git show`, `git for-each-ref`, `git ls-tree`, `git
+  rev-parse`, `git config --get` (ver [RN-143](../business-rules.md#rn-143));
 - **build e teste** — `pnpm install`, `pnpm test`, `npm run`, `npx vitest`,
   `mix test`, `pytest`, `go test`, `cargo test`, entre outros.
 
-A segunda família existe porque `ReportDone` só deixa abrir PR depois de um
+A terceira família existe porque `ReportDone` só deixa abrir PR depois de um
 `terminal` com `exit 0` no histórico. A primeira existe porque o agente **olha
 antes de construir**: sem ela, cada `ls -la` num repositório recém-provisionado
 caía em aprovação, voltava como `status pending` — e não como a saída do
 comando — e queimava uma iteração do ToolLoop até a task morrer por limite
-(ver [RN-068](../business-rules.md#rn-068)).
+(ver [RN-068](../business-rules.md#rn-068)). A segunda existe porque `git
+status`/`diff`/`log` bastam pra olhar o worktree, mas não pra o agente se
+orientar no histórico e nos remotos de um repositório recém-adotado — uma
+sessão real gastou dezenas de aprovações manuais em subcomandos como `git
+branch -a` ou `git worktree list` que caíam fora do `allow` e reprovavam para
+aprovação manual qualquer comando composto em que aparecessem.
 
 Isto NÃO afrouxa nada do que está acima. Continua valendo que `deny` vence
 `allow`, que os padrões embutidos seguem ativos, que o casamento é por prefixo
 de **token** (`ls` liberado não libera `lsof`) e que comando composto exige que
 CADA segmento case — então `ls && rm -rf /` não passa por causa do `ls`.
+
+A segunda família tem um cuidado a mais, porque o casamento por prefixo
+permite QUALQUER coisa depois do prefixo que bateu: um padrão pelado
+`Terminal(git branch)` bateria tanto em `git branch -D nome` (apaga) quanto em
+`git branch nome-nova` (cria) quanto na listagem sozinha, porque ele não
+enxerga o que vem depois. Por isso `branch`, `remote`, `worktree` e `config` —
+os quatro que têm irmão MUTANTE — só entraram ANCORADOS pela flag que torna a
+leitura inequívoca (`-a`/`-v`/`show`/`list`/`--get`), nunca pelo verbo pelado;
+`git branch -D/-d/-m/-M`, `git remote add/remove/set-url`, `git worktree
+add/remove/prune` e `git config <chave> <valor>` (sem `--get`) continuam
+exigindo aprovação. `show`, `log`, `for-each-ref`, `ls-tree` e `rev-parse`
+não precisaram de âncora: nenhuma continuação deles muta o repositório.
 
 Auto-aprovar `terminal` por `agent_autonomy` seria diferente e não é o que se
 faz: liberaria QUALQUER comando dentro do container do engine, sem o arquivo no
@@ -200,6 +221,30 @@ flowchart TD
   H -->|sim, e estava auto_approve| I[TETO: require_approval]
   H -->|não| J[veredito final]
 ```
+
+### "Auto mode": a curinga de `agent_autonomy` ([RN-153](../business-rules.md#rn-153))
+
+O nó `agent_autonomy tem opinião?` do diagrama acima não sabe, e não precisa
+saber, se a opinião veio de uma regra ESPECÍFICA (`actionType: "terminal"`)
+ou da curinga `actionType: "*"` — "auto mode": autonomia pra QUALQUER tipo
+de ação daquele agente, ligada com um clique em "Modo automático" no
+`ApprovalCard`. A resolução acontece ANTES deste diagrama começar, num
+repositório só: `DrizzleAgentAutonomyRepository.findMode` busca a regra
+específica e a curinga na mesma consulta, e devolve a específica quando as
+duas existem — gravar `terminal: deny` com `"*": auto_approve` ligado
+continua negando `terminal` desse agente, liberando o resto.
+
+É por isso que o diagrama não ganhou um nó novo, e é a prova de que os
+tetos, logo abaixo, valem para "auto mode" sem exceção declarada em lugar
+nenhum: eles reagem a `current.policy === 'auto_approve'`, nunca à origem
+dela ([RN-154](../business-rules.md#rn-154)).
+
+"Auto mode" exige `maintainer` — mesmo papel que já protegia
+`PUT .../agent-autonomy` antes da curinga existir. Desligar reusa o toggle
+manual/auto que o card do agente já tinha na Visão Geral/Executores: com a
+curinga gravada, o toggle passa a editar ELA em vez do tipo representativo
+de sempre, e "manual" nele é a mesma curinga regravada como
+`require_approval`.
 
 ## A fronteira do container (RN-106)
 

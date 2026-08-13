@@ -12,7 +12,16 @@ defmodule Engine.Agents.CriativoServer do
   emit_artifact (com origem rastreável). O `product_brief` NUNCA sai por tool
   call — só quando o USUÁRIO confirma prontidão (`confirm_readiness`), o
   servidor consolida as regras num product_brief e oferece o handoff ao PO
-  (CLAUDE.md 3b.2/3b.3).
+  (CLAUDE.md 3b.2/3b.3). `confirm_readiness` RECUSA a confirmação — sem
+  subir a Task, sem product_brief, sem handoff — quando zero regras de
+  negócio foram capturadas na sessão: a garantia vive aqui, não só na UI
+  (`SessionPage.tsx` desabilita o botão, mas isso é só a UX complementar).
+
+  Segunda ferramenta (RN-162): `ask_structured_questions`, para quando o
+  modelo faz várias perguntas na mesma resposta e quer que o usuário
+  responda num formulário em vez de texto livre item por item. Emite
+  `chat.structured_question`; as respostas voltam num turno FUTURO, como
+  `chat.message` normal — não há um terceiro tool call "resposta".
   """
 
   use GenServer, restart: :temporary
@@ -26,7 +35,7 @@ defmodule Engine.Agents.CriativoServer do
   }
 
   alias Engine.Agents.{FalhaDeTurno, TurnoAssincrono}
-  alias Engine.Harness.Tools.EmitArtifact
+  alias Engine.Harness.Tools.{AskStructuredQuestions, EmitArtifact}
   alias Engine.Sessions.EngineApiClient
 
   @agent "criativo"
@@ -66,7 +75,7 @@ defmodule Engine.Agents.CriativoServer do
        project_id: project_id,
        agent: @agent,
        messages: [system_msg | history],
-       tool_specs: [EmitArtifact.spec()],
+       tool_specs: [EmitArtifact.spec(), AskStructuredQuestions.spec()],
        # Guardado enquanto o turno roda numa Task supervisionada, fora do
        # `handle_call` que bloqueava o processo inteiro — é o que permite um
        # `:cancel` chegar e ser atendido (RN-122). Ver `TurnoAssincrono`.
@@ -83,9 +92,24 @@ defmodule Engine.Agents.CriativoServer do
     TurnoAssincrono.iniciar(state, from, fn -> run_turn(work) end)
   end
 
+  # Guardrail: zero regras de negócio capturadas → recusa ANTES de subir a
+  # Task — nem o turno de consolidação roda, nem o product_brief, nem o
+  # handoff. Não passa por `TurnoAssincrono` porque não é um turno de LLM: é
+  # uma decisão do SERVIDOR, resolvida sem chamar o modelo. E como
+  # `agent_command_controller.ex#readiness/2` IGNORA o retorno deste
+  # `GenServer.call` e sempre responde 202 (mesmo padrão do `message/2` desde
+  # RN-122 — "esta resposta é só o aceite"), a ÚNICA forma do usuário saber
+  # por quê é o `agent.error` DURÁVEL no fio (RN-059), não o HTTP.
   @impl true
   def handle_call(:confirm_readiness, from, state) do
-    TurnoAssincrono.iniciar(state, from, fn -> executar_confirm_readiness(state) end)
+    case business_rule_refs(state) do
+      [] ->
+        emit_falha_sem_regra(state)
+        {:reply, {:error, :sem_regra_de_negocio}, state}
+
+      _refs ->
+        TurnoAssincrono.iniciar(state, from, fn -> executar_confirm_readiness(state) end)
+    end
   end
 
   @impl true
@@ -169,10 +193,11 @@ defmodule Engine.Agents.CriativoServer do
         emit_falha(state, {:final, erro})
         {state, ""}
 
-      {:ok, %{"message" => message}} ->
+      {:ok, %{"message" => message} = frame} ->
         content = Map.get(message, "content", "")
+        model_name = Map.get(frame, "modelName")
         state = append(state, assistant_msg(content))
-        if content != "", do: emit_response(state, content)
+        if content != "", do: emit_response(state, content, model_name)
         state = Enum.reduce(tool_calls(message, state.tool_specs), state, &dispatch_tool/2)
         {state, content}
 
@@ -186,9 +211,10 @@ defmodule Engine.Agents.CriativoServer do
     end
   end
 
-  # emit_artifact é a única ferramenta do Criativo; o guardrail (product_brief
-  # bloqueado) vive dentro de EmitArtifact.run. Rodamos direto (tool :direct),
-  # sem pipeline/hooks — o Criativo não toca terminal/arquivos.
+  # emit_artifact e ask_structured_questions são as ferramentas do Criativo;
+  # o guardrail (product_brief bloqueado) vive dentro de EmitArtifact.run.
+  # Rodamos direto (tool :direct), sem pipeline/hooks — o Criativo não toca
+  # terminal/arquivos.
   defp dispatch_tool(%{"name" => "emit_artifact", "arguments" => args} = call, state) do
     emit(state, "tool.call", %{tool: "emit_artifact", args: args})
 
@@ -199,7 +225,7 @@ defmodule Engine.Agents.CriativoServer do
     case EmitArtifact.run(args, state) do
       {:ok, texto} ->
         emit(state, "tool.result", %{tool: "emit_artifact", ok: true})
-        realimentar(state, call, texto)
+        realimentar(state, call, texto, "emit_artifact")
 
       {:error, motivo} ->
         emit(state, "tool.result", %{
@@ -216,20 +242,55 @@ defmodule Engine.Agents.CriativoServer do
           "Não consegui registrar isso: #{motivo}. Vou corrigir e tentar de novo."
         )
 
-        realimentar(state, call, "ERRO: #{motivo}")
+        realimentar(state, call, "ERRO: #{motivo}", "emit_artifact")
+    end
+  end
+
+  # RN-162: o Criativo emite `chat.structured_question` quando quer que o
+  # usuário responda VÁRIAS perguntas de uma vez, por um formulário, em vez
+  # de texto livre. O resultado da ferramenta é só a confirmação de que a
+  # pergunta foi registrada — as respostas voltam num turno FUTURO, como
+  # `chat.message` normal (via `AnswerStructuredQuestionUseCase` na api),
+  # não por este tool call.
+  defp dispatch_tool(
+         %{"name" => "ask_structured_questions", "arguments" => args} = call,
+         state
+       ) do
+    emit(state, "tool.call", %{tool: "ask_structured_questions", args: args})
+
+    case AskStructuredQuestions.run(args, state) do
+      {:ok, texto} ->
+        emit(state, "tool.result", %{tool: "ask_structured_questions", ok: true})
+        realimentar(state, call, texto, "ask_structured_questions")
+
+      {:error, motivo} ->
+        emit(state, "tool.result", %{
+          tool: "ask_structured_questions",
+          ok: false,
+          erro: to_string(motivo)
+        })
+
+        emit_response(
+          state,
+          "Não consegui montar essas perguntas: #{motivo}. Vou corrigir e tentar de novo."
+        )
+
+        realimentar(state, call, "ERRO: #{motivo}", "ask_structured_questions")
     end
   end
 
   defp dispatch_tool(_other, state), do: state
 
   # Devolve o resultado da ferramenta ao histórico, no papel `tool` — é o que
-  # o PO e o Arquiteto já faziam, e o que faltava aqui.
-  defp realimentar(state, call, texto) do
+  # o PO e o Arquiteto já faziam, e o que faltava aqui. `tool_name` viaja à
+  # parte (e não fixo em "emit_artifact") desde que o Criativo ganhou uma
+  # segunda ferramenta (RN-162).
+  defp realimentar(state, call, texto, tool_name) do
     append(state, %{
       "role" => "tool",
       "content" => to_string(texto),
       "toolCallId" => Map.get(call, "id"),
-      "name" => "emit_artifact",
+      "name" => tool_name,
       :pinned => false
     })
   end
@@ -333,8 +394,11 @@ defmodule Engine.Agents.CriativoServer do
     end
   end
 
-  defp emit_response(state, content),
-    do: emit(state, "agent.response", %{content: content})
+  # `model_name` viaja do frame `final` da api (achado do problema 2) — nulo
+  # nas respostas server-emitted que não vêm de um turno de LLM real (ex.: a
+  # mensagem de erro sintética quando `emit_artifact` recusa o payload).
+  defp emit_response(state, content, model_name \\ nil),
+    do: emit(state, "agent.response", %{content: content, modelName: model_name})
 
   # A falha, gravada e DITA. O `broadcast` continua, para quem está com a aba
   # aberta ver na hora — mas ele deixou de ser a única fonte.
@@ -373,6 +437,31 @@ defmodule Engine.Agents.CriativoServer do
 
     broadcast(state, "agent.error", %{origem: origem, mensagem: mensagem})
     state
+  end
+
+  # A recusa do guardrail de prontidão (zero regra de negócio). "politica" —
+  # não `FalhaDeTurno.origem/1` — porque não há `reason` de turno nenhum pra
+  # classificar: é decisão de produto, resolvida antes de qualquer chamada ao
+  # modelo (mesmo raciocínio de `TurnoAssincrono.emitir_cancelamento/1`, que
+  # também hardcoda "politica" direto).
+  defp emit_falha_sem_regra(state) do
+    origem = "politica"
+    mensagem = no_business_rules_message()
+
+    emit(state, "agent.error", %{
+      origem: origem,
+      mensagem: mensagem,
+      reason: "sem_regra_de_negocio"
+    })
+
+    broadcast(state, "agent.error", %{origem: origem, mensagem: mensagem})
+    state
+  end
+
+  defp no_business_rules_message do
+    "ainda não há nenhuma regra de negócio registrada nesta conversa — continue " <>
+      "conversando com o Criativo até capturar pelo menos uma regra antes de " <>
+      "confirmar prontidão"
   end
 
   defp emit(state, type, payload) do

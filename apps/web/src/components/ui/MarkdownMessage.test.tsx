@@ -1,0 +1,79 @@
+import { describe, expect, it } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { MarkdownMessage } from './MarkdownMessage';
+
+/**
+ * O realce de sintaxe quebra a linha em vários `<span>` (um por token), então
+ * o texto não é filho DIRETO de nenhum nó — mesmo matcher que
+ * `routes/code/CodeEditor.test.tsx` já usa pelo mesmo motivo.
+ */
+function porTextoDaLinha(texto: string) {
+  return (_content: string, element: Element | null) => {
+    if (!element) return false;
+    const igual = (el: Element) => el.textContent === texto;
+    return igual(element) && Array.from(element.children).every((filho) => !igual(filho));
+  };
+}
+
+/**
+ * RN-158 — `agent.response` renderizava texto PURO no fio (`#`/`**`/fence
+ * apareciam literais). Este componente monta elementos React DIRETAMENTE, a
+ * partir da árvore de dados de `lib/markdown.ts` — nunca `innerHTML`, então
+ * o teste de segurança confere que o texto do modelo nunca vira marcação
+ * interpretada nem link executável.
+ */
+describe('MarkdownMessage', () => {
+  it('negrito, cabeçalho e lista renderizam como elementos de verdade', () => {
+    render(<MarkdownMessage text={'# Título\n\nUm **destaque** no meio.\n\n- item 1\n- item 2'} />);
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Título' })).toBeInTheDocument();
+    const negrito = screen.getByText('destaque');
+    expect(negrito.tagName).toBe('STRONG');
+    expect(screen.getByRole('list')).toBeInTheDocument();
+    expect(screen.getByText('item 1')).toBeInTheDocument();
+    expect(screen.getByText('item 2')).toBeInTheDocument();
+  });
+
+  it('fence sem linguagem degrada bem: o código aparece, sem quebrar a tela', () => {
+    render(<MarkdownMessage text={'```\nplain text\n```'} />);
+    expect(screen.getByText(porTextoDaLinha('plain text'))).toBeInTheDocument();
+    expect(screen.getByText('texto')).toBeInTheDocument();
+  });
+
+  it('código dentro do fence tem realce por token (reusa highlight.ts)', () => {
+    render(<MarkdownMessage text={'```ts\nconst a = 1;\n```'} />);
+    // O token `const` vira `<span>` próprio, colorido como keyword — não
+    // texto cru dentro de um único nó.
+    const keyword = screen.getByText('const');
+    expect(keyword.tagName).toBe('SPAN');
+  });
+
+  it('fence ```bash ganha o vocabulário de shell (RN-158) e o prompt de terminal', () => {
+    render(<MarkdownMessage text={'```bash\nif [ -f x ]; then echo ok; fi\n```'} />);
+    // `if`/`then`/`echo`/`fi` são palavras REAIS de shell (não JS) — sem o
+    // vocabulário próprio, caíam no fallback de JS sem keyword nenhuma.
+    expect(screen.getByText('if')).toBeInTheDocument();
+    expect(screen.getByText('then')).toBeInTheDocument();
+    expect(screen.getByText('fi')).toBeInTheDocument();
+    expect(screen.getByText('$')).toBeInTheDocument();
+  });
+
+  it('link com esquema seguro (https) vira <a> clicável', () => {
+    render(<MarkdownMessage text="veja [a doc](https://brabo.dev/docs)" />);
+    const link = screen.getByRole('link', { name: 'a doc' });
+    expect(link).toHaveAttribute('href', 'https://brabo.dev/docs');
+  });
+
+  it('XSS: link javascript: nunca vira href — degrada pro texto', () => {
+    render(<MarkdownMessage text="[clique](javascript:alert(1))" />);
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+    expect(screen.getByText('clique')).toBeInTheDocument();
+  });
+
+  it('nunca usa innerHTML: uma tag literal no texto do modelo aparece como TEXTO, não como elemento', () => {
+    const { container } = render(<MarkdownMessage text={'texto com <img src=x onerror=alert(1)> no meio'} />);
+    // Nenhum <img> real foi criado — a string sobrevive como texto.
+    expect(container.querySelector('img')).toBeNull();
+    expect(screen.getByText(/texto com <img src=x onerror=alert\(1\)> no meio/)).toBeInTheDocument();
+  });
+});

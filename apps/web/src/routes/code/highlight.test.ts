@@ -81,6 +81,27 @@ describe('highlightLine — comentário de bloco entre linhas', () => {
   });
 });
 
+// RN-158: vocabulário PRÓPRIO de shell — antes `sh`/`bash` só tinham o
+// comentário de linha (`#`) mapeado, e caíam no fallback de JS
+// (PALAVRAS_BASE) pra keyword, que não conhece `fi`/`done`/`esac`/`local`.
+describe('highlightLine — vocabulário de shell (RN-158)', () => {
+  it('palavras REAIS de shell (sem equivalente em JS) viram keyword em sh e bash', () => {
+    for (const lang of ['sh', 'bash']) {
+      const { tokens } = highlightLine('if [ -f x ]; then echo ok; fi', lang);
+      const kinds = tokens.filter((t) => t.text.trim()).map((t) => `${t.text}:${t.kind}`);
+      expect(kinds).toContain('if:keyword');
+      expect(kinds).toContain('then:keyword');
+      expect(kinds).toContain('echo:keyword');
+      expect(kinds).toContain('fi:keyword');
+    }
+  });
+
+  it('`#` continua sendo o comentário de linha em sh/bash', () => {
+    const { tokens } = highlightLine('echo ok # nota', 'bash');
+    expect(tokens[tokens.length - 1]).toEqual({ text: '# nota', kind: 'comment' });
+  });
+});
+
 describe('highlightFile', () => {
   it('devolve uma linha de tokens por linha do conteúdo, carregando o estado de bloco', () => {
     const conteudo = ['/* a', 'b', 'c */ const x = 1;'].join('\n');

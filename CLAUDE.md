@@ -626,10 +626,41 @@ agentes seguintes sem risco de colisão.
 o da 26 — SÓ LEITURA de código, nenhum salvamento pela aba. A edição é fase
 seguinte, e quando vier, escrita é efeito externo: nasce `proposed_action`.
 
+## PÓS-PROGRAMA 16–26 — o que o uso pediu depois (RN-148)
+Mesmo espírito da PÓS-FASE 15: não é fase planejada, é o que o USO pediu.
+Histórias com promoção pendente ao mesmo tempo (RN-048/RN-126) viravam N
+cards avulsos na timeline da sessão do PO quando ele produzia várias numa
+leva. `Carousel` (`apps/web/src/components/ui/Carousel.tsx`) é o primeiro
+componente de navegação item-por-item do design system — 2+ pendentes
+viram UM carrossel navegável (setas, dots, teclado), com "Aprovar todas"
+promovendo o lote inteiro numa chamada só (`promoteStories` já era lote,
+sem mudança de contrato); 1 pendente continua o card simples de sempre. A
+decisão de quando uma "leva" se forma é reavaliada a cada render — o
+conjunto das promoções AINDA PENDENTES na sessão, não "criadas em sequência
+sem interrupção" — para que resolver uma história no meio do carrossel
+recalcule a leva sozinho, sem estado próprio a sincronizar.
+
+**Diagrama C4 do Arquiteto (RN-149, ADR 0068).** Entregável novo:
+`create_c4_diagram` gera Context + Container (Simon Brown) em Mermaid,
+renderizado na Visão Geral. O Container level é DERIVADO do `module_map`
+vigente pelo caso de uso — nunca redigitado pelo modelo — para não abrir
+uma segunda fonte que diverge da primeira; só o Context (nome do sistema e
+atores externos) vem do tool call. `artifact.c4_diagram` é artefato sem
+tabela, versionado no event log, mesmo desenho do `artifact.project_image`
+(ADR 0065). `mermaid` entrou como dependência de RUNTIME nova do
+`apps/web` — a primeira do tipo (o site de docs já usa Mermaid, mas em
+build-time) — isolada atrás de `apps/web/src/lib/mermaid-render.ts` com
+`import()` dinâmico; `vite build` confirmou que só o entrypoint carrega
+eager e os chunks pesados do Mermaid ficam sob demanda, e nenhum deles usa
+`eval`/`new Function` — o CSP fechado do ADR 0058 seguiu intacto, sem
+mudança de configuração.
+
 ## Stack (decidida — não proponha alternativas)
 - `apps/api`: NestJS 11 + Drizzle ORM + PostgreSQL 16 + pgvector
 - `apps/engine`: Elixir/OTP + Phoenix (canais) + Oban (filas no Postgres)
-- `apps/web`: React 19 + Vite + TanStack Query/Router
+- `apps/web`: React 19 + Vite + TanStack Query/Router; `mermaid` (runtime,
+  ADR 0068) para o diagrama C4 do Arquiteto, isolado atrás de
+  `lib/mermaid-render.ts` com `import()` dinâmico
 - Monorepo pnpm (TS) com apps/engine Elixir ao lado; Docker Compose para dev
 - Auth: first-party no domínio da api (argon2id + access JWT curto +
   refresh opaco com rotação); autorização RBAC no domínio da api
@@ -678,6 +709,15 @@ seguinte, e quando vier, escrita é efeito externo: nasce `proposed_action`.
   CONTIDA e ter TETO: caminho vindo do cliente passa pela checagem central
   (RN-092/RN-095), e leitura composta que chama o provider N vezes tem
   orçamento e cache, senão vira amplificador de tráfego (ADR 0060).
+- `agent_autonomy` aceita `actionType: "*"` — "auto mode" (RN-153):
+  autonomia pra QUALQUER tipo de ação do agente, ligada pelo `ApprovalCard`
+  ("Modo automático") e desligada pelo mesmo toggle manual/auto do card do
+  agente na Visão Geral/Executores. Regra específica sempre vence a
+  curinga; a resolução mora no repositório (`findMode`), nunca em
+  `decide()`. Três tetos continuam absolutos MESMO com auto mode ligado, e
+  não têm exceção configurável em lugar nenhum — merge em branch
+  protegida, `instruction_patch` e `parallelize`/`raise_max_parallel`
+  (RN-154).
 - A imagem de container de um projeto é ARTEFATO do ARQUITETO
   (`artifact.project_image`, versionado, sem tabela), nunca configuração
   escondida. Enquanto ele não decide, a aba Code responde 409 (RN-105).
@@ -688,6 +728,12 @@ seguinte, e quando vier, escrita é efeito externo: nasce `proposed_action`.
   FASE 25 —, então a política de terminal do ADR 0055 (escopo de caminho,
   allowlist estreito) segue valendo como está até o container subir de
   verdade.
+- O diagrama C4 (Context + Container) também é ARTEFATO do ARQUITETO
+  (`artifact.c4_diagram`, versionado, sem tabela — RN-149, ADR 0068),
+  mesmo desenho do `artifact.project_image`. O Container level é DERIVADO
+  do `module_map` vigente pelo caso de uso, nunca redigitado pelo modelo
+  na ferramenta `create_c4_diagram` — só o Context (nome do sistema e
+  atores externos) vem do tool call.
 - Agentes rodam SEMPRE dentro de um Harness; nenhuma chamada de LLM ou
   ferramenta fora dele.
 - Handoff externo endereça só LEAD de área ou agente sem área;

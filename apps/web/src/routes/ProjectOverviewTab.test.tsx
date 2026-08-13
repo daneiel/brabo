@@ -68,6 +68,7 @@ const ARQUITETURA: Architecture = {
   },
   adrs: [],
   pendencies: [],
+  c4Diagram: { status: 'sem_diagrama', diagrama: null, version: 0, eventId: null, createdAt: null },
 };
 
 const HANDOFF_INFRA: Handoff = {

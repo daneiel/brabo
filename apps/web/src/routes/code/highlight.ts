@@ -60,6 +60,20 @@ const PALAVRAS_EX = [
   'catch', 'after', 'with',
 ];
 
+// RN-158: vocabulário de shell (sh/bash) — antes só existia
+// `COMENTARIO_DE_LINHA['sh'|'bash'] = '#'`, sem palavras-chave próprias, e
+// blocos ```bash/```sh no chat (Markdown do fio, SessionPage) caíam no
+// fallback de JS (PALAVRAS_BASE): `if`/`for`/`function` pintavam como
+// keyword por coincidência de nome, mas `fi`/`done`/`esac`/`local`/`echo` —
+// palavras REAIS de shell sem equivalente em JS — ficavam sem realce nenhum.
+const PALAVRAS_SH = [
+  'if', 'then', 'elif', 'else', 'fi', 'for', 'while', 'until', 'do', 'done',
+  'case', 'esac', 'function', 'export', 'local', 'readonly', 'declare',
+  'return', 'echo', 'printf', 'set', 'unset', 'shift', 'exit', 'break',
+  'continue', 'in', 'select', 'trap', 'source', 'alias', 'unalias', 'eval',
+  'exec', 'wait', 'test',
+];
+
 const PALAVRAS_POR_LINGUAGEM: Record<string, readonly string[]> = {
   ts: PALAVRAS_TS,
   tsx: PALAVRAS_TS,
@@ -70,6 +84,8 @@ const PALAVRAS_POR_LINGUAGEM: Record<string, readonly string[]> = {
   py: PALAVRAS_PY,
   ex: PALAVRAS_EX,
   exs: PALAVRAS_EX,
+  sh: PALAVRAS_SH,
+  bash: PALAVRAS_SH,
 };
 
 const TIPOS = new Set([

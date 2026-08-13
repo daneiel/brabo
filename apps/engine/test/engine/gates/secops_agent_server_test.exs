@@ -4,7 +4,7 @@ defmodule Engine.Gates.SecOpsAgentServerTest do
   use Engine.DataCase, async: false
 
   alias Engine.Dev.DevAgentState
-  alias Engine.Gates.SecOpsAgentServer
+  alias Engine.Gates.{GateState, SecOpsAgentServer}
   alias Engine.Sessions.FakeEngineApiClient
 
   setup do
@@ -57,7 +57,8 @@ defmodule Engine.Gates.SecOpsAgentServerTest do
   end
 
   test "segredo plantado no worktree (gitleaks): changes_requested, pede correção ao dev", %{
-    state: state
+    state: state,
+    project_id: project_id
   } do
     Application.put_env(:engine, :gitleaks_fake_available, true)
 
@@ -79,9 +80,15 @@ defmodule Engine.Gates.SecOpsAgentServerTest do
                      _resumo, itens, _}
 
     assert Enum.any?(itens, &(&1 =~ "AWS key hardcoded"))
+
+    # ADR 0067: dispatch (correct) aplicado — nada fica em voo.
+    assert GateState.get(project_id, "task-abc12345", "secops") == nil
   end
 
-  test "sem achados (gitleaks e semgrep limpos): approved", %{state: state} do
+  test "sem achados (gitleaks e semgrep limpos): approved", %{
+    state: state,
+    project_id: project_id
+  } do
     Application.put_env(:engine, :gitleaks_fake_available, true)
     Application.put_env(:engine, :gitleaks_fake_result, {:ok, []})
     Application.put_env(:engine, :semgrep_fake_available, true)
@@ -91,9 +98,13 @@ defmodule Engine.Gates.SecOpsAgentServerTest do
     assert {:noreply, _} = SecOpsAgentServer.handle_cast({:run, "task-abc12345"}, state)
 
     assert_received {:gate_verdict_recorded, "task-abc12345", "secops", "approved", _, [], _}
+    assert GateState.get(project_id, "task-abc12345", "secops") == nil
   end
 
-  test "scanner ausente: pula, registra no resumo, NUNCA quebra o gate", %{state: state} do
+  test "scanner ausente: pula, registra no resumo, NUNCA quebra o gate", %{
+    state: state,
+    project_id: project_id
+  } do
     Application.put_env(:engine, :gitleaks_fake_available, false)
     Application.put_env(:engine, :semgrep_fake_available, false)
     Process.put(:fake_gate_verdict_response, %{"nextAction" => "done"})
@@ -102,5 +113,6 @@ defmodule Engine.Gates.SecOpsAgentServerTest do
 
     assert_received {:gate_verdict_recorded, "task-abc12345", "secops", "approved", resumo, [], _}
     assert resumo =~ "indisponível"
+    assert GateState.get(project_id, "task-abc12345", "secops") == nil
   end
 end

@@ -1,0 +1,69 @@
+---
+id: execution-controller-get-session
+title: "Devolve a sessão de execução vigente do projeto, ou nada"
+description: "A sessão `active` mais recente que já carrega `execution.activated` — o MESMO critério que `activate` usa para decidir se reativa ou cria (RN-139). `null` quando não há execução em curso. Existe para a aba Executores parar de inferir essa sessão pela mais recente do projeto, que muda de sessão em sessão nova sem pista nenhuma na tela."
+sidebar_label: "Devolve a sessão de execução vigente do projeto, ou nada"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "get api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Devolve a sessão de execução vigente do projeto, ou nada"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/projects/{projectId}/execution/session"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+A sessão `active` mais recente que já carrega `execution.activated` — o MESMO critério que `activate` usa para decidir se reativa ou cria (RN-139). `null` quando não há execução em curso. Existe para a aba Executores parar de inferir essa sessão pela mais recente do projeto, que muda de sessão em sessão nova sem pista nenhuma na tela.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./execution-controller-get-session.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./execution-controller-get-session.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./execution-controller-get-session.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

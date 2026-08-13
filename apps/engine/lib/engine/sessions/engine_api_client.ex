@@ -122,6 +122,20 @@ defmodule Engine.Sessions.EngineApiClient do
               {:ok, map()} | {:error, term()}
 
   @doc """
+  Ferramenta `create_c4_diagram` do Arquiteto: gera o diagrama C4 (Context +
+  Container, modelo de Simon Brown) a partir do module_map vigente. `entrada`
+  carrega `system_name`/`system_description`/`actors` — o Container level é
+  DERIVADO do module_map na api, nunca redigitado aqui. `{:error, _}` quando
+  não há module_map vigente (400) ou a entrada é inválida.
+  """
+  @callback create_c4_diagram(
+              project_id :: String.t(),
+              session_id :: String.t(),
+              entrada :: map()
+            ) ::
+              {:ok, map()} | {:error, term()}
+
+  @doc """
   Ferramenta `choose_project_image` do Arquiteto (FASE 25a, ADR 0065): fixa a
   imagem de container do projeto. Imagem sem tag explícita, `latest`, rationale
   curto ou recurso acima do teto voltam como `{:error, _}` — a regra é de
@@ -421,6 +435,9 @@ defmodule Engine.Sessions.EngineApiClient do
   def create_module_map(project_id, session_id, modules),
     do: impl().create_module_map(project_id, session_id, modules)
 
+  def create_c4_diagram(project_id, session_id, entrada),
+    do: impl().create_c4_diagram(project_id, session_id, entrada)
+
   def assign_story_modules(project_id, session_id, fields),
     do: impl().assign_story_modules(project_id, session_id, fields)
 
@@ -655,6 +672,14 @@ defmodule Engine.Sessions.EngineApiClient.Live do
       projectId: project_id,
       modules: modules
     })
+  end
+
+  @impl true
+  def create_c4_diagram(project_id, session_id, entrada) do
+    post_returning(
+      "/internal/sessions/#{session_id}/c4-diagram",
+      Map.put(entrada, :projectId, project_id)
+    )
   end
 
   @impl true

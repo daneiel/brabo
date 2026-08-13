@@ -59,4 +59,39 @@ defmodule Engine.Harness.WorkspaceFilesTest do
     by_content = WorkspaceFiles.search(dir, "palavra")
     assert Enum.any?(by_content, &(&1.path == "sub/outro.txt"))
   end
+
+  # search/3 com max_hits: o teto que faz search_workspace parar de escanear
+  # (não só de exibir) quando a árvore tem hit demais — ver o comentário de
+  # WorkspaceFiles.search/3 sobre por que isso é possível (Stream + o "+1"
+  # que detecta truncagem sem precisar contar o total).
+  describe "search/3 com max_hits" do
+    test "menos hits que o teto: devolve tudo, sem marcar truncagem", %{project_id: pid} do
+      dir = Workspace.workspace_dir(pid)
+      File.write!(Path.join(dir, "alvo1.txt"), "x")
+      File.write!(Path.join(dir, "alvo2.txt"), "x")
+
+      assert {hits, false} = WorkspaceFiles.search(dir, "alvo", max_hits: 5)
+      assert length(hits) == 2
+    end
+
+    test "hits no limite exato: NÃO marca truncagem", %{project_id: pid} do
+      dir = Workspace.workspace_dir(pid)
+      File.write!(Path.join(dir, "alvo1.txt"), "x")
+      File.write!(Path.join(dir, "alvo2.txt"), "x")
+
+      assert {hits, false} = WorkspaceFiles.search(dir, "alvo", max_hits: 2)
+      assert length(hits) == 2
+    end
+
+    test "mais hits que o teto: corta na quantidade e marca truncado", %{project_id: pid} do
+      dir = Workspace.workspace_dir(pid)
+
+      for i <- 1..5 do
+        File.write!(Path.join(dir, "alvo#{i}.txt"), "x")
+      end
+
+      assert {hits, true} = WorkspaceFiles.search(dir, "alvo", max_hits: 3)
+      assert length(hits) == 3
+    end
+  end
 end

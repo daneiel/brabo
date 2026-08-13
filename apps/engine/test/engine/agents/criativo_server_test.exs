@@ -97,6 +97,43 @@ defmodule Engine.Agents.CriativoServerTest do
     assert Enum.any?(new_state.messages, &(&1["role"] == "assistant"))
   end
 
+  # Achado do problema 2 (RN-146): o `agent.response` carrega o nome do
+  # modelo que gerou a resposta, extraído do frame `final` da api.
+  test "agent.response carrega o nome do modelo", %{state: state, session_id: session_id} do
+    Process.put(:fake_llm_turns, [
+      FakeEngineApiClient.final_response("Oi! Me conta sobre o produto.", "llama3.2:3b")
+    ])
+
+    assert {:reply, :ok, _} =
+             sync_call(CriativoServer, {:user_message, "oi"}, state)
+
+    assert_received {:event_appended, _, ^session_id,
+                     %{
+                       type: "agent.response",
+                       payload: %{
+                         content: "Oi! Me conta sobre o produto.",
+                         modelName: "llama3.2:3b"
+                       }
+                     }}
+  end
+
+  # Borda: a api pode não mandar `modelName` (versão antiga durante rollout, ou
+  # frame `final` sem o campo) — o engine não deve quebrar, só gravar `nil`. É
+  # o mesmo caminho que produz o payload de um evento GRAVADO antes desta
+  # mudança, que `SessionPage.tsx` sabe degradar para o rótulo genérico.
+  test "sem modelName no frame final: grava modelName nil, sem quebrar", %{
+    state: state,
+    session_id: session_id
+  } do
+    Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("oi")])
+
+    assert {:reply, :ok, _} =
+             sync_call(CriativoServer, {:user_message, "oi"}, state)
+
+    assert_received {:event_appended, _, ^session_id,
+                     %{type: "agent.response", payload: %{content: "oi", modelName: nil}}}
+  end
+
   test "guardrail: turno normal NÃO emite product_brief nem por tool call", %{state: state} do
     Process.put(:fake_llm_turns, [product_brief_tool_turn()])
 
@@ -138,6 +175,12 @@ defmodule Engine.Agents.CriativoServerTest do
        %{state: state, session_id: session_id} do
     Phoenix.PubSub.subscribe(Engine.PubSub, "session:" <> session_id)
     Process.put(:fake_handoff_error, {500, %{"message" => "erro interno"}})
+    # O guardrail de zero regra de negócio roda ANTES: sem isto a recusa dele
+    # dispara primeiro, e o teste nunca alcançaria o cenário de falha do
+    # handoff que é o assunto aqui.
+    Process.put(:fake_events, [
+      %{"id" => "evt-a", "type" => "artifact.business_rule", "payload" => %{}}
+    ])
 
     Process.put(:fake_llm_turns, [
       FakeEngineApiClient.final_response("Resumo executivo do produto")
@@ -157,6 +200,41 @@ defmodule Engine.Agents.CriativoServerTest do
     refute payload.mensagem =~ "Nada foi gasto"
 
     assert_received %Phoenix.Socket.Broadcast{event: "agent.error"}
+  end
+
+  # Confirmar prontidão sem NENHUMA regra de negócio capturada é recusado
+  # ANTES de subir a Task: nem o turno de consolidação roda, nem o
+  # product_brief, nem o handoff nascem. O controller ignora o retorno deste
+  # `GenServer.call` e sempre responde 202 (RN-122) — a única forma do
+  # usuário saber é o `agent.error` durável no fio.
+  test "prontidão: recusa quando NENHUMA regra de negócio foi capturada", %{
+    state: state,
+    session_id: session_id
+  } do
+    Phoenix.PubSub.subscribe(Engine.PubSub, "session:" <> session_id)
+    # Sem `Process.put(:fake_events, ...)` — a fila default é [], simulando
+    # uma conversa em que o usuário clicou "Estou pronto para produzir" sem
+    # ter capturado regra nenhuma.
+
+    assert {:reply, {:error, :sem_regra_de_negocio}, ^state} =
+             sync_call(CriativoServer, :confirm_readiness, state)
+
+    # Nem o turno de consolidação rodou (nenhuma chamada ao LLM), nem o
+    # brief, nem o handoff.
+    refute_received {:llm_turn_stream, _, _, _}
+    refute_received {:event_appended, _, ^session_id, %{type: "artifact.product_brief"}}
+    refute_received {:handoff_created, _, ^session_id, "criativo", "po", _artifact_id}
+
+    # A recusa É narrada — durável no event log e no canal, com origem
+    # "politica" (é decisão de produto, não falha de infra/modelo/código).
+    assert_received {:event_appended, _, ^session_id, %{type: "agent.error", payload: payload}}
+    assert payload.origem == "politica"
+    assert payload.mensagem =~ "regra de negócio"
+
+    assert_received %Phoenix.Socket.Broadcast{
+      event: "agent.error",
+      payload: %{origem: "politica"}
+    }
   end
 
   test "deltas são rebroadcastados no canal Phoenix da sessão", %{
@@ -282,6 +360,99 @@ defmodule Engine.Agents.CriativoServerTest do
                      %{
                        type: "agent.response",
                        payload: %{content: "Não consegui registrar" <> _}
+                     }}
+  end
+
+  # RN-162: o Criativo pode emitir várias perguntas de uma vez, num formato
+  # estruturado, em vez de deixar o usuário responder item por item em texto
+  # livre.
+  defp structured_question_turn do
+    %{
+      "message" => %{
+        "role" => "assistant",
+        "content" => "Preciso entender melhor o produto.",
+        "toolCalls" => [
+          %{
+            "id" => "tc3",
+            "name" => "ask_structured_questions",
+            "arguments" => %{
+              "questions" => [
+                %{"id" => "nome", "label" => "Qual o nome do produto?"},
+                %{
+                  "id" => "plataforma",
+                  "label" => "Qual plataforma?",
+                  "type" => "select",
+                  "options" => ["Web", "Mobile"]
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "usage" => %{"estimated" => true},
+      "error" => nil
+    }
+  end
+
+  test "ask_structured_questions: emite chat.structured_question com as perguntas", %{
+    state: state
+  } do
+    Process.put(:fake_llm_turns, [structured_question_turn()])
+
+    assert {:reply, :ok, new_state} =
+             sync_call(CriativoServer, {:user_message, "quero um app"}, state)
+
+    assert_received {:event_appended, _, _, %{type: "agent.response"}}
+
+    assert_received {:event_appended, _, _, %{type: "chat.structured_question", payload: payload}}
+
+    assert payload.questions == [
+             %{id: "nome", label: "Qual o nome do produto?", type: "text", options: []},
+             %{
+               id: "plataforma",
+               label: "Qual plataforma?",
+               type: "select",
+               options: ["Web", "Mobile"]
+             }
+           ]
+
+    # O tool call e o resultado entram no histórico como o resto do turno.
+    assert Enum.any?(
+             new_state.messages,
+             &(&1["role"] == "tool" and &1["name"] == "ask_structured_questions")
+           )
+  end
+
+  test "ask_structured_questions recusado (sem label) vira tool.result de erro, e o agente fala",
+       %{state: state} do
+    Process.put(:fake_llm_turns, [
+      %{
+        "message" => %{
+          "role" => "assistant",
+          "content" => "",
+          "toolCalls" => [
+            %{
+              "id" => "tc4",
+              "name" => "ask_structured_questions",
+              "arguments" => %{"questions" => [%{"id" => "a"}]}
+            }
+          ]
+        }
+      }
+    ])
+
+    assert {:reply, :ok, _} =
+             sync_call(CriativoServer, {:user_message, "oi"}, state)
+
+    assert_received {:event_appended, _, _,
+                     %{type: "tool.result", payload: %{ok: false, erro: erro}}}
+
+    assert erro =~ "label"
+
+    assert_received {:event_appended, _, _,
+                     %{
+                       type: "agent.response",
+                       payload: %{content: "Não consegui montar essas perguntas" <> _}
                      }}
   end
 

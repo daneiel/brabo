@@ -38,6 +38,8 @@ vi.mock('../lib/hooks', () => ({
   useSessionEvent: () => ({ data: undefined, isError: false }),
   usePendingActions: () => ({ data: { items: [] } }),
   useHandoffs: () => ({ data: [] }),
+  useCurrentWorkspaceWithRole: () => ({ data: undefined }),
+  useBacklog: () => ({ data: [] }),
 }));
 
 vi.mock('../lib/chat-stream', () => ({
