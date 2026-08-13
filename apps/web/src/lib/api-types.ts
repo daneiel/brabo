@@ -100,6 +100,11 @@ export interface ProjectCardSummary {
   latestSeq: number;
   lastEvent: SessionEvent | null;
   storiesAwaitingPromotion: number;
+  /**
+   * `proposed_actions` pendentes no projeto INTEIRO, todas as sessões
+   * (RN-151) — o que a sidebar mostra como badge do projeto.
+   */
+  pendingApprovalsCount: number;
   roster: {
     executionActivated: boolean;
     moduleNames: string[];

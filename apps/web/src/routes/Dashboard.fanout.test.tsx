@@ -70,6 +70,7 @@ function resumo(i: number): ProjectCardSummary {
     latestSeq: 10,
     lastEvent: null,
     storiesAwaitingPromotion: 0,
+    pendingApprovalsCount: 0,
     roster: {
       executionActivated: true,
       moduleNames: ['api', 'web'],

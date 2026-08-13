@@ -5025,6 +5025,47 @@ o de maior `version`, e revisar é gerar de novo, nunca sobrescrever.
 - **Origem:** pedido do usuário — diagrama C4 do Arquiteto na Visão Geral do
   projeto (ADR 0068)
 
+### RN-151 — O badge de projeto na sidebar é aprovações pendentes, não atividade não lida {#rn-151}
+
+O número ao lado do nome de cada projeto em `Shell.tsx` vinha de
+`useProjectsUnread` — `latestSeq` (o `seq` mais recente já gravado na sessão)
+menos o cursor de "última vez visto" que o navegador guarda em
+`read-state.ts`. Isso conta QUALQUER evento novo — `tool.call`,
+`agent.response`, chat — não só decisão pendente. Um projeto de teste
+mostrava "392" na sidebar (atividade acumulada de uma execução real) enquanto
+a aba Aprovações do MESMO projeto mostrava "8" (a contagem de verdade). Um
+número que não corresponde a nada acionável ao clicar é pior que nenhum.
+
+O read model do dashboard (`ProjectsSummaryRepository.summarizeForWorkspace`,
+RN-090) ganhou `pendingApprovalsCount`: `COUNT(*)` de `proposed_actions` com
+`status = 'pending'`, agregado por `project_id` numa consulta a mais no
+`Promise.all` já existente — mesmo formato de `storiesAwaitingPromotion`
+(RN-048), sem crescer o número de idas ao banco por projeto. A soma é do
+projeto INTEIRO, todas as sessões — de propósito diferente da aba Aprovações
+(`ProjectApprovalsTab.tsx`), que mostra só as pendências da sessão MAIS
+RECENTE: o badge é por PROJETO, não por sessão, e uma pendência numa sessão
+antiga continua sendo uma pendência.
+
+`Shell.tsx` parou de importar `useProjectsUnread` — o único consumidor dele
+ali era este badge. `Dashboard.tsx`/`ProjectCard.tsx` ganharam o mesmo fio:
+o prop `unreadCount` de `ProjectCard` nunca tinha chamador (`ProjectCardContainer`
+não o passava), e virou `pendingApprovalsCount` com o mesmo valor da sidebar
+— duas telas, um número, uma fonte.
+
+- **Onde:** `apps/api/src/application/ports/projects-summary-repository.port.ts`
+  (`ProjectCardSummary.pendingApprovalsCount`),
+  `apps/api/src/infrastructure/persistence/drizzle/projects-summary.repository.ts`
+  (`summarizeForWorkspace`, consulta agregada sobre `proposed_actions`),
+  `apps/web/src/routes/Shell.tsx`, `apps/web/src/routes/Dashboard.tsx`,
+  `apps/web/src/components/ProjectCard.tsx`
+- **Teste:**
+  `apps/api/test/infrastructure/persistence/drizzle/projects-summary.repository.spec.ts`
+  (`pendingApprovalsCount soma o projeto INTEIRO...`, só `pending` conta, não
+  vaza entre projetos, número de consultas continua constante),
+  `apps/web/src/routes/Shell.test.tsx` (badge de aprovações pendentes)
+- **Origem:** achado do usuário navegando a app — badge da sidebar mostrando
+  "392" contra "8" de verdade na aba Aprovações do mesmo projeto
+
 ---
 
 ## Quando dá errado
