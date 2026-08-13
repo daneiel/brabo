@@ -2,6 +2,146 @@
 
 Gerado dos conventional commits por `scripts/changelog.mjs`.
 
+## v3.0.0 — 2026-08-13
+
+### ⚠ Mudanças incompatíveis
+
+- registra a quebra que o container por projeto introduz (54408462)
+
+### Novidades
+
+- **engine,api,web**: Criativo pode fazer perguntas estruturadas (RN-162) (14b2636f)
+- **web**: gate de história promovida no botão do Arquiteto e fusão condicional handoff+execução (RN-160, RN-161) (a5433682)
+- **web**: markdown leve no chat com highlight (RN-158) e artefatos gerados agrupados por agente (RN-159) (f3bc4e03)
+- **api,web**: "auto mode" no ApprovalCard — autonomia pra qualquer ação de um agente (RN-153/154) (4cdb5e8e)
+- **code**: vincula branch de dev agent ao módulo dono (RN-152) (ee870790)
+- **api,engine,web**: diagrama C4 do Arquiteto na Visão Geral do projeto (61fc8af3)
+- **web**: carrossel de histórias com promoção pendente no fio do PO (80ad9003)
+- **web,api,engine**: botão de prontidão do Arquiteto, modelo no agent.response e ícone no grupo colapsado (ee338c40)
+- **engine**: gate sobrevive a restart no meio do ciclo (ADR 0067, RN-136) (ee919d3e)
+- **web**: botão volta ao projeto e promoção de história inline no fio (b9add0ea)
+- **web**: handoff aceito inline no fio, com link do PO pro Backlog (d53ac38e)
+- **engine,api,web**: botão Parar cancela de verdade o turno do agente (RN-121) (55979ca1)
+- **web**: aba Executores separa dev agent e QA do time misturado (76e3b56c)
+- **web**: árvore do time abre os 5 últimos e expande detalhe de execução (8f1e12c8)
+- **web**: permite renomear sessão direto da lista do projeto (da8ccde3)
+- **api,engine,web**: desativa o Psicólogo globalmente por decisão do usuário (9016a3d3)
+- **engine,api,web**: a Anamnese pode ser pausada globalmente (100dc51d)
+- **web**: lista navegável de PRs no painel de diff da aba Code (fedaef2d)
+- **web**: dropdown rico de branches na aba Code (baf8edd8)
+- **web**: blame no editor da aba Code, sob demanda (RN-113) (7ffe472b)
+- **api**: fundação de blame, PRs navegáveis e branch rica na aba Code (11594f05)
+- **api,engine**: a pasta do workspace do projeto ganha nome legível (4cda77a9)
+- **api,engine,web**: o socket da sessão exige ticket opaco de uso único (fc0b24d4)
+- **docker**: PROJECT_WORKSPACES_HOST_DIR aponta o workspace para pasta real (36c1690c)
+- **web**: a aba Code, só leitura — explorador, busca, editor com realce de sintaxe e diff de PR (9cea55e4)
+- **api,web**: modelo de LLM vira padrão herdável por área (bd7f69a7)
+- **api,engine**: container por projeto — o Arquiteto decide a imagem, a fronteira deixa de ser só política (7014d722)
+- **web**: o tipo da sessão vira lugar — abas Criativo e Chat (0dde807a)
+- **api,web**: o mesmo gasto para duas audiências (506f39b9)
+- **web,api**: Atividades pagina por cursor e o sino ordena do mais recente (4d8a7b8a)
+- **api,web**: a sessão nasce com tipo, ganha nome e uma saída (a42cb53f)
+- **web**: toda aprovação diz o que faz, e o payload cru nasce colapsado (d247cd85)
+- **api**: a superfície de leitura de código da aba Code, contida e com orçamento (55ace0cb)
+- **api,shared**: arvore e diff de PR no contrato de git, provados pela suite (2c8ea308)
+
+### Correções
+
+- **engine,docs**: mix format + regenera inventário de eventos (dd3a52fa)
+- **business-rules**: corrige link relativo do ADR 0069 na RN-161 (200af4f5)
+- **web**: corrige ordenação da timeline, indicador de 5s e aviso do PO (f88589fe)
+- **api,web**: badge da sidebar mostra aprovações pendentes, não atividade não lida (RN-151) (28ae04c6)
+- **engine**: search_workspace trunca por quantidade de hits e por bytes (RN-150) (479eb3de)
+- **api**: CodeQL reconhece a sanitização de segmento de URL interna (RN-128) (acadfe46)
+- **api**: amplia allowlist de terminal do dev agent para subcomandos git de leitura (c13f0100)
+- **engine,web**: Criativo recusa handoff ao PO sem regra de negócio nenhuma (7f0a4b6d)
+- **engine**: read_file trunca conteúdo grande, evitando 413 do provider (2cb84851)
+- **web**: aba Criativo não lista mais a sessão de execução vigente (39390472)
+- **api,web**: aba Executores lê a sessão de execução vigente, não a mais recente do projeto (ba9f7dfa)
+- **web**: prioridade do handoff pro Dev Lead, ativação inline e colapso por agente no fio (d9ebaae2)
+- **api**: ativar execução fecha a sessão de chat que originou o pedido (7947cc83)
+- **api**: sessão do bootstrap de Git nasce com nome default "git-bootstrap" (34139d19)
+- **web**: três corridas confirmadas ao vivo em SessionPage.tsx (RN-129) (ec35d232)
+- **web**: write_file mostra corpo próprio na aprovação, e payload vazio vira mensagem clara (04c1f7ea)
+- **engine**: ToolLoop nunca grava agent.response vazio, estende RN-059 (2833f326)
+- **api**: valida query array e segmento de URL interna (CodeQL crítico) (ac55537a)
+- **ci**: libera git log/blame/show pro claude-review não travar em permissão (336e03b6)
+- **docs**: regenera events.md com o arquivo certo pro agent.done/status (ec66743d)
+- **api,web**: sessão de chat consistente — modelo, duplicata, ideação e roteamento (5762dc39)
+- **api**: heartbeat não fecha sessão com agente em turno após handoff (a2e75275)
+- **web**: pista no convite perdido e indicador de agente trabalhando (5de8c6db)
+- **web**: marca "Brabo" da sidebar navega para o dashboard (8aa31f02)
+- **engine**: perform/1 do scheduler da Anamnese confere a flag global (ef07468c)
+- **web**: reconcilia turno do agente mesmo sem agent.done do canal (dbeddc97)
+- **api**: lint (prettier + type assertion desnecessária) e docs vale-revisar (29fba8ea)
+- **api,engine**: os quatro segredos irmãos do GIT_OAUTH_STATE_SECRET também recusam o default em produção (0df9047c)
+- **docker**: o smoke manda o kind, que a rota de sessão passou a exigir (7a9c5c0c)
+- **web**: o typecheck do CI inclui os testes, e o do editor não (069325db)
+- **api**: a área de agentes nasce com o projeto, e o backfill alcança os antigos (5ccbb861)
+
+### Refatorações
+
+- **web**: o teto do nome da sessão vive num lugar só (87c4530b)
+- **web**: o metadado truncado da sessão fica legível no hover (133fd31d)
+- **web**: Aprovações e Configurações conforme o handoff (6b7cb551)
+- **web**: Projeto e Sessão conforme o handoff de design (b1ba2a71)
+- **web,design**: login e lista de projetos conforme o handoff (f96f7a63)
+- **web**: rótulo de sessão vira helper e os cinco inline migram (00b4529a)
+- **web**: Disclosure no design system, sem migrar call site nenhum (70b76829)
+- **web**: as abas do projeto derivam de um registro só (2a699882)
+
+### Documentação
+
+- **business-rules**: RN-162 — perguntas estruturadas do Criativo (PR #292) (eafccac2)
+- **internal-api**: documenta que RN-162 reusa /sessions/:id/agent/message (345bbe0e)
+- **business-rules**: RN-160 e RN-161 — gate do Arquiteto e fusão handoff/execução (PR #290) (423d38bc)
+- **business-rules**: RN-158 e RN-159 — markdown e artefatos gerados (PR #288) (cb1f468e)
+- **business-rules**: RN-155 a RN-157 — ordenação da timeline (PR #286) (93f550c0)
+- **changelog**: consolida a onda 1 do exp003 (5 PRs) (87f473e3)
+- **security-surface,internal-api**: documenta a curinga do agent_autonomy de verdade (6a706576)
+- **business-rules**: corrige colisão de numeração RN-141 -> RN-144 (b85a0e21)
+- **business-rules**: corrige colisão de numeração RN-141 -> RN-142 (ad7273c1)
+- **business-rules**: corrige colisão de numeração RN-141 -> RN-143 (f353770a)
+- **api**: documenta os subcomandos git de leitura na allowlist do dev agent (6281cd1e)
+- **business-rules**: corrige colisão de numeração RN-136 -> RN-139 (c2ec03a1)
+- **business-rules**: corrige colisão de numeração RN-136 -> RN-140 (12c0f3d8)
+- **security-surface,internal-api**: documenta originSessionId da ativação de execução (4f5b7696)
+- **business-rules**: corrige colisão de numeração RN-129 -> RN-131 (9166452d)
+- **web**: documenta write_file no corpo próprio da aprovação (RN-096) (fcf19253)
+- **engine,api**: documenta a rota interna de cancelamento (RN-121) (b326001c)
+- **business-rules**: renumera RN-114 da Anamnese para RN-115 (edc96dab)
+- **business-rules**: renumera RN-110 dos segredos irmãos para RN-114 (b7f1d34c)
+- **runbook,getting-started**: dono root no bind mount, e como migrar workspaces existentes (7919e897)
+- **architecture**: a aba Code entra na descricao do contrato web-api (e577700f)
+- contagem de ADRs pos-merge de origin/dev (64) e manifesto regenerado (86ae1043)
+- **reference**: a cascata de binding ganha área, na página de providers (b3c026de)
+- **runbook**: o smoke cria sessão consultiva, e por que é ela que prova a rota (63d1883a)
+- **referencia**: a trava do tipo de sessão na api interna e nos artefatos (3864a4a1)
+- **architecture**: lib/aprovacoes.ts e a união ActionType que envelhece (4b604731)
+- **validacao**: 9ª e 10ª execuções, as de dois módulos, e o achado AF (3426928c)
+- **changelog**: a entrada vai para a secao Unreleased que ja existia (13b00324)
+- **business-rules,architecture**: as quatro capabilities de git na RN-028 (be746d7d)
+- **claude**: o programa 16-26, e o CLAUDE.md na definição de pronto (023b7940)
+- **claude**: o estado das fases depois da 15, e o que o uso ensinou (24cbb48c)
+- **changelog**: v2.5.1 (0e7072d3)
+
+### Testes
+
+- **web**: a sigla do conector conferida na tela, não na função (b806d810)
+
+### CI
+
+- recarrega o corpo da PR (a dispensa do drift estava entre crases, de novo) (7a91b96d)
+- recarrega o corpo da PR (a dispensa do drift estava entre crases) (fa408874)
+
+### Manutenção
+
+- **web**: árvore de Executores porta o skin de bolha do chat do Criativo (56b84620)
+- **docs**: renumera RN-123 do handoff inline pra RN-125 (e4fbeca5)
+- **docs**: desfaz colisão de RN-118 entre PR #247 e #248 (40332299)
+- **docs**: renumera RN-121 do cancelamento de turno para RN-122 (9162f8cf)
+- **design**: o handoff entra no repo e os tokens fecham contra ele (05e02860)
+
 ## Unreleased
 
 ### Novidades
