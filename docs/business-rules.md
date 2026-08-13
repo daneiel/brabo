@@ -5439,7 +5439,7 @@ seja reportado como "não foi possível aceitar o handoff".
   (`podeFundirHandoffComExecucao`, `handleAcceptHandoff`)
 - **Teste:** `apps/web/src/routes/SessionPage.handoff-devlead-e-colapso.test.tsx`,
   describe "problema 4"
-- **Decisão arquitetural:** [ADR 0069](../adr/0069-fusao-condicional-do-handoff-com-a-ativacao-de-execucao.md)
+- **Decisão arquitetural:** [ADR 0069](adr/0069-fusao-condicional-do-handoff-com-a-ativacao-de-execucao.md)
 - **Origem:** pedido do usuário (desenho aprovado)
 
 ---
