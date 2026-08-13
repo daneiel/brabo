@@ -217,24 +217,18 @@
 /* `--msg-color` vive na MENSAGEM, não em cada peça dela: avatar, nome e
    indicador de digitação são a mesma voz e antes cada um recebia (ou não)
    o próprio `style` inline — o indicador nunca recebia, e ficava cinza no
-   meio de um turno colorido. */
+   meio de um turno colorido.
+
+   O corpo destas regras foi extraído para `../components/ui/ChatBubble.module.css`
+   — é o mesmo skin que o detalhe expandido de `AgentTimelineTree` usa
+   (Executores), via `composes`. Mudar cor, padding ou raio ali muda os dois
+   lugares; não há segunda cópia dos valores pra divergir. */
 .message {
-  display: flex;
-  gap: 13px;
-  align-items: flex-start;
+  composes: message from '../components/ui/ChatBubble.module.css';
 }
 
 .avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-md);
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--msg-color);
-  background: color-mix(in srgb, var(--msg-color) 16%, var(--surface-2));
-  border: 1px solid color-mix(in srgb, var(--msg-color) 50%, transparent);
+  composes: avatar from '../components/ui/ChatBubble.module.css';
 }
 
 .avatar.user {
@@ -244,41 +238,23 @@
 }
 
 .messageBody {
-  flex: 1;
-  min-width: 0;
+  composes: messageBody from '../components/ui/ChatBubble.module.css';
 }
 
 .messageHeader {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  margin-bottom: 5px;
+  composes: messageHeader from '../components/ui/ChatBubble.module.css';
 }
 
 .messageName {
-  font-family: var(--font-heading);
-  font-weight: 600;
-  font-size: 13px;
-  color: var(--msg-color);
+  composes: messageName from '../components/ui/ChatBubble.module.css';
 }
 
 .messageMeta {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--text-muted);
+  composes: messageMeta from '../components/ui/ChatBubble.module.css';
 }
 
 .bubble {
-  background: var(--surface-1);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  border-top-left-radius: 2px;
-  padding: 12px 15px;
-  font-size: 14px;
-  line-height: 1.5;
-  color: var(--text-secondary);
-  white-space: pre-wrap;
-  word-break: break-word;
+  composes: bubble from '../components/ui/ChatBubble.module.css';
 }
 
 .typing {

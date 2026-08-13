@@ -1,0 +1,76 @@
+/*
+ * O skin de "bolha de chat" — extraído de `SessionPage.module.css` para ser
+ * a fonte ÚNICA que tanto o fio da Sessão (mensagens do Criativo/PO/…)
+ * quanto o detalhe expandido da árvore de Executores (`AgentTimelineTree`,
+ * onde `tool.call`/`tool.result`/`agent.response` mostravam texto cru em
+ * `<pre>`) usam via `composes`.
+ *
+ * O motivo de extrair em vez de duplicar os valores: os dois lugares
+ * respondem perguntas diferentes (a árvore é "o que cada agente está
+ * fazendo AGORA", o fio é "o que aconteceu, em ordem" — CLAUDE.md, FASE
+ * 14b), mas a APARÊNCIA de uma fala de agente é uma decisão SÓ, e uma
+ * segunda cópia dos valores (cor, borda, raio, padding, tipografia)
+ * divergiria na primeira correção feita de um lado só — o mesmo argumento
+ * que já levou `Textarea.module.css` a compor de `Input.module.css`.
+ *
+ * `--msg-color` não é fixada aqui: quem usa a classe define no ancestral
+ * (`corDoAgente()` em SessionPage.tsx, o mesmo padrão em AgentTimelineTree),
+ * porque a cor é por AGENTE (`lib/agents.ts`), não por lugar da tela.
+ */
+
+.message {
+  display: flex;
+  gap: 13px;
+  align-items: flex-start;
+}
+
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--msg-color);
+  background: color-mix(in srgb, var(--msg-color) 16%, var(--surface-2));
+  border: 1px solid color-mix(in srgb, var(--msg-color) 50%, transparent);
+}
+
+.messageBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.messageHeader {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+
+.messageName {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--msg-color);
+}
+
+.messageMeta {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.bubble {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  border-top-left-radius: 2px;
+  padding: 12px 15px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  word-break: break-word;
+}

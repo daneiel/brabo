@@ -44,6 +44,7 @@ import { ModelPicker } from '../components/ModelPicker';
 import { ApprovalCard } from '../components/ApprovalCard';
 import { ActivityFeed } from '../components/ActivityFeed';
 import { EventItem } from '../components/EventItem';
+import { AvatarDoAgente } from '../components/ui/AvatarDoAgente';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Carousel, type CarouselSlide } from '../components/ui/Carousel';
@@ -155,30 +156,6 @@ function nomeDoAgente(id: string | undefined): string {
 function corDoAgente(id: string | undefined): CSSProperties {
   const cor = id ? AGENTS[id as keyof typeof AGENTS]?.color : undefined;
   return { ['--msg-color' as string]: cor ?? 'var(--accent)' } as CSSProperties;
-}
-
-/**
- * O avatar do agente — mesma caixa `.avatar` que toda mensagem expandida já
- * usa (achado do problema 3: o cabeçalho do grupo colapsado tinha só o nome,
- * sem o ícone que identifica visualmente quem está falando).
- *
- * O ícone é o do ROSTER (`AGENTS[id].icon`), a mesma fonte que já identifica
- * "quem está falando" no indicador de streaming (`agenteExibido.icon`) — e
- * não o ícone por TIPO de evento que cada entrada expandida usa (`ModelIcon`
- * em `agent.response`, `StackIcon` em `backlog.*_created`, `AlertCircleIcon`
- * em `agent.error`). Um grupo colapsado mistura esses tipos: o cabeçalho
- * representa o AGENTE, não a última entrada dele, e só o ícone do roster é
- * estável para isso. Sem `id`, ou agente fora do roster, degrada para
- * `ModelIcon` — nunca para uma caixa vazia.
- */
-function AvatarDoAgente({ id }: { id: string | undefined }) {
-  const Icon =
-    (id ? AGENTS[id as keyof typeof AGENTS]?.icon : undefined) ?? ModelIcon;
-  return (
-    <span className={styles.avatar}>
-      <Icon size={15} />
-    </span>
-  );
 }
 
 /**

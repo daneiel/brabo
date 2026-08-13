@@ -10681,6 +10681,16 @@
                 "$ref": "#/components/schemas/CodeBranchPullRequestRefResponseDto"
               }
             ]
+          },
+          "producedBy": {
+            "nullable": true,
+            "description": "Dev agent/módulo dono da branch (RN-152), quando o nome bate com `feature/task-XXXXXXXX` e a task/módulo ainda são resolvíveis. `null` pra branch manual do usuário ou pra `main`/`dev`/`qa`.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CodeBranchProducedByResponseDto"
+              }
+            ]
           }
         },
         "required": [
@@ -10689,7 +10699,27 @@
           "protected",
           "ahead",
           "behind",
-          "pullRequest"
+          "pullRequest",
+          "producedBy"
+        ]
+      },
+      "CodeBranchProducedByResponseDto": {
+        "type": "object",
+        "properties": {
+          "agentId": {
+            "type": "string",
+            "example": "dev-pieces",
+            "description": "agent_id do dev que criou a branch (`dev-<modulo>`/`dev-<modulo>-2`, RN-087)."
+          },
+          "moduleId": {
+            "type": "string",
+            "example": "pieces",
+            "description": "Nome do módulo, do `module_map` vigente do projeto."
+          }
+        },
+        "required": [
+          "agentId",
+          "moduleId"
         ]
       },
       "CodeBranchPullRequestRefResponseDto": {

@@ -9,6 +9,7 @@ import {
 import type { SessionEvent } from '../lib/api-types';
 import { AGENTS } from '../lib/agents';
 import { getAgentLastSeenSeq, setAgentLastSeenSeq } from '../lib/read-state';
+import { AvatarDoAgente } from './ui/AvatarDoAgente';
 import { ChevronDownIcon, ChevronRightIcon } from './ui/icons';
 import styles from './AgentTimelineTree.module.css';
 
@@ -29,6 +30,14 @@ import styles from './AgentTimelineTree.module.css';
  * Cada ramo colapsado que ganhou marco novo desde a última vez que foi
  * aberto mostra a contagem de NOVIDADE no cabeçalho, em vez do total — o
  * "visto" é por agente, dentro do projeto (`read-state.ts`).
+ *
+ * O cabeçalho de cada ramo e o detalhe expandido de cada marco usam o MESMO
+ * skin visual do chat do Criativo (`SessionPage.tsx`): avatar do agente
+ * (`AvatarDoAgente`) e bolha de mensagem, compartilhados via
+ * `../components/ui/ChatBubble.module.css`. A estrutura continua sendo
+ * ÁRVORE — a decisão de "agente primeiro, tempo depois" não muda; só a
+ * aparência de "isto é o que um agente disse/fez" deixou de divergir entre
+ * as duas telas.
  */
 export function AgentTimelineTree({
   events,
@@ -96,15 +105,12 @@ export function AgentTimelineTree({
               aria-expanded={aberto}
               data-testid={`ramo-cabecalho-${ramo.agente}`}
               onClick={() => alternar(ramo.agente)}
+              style={{ ['--msg-color' as string]: corDo(ramo.agente) }}
             >
               <span className={styles.chevron}>
                 {aberto ? <ChevronDownIcon size={13} /> : <ChevronRightIcon size={13} />}
               </span>
-              <span
-                className={styles.pino}
-                style={{ ['--cor-agente' as string]: corDo(ramo.agente) }}
-                aria-hidden="true"
-              />
+              <AvatarDoAgente id={ramo.agente} />
               <span className={styles.nome}>{rotuloDo(ramo.agente)}</span>
               <span
                 className={[styles.agora, ramo.ativo && styles.agoraAtivo]
@@ -178,7 +184,7 @@ export function AgentTimelineTree({
                             role="region"
                             className={styles.marcoDetalhe}
                           >
-                            {detalheExpandido(m)}
+                            {detalheExpandido(m, ramo.agente)}
                           </div>
                         )}
                       </li>
@@ -194,45 +200,62 @@ export function AgentTimelineTree({
   );
 }
 
-/** O conteúdo do detalhe expandido — um por `eventType`, os únicos expansíveis. */
-function detalheExpandido(m: Marco) {
+/**
+ * O detalhe expandido de um marco — um por `eventType`, os únicos
+ * expansíveis (`marcoExpansivel`, lib/timeline-tree.ts).
+ *
+ * Porta o mesmo skin do chat do Criativo (`SessionPage.tsx`): avatar do
+ * agente + corpo com cabeçalho e bolha (`.detalheMensagem`/`.detalheCorpo`/
+ * `.detalheCabecalho`/`.detalheBolha`, compostas de
+ * `../components/ui/ChatBubble.module.css`) — o texto cru que antes vivia
+ * num `<pre>` ganha a mesma aparência de fala que o resto do produto já usa
+ * para "isto é o que um agente disse". A estrutura de ÁRVORE não muda: isto
+ * é só o conteúdo de UM marco já expandido, dentro do ramo do agente.
+ */
+function detalheExpandido(m: Marco, agente: string) {
+  const conteudo = conteudoDoMarco(m);
+  if (!conteudo || (!conteudo.rotulo && !conteudo.texto && !conteudo.erro)) return null;
+  const { rotulo, texto, erro } = conteudo;
+  return (
+    <div
+      className={styles.detalheMensagem}
+      style={{ ['--msg-color' as string]: corDo(agente) }}
+    >
+      <AvatarDoAgente id={agente} />
+      <div className={styles.detalheCorpo}>
+        {rotulo && (
+          <div className={styles.detalheCabecalho}>
+            <span className={styles.detalheRotulo}>{rotulo}</span>
+          </div>
+        )}
+        {texto && <div className={styles.detalheBolha}>{texto}</div>}
+        {erro && <div className={styles.detalheErro}>erro: {erro}</div>}
+      </div>
+    </div>
+  );
+}
+
+/** Extrai rótulo/texto/erro do payload cru de um marco expansível. */
+function conteudoDoMarco(m: Marco): { rotulo?: string; texto?: string; erro?: string } | null {
   switch (m.eventType) {
-    case 'tool.call': {
-      const args = m.payload.args;
-      return (
-        <>
-          <div className={styles.detalheRotulo}>argumentos</div>
-          <pre className={styles.detalhePre}>{formatar(args)}</pre>
-        </>
-      );
-    }
+    case 'tool.call':
+      return { rotulo: 'argumentos', texto: formatar(m.payload.args) };
     case 'tool.result': {
       const ok = m.payload.ok !== false;
-      const result = m.payload.result;
-      return (
-        <>
-          <div className={styles.detalheRotulo}>{ok ? 'resultado' : 'resultado (falhou)'}</div>
-          <pre className={styles.detalhePre}>{formatar(result)}</pre>
-        </>
-      );
+      return {
+        rotulo: ok ? 'resultado' : 'resultado (falhou)',
+        texto: formatar(m.payload.result),
+      };
     }
     case 'agent.response': {
       const content = m.payload.content;
       const error = m.payload.error;
       const iteration = m.payload.iteration;
-      return (
-        <>
-          {typeof iteration === 'number' && (
-            <div className={styles.detalheRotulo}>iteração {iteration}</div>
-          )}
-          {typeof content === 'string' && content.trim() !== '' && (
-            <pre className={styles.detalhePre}>{content}</pre>
-          )}
-          {error != null && error !== '' && (
-            <div className={styles.detalheErro}>erro: {formatar(error)}</div>
-          )}
-        </>
-      );
+      return {
+        rotulo: typeof iteration === 'number' ? `iteração ${iteration}` : undefined,
+        texto: typeof content === 'string' && content.trim() !== '' ? content : undefined,
+        erro: error != null && error !== '' ? formatar(error) : undefined,
+      };
     }
     default:
       return null;
