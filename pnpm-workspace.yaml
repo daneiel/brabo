@@ -107,6 +107,20 @@ overrides:
   # `dompurify: ^3.3.3`; a 3.4.13 é a correção e cabe na faixa.
   dompurify@>=3.0.0 <3.4.13: 3.4.13
 
+
+# O default do pnpm ("install") roda um `pnpm install` do workspace INTEIRO,
+# em silêncio, antes de executar QUALQUER script — inclusive `pn bootstrap`/
+# `pnpm bootstrap`, que nem chega a abrir o menu (scripts/dev/bootstrap.sh).
+# Isso quebra sempre que UMA pasta de UM workspace (ex.: website/, populada
+# pelo Docker rodando como root — sem `USER` nos Dockerfiles de dev) fica com
+# dono divergente do host: o install implícito falha com EACCES antes do
+# bootstrap.sh ter a chance de se auto-curar (função `corrigir_donos`).
+#
+# Vai em `pnpm-workspace.yaml`, não em `.npmrc`: testado nesta versão do
+# pnpm (11.3.0) — `.npmrc` (mesmo com o tipo certo, boolean) é ignorado para
+# esta chave, só a forma camelCase aqui é respeitada.
+verifyDepsBeforeRun: false
+
 allowBuilds:
   '@swc/core': true
   esbuild: true
