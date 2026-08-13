@@ -147,9 +147,19 @@ export interface PermissionsFile {
 
 export type PermissionPolicy = 'auto_approve' | 'require_approval' | 'deny';
 
+/**
+ * Curinga de `agent_autonomy.action_type` — "auto mode" (RN-153): autonomia
+ * pra QUALQUER tipo de ação do agente, não um tipo específico. NÃO é um
+ * `ActionType` (não é avaliado por `decide()`; é resolvido antes, no
+ * repositório) — por isso fica fora da união e não entra em
+ * `aprovacoes.test.ts`, que lê só `ACTION_TYPES` do backend.
+ */
+export const AGENT_AUTONOMY_ALL_ACTIONS = '*' as const;
+export type AgentAutonomyActionType = ActionType | typeof AGENT_AUTONOMY_ALL_ACTIONS;
+
 export interface AgentAutonomyRule {
   agentId: string;
-  actionType: ActionType;
+  actionType: AgentAutonomyActionType;
   mode: PermissionPolicy;
 }
 

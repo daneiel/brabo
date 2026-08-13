@@ -83,6 +83,44 @@ describe('ApprovalCard', () => {
     expect(onAlwaysAllow).toHaveBeenCalledTimes(1);
   });
 
+  it('sem onActivateAutoMode, o botão "Modo automático" não aparece (RN-153 — sem papel maintainer)', () => {
+    render(
+      <ApprovalCard action={makeAction()} onApprove={vi.fn()} onDeny={vi.fn()} onAlwaysAllow={vi.fn()} />,
+    );
+    expect(screen.queryByRole('button', { name: 'Modo automático' })).toBeNull();
+  });
+
+  it('com onActivateAutoMode, chama ao clicar em "Modo automático"', () => {
+    const onActivateAutoMode = vi.fn();
+    render(
+      <ApprovalCard
+        action={makeAction()}
+        onApprove={vi.fn()}
+        onDeny={vi.fn()}
+        onAlwaysAllow={vi.fn()}
+        onActivateAutoMode={onActivateAutoMode}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Modo automático' }));
+    expect(onActivateAutoMode).toHaveBeenCalledTimes(1);
+  });
+
+  it('mostra a nota do "Modo automático" na variante chat, citando os tetos que continuam pedindo decisão', () => {
+    render(
+      <ApprovalCard
+        action={makeAction()}
+        variant="chat"
+        onApprove={vi.fn()}
+        onDeny={vi.fn()}
+        onAlwaysAllow={vi.fn()}
+        onActivateAutoMode={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/libera TODA ação futura/)).toBeInTheDocument();
+    expect(screen.getByText(/paralelismo/)).toBeInTheDocument();
+  });
+
   it('mostra a nota de permissions.json na variante chat', () => {
     render(<ApprovalCard action={makeAction()} variant="chat" onApprove={vi.fn()} onDeny={vi.fn()} onAlwaysAllow={vi.fn()} />);
     expect(screen.getByText(/permissions\.json/)).toBeInTheDocument();

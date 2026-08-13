@@ -222,6 +222,30 @@ flowchart TD
   H -->|não| J[veredito final]
 ```
 
+### "Auto mode": a curinga de `agent_autonomy` ([RN-153](../business-rules.md#rn-153))
+
+O nó `agent_autonomy tem opinião?` do diagrama acima não sabe, e não precisa
+saber, se a opinião veio de uma regra ESPECÍFICA (`actionType: "terminal"`)
+ou da curinga `actionType: "*"` — "auto mode": autonomia pra QUALQUER tipo
+de ação daquele agente, ligada com um clique em "Modo automático" no
+`ApprovalCard`. A resolução acontece ANTES deste diagrama começar, num
+repositório só: `DrizzleAgentAutonomyRepository.findMode` busca a regra
+específica e a curinga na mesma consulta, e devolve a específica quando as
+duas existem — gravar `terminal: deny` com `"*": auto_approve` ligado
+continua negando `terminal` desse agente, liberando o resto.
+
+É por isso que o diagrama não ganhou um nó novo, e é a prova de que os
+tetos, logo abaixo, valem para "auto mode" sem exceção declarada em lugar
+nenhum: eles reagem a `current.policy === 'auto_approve'`, nunca à origem
+dela ([RN-154](../business-rules.md#rn-154)).
+
+"Auto mode" exige `maintainer` — mesmo papel que já protegia
+`PUT .../agent-autonomy` antes da curinga existir. Desligar reusa o toggle
+manual/auto que o card do agente já tinha na Visão Geral/Executores: com a
+curinga gravada, o toggle passa a editar ELA em vez do tipo representativo
+de sempre, e "manual" nele é a mesma curinga regravada como
+`require_approval`.
+
 ## A fronteira do container (RN-106)
 
 Aplicada **antes** de qualquer estágio permissivo, e não como teto no fim: `git

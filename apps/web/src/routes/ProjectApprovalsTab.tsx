@@ -1,13 +1,21 @@
 import { useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { approveAction, approveAlwaysAction, denyAction, getProjectPermissions, setProjectPermissions } from '../lib/api-client';
-import { useBacklog, useInfraArtifacts, useLatestSession, usePendingActions, useSessionEvents } from '../lib/hooks';
-import type {
-  CoverageMatrixRow,
-  PermissionListName,
-  QaVerdictPayload,
-  SecOpsVerdictPayload,
-  Task,
+import {
+  approveAction,
+  approveAlwaysAction,
+  denyAction,
+  getProjectPermissions,
+  setAgentAutonomy,
+  setProjectPermissions,
+} from '../lib/api-client';
+import { useBacklog, useCurrentWorkspaceWithRole, useInfraArtifacts, useLatestSession, usePendingActions, useSessionEvents } from '../lib/hooks';
+import {
+  AGENT_AUTONOMY_ALL_ACTIONS,
+  type CoverageMatrixRow,
+  type PermissionListName,
+  type QaVerdictPayload,
+  type SecOpsVerdictPayload,
+  type Task,
 } from '../lib/api-types';
 import { ApprovalCard } from '../components/ApprovalCard';
 import { PrGateTimeline, type GateVerdict } from '../components/PrGateTimeline';
@@ -16,6 +24,7 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Table, type TableColumn } from '../components/ui/Table';
 import { Badge } from '../components/ui/Badge';
+import { useToast } from '../components/ui/ToastProvider';
 import { AlertCircleIcon, CheckIcon, SearchIcon, TrashIcon } from '../components/ui/icons';
 import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
 import { AGENTS, AREAS } from '../lib/agents';
@@ -86,8 +95,17 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
   const infraQuery = useInfraArtifacts(projectId);
   const epics = backlogQuery.data;
   const queryClient = useQueryClient();
+  const { showToast } = useToast();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState('');
+
+  // "Auto mode" (RN-153) exige `maintainer` no endpoint que grava a curinga —
+  // mesma aproximação (papel de WORKSPACE) que `ProjectSettingsTab.tsx` já
+  // usa pra gate de `maintainer`/`owner`: não existe hoje um papel de
+  // PROJETO no cliente, só o de workspace que a listagem devolve.
+  const { data: workspaceComPapel } = useCurrentWorkspaceWithRole();
+  const podeAtivarAutoMode =
+    workspaceComPapel?.role === 'owner' || workspaceComPapel?.role === 'maintainer';
 
   const allActions = actionsQuery.data?.items ?? [];
   const events = eventsQuery.data?.items ?? [];
@@ -276,6 +294,29 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
     queryClient.invalidateQueries({ queryKey: ['permissions', projectId] });
   }
 
+  // "Auto mode" (RN-153) — grava a curinga `actionType: "*"` pro agente que
+  // propôs ESTA ação. NÃO aprova a ação em si (quem aprova é o botão
+  // Aprovar); liga a autonomia pras PRÓXIMAS. Mesma `queryKey` que a Visão
+  // Geral/Executores leem (`agent-autonomy`), então o toggle de lá já nasce
+  // ligado sem um segundo clique — e é ele que serve de "desligar" depois.
+  async function handleActivateAutoMode(agentId: string) {
+    try {
+      await setAgentAutonomy(projectId, {
+        agentId,
+        actionType: AGENT_AUTONOMY_ALL_ACTIONS,
+        mode: 'auto_approve',
+      });
+      await queryClient.invalidateQueries({ queryKey: ['agent-autonomy', projectId] });
+      showToast({ title: 'Modo automático ligado', message: agentId, tone: 'success' });
+    } catch {
+      showToast({
+        title: 'Não foi possível ligar o modo automático',
+        message: agentId,
+        tone: 'danger',
+      });
+    }
+  }
+
   function toggleSelect(id: string) {
     setSelected((current) => {
       const next = new Set(current);
@@ -403,6 +444,11 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
                           onApprove={() => handleApprove(action.id)}
                           onDeny={() => handleDeny(action.id)}
                           onAlwaysAllow={() => handleAlwaysAllow(action.id)}
+                          onActivateAutoMode={
+                            podeAtivarAutoMode && action.actor.kind === 'agent'
+                              ? () => handleActivateAutoMode(action.actor.id)
+                              : undefined
+                          }
                         />
                       ))}
                     </div>

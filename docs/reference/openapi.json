@@ -2600,7 +2600,7 @@
         ]
       },
       "put": {
-        "description": "Upsert por (agente, tipo). NÃO sobrepõe o `permissions.json`: um padrão em `deny` continua bloqueado por mais autonomia que se conceda aqui.",
+        "description": "Upsert por (agente, tipo). NÃO sobrepõe o `permissions.json`: um padrão em `deny` continua bloqueado por mais autonomia que se conceda aqui. `actionType: \"*\"` é o \"auto mode\" (RN-153) — autonomia pra QUALQUER tipo de ação deste agente; uma regra específica gravada depois continua vencendo a curinga para aquele tipo.",
         "operationId": "AgentAutonomyController_set",
         "parameters": [
           {
@@ -9589,24 +9589,8 @@
           },
           "actionType": {
             "type": "string",
-            "enum": [
-              "terminal",
-              "git_commit",
-              "git_push",
-              "pr_open",
-              "spend",
-              "git_repo_create",
-              "git_branch_create",
-              "git_branch_protect",
-              "write_file",
-              "open_adr_pr",
-              "git_merge",
-              "open_infra_pr",
-              "instruction_patch",
-              "parallelize",
-              "raise_max_parallel"
-            ],
-            "example": "terminal"
+            "example": "terminal",
+            "description": "O tipo de ação, ou `\"*\"` — \"auto mode\" (RN-153): autonomia pra QUALQUER tipo de ação deste agente."
           },
           "mode": {
             "type": "string",
@@ -15910,9 +15894,11 @@
               "open_infra_pr",
               "instruction_patch",
               "parallelize",
-              "raise_max_parallel"
+              "raise_max_parallel",
+              "*"
             ],
-            "example": "terminal"
+            "example": "terminal",
+            "description": "Tipo de ação, ou `\"*\"` para TODO tipo de ação deste agente — o \"auto mode\" do ApprovalCard (RN-153). Uma regra ESPECÍFICA sempre vence a curinga: gravar `terminal: deny` com `\"*\": auto_approve` já ligado continua negando terminal."
           },
           "mode": {
             "type": "string",

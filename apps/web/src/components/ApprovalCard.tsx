@@ -117,6 +117,15 @@ interface ApprovalCardProps {
   onApprove: () => void;
   onDeny: (reason?: string) => void;
   onAlwaysAllow: () => void;
+  /**
+   * "Auto mode" (RN-153) — liga `agent_autonomy` com a curinga `actionType:
+   * "*"` pro AGENTE desta ação: nenhum comando FUTURO dele precisa de
+   * aprovação, até desligar. Ausente/`undefined` esconde o botão — é assim
+   * que quem chama trata "sem papel maintainer" (o mesmo papel que já
+   * protege `PUT .../agent-autonomy`): não passa o callback, sem duplicar a
+   * checagem de papel aqui dentro.
+   */
+  onActivateAutoMode?: () => void;
 }
 
 export function ApprovalCard({
@@ -129,6 +138,7 @@ export function ApprovalCard({
   onApprove,
   onDeny,
   onAlwaysAllow,
+  onActivateAutoMode,
 }: ApprovalCardProps) {
   const [expandedFile, setExpandedFile] = useState<string | null>(null);
 
@@ -235,11 +245,28 @@ export function ApprovalCard({
                 Sempre permitir
               </Button>
             )}
+            {/* "Auto mode" (RN-153) — só quando quem chama já confirmou papel
+                maintainer e passou o callback; ausente some o botão em vez de
+                desabilitar sem explicar (action.actor.kind === 'user' também
+                cai aqui: não há AGENTE pra confiar). */}
+            {onActivateAutoMode && (
+              <Button variant="ghost" onClick={onActivateAutoMode}>
+                Modo automático
+              </Button>
+            )}
           </div>
           {variant === 'chat' && podeSemprePermitir && (
             <span className={styles.note}>
               <AlertIcon size={12} />
               &quot;Sempre permitir&quot; grava a regra em .brabo/permissions.json
+            </span>
+          )}
+          {variant === 'chat' && onActivateAutoMode && (
+            <span className={styles.note}>
+              <AlertIcon size={12} />
+              &quot;Modo automático&quot; libera TODA ação futura de {actorLabel} sem perguntar —
+              exceto merge em branch protegida, patch de instrução e paralelismo, que continuam
+              sempre pedindo sua decisão. Dá pra desligar depois no card do agente.
             </span>
           )}
         </>

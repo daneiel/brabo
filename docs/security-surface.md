@@ -221,6 +221,24 @@ o componente `d` da JWK, travado por teste.
   volta ao engine, que o inclui no payload de `agent.response`. Nenhum dado
   novo é lido, nenhuma credencial nova é exposta — é o mesmo nome que já sai
   em `token_usage`.
+- **`PUT /projects/:projectId/agent-autonomy` passou a aceitar `actionType:
+  "*"` — "auto mode" ([RN-153](business-rules.md#rn-153)) —, e a
+  classificação não mudou:** continua `role:maintainer`, o mesmo do `GET`
+  ao lado. A diferença é o que o corpo agora AUTORIZA, não quem pode
+  chamar: a curinga concede autonomia pra QUALQUER tipo de ação do agente
+  de uma vez, em vez de um tipo por vez como antes. A resolução (uma regra
+  ESPECÍFICA sempre vence a curinga) mora inteira no repositório
+  (`DrizzleAgentAutonomyRepository.findMode`), nunca em `decide()` — que
+  segue recebendo só o `PermissionPolicy` já resolvido, exatamente como
+  antes da curinga existir. É por isso que os três tetos absolutos —
+  merge em branch protegida, `instruction_patch`,
+  `parallelize`/`raise_max_parallel` — continuam bloqueando mesmo com a
+  curinga em `auto_approve` ([RN-154](business-rules.md#rn-154)): eles
+  reagem a `current.policy === 'auto_approve'`, nunca à origem dela, e
+  nenhuma exceção precisou entrar em `decide()` pra isso continuar
+  valendo. `ApprovalCard.tsx` só oferece o botão que grava a curinga a
+  quem o cliente já sabe ter `maintainer`/`owner` — mas quem garante o
+  papel de verdade é este mesmo `@RequireRole('maintainer')`, inalterado.
 
 ## Tabela
 

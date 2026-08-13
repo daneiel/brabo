@@ -5,6 +5,7 @@ import type { LlmCredentialProvider } from './models';
 import type { MySpend, WorkspaceSpendReport } from './spend';
 import type {
   AgentAutonomyRule,
+  AgentAutonomyActionType,
   CredentialSpend,
   UsoDeModelo,
   AgentTokenUsage,
@@ -304,7 +305,7 @@ export const listAgentAutonomy = (projectId: string) =>
   get<AgentAutonomyRule[]>(`/projects/${projectId}/agent-autonomy`);
 export const setAgentAutonomy = (
   projectId: string,
-  input: { agentId: string; actionType: ActionType; mode: PermissionPolicy },
+  input: { agentId: string; actionType: AgentAutonomyActionType; mode: PermissionPolicy },
 ) => put<void>(`/projects/${projectId}/agent-autonomy`, input);
 
 // --- Git ---

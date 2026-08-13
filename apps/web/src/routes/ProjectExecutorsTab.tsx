@@ -27,7 +27,7 @@ import { Badge } from '../components/ui/Badge';
 import { Skeleton } from '../components/ui/Skeleton';
 import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
 import { useToast } from '../components/ui/ToastProvider';
-import type { ActionType } from '../lib/api-types';
+import type { AgentAutonomyActionType } from '../lib/api-types';
 import styles from './ProjectOverviewTab.module.css';
 
 /**
@@ -148,7 +148,7 @@ export function ProjectExecutorsTab({ projectId }: { projectId: string }) {
     try {
       await setAgentAutonomy(projectId, {
         agentId,
-        actionType: actionType as ActionType,
+        actionType: actionType as AgentAutonomyActionType,
         mode: mode === 'auto' ? 'auto_approve' : 'require_approval',
       });
       await queryClient.invalidateQueries({ queryKey: ['agent-autonomy', projectId] });
