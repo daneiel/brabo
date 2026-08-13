@@ -100,8 +100,7 @@ defmodule Engine.Harness.Tools.AskStructuredQuestions do
         {:error, "`type` precisa ser um de: #{Enum.join(@tipos_validos, ", ")}"}
 
       Enum.any?(questions, &select_sem_options?/1) ->
-        {:error,
-         "pergunta `type: \"select\"` exige `options` (lista não vazia de strings)"}
+        {:error, "pergunta `type: \"select\"` exige `options` (lista não vazia de strings)"}
 
       true ->
         :ok

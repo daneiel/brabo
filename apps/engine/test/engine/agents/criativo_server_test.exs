@@ -404,8 +404,7 @@ defmodule Engine.Agents.CriativoServerTest do
 
     assert_received {:event_appended, _, _, %{type: "agent.response"}}
 
-    assert_received {:event_appended, _, _,
-                     %{type: "chat.structured_question", payload: payload}}
+    assert_received {:event_appended, _, _, %{type: "chat.structured_question", payload: payload}}
 
     assert payload.questions == [
              %{id: "nome", label: "Qual o nome do produto?", type: "text", options: []},
@@ -418,7 +417,10 @@ defmodule Engine.Agents.CriativoServerTest do
            ]
 
     # O tool call e o resultado entram no histórico como o resto do turno.
-    assert Enum.any?(new_state.messages, &(&1["role"] == "tool" and &1["name"] == "ask_structured_questions"))
+    assert Enum.any?(
+             new_state.messages,
+             &(&1["role"] == "tool" and &1["name"] == "ask_structured_questions")
+           )
   end
 
   test "ask_structured_questions recusado (sem label) vira tool.result de erro, e o agente fala",
