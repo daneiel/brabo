@@ -2,42 +2,34 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import type { Session } from '../lib/api-types';
+import type { Epic, Session } from '../lib/api-types';
 
 /**
- * A garantia de VERDADE é o guardrail no engine: `CriativoServer` recusa
- * `confirm_readiness` (e narra a recusa como `agent.error` no fio, com
- * origem "politica") quando a sessão não tem nenhuma
- * `artifact.business_rule` — ver criativo_server.ex. Este arquivo cobre só a
- * UX complementar: o botão "Estou pronto para produzir" nasce `disabled`
- * (com a dica em `title`) sem regra nenhuma, e libera assim que a MESMA
- * fonte que já alimenta o painel "Regras de negócio" (session-events) tem
- * pelo menos uma.
+ * RN-160 — mirror de `SessionPage.readiness-exige-regra.test.tsx`, agora para
+ * o botão "Confirmar arquitetura pronta" (handoff Arquiteto→Dev Lead): não
+ * basta ter regra de negócio capturada, precisa existir pelo menos 1 história
+ * já PROMOVIDA (`status !== 'draft'` — RN-048, `PromoteStoriesUseCase` move
+ * `draft` para `ready` via `TransitionStoryUseCase`). A fonte é a MESMA que a
+ * aba Backlog já usa (`useBacklog`, `ProjectBacklogTab.tsx`), sem round-trip
+ * novo.
  */
 
 const getSession = vi.fn();
+const confirmArchitectureReadiness = vi.fn();
 
-const EVENTO_CRIATIVO_ATIVO = {
-  id: 'e0',
+const ARQUITETO_ATIVO = {
+  id: 'ev-arq-ativo',
   seq: 1,
   type: 'agent.activated',
-  actor: { kind: 'agent', id: 'criativo' },
-  payload: { agent: 'criativo' },
+  actor: { kind: 'agent', id: 'arquiteto' },
+  payload: { agent: 'arquiteto' },
   createdAt: '2026-08-11T12:00:00.000Z',
 };
 
-const EVENTO_REGRA_DE_NEGOCIO = {
-  id: 'e1',
-  seq: 2,
-  type: 'artifact.business_rule',
-  actor: { kind: 'agent', id: 'criativo' },
-  payload: { title: 'Só maiores de 18', description: 'Idade >= 18', origin: [1] },
-  createdAt: '2026-08-11T12:00:30.000Z',
-};
-
 const eventos = vi.fn<() => { items: unknown[] }>(() => ({
-  items: [EVENTO_CRIATIVO_ATIVO],
+  items: [ARQUITETO_ATIVO],
 }));
+const backlogMock = vi.fn<() => Epic[] | undefined>(() => []);
 
 vi.mock('@tanstack/react-router', () => ({
   Link: ({ to, children, ...rest }: { to: string; children: ReactNode }) => (
@@ -53,7 +45,7 @@ vi.mock('../lib/hooks', () => ({
   usePendingActions: () => ({ data: { items: [] } }),
   useHandoffs: () => ({ data: [] }),
   useCurrentWorkspaceWithRole: () => ({ data: undefined }),
-  useBacklog: () => ({ data: [] }),
+  useBacklog: () => ({ data: backlogMock() }),
 }));
 
 vi.mock('../lib/chat-stream', () => ({ streamChatMessage: vi.fn() }));
@@ -79,6 +71,8 @@ vi.mock('../lib/api-client', async () => {
     acceptHandoff: vi.fn(),
     approveAction: vi.fn(),
     approveAlwaysAction: vi.fn(),
+    confirmArchitectureReadiness: (...args: unknown[]) =>
+      confirmArchitectureReadiness(...args),
     confirmReadiness: vi.fn(),
     denyAction: vi.fn(),
     promoteStories: vi.fn(),
@@ -111,6 +105,33 @@ function sessao(over: Partial<Session> = {}): Session {
   } as Session;
 }
 
+function epico(status: 'draft' | 'ready' | 'in_progress' | 'done'): Epic {
+  return {
+    id: 'epic-1',
+    projectId: 'proj-1',
+    title: 'Épico único',
+    createdAt: '2026-08-11T12:00:00.000Z',
+    stories: [
+      {
+        id: 'story-1',
+        epicId: 'epic-1',
+        title: 'História única',
+        description: null,
+        status,
+        proposedReady: false,
+        returnedReason: null,
+        rf: [],
+        rnf: [],
+        dor: [],
+        dod: [],
+        businessRuleIds: [],
+        tasks: [],
+        createdAt: '2026-08-11T12:00:00.000Z',
+      },
+    ],
+  } as unknown as Epic;
+}
+
 function montar() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -126,39 +147,57 @@ function montar() {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  eventos.mockReturnValue({ items: [EVENTO_CRIATIVO_ATIVO] });
+  eventos.mockReturnValue({ items: [ARQUITETO_ATIVO] });
+  backlogMock.mockReturnValue([]);
   getSession.mockResolvedValue(sessao());
 });
 
-describe('SessionPage — "Estou pronto para produzir" exige regra de negócio', () => {
-  it('sem nenhuma regra capturada, o botão nasce desabilitado com a dica', async () => {
+describe('SessionPage — "Confirmar arquitetura pronta" exige história promovida (RN-160)', () => {
+  it('sem nenhuma história promovida, o botão nasce desabilitado com a dica', async () => {
+    backlogMock.mockReturnValue([epico('draft')]);
     montar();
 
     const botao = await screen.findByRole('button', {
-      name: 'Estou pronto para produzir',
+      name: 'Confirmar arquitetura pronta',
     });
 
     expect(botao).toBeDisabled();
     expect(botao).toHaveAttribute(
       'title',
-      'Registre pelo menos uma regra de negócio com o Criativo antes de confirmar prontidão',
+      'Promova pelo menos uma história no Backlog antes de confirmar a arquitetura',
     );
   });
 
-  it('com pelo menos 1 regra capturada, o botão libera — mesma fonte do painel lateral', async () => {
-    eventos.mockReturnValue({ items: [EVENTO_CRIATIVO_ATIVO, EVENTO_REGRA_DE_NEGOCIO] });
-
+  it('backlog vazio (nenhum épico ainda) também desabilita', async () => {
+    backlogMock.mockReturnValue([]);
     montar();
 
     const botao = await screen.findByRole('button', {
-      name: 'Estou pronto para produzir',
+      name: 'Confirmar arquitetura pronta',
+    });
+
+    expect(botao).toBeDisabled();
+  });
+
+  it('com pelo menos 1 história promovida (ready), o botão libera', async () => {
+    backlogMock.mockReturnValue([epico('ready')]);
+    montar();
+
+    const botao = await screen.findByRole('button', {
+      name: 'Confirmar arquitetura pronta',
     });
 
     expect(botao).not.toBeDisabled();
     expect(botao).not.toHaveAttribute('title');
+  });
 
-    // O painel "Regras de negócio" (mesma fonte, sem busca própria) mostra a
-    // regra registrada — prova de que não há uma segunda leitura divergente.
-    expect(screen.getByText('Só maiores de 18')).toBeInTheDocument();
+  it('história em progresso ou concluída também conta como promovida', async () => {
+    backlogMock.mockReturnValue([epico('in_progress')]);
+    montar();
+
+    const botao = await screen.findByRole('button', {
+      name: 'Confirmar arquitetura pronta',
+    });
+    expect(botao).not.toBeDisabled();
   });
 });
