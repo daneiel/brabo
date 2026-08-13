@@ -496,6 +496,15 @@ Vale reparar que o nome repetido nos dois lados esconde a assimetria: a rota
 pública é o PORTÃO, a interna é o EXECUTOR. É a mesma divisão de
 `/actions/execute`, e a razão de ela existir é idêntica.
 
+**Perguntas estruturadas do Criativo (RN-162) não abrem rota interna nova.** A
+rota pública `POST /projects/:projectId/sessions/:sessionId/agents/:agent/structured-question/:questionSetId/answer`
+(`AnswerStructuredQuestionUseCase`) grava `chat.structured_question_answered`
+e então chama esta MESMA `/sessions/:id/agent/message` acima — as respostas do
+formulário viram uma mensagem concatenada ("1. {label}: {resposta}"), como se
+o usuário tivesse digitado no fio. Do lado do engine não existe canal separado
+para "ler resposta estruturada": o Criativo lê o próximo `chat.message`
+normalmente, no turno seguinte.
+
 ### Saúde e métricas
 
 | caminho | responde |
