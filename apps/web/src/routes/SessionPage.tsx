@@ -45,6 +45,7 @@ import { ApprovalCard } from '../components/ApprovalCard';
 import { ActivityFeed } from '../components/ActivityFeed';
 import { EventItem } from '../components/EventItem';
 import { AvatarDoAgente } from '../components/ui/AvatarDoAgente';
+import { MarkdownMessage } from '../components/ui/MarkdownMessage';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Carousel, type CarouselSlide } from '../components/ui/Carousel';
@@ -65,6 +66,7 @@ import {
   ChevronRightIcon,
   LayoutSidebarIcon,
   ModelIcon,
+  PrIcon,
   StackIcon,
   StopSquareIcon,
   UserIcon,
@@ -1055,7 +1057,13 @@ export function SessionPage({
                     não foi registrado.
                   </div>
                 ) : (
-                  <div className={styles.bubble}>{text}</div>
+                  // RN-158: Markdown leve (negrito, cabeçalho, lista, fence de
+                  // código com realce) — antes `#`/`**`/```` ``` ```` apareciam
+                  // literais no balão. Só `agent.response`: `chat.message` é
+                  // texto DIGITADO pelo usuário, não saída de LLM.
+                  <div className={styles.bubble}>
+                    <MarkdownMessage text={text} />
+                  </div>
                 )}
               </div>
             </div>
@@ -2037,6 +2045,7 @@ export function SessionPage({
 
         {asideOpen && (
           <ContextAside
+            projectId={projectId}
             actions={actionsQuery.data?.items ?? []}
             events={events}
             logOpen={logOpen}
@@ -2082,7 +2091,39 @@ export function SessionPage({
   );
 }
 
+/**
+ * Um artefato do painel "Artefatos gerados" (RN-159) — PR (dev ou ADR do
+ * Arquiteto) e épico/história do PO, na mesma lista, agrupados por QUEM
+ * gerou. `ordenacao` usa o mesmo eixo de `ordemDaAcaoNaTimeline` (RN-155)
+ * pras ações — nunca `action.seq` cru, pelo mesmo motivo documentado lá:
+ * é um bigserial GLOBAL da tabela inteira, incomparável entre artefatos de
+ * origens diferentes.
+ */
+interface ArtefatoGerado {
+  key: string;
+  actorId: string;
+  node: ReactNode;
+  ordenacao: number;
+}
+
+/** `pr_open` (PR de dev) e `open_adr_pr` (PR de ADR do Arquiteto) — os dois
+ *  são "uma PR foi aberta", só o autor e o conteúdo mudam; o painel os
+ *  mostra juntos, com o MESMO ícone. */
+const TITULO_PADRAO_POR_TIPO_DE_PR: Partial<Record<ProposedAction['actionType'], string>> = {
+  pr_open: 'Pull request',
+  open_adr_pr: 'ADR',
+};
+
+function urlDaPr(action: ProposedAction): string | null {
+  // `executionResult` no tipo do web é `TerminalExecutionResult | null`
+  // (o único payload de execução tipado hoje), mas `pr_open`/`open_adr_pr`
+  // gravam outra forma — mesmo cast que `ProjectOverviewTab.tsx` já faz pra
+  // ler `pullRequestUrl` de uma PR de dev.
+  return (action.executionResult as { pullRequestUrl?: string } | null)?.pullRequestUrl ?? null;
+}
+
 function ContextAside({
+  projectId,
   actions,
   events,
   logOpen,
@@ -2091,6 +2132,7 @@ function ContextAside({
   citedEvent,
   citedEventMissing,
 }: {
+  projectId: string;
   actions: ProposedAction[];
   events: SessionEvent[];
   logOpen: boolean;
@@ -2099,8 +2141,81 @@ function ContextAside({
   citedEvent?: SessionEvent;
   citedEventMissing?: boolean;
 }) {
-  const prActions = actions.filter((a) => a.actionType === 'pr_open');
   const businessRules = events.filter((e) => e.type === 'artifact.business_rule');
+
+  // Artefatos gerados (RN-159): PR (dev ou ADR) + épico/história do PO, numa
+  // lista só, agrupada por AGENTE. module_map/C4 ficaram de FORA desta
+  // rodada — decisão registrada no PR: os dois são estado VIGENTE do
+  // projeto (uma versão corrente, sobrescrita a cada geração), não um
+  // artefato datado por SESSÃO como PR/épico/história; a "Visão Geral"
+  // (`ProjectOverviewTab.tsx`) já é o lugar deles, sem âncora própria hoje —
+  // adicionar uma set fora do escopo desta entrega.
+  const artefatos: ArtefatoGerado[] = [];
+
+  for (const a of actions) {
+    if (a.actionType !== 'pr_open' && a.actionType !== 'open_adr_pr') continue;
+    const titulo = (a.payload as { title?: string }).title ?? TITULO_PADRAO_POR_TIPO_DE_PR[a.actionType]!;
+    const url = urlDaPr(a);
+    artefatos.push({
+      key: `pr-${a.id}`,
+      actorId: a.actor.id,
+      ordenacao: ordemDaAcaoNaTimeline(a, events),
+      node: url ? (
+        <a
+          key={`pr-${a.id}`}
+          href={url}
+          target="_blank"
+          rel="noreferrer"
+          className={[styles.artefatoItem, styles.artefatoItemLink].join(' ')}
+        >
+          <PrIcon size={13} className={styles.artefatoItemIcone} />
+          <span className={styles.artefatoItemTitulo}>{titulo}</span>
+        </a>
+      ) : (
+        <span key={`pr-${a.id}`} className={styles.artefatoItem}>
+          <PrIcon size={13} className={styles.artefatoItemIcone} />
+          <span className={styles.artefatoItemTitulo}>{titulo}</span>
+        </span>
+      ),
+    });
+  }
+
+  for (const e of events) {
+    if (e.type !== 'backlog.epic_created' && e.type !== 'backlog.story_created') continue;
+    const payload = e.payload as { title?: unknown };
+    const titulo = typeof payload?.title === 'string' ? payload.title : '(sem título)';
+    artefatos.push({
+      key: `backlog-${e.id}`,
+      actorId: e.actor.id,
+      ordenacao: e.seq,
+      node: (
+        <Link
+          key={`backlog-${e.id}`}
+          to="/projects/$projectId"
+          params={{ projectId }}
+          search={{ tab: 'backlog' }}
+          className={[styles.artefatoItem, styles.artefatoItemLink].join(' ')}
+        >
+          <StackIcon size={13} className={styles.artefatoItemIcone} />
+          <span className={styles.artefatoItemTitulo}>{titulo}</span>
+        </Link>
+      ),
+    });
+  }
+
+  artefatos.sort((a, b) => a.ordenacao - b.ordenacao);
+
+  // Agrupado por `actorId` — o mesmo padrão de colapso do fio principal
+  // (RN-138, `timelineAgrupada`), num `Disclosure` por agente, com a ORDEM
+  // de primeira aparição (não alfabética: reflete a ordem em que os
+  // artefatos nasceram).
+  const gruposDeArtefatos: { actorId: string; itens: ArtefatoGerado[] }[] = [];
+  for (const item of artefatos) {
+    const grupo = gruposDeArtefatos.find((g) => g.actorId === item.actorId);
+    if (grupo) grupo.itens.push(item);
+    else gruposDeArtefatos.push({ actorId: item.actorId, itens: [item] });
+  }
+
   // Opções do filtro "por agente" do feed (Fase 8d — a prop existia desde
   // sempre em ActivityFeed, mas nenhum dos dois call sites a passava, então
   // o filtro nunca funcionou). Deriva dos atores REAIS desta sessão — pega
@@ -2157,16 +2272,39 @@ function ContextAside({
       </div>
 
       <div className={styles.asideSection}>
-        <div className={styles.asideHeader}>Artefatos gerados</div>
-        {prActions.length === 0 ? (
-          <div className={styles.asideEmpty}>Nada ainda.</div>
-        ) : (
-          prActions.map((a) => (
-            <div key={a.id} className={styles.asideItem}>
-              {(a.payload as { title?: string }).title ?? 'Pull request'}
-            </div>
-          ))
-        )}
+        {/* RN-159: agrupado por agente (mesmo `Disclosure` do colapso do fio,
+            RN-138) — antes era uma lista PLANA só de `pr_open`, sem dizer
+            QUEM abriu cada PR nem incluir épico/história do PO. */}
+        <Disclosure
+          titulo="Artefatos gerados"
+          trailing={artefatos.length}
+          padraoAberto
+          classNameCabecalho={styles.asideHeader}
+        >
+          {gruposDeArtefatos.length === 0 ? (
+            <div className={styles.asideEmpty}>Nada ainda.</div>
+          ) : (
+            gruposDeArtefatos.map(({ actorId, itens }) => (
+              <div key={actorId} style={corDoAgente(actorId)}>
+                <Disclosure
+                  titulo={
+                    <span className={styles.agentGroupTitulo}>
+                      <AvatarDoAgente id={actorId} />
+                      {nomeDoAgente(actorId)}
+                    </span>
+                  }
+                  trailing={itens.length}
+                  classNameCabecalho={styles.agentGroupCabecalho}
+                  className={styles.agentGroup}
+                >
+                  <div className={styles.artefatoGrupoRegiao}>
+                    {itens.map((item) => item.node)}
+                  </div>
+                </Disclosure>
+              </div>
+            ))
+          )}
+        </Disclosure>
       </div>
 
       <div className={styles.asideSection}>

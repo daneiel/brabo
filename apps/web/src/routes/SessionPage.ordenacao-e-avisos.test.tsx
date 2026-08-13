@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, act, waitFor } from '@testing-library/react';
+import { render, screen, act, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import type { Handoff, ProposedAction, Session } from '../lib/api-types';
 import type { SessionChannelHandlers } from '../lib/session-channel';
@@ -401,8 +401,11 @@ describe('RN-157 — aviso compacto do PO ao criar épico/história', () => {
     expect(pill).toBeInTheDocument();
 
     // O nome do agente continua visível, só que dentro da pílula compacta —
-    // não mais num avatar de 32px com cabeçalho próprio.
-    expect(screen.getByText('PO')).toBeInTheDocument();
+    // não mais num avatar de 32px com cabeçalho próprio. Escopado dentro da
+    // PRÓPRIA pílula (RN-159): o painel "Artefatos gerados" também passou a
+    // mostrar "PO" — como nome do GRUPO que a mesma criação de épico
+    // alimenta —, e um `getByText` sem escopo bateria nos dois.
+    expect(within(pill).getByText('PO')).toBeInTheDocument();
 
     const link = screen.getByRole('link', { name: /Ver no Backlog/ });
     expect(link).toHaveAttribute('href', '/projects/proj-1?tab=backlog');
