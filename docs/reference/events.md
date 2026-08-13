@@ -55,6 +55,8 @@ Uma linha em `session_events`, append-only, com `seq` densa por sessão
 | tipo | quando |
 |---|---|
 | `chat.message` | mensagem no fio da sessão, do usuário ou do agente |
+| `chat.structured_question` | o Criativo pediu VÁRIAS respostas de uma vez, num formulário — ferramenta `ask_structured_questions` (RN-162) |
+| `chat.structured_question_answered` | o usuário respondeu o formulário; as respostas também voltam como `chat.message` para o agente ler |
 | `agent.activated` | um agente assumiu trabalho na sessão |
 | `agent.response` | resposta completa do agente, já consolidada |
 | `tool.result` | resultado de uma execução de ferramenta, gravado pelo hook `Engine.Harness.Hooks.EventLog` |
@@ -95,7 +97,7 @@ Uma linha em `session_events`, append-only, com `seq` densa por sessão
 | tipo | quando |
 |---|---|
 | `execution.plan_proposed` | o Dev Lead propôs o plano: quantos agentes por módulo e por quê (FASE 14d) |
-| `execution.activated` | a fase de execução começou |
+| `execution.activated` | a fase de execução começou. **Só entra em sessão `criativa`** — numa `consultiva` o append responde 409 ([RN-097](../business-rules.md#rn-097)). Continua sendo ele, e não a coluna `sessions.kind`, quem diz que uma sessão ESTÁ executando |
 | `execution.parallelization_suggested` | o sistema propôs paralelizar |
 | `execution.parallelization_accepted` | aceita — o subagente herda o teto do agente base |
 | `dev.started` | o dev agent começou o ciclo (ativação, paralelização — NÃO reidratação, que nunca redispara) |
@@ -203,6 +205,17 @@ recarrega a página não as recupera — recupera o event log.
 
 Um evento de domínio quase sempre gera um `event.appended`; o inverso não vale.
 
+### Quem pode ouvir (RN-108)
+
+Entrar no canal `session:<id>` — e portanto receber qualquer um destes
+broadcasts — exige um ticket opaco de uso único emitido por
+`POST /projects/:projectId/sessions/:sessionId/socket-ticket` (TTL de 30s).
+Até a RN-108 o `connect/3` do socket Phoenix não checava nada além do
+`session_id` existir: quem descobrisse o UUID entrava e ouvia tudo. O ticket
+não é persistido/lido no event log — mora em `session_socket_tickets`,
+verificado e consumido pelo próprio engine — então não aparece no inventário
+de eventos de domínio abaixo. Ver [RN-108](../business-rules.md#rn-108).
+
 ## Span
 
 Nomes de span OpenTelemetry. Uma sessão é uma **trace raiz** atravessando api e
@@ -276,15 +289,15 @@ respeito.
 
 > ⚠️ Bloco gerado por `pnpm docs:generate`. Não edite à mão — o próximo build sobrescreve.
 
-Extraído dos pontos de emissão: **81 identificadores**, dos quais **2** não aparecem descritos acima.
+Extraído dos pontos de emissão: **83 identificadores**, dos quais **2** não aparecem descritos acima.
 
 - `action.failed` <sub>(apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts)</sub>
 - `agent.activated` <sub>(apps/api/src/application/use-cases/agents/activate-agent.use-case.ts)</sub>
 - `agent.delta` <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub>
-- `agent.done` <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub>
+- `agent.done` <sub>(apps/engine/lib/engine/agents/turno_assincrono.ex)</sub>
 - `agent.error` <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub>
 - `agent.response` <sub>(apps/api/src/application/use-cases/llm/send-chat-message.use-case.ts)</sub>
-- `agent.status` <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub>
+- `agent.status` <sub>(apps/engine/lib/engine/agents/turno_assincrono.ex)</sub>
 - `agent.turn` <sub>(apps/engine/lib/engine/harness/tool_loop.ex)</sub>
 - `anamnese.profile_updated` <sub>(apps/api/src/application/use-cases/anamnese/record-proficiency.use-case.ts)</sub>
 - `anamnese.run_completed` <sub>(apps/api/src/application/use-cases/anamnese/record-proficiency.use-case.ts)</sub>
@@ -320,6 +333,8 @@ Extraído dos pontos de emissão: **81 identificadores**, dos quais **2** não a
 - `bootstrap.step_started` <sub>(apps/api/src/application/use-cases/git/bootstrap-runner.ts)</sub>
 - `budget.threshold_crossed` <sub>(apps/api/src/application/use-cases/llm/record-llm-usage.use-case.ts)</sub>
 - `chat.message` <sub>(apps/api/src/application/use-cases/agents/send-agent-message.use-case.ts)</sub>
+- `chat.structured_question` <sub>(apps/engine/lib/engine/harness/tools/ask_structured_questions.ex)</sub>
+- `chat.structured_question_answered` <sub>(apps/api/src/application/use-cases/agents/answer-structured-question.use-case.ts)</sub>
 - `delegation.completed` <sub>(apps/api/src/application/use-cases/execution/record-delegation.use-case.ts)</sub>
 - `delegation.dispensed` <sub>(apps/api/src/application/use-cases/execution/record-delegation.use-case.ts)</sub>
 - `delegation.failed` <sub>(apps/api/src/application/use-cases/execution/record-delegation.use-case.ts)</sub>

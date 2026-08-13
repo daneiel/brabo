@@ -25,10 +25,21 @@ defmodule Engine.Gates.QaLeadServer do
 
   use GenServer, restart: :temporary
 
-  @subagentes ["qa-automacao", "qa-performance-seguranca"]
+  # DERIVADO da lista canônica da api (FASE 18) — era a terceira cópia escrita
+  # à mão, e a única que nenhum teste travava: subagente novo lá dentro passava
+  # a existir sem que este `Wake.subscribe` soubesse.
+  @subagentes Engine.Agents.Areas.membros("qa")
 
   alias Engine.Dev.{ContextBuilder, DevAgentServer, DevAgentState, Wake}
-  alias Engine.Gates.{Dispatcher, QaAutomacaoAgent, QaLead, QaPerformanceSegurancaAgent}
+
+  alias Engine.Gates.{
+    Dispatcher,
+    GateState,
+    QaAutomacaoAgent,
+    QaLead,
+    QaPerformanceSegurancaAgent
+  }
+
   alias Engine.Harness.ArtifactEmitter
   alias Engine.Sessions.EngineApiClient
 
@@ -85,6 +96,18 @@ defmodule Engine.Gates.QaLeadServer do
     project_id = state.project_id
     session_id = dev_state.session_id
 
+    # ADR 0067: o ciclo entra em voo AQUI, antes de qualquer subagente rodar —
+    # é o que permite ao `Engine.Gates.GateRescuer` achar um ciclo que nunca
+    # chegou a registrar veredito nenhum (crash logo no início, ou no meio de
+    # um subagente suspenso esperando aprovação).
+    GateState.upsert!(%{
+      project_id: project_id,
+      task_id: task_id,
+      gate: "qa",
+      session_id: session_id,
+      step: "in_progress"
+    })
+
     case ContextBuilder.fetch(project_id, session_id, task_id) do
       {:ok, dev_context} ->
         delegacoes = decidir_delegacoes(dev_context.story)
@@ -126,6 +149,19 @@ defmodule Engine.Gates.QaLeadServer do
                emVoo.dev_context
              ) do
           {:awaiting, pendente} ->
+            # Só diagnóstico (ADR 0067) — o resgate NÃO tenta retomar este
+            # `ctx` específico (ele não sobrevive a um restart, mesma
+            # limitação do `laço_pendente` do dev agent); ele reinicia a área
+            # inteira. `step` continua "in_progress".
+            GateState.upsert!(%{
+              project_id: emVoo.project_id,
+              task_id: emVoo.task_id,
+              gate: "qa",
+              session_id: emVoo.session_id,
+              step: "in_progress",
+              subagent: d.subagent
+            })
+
             %{
               state
               | pendente:
@@ -339,6 +375,11 @@ defmodule Engine.Gates.QaLeadServer do
       "qa-lead",
       origin
     )
+
+    # O ciclo desta tentativa terminou (bloqueado) — `mark_task_blocked` já é
+    # durável e já acorda o dev agent (mesma transação, outbox própria); nada
+    # mais a resgatar (ADR 0067).
+    GateState.delete(project_id, task_id, "qa")
   end
 
   # Mesma chamada, byte a byte, que o QAAgent da Fase 4a fazia — é o que
@@ -359,17 +400,50 @@ defmodule Engine.Gates.QaLeadServer do
 
     case result do
       {:ok, %{"nextAction" => "correct"}} ->
-        DevAgentServer.correct(project_id, dev_state.agent_id, %{
+        # ADR 0067: o veredito JÁ está gravado (durável, na api) — o que falta
+        # é só esta chamada em processo. Persiste ANTES de chamá-la, pra o
+        # `GateRescuer` reenviar exatamente isto se o processo cair nesta
+        # janela; apaga DEPOIS, porque a chamada em si é local e instantânea
+        # (sem I/O de rede no meio) — a janela de perda que sobra é a mesma
+        # ordem de grandeza de outras já aceitas no produto (ex.: a entrega
+        # at-most-once do `Engine.Dev.Wake`, ADR 0045).
+        findings = %{gate: "qa", reason: resumo, diagnosis: Enum.join(itens, "; ")}
+
+        GateState.upsert!(%{
+          project_id: project_id,
+          task_id: task_id,
           gate: "qa",
-          reason: resumo,
-          diagnosis: Enum.join(itens, "; ")
+          session_id: dev_state.session_id,
+          step: "dispatch_pending",
+          next_action: "correct",
+          correction_reason: resumo,
+          correction_diagnosis: findings.diagnosis
         })
 
+        DevAgentServer.correct(project_id, dev_state.agent_id, findings)
+        GateState.delete(project_id, task_id, "qa")
+
       {:ok, %{"nextAction" => "run_secops"}} ->
+        GateState.upsert!(%{
+          project_id: project_id,
+          task_id: task_id,
+          gate: "qa",
+          session_id: dev_state.session_id,
+          step: "dispatch_pending",
+          next_action: "run_secops"
+        })
+
         :ok = Dispatcher.run_secops(project_id, task_id)
+        GateState.delete(project_id, task_id, "qa")
 
       _ ->
-        :ok
+        # `done`, ou um erro/estado inesperado da api (ex.: 500 de
+        # `InvalidGateActionError` — sempre possível se o `GateRescuer`
+        # reenviar um ciclo cujo veredito já tinha sido registrado por outra
+        # via; ver ADR 0067). Nos dois casos não há dispatch pendente: `done`
+        # já é durável via outbox (`RecordGateVerdictUseCase`), e um erro não
+        # tem o que resgatar de novo.
+        GateState.delete(project_id, task_id, "qa")
     end
   end
 

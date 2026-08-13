@@ -156,20 +156,41 @@ São duas famílias:
 
 - **leitura do próprio worktree** — `ls`, `pwd`, `find`, `cat`, `head`, `tail`,
   `grep`, `wc`, `echo`, `git status`, `git diff`, `git log`;
+- **leitura de histórico/remoto/config do git** — `git branch
+  -a/-r/-v/--list/--show-current`, `git remote -v`, `git remote show`, `git
+  worktree list`, `git show`, `git for-each-ref`, `git ls-tree`, `git
+  rev-parse`, `git config --get` (ver [RN-143](../business-rules.md#rn-143));
 - **build e teste** — `pnpm install`, `pnpm test`, `npm run`, `npx vitest`,
   `mix test`, `pytest`, `go test`, `cargo test`, entre outros.
 
-A segunda família existe porque `ReportDone` só deixa abrir PR depois de um
+A terceira família existe porque `ReportDone` só deixa abrir PR depois de um
 `terminal` com `exit 0` no histórico. A primeira existe porque o agente **olha
 antes de construir**: sem ela, cada `ls -la` num repositório recém-provisionado
 caía em aprovação, voltava como `status pending` — e não como a saída do
 comando — e queimava uma iteração do ToolLoop até a task morrer por limite
-(ver [RN-068](../business-rules.md#rn-068)).
+(ver [RN-068](../business-rules.md#rn-068)). A segunda existe porque `git
+status`/`diff`/`log` bastam pra olhar o worktree, mas não pra o agente se
+orientar no histórico e nos remotos de um repositório recém-adotado — uma
+sessão real gastou dezenas de aprovações manuais em subcomandos como `git
+branch -a` ou `git worktree list` que caíam fora do `allow` e reprovavam para
+aprovação manual qualquer comando composto em que aparecessem.
 
 Isto NÃO afrouxa nada do que está acima. Continua valendo que `deny` vence
 `allow`, que os padrões embutidos seguem ativos, que o casamento é por prefixo
 de **token** (`ls` liberado não libera `lsof`) e que comando composto exige que
 CADA segmento case — então `ls && rm -rf /` não passa por causa do `ls`.
+
+A segunda família tem um cuidado a mais, porque o casamento por prefixo
+permite QUALQUER coisa depois do prefixo que bateu: um padrão pelado
+`Terminal(git branch)` bateria tanto em `git branch -D nome` (apaga) quanto em
+`git branch nome-nova` (cria) quanto na listagem sozinha, porque ele não
+enxerga o que vem depois. Por isso `branch`, `remote`, `worktree` e `config` —
+os quatro que têm irmão MUTANTE — só entraram ANCORADOS pela flag que torna a
+leitura inequívoca (`-a`/`-v`/`show`/`list`/`--get`), nunca pelo verbo pelado;
+`git branch -D/-d/-m/-M`, `git remote add/remove/set-url`, `git worktree
+add/remove/prune` e `git config <chave> <valor>` (sem `--get`) continuam
+exigindo aprovação. `show`, `log`, `for-each-ref`, `ls-tree` e `rev-parse`
+não precisaram de âncora: nenhuma continuação deles muta o repositório.
 
 Auto-aprovar `terminal` por `agent_autonomy` seria diferente e não é o que se
 faz: liberaria QUALQUER comando dentro do container do engine, sem o arquivo no
@@ -181,7 +202,9 @@ meio.
 flowchart TD
   A[proposed_action] --> B{papel >= mínimo?}
   B -->|não| D1[deny: IAM insuficiente]
-  B -->|sim| C[base: require_approval]
+  B -->|sim| Z{terminal pede git push,<br/>PR ou deploy?}
+  Z -->|sim| D4[deny: fronteira do container<br/>use a ação tipada — RN-106]
+  Z -->|não| C[base: require_approval]
   C --> D{agent_autonomy tem opinião?}
   D -->|deny| D2[deny]
   D -->|outra| E[adota a opinião]
@@ -199,13 +222,69 @@ flowchart TD
   H -->|não| J[veredito final]
 ```
 
+### "Auto mode": a curinga de `agent_autonomy` ([RN-153](../business-rules.md#rn-153))
+
+O nó `agent_autonomy tem opinião?` do diagrama acima não sabe, e não precisa
+saber, se a opinião veio de uma regra ESPECÍFICA (`actionType: "terminal"`)
+ou da curinga `actionType: "*"` — "auto mode": autonomia pra QUALQUER tipo
+de ação daquele agente, ligada com um clique em "Modo automático" no
+`ApprovalCard`. A resolução acontece ANTES deste diagrama começar, num
+repositório só: `DrizzleAgentAutonomyRepository.findMode` busca a regra
+específica e a curinga na mesma consulta, e devolve a específica quando as
+duas existem — gravar `terminal: deny` com `"*": auto_approve` ligado
+continua negando `terminal` desse agente, liberando o resto.
+
+É por isso que o diagrama não ganhou um nó novo, e é a prova de que os
+tetos, logo abaixo, valem para "auto mode" sem exceção declarada em lugar
+nenhum: eles reagem a `current.policy === 'auto_approve'`, nunca à origem
+dela ([RN-154](../business-rules.md#rn-154)).
+
+"Auto mode" exige `maintainer` — mesmo papel que já protegia
+`PUT .../agent-autonomy` antes da curinga existir. Desligar reusa o toggle
+manual/auto que o card do agente já tinha na Visão Geral/Executores: com a
+curinga gravada, o toggle passa a editar ELA em vez do tipo representativo
+de sempre, e "manual" nele é a mesma curinga regravada como
+`require_approval`.
+
+## A fronteira do container (RN-106)
+
+Aplicada **antes** de qualquer estágio permissivo, e não como teto no fim: `git
+push`, `git remote add`/`set-url`, `git merge`, os CLIs de provider (`gh pr
+create`, `gh pr merge`, `glab mr create`/`merge`, releases e workflow dispatch)
+e os comandos de deploy comuns (`kubectl apply`, `helm upgrade`, `terraform
+apply`, `docker push`, `npm publish`, ...) num comando `terminal` são **`deny`
+imediato**, qualquer que seja o `permissions.json` ou o `agent_autonomy`
+([ADR 0065](../adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md)).
+
+Não é `require_approval` de propósito: existe "sempre permitir", que grava o
+padrão em `allow` — bastaria um clique para essa segunda porta ficar aberta
+para sempre. `deny` vence `allow` em qualquer estágio, e é a única forma que
+não pode ser contornada por um clique só.
+
+O casamento é por **prefixo de tokens** (`apps/api/src/domain/actions/external-effect.ts`),
+ignorando flags globais no meio — `git -C /tmp push` casa `git push`. Cada
+segmento de um comando composto é verificado: `pnpm test && git push origin
+main` é barrado pelo segundo segmento, do mesmo jeito que o comando composto já
+exige que todo segmento case para virar `auto_approve`.
+
+Negar não tira poder do agente: a mensagem de erro diz qual ação **tipada**
+usar — `git_push`, `git_merge` ou `pr_open` — que nasce `proposed_action`,
+segue o pipeline normal (papel mínimo, decisão do usuário) e registra no event
+log o que foi empurrado e para onde. É o caminho que o dev agent já usa hoje
+para propor push (`agent_io.ex`); o que muda é que agora ele é o **único**
+caminho, garantido por código.
+
 ## Escopo de caminho
 
 Um comando de `terminal` é avaliado também por **onde ele toca**, não só pelo
 verbo ([ADR 0055](../adr/0055-escopo-de-caminho-na-politica-de-terminal.md),
 [RN-075](../business-rules.md#rn-075)). A pasta do projeto —
-`<PROJECT_WORKSPACES_ROOT>/<projectId>`, onde vivem o `permissions.json` e todos
-os worktrees de agente — é o **escopo**.
+`<PROJECT_WORKSPACES_ROOT>/<workspace_dir_name>`, onde vivem o
+`permissions.json` e todos os worktrees de agente — é o **escopo**.
+`workspace_dir_name` ([ADR 0066](../adr/0066-nome-de-pasta-legivel-do-workspace.md),
+[RN-109](../business-rules.md#rn-109)) é o nome de pasta congelado na
+criação do projeto — legível (`<slug>-<8 chars do id>`) num projeto novo, o
+UUID puro num projeto de antes dessa mudança.
 
 A comparação de caminho é **léxica e sem regex sobre a entrada**: o corte de
 barras finais é varredura O(n), não `.replace(/\/+$/, '')`. O padrão antigo foi

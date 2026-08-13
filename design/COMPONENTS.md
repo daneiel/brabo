@@ -6,18 +6,108 @@ Fonte: projeto claude.ai/design `1c960ca8-5e00-4558-8ced-80dfbdf01027`
 (`Brabo App/Project/Session/Approvals/Settings.dc.html`), extraídos via
 `DesignSync` em 2026-07-23. Esses `.dc.html` usam a sintaxe de template do
 canvas do claude.ai/design (`sc-for`, `sc-if`, `{{ }}`, atributos
-`style-hover`/`style-focus`) — não são código executável, e não foram
-copiados verbatim pro repo (conteúdo grande, sem valor extra sobre esta
-extração curada; o projeto original permanece acessível via
-`DesignSync(get_file)` se for preciso reconferir algum detalhe). Este
+`style-hover`/`style-focus`) — não são código executável. Este
 arquivo é a base pra implementação real em React/TSX — todo valor de cor/
 espaçamento referencia os tokens de `tokens.css`, nunca hex cru.
 
-Convenção geral confirmada em todas as telas: ícones outline (stroke 1.6,
-grid 24px, `currentColor`), botões com 3 variantes (primary/secondary/
-ghost) × 4 estados (default/hover/focus/disabled), `:hover`/`:focus` real
-via CSS (o `style-hover` do mockup não existe em CSS/React — precisa de
-CSS Modules ou styled approach equivalente, nunca inline-only).
+**Desde 2026-08-08 (FASE 16) a referência viva é o handoff versionado em
+`design_handoff_brabo/`** — README com a especificação e 8 arquivos `.dc.html`
+de alta fidelidade. O que este arquivo diz continua valendo; o que o handoff
+acrescenta está nas três seções de fundação abaixo. Regra que o próprio README
+do handoff estabelece e que vale aqui: os `.dc.html` são **referência de
+design, não código de produção para copiar** — a implementação usa os padrões
+do `apps/web`.
+
+Convenção geral confirmada em todas as telas: ícones outline (stroke 1.6–2.0,
+grid 24px, `currentColor`, `stroke-linecap`/`stroke-linejoin: round`), botões
+com 3 variantes (primary/secondary/ghost) × 4 estados (default/hover/focus/
+disabled), `:hover`/`:focus` real via CSS (o `style-hover` do mockup não existe
+em CSS/React — precisa de CSS Modules ou styled approach equivalente, nunca
+inline-only). Nenhum asset binário: todo ícone é SVG inline, e o único asset de
+marca é o monograma documentado abaixo — que é **componente, nunca imagem
+rasterizada**.
+
+## Tipografia — a escala do handoff
+
+As três famílias e o que cada uma carrega. A carga é auto-hospedada
+(`@font-face` em `apps/web/src/index.css` apontando para `public/fonts/`); o
+handoff pede o `<link>` do Google Fonts e **essa é a única divergência
+deliberada** — ver o ADR 0036 e o cabeçalho de `tokens.css`.
+
+- **Space Grotesk** (`var(--font-heading)`) — títulos, nomes de agente e de
+  projeto, wordmark. Pesos 600/700. Título de seção 18px/600; H1 22px/700
+  `letter-spacing:-.02em`; wordmark 700 `letter-spacing:-.045em`.
+- **Archivo** (`var(--font-body)`) — corpo, labels, botões. Pesos 400/500/600.
+  Corpo 13px, label 12px, botão 13px/600.
+- **IBM Plex Mono** (`var(--font-mono)`) — código, diffs, terminal, contadores
+  de token, caminhos, chaves, IDs e badges de status. 10–13px. Label de
+  cabeçalho de tabela: 10px/600, `letter-spacing:.05em`, uppercase.
+
+A regra por trás da lista: mono não é só para código. Ele marca **valor que a
+pessoa vai comparar, copiar ou digitar** — hash, path, id, contagem. É o que
+mantém título e dado distinguíveis mesmo em 10px.
+
+## Alturas, raios, sombras e transições
+
+Grade de 8px. Padding de card 14–18px; padding de célula de tabela 10–11px ×
+14px.
+
+| altura | onde |
+|---|---|
+| 44px | barra de topo; botão primário do login |
+| 42px | input; botão secundário do login |
+| 36px | aba do editor |
+| 28–36px | botão em contexto denso |
+| 28px | breadcrumb |
+| 24px | status bar |
+| 21px | linha de código |
+
+Raios: 4–5px (badge mono), 6–7px (input pequeno, botão de ícone), 8px (botão,
+input, card pequeno — `var(--radius-md)`), 10–12px (card, tabela —
+`var(--radius-lg)`), 22px (tile de marca grande). Os tokens cobrem os três
+degraus que a UI usa em volume (`--radius-sm` 4px, `--radius-md` 8px,
+`--radius-lg` 12px, `--radius-full`); 6–7px e 22px são valores de contexto
+único e ficam escritos onde são usados.
+
+Sombras: `var(--shadow)` é a padrão (`0 1px 2px rgba(0,0,0,.4), 0 12px 32px
+rgba(0,0,0,.45)`); `var(--shadow-lg)` é a do card de login
+(`0 24px 60px rgba(0,0,0,.55)`).
+
+Transições: 120–130ms para cor e borda; `bfade` .13s ease-out para dropdowns;
+caret do terminal 1.05s step-end; pulso ao vivo `bpulse` 2.4s ease-in-out
+infinite (opacidade 1 → .35); spinner `bspin` .7s linear. Toda animação
+contínua para em `prefers-reduced-motion` — o elemento fica, só o movimento
+sai (ver "Botão com `loading`").
+
+Cores derivadas saem sempre de `color-mix(in srgb, <token> N%, transparent)` —
+tipicamente 11–15% para fundo de chip e 34–45% para borda de chip. Nunca um
+hex novo inventado para "a versão clara de".
+
+## Marca — o monograma B
+
+Haste vertical sólida + dois chevrons. De perto é a letra B; de longe lê-se
+`>>` — agentes avançando em cadeia. O chevron inferior fica a **58% de
+opacidade**, e isso é semântico: é o handoff ainda em execução.
+
+SVG canônico (`viewBox="0 0 24 24"`, `fill:none`, `stroke-linecap` e
+`stroke-linejoin: round`):
+
+```html
+<path d="M5.4 3.6v16.8" stroke-width="3.4"/>
+<path d="M10.4 4.6l5.6 3.8-5.6 3.8" stroke-width="2.8"/>
+<path d="M10.4 12l5.6 3.8-5.6 3.8" stroke-width="2.8" opacity=".58"/>
+```
+
+Aplicação padrão: tile `var(--accent)` com stroke `var(--on-accent)`, raio ≈
+28% do lado (32px→9px, 40px→11px, 96px→22px). Tamanho mínimo 16px — e nesse
+tamanho o chevron inferior sobe para `opacity:.7`, senão some.
+
+Variantes permitidas: tile terracota; terracota sobre superfície; teal sobre
+fundo escuro (estado ativo); monocromático. **Nunca** girar, esticar, contornar
+ou aplicar gradiente. Respiro mínimo = a largura da haste (3.4 unidades da
+grade de 24).
+
+Wordmark: Space Grotesk 700, `letter-spacing:-.045em`.
 
 ## Botões (base)
 
@@ -26,6 +116,15 @@ CSS Modules ou styled approach equivalente, nunca inline-only).
   `font-size:13px` Archivo. Hover: bg/border `var(--accent-hover)`. Focus:
   outline 2px `var(--accent)` offset 2px. Disabled: bg `var(--surface-2)`,
   texto `var(--text-muted)`, opacity .6, `cursor:not-allowed`.
+
+**Tamanho** (`size`, FASE 17a): o default é o botão denso acima, na faixa de
+28–36px da tabela de alturas. `lg` é a **ação principal de uma tela inteira** —
+`height: 44px`, `padding: 0 16px`, `font-size:14px`,
+`letter-spacing:.01em` —, hoje o submit das quatro telas de auth. É `height`
+fixa e não mais padding porque o rótulo troca em `loading` ("Entrar" →
+"Autenticando…") e a caixa não pode mudar de altura quando o spinner entra.
+`size` é independente de `fullWidth`: largura e altura respondem a perguntas
+diferentes.
 - **secondary**: bg `var(--surface-2)`, texto `var(--text-primary)`,
   border `var(--border)`. Hover: border `var(--border-strong)`. Disabled:
   bg transparent, opacity .5.
@@ -55,11 +154,11 @@ card também tem um toggle de autonomia manual/auto (pill de 2 botões).
 **Roster fixo dos 9 agentes** (CLAUDE.md): Psicólogo, Anamnese, Criativo,
 Arquiteto, PO, Dev Backend, Dev Frontend, Infra, QA, SecOps — cada um com
 uma cor de acento própria usada no avatar/nome ao longo de toda a UI
-(consistente entre chat e overview): Psicólogo `#9C7BE0`, Anamnese
-`var(--success)` `#37B3A4`, Criativo `var(--warning)` `#E0982F`, Arquiteto
-`var(--accent)` `#D6633A`, PO `#9C7BE0`, Dev Backend `var(--success)`
-`#37B3A4`, Dev Frontend `#5EBEB1`, Infra `var(--warning)` `#E0982F`, QA
-`var(--danger)` `#E05A3E`, SecOps `#8AA6AE`.
+(consistente entre chat e overview): Psicólogo `var(--violet)` `#9C7BE0`,
+Anamnese `var(--success)` `#37B3A4`, Criativo `var(--warning)` `#E0982F`,
+Arquiteto `var(--accent)` `#D6633A`, PO `var(--violet)` `#9C7BE0`, Dev
+Backend `var(--success)` `#37B3A4`, Dev Frontend `#5EBEB1`, Infra
+`var(--warning)` `#E0982F`, QA `var(--danger)` `#E05A3E`, SecOps `#8AA6AE`.
 
 ## TokenMeter
 
@@ -103,7 +202,7 @@ tempo relativo à direita (11px mono, `text-muted`, `white-space:nowrap`).
 Hover de linha: `background: var(--surface-2)`. Borda entre itens:
 `border-top: 1px solid var(--border)`.
 Cores por tipo de evento: commit → `text-secondary`; PR/pull request →
-`var(--accent)`; hypothesis (psicólogo) → `#9C7BE0`; session (encerramento
+`var(--accent)`; hypothesis (psicólogo) → `var(--violet)`; session (encerramento
 anormal) → `var(--danger)`; permission (concedida/negada) → `var(--success)`
 (negada usa `var(--danger)` via um flag `bad` separado do tipo).
 No feed da tela Project: filtro por agente (select) + chips de tipo
@@ -132,19 +231,31 @@ radius 12px.
     separado "terminal · output", com badge opcional `rtk −N%` quando
     houver compressão real).
   - **PR**: título (Space Grotesk 600), `{branch-origem} → {branch-destino}`
-    (pílulas mono) + status, resumo (texto secundário).
-- Ações (estado pendente): 3 botões lado a lado — **Aprovar** (flex:1,
-  bg `var(--success)`, texto branco), **Negar** (flex:1, ghost com borda
+    (retângulos mono de raio 6 com borda `var(--border)`, não pílulas) +
+    status, resumo (texto secundário).
+- Ações (estado pendente): 3 botões lado a lado — **Aprovar** (bg
+  `var(--success)`, texto branco), **Negar** (ghost com borda
   `color-mix(var(--danger) 45%)`, texto `var(--danger)`), **Sempre
-  permitir** (secondary, não flex — largura de conteúdo). Abaixo, no chat:
-  nota fixa (ícone de alerta + mono 11px, `text-muted`):
+  permitir** (secondary). Os dois primeiros esticam (`flex:1`) só na
+  variante **chat**, onde a coluna é estreita; na **fila de Aprovações**
+  têm largura de conteúdo, como no handoff. Abaixo, no chat: nota fixa
+  (ícone de alerta + mono 11px, `text-muted`):
   `"'Sempre permitir' grava a regra em .brabo/permissions.json"`.
 - Estado decidido: some os botões, mostra uma linha com dot colorido +
   texto (`"Aprovado · comando em execução"` verde / `"Negado"` vermelho /
   `"Sempre permitido · gravado em permissions.json"` accent).
 - Fila de Aprovações também tem seleção em lote: checkbox por card (canto
-  superior esquerdo do header) + barra de ação flutuante quando há seleção
-  (`"{N} selecionadas"` + botão "Aprovar selecionados").
+  superior esquerdo do header) + barra de ação no CABEÇALHO DA SEÇÃO
+  quando há seleção (`"{N} selecionadas"` + "Aprovar selecionados" +
+  "Limpar"). No cabeçalho, e não numa faixa própria acima da fila: a faixa
+  empurrava a lista 44px para baixo no primeiro clique de cada seleção.
+
+**Estrutura do card (handoff, seção 6):** o card RECORTA
+(`overflow: hidden`) e não tem padding próprio — cada região traz o seu e a
+divisória: cabeçalho 14×16 com borda embaixo, corpo colado nas bordas
+(terminal e diff sobre `var(--code-bg)`, PR sobre a superfície do card),
+ações 12×16 com borda em cima. A faixa que abre o diff fica sobre
+`var(--surface-2)`.
 
 ## ModelPicker
 
@@ -284,19 +395,22 @@ o elemento **fica**, porque removê-lo mudaria o layout do botão.
 O `Inputs/selects` acima segue valendo como default. Esta é a variante do
 mockup de login, e é **opt-in**: as telas fora de auth continuam no default.
 
-`background: var(--surface-2)`, `height: 42px`, `padding: 0 13px`,
+`background: var(--code-bg)`, `height: 42px`, `padding: 0 13px`,
 `font-size: 14px`. As três coisas vêm da mesma especificação e viajam
 juntas — metade dela dá um campo que não existe em lugar nenhum.
 
-O mockup usa `var(--code-bg)` (campo **afundado**); a implementação usa
-`var(--surface-2)` (campo **elevado**) — divergência registrada no ADR 0036.
-Sobre um card `var(--surface-1)`, o fundo default do campo é o MESMO do card,
-separados só por 1px de borda; o problema é real e as outras telas o têm.
+O campo é **afundado**, como no handoff. Foi `var(--surface-2)` (campo
+**elevado**) até a FASE 17a, divergência que o ADR 0036 registrara: sobre um
+card `var(--surface-1)`, o fundo default do campo é o MESMO do card, separados
+só por 1px de borda. O problema era real e continua valendo para as telas fora
+de auth; afundar o resolve igual, segue a referência versionada e ainda melhora
+o contraste.
 
 **Senha**: `var(--font-mono)` 13.5px `letter-spacing: .02em` (mono a 14px ao
 lado de Archivo a 14px lê como corpo maior). Placeholder em
-`var(--text-secondary)`, não `var(--text-muted)` — este dá 3.10:1 sobre
-`--surface-2` e reprova o AA.
+`var(--text-secondary)`, não `var(--text-muted)`: sobre `--code-bg` o muted
+passaria (5.65:1), mas placeholder é texto de leitura e a razão de ele estar
+mais presente que no handoff não mudou.
 
 **Botão de revelar**: 32×32 absoluto, `right: 5px`, centrado vertical,
 radius 4px, `color: var(--text-muted)`; hover `var(--text-secondary)` +

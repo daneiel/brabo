@@ -28,9 +28,11 @@ arquivo. Comece pela triagem.
 | não sei que versão está rodando | [Que versão está no ar](#que-versao-esta-no-ar) |
 | `blocked by CORS policy` no console do navegador | [Erro de CORS](#erro-de-cors) |
 | a api sai no boot reclamando de `GIT_OAUTH_STATE_SECRET` | [A api recusa subir por segredo de OAuth](#segredo-de-oauth-no-boot) |
+| a api ou o engine saem no boot reclamando de `AUTH_JWT_SECRET`, `BRABO_SERVICE_TOKEN`, `CREDENTIALS_MASTER_KEY` ou `SECRET_KEY_BASE` | [Os quatro segredos irmãos também não sobem com o default](#segredos-irmaos-no-boot) |
 | agente respondendo vazio, truncado ou lentíssimo | [Ambiente de inferência](#ambiente-de-inferencia) |
 | agente parando com `limite de iterações atingido` sem ter entregado | [Ambiente de inferência](#ambiente-de-inferencia) |
 | quero acrescentar um provider de LLM compatível com a OpenAI | [Adicionando um provider compatível](#adicionando-um-provider-compativel) |
+| quero migrar meus workspaces do volume Docker para uma pasta real | [Migrar workspaces para pasta local](#migrar-workspaces-pasta-local) |
 
 Duas coisas que valem antes de qualquer procedimento:
 
@@ -39,6 +41,34 @@ Duas coisas que valem antes de qualquer procedimento:
   Grafana fora do ar significa nenhum aviso, não nenhum problema.
 - **Matar o pod não fecha sessão.** `kubectl delete pod` sem drain cria órfã.
   O caminho é sempre a transição normal.
+
+### Migrar workspaces para pasta local {#migrar-workspaces-pasta-local}
+
+Definir `PROJECT_WORKSPACES_HOST_DIR`/`GIT_LOCAL_REPOS_HOST_DIR`
+([Primeiros passos](getting-started.md#pasta-local-dos-workspaces)) troca o
+volume Docker pela pasta indicada — mas **não copia** o que já existia no
+volume antigo. Quem já tem projetos criados e não quer perder o trabalho
+precisa copiar o conteúdo antes de trocar:
+
+```bash
+pnpm dev:down
+docker run --rm \
+  -v brabo_project_workspaces:/de \
+  -v "$(realpath ~/brabo-projetos)":/para \
+  alpine sh -c 'cp -a /de/. /para/'
+docker run --rm \
+  -v brabo_git_local_repos:/de \
+  -v "$(realpath ~/brabo-projetos-bare)":/para \
+  alpine sh -c 'cp -a /de/. /para/'
+# defina as duas variáveis no .env, depois:
+pnpm dev
+```
+
+O nome do volume (`brabo_project_workspaces`) tem o prefixo do projeto
+Compose (`name: brabo` em `docker/docker-compose.yml`) — confirme com
+`docker volume ls` se você renomeou o projeto. O volume antigo continua
+existindo depois (Compose não apaga volume que saiu de uso); remova com
+`docker volume rm` se tiver certeza de que a cópia funcionou.
 
 ---
 
@@ -243,6 +273,47 @@ Trocar a chave **invalida os `state` em voo**: quem estiver no meio de um
 conexão **já estabelecida** é afetada (o token guardado não depende desta
 chave).
 
+### Os quatro segredos irmãos também não sobem com o default {#segredos-irmaos-no-boot}
+
+Sintoma: com `NODE_ENV=production`, a api (ou, para `SECRET_KEY_BASE`, o
+engine) morre no start com uma mensagem sobre `AUTH_JWT_SECRET`,
+`BRABO_SERVICE_TOKEN`, `CREDENTIALS_MASTER_KEY` ou `SECRET_KEY_BASE` —
+ausente, com o valor de exemplo do repositório, ou curta demais.
+
+**Mesma causa do segredo de OAuth acima, e mesma orientação: não é regressão,
+e não contorne.** O [ADR 0059](adr/0059-segredo-do-state-de-oauth-sem-default.md)
+já declarava esses quatro como pendência — o mesmo padrão, só ainda não
+replicado — e a [RN-114](business-rules.md#rn-114) fechou. Cada um protege
+algo diferente:
+
+- `AUTH_JWT_SECRET` público = qualquer um deriva o par que assina o access
+  token e forja um token válido.
+- `BRABO_SERVICE_TOKEN` público = qualquer um chama `/internal/*` sem passar
+  pelo `EngineServiceGuard`.
+- `CREDENTIALS_MASTER_KEY` público = qualquer um decripta o acervo de
+  credenciais do usuário (chaves de LLM, tokens de git).
+- `SECRET_KEY_BASE` (engine) já tinha `raise` no `runtime.exs` — o defeito era
+  só o compose mascarar esse `raise` com um fallback público.
+
+```bash
+export AUTH_JWT_SECRET="$(openssl rand -base64 32)"
+export BRABO_SERVICE_TOKEN="$(openssl rand -base64 32)"
+export CREDENTIALS_MASTER_KEY="$(openssl rand -base64 32)"
+export SECRET_KEY_BASE="$(openssl rand -base64 64)"
+```
+
+Em Kubernetes nada muda, pelo mesmo motivo do `GIT_OAUTH_STATE_SECRET`: os
+quatro já vinham de `brabo-secrets`, pela chave de mesmo nome, em
+`deploy/k8s/base/common/externalsecrets.yaml`.
+
+Trocar `AUTH_JWT_SECRET` ou `BRABO_SERVICE_TOKEN` sem a dança do `_PREVIOUS`
+tem o mesmo efeito que já era documentado em
+[Rotação das chaves do auth](#rotacao-das-chaves-do-auth); trocar
+`CREDENTIALS_MASTER_KEY` sem re-embrulhar tem o mesmo efeito já documentado em
+[Rotação da chave mestra](#rotacao-da-chave-mestra). Esta checagem de BOOT não
+muda nenhum dos dois procedimentos — ela só impede que a chave chegue à
+produção sendo o literal público deste repositório.
+
 ### k3d é o padrão mesmo com kind instalado
 
 Não é preferência. O k3s traz controlador de NetworkPolicy embutido; o
@@ -260,7 +331,15 @@ escopo. O smoke avisa quando o cluster não faz enforcement.
    emissão do access token e os cookies de sessão.
 4. `workspace → projeto → sessão`. Este passo atravessa as NetworkPolicies
    inteiras: criar sessão faz a api chamar o engine por HTTP interno, com o
-   service token.
+   service token. A sessão é criada com `kind: consultiva` — obrigatório desde
+   a FASE 20 ([RN-097](business-rules.md#rn-097)) — e é `consultiva` de
+   propósito: o smoke exercita criar → ativar → encerrar e nunca ativa
+   execução, que numa consultiva responde `409`.
+
+   **É este passo que prova que a rota tem consumidor fora do web.** Quando o
+   `kind` nasceu obrigatório, a suite da api passou com 1562 testes e foi o
+   smoke que reprovou, porque é o único que chama a rota como cliente externo,
+   sem mock e contra a imagem de produção.
 5. Probes distintas (`/live` e `/ready` do engine, `/live` da api) e o
    `/config.js` do web apontando para as URLs do cluster.
 6. `oban_queue_depth` com os rótulos `queue` e `state` em `/metrics`.

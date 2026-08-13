@@ -286,3 +286,27 @@ rules:
     requires_adr: true
     severity: warn
     note: "Mudança estrutural? Provavelmente merece um ADR."
+
+  # O CLAUDE.md é o único documento lido em TODA sessão — desatualizado ele não
+  # fica neutro, ele ensina errado. Até aqui tinha ZERO cobertura: nenhuma regra
+  # o observava, e ele só era atualizado quando alguém lembrava.
+  #
+  # `warn` e não `block` de propósito: o CLAUDE.md não mora sob `docs/`, e é lá
+  # que o `generate.mjs --check` valida glob morto, gerado fora de dia e link
+  # quebrado. Uma regra `block` que o checker não sabe verificar vira regra que
+  # se burla com a label `docs-not-needed` — pior que `warn` honesto, porque
+  # ensina a ignorar o vermelho.
+  #
+  # O watch são os gatilhos que HISTORICAMENTE o desatualizam: dependência nova
+  # (Stack), ADR novo (Convenções e proibições) e gate novo.
+  - id: claude-md
+    watch:
+      - "package.json"
+      - "pnpm-workspace.yaml"
+      - "apps/*/package.json"
+      - "apps/engine/mix.exs"
+      - "docs/adr/*.md"
+      - "docs/gates.yml"
+    docs: ["CLAUDE.md"]
+    severity: warn
+    note: "Stack, Convenções, 'O que NÃO fazer' e o estado das fases envelhecem em silêncio."

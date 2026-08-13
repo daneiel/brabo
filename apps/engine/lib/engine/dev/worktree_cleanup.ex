@@ -17,29 +17,40 @@ defmodule Engine.Dev.WorktreeCleanup do
   `dev_agent_states` é global por construção (é a mesma linha de que a
   reidratação parte) e a linha é deletada quando o agente termina, então o
   conjunto é equivalente ao do Registry num nó só e correto em N nós.
+
+  ## Por que a fonte de projetos é o banco, e não `File.ls(root)` (RN-109)
+
+  Antes da RN-109 o nome de pasta de um projeto ERA o `project_id` — varrer o
+  disco e tratar cada entrada como um id era uma leitura válida. Com nome de
+  pasta legível (`<slug>-<8 chars>`), a pasta deixou de ser o id, e não dá
+  pra voltar um pra o outro sem consultar. `Project.all_workspace_dirs/0` faz
+  essa consulta — UMA, para todos os projetos, o mesmo cuidado que motivava
+  ler o disco antes — e devolve `{id, workspace_dir_name}` prontos: nem esta
+  função nem `WorktreeManager` precisam mais chamar `Workspace.workspace_dir/1`
+  (que faria SUA PRÓPRIA consulta por projeto) para descobrir a pasta.
   """
 
   alias Engine.Dev.DevAgentState
   alias Engine.Dev.WorktreeManager
+  alias Engine.Projects.Project
 
   def run do
     root = Application.get_env(:engine, :project_workspaces_root)
 
-    case root && File.ls(root) do
-      {:ok, project_ids} ->
-        # Uma consulta só para todos os projetos: varrer o disco já é N
-        # chamadas de sistema, não vale somar N round-trips ao banco.
-        live = live_agents_by_project()
+    if root do
+      live = live_agents_by_project()
 
-        Enum.each(project_ids, fn project_id ->
-          WorktreeManager.cleanup_orphans(project_id, Map.get(live, project_id, []))
-        end)
+      Project.all_workspace_dirs()
+      |> Enum.each(fn %{id: project_id, workspace_dir_name: dir_name} ->
+        work_dir = Path.join(root, dir_name)
 
-        :ok
-
-      _ ->
-        :ok
+        if File.dir?(work_dir) do
+          WorktreeManager.cleanup_orphans_at(work_dir, Map.get(live, project_id, []))
+        end
+      end)
     end
+
+    :ok
   end
 
   @doc "agent_ids com dev agent vivo em QUALQUER réplica, agrupados por projeto."

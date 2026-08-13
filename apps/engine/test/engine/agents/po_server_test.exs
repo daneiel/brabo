@@ -7,6 +7,7 @@ defmodule Engine.Agents.PoServerTest do
 
   alias Engine.Agents.PoServer
   alias Engine.Sessions.FakeEngineApiClient
+  import Engine.Agents.TurnoAssincronoCase, only: [sync_call: 3, sync_cast: 3]
 
   setup do
     root =
@@ -75,7 +76,7 @@ defmodule Engine.Agents.PoServerTest do
       FakeEngineApiClient.final_response("Backlog pronto.")
     ])
 
-    assert {:noreply, new_state} = PoServer.handle_cast(:kickoff, state)
+    assert {:noreply, new_state} = sync_cast(PoServer, :kickoff, state)
 
     assert_received {:epic_created, %{title: "Cadastro"}}
     assert_received {:story_created, story_fields}
@@ -101,7 +102,7 @@ defmodule Engine.Agents.PoServerTest do
       FakeEngineApiClient.final_response("ok")
     ])
 
-    assert {:noreply, new_state} = PoServer.handle_cast(:kickoff, state)
+    assert {:noreply, new_state} = sync_cast(PoServer, :kickoff, state)
 
     tool_msgs = Enum.filter(new_state.messages, &(&1["role"] == "tool"))
     assert Enum.any?(tool_msgs, &String.contains?(&1["content"], "falha ao criar história"))
@@ -113,10 +114,27 @@ defmodule Engine.Agents.PoServerTest do
     Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("feito")])
 
     assert {:reply, :ok, _} =
-             PoServer.handle_call({:user_message, "gere o backlog"}, self(), state)
+             sync_call(PoServer, {:user_message, "gere o backlog"}, state)
 
     assert_received %Phoenix.Socket.Broadcast{event: "agent.delta", payload: %{text: "Vou "}}
     assert_received %Phoenix.Socket.Broadcast{event: "agent.done"}
+  end
+
+  # Achado do problema 2 (RN-146): o `agent.response` carrega o nome do
+  # modelo que gerou a resposta, extraído do frame `final` da api.
+  test "agent.response carrega o nome do modelo", %{state: state, session_id: session_id} do
+    Process.put(:fake_llm_turns, [
+      FakeEngineApiClient.final_response("Backlog pronto.", "llama3.2:3b")
+    ])
+
+    assert {:reply, :ok, _} =
+             sync_call(PoServer, {:user_message, "gere o backlog"}, state)
+
+    assert_received {:event_appended, _, ^session_id,
+                     %{
+                       type: "agent.response",
+                       payload: %{content: "Backlog pronto.", modelName: "llama3.2:3b"}
+                     }}
   end
 
   describe "revise/2 — devolução de história recusada (Fase 12c, RN-048)" do
@@ -124,14 +142,14 @@ defmodule Engine.Agents.PoServerTest do
       Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("vou revisar")])
 
       assert {:reply, :ok, new_state} =
-               PoServer.handle_call(
+               sync_call(
+                 PoServer,
                  {:revise,
                   %{
                     "id" => "story-1",
                     "title" => "Cadastro",
                     "reason" => "Falta o caso de recusa do pagamento"
                   }},
-                 self(),
                  state
                )
 

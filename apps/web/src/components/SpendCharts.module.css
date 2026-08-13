@@ -1,0 +1,163 @@
+/* Gráficos do relatório de gasto (FASE 22). SVG inline, sem lib. */
+
+.figura {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.legenda {
+  font-family: var(--font-heading);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.svg {
+  width: 100%;
+  height: 56px;
+  display: block;
+}
+
+.barra {
+  fill: var(--accent);
+}
+
+.eixo {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.eixoVazio {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.ranking {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.rankingTitulo {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.rankingVazio {
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: var(--space-2) 0;
+}
+
+.rankingLista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/*
+ * Rótulo e valor em cima, barra e detalhe embaixo — e não quatro colunas numa
+ * linha só.
+ *
+ * A versão de quatro colunas foi REPROVADA pelo `scripts/dev/validacao-visual.js`:
+ * com os três rankings lado a lado, a coluna do rótulo ficava em 96px e
+ * `anthropic/claude-sonnet-4` (180px) era cortado por `text-overflow`. Nome de
+ * modelo é justamente o que se veio ler aqui, e reticências num relatório de
+ * custo escondem qual linha é qual.
+ */
+.rankingItem {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'rotulo valor'
+    'trilho trilho'
+    'detalhe detalhe';
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  /* Alvo de 24px de altura mínima — a régua da validação visual. */
+  min-height: 24px;
+}
+
+.rankingRotulo {
+  grid-area: rotulo;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-primary);
+  /* Quebra em vez de cortar: nome de modelo não tem teto de tamanho, e
+     `anywhere` é o que impede a linha de estourar a coluna. */
+  overflow-wrap: anywhere;
+}
+
+.rankingTrilho {
+  grid-area: trilho;
+  display: block;
+  height: 8px;
+  background: var(--surface-2);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.rankingBarra {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  border-radius: var(--radius-full);
+}
+
+.rankingDetalhe {
+  grid-area: detalhe;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.rankingValor {
+  grid-area: valor;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-primary);
+  text-align: right;
+}
+
+.destaque {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.destaqueRotulo {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.destaqueValor {
+  font-family: var(--font-heading);
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.destaqueDetalhe {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+

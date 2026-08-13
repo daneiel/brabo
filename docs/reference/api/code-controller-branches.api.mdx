@@ -1,0 +1,69 @@
+---
+id: code-controller-branches
+title: "Lista as branches com ahead/behind e a PR aberta associada"
+description: "Fundação do dropdown rico (FASE 26b) — hoje o seletor de ref é campo de texto simples. `ahead`/`behind` são relativos à branch DEFAULT do repositório; `null` quando o provider não consegue computar (degradação honesta, não erro). NÃO é `listBranches` (que o bootstrap de Gitflow usa) — é operação própria, porque enriquecer custa uma chamada extra ao provider POR BRANCH."
+sidebar_label: "Lista as branches com ahead/behind e a PR aberta associada"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "get api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Lista as branches com ahead/behind e a PR aberta associada"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/projects/{projectId}/code/branches"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Fundação do dropdown rico (FASE 26b) — hoje o seletor de ref é campo de texto simples. `ahead`/`behind` são relativos à branch DEFAULT do repositório; `null` quando o provider não consegue computar (degradação honesta, não erro). NÃO é `listBranches` (que o bootstrap de Gitflow usa) — é operação própria, porque enriquecer custa uma chamada extra ao provider POR BRANCH.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./code-controller-branches.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./code-controller-branches.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./code-controller-branches.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

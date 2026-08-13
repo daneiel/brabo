@@ -53,6 +53,9 @@ defmodule Engine.Application do
       {Engine.Sessions.Rehydrator, []},
       # Reidrata os dev agents sobreviventes (depois do DevAgentSupervisor).
       {Engine.Dev.DevRehydrator, []},
+      # Resgata ciclos de gate (QA/SecOps) órfãos de um boot anterior — mesmo
+      # idioma do DevRehydrator, depois dos dois supervisors de gate (ADR 0067).
+      {Engine.Gates.GateRescuer, []},
       EngineWeb.Endpoint
     ]
 
@@ -76,6 +79,10 @@ defmodule Engine.Application do
       {:ok, _model_sync} = Engine.Workers.ModelSyncSchedulerWorker.kickoff()
     end
 
+    if match?({:ok, _}, result) and gate_rescue_should_start?() do
+      {:ok, _gate_rescue} = Engine.Workers.GateRescueSchedulerWorker.kickoff()
+    end
+
     result
   end
 
@@ -96,6 +103,12 @@ defmodule Engine.Application do
   # chama ModelSyncSchedulerWorker.perform/1 direto, sem o tick periódico.
   defp model_sync_should_start? do
     Application.get_env(:engine, :start_model_sync?, true)
+  end
+
+  # Desligável em teste (config :engine, start_gate_rescue?: false) — a suite
+  # chama Engine.Gates.GateRescuer.run/0 direto, sem o tick periódico.
+  defp gate_rescue_should_start? do
+    Application.get_env(:engine, :start_gate_rescue?, true)
   end
 
   # Tell Phoenix to update the endpoint configuration

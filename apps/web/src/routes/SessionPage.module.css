@@ -4,19 +4,22 @@
   height: 100%;
 }
 
+/* Faixa `surface-1` de 60px (handoff, seção 5) — era transparente, e com a
+   coluna de chat no mesmo fundo a barra só existia pela linha de baixo. */
 .topbar {
   height: 60px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
   padding: 0 20px;
+  background: var(--surface-1);
   border-bottom: 1px solid var(--border);
 }
 
 .statusDot {
-  width: 8px;
-  height: 8px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
   background: var(--success);
   flex-shrink: 0;
@@ -26,38 +29,162 @@
   animation: bpulse 1.4s ease-in-out infinite;
 }
 
+/* Sessão que já terminou: apagada. */
+.statusDot.statusDotParado {
+  background: var(--text-muted);
+}
+
+/* `closed_abnormally` — vem DEPOIS do parado de propósito: os dois se aplicam
+   à mesma sessão, e o que importa saber é que ela terminou mal. */
+.statusDot.statusDotFalha {
+  background: var(--danger);
+}
+
 .titleBlock {
   min-width: 0;
 }
 
+/* A saída da tela (FASE 20). 32px de lado — acima do piso de 24px do WCAG 2.2
+   AA (2.5.8) que `scripts/dev/validacao-visual.js` mede. */
+.voltar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.voltar:hover {
+  background: var(--surface-2);
+  color: var(--text-primary);
+}
+
+.voltar:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* `.title` é um `button` desde a FASE 20 (clicar renomeia), então o reset do
+   botão vem junto: sem ele o navegador aplica fundo, borda e a fonte dele, e a
+   barra de topo muda de cara. */
 .title {
   font-family: var(--font-heading);
   font-weight: 600;
   font-size: 14px;
+  line-height: 1.15;
   color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+  max-width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.title:disabled {
+  cursor: default;
+}
+
+.title:hover:not(:disabled) {
+  color: var(--accent);
+}
+
+.title:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* O campo ocupa a posição EXATA do título que ele muda — mesma fonte, mesmo
+   tamanho, mesma linha. Um campo com outra métrica faria a barra saltar no
+   instante em que se clica para renomear. */
+.tituloEditavel {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 1.15;
+  color: var(--text-primary);
+  width: 100%;
+  padding: 2px 6px;
+  background: var(--code-bg);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+}
+
+.tituloEditavel:focus {
+  outline: none;
 }
 
 .meta {
   font-family: var(--font-mono);
   font-size: 11px;
   color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .spacer {
   flex: 1;
 }
 
+/* A pista ao lado do botão "pelado" da topbar — visível quando a conversa já
+   começou (`conversaComecou`) sem o convite ter aparecido nunca (mandar
+   mensagem antes de "Iniciar ideação"). Mesma cor do Criativo no fio
+   (`--warning`), pra a pista e a futura bolha dele lerem como o mesmo ator. */
+.iniciarIdeacaoComPista {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.iniciarIdeacaoIcone {
+  color: var(--warning);
+  flex-shrink: 0;
+}
+
+.iniciarIdeacaoDica {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
 .toggleAside {
-  width: 34px;
-  height: 34px;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
   border-radius: var(--radius-md);
   border: 1px solid var(--border);
-  background: var(--surface-1);
+  background: var(--surface-0);
   color: var(--text-secondary);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  transition:
+    background 0.12s,
+    border-color 0.12s,
+    color 0.12s;
+}
+
+.toggleAside:hover {
+  border-color: var(--border-strong);
+}
+
+/* O botão diz se o painel está aberto — antes ele tinha uma aparência só, e
+   quem fechasse o contexto não tinha como saber pelo controle. */
+.toggleAside.toggleAsideOn {
+  background: var(--surface-2);
+  color: var(--text-primary);
 }
 
 .body {
@@ -76,7 +203,7 @@
 .messages {
   flex: 1;
   overflow-y: auto;
-  padding: 24px;
+  padding: 28px 24px 40px;
 }
 
 .messagesInner {
@@ -87,66 +214,52 @@
   gap: 20px;
 }
 
+/* `--msg-color` vive na MENSAGEM, não em cada peça dela: avatar, nome e
+   indicador de digitação são a mesma voz e antes cada um recebia (ou não)
+   o próprio `style` inline — o indicador nunca recebia, e ficava cinza no
+   meio de um turno colorido.
+
+   O corpo destas regras foi extraído para `../components/ui/ChatBubble.module.css`
+   — é o mesmo skin que o detalhe expandido de `AgentTimelineTree` usa
+   (Executores), via `composes`. Mudar cor, padding ou raio ali muda os dois
+   lugares; não há segunda cópia dos valores pra divergir. */
 .message {
-  display: flex;
-  gap: 12px;
+  composes: message from '../components/ui/ChatBubble.module.css';
 }
 
 .avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 9px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--msg-color);
-  background: color-mix(in srgb, var(--msg-color) 18%, var(--surface-2));
+  composes: avatar from '../components/ui/ChatBubble.module.css';
 }
 
 .avatar.user {
-  background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+  background: linear-gradient(135deg, var(--accent), var(--warning));
+  border-color: transparent;
   color: var(--on-accent);
 }
 
 .messageBody {
-  flex: 1;
-  min-width: 0;
+  composes: messageBody from '../components/ui/ChatBubble.module.css';
 }
 
 .messageHeader {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  margin-bottom: 4px;
+  composes: messageHeader from '../components/ui/ChatBubble.module.css';
 }
 
 .messageName {
-  font-weight: 600;
-  font-size: 13px;
-  color: var(--msg-color);
+  composes: messageName from '../components/ui/ChatBubble.module.css';
 }
 
 .messageMeta {
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  color: var(--text-muted);
+  composes: messageMeta from '../components/ui/ChatBubble.module.css';
 }
 
 .bubble {
-  background: var(--surface-1);
-  border-radius: 12px;
-  border-top-left-radius: 2px;
-  padding: 10px 14px;
-  font-size: 13.5px;
-  color: var(--text-primary);
-  white-space: pre-wrap;
-  word-break: break-word;
+  composes: bubble from '../components/ui/ChatBubble.module.css';
 }
 
 .typing {
   display: flex;
-  gap: 4px;
+  gap: 5px;
   padding: 6px 0;
 }
 
@@ -154,7 +267,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--text-muted);
+  background: var(--msg-color);
   animation: bpulse 1s ease-in-out infinite;
 }
 
@@ -208,25 +321,46 @@
   font-size: 13px;
 }
 
+/* Trilho de contexto: `surface-1`, seções separadas por divisória própria em
+   vez de margem solta (handoff, seção 5). */
 .aside {
   width: 320px;
   flex-shrink: 0;
   border-left: 1px solid var(--border);
-  padding: 16px;
+  background: var(--surface-1);
   overflow-y: auto;
 }
 
+.asideTitleBar {
+  padding: 15px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.asideTitle {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
 .asideSection {
-  margin-bottom: 22px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.asideSection:last-child {
+  border-bottom: none;
 }
 
 .asideHeader {
   font-family: var(--font-mono);
   font-size: 10px;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   color: var(--text-muted);
-  margin-bottom: 10px;
+  margin-bottom: 11px;
 }
 
 .asideEmpty {
@@ -238,17 +372,33 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 12.5px;
+  font-family: var(--font-mono);
+  font-size: 12px;
   color: var(--text-secondary);
-  padding: 4px 0;
+  padding: 3px 0;
 }
 
 .fileLetter {
-  width: 16px;
-  font-family: var(--font-mono);
-  font-weight: 700;
-  font-size: 11px;
+  width: 12px;
+  font-weight: 600;
+  color: var(--success);
   flex-shrink: 0;
+}
+
+.filePath {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fileAdd {
+  color: var(--success);
+}
+
+.fileDel {
+  color: var(--danger);
 }
 
 /* --- Fase 3b: cards de regra de negócio + divisor de handoff --- */
@@ -289,7 +439,7 @@
   align-items: center;
   justify-content: center;
   gap: 12px;
-  margin: 18px 0;
+  padding: 2px 0;
 }
 
 .handoffDivider::before,
@@ -297,20 +447,178 @@
   content: '';
   flex: 1;
   height: 1px;
-  background: var(--border-strong);
+  background: var(--border);
 }
 
+/* A marca de passagem de bastão é uma FRASE, não um selo em caixa alta: o
+   desenho a escreve por extenso, com os dois agentes na cor de cada um. */
 .handoffPill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-family: var(--font-mono);
-  font-size: 10.5px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-secondary);
-  background: color-mix(in srgb, var(--accent) 16%, transparent);
-  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  font-size: 11px;
+  color: var(--text-muted);
+  background: var(--surface-1);
+  border: 1px solid var(--border);
   border-radius: var(--radius-full);
-  padding: 4px 12px;
+  padding: 5px 12px;
   white-space: nowrap;
+  min-width: 0;
+}
+
+.handoffAgent {
+  font-weight: 600;
+  color: var(--msg-color);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* O card ACIONÁVEL de handoff (RN-125) — a oferta pendente ganha a mesma
+   pílula do divisor, mas em caixa, com a ação embutida: aceitar deixa de
+   ser um botão pelado longe do evento que o motivou. */
+.handoffCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin: 4px 0;
+  padding: 16px;
+  border: 1px solid color-mix(in srgb, var(--success) 45%, var(--border));
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--success) 8%, var(--surface-1));
+}
+
+/* Um slide do carrossel de histórias (RN-148) — mesmo miolo do
+   `.handoffCard` acima, mas SEM caixa própria: o `Carousel` já dá a borda e
+   o fundo, e duplicar aqui empilharia duas caixas uma dentro da outra. */
+.storySlide {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.storySlideResumo {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  max-width: 48ch;
+}
+
+/* Formulário de `chat.structured_question` (RN-162) — mesmo miolo do
+   `.handoffCard`, mas alinhado à esquerda (é um formulário, não uma
+   confirmação) e sem o realce de sucesso: perguntar não é uma decisão do
+   usuário aprovar/negar. */
+.structuredQuestionCard {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 4px 0;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-1);
+  width: 100%;
+  max-width: 480px;
+}
+
+.structuredQuestionForm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.structuredQuestionField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.structuredQuestionFieldLabel {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+/* Estado somente-leitura, depois de enviado — pergunta e resposta lado a
+   lado, sem os campos de formulário. */
+.structuredQuestionAnswers {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  margin: 0;
+}
+
+.structuredQuestionAnswerRow {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.structuredQuestionAnswerRow dt {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.structuredQuestionAnswerRow dd {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+/* Link que navega pra outra aba do projeto a partir do fio — o CTA pra
+   Executores no card de handoff pro Dev Lead (RN-125) e o link pro Backlog
+   no chip de épico/história criados pelo PO (RN-124). */
+.timelineLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.timelineLink:hover {
+  text-decoration: underline;
+}
+
+/* Colapso de mensagens do MESMO agente depois que ele passa o bastão
+   (RN-138) — `Disclosure` do design system, fechado por padrão. `.agentGroup`
+   só existe para segurar `--msg-color` (fixado no elemento pai, RN-138) na
+   cor do agente, a mesma pista que o resto da bolha usa. */
+.agentGroup {
+  display: flex;
+  flex-direction: column;
+}
+
+.agentGroupCabecalho {
+  color: var(--msg-color);
+  font-family: var(--font-mono);
+}
+
+/* O avatar (achado do problema 3) entra na FRENTE do nome, dentro do
+   `titulo` do Disclosure — `.titulo` já é `flex: 1`, então só falta alinhar
+   os dois na mesma linha. */
+.agentGroupTitulo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.agentGroupRegiao {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-top: 10px;
 }
 
 /* Evento citado por uma hipótese do Psicólogo, fixado no topo do log
@@ -352,9 +660,12 @@
   background: var(--surface-1);
 }
 
+/* `--font-display` não existe em `design/tokens.css` — o título do convite
+   caía na fonte do navegador, que é justamente a falha que o ADR 0036 fechou
+   para as três famílias. A de título chama-se `--font-heading`. */
 .conviteTitulo {
   margin: 0 0 12px;
-  font-family: var(--font-display);
+  font-family: var(--font-heading);
   font-size: 18px;
   font-weight: 600;
   color: var(--text-primary);
@@ -365,6 +676,22 @@
   font-size: 14px;
   line-height: 1.6;
   color: var(--text-secondary);
+}
+
+/* A ação de trazer o Criativo, DENTRO do convite (FASE 24). Ela morava só na
+   topbar, e o convite gastava um parágrafo apontando para lá. */
+.conviteAcao {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 0 0 16px;
+}
+
+.conviteAcaoNota {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-muted);
 }
 
 /* O exemplo é clicável: preenche o campo em vez de mandar a pessoa digitar. */
@@ -403,4 +730,51 @@
   background: transparent;
   color: var(--text-muted);
   font-style: italic;
+}
+
+/* --- Painel "Artefatos gerados" agrupado por agente (RN-159) --- */
+
+/* A REGIÃO do `Disclosure` de cada agente — mesmo espaçamento vertical de
+   `.agentGroupRegiao` (RN-138), só que mais apertado: item de lista, não
+   bolha de mensagem. */
+.artefatoGrupoRegiao {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 6px;
+}
+
+.artefatoItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding: 4px 0;
+  text-decoration: none;
+}
+
+/* Só quando existe destino (PR com `pullRequestUrl`, ou o link pro Backlog)
+   — sem URL o item fica neutro, porque não há pra onde clicar. */
+.artefatoItemLink {
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.artefatoItemLink:hover {
+  text-decoration: underline;
+}
+
+.artefatoItemIcone {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.artefatoItemTitulo {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

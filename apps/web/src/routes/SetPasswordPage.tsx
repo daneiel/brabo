@@ -162,7 +162,7 @@ export function SetPasswordPage({
           error={erroDeConfirmacao}
         />
         <div className={styles.acoes}>
-          <Button type="submit" fullWidth loading={enviando}>
+          <Button type="submit" fullWidth size="lg" loading={enviando}>
             {enviando ? 'Definindo…' : 'Definir senha'}
           </Button>
         </div>

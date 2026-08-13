@@ -1,0 +1,128 @@
+/*
+ * Tipografia do Markdown leve do chat (RN-158). Vive DENTRO de `.bubble`
+ * (`ChatBubble.module.css`), que já dá fundo, borda e `white-space: pre-wrap`
+ * — aqui só o espaçamento entre blocos e a forma de cada um.
+ */
+.markdown > :first-child {
+  margin-top: 0;
+}
+
+.markdown > :last-child {
+  margin-bottom: 0;
+}
+
+.paragrafo {
+  margin: 0 0 10px;
+}
+
+.titulo1,
+.titulo2,
+.titulo3 {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.3;
+  margin: 14px 0 8px;
+}
+
+.titulo1 {
+  font-size: 18px;
+}
+
+.titulo2 {
+  font-size: 16px;
+}
+
+.titulo3 {
+  font-size: 14px;
+}
+
+.lista {
+  margin: 0 0 10px;
+  padding-left: 20px;
+}
+
+.lista li {
+  margin-bottom: 3px;
+}
+
+.codigoInline {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  background: var(--code-bg);
+  border-radius: 4px;
+  padding: 1px 5px;
+  color: var(--text-primary);
+}
+
+/* --- Fence de código (``` linguagem) --- */
+
+.fence {
+  margin: 4px 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--code-bg);
+  overflow: hidden;
+}
+
+.fenceCabecalho {
+  padding: 5px 10px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+}
+
+.fencePre {
+  margin: 0;
+  padding: 8px 0;
+  overflow-x: auto;
+}
+
+.fenceLinha {
+  display: flex;
+  min-width: 100%;
+  width: max-content;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.6;
+  white-space: pre;
+}
+
+.fenceTexto {
+  padding: 0 12px;
+}
+
+/* Realce por token — fonte ÚNICA em `SyntaxTokens.module.css` (RN-158), a
+   mesma que `routes/code/CodeEditor.module.css` usa na aba Code: mudar uma
+   cor ali muda os dois lugares. */
+.tkKeyword { composes: tkKeyword from './SyntaxTokens.module.css'; }
+.tkFunction { composes: tkFunction from './SyntaxTokens.module.css'; }
+.tkString { composes: tkString from './SyntaxTokens.module.css'; }
+.tkNumber { composes: tkNumber from './SyntaxTokens.module.css'; }
+.tkComment { composes: tkComment from './SyntaxTokens.module.css'; }
+.tkType { composes: tkType from './SyntaxTokens.module.css'; }
+.tkOperator { composes: tkOperator from './SyntaxTokens.module.css'; }
+.tkText { composes: tkText from './SyntaxTokens.module.css'; }
+
+/* Skin de "terminal" (RN-158) — fences ```sh/```bash ganham o prompt `$` por
+   linha, a mesma leitura visual que `ApprovalCard.module.css` já usa pra
+   ação `terminal` (`.prompt`/`.commandLine`): é o precedente do produto pra
+   "isto é um comando de shell", reaproveitado aqui em vez de inventado. */
+.fenceTerminal {
+  border-color: color-mix(in srgb, var(--text-muted) 40%, var(--border));
+}
+
+.fenceTerminal .fenceCabecalho {
+  color: var(--text-secondary);
+}
+
+.fencePrompt {
+  flex-shrink: 0;
+  width: 18px;
+  padding-left: 10px;
+  color: var(--text-muted);
+  user-select: none;
+}

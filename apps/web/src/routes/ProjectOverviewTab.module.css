@@ -1,35 +1,69 @@
+/*
+ * As três regiões do handoff (seção 4): navegação/contexto no cabeçalho da
+ * moldura, o time no meio, a atividade num trilho de 360px à direita.
+ *
+ * Cada região rola por si. Antes a página inteira rolava junto e o trilho era
+ * um card arredondado boiando a 24px da borda — o feed sumia de vista assim
+ * que a lista de agentes crescia.
+ */
 .layout {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
   display: flex;
-  gap: 24px;
-  align-items: flex-start;
 }
 
 .main {
   flex: 1;
   min-width: 0;
+  overflow-y: auto;
+  padding: 22px 24px;
 }
 
 .aside {
   width: 360px;
   flex-shrink: 0;
   background: var(--surface-1);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg, 12px);
-  padding: 16px;
+  border-left: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 16px 18px;
 }
 
 .sectionHeader {
   font-family: var(--font-heading);
   font-weight: 600;
-  font-size: 14px;
+  font-size: 16px;
   color: var(--text-primary);
   margin-bottom: 4px;
+}
+
+/* Título e resumo na MESMA linha de base, como o desenho: "Time de agentes"
+   e "10 agentes · 3 trabalhando" são uma frase só, e empilhá-los empurrava os
+   cards para baixo sem ganhar nada. */
+.sectionRow {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.sectionRow .sectionHeader {
+  margin-bottom: 0;
 }
 
 .sectionSub {
   font-size: 12px;
   color: var(--text-muted);
   margin-bottom: 16px;
+}
+
+/* O resumo numérico ao lado do título é mono (contagem é dado, não prosa); a
+   frase que explica a seção continua em `.sectionSub`, em corpo. */
+.sectionCount {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
 .grid {

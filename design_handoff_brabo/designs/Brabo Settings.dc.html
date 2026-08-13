@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --surface-0:#061B24; --surface-1:#0A2E3D; --surface-2:#123F4E;
+    --text-primary:#F5EDE0; --text-secondary:#AEC6CE; --text-muted:#6E8A94;
+    --accent:#D6633A; --accent-hover:#E37B4E; --on-accent:#F7EEE2;
+    --success:#37B3A4; --warning:#E0982F; --danger:#E05A3E;
+    --border:#1C4A5A; --border-strong:#2E6072; --code-bg:#03141B;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 12px 32px rgba(0,0,0,.45);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{font-family:'Archivo',sans-serif;background:var(--surface-0);color:var(--text-primary);-webkit-font-smoothing:antialiased;line-height:1.5;}
+  a{color:var(--accent);text-decoration:none;}
+  a:hover{color:var(--accent-hover);}
+  ::selection{background:var(--accent);color:var(--on-accent);}
+  ::-webkit-scrollbar{width:10px;height:10px;}
+  ::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:6px;border:2px solid var(--surface-0);}
+  @keyframes bfade{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:translateY(0);}}
+  @keyframes bpulse{0%,100%{opacity:1;}50%{opacity:.35;}}
+</style>
+</helmet>
+<div style="min-height:100vh;background:var(--surface-0);color:var(--text-primary);">
+  <div style="max-width:1040px;margin:0 auto;padding:28px 28px 90px;">
+
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">
+      <div style="width:28px;height:28px;border-radius:8px;background:var(--accent);display:grid;place-items:center;flex-shrink:0;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--on-accent)" stroke-linecap="round" stroke-linejoin="round"><path d="M5.4 3.6v16.8" stroke-width="3.4"/><path d="M10.4 4.6l5.6 3.8-5.6 3.8" stroke-width="2.8"/><path d="M10.4 12l5.6 3.8-5.6 3.8" stroke-width="2.8" opacity=".58"/></svg></div>
+      <span style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:15px;letter-spacing:-.02em;color:var(--text-secondary);">Brabo</span>
+      <span style="color:var(--text-muted);font-size:15px;">/</span>
+      <h1 style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:22px;margin:0;letter-spacing:-.02em;">brabo-api</h1>
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-muted);border:1px solid var(--border);border-radius:6px;padding:2px 7px;">github · privado</span>
+    </div>
+    <div style="display:flex;gap:2px;border-bottom:1px solid var(--border);margin-bottom:28px;flex-wrap:wrap;">
+      <span style="font-family:'Archivo',sans-serif;font-weight:500;font-size:13px;color:var(--text-muted);padding:10px 14px;">Visão geral</span>
+      <span style="font-family:'Archivo',sans-serif;font-weight:500;font-size:13px;color:var(--text-muted);padding:10px 14px;">Sessões</span>
+      <span style="font-family:'Archivo',sans-serif;font-weight:500;font-size:13px;color:var(--text-muted);padding:10px 14px;">Backlog</span>
+      <span style="font-family:'Archivo',sans-serif;font-weight:500;font-size:13px;color:var(--text-muted);padding:10px 14px;">Aprovações</span>
+      <span style="font-family:'Archivo',sans-serif;font-weight:500;font-size:13px;color:var(--text-muted);padding:10px 14px;">Insights</span>
+      <span style="font-family:'Archivo',sans-serif;font-weight:600;font-size:13px;color:var(--text-primary);border-bottom:2px solid var(--accent);padding:10px 14px;">Configurações</span>
+    </div>
+
+    <!-- ===== REPOSITÓRIO ===== -->
+    <section style="margin-bottom:36px;">
+      <h2 style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:18px;margin:0 0 4px;">Repositório</h2>
+      <p style="font-size:13px;color:var(--text-secondary);margin:0 0 14px;">Criado pelo Brabo, com o bootstrap de Gitflow aplicado.</p>
+      <div style="display:flex;align-items:center;gap:12px;background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:12px 14px;flex-wrap:wrap;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M6 3v12a3 3 0 0 0 3 3h6"/><circle cx="6" cy="18" r="2.4"/><circle cx="18" cy="18" r="2.4"/><circle cx="6" cy="4" r="2"/></svg>
+        <code style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--text-primary);">/data/git-repos/brabo-api.git</code>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-muted);">local · main</span>
+        <span style="flex:1;"></span>
+        <span style="display:inline-flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--success);"><span style="width:6px;height:6px;border-radius:50%;background:var(--success);"></span>sincronizado</span>
+      </div>
+    </section>
+
+    <!-- ===== EXECUÇÃO ===== -->
+    <section style="margin-bottom:36px;">
+      <h2 style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:18px;margin:0 0 4px;">Execução</h2>
+      <p style="font-size:13px;color:var(--text-secondary);margin:0 0 14px;max-width:82ch;text-wrap:pretty;">Circuit breaker dos dev agents — vale a partir da próxima ativação da execução, não afeta agentes já rodando.</p>
+      <div style="background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:16px 18px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:260px;">
+          <div style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:14px;">Tasks blocked seguidas até parar</div>
+          <div style="font-size:12.5px;color:var(--text-muted);">{{ breakerHint }}</div>
+        </div>
+        <input value="{{ breaker }}" onChange="{{ setBreaker }}" style="width:150px;font-family:'IBM Plex Mono',monospace;font-size:14px;color:var(--text-primary);background:var(--code-bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;outline:none;" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent);">
+        <button onClick="{{ saveBreaker }}" style="font-family:'Archivo',sans-serif;font-weight:600;font-size:13px;color:var(--on-accent);background:var(--accent);border:none;border-radius:8px;padding:10px 20px;cursor:pointer;" style-hover="background:var(--accent-hover);">Salvar</button>
+      </div>
+    </section>
+
+    <!-- ===== PROMOÇÃO DE HISTÓRIAS ===== -->
+    <section style="margin-bottom:44px;">
+      <h2 style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:18px;margin:0 0 4px;">Promoção de histórias</h2>
+      <p style="font-size:13px;color:var(--text-secondary);margin:0 0 14px;max-width:88ch;text-wrap:pretty;">Uma história só vira trabalho pegável quando está pronta. Isto define quem dá esse passo — as validações são as mesmas nos dois modos; o que muda é quem dispara, nunca o que é exigido.</p>
+      <div style="background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:16px 18px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:300px;">
+          <div style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:14px;">Quem promove</div>
+          <div style="font-size:12.5px;color:var(--text-muted);max-width:62ch;text-wrap:pretty;">O PO promove sozinho ao terminar uma história completa — comportamento anterior à Fase 12c, mantido como opção.</div>
+        </div>
+        <div style="position:relative;">
+          <select style="appearance:none;font-family:'Archivo',sans-serif;font-size:13px;color:var(--text-primary);background:var(--code-bg);border:1px solid var(--border);border-radius:8px;padding:10px 38px 10px 13px;outline:none;cursor:pointer;min-width:270px;" style-focus="border-color:var(--accent);"><option>Automática — o PO promove</option><option>Manual — você promove</option><option>Automática com revisão do Arquiteto</option></select>
+          <svg style="position:absolute;right:13px;top:50%;transform:translateY(-50%);pointer-events:none;" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== CONECTORES DE IA ===== -->
+    <section style="margin-bottom:44px;">
+      <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:4px;flex-wrap:wrap;">
+        <h2 style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:18px;margin:0;">Conectores de IA</h2>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-muted);">{{ connectorSummary }}</span>
+      </div>
+      <p style="font-size:13px;color:var(--text-secondary);margin:0 0 16px;max-width:88ch;text-wrap:pretty;">Cada conector é uma fonte de modelos: uma <strong style="color:var(--text-primary);font-weight:600;">credencial de provider</strong> expõe o catálogo remoto daquela conta, o <strong style="color:var(--text-primary);font-weight:600;">runtime local</strong> expõe só o que está puxado no disco. Modelos aparecem no seletor agrupados pelo conector que os fornece.</p>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;">
+        <sc-for list="{{ connectors }}" as="c" hint-placeholder-count="4">
+          <div style="background:var(--surface-1);border:1px solid var(--border);border-left:2px solid {{ c.tone }};border-radius:10px;padding:14px 15px;display:flex;flex-direction:column;gap:10px;" style-hover="border-color:var(--border-strong);">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="width:28px;height:28px;border-radius:8px;background:{{ c.chipBg }};border:1px solid {{ c.chipRing }};display:grid;place-items:center;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;color:{{ c.tone }};flex-shrink:0;">{{ c.tag }}</span>
+              <div style="flex:1;min-width:0;">
+                <div style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ c.name }}</div>
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--text-muted);">{{ c.kind }}</div>
+              </div>
+              <span style="display:inline-flex;align-items:center;gap:5px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:{{ c.stColor }};flex-shrink:0;"><span style="width:6px;height:6px;border-radius:50%;background:{{ c.stColor }};animation:bpulse 2.4s ease-in-out infinite;"></span>{{ c.status }}</span>
+            </div>
+            <code style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-secondary);background:var(--code-bg);border:1px solid var(--border);border-radius:6px;padding:6px 9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ c.credential }}</code>
+            <div style="display:flex;flex-wrap:wrap;gap:5px;">
+              <sc-for list="{{ c.caps }}" as="cap" hint-placeholder-count="3">
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.04em;text-transform:uppercase;color:{{ cap.color }};background:{{ cap.bg }};border:1px solid {{ cap.ring }};border-radius:4px;padding:2px 6px;">{{ cap.label }}</span>
+              </sc-for>
+            </div>
+            <div style="display:flex;align-items:baseline;gap:8px;border-top:1px solid var(--border);padding-top:9px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-muted);">
+              <span style="color:var(--text-secondary);">{{ c.count }}</span>
+              <span style="flex:1;">{{ c.note }}</span>
+              <a href="#" style="font-size:11px;">gerenciar</a>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+
+    <!-- ===== MELHORES MODELOS POR CAPACIDADE ===== -->
+    <section style="margin-bottom:44px;">
+      <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:4px;flex-wrap:wrap;">
+        <h2 style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:18px;margin:0;">Melhores modelos por capacidade</h2>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-muted);">{{ recPolicyLabel }}</span>
+      </div>
+      <p style="font-size:13px;color:var(--text-secondary);margin:0 0 14px;max-width:88ch;text-wrap:pretty;">Ranking do Brabo por tipo de trabalho, medido nos últimos 30 dias deste workspace (taxa de aprovação sem retrabalho × custo por tarefa concluída).</p>
+
+      <div style="border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+        <div style="display:grid;grid-template-columns:1.15fr 1.5fr 1.35fr .8fr 1.5fr;background:var(--surface-2);font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;color:var(--text-secondary);letter-spacing:.05em;">
+          <div style="padding:11px 14px;">CAPACIDADE</div>
+          <div style="padding:11px 14px;border-left:1px solid var(--border);">{{ colPrimary }}</div>
+          <div style="padding:11px 14px;border-left:1px solid var(--border);">{{ colSecondary }}</div>
+          <div style="padding:11px 14px;border-left:1px solid var(--border);text-align:right;">SCORE</div>
+          <div style="padding:11px 14px;border-left:1px solid var(--border);">USADO POR</div>
+        </div>
+        <sc-for list="{{ recs }}" as="r" hint-placeholder-count="5">
+          <div style="display:grid;grid-template-columns:1.15fr 1.5fr 1.35fr .8fr 1.5fr;border-top:1px solid var(--border);align-items:center;" style-hover="background:var(--surface-1);">
+            <div style="padding:11px 14px;display:flex;align-items:center;gap:9px;min-width:0;">
+              <span style="width:22px;height:22px;border-radius:6px;background:{{ r.bg }};border:1px solid {{ r.ring }};display:grid;place-items:center;flex-shrink:0;">
+                <span style="width:7px;height:7px;border-radius:2px;background:{{ r.color }};"></span>
+              </span>
+              <span style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:13px;">{{ r.label }}</span>
+            </div>
+            <div style="padding:9px 14px;border-left:1px solid var(--border);">
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:{{ r.primaryColor }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ r.primary }}</div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-muted);">{{ r.primaryVia }}</div>
+            </div>
+            <div style="padding:9px 14px;border-left:1px solid var(--border);">
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ r.secondary }}</div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-muted);">{{ r.secondaryVia }}</div>
+            </div>
+            <div style="padding:11px 14px;border-left:1px solid var(--border);text-align:right;font-family:'IBM Plex Mono',monospace;font-size:12px;">{{ r.score }}</div>
+            <div style="padding:11px 14px;border-left:1px solid var(--border);font-size:12px;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ r.usedBy }}</div>
+          </div>
+        </sc-for>
+      </div>
+      <p style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-muted);margin:10px 0 0;">{{ recFootnote }}</p>
+    </section>
+
+    <!-- ===== MODELOS POR AGENTE ===== -->
+    <section style="margin-bottom:44px;">
+      <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:4px;flex-wrap:wrap;">
+        <h2 style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:18px;margin:0;">Modelos por agente</h2>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-muted);">binding vigente por cascata</span>
+      </div>
+      <p style="font-size:13px;color:var(--text-secondary);margin:0 0 14px;">A origem indica onde o valor é resolvido: <span style="color:var(--text-muted);font-family:'IBM Plex Mono',monospace;">global</span> → <span style="color:var(--warning);font-family:'IBM Plex Mono',monospace;">projeto</span> → <span style="color:var(--accent);font-family:'IBM Plex Mono',monospace;">agente</span>. O mais específico vence. As tags sob o nome são as capacidades que aquele agente realmente exige.</p>
+
+      <div style="display:flex;align-items:center;gap:8px;background:var(--surface-1);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:14px;flex-wrap:wrap;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 8v4l3 2"/></svg>
+        <span style="font-size:13px;color:var(--text-secondary);flex:1;min-width:200px;">Custo estimado mensal do time <span style="color:var(--text-muted);">· com base no histórico de 30 dias</span></span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:600;">{{ totalCost }}</span>
+      </div>
+
+      <div style="border:1px solid var(--border);border-radius:12px;overflow:visible;">
+        <div style="display:grid;grid-template-columns:1.4fr 1.9fr .8fr 1.4fr .9fr;background:var(--surface-2);font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;color:var(--text-secondary);letter-spacing:.05em;border-radius:12px 12px 0 0;">
+          <div style="padding:11px 14px;">AGENTE · CAPACIDADES</div><div style="padding:11px 14px;border-left:1px solid var(--border);">MODELO VIGENTE</div><div style="padding:11px 14px;border-left:1px solid var(--border);">ORIGEM</div><div style="padding:11px 14px;border-left:1px solid var(--border);">FALLBACK</div><div style="padding:11px 14px;border-left:1px solid var(--border);text-align:right;">EST. MÊS</div>
+        </div>
+        <sc-for list="{{ agents }}" as="a" hint-placeholder-count="6">
+          <div style="display:grid;grid-template-columns:1.4fr 1.9fr .8fr 1.4fr .9fr;border-top:1px solid var(--border);align-items:center;" style-hover="background:var(--surface-1);">
+            <div style="padding:10px 14px;display:flex;align-items:center;gap:9px;min-width:0;">
+              <span style="width:26px;height:26px;border-radius:7px;background:{{ a.avBg }};border:1px solid {{ a.avRing }};display:grid;place-items:center;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;color:{{ a.avColor }};flex-shrink:0;">{{ a.initials }}</span>
+              <div style="min-width:0;">
+                <div style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ a.name }}</div>
+                <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:2px;">
+                  <sc-for list="{{ a.caps }}" as="cap" hint-placeholder-count="2">
+                    <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.04em;text-transform:uppercase;color:{{ cap.color }};background:{{ cap.bg }};border:1px solid {{ cap.ring }};border-radius:4px;padding:1px 5px;">{{ cap.label }}</span>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+            <div style="padding:9px 14px;border-left:1px solid var(--border);position:relative;">
+              <button onClick="{{ a.toggle }}" style="width:100%;display:flex;align-items:center;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-primary);background:var(--surface-0);border:1px solid {{ a.pickBorder }};border-radius:7px;padding:7px 10px;cursor:pointer;text-align:left;" style-hover="border-color:var(--border-strong);">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.6" stroke-linejoin="round" style="flex-shrink:0;"><path d="M21 16V8l-9-5-9 5v8l9 5 9-5z"/><path d="M3.5 7.5 12 12l8.5-4.5"/></svg>
+                <span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ a.model }}</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:{{ a.viaColor }};flex-shrink:0;">{{ a.via }}</span>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+              <sc-if value="{{ a.open }}" hint-placeholder-val="{{ false }}">
+                <div onClick="{{ a.close }}" style="position:fixed;inset:0;z-index:40;"></div>
+                <div style="position:absolute;top:calc(100% - 2px);left:14px;right:14px;z-index:41;background:var(--surface-1);border:1px solid var(--border-strong);border-radius:9px;box-shadow:var(--shadow);overflow:hidden;animation:bfade .13s ease-out;max-height:420px;overflow-y:auto;">
+                  <div style="padding:8px 12px;background:var(--code-bg);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;">
+                    <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);">{{ groupModeLabel }}</span>
+                    <span style="flex:1;"></span>
+                    <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-muted);">{{ a.capsHint }}</span>
+                  </div>
+                  <sc-for list="{{ a.groups }}" as="g" hint-placeholder-count="3">
+                    <div>
+                      <div style="padding:7px 12px;background:var(--surface-2);border-top:1px solid var(--border);display:flex;align-items:center;gap:7px;">
+                        <span style="width:5px;height:5px;border-radius:50%;background:{{ g.tone }};flex-shrink:0;"></span>
+                        <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;letter-spacing:.08em;color:var(--text-secondary);text-transform:uppercase;flex:1;">{{ g.label }}</span>
+                        <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-muted);">{{ g.meta }}</span>
+                      </div>
+                      <sc-for list="{{ g.opts }}" as="m" hint-placeholder-count="2">
+                        <button onClick="{{ m.onClick }}" style="width:100%;display:flex;align-items:center;gap:9px;padding:8px 12px;background:{{ m.bg }};border:none;border-top:1px solid var(--border);cursor:pointer;text-align:left;" style-hover="background:var(--surface-2);">
+                          <span style="width:13px;height:13px;border-radius:50%;border:2px solid {{ m.ring }};display:grid;place-items:center;flex-shrink:0;"><span style="width:5px;height:5px;border-radius:50%;background:{{ m.dot }};"></span></span>
+                          <span style="flex:1;min-width:0;">
+                            <span style="display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ m.name }}</span>
+                            <span style="display:block;font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-muted);">{{ m.capsLabel }}</span>
+                          </span>
+                          <sc-if value="{{ m.fit }}" hint-placeholder-val="{{ false }}">
+                            <span style="font-family:'IBM Plex Mono',monospace;font-size:8.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--success);background:color-mix(in srgb,var(--success) 14%,transparent);border:1px solid color-mix(in srgb,var(--success) 36%,transparent);border-radius:4px;padding:1px 5px;flex-shrink:0;">ideal</span>
+                          </sc-if>
+                          <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:{{ m.costColor }};flex-shrink:0;">{{ m.cost }}</span>
+                        </button>
+                      </sc-for>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-if>
+            </div>
+            <div style="padding:11px 14px;border-left:1px solid var(--border);"><span style="display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;color:{{ a.origColor }};background:{{ a.origBg }};border:1px solid {{ a.origBorder }};border-radius:5px;padding:2px 8px;">{{ a.origin }}</span></div>
+            <div style="padding:11px 14px;border-left:1px solid var(--border);font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ a.fallback }}</div>
+            <div style="padding:11px 14px;border-left:1px solid var(--border);text-align:right;font-family:'IBM Plex Mono',monospace;font-size:12px;">{{ a.est }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+
+    <!-- ===== IAM ===== -->
+    <section>
+      <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:4px;">
+        <h2 style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:18px;margin:0;">Membros e papéis</h2>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-muted);">IAM · por projeto</span>
+      </div>
+      <p style="font-size:13px;color:var(--text-secondary);margin:0 0 16px;">Papéis definem quem pode aprovar quais ações dos agentes neste projeto.</p>
+
+      <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+        <div style="position:relative;flex:1;min-width:220px;">
+          <svg style="position:absolute;left:12px;top:50%;transform:translateY(-50%);" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
+          <input value="{{ invite }}" onChange="{{ setInvite }}" placeholder="convidar por e-mail…" style="width:100%;font-family:'Archivo',sans-serif;font-size:13px;color:var(--text-primary);background:var(--surface-1);border:1px solid var(--border);border-radius:8px;padding:9px 12px 9px 36px;outline:none;" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent);">
+        </div>
+        <div style="position:relative;">
+          <select style="appearance:none;font-family:'Archivo',sans-serif;font-size:13px;color:var(--text-secondary);background:var(--surface-1);border:1px solid var(--border);border-radius:8px;padding:9px 34px 9px 12px;outline:none;cursor:pointer;height:100%;" style-focus="border-color:var(--accent);"><option>developer</option><option>maintainer</option><option>viewer</option><option>owner</option></select>
+          <svg style="position:absolute;right:12px;top:50%;transform:translateY(-50%);pointer-events:none;" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+        </div>
+        <button style="display:inline-flex;align-items:center;gap:7px;font-family:'Archivo',sans-serif;font-weight:600;font-size:13px;color:var(--on-accent);background:var(--accent);border:1px solid var(--accent);border-radius:8px;padding:9px 16px;cursor:pointer;" style-hover="background:var(--accent-hover);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>Convidar</button>
+      </div>
+
+      <div style="border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:28px;">
+        <div style="display:grid;grid-template-columns:2.2fr 1.3fr 1fr 56px;background:var(--surface-2);font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;color:var(--text-secondary);letter-spacing:.05em;">
+          <div style="padding:11px 14px;">MEMBRO</div><div style="padding:11px 14px;border-left:1px solid var(--border);">PAPEL NO PROJETO</div><div style="padding:11px 14px;border-left:1px solid var(--border);">STATUS</div><div style="padding:11px 8px;border-left:1px solid var(--border);"></div>
+        </div>
+        <sc-for list="{{ members }}" as="m" hint-placeholder-count="5">
+          <div style="display:grid;grid-template-columns:2.2fr 1.3fr 1fr 56px;border-top:1px solid var(--border);align-items:center;" style-hover="background:var(--surface-1);">
+            <div style="padding:10px 14px;display:flex;align-items:center;gap:11px;min-width:0;">
+              <span style="width:32px;height:32px;border-radius:8px;background:{{ m.avBg }};display:grid;place-items:center;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:12px;color:var(--on-accent);flex-shrink:0;">{{ m.initials }}</span>
+              <div style="min-width:0;"><div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ m.name }}</div><div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ m.email }}</div></div>
+            </div>
+            <div style="padding:10px 14px;border-left:1px solid var(--border);">
+              <div style="position:relative;"><select style="appearance:none;width:100%;font-family:'IBM Plex Mono',monospace;font-size:12px;color:{{ m.roleColor }};background:var(--surface-0);border:1px solid var(--border);border-radius:7px;padding:6px 28px 6px 10px;outline:none;cursor:pointer;" style-focus="border-color:var(--accent);"><option>{{ m.role }}</option><option>owner</option><option>maintainer</option><option>developer</option><option>viewer</option></select><svg style="position:absolute;right:9px;top:50%;transform:translateY(-50%);pointer-events:none;" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></div>
+            </div>
+            <div style="padding:10px 14px;border-left:1px solid var(--border);"><span style="display:inline-flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:{{ m.stColor }};"><span style="width:6px;height:6px;border-radius:50%;background:{{ m.stColor }};"></span>{{ m.status }}</span></div>
+            <div style="padding:8px;border-left:1px solid var(--border);display:grid;place-items:center;"><button title="Remover" style="width:28px;height:28px;border-radius:7px;background:transparent;border:1px solid var(--border);color:var(--text-muted);cursor:pointer;display:grid;place-items:center;" style-hover="border-color:color-mix(in srgb,var(--danger) 50%,transparent);color:var(--danger);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button></div>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:12px;">
+        <h3 style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:14px;margin:0;">Quem pode aprovar o quê</h3>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-muted);">matriz resumida</span>
+      </div>
+      <div style="border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+        <div style="display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr 1fr;background:var(--surface-2);font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;color:var(--text-secondary);letter-spacing:.04em;">
+          <div style="padding:11px 14px;">TIPO DE AÇÃO</div>
+          <div style="padding:11px 8px;border-left:1px solid var(--border);text-align:center;">owner</div>
+          <div style="padding:11px 8px;border-left:1px solid var(--border);text-align:center;">maintainer</div>
+          <div style="padding:11px 8px;border-left:1px solid var(--border);text-align:center;">developer</div>
+          <div style="padding:11px 8px;border-left:1px solid var(--border);text-align:center;">viewer</div>
+        </div>
+        <sc-for list="{{ matrix }}" as="row" hint-placeholder-count="6">
+          <div style="display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr 1fr;border-top:1px solid var(--border);align-items:center;" style-hover="background:var(--surface-1);">
+            <div style="padding:11px 14px;font-size:12.5px;color:var(--text-secondary);">{{ row.action }}</div>
+            <div style="padding:11px 8px;border-left:1px solid var(--border);display:grid;place-items:center;">{{ row.owner }}</div>
+            <div style="padding:11px 8px;border-left:1px solid var(--border);display:grid;place-items:center;">{{ row.maintainer }}</div>
+            <div style="padding:11px 8px;border-left:1px solid var(--border);display:grid;place-items:center;">{{ row.developer }}</div>
+            <div style="padding:11px 8px;border-left:1px solid var(--border);display:grid;place-items:center;">{{ row.viewer }}</div>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display:flex;align-items:center;gap:16px;margin-top:12px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-muted);">
+        <span style="display:flex;align-items:center;gap:6px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>pode aprovar</span>
+        <span style="display:flex;align-items:center;gap:6px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round"><path d="M5 12h14"/></svg>sem permissão</span>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1180,&quot;height&quot;:1400},&quot;modelGrouping&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;conector&quot;,&quot;capacidade&quot;],&quot;default&quot;:&quot;conector&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Catálogo de modelos&quot;},&quot;localFirst&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Catálogo de modelos&quot;},&quot;costVisibility&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;visível&quot;,&quot;oculto&quot;],&quot;default&quot;:&quot;visível&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Catálogo de modelos&quot;}}">
+const CAPS = {
+  coding: { label: 'código', color: '#37B3A4' },
+  vision: { label: 'imagem', color: '#9C7BE0' },
+  design: { label: 'design', color: '#D6633A' },
+  chat:   { label: 'chat',   color: '#5EBEB1' },
+  docs:   { label: 'docs',   color: '#E0982F' },
+};
+
+const CONNECTORS = {
+  ollama: { name: 'Ollama · runtime local', kind: 'runtime local', tag: 'OL', tone: '#37B3A4', credential: 'http://127.0.0.1:11434', status: 'ativo', stColor: 'var(--success)', note: 'no disco · 42 GB' },
+  anthropic: { name: 'Anthropic', kind: 'credencial de provider', tag: 'AN', tone: '#D6633A', credential: 'sk-ant-api03-••••••••7f2c', status: 'ativo', stColor: 'var(--success)', note: 'org · brabo-dev' },
+  openai: { name: 'OpenAI', kind: 'credencial de provider', tag: 'OA', tone: '#5EBEB1', credential: 'sk-proj-••••••••a91d', status: 'ativo', stColor: 'var(--success)', note: 'projeto · brabo' },
+  google: { name: 'Google AI', kind: 'credencial de provider', tag: 'GO', tone: '#9C7BE0', credential: 'AIza••••••••kQ4', status: 'cota 78%', stColor: 'var(--warning)', note: 'free tier' },
+};
+
+const MODELS = [
+  { id: 'qwen2.5-coder:14b', conn: 'ollama', caps: ['coding'], cost: 'grátis', local: true },
+  { id: 'llama3.1:8b', conn: 'ollama', caps: ['chat', 'docs'], cost: 'grátis', local: true },
+  { id: 'llava:13b', conn: 'ollama', caps: ['vision'], cost: 'grátis', local: true },
+  { id: 'deepseek-r1:8b', conn: 'ollama', caps: ['coding', 'docs'], cost: 'grátis', local: true },
+  { id: 'claude-sonnet-4', conn: 'anthropic', caps: ['coding', 'design', 'docs', 'vision'], cost: 'R$ 18' },
+  { id: 'claude-haiku-4', conn: 'anthropic', caps: ['chat', 'docs'], cost: 'R$ 4,80' },
+  { id: 'gpt-4o', conn: 'openai', caps: ['vision', 'chat', 'design'], cost: 'R$ 15' },
+  { id: 'o3-mini', conn: 'openai', caps: ['coding'], cost: 'R$ 9,20' },
+  { id: 'gemini-2.5-pro', conn: 'google', caps: ['docs', 'vision', 'coding'], cost: 'R$ 11' },
+];
+
+const AGENTS = [
+  { id: 'psi', name: 'Psicólogo', initials: 'PS', accent: '#9C7BE0', caps: ['chat', 'docs'], model: 'claude-sonnet-4', origin: 'agente', fallback: 'claude-haiku-4', est: 'R$ 84,20' },
+  { id: 'po', name: 'PO', initials: 'PO', accent: '#9C7BE0', caps: ['docs', 'chat'], model: 'claude-haiku-4', origin: 'projeto', fallback: 'llama3.1:8b', est: 'R$ 41,00' },
+  { id: 'arq', name: 'Arquiteto', initials: 'AR', accent: '#D6633A', caps: ['coding', 'docs'], model: 'claude-sonnet-4', origin: 'global', fallback: 'gpt-4o', est: 'R$ 132,40' },
+  { id: 'be', name: 'Dev Backend', initials: 'BE', accent: '#37B3A4', caps: ['coding'], model: 'qwen2.5-coder:14b', origin: 'agente', fallback: 'claude-sonnet-4', est: 'R$ 0,00' },
+  { id: 'fe', name: 'Dev Frontend', initials: 'FE', accent: '#5EBEB1', caps: ['coding', 'design'], model: 'claude-sonnet-4', origin: 'projeto', fallback: 'claude-haiku-4', est: 'R$ 96,30' },
+  { id: 'ux', name: 'Design Review', initials: 'UX', accent: '#D6633A', caps: ['design', 'vision'], model: 'gpt-4o', origin: 'agente', fallback: 'claude-sonnet-4', est: 'R$ 52,80' },
+  { id: 'qa', name: 'QA', initials: 'QA', accent: '#E0982F', caps: ['coding', 'vision'], model: 'claude-haiku-4', origin: 'global', fallback: 'llama3.1:8b', est: 'R$ 28,50' },
+];
+
+const RECS = [
+  { cap: 'coding', label: 'Código', cloud: 'claude-sonnet-4', local: 'qwen2.5-coder:14b', score: '9.4', usedBy: 'Arquiteto, Backend, Frontend' },
+  { cap: 'vision', label: 'Leitura de imagem', cloud: 'gpt-4o', local: 'llava:13b', score: '9.1', usedBy: 'Design Review, QA' },
+  { cap: 'design', label: 'Design & UI', cloud: 'claude-sonnet-4', local: '— sem cobertura local', score: '8.7', usedBy: 'Frontend, Design Review' },
+  { cap: 'chat', label: 'Chat & triagem', cloud: 'claude-haiku-4', local: 'llama3.1:8b', score: '8.9', usedBy: 'Psicólogo, PO' },
+  { cap: 'docs', label: 'Documentação', cloud: 'gemini-2.5-pro', local: 'deepseek-r1:8b', score: '9.0', usedBy: 'PO, Arquiteto' },
+];
+
+class Component extends DCLogic {
+  state = { open: null, bindings: {}, invite: '', breaker: '3' };
+
+  yes() { return React.createElement('svg', { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: 'var(--success)', strokeWidth: 2.2, strokeLinecap: 'round', strokeLinejoin: 'round' }, React.createElement('path', { d: 'M20 6L9 17l-5-5' })); }
+  no() { return React.createElement('svg', { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: 'var(--text-muted)', strokeWidth: 2, strokeLinecap: 'round' }, React.createElement('path', { d: 'M5 12h14' })); }
+
+  capChip(key, big) {
+    const c = CAPS[key];
+    return { label: c.label, color: c.color, bg: 'color-mix(in srgb,' + c.color + ' 13%,transparent)', ring: 'color-mix(in srgb,' + c.color + ' 34%,transparent)' };
+  }
+
+  renderVals() {
+    const st = this.state;
+    const localFirst = this.props.localFirst ?? false;
+    const grouping = this.props.modelGrouping ?? 'conector';
+    const costs = this.props.costVisibility ?? 'visível';
+    const hideCosts = costs === 'oculto';
+
+    const byId = {};
+    MODELS.forEach(m => { byId[m.id] = m; });
+    const mask = v => (hideCosts ? '•••' : v);
+
+    // ---- connectors ----
+    const order = localFirst ? ['ollama', 'anthropic', 'openai', 'google'] : ['anthropic', 'openai', 'google', 'ollama'];
+    const connectors = order.map(k => {
+      const c = CONNECTORS[k];
+      const ms = MODELS.filter(m => m.conn === k);
+      const caps = [...new Set(ms.flatMap(m => m.caps))].map(x => this.capChip(x));
+      return { ...c, chipBg: 'color-mix(in srgb,' + c.tone + ' 15%,var(--surface-2))', chipRing: 'color-mix(in srgb,' + c.tone + ' 42%,transparent)',
+        count: ms.length + ' modelos', caps };
+    });
+    const nProv = order.filter(k => CONNECTORS[k].kind !== 'runtime local').length;
+    const connectorSummary = nProv + ' credenciais de provider · 1 runtime local · ' + MODELS.length + ' modelos disponíveis';
+
+    // ---- picker groups ----
+    const groupsFor = (a) => {
+      const cur = st.bindings[a.id] || a.model;
+      const opt = (m) => {
+        const sel = cur === m.id;
+        const fit = a.caps.every(c => m.caps.includes(c));
+        return {
+          name: m.id, capsLabel: m.caps.map(c => CAPS[c].label).join(' · ') + '  ·  ' + CONNECTORS[m.conn].name.split(' ·')[0],
+          cost: mask(m.cost), costColor: m.local ? 'var(--success)' : 'var(--text-muted)', fit,
+          bg: sel ? 'color-mix(in srgb,var(--accent) 10%,transparent)' : 'transparent',
+          ring: sel ? 'var(--accent)' : 'var(--border-strong)', dot: sel ? 'var(--accent)' : 'transparent',
+          onClick: () => this.setState(s => ({ bindings: { ...s.bindings, [a.id]: m.id }, open: null })),
+        };
+      };
+      if (grouping === 'capacidade') {
+        return Object.keys(CAPS).map(k => {
+          const ms = MODELS.filter(m => m.caps.includes(k));
+          const sorted = localFirst ? [...ms].sort((x, y) => (y.local ? 1 : 0) - (x.local ? 1 : 0)) : ms;
+          return { label: 'melhores para ' + CAPS[k].label, tone: CAPS[k].color, meta: ms.length + ' modelos', opts: sorted.map(opt) };
+        });
+      }
+      return order.map(k => {
+        const c = CONNECTORS[k];
+        return { label: c.name, tone: c.tone, meta: c.kind === 'runtime local' ? 'local' : 'credencial', opts: MODELS.filter(m => m.conn === k).map(opt) };
+      });
+    };
+
+    const originTone = { global: 'var(--text-muted)', projeto: 'var(--warning)', agente: 'var(--accent)' };
+    const agents = AGENTS.map(a => {
+      const cur = st.bindings[a.id] || a.model;
+      const m = byId[cur];
+      const orig = st.bindings[a.id] && st.bindings[a.id] !== a.model ? 'agente' : a.origin;
+      return {
+        name: a.name, initials: a.initials, avColor: a.accent,
+        avBg: 'color-mix(in srgb,' + a.accent + ' 15%,var(--surface-2))', avRing: 'color-mix(in srgb,' + a.accent + ' 45%,transparent)',
+        caps: a.caps.map(c => this.capChip(c)),
+        capsHint: 'exige: ' + a.caps.map(c => CAPS[c].label).join(' + '),
+        model: cur, via: CONNECTORS[m.conn].tag.toLowerCase() + (m.local ? ' · local' : ' · api'),
+        viaColor: m.local ? 'var(--success)' : 'var(--text-muted)',
+        fallback: a.fallback, est: mask(a.est),
+        origin: orig, origColor: originTone[orig], origBg: 'color-mix(in srgb,' + originTone[orig] + ' 14%,transparent)', origBorder: 'color-mix(in srgb,' + originTone[orig] + ' 34%,transparent)',
+        open: st.open === a.id, pickBorder: st.open === a.id ? 'var(--accent)' : 'var(--border)',
+        toggle: () => this.setState(s => ({ open: s.open === a.id ? null : a.id })), close: () => this.setState({ open: null }),
+        groups: groupsFor(a),
+      };
+    });
+
+    const recs = RECS.map(r => {
+      const c = CAPS[r.cap];
+      const primary = localFirst ? r.local : r.cloud;
+      const secondary = localFirst ? r.cloud : r.local;
+      const viaOf = id => { const m = byId[id]; return m ? CONNECTORS[m.conn].name.split(' ·')[0].toLowerCase() + ' · ' + mask(m.cost) : 'nenhum modelo puxado'; };
+      return { label: r.label, color: c.color, bg: 'color-mix(in srgb,' + c.color + ' 13%,transparent)', ring: 'color-mix(in srgb,' + c.color + ' 34%,transparent)',
+        primary, primaryVia: viaOf(primary), primaryColor: byId[primary] && byId[primary].local ? 'var(--success)' : 'var(--accent)',
+        secondary, secondaryVia: viaOf(secondary), score: r.score, usedBy: r.usedBy };
+    });
+
+    const roleColor = { owner: 'var(--accent)', maintainer: 'var(--warning)', developer: 'var(--success)', viewer: 'var(--text-muted)' };
+    const memDefs = [
+      { name: 'Rafael Souza', email: 'rafael@brabo.dev', initials: 'RS', role: 'owner', status: 'ativo', st: 'var(--success)', av: 'linear-gradient(135deg,var(--accent),var(--warning))' },
+      { name: 'Marina Costa', email: 'marina@brabo.dev', initials: 'MC', role: 'maintainer', status: 'ativo', st: 'var(--success)', av: 'linear-gradient(135deg,#9C7BE0,var(--accent))' },
+      { name: 'João Prado', email: 'joao@brabo.dev', initials: 'JP', role: 'developer', status: 'ativo', st: 'var(--success)', av: 'linear-gradient(135deg,var(--success),#5EBEB1)' },
+      { name: 'Ana Lima', email: 'ana@contractor.io', initials: 'AL', role: 'developer', status: 'convite', st: 'var(--warning)', av: 'linear-gradient(135deg,var(--warning),var(--accent))' },
+      { name: 'Auditoria', email: 'audit@brabo.dev', initials: 'AU', role: 'viewer', status: 'ativo', st: 'var(--success)', av: 'linear-gradient(135deg,#5E8C9C,var(--surface-2))' },
+    ];
+    const members = memDefs.map(m => ({ ...m, avBg: m.av, roleColor: roleColor[m.role], stColor: m.st }));
+
+    const Y = this.yes(), N = this.no();
+    const matrix = [
+      ['Merge / abrir PR', 1, 1, 1, 0],
+      ['Deploy em produção', 1, 1, 0, 0],
+      ['Comando privilegiado (terminal)', 1, 1, 0, 0],
+      ['Alterar schema / migração', 1, 1, 0, 0],
+      ['Adicionar credencial de provider', 1, 0, 0, 0],
+      ['Editar permissions.json', 1, 0, 0, 0],
+    ].map(r => ({ action: r[0], owner: r[1] ? Y : N, maintainer: r[2] ? Y : N, developer: r[3] ? Y : N, viewer: r[4] ? Y : N }));
+
+    return {
+      connectors, connectorSummary, agents, recs, members, matrix,
+      totalCost: hideCosts ? '••• · orçamento oculto' : 'R$ 640,10  · US$ 116',
+      colPrimary: localFirst ? 'RECOMENDADO (LOCAL)' : 'RECOMENDADO',
+      colSecondary: localFirst ? 'ALTERNATIVA EM NUVEM' : 'ALTERNATIVA LOCAL',
+      recPolicyLabel: localFirst ? 'política local-first' : 'melhor resultado primeiro',
+      recFootnote: localFirst
+        ? 'Local-first: só cai para nuvem quando nenhum modelo no disco cobre a capacidade exigida.'
+        : 'Score combina aprovação sem retrabalho e custo por tarefa concluída neste workspace.',
+      groupModeLabel: grouping === 'capacidade' ? 'agrupado por capacidade' : 'agrupado por conector',
+      breaker: st.breaker,
+      breakerHint: st.breaker === '3' ? 'Sem valor próprio — usa o default (3)' : 'Valor próprio do projeto · default 3',
+      setBreaker: e => this.setState({ breaker: e.target.value }),
+      saveBreaker: () => this.setState({}),
+      invite: st.invite, setInvite: e => this.setState({ invite: e.target.value }),
+    };
+  }
+}
+
+</script>
+</body>
+</html>

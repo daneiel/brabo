@@ -48,6 +48,16 @@ jobs:
           plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
           plugins: 'code-review@claude-code-plugins'
           prompt: '/code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number }}'
+          # O plugin code-review (anthropics/claude-code-plugins) só declara
+          # Bash(gh ...) no seu allowed-tools próprio. Na prática os agentes de
+          # revisão (passo 4 do comando) tentam ler histórico/autoria do
+          # checkout local com `git log`/`git blame`/`git show`, e como nada
+          # liberava esses comandos, a PR #250 sofreu 44 negações de permissão
+          # e a sessão terminou sem nenhum comentário em prosa (fallback
+          # mecânico "Ran N shell commands."). claude_args é aditivo ao
+          # allowed-tools do plugin, não substitui.
+          claude_args: |
+            --allowedTools "Bash(git log:*),Bash(git blame:*),Bash(git show:*)"
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://code.claude.com/docs/en/cli-reference for available options
 

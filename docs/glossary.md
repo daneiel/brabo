@@ -98,6 +98,15 @@ o modelo pede uma ferramenta → a ferramenta vira `proposed_action` → políti
 decide → executa → resultado volta ao contexto. Tem teto de iterações; esgotado,
 o agente encerra com artefato de bloqueio.
 
+**Turno (agente conversacional)** — uma rodada de trabalho de um dos quatro
+agentes conversacionais session-scoped (Criativo, PO, Arquiteto, Dev Lead):
+uma chamada streamada ao LLM mais o loop de ferramentas que ela dispara.
+Desde [RN-122](business-rules.md#rn-122) roda numa `Task` supervisionada
+(`Engine.Agents.TurnoAssincrono`), não mais dentro do `handle_call` que
+recebia a mensagem — é o que permite o botão **"Parar"** do composer
+cancelar o turno DE VERDADE (mata a task, corta a conexão com a api) em vez
+de só parar de renderizar no cliente.
+
 **Handoff** — passagem explícita de trabalho de um agente para outro. Explícita
 porque o destino e o motivo ficam registrados no event log, em vez de um agente
 "assumir" o contexto do outro implicitamente.
@@ -197,6 +206,13 @@ dev agents existem (um por módulo) e a quem cada história pertence. Não pode 
 ciclo ([RN-013](business-rules.md#rn-013)); módulo removido rebaixa as
 histórias que dependiam dele ([RN-012](business-rules.md#rn-012)).
 
+**Imagem do projeto (`artifact.project_image`)** — a decisão do Arquiteto
+sobre qual container roda o código do projeto: imagem OCI (tag explícita
+obrigatória, `latest` recusado), postura de rede (`none` por default,
+`egress` autorizado) e teto de recursos. Versionada no event log, como o
+`module_map`. Enquanto não existe, é o estado `sem_decisao` que fecha a aba
+Code ([RN-105](business-rules.md#rn-105)).
+
 ---
 
 ## Custo
@@ -212,9 +228,10 @@ ambos ([RN-017](business-rules.md#rn-017)). Notifica em 70/90/100% sem repetir.
 comum de "o orçamento não segurou" ([RN-019](business-rules.md#rn-019)).
 
 **Binding** — a amarração entre um escopo e um modelo de LLM. Resolve em
-cascata: **sessão > agente > projeto > workspace**, o primeiro que existir
-([RN-020](business-rules.md#rn-020)). É por isso que dá para pôr um modelo caro
-só no QA.
+cascata: **sessão > agente > área > projeto > workspace**, o primeiro que
+existir ([RN-020](business-rules.md#rn-020)). É por isso que dá para pôr um
+modelo caro só no QA. `área` é o PADRÃO que lead e subagentes de uma área
+compartilham, e o agente pode divergir ([RN-102](business-rules.md#rn-102)).
 
 **Faceta de capability** — o que o **provider declara** sobre um modelo: lê
 imagem, gera imagem, faz thinking, aceita `tools`. Vem do catálogo remoto no
@@ -255,7 +272,7 @@ nova em vez de apagar ([RN-027](business-rules.md#rn-027)).
 
 ## Git e segredos
 
-**GitProvider** — o contrato normalizado de dez operações que Local, GitHub e
+**GitProvider** — o contrato normalizado de doze operações que Local, GitHub e
 GitLab implementam. Uma suite de contrato única roda contra os três.
 
 **Capability** — declaração do que aquele provider suporta. Operação não

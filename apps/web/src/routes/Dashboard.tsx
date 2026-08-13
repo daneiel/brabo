@@ -86,6 +86,11 @@ function ProjectCardContainer({
         })
       }
       lastActivityText={lastActivityText}
+      // Mesma contagem da sidebar (RN-151) — aprovações pendentes do projeto
+      // inteiro, não atividade não lida. O prop era um fio nunca ligado
+      // (nenhum chamador o passava); agora carrega o número certo em vez de
+      // continuar morto.
+      pendingApprovalsCount={summary?.pendingApprovalsCount}
       onClick={() =>
         provisioningStatus === 'provision_failed'
           ? navigate({
@@ -135,7 +140,7 @@ export function Dashboard() {
   return (
     <>
       <div className={styles.topbar}>
-        <span className={styles.title}>Projetos</span>
+        <h1 className={styles.title}>Projetos</h1>
         <div className={styles.search}>
           <Input placeholder="Buscar projetos…" icon={<SearchIcon size={14} />} value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>

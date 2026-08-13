@@ -36,6 +36,24 @@ export interface Marco {
   /** Detalhe curto — nome da ferramenta, destino do handoff, origem da falha. */
   detalhe?: string;
   em: string;
+  /** Tipo CRU do evento (`tool.call`, `tool.result`, `agent.response`, …) —
+   * decide o que o detalhe expandido do marco mostra, porque `tipo` (acima)
+   * já funde `tool.call`/`tool.result` num `MarcoTipo` só. */
+  eventType: string;
+  /** Payload cru do evento — args da chamada, resultado da ferramenta,
+   * conteúdo da resposta. Nunca despejado por padrão: só aparece quando o
+   * marco é expandido individualmente. */
+  payload: Record<string, unknown>;
+  /**
+   * Iteração do turno de ToolLoop a que este marco pertence, quando dá pra
+   * saber. `agent.response` carrega `iteration` no payload (ToolLoop); quem
+   * não carrega (agentes conversacionais fora do ToolLoop, como PO/Criativo)
+   * ganha um contador PRÓPRIO por agente, incrementado a cada resposta —
+   * é a inferência por proximidade que a árvore usa para agrupar visualmente.
+   * `tool.call`/`tool.result` herdam a iteração da resposta que os originou,
+   * porque no ToolLoop eles são despachados DEPOIS dela (ver tool_loop.ex).
+   */
+  iteracao?: number;
 }
 
 export interface RamoDeAgente {
@@ -47,6 +65,8 @@ export interface RamoDeAgente {
   ativo: boolean;
   primeiroEm: string;
   ultimoEm: string;
+  /** `seq` do marco mais recente — a régua de recência dos "5 últimos". */
+  ultimoSeq: number;
 }
 
 /** Eventos que não pertencem a um agente — o tronco da árvore. */
@@ -136,6 +156,18 @@ const TRADUCAO: Record<string, Traducao> = {
 const DESFECHOS = new Set<MarcoTipo>(['resposta', 'falha', 'handoff']);
 
 /**
+ * Marcos com detalhe de execução por trás — args da chamada, resultado da
+ * ferramenta, conteúdo/iteração da resposta. São os únicos que a árvore deixa
+ * expandir individualmente; os demais (handoff, artefato, gate…) já dizem
+ * tudo que têm na própria linha.
+ */
+export const EVENTOS_EXPANSIVEIS = new Set(['tool.call', 'tool.result', 'agent.response']);
+
+export function marcoExpansivel(m: Marco): boolean {
+  return EVENTOS_EXPANSIVEIS.has(m.eventType);
+}
+
+/**
  * A frase de "agora". Fala do ÚLTIMO marco, porque é ele que descreve o
  * presente — e diz explicitamente quando o agente está parado, em vez de
  * deixar o ramo mudo (que foi o defeito que originou tudo isto).
@@ -163,6 +195,9 @@ export function montarArvore(events: SessionEvent[]): {
 } {
   const porAgente = new Map<string, Marco[]>();
   const tronco: Marco[] = [];
+  // Estado de agrupamento por iteração, por agente — ver o comentário de
+  // `Marco.iteracao`. `fallback` só avança para agente sem `iteration` real.
+  const iteracaoPorAgente = new Map<string, { atual?: number; fallback: number }>();
 
   for (const evento of events) {
     const traducao = TRADUCAO[evento.type];
@@ -175,6 +210,8 @@ export function montarArvore(events: SessionEvent[]): {
         tipo: 'trabalho',
         rotulo: evento.type,
         em: evento.createdAt,
+        eventType: evento.type,
+        payload,
       });
       continue;
     }
@@ -186,6 +223,13 @@ export function montarArvore(events: SessionEvent[]): {
 
     const agente = evento.actor.id;
     const marcos = porAgente.get(agente) ?? [];
+    const estadoIteracao = iteracaoPorAgente.get(agente) ?? { atual: undefined, fallback: 0 };
+    if (traducao.tipo === 'resposta') {
+      estadoIteracao.atual =
+        typeof payload.iteration === 'number' ? payload.iteration : estadoIteracao.fallback++;
+    }
+    iteracaoPorAgente.set(agente, estadoIteracao);
+
     marcos.push({
       eventId: evento.id,
       seq: evento.seq,
@@ -193,6 +237,9 @@ export function montarArvore(events: SessionEvent[]): {
       rotulo: traducao.rotulo,
       detalhe: traducao.detalhe?.(payload),
       em: evento.createdAt,
+      eventType: evento.type,
+      payload,
+      iteracao: estadoIteracao.atual,
     });
     porAgente.set(agente, marcos);
   }
@@ -208,16 +255,36 @@ export function montarArvore(events: SessionEvent[]): {
         ativo,
         primeiroEm: ordenados[0].em,
         ultimoEm: ordenados[ordenados.length - 1].em,
+        ultimoSeq: ordenados[ordenados.length - 1].seq,
       };
     },
   );
 
   // Quem está ATIVO primeiro — a pergunta "quem está trabalhando agora" é a
-  // que se faz olhando a tela; o histórico de quem parou pode esperar.
+  // que se faz olhando a tela; o histórico de quem parou pode esperar. Dentro
+  // de cada grupo (ativo/parado), o mais RECENTE primeiro — é a ordem que
+  // `ramosAbertosPorPadrao` usa pra decidir os "5 últimos".
   ramos.sort((a, b) => {
     if (a.ativo !== b.ativo) return a.ativo ? -1 : 1;
-    return b.ultimoEm.localeCompare(a.ultimoEm);
+    return b.ultimoSeq - a.ultimoSeq;
   });
 
   return { ramos, tronco };
+}
+
+/**
+ * Quais ramos abrem expandidos por padrão.
+ *
+ * Critério: os 5 agentes com atividade mais RECENTE (maior `seq` do último
+ * marco) — mas ativo continua tendo prioridade sobre recência, então um
+ * ramo ainda em ação sempre abre, mesmo que existam mais de 5. Como
+ * `ramos` (parâmetro) já vem ordenado por `montarArvore` com os ativos
+ * primeiro e, dentro de cada grupo, do mais recente pro mais antigo, os
+ * dois critérios colapsam numa fatia só: os primeiros
+ * `max(nº de ativos, 5)` elementos.
+ */
+export function ramosAbertosPorPadrao(ramos: RamoDeAgente[]): Set<string> {
+  const ativos = ramos.filter((r) => r.ativo).length;
+  const quantos = Math.max(ativos, 5);
+  return new Set(ramos.slice(0, quantos).map((r) => r.agente));
 }

@@ -19,6 +19,7 @@ config :engine, Engine.Repo,
 config :engine, start_outbox_drain?: false
 config :engine, start_anamnese?: false
 config :engine, start_model_sync?: false
+config :engine, start_gate_rescue?: false
 config :engine, Oban, testing: :manual
 
 # O poller roda fora da Sandbox do Ecto: cada ciclo viraria um aviso de

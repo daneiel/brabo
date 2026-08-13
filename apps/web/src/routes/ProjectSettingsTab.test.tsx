@@ -3,14 +3,17 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import {
+  AreaModelsSection,
   CredentialsSection,
   ExecutionSection,
   ModelsSection,
   ParallelismSection,
+  ProficiencySection,
   PromotionSection,
 } from './ProjectSettingsTab';
 import { ToastProvider } from '../components/ui/ToastProvider';
 import { ApiError } from '../lib/api-client';
+import { CREDENCIAIS_DE_LLM } from '../lib/models';
 import type { Project, UserCredentialMetadata } from '../lib/api-types';
 
 const getProject = vi.fn();
@@ -21,12 +24,24 @@ const deleteCredential = vi.fn();
 const testCredential = vi.fn();
 const listModels = vi.fn();
 const getAgentModelBinding = vi.fn();
+const clearAgentModelBinding = vi.fn();
 const getProjectModelBinding = vi.fn();
 const getWorkspaceModelBinding = vi.fn();
+const getAreaModelBinding = vi.fn();
+const setAreaModelBinding = vi.fn();
+const clearAreaModelBinding = vi.fn();
 const getProjectAgentCosts = vi.fn();
 const setAgentModelBinding = vi.fn();
 const listAgentAreas = vi.fn();
 const setAreaMaxParallel = vi.fn();
+const useCurrentWorkspaceWithRole = vi.fn();
+const runAnamnese = vi.fn();
+
+vi.mock('../lib/hooks', () => ({
+  useCurrentWorkspaceWithRole: (...args: unknown[]) =>
+    useCurrentWorkspaceWithRole(...args),
+  useProficiency: () => ({ data: undefined }),
+}));
 
 vi.mock('../lib/api-client', async () => {
   // `mensagemDaApi` e `ApiError` entram de verdade: é justamente a extração da
@@ -45,14 +60,21 @@ vi.mock('../lib/api-client', async () => {
     testCredential: (...args: unknown[]) => testCredential(...args),
     listModels: (...args: unknown[]) => listModels(...args),
     getAgentModelBinding: (...args: unknown[]) => getAgentModelBinding(...args),
+    clearAgentModelBinding: (...args: unknown[]) =>
+      clearAgentModelBinding(...args),
     getProjectModelBinding: (...args: unknown[]) =>
       getProjectModelBinding(...args),
     getWorkspaceModelBinding: (...args: unknown[]) =>
       getWorkspaceModelBinding(...args),
+    getAreaModelBinding: (...args: unknown[]) => getAreaModelBinding(...args),
+    setAreaModelBinding: (...args: unknown[]) => setAreaModelBinding(...args),
+    clearAreaModelBinding: (...args: unknown[]) =>
+      clearAreaModelBinding(...args),
     getProjectAgentCosts: (...args: unknown[]) => getProjectAgentCosts(...args),
     setAgentModelBinding: (...args: unknown[]) => setAgentModelBinding(...args),
     listAgentAreas: (...args: unknown[]) => listAgentAreas(...args),
     setAreaMaxParallel: (...args: unknown[]) => setAreaMaxParallel(...args),
+    runAnamnese: (...args: unknown[]) => runAnamnese(...args),
   };
 });
 
@@ -92,13 +114,19 @@ beforeEach(() => {
   listCredentials.mockResolvedValue([]);
   listModels.mockResolvedValue({ local: {}, cloud: {} });
   getAgentModelBinding.mockResolvedValue(null);
+  clearAgentModelBinding.mockResolvedValue(undefined);
   getProjectModelBinding.mockResolvedValue(null);
   getWorkspaceModelBinding.mockResolvedValue(null);
+  getAreaModelBinding.mockResolvedValue(null);
+  setAreaModelBinding.mockResolvedValue(undefined);
+  clearAreaModelBinding.mockResolvedValue(undefined);
   getProjectAgentCosts.mockResolvedValue([]);
   upsertCredential.mockResolvedValue({});
   deleteCredential.mockResolvedValue({ ok: true });
   listAgentAreas.mockResolvedValue([]);
   setAreaMaxParallel.mockResolvedValue({});
+  useCurrentWorkspaceWithRole.mockReturnValue({ data: { role: 'maintainer' } });
+  runAnamnese.mockResolvedValue(undefined);
 });
 
 function credencial(over: Partial<UserCredentialMetadata> = {}): UserCredentialMetadata {
@@ -407,6 +435,28 @@ describe('CredentialsSection (ADR 0050)', () => {
       screen.getByRole('button', { name: 'Salvar chave de OpenRouter' }),
     ).toBeDisabled();
   });
+
+  /**
+   * O chip de duas letras do handoff, conferido na TELA e não na função: o que
+   * importa é que dois cards vizinhos não tragam o mesmo distintivo. Quebrar
+   * por espaço dava `OP` para "OpenAI" e para "OpenRouter", que são uma palavra
+   * só cada.
+   */
+  it('cada conector tem uma sigla própria no chip', async () => {
+    montarSecao(<CredentialsSection />);
+    await campoDoOpenrouter();
+
+    expect(screen.getByText('OA')).toBeInTheDocument();
+    expect(screen.getByText('OR')).toBeInTheDocument();
+    // Uma maiúscula só cai nas duas primeiras letras.
+    expect(screen.getByText('AN')).toBeInTheDocument();
+
+    const siglas = screen
+      .getAllByText(/^[A-Z]{2}$/)
+      .map((el) => el.textContent);
+    expect(siglas).toHaveLength(CREDENCIAIS_DE_LLM.length);
+    expect(new Set(siglas).size).toBe(siglas.length);
+  });
 });
 
 /**
@@ -520,5 +570,228 @@ describe('ModelsSection — colunas do desenho', () => {
 
     await screen.findByText('Modelos por agente');
     expect(screen.queryByText(/US\$\s*0,00/)).toBeNull();
+  });
+
+  // ------------------------------------------------ FASE 23 / ADR 0064
+
+  it('agente que DIVERGIU mostra "voltar a herdar", e clicar apaga o binding dele', async () => {
+    getAgentModelBinding.mockImplementation((_projectId: string, slug: string) =>
+      Promise.resolve(
+        slug === 'qa-automacao'
+          ? { modelId: 'm-agente', origin: 'agent', skipped: [] }
+          : null,
+      ),
+    );
+    montarSecao(<ModelsSection projectId="proj-1" />);
+
+    const botao = await screen.findByRole('button', { name: 'voltar a herdar' });
+    fireEvent.click(botao);
+
+    await waitFor(() =>
+      expect(clearAgentModelBinding).toHaveBeenCalledWith('proj-1', 'qa-automacao'),
+    );
+  });
+
+  it('agente que HERDA (sem binding próprio) não mostra o botão de herança', async () => {
+    getAgentModelBinding.mockResolvedValue({
+      modelId: 'm-area',
+      origin: 'area',
+      skipped: [],
+    });
+    montarSecao(<ModelsSection projectId="proj-1" />);
+
+    await screen.findByText('Modelos por agente');
+    expect(screen.queryByRole('button', { name: 'voltar a herdar' })).toBeNull();
+  });
+
+  it('FALLBACK de um agente com área mostra o padrão da ÁREA, não o do projeto', async () => {
+    // `qa-automacao` é subagente da área `qa` (agent-areas.ts) — quando ele
+    // diverge, o degrau de baixo é o padrão da área, e só depois o projeto.
+    getAgentModelBinding.mockImplementation((_projectId: string, slug: string) =>
+      Promise.resolve(
+        slug === 'qa-automacao'
+          ? { modelId: 'm-agente', origin: 'agent', skipped: [] }
+          : null,
+      ),
+    );
+    getAreaModelBinding.mockImplementation((_projectId: string, key: string) =>
+      Promise.resolve(
+        key === 'qa'
+          ? { modelId: 'm-area', origin: 'area', skipped: [] }
+          : null,
+      ),
+    );
+    listModels.mockResolvedValue({
+      local: {
+        ollama: [
+          modelo('m-proj', 'Modelo do Projeto'),
+          modelo('m-area', 'Modelo da Área'),
+        ],
+      },
+      cloud: {},
+    });
+    getProjectModelBinding.mockResolvedValue({ modelId: 'm-proj' });
+    montarSecao(<ModelsSection projectId="proj-1" />);
+
+    expect(await screen.findAllByText('Modelo da Área')).not.toHaveLength(0);
+    expect(screen.queryByText('Modelo do Projeto')).toBeNull();
+  });
+});
+
+describe('AreaModelsSection — padrão herdável da área (ADR 0064, RN-102)', () => {
+  function modeloDaArea(id: string, displayName: string) {
+    return {
+      id,
+      provider: 'ollama',
+      name: displayName,
+      displayName,
+      inputPricePerMillionMicros: 0,
+      outputPricePerMillionMicros: 0,
+      contextWindow: null,
+      supportsToolCalling: true,
+      supportsStreaming: true,
+      supportsVision: false,
+      manualPricing: true,
+      availability: 'available',
+      lastSeenAt: null,
+      createdAt: '2026-08-01T00:00:00.000Z',
+      updatedAt: '2026-08-01T00:00:00.000Z',
+    };
+  }
+
+  beforeEach(() => {
+    listModels.mockResolvedValue({
+      local: { ollama: [modeloDaArea('m-area', 'Modelo QA')] },
+      cloud: {},
+    });
+  });
+
+  it('lista as três áreas do catálogo, com lead e origem', async () => {
+    getAreaModelBinding.mockResolvedValue({
+      modelId: 'm-area',
+      origin: 'project',
+      skipped: [],
+    });
+    montarSecao(<AreaModelsSection projectId="proj-1" />);
+
+    expect(await screen.findByText('Área Dev')).toBeInTheDocument();
+    expect(screen.getByText('Área QA')).toBeInTheDocument();
+    expect(screen.getByText('Área Infra')).toBeInTheDocument();
+    expect(screen.getByText(/Lead: dev-lead/)).toBeInTheDocument();
+  });
+
+  it('área SEM padrão próprio não mostra "Voltar a herdar"', async () => {
+    getAreaModelBinding.mockResolvedValue({
+      modelId: 'm-area',
+      origin: 'project',
+      skipped: [],
+    });
+    montarSecao(<AreaModelsSection projectId="proj-1" />);
+
+    await screen.findByText('Área Dev');
+    expect(screen.queryByRole('button', { name: 'Voltar a herdar' })).toBeNull();
+  });
+
+  it('área COM padrão próprio mostra "Voltar a herdar", e clicar apaga (RN-102)', async () => {
+    getAreaModelBinding.mockResolvedValue({
+      modelId: 'm-area',
+      origin: 'area',
+      skipped: [],
+    });
+    montarSecao(<AreaModelsSection projectId="proj-1" />);
+
+    const botoes = await screen.findAllByRole('button', { name: 'Voltar a herdar' });
+    expect(botoes).toHaveLength(3); // uma por área
+    fireEvent.click(botoes[0]);
+
+    await waitFor(() => expect(clearAreaModelBinding).toHaveBeenCalled());
+  });
+
+  it('define o modelo padrão da área — chama setAreaModelBinding, não setAgentModelBinding', async () => {
+    getAreaModelBinding.mockResolvedValue(null);
+    montarSecao(<AreaModelsSection projectId="proj-1" />);
+
+    const gatilhos = await screen.findAllByRole('button', { name: 'Selecionar modelo' });
+    fireEvent.click(gatilhos[1]); // a área QA, segunda linha
+    fireEvent.click(screen.getByText('Modelo QA'));
+
+    await waitFor(() =>
+      expect(setAreaModelBinding).toHaveBeenCalledWith('proj-1', 'qa', 'm-area'),
+    );
+    expect(setAgentModelBinding).not.toHaveBeenCalled();
+  });
+
+  it('sem papel maintainer, o seletor de modelo fica desabilitado', async () => {
+    useCurrentWorkspaceWithRole.mockReturnValue({ data: { role: 'developer' } });
+    getAreaModelBinding.mockResolvedValue(null);
+    montarSecao(<AreaModelsSection projectId="proj-1" />);
+
+    const gatilhos = await screen.findAllByRole('button', { name: 'Selecionar modelo' });
+    for (const gatilho of gatilhos) {
+      expect(gatilho).toBeDisabled();
+    }
+    expect(
+      screen.getByText(/Exige papel maintainer para alterar/),
+    ).toBeInTheDocument();
+  });
+});
+
+/**
+ * A Anamnese pode estar pausada GLOBALMENTE (decisão do usuário em
+ * 2026-08-10, não bug — ver docs/explanation/backlog.md). Não confundir com o
+ * opt-in/opt-out POR MEMBRO ("Voltar a ser perfilado"), que é outro conceito e
+ * não muda aqui.
+ */
+describe('ProficiencySection — Anamnese pausada globalmente', () => {
+  function montarProficiencia() {
+    return montarSecao(<ProficiencySection projectId="proj-1" />);
+  }
+
+  it('rodar agora com sucesso avisa e não desabilita o botão', async () => {
+    montarProficiencia();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rodar agora' }));
+
+    expect(await screen.findByText('Rodada enfileirada')).toBeInTheDocument();
+    expect(runAnamnese).toHaveBeenCalledWith('proj-1');
+    expect(screen.getByRole('button', { name: 'Rodar agora' })).not.toBeDisabled();
+  });
+
+  it('503 (desativada globalmente) é distinto de erro genérico: some toast claro, o botão desabilita e a explicação fica na tela', async () => {
+    runAnamnese.mockRejectedValue(
+      new ApiError(503, {
+        message: 'A Anamnese está desativada globalmente por decisão do usuário — aguardando refinamento futuro.',
+        reason: 'anamnese_disabled',
+      }),
+    );
+    montarProficiencia();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rodar agora' }));
+
+    expect(await screen.findByText('Anamnese pausada')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'A Anamnese está desativada globalmente por decisão do usuário — aguardando refinamento futuro.',
+      ),
+    ).toBeInTheDocument();
+
+    // Persistente na tela, não só o toast (RN-088: nunca falha silenciosa ou
+    // confusa) — e o botão para de convidar um clique que sabidamente falha.
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Rodar agora' })).toBeDisabled(),
+    );
+    expect(
+      screen.getByText(/A Anamnese está pausada globalmente por decisão do time/),
+    ).toBeInTheDocument();
+  });
+
+  it('erro genérico (não 503) não mexe no botão — só o toast de erro comum', async () => {
+    runAnamnese.mockRejectedValue(new ApiError(500, { message: 'boom' }));
+    montarProficiencia();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rodar agora' }));
+
+    expect(await screen.findByText('Erro')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Rodar agora' })).not.toBeDisabled();
   });
 });

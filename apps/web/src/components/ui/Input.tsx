@@ -13,8 +13,9 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   /** Texto de apoio, mostrado quando não há erro. */
   hint?: string;
   /**
-   * Fundo preenchido (`--surface-2`), para o campo se separar do card que o
-   * contém (ADR 0036).
+   * Fundo afundado (`--code-bg`), para o campo se separar do card que o
+   * contém (ADR 0036; o fundo passou de `--surface-2` a `--code-bg` na FASE
+   * 17a, ver a nota em `Input.module.css`).
    *
    * É prop e não default porque o `Input` é usado por cinco telas fora de auth, e
    * o `design/COMPONENTS.md` especifica `--surface-0`/`--surface-1` para campo.

@@ -12,26 +12,29 @@ import { TokenMeter } from '../components/TokenMeter';
 import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
 import { Skeleton } from '../components/ui/Skeleton';
 import { Tabs } from '../components/ui/Tabs';
-import { GitHubIcon, GitLabIcon, LocalRepoIcon } from '../components/ui/icons';
-import { ProjectOverviewTab } from './ProjectOverviewTab';
-import { ProjectSessionsTab } from './ProjectSessionsTab';
-import { ProjectApprovalsTab } from './ProjectApprovalsTab';
-import { ProjectBacklogTab, aguardandoPromocao } from './ProjectBacklogTab';
-import { ProjectInsightsTab } from './ProjectInsightsTab';
-import { ProjectSettingsTab } from './ProjectSettingsTab';
+import { BranchIcon, GitHubIcon, GitLabIcon, LocalRepoIcon } from '../components/ui/icons';
+import { aguardandoPromocao } from './ProjectBacklogTab';
+import {
+  ABAS_DO_PROJETO,
+  ABA_PADRAO,
+  abaPorChave,
+  type ChaveDeAba,
+  type ContagensDeAba,
+} from './project-tabs';
 import styles from './ProjectPage.module.css';
 
 const PROVIDER_ICON = { github: GitHubIcon, gitlab: GitLabIcon, local: LocalRepoIcon } as const;
 
-type TabKey = 'overview' | 'sessions' | 'backlog' | 'approvals' | 'insights' | 'settings';
+/** O chip ao lado do nome diz o que o repositório É, em pt-BR (handoff, seção 4). */
+const VISIBILIDADE = { public: 'público', private: 'privado' } as const;
 
 interface ProjectPageProps {
   projectId: string;
-  initialTab?: TabKey;
+  initialTab?: ChaveDeAba;
 }
 
 export function ProjectPage({ projectId, initialTab }: ProjectPageProps) {
-  const [tab, setTab] = useState<TabKey>(initialTab ?? 'overview');
+  const [tab, setTab] = useState<ChaveDeAba>(initialTab ?? ABA_PADRAO);
 
   const projectQuery = useQuery({ queryKey: ['project', projectId], queryFn: () => getProject(projectId) });
   const project = projectQuery.data;
@@ -57,7 +60,15 @@ export function ProjectPage({ projectId, initialTab }: ProjectPageProps) {
     (h) => h.status === 'proposed',
   ).length;
 
+  const contagens: ContagensDeAba = {
+    promocoesPendentes,
+    aprovacoesPendentes: pendingCount,
+    hipotesesPendentes,
+  };
+
   useEffect(() => {
+    // Literal de propósito: quem marca o projeto como lido é a Visão geral —
+    // não "a aba padrão, seja ela qual for".
     if (tab === 'overview' && latestSession) {
       setLastSeenSeq(projectId, latestSession.nextSeq - 1);
     }
@@ -91,70 +102,84 @@ export function ProjectPage({ projectId, initialTab }: ProjectPageProps) {
   }
 
   const ProviderIcon = PROVIDER_ICON[repository?.provider ?? 'local'];
+  // O painel sai do registro, não de uma cadeia de `&&`: era ali que uma aba
+  // nova entrava na régua e no `?tab=` sem nunca renderizar nada.
+  const aba = abaPorChave(tab);
+  const PainelDaAba = aba.component;
 
   return (
     <div className={styles.wrapper}>
-      <div className={styles.header}>
-        <div className={styles.headerLeft}>
-          <span className={styles.providerIcon}>
-            <ProviderIcon size={18} />
-          </span>
-          <div>
-            <div className={styles.titleRow}>
-              <span className={styles.name}>{project.name}</span>
-            </div>
-            <div className={styles.meta}>
-              {repository
-                ? [
-                    repository.provider,
-                    repository.visibility,
-                    repository.defaultBranch,
-                    // Fase 12a: adotado é fato permanente do projeto, e
-                    // saber que o repo veio de fora muda como se lê tudo
-                    // o mais (a política de branches é dele, não nossa).
-                    repository.origin === 'adopted' ? 'adotado' : null,
-                  ]
-                    .filter(Boolean)
-                    .join(' · ')
-                : 'repositório não provisionado'}
+      {/* A régua vive DENTRO do cabeçalho, e o cabeçalho é uma faixa
+          `surface-1` com uma única divisória embaixo (handoff, seção 4). Eram
+          dois blocos com `border-bottom` cada um, e a régua no fundo da
+          página: duas linhas de 1px separadas por 40px de nada. */}
+      <header className={styles.header}>
+        <div className={styles.headerTop}>
+          <div className={styles.headerLeft}>
+            <span className={styles.providerIcon}>
+              <ProviderIcon size={19} />
+            </span>
+            <div className={styles.identity}>
+              <div className={styles.titleRow}>
+                <h1 className={styles.name}>{project.name}</h1>
+                {repository && (
+                  <span className={styles.repoChip}>
+                    {repository.provider} · {VISIBILIDADE[repository.visibility]}
+                  </span>
+                )}
+              </div>
+              <div className={styles.meta}>
+                {repository ? (
+                  <>
+                    <BranchIcon size={13} />
+                    <span className={styles.metaStrong}>{repository.defaultBranch}</span>
+                    {/* Fase 12a: adotado é fato permanente do projeto, e
+                        saber que o repo veio de fora muda como se lê tudo
+                        o mais (a política de branches é dele, não nossa). */}
+                    {repository.origin === 'adopted' && (
+                      <>
+                        <span className={styles.metaSep} />
+                        <span>adotado</span>
+                      </>
+                    )}
+                  </>
+                ) : (
+                  'repositório não provisionado'
+                )}
+              </div>
             </div>
           </div>
+
+          {budget && (
+            <TokenMeter
+              variant="compact"
+              unitLabel="USD"
+              used={budget.spentMicros / 1_000_000}
+              limit={budget.limitMicros / 1_000_000}
+              costBRL={0}
+              costUSD={budget.spentMicros / 1_000_000}
+            />
+          )}
         </div>
 
-        {budget && (
-          <TokenMeter
-            variant="compact"
-            unitLabel="USD"
-            used={budget.spentMicros / 1_000_000}
-            limit={budget.limitMicros / 1_000_000}
-            costBRL={0}
-            costUSD={budget.spentMicros / 1_000_000}
+        <div className={styles.tabsRow}>
+          <Tabs
+            active={tab}
+            onChange={(key) => setTab(key as ChaveDeAba)}
+            items={ABAS_DO_PROJETO.map((aba) => ({
+              key: aba.key,
+              label: aba.label,
+              count: aba.count?.(contagens),
+            }))}
           />
-        )}
-      </div>
+        </div>
+      </header>
 
-      <div className={styles.tabsRow}>
-        <Tabs
-          active={tab}
-          onChange={(key) => setTab(key as TabKey)}
-          items={[
-            { key: 'overview', label: 'Visão geral' },
-            { key: 'sessions', label: 'Sessões' },
-            { key: 'backlog', label: 'Backlog', count: promocoesPendentes || undefined },
-            { key: 'approvals', label: 'Aprovações', count: pendingCount || undefined },
-            { key: 'insights', label: 'Insights', count: hipotesesPendentes || undefined },
-            { key: 'settings', label: 'Configurações' },
-          ]}
-        />
-      </div>
-
-      <div className={styles.body}>
-        {tab === 'overview' && <ProjectOverviewTab projectId={projectId} />}
-        {tab === 'sessions' && <ProjectSessionsTab projectId={projectId} />}
-        {tab === 'backlog' && <ProjectBacklogTab projectId={projectId} />}
-        {tab === 'approvals' && <ProjectApprovalsTab projectId={projectId} />}
-        {tab === 'insights' && <ProjectInsightsTab projectId={projectId} />}
-        {tab === 'settings' && <ProjectSettingsTab projectId={projectId} />}
+      {/* Quem manda no respiro é o REGISTRO, não um `tab === 'overview'`
+          escrito aqui: a Visão geral desenha as próprias regiões até a borda
+          (o feed é um trilho com divisória à esquerda, não um card solto). */}
+      <div className={[styles.body, aba.semRespiro && styles.bodyRente].filter(Boolean).join(' ')}>
+        <PainelDaAba projectId={projectId} />
       </div>
     </div>
   );

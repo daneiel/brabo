@@ -2,6 +2,9 @@
  * Brabo Design System — tokens.
  * Fonte: projeto claude.ai/design "Brabo Design System"
  * (arquivo "Brabo Design System.dc.html"). Extraído em 2026-07-23.
+ * Reconciliado em 2026-08-08 com o handoff versionado em
+ * `design_handoff_brabo/README.md` (bloco "Cores"), que é a referência
+ * viva a partir da FASE 16.
  *
  * Dark é o tema primário (valores em :root). [data-theme="light"] no
  * <html> (ou em qualquer ancestral) troca para o tema claro.
@@ -22,6 +25,12 @@
  * --font-heading e --font-body compartilham o fallback sans-serif, a
  * distinção entre título e corpo simplesmente desaparecia. Ver o ADR
  * 0036.
+ *
+ * O handoff (`design_handoff_brabo/README.md`) pede o <link> do Google
+ * Fonts de volta. É a ÚNICA divergência deliberada em relação a ele, e
+ * não é preferência: seguir esse item reintroduz exatamente a falha que
+ * o ADR 0036 fechou. As famílias e os pesos do handoff valem; a forma de
+ * carregá-las, não.
  */
 
 :root {
@@ -71,6 +80,10 @@
   --success: #37b3a4;
   --warning: #e0982f;
   --danger: #e05a3e;
+  /* Agentes/IA e ações de agente. Última cor do handoff que não tinha token:
+     `#9c7be0` já estava hard-coded em quatro lugares do web (agents.ts,
+     EventItem, HypothesisCard) porque não havia o que referenciar. */
+  --violet: #9c7be0;
   --border: #1c4a5a;
   --border-strong: #2e6072;
   --code-bg: #03141b;
@@ -79,9 +92,25 @@
      histórico de versões inventou cor de texto no lugar. */
   --diff-add: #0e2e24;
   --diff-del: #331a16;
+  /* Realce de sintaxe da aba Code (FASE 26). Keyword/string/número/tipo
+     REUSAM tokens semânticos que já existem (accent/warning/violet/success) —
+     só função, comentário e operador precisavam de valor próprio, porque
+     nenhum token existente cobria aquele tom sem colidir com outro papel.
+     Os três são calibrados para 4,5:1 contra --code-bg NOS DOIS temas (medido
+     em apps/web/src/lib/contraste.test.ts) — os quatro reusados só têm essa
+     garantia no tema escuro, o mesmo status que --violet já tinha antes desta
+     fase. */
+  --syntax-function: #5ebeb1;
+  --syntax-comment: #7f9aa4;
+  --syntax-operator: #8fb0ba;
+  /* Os dois valores do handoff, literais. O `--shadow` estava mais raso
+     (8px/24px a .35) que a sombra padrão especificada, e a sombra grande do
+     login não existia em lugar nenhum — cada tela que precisasse dela ia
+     escrever a sua. */
   --shadow:
     0 1px 2px rgba(0, 0, 0, 0.4),
-    0 8px 24px rgba(0, 0, 0, 0.35);
+    0 12px 32px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.55);
 
   /* Tipografia */
   --font-heading: 'Space Grotesk', sans-serif;
@@ -116,13 +145,24 @@
   --success: #217e73;
   --warning: #b5701c;
   --danger: #b33a26;
+  /* O handoff só especifica o tema escuro; este valor é DERIVADO, escurecendo
+     o `#9c7be0` como o claro já escurece accent/success/danger. Fica em
+     4,50:1 sobre `--surface-0`, a mesma vizinhança dos outros acentos. */
+  --violet: #7b56c9;
   --border: #dec9aa;
   --border-strong: #c6af8c;
   --code-bg: #efe4d2;
   /* Mesma função no tema claro (o par do spec é calibrado pro escuro). */
   --diff-add: #d6ead9;
   --diff-del: #f4d9d2;
+  /* Mesma função no tema claro — valor próprio, e não um `color-mix` do
+     escuro: --code-bg vira claro neste tema, e um teal/azul calibrado pro
+     fundo quase preto do escuro reprova 4,5:1 aqui (medido). */
+  --syntax-function: #186158;
+  --syntax-comment: #4a6873;
+  --syntax-operator: #456570;
   --shadow:
     0 1px 2px rgba(10, 46, 61, 0.08),
-    0 10px 28px rgba(10, 46, 61, 0.1);
+    0 12px 32px rgba(10, 46, 61, 0.12);
+  --shadow-lg: 0 24px 60px rgba(10, 46, 61, 0.16);
 }
