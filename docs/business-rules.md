@@ -5401,6 +5401,47 @@ endereçar isso é fora do escopo desta entrega.
 - **Origem:** PR #288 — o painel não distinguia quem gerou cada artefato
   nem cobria PR de ADR e épico/história, só PR de dev
 
+### RN-160 — "Confirmar arquitetura pronta" exige pelo menos 1 história promovida {#rn-160}
+
+O botão "Confirmar arquitetura pronta" (handoff Arquiteto→Dev Lead, via
+`confirmArchitectureReadiness`) nasce `disabled` até existir no backlog do
+projeto pelo menos 1 história com status diferente de `draft` — ou seja, já
+promovida por `PromoteStoriesUseCase`/`TransitionStoryUseCase` ([RN-048](#rn-048)),
+não bastando ter regra de negócio capturada. `in_progress`/`done` também
+contam, porque só se chega lá tendo passado por `ready`. A fonte é a MESMA
+que a aba Backlog já usa (`useBacklog`, `ProjectBacklogTab.tsx`, mesma
+queryKey `['backlog', projectId]`) — sem round-trip novo. Enquanto não há
+história promovida, o botão mostra a dica em `title` explicando o motivo.
+
+- **Onde:** `apps/web/src/routes/SessionPage.tsx` (`hasPromotedStory`,
+  render do botão)
+- **Teste:** `apps/web/src/routes/SessionPage.readiness-arquitetura-exige-historia.test.tsx`
+- **Origem:** pedido do usuário — o botão de handoff Arquiteto→Dev Lead
+  não tinha gate nenhum
+
+### RN-161 — Aceitar o handoff pro Dev Lead encadeia a ativação de execução quando o papel efetivo já autoriza {#rn-161}
+
+`handleAcceptHandoff` (`SessionPage.tsx`) encadeia `activateExecution`
+automaticamente quando `toAgent === 'dev-lead'` E o papel EFETIVO de quem
+aceita — lido do mesmo `useCurrentWorkspaceWithRole()` que já autoriza o
+"Auto mode" ([RN-153](#rn-153)) e as telas de Aprovações/Configurações — é
+`owner` ou `maintainer`. Para `developer` (ou papel ainda não resolvido), o
+fluxo atual continua intocado: aceitar não ativa nada, e "Ativar execução"
+permanece como segundo botão. A checagem é só no cliente —
+`POST .../execution/activate` continua exigindo `maintainer` no backend
+([RN-137](#rn-137)); a fusão só evita um clique redundante para quem já
+tinha os dois papéis. Reusa a MESMA `handleActivateExecution` que o botão
+"Ativar execução" já chama, que trata o próprio erro (toast +
+`mensagemDaApi`) e nunca relança — evita que um erro de ativação tardio
+seja reportado como "não foi possível aceitar o handoff".
+
+- **Onde:** `apps/web/src/routes/SessionPage.tsx`
+  (`podeFundirHandoffComExecucao`, `handleAcceptHandoff`)
+- **Teste:** `apps/web/src/routes/SessionPage.handoff-devlead-e-colapso.test.tsx`,
+  describe "problema 4"
+- **Decisão arquitetural:** [ADR 0069](../adr/0069-fusao-condicional-do-handoff-com-a-ativacao-de-execucao.md)
+- **Origem:** pedido do usuário (desenho aprovado)
+
 ---
 
 ## Quando dá errado
