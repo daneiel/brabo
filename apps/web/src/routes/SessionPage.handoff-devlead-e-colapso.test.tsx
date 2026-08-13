@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import type { Handoff, ProposedAction, Session } from '../lib/api-types';
+import type { Handoff, ProposedAction, Session, WorkspaceWithRole } from '../lib/api-types';
 
 /**
  * Três problemas confirmados por investigação + teste ao vivo no Chrome, TODOS
@@ -30,6 +30,12 @@ const activateExecution = vi.fn();
 const eventos = vi.fn<() => { items: unknown[] }>(() => ({ items: [] }));
 const handoffsMock = vi.fn<() => Handoff[]>(() => []);
 const actionsMock = vi.fn<() => ProposedAction[]>(() => []);
+// RN-161: papel efetivo do workspace — `undefined` por padrão (mesmo
+// comportamento anterior dos outros describes), sobrescrito nos testes de
+// fusão do problema 4.
+const workspaceComPapelMock = vi.fn<() => WorkspaceWithRole | undefined>(
+  () => undefined,
+);
 
 vi.mock('@tanstack/react-router', () => ({
   Link: ({
@@ -61,7 +67,8 @@ vi.mock('../lib/hooks', () => ({
   useSessionEvent: () => ({ data: undefined, isError: false }),
   usePendingActions: () => ({ data: { items: actionsMock() } }),
   useHandoffs: () => ({ data: handoffsMock() }),
-  useCurrentWorkspaceWithRole: () => ({ data: undefined }),
+  useCurrentWorkspaceWithRole: () => ({ data: workspaceComPapelMock() }),
+  useBacklog: () => ({ data: [] }),
 }));
 
 vi.mock('../lib/chat-stream', () => ({ streamChatMessage: vi.fn() }));
@@ -134,11 +141,26 @@ function montar() {
   );
 }
 
+function workspaceComPapel(role: WorkspaceWithRole['role']): WorkspaceWithRole {
+  return {
+    workspace: {
+      id: 'ws-1',
+      name: 'Workspace',
+      slug: 'workspace',
+      createdBy: 'user-1',
+      createdAt: '2026-08-10T00:00:00.000Z',
+      updatedAt: '2026-08-10T00:00:00.000Z',
+    },
+    role,
+  };
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   eventos.mockReturnValue({ items: [] });
   handoffsMock.mockReturnValue([]);
   actionsMock.mockReturnValue([]);
+  workspaceComPapelMock.mockReturnValue(undefined);
   getSession.mockResolvedValue(sessao());
 });
 
@@ -300,6 +322,126 @@ describe('SessionPage — problema 2: "Ativar execução" inline no card do Dev 
     expect(
       screen.getByRole('link', { name: /Acompanhe a execução em Executores/ }),
     ).toBeInTheDocument();
+  });
+});
+
+/**
+ * RN-161: fusão condicional por papel EFETIVO. `maintainer`/`owner` já é o
+ * papel que `POST .../execution/activate` exige no backend — encadear a
+ * ativação no próprio aceite do handoff poupa o segundo clique. `developer`
+ * mantém o fluxo de hoje: aceitar não ativa nada, e "Ativar execução"
+ * continua ali como segundo botão.
+ */
+describe('SessionPage — problema 4: fusão handoff + execução por papel efetivo (RN-161)', () => {
+  const HANDOFF_DEVLEAD: Handoff = {
+    id: 'handoff-devlead',
+    sessionId: ID,
+    projectId: 'proj-1',
+    fromAgent: 'arquiteto',
+    toAgent: 'dev-lead',
+    artifactId: null,
+    status: 'offered',
+    createdAt: '2026-08-10T12:00:00.000Z',
+    updatedAt: '2026-08-10T12:00:00.000Z',
+  };
+
+  function montarComCardDevLead() {
+    handoffsMock.mockReturnValue([HANDOFF_DEVLEAD]);
+    eventos.mockReturnValue({
+      items: [
+        {
+          id: 'ev-devlead',
+          seq: 1,
+          type: 'handoff.offered',
+          actor: { kind: 'agent', id: 'arquiteto' },
+          payload: { handoffId: 'handoff-devlead', toAgent: 'dev-lead' },
+          createdAt: '2026-08-10T12:00:00.000Z',
+        },
+      ],
+    });
+    return montar();
+  }
+
+  // Depois de `waitFor` confirmar `acceptHandoff` chamado, o resto de
+  // `handleAcceptHandoff` (as duas invalidações + o `if` da fusão) é só
+  // microtask — nenhum `setTimeout`/`await` real no meio. Um único
+  // `setTimeout(0)` roda depois de TODA a fila de microtasks drenar (ordem
+  // garantida pelo event loop), então é uma espera determinística — não uma
+  // gambiarra de "torcer pra dar tempo".
+  async function esperarMicrotasksDrenarem() {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+
+  it('maintainer aceitando o handoff já encadeia activateExecution, sem segundo clique', async () => {
+    workspaceComPapelMock.mockReturnValue(workspaceComPapel('maintainer'));
+    acceptHandoff.mockResolvedValue(undefined);
+    activateExecution.mockResolvedValue({ sessionId: 'sessao-exec-1', modules: ['api'] });
+    montarComCardDevLead();
+
+    const botaoAceitar = await screen.findByRole('button', {
+      name: 'Aceitar handoff e iniciar dev-lead',
+    });
+    fireEvent.click(botaoAceitar);
+
+    await waitFor(() => {
+      expect(acceptHandoff).toHaveBeenCalledWith('proj-1', ID, 'handoff-devlead');
+    });
+    await waitFor(() => {
+      expect(activateExecution).toHaveBeenCalledWith('proj-1', ID);
+    });
+    expect(await screen.findByText('Execução ativada')).toBeInTheDocument();
+  });
+
+  it('owner aceitando o handoff também encadeia (mesmo papel que o backend já exige pra ativar)', async () => {
+    workspaceComPapelMock.mockReturnValue(workspaceComPapel('owner'));
+    acceptHandoff.mockResolvedValue(undefined);
+    activateExecution.mockResolvedValue({ sessionId: 'sessao-exec-1', modules: ['api'] });
+    montarComCardDevLead();
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Aceitar handoff e iniciar dev-lead' }),
+    );
+
+    await waitFor(() => {
+      expect(activateExecution).toHaveBeenCalledWith('proj-1', ID);
+    });
+  });
+
+  it('developer aceitando o handoff NÃO encadeia — mantém os dois botões separados', async () => {
+    workspaceComPapelMock.mockReturnValue(workspaceComPapel('developer'));
+    acceptHandoff.mockResolvedValue(undefined);
+    montarComCardDevLead();
+
+    const botaoAceitar = await screen.findByRole('button', {
+      name: 'Aceitar handoff e iniciar dev-lead',
+    });
+    // O segundo botão continua ali, do jeito que já era antes da fusão —
+    // ninguém que só tem `developer` perde a capacidade de aceitar.
+    expect(screen.getByRole('button', { name: 'Ativar execução' })).toBeInTheDocument();
+
+    fireEvent.click(botaoAceitar);
+
+    await waitFor(() => {
+      expect(acceptHandoff).toHaveBeenCalledWith('proj-1', ID, 'handoff-devlead');
+    });
+    await esperarMicrotasksDrenarem();
+    expect(activateExecution).not.toHaveBeenCalled();
+  });
+
+  it('sem papel resolvido ainda (workspace undefined) também NÃO encadeia', async () => {
+    // workspaceComPapelMock já devolve undefined por padrão (beforeEach).
+    acceptHandoff.mockResolvedValue(undefined);
+    montarComCardDevLead();
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Aceitar handoff e iniciar dev-lead' }),
+    );
+
+    await waitFor(() => {
+      expect(acceptHandoff).toHaveBeenCalled();
+    });
+    await esperarMicrotasksDrenarem();
+    expect(activateExecution).not.toHaveBeenCalled();
   });
 });
 
