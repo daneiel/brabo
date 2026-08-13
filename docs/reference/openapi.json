@@ -14052,6 +14052,11 @@
             "example": 2,
             "description": "Histórias que o PO terminou e que aguardam a promoção do usuário (RN-048)."
           },
+          "pendingApprovalsCount": {
+            "type": "number",
+            "example": 8,
+            "description": "`proposed_actions` com `status = pending` no projeto INTEIRO, todas as sessões — não só a mais recente. É o que a sidebar mostra como badge do projeto (RN-151)."
+          },
           "roster": {
             "$ref": "#/components/schemas/RosterFactsResponseDto"
           }
@@ -14065,6 +14070,7 @@
           "latestSeq",
           "lastEvent",
           "storiesAwaitingPromotion",
+          "pendingApprovalsCount",
           "roster"
         ]
       },
