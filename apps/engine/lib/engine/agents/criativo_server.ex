@@ -491,8 +491,9 @@ defmodule Engine.Agents.CriativoServer do
   end
 
   # `model_name` viaja do frame `final` da api (achado do problema 2) — nulo
-  # nas respostas server-emitted que não vêm de um turno de LLM real (ex.: a
-  # mensagem de erro sintética quando `emit_artifact` recusa o payload).
+  # nas respostas server-emitted que não vêm de um turno de LLM real (hoje, o
+  # desfecho consolidado de `encerrar/2`; a mensagem sintética de erro de
+  # ferramenta virou `agent.error` na RN-163).
   defp emit_response(state, content, model_name \\ nil),
     do: emit(state, "agent.response", %{content: content, modelName: model_name})
 
