@@ -63,7 +63,14 @@ function gerar(
  * existe para não cometer.
  */
 function redirecionoDe(erro: string, url: string): string | null {
-  const script = /<script>([\s\S]*?)<\/script>/.exec(erro);
+  // A flag `i` não é zelo: sem ela o CodeQL aponta `js/bad-tag-filter` (HIGH),
+  // e com razão como regra geral — regex que casa `<script>` e ignora
+  // `<SCRIPT>` é o defeito clássico de sanitizador de HTML. Aqui não há
+  // sanitização (o teste extrai o script de um arquivo que o PRÓPRIO gerador
+  // acabou de escrever), mas a correção é de um caractere e deixa o teste
+  // honesto: se o gerador um dia emitir a tag em outra caixa, ele continua
+  // encontrando em vez de estourar com "404.html sem <script>".
+  const script = /<script>([\s\S]*?)<\/script>/i.exec(erro);
   if (script === null) throw new Error('404.html sem <script>');
 
   const alvo = new URL(`https://daneiel.github.io${url}`);
