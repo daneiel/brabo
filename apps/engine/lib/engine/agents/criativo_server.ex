@@ -22,6 +22,14 @@ defmodule Engine.Agents.CriativoServer do
   responda num formulário em vez de texto livre item por item. Emite
   `chat.structured_question`; as respostas voltam num turno FUTURO, como
   `chat.message` normal — não há um terceiro tool call "resposta".
+
+  Cada turno roda um LAÇO bounded de tool use (RN-163), como o PO e o
+  Arquiteto já rodavam. Antes o modelo era chamado UMA vez por turno: o
+  resultado da ferramenta era anexado ao histórico em memória e ninguém mais
+  o lia, então o Criativo dizia "vou corrigir e tentar de novo" e a promessa
+  só se cumpria se o usuário mandasse outra mensagem. A frase era literal no
+  código; o laço não existia. Agora quem decide o que se anuncia é o teto —
+  ver `continuar/4`.
   """
 
   use GenServer, restart: :temporary
@@ -39,6 +47,15 @@ defmodule Engine.Agents.CriativoServer do
   alias Engine.Sessions.EngineApiClient
 
   @agent "criativo"
+
+  # O teto de voltas do laço de ferramenta deste agente. Igual ao do PO (12), e
+  # pelo mesmo motivo: o Criativo encadeia poucas chamadas por turno
+  # (`emit_artifact` por regra capturada) e o teto está aqui como trava contra
+  # laço infinito, não como orçamento — quem segura gasto é o budget do
+  # projeto/sessão. Não usa `Engine.Harness.Iteracoes`: aquele teto é do
+  # `ToolLoop`, e os conversacionais têm laço PRÓPRIO com constante própria
+  # (po=12, arquiteto=14, dev-lead=14).
+  @max_iterations 12
 
   # --- API pública ---
 
@@ -164,14 +181,26 @@ defmodule Engine.Agents.CriativoServer do
     end
   end
 
-  # --- Turno ---
+  # --- Turno com laço bounded de tool use (RN-163) ---
 
   defp run_turn(state) do
     {state, _content} = run_turn_capturing(state)
     state
   end
 
-  defp run_turn_capturing(state) do
+  defp run_turn_capturing(state),
+    do: run_turn_capturing(state, @max_iterations, %{falhas: [], conteudo: ""})
+
+  # `acc` guarda o que só o TURNO INTEIRO sabe, e que não cabe no `state` (que
+  # é o histórico do modelo e sobrevive ao turno):
+  #
+  #   * `falhas` — as ferramentas que erraram em QUALQUER volta, para o
+  #     desfecho falar do turno e não só da última;
+  #   * `conteudo` — o último texto não vazio do modelo. É ele que
+  #     `executar_confirm_readiness/1` usa como resumo do product_brief: com o
+  #     laço, a última volta pode ser só tool call, e devolver o `content` dela
+  #     faria o brief nascer com resumo vazio.
+  defp run_turn_capturing(state, remaining, acc) do
     # O `agent` viaja junto do texto (achado C): a tela rotulava a bolha ao vivo
     # com o nome do MODELO porque o delta não dizia quem estava falando, e o
     # agente só aparecia quando o evento persistido chegava.
@@ -191,15 +220,23 @@ defmodule Engine.Agents.CriativoServer do
       # turno terminava em silêncio absoluto, pior que o balão vazio.
       {:ok, %{"error" => erro}} when is_binary(erro) and erro != "" ->
         emit_falha(state, {:final, erro})
-        {state, ""}
+        {state, acc.conteudo}
 
       {:ok, %{"message" => message} = frame} ->
         content = Map.get(message, "content", "")
         model_name = Map.get(frame, "modelName")
         state = append(state, assistant_msg(content))
         if content != "", do: emit_response(state, content, model_name)
-        state = Enum.reduce(tool_calls(message, state.tool_specs), state, &dispatch_tool/2)
-        {state, content}
+        acc = if content == "", do: acc, else: %{acc | conteudo: content}
+
+        case tool_calls(message, state.tool_specs) do
+          [] ->
+            {encerrar(state, acc), acc.conteudo}
+
+          calls ->
+            {state, desfechos} = despachar(calls, state)
+            continuar(state, acc, desfechos, remaining - 1)
+        end
 
       {:error, reason} ->
         # NUNCA mais `agent.response` vazio aqui: no event log ele é
@@ -207,43 +244,92 @@ defmodule Engine.Agents.CriativoServer do
         # é efêmero. A falha vira evento durável COM origem, e o agente diz o
         # que houve no próprio fio.
         emit_falha(state, reason)
-        {state, ""}
+        {state, acc.conteudo}
     end
   end
+
+  # O ponto da RN-163: o que se ANUNCIA só pode ser decidido aqui, depois de
+  # despachar (é quando se sabe se houve o que corrigir) e sabendo quantas
+  # voltas sobraram (é quando se sabe se a correção vai acontecer). Prometer
+  # dentro de `dispatch_tool/2`, como antes, era prometer no escuro — não havia
+  # laço nenhum para cumprir a promessa.
+  defp continuar(state, acc, desfechos, remaining) do
+    falhas = erros(desfechos)
+    vai_tentar? = falhas != [] and remaining > 0
+    acc = %{acc | falhas: acc.falhas ++ falhas}
+
+    Enum.each(falhas, fn {tool, motivo} ->
+      emit_falha_de_ferramenta(state, tool, motivo, vai_tentar?)
+    end)
+
+    cond do
+      vai_tentar? ->
+        run_turn_capturing(state, remaining, acc)
+
+      # Teto esgotado NUNCA termina calado — é o erro que o `po_server` comete
+      # (`run_turn(state, remaining) when remaining <= 0, do: state`) e que o
+      # `ToolLoop` já não cometia (`toolloop.limit_reached`). Sem isto, uma
+      # ferramenta que erra doze vezes seguidas acaba num silêncio idêntico ao
+      # de um turno bem-sucedido.
+      remaining <= 0 ->
+        emit_falha_limite(state, acc)
+        {state, acc.conteudo}
+
+      # Perguntas estruturadas ENTREGUES: a bola está com o usuário, e as
+      # respostas voltam num turno futuro como `chat.message` (RN-162). Chamar
+      # o modelo de novo aqui gastaria uma volta para ele reperguntar o que
+      # acabou de perguntar.
+      aguardando_usuario?(desfechos) ->
+        {encerrar(state, acc), acc.conteudo}
+
+      true ->
+        run_turn_capturing(state, remaining, acc)
+    end
+  end
+
+  # Fim de turno: se houve falha em alguma volta, o desfecho é CONSOLIDADO num
+  # evento durável, em vez de a última palavra do fio ser a frase de erro de
+  # uma volta que já foi corrigida depois.
+  defp encerrar(state, %{falhas: []}), do: state
+
+  defp encerrar(state, acc) do
+    tools = acc.falhas |> Enum.map(&elem(&1, 0)) |> Enum.uniq() |> Enum.join(", ")
+
+    emit_response(
+      state,
+      "Fechando o turno: #{length(acc.falhas)} chamada(s) de ferramenta falharam " <>
+        "aqui (#{tools}) e eu tentei de novo depois de cada uma. Confira se o que " <>
+        "você pediu ficou registrado."
+    )
+
+    state
+  end
+
+  defp despachar(calls, state) do
+    {desfechos, state} =
+      Enum.map_reduce(calls, state, fn call, state ->
+        {novo_state, desfecho} = dispatch_tool(call, state)
+        {desfecho, novo_state}
+      end)
+
+    {state, desfechos}
+  end
+
+  defp erros(desfechos), do: for({:erro, tool, motivo} <- desfechos, do: {tool, motivo})
+
+  defp aguardando_usuario?(desfechos),
+    do: Enum.any?(desfechos, &(&1 == {:ok, "ask_structured_questions"}))
 
   # emit_artifact e ask_structured_questions são as ferramentas do Criativo;
   # o guardrail (product_brief bloqueado) vive dentro de EmitArtifact.run.
   # Rodamos direto (tool :direct), sem pipeline/hooks — o Criativo não toca
   # terminal/arquivos.
+  #
+  # Devolve `{state, desfecho}`: a NARRAÇÃO da falha saiu daqui (ver
+  # `continuar/4`), mas o desfecho de cada chamada precisa subir para o laço
+  # decidir se volta ao modelo.
   defp dispatch_tool(%{"name" => "emit_artifact", "arguments" => args} = call, state) do
-    emit(state, "tool.call", %{tool: "emit_artifact", args: args})
-
-    # O resultado era DESCARTADO (`_ =`). Um payload recusado pelo schema — o
-    # modelo emitiu `titulo`/`descricao` contra `title`/`description` — sumia
-    # sem evento, sem aviso e sem chegar ao modelo: o Criativo dizia "registrei
-    # as regras", quatro regras iam para o lixo e o painel ficava vazio.
-    case EmitArtifact.run(args, state) do
-      {:ok, texto} ->
-        emit(state, "tool.result", %{tool: "emit_artifact", ok: true})
-        realimentar(state, call, texto, "emit_artifact")
-
-      {:error, motivo} ->
-        emit(state, "tool.result", %{
-          tool: "emit_artifact",
-          ok: false,
-          erro: to_string(motivo)
-        })
-
-        # O agente FALA (RN-059) e o erro VOLTA para o modelo: no próximo turno
-        # ele lê o motivo e reemite corrigido, que é como um tool loop deve
-        # funcionar — erro é entrada, não fim de linha.
-        emit_response(
-          state,
-          "Não consegui registrar isso: #{motivo}. Vou corrigir e tentar de novo."
-        )
-
-        realimentar(state, call, "ERRO: #{motivo}", "emit_artifact")
-    end
+    executar(call, state, "emit_artifact", fn -> EmitArtifact.run(args, state) end)
   end
 
   # RN-162: o Criativo emite `chat.structured_question` quando quer que o
@@ -252,34 +338,44 @@ defmodule Engine.Agents.CriativoServer do
   # pergunta foi registrada — as respostas voltam num turno FUTURO, como
   # `chat.message` normal (via `AnswerStructuredQuestionUseCase` na api),
   # não por este tool call.
-  defp dispatch_tool(
-         %{"name" => "ask_structured_questions", "arguments" => args} = call,
-         state
-       ) do
-    emit(state, "tool.call", %{tool: "ask_structured_questions", args: args})
-
-    case AskStructuredQuestions.run(args, state) do
-      {:ok, texto} ->
-        emit(state, "tool.result", %{tool: "ask_structured_questions", ok: true})
-        realimentar(state, call, texto, "ask_structured_questions")
-
-      {:error, motivo} ->
-        emit(state, "tool.result", %{
-          tool: "ask_structured_questions",
-          ok: false,
-          erro: to_string(motivo)
-        })
-
-        emit_response(
-          state,
-          "Não consegui montar essas perguntas: #{motivo}. Vou corrigir e tentar de novo."
-        )
-
-        realimentar(state, call, "ERRO: #{motivo}", "ask_structured_questions")
-    end
+  defp dispatch_tool(%{"name" => "ask_structured_questions", "arguments" => args} = call, state) do
+    executar(call, state, "ask_structured_questions", fn ->
+      AskStructuredQuestions.run(args, state)
+    end)
   end
 
-  defp dispatch_tool(_other, state), do: state
+  # Nome que não é nenhuma das duas: o modelo inventou a ferramenta. Volta como
+  # ERRO pelo mesmo caminho de um payload inválido — antes era ignorado em
+  # silêncio, e com o laço isso seria pior que antes: o histórico ficaria
+  # intacto e o modelo repetiria a invenção até esgotar o teto. Mesmo desenho
+  # do `run_tool/3` do PO.
+  defp dispatch_tool(call, state) do
+    tool = to_string(Map.get(call, "name", "desconhecida"))
+    executar(call, state, tool, fn -> {:error, "ferramenta desconhecida: #{tool}"} end)
+  end
+
+  defp executar(call, state, tool, fun) do
+    args = Map.get(call, "arguments", %{})
+    emit(state, "tool.call", %{tool: tool, args: args})
+
+    # O resultado era DESCARTADO (`_ =`). Um payload recusado pelo schema — o
+    # modelo emitiu `titulo`/`descricao` contra `title`/`description` — sumia
+    # sem evento, sem aviso e sem chegar ao modelo: o Criativo dizia "registrei
+    # as regras", quatro regras iam para o lixo e o painel ficava vazio.
+    case fun.() do
+      {:ok, texto} ->
+        emit(state, "tool.result", %{tool: tool, ok: true})
+        {realimentar(state, call, texto, tool), {:ok, tool}}
+
+      {:error, motivo} ->
+        emit(state, "tool.result", %{tool: tool, ok: false, erro: to_string(motivo)})
+
+        # O erro VOLTA para o modelo: na volta seguinte ele lê o motivo e
+        # reemite corrigido, que é como um laço de ferramenta deve funcionar —
+        # erro é entrada, não fim de linha.
+        {realimentar(state, call, "ERRO: #{motivo}", tool), {:erro, tool, to_string(motivo)}}
+    end
+  end
 
   # Devolve o resultado da ferramenta ao histórico, no papel `tool` — é o que
   # o PO e o Arquiteto já faziam, e o que faltava aqui. `tool_name` viaja à
@@ -413,6 +509,81 @@ defmodule Engine.Agents.CriativoServer do
     })
 
     broadcast(state, "agent.error", %{origem: origem, mensagem: mensagem})
+  end
+
+  # A falha de UMA ferramenta, no meio do turno (RN-163). Era `agent.response`:
+  # no event log ficava indistinguível de uma resposta normal do Criativo e não
+  # dizia origem nenhuma — exatamente o que a RN-059 fechou para a falha de
+  # turno, sobrevivendo aqui. Agora é `agent.error` durável, com origem, e o
+  # agente continua falando no fio (a `mensagem` é o que a tela mostra).
+  #
+  # A promessa de retentativa entra na frase SÓ quando `vai_tentar?` — que é o
+  # teto respondendo, não um texto fixo.
+  defp emit_falha_de_ferramenta(state, tool, motivo, vai_tentar?) do
+    origem = origem_da_ferramenta(motivo)
+
+    mensagem =
+      "#{prefixo_da_ferramenta(tool)}: #{motivo}." <>
+        if vai_tentar?, do: " Vou corrigir e tentar de novo.", else: ""
+
+    emit(state, "agent.error", %{
+      origem: origem,
+      mensagem: mensagem,
+      reason: "tool_error:#{tool}",
+      tool: tool,
+      retentativa: vai_tentar?
+    })
+
+    broadcast(state, "agent.error", %{origem: origem, mensagem: mensagem})
+    state
+  end
+
+  # As duas ferramentas do Criativo só produzem falha de INFRA por um caminho —
+  # a api recusando o `append_event` —, e cada uma o prefixa com um texto
+  # próprio. Todo o resto é o payload que o MODELO escreveu (chave errada,
+  # `origin` que não é lista, regra duplicada, tipo system-emitted): é ele que
+  # tem de mudar na volta seguinte, e é ele que a origem precisa apontar.
+  defp origem_da_ferramenta("falha ao emitir artefato: " <> _), do: "infra"
+  defp origem_da_ferramenta("falha ao registrar perguntas: " <> _), do: "infra"
+  defp origem_da_ferramenta(_outro), do: "modelo"
+
+  defp prefixo_da_ferramenta("emit_artifact"), do: "Não consegui registrar isso"
+
+  defp prefixo_da_ferramenta("ask_structured_questions"),
+    do: "Não consegui montar essas perguntas"
+
+  defp prefixo_da_ferramenta(tool), do: "Não consegui usar a ferramenta #{tool}"
+
+  # Teto de voltas esgotado. Origem `modelo` porque o teto só se esgota quando
+  # o modelo continua pedindo ferramenta sem convergir — a mesma leitura do
+  # `toolloop.limit_reached` (ver `Engine.Harness.Iteracoes`). O evento é
+  # `agent.error` e não `toolloop.limit_reached` porque este agente não roda
+  # dentro do `ToolLoop`: reusar o nome faria o evento mentir sobre quem o
+  # produziu, e `agent.error` é o que a tela do fio já sabe mostrar.
+  defp emit_falha_limite(state, acc) do
+    origem = "modelo"
+
+    mensagem =
+      "Atingi o limite de #{@max_iterations} idas ao modelo neste turno e vou " <>
+        "parar por aqui" <>
+        case acc.falhas do
+          [] ->
+            ". Me diga como prefere seguir."
+
+          falhas ->
+            ", com #{length(falhas)} chamada(s) de ferramenta ainda falhando. " <>
+              "Me diga como prefere seguir."
+        end
+
+    emit(state, "agent.error", %{
+      origem: origem,
+      mensagem: mensagem,
+      reason: "limite_de_iteracoes",
+      max_iterations: @max_iterations
+    })
+
+    broadcast(state, "agent.error", %{origem: origem, mensagem: mensagem})
+    state
   end
 
   # Diferente de `emit_falha/2`: aqui o TURNO já rodou e o product_brief já

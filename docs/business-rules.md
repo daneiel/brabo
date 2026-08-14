@@ -5479,6 +5479,52 @@ reaparecer — o card vira somente leitura assim que existe um
   `apps/web/src/routes/SessionPage.perguntas-estruturadas.test.tsx`
 - **Origem:** pedido do usuário — sem precedente de input estruturado no chat
 
+### RN-163 — O Criativo cumpre a promessa de tentar de novo {#rn-163}
+
+Cada turno do Criativo roda um **laço bounded de tool use**, com teto de **12**
+idas ao modelo — o mesmo desenho que o PO e o Arquiteto já tinham. Antes o
+modelo era chamado UMA vez por turno: o resultado da ferramenta era anexado ao
+histórico em memória e ninguém mais o lia, então a frase *"vou corrigir e
+tentar de novo"* — literal no código — só se cumpria se o usuário mandasse
+outra mensagem. Para quem usava, o Criativo simplesmente parava de responder
+depois de dizer que ia corrigir.
+
+Quatro consequências, e cada uma é uma regra:
+
+1. **Erro de ferramenta é entrada, não fim de linha.** O motivo volta ao modelo
+   como mensagem `tool` e o laço chama o modelo de novo, que reemite corrigido
+   DENTRO do mesmo turno.
+2. **Nada se anuncia que o código não vá executar.** A frase de retentativa é
+   decidida depois de despachar as ferramentas e sabendo quantas voltas
+   sobraram: com volta disponível, o agente diz que vai corrigir; sem volta, ele
+   não promete.
+3. **A falha de ferramenta virou `agent.error` durável, com origem**
+   ([RN-059](#rn-059)) — era `agent.response`, indistinguível no event log de
+   uma resposta normal. `origem: infra` quando a api recusou o `append_event`;
+   `origem: modelo` para o payload que o modelo escreveu (chave errada,
+   `origin` que não é lista, regra duplicada, tipo system-emitted). O payload
+   carrega `tool` e `retentativa`.
+4. **Teto esgotado não termina em silêncio.** Vira `agent.error` com
+   `reason: "limite_de_iteracoes"` e `origem: modelo`, a mesma leitura do
+   `toolloop.limit_reached` do `ToolLoop`. O nome do evento NÃO é reusado: este
+   agente não roda dentro do `ToolLoop`, e o evento mentiria sobre quem o
+   produziu.
+
+Duas fronteiras do laço, ambas deliberadas: `ask_structured_questions`
+bem-sucedida **encerra** o turno (a bola está com o usuário, e as respostas
+voltam num turno futuro — [RN-162](#rn-162)); e um turno que teve falha em
+alguma volta fecha com um desfecho CONSOLIDADO no fio, para a última palavra
+não ser o erro de uma volta que já foi corrigida depois.
+
+- **Onde:** `apps/engine/lib/engine/agents/criativo_server.ex`
+  (`run_turn_capturing/3`, `continuar/4`, `emit_falha_de_ferramenta/4`,
+  `emit_falha_limite/2`)
+- **Teste:** `apps/engine/test/engine/agents/criativo_server_test.exs`
+  (laço que corrige de verdade, teto esgotado narrado, origem `infra` vs
+  `modelo`, pergunta estruturada que encerra o turno)
+- **Origem:** uso real no projeto `exp001` — "o Criativo não respondeu depois
+  de dizer que iria corrigir e tentar de novo"
+
 ---
 
 ## Quando dá errado
