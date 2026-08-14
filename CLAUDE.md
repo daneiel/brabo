@@ -731,6 +731,23 @@ o modelo declara as perguntas em schema, o formulário é renderizado por
 vez de abrir um segundo caminho de mensagem. Responder é ato único —
 reenvio é 409, não sobrescrita.
 
+## RODADA exp001 — o Criativo cumpre a promessa (RN-163)
+Mesmo espírito das outras rodadas: veio do USO, não de roteiro. O relato foi
+"o Criativo não respondeu depois de dizer que iria corrigir e tentar de novo",
+e a frase era literal no código — `run_turn_capturing/1` chamava o modelo UMA
+vez, despachava as ferramentas e voltava. O resultado da ferramenta entrava no
+histórico em memória e ninguém mais o lia, então a correção prometida só
+acontecia se o usuário mandasse outra mensagem.
+
+O Criativo era o único conversacional sem laço de tool use; ganhou o mesmo do
+PO, com teto próprio de 12. O que vale além da correção: **quem decide o que se
+anuncia passou a ser o teto**, e não um texto fixo — a promessa de retentativa
+só entra na frase quando ainda há volta para cumpri-la. Teto esgotado virou
+`agent.error` narrado (o `po_server` ainda termina calado nesse caso, e é a
+próxima dívida óbvia), e a falha de ferramenta deixou de ser `agent.response`
+— no event log ela era indistinguível de uma resposta normal e não dizia
+origem nenhuma, exatamente o que a RN-059 fechou para a falha de turno.
+
 ## FERRAMENTA DE DESENVOLVIMENTO — `pnpm bootstrap`
 Menu de terminal em `scripts/dev/bootstrap.sh` agrupando o que se faz no
 dia a dia: Docker, K8s, Database e Test. Existe porque esses comandos moram
@@ -743,6 +760,18 @@ sobre ele que roda o teste (`scripts/dev/bootstrap.spec.ts`) — um TUI não se
 testa por unidade, mas o mapeamento menu→comando sim, e é ele que erra.
 Zero dependência nova; as cores saem de `design/tokens.css` em ANSI 24-bit
 com degradação para 256 cores e para nenhuma.
+
+A saída de um comando em execução é ROLÁVEL (roda do mouse em SGR, `j`/`k`,
+PageUp/PageDown, `G` para voltar ao fim). O que faltava não era ler a roda: era
+DESLOCAMENTO — `tail -n` só sabe mostrar o fim —, então a janela virou recorte
+com `sed -n 'a,bp'`, testável sem TTY por `--print-window`. Duas consequências
+que o rodapé anuncia: rolar para trás CONGELA a janela (como o `less +F`, senão
+o redesenho de 5 Hz desfaz a rolagem) e o rastreio de mouse, ligado só na tela de
+execução, é desligado em TODA saída — `\e[?1006l\e[?1000l` em
+`restaurar_terminal`, que o trap de EXIT cobre. O parser de escape é CSI
+genérico (lê até o byte final): ler dois bytes fixos deixava o resto da sequência
+no buffer, e como o menu trata `[1-9]` como escolha, um giro de roda disparava
+itens do menu.
 
 Três decisões registradas: `Create` provisiona do zero e `Deploy` publica
 num ambiente que já existe (por isso só `Deploy` tem escolha por serviço);
@@ -866,7 +895,15 @@ divide o mesmo banco, recuperar exige `db:migrate` E `engine:migrate`.
   (infra | modelo | código | política) — nunca diagnóstico por
   eliminação (lição do ADR 0020). Falha NUNCA vira resposta vazia no
   event log, e o motivo NUNCA fica só em broadcast: `agent.error` é
-  durável e o agente diz o que houve no fio (RN-059).
+  durável e o agente diz o que houve no fio (RN-059). Falha de UMA
+  ferramenta no meio do laço segue a mesma régua (RN-163).
+- Os quatro agentes conversacionais rodam laço bounded de tool use, com
+  teto PRÓPRIO no servidor de cada um (Criativo e PO 12, Arquiteto e Dev
+  Lead 14) — não o teto do `ToolLoop` (`Engine.Harness.Iteracoes`), que é
+  dos agentes de execução e de gate. Erro de ferramenta é ENTRADA do laço,
+  não fim de linha; teto esgotado é narrado, nunca silêncio; e o agente não
+  anuncia ação que o código não vá executar — o que se promete é decidido
+  pelo teto, nunca por texto fixo (RN-163).
 - A chave de LLM que um agente gasta é a do OWNER do workspace
   (RN-058); o relatório desse gasto é do owner e só dele (RN-060). O
   membro vê o PRÓPRIO consumo por ATOR, em tokens e custo estimado, e
