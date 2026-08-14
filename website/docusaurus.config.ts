@@ -7,8 +7,10 @@ import { themes as prismThemes } from 'prism-react-renderer';
 const EDIT_BRANCH = 'dev';
 
 // PUBLICAÇÃO POR DEGRAU. Cada permanente publica no seu próprio lugar dentro do
-// mesmo GitHub Pages: `main` na raiz, `qa` e `dev` em subdiretório. Quem decide
-// é o `docs-deploy.yml`, passando `DOCS_BASE_URL`.
+// mesmo GitHub Pages, e desde o ADR 0071 os TRÊS são simétricos:
+// `/brabo/main/`, `/brabo/qa/` e `/brabo/dev/`. A raiz virou a página que
+// escolhe entre eles. Quem decide é o `docs-deploy.yml`, passando
+// `DOCS_BASE_URL` e `DOCS_BRANCH`.
 //
 // Não é preferência de estilo: o `baseUrl` entra em TODA URL de asset que o
 // Docusaurus emite. Um site servido de `/brabo/dev/` com `baseUrl: '/brabo/'`
@@ -17,10 +19,31 @@ const EDIT_BRANCH = 'dev';
 //
 // O default é o de produção, então rodar `pnpm docs:build` sem variável nenhuma
 // continua produzindo exatamente o que sempre produziu.
-const BASE_URL = process.env.DOCS_BASE_URL ?? '/brabo/';
+const BASE_URL = process.env.DOCS_BASE_URL ?? '/brabo/main/';
+
+// O degrau é DECLARADO, não deduzido do baseUrl.
+//
+// Isto já foi `BASE_URL === '/brabo/'`, e funcionava enquanto `main` era o
+// único que publicava na raiz. Com os três em subdiretório, aquela comparação
+// passaria a ser falsa para `main` também — e o efeito seria `noIndex: true` na
+// documentação REAL: ela sairia do Google em silêncio, com o CI verde, porque
+// nada no build reprova por indexar de menos.
+//
+// Deduzir ambiente de uma string de caminho é o tipo de acoplamento que só
+// aparece quando o caminho muda. Uma variável própria não tem esse problema.
+const DOCS_BRANCH = process.env.DOCS_BRANCH ?? 'main';
 
 // `main` é a documentação real; `dev` e `qa` são pré-visualização do degrau.
-const E_PRODUCAO = BASE_URL === '/brabo/';
+const E_PRODUCAO = DOCS_BRANCH === 'main';
+
+// Os três degraus, para o seletor da barra do topo. `href` ABSOLUTO de
+// propósito: o link atravessa sites com `baseUrl` diferente, e um link relativo
+// resolveria dentro do próprio degrau — `/brabo/dev/main/`, que não existe.
+const DEGRAUS = [
+  { branch: 'main', rotulo: 'main — estável' },
+  { branch: 'qa', rotulo: 'qa — candidata' },
+  { branch: 'dev', rotulo: 'dev — em desenvolvimento' },
+] as const;
 
 const config: Config = {
   title: 'Brabo',
@@ -216,6 +239,17 @@ const config: Config = {
         },
         { to: '/runbook', label: 'Runbook', position: 'left' },
         { to: '/adr/', label: 'ADRs', position: 'left' },
+        // O degrau que você está lendo, e como trocar. Fica à esquerda do
+        // GitHub porque é navegação do próprio site, não link externo.
+        {
+          type: 'dropdown',
+          label: DOCS_BRANCH,
+          position: 'right',
+          items: DEGRAUS.map((d) => ({
+            href: `https://daneiel.github.io/brabo/${d.branch}/`,
+            label: d.branch === DOCS_BRANCH ? `${d.rotulo} ✓` : d.rotulo,
+          })),
+        },
         {
           href: 'https://github.com/daneiel/brabo',
           label: 'GitHub',

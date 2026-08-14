@@ -20,3 +20,8 @@ apps/web/types/
 
 # Artefato do workflow de promoção (gerado por scripts/ci/promote.ts)
 corpo-da-promocao.md
+
+# Árvore que o docs-deploy.yml monta antes de empurrar para a gh-pages
+# (ADR 0071). São ~2 mil arquivos gerados; um `git add -A` distraído os
+# commitaria.
+publicacao/
