@@ -26,6 +26,7 @@
     "docs:serve": "pnpm --filter website serve",
     "docs:clear": "pnpm --filter website clear",
     "docs:generate": "node scripts/docs/generate.mjs",
+    "docs:landing": "node scripts/docs/landing.mjs",
     "docs:check": "node scripts/docs/docmap.mjs && node scripts/docs/generate.mjs --check",
     "docs:drift": "node scripts/docs/drift.mjs",
     "docs:audit": "node scripts/docs/audit.mjs"

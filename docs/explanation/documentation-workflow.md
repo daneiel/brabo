@@ -191,9 +191,17 @@ Cada branch permanente publica no seu próprio lugar do mesmo GitHub Pages:
 
 | degrau | URL | indexado por buscador |
 |---|---|---|
-| `main` | `https://daneiel.github.io/brabo/` | ✅ |
+| — (índice) | `https://daneiel.github.io/brabo/` | ❌ |
+| `main` | `https://daneiel.github.io/brabo/main/` | ✅ |
 | `qa` | `https://daneiel.github.io/brabo/qa/` | ❌ |
 | `dev` | `https://daneiel.github.io/brabo/dev/` | ❌ |
+
+Os três são **simétricos** desde o
+[ADR 0071](../adr/0071-publicacao-simetrica-por-degrau.md); a raiz é uma página
+gerada que lista os três com a versão carimbada de cada um, e cada site tem no
+topo um seletor para trocar de degrau. Antes disso a `main` publicava na raiz, e
+esse caso especial obrigava o workflow a preservar `/dev/` e `/qa/` num caminho
+que só rodava um terço das vezes.
 
 Isso fecha um vão da esteira: entre um merge em `dev` e a promoção final, ler a
 documentação daquele estado exigia clonar o repositório. O `docs-check` constrói o
@@ -207,6 +215,11 @@ Três detalhes que não são óbvios e que já custaram um erro cada:
 - **`baseUrl` vem de `DOCS_BASE_URL`**, com o valor de produção como default. Ele
   entra em toda URL de asset: um site em `/brabo/dev/` com `baseUrl: '/brabo/'`
   carrega o HTML e nada mais, e a página fica *quebrada sem erro*.
+- **O degrau é declarado em `DOCS_BRANCH`, e não deduzido do `baseUrl`.** Isto já
+  foi `BASE_URL === '/brabo/'`, e funcionava enquanto a `main` era a única na
+  raiz. Com os três em subdiretório aquela comparação vira falsa para a `main`
+  também, e o efeito seria `noIndex` na documentação REAL — fora do Google, em
+  silêncio, com o CI verde, porque nada no build reprova por indexar de menos.
 - **`noIndex` fora da `main` exige `forceIgnoreNoIndex` na busca.** O
   `@easyops-cn/docusaurus-search-local` descarta toda página com
   `<meta name="robots" content="noindex">`, então os dois recursos se anulavam: os
