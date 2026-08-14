@@ -410,13 +410,22 @@ defmodule Engine.Agents.CriativoServerTest do
 
     assert_received {:event_appended, _, _, %{type: "chat.structured_question", payload: payload}}
 
+    # RN-171: `allowOther` só existe em `select`, e ausente vale `true` — a
+    # saída por texto livre é o DEFAULT, e fechá-la é declaração deliberada.
     assert payload.questions == [
-             %{id: "nome", label: "Qual o nome do produto?", type: "text", options: []},
+             %{
+               id: "nome",
+               label: "Qual o nome do produto?",
+               type: "text",
+               options: [],
+               allowOther: false
+             },
              %{
                id: "plataforma",
                label: "Qual plataforma?",
                type: "select",
-               options: ["Web", "Mobile"]
+               options: ["Web", "Mobile"],
+               allowOther: true
              }
            ]
 

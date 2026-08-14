@@ -828,6 +828,50 @@ para o que NENHUMA lista de dependências alcança (colapso de `Disclosure`,
 Markdown reflowando). A guarda dos 120px do fim continua intacta, de
 propósito: o fio segue a conversa, não sequestra a leitura de quem subiu.
 
+## RODADA exp001 — o fio diz quem fala, com qual modelo e o que pergunta (RN-171/174/175/176)
+Mesma origem: USO. Quatro queixas sobre a tela da Sessão, e três delas
+compartilham a mesma lição — **o produto sabia a informação e não a
+mostrava**.
+
+**A pergunta ao centro, e com saída (RN-171).** O relato foi literal: "sempre
+dê a opção de input do usuário quando ele seleciona Escreva". O modelo
+oferecia uma opção do tipo "Escreva você mesmo" e o formulário não tinha onde
+escrever — o schema de `ask_structured_questions` não sabia expressar "além
+destas, o que você quiser". `allowOther` entrou em `select` com **default
+`true`**, e a assimetria é o argumento: lista fechada por ESQUECIMENTO trava a
+conversa e o usuário não destrava de fora; lista aberta por engano oferece um
+campo a mais. O sentinela de interface nunca viaja pro backend, e o botão de
+envio continua exigindo tudo preenchido (o backend recusa com 400 de qualquer
+forma). A caixa também virou centralizada com o teto de 560px do
+`ApprovalCard` e ganhou avatar: era o único item do fio alinhado a nada.
+
+**Ação que dispara turno arma o indicador (RN-174).** A animação de "pensando"
+já existia — o que faltava era COBERTURA. Duas ações da tela disparam turno
+síncrono no engine e não ligavam nada: responder o formulário
+(`AnswerStructuredQuestionUseCase` reusa `SendAgentMessageUseCase`) e devolver
+história ao PO (`ReturnStoryUseCase` chama `reviseStory`, que é
+`handle_call({:revise, …})`). O canal Phoenix não cobre o buraco: com o join
+ainda em curso (RN-108) o `agent.status` "working" não tem ouvinte e se perde.
+
+**O modelo, para TODOS (RN-175).** A premissa de que o defeito era do PO não se
+sustentou: os quatro conversacionais gravam `modelName` desde a RN-146, com
+teste verde. Quem nunca gravou foi o **`ToolLoop`** — o caminho de todo agente
+de execução e de gate — e o chat sem agente ativo na api. Nenhuma chamada
+nova: `RunLlmTurnUseCase` já devolvia o campo no corpo. A tela deixou de
+escrever a palavra solta "modelo" (que se lê como se o modelo se chamasse
+assim) e virou chip legível; sem o dado, ela DIZ que não foi registrado —
+adivinhar pelo binding atual atribuiria a uma resposta antiga um modelo que
+talvez nem existisse, o mesmo erro que o preço congelado da RN-044 evita.
+
+**Tabela em Markdown vira tabela (RN-176).** Duas saídas eram possíveis, e a
+escolhida foi suportar tabela no Markdown do chat, com o `Table` do design
+system. Renderizar `artifact.module_map` no fio foi RECUSADO por uma decisão
+já registrada: ele é estado VIGENTE do projeto, não artefato datado por
+sessão (RN-159), e vive na Visão Geral. Além disso, o pedido foi sobre a
+tabela **dentro da mensagem** — e a correção serve a qualquer agente que
+escreva uma, não só ao Mapa de Módulos. A linha separadora continua
+obrigatória (GFM), então prosa com `|` nunca vira tabela por engano.
+
 ## FERRAMENTA DE DESENVOLVIMENTO — `pnpm bootstrap`
 Menu de terminal em `scripts/dev/bootstrap.sh` agrupando o que se faz no
 dia a dia: Docker, K8s, Database e Test. Existe porque esses comandos moram

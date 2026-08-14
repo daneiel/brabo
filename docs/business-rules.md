@@ -5845,6 +5845,173 @@ a coluna do grid.
 - **Origem:** uso real no `exp001` — "o scroll do chat deve ficar sempre no
   final seguindo o chat" e "aprovação mal diagramado deve ficar ao centro"
 
+### RN-171 — A pergunta de lista tem saída por texto livre, por default {#rn-171}
+
+Pergunta `type: "select"` de `ask_structured_questions` (RN-162) aceita
+resposta **fora da lista**. O campo é `allowOther`, e o **default é `true`**:
+quem não declara nada oferece a saída. Fechar a lista exige
+`allowOther: false` explícito, e só faz sentido quando ela é genuinamente
+fechada ("Sim"/"Não").
+
+O default aberto não é preferência de estilo. Uma lista fechada por
+ESQUECIMENTO do modelo trava a conversa inteira e o usuário não tem como
+destravá-la de fora — foi exatamente o que o uso real encontrou: o modelo
+ofereceu uma opção do tipo "Escreva você mesmo" e o formulário não tinha onde
+escrever, porque o schema do tool não sabia expressar "além destas, o que
+você quiser". Uma lista aberta por engano, no pior caso, oferece um campo a
+mais. Os dois erros não custam a mesma coisa. Pelo mesmo motivo a descrição
+do tool **proíbe** criar uma opção "Outro" dentro de `options`: o formulário
+já a oferece sozinha, e duas escapatórias na mesma lista confundem.
+
+`allowOther` só existe em `select` — em `text`/`textarea` o campo já é texto
+livre, e o engine normaliza esses dois para `false` em vez de gravar estado
+sem significado no event log. Na tela, escolher "Outra (escrever)" troca o
+`Select` por um `Input`: o sentinela de interface (`__outra__`) **nunca**
+viaja para o backend, e o que vai é o TEXTO digitado. O botão de envio
+continua exigindo TODAS as perguntas preenchidas — `AnswerStructuredQuestion
+UseCase` recusa com 400 listando o que falta, então habilitar com campo vazio
+só produziria um erro do servidor —, e estar em "Outra" com o texto ainda em
+branco NÃO conta como preenchido.
+
+O card também deixou de ser o único item do fio alinhado a nada: ele passa a
+ser centralizado com o mesmo teto de 560px do `ApprovalCard` na variante
+`chat` ([RN-173](#rn-173)) e ganha o avatar e a cor do agente, que é o que o
+faz ler como FALA de alguém em vez de formulário órfão. Antes ele nascia
+encostado à esquerda com teto de 480px, enquanto as bolhas começam 45px
+adentro.
+
+- **Onde:** `apps/engine/lib/engine/harness/tools/ask_structured_questions.ex`
+  (schema, validação e `normalizar/1`), `apps/web/src/lib/api-types.ts`
+  (`StructuredQuestion.allowOther`), `apps/web/src/routes/SessionPage.tsx`
+  (`StructuredQuestionCard`, `OUTRA_RESPOSTA`, `permiteOutra`),
+  `apps/web/src/routes/SessionPage.module.css` (`.structuredQuestionCard`,
+  `.structuredQuestionCabecalho`)
+- **Teste:** `apps/engine/test/engine/harness/tools/ask_structured_questions_test.exs`
+  (default aberto, `false` explícito, `allowOther` não booleano recusado),
+  `apps/web/src/routes/SessionPage.perguntas-estruturadas.test.tsx`
+  (describe "saída por texto livre no select")
+- **Origem:** uso real no `exp001` — "sempre dê a opção de input do usuário
+  quando ele seleciona Escreva"
+
+### RN-174 — Ação que dispara turno de agente arma o indicador do fio {#rn-174}
+
+O indicador de "o agente está trabalhando" (os três pontinhos depois de 5s,
+[RN-131](#rn-131)/[RN-156](#rn-156)) só aparece enquanto `streaming` ou
+`statusAgent` valem, e eles eram ligados em três lugares: o composer
+(`handleSend`), as confirmações de prontidão e o canal Phoenix. **Toda ação da
+tela que dispara um turno síncrono no engine passa a armá-lo também.**
+
+São duas, e nenhuma delas é o composer:
+
+1. **Responder o formulário de perguntas estruturadas** —
+   `AnswerStructuredQuestionUseCase` reusa `SendAgentMessageUseCase`
+   ([RN-162](#rn-162)), e a chamada só resolve depois do turno inteiro.
+2. **Devolver uma história ao PO** — `ReturnStoryUseCase` chama `reviseStory`,
+   que é `handle_call({:revise, …})` no `po_server`: a resposta HTTP espera o
+   PO reescrever a história.
+
+O canal Phoenix não cobre o buraco, e é isso que torna a correção necessária
+em vez de redundante: quando ele ainda não terminou de conectar (ticket +
+join, [RN-108](#rn-108)) o broadcast de `agent.status` "working" não tem
+ouvinte e se perde — a tela fica em silêncio absoluto por dezenas de segundos,
+que é indistinguível de "não vai acontecer nada".
+
+O par é `iniciarTurnoDoAgente(agente)` **antes** do `await` (o `agent.status`
+do canal pode chegar primeiro, e sem o agente fixado o indicador nasceria sem
+saber quem fala) e `finalizarTurnoDoAgente()` no `finally` — nos DOIS
+caminhos, porque um erro que deixasse `streaming` ligado travaria o composer
+até o próximo turno. Resolver a chamada é sinal de fim de turno tão confiável
+quanto o `agent.done` do canal, e `finalizarTurnoDoAgente` é idempotente. O
+prazo de 5s não muda: turno que responde rápido continua sem mostrar nada.
+
+- **Onde:** `apps/web/src/routes/SessionPage.tsx` (`iniciarTurnoDoAgente`,
+  `handleReturnStory`, `StructuredQuestionCard`)
+- **Teste:** `apps/web/src/routes/SessionPage.perguntas-estruturadas.test.tsx`
+  e `apps/web/src/routes/SessionPage.promocao-inline-e-volta.test.tsx`
+  (describes de RN-174, com o caso de falha provando que o indicador não fica
+  preso)
+- **Origem:** uso real no `exp001` — "caso a web, api e engine demore mais de
+  5s para ter uma resposta, a web deve apresentar uma animação no chat
+  mostrando que o agente está pensando"
+
+### RN-175 — Toda resposta de agente diz com qual modelo foi gerada {#rn-175}
+
+`agent.response` carrega `modelName` nos **três** produtores do evento, e não
+só nos quatro agentes conversacionais:
+
+| produtor | quem passa por ali | antes |
+|---|---|---|
+| os quatro conversacionais (`criativo`/`po`/`arquiteto`/`dev_lead`) | chat | já gravava, desde a [RN-146](#rn-146) |
+| `Engine.Harness.ToolLoop` | TODO agente de execução e de gate — `dev-*`, QA, SecOps, Infra-Workflows, Psicólogo, Anamnese | **nunca gravou** |
+| `SendChatMessageUseCase` (api) | chat sem agente ativo, em que quem responde é o modelo | **nunca gravou** |
+
+Nenhuma chamada nova: `RunLlmTurnUseCase` já devolve `modelName` no corpo e
+`StreamLlmTurnUseCase` já o põe no frame `final` — o valor é o nome do modelo
+do **binding resolvido** (`model.name`), não o eco do provider. Ele é `null`
+quando o turno falhou antes de resolver o binding, e ausente em evento gravado
+antes desta regra.
+
+Na tela, o modelo deixou de ser a palavra solta `modelo` em mono 10px
+`--text-muted` ao lado do nome do agente — que se lê como se o modelo se
+CHAMASSE "modelo", e que reprova o contraste de texto de leitura. Virou um
+**chip** com o ícone de modelo, `--text-secondary` sobre `--surface-2`, e o
+rótulo de desconhecido passou a ser "modelo não registrado". A tela **não**
+adivinha o modelo pelo binding ATUAL do agente quando o dado falta: atribuir a
+uma resposta antiga um modelo que talvez nem existisse quando ela foi gerada
+seria inventar procedência, e procedência inventada é pior que ausente — o
+mesmo argumento do preço congelado em `token_usage` ([RN-044](#rn-044)).
+
+Fora do escopo, declarado: `agent.error` continua sem o modelo nos quatro
+servidores, mesmo quando a api o mandou no frame de erro (budget estourado, por
+exemplo). É mudança de outro evento, com outra pergunta a responder.
+
+- **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex`,
+  `apps/api/src/application/use-cases/llm/send-chat-message.use-case.ts`,
+  `apps/web/src/routes/SessionPage.tsx` (o chip em `agent.response`),
+  `apps/web/src/routes/SessionPage.module.css` (`.messageModelo`)
+- **Teste:** `apps/engine/test/engine/harness/tool_loop_test.exs`,
+  `apps/api/test/application/use-cases/llm/send-chat-message.use-case.spec.ts`,
+  `apps/web/src/routes/SessionPage.arquiteto-modelo-icone.test.tsx`,
+  `apps/web/src/design-contraste.test.ts` (o par do chip)
+- **Origem:** uso real no `exp001` — "PO não mostrou o modelo que estava
+  utilizando; todos os agentes devem apresentar o seu modelo ao lado do nome"
+
+### RN-176 — Tabela em Markdown no fio vira tabela de verdade {#rn-176}
+
+O Markdown leve do chat ([RN-158](#rn-158)) passa a reconhecer **tabela GFM** e
+a renderizá-la com o `Table` do design system — o mesmo componente de
+Configurações, Gastos e Executores, não uma `<table>` própria: "como o Brabo
+desenha uma tabela" é uma decisão só. Antes, a tabela do Mapa de Módulos que o
+Arquiteto escreve na resposta saía como parágrafo com pipes literais.
+
+O que distingue tabela de prosa com `|` é a **linha separadora**, e ela é
+obrigatória como no GFM: sem ela o bloco continua sendo parágrafo, então
+"escolha entre a | b | c" não vira tabela por engano. O cabeçalho manda no
+número de colunas — linha curta ganha célula vazia, linha longa perde o
+excesso —, `\|` escapado fica dentro da célula, e o alinhamento sai dos
+dois-pontos do separador. Zero dependência nova: o parser continua sendo o
+próprio, por regex, e a árvore de dados continua virando elementos React
+diretos (nenhum `dangerouslySetInnerHTML`).
+
+**O artefato `artifact.module_map` continua FORA do fio**, e a escolha é
+deliberada: ele é estado VIGENTE do projeto, não artefato datado por sessão —
+a mesma decisão já registrada na [RN-159](#rn-159) —, e vive na Visão Geral.
+O que o usuário pediu foi a tabela **dentro da mensagem**, e é ela que passou
+a ser desenhada; a correção serve a QUALQUER agente que escreva uma tabela, e
+não só ao Mapa de Módulos.
+
+No balão, a tabela **rola na horizontal** em vez de espremer coluna: o fio tem
+~700px e um `module_map` tem 4 colunas.
+
+- **Onde:** `apps/web/src/lib/markdown.ts` (bloco `table`, `celulasDaLinha`),
+  `apps/web/src/components/ui/MarkdownMessage.tsx` (`TabelaMarkdown`),
+  `apps/web/src/components/ui/MarkdownMessage.module.css`
+- **Teste:** `apps/web/src/lib/markdown.test.ts` (describe "tabela (RN-176)"),
+  `apps/web/src/components/ui/MarkdownMessage.test.tsx`
+- **Origem:** uso real no `exp001` — "a tabela dentro da mensagem do Mapa de
+  Módulos do arquiteto tem que ficar bem estruturada em formato tabela,
+  utilizar design system do próprio Brabo"
+
 ---
 
 ## Quando dá errado

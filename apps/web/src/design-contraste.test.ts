@@ -128,6 +128,14 @@ describe.each([
     expect(contraste(tema.textPrimary, tema.surface2)).toBeGreaterThanOrEqual(AA_TEXTO);
   });
 
+  it('fio da sessão: chip do modelo (--text-secondary) sobre --surface-2', () => {
+    // RN-175 — o modelo ao lado do nome do agente deixou de ser
+    // `--text-muted` em 10px (que reprova este mesmo limiar, ver o caso do
+    // `--text-muted` mais abaixo) e virou chip legível. O teste existe para
+    // que uma mudança futura de `--surface-2` não devolva o problema.
+    expect(contraste(tema.textSecondary, tema.surface2)).toBeGreaterThanOrEqual(AA_TEXTO);
+  });
+
   it('sidebar: iniciais do avatar (--on-accent) sobre --accent sólido', () => {
     // Era gradiente accent→warning — a mistura com --warning derrubava o
     // contraste pra 2.10:1 (reprova até o 3:1 de UI). --on-accent sobre
