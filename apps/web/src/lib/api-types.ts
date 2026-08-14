@@ -667,6 +667,16 @@ export interface StructuredQuestion {
   label: string;
   type: StructuredQuestionType;
   options: string[];
+  /**
+   * RN-171 — a pergunta de lista aceita resposta FORA da lista. Só existe em
+   * `select` (em `text`/`textarea` o campo já é texto livre), e o engine a
+   * grava com default `true` (`ask_structured_questions.ex`): lista fechada é
+   * declaração deliberada, não esquecimento.
+   *
+   * Opcional aqui, e não obrigatório, porque evento GRAVADO antes da RN-171
+   * não tem a chave — e ausente vale `true` pelo mesmo motivo que no engine.
+   */
+  allowOther?: boolean;
 }
 
 // Payload do session_event `chat.structured_question`.

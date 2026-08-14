@@ -100,3 +100,81 @@ describe('parseMarkdown — blocos', () => {
     expect(blocos.map((b) => b.type)).toEqual(['heading', 'paragraph', 'list', 'code']);
   });
 });
+
+/**
+ * RN-176 — a tabela do Mapa de Módulos do Arquiteto saía como parágrafo com
+ * pipes literais. O que distingue tabela de prosa com `|` é a linha
+ * SEPARADORA, e é ela que estes testes cobrem nos dois sentidos.
+ */
+describe('parseMarkdown — tabela (RN-176)', () => {
+  it('cabeçalho + separador + linhas viram um bloco table', () => {
+    const blocos = parseMarkdown(
+      '| Módulo | Stack |\n| --- | --- |\n| api | NestJS |\n| web | React |',
+    );
+    expect(blocos).toEqual([
+      {
+        type: 'table',
+        header: [
+          [{ kind: 'text', text: 'Módulo' }],
+          [{ kind: 'text', text: 'Stack' }],
+        ],
+        aligns: ['left', 'left'],
+        rows: [
+          [[{ kind: 'text', text: 'api' }], [{ kind: 'text', text: 'NestJS' }]],
+          [[{ kind: 'text', text: 'web' }], [{ kind: 'text', text: 'React' }]],
+        ],
+      },
+    ]);
+  });
+
+  it('SEM a linha separadora continua sendo parágrafo — prosa com `|` não vira tabela', () => {
+    const blocos = parseMarkdown('escolha entre a | b | c');
+    expect(blocos.map((b) => b.type)).toEqual(['paragraph']);
+  });
+
+  it('lê o alinhamento dos dois-pontos do separador', () => {
+    const [bloco] = parseMarkdown('| a | b | c |\n| :--- | :---: | ---: |\n| 1 | 2 | 3 |');
+    expect(bloco).toMatchObject({ type: 'table', aligns: ['left', 'center', 'right'] });
+  });
+
+  it('linha curta ganha célula vazia e linha longa perde o excesso — o cabeçalho manda', () => {
+    const [bloco] = parseMarkdown('| a | b |\n| --- | --- |\n| 1 |\n| 1 | 2 | 3 |');
+    expect(bloco).toEqual({
+      type: 'table',
+      header: [[{ kind: 'text', text: 'a' }], [{ kind: 'text', text: 'b' }]],
+      aligns: ['left', 'left'],
+      rows: [
+        // Célula ausente vira sequência inline VAZIA (`parseInline('')`), e
+        // não um nó de texto em branco.
+        [[{ kind: 'text', text: '1' }], []],
+        [[{ kind: 'text', text: '1' }], [{ kind: 'text', text: '2' }]],
+      ],
+    });
+  });
+
+  it('célula mantém a formatação inline (código, negrito)', () => {
+    const [bloco] = parseMarkdown('| Módulo | Depende |\n| --- | --- |\n| `api` | **web** |');
+    expect(bloco).toMatchObject({
+      rows: [[[{ kind: 'code', text: 'api' }], [{ kind: 'bold', text: 'web' }]]],
+    });
+  });
+
+  it('barra escapada (\\|) fica DENTRO da célula em vez de separar', () => {
+    const [bloco] = parseMarkdown('| a | b |\n| --- | --- |\n| x \\| y | z |');
+    expect(bloco).toMatchObject({
+      rows: [[[{ kind: 'text', text: 'x | y' }], [{ kind: 'text', text: 'z' }]]],
+    });
+  });
+
+  it('a tabela termina na linha em branco e o texto seguinte volta a ser parágrafo', () => {
+    const blocos = parseMarkdown(
+      'Segue o mapa:\n| a |\n| --- |\n| 1 |\n\nDepois disso, mais nada.',
+    );
+    expect(blocos.map((b) => b.type)).toEqual(['paragraph', 'table', 'paragraph']);
+  });
+
+  it('tabela só com cabeçalho não quebra — vira table sem linhas', () => {
+    const [bloco] = parseMarkdown('| a | b |\n| --- | --- |');
+    expect(bloco).toMatchObject({ type: 'table', rows: [] });
+  });
+});

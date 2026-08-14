@@ -253,6 +253,39 @@
   composes: messageMeta from '../components/ui/ChatBubble.module.css';
 }
 
+/* O modelo que gerou a resposta, ao lado do nome do agente (RN-175). Era
+   `.messageMeta` cru — mono 10px em `--text-muted`, que reprova contraste de
+   leitura sobre `--surface-0` (a mesma razão documentada em
+   `Input.module.css` para o `.hint`) e que, na prática, ninguém via. Vira um
+   CHIP: `--text-secondary` sobre `--surface-2`, com o ícone de modelo, para
+   dizer o que aquele texto É. */
+.messageModelo {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  line-height: 1.4;
+  padding: 2px 7px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  /* O nome de modelo é longo (`anthropic/claude-…`) e o cabeçalho não pode
+     empurrar a bolha: ele encolhe com reticências em vez de vazar. */
+  max-width: 28ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Sem o nome gravado. Continua LEGÍVEL — o que muda é o itálico, que separa
+   "o modelo se chama X" de "não sabemos qual foi". */
+.messageModeloAusente {
+  font-style: italic;
+  color: var(--text-muted);
+}
+
 .bubble {
   composes: bubble from '../components/ui/ChatBubble.module.css';
 }
@@ -509,21 +542,43 @@
 }
 
 /* Formulário de `chat.structured_question` (RN-162) — mesmo miolo do
-   `.handoffCard`, mas alinhado à esquerda (é um formulário, não uma
-   confirmação) e sem o realce de sucesso: perguntar não é uma decisão do
-   usuário aprovar/negar. */
+   `.handoffCard`, alinhado à esquerda porque é um FORMULÁRIO (os campos
+   pedem uma coluna, não um centro), e sem o realce de sucesso: perguntar não
+   é uma decisão do usuário aprovar/negar.
+
+   RN-171 — a CAIXA passou a ser centralizada, com o mesmo teto de 560px do
+   `ApprovalCard` no fio (`ApprovalCard.module.css`, RN-173). Antes ela
+   nascia encostada à esquerda com teto de 480px, enquanto as bolhas começam
+   45px adentro (avatar de 32px + gap de 13px) e o card de aprovação
+   centraliza: a pergunta era o único item do fio alinhado a nada, e é isso
+   que o relato chamou de "mal diagramada". Centralizar (e não recuar 45px
+   como as bolhas) segue a MESMA regra já registrada no `ApprovalCard`: caixa
+   que pede algo ao usuário fica no eixo do fio. O avatar em `.structured
+   QuestionCabecalho` é o que devolve a leitura de "isto é fala de alguém". */
 .structuredQuestionCard {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 12px;
-  margin: 4px 0;
+  margin: 4px auto;
   padding: 16px;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   background: var(--surface-1);
   width: 100%;
-  max-width: 480px;
+  max-width: 560px;
+}
+
+/* O avatar do agente ao lado da pílula — a mesma dupla (avatar + nome) que a
+   bolha e o cabeçalho de grupo colapsado já usam, para a pergunta ler como
+   FALA e não como formulário órfão. `--msg-color` vem do `style` inline do
+   card (`corDoAgente`), como no resto do fio. */
+.structuredQuestionCabecalho {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .structuredQuestionForm {

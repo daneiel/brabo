@@ -392,10 +392,49 @@ function StorySlide({
 }
 
 /**
+ * O valor que marca "quero escrever a minha própria resposta" no `Select`
+ * (RN-171). É um SENTINELA de interface, nunca uma resposta: quem escolhe
+ * troca o campo por um de texto, e o que viaja pro backend é o texto digitado.
+ *
+ * O prefixo `__` e o nome em português existem para nunca colidir com uma
+ * `option` de verdade vinda do modelo — e, se colidisse, o efeito seria
+ * abrir o campo de texto, não gravar o sentinela.
+ */
+const OUTRA_RESPOSTA = '__outra__';
+
+/** RN-171: `select` aceita resposta fora da lista, e ausente vale `true` —
+ *  evento gravado antes da regra não tem a chave, e a leitura permissiva é a
+ *  mesma escolha que o engine faz ao normalizar. */
+function permiteOutra(q: StructuredQuestion): boolean {
+  return q.type === 'select' && q.allowOther !== false;
+}
+
+/**
  * Card de `chat.structured_question` (RN-162) — o formulário que o Criativo
- * pede quando faz VÁRIAS perguntas de uma vez, em vez de texto livre que o
- * usuário responderia item por item. `type` decide o input: `text`→`Input`,
- * `textarea`→`Textarea`, `select`→`Select` com `options`.
+ * (e o PO, RN-164) pede quando faz VÁRIAS perguntas de uma vez, em vez de
+ * texto livre que o usuário responderia item por item. `type` decide o input:
+ * `text`→`Input`, `textarea`→`Textarea`, `select`→`Select` com `options`.
+ *
+ * RN-171 — duas coisas mudaram depois do uso real:
+ *
+ * 1. **O card é uma FALA do agente.** Antes ele nascia encostado à esquerda,
+ *    sem avatar e com teto de 480px, enquanto as bolhas começam 45px adentro
+ *    e o `ApprovalCard` no fio centraliza com teto de 560px — resultado: a
+ *    pergunta ficava torta em relação a tudo à volta. Agora ela é centralizada
+ *    com o MESMO teto de 560px do card de aprovação (é a mesma natureza: uma
+ *    caixa que pede algo ao usuário) e carrega o avatar e a cor do agente, que
+ *    é o que a faz ler como fala de alguém e não como um formulário avulso.
+ * 2. **`select` tem saída por texto livre.** O relato foi literal — "sempre dê
+ *    a opção de input do usuário quando ele seleciona Escreva": o modelo
+ *    ofereceu uma opção do tipo "Escreva você mesmo" e não havia onde
+ *    escrever. Escolher "Outra (escrever)" troca o `Select` por um `Input`, e
+ *    o que viaja é o TEXTO — o sentinela nunca sai daqui.
+ *
+ * `completo` continua exigindo TODAS as perguntas, e não por conservadorismo:
+ * `AnswerStructuredQuestionUseCase` recusa com 400 listando o que falta, então
+ * um botão habilitado com campo vazio só produziria um erro do servidor. O que
+ * mudou é que estar em "Outra" com o texto ainda vazio NÃO conta como
+ * preenchido.
  *
  * Depois de enviado, o card vira SOMENTE LEITURA (`respondida`, derivado de
  * existir um `chat.structured_question_answered` posterior com o mesmo
@@ -412,6 +451,8 @@ function StructuredQuestionCard({
   questions,
   respondida,
   respostasExistentes,
+  onTurnoIniciado,
+  onTurnoTerminado,
 }: {
   projectId: string;
   sessionId: string;
@@ -420,18 +461,37 @@ function StructuredQuestionCard({
   questions: StructuredQuestion[];
   respondida: boolean;
   respostasExistentes: Record<string, string> | undefined;
+  /**
+   * RN-174 — responder o formulário INICIA um turno de agente
+   * (`AnswerStructuredQuestionUseCase` reusa `SendAgentMessageUseCase`), e
+   * quem sabe disso é o card. Sem avisar a página, nada no fio dizia que
+   * alguém estava trabalhando: o indicador de "pensando" depende de
+   * `streaming`/`statusAgent`, e este caminho não ligava nenhum dos dois.
+   */
+  onTurnoIniciado: () => void;
+  onTurnoTerminado: () => void;
 }) {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const [respostas, setRespostas] = useState<Record<string, string>>({});
+  /**
+   * Quais `select` estão em modo "texto livre" (RN-171). Estado SEPARADO de
+   * `respostas` de propósito: `respostas` é o que vai pro backend, e o
+   * sentinela nunca deve chegar lá — misturar os dois seria a única forma de
+   * ele vazar.
+   */
+  const [modoOutra, setModoOutra] = useState<Record<string, boolean>>({});
   const [enviando, setEnviando] = useState(false);
 
   if (respondida) {
     return (
-      <div className={styles.structuredQuestionCard}>
-        <span className={styles.handoffPill}>
-          <ChatIcon size={13} />
-          perguntas do {nomeDoAgente(agent)} — respondidas
+      <div className={styles.structuredQuestionCard} style={corDoAgente(agent)}>
+        <span className={styles.structuredQuestionCabecalho}>
+          <AvatarDoAgente id={agent} />
+          <span className={styles.handoffPill}>
+            <ChatIcon size={13} />
+            perguntas do {nomeDoAgente(agent)} — respondidas
+          </span>
         </span>
         <dl className={styles.structuredQuestionAnswers}>
           {questions.map((q) => (
@@ -445,11 +505,20 @@ function StructuredQuestionCard({
     );
   }
 
+  // `respostas[q.id]` guarda SEMPRE a resposta final — inclusive no modo
+  // "Outra", em que ela é o texto digitado. Por isso a regra não precisa
+  // conhecer o sentinela: pergunta em "Outra" com texto vazio simplesmente
+  // não está preenchida, que é o resultado certo.
   const completo = questions.every((q) => (respostas[q.id] ?? '').trim() !== '');
 
   async function handleSubmit() {
     if (enviando || !completo) return;
     setEnviando(true);
+    // RN-174: o turno começa AQUI, antes do `await` — a chamada é síncrona no
+    // engine (o mesmo `SendAgentMessageUseCase` de `handleSend`) e pode levar
+    // dezenas de segundos. Armar depois de ela resolver seria armar quando o
+    // turno já acabou.
+    onTurnoIniciado();
     try {
       await answerStructuredQuestion(projectId, sessionId, agent, questionSetId, respostas);
       await queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
@@ -461,14 +530,21 @@ function StructuredQuestionCard({
       });
     } finally {
       setEnviando(false);
+      // Mesma rede de segurança de `handleSend`/`handleReadiness`: resolver
+      // esta chamada é sinal de fim de turno tão confiável quanto o
+      // `agent.done` do canal, e `finalizarTurnoDoAgente` é idempotente.
+      onTurnoTerminado();
     }
   }
 
   return (
-    <div className={styles.structuredQuestionCard}>
-      <span className={styles.handoffPill}>
-        <ChatIcon size={13} />
-        perguntas do {nomeDoAgente(agent)}
+    <div className={styles.structuredQuestionCard} style={corDoAgente(agent)}>
+      <span className={styles.structuredQuestionCabecalho}>
+        <AvatarDoAgente id={agent} />
+        <span className={styles.handoffPill}>
+          <ChatIcon size={13} />
+          perguntas do {nomeDoAgente(agent)}
+        </span>
       </span>
       <div className={styles.structuredQuestionForm}>
         {questions.map((q) => {
@@ -493,6 +569,11 @@ function StructuredQuestionCard({
             // prop `label` que `Input`/`Textarea` têm — sem a associação, um
             // leitor de tela não liga a pergunta ao campo.
             const selectId = `sq-${questionSetId}-${q.id}`;
+            const emOutra = modoOutra[q.id] === true;
+            // O que o `Select` MOSTRA. No modo "Outra" ele mostra o sentinela;
+            // fora dele, a resposta — que só é uma das `options`, porque
+            // qualquer outro caminho de escrita passa pelo modo "Outra".
+            const selecionado = emOutra ? OUTRA_RESPOSTA : value;
             return (
               <div key={q.id} className={styles.structuredQuestionField}>
                 <label className={styles.structuredQuestionFieldLabel} htmlFor={selectId}>
@@ -500,9 +581,17 @@ function StructuredQuestionCard({
                 </label>
                 <Select
                   id={selectId}
-                  value={value}
+                  value={selecionado}
                   disabled={enviando}
-                  onChange={(e) => atualizar(e.target.value)}
+                  onChange={(e) => {
+                    const escolha = e.target.value;
+                    const outra = escolha === OUTRA_RESPOSTA;
+                    setModoOutra((atual) => ({ ...atual, [q.id]: outra }));
+                    // Entrar em "Outra" ZERA a resposta: o sentinela não é uma
+                    // resposta, e deixar a opção anterior gravada faria o botão
+                    // habilitar sem nada digitado.
+                    atualizar(outra ? '' : escolha);
+                  }}
                 >
                   <option value="" disabled>
                     Selecione
@@ -512,7 +601,25 @@ function StructuredQuestionCard({
                       {opcao}
                     </option>
                   ))}
+                  {/* RN-171: a saída por texto livre. Fica no FIM da lista, e
+                      só existe quando a pergunta a permite (default do
+                      engine: sim, para `select`). */}
+                  {permiteOutra(q) && (
+                    <option value={OUTRA_RESPOSTA}>Outra (escrever)</option>
+                  )}
                 </Select>
+                {emOutra && (
+                  // O rótulo repete a pergunta porque um formulário com dois
+                  // `select` abertos teria dois campos chamados "Sua
+                  // resposta" — indistinguíveis para quem usa leitor de tela.
+                  <Input
+                    label={`Sua resposta — ${q.label}`}
+                    value={value}
+                    disabled={enviando}
+                    autoFocus
+                    onChange={(e) => atualizar(e.target.value)}
+                  />
+                )}
               </div>
             );
           }
@@ -823,6 +930,42 @@ export function SessionPage({
       (AGENTES_DE_CHAT as readonly string[]).includes(h.toAgent),
   );
 
+  /**
+   * RN-174 — arma o indicador de turno em curso a partir de uma ação que NÃO
+   * é o composer.
+   *
+   * O indicador de "pensando" (RN-131/156) só aparece enquanto
+   * `streaming || statusAgent` vale, e os dois eram ligados em três lugares:
+   * `handleSend`, `handleReadiness`/`handleArchitectureReadiness` (que os
+   * ligam na mão) e o canal Phoenix (`agent.delta`/`agent.status`). Só que
+   * OUTRAS ações da tela também disparam um turno de agente síncrono no
+   * engine — responder o formulário de perguntas estruturadas
+   * (`AnswerStructuredQuestionUseCase` reusa `SendAgentMessageUseCase`) e
+   * devolver uma história ao PO (`ReturnStoryUseCase` chama `reviseStory`,
+   * que é `handle_call({:revise, …})` no `po_server`). Nesses dois caminhos
+   * nenhum dos dois estados era ligado, e o canal não cobre o buraco: quando
+   * ele ainda não terminou de conectar (ticket + join, RN-108) o
+   * `agent.status` "working" se perde, e a tela fica em SILÊNCIO absoluto por
+   * dezenas de segundos — que é exatamente o relato ("a web deve apresentar
+   * uma animação mostrando que o agente está pensando").
+   *
+   * Quem chama é responsável por chamar `finalizarTurnoDoAgente` no fim (o
+   * `finally` da própria ação), pelo mesmo argumento do `handleSend`: a
+   * chamada RESOLVER é sinal de fim de turno tão confiável quanto o
+   * `agent.done` do canal, e a função é idempotente.
+   */
+  const iniciarTurnoDoAgente = useCallback((agente: string | null) => {
+    // Fixado ANTES do `await` de quem chama (mesmo motivo do achado B em
+    // `handleAcceptHandoff`): o `agent.status` do canal pode chegar primeiro,
+    // e sem o ref o indicador nasceria sem saber quem está falando.
+    turnoAgentRef.current = agente;
+    setStreaming(true);
+    setStreamingText('');
+    // `statusAgent` é o que dá NOME ao indicador antes do primeiro delta.
+    // `streaming` sozinho já o faria aparecer, mas como "agente" genérico.
+    setStatusAgent(agente);
+  }, []);
+
   // Reconciliação de fim de turno do `activeAgent` — o que `onAgentDone` (canal)
   // faz, extraído pra também servir de REDE DE SEGURANÇA em `handleSend` (ver
   // abaixo). Idempotente: chamar duas vezes pro mesmo turno (canal E fallback)
@@ -1107,6 +1250,11 @@ export function SessionPage({
                   ? (respostaEvento.payload as StructuredQuestionAnsweredPayload).answers
                   : undefined
               }
+              // RN-174: quem responde é o agente que PERGUNTOU — o ator do
+              // próprio evento, e não `activeAgent`, que pode já ter mudado
+              // enquanto o formulário ficava na tela sem resposta.
+              onTurnoIniciado={() => iniciarTurnoDoAgente(event.actor.id)}
+              onTurnoTerminado={finalizarTurnoDoAgente}
             />
           ),
         });
@@ -1404,7 +1552,7 @@ export function SessionPage({
         // RN-146) — evento GRAVADO antes desta mudança não tem a chave, e
         // `payload.modelName` também pode chegar `null` (turno cuja api não
         // resolveu modelo nenhum antes de falhar). Os dois degradam para o
-        // rótulo genérico "modelo", nunca para `undefined`/`null` na tela.
+        // rótulo de desconhecido, nunca para `undefined`/`null` na tela.
         const modelName =
           typeof payload?.modelName === 'string' && payload.modelName !== ''
             ? payload.modelName
@@ -1419,7 +1567,28 @@ export function SessionPage({
               <div className={styles.messageBody}>
                 <div className={styles.messageHeader}>
                   <span className={styles.messageName}>{nomeDoAgente(event.actor.id)}</span>
-                  <span className={styles.messageMeta}>{modelName ?? 'modelo'}</span>
+                  {/* RN-175: o modelo ao lado do nome, como CHIP legível e não
+                      como a palavra solta "modelo" em 10px cinza — que era o
+                      que o relato viu e que se lê como se o modelo se chamasse
+                      "modelo". Sem o dado (evento anterior à RN-146/175, ou
+                      turno que falhou antes de resolver o binding) o chip diz
+                      que ele não foi REGISTRADO, que é a verdade: adivinhá-lo
+                      pelo binding atual do agente seria atribuir a uma resposta
+                      antiga um modelo que talvez nem existisse quando ela foi
+                      gerada. */}
+                  <span
+                    className={[styles.messageModelo, !modelName && styles.messageModeloAusente]
+                      .filter(Boolean)
+                      .join(' ')}
+                    title={
+                      modelName
+                        ? `Modelo que gerou esta resposta: ${modelName}`
+                        : 'Esta resposta foi gravada sem o nome do modelo'
+                    }
+                  >
+                    <ModelIcon size={11} />
+                    {modelName ?? 'modelo não registrado'}
+                  </span>
                 </div>
                 {/* Resposta vazia é evento ANTIGO: até a RN-059, falha de
                     turno era gravada como `agent.response` com conteúdo "" —
@@ -1545,6 +1714,8 @@ export function SessionPage({
     promovendoTodas,
     ativandoExecucao,
     podeAtivarAutoMode,
+    iniciarTurnoDoAgente,
+    finalizarTurnoDoAgente,
   ]);
 
   // Colapso de mensagens por agente depois que ele passa o bastão (RN-138) —
@@ -1879,6 +2050,11 @@ export function SessionPage({
   async function handleReturnStory() {
     if (!recusandoStory || motivoRecusa.trim() === '' || enviandoRecusa) return;
     setEnviandoRecusa(true);
+    // RN-174: devolver NÃO é só gravar a recusa — `ReturnStoryUseCase` chama
+    // `reviseStory`, que é um `handle_call({:revise, …})` no `po_server`, e
+    // esta chamada só resolve depois de o PO rodar o turno INTEIRO (reescrever
+    // a história). Sem armar o indicador, a tela ficava muda esse tempo todo.
+    iniciarTurnoDoAgente(activeAgent);
     try {
       await returnStory(projectId, recusandoStory.id, motivoRecusa.trim());
       setRecusandoStory(null);
@@ -1890,6 +2066,9 @@ export function SessionPage({
       showToast({ title: 'Erro', message: 'Não foi possível devolver a história', tone: 'danger' });
     } finally {
       setEnviandoRecusa(false);
+      // Idempotente e nos DOIS caminhos: um erro que deixasse `streaming`
+      // ligado travaria o composer até o próximo turno.
+      finalizarTurnoDoAgente();
     }
   }
 

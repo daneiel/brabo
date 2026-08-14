@@ -15,6 +15,15 @@ defmodule Engine.Harness.Tools.AskStructuredQuestions do
   `options`) e devolve as respostas concatenadas como `chat.message` — o
   Criativo as lê no próximo turno como uma mensagem normal do usuário. Este
   tool não espera resposta síncrona nenhuma: `run/2` só registra a pergunta.
+
+  RN-171 — `select` tem SAÍDA por texto livre (`allowOther`), e o default dela
+  é `true`. O uso real encontrou o usuário preso: o modelo ofereceu uma opção
+  do tipo "Escreva você mesmo" e o formulário não tinha onde escrever, porque
+  o schema não sabia dizer "além destas, o que você quiser". A escapatória ser
+  o DEFAULT (e fechá-la exigir `allowOther: false` explícito) é deliberada:
+  uma lista de opções fechada por ESQUECIMENTO trava a conversa inteira, e o
+  usuário não tem como destravá-la; uma lista aberta por engano só oferece um
+  campo a mais. Só a lista genuinamente fechada — "Sim/Não" — declara `false`.
   """
 
   @behaviour Engine.Harness.Tool
@@ -39,7 +48,8 @@ defmodule Engine.Harness.Tools.AskStructuredQuestions do
                 "id" => %{"type" => "string"},
                 "label" => %{"type" => "string"},
                 "type" => %{"type" => "string", "enum" => @tipos_validos},
-                "options" => %{"type" => "array", "items" => %{"type" => "string"}}
+                "options" => %{"type" => "array", "items" => %{"type" => "string"}},
+                "allowOther" => %{"type" => "boolean"}
               },
               "required" => ["id", "label"]
             }
@@ -102,6 +112,9 @@ defmodule Engine.Harness.Tools.AskStructuredQuestions do
       Enum.any?(questions, &select_sem_options?/1) ->
         {:error, "pergunta `type: \"select\"` exige `options` (lista não vazia de strings)"}
 
+      Enum.any?(questions, &allow_other_invalido?/1) ->
+        {:error, "`allowOther` precisa ser booleano (true/false)"}
+
       true ->
         :ok
     end
@@ -145,13 +158,26 @@ defmodule Engine.Harness.Tools.AskStructuredQuestions do
          not Enum.all?(Map.get(q, "options"), &is_binary/1))
   end
 
+  defp allow_other_invalido?(q) do
+    case Map.get(q, "allowOther") do
+      nil -> false
+      valor -> not is_boolean(valor)
+    end
+  end
+
   defp normalizar(questions) do
     Enum.map(questions, fn q ->
+      tipo = Map.get(q, "type", "text")
+
       %{
         id: Map.fetch!(q, "id"),
         label: Map.fetch!(q, "label"),
-        type: Map.get(q, "type", "text"),
-        options: Map.get(q, "options", [])
+        type: tipo,
+        options: Map.get(q, "options", []),
+        # RN-171: só `select` tem o que escapar — em `text`/`textarea` o campo
+        # JÁ é texto livre, e gravar `allowOther: true` neles seria estado
+        # sem significado no event log. Em `select`, ausente vale TRUE.
+        allowOther: tipo == "select" and Map.get(q, "allowOther", true)
       }
     end)
   end
@@ -169,13 +195,20 @@ defmodule Engine.Harness.Tools.AskStructuredQuestions do
     - `type` (opcional, default "text") — "text" (campo curto), "textarea"
       (campo longo) ou "select" (lista de opções)
     - `options` (lista de strings) — OBRIGATÓRIO quando `type` é "select"
+    - `allowOther` (booleano, opcional, default TRUE em "select") — o usuário
+      pode escrever uma resposta fora da lista. NÃO crie uma opção do tipo
+      "Outro"/"Escreva você mesmo" dentro de `options`: o formulário já
+      oferece o campo de texto livre sozinho. Só declare `allowOther: false`
+      quando a lista for genuinamente fechada (ex.: "Sim"/"Não").
 
     Exemplo de chamada válida:
     {"questions": [
       {"id": "nome", "label": "Qual o nome do produto?", "type": "text"},
       {"id": "usuarios", "label": "Quem são os usuários?", "type": "textarea"},
       {"id": "plataforma", "label": "Qual plataforma?", "type": "select",
-       "options": ["Web", "Mobile", "Ambos"]}
+       "options": ["Web", "Mobile", "Ambos"]},
+      {"id": "cobranca", "label": "Vai cobrar?", "type": "select",
+       "options": ["Sim", "Não"], "allowOther": false}
     ]}
 
     As respostas voltam como uma mensagem normal do usuário, num próximo

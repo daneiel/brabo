@@ -22,11 +22,27 @@ export type MdInline =
   | { kind: 'code'; text: string }
   | { kind: 'link'; text: string; url: string };
 
+/** Alinhamento declarado na linha separadora de uma tabela (`:---`, `:-:`,
+ *  `---:`). Sem os dois-pontos, `left` — o mesmo default do CommonMark. */
+export type MdAlinhamento = 'left' | 'center' | 'right';
+
 export type MdBlock =
   | { type: 'heading'; level: 1 | 2 | 3; inline: MdInline[] }
   | { type: 'paragraph'; inline: MdInline[] }
   | { type: 'list'; ordered: boolean; items: MdInline[][] }
-  | { type: 'code'; lang: string; content: string };
+  | { type: 'code'; lang: string; content: string }
+  /**
+   * Tabela GFM (RN-176). `header` tem uma entrada por COLUNA e é ela que
+   * define quantas colunas a tabela tem — toda linha de `rows` é normalizada
+   * para esse tamanho no parser, então quem renderiza nunca precisa checar
+   * comprimento (linha curta ganha célula vazia, linha longa perde o excesso).
+   */
+  | {
+      type: 'table';
+      header: MdInline[][];
+      aligns: MdAlinhamento[];
+      rows: MdInline[][][];
+    };
 
 /**
  * Esquemas aceitos para um link virar `<a>` clicável — `http(s)` e caminho
@@ -92,6 +108,53 @@ const FENCE_FIM_RE = /^```\s*$/;
 const HEADING_RE = /^(#{1,3})\s+(.*)$/;
 const UL_RE = /^\s*[-*+]\s+(.*)$/;
 const OL_RE = /^\s*\d+[.)]\s+(.*)$/;
+/**
+ * A linha SEPARADORA é o que distingue uma tabela de um parágrafo cheio de
+ * `|` (uma alternativa em prosa, uma saída de terminal colada no chat). Ela é
+ * obrigatória, como no GFM: sem ela, o bloco continua sendo parágrafo — que é
+ * exatamente o comportamento de antes desta mudança, e nada regride.
+ */
+const TABELA_SEPARADOR_RE = /^\s*\|?\s*:?-{1,}:?\s*(\|\s*:?-{1,}:?\s*)*\|?\s*$/;
+const TABELA_LINHA_RE = /\|/;
+
+/**
+ * Quebra uma linha de tabela em células. As barras das PONTAS são moldura, não
+ * separador: `| a | b |` tem duas células, não quatro. `\|` escapado NÃO
+ * separa — é o único jeito de escrever uma barra dentro de uma célula, e um
+ * `module_map` com `depends_on: a \| b` é caso plausível.
+ */
+export function celulasDaLinha(linha: string): string[] {
+  const partes: string[] = [];
+  let atual = '';
+  for (let i = 0; i < linha.length; i += 1) {
+    const c = linha[i];
+    if (c === '\\' && linha[i + 1] === '|') {
+      atual += '|';
+      i += 1;
+      continue;
+    }
+    if (c === '|') {
+      partes.push(atual);
+      atual = '';
+      continue;
+    }
+    atual += c;
+  }
+  partes.push(atual);
+  // Moldura das pontas: só o PRIMEIRO e o ÚLTIMO pedaço, e só quando vazios.
+  if (partes.length > 0 && partes[0].trim() === '') partes.shift();
+  if (partes.length > 0 && partes[partes.length - 1].trim() === '') partes.pop();
+  return partes.map((p) => p.trim());
+}
+
+function alinhamentoDaCelula(celula: string): MdAlinhamento {
+  const t = celula.trim();
+  const inicia = t.startsWith(':');
+  const termina = t.endsWith(':');
+  if (inicia && termina) return 'center';
+  if (termina) return 'right';
+  return 'left';
+}
 
 /**
  * Parser de blocos: cabeçalho (`#`/`##`/`###`), lista (`-`/`1.`), fence de
@@ -160,6 +223,39 @@ export function parseMarkdown(source: string): MdBlock[] {
         inline: parseInline(heading[2]),
       });
       i++;
+      continue;
+    }
+
+    // Tabela (RN-176): cabeçalho + separador. O olhar para a linha SEGUINTE é
+    // o que evita transformar prosa com `|` em tabela — e é por isso que a
+    // detecção mora aqui e não em `parseInline`.
+    if (
+      TABELA_LINHA_RE.test(linha) &&
+      i + 1 < linhas.length &&
+      TABELA_SEPARADOR_RE.test(linhas[i + 1]) &&
+      TABELA_LINHA_RE.test(linhas[i + 1])
+    ) {
+      fecharParagrafo();
+      fecharLista();
+      const cabecalho = celulasDaLinha(linha);
+      const aligns = celulasDaLinha(linhas[i + 1]).map(alinhamentoDaCelula);
+      i += 2;
+      const corpo: MdInline[][][] = [];
+      while (i < linhas.length && linhas[i].trim() !== '' && TABELA_LINHA_RE.test(linhas[i])) {
+        const celulas = celulasDaLinha(linhas[i]);
+        // Normaliza para o número de colunas do CABEÇALHO: é ele que manda,
+        // e assim quem renderiza nunca lida com linha torta.
+        corpo.push(
+          cabecalho.map((_, c) => parseInline(celulas[c] ?? '')),
+        );
+        i += 1;
+      }
+      blocos.push({
+        type: 'table',
+        header: cabecalho.map(parseInline),
+        aligns: cabecalho.map((_, c) => aligns[c] ?? 'left'),
+        rows: corpo,
+      });
       continue;
     }
 

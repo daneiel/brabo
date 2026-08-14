@@ -55,10 +55,10 @@ Uma linha em `session_events`, append-only, com `seq` densa por sessão
 | tipo | quando |
 |---|---|
 | `chat.message` | mensagem no fio da sessão, do usuário ou do agente |
-| `chat.structured_question` | o Criativo pediu VÁRIAS respostas de uma vez, num formulário — ferramenta `ask_structured_questions` (RN-162) |
+| `chat.structured_question` | o Criativo pediu VÁRIAS respostas de uma vez, num formulário — ferramenta `ask_structured_questions` (RN-162). Cada pergunta traz `id`, `label`, `type`, `options` e `allowOther` — este último é a saída por texto livre do `select`, e vale `true` quando o modelo não declara nada ([RN-171](../business-rules.md#rn-171)) |
 | `chat.structured_question_answered` | o usuário respondeu o formulário; as respostas também voltam como `chat.message` para o agente ler |
 | `agent.activated` | um agente assumiu trabalho na sessão |
-| `agent.response` | resposta completa do agente, já consolidada |
+| `agent.response` | resposta completa do agente, já consolidada. `modelName` diz QUAL modelo a gerou, nos três produtores (os quatro conversacionais, o `ToolLoop` de todo agente de execução/gate e o chat sem agente ativo na api) — `null` quando o turno falhou antes de resolver o binding, e ausente em evento gravado antes da regra ([RN-175](../business-rules.md#rn-175)) |
 | `agent.error` | falha do agente, com `origem` (`infra`/`modelo`/`codigo`/`politica`) e a `mensagem` que ele diz no fio ([RN-059](../business-rules.md#rn-059)). Cobre o turno inteiro e também a falha de UMA ferramenta no meio do laço, com `tool` e `retentativa` no payload ([RN-163](../business-rules.md#rn-163)) |
 | `tool.result` | resultado de uma execução de ferramenta, gravado pelo hook `Engine.Harness.Hooks.EventLog` |
 | `handoff.offered` | um agente ofereceu o trabalho a outro |

@@ -233,14 +233,20 @@ describe('SessionPage — problema 2: nome do modelo ao lado do agente', () => {
     expect(screen.queryByText('modelo')).not.toBeInTheDocument();
   });
 
-  it('borda: evento GRAVADO antes da RN-146 (sem a chave modelName) degrada para o rótulo genérico', async () => {
+  // RN-175: o rótulo de desconhecido deixou de ser a palavra solta "modelo",
+  // que se lê como se o modelo se CHAMASSE assim — foi o que o uso real
+  // relatou. Ele agora diz que o dado não foi registrado, e a tela nunca
+  // adivinha o modelo pelo binding atual do agente: atribuir a uma resposta
+  // antiga um modelo que talvez nem existisse quando ela foi gerada seria
+  // inventar procedência.
+  it('borda: evento GRAVADO antes da RN-146 (sem a chave modelName) diz que o modelo não foi registrado', async () => {
     eventos.mockReturnValue({
       items: [respostaDoPo({ content: 'Resposta antiga' })],
     });
     montar();
 
     await screen.findByText('Resposta antiga');
-    expect(screen.getByText('modelo')).toBeInTheDocument();
+    expect(screen.getByText('modelo não registrado')).toBeInTheDocument();
   });
 
   it('borda: modelName null (turno cuja api não resolveu modelo) também degrada', async () => {
@@ -250,7 +256,7 @@ describe('SessionPage — problema 2: nome do modelo ao lado do agente', () => {
     montar();
 
     await screen.findByText('Resposta sem modelo');
-    expect(screen.getByText('modelo')).toBeInTheDocument();
+    expect(screen.getByText('modelo não registrado')).toBeInTheDocument();
   });
 });
 

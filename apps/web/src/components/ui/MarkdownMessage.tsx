@@ -2,10 +2,12 @@ import type { ReactNode } from 'react';
 import {
   parseMarkdown,
   normalizarLinguagemDoFence,
+  type MdAlinhamento,
   type MdBlock,
   type MdInline,
 } from '../../lib/markdown';
 import { highlightFile, type TokenKind } from '../../routes/code/highlight';
+import { Table, type TableColumn } from './Table';
 import styles from './MarkdownMessage.module.css';
 
 const CLASSE_POR_TOKEN: Record<TokenKind, string> = {
@@ -56,6 +58,12 @@ function renderInline(nodes: MdInline[]): ReactNode {
   });
 }
 
+/** O TEXTO de uma sequência inline, sem formatação — usado onde o destino só
+ *  aceita `string` (o `label` de coluna do `Table`). */
+function textoSimples(nodes: MdInline[]): string {
+  return nodes.map((n) => n.text).join('');
+}
+
 function CodeFence({ lang, content }: { lang: string; content: string }) {
   const linguagem = normalizarLinguagemDoFence(lang);
   const terminal = LINGUAGENS_DE_TERMINAL.has(linguagem);
@@ -88,6 +96,55 @@ function CodeFence({ lang, content }: { lang: string; content: string }) {
           ))}
         </code>
       </pre>
+    </div>
+  );
+}
+
+/**
+ * Tabela GFM dentro do balão (RN-176) — o `Table` do design system, o MESMO
+ * componente das telas de Configurações/Gastos/Executores, e não uma
+ * `<table>` própria: "como o Brabo desenha uma tabela" é uma decisão só.
+ *
+ * A largura é o problema real da tabela no fio — o balão tem ~700px e um
+ * `module_map` costuma ter 4 colunas —, então o `Table` (grid de `1fr`) vive
+ * dentro de um contêiner que ROLA na horizontal, com piso de largura por
+ * coluna. Espremer a coluna até a palavra quebrar letra a letra seria o
+ * mesmo defeito que o usuário relatou, com outra forma.
+ */
+function TabelaMarkdown({
+  header,
+  aligns,
+  rows,
+}: {
+  header: MdInline[][];
+  aligns: MdAlinhamento[];
+  rows: MdInline[][][];
+}) {
+  const columns: TableColumn<{ celulas: MdInline[][]; indice: number }>[] = header.map(
+    (celula, c) => ({
+      key: String(c),
+      // `label` do `Table` é `string` por contrato, então o cabeçalho perde
+      // a formatação inline (`**Módulo**` vira `Módulo`) em vez de ganhar uma
+      // prop nova no componente compartilhado — o cabeçalho de tabela já é
+      // desenhado em mono/maiúsculas pelo design system, e negrito dentro
+      // dele não teria efeito visível nenhum.
+      label: textoSimples(celula),
+      render: (row) => (
+        <span className={styles.tabelaCelula} style={{ textAlign: aligns[c] }}>
+          {renderInline(row.celulas[c] ?? [])}
+        </span>
+      ),
+    }),
+  );
+
+  return (
+    <div className={styles.tabelaScroll}>
+      <Table
+        columns={columns}
+        rows={rows.map((celulas, i) => ({ celulas, indice: i }))}
+        rowKey={(row) => String(row.indice)}
+        emptyMessage="Tabela sem linhas."
+      />
     </div>
   );
 }
@@ -136,6 +193,15 @@ function renderBlock(block: MdBlock, key: number): ReactNode {
       );
     case 'code':
       return <CodeFence key={key} lang={block.lang} content={block.content} />;
+    case 'table':
+      return (
+        <TabelaMarkdown
+          key={key}
+          header={block.header}
+          aligns={block.aligns}
+          rows={block.rows}
+        />
+      );
     default:
       return null;
   }
