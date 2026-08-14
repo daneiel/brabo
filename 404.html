@@ -10,16 +10,21 @@
     var caminho = window.location.pathname;
     if (caminho.indexOf(raiz) !== 0) return;
     var resto = caminho.slice(raiz.length);
-    // Já está dentro de um degrau: a página realmente não existe.
-    if (/^(main|qa|dev)(\/|$)/.test(resto)) return;
-    window.location.replace(
-      raiz + 'main/' + resto + window.location.search + window.location.hash
-    );
+    var cauda = window.location.search + window.location.hash;
+    // O caminho aposentado: /brabo/main/<algo> -> /brabo/prd/<algo>.
+    var aposentado = /^main(?:\/(.*))?$/.exec(resto);
+    if (aposentado) {
+      window.location.replace(raiz + 'prd/' + (aposentado[1] || '') + cauda);
+      return;
+    }
+    // Já está dentro de um degrau publicado: a página realmente não existe.
+    if (/^(prd|qa|dev)(\/|$)/.test(resto)) return;
+    window.location.replace(raiz + 'prd/' + resto + cauda);
   })();
 </script>
 </head>
 <body>
   <p>Esta página mudou de endereço. Indo para
-     <a href="/brabo/main/">a documentação estável</a>…</p>
+     <a href="/brabo/prd/">a documentação estável</a>…</p>
 </body>
 </html>
