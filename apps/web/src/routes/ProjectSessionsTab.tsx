@@ -1,7 +1,13 @@
 import { useState, type KeyboardEvent, type MouseEvent } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useQueries, useQueryClient } from '@tanstack/react-query';
-import { createSession, listActions, renameSession, transitionSession } from '../lib/api-client';
+import {
+  createSession,
+  listActions,
+  mensagemDaApi,
+  renameSession,
+  transitionSession,
+} from '../lib/api-client';
 import { useActiveExecutionSession, useProjectSessions } from '../lib/hooks';
 import {
   resumirAcoes,
@@ -129,9 +135,33 @@ export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps)
         // tela degrada para a hashtag sozinha (RN-098).
         name: nome.trim() || undefined,
       });
-      await transitionSession(projectId, session.id, 'active');
+
+      // Os DOIS passos têm desfecho próprio de propósito. Antes eram um `try`
+      // com `finally` só, e uma ativação que falhava (a api sem alcançar o
+      // engine devolve 500) deixava a tela EXATAMENTE como estava: nenhum
+      // toast, nenhuma navegação, a sessão criada e invisível. O botão parecia
+      // não fazer nada, e a cada clique nascia outra sessão `created`.
+      //
+      // Falhar em ativar não desfaz a criação — a sessão existe —, então a
+      // navegação acontece de todo modo: é lá que mora o "Ativar sessão", que
+      // é o segundo caminho para o mesmo passo.
+      try {
+        await transitionSession(projectId, session.id, 'active');
+      } catch (erro) {
+        showToast({
+          title: mensagemDaApi(erro, 'A sessão foi criada, mas não ativou'),
+          message: 'Abra a sessão e tente "Ativar sessão".',
+          tone: 'danger',
+        });
+      }
+
       await queryClient.invalidateQueries({ queryKey: ['sessions', projectId] });
       navigate({ to: '/projects/$projectId/sessions/$sessionId', params: { projectId, sessionId: session.id } });
+    } catch (erro) {
+      showToast({
+        title: mensagemDaApi(erro, 'Não foi possível abrir a sessão'),
+        tone: 'danger',
+      });
     } finally {
       setCreating(false);
     }

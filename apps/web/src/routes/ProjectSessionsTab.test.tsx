@@ -7,6 +7,9 @@ import {
   ProjectSessionsTab,
 } from './ProjectSessionsTab';
 import { ToastProvider } from '../components/ui/ToastProvider';
+// O mock abaixo re-exporta o `ApiError` REAL, então este import atravessa até
+// a classe de verdade — é ela que carrega a frase que o toast mostra.
+import { ApiError } from '../lib/api-client';
 import type { ProposedAction, Session, SessionKind } from '../lib/api-types';
 
 const listSessions = vi.fn();
@@ -388,6 +391,63 @@ describe('ProjectSessionsTab — cada aba é um tipo', () => {
       kind: 'consultiva',
       name: undefined,
     });
+  });
+
+  /**
+   * O silêncio era o defeito, e ele apareceu no uso: `ENGINE_URL` apontando
+   * para `localhost` DENTRO do container fazia a api responder 500 no
+   * `transition`, e a tela ficava idêntica — sem toast, sem navegação, com uma
+   * sessão `created` nova a cada clique. O `try` único com `finally` só
+   * engolia as duas falhas.
+   */
+  it('ativação que falha AVISA e navega mesmo assim — a sessão já existe', async () => {
+    createSession.mockResolvedValue({ id: 'nova-sessao' });
+    transitionSession.mockRejectedValue(
+      new ApiError(500, { message: 'fetch failed' }),
+    );
+
+    montarAba(ProjectCriativoTab);
+    await screen.findByText('Criativo');
+    fireEvent.click(screen.getByRole('button', { name: '+ Nova ideação' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Abrir sessão criativa' }),
+    );
+
+    expect(await screen.findByText('fetch failed')).toBeInTheDocument();
+    expect(
+      screen.getByText('Abra a sessão e tente "Ativar sessão".'),
+    ).toBeInTheDocument();
+    // Navega de todo modo: o `transition` falhou, o `createSession` não.
+    await vi.waitFor(() =>
+      expect(navigateMock).toHaveBeenCalledWith({
+        to: '/projects/$projectId/sessions/$sessionId',
+        params: { projectId: 'proj-1', sessionId: 'nova-sessao' },
+      }),
+    );
+  });
+
+  it('criação que falha AVISA e não navega para lugar nenhum', async () => {
+    createSession.mockRejectedValue(
+      new ApiError(403, { message: 'papel insuficiente no projeto' }),
+    );
+
+    montarAba(ProjectCriativoTab);
+    await screen.findByText('Criativo');
+    fireEvent.click(screen.getByRole('button', { name: '+ Nova ideação' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Abrir sessão criativa' }),
+    );
+
+    expect(
+      await screen.findByText('papel insuficiente no projeto'),
+    ).toBeInTheDocument();
+    expect(transitionSession).not.toHaveBeenCalled();
+    expect(navigateMock).not.toHaveBeenCalled();
+    // O CTA volta a ficar clicável: `creating` preso em `true` deixaria a
+    // pessoa sem nem poder tentar de novo.
+    expect(
+      screen.getByRole('button', { name: 'Abrir sessão criativa' }),
+    ).toBeEnabled();
   });
 });
 
