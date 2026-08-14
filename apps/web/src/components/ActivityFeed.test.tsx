@@ -66,6 +66,87 @@ describe('ActivityFeed', () => {
 });
 
 /**
+ * RN-177/178 — o feed passa a ler como um log se lê: do fim para o começo, com
+ * as últimas cinco à vista e o resto recolhido por ORIGEM. E o ruído de
+ * máquina deixa de ser invisível para virar uma ESCOLHA.
+ */
+describe('ActivityFeed — ordem, agrupamento e o toggle de máquina', () => {
+  /** N eventos narrativos com `seq` crescente e texto distinguível. */
+  function muitos(n: number): SessionEvent[] {
+    return Array.from({ length: n }, (_, i) =>
+      makeEvent({
+        id: `evt-${i + 1}`,
+        seq: i + 1,
+        type: 'agent.activated',
+        actor: { kind: 'agent', id: 'po' },
+      }),
+    );
+  }
+
+  function idsVisiveis(container: HTMLElement): string[] {
+    return Array.from(container.querySelectorAll('[id^="event-"]')).map((el) =>
+      el.id.replace('event-', ''),
+    );
+  }
+
+  it('RN-178: o mais recente vem primeiro', () => {
+    const { container } = render(<ActivityFeed events={muitos(3)} />);
+
+    expect(idsVisiveis(container)).toEqual(['evt-3', 'evt-2', 'evt-1']);
+  });
+
+  it('RN-177: as 5 últimas ficam abertas e o resto vira grupo por origem', () => {
+    const { container } = render(<ActivityFeed events={muitos(8)} />);
+
+    // As cinco de cima estão na tela; as três mais antigas estão dentro de um
+    // `Disclosure` FECHADO, e `Disclosure` não monta o que está fechado.
+    expect(idsVisiveis(container)).toEqual([
+      'evt-8',
+      'evt-7',
+      'evt-6',
+      'evt-5',
+      'evt-4',
+    ]);
+
+    const grupo = screen.getByRole('button', { name: /Agente/ });
+    expect(grupo.textContent).toContain('3');
+    fireEvent.click(grupo);
+    expect(idsVisiveis(container)).toContain('evt-1');
+  });
+
+  it('com 5 ou menos, nenhum grupo aparece — não há histórico a recolher', () => {
+    render(<ActivityFeed events={muitos(5)} />);
+
+    expect(screen.queryByRole('button', { name: /Agente/ })).toBeNull();
+  });
+
+  it('o toggle de máquina traz o que o filtro esconde, e nasce DESLIGADO', () => {
+    const { container } = render(
+      <ActivityFeed
+        events={[
+          makeEvent({ id: 'narrativo', seq: 1 }),
+          makeEvent({
+            id: 'maquina',
+            seq: 2,
+            type: 'tool.call',
+            actor: { kind: 'agent', id: 'po' },
+          }),
+        ]}
+      />,
+    );
+
+    const toggle = screen.getByRole('button', { name: 'Eventos de máquina' });
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
+    expect(idsVisiveis(container)).toEqual(['narrativo']);
+
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute('aria-pressed')).toBe('true');
+    // Decrescente: o `tool.call` é o mais novo, então entra na frente.
+    expect(idsVisiveis(container)).toEqual(['maquina', 'narrativo']);
+  });
+});
+
+/**
  * A paginação do histórico (RN-099), do lado da tela.
  *
  * As props são OPCIONAIS por desenho: a tela de sessão usa o mesmo componente

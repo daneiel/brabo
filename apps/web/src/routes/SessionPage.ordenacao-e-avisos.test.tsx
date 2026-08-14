@@ -4,6 +4,7 @@ import { render, screen, act, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import type { Handoff, ProposedAction, Session } from '../lib/api-types';
 import type { SessionChannelHandlers } from '../lib/session-channel';
+import { historicoFalso } from '../test/historico-de-eventos';
 
 /**
  * Três problemas confirmados por investigação de código + observação ao vivo,
@@ -68,6 +69,7 @@ vi.mock('@tanstack/react-router', () => ({
 
 vi.mock('../lib/hooks', () => ({
   useSessionEvents: () => ({ data: eventos(), isPending: false }),
+  useSessionEventHistory: () => historicoFalso(eventos().items),
   useSessionEvent: () => ({ data: undefined, isError: false }),
   usePendingActions: () => ({ data: { items: acoes() } }),
   useHandoffs: () => ({ data: handoffsMock() }),
