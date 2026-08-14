@@ -106,6 +106,10 @@ Desde [RN-122](business-rules.md#rn-122) roda numa `Task` supervisionada
 recebia a mensagem — é o que permite o botão **"Parar"** do composer
 cancelar o turno DE VERDADE (mata a task, corta a conexão com a api) em vez
 de só parar de renderizar no cliente.
+O laço de ferramentas é PRÓPRIO — não é o `ToolLoop` acima —, mas o teto de
+iterações dele deixou de ser silencioso: esgotado, emite o MESMO
+`toolloop.limit_reached` ([RN-166](business-rules.md#rn-166)), porque é o
+mesmo fato e quem lê o event log não deve precisar de um segundo nome.
 
 **Handoff** — passagem explícita de trabalho de um agente para outro. Explícita
 porque o destino e o motivo ficam registrados no event log, em vez de um agente
