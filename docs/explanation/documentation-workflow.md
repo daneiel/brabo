@@ -40,14 +40,28 @@ Sem isso, ele envelhece calado. Foi o que aconteceu: o site publicado dizia
 "28 deles" e "as 29 decisões" quando já eram 30, e "o próximo é 0030" com o
 0030 pronto. Nada quebrou, nenhum check reclamou — só ficou errado.
 
-O caso mais caro foi a **versão no README**: ele anunciou `v0.1.0` da Fase 5
-até a v2.1.0 — sete releases atrás da realidade, na primeira coisa que quem
-chega lê. A conferência compara a prosa com o primeiro `## vX.Y.Z` do
+O caso mais caro foi a **versão anunciada em prosa**: o README anunciou `v0.1.0`
+da Fase 5 até a v2.1.0 — sete releases atrás da realidade, na primeira coisa que
+quem chega lê. A conferência compara a prosa com o primeiro `## vX.Y.Z` do
 CHANGELOG, que é escrito pelo workflow de release e volta por PR; uma tag lida
 do git não serviria, porque o checkout raso do CI pode não ter tag nenhuma. Já
 o **badge** saiu da conferência e virou geração: ele lê a release do GitHub
 direto (`shields.io/github/v/release`) e se atualiza sozinho — verifica-se só o
 que não dá para gerar.
+
+E aconteceu **uma vez por porta de entrada**. O `docs/intro.md` — a primeira
+página do site publicado, que nem todo mundo alcança pelo README — seguiu
+dizendo "Fases 1 a 5 concluídas, v0.1.0" com o produto na Fase 26. Conferir só
+o README nunca protegeu a segunda porta, então `verificarVersaoAnunciada`
+recebeu os dois arquivos numa lista, e `scripts/ci/readme-version.ts` passou a
+escrever nos dois no mesmo commit do CHANGELOG. As duas metades andam juntas de
+propósito: um check que cobra o que o gerador não escreve faria todo release
+nascer vermelho numa PR que o bot abre e ninguém pode consertar.
+
+O padrão do `intro.md` exige a frase **inteira** — "Fases 1 a NN concluídas,
+versão vX.Y.Z" —, e não só a versão: as duas metades envelhecem juntas, e casar
+metade deixaria a contagem de fases mentindo ao lado de uma versão correta. A
+contagem de fases não é gerável daqui: o release conhece a versão, não a fase.
 
 O `generate.mjs` agora confere essas afirmações contra a realidade do
 diretório. E **padrão que não casa também reprova**: um check cuja regex parou
@@ -55,10 +69,11 @@ de encontrar a frase é pior que check nenhum, porque fica verde para sempre
 dizendo que conferiu algo que não olhou. Quando a frase mudar, o CI diz `CEGO`
 e pede o ajuste do padrão.
 
-Acrescentar uma afirmação nova à conferência é uma entrada na lista
-`afericoes` de `verificarContagensDeAdr` (arquivo, padrão, valor esperado) ou
-uma função própria ao lado de `verificarVersaoNoReadme`, quando a fonte da
-verdade não for o diretório de ADRs.
+Acrescentar uma afirmação nova à conferência é uma entrada numa das listas
+`afericoes` — a de `verificarContagensDeAdr` (arquivo, padrão, valor esperado)
+quando a fonte da verdade é o diretório de ADRs, a de
+`verificarVersaoAnunciada` quando é a última release do CHANGELOG — ou uma
+função própria ao lado delas, quando não for nenhuma das duas.
 
 ## As peças
 
@@ -189,10 +204,10 @@ aparecia em regra nenhuma, e mexer no config do site não cobrava documentação
 
 Cada branch permanente publica no seu próprio lugar do mesmo GitHub Pages:
 
-| degrau | URL | indexado por buscador |
+| branch | URL | indexado por buscador |
 |---|---|---|
 | — (índice) | `https://daneiel.github.io/brabo/` | ❌ |
-| `main` | `https://daneiel.github.io/brabo/main/` | ✅ |
+| `main` | `https://daneiel.github.io/brabo/prd/` | ✅ |
 | `qa` | `https://daneiel.github.io/brabo/qa/` | ❌ |
 | `dev` | `https://daneiel.github.io/brabo/dev/` | ❌ |
 
@@ -202,6 +217,29 @@ gerada que lista os três com a versão carimbada de cada um, e cada site tem no
 topo um seletor para trocar de degrau. Antes disso a `main` publicava na raiz, e
 esse caso especial obrigava o workflow a preservar `/dev/` e `/qa/` num caminho
 que só rodava um terço das vezes.
+
+**O caminho não é o nome da branch.** O
+[ADR 0073](../adr/0073-o-caminho-publicado-nomeia-o-ambiente.md) separou os
+dois: o endereço nomeia o **ambiente** para quem lê, e `main` é vocabulário de
+quem commita. Daí a `main` publicar em `/prd/`; `qa` e `dev` coincidem por
+acaso, não por regra. O mapa branch→caminho existe em um ponto por processo — o
+passo "Qual degrau, e para onde ele publica" do workflow, a tabela `DEGRAUS` do
+`docusaurus.config.ts` e a do `landing.mjs` — e tudo o mais deriva dele.
+
+Duas consequências que valem lembrar antes de mexer nisso:
+
+- **`/brabo/main/` era publicado, e não é mais.** Como a árvore é montada e
+  empurrada com `keep_files: false`, o diretório some. Quem segura os links
+  salvos é o `404.html` da raiz, que **reescreve** o prefixo
+  (`/brabo/main/<algo>` → `/brabo/prd/<algo>`) num caso próprio, separado do
+  reencaminhamento genérico — que produziria `/brabo/prd/main/<algo>`. A guarda
+  anti-laço cobre só os caminhos que existem (`prd|qa|dev`).
+- **`/prd/` foi semeado do `gh-pages:main`** na transição, pelo mesmo motivo que
+  o ADR 0071 semeou `/main/` da raiz antiga: sem isso, `/brabo/prd/` responderia
+  404 entre o primeiro push de `dev` e a próxima promoção até `main`. A semente
+  é **reescrita** de `/brabo/main/` para `/brabo/prd/`, porque o `404.html` não
+  salva subrecurso — CSS e JS pedidos no endereço antigo receberiam HTML com
+  status 404, e o site serviria texto pelado.
 
 Isso fecha um vão da esteira: entre um merge em `dev` e a promoção final, ler a
 documentação daquele estado exigia clonar o repositório. O `docs-check` constrói o
@@ -220,6 +258,8 @@ Três detalhes que não são óbvios e que já custaram um erro cada:
   raiz. Com os três em subdiretório aquela comparação vira falsa para a `main`
   também, e o efeito seria `noIndex` na documentação REAL — fora do Google, em
   silêncio, com o CI verde, porque nada no build reprova por indexar de menos.
+  O ADR 0073 é exatamente o cenário para o qual essa separação foi feita: o
+  caminho mudou para `/prd/` e `E_PRODUCAO` não precisou saber disso.
 - **`noIndex` fora da `main` exige `forceIgnoreNoIndex` na busca.** O
   `@easyops-cn/docusaurus-search-local` descarta toda página com
   `<meta name="robots" content="noindex">`, então os dois recursos se anulavam: os

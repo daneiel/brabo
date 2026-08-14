@@ -7,10 +7,14 @@ import { themes as prismThemes } from 'prism-react-renderer';
 const EDIT_BRANCH = 'dev';
 
 // PUBLICAÇÃO POR DEGRAU. Cada permanente publica no seu próprio lugar dentro do
-// mesmo GitHub Pages, e desde o ADR 0071 os TRÊS são simétricos:
-// `/brabo/main/`, `/brabo/qa/` e `/brabo/dev/`. A raiz virou a página que
-// escolhe entre eles. Quem decide é o `docs-deploy.yml`, passando
-// `DOCS_BASE_URL` e `DOCS_BRANCH`.
+// mesmo GitHub Pages, e desde o ADR 0071 os TRÊS são simétricos. Quem decide é
+// o `docs-deploy.yml`, passando `DOCS_BASE_URL` e `DOCS_BRANCH`.
+//
+// O ADR 0073 separou BRANCH de CAMINHO: a `main` publica em `/brabo/prd/`,
+// porque o endereço nomeia o AMBIENTE para quem lê, e `main` é vocabulário de
+// quem commita. `qa` e `dev` coincidem por acaso, não por regra — quem manda é
+// a tabela `DEGRAUS` abaixo, e nada aqui deriva caminho de branch por
+// interpolação.
 //
 // Não é preferência de estilo: o `baseUrl` entra em TODA URL de asset que o
 // Docusaurus emite. Um site servido de `/brabo/dev/` com `baseUrl: '/brabo/'`
@@ -18,8 +22,8 @@ const EDIT_BRANCH = 'dev';
 // "quebrada sem erro".
 //
 // O default é o de produção, então rodar `pnpm docs:build` sem variável nenhuma
-// continua produzindo exatamente o que sempre produziu.
-const BASE_URL = process.env.DOCS_BASE_URL ?? '/brabo/main/';
+// continua produzindo exatamente o que a publicação da `main` produz.
+const BASE_URL = process.env.DOCS_BASE_URL ?? '/brabo/prd/';
 
 // O degrau é DECLARADO, não deduzido do baseUrl.
 //
@@ -30,20 +34,29 @@ const BASE_URL = process.env.DOCS_BASE_URL ?? '/brabo/main/';
 // nada no build reprova por indexar de menos.
 //
 // Deduzir ambiente de uma string de caminho é o tipo de acoplamento que só
-// aparece quando o caminho muda. Uma variável própria não tem esse problema.
+// aparece quando o caminho muda — e o ADR 0073 é exatamente o caminho mudando.
+// A variável continua sendo a BRANCH: é ela que o workflow conhece, e é ela que
+// diz "sou produção" sem depender de como o endereço está escrito hoje.
 const DOCS_BRANCH = process.env.DOCS_BRANCH ?? 'main';
 
 // `main` é a documentação real; `dev` e `qa` são pré-visualização do degrau.
 const E_PRODUCAO = DOCS_BRANCH === 'main';
 
-// Os três degraus, para o seletor da barra do topo. `href` ABSOLUTO de
-// propósito: o link atravessa sites com `baseUrl` diferente, e um link relativo
-// resolveria dentro do próprio degrau — `/brabo/dev/main/`, que não existe.
+// Os três degraus, para o seletor da barra do topo, e o MAPA branch→caminho que
+// o site conhece. `href` ABSOLUTO de propósito: o link atravessa sites com
+// `baseUrl` diferente, e um link relativo resolveria dentro do próprio degrau —
+// `/brabo/dev/prd/`, que não existe.
 const DEGRAUS = [
-  { branch: 'main', rotulo: 'main — estável' },
-  { branch: 'qa', rotulo: 'qa — candidata' },
-  { branch: 'dev', rotulo: 'dev — em desenvolvimento' },
+  { branch: 'main', caminho: 'prd', rotulo: 'prd — estável' },
+  { branch: 'qa', caminho: 'qa', rotulo: 'qa — candidata' },
+  { branch: 'dev', caminho: 'dev', rotulo: 'dev — em desenvolvimento' },
 ] as const;
+
+// O rótulo do seletor mostra o degrau como ELE É ENDEREÇADO (`prd`), não o nome
+// da branch — é o endereço que a pessoa vê na barra do navegador. O fallback
+// existe para build local com `DOCS_BRANCH` fora da lista: ele degrada para o
+// próprio valor em vez de exibir `undefined`.
+const CAMINHO_ATUAL = DEGRAUS.find((d) => d.branch === DOCS_BRANCH)?.caminho ?? DOCS_BRANCH;
 
 const config: Config = {
   title: 'Brabo',
@@ -243,10 +256,10 @@ const config: Config = {
         // GitHub porque é navegação do próprio site, não link externo.
         {
           type: 'dropdown',
-          label: DOCS_BRANCH,
+          label: CAMINHO_ATUAL,
           position: 'right',
           items: DEGRAUS.map((d) => ({
-            href: `https://daneiel.github.io/brabo/${d.branch}/`,
+            href: `https://daneiel.github.io/brabo/${d.caminho}/`,
             label: d.branch === DOCS_BRANCH ? `${d.rotulo} ✓` : d.rotulo,
           })),
         },
