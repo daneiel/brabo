@@ -114,6 +114,18 @@ describe('ActivityFeed — ordem, agrupamento e o toggle de máquina', () => {
     expect(idsVisiveis(container)).toContain('evt-1');
   });
 
+  it('o evento CITADO nunca fica dentro de um grupo fechado', () => {
+    // Mesmo motivo do filtro de máquina: destaque invisível é navegação que
+    // não chega em nada. Sendo antigo, ele é FIXADO no topo.
+    const { container } = render(
+      <ActivityFeed events={muitos(8)} highlightEventId="evt-1" />,
+    );
+
+    expect(idsVisiveis(container)[0]).toBe('evt-1');
+    // E some do grupo, em vez de aparecer duas vezes.
+    expect(screen.getByRole('button', { name: /Agente/ }).textContent).toContain('2');
+  });
+
   it('com 5 ou menos, nenhum grupo aparece — não há histórico a recolher', () => {
     render(<ActivityFeed events={muitos(5)} />);
 

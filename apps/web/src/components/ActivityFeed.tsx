@@ -102,13 +102,25 @@ export function ActivityFeed({
   // é sobre a lista já FILTRADA — quem liga o toggle de máquina vê cinco
   // eventos de máquina no topo se foram eles os últimos, que é a leitura
   // honesta de "as últimas 5".
-  const { recentes, grupos } = useMemo(
-    () => ({
-      recentes: filtered.slice(0, RECENTES_ABERTOS),
-      grupos: agruparPorOrigem(filtered.slice(RECENTES_ABERTOS), origemDoEvento),
-    }),
-    [filtered],
-  );
+  const { recentes, grupos } = useMemo(() => {
+    const abertos = filtered.slice(0, RECENTES_ABERTOS);
+    const antigos = filtered.slice(RECENTES_ABERTOS);
+    // O evento CITADO nunca cai dentro de um grupo fechado — `Disclosure` não
+    // monta o que está fechado, e o destaque viraria uma navegação que não
+    // chega em nada, exatamente o que o filtro acima já protege. Sendo antigo,
+    // ele é FIXADO no topo: fora da ordem cronológica de propósito, porque
+    // quem chegou aqui por um chip de evidência veio ver ESTE evento.
+    const destacado = highlightEventId
+      ? antigos.find((e) => e.id === highlightEventId)
+      : undefined;
+    return {
+      recentes: destacado ? [destacado, ...abertos] : abertos,
+      grupos: agruparPorOrigem(
+        destacado ? antigos.filter((e) => e !== destacado) : antigos,
+        origemDoEvento,
+      ),
+    };
+  }, [filtered, highlightEventId]);
 
   return (
     <div className={styles.wrapper}>
