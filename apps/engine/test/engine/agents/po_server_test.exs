@@ -346,4 +346,57 @@ defmodule Engine.Agents.PoServerTest do
     # system (pinned) + user + assistant; artefatos são ignorados na rehydration.
     assert roles == ["system", "user", "assistant"]
   end
+
+  # A api narra budget/credencial/binding no PRÓPRIO frame final, e esse ramo
+  # devolvia `{state, ""}` — uma TUPLA onde todos os outros ramos de `run_turn`
+  # devolvem o mapa do state. `TurnoAssincrono.tratar_resultado/2` faz
+  # `Map.put/3` no que a task devolveu, e `Map.put/3` numa tupla levanta
+  # `BadMapError` DENTRO do `handle_info`: o agente morria e, sendo
+  # `restart: :temporary`, não voltava. O gatilho é o mais corriqueiro de
+  # todos — acabar o orçamento.
+  #
+  # Este teste NÃO usa `sync_call/3` de propósito: lá os callbacks rodam no
+  # processo de TESTE, onde "o agente morreu" e "o teste falhou" viram a mesma
+  # coisa e nada prova que o PROCESSO sobreviveu. Aqui o PoServer sobe de
+  # verdade, sem link (para uma queda não levar o teste junto), e a pergunta
+  # final é `Process.alive?/1`.
+  #
+  # `:sys.replace_state/2` roda a função DENTRO do processo do agente — é a
+  # única forma de semear o dicionário DELE, de onde o `FakeEngineApiClient` lê
+  # o script (o `TurnoAssincrono` copia o dicionário do agente para a task).
+  test "erro narrado no frame final vira agent.error e NÃO derruba o agente" do
+    project_id = Ecto.UUID.generate()
+    session_id = Ecto.UUID.generate()
+
+    {:ok, pid} = GenServer.start(PoServer, {session_id, project_id})
+
+    :sys.replace_state(pid, fn estado ->
+      Process.put(:fake_llm_turns, [%{"error" => "Orçamento da sessão esgotado"}])
+      estado
+    end)
+
+    assert :ok = GenServer.call(pid, {:user_message, "e aí?"})
+
+    assert Process.alive?(pid),
+           "o agente tinha que sobreviver à falha narrada — era exatamente isto que o BadMapError derrubava"
+
+    assert_receive {:event_appended, ^project_id, ^session_id,
+                    %{type: "agent.error", payload: payload}},
+                   5_000
+
+    assert payload.origem == "politica"
+    assert payload.mensagem =~ "Orçamento"
+
+    # O ramo devolveu o formato certo, e não foi a segunda barreira do
+    # `TurnoAssincrono` que salvou o agente. Sem esta linha o teste passaria
+    # com a tupla de volta no lugar (a barreira narraria em vez de derrubar), e
+    # a regressão do ramo em si ficaria invisível.
+    refute_received {:event_appended, _, _, %{type: "agent.error", payload: %{origem: "codigo"}}}
+
+    # O turno fechou de verdade: sem isto, um `turno_assincrono` pendurado
+    # faria a próxima mensagem do usuário responder `:turno_em_andamento`.
+    assert :sys.get_state(pid).turno_assincrono == nil
+
+    GenServer.stop(pid)
+  end
 end

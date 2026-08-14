@@ -203,4 +203,31 @@ defmodule Engine.Agents.ArquitetoServerTest do
     roles = Enum.map(state.messages, & &1["role"])
     assert roles == ["system", "user", "assistant"]
   end
+
+  # A api narra budget/credencial/binding no PRÓPRIO frame final, e esse ramo
+  # devolvia `{state, ""}` — uma TUPLA onde todos os outros ramos devolvem o
+  # mapa do state. `TurnoAssincrono.tratar_resultado/2` faz `Map.put/3` no que a
+  # task devolveu: numa tupla isso é `BadMapError` dentro do `handle_info`, e o
+  # agente (`restart: :temporary`) morria sem voltar. Aqui o ciclo COMPLETO
+  # roda — `sync_call/3` passa pelo `handle_info` —, então a falha derrubaria o
+  # teste. A prova a nível de PROCESSO está em `po_server_test.exs`.
+  test "erro narrado no frame final vira agent.error e o turno fecha inteiro", %{
+    state: state,
+    session_id: session_id
+  } do
+    Process.put(:fake_llm_turns, [%{"error" => "Orçamento da sessão esgotado"}])
+
+    assert {:reply, :ok, final_state} =
+             sync_call(ArquitetoServer, {:user_message, "e aí?"}, state)
+
+    assert_received {:event_appended, _, ^session_id, %{type: "agent.error", payload: payload}}
+    assert payload.origem == "politica"
+    assert payload.mensagem =~ "Orçamento"
+
+    # O ramo devolveu o formato certo, e não foi a segunda barreira do
+    # `TurnoAssincrono` que salvou o agente — ela narraria com origem `codigo`.
+    refute_received {:event_appended, _, _, %{type: "agent.error", payload: %{origem: "codigo"}}}
+
+    assert final_state.turno_assincrono == nil
+  end
 end

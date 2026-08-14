@@ -2874,20 +2874,36 @@ Havia um segundo caminho, pior ainda: quando a api narrava a falha no PRÓPRIO
 frame final (budget, credencial ausente, binding faltando), o turno não caía no
 ramo de erro e **não emitia evento nenhum** — silêncio absoluto.
 
+Esse mesmo ramo, uma vez corrigido, custou uma segunda rodada: no PO, no
+Arquiteto e no Dev Lead ele devolvia `{state, ""}` — uma TUPLA onde todos os
+outros ramos de `run_turn` devolvem o `state` (um mapa). O `Map.put/3` de
+`TurnoAssincrono.tratar_resultado/2` levantava `BadMapError` dentro do
+`handle_info`, e como os quatro conversacionais são `restart: :temporary`, o
+agente MORRIA e não voltava. A falha deixava de ser silenciosa e virava uma
+queda — com os gatilhos mais corriqueiros que existem. A regra vale inteira: o
+agente narra a falha **e continua de pé**. Por isso `tratar_resultado/2` tem
+uma segunda barreira, no ponto compartilhado pelos quatro: resultado de turno
+que não é mapa vira `agent.error` com origem `codigo`, nunca um processo morto.
+
 A origem NUNCA é adivinhada: cada padrão em `FalhaDeTurno.origem/1` tem um
-motivo escrito, e o que não casa com nenhum sai como **`indeterminada`**, que é
-mais honesto que chutar uma das quatro (ADR 0020).
+motivo escrito, e o que não casa com nenhum sai como **`codigo`** — a lacuna é
+do nosso classificador, e essa é a origem que aponta a ação certa (ADR 0020).
 
 Os eventos já gravados não se apagam — a tela os NOMEIA como resposta vazia
 anterior a esta regra, em vez de mostrar branco.
 
 - **Onde:** `apps/engine/lib/engine/agents/falha_de_turno.ex`,
   `criativo_server.ex`, `po_server.ex`, `arquiteto_server.ex`,
-  `infra_lead_server.ex` (`emit_falha/2`),
+  `dev_lead_server.ex`, `infra_lead_server.ex` (`emit_falha/2`),
+  `turno_assincrono.ex` (`tratar_resultado/2`, a segunda barreira),
   `apps/web/src/lib/session-falha.ts`
 - **Teste:** `apps/engine/test/engine/agents/criativo_server_test.exs`
   (evento durável com origem; nunca grava resposta vazia; erro narrado no frame
-  final também vira evento); `apps/web/src/lib/session-falha.test.ts`
+  final também vira evento); `po_server_test.exs` (o frame final com erro não
+  derruba o agente — GenServer de VERDADE, com `Process.alive?/1`);
+  `arquiteto_server_test.exs` e `dev_lead_server_test.exs` (mesmo caminho, ciclo
+  completo); `turno_assincrono_test.exs` (a segunda barreira narra em vez de
+  derrubar); `apps/web/src/lib/session-falha.test.ts`
 - **Origem:** execução real da FASE 13b
 
 ### RN-116 — Falha ao CRIAR um handoff não derruba o agente {#rn-116}
