@@ -69,28 +69,38 @@ vi.mock('../lib/session-channel', () => ({
 
 vi.mock('../lib/auth', () => ({ emailDaSessao: () => 'eu@brabo.dev' }));
 
-vi.mock('../lib/api-client', () => ({
-  getProject: vi.fn().mockResolvedValue({ id: 'proj-1', name: 'core' }),
-  getSession: (...args: unknown[]) => getSession(...args),
-  getSessionBudget: vi.fn().mockResolvedValue(null),
-  getSessionModelBinding: vi.fn().mockResolvedValue(null),
-  listModels: vi.fn().mockResolvedValue(null),
-  renameSession: vi.fn(),
-  acceptHandoff: vi.fn(),
-  answerStructuredQuestion: (
-    ...args: [string, string, string, string, Record<string, string>]
-  ) => answerStructuredQuestion(...args),
-  approveAction: vi.fn(),
-  approveAlwaysAction: vi.fn(),
-  confirmReadiness: vi.fn(),
-  denyAction: vi.fn(),
-  promoteStories: vi.fn(),
-  returnStory: vi.fn(),
-  sendAgentMessage: vi.fn(),
-  setSessionModelBinding: vi.fn(),
-  startAgent: vi.fn(),
-  transitionSession: vi.fn(),
-}));
+// `mensagemDaApi`/`ApiError` vêm do módulo REAL: o caminho de erro do card
+// (`handleSubmit`) os chama, e um mock que não os exporta transforma a falha
+// de rede simulada numa rejeição não tratada — que passa despercebida no
+// resumo do vitest (todos os testes "passam") e reprova o CI.
+vi.mock('../lib/api-client', async () => {
+  const real =
+    await vi.importActual<typeof import('../lib/api-client')>('../lib/api-client');
+  return {
+    ApiError: real.ApiError,
+    mensagemDaApi: real.mensagemDaApi,
+    getProject: vi.fn().mockResolvedValue({ id: 'proj-1', name: 'core' }),
+    getSession: (...args: unknown[]) => getSession(...args),
+    getSessionBudget: vi.fn().mockResolvedValue(null),
+    getSessionModelBinding: vi.fn().mockResolvedValue(null),
+    listModels: vi.fn().mockResolvedValue(null),
+    renameSession: vi.fn(),
+    acceptHandoff: vi.fn(),
+    answerStructuredQuestion: (
+      ...args: [string, string, string, string, Record<string, string>]
+    ) => answerStructuredQuestion(...args),
+    approveAction: vi.fn(),
+    approveAlwaysAction: vi.fn(),
+    confirmReadiness: vi.fn(),
+    denyAction: vi.fn(),
+    promoteStories: vi.fn(),
+    returnStory: vi.fn(),
+    sendAgentMessage: vi.fn(),
+    setSessionModelBinding: vi.fn(),
+    startAgent: vi.fn(),
+    transitionSession: vi.fn(),
+  };
+});
 
 const { SessionPage } = await import('./SessionPage');
 const { ToastProvider } = await import('../components/ui/ToastProvider');
