@@ -355,10 +355,21 @@ describe('RN-172 — turno e desfecho (unidade)', () => {
     expect(turnoDoSeq(aberturas, 99)).toBe(7);
   });
 
+  // `origem` (RN-177) entra aqui como valor fixo de propósito:
+  // `afundarDesfechos` não a lê — quem decide o afundamento são `turno`,
+  // `autor` e `desfecho` —, e variá-la por caso sugeriria uma influência que
+  // ela não tem.
   const entrada = (
     seq: number,
     over: { autor?: string; turno?: number; desfecho?: boolean } = {},
-  ) => ({ seq, node: null, autor: 'agent:po', turno: 1, ...over });
+  ) => ({
+    seq,
+    node: null,
+    autor: 'agent:po',
+    turno: 1,
+    origem: 'agente' as const,
+    ...over,
+  });
 
   it('o desfecho desce até o fim do trecho do MESMO autor no MESMO turno', () => {
     const ordenada = afundarDesfechos([
