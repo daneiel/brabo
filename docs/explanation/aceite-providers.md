@@ -22,6 +22,53 @@ provada. Enquanto um smoke não rodou contra chave real, o que existe sobre
 aquele provider é leitura de documentação oficial — boa, verificada linha a
 linha na Fase 11, e ainda assim não é execução.
 
+## Estado em 2026-08-14 — a capability de embedding (ADR 0075)
+
+Eixo NOVO nesta lista. Até aqui "aceite" queria dizer o roteiro de CHAT; o
+[ADR 0075](../adr/0075-embeddings-no-contrato-de-llm-provider.md) acrescentou
+`embed` ao contrato, e a mesma régua vale: **capability só é `true` com prova
+de execução**.
+
+**Ollama fechou**, e é o único. Rodado contra o daemon local de verdade
+(0.32.1), com o modelo puxado na hora:
+
+```bash
+docker exec brabo-ollama-1 ollama pull nomic-embed-text
+OLLAMA_EMBEDDING_SMOKE=1 pnpm --filter api test ollama-provider.embeddings
+```
+
+| o que | resultado |
+|---|---|
+| `POST /api/embed`, 2 entradas | 2 vetores, **768** dimensões cada |
+| `prompt_eval_count` | **10** — `estimated: false`, veio do daemon |
+| `/api/tags` do mesmo daemon | `nomic-embed-text` com `capabilities: ["embedding"]` e `embedding_length: 768`; `llama3.2:1b` com `["completion","tools"]` |
+| modelo de CHAT pedindo embedding | **`501`** — "This server does not support embeddings" |
+
+O `501` é o achado que mais valeu, e virou teste nos dois níveis: é a camada de
+MODELO da capability falhando no lugar mais tarde possível, e a razão de
+`assertCanEmbed` recusar antes ([RN-190](../business-rules.md#rn-190)). Custo
+real: **US$ 0,00** — modelo local não tem preço, e por isso este é o único
+aceite desta página que dá para repetir à vontade.
+
+| provider | `embeddings` | rodou? | motivo |
+|---|---|---|---|
+| Ollama | ✅ **sim** | ✅ sim | daemon local, sem chave e sem custo |
+| Anthropic | ❌ não | — | **não tem** endpoint de embedding próprio; a doc aponta para um terceiro, que é outro provider com outra chave e outro dialeto |
+| OpenAI | ❌ não | ❌ pulado | `OPENAI_TEST_KEY` ausente |
+| OpenRouter | ❌ não | ❌ pulado | tem chave, mas o smoke que rodou foi de **chat** — num hub, embedding roteia para provedor diferente, e a prova de um endpoint não é a do outro |
+| Together AI | ❌ não | ❌ pulado | `TOGETHER_TEST_KEY` ausente |
+| DeepInfra | ❌ não | ❌ pulado | `DEEPINFRA_TEST_KEY` ausente |
+| NVIDIA NIM | ❌ não | ❌ pulado | `NVIDIA_NIM_TEST_KEY` ausente |
+| Bitdeer | ❌ não | ❌ pulado | `BITDEER_TEST_KEY` ausente — irônico, já que a doc de embeddings deles é a única fonte autenticada que a Fase 11b encontrou |
+| Vultr | ❌ não | ❌ pulado | `VULTR_TEST_KEY` ausente |
+
+O que **está** provado sem credencial nenhuma é o DIALETO: a suite de contrato
+roda uma segunda vez sobre a base OpenAI-compatível com a capability ligada, e
+exercita ordenação por `index`, leitura de `usage.prompt_tokens`, recusa de
+lote incompleto e erro normalizado por `code`. Virar um provider para `true`
+quando a chave existir é mudar uma linha do literal e rodar o smoke — não
+escrever parsing.
+
 ## Estado em 2026-08-07
 
 Primeira execução paga desta lista. **OpenRouter fechou**; os outros cinco

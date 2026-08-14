@@ -376,6 +376,10 @@ function gerarProvidersDeLlm() {
       streaming: flag('streaming'),
       toolCalling: flag('toolCalling'),
       listModels: flag('listModels'),
+      // ADR 0075. Só o Ollama declara `true`, e por execução contra o daemon
+      // — a coluna existe justamente para que virar essa flag sem prova fique
+      // visível na doc, como aconteceu com `list_models` na Fase 9c.
+      embeddings: flag('embeddings'),
     });
   }
 
@@ -401,11 +405,12 @@ function gerarProvidersDeLlm() {
   let corpo = `\n${AVISO_BLOCO}\n\n`;
   corpo += `Lido dos literais de \`capabilities\` em \`apps/api/src/infrastructure/llm/\` — `;
   corpo += `**${ordenados.length} providers**.\n\n`;
-  corpo += '| provider | streaming | tool calling | list_models | credencial | origem dos modelos | quirks resumidos | fonte |\n';
-  corpo += '| --- | --- | --- | --- | --- | --- | --- | --- |\n';
+  corpo += '| provider | streaming | tool calling | list_models | embeddings | credencial | origem dos modelos | quirks resumidos | fonte |\n';
+  corpo += '| --- | --- | --- | --- | --- | --- | --- | --- | --- |\n';
   for (const [provider, c] of ordenados) {
     corpo +=
       `| \`${provider}\` | ${marca(c.streaming)} | ${marca(c.toolCalling)} | ${marca(c.listModels)} | ` +
+      `${marca(c.embeddings)} | ` +
       `${credencial(provider)} | ${origem(provider, c)} | ${quirks(provider)} | \`${c.arquivo}\` |\n`;
   }
   corpo += '\nProvider sem `list_models` é PULADO pelo sync de catálogo, com o motivo\n';
@@ -414,6 +419,9 @@ function gerarProvidersDeLlm() {
   corpo += '`apps/api/src/db/seed.ts`, `sync + seed` tem os dois (seed é só bootstrap\n';
   corpo += 'antes do primeiro sync). "Quirks resumidos" são os RÓTULOS em negrito da\n';
   corpo += 'seção de prosa do provider abaixo — o porquê de cada um está lá, não aqui.\n';
+  corpo += '"embeddings" é a capability do ADR 0075, e ela só é `sim` com PROVA de\n';
+  corpo += 'execução: leitura de doc não conta, e o porquê de cada `não` está no\n';
+  corpo += 'comentário do literal, no arquivo da última coluna.\n';
 
   escreverBloco('docs/reference/llm-providers.md', 'providers-capabilities', corpo);
 }

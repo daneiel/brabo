@@ -19,7 +19,7 @@ com o teto de inatividade herdado do [ADR 0020](../adr/0020-destravar-gates-qa-s
 ## O contrato
 
 `LLMProvider` (`apps/api/src/application/ports/llm-provider.port.ts`) tem uma
-operação só, e ela é sempre streaming:
+operação OBRIGATÓRIA, e ela é sempre streaming:
 
 ```ts
 abstract class LLMProvider {
@@ -29,8 +29,20 @@ abstract class LLMProvider {
     messages: ChatMessage[],
     options: ChatOptions,
   ): AsyncGenerator<ChatStreamChunk>;
+
+  /** Só quando `capabilities.listModels` (Fase 9c). */
+  listModels?(apiKey?: string): Promise<ModeloDoCatalogo[]>;
+  /** Só quando `capabilities.embeddings` (ADR 0075). */
+  embed?(
+    inputs: readonly string[],
+    options: EmbeddingOptions,
+  ): Promise<EmbeddingResult>;
 }
 ```
+
+As duas opcionais seguem o mesmo contrato de **dois lados**: quem declara a
+capability implementa o método, e quem não declara não o expõe. Quem consome
+degrada olhando a capability, nunca descobrindo na falha.
 
 Não há método separado para tool calling nem para contagem de tokens: as
 ferramentas vão em `options.tools` e tudo volta pelo mesmo stream, como um dos
@@ -57,6 +69,7 @@ provider, nunca mais rico.
 | `streaming` | provider + `models.supports_streaming` | — |
 | `toolCalling` | provider + `models.supports_tool_calling` | recusar binding de agente ([RN-040](../business-rules.md#rn-040)) |
 | `listModels` | só provider | ligar/pular o sync de catálogo ([RN-043](../business-rules.md#rn-043)) |
+| `embeddings` | provider + `supportsEmbeddings` na linha de catálogo | permitir/recusar a chamada de embedding ([RN-190](../business-rules.md#rn-190)) |
 | `context_length` | `models.context_window` | orçamento de contexto |
 | `vision` | `models.supports_vision` | filtrar o catálogo ([RN-056](../business-rules.md#rn-056)) |
 | `reasoning` | `models.supports_reasoning` | idem |
@@ -97,17 +110,17 @@ do modelo seria palpite vestido de dado.
 
 Lido dos literais de `capabilities` em `apps/api/src/infrastructure/llm/` — **9 providers**.
 
-| provider | streaming | tool calling | list_models | credencial | origem dos modelos | quirks resumidos | fonte |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| `anthropic` | sim | sim | sim | chave de API | sync + seed | — | `apps/api/src/infrastructure/llm/anthropic-provider.ts` |
-| `bitdeer` | sim | sim | não | chave de API | seed | `Authorization: Bearer <chave>` CONFIRMADO; `GET /v1/models` existe e é autenticado; Três ids de modelo REAIS confirmados; Nenhum quirk de stream/erro confirmado | `apps/api/src/infrastructure/llm/bitdeer-provider.ts` |
-| `deepinfra` | sim | sim | sim | chave de API | sync + seed | O catálogo é PÚBLICO — sem autenticação nenhuma; `stream_options.include_usage` confirmado suportado; Erro em shape padrão | `apps/api/src/infrastructure/llm/deepinfra-provider.ts` |
-| `nvidia-nim` | sim | sim | não | chave de API | seed | Sem header próprio; Tool calling é por MODELO, não por API; `stream_options.include_usage` não confirmado | `apps/api/src/infrastructure/llm/nvidia-nim-provider.ts` |
-| `ollama` | sim | sim | sim | nenhuma (local) | sync + seed | — | `apps/api/src/infrastructure/llm/ollama-provider.ts` |
-| `openai` | sim | sim | sim | chave de API | sync + seed | — | `apps/api/src/infrastructure/llm/openai-provider.ts` |
-| `openrouter` | sim | sim | sim | chave de API | sync | Headers próprios; Id de modelo prefixado pelo upstream; Catálogo com pricing na própria linha; Erro NO MEIO do stream | `apps/api/src/infrastructure/llm/openrouter-provider.ts` |
-| `together` | sim | sim | sim | chave de API | sync + seed | Unidade do preço NÃO documentada explicitamente pela Together; Ids namespaced; `stream_options.include_usage` não confirmado; 429 carrega `error_type: dynamic_request_limited \| dynamic_token_limited` | `apps/api/src/infrastructure/llm/together-provider.ts` |
-| `vultr` | sim | sim | não | chave de API | seed | Tool calling CONFIRMADO com exemplo real; Sufixo `-normalize` | `apps/api/src/infrastructure/llm/vultr-provider.ts` |
+| provider | streaming | tool calling | list_models | embeddings | credencial | origem dos modelos | quirks resumidos | fonte |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `anthropic` | sim | sim | sim | não | chave de API | sync + seed | — | `apps/api/src/infrastructure/llm/anthropic-provider.ts` |
+| `bitdeer` | sim | sim | não | não | chave de API | seed | `Authorization: Bearer <chave>` CONFIRMADO; `GET /v1/models` existe e é autenticado; Três ids de modelo REAIS confirmados; Nenhum quirk de stream/erro confirmado | `apps/api/src/infrastructure/llm/bitdeer-provider.ts` |
+| `deepinfra` | sim | sim | sim | não | chave de API | sync + seed | O catálogo é PÚBLICO — sem autenticação nenhuma; `stream_options.include_usage` confirmado suportado; Erro em shape padrão | `apps/api/src/infrastructure/llm/deepinfra-provider.ts` |
+| `nvidia-nim` | sim | sim | não | não | chave de API | seed | Sem header próprio; Tool calling é por MODELO, não por API; `stream_options.include_usage` não confirmado | `apps/api/src/infrastructure/llm/nvidia-nim-provider.ts` |
+| `ollama` | sim | sim | sim | sim | nenhuma (local) | sync + seed | — | `apps/api/src/infrastructure/llm/ollama-provider.ts` |
+| `openai` | sim | sim | sim | não | chave de API | sync + seed | — | `apps/api/src/infrastructure/llm/openai-provider.ts` |
+| `openrouter` | sim | sim | sim | não | chave de API | sync | Headers próprios; Id de modelo prefixado pelo upstream; Catálogo com pricing na própria linha; Erro NO MEIO do stream | `apps/api/src/infrastructure/llm/openrouter-provider.ts` |
+| `together` | sim | sim | sim | não | chave de API | sync + seed | Unidade do preço NÃO documentada explicitamente pela Together; Ids namespaced; `stream_options.include_usage` não confirmado; 429 carrega `error_type: dynamic_request_limited \| dynamic_token_limited` | `apps/api/src/infrastructure/llm/together-provider.ts` |
+| `vultr` | sim | sim | não | não | chave de API | seed | Tool calling CONFIRMADO com exemplo real; Sufixo `-normalize` | `apps/api/src/infrastructure/llm/vultr-provider.ts` |
 
 Provider sem `list_models` é PULADO pelo sync de catálogo, com o motivo
 registrado no relatório — nunca tratado como "o catálogo ficou vazio".
@@ -115,6 +128,9 @@ registrado no relatório — nunca tratado como "o catálogo ficou vazio".
 `apps/api/src/db/seed.ts`, `sync + seed` tem os dois (seed é só bootstrap
 antes do primeiro sync). "Quirks resumidos" são os RÓTULOS em negrito da
 seção de prosa do provider abaixo — o porquê de cada um está lá, não aqui.
+"embeddings" é a capability do ADR 0075, e ela só é `sim` com PROVA de
+execução: leitura de doc não conta, e o porquê de cada `não` está no
+comentário do literal, no arquivo da última coluna.
 <!-- END:GENERATED:providers-capabilities -->
 
 O default de `supports_tool_calling` é `false`. É de propósito: modelo
@@ -288,6 +304,68 @@ como no-op.
 `Engine.Outbox.Drain.run_once/0` filtra `aggregate_type == "session"` — uma
 linha de preço lá ficaria com `processed_at` nulo para sempre e sujaria a
 métrica de lag da outbox. É log de domínio imutável, como `session_events`.
+:::
+
+## Embeddings
+
+A segunda operação do contrato (ADR 0075), e a única além do `chat` que gasta
+token. Existe só onde `capabilities.embeddings` é `true`.
+
+```ts
+const { vectors, dimensions, model, inputTokens, estimated } =
+  await provider.embed(['primeiro trecho', 'segundo trecho'], {
+    model: 'nomic-embed-text',
+  });
+```
+
+**É lote, e a ordem é contrato.** Um índice recebe N trechos de uma vez, e a
+posição é o único vínculo entre entrada e vetor. Daí a garantia que mais
+importa: **um vetor por entrada, ou erro** — nunca uma lista mais curta. Uma
+resposta parcialmente recusada é indetectável depois; o defeito só apareceria
+na busca, longe da causa. Pelo mesmo motivo o contrato recusa vetor vazio,
+dimensões divergentes na mesma resposta e lista de entradas vazia.
+
+**O erro lança, não vira chunk.** No `chat` o erro vira chunk porque o turno já
+gastou tokens e o metering precisa acontecer; aqui não há nada a preservar — ou
+o provider devolveu os vetores e cobrou, ou não devolveu e não cobrou. A
+taxonomia de `code` é exatamente a mesma da tabela abaixo.
+
+| dialeto | endpoint | corpo da resposta |
+| --- | --- | --- |
+| base OpenAI-compatível | `POST /embeddings` | `{ data: [{ index, embedding }], model, usage.prompt_tokens }` |
+| Ollama | `POST /api/embed` | `{ model, embeddings: number[][], prompt_eval_count }` |
+
+O `index` da OpenAI é o vínculo com a entrada e a doc **não promete ordem** —
+por isso a base ordena por ele antes de devolver. O `dimensions` de
+`EmbeddingOptions` (reduzir o vetor) só existe na OpenAI; o Ollama ignora, em
+vez de falhar, porque a dimensão lá é do modelo — e o resultado sempre declara
+a dimensão REAL do que veio.
+
+### Quem embeda hoje
+
+| provider | `embeddings` | por quê |
+| --- | --- | --- |
+| `ollama` | **sim** | provado por execução contra o daemon 0.32.1 (`nomic-embed-text`, 2 entradas → 2 vetores de 768) |
+| `anthropic` | não | **não tem** endpoint de embedding — a doc aponta para um terceiro, que é outro provider |
+| os outros sete | não | nenhum smoke com credencial provou o endpoint deles ([aceite](../explanation/aceite-providers.md)) |
+
+Declarar por leitura de doc é o que o ADR 0043 proíbe, e custou duas reversões
+ao vivo. O DIALETO da base, esse sim, está provado: a suite de contrato roda
+uma segunda vez sobre ela com a capability ligada — é o que torna barato virar
+um provider para `true` quando a chave existir.
+
+O Ollama é também o único que publica a camada de MODELO: `/api/tags` traz
+`capabilities: ["embedding"]` e `details.embedding_length` por linha, e é de lá
+que saem `supportsEmbeddings` e `embeddingDimensions` no catálogo. Modelo de
+chat pedindo embedding recebe **`501`** do daemon — a razão de a checagem
+acontecer antes ([RN-190](../business-rules.md#rn-190)).
+
+:::note O gasto ainda não é medido
+`embed` devolve `inputTokens`/`estimated` para alimentar o metering, e
+`calculateCostMicros(input, 0, …)` já serve (embedding não tem saída em
+tokens). O que falta é estrutural: `token_usage.session_id` é **NOT NULL**, e
+indexar um repositório não acontece dentro de uma sessão. Corte declarado do
+ADR 0075 — é da onda que implementa o consumidor.
 :::
 
 ## Erros normalizados
