@@ -46,7 +46,7 @@ produção.
 | `PORT` | `3000` | — |
 | `NODE_ENV` | — | `production` liga as validações estritas de CORS e chave |
 | `API_PUBLIC_URL` | `http://localhost:3000` | usada nos callbacks de OAuth de git; errada = callback quebrado |
-| `ENGINE_URL` | `http://localhost:4000` | comandos síncronos api→engine falham |
+| `ENGINE_URL` | `http://localhost:4000` no código, `http://engine:4000` no Compose | comandos síncronos api→engine falham. **Deixe-a vazia no `.env`**: definida ali, ela vence o default do Compose e a api tenta falar com `localhost:4000` de dentro do próprio container — toda ativação de sessão morre em `ECONNREFUSED` e o front não sai do lugar. Cada ambiente já tem o default certo sem a linha |
 | `BRABO_VERSION` | `dev` | vira `service.version` no recurso OpenTelemetry — é como se sabe qual build gerou um trace. A imagem de release injeta a tag via `ARG` do `docker-bake.hcl`; fora do release fica `dev`. **Não** aparece no `/health`, que não devolve versão de propósito (ver o `description` da rota) |
 | `MIGRATIONS_FOLDER` | `./src/db/migrations` | — |
 

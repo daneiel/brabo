@@ -1909,9 +1909,21 @@ export function SessionPage({
     };
   }, [timelineAgrupada]);
 
+  // "Ativar sessão" chama o engine por baixo (a api cria a sessão
+  // supervisionada), e por isso falha por motivo que não é do domínio: engine
+  // fora do ar, url errada, 500. Sem o `catch`, o clique não mudava NADA na
+  // tela — mesmo desfecho de `handleActivateExecution` antes dele ganhar toast.
   async function handleActivate() {
-    await transitionSession(projectId, sessionId, 'active');
-    queryClient.invalidateQueries({ queryKey: ['session', projectId, sessionId] });
+    try {
+      await transitionSession(projectId, sessionId, 'active');
+      await queryClient.invalidateQueries({ queryKey: ['session', projectId, sessionId] });
+      queryClient.invalidateQueries({ queryKey: ['sessions', projectId] });
+    } catch (erro) {
+      showToast({
+        title: mensagemDaApi(erro, 'Não foi possível ativar a sessão'),
+        tone: 'danger',
+      });
+    }
   }
 
   async function handleClose() {
