@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import type { Handoff, Session } from '../lib/api-types';
+import { historicoFalso } from '../test/historico-de-eventos';
 
 /**
  * Três problemas confirmados por investigação, todos em `SessionPage.tsx`:
@@ -40,6 +41,7 @@ vi.mock('@tanstack/react-router', () => ({
 
 vi.mock('../lib/hooks', () => ({
   useSessionEvents: () => ({ data: eventos(), isPending: false }),
+  useSessionEventHistory: () => historicoFalso(eventos().items),
   useSessionEvent: () => ({ data: undefined, isError: false }),
   usePendingActions: () => ({ data: { items: actionsMock() } }),
   useHandoffs: () => ({ data: handoffsMock() }),
@@ -233,14 +235,20 @@ describe('SessionPage — problema 2: nome do modelo ao lado do agente', () => {
     expect(screen.queryByText('modelo')).not.toBeInTheDocument();
   });
 
-  it('borda: evento GRAVADO antes da RN-146 (sem a chave modelName) degrada para o rótulo genérico', async () => {
+  // RN-175: o rótulo de desconhecido deixou de ser a palavra solta "modelo",
+  // que se lê como se o modelo se CHAMASSE assim — foi o que o uso real
+  // relatou. Ele agora diz que o dado não foi registrado, e a tela nunca
+  // adivinha o modelo pelo binding atual do agente: atribuir a uma resposta
+  // antiga um modelo que talvez nem existisse quando ela foi gerada seria
+  // inventar procedência.
+  it('borda: evento GRAVADO antes da RN-146 (sem a chave modelName) diz que o modelo não foi registrado', async () => {
     eventos.mockReturnValue({
       items: [respostaDoPo({ content: 'Resposta antiga' })],
     });
     montar();
 
     await screen.findByText('Resposta antiga');
-    expect(screen.getByText('modelo')).toBeInTheDocument();
+    expect(screen.getByText('modelo não registrado')).toBeInTheDocument();
   });
 
   it('borda: modelName null (turno cuja api não resolveu modelo) também degrada', async () => {
@@ -250,7 +258,7 @@ describe('SessionPage — problema 2: nome do modelo ao lado do agente', () => {
     montar();
 
     await screen.findByText('Resposta sem modelo');
-    expect(screen.getByText('modelo')).toBeInTheDocument();
+    expect(screen.getByText('modelo não registrado')).toBeInTheDocument();
   });
 });
 

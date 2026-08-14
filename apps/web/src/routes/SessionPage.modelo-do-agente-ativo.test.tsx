@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
+import { historicoFalso } from '../test/historico-de-eventos';
 
 /**
  * Achado 1: o modelo exibido na topbar não refletia o modelo REAL em uso.
@@ -29,6 +30,7 @@ const eventos = vi.fn<() => { items: unknown[] }>(() => ({ items: [] }));
 
 vi.mock('../lib/hooks', () => ({
   useSessionEvents: () => ({ data: eventos() }),
+  useSessionEventHistory: () => historicoFalso(eventos().items),
   useSessionEvent: () => ({ data: undefined, isError: false }),
   usePendingActions: () => ({ data: { items: [] } }),
   useHandoffs: () => ({ data: [] }),

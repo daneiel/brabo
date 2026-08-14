@@ -147,9 +147,32 @@ possível sem downtime ([RN-035](../business-rules.md#rn-035)).
 | variável | default | nota |
 |---|---|---|
 | `GIT_LOCAL_REPOS_ROOT` | `/tmp/brabo-git-repos` | provider Local. Em `/tmp` os repos somem no reboot |
-| `PROJECT_WORKSPACES_ROOT` | `/tmp/brabo-project-workspaces` | worktrees dos agentes. **Precisa ser o mesmo caminho no engine**, e o mesmo volume |
+| `PROJECT_WORKSPACES_ROOT` | `/tmp/brabo-project-workspaces` | worktrees dos agentes de projeto no modo **Container**. **Precisa ser o mesmo caminho no engine**, e o mesmo volume |
 | `GITHUB_OAUTH_CLIENT_ID` / `_SECRET` | vazio | vazio = conexão GitHub por OAuth indisponível (PAT continua) |
 | `GITLAB_OAUTH_CLIENT_ID` / `_SECRET` | vazio | idem |
+
+#### Projeto no modo Local: não é variável, é montagem
+
+Desde o [ADR 0072](../adr/0072-projeto-local-ou-container.md), um projeto pode
+nascer no modo **Local** — o código mora numa pasta do usuário, de caminho
+absoluto livre, e `PROJECT_WORKSPACES_ROOT` **não participa** da raiz dele.
+
+Isso NÃO tem variável de ambiente: o caminho é dado do projeto
+(`projects.workspace_path`), escolhido na criação. O que o AMBIENTE precisa
+oferecer é a montagem — a mesma pasta, no **mesmo caminho absoluto**, dentro dos
+containers da `api` e do `engine`:
+
+```yaml
+# docker/docker-compose.yml — nos DOIS serviços
+    volumes:
+      - /home/voce/projetos/loja:/home/voce/projetos/loja
+```
+
+Montar só num dos dois produz um projeto que a api aceita e o engine não
+enxerga: a validação da criação ([RN-170](../business-rules.md#rn-170)) confere
+o que a **api** vê, e ela não tem como saber o que está montado no outro
+container. Sem montagem nenhuma, a criação é recusada com 400 e a mensagem traz
+a linha acima — ver [runbook](../runbook.md#projeto-no-modo-local).
 
 ### LLM
 

@@ -420,3 +420,33 @@ describe('classifyEvent — bootstrap de Gitflow', () => {
     expect(c.text).toContain('bootstrap');
   });
 });
+
+describe('classifyEvent — épico sem história (RN-165)', () => {
+  it('narra a cobrança em vermelho, com os épicos, e NÃO cai no genérico de backlog', () => {
+    // A regressão que isto trava: sem o ramo próprio, o fallback
+    // `type.startsWith('backlog.')` narraria "o po atualizou o backlog" — o
+    // oposto do que aconteceu, e em cinza neutro.
+    const c = classifyEvent(
+      ev('backlog.epic_without_story', 'po', {
+        origem: 'modelo',
+        epicIds: ['ep-1'],
+        epicTitles: ['Cadastro'],
+        mensagem: 'Encerrei o turno com 1 épico(s) sem nenhuma história',
+      }),
+    );
+
+    expect(c.bad).toBe(true);
+    expect(c.color).toBe('var(--danger)');
+    expect(c.text).toContain('sem nenhuma história');
+    expect(c.text).toContain('Cadastro');
+    expect(c.text).not.toContain('atualizou o backlog');
+  });
+
+  it('sem os títulos no payload, ainda diz o essencial', () => {
+    const c = classifyEvent(ev('backlog.epic_without_story', 'po', {}));
+
+    expect(c.bad).toBe(true);
+    expect(c.text).toContain('sem nenhuma história');
+    expect(c.text).not.toContain('()');
+  });
+});

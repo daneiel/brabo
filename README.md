@@ -84,11 +84,25 @@ cada item chama exatamente o `pnpm`, o `make` ou o script que já existe.
 | `q` | sai |
 | `↓` | durante a execução, mostra a saída ao vivo |
 | `↑` | volta para a tela "executando" |
+| roda do mouse · `j`/`k` · `PgUp`/`PgDn` | com a saída à mostra, rola o log inteiro |
+| `G` | volta ao fim do log (ao vivo) |
 | `Ctrl+C` | aborta o comando em curso |
 
 Os atalhos válidos aparecem no rodapé da tela em que você está — não é preciso
 lembrar. O banner fica fixo no topo enquanto você navega, rola ou redimensiona a
 janela.
+
+**Rolar o log.** A saída expandida mostrava só o fim do arquivo; agora ela é uma
+janela que anda para trás, e o log inteiro do comando é alcançável sem esperar
+ele terminar. Duas consequências que o rodapé anuncia na hora:
+
+- **Rolar para trás CONGELA a janela** (como o `less +F`), senão o redesenho de
+  cinco vezes por segundo desfaria a rolagem antes de você ler a linha. `G`
+  volta a acompanhar o fim.
+- **Enquanto o comando roda, o menu liga o rastreio de mouse** para receber a
+  roda — e com ele ligado, arrastar deixa de selecionar texto. **Segure `Shift`**
+  para a seleção nativa do terminal. Fora dessa tela o rastreio fica desligado, e
+  ele é desligado também na saída, inclusive por `Ctrl+C`.
 
 **As quatro áreas.** `Create` provisiona o ambiente do zero, `Deploy` publica
 código num ambiente que já existe (por isso é o único com escolha por serviço) e
@@ -126,7 +140,9 @@ pnpm bootstrap --help                         # o cabeçalho de uso
 `--print-commands` resolve cada folha do menu para o comando real **sem executar
 nada** — é como se audita o que o menu faz, e é sobre ele que roda o teste
 (`scripts/dev/bootstrap.spec.ts`). Sem terminal interativo o menu recusa abrir e
-aponta para essa opção, em vez de travar esperando uma tecla que nunca vem.
+aponta para essa opção, em vez de travar esperando uma tecla que nunca vem. Pelo
+mesmo motivo existe `--print-window <log> <linhas> <deslocamento>`: o recorte que
+a rolagem faz no log é aritmética pura, e assim ele é testável sem TTY.
 
 `NO_COLOR=1` desliga a cor; sem isso ele usa os tokens do design system em ANSI
 24-bit e degrada para 256 cores onde o terminal não suportar.
@@ -192,7 +208,7 @@ merge em `main`, e por isso fica um ciclo de promoção atrás do que está em
 | [Artefatos](docs/reference/artifacts.md) | os sete schemas e quem pode emitir cada um |
 | [Providers de git](docs/reference/git-providers.md) | o contrato de quinze operações e as capabilities |
 | [API interna](docs/reference/internal-api.md) | o contrato api ↔ engine |
-| [ADRs](docs/adr/index.md) | as 70 decisões e o porquê de cada uma |
+| [ADRs](docs/adr/index.md) | as 72 decisões e o porquê de cada uma |
 | [Segurança](SECURITY.md) | como reportar uma vulnerabilidade |
 | [Como contribuir](CONTRIBUTING.md) | fluxo, Definition of Done, o que é aceito |
 | [Onde pedir ajuda](SUPPORT.md) | qual canal para cada tipo de assunto |
@@ -430,7 +446,7 @@ fonte de sistema, e título e corpo ficavam indistinguíveis.
 
 ## Estado
 
-**Fases 1 a 26 concluídas**, versão **v3.0.0** ([CHANGELOG](CHANGELOG.md)).
+**Fases 1 a 26 concluídas**, versão **v3.1.0** ([CHANGELOG](CHANGELOG.md)).
 Esteira de release exercitada de ponta a ponta, auth first-party sem Keycloak,
 nove providers de LLM sobre uma base única, e a cadeia inteira provada contra um
 GitHub real — adoção do repositório, promoção de história, dev agent escrevendo

@@ -16,6 +16,32 @@
   overflow: hidden;
 }
 
+/*
+ * RN-173 — no FIO da sessão (variante `chat`), o card concorda com a conversa
+ * em vez de atropelá-la.
+ *
+ * Sem isto ele é o ÚNICO item da timeline a ocupar os 780px inteiros de
+ * `.messagesInner`: as bolhas começam 45px adentro (avatar de 32px + gap de
+ * 13px, em `ChatBubble.module.css`), `.structuredQuestionCard` para em 480px,
+ * e o card de aprovação ia de ponta a ponta — daí a leitura de "mal
+ * diagramado". Caixa larga demais no meio de um fio estreito lê como outro
+ * assunto, não como o desfecho deste.
+ *
+ * A escolha é CENTRALIZAR com teto de largura, e não recuar 45px como as
+ * bolhas: o card não é fala de ninguém, é uma decisão pedida ao usuário — a
+ * mesma natureza de `.handoffCard`/`.handoffDivider`, que o desenho já
+ * centraliza no fio. 560px é mais largo que os 480px do formulário de
+ * perguntas de propósito: aqui cabem diff e saída de terminal.
+ *
+ * Escopado em `.chat` — a fila da aba Aprovações (`variant="queue"`) vive num
+ * grid próprio, onde o card DEVE preencher a coluna.
+ */
+.card.chat {
+  width: 100%;
+  max-width: 560px;
+  margin-inline: auto;
+}
+
 .card.critical {
   border-color: color-mix(in srgb, var(--danger) 32%, var(--border));
 }

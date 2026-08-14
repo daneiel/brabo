@@ -168,4 +168,61 @@ defmodule Engine.Agents.TurnoAssincronoTest do
       assert payload.mensagem =~ "caiu de forma inesperada"
     end
   end
+
+  describe "a task que devolve algo que NÃO é o state" do
+    # A segunda barreira, e ela existe por uma queda real: o ramo do erro
+    # narrado no frame final devolvia `{state, ""}` (tupla) onde todos os
+    # outros ramos de `run_turn` devolvem `state` (mapa). O `Map.put/3` de
+    # `tratar_resultado/2` levantava `BadMapError` DENTRO do `handle_info` do
+    # agente, que é `restart: :temporary` e não voltava.
+    #
+    # Os três ramos foram corrigidos onde nasciam (po/arquiteto/dev_lead), mas
+    # a sobrevivência do agente não pode depender de todo ramo futuro lembrar
+    # do formato — daí a cláusula que narra em vez de derrubar.
+    test "narra a falha com origem `codigo` em vez de levantar BadMapError", %{
+      state: state,
+      session_id: session_id
+    } do
+      from = {self(), make_ref()}
+
+      {:noreply, state_with_task} =
+        TurnoAssincrono.iniciar(state, from, fn -> {state, ""} end)
+
+      %{task: %Task{ref: ref}} = state_with_task.turno_assincrono
+      assert_receive {^ref, resultado}, 1_000
+
+      # Antes da correção esta linha levantava `BadMapError` — que num
+      # GenServer de verdade é a morte do agente.
+      assert {:ok, final_state} =
+               TurnoAssincrono.tratar_resultado({ref, resultado}, state_with_task)
+
+      assert final_state.turno_assincrono == nil
+
+      assert_received {:event_appended, _, ^session_id, %{type: "agent.error", payload: payload}}
+      assert payload.origem == "codigo"
+      assert payload.mensagem =~ "formato que o engine não sabe incorporar"
+      assert payload.reason =~ "resultado_de_turno_invalido"
+
+      # Quem chamou não fica pendurado esperando um turno que não vai voltar.
+      assert_received {_tag, {:error, :resultado_invalido}}
+    end
+
+    # O state PRESERVADO é o anterior ao turno: perder o histórico do turno é
+    # caro, perder o agente é pior — e é a única escolha possível, já que o
+    # resultado fora do contrato não é um state que se possa incorporar.
+    test "preserva o state anterior ao turno", %{state: state} do
+      from = {self(), make_ref()}
+
+      {:noreply, state_with_task} =
+        TurnoAssincrono.iniciar(state, from, fn -> :qualquer_coisa end)
+
+      %{task: %Task{ref: ref}} = state_with_task.turno_assincrono
+      assert_receive {^ref, resultado}, 1_000
+
+      {:ok, final_state} = TurnoAssincrono.tratar_resultado({ref, resultado}, state_with_task)
+
+      assert final_state.messages == state.messages
+      assert final_state.session_id == state.session_id
+    end
+  end
 end

@@ -2,6 +2,25 @@
 
 Gerado dos conventional commits por `scripts/changelog.mjs`.
 
+## v3.1.0 — 2026-08-13
+
+### Novidades
+
+- **docs**: publicação simétrica por degrau, com raiz que escolhe (cec7d367)
+- **docker**: observabilidade local — Prometheus, Loki e Grafana no Compose (124d909c)
+- **scripts**: menu de terminal para operar o repositório (ccfa746e)
+
+### Correções
+
+- **scripts**: teste da landing deixa de depender das tags do clone (f2d20287)
+- **scripts**: bootstrap.sh se auto-cura de permissão e corrige bugs de TUI (77005575)
+- **docs**: regenera scripts.md contra a dev atual (659c5415)
+
+### Documentação
+
+- atualiza README, CLAUDE.md e onboarding até o estado de hoje (285db8cd)
+- **changelog**: v3.0.0 (5b14cd57)
+
 ## v3.0.0 — 2026-08-13
 
 ### ⚠ Mudanças incompatíveis

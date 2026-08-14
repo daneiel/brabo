@@ -5,6 +5,7 @@ import { ProjectCodeTab } from './ProjectCodeTab';
 import type { EstadoDoContainer } from '../lib/api-types';
 
 const getContainerState = vi.fn();
+const getProject = vi.fn();
 
 vi.mock('../lib/api-client', async () => {
   const real = await vi.importActual<typeof import('../lib/api-client')>('../lib/api-client');
@@ -12,6 +13,7 @@ vi.mock('../lib/api-client', async () => {
     ApiError: real.ApiError,
     mensagemDaApi: real.mensagemDaApi,
     getContainerState: (...args: unknown[]) => getContainerState(...args),
+    getProject: (...args: unknown[]) => getProject(...args),
   };
 });
 
@@ -49,8 +51,29 @@ const SEM_DECISAO: EstadoDoContainer = {
   decidedAt: null,
 };
 
+/**
+ * O projeto no modo de sempre. A aba pergunta o modo (RN-169) porque projeto
+ * Local não passa pelo gate do container — ele não sobe container nenhum.
+ */
+function projeto(workspaceMode: 'container' | 'local' = 'container') {
+  return {
+    id: 'proj-1',
+    workspaceId: 'ws-1',
+    name: 'Checkout',
+    slug: 'checkout',
+    createdBy: 'user-1',
+    maxConsecutiveBlocked: null,
+    storyPromotion: 'manual' as const,
+    workspaceMode,
+    workspacePath: workspaceMode === 'local' ? '/home/voce/loja' : null,
+    createdAt: '2026-08-02T00:00:00.000Z',
+    updatedAt: '2026-08-02T00:00:00.000Z',
+  };
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
+  getProject.mockResolvedValue(projeto());
 });
 
 describe('ProjectCodeTab — o gate (RN-107)', () => {
@@ -97,5 +120,22 @@ describe('ProjectCodeTab — o gate (RN-107)', () => {
 
     expect(await screen.findByText('shell aberto para proj-1')).toBeInTheDocument();
     expect(screen.queryByText(/ainda não está liberada/)).not.toBeInTheDocument();
+  });
+
+  /**
+   * Projeto Local (RN-169, ADR 0072): a api já libera a leitura, e a tela tem
+   * de concordar. Sem isto a aba ficaria bloqueada para sempre esperando uma
+   * decisão que ninguém vai tomar — e nem sequer há o que perguntar, por isso
+   * `getContainerState` não é chamado.
+   */
+  it('projeto Local: abre o shell sem sequer perguntar do container', async () => {
+    getProject.mockResolvedValue(projeto('local'));
+    getContainerState.mockResolvedValue(SEM_DECISAO);
+
+    montar();
+
+    expect(await screen.findByText('shell aberto para proj-1')).toBeInTheDocument();
+    expect(screen.queryByText(/ainda não está liberada/)).not.toBeInTheDocument();
+    expect(getContainerState).not.toHaveBeenCalled();
   });
 });

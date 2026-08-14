@@ -12,7 +12,7 @@ keywords: [arquitetura, code map, invariantes, harness, event log]
 Este documento é o mapa para quem vai **mexer** no código. Ele diz por onde
 começar a ler, o que cada fronteira promete, e o que já se sabe que está torto.
 
-Decisões e o porquê delas ficam nos [ADRs](adr/index.md) — 70 deles, vários
+Decisões e o porquê delas ficam nos [ADRs](adr/index.md) — 72 deles, vários
 registrando defeito real encontrado em execução. Aqui não repetimos a
 argumentação: apontamos.
 
@@ -322,6 +322,19 @@ O ciclo de vida do container (provisionar, reciclar, limpar) ainda não
 existe — corte declarado da FASE 25, registrado no CLAUDE.md — então esta
 invariante convive, por ora, com a política de escopo de caminho do
 [ADR 0055](adr/0055-escopo-de-caminho-na-politica-de-terminal.md).
+
+**9. Agente que ESCREVE tem de poder LER e tem de poder PERGUNTAR.** As duas
+metades são a mesma lição, e vieram de um agente que só tinha ferramenta de
+escrita: o PO montava contexto uma vez, no kickoff, e agia dali em diante
+sobre um retrato velho — diante de uma lacuna, escolhia entre inventar e
+parar ([RN-164](business-rules.md#rn-164),
+[RN-165](business-rules.md#rn-165)). Ler **não** vira `proposed_action` (a
+invariante 4 é sobre efeito EXTERNO, e leitura não é um), mas é contida no
+sentido do [ADR 0060](adr/0060-superficie-de-leitura-de-codigo.md): escopo
+fechado pelo caminho da rota, custo constante por chamada e teto de linhas no
+texto entregue ao modelo. E laço de agente não termina calado — teto de
+iterações emite `toolloop.limit_reached`, obrigação não cumprida emite
+desfecho durável com origem ([RN-166](business-rules.md#rn-166)).
 
 ## Assuntos transversais
 

@@ -411,19 +411,26 @@ que é incompatível com um subdiretório por degrau. O desenho completo, as
 alternativas descartadas e a exceção de push que isto abre estão no
 [ADR 0034](../explanation/../adr/0034-documentacao-publicada-por-degrau.md).
 
-| degrau | URL | indexado |
+| branch | URL | indexado |
 |---|---|---|
 | — (índice dos três) | `https://daneiel.github.io/brabo/` | ❌ `noindex, follow` |
-| `main` | `https://daneiel.github.io/brabo/main/` | ✅ |
+| `main` | `https://daneiel.github.io/brabo/prd/` | ✅ |
 | `qa` | `https://daneiel.github.io/brabo/qa/` | ❌ `noIndex` |
 | `dev` | `https://daneiel.github.io/brabo/dev/` | ❌ `noIndex` |
 
 Os três viraram simétricos no
 [ADR 0071](../adr/0071-publicacao-simetrica-por-degrau.md), que também explica a
-raiz gerada e o `404.html` que reencaminha link antigo para `/main/`. **A
-configuração do Pages não muda com isso** — a fonte continua sendo a branch
-`gh-pages` na pasta `/ (root)`; o que mudou é o conteúdo que o workflow monta
-antes de empurrar.
+raiz gerada e o `404.html` que reencaminha link antigo para o degrau estável. O
+[ADR 0073](../adr/0073-o-caminho-publicado-nomeia-o-ambiente.md) separou o
+CAMINHO da BRANCH: a `main` publica em `/prd/`, porque o endereço nomeia o
+ambiente para quem lê. O `404.html` passou a reescrever `/brabo/main/<algo>`
+para `/brabo/prd/<algo>` — o diretório antigo sai da árvore, e o
+`keep_files: false` o remove.
+
+**A configuração do Pages não muda com nenhum dos dois** — a fonte continua
+sendo a branch `gh-pages` na pasta `/ (root)`; o que mudou é o conteúdo que o
+workflow monta antes de empurrar. E `prd` **não** é branch: não entra em ruleset
+nenhum, não existe em `git`, e é só o nome de um diretório na `gh-pages`.
 
 > **A `gh-pages` NÃO entra no ruleset das permanentes.** Ela não é permanente, e o
 > bot precisa empurrar nela — incluí-la travaria a própria publicação. É também
