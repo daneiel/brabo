@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<script src="support.js"></script>
+<script src="./support.js"></script>
 </head>
 <body>
 <x-dc>
@@ -32,23 +32,41 @@
   @keyframes bfade{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:translateY(0);}}
   @keyframes bcaret{0%,49%{opacity:1;}50%,100%{opacity:0;}}
   @keyframes bpulse{0%,100%{opacity:1;}50%{opacity:.35;}}
+
+  :root{
+    --syn-kw:#D6633A; --syn-fn:#5EBEB1; --syn-str:#E0982F; --syn-num:#9C7BE0;
+    --syn-cm:#5C7A85; --syn-txt:#DCE9ED; --syn-op:#8FB0BA; --syn-typ:#37B3A4;
+  }
+  html[data-theme="light"]{
+    --syn-kw:#B04A22; --syn-fn:#0F7A6E; --syn-str:#96600D; --syn-num:#6B4FB0;
+    --syn-cm:#8A9AA0; --syn-txt:#12262E; --syn-op:#5A737C; --syn-typ:#0E7267;
+    --surface-0:#F5EDE0; --surface-1:#FCF8F1; --surface-2:#ECDDC7;
+    --text-primary:#0A2E3D; --text-secondary:#3C5A66; --text-muted:#80939A;
+    --accent:#C4552D; --accent-hover:#A5451F; --on-accent:#F7EEE2;
+    --success:#217E73; --warning:#B5701C; --danger:#B33A26; --violet:#6B4FB0;
+    --border:#DEC9AA; --border-strong:#C6AF8C; --code-bg:#EFE4D2;
+    --shadow:0 1px 2px rgba(10,46,61,.08),0 10px 28px rgba(10,46,61,.10);
+    color-scheme:light;
+  }
+  html[data-theme="light"] ::-webkit-scrollbar-thumb{background:#D3BE9F;}
 </style>
 </helmet>
 
-<div style="height:100vh;display:flex;flex-direction:column;background:var(--surface-0);color:var(--text-primary);overflow:hidden;">
+<div style="display:flex;height:100vh;overflow:hidden;background:var(--surface-0);color:var(--text-primary);">
+<x-import component-from-global-scope="brabo-sidebar" from="./brabo-sidebar.js" active="code" project="brabo-api" auto-collapse hint-size="264px,100vh"></x-import>
+<div style="flex:1;min-width:0;height:100vh;display:flex;flex-direction:column;overflow:hidden;">
 
   <!-- ===== TOP BAR ===== -->
   <header style="height:44px;flex-shrink:0;display:flex;align-items:center;gap:12px;padding:0 12px;background:var(--surface-1);border-bottom:1px solid var(--border);">
-    <div style="width:26px;height:26px;border-radius:8px;background:var(--accent);display:grid;place-items:center;flex-shrink:0;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--on-accent)" stroke-linecap="round" stroke-linejoin="round"><path d="M5.4 3.6v16.8" stroke-width="3.4"/><path d="M10.4 4.6l5.6 3.8-5.6 3.8" stroke-width="2.8"/><path d="M10.4 12l5.6 3.8-5.6 3.8" stroke-width="2.8" opacity=".58"/></svg></div>
-    <span style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:14px;letter-spacing:-.02em;color:var(--text-secondary);">Brabo</span>
-    <span style="color:var(--text-muted);font-size:14px;">/</span>
     <span style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:14px;letter-spacing:-.02em;">brabo-api</span>
 
-    <div style="display:flex;gap:2px;margin-left:14px;">
-      <span style="font-size:12.5px;font-weight:500;color:var(--text-muted);padding:5px 11px;border-radius:7px;">Sessões</span>
+    <div style="display:flex;gap:2px;margin-left:14px;flex-wrap:wrap;">
+      <a href="Brabo%20Criativo.dc.html" style="font-size:12.5px;font-weight:500;color:var(--text-muted);padding:5px 11px;border-radius:7px;">Criativo</a>
       <span style="font-size:12.5px;font-weight:600;color:var(--text-primary);background:var(--surface-2);padding:5px 11px;border-radius:7px;">Código</span>
-      <span style="font-size:12.5px;font-weight:500;color:var(--text-muted);padding:5px 11px;border-radius:7px;">Aprovações</span>
-      <span style="font-size:12.5px;font-weight:500;color:var(--text-muted);padding:5px 11px;border-radius:7px;">Configurações</span>
+      <a href="Brabo%20Chat.dc.html" style="font-size:12.5px;font-weight:500;color:var(--text-muted);padding:5px 11px;border-radius:7px;">Chat RAG</a>
+      <a href="Brabo%20Gastos.dc.html" style="font-size:12.5px;font-weight:500;color:var(--text-muted);padding:5px 11px;border-radius:7px;">Gastos</a>
+      <a href="Brabo%20Approvals.dc.html" style="font-size:12.5px;font-weight:500;color:var(--text-muted);padding:5px 11px;border-radius:7px;">Aprovações</a>
+      <a href="Brabo%20Settings.dc.html" style="font-size:12.5px;font-weight:500;color:var(--text-muted);padding:5px 11px;border-radius:7px;">Configurações</a>
     </div>
 
     <span style="flex:1;"></span>
@@ -229,11 +247,12 @@
   </footer>
 </div>
 
+</div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900},&quot;density&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;compacta&quot;,&quot;confortável&quot;,&quot;espaçosa&quot;],&quot;default&quot;:&quot;confortável&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Editor&quot;},&quot;showBlame&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Editor&quot;}}">
 const C = {
-  kw: '#D6633A', fn: '#5EBEB1', str: '#E0982F', num: '#9C7BE0',
-  cm: '#5C7A85', txt: '#DCE9ED', op: '#8FB0BA', typ: '#37B3A4', dim: '#6E8A94',
+  kw: 'var(--syn-kw)', fn: 'var(--syn-fn)', str: 'var(--syn-str)', num: 'var(--syn-num)',
+  cm: 'var(--syn-cm)', txt: 'var(--syn-txt)', op: 'var(--syn-op)', typ: 'var(--syn-typ)', dim: 'var(--text-muted)',
 };
 
 // [text, colorKey] token rows. sign: ' ' | '+' | '-'

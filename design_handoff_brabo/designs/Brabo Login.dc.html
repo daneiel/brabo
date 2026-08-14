@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<script src="support.js"></script>
+<script src="./support.js"></script>
 </head>
 <body>
 <x-dc>
@@ -32,6 +32,17 @@
   @keyframes bpulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.3;transform:scale(.65);}}
   @keyframes bspin{to{transform:rotate(360deg);}}
   @keyframes bfade{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+
+  html[data-theme="light"]{
+    --surface-0:#F5EDE0; --surface-1:#FCF8F1; --surface-2:#ECDDC7;
+    --text-primary:#0A2E3D; --text-secondary:#3C5A66; --text-muted:#80939A;
+    --accent:#C4552D; --accent-hover:#A5451F; --on-accent:#F7EEE2;
+    --success:#217E73; --warning:#B5701C; --danger:#B33A26;
+    --border:#DEC9AA; --border-strong:#C6AF8C; --code-bg:#EFE4D2;
+    --shadow:0 1px 2px rgba(10,46,61,.08),0 10px 28px rgba(10,46,61,.10);
+    color-scheme:light;
+  }
+  html[data-theme="light"] ::-webkit-scrollbar-thumb{background:#D3BE9F;}
 </style>
 </helmet>
 
