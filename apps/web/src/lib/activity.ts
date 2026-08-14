@@ -371,6 +371,30 @@ export function classifyEvent(event: SessionEvent): ActivityDisplay {
           : `história → ${para ?? 'novo estado'}`,
     };
   }
+  // RN-165, e pela MESMA razão das três acima: sem este ramo o fallback
+  // `type.startsWith('backlog.')` narraria "o po atualizou o backlog" — que é
+  // o oposto do que aconteceu. `bad`, porque é: a execução não sai do lugar.
+  if (type === 'backlog.epic_without_story') {
+    // `payloadField` só devolve string/número — `epicTitles` é lista, e por
+    // isso é lida aqui, com degradação para a frase sem os nomes.
+    const titulos =
+      payload && typeof payload === 'object' && 'epicTitles' in payload
+        ? (payload as { epicTitles?: unknown }).epicTitles
+        : undefined;
+    const nomes = Array.isArray(titulos)
+      ? titulos.filter((t): t is string => typeof t === 'string')
+      : [];
+    return {
+      kind: 'generic',
+      icon: StackIcon,
+      color: 'var(--danger)',
+      bad: true,
+      text:
+        `${actorLabel} encerrou com épico sem nenhuma história` +
+        (nomes.length > 0 ? ` (${nomes.join(', ')})` : '') +
+        ' — sem história não há tarefa, e a execução trava',
+    };
+  }
   if (type === 'backlog.story_demoted') {
     return {
       kind: 'generic',

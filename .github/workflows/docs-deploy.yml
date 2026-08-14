@@ -2,9 +2,13 @@ name: Documentação
 
 # Publica a documentação de CADA branch permanente no seu próprio lugar:
 #
-#   main → https://daneiel.github.io/brabo/       (a documentação real)
+#   main → https://daneiel.github.io/brabo/prd/   (a documentação real)
 #   qa   → https://daneiel.github.io/brabo/qa/
 #   dev  → https://daneiel.github.io/brabo/dev/
+#
+# O caminho nomeia o AMBIENTE, não a branch (ADR 0073): `main` é o nome do
+# branch de código, `prd` é o nome de quem lê. Os dois deixaram de ser a mesma
+# string, e por isso o mapa branch→caminho existe uma vez só, no passo abaixo.
 #
 # "POR BRANCH QUE PASSAR" SAI DE GRAÇA, e vale escrever por que: `push` numa
 # permanente só acontece por merge de PR, e o ruleset exige os 12 checks
@@ -45,20 +49,29 @@ jobs:
           # página fica com a data do checkout, que é pior que nenhuma data.
           fetch-depth: 0
 
-      # Um lugar só decide o destino do degrau, e os valores saem juntos daqui —
-      # `baseUrl` e subdiretório TÊM que concordar, e separá-los em dois lugares
-      # é como eles passam a divergir.
+      # O MAPA branch→caminho mora aqui, e só aqui. Tudo o que precisa do
+      # destino — `baseUrl`, subdiretório da árvore, mensagem final — deriva
+      # destas saídas em vez de reconstruir o caminho a partir do nome da
+      # branch. `baseUrl` e subdiretório TÊM que concordar, e separá-los em
+      # dois lugares é como eles passam a divergir.
       #
       # Desde o ADR 0071 os três são SIMÉTRICOS: `main` também publica em
       # subdiretório, e a raiz virou a página que escolhe entre eles. Antes
       # disso `main` publicava na raiz, e era esse caso especial que obrigava o
       # workflow a preservar `/dev/` e `/qa/` só num dos três caminhos.
+      #
+      # O ADR 0073 quebrou a última identidade que restava: o caminho publicado
+      # deixou de SER o nome da branch. `main` publica em `/prd/`, porque o
+      # endereço fala do ambiente com quem lê, e `main` é vocabulário de quem
+      # commita. `$GITHUB_REF_NAME` continua sendo a branch — nunca o caminho.
       - name: Qual degrau, e para onde ele publica
         id: degrau
         run: |
           set -euo pipefail
           case "$GITHUB_REF_NAME" in
-            main|qa|dev) ;;
+            main) caminho='prd' ;;
+            qa)   caminho='qa' ;;
+            dev)  caminho='dev' ;;
             *)
               echo "::error::branch '$GITHUB_REF_NAME' não é permanente — este workflow só publica dev, qa e main."
               exit 1
@@ -66,9 +79,10 @@ jobs:
           esac
           {
             echo "branch=$GITHUB_REF_NAME"
-            echo "base=/brabo/$GITHUB_REF_NAME/"
+            echo "caminho=$caminho"
+            echo "base=/brabo/$caminho/"
           } >> "$GITHUB_OUTPUT"
-          echo "degrau '$GITHUB_REF_NAME' → baseUrl '/brabo/$GITHUB_REF_NAME/'"
+          echo "degrau '$GITHUB_REF_NAME' → baseUrl '/brabo/$caminho/'"
 
       - uses: pnpm/action-setup@v4
 
@@ -126,11 +140,18 @@ jobs:
       # é gerada. `keep_files: false` passa a ser exatamente o que se quer — o
       # que não está na árvore montada não deveria estar publicado.
       #
-      # Efeito colateral bom, e é a migração inteira: os arquivos que a `main`
-      # deixou na RAIZ no layout antigo (`architecture.html`, `assets/`, …) não
-      # estão na árvore montada, então o primeiro push os remove sozinho. Não há
-      # limpeza manual da `gh-pages` a fazer.
+      # Efeito colateral bom, e é a migração inteira: o que não está na árvore
+      # montada sai sozinho no primeiro push, sem limpeza manual da `gh-pages` —
+      # foi assim com os arquivos que a `main` deixou na RAIZ no layout antigo,
+      # e é assim agora com o diretório `/main/`, que o ADR 0073 aposenta em
+      # favor de `/prd/`. Quem segura os links salvos para `/brabo/main/…` é o
+      # `404.html` gerado pela landing, não uma cópia mantida por precaução.
       - name: Montar a árvore de publicação
+        env:
+          # O CAMINHO, nunca a branch: desde o ADR 0073 os dois são strings
+          # diferentes para a `main`, e usar `$GITHUB_REF_NAME` aqui montaria
+          # `/main/` ao lado de `/prd/` — dois degraus estáveis, um deles velho.
+          CAMINHO: ${{ steps.degrau.outputs.caminho }}
         run: |
           set -euo pipefail
           rm -rf publicacao && mkdir -p publicacao
@@ -138,8 +159,8 @@ jobs:
           # 1. Os outros dois degraus, como estão publicados hoje.
           if git ls-remote --exit-code --heads origin gh-pages >/dev/null 2>&1; then
             git fetch --no-tags --depth=1 origin gh-pages
-            for degrau in main qa dev; do
-              [ "$degrau" = "$GITHUB_REF_NAME" ] && continue
+            for degrau in prd qa dev; do
+              [ "$degrau" = "$CAMINHO" ] && continue
               if git cat-file -e "FETCH_HEAD:$degrau" 2>/dev/null; then
                 git archive FETCH_HEAD "$degrau" | tar -x -C publicacao
                 echo "preservado: /$degrau/ ($(find "publicacao/$degrau" -type f | wc -l) arquivo(s))"
@@ -148,34 +169,60 @@ jobs:
               fi
             done
 
-            # TRANSIÇÃO DE LAYOUT, uma vez só.
+            # TRANSIÇÃO DE CAMINHO, uma vez só.
             #
-            # No layout antigo a `main` publicava na RAIZ, então não existe
-            # `gh-pages:main` até a `main` passar por aqui. Sem este bloco, o
-            # primeiro push de `dev` ou `qa` deixaria `/brabo/main/` inexistente
-            # — e como o `404.html` reencaminha link antigo justamente para lá,
-            # todo link salvo apontaria para um 404 até a próxima promoção.
+            # O que está publicado hoje é `/main/`, e `gh-pages:prd` só nasce
+            # quando a `main` passar por aqui depois desta mudança. Como a
+            # árvore é montada e publicada com `keep_files: false`, o primeiro
+            # push de `dev` ou `qa` removeria `/main/` sem que `/prd/` existisse
+            # — a documentação ESTÁVEL fora do ar até a próxima promoção, que
+            # pode demorar dias.
             #
-            # A raiz que está publicada AGORA é, literalmente, o build da
-            # `main`. Então ela semeia `/main/`, e o site nunca fica sem a
-            # documentação estável. Na próxima publicação de `main` o
-            # `gh-pages:main` já existe e este caminho não roda mais.
-            if [ "$GITHUB_REF_NAME" != 'main' ] && [ ! -d publicacao/main ] \
-               && git cat-file -e FETCH_HEAD:index.html 2>/dev/null; then
-              rm -rf raiz-antiga && mkdir -p raiz-antiga
-              git archive FETCH_HEAD | tar -x -C raiz-antiga
-              rm -rf raiz-antiga/main raiz-antiga/qa raiz-antiga/dev
-              mv raiz-antiga publicacao/main
-              echo "::notice::transição de layout — /main/ semeado da raiz antiga ($(find publicacao/main -type f | wc -l) arquivo(s))"
+            # O conteúdo de `gh-pages:main` é, literalmente, o build da `main`.
+            # Então ele semeia `/prd/` — REESCRITO, e essa parte não é opcional:
+            # o `baseUrl` embutido nele aponta para `/brabo/main/`, e o
+            # `404.html` NÃO salva subrecurso. O script dele roda em NAVEGAÇÃO;
+            # um `<script src>` ou `<link rel=stylesheet>` que caia no 404
+            # recebe HTML com status 404 e falha calado. Sem a reescrita, `/prd/`
+            # serviria texto sem CSS, sem busca e sem hidratação — exatamente o
+            # "carrega HTML e nada mais" que o `docusaurus.config.ts` descreve.
+            #
+            # É semente, não substituto: na primeira publicação de `main` o
+            # caminho normal assume, `gh-pages:prd` passa a existir e este bloco
+            # não roda mais.
+            #
+            # O bloco análogo do ADR 0071 (semear `/main/` a partir da RAIZ
+            # antiga) foi removido junto: ele já cumpriu o papel — a `gh-pages`
+            # de hoje tem `main/`, `qa/` e `dev/` —, e a condição dele
+            # (`FETCH_HEAD:index.html` existir) passou a casar com o índice
+            # gerado pela própria landing, o que faria a raiz virar degrau.
+            if [ "$CAMINHO" != 'prd' ] && [ ! -d publicacao/prd ] \
+               && git cat-file -e FETCH_HEAD:main 2>/dev/null; then
+              rm -rf prd-semente && mkdir -p prd-semente
+              git archive FETCH_HEAD main | tar -x -C prd-semente
+              mv prd-semente/main publicacao/prd
+              rm -rf prd-semente
+
+              # Só arquivo de TEXTO que contém a string: `-I` deixa fonte,
+              # imagem e índice binário de fora, porque `sed -i` num binário
+              # pode acrescentar o newline final que falta e corrompê-lo.
+              mapfile -t alvos < <(
+                grep -rlI --binary-files=without-match -- '/brabo/main/' publicacao/prd || true
+              )
+              if [ "${#alvos[@]}" -gt 0 ]; then
+                sed -i 's|/brabo/main/|/brabo/prd/|g' "${alvos[@]}"
+              fi
+
+              echo "::notice::transição de caminho — /prd/ semeado de gh-pages:main ($(find publicacao/prd -type f | wc -l) arquivo(s), ${#alvos[@]} reescrito(s) de /brabo/main/ para /brabo/prd/)"
             fi
           else
             echo "::notice::gh-pages ainda não existe — primeira publicação."
           fi
 
           # 2. O degrau deste push, do build recém-feito.
-          mkdir -p "publicacao/$GITHUB_REF_NAME"
-          cp -a website/build/. "publicacao/$GITHUB_REF_NAME/"
-          echo "publicando: /$GITHUB_REF_NAME/ ($(find "publicacao/$GITHUB_REF_NAME" -type f | wc -l) arquivo(s))"
+          mkdir -p "publicacao/$CAMINHO"
+          cp -a website/build/. "publicacao/$CAMINHO/"
+          echo "publicando: /$CAMINHO/ ($(find "publicacao/$CAMINHO" -type f | wc -l) arquivo(s))"
 
           # 3. A raiz: índice dos degraus + o 404 que segura os links antigos.
           #    Roda por último porque decide o que oferecer olhando quais
@@ -215,6 +262,8 @@ jobs:
             echo "### Documentação publicada"
             echo
             echo "Degrau \`${GITHUB_REF_NAME}\` → $url"
+            echo
+            echo "(o caminho publicado é \`${{ steps.degrau.outputs.caminho }}\`, e não o nome da branch — ADR 0073)"
             echo
             echo "Índice dos três degraus → https://daneiel.github.io/brabo/"
             echo

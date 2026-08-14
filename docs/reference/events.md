@@ -92,6 +92,7 @@ Uma linha em `session_events`, append-only, com `seq` densa por sessão
 | `backlog.task_status_changed` | — |
 | `backlog.task_blocked` | teto de correções esgotado, ou impedimento registrado |
 | `backlog.task_unblocked` | — |
+| `backlog.epic_without_story` | o PO encerrou um turno tendo criado épico e NENHUMA história para ele. Épico não gera tarefa — história gera —, então este é o estado que trava a execução sem erro visível. Desfecho explícito no padrão da [RN-059](../business-rules.md#rn-059): evento durável com `origem`, `epicIds`/`epicTitles` e a mensagem, mais o broadcast `agent.error`. Reportado UMA vez por ocorrência, nunca em loop ([RN-165](../business-rules.md#rn-165)) |
 
 ### Execução e gates
 
@@ -125,6 +126,19 @@ Os três são emitidos pelo `QaLeadServer`, um por subespecialidade, SEPARADOS
 da chamada a `record_gate_verdict` — o `pr.gate_changed` acima continua sendo
 o único evento que descreve o gate em si; estes descrevem a área por trás
 dele.
+
+### Laço de ferramentas
+
+| tipo | quando |
+|---|---|
+| `toolloop.limit_reached` | o laço bateu no teto de iterações. `payload` traz `iteration` e `max_iterations` — o teto é por TIPO de agente ([RN-085](../business-rules.md#rn-085)) |
+| `toolloop.budget_exceeded` | o orçamento de tokens daquele laço acabou antes do trabalho; `payload` traz `tokens_spent_micros` e `token_budget_micros` |
+
+Emitidos pelo `Engine.Harness.ToolLoop` e — desde a
+[RN-166](../business-rules.md#rn-166) — também pelo `PoServer`, que tem laço
+PRÓPRIO e até então esgotava o teto **em silêncio**. Mesmo tipo e mesmo
+payload de propósito: é o mesmo fato, e quem lê o log não deve precisar
+aprender um segundo nome porque o agente conversacional não usa o `ToolLoop`.
 
 ### Artefatos
 
@@ -290,7 +304,7 @@ respeito.
 
 > ⚠️ Bloco gerado por `pnpm docs:generate`. Não edite à mão — o próximo build sobrescreve.
 
-Extraído dos pontos de emissão: **83 identificadores**, dos quais **2** não aparecem descritos acima.
+Extraído dos pontos de emissão: **84 identificadores**, dos quais **2** não aparecem descritos acima.
 
 - `action.failed` <sub>(apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts)</sub>
 - `agent.activated` <sub>(apps/api/src/application/use-cases/agents/activate-agent.use-case.ts)</sub>
@@ -311,6 +325,7 @@ Extraído dos pontos de emissão: **83 identificadores**, dos quais **2** não a
 - `artifact.module_map` <sub>(apps/api/src/application/use-cases/architecture/create-module-map.use-case.ts)</sub>
 - `artifact.product_brief` <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub>
 - `backlog.epic_created` <sub>(apps/api/src/application/use-cases/backlog/create-epic.use-case.ts)</sub>
+- `backlog.epic_without_story` <sub>(apps/engine/lib/engine/agents/po_server.ex)</sub>
 - `backlog.story_created` <sub>(apps/api/src/application/use-cases/backlog/create-story.use-case.ts)</sub>
 - `backlog.story_demoted` <sub>(apps/api/src/application/use-cases/architecture/create-module-map.use-case.ts)</sub>
 - `backlog.story_modules_assigned` <sub>(apps/api/src/application/use-cases/architecture/assign-story-modules.use-case.ts)</sub>

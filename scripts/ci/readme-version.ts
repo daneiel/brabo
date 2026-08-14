@@ -1,31 +1,45 @@
 /**
- * Põe a versão recém-lançada na prosa do README, no MESMO commit em que o
+ * Põe a versão recém-lançada na prosa que a anuncia, no MESMO commit em que o
  * CHANGELOG é cortado.
  *
  * ## Por que existe
  *
  * O README anunciou `v0.1.0` da Fase 5 até a v2.1.0 — sete releases atrás da
  * realidade, na primeira coisa que quem chega lê. A conferência que passou a
- * cobrar isso (`verificarVersaoNoReadme` em `scripts/docs/generate.mjs`) pegaria
- * a mentira, mas cobraria de quem não pode consertar: a PR do CHANGELOG é
- * ABERTA PELO BOT e só toca `CHANGELOG.md`, então todo release nasceria com o
+ * cobrar isso (`verificarVersaoAnunciada` em `scripts/docs/generate.mjs`)
+ * pegaria a mentira, mas cobraria de quem não pode consertar: a PR do CHANGELOG
+ * é ABERTA PELO BOT e só toca `CHANGELOG.md`, então todo release nasceria com o
  * drift vermelho esperando mão humana.
  *
  * A saída é a de sempre neste repositório: **gerar > verificar > lembrar**
  * (ADR 0029). Aqui a versão é gerável — o release sabe qual é —, então ela é
  * gerada, e a conferência vira backstop para o caso de alguém mexer na frase.
  *
+ * ## São DOIS arquivos
+ *
+ * O `docs/intro.md` é a primeira página do site publicado, e anunciava a versão
+ * pela mesma frase — presa em `v0.1.0` com o produto na Fase 26. Ele entra aqui
+ * junto com o README pelo motivo acima e não por simetria: assim que o check
+ * passou a conferir os dois, deixar um fora do gerador faria todo release
+ * nascer vermelho na PR do bot.
+ *
  * O badge não passa por aqui: ele lê a release do GitHub direto e já se
  * atualiza sozinho.
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 
-const ARQUIVO = 'README.md';
+/** Os arquivos que anunciam a versão em prosa, na ordem em que o CLI os grava. */
+const ARQUIVOS = ['README.md', 'docs/intro.md'];
 
 /**
- * A frase que o README usa para anunciar a versão. Precisa bater com o padrão
- * de `verificarVersaoNoReadme`: são os dois lados do mesmo contrato, e se
+ * A frase usada para anunciar a versão. Precisa bater com o padrão de
+ * `verificarVersaoAnunciada`: são os dois lados do mesmo contrato, e se
  * divergirem um escreve o que o outro não encontra.
+ *
+ * Um padrão só serve para os dois arquivos porque a frase é a mesma — o
+ * `docs/intro.md` a envolve em "Fases 1 a NN concluídas", que o check exige
+ * inteira, mas cuja contagem NÃO é gerável daqui: o release conhece a versão,
+ * não a fase.
  */
 const PADRAO = /versão \*\*v(\d+\.\d+\.\d+)\*\*/;
 
@@ -41,7 +55,7 @@ export interface Troca {
  * Silenciar seria pior — o mesmo modo de falha do check que fica verde para
  * sempre porque a regex parou de casar.
  */
-export function trocarVersaoNoReadme(texto: string, tag: string): Troca {
+export function trocarVersaoAnunciada(texto: string, tag: string): Troca {
   const versao = tag.replace(/^v/, '');
   const achado = PADRAO.exec(texto);
 
@@ -65,22 +79,31 @@ if (process.argv[1]?.endsWith('readme-version.ts')) {
     process.exit(2);
   }
 
-  const { texto, anterior } = trocarVersaoNoReadme(readFileSync(ARQUIVO, 'utf8'), tag);
+  const novo = tag.replace(/^v/, '');
 
-  if (anterior === null) {
+  // Todos os arquivos são LIDOS e trocados antes de qualquer escrita: a frase
+  // ausente num deles reprova o release inteiro sem deixar metade gravada.
+  const trocas = ARQUIVOS.map((arquivo) => ({
+    arquivo,
+    ...trocarVersaoAnunciada(readFileSync(arquivo, 'utf8'), tag),
+  }));
+
+  const cegos = trocas.filter((t) => t.anterior === null);
+  if (cegos.length > 0) {
     console.error(
-      `::error::não achei "versão **vX.Y.Z**" em ${ARQUIVO}. A frase mudou — ` +
-        'ajuste o padrão aqui E em scripts/docs/generate.mjs, que confere o mesmo texto.',
+      `::error::não achei "versão **vX.Y.Z**" em ${cegos.map((c) => c.arquivo).join(', ')}. ` +
+        'A frase mudou — ajuste o padrão aqui E em scripts/docs/generate.mjs, que confere o ' +
+        'mesmo texto.',
     );
     process.exit(1);
   }
 
-  const novo = tag.replace(/^v/, '');
-  if (anterior === novo) {
-    console.log(`[readme-version] já estava em v${novo} — nada a fazer.`);
-    process.exit(0);
+  for (const { arquivo, texto, anterior } of trocas) {
+    if (anterior === novo) {
+      console.log(`[readme-version] ${arquivo} já estava em v${novo} — nada a fazer.`);
+      continue;
+    }
+    writeFileSync(arquivo, texto);
+    console.log(`[readme-version] ${arquivo}: v${anterior} → v${novo}`);
   }
-
-  writeFileSync(ARQUIVO, texto);
-  console.log(`[readme-version] v${anterior} → v${novo}`);
 }

@@ -429,6 +429,89 @@
         ]
       }
     },
+    "/internal/projects/{projectId}/backlog": {
+      "get": {
+        "description": "A MESMA árvore épico → história → tarefa da aba Backlog, pelo mesmo caso de uso (três leituras por projeto, nunca N+1). É com ela que o PO enxerga épico órfão e história sem tarefa em vez de recriar o que já existe (RN-164).",
+        "operationId": "InternalProjectsController_backlog",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EpicComHistoriasResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Service token ausente ou diferente do compartilhado."
+          }
+        },
+        "security": [
+          {
+            "service-token": []
+          }
+        ],
+        "summary": "O backlog do projeto em árvore, para o PO ler o que já escreveu",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
+    "/internal/projects/{projectId}/business-rules": {
+      "get": {
+        "description": "Todo `artifact.business_rule` das sessões do projeto — não só as da sessão corrente, que era o teto do contexto de kickoff do PO — com a `description` inteira e quais histórias já citam cada regra. `uncoveredCount` é a pendência: regra que nenhuma história cobre (RN-164). Projeto sem regra nenhuma responde `200` com lista vazia: \"ainda não capturei regra\" não é erro.",
+        "operationId": "InternalProjectsController_businessRules",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectBusinessRulesResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Service token ausente ou diferente do compartilhado."
+          }
+        },
+        "security": [
+          {
+            "service-token": []
+          }
+        ],
+        "summary": "As regras de negócio do projeto, com cobertura, para o PO ler",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
     "/internal/projects/{projectId}/git-remote": {
       "get": {
         "description": "Devolve a origem limpa (sem credencial embutida) e, para provider remoto, o token do OWNER do workspace (RN-058) decifrado na hora. Quem consome injeta o token por invocação e NUNCA o escreve em arquivo — o `.git/config` fica dentro da pasta onde a RN-075 dá leitura auto-aprovada ao dev agent.",
@@ -14096,6 +14179,66 @@
         "required": [
           "projectId",
           "blockedTaskCount"
+        ]
+      },
+      "ProjectBusinessRuleResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "evt_01jc4z0000regra0000000001",
+            "description": "O id do EVENTO `artifact.business_rule`. É este valor que vai em `business_rule_ids` ao criar a história — não existe tabela de regras."
+          },
+          "title": {
+            "type": "string",
+            "example": "Carrinho aceita no máximo 50 itens"
+          },
+          "description": {
+            "type": "string",
+            "example": "Acima disso, a adição é recusada com 409.",
+            "description": "O conteúdo da regra, e não só o enunciado: é dele que sai o RF da história. É o campo que distingue esta leitura da cobertura da tela."
+          },
+          "coveredByStoryIds": {
+            "example": [
+              "01JC4Z0000HISTORIA000000001"
+            ],
+            "description": "Histórias que já citam esta regra.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "covered": {
+            "type": "boolean",
+            "example": true
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "description",
+          "coveredByStoryIds",
+          "covered"
+        ]
+      },
+      "ProjectBusinessRulesResponseDto": {
+        "type": "object",
+        "properties": {
+          "rules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProjectBusinessRuleResponseDto"
+            }
+          },
+          "uncoveredCount": {
+            "type": "number",
+            "example": 2,
+            "description": "Quantas regras nenhuma história cobre. É a pendência do PO, e o número que a ferramenta `listar_regras_de_negocio` põe na frente do modelo."
+          }
+        },
+        "required": [
+          "rules",
+          "uncoveredCount"
         ]
       },
       "ProjectCardBudgetResponseDto": {

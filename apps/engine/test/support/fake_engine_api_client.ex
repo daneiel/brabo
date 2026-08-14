@@ -99,6 +99,20 @@ defmodule Engine.Sessions.FakeEngineApiClient do
   end
 
   @impl true
+  def list_business_rules(project_id) do
+    notify({:business_rules_listed, project_id})
+
+    reply(:fake_business_rules, %{"rules" => [], "uncoveredCount" => 0})
+  end
+
+  @impl true
+  def list_backlog(project_id) do
+    notify({:backlog_listed, project_id})
+
+    reply(:fake_backlog, [])
+  end
+
+  @impl true
   def create_module_map(_project_id, _session_id, modules) do
     notify({:module_map_created, modules})
 

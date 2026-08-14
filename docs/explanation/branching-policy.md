@@ -452,15 +452,18 @@ procedimento está em [Rulesets](../reference/rulesets.md#republicar-uma-tag-que
 
 Publicada a Release, o `release.yml` abre uma PR `chore/changelog-<tag>` para
 **`dev`** com o corte da versão no `CHANGELOG.md` — e, no mesmo commit, com a
-versão que o `README.md` anuncia, reescrita por `scripts/ci/readme-version.ts`.
+versão anunciada em prosa nos **dois** arquivos que a escrevem: o `README.md` e
+o `docs/intro.md`, a primeira página do site publicado. Quem reescreve os dois é
+`scripts/ci/readme-version.ts`, e ele lê e troca todos antes de gravar qualquer
+um: frase ausente num deles reprova o release inteiro sem deixar metade gravada.
 
-As duas coisas andam juntas de propósito. A versão do README é **gerável** (o
-release sabe qual é), e o drift check confere que ela bate com o corte mais
-recente do CHANGELOG; separar as duas faria toda PR de changelog nascer
-vermelha, aberta pelo bot e esperando uma mão humana que a política não prevê.
-Frase não encontrada REPROVA o passo em vez de passar batido — a regex deste
-script e a de `scripts/docs/generate.mjs` são os dois lados do mesmo contrato,
-e um teste guarda o acordo.
+As três coisas andam juntas de propósito. A versão é **gerável** (o release sabe
+qual é), e o `docs:check` confere que ela bate com o corte mais recente do
+CHANGELOG em cada um dos arquivos; separar as duas pontas faria toda PR de
+changelog nascer vermelha, aberta pelo bot e esperando uma mão humana que a
+política não prevê. Frase não encontrada REPROVA o passo em vez de passar
+batido — a regex deste script e a de `scripts/docs/generate.mjs` são os dois
+lados do mesmo contrato, e um teste guarda o acordo.
 
 Por PR, e não por push, porque nenhum dos caminhos diretos existe: `main` só
 aceita tag (bot de release) e `.release/gate.json` (bot do gate), e commitar em

@@ -1,0 +1,69 @@
+---
+id: internal-projects-controller-business-rules
+title: "As regras de negócio do projeto, com cobertura, para o PO ler"
+description: "Todo `artifact.business_rule` das sessões do projeto — não só as da sessão corrente, que era o teto do contexto de kickoff do PO — com a `description` inteira e quais histórias já citam cada regra. `uncoveredCount` é a pendência: regra que nenhuma história cobre (RN-164). Projeto sem regra nenhuma responde `200` com lista vazia: 'ainda não capturei regra' não é erro."
+sidebar_label: "As regras de negócio do projeto, com cobertura, para o PO ler"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "get api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"As regras de negócio do projeto, com cobertura, para o PO ler"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/internal/projects/{projectId}/business-rules"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Todo `artifact.business_rule` das sessões do projeto — não só as da sessão corrente, que era o teto do contexto de kickoff do PO — com a `description` inteira e quais histórias já citam cada regra. `uncoveredCount` é a pendência: regra que nenhuma história cobre (RN-164). Projeto sem regra nenhuma responde `200` com lista vazia: "ainda não capturei regra" não é erro.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./internal-projects-controller-business-rules.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./internal-projects-controller-business-rules.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./internal-projects-controller-business-rules.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

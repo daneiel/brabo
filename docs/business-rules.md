@@ -5649,6 +5649,107 @@ montado no outro container.
 
 ---
 
+### RN-164 — O PO LÊ o que já existe, escopado ao projeto {#rn-164}
+
+O PO ganhou duas ferramentas de LEITURA — `listar_regras_de_negocio` e
+`listar_backlog` (`:direct`, sem parâmetro nenhum) — servidas por duas rotas
+internas escopadas ao **projeto**: `GET /internal/projects/:projectId/business-rules`
+e `GET /internal/projects/:projectId/backlog`.
+
+A primeira devolve todo `artifact.business_rule` das sessões do projeto com a
+`description` inteira, quais histórias já citam cada regra e o
+`uncoveredCount`; a segunda devolve a MESMA árvore épico → história → tarefa
+da aba Backlog, pelo mesmo `ListBacklogUseCase` (três leituras por projeto,
+nunca N+1). O texto que volta ao modelo põe as regras DESCOBERTAS primeiro e
+os épicos ÓRFÃOS antes da árvore — é o que gera trabalho.
+
+O que a regra corrige: até aqui o PO tinha **quatro ferramentas e todas de
+escrita**. O contexto dele era montado uma vez, no kickoff, a partir dos 200
+últimos eventos da **sessão** — dali em diante ele não sabia quais regras
+existiam, quais já tinha coberto, nem o que já havia criado. O escopo é o
+projeto e não a sessão de propósito: regra capturada numa sessão anterior é
+exatamente o que a leitura por sessão escondia.
+
+Ler **não** vira `proposed_action` (não é efeito externo), mas é CONTIDA no
+sentido do ADR 0060: nenhuma das duas rotas aceita parâmetro além do id do
+projeto — sem busca, sem paginação, sem filtro —, o custo por chamada é
+constante, e o texto entregue ao modelo tem teto de linhas dizendo o total
+real quando trunca.
+
+- **Onde:** `apps/engine/lib/engine/harness/tools/listar_regras_de_negocio.ex`,
+  `apps/engine/lib/engine/harness/tools/listar_backlog.ex`,
+  `apps/engine/lib/engine/agents/po_server.ex`,
+  `apps/engine/lib/engine/sessions/engine_api_client.ex`,
+  `apps/api/src/application/use-cases/backlog/list-business-rules.use-case.ts`,
+  `apps/api/src/interfaces/http/internal/internal-projects.controller.ts`
+- **Teste:** `apps/engine/test/engine/harness/tools/listar_regras_de_negocio_test.exs`,
+  `apps/engine/test/engine/harness/tools/listar_backlog_test.exs`,
+  `apps/engine/test/engine/agents/po_server_test.exs`,
+  `apps/api/test/application/use-cases/backlog/list-business-rules.use-case.spec.ts`
+- **Origem:** uso real no projeto `exp001` — "crie ferramenta para o PO
+  conseguir listar as regras de negócio"
+
+---
+
+### RN-165 — Épico sem história é cobrado, e o PO pergunta quando não sabe {#rn-165}
+
+Quando o PO encerra um turno tendo criado um épico e **nenhuma história para
+ele**, isso vira desfecho EXPLÍCITO: evento durável
+`backlog.epic_without_story` (com `origem: "modelo"`, os ids e títulos dos
+épicos e a mensagem) mais o broadcast `agent.error` — o padrão da
+[RN-059](#rn-059): o log é o que sobrevive, o broadcast é o agente dizendo no
+fio. A cobrança é por OCORRÊNCIA: reportada uma vez, a lista de pendências é
+esvaziada, e não vira alarme que repete a cada turno.
+
+O que conta é a criação que **deu certo**: um `create_story` recusado pela api
+(`business_rule_id` inexistente, por exemplo) não quita o épico. Tratá-lo como
+se quitasse seria trocar um silêncio por outro. Os épicos pendentes vivem no
+state do `PoServer` e NÃO são reidratados: a cobrança é sobre a obrigação
+assumida no turno, e reconstruí-la do event log reabriria épico antigo que o
+usuário já resolveu de outro jeito.
+
+Junto vieram as duas peças que faltavam para o PO ter uma saída além de parar:
+`ask_structured_questions` — a MESMA ferramenta do Criativo
+([RN-162](#rn-162)), só passada a advertisar no `po_server` — e a instrução de
+kickoff dizendo, com todas as letras, que épico sem história trava a execução
+e que **faltando informação se PERGUNTA**, nunca se para nem se inventa. A
+instrução anterior não dizia uma palavra sobre o que fazer diante de uma
+lacuna, e diante de uma lacuna sem instrução um modelo escolhe entre inventar
+e parar.
+
+- **Onde:** `apps/engine/lib/engine/agents/po_server.ex`
+  (`anotar_obrigacao/4`, `encerrar_turno/1`, `obrigacoes/0`),
+  `apps/engine/lib/engine/harness/tools/create_epic.ex` (`id_no_resultado/1`),
+  `apps/web/src/lib/activity.ts`
+- **Teste:** `apps/engine/test/engine/agents/po_server_test.exs`
+  (describe "RN-165"), `apps/web/src/lib/activity.test.ts`
+- **Origem:** uso real no projeto `exp001` — backlog sem história, logo sem
+  tarefa, logo execução travada sem erro visível
+
+---
+
+### RN-166 — O teto de iterações do PO deixa rastro {#rn-166}
+
+Esgotado o teto de iterações do laço de ferramentas do `PoServer` (12), o
+turno emite `toolloop.limit_reached` com `{iteration, max_iterations}` —
+o MESMO tipo e o mesmo payload que o `Engine.Harness.ToolLoop` já emitia
+desde a Fase 3. Antes, a cláusula devolvia o state e pronto: de fora, um laço
+esgotado era indistinguível de um turno que simplesmente acabou.
+
+Reusar o identificador em vez de criar um `po.*` é deliberado: é o mesmo fato
+(o laço bateu no teto), e quem lê o event log não deve precisar aprender um
+segundo nome por causa de o agente conversacional ter laço próprio em vez de
+usar o `ToolLoop`.
+
+- **Onde:** `apps/engine/lib/engine/agents/po_server.ex` (`run_turn/2`,
+  cláusula `remaining <= 0`)
+- **Teste:** `apps/engine/test/engine/agents/po_server_test.exs`
+  ("teto de iterações emite toolloop.limit_reached")
+- **Origem:** investigação do travamento do `exp001` — o laço terminava em
+  silêncio
+
+---
+
 ## Quando dá errado
 
 | situação | o que o sistema faz |
