@@ -956,6 +956,19 @@ divide o mesmo banco, recuperar exige `db:migrate` E `engine:migrate`.
   ensina errado. Ele tem regra `warn` no docmap (não `block`, porque não
   mora sob docs/ e o checker valida glob e link dentro de docs/ — promover
   sem estender o checker criaria regra que se burla com `docs-not-needed`).
+- A documentação publica um site por branch permanente, e o CAMINHO nomeia o
+  AMBIENTE, não a branch (ADR 0073): `main` → `/brabo/prd/`, `qa` → `/brabo/qa/`,
+  `dev` → `/brabo/dev/`, com a raiz sendo o índice gerado por
+  `scripts/docs/landing.mjs`. O mapa branch→caminho existe num ponto por
+  processo (o passo do `docs-deploy.yml`, `DEGRAUS` no `docusaurus.config.ts` e
+  no `landing.mjs`) — nunca interpole `$GITHUB_REF_NAME` num caminho.
+- A versão anunciada em PROSA é verificada por `pnpm docs:check` em DOIS
+  arquivos, contra o primeiro `## vX.Y.Z` do CHANGELOG: `README.md` e
+  `docs/intro.md` (a primeira página do site). Quem escreve os dois é
+  `scripts/ci/readme-version.ts`, no mesmo commit do corte do CHANGELOG —
+  cobrar o que o gerador não escreve faria todo release nascer vermelho numa
+  PR do bot. Frase alterada sem ajustar o padrão reprova como `CEGO`, de
+  propósito.
 - Antes de finalizar: pnpm docs:check e pnpm docs:build verdes (glob
   morto, gerado fora de dia e link quebrado reprovam).
 - Nunca inventar conteúdo de doc: sem informação suficiente, use
