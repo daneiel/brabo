@@ -27,6 +27,7 @@ arquivo. Comece pela triagem.
 | painel vazio, sem trace, sem log | [Observabilidade](#observabilidade) |
 | não sei que versão está rodando | [Que versão está no ar](#que-versao-esta-no-ar) |
 | `blocked by CORS policy` no console do navegador | [Erro de CORS](#erro-de-cors) |
+| ativar sessão não faz nada, ou `transition` responde `500` com `ECONNREFUSED` | [A sessão não sai de `created`](#sessao-nao-ativa) |
 | a api sai no boot reclamando de `GIT_OAUTH_STATE_SECRET` | [A api recusa subir por segredo de OAuth](#segredo-de-oauth-no-boot) |
 | a api ou o engine saem no boot reclamando de `AUTH_JWT_SECRET`, `BRABO_SERVICE_TOKEN`, `CREDENTIALS_MASTER_KEY` ou `SECRET_KEY_BASE` | [Os quatro segredos irmãos também não sobem com o default](#segredos-irmaos-no-boot) |
 | agente respondendo vazio, truncado ou lentíssimo | [Ambiente de inferência](#ambiente-de-inferencia) |
@@ -297,12 +298,71 @@ Três coisas que **não** são problema de CORS, por mais que pareçam:
 
 - **api ↔ engine**. CORS é mecanismo de navegador; ali quem chama é cliente HTTP
   de servidor, que ignora esses cabeçalhos. Falha nesse caminho é service token
-  (`401`/`403`) — ver [rotação](#rotacao-das-chaves-do-auth).
+  (`401`/`403` — ver [rotação](#rotacao-das-chaves-do-auth)) ou endereço errado
+  (`ECONNREFUSED` — ver [a sessão não sai de `created`](#sessao-nao-ativa)).
 - **O canal Phoenix ficar mudo.** WebSocket não passa por CORS. Quem recusa é o
   `check_origin` do endpoint, também alimentado por `WEB_ORIGIN`, e a recusa
   aparece no log do engine — não no console do navegador como erro de CORS.
 - **`/metrics` do engine bloqueado no navegador.** É deliberado: métrica interna
   não é legível por JavaScript de página. Use `curl`.
+
+### A sessão não sai de `created` {#sessao-nao-ativa}
+
+Sintoma: ativar sessão não faz nada. "Abrir sessão criativa" cria a sessão e a
+tela não muda de lugar; "Ativar sessão" também não. No log da api,
+`POST /projects/:id/sessions/:id/transition` responde `500`:
+
+```
+TransitionSessionUseCase.activate ✗ TypeError
+  ↳ HttpApiToEngineClient.startSession ✗ TypeError: fetch failed
+      caused by: AggregateError [ECONNREFUSED]
+```
+
+Ativar sessão é o primeiro passo que **atravessa** para o engine (a api pede a
+sessão supervisionada por HTTP interno), então é aqui que um `ENGINE_URL` errado
+aparece — e não antes, porque nada mais no caminho de criação sai da api.
+
+Confirme de **dentro** do container, que é onde o endereço vale:
+
+```bash
+docker exec brabo-api-1 node -e '
+for (const u of ["http://engine:4000/health", "http://localhost:4000/health"]) {
+  fetch(u, { signal: AbortSignal.timeout(5000) })
+    .then((r) => console.log(u, "->", r.status))
+    .catch((e) => console.log(u, "-> FALHOU:", e.cause?.code ?? e.message));
+}'
+docker exec brabo-api-1 sh -c 'echo $ENGINE_URL'
+```
+
+`engine:4000` respondendo `200` enquanto `localhost:4000` dá `ECONNREFUSED`, com
+`ENGINE_URL=http://localhost:4000`, é o diagnóstico fechado: **dentro do
+container, `localhost` é a própria api**.
+
+A causa costuma ser o `.env`, não o compose. O `pnpm dev` passa o `.env` como
+`--env-file`, e um valor ali **vence** o `${ENGINE_URL:-http://engine:4000}` do
+compose. Correção: remover (ou comentar) a linha `ENGINE_URL` do seu `.env` e
+recriar a api —
+
+```bash
+docker compose -f docker/docker-compose.yml --env-file .env up -d api
+```
+
+— porque cada ambiente já traz o default certo sem ela: o compose aponta para o
+serviço `engine`, e a api rodando no host cai no `http://localhost:4000` do
+próprio código. Preencher a variável só faz sentido para apontar para um engine
+que não é nenhum dos dois. Vale para o compose de **produção** também, que usa a
+mesma interpolação; em Kubernetes o valor vem do ConfigMap e sempre foi
+`http://engine:4000`.
+
+Duas checagens antes de culpar o endereço, se o `ENGINE_URL` estiver correto:
+
+- **O engine está de pé?** `docker compose ps engine` e
+  `curl -sI http://localhost:4000/health`. `ECONNREFUSED` com endereço certo é
+  serviço fora do ar, não configuração.
+- **Sessão que ativa e fecha sozinha ~30s depois** não é este problema. Olhe
+  `termination_reason`: `heartbeat_timeout` significa que a ativação funcionou e
+  ninguém entrou no canal Phoenix — comportamento esperado quando se ativa por
+  fora da interface (`SESSION_HEARTBEAT_TIMEOUT_MS`).
 
 ### A api recusa subir por segredo de OAuth {#segredo-de-oauth-no-boot}
 
