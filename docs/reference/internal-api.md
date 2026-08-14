@@ -281,7 +281,8 @@ Duas coisas que esta rota **não** faz, e que já foram diferentes:
 |---|---|
 | GET | `/internal/projects/:projectId/git-remote` (**não** é session-scoped) |
 
-A segunda rota `engine → api` fora de `/internal/sessions/:sessionId/`, e a
+A segunda rota `engine → api` fora de `/internal/sessions/:sessionId/` a
+existir — as duas de leitura do PO, na seção seguinte, vieram depois — e a
 **única do produto que devolve um segredo decifrado**
 ([ADR 0056](../adr/0056-o-engine-trabalha-em-repositorio-remoto.md)).
 
@@ -323,6 +324,49 @@ atravessando processo, e por isso nada nesse caminho abre rota interna.
 
 A consequência prática é a que importa: a única rota do produto que devolve
 segredo decifrado continua sendo UMA. Ler código não a multiplicou.
+
+### O que o PO relê: regras de negócio e backlog
+
+| método | caminho |
+|---|---|
+| GET | `/internal/projects/:projectId/business-rules` (**não** é session-scoped) |
+| GET | `/internal/projects/:projectId/backlog` (**não** é session-scoped) |
+
+As outras duas rotas fora de `/internal/sessions/:sessionId/`, e pelo mesmo
+critério das anteriores: o recurso é do **projeto**, e um segmento de sessão
+aqui seria decorativo — pior, seria enganoso, porque é justamente o escopo de
+sessão que causou o defeito que elas corrigem
+([RN-164](../business-rules.md#rn-164)).
+
+O PO tinha **quatro ferramentas e todas de escrita** (`create_epic`,
+`create_story`, `create_task`, `offer_handoff`). O contexto dele era montado
+uma vez, no kickoff, a partir dos 200 últimos eventos da **sessão corrente** —
+e depois disso ele nunca mais relia nada. Numa sessão longa, ou numa retomada,
+ele não sabia quais regras existiam, quais já tinha coberto, nem o que ele
+próprio já havia criado. O sintoma que apareceu no uso real foi um backlog com
+épico e **nenhuma história**: sem história não há tarefa, e sem tarefa a
+execução trava sem erro nenhum.
+
+`/business-rules` devolve todo `artifact.business_rule` das sessões do
+projeto — com a `description` inteira, quais histórias já citam cada regra
+(`coveredByStoryIds`) e o `uncoveredCount`. Não é a `GetCoverageUseCase` de
+novo: aquela responde "quanto do produto já virou história" para a TELA e por
+isso só carrega título; esta responde "o que eu preciso transformar em
+história" para o MODELO, e sem a descrição o PO teria o enunciado da regra e
+não o conteúdo dela. O CÁLCULO de cobertura é o mesmo (`computeCoverage`,
+puro) — duas contas do mesmo fato divergiriam no primeiro ajuste.
+
+`/backlog` devolve a MESMA árvore épico → história → tarefa da aba Backlog,
+pelo mesmo `ListBacklogUseCase` (três leituras por projeto, nunca N+1).
+
+Nenhuma das duas devolve segredo, e **nenhuma das duas aceita parâmetro além
+do id do projeto**: sem termo de busca, sem paginação, sem filtro. É
+deliberado, e é o que as mantém do lado certo do
+[ADR 0060](../adr/0060-superficie-de-leitura-de-codigo.md): ler não é
+efeito externo e não vira `proposed_action`, mas leitura de agente precisa ser
+CONTIDA — e uma rota sem parâmetro não tem onde o modelo escrever o que
+quiser. O custo por chamada é constante, e o texto entregue ao modelo tem teto
+de linhas, sempre declarando o total real quando trunca.
 
 ### Contexto por agente
 

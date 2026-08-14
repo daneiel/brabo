@@ -743,10 +743,44 @@ O Criativo era o único conversacional sem laço de tool use; ganhou o mesmo do
 PO, com teto próprio de 12. O que vale além da correção: **quem decide o que se
 anuncia passou a ser o teto**, e não um texto fixo — a promessa de retentativa
 só entra na frase quando ainda há volta para cumpri-la. Teto esgotado virou
-`agent.error` narrado (o `po_server` ainda termina calado nesse caso, e é a
-próxima dívida óbvia), e a falha de ferramenta deixou de ser `agent.response`
+`agent.error` narrado (o `po_server` terminava calado nesse caso, e essa era a
+próxima dívida óbvia — fechada logo abaixo pela RN-166), e a falha de
+ferramenta deixou de ser `agent.response`
 — no event log ela era indistinguível de uma resposta normal e não dizia
 origem nenhuma, exatamente o que a RN-059 fechou para a falha de turno.
+
+## RODADA exp001 — o PO lê o que já existe e é cobrado (RN-164..166)
+Não é fase: é um defeito achado por USO real, e a origem importa porque
+nenhuma suite pegaria. O backlog saiu com épico e **nenhuma história** — logo
+sem tarefa, logo a execução travada **sem erro nenhum**. A investigação achou
+quatro causas empilhadas, e as três primeiras são a mesma: o PO não tinha como
+saber e não tinha como avisar.
+
+1. **O PO tinha quatro ferramentas e todas de ESCRITA.** O contexto era
+   montado UMA vez, no kickoff, a partir dos 200 últimos eventos da SESSÃO —
+   dali em diante ele nunca mais relia nada: não sabia quais regras existiam,
+   quais já cobrira, nem o que ele próprio já criara. Entraram
+   `listar_regras_de_negocio` e `listar_backlog` (RN-164), servidas por duas
+   rotas internas escopadas ao PROJETO — e o escopo é o ponto: leitura por
+   sessão era exatamente o que escondia a regra capturada antes. Reusam o
+   encanamento que já existia (`listByTypeForProject`, `ListBacklogUseCase`,
+   `computeCoverage`); o que faltava era a rota, o método no cliente e o tool.
+2. **Nada cobrava a história depois do épico** e **o laço terminava calado**.
+   Épico sem história virou desfecho EXPLÍCITO — `backlog.epic_without_story`,
+   durável, no padrão da RN-059 (RN-165) — e o teto de iterações do `PoServer`
+   passou a emitir `toolloop.limit_reached`, o MESMO tipo do `ToolLoop`, que
+   os agentes conversacionais nunca emitiram por terem laço próprio (RN-166).
+3. **A instrução de kickoff não dizia uma palavra sobre o que fazer quando
+   falta informação** — e diante de uma lacuna sem instrução um modelo escolhe
+   entre inventar e parar. Parar foi o que ele fez. A terceira saída passou a
+   estar escrita, com a ferramenta para exercê-la: `ask_structured_questions`,
+   a MESMA do Criativo (RN-162), agora advertida também ao PO.
+
+Duas decisões de desenho que valem além deste caso: só o `create_story` que
+**deu certo** quita a obrigação do épico (uma história recusada pela api não
+cobriu nada, e tratá-la como se tivesse é trocar um silêncio por outro); e a
+cobrança é por OCORRÊNCIA, reportada uma vez, nunca alarme que repete a cada
+turno até alguém aprender a ignorá-lo.
 
 ## FERRAMENTA DE DESENVOLVIMENTO — `pnpm bootstrap`
 Menu de terminal em `scripts/dev/bootstrap.sh` agrupando o que se faz no
@@ -868,6 +902,17 @@ divide o mesmo banco, recuperar exige `db:migrate` E `engine:migrate`.
   atores externos) vem do tool call.
 - Agentes rodam SEMPRE dentro de um Harness; nenhuma chamada de LLM ou
   ferramenta fora dele.
+- Agente que ESCREVE tem de poder LER o que já existe, e tem de poder
+  PERGUNTAR quando falta informação. As duas são a mesma lição (RN-164/165):
+  um agente só com ferramenta de escrita age sobre um retrato tirado uma vez,
+  no kickoff, e diante de uma lacuna escolhe entre inventar e parar. Leitura
+  de agente é escopada ao PROJETO quando o recurso é do projeto, e CONTIDA
+  (ADR 0060): sem parâmetro onde o modelo escreva o que quiser, custo constante
+  por chamada, teto de linhas declarando o total real quando trunca.
+- Laço de agente NÃO termina calado. O teto de iterações emite
+  `toolloop.limit_reached` — o mesmo tipo para o `ToolLoop` e para os agentes
+  conversacionais, que têm laço próprio (RN-166) — e obrigação não cumprida
+  vira desfecho explícito no padrão da RN-059, durável e com origem.
 - Handoff externo endereça só LEAD de área ou agente sem área;
   delegação interna é privada da área; falha de subagente NUNCA é
   silenciosa — reporta origem ao lead, que decide e registra evento.

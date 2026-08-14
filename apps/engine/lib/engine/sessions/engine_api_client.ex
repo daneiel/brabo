@@ -104,6 +104,20 @@ defmodule Engine.Sessions.EngineApiClient do
               {:ok, map()} | {:error, term()}
 
   @doc """
+  Ferramentas de LEITURA do PO (RN-164) — as duas escopadas ao PROJETO, não à
+  sessão: regra de negócio e backlog atravessam as sessões, e limitar a leitura
+  à sessão corrente é justamente o que fazia o PO não enxergar o que já existia.
+
+  `list_business_rules/1` devolve `%{"rules" => [...], "uncoveredCount" => n}`;
+  `list_backlog/1` devolve a árvore épico → história → tarefa. Nenhuma das duas
+  leva `session_id` — não há o que escopar por sessão aqui.
+  """
+  @callback list_business_rules(project_id :: String.t()) ::
+              {:ok, map()} | {:error, term()}
+  @callback list_backlog(project_id :: String.t()) ::
+              {:ok, [map()]} | {:error, term()}
+
+  @doc """
   Ferramentas do Arquiteto: `create_module_map` (modules validado contra ciclos
   na api) e `assign_story_modules`. Retornam `{:ok, map}` ou `{:error, term}`
   (ex.: ciclo / módulo inexistente → 4xx da api).
@@ -431,6 +445,10 @@ defmodule Engine.Sessions.EngineApiClient do
 
   def create_task(project_id, session_id, fields),
     do: impl().create_task(project_id, session_id, fields)
+
+  def list_business_rules(project_id), do: impl().list_business_rules(project_id)
+
+  def list_backlog(project_id), do: impl().list_backlog(project_id)
 
   def create_module_map(project_id, session_id, modules),
     do: impl().create_module_map(project_id, session_id, modules)
@@ -847,6 +865,34 @@ defmodule Engine.Sessions.EngineApiClient.Live do
            token: Map.get(body, "token"),
            username: Map.get(body, "username")
          }}
+
+      {:ok, %Req.Response{status: status, body: resp}} ->
+        {:error, {status, resp}}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  @impl true
+  def list_business_rules(project_id) do
+    get_json("/internal/projects/#{project_id}/business-rules")
+  end
+
+  @impl true
+  def list_backlog(project_id) do
+    get_json("/internal/projects/#{project_id}/backlog")
+  end
+
+  # GET que devolve o corpo decodificado. Existe para as leituras do PO
+  # (RN-164) e NÃO foi retrofitado nos seis GETs anteriores de propósito:
+  # cada um deles normaliza o corpo do seu jeito (o `get_git_remote` recasa
+  # chave por chave, o `session_pending_work` extrai dois campos), e trocar
+  # isso por um helper comum seria refatorar caminho que já está provado.
+  defp get_json(path) do
+    case Req.get(api_url() <> path, headers: headers()) do
+      {:ok, %Req.Response{status: status, body: body}} when status in 200..299 ->
+        {:ok, body}
 
       {:ok, %Req.Response{status: status, body: resp}} ->
         {:error, {status, resp}}
