@@ -100,6 +100,116 @@ interface TimelineEntry {
    * participar dele.
    */
   agentId?: string;
+  /**
+   * Quem PRODUZIU a entrada, no formato `<kind>:<id>` do `Actor` — sempre
+   * populado, inclusive para usuário e para as entradas de transição.
+   *
+   * É DELIBERADAMENTE diferente de `agentId`, e uma não substitui a outra:
+   * `agentId` responde "esta entrada participa do colapso por agente?" (e
+   * por isso o divisor de handoff o deixa vazio de propósito), enquanto
+   * `autor` responde "de quem é o turno em que ela nasceu?" — pergunta que o
+   * afundamento de desfecho (RN-172) precisa fazer sobre TODAS elas.
+   */
+  autor: string;
+  /**
+   * O TURNO a que a entrada pertence (RN-172): o `seq` da última ABERTURA de
+   * turno que não é posterior a ela, ou `0` no prólogo (antes da primeira).
+   */
+  turno: number;
+  /**
+   * A entrada é o DESFECHO do turno (RN-172) — handoff oferecido e card de
+   * aprovação. Afunda para o fim do próprio turno em vez de ficar onde o
+   * `seq` a colocou.
+   */
+  desfecho?: boolean;
+}
+
+/**
+ * As ABERTURAS de turno de uma sessão (RN-172) — os `seq` dos eventos cujo
+ * ator é o USUÁRIO.
+ *
+ * O critério não é arbitrário: um turno de agente só começa porque alguém de
+ * fora o começou, e é sempre o usuário. `SendAgentMessageUseCase` grava
+ * `chat.message`, `ActivateAgentUseCase` grava `agent.activated`,
+ * devolver/promover história grava
+ * `backlog.story_promotion_returned`/`backlog.story_transitioned` — e TODOS
+ * gravam `actor: { kind: 'user', … }`. Dentro do turno, ao contrário, tudo
+ * que o engine emite (`agent.response`, `handoff.offered`,
+ * `proposed_action.created`, `backlog.story_created`…) tem ator AGENTE.
+ *
+ * Ator `system` NÃO abre turno, de propósito: é ruído de infraestrutura no
+ * meio do fio, não uma decisão de quem conversa.
+ */
+export function aberturasDeTurno(eventos: SessionEvent[]): number[] {
+  return eventos
+    .filter((e) => e.actor.kind === 'user')
+    .map((e) => e.seq)
+    .sort((a, b) => a - b);
+}
+
+/** O turno de um ponto do eixo: a última abertura que não é posterior a ele. */
+export function turnoDoSeq(aberturas: number[], seq: number): number {
+  let turno = 0;
+  for (const abertura of aberturas) {
+    if (abertura > seq) break;
+    turno = abertura;
+  }
+  return turno;
+}
+
+/**
+ * RN-172 — handoff oferecido e card de aprovação são o DESFECHO do turno, e
+ * por isso aparecem DEPOIS da última fala dele.
+ *
+ * Isto NÃO é conserto de ordenação: a ordem por `seq` continua fiel ao event
+ * log e a RN-155 segue valendo inteira. O que o log registra é que
+ * `po_server.ex` (`run_turn/2`) emite, na MESMA iteração, o `agent.response`
+ * do turno, DEPOIS o `tool.call` de `offer_handoff` (que grava
+ * `handoff.offered`) e SÓ ENTÃO recursa para o `agent.response` de
+ * fechamento. O `seq` do handoff é, honestamente, menor que o da última fala
+ * — e mostrar "passou o bastão" no meio da conversa é leitura errada de um
+ * dado certo. O mesmo vale para `proposed_action.created`, que nasce no meio
+ * do turno enquanto o agente ainda tem o que dizer.
+ *
+ * A regra de APRESENTAÇÃO é: um desfecho desce até o fim do trecho logo
+ * abaixo dele, parando na primeira entrada que falhe QUALQUER uma das três
+ * condições — e são elas que garantem que turnos diferentes nunca se
+ * misturam:
+ *
+ * 1. **mesmo turno** (`turno`): protege o caso em que a fronteira entre dois
+ *    turnos não tem entrada VISÍVEL nenhuma — `agent.activated` abre turno e
+ *    não vira item do fio. Sem isto, o handoff do turno N desceria para
+ *    dentro do turno N+1 do mesmo agente.
+ * 2. **mesmo autor** (`autor`): em sessão de EXECUÇÃO vários agentes escrevem
+ *    sem que o usuário fale uma única vez, e todos ficam no mesmo turno; o
+ *    desfecho de um deles não pode atravessar a fala de outro.
+ * 3. **não é desfecho**: dois desfechos seguidos preservam a ordem entre si —
+ *    o `handoff.offered` do Infra antes do Dev Lead, na MESMA confirmação
+ *    (FASE 14d), continua nessa ordem.
+ *
+ * A varredura vai do FIM para o começo justamente para que um desfecho já
+ * reposicionado seja a parada do desfecho anterior, e nunca o contrário.
+ */
+export function afundarDesfechos(entradas: TimelineEntry[]): TimelineEntry[] {
+  const resultado = [...entradas];
+  for (let i = resultado.length - 1; i >= 0; i -= 1) {
+    const entrada = resultado[i];
+    if (!entrada.desfecho) continue;
+    let destino = i;
+    while (destino + 1 < resultado.length) {
+      const proxima = resultado[destino + 1];
+      if (proxima.desfecho) break;
+      if (proxima.turno !== entrada.turno) break;
+      if (proxima.autor !== entrada.autor) break;
+      destino += 1;
+    }
+    if (destino === i) continue;
+    // `splice` de remoção primeiro: quem estava em `destino` desce uma
+    // posição, e inserir EM `destino` deixa a entrada logo depois dele.
+    resultado.splice(i, 1);
+    resultado.splice(destino, 0, entrada);
+  }
+  return resultado;
 }
 
 /**
@@ -526,6 +636,9 @@ export function SessionPage({
   // sem NENHUM scroll automático.
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  // O CONTEÚDO do fio (RN-173) — o que muda de altura. O container rola, mas
+  // não é ele que cresce; observar o container não veria nada.
+  const messagesInnerRef = useRef<HTMLDivElement | null>(null);
   const abriuNoFimRef = useRef(false);
 
   const { data: project } = useQuery({ queryKey: ['project', projectId], queryFn: () => getProject(projectId) });
@@ -578,17 +691,46 @@ export function SessionPage({
     abriuNoFimRef.current = true;
   }, [highlightEvent, events.length]);
 
-  // Mensagem nova (evento persistido ou delta de streaming) acompanha o fim
-  // SE o usuário já estava lá — não arranca o scroll de quem subiu pra reler
-  // o histórico. Só entra em jogo depois da abertura inicial.
-  useEffect(() => {
+  // Conteúdo novo acompanha o fim SE o usuário já estava lá — não arranca o
+  // scroll de quem subiu pra reler o histórico. A guarda dos 120px é
+  // DELIBERADA e continua intacta: ela é a diferença entre "o chat me segue"
+  // e "o chat me arrasta".
+  const acompanharOFim = useCallback(() => {
     if (!abriuNoFimRef.current) return;
     const container = scrollContainerRef.current;
     if (!container) return;
     const pertoDoFim =
       container.scrollHeight - container.scrollTop - container.clientHeight < 120;
     if (pertoDoFim) rolarParaOFim(messagesEndRef.current);
-  }, [events.length, streamingText]);
+  }, []);
+
+  // RN-173: as dependências eram só `[events.length, streamingText]`, e por
+  // isso TUDO que cresce o fio sem um evento novo passava despercebido — um
+  // `ApprovalCard` chegando pelo poll de `usePendingActions` (que é uma query
+  // SEPARADA) empurrava a conversa para fora da tela sem rolar nada. `actions`
+  // entra aqui pelo mesmo motivo que `events`: é uma das duas fontes da
+  // timeline.
+  useEffect(() => {
+    acompanharOFim();
+  }, [events.length, actions.length, streamingText, acompanharOFim]);
+
+  // A outra metade do mesmo problema, e a que NENHUMA lista de dependências
+  // resolve: altura que muda sem estado novo no `SessionPage` — abrir/fechar
+  // um `Disclosure` (o colapso por agente da RN-138, os "Detalhes" do próprio
+  // card de aprovação), o Markdown reflowando, um diagrama renderizando
+  // depois. Quem sabe disso é o LAYOUT, não o React, então quem pergunta é um
+  // `ResizeObserver` — sobre o CONTEÚDO, com a MESMA guarda dos 120px.
+  //
+  // A guarda de existência é a mesma razão de `rolarParaOFim`: jsdom não
+  // implementa `ResizeObserver`, e num navegador de verdade ele sempre existe
+  // — a guarda nunca muda o comportamento visível.
+  useEffect(() => {
+    const alvo = messagesInnerRef.current;
+    if (!alvo || typeof ResizeObserver === 'undefined') return;
+    const observador = new ResizeObserver(() => acompanharOFim());
+    observador.observe(alvo);
+    return () => observador.disconnect();
+  }, [acompanharOFim]);
 
   const handoffsQuery = useHandoffs(projectId, sessionId, 3000);
   const handoffs = handoffsQuery.data ?? [];
@@ -826,6 +968,10 @@ export function SessionPage({
 
   const timeline = useMemo<TimelineEntry[]>(() => {
     const items: TimelineEntry[] = [];
+    // As fronteiras de turno (RN-172), calculadas UMA vez para a sessão
+    // inteira — é o que impede um desfecho de escorregar para o turno de
+    // baixo.
+    const aberturas = aberturasDeTurno(events);
     // O evento que representa a oferta de handoff ATUAL (ainda não aceita) —
     // o `handoff.offered` mais RECENTE com o mesmo par fromAgent/toAgent de
     // `offeredHandoff` (RN-125). O payload do evento não carrega o id do
@@ -894,10 +1040,22 @@ export function SessionPage({
       : -1;
 
     for (const event of events) {
-      if (event.type === 'chat.message') {
-        const text = typeof (event.payload as { text?: unknown })?.text === 'string' ? (event.payload as { text: string }).text : '';
+      // Todo item nascido deste evento herda o eixo (`seq`), o AUTOR e o
+      // TURNO dele — os três campos que `afundarDesfechos` lê. Passam por
+      // aqui em vez de serem repetidos em cada `items.push`: um `push` que
+      // esquecesse `autor`/`turno` viraria um item de turno "0" no meio do
+      // fio, e o desfecho pararia nele sem que ninguém entendesse por quê.
+      const empurrar = (entry: Omit<TimelineEntry, 'seq' | 'autor' | 'turno'>) =>
         items.push({
           seq: event.seq,
+          autor: `${event.actor.kind}:${event.actor.id}`,
+          turno: turnoDoSeq(aberturas, event.seq),
+          ...entry,
+        });
+
+      if (event.type === 'chat.message') {
+        const text = typeof (event.payload as { text?: unknown })?.text === 'string' ? (event.payload as { text: string }).text : '';
+        empurrar({
           node: (
             <div
               className={styles.message}
@@ -933,8 +1091,7 @@ export function SessionPage({
             e.type === 'chat.structured_question_answered' &&
             (e.payload as StructuredQuestionAnsweredPayload)?.questionSetId === event.id,
         );
-        items.push({
-          seq: event.seq,
+        empurrar({
           agentId: event.actor.kind === 'agent' ? event.actor.id : undefined,
           node: (
             <StructuredQuestionCard
@@ -966,8 +1123,13 @@ export function SessionPage({
         // tempo (um na topbar, um no fio) seria o mesmo problema que
         // `ApprovalCard` já evita ao nunca duplicar a ação fora do fio.
         const isOfertaAtual = isActive && event.seq === offeredHandoffEventSeq;
-        items.push({
-          seq: event.seq,
+        empurrar({
+          // RN-172: passar o bastão é o DESFECHO do turno, e por isso desce
+          // abaixo da última fala do agente que passou — o `seq` do evento o
+          // põe antes dela porque o engine emite a ferramenta ANTES de
+          // recursar para o fechamento. Vale para as duas formas (card
+          // acionável e divisor mudo): a leitura errada é a mesma.
+          desfecho: true,
           node: isOfertaAtual ? (
             <div className={styles.handoffCard} key={event.id}>
               <span className={styles.handoffPill}>
@@ -1051,8 +1213,7 @@ export function SessionPage({
         const titulo = typeof payload?.title === 'string' ? payload.title : '(sem título)';
         const verbo =
           event.type === 'backlog.epic_created' ? 'criou o épico' : 'criou a história';
-        items.push({
-          seq: event.seq,
+        empurrar({
           agentId: event.actor.kind === 'agent' ? event.actor.id : undefined,
           node: (
             <div className={styles.handoffDivider} key={event.id}>
@@ -1126,8 +1287,7 @@ export function SessionPage({
                 />
               ),
             }));
-            items.push({
-              seq: event.seq,
+            empurrar({
               node: (
                 <Carousel
                   key="carrossel-historias"
@@ -1152,8 +1312,7 @@ export function SessionPage({
           continue;
         }
 
-        items.push({
-          seq: event.seq,
+        empurrar({
           node:
             !resolvida && storyId ? (
               <div className={styles.handoffCard} key={event.id}>
@@ -1207,8 +1366,7 @@ export function SessionPage({
         const payload = event.payload as { title?: unknown; reason?: unknown };
         const titulo = typeof payload?.title === 'string' ? payload.title : 'uma história';
         const motivo = typeof payload?.reason === 'string' ? payload.reason : 'sem motivo';
-        items.push({
-          seq: event.seq,
+        empurrar({
           node: (
             <div
               className={styles.message}
@@ -1251,8 +1409,7 @@ export function SessionPage({
           typeof payload?.modelName === 'string' && payload.modelName !== ''
             ? payload.modelName
             : undefined;
-        items.push({
-          seq: event.seq,
+        empurrar({
           agentId: event.actor.kind === 'agent' ? event.actor.id : undefined,
           node: (
             <div className={styles.message} key={event.id} style={corDoAgente(event.actor.id)}>
@@ -1293,8 +1450,7 @@ export function SessionPage({
         // broadcast (efêmero) e o log guardava uma resposta vazia — quem
         // abrisse a sessão depois via um balão em branco e nada mais.
         const { mensagem, origem } = lerFalhaDeTurno(event.payload);
-        items.push({
-          seq: event.seq,
+        empurrar({
           agentId: event.actor.kind === 'agent' ? event.actor.id : undefined,
           node: (
             <div
@@ -1323,10 +1479,18 @@ export function SessionPage({
     }
 
     for (const action of actions) {
+      // RN-155: NUNCA `action.seq` (bigserial global da tabela inteira,
+      // incomparável com `event.seq`) — ver `ordemDaAcaoNaTimeline`.
+      const ordem = ordemDaAcaoNaTimeline(action, events);
       items.push({
-        // RN-155: NUNCA `action.seq` (bigserial global da tabela inteira,
-        // incomparável com `event.seq`) — ver `ordemDaAcaoNaTimeline`.
-        seq: ordemDaAcaoNaTimeline(action, events),
+        seq: ordem,
+        autor: `${action.actor.kind}:${action.actor.id}`,
+        turno: turnoDoSeq(aberturas, ordem),
+        // RN-172: a decisão que o agente pede é o DESFECHO do turno dele. O
+        // eixo continua o da RN-155 (o `seq` do `proposed_action.created`),
+        // que é honesto — a ação NASCE no meio do turno; o que muda é onde
+        // ela é MOSTRADA, porque decidir é a última coisa que o turno pede.
+        desfecho: true,
         agentId: action.actor.kind === 'agent' ? action.actor.id : undefined,
         // Sem `meta` com o modelo (achado I). O card recebia o modelo ATUAL da
         // sessão, então trocar o binding reescrevia retroativamente o rótulo de
@@ -1360,7 +1524,13 @@ export function SessionPage({
     // Um único eixo numérico agora (RN-155): `event.seq` pros eventos, e a
     // posição resolvida por `ordemDaAcaoNaTimeline` pras ações — nunca mais
     // `action.seq` cru misturado com `event.seq`.
-    return items.sort((a, b) => a.seq - b.seq);
+    //
+    // O `sort` continua sendo a ORDEM DO LOG, e a regra de APRESENTAÇÃO da
+    // RN-172 vem depois, numa passada separada e legível: quem lê daqui a um
+    // ano vê que a timeline é ordenada pelo event log e que handoff/aprovação
+    // são reposicionados por uma decisão de produto explícita — não vê um
+    // comparador com três termos que ninguém sabe mais justificar.
+    return afundarDesfechos(items.sort((a, b) => a.seq - b.seq));
   }, [
     events,
     actions,
@@ -2045,7 +2215,7 @@ export function SessionPage({
       <div className={styles.body}>
         <div className={styles.chatColumn}>
           <div className={styles.messages} ref={scrollContainerRef}>
-            <div className={styles.messagesInner}>
+            <div className={styles.messagesInner} ref={messagesInnerRef}>
               {/* O Criativo é ativado e NÃO fala primeiro: ele espera a sua
                   mensagem. Sem isto a tela ficava em branco depois de "Iniciar
                   ideação", e quem chega não tem como saber que a vez é dele.

@@ -796,6 +796,38 @@ cobriu nada, e tratá-la como se tivesse é trocar um silêncio por outro); e a
 cobrança é por OCORRÊNCIA, reportada uma vez, nunca alarme que repete a cada
 turno até alguém aprender a ignorá-lo.
 
+## RODADA exp001 — o fio se lê como o turno acontece (RN-172/173)
+Mesma origem das outras: USO, não roteiro. Quatro queixas sobre a tela da
+Sessão — o handoff do PO aparecendo ACIMA da última fala dele, a aprovação
+subindo para o meio da resposta do Arquiteto e só descendo quando ele
+terminava, o card de aprovação "mal diagramado" e o scroll que não seguia a
+conversa.
+
+**A investigação achou que a ordenação estava CERTA**, e é essa a lição da
+rodada. A RN-155 é fiel ao event log; o que o log diz é que
+`po_server.ex#run_turn/2` emite, na MESMA iteração, o `agent.response`, DEPOIS
+o `tool.call` de `offer_handoff` e SÓ ENTÃO recursa para a fala de fechamento
+— logo o `seq` do handoff é honestamente MENOR que o da última fala. O mesmo
+para `proposed_action.created`. A correção, portanto, não é de ordenação: é
+uma regra de APRESENTAÇÃO declarada (RN-172), numa passada separada
+(`afundarDesfechos`) DEPOIS do `sort` por `seq` — não um comparador com três
+termos que ninguém saberia justificar um ano depois.
+
+O que impede turnos de se misturarem são três barreiras, e cada uma existe
+por um caso real: **turno** (a fronteira entre dois turnos pode não ter
+entrada VISÍVEL — `agent.activated` abre turno e não vira item do fio),
+**autor** (em sessão de execução vários agentes escrevem sem o usuário falar
+nenhuma vez, e todos ficam no mesmo turno) e **não-desfecho** (dois desfechos
+seguidos preservam a ordem entre si — Infra antes do Dev Lead).
+
+A RN-173 fecha as outras duas queixas, e elas eram a mesma: o efeito de
+scroll dependia só de `[events.length, streamingText]`, e `actions` é uma
+query SEPARADA — um card chegando empurrava a conversa para fora da tela sem
+rolar nada. Dependência corrigida, mais um `ResizeObserver` sobre o conteúdo
+para o que NENHUMA lista de dependências alcança (colapso de `Disclosure`,
+Markdown reflowando). A guarda dos 120px do fim continua intacta, de
+propósito: o fio segue a conversa, não sequestra a leitura de quem subiu.
+
 ## FERRAMENTA DE DESENVOLVIMENTO — `pnpm bootstrap`
 Menu de terminal em `scripts/dev/bootstrap.sh` agrupando o que se faz no
 dia a dia: Docker, K8s, Database e Test. Existe porque esses comandos moram

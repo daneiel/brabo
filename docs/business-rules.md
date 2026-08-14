@@ -5750,6 +5750,87 @@ usar o `ToolLoop`.
 
 ---
 
+### RN-172 — Handoff e aprovação são o DESFECHO do turno {#rn-172}
+
+No fio da sessão, o **handoff oferecido** e o **card de aprovação** aparecem
+DEPOIS da última fala do turno em que nasceram — nunca no meio dele.
+
+Isto **não corrige ordenação**: a RN-155 continua valendo inteira, e a
+timeline segue ordenada pelo `seq` do event log. O que o log registra é a
+verdade: `po_server.ex` (`run_turn/2`) emite, na MESMA iteração, o
+`agent.response` do turno, DEPOIS o `tool.call` de `offer_handoff` (que grava
+`handoff.offered`) e SÓ ENTÃO recursa para o `agent.response` de fechamento.
+O `seq` do handoff é honestamente menor que o da última fala. O mesmo vale
+para `proposed_action.created`, que nasce no meio do turno enquanto o agente
+ainda tem o que dizer. Mostrar "passou o bastão" ou "aprove isto" no meio da
+conversa é leitura errada de um dado certo — então a regra é de
+APRESENTAÇÃO, aplicada numa passada separada e explícita
+(`afundarDesfechos`), depois do `sort` por `seq`, e não escondida num
+comparador com três termos.
+
+Turnos diferentes **nunca se misturam**. Um desfecho desce até o fim do
+trecho logo abaixo dele e para na primeira entrada que falhe qualquer uma das
+três condições:
+
+1. **mesmo turno** — turno é o `seq` da última ABERTURA anterior à entrada, e
+   abertura é evento de ator `user` (`chat.message`, `agent.activated`,
+   promoção/devolução de história). Protege o caso em que a fronteira entre
+   dois turnos não tem entrada VISÍVEL nenhuma: `agent.activated` abre turno e
+   não vira item do fio.
+2. **mesmo autor** — em sessão de EXECUÇÃO vários agentes escrevem sem que o
+   usuário fale uma única vez, e todos ficam no mesmo turno; o desfecho de um
+   não pode atravessar a fala de outro.
+3. **não é desfecho** — dois desfechos seguidos preservam a ordem entre si (o
+   `handoff.offered` do Infra antes do Dev Lead, na mesma confirmação).
+
+Ator `system` NÃO abre turno: é ruído de infraestrutura no meio do fio, não
+decisão de quem conversa.
+
+- **Onde:** `apps/web/src/routes/SessionPage.tsx`
+  (`aberturasDeTurno`, `turnoDoSeq`, `afundarDesfechos`, e os campos
+  `autor`/`turno`/`desfecho` de `TimelineEntry`)
+- **Teste:** `apps/web/src/routes/SessionPage.ordenacao-e-avisos.test.tsx`
+  (describes "RN-172 — turno e desfecho (unidade)" e "RN-172 — a sequência
+  REAL do engine, renderizada")
+- **Origem:** uso real no `exp001` — "a passagem de bastão do PO para o
+  arquiteto está aparecendo acima da última mensagem do PO" e "a mensagem de
+  aprovação apareceu acima do chat do arquiteto até ele finalizar a resposta"
+
+---
+
+### RN-173 — O fio acompanha tudo que cresce, e só quem já estava no fim {#rn-173}
+
+O chat rola para o fim quando o conteúdo cresce — **e não só quando chega
+evento novo**. As duas fontes da timeline são queries SEPARADAS (`events` e
+`actions`), e a altura ainda muda sem nenhuma das duas: abrir/fechar um
+`Disclosure` (colapso por agente da RN-138, "Detalhes" do card de aprovação),
+Markdown reflowando, diagrama renderizando depois. Por isso são dois
+mecanismos: as dependências do efeito cobrem o que o React sabe
+(`events.length`, `actions.length`, `streamingText`), e um `ResizeObserver`
+sobre o CONTEÚDO do fio cobre o que só o layout sabe.
+
+A guarda continua **inalterada e deliberada**: só rola quem já está a menos de
+120px do fim. Quem subiu para reler o histórico não é arrastado — o fio segue
+a conversa, não sequestra a leitura.
+
+No mesmo fio, o card de aprovação da variante `chat` deixa de ocupar os 780px
+inteiros da coluna: ganha teto de 560px e fica centralizado, como
+`.handoffCard`/`.handoffDivider` já são. Recuar 45px como as bolhas seria
+errado — o card não é fala de ninguém, é uma decisão pedida ao usuário. A
+fila da aba Aprovações (`variant="queue"`) não muda: lá o card DEVE preencher
+a coluna do grid.
+
+- **Onde:** `apps/web/src/routes/SessionPage.tsx` (`acompanharOFim` e os dois
+  efeitos que o chamam); `apps/web/src/components/ApprovalCard.module.css`
+  (`.card.chat`)
+- **Teste:** `apps/web/src/routes/SessionPage.ordenacao-e-avisos.test.tsx`
+  (describe "RN-173 — o fio acompanha o que cresce", com o caso de o usuário
+  ter rolado para cima)
+- **Origem:** uso real no `exp001` — "o scroll do chat deve ficar sempre no
+  final seguindo o chat" e "aprovação mal diagramado deve ficar ao centro"
+
+---
+
 ## Quando dá errado
 
 | situação | o que o sistema faz |
