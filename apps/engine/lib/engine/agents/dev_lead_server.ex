@@ -128,9 +128,17 @@ defmodule Engine.Agents.DevLeadServer do
       # A api narra a falha no PRÓPRIO frame final (budget, credencial, binding).
       # Isto não caía no `{:error, _}` abaixo e não emitia evento nenhum: o
       # turno terminava em silêncio absoluto, pior que o balão vazio.
+      #
+      # Devolve `state` (mapa), e NÃO `{state, ""}` (tupla): quem recebe o
+      # retorno de `run_turn/2` é `TurnoAssincrono.tratar_resultado/2`, que faz
+      # `Map.put(resultado, :turno_assincrono, nil)`. `Map.put/3` numa tupla
+      # levanta `BadMapError` DENTRO do `handle_info` do agente e, como o
+      # servidor é `restart: :temporary`, ele morria e não voltava — a correção
+      # de uma falha silenciosa tinha virado uma QUEDA, com o gatilho mais
+      # corriqueiro que existe (acabar o orçamento).
       {:ok, %{"error" => erro}} when is_binary(erro) and erro != "" ->
         emit_falha(state, {:final, erro})
-        {state, ""}
+        state
 
       {:ok, %{"message" => message} = frame} ->
         content = Map.get(message, "content", "")

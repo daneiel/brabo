@@ -70,6 +70,45 @@ describe('MarkdownMessage', () => {
     expect(screen.getByText('clique')).toBeInTheDocument();
   });
 
+  /**
+   * RN-176 — o Mapa de Módulos do Arquiteto vem como tabela Markdown na
+   * `agent.response`, e saía como parágrafo com pipes literais. A tabela é
+   * renderizada pelo `Table` do DESIGN SYSTEM (o mesmo de Configurações e
+   * Gastos), não por uma `<table>` própria.
+   */
+  it('tabela Markdown vira o Table do design system, com cabeçalho e células', () => {
+    const { container } = render(
+      <MarkdownMessage
+        text={'| Módulo | Stack |\n| --- | --- |\n| api | NestJS |\n| web | React |'}
+      />,
+    );
+
+    // Nenhum pipe literal sobrou na tela — era exatamente o defeito relatado.
+    expect(container.textContent).not.toContain('|');
+
+    expect(screen.getByText('Módulo')).toBeInTheDocument();
+    expect(screen.getByText('Stack')).toBeInTheDocument();
+    expect(screen.getByText('api')).toBeInTheDocument();
+    expect(screen.getByText('NestJS')).toBeInTheDocument();
+    expect(screen.getByText('web')).toBeInTheDocument();
+    expect(screen.getByText('React')).toBeInTheDocument();
+
+    // O `Table` monta CSS Grid, não `<table>` — a prova de que o componente
+    // compartilhado foi reusado em vez de duplicado aqui.
+    expect(container.querySelector('table')).toBeNull();
+  });
+
+  it('formatação dentro da célula sobrevive (código, negrito)', () => {
+    render(<MarkdownMessage text={'| Módulo | Depende |\n| --- | --- |\n| `api` | **web** |'} />);
+    expect(screen.getByText('api').tagName).toBe('CODE');
+    expect(screen.getByText('web').tagName).toBe('STRONG');
+  });
+
+  it('prosa com `|` e sem separador continua parágrafo — nada vira tabela por engano', () => {
+    const { container } = render(<MarkdownMessage text="escolha entre a | b | c" />);
+    expect(container.textContent).toBe('escolha entre a | b | c');
+  });
+
   it('nunca usa innerHTML: uma tag literal no texto do modelo aparece como TEXTO, não como elemento', () => {
     const { container } = render(<MarkdownMessage text={'texto com <img src=x onerror=alert(1)> no meio'} />);
     // Nenhum <img> real foi criado — a string sobrevive como texto.

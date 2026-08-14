@@ -83,18 +83,47 @@ sequenceDiagram
 
 ## Estado
 
-**Fases 1 a 5 concluídas**, versão **v0.1.0**. O que existe:
+**Fases 1 a 26 concluídas**, versão **v3.1.0**. O que existe:
 
-- IAM/RBAC, sessões com event log imutável, roteador de LLM (Ollama e APIs),
-  metering e orçamento, pipeline de aprovação
-- GitProvider para Local, GitHub e GitLab sob contrato único; bootstrap de
-  Gitflow idempotente
-- Harness completo; Criativo, PO e Arquiteto com artefatos validados
-- Devs dinâmicos em worktrees isolados, gates de QA e SecOps, trava de merge,
-  Psicólogo e Anamnese com loop fechado
-- Imagens de produção non-root, CI com scan, deploy Kustomize, graceful
-  shutdown, OpenTelemetry, backup com restore **testado**
+- IAM/RBAC, sessões com event log imutável, roteador de LLM, metering e
+  orçamento, pipeline de aprovação com `permissions.json`
+- GitProvider para Local, GitHub, GitLab, Bitbucket e genérico sob contrato
+  único, com capability declarada só quando provada; bootstrap de Gitflow
+  idempotente e adoção de repositório existente com o plano como portão
+- Harness completo e hierarquia de agentes por área — lead como contato
+  externo, delegação interna privada, veredito consolidado; Criativo, PO,
+  Arquiteto e Dev Lead conversacionais, devs por módulo em worktrees isolados,
+  QA e SecOps como gates de PR, Infra propositivo, Psicólogo e Anamnese com
+  loop fechado
+- Auth first-party (argon2id, access Ed25519, rotação de refresh com revogação
+  de família) — o Keycloak saiu inteiro; OpenAPI travada por tipo nos
+  controllers, com a [referência](reference/api/brabo-api.info.mdx) gerada
+- Nove providers de LLM sobre uma base OpenAI-compatível única, catálogo com
+  curadoria manual e preço congelado no metering
+- Imagens de produção non-root, deploy Kustomize com HPA por fila do Oban,
+  graceful shutdown, OpenTelemetry, backup com restore **testado**
+- Esteira de release mecanizada: versão calculada pela função da branch,
+  approval-ladder, promote/tag-release e backmerge com retropropagação
+- A app: as oito telas do handoff de design, aba Code só-leitura (árvore,
+  arquivo com realce próprio, busca, diff de PR, blame e PRs na API), aba
+  Gastos com duas audiências, linha do tempo em árvore, container por projeto
+  decidido pelo Arquiteto e o diagrama C4 dele na Visão Geral
 
-O que ainda não existe está dito onde importa — a
-[dívida técnica conhecida](architecture.md#divida-tecnica) é uma
-seção, não uma omissão.
+O que veio depois da Fase 15 não saiu de roteiro: saiu de **usar o produto**. O
+programa 16–26 nasceu da primeira navegação real na app, e cada achado das
+sessões de teste ao vivo virou regra com `arquivo:linha` e teste. A cadeia
+inteira foi provada contra um GitHub real — adoção do repositório, promoção de
+história, dev agent escrevendo código, PR aberta, gate julgando e o veredito
+voltando.
+
+O que ainda não existe está dito onde importa, e é para ser lido:
+
+- a [dívida técnica conhecida](architecture.md#divida-tecnica) é uma seção, não
+  uma omissão;
+- os [achados da execução real](explanation/achados-execucao-real.md) registram
+  o que segue aberto **por decisão** — incluindo os dois casos em que a
+  conclusão foi que o caminho para autonomia não passa por afrouxar política;
+- o ciclo de vida do container por projeto é **corte declarado** da Fase 25, não
+  esquecimento: enquanto ele não sobe, a política de terminal do
+  [ADR 0055](adr/0055-escopo-de-caminho-na-politica-de-terminal.md) segue
+  valendo como está.

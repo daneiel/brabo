@@ -609,12 +609,22 @@ function verificarContagensDeAdr() {
 }
 
 /**
- * A versão que o README anuncia contra a ÚLTIMA release do CHANGELOG.
+ * A versão anunciada em prosa contra a ÚLTIMA release do CHANGELOG.
  *
  * O README ficou preso em `v0.1.0` da Fase 5 até a v2.1.0 — sete releases
  * anunciando a errada, na primeira coisa que quem chega lê. É o mesmo modo de
  * falha das contagens de ADR ("gerar > verificar > lembrar", ADR 0029): número
  * no meio de uma frase que ninguém tem obrigação de lembrar de trocar.
+ *
+ * E acontece uma vez por lugar: o `docs/intro.md` — a primeira página do SITE
+ * publicado, que nem todo mundo alcança pelo README — anunciava "Fases 1 a 5,
+ * v0.1.0" com o produto na 26. Conferir só o README nunca protegeu a segunda
+ * porta de entrada, então a aferição virou uma LISTA: cada arquivo que escreve
+ * a versão em prosa entra aqui, com o padrão que a encontra.
+ *
+ * Padrão que não casa também REPROVA, pelo mesmo motivo das contagens de ADR:
+ * um check cuja regex parou de achar a frase fica verde para sempre dizendo
+ * que conferiu algo que não olhou.
  *
  * O badge não entra aqui de propósito — ele passou a ler a release do GitHub
  * direto (`shields.io/github/v/release`) e se atualiza sozinho. Verifica-se só
@@ -624,39 +634,57 @@ function verificarContagensDeAdr() {
  * workflow de release e volta por PR — não uma tag lida do git, que pode não
  * existir num checkout raso de CI.
  */
-function verificarVersaoNoReadme() {
+function verificarVersaoAnunciada() {
   const ultima = /^## v(\d+\.\d+\.\d+) — /m.exec(ler('CHANGELOG.md'));
 
   if (ultima === null) {
-    pendencias.push('versão no README');
+    pendencias.push('versão anunciada');
     console.log(
       '  CEGO      CHANGELOG.md — não achei nenhuma seção `## vX.Y.Z — data`.\n' +
-        '            Sem ela não há com o que comparar o README.',
+        '            Sem ela não há com o que comparar a prosa.',
     );
     return;
   }
 
-  const anunciada = /versão \*\*v(\d+\.\d+\.\d+)\*\*/.exec(ler('README.md'));
+  const afericoes = [
+    {
+      arquivo: 'README.md',
+      padrao: /versão \*\*v(\d+\.\d+\.\d+)\*\*/,
+    },
+    {
+      // A primeira página do site publicado. O padrão exige a frase INTEIRA
+      // ("Fases 1 a NN concluídas**, versão **vX.Y.Z**") de propósito: as duas
+      // metades envelhecem juntas, e casar só a versão deixaria a contagem de
+      // fases mentindo do lado dela sem nada reprovar.
+      arquivo: 'docs/intro.md',
+      padrao: /\*\*Fases 1 a \d+ concluídas\*\*, versão \*\*v(\d+\.\d+\.\d+)\*\*/,
+    },
+  ];
 
-  if (anunciada === null) {
-    pendencias.push('versão no README');
-    console.log(
-      '  CEGO      README.md — não achei a versão anunciada. A frase mudou, e o\n' +
-        '            check deixou de conferir. Ajuste o padrão em generate.mjs.',
-    );
-    return;
+  let problemas = 0;
+  for (const { arquivo, padrao } of afericoes) {
+    const anunciada = padrao.exec(ler(arquivo));
+
+    if (anunciada === null) {
+      problemas++;
+      console.log(
+        `  CEGO      ${arquivo} — não achei a versão anunciada. A frase mudou, e o\n` +
+          '            check deixou de conferir. Ajuste o padrão em generate.mjs.',
+      );
+      continue;
+    }
+
+    if (anunciada[1] !== ultima[1]) {
+      problemas++;
+      console.log(
+        `  DESATUAL. ${arquivo} — a versão anunciada: diz v${anunciada[1]}, ` +
+          `a última release é v${ultima[1]}.`,
+      );
+    }
   }
 
-  if (anunciada[1] !== ultima[1]) {
-    pendencias.push('versão no README');
-    console.log(
-      `  DESATUAL. README.md — a versão anunciada: diz v${anunciada[1]}, ` +
-        `a última release é v${ultima[1]}.`,
-    );
-    return;
-  }
-
-  console.log(`  ok        versão no README (v${ultima[1]})`);
+  if (problemas > 0) pendencias.push('versão anunciada');
+  else console.log(`  ok        versão anunciada (v${ultima[1]}, em ${afericoes.length} arquivos)`);
 }
 
 // ------------------------------------------------------------------- main
@@ -670,7 +698,7 @@ gerarReferenciaApi();
 gerarProvidersDeLlm();
 verificarIndiceAdr();
 verificarContagensDeAdr();
-verificarVersaoNoReadme();
+verificarVersaoAnunciada();
 
 if (CHECAR && pendencias.length > 0) {
   console.error(

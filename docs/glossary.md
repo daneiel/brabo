@@ -105,7 +105,15 @@ Desde [RN-122](business-rules.md#rn-122) roda numa `Task` supervisionada
 (`Engine.Agents.TurnoAssincrono`), não mais dentro do `handle_call` que
 recebia a mensagem — é o que permite o botão **"Parar"** do composer
 cancelar o turno DE VERDADE (mata a task, corta a conexão com a api) em vez
-de só parar de renderizar no cliente.
+de só parar de renderizar no cliente. Cada um tem teto PRÓPRIO de voltas do
+laço (Criativo e PO 12, Arquiteto e Dev Lead 14) — é constante do servidor do
+agente, não o teto do `ToolLoop` (`Engine.Harness.Iteracoes`), que vale para os
+agentes de execução e de gate. O Criativo foi o último a ganhar o laço, em
+[RN-163](business-rules.md#rn-163): até então ele chamava o modelo uma vez por
+turno e prometia uma correção que nunca acontecia. Esse teto próprio também
+deixou de ser silencioso: esgotado, emite o MESMO `toolloop.limit_reached`
+([RN-166](business-rules.md#rn-166)), porque é o mesmo fato e quem lê o event
+log não deve precisar de um segundo nome.
 
 **Handoff** — passagem explícita de trabalho de um agente para outro. Explícita
 porque o destino e o motivo ficam registrados no event log, em vez de um agente
@@ -124,6 +132,14 @@ sobre o mesmo repositório. Dois devs mexem em branches diferentes sem se
 atropelar. É por **agente**, não por task: quem reivindica a próxima task
 substitui o diretório, e é isso que obriga o agente a segurá-lo enquanto um
 gate ainda vai lê-lo.
+
+**Modo de workspace** — onde o código de um projeto mora no disco, escolhido na
+criação e **congelado** depois ([ADR 0072](adr/0072-projeto-local-ou-container.md),
+[RN-169](business-rules.md#rn-169)). `container` é a pasta gerenciada sob
+`PROJECT_WORKSPACES_ROOT` — o default e o comportamento de sempre; `local` é um
+caminho absoluto do usuário, que só funciona se estiver montado no container.
+Não confundir com **workspace** de IAM (o agrupamento de projetos e membros):
+são a mesma palavra para coisas diferentes, e o modo é sobre disco.
 
 **Estados do dev agent** — `working` (implementando), `awaiting_approval`
 (propôs commit/push/PR e alguma ficou pendente de aprovação — **sem PR não se

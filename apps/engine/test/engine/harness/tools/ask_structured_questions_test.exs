@@ -38,15 +38,75 @@ defmodule Engine.Harness.Tools.AskStructuredQuestionsTest do
                      %{type: "chat.structured_question", actorId: "criativo", payload: payload}}
 
     assert payload.questions == [
-             %{id: "nome", label: "Qual o nome do produto?", type: "text", options: []},
-             %{id: "usuarios", label: "Quem são os usuários?", type: "textarea", options: []},
+             %{
+               id: "nome",
+               label: "Qual o nome do produto?",
+               type: "text",
+               options: [],
+               allowOther: false
+             },
+             %{
+               id: "usuarios",
+               label: "Quem são os usuários?",
+               type: "textarea",
+               options: [],
+               allowOther: false
+             },
              %{
                id: "plataforma",
                label: "Qual plataforma?",
                type: "select",
-               options: ["Web", "Mobile", "Ambos"]
+               options: ["Web", "Mobile", "Ambos"],
+               allowOther: true
              }
            ]
+  end
+
+  # RN-171: a saída por texto livre do `select` é o DEFAULT. O uso real
+  # encontrou o usuário preso numa lista fechada por esquecimento do modelo —
+  # e uma lista fechada por engano não tem como ser destravada de fora.
+  test "select sem `allowOther` nasce ABERTO (default true)", %{ctx: ctx} do
+    questions = [%{"id" => "a", "label" => "A?", "type" => "select", "options" => ["x"]}]
+
+    assert {:ok, _} = AskStructuredQuestions.run(%{"questions" => questions}, ctx)
+    assert_received {:event_appended, _, _, %{payload: %{questions: [%{allowOther: true}]}}}
+  end
+
+  test "select com `allowOther: false` fecha a lista — é a declaração deliberada", %{ctx: ctx} do
+    questions = [
+      %{
+        "id" => "a",
+        "label" => "A?",
+        "type" => "select",
+        "options" => ["Sim", "Não"],
+        "allowOther" => false
+      }
+    ]
+
+    assert {:ok, _} = AskStructuredQuestions.run(%{"questions" => questions}, ctx)
+    assert_received {:event_appended, _, _, %{payload: %{questions: [%{allowOther: false}]}}}
+  end
+
+  test "`allowOther` em text/textarea é sempre false — o campo já é texto livre", %{ctx: ctx} do
+    questions = [%{"id" => "a", "label" => "A?", "type" => "text", "allowOther" => true}]
+
+    assert {:ok, _} = AskStructuredQuestions.run(%{"questions" => questions}, ctx)
+    assert_received {:event_appended, _, _, %{payload: %{questions: [%{allowOther: false}]}}}
+  end
+
+  test "`allowOther` não booleano é recusado", %{ctx: ctx} do
+    questions = [
+      %{
+        "id" => "a",
+        "label" => "A?",
+        "type" => "select",
+        "options" => ["x"],
+        "allowOther" => "sim"
+      }
+    ]
+
+    assert {:error, texto} = AskStructuredQuestions.run(%{"questions" => questions}, ctx)
+    assert texto =~ "allowOther"
   end
 
   test "type default é text quando omitido", %{ctx: ctx} do

@@ -33,6 +33,7 @@ arquivo. Comece pela triagem.
 | agente parando com `limite de iterações atingido` sem ter entregado | [Ambiente de inferência](#ambiente-de-inferencia) |
 | quero acrescentar um provider de LLM compatível com a OpenAI | [Adicionando um provider compatível](#adicionando-um-provider-compativel) |
 | quero migrar meus workspaces do volume Docker para uma pasta real | [Migrar workspaces para pasta local](#migrar-workspaces-pasta-local) |
+| criar projeto **Local** recusa dizendo que a pasta não existe | [Projeto no modo Local](#projeto-no-modo-local) |
 
 Duas coisas que valem antes de qualquer procedimento:
 
@@ -69,6 +70,64 @@ Compose (`name: brabo` em `docker/docker-compose.yml`) — confirme com
 `docker volume ls` se você renomeou o projeto. O volume antigo continua
 existindo depois (Compose não apaga volume que saiu de uso); remova com
 `docker volume rm` se tiver certeza de que a cópia funcionou.
+
+### Projeto no modo Local {#projeto-no-modo-local}
+
+**Sintoma:** ao criar o projeto escolhendo **Local**, a api responde `400`
+dizendo que a pasta *não existe do lado de dentro da api*.
+
+Isso é a guarda funcionando ([RN-170](business-rules.md#rn-170)), não um bug: o
+caminho que você digitou existe no seu computador e **não** dentro do container.
+Um projeto criado assim travaria depois, na primeira ferramenta do primeiro
+agente, longe da tela onde a decisão foi tomada — por isso ele não nasce.
+
+**O que fazer.** Montar a pasta nos **dois** serviços, no **mesmo caminho
+absoluto** dos dois lados:
+
+```yaml
+# docker/docker-compose.yml
+services:
+  api:
+    volumes:
+      # ... as linhas que já existem
+      - /home/voce/projetos/loja:/home/voce/projetos/loja
+
+  engine:
+    volumes:
+      # ... as linhas que já existem
+      - /home/voce/projetos/loja:/home/voce/projetos/loja
+```
+
+```bash
+docker compose -f docker/docker-compose.yml up -d api engine
+```
+
+Confira antes de tentar de novo — a api valida o que **ela** vê, e não tem como
+saber o que está montado no outro container:
+
+```bash
+docker compose -f docker/docker-compose.yml exec api  ls -la /home/voce/projetos/loja
+docker compose -f docker/docker-compose.yml exec engine ls -la /home/voce/projetos/loja
+```
+
+**Por que o mesmo caminho dos dois lados.** O caminho é gravado UMA vez em
+`projects.workspace_path` e lido pelos dois processos
+([RN-169](business-rules.md#rn-169)). Montar em lugares diferentes faria o
+engine escrever onde a api não lê — a divergência que a derivação única existe
+para impedir.
+
+**Outros modos de recusa, e o que cada um quer dizer:**
+
+| a mensagem diz | o que fazer |
+|---|---|
+| *não existe do lado de dentro da api* | montar, como acima |
+| *existe mas não é uma pasta* | o caminho aponta para um arquivo; use a pasta |
+| *o processo não pode escrever nela* | dono/permissão da pasta no host. As imagens rodam non-root ([ADR 0024](adr/0024-fase5-imagens-producao-ci.md)); ajuste o dono ou o modo da pasta |
+| *Caminho inválido para um projeto Local* | é raiz do sistema, pasta de sistema, relativo, tem `..`, ou se sobrepõe ao checkout do Brabo — escolha uma pasta sua, fora dessas ([ADR 0072](adr/0072-projeto-local-ou-container.md)) |
+
+**Não confunda com o modo Container.** Projeto no modo Container (o default)
+continua usando `PROJECT_WORKSPACES_ROOT` e o procedimento de migração acima;
+o modo Local não passa por essa raiz em momento nenhum.
 
 ---
 

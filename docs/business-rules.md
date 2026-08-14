@@ -2874,20 +2874,36 @@ Havia um segundo caminho, pior ainda: quando a api narrava a falha no PRÓPRIO
 frame final (budget, credencial ausente, binding faltando), o turno não caía no
 ramo de erro e **não emitia evento nenhum** — silêncio absoluto.
 
+Esse mesmo ramo, uma vez corrigido, custou uma segunda rodada: no PO, no
+Arquiteto e no Dev Lead ele devolvia `{state, ""}` — uma TUPLA onde todos os
+outros ramos de `run_turn` devolvem o `state` (um mapa). O `Map.put/3` de
+`TurnoAssincrono.tratar_resultado/2` levantava `BadMapError` dentro do
+`handle_info`, e como os quatro conversacionais são `restart: :temporary`, o
+agente MORRIA e não voltava. A falha deixava de ser silenciosa e virava uma
+queda — com os gatilhos mais corriqueiros que existem. A regra vale inteira: o
+agente narra a falha **e continua de pé**. Por isso `tratar_resultado/2` tem
+uma segunda barreira, no ponto compartilhado pelos quatro: resultado de turno
+que não é mapa vira `agent.error` com origem `codigo`, nunca um processo morto.
+
 A origem NUNCA é adivinhada: cada padrão em `FalhaDeTurno.origem/1` tem um
-motivo escrito, e o que não casa com nenhum sai como **`indeterminada`**, que é
-mais honesto que chutar uma das quatro (ADR 0020).
+motivo escrito, e o que não casa com nenhum sai como **`codigo`** — a lacuna é
+do nosso classificador, e essa é a origem que aponta a ação certa (ADR 0020).
 
 Os eventos já gravados não se apagam — a tela os NOMEIA como resposta vazia
 anterior a esta regra, em vez de mostrar branco.
 
 - **Onde:** `apps/engine/lib/engine/agents/falha_de_turno.ex`,
   `criativo_server.ex`, `po_server.ex`, `arquiteto_server.ex`,
-  `infra_lead_server.ex` (`emit_falha/2`),
+  `dev_lead_server.ex`, `infra_lead_server.ex` (`emit_falha/2`),
+  `turno_assincrono.ex` (`tratar_resultado/2`, a segunda barreira),
   `apps/web/src/lib/session-falha.ts`
 - **Teste:** `apps/engine/test/engine/agents/criativo_server_test.exs`
   (evento durável com origem; nunca grava resposta vazia; erro narrado no frame
-  final também vira evento); `apps/web/src/lib/session-falha.test.ts`
+  final também vira evento); `po_server_test.exs` (o frame final com erro não
+  derruba o agente — GenServer de VERDADE, com `Process.alive?/1`);
+  `arquiteto_server_test.exs` e `dev_lead_server_test.exs` (mesmo caminho, ciclo
+  completo); `turno_assincrono_test.exs` (a segunda barreira narra em vez de
+  derrubar); `apps/web/src/lib/session-falha.test.ts`
 - **Origem:** execução real da FASE 13b
 
 ### RN-116 — Falha ao CRIAR um handoff não derruba o agente {#rn-116}
@@ -5479,6 +5495,708 @@ reaparecer — o card vira somente leitura assim que existe um
   `apps/web/src/routes/SessionPage.perguntas-estruturadas.test.tsx`
 - **Origem:** pedido do usuário — sem precedente de input estruturado no chat
 
+### RN-163 — O Criativo cumpre a promessa de tentar de novo {#rn-163}
+
+Cada turno do Criativo roda um **laço bounded de tool use**, com teto de **12**
+idas ao modelo — o mesmo desenho que o PO e o Arquiteto já tinham. Antes o
+modelo era chamado UMA vez por turno: o resultado da ferramenta era anexado ao
+histórico em memória e ninguém mais o lia, então a frase *"vou corrigir e
+tentar de novo"* — literal no código — só se cumpria se o usuário mandasse
+outra mensagem. Para quem usava, o Criativo simplesmente parava de responder
+depois de dizer que ia corrigir.
+
+Quatro consequências, e cada uma é uma regra:
+
+1. **Erro de ferramenta é entrada, não fim de linha.** O motivo volta ao modelo
+   como mensagem `tool` e o laço chama o modelo de novo, que reemite corrigido
+   DENTRO do mesmo turno.
+2. **Nada se anuncia que o código não vá executar.** A frase de retentativa é
+   decidida depois de despachar as ferramentas e sabendo quantas voltas
+   sobraram: com volta disponível, o agente diz que vai corrigir; sem volta, ele
+   não promete.
+3. **A falha de ferramenta virou `agent.error` durável, com origem**
+   ([RN-059](#rn-059)) — era `agent.response`, indistinguível no event log de
+   uma resposta normal. `origem: infra` quando a api recusou o `append_event`;
+   `origem: modelo` para o payload que o modelo escreveu (chave errada,
+   `origin` que não é lista, regra duplicada, tipo system-emitted). O payload
+   carrega `tool` e `retentativa`.
+4. **Teto esgotado não termina em silêncio.** Vira `agent.error` com
+   `reason: "limite_de_iteracoes"` e `origem: modelo`, a mesma leitura do
+   `toolloop.limit_reached` do `ToolLoop`. O nome do evento NÃO é reusado: este
+   agente não roda dentro do `ToolLoop`, e o evento mentiria sobre quem o
+   produziu.
+
+Duas fronteiras do laço, ambas deliberadas: `ask_structured_questions`
+bem-sucedida **encerra** o turno (a bola está com o usuário, e as respostas
+voltam num turno futuro — [RN-162](#rn-162)); e um turno que teve falha em
+alguma volta fecha com um desfecho CONSOLIDADO no fio, para a última palavra
+não ser o erro de uma volta que já foi corrigida depois.
+
+- **Onde:** `apps/engine/lib/engine/agents/criativo_server.ex`
+  (`run_turn_capturing/3`, `continuar/4`, `emit_falha_de_ferramenta/4`,
+  `emit_falha_limite/2`)
+- **Teste:** `apps/engine/test/engine/agents/criativo_server_test.exs`
+  (laço que corrige de verdade, teto esgotado narrado, origem `infra` vs
+  `modelo`, pergunta estruturada que encerra o turno)
+- **Origem:** uso real no projeto `exp001` — "o Criativo não respondeu depois
+  de dizer que iria corrigir e tentar de novo"
+
+### RN-169 — O projeto escolhe onde o código mora: Local ou Container {#rn-169}
+
+Um projeto nasce com um **modo de workspace** (`projects.workspace_mode`,
+migração `0043`), e é ele que decide de onde a raiz de escopo é derivada:
+
+- **`container`** (DEFAULT, e o comportamento que sempre existiu): a pasta
+  GERENCIADA pelo produto, `join(PROJECT_WORKSPACES_ROOT, workspace_dir_name)`
+  ([RN-109](#rn-109));
+- **`local`**: uma pasta DO USUÁRIO, no caminho absoluto de
+  `projects.workspace_path`.
+
+O par é amarrado por CHECK no banco
+(`(workspace_mode = 'local') = (workspace_path IS NOT NULL)`), e não só pelo
+caso de uso: a coluna é lida por DOIS processos (api e engine) e escrita por
+scripts de seed/backfill que não passam por ele. `local` sem caminho seria
+escopo de terminal apontando para lugar nenhum; `container` com caminho seria
+uma segunda fonte de verdade esperando divergir da primeira.
+
+A derivação continua **única** — `projectScopeRoot` passou a receber a
+localização (`{workspaceDirName, workspaceMode, workspacePath}`) e escolhe o
+ramo; nenhum dos quatro consumidores ([RN-092](#rn-092)) ganhou validação
+própria. O engine resolve o mesmo localizador na CONSULTA (nome de pasta no
+`container`, caminho absoluto no `local`) e distingue os dois pela barra
+inicial, que é inequívoca porque o nome de pasta é validado contra
+`^[A-Za-z0-9_-]{1,64}$`.
+
+Duas consequências explícitas do modo `local`:
+
+1. **O portão da imagem do Arquiteto ([RN-105](#rn-105)) NÃO vale.** Projeto
+   Local não sobe container, então a aba Code libera sem esperar decisão que
+   nunca vai acontecer. A dispensa mora no mesmo funil do portão na api, e a
+   tela concorda: `ProjectCodeTab` nem chega a perguntar o estado do container
+   ([RN-107](#rn-107)) quando o projeto é Local — se só a api dispensasse, a
+   aba continuaria bloqueada na tela por uma decisão inexistente.
+2. **O `permissions.json` mora na pasta do usuário**, junto com o código —
+   porque a política tem que ser lida da MESMA raiz que o escopo de terminal
+   autoriza.
+
+`workspace_mode` não confunde com o `GitProviderName` `'local'`: um diz onde o
+CÓDIGO mora em disco, o outro onde o REPOSITÓRIO git vive, e as duas escolhas
+são ortogonais.
+
+- **Onde:** `apps/api/src/db/schema.ts` (`projects`),
+  `apps/api/src/infrastructure/filesystem/project-workspaces-root.ts`
+  (`projectScopeRoot`), `apps/api/src/domain/iam/project.entity.ts`,
+  `apps/api/src/application/use-cases/git/read-project-code.use-case.ts`
+  (`portaoDoContainer`), `apps/web/src/routes/ProjectCodeTab.tsx`,
+  `apps/engine/lib/engine/projects/project.ex`,
+  `apps/engine/lib/engine/actions/workspace.ex` (`workspace_dir/2`),
+  `apps/engine/lib/engine/dev/worktree_cleanup.ex` (que era a segunda
+  derivação escrita à mão, e passou a usar a única),
+  `apps/web/src/routes/NewProjectWizard.tsx`
+- **Teste:** `apps/api/test/infrastructure/filesystem/project-workspaces-root.spec.ts`
+  (describe "projectScopeRoot no modo local"),
+  `apps/api/test/infrastructure/filesystem/fs-permissions-file-store.spec.ts`
+  (o permissions.json na pasta do usuário),
+  `apps/api/test/application/use-cases/iam/create-project-modo-de-workspace.spec.ts`,
+  `apps/api/test/application/use-cases/git/read-project-code.use-case.spec.ts`
+  (projeto Local não passa pelo portão),
+  `apps/api/test/interfaces/http/iam/project-dto-modo-de-workspace.spec.ts`
+  (o modo é congelado: PATCH não o muda),
+  `apps/web/src/routes/ProjectCodeTab.test.tsx` (a tela também dispensa o gate),
+  `apps/engine/test/engine/actions/workspace_test.exs`
+  (describe "workspace_dir/2 com o localizador já resolvido"),
+  `apps/web/src/routes/NewProjectWizard.test.tsx`
+- **Decisão arquitetural:** [ADR 0072](adr/0072-projeto-local-ou-container.md)
+- **Origem:** pedido do usuário (decisão dele, com a variante de caminho livre
+  escolhida explicitamente)
+
+### RN-170 — Caminho Local é validado na CRIAÇÃO, e a recusa ensina {#rn-170}
+
+Criar um projeto no modo `local` com um caminho que a api não alcança produz um
+projeto que **trava depois** — na primeira ferramenta do primeiro agente, longe
+da tela onde a decisão foi tomada. Por isso a criação **recusa com 400**, e a
+mensagem diz o que falta fazer.
+
+O caminho precisa ser:
+
+1. **absoluto**, sem `..` nem `.` em nenhum segmento (o caminho gravado é o
+   caminho que se lê; `/srv/app/../../etc` é `/etc` e não parece);
+2. **existente e uma pasta** dentro do container da api;
+3. **gravável pelo processo** (`access(W_OK|X_OK)`) — as imagens rodam non-root
+   ([ADR 0024](adr/0024-fase5-imagens-producao-ci.md)), e pasta do host com
+   outro dono chega montada como somente leitura na prática;
+4. **fora da raiz e das pastas de sistema** (`/`, `/etc`, `/usr`, `/var`,
+   `/data`… e tudo abaixo delas): a raiz do projeto é o escopo que AUTORIZA o
+   terminal do agente ([ADR 0055](adr/0055-escopo-de-caminho-na-politica-de-terminal.md)),
+   e um projeto com raiz em `/etc` transforma "o agente escreve no projeto dele"
+   em "o agente reescreve o container";
+5. **sem sobreposição com o checkout do Brabo, nos DOIS sentidos** — a pasta que
+   CONTÉM o monorepo e a pasta DENTRO dele. O segundo caso é o problema que o
+   ADR 0055 relata acontecendo de verdade.
+
+O caminho gravado é o **normalizado**, não a string crua: validar uma string e
+gravar outra é como a validação deixa de valer no dia seguinte. `workspacePath`
+enviado junto com `workspace_mode: container` é RECUSADO, não ignorado — campo
+descartado em silêncio vira "mas eu configurei".
+
+A parte LÉXICA (itens 1, 4 e 5) roda **também na leitura**, a cada derivação de
+`projectScopeRoot`: o único jeito de burlar a criação é escrever direto no
+banco, e o que se ganha ali é escopo de terminal em `/`. A parte de DISCO
+(itens 2 e 3) roda só na criação, onde o usuário ainda pode corrigir.
+
+A recusa por pasta ausente traz a instrução de montagem — o arquivo, os dois
+serviços e a linha (`- <caminho>:<caminho>`), com o ponteiro para
+[o runbook](runbook.md). Montar só na api produz um projeto que a api aceita e o
+engine não enxerga: ela valida o que ela vê, e não tem como saber o que está
+montado no outro container.
+
+- **Onde:** `apps/api/src/infrastructure/filesystem/project-workspaces-root.ts`
+  (`validarCaminhoDeWorkspaceLocal`, `CaminhoLocalInvalidoError`),
+  `apps/api/src/application/use-cases/iam/create-project.use-case.ts`
+  (`caminhoValidado`), `apps/api/src/interfaces/http/iam/dto/create-project.dto.ts`,
+  `apps/web/src/lib/wizard.ts` (`caminhoLocalParecePlausivel`)
+- **Teste:** `apps/api/test/infrastructure/filesystem/project-workspaces-root.spec.ts`
+  (describe "validarCaminhoDeWorkspaceLocal"),
+  `apps/api/test/application/use-cases/iam/create-project-modo-de-workspace.spec.ts`
+  (describe "a criação RECUSA o caminho que travaria depois"),
+  `apps/web/src/lib/wizard.test.ts`, `apps/web/src/routes/NewProjectWizard.test.tsx`
+- **Decisão arquitetural:** [ADR 0072](adr/0072-projeto-local-ou-container.md)
+- **Origem:** guarda exigida pela variante de caminho livre (ADR 0072)
+
+---
+
+### RN-164 — O PO LÊ o que já existe, escopado ao projeto {#rn-164}
+
+O PO ganhou duas ferramentas de LEITURA — `listar_regras_de_negocio` e
+`listar_backlog` (`:direct`, sem parâmetro nenhum) — servidas por duas rotas
+internas escopadas ao **projeto**: `GET /internal/projects/:projectId/business-rules`
+e `GET /internal/projects/:projectId/backlog`.
+
+A primeira devolve todo `artifact.business_rule` das sessões do projeto com a
+`description` inteira, quais histórias já citam cada regra e o
+`uncoveredCount`; a segunda devolve a MESMA árvore épico → história → tarefa
+da aba Backlog, pelo mesmo `ListBacklogUseCase` (três leituras por projeto,
+nunca N+1). O texto que volta ao modelo põe as regras DESCOBERTAS primeiro e
+os épicos ÓRFÃOS antes da árvore — é o que gera trabalho.
+
+O que a regra corrige: até aqui o PO tinha **quatro ferramentas e todas de
+escrita**. O contexto dele era montado uma vez, no kickoff, a partir dos 200
+últimos eventos da **sessão** — dali em diante ele não sabia quais regras
+existiam, quais já tinha coberto, nem o que já havia criado. O escopo é o
+projeto e não a sessão de propósito: regra capturada numa sessão anterior é
+exatamente o que a leitura por sessão escondia.
+
+Ler **não** vira `proposed_action` (não é efeito externo), mas é CONTIDA no
+sentido do ADR 0060: nenhuma das duas rotas aceita parâmetro além do id do
+projeto — sem busca, sem paginação, sem filtro —, o custo por chamada é
+constante, e o texto entregue ao modelo tem teto de linhas dizendo o total
+real quando trunca.
+
+- **Onde:** `apps/engine/lib/engine/harness/tools/listar_regras_de_negocio.ex`,
+  `apps/engine/lib/engine/harness/tools/listar_backlog.ex`,
+  `apps/engine/lib/engine/agents/po_server.ex`,
+  `apps/engine/lib/engine/sessions/engine_api_client.ex`,
+  `apps/api/src/application/use-cases/backlog/list-business-rules.use-case.ts`,
+  `apps/api/src/interfaces/http/internal/internal-projects.controller.ts`
+- **Teste:** `apps/engine/test/engine/harness/tools/listar_regras_de_negocio_test.exs`,
+  `apps/engine/test/engine/harness/tools/listar_backlog_test.exs`,
+  `apps/engine/test/engine/agents/po_server_test.exs`,
+  `apps/api/test/application/use-cases/backlog/list-business-rules.use-case.spec.ts`
+- **Origem:** uso real no projeto `exp001` — "crie ferramenta para o PO
+  conseguir listar as regras de negócio"
+
+---
+
+### RN-165 — Épico sem história é cobrado, e o PO pergunta quando não sabe {#rn-165}
+
+Quando o PO encerra um turno tendo criado um épico e **nenhuma história para
+ele**, isso vira desfecho EXPLÍCITO: evento durável
+`backlog.epic_without_story` (com `origem: "modelo"`, os ids e títulos dos
+épicos e a mensagem) mais o broadcast `agent.error` — o padrão da
+[RN-059](#rn-059): o log é o que sobrevive, o broadcast é o agente dizendo no
+fio. A cobrança é por OCORRÊNCIA: reportada uma vez, a lista de pendências é
+esvaziada, e não vira alarme que repete a cada turno.
+
+O que conta é a criação que **deu certo**: um `create_story` recusado pela api
+(`business_rule_id` inexistente, por exemplo) não quita o épico. Tratá-lo como
+se quitasse seria trocar um silêncio por outro. Os épicos pendentes vivem no
+state do `PoServer` e NÃO são reidratados: a cobrança é sobre a obrigação
+assumida no turno, e reconstruí-la do event log reabriria épico antigo que o
+usuário já resolveu de outro jeito.
+
+Junto vieram as duas peças que faltavam para o PO ter uma saída além de parar:
+`ask_structured_questions` — a MESMA ferramenta do Criativo
+([RN-162](#rn-162)), só passada a advertisar no `po_server` — e a instrução de
+kickoff dizendo, com todas as letras, que épico sem história trava a execução
+e que **faltando informação se PERGUNTA**, nunca se para nem se inventa. A
+instrução anterior não dizia uma palavra sobre o que fazer diante de uma
+lacuna, e diante de uma lacuna sem instrução um modelo escolhe entre inventar
+e parar.
+
+- **Onde:** `apps/engine/lib/engine/agents/po_server.ex`
+  (`anotar_obrigacao/4`, `encerrar_turno/1`, `obrigacoes/0`),
+  `apps/engine/lib/engine/harness/tools/create_epic.ex` (`id_no_resultado/1`),
+  `apps/web/src/lib/activity.ts`
+- **Teste:** `apps/engine/test/engine/agents/po_server_test.exs`
+  (describe "RN-165"), `apps/web/src/lib/activity.test.ts`
+- **Origem:** uso real no projeto `exp001` — backlog sem história, logo sem
+  tarefa, logo execução travada sem erro visível
+
+---
+
+### RN-166 — O teto de iterações do PO deixa rastro {#rn-166}
+
+Esgotado o teto de iterações do laço de ferramentas do `PoServer` (12), o
+turno emite `toolloop.limit_reached` com `{iteration, max_iterations}` —
+o MESMO tipo e o mesmo payload que o `Engine.Harness.ToolLoop` já emitia
+desde a Fase 3. Antes, a cláusula devolvia o state e pronto: de fora, um laço
+esgotado era indistinguível de um turno que simplesmente acabou.
+
+Reusar o identificador em vez de criar um `po.*` é deliberado: é o mesmo fato
+(o laço bateu no teto), e quem lê o event log não deve precisar aprender um
+segundo nome por causa de o agente conversacional ter laço próprio em vez de
+usar o `ToolLoop`.
+
+- **Onde:** `apps/engine/lib/engine/agents/po_server.ex` (`run_turn/2`,
+  cláusula `remaining <= 0`)
+- **Teste:** `apps/engine/test/engine/agents/po_server_test.exs`
+  ("teto de iterações emite toolloop.limit_reached")
+- **Origem:** investigação do travamento do `exp001` — o laço terminava em
+  silêncio
+
+---
+
+### RN-172 — Handoff e aprovação são o DESFECHO do turno {#rn-172}
+
+No fio da sessão, o **handoff oferecido** e o **card de aprovação** aparecem
+DEPOIS da última fala do turno em que nasceram — nunca no meio dele.
+
+Isto **não corrige ordenação**: a RN-155 continua valendo inteira, e a
+timeline segue ordenada pelo `seq` do event log. O que o log registra é a
+verdade: `po_server.ex` (`run_turn/2`) emite, na MESMA iteração, o
+`agent.response` do turno, DEPOIS o `tool.call` de `offer_handoff` (que grava
+`handoff.offered`) e SÓ ENTÃO recursa para o `agent.response` de fechamento.
+O `seq` do handoff é honestamente menor que o da última fala. O mesmo vale
+para `proposed_action.created`, que nasce no meio do turno enquanto o agente
+ainda tem o que dizer. Mostrar "passou o bastão" ou "aprove isto" no meio da
+conversa é leitura errada de um dado certo — então a regra é de
+APRESENTAÇÃO, aplicada numa passada separada e explícita
+(`afundarDesfechos`), depois do `sort` por `seq`, e não escondida num
+comparador com três termos.
+
+Turnos diferentes **nunca se misturam**. Um desfecho desce até o fim do
+trecho logo abaixo dele e para na primeira entrada que falhe qualquer uma das
+três condições:
+
+1. **mesmo turno** — turno é o `seq` da última ABERTURA anterior à entrada, e
+   abertura é evento de ator `user` (`chat.message`, `agent.activated`,
+   promoção/devolução de história). Protege o caso em que a fronteira entre
+   dois turnos não tem entrada VISÍVEL nenhuma: `agent.activated` abre turno e
+   não vira item do fio.
+2. **mesmo autor** — em sessão de EXECUÇÃO vários agentes escrevem sem que o
+   usuário fale uma única vez, e todos ficam no mesmo turno; o desfecho de um
+   não pode atravessar a fala de outro.
+3. **não é desfecho** — dois desfechos seguidos preservam a ordem entre si (o
+   `handoff.offered` do Infra antes do Dev Lead, na mesma confirmação).
+
+Ator `system` NÃO abre turno: é ruído de infraestrutura no meio do fio, não
+decisão de quem conversa.
+
+- **Onde:** `apps/web/src/routes/SessionPage.tsx`
+  (`aberturasDeTurno`, `turnoDoSeq`, `afundarDesfechos`, e os campos
+  `autor`/`turno`/`desfecho` de `TimelineEntry`)
+- **Teste:** `apps/web/src/routes/SessionPage.ordenacao-e-avisos.test.tsx`
+  (describes "RN-172 — turno e desfecho (unidade)" e "RN-172 — a sequência
+  REAL do engine, renderizada")
+- **Origem:** uso real no `exp001` — "a passagem de bastão do PO para o
+  arquiteto está aparecendo acima da última mensagem do PO" e "a mensagem de
+  aprovação apareceu acima do chat do arquiteto até ele finalizar a resposta"
+
+---
+
+### RN-173 — O fio acompanha tudo que cresce, e só quem já estava no fim {#rn-173}
+
+O chat rola para o fim quando o conteúdo cresce — **e não só quando chega
+evento novo**. As duas fontes da timeline são queries SEPARADAS (`events` e
+`actions`), e a altura ainda muda sem nenhuma das duas: abrir/fechar um
+`Disclosure` (colapso por agente da RN-138, "Detalhes" do card de aprovação),
+Markdown reflowando, diagrama renderizando depois. Por isso são dois
+mecanismos: as dependências do efeito cobrem o que o React sabe
+(`events.length`, `actions.length`, `streamingText`), e um `ResizeObserver`
+sobre o CONTEÚDO do fio cobre o que só o layout sabe.
+
+A guarda continua **inalterada e deliberada**: só rola quem já está a menos de
+120px do fim. Quem subiu para reler o histórico não é arrastado — o fio segue
+a conversa, não sequestra a leitura.
+
+No mesmo fio, o card de aprovação da variante `chat` deixa de ocupar os 780px
+inteiros da coluna: ganha teto de 560px e fica centralizado, como
+`.handoffCard`/`.handoffDivider` já são. Recuar 45px como as bolhas seria
+errado — o card não é fala de ninguém, é uma decisão pedida ao usuário. A
+fila da aba Aprovações (`variant="queue"`) não muda: lá o card DEVE preencher
+a coluna do grid.
+
+- **Onde:** `apps/web/src/routes/SessionPage.tsx` (`acompanharOFim` e os dois
+  efeitos que o chamam); `apps/web/src/components/ApprovalCard.module.css`
+  (`.card.chat`)
+- **Teste:** `apps/web/src/routes/SessionPage.ordenacao-e-avisos.test.tsx`
+  (describe "RN-173 — o fio acompanha o que cresce", com o caso de o usuário
+  ter rolado para cima)
+- **Origem:** uso real no `exp001` — "o scroll do chat deve ficar sempre no
+  final seguindo o chat" e "aprovação mal diagramado deve ficar ao centro"
+
+### RN-171 — A pergunta de lista tem saída por texto livre, por default {#rn-171}
+
+Pergunta `type: "select"` de `ask_structured_questions` (RN-162) aceita
+resposta **fora da lista**. O campo é `allowOther`, e o **default é `true`**:
+quem não declara nada oferece a saída. Fechar a lista exige
+`allowOther: false` explícito, e só faz sentido quando ela é genuinamente
+fechada ("Sim"/"Não").
+
+O default aberto não é preferência de estilo. Uma lista fechada por
+ESQUECIMENTO do modelo trava a conversa inteira e o usuário não tem como
+destravá-la de fora — foi exatamente o que o uso real encontrou: o modelo
+ofereceu uma opção do tipo "Escreva você mesmo" e o formulário não tinha onde
+escrever, porque o schema do tool não sabia expressar "além destas, o que
+você quiser". Uma lista aberta por engano, no pior caso, oferece um campo a
+mais. Os dois erros não custam a mesma coisa. Pelo mesmo motivo a descrição
+do tool **proíbe** criar uma opção "Outro" dentro de `options`: o formulário
+já a oferece sozinha, e duas escapatórias na mesma lista confundem.
+
+`allowOther` só existe em `select` — em `text`/`textarea` o campo já é texto
+livre, e o engine normaliza esses dois para `false` em vez de gravar estado
+sem significado no event log. Na tela, escolher "Outra (escrever)" troca o
+`Select` por um `Input`: o sentinela de interface (`__outra__`) **nunca**
+viaja para o backend, e o que vai é o TEXTO digitado. O botão de envio
+continua exigindo TODAS as perguntas preenchidas — `AnswerStructuredQuestion
+UseCase` recusa com 400 listando o que falta, então habilitar com campo vazio
+só produziria um erro do servidor —, e estar em "Outra" com o texto ainda em
+branco NÃO conta como preenchido.
+
+O card também deixou de ser o único item do fio alinhado a nada: ele passa a
+ser centralizado com o mesmo teto de 560px do `ApprovalCard` na variante
+`chat` ([RN-173](#rn-173)) e ganha o avatar e a cor do agente, que é o que o
+faz ler como FALA de alguém em vez de formulário órfão. Antes ele nascia
+encostado à esquerda com teto de 480px, enquanto as bolhas começam 45px
+adentro.
+
+- **Onde:** `apps/engine/lib/engine/harness/tools/ask_structured_questions.ex`
+  (schema, validação e `normalizar/1`), `apps/web/src/lib/api-types.ts`
+  (`StructuredQuestion.allowOther`), `apps/web/src/routes/SessionPage.tsx`
+  (`StructuredQuestionCard`, `OUTRA_RESPOSTA`, `permiteOutra`),
+  `apps/web/src/routes/SessionPage.module.css` (`.structuredQuestionCard`,
+  `.structuredQuestionCabecalho`)
+- **Teste:** `apps/engine/test/engine/harness/tools/ask_structured_questions_test.exs`
+  (default aberto, `false` explícito, `allowOther` não booleano recusado),
+  `apps/web/src/routes/SessionPage.perguntas-estruturadas.test.tsx`
+  (describe "saída por texto livre no select")
+- **Origem:** uso real no `exp001` — "sempre dê a opção de input do usuário
+  quando ele seleciona Escreva"
+
+### RN-174 — Ação que dispara turno de agente arma o indicador do fio {#rn-174}
+
+O indicador de "o agente está trabalhando" (os três pontinhos depois de 5s,
+[RN-131](#rn-131)/[RN-156](#rn-156)) só aparece enquanto `streaming` ou
+`statusAgent` valem, e eles eram ligados em três lugares: o composer
+(`handleSend`), as confirmações de prontidão e o canal Phoenix. **Toda ação da
+tela que dispara um turno síncrono no engine passa a armá-lo também.**
+
+São duas, e nenhuma delas é o composer:
+
+1. **Responder o formulário de perguntas estruturadas** —
+   `AnswerStructuredQuestionUseCase` reusa `SendAgentMessageUseCase`
+   ([RN-162](#rn-162)), e a chamada só resolve depois do turno inteiro.
+2. **Devolver uma história ao PO** — `ReturnStoryUseCase` chama `reviseStory`,
+   que é `handle_call({:revise, …})` no `po_server`: a resposta HTTP espera o
+   PO reescrever a história.
+
+O canal Phoenix não cobre o buraco, e é isso que torna a correção necessária
+em vez de redundante: quando ele ainda não terminou de conectar (ticket +
+join, [RN-108](#rn-108)) o broadcast de `agent.status` "working" não tem
+ouvinte e se perde — a tela fica em silêncio absoluto por dezenas de segundos,
+que é indistinguível de "não vai acontecer nada".
+
+O par é `iniciarTurnoDoAgente(agente)` **antes** do `await` (o `agent.status`
+do canal pode chegar primeiro, e sem o agente fixado o indicador nasceria sem
+saber quem fala) e `finalizarTurnoDoAgente()` no `finally` — nos DOIS
+caminhos, porque um erro que deixasse `streaming` ligado travaria o composer
+até o próximo turno. Resolver a chamada é sinal de fim de turno tão confiável
+quanto o `agent.done` do canal, e `finalizarTurnoDoAgente` é idempotente. O
+prazo de 5s não muda: turno que responde rápido continua sem mostrar nada.
+
+- **Onde:** `apps/web/src/routes/SessionPage.tsx` (`iniciarTurnoDoAgente`,
+  `handleReturnStory`, `StructuredQuestionCard`)
+- **Teste:** `apps/web/src/routes/SessionPage.perguntas-estruturadas.test.tsx`
+  e `apps/web/src/routes/SessionPage.promocao-inline-e-volta.test.tsx`
+  (describes de RN-174, com o caso de falha provando que o indicador não fica
+  preso)
+- **Origem:** uso real no `exp001` — "caso a web, api e engine demore mais de
+  5s para ter uma resposta, a web deve apresentar uma animação no chat
+  mostrando que o agente está pensando"
+
+### RN-175 — Toda resposta de agente diz com qual modelo foi gerada {#rn-175}
+
+`agent.response` carrega `modelName` nos **três** produtores do evento, e não
+só nos quatro agentes conversacionais:
+
+| produtor | quem passa por ali | antes |
+|---|---|---|
+| os quatro conversacionais (`criativo`/`po`/`arquiteto`/`dev_lead`) | chat | já gravava, desde a [RN-146](#rn-146) |
+| `Engine.Harness.ToolLoop` | TODO agente de execução e de gate — `dev-*`, QA, SecOps, Infra-Workflows, Psicólogo, Anamnese | **nunca gravou** |
+| `SendChatMessageUseCase` (api) | chat sem agente ativo, em que quem responde é o modelo | **nunca gravou** |
+
+Nenhuma chamada nova: `RunLlmTurnUseCase` já devolve `modelName` no corpo e
+`StreamLlmTurnUseCase` já o põe no frame `final` — o valor é o nome do modelo
+do **binding resolvido** (`model.name`), não o eco do provider. Ele é `null`
+quando o turno falhou antes de resolver o binding, e ausente em evento gravado
+antes desta regra.
+
+Na tela, o modelo deixou de ser a palavra solta `modelo` em mono 10px
+`--text-muted` ao lado do nome do agente — que se lê como se o modelo se
+CHAMASSE "modelo", e que reprova o contraste de texto de leitura. Virou um
+**chip** com o ícone de modelo, `--text-secondary` sobre `--surface-2`, e o
+rótulo de desconhecido passou a ser "modelo não registrado". A tela **não**
+adivinha o modelo pelo binding ATUAL do agente quando o dado falta: atribuir a
+uma resposta antiga um modelo que talvez nem existisse quando ela foi gerada
+seria inventar procedência, e procedência inventada é pior que ausente — o
+mesmo argumento do preço congelado em `token_usage` ([RN-044](#rn-044)).
+
+Fora do escopo, declarado: `agent.error` continua sem o modelo nos quatro
+servidores, mesmo quando a api o mandou no frame de erro (budget estourado, por
+exemplo). É mudança de outro evento, com outra pergunta a responder.
+
+- **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex`,
+  `apps/api/src/application/use-cases/llm/send-chat-message.use-case.ts`,
+  `apps/web/src/routes/SessionPage.tsx` (o chip em `agent.response`),
+  `apps/web/src/routes/SessionPage.module.css` (`.messageModelo`)
+- **Teste:** `apps/engine/test/engine/harness/tool_loop_test.exs`,
+  `apps/api/test/application/use-cases/llm/send-chat-message.use-case.spec.ts`,
+  `apps/web/src/routes/SessionPage.arquiteto-modelo-icone.test.tsx`,
+  `apps/web/src/design-contraste.test.ts` (o par do chip)
+- **Origem:** uso real no `exp001` — "PO não mostrou o modelo que estava
+  utilizando; todos os agentes devem apresentar o seu modelo ao lado do nome"
+
+### RN-176 — Tabela em Markdown no fio vira tabela de verdade {#rn-176}
+
+O Markdown leve do chat ([RN-158](#rn-158)) passa a reconhecer **tabela GFM** e
+a renderizá-la com o `Table` do design system — o mesmo componente de
+Configurações, Gastos e Executores, não uma `<table>` própria: "como o Brabo
+desenha uma tabela" é uma decisão só. Antes, a tabela do Mapa de Módulos que o
+Arquiteto escreve na resposta saía como parágrafo com pipes literais.
+
+O que distingue tabela de prosa com `|` é a **linha separadora**, e ela é
+obrigatória como no GFM: sem ela o bloco continua sendo parágrafo, então
+"escolha entre a | b | c" não vira tabela por engano. O cabeçalho manda no
+número de colunas — linha curta ganha célula vazia, linha longa perde o
+excesso —, `\|` escapado fica dentro da célula, e o alinhamento sai dos
+dois-pontos do separador. Zero dependência nova: o parser continua sendo o
+próprio, por regex, e a árvore de dados continua virando elementos React
+diretos (nenhum `dangerouslySetInnerHTML`).
+
+**O artefato `artifact.module_map` continua FORA do fio**, e a escolha é
+deliberada: ele é estado VIGENTE do projeto, não artefato datado por sessão —
+a mesma decisão já registrada na [RN-159](#rn-159) —, e vive na Visão Geral.
+O que o usuário pediu foi a tabela **dentro da mensagem**, e é ela que passou
+a ser desenhada; a correção serve a QUALQUER agente que escreva uma tabela, e
+não só ao Mapa de Módulos.
+
+No balão, a tabela **rola na horizontal** em vez de espremer coluna: o fio tem
+~700px e um `module_map` tem 4 colunas.
+
+- **Onde:** `apps/web/src/lib/markdown.ts` (bloco `table`, `celulasDaLinha`),
+  `apps/web/src/components/ui/MarkdownMessage.tsx` (`TabelaMarkdown`),
+  `apps/web/src/components/ui/MarkdownMessage.module.css`
+- **Teste:** `apps/web/src/lib/markdown.test.ts` (describe "tabela (RN-176)"),
+  `apps/web/src/components/ui/MarkdownMessage.test.tsx`
+- **Origem:** uso real no `exp001` — "a tabela dentro da mensagem do Mapa de
+  Módulos do arquiteto tem que ficar bem estruturada em formato tabela,
+  utilizar design system do próprio Brabo"
+
+### RN-177 — O log mostra tudo, e o histórico se recolhe por ORIGEM {#rn-177}
+
+O feed de atividade escondia seis tipos de evento (`tool.call`, `tool.result`,
+`agent.response`, `agent.delta`, `agent.status`, `context.compacted`) **sem
+oferecer alternativa nenhuma**: quem quisesse ver o que o agente e o harness
+trocam entre si tinha de abrir o banco. O filtro continua, e continua
+**desligado por padrão** — a razão dele não mudou (116 de 193 eventos reais
+eram desses tipos, ver `isMachineEvent`) —, mas virou **escolha**: um botão
+"Eventos de máquina" no mesmo trilho dos chips de tipo.
+
+Mostrar tudo só resolve metade: uma sessão longa vira uma lista que ninguém
+percorre. Por isso as **5 mais recentes ficam abertas** e o resto entra em
+colapsos por **ORIGEM** — uma classificação NOVA, que não substitui o
+`ActivityKind`: `kind` diz de que ASSUNTO o evento fala (commit, PR, permissão)
+e decide ícone e cor; `origem` diz de que CAMADA ele veio, e é ela que torna o
+histórico legível em punhados. As seis saem do dado que existe — `actor.kind` e
+o prefixo do `type` —, nunca de suposição:
+
+| origem | o que cai nela |
+|---|---|
+| `harness` | `tool.*`, `toolloop.*`, `agent.status`, `context.compacted` |
+| `llm` | `agent.response`, `agent.delta`, `llm.*` |
+| `usuario` | qualquer evento com `actor.kind === 'user'` |
+| `sistema` | qualquer evento com `actor.kind === 'system'` |
+| `agente` | `agent.*` restante, `handoff.*`, `delegation.*`, `chat.*` de agente |
+| `eventos` | o event log de domínio (backlog, git, PR, artefato, bootstrap…) |
+
+A **precedência** é o que torna a classificação previsível, e está na ordem dos
+`if`: mecanismo (`harness`, `llm`) vence ator, porque um `tool.call` é do
+harness qualquer que seja o ator; e ator vence prefixo de agente, porque
+`chat.message` existe dos dois lados e quem os distingue é quem falou. Tipo que
+ninguém previu cai em `eventos` — nunca some, nunca inventa categoria.
+
+**A mesma regra vale no FIO da sessão**, com o eixo invertido: o fio é
+crescente (o mais novo junto do composer), então as 5 últimas entradas ficam
+abertas em baixo e o histórico recolhido fica no TOPO. O corte é sobre a lista
+já agrupada por agente ([RN-138](#rn-138)) — quem conta é o que o usuário vê, e
+um colapso de doze mensagens é UMA entrada na tela.
+
+- **Onde:** `apps/web/src/lib/activity.ts:94` (`OrigemDeEvento`), `:125`
+  (`origemDoEvento`), `:152` (`agruparPorOrigem`);
+  `apps/web/src/components/ActivityFeed.tsx:34` (o corte de 5), `:66` (o
+  toggle); `apps/web/src/routes/SessionPage.tsx:284` (o corte do fio), `:1898`
+  (`fio`)
+- **Teste:** `apps/web/src/lib/activity-origem.test.ts`,
+  `apps/web/src/components/ActivityFeed.test.tsx` (describe "ordem,
+  agrupamento e o toggle de máquina"),
+  `apps/web/src/routes/SessionPage.painel-e-agrupamento.test.tsx` (describe
+  "RN-177")
+- **Origem:** uso real no `exp001` — "em log de eventos mostrar também log do
+  sistema, concentrar a mensagem em grupo, ou seja mantém as últimas 5
+  mensagens mas abaixo vira o grupo de log de eventos, sistema, llm, harness,
+  agente, usuário"
+
+### RN-178 — O painel da sessão lê do último para o primeiro, e a lista de regras pagina {#rn-178}
+
+As quatro seções do painel de contexto (regras de negócio, artefatos gerados,
+arquivos tocados e log de eventos) eram **crescentes**: abriam no começo da
+sessão. Numa sessão de milhares de eventos isso entrega a tela errada — quem
+abre o painel quer o que acabou de acontecer. As quatro passaram a ser
+**decrescentes**, inclusive dentro da árvore de backlog ([RN-179](#rn-179)).
+
+Uma consequência que veio junto: o botão "Carregar mais antigos" do feed
+([RN-099](#rn-099)) **mudou de lado**. Ele ficava ACIMA da lista porque a lista
+era crescente e o passado estava em cima; com a ordem invertida o passado está
+no fim, e um botão no topo pediria para rolar na direção contrária à que ele
+carrega — o mesmo argumento de antes, com o sinal trocado.
+
+E **acima de 5 regras a lista pagina**, em vez de crescer sem fim: o painel tem
+a largura de uma coluna e uma sessão de ideação passa de vinte regras sem
+esforço. A página vigente é resolvida por *clamp* (`min(pagina, total - 1)`) e
+não por efeito de sincronização: uma regra nova chegando pelo poll alonga a
+lista, e um `useEffect` renderizaria uma vez com a página inválida antes de
+corrigir. Com 5 ou menos, o paginador **não existe** — controle que não pagina
+nada é ruído ocupando altura.
+
+- **Onde:** `apps/web/src/routes/SessionPage.tsx:2988` (`REGRAS_POR_PAGINA`) e
+  a ordenação das quatro seções em `ContextAside`;
+  `apps/web/src/components/ActivityFeed.tsx:98` (o `sort` decrescente)
+- **Teste:** `apps/web/src/routes/SessionPage.painel-e-agrupamento.test.tsx`
+  (describe "RN-178"), `apps/web/src/components/ActivityFeed.test.tsx`
+- **Origem:** uso real no `exp001` — "mostrar log de eventos, arquivos tocados
+  e regras de negócio sempre em ordem do último para o primeiro de acordo com
+  a data" e "caso as regras de negócio ficar acima de 5, deve-se paginar"
+
+### RN-179 — O artefato do PO é uma ÁRVORE: épico → história → tarefa {#rn-179}
+
+O painel "Artefatos gerados" ([RN-159](#rn-159)) listava épico e história lado
+a lado, planos, e **ignorava `backlog.task_created`** — justamente o que um dev
+agent pega para trabalhar. Os três passaram a formar uma árvore, com o filho
+dentro de um colapso do pai, e as tarefas nascem FECHADAS: um épico com trinta
+tarefas tomaria o painel inteiro sem que ninguém tivesse pedido.
+
+O parentesco sai do **vínculo que o evento já carrega** —
+`backlog.story_created` grava `epicId`, `backlog.task_created` grava `storyId`
+—, nunca da vizinhança no log. Nó cujo pai não está entre os eventos carregados
+**sobe para a raiz** em vez de ser pendurado no épico mais próximo: inventar
+parentesco é pior que mostrar o nó solto, e uma tarefa cuja história ficou fora
+da janela é caso normal, não erro.
+
+Cada nível continua sendo um **link** para o Backlog, e o colapso dos filhos
+vem ABAIXO da linha em vez de dentro do cabeçalho — cabeçalho de `Disclosure` é
+`<button>`, e um `<a>` dentro de um `<button>` é HTML inválido e alvo de clique
+ambíguo. O contador do cabeçalho da seção conta a árvore INTEIRA, não só as
+raízes: dizer "3" com dezoito tarefas dentro seria o mesmo tipo de número que
+não corresponde a nada que a [RN-151](#rn-151) tirou da sidebar.
+
+- **Onde:** `apps/web/src/routes/SessionPage.tsx:2904`
+  (`montarArvoreDeBacklog`), `:3097` (as raízes viram item), `:3114` (a
+  contagem da árvore)
+- **Teste:** `apps/web/src/routes/SessionPage.artefatos-gerados.test.tsx`
+  (casos "épico/história/tarefa do PO viram árvore" e "nó sem pai carregado
+  aparece na raiz")
+- **Origem:** uso real no `exp001` — "mostrar também as tarefas criadas no
+  artefato do PO, mas abaixo do épico e ter opção de colapsar"
+
+### RN-180 — O painel diz o que NÃO está mostrando {#rn-180}
+
+`useSessionEvents` busca `{ limit: 200, latest: true }`, e o painel de contexto
+lia esse recorte por prop. Consequência: numa sessão de milhares de eventos as
+quatro seções mostravam a cauda **como se fosse a sessão inteira** — regra de
+negócio capturada no começo da ideação simplesmente não existia, sem aviso
+nenhum.
+
+O painel passou a ler o mesmo histórico paginado que a aba de Atividade da
+Visão Geral já usava ([RN-099](#rn-099)), com a `queryKey` da cauda
+compartilhada com o fio — **zero requisição a mais** no ciclo de poll
+([RN-090](#rn-090)/[RN-091](#rn-091)). Duas coisas mudaram com isso:
+
+1. **O feed ganhou o pager que o componente sempre teve.** As props
+   `onLoadOlder`/`hasOlder`/`loadingOlder` são opcionais desde a RN-099 e este
+   call site nunca as passava — era essa a razão de a sessão perder o começo em
+   silêncio.
+2. **Uma nota conta quantos eventos faltam.** O número sai de SUBTRAÇÃO sobre o
+   `seq` (gapless e por sessão): `menor seq baixado − 1`. Nunca de uma
+   requisição a mais — o mesmo mecanismo do "+ N mais antigos" do sino
+   ([RN-100](#rn-100)). Alcançando o começo da sessão a nota **desaparece**, em
+   vez de afirmar um zero.
+
+As seções derivadas leem `baixados` (tudo que já veio) e não `events` (a janela
+de 100 do feed): elas não paginam item a item, e cortá-las na janela as faria
+mostrar MENOS do que mostravam antes desta mudança. É o mesmo botão que
+alimenta as duas.
+
+O `pausarPoll` desce por `useSessionEventHistory` até `useSessionEvents`, e não
+é detalhe: o intervalo de refetch é de cada OBSERVADOR, não da query. Um
+segundo observador da mesma chave com timer ligado ressuscitaria o poll que a
+tela pausa durante o turno — e com ele a duplicata visual da bolha em
+streaming.
+
+- **Onde:** `apps/web/src/lib/hooks.ts:246` (o `pausarPoll` do histórico),
+  `:325` (`baixados`); `apps/web/src/routes/SessionPage.tsx:3032`
+  (`eventosAnteriores`) e o `ActivityFeed` com o pager, no fim de
+  `ContextAside`
+- **Teste:** `apps/web/src/routes/SessionPage.painel-e-agrupamento.test.tsx`
+  (describe "RN-180")
+- **Origem:** revisão da própria rodada — o teto de 200 existia em silêncio nas
+  quatro seções
+
+### RN-181 — Delegação de área aparece no fio {#rn-181}
+
+Quando uma área (QA, Infra) delega a subagentes e consolida o veredito, os três
+desfechos que o lead registra — `delegation.completed`, `delegation.failed` e
+`delegation.dispensed` — só existiam no painel de log. Quem acompanhava a
+sessão via o gate abrir e fechar **sem nenhum sinal** de que houve uma segunda
+tentativa por baixo.
+
+Os três passaram a ser narrados no fio como **aviso compacto**, no formato da
+[RN-157](#rn-157) — não bolha: é notificação do que aconteceu dentro da área,
+não uma fala. A FRASE sai de `classifyEvent`, a mesma do painel, porque duas
+redações do mesmo evento divergem na primeira mudança de payload; e ela já
+nomeia o subagente e a área, então o lead **não** é prefixado (produziria "QA
+Lead QA Automação concluiu a delegação (qa)").
+
+O contrato externo da área **não muda** (ADR 0038): o fio não passa a endereçar
+subagente, só a narrar o que o lead já registrou. A origem da falha viaja junto
+em `delegation.failed`, pela mesma razão da [RN-059](#rn-059) — é ela que diz
+se o próximo passo é trocar a chave, esperar o provider ou abrir um bug.
+
+- **Onde:** `apps/web/src/routes/SessionPage.tsx:1687`
+- **Teste:** `apps/web/src/routes/SessionPage.painel-e-agrupamento.test.tsx`
+  (describe "RN-181")
+- **Origem:** uso real no `exp001` — "quando houver uma nova tentativa e
+  consolidação de algum agente deve apresentar no chat"
+
 ---
 
 ## Quando dá errado
@@ -5501,6 +6219,7 @@ reaparecer — o card vira somente leitura assim que existe um
 | Modelo do binding some do provider | a cascata cai para o nível de baixo e AVISA qual escopo pulou — nunca troca o modelo em silêncio (RN-041) |
 | Preço do modelo muda | vale daqui em diante; o custo gravado e o preço que o produziu ficam intocados (RN-042) |
 | Criar o handoff falha (Criativo→PO, Arquiteto→Infra/Dev Lead) | `agent.error` durável, o processo do agente CONTINUA vivo; o que já foi gravado antes (product_brief, regras) não se perde (RN-116) |
+| Caminho de projeto **Local** não montado no container | a criação é **recusada** (400) com a linha de compose a acrescentar — o projeto não nasce para travar depois (RN-170) |
 
 > **TODO(humano):** as RNs acima foram extraídas do código e dos testes. Falta
 > confirmar se existe regra de negócio **não implementada** que deveria estar

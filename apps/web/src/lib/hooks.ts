@@ -181,6 +181,18 @@ export const EVENTOS_POR_PAGINA = 100;
 export interface HistoricoDeEventos {
   /** A janela visível, em ordem crescente de `seq` (o mais novo por último). */
   events: SessionEvent[];
+  /**
+   * TUDO que já foi baixado — a cauda mais as páginas antigas já pedidas —,
+   * sem o recorte da janela (RN-180).
+   *
+   * A janela existe para o FEED, que pagina item a item. As seções derivadas
+   * do painel de contexto (regras de negócio, artefatos, arquivos tocados) não
+   * paginam: elas somam sobre o que a sessão trouxe, e cortá-las na janela de
+   * 100 mostraria MENOS regra do que o painel já mostrava antes de existir
+   * paginação. `carregarMaisAntigos` aumenta as duas, e é isso que faz o
+   * botão do feed valer também para elas.
+   */
+  baixados: SessionEvent[];
   /** Quantos eventos CRUS a janela tem — o `M` do "N de M carregados". */
   carregados: number;
   /** Há sessão anterior à janela, seja já baixada ou ainda por baixar. */
@@ -231,10 +243,16 @@ export function useSessionEventHistory(
   projectId: string | undefined,
   sessionId: string | undefined,
   intervalMs = 3000,
+  pausarPoll = false,
 ): HistoricoDeEventos {
   // A cauda ao vivo. Mesma `queryKey` de `useSessionEvents`: quando os dois
   // estão montados na mesma tela, o React Query serve os dois com UMA busca.
-  const cauda = useSessionEvents(projectId, sessionId, intervalMs);
+  //
+  // `pausarPoll` PRECISA descer até aqui (achados 2/7): o intervalo é de cada
+  // OBSERVADOR, não da query. Um segundo observador desta mesma chave com
+  // intervalo ligado ressuscitaria o poll que `SessionPage` pausa durante o
+  // turno — e com ele a duplicata visual da bolha em streaming.
+  const cauda = useSessionEvents(projectId, sessionId, intervalMs, pausarPoll);
 
   // Cursores das páginas antigas já pedidas, do mais novo para o mais velho.
   const [cursores, setCursores] = useState<number[]>([]);
@@ -304,6 +322,7 @@ export function useSessionEventHistory(
 
   return {
     events,
+    baixados: todos,
     carregados: events.length,
     temMaisAntigos,
     carregarMaisAntigos,

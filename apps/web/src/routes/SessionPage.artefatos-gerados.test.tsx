@@ -4,6 +4,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import type { Handoff, ProposedAction, Session } from '../lib/api-types';
+import { historicoFalso } from '../test/historico-de-eventos';
 
 /**
  * RN-159 — o painel "Artefatos gerados" (`ContextAside`) hoje só lia
@@ -45,6 +46,7 @@ vi.mock('@tanstack/react-router', () => ({
 
 vi.mock('../lib/hooks', () => ({
   useSessionEvents: () => ({ data: eventos() }),
+  useSessionEventHistory: () => historicoFalso(eventos().items),
   useSessionEvent: () => ({ data: undefined, isError: false }),
   usePendingActions: () => ({ data: actionsMock() }),
   useHandoffs: () => ({ data: handoffsMock() }),
@@ -200,7 +202,12 @@ describe('SessionPage — ContextAside: artefatos gerados agrupados por agente (
     expect(link).toHaveAttribute('href', 'https://github.com/org/repo/pull/70');
   });
 
-  it('épico/história do PO entram no painel, com link pro Backlog (não pra PR)', async () => {
+  /**
+   * RN-179 mudou a FORMA desta seção: épico, história e tarefa deixaram de ser
+   * três itens planos e viraram uma ÁRVORE, com o filho dentro de um colapso
+   * do pai. O link continua o mesmo — o que muda é quantos cliques até ele.
+   */
+  it('épico/história/tarefa do PO viram árvore, cada nível com link pro Backlog', async () => {
     eventos.mockReturnValue({
       items: [
         {
@@ -219,16 +226,72 @@ describe('SessionPage — ContextAside: artefatos gerados agrupados por agente (
           payload: { storyId: 'story-1', epicId: 'epic-1', title: 'Login com e-mail' },
           createdAt: '2026-08-10T12:00:01.000Z',
         },
+        {
+          id: 'ev-task',
+          seq: 3,
+          type: 'backlog.task_created',
+          actor: { kind: 'agent', id: 'po' },
+          payload: { taskId: 'task-1', storyId: 'story-1', title: 'Formulário de login' },
+          createdAt: '2026-08-10T12:00:02.000Z',
+        },
+      ],
+    });
+
+    montar();
+    const user = await abrirGrupo('PO');
+
+    // O épico é a RAIZ: é o único que aparece sem mais nenhum clique.
+    const linkEpic = screen.getByRole('link', { name: /Autenticação/ });
+    expect(linkEpic).toHaveAttribute('href', '/projects/proj-1?tab=backlog');
+    expect(screen.queryByRole('link', { name: /Login com e-mail/ })).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: /histórias/ }));
+    const linkStory = screen.getByRole('link', { name: /Login com e-mail/ });
+    expect(linkStory).toHaveAttribute('href', '/projects/proj-1?tab=backlog');
+
+    // A tarefa — o que RN-179 acrescentou — pende da HISTÓRIA, e nasce
+    // fechada: um épico com trinta tarefas tomaria o painel inteiro.
+    expect(screen.queryByRole('link', { name: /Formulário de login/ })).toBeNull();
+    await user.click(screen.getByRole('button', { name: /tarefas/ }));
+    expect(
+      screen.getByRole('link', { name: /Formulário de login/ }),
+    ).toHaveAttribute('href', '/projects/proj-1?tab=backlog');
+  });
+
+  /**
+   * O parentesco sai do VÍNCULO no payload, não da vizinhança no log: uma
+   * tarefa cuja história ficou fora da janela carregada sobe para a raiz em
+   * vez de ser pendurada no primeiro épico que aparecer.
+   */
+  it('nó sem pai carregado aparece na raiz, nunca pendurado por adivinhação', async () => {
+    eventos.mockReturnValue({
+      items: [
+        {
+          id: 'ev-epic',
+          seq: 1,
+          type: 'backlog.epic_created',
+          actor: { kind: 'agent', id: 'po' },
+          payload: { epicId: 'epic-1', title: 'Autenticação' },
+          createdAt: '2026-08-10T12:00:00.000Z',
+        },
+        {
+          id: 'ev-task-orfa',
+          seq: 2,
+          type: 'backlog.task_created',
+          actor: { kind: 'agent', id: 'po' },
+          payload: { taskId: 'task-9', storyId: 'story-fora-da-janela', title: 'Tarefa órfã' },
+          createdAt: '2026-08-10T12:00:01.000Z',
+        },
       ],
     });
 
     montar();
     await abrirGrupo('PO');
 
-    const linkEpic = screen.getByRole('link', { name: /Autenticação/ });
-    expect(linkEpic).toHaveAttribute('href', '/projects/proj-1?tab=backlog');
-    const linkStory = screen.getByRole('link', { name: /Login com e-mail/ });
-    expect(linkStory).toHaveAttribute('href', '/projects/proj-1?tab=backlog');
+    expect(screen.getByRole('link', { name: /Tarefa órfã/ })).toBeTruthy();
+    expect(screen.getByRole('link', { name: /Autenticação/ })).toBeTruthy();
+    // Nenhum colapso de filhos: o épico não ganhou a órfã por proximidade.
+    expect(screen.queryByRole('button', { name: /tarefas/ })).toBeNull();
   });
 
   it('dois artefatos do MESMO agente ficam sob UM grupo só, com a contagem certa', async () => {

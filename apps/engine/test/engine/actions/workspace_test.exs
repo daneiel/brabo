@@ -211,4 +211,34 @@ defmodule Engine.Actions.WorkspaceTest do
                )
     end
   end
+
+  # O localizador vem resolvido da consulta (RN-169, ADR 0072) e é uma de duas
+  # coisas: NOME de pasta no modo `container`, CAMINHO ABSOLUTO no modo
+  # `local`. A distinção pela barra inicial é o que faz api e engine
+  # concordarem sobre a raiz — juntar um caminho absoluto com a raiz
+  # gerenciada produziria `/data/project-workspaces/home/voce/...`, e o engine
+  # escreveria onde a api não lê.
+  describe "workspace_dir/2 com o localizador já resolvido" do
+    test "nome relativo (modo container) é juntado com a raiz gerenciada" do
+      raiz = Application.fetch_env!(:engine, :project_workspaces_root)
+      project_id = Ecto.UUID.generate()
+
+      assert Workspace.workspace_dir(project_id, "loja-3f2b1c8e") ==
+               Path.join(raiz, "loja-3f2b1c8e")
+    end
+
+    test "caminho absoluto (modo local) É a raiz, sem juntar com nada" do
+      project_id = Ecto.UUID.generate()
+
+      assert Workspace.workspace_dir(project_id, "/home/voce/projetos/loja") ==
+               "/home/voce/projetos/loja"
+    end
+
+    test "nil continua degradando pro project_id cru — o comportamento de antes da RN-109" do
+      raiz = Application.fetch_env!(:engine, :project_workspaces_root)
+      project_id = Ecto.UUID.generate()
+
+      assert Workspace.workspace_dir(project_id, nil) == Path.join(raiz, project_id)
+    end
+  end
 end

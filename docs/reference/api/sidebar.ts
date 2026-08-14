@@ -222,6 +222,18 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/internal-projects-controller-backlog",
+          label: "O backlog do projeto em árvore, para o PO ler o que já escreveu",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/internal-projects-controller-business-rules",
+          label: "As regras de negócio do projeto, com cobertura, para o PO ler",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/internal-projects-controller-git-remote",
           label: "O remoto de trabalho do projeto, para buscar e empurrar",
           className: "api-method get",

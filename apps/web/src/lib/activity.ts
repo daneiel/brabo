@@ -57,6 +57,115 @@ export function isMachineEvent(event: SessionEvent): boolean {
   return EVENTOS_DE_MAQUINA.has(event.type);
 }
 
+/**
+ * A ORIGEM de um evento (RN-177) — quem o produziu, no sentido de qual CAMADA,
+ * não de qual agente.
+ *
+ * É uma classificação NOVA e independente do `ActivityKind`, que responde
+ * outra pergunta: `kind` diz DE QUE ASSUNTO o evento fala (commit, PR,
+ * permissão) e decide ícone e cor; `origem` diz DE ONDE ele veio, e é o que
+ * permite recolher o histórico em punhados legíveis em vez de uma lista
+ * infinita. Um `tool.call` e um `git.push` podem ser os dois do mesmo agente e
+ * do mesmo turno, e ainda assim quem lê quer separá-los.
+ *
+ * As seis saem do dado que EXISTE — `actor.kind` (`user | agent | system`) e o
+ * prefixo do `type` —, nunca de suposição sobre quem emitiu:
+ *
+ * - `harness` — a maquinaria do laço: `tool.*`, `toolloop.*`, `agent.status`,
+ *   `context.compacted`. É quase tudo que `isMachineEvent` esconde, e é por
+ *   isso que o toggle e o agrupamento nasceram juntos.
+ * - `llm` — o turno do modelo em si: `agent.response`, `agent.delta`, `llm.*`.
+ * - `usuario` / `sistema` — decididos pelo ATOR, porque é o ator que os define.
+ * - `agente` — o que o agente fez enquanto agente e não enquanto domínio:
+ *   entrar na sessão, falhar, passar o bastão, delegar, perguntar.
+ * - `eventos` — o event log de DOMÍNIO propriamente dito (backlog, git, PR,
+ *   artefato, bootstrap, permissão…), que é o resto.
+ *
+ * A precedência importa e está escrita na ordem dos `if`: `harness` e `llm`
+ * vêm ANTES do ator porque são categorias de MECANISMO — um `tool.call` é do
+ * harness qualquer que seja o ator —, e `usuario`/`sistema` vêm antes dos
+ * prefixos de agente porque `chat.message` do humano não é fala de agente.
+ *
+ * Aceita a forma ESTRUTURAL (`{ type, actor: { kind } }`) em vez de
+ * `SessionEvent` inteiro de propósito: o fio da sessão precisa classificar
+ * também o card de uma `ProposedAction`, que não é evento e nunca terá `seq`
+ * nem `payload`.
+ */
+export type OrigemDeEvento =
+  | 'eventos'
+  | 'sistema'
+  | 'llm'
+  | 'harness'
+  | 'agente'
+  | 'usuario';
+
+/** A ordem em que os grupos aparecem — a MESMA em que o pedido os nomeou. */
+export const ORDEM_DAS_ORIGENS: OrigemDeEvento[] = [
+  'eventos',
+  'sistema',
+  'llm',
+  'harness',
+  'agente',
+  'usuario',
+];
+
+export const ROTULO_DA_ORIGEM: Record<OrigemDeEvento, string> = {
+  eventos: 'Log de eventos',
+  sistema: 'Sistema',
+  llm: 'LLM',
+  harness: 'Harness',
+  agente: 'Agente',
+  usuario: 'Usuário',
+};
+
+const TIPOS_DO_HARNESS = new Set(['agent.status', 'context.compacted']);
+const TIPOS_DO_LLM = new Set(['agent.response', 'agent.delta']);
+const PREFIXOS_DE_AGENTE = ['agent.', 'handoff.', 'delegation.', 'chat.'];
+
+export function origemDoEvento(event: {
+  type: string;
+  actor: { kind: string };
+}): OrigemDeEvento {
+  const { type } = event;
+  if (
+    TIPOS_DO_HARNESS.has(type) ||
+    type.startsWith('tool.') ||
+    type.startsWith('toolloop.')
+  ) {
+    return 'harness';
+  }
+  if (TIPOS_DO_LLM.has(type) || type.startsWith('llm.')) return 'llm';
+  if (event.actor.kind === 'user') return 'usuario';
+  if (event.actor.kind === 'system') return 'sistema';
+  if (PREFIXOS_DE_AGENTE.some((p) => type.startsWith(p))) return 'agente';
+  return 'eventos';
+}
+
+/**
+ * Agrupa por origem PRESERVANDO a ordem de `ORDEM_DAS_ORIGENS` e descartando
+ * grupo vazio — um cabeçalho "Harness · 0" seria ruído com outro nome.
+ *
+ * Genérico no item, e não fixo em `SessionEvent`, porque os dois consumidores
+ * agrupam coisas diferentes: o painel agrupa EVENTOS, e o fio da sessão agrupa
+ * ENTRADAS já renderizadas (que podem ser um colapso por agente inteiro).
+ */
+export function agruparPorOrigem<T>(
+  itens: T[],
+  origemDe: (item: T) => OrigemDeEvento,
+): { origem: OrigemDeEvento; itens: T[] }[] {
+  const porOrigem = new Map<OrigemDeEvento, T[]>();
+  for (const item of itens) {
+    const origem = origemDe(item);
+    const grupo = porOrigem.get(origem);
+    if (grupo) grupo.push(item);
+    else porOrigem.set(origem, [item]);
+  }
+  return ORDEM_DAS_ORIGENS.filter((o) => porOrigem.has(o)).map((origem) => ({
+    origem,
+    itens: porOrigem.get(origem)!,
+  }));
+}
+
 // Aceita number além de string: `toVersion`/`restoredFrom` chegam como número
 // e, aceitando só string, sumiam em silêncio — a narração do patch saía sem a
 // versão e a do rollback saía "revertida para a v?". Quem chama isto quer um
@@ -369,6 +478,30 @@ export function classifyEvent(event: SessionEvent): ActivityDisplay {
         para === 'ready'
           ? `${quem} uma história a pronta — as tarefas dela ficaram pegáveis`
           : `história → ${para ?? 'novo estado'}`,
+    };
+  }
+  // RN-165, e pela MESMA razão das três acima: sem este ramo o fallback
+  // `type.startsWith('backlog.')` narraria "o po atualizou o backlog" — que é
+  // o oposto do que aconteceu. `bad`, porque é: a execução não sai do lugar.
+  if (type === 'backlog.epic_without_story') {
+    // `payloadField` só devolve string/número — `epicTitles` é lista, e por
+    // isso é lida aqui, com degradação para a frase sem os nomes.
+    const titulos =
+      payload && typeof payload === 'object' && 'epicTitles' in payload
+        ? (payload as { epicTitles?: unknown }).epicTitles
+        : undefined;
+    const nomes = Array.isArray(titulos)
+      ? titulos.filter((t): t is string => typeof t === 'string')
+      : [];
+    return {
+      kind: 'generic',
+      icon: StackIcon,
+      color: 'var(--danger)',
+      bad: true,
+      text:
+        `${actorLabel} encerrou com épico sem nenhuma história` +
+        (nomes.length > 0 ? ` (${nomes.join(', ')})` : '') +
+        ' — sem história não há tarefa, e a execução trava',
     };
   }
   if (type === 'backlog.story_demoted') {

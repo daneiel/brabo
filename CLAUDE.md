@@ -644,6 +644,20 @@ conjunto das promoções AINDA PENDENTES na sessão, não "criadas em sequência
 sem interrupção" — para que resolver uma história no meio do carrossel
 recalcule a leva sozinho, sem estado próprio a sincronizar.
 
+**Projeto Local ou Container (RN-169/RN-170, ADR 0072).** Pedido do dono do
+produto: "cruzar a fronteira de apenas escrever código no container e poder
+escrever código a partir de uma pasta do usuário", com a variante de **caminho
+livre digitado** escolhida por ele, ciente de que só funciona montado no
+container. `projects` ganha (`workspace_mode`, `workspace_path`) na migração
+`0043`, com `container` de default — nada muda para quem não escolhe. O ADR
+0072 REVISA parte do 0065 e mexe no terreno do 0055, que decidiram a direção
+contrária (a parede de container), e por isso a consequência está escrita sem
+atenuar: a contenção ESTRUTURAL do `join(env, coluna)` — nenhuma coluna
+corrompida saindo da raiz gerenciada — deixa de existir para projeto Local, e
+o que sobra é a guarda da criação mais a revalidação léxica na leitura. A
+FASE 25b continua cortada: projeto Local roda no MESMO container de hoje, só
+a pasta mudou.
+
 **Diagrama C4 do Arquiteto (RN-149, ADR 0068).** Entregável novo:
 `create_c4_diagram` gera Context + Container (Simon Brown) em Mermaid,
 renderizado na Visão Geral. O Container level é DERIVADO do `module_map`
@@ -731,6 +745,178 @@ o modelo declara as perguntas em schema, o formulário é renderizado por
 vez de abrir um segundo caminho de mensagem. Responder é ato único —
 reenvio é 409, não sobrescrita.
 
+## RODADA exp001 — o Criativo cumpre a promessa (RN-163)
+Mesmo espírito das outras rodadas: veio do USO, não de roteiro. O relato foi
+"o Criativo não respondeu depois de dizer que iria corrigir e tentar de novo",
+e a frase era literal no código — `run_turn_capturing/1` chamava o modelo UMA
+vez, despachava as ferramentas e voltava. O resultado da ferramenta entrava no
+histórico em memória e ninguém mais o lia, então a correção prometida só
+acontecia se o usuário mandasse outra mensagem.
+
+O Criativo era o único conversacional sem laço de tool use; ganhou o mesmo do
+PO, com teto próprio de 12. O que vale além da correção: **quem decide o que se
+anuncia passou a ser o teto**, e não um texto fixo — a promessa de retentativa
+só entra na frase quando ainda há volta para cumpri-la. Teto esgotado virou
+`agent.error` narrado (o `po_server` terminava calado nesse caso, e essa era a
+próxima dívida óbvia — fechada logo abaixo pela RN-166), e a falha de
+ferramenta deixou de ser `agent.response`
+— no event log ela era indistinguível de uma resposta normal e não dizia
+origem nenhuma, exatamente o que a RN-059 fechou para a falha de turno.
+
+## RODADA exp001 — o PO lê o que já existe e é cobrado (RN-164..166)
+Não é fase: é um defeito achado por USO real, e a origem importa porque
+nenhuma suite pegaria. O backlog saiu com épico e **nenhuma história** — logo
+sem tarefa, logo a execução travada **sem erro nenhum**. A investigação achou
+quatro causas empilhadas, e as três primeiras são a mesma: o PO não tinha como
+saber e não tinha como avisar.
+
+1. **O PO tinha quatro ferramentas e todas de ESCRITA.** O contexto era
+   montado UMA vez, no kickoff, a partir dos 200 últimos eventos da SESSÃO —
+   dali em diante ele nunca mais relia nada: não sabia quais regras existiam,
+   quais já cobrira, nem o que ele próprio já criara. Entraram
+   `listar_regras_de_negocio` e `listar_backlog` (RN-164), servidas por duas
+   rotas internas escopadas ao PROJETO — e o escopo é o ponto: leitura por
+   sessão era exatamente o que escondia a regra capturada antes. Reusam o
+   encanamento que já existia (`listByTypeForProject`, `ListBacklogUseCase`,
+   `computeCoverage`); o que faltava era a rota, o método no cliente e o tool.
+2. **Nada cobrava a história depois do épico** e **o laço terminava calado**.
+   Épico sem história virou desfecho EXPLÍCITO — `backlog.epic_without_story`,
+   durável, no padrão da RN-059 (RN-165) — e o teto de iterações do `PoServer`
+   passou a emitir `toolloop.limit_reached`, o MESMO tipo do `ToolLoop`, que
+   os agentes conversacionais nunca emitiram por terem laço próprio (RN-166).
+3. **A instrução de kickoff não dizia uma palavra sobre o que fazer quando
+   falta informação** — e diante de uma lacuna sem instrução um modelo escolhe
+   entre inventar e parar. Parar foi o que ele fez. A terceira saída passou a
+   estar escrita, com a ferramenta para exercê-la: `ask_structured_questions`,
+   a MESMA do Criativo (RN-162), agora advertida também ao PO.
+
+Duas decisões de desenho que valem além deste caso: só o `create_story` que
+**deu certo** quita a obrigação do épico (uma história recusada pela api não
+cobriu nada, e tratá-la como se tivesse é trocar um silêncio por outro); e a
+cobrança é por OCORRÊNCIA, reportada uma vez, nunca alarme que repete a cada
+turno até alguém aprender a ignorá-lo.
+
+## RODADA exp001 — o fio se lê como o turno acontece (RN-172/173)
+Mesma origem das outras: USO, não roteiro. Quatro queixas sobre a tela da
+Sessão — o handoff do PO aparecendo ACIMA da última fala dele, a aprovação
+subindo para o meio da resposta do Arquiteto e só descendo quando ele
+terminava, o card de aprovação "mal diagramado" e o scroll que não seguia a
+conversa.
+
+**A investigação achou que a ordenação estava CERTA**, e é essa a lição da
+rodada. A RN-155 é fiel ao event log; o que o log diz é que
+`po_server.ex#run_turn/2` emite, na MESMA iteração, o `agent.response`, DEPOIS
+o `tool.call` de `offer_handoff` e SÓ ENTÃO recursa para a fala de fechamento
+— logo o `seq` do handoff é honestamente MENOR que o da última fala. O mesmo
+para `proposed_action.created`. A correção, portanto, não é de ordenação: é
+uma regra de APRESENTAÇÃO declarada (RN-172), numa passada separada
+(`afundarDesfechos`) DEPOIS do `sort` por `seq` — não um comparador com três
+termos que ninguém saberia justificar um ano depois.
+
+O que impede turnos de se misturarem são três barreiras, e cada uma existe
+por um caso real: **turno** (a fronteira entre dois turnos pode não ter
+entrada VISÍVEL — `agent.activated` abre turno e não vira item do fio),
+**autor** (em sessão de execução vários agentes escrevem sem o usuário falar
+nenhuma vez, e todos ficam no mesmo turno) e **não-desfecho** (dois desfechos
+seguidos preservam a ordem entre si — Infra antes do Dev Lead).
+
+A RN-173 fecha as outras duas queixas, e elas eram a mesma: o efeito de
+scroll dependia só de `[events.length, streamingText]`, e `actions` é uma
+query SEPARADA — um card chegando empurrava a conversa para fora da tela sem
+rolar nada. Dependência corrigida, mais um `ResizeObserver` sobre o conteúdo
+para o que NENHUMA lista de dependências alcança (colapso de `Disclosure`,
+Markdown reflowando). A guarda dos 120px do fim continua intacta, de
+propósito: o fio segue a conversa, não sequestra a leitura de quem subiu.
+
+## RODADA exp001 — o fio diz quem fala, com qual modelo e o que pergunta (RN-171/174/175/176)
+Mesma origem: USO. Quatro queixas sobre a tela da Sessão, e três delas
+compartilham a mesma lição — **o produto sabia a informação e não a
+mostrava**.
+
+**A pergunta ao centro, e com saída (RN-171).** O relato foi literal: "sempre
+dê a opção de input do usuário quando ele seleciona Escreva". O modelo
+oferecia uma opção do tipo "Escreva você mesmo" e o formulário não tinha onde
+escrever — o schema de `ask_structured_questions` não sabia expressar "além
+destas, o que você quiser". `allowOther` entrou em `select` com **default
+`true`**, e a assimetria é o argumento: lista fechada por ESQUECIMENTO trava a
+conversa e o usuário não destrava de fora; lista aberta por engano oferece um
+campo a mais. O sentinela de interface nunca viaja pro backend, e o botão de
+envio continua exigindo tudo preenchido (o backend recusa com 400 de qualquer
+forma). A caixa também virou centralizada com o teto de 560px do
+`ApprovalCard` e ganhou avatar: era o único item do fio alinhado a nada.
+
+**Ação que dispara turno arma o indicador (RN-174).** A animação de "pensando"
+já existia — o que faltava era COBERTURA. Duas ações da tela disparam turno
+síncrono no engine e não ligavam nada: responder o formulário
+(`AnswerStructuredQuestionUseCase` reusa `SendAgentMessageUseCase`) e devolver
+história ao PO (`ReturnStoryUseCase` chama `reviseStory`, que é
+`handle_call({:revise, …})`). O canal Phoenix não cobre o buraco: com o join
+ainda em curso (RN-108) o `agent.status` "working" não tem ouvinte e se perde.
+
+**O modelo, para TODOS (RN-175).** A premissa de que o defeito era do PO não se
+sustentou: os quatro conversacionais gravam `modelName` desde a RN-146, com
+teste verde. Quem nunca gravou foi o **`ToolLoop`** — o caminho de todo agente
+de execução e de gate — e o chat sem agente ativo na api. Nenhuma chamada
+nova: `RunLlmTurnUseCase` já devolvia o campo no corpo. A tela deixou de
+escrever a palavra solta "modelo" (que se lê como se o modelo se chamasse
+assim) e virou chip legível; sem o dado, ela DIZ que não foi registrado —
+adivinhar pelo binding atual atribuiria a uma resposta antiga um modelo que
+talvez nem existisse, o mesmo erro que o preço congelado da RN-044 evita.
+
+**Tabela em Markdown vira tabela (RN-176).** Duas saídas eram possíveis, e a
+escolhida foi suportar tabela no Markdown do chat, com o `Table` do design
+system. Renderizar `artifact.module_map` no fio foi RECUSADO por uma decisão
+já registrada: ele é estado VIGENTE do projeto, não artefato datado por
+sessão (RN-159), e vive na Visão Geral. Além disso, o pedido foi sobre a
+tabela **dentro da mensagem** — e a correção serve a qualquer agente que
+escreva uma, não só ao Mapa de Módulos. A linha separadora continua
+obrigatória (GFM), então prosa com `|` nunca vira tabela por engano.
+
+## RODADA exp001 — o painel agrupa, ordena e diz o que não mostra (RN-177..181)
+Mesma origem das outras: USO, não roteiro. Cinco queixas sobre o painel de
+contexto e o log da Sessão, e a lição da rodada é uma só — **o painel mostrava
+um recorte como se fosse o todo, em três dimensões diferentes ao mesmo tempo**:
+escondia seis tipos de evento sem oferecer alternativa, lia do mais antigo para
+o mais novo, e cortava a sessão em 200 eventos sem dizer.
+
+**Origem como classificação nova (RN-177).** `ActivityKind` responde "de que
+ASSUNTO o evento fala" e decide ícone e cor; `origem` responde "de que CAMADA
+ele veio", e é ela que torna o histórico legível — `eventos`, `sistema`, `llm`,
+`harness`, `agente`, `usuario`, derivadas do dado que EXISTE (`actor.kind` e o
+prefixo do `type`). A precedência é o que a torna previsível e está na ordem
+dos `if`: mecanismo vence ator (um `tool.call` é do harness seja quem for), e
+ator vence prefixo de agente (`chat.message` existe dos dois lados). As 5 mais
+recentes ficam abertas e o resto se recolhe por origem, **nos dois lugares** —
+no painel de log e no fio, onde o eixo é invertido (o fio é crescente, então o
+histórico fica no TOPO). O filtro de ruído de máquina **continua ligado por
+padrão**: a razão dele não mudou (116 de 193 eventos reais), o que mudou é ele
+ter virado ESCOLHA em vez de fato consumado.
+
+**Ordem e paginação (RN-178).** As quatro seções passaram a decrescentes, e o
+botão "Carregar mais antigos" mudou de lado por consequência — o argumento de
+antes, com o sinal trocado. Regras de negócio acima de 5 paginam, com a página
+resolvida por *clamp* e não por efeito de sincronização.
+
+**A árvore do PO (RN-179).** `backlog.task_created` nunca entrou no painel;
+agora épico → história → tarefa formam árvore, pelo VÍNCULO que o evento já
+carrega (`epicId`/`storyId`), nunca por vizinhança no log — nó sem pai
+carregado sobe para a raiz em vez de ser pendurado por adivinhação.
+
+**O teto que passou a aparecer (RN-180), e é o item que mais valia.** O painel
+lia 200 eventos por prop e não tinha como dizer que havia mais. Passou a ler o
+histórico paginado da RN-099 (mesma `queryKey` da cauda, ZERO requisição a mais
+— RN-090/091), ganhou o pager que o `ActivityFeed` sempre teve e nenhum call
+site passava, e a nota conta quantos faltam por SUBTRAÇÃO sobre o `seq`, como o
+sino da RN-100. As seções derivadas leem `baixados` (tudo que já veio) e não a
+janela do feed, senão passariam a mostrar MENOS do que mostravam antes.
+
+**Delegação no fio (RN-181).** `delegation.completed|failed|dispensed` só
+existiam no painel de log: o gate abria e fechava sem sinal nenhum de que houve
+uma segunda tentativa por baixo. Viraram aviso compacto no formato da RN-157,
+com a frase saindo de `classifyEvent` — a mesma do painel. O contrato externo
+da área não muda (ADR 0038): o fio narra o que o lead registrou, não passa a
+endereçar subagente.
+
 ## FERRAMENTA DE DESENVOLVIMENTO — `pnpm bootstrap`
 Menu de terminal em `scripts/dev/bootstrap.sh` agrupando o que se faz no
 dia a dia: Docker, K8s, Database e Test. Existe porque esses comandos moram
@@ -743,6 +929,18 @@ sobre ele que roda o teste (`scripts/dev/bootstrap.spec.ts`) — um TUI não se
 testa por unidade, mas o mapeamento menu→comando sim, e é ele que erra.
 Zero dependência nova; as cores saem de `design/tokens.css` em ANSI 24-bit
 com degradação para 256 cores e para nenhuma.
+
+A saída de um comando em execução é ROLÁVEL (roda do mouse em SGR, `j`/`k`,
+PageUp/PageDown, `G` para voltar ao fim). O que faltava não era ler a roda: era
+DESLOCAMENTO — `tail -n` só sabe mostrar o fim —, então a janela virou recorte
+com `sed -n 'a,bp'`, testável sem TTY por `--print-window`. Duas consequências
+que o rodapé anuncia: rolar para trás CONGELA a janela (como o `less +F`, senão
+o redesenho de 5 Hz desfaz a rolagem) e o rastreio de mouse, ligado só na tela de
+execução, é desligado em TODA saída — `\e[?1006l\e[?1000l` em
+`restaurar_terminal`, que o trap de EXIT cobre. O parser de escape é CSI
+genérico (lê até o byte final): ler dois bytes fixos deixava o resto da sequência
+no buffer, e como o menu trata `[1-9]` como escolha, um giro de roda disparava
+itens do menu.
 
 Três decisões registradas: `Create` provisiona do zero e `Deploy` publica
 num ambiente que já existe (por isso só `Deploy` tem escolha por serviço);
@@ -821,9 +1019,22 @@ divide o mesmo banco, recuperar exige `db:migrate` E `engine:migrate`.
   não têm exceção configurável em lugar nenhum — merge em branch
   protegida, `instruction_patch` e `parallelize`/`raise_max_parallel`
   (RN-154).
+- O projeto escolhe ONDE o código mora, na criação (RN-169, ADR 0072):
+  `container` (DEFAULT — a pasta gerenciada em `PROJECT_WORKSPACES_ROOT`, o
+  comportamento de sempre) ou `local` (uma pasta do USUÁRIO, caminho absoluto
+  livre em `projects.workspace_path`). O par (modo, caminho) é amarrado por
+  CHECK no banco, e `projectScopeRoot` continua sendo a derivação ÚNICA da
+  raiz — não duplique validação nos chamadores. Caminho Local é validado na
+  CRIAÇÃO e RECUSADO com mensagem que ensina a montar (RN-170): absoluto, sem
+  `..`, existente, gravável de dentro do container, nunca raiz/pasta de
+  sistema nem sobreposto ao checkout do Brabo. O portão da imagem (RN-105) NÃO
+  vale para projeto `local`, que não sobe container. Consequência declarada no
+  ADR: a contenção estrutural do `join` some para esses projetos, e o vetor de
+  symlink do ADR 0055 continua aberto.
 - A imagem de container de um projeto é ARTEFATO do ARQUITETO
   (`artifact.project_image`, versionado, sem tabela), nunca configuração
-  escondida. Enquanto ele não decide, a aba Code responde 409 (RN-105).
+  escondida. Enquanto ele não decide, a aba Code responde 409 (RN-105) —
+  exceto em projeto no modo `local` (RN-169).
   `git push`, abertura de PR e deploy NÃO saem pelo terminal — a regra é
   `deny`, não `require_approval`, mesmo dentro do escopo do projeto e mesmo
   com "sempre permitir" (RN-106, ADR 0065). O ciclo de vida do container
@@ -839,6 +1050,17 @@ divide o mesmo banco, recuperar exige `db:migrate` E `engine:migrate`.
   atores externos) vem do tool call.
 - Agentes rodam SEMPRE dentro de um Harness; nenhuma chamada de LLM ou
   ferramenta fora dele.
+- Agente que ESCREVE tem de poder LER o que já existe, e tem de poder
+  PERGUNTAR quando falta informação. As duas são a mesma lição (RN-164/165):
+  um agente só com ferramenta de escrita age sobre um retrato tirado uma vez,
+  no kickoff, e diante de uma lacuna escolhe entre inventar e parar. Leitura
+  de agente é escopada ao PROJETO quando o recurso é do projeto, e CONTIDA
+  (ADR 0060): sem parâmetro onde o modelo escreva o que quiser, custo constante
+  por chamada, teto de linhas declarando o total real quando trunca.
+- Laço de agente NÃO termina calado. O teto de iterações emite
+  `toolloop.limit_reached` — o mesmo tipo para o `ToolLoop` e para os agentes
+  conversacionais, que têm laço próprio (RN-166) — e obrigação não cumprida
+  vira desfecho explícito no padrão da RN-059, durável e com origem.
 - Handoff externo endereça só LEAD de área ou agente sem área;
   delegação interna é privada da área; falha de subagente NUNCA é
   silenciosa — reporta origem ao lead, que decide e registra evento.
@@ -866,7 +1088,15 @@ divide o mesmo banco, recuperar exige `db:migrate` E `engine:migrate`.
   (infra | modelo | código | política) — nunca diagnóstico por
   eliminação (lição do ADR 0020). Falha NUNCA vira resposta vazia no
   event log, e o motivo NUNCA fica só em broadcast: `agent.error` é
-  durável e o agente diz o que houve no fio (RN-059).
+  durável e o agente diz o que houve no fio (RN-059). Falha de UMA
+  ferramenta no meio do laço segue a mesma régua (RN-163).
+- Os quatro agentes conversacionais rodam laço bounded de tool use, com
+  teto PRÓPRIO no servidor de cada um (Criativo e PO 12, Arquiteto e Dev
+  Lead 14) — não o teto do `ToolLoop` (`Engine.Harness.Iteracoes`), que é
+  dos agentes de execução e de gate. Erro de ferramenta é ENTRADA do laço,
+  não fim de linha; teto esgotado é narrado, nunca silêncio; e o agente não
+  anuncia ação que o código não vá executar — o que se promete é decidido
+  pelo teto, nunca por texto fixo (RN-163).
 - A chave de LLM que um agente gasta é a do OWNER do workspace
   (RN-058); o relatório desse gasto é do owner e só dele (RN-060). O
   membro vê o PRÓPRIO consumo por ATOR, em tokens e custo estimado, e
@@ -874,6 +1104,19 @@ divide o mesmo banco, recuperar exige `db:migrate` E `engine:migrate`.
   perguntas diferentes e nenhuma é recorte da outra (RN-101/ADR 0063).
 - Métrica de execução de agentes é extraída do event log/token_usage
   por script, nunca anotada manualmente (lição da Fase 10/13).
+- Tela que mostra um RECORTE diz que é recorte (RN-180). Toda leitura tem
+  teto — `limit: 200` nos eventos e nas ações —, e teto silencioso faz a
+  tela afirmar sobre o que não leu. O número que falta sai de SUBTRAÇÃO
+  sobre o `seq` (gapless, por sessão), nunca de uma requisição a mais:
+  é o mesmo mecanismo do sino (RN-100). Quando houver como carregar o
+  resto, o controle mora onde o corte aparece.
+- Evento tem DUAS classificações no cliente, e elas não se substituem:
+  `ActivityKind` (assunto — decide ícone e cor) e `OrigemDeEvento`
+  (camada — `eventos|sistema|llm|harness|agente|usuario`, RN-177). A
+  origem tem UMA fonte, `apps/web/src/lib/activity.ts`, consumida pelo
+  painel de log E pelo fio; a precedência dos `if` é a regra (mecanismo
+  vence ator, ator vence prefixo de agente) e tipo desconhecido cai em
+  `eventos` — nunca some nem abre categoria nova.
 - Testes: vitest (api/web/scripts de CI), ExUnit (engine). Nenhuma
   feature sem teste do caminho feliz + 1 caso de falha. Providers de
   git e de LLM validados por suas suites de contrato únicas.
@@ -919,6 +1162,19 @@ divide o mesmo banco, recuperar exige `db:migrate` E `engine:migrate`.
   ensina errado. Ele tem regra `warn` no docmap (não `block`, porque não
   mora sob docs/ e o checker valida glob e link dentro de docs/ — promover
   sem estender o checker criaria regra que se burla com `docs-not-needed`).
+- A documentação publica um site por branch permanente, e o CAMINHO nomeia o
+  AMBIENTE, não a branch (ADR 0073): `main` → `/brabo/prd/`, `qa` → `/brabo/qa/`,
+  `dev` → `/brabo/dev/`, com a raiz sendo o índice gerado por
+  `scripts/docs/landing.mjs`. O mapa branch→caminho existe num ponto por
+  processo (o passo do `docs-deploy.yml`, `DEGRAUS` no `docusaurus.config.ts` e
+  no `landing.mjs`) — nunca interpole `$GITHUB_REF_NAME` num caminho.
+- A versão anunciada em PROSA é verificada por `pnpm docs:check` em DOIS
+  arquivos, contra o primeiro `## vX.Y.Z` do CHANGELOG: `README.md` e
+  `docs/intro.md` (a primeira página do site). Quem escreve os dois é
+  `scripts/ci/readme-version.ts`, no mesmo commit do corte do CHANGELOG —
+  cobrar o que o gerador não escreve faria todo release nascer vermelho numa
+  PR do bot. Frase alterada sem ajustar o padrão reprova como `CEGO`, de
+  propósito.
 - Antes de finalizar: pnpm docs:check e pnpm docs:build verdes (glob
   morto, gerado fora de dia e link quebrado reprovam).
 - Nunca inventar conteúdo de doc: sem informação suficiente, use
