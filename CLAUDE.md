@@ -744,6 +744,18 @@ testa por unidade, mas o mapeamento menu→comando sim, e é ele que erra.
 Zero dependência nova; as cores saem de `design/tokens.css` em ANSI 24-bit
 com degradação para 256 cores e para nenhuma.
 
+A saída de um comando em execução é ROLÁVEL (roda do mouse em SGR, `j`/`k`,
+PageUp/PageDown, `G` para voltar ao fim). O que faltava não era ler a roda: era
+DESLOCAMENTO — `tail -n` só sabe mostrar o fim —, então a janela virou recorte
+com `sed -n 'a,bp'`, testável sem TTY por `--print-window`. Duas consequências
+que o rodapé anuncia: rolar para trás CONGELA a janela (como o `less +F`, senão
+o redesenho de 5 Hz desfaz a rolagem) e o rastreio de mouse, ligado só na tela de
+execução, é desligado em TODA saída — `\e[?1006l\e[?1000l` em
+`restaurar_terminal`, que o trap de EXIT cobre. O parser de escape é CSI
+genérico (lê até o byte final): ler dois bytes fixos deixava o resto da sequência
+no buffer, e como o menu trata `[1-9]` como escolha, um giro de roda disparava
+itens do menu.
+
 Três decisões registradas: `Create` provisiona do zero e `Deploy` publica
 num ambiente que já existe (por isso só `Deploy` tem escolha por serviço);
 no K8s só `All` funciona, e Api/Engine/Web aparecem DESABILITADOS em vez de
