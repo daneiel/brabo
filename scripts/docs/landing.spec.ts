@@ -11,13 +11,40 @@ import { describe, expect, it } from 'vitest';
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const SCRIPT = path.join(RAIZ, 'scripts/docs/landing.mjs');
 
-function gerar(degraus: string[]): { indice: string; erro: string; destino: string } {
-  const destino = mkdtempSync(path.join(tmpdir(), 'brabo-landing-'));
+/**
+ * Gera a raiz num repositório git PRÓPRIO, com as tags que o teste declara.
+ *
+ * O gerador lê a versão de cada degrau com `git tag` no diretório corrente.
+ * Testar isso contra o repositório de verdade acopla o teste ao estado do
+ * clone: o checkout do CI não traz tags, e a primeira versão deste arquivo
+ * passava na minha máquina e reprovava lá. Um repositório descartável com
+ * tags conhecidas torna a asserção determinística — e, de quebra, passa a
+ * PROVAR a leitura de tag em vez de só observá-la.
+ */
+function gerar(
+  degraus: string[],
+  tags: string[] = [],
+): { indice: string; erro: string; destino: string } {
+  const repo = mkdtempSync(path.join(tmpdir(), 'brabo-landing-'));
+  const git = (...args: string[]) =>
+    execFileSync('git', ['-c', 'user.email=t@t', '-c', 'user.name=t', ...args], {
+      cwd: repo,
+      stdio: 'pipe',
+    });
+
+  git('init', '-q');
+  git('commit', '-q', '--allow-empty', '-m', 'base');
+  for (const t of tags) git('tag', t);
+
+  const destino = path.join(repo, 'publicacao');
+  mkdirSync(destino, { recursive: true });
   for (const d of degraus) {
     mkdirSync(path.join(destino, d), { recursive: true });
     writeFileSync(path.join(destino, d, 'index.html'), '<html></html>');
   }
-  execFileSync('node', [SCRIPT, destino], { encoding: 'utf8' });
+  // `cwd: repo` é o que faz o gerador enxergar as tags acima, e não as do
+  // repositório onde a suite está rodando.
+  execFileSync('node', [SCRIPT, destino], { encoding: 'utf8', cwd: repo });
   return {
     destino,
     indice: readFileSync(path.join(destino, 'index.html'), 'utf8'),
@@ -43,10 +70,18 @@ describe('landing — a página que escolhe o degrau', () => {
   });
 
   it('mostra a versão carimbada de cada degrau', () => {
-    const { indice } = gerar(['main', 'qa']);
-    // As tags do próprio repositório: `main` é final, `qa` é pré-release.
-    expect(indice).toMatch(/v\d+\.\d+\.\d+/);
-    expect(indice).toMatch(/v\d+\.\d+\.\d+-qa\.\d+/);
+    const { indice } = gerar(['main', 'qa'], ['v9.9.9', 'v9.9.9-qa.7', 'v9.9.9-dev.3']);
+    expect(indice).toContain('v9.9.9-qa.7');
+    // A `main` pega a última FINAL, nunca uma pré-release — o glob dela casa o
+    // prefixo de `v9.9.9-qa.7` também, e é o filtro que separa as duas.
+    expect(indice).toContain('>v9.9.9<');
+    expect(indice).not.toContain('>v9.9.9-dev.3<');
+  });
+
+  it('diz que não há versão quando o degrau existe mas não há tag', () => {
+    // Repositório sem tag nenhuma: a página não pode inventar uma versão.
+    const { indice } = gerar(['main'], []);
+    expect(indice).toContain('sem versão carimbada');
   });
 
   it('se explica quando nenhum degrau foi publicado ainda', () => {
