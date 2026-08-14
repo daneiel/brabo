@@ -105,11 +105,15 @@ Desde [RN-122](business-rules.md#rn-122) roda numa `Task` supervisionada
 (`Engine.Agents.TurnoAssincrono`), não mais dentro do `handle_call` que
 recebia a mensagem — é o que permite o botão **"Parar"** do composer
 cancelar o turno DE VERDADE (mata a task, corta a conexão com a api) em vez
-de só parar de renderizar no cliente.
-O laço de ferramentas é PRÓPRIO — não é o `ToolLoop` acima —, mas o teto de
-iterações dele deixou de ser silencioso: esgotado, emite o MESMO
-`toolloop.limit_reached` ([RN-166](business-rules.md#rn-166)), porque é o
-mesmo fato e quem lê o event log não deve precisar de um segundo nome.
+de só parar de renderizar no cliente. Cada um tem teto PRÓPRIO de voltas do
+laço (Criativo e PO 12, Arquiteto e Dev Lead 14) — é constante do servidor do
+agente, não o teto do `ToolLoop` (`Engine.Harness.Iteracoes`), que vale para os
+agentes de execução e de gate. O Criativo foi o último a ganhar o laço, em
+[RN-163](business-rules.md#rn-163): até então ele chamava o modelo uma vez por
+turno e prometia uma correção que nunca acontecia. Esse teto próprio também
+deixou de ser silencioso: esgotado, emite o MESMO `toolloop.limit_reached`
+([RN-166](business-rules.md#rn-166)), porque é o mesmo fato e quem lê o event
+log não deve precisar de um segundo nome.
 
 **Handoff** — passagem explícita de trabalho de um agente para outro. Explícita
 porque o destino e o motivo ficam registrados no event log, em vez de um agente
