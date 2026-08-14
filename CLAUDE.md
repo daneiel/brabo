@@ -595,7 +595,12 @@ e RN-106).
     (`GIT_BLOB_MAX_BYTES`) limita o pior caso por ora.
 
 ### FASE 26b — CONCLUÍDA: fundação de blame, PRs navegáveis e branch rica
-Só a camada de API — nenhuma UI. As três pendências declaradas de blame,
+A fase começou como SÓ a camada de API, e a frase "nenhuma UI" que ficou aqui
+descrevia o estado da PRIMEIRA leva — envelheceu e passou a ensinar errado. As
+TRÊS UIs existem: o dropdown rico de branches (item 38, `CodeBranchPicker.tsx`),
+o toggle de blame sob demanda (`CodeEditor.tsx`, RN-113) e a lista de PRs dentro
+da aba (`CodeDiffPanel.tsx`), as duas últimas entregues na v3.0.0. As três
+pendências declaradas de blame,
 dropdown rico de branches e lista de PRs tocariam os MESMOS arquivos
 (contrato, os três providers, o caso de uso, o controller, a suite de
 contrato) se atacadas separadamente por agentes em paralelo; a decisão foi
@@ -917,6 +922,38 @@ com a frase saindo de `classifyEvent` — a mesma do painel. O contrato externo
 da área não muda (ADR 0038): o fio narra o que o lead registrou, não passa a
 endereçar subagente.
 
+## PROGRAMA 28 — Onda 1, frente A: o tema deixa de ser inalcançável (RN-182..185)
+O tema claro existia em `design/tokens.css`, tinha teste de paridade e estava
+descrito no `design/README.md` como se fosse uma tela — e **nada em `apps/web`
+escrevia `data-theme`**. O único jeito de vê-lo era digitar o atributo no
+DevTools. Os dois testes de contraste sabiam e diziam: um afirmava por `expect`
+que TRÊS pares do claro reprovam, "registro do que se herda, não garantia do que
+se renderiza". Enquanto durou, o argumento era honesto — medir uma tela que
+ninguém pode abrir é medir uma intenção. Com o botão de tema chegando, ele
+inverte de sinal.
+
+**O boot é um ARQUIVO** (`apps/web/public/theme-boot.js`), síncrono no `<head>`,
+antes do bundle. O handoff manda usar script INLINE; a imagem serve sob
+`script-src 'self'` (ADR 0058), então inline funcionaria em `pnpm dev:web` e
+seria bloqueado em produção — a falha do ADR 0036 com outro sujeito. `tema.ts`
+é a API que o shell consome; o botão não mora nela. `localStorage` que lança
+degrada para "pinta e não persiste", e valor desconhecido cai no default.
+
+**Seis tokens do tema claro mudaram de valor** (ADR 0074), porque o fundo mais
+exigente do claro é o `--code-bg` de papel: accent 3,56 → 4,81, warning
+3,15 → 4,98, success 3,89 → 5,12, violet 4,16 → 4,95, text-muted 2,76 → 5,17,
+mais o accent-hover um degrau abaixo. O ESCURO não mudou nenhum, e a dívida dele
+segue travada nos mesmos cinco números. Dois efeitos colaterais registrados: os
+cinco pares que no escuro são dívida PASSAM no claro, e a "exceção conhecida do
+design system" (`--on-accent` sobre `--accent`, 3,20:1) some no claro — o
+conserto que o comentário do teste descrevia, escurecer até `--terracota-500`, é
+o que o claro passou a fazer.
+
+**Cinco dos oito valores `--syn-*` do handoff foram RECUSADOS por medição** (o
+pior, `--syn-cm`, dá 2,32:1 no claro). Onde o handoff reprova, vale o número
+medido: é a mesma régua das fontes. Os oito papéis passam a existir com prefixo
+`--syntax-*`; os cinco semânticos que ainda pintam vão medidos ao lado deles.
+
 ## FERRAMENTA DE DESENVOLVIMENTO — `pnpm bootstrap`
 Menu de terminal em `scripts/dev/bootstrap.sh` agrupando o que se faz no
 dia a dia: Docker, K8s, Database e Test. Existe porque esses comandos moram
@@ -1128,6 +1165,21 @@ divide o mesmo banco, recuperar exige `db:migrate` E `engine:migrate`.
   medido por teste sobre os tokens e layout é verificado no navegador
   por scripts/dev/validacao-visual.js — as duas validações estão
   explicadas em design/README.md.
+- Os DOIS temas são alcançáveis e os DOIS são medidos (ADR 0074,
+  RN-182/184). `data-theme` é escrito por `apps/web/public/theme-boot.js`,
+  ARQUIVO e não script inline — a imagem serve sob `script-src 'self'`, e
+  inline passa em dev e é bloqueado em produção. A preferência mora em
+  `localStorage['brabo.theme']` e a API é `apps/web/src/lib/tema.ts`;
+  nenhum componente escreve o atributo por conta própria. Dívida de
+  contraste é do tema ESCURO e está travada por número — não afrouxe um
+  piso para passar, e não deixe o claro nascer pior que o primário.
+- O handoff estabelece a INTENÇÃO; a medição estabelece o NÚMERO, e o
+  produto estabelece o MECANISMO. Já valeu três vezes: as fontes (ADR
+  0036), o boot de tema inline e cinco dos oito `--syn-*` que reprovam
+  4,5:1 contra o próprio `--code-bg` do handoff (ADR 0074). Nome do
+  handoff que já existe com outro nome entra como ALIAS, nunca
+  renomeação — `--font-display`, `--shadow-modal` e `--r-md`/`--r-lg`/
+  `--r-pill`; e `--r-sm` (7px) NÃO é sinônimo de `--radius-sm` (4px).
 - Tipo novo de `proposed_action` nasce com FRASE em pt-BR em
   `apps/web/src/lib/aprovacoes.ts` — verbo e frase têm UMA fonte, e as
   três telas de decisão (Aprovações, chat da sessão, Insights) a

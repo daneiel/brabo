@@ -1,4 +1,7 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { lerTokens, razaoDeContraste, resolverToken, type Rgb } from './lib/contraste';
 
 /**
  * Contraste WCAG AA calculado direto dos valores de `design/tokens.css` —
@@ -9,84 +12,66 @@ import { describe, it, expect } from 'vitest';
  * comentários de `components/ui/Input.module.css` e
  * `routes/AuthLayout.module.css`.
  *
- * Os hex abaixo são uma CÓPIA dos valores resolvidos de `design/tokens.css`
- * — precisa acompanhar manualmente qualquer mudança de token, porque não há
- * como um teste em Node ler CSS custom properties sem layout de browser.
+ * Enquanto os pares deste arquivo são de COMPONENTE ("o rodapé da sidebar",
+ * "o campo do login"), os de `lib/contraste.test.ts` são do design system.
+ * Os dois medem a mesma aritmética e existem por razões diferentes.
+ *
+ * As cores eram uma CÓPIA à mão dos valores resolvidos, com o aviso de que
+ * "precisa acompanhar manualmente qualquer mudança de token" escrito aqui em
+ * cima — e o ADR 0074, que mexeu em seis tokens do tema claro, é exatamente o
+ * commit em que essa cópia teria mentido. Agora as duas paletas são LIDAS do
+ * arquivo, pelas mesmas funções de `lib/contraste.ts` que o outro teste usa.
  */
 
+const css = readFileSync(resolve(process.cwd(), '../../design/tokens.css'), 'utf8');
+const RAIZ = lerTokens(css, ':root');
+const LIGHT = { ...RAIZ, ...lerTokens(css, `\\[data-theme='light'\\]`) };
+
 interface Tema {
-  surface0: string;
-  surface1: string;
-  surface2: string;
-  textPrimary: string;
-  textSecondary: string;
-  textMuted: string;
-  accent: string;
-  accentHover: string;
-  onAccent: string;
-  success: string;
-  warning: string;
-  danger: string;
-  codeBg: string;
+  surface0: Rgb;
+  surface1: Rgb;
+  surface2: Rgb;
+  textPrimary: Rgb;
+  textSecondary: Rgb;
+  textMuted: Rgb;
+  accent: Rgb;
+  accentHover: Rgb;
+  onAccent: Rgb;
+  success: Rgb;
+  warning: Rgb;
+  danger: Rgb;
+  codeBg: Rgb;
 }
 
-const ESCURO: Tema = {
-  surface0: '#061b24',
-  surface1: '#0a2e3d',
-  surface2: '#123f4e',
-  textPrimary: '#f5ede0',
-  textSecondary: '#aec6ce',
-  textMuted: '#6e8a94',
-  accent: '#d6633a',
-  accentHover: '#e37b4e',
-  onAccent: '#f7eee2',
-  success: '#37b3a4',
-  warning: '#e0982f',
-  danger: '#e05a3e',
-  codeBg: '#03141b',
-};
-
-const CLARO: Tema = {
-  surface0: '#f5ede0',
-  surface1: '#fcf8f1',
-  surface2: '#ecddc7',
-  textPrimary: '#0a2e3d',
-  textSecondary: '#3c5a66',
-  textMuted: '#80939a',
-  accent: '#c4552d',
-  accentHover: '#a5451f',
-  onAccent: '#f7eee2',
-  success: '#217e73',
-  warning: '#b5701c',
-  danger: '#b33a26',
-  codeBg: '#efe4d2',
-};
-
-function hexParaRgb(hex: string): [number, number, number] {
-  const limpo = hex.replace('#', '');
-  return [
-    parseInt(limpo.slice(0, 2), 16),
-    parseInt(limpo.slice(2, 4), 16),
-    parseInt(limpo.slice(4, 6), 16),
-  ];
-}
-
-// Fórmula de luminância relativa do WCAG 2.x (sRGB).
-function luminancia([r, g, b]: [number, number, number]): number {
-  const canal = (v: number) => {
-    const s = v / 255;
-    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+function lerTema(tokens: Record<string, string>): Tema {
+  const cor = (nome: string): Rgb => {
+    const rgb = resolverToken(nome, tokens);
+    // Token que sumiu ou virou alias quebrado tem de PARAR o teste, não virar
+    // preto e passar medindo outra coisa.
+    if (!rgb) throw new Error(`design/tokens.css não resolve ${nome}`);
+    return rgb;
   };
-  const [rl, gl, bl] = [canal(r), canal(g), canal(b)];
-  return 0.2126 * rl + 0.7152 * gl + 0.0722 * bl;
+  return {
+    surface0: cor('--surface-0'),
+    surface1: cor('--surface-1'),
+    surface2: cor('--surface-2'),
+    textPrimary: cor('--text-primary'),
+    textSecondary: cor('--text-secondary'),
+    textMuted: cor('--text-muted'),
+    accent: cor('--accent'),
+    accentHover: cor('--accent-hover'),
+    onAccent: cor('--on-accent'),
+    success: cor('--success'),
+    warning: cor('--warning'),
+    danger: cor('--danger'),
+    codeBg: cor('--code-bg'),
+  };
 }
 
-function contraste(corA: string, corB: string): number {
-  const la = luminancia(hexParaRgb(corA));
-  const lb = luminancia(hexParaRgb(corB));
-  const [maior, menor] = la > lb ? [la, lb] : [lb, la];
-  return (maior + 0.05) / (menor + 0.05);
-}
+const ESCURO = lerTema(RAIZ);
+const CLARO = lerTema(LIGHT);
+
+const contraste = razaoDeContraste;
 
 // AA: 4.5:1 pra texto normal, 3:1 pra texto grande (≥18.66px bold/24px
 // regular) e pra componentes gráficos de UI (WCAG 1.4.11).

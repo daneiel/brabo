@@ -97,7 +97,14 @@
 
 .success {
   background: var(--success);
-  color: #fff;
+  /* Era `#fff` — o único hex solto do arquivo. `--on-accent` (#f7eee2) é o
+     token do texto sobre preenchimento de marca, o mesmo que `.primary` usa, e
+     acompanha o tema em vez de ficar branco puro sobre o teal escuro do claro.
+     O contraste do par não muda de faixa (2,24:1 → 2,07:1 no escuro; ambos
+     abaixo de 4,5:1) — é o mesmo status já registrado para `--on-accent` sobre
+     `--accent` em `design-contraste.test.ts`, rótulo compacto de UI e não
+     texto de leitura. */
+  color: var(--on-accent);
   border-color: var(--success);
 }
 
