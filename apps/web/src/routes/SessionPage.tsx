@@ -28,10 +28,25 @@ import {
 } from '../lib/api-client';
 import { streamChatMessage } from '../lib/chat-stream';
 import { connectSessionHeartbeat } from '../lib/session-channel';
-import { useBacklog, useCurrentWorkspaceWithRole, useSessionEvents, useSessionEvent, usePendingActions, useHandoffs } from '../lib/hooks';
+import {
+  useBacklog,
+  useCurrentWorkspaceWithRole,
+  useSessionEvents,
+  useSessionEvent,
+  useSessionEventHistory,
+  usePendingActions,
+  useHandoffs,
+} from '../lib/hooks';
 import { pollQueParaNoErro } from '../lib/query-policy';
 import { emailDaSessao } from '../lib/auth';
 import { AGENTS } from '../lib/agents';
+import {
+  agruparPorOrigem,
+  classifyEvent,
+  origemDoEvento,
+  ROTULO_DA_ORIGEM,
+  type OrigemDeEvento,
+} from '../lib/activity';
 import {
   AGENT_AUTONOMY_ALL_ACTIONS,
   type BusinessRulePayload,
@@ -47,7 +62,9 @@ import { TokenMeter } from '../components/TokenMeter';
 import { ModelPicker } from '../components/ModelPicker';
 import { ApprovalCard } from '../components/ApprovalCard';
 import { ActivityFeed } from '../components/ActivityFeed';
+import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
 import { EventItem } from '../components/EventItem';
+import { Skeleton } from '../components/ui/Skeleton';
 import { AvatarDoAgente } from '../components/ui/AvatarDoAgente';
 import { MarkdownMessage } from '../components/ui/MarkdownMessage';
 import { Button } from '../components/ui/Button';
@@ -122,6 +139,15 @@ interface TimelineEntry {
    * `seq` a colocou.
    */
   desfecho?: boolean;
+  /**
+   * A CAMADA de onde a entrada veio (RN-177) — o mesmo eixo do painel de log,
+   * e é ele que dá nome aos grupos do histórico recolhido do fio.
+   *
+   * Não substitui `agentId` nem `autor`: os três respondem perguntas
+   * diferentes ("participa do colapso por agente?", "de quem é o turno?",
+   * "de que camada veio?").
+   */
+  origem: OrigemDeEvento;
 }
 
 /**
@@ -249,6 +275,13 @@ export function pontoDaSessao(status: SessionStatus | undefined) {
  * composer.
  */
 const AGENTES_DE_CHAT = ['criativo', 'po', 'arquiteto', 'dev-lead'] as const;
+
+/**
+ * Quantas entradas do fio ficam ABERTAS antes de o resto virar histórico
+ * recolhido por origem (RN-177). Mesmo número do painel de log, e pelo mesmo
+ * pedido: "mantém as últimas 5 mensagens".
+ */
+const FIO_RECENTES_ABERTAS = 5;
 
 /**
  * `scrollIntoView` com guarda de existência (achado 10) — jsdom (ambiente de
@@ -1188,11 +1221,18 @@ export function SessionPage({
       // aqui em vez de serem repetidos em cada `items.push`: um `push` que
       // esquecesse `autor`/`turno` viraria um item de turno "0" no meio do
       // fio, e o desfecho pararia nele sem que ninguém entendesse por quê.
-      const empurrar = (entry: Omit<TimelineEntry, 'seq' | 'autor' | 'turno'>) =>
+      const empurrar = (
+        entry: Omit<TimelineEntry, 'seq' | 'autor' | 'turno' | 'origem'>,
+      ) =>
         items.push({
           seq: event.seq,
           autor: `${event.actor.kind}:${event.actor.id}`,
           turno: turnoDoSeq(aberturas, event.seq),
+          // RN-177: a origem sai do MESMO derivador do painel de log — uma
+          // classificação só para os dois lugares. Derivá-la aqui de novo,
+          // por tipo, garantiria que um dia as duas telas discordassem sobre
+          // o que é fala de agente.
+          origem: origemDoEvento(event),
           ...entry,
         });
 
@@ -1644,6 +1684,42 @@ export function SessionPage({
             </div>
           ),
         });
+      } else if (event.type.startsWith('delegation.')) {
+        // RN-181 — a área trabalha por dentro e o fio ficava mudo.
+        //
+        // Quando QA ou Infra delega a subagentes e consolida o veredito, os
+        // três desfechos (`completed`/`failed`/`dispensed`) só existiam no
+        // painel de log: quem acompanha a sessão via o gate abrir e fechar sem
+        // nenhum sinal de que houve uma segunda tentativa por baixo. O
+        // contrato externo da área NÃO muda (ADR 0038) — o fio não passa a
+        // endereçar subagente, só a NARRAR o que o lead já registrou.
+        //
+        // Aviso compacto, no formato da RN-157, e não bolha: é notificação de
+        // algo que aconteceu dentro da área, não uma fala. E a FRASE sai de
+        // `classifyEvent` — a mesma do painel —, porque duas redações do mesmo
+        // evento divergem na primeira mudança de payload.
+        const display = classifyEvent(event);
+        empurrar({
+          agentId: event.actor.kind === 'agent' ? event.actor.id : undefined,
+          node: (
+            <div className={styles.handoffDivider} key={event.id}>
+              {/* A frase de `classifyEvent` JÁ nomeia o subagente e a área —
+                  prefixar o lead produziria "QA Lead QA Automação concluiu a
+                  delegação (qa)". */}
+              <span
+                className={styles.handoffPill}
+                style={
+                  display.bad
+                    ? ({ color: 'var(--danger)' } as CSSProperties)
+                    : undefined
+                }
+              >
+                <display.icon size={13} />
+                {display.text}
+              </span>
+            </div>
+          ),
+        });
       }
     }
 
@@ -1661,6 +1737,13 @@ export function SessionPage({
         // ela é MOSTRADA, porque decidir é a última coisa que o turno pede.
         desfecho: true,
         agentId: action.actor.kind === 'agent' ? action.actor.id : undefined,
+        // RN-177: a ação não é evento, mas o EVENTO que a representa no log é
+        // `proposed_action.created` — classificar por ele mantém as duas
+        // telas dizendo a mesma coisa sobre o mesmo fato.
+        origem: origemDoEvento({
+          type: 'proposed_action.created',
+          actor: action.actor,
+        }),
         // Sem `meta` com o modelo (achado I). O card recebia o modelo ATUAL da
         // sessão, então trocar o binding reescrevia retroativamente o rótulo de
         // TODA ação antiga — inclusive das que rodaram com outro modelo. Não há
@@ -1737,7 +1820,7 @@ export function SessionPage({
     const colapsavel = (agentId: string) =>
       passaramBastao.has(agentId) && !comAcaoPendente.has(agentId);
 
-    const resultado: { key: string; node: ReactNode }[] = [];
+    const resultado: { key: string; node: ReactNode; origem: OrigemDeEvento }[] = [];
     let corrente: TimelineEntry[] = [];
 
     function fecharCorrente() {
@@ -1749,6 +1832,9 @@ export function SessionPage({
         const grupo = corrente;
         resultado.push({
           key: `grupo-${agentId}-${grupo[0].seq}`,
+          // Um colapso por agente é, por construção, fala de agente — mesmo
+          // quando o que ele contém veio de origens diferentes.
+          origem: 'agente',
           node: (
             <div style={corDoAgente(agentId)}>
               <Disclosure
@@ -1773,7 +1859,7 @@ export function SessionPage({
         });
       } else {
         for (const e of corrente) {
-          resultado.push({ key: String(e.seq), node: e.node });
+          resultado.push({ key: String(e.seq), node: e.node, origem: e.origem });
         }
       }
       corrente = [];
@@ -1788,13 +1874,40 @@ export function SessionPage({
       if (entry.agentId) {
         corrente = [entry];
       } else {
-        resultado.push({ key: String(entry.seq), node: entry.node });
+        resultado.push({ key: String(entry.seq), node: entry.node, origem: entry.origem });
       }
     }
     fecharCorrente();
 
     return resultado;
   }, [timeline, handoffs, actions]);
+
+  /**
+   * RN-177 no FIO: as últimas {@link FIO_RECENTES_ABERTAS} entradas ficam
+   * abertas e tudo que veio antes vira histórico recolhido POR ORIGEM.
+   *
+   * O fio é CRESCENTE (o mais novo em baixo, junto do composer), então aqui o
+   * histórico fica no TOPO — é a mesma regra do painel de log com o eixo
+   * invertido, e não uma segunda decisão.
+   *
+   * O corte é sobre a lista JÁ agrupada por agente (RN-138): quem conta é o
+   * que o usuário vê, e um colapso de doze mensagens é UMA entrada na tela.
+   * Contar entradas cruas faria "as últimas 5" esconderem a conversa inteira
+   * atrás de um agrupamento.
+   */
+  const fio = useMemo(() => {
+    if (timelineAgrupada.length <= FIO_RECENTES_ABERTAS) {
+      return { historico: [], recentes: timelineAgrupada };
+    }
+    const corte = timelineAgrupada.length - FIO_RECENTES_ABERTAS;
+    return {
+      historico: agruparPorOrigem(
+        timelineAgrupada.slice(0, corte),
+        (item) => item.origem,
+      ),
+      recentes: timelineAgrupada.slice(corte),
+    };
+  }, [timelineAgrupada]);
 
   async function handleActivate() {
     await transitionSession(projectId, sessionId, 'active');
@@ -2467,7 +2580,33 @@ export function SessionPage({
                 )
               )}
 
-              {timelineAgrupada.map((entry) => (
+              {/* RN-177 — o histórico recolhido POR ORIGEM, no topo do fio,
+                  porque o fio é crescente. Nasce FECHADO: a conversa que
+                  importa é a recente, e abrir tudo é o estado de hoje, que é
+                  justamente o que o pedido apontou como ilegível numa sessão
+                  longa. Cada origem é um `Disclosure` próprio — assim voltar a
+                  ler só o que o usuário disse não obriga a reabrir também
+                  todo o log de domínio. */}
+              {fio.historico.length > 0 && (
+                <div className={styles.fioHistorico}>
+                  {fio.historico.map(({ origem, itens }) => (
+                    <Disclosure
+                      key={origem}
+                      titulo={ROTULO_DA_ORIGEM[origem]}
+                      trailing={itens.length}
+                      classNameCabecalho={styles.fioHistoricoCabecalho}
+                    >
+                      <div className={styles.fioHistoricoRegiao}>
+                        {itens.map((entry) => (
+                          <div key={entry.key}>{entry.node}</div>
+                        ))}
+                      </div>
+                    </Disclosure>
+                  ))}
+                </div>
+              )}
+
+              {fio.recentes.map((entry) => (
                 <div key={entry.key}>{entry.node}</div>
               ))}
 
@@ -2632,8 +2771,12 @@ export function SessionPage({
         {asideOpen && (
           <ContextAside
             projectId={projectId}
+            sessionId={sessionId}
             actions={actionsQuery.data?.items ?? []}
-            events={events}
+            // O MESMO pausa-poll do fio (achados 2/7): o painel lê a mesma
+            // query, e um segundo observador com timer próprio ressuscitaria
+            // o poll que o turno em streaming pausa.
+            pausarPoll={streaming}
             logOpen={logOpen}
             onToggleLog={() => setLogOpen((open) => !open)}
             highlightEvent={highlightEvent}
@@ -2708,10 +2851,147 @@ function urlDaPr(action: ProposedAction): string | null {
   return (action.executionResult as { pullRequestUrl?: string } | null)?.pullRequestUrl ?? null;
 }
 
+/**
+ * Um nó da árvore de backlog do painel de artefatos (RN-179) — épico, história
+ * ou tarefa, ligados pelo que o event log JÁ carrega:
+ * `backlog.epic_created` grava `{ epicId, title }`, `backlog.story_created`
+ * grava `{ storyId, epicId, … }` e `backlog.task_created` grava
+ * `{ taskId, storyId, … }`.
+ *
+ * A hierarquia é derivada desses vínculos, nunca adivinhada por proximidade no
+ * log: nó cujo pai não está entre os eventos carregados sobe para a raiz em vez
+ * de ser pendurado no épico mais próximo — inventar parentesco seria pior que
+ * mostrá-lo solto.
+ */
+interface NoDeBacklog {
+  id: string;
+  evento: SessionEvent;
+  titulo: string;
+  /** Como se chama o que está PENDURADO nele, quando há. */
+  rotuloDosFilhos: string;
+  filhos: NoDeBacklog[];
+}
+
+const ROTULO_DOS_FILHOS: Record<string, string> = {
+  'backlog.epic_created': 'histórias',
+  'backlog.story_created': 'tarefas',
+  'backlog.task_created': '',
+};
+
+/** O id PRÓPRIO e o id do PAI de um evento de backlog, quando ele os tem. */
+function vinculoDeBacklog(e: SessionEvent): { id?: string; paiId?: string } {
+  const p = e.payload as {
+    epicId?: unknown;
+    storyId?: unknown;
+    taskId?: unknown;
+  };
+  const texto = (v: unknown) => (typeof v === 'string' && v !== '' ? v : undefined);
+  if (e.type === 'backlog.epic_created') return { id: texto(p?.epicId) };
+  if (e.type === 'backlog.story_created') {
+    return { id: texto(p?.storyId), paiId: texto(p?.epicId) };
+  }
+  return { id: texto(p?.taskId), paiId: texto(p?.storyId) };
+}
+
+/**
+ * Monta a árvore épico → história → tarefa a partir dos eventos carregados.
+ *
+ * Duas passadas de propósito: a primeira cria TODOS os nós, a segunda os
+ * pendura. Pendurar na mesma passada exigiria que o pai já existisse, e o
+ * event log não garante isso — uma tarefa criada numa sessão cuja história
+ * nasceu antes da janela carregada é caso normal, não erro.
+ */
+export function montarArvoreDeBacklog(events: SessionEvent[]): NoDeBacklog[] {
+  const porId = new Map<string, NoDeBacklog>();
+  const ordem: NoDeBacklog[] = [];
+
+  for (const e of events) {
+    if (!(e.type in ROTULO_DOS_FILHOS)) continue;
+    const { id } = vinculoDeBacklog(e);
+    if (!id) continue;
+    const payload = e.payload as { title?: unknown };
+    const no: NoDeBacklog = {
+      id,
+      evento: e,
+      titulo: typeof payload?.title === 'string' ? payload.title : '(sem título)',
+      rotuloDosFilhos: ROTULO_DOS_FILHOS[e.type],
+      filhos: [],
+    };
+    porId.set(id, no);
+    ordem.push(no);
+  }
+
+  const raizes: NoDeBacklog[] = [];
+  for (const no of ordem) {
+    const { paiId } = vinculoDeBacklog(no.evento);
+    const pai = paiId ? porId.get(paiId) : undefined;
+    if (pai) pai.filhos.push(no);
+    else raizes.push(no);
+  }
+  return raizes;
+}
+
+/** Quantos descendentes o nó tem, contando os netos — é o número do colapso. */
+function totalDeDescendentes(no: NoDeBacklog): number {
+  return no.filhos.reduce((soma, f) => soma + 1 + totalDeDescendentes(f), 0);
+}
+
+/**
+ * Um nó da árvore de backlog na tela (RN-179).
+ *
+ * A LINHA do nó continua sendo um link para o Backlog (RN-159) e o colapso dos
+ * filhos vem ABAIXO dela, num `Disclosure` próprio — e não com o link dentro
+ * do cabeçalho do colapso: cabeçalho de `Disclosure` é `<button>`, e um `<a>`
+ * dentro de um `<button>` é HTML inválido e alvo de clique ambíguo. Assim
+ * épico e história continuam navegando, e as tarefas nascem FECHADAS: um épico
+ * com trinta tarefas ocuparia o painel inteiro sem que ninguém tivesse pedido.
+ */
+function ItemDeBacklog({
+  projectId,
+  no,
+}: {
+  projectId: string;
+  no: NoDeBacklog;
+}) {
+  return (
+    <div className={styles.artefatoNo}>
+      <Link
+        to="/projects/$projectId"
+        params={{ projectId }}
+        search={{ tab: 'backlog' }}
+        className={[styles.artefatoItem, styles.artefatoItemLink].join(' ')}
+      >
+        <StackIcon size={13} className={styles.artefatoItemIcone} />
+        <span className={styles.artefatoItemTitulo}>{no.titulo}</span>
+      </Link>
+      {no.filhos.length > 0 && (
+        <Disclosure
+          titulo={no.rotuloDosFilhos || 'itens'}
+          trailing={no.filhos.length}
+          classNameCabecalho={styles.artefatoFilhosCabecalho}
+        >
+          <div className={styles.artefatoFilhos}>
+            {/* RN-178 vale aqui dentro também: o mais recente primeiro. */}
+            {[...no.filhos]
+              .sort((a, b) => b.evento.seq - a.evento.seq)
+              .map((filho) => (
+                <ItemDeBacklog key={filho.id} projectId={projectId} no={filho} />
+              ))}
+          </div>
+        </Disclosure>
+      )}
+    </div>
+  );
+}
+
+/** Quantas regras de negócio cabem numa página do painel (RN-178). */
+const REGRAS_POR_PAGINA = 5;
+
 function ContextAside({
   projectId,
+  sessionId,
   actions,
-  events,
+  pausarPoll,
   logOpen,
   onToggleLog,
   highlightEvent,
@@ -2719,23 +2999,66 @@ function ContextAside({
   citedEventMissing,
 }: {
   projectId: string;
+  sessionId: string;
   actions: ProposedAction[];
-  events: SessionEvent[];
+  pausarPoll: boolean;
   logOpen: boolean;
   onToggleLog: () => void;
   highlightEvent?: string;
   citedEvent?: SessionEvent;
   citedEventMissing?: boolean;
 }) {
-  const businessRules = events.filter((e) => e.type === 'artifact.business_rule');
+  /**
+   * RN-180 — o painel deixa de mentir sobre o teto.
+   *
+   * Antes ele recebia por prop os 200 últimos eventos (`useSessionEvents`) e
+   * não tinha como dizer que havia mais: numa sessão de milhares, as quatro
+   * seções mostravam um recorte da cauda como se fosse a sessão inteira. Agora
+   * ele lê o MESMO histórico paginado que a aba de Atividade da Visão Geral já
+   * usava (RN-099), com a `queryKey` da cauda compartilhada com o fio — ZERO
+   * requisição a mais no ciclo de poll (RN-090/091).
+   *
+   * `baixados` (tudo que já veio) alimenta as seções derivadas e `events` (a
+   * janela) alimenta o feed: as seções não paginam item a item, e cortá-las na
+   * janela de 100 as faria mostrar MENOS do que mostravam antes desta mudança.
+   */
+  const historico = useSessionEventHistory(projectId, sessionId, 3000, pausarPoll);
+  const events = historico.baixados;
 
-  // Artefatos gerados (RN-159): PR (dev ou ADR) + épico/história do PO, numa
-  // lista só, agrupada por AGENTE. module_map/C4 ficaram de FORA desta
-  // rodada — decisão registrada no PR: os dois são estado VIGENTE do
-  // projeto (uma versão corrente, sobrescrita a cada geração), não um
-  // artefato datado por SESSÃO como PR/épico/história; a "Visão Geral"
-  // (`ProjectOverviewTab.tsx`) já é o lugar deles, sem âncora própria hoje —
-  // adicionar uma set fora do escopo desta entrega.
+  // Quantos eventos da sessão ficaram ANTES do que já foi baixado. Sai de
+  // SUBTRAÇÃO sobre o `seq` (que é gapless e por sessão), nunca de uma
+  // requisição a mais — o mesmo mecanismo do "+ N mais antigos" do sino
+  // (RN-100).
+  const eventosAnteriores = Math.max(0, (events[0]?.seq ?? 1) - 1);
+
+  // RN-178: do último para o primeiro, nas quatro seções. Cópia antes do
+  // `sort`: `baixados` é derivado do cache da query, e ordená-lo no lugar
+  // reordenaria o que os outros consumidores leem.
+  const businessRules = events
+    .filter((e) => e.type === 'artifact.business_rule')
+    .sort((a, b) => b.seq - a.seq);
+
+  // RN-178: acima de 5 regras a lista pagina em vez de crescer sem fim — o
+  // painel tem a altura de uma coluna, e uma sessão de ideação passa
+  // facilmente de vinte regras.
+  const [paginaDeRegras, setPaginaDeRegras] = useState(0);
+  const totalDePaginas = Math.max(1, Math.ceil(businessRules.length / REGRAS_POR_PAGINA));
+  // Clamp em vez de efeito: regra nova chegando pelo poll encurta a lista
+  // (nunca) ou a alonga, e trocar de sessão a zera — um `useEffect` de
+  // sincronização renderizaria uma vez com a página inválida antes de corrigir.
+  const pagina = Math.min(paginaDeRegras, totalDePaginas - 1);
+  const regrasDaPagina = businessRules.slice(
+    pagina * REGRAS_POR_PAGINA,
+    pagina * REGRAS_POR_PAGINA + REGRAS_POR_PAGINA,
+  );
+
+  // Artefatos gerados (RN-159): PR (dev ou ADR) + backlog do PO, numa lista
+  // só, agrupada por AGENTE. module_map/C4 ficaram de FORA desta rodada —
+  // decisão registrada no PR: os dois são estado VIGENTE do projeto (uma
+  // versão corrente, sobrescrita a cada geração), não um artefato datado por
+  // SESSÃO como PR/épico/história; a "Visão Geral" (`ProjectOverviewTab.tsx`)
+  // já é o lugar deles, sem âncora própria hoje — adicionar uma seria fora do
+  // escopo desta entrega.
   const artefatos: ArtefatoGerado[] = [];
 
   for (const a of actions) {
@@ -2766,35 +3089,34 @@ function ContextAside({
     });
   }
 
-  for (const e of events) {
-    if (e.type !== 'backlog.epic_created' && e.type !== 'backlog.story_created') continue;
-    const payload = e.payload as { title?: unknown };
-    const titulo = typeof payload?.title === 'string' ? payload.title : '(sem título)';
+  // RN-179: a TAREFA entra no painel, e entra pendurada na história, que por
+  // sua vez pende do épico. Antes só épico e história apareciam, lado a lado e
+  // planos — o que o PO produziu de fato (a tarefa, que é o que um dev pega)
+  // não deixava rastro nenhum aqui. Só as RAÍZES viram item da lista; os
+  // descendentes vão dentro do colapso do pai.
+  const arvoreDeBacklog = montarArvoreDeBacklog(events);
+  for (const raiz of arvoreDeBacklog) {
     artefatos.push({
-      key: `backlog-${e.id}`,
-      actorId: e.actor.id,
-      ordenacao: e.seq,
-      node: (
-        <Link
-          key={`backlog-${e.id}`}
-          to="/projects/$projectId"
-          params={{ projectId }}
-          search={{ tab: 'backlog' }}
-          className={[styles.artefatoItem, styles.artefatoItemLink].join(' ')}
-        >
-          <StackIcon size={13} className={styles.artefatoItemIcone} />
-          <span className={styles.artefatoItemTitulo}>{titulo}</span>
-        </Link>
-      ),
+      key: `backlog-${raiz.evento.id}`,
+      actorId: raiz.evento.actor.id,
+      ordenacao: raiz.evento.seq,
+      node: <ItemDeBacklog key={`backlog-${raiz.evento.id}`} projectId={projectId} no={raiz} />,
     });
   }
 
-  artefatos.sort((a, b) => a.ordenacao - b.ordenacao);
+  // RN-178: o mais recente primeiro, aqui como nas outras seções.
+  artefatos.sort((a, b) => b.ordenacao - a.ordenacao);
+
+  // O contador do cabeçalho conta a ÁRVORE inteira, não só as raízes: dizer
+  // "3" com dezoito tarefas dentro seria o mesmo tipo de número que não
+  // corresponde a nada que a RN-151 tirou da sidebar.
+  const totalDeArtefatos =
+    artefatos.length +
+    arvoreDeBacklog.reduce((soma, r) => soma + totalDeDescendentes(r), 0);
 
   // Agrupado por `actorId` — o mesmo padrão de colapso do fio principal
   // (RN-138, `timelineAgrupada`), num `Disclosure` por agente, com a ORDEM
-  // de primeira aparição (não alfabética: reflete a ordem em que os
-  // artefatos nasceram).
+  // em que os artefatos aparecem na lista (que agora é a do mais recente).
   const gruposDeArtefatos: { actorId: string; itens: ArtefatoGerado[] }[] = [];
   for (const item of artefatos) {
     const grupo = gruposDeArtefatos.find((g) => g.actorId === item.actorId);
@@ -2811,11 +3133,16 @@ function ContextAside({
     id,
     label: AGENTS[id as keyof typeof AGENTS]?.name ?? id,
   }));
-  const filesTouched = actions
+
+  // RN-178: a ação mais recente primeiro, e a chave carrega o id da AÇÃO —
+  // o mesmo arquivo tocado por dois commits são duas linhas legítimas, e
+  // `key={file.path}` fazia delas uma chave duplicada.
+  const filesTouched = [...actions]
     .filter((a) => a.actionType === 'git_commit' || a.actionType === 'git_push')
+    .sort((a, b) => ordemDaAcaoNaTimeline(b, events) - ordemDaAcaoNaTimeline(a, events))
     .flatMap((a) => {
       const files = (a.payload as { files?: { path: string; additions: number; deletions: number }[] }).files;
-      return files ?? [];
+      return (files ?? []).map((file) => ({ ...file, actionId: a.id }));
     });
 
   return (
@@ -2825,6 +3152,18 @@ function ContextAside({
       <div className={styles.asideTitleBar}>
         <h2 className={styles.asideTitle}>Contexto da sessão</h2>
       </div>
+
+      {/* RN-180 — o teto que existia em silêncio passa a estar escrito. Uma
+          nota só, no topo, porque o teto é UM: as quatro seções leem os mesmos
+          eventos baixados, e é o mesmo botão que traz mais para todas. */}
+      {eventosAnteriores > 0 && (
+        <p className={styles.asideTeto}>
+          Este painel lê os <strong>{events.length}</strong> eventos já
+          carregados desta sessão. Há <strong>{eventosAnteriores}</strong>{' '}
+          anteriores — “Carregar mais antigos”, no Log de eventos, traz mais, e
+          as outras seções crescem junto.
+        </p>
+      )}
 
       <div className={styles.asideSection}>
         {/* Contador exposto com o MESMO padrão do Log de eventos (`Disclosure`
@@ -2841,18 +3180,48 @@ function ContextAside({
           {businessRules.length === 0 ? (
             <div className={styles.asideEmpty}>Nada ainda.</div>
           ) : (
-            businessRules.map((e) => {
-              const rule = e.payload as BusinessRulePayload;
-              return (
-                <div key={e.id} className={styles.ruleCard}>
-                  <div className={styles.ruleTitle}>{rule.title}</div>
-                  <div className={styles.ruleDescription}>{rule.description}</div>
-                  <div className={styles.ruleOrigin}>
-                    origem: {Array.isArray(rule.origin) ? rule.origin.length : 0} ref(s)
+            <>
+              {regrasDaPagina.map((e) => {
+                const rule = e.payload as BusinessRulePayload;
+                return (
+                  <div key={e.id} className={styles.ruleCard}>
+                    <div className={styles.ruleTitle}>{rule.title}</div>
+                    <div className={styles.ruleDescription}>{rule.description}</div>
+                    <div className={styles.ruleOrigin}>
+                      origem: {Array.isArray(rule.origin) ? rule.origin.length : 0} ref(s)
+                    </div>
                   </div>
+                );
+              })}
+              {/* O paginador só existe quando há o que paginar: com 5 ou menos
+                  ele seria um controle permanentemente inútil ocupando altura
+                  na coluna mais estreita da tela. */}
+              {totalDePaginas > 1 && (
+                <div className={styles.asidePager}>
+                  <button
+                    type="button"
+                    className={styles.asidePagerBotao}
+                    onClick={() => setPaginaDeRegras(Math.max(0, pagina - 1))}
+                    disabled={pagina === 0}
+                    aria-label="Página anterior de regras de negócio"
+                  >
+                    ‹
+                  </button>
+                  <span className={styles.asidePagerTexto}>
+                    {pagina + 1} de {totalDePaginas}
+                  </span>
+                  <button
+                    type="button"
+                    className={styles.asidePagerBotao}
+                    onClick={() => setPaginaDeRegras(Math.min(totalDePaginas - 1, pagina + 1))}
+                    disabled={pagina >= totalDePaginas - 1}
+                    aria-label="Próxima página de regras de negócio"
+                  >
+                    ›
+                  </button>
                 </div>
-              );
-            })
+              )}
+            </>
           )}
         </Disclosure>
       </div>
@@ -2860,10 +3229,11 @@ function ContextAside({
       <div className={styles.asideSection}>
         {/* RN-159: agrupado por agente (mesmo `Disclosure` do colapso do fio,
             RN-138) — antes era uma lista PLANA só de `pr_open`, sem dizer
-            QUEM abriu cada PR nem incluir épico/história do PO. */}
+            QUEM abriu cada PR nem incluir épico/história do PO. RN-179: e as
+            tarefas, penduradas na história a que pertencem. */}
         <Disclosure
           titulo="Artefatos gerados"
-          trailing={artefatos.length}
+          trailing={totalDeArtefatos}
           padraoAberto
           classNameCabecalho={styles.asideHeader}
         >
@@ -2899,7 +3269,7 @@ function ContextAside({
           <div className={styles.asideEmpty}>Nada ainda.</div>
         ) : (
           filesTouched.map((file) => (
-            <div key={file.path} className={styles.asideItem}>
+            <div key={`${file.actionId}-${file.path}`} className={styles.asideItem}>
               <span className={styles.fileLetter}>M</span>
               <span className={styles.filePath}>{file.path}</span>
               <span className={styles.fileAdd}>+{file.additions}</span>
@@ -2921,7 +3291,7 @@ function ContextAside({
       <div className={styles.asideSection}>
         <Disclosure
           titulo="Log de eventos"
-          trailing={events.length}
+          trailing={historico.carregados}
           aberto={logOpen}
           onAlternar={onToggleLog}
           classNameCabecalho={styles.asideHeader}
@@ -2941,11 +3311,30 @@ function ContextAside({
               O evento citado não foi encontrado nesta sessão.
             </div>
           )}
-          <ActivityFeed
-            events={events}
-            agentOptions={agentOptions}
-            highlightEventId={highlightEvent}
-          />
+          {/* Os três estados da RN-088, com o ERRO antes do vazio — o painel
+              lia de uma prop e por isso nunca soube distinguir "a api recusou"
+              de "não aconteceu nada". */}
+          {historico.isError ? (
+            <ErroDeCarregamento
+              titulo="Não foi possível carregar o log de eventos."
+              erro={historico.error}
+              onTentarDeNovo={historico.refetch}
+            />
+          ) : historico.isPending ? (
+            <Skeleton height={120} />
+          ) : (
+            <ActivityFeed
+              events={historico.events}
+              agentOptions={agentOptions}
+              highlightEventId={highlightEvent}
+              // RN-180: o pager sempre existiu no componente e este call site
+              // nunca o passava — era essa a razão de a sessão perder o começo
+              // em silêncio.
+              onLoadOlder={historico.carregarMaisAntigos}
+              hasOlder={historico.temMaisAntigos}
+              loadingOlder={historico.carregandoMaisAntigos}
+            />
+          )}
         </Disclosure>
       </div>
     </aside>

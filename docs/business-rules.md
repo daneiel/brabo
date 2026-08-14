@@ -6012,6 +6012,191 @@ No balão, a tabela **rola na horizontal** em vez de espremer coluna: o fio tem
   Módulos do arquiteto tem que ficar bem estruturada em formato tabela,
   utilizar design system do próprio Brabo"
 
+### RN-177 — O log mostra tudo, e o histórico se recolhe por ORIGEM {#rn-177}
+
+O feed de atividade escondia seis tipos de evento (`tool.call`, `tool.result`,
+`agent.response`, `agent.delta`, `agent.status`, `context.compacted`) **sem
+oferecer alternativa nenhuma**: quem quisesse ver o que o agente e o harness
+trocam entre si tinha de abrir o banco. O filtro continua, e continua
+**desligado por padrão** — a razão dele não mudou (116 de 193 eventos reais
+eram desses tipos, ver `isMachineEvent`) —, mas virou **escolha**: um botão
+"Eventos de máquina" no mesmo trilho dos chips de tipo.
+
+Mostrar tudo só resolve metade: uma sessão longa vira uma lista que ninguém
+percorre. Por isso as **5 mais recentes ficam abertas** e o resto entra em
+colapsos por **ORIGEM** — uma classificação NOVA, que não substitui o
+`ActivityKind`: `kind` diz de que ASSUNTO o evento fala (commit, PR, permissão)
+e decide ícone e cor; `origem` diz de que CAMADA ele veio, e é ela que torna o
+histórico legível em punhados. As seis saem do dado que existe — `actor.kind` e
+o prefixo do `type` —, nunca de suposição:
+
+| origem | o que cai nela |
+|---|---|
+| `harness` | `tool.*`, `toolloop.*`, `agent.status`, `context.compacted` |
+| `llm` | `agent.response`, `agent.delta`, `llm.*` |
+| `usuario` | qualquer evento com `actor.kind === 'user'` |
+| `sistema` | qualquer evento com `actor.kind === 'system'` |
+| `agente` | `agent.*` restante, `handoff.*`, `delegation.*`, `chat.*` de agente |
+| `eventos` | o event log de domínio (backlog, git, PR, artefato, bootstrap…) |
+
+A **precedência** é o que torna a classificação previsível, e está na ordem dos
+`if`: mecanismo (`harness`, `llm`) vence ator, porque um `tool.call` é do
+harness qualquer que seja o ator; e ator vence prefixo de agente, porque
+`chat.message` existe dos dois lados e quem os distingue é quem falou. Tipo que
+ninguém previu cai em `eventos` — nunca some, nunca inventa categoria.
+
+**A mesma regra vale no FIO da sessão**, com o eixo invertido: o fio é
+crescente (o mais novo junto do composer), então as 5 últimas entradas ficam
+abertas em baixo e o histórico recolhido fica no TOPO. O corte é sobre a lista
+já agrupada por agente ([RN-138](#rn-138)) — quem conta é o que o usuário vê, e
+um colapso de doze mensagens é UMA entrada na tela.
+
+- **Onde:** `apps/web/src/lib/activity.ts:94` (`OrigemDeEvento`), `:125`
+  (`origemDoEvento`), `:152` (`agruparPorOrigem`);
+  `apps/web/src/components/ActivityFeed.tsx:34` (o corte de 5), `:66` (o
+  toggle); `apps/web/src/routes/SessionPage.tsx:284` (o corte do fio), `:1898`
+  (`fio`)
+- **Teste:** `apps/web/src/lib/activity-origem.test.ts`,
+  `apps/web/src/components/ActivityFeed.test.tsx` (describe "ordem,
+  agrupamento e o toggle de máquina"),
+  `apps/web/src/routes/SessionPage.painel-e-agrupamento.test.tsx` (describe
+  "RN-177")
+- **Origem:** uso real no `exp001` — "em log de eventos mostrar também log do
+  sistema, concentrar a mensagem em grupo, ou seja mantém as últimas 5
+  mensagens mas abaixo vira o grupo de log de eventos, sistema, llm, harness,
+  agente, usuário"
+
+### RN-178 — O painel da sessão lê do último para o primeiro, e a lista de regras pagina {#rn-178}
+
+As quatro seções do painel de contexto (regras de negócio, artefatos gerados,
+arquivos tocados e log de eventos) eram **crescentes**: abriam no começo da
+sessão. Numa sessão de milhares de eventos isso entrega a tela errada — quem
+abre o painel quer o que acabou de acontecer. As quatro passaram a ser
+**decrescentes**, inclusive dentro da árvore de backlog ([RN-179](#rn-179)).
+
+Uma consequência que veio junto: o botão "Carregar mais antigos" do feed
+([RN-099](#rn-099)) **mudou de lado**. Ele ficava ACIMA da lista porque a lista
+era crescente e o passado estava em cima; com a ordem invertida o passado está
+no fim, e um botão no topo pediria para rolar na direção contrária à que ele
+carrega — o mesmo argumento de antes, com o sinal trocado.
+
+E **acima de 5 regras a lista pagina**, em vez de crescer sem fim: o painel tem
+a largura de uma coluna e uma sessão de ideação passa de vinte regras sem
+esforço. A página vigente é resolvida por *clamp* (`min(pagina, total - 1)`) e
+não por efeito de sincronização: uma regra nova chegando pelo poll alonga a
+lista, e um `useEffect` renderizaria uma vez com a página inválida antes de
+corrigir. Com 5 ou menos, o paginador **não existe** — controle que não pagina
+nada é ruído ocupando altura.
+
+- **Onde:** `apps/web/src/routes/SessionPage.tsx:2988` (`REGRAS_POR_PAGINA`) e
+  a ordenação das quatro seções em `ContextAside`;
+  `apps/web/src/components/ActivityFeed.tsx:98` (o `sort` decrescente)
+- **Teste:** `apps/web/src/routes/SessionPage.painel-e-agrupamento.test.tsx`
+  (describe "RN-178"), `apps/web/src/components/ActivityFeed.test.tsx`
+- **Origem:** uso real no `exp001` — "mostrar log de eventos, arquivos tocados
+  e regras de negócio sempre em ordem do último para o primeiro de acordo com
+  a data" e "caso as regras de negócio ficar acima de 5, deve-se paginar"
+
+### RN-179 — O artefato do PO é uma ÁRVORE: épico → história → tarefa {#rn-179}
+
+O painel "Artefatos gerados" ([RN-159](#rn-159)) listava épico e história lado
+a lado, planos, e **ignorava `backlog.task_created`** — justamente o que um dev
+agent pega para trabalhar. Os três passaram a formar uma árvore, com o filho
+dentro de um colapso do pai, e as tarefas nascem FECHADAS: um épico com trinta
+tarefas tomaria o painel inteiro sem que ninguém tivesse pedido.
+
+O parentesco sai do **vínculo que o evento já carrega** —
+`backlog.story_created` grava `epicId`, `backlog.task_created` grava `storyId`
+—, nunca da vizinhança no log. Nó cujo pai não está entre os eventos carregados
+**sobe para a raiz** em vez de ser pendurado no épico mais próximo: inventar
+parentesco é pior que mostrar o nó solto, e uma tarefa cuja história ficou fora
+da janela é caso normal, não erro.
+
+Cada nível continua sendo um **link** para o Backlog, e o colapso dos filhos
+vem ABAIXO da linha em vez de dentro do cabeçalho — cabeçalho de `Disclosure` é
+`<button>`, e um `<a>` dentro de um `<button>` é HTML inválido e alvo de clique
+ambíguo. O contador do cabeçalho da seção conta a árvore INTEIRA, não só as
+raízes: dizer "3" com dezoito tarefas dentro seria o mesmo tipo de número que
+não corresponde a nada que a [RN-151](#rn-151) tirou da sidebar.
+
+- **Onde:** `apps/web/src/routes/SessionPage.tsx:2904`
+  (`montarArvoreDeBacklog`), `:3097` (as raízes viram item), `:3114` (a
+  contagem da árvore)
+- **Teste:** `apps/web/src/routes/SessionPage.artefatos-gerados.test.tsx`
+  (casos "épico/história/tarefa do PO viram árvore" e "nó sem pai carregado
+  aparece na raiz")
+- **Origem:** uso real no `exp001` — "mostrar também as tarefas criadas no
+  artefato do PO, mas abaixo do épico e ter opção de colapsar"
+
+### RN-180 — O painel diz o que NÃO está mostrando {#rn-180}
+
+`useSessionEvents` busca `{ limit: 200, latest: true }`, e o painel de contexto
+lia esse recorte por prop. Consequência: numa sessão de milhares de eventos as
+quatro seções mostravam a cauda **como se fosse a sessão inteira** — regra de
+negócio capturada no começo da ideação simplesmente não existia, sem aviso
+nenhum.
+
+O painel passou a ler o mesmo histórico paginado que a aba de Atividade da
+Visão Geral já usava ([RN-099](#rn-099)), com a `queryKey` da cauda
+compartilhada com o fio — **zero requisição a mais** no ciclo de poll
+([RN-090](#rn-090)/[RN-091](#rn-091)). Duas coisas mudaram com isso:
+
+1. **O feed ganhou o pager que o componente sempre teve.** As props
+   `onLoadOlder`/`hasOlder`/`loadingOlder` são opcionais desde a RN-099 e este
+   call site nunca as passava — era essa a razão de a sessão perder o começo em
+   silêncio.
+2. **Uma nota conta quantos eventos faltam.** O número sai de SUBTRAÇÃO sobre o
+   `seq` (gapless e por sessão): `menor seq baixado − 1`. Nunca de uma
+   requisição a mais — o mesmo mecanismo do "+ N mais antigos" do sino
+   ([RN-100](#rn-100)). Alcançando o começo da sessão a nota **desaparece**, em
+   vez de afirmar um zero.
+
+As seções derivadas leem `baixados` (tudo que já veio) e não `events` (a janela
+de 100 do feed): elas não paginam item a item, e cortá-las na janela as faria
+mostrar MENOS do que mostravam antes desta mudança. É o mesmo botão que
+alimenta as duas.
+
+O `pausarPoll` desce por `useSessionEventHistory` até `useSessionEvents`, e não
+é detalhe: o intervalo de refetch é de cada OBSERVADOR, não da query. Um
+segundo observador da mesma chave com timer ligado ressuscitaria o poll que a
+tela pausa durante o turno — e com ele a duplicata visual da bolha em
+streaming.
+
+- **Onde:** `apps/web/src/lib/hooks.ts:246` (o `pausarPoll` do histórico),
+  `:325` (`baixados`); `apps/web/src/routes/SessionPage.tsx:3032`
+  (`eventosAnteriores`) e o `ActivityFeed` com o pager, no fim de
+  `ContextAside`
+- **Teste:** `apps/web/src/routes/SessionPage.painel-e-agrupamento.test.tsx`
+  (describe "RN-180")
+- **Origem:** revisão da própria rodada — o teto de 200 existia em silêncio nas
+  quatro seções
+
+### RN-181 — Delegação de área aparece no fio {#rn-181}
+
+Quando uma área (QA, Infra) delega a subagentes e consolida o veredito, os três
+desfechos que o lead registra — `delegation.completed`, `delegation.failed` e
+`delegation.dispensed` — só existiam no painel de log. Quem acompanhava a
+sessão via o gate abrir e fechar **sem nenhum sinal** de que houve uma segunda
+tentativa por baixo.
+
+Os três passaram a ser narrados no fio como **aviso compacto**, no formato da
+[RN-157](#rn-157) — não bolha: é notificação do que aconteceu dentro da área,
+não uma fala. A FRASE sai de `classifyEvent`, a mesma do painel, porque duas
+redações do mesmo evento divergem na primeira mudança de payload; e ela já
+nomeia o subagente e a área, então o lead **não** é prefixado (produziria "QA
+Lead QA Automação concluiu a delegação (qa)").
+
+O contrato externo da área **não muda** (ADR 0038): o fio não passa a endereçar
+subagente, só a narrar o que o lead já registrou. A origem da falha viaja junto
+em `delegation.failed`, pela mesma razão da [RN-059](#rn-059) — é ela que diz
+se o próximo passo é trocar a chave, esperar o provider ou abrir um bug.
+
+- **Onde:** `apps/web/src/routes/SessionPage.tsx:1687`
+- **Teste:** `apps/web/src/routes/SessionPage.painel-e-agrupamento.test.tsx`
+  (describe "RN-181")
+- **Origem:** uso real no `exp001` — "quando houver uma nova tentativa e
+  consolidação de algum agente deve apresentar no chat"
+
 ---
 
 ## Quando dá errado

@@ -872,6 +872,51 @@ tabela **dentro da mensagem** — e a correção serve a qualquer agente que
 escreva uma, não só ao Mapa de Módulos. A linha separadora continua
 obrigatória (GFM), então prosa com `|` nunca vira tabela por engano.
 
+## RODADA exp001 — o painel agrupa, ordena e diz o que não mostra (RN-177..181)
+Mesma origem das outras: USO, não roteiro. Cinco queixas sobre o painel de
+contexto e o log da Sessão, e a lição da rodada é uma só — **o painel mostrava
+um recorte como se fosse o todo, em três dimensões diferentes ao mesmo tempo**:
+escondia seis tipos de evento sem oferecer alternativa, lia do mais antigo para
+o mais novo, e cortava a sessão em 200 eventos sem dizer.
+
+**Origem como classificação nova (RN-177).** `ActivityKind` responde "de que
+ASSUNTO o evento fala" e decide ícone e cor; `origem` responde "de que CAMADA
+ele veio", e é ela que torna o histórico legível — `eventos`, `sistema`, `llm`,
+`harness`, `agente`, `usuario`, derivadas do dado que EXISTE (`actor.kind` e o
+prefixo do `type`). A precedência é o que a torna previsível e está na ordem
+dos `if`: mecanismo vence ator (um `tool.call` é do harness seja quem for), e
+ator vence prefixo de agente (`chat.message` existe dos dois lados). As 5 mais
+recentes ficam abertas e o resto se recolhe por origem, **nos dois lugares** —
+no painel de log e no fio, onde o eixo é invertido (o fio é crescente, então o
+histórico fica no TOPO). O filtro de ruído de máquina **continua ligado por
+padrão**: a razão dele não mudou (116 de 193 eventos reais), o que mudou é ele
+ter virado ESCOLHA em vez de fato consumado.
+
+**Ordem e paginação (RN-178).** As quatro seções passaram a decrescentes, e o
+botão "Carregar mais antigos" mudou de lado por consequência — o argumento de
+antes, com o sinal trocado. Regras de negócio acima de 5 paginam, com a página
+resolvida por *clamp* e não por efeito de sincronização.
+
+**A árvore do PO (RN-179).** `backlog.task_created` nunca entrou no painel;
+agora épico → história → tarefa formam árvore, pelo VÍNCULO que o evento já
+carrega (`epicId`/`storyId`), nunca por vizinhança no log — nó sem pai
+carregado sobe para a raiz em vez de ser pendurado por adivinhação.
+
+**O teto que passou a aparecer (RN-180), e é o item que mais valia.** O painel
+lia 200 eventos por prop e não tinha como dizer que havia mais. Passou a ler o
+histórico paginado da RN-099 (mesma `queryKey` da cauda, ZERO requisição a mais
+— RN-090/091), ganhou o pager que o `ActivityFeed` sempre teve e nenhum call
+site passava, e a nota conta quantos faltam por SUBTRAÇÃO sobre o `seq`, como o
+sino da RN-100. As seções derivadas leem `baixados` (tudo que já veio) e não a
+janela do feed, senão passariam a mostrar MENOS do que mostravam antes.
+
+**Delegação no fio (RN-181).** `delegation.completed|failed|dispensed` só
+existiam no painel de log: o gate abria e fechava sem sinal nenhum de que houve
+uma segunda tentativa por baixo. Viraram aviso compacto no formato da RN-157,
+com a frase saindo de `classifyEvent` — a mesma do painel. O contrato externo
+da área não muda (ADR 0038): o fio narra o que o lead registrou, não passa a
+endereçar subagente.
+
 ## FERRAMENTA DE DESENVOLVIMENTO — `pnpm bootstrap`
 Menu de terminal em `scripts/dev/bootstrap.sh` agrupando o que se faz no
 dia a dia: Docker, K8s, Database e Test. Existe porque esses comandos moram
@@ -1059,6 +1104,19 @@ divide o mesmo banco, recuperar exige `db:migrate` E `engine:migrate`.
   perguntas diferentes e nenhuma é recorte da outra (RN-101/ADR 0063).
 - Métrica de execução de agentes é extraída do event log/token_usage
   por script, nunca anotada manualmente (lição da Fase 10/13).
+- Tela que mostra um RECORTE diz que é recorte (RN-180). Toda leitura tem
+  teto — `limit: 200` nos eventos e nas ações —, e teto silencioso faz a
+  tela afirmar sobre o que não leu. O número que falta sai de SUBTRAÇÃO
+  sobre o `seq` (gapless, por sessão), nunca de uma requisição a mais:
+  é o mesmo mecanismo do sino (RN-100). Quando houver como carregar o
+  resto, o controle mora onde o corte aparece.
+- Evento tem DUAS classificações no cliente, e elas não se substituem:
+  `ActivityKind` (assunto — decide ícone e cor) e `OrigemDeEvento`
+  (camada — `eventos|sistema|llm|harness|agente|usuario`, RN-177). A
+  origem tem UMA fonte, `apps/web/src/lib/activity.ts`, consumida pelo
+  painel de log E pelo fio; a precedência dos `if` é a regra (mecanismo
+  vence ator, ator vence prefixo de agente) e tipo desconhecido cai em
+  `eventos` — nunca some nem abre categoria nova.
 - Testes: vitest (api/web/scripts de CI), ExUnit (engine). Nenhuma
   feature sem teste do caminho feliz + 1 caso de falha. Providers de
   git e de LLM validados por suas suites de contrato únicas.
