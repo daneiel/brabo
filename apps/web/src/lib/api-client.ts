@@ -945,3 +945,26 @@ export const getMySpend = (projectId: string, dias?: number) =>
   get<MySpend>(
     `/projects/${projectId}/spend/me${dias ? `?dias=${dias}` : ''}`,
   );
+
+// ---------------------------------------------------------------------------
+// APÊNDICE DA FRENTE D0 (ADR 0076). Escrito no fim pelo mesmo motivo do
+// apêndice de `api-types.ts`: a onda tem outras frentes editando este arquivo.
+// A integração recolhe isto para cima, dentro de `getWorkspaceSpendReport`.
+// ---------------------------------------------------------------------------
+
+/**
+ * A MESMA rota de `getWorkspaceSpendReport`, com o tipo já ciente dos três
+ * blocos novos (provider, owner e agente — RN-186/RN-188).
+ *
+ * Não há função nova do lado do membro, e não é esquecimento: `getMySpend`
+ * continua sem qualquer parâmetro de dimensão. Uma função que aceitasse
+ * "dimensão" na visão do membro seria a porta que o ADR 0063 mandou não abrir,
+ * e a api recusaria de qualquer forma — a rota dela não lê esse parâmetro.
+ */
+export const getWorkspaceSpendReportComProvider = (
+  workspaceId: string,
+  dias?: number,
+) =>
+  get<
+    WorkspaceSpendReport & import('./api-types').WorkspaceSpendPorProvider
+  >(`/workspaces/${workspaceId}/spend-report${dias ? `?dias=${dias}` : ''}`);
