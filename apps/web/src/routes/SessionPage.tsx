@@ -3094,7 +3094,8 @@ function ContextAside({
   // planos — o que o PO produziu de fato (a tarefa, que é o que um dev pega)
   // não deixava rastro nenhum aqui. Só as RAÍZES viram item da lista; os
   // descendentes vão dentro do colapso do pai.
-  for (const raiz of montarArvoreDeBacklog(events)) {
+  const arvoreDeBacklog = montarArvoreDeBacklog(events);
+  for (const raiz of arvoreDeBacklog) {
     artefatos.push({
       key: `backlog-${raiz.evento.id}`,
       actorId: raiz.evento.actor.id,
@@ -3111,7 +3112,7 @@ function ContextAside({
   // corresponde a nada que a RN-151 tirou da sidebar.
   const totalDeArtefatos =
     artefatos.length +
-    montarArvoreDeBacklog(events).reduce((soma, r) => soma + totalDeDescendentes(r), 0);
+    arvoreDeBacklog.reduce((soma, r) => soma + totalDeDescendentes(r), 0);
 
   // Agrupado por `actorId` — o mesmo padrão de colapso do fio principal
   // (RN-138, `timelineAgrupada`), num `Disclosure` por agente, com a ORDEM
