@@ -83,7 +83,7 @@ sequenceDiagram
 
 ## Estado
 
-**Fases 1 a 26 concluídas**, versão **v3.0.0**. O que existe:
+**Fases 1 a 26 concluídas**, versão **v3.1.0**. O que existe:
 
 - IAM/RBAC, sessões com event log imutável, roteador de LLM, metering e
   orçamento, pipeline de aprovação com `permissions.json`

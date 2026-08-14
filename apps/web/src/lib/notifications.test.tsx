@@ -66,6 +66,8 @@ const projeto: Project = {
   createdBy: 'user-1',
   maxConsecutiveBlocked: null,
   storyPromotion: 'manual',
+  workspaceMode: 'container',
+  workspacePath: null,
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
 };

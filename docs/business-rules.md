@@ -5525,6 +5525,128 @@ não ser o erro de uma volta que já foi corrigida depois.
 - **Origem:** uso real no projeto `exp001` — "o Criativo não respondeu depois
   de dizer que iria corrigir e tentar de novo"
 
+### RN-169 — O projeto escolhe onde o código mora: Local ou Container {#rn-169}
+
+Um projeto nasce com um **modo de workspace** (`projects.workspace_mode`,
+migração `0043`), e é ele que decide de onde a raiz de escopo é derivada:
+
+- **`container`** (DEFAULT, e o comportamento que sempre existiu): a pasta
+  GERENCIADA pelo produto, `join(PROJECT_WORKSPACES_ROOT, workspace_dir_name)`
+  ([RN-109](#rn-109));
+- **`local`**: uma pasta DO USUÁRIO, no caminho absoluto de
+  `projects.workspace_path`.
+
+O par é amarrado por CHECK no banco
+(`(workspace_mode = 'local') = (workspace_path IS NOT NULL)`), e não só pelo
+caso de uso: a coluna é lida por DOIS processos (api e engine) e escrita por
+scripts de seed/backfill que não passam por ele. `local` sem caminho seria
+escopo de terminal apontando para lugar nenhum; `container` com caminho seria
+uma segunda fonte de verdade esperando divergir da primeira.
+
+A derivação continua **única** — `projectScopeRoot` passou a receber a
+localização (`{workspaceDirName, workspaceMode, workspacePath}`) e escolhe o
+ramo; nenhum dos quatro consumidores ([RN-092](#rn-092)) ganhou validação
+própria. O engine resolve o mesmo localizador na CONSULTA (nome de pasta no
+`container`, caminho absoluto no `local`) e distingue os dois pela barra
+inicial, que é inequívoca porque o nome de pasta é validado contra
+`^[A-Za-z0-9_-]{1,64}$`.
+
+Duas consequências explícitas do modo `local`:
+
+1. **O portão da imagem do Arquiteto ([RN-105](#rn-105)) NÃO vale.** Projeto
+   Local não sobe container, então a aba Code libera sem esperar decisão que
+   nunca vai acontecer. A dispensa mora no mesmo funil do portão na api, e a
+   tela concorda: `ProjectCodeTab` nem chega a perguntar o estado do container
+   ([RN-107](#rn-107)) quando o projeto é Local — se só a api dispensasse, a
+   aba continuaria bloqueada na tela por uma decisão inexistente.
+2. **O `permissions.json` mora na pasta do usuário**, junto com o código —
+   porque a política tem que ser lida da MESMA raiz que o escopo de terminal
+   autoriza.
+
+`workspace_mode` não confunde com o `GitProviderName` `'local'`: um diz onde o
+CÓDIGO mora em disco, o outro onde o REPOSITÓRIO git vive, e as duas escolhas
+são ortogonais.
+
+- **Onde:** `apps/api/src/db/schema.ts` (`projects`),
+  `apps/api/src/infrastructure/filesystem/project-workspaces-root.ts`
+  (`projectScopeRoot`), `apps/api/src/domain/iam/project.entity.ts`,
+  `apps/api/src/application/use-cases/git/read-project-code.use-case.ts`
+  (`portaoDoContainer`), `apps/web/src/routes/ProjectCodeTab.tsx`,
+  `apps/engine/lib/engine/projects/project.ex`,
+  `apps/engine/lib/engine/actions/workspace.ex` (`workspace_dir/2`),
+  `apps/engine/lib/engine/dev/worktree_cleanup.ex` (que era a segunda
+  derivação escrita à mão, e passou a usar a única),
+  `apps/web/src/routes/NewProjectWizard.tsx`
+- **Teste:** `apps/api/test/infrastructure/filesystem/project-workspaces-root.spec.ts`
+  (describe "projectScopeRoot no modo local"),
+  `apps/api/test/infrastructure/filesystem/fs-permissions-file-store.spec.ts`
+  (o permissions.json na pasta do usuário),
+  `apps/api/test/application/use-cases/iam/create-project-modo-de-workspace.spec.ts`,
+  `apps/api/test/application/use-cases/git/read-project-code.use-case.spec.ts`
+  (projeto Local não passa pelo portão),
+  `apps/api/test/interfaces/http/iam/project-dto-modo-de-workspace.spec.ts`
+  (o modo é congelado: PATCH não o muda),
+  `apps/web/src/routes/ProjectCodeTab.test.tsx` (a tela também dispensa o gate),
+  `apps/engine/test/engine/actions/workspace_test.exs`
+  (describe "workspace_dir/2 com o localizador já resolvido"),
+  `apps/web/src/routes/NewProjectWizard.test.tsx`
+- **Decisão arquitetural:** [ADR 0072](adr/0072-projeto-local-ou-container.md)
+- **Origem:** pedido do usuário (decisão dele, com a variante de caminho livre
+  escolhida explicitamente)
+
+### RN-170 — Caminho Local é validado na CRIAÇÃO, e a recusa ensina {#rn-170}
+
+Criar um projeto no modo `local` com um caminho que a api não alcança produz um
+projeto que **trava depois** — na primeira ferramenta do primeiro agente, longe
+da tela onde a decisão foi tomada. Por isso a criação **recusa com 400**, e a
+mensagem diz o que falta fazer.
+
+O caminho precisa ser:
+
+1. **absoluto**, sem `..` nem `.` em nenhum segmento (o caminho gravado é o
+   caminho que se lê; `/srv/app/../../etc` é `/etc` e não parece);
+2. **existente e uma pasta** dentro do container da api;
+3. **gravável pelo processo** (`access(W_OK|X_OK)`) — as imagens rodam non-root
+   ([ADR 0024](adr/0024-fase5-imagens-producao-ci.md)), e pasta do host com
+   outro dono chega montada como somente leitura na prática;
+4. **fora da raiz e das pastas de sistema** (`/`, `/etc`, `/usr`, `/var`,
+   `/data`… e tudo abaixo delas): a raiz do projeto é o escopo que AUTORIZA o
+   terminal do agente ([ADR 0055](adr/0055-escopo-de-caminho-na-politica-de-terminal.md)),
+   e um projeto com raiz em `/etc` transforma "o agente escreve no projeto dele"
+   em "o agente reescreve o container";
+5. **sem sobreposição com o checkout do Brabo, nos DOIS sentidos** — a pasta que
+   CONTÉM o monorepo e a pasta DENTRO dele. O segundo caso é o problema que o
+   ADR 0055 relata acontecendo de verdade.
+
+O caminho gravado é o **normalizado**, não a string crua: validar uma string e
+gravar outra é como a validação deixa de valer no dia seguinte. `workspacePath`
+enviado junto com `workspace_mode: container` é RECUSADO, não ignorado — campo
+descartado em silêncio vira "mas eu configurei".
+
+A parte LÉXICA (itens 1, 4 e 5) roda **também na leitura**, a cada derivação de
+`projectScopeRoot`: o único jeito de burlar a criação é escrever direto no
+banco, e o que se ganha ali é escopo de terminal em `/`. A parte de DISCO
+(itens 2 e 3) roda só na criação, onde o usuário ainda pode corrigir.
+
+A recusa por pasta ausente traz a instrução de montagem — o arquivo, os dois
+serviços e a linha (`- <caminho>:<caminho>`), com o ponteiro para
+[o runbook](runbook.md). Montar só na api produz um projeto que a api aceita e o
+engine não enxerga: ela valida o que ela vê, e não tem como saber o que está
+montado no outro container.
+
+- **Onde:** `apps/api/src/infrastructure/filesystem/project-workspaces-root.ts`
+  (`validarCaminhoDeWorkspaceLocal`, `CaminhoLocalInvalidoError`),
+  `apps/api/src/application/use-cases/iam/create-project.use-case.ts`
+  (`caminhoValidado`), `apps/api/src/interfaces/http/iam/dto/create-project.dto.ts`,
+  `apps/web/src/lib/wizard.ts` (`caminhoLocalParecePlausivel`)
+- **Teste:** `apps/api/test/infrastructure/filesystem/project-workspaces-root.spec.ts`
+  (describe "validarCaminhoDeWorkspaceLocal"),
+  `apps/api/test/application/use-cases/iam/create-project-modo-de-workspace.spec.ts`
+  (describe "a criação RECUSA o caminho que travaria depois"),
+  `apps/web/src/lib/wizard.test.ts`, `apps/web/src/routes/NewProjectWizard.test.tsx`
+- **Decisão arquitetural:** [ADR 0072](adr/0072-projeto-local-ou-container.md)
+- **Origem:** guarda exigida pela variante de caminho livre (ADR 0072)
+
 ---
 
 ### RN-164 — O PO LÊ o que já existe, escopado ao projeto {#rn-164}
@@ -5648,6 +5770,7 @@ usar o `ToolLoop`.
 | Modelo do binding some do provider | a cascata cai para o nível de baixo e AVISA qual escopo pulou — nunca troca o modelo em silêncio (RN-041) |
 | Preço do modelo muda | vale daqui em diante; o custo gravado e o preço que o produziu ficam intocados (RN-042) |
 | Criar o handoff falha (Criativo→PO, Arquiteto→Infra/Dev Lead) | `agent.error` durável, o processo do agente CONTINUA vivo; o que já foi gravado antes (product_brief, regras) não se perde (RN-116) |
+| Caminho de projeto **Local** não montado no container | a criação é **recusada** (400) com a linha de compose a acrescentar — o projeto não nasce para travar depois (RN-170) |
 
 > **TODO(humano):** as RNs acima foram extraídas do código e dos testes. Falta
 > confirmar se existe regra de negócio **não implementada** que deveria estar

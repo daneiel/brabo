@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { getContainerState } from '../lib/api-client';
+import { getContainerState, getProject } from '../lib/api-client';
 import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
 import { Skeleton } from '../components/ui/Skeleton';
 import { LockIcon } from '../components/ui/icons';
@@ -20,6 +20,15 @@ import styles from './ProjectCodeTab.module.css';
  * api respondeu certo) e não é vazio (não é ausência de dado — é uma decisão
  * que ainda não existe).
  *
+ * ## O modo Local não passa pelo gate (RN-169, ADR 0072)
+ *
+ * Projeto no modo `local` não sobe container, então a decisão do Arquiteto
+ * nunca vai acontecer e a api já libera a leitura para ele. A tela precisa
+ * concordar: sem isto, a aba ficaria eternamente na tela de bloqueio de uma
+ * decisão que não existe — o mesmo defeito do lado do servidor, com outra
+ * cara. A pergunta é feita ao MESMO `queryKey: ['project', projectId]` que a
+ * tela de projeto já usa, então não custa requisição nova.
+ *
  * ## Congelamento
  *
  * Nenhuma escrita mora aqui nem em `code/*`. O que a árvore, a busca e o diff
@@ -27,6 +36,12 @@ import styles from './ProjectCodeTab.module.css';
  * fase seguinte — vira `proposed_action`, como todo efeito externo.
  */
 export function ProjectCodeTab({ projectId }: { projectId: string }) {
+  const projectQuery = useQuery({
+    queryKey: ['project', projectId],
+    queryFn: () => getProject(projectId),
+  });
+  const modoLocal = projectQuery.data?.workspaceMode === 'local';
+
   const containerQuery = useQuery({
     queryKey: ['container', projectId],
     queryFn: () => getContainerState(projectId),
@@ -35,7 +50,24 @@ export function ProjectCodeTab({ projectId }: { projectId: string }) {
     // estável seria só tráfego (a mesma família de defeito da PÓS-FASE 15).
     refetchInterval: (query) =>
       query.state.data?.status === 'sem_decisao' ? 15_000 : false,
+    // Projeto Local não tem o que perguntar: não há container a decidir.
+    enabled: projectQuery.isSuccess && !modoLocal,
   });
+
+  // A leitura já está liberada — o gate inteiro abaixo é sobre o container.
+  if (modoLocal) return <CodeShell projectId={projectId} />;
+
+  if (projectQuery.isError) {
+    return (
+      <div className={styles.estadoPagina}>
+        <ErroDeCarregamento
+          titulo="Não consegui carregar este projeto."
+          erro={projectQuery.error}
+          onTentarDeNovo={() => void projectQuery.refetch()}
+        />
+      </div>
+    );
+  }
 
   if (containerQuery.isError) {
     return (
@@ -49,7 +81,7 @@ export function ProjectCodeTab({ projectId }: { projectId: string }) {
     );
   }
 
-  if (!containerQuery.data) {
+  if (!projectQuery.data || !containerQuery.data) {
     return (
       <div className={styles.estadoPagina}>
         <Skeleton width={280} height={20} />

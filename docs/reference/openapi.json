@@ -11472,6 +11472,20 @@
             ],
             "example": "manual",
             "description": "Quem promove uma story de `draft` para `ready` (Fase 12c — RN-048). `manual` (default de projeto novo): o PO propõe e VOCÊ decide, na aba Backlog. `auto`: a story completa já nasce `ready`, sem passo humano — era o comportamento até a 12c, e projetos criados antes dela ficaram nele. As validações de domínio (DoD/DoR/RF/regra/módulos) são as MESMAS nos dois modos; o modo muda só quem dispara."
+          },
+          "workspaceMode": {
+            "type": "string",
+            "enum": [
+              "container",
+              "local"
+            ],
+            "example": "container",
+            "description": "ONDE o código deste projeto mora (RN-169 — ADR 0072). `container` (default): a pasta gerenciada pelo produto dentro de PROJECT_WORKSPACES_ROOT, que é o comportamento de sempre. `local`: uma pasta SUA, informada em `workspacePath`, que precisa estar montada dentro dos containers da api e do engine — a criação RECUSA (400) o caminho que não estiver, com a instrução de como montar (RN-170)."
+          },
+          "workspacePath": {
+            "type": "string",
+            "example": "/home/voce/projetos/loja",
+            "description": "Caminho ABSOLUTO da pasta, obrigatório quando `workspaceMode` é `local` e recusado quando é `container`. Validado na criação: precisa existir e ser gravável de dentro do container, e não pode ser a raiz do sistema, pasta de sistema, nem se sobrepor ao checkout do Brabo (RN-170)."
           }
         },
         "required": [
@@ -14464,6 +14478,21 @@
             "example": "checkout-3f2b1c8e",
             "description": "Nome da pasta física do workspace deste projeto em PROJECT_WORKSPACES_ROOT (RN-109). `<slug>-<8 chars do id>` num projeto novo; o UUID puro num projeto criado antes desta coluna existir. Congelado na criação — editar `slug` depois não recalcula."
           },
+          "workspaceMode": {
+            "type": "string",
+            "enum": [
+              "container",
+              "local"
+            ],
+            "example": "container",
+            "description": "ONDE o código mora (RN-169 — ADR 0072). `container`: a pasta gerenciada em PROJECT_WORKSPACES_ROOT. `local`: a pasta do usuário em `workspacePath`."
+          },
+          "workspacePath": {
+            "type": "object",
+            "example": null,
+            "nullable": true,
+            "description": "Caminho absoluto da pasta do usuário — preenchido só no modo `local`, sempre `null` no modo `container`."
+          },
           "createdBy": {
             "type": "string",
             "example": "01JC4Z0000USUARIO0000000001"
@@ -14506,6 +14535,8 @@
           "name",
           "slug",
           "workspaceDirName",
+          "workspaceMode",
+          "workspacePath",
           "createdBy",
           "taskBudgetMicros",
           "maxConsecutiveBlocked",

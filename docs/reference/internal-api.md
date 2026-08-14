@@ -368,6 +368,26 @@ CONTIDA — e uma rota sem parâmetro não tem onde o modelo escrever o que
 quiser. O custo por chamada é constante, e o texto entregue ao modelo tem teto
 de linhas, sempre declarando o total real quando trunca.
 
+### Onde o workspace do projeto mora — e por que isso também não virou rota
+
+O modo de workspace ([ADR 0072](../adr/0072-projeto-local-ou-container.md),
+[RN-169](../business-rules.md#rn-169)) segue a mesma divisão. A partir dele um
+projeto pode ser `container` (a pasta gerenciada em `PROJECT_WORKSPACES_ROOT`, o
+default) ou `local` (um caminho absoluto do usuário) — e o engine precisa saber
+qual, porque é ele quem cria worktree e roda comando ali dentro.
+
+**Nenhuma rota interna nova.** O engine resolve o localizador lendo as MESMAS
+colunas do MESMO banco (`projects.workspace_mode` e `projects.workspace_path`),
+como já fazia com `workspace_dir_name` desde o
+[ADR 0066](../adr/0066-nome-de-pasta-legivel-do-workspace.md). É o mesmo
+argumento de sempre: as duas derivações — api e engine — precisam concordar, e
+concordar por leitura da mesma linha é mais barato e mais difícil de divergir
+que concordar por contrato HTTP. Não há segredo envolvido, então não há motivo
+para uma rota.
+
+O engine distingue os dois casos pela **barra inicial** do localizador: nome de
+pasta no modo `container`, caminho absoluto no `local`.
+
 ### Contexto por agente
 
 | método | caminho |

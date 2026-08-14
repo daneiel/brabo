@@ -54,6 +54,8 @@ const PROJETO: Project = {
   createdBy: 'user-1',
   maxConsecutiveBlocked: null,
   storyPromotion: 'manual',
+  workspaceMode: 'container',
+  workspacePath: null,
   createdAt: '2026-08-01T10:00:00.000Z',
   updatedAt: '2026-08-01T10:00:00.000Z',
 };

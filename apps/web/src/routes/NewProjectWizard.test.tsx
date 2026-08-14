@@ -11,9 +11,14 @@ const registerGitCredential = vi.fn();
 vi.mock('../lib/api-client', () => ({
   ApiError: class ApiError extends Error {
     status: number;
-    constructor(status: number, message: string) {
-      super(message);
+    body: unknown;
+    // `body` entrou porque a recusa do caminho Local (RN-170) é lida DALI: a
+    // mensagem que ensina como montar a pasta vem no corpo da resposta, não
+    // no `message` do erro de transporte.
+    constructor(status: number, body?: unknown) {
+      super(`api error ${status}`);
       this.status = status;
+      this.body = body;
     }
   },
   createProject: (...a: unknown[]) => createProject(...a),
@@ -99,5 +104,95 @@ describe('NewProjectWizard — aviso de repositório privado', () => {
     await ateVisibilidade('Local');
 
     expect(screen.queryByText(/não aceita proteção de branch/i)).toBeNull();
+  });
+});
+
+/**
+ * O passo "Onde o código vai morar" (RN-169/RN-170, ADR 0072).
+ *
+ * Duas coisas são provadas aqui, e a segunda é o ponto da entrega: que o modo
+ * escolhido CHEGA à api, e que a recusa dela — a mensagem que ensina a montar
+ * a pasta — aparece NA TELA em vez de virar um toast genérico.
+ */
+describe('NewProjectWizard — onde o código vai morar', () => {
+  /** Do passo 1 até o de workspace, no provider Local (sem credencial). */
+  async function ateWorkspace() {
+    await ateVisibilidade('Local');
+    fireEvent.change(screen.getByLabelText('Nome do projeto'), {
+      target: { value: 'Loja' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+    await screen.findByText('Onde o código vai morar');
+  }
+
+  it('Container é o pré-selecionado e vai para a api como tal — nada muda para quem não escolhe', async () => {
+    createProject.mockResolvedValue({ id: 'proj-1' });
+    await ateWorkspace();
+
+    // Avança sem digitar nada: é o comportamento de sempre.
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Provisionar' }));
+
+    await waitFor(() => expect(createProject).toHaveBeenCalled());
+    expect(createProject.mock.calls[0][1]).toEqual({
+      name: 'Loja',
+      slug: 'loja',
+      workspaceMode: 'container',
+    });
+  });
+
+  it('Local manda o caminho digitado, e só ele', async () => {
+    createProject.mockResolvedValue({ id: 'proj-1' });
+    await ateWorkspace();
+
+    fireEvent.click(screen.getByText('Local'));
+    fireEvent.change(screen.getByLabelText('Caminho da pasta'), {
+      target: { value: '/home/voce/projetos/loja' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Provisionar' }));
+
+    await waitFor(() => expect(createProject).toHaveBeenCalled());
+    expect(createProject.mock.calls[0][1]).toEqual({
+      name: 'Loja',
+      slug: 'loja',
+      workspaceMode: 'local',
+      workspacePath: '/home/voce/projetos/loja',
+    });
+  });
+
+  it('Local sem caminho não avança — a tela não deixa mandar o que a api recusaria', async () => {
+    await ateWorkspace();
+
+    fireEvent.click(screen.getByText('Local'));
+
+    expect(screen.getByRole('button', { name: 'Continuar' })).toBeDisabled();
+  });
+
+  it('a RECUSA da api aparece na tela com a instrução de montagem, não como toast genérico', async () => {
+    const { ApiError } = await import('../lib/api-client');
+    createProject.mockRejectedValue(
+      new (ApiError as new (s: number, b: unknown) => Error)(400, {
+        message:
+          'A pasta /home/voce/projetos/loja não existe do lado de dentro da api. ' +
+          'No docker/docker-compose.yml, acrescente a mesma linha aos serviços "api" e "engine".',
+      }),
+    );
+    await ateWorkspace();
+
+    fireEvent.click(screen.getByText('Local'));
+    fireEvent.change(screen.getByLabelText('Caminho da pasta'), {
+      target: { value: '/home/voce/projetos/loja' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Provisionar' }));
+
+    expect(
+      await screen.findByText(/não existe do lado de dentro da api/i),
+    ).toBeTruthy();
+    expect(screen.getByText(/docker-compose\.yml/)).toBeTruthy();
   });
 });
