@@ -336,6 +336,27 @@ A tabela de sintomas está em
 
 ---
 
+## Observabilidade local (containers)
+
+Também não são lidas pelo nosso código: são as portas do overlay
+`docker/docker-compose.observability.yml`, que sobe Prometheus, Loki e Grafana
+ao lado do stack de desenvolvimento (`pnpm dev:obs`). O mecanismo está em
+[observabilidade local](../runbook.md#observabilidade-local).
+
+| variável | default | por quê |
+|---|---|---|
+| `GRAFANA_PORT` | `3001` | mesma porta que o Grafana do cluster usa; os dois **não coexistem**, pela mesma razão que `pnpm dev` e `make deploy-local` não coexistem |
+| `PROMETHEUS_PORT` | `9090` | a porta que o runbook já usa no `kubectl port-forward` do cluster |
+| `LOKI_PORT` | `3100` | só para consultar direto; o caminho normal é pelo Grafana |
+
+O overlay **não** define `OTEL_EXPORTER_OTLP_ENDPOINT`: sem Collector no meio,
+apontar as apps para um endereço que não existe só produz erro de exportação a
+cada turno ([ADR 0035](../adr/0035-observabilidade-legivel-e-trace-sem-coletor.md)
+separou instrumentar de exportar exatamente por isso). Métrica e log funcionam
+sem ele; trace continua sendo o cluster.
+
+---
+
 ## Inventário completo
 
 As tabelas acima explicam **o que cada variável faz**. Esta seção é o

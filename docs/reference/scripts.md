@@ -22,6 +22,8 @@ Fonte: os `package.json` de cada pacote e o `Makefile` da raiz.
 | `pnpm dev:build` | `node scripts/dev/preflight.mjs && docker compose -f docker/docker-compose.yml --env-file .env up --build` |
 | `pnpm dev:down` | `docker compose -f docker/docker-compose.yml --env-file .env down` |
 | `pnpm dev:gpu` | `node scripts/dev/preflight.mjs && docker compose -f docker/docker-compose.yml -f docker/docker-compose.gpu.yml --env-file .env up` |
+| `pnpm dev:obs` | `node scripts/dev/preflight.mjs && docker compose -f docker/docker-compose.yml -f docker/docker-compose.observability.yml --env-file .env up -d && node scripts/dev/observabilidade-pronta.mjs` |
+| `pnpm obs:down` | `docker compose -f docker/docker-compose.yml -f docker/docker-compose.observability.yml --env-file .env stop grafana prometheus loki alloy` |
 | `pnpm dev:preflight` | `node scripts/dev/preflight.mjs` |
 | `pnpm dev:api` | `pnpm --filter api start:dev` |
 | `pnpm dev:web` | `pnpm --filter web dev` |
@@ -127,4 +129,4 @@ Fonte: os `package.json` de cada pacote e o `Makefile` da raiz.
 
 ---
 
-82 comandos no total. Alvo do Makefile sem anotação `## descrição` não aparece aqui — anote na fonte.
+84 comandos no total. Alvo do Makefile sem anotação `## descrição` não aparece aqui — anote na fonte.

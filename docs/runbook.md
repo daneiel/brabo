@@ -1156,6 +1156,48 @@ que foi gasto, e nada aqui devolve dinheiro ao provedor. A única prevenção re
 Como seguir uma sessão, achar custo e diagnosticar quando não há dado.
 Decisões em [ADR 0026](adr/0026-fase5-observabilidade-e-graceful-shutdown.md).
 
+### Observabilidade local, sem cluster {#observabilidade-local}
+
+Tudo abaixo desta subseção pressupõe o cluster de pé. Para métrica e log sem
+subir Kubernetes, existe um overlay do Compose
+([ADR 0070](adr/0070-observabilidade-no-compose-local.md)):
+
+```bash
+pnpm dev:obs     # sobe o stack de dev + Prometheus, Loki, Alloy e Grafana
+pnpm obs:down    # derruba só os quatro, deixando as apps de pé
+```
+
+O comando termina verificando o que subiu — se ele diz `ok` em todas as linhas,
+o painel tem dado; se reclama, ele diz qual peça faltou.
+
+| ferramenta | endereço | serve para |
+|---|---|---|
+| Grafana | <http://localhost:3001> | dashboards e logs, sem login |
+| Logs | <http://localhost:3001/d/brabo-logs> | um serviço por vez, ou os três juntos |
+| Prometheus | <http://localhost:9090> | conferir target e série crua |
+| Loki | <http://localhost:3100> | consulta direta (o caminho normal é o Grafana) |
+
+**Os dashboards são os MESMOS do cluster** — o Compose monta
+`deploy/k8s/observability/dashboards/` direto, e os UIDs de datasource
+(`brabo-prometheus`, `brabo-loki`) são iguais. Dashboard novo vale nos dois
+ambientes sem cópia.
+
+**O que este overlay não faz:** trace. Sem OpenTelemetry Collector no meio não
+há Tempo, e é decisão, não esquecimento ([ADR 0026](adr/0026-fase5-observabilidade-e-graceful-shutdown.md),
+decisão 9). O `trace_id` continua no log e serve para cruzar api e engine à mão.
+
+Três coisas que confundem, e valem antes de abrir issue:
+
+1. **Painel de custo/tokens vazio é o esperado num banco novo.** Aquelas
+   métricas têm rótulo (`project`, `provider`), e no `prom-client` uma métrica
+   rotulada não existe antes da primeira observação. Uma chamada de LLM e a
+   série aparece.
+2. **Só `api`, `engine` e `web` vão para o Loki.** Postgres e Ollama ficam de
+   fora por ruído; o próprio stack de observabilidade fica de fora porque, no
+   mesmo projeto do Compose, ele ingeriria o próprio log num laço.
+3. **O nível `OUTRO`** é a linha de continuação da árvore do `pino-pretty`, que
+   não tem nível próprio. Não é log perdido.
+
 ### Onde está o quê
 
 | ferramenta | endereço local | serve para |
