@@ -10,6 +10,8 @@
     "dev:build": "node scripts/dev/preflight.mjs && docker compose -f docker/docker-compose.yml --env-file .env up --build",
     "dev:down": "docker compose -f docker/docker-compose.yml --env-file .env down",
     "dev:gpu": "node scripts/dev/preflight.mjs && docker compose -f docker/docker-compose.yml -f docker/docker-compose.gpu.yml --env-file .env up",
+    "dev:obs": "node scripts/dev/preflight.mjs && docker compose -f docker/docker-compose.yml -f docker/docker-compose.observability.yml --env-file .env up -d && node scripts/dev/observabilidade-pronta.mjs",
+    "obs:down": "docker compose -f docker/docker-compose.yml -f docker/docker-compose.observability.yml --env-file .env stop grafana prometheus loki alloy",
     "dev:preflight": "node scripts/dev/preflight.mjs",
     "dev:api": "pnpm --filter api start:dev",
     "dev:web": "pnpm --filter web dev",
