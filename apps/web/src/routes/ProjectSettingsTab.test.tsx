@@ -87,6 +87,8 @@ function project(over: Partial<Project> = {}): Project {
     createdBy: 'user-1',
     maxConsecutiveBlocked: null,
     storyPromotion: 'manual',
+    workspaceMode: 'container',
+    workspacePath: null,
     createdAt: '2026-08-02T00:00:00.000Z',
     updatedAt: '2026-08-02T00:00:00.000Z',
     ...over,

@@ -12,9 +12,11 @@ import {
   canAdvanceFromCredential,
   canAdvanceFromDetails,
   canAdvanceFromMode,
+  canAdvanceFromWorkspace,
   providerNeedsCredential,
   slugify,
   type ModoDeRepositorio,
+  type ModoDeWorkspace,
 } from '../lib/wizard';
 import { BOOTSTRAP_STEPS } from '../lib/bootstrap';
 import { CredentialStep } from '../components/wizard/CredentialStep';
@@ -31,6 +33,7 @@ type StepKey =
   | 'provider'
   | 'credential'
   | 'details'
+  | 'workspace'
   | 'policy'
   | 'confirm';
 type Visibility = 'private' | 'public';
@@ -45,6 +48,27 @@ const MODOS: { id: ModoDeRepositorio; label: string; desc: string }[] = [
     id: 'adopt',
     label: 'Adotar existente',
     desc: 'Aponta o projeto para um repositório que já existe. Nada é criado, e nada é alterado sem você aprovar.',
+  },
+];
+
+// Onde o CÓDIGO deste projeto vai morar (ADR 0072). Passo próprio, e não uma
+// caixinha no passo de detalhes, porque a escolha muda quem é dono da pasta —
+// e a variante Local só funciona se o caminho estiver montado no container,
+// que é um pré-requisito do AMBIENTE, não um detalhe do projeto.
+const MODOS_DE_WORKSPACE: {
+  id: ModoDeWorkspace;
+  label: string;
+  desc: string;
+}[] = [
+  {
+    id: 'container',
+    label: 'Container',
+    desc: 'O Brabo gerencia a pasta, dentro do volume compartilhado com o engine. É o padrão, e não exige nada de você.',
+  },
+  {
+    id: 'local',
+    label: 'Local',
+    desc: 'O código mora numa pasta SUA. Ela precisa estar montada dentro dos containers da api e do engine, no mesmo caminho.',
   },
 ];
 
@@ -64,6 +88,7 @@ const STEP_TITLE: Record<StepKey, string> = {
   provider: 'Onde hospedar',
   credential: 'Credencial de acesso',
   details: 'Nome e visibilidade',
+  workspace: 'Onde o código vai morar',
   policy: 'Política de branches',
   confirm: 'Confirmar',
 };
@@ -79,6 +104,13 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
   const [name, setName] = useState('');
   const [externalId, setExternalId] = useState('');
   const [visibility, setVisibility] = useState<Visibility>('private');
+  // `container` é o pré-selecionado, ao contrário do modo de repositório, que
+  // nasce sem default: aqui existe SIM uma "normal" — é o comportamento que
+  // todo projeto teve até o ADR 0072, e o Local pede preparo do ambiente.
+  const [modoDeWorkspace, setModoDeWorkspace] =
+    useState<ModoDeWorkspace>('container');
+  const [caminhoLocal, setCaminhoLocal] = useState('');
+  const [erroDeCriacao, setErroDeCriacao] = useState<string | null>(null);
   const [selectedCredentialId, setSelectedCredentialId] = useState<string>();
   const [registering, setRegistering] = useState(false);
   const [credError, setCredError] = useState<string | null>(null);
@@ -98,6 +130,7 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
     const keys: StepKey[] = ['mode', 'provider'];
     if (needsCredential) keys.push('credential');
     keys.push('details');
+    keys.push('workspace');
     // Adotar não passa pela política: o que vai (ou não) acontecer com as
     // branches é decidido depois, na tela do PLANO, contra o repositório
     // real — prometer o template aqui seria mentir sobre o que o
@@ -143,6 +176,8 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
           canAdvanceFromDetails(modo!, { name, externalId }) &&
           (adotando || slug.length > 0)
         );
+      case 'workspace':
+        return canAdvanceFromWorkspace(modoDeWorkspace, caminhoLocal);
       default:
         return true;
     }
@@ -171,6 +206,7 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
   async function handleConfirm() {
     if (!provider) return;
     setSubmitting(true);
+    setErroDeCriacao(null);
     try {
       // Na adoção o nome do PROJETO vem do identificador do repositório
       // (o usuário não digitou nome nenhum) — `acme/checkout` vira
@@ -179,6 +215,13 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
       const project = await createProject(workspaceId, {
         name: nomeDoProjeto,
         slug: slugify(nomeDoProjeto),
+        workspaceMode: modoDeWorkspace,
+        // Só no modo Local: mandar o campo vazio junto com `container` é 400
+        // na api, de propósito (campo descartado em silêncio vira "mas eu
+        // configurei").
+        ...(modoDeWorkspace === 'local'
+          ? { workspacePath: caminhoLocal.trim() }
+          : {}),
       });
       await queryClient.invalidateQueries({ queryKey: ['projects', workspaceId] });
       onClose();
@@ -198,8 +241,20 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
               search: { provider },
             },
       );
-    } catch {
-      showToast({ title: 'Falha ao criar projeto', tone: 'danger' });
+    } catch (error) {
+      // A mensagem da api é o produto quando o caminho Local não está montado
+      // (RN-170): ela diz o que falta e como montar. Um toast genérico
+      // ("Falha ao criar projeto") jogaria fora exatamente a parte útil, então
+      // o motivo fica NA TELA, no passo, e não some com o toast.
+      const motivo =
+        error instanceof ApiError && error.status === 400
+          ? mensagemDaApi(error)
+          : null;
+      setErroDeCriacao(motivo);
+      showToast({
+        title: motivo ? 'Não deu para criar o projeto' : 'Falha ao criar projeto',
+        tone: 'danger',
+      });
       setSubmitting(false);
     }
   }
@@ -367,6 +422,60 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
         </div>
       )}
 
+      {currentStep === 'workspace' && (
+        <div>
+          <div className={styles.providerGrid}>
+            {MODOS_DE_WORKSPACE.map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                className={[
+                  styles.providerOption,
+                  modoDeWorkspace === m.id && styles.selected,
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+                onClick={() => setModoDeWorkspace(m.id)}
+              >
+                <span className={styles.providerLabel}>{m.label}</span>
+                <span className={styles.providerDesc}>{m.desc}</span>
+              </button>
+            ))}
+          </div>
+
+          {modoDeWorkspace === 'local' && (
+            <div className={styles.field} style={{ marginTop: 16 }}>
+              <label className={styles.fieldLabel} htmlFor="workspace-path">
+                Caminho da pasta
+              </label>
+              <Input
+                id="workspace-path"
+                value={caminhoLocal}
+                onChange={(e) => setCaminhoLocal(e.target.value)}
+                placeholder="/home/voce/projetos/loja"
+                autoFocus
+              />
+              <div className={styles.slugPreview}>
+                caminho absoluto, como ele aparece DENTRO do container
+              </div>
+              {/* O aviso é a decisão do dono do produto declarada na tela: o
+                  caminho é livre, e livre só funciona se estiver montado. Sem
+                  isto, a recusa da api (RN-170) chegaria como surpresa. */}
+              <Alert tone="warning">
+                A pasta precisa estar <strong>montada nos containers</strong> da
+                api e do engine, no <strong>mesmo caminho absoluto</strong> — os
+                dois escrevem no mesmo lugar. No{' '}
+                <code>docker/docker-compose.yml</code>, acrescente{' '}
+                <code>- {caminhoLocal.trim() || '/sua/pasta'}:{caminhoLocal.trim() || '/sua/pasta'}</code>{' '}
+                aos serviços <code>api</code> e <code>engine</code>. Se não
+                estiver, a criação é <strong>recusada</strong> aqui mesmo — o
+                projeto não nasce quebrado.
+              </Alert>
+            </div>
+          )}
+        </div>
+      )}
+
       {currentStep === 'policy' && (
         <div className={styles.policy}>
           <p className={styles.policyIntro}>
@@ -403,6 +512,15 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
             value={adotando ? 'Adotar existente' : 'Criar novo'}
           />
           <SummaryRow label="Provider" value={PROVIDERS.find((p) => p.id === provider)?.label ?? '—'} />
+          <SummaryRow
+            label="Código em"
+            value={
+              modoDeWorkspace === 'local'
+                ? caminhoLocal.trim()
+                : 'pasta gerenciada pelo Brabo'
+            }
+            mono={modoDeWorkspace === 'local'}
+          />
           {adotando ? (
             <>
               <SummaryRow label="Repositório" value={externalId.trim()} mono />
@@ -419,6 +537,10 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
             </>
           )}
         </div>
+      )}
+
+      {erroDeCriacao && (
+        <Alert tone="danger">{erroDeCriacao}</Alert>
       )}
 
       <div className={styles.footer}>
@@ -450,6 +572,21 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
       </div>
     </Modal>
   );
+}
+
+/**
+ * A frase que a api mandou, quando ela mandou uma.
+ *
+ * O `message` do Nest chega como string ou como lista (`class-validator`
+ * devolve uma por regra violada). Sem esta normalização, a lista viraria
+ * `[object Object]` na tela — que é como uma mensagem que ensina vira ruído.
+ */
+function mensagemDaApi(error: ApiError): string | null {
+  const corpo = error.body as { message?: unknown } | null;
+  const bruto = corpo?.message;
+  if (typeof bruto === 'string') return bruto;
+  if (Array.isArray(bruto)) return bruto.filter((m) => typeof m === 'string').join(' ');
+  return null;
 }
 
 /** `acme/checkout` → `checkout`; `/srv/git/loja.git` → `loja`. */

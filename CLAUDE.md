@@ -644,6 +644,20 @@ conjunto das promoções AINDA PENDENTES na sessão, não "criadas em sequência
 sem interrupção" — para que resolver uma história no meio do carrossel
 recalcule a leva sozinho, sem estado próprio a sincronizar.
 
+**Projeto Local ou Container (RN-169/RN-170, ADR 0072).** Pedido do dono do
+produto: "cruzar a fronteira de apenas escrever código no container e poder
+escrever código a partir de uma pasta do usuário", com a variante de **caminho
+livre digitado** escolhida por ele, ciente de que só funciona montado no
+container. `projects` ganha (`workspace_mode`, `workspace_path`) na migração
+`0043`, com `container` de default — nada muda para quem não escolhe. O ADR
+0072 REVISA parte do 0065 e mexe no terreno do 0055, que decidiram a direção
+contrária (a parede de container), e por isso a consequência está escrita sem
+atenuar: a contenção ESTRUTURAL do `join(env, coluna)` — nenhuma coluna
+corrompida saindo da raiz gerenciada — deixa de existir para projeto Local, e
+o que sobra é a guarda da criação mais a revalidação léxica na leitura. A
+FASE 25b continua cortada: projeto Local roda no MESMO container de hoje, só
+a pasta mudou.
+
 **Diagrama C4 do Arquiteto (RN-149, ADR 0068).** Entregável novo:
 `create_c4_diagram` gera Context + Container (Simon Brown) em Mermaid,
 renderizado na Visão Geral. O Container level é DERIVADO do `module_map`
@@ -850,9 +864,22 @@ divide o mesmo banco, recuperar exige `db:migrate` E `engine:migrate`.
   não têm exceção configurável em lugar nenhum — merge em branch
   protegida, `instruction_patch` e `parallelize`/`raise_max_parallel`
   (RN-154).
+- O projeto escolhe ONDE o código mora, na criação (RN-169, ADR 0072):
+  `container` (DEFAULT — a pasta gerenciada em `PROJECT_WORKSPACES_ROOT`, o
+  comportamento de sempre) ou `local` (uma pasta do USUÁRIO, caminho absoluto
+  livre em `projects.workspace_path`). O par (modo, caminho) é amarrado por
+  CHECK no banco, e `projectScopeRoot` continua sendo a derivação ÚNICA da
+  raiz — não duplique validação nos chamadores. Caminho Local é validado na
+  CRIAÇÃO e RECUSADO com mensagem que ensina a montar (RN-170): absoluto, sem
+  `..`, existente, gravável de dentro do container, nunca raiz/pasta de
+  sistema nem sobreposto ao checkout do Brabo. O portão da imagem (RN-105) NÃO
+  vale para projeto `local`, que não sobe container. Consequência declarada no
+  ADR: a contenção estrutural do `join` some para esses projetos, e o vetor de
+  symlink do ADR 0055 continua aberto.
 - A imagem de container de um projeto é ARTEFATO do ARQUITETO
   (`artifact.project_image`, versionado, sem tabela), nunca configuração
-  escondida. Enquanto ele não decide, a aba Code responde 409 (RN-105).
+  escondida. Enquanto ele não decide, a aba Code responde 409 (RN-105) —
+  exceto em projeto no modo `local` (RN-169).
   `git push`, abertura de PR e deploy NÃO saem pelo terminal — a regra é
   `deny`, não `require_approval`, mesmo dentro do escopo do projeto e mesmo
   com "sempre permitir" (RN-106, ADR 0065). O ciclo de vida do container

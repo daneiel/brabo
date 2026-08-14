@@ -32,11 +32,30 @@ export interface Project {
   // de projeto novo; os projetos que existiam antes da fase ficaram em `auto`,
   // que é o comportamento anterior.
   storyPromotion: StoryPromotionMode;
+  // ONDE o código mora (RN-169 — ADR 0072). `container`: a pasta gerenciada
+  // pelo produto, que é o default e o comportamento de sempre. `local`: a
+  // pasta do usuário em `workspacePath`.
+  workspaceMode: WorkspaceMode;
+  // Caminho absoluto da pasta do usuário; `null` fora do modo `local`.
+  workspacePath: string | null;
   createdAt: string;
   updatedAt: string;
 }
 
 export type StoryPromotionMode = 'manual' | 'auto';
+
+/**
+ * ONDE o código de um projeto mora (RN-169 — ADR 0072). Espelha o enum
+ * `project_workspace_mode` da api.
+ *
+ * `container` é a pasta gerenciada pelo produto em PROJECT_WORKSPACES_ROOT —
+ * o default e o comportamento de sempre. `local` é uma pasta do usuário, que
+ * só funciona montada dentro dos containers da api e do engine.
+ *
+ * Cuidado com o homônimo: nada a ver com o `GitProviderName` `'local'`, que
+ * fala de onde o REPOSITÓRIO vive.
+ */
+export type WorkspaceMode = 'container' | 'local';
 
 /** Uma área de agente e seu teto de paralelismo (FASE 14d, ADR 0053). */
 export interface AgentArea {

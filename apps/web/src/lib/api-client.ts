@@ -71,6 +71,7 @@ import type {
   WorkspaceSummary,
   WorkspaceWithRole,
   RegistroDeGates,
+  WorkspaceMode,
 } from './api-types';
 
 export const API_URL = runtimeConfig.apiUrl;
@@ -267,9 +268,19 @@ export const getUnreadEvents = (
   post<ProjectUnreadEvents[]>(`/workspaces/${workspaceId}/unread-events`, {
     cursors,
   });
+// `workspaceMode`/`workspacePath` (ADR 0072): onde o código do projeto mora.
+// Omitidos, a api usa `container` — o comportamento de sempre. Com `local`, o
+// caminho é OBRIGATÓRIO e a api RECUSA a criação (400) quando ele não existe
+// ou não é gravável de dentro do container, com a instrução de como montar
+// (RN-170) — a mensagem do erro é para mostrar ao usuário, não para engolir.
 export const createProject = (
   workspaceId: string,
-  input: { name: string; slug: string },
+  input: {
+    name: string;
+    slug: string;
+    workspaceMode?: WorkspaceMode;
+    workspacePath?: string;
+  },
 ) => post<Project>(`/workspaces/${workspaceId}/projects`, input);
 export const getProject = (projectId: string) =>
   get<Project>(`/projects/${projectId}`);
