@@ -257,6 +257,30 @@ pnpm db:migrate             # aplica as migrações
 pnpm dev:down               # derruba tudo
 ```
 
+### O menu, para não decorar isso tudo
+
+```bash
+pnpm bootstrap
+```
+
+Esses comandos moram em três lugares que não conversam — `package.json`, o
+`Makefile` (Kubernetes) e scripts em `deploy/k8s/` e `docker/`. O menu junta os
+quatro grupos (Docker, K8s, Database, Test) numa porta só, navegado por dígito
+sem Enter, com `v` para voltar e `q` para sair; os atalhos válidos aparecem no
+rodapé. Enquanto um comando roda, a tela mostra só que está rodando — `↓` revela
+a saída ao vivo e `↑` a esconde.
+
+Ele **não reimplementa nada**: cada item chama exatamente o comando que já
+existe, e `pnpm bootstrap --print-commands` imprime a árvore inteira com o
+comando de cada folha, sem executar — é assim que se confere o que ele faz antes
+de deixá-lo fazer. A lista completa está em
+[Scripts](reference/scripts.md).
+
+Um item pede cuidado: **`Database › Delete`** apaga todas as tabelas (as da api e
+as do engine, que dividem o mesmo banco). É a única tela que pede Enter, exige
+digitar o nome do banco, e diz ao final que recuperar é `pnpm db:migrate` **e**
+`pnpm engine:migrate`.
+
 Trabalhe sempre em `feature/*` a partir de `dev`, com conventional commits em
 pt-BR. `CLAUDE.md` tem as convenções completas.
 

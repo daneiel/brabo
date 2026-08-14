@@ -401,7 +401,11 @@ serial.
 4. Rótulo de sessão vira helper e os cinco `slice(0, 8)` inline migram. É
    esta migração que impede a FASE 20 de colidir com a 19.
 5. `CLAUDE.md` entra na definição de pronto (ver a seção de Documentação), com
-   regra `warn` no docmap — hoje ele tem ZERO cobertura.
+   regra `warn` no docmap. ENTREGUE: a regra é `claude-md` em
+   docs/.docmap.yml, disparada por `package.json`, `pnpm-workspace.yaml`,
+   `apps/*/package.json`, `apps/engine/mix.exs`, `docs/adr/*.md` e
+   `docs/gates.yml` — a frase "hoje ele tem ZERO cobertura" que estava aqui
+   descrevia o estado ANTES da fase e ficou mentindo depois dela.
 
 ### FASE 17 — CONCLUÍDA: as 8 telas conforme o handoff
 Fidelidade visual ANTES do comportamento, para não refazer trabalho. Nenhuma
@@ -655,6 +659,100 @@ eager e os chunks pesados do Mermaid ficam sob demanda, e nenhum deles usa
 `eval`/`new Function` — o CSP fechado do ADR 0058 seguiu intacto, sem
 mudança de configuração.
 
+## RODADA exp003 — CONCLUÍDA (RN-150..162, PRs #278–#293)
+Não é fase: são 17 pontos que o USO encontrou numa sessão de teste ao vivo
+sobre o projeto `exp003`, corrigidos em cinco ondas sequenciadas por
+ARQUIVO DISPUTADO — quatro delas convergindo em `SessionPage.tsx`, o que
+obrigou a serializar. Vale a origem: nenhum destes foi achado por teste.
+
+**O que a rodada ensinou, e vale mais que a lista**: a maior correção
+(RN-155) era invisível a qualquer suite porque o defeito estava em comparar
+dois espaços numéricos DIFERENTES que casualmente são ambos `number` — o
+`event.seq` (gapless, por SESSÃO) contra o `action.seq`
+(`proposed_actions.seq`, `bigserial` global de TODA a tabela, compartilhado
+por todo projeto e toda sessão do sistema, e documentado no schema como
+contraste deliberado). A ordem só parecia certa enquanto a tabela era
+pequena. A correção não inventou campo: usou o evento
+`proposed_action.created` que o `ProposeActionUseCase` já grava na MESMA
+transação, com `payload.actionId` apontando de volta.
+
+**Engine e leitura contida (RN-150)** — `search_workspace` devolvia TODOS
+os hits, sem teto: a segunda causa real do `413` em revisão de PR, depois
+da correção de `read_file`. Dois tetos INDEPENDENTES, porque a busca
+estoura de duas formas — quantidade de hits (`SEARCH_WORKSPACE_MAX_HITS`,
+500, sobre um `Stream` que PARA de escanear em `max_hits + 1`) e bytes do
+texto final (`SEARCH_WORKSPACE_MAX_BYTES`, 32.768). Variáveis próprias, não
+reaproveitadas das outras duas: mesma classe de estouro, divergir uma não
+deve exigir tocar as outras. A marca de truncagem é dirigida ao MODELO
+(manda refinar o termo) e nunca inventa um total, porque contar o total
+pagaria de novo o I/O que o teto existe para evitar.
+
+**Números que mentem (RN-151)** — o badge do projeto na sidebar contava
+QUALQUER evento não lido: `exp003` mostrava 392 enquanto a aba Aprovações
+do mesmo projeto mostrava 8. Um número que não corresponde a nada acionável
+ao clicar é pior que nenhum. Virou `pendingApprovalsCount` no read model
+que já existia (RN-090), numa agregação a mais no `Promise.all` — nunca
+N+1.
+
+**Rastreabilidade do que o agente produziu (RN-152)** — a branch
+`feature/task-XXXXXXXX` no dropdown da aba Code passa a dizer de qual dev
+agent e módulo ela é. O módulo sai do `module_map` vigente pelas MESMAS
+funções que o geraram, nunca por regex reversa sobre o nome; sem vínculo,
+degrada para `null` em vez de adivinhar.
+
+**Auto mode (RN-153/154, ver Convenções)** — a curinga `actionType: "*"`.
+O que importa é onde ela mora: a resolução é do REPOSITÓRIO (`findMode`),
+e `decide.ts` não ganhou uma linha — é isso que torna os três tetos
+absolutos verdadeiros por CONSTRUÇÃO, e não por mais um `if` que um dia
+alguém esquece.
+
+**O fio da sessão que se lê (RN-155..159)** — ordenação (acima); o
+indicador de 5s com texto fixo "Reunindo informações..." em vez de
+interpolar o agente, que já aparece no cabeçalho (RN-156); criação de
+épico/história do PO virando aviso compacto em vez de bolha com o mesmo
+peso visual de uma resposta de verdade (RN-157); Markdown leve com highlight
+no chat por parser PRÓPRIO de regex, zero dependência nova e nenhum
+`dangerouslySetInnerHTML`, e só a SAÍDA do agente é renderizada — o que o
+humano digita fica literal (RN-158); e "Artefatos gerados" agrupado por
+agente com o `Disclosure` da RN-138, cada artefato navegando para onde ele
+vive (RN-159). O module_map/C4 ficou FORA por decisão registrada: é estado
+VIGENTE do projeto, não artefato datado por sessão.
+
+**Ordem de autoridade (RN-160/161, ADR 0069)** — "Confirmar arquitetura
+pronta" só habilita com ao menos 1 história PROMOVIDA (não basta ter regra
+capturada); e aceitar o handoff pro Dev Lead encadeia a ativação de
+execução quando o papel efetivo de quem aceita já autoriza. A fusão é só no
+cliente: o backend continua exigindo `maintainer` (RN-137), então ela evita
+um clique redundante sem mover a fronteira de autorização.
+
+**Entrada estruturada (RN-162)** — `ask_structured_questions`, do Criativo:
+o modelo declara as perguntas em schema, o formulário é renderizado por
+`StructuredQuestionCard`, e a resposta REUSA `SendAgentMessageUseCase` em
+vez de abrir um segundo caminho de mensagem. Responder é ato único —
+reenvio é 409, não sobrescrita.
+
+## FERRAMENTA DE DESENVOLVIMENTO — `pnpm bootstrap`
+Menu de terminal em `scripts/dev/bootstrap.sh` agrupando o que se faz no
+dia a dia: Docker, K8s, Database e Test. Existe porque esses comandos moram
+em TRÊS lugares que não conversam — `package.json`, `Makefile` e scripts em
+`deploy/k8s/`/`docker/` — e conhecimento decorado apodrece.
+
+Ele **não reimplementa nada**: cada folha chama o comando que já existe. O
+modo `--print-commands` resolve a árvore inteira sem TTY e sem executar, e é
+sobre ele que roda o teste (`scripts/dev/bootstrap.spec.ts`) — um TUI não se
+testa por unidade, mas o mapeamento menu→comando sim, e é ele que erra.
+Zero dependência nova; as cores saem de `design/tokens.css` em ANSI 24-bit
+com degradação para 256 cores e para nenhuma.
+
+Três decisões registradas: `Create` provisiona do zero e `Deploy` publica
+num ambiente que já existe (por isso só `Deploy` tem escolha por serviço);
+no K8s só `All` funciona, e Api/Engine/Web aparecem DESABILITADOS em vez de
+sumirem, porque o menu deve dizer o que o produto não faz; e
+`Database › Delete` recria a extensão pgvector, já que
+`docker/postgres/init.sql` só roda na primeira inicialização do volume —
+um `DROP SCHEMA` puro faria a migração seguinte falhar, e como o engine
+divide o mesmo banco, recuperar exige `db:migrate` E `engine:migrate`.
+
 ## Stack (decidida — não proponha alternativas)
 - `apps/api`: NestJS 11 + Drizzle ORM + PostgreSQL 16 + pgvector
 - `apps/engine`: Elixir/OTP + Phoenix (canais) + Oban (filas no Postgres)
@@ -675,7 +773,12 @@ mudança de configuração.
   (scripts/ci/, vitest)
 
 ## Convenções
-- Branches permanentes: dev, qa, main — um branch, um ambiente.
+- Branches permanentes: dev, qa, main — um branch, um ambiente. `rc` saiu
+  da política (ADR 0030) e o bootstrap parou de criá-la, mas continua em
+  `PROTECTED_BRANCHES` DE PROPÓSITO: a lista decide o que a trava de merge
+  RECUSA, e repositórios bootstrapados por versões anteriores ainda têm a
+  branch. Proteger uma branch que não existe não custa nada; desproteger
+  uma que existe custa caro. Não "limpe" essa lista.
   Trabalho nasce de dev com a taxonomia da política (breaking/,
   feature/, bugfix/, perf/, refactor/, chore/, docs/, test/);
   hotfix/ nasce de main. Formato funcao/descritivo,
@@ -839,9 +942,14 @@ mudança de configuração.
 - Não refatorar código de fase concluída sem pedido explícito
 - Não ativar modelo descoberto automaticamente: curadoria manual
   sempre (ADR 0042)
-- Não corrigir de passagem os 19 achados abertos, hoje em
-  docs/explanation/achados-execucao-real.md — cada um espera a fase que
-  o endereça, e corrigir fora dela apaga a evidência de por que existia
+- Não corrigir de passagem os achados que seguem ABERTOS em
+  docs/explanation/achados-execucao-real.md — corrigir fora da fase que os
+  endereça apaga a evidência de por que existiam. Os 19 achados do
+  dogfooding fecharam (19 de 19, ver a FASE 13c); o que resta aberto é da
+  execução real e NÃO é bug a corrigir, é decisão de produto: Z/AD (o
+  allowlist de verbos não converge — verbo, forma e invocação são espaços
+  distintos) e AE (o agente de QA tenta consertar o código que julga,
+  contra o próprio prompt, contido por duas barreiras independentes)
 - (FASE 15 — CONCLUÍDA) O congelamento de gates valeu enquanto a fase
   corria — nenhum gate NOVO, nenhuma mudança de comportamento de gate
   existente — e terminou sem exceção nenhuma: a fase só DECLAROU e MEDIU

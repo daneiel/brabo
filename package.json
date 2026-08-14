@@ -5,10 +5,13 @@
   "version": "0.1.0",
   "packageManager": "pnpm@11.3.0",
   "scripts": {
+    "bootstrap": "bash scripts/dev/bootstrap.sh",
     "dev": "node scripts/dev/preflight.mjs && docker compose -f docker/docker-compose.yml --env-file .env up",
     "dev:build": "node scripts/dev/preflight.mjs && docker compose -f docker/docker-compose.yml --env-file .env up --build",
     "dev:down": "docker compose -f docker/docker-compose.yml --env-file .env down",
     "dev:gpu": "node scripts/dev/preflight.mjs && docker compose -f docker/docker-compose.yml -f docker/docker-compose.gpu.yml --env-file .env up",
+    "dev:obs": "node scripts/dev/preflight.mjs && docker compose -f docker/docker-compose.yml -f docker/docker-compose.observability.yml --env-file .env up -d && node scripts/dev/observabilidade-pronta.mjs",
+    "obs:down": "docker compose -f docker/docker-compose.yml -f docker/docker-compose.observability.yml --env-file .env stop grafana prometheus loki alloy",
     "dev:preflight": "node scripts/dev/preflight.mjs",
     "dev:api": "pnpm --filter api start:dev",
     "dev:web": "pnpm --filter web dev",
@@ -25,6 +28,7 @@
     "docs:serve": "pnpm --filter website serve",
     "docs:clear": "pnpm --filter website clear",
     "docs:generate": "node scripts/docs/generate.mjs",
+    "docs:landing": "node scripts/docs/landing.mjs",
     "docs:check": "node scripts/docs/docmap.mjs && node scripts/docs/generate.mjs --check",
     "docs:drift": "node scripts/docs/drift.mjs",
     "docs:audit": "node scripts/docs/audit.mjs"

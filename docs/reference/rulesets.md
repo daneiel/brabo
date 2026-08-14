@@ -413,9 +413,17 @@ alternativas descartadas e a exceção de push que isto abre estão no
 
 | degrau | URL | indexado |
 |---|---|---|
-| `main` | `https://daneiel.github.io/brabo/` | ✅ |
+| — (índice dos três) | `https://daneiel.github.io/brabo/` | ❌ `noindex, follow` |
+| `main` | `https://daneiel.github.io/brabo/main/` | ✅ |
 | `qa` | `https://daneiel.github.io/brabo/qa/` | ❌ `noIndex` |
 | `dev` | `https://daneiel.github.io/brabo/dev/` | ❌ `noIndex` |
+
+Os três viraram simétricos no
+[ADR 0071](../adr/0071-publicacao-simetrica-por-degrau.md), que também explica a
+raiz gerada e o `404.html` que reencaminha link antigo para `/main/`. **A
+configuração do Pages não muda com isso** — a fonte continua sendo a branch
+`gh-pages` na pasta `/ (root)`; o que mudou é o conteúdo que o workflow monta
+antes de empurrar.
 
 > **A `gh-pages` NÃO entra no ruleset das permanentes.** Ela não é permanente, e o
 > bot precisa empurrar nela — incluí-la travaria a própria publicação. É também
