@@ -99,6 +99,25 @@ o componente `d` da JWK, travado por teste.
 
 ## Notas
 
+- **`POST /workspaces/:workspaceId/projects` decide onde o agente vai escrever,
+  e por isso é rota de superfície de segurança, não só de cadastro**
+  ([ADR 0072](adr/0072-projeto-local-ou-container.md),
+  [RN-169](business-rules.md#rn-169)/[RN-170](business-rules.md#rn-170)). O
+  corpo ganhou `workspaceMode` (`container` — o default e o comportamento de
+  sempre — ou `local`) e `workspacePath`. No modo `local` o caminho absoluto
+  informado vira a **raiz do escopo de terminal** do ADR 0055: o que se digita
+  aqui é o que o agente pode ler e escrever. Nenhuma rota nova, e nenhuma
+  mudança de papel (`RequireRole('maintainer')`, como já era) — o que mudou é
+  o alcance do que a rota concede.
+
+  A validação está toda na criação (RN-170: absoluto, sem `..`, existente,
+  gravável de dentro do container, nunca raiz nem pasta de sistema, nunca
+  sobreposto ao checkout do Brabo nos dois sentidos) e a recusa é `400` com a
+  linha de compose que resolve. O modo é **congelado** depois: `UpdateProjectDto`
+  omite os dois campos de propósito, senão `PartialType(CreateProjectDto)` os
+  exporia num `PATCH` sem guarda nenhuma. O predicado léxico ainda roda a cada
+  derivação da raiz, porque o único jeito de burlar a criação é escrever direto
+  no banco.
 - **`GET /`** é o "Hello World!" do scaffold do NestJS
   (`src/app.controller.ts`). Está atrás do guard e não vaza nada, mas não serve
   a nada — candidata a remoção. Ficou registrada aqui em vez de removida por

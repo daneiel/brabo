@@ -130,6 +130,14 @@ atropelar. É por **agente**, não por task: quem reivindica a próxima task
 substitui o diretório, e é isso que obriga o agente a segurá-lo enquanto um
 gate ainda vai lê-lo.
 
+**Modo de workspace** — onde o código de um projeto mora no disco, escolhido na
+criação e **congelado** depois ([ADR 0072](adr/0072-projeto-local-ou-container.md),
+[RN-169](business-rules.md#rn-169)). `container` é a pasta gerenciada sob
+`PROJECT_WORKSPACES_ROOT` — o default e o comportamento de sempre; `local` é um
+caminho absoluto do usuário, que só funciona se estiver montado no container.
+Não confundir com **workspace** de IAM (o agrupamento de projetos e membros):
+são a mesma palavra para coisas diferentes, e o modo é sobre disco.
+
 **Estados do dev agent** — `working` (implementando), `awaiting_approval`
 (propôs commit/push/PR e alguma ficou pendente de aprovação — **sem PR não se
 abre gate**, [RN-050](business-rules.md#rn-050)), `awaiting_gate` (PR aberta,

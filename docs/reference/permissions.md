@@ -286,6 +286,22 @@ verbo ([ADR 0055](../adr/0055-escopo-de-caminho-na-politica-de-terminal.md),
 criação do projeto — legível (`<slug>-<8 chars do id>`) num projeto novo, o
 UUID puro num projeto de antes dessa mudança.
 
+**Projeto no modo `local` tem outro escopo, e a diferença importa aqui**
+([ADR 0072](../adr/0072-projeto-local-ou-container.md),
+[RN-169](../business-rules.md#rn-169)/[RN-170](../business-rules.md#rn-170)):
+a raiz passa a ser o **caminho absoluto que o usuário digitou na criação**, não
+`join(PROJECT_WORKSPACES_ROOT, workspace_dir_name)`.
+
+Tudo o que esta seção descreve continua valendo — o escopo aperta e afrouxa
+exatamente igual, e `deny` continua vencendo primeiro. O que muda é o que ele
+CONTÉM. E a consequência está declarada sem atenuação no ADR 0072: a contenção
+**estrutural** do `join` — "o resultado nunca sai da raiz gerenciada, aconteça o
+que acontecer com a coluna" — deixa de existir para esses projetos. O que
+substitui é a validação da criação (RN-170: absoluto, sem `..`, existente,
+gravável, nunca raiz de sistema, nunca sobreposto ao checkout do Brabo), mais a
+revalidação LÉXICA do mesmo predicado a cada derivação da raiz — para que uma
+linha adulterada direto no banco não vire escopo de terminal em `/`.
+
 A comparação de caminho é **léxica e sem regex sobre a entrada**: o corte de
 barras finais é varredura O(n), não `.replace(/\/+$/, '')`. O padrão antigo foi
 apontado pelo CodeQL como ReDoS polinomial (HIGH) — ele obriga o motor a tentar
