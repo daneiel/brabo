@@ -6498,6 +6498,30 @@ correção feita de um lado só.
   de sintaxe sobre --code-bg")
 - **ADR:** [0074](adr/0074-tema-alcancavel-e-o-boot-sob-csp.md)
 
+### RN-210 — "Recomendado" é uso real e custo, nunca nota calculada {#rn-210}
+
+O bloco "Melhores modelos por capacidade" (Configurações) não tem coluna de
+score. O handoff mostra uma nota por capacidade (código 9.4, imagem 9.1…), mas
+é dado FICTÍCIO do mock — nenhum provider publica "qualidade de código" e o
+produto não mede isso em lugar nenhum. Calcular um número aqui seria o mesmo
+"palpite vestido de dado" que o [ADR 0041](adr/0041-base-openai-compativel-e-contrato-de-llm-providers.md)
+proíbe para capability de MODELO, agora sobre qualidade.
+
+Em vez disso, "recomendado"/"alternativa" saem de dois sinais reais, entre os
+modelos que a curadoria DESTE workspace marcou para aquela capacidade (`uses`,
+[RN-057](#rn-057)): primeiro os mais usados por agentes DESTE projeto — a
+mesma cascata que resolve o binding vigente de cada agente —, custo (do
+catálogo, ascendente) como desempate. "O que o time já escolheu" é o sinal
+mais honesto disponível sem inventar nota. Capacidade sem nenhum modelo curado
+mostra "sem cobertura curada" — nunca esconde a linha, mesmo padrão que a
+coluna Origem de `ModelsSection` já usa para o binding pulado.
+
+- **Onde:** `apps/web/src/routes/ProjectSettingsTab.tsx`
+  (`MelhoresModelosPorCapacidadeSection`)
+- **Teste:** `apps/web/src/routes/ProjectSettingsTab.test.tsx`
+  (describe "MelhoresModelosPorCapacidadeSection")
+- **ADR:** [0079](adr/0079-ranking-de-modelos-por-capacidade-sem-nota-inventada.md)
+
 ---
 
 ## Quando dá errado

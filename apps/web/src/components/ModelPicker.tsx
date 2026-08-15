@@ -5,6 +5,27 @@ import { Badge } from './ui/Badge';
 import { ChevronDownIcon, ModelIcon } from './ui/icons';
 import styles from './ModelPicker.module.css';
 
+/**
+ * O handoff (`design_handoff_brabo/README.md`, seção 7 "Dropdown de modelo")
+ * pede um badge verde **ideal** em cada opção "quando o modelo cobre TODAS as
+ * capacidades exigidas pelo agente". Investigado e NÃO construído — ver
+ * ADR 0079.
+ *
+ * O motivo é duplo, e o segundo por si só já fecharia a questão:
+ *
+ * 1. "Capacidades exigidas por agente" não existe no domínio. A tabela de
+ *    bindings (`ModelsSection`, `ProjectSettingsTab.tsx`) já registrou isso
+ *    ao renomear a coluna de "Agente · capacidades" para só "Agente" —
+ *    prometer aqui o que já foi recusado ali reabriria a mesma lacuna.
+ * 2. Mesmo que existisse, este picker não tem como LER capacidade curada
+ *    (`uses`, ADR 0051): ele recebe `Model` de `GET /projects/:id/models`
+ *    (papel `viewer`), e `uses` só existe em `ModelComCuradoria`, de
+ *    `GET /workspaces/:id/models/catalog` (papel `maintainer`). Buscar a
+ *    segunda rota para pintar um badge no seletor de um `developer`
+ *    alargaria o que ele pode LER — mudança de RBAC, decisão de produto,
+ *    fora do escopo desta frente.
+ */
+
 // Precisa casar com .dropdown no CSS — o cálculo de posição depende disso.
 const DROPDOWN_WIDTH = 320;
 const DROPDOWN_MAX_HEIGHT = 360;

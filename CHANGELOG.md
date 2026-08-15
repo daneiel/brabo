@@ -17,6 +17,12 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   (`GET /projects/:id/spend/me`) **não mudou**: continua sem provider e sem
   credencial, e agora a garantia é do TIPO — pedir a dimensão com escopo de
   ator não compila (RN-187).
+- **web**: a aba Configurações ganha "Melhores modelos por capacidade" —
+  para código, documentação, análise, imagem e conversa, mostra o modelo mais
+  usado pelos agentes deste projeto entre os que a curadoria do workspace
+  marcou para aquele uso, com custo como desempate. Sem coluna de "nota":
+  o handoff pedia um score por capacidade, mas é dado fictício do mock — o
+  produto não mede qualidade de modelo em lugar nenhum (ADR 0079, RN-210)
 
 ### Correções
 
