@@ -71,6 +71,71 @@ export interface LLMProviderCapabilities {
    * jeito que o contrato de git provider degrada por capability desde a Fase 2.
    */
   readonly listModels: boolean;
+  /**
+   * O provider sabe transformar texto em VETOR (ADR 0075). Camada de PROVIDER
+   * — a de modelo é `ModeloDoCatalogo.supportsEmbeddings`, e as duas precisam
+   * ser verdade para uma chamada existir: um provider que embeda continua sem
+   * embedar com um modelo de chat.
+   *
+   * Obrigatório (não opcional) pela mesma razão que `code` em
+   * `ChatErrorChunk`: com campo opcional, um provider novo esquece de declarar
+   * e ninguém percebe. Quem declara `false` não expõe `embed` — quem consome
+   * degrada olhando a capability, nunca descobrindo na falha.
+   */
+  readonly embeddings: boolean;
+}
+
+/**
+ * O que se pede a um provider ao gerar embedding (ADR 0075).
+ *
+ * Não estende `ChatOptions` de propósito: `maxTokens` e `tools` não têm
+ * sentido aqui, e herdar campos inaplicáveis convida a mandá-los no fio.
+ */
+export interface EmbeddingOptions {
+  /** O modelo DE EMBEDDING — nunca o de chat (ver `supportsEmbeddings`). */
+  model: string;
+  /** Credencial decriptada — nunca persistida/logada por quem consome isto. */
+  apiKey?: string;
+  /** Override do host do Ollama (senão usa OLLAMA_HOST/default do provider). */
+  host?: string;
+  /**
+   * Reduz a dimensão do vetor, quando o provider aceita (`dimensions` da
+   * OpenAI). Ausente = a dimensão nativa do modelo. Provider que não aceita
+   * IGNORA em vez de falhar — o índice de destino é que decide se aceita o
+   * vetor, e o retorno sempre diz a dimensão REAL do que veio.
+   */
+  dimensions?: number;
+}
+
+/**
+ * O resultado de uma chamada de embedding (ADR 0075).
+ *
+ * Um vetor por entrada, na MESMA ordem — embedding é operação de lote por
+ * natureza (um índice recebe N trechos de uma vez), e a ordem é o único
+ * vínculo entre entrada e vetor.
+ */
+export interface EmbeddingResult {
+  readonly vectors: readonly (readonly number[])[];
+  /**
+   * O tamanho de cada vetor, conferido contra o que veio — e não copiado do
+   * catálogo. Um índice vetorial tem dimensão FIXA: gravar um vetor de tamanho
+   * diferente do declarado falha lá na frente, longe da causa.
+   */
+  readonly dimensions: number;
+  /**
+   * O modelo que o provider DIZ ter usado, que nem sempre é o pedido (um alias
+   * resolve para uma versão datada). É este que vai para o metering, pelo mesmo
+   * motivo que o preço é congelado em `token_usage` (RN-044).
+   */
+  readonly model: string;
+  /** Tokens de ENTRADA consumidos. Embedding não tem saída em tokens. */
+  readonly inputTokens: number;
+  /**
+   * `true` quando o provider não informou a contagem e ela foi estimada (ou
+   * ficou em zero). Mesma distinção do `usage` do chat: "o provider disse
+   * zero" não é "o provider não disse nada" (RN-041).
+   */
+  readonly estimated: boolean;
 }
 
 /**
@@ -115,6 +180,23 @@ export interface ModeloDoCatalogo {
   readonly supportsReasoning?: boolean;
   /** PRODUZ imagem — eixo diferente de aceitar imagem na entrada. */
   readonly generatesImage?: boolean;
+  /**
+   * Este modelo é DE EMBEDDING (ADR 0075) — a camada de MODELO da capability,
+   * abaixo de `LLMProviderCapabilities.embeddings`.
+   *
+   * Não é gradiente e sim EXCLUSÃO: um modelo de embedding não conversa e um
+   * modelo de chat não vetoriza. O Ollama publica isso por modelo
+   * (`capabilities: ["embedding"]` no `/api/tags`), e é de lá que o valor sai.
+   * Ausente continua sendo "o provider não disse" — nunca `false` inventado, e
+   * nunca deduzido do NOME do modelo, que seria palpite vestido de dado.
+   */
+  readonly supportsEmbeddings?: boolean;
+  /**
+   * A dimensão nativa do vetor, quando o catálogo publica. Serve para escolher
+   * o índice ANTES da primeira chamada; a dimensão que vale é sempre a que
+   * `EmbeddingResult` devolve.
+   */
+  readonly embeddingDimensions?: number;
   readonly inputPricePerMillionMicros?: number;
   readonly outputPricePerMillionMicros?: number;
   /** Só um hub preenche: quem de fato serve o modelo por baixo. */

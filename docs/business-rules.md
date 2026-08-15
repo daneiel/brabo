@@ -957,6 +957,98 @@ a auditar, o seed reusando o próprio `UpdateModelPricingUseCase`.
   `test/application/use-cases/llm/sync-model-catalog.use-case.spec.ts`
 - **Origem:** [ADR 0042](adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md)
 
+### RN-189 — Embedding devolve um vetor por entrada, ou erro {#rn-189}
+
+`embed` é operação de LOTE: recebe N textos e devolve N vetores, **na mesma
+ordem**. A ordem é o único vínculo entre entrada e vetor, e por isso uma
+resposta mais curta não é aproveitável — o i-ésimo vetor passaria a ser de
+outra frase, e o índice ficaria errado em silêncio, com o sintoma aparecendo na
+BUSCA, semanas depois e longe da causa.
+
+Então o contrato recusa, em vez de degradar, três coisas: lote incompleto,
+vetor vazio e dimensões diferentes na mesma resposta. Lista de entradas vazia
+também é recusada antes de sair pela rede — responder `[]` a ela faria quem
+chama gravar um índice vazio achando que indexou.
+
+O resultado carrega quatro campos, e cada um responde a uma pergunta que já
+custou caro em outro lugar do produto: `dimensions` é conferido contra o que
+VEIO (nunca copiado do catálogo); `model` é o que o provider **disse** ter
+usado, porque um alias resolve para uma versão datada e é esse nome que vai ao
+metering, pelo mesmo motivo do preço congelado ([RN-044](#rn-044)); e
+`inputTokens` vem com `estimated`, preservando a distinção "o provider disse
+zero" × "o provider não disse nada" da [RN-041](#rn-041).
+
+O erro **lança** normalizado por `code`, em vez de virar chunk como no `chat`.
+A razão do chunk é preservar o gasto de um turno em andamento; aqui não há nada
+a preservar — ou o provider devolveu os vetores e cobrou, ou não devolveu e não
+cobrou. É a mesma escolha de `listModels`, e a taxonomia é a mesma: nenhum
+`LLMErrorCode` novo.
+
+- **Onde:** `apps/api/src/application/ports/llm-provider.port.ts:61`,
+  `apps/api/src/infrastructure/llm/embedding-result.ts:26`
+- **Teste:** `test/contract/llm-provider.contract.ts` (cinco casos, rodados
+  contra todo provider que declara a capability)
+- **Origem:** [ADR 0075](adr/0075-embeddings-no-contrato-de-llm-provider.md)
+
+### RN-190 — Embedding tem capability em duas camadas, e a de modelo é exclusão {#rn-190}
+
+Como em tool calling ([RN-040](#rn-040)), a capability tem duas camadas: o
+PROVIDER (`capabilities.embeddings`, o teto) e o MODELO
+(`supportsEmbeddings` na linha de catálogo). A diferença entre os dois casos é
+o que a regra existe para dizer:
+
+- **tool calling é gradiente** — um modelo que não pede ferramentas ainda
+  conversa, e por isso só o binding de agente é recusado;
+- **embedding é exclusão** — `nomic-embed-text` não responde uma pergunta e
+  `llama3.2` não devolve vetor. São conjuntos disjuntos, e o daemon do Ollama
+  prova isso respondendo **`501`** ("This server does not support embeddings")
+  a um pedido de embedding com modelo de chat.
+
+`assertCanEmbed` confere as duas na ordem em que falham melhor: o provider
+primeiro, porque trocar de modelo não resolve provider que não embeda. Modelo
+**sem declaração** também é recusado, com mensagem diferente — ausência é "o
+provider não disse" ([ADR 0041](adr/0041-base-openai-compativel-e-contrato-de-llm-providers.md)),
+nunca permissão, e a ação de quem lê é sincronizar o catálogo em vez de trocar
+de modelo. Deduzir a capability do NOME do modelo é proibido: seria palpite
+vestido de dado.
+
+- **Onde:** `apps/api/src/domain/llm/embedding-capability.ts:64`,
+  `apps/api/src/infrastructure/llm/ollama-provider.ts:319`
+- **Teste:** `test/domain/llm/embedding-capability.spec.ts`,
+  `test/infrastructure/llm/ollama-provider.spec.ts`
+- **Origem:** [ADR 0075](adr/0075-embeddings-no-contrato-de-llm-provider.md)
+
+### RN-191 — `embeddings: true` exige execução, não documentação {#rn-191}
+
+A regra da casa ([ADR 0041](adr/0041-base-openai-compativel-e-contrato-de-llm-providers.md)/[ADR 0043](adr/0043-seis-providers-de-llm-e-o-fechamento-da-fase-9b.md))
+aplicada à capability nova: **só o `ollama` declara `true`**, e a prova é o
+`POST /api/embed` rodado contra o daemon 0.32.1 com `nomic-embed-text` — duas
+entradas, dois vetores de 768, `prompt_eval_count: 10`.
+
+Os outros oito declaram `false`, por dois motivos distintos:
+
+- **falta de prova** (sete): não há chave deles no ambiente, e o único smoke
+  pago que já rodou ([aceite](explanation/aceite-providers.md)) foi de CHAT —
+  num hub, embedding roteia para provedores diferentes dos de chat, e a prova
+  de um endpoint não é a do outro;
+- **ausência da operação** (Anthropic): não há endpoint de embedding próprio, e
+  a doc dela aponta para um terceiro, que é outro provider com outra chave e
+  outro dialeto.
+
+O DIALETO da base OpenAI-compatível é provado à parte, com a suite de contrato
+rodando uma segunda vez sobre ela com a capability ligada. É isso que torna
+barato virar um provider para `true` no dia em que a chave existir: muda uma
+linha do literal, e o parsing já está exercitado. Provider que declara `false`
+e ainda assim expõe o método **recusa a chamada** antes de tocar a rede.
+
+- **Onde:** `apps/api/src/infrastructure/llm/ollama-provider.ts:73`,
+  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:302`
+- **Teste:** `test/contract/llm-provider.contract.ts`,
+  `test/infrastructure/llm/openai-compatible-provider.contract.spec.ts`,
+  `test/infrastructure/llm/ollama-provider.embeddings.smoke.spec.ts` (manual,
+  contra o daemon real)
+- **Origem:** [ADR 0075](adr/0075-embeddings-no-contrato-de-llm-provider.md)
+
 ### RN-045 — Repositório adotado só é alterado por plano aprovado {#rn-045}
 
 Adotar um repositório existente **diagnostica sem agir**. A adoção valida o

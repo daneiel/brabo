@@ -1179,6 +1179,21 @@ divide o mesmo banco, recuperar exige `db:migrate` E `engine:migrate`.
 - Capability só é declarada quando provada pela suite; sem prova,
   declara-se false e degrada (regra dos ADRs 0041/0042, vale para git
   e LLM).
+- O contrato de LLMProvider tem DUAS operações opcionais, e as duas seguem a
+  mesma regra de dois lados: `listModels` (Fase 9c) e `embed` (ADR 0075,
+  RN-189..191). Embedding é LOTE e devolve **um vetor por entrada ou erro** —
+  nunca lista mais curta, porque a ordem é o único vínculo entre entrada e
+  vetor e uma resposta parcial é indetectável depois. O erro LANÇA normalizado
+  por `code` em vez de virar chunk: não há turno em andamento cujo gasto
+  precise sobreviver. A capability tem duas camadas como as outras, com uma
+  diferença que precisou ser nomeada: tool calling é GRADIENTE (modelo sem
+  ferramenta ainda conversa) e embedding é EXCLUSÃO — modelo de chat não
+  vetoriza e modelo de embedding não conversa (RN-190), conjuntos disjuntos.
+  Só o `ollama` declara `embeddings: true`, provado contra o daemon real; os
+  outros oito degradam com `false` (RN-191), e virar essa flag exige smoke com
+  credencial, nunca leitura de doc. O gasto de embedding NÃO passa pelo
+  metering ainda — corte declarado do ADR 0075, porque `token_usage.session_id`
+  é `NOT NULL` e indexar repositório não acontece dentro de sessão.
 - UI: fidelidade estrita ao design system em design/ (tokens, tipografia
   Space Grotesk/Archivo/IBM Plex Mono, dark mode primário). Contraste é
   medido por teste sobre os tokens e layout é verificado no navegador
