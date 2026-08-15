@@ -954,6 +954,25 @@ pior, `--syn-cm`, dá 2,32:1 no claro). Onde o handoff reprova, vale o número
 medido: é a mesma régua das fontes. Os oito papéis passam a existir com prefixo
 `--syntax-*`; os cinco semânticos que ainda pintam vão medidos ao lado deles.
 
+## PROGRAMA 28 — Onda 1, frente D0: gasto por provider (RN-186..188)
+**A contenção mudou de natureza, e é isso que importa — não o eixo novo.**
+`provider` voltou a ser dimensão de `sumGroupedBy`, revisando o ADR 0063 por
+decisão do dono do produto. Antes, o membro não alcançava a quebra por
+CREDENCIAL porque ela não existia — o ADR 0063 escreveu "não há argumento a
+passar". Agora existe, e quem contém é o TIPO: duas sobrecargas, e o escopo que
+carrega `actor` (o único da visão do membro) só aceita
+`Exclude<SpendDimension, 'provider'>`. A garantia passou de "impossível de
+expressar" para "impossível de compilar", que é mais fraca — e é por isso que as
+barreiras são DUAS e independentes: a rota do membro também não tem parâmetro de
+dimensão nenhum. Nenhum `if` sobre a combinação, de propósito (mesma lição da
+RN-153/154), e a prova foi por INVERSÃO: sem o `@ts-expect-error` o `tsc` acusa
+`TS2769` na linha exata.
+
+`porOwner`/`porAgente` são partição de `porAtor` por `actor_kind`, sem consulta a
+mais; `system` fica fora dos dois e continua no total. O índice em
+`token_usage(created_at)` que o ADR 0063 mediu e adiou entrou na migração `0044`.
+A TELA não mudou — é onda posterior.
+
 ## FERRAMENTA DE DESENVOLVIMENTO — `pnpm bootstrap`
 Menu de terminal em `scripts/dev/bootstrap.sh` agrupando o que se faz no
 dia a dia: Docker, K8s, Database e Test. Existe porque esses comandos moram

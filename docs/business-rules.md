@@ -2734,8 +2734,9 @@ O produto responde **duas perguntas diferentes** sobre `token_usage`, e nenhuma
 **A do owner é por CREDENCIAL.** `GET /workspaces/:id/credential-spend` continua
 como a [RN-060](#rn-060) o deixou — por provider, exigindo `owner`, respondendo
 "quanto saiu da minha chave". Junto dele, `GET /workspaces/:id/spend-report`
-(também `owner`) quebra o workspace por **modelo, projeto, ator e dia**. O owner
-vê os dois porque é a única pessoa que pode ver os dois.
+(também `owner`) quebra o workspace por **modelo, provider, projeto, ator e
+dia** — o eixo de provider entrou pela [RN-186](#rn-186). O owner vê os dois
+porque é a única pessoa que pode ver os dois.
 
 **A do membro é por ATOR.** `GET /projects/:id/spend/me` (papel `viewer`)
 devolve, em tokens e custo **estimado**, o que **quem chamou** consumiu naquele
@@ -2753,11 +2754,14 @@ quem mandou gastar; atribuir o agente a quem o iniciou seria inventar um dado
 que a tabela não tem. Gasto de agente aparece no relatório do owner, de quem é a
 chave.
 
-**A agregação nova não tem eixo de `provider`.** As cinco dimensões de
-`sumGroupedBy` são `model`, `project`, `actor`, `session` e `day` — e só. A
-ausência é o que impede a visão do membro de ganhar esse eixo por descuido: não
-há argumento a passar. Pelo mesmo motivo, dois providers servindo o mesmo nome
-de modelo caem numa linha só.
+**O eixo de `provider` existe, e o membro não o alcança.** Até o
+[ADR 0076](adr/0076-provider-volta-a-ser-dimensao-de-gasto.md) ele simplesmente
+não existia na agregação, e era a ausência que continha a visão do membro. Hoje
+`sumGroupedBy` tem seis dimensões (`model`, `provider`, `project`, `actor`,
+`session`, `day`) e a contenção mudou de forma, não de força: quem contém é o
+TIPO — ver [RN-186](#rn-186) e [RN-187](#rn-187). O que não mudou é que dois
+providers servindo o mesmo nome de modelo continuam caindo numa linha só na
+dimensão `model`.
 
 - **Onde:**
   `apps/api/src/application/use-cases/llm/get-my-spend.use-case.ts`,
@@ -2769,7 +2773,97 @@ de modelo caem numa linha só.
   (o membro não enxerga linha de outro ator, nem de agente, nem do owner; o
   filtro é pelo par `(kind, id)`; a resposta não carrega provider);
   `apps/web/src/routes/ProjectSpendTab.test.tsx`
-- **Origem:** [ADR 0063](adr/0063-duas-audiencias-para-o-mesmo-gasto.md) (FASE 22)
+- **Origem:** [ADR 0063](adr/0063-duas-audiencias-para-o-mesmo-gasto.md) (FASE 22),
+  revisto pelo [ADR 0076](adr/0076-provider-volta-a-ser-dimensao-de-gasto.md)
+
+### RN-186 — `provider` é dimensão do relatório do owner, e só dele {#rn-186}
+
+`sumGroupedBy` aceita `provider` como dimensão, e
+`GET /workspaces/:id/spend-report` devolve a lista `porProvider` ao lado de
+modelo, projeto, ator e dia. O [ADR 0063](adr/0063-duas-audiencias-para-o-mesmo-gasto.md)
+tinha deixado o eixo de fora; o [ADR 0076](adr/0076-provider-volta-a-ser-dimensao-de-gasto.md)
+o devolveu **sem revogar o argumento**: quebrar gasto por provider continua
+sendo quebrar por CREDENCIAL, e por isso o eixo mora numa rota que já exige
+`owner` ([RN-060](#rn-060)) — a mesma régua de `credential-spend`, que segue
+respondendo a pergunta da FATURA (por mês, com o vínculo à chave que existe
+hoje).
+
+`GET /projects/:id/spend/me` **não ganhou nada**. A assimetria é o desenho: as
+duas respostas continuam não sendo recorte uma da outra ([RN-101](#rn-101)).
+
+A dimensão `model` **não mudou**: dois providers servindo o mesmo nome de modelo
+continuam numa linha só. Quem quer a quebra por credencial tem a lista própria,
+e cruzar as duas dimensões multiplicaria as linhas do ranking sem responder
+pergunta que as duas listas separadas já não respondam.
+
+- **Onde:** `apps/api/src/application/ports/token-usage-repository.port.ts:123`
+  (`SpendDimension`),
+  `apps/api/src/infrastructure/persistence/drizzle/token-usage.repository.ts:245`
+  (o `GROUP BY`), `apps/api/src/application/use-cases/llm/get-workspace-spend-report.use-case.ts:112`,
+  `apps/api/src/interfaces/http/llm/spend.controller.ts:56`
+- **Teste:** `apps/api/test/application/use-cases/llm/spend-audiencias.use-case.spec.ts`
+  ("quebra por PROVIDER, e o mesmo nome de modelo em dois providers segue UMA
+  linha")
+- **Origem:** [ADR 0076](adr/0076-provider-volta-a-ser-dimensao-de-gasto.md)
+
+### RN-187 — A visão do membro não alcança `provider`, e quem garante é o TIPO {#rn-187}
+
+Enquanto o eixo não existia, o que continha a visão do membro era a **ausência**
+de argumento a passar. Com o eixo de volta, a contenção passou a ser da
+assinatura: `sumGroupedBy` tem **duas sobrecargas**, e a que aceita um escopo com
+`actor` — o da audiência do membro, e o único que ele tem — só recebe
+`SpendDimensionDoAtor`, que é `Exclude<SpendDimension, 'provider'>`.
+`sumGroupedBy('provider', escopoComAtor)` **não compila**.
+
+Nem o repositório nem o caso de uso têm `if` sobre essa combinação, de
+propósito: uma checagem em tempo de execução daria a impressão de que a garantia
+é dinâmica, quando quem a sustenta é o compilador — e um `if` é o tipo de coisa
+que a próxima refatoração remove sem que nenhum teste fique vermelho.
+
+A barreira é dupla e as duas metades são independentes: a rota do membro
+**também não tem parâmetro de dimensão** (só `projectId` e `dias`), então uma
+query inventada como `?dimensao=provider` é descartada pelo Nest antes de
+chegar ao handler.
+
+`Exclude` em vez de uma segunda lista escrita à mão é deliberado: dimensão nova
+nasce alcançável pelas duas audiências, e tirá-la do alcance do membro vira ato
+explícito **neste ponto** — nunca um esquecimento em outro arquivo.
+
+- **Onde:** `apps/api/src/application/ports/token-usage-repository.port.ts:107`
+  (as duas sobrecargas), `:138` (`SpendDimensionDoAtor`), `:154`/`:164` (os dois
+  escopos), `apps/api/src/application/use-cases/llm/get-my-spend.use-case.ts:73`,
+  `apps/api/src/interfaces/http/llm/spend.controller.ts:98`
+- **Teste:** `apps/api/test/application/use-cases/llm/spend-audiencias.use-case.spec.ts`
+  ("não compila pedir `provider` com escopo de ator" — um `@ts-expect-error` que
+  o `tsc` reprova como diretiva NÃO USADA se a barreira cair; e "só pede as
+  dimensões `session` e `day`"),
+  `apps/api/test/interfaces/spend.controller.spec.ts` (a rota do membro aceita
+  `dias` e mais nada)
+- **Origem:** [ADR 0076](adr/0076-provider-volta-a-ser-dimensao-de-gasto.md)
+
+### RN-188 — Pessoa e agente são partição da lista por ator, sem consulta a mais {#rn-188}
+
+O relatório do owner traz `porOwner` (linhas de `actor_kind = 'user'`) e
+`porAgente` (`actor_kind = 'agent'`) além de `porAtor`, que continua inteira.
+Os dois blocos são **derivados** de `porAtor` no caso de uso — `actorKind` já
+vem na linha desde a FASE 22 —, e não duas consultas com `where actor_kind`.
+O motivo é medido: o [ADR 0063](adr/0063-duas-audiencias-para-o-mesmo-gasto.md)
+mostrou que o custo destas consultas cresce com o tamanho de `token_usage` e
+não com o do pedido, então varrer a janela duas vezes a mais para separar o que
+já está separado em memória seria caro pelo motivo errado.
+
+`actor_kind` que não seja pessoa nem agente (hoje, `system`) **não entra em
+nenhum dos dois blocos** e continua visível em `porAtor` e no total. Abrir um
+terceiro bloco para ele diria que o produto tem uma audiência que ele não tem.
+
+O rótulo "Por owner" é do handoff de design e vale pela [RN-058](#rn-058) — é a
+chave do owner que todas essas linhas gastam. Quem é o dono do workspace
+continua sendo o campo `ownerId`, não o `actorKind` de cada linha.
+
+- **Onde:** `apps/api/src/application/use-cases/llm/get-workspace-spend-report.use-case.ts:120`
+- **Teste:** `apps/api/test/application/use-cases/llm/spend-audiencias.use-case.spec.ts`
+  ("separa PESSOA de AGENTE em dois blocos, sem perder a lista por ator")
+- **Origem:** [ADR 0076](adr/0076-provider-volta-a-ser-dimensao-de-gasto.md)
 
 ### RN-102 — O modelo da área é padrão herdável; divergir é decisão do agente, e voltar a herdar apaga a decisão {#rn-102}
 

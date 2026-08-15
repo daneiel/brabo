@@ -10,12 +10,26 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - **design**: os tokens que faltavam do handoff — escala `--fs-*`, raios `--r-xs`/`--r-sm` (mais alias para `--r-md`/`--r-lg`/`--r-pill`), métricas do shell (`--sidebar-w`, `--sidebar-w-collapsed`, `--header-h`, `--tabs-h`) e os nomes `--font-display`/`--shadow-modal` como ALIAS dos existentes
 - **design**: a paleta de realce passa a ter os oito papéis do handoff com prefixo `--syntax-*`, valor próprio por tema e 4,5:1 contra `--code-bg` nos dois — cinco dos oito valores do handoff foram recusados por medição (RN-185)
 - **web**: scrollbar customizada em `--border-strong`, raio 6px e borda na cor da superfície, nos dois temas
+- **api**: o relatório de gasto do workspace (`GET
+  /workspaces/:id/spend-report`, papel `owner`) ganhou a quebra por
+  **provider** e blocos separados de **pessoa** e **agente** — `porProvider`,
+  `porOwner` e `porAgente` (ADR 0076, RN-186/188). O relatório do membro
+  (`GET /projects/:id/spend/me`) **não mudou**: continua sem provider e sem
+  credencial, e agora a garantia é do TIPO — pedir a dimensão com escopo de
+  ator não compila (RN-187).
 
 ### Correções
 
 - **design**: seis tokens do tema claro corrigidos até passarem AA — `--accent` 3,56 → 4,81:1, `--warning` 3,15 → 4,98:1, `--success` 3,89 → 5,12:1, `--violet` 4,16 → 4,95:1 e `--text-muted` 2,76 → 5,17:1 contra o fundo que os cobrava, mais `--accent-hover` um degrau abaixo; o tema escuro não mudou nenhum valor e a dívida dele segue travada nos mesmos cinco números (ADR 0074, RN-184)
 - **web**: o contraste passa a ser medido nos DOIS temas nos três arquivos que o medem — o teste que afirmava que "nada na app define `data-theme=light`" e que três pares reprovavam foi invertido junto com o produto
 - **web**: cor de agente e o `#fff` do botão `.success` saem de token (`var(--violet)`, `var(--on-accent)`); três cores de agente sem contraparte semântica ficam declaradas no arquivo, não inventadas
+
+### Desempenho
+
+- **api**: índice `token_usage(created_at)` (migração `0044`). Medido pelo ADR
+  0063 a 525 mil linhas: o relatório do workspace sai de 55 ms para 32 ms e o
+  do membro de 38 ms para 19 ms — os dois planos deixam de ser *seq scan*.
+
 
 ## v3.1.0 — 2026-08-13
 

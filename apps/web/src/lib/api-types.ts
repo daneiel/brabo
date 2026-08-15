@@ -1256,3 +1256,34 @@ export interface CodeBranchDetailList {
   /** A lista foi cortada no teto de branches enriquecidas. */
   truncated: boolean;
 }
+
+// ---------------------------------------------------------------------------
+// APÊNDICE DA FRENTE D0 (ADR 0076) — gasto por provider, owner e agente.
+//
+// Escrito no FIM do arquivo, e não junto dos tipos de gasto, porque esta onda
+// roda em paralelo com outras que editam este mesmo arquivo: apêndice não
+// conflita, edição no meio conflita. A frente de integração recolhe isto para
+// onde ele mora de verdade (`lib/spend.ts`, que a TELA de Gastos consome).
+//
+// Só a camada de API. A tela é da Onda 3 e não foi tocada.
+// ---------------------------------------------------------------------------
+
+/**
+ * Os três blocos que `GET /workspaces/:id/spend-report` ganhou.
+ *
+ * `porProvider` fala de CREDENCIAL, e é por isso que ele só existe na resposta
+ * da rota de `owner` (RN-060/RN-186). `MySpend`, a do membro, não ganhou campo
+ * nenhum — a assimetria é o desenho, não uma pendência.
+ */
+export interface WorkspaceSpendPorProvider {
+  /** Por PROVIDER. Chave = nome do provider; `rotulo` e `actorKind` são `null`. */
+  porProvider: import('./spend').SpendLinha[];
+  /**
+   * As linhas de PESSOA (`actorKind === 'user'`) — o bloco que o handoff chama
+   * de "Por owner", porque pela RN-058 é a chave do owner que todas elas
+   * gastam. Quem é o dono continua sendo `ownerId`.
+   */
+  porOwner: import('./spend').SpendLinha[];
+  /** As linhas de AGENTE (`actorKind === 'agent'`). */
+  porAgente: import('./spend').SpendLinha[];
+}

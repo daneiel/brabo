@@ -757,7 +757,7 @@ const sidebar: SidebarsConfig = {
         {
           type: "doc",
           id: "docs/reference/api/spend-controller-get-workspace-spend-report",
-          label: "Quebra o gasto do workspace por modelo, projeto, ator e dia",
+          label: "Quebra o gasto do workspace por modelo, provider, projeto, ator e dia",
           className: "api-method get",
         },
       ],

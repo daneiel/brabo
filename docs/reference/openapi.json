@@ -7897,7 +7897,7 @@
     },
     "/projects/{projectId}/spend/me": {
       "get": {
-        "description": "A audiência do MEMBRO. Só as linhas de quem chama — o ator sai do token autenticado e não há parâmetro para trocá-lo. Em tokens e custo ESTIMADO, sem quebrar por provider nem por credencial: a chave que rodou é a do owner (RN-058) e a fatura dela é dele (RN-060). Agente não entra: `token_usage` registra quem gastou, não quem mandou gastar.",
+        "description": "A audiência do MEMBRO. Só as linhas de quem chama — o ator sai do token autenticado e não há parâmetro para trocá-lo. Em tokens e custo ESTIMADO, sem quebrar por provider nem por credencial: a chave que rodou é a do owner (RN-058) e a fatura dela é dele (RN-060). O eixo de provider passou a existir no relatório do owner (ADR 0076) e continua inalcançável daqui — não há parâmetro de dimensão nesta rota, e o tipo do repositório recusa a combinação (RN-187). Agente não entra: `token_usage` registra quem gastou, não quem mandou gastar.",
         "operationId": "SpendController_getMySpend",
         "parameters": [
           {
@@ -9356,7 +9356,7 @@
     },
     "/workspaces/{workspaceId}/spend-report": {
       "get": {
-        "description": "A audiência do OWNER. Complementa `credential-spend`, que responde a pergunta da FATURA (por provider, que é a unidade da credencial) e continua exclusiva dele pela RN-060. Aqui não há eixo de provider: quebrar por provider é quebrar por credencial. Janela deslizante em dias, e a série diária vem DENSA — dia sem gasto entra com zero, senão a sparkline mente sobre o ritmo.",
+        "description": "A audiência do OWNER. O eixo de PROVIDER voltou (ADR 0076, RN-186) e está aqui, e não na rota do membro, porque quebrar por provider é quebrar por CREDENCIAL — e credencial é assunto de quem paga (RN-060). Complementa `credential-spend`, que segue respondendo a pergunta da FATURA (por mês, com o vínculo à chave que existe hoje). Pessoa e agente também vêm em blocos separados, por `actor_kind`. Janela deslizante em dias, e a série diária vem DENSA — dia sem gasto entra com zero, senão a sparkline mente sobre o ritmo.",
         "operationId": "SpendController_getWorkspaceSpendReport",
         "parameters": [
           {
@@ -9403,7 +9403,7 @@
             "bearer": []
           }
         ],
-        "summary": "Quebra o gasto do workspace por modelo, projeto, ator e dia",
+        "summary": "Quebra o gasto do workspace por modelo, provider, projeto, ator e dia",
         "tags": [
           "llm"
         ]
@@ -16395,7 +16395,7 @@
           "chave": {
             "type": "string",
             "example": "anthropic/claude-sonnet-4",
-            "description": "A chave do agrupamento: nome do modelo, id do projeto, id do ator ou id da sessão, conforme a lista em que a linha aparece."
+            "description": "A chave do agrupamento: nome do modelo, nome do provider, id do projeto, id do ator ou id da sessão, conforme a lista em que a linha aparece."
           },
           "rotulo": {
             "type": "object",
@@ -16407,7 +16407,7 @@
             "type": "object",
             "example": "agent",
             "nullable": true,
-            "description": "Só a lista `porAtor` preenche; nas outras é `null`."
+            "description": "Só as listas por ator preenchem (`porAtor`, `porOwner`, `porAgente`); nas outras é `null`."
           },
           "costMicros": {
             "type": "number",
@@ -17316,6 +17316,13 @@
               "$ref": "#/components/schemas/SpendLinhaResponseDto"
             }
           },
+          "porProvider": {
+            "description": "Por PROVIDER (ADR 0076, RN-186). Este eixo fala de CREDENCIAL e por isso só existe aqui, numa rota que exige `owner` (RN-060) — a resposta do membro não o tem, e não é um filtro que o esconde: é a assinatura do repositório que não o aceita com escopo de ator (RN-187).",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SpendLinhaResponseDto"
+            }
+          },
           "porProjeto": {
             "description": "Por PROJETO dentro do workspace.",
             "type": "array",
@@ -17325,6 +17332,20 @@
           },
           "porAtor": {
             "description": "Por ATOR — agente e pessoa na mesma lista, distintos por `actorKind`.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SpendLinhaResponseDto"
+            }
+          },
+          "porOwner": {
+            "description": "As linhas de PESSOA (`actor_kind = \"user\"`) — o bloco que o handoff chama de \"Por owner\", porque pela RN-058 é a chave do owner que todas elas gastam. Quem é o dono está em `ownerId`. Partição de `porAtor`, sem consulta a mais (RN-188).",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SpendLinhaResponseDto"
+            }
+          },
+          "porAgente": {
+            "description": "As linhas de AGENTE (`actor_kind = \"agent\"`). A outra metade de `porAtor`.",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/SpendLinhaResponseDto"
@@ -17346,8 +17367,11 @@
           "outputTokens",
           "chamadas",
           "porModelo",
+          "porProvider",
           "porProjeto",
           "porAtor",
+          "porOwner",
+          "porAgente",
           "porDia"
         ]
       },
