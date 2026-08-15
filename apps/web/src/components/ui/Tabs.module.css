@@ -1,35 +1,87 @@
+/*
+ * Régua de abas do projeto (handoff, checklist "moldura de tela" — ADR 0078).
+ *
+ * Único consumidor hoje é `ProjectPage.tsx`; os valores abaixo (gap, padding,
+ * `--tabs-h`) eram overrides por CSS de descendente em `ProjectPage.module.css`
+ * — pendência declarada desde a FASE 16 ("quando ela puder mudar, o lugar
+ * disto é lá"). Como esta onda dá o dono deste arquivo para a mesma frente
+ * que toca `ProjectPage`, os valores migraram para cá.
+ *
+ * `overflow-x: auto` + `.tab { flex-shrink: 0 }` é o que faz a régua rolar
+ * em largura estreita em vez de quebrar linha ou espremer os rótulos.
+ */
 .list {
   display: flex;
-  gap: var(--space-4, 20px);
+  align-items: stretch;
+  gap: 2px;
+  min-height: var(--tabs-h, 42px);
   border-bottom: 1px solid var(--border);
+  overflow-x: auto;
 }
 
 .tab {
   display: inline-flex;
+  flex-shrink: 0;
   align-items: center;
   gap: 8px;
   background: none;
   border: none;
-  border-bottom: 2px solid transparent;
   color: var(--text-muted);
   font-family: var(--font-body);
   font-size: 13px;
   font-weight: 500;
-  padding: 10px 2px;
+  padding: 11px 13px;
+  white-space: nowrap;
   cursor: pointer;
   transition:
     color 0.12s,
-    border-color 0.12s;
+    box-shadow 0.12s;
 }
 
 .tab:hover {
   color: var(--text-primary);
 }
 
+/* Handoff: `box-shadow: inset 0 -2px 0 var(--accent)` — não `border-bottom`.
+   A diferença importa na barra compacta que a aba de Código já tem por conta
+   própria (`CodeEditor.module.css`, abas de arquivo aberto): ali a aba ativa
+   usa `border-top` de 2px, e a régua do PROJETO (esta) nunca ficou embutida
+   dentro dela — são duas réguas distintas, e box-shadow evita qualquer
+   confusão de "qual borda pertence a qual" se um dia colidirem visualmente. */
 .tab.active {
   color: var(--text-primary);
   font-weight: 600;
-  border-color: var(--accent);
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+/*
+ * `:focus-visible` (mesmo padrão de `Input.module.css`, ADR 0036) — achado
+ * pela frente H1 (acessibilidade): navegar por Tab não mostrava foco NENHUM
+ * aqui. `outline` transparente reserva o espaço; `box-shadow` pinta o anel
+ * visível — e é `inset`, ao contrário do de `Input`, porque as abas ficam
+ * lado a lado com 2px de vão dentro de um `.list` com `overflow-x: auto`: um
+ * anel para FORA seria cortado pela vizinha ou pelo próprio scroll.
+ *
+ * `.tab.active:focus-visible` soma os dois `box-shadow` (sublinhado + anel)
+ * em vez de o foco substituir o sublinhado — CSS não combina duas
+ * declarações da mesma propriedade sozinho.
+ */
+.tab:focus-visible {
+  outline: 2px solid transparent;
+  outline-offset: -2px;
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.tab.active:focus-visible {
+  box-shadow:
+    inset 0 -2px 0 var(--accent),
+    inset 0 0 0 2px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+@media (forced-colors: active) {
+  .tab:focus-visible {
+    outline-color: Highlight;
+  }
 }
 
 .count {

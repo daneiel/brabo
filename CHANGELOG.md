@@ -32,8 +32,22 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   "Configurações") saem — só Projetos e Atividades são globais. A aba
   Código recolhe a sidebar automaticamente, sem gravar a preferência
   (RN-195..201)
+- **web**: moldura de tela conforme o handoff — cabeçalho do projeto com
+  `--header-h` (piso de 60px, sem cortar o alerta de orçamento), régua de abas
+  com `box-shadow: inset 0 -2px 0 var(--accent)` em vez de `border-bottom`,
+  rolagem horizontal em telas estreitas, e container de conteúdo com largura
+  máxima de 1040px. O rótulo "Code" virou "Código" (ADR 0078).
 
 ### Correções
+
+- **web**: os valores de espaçamento da régua de abas do projeto, que viviam
+  como override de CSS de descendente em `ProjectPage.module.css` desde a
+  FASE 16, migraram para `Tabs.module.css` — pendência declarada fechada
+- **web**: a régua de abas do projeto (`Tabs.module.css`) ganhou
+  `:focus-visible` — navegar por Tab não mostrava indicação de foco nenhuma;
+  achado pela frente de acessibilidade, corrigido no mesmo padrão de
+  `Input.module.css` (ADR 0036), com anel `inset` (a régua rola
+  horizontalmente e um anel para fora seria cortado)
 
 - **design**: seis tokens do tema claro corrigidos até passarem AA — `--accent` 3,56 → 4,81:1, `--warning` 3,15 → 4,98:1, `--success` 3,89 → 5,12:1, `--violet` 4,16 → 4,95:1 e `--text-muted` 2,76 → 5,17:1 contra o fundo que os cobrava, mais `--accent-hover` um degrau abaixo; o tema escuro não mudou nenhum valor e a dívida dele segue travada nos mesmos cinco números (ADR 0074, RN-184)
 - **web**: o contraste passa a ser medido nos DOIS temas nos três arquivos que o medem — o teste que afirmava que "nada na app define `data-theme=light`" e que três pares reprovavam foi invertido junto com o produto
