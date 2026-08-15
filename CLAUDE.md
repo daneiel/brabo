@@ -1002,6 +1002,31 @@ Duas divergências do handoff documentadas e NÃO resolvidas (RN-197): o badge
 do projeto continua `pendingApprovalsCount` (RN-151 vence, é mais recente) e a
 cor de identidade do handoff só aparece na trilha recolhida — a linha
 expandida mantém só o dot de status existente (RN-039), dois dots seria ruído.
+## PROGRAMA 28 — Onda 2, frente C: moldura de tela (RN-202/203, ADR 0078)
+As quatro correções literais do checklist "moldura de tela" do handoff:
+`.headerTop` ganhou `min-height: var(--header-h)` — PISO, não teto, porque o
+cabeçalho do projeto (identidade + `TokenMeter` compacto) é mais rico que o
+cabeçalho genérico das 6 telas internas do handoff, e forçar 60px cortaria o
+alerta de orçamento, a mesma classe de erro que a RN-088 proíbe; aba ativa com
+`box-shadow: inset 0 -2px 0 var(--accent)` em vez de `border-bottom`; rolagem
+horizontal na régua; container de conteúdo com `max-width: 1040px` nas abas em
+forma de documento (não nas `semRespiro`). Os valores de espaçamento da régua
+que viviam como override de CSS de descendente em `ProjectPage.module.css`
+desde a FASE 16 migraram para `Tabs.module.css`, agora com o mesmo dono.
+
+A parte que exigia decisão, não só CSS: o handoff lista 7 abas de projeto e o
+registro (`project-tabs.ts`) tem 10. `executores` (RN-121), `backlog`
+(RN-048) e `insights` (hipóteses do Psicólogo) nasceram DEPOIS do handoff, com
+dado real e RN própria, e FICAM — o handoff é referência de fidelidade VISUAL,
+não teto de quantas abas o produto tem (RN-203, ADR 0078). E a chave
+`sessions` continua rotulada "Chat", nunca "Chat RAG" como o handoff mais
+recente pede (RN-202): "Chat RAG" descreveria uma funcionalidade que não
+existe — o contrato de embeddings está pronto (ADR 0075) mas nada ainda o
+consome, sem pipeline de indexação e sem UI de citação — e renomear a aba
+hoje seria o mesmo erro que o ADR 0042 já recusa para modelo de catálogo:
+anunciar uma capacidade antes dela existir. Nenhuma FORMA de export mudou
+(`AbaDoProjeto`, `ABAS_DO_PROJETO`); só o rótulo de `code` foi de "Code" para
+"Código".
 
 ## FERRAMENTA DE DESENVOLVIMENTO — `pnpm bootstrap`
 Menu de terminal em `scripts/dev/bootstrap.sh` agrupando o que se faz no
