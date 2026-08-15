@@ -182,6 +182,17 @@ distinguir as audiências ou receber o id do ator como parâmetro — que é
 exatamente o que o [ADR 0063](../adr/0063-duas-audiencias-para-o-mesmo-gasto.md)
 recusa. O engine escreve o gasto; quem o lê é gente.
 
+O [ADR 0076](../adr/0076-provider-volta-a-ser-dimensao-de-gasto.md) revisou o
+0063 e reabriu a quebra por **provider**, que é quebra por CREDENCIAL. Nem a
+rota nem o papel mudaram — as duas continuam classificadas como estão acima —,
+mas o que a rota do owner DEVOLVE mudou, e por isso a fronteira vale ser dita
+aqui: `porProvider` existe só no relatório do workspace (`owner`), e o consumo
+do membro segue sem provider e sem credencial. O que mudou de verdade é o modo
+de garantir: a dimensão pedida com escopo de ator **não compila**
+([RN-187](../business-rules.md#rn-187)), em vez de depender de a rota não
+oferecer o parâmetro. O argumento do parágrafo acima continua de pé — é ele que
+explica por que essa leitura nunca desce para cá.
+
 ### Ciclo de vida da sessão
 
 | método | caminho |
