@@ -3,10 +3,19 @@
 ## Overview
 Brabo é uma plataforma SaaS técnica onde times de agentes de IA (Psicólogo, PO, Arquiteto, Dev Backend, Dev Frontend, Design Review, QA) executam trabalho de engenharia de software sobre um repositório Git real, com aprovação humana em pontos privilegiados (merge, deploy, comandos de terminal, migrações).
 
-Este pacote contém 8 telas de alta fidelidade cobrindo: autenticação, lista de projetos, visão de projeto, sessão de chat com agentes, fila de aprovações, configurações (conectores de IA + IAM), e uma aba de código no padrão IDE.
+Este pacote contém 10 telas de alta fidelidade cobrindo: autenticação, lista de projetos, visão de projeto, sessão criativa (ideação → primeiro commit), aba de código no padrão IDE, dashboard de gastos, chat RAG do projeto, fila de aprovações e configurações (conectores de IA + IAM), além do documento vivo do design system.
+
+Todas as telas compartilham um **shell de navegação** (`designs/brabo-sidebar.js`) — ver a seção *Navigation shell* abaixo.
+
+**Como usar este pacote no Claude Code:**
+1. `tokens.css` — fonte da verdade das cores, tipografia e métricas nos dois temas. Copie para o codebase e substitua hex soltos por variáveis.
+2. `CHECKLIST-CONFRONTO.md` — checklist verificável para comparar o código atual com o design **antes** de escrever qualquer coisa. Peça ao Claude Code um relatório de divergências (existe / divergente / ausente) e só depois implemente.
+3. `PROMPTS-CLAUDE-CODE.md` — a sequência de prompts recomendada (levantamento → plano → fundação → tela por tela).
+4. `designs/*.dc.html` — os protótipos. Abrem direto no navegador; sirva a pasta (`npx serve designs`) para que a navegação entre telas funcione.
+5. `screenshots/` — capturas para conferência rápida (índice em `screenshots/README.md`).
 
 ## About the Design Files
-Os arquivos em `designs` são **referências de design escritas em HTML** — protótipos que mostram aparência e comportamento pretendidos, **não código de produção para copiar**.
+Os arquivos em `designs/` são **referências de design escritas em HTML** — protótipos que mostram aparência e comportamento pretendidos, **não código de produção para copiar**.
 
 A tarefa é **recriar estes designs no ambiente já existente do codebase alvo** (React, Vue, Svelte, SwiftUI, nativo…), usando seus padrões, bibliotecas de componentes e convenções estabelecidas. Se ainda não existe ambiente, escolha o framework mais apropriado ao projeto e implemente lá. Não faça deploy do HTML.
 
@@ -40,6 +49,27 @@ Cada arquivo `.dc.html` abre direto no navegador. Estilos são inline por constr
 | `violet` | `#9C7BE0` | agentes/IA, ações de agente |
 
 Sombra padrão: `0 1px 2px rgba(0,0,0,.4), 0 12px 32px rgba(0,0,0,.45)`. No login: `0 24px 60px rgba(0,0,0,.55)`.
+
+### Cores (tema claro)
+Ativado por `data-theme="light"` no elemento raiz. Mesmos nomes de token, valores diferentes — nenhum componente conhece hex.
+
+| Token | Hex | Token | Hex |
+|---|---|---|---|
+| `surface-0` | `#F5EDE0` | `accent` | `#C4552D` |
+| `surface-1` | `#FCF8F1` | `accent-hover` | `#A5451F` |
+| `surface-2` | `#ECDDC7` | `on-accent` | `#F7EEE2` |
+| `code-bg` | `#EFE4D2` | `success` | `#217E73` |
+| `border` | `#DEC9AA` | `warning` | `#B5701C` |
+| `border-strong` | `#C6AF8C` | `danger` | `#B33A26` |
+| `text-primary` | `#0A2E3D` | `violet` | `#6B4FB0` |
+| `text-secondary` | `#3C5A66` | `diff-add` | `#DCEBE2` |
+| `text-muted` | `#80939A` | `diff-del` | `#F5DED7` |
+
+Sombra clara: `0 1px 2px rgba(10,46,61,.08), 0 10px 28px rgba(10,46,61,.10)`.
+
+**Realce de sintaxe** (tela de Código) também é tokenizado — `--syn-kw/fn/str/num/cm/txt/op/typ`, com valores próprios por tema. Ver `tokens.css`.
+
+**Troca de tema:** botão no rodapé da barra lateral (ícone sol/lua + estado textual). Grava `localStorage['brabo.theme']` e escreve `data-theme` no `<html>`. Aplique o atributo antes do primeiro paint para não piscar. Login e o documento do design system respeitam o mesmo atributo.
 
 Cores derivadas usam `color-mix(in srgb, <cor> N%, transparent)` — tipicamente 11–15% para fundos de chip e 34–45% para bordas de chip.
 
@@ -119,12 +149,49 @@ Documentação viva: seção **00 · Marca** (símbolo, construção na grade de
 
 ---
 
-### 5. Sessão — `designs/Brabo Session.dc.html`
-**Propósito:** conversa com o time de agentes durante a execução.
+### 5. Criativo — `designs/Brabo Criativo.dc.html`
+**Propósito:** a conversa que sai da ideação e chega ao primeiro commit. Antes chamada "Sessão"; renomeada porque o valor da tela é a ideação virando trabalho, não o registro do chat.
 
-**Layout:** barra de topo (logo 28px + divisória + indicador de status pulsante) → coluna de mensagens → painel de contexto colapsável à direita.
+**Layout:** barra de topo (contexto da ideação com indicador pulsante) → coluna de mensagens → painel de contexto colapsável à direita ("Contexto da ideação").
 
 **Componentes:** mensagens de agente com avatar e cor própria; blocos de código e terminal em IBM Plex Mono sobre `code-bg`; marcadores de handoff entre agentes; **ApprovalCard** inline; painel de contexto colapsável.
+
+---
+
+### 5b. Gastos — `designs/Brabo Gastos.dc.html`
+**Propósito:** onde o dinheiro e os tokens estão sendo gastos, por qual eixo.
+
+**Layout:** header com título, seletor de período (7 dias / 30 dias / trimestre / ano), Exportar CSV e Definir orçamento → linha de chips de escopo por projeto → conteúdo em cards.
+
+**Blocos, em ordem:**
+1. **KPIs** (grid `auto-fit minmax(210px,1fr)`): gasto total, tokens consumidos, economia com modelos locais, custo médio por sessão, agentes ativos. Cada um com delta colorido (danger = subiu, success = caiu, neutro = estável) e sublinha de contexto.
+2. **Gasto diário por provider** — 30 barras empilhadas (Anthropic terracota, OpenAI teal, Google violeta, Ollama cinza), legenda no topo, eixo de datas embaixo.
+3. **Por provider** — barra de proporção por provider com tokens, custo, % do total e os modelos/chaves envolvidos. Ollama sempre R$ 0,00 em verde.
+4. **Por owner** — avatar em gradiente, papel, barra de consumo e nº de sessões. Inclui a service account do CI.
+5. **Por modelo** — tabela `2fr 1fr 1fr 1fr 1fr 1.2fr`: modelo (+papel que ele serve), tokens de entrada, de saída, requisições, R$/1M e custo.
+6. **Por agente** — custo acumulado por papel no time, com nº de sessões.
+7. **Por projeto** — consumo contra o orçamento, com barra que muda de cor nos limiares 70% (warning) e 90% (danger).
+8. **Alertas de custo** — regras vindas de `.brabo/budget.json`: orçamento em 90%, modelo dominando o gasto, owner acima da média, economia obtida com local.
+
+**Estado:** `{ period, scope }`. Ambos apenas filtram — o dado real vem de agregações do backend por período/projeto.
+
+---
+
+### 5c. Chat RAG — `designs/Brabo Chat.dc.html`
+**Propósito:** consultar o conhecimento do projeto. **Só consulta — não executa ações**; isso é dito explicitamente na UI para separá-la do Criativo.
+
+**Layout:** coluna de consultas 236px → conversa (max-width 760px, centralizada) → painel "Base de conhecimento" 320px colapsável.
+
+**Componentes:**
+- Header: título + "RAG · somente consulta", chip do projeto, selo teal "índice atualizado · há 12min", contagem `1.284 chunks · 46 fontes`, botão de toggle do painel.
+- Resposta do RAG: avatar de lupa em accent@16%, meta `gpt-4o-mini · 6 chunks · 0,42s`, faixa de trace da busca ("busca híbrida · embeddings + BM25 · limiar 0,78" + `6/1.284 chunks`), corpo com marcadores de citação `[1] [2] [3]` em superscript terracota.
+- **Trechos usados:** cards com número da citação, arquivo/origem, localização (linhas ou seção), excerto e score (verde ≥ 0.90).
+- Ações: copiar, útil, e custo da resposta em mono.
+- Estado "recuperando trechos da base…" com três pontos piscando (`bblink` 1s, defasagem .2s).
+- Sugestões de pergunta em chips arredondados; chips de escopo da busca (docs / ADRs / sessões / código / PRs) alternáveis; nota "consulta · não executa ações" ao lado do botão Perguntar.
+- Painel: cobertura do índice (barra + % + arquivos fora), fontes indexadas com nº de chunks, perguntas frequentes do time com contagem, botão Reindexar agora.
+
+**Estado:** `{ panelOpen, thread, draft, scopes[] }`.
 
 ---
 
@@ -217,6 +284,53 @@ O terminal mostra a narrativa central do produto: o agente pediu `git push origi
 
 ---
 
+## Sub-navegação de sessões (Criativo e Chat RAG)
+
+Ambas as telas alternam entre a sessão aberta e o histórico completo, por um segmento no topo do conteúdo (não é aba de projeto — vive **abaixo** da fileira de abas):
+
+```
+[ Sessão atual | Todas as sessões ]   texto de contexto        [ + Nova sessão ]
+```
+
+Segmento: contêiner `surface-1` + borda, raio 8px, padding 2px; item ativo com fundo `surface-2`, peso 600, `text-primary`; inativo `text-muted`. Fonte mono 12px.
+
+**Criativo → Todas as sessões**
+- 4 KPIs (`auto-fit minmax(190px,1fr)`): sessões no projeto, ativas agora, taxa ideação→commit, custo do mês.
+- Filtros pill: todas / ativas / fechadas / abortadas.
+- Cards de sessão: selo de status (ativa teal com ponto pulsante · aguardando âmbar · fechada neutra · abortada vermelha), título 15/600, id mono à direita, resumo (`max-width:92ch`, `text-wrap:pretty`), chips dos agentes participantes, tokens + duração, custo, e rodapé com artefatos / decisões / arquivos tocados / desfecho colorido. Card de sessão ativa tem borda teal a 30%.
+- Clicar num card abre aquela sessão.
+
+**Chat RAG → Todas as sessões**
+- 4 KPIs: sessões de consulta, perguntas respondidas, % de respostas com citação, custo do mês.
+- Filtros pill: todas / minhas / abertas / de agentes.
+- Tabela `2.4fr 1fr .8fr .8fr .9fr 1fr`: sessão (título + escopo consultado, ponto verde se aberta), autor (avatar de iniciais — pessoa **ou** agente), nº de perguntas, chunks recuperados, custo, última atividade.
+- Nota de rodapé reforçando que consultas não alteram o projeto.
+
+## Navigation shell
+
+Componente compartilhado por todas as telas autenticadas — `designs/brabo-sidebar.js`, um web component `<brabo-sidebar active="…" project="…" [auto-collapse]>`. No codebase alvo, implemente como um layout/shell único; não duplique a navegação por tela.
+
+**Estrutura (264px expandido, 62px recolhido):**
+1. **Marca** — tile do logo + wordmark, é um link para a lista de projetos.
+2. **Projetos** — lista expansível. Vários projetos podem ficar abertos ao mesmo tempo (1 ou N). Cada linha: chevron, ponto de cor do projeto, nome em mono e **badge com o total de últimas iterações**. Ao expandir, mostra as **abas daquele projeto**: Criativo, Código, Chat RAG, Gastos, Aprovações, Configurações. Não existem itens globais além de Projetos e Atividades — tudo é escopado a um projeto.
+3. **Atividades** — colapsos por agente. Cada agente mostra ponto de cor, nome, badge de nº de instâncias (quando > 1) e badge de total de interações. Abrir um agente com **uma** instância revela seus eventos direto; um agente com **várias** instâncias (Dev Backend, QA) revela um segundo nível de colapso, uma linha por instância (`dev-backend-01`, `dev-backend-02`) com sua própria contagem, e os eventos abrem dentro dela.
+4. **Rodapé** — botão "Recolher menu" e o cartão do usuário.
+
+**Recolhido:** vira trilha de ícones — um quadrado por projeto com as iniciais (borda na cor do projeto) mais um ícone de Atividades. Clicar em um projeto na trilha reexpande a barra e abre aquele projeto.
+
+**Persistência (localStorage):**
+| Chave | Conteúdo |
+|---|---|
+| `brabo.sidebar.collapsed` | `'1'`/`'0'` — preferência de colapso do usuário |
+| `brabo.sidebar.open` | ids dos projetos expandidos |
+| `brabo.sidebar.agents` | ids de agentes/instâncias expandidos (`'dev'`, `'dev/dev-01'`) |
+| `brabo.project` | projeto ativo |
+| `brabo.tab` | aba do projeto ativa — persiste entre as páginas do dashboard |
+
+**Auto-collapse:** a tela de Código monta o shell com `auto-collapse`, então a barra abre recolhida para dar largura ao editor. Isso **não** grava a preferência do usuário — ao sair do Código, o estado anterior volta.
+
+**Abas do projeto:** todas as telas de projeto (Visão geral, Criativo, Código, Chat RAG, Gastos, Aprovações, Configurações) repetem a mesma fileira de abas, com a ativa marcada por borda inferior terracota de 2px (barra compacta com fundo `surface-2` na tela de Código). Aprovações leva badge com o nº de pendências.
+
 ## Interactions & Behavior
 
 - **Dropdowns** (branch, modelo por agente): abrem com `bfade` .13s ease-out; fecham por clique no overlay `position:fixed; inset:0` ou ao selecionar.
@@ -234,25 +348,33 @@ O terminal mostra a narrativa central do produto: o agente pediu `git push origi
 **Dados a buscar do backend:** lista de projetos + consumo de tokens; time de agentes com status ao vivo (streaming/websocket); catálogo de modelos por conector (o catálogo remoto vem da credencial; o local vem do `/api/tags` do Ollama); bindings resolvidos por cascata; fila de aprovações; árvore de arquivos e conteúdo por branch; stream do terminal; membros e papéis.
 
 ## Assets
-Nenhum binário. Todos os ícones são SVG inline de traço 1.6–2.0, 24×24, `stroke-linecap/linejoin: round` — trocáveis por qualquer biblioteca outline equivalente (Lucide combina bem). O único asset de marca é o monograma B documentado acima; recrie-o como componente e não o rasterize.
+Nenhum binário no produto (as imagens em `screenshots/` são só referência de conferência). Todos os ícones são SVG inline de traço 1.6–2.0, 24×24, `stroke-linecap/linejoin: round` — trocáveis por qualquer biblioteca outline equivalente (Lucide combina bem). O único asset de marca é o monograma B documentado acima; recrie-o como componente e não o rasterize.
 
 ## Files
-| Arquivo | Tela |
+| Arquivo | Conteúdo |
 |---|---|
+| `tokens.css` | tokens dos dois temas — **portar primeiro** |
+| `PROMPTS-CLAUDE-CODE.md` | sequência de prompts para planejar e executar |
+| `screenshots/` | capturas das 10 telas (dark + light) |
+| `CHECKLIST-CONFRONTO.md` | checklist de divergências design × código atual |
 | `designs/Brabo Design System.dc.html` | fundação visual e componentes |
 | `designs/Brabo Login.dc.html` | login |
 | `designs/Brabo App.dc.html` | lista de projetos |
 | `designs/Brabo Project.dc.html` | visão de projeto |
-| `designs/Brabo Session.dc.html` | sessão com agentes |
+| `designs/Brabo Criativo.dc.html` | criativo — ideação → primeiro commit |
+| `designs/Brabo Gastos.dc.html` | dashboard de gastos |
+| `designs/Brabo Chat.dc.html` | chat RAG do projeto |
 | `designs/Brabo Approvals.dc.html` | fila de aprovações |
 | `designs/Brabo Settings.dc.html` | configurações (IA + IAM) |
 | `designs/Brabo Code.dc.html` | aba de código (IDE) |
+| `designs/brabo-sidebar.js` | shell de navegação compartilhado — **portar como layout** |
 | `designs/support.js` | runtime do protótipo — **não portar** |
 
 ## Ordem sugerida de implementação
-1. Tokens + tipografia + componente do logo.
+1. Tokens (`tokens.css`, dois temas) + tipografia + componente do logo + troca de tema no root.
 2. Login (isolado, valida o sistema de tokens ponta a ponta).
-3. Shell da aplicação (sidebar, header, breadcrumb) + lista de projetos.
-4. Visão de projeto e sessão (dependem de status ao vivo).
-5. Configurações (mais estado, sem tempo real).
-6. Aba de código (a mais custosa: virtualização de linhas, syntax highlighting, stream do terminal).
+3. Shell de navegação (sidebar com projetos/atividades, colapso persistido, abas do projeto) + lista de projetos.
+4. Visão de projeto e Criativo (dependem de status ao vivo).
+5. Configurações e Gastos (mais estado, sem tempo real).
+6. Chat RAG (depende do pipeline de indexação e do retorno de citações).
+7. Aba de código (a mais custosa: virtualização de linhas, syntax highlighting, stream do terminal).

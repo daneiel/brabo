@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<script src="support.js"></script>
+<script src="./support.js"></script>
 </head>
 <body>
 <x-dc>
@@ -31,49 +31,23 @@
   @keyframes bpulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.35;transform:scale(.7);}}
   @keyframes bpop{from{opacity:0;transform:translateY(-6px) scale(.98);}to{opacity:1;transform:translateY(0) scale(1);}}
   @keyframes bfade{from{opacity:0;}to{opacity:1;}}
+
+  html[data-theme="light"]{
+    --surface-0:#F5EDE0; --surface-1:#FCF8F1; --surface-2:#ECDDC7;
+    --text-primary:#0A2E3D; --text-secondary:#3C5A66; --text-muted:#80939A;
+    --accent:#C4552D; --accent-hover:#A5451F; --on-accent:#F7EEE2;
+    --success:#217E73; --warning:#B5701C; --danger:#B33A26;
+    --border:#DEC9AA; --border-strong:#C6AF8C; --code-bg:#EFE4D2;
+    --shadow:0 1px 2px rgba(10,46,61,.08),0 10px 28px rgba(10,46,61,.10);
+    color-scheme:light;
+  }
+  html[data-theme="light"] ::-webkit-scrollbar-thumb{background:#D3BE9F;}
 </style>
 </helmet>
 <div style="display:flex;height:100vh;overflow:hidden;background:var(--surface-0);color:var(--text-primary);">
 
   <!-- ===== SIDEBAR ===== -->
-  <aside style="width:248px;flex-shrink:0;background:var(--surface-1);border-right:1px solid var(--border);display:flex;flex-direction:column;">
-    <div style="padding:16px 18px;display:flex;align-items:center;gap:11px;border-bottom:1px solid var(--border);">
-      <div style="width:32px;height:32px;border-radius:9px;background:var(--accent);display:grid;place-items:center;flex-shrink:0;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--on-accent)" stroke-linecap="round" stroke-linejoin="round"><path d="M5.4 3.6v16.8" stroke-width="3.4"/><path d="M10.4 4.6l5.6 3.8-5.6 3.8" stroke-width="2.8"/><path d="M10.4 12l5.6 3.8-5.6 3.8" stroke-width="2.8" opacity=".58"/></svg>
-      </div>
-      <span style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:17px;letter-spacing:-.02em;">Brabo</span>
-    </div>
-
-    <div style="padding:14px 12px 6px;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.1em;color:var(--text-muted);text-transform:uppercase;">Projetos</div>
-    <nav style="flex:1;overflow-y:auto;padding:0 8px;display:flex;flex-direction:column;gap:2px;">
-      <sc-for list="{{ projects }}" as="p" hint-placeholder-count="6">
-        <button onClick="{{ p.onSelect }}" style="display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border:none;border-radius:8px;background:{{ p.navBg }};cursor:pointer;text-align:left;" style-hover="background:var(--surface-2);">
-          <span style="width:8px;height:8px;border-radius:2px;background:{{ p.dot }};flex-shrink:0;"></span>
-          <span style="flex:1;min-width:0;font-family:'IBM Plex Mono',monospace;font-size:13px;color:{{ p.navColor }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ p.name }}</span>
-          <sc-if value="{{ p.hasUnread }}" hint-placeholder-val="{{ false }}">
-            <span style="min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--accent);color:var(--on-accent);font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;display:grid;place-items:center;flex-shrink:0;">{{ p.unread }}</span>
-          </sc-if>
-        </button>
-      </sc-for>
-    </nav>
-
-    <div style="padding:8px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:2px;">
-      <button style="display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;border:none;border-radius:8px;background:transparent;color:var(--text-secondary);cursor:pointer;font-family:'Archivo',sans-serif;font-size:13px;font-weight:500;text-align:left;" style-hover="background:var(--surface-2);color:var(--text-primary);">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4L3 21l1.1-3.6A8.4 8.4 0 1 1 21 11.5z"/></svg>
-        Chat global
-      </button>
-      <button style="display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;border:none;border-radius:8px;background:transparent;color:var(--text-secondary);cursor:pointer;font-family:'Archivo',sans-serif;font-size:13px;font-weight:500;text-align:left;" style-hover="background:var(--surface-2);color:var(--text-primary);">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 13a7.8 7.8 0 0 0 .1-2l2-1.6-2-3.4-2.4 1a7.8 7.8 0 0 0-1.7-1l-.4-2.5H9.9l-.4 2.5a7.8 7.8 0 0 0-1.7 1l-2.4-1-2 3.4L3.5 11a7.8 7.8 0 0 0 0 2l-2 1.6 2 3.4 2.4-1a7.8 7.8 0 0 0 1.7 1l.4 2.5h4.2l.4-2.5a7.8 7.8 0 0 0 1.7-1l2.4 1 2-3.4z"/></svg>
-        Configurações
-      </button>
-    </div>
-
-    <div style="padding:12px;border-top:1px solid var(--border);display:flex;align-items:center;gap:11px;">
-      <div style="width:34px;height:34px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--warning));display:grid;place-items:center;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:13px;color:var(--on-accent);flex-shrink:0;">RS</div>
-      <div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Rafael Souza</div><div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-muted);">sênior · owner</div></div>
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 9l4-4 4 4M8 15l4 4 4-4"/></svg>
-    </div>
-  </aside>
+  <x-import component-from-global-scope="brabo-sidebar" from="./brabo-sidebar.js" active="app" project="brabo-api" hint-size="264px,100vh"></x-import>
 
   <!-- ===== MAIN ===== -->
   <div style="flex:1;display:flex;flex-direction:column;min-width:0;">
@@ -109,7 +83,7 @@
       </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px;">
         <sc-for list="{{ projects }}" as="p" hint-placeholder-count="6">
-          <div style="background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:18px;cursor:pointer;transition:border-color .15s;" style-hover="border-color:var(--border-strong);">
+          <div onClick="{{ p.onOpen }}" style="background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:18px;cursor:pointer;transition:border-color .15s;" style-hover="border-color:var(--border-strong);">
             <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:14px;">
               <span style="width:34px;height:34px;border-radius:8px;background:var(--surface-2);border:1px solid var(--border);display:grid;place-items:center;flex-shrink:0;color:var(--text-secondary);">{{ p.providerIcon }}</span>
               <div style="flex:1;min-width:0;">
@@ -329,7 +303,33 @@ class Component extends DCLogic {
     return { id, initials:m.initials, color:m.color, ring:'color-mix(in srgb,'+m.c+' 55%,transparent)', bg:'color-mix(in srgb,'+m.c+' 16%,var(--surface-2))' };
   }
 
+  navIcon(kind, stroke) {
+    const paths = {
+      folder:'M3 7h6l2 2h10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',
+      spark:'M12 3v4M12 17v4M4.5 7.5 7 10M17 14l2.5 2.5M3 12h4M17 12h4M4.5 16.5 7 14M17 10l2.5-2.5',
+      code:'M16 18l6-6-6-6M8 6l-6 6 6 6',
+      money:'M12 3v18M8 7h6a3 3 0 0 1 0 6H9a3 3 0 0 0 0 6h6',
+      chat:'M21 11.5a8.4 8.4 0 0 1-9 8.4L3 21l1.1-3.6A8.4 8.4 0 1 1 21 11.5z',
+      check:'M20 6L9 17l-5-5',
+      gear:'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 13a7.8 7.8 0 0 0 .1-2l2-1.6-2-3.4-2.4 1a7.8 7.8 0 0 0-1.7-1l-.4-2.5H9.9l-.4 2.5a7.8 7.8 0 0 0-1.7 1l-2.4-1-2 3.4L3.5 11a7.8 7.8 0 0 0 0 2l-2 1.6 2 3.4 2.4-1a7.8 7.8 0 0 0 1.7 1l.4 2.5h4.2l.4-2.5a7.8 7.8 0 0 0 1.7-1l2.4 1 2-3.4z',
+    };
+    return React.createElement('svg', { width:17, height:17, viewBox:'0 0 24 24', fill:'none', stroke:stroke||'currentColor', strokeWidth:1.6, strokeLinecap:'round', strokeLinejoin:'round' },
+      React.createElement('path', { d: paths[kind] }));
+  }
+
   renderVals() {
+    const workspaceNav = [
+      ['Projetos','Brabo%20App.dc.html','folder',true,null],
+      ['Criativo','Brabo%20Criativo.dc.html','spark',false,null],
+      ['Código','Brabo%20Code.dc.html','code',false,null],
+      ['Gastos','Brabo%20Gastos.dc.html','money',false,null],
+      ['Chat RAG','Brabo%20Chat.dc.html','chat',false,null],
+      ['Aprovações','Brabo%20Approvals.dc.html','check',false,'2'],
+      ['Configurações','Brabo%20Settings.dc.html','gear',false,null],
+    ].map(([label,href,icon,active,badge])=>({ label, href, badge, hasBadge:!!badge,
+      icon:this.navIcon(icon, active?'var(--accent)':'currentColor'),
+      bg:active?'var(--surface-2)':'transparent',
+      color:active?'var(--text-primary)':'var(--text-secondary)', weight:active?'600':'500' }));
     const providerLabels = { github:'GitHub', gitlab:'GitLab', bitbucket:'Bitbucket', local:'Local' };
     const barColorFor = pct => pct >= 90 ? 'var(--danger)' : pct >= 70 ? 'var(--warning)' : 'var(--success)';
     const raw = [
@@ -347,7 +347,8 @@ class Component extends DCLogic {
         agents:p.agents.slice(0,4).map(a=>this.agentDef(a)),
         agentLabel:p.agents.length+' agentes', pct:p.pct, pctWidth:p.pct+'%', barColor:barColorFor(p.pct),
         dot:p.actDot, navColor:isActive?'var(--text-primary)':'var(--text-secondary)', navBg:isActive?'var(--surface-2)':'transparent',
-        onSelect:()=>this.setState({active:p.name}) };
+        onSelect:()=>this.setState({active:p.name}),
+        onOpen:()=>{ window.location.href = 'Brabo%20Project.dc.html'; } };
     });
 
     const ev = (kind,color,text,time)=>({ icon:this.icon(kind,color), color, bg:'color-mix(in srgb,'+color+' 16%,transparent)', text, time });
@@ -396,7 +397,7 @@ class Component extends DCLogic {
     const slug = (st.name||'').trim().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') || 'nome-do-projeto';
     const canProceed = st.step===2 ? !!st.name.trim() : st.step===4 ? st.agents.length>0 : true;
     return {
-      projects, notifGroups,
+      workspaceNav, projects, notifGroups,
       step:st.step, stepIs1:st.step===1, stepIs2:st.step===2, stepIs3:st.step===3, stepIs4:st.step===4,
       isLastStep:st.step===4, canProceed,
       next:()=>{ if(canProceed) this.setState(s=>({step:Math.min(4,s.step+1)})); },
