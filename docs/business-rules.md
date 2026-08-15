@@ -6197,6 +6197,121 @@ se o próximo passo é trocar a chave, esperar o provider ou abrir um bug.
 - **Origem:** uso real no `exp001` — "quando houver uma nova tentativa e
   consolidação de algum agente deve apresentar no chat"
 
+### RN-182 — O tema é escolhido, persistido e aplicado antes do primeiro paint {#rn-182}
+
+O tema claro existe em `design/tokens.css` desde o começo, sob
+`[data-theme='light']`, e **nada em `apps/web` escrevia esse atributo**: o
+único jeito de ver o tema claro era digitar o atributo no DevTools. Ele passa a
+ser alcançável.
+
+A preferência mora em `localStorage['brabo.theme']`, aceita **só** `'dark'` ou
+`'light'`, e o default é `dark` — o tema primário do design system. Quem aplica
+é `apps/web/public/theme-boot.js`, **síncrono no `<head>` e antes do bundle**:
+`data-theme` decide as cores de todo o `tokens.css`, e aplicá-lo depois da
+hidratação faria o usuário do tema claro ver um flash escuro a cada carga.
+
+É **arquivo, não script inline**, e a razão é a mesma que fez as fontes serem
+auto-hospedadas (ADR 0036): a imagem de produção serve sob `script-src 'self'`
+(`docker/web/nginx.conf`), sem `'unsafe-inline'` e sem nonce. Inline
+funcionaria em `pnpm dev:web` e seria **bloqueado na imagem publicada** — o
+pior modo de falha possível, porque só aparece depois do deploy.
+
+O caminho inteiro degrada em vez de quebrar: `localStorage` pode lançar (modo
+privado, storage bloqueado em iframe) e tema é preferência, não função; valor
+desconhecido cai no default em vez de virar um `data-theme` que o CSS não
+conhece e que renderizaria sem tema nenhum.
+
+- **Onde:** `apps/web/public/theme-boot.js:41`,
+  `apps/web/index.html:53`
+- **Teste:** `apps/web/src/lib/tema.test.ts` (describe "contrato com o script
+  de boot")
+- **ADR:** [0074](adr/0074-tema-alcancavel-e-o-boot-sob-csp.md)
+
+### RN-183 — A preferência de tema tem uma fonte, e o atributo do `<html>` é a verdade {#rn-183}
+
+Ler, gravar, alternar e observar o tema é `apps/web/src/lib/tema.ts` — o botão
+mora no shell e consome essa API, nunca escreve `data-theme` por conta própria.
+
+Três decisões dentro dela:
+
+1. **`temaAtual()` lê o ATRIBUTO primeiro**, e só depois o `localStorage` e o
+   default. É o atributo que a tela está mostrando; cair na preferência gravada
+   antes dele faria a UI afirmar um tema diferente do que se vê, no exato caso
+   em que o boot falhou.
+2. **`lerTemaSalvo()` devolve `null`, não o default**, quando não há preferência
+   gravada. Quem nunca escolheu pode um dia seguir o sistema operacional
+   (`prefers-color-scheme`), e apagar essa distinção aqui tiraria a informação
+   de quem decidir isso depois.
+3. **`observarTema()` cobre o evento `storage`**, que o navegador dispara nas
+   OUTRAS abas do mesmo origin. Sem isso dois separadores abertos ficariam em
+   temas diferentes até o próximo reload.
+
+A chave e o default são repetidos em `public/theme-boot.js` porque ele roda
+antes do bundle e não pode importar nada. É a única duplicação possível de
+divergir em silêncio, e por isso o teste lê o arquivo de boot e reprova se os
+dois deixarem de bater.
+
+- **Onde:** `apps/web/src/lib/tema.ts:73`
+- **Teste:** `apps/web/src/lib/tema.test.ts`
+- **ADR:** [0074](adr/0074-tema-alcancavel-e-o-boot-sob-csp.md)
+
+### RN-184 — Contraste é medido nos DOIS temas {#rn-184}
+
+Enquanto o tema claro era inalcançável ([RN-182](#rn-182)), medir só o escuro
+era honesto: medir uma tela que ninguém pode abrir é medir uma intenção. Com o
+botão de tema, deixar de medir o claro passaria a esconder metade da superfície
+visível do produto — então os pares passam a ser cobrados nos dois temas, com o
+mesmo piso (4,5:1 para texto, 3:1 para elemento de interface).
+
+Para isso, **seis tokens do tema claro mudaram de valor**. O fundo mais
+exigente do claro é o `--code-bg` (papel, `#efe4d2`, a um passo das
+superfícies), e quem fecha contra ele fecha contra o resto: `--accent`
+3,56 → 4,81, `--warning` 3,15 → 4,98, `--success` 3,89 → 5,12, `--violet`
+4,16 → 4,95, `--text-muted` 2,76 → 5,17, e `--accent-hover` seguiu o accent um
+degrau abaixo. O tema escuro **não mudou um valor**, e a dívida conhecida dele
+segue travada pelos mesmos cinco números (3,89 / 3,10 / 3,88 / 3,88 / 4,41).
+
+O `--text-muted` do claro não era dívida: a 2,40:1 sobre `--surface-2` ele
+reprovava até o piso de **elemento de interface**, que é o mais baixo que
+existe. Era defeito, e o tema claro não tem por que ser pior que o primário.
+
+- **Onde:** `design/tokens.css:208`
+- **Teste:** `apps/web/src/lib/contraste.test.ts`,
+  `apps/web/src/design-contraste.test.ts`,
+  `apps/web/test/design-contraste.test.ts`
+- **ADR:** [0074](adr/0074-tema-alcancavel-e-o-boot-sob-csp.md)
+
+### RN-185 — Os oito papéis de sintaxe, e o valor do handoff só entra medido {#rn-185}
+
+A paleta de realce era três tokens próprios (`--syntax-function`,
+`--syntax-comment`, `--syntax-operator`) e cinco reusos de semântico
+(`--accent`, `--warning`, `--violet`, `--success`, `--text-primary`). É esse
+reuso que fazia a paleta ser medida só no escuro: no claro os semânticos
+reprovavam contra o `--code-bg` de papel.
+
+Passa a ter os **oito papéis** do handoff, com o prefixo `--syntax-*` que o
+repositório já usa, e cada um com valor próprio por tema. Nomear os oito é o
+que permite o realce divergir do semântico no dia em que precisar.
+
+**Valor do handoff só entra quando a medição aprova.** Contra o próprio
+`--code-bg` do handoff, cinco dos oito reprovam os 4,5:1 que texto de código
+exige — `--syn-cm` 4,09:1 no escuro e 2,32:1 no claro, `--syn-kw` 4,34:1,
+`--syn-str` 4,20:1, `--syn-fn` 4,14:1, `--syn-op` 4,00:1. Onde o handoff
+reprova, vale o número medido: é a mesma régua do ADR 0036 — a intenção do
+handoff vale, o mecanismo (ou o número) que quebra o produto, não.
+
+Os cinco semânticos continuam sendo quem pinta (`SyntaxTokens.module.css` não
+mudou nesta entrega) e por isso vão **medidos ao lado** dos oito: enquanto
+forem o pixel de verdade, é deles que o piso é cobrado. No tema claro cada
+papel tem hoje o MESMO número do semântico que o pinta, de propósito — duas
+fontes com números diferentes para o mesmo pixel divergiriam na primeira
+correção feita de um lado só.
+
+- **Onde:** `design/tokens.css:111`
+- **Teste:** `apps/web/src/lib/contraste.test.ts` (describe "contraste — paleta
+  de sintaxe sobre --code-bg")
+- **ADR:** [0074](adr/0074-tema-alcancavel-e-o-boot-sob-csp.md)
+
 ---
 
 ## Quando dá errado

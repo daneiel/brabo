@@ -2,6 +2,21 @@
 
 Gerado dos conventional commits por `scripts/changelog.mjs`.
 
+## Unreleased
+
+### Novidades
+
+- **web,design**: o tema claro deixa de ser inalcançável — `public/theme-boot.js` aplica `data-theme` a partir de `localStorage['brabo.theme']` antes do primeiro paint (arquivo, não script inline, porque a imagem serve sob `script-src 'self'`), e `src/lib/tema.ts` é a API que o shell consome para alternar (ADR 0074, RN-182/RN-183)
+- **design**: os tokens que faltavam do handoff — escala `--fs-*`, raios `--r-xs`/`--r-sm` (mais alias para `--r-md`/`--r-lg`/`--r-pill`), métricas do shell (`--sidebar-w`, `--sidebar-w-collapsed`, `--header-h`, `--tabs-h`) e os nomes `--font-display`/`--shadow-modal` como ALIAS dos existentes
+- **design**: a paleta de realce passa a ter os oito papéis do handoff com prefixo `--syntax-*`, valor próprio por tema e 4,5:1 contra `--code-bg` nos dois — cinco dos oito valores do handoff foram recusados por medição (RN-185)
+- **web**: scrollbar customizada em `--border-strong`, raio 6px e borda na cor da superfície, nos dois temas
+
+### Correções
+
+- **design**: seis tokens do tema claro corrigidos até passarem AA — `--accent` 3,56 → 4,81:1, `--warning` 3,15 → 4,98:1, `--success` 3,89 → 5,12:1, `--violet` 4,16 → 4,95:1 e `--text-muted` 2,76 → 5,17:1 contra o fundo que os cobrava, mais `--accent-hover` um degrau abaixo; o tema escuro não mudou nenhum valor e a dívida dele segue travada nos mesmos cinco números (ADR 0074, RN-184)
+- **web**: o contraste passa a ser medido nos DOIS temas nos três arquivos que o medem — o teste que afirmava que "nada na app define `data-theme=light`" e que três pares reprovavam foi invertido junto com o produto
+- **web**: cor de agente e o `#fff` do botão `.success` saem de token (`var(--violet)`, `var(--on-accent)`); três cores de agente sem contraparte semântica ficam declaradas no arquivo, não inventadas
+
 ## v3.1.0 — 2026-08-13
 
 ### Novidades

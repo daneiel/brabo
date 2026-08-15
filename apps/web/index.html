@@ -41,6 +41,16 @@
       inofensivo: a app cai no fallback das VITE_*.
     -->
     <script src="/config.js"></script>
+    <!--
+      Tema (RN-182, ADR 0074): escreve `data-theme` no <html> a partir de
+      `localStorage['brabo.theme']`, com `dark` de default. Síncrono e antes do
+      bundle, senão o usuário do tema claro vê um flash escuro a cada carga.
+
+      É ARQUIVO, não script inline, pela mesma razão que as fontes são
+      auto-hospedadas: a CSP da imagem de produção é `script-src 'self'` —
+      inline seria bloqueado lá e funcionaria aqui, que é o pior dos casos.
+    -->
+    <script src="/theme-boot.js"></script>
   </head>
   <body>
     <div id="root"></div>
