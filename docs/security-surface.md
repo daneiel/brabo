@@ -181,6 +181,20 @@ o componente `d` da JWK, travado por teste.
     ([RN-058](business-rules.md#rn-058)/[RN-082](business-rules.md#rn-082)),
     como na escrita. Ler custa rate limit do provider, e é por isso que a busca
     tem orçamento: sem teto, um `viewer` pagaria a conta do owner à vontade.
+- **`GET /workspaces/:workspaceId/spend-report` passou a devolver a quebra por
+  provider, que é quebra por CREDENCIAL** ([ADR
+  0076](adr/0076-provider-volta-a-ser-dimensao-de-gasto.md),
+  [RN-186](business-rules.md#rn-186)/[RN-187](business-rules.md#rn-187)). Nenhuma
+  rota nova e nenhuma mudança de papel — continua `role:owner`, como já era —,
+  mas o que ela CONCEDE mudou, e é por isso que a nota existe. O ADR
+  [0063](adr/0063-duas-audiencias-para-o-mesmo-gasto.md) tinha recusado o eixo
+  justamente por isso; o 0076 o revisa por decisão do dono do produto. O que
+  segura a fronteira agora são DUAS barreiras independentes: `GET
+  /projects/:projectId/spend/me` (`role:viewer`) não tem parâmetro de dimensão
+  nenhum, e o TIPO recusa a combinação — escopo com `actor` só aceita
+  `Exclude<SpendDimension, 'provider'>`, então pedir provider na visão do membro
+  não compila. A segunda é mais fraca que a garantia anterior ("a dimensão não
+  existia"), e é por isso que são duas.
 - **`POST /projects/:projectId/sessions/:sessionId/socket-ticket` é
   `role:viewer` na tabela, mas isso é o PISO, não o teto** (RN-108). O
   `@RequireRole('viewer')` cobre `scope: "heartbeat"` — o socket de
