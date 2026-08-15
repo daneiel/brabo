@@ -987,6 +987,21 @@ foi construído; a tabela "Melhores modelos por capacidade" FOI, com dois
 sinais reais: quantos agentes do projeto já resolvem, pela cascata, para
 cada modelo curado, e o custo do catálogo como desempate — nunca nota
 calculada.
+## PROGRAMA 28 — Onda 2, frente B: sidebar recolhe (RN-195..201)
+264px/62px com trilha de ícones no colapso; projetos expansíveis revelando as
+abas (lidas de `project-tabs.ts`, nunca hardcoded); seção Atividades agrupada
+por agente-base/instância REAL — sufixo `-2` de `extraDevAgentId`, nunca um
+contador `-01/-02` inventado (achado da Onda 1/frente B0) —, escopada ao
+projeto da rota atual, não a todos, para não abrir N+1 de eventos. Botão de
+tema no rodapé; os dois itens globais inertes saem, só Projetos e Atividades
+são globais; auto-collapse da aba Código via `AutoCollapseContext`
+(`sidebar-state.ts`), sem gravar preferência. Persistência centralizada em
+`sidebar-state.ts`, as seis chaves `brabo.*` do handoff.
+
+Duas divergências do handoff documentadas e NÃO resolvidas (RN-197): o badge
+do projeto continua `pendingApprovalsCount` (RN-151 vence, é mais recente) e a
+cor de identidade do handoff só aparece na trilha recolhida — a linha
+expandida mantém só o dot de status existente (RN-039), dois dots seria ruído.
 
 ## FERRAMENTA DE DESENVOLVIMENTO — `pnpm bootstrap`
 Menu de terminal em `scripts/dev/bootstrap.sh` agrupando o que se faz no
