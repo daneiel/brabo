@@ -1,4 +1,4 @@
-# ADR 0079 — Ranking de modelos por capacidade, sem nota inventada
+# ADR 0077 — Ranking de modelos por capacidade, sem nota inventada
 
 - **Status:** aceito
 - **Data:** 2026-08-15

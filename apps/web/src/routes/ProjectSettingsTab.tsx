@@ -273,7 +273,7 @@ function GastoDasChaves({ projectId }: { projectId: string }) {
  *
  * A curadoria pende de `:workspaceId` e exige `maintainer` (ADR 0042) — esta
  * seção herda a mesma visibilidade de `CatalogoDeModelos`, mais abaixo, e não
- * é mostrada a quem só tem `viewer`/`developer`. Ver ADR 0079.
+ * é mostrada a quem só tem `viewer`/`developer`. Ver ADR 0077.
  */
 export function MelhoresModelosPorCapacidadeSection({
   projectId,

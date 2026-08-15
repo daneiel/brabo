@@ -9,7 +9,7 @@ import styles from './ModelPicker.module.css';
  * O handoff (`design_handoff_brabo/README.md`, seção 7 "Dropdown de modelo")
  * pede um badge verde **ideal** em cada opção "quando o modelo cobre TODAS as
  * capacidades exigidas pelo agente". Investigado e NÃO construído — ver
- * ADR 0079.
+ * ADR 0077.
  *
  * O motivo é duplo, e o segundo por si só já fecharia a questão:
  *

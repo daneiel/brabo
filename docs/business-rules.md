@@ -6520,7 +6520,7 @@ coluna Origem de `ModelsSection` já usa para o binding pulado.
   (`MelhoresModelosPorCapacidadeSection`)
 - **Teste:** `apps/web/src/routes/ProjectSettingsTab.test.tsx`
   (describe "MelhoresModelosPorCapacidadeSection")
-- **ADR:** [0079](adr/0079-ranking-de-modelos-por-capacidade-sem-nota-inventada.md)
+- **ADR:** [0077](adr/0077-ranking-de-modelos-por-capacidade-sem-nota-inventada.md)
 
 ---
 

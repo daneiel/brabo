@@ -466,7 +466,7 @@ describe('CredentialsSection (ADR 0050)', () => {
 });
 
 /**
- * "Melhores modelos por capacidade" (handoff, item 5 — ADR 0079). Sem coluna
+ * "Melhores modelos por capacidade" (handoff, item 5 — ADR 0077). Sem coluna
  * de nota de qualidade: só custo real do catálogo e uso real dos agentes
  * deste projeto, sobre a curadoria (`uses`) que o workspace já marcou.
  */
