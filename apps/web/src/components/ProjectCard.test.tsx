@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import { ProjectCard } from './ProjectCard';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { ProjectCard, ProjectCardSkeleton } from './ProjectCard';
 import { groupRosterByArea, type RosterEntry } from '../lib/agent-status';
 import { AGENTS } from '../lib/agents';
 
@@ -75,5 +75,33 @@ describe('ProjectCard — chips de agente', () => {
 
     rerender(<ProjectCard {...baseProps} rosterGroups={[]} provider="local" />);
     expect(screen.getByText('Repositório local')).toBeInTheDocument();
+  });
+});
+
+/**
+ * Foco visível do card (frente H1, PROGRAMA 28).
+ *
+ * `ProjectCard.module.css` tinha `.card:hover` mas NENHUM `:focus-visible` —
+ * o card é um `<button>` (Tab alcança), mas até aqui não tinha indicação
+ * própria de foco, só a que o hover dá, e teclado não aciona hover. Entrou o
+ * mesmo tratamento calibrado de `Input.module.css` (ADR 0036). O teste prova
+ * alcançabilidade por teclado de verdade, não presença de classe CSS.
+ */
+describe('ProjectCard — foco visível', () => {
+  it('o card é um <button> alcançável por teclado e aciona onClick', () => {
+    const onClick = vi.fn();
+    render(<ProjectCard {...baseProps} rosterGroups={[]} onClick={onClick} />);
+
+    const card = screen.getByRole('button', { name: /Core API/ });
+    card.focus();
+    expect(card).toHaveFocus();
+
+    fireEvent.click(card);
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('o skeleton NÃO é alvo de foco — é <div>, não <button>, enquanto carrega', () => {
+    render(<ProjectCardSkeleton />);
+    expect(screen.queryByRole('button')).toBeNull();
   });
 });

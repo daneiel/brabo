@@ -29,6 +29,16 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - **design**: seis tokens do tema claro corrigidos até passarem AA — `--accent` 3,56 → 4,81:1, `--warning` 3,15 → 4,98:1, `--success` 3,89 → 5,12:1, `--violet` 4,16 → 4,95:1 e `--text-muted` 2,76 → 5,17:1 contra o fundo que os cobrava, mais `--accent-hover` um degrau abaixo; o tema escuro não mudou nenhum valor e a dívida dele segue travada nos mesmos cinco números (ADR 0074, RN-184)
 - **web**: o contraste passa a ser medido nos DOIS temas nos três arquivos que o medem — o teste que afirmava que "nada na app define `data-theme=light`" e que três pares reprovavam foi invertido junto com o produto
 - **web**: cor de agente e o `#fff` do botão `.success` saem de token (`var(--violet)`, `var(--on-accent)`); três cores de agente sem contraparte semântica ficam declaradas no arquivo, não inventadas
+- **web**: `Select`, `Modal` (botão de fechar) e `ProjectCard` ganham
+  `:focus-visible` no mesmo tratamento calibrado de `Input.module.css`
+  (ADR 0036, incluindo o bloco de `forced-colors`) — nenhum dos três tinha
+  indicação de foco própria alcançável só por teclado. O botão de fechar do
+  `Modal` também sobe de 30px para 32px, o piso de alvo de toque em desktop.
+  `Table` e `Badge` foram auditados e não precisaram de mudança: nenhum dos
+  dois expõe afordância interativa própria — linha de `Table` é apresentação
+  pura (quem precisa de linha clicável já usa `<button>`/`<a>` dentro da
+  célula, via `render`) e `Badge` não é usado com `onClick` em lugar nenhum
+  do produto hoje.
 
 ### Desempenho
 
