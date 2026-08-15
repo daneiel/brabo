@@ -22,7 +22,16 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   usado pelos agentes deste projeto entre os que a curadoria do workspace
   marcou para aquele uso, com custo como desempate. Sem coluna de "nota":
   o handoff pedia um score por capacidade, mas é dado fictício do mock — o
-  produto não mede qualidade de modelo em lugar nenhum (ADR 0079, RN-210)
+  produto não mede qualidade de modelo em lugar nenhum (ADR 0077, RN-210)
+- **web**: a sidebar recolhe (264px ↔ 62px, trilha de ícones por projeto)
+  com preferência persistida; projetos ficam expansíveis (N ao mesmo tempo)
+  revelando as abas de cada um; nova seção **Atividades**, agrupada por
+  agente e, quando o módulo tem paralelização, por INSTÂNCIA real
+  (`dev-<modulo>`/`dev-<modulo>-2`, nunca um contador inventado); botão de
+  tema no rodapé; os dois itens globais sem rota ("Chat global"/
+  "Configurações") saem — só Projetos e Atividades são globais. A aba
+  Código recolhe a sidebar automaticamente, sem gravar a preferência
+  (RN-195..201)
 
 ### Correções
 

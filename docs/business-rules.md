@@ -6498,6 +6498,198 @@ correção feita de um lado só.
   de sintaxe sobre --code-bg")
 - **ADR:** [0074](adr/0074-tema-alcancavel-e-o-boot-sob-csp.md)
 
+### RN-195 — A sidebar recolhe para uma trilha de ícones, com a preferência persistida {#rn-195}
+
+`Shell.tsx` tinha largura fixa (248px) e nenhum jeito de encolher. Passa a
+alternar entre `--sidebar-w` (264px) e `--sidebar-w-collapsed` (62px) — os
+dois tokens que a Onda 1/frente A já tinha criado em `design/tokens.css` —
+com `transition: width .18s ease`. Recolhida, vira uma trilha vertical: um
+quadrado de iniciais por projeto (borda na cor de identidade,
+[RN-197](#rn-197)) mais um ícone de Atividades; clicar num projeto na
+trilha reexpande a barra, abre aquele projeto e navega para ele.
+
+A preferência é do usuário e sobrevive a reload: `brabo.sidebar.collapsed`
+(`'1'`/`'0'`) em `apps/web/src/lib/sidebar-state.ts`. Ela é **manual**
+(`colapsadoManual`) e se soma por OR a um segundo estado, **automático**
+(`autoColapsado`, [RN-201](#rn-201)) — o colapso visível é a união dos dois,
+mas só o manual é gravado.
+
+- **Onde:** `apps/web/src/routes/Shell.tsx:340-351` (estado e toggle),
+  `apps/web/src/routes/Shell.module.css` (`.sidebar`, `.colapsado .sidebar`,
+  `.trilha*`), `apps/web/src/lib/sidebar-state.ts`
+  (`lerColapsado`/`gravarColapsado`)
+- **Teste:** `apps/web/src/lib/sidebar-state.test.ts` (describe "colapso"),
+  `apps/web/src/routes/Shell.test.tsx`
+- **Origem:** PROGRAMA 28, Onda 2, frente B —
+  `design_handoff_brabo/README.md` seção "Navigation shell"
+
+### RN-196 — Projetos expansíveis revelam as abas do projeto, N ao mesmo tempo {#rn-196}
+
+Cada projeto na sidebar ganha um chevron: clicar nele expande a linha e
+revela a lista de abas daquele projeto (Visão geral, Executores, Criativo,
+Chat, Code, Backlog, Aprovações, Insights, Gastos, Configurações), cada uma
+um link para `/projects/$projectId?tab=<chave>`. Vários projetos podem ficar
+abertos ao mesmo tempo — o estado é um `Set<string>` de ids, persistido em
+`brabo.sidebar.open`.
+
+A lista de abas e os rótulos vêm de `ABAS_DO_PROJETO`
+(`apps/web/src/routes/project-tabs.ts`, dono da frente C, rodando em
+paralelo nesta mesma onda) — a sidebar só **lê** o array exportado, nunca
+reescreve nomes de aba. **Suposição de shape**, para conferir contra o que a
+frente C entregou: `AbaDoProjeto` tem `key: string`, `label: string` e
+`count?: (contagens: ContagensDeAba) => number | undefined`, com
+`ContagensDeAba = { promocoesPendentes, aprovacoesPendentes,
+hipotesesPendentes }`. A sidebar só consegue preencher
+`aprovacoesPendentes` de graça (`pendingApprovalsCount` já vem no resumo do
+dashboard, [RN-151](#rn-151)); `promocoesPendentes`/`hipotesesPendentes`
+entram como `0` — calculá-los exigiria uma consulta nova POR PROJETO
+ABERTO na sidebar, a mesma classe de N+1 que a RN-090/091 fechou no
+dashboard. Os dois selos continuam corretos dentro da régua da própria
+`ProjectPage`; só o preview na sidebar é parcial, e é uma omissão
+deliberada, não um bug.
+
+O projeto da rota ATUAL sempre aparece expandido (`projetosAbertosEfetivo`),
+mesmo sem estar no `Set` persistido — abrir "de graça" pela rota não grava
+nada; só o clique explícito no chevron entra em `brabo.sidebar.open`.
+
+- **Onde:** `apps/web/src/routes/Shell.tsx:353-374` (estado e o efetivo),
+  `apps/web/src/routes/Shell.tsx` (`LinhaDeAba`), `apps/web/src/lib/sidebar-state.ts`
+  (`lerProjetosAbertos`/`gravarProjetosAbertos`)
+- **Teste:** `apps/web/src/lib/sidebar-state.test.ts` (describe "conjuntos"),
+  `apps/web/src/routes/Shell.test.tsx`
+- **Origem:** PROGRAMA 28, Onda 2, frente B
+
+### RN-197 — Duas cores de projeto, dois propósitos: identidade não é status {#rn-197}
+
+O handoff pede um "ponto de cor do projeto" na linha expandida e o mesmo
+princípio de cor na trilha recolhida. O produto já tinha um dot ali —
+`NavStatusDot` — mas ele é **status** (orçamento/atividade recente,
+derivado sem consulta própria de `useProjectsSummary`/`useProjectsStatus`,
+RN-039), não identidade: a cor dele MUDA com o tempo.
+
+Decisão, documentada em vez de resolvida: a linha expandida continua
+mostrando só `NavStatusDot` (é informação acionável; duplicar um segundo
+dot ao lado seria ruído). A cor de IDENTIDADE — estável por projeto, hash
+determinístico do id sobre uma paleta fixa de tokens (`corDoProjeto`,
+sem tabela nova, mesma ideia de `AGENTS[key].color`) — aparece só na
+trilha recolhida, como borda do quadrado de iniciais, que é onde não há
+espaço para os dois dots e onde a identidade (não o status) é o que ajuda a
+achar o projeto certo entre vários quadrados parecidos.
+
+Do mesmo jeito, o handoff pede "badge com o total de últimas iterações" no
+projeto; o produto usa `pendingApprovalsCount` desde a RN-151, que é
+posterior ao handoff e resolve um defeito real (um número que não
+correspondia a nada acionável ao clicar). Este badge **não muda** — RN-151
+continua valendo, e é o handoff que diverge aqui.
+
+- **Onde:** `apps/web/src/lib/sidebar-state.ts` (`corDoProjeto`),
+  `apps/web/src/routes/Shell.tsx` (`NavStatusDot`, comentário da divergência)
+- **Teste:** `apps/web/src/lib/sidebar-state.test.ts` (describe "corDoProjeto")
+- **Origem:** PROGRAMA 28, Onda 2, frente B — divergência entre
+  `design_handoff_brabo/CHECKLIST-CONFRONTO.md` e RN-151
+
+### RN-198 — Atividades agrupa por agente-base/instância REAL, nunca por contador inventado {#rn-198}
+
+A seção Atividades da sidebar é a mesma lógica de agrupamento de
+`AgentTimelineTree.tsx`/`timeline-tree.ts` (já usada na Visão geral do
+projeto), movida para um lugar novo — não reescrita. `montarArvore` já
+agrupa por `evento.actor.id`; a novidade é `agruparPorInstancia`
+(`apps/web/src/lib/timeline-tree.ts`), que decide quais ramos formam um
+grupo visual de dois níveis.
+
+A "instância" não é um contador renumerado (`-01`/`-02`) — é o `agent_id`
+REAL que o produto já escreve: `devAgentId`/`extraDevAgentId`
+(`apps/api/src/application/use-cases/execution/activate-execution.use-case.ts:27-38`)
+produzem `dev-<modulo>` e `dev-<modulo>-2` (sufixo sempre exatamente `-2`,
+porque o teto é DOIS por módulo, [RN-154](#rn-154)). Um ramo só vira
+"instância extra" de outro se o agente-base (sem o sufixo) TAMBÉM tiver um
+ramo na mesma lista — senão ele é o próprio agente. Agente com uma instância
+abre direto nos eventos; com duas, revela um segundo nível, uma linha por
+instância, cada uma com sua própria contagem — reaproveitando
+`getAgentLastSeenSeq`/`setAgentLastSeenSeq` (`read-state.ts`) que já existia
+para o contador de novidade da árvore.
+
+Escopo: só o projeto da ROTA ATUAL (`pathname`), não todos os projetos do
+workspace — agregar todos exigiria uma consulta de eventos POR projeto, a
+mesma classe de N+1 que a RN-090/091 fechou no dashboard. Reusa o MESMO par
+de hooks que `AgentTimelineTree`/`SessionPage` já usam
+(`useActiveExecutionSession` + `useSessionEvents`, mesma `queryKey`) — zero
+requisição nova quando as duas telas estão montadas juntas.
+
+O que abre/fecha é persistido em `brabo.sidebar.agents`, com o formato do
+handoff adaptado aos ids reais: `agenteBase` (grupo aberto, ex.:
+`dev-backend`) ou `${agenteBase}/${instancia}` (uma instância específica
+aberta, ex.: `dev-backend/dev-backend-2`).
+
+- **Onde:** `apps/web/src/lib/timeline-tree.ts` (`agruparPorInstancia`,
+  `GrupoDeAgente`), `apps/web/src/routes/Shell.tsx:237-311`
+  (`GrupoDeAtividade`, `InstanciaDeAgente`), `apps/web/src/routes/Shell.tsx:376-399`
+  (escopo e persistência)
+- **Teste:** `apps/web/src/lib/timeline-tree.test.ts` (describe
+  "agruparPorInstancia"), `apps/web/src/lib/sidebar-state.test.ts`
+- **Origem:** PROGRAMA 28, Onda 1/frente B0 (achado, sem código) e Onda
+  2/frente B (implementação)
+
+### RN-199 — Botão de tema no rodapé, funcional recolhido {#rn-199}
+
+O rodapé da sidebar ganha um botão sol/lua que consome a API de
+`apps/web/src/lib/tema.ts` da Onda 1/frente A (`temaAtual`,
+`alternarTema`, `observarTema`) sem reimplementar nada — só o BOTÃO é novo.
+Funciona recolhido (62px): o rótulo textual some, mas `aria-label`/`title`
+continuam descrevendo o tema atual e o clique continua alternando.
+
+- **Onde:** `apps/web/src/routes/Shell.tsx:130-148` (`BotaoDeTema`)
+- **Teste:** `apps/web/src/lib/tema.test.ts` (a API, inalterada por esta RN)
+  — `Shell.test.tsx` não duplica a suite do tema, só monta o Shell
+- **Origem:** PROGRAMA 28, Onda 2, frente B
+
+### RN-200 — Só Projetos e Atividades como itens globais {#rn-200}
+
+Os dois itens sem rota do rodapé da nav ("Chat global"/"Configurações",
+`title="em breve"`) saem. O handoff é explícito: só Projetos e Atividades
+são itens GLOBAIS — tudo o mais é escopado a um projeto. "Configurações"
+continua existindo, como ABA de projeto ([RN-196](#rn-196)) dentro da linha
+expandida — o que sai é o item solto sem destino.
+
+- **Onde:** `apps/web/src/routes/Shell.tsx` (o bloco `.globalNav`/
+  `.inertNavItem` da FASE 17a foi removido, sem substituto global)
+- **Teste:** `apps/web/src/routes/Shell.test.tsx` (describe "sem itens
+  globais inertes")
+- **Origem:** PROGRAMA 28, Onda 2, frente B —
+  `design_handoff_brabo/README.md` seção "Navigation shell"
+
+### RN-201 — Projeto/aba ativos persistem entre páginas; a aba Código recolhe sem gravar preferência {#rn-201}
+
+Duas chaves finais do handoff: `brabo.project` (o projeto ativo) e
+`brabo.tab` (a aba ativa) — gravadas quando o usuário clica um link de aba
+NA SIDEBAR (`LinhaDeAba`/o link de nome do projeto). `?tab=` na URL só vale
+como deep-link INICIAL (`project-tabs.ts`, FASE 24) — trocar de aba dentro
+de `ProjectPage.tsx` é estado local e não escreve na URL depois do
+primeiro load, então estas chaves são o único jeito de a preferência
+sobreviver entre uma navegação e outra.
+
+**Auto-collapse do Código, sem gravar preferência.** A rota de Código
+(`ProjectCodeTab.tsx`) não é uma URL própria — é uma ABA dentro de
+`ProjectPage.tsx`, montada/desmontada por troca de `tab` (React desmonta o
+componente anterior ao trocar o `component` da aba ativa). Isso descarta a
+alternativa óbvia ("observar a URL no Shell"): a URL não muda ao trocar de
+aba, só no load inicial. A solução é um `Context` — `AutoCollapseContext`
+(`apps/web/src/lib/sidebar-state.ts`) —, porque `Shell.tsx` fica ACIMA de
+`<Outlet />` na árvore e não há como uma aba passar uma prop pra cima sem
+um canal explícito. `useAutoCollapseSidebar()` chama `registrar(true)` no
+`useEffect` de montagem e `registrar(false)` na limpeza; o Shell soma esse
+sinal (`autoColapsado`) por OR ao colapso manual, e só o manual é
+persistido — por isso o estado anterior volta sozinho ao sair do Código.
+
+- **Onde:** `apps/web/src/lib/sidebar-state.ts` (`AutoCollapseContext`,
+  `useAutoCollapseSidebar`, `lerProjetoAtivo`/`gravarProjetoAtivo`,
+  `lerAbaAtiva`/`gravarAbaAtiva`), `apps/web/src/routes/Shell.tsx`
+  (`autoCollapseValue`, o `Provider` em torno de `<Outlet />`),
+  `apps/web/src/routes/ProjectCodeTab.tsx` (a única chamadora hoje)
+- **Teste:** `apps/web/src/lib/sidebar-state.test.ts` (describe
+  "useAutoCollapseSidebar", "projeto e aba ativos")
+- **Origem:** PROGRAMA 28, Onda 2, frente B —
+  `design_handoff_brabo/CHECKLIST-CONFRONTO.md` seção 1, "Auto-collapse"
 ### RN-210 — "Recomendado" é uso real e custo, nunca nota calculada {#rn-210}
 
 O bloco "Melhores modelos por capacidade" (Configurações) não tem coluna de

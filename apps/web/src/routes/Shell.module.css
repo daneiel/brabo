@@ -3,13 +3,27 @@
   height: 100vh;
 }
 
+/*
+ * 264px expandido / 62px recolhido (`--sidebar-w`/`--sidebar-w-collapsed`,
+ * `design/tokens.css` — a Onda 1/frente A já criou os tokens; PROGRAMA 28
+ * seção "Navigation shell"). A transição é só de `width`: o CONTEÚDO troca
+ * de forma (texto some, trilha aparece) sob condicional no componente, não
+ * por CSS — animar os dois ao mesmo tempo produziria texto cortado a meio
+ * caminho da transição.
+ */
 .sidebar {
-  width: 248px;
+  width: var(--sidebar-w);
   flex-shrink: 0;
   background: var(--surface-1);
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
+  transition: width 0.18s ease;
+  overflow: hidden;
+}
+
+.colapsado .sidebar {
+  width: var(--sidebar-w-collapsed);
 }
 
 .brand {
@@ -18,6 +32,11 @@
   gap: 11px;
   padding: 16px 18px;
   border-bottom: 1px solid var(--border);
+}
+
+.colapsado .brand {
+  justify-content: center;
+  padding: 16px 0;
 }
 
 /*
@@ -87,29 +106,40 @@
   outline-offset: 1px;
 }
 
-.nav {
+/*
+ * Envolve Projetos + Atividades — a única região que rola. Marca e rodapé
+ * ficam fixos; sem este wrapper, `.sidebar` com `overflow: hidden` (exigido
+ * pela transição de largura, senão o texto vaza durante os 0.18s) cortaria
+ * a lista de projetos em vez de rolar.
+ */
+.corpo {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.nav {
   display: flex;
   flex-direction: column;
   gap: 2px;
   padding: 0 8px;
 }
 
+.projetoBloco {
+  display: flex;
+  flex-direction: column;
+}
+
 .navItem {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
+  gap: 4px;
+  padding: 4px 6px 4px 4px;
   border-radius: var(--radius-md);
   color: var(--text-secondary);
   font-size: 13px;
-  text-decoration: none;
-}
-
-.navItem:hover {
-  background: var(--surface-2);
-  color: var(--text-primary);
 }
 
 .navItem.active {
@@ -117,11 +147,55 @@
   color: var(--text-primary);
 }
 
+.chevronBotao {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.chevronBotao:hover {
+  background: var(--surface-2);
+  color: var(--text-primary);
+}
+
+.chevronBotao:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.navLink {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 4px;
+  border-radius: var(--radius-md);
+  color: inherit;
+  text-decoration: none;
+}
+
+.navLink:hover {
+  color: var(--text-primary);
+}
+
 /*
  * Quadrado de canto arredondado, não círculo: é a forma que o handoff dá ao
- * marcador de projeto da sidebar, e é o que o distingue do ponto REDONDO de
+ * marcador de STATUS na sidebar, e é o que o distingue do ponto REDONDO de
  * "ao vivo" que aparece nos cards e no rodapé do explorador. Duas formas, dois
  * significados — estado do projeto e pulso de atividade.
+ *
+ * Não confundir com a cor de IDENTIDADE da trilha recolhida
+ * (`.trilhaItem`, abaixo) — são conceitos diferentes, ver o comentário de
+ * `NavStatusDot` em `Shell.tsx`.
  */
 .navDot {
   width: 8px;
@@ -131,7 +205,7 @@
   flex-shrink: 0;
 }
 
-/* Falha ao carregar a lista de projetos. Texto, não card: são 248px de
+/* Falha ao carregar a lista de projetos. Texto, não card: são 264px de
    largura, e o alerta cheio (borda, ícone, respiro) comeria a coluna inteira.
    `--danger` sobre `--surface-1` é dívida conhecida de contraste (3.88:1), por
    isso a MENSAGEM fica em `--text-secondary` e só o realce de que algo falhou
@@ -169,9 +243,7 @@
   text-decoration: underline;
 }
 
-/* O nome e, quando ele se repete, a linha de desempate — empilhados. O `flex`
-   saiu de `.navName` e veio para cá: quem ocupa a sobra da linha agora é o
-   bloco, senão a segunda linha nasceria fora do espaço do item. */
+/* O nome e, quando ele se repete, a linha de desempate — empilhados. */
 .navText {
   flex: 1;
   min-width: 0;
@@ -202,39 +274,292 @@
   text-overflow: ellipsis;
 }
 
-.globalNav {
+/* As abas do projeto, reveladas ao expandir a linha (RN-196). */
+.abasDoProjeto {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 8px;
-  border-top: 1px solid var(--border);
+  gap: 1px;
+  padding: 2px 0 6px 30px;
 }
 
-/*
- * Os dois itens sem rota. `--text-muted` e não o `--text-secondary` do handoff:
- * lá os dois são navegação de verdade, aqui são presença visual ("em breve") e
- * a cor é o que os diferencia de um item clicável. Peso e respiro seguem o
- * handoff.
- */
-.inertNavItem {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 9px 10px;
-  border-radius: var(--radius-md);
-  color: var(--text-muted);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: default;
-}
-
-.footer {
-  border-top: 1px solid var(--border);
-  padding: 12px;
+.abaItem {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  padding: 5px 8px;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.abaItem:hover {
+  background: var(--surface-2);
+  color: var(--text-primary);
+}
+
+.abaRotulo {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* --- Seção Atividades (RN-198) ------------------------------------------ */
+
+.atividadesSecao {
+  border-top: 1px solid var(--border);
+  padding-bottom: 8px;
+}
+
+.atividadesVazio {
+  margin: 0;
+  padding: 4px 12px 8px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.grupoAgente {
+  padding: 0 8px;
+}
+
+.grupoCabecalho {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 4px;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-align: left;
+}
+
+.grupoCabecalho:hover {
+  background: var(--surface-2);
+  color: var(--text-primary);
+}
+
+.grupoCabecalho:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.grupoNome {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.chevronPequeno {
+  display: flex;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.contagem {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.contagemNova {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.instancias {
+  display: flex;
+  flex-direction: column;
+  padding-left: 20px;
+}
+
+.instancia {
+  display: flex;
+  flex-direction: column;
+}
+
+.instanciaCabecalho {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.instanciaCabecalho:hover {
+  background: var(--surface-2);
+  color: var(--text-primary);
+}
+
+.instanciaNome {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.marcos {
+  list-style: none;
+  margin: 0;
+  padding: 2px 0 4px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.marco {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.marcoVazio {
+  font-size: 11px;
+  color: var(--text-muted);
+  padding: 2px 0;
+}
+
+.marcoRotulo {
+  min-width: 0;
+}
+
+.marcoDetalhe {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bolinha {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--msg-color, var(--text-muted));
+  flex-shrink: 0;
+}
+
+/* --- Trilha recolhida (RN-195) ------------------------------------------ */
+
+.trilha {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 0;
+  overflow-y: auto;
+}
+
+/*
+ * Um quadrado por projeto com as iniciais, borda na cor de IDENTIDADE
+ * (`corDoProjeto`, `sidebar-state.ts` — estável por projeto, não muda com
+ * status). É AQUI que a "cor do projeto" do handoff aparece; a linha
+ * expandida usa o dot de STATUS (`.navDot`) em vez dela — ver o comentário
+ * de `NavStatusDot` em `Shell.tsx`.
+ */
+.trilhaItem,
+.trilhaItemAtividades {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border: 1.5px solid var(--identidade, var(--border-strong));
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.trilhaItem:hover,
+.trilhaItemAtividades:hover {
+  background: var(--surface-1);
+  border-color: var(--accent);
+}
+
+.trilhaItem:focus-visible,
+.trilhaItemAtividades:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.trilhaItemAtividades {
+  margin-top: 8px;
+  border-color: var(--border-strong);
+  border-style: dashed;
+  color: var(--text-secondary);
+}
+
+/* --- Rodapé --------------------------------------------------------------- */
+
+.footer {
+  border-top: 1px solid var(--border);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.colapsado .footer {
+  align-items: center;
+}
+
+.footerButton {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 6px;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  cursor: pointer;
+  width: 100%;
+}
+
+.colapsado .footerButton {
+  width: 36px;
+  justify-content: center;
+}
+
+.footerButton:hover {
+  background: var(--surface-2);
+  color: var(--text-primary);
+}
+
+.footerButton:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }
 
 .userCard {
@@ -242,6 +567,7 @@
   align-items: center;
   gap: 11px;
   min-width: 0;
+  padding: 6px;
 }
 
 .avatar {
@@ -292,15 +618,32 @@
 }
 
 .logout {
-  background: none;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 6px;
   border: none;
+  background: none;
   color: var(--text-muted);
   cursor: pointer;
-  font-size: 11px;
+  font-size: 12.5px;
+  border-radius: var(--radius-md);
+  width: 100%;
+}
+
+.colapsado .logout {
+  width: 36px;
+  justify-content: center;
 }
 
 .logout:hover {
+  background: var(--surface-2);
   color: var(--text-primary);
+}
+
+.logout:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }
 
 .main {

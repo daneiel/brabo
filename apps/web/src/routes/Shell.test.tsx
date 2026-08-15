@@ -4,6 +4,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Shell } from './Shell';
 import { ApiError } from '../lib/api-client';
 import type { Project, WorkspaceWithRole } from '../lib/api-types';
+import { CHAVE_COLAPSADO } from '../lib/sidebar-state';
+// Real module, não mockado — RN-196 lê a LISTA de abas dela, nunca hardcoda
+// rótulos, então o teste também lê daqui em vez de repetir uma string.
+import { ABAS_DO_PROJETO } from './project-tabs';
 
 const navigate = vi.fn();
 const sair = vi.fn(() => Promise.resolve());
@@ -16,6 +20,10 @@ const estado = vi.hoisted(() => ({
   projectsQuery: {} as Record<string, unknown>,
   summaries: [] as unknown[],
   pathname: '/',
+  // Atividades (RN-198): a sessão de execução vigente do projeto CORRENTE e
+  // os eventos dela — só usados nos testes que miram a seção.
+  execSession: null as { id: string } | null,
+  sessionEvents: [] as unknown[],
 }));
 
 const PROJECT: Project = {
@@ -72,6 +80,10 @@ vi.mock('../lib/hooks', () => ({
   useProjects: () => ({ data: estado.projects, ...estado.projectsQuery }),
   useProjectsStatus: () => ({ data: [] }),
   useProjectsSummary: () => ({ data: estado.summaries }),
+  // Atividades (RN-198) — só o projeto CORRENTE (`pathname`) as consulta;
+  // vazio por padrão é suficiente para os testes que não miram a seção.
+  useActiveExecutionSession: () => ({ session: estado.execSession }),
+  useSessionEvents: () => ({ data: { items: estado.sessionEvents, nextCursor: null } }),
 }));
 
 vi.mock('../lib/api-client', async () => {
@@ -102,12 +114,19 @@ function renderShell() {
 }
 
 beforeEach(() => {
+  // `Shell.tsx` lê/grava `brabo.sidebar.*` (`sidebar-state.ts`) — sem
+  // limpar, um teste que colapsa a sidebar vazaria o estado para o
+  // próximo (mesmo padrão de `tema.test.ts`/`sidebar-state.test.ts`).
+  window.localStorage.clear();
   navigate.mockClear();
   sair.mockClear();
   estado.projects = [PROJECT];
   estado.projectsQuery = {};
   estado.summaries = [];
   estado.pathname = '/';
+  estado.execSession = null;
+  estado.sessionEvents = [];
+  document.documentElement.removeAttribute('data-theme');
 });
 
 describe('Shell — rodapé', () => {
@@ -192,22 +211,21 @@ describe('Shell — lista de projetos que não carrega', () => {
   });
 });
 
-describe('Shell — nav global inerte', () => {
-  it('Chat global e Configurações aparecem, mas não navegam ao clicar', () => {
+/**
+ * RN-200: o handoff é explícito em que só existem DOIS itens globais —
+ * Projetos e Atividades. "Chat global" e "Configurações" eram presença
+ * visual sem rota (`title="em breve"`) desde a FASE 17a; a sidebar nova não
+ * reintroduz falsos destinos de navegação.
+ */
+describe('Shell — sem itens globais inertes', () => {
+  it('não existe mais "Chat global" nem um item solto "Configurações" fora de um projeto', () => {
     renderShell();
 
-    const chat = screen.getByText('Chat global');
-    const settings = screen.getByText('Configurações');
-    expect(chat).toBeInTheDocument();
-    expect(settings).toBeInTheDocument();
-
-    // Nem `<a>` nem `<button>` — não é um destino de navegação real.
-    expect(chat.closest('a')).toBeNull();
-    expect(settings.closest('a')).toBeNull();
-
-    chat.click();
-    settings.click();
-    expect(navigate).not.toHaveBeenCalled();
+    expect(screen.queryByText('Chat global')).toBeNull();
+    // "Configurações" AINDA existe — como ABA de projeto, dentro da linha
+    // expandida (ver `Shell — projetos expansíveis`). O que não existe mais
+    // é o item GLOBAL solto no rodapé da nav.
+    expect(screen.queryByTitle('em breve')).toBeNull();
   });
 });
 
@@ -309,5 +327,110 @@ describe('Shell — badge de aprovações pendentes', () => {
     renderShell();
 
     expect(screen.queryByText('0')).toBeNull();
+  });
+});
+
+/** RN-195: 264px ↔ 62px, com a preferência persistida em `brabo.sidebar.collapsed`. */
+describe('Shell — colapso da sidebar', () => {
+  it('clicar em "Recolher menu" grava a preferência e troca a lista por uma trilha de ícones', () => {
+    renderShell();
+
+    // Expandida: o rótulo da seção e o nome do projeto aparecem.
+    expect(screen.getByText('Projetos')).toBeInTheDocument();
+    expect(screen.getByText('Core API')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Recolher menu' }));
+
+    expect(window.localStorage.getItem(CHAVE_COLAPSADO)).toBe('1');
+    // Recolhida: "Projetos" (rótulo de seção) some, e o quadrado de
+    // iniciais da trilha (mesmo `aria-label` do nome do projeto) some em
+    // texto normal — mas o BOTÃO continua acessível pelo nome do projeto.
+    expect(screen.queryByText('Projetos')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Core API' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Expandir menu' })).toBeInTheDocument();
+  });
+
+  it('preferência corrompida/desconhecida no localStorage degrada para expandida, não quebra', () => {
+    window.localStorage.setItem(CHAVE_COLAPSADO, 'alguma-coisa-invalida');
+
+    expect(() => renderShell()).not.toThrow();
+    expect(screen.getByText('Projetos')).toBeInTheDocument();
+  });
+});
+
+/**
+ * RN-196: a linha do projeto expande revelando as abas dele, lidas de
+ * `ABAS_DO_PROJETO` (`project-tabs.ts`, dona da FRENTE C) — nunca
+ * hardcoded aqui.
+ */
+describe('Shell — projetos expansíveis', () => {
+  it('projeto fechado não mostra nenhuma aba', () => {
+    renderShell();
+
+    for (const aba of ABAS_DO_PROJETO) {
+      expect(screen.queryByText(aba.label)).toBeNull();
+    }
+  });
+
+  it('clicar no chevron revela as abas do projeto; clicar de novo esconde', () => {
+    renderShell();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Expandir Core API' }));
+
+    for (const aba of ABAS_DO_PROJETO) {
+      expect(screen.getByText(aba.label)).toBeInTheDocument();
+    }
+    expect(screen.getByRole('button', { name: 'Recolher Core API' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Recolher Core API' }));
+
+    expect(screen.queryByText(ABAS_DO_PROJETO[0].label)).toBeNull();
+  });
+});
+
+/**
+ * RN-198: Atividades escopada ao projeto da ROTA ATUAL — fora de um
+ * projeto ela diz isso em vez de ficar vazia (mesmo espírito da RN-088).
+ */
+describe('Shell — Atividades', () => {
+  it('fora de um projeto, pede para abrir um', () => {
+    estado.pathname = '/';
+
+    renderShell();
+
+    expect(
+      screen.getByText('Abra um projeto para ver as atividades dos agentes.'),
+    ).toBeInTheDocument();
+  });
+
+  it('dentro de um projeto sem nenhum evento de agente, diz que ninguém entrou em ação', () => {
+    estado.pathname = `/projects/${PROJECT.id}`;
+    estado.sessionEvents = [];
+
+    renderShell();
+
+    expect(screen.getByText('Nenhum agente entrou em ação ainda.')).toBeInTheDocument();
+  });
+});
+
+/** RN-199: o botão de tema do rodapé, funcional recolhido ou expandido. */
+describe('Shell — botão de tema', () => {
+  it('mostra o tema atual e alterna ao clicar (dark -> light)', () => {
+    renderShell();
+
+    expect(screen.getByRole('button', { name: 'Tema escuro' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Tema escuro' }));
+
+    expect(screen.getByRole('button', { name: 'Tema claro' })).toBeInTheDocument();
+    expect(document.documentElement.getAttribute('data-theme')).toBe('light');
+  });
+
+  it('valor desconhecido gravado antes de montar cai no padrão (escuro), sem quebrar o botão', () => {
+    window.localStorage.setItem('brabo.theme', 'sépia-inexistente');
+
+    renderShell();
+
+    expect(screen.getByRole('button', { name: 'Tema escuro' })).toBeInTheDocument();
   });
 });
