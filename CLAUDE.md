@@ -1094,8 +1094,63 @@ e CONGELA versão/recursos na linha; projeto `local` (ADR 0072) é
 recusado, porque não sobe container próprio. Teto de recursos
 (`cpus`/`memory_mb`/`pids_limit`) é DECLARADO, não aplicado — nenhuma
 tela afirma "o container está limitado a X", só "a intenção registrada
-era X". Nenhuma rota HTTP nova: sem consumidor real ainda, expor uma
-seria adivinhar contrato.
+era X". Nenhuma rota HTTP nova à época: sem consumidor real ainda, expor
+uma seria adivinhar contrato — fechado pela Onda 5/frente F2 logo abaixo.
+
+## PROGRAMA 28 — Onda 5, frente G3: o Chat RAG ganha aba própria (RN-252..254, ADR 0082)
+A tela que RN-202 (Onda 2/C) tinha adiado — "Chat RAG" descreveria uma
+capacidade que ainda não existia — chega junto com o backend da Onda
+4/G2: `key: 'rag'`, aba NOVA (`ordem: 28`, entre Código e Backlog),
+NUNCA renomeando `sessions`. A distinção continua a mesma, só a razão
+mudou: `sessions` é conversa com agente ATIVADO (gasta a chave do owner
+por turno, RN-058); `rag` é busca sobre um índice já construído, sem
+agente nenhum no meio, read-only por natureza. A tela consome os três
+contratos do ADR 0080 sem adivinhar forma e mostra as duas degradações
+honestas que o backend já declarava e nenhuma tela lia — `vectorAvailable:
+false` vira aviso visível, e a cobertura nunca inventa "reindexado há
+Xmin". Citação de origem `session` navega até o EVENTO exato, reusando o
+mecanismo que os chips de evidência do Psicólogo já usam; origem `file`
+mostra caminho/heading como texto, sem link — a aba Código não tem
+deep-link por caminho hoje, fora de escopo aqui.
+
+## PROGRAMA 28 — Onda 5, frente F2: o consumidor real do ciclo de vida do container (não o terminal) (RN-267/268, ADR 0083)
+O plano original desta frente era o terminal interativo completo. A
+investigação confirmou que a FASE 25b continua cortada: nenhum serviço
+monta `/var/run/docker.sock`, e mesmo depois do ADR 0081 nada em
+produção transiciona `project_containers` — não existe container real
+para abrir um terminal DENTRO dele. Implementar um terminal fingido, ou
+rodando no mesmo container do monorepo do Brabo (a dívida que o ADR 0055
+já descreve como política, não isolamento), inventaria capacidade — o
+mesmo erro que os ADRs 0041/0042 recusam para provider de LLM e modelo
+de catálogo. A entrega real: `GET /projects/:projectId/container/lifecycle`
+(role:viewer), primeira exposição HTTP do ciclo de vida (revisa o ADR
+0081, que tinha adiado a rota por falta de consumidor), e a aba Terminal
+mostrando esse estado — badge traduzido, motivo de falha — SOB o texto
+explicativo que já existia, nunca no lugar dele, buscado só enquanto a
+aba está aberta. `null` (nunca provisionado) é o resultado honesto e
+mais comum hoje.
+
+## PROGRAMA 28 — Onda 5, frente I: login social revoga a proibição do backlog do ADR 0031 (RN-272..283, ADR 0084)
+Pedido explícito do dono do produto, ciente das consequências de
+segurança — a proibição sai só para GitHub/GitLab; MFA, OIDC provider e
+federação genérica continuam fora de escopo (ver "O que NÃO fazer").
+`SocialLoginCallbackUseCase` termina no MESMO `EmitirSessaoUseCase` do
+login por senha — nenhum segundo formato de sessão. Reusa o cliente
+OAuth existente, mas o `state` tem propósito PRÓPRIO
+(`purpose: 'social_login'`, checado ANTES de qualquer outro campo):
+nunca aceita o `state` do fluxo de CONEXÃO de git a um projeto, o que
+seria escalação de privilégio. Tabela nova `social_identities` (migração
+`0047`), chave `(provider, provider_user_id)` — nunca e-mail/login.
+Decisão em três passos: identidade conhecida → login; e-mail bate com
+conta existente E verificado pelo provider → vincula (e verifica o
+e-mail da conta se ainda não estava); e-mail bate mas NÃO verificado →
+recusa — um e-mail digitado não é prova de posse, aceitar abriria
+account takeover; sem conta correspondente → provisiona conta nova sem
+senha, mesmo estado "pendente" da migração do Keycloak. Reusa o MESMO
+app OAuth da conexão de git — zero variável de ambiente nova, só
+`redirect_uri`/`scope` diferentes por fluxo; a ação do OPERADOR de
+cadastrar o segundo callback no provider é o que justifica o branch
+`breaking/`.
 
 ## FERRAMENTA DE DESENVOLVIMENTO — `pnpm bootstrap`
 Menu de terminal em `scripts/dev/bootstrap.sh` agrupando o que se faz no
@@ -1397,8 +1452,12 @@ divide o mesmo banco, recuperar exige `db:migrate` E `engine:migrate`.
 
 ## O que NÃO fazer
 - Não usar Redis (filas ficam no Postgres via Oban)
-- Não implementar MFA, login social, OIDC provider ou federação
-  (backlog do ADR 0031)
+- Login social (GitHub/GitLab) deixou de ser proibido e está
+  IMPLEMENTADO (ADR 0084, PROGRAMA 28/Onda 5, frente I) — a proibição
+  foi revogada só para essa capacidade, por decisão explícita do dono
+  do produto. O que continua valendo do backlog do ADR 0031: não
+  implementar MFA, OIDC provider (a api virar provedor) nem federação
+  genérica
 - Dev Lead, áreas dinâmicas via module_map e o aparato genérico de
   áreas (agent_areas) deixaram de ser proibidos e estão IMPLEMENTADOS
   (ADR 0053 aceito, FASE 14d). O que continua valendo é o resto da

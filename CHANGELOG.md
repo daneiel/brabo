@@ -68,6 +68,28 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   primeira transição exigindo a imagem já decidida pelo Arquiteto e
   congelando versão/recursos; nenhuma chamada real a Docker ainda
   (RN-243..248, ADR 0081)
+- **web**: a aba **Chat RAG** (`key: 'rag'`), separada da aba Chat
+  (`sessions`, que continua sendo conversa com agente ativado) — busca com
+  filtro de escopo (docs/ADR/sessões), citações navegáveis (origem de
+  sessão leva ao evento exato; origem de arquivo mostra caminho/heading,
+  sem link — a aba Código não tem deep-link por caminho ainda), painel de
+  cobertura do índice com contagem REAL (nunca "reindexado há Xmin"
+  inventado) e botão de reindexar restrito a `maintainer`/`owner`. Avisa
+  quando a busca degradou para só léxica por falta de embedding
+  (RN-252..254, ADR 0082)
+- **api,web**: primeira exposição HTTP do ciclo de vida do container
+  (`GET .../container/lifecycle`, role:viewer) e a aba Terminal passa a
+  mostrar esse estado real (status, motivo de falha) sob o texto
+  explicativo que já existia — nunca um terminal simulado, porque não há
+  container real rodando ainda (FASE 25b segue cortada) (RN-267/268,
+  ADR 0083)
+- **api,web**: login social via GitHub/GitLab — revoga a proibição do
+  backlog do ADR 0031 só para esta capacidade. Reusa o mesmo app OAuth da
+  conexão de git (zero variável de ambiente nova) e a emissão de sessão do
+  login por senha; vincular a conta existente exige e-mail verificado pelo
+  provider, contra account takeover; conta provisionada nasce sem senha.
+  Branch `breaking/`: o operador precisa cadastrar um segundo callback
+  OAuth no provider antes do deploy (RN-272..283, ADR 0084)
 
 ### Correções
 
@@ -78,6 +100,13 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   do WCAG 2.2 AA (2.5.8); a faixa de arquivo do diff em `ApprovalCard` NÃO
   migrou (animação própria de chevron que o componente genérico não
   replica) e ganhou só o `aria-controls` que faltava (RN-249..251)
+- **web**: fecha o resto da varredura de acessibilidade — alvos de toque
+  abaixo do piso de 32px do handoff em botões de ícone da sidebar
+  (colapsada e expandida), ações destrutivas de Aprovações/Configurações e
+  o botão de fechar do `Toast` (que não tinha tamanho explícito nenhum, e
+  também ganhou `:focus-visible`); quatro alvos abaixo do piso de 24px do
+  WCAG corrigidos em telas reais. `aria-expanded` da sidebar auditado e já
+  estava correto nos dois controles
 
 - **web**: os valores de espaçamento da régua de abas do projeto, que viviam
   como override de CSS de descendente em `ProjectPage.module.css` desde a
