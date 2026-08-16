@@ -349,6 +349,26 @@ produto adiadas — por isso sem prioridade aqui.
 | Reativar a Anamnese (`ANAMNESE_ENABLED=true`) | pausada por decisão do usuário em 2026-08-10 — "hoje ele não está trazendo dados de muito valor" ([RN-115](../business-rules.md#rn-115)). Nenhum dado apagado (hipóteses, perfis de proficiência, patches de instrução seguem intactos e visíveis); a pausa é só do CAMINHO de rodada nova, aguardando um refinamento futuro do que a Anamnese deriva antes de religar |
 | Reativar o Psicólogo (`PSYCHOLOGIST_ENABLED=true`) | pausado por decisão do usuário em 2026-08-10, mesmo motivo e mesmo padrão da Anamnese acima ([RN-117](../business-rules.md#rn-117)). Nenhum dado apagado (análises e hipóteses já emitidas seguem intactas e visíveis); a pausa é só do CAMINHO de rodada nova (automática e sob demanda) |
 
+## Backlog do modelo de time (ADR 0085)
+
+Saída da auditoria `fluxo.yml` × código
+([auditoria-fluxo-vs-codigo.md](auditoria-fluxo-vs-codigo.md)). São itens
+declarados no modelo (`docs/fluxo.yml`) sobre papéis já **ativos** — não
+esperam nenhum papel `proposto`/`planned` ativar primeiro — e nenhum está
+em andamento; a ordem de ataque é decisão do usuário. O documento da
+auditoria tem o plano de ondas completo, com custo e critério de
+verificação por item.
+
+| item | onde está a lacuna | referência |
+|---|---|---|
+| Delegação Dev Lead → dev | `dev-lead` só tem `propose_execution_plan`; `delegations` já aceita `area='dev'` mas nenhum chamador usa | ADR 0053 item 5; [auditoria, B1](auditoria-fluxo-vs-codigo.md#b-lacunas-de-papéis-ativos-trabalho-implementável-já) |
+| Gate `necessidade-validada` (Criativo → PO) | não existe em `gates.yml` nem em código; falta o critério objetivo e o ADR | [auditoria, B2](auditoria-fluxo-vs-codigo.md#b-lacunas-de-papéis-ativos-trabalho-implementável-já) |
+| Gate `implementavel` (gate_futuro do dev-lead) | `gates.yml` já declara `planned`, sem consumidor; não depende de `qa-estrategia`/`appsec` existirem | [auditoria, B3](auditoria-fluxo-vs-codigo.md#b-lacunas-de-papéis-ativos-trabalho-implementável-já) |
+| Métricas de produto → PO | `medicao` já tem `sumGroupedBy`; falta a métrica de produto e o PO lendo — sem precisar do papel `analytics` separar | [auditoria, B4](auditoria-fluxo-vs-codigo.md#b-lacunas-de-papéis-ativos-trabalho-implementável-já) |
+| `docs/gates.yml` desatualizado (`paralelismo-autorizado`) | declara `planned`; o mecanismo está ativo desde a FASE 14d (2026-08-07) | [auditoria, A1/B5](auditoria-fluxo-vs-codigo.md#a-divergências) |
+| RN-160 sem revalidação no backend | "Confirmar arquitetura pronta" só é garantido no cliente (`SessionPage.tsx`); `OfferInfraHandoffUseCase` não revalida | [auditoria, A6/B6](auditoria-fluxo-vs-codigo.md#a-divergências) |
+| Relatório DORA via `medicao` | lead time, deployment frequency, MTTR, change failure rate — `delivery-metricas` nunca vira agente, o relatório não espera gatilho | [auditoria, B7](auditoria-fluxo-vs-codigo.md#b-lacunas-de-papéis-ativos-trabalho-implementável-já) |
+
 ## O que esta triagem NÃO faz
 
 Não corrige nada. A disciplina que vem valendo desde a Fase 10 continua: cada
