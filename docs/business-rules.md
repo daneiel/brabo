@@ -7289,6 +7289,67 @@ registrada era X").
   — "create nasce em `provisioning`, com a versão e os recursos passados"
 - **ADR:** [0081](adr/0081-ciclo-de-vida-do-container-tabela-sem-orquestrador.md)
 
+## PROGRAMA 28 — Onda 5, frente G3: a tela do Chat RAG (RN-252..254, ADR 0082)
+
+### RN-252 — A tela do Chat RAG mostra as duas degradações honestas que o backend já declara, nunca as esconde {#rn-252}
+
+`HybridSearchUseCase` já devolve `vectorAvailable: false` quando o provider
+de embedding não respondeu (RN-233) e `GetRagCoverageUseCase` já nunca
+inclui timestamp de indexação (RN-237) — mas um contrato honesto no
+backend não garante uma tela honesta se ela decidir não ler os dois
+campos. `ProjectRagTab` mostra um aviso acima dos resultados quando
+`vectorAvailable` é `false` (com `vectorUnavailableReason`, quando
+existe), e `RagCoveragePanel` só renderiza contagem REAL (`filesIndexed`/
+`filesInRepo`, `sessionsIndexed`/`sessionsInProject`) — nenhum texto do
+tipo "reindexado há Xmin" nasce nesta tela, porque a resposta não carrega
+esse dado e inventá-lo mentiria (mesma régua do ADR 0042 para nota de
+modelo).
+
+- **Onde:** `apps/web/src/routes/ProjectRagTab.tsx` (linhas 27-31, 176-182),
+  `apps/web/src/components/rag/RagCoveragePanel.tsx` (linhas 27-34)
+- **Teste:** `apps/web/src/routes/ProjectRagTab.test.tsx` — "CASO DE FALHA
+  (degradação honesta): vectorAvailable false avisa..."; `apps/web/src/components/rag/RagCoveragePanel.test.tsx`
+  — "CASO DE FALHA (degradação honesta): nunca escreve..."
+- **ADR:** [0082](adr/0082-chat-rag-aba-de-busca-hibrida.md)
+
+### RN-253 — Citação de origem `session` navega até o EVENTO exato, reusando o mecanismo do Psicólogo {#rn-253}
+
+`RagCitationCard` não inventa um segundo caminho de navegação: origem
+`{ kind: 'session', sessionId, eventId }` chama `useNavigate` para
+`/projects/:projectId/sessions/:sessionId` com `search: { highlightEvent:
+eventId }` — a MESMA rota e o MESMO parâmetro que os chips de evidência
+do Psicólogo já usam (`HypothesisCard.tsx`, Fase 4b) para rolar o fio até
+o evento e destacá-lo. Origem `{ kind: 'file' }` mostra caminho e
+`headingPath` como texto, sem link: a aba Código não tem hoje deep-link
+por caminho, e construir essa navegação está fora do escopo desta
+frente.
+
+- **Onde:** `apps/web/src/components/rag/RagCitationCard.tsx` (linhas
+  32-38, 49-56)
+- **Teste:** `apps/web/src/components/rag/RagCitationCard.test.tsx` —
+  "caminho feliz: origem de sessão navega até o evento exato ao clicar"
+- **ADR:** [0082](adr/0082-chat-rag-aba-de-busca-hibrida.md)
+
+### RN-254 — O botão de reindexar é maintainer/owner na TELA, espelhando a régua da rota {#rn-254}
+
+`POST .../rag/reindex` já exige `role:maintainer` (RN-238) — quem
+garante é a api. `ProjectRagTab` espelha a régua no CLIENTE pelo mesmo
+padrão que `ProjectSettingsTab`/`ProjectApprovalsTab` já usam para outros
+gates de `maintainer` (`useCurrentWorkspaceWithRole`, já que não existe
+hoje um papel de PROJETO no cliente, só o de workspace que a listagem
+devolve): o botão "Reindexar agora" nem aparece para quem não é
+`owner`/`maintainer`, em vez de aparecer desabilitado — reindexar dispara
+N chamadas ao repositório do projeto e ao provider de embedding (mesma
+régua "muda o que o produto gasta sem perguntar" do teto de paralelismo,
+RN-083), e um botão visível mas sempre recusado só ensinaria a
+ignorar o 403.
+
+- **Onde:** `apps/web/src/routes/ProjectRagTab.tsx` (linhas 43-44, 109)
+- **Teste:** `apps/web/src/routes/ProjectRagTab.test.tsx` — "botão de
+  reindexar só aparece para maintainer/owner..."; "maintainer vê e pode
+  disparar a reindexação"
+- **ADR:** [0082](adr/0082-chat-rag-aba-de-busca-hibrida.md)
+
 ---
 
 ## Quando dá errado
