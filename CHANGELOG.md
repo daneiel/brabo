@@ -52,8 +52,32 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   (todas/ativas/fechadas/abortadas) e selos de status para os 5 estados
   reais da sessão — `closing` com selo próprio "encerrando", nunca fundido
   com "fechada" (RN-227..230)
+- **api**: pipeline de indexação (`docs`/`adr`/`session`, chunking por
+  heading/parágrafo com 1200 caracteres e 150 de sobreposição) e busca
+  híbrida (vetor + léxico, pesos 0.6/0.4, limiar 0.2) do Chat RAG, com
+  degradação honesta quando o provider de embedding está indisponível e
+  três rotas novas (`POST .../rag/search`, `POST .../rag/reindex`,
+  `GET .../rag/coverage`) — RN-231..238, ADR 0080
+- **web**: virtualização de linha na aba Código — arquivo de 5.000 linhas
+  renderiza uma janela pequena de nós de DOM, não o arquivo inteiro — e
+  minimapa em `<canvas>` reaproveitando a tokenização já feita pelo realce
+  de sintaxe, sem segundo passe sobre o arquivo (RN-239..242)
+- **api**: ciclo de vida do container como tabela de estado
+  (`project_containers`, migração `0046`), sem orquestrador — máquina de
+  estados pura (`provisioning → running ⇄ stopped`, `failed`, `removed`),
+  primeira transição exigindo a imagem já decidida pelo Arquiteto e
+  congelando versão/recursos; nenhuma chamada real a Docker ainda
+  (RN-243..248, ADR 0081)
 
 ### Correções
+
+- **web**: os seis colapsos ad-hoc restantes migram para o `Disclosure`
+  compartilhado (`ModelCatalogSection`, `AgentTimelineTree`,
+  `code/CodeExplorer.tsx`, `code/CodeShell.tsx`) — o marco com detalhe de
+  `AgentTimelineTree` tinha alvo de clique de 20px, abaixo do piso de 24px
+  do WCAG 2.2 AA (2.5.8); a faixa de arquivo do diff em `ApprovalCard` NÃO
+  migrou (animação própria de chevron que o componente genérico não
+  replica) e ganhou só o `aria-controls` que faltava (RN-249..251)
 
 - **web**: os valores de espaçamento da régua de abas do projeto, que viviam
   como override de CSS de descendente em `ProjectPage.module.css` desde a
