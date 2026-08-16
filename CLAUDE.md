@@ -973,6 +973,21 @@ mais; `system` fica fora dos dois e continua no total. O índice em
 `token_usage(created_at)` que o ADR 0063 mediu e adiou entrou na migração `0044`.
 A TELA não mudou — é onda posterior.
 
+## PROGRAMA 28 — Onda 2, frente H2: ranking de modelos sem nota inventada (RN-210, ADR 0077)
+O handoff pedia duas coisas que dependiam do MESMO dado que o produto não
+tem: uma nota de qualidade por capacidade (mock: "código → claude-sonnet-4 /
+qwen2.5-coder:14b (9.4)") e um badge "ideal" no `ModelPicker` quando o
+modelo cobre "todas as capacidades exigidas pelo agente". A investigação
+confirmou duas vezes que esse segundo dado não existe: o próprio
+`ModelsSection` já tinha renomeado a coluna "Agente · capacidades" para só
+"Agente" por essa razão, e o `ModelPicker` de binding de agente lê
+`GET /projects/:id/models` (papel `viewer`) — a curadoria (`uses`, ADR 0051)
+só existe em `ModelComCuradoria`, de uma rota `maintainer`-only. O badge NÃO
+foi construído; a tabela "Melhores modelos por capacidade" FOI, com dois
+sinais reais: quantos agentes do projeto já resolvem, pela cascata, para
+cada modelo curado, e o custo do catálogo como desempate — nunca nota
+calculada.
+
 ## FERRAMENTA DE DESENVOLVIMENTO — `pnpm bootstrap`
 Menu de terminal em `scripts/dev/bootstrap.sh` agrupando o que se faz no
 dia a dia: Docker, K8s, Database e Test. Existe porque esses comandos moram

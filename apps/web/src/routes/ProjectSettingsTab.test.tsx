@@ -6,6 +6,7 @@ import {
   AreaModelsSection,
   CredentialsSection,
   ExecutionSection,
+  MelhoresModelosPorCapacidadeSection,
   ModelsSection,
   ParallelismSection,
   ProficiencySection,
@@ -23,6 +24,7 @@ const upsertCredential = vi.fn();
 const deleteCredential = vi.fn();
 const testCredential = vi.fn();
 const listModels = vi.fn();
+const listModelCatalog = vi.fn();
 const getAgentModelBinding = vi.fn();
 const clearAgentModelBinding = vi.fn();
 const getProjectModelBinding = vi.fn();
@@ -59,6 +61,7 @@ vi.mock('../lib/api-client', async () => {
     deleteCredential: (...args: unknown[]) => deleteCredential(...args),
     testCredential: (...args: unknown[]) => testCredential(...args),
     listModels: (...args: unknown[]) => listModels(...args),
+    listModelCatalog: (...args: unknown[]) => listModelCatalog(...args),
     getAgentModelBinding: (...args: unknown[]) => getAgentModelBinding(...args),
     clearAgentModelBinding: (...args: unknown[]) =>
       clearAgentModelBinding(...args),
@@ -115,6 +118,7 @@ beforeEach(() => {
   updateProject.mockResolvedValue(project({ maxConsecutiveBlocked: 3 }));
   listCredentials.mockResolvedValue([]);
   listModels.mockResolvedValue({ local: {}, cloud: {} });
+  listModelCatalog.mockResolvedValue({ local: {}, cloud: {} });
   getAgentModelBinding.mockResolvedValue(null);
   clearAgentModelBinding.mockResolvedValue(undefined);
   getProjectModelBinding.mockResolvedValue(null);
@@ -458,6 +462,107 @@ describe('CredentialsSection (ADR 0050)', () => {
       .map((el) => el.textContent);
     expect(siglas).toHaveLength(CREDENCIAIS_DE_LLM.length);
     expect(new Set(siglas).size).toBe(siglas.length);
+  });
+});
+
+/**
+ * "Melhores modelos por capacidade" (handoff, item 5 — ADR 0077). Sem coluna
+ * de nota de qualidade: só custo real do catálogo e uso real dos agentes
+ * deste projeto, sobre a curadoria (`uses`) que o workspace já marcou.
+ */
+describe('MelhoresModelosPorCapacidadeSection', () => {
+  function modeloCurado(
+    over: Partial<{
+      id: string;
+      displayName: string;
+      isActive: boolean;
+      uses: string[];
+      inputPricePerMillionMicros: number;
+    }> = {},
+  ) {
+    return {
+      id: 'm-1',
+      provider: 'ollama',
+      name: 'modelo',
+      displayName: 'Modelo',
+      inputPricePerMillionMicros: 0,
+      outputPricePerMillionMicros: 0,
+      contextWindow: null,
+      supportsToolCalling: true,
+      supportsStreaming: true,
+      supportsVision: false,
+      supportsReasoning: false,
+      generatesImage: false,
+      manualPricing: true,
+      availability: 'available',
+      lastSeenAt: null,
+      isActive: true,
+      uses: ['codigo'],
+      ...over,
+    };
+  }
+
+  beforeEach(() => {
+    getProject.mockResolvedValue(project());
+  });
+
+  it('recomenda o modelo curado para a capacidade que MAIS agentes deste projeto usam, custo desempatando', async () => {
+    listModelCatalog.mockResolvedValue({
+      local: {
+        ollama: [
+          modeloCurado({
+            id: 'barato-sem-uso',
+            displayName: 'Barato sem uso',
+            uses: ['codigo'],
+            inputPricePerMillionMicros: 0,
+          }),
+        ],
+      },
+      cloud: {
+        anthropic: [
+          modeloCurado({
+            id: 'caro-usado',
+            displayName: 'Caro mas usado',
+            uses: ['codigo'],
+            inputPricePerMillionMicros: 3_000_000,
+          }),
+        ],
+      },
+    });
+    // Um agente do projeto resolve, pela cascata, para o modelo caro — é
+    // esse sinal de uso real que deve vencer o desempate de custo.
+    getAgentModelBinding.mockImplementation((_projectId: string, slug: string) =>
+      Promise.resolve(
+        slug === 'dev-backend'
+          ? { modelId: 'caro-usado', origin: 'agent', skipped: [] }
+          : null,
+      ),
+    );
+
+    montarSecao(<MelhoresModelosPorCapacidadeSection projectId="proj-1" />);
+
+    await screen.findByText('Melhores modelos por capacidade');
+    expect(await screen.findAllByText('Caro mas usado')).not.toHaveLength(0);
+    expect(screen.getByText('Barato sem uso')).toBeInTheDocument();
+    expect(screen.getByText('1 agente deste projeto')).toBeInTheDocument();
+  });
+
+  it('capacidade sem modelo curado mostra "sem cobertura curada", nunca esconde a linha', async () => {
+    // Catálogo com um modelo curado só para "imagem" — as outras quatro
+    // capacidades (código, documentação, análise, conversa) ficam sem
+    // cobertura, e a linha continua aparecendo.
+    listModelCatalog.mockResolvedValue({
+      local: {},
+      cloud: {
+        openai: [modeloCurado({ id: 'so-imagem', displayName: 'Só imagem', uses: ['imagem'] })],
+      },
+    });
+
+    montarSecao(<MelhoresModelosPorCapacidadeSection projectId="proj-1" />);
+
+    await screen.findByText('Melhores modelos por capacidade');
+    expect(await screen.findAllByText('sem cobertura curada')).toHaveLength(4);
+    expect(screen.getByText('Só imagem')).toBeInTheDocument();
   });
 });
 
