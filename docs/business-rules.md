@@ -7199,6 +7199,67 @@ régua "muda o que o produto gasta sem perguntar" do teto de paralelismo de
   rotas)
 - **ADR:** [0080](adr/0080-busca-hibrida-pesos-limiar-e-citacao.md)
 
+## PROGRAMA 28 — Onda 4, frente E2: virtualização de linha e minimapa na aba Code (RN-239..242)
+
+### RN-239 — Virtualização de linha: só a janela visível vira nó de DOM {#rn-239}
+
+`CodeEditor.tsx` renderiza só as linhas dentro da janela visível (mais
+`OVERSCAN = 20` de margem) como `[data-line-row]`; o resto vira dois
+espaçadores que reservam a altura sem existir como nó. A decisão de NÃO
+usar `react-window`/`react-virtual`: a altura de linha é FIXA
+(`ALTURA_LINHA = 21`, monoespaçado), o que reduz "qual linha está visível"
+a uma divisão inteira sobre `scrollTop` — o problema que essas libs
+resolvem de verdade é altura VARIÁVEL por item, que não é o caso da aba
+Code.
+
+- **Onde:** `apps/web/src/routes/code/CodeEditor.tsx` (linhas 38-96, 45,
+  48)
+- **Teste:** `apps/web/src/routes/code/CodeEditor.test.tsx` — describe
+  "CodeEditor — virtualização", "caminho feliz: arquivo de 5.000 linhas
+  renderiza uma janela pequena de nós, não o arquivo inteiro" (`< 150` nós
+  `[data-line-row]`) e "rolar para o meio do arquivo troca a janela —
+  linha 1 some, linhas do meio aparecem"
+
+### RN-240 — Sem medição de altura, degrada para janela padrão generosa, nunca renderiza tudo {#rn-240}
+
+Quando `containerHeight` ainda não foi medido (1º render, ou jsdom sem
+`ResizeObserver` em teste), a janela cai para `LINHAS_SEM_MEDICAO = 40` —
+generosa o bastante para não truncar os arquivos pequenos que os testes
+usam, pequena o bastante para nunca virar "renderiza tudo" num arquivo
+grande de verdade.
+
+- **Onde:** `apps/web/src/routes/code/CodeEditor.tsx` (linha 57)
+- **Teste:** `apps/web/src/routes/code/CodeEditor.test.tsx` — "falha/borda:
+  sem medição de altura (jsdom sem ResizeObserver, clientHeight 0),
+  degrada para uma janela padrão em vez de não renderizar nada"
+
+### RN-241 — Minimapa reusa a MESMA tokenização da virtualização — zero segundo passe sobre o arquivo {#rn-241}
+
+`minimap.ts` não tokeniza nada: ele resume a saída que `highlight.ts` já
+produziu (`HighlightToken[][]` de `highlightFile`, chamada uma vez só) —
+a MESMA que a virtualização usa para colorir as linhas visíveis.
+Tokenizar de novo só para o minimapa pagaria o custo de leitura do
+arquivo pela segunda vez, e por isso o minimapa só entra depois de a
+virtualização estar de pé, nunca antes.
+
+- **Onde:** `apps/web/src/routes/code/minimap.ts` (linhas 1-18, 39)
+- **Teste:** `apps/web/src/routes/code/minimap.test.ts`
+
+### RN-242 — Minimapa é CANVAS, um nó de DOM só, nunca um `<div>` por linha {#rn-242}
+
+O desenho é em `<canvas>` (`desenharMinimapa`), não em elemento por
+linha: um minimapa com um nó por linha dobraria de novo a contagem que a
+virtualização (RN-239) acabou de cortar. Sem contexto de canvas 2D
+disponível (jsdom sem o pacote `canvas`), o overlay clicável continua
+funcionando — só o desenho é pulado, nunca a interação.
+
+- **Onde:** `apps/web/src/routes/code/minimap.ts` (linhas 14-16, 91)
+- **Teste:** `apps/web/src/routes/code/CodeEditor.test.tsx` — describe
+  "CodeEditor — minimapa", "caminho feliz: clicar no minimapa rola o
+  editor e troca a janela renderizada" e "falha: sem contexto de canvas
+  2D (jsdom sem o pacote `canvas`), o overlay continua clicável e nada
+  quebra"
+
 ### RN-243 — O ciclo de vida do container é TABELA, e nenhuma linha dela chama Docker {#rn-243}
 
 `project_containers` (migração `0046`) grava o ESTADO mutável do container
@@ -7288,6 +7349,64 @@ registrada era X").
 - **Teste:** `apps/api/test/infrastructure/persistence/drizzle/container.repository.spec.ts`
   — "create nasce em `provisioning`, com a versão e os recursos passados"
 - **ADR:** [0081](adr/0081-ciclo-de-vida-do-container-tabela-sem-orquestrador.md)
+
+## PROGRAMA 28 — Onda 4, frente H4: os colapsos ad-hoc restantes migram para o `Disclosure` (RN-249..251)
+
+### RN-249 — Alvo de clique do marco com detalhe sobe de 20px para o piso de 24px do `Disclosure` {#rn-249}
+
+O marco COM detalhe de `AgentTimelineTree` tinha `min-height: 20px` no
+cabeçalho clicável — abaixo do WCAG 2.2 AA 2.5.8 (Target Size, mínimo
+24px) que um comentário anterior já prometia sem cumprir. A migração
+para o `Disclosure` compartilhado corrige isso de graça: o componente
+genérico já nasce em 24px, e não é preciso lembrar de setar a régua em
+cada novo consumidor.
+
+- **Onde:** `apps/web/src/components/AgentTimelineTree.module.css`
+  (linhas 135-155, `.marcoLinha`)
+- **Teste:** `apps/web/src/components/AgentTimelineTree.test.tsx`
+- **ADR:** nenhum — correção pontual de a11y, mesmo padrão do ADR 0036
+
+### RN-250 — Faixa de arquivo do diff em `ApprovalCard` NÃO migra para o `Disclosure` — a animação própria é a razão {#rn-250}
+
+A faixa de arquivo do diff em `ApprovalCard` gira o chevron por
+`transform: rotate(90deg)` com transição própria
+(`.chevron.open`/`ApprovalCard.module.css`); o `Disclosure` genérico
+TROCA o ícone (seta direita → seta baixo) sem animação nenhuma. Forçar a
+migração apagaria a micro-interação sem ganho — a exclusividade (só um
+arquivo aberto por vez) já vem de fora (`expandedFile`), o mesmo que o
+`Disclosure` controlado faria. O que faltava, e não era peculiaridade —
+é o mesmo defeito que o `Disclosure` existe para fechar —, era
+`aria-controls` apontando para uma região nomeada: corrigido diretamente,
+sem trocar de componente.
+
+- **Onde:** `apps/web/src/components/ApprovalCard.tsx` (linhas 511-539)
+- **Teste:** `apps/web/src/components/ApprovalCard.test.tsx`
+
+### RN-251 — Cinco call sites migram para o `Disclosure` compartilhado; o componente ganha `testId` como único hook novo {#rn-251}
+
+`ModelCatalogSection` (a referência original que gerou o componente na
+FASE 16), `AgentTimelineTree` (ramo + marco), `code/CodeExplorer.tsx`
+(pasta da árvore) e `code/CodeShell.tsx` (painel inferior) passam a usar
+o `Disclosure` compartilhado — nenhuma das seis implementações ad-hoc que
+sobreviveram à FASE 16 fica de fora, exceto a exceção declarada da
+RN-250. `testId` é o único prop novo que um consumidor precisou (`data-
+testid` no cabeçalho, para os testes existentes continuarem
+selecionando o botão certo sem reescrever a suíte inteira). A região
+controlada existe no DOM mesmo fechada — só `hidden` e sem os filhos
+montados —, porque `aria-controls` apontando para um id que não resolve
+é pior que não ter o atributo (leitor de tela anunciaria controle de
+algo inexistente); é essa mesma propriedade que permite colapsar listas
+caras (o catálogo do OpenRouter tem 338 modelos) sem montar o que
+ninguém está vendo.
+
+- **Onde:** `apps/web/src/components/ui/Disclosure.tsx` (linhas 33-71),
+  `apps/web/src/components/ModelCatalogSection.tsx`,
+  `apps/web/src/components/AgentTimelineTree.tsx`,
+  `apps/web/src/routes/code/CodeExplorer.tsx`,
+  `apps/web/src/routes/code/CodeShell.tsx`
+- **Teste:** `apps/web/src/components/ui/Disclosure.test.tsx`,
+  `apps/web/src/routes/code/CodeExplorer.test.tsx`,
+  `apps/web/src/routes/code/CodeShell.test.tsx`
 
 ### RN-272 — O callback do login social decide em ORDEM: identidade conhecida, depois vínculo por e-mail, depois conta nova {#rn-272}
 
