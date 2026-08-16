@@ -1308,6 +1308,13 @@ divide o mesmo banco, recuperar exige `db:migrate` E `engine:migrate`.
   teste se estiverem velhas; nunca as edite à mão (FASE 18). Área nova
   continua sendo decisão de produto, com ADR. A lista é o CATÁLOGO; a
   tabela `agent_areas` é o ESTADO por projeto, e nasce com ele (RN-094).
+- `docs/fluxo.yml` é a terceira peça do modelo de time, ao lado do
+  CATÁLOGO (`agent-areas.ts`) e do CONTROLE (`docs/gates.yml`, ADR
+  0054): declara as RELAÇÕES entre papéis — quem entrega o quê a quem
+  (ADR 0085). Papel `proposto` diz quem o absorve hoje e o critério
+  objetivo de separação; o docmap cobre mudança em `agent-areas.ts`/
+  `gates.yml` só em `warn`, até existir o teste de cruzamento entre os
+  três (backlog).
 - Merge em branch protegida (dev/qa/main) é SEMPRE manual do
   usuário — sem opção de automatizar, garantido por teste.
 - Socket Phoenix da sessão (`session:<id>`) exige ticket opaco de uso
