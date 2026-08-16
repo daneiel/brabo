@@ -20,12 +20,13 @@ que ficam abertas. Decisões em
 | `role:<papel>` | autenticada e restrita pelo RBAC do domínio (`@RequireRole`) |
 | `jwt` | autenticada, sem papel exigido na rota — o escopo vem do próprio recurso |
 
-## As doze rotas públicas
+## As catorze rotas públicas
 
 Eram quatro até a Fase 6. A Fase 7a acrescentou oito de uma vez — o auth
-first-party — e cada uma está justificada abaixo. Abrir mais alguma continua
-exigindo mexer na asserção de `route-surface.spec.ts`, que lista as públicas
-literalmente para forçar a conversa.
+first-party — e o ADR 0084 acrescentou mais duas, o login social. Cada uma
+está justificada abaixo. Abrir mais alguma continua exigindo mexer na
+asserção de `route-surface.spec.ts`, que lista as públicas literalmente para
+forçar a conversa.
 
 ### Infraestrutura
 
@@ -96,6 +97,25 @@ assina os access tokens. Mesmo raciocínio de `/metrics`: quem consome não tem
 token, e exigir um seria pedir credencial para poder validar credencial.
 Publicar chave pública é o propósito do formato — o que não pode sair daqui é
 o componente `d` da JWK, travado por teste.
+
+### Login social (ADR 0084)
+
+**`GET /auth/oauth/:provider/start`** — redireciona direto para o provider
+(GitHub/GitLab). Pública pela mesma razão estrutural das outras sete: é o
+próprio ponto de entrada, antes de qualquer sessão existir. O `state` que ela
+gera é assinado por HMAC com propósito PRÓPRIO
+(`signSocialOauthState`/[RN-273](business-rules.md#rn-273)) — nunca o mesmo
+`state` do `GET /git/oauth/:provider/callback` acima, mesmo as duas rotas
+assinando com a MESMA chave `GIT_OAUTH_STATE_SECRET`. O campo `purpose` no
+payload é o que impede um `state` de um fluxo ser aceito no verificador do
+outro.
+
+**`GET /auth/oauth/:provider/callback`** — recebe o retorno do provider.
+Mesmo raciocínio do callback de conexão de git: o browser chega sem sessão, o
+`state` é verificado por HMAC, e a rota nunca responde JSON — sempre
+redireciona, para `WEB_ORIGIN/` no sucesso (com os cookies de sessão já
+gravados) e para `WEB_ORIGIN/login?oauth_error=1` na falha, sem detalhar o
+motivo na URL.
 
 ## Notas
 
@@ -297,6 +317,8 @@ o componente `d` da JWK, travado por teste.
 | GET | `/.well-known/jwks.json` | public |
 | POST | `/auth/login` | public |
 | POST | `/auth/logout` | public |
+| GET | `/auth/oauth/:provider/callback` | public |
+| GET | `/auth/oauth/:provider/start` | public |
 | POST | `/auth/refresh` | public |
 | POST | `/auth/register` | public |
 | POST | `/auth/request-password-reset` | public |

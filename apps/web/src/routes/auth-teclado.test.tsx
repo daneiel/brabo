@@ -60,6 +60,15 @@ describe('navegação por teclado nas telas de auth', () => {
     await u.tab();
     expect(screen.getByRole('button', { name: 'Entrar' })).toHaveFocus();
 
+    // Login social (ADR 0084): os dois links vêm DEPOIS do submit, ANTES do
+    // rodapé do card — mesma posição visual, mesma ordem no DOM. O divisor
+    // "ou" não é focável, então não conta como parada.
+    await u.tab();
+    expect(focado()).toBe('Continuar com GitHub');
+
+    await u.tab();
+    expect(focado()).toBe('Continuar com GitLab');
+
     // Depois do submit vem o rodapé do card, e só então o rodapé da página.
     await u.tab();
     expect(focado()).toBe('Criar uma conta');
@@ -76,7 +85,13 @@ describe('navegação por teclado nas telas de auth', () => {
     const u = userEvent.setup();
     render(<LoginPage onEntrar={vi.fn()} irPara={vi.fn()} />);
 
-    screen.getByRole('button', { name: 'Entrar' }).focus();
+    screen.getByRole('link', { name: /Continuar com GitLab/ }).focus();
+
+    await u.tab({ shift: true });
+    expect(focado()).toBe('Continuar com GitHub');
+
+    await u.tab({ shift: true });
+    expect(screen.getByRole('button', { name: 'Entrar' })).toHaveFocus();
 
     await u.tab({ shift: true });
     expect(focado()).toBe('Mostrar senha');

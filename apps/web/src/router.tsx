@@ -88,10 +88,36 @@ const irPara = (rota: string) => {
   void router.navigate({ to: rota });
 };
 
+/**
+ * `oauthError` vem de `?oauth_error=1` — o callback de login social (ADR
+ * 0084) redireciona para cá em QUALQUER falha, sem detalhar o motivo na URL
+ * (RN-283). A comparação por STRING `'1'` é de propósito: query param é
+ * sempre string, e `Boolean('0')` seria `true`.
+ *
+ * `proxima` já existia (o `beforeLoad` do `appLayout` a escreve ao redirecionar
+ * pro login) e continua sem consumidor — `validateSearch` precisa conhecer a
+ * chave só para o `redirect({ search: { proxima } })` daquele `beforeLoad`
+ * continuar tipando; usá-la de verdade (voltar pra rota de origem depois do
+ * login) é fora do escopo desta mudança.
+ */
+interface LoginSearch {
+  oauthError?: boolean;
+  proxima?: string;
+}
+
 const loginRoute = createRoute({
   getParentRoute: () => authLayout,
   path: '/login',
-  component: () => <LoginPage onEntrar={entrar} irPara={irPara} />,
+  validateSearch: (search: Record<string, unknown>): LoginSearch => ({
+    oauthError: search.oauth_error === '1',
+    proxima: typeof search.proxima === 'string' ? search.proxima : undefined,
+  }),
+  component: () => {
+    const { oauthError } = loginRoute.useSearch();
+    return (
+      <LoginPage onEntrar={entrar} irPara={irPara} erroOAuth={oauthError} />
+    );
+  },
 });
 
 const registerRoute = createRoute({

@@ -119,4 +119,32 @@ describe('LoginPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Esqueci minha senha' }));
     expect(irPara).toHaveBeenCalledWith('/esqueci-senha');
   });
+
+  describe('login social (ADR 0084)', () => {
+    it('os dois links apontam para as rotas de início do OAuth, sem fetch nenhum', () => {
+      montar();
+
+      const github = screen.getByRole('link', { name: /Continuar com GitHub/ });
+      const gitlab = screen.getByRole('link', { name: /Continuar com GitLab/ });
+
+      expect(github).toHaveAttribute(
+        'href',
+        expect.stringMatching(/\/auth\/oauth\/github\/start$/),
+      );
+      expect(gitlab).toHaveAttribute(
+        'href',
+        expect.stringMatching(/\/auth\/oauth\/gitlab\/start$/),
+      );
+    });
+
+    it('?oauth_error=1 mostra um alerta genérico, sem detalhar o motivo (RN-283)', () => {
+      render(
+        <LoginPage onEntrar={vi.fn()} irPara={vi.fn()} erroOAuth />,
+      );
+
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        /não foi possível concluir o login social/i,
+      );
+    });
+  });
 });
