@@ -230,6 +230,14 @@
   color: var(--text-muted);
 }
 
+/*
+ * Alvo abaixo de 24px por design (PROGRAMA 28, Onda 5/H5, auditado): a linha
+ * "vX.Y.Z · Status · Documentação" é texto corrido com separadores de gap
+ * uniforme (ver comentário de `.rodapePagina`) — cai na exceção "constrained
+ * by the line-height of non-target text" da WCAG 2.2 2.5.8, o mesmo motivo
+ * que isenta um link dentro de frase. Impor 24px quebraria o alinhamento dos
+ * "·" com o texto ao redor.
+ */
 .linkRodape {
   color: var(--text-muted);
   text-decoration: none;
@@ -268,6 +276,13 @@
  * qualquer forma, porque não depende de enxergar cor. Ver
  * `design-contraste.test.ts`.
  */
+/*
+ * "Criar uma conta" mede 19px de altura (PROGRAMA 28, Onda 5/H5, auditado) —
+ * abaixo do piso de 24px, mas ISENTO: é link DENTRO de frase ("Não tem
+ * acesso? Criar uma conta"), a exceção "target is in a sentence" da WCAG 2.2
+ * 2.5.8. Mesmo raciocínio isenta `.linkPequeno` abaixo — lá o texto vizinho é
+ * o rótulo do campo, não uma frase, mas a régua de baseline é a mesma.
+ */
 .link {
   color: var(--accent-hover);
   text-decoration: none;
@@ -286,7 +301,12 @@
 
 /*
  * Variante menor do `.link`, para a ação que acompanha um rótulo de campo. Vai
- * SOMADA a `.link` no `className`, não no lugar dele.
+ * SOMADA a `.link` no `className`, não no lugar dele. 17px de altura, abaixo
+ * do piso de 24px — ISENTO (WCAG 2.2 2.5.8, "constrained by the line-height
+ * of non-target text"): `.linhaLabel` de `Input.module.css` alinha este link
+ * pelo `baseline` com o rótulo do campo DE PROPÓSITO ("alinhar pelo centro
+ * deixaria as duas linhas de base desencontradas"), então dar `min-height`
+ * aqui quebraria exatamente o alinhamento que aquele comentário defende.
  */
 .linkPequeno {
   font-size: 11.5px;
