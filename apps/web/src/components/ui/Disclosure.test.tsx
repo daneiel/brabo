@@ -134,6 +134,22 @@ describe('Disclosure', () => {
     expect(botao.querySelector('[aria-hidden="true"]')).not.toBeNull();
   });
 
+  it('testId vira data-testid do cabeçalho, quando passado', () => {
+    // `AgentTimelineTree` precisa achar UM ramo entre vários agentes com
+    // testes que não dão pra distinguir só por nome acessível parcial.
+    render(
+      <Disclosure titulo="Hubs" testId="ramo-cabecalho-x">
+        conteúdo
+      </Disclosure>,
+    );
+    expect(screen.getByTestId('ramo-cabecalho-x')).toBe(screen.getByRole('button'));
+  });
+
+  it('sem testId, nenhum data-testid aparece', () => {
+    render(<Disclosure titulo="Hubs">conteúdo</Disclosure>);
+    expect(screen.getByRole('button')).not.toHaveAttribute('data-testid');
+  });
+
   it('o trailing fica DENTRO do alvo de clique', () => {
     // A linha inteira alterna, não só o chevron — é o que a implementação de
     // `ModelCatalogSection` já fazia e o que a régua de 24px pressupõe.

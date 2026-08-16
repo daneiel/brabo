@@ -10,6 +10,7 @@ import {
 } from '../../lib/hooks';
 import { deriveAgentRoster } from '../../lib/agent-status';
 import { BranchIcon, FolderIcon, SearchIcon } from '../../components/ui/icons';
+import { Disclosure } from '../../components/ui/Disclosure';
 import { CodeExplorer } from './CodeExplorer';
 import { CodeSearchPanel } from './CodeSearchPanel';
 import { CodeEditor } from './CodeEditor';
@@ -186,17 +187,23 @@ export function CodeShell({ projectId }: { projectId: string }) {
             onCloseTab={fecharAba}
           />
 
-          <div className={styles.bottomToggleRow}>
-            <button
-              type="button"
-              className={styles.bottomToggle}
-              onClick={() => setBottomOpen((v) => !v)}
-              aria-expanded={bottomOpen}
-            >
-              {bottomOpen ? 'Fechar painel inferior' : 'Painel inferior'}
-            </button>
-          </div>
-          {bottomOpen && <CodeBottomPanel projectId={projectId} />}
+          {/* Migrado para o `Disclosure` do design system (Onda 4/frente H4)
+              — o texto do botão continua trocando de verbo ("Painel
+              inferior" ↔ "Fechar painel inferior", é o que os testes já
+              fixam), só ganhou `aria-controls`/região nomeada que faltavam
+              antes. `className={styles.bottomToggleRow}` no wrapper mantém
+              a borda/fundo da faixa no MESMO lugar — `CodeBottomPanel` já
+              tem fundo próprio idêntico, então cobrir o corpo inteiro não
+              muda nada visível. */}
+          <Disclosure
+            aberto={bottomOpen}
+            onAlternar={() => setBottomOpen((v) => !v)}
+            className={styles.bottomToggleRow}
+            classNameCabecalho={styles.bottomToggle}
+            titulo={bottomOpen ? 'Fechar painel inferior' : 'Painel inferior'}
+          >
+            <CodeBottomPanel projectId={projectId} />
+          </Disclosure>
         </div>
       </div>
 

@@ -549,4 +549,59 @@ describe('ApprovalCard', () => {
       expect(screen.queryByText(/prod-1/)).toBeNull();
     });
   });
+
+  /**
+   * A faixa por arquivo (`git_commit`/`git_push`) NÃO migrou para o
+   * `Disclosure` do design system (Onda 4/frente H4) — ela gira o chevron
+   * com `transform: rotate(90deg)`, e o `Disclosure` genérico troca de ícone
+   * sem animação. O defeito real que valia corrigir era outro: faltava
+   * `aria-controls` apontando para uma região que existe mesmo fechada —
+   * exatamente o que o `Disclosure` sempre garantiu para os colapsos que já
+   * o usam (RN-250).
+   */
+  describe('faixa de arquivo do diff (git_commit/git_push)', () => {
+    function acaoComArquivos() {
+      return makeAction({
+        actionType: 'git_commit',
+        payload: {
+          files: [
+            { path: 'apps/api/src/a.ts', additions: 2, deletions: 0, lines: [{ kind: 'add', content: 'x', lineNo: 1 }] },
+            { path: 'apps/api/src/b.ts', additions: 0, deletions: 1, lines: [{ kind: 'del', content: 'y', lineNo: 3 }] },
+          ],
+        },
+      });
+    }
+
+    it('nasce fechada, com aria-controls apontando pra uma região que existe mesmo escondida', () => {
+      render(
+        <ApprovalCard action={acaoComArquivos()} variant="chat" onApprove={vi.fn()} onDeny={vi.fn()} onAlwaysAllow={vi.fn()} />,
+      );
+
+      const faixaA = screen.getByRole('button', { name: /a\.ts/ });
+      expect(faixaA.getAttribute('aria-expanded')).toBe('false');
+      const idRegiao = faixaA.getAttribute('aria-controls');
+      expect(idRegiao).toBeTruthy();
+      const regiao = document.getElementById(idRegiao!);
+      expect(regiao).not.toBeNull();
+      expect(regiao).toHaveAttribute('role', 'region');
+      expect(regiao).not.toBeVisible();
+    });
+
+    it('clicar abre o diff daquele arquivo, e abrir outro fecha o anterior (exclusivo)', () => {
+      render(
+        <ApprovalCard action={acaoComArquivos()} variant="chat" onApprove={vi.fn()} onDeny={vi.fn()} onAlwaysAllow={vi.fn()} />,
+      );
+
+      const faixaA = screen.getByRole('button', { name: /a\.ts/ });
+      const faixaB = screen.getByRole('button', { name: /b\.ts/ });
+
+      fireEvent.click(faixaA);
+      expect(faixaA.getAttribute('aria-expanded')).toBe('true');
+      expect(faixaB.getAttribute('aria-expanded')).toBe('false');
+
+      fireEvent.click(faixaB);
+      expect(faixaA.getAttribute('aria-expanded')).toBe('false');
+      expect(faixaB.getAttribute('aria-expanded')).toBe('true');
+    });
+  });
 });

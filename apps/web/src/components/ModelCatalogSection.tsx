@@ -23,9 +23,9 @@ import {
   type Faceta,
 } from '../lib/models';
 import { Alert } from './ui/Alert';
-import { ChevronDownIcon, ChevronRightIcon } from './ui/icons';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
+import { Disclosure } from './ui/Disclosure';
 import { useToast } from './ui/ToastProvider';
 import styles from './ModelCatalogSection.module.css';
 
@@ -402,76 +402,76 @@ export function ModelCatalogSection({ workspaceId }: { workspaceId: string }) {
         </div>
       )}
 
-      {grupos.map((grupo) => (
-        <div key={grupo.kind} className={styles.grupo}>
-          <button
-            type="button"
-            className={styles.grupoTitulo}
-            aria-expanded={!gruposFechados.has(grupo.kind)}
-            onClick={() => alternarGrupo(grupo.kind)}
+      {/* Migrado para o `Disclosure` do design system na Onda 4/frente H4 —
+          era a implementação de REFERÊNCIA que ditou a semântica do
+          componente (grupos, subgrupos, `aria-expanded`, "minimizar tudo"),
+          mas nunca tinha sido convertida para consumi-lo. Os dois `Set`s
+          (`gruposFechados`/`subgruposAbertos`) continuam sendo a fonte de
+          verdade — `Disclosure` só fica CONTROLADO por eles via `aberto`/
+          `onAlternar`, sem duplicar estado. */}
+      {grupos.map((grupo) => {
+        const abertoGrupo = !gruposFechados.has(grupo.kind);
+        return (
+          <Disclosure
+            key={grupo.kind}
+            className={styles.grupo}
+            classNameCabecalho={styles.grupoTitulo}
+            aberto={abertoGrupo}
+            onAlternar={() => alternarGrupo(grupo.kind)}
+            titulo={
+              <>
+                {grupo.rotulo}
+                {/* "Hubs" sozinho não diz de QUEM é o catálogo — e preço,
+                    disponibilidade e credencial pertencem ao hub, não ao
+                    fabricante do modelo. Nos outros grupos o provider já é
+                    evidente na linha. */}
+                {grupo.kind === 'hub' && (
+                  <span className={styles.grupoProvedores}>
+                    ·{' '}
+                    {grupo.provedores
+                      .map((p) => ROTULO_DO_PROVIDER[p] ?? p)
+                      .join(', ')}
+                  </span>
+                )}
+              </>
+            }
+            trailing={grupo.modelos.length}
           >
-            <span className={styles.chevron}>
-              {gruposFechados.has(grupo.kind) ? (
-                <ChevronRightIcon size={13} />
-              ) : (
-                <ChevronDownIcon size={13} />
-              )}
-            </span>
-            {grupo.rotulo}
-            {/* "Hubs" sozinho não diz de QUEM é o catálogo — e preço,
-                disponibilidade e credencial pertencem ao hub, não ao fabricante
-                do modelo. Nos outros grupos o provider já é evidente na linha. */}
-            {grupo.kind === 'hub' && (
-              <span className={styles.grupoProvedores}>
-                ·{' '}
-                {grupo.provedores
-                  .map((p) => ROTULO_DO_PROVIDER[p] ?? p)
-                  .join(', ')}
-              </span>
-            )}
-            <span className={styles.grupoContagem}>{grupo.modelos.length}</span>
-          </button>
-
-          {/* Um hub serve o catálogo de dezenas de fabricantes numa lista só —
-              338, no caso do OpenRouter. Repartir por quem serve por baixo é o
-              que torna a lista navegável; sem isso, achar o Claude é rolagem. */}
-          {!gruposFechados.has(grupo.kind) &&
-            (grupo.subgrupos
-            ? grupo.subgrupos.map((sub) => {
-                const aberto = subgruposAbertos.has(sub.upstream);
-                const marcadosAqui = sub.modelos.filter((m) =>
-                  marcados.has(m.id),
-                ).length;
-                return (
-                  <div key={sub.upstream} className={styles.subgrupo}>
-                    <button
-                      type="button"
-                      className={styles.subgrupoTitulo}
-                      aria-expanded={aberto}
-                      onClick={() => alternarSubgrupo(sub.upstream)}
+            {/* Um hub serve o catálogo de dezenas de fabricantes numa lista só
+                — 338, no caso do OpenRouter. Repartir por quem serve por baixo
+                é o que torna a lista navegável; sem isso, achar o Claude é
+                rolagem. */}
+            {grupo.subgrupos
+              ? grupo.subgrupos.map((sub) => {
+                  const aberto = subgruposAbertos.has(sub.upstream);
+                  const marcadosAqui = sub.modelos.filter((m) =>
+                    marcados.has(m.id),
+                  ).length;
+                  return (
+                    <Disclosure
+                      key={sub.upstream}
+                      className={styles.subgrupo}
+                      classNameCabecalho={styles.subgrupoTitulo}
+                      aberto={aberto}
+                      onAlternar={() => alternarSubgrupo(sub.upstream)}
+                      titulo={sub.rotulo}
+                      trailing={
+                        <>
+                          <span className={styles.grupoContagem}>
+                            {sub.modelos.length}
+                          </span>
+                          {/* Fechado com itens marcados: sem este selo, a
+                              barra diria "12 selecionados" e você não teria
+                              como ver QUAIS — ativaria em lote às cegas. */}
+                          {!aberto && marcadosAqui > 0 && (
+                            <span className={styles.marcadosOcultos}>
+                              {marcadosAqui} marcado{marcadosAqui > 1 ? 's' : ''}
+                            </span>
+                          )}
+                        </>
+                      }
                     >
-                      <span className={styles.chevron}>
-                        {aberto ? (
-                          <ChevronDownIcon size={12} />
-                        ) : (
-                          <ChevronRightIcon size={12} />
-                        )}
-                      </span>
-                      {sub.rotulo}
-                      <span className={styles.grupoContagem}>
-                        {sub.modelos.length}
-                      </span>
-                      {/* Fechado com itens marcados: sem este selo, a barra
-                          diria "12 selecionados" e você não teria como ver
-                          QUAIS — ativaria em lote às cegas. */}
-                      {!aberto && marcadosAqui > 0 && (
-                        <span className={styles.marcadosOcultos}>
-                          {marcadosAqui} marcado{marcadosAqui > 1 ? 's' : ''}
-                        </span>
-                      )}
-                    </button>
-                    {aberto &&
-                      sub.modelos.map((model) => (
+                      {sub.modelos.map((model) => (
                         <LinhaDoCatalogo
                           key={model.id}
                           model={model}
@@ -479,19 +479,20 @@ export function ModelCatalogSection({ workspaceId }: { workspaceId: string }) {
                           onToggle={() => alternar(model.id)}
                         />
                       ))}
-                  </div>
-                );
-              })
-            : grupo.modelos.map((model) => (
-                <LinhaDoCatalogo
-                  key={model.id}
-                  model={model}
-                  marcado={marcados.has(model.id)}
-                  onToggle={() => alternar(model.id)}
-                />
-              )))}
-        </div>
-      ))}
+                    </Disclosure>
+                  );
+                })
+              : grupo.modelos.map((model) => (
+                  <LinhaDoCatalogo
+                    key={model.id}
+                    model={model}
+                    marcado={marcados.has(model.id)}
+                    onToggle={() => alternar(model.id)}
+                  />
+                ))}
+          </Disclosure>
+        );
+      })}
     </div>
   );
 }

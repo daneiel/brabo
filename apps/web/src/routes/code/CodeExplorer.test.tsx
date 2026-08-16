@@ -78,6 +78,43 @@ describe('CodeExplorer — caminho feliz', () => {
   });
 });
 
+describe('CodeExplorer — pasta é um Disclosure (aria-expanded acompanha o clique)', () => {
+  it('nasce fechada e alterna ao clicar; fechar de novo desmonta os filhos', async () => {
+    getCodeTree.mockImplementation((_projectId: string, opts: { path?: string }) =>
+      Promise.resolve(opts.path === 'apps' ? FILHOS_APPS : RAIZ),
+    );
+    const user = userEvent.setup();
+    montar();
+
+    await screen.findByText('apps');
+    const pasta = screen.getByRole('button', { name: /apps/ });
+    expect(pasta.getAttribute('aria-expanded')).toBe('false');
+
+    await user.click(pasta);
+    expect(pasta.getAttribute('aria-expanded')).toBe('true');
+    expect(await screen.findByText('web')).toBeInTheDocument();
+
+    await user.click(pasta);
+    expect(pasta.getAttribute('aria-expanded')).toBe('false');
+    expect(screen.queryByText('web')).not.toBeInTheDocument();
+  });
+
+  it('erro ao listar uma subpasta aparece dentro dela, sem derrubar a raiz', async () => {
+    getCodeTree.mockImplementation((_projectId: string, opts: { path?: string }) =>
+      opts.path === 'apps' ? Promise.reject(new Error('boom')) : Promise.resolve(RAIZ),
+    );
+    const user = userEvent.setup();
+    montar();
+
+    await screen.findByText('apps');
+    await user.click(screen.getByRole('button', { name: /apps/ }));
+
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    // A raiz continua íntegra — o erro é só da subpasta.
+    expect(screen.getByText('README.md')).toBeInTheDocument();
+  });
+});
+
 describe('CodeExplorer — os três estados (RN-088)', () => {
   it('carregando', () => {
     getCodeTree.mockReturnValue(new Promise(() => {}));

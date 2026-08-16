@@ -97,10 +97,22 @@ describe('CodeShell', () => {
     await screen.findByText('painel explorador');
 
     expect(screen.queryByText('painel inferior')).not.toBeInTheDocument();
-    await user.click(screen.getByText('Painel inferior'));
+    const botao = screen.getByText('Painel inferior').closest('button')!;
+    expect(botao.getAttribute('aria-expanded')).toBe('false');
+
+    await user.click(botao);
     expect(await screen.findByText('painel inferior')).toBeInTheDocument();
+    expect(botao.getAttribute('aria-expanded')).toBe('true');
+    // `aria-controls` aponta para uma região que existe — o defeito real que
+    // a migração pro `Disclosure` fechou (o botão ad-hoc de antes não tinha
+    // nenhum dos dois).
+    const idRegiao = botao.getAttribute('aria-controls');
+    expect(idRegiao).toBeTruthy();
+    expect(document.getElementById(idRegiao!)).not.toBeNull();
+
     await user.click(screen.getByText('Fechar painel inferior'));
     expect(screen.queryByText('painel inferior')).not.toBeInTheDocument();
+    expect(botao.getAttribute('aria-expanded')).toBe('false');
   });
 
   it('sem sessão/eventos ainda, mostra 0 agentes ativos — dado real, não inventado', async () => {
