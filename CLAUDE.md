@@ -546,14 +546,18 @@ e RN-106).
     artefato dele (`artifact.project_image` no event log, versionado, sem
     tabela) — auditável, não configuração escondida. Enquanto ele não
     decidir, a aba Code responde 409 e não libera (RN-105).
-31. NÃO ENTREGUE, declarado: ciclo de vida por projeto (provisionar, reciclar,
-    limpar, teto de recursos aplicado de verdade), com o worktree do agente
-    vivendo dentro do container. Estado de container é MUTÁVEL e pede tabela
-    própria — improvisá-lo no event log só para não esperar o slot de
-    migration produziria a correção logo depois. Consequência honesta: a
-    metade "dentro o agente é livre" da política de terminal AINDA NÃO mudou
-    — o ADR 0055 continua valendo como está até o container subir de
-    verdade.
+31. NÃO ENTREGUE À ÉPOCA, declarado: ciclo de vida por projeto (provisionar,
+    reciclar, limpar, teto de recursos aplicado de verdade), com o worktree
+    do agente vivendo dentro do container. Estado de container é MUTÁVEL e
+    pedia tabela própria — improvisá-lo no event log só para não esperar o
+    slot de migration produziria a correção logo depois.
+    PARCIALMENTE REVOGADO pela Onda 4/frente F1 do PROGRAMA 28: a TABELA de
+    estado (`project_containers`, ADR 0081) chegou. O que continua faltando,
+    sem atenuar, é a metade que fazia a tabela valer alguma coisa: nenhum
+    orquestrador real chama Docker ainda, e o worktree do agente segue fora
+    do container. A metade "dentro o agente é livre" da política de terminal
+    AINDA NÃO mudou — o ADR 0055 continua valendo como está até o container
+    subir de verdade.
 32. CONCLUÍDO: a fronteira de efeito externo. `git push`, PR e deploy não
     saem pelo terminal — nem dentro do escopo do projeto —, e a regra é
     `deny` (não `require_approval`, por causa do "sempre permitir"), com a
@@ -590,9 +594,12 @@ e RN-106).
     (FASE 25b, que segue cortada — estado vazio honesto na aba), blame,
     lista de PRs dentro da aba (o diff só é alcançável por id
     conhecido, vindo de Aprovações) e painel de Problemas/lint/testes.
-    Virtualização de linha também ficou de fora — o próprio handoff chama a
-    aba de código "a mais custosa do programa"; o teto de 512 KB por arquivo
-    (`GIT_BLOB_MAX_BYTES`) limita o pior caso por ora.
+    Virtualização de linha também ficou de fora à época — o próprio handoff
+    chama a aba de código "a mais custosa do programa"; o teto de 512 KB por
+    arquivo (`GIT_BLOB_MAX_BYTES`) limitava o pior caso até então. FECHADA
+    pela Onda 4/frente E2 do PROGRAMA 28 (RN-239..242): só a janela visível
+    vira nó de DOM, e o minimapa reusa a mesma tokenização sem segundo
+    passe.
 
 ### FASE 26b — CONCLUÍDA: fundação de blame, PRs navegáveis e branch rica
 A fase começou como SÓ a camada de API, e a frase "nenhuma UI" que ficou aqui
@@ -1057,6 +1064,39 @@ membro/RN-101) e nunca mostra o total do projeto — que é dado do owner
 sessão e commit no produto hoje — inventar o cálculo seria a mesma classe
 de erro que o ADR 0042 já recusa para nota de modelo.
 
+## PROGRAMA 28 — Onda 4, frente G2: o Chat RAG ganha pipeline de indexação e busca híbrida (RN-231..238, ADR 0080)
+Sobre a tabela `chunks` da Onda 3 (ADR 0079): indexação MANUAL (sem
+watcher, `POST .../rag/reindex`, full rebuild idempotente — apaga o
+escopo/sessão antes de recriar) dos três escopos honestos — `docs`/`adr`
+via `ReadProjectCodeUseCase` (mesma credencial/portão/checagem de caminho
+da aba Code) e `session` só de `chat.message`/`agent.response`. Chunking
+por heading/parágrafo, 1200 caracteres com 150 de sobreposição —
+documentado como ponto de partida, não calibração contra dado real (não
+existe, ainda, corpo de perguntas rodado contra o índice). Busca híbrida
+é DUAS consultas independentes (vetor via HNSW, léxico via GIN),
+fundidas por soma ponderada (0.6/0.4) e cortadas num limiar (0.2) —
+números também ponto de partida. Quando o provider de embedding (fixo:
+`ollama`) não responde, o pipeline grava os chunks SEM vetor e declara a
+lacuna no relatório — nunca finge indexação completa, e a busca degrada
+para léxico-only avisando. A tela (Chat RAG como aba própria) é da Onda
+5; esta frente é só o backend.
+
+## PROGRAMA 28 — Onda 4, frente F1: ciclo de vida do container vira tabela, sem orquestrador (RN-243..248, ADR 0081)
+Ver item 31 da FASE 25 (PARCIALMENTE REVOGADO): `project_containers`
+(migração `0046`) grava o ESTADO mutável — `provisioning → running ⇄
+stopped`, `failed` alcançável dos três, `removed` só sai reprovisionando
+— distinto de `artifact.project_image` (a DECISÃO imutável do
+Arquiteto). Confirmado por investigação (grep, zero ocorrências):
+NENHUM serviço do produto monta `/var/run/docker.sock` nem roda
+`privileged` — os dois casos de uso só GRAVAM e LEEM, nenhuma chamada
+real a Docker. A primeira transição exige a imagem já decidida (RN-105)
+e CONGELA versão/recursos na linha; projeto `local` (ADR 0072) é
+recusado, porque não sobe container próprio. Teto de recursos
+(`cpus`/`memory_mb`/`pids_limit`) é DECLARADO, não aplicado — nenhuma
+tela afirma "o container está limitado a X", só "a intenção registrada
+era X". Nenhuma rota HTTP nova: sem consumidor real ainda, expor uma
+seria adivinhar contrato.
+
 ## FERRAMENTA DE DESENVOLVIMENTO — `pnpm bootstrap`
 Menu de terminal em `scripts/dev/bootstrap.sh` agrupando o que se faz no
 dia a dia: Docker, K8s, Database e Test. Existe porque esses comandos moram
@@ -1177,11 +1217,12 @@ divide o mesmo banco, recuperar exige `db:migrate` E `engine:migrate`.
   exceto em projeto no modo `local` (RN-169).
   `git push`, abertura de PR e deploy NÃO saem pelo terminal — a regra é
   `deny`, não `require_approval`, mesmo dentro do escopo do projeto e mesmo
-  com "sempre permitir" (RN-106, ADR 0065). O ciclo de vida do container
-  (provisionar, reciclar, limpar) ainda não existe — corte declarado da
-  FASE 25 —, então a política de terminal do ADR 0055 (escopo de caminho,
-  allowlist estreito) segue valendo como está até o container subir de
-  verdade.
+  com "sempre permitir" (RN-106, ADR 0065). O ciclo de vida do container tem
+  TABELA de estado desde a Onda 4/frente F1 do PROGRAMA 28
+  (`project_containers`, ADR 0081, RN-243..248) — mas nenhuma linha dela
+  chama Docker: provisionar/reciclar/limpar DE VERDADE ainda não existe,
+  então a política de terminal do ADR 0055 (escopo de caminho, allowlist
+  estreito) segue valendo como está até o container subir de verdade.
 - O diagrama C4 (Context + Container) também é ARTEFATO do ARQUITETO
   (`artifact.c4_diagram`, versionado, sem tabela — RN-149, ADR 0068),
   mesmo desenho do `artifact.project_image`. O Container level é DERIVADO
