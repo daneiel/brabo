@@ -120,6 +120,7 @@ const sidebars: SidebarsConfig = {
         'explanation/validacao-real',
         'explanation/aceite-providers',
         'explanation/gates',
+        'explanation/auditoria-fluxo-vs-codigo',
       ],
     },
     {
