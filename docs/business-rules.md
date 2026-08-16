@@ -7524,6 +7524,193 @@ o status com um `Badge` (`provisioning`/`running`/`stopped`/`failed`/
   agente vivendo lá dentro), não desta rota de leitura.
 - **ADR:** [0083](adr/0083-terminal-mostra-estado-real-do-container.md)
 
+### RN-272 — O callback do login social decide em ORDEM: identidade conhecida, depois vínculo por e-mail, depois conta nova {#rn-272}
+
+`SocialLoginCallbackUseCase` resolve a identidade do provider em três
+passos, nesta ordem, e nunca fora dela: `(provider, providerUserId)`
+já vinculada → login direto; sem vínculo mas o e-mail bate com uma conta
+existente → decide por [RN-274](#rn-274)/[RN-275](#rn-275); nenhuma das
+duas → provisiona conta nova ([RN-278](#rn-278)). A chave de busca do
+primeiro passo é sempre `providerUserId`, nunca e-mail — evita que trocar
+o e-mail no provider "perca" o vínculo.
+
+- **Onde:** `apps/api/src/application/use-cases/auth/social-login-callback.use-case.ts`
+- **Teste:** `apps/api/test/application/use-cases/auth/social-login-callback.use-case.spec.ts`
+  — os sete casos de `SocialLoginCallbackUseCase`
+- **ADR:** [0084](adr/0084-login-social-github-e-gitlab.md)
+
+### RN-273 — O `state` do login social tem propósito PRÓPRIO, mesmo assinado pela mesma chave do fluxo de conexão de git {#rn-273}
+
+`domain/auth/social-oauth-state.ts` assina com `GIT_OAUTH_STATE_SECRET` —
+a MESMA chave HMAC do `state` de "conectar git ao projeto X"
+(`domain/git/oauth-state.ts`) — mas o payload carrega
+`purpose: 'social_login'`, checado ANTES de qualquer outro campo. Um
+`state` do fluxo de conexão de git, mesmo com assinatura válida, é
+recusado aqui: sem o discriminante, aceitá-lo equivaleria a logar como o
+`userId` de quem iniciou aquela conexão — escalação de privilégio.
+
+- **Onde:** `apps/api/src/domain/auth/social-oauth-state.ts`
+- **Teste:** `apps/api/test/domain/auth/social-oauth-state.spec.ts`
+  — "RN-273: rejeita um state do fluxo de CONEXÃO de git, mesma chave"
+- **ADR:** [0084](adr/0084-login-social-github-e-gitlab.md)
+
+### RN-274 — Vincular identidade social a conta existente exige e-mail VERIFICADO pelo provider {#rn-274}
+
+Quando o e-mail devolvido pelo provider bate com uma conta já cadastrada,
+o vínculo só acontece se o provider marca aquele e-mail como verificado
+(`emailVerified: true`) — GitHub via `GET /user/emails`, GitLab via
+`confirmed_at`. Um e-mail digitado mas não verificado não é prova de
+identidade: qualquer um pode registrar um e-mail alheio num provider
+OAuth. Aceitar o vínculo sem essa checagem abriria account takeover —
+quem já tem `alguem@empresa.com` na Brabo não pediu para um GitHub
+alheio, com aquele endereço só DIGITADO, herdar a conta. A recusa é
+`403`, e nenhum vínculo é gravado.
+
+- **Onde:** `apps/api/src/application/use-cases/auth/social-login-callback.use-case.ts`
+  (`vincularAContaExistente`)
+- **Teste:** `apps/api/test/application/use-cases/auth/social-login-callback.use-case.spec.ts`
+  — "RECUSA vincular quando o e-mail bate mas NÃO está verificado pelo provider"
+- **ADR:** [0084](adr/0084-login-social-github-e-gitlab.md)
+
+### RN-275 — Provisionar conta NOVA não exige e-mail verificado — só vincular a uma existente exige {#rn-275}
+
+A verificação de e-mail da RN-274 protege uma conta que já existe; quando
+não há conta correspondente, não há nada a proteger, só uma conta nova a
+nascer. Exigir e-mail verificado nesse caso encareceria o caminho comum
+(a maioria dos usuários de GitHub tem e-mail verificado, mas nem todos, e
+recusar o login por isso seria atrito sem ganho de segurança
+correspondente) sem reduzir risco nenhum — o pior caso é uma conta nova
+com um e-mail não comprovado, o mesmo risco que o registro por senha já
+aceita implicitamente até o clique no link de verificação.
+
+- **Onde:** `apps/api/src/application/use-cases/auth/social-login-callback.use-case.ts`
+  (`provisionarContaNova`)
+- **Teste:** `apps/api/test/application/use-cases/auth/social-login-callback.use-case.spec.ts`
+  — "provisiona conta nova mesmo com e-mail NÃO verificado"
+- **ADR:** [0084](adr/0084-login-social-github-e-gitlab.md)
+
+### RN-276 — `providerUserId`, nunca e-mail ou login, é a chave de identidade social {#rn-276}
+
+`social_identities` tem índice único em `(provider, provider_user_id)` —
+o id NUMÉRICO e estável do provider. E-mail e login (username) podem
+mudar de dono ou de valor no provider sem aviso; usá-los como chave
+faria uma troca de e-mail no GitHub "perder" o vínculo de quem já tinha
+conta, ou pior, herdar silenciosamente o vínculo de outra pessoa que
+reusou aquele endereço depois.
+
+- **Onde:** `apps/api/src/db/migrations/0047_complete_hannibal_king.sql`,
+  `apps/api/src/application/ports/social-identity-repository.port.ts`
+- **Teste:** `apps/api/test/application/use-cases/auth/social-login-callback.use-case.spec.ts`
+  — "identidade já conhecida: login direto, sem criar segunda linha"
+- **ADR:** [0084](adr/0084-login-social-github-e-gitlab.md)
+
+### RN-277 — Login social pede escopo MÍNIMO, nunca o de conexão de repositório {#rn-277}
+
+`buildLoginAuthorizeUrl` pede `read:user user:email` (GitHub) e
+`read_user` (GitLab) — nunca o `repo`/`api` que o fluxo de CONEXÃO de git
+pede. Entrar na conta não deveria conceder acesso a repositório nenhum;
+os dois fluxos reusam o MESMO app OAuth (RN-281) mas pedem autorizações
+diferentes, decididas na hora da autorização, não na configuração do app.
+
+- **Onde:** `apps/api/src/infrastructure/git/github-oauth-client.ts`,
+  `apps/api/src/infrastructure/git/gitlab-oauth-client.ts`
+  (`buildLoginAuthorizeUrl`)
+- **Teste:** `apps/api/test/application/use-cases/auth/social-login-callback.use-case.spec.ts`
+  — "StartSocialLoginUseCase › caminho feliz"
+- **ADR:** [0084](adr/0084-login-social-github-e-gitlab.md)
+
+### RN-278 — Conta provisionada por login social nasce SEM senha — mesmo estado "pendente" da migração do Keycloak {#rn-278}
+
+Provisionar por login social grava uma linha em `users` e NENHUMA em
+`auth_credentials` — o mesmo par que a migração do Keycloak já deixava
+para "conta sem senha ainda" (ver RN-032 e `migracao-keycloak.spec.ts`).
+`LoginUseCase` e `ResetPasswordUseCase` já tratam esse estado; não foi
+necessário um segundo mecanismo de "senha pendente" para o login social.
+
+- **Onde:** `apps/api/src/application/ports/auth-credential-repository.port.ts`
+  (`criarUsuarioSemCredencial`),
+  `apps/api/src/infrastructure/persistence/drizzle/auth-credential.repository.ts`
+- **Teste:** `apps/api/test/application/use-cases/auth/social-login-callback.use-case.spec.ts`
+  — "caminho feliz: provisiona um usuário NOVO, sem senha (RN-278)"
+- **ADR:** [0084](adr/0084-login-social-github-e-gitlab.md)
+
+### RN-279 — Vincular por e-mail verificado também verifica o e-mail da conta existente {#rn-279}
+
+Quando uma conta registrada por senha (e nunca verificada) é vinculada a
+uma identidade social cujo e-mail o provider marca como verificado, a
+conta ganha `emailVerifiedAt` preenchido como efeito colateral. O
+provider acabou de provar, por um caminho independente, exatamente o que
+o clique no link de verificação provaria — não faz sentido a conta
+continuar bloqueada do login por senha (RN-032) depois de provar posse
+do e-mail por outro caminho igualmente forte.
+
+- **Onde:** `apps/api/src/application/use-cases/auth/social-login-callback.use-case.ts`
+  (`vincularAContaExistente`)
+- **Teste:** `apps/api/test/application/use-cases/auth/social-login-callback.use-case.spec.ts`
+  — "vincula a conta existente (…) e marca o e-mail dela como verificado (RN-274/279)"
+- **ADR:** [0084](adr/0084-login-social-github-e-gitlab.md)
+
+### RN-280 — Login social recusa conta DESABILITADA, mesma régua do login por senha {#rn-280}
+
+Identidade social vinculada a uma conta com `auth_credentials.disabled_at`
+preenchido é recusada com `403`, tanto no login direto (identidade já
+conhecida) quanto na tentativa de vincular. Desabilitar uma conta não
+pode ser contornado trocando de método de entrada.
+
+- **Onde:** `apps/api/src/application/use-cases/auth/social-login-callback.use-case.ts`
+  (`entrarComIdentidadeConhecida`, `vincularAContaExistente`)
+- **Teste:** `apps/api/test/application/use-cases/auth/social-login-callback.use-case.spec.ts`
+  — "recusa login de identidade vinculada a conta DESABILITADA"
+- **ADR:** [0084](adr/0084-login-social-github-e-gitlab.md)
+
+### RN-281 — O login social reusa o MESMO app OAuth da conexão de git — sem variável de ambiente nova {#rn-281}
+
+`GITHUB_OAUTH_CLIENT_ID`/`_SECRET` e `GITLAB_OAUTH_CLIENT_ID`/`_SECRET`
+continuam sendo os únicos client id/secret cadastrados. O que muda por
+fluxo é o `redirect_uri` (`/auth/oauth/<provider>/callback` contra
+`/git/oauth/<provider>/callback`) e o `scope` (RN-277) — os dois
+decididos em tempo de requisição. Ação do OPERADOR continua necessária
+(cadastrar o segundo callback URL no app de cada provider), documentada
+em `.env.example` — é essa exigência, não uma env var nova, que justifica
+o branch nascer `breaking/`.
+
+- **Onde:** `.env.example`,
+  `apps/api/src/application/use-cases/auth/start-social-login.use-case.ts`
+- **Teste:** manual (cadastro no app OAuth) — não há como testar
+  automaticamente uma configuração externa ao produto
+- **ADR:** [0084](adr/0084-login-social-github-e-gitlab.md)
+
+### RN-282 — O access token do login social nunca viaja na URL nem no corpo do callback {#rn-282}
+
+`GET /auth/oauth/:provider/callback` grava os cookies de sessão
+(`definirCookiesDeSessao`, a MESMA função do login por senha) e
+redireciona para `WEB_ORIGIN/`. O boot da web (`restaurarSessao()`,
+chamado em toda carga de página) troca o refresh recém-gravado por um
+access token — nenhum código novo do lado do cliente além dos botões e o
+alias de rota de erro.
+
+- **Onde:** `apps/api/src/interfaces/http/auth/auth.controller.ts`
+  (`oauthCallback`)
+- **Teste:** `apps/api/test/interfaces/route-surface.spec.ts` — cobre a
+  classificação pública e os metadados OpenAPI da rota; o fluxo completo
+  de cookie→boot é E2E, fora do escopo de teste de unidade
+- **ADR:** [0084](adr/0084-login-social-github-e-gitlab.md)
+
+### RN-283 — Falha do callback de login social não vaza o motivo na URL {#rn-283}
+
+Qualquer falha (`state` inválido, code rejeitado pelo provider, conta
+desabilitada, e-mail não verificado) redireciona para
+`WEB_ORIGIN/login?oauth_error=1` — um único sinal genérico, nunca o
+motivo real. Mesmo padrão do callback de conexão de git
+(`WEB_ORIGIN/git-error`).
+
+- **Onde:** `apps/api/src/interfaces/http/auth/auth.controller.ts`
+  (`oauthCallback`, bloco `catch`)
+- **Teste:** `apps/api/test/application/use-cases/auth/social-login-callback.use-case.spec.ts`
+  — cobre os desfechos de falha que o controller mapeia para o mesmo
+  redirect genérico
+- **ADR:** [0084](adr/0084-login-social-github-e-gitlab.md)
+
 ---
 
 ## Quando dá errado
@@ -7547,6 +7734,8 @@ o status com um `Badge` (`provisioning`/`running`/`stopped`/`failed`/
 | Preço do modelo muda | vale daqui em diante; o custo gravado e o preço que o produziu ficam intocados (RN-042) |
 | Criar o handoff falha (Criativo→PO, Arquiteto→Infra/Dev Lead) | `agent.error` durável, o processo do agente CONTINUA vivo; o que já foi gravado antes (product_brief, regras) não se perde (RN-116) |
 | Caminho de projeto **Local** não montado no container | a criação é **recusada** (400) com a linha de compose a acrescentar — o projeto não nasce para travar depois (RN-170) |
+| Login social: e-mail do provider bate com conta existente mas NÃO verificado | recusado com 403, nenhum vínculo gravado — e-mail não verificado não é prova de identidade (RN-274) |
+| Login social: `state` inválido/expirado, ou de outro PROPÓSITO (fluxo de conexão de git) | recusado, nenhuma chamada ao provider nem escrita no banco (RN-273) |
 
 > **TODO(humano):** as RNs acima foram extraídas do código e dos testes. Falta
 > confirmar se existe regra de negócio **não implementada** que deveria estar

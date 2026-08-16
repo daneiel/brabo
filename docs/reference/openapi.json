@@ -82,6 +82,101 @@
         ]
       }
     },
+    "/auth/oauth/{provider}/callback": {
+      "get": {
+        "description": "Sucesso vai para `WEB_ORIGIN/` já com os cookies de sessão gravados; falha vai para `WEB_ORIGIN/login?oauth_error=1`, sem detalhar o motivo.",
+        "operationId": "AuthController_oauthCallback",
+        "parameters": [
+          {
+            "name": "provider",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "enum": [
+                "github",
+                "gitlab"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "code",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Redireciona para a web.",
+            "headers": {
+              "Location": {
+                "description": "Destino na web.",
+                "schema": {
+                  "type": "string",
+                  "example": "http://localhost:5173/"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Recebe o retorno do OAuth de login social",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/oauth/{provider}/start": {
+      "get": {
+        "description": "O `state` vai assinado por HMAC com propósito PRÓPRIO — nunca o do fluxo de conexão de git a um projeto (ver ADR 0084).",
+        "operationId": "AuthController_oauthStart",
+        "parameters": [
+          {
+            "name": "provider",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "enum": [
+                "github",
+                "gitlab"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Redireciona para o provider.",
+            "headers": {
+              "Location": {
+                "description": "URL de autorização do provider.",
+                "schema": {
+                  "type": "string",
+                  "example": "https://github.com/login/oauth/authorize?…"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Provider fora de `github`/`gitlab`."
+          }
+        },
+        "summary": "Redireciona para o provider OAuth para login social",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/auth/refresh": {
       "post": {
         "description": "O refresh apresentado é consumido. Reapresentar um token já rotacionado revoga a FAMÍLIA inteira e registra evento de segurança — inclusive quando a causa foi um duplo-submit do cliente.",

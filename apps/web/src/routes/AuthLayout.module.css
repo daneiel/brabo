@@ -27,8 +27,11 @@
  * O padding vertical da página é 32px (`--space-5`), não os 40px do handoff —
  * 40 não é token, e a diferença só aparece em viewport curta.
  *
- * As outras divergências (sem botão do GitHub, sem "N agentes online") estão no
- * ADR 0036 e seguem valendo: as duas são COMPORTAMENTO, não pintura.
+ * A divergência "sem botão do GitHub" do ADR 0036 FECHOU com o login social
+ * (ADR 0084) — `.divisor`/`.botaoSocial` abaixo seguem o mock (`Brabo
+ * Login.dc.html`), com GitLab somado ao lado do GitHub que o mock desenhava
+ * sozinho. "Sem 'N agentes online'" segue valendo: continua sendo dado
+ * dinâmico pré-autenticação que exigiria rota pública própria.
  */
 
 .tela {
@@ -188,6 +191,76 @@
 /* O submit encosta um fio abaixo do último campo, como no mock. */
 .acoes {
   margin-top: 2px;
+}
+
+/*
+ * Divisor "ou" entre o submit e os botões de login social (ADR 0084) —
+ * existe só enquanto houver um botão social depois dele; a lição do ADR 0036
+ * (item "consequência derivada da nº 1") era o inverso: sem botão nenhum, o
+ * divisor saía junto, porque um "ou" apontando para nada é pior que a
+ * assimetria.
+ */
+.divisor {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 2px 0;
+}
+
+.linhaDivisor {
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.textoDivisor {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.botoesSociais {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/*
+ * `<a>`, não `<button>`: é navegação de página inteira para
+ * `GET /auth/oauth/:provider/start`, que redireciona 302 direto pro
+ * provider — sem `fetch`, sem estado de carregamento (o próprio browser
+ * mostra o progresso da navegação).
+ */
+.botaoSocial {
+  height: 42px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 13.5px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  text-decoration: none;
+  transition:
+    border-color 0.12s,
+    background 0.12s;
+}
+
+.botaoSocial:hover {
+  background: var(--border);
+  border-color: var(--text-muted);
+}
+
+.botaoSocial:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 /*

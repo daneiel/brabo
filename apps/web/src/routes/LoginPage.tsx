@@ -2,6 +2,8 @@ import { useState, type FormEvent } from 'react';
 import { Alert } from '../components/ui/Alert';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { GitHubIcon, GitLabIcon } from '../components/ui/icons';
+import { runtimeConfig } from '../lib/runtime-config';
 import { AuthLayout } from './AuthLayout';
 import styles from './AuthLayout.module.css';
 
@@ -11,6 +13,13 @@ interface LoginPageProps {
     senha: string,
   ) => Promise<{ ok: true } | { ok: false; status: number }>;
   irPara: (rota: string) => void;
+  /**
+   * `true` quando a página abriu vinda de `?oauth_error=1` — o callback de
+   * login social (ADR 0084) redireciona para cá em QUALQUER falha, sem
+   * detalhar o motivo na URL (RN-283), pelo mesmo raciocínio da RN-032: o
+   * 401 uniforme do login por senha.
+   */
+  erroOAuth?: boolean;
 }
 
 /**
@@ -46,10 +55,14 @@ interface LoginPageProps {
  * dois como inválidos afirmaria mais do que se sabe. O erro é do formulário, e é
  * onde ele aparece.
  */
-export function LoginPage({ onEntrar, irPara }: LoginPageProps) {
+export function LoginPage({ onEntrar, irPara, erroOAuth }: LoginPageProps) {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
-  const [erro, setErro] = useState<string | null>(null);
+  const [erro, setErro] = useState<string | null>(
+    erroOAuth
+      ? 'Não foi possível concluir o login social. Tente de novo ou entre com e-mail e senha.'
+      : null,
+  );
   const [enviando, setEnviando] = useState(false);
 
   async function submeter(evento: FormEvent) {
@@ -140,6 +153,29 @@ export function LoginPage({ onEntrar, irPara }: LoginPageProps) {
           <Button type="submit" fullWidth size="lg" loading={enviando}>
             {enviando ? 'Autenticando…' : 'Entrar'}
           </Button>
+        </div>
+
+        <div className={styles.divisor}>
+          <span className={styles.linhaDivisor} aria-hidden="true" />
+          <span className={styles.textoDivisor}>ou</span>
+          <span className={styles.linhaDivisor} aria-hidden="true" />
+        </div>
+
+        <div className={styles.botoesSociais}>
+          <a
+            className={styles.botaoSocial}
+            href={`${runtimeConfig.apiUrl}/auth/oauth/github/start`}
+          >
+            <GitHubIcon size={17} />
+            Continuar com GitHub
+          </a>
+          <a
+            className={styles.botaoSocial}
+            href={`${runtimeConfig.apiUrl}/auth/oauth/gitlab/start`}
+          >
+            <GitLabIcon size={17} />
+            Continuar com GitLab
+          </a>
         </div>
       </form>
     </AuthLayout>

@@ -1,0 +1,69 @@
+---
+id: auth-controller-oauth-start
+title: "Redireciona para o provider OAuth para login social"
+description: "O `state` vai assinado por HMAC com propósito PRÓPRIO — nunca o do fluxo de conexão de git a um projeto (ver ADR 0084)."
+sidebar_label: "Redireciona para o provider OAuth para login social"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "get api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Redireciona para o provider OAuth para login social"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/auth/oauth/{provider}/start"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+O `state` vai assinado por HMAC com propósito PRÓPRIO — nunca o do fluxo de conexão de git a um projeto (ver ADR 0084).
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./auth-controller-oauth-start.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./auth-controller-oauth-start.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./auth-controller-oauth-start.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

@@ -30,6 +30,18 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/auth-controller-oauth-callback",
+          label: "Recebe o retorno do OAuth de login social",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/auth-controller-oauth-start",
+          label: "Redireciona para o provider OAuth para login social",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/auth-controller-refresh",
           label: "Rotaciona o refresh e emite um par novo",
           className: "api-method post",
