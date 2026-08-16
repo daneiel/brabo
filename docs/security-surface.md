@@ -165,6 +165,13 @@ o componente `d` da JWK, travado por teste.
   volta a ser o que a FASE 14d quis: **ler** o teto é trabalho de quem executa;
   **mudá-lo** é decidir quanto o produto gasta sem perguntar, e por isso exige
   o mesmo papel de ativar a execução.
+- **As três rotas `/projects/:projectId/rag/*` dividem o papel pelo mesmo
+  critério do teto de paralelismo de área (RN-083)** (PROGRAMA 28, Onda 4 —
+  RN-231..234, ADR 0080): `search` e `coverage` são `role:viewer` (leitura
+  pura sobre o que já está indexado), e `reindex` é `role:maintainer` — ele
+  dispara N chamadas ao repositório do projeto e ao provider de embedding, o
+  mesmo "muda o que o produto gasta sem perguntar" que já justifica o papel
+  mais alto em outras rotas de disparo caro.
 - **As quatro rotas `/projects/:projectId/code/*` são `role:viewer` e SÓ
   LEITURA** (FASE 26b). Ver o código do projeto é a mesma permissão que ver o
   projeto — o mesmo corte de `GET /projects/:id/git/repository`. Três coisas
@@ -373,6 +380,9 @@ o componente `d` da JWK, travado por teste.
 | GET | `/projects/:projectId/code/pull-requests/:pullRequestId/diff` | role:viewer |
 | GET | `/projects/:projectId/code/search` | role:viewer |
 | GET | `/projects/:projectId/code/tree` | role:viewer |
+| POST | `/projects/:projectId/rag/search` | role:viewer |
+| POST | `/projects/:projectId/rag/reindex` | role:maintainer |
+| GET | `/projects/:projectId/rag/coverage` | role:viewer |
 | GET | `/projects/:projectId/container` | role:viewer |
 | GET | `/projects/:projectId/coverage` | role:viewer |
 | GET | `/projects/:projectId/events/:eventId` | role:viewer |

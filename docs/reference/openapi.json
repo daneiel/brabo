@@ -5759,6 +5759,166 @@
         ]
       }
     },
+    "/projects/{projectId}/rag/coverage": {
+      "get": {
+        "description": "Contagem real (nunca estimada) de arquivos `.md` de `docs`/`docs/adr` no repositório do projeto contra quantos têm chunk, e sessões do projeto contra quantas têm chunk. Não inclui \"há N minutos\" — não há coluna de timestamp de indexação por escopo, e um número chutado mentiria (mesma régua do ADR 0042 para nota de modelo).",
+        "operationId": "RagController_obterCobertura",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RagCoverageResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cobertura do índice: arquivos/sessões indexados contra o total real",
+        "tags": [
+          "rag"
+        ]
+      }
+    },
+    "/projects/{projectId}/rag/reindex": {
+      "post": {
+        "description": "\"Reindexar agora\" do painel do Chat RAG. Apaga e recria os chunks dos três escopos honestos (RN-219) a partir do estado ATUAL — não há watcher automático por push/fechamento de sessão (decisão registrada no ADR 0079/0080). Pode demorar em projetos com muitas sessões: roda uma indexação por sessão, cada uma podendo chamar o provider de embedding em lote.",
+        "operationId": "RagController_reindexar",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReindexProjectResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reindexa docs/ADR/sessões do projeto (full rebuild idempotente)",
+        "tags": [
+          "rag"
+        ]
+      }
+    },
+    "/projects/{projectId}/rag/search": {
+      "post": {
+        "description": "Combina similaridade de cosseno (pgvector) com `ts_rank` léxico (tsvector), cada um por uma consulta independente, fundidas por soma ponderada e cortadas pelo limiar (ADR 0080). `vectorAvailable: false` avisa quando o provider de embedding não respondeu e a busca rodou só com o sinal léxico — nunca finge ter rodado o híbrido completo.",
+        "operationId": "RagController_buscar",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HybridSearchRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HybridSearchResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Busca híbrida (vetor + léxico) nos chunks indexados do projeto",
+        "tags": [
+          "rag"
+        ]
+      }
+    },
     "/projects/{projectId}/sessions": {
       "get": {
         "operationId": "SessionsController_list",
@@ -12652,6 +12812,109 @@
           "timestamp"
         ]
       },
+      "HybridSearchHitResponseDto": {
+        "type": "object",
+        "properties": {
+          "chunkId": {
+            "type": "string"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "docs",
+              "adr",
+              "session"
+            ]
+          },
+          "content": {
+            "type": "string"
+          },
+          "score": {
+            "type": "number",
+            "description": "Combinado (RAG_SEARCH_WEIGHT_VECTOR*vetor + RAG_SEARCH_WEIGHT_LEXICAL*léxico), já filtrado pelo limiar — todo hit devolvido passou dele."
+          },
+          "vectorScore": {
+            "type": "number",
+            "nullable": true,
+            "description": "Similaridade de cosseno, 0..1. `null` quando este chunk não tinha vetor."
+          },
+          "lexicalScore": {
+            "type": "number",
+            "nullable": true,
+            "description": "`ts_rank` normalizado, 0..1. `null` quando o termo não casou neste chunk."
+          },
+          "origin": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "União discriminada por `kind`: \"file\" (`sourcePath`/`headingPath`) ou \"session\" (`sessionId`/`eventId`). Ver `domain/rag/rag-citation.ts`."
+          }
+        },
+        "required": [
+          "chunkId",
+          "scope",
+          "content",
+          "score",
+          "vectorScore",
+          "lexicalScore",
+          "origin"
+        ]
+      },
+      "HybridSearchRequestDto": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "example": "como funciona o gate de PR",
+            "description": "Entre 2 e 500 caracteres — mesma régua da busca da aba Code."
+          },
+          "scopes": {
+            "type": "array",
+            "description": "Ausente busca nos três escopos (RN-219).",
+            "items": {
+              "type": "string",
+              "enum": [
+                "docs",
+                "adr",
+                "session"
+              ]
+            }
+          },
+          "limit": {
+            "type": "number",
+            "example": 10,
+            "description": "1 a 10 — ausente usa o teto."
+          }
+        },
+        "required": [
+          "query"
+        ]
+      },
+      "HybridSearchResponseDto": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string"
+          },
+          "hits": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HybridSearchHitResponseDto"
+            }
+          },
+          "vectorAvailable": {
+            "type": "boolean",
+            "description": "`false` quando o provider de embedding não respondeu — a busca rodou só com o sinal léxico (RN-233)."
+          },
+          "vectorUnavailableReason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "query",
+          "hits",
+          "vectorAvailable"
+        ]
+      },
       "HypothesisDraftDto": {
         "type": "object",
         "properties": {
@@ -12857,6 +13120,55 @@
         "required": [
           "decisao",
           "version"
+        ]
+      },
+      "IndexDocsReportResponseDto": {
+        "type": "object",
+        "properties": {
+          "filesScanned": {
+            "type": "number"
+          },
+          "docsChunks": {
+            "type": "number"
+          },
+          "adrChunks": {
+            "type": "number"
+          },
+          "truncated": {
+            "type": "boolean"
+          },
+          "embedding": {
+            "$ref": "#/components/schemas/IndexEmbeddingResponseDto"
+          }
+        },
+        "required": [
+          "filesScanned",
+          "docsChunks",
+          "adrChunks",
+          "truncated",
+          "embedding"
+        ]
+      },
+      "IndexEmbeddingResponseDto": {
+        "type": "object",
+        "properties": {
+          "available": {
+            "type": "boolean"
+          },
+          "embedded": {
+            "type": "number"
+          },
+          "skipped": {
+            "type": "number"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "available",
+          "embedded",
+          "skipped"
         ]
       },
       "InfraArtifactResponseDto": {
@@ -15234,6 +15546,67 @@
           "priorHypotheses"
         ]
       },
+      "RagCoverageResponseDto": {
+        "type": "object",
+        "properties": {
+          "docs": {
+            "$ref": "#/components/schemas/RagFileCoverageResponseDto"
+          },
+          "adr": {
+            "$ref": "#/components/schemas/RagFileCoverageResponseDto"
+          },
+          "session": {
+            "$ref": "#/components/schemas/RagSessionCoverageResponseDto"
+          },
+          "chunksTotal": {
+            "type": "number"
+          },
+          "chunksWithoutVector": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "docs",
+          "adr",
+          "session",
+          "chunksTotal",
+          "chunksWithoutVector"
+        ]
+      },
+      "RagFileCoverageResponseDto": {
+        "type": "object",
+        "properties": {
+          "filesInRepo": {
+            "type": "number"
+          },
+          "filesIndexed": {
+            "type": "number"
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "filesInRepo",
+          "filesIndexed",
+          "truncated"
+        ]
+      },
+      "RagSessionCoverageResponseDto": {
+        "type": "object",
+        "properties": {
+          "sessionsInProject": {
+            "type": "number"
+          },
+          "sessionsIndexed": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "sessionsInProject",
+          "sessionsIndexed"
+        ]
+      },
       "ReconhecerFalhaDeProtecaoResponseDto": {
         "type": "object",
         "properties": {
@@ -15558,6 +15931,47 @@
         "required": [
           "provider",
           "token"
+        ]
+      },
+      "ReindexProjectResponseDto": {
+        "type": "object",
+        "properties": {
+          "docs": {
+            "$ref": "#/components/schemas/IndexDocsReportResponseDto"
+          },
+          "sessions": {
+            "$ref": "#/components/schemas/ReindexSessionsResponseDto"
+          },
+          "embeddingAvailable": {
+            "type": "boolean"
+          },
+          "embeddingReason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "docs",
+          "sessions",
+          "embeddingAvailable"
+        ]
+      },
+      "ReindexSessionsResponseDto": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number"
+          },
+          "indexed": {
+            "type": "number"
+          },
+          "chunksCreated": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "total",
+          "indexed",
+          "chunksCreated"
         ]
       },
       "RenameSessionDto": {
