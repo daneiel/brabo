@@ -228,4 +228,33 @@ describe('abas do projeto derivam de um registro só', () => {
     // E as abas sem contador declarado nunca ganham selo.
     expect(screen.getByRole('tab', { name: 'Configurações' })).toBeInTheDocument();
   });
+
+  /**
+   * RN-203 (ADR 0078) — o handoff do PROGRAMA 28 prevê 7 abas; este registro
+   * tem 10. As 3 a mais nasceram DEPOIS do handoff, com dado real e RN
+   * própria — o handoff é referência de fidelidade visual, não teto de
+   * produto. Este teste é o que faria a régua encolher de volta para 7 se
+   * alguém "arrumasse" o registro contra o handoff sem ler o ADR.
+   */
+  it('RN-203 — as 3 abas que o handoff não previu continuam no registro', () => {
+    expect(ABAS_DO_PROJETO).toHaveLength(10);
+    const chaves = ABAS_DO_PROJETO.map((aba) => aba.key);
+    expect(chaves).toEqual(
+      expect.arrayContaining(['executores', 'backlog', 'insights']),
+    );
+  });
+
+  /**
+   * RN-202 (ADR 0078) — "Chat RAG" é uma tela que ainda não existe (sem
+   * pipeline de indexação, sem UI de citação). Renomear a aba `sessions`
+   * agora anunciaria uma capacidade que o produto não tem. Este teste é o
+   * que quebraria se alguém seguisse o handoff ao pé da letra sem checar o
+   * ADR.
+   */
+  it('RN-202 — a aba `sessions` continua "Chat", nunca "Chat RAG"', async () => {
+    montar();
+
+    expect(await screen.findByRole('tab', { name: 'Chat' })).toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: /Chat RAG/ })).toBeNull();
+  });
 });

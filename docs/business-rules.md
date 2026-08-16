@@ -6690,6 +6690,52 @@ persistido — por isso o estado anterior volta sozinho ao sair do Código.
   "useAutoCollapseSidebar", "projeto e aba ativos")
 - **Origem:** PROGRAMA 28, Onda 2, frente B —
   `design_handoff_brabo/CHECKLIST-CONFRONTO.md` seção 1, "Auto-collapse"
+### RN-202 — A aba `sessions` continua "Chat", nunca "Chat RAG" {#rn-202}
+
+O handoff de design mais recente do PROGRAMA 28 chama a aba consultiva de
+"Chat RAG" (`designs/Brabo Chat.dc.html`), mas o produto não tem essa
+funcionalidade: não há pipeline de indexação por projeto, não há índice
+vetorial, não há UI de citação de fonte. O ADR 0075 pôs `embed` no contrato de
+`LLMProvider` — a operação existe e é PROVADA no Ollama —, mas nada ainda a
+CONSOME. A aba `sessions` de hoje é o Chat consultivo comum da
+[RN-104](#rn-104): um agente respondendo com o contexto da sessão, sem
+produzir backlog, sem RAG nenhum por trás.
+
+Rotular a aba "Chat RAG" hoje anunciaria uma capacidade que não existe — o
+mesmo erro que o [ADR 0042](adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md)
+já recusa para modelo de catálogo ("não ativar modelo descoberto
+automaticamente"). O rótulo muda no dia em que a funcionalidade chegar, junto
+com o dado por trás dele — nunca antes.
+
+- **Onde:** `apps/web/src/routes/project-tabs.ts:144` (entrada `key:
+  'sessions'`)
+- **Teste:** `apps/web/src/routes/project-tabs.test.tsx` (describe "abas do
+  projeto derivam de um registro só", `'RN-202 — a aba \`sessions\` continua
+  "Chat", nunca "Chat RAG"'`)
+- **ADR:** [0078](adr/0078-moldura-de-tela-e-o-registro-de-abas-diverge-do-handoff.md)
+
+### RN-203 — O handoff é referência visual, não teto de quantas abas o produto tem {#rn-203}
+
+O handoff de design lista 7 abas de projeto (Visão geral, Criativo, Código,
+Chat RAG, Gastos, Aprovações, Configurações); o registro
+(`apps/web/src/routes/project-tabs.ts`) tem 10. As três a mais —
+`executores` ([RN-121](#rn-121)), `backlog` ([RN-048](#rn-048)) e
+`insights` (hipóteses do Psicólogo aguardando decisão) — nasceram DEPOIS do
+handoff ser desenhado, todas com dado real, contador derivado de consulta e
+pelo menos uma RN própria com teste.
+
+O handoff fixa como cada tela deve se PARECER — cores, tipografia,
+espaçamento, o desenho da moldura —, e essa parte foi seguida à risca nesta
+mesma mudança (header, régua, rolagem, largura do conteúdo). Ele não congela o
+inventário de abas no dia em que foi escrito. Apagar as três para "bater" com
+o handoff destruiria informação que o produto já sabia mostrar, pelo motivo
+errado.
+
+- **Onde:** `apps/web/src/routes/project-tabs.ts:91` (o `REGISTRO`)
+- **Teste:** `apps/web/src/routes/project-tabs.test.tsx` (describe "abas do
+  projeto derivam de um registro só", `'RN-203 — as 3 abas que o handoff não
+  previu continuam no registro'`)
+- **ADR:** [0078](adr/0078-moldura-de-tela-e-o-registro-de-abas-diverge-do-handoff.md)
 ### RN-210 — "Recomendado" é uso real e custo, nunca nota calculada {#rn-210}
 
 O bloco "Melhores modelos por capacidade" (Configurações) não tem coluna de
