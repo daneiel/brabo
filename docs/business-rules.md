@@ -6760,6 +6760,132 @@ coluna Origem de `ModelsSection` já usa para o binding pulado.
   (describe "MelhoresModelosPorCapacidadeSection")
 - **ADR:** [0077](adr/0077-ranking-de-modelos-por-capacidade-sem-nota-inventada.md)
 
+### RN-219 — Os três escopos do índice de chunks são honestos, e mutuamente exclusivos por CHECK {#rn-219}
+
+O índice do Chat RAG cobre só três fontes de texto que o produto já sabe de
+onde vieram: `docs`, `adr` e `session`. Código-fonte e Pull Requests ficam
+de fora de propósito — indexá-los sem um watcher de reindexação a cada
+`push` faria o índice mentir sobre cobertura, a mesma classe de erro que o
+ADR 0042 já recusa para capability de modelo. `session_id`/`source_path`
+são mutuamente exclusivos por CHECK, não por convenção de aplicação, mesmo
+padrão de `projects.workspace_mode`/`workspace_path` (ADR 0072): `scope =
+'session'` exige `session_id` e recusa `source_path`; `docs`/`adr` exigem
+`source_path` e recusam `session_id`. A trava fica no banco porque quem vai
+escrever esta tabela é um pipeline (Onda 4) que não necessariamente passa
+pelo mesmo caso de uso toda vez.
+
+- **Onde:** `apps/api/src/db/schema.ts` (`chunkScopeEnum` e os dois CHECK
+  da tabela `chunks`)
+- **Teste:** `apps/api/test/infrastructure/persistence/chunk.repository.spec.ts`
+  ("recusa chunk de docs sem source_path — o CHECK da migração 0045, não
+  validação de aplicação")
+- **ADR:** [0079](adr/0079-tabela-de-chunks-vetor-e-tsvector-juntos.md)
+
+### RN-220 — Vetor e busca léxica vivem na mesma linha, nunca em tabelas separadas {#rn-220}
+
+`chunks.embedding` (pgvector) e `chunks.search_vector` (tsvector) são
+colunas irmãs da MESMA tabela, não duas tabelas ligadas por `chunk_id`.
+Separar exigiria um JOIN em toda busca híbrida (Onda 4) e abriria espaço
+para as duas divergirem — um trecho com vetor mas sem entrada léxica, ou
+vice-versa — sem nenhum mecanismo do banco impedindo. Uma linha, uma fonte
+de verdade para as duas metades da busca.
+
+- **Onde:** `apps/api/src/db/schema.ts` (tabela `chunks`)
+- **Teste:** `apps/api/test/infrastructure/persistence/chunk.repository.spec.ts`
+  (as três specs escrevem e leem as duas colunas na mesma linha)
+- **ADR:** [0079](adr/0079-tabela-de-chunks-vetor-e-tsvector-juntos.md)
+
+### RN-221 — `search_vector` nunca é escrita pela aplicação — é coluna GENERATED {#rn-221}
+
+`search_vector` é `GENERATED ALWAYS AS (to_tsvector('portuguese', content))
+STORED`. Nenhum caso de uso, repositório ou script escreve nela — o
+Postgres a mantém coerente com `content` por construção, pronta na mesma
+transação do `INSERT`, sem depender de nenhum provider de LLM responder
+(diferente de `embedding`, que só chega quando um pipeline de indexação
+existir).
+
+- **Onde:** `apps/api/src/db/schema.ts` (coluna `search_vector`)
+- **Teste:** `apps/api/test/infrastructure/persistence/chunk.repository.spec.ts`
+  ("grava um chunk de docs com vetor e devolve o search_vector gerado pela
+  GENERATED ALWAYS AS")
+- **ADR:** [0079](adr/0079-tabela-de-chunks-vetor-e-tsvector-juntos.md)
+
+### RN-222 — A dimensão do vetor é documentada, não adivinhada, e `embedding` chega depois do chunk {#rn-222}
+
+`chunks.embedding` é `vector(768)` — a dimensão real do `nomic-embed-text`
+do Ollama, o único provider que hoje declara `capabilities.embeddings:
+true` (RN-191, ADR 0075). Um índice vetorial tem dimensão FIXA: trocar de
+modelo de embedding no futuro é migração nova, nunca parâmetro de runtime.
+A coluna é NULLABLE: esta tabela guarda o CHUNK (texto recortado), e o
+VETOR pode chegar depois via um pipeline de indexação assíncrono que ainda
+não existe (Onda 4) — sem isso, chunking teria que esperar embedding,
+misturando duas falhas de natureza diferente (parsing de documento contra
+chamada de rede a um provider) numa escrita atômica só.
+
+- **Onde:** `apps/api/src/db/schema.ts` (coluna `embedding`)
+- **Teste:** `apps/api/test/infrastructure/persistence/chunk.repository.spec.ts`
+  ("grava um chunk de docs com vetor..." grava com `embedding` preenchido;
+  as outras duas specs gravam sem ele, confirmando a nulabilidade)
+- **ADR:** [0079](adr/0079-tabela-de-chunks-vetor-e-tsvector-juntos.md); [RN-191](#rn-191)
+
+### RN-223 — O índice vetorial é HNSW, não IVFFlat, porque a tabela nasce vazia {#rn-223}
+
+IVFFlat precisa de linhas já carregadas para treinar as listas (`lists`) e
+fica ruim se construído sobre tabela vazia — que é exatamente o estado
+desta tabela ao nascer, sem pipeline de indexação ainda (Onda 4). HNSW
+constrói o grafo incrementalmente, inserção por inserção, sem etapa de
+treino — bom desde a primeira linha. `vector_cosine_ops` porque é a
+métrica que embeddings de texto geralmente esperam (o ranking de
+similaridade não deveria mudar com a magnitude do vetor).
+
+- **Onde:** `apps/api/src/db/migrations/0045_shallow_randall.sql`
+  (`chunks_embedding_idx`)
+- **ADR:** [0079](adr/0079-tabela-de-chunks-vetor-e-tsvector-juntos.md)
+
+### RN-224 — A migração cria a extensão pgvector sozinha, de forma idempotente {#rn-224}
+
+A migration `0045` executa `CREATE EXTENSION IF NOT EXISTS vector` antes de
+criar a tabela, em vez de assumir que `docker/postgres/init.sql` já rodou —
+esse arquivo só executa na PRIMEIRA inicialização do volume Postgres, e um
+ambiente com volume antigo pode não ter a extensão. `IF NOT EXISTS` é
+idempotente: local (onde a extensão já estava instalada) e um ambiente
+novo passam pela mesma linha sem diferença de comportamento.
+
+- **Onde:** `apps/api/src/db/migrations/0045_shallow_randall.sql`
+- **ADR:** [0079](adr/0079-tabela-de-chunks-vetor-e-tsvector-juntos.md)
+
+### RN-225 — Migração que pode exigir privilégio de operador nasce em `breaking/` {#rn-225}
+
+Criar uma extensão exige que o role da aplicação tenha `CREATEDB` (ou que a
+extensão esteja marcada "trusted" pelo DBA). Localmente o role é
+superusuário, mas nada garante isso em produção — gerenciadores de
+Postgres administrado frequentemente não dão superusuário à aplicação. Se
+a migration falhar aí, é ação do OPERADOR antes do deploy (rodar `CREATE
+EXTENSION vector;` uma vez, como superusuário), não bug do produto — o
+critério do CLAUDE.md para nascer em `breaking/` em vez de
+`feature/`/`bugfix/`.
+
+- **Onde:** branch `breaking/tabela-de-chunks`,
+  `apps/api/src/db/migrations/0045_shallow_randall.sql` (comentário que
+  documenta a decisão dentro da própria migration)
+- **ADR:** [0079](adr/0079-tabela-de-chunks-vetor-e-tsvector-juntos.md)
+
+### RN-226 — `ChunkRepository` cobre só escrita/leitura básica; `createMany` é operação de lote {#rn-226}
+
+O port só tem `create`, `createMany`, `findById` e `listByProject` — busca
+híbrida (vetor + léxico, pesos, limiar) é da Onda 4 (G2) e deliberadamente
+NÃO entra aqui: o port guarda dado, o caso de uso decide o que fazer com
+ele. `createMany` existe porque uma indexação recorta N trechos de um
+documento/sessão de uma vez, evitando N round-trips por documento
+indexado.
+
+- **Onde:** `apps/api/src/application/ports/chunk-repository.port.ts`,
+  `apps/api/src/infrastructure/persistence/drizzle/chunk.repository.ts`
+- **Teste:** `apps/api/test/infrastructure/persistence/chunk.repository.spec.ts`
+  ("createMany grava um lote e listByProject filtra por escopo, sem
+  misturar docs e session")
+- **ADR:** [0079](adr/0079-tabela-de-chunks-vetor-e-tsvector-juntos.md)
+
 ---
 
 ## Quando dá errado
