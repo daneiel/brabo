@@ -54,6 +54,9 @@ vi.mock('./ProjectSessionsTab', () => ({
 vi.mock('./ProjectCodeTab', () => ({
   ProjectCodeTab: () => <div>painel de code</div>,
 }));
+vi.mock('./ProjectRagTab', () => ({
+  ProjectRagTab: () => <div>painel de rag</div>,
+}));
 vi.mock('./ProjectExecutorsTab', () => ({
   ProjectExecutorsTab: () => <div>painel de executores</div>,
 }));
@@ -130,9 +133,13 @@ describe('abas do projeto derivam de um registro só', () => {
     async (key, label) => {
       montar(key as never);
 
-      // Ponto 3: a régua.
+      // Ponto 3: a régua. O regex é ANCORADO (início e fim) desde que "Chat
+      // RAG" (Onda 5, frente G3) entrou no registro — sem âncora, o rótulo
+      // "Chat" bate por SUBSTRING dentro de "Chat RAG" e `findByRole` acha
+      // dois nós para a chave `sessions`.
+      const escapado = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       expect(
-        await screen.findByRole('tab', { name: new RegExp(label) }),
+        await screen.findByRole('tab', { name: new RegExp(`^${escapado}$`) }),
       ).toBeInTheDocument();
       // Ponto 4: o render. Uma cadeia de `&&` sem esta chave mostraria o
       // cabeçalho do projeto e um corpo vazio.
@@ -231,30 +238,38 @@ describe('abas do projeto derivam de um registro só', () => {
 
   /**
    * RN-203 (ADR 0078) — o handoff do PROGRAMA 28 prevê 7 abas; este registro
-   * tem 10. As 3 a mais nasceram DEPOIS do handoff, com dado real e RN
-   * própria — o handoff é referência de fidelidade visual, não teto de
-   * produto. Este teste é o que faria a régua encolher de volta para 7 se
-   * alguém "arrumasse" o registro contra o handoff sem ler o ADR.
+   * tem 11. As 3 primeiras a mais — `executores`, `backlog`, `insights` —
+   * nasceram DEPOIS do handoff, com dado real e RN própria — o handoff é
+   * referência de fidelidade visual, não teto de produto. A 4ª, `rag`
+   * (Onda 5, frente G3, RN-252..), é a promessa que o RN-202 abaixo tinha
+   * adiado, chegando como aba PRÓPRIA. Este teste é o que faria a régua
+   * encolher de volta para 7 se alguém "arrumasse" o registro contra o
+   * handoff sem ler o ADR.
    */
-  it('RN-203 — as 3 abas que o handoff não previu continuam no registro', () => {
-    expect(ABAS_DO_PROJETO).toHaveLength(10);
+  it('RN-203 — as 4 abas que o handoff não previu (como registro) continuam no registro', () => {
+    expect(ABAS_DO_PROJETO).toHaveLength(11);
     const chaves = ABAS_DO_PROJETO.map((aba) => aba.key);
     expect(chaves).toEqual(
-      expect.arrayContaining(['executores', 'backlog', 'insights']),
+      expect.arrayContaining(['executores', 'backlog', 'insights', 'rag']),
     );
   });
 
   /**
-   * RN-202 (ADR 0078) — "Chat RAG" é uma tela que ainda não existe (sem
-   * pipeline de indexação, sem UI de citação). Renomear a aba `sessions`
-   * agora anunciaria uma capacidade que o produto não tem. Este teste é o
-   * que quebraria se alguém seguisse o handoff ao pé da letra sem checar o
-   * ADR.
+   * RN-202 (ADR 0078) — a aba `sessions` NUNCA vira "Chat RAG": ela é
+   * conversa com um agente ativado, e "Chat RAG" (busca sobre o índice, sem
+   * agente algum) chegou como aba PRÓPRIA (`rag`, Onda 5/G3) em vez de
+   * renomear esta. Este teste é o que quebraria se alguém "corrigisse"
+   * `sessions` contra o handoff sem notar que a aba `rag` já existe.
    */
-  it('RN-202 — a aba `sessions` continua "Chat", nunca "Chat RAG"', async () => {
+  it('RN-202 — a aba `sessions` continua "Chat", nunca "Chat RAG" (que é a aba `rag`, separada)', async () => {
     montar();
 
     expect(await screen.findByRole('tab', { name: 'Chat' })).toBeInTheDocument();
-    expect(screen.queryByRole('tab', { name: /Chat RAG/ })).toBeNull();
+    expect(screen.getByRole('tab', { name: 'Chat RAG' })).toBeInTheDocument();
+
+    const sessionsAba = ABAS_DO_PROJETO.find((aba) => aba.key === 'sessions');
+    expect(sessionsAba?.label).toBe('Chat');
+    const ragAba = ABAS_DO_PROJETO.find((aba) => aba.key === 'rag');
+    expect(ragAba?.label).toBe('Chat RAG');
   });
 });

@@ -1,0 +1,98 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.cabecalho {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.score {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.sinais {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.conteudo {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.conteudoExpandido {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+}
+
+.botaoExpandir {
+  align-self: flex-start;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.botaoExpandir:hover {
+  text-decoration: underline;
+}
+
+.origem {
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+
+.origemFile {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.headingPath {
+  color: var(--text-muted);
+}
+
+.origemSessao {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  background: none;
+  border: none;
+  font-size: 11.5px;
+  color: var(--violet);
+  cursor: pointer;
+}
+
+.origemSessao:hover {
+  text-decoration: underline;
+}

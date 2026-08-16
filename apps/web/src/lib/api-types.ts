@@ -1309,3 +1309,112 @@ export interface WorkspaceSpendPorProvider {
   /** As linhas de AGENTE (`actorKind === 'agent'`). */
   porAgente: import('./spend').SpendLinha[];
 }
+
+// ---------------------------------------------------------------------------
+// APÊNDICE DA FRENTE G3 (PROGRAMA 28, Onda 5) — a tela do Chat RAG.
+//
+// Espelha 1:1 o contrato HTTP de `rag.controller.ts`/`rag.response.dto.ts`
+// (RN-231..238, ADR 0080), escrito no FIM do arquivo pelo mesmo motivo do
+// apêndice da frente D0: outras frentes da Onda 5 editam este arquivo em
+// paralelo, e um bloco novo no fim é o que menos colide.
+// ---------------------------------------------------------------------------
+
+/** Os três escopos honestos do índice (RN-219/232): nunca código-fonte, nunca PR. */
+export type RagChunkScope = 'docs' | 'adr' | 'session';
+
+/**
+ * União discriminada por `kind` — o mesmo motivo do `ChunkOrigin` do
+ * servidor: quem consome nunca deveria checar dois campos opcionais para
+ * saber qual é o `null`.
+ */
+export type RagChunkOrigin =
+  | {
+      kind: 'file';
+      sourcePath: string;
+      /** Trilha de headings da seção de onde o trecho veio, quando há uma. */
+      headingPath?: string[];
+      title?: string;
+    }
+  | {
+      kind: 'session';
+      sessionId: string;
+      /** O evento de origem — o mesmo id que `highlightEvent` navega até. */
+      eventId?: string;
+      title?: string;
+    };
+
+export interface RagSearchHit {
+  chunkId: string;
+  scope: RagChunkScope;
+  content: string;
+  /** Combinado (0.6 vetor + 0.4 léxico), já acima do limiar de 0.2 (RN-234). */
+  score: number;
+  /** Similaridade de cosseno, 0..1. `null` quando o sinal não achou o chunk. */
+  vectorScore: number | null;
+  /** `ts_rank` normalizado, 0..1. `null` quando o termo não casou lexicalmente. */
+  lexicalScore: number | null;
+  origin: RagChunkOrigin;
+}
+
+export interface RagSearchResult {
+  query: string;
+  hits: RagSearchHit[];
+  /**
+   * `false` quando o provider de embedding não respondeu (RN-233) — a busca
+   * rodou só com o sinal léxico. A tela avisa; nunca esconde.
+   */
+  vectorAvailable: boolean;
+  vectorUnavailableReason?: string;
+}
+
+export interface RagFileCoverage {
+  filesInRepo: number;
+  filesIndexed: number;
+  truncated: boolean;
+}
+
+export interface RagSessionCoverage {
+  sessionsInProject: number;
+  sessionsIndexed: number;
+}
+
+/**
+ * Contagem REAL, nunca "reindexado há Xmin" (RN-237) — não existe coluna de
+ * timestamp de indexação por escopo, e um número chutado mentiria.
+ */
+export interface RagCoverage {
+  docs: RagFileCoverage;
+  adr: RagFileCoverage;
+  session: RagSessionCoverage;
+  chunksTotal: number;
+  chunksWithoutVector: number;
+}
+
+export interface RagIndexEmbeddingReport {
+  available: boolean;
+  embedded: number;
+  skipped: number;
+  reason?: string;
+}
+
+export interface RagIndexDocsReport {
+  filesScanned: number;
+  docsChunks: number;
+  adrChunks: number;
+  truncated: boolean;
+  embedding: RagIndexEmbeddingReport;
+}
+
+export interface RagReindexSessionsReport {
+  total: number;
+  indexed: number;
+  chunksCreated: number;
+}
+
+/** A resposta de `POST .../rag/reindex` — full rebuild idempotente (RN-236). */
+export interface RagReindexReport {
+  docs: RagIndexDocsReport;
+  sessions: RagReindexSessionsReport;
+  embeddingAvailable: boolean;
+  embeddingReason?: string;
+}
