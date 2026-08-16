@@ -7057,6 +7057,96 @@ modelo.
 - **Teste:** `apps/web/src/routes/ProjectSessionsTab.test.tsx` — "'Taxa
   ideação → commit' é DECLARADA ausente — nunca um número calculado"
 
+### RN-243 — O ciclo de vida do container é TABELA, e nenhuma linha dela chama Docker {#rn-243}
+
+`project_containers` (migração `0046`) grava o ESTADO mutável do container
+de um projeto — distinto de `artifact.project_image` no event log (ADR
+0065), que é a DECISÃO imutável do Arquiteto. Nem
+`RegistrarTransicaoDeContainerUseCase` nem
+`ObterCicloDeVidaDoContainerUseCase` chamam um daemon Docker: nenhum
+serviço do produto monta `/var/run/docker.sock` nem roda `privileged`
+hoje, e conceder isso é decisão de segurança fora do escopo desta regra.
+Um orquestrador real, quando existir, CONSOME esta tabela depois de agir
+de verdade — nunca o contrário.
+
+- **Onde:** `apps/api/src/domain/containers/container-lifecycle.ts`,
+  `apps/api/src/application/use-cases/containers/registrar-transicao-de-container.use-case.ts`
+- **Teste:** `apps/api/test/application/use-cases/containers/ciclo-de-vida-do-container.use-case.spec.ts`
+- **ADR:** [0081](adr/0081-ciclo-de-vida-do-container-tabela-sem-orquestrador.md)
+
+### RN-244 — A máquina de estados do container: só `removed` sai reprovisionando {#rn-244}
+
+`provisioning → running ⇄ stopped`, com `failed` alcançável de
+`provisioning`/`running`/`stopped`, e `removed → provisioning` como a
+ÚNICA saída de `removed` — nenhum estado é terminal de verdade, porque um
+projeto pode reprovisionar com uma imagem revisada pelo Arquiteto.
+Transição fora da tabela lança `InvalidContainerTransitionError`, que o
+caso de uso traduz para 409 — mesmo formato de `session-state-machine.ts`
+e `pr-gate-state-machine.ts`.
+
+- **Onde:** `apps/api/src/domain/containers/container-lifecycle.ts`
+  (`ALLOWED_TRANSITIONS`)
+- **Teste:** `apps/api/test/domain/containers/container-lifecycle.spec.ts`
+- **ADR:** [0081](adr/0081-ciclo-de-vida-do-container-tabela-sem-orquestrador.md)
+
+### RN-245 — A primeira transição exige a imagem já decidida, e CONGELA versão e recursos {#rn-245}
+
+Não existe linha até a primeira chamada com `to: 'provisioning'`, e ela só
+é aceita se o Arquiteto já tiver decidido a imagem do projeto (RN-105) —
+o mesmo portão que já protege a aba Code, aplicado na origem em vez de
+duplicado. A versão de `artifact.project_image` e os recursos declarados
+naquele instante são CONGELADOS na linha nova (`image_version`, `cpus`,
+`memory_mb`, `pids_limit`): uma revisão posterior do artefato não muda
+retroativamente o que uma instância já provisionada promete.
+
+- **Onde:** `apps/api/src/application/use-cases/containers/registrar-transicao-de-container.use-case.ts`
+- **Teste:** `apps/api/test/application/use-cases/containers/ciclo-de-vida-do-container.use-case.spec.ts`
+  — "a primeira transição (provisioning) cria a linha…" e "sem decisão de
+  imagem do Arquiteto, não há o que provisionar"
+- **ADR:** [0081](adr/0081-ciclo-de-vida-do-container-tabela-sem-orquestrador.md)
+
+### RN-246 — Projeto em modo `local` não tem ciclo de vida de container {#rn-246}
+
+Um projeto com `workspace_mode: 'local'` (ADR 0072, RN-169) roda no
+container do AGENTE de sempre — não sobe container próprio. Pedir
+qualquer transição para um projeto `local` é recusado com 400 ANTES de
+tocar a tabela, na origem, não filtrado depois na UI.
+
+- **Onde:** `apps/api/src/application/use-cases/containers/registrar-transicao-de-container.use-case.ts`
+- **Teste:** `apps/api/test/application/use-cases/containers/ciclo-de-vida-do-container.use-case.spec.ts`
+  — "projeto em modo `local` não tem ciclo de vida de container (ADR 0072)"
+- **ADR:** [0081](adr/0081-ciclo-de-vida-do-container-tabela-sem-orquestrador.md)
+
+### RN-247 — Uma linha por projeto: `project_id` é único {#rn-247}
+
+Só existe UM container vigente por projeto de cada vez — o mesmo desenho
+de `dev_agent_states` no engine (ADR 0045). A constraint única mora no
+BANCO (`project_containers_project_id_unique`), não só no caso de uso:
+`create` chamado duas vezes para o mesmo projeto falha na escrita, nunca
+produz uma segunda linha silenciosa.
+
+- **Onde:** `apps/api/src/db/migrations/0046_chilly_forgotten_one.sql`
+- **Teste:** `apps/api/test/infrastructure/persistence/drizzle/container.repository.spec.ts`
+  — "só uma linha por projeto — create duplicado viola a constraint única"
+- **ADR:** [0081](adr/0081-ciclo-de-vida-do-container-tabela-sem-orquestrador.md)
+
+### RN-248 — Teto de recursos DECLARADO, não aplicado — o campo existe para quando houver orquestrador {#rn-248}
+
+`cpus`/`memory_mb`/`pids_limit` gravam o que o artefato do Arquiteto
+prometia no momento do provisionamento, mas nenhum processo hoje faz o
+kernel respeitar esse teto — não há orquestrador chamando `docker run
+--cpus … --memory … --pids-limit …`. O campo nasce mesmo assim porque
+adiar a coluna para quando o orquestrador existir obrigaria uma migration
+de correção no dia em que ele chegasse; declarar sem aplicar é honesto
+enquanto a tabela não mentir sobre APLICAR (nenhuma tela ou resposta de
+API hoje afirma "o container está limitado a X" — só "a intenção
+registrada era X").
+
+- **Onde:** `apps/api/src/db/schema.ts` (`projectContainers`)
+- **Teste:** `apps/api/test/infrastructure/persistence/drizzle/container.repository.spec.ts`
+  — "create nasce em `provisioning`, com a versão e os recursos passados"
+- **ADR:** [0081](adr/0081-ciclo-de-vida-do-container-tabela-sem-orquestrador.md)
+
 ---
 
 ## Quando dá errado
