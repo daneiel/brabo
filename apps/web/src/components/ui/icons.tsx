@@ -77,6 +77,10 @@ export const TerminalIcon = (props: IconProps) =>
 export const DiffIcon = (props: IconProps) =>
   base(['M12 5v14M5 8h6M5 12h6M16 12h3M17.5 10.5v3'], props);
 
+/** Saída de comando/build — linhas de log, para distinguir do prompt do TerminalIcon. */
+export const OutputIcon = (props: IconProps) =>
+  base(['M4 6h16M4 12h10M4 18h13'], props);
+
 export const ModelIcon = (props: IconProps) =>
   base(['M21 16V8l-9-5-9 5v8l9 5 9-5z', 'M3.5 7.5 12 12l8.5-4.5M12 12v9.5'], props);
 

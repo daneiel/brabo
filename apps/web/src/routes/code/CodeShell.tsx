@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getRepository } from '../../lib/api-client';
+import { getCodeBranches, getRepository } from '../../lib/api-client';
 import {
   useArchitecture,
   useHandoffs,
@@ -15,6 +15,7 @@ import { CodeSearchPanel } from './CodeSearchPanel';
 import { CodeEditor } from './CodeEditor';
 import { CodeBottomPanel } from './CodeBottomPanel';
 import { CodeBranchPicker } from './CodeBranchPicker';
+import { linguagemPorCaminho } from './highlight';
 import styles from './CodeShell.module.css';
 
 type RailView = 'explorer' | 'search';
@@ -34,9 +35,16 @@ const RAIL_DESABILITADO: { rotulo: string; motivo: string }[] = [
 ];
 
 /**
- * O shell da aba Code: rail, explorador/busca, editor e painel inferior — só
- * depois que o gate de `ProjectCodeTab` já confirmou que o container tem
- * imagem decidida.
+ * O shell da aba Code: rail, explorador/busca, editor, painel inferior e a
+ * status bar de 24px do handoff — só depois que o gate de `ProjectCodeTab`
+ * já confirmou que o container tem imagem decidida. A status bar só mostra o
+ * que é dado REAL: branch + `↑N ↓M` (`getCodeBranches`, mesma queryKey do
+ * `CodeBranchPicker`), linguagem do arquivo ativo (extensão, via
+ * `linguagemPorCaminho`), UTF-8 fixo (única codificação que a leitura de
+ * código serve hoje) e agentes ativos. Posição do cursor e contagem de
+ * erros/testes do mock do handoff ficaram DE FORA — `CodeEditor` não tem
+ * seleção rastreável e não há lint/teste integrado (mesma decisão da aba
+ * Problemas em `CodeBottomPanel.tsx`).
  */
 export function CodeShell({ projectId }: { projectId: string }) {
   const [railView, setRailView] = useState<RailView>('explorer');
@@ -50,6 +58,17 @@ export function CodeShell({ projectId }: { projectId: string }) {
     queryFn: () => getRepository(projectId),
   });
   const refEfetiva = ref || repository?.defaultBranch || '';
+
+  // MESMA queryKey do `CodeBranchPicker` — dedup pelo React Query, zero
+  // requisição a mais (RN-090/091). ahead/behind da ref atual, para a status
+  // bar do handoff (`↑1 ↓0`); ref fora da lista de branches (tag/sha) não
+  // tem entrada, e o item simplesmente não aparece.
+  const branchesQuery = useQuery({
+    queryKey: ['code-branches', projectId],
+    queryFn: () => getCodeBranches(projectId),
+  });
+  const branchAtual = branchesQuery.data?.items.find((b) => b.name === refEfetiva);
+  const aheadBehind = formatarAheadBehind(branchAtual?.ahead, branchAtual?.behind);
 
   function abrirArquivo(path: string) {
     setOpenTabs((abas) => (abas.includes(path) ? abas : [...abas, path]));
@@ -174,7 +193,7 @@ export function CodeShell({ projectId }: { projectId: string }) {
               onClick={() => setBottomOpen((v) => !v)}
               aria-expanded={bottomOpen}
             >
-              {bottomOpen ? 'Fechar painel inferior' : 'Terminal / Diff de PR'}
+              {bottomOpen ? 'Fechar painel inferior' : 'Painel inferior'}
             </button>
           </div>
           {bottomOpen && <CodeBottomPanel projectId={projectId} />}
@@ -185,8 +204,12 @@ export function CodeShell({ projectId }: { projectId: string }) {
         <span className={styles.statusItem}>
           <BranchIcon size={12} />
           {refEfetiva || '—'}
+          {aheadBehind && <span className={styles.statusAheadBehind}>{aheadBehind}</span>}
         </span>
         <span className={styles.statusSpacer} />
+        {activePath && linguagemPorCaminho(activePath) && (
+          <span className={styles.statusItem}>{linguagemPorCaminho(activePath)}</span>
+        )}
         <span className={styles.statusItem}>UTF-8</span>
         <span className={styles.statusItem}>
           <span className={styles.pulso} aria-hidden="true" />
@@ -195,4 +218,22 @@ export function CodeShell({ projectId }: { projectId: string }) {
       </div>
     </div>
   );
+}
+
+/**
+ * `↑N ↓M` de commits (item 26b/RN-112, `CodeBranchDetail.ahead/behind`) —
+ * `null` é "não computável" e ZERO em ambos não vira texto (nada a dizer).
+ * Posição do cursor do handoff NÃO entra: `CodeEditor` renderiza `<pre>`
+ * estático, sem seleção/caret rastreável — inventar uma posição seria o
+ * mesmo erro que a contagem de testes/lint da aba Problemas.
+ */
+function formatarAheadBehind(ahead: number | null | undefined, behind: number | null | undefined) {
+  if (ahead == null && behind == null) return null;
+  const a = ahead ?? 0;
+  const b = behind ?? 0;
+  if (a === 0 && b === 0) return null;
+  const partes: string[] = [];
+  if (a > 0) partes.push(`↑${a}`);
+  if (b > 0) partes.push(`↓${b}`);
+  return partes.join(' ');
 }
