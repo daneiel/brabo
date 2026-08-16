@@ -336,6 +336,20 @@ atravessando processo, e por isso nada nesse caminho abre rota interna.
 A consequência prática é a que importa: a única rota do produto que devolve
 segredo decifrado continua sendo UMA. Ler código não a multiplicou.
 
+#### A indexação do Chat RAG (Onda 4/G2) também não abre rota interna
+
+`docs`/`adr` são indexados via `ReadProjectCodeUseCase` — a MESMA
+superfície da aba Code, mesma credencial do owner, mesmo portão de
+container (RN-105) — pela razão de cima: nada nesse caminho decifra
+segredo num processo separado. `session` lê `chat.message`/`agent.response`
+direto do event log, sem sair da api. O embedding (`RagEmbeddingService`)
+não passa pelo resolvedor de credencial da RN-058 nenhuma vez: ele pede o
+provider FIXO `ollama` direto ao `LLMProviderRegistry`, o mesmo caminho que
+a RN-058 já descreve como "a busca é pulada" para esse provider — não há
+segredo de usuário para decifrar aqui, e por isso também não há rota
+interna a abrir ([RN-232](../business-rules.md#rn-232),
+[ADR 0080](../adr/0080-busca-hibrida-pesos-limiar-e-citacao.md)).
+
 ### O que o PO relê: regras de negócio e backlog
 
 | método | caminho |

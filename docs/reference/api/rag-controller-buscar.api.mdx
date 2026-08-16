@@ -1,0 +1,69 @@
+---
+id: rag-controller-buscar
+title: "Busca híbrida (vetor + léxico) nos chunks indexados do projeto"
+description: "Combina similaridade de cosseno (pgvector) com `ts_rank` léxico (tsvector), cada um por uma consulta independente, fundidas por soma ponderada e cortadas pelo limiar (ADR 0080). `vectorAvailable: false` avisa quando o provider de embedding não respondeu e a busca rodou só com o sinal léxico — nunca finge ter rodado o híbrido completo."
+sidebar_label: "Busca híbrida (vetor + léxico) nos chunks indexados do projeto"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "post api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Busca híbrida (vetor + léxico) nos chunks indexados do projeto"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/projects/{projectId}/rag/search"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Combina similaridade de cosseno (pgvector) com `ts_rank` léxico (tsvector), cada um por uma consulta independente, fundidas por soma ponderada e cortadas pelo limiar (ADR 0080). `vectorAvailable: false` avisa quando o provider de embedding não respondeu e a busca rodou só com o sinal léxico — nunca finge ter rodado o híbrido completo.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./rag-controller-buscar.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./rag-controller-buscar.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./rag-controller-buscar.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

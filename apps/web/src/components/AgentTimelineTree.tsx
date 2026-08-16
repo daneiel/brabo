@@ -10,7 +10,7 @@ import type { SessionEvent } from '../lib/api-types';
 import { AGENTS } from '../lib/agents';
 import { getAgentLastSeenSeq, setAgentLastSeenSeq } from '../lib/read-state';
 import { AvatarDoAgente } from './ui/AvatarDoAgente';
-import { ChevronDownIcon, ChevronRightIcon } from './ui/icons';
+import { Disclosure } from './ui/Disclosure';
 import styles from './AgentTimelineTree.module.css';
 
 /**
@@ -98,38 +98,46 @@ export function AgentTimelineTree({
           ? 0
           : ramo.marcos.filter((m) => m.seq > getAgentLastSeenSeq(projectId, ramo.agente)).length;
         return (
-          <div key={ramo.agente} className={styles.ramo}>
-            <button
-              type="button"
-              className={styles.cabecalho}
-              aria-expanded={aberto}
-              data-testid={`ramo-cabecalho-${ramo.agente}`}
-              onClick={() => alternar(ramo.agente)}
-              style={{ ['--msg-color' as string]: corDo(ramo.agente) }}
+          // A cor por agente vive na CSS var no wrapper, não no botão do
+          // `Disclosure` — o mesmo padrão de `SessionPage.tsx` (agrupamento
+          // de artefatos por agente): o componente compartilhado não expõe
+          // `style`, e não precisa: a variável herda para dentro.
+          <div
+            key={ramo.agente}
+            className={styles.ramo}
+            style={{ ['--msg-color' as string]: corDo(ramo.agente) }}
+          >
+            <Disclosure
+              aberto={aberto}
+              onAlternar={() => alternar(ramo.agente)}
+              classNameCabecalho={styles.cabecalho}
+              testId={`ramo-cabecalho-${ramo.agente}`}
+              titulo={
+                <span className={styles.tituloRamo}>
+                  <AvatarDoAgente id={ramo.agente} />
+                  <span className={styles.nome}>{rotuloDo(ramo.agente)}</span>
+                  <span
+                    className={[styles.agora, ramo.ativo && styles.agoraAtivo]
+                      .filter(Boolean)
+                      .join(' ')}
+                  >
+                    {ramo.agora}
+                  </span>
+                </span>
+              }
+              trailing={
+                <span
+                  className={[styles.contagem, naoVistos > 0 && styles.contagemNova]
+                    .filter(Boolean)
+                    .join(' ')}
+                  title={
+                    naoVistos > 0 ? `${naoVistos} marco(s) novo(s) desde a última vez` : undefined
+                  }
+                >
+                  {naoVistos > 0 ? `+${naoVistos}` : ramo.marcos.length}
+                </span>
+              }
             >
-              <span className={styles.chevron}>
-                {aberto ? <ChevronDownIcon size={13} /> : <ChevronRightIcon size={13} />}
-              </span>
-              <AvatarDoAgente id={ramo.agente} />
-              <span className={styles.nome}>{rotuloDo(ramo.agente)}</span>
-              <span
-                className={[styles.agora, ramo.ativo && styles.agoraAtivo]
-                  .filter(Boolean)
-                  .join(' ')}
-              >
-                {ramo.agora}
-              </span>
-              <span
-                className={[styles.contagem, naoVistos > 0 && styles.contagemNova]
-                  .filter(Boolean)
-                  .join(' ')}
-                title={naoVistos > 0 ? `${naoVistos} marco(s) novo(s) desde a última vez` : undefined}
-              >
-                {naoVistos > 0 ? `+${naoVistos}` : ramo.marcos.length}
-              </span>
-            </button>
-
-            {aberto && (
               <ol className={styles.marcos}>
                 {ramo.marcos.map((m, i) => {
                   const anterior = ramo.marcos[i - 1];
@@ -149,26 +157,32 @@ export function AgentTimelineTree({
                           .join(' ')}
                       >
                         {expansivel ? (
-                          <button
-                            type="button"
-                            className={styles.marcoLinha}
-                            aria-expanded={expandido}
-                            aria-controls={`marco-detalhe-${m.eventId}`}
-                            data-testid={`marco-cabecalho-${m.eventId}`}
-                            onClick={() => alternarMarco(m.eventId)}
+                          // `className={styles.marcoBloco}` restaura o `gap`
+                          // de 6px que antes vinha do `<li>` flex-column com
+                          // DOIS filhos diretos (botão + região) — agora os
+                          // dois moram dentro do wrapper do `Disclosure`, que
+                          // não declara gap nenhum por padrão.
+                          <Disclosure
+                            className={styles.marcoBloco}
+                            classNameCabecalho={styles.marcoLinha}
+                            aberto={expandido}
+                            onAlternar={() => alternarMarco(m.eventId)}
+                            testId={`marco-cabecalho-${m.eventId}`}
+                            titulo={
+                              <>
+                                <span className={[styles.bolinha, styles[m.tipo]].join(' ')} />
+                                <span className={styles.rotulo}>{m.rotulo}</span>
+                                {m.detalhe && (
+                                  <span className={styles.detalhe}>{m.detalhe}</span>
+                                )}
+                              </>
+                            }
+                            trailing={<span className={styles.hora}>{hora(m)}</span>}
                           >
-                            <span className={styles.marcoChevron} aria-hidden="true">
-                              {expandido ? (
-                                <ChevronDownIcon size={11} />
-                              ) : (
-                                <ChevronRightIcon size={11} />
-                              )}
-                            </span>
-                            <span className={[styles.bolinha, styles[m.tipo]].join(' ')} />
-                            <span className={styles.rotulo}>{m.rotulo}</span>
-                            {m.detalhe && <span className={styles.detalhe}>{m.detalhe}</span>}
-                            <span className={styles.hora}>{hora(m)}</span>
-                          </button>
+                            <div className={styles.marcoDetalhe}>
+                              {detalheExpandido(m, ramo.agente)}
+                            </div>
+                          </Disclosure>
                         ) : (
                           <span className={styles.marcoLinhaEstatica}>
                             <span className={[styles.bolinha, styles[m.tipo]].join(' ')} />
@@ -177,22 +191,12 @@ export function AgentTimelineTree({
                             <span className={styles.hora}>{hora(m)}</span>
                           </span>
                         )}
-
-                        {expansivel && expandido && (
-                          <div
-                            id={`marco-detalhe-${m.eventId}`}
-                            role="region"
-                            className={styles.marcoDetalhe}
-                          >
-                            {detalheExpandido(m, ramo.agente)}
-                          </div>
-                        )}
                       </li>
                     </Fragment>
                   );
                 })}
               </ol>
-            )}
+            </Disclosure>
           </div>
         );
       })}

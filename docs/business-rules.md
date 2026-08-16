@@ -7057,6 +7057,148 @@ modelo.
 - **Teste:** `apps/web/src/routes/ProjectSessionsTab.test.tsx` — "'Taxa
   ideação → commit' é DECLARADA ausente — nunca um número calculado"
 
+## PROGRAMA 28 — Onda 4, frente G2: pipeline de indexação e busca híbrida do Chat RAG (RN-231..238, ADR 0080)
+
+### RN-231 — `ChunkRepository` ganha DELETE e as duas metades da busca híbrida {#rn-231}
+
+O port da Onda 3 (RN-226) só cobria escrita/leitura básica. A Onda 4
+acrescentou `deleteByScope`/`deleteBySession` (para reindexação idempotente
+por full rebuild — apagar e recriar, nunca UPDATE) e
+`searchByVector`/`searchByLexicalQuery` (as duas metades da busca híbrida,
+cada uma uma consulta independente, aproveitando o índice feito para ela —
+HNSW ou GIN). `deleteByScope` é tipado `Exclude<ChunkScope, 'session'>`:
+apagar `session` por projeto inteiro apagaria sessões que não estão sendo
+reindexadas agora, então sessão só apaga por `deleteBySession`.
+
+- **Onde:** `apps/api/src/application/ports/chunk-repository.port.ts`
+  (linhas 105-146), `apps/api/src/infrastructure/persistence/drizzle/chunk.repository.ts`
+- **Teste:** `apps/api/test/infrastructure/persistence/chunk.repository.spec.ts`
+  — describes "Onda 4 (G2)" (delete por escopo/sessão, busca por
+  vetor/léxico, caso feliz e vazio de cada um)
+- **ADR:** [0080](adr/0080-busca-hibrida-pesos-limiar-e-citacao.md)
+
+### RN-232 — Origem do texto indexado: `docs`/`adr` do repositório do PRÓPRIO projeto, `session` só de `chat.message`/`agent.response` {#rn-232}
+
+`docs`/`adr` são indexados via `ReadProjectCodeUseCase` — a mesma superfície
+da aba Code, com a mesma credencial do owner, o mesmo portão de container
+(RN-105) e a mesma checagem de caminho (RN-095) — nunca a documentação do
+Brabo enquanto produto. `session` indexa só dois tipos de evento
+(`chat.message`, `agent.response`); o resto do event log (`tool.call`,
+`agent.status`, `agent.error`...) é mecanismo/falha, não conhecimento
+citável.
+
+- **Onde:** `apps/api/src/application/use-cases/rag/index-project-docs.use-case.ts`
+  (linhas 16-17, 64), `apps/api/src/application/use-cases/rag/index-session.use-case.ts`
+  (linha 29, 45)
+- **Teste:** `apps/api/test/application/use-cases/rag/index-project-docs.use-case.spec.ts`,
+  `apps/api/test/application/use-cases/rag/index-session.use-case.spec.ts`
+  (casos felizes + "projeto sem docs/" + "evento sem payload.text é
+  ignorado")
+- **ADR:** [0080](adr/0080-busca-hibrida-pesos-limiar-e-citacao.md)
+
+### RN-233 — Provider de embedding indisponível: grava sem vetor e declara a lacuna, nunca finge indexação completa {#rn-233}
+
+Quando `ollama`/`nomic-embed-text` não responde, `RagEmbeddingService.embedMany`
+não lança — devolve `available: false` e `null` por entrada pedida. O
+pipeline grava os chunks mesmo assim (`embedding: null`; `search_vector` é
+`GENERATED ALWAYS AS` e não depende de provider nenhum), e o relatório de
+indexação declara a lacuna (`embedding: { available, embedded, skipped,
+reason }`). A mesma degradação vale na busca: `HybridSearchUseCase` roda só
+com o sinal léxico e `vectorAvailable: false` avisa.
+
+- **Onde:** `apps/api/src/application/use-cases/rag/rag-embedding.service.ts`
+  (linhas 53-58)
+- **Teste:** `apps/api/test/application/use-cases/rag/rag-embedding.service.spec.ts`
+  — "CASO DE FALHA: provider sem a capability..." e "CASO DE FALHA: provider
+  que lança no meio do lote..."; `index-project-docs.use-case.spec.ts`/
+  `index-session.use-case.spec.ts` — "CASO DE FALHA: provider de embedding
+  indisponível grava os chunks SEM vetor..."; `hybrid-search.use-case.spec.ts`
+  — "quando o embedding está indisponível, degrada para busca só léxica"
+- **ADR:** [0080](adr/0080-busca-hibrida-pesos-limiar-e-citacao.md)
+
+### RN-234 — Busca híbrida: duas consultas independentes, fusão por peso (0.6/0.4), limiar 0.2, e o contrato de citação {#rn-234}
+
+`searchByVector`/`searchByLexicalQuery` são consultas SEPARADAS (nunca um
+JOIN), fundidas em `HybridSearchUseCase` por soma ponderada
+(`RAG_SEARCH_WEIGHT_VECTOR = 0.6`, `RAG_SEARCH_WEIGHT_LEXICAL = 0.4` — as
+escalas de cosseno e `ts_rank` normalizado não são comparáveis por
+natureza) e cortadas em `RAG_SEARCH_SCORE_THRESHOLD = 0.2`. Nenhum dos
+quatro números vem de calibração com dado real — são ponto de partida
+documentado. A citação (`HybridSearchHit`) expõe
+`chunkId`/`content`/scores separados (`null`, não zero, quando o sinal não
+achou o chunk)/`origin` como união discriminada por `kind` (`file` com
+`sourcePath`/`headingPath`, `session` com `sessionId`/`eventId`).
+
+- **Onde:** `apps/api/src/application/use-cases/rag/hybrid-search.use-case.ts`
+  (linhas 44-113), `apps/api/src/domain/rag/rag-search-limits.ts`
+  (linhas 60-93), `apps/api/src/domain/rag/rag-citation.ts` (linhas 12-71)
+- **Teste:** `apps/api/test/application/use-cases/rag/hybrid-search.use-case.spec.ts`
+  (fusão/ordenação/limiar, query fora da faixa, degradação léxico-only,
+  origin de sessão) e `apps/api/test/infrastructure/persistence/chunk.repository.spec.ts`
+  (as consultas SQL de fato, contra pgvector/tsvector real)
+- **ADR:** [0080](adr/0080-busca-hibrida-pesos-limiar-e-citacao.md)
+
+### RN-235 — Chunking: 1200 caracteres, 150 de sobreposição, por parágrafo/heading {#rn-235}
+
+`CHUNK_TARGET_CHARS = 1200` (~300 tokens em português),
+`CHUNK_OVERLAP_CHARS = 150` (12,5%), com corte preferindo quebra de
+parágrafo, depois de palavra, dentro de uma janela de 200 caracteres.
+Markdown (`docs`/`adr`) é dividido por HEADING antes de ser recortado por
+tamanho, preservando `headingPath`. Números documentados como ponto de
+partida ajustável, não calibrados contra dado real de qualidade de
+recuperação (não existe, ainda, um corpo de perguntas reais rodado contra
+este índice).
+
+- **Onde:** `apps/api/src/domain/rag/chunking.ts` (linhas 30-31, 53 em
+  diante)
+- **Teste:** `apps/api/test/domain/rag/chunking.spec.ts` (texto que
+  cabe/não cabe, texto vazio, sobreposição real, texto patológico sem
+  espaço, headings aninhados, markdown sem heading)
+- **ADR:** [0080](adr/0080-busca-hibrida-pesos-limiar-e-citacao.md)
+
+### RN-236 — Reindexação é sempre MANUAL, full rebuild idempotente {#rn-236}
+
+Não há watcher por push nem por fechamento de sessão. `ReindexProjectUseCase`
+roda `docs`/`adr` uma vez e uma `IndexSessionUseCase` por sessão do projeto,
+cada indexação apagando o escopo/sessão antes de recriar — rodar duas vezes
+seguidas não duplica. Disparado por `POST /projects/:projectId/rag/reindex`,
+`role:maintainer`.
+
+- **Onde:** `apps/api/src/application/use-cases/rag/reindex-project.use-case.ts`
+  (linha 36)
+- **Teste:** `apps/api/test/application/use-cases/rag/reindex-project.use-case.spec.ts`
+  (agrega docs+sessões, embeddingAvailable falso quando qualquer rodada
+  falha, projeto inexistente)
+- **ADR:** [0080](adr/0080-busca-hibrida-pesos-limiar-e-citacao.md)
+
+### RN-237 — Cobertura do índice é contagem REAL, nunca "há N minutos" inventado {#rn-237}
+
+`GetRagCoverageUseCase` conta arquivos `.md` reais no repositório do
+projeto contra quantos têm chunk, e sessões do projeto contra quantas têm
+chunk. Não existe coluna de timestamp de indexação por escopo, e a
+resposta não inclui nenhum "reindexado há Xmin" — um número chutado
+mentiria (mesma régua do ADR 0042 para nota de modelo).
+
+- **Onde:** `apps/api/src/application/use-cases/rag/get-rag-coverage.use-case.ts`
+  (linha 47)
+- **Teste:** `apps/api/test/application/use-cases/rag/get-rag-coverage.use-case.spec.ts`
+- **ADR:** [0080](adr/0080-busca-hibrida-pesos-limiar-e-citacao.md)
+
+### RN-238 — As três rotas HTTP do RAG dividem papel por quem MUDA o que o produto gasta {#rn-238}
+
+`POST .../rag/search` e `GET .../rag/coverage` são `role:viewer` (leitura
+pura); `POST .../rag/reindex` é `role:maintainer`, porque dispara N
+chamadas ao repositório do projeto e ao provider de embedding — mesma
+régua "muda o que o produto gasta sem perguntar" do teto de paralelismo de
+área (RN-083).
+
+- **Onde:** `apps/api/src/interfaces/http/rag/rag.controller.ts` (linhas
+  50, 57, 81, 98), `docs/security-surface.md`
+- **Teste:** `apps/api/test/interfaces/route-surface.spec.ts`
+  (classificação de papel, tags fechadas, metadados OpenAPI das três
+  rotas)
+- **ADR:** [0080](adr/0080-busca-hibrida-pesos-limiar-e-citacao.md)
+
 ### RN-243 — O ciclo de vida do container é TABELA, e nenhuma linha dela chama Docker {#rn-243}
 
 `project_containers` (migração `0046`) grava o ESTADO mutável do container

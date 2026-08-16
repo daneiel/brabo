@@ -896,6 +896,30 @@ const sidebar: SidebarsConfig = {
     },
     {
       type: "category",
+      label: "rag",
+      items: [
+        {
+          type: "doc",
+          id: "docs/reference/api/rag-controller-obter-cobertura",
+          label: "Cobertura do índice: arquivos/sessões indexados contra o total real",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/rag-controller-reindexar",
+          label: "Reindexa docs/ADR/sessões do projeto (full rebuild idempotente)",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/rag-controller-buscar",
+          label: "Busca híbrida (vetor + léxico) nos chunks indexados do projeto",
+          className: "api-method post",
+        },
+      ],
+    },
+    {
+      type: "category",
       label: "sessões",
       items: [
         {
