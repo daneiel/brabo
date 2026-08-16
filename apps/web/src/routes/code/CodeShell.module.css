@@ -150,6 +150,13 @@
   white-space: nowrap;
 }
 
+/* `↑N ↓M` — mesma cor que `CodeBranchPicker.module.css` já usa pro mesmo
+   dado (`.triggerAheadBehind`), não o terracota/warning do mock do handoff:
+   duas cores pro mesmo número em dois lugares seria inconsistência nova. */
+.statusAheadBehind {
+  color: var(--text-muted);
+}
+
 .statusSpacer {
   flex: 1;
 }
