@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getCodeTree, mensagemDaApi } from '../../lib/api-client';
-import { ChevronDownIcon, ChevronRightIcon, FileIcon, FolderIcon } from '../../components/ui/icons';
+import { FileIcon, FolderIcon } from '../../components/ui/icons';
+import { Disclosure } from '../../components/ui/Disclosure';
 import type { CodeTreeEntry } from '../../lib/api-types';
 import styles from './CodeExplorer.module.css';
 
@@ -124,20 +125,25 @@ function TreeEntry({ entrada, projectId, gitRef, depth, activePath, onOpenFile }
   }
 
   return (
-    <li>
-      <button
-        type="button"
-        className={styles.linha}
-        style={{ paddingLeft: indentacao }}
-        onClick={() => setAberto((v) => !v)}
-        aria-expanded={aberto}
+    // A indentação por profundidade é a peculiaridade que o `Disclosure`
+    // genérico não tem hook pra cobrir (não existe prop `style` no
+    // cabeçalho): em vez de estender o componente compartilhado por causa
+    // de UM valor numérico, a profundidade vira variável CSS no `<li>` — ela
+    // herda por qualquer número de wrappers que o `Disclosure` insira, e
+    // `.linha` (classNameCabecalho) lê `var(--indent)`. Pixel a pixel igual
+    // ao `style={{ paddingLeft: indentacao }}` de antes.
+    <li style={{ ['--indent' as string]: `${indentacao}px` }}>
+      <Disclosure
+        aberto={aberto}
+        onAlternar={() => setAberto((v) => !v)}
+        classNameCabecalho={styles.linha}
+        titulo={
+          <>
+            <FolderIcon size={13} />
+            <span className={styles.nome}>{entrada.name}</span>
+          </>
+        }
       >
-        {aberto ? <ChevronDownIcon size={12} /> : <ChevronRightIcon size={12} />}
-        <FolderIcon size={13} />
-        <span className={styles.nome}>{entrada.name}</span>
-      </button>
-
-      {aberto && (
         <ul className={styles.lista}>
           {filhosQuery.isLoading && (
             <li className={styles.estadoFilho} style={{ paddingLeft: indentacao + 18 }}>
@@ -177,7 +183,7 @@ function TreeEntry({ entrada, projectId, gitRef, depth, activePath, onOpenFile }
             </li>
           )}
         </ul>
-      )}
+      </Disclosure>
     </li>
   );
 }
