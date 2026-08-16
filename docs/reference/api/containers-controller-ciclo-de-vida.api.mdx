@@ -1,0 +1,69 @@
+---
+id: containers-controller-ciclo-de-vida
+title: "Ciclo de vida do container do projeto (estado registrado)"
+description: "`null` quando o projeto nunca foi provisionado — hoje o caso comum, porque nenhum orquestrador real transiciona esta tabela ainda (RN-243/RN-267). O estado devolvido é o que foi REGISTRADO, nunca confirmado contra um daemon Docker: não existe cliente Docker no produto."
+sidebar_label: "Ciclo de vida do container do projeto (estado registrado)"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "get api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Ciclo de vida do container do projeto (estado registrado)"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/projects/{projectId}/container/lifecycle"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+`null` quando o projeto nunca foi provisionado — hoje o caso comum, porque nenhum orquestrador real transiciona esta tabela ainda (RN-243/RN-267). O estado devolvido é o que foi REGISTRADO, nunca confirmado contra um daemon Docker: não existe cliente Docker no produto.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./containers-controller-ciclo-de-vida.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./containers-controller-ciclo-de-vida.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./containers-controller-ciclo-de-vida.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

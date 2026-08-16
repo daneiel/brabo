@@ -458,7 +458,7 @@ export function Shell() {
                 title="Novo projeto"
                 aria-label="Novo projeto"
               >
-                <PlusIcon size={12} />
+                <PlusIcon size={16} />
               </button>
             </div>
             <nav className={styles.nav}>

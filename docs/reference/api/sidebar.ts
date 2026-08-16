@@ -468,6 +468,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/containers-controller-ciclo-de-vida",
+          label: "Ciclo de vida do container do projeto (estado registrado)",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/projects-controller-list-members",
           label: "Lista os membros do projeto com o papel efetivo",
           className: "api-method get",

@@ -70,7 +70,10 @@
 
 /* `.title` é um `button` desde a FASE 20 (clicar renomeia), então o reset do
    botão vem junto: sem ele o navegador aplica fundo, borda e a fonte dele, e a
-   barra de topo muda de cara. */
+   barra de topo muda de cara. `min-height: 24px` fecha o piso de alvo de
+   toque da WCAG 2.2 AA (2.5.8) que `scripts/dev/validacao-visual.js` cobra
+   (PROGRAMA 28, Onda 5/H5) — era ~16px efetivo (`padding: 0` + a linha do
+   texto), o mesmo defeito do `.rowId` de `ProjectSessionsTab.module.css`. */
 .title {
   font-family: var(--font-heading);
   font-weight: 600;
@@ -80,7 +83,9 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  display: block;
+  display: flex;
+  align-items: center;
+  min-height: 24px;
   max-width: 100%;
   padding: 0;
   border: none;
@@ -424,7 +429,10 @@
 }
 
 .asidePagerBotao {
-  /* 24px é o alvo mínimo que `scripts/dev/validacao-visual.js` cobra. */
+  /* 24px é o alvo mínimo que `scripts/dev/validacao-visual.js` cobra. NÃO
+     sobe para os 32px do handoff (PROGRAMA 28, Onda 5/H5): paginador denso
+     de painel lateral estreito, não botão de ícone PRIMÁRIO — mesmo
+     argumento do `.dot` de `Carousel.module.css`. */
   min-width: 24px;
   min-height: 24px;
   border: 1px solid var(--border);

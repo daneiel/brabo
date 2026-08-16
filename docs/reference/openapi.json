@@ -4163,6 +4163,52 @@
         ]
       }
     },
+    "/projects/{projectId}/container/lifecycle": {
+      "get": {
+        "description": "`null` quando o projeto nunca foi provisionado — hoje o caso comum, porque nenhum orquestrador real transiciona esta tabela ainda (RN-243/RN-267). O estado devolvido é o que foi REGISTRADO, nunca confirmado contra um daemon Docker: não existe cliente Docker no produto.",
+        "operationId": "ContainersController_cicloDeVida",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "O ciclo de vida registrado, ou `null` (nunca provisionado).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CicloDeVidaDoContainerResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Ciclo de vida do container do projeto (estado registrado)",
+        "tags": [
+          "projetos"
+        ]
+      }
+    },
     "/projects/{projectId}/coverage": {
       "get": {
         "description": "Cruza as regras do projeto com o `businessRuleIds` das histórias. Regra sem história nenhuma é uma DESCOBERTA — pendência do PO, não erro.",
@@ -10988,6 +11034,58 @@
         },
         "required": [
           "type"
+        ]
+      },
+      "CicloDeVidaDoContainerResponseDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "provisioning",
+              "running",
+              "stopped",
+              "failed",
+              "removed"
+            ],
+            "example": "provisioning",
+            "description": "O que foi REGISTRADO, não o que um daemon Docker confirma — nenhum orquestrador real transiciona esta tabela hoje (RN-243)."
+          },
+          "imageVersion": {
+            "type": "number",
+            "example": 1,
+            "description": "Versão de `artifact.project_image` CONGELADA na primeira transição (RN-245) — não é reaplicada a cada leitura."
+          },
+          "resources": {
+            "description": "Teto DECLARADO no provisionamento — não aplicado (RN-248).",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RecursosDoContainerResponseDto"
+              }
+            ]
+          },
+          "failureReason": {
+            "type": "object",
+            "nullable": true,
+            "example": null,
+            "description": "Só populado numa transição para `failed`."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "statusChangedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "status",
+          "imageVersion",
+          "resources",
+          "failureReason",
+          "createdAt",
+          "statusChangedAt"
         ]
       },
       "ClaimTaskInternalDto": {

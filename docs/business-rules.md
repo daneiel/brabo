@@ -7408,6 +7408,122 @@ ninguém está vendo.
   `apps/web/src/routes/code/CodeExplorer.test.tsx`,
   `apps/web/src/routes/code/CodeShell.test.tsx`
 
+## PROGRAMA 28 — Onda 5, frente G3: a tela do Chat RAG (RN-252..254, ADR 0082)
+
+### RN-252 — A tela do Chat RAG mostra as duas degradações honestas que o backend já declara, nunca as esconde {#rn-252}
+
+`HybridSearchUseCase` já devolve `vectorAvailable: false` quando o provider
+de embedding não respondeu (RN-233) e `GetRagCoverageUseCase` já nunca
+inclui timestamp de indexação (RN-237) — mas um contrato honesto no
+backend não garante uma tela honesta se ela decidir não ler os dois
+campos. `ProjectRagTab` mostra um aviso acima dos resultados quando
+`vectorAvailable` é `false` (com `vectorUnavailableReason`, quando
+existe), e `RagCoveragePanel` só renderiza contagem REAL (`filesIndexed`/
+`filesInRepo`, `sessionsIndexed`/`sessionsInProject`) — nenhum texto do
+tipo "reindexado há Xmin" nasce nesta tela, porque a resposta não carrega
+esse dado e inventá-lo mentiria (mesma régua do ADR 0042 para nota de
+modelo).
+
+- **Onde:** `apps/web/src/routes/ProjectRagTab.tsx` (linhas 27-31, 176-182),
+  `apps/web/src/components/rag/RagCoveragePanel.tsx` (linhas 27-34)
+- **Teste:** `apps/web/src/routes/ProjectRagTab.test.tsx` — "CASO DE FALHA
+  (degradação honesta): vectorAvailable false avisa..."; `apps/web/src/components/rag/RagCoveragePanel.test.tsx`
+  — "CASO DE FALHA (degradação honesta): nunca escreve..."
+- **ADR:** [0082](adr/0082-chat-rag-aba-de-busca-hibrida.md)
+
+### RN-253 — Citação de origem `session` navega até o EVENTO exato, reusando o mecanismo do Psicólogo {#rn-253}
+
+`RagCitationCard` não inventa um segundo caminho de navegação: origem
+`{ kind: 'session', sessionId, eventId }` chama `useNavigate` para
+`/projects/:projectId/sessions/:sessionId` com `search: { highlightEvent:
+eventId }` — a MESMA rota e o MESMO parâmetro que os chips de evidência
+do Psicólogo já usam (`HypothesisCard.tsx`, Fase 4b) para rolar o fio até
+o evento e destacá-lo. Origem `{ kind: 'file' }` mostra caminho e
+`headingPath` como texto, sem link: a aba Código não tem hoje deep-link
+por caminho, e construir essa navegação está fora do escopo desta
+frente.
+
+- **Onde:** `apps/web/src/components/rag/RagCitationCard.tsx` (linhas
+  32-38, 49-56)
+- **Teste:** `apps/web/src/components/rag/RagCitationCard.test.tsx` —
+  "caminho feliz: origem de sessão navega até o evento exato ao clicar"
+- **ADR:** [0082](adr/0082-chat-rag-aba-de-busca-hibrida.md)
+
+### RN-254 — O botão de reindexar é maintainer/owner na TELA, espelhando a régua da rota {#rn-254}
+
+`POST .../rag/reindex` já exige `role:maintainer` (RN-238) — quem
+garante é a api. `ProjectRagTab` espelha a régua no CLIENTE pelo mesmo
+padrão que `ProjectSettingsTab`/`ProjectApprovalsTab` já usam para outros
+gates de `maintainer` (`useCurrentWorkspaceWithRole`, já que não existe
+hoje um papel de PROJETO no cliente, só o de workspace que a listagem
+devolve): o botão "Reindexar agora" nem aparece para quem não é
+`owner`/`maintainer`, em vez de aparecer desabilitado — reindexar dispara
+N chamadas ao repositório do projeto e ao provider de embedding (mesma
+régua "muda o que o produto gasta sem perguntar" do teto de paralelismo,
+RN-083), e um botão visível mas sempre recusado só ensinaria a
+ignorar o 403.
+
+- **Onde:** `apps/web/src/routes/ProjectRagTab.tsx` (linhas 43-44, 109)
+- **Teste:** `apps/web/src/routes/ProjectRagTab.test.tsx` — "botão de
+  reindexar só aparece para maintainer/owner..."; "maintainer vê e pode
+  disparar a reindexação"
+- **ADR:** [0082](adr/0082-chat-rag-aba-de-busca-hibrida.md)
+
+### RN-267 — `GET /projects/:projectId/container/lifecycle` é a primeira exposição HTTP do ciclo de vida do container {#rn-267}
+
+O ADR 0081 criou `ObterCicloDeVidaDoContainerUseCase` sem rota, de propósito
+("expor uma seria adivinhar contrato" antes de existir um consumidor real).
+A Onda 5/F2 é esse consumidor (RN-268), e a rota nasce como espelho fiel do
+caso de uso: `null` quando o projeto nunca foi provisionado — o resultado
+esperado hoje, porque nenhum orquestrador real transiciona
+`project_containers` em produção (`RegistrarTransicaoDeContainerUseCase` não
+tem chamador nenhum fora de teste) — ou o estado registrado
+(`status`/`imageVersion`/`resources`/`failureReason`/`statusChangedAt`), NUNCA
+confirmado contra um daemon Docker, porque não existe cliente Docker no
+produto (RN-243). Mesma permissão da rota irmã (`GET
+/projects/:projectId/container`): `viewer`, GET, sem `@Post` — quem
+transicionaria o ciclo de vida é um orquestrador que ainda não existe.
+
+- **Onde:** `apps/api/src/interfaces/http/containers/containers.controller.ts`
+  (`cicloDeVida`), `apps/api/src/interfaces/http/containers/dto/containers.response.dto.ts`
+  (`CicloDeVidaDoContainerResponseDto`)
+- **Teste:** `apps/api/test/interfaces/http/containers/containers.controller.spec.ts`
+- **Borda:** `id`/`projectId`/`containerId` da linha interna NÃO vazam na
+  resposta — o contrato HTTP não é a mesma forma que a linha do banco.
+- **ADR:** [0083](adr/0083-terminal-mostra-estado-real-do-container.md)
+  (revisa o [0081](adr/0081-ciclo-de-vida-do-container-tabela-sem-orquestrador.md))
+
+### RN-268 — A aba Terminal mostra o estado REAL do container, nunca finge um terminal que não existe {#rn-268}
+
+O plano original desta frente era o terminal interativo completo, mas a
+investigação confirmou que a FASE 25b continua cortada: nenhum serviço monta
+`/var/run/docker.sock`, e mesmo depois do ADR 0081 (Onda 4) nada transiciona
+`project_containers` em produção. Implementar um terminal que finge executar
+comandos — ou que roda no mesmo container do monorepo do Brabo, a dívida que
+o ADR 0055 já descreve como política e não isolamento — seria inventar
+capacidade, o mesmo erro que os ADRs 0041/0042 já recusam para provider de
+LLM e modelo de catálogo.
+
+O que a aba GANHA é honesto: sob o texto explicativo que já existia (FASE
+26b), `CodeBottomPanel` busca `GET .../container/lifecycle` (RN-267) só
+enquanto a aba Terminal está aberta (`enabled: aba === 'terminal'` — sem
+polling em segundo plano, a mesma disciplina de tráfego da RN-107) e mostra
+o status com um `Badge` (`provisioning`/`running`/`stopped`/`failed`/
+`removed`, em pt-BR), há quanto tempo, e o `failureReason` quando o estado é
+`failed`. Projeto nunca provisionado — o caso comum hoje — mostra a frase
+"ainda não foi provisionado", nunca um badge inventado.
+
+- **Onde:** `apps/web/src/routes/code/CodeBottomPanel.tsx`,
+  `apps/web/src/routes/code/CodeBottomPanel.module.css`,
+  `apps/web/src/lib/api-client.ts` (`getContainerLifecycle`),
+  `apps/web/src/lib/api-types.ts` (`CicloDeVidaDoContainer`)
+- **Teste:** `apps/web/src/routes/code/CodeBottomPanel.test.tsx`
+  (describe "Terminal — o estado REAL do ciclo de vida do container")
+- **Borda:** o terminal interativo em si NÃO nasce aqui — é FASE 25b, que
+  segue cortada e depende da parede física do container (o worktree do
+  agente vivendo lá dentro), não desta rota de leitura.
+- **ADR:** [0083](adr/0083-terminal-mostra-estado-real-do-container.md)
+
 ### RN-272 — O callback do login social decide em ORDEM: identidade conhecida, depois vínculo por e-mail, depois conta nova {#rn-272}
 
 `SocialLoginCallbackUseCase` resolve a identidade do provider em três

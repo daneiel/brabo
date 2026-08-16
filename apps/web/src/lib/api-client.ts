@@ -21,6 +21,7 @@ import type {
   AgentInstructionVersion,
   Budget,
   BudgetPolicy,
+  CicloDeVidaDoContainer,
   CodeBlame,
   CodeBranchDetailList,
   CodeDiff,
@@ -389,6 +390,12 @@ export const registerGitCredential = (input: {
 
 export const getContainerState = (projectId: string) =>
   get<EstadoDoContainer>(`/projects/${projectId}/container`);
+
+// O ciclo de vida (provisioning/running/stopped/failed/removed), distinto da
+// decisão de imagem acima (ADR 0081/0083, RN-267). `null` é honesto: nenhum
+// orquestrador real transiciona `project_containers` hoje.
+export const getContainerLifecycle = (projectId: string) =>
+  get<CicloDeVidaDoContainer | null>(`/projects/${projectId}/container/lifecycle`);
 
 // --- Aba Code, só leitura (FASE 26) ---
 //
@@ -968,3 +975,30 @@ export const getWorkspaceSpendReportComProvider = (
   get<
     WorkspaceSpendReport & import('./api-types').WorkspaceSpendPorProvider
   >(`/workspaces/${workspaceId}/spend-report${dias ? `?dias=${dias}` : ''}`);
+
+// ---------------------------------------------------------------------------
+// APÊNDICE DA FRENTE G3 (PROGRAMA 28, Onda 5) — a tela do Chat RAG.
+//
+// As três rotas de `rag.controller.ts` (RN-231..238, ADR 0080). Escrito no
+// FIM do arquivo pelo mesmo motivo do apêndice da frente D0 — outras frentes
+// da Onda 5 editam este arquivo em paralelo. Tipos importados INLINE (sem
+// entrar na lista grande do topo) pela mesma razão.
+//
+// `search` e `coverage` são `role:viewer`; `reindex` é `role:maintainer`
+// (RN-238) — a tela gate o botão, mas quem garante é a api.
+// ---------------------------------------------------------------------------
+
+export const searchRag = (
+  projectId: string,
+  body: {
+    query: string;
+    scopes?: import('./api-types').RagChunkScope[];
+    limit?: number;
+  },
+) => post<import('./api-types').RagSearchResult>(`/projects/${projectId}/rag/search`, body);
+
+export const getRagCoverage = (projectId: string) =>
+  get<import('./api-types').RagCoverage>(`/projects/${projectId}/rag/coverage`);
+
+export const reindexRag = (projectId: string) =>
+  post<import('./api-types').RagReindexReport>(`/projects/${projectId}/rag/reindex`);

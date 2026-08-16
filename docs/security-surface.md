@@ -406,6 +406,7 @@ motivo na URL.
 | POST | `/projects/:projectId/rag/reindex` | role:maintainer |
 | GET | `/projects/:projectId/rag/coverage` | role:viewer |
 | GET | `/projects/:projectId/container` | role:viewer |
+| GET | `/projects/:projectId/container/lifecycle` | role:viewer |
 | GET | `/projects/:projectId/coverage` | role:viewer |
 | GET | `/projects/:projectId/events/:eventId` | role:viewer |
 | POST | `/projects/:projectId/execution/activate` | role:maintainer |
