@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { marcoExpansivel, montarArvore, ramosAbertosPorPadrao } from './timeline-tree';
+import { agruparPorInstancia, marcoExpansivel, montarArvore, ramosAbertosPorPadrao } from './timeline-tree';
 import type { SessionEvent } from './api-types';
 
 let seq = 0;
@@ -227,5 +227,60 @@ describe('ramosAbertosPorPadrao', () => {
     ]);
 
     expect(ramosAbertosPorPadrao(ramos)).toEqual(new Set(['a', 'b']));
+  });
+});
+
+/**
+ * A "instância" (achado da Onda 1/frente B0 do PROGRAMA 28, RN-198): não é
+ * um contador renumerado — é o `agent_id` real que o produto já escreve
+ * (`dev-backend`/`dev-backend-2`, `extraDevAgentId` em
+ * `activate-execution.use-case.ts`), e `montarArvore` já os separa em dois
+ * ramos por agrupar `evento.actor.id`. `agruparPorInstancia` só decide quais
+ * ramos formam um grupo visual de dois níveis.
+ */
+describe('agruparPorInstancia', () => {
+  it('agente sem sufixo -2 vira grupo de UMA instância', () => {
+    const { ramos } = montarArvore([evento('agent.activated', agente('criativo'))]);
+
+    const grupos = agruparPorInstancia(ramos);
+
+    expect(grupos).toEqual([{ agenteBase: 'criativo', instancias: [ramos[0]] }]);
+  });
+
+  it('dev-backend e dev-backend-2 viram UM grupo com DUAS instâncias, base primeiro', () => {
+    const { ramos } = montarArvore([
+      evento('agent.activated', agente('dev-backend-2')),
+      evento('agent.activated', agente('dev-backend')),
+    ]);
+
+    const grupos = agruparPorInstancia(ramos);
+
+    expect(grupos).toHaveLength(1);
+    expect(grupos[0].agenteBase).toBe('dev-backend');
+    expect(grupos[0].instancias.map((r) => r.agente)).toEqual(['dev-backend', 'dev-backend-2']);
+  });
+
+  it('agente terminado em -2 SEM o par de base vira grupo próprio, não instância de ninguém', () => {
+    // Não existe hoje (o teto é sempre dev-<modulo> + dev-<modulo>-2), mas a
+    // função não deve adivinhar um agente-base que não está na lista.
+    const { ramos } = montarArvore([evento('agent.activated', agente('modulo-2'))]);
+
+    const grupos = agruparPorInstancia(ramos);
+
+    expect(grupos).toEqual([{ agenteBase: 'modulo-2', instancias: [ramos[0]] }]);
+  });
+
+  it('múltiplos agentes independentes: um grupo por agente-base, ordem preservada', () => {
+    const { ramos } = montarArvore([
+      evento('agent.activated', agente('dev-backend')),
+      evento('agent.activated', agente('po')),
+      evento('agent.activated', agente('dev-backend-2')),
+    ]);
+
+    const grupos = agruparPorInstancia(ramos);
+
+    expect(grupos.map((g) => g.agenteBase).sort()).toEqual(['dev-backend', 'po']);
+    const devBackend = grupos.find((g) => g.agenteBase === 'dev-backend')!;
+    expect(devBackend.instancias).toHaveLength(2);
   });
 });

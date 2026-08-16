@@ -3,6 +3,7 @@ import { getContainerState, getProject } from '../lib/api-client';
 import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
 import { Skeleton } from '../components/ui/Skeleton';
 import { LockIcon } from '../components/ui/icons';
+import { useAutoCollapseSidebar } from '../lib/sidebar-state';
 import { CodeShell } from './code/CodeShell';
 import styles from './ProjectCodeTab.module.css';
 
@@ -36,6 +37,14 @@ import styles from './ProjectCodeTab.module.css';
  * fase seguinte — vira `proposed_action`, como todo efeito externo.
  */
 export function ProjectCodeTab({ projectId }: { projectId: string }) {
+  // RN-201 (PROGRAMA 28, Onda 2): a sidebar recolhe sozinha para dar largura
+  // ao editor, SEM gravar a preferência do usuário. Chamado incondicionalmente
+  // no topo — o `useEffect` de dentro do hook é o que registra no Shell
+  // enquanto este componente está montado, em QUALQUER um dos estados abaixo
+  // (bloqueado, carregando, pronto), e desregistra ao desmontar (trocar de
+  // aba ou sair do projeto), que é o que faz o colapso anterior voltar.
+  useAutoCollapseSidebar();
+
   const projectQuery = useQuery({
     queryKey: ['project', projectId],
     queryFn: () => getProject(projectId),
