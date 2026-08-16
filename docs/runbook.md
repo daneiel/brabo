@@ -29,6 +29,7 @@ arquivo. Comece pela triagem.
 | `blocked by CORS policy` no console do navegador | [Erro de CORS](#erro-de-cors) |
 | ativar sessão não faz nada, ou `transition` responde `500` com `ECONNREFUSED` | [A sessão não sai de `created`](#sessao-nao-ativa) |
 | a api sai no boot reclamando de `GIT_OAUTH_STATE_SECRET` | [A api recusa subir por segredo de OAuth](#segredo-de-oauth-no-boot) |
+| "Entrar com GitHub/GitLab" volta do provider com erro de `redirect_uri` | [O provider recusa o callback do login social](#callback-login-social-nao-registrado) |
 | a api ou o engine saem no boot reclamando de `AUTH_JWT_SECRET`, `BRABO_SERVICE_TOKEN`, `CREDENTIALS_MASTER_KEY` ou `SECRET_KEY_BASE` | [Os quatro segredos irmãos também não sobem com o default](#segredos-irmaos-no-boot) |
 | agente respondendo vazio, truncado ou lentíssimo | [Ambiente de inferência](#ambiente-de-inferencia) |
 | agente parando com `limite de iterações atingido` sem ter entregado | [Ambiente de inferência](#ambiente-de-inferencia) |
@@ -391,6 +392,28 @@ Trocar a chave **invalida os `state` em voo**: quem estiver no meio de um
 `state` é de 10 minutos, a janela é essa — não há migração a fazer, e nenhuma
 conexão **já estabelecida** é afetada (o token guardado não depende desta
 chave).
+
+### O provider recusa o callback do login social {#callback-login-social-nao-registrado}
+
+Sintoma: clicar em "Entrar com GitHub"/"Entrar com GitLab" na tela de login
+leva ao provider e volta com um erro do TIPO DELE (`redirect_uri_mismatch` no
+GitHub, "The redirect URI included is not valid" no GitLab) — nunca chega a
+`/auth/oauth/:provider/callback`.
+
+**Não é bug do produto — é registro faltando no lado do provider.** O login
+social ([ADR 0084](adr/0084-login-social-github-e-gitlab.md)) reusa o MESMO
+OAuth App que a conexão de git já usa (`GITHUB_OAUTH_CLIENT_ID`/
+`GITLAB_OAUTH_CLIENT_ID`, sem variável nova), mas cada FLUXO tem seu próprio
+`redirect_uri`, e o provider exige que TODOS os que a api pode pedir estejam
+cadastrados de antemão:
+
+- Conexão de git (já existia): `${API_PUBLIC_URL}/git/oauth/<provider>/callback`
+- Login social (novo): `${API_PUBLIC_URL}/auth/oauth/<provider>/callback`
+
+Cadastre o segundo na configuração do OAuth App (GitHub: Settings → Developer
+settings → OAuth Apps; GitLab: Settings → Applications) — GitHub aceita várias
+callback URLs no mesmo App, GitLab também. Não precisa de App separado nem de
+client id/secret novo.
 
 ### Os quatro segredos irmãos também não sobem com o default {#segredos-irmaos-no-boot}
 

@@ -29,8 +29,16 @@ usuário (RBAC por papel, `@RequireRole`) — como
 documento, mesmo quando um agente é quem efetivamente chama através delas. O
 service token compartilhado NUNCA serve como credencial nessas rotas, e o JWT
 de usuário nunca serve em `/internal/*` — os dois mecanismos não se sobrepõem
-([RN-035](../business-rules.md#rn-035)). A classificação de exposição de toda
-rota HTTP, interna ou não, está em [docs/security-surface.md](../security-surface.md).
+([RN-035](../business-rules.md#rn-035)). Também fora do escopo: as rotas
+`@Public()` que são o próprio PONTO DE ENTRADA antes de qualquer sessão
+existir — `POST /auth/login`, `POST /auth/register`,
+`GET /auth/oauth/:provider/start`/`callback` (login social, ADR 0084) e as
+demais de `auth.controller.ts`. Nenhuma delas usa o service token nem o JWT
+de usuário (é o que ELAS emitem, não o que exigem), então a distinção
+service-token-vs-JWT que esta página existe para explicar não se aplica —
+elas simplesmente não têm credencial nenhuma na entrada. A classificação de
+exposição de toda rota HTTP, interna ou não, está em
+[docs/security-surface.md](../security-surface.md).
 
 ## Autenticação
 
