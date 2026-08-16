@@ -79,3 +79,27 @@
   font-size: 12px;
   line-height: 1.5;
 }
+
+/* O estado REAL do ciclo de vida do container (RN-267/268), sob o texto
+   explicativo — nunca no lugar dele, porque o estado sozinho não diz por
+   que o terminal em si não existe. */
+.cicloDeVida {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.cicloDeVidaDetalhe {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.cicloDeVidaFalha {
+  margin: 0;
+  max-width: 440px;
+  font-size: 11px;
+  color: var(--danger);
+  width: 100%;
+}

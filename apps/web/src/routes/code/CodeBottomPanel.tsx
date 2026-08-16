@@ -1,5 +1,11 @@
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { getContainerLifecycle } from '../../lib/api-client';
+import { ErroDeCarregamento } from '../../components/ErroDeCarregamento';
+import { Badge, type BadgeTone } from '../../components/ui/Badge';
+import { Skeleton } from '../../components/ui/Skeleton';
 import { AlertIcon, OutputIcon, TerminalIcon } from '../../components/ui/icons';
+import type { ContainerLifecycleStatus } from '../../lib/api-types';
 import { CodeDiffPanel } from './CodeDiffPanel';
 import styles from './CodeBottomPanel.module.css';
 
@@ -12,6 +18,22 @@ const ABAS: { chave: PainelInferior; rotulo: string }[] = [
   { chave: 'output', rotulo: 'Saída' },
 ];
 
+const STATUS_LABEL: Record<ContainerLifecycleStatus, string> = {
+  provisioning: 'Provisionando',
+  running: 'Rodando',
+  stopped: 'Parado',
+  failed: 'Falhou',
+  removed: 'Removido',
+};
+
+const STATUS_TONE: Record<ContainerLifecycleStatus, BadgeTone> = {
+  provisioning: 'accent',
+  running: 'success',
+  stopped: 'muted',
+  failed: 'danger',
+  removed: 'muted',
+};
+
 /**
  * Painel inferior, as quatro abas do handoff (item 279 do
  * `design_handoff_brabo/README.md`): Terminal, Problemas, Diff e Saída.
@@ -21,7 +43,13 @@ const ABAS: { chave: PainelInferior; rotulo: string }[] = [
  * As outras três nascem com estado vazio HONESTO, e cada uma explica por quê
  * — nenhuma decoração fingindo integração que não existe:
  *
- * - Terminal: interativo é FASE 25b, que ainda não subiu.
+ * - Terminal: interativo é FASE 25b, que ainda não subiu — e continua não
+ *   existindo aqui (Onda 5/F2, RN-267/268). O que a aba GANHA é o estado
+ *   REGISTRADO do ciclo de vida do container (ADR 0081/0083), lido de
+ *   `GET .../container/lifecycle` só enquanto esta aba está aberta: `null`
+ *   é o resultado honesto de "nunca provisionado", porque nenhum
+ *   orquestrador real transiciona `project_containers` ainda — mostrar
+ *   qualquer outra coisa aqui seria simular execução que não acontece.
  * - Problemas: não há lint/diagnóstico algum rodando sobre o código do
  *   projeto gerido nesta aba — o badge "3" do handoff é mock. Inventar a
  *   contagem seria o mesmo erro que o ADR 0077 já recusou para nota de
@@ -32,6 +60,16 @@ const ABAS: { chave: PainelInferior; rotulo: string }[] = [
  */
 export function CodeBottomPanel({ projectId }: { projectId: string }) {
   const [aba, setAba] = useState<PainelInferior>('terminal');
+
+  const lifecycleQuery = useQuery({
+    queryKey: ['container-lifecycle', projectId],
+    queryFn: () => getContainerLifecycle(projectId),
+    // Só busca enquanto a aba Terminal está aberta — nenhum orquestrador
+    // real transiciona esta tabela hoje (RN-243), então reconsultar em
+    // segundo plano seria tráfego sem informação nova (a mesma família de
+    // defeito da PÓS-FASE 15).
+    enabled: aba === 'terminal',
+  });
 
   return (
     <div className={styles.painel}>
@@ -61,6 +99,42 @@ export function CodeBottomPanel({ projectId }: { projectId: string }) {
               (provisionar, reciclar, o worktree do agente vivendo lá dentro)
               é a fase seguinte.
             </p>
+
+            {lifecycleQuery.isLoading && (
+              <Skeleton width={180} height={20} radius={999} />
+            )}
+
+            {lifecycleQuery.isError && (
+              <ErroDeCarregamento
+                titulo="Não consegui consultar o estado do container."
+                erro={lifecycleQuery.error}
+                onTentarDeNovo={() => void lifecycleQuery.refetch()}
+              />
+            )}
+
+            {lifecycleQuery.isSuccess &&
+              (lifecycleQuery.data ? (
+                <div className={styles.cicloDeVida}>
+                  <Badge tone={STATUS_TONE[lifecycleQuery.data.status]}>
+                    {STATUS_LABEL[lifecycleQuery.data.status]}
+                  </Badge>
+                  <span className={styles.cicloDeVidaDetalhe}>
+                    desde{' '}
+                    {new Date(lifecycleQuery.data.statusChangedAt).toLocaleString('pt-BR')}
+                  </span>
+                  {lifecycleQuery.data.status === 'failed' &&
+                    lifecycleQuery.data.failureReason && (
+                      <p className={styles.cicloDeVidaFalha}>
+                        {lifecycleQuery.data.failureReason}
+                      </p>
+                    )}
+                </div>
+              ) : (
+                <p className={styles.cicloDeVidaDetalhe}>
+                  Este projeto ainda não foi provisionado — nenhuma linha de
+                  ciclo de vida registrada (RN-267).
+                </p>
+              ))}
           </div>
         )}
         {aba === 'problems' && (

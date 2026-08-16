@@ -1096,6 +1096,28 @@ export interface EstadoDoContainer {
   decidedAt: string | null;
 }
 
+/**
+ * O ciclo de vida do container (ADR 0081/0083, RN-243..248/RN-267) —
+ * distinto de `EstadoDoContainer`, que é a DECISÃO de imagem. `null` é o
+ * estado honesto de "nunca provisionado": nenhum orquestrador real
+ * transiciona `project_containers` hoje.
+ */
+export type ContainerLifecycleStatus =
+  | 'provisioning'
+  | 'running'
+  | 'stopped'
+  | 'failed'
+  | 'removed';
+
+export interface CicloDeVidaDoContainer {
+  status: ContainerLifecycleStatus;
+  imageVersion: number;
+  resources: RecursosDoContainer;
+  failureReason: string | null;
+  createdAt: string;
+  statusChangedAt: string;
+}
+
 // --- Aba Code, só leitura (FASE 26) — espelha
 // apps/api/src/application/use-cases/git/read-project-code.use-case.ts +
 // interfaces/http/git/dto/code.response.dto.ts ---
