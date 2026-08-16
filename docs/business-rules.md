@@ -6760,6 +6760,124 @@ coluna Origem de `ModelsSection` já usa para o binding pulado.
   (describe "MelhoresModelosPorCapacidadeSection")
 - **ADR:** [0077](adr/0077-ranking-de-modelos-por-capacidade-sem-nota-inventada.md)
 
+### RN-211 — Gasto por provider na tela é Ranking, não paleta categórica inventada {#rn-211}
+
+O handoff pede barras diárias empilhadas por provider e uma quebra por
+provider. A skill de dataviz do repositório manda validar paleta
+categórica por script antes de usar, nunca por olho: `validate_palette.js`
+reprova toda combinação de 3+ tokens de `design/tokens.css` contra pelo
+menos um dos dois temas — `--accent`+`--violet` é o único par que passa
+nos dois (vários `--syntax-*` são literalmente o mesmo hex de
+`--warning`/`--violet`/`--success`, medido). Com 9 providers (ADR 0043) e
+2 cores validadas, ciclar a paleta é o anti-padrão que a própria skill
+nomeia ("a 9th series is never a generated hue"), e inventar hex novo
+violaria a instrução desta frente. A quebra por provider vira `Ranking` —
+a mesma peça de "Por modelo"/"Por projeto"/"Por agente e pessoa", sem
+identidade por cor. A série DIÁRIA por provider não é entregue:
+`sumGroupedBy` (ADR 0076) agrupa por uma dimensão de cada vez, e não existe
+agregação cruzada dia×provider no backend desta onda.
+
+- **Onde:** `apps/web/src/lib/spend.ts` (bloco "Gasto por PROVIDER na
+  tela"), `apps/web/src/routes/ProjectSpendTab.tsx` (`GastoDoWorkspace`)
+- **Teste:** `apps/web/src/routes/ProjectSpendTab.test.tsx` (describe "a
+  audiência do owner" — `'mostra os cinco recortes do workspace,
+  incluindo provider'`)
+- **ADR:** [0076](adr/0076-provider-volta-a-ser-dimensao-de-gasto.md)
+
+### RN-212 — Bloco "por projeto" é o TokenMeter plugado ao orçamento real {#rn-212}
+
+A aba de Gastos ganha um bloco por PROJETO (não por audiência):
+`OrcamentoDoProjeto` lê `GET /projects/:id/budget` e planta o resultado
+direto no `TokenMeter` existente, que já implementa os limiares 70/90
+(`tokenThreshold`) — nenhum componente novo. Três leituras: carregando
+(silencioso, evita piscar antes do papel resolver a audiência de baixo),
+sem orçamento definido (nota em texto, sem CTA) e erro (silencioso — na
+prática quase sempre 403 de quem tem papel de WORKSPACE mas não é
+`maintainer` no PROJETO, e mostrar banner de propósito seria alarme falso
+para a maioria dos membros, o mesmo padrão já usado pelo `TokenMeter`
+compacto de `ProjectPage.tsx`).
+
+- **Onde:** `apps/web/src/routes/ProjectSpendTab.tsx`
+  (`OrcamentoDoProjeto`)
+- **Teste:** `apps/web/src/routes/ProjectSpendTab.test.tsx` (describe "o
+  orçamento do projeto")
+
+### RN-213 — Alerta de custo é leitura de `lastThresholdNotified`, nunca recálculo {#rn-213}
+
+`alertaDeOrcamento` não reimplementa `crossedThresholds`
+(`apps/api/src/domain/llm/budget-threshold.ts`): lê o campo que o backend
+já grava no momento em que uma chamada real cruza 70/90/100%, e só decide
+a cor (`warning` abaixo de 90, `danger` a partir de 90) e se o texto deve
+avisar bloqueio ativo (`policy === 'block' && spentMicros >=
+limitMicros`). Nenhuma regra de negócio nova — puramente apresentação de
+um dado que já existe.
+
+- **Onde:** `apps/web/src/lib/spend.ts` (`alertaDeOrcamento`)
+- **Teste:** `apps/web/src/lib/spend.test.ts` (describe "alertaDeOrcamento
+  (RN-213)"); `apps/web/src/routes/ProjectSpendTab.test.tsx` (describe "o
+  orçamento do projeto")
+
+### RN-214 — KPI de economia com modelo local fica de fora por falta de preço contrafactual {#rn-214}
+
+`TokenMeter` já tem `savingsBRL`/`savingsPct` prontos para receber o
+número, e permanecem não alimentados de propósito. O card exigiria um
+preço CONTRAFACTUAL — quanto a mesma chamada teria custado num modelo
+pago — que não existe em lugar nenhum do produto: o catálogo (ADR 0042)
+só congela o preço do modelo REALMENTE usado (RN-044), e não há
+mapeamento declarado "modelo local X ~ modelo pago Y". Inventá-lo aqui
+seria a mesma classe de "nota vestida de dado" que a RN-210 já recusou
+para ranking de capacidade. Pendência registrada no backlog para quando
+existir um preço contrafactual defensável e versionado.
+
+- **Onde:** `apps/web/src/routes/ProjectSpendTab.tsx` (comentário "KPI de
+  economia com modelos locais — CORTE DECLARADO", fim do arquivo)
+
+### RN-215 — Aba Problemas nasce com estado vazio honesto {#rn-215}
+
+Não há lint nem teste integrado sobre o código do projeto gerido; a aba
+Problemas do painel inferior (handoff `design_handoff_brabo`) diz isso
+explicitamente em vez de mostrar contagem inventada (o mock do handoff traz
+badge "3"). Mesmo padrão já usado pelo Terminal (FASE 25b) e pelo item
+"Testes" desabilitado do rail.
+
+- **Onde:** `apps/web/src/routes/code/CodeBottomPanel.tsx`
+- **Teste:** `apps/web/src/routes/code/CodeBottomPanel.test.tsx` —
+  "Problemas diz honestamente que não há lint/teste integrado, sem
+  contagem inventada"
+
+### RN-216 — Aba Saída nasce com estado vazio honesto {#rn-216}
+
+Não há stream de comando de build/deploy nesta aba — ele dependeria do
+terminal interativo (FASE 25b), que não existe. A aba explica isso e lembra
+que `git push`/PR/deploy não saem pelo terminal de qualquer forma (RN-106).
+
+- **Onde:** `apps/web/src/routes/code/CodeBottomPanel.tsx`
+- **Teste:** `apps/web/src/routes/code/CodeBottomPanel.test.tsx` — "Saída
+  diz honestamente que não há stream de comando, sem simular execução"
+
+### RN-217 — Status bar da aba Código só mostra dado real {#rn-217}
+
+A status bar de 24px (`CodeShell.tsx`) mostra `↑N ↓M` de commits da branch
+atual (via `getCodeBranches`, mesma `queryKey` de `CodeBranchPicker` —
+dedup, zero requisição extra, RN-090/091) e a linguagem do arquivo ativo
+(`linguagemPorCaminho`). Posição do cursor e contagem de erros/testes do
+mock do handoff ficaram de fora: `CodeEditor` não expõe seleção/caret
+rastreável e não há lint/teste integrado (mesma decisão da RN-215).
+
+- **Onde:** `apps/web/src/routes/code/CodeShell.tsx`
+- **Teste:** `apps/web/src/routes/code/CodeShell.test.tsx` — "a status bar
+  mostra ↑/↓ real da branch atual" e "sem ahead/behind (branch em dia), a
+  status bar não mostra o par vazio"
+
+### RN-218 — Foco visível nas abas próprias do painel inferior {#rn-218}
+
+As abas de `CodeBottomPanel.tsx` são implementação própria (não o `Tabs` do
+design system) e não herdavam o `:focus-visible` calibrado que
+`Tabs.module.css` ganhou na Onda 2/frente C. Corrigido com o mesmo padrão de
+`Input.module.css` (ADR 0036), incluindo `forced-colors`.
+
+- **Onde:** `apps/web/src/routes/code/CodeBottomPanel.module.css`
+
 ### RN-219 — Os três escopos do índice de chunks são honestos, e mutuamente exclusivos por CHECK {#rn-219}
 
 O índice do Chat RAG cobre só três fontes de texto que o produto já sabe de
@@ -6885,6 +7003,59 @@ indexado.
   ("createMany grava um lote e listByProject filtra por escopo, sem
   misturar docs e session")
 - **ADR:** [0079](adr/0079-tabela-de-chunks-vetor-e-tsvector-juntos.md)
+
+### RN-227 — Selo de status da sessão cobre os 5 estados reais, não os 4 do handoff {#rn-227}
+
+O handoff pede 4 selos (ativa/aguardando/fechada/abortada) para os 5
+estados reais da máquina (`created/active/closing/closed/closed_abnormally`).
+`closed_abnormally`→abortada e `created`→aguardando são diretos. `closing`
+NÃO é fundido com "fechada": ganha selo próprio ("encerrando", tom
+`accent`, pulsante), porque em `closing` o desfecho (`closed` ou
+`closed_abnormally`) ainda não é conhecido — chamá-la de "fechada"
+mentiria sobre isso.
+
+- **Onde:** `apps/web/src/routes/ProjectSessionsTab.tsx` (`SELO_DO_STATUS`)
+- **Teste:** `apps/web/src/routes/ProjectSessionsTab.test.tsx` — describe
+  "ProjectSessionsTab — selo de status (RN-227)"
+
+### RN-228 — Filtro pill agrupa os 2 estados sem pill própria por TRAJETÓRIA {#rn-228}
+
+Os filtros pill do handoff (todas/ativas/fechadas/abortadas) só cobrem 4
+dos 5 estados. `created` (aguardando) entra no pill "Ativas" — ainda não
+chegou a lugar nenhum, é "sessão em jogo". `closing` entra no pill
+"Fechadas" — já está a caminho de fechar sem erro. O SELO de cada linha
+(RN-227) nunca é reescrito pelo filtro; o pill só agrupa.
+
+- **Onde:** `apps/web/src/routes/ProjectSessionsTab.tsx`
+  (`correspondeAoFiltro`)
+- **Teste:** `apps/web/src/routes/ProjectSessionsTab.test.tsx` — describe
+  "filtro pill agrupa os 2 estados sem pill própria (RN-228)"
+
+### RN-229 — KPI "custo do mês" da aba Criativo é o consumo do ATOR, não o total do projeto {#rn-229}
+
+Reaproveita `getMySpend(projectId, 30)` — a MESMA queryKey que
+`ProjectSpendTab.tsx#MeuConsumo` usa para a visão do membro (RN-101, ADR
+0063), sem agregação nova. NUNCA mostra o total do projeto somando todo
+mundo (`porProjeto` em `getWorkspaceSpendReport`), porque esse dado é
+owner-only e a aba Criativo é vista por qualquer membro do projeto —
+mostrar o total geral vazaria gasto alheio para quem a RN-060/101 não
+autoriza a ver.
+
+- **Onde:** `apps/web/src/routes/ProjectSessionsTab.tsx` (`CriativoKpis`)
+- **Teste:** `apps/web/src/routes/ProjectSessionsTab.test.tsx` — describe
+  "KPIs da aba Criativo", casos "caminho feliz" e "CASO DE FALHA"
+
+### RN-230 — KPI "taxa ideação → commit" é declarado ausente, nunca calculado {#rn-230}
+
+Não existe, em lugar nenhum do produto, vínculo entre uma sessão criativa e
+o commit que ela produziu. A aba Criativo mostra "—" com a frase "não
+medido: sessão não é vinculada a commit hoje" em vez de inventar um
+cálculo — mesma classe de erro que o ADR 0042 já recusa para nota de
+modelo.
+
+- **Onde:** `apps/web/src/routes/ProjectSessionsTab.tsx` (`CriativoKpis`)
+- **Teste:** `apps/web/src/routes/ProjectSessionsTab.test.tsx` — "'Taxa
+  ideação → commit' é DECLARADA ausente — nunca um número calculado"
 
 ---
 

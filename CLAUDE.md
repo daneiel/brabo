@@ -1039,6 +1039,24 @@ mudança — nenhum dos dois expõe afordância interativa própria: linha de
 `<button>`/`<a>` dentro da célula, via `render`) e `Badge` não é usado com
 `onClick` em lugar nenhum do produto.
 
+## PROGRAMA 28 — Onda 3, frente H3: a aba Criativo ganha KPIs sem fingir dado que não existe (RN-227..230)
+O handoff pede 4 selos de status para os 5 estados reais da sessão
+(`created/active/closing/closed/closed_abnormally`). `closed_abnormally`→
+abortada e `created`→aguardando são diretos; `closing` NÃO foi fundido com
+"fechada" — ganha selo próprio ("encerrando", tom `accent`, pulsante),
+porque em `closing` o desfecho ainda não é conhecido e chamá-la de "fechada"
+mentiria sobre isso. Os filtros pill (só 4, pelo mesmo motivo) agrupam
+`created` e `closing` por TRAJETÓRIA, não aparência: `created` cai em
+"Ativas" (ainda em jogo), `closing` cai em "Fechadas" (a caminho de fechar
+sem erro) — o selo da linha nunca é reescrito pelo filtro, só o agrupamento
+muda. Dos 4 KPIs, dois são honestos por dado ausente: "custo do mês"
+REAPROVEITA `getMySpend` (mesma `queryKey` da aba Gastos, visão do
+membro/RN-101) e nunca mostra o total do projeto — que é dado do owner
+(`porProjeto`), e a aba Criativo é vista por qualquer membro; "taxa ideação
+→ commit" é DECLARADA ausente (mostra "—"), porque não existe vínculo entre
+sessão e commit no produto hoje — inventar o cálculo seria a mesma classe
+de erro que o ADR 0042 já recusa para nota de modelo.
+
 ## FERRAMENTA DE DESENVOLVIMENTO — `pnpm bootstrap`
 Menu de terminal em `scripts/dev/bootstrap.sh` agrupando o que se faz no
 dia a dia: Docker, K8s, Database e Test. Existe porque esses comandos moram
