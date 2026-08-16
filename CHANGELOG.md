@@ -37,6 +37,21 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   com `box-shadow: inset 0 -2px 0 var(--accent)` em vez de `border-bottom`,
   rolagem horizontal em telas estreitas, e container de conteúdo com largura
   máxima de 1040px. O rótulo "Code" virou "Código" (ADR 0078).
+- **web**: aba de Gastos ganha quebra por provider (Ranking, RN-211), bloco
+  de orçamento por projeto com o `TokenMeter` existente (RN-212) e alerta
+  de custo lido do orçamento (RN-213). KPI de economia com modelo local
+  fica de fora, declarado — falta preço contrafactual defensável (RN-214)
+- **web**: o painel inferior da aba Código ganha as quatro abas do handoff
+  (Terminal, Problemas, Diff de PR, Saída) — Problemas e Saída nascem com
+  estado vazio honesto, sem lint/teste ou stream de comando inventados
+  (RN-215/216) — e a status bar de 24px passa a mostrar `↑N ↓M` real da
+  branch e a linguagem do arquivo ativo (RN-217); abas do painel ganham
+  foco visível (RN-218)
+- **web**: a aba Criativo ganhou os 4 KPIs do handoff (sessões no projeto,
+  ativas agora, taxa ideação→commit, custo do mês), filtros pill
+  (todas/ativas/fechadas/abortadas) e selos de status para os 5 estados
+  reais da sessão — `closing` com selo próprio "encerrando", nunca fundido
+  com "fechada" (RN-227..230)
 
 ### Correções
 
