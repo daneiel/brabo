@@ -82,12 +82,18 @@
   color: var(--text-muted);
 }
 
+/*
+ * 32px é o piso de alvo de toque para botão de ícone primário (PROGRAMA 28,
+ * Onda 5/H5) — o mesmo tratamento do `.close` de `Modal.module.css`. Era
+ * 22px, abaixo até do piso de 24px da WCAG 2.2 AA 2.5.8 que
+ * `scripts/dev/validacao-visual.js` mede.
+ */
 .newProjectButton {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: 32px;
+  height: 32px;
   flex-shrink: 0;
   border: none;
   border-radius: var(--radius-sm);
@@ -147,12 +153,18 @@
   color: var(--text-primary);
 }
 
+/*
+ * 32px, piso de alvo de toque para botão de ícone primário (PROGRAMA 28,
+ * Onda 5/H5) — era 22px. Bumpar aqui alonga a linha do projeto na sidebar;
+ * aceito, é um controle de navegação PRINCIPAL (expande/recolhe as abas do
+ * projeto), não um controle denso repetido como o fechar de aba do editor.
+ */
 .chevronBotao {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: 32px;
+  height: 32px;
   flex-shrink: 0;
   border: none;
   border-radius: var(--radius-sm);
@@ -547,8 +559,15 @@
   width: 100%;
 }
 
+/*
+ * Recolhida, esta linha vira botão SÓ DE ÍCONE (o rótulo de texto some) —
+ * `min-height: 32px` fecha o piso de toque de ícone primário que faltava
+ * (PROGRAMA 28, Onda 5/H5); expandida ela já é maior por causa do texto,
+ * então o `padding` de lá não muda.
+ */
 .colapsado .footerButton {
   width: 36px;
+  min-height: 32px;
   justify-content: center;
 }
 
@@ -631,8 +650,11 @@
   width: 100%;
 }
 
+/* Mesma razão do `.colapsado .footerButton` acima: recolhida, esta linha é
+   só ícone, e precisa do piso de 32px de altura. */
 .colapsado .logout {
   width: 36px;
+  min-height: 32px;
   justify-content: center;
 }
 

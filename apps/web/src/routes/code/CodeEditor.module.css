@@ -55,7 +55,11 @@
   align-items: center;
   justify-content: center;
   /* 24px é o piso de alvo de toque da WCAG 2.2 AA (2.5.8) — a mesma régua
-     que scripts/dev/validacao-visual.js aplica no navegador. Era 22px. */
+     que scripts/dev/validacao-visual.js aplica no navegador. Era 22px.
+     NÃO sobe para os 32px do handoff (PROGRAMA 28, Onda 5/H5): fechar de
+     aba é controle DENSO e repetido por aba aberta — o mesmo argumento do
+     `.dot` de `Carousel.module.css` — e não o botão de ícone PRIMÁRIO que a
+     régua de 32px mira (ex.: `.close` de `Modal`). */
   width: 24px;
   height: 24px;
   margin-right: 6px;
