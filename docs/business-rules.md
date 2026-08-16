@@ -7289,6 +7289,61 @@ registrada era X").
   — "create nasce em `provisioning`, com a versão e os recursos passados"
 - **ADR:** [0081](adr/0081-ciclo-de-vida-do-container-tabela-sem-orquestrador.md)
 
+### RN-267 — `GET /projects/:projectId/container/lifecycle` é a primeira exposição HTTP do ciclo de vida do container {#rn-267}
+
+O ADR 0081 criou `ObterCicloDeVidaDoContainerUseCase` sem rota, de propósito
+("expor uma seria adivinhar contrato" antes de existir um consumidor real).
+A Onda 5/F2 é esse consumidor (RN-268), e a rota nasce como espelho fiel do
+caso de uso: `null` quando o projeto nunca foi provisionado — o resultado
+esperado hoje, porque nenhum orquestrador real transiciona
+`project_containers` em produção (`RegistrarTransicaoDeContainerUseCase` não
+tem chamador nenhum fora de teste) — ou o estado registrado
+(`status`/`imageVersion`/`resources`/`failureReason`/`statusChangedAt`), NUNCA
+confirmado contra um daemon Docker, porque não existe cliente Docker no
+produto (RN-243). Mesma permissão da rota irmã (`GET
+/projects/:projectId/container`): `viewer`, GET, sem `@Post` — quem
+transicionaria o ciclo de vida é um orquestrador que ainda não existe.
+
+- **Onde:** `apps/api/src/interfaces/http/containers/containers.controller.ts`
+  (`cicloDeVida`), `apps/api/src/interfaces/http/containers/dto/containers.response.dto.ts`
+  (`CicloDeVidaDoContainerResponseDto`)
+- **Teste:** `apps/api/test/interfaces/http/containers/containers.controller.spec.ts`
+- **Borda:** `id`/`projectId`/`containerId` da linha interna NÃO vazam na
+  resposta — o contrato HTTP não é a mesma forma que a linha do banco.
+- **ADR:** [0083](adr/0083-terminal-mostra-estado-real-do-container.md)
+  (revisa o [0081](adr/0081-ciclo-de-vida-do-container-tabela-sem-orquestrador.md))
+
+### RN-268 — A aba Terminal mostra o estado REAL do container, nunca finge um terminal que não existe {#rn-268}
+
+O plano original desta frente era o terminal interativo completo, mas a
+investigação confirmou que a FASE 25b continua cortada: nenhum serviço monta
+`/var/run/docker.sock`, e mesmo depois do ADR 0081 (Onda 4) nada transiciona
+`project_containers` em produção. Implementar um terminal que finge executar
+comandos — ou que roda no mesmo container do monorepo do Brabo, a dívida que
+o ADR 0055 já descreve como política e não isolamento — seria inventar
+capacidade, o mesmo erro que os ADRs 0041/0042 já recusam para provider de
+LLM e modelo de catálogo.
+
+O que a aba GANHA é honesto: sob o texto explicativo que já existia (FASE
+26b), `CodeBottomPanel` busca `GET .../container/lifecycle` (RN-267) só
+enquanto a aba Terminal está aberta (`enabled: aba === 'terminal'` — sem
+polling em segundo plano, a mesma disciplina de tráfego da RN-107) e mostra
+o status com um `Badge` (`provisioning`/`running`/`stopped`/`failed`/
+`removed`, em pt-BR), há quanto tempo, e o `failureReason` quando o estado é
+`failed`. Projeto nunca provisionado — o caso comum hoje — mostra a frase
+"ainda não foi provisionado", nunca um badge inventado.
+
+- **Onde:** `apps/web/src/routes/code/CodeBottomPanel.tsx`,
+  `apps/web/src/routes/code/CodeBottomPanel.module.css`,
+  `apps/web/src/lib/api-client.ts` (`getContainerLifecycle`),
+  `apps/web/src/lib/api-types.ts` (`CicloDeVidaDoContainer`)
+- **Teste:** `apps/web/src/routes/code/CodeBottomPanel.test.tsx`
+  (describe "Terminal — o estado REAL do ciclo de vida do container")
+- **Borda:** o terminal interativo em si NÃO nasce aqui — é FASE 25b, que
+  segue cortada e depende da parede física do container (o worktree do
+  agente vivendo lá dentro), não desta rota de leitura.
+- **ADR:** [0083](adr/0083-terminal-mostra-estado-real-do-container.md)
+
 ---
 
 ## Quando dá errado

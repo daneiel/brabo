@@ -21,6 +21,7 @@ import type {
   AgentInstructionVersion,
   Budget,
   BudgetPolicy,
+  CicloDeVidaDoContainer,
   CodeBlame,
   CodeBranchDetailList,
   CodeDiff,
@@ -389,6 +390,12 @@ export const registerGitCredential = (input: {
 
 export const getContainerState = (projectId: string) =>
   get<EstadoDoContainer>(`/projects/${projectId}/container`);
+
+// O ciclo de vida (provisioning/running/stopped/failed/removed), distinto da
+// decisão de imagem acima (ADR 0081/0083, RN-267). `null` é honesto: nenhum
+// orquestrador real transiciona `project_containers` hoje.
+export const getContainerLifecycle = (projectId: string) =>
+  get<CicloDeVidaDoContainer | null>(`/projects/${projectId}/container/lifecycle`);
 
 // --- Aba Code, só leitura (FASE 26) ---
 //
