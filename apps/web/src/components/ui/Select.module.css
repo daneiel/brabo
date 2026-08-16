@@ -21,9 +21,25 @@
     box-shadow 0.12s;
 }
 
-.select:focus {
+/*
+ * `:focus-visible`, e com `outline` transparente (ADR 0036) — cópia literal do
+ * mesmo tratamento de `Input.module.css` (mesma cor, largura, offset e o bloco
+ * de `forced-colors`). Era `:focus` puro, que também acende ao clicar com o
+ * mouse e, em `forced-colors` (alto contraste do sistema), fica sem indicador
+ * NENHUM porque o `box-shadow` é descartado ali — o `outline` transparente
+ * reserva o espaço que o modo de alto contraste pinta.
+ */
+.select:focus-visible {
   border-color: var(--accent);
+  outline: 2px solid transparent;
+  outline-offset: 0;
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+@media (forced-colors: active) {
+  .select:focus-visible {
+    outline-color: Highlight;
+  }
 }
 
 .chevron {

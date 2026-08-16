@@ -1028,6 +1028,17 @@ anunciar uma capacidade antes dela existir. Nenhuma FORMA de export mudou
 (`AbaDoProjeto`, `ABAS_DO_PROJETO`); só o rótulo de `code` foi de "Code" para
 "Código".
 
+## PROGRAMA 28 — Onda 2, frente H1: foco visível (ADR 0036)
+`Select`, `Modal` (botão de fechar) e `ProjectCard` ganharam `:focus-visible`
+no mesmo tratamento calibrado de `Input.module.css`, incluindo o bloco de
+`forced-colors`: nenhum dos três tinha indicação de foco alcançável só por
+teclado. O botão de fechar do `Modal` subiu de 30px para 32px, o piso de alvo
+de toque em desktop. `Table` e `Badge` foram auditados e NÃO precisaram de
+mudança — nenhum dos dois expõe afordância interativa própria: linha de
+`Table` é apresentação pura (quem precisa de linha clicável já usa
+`<button>`/`<a>` dentro da célula, via `render`) e `Badge` não é usado com
+`onClick` em lugar nenhum do produto.
+
 ## FERRAMENTA DE DESENVOLVIMENTO — `pnpm bootstrap`
 Menu de terminal em `scripts/dev/bootstrap.sh` agrupando o que se faz no
 dia a dia: Docker, K8s, Database e Test. Existe porque esses comandos moram
