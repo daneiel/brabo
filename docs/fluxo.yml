@@ -1,0 +1,267 @@
+# docs/fluxo.yml — modelo-alvo do time de entrega (v3)
+# Decisão estrutural: ADR 0085. Peças irmãs: docs/gates.yml (controle,
+# ADR 0054) e apps/api/src/domain/agents/agent-areas.ts (catálogo).
+#
+# status de papel:
+#   active          opera hoje, com RN/ADR citada
+#   planned         contrato pronto, ativação decidida, aguarda gatilho
+#   proposto        papel do modelo-alvo, hoje absorvido por outro,
+#                   com critério objetivo de separação declarado
+#   em-refinamento  código ativo, fora do fluxo formal até o dono do
+#                   produto redefinir os entregáveis
+version: 3
+
+camada_autoridade:
+  - id: usuario
+    status: active
+    entregaveis: [decisao-de-merge (RN-014), promocao-de-story (RN-048),
+      aprovacao-de-proposed-action, plano-de-adocao (RN-045/046),
+      autorizacao-de-paralelismo (RN-083/086),
+      decisao-que-retoma-laco (ADR 0052/0057), dispensa-com-justificativa]
+
+camada_produto:
+  - id: criativo
+    papel_de_mercado: discovery / entrada de negócio
+    status: active
+    teto: 12
+    entradas: [{ artefato: conversa-livre, origem: usuario }]
+    saidas: [{ artefato: necessidade-de-negocio, destino: po, via: handoff }]
+    ferramentas: [ask_structured_questions]        # RN-162/171
+    gate_saida: { id: necessidade-validada, status: proposto }
+    anti_padrao: solução disfarçada de problema
+
+  - id: ux-designer
+    papel_de_mercado: UX / Product Designer
+    status: proposto
+    hoje_absorvido_por: criativo (discovery) + design/ (design system como dado)
+    criterio_de_separacao: >
+      Quando o projeto GERENCIADO tiver interface própria a desenhar —
+      hoje o design system é insumo estático. Separa quando protótipo
+      virar artefato recorrente.
+    entregaveis_alvo: [personas-e-jornadas, prototipo-navegavel,
+      spec-de-handoff-visual, teste-de-usabilidade]
+    entradas_alvo: [{ artefato: necessidade-de-negocio, origem: criativo },
+                    { artefato: metricas-de-uso, origem: analytics }]
+    saidas_alvo: [{ artefato: prototipo, destino: po },
+                  { artefato: spec-visual, destino: dev-lead }]
+    gate_alvo: { id: prototipo-validado, status: proposto }
+
+  - id: po
+    papel_de_mercado: PO/PM
+    status: active
+    teto: 12
+    entradas:
+      - { artefato: necessidade-de-negocio, origem: criativo }
+      - { artefato: regras-e-backlog, origem: leitura-escopada }   # RN-164
+      - { artefato: metricas-de-produto, origem: analytics, status: lacuna }
+    saidas:
+      - { artefato: epico, destino: backlog, obrigacao: RN-165 }
+      - { artefato: historia, destino: usuario, via: proposed_ready }
+      - { artefato: tarefa, destino: dev, via: backlog }            # RN-179
+    gate_saida: { id: story-promovida, status: ativo, aprovacao_humana: true }
+
+  - id: analytics
+    papel_de_mercado: Analytics Engineer (métrica de PRODUTO)
+    status: proposto
+    hoje_absorvido_por: medicao (que só cobre métrica de EXECUÇÃO)
+    criterio_de_separacao: >
+      O dia em que metricas-de-produto virar entrada obrigatória do PO
+      (proposta em aberto). Execução e produto são perguntas diferentes —
+      a Onda 3/H3 provou a lacuna ("taxa ideação → commit" ausente).
+    entregaveis_alvo: [metricas-de-produto, funil-ideacao-commit-release,
+      evidencia-de-adocao-por-feature]
+    saidas_alvo: [{ artefato: metricas-de-produto, destino: [po, ux-designer] }]
+
+camada_decisao_tecnica:
+  - id: arquiteto
+    papel_de_mercado: Arquiteto de software
+    status: active
+    teto: 14
+    entradas:
+      - { artefato: backlog-promovido, origem: po, pre_condicao: RN-160 }
+      - { artefato: rfc-e-poc, origem: staff, status: planned }
+      - { artefato: telemetria-consolidada, origem: platform, status: planned }
+      - { artefato: threat-model, origem: appsec, status: proposto }
+    saidas:
+      - { artefato: module_map, destino: [dev-lead, area-dev] }     # RN-159
+      - { artefato: artifact.project_image, destino: aba-code }     # RN-105
+      - { artefato: artifact.c4_diagram, destino: visao-geral }     # RN-149
+      - { artefato: handoff-duplo, destino: [dev-lead, area-infra] } # RN-161
+      - { artefato: nfrs-mensuraveis, destino: [dev-lead, qa-estrategia,
+          platform], status: proposto, regra: NFR sem como-medir é inválido }
+    gate_saida: { id: adr-aprovado, status: proposto }
+    fronteira: decisão que cabe num PR revertível NÃO é dele
+
+  - id: dev-lead
+    papel_de_mercado: Tech Lead
+    status: active
+    teto: 14
+    entradas:
+      - { artefato: handoff + module_map, origem: arquiteto }
+      - { artefato: plano-de-teste, origem: qa-estrategia, status: proposto }
+      - { artefato: threat-model, origem: appsec, status: proposto }
+      - { artefato: parecer-de-migracao, origem: dbre, status: proposto }
+    saidas:
+      - { artefato: plano-de-paralelismo, destino: usuario,
+          via: proposed_action, regra: RN-083/154 }
+      - { artefato: delegacao, destino: dev, status: lacuna }  # ADR 0053 item 5
+      - { artefato: design-doc + quebra-tecnica, destino: dev,
+          status: proposto }
+    gate_saida: { id: paralelismo-autorizado, status: ativo }
+    gate_futuro: { id: implementavel, status: proposto,
+      valor: story inviável morre antes de queimar token }
+
+  - id: staff
+    papel_de_mercado: Staff/Principal Engineer
+    status: planned
+    ativacao: problema sistêmico RECORRENTE registrado — gatilho pendente
+      enquanto anamnese estiver em refinamento
+    entregaveis_alvo: [rfc, poc-descartavel, parecer-sistemico]
+    saidas_alvo: [{ artefato: rfc + poc, destino: arquiteto }]
+
+camada_execucao:
+  - id: dev
+    papel_de_mercado: Engenheiro de software
+    status: active
+    tipo: execucao (teto 60, RN-085) · area dinâmica, um por módulo
+    entradas: [{ artefato: tarefa, origem: backlog },
+               { artefato: worktree-por-agente, origem: harness },
+               { artefato: design-doc, origem: dev-lead, status: proposto }]
+    saidas:
+      - { artefato: branch-rastreavel }                             # RN-152
+      - { artefato: pr-remota, destino: [area-qa, secops], via: acao-tipada }
+      - { artefato: eventos-instrumentados, destino: medicao }
+    maquina_de_estados: working|awaiting_gate|idle|idle_tripped     # RN-047
+
+camada_qualidade:
+  - id: qa-estrategia
+    papel_de_mercado: QA Engineer (estratégia, shift-left)
+    status: proposto
+    hoje_absorvido_por: area-qa (que só atua DEPOIS, na PR)
+    criterio_de_separacao: >
+      Quando o gate implementavel ativar — o plano-de-teste é entrada
+      dele. Pode ser o próprio qa-lead em segundo MOMENTO, não
+      necessariamente agente novo: a separação é de entregável.
+    entregaveis_alvo: [plano-de-teste-por-story, criterio-executavel,
+      estrategia-de-automacao]
+    saidas_alvo: [{ artefato: plano-de-teste, destino: [dev-lead, dev] }]
+
+  - id: area-qa
+    papel_de_mercado: SDET + QA de execução
+    status: active
+    estrutura: qa-lead + qa-automacao + qa-perf-seguranca (ADR 0038)
+    entradas: [{ artefato: pr-remota, origem: dev }]
+    internas: [delegacao-privada, suspensao-retomada-por-decisao (13b),
+               falha-com-origem-ao-lead]
+    saidas: [{ artefato: veredito-qa, destino: gates }]
+    gate_saida: { id: qa-verificada, status: ativo }
+    achado_aberto: AE (decisão de produto)
+
+camada_seguranca:
+  - id: appsec
+    papel_de_mercado: AppSec (segurança no DESIGN)
+    status: proposto
+    hoje_absorvido_por: secops (que só atua na PR)
+    criterio_de_separacao: >
+      Mesmo padrão do QA: dois MOMENTOS, não dois agentes por ora.
+      Threat model no design ativa quando o gate implementavel existir.
+      Agente separado só com produção real.
+    entregaveis_alvo: [threat-model, requisito-de-seguranca-por-feature,
+      politica-de-supply-chain]
+    saidas_alvo: [{ artefato: threat-model,
+                    destino: [arquiteto, dev-lead, area-infra] }]
+
+  - id: secops
+    papel_de_mercado: SecOps (veredito na PR)
+    status: active
+    entradas: [{ artefato: pr-remota, origem: dev }]
+    saidas: [{ artefato: veredito-secops, destino: gates }]
+    gate_saida: { id: secops-segura, status: ativo }
+
+  - id: secops-runtime
+    papel_de_mercado: detecção e resposta
+    status: proposto
+    criterio_de_separacao: produção com tráfego real (pós DEPLOY_ENABLED
+      + platform ativo)
+    entregaveis_alvo: [deteccao, resposta-a-incidente,
+      postmortem-de-seguranca]
+
+camada_plataforma:
+  - id: area-infra
+    papel_de_mercado: DevOps/Infra Engineer
+    status: active
+    estrutura: infra-lead + infra-workflows (CI por provider, ADR 0039)
+    entradas: [{ artefato: handoff, origem: arquiteto },
+               { artefato: threat-model, origem: appsec, status: proposto }]
+    saidas: [{ artefato: ci-workflows, destino: repositorio },
+             { artefato: proposta-de-infra, destino: usuario },
+             { artefato: pipeline-verde, destino: platform, status: planned }]
+    gate_saida: { id: deployavel, status: planned }   # DEPLOY_ENABLED
+
+  - id: bots-release-gate
+    papel_de_mercado: automação de release
+    status: active
+    saidas: [tag-calculada, release-gate-json, backmerge-retropropagado]
+    gates: [{ id: merge-protegida, evidencia: teste },
+            { id: backmerge, evidencia: ci }]
+
+  - id: platform
+    papel_de_mercado: SRE / Platform — dono do loop de retorno
+    status: planned
+    ativacao: sincronizada com DEPLOY_ENABLED
+    entradas_alvo: [{ artefato: pipeline-verde, origem: area-infra },
+                    { artefato: nfrs-mensuraveis, origem: arquiteto }]
+    saidas_alvo:
+      - { artefato: slo + dashboard + runbook, destino: gates }
+      - { artefato: telemetria-consolidada, destino: arquiteto }
+      - { artefato: postmortem, destino: [arquiteto, po] }
+    gate_saida: { id: operavel, status: planned }
+
+  - id: dbre
+    papel_de_mercado: DBA / Database Reliability
+    status: proposto
+    hoje_absorvido_por: dev-lead (revisão de migração) + platform (tuning,
+      quando ativar) — a regra de UMA migration por onda é a versão
+      mecanizada do papel
+    criterio_de_separacao: volume real de dados no projeto gerenciado
+      (hoje o risco é de SCHEMA, não de carga)
+    entregaveis_alvo: [parecer-de-migracao, plano-de-capacidade,
+      backup-restore-testado, tuning]
+    saidas_alvo: [{ artefato: parecer-de-migracao, destino: dev-lead }]
+
+camada_instrumentos:
+  - id: medicao
+    papel_de_mercado: Data Engineer (métrica de EXECUÇÃO)
+    status: active
+    ferramentas: ["medir:execucao", "validacao:gates", "validacao:real",
+                  sumGroupedBy]
+    saidas: [{ artefato: metricas-de-execucao, destino: usuario }]
+    nota: métrica de PRODUTO é do papel analytics (camada produto)
+
+  - id: harness
+    papel_de_mercado: Delivery Manager (orquestração)
+    status: active
+    componentes: [PromptAssembler, ToolLoop, ContextManager, Hooks]
+    invariantes: [nada-fora-do-harness, tetos-por-tipo (RN-085),
+                  laco-nunca-calado (RN-166)]
+
+  - id: delivery-metricas
+    papel_de_mercado: Delivery Manager (fluxo — DORA)
+    status: proposto
+    hoje_absorvido_por: medicao (parcialmente)
+    criterio_de_separacao: nunca vira agente; vira RELATÓRIO do medicao
+      (lead time, deployment frequency, MTTR, change failure rate
+      extraídos do event log + gates.yml)
+
+camada_transversal:
+  - id: psicologo
+    status: em-refinamento      # decisão do dono do produto
+    entregaveis_congelados: [hipotese-com-chips-de-evidencia]
+  - id: anamnese
+    status: em-refinamento
+    entregaveis_congelados: [proposta-de-ajuste-3-aprovacoes-zero-negacao]
+    pendencias_da_suspensao: [autor-da-proposta-de-teto (RN-086),
+                              gatilho-de-ativacao-do-staff]
+
+removidos:
+  - { papel: engineering-manager, decisao: removido-pelo-usuario }

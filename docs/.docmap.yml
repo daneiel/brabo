@@ -180,6 +180,21 @@ rules:
     docs: ["docs/explanation/gates.md", "docs/business-rules.md"]
     severity: block
 
+  # O fluxo (ADR 0085) declara as RELAÇÕES entre papéis — quem entrega o
+  # quê a quem — a terceira peça ao lado do catálogo (agent-areas.ts) e do
+  # controle (gates.yml, ADR 0054). `warn`, não `block`: ainda não existe
+  # teste de cruzamento fluxo.yml × gates.yml × agent-areas.ts que prove
+  # que uma mudança no catálogo ou no registro de gates quebrou uma
+  # relação declarada — promover para `block` fica para quando esse teste
+  # existir (backlog).
+  - id: modelo-de-time
+    watch:
+      - "apps/api/src/domain/agents/**"
+      - "docs/gates.yml"
+    docs: ["docs/fluxo.yml", "docs/explanation/modelo-de-time.md"]
+    severity: warn
+    note: "Fluxo declara as relações entre papéis; catálogo (agent-areas.ts) ou controle (gates.yml) mudando pode desalinhar docs/fluxo.yml."
+
   # -------------------------------------------------------- infra e operação
 
   - id: boot-e-supervisao
