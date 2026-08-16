@@ -18,6 +18,7 @@ const createSession = vi.fn();
 const transitionSession = vi.fn();
 const renameSession = vi.fn();
 const getActiveExecutionSession = vi.fn();
+const getMySpend = vi.fn();
 
 // Um SÓ mock de navegação, compartilhado entre chamadas de `useNavigate` —
 // é o que permite os testes de "não navega ao editar" / "navega fora do
@@ -43,6 +44,7 @@ vi.mock('../lib/api-client', async () => {
     transitionSession: (...args: unknown[]) => transitionSession(...args),
     renameSession: (...args: unknown[]) => renameSession(...args),
     getActiveExecutionSession: (...args: unknown[]) => getActiveExecutionSession(...args),
+    getMySpend: (...args: unknown[]) => getMySpend(...args),
   };
 });
 
@@ -122,6 +124,20 @@ beforeEach(() => {
   // Default: nenhuma execução vigente. Os testes de RN-144 sobrescrevem isto
   // quando precisam de uma sessão de execução de verdade.
   getActiveExecutionSession.mockResolvedValue(null);
+  // Default: os KPIs da aba Criativo (RN-227/229/230) buscam `getMySpend`
+  // assim que montam — sem isto, todo teste que abre `ProjectCriativoTab`
+  // dispararia a chamada REAL não mockada.
+  getMySpend.mockResolvedValue({
+    projectId: 'proj-1',
+    dias: 30,
+    actorId: 'user-1',
+    totalMicros: 0,
+    inputTokens: 0,
+    outputTokens: 0,
+    chamadas: 0,
+    porSessao: [],
+    porDia: [],
+  });
 });
 
 /**
@@ -263,9 +279,10 @@ describe('ProjectSessionsTab — renomear direto da lista', () => {
 
     montar();
 
-    // `status` do dublê de sessão é `closed` por padrão — clicar no badge
-    // é clicar na LINHA, fora do controle de renomear.
-    fireEvent.click(await screen.findByText('closed'));
+    // `status` do dublê de sessão é `closed` por padrão, e o selo mostra a
+    // frase em pt-BR (RN-227), não o código cru — clicar no badge é clicar na
+    // LINHA, fora do controle de renomear.
+    fireEvent.click(await screen.findByText('fechada'));
 
     expect(navigateMock).toHaveBeenCalledWith({
       to: '/projects/$projectId/sessions/$sessionId',
@@ -596,5 +613,196 @@ describe('ProjectSessionsTab — carregando, erro e vazio', () => {
 
     // Há sessão no projeto — só não deste tipo.
     expect(await screen.findByText(/Nenhuma conversa ainda/)).toBeTruthy();
+  });
+});
+
+/**
+ * PROGRAMA 28, Onda 3/frente H3 — o handoff pede 4 selos de status para 5
+ * estados reais da sessão (RN-227). `closed_abnormally`→abortada e
+ * `created`→aguardando são diretos; o que este bloco prova é o caso que NÃO
+ * é: `closing` não vira "fechada" por conveniência — ganha selo próprio
+ * ("encerrando"), porque em `closing` o desfecho (`closed` ou
+ * `closed_abnormally`) ainda não é conhecido.
+ */
+describe('ProjectSessionsTab — selo de status (RN-227)', () => {
+  beforeEach(() => {
+    listActions.mockResolvedValue({ items: [], nextCursor: null });
+  });
+
+  it('`closing` NÃO é fundido com "fechada" — ganha o selo "encerrando"', async () => {
+    listSessions.mockResolvedValue([
+      sessao('11111111-aaaa', '2026-08-01T00:00:00.000Z', {
+        kind: 'criativa',
+        status: 'closing',
+      }),
+    ]);
+
+    montarAba(ProjectCriativoTab);
+
+    expect(await screen.findByText('encerrando')).toBeTruthy();
+    // Nem o texto cru, nem o rótulo de "fechada" — os dois mentiriam sobre
+    // um desfecho que ainda não aconteceu.
+    expect(screen.queryByText('closing')).toBeNull();
+    expect(screen.queryByText('fechada')).toBeNull();
+  });
+
+  it('`created` vira o selo "aguardando", não o texto cru do banco', async () => {
+    listSessions.mockResolvedValue([
+      sessao('22222222-bbbb', '2026-08-02T00:00:00.000Z', {
+        kind: 'criativa',
+        status: 'created',
+      }),
+    ]);
+
+    montarAba(ProjectCriativoTab);
+
+    expect(await screen.findByText('aguardando')).toBeTruthy();
+    expect(screen.queryByText('created')).toBeNull();
+  });
+});
+
+/**
+ * Os filtros pill do handoff (`todas/ativas/fechadas/abortadas`) só cobrem 4
+ * dos 5 estados (RN-228). `created` e `closing` entram no pill mais próximo
+ * por TRAJETÓRIA: `created` ainda não chegou a lugar nenhum → "Ativas";
+ * `closing` já está a caminho de fechar sem erro → "Fechadas".
+ */
+describe('ProjectSessionsTab — filtro pill agrupa os 2 estados sem pill própria (RN-228)', () => {
+  beforeEach(() => {
+    listActions.mockResolvedValue({ items: [], nextCursor: null });
+    listSessions.mockResolvedValue([
+      sessao('11111111-aaaa', '2026-08-01T00:00:00.000Z', {
+        kind: 'criativa',
+        name: 'Aguardando ativação',
+        status: 'created',
+      }),
+      sessao('22222222-bbbb', '2026-08-02T00:00:00.000Z', {
+        kind: 'criativa',
+        name: 'Encerrando agora',
+        status: 'closing',
+      }),
+      sessao('33333333-cccc', '2026-08-03T00:00:00.000Z', {
+        kind: 'criativa',
+        name: 'De verdade ativa',
+        status: 'active',
+      }),
+    ]);
+  });
+
+  it('pill "Ativas" mostra `created` junto com `active`', async () => {
+    montarAba(ProjectCriativoTab);
+    await screen.findByText(/Aguardando ativação/);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Ativas' }));
+
+    expect(await screen.findByText(/Aguardando ativação/)).toBeTruthy();
+    expect(screen.getByText(/De verdade ativa/)).toBeTruthy();
+    expect(screen.queryByText(/Encerrando agora/)).toBeNull();
+  });
+
+  it('pill "Fechadas" mostra `closing` (nunca `active` ou `created`)', async () => {
+    montarAba(ProjectCriativoTab);
+    await screen.findByText(/Encerrando agora/);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Fechadas' }));
+
+    expect(await screen.findByText(/Encerrando agora/)).toBeTruthy();
+    expect(screen.queryByText(/Aguardando ativação/)).toBeNull();
+    expect(screen.queryByText(/De verdade ativa/)).toBeNull();
+  });
+
+  it('vazio POR FILTRO é frase diferente de vazio por ausência', async () => {
+    montarAba(ProjectCriativoTab);
+    await screen.findByText(/Aguardando ativação/);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Abortadas' }));
+
+    expect(await screen.findByText('Nenhuma sessão neste filtro.')).toBeTruthy();
+    expect(screen.queryByText(/Nenhuma ideação ainda/)).toBeNull();
+  });
+});
+
+/**
+ * Os 4 KPIs da aba Criativo (RN-227/229/230). Só existem nesta aba — a Chat
+ * continua exatamente como era.
+ */
+describe('ProjectSessionsTab — KPIs da aba Criativo', () => {
+  beforeEach(() => {
+    listActions.mockResolvedValue({ items: [], nextCursor: null });
+  });
+
+  it('caminho feliz: conta sessões/ativas e mostra o custo do mês', async () => {
+    listSessions.mockResolvedValue([
+      sessao('11111111-aaaa', '2026-08-01T00:00:00.000Z', {
+        kind: 'criativa',
+        status: 'active',
+      }),
+      sessao('22222222-bbbb', '2026-08-02T00:00:00.000Z', {
+        kind: 'criativa',
+        status: 'closed',
+      }),
+    ]);
+    getMySpend.mockResolvedValue({
+      projectId: 'proj-1',
+      dias: 30,
+      actorId: 'user-1',
+      totalMicros: 5_000_000,
+      inputTokens: 10,
+      outputTokens: 20,
+      chamadas: 3,
+      porSessao: [],
+      porDia: [],
+    });
+
+    montarAba(ProjectCriativoTab);
+
+    expect(await screen.findByText('Sessões no projeto')).toBeTruthy();
+    expect(screen.getByText('2')).toBeTruthy();
+    expect(screen.getByText('Ativas agora')).toBeTruthy();
+    expect(screen.getByText('1')).toBeTruthy();
+    // `getMySpend(projectId, 30)` é a MESMA chamada que a aba Gastos faz
+    // para a visão do membro — nenhuma agregação nova.
+    expect(getMySpend).toHaveBeenCalledWith('proj-1', 30);
+    expect(await screen.findByText('US$ 5,00')).toBeTruthy();
+  });
+
+  it('CASO DE FALHA: custo do mês não trava a tela — mostra "—" e a frase de erro', async () => {
+    listSessions.mockResolvedValue([
+      sessao('11111111-aaaa', '2026-08-01T00:00:00.000Z', { kind: 'criativa' }),
+    ]);
+    getMySpend.mockRejectedValue(new Error('falhou'));
+
+    montarAba(ProjectCriativoTab);
+
+    expect(await screen.findByText('Custo do mês')).toBeTruthy();
+    expect(await screen.findByText('não foi possível carregar')).toBeTruthy();
+  });
+
+  it('"Taxa ideação → commit" é DECLARADA ausente — nunca um número calculado', async () => {
+    listSessions.mockResolvedValue([
+      sessao('11111111-aaaa', '2026-08-01T00:00:00.000Z', { kind: 'criativa' }),
+    ]);
+
+    montarAba(ProjectCriativoTab);
+
+    expect(await screen.findByText('Taxa ideação → commit')).toBeTruthy();
+    expect(
+      screen.getByText('não medido: sessão não é vinculada a commit hoje'),
+    ).toBeTruthy();
+  });
+
+  it('a aba Chat não busca KPI nenhum — sem `getMySpend`', async () => {
+    listSessions.mockResolvedValue([
+      sessao('11111111-aaaa', '2026-08-01T00:00:00.000Z', {
+        kind: 'consultiva',
+        name: 'Dúvidas de billing',
+      }),
+    ]);
+
+    montarAba(ProjectChatTab);
+
+    await screen.findByText('Dúvidas de billing · #11111111');
+    expect(screen.queryByText('Sessões no projeto')).toBeNull();
+    expect(getMySpend).not.toHaveBeenCalled();
   });
 });
