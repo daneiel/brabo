@@ -96,6 +96,16 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   conversa com o Dev Lead PAUSA: é a primeira vez que um agente
   conversacional suspende esperando aprovação humana no meio do turno
   síncrono (RN-284, ADR 0086)
+- **api**: o papel `platform` (`docs/fluxo.yml`, `status: planned` —
+  ativação ainda pendente de `DEPLOY_ENABLED`, que não existe) ganha uma
+  primeira entrega honesta: `pnpm --filter api relatorio:telemetria
+  [--projeto <uuid>] [--json]`, um SCRIPT (não agente) que lê sob demanda as
+  mesmas fontes do `DomainGaugesCollector` — sessões ativas/closing e tasks
+  bloqueadas por projeto, estado do último backup — e linka para os
+  dashboards/alertas/runbook já versionados, sem duplicar. A saída declara
+  explicitamente o que NÃO mede: SLO numérico (nenhum definido), postmortem
+  (sem incidente real) e telemetria automática em loop fechado
+  (RN-385/386, ADR 0092)
 
 ### Correções
 
