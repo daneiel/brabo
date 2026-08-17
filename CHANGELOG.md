@@ -96,6 +96,15 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   conversa com o Dev Lead PAUSA: é a primeira vez que um agente
   conversacional suspende esperando aprovação humana no meio do turno
   síncrono (RN-284, ADR 0086)
+- **engine,api,web**: o Staff/Principal Engineer ganha CÓDIGO — quinto
+  agente conversacional solo (`propose_rfc`: problema, opções com
+  trade-offs, recomendação e PoC descartável, devolvido ao Arquiteto por
+  handoff no mesmo tool call), acionável MANUALMENTE por handoff aceito
+  endereçado a "staff" (caminho genérico, sem entrar em
+  `USER_STARTED_AGENTS`). O gatilho AUTOMÁTICO (a Anamnese notando um
+  problema sistêmico recorrente) segue pendente enquanto
+  `ANAMNESE_ENABLED=false` — dormente para disparo automático, não para
+  acionamento manual (RN-305/306, ADR 0088)
 
 ### Correções
 

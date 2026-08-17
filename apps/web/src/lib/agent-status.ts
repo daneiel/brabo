@@ -210,6 +210,14 @@ export interface RosterFacts {
   gatesEverOpened: boolean;
   delegatedSubagents: string[];
   infraActive: boolean;
+  /**
+   * Staff (docs/fluxo.yml, camada_decisao_tecnica, ADR 0088) — mesmo
+   * critério de presença de `infraActive`: só entra no roster quando há
+   * handoff `accepted` endereçado a ele NESTA sessão. Dormente para
+   * disparo automático (a Anamnese que o dispararia está pausada); o fato
+   * aqui só reflete ativação MANUAL já aceita.
+   */
+  staffActive: boolean;
 }
 
 /** Extrai os fatos de presença do event log (caminho do painel do time). */
@@ -238,14 +246,18 @@ export function rosterFactsFromEvents(
     infraActive: handoffs.some(
       (h) => h.toAgent === 'infra' && h.status === 'accepted',
     ),
+    staffActive: handoffs.some(
+      (h) => h.toAgent === 'staff' && h.status === 'accepted',
+    ),
   };
 }
 
 /**
  * A REGRA DE PRESENÇA, única no app: criativo/po/arquiteto sempre;
  * dev-<modulo> por módulo quando a execução foi ativada; qa/secops quando
- * algum gate já abriu; membros de área com delegação registrada; infra quando
- * o handoff foi aceito.
+ * algum gate já abriu; membros de área com delegação registrada; infra/staff
+ * quando o handoff foi aceito (staff: docs/fluxo.yml, ADR 0088 — dormente
+ * para disparo automático, presente aqui só por ativação MANUAL).
  *
  * `statusOf` é de quem chama: o painel do time resolve pelo event log, o card
  * do dashboard devolve `ocioso` porque não exibe status.
@@ -278,6 +290,10 @@ export function rosterFromFacts(
     pushAreaMembers(roster, facts.delegatedSubagents, 'infra', statusOf);
   }
 
+  if (facts.staffActive) {
+    roster.push({ id: 'staff', def: AGENTS.staff, status: statusOf('staff') });
+  }
+
   return roster;
 }
 
@@ -285,8 +301,9 @@ export function rosterFromFacts(
  * Monta o roster REAL de agentes instanciados numa sessão (Fase 4a —
  * painel do time ao vivo): criativo/po/arquiteto sempre; dev-<modulo> por
  * módulo do module_map quando a execução foi ativada; qa/secops quando
- * algum gate de PR (dev ou infra) já abriu alguma vez; infra quando o
- * handoff foi aceito. Substitui o AGENT_LIST estático + status uniforme.
+ * algum gate de PR (dev ou infra) já abriu alguma vez; infra/staff quando o
+ * respectivo handoff foi aceito. Substitui o AGENT_LIST estático + status
+ * uniforme.
  *
  * Fase 8d: `qa`/`infra` continuam sendo os LEADS de área (ADR 0038); os
  * SUBAGENTES (`qa-automacao`, `qa-performance-seguranca`,

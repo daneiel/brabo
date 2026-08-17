@@ -46,6 +46,18 @@ const handoffInfra: Handoff = {
   status: 'accepted',
 } as unknown as Handoff;
 
+// Staff (docs/fluxo.yml, ADR 0088) — mesmo fixture de `handoffInfra`, só o
+// alvo muda: ativação MANUAL, por handoff aceito.
+const handoffStaff: Handoff = {
+  id: 'h-2',
+  sessionId: 'sess-1',
+  projectId: 'proj-1',
+  fromAgent: 'arquiteto',
+  toAgent: 'staff',
+  artifactId: null,
+  status: 'accepted',
+} as unknown as Handoff;
+
 function statusOf(roster: ReturnType<typeof deriveAgentRoster>, id: string) {
   return roster.find((r) => r.id === id)?.status;
 }
@@ -466,6 +478,7 @@ describe('rosterFromFacts — a mesma regra nos dois caminhos', () => {
         gatesEverOpened: true,
         delegatedSubagents: ['qa-automacao'],
         infraActive: true,
+        staffActive: false,
       },
       () => 'ocioso',
     );
@@ -484,6 +497,7 @@ describe('rosterFromFacts — a mesma regra nos dois caminhos', () => {
         gatesEverOpened: false,
         delegatedSubagents: [],
         infraActive: false,
+        staffActive: false,
       },
       () => 'ocioso',
     );
@@ -492,5 +506,30 @@ describe('rosterFromFacts — a mesma regra nos dois caminhos', () => {
     expect(daApi.map((r) => r.id)).toEqual(
       deriveAgentRoster([], null, false, []).map((r) => r.id),
     );
+  });
+
+  // Staff (docs/fluxo.yml, ADR 0088): mesmo critério de presença de
+  // `infraActive` — só entra com handoff `accepted` endereçado a ele.
+  it('staff entra no roster só com handoff aceito endereçado a ele', () => {
+    const semHandoffDeStaff = rosterFactsFromEvents([], null, false, [handoffInfra]);
+    expect(semHandoffDeStaff.staffActive).toBe(false);
+    expect(rosterFromFacts(semHandoffDeStaff, () => 'ocioso').map((r) => r.id)).not.toContain(
+      'staff',
+    );
+
+    const comHandoffDeStaff = rosterFactsFromEvents([], null, false, [
+      handoffInfra,
+      handoffStaff,
+    ]);
+    expect(comHandoffDeStaff.staffActive).toBe(true);
+
+    const roster = rosterFromFacts(comHandoffDeStaff, () => 'ocioso');
+    expect(roster.map((r) => r.id)).toContain('staff');
+    expect(roster.find((r) => r.id === 'staff')?.def).toBe(AGENTS.staff);
+
+    // Mesmo caminho do painel do time (`deriveAgentRoster`), não só do card.
+    expect(
+      deriveAgentRoster([], null, false, [handoffInfra, handoffStaff]).map((r) => r.id),
+    ).toContain('staff');
   });
 });

@@ -12,7 +12,7 @@ keywords: [arquitetura, code map, invariantes, harness, event log]
 Este documento é o mapa para quem vai **mexer** no código. Ele diz por onde
 começar a ler, o que cada fronteira promete, e o que já se sabe que está torto.
 
-Decisões e o porquê delas ficam nos [ADRs](adr/index.md) — 85 deles, vários
+Decisões e o porquê delas ficam nos [ADRs](adr/index.md) — 86 deles, vários
 registrando defeito real encontrado em execução. Aqui não repetimos a
 argumentação: apontamos.
 
@@ -126,7 +126,7 @@ entre imports rodaria tarde demais).
 | `infra/` (9) | área de Infra (Lead conversacional session-scoped + subespecialidade Workflows via ToolLoop — duas famílias arquiteturais na mesma área, ver RN-037) | `infra/infra_lead_server.ex` |
 | `sessions/` (9) | ciclo de vida da sessão, registro `:global` | `sessions/session_server.ex` |
 | `actions/` (9) | executores de terminal e git, detectors de lint/scanner | `actions/git_executor.ex` |
-| `agents/` (13) | Criativo, PO, Arquiteto, Dev Lead — cada turno roda numa Task supervisionada (`TurnoAssincrono`, RN-122), não mais dentro do `handle_call`, pra um `:cancel` poder interrompê-lo de verdade | `agents/turno_assincrono.ex` |
+| `agents/` (16) | Criativo, PO, Arquiteto, Dev Lead, Staff (ADR 0088, dormente para disparo automático) — cada turno roda numa Task supervisionada (`TurnoAssincrono`, RN-122), não mais dentro do `handle_call`, pra um `:cancel` poder interrompê-lo de verdade | `agents/turno_assincrono.ex` |
 | `psychologist/` (6) · `anamnese/` (6) | análise e melhoria do time | — |
 
 **Entrypoint:** `lib/engine/application.ex` — a árvore de supervisão inteira

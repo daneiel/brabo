@@ -1184,6 +1184,41 @@ sozinho. Fechar isto exigiria o mesmo mecanismo de persistência do ADR
 0052; fora do escopo desta correção, que só alinha o comportamento ao que
 `docs/fluxo.yml` já declarava.
 
+## Staff — código pronto, dormente para disparo automático (RN-305/306, ADR 0088)
+Não é fase planejada: `docs/fluxo.yml` declara o Staff/Principal Engineer
+como `status: planned` desde o ADR 0085 ("contrato pronto, ativação
+decidida, aguarda gatilho"). Decisão CONSCIENTE do dono do produto:
+antecipar o CÓDIGO mesmo sabendo que o gatilho AUTOMÁTICO (a Anamnese
+notando um problema sistêmico RECORRENTE) não vai disparar — a Anamnese
+está pausada (`ANAMNESE_ENABLED=false`, decisão de 2026-08-10). Dormente
+para disparo automático, não para acionamento MANUAL.
+
+Quinto agente conversacional solo (`Engine.Agents.StaffServer`), ao lado de
+Criativo/PO/Arquiteto/Dev Lead, espelhando o Arquiteto (laço bounded teto
+14) com duas diferenças: SEM `kickoff/1` (não há artefato de sessão para
+resumir — sobe e fica ocioso até a primeira `user_message`, que é como
+quem endereçou o handoff explica o problema) e ativado pelo caminho
+GENÉRICO de `canActivateAgent` (handoff `accepted` endereçado a "staff"),
+sem entrar em `USER_STARTED_AGENTS` — investigação confirmou que nenhuma
+mudança de domínio na api era necessária, porque `assertHandoffTargetAllowed`
+só recusa subagente de área e o Staff não tem área. A única ferramenta,
+`propose_rfc` (problema, opções com trade-offs, recomendação, PoC
+descartável), grava `artifact.rfc_staff` DIRETO via
+`append_event_returning` — mesmo padrão sem tabela de `emit_insight`, e
+não o de `artifact.c4_diagram` (que deriva o Container level do
+module_map na api) — e devolve o handoff ao Arquiteto no MESMO tool call,
+sem `proposed_action` (registrar um documento não é efeito externo).
+
+`staffActive` entrou na roster do painel do time e no card do dashboard
+(`ProjectCardSummary.roster`), mesmo critério de `infraActive`, para não
+abrir a divergência que o comentário de `RosterFacts` já alertava.
+**Declarado, não escondido**: `SessionPage.tsx`/`AGENTES_DE_CHAT` não
+foram tocados — mesmo padrão já aceito para `infra` (um lead REAL e ATIVO
+também fora dessa lista). O caminho ponta a ponta de uso hoje é a rota
+interna (`POST .../agent/message`, `agent: "staff"`), não a tela de
+Sessão; a UI genérica de "handoff manual a agente à escolha" segue no
+backlog.
+
 ## FERRAMENTA DE DESENVOLVIMENTO — `pnpm bootstrap`
 Menu de terminal em `scripts/dev/bootstrap.sh` agrupando o que se faz no
 dia a dia: Docker, K8s, Database e Test. Existe porque esses comandos moram
@@ -1365,13 +1400,16 @@ divide o mesmo banco, recuperar exige `db:migrate` E `engine:migrate`.
   event log, e o motivo NUNCA fica só em broadcast: `agent.error` é
   durável e o agente diz o que houve no fio (RN-059). Falha de UMA
   ferramenta no meio do laço segue a mesma régua (RN-163).
-- Os quatro agentes conversacionais rodam laço bounded de tool use, com
-  teto PRÓPRIO no servidor de cada um (Criativo e PO 12, Arquiteto e Dev
-  Lead 14) — não o teto do `ToolLoop` (`Engine.Harness.Iteracoes`), que é
-  dos agentes de execução e de gate. Erro de ferramenta é ENTRADA do laço,
-  não fim de linha; teto esgotado é narrado, nunca silêncio; e o agente não
-  anuncia ação que o código não vá executar — o que se promete é decidido
-  pelo teto, nunca por texto fixo (RN-163).
+- Os cinco agentes conversacionais rodam laço bounded de tool use, com
+  teto PRÓPRIO no servidor de cada um (Criativo e PO 12, Arquiteto, Dev
+  Lead e Staff 14 — raciocínio, não conversa leve) — não o teto do
+  `ToolLoop` (`Engine.Harness.Iteracoes`), que é dos agentes de execução e
+  de gate. Erro de ferramenta é ENTRADA do laço, não fim de linha; teto
+  esgotado é narrado, nunca silêncio; e o agente não anuncia ação que o
+  código não vá executar — o que se promete é decidido pelo teto, nunca
+  por texto fixo (RN-163). O Staff é o único SEM `kickoff/1` — sobe e fica
+  ocioso até a primeira `user_message`, porque não há artefato de sessão
+  para sintetizar uma abertura (ADR 0088).
 - O turno de um agente conversacional pode SUSPENDER esperando aprovação
   humana (ADR 0086, RN-284) — hoje só o Dev Lead, no `propose_execution_plan`.
   `Engine.Agents.TurnoAssincrono` responde ao `from` síncrono na hora

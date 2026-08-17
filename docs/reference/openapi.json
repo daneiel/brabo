@@ -16473,6 +16473,11 @@
             "type": "boolean",
             "example": false,
             "description": "Existe handoff `accepted` para `infra` na sessão mais recente."
+          },
+          "staffActive": {
+            "type": "boolean",
+            "example": false,
+            "description": "Existe handoff `accepted` para `staff` na sessão mais recente (docs/fluxo.yml, ADR 0088) — dormente para disparo automático, só reflete ativação MANUAL já aceita."
           }
         },
         "required": [
@@ -16480,7 +16485,8 @@
           "moduleNames",
           "gatesEverOpened",
           "delegatedSubagents",
-          "infraActive"
+          "infraActive",
+          "staffActive"
         ]
       },
       "RuleCoverageResponseDto": {

@@ -130,6 +130,8 @@ export interface ProjectCardSummary {
     gatesEverOpened: boolean;
     delegatedSubagents: string[];
     infraActive: boolean;
+    /** Staff (docs/fluxo.yml, ADR 0088) — mesmo critério de `infraActive`. */
+    staffActive: boolean;
   };
 }
 

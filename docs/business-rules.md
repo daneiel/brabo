@@ -7823,6 +7823,108 @@ comportamento bater com o que `docs/fluxo.yml` já declarava.
 
 ---
 
+## Staff: código pronto, dormente para disparo automático (RN-305/RN-306, ADR 0088)
+Não é fase planejada: `docs/fluxo.yml` declara o Staff/Principal Engineer como
+`status: planned` desde o ADR 0085 ("contrato pronto, ativação decidida,
+aguarda gatilho"). O dono do produto decidiu antecipar o CÓDIGO mesmo sabendo
+que o gatilho automático (a Anamnese notando um problema sistêmico
+RECORRENTE) não vai disparar — a Anamnese está pausada
+(`ANAMNESE_ENABLED=false`, decisão de produto de 2026-08-10). Ver a
+pendência já documentada em RN-086: o mesmo sinal que faria a Anamnese
+propor subir o teto de paralelismo é o que faria ela propor um handoff ao
+Staff, e nenhum dos dois dispara enquanto ela estiver pausada.
+
+### RN-305 — O Staff ativa pelo caminho GENÉRICO de handoff, sem `USER_STARTED_AGENTS`, e sem `kickoff/1`
+
+`USER_STARTED_AGENTS` (`apps/api/src/domain/sessions/agent-activation.ts`) é
+a exceção do Criativo (inicia SEM handoff, por comando do usuário) — o Staff
+NÃO entra nela. Investigação confirmou que `canActivateAgent` já ativa
+qualquer agente com handoff `accepted` endereçado a ele, o mesmo caminho que
+já vale para `dev-lead`/`arquiteto`/`infra`; e `assertHandoffTargetAllowed`
+(`apps/api/src/domain/agents/agent-areas.ts`) só recusa handoff endereçado a
+SUBAGENTE de área — o Staff não tem área, então nenhuma mudança de domínio
+na api foi necessária. "Acionável manualmente" significa que a MECÂNICA de
+domínio permite (qualquer agente pode chamar
+`EngineApiClient.create_handoff(..., "staff", ...)`, e um humano aceita pela
+rota já existente), não que existe hoje uma tela dedicada para escolher
+"endereçar handoff ao Staff" — a UI genérica de handoff a agente à escolha
+segue no backlog (`docs/explanation/backlog.md`), como já estava antes desta
+mudança.
+
+`Engine.Agents.StaffServer` (`apps/engine/lib/engine/agents/staff_server.ex`)
+é o quinto agente conversacional solo (junto de Criativo, PO, Arquiteto, Dev
+Lead), espelhando o Arquiteto — `GenServer` por sessão, rehydration do event
+log, laço bounded de tool use com teto 14 (`staff_server.ex:49`) — mas **sem
+`kickoff/1`**: os outros leads sintetizam uma instrução de abertura a partir
+de um artefato anterior no event log da sessão (product_brief, module_map,
+backlog); o Staff não tem essa fonte, porque o problema sistêmico nasce de
+fora da sessão. `StaffSupervisor.start_agent/2` sobe o processo (rehidrata o
+histórico) e ele fica ocioso até a primeira `user_message`
+(`staff_server.ex:60`) — que é como quem endereçou o handoff explica o
+problema. `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:60`
+(cláusula `start/2` de `"staff"`) nunca chama `kickoff` (a função nem
+existe), ao contrário de po/arquiteto/dev-lead/infra.
+
+- **Onde:** `apps/api/src/domain/sessions/agent-activation.ts`
+  (`canActivateAgent`, `USER_STARTED_AGENTS` — intocado),
+  `apps/api/src/domain/agents/agent-areas.ts`
+  (`assertHandoffTargetAllowed` — intocado),
+  `apps/engine/lib/engine/agents/staff_server.ex`,
+  `staff_supervisor.ex`,
+  `apps/engine/lib/engine_web/controllers/agent_command_controller.ex`
+  (cláusulas `start/2`/`message/2`/`via_for/2` de `"staff"`),
+  `apps/engine/lib/engine/application.ex` (`Engine.Agents.StaffSupervisor`
+  na árvore de supervisão)
+- **Teste:** `apps/engine/test/engine/agents/staff_server_test.exs`
+  (rehydration, ausência de kickoff automático — o turno só roda por
+  `user_message`)
+- **ADR:** [0088](adr/0088-staff-agente-dormente-para-disparo-automatico.md)
+
+### RN-306 — `propose_rfc` grava o artefato DIRETO e devolve o handoff no MESMO tool call, sem `proposed_action`
+
+`Engine.Agents.StaffTools.propose_rfc`
+(`apps/engine/lib/engine/agents/staff_tools.ex:41`) é a única ferramenta do
+Staff: problema, opções com trade-offs, recomendação e o escopo de uma PoC
+DESCARTÁVEL (`descartavel: true` é FIXO — nunca escrito pelo modelo). `run/2`
+(`staff_tools.ex:89`) grava `artifact.rfc_staff` via
+`EngineApiClient.append_event_returning/3` — mesmo padrão SEM tabela e SEM
+caso de uso dedicado de `Engine.Harness.Tools.EmitInsight` (o `emit_insight`
+do Arquiteto), e não o de `artifact.c4_diagram` (ADR 0068), que tem caso de
+uso próprio na api porque DERIVA o nível Container do `module_map` vigente —
+o RFC não deriva nada do lado de lá, todo o payload vem do tool call.
+
+Depois de gravar, o MESMO `run/2` chama
+`EngineApiClient.create_handoff(..., "staff", "arquiteto", artifact_id)` —
+sem confirmação humana no meio, mesmo padrão de
+`CriativoServer.executar_confirm_readiness/1` emitindo o product_brief e
+oferecendo o handoff ao PO na mesma resposta. `propose_rfc` NÃO é
+`proposed_action`: registrar um documento de arquitetura não é efeito
+externo (não é git, terminal, nem gasto de agente) — a decisão real
+(adotar, adaptar, recusar a recomendação) é do Arquiteto, no handoff que a
+ferramenta já devolve. Falha ao criar o handoff NÃO derruba o processo nem
+perde o RFC já gravado (RN-116) — o motivo entra no tool-result, e o modelo
+sabe que precisa tentar de novo só o handoff, não reescrever o RFC.
+
+- **Onde:** `apps/engine/lib/engine/agents/staff_tools.ex`
+- **Teste:** `apps/engine/test/engine/agents/staff_server_test.exs`
+  ("propõe o RFC, grava o artefato e devolve o handoff ao arquiteto";
+  "propose_rfc com opções vazias vira tool-result de erro"; "falha ao
+  devolver o handoff ao arquiteto NÃO derruba o processo")
+- **ADR:** [0088](adr/0088-staff-agente-dormente-para-disparo-automatico.md)
+
+**Declarado, não escondido**: a roster do painel do time
+(`apps/web/src/lib/agent-status.ts`, `staffActive`) e o card do dashboard
+(`ProjectCardSummary.roster`, `apps/api/.../projects-summary.repository.ts`)
+mostram o Staff quando ativo, mesmo critério de `infraActive` — evitando a
+divergência que o comentário de `RosterFacts` já alertava. `SessionPage.tsx`
+NÃO foi tocado: `staff` fica fora de `AGENTES_DE_CHAT`, o mesmo padrão já
+aceito para `infra` (um lead REAL e ATIVO também fora dessa lista — o
+handoff para ele "nunca é aceito por AQUI", conforme o comentário do próprio
+arquivo). O caminho ponta a ponta de uso hoje é a rota interna
+(`POST .../agent/message`, `agent: "staff"`), não a tela de Sessão.
+
+---
+
 ## Quando dá errado
 
 | situação | o que o sistema faz |

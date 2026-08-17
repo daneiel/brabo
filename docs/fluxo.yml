@@ -114,8 +114,12 @@ camada_decisao_tecnica:
   - id: staff
     papel_de_mercado: Staff/Principal Engineer
     status: planned
-    ativacao: problema sistêmico RECORRENTE registrado — gatilho pendente
-      enquanto anamnese estiver em refinamento
+    codigo: pronto (staff_server.ex, staff_tools.ex, staff_supervisor.ex —
+      ADR 0088) — acionável MANUALMENTE por handoff aceito endereçado a
+      "staff", mecanismo GENÉRICO (sem entrar em USER_STARTED_AGENTS)
+    ativacao: gatilho AUTOMÁTICO (problema sistêmico RECORRENTE registrado
+      pela anamnese) segue pendente enquanto ANAMNESE_ENABLED=false —
+      dormente para disparo automático, não para acionamento manual
     entregaveis_alvo: [rfc, poc-descartavel, parecer-sistemico]
     saidas_alvo: [{ artefato: rfc + poc, destino: arquiteto }]
 
