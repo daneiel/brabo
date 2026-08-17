@@ -67,15 +67,15 @@ camada_produto:
 
   - id: analytics
     papel_de_mercado: Analytics Engineer (métrica de PRODUTO)
-    status: proposto
-    hoje_absorvido_por: medicao (que só cobre métrica de EXECUÇÃO)
-    criterio_de_separacao: >
-      O dia em que metricas-de-produto virar entrada obrigatória do PO
-      (proposta em aberto). Execução e produto são perguntas diferentes —
-      a Onda 3/H3 provou a lacuna ("taxa ideação → commit" ausente).
-    entregaveis_alvo: [metricas-de-produto, funil-ideacao-commit-release,
-      evidencia-de-adocao-por-feature]
-    saidas_alvo: [{ artefato: metricas-de-produto, destino: [po, ux-designer] }]
+    status: active
+    forma: script (nunca agente — ADR 0089), "analise:funil"
+    entregaveis: [funil-sessao-commit-pr-merge, lead-time-real,
+      deployment-frequency-real]
+    saidas: [{ artefato: relatorio-de-funil, destino: [po, ux-designer] }]
+    lacunas: [{ artefato: metricas-de-produto-completas, status: lacuna,
+        motivo: "sessions sem storyId — RN-230" },
+      { artefato: evidencia-de-adocao-por-feature, status: lacuna,
+        motivo: "sem caminho hoje — Brabo não instrumenta o que constrói" }]
 
 camada_decisao_tecnica:
   - id: arquiteto
@@ -270,11 +270,15 @@ camada_instrumentos:
 
   - id: delivery-metricas
     papel_de_mercado: Delivery Manager (fluxo — DORA)
-    status: proposto
-    hoje_absorvido_por: medicao (parcialmente)
-    criterio_de_separacao: nunca vira agente; vira RELATÓRIO do medicao
-      (lead time, deployment frequency, MTTR, change failure rate
-      extraídos do event log + gates.yml)
+    status: active
+    criterio_de_separacao: nunca vira agente — é RELATÓRIO do medicao
+      ("analise:funil", ADR 0089)
+    entregaveis: [lead-time-real, deployment-frequency-real]
+    saidas: [{ artefato: relatorio-dora-parcial, destino: usuario }]
+    lacunas: [{ artefato: mttr, status: lacuna,
+        motivo: "exige sinal de incidente real — secops-runtime/platform" },
+      { artefato: change-failure-rate, status: lacuna,
+        motivo: "mesma dependência de mttr" }]
 
 camada_transversal:
   - id: psicologo
