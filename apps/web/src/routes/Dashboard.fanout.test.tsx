@@ -80,6 +80,7 @@ function resumo(i: number): ProjectCardSummary {
       delegatedSubagents: ['qa-automacao'],
       infraActive: false,
       uxDesignerActive: false,
+      staffActive: false,
     },
   };
 }

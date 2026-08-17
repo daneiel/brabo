@@ -5,6 +5,7 @@ import {
   ClockIcon,
   CodeIcon,
   DeployIcon,
+  FileIcon,
   GaugeIcon,
   HypothesisIcon,
   LayoutSidebarIcon,
@@ -31,6 +32,7 @@ export type AgentKey =
   | 'arquiteto'
   | 'po'
   | 'ux-designer'
+  | 'staff'
   | 'dev-lead'
   | 'dev-backend'
   | 'dev-frontend'
@@ -133,6 +135,20 @@ export const AGENTS: Record<AgentKey, AgentDef> = {
     role: 'Personas, jornadas e protótipo navegável',
     color: 'var(--accent)',
     icon: PencilIcon,
+  },
+  // Staff/Principal Engineer (docs/fluxo.yml, camada_decisao_tecnica, ADR
+  // 0088) — RFC + PoC descartável para problema sistêmico RECORRENTE,
+  // devolvido ao Arquiteto por handoff. Dormente para disparo AUTOMÁTICO
+  // (a Anamnese, que o dispararia, está pausada — ANAMNESE_ENABLED=false);
+  // acionável MANUALMENTE por handoff aceito, mesmo mecanismo genérico dos
+  // demais leads (sem entrar em USER_STARTED_AGENTS).
+  staff: {
+    key: 'staff',
+    name: 'Staff',
+    initials: 'ST',
+    role: 'Parecer sistêmico e RFC',
+    color: 'var(--violet)',
+    icon: FileIcon,
   },
   'dev-lead': {
     key: 'dev-lead',

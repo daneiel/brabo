@@ -205,10 +205,10 @@ merge em `main`, e por isso fica um ciclo de promoção atrás do que está em
 | [Scripts](docs/reference/scripts.md) | todo comando `pnpm` e alvo do `Makefile`, extraídos da fonte |
 | [Eventos](docs/reference/events.md) | os tipos do event log, broadcasts e spans |
 | [Permissões](docs/reference/permissions.md) | o formato do `permissions.json` e a ordem da decisão |
-| [Artefatos](docs/reference/artifacts.md) | os sete schemas e quem pode emitir cada um |
+| [Artefatos](docs/reference/artifacts.md) | os oito schemas e quem pode emitir cada um |
 | [Providers de git](docs/reference/git-providers.md) | o contrato de quinze operações e as capabilities |
 | [API interna](docs/reference/internal-api.md) | o contrato api ↔ engine |
-| [ADRs](docs/adr/index.md) | as 86 decisões e o porquê de cada uma |
+| [ADRs](docs/adr/index.md) | as 87 decisões e o porquê de cada uma |
 | [Segurança](SECURITY.md) | como reportar uma vulnerabilidade |
 | [Como contribuir](CONTRIBUTING.md) | fluxo, Definition of Done, o que é aceito |
 | [Onde pedir ajuda](SUPPORT.md) | qual canal para cada tipo de assunto |

@@ -90,6 +90,7 @@ function resumo(latestSeq: number): ProjectCardSummary {
       delegatedSubagents: [],
       infraActive: false,
       uxDesignerActive: false,
+      staffActive: false,
     },
   };
 }
