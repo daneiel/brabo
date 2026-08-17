@@ -3,7 +3,7 @@ id: artifacts
 title: Artefatos
 sidebar_label: Artefatos
 sidebar_position: 4
-description: Os sete schemas de artefato validados no engine, quem pode emitir cada um, e por que a maioria não é emitível pelo modelo.
+description: Os oito schemas de artefato validados no engine, quem pode emitir cada um, e por que a maioria não é emitível pelo modelo.
 keywords: [artefato, schema, emit_artifact, qa_verdict, business_rule]
 ---
 
@@ -146,6 +146,29 @@ visto de fora da área. O que a api enxerga é a PR consolidada, via
 `InfraGateRunner` (ADR 0021): um delegado sem nenhum arquivo não terminou
 nada, e "vazio" nunca deve passar por "concluído".
 
+### `prototipo_navegavel` — ferramenta (`propose_prototype`, não `emit_artifact`)
+
+| campo | obrigatório |
+|---|---|
+| `personas` | ✅ — lista **não vazia** |
+| `jornadas` | ✅ — lista **não vazia** |
+| `prototipo` | ✅ — `telas` não vazia |
+| `resumo` | ✅ |
+
+O protótipo que o UX Designer produz (ADR 0087), a partir da
+`necessidade-de-negocio` do Criativo. Não é `note`/`business_rule` — o
+UX Designer emite via `propose_prototype`, uma ferramenta PRÓPRIA
+(`Engine.Agents.UxDesignerTools`), e este módulo só valida a FORMA, mesmo
+mecanismo de `product_brief`: validável aqui sem estar na lista de tipos
+emitíveis por `emit_artifact`.
+
+`personas`/`jornadas` vazias, ou `prototipo` sem nenhuma tela, reprovam
+pela mesma régua de `business_rule.origin` (linha 59): um artefato sem
+conteúdo não vale registrar. Um `propose_prototype` bem-sucedido encerra o
+turno (mesmo raciocínio do `propose_execution_plan`/`propose_infra_pr`) —
+sem `proposed_action`, sem suspensão: propor um protótipo não tem efeito
+externo.
+
 ## Artefatos que não passam por aqui
 
 Dois tipos de evento `artifact.*` existem no log sem estar neste registro,
@@ -166,7 +189,7 @@ está anotada como
 
 | erro | causa |
 |---|---|
-| `{:unknown_type, tipo}` | tipo fora dos sete |
+| `{:unknown_type, tipo}` | tipo fora dos oito |
 | `{:missing_keys, [...]}` | campos obrigatórios ausentes, todos nomeados |
 | `:origem_invalida` | `business_rule.origin` vazia ou não é lista |
 | `{:sujeito_invalido, chaves}` | parecer com os dois sujeitos, ou com nenhum |
