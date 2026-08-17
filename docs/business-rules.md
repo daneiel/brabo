@@ -8032,6 +8032,8 @@ arquivo). O caminho ponta a ponta de uso hoje é a rota interna
 
 ## O gate `implementavel` ativa — QA-estratégia como segundo momento do qa-lead (RN-340/341, ADR 0090)
 
+### RN-340 — O gate `implementavel` decide a story ANTES do dev agent escrever código {#rn-340}
+
 `docs/gates.yml` declarava o gate `implementavel` (dono `dev-lead`) desde a
 FASE 14d com `status: planned` — nunca ativado. O [ADR 0090](adr/0090-qa-estrategia-e-appsec-segundo-momento.md)
 ativa: a ferramenta `assess_implementability` do Dev Lead propõe o **parecer
