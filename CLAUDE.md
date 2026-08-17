@@ -1184,6 +1184,50 @@ sozinho. Fechar isto exigiria o mesmo mecanismo de persistência do ADR
 0052; fora do escopo desta correção, que só alinha o comportamento ao que
 `docs/fluxo.yml` já declarava.
 
+## UX Designer — o quinto agente conversacional, antecipado (RN-285..287, ADR 0087)
+Não é gatilho de separação disparado — `docs/fluxo.yml` sempre declarou
+"quando o projeto GERENCIADO tiver interface própria a desenhar" como
+critério, e ele não disparou: o design system continua insumo estático.
+Decisão CONSCIENTE do dono do produto de antecipar o papel mesmo assim.
+
+`Engine.Agents.UxDesignerServer` espelha o `DevLeadServer` — GenServer por
+sessão, teto de 14 iterações, ativado por handoff `accepted` endereçado a
+"ux-designer" pelo mecanismo GENÉRICO já existente (nenhuma linha mudou em
+`ActivateAgentUseCase`). SOLO: sem área, sem subagentes. O kickoff lê a
+`artifact.product_brief` mais recente — a MESMA "necessidade de negócio"
+que o Criativo produz, sem artefato novo — e o sistema de design
+(`design/tokens.css`, `design/COMPONENTS.md`) é DESCRITO na identidade do
+agente (`Engine.Harness.Agents`), texto estático: os agentes conversacionais
+não têm ferramenta de leitura de arquivo do repositório.
+
+`propose_prototype` é a ÚNICA ferramenta (`personas`, `jornadas`,
+`prototipo` com `telas`/`anotacoes`, `resumo`). Grava
+`artifact.prototipo_navegavel` **sem caso de uso dedicado na api** —
+diferente de `choose_project_image`/`create_c4_diagram`, que precisam de um
+porque têm conteúdo DERIVADO de outro artefato ou recusa de domínio
+compartilhada; nenhum dos dois motivos vale aqui, então a validação de forma
+mora no engine (`ArtifactSchemas`) e a gravação usa o `append_event_returning`
+genérico que a api já expõe, mesmo caminho do `artifact.product_brief`. Um
+artefato só, dois handoffs sobre ele — para "po" e para "dev-lead" — nunca
+um segundo artefato para "spec-visual": o protótipo (telas + anotações) É a
+spec visual, e duplicá-lo arriscaria as duas cópias divergirem depois. Reusa
+a metade do desenho do ADR 0086 que sobrevive sem a suspensão dele:
+`propose_prototype` bem-sucedido encerra o turno, para o modelo não propor
+de novo e duplicar o artefato — sem o "aguardando_aprovacao", porque propor
+um protótipo não tem efeito externo.
+
+`apps/web/src/lib/agents.ts` ganhou a entrada (`color: var(--accent)`, o
+token semântico menos reusado do roster; `icon: PencilIcon`).
+`uxDesignerActive` entrou no roster nas DUAS fontes que a RN-090 exige em
+sincronia — o painel do time (`agent-status.ts`) e o card do dashboard
+(`projects-summary.repository.ts`, mesma consulta de `infraActive`
+ampliada, sem query nova).
+
+**Fora de alcance, declarado**: `teste-de-usabilidade` exige usuário humano
+real — nenhum agente substitui isso. `metricas-de-uso` segue lacuna: depende
+do papel `analytics` (métrica de PRODUTO), que `docs/fluxo.yml` mantém
+`proposto`.
+
 ## Staff — código pronto, dormente para disparo automático (RN-305/306, ADR 0088)
 Não é fase planejada: `docs/fluxo.yml` declara o Staff/Principal Engineer
 como `status: planned` desde o ADR 0085 ("contrato pronto, ativação
@@ -1193,17 +1237,17 @@ notando um problema sistêmico RECORRENTE) não vai disparar — a Anamnese
 está pausada (`ANAMNESE_ENABLED=false`, decisão de 2026-08-10). Dormente
 para disparo automático, não para acionamento MANUAL.
 
-Quinto agente conversacional solo (`Engine.Agents.StaffServer`), ao lado de
-Criativo/PO/Arquiteto/Dev Lead, espelhando o Arquiteto (laço bounded teto
-14) com duas diferenças: SEM `kickoff/1` (não há artefato de sessão para
-resumir — sobe e fica ocioso até a primeira `user_message`, que é como
-quem endereçou o handoff explica o problema) e ativado pelo caminho
-GENÉRICO de `canActivateAgent` (handoff `accepted` endereçado a "staff"),
-sem entrar em `USER_STARTED_AGENTS` — investigação confirmou que nenhuma
-mudança de domínio na api era necessária, porque `assertHandoffTargetAllowed`
-só recusa subagente de área e o Staff não tem área. A única ferramenta,
-`propose_rfc` (problema, opções com trade-offs, recomendação, PoC
-descartável), grava `artifact.rfc_staff` DIRETO via
+Sexto agente conversacional solo (`Engine.Agents.StaffServer`), ao lado de
+Criativo/PO/Arquiteto/Dev Lead/UX Designer, espelhando o Arquiteto (laço
+bounded teto 14) com duas diferenças: SEM `kickoff/1` (não há artefato de
+sessão para resumir — sobe e fica ocioso até a primeira `user_message`,
+que é como quem endereçou o handoff explica o problema) e ativado pelo
+caminho GENÉRICO de `canActivateAgent` (handoff `accepted` endereçado a
+"staff"), sem entrar em `USER_STARTED_AGENTS` — investigação confirmou que
+nenhuma mudança de domínio na api era necessária, porque
+`assertHandoffTargetAllowed` só recusa subagente de área e o Staff não tem
+área. A única ferramenta, `propose_rfc` (problema, opções com trade-offs,
+recomendação, PoC descartável), grava `artifact.rfc_staff` DIRETO via
 `append_event_returning` — mesmo padrão sem tabela de `emit_insight`, e
 não o de `artifact.c4_diagram` (que deriva o Container level do
 module_map na api) — e devolve o handoff ao Arquiteto no MESMO tool call,
@@ -1400,16 +1444,16 @@ divide o mesmo banco, recuperar exige `db:migrate` E `engine:migrate`.
   event log, e o motivo NUNCA fica só em broadcast: `agent.error` é
   durável e o agente diz o que houve no fio (RN-059). Falha de UMA
   ferramenta no meio do laço segue a mesma régua (RN-163).
-- Os cinco agentes conversacionais rodam laço bounded de tool use, com
+- Os seis agentes conversacionais rodam laço bounded de tool use, com
   teto PRÓPRIO no servidor de cada um (Criativo e PO 12, Arquiteto, Dev
-  Lead e Staff 14 — raciocínio, não conversa leve) — não o teto do
-  `ToolLoop` (`Engine.Harness.Iteracoes`), que é dos agentes de execução e
-  de gate. Erro de ferramenta é ENTRADA do laço, não fim de linha; teto
-  esgotado é narrado, nunca silêncio; e o agente não anuncia ação que o
-  código não vá executar — o que se promete é decidido pelo teto, nunca
-  por texto fixo (RN-163). O Staff é o único SEM `kickoff/1` — sobe e fica
-  ocioso até a primeira `user_message`, porque não há artefato de sessão
-  para sintetizar uma abertura (ADR 0088).
+  Lead, UX Designer e Staff 14 — raciocínio, não conversa leve) — não o
+  teto do `ToolLoop` (`Engine.Harness.Iteracoes`), que é dos agentes de
+  execução e de gate. Erro de ferramenta é ENTRADA do laço, não fim de
+  linha; teto esgotado é narrado, nunca silêncio; e o agente não anuncia
+  ação que o código não vá executar — o que se promete é decidido pelo
+  teto, nunca por texto fixo (RN-163). O Staff é o único SEM `kickoff/1`
+  — sobe e fica ocioso até a primeira `user_message`, porque não há
+  artefato de sessão para sintetizar uma abertura (ADR 0088).
 - O turno de um agente conversacional pode SUSPENDER esperando aprovação
   humana (ADR 0086, RN-284) — hoje só o Dev Lead, no `propose_execution_plan`.
   `Engine.Agents.TurnoAssincrono` responde ao `from` síncrono na hora

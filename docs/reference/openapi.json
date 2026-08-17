@@ -16474,6 +16474,11 @@
             "example": false,
             "description": "Existe handoff `accepted` para `infra` na sessão mais recente."
           },
+          "uxDesignerActive": {
+            "type": "boolean",
+            "example": false,
+            "description": "Existe handoff `accepted` para `ux-designer` na sessão mais recente (ADR 0087)."
+          },
           "staffActive": {
             "type": "boolean",
             "example": false,
@@ -16486,6 +16491,7 @@
           "gatesEverOpened",
           "delegatedSubagents",
           "infraActive",
+          "uxDesignerActive",
           "staffActive"
         ]
       },

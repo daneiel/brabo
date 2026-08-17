@@ -42,8 +42,20 @@ defmodule Engine.Sessions.FakeEngineApiClient do
   @impl true
   def append_event_returning(project_id, session_id, event) do
     notify({:event_appended, project_id, session_id, event})
-    id = "evt-#{System.unique_integer([:positive])}"
-    {:ok, %{"id" => id, "seq" => 0, "type" => Map.get(event, :type)}}
+
+    # Mesmo scriptável de `append_event/3` (`:fake_append_event_error`) — as
+    # duas expressam a MESMA falha ("a api recusou o append"), só com forma
+    # de retorno diferente. Introduzido pelo UX Designer (ADR 0087), que
+    # precisa do id de volta (`propose_prototype`) e também precisa exercitar
+    # "gravar o artefato falhou, então nenhum handoff é ofertado".
+    case Process.get(:fake_append_event_error) do
+      nil ->
+        id = "evt-#{System.unique_integer([:positive])}"
+        {:ok, %{"id" => id, "seq" => 0, "type" => Map.get(event, :type)}}
+
+      reason ->
+        {:error, reason}
+    end
   end
 
   @impl true

@@ -211,6 +211,13 @@ export interface RosterFacts {
   delegatedSubagents: string[];
   infraActive: boolean;
   /**
+   * ADR 0087 — mesmo critério de `infraActive`: handoff `accepted`
+   * endereçado a "ux-designer" nesta sessão. Ele é SOLO (sem área), então
+   * não há `pushAreaMembers` correspondente. Calculado nas DUAS fontes
+   * (aqui e em `projects-summary.repository.ts`, RN-090), como `infraActive`.
+   */
+  uxDesignerActive: boolean;
+  /**
    * Staff (docs/fluxo.yml, camada_decisao_tecnica, ADR 0088) — mesmo
    * critério de presença de `infraActive`: só entra no roster quando há
    * handoff `accepted` endereçado a ele NESTA sessão. Dormente para
@@ -246,6 +253,9 @@ export function rosterFactsFromEvents(
     infraActive: handoffs.some(
       (h) => h.toAgent === 'infra' && h.status === 'accepted',
     ),
+    uxDesignerActive: handoffs.some(
+      (h) => h.toAgent === 'ux-designer' && h.status === 'accepted',
+    ),
     staffActive: handoffs.some(
       (h) => h.toAgent === 'staff' && h.status === 'accepted',
     ),
@@ -255,9 +265,10 @@ export function rosterFactsFromEvents(
 /**
  * A REGRA DE PRESENÇA, única no app: criativo/po/arquiteto sempre;
  * dev-<modulo> por módulo quando a execução foi ativada; qa/secops quando
- * algum gate já abriu; membros de área com delegação registrada; infra/staff
- * quando o handoff foi aceito (staff: docs/fluxo.yml, ADR 0088 — dormente
- * para disparo automático, presente aqui só por ativação MANUAL).
+ * algum gate já abriu; membros de área com delegação registrada;
+ * infra/ux-designer/staff quando o handoff foi aceito (ux-designer: ADR
+ * 0087; staff: docs/fluxo.yml, ADR 0088 — dormente para disparo automático,
+ * presente aqui só por ativação MANUAL).
  *
  * `statusOf` é de quem chama: o painel do time resolve pelo event log, o card
  * do dashboard devolve `ocioso` porque não exibe status.
@@ -288,6 +299,15 @@ export function rosterFromFacts(
   if (facts.infraActive) {
     roster.push({ id: 'infra', def: AGENTS.infra, status: statusOf('infra') });
     pushAreaMembers(roster, facts.delegatedSubagents, 'infra', statusOf);
+  }
+
+  // ADR 0087 — SOLO (sem área): nenhum `pushAreaMembers` correspondente.
+  if (facts.uxDesignerActive) {
+    roster.push({
+      id: 'ux-designer',
+      def: AGENTS['ux-designer'],
+      status: statusOf('ux-designer'),
+    });
   }
 
   if (facts.staffActive) {

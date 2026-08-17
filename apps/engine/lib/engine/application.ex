@@ -35,6 +35,13 @@ defmodule Engine.Application do
       Engine.Agents.PoSupervisor,
       Engine.Agents.ArquitetoSupervisor,
       Engine.Agents.DevLeadSupervisor,
+      # UX/Product Designer (ADR 0087) — solo, sem área. Ativado por handoff
+      # aceito endereçado a "ux-designer" (mesmo mecanismo genérico dos
+      # demais).
+      Engine.Agents.UxDesignerSupervisor,
+      # Staff/Principal Engineer (docs/fluxo.yml, ADR 0088) — solo, sem área,
+      # dormente para disparo automático (Anamnese pausada); acionável por
+      # handoff aceito endereçado a "staff", mesmo mecanismo genérico.
       Engine.Agents.StaffSupervisor,
       # Infra Lead (Fase 4a; área — Fase 8c) — mesma família session-scoped
       # dos demais, ativado por handoff aceito do Arquiteto.

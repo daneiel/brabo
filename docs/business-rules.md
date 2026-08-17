@@ -7823,6 +7823,111 @@ comportamento bater com o que `docs/fluxo.yml` já declarava.
 
 ---
 
+## UX Designer — o quinto agente conversacional (RN-285..287, ADR 0087)
+
+Não é gatilho de separação disparado (`docs/fluxo.yml` sempre declarou "quando
+o projeto GERENCIADO tiver interface própria a desenhar" como critério) — é
+decisão consciente do dono do produto de antecipar o papel. `teste-de-
+usabilidade` (exige usuário humano real) fica fora de alcance; `metricas-de-
+uso` segue lacuna, porque depende do papel `analytics`, que continua
+`proposto`.
+
+### RN-285 — O UX Designer é conversacional SOLO, sem área {#rn-285}
+
+`Engine.Agents.UxDesignerServer` (`apps/engine/lib/engine/agents/ux_designer_server.ex:40`)
+espelha `Engine.Agents.ArquitetoServer`/`DevLeadServer`: GenServer por sessão,
+laço bounded de tool use próprio com teto 14 (mesmo calibre de Arquiteto/Dev
+Lead — agente de raciocínio, não conversação leve como Criativo/PO). Ativado
+por handoff `accepted` endereçado a "ux-designer" — mecanismo GENÉRICO já
+existente (`ActivateAgentUseCase`/`canActivateAgent` na api não ganharam
+linha nenhuma: qualquer agente com handoff aceito já é ativável).
+
+O kickoff (`build_kickoff/1`, `ux_designer_server.ex:222`) lê a
+`artifact.product_brief` mais recente da sessão — a MESMA "necessidade de
+negócio" que o Criativo produz, sem artefato novo. O sistema de design
+(`design/tokens.css`, `design/COMPONENTS.md`) é DESCRITO na identidade
+(`Engine.Harness.Agents`, entrada `"ux-designer"`), texto estático, porque os
+agentes conversacionais não têm ferramenta de leitura de arquivo do repo — é
+a única camada do prompt presente em TODO turno, não só no kickoff.
+
+Sem área, sem subagentes: `docs/fluxo.yml` já classificava o papel como
+`camada_produto`, ao lado de Criativo e PO, nenhum dos quais tem área.
+
+### RN-286 — `propose_prototype` grava artefato sem tabela e sem caso de uso dedicado, e oferece DOIS handoffs sobre o MESMO artefato {#rn-286}
+
+`artifact.prototipo_navegavel` segue o desenho sem tabela de
+`artifact.project_image`/`artifact.c4_diagram` ([RN-149](#rn-149)) — o event
+log é o registro —, mas por um caminho DIFERENTE do que os dois usam.
+`choose_project_image`/`create_c4_diagram` precisam de caso de uso NA API
+(`DecidirImagemDoProjetoUseCase`/`CreateC4DiagramUseCase`) porque têm
+conteúdo DERIVADO de outro artefato (o Container level vem do `module_map`
+vigente) ou recusa de domínio compartilhada por mais de um consumidor (teto
+de recursos da imagem). `propose_prototype`
+(`Engine.Agents.UxDesignerTools.run/2`,
+`apps/engine/lib/engine/agents/ux_designer_tools.ex:122`) não tem nenhum dos
+dois motivos — é conteúdo AUTOCONTIDO que só o próprio UX Designer escreve e
+só ele lê de volta —, então a validação de FORMA mora no engine
+(`Engine.Harness.ArtifactSchemas`, tipo `"prototipo_navegavel"`,
+`artifact_schemas.ex:49/135` — personas e jornadas não-vazias, ao menos uma
+tela) e a gravação usa o caminho GENÉRICO que a api já expõe para qualquer
+tipo de evento (`EngineApiClient.append_event_returning/3`), o mesmo
+mecanismo do `artifact.product_brief` do Criativo. Nenhuma rota nova na api.
+
+Depois de gravar, `gravar_e_ofertar_handoffs/2` (`ux_designer_tools.ex:149`)
+oferece DOIS handoffs sobre o MESMO artefato — `create_handoff` para "po" e
+para "dev-lead", os dois com o `artifactId` do protótipo. Nunca um segundo
+artefato para "spec-visual" (`docs/fluxo.yml`): o PO lê `resumo`/`prototipo`
+para desenhar o backlog, o Dev Lead lê as MESMAS `telas`/`anotacoes` como
+referência visual de implementação — duplicar o conteúdo arriscaria as duas
+cópias divergirem na revisão seguinte, o mesmo argumento por trás do C4 não
+redigitar o `module_map`.
+
+Falha ao ofertar UM dos dois handoffs não desfaz o artefato já gravado nem o
+outro handoff (RN-116) — o motivo volta como texto do tool-result, entrada do
+laço e não fim de linha (RN-163): o modelo lê e pode reportar ao usuário na
+resposta seguinte.
+
+Um `propose_prototype` BEM-SUCEDIDO encerra o turno
+(`ux_designer_server.ex:120`, mesma guarda de `propose_execution_plan` no Dev
+Lead) — sem isso o laço voltaria ao modelo, que poderia propor de novo e
+produzir dois protótipos com o mesmo total. Só existe UMA ferramenta aqui
+(não há um segundo tool call a encadear como no Arquiteto), então "para no
+primeiro sucesso" não perde nada.
+
+### RN-287 — `uxDesignerActive` no roster, nas DUAS fontes (RN-090) {#rn-287}
+
+Mesmo critério de `infraActive`: handoff `accepted` endereçado a
+"ux-designer" na sessão. `apps/web/src/lib/agent-status.ts`
+(`rosterFactsFromEvents`/`rosterFromFacts`) ganhou o fato e o empurra
+condicionalmente no roster como agente SOLO — sem `pushAreaMembers`
+correspondente, porque ele não é área.
+
+A RN-090 exige as DUAS fontes em sincronia (painel do time via event log; o
+card do dashboard via `ProjectCardSummary.roster`, computado na api) para que
+um agente novo não apareça num lugar e falte no outro. O fato entrou nas
+duas: `apps/api/src/infrastructure/persistence/drizzle/projects-summary.repository.ts`
+amplia a MESMA consulta de `infraActive` (um `inArray(handoffs.toAgent,
+['infra', 'ux-designer'])` no lugar do `eq` único, partido em dois `Set` por
+`toAgent`) — nenhuma consulta nova, a contagem de doze consultas constantes
+que `projects-summary.repository.spec.ts` prova não cresce.
+
+- **Onde:** `apps/engine/lib/engine/agents/ux_designer_server.ex`,
+  `ux_designer_tools.ex`, `ux_designer_supervisor.ex`;
+  `apps/engine/lib/engine/harness/agents.ex` (identidade),
+  `artifact_schemas.ex` (tipo `prototipo_navegavel`);
+  `apps/engine/lib/engine/application.ex`;
+  `apps/engine/lib/engine_web/controllers/agent_command_controller.ex`;
+  `apps/web/src/lib/agents.ts`, `agent-status.ts`;
+  `apps/api/src/application/ports/projects-summary-repository.port.ts`,
+  `apps/api/src/infrastructure/persistence/drizzle/projects-summary.repository.ts`
+- **Teste:** `apps/engine/test/engine/agents/ux_designer_server_test.exs`,
+  `ux_designer_tools_test.exs`; `apps/web/src/lib/agent-status.test.ts`;
+  `apps/api/test/infrastructure/persistence/drizzle/projects-summary.repository.spec.ts`
+  (describe com os dois `toAgent` na mesma sessão)
+- **ADR:** [0087](adr/0087-ux-designer-agente.md)
+
+---
+
 ## Staff: código pronto, dormente para disparo automático (RN-305/RN-306, ADR 0088)
 Não é fase planejada: `docs/fluxo.yml` declara o Staff/Principal Engineer como
 `status: planned` desde o ADR 0085 ("contrato pronto, ativação decidida,
