@@ -79,6 +79,7 @@ qualquer push, e `GitPush(algo)` não casa nada.
 | `parallelize` | `Parallelize` | maintainer |
 | `raise_max_parallel` | `RaiseMaxParallel` | maintainer |
 | `propose_execution_plan` | `ProposeExecutionPlan` | maintainer |
+| `assess_implementability` | `AssessImplementability` | maintainer |
 | `spend` | `Spend` | **owner** |
 
 O papel mínimo é verificado **antes** do arquivo. Sem ele, `deny` — o
@@ -99,6 +100,13 @@ contrário de `parallelize`/`raise_max_parallel`, ela NÃO está no bloco de
 tetos absolutos — pode ser configurada para `auto_approve`, como
 `open_adr_pr`/`open_infra_pr` — e enquanto ela está `pending`, o turno do Dev
 Lead fica SUSPENSO esperando a decisão, não só a conversa parada.
+
+`assess_implementability` (ADR 0090, [RN-340](../business-rules.md#rn-340)) é
+o parecer de implementabilidade de uma story (gate `implementavel`,
+`docs/gates.yml`) — MESMO calibre e MESMO raciocínio de
+`propose_execution_plan`: decisão inicial da sessão, não ultrapassagem de
+teto, e por isso também fora do bloco de tetos absolutos. Suspende o turno
+do Dev Lead do mesmo jeito enquanto `pending`.
 
 ## Como um padrão casa com um comando
 

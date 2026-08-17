@@ -96,6 +96,14 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   conversa com o Dev Lead PAUSA: é a primeira vez que um agente
   conversacional suspende esperando aprovação humana no meio do turno
   síncrono (RN-284, ADR 0086)
+- **api,engine**: o gate `implementavel` sai de `planned` para `active` — o
+  Dev Lead ganha `assess_implementability`, o parecer de implementabilidade
+  de uma story (viável/inviável, com justificativa), a partir do plano de
+  teste que a QA-estratégia produz. A QA-estratégia deixa de ser papel
+  `proposto` em `docs/fluxo.yml`: é o próprio `qa-lead`, num SEGUNDO
+  momento (mesmo processo, entregável separado do veredito de PR) — sem
+  worktree, sem task, PRE-DEV. O parecer nasce `proposed_action`, mesmo
+  padrão do plano de execução (RN-340/341, ADR 0090)
 
 ### Correções
 

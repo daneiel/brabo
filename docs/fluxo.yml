@@ -98,18 +98,20 @@ camada_decisao_tecnica:
     teto: 14
     entradas:
       - { artefato: handoff + module_map, origem: arquiteto }
-      - { artefato: plano-de-teste, origem: qa-estrategia, status: proposto }
+      - { artefato: plano-de-teste, origem: qa-estrategia }        # ADR 0090
       - { artefato: threat-model, origem: appsec, status: proposto }
       - { artefato: parecer-de-migracao, origem: dbre, status: proposto }
     saidas:
       - { artefato: plano-de-paralelismo, destino: usuario,
           via: proposed_action, regra: RN-083/154 }
+      - { artefato: parecer-implementabilidade, destino: usuario,
+          via: proposed_action, regra: RN-340 }                    # ADR 0090
       - { artefato: delegacao, destino: dev, status: lacuna }  # ADR 0053 item 5
       - { artefato: design-doc + quebra-tecnica, destino: dev,
           status: proposto }
-    gate_saida: { id: paralelismo-autorizado, status: ativo }
-    gate_futuro: { id: implementavel, status: proposto,
-      valor: story inviável morre antes de queimar token }
+    gates:
+      - { id: paralelismo-autorizado, status: ativo }
+      - { id: implementavel, status: ativo }                       # ADR 0090
 
   - id: staff
     papel_de_mercado: Staff/Principal Engineer
@@ -136,15 +138,19 @@ camada_execucao:
 camada_qualidade:
   - id: qa-estrategia
     papel_de_mercado: QA Engineer (estratégia, shift-left)
-    status: proposto
-    hoje_absorvido_por: area-qa (que só atua DEPOIS, na PR)
-    criterio_de_separacao: >
-      Quando o gate implementavel ativar — o plano-de-teste é entrada
-      dele. Pode ser o próprio qa-lead em segundo MOMENTO, não
-      necessariamente agente novo: a separação é de entregável.
-    entregaveis_alvo: [plano-de-teste-por-story, criterio-executavel,
+    status: active                                                 # ADR 0090
+    absorvido_por: >
+      area-qa — o critério de separação PREVISTO aqui se confirmou: é o
+      próprio qa-lead (Engine.Gates.QaLeadServer.run_design/3), SEGUNDO
+      momento, mesmo processo, entregável separado do veredito de PR —
+      nunca agente novo
+    entradas:
+      - { artefato: story, origem: po }                            # via backlog
+      - { artefato: module_map, origem: arquiteto, status: opcional }
+    entregaveis: [plano-de-teste-por-story, criterio-executavel,
       estrategia-de-automacao]
-    saidas_alvo: [{ artefato: plano-de-teste, destino: [dev-lead, dev] }]
+    saidas: [{ artefato: plano-de-teste, destino: [dev-lead, dev] }]
+    gate_saida: { id: implementavel, status: ativo }
 
   - id: area-qa
     papel_de_mercado: SDET + QA de execução

@@ -283,7 +283,8 @@ export type ActionType =
   | 'instruction_patch'
   | 'parallelize'
   | 'raise_max_parallel'
-  | 'propose_execution_plan';
+  | 'propose_execution_plan'
+  | 'assess_implementability';
 
 export type ActionStatus =
   | 'pending'

@@ -71,6 +71,42 @@ defmodule Engine.Agents.DevLeadServerTest do
     end
   end
 
+  # --- ADR 0090: assess_implementability -------------------------------
+
+  defp assessment_turn(story_id) do
+    %{
+      "message" => %{
+        "role" => "assistant",
+        "content" => "",
+        "toolCalls" => [
+          %{
+            "id" => "call-#{System.unique_integer([:positive])}",
+            "name" => "assess_implementability",
+            "arguments" => %{
+              "storyId" => story_id,
+              "parecer" => "implementavel",
+              "justificativa" => "critérios claros"
+            }
+          }
+        ]
+      },
+      "usage" => %{"estimated" => true},
+      "error" => nil
+    }
+  end
+
+  defp plano_de_teste_event(story_id) do
+    %{
+      "type" => "artifact.plano_de_teste",
+      "payload" => %{
+        "storyId" => story_id,
+        "planoDeTeste" => "cobrir X",
+        "criteriosExecutaveis" => ["dado X, quando Y, então Z"],
+        "estrategiaDeAutomacao" => "integração"
+      }
+    }
+  end
+
   test "o plano ENCERRA o turno: uma só proposed_action (status auto_approved do fake)", %{
     state: state
   } do
@@ -318,6 +354,58 @@ defmodule Engine.Agents.DevLeadServerTest do
 
       assert {:noreply, depois_do_cancel} = DevLeadServer.handle_cast(:cancel, suspenso)
       assert depois_do_cancel == suspenso
+    end
+
+    # ADR 0090 — a MESMA suspensão genérica, agora pela SEGUNDA ferramenta do
+    # Dev Lead. Não repete a dança inteira de retomada (já provada acima,
+    # agnóstica de tool_name/tool_call_id): só prova que `assess_implementability`
+    # também suspende quando a api segura a ação como pending.
+    test "assess_implementability pending TAMBÉM suspende, sem agent.done", %{state: state} do
+      Process.put(:fake_events, [plano_de_teste_event("st-1")])
+      Process.put(:fake_propose_action, %{"id" => "pa-imp-1", "status" => "pending"})
+      Process.put(:fake_llm_turns, [assessment_turn("st-1")])
+
+      Phoenix.PubSub.subscribe(Engine.PubSub, "session:" <> state.session_id)
+
+      assert {:reply, :ok, final_state} =
+               sync_call(DevLeadServer, {:user_message, "avalie a st-1"}, state)
+
+      assert %{
+               action_id: "pa-imp-1",
+               tool_name: "assess_implementability"
+             } = final_state.aguardando_aprovacao
+
+      assert_received {:propose_action, "assess_implementability", _actor, _payload}
+      refute_received %Phoenix.Socket.Broadcast{event: "agent.done"}
+
+      assert_received %Phoenix.Socket.Broadcast{
+        event: "agent.status",
+        payload: %{status: "awaiting_approval"}
+      }
+    end
+
+    # RN-163: erro de ferramenta é ENTRADA do laço, não fim de linha — sem
+    # plano de teste ainda, `assess_implementability` devolve `{:error, _}`
+    # (não `{:pending, _}`), e o turno CONTINUA para o próximo turno
+    # scriptado em vez de suspender.
+    test "assess_implementability sem plano ainda NÃO suspende — o laço continua", %{
+      state: state
+    } do
+      Process.put(:fake_events, [])
+      Application.put_env(:engine, :gate_dispatcher, Engine.Gates.FakeGateDispatcher)
+      on_exit(fn -> Application.delete_env(:engine, :gate_dispatcher) end)
+
+      Process.put(:fake_llm_turns, [
+        assessment_turn("st-sem-plano"),
+        FakeEngineApiClient.final_response("ok, vou esperar o plano")
+      ])
+
+      assert {:noreply, final_state} = sync_cast(DevLeadServer, :kickoff, state)
+
+      assert final_state.aguardando_aprovacao == nil
+      refute_received {:propose_action, "assess_implementability", _actor, _payload}
+
+      assert_received {:qa_estrategia_dispatch, _project_id, _session_id, "st-sem-plano"}
     end
   end
 end

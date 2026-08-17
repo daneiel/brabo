@@ -134,6 +134,39 @@ defmodule Engine.Harness.ArtifactSchemasTest do
     end
   end
 
+  describe "plano_de_teste (ADR 0090 — QA-estratégia)" do
+    test "válido, e NÃO é tool-emittable (server-emitted)" do
+      assert :ok =
+               ArtifactSchemas.validate("plano_de_teste", %{
+                 "storyId" => "st-1",
+                 "planoDeTeste" => "cobrir o cadastro",
+                 "criteriosExecutaveis" => ["dado X, quando Y, então Z"],
+                 "estrategiaDeAutomacao" => "integração"
+               })
+
+      refute "plano_de_teste" in ArtifactSchemas.known()
+    end
+
+    test "criteriosExecutaveis vazio é rejeitado — plano sem critério não é plano" do
+      assert {:error, :criterios_vazios} =
+               ArtifactSchemas.validate("plano_de_teste", %{
+                 "storyId" => "st-1",
+                 "planoDeTeste" => "cobrir o cadastro",
+                 "criteriosExecutaveis" => [],
+                 "estrategiaDeAutomacao" => "integração"
+               })
+    end
+
+    test "faltando chave obrigatória" do
+      assert {:error, {:missing_keys, ["estrategiaDeAutomacao"]}} =
+               ArtifactSchemas.validate("plano_de_teste", %{
+                 "storyId" => "st-1",
+                 "planoDeTeste" => "cobrir o cadastro",
+                 "criteriosExecutaveis" => ["a"]
+               })
+    end
+  end
+
   test "known/0 lista só os model-emittable" do
     assert Enum.sort(ArtifactSchemas.known()) == ["business_rule", "note"]
   end

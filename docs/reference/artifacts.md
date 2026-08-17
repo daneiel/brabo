@@ -146,6 +146,26 @@ visto de fora da área. O que a api enxerga é a PR consolidada, via
 `InfraGateRunner` (ADR 0021): um delegado sem nenhum arquivo não terminou
 nada, e "vazio" nunca deve passar por "concluído".
 
+### `plano_de_teste` — servidor
+
+| campo | obrigatório |
+|---|---|
+| `storyId` | ✅ |
+| `planoDeTeste` | ✅ |
+| `criteriosExecutaveis` | ✅ — lista **não vazia** |
+| `estrategiaDeAutomacao` | ✅ |
+
+O entregável da QA-estratégia (ADR 0090; `docs/fluxo.yml`, papel
+`qa-estrategia`, segundo momento do `qa-lead`): o plano de teste de UMA
+story, emitido ANTES do dev agent escrever código — o gate `implementavel`
+(`docs/gates.yml`) o consome. Nasce de `emit_plano_de_teste`, mas o modelo
+não emite o artefato diretamente — `Engine.Gates.QaEstrategiaAgent` extrai o
+resultado da tool call e chama `ArtifactEmitter.emit/5`, mesmo padrão de
+`qa_verdict`/`task_blocked`.
+
+`criteriosExecutaveis` vazia reprova pela mesma razão de
+`infra_delegation_files`: um plano sem nenhum critério não é plano.
+
 ## Artefatos que não passam por aqui
 
 Dois tipos de evento `artifact.*` existem no log sem estar neste registro,

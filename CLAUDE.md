@@ -1184,6 +1184,55 @@ sozinho. Fechar isto exigiria o mesmo mecanismo de persistência do ADR
 0052; fora do escopo desta correção, que só alinha o comportamento ao que
 `docs/fluxo.yml` já declarava.
 
+## O gate `implementavel` ativo — QA-estratégia como segundo momento do qa-lead (ADR 0090)
+Decisão consciente do dono do produto de antecipar o gatilho que
+`docs/fluxo.yml` já previa ("quando o gate implementavel ativar") — o
+gatilho AQUI é o próprio trabalho de construir o mecanismo, não um sintoma
+de uso esperando para acontecer. `docs/gates.yml`, `implementavel`:
+`status: planned` → `active` (dono `dev-lead`, `severidade: warn`
+intocada — o registro já dizia "nasce warn mesmo quando ativar").
+
+**QA-estratégia deixa de ser papel `proposto`**: é o PRÓPRIO `qa-lead`, num
+segundo MOMENTO — mesmo processo, entregável separado do veredito de PR,
+exatamente como `docs/fluxo.yml` já declarava ("pode ser o próprio qa-lead
+em segundo MOMENTO, não necessariamente agente novo: a separação é de
+entregável"). `Engine.Gates.QaLeadServer.run_design/3` é um ponto de
+entrada NOVO e ADITIVO (sem tocar `run/2`, o caminho de sempre, amarrado a
+`DevAgentState.find_by_task_id`), acionado por
+`Engine.Gates.Dispatcher.run_qa_estrategia/3` (mesma indireção trocável em
+teste que `run_qa/2`/`run_secops/2` já usam).
+
+`Engine.Gates.QaEstrategiaAgent` é módulo SEM ESTADO (não `GenServer`),
+mesma forma de `QaPerformanceSegurancaAgent` — registro sem `Terminal`
+(`ReadFile`, `SearchWorkspace`, `EmitPlanoDeTeste`) —, mas o CONTEXTO é
+outro: `Engine.Gates.QaEstrategiaContext.fetch/3` busca SÓ story (de
+`list_backlog`) e `module_map` vigente (de `get_infra_context`, reusado só
+pelo campo `moduleMap` — zero rota nova), sem `dev_state` nem
+`worktree_path`, porque o gate roda PRE-DEV: não há dev agent, worktree
+nem `task_id` ainda. Nenhuma das três ferramentas passa pelo
+`ActionPipeline` (só `terminal`/`write_file` passam), então este agente
+NUNCA suspende — `run_design/3` roda síncrono dentro do próprio
+`handle_cast`. O teto de iterações fica em 8 (conversacional), não 60
+(gate) — DE PROPÓSITO: sem `token_budget_micros` por baixo (não há task,
+PRE-DEV), a mesma razão pela qual `infra-workflows` fica em 8 mesmo usando
+ferramenta (RN-085). O entregável (`emit_plano_de_teste`: síntese,
+critérios executáveis, estratégia de automação GENÉRICA e sem framework)
+vira `artifact.plano_de_teste` no event log da sessão que chamou.
+
+`assess_implementability`, ferramenta nova do Dev Lead, lê o
+`artifact.plano_de_teste` mais recente da story no histórico da PRÓPRIA
+sessão: sem plano ainda, dispara a avaliação e devolve erro pedindo
+retentativa (erro de ferramenta é ENTRADA do laço, não fim de linha —
+RN-163); com plano, propõe o parecer (`implementavel`/`inviavel` +
+justificativa, plano embutido no payload) como `proposed_action`, MESMO
+padrão de três desfechos de `propose_execution_plan` (ADR 0086) —
+`maintainer`, DELIBERADAMENTE fora do bloco de tetos absolutos de
+`decide.ts`.
+
+**`appsec` segue `proposto`** — mesma doutrina de dois momentos (threat
+model como segundo momento do SecOps), implementação em frente separada,
+fora do escopo desta entrega.
+
 ## FERRAMENTA DE DESENVOLVIMENTO — `pnpm bootstrap`
 Menu de terminal em `scripts/dev/bootstrap.sh` agrupando o que se faz no
 dia a dia: Docker, K8s, Database e Test. Existe porque esses comandos moram

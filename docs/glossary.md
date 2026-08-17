@@ -202,6 +202,17 @@ subagente herda o teto do agente base
 **`task_blocked`** — o artefato emitido quando uma task não avança: carrega
 `reason` e `diagnosis`. É registro de fracasso legível, não silêncio.
 
+**Gate `implementavel`** — portão PRE-DEV, antes de existir dev agent ou
+worktree: o Dev Lead avalia se uma story é implementável a partir do
+**plano de teste** que a QA-estratégia produz. `dono: dev-lead`,
+`aprovacao_humana: true`, `severidade: warn` ([ADR 0090](adr/0090-qa-estrategia-e-appsec-segundo-momento.md)).
+
+**QA-estratégia** — o `qa-lead` num segundo MOMENTO (mesmo processo,
+entregável separado do veredito de PR): produz o **plano de teste**
+(síntese, critérios executáveis, estratégia de automação) de UMA story,
+antes do dev agent escrever código. Nunca suspende — nenhuma das
+ferramentas dele passa pelo pipeline de ações.
+
 ---
 
 ## Backlog e arquitetura

@@ -247,7 +247,7 @@ gates:
     status: planned
     backlog: ADR 0053
 
-  - id: implementavel # Dev Lead — FASE 14d (ADR 0053)
+  - id: implementavel # Dev Lead — FASE 14d (ADR 0053); ativado pelo ADR 0090
     fluxo: pre-dev
     dono: dev-lead
     entrada: [story-ready, plano-de-teste]
@@ -255,8 +255,17 @@ gates:
     verificacao: script
     severidade: warn # nasce warn mesmo quando ativar
     aprovacao_humana: true
-    status: planned
-    backlog: ADR 0053
+    status: active
+    evidencia:
+      tipo: event_log
+      event_types:
+        [
+          proposed_action.created,
+          proposed_action.approved,
+          proposed_action.denied,
+        ]
+      filtro: { actionType: assess_implementability }
+      onde: apps/engine/lib/engine/agents/dev_lead_tools.ex
 
   - id: operavel # Platform/SRE — sincronizado com DEPLOY_ENABLED
     fluxo: pre-deploy
