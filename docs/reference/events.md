@@ -148,6 +148,7 @@ aprender um segundo nome porque o agente conversacional não usa o `ToolLoop`.
 | `artifact.business_rule` | `title`, `description`, `origin` |
 | `artifact.module_map` | o mapa de módulos do Arquiteto |
 | `artifact.insight` | — |
+| `artifact.prototipo_navegavel` | `personas`, `jornadas`, `prototipo` (`telas`, `anotacoes`), `resumo` — o protótipo do UX Designer ([RN-286](../business-rules.md#rn-286), ADR 0087) |
 
 Os schemas são fechados: campo faltando reprova a emissão
 (`Engine.Harness.ArtifactSchemas`).
@@ -304,7 +305,7 @@ respeito.
 
 > ⚠️ Bloco gerado por `pnpm docs:generate`. Não edite à mão — o próximo build sobrescreve.
 
-Extraído dos pontos de emissão: **83 identificadores**, dos quais **2** não aparecem descritos acima.
+Extraído dos pontos de emissão: **84 identificadores**, dos quais **2** não aparecem descritos acima.
 
 - `action.failed` <sub>(apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts)</sub>
 - `agent.activated` <sub>(apps/api/src/application/use-cases/agents/activate-agent.use-case.ts)</sub>
@@ -324,6 +325,7 @@ Extraído dos pontos de emissão: **83 identificadores**, dos quais **2** não a
 - `artifact.insight` <sub>(apps/engine/lib/engine/harness/tools/emit_insight.ex)</sub>
 - `artifact.module_map` <sub>(apps/api/src/application/use-cases/architecture/create-module-map.use-case.ts)</sub>
 - `artifact.product_brief` <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub>
+- `artifact.prototipo_navegavel` <sub>(apps/engine/lib/engine/agents/ux_designer_tools.ex)</sub>
 - `backlog.epic_created` <sub>(apps/api/src/application/use-cases/backlog/create-epic.use-case.ts)</sub>
 - `backlog.epic_without_story` <sub>(apps/engine/lib/engine/agents/po_server.ex)</sub>
 - `backlog.story_created` <sub>(apps/api/src/application/use-cases/backlog/create-story.use-case.ts)</sub>

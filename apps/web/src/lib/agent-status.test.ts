@@ -466,6 +466,7 @@ describe('rosterFromFacts — a mesma regra nos dois caminhos', () => {
         gatesEverOpened: true,
         delegatedSubagents: ['qa-automacao'],
         infraActive: true,
+        uxDesignerActive: false,
       },
       () => 'ocioso',
     );
@@ -484,6 +485,7 @@ describe('rosterFromFacts — a mesma regra nos dois caminhos', () => {
         gatesEverOpened: false,
         delegatedSubagents: [],
         infraActive: false,
+        uxDesignerActive: false,
       },
       () => 'ocioso',
     );

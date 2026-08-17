@@ -96,6 +96,16 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   conversa com o Dev Lead PAUSA: é a primeira vez que um agente
   conversacional suspende esperando aprovação humana no meio do turno
   síncrono (RN-284, ADR 0086)
+- **engine,web**: o UX Designer entra como o quinto agente conversacional
+  (Criativo, PO, Arquiteto, Dev Lead e agora ele), SOLO e sem área —
+  antecipado pelo dono do produto antes do gatilho de separação declarado
+  em `docs/fluxo.yml` ter disparado. Kickoff a partir do product brief do
+  Criativo; a única ferramenta, `propose_prototype`, registra personas,
+  jornadas e o protótipo navegável (`artifact.prototipo_navegavel`, sem
+  tabela nem rota nova na api) e oferece o mesmo artefato como handoff ao
+  PO e ao Dev Lead. `teste-de-usabilidade` fica fora de alcance (exige
+  usuário humano real); `metricas-de-uso` segue lacuna declarada
+  (RN-285..287, ADR 0087)
 
 ### Correções
 

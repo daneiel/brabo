@@ -130,6 +130,8 @@ export interface ProjectCardSummary {
     gatesEverOpened: boolean;
     delegatedSubagents: string[];
     infraActive: boolean;
+    /** ADR 0087 — mesmo critério de `infraActive`. */
+    uxDesignerActive: boolean;
   };
 }
 

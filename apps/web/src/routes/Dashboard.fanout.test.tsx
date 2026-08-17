@@ -79,6 +79,7 @@ function resumo(i: number): ProjectCardSummary {
       gatesEverOpened: true,
       delegatedSubagents: ['qa-automacao'],
       infraActive: false,
+      uxDesignerActive: false,
     },
   };
 }

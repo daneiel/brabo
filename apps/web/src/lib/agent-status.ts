@@ -210,6 +210,13 @@ export interface RosterFacts {
   gatesEverOpened: boolean;
   delegatedSubagents: string[];
   infraActive: boolean;
+  /**
+   * ADR 0087 — mesmo critério de `infraActive`: handoff `accepted`
+   * endereçado a "ux-designer" nesta sessão. Ele é SOLO (sem área), então
+   * não há `pushAreaMembers` correspondente. Calculado nas DUAS fontes
+   * (aqui e em `projects-summary.repository.ts`, RN-090), como `infraActive`.
+   */
+  uxDesignerActive: boolean;
 }
 
 /** Extrai os fatos de presença do event log (caminho do painel do time). */
@@ -237,6 +244,9 @@ export function rosterFactsFromEvents(
     delegatedSubagents,
     infraActive: handoffs.some(
       (h) => h.toAgent === 'infra' && h.status === 'accepted',
+    ),
+    uxDesignerActive: handoffs.some(
+      (h) => h.toAgent === 'ux-designer' && h.status === 'accepted',
     ),
   };
 }
@@ -276,6 +286,15 @@ export function rosterFromFacts(
   if (facts.infraActive) {
     roster.push({ id: 'infra', def: AGENTS.infra, status: statusOf('infra') });
     pushAreaMembers(roster, facts.delegatedSubagents, 'infra', statusOf);
+  }
+
+  // ADR 0087 — SOLO (sem área): nenhum `pushAreaMembers` correspondente.
+  if (facts.uxDesignerActive) {
+    roster.push({
+      id: 'ux-designer',
+      def: AGENTS['ux-designer'],
+      status: statusOf('ux-designer'),
+    });
   }
 
   return roster;
