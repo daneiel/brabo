@@ -11660,7 +11660,8 @@
               "open_infra_pr",
               "instruction_patch",
               "parallelize",
-              "raise_max_parallel"
+              "raise_max_parallel",
+              "propose_execution_plan"
             ],
             "example": "terminal"
           },
@@ -15156,7 +15157,8 @@
               "open_infra_pr",
               "instruction_patch",
               "parallelize",
-              "raise_max_parallel"
+              "raise_max_parallel",
+              "propose_execution_plan"
             ],
             "example": "terminal",
             "description": "Tipo da ação. Cada tipo tem papel mínimo próprio: `git_push`, `git_merge` e `git_branch_protect` exigem `maintainer`, o resto `developer`."
@@ -15222,7 +15224,8 @@
               "open_infra_pr",
               "instruction_patch",
               "parallelize",
-              "raise_max_parallel"
+              "raise_max_parallel",
+              "propose_execution_plan"
             ],
             "example": "terminal",
             "description": "O que a ação faria. `git_push` e `git_merge` exigem `maintainer`."
@@ -16789,6 +16792,7 @@
               "instruction_patch",
               "parallelize",
               "raise_max_parallel",
+              "propose_execution_plan",
               "*"
             ],
             "example": "terminal",

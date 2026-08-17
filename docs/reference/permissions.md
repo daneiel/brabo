@@ -78,6 +78,7 @@ qualquer push, e `GitPush(algo)` não casa nada.
 | `instruction_patch` | `InstructionPatch` | maintainer |
 | `parallelize` | `Parallelize` | maintainer |
 | `raise_max_parallel` | `RaiseMaxParallel` | maintainer |
+| `propose_execution_plan` | `ProposeExecutionPlan` | maintainer |
 | `spend` | `Spend` | **owner** |
 
 O papel mínimo é verificado **antes** do arquivo. Sem ele, `deny` — o
@@ -89,6 +90,15 @@ repositório: ela pede mais AGENTES. Está em `maintainer` pelo mesmo motivo de
 do teto do lead; dentro dele não há ação, porque não há o que decidir
 ([RN-083](../business-rules.md#rn-083))
 ([RN-005](../business-rules.md#rn-005)).
+
+`propose_execution_plan` (ADR 0086, [RN-284](../business-rules.md#rn-284)) é o
+plano do Dev Lead — quantos agentes por módulo e por quê, antes de qualquer um
+subir. Mesmo calibre de `parallelize`: decisão de QUANTO o produto vai gastar
+com paralelismo, só que na largada em vez de numa ultrapassagem de teto. Ao
+contrário de `parallelize`/`raise_max_parallel`, ela NÃO está no bloco de
+tetos absolutos — pode ser configurada para `auto_approve`, como
+`open_adr_pr`/`open_infra_pr` — e enquanto ela está `pending`, o turno do Dev
+Lead fica SUSPENSO esperando a decisão, não só a conversa parada.
 
 ## Como um padrão casa com um comando
 
@@ -412,6 +422,16 @@ aconteceu, é esse o primeiro lugar para olhar.
 
 A auto-aprovação não passa por aqui: ela executa na proposta e o resultado volta
 no mesmo turno — que é justamente o valor de ter os padrões da seção anterior.
+
+**O Dev Lead suspende do mesmo jeito, com uma diferença no reinício** (ADR
+0086, [RN-284](../business-rules.md#rn-284)). Ele é conversacional, não tem
+worktree nem task — o que suspende é o `handle_call` síncrono do turno, via
+`agent.status: awaiting_approval`. Ao contrário do dev agent, ele NÃO tem
+fila para onde voltar num reinício do engine: a decisão continua registrada e
+visível em Aprovações, mas o Dev Lead não narra o desfecho sozinho — o
+processo que estava esperando morreu, e o próximo restart sobe um Dev Lead
+novo, sem inscrição para aquela ação. Lacuna aceita e declarada, não
+disfarçada.
 
 ## O que fica escrito de cada decisão
 

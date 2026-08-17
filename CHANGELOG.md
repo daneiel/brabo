@@ -90,6 +90,12 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   provider, contra account takeover; conta provisionada nasce sem senha.
   Branch `breaking/`: o operador precisa cadastrar um segundo callback
   OAuth no provider antes do deploy (RN-272..283, ADR 0084)
+- **api,engine**: o plano de execução do Dev Lead (quantos agentes por
+  módulo e por quê) vira uma decisão real em Aprovações — antes só narrava
+  no fio, sem pipeline de aprovação nenhum. Enquanto ela não é decidida, a
+  conversa com o Dev Lead PAUSA: é a primeira vez que um agente
+  conversacional suspende esperando aprovação humana no meio do turno
+  síncrono (RN-284, ADR 0086)
 
 ### Correções
 

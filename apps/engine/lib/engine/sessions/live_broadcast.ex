@@ -36,7 +36,7 @@ defmodule Engine.Sessions.LiveBroadcast do
   narrativa, não decisão.
   """
   def agent_status(project_id, session_id, agent_id, status)
-      when status in ["working", "idle"] do
+      when status in ["working", "idle", "awaiting_approval"] do
     payload = %{status: status}
 
     EngineWeb.Endpoint.broadcast("session:" <> session_id, "agent.status", payload)

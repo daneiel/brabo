@@ -98,7 +98,7 @@ Uma linha em `session_events`, append-only, com `seq` densa por sessão
 
 | tipo | quando |
 |---|---|
-| `execution.plan_proposed` | o Dev Lead propôs o plano: quantos agentes por módulo e por quê (FASE 14d) |
+| `execution.plan_proposed` | **DESCONTINUADO desde o ADR 0086** ([RN-284](../business-rules.md#rn-284)) — sessões antigas podem ainda ter este tipo no log; sessões novas usam `proposed_action` do tipo `propose_execution_plan` (ver `docs/reference/permissions.md`), porque o plano do Dev Lead passou a ser uma decisão real, aprovada ou recusada em Aprovações, não mais um evento simples |
 | `execution.activated` | a fase de execução começou. **Só entra em sessão `criativa`** — numa `consultiva` o append responde 409 ([RN-097](../business-rules.md#rn-097)). Continua sendo ele, e não a coluna `sessions.kind`, quem diz que uma sessão ESTÁ executando |
 | `execution.parallelization_suggested` | o sistema propôs paralelizar |
 | `execution.parallelization_accepted` | aceita — o subagente herda o teto do agente base |
@@ -304,7 +304,7 @@ respeito.
 
 > ⚠️ Bloco gerado por `pnpm docs:generate`. Não edite à mão — o próximo build sobrescreve.
 
-Extraído dos pontos de emissão: **84 identificadores**, dos quais **2** não aparecem descritos acima.
+Extraído dos pontos de emissão: **83 identificadores**, dos quais **2** não aparecem descritos acima.
 
 - `action.failed` <sub>(apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts)</sub>
 - `agent.activated` <sub>(apps/api/src/application/use-cases/agents/activate-agent.use-case.ts)</sub>
@@ -358,7 +358,6 @@ Extraído dos pontos de emissão: **84 identificadores**, dos quais **2** não a
 - `execution.activated` <sub>(apps/api/src/application/use-cases/execution/activate-execution.use-case.ts)</sub>
 - `execution.parallelization_accepted` <sub>(apps/api/src/application/use-cases/execution/accept-parallelization.use-case.ts)</sub>
 - `execution.parallelization_suggested` <sub>(apps/api/src/application/use-cases/execution/activate-execution.use-case.ts)</sub>
-- `execution.plan_proposed` <sub>(apps/engine/lib/engine/agents/dev_lead_tools.ex)</sub>
 - `gate.scanner` <sub>(apps/engine/lib/engine/gates/scanner.ex)</sub>
 - `handoff.accepted` <sub>(apps/api/src/application/use-cases/agents/accept-handoff.use-case.ts)</sub>
 - `handoff.offered` <sub>(apps/api/src/application/use-cases/agents/create-handoff.use-case.ts)</sub>

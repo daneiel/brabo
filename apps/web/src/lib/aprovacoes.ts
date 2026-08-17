@@ -59,6 +59,7 @@ export const VERBO_DA_ACAO: Record<ActionType, string> = {
   instruction_patch: 'propõe ajustar a instrução de um agente',
   parallelize: 'quer mais um agente em paralelo',
   raise_max_parallel: 'propõe subir o teto de paralelismo',
+  propose_execution_plan: 'propõe o plano de execução',
 };
 
 type Payload = Record<string, unknown>;
@@ -235,6 +236,21 @@ const FRASE_DA_ACAO: Record<ActionType, (payload: Payload) => string> = {
     const qual = area ? ` da área ${area}` : '';
     const salto = atual !== undefined && proposto !== undefined ? ` de ${atual} para ${proposto}` : '';
     return `Sobe o teto de agentes em paralelo${qual}${salto} — muda quanto o produto gasta sem perguntar.`;
+  },
+
+  propose_execution_plan: (p) => {
+    const total = numero(p, 'totalAgentes');
+    const modulos = quantidade(p, 'modulos');
+    const resumo = texto(p, 'resumo');
+    const quantos =
+      total !== undefined && modulos !== undefined
+        ? ` — ${plural(total, 'agente', 'agentes')} em ${plural(modulos, 'módulo', 'módulos')}`
+        : '';
+    const porque = resumo ? `: "${curto(resumo)}"` : '';
+    // Aprovar aqui NÃO sobe agente nenhum — só aceita o plano. Quem sobe é
+    // uma ação separada (ativar execução), depois. Ver o comentário de
+    // `DevLeadTools.classificar/4`.
+    return `Aprova o plano de execução do Dev Lead${quantos}${porque}. Você ainda decide quando ativar a execução.`;
   },
 };
 
