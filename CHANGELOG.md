@@ -131,6 +131,16 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   e o lead de Infra. `run_design/2` já é acionável, mas nenhum caminho aciona
   sozinho ainda — o gatilho automático fica para a frente `qa-estrategia`
   (RN-360/361, ADR 0090)
+- **api**: novo script `pnpm --filter api analise:funil -- --projeto
+  <uuid> [--json]` — os papéis `analytics`/`delivery-metricas` de
+  `docs/fluxo.yml` (antes `status: proposto`) viram `active`, entregues
+  como RELATÓRIO puro (mesmo formato de `medir-execucao.ts`, sem agente,
+  sem GenServer). Mede funil real sessão → commit → PR → merge, lead time
+  real e deployment frequency real em branch protegida, todos extraídos
+  de `proposed_actions.execution_result`. Declara, de propósito, três
+  métricas sem caminho para existir hoje: funil de produto completo
+  (ideação → commit), evidência de adoção por feature e MTTR/change
+  failure rate (RN-320..322, ADR 0089)
 
 ### Correções
 
