@@ -34,6 +34,14 @@ defmodule Engine.Harness.IteracoesTest do
       assert Iteracoes.tipo("infra-workflows") == :conversacional
     end
 
+    test "qa-estrategia é conversacional DE PROPÓSITO (ADR 0090)" do
+      # Mesmo raciocínio de infra-workflows: usa ferramenta (ReadFile/
+      # SearchWorkspace), mas roda PRE-DEV, sem task e sem
+      # `token_budget_micros` por baixo. Não ganhou cláusula própria —
+      # cair no default é a decisão certa, não uma lacuna.
+      assert Iteracoes.tipo("qa-estrategia") == :conversacional
+    end
+
     test "agente desconhecido cai no teto mais BAIXO" do
       # Errar para o lado barato: quem precisa de mais voltas aparece como
       # `limite de iterações atingido` e é corrigido; quem ganha 60 por engano

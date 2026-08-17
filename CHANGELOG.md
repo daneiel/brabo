@@ -96,6 +96,70 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   conversa com o Dev Lead PAUSA: é a primeira vez que um agente
   conversacional suspende esperando aprovação humana no meio do turno
   síncrono (RN-284, ADR 0086)
+- **engine,web**: o UX Designer entra como o quinto agente conversacional
+  (Criativo, PO, Arquiteto, Dev Lead e agora ele), SOLO e sem área —
+  antecipado pelo dono do produto antes do gatilho de separação declarado
+  em `docs/fluxo.yml` ter disparado. Kickoff a partir do product brief do
+  Criativo; a única ferramenta, `propose_prototype`, registra personas,
+  jornadas e o protótipo navegável (`artifact.prototipo_navegavel`, sem
+  tabela nem rota nova na api) e oferece o mesmo artefato como handoff ao
+  PO e ao Dev Lead. `teste-de-usabilidade` fica fora de alcance (exige
+  usuário humano real); `metricas-de-uso` segue lacuna declarada
+  (RN-285..287, ADR 0087)
+- **engine,api,web**: o Staff/Principal Engineer ganha CÓDIGO — sexto
+  agente conversacional solo (`propose_rfc`: problema, opções com
+  trade-offs, recomendação e PoC descartável, devolvido ao Arquiteto por
+  handoff no mesmo tool call), acionável MANUALMENTE por handoff aceito
+  endereçado a "staff" (caminho genérico, sem entrar em
+  `USER_STARTED_AGENTS`). O gatilho AUTOMÁTICO (a Anamnese notando um
+  problema sistêmico recorrente) segue pendente enquanto
+  `ANAMNESE_ENABLED=false` — dormente para disparo automático, não para
+  acionamento manual (RN-305/306, ADR 0088)
+- **api,engine**: o gate `implementavel` sai de `planned` para `active` — o
+  Dev Lead ganha `assess_implementability`, o parecer de implementabilidade
+  de uma story (viável/inviável, com justificativa), a partir do plano de
+  teste que a QA-estratégia produz. A QA-estratégia deixa de ser papel
+  `proposto` em `docs/fluxo.yml`: é o próprio `qa-lead`, num SEGUNDO
+  momento (mesmo processo, entregável separado do veredito de PR) — sem
+  worktree, sem task, PRE-DEV. O parecer nasce `proposed_action`, mesmo
+  padrão do plano de execução (RN-340/341, ADR 0090)
+- **engine**: o papel `appsec` (`docs/fluxo.yml`) ganha o segundo momento do
+  secops — threat model de DESIGN (checklist STRIDE-lite) sobre a story e o
+  module_map vigente, ANTES de existir código ou PR. Roda no MESMO processo
+  do `SecOpsAgentServer` (`run_design/2`, sem worktree/task_id), termina
+  emitindo `artifact.threat_model` e criando handoff para arquiteto, dev-lead
+  e o lead de Infra. `run_design/2` já é acionável, mas nenhum caminho aciona
+  sozinho ainda — o gatilho automático fica para a frente `qa-estrategia`
+  (RN-360/361, ADR 0090)
+- **api**: novo script `pnpm --filter api analise:funil -- --projeto
+  <uuid> [--json]` — os papéis `analytics`/`delivery-metricas` de
+  `docs/fluxo.yml` (antes `status: proposto`) viram `active`, entregues
+  como RELATÓRIO puro (mesmo formato de `medir-execucao.ts`, sem agente,
+  sem GenServer). Mede funil real sessão → commit → PR → merge, lead time
+  real e deployment frequency real em branch protegida, todos extraídos
+  de `proposed_actions.execution_result`. Declara, de propósito, três
+  métricas sem caminho para existir hoje: funil de produto completo
+  (ideação → commit), evidência de adoção por feature e MTTR/change
+  failure rate (RN-320..322, ADR 0089)
+- **api**: `pnpm --filter api relatorio:seguranca-runtime` — o papel
+  `secops-runtime` (`docs/fluxo.yml`) antecipado como SCRIPT, não agente,
+  sobre o dado que o `RateLimitGuard` já coleta hoje (`rate_limit_hits`):
+  ranking de baldes (usuário/IP) com mais hits e distribuição temporal dos
+  picos, com a janela de retenção (curta, poucos minutos) sempre declarada.
+  Detecção automática de incidente, resposta a incidente e postmortem de
+  segurança seguem FORA — dependem de tráfego de produção real, que não
+  existe — e o relatório lista essa lacuna, sem simular incidente de
+  exemplo (RN-375..377, ADR 0091)
+- **api**: o papel `platform` (`docs/fluxo.yml`, `status: planned` —
+  ativação ainda pendente de `DEPLOY_ENABLED`, que não existe) ganha uma
+  primeira entrega honesta: `pnpm --filter api relatorio:telemetria
+  [--projeto <uuid>] [--json]`, um SCRIPT (não agente) que lê sob demanda as
+  mesmas fontes do `DomainGaugesCollector` — sessões ativas/closing e tasks
+  bloqueadas por projeto, estado do último backup — e linka para os
+  dashboards/alertas/runbook já versionados, sem duplicar. A saída declara
+  explicitamente o que NÃO mede: SLO numérico (nenhum definido), postmortem
+  (sem incidente real) e telemetria automática em loop fechado
+  (RN-385/386, ADR 0092)
 - **api**: o papel `dbre` vira dois scripts mecânicos —
   `lint:migracao` varre `apps/api/src/db/migrations/*.sql` e sinaliza
   `DROP TABLE`/`TRUNCATE`/`DROP COLUMN`/`ALTER COLUMN ... TYPE`/`ADD

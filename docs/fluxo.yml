@@ -32,19 +32,24 @@ camada_produto:
 
   - id: ux-designer
     papel_de_mercado: UX / Product Designer
-    status: proposto
-    hoje_absorvido_por: criativo (discovery) + design/ (design system como dado)
-    criterio_de_separacao: >
-      Quando o projeto GERENCIADO tiver interface própria a desenhar —
-      hoje o design system é insumo estático. Separa quando protótipo
-      virar artefato recorrente.
-    entregaveis_alvo: [personas-e-jornadas, prototipo-navegavel,
-      spec-de-handoff-visual, teste-de-usabilidade]
-    entradas_alvo: [{ artefato: necessidade-de-negocio, origem: criativo },
-                    { artefato: metricas-de-uso, origem: analytics }]
-    saidas_alvo: [{ artefato: prototipo, destino: po },
-                  { artefato: spec-visual, destino: dev-lead }]
-    gate_alvo: { id: prototipo-validado, status: proposto }
+    status: active
+    teto: 14
+    # Ativado antes do gatilho original ter disparado (ADR 0087, decisão
+    # consciente do dono do produto) — histórico do que o papel absorvia:
+    # criativo (discovery) + design/ (design system como dado estático). O
+    # design system CONTINUA estático (sem tool de leitura de repo pros
+    # agentes conversacionais); o que mudou é o protótipo virar entregável
+    # de agente, não mais implícito na conversa do Criativo.
+    entregaveis: [personas-e-jornadas, prototipo-navegavel]
+    # teste-de-usabilidade fica FORA de alcance: exige usuário humano real,
+    # não um agente. metricas-de-uso segue lacuna — depende do papel
+    # analytics, que continua proposto.
+    entradas: [{ artefato: necessidade-de-negocio, origem: criativo },
+               { artefato: metricas-de-uso, origem: analytics, status: lacuna }]
+    saidas: [{ artefato: prototipo, destino: po },
+             { artefato: spec-visual, destino: dev-lead }]
+    ferramentas: [propose_prototype]
+    gate_saida: { id: prototipo-validado, status: proposto }
 
   - id: po
     papel_de_mercado: PO/PM
@@ -62,15 +67,15 @@ camada_produto:
 
   - id: analytics
     papel_de_mercado: Analytics Engineer (métrica de PRODUTO)
-    status: proposto
-    hoje_absorvido_por: medicao (que só cobre métrica de EXECUÇÃO)
-    criterio_de_separacao: >
-      O dia em que metricas-de-produto virar entrada obrigatória do PO
-      (proposta em aberto). Execução e produto são perguntas diferentes —
-      a Onda 3/H3 provou a lacuna ("taxa ideação → commit" ausente).
-    entregaveis_alvo: [metricas-de-produto, funil-ideacao-commit-release,
-      evidencia-de-adocao-por-feature]
-    saidas_alvo: [{ artefato: metricas-de-produto, destino: [po, ux-designer] }]
+    status: active
+    forma: script (nunca agente — ADR 0089), "analise:funil"
+    entregaveis: [funil-sessao-commit-pr-merge, lead-time-real,
+      deployment-frequency-real]
+    saidas: [{ artefato: relatorio-de-funil, destino: [po, ux-designer] }]
+    lacunas: [{ artefato: metricas-de-produto-completas, status: lacuna,
+        motivo: "sessions sem storyId — RN-230" },
+      { artefato: evidencia-de-adocao-por-feature, status: lacuna,
+        motivo: "sem caminho hoje — Brabo não instrumenta o que constrói" }]
 
 camada_decisao_tecnica:
   - id: arquiteto
@@ -98,24 +103,30 @@ camada_decisao_tecnica:
     teto: 14
     entradas:
       - { artefato: handoff + module_map, origem: arquiteto }
-      - { artefato: plano-de-teste, origem: qa-estrategia, status: proposto }
+      - { artefato: plano-de-teste, origem: qa-estrategia }        # ADR 0090
       - { artefato: threat-model, origem: appsec, status: proposto }
       - { artefato: parecer-de-migracao, origem: dbre, status: proposto }
     saidas:
       - { artefato: plano-de-paralelismo, destino: usuario,
           via: proposed_action, regra: RN-083/154 }
+      - { artefato: parecer-implementabilidade, destino: usuario,
+          via: proposed_action, regra: RN-340 }                    # ADR 0090
       - { artefato: delegacao, destino: dev, status: lacuna }  # ADR 0053 item 5
       - { artefato: design-doc + quebra-tecnica, destino: dev,
           status: proposto }
-    gate_saida: { id: paralelismo-autorizado, status: ativo }
-    gate_futuro: { id: implementavel, status: proposto,
-      valor: story inviável morre antes de queimar token }
+    gates:
+      - { id: paralelismo-autorizado, status: ativo }
+      - { id: implementavel, status: ativo }                       # ADR 0090
 
   - id: staff
     papel_de_mercado: Staff/Principal Engineer
     status: planned
-    ativacao: problema sistêmico RECORRENTE registrado — gatilho pendente
-      enquanto anamnese estiver em refinamento
+    codigo: pronto (staff_server.ex, staff_tools.ex, staff_supervisor.ex —
+      ADR 0088) — acionável MANUALMENTE por handoff aceito endereçado a
+      "staff", mecanismo GENÉRICO (sem entrar em USER_STARTED_AGENTS)
+    ativacao: gatilho AUTOMÁTICO (problema sistêmico RECORRENTE registrado
+      pela anamnese) segue pendente enquanto ANAMNESE_ENABLED=false —
+      dormente para disparo automático, não para acionamento manual
     entregaveis_alvo: [rfc, poc-descartavel, parecer-sistemico]
     saidas_alvo: [{ artefato: rfc + poc, destino: arquiteto }]
 
@@ -136,15 +147,19 @@ camada_execucao:
 camada_qualidade:
   - id: qa-estrategia
     papel_de_mercado: QA Engineer (estratégia, shift-left)
-    status: proposto
-    hoje_absorvido_por: area-qa (que só atua DEPOIS, na PR)
-    criterio_de_separacao: >
-      Quando o gate implementavel ativar — o plano-de-teste é entrada
-      dele. Pode ser o próprio qa-lead em segundo MOMENTO, não
-      necessariamente agente novo: a separação é de entregável.
-    entregaveis_alvo: [plano-de-teste-por-story, criterio-executavel,
+    status: active                                                 # ADR 0090
+    absorvido_por: >
+      area-qa — o critério de separação PREVISTO aqui se confirmou: é o
+      próprio qa-lead (Engine.Gates.QaLeadServer.run_design/3), SEGUNDO
+      momento, mesmo processo, entregável separado do veredito de PR —
+      nunca agente novo
+    entradas:
+      - { artefato: story, origem: po }                            # via backlog
+      - { artefato: module_map, origem: arquiteto, status: opcional }
+    entregaveis: [plano-de-teste-por-story, criterio-executavel,
       estrategia-de-automacao]
-    saidas_alvo: [{ artefato: plano-de-teste, destino: [dev-lead, dev] }]
+    saidas: [{ artefato: plano-de-teste, destino: [dev-lead, dev] }]
+    gate_saida: { id: implementavel, status: ativo }
 
   - id: area-qa
     papel_de_mercado: SDET + QA de execução
@@ -160,16 +175,24 @@ camada_qualidade:
 camada_seguranca:
   - id: appsec
     papel_de_mercado: AppSec (segurança no DESIGN)
-    status: proposto
-    hoje_absorvido_por: secops (que só atua na PR)
-    criterio_de_separacao: >
-      Mesmo padrão do QA: dois MOMENTOS, não dois agentes por ora.
-      Threat model no design ativa quando o gate implementavel existir.
-      Agente separado só com produção real.
-    entregaveis_alvo: [threat-model, requisito-de-seguranca-por-feature,
-      politica-de-supply-chain]
-    saidas_alvo: [{ artefato: threat-model,
-                    destino: [arquiteto, dev-lead, area-infra] }]
+    status: active
+    estrutura: mesmo padrão do QA — dois MOMENTOS, não dois agentes por ora.
+      Quem roda é o MESMO processo do secops (`Engine.Gates.SecOpsAgentServer`),
+      num segundo momento — `run_design/2`, sem worktree/task_id, threat
+      model STRIDE-lite sobre a story + module_map, ANTES de existir
+      código/PR (RN-360, ADR 0090). Agente separado continua fora de
+      escopo, só com produção real.
+    entradas:
+      - { artefato: story + module_map, origem: [po, arquiteto] }
+    saidas:
+      - { artefato: threat-model, destino: [arquiteto, dev-lead, infra] }     # RN-360
+    entregaveis_alvo: [politica-de-supply-chain]   # herdado do secops hoje (SBOM/dependabot), sem mecanismo novo
+    acionamento: >
+      lacuna — SecOpsAgentServer.run_design/2 existe e é ACIONÁVEL (qualquer
+      chamador dentro do engine, por project_id+story_id), mas nada aciona
+      sozinho ainda — nenhuma rota HTTP nem tool de outro agente chama. O
+      gatilho natural é assess_implementability do Dev Lead (frente
+      qa-estrategia, gate implementavel), fora do escopo desta entrega.
 
   - id: secops
     papel_de_mercado: SecOps (veredito na PR)
@@ -180,11 +203,21 @@ camada_seguranca:
 
   - id: secops-runtime
     papel_de_mercado: detecção e resposta
-    status: proposto
-    criterio_de_separacao: produção com tráfego real (pós DEPLOY_ENABLED
-      + platform ativo)
-    entregaveis_alvo: [deteccao, resposta-a-incidente,
-      postmortem-de-seguranca]
+    status: active
+    entradas: [{ artefato: rate-limit-hits, origem: rate-limit-guard }]
+    entregaveis:
+      - { artefato: deteccao, forma: relatorio-de-abuso-sobre-rate-limit-hits,
+          via: script, status: active }   # ADR 0091, RN-375..378
+      - { artefato: resposta-a-incidente, status: lacuna,
+          motivo: exige tráfego de produção real (pós DEPLOY_ENABLED + platform ativo) }
+      - { artefato: postmortem-de-seguranca, status: lacuna,
+          motivo: exige tráfego de produção real (pós DEPLOY_ENABLED + platform ativo) }
+    saidas: [{ artefato: relatorio-de-abuso, destino: usuario, via: script }]
+    criterio_de_separacao: >
+      Detecção AUTOMÁTICA (alarme sobre tráfego contínuo), resposta a
+      incidente e postmortem continuam exigindo produção com tráfego real
+      (pós DEPLOY_ENABLED + platform ativo) — o script acima só relata,
+      sob demanda, o padrão já coletado em rate_limit_hits.
 
 camada_plataforma:
   - id: area-infra
@@ -213,7 +246,11 @@ camada_plataforma:
                     { artefato: nfrs-mensuraveis, origem: arquiteto }]
     saidas_alvo:
       - { artefato: slo + dashboard + runbook, destino: gates }
-      - { artefato: telemetria-consolidada, destino: arquiteto }
+      - { artefato: telemetria-consolidada, destino: arquiteto,
+          nota: "a versão MANUAL/sob-demanda já é REAL — script
+            (relatorio:telemetria, RN-385/386, ADR 0092), lendo as mesmas
+            fontes do DomainGaugesCollector; a versão AUTOMÁTICA, em loop
+            fechado, segue pendente do gatilho (DEPLOY_ENABLED)" }
       - { artefato: postmortem, destino: [arquiteto, po] }
     gate_saida: { id: operavel, status: planned }
 
@@ -256,11 +293,15 @@ camada_instrumentos:
 
   - id: delivery-metricas
     papel_de_mercado: Delivery Manager (fluxo — DORA)
-    status: proposto
-    hoje_absorvido_por: medicao (parcialmente)
-    criterio_de_separacao: nunca vira agente; vira RELATÓRIO do medicao
-      (lead time, deployment frequency, MTTR, change failure rate
-      extraídos do event log + gates.yml)
+    status: active
+    criterio_de_separacao: nunca vira agente — é RELATÓRIO do medicao
+      ("analise:funil", ADR 0089)
+    entregaveis: [lead-time-real, deployment-frequency-real]
+    saidas: [{ artefato: relatorio-dora-parcial, destino: usuario }]
+    lacunas: [{ artefato: mttr, status: lacuna,
+        motivo: "exige sinal de incidente real — secops-runtime/platform" },
+      { artefato: change-failure-rate, status: lacuna,
+        motivo: "mesma dependência de mttr" }]
 
 camada_transversal:
   - id: psicologo
