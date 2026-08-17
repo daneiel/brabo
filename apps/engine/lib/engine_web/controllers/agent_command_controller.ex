@@ -16,7 +16,11 @@ defmodule EngineWeb.AgentCommandController do
     ArquitetoSupervisor,
     ArquitetoServer,
     DevLeadSupervisor,
-    DevLeadServer
+    DevLeadServer,
+    UxDesignerSupervisor,
+    UxDesignerServer,
+    StaffSupervisor,
+    StaffServer
   }
 
   alias Engine.Infra.{InfraLeadSupervisor, InfraLeadServer}
@@ -52,6 +56,29 @@ defmodule EngineWeb.AgentCommandController do
     # Ativado pelo handoff aceito do Arquiteto — kickoff só num start FRESCO.
     {:ok, _pid, origin} = InfraLeadSupervisor.start_agent(session_id, project_id)
     if origin == :started, do: InfraLeadServer.kickoff(session_id)
+    send_resp(conn, 201, "")
+  end
+
+  def start(conn, %{
+        "sessionId" => session_id,
+        "projectId" => project_id,
+        "agent" => "ux-designer"
+      }) do
+    # Ativado pelo handoff aceito (ADR 0087) — kickoff só num start FRESCO:
+    # restart não regera o protótipo.
+    {:ok, _pid, origin} = UxDesignerSupervisor.start_agent(session_id, project_id)
+    if origin == :started, do: UxDesignerServer.kickoff(session_id)
+    send_resp(conn, 201, "")
+  end
+
+  def start(conn, %{"sessionId" => session_id, "projectId" => project_id, "agent" => "staff"}) do
+    # Ativado pelo handoff aceito endereçado a "staff" — mecanismo GENÉRICO
+    # (ActivateAgentUseCase/canActivateAgent, sem entrar em
+    # USER_STARTED_AGENTS: ver o moduledoc de `Engine.Agents.StaffServer`).
+    # SEM kickoff, ao contrário dos demais: o Staff não sintetiza instrução
+    # de abertura nenhuma a partir do event log — fica ocioso até a
+    # primeira `user_message` (ADR 0088).
+    {:ok, _pid, _origin} = StaffSupervisor.start_agent(session_id, project_id)
     send_resp(conn, 201, "")
   end
 
@@ -105,6 +132,28 @@ defmodule EngineWeb.AgentCommandController do
       }) do
     {:ok, _pid, _origin} = ArquitetoSupervisor.start_agent(session_id, project_id)
     _ = ArquitetoServer.user_message(session_id, text)
+    send_resp(conn, 202, "")
+  end
+
+  def message(conn, %{
+        "sessionId" => session_id,
+        "projectId" => project_id,
+        "agent" => "ux-designer",
+        "text" => text
+      }) do
+    {:ok, _pid, _origin} = UxDesignerSupervisor.start_agent(session_id, project_id)
+    _ = UxDesignerServer.user_message(session_id, text)
+    send_resp(conn, 202, "")
+  end
+
+  def message(conn, %{
+        "sessionId" => session_id,
+        "projectId" => project_id,
+        "agent" => "staff",
+        "text" => text
+      }) do
+    {:ok, _pid, _origin} = StaffSupervisor.start_agent(session_id, project_id)
+    _ = StaffServer.user_message(session_id, text)
     send_resp(conn, 202, "")
   end
 
@@ -189,5 +238,7 @@ defmodule EngineWeb.AgentCommandController do
   defp via_for("po", session_id), do: {:ok, PoServer.via(session_id)}
   defp via_for("arquiteto", session_id), do: {:ok, ArquitetoServer.via(session_id)}
   defp via_for("dev-lead", session_id), do: {:ok, DevLeadServer.via(session_id)}
+  defp via_for("ux-designer", session_id), do: {:ok, UxDesignerServer.via(session_id)}
+  defp via_for("staff", session_id), do: {:ok, StaffServer.via(session_id)}
   defp via_for(_agent, _session_id), do: :error
 end

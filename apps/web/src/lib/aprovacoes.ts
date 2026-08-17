@@ -60,6 +60,7 @@ export const VERBO_DA_ACAO: Record<ActionType, string> = {
   parallelize: 'quer mais um agente em paralelo',
   raise_max_parallel: 'propõe subir o teto de paralelismo',
   propose_execution_plan: 'propõe o plano de execução',
+  assess_implementability: 'avalia a implementabilidade de uma story',
 };
 
 type Payload = Record<string, unknown>;
@@ -251,6 +252,17 @@ const FRASE_DA_ACAO: Record<ActionType, (payload: Payload) => string> = {
     // uma ação separada (ativar execução), depois. Ver o comentário de
     // `DevLeadTools.classificar/4`.
     return `Aprova o plano de execução do Dev Lead${quantos}${porque}. Você ainda decide quando ativar a execução.`;
+  },
+
+  assess_implementability: (p) => {
+    const parecer = texto(p, 'parecer');
+    const justificativa = texto(p, 'justificativa');
+    const rotulo = parecer === 'inviavel' ? 'INVIÁVEL' : 'implementável';
+    const porque = justificativa ? `: "${curto(justificativa)}"` : '';
+    // Gate `implementavel` (docs/gates.yml, ADR 0090) — o parecer do Dev
+    // Lead, a partir do plano de teste da QA-estratégia. Aprovar registra o
+    // parecer; não sobe agente nenhum.
+    return `Registra a story como ${rotulo}${porque}.`;
   },
 };
 

@@ -6,6 +6,13 @@ defmodule Engine.Agents.DevLeadServer do
   e propõe o PLANO de execução: quantos agentes por módulo e por quê. Ele **não
   escreve código** — distribui trabalho e responde por ele.
 
+  Desde o ADR 0090 ele também é dono do gate `implementavel`
+  (`docs/gates.yml`, ativo): a ferramenta `assess_implementability` propõe o
+  parecer de implementabilidade de uma story, a partir do plano de teste que
+  a QA-estratégia produz (`Engine.Gates.QaEstrategiaAgent`, segundo momento
+  do `qa-lead` — ver `docs/fluxo.yml`). Mesmo mecanismo de suspensão do
+  `propose_execution_plan`.
+
   Espelha o `Engine.Agents.ArquitetoServer` e o `Engine.Infra.InfraLeadServer`:
   GenServer por sessão, estado + rehydration + streaming + loop bounded de tool
   use. Kickoff no start fresco.
@@ -123,7 +130,9 @@ defmodule Engine.Agents.DevLeadServer do
        project_id: project_id,
        agent: @agent,
        messages: [system_msg | history],
-       tool_specs: [DevLeadTools.spec()],
+       # ADR 0090: `assess_implementability` entrou como SEGUNDA ferramenta,
+       # aditiva — `propose_execution_plan` continua a primeira e intocada.
+       tool_specs: [DevLeadTools.spec(), DevLeadTools.spec_assess_implementability()],
        # Guardado enquanto o turno roda numa Task supervisionada, fora do
        # handler que bloqueava o processo inteiro — é o que permite um
        # `:cancel` chegar e ser atendido (RN-122). Ver `TurnoAssincrono`.
@@ -372,6 +381,13 @@ defmodule Engine.Agents.DevLeadServer do
   end
 
   defp run_tool("propose_execution_plan", args, state), do: DevLeadTools.run(args, state)
+
+  # ADR 0090 — aditivo, sem tocar o clause acima. Devolve o MESMO contrato
+  # de três desfechos: `run_turn/2` já sabe suspender em `{:pending, _}`
+  # (gate `implementavel`, `aprovacao_humana: true` em docs/gates.yml).
+  defp run_tool("assess_implementability", args, state),
+    do: DevLeadTools.run_assessment(args, state)
+
   defp run_tool(name, _args, _state), do: {:error, "ferramenta desconhecida: #{name}"}
 
   # --- Kickoff ---
@@ -418,6 +434,11 @@ defmodule Engine.Agents.DevLeadServer do
     histórias não acelera nada e custa o dobro. Acima do teto da área, o
     usuário precisa autorizar, então o `porque` de cada módulo é o que ele vai
     ler para decidir.
+
+    Antes (ou depois) de propor o plano, você também pode avaliar a
+    IMPLEMENTABILIDADE de uma story com `assess_implementability` — é
+    OPCIONAL, use o julgamento: se uma história parece arriscada ou mal
+    especificada, vale registrar o parecer antes de contar com ela no plano.
 
     MÓDULOS:
     #{modulos}
