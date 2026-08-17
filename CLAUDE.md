@@ -1184,6 +1184,38 @@ sozinho. Fechar isto exigiria o mesmo mecanismo de persistência do ADR
 0052; fora do escopo desta correção, que só alinha o comportamento ao que
 `docs/fluxo.yml` já declarava.
 
+## `analytics`/`delivery-metricas` viram relatório (RN-320..322, ADR 0089)
+Decisão consciente do dono do produto de ANTECIPAR dois papéis do
+modelo-alvo (`docs/fluxo.yml`, `status: proposto`) sem esperar o gatilho
+orgânico que cada um já declarava. A forma é a que o próprio fluxo
+prescrevia: `analytics` "absorvido por `medicao`" até métrica de PRODUTO
+virar entrada obrigatória do PO, `delivery-metricas` "nunca vira agente —
+vira RELATÓRIO do `medicao`". Os dois viram um SCRIPT só —
+`apps/api/scripts/analise-funil.ts` (`pnpm --filter api analise:funil --
+--projeto <uuid> [--json]`), no MESMO formato de `medir-execucao.ts`
+(Fase 13b): leitura pura via Drizzle, zero escrita, sem GenServer, sem
+agente de LLM.
+
+Mede DE VERDADE, sobre `proposed_actions.execution_result` das três ações
+git do dev agent (`git_commit`/`pr_open`/`git_merge`, só `status:
+'executed'`): funil real (quantas sessões produziram commit / PR aberta /
+PR mergeada, e a conversão entre etapas — conta SESSÃO, não ação), lead
+time real (primeiro commit ao primeiro merge da sessão, por `updated_at`
+da EXECUÇÃO, não da proposta) e deployment frequency real (merge em
+branch `PROTECTED_BRANCHES`, por dia, cruzando por referência com o gate
+`backmerge` de `docs/gates.yml` — cuja evidência é CI, fora do alcance de
+um script que só lê o banco).
+
+Três métricas ficam numa seção "Não medido, de propósito" — declaração
+PERMANENTE, não lacuna a fechar na próxima rodada: **funil de produto
+completo ideação → commit** (`sessions` sem `storyId`, RN-230, exigiria
+schema novo — nenhuma migration nesta frente); **evidência de adoção por
+feature** (não é dado que falta coletar — o Brabo não instrumenta os
+projetos que ele CONSTRÓI, sem caminho nenhum para essa telemetria
+existir hoje); **MTTR e change failure rate** (exigem sinal de INCIDENTE
+de produção real, a mesma dependência de `secops-runtime`/`platform` —
+outra frente).
+
 ## FERRAMENTA DE DESENVOLVIMENTO — `pnpm bootstrap`
 Menu de terminal em `scripts/dev/bootstrap.sh` agrupando o que se faz no
 dia a dia: Docker, K8s, Database e Test. Existe porque esses comandos moram

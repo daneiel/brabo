@@ -21,8 +21,13 @@ DBA) para agentes do Brabo, sob dois critérios:
 O princípio que emergiu da segregação: **quase toda separação é
 primeiro de ENTREGÁVEL e MOMENTO, e só depois (talvez) de agente** —
 QA e AppSec ganham o momento de design mantendo um agente só;
-analytics nasce como saída nova do medicao antes de ser papel. O papel
-se materializa quando o artefato dele já circula, nunca antes.
+analytics nasceu como saída nova do medicao antes de ser papel. O papel
+se materializa quando o artefato dele já circula, nunca antes — exceto
+quando o dono do produto decide ANTECIPAR a construção sem esperar o
+gatilho orgânico, como fez para `analytics`/`delivery-metricas`
+(ADR 0089): os dois viraram `status: active` como SCRIPT de relatório
+(`analise:funil`), nunca agente — a forma que o critério de separação
+já prescrevia.
 
 ## Decisões do dono do produto
 
@@ -35,8 +40,11 @@ se materializa quando o artefato dele já circula, nunca antes.
   a proposta de subir `max_parallel` (RN-086) fica sem autor, e o
   gatilho de ativação do Staff fica órfão.
 - **Delivery absorvido** pelo Harness (orquestração) + medição (DORA
-  como relatório futuro, nunca agente); **DBA absorvido** por Dev Lead
-  (migração) e Platform (tuning).
+  PARCIAL entregue como relatório — funil real, lead time real,
+  deployment frequency real; MTTR e change failure rate seguem
+  `status: lacuna`, dependentes de sinal de incidente real —
+  ADR 0089); **DBA absorvido** por Dev Lead (migração) e Platform
+  (tuning).
 
 ## Invariantes do fluxo
 
@@ -54,12 +62,13 @@ se materializa quando o artefato dele já circula, nunca antes.
 | Gatilho no produto | Papéis que ele ativa/separa |
 |---|---|
 | Gate `implementavel` criado | `qa-estrategia` + `appsec` (segundo momento dos agentes existentes) |
-| Métricas de produto viram entrada do PO | `analytics` separa do `medicao` |
+| Antecipado por decisão do dono do produto (ADR 0089) | `analytics`/`delivery-metricas` viram `active` como script, antes do gatilho orgânico |
+| Métricas de produto COMPLETAS viram entrada do PO | resto de `analytics` (o que ADR 0089 não fechou) |
 | `DEPLOY_ENABLED` flipa | `platform` ativa → depois `secops-runtime` |
 | Anamnese sai do refinamento | gatilho do `staff` volta a ter dono |
 | Projeto gerenciado com UI própria | `ux-designer` separa do Criativo |
 | Volume real de dados | `dbre` separa de Dev Lead/Platform |
-| — (nunca) | `delivery-metricas` vira relatório, não agente |
+| — (nunca) | `delivery-metricas` vira relatório, não agente (ADR 0089, já entregue) |
 
 ## Estado da malha (auditado)
 

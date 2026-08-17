@@ -7823,6 +7823,88 @@ comportamento bater com o que `docs/fluxo.yml` já declarava.
 
 ---
 
+## Analytics e delivery-metricas: os dois papéis viram RELATÓRIO (RN-320..322, ADR 0089)
+
+Decisão consciente do dono do produto de ANTECIPAR a construção dos papéis
+`analytics` e `delivery-metricas` (`docs/fluxo.yml`, `status: proposto`) sem
+esperar o gatilho orgânico que cada um já declarava. Os dois viram um SCRIPT
+só — `apps/api/scripts/analise-funil.ts` — no mesmo formato de
+`medir-execucao.ts` (Fase 13b): `NestFactory.createApplicationContext`,
+`--projeto <uuid>` obrigatório, leitura pura via Drizzle, sem escrita
+nenhuma. A forma é a que o próprio fluxo já prescrevia: `analytics` é
+"absorvido por `medicao`" e `delivery-metricas` "nunca vira agente" —
+nenhum GenServer, nenhum agente de LLM.
+
+### RN-320 — `analise-funil.ts` é script, nunca agente — mesmo esqueleto de `medir-execucao.ts` {#rn-320}
+
+O comando é `pnpm --filter api analise:funil -- --projeto <uuid> [--json]`.
+Só lê `proposed_actions` (filtrado por `actionType IN (git_commit, pr_open,
+git_merge)`) e `projects`, nunca escreve. A guarda
+`if (process.argv[1]?.endsWith('analise-funil.ts')) void main();` no fim do
+arquivo é a mesma de `medir-execucao.ts`: sem ela, importar o módulo no
+teste subiria o Nest inteiro e derrubaria o processo no `process.exit` do
+parser de argumentos.
+
+- **Onde:** `apps/api/scripts/analise-funil.ts:64-73` (`lerOpcoes`),
+  `:256-319` (`main`), `:390` (guarda de execução)
+- **Teste:** `apps/api/test/scripts/analise-funil.spec.ts` (só as funções
+  puras — a parte que fala com o banco é exercitada por execução real,
+  mesmo padrão de `medir-execucao.spec.ts`)
+- **ADR:** [0089](adr/0089-analytics-e-delivery-metricas-como-relatorio.md)
+
+### RN-321 — O funil conta SESSÃO por etapa, só ação `executed`, e o lead time usa `updated_at` da execução {#rn-321}
+
+`calcularFunil` conta quantas sessões produziram pelo menos um `git_commit`,
+`pr_open` e `git_merge` com `status: 'executed'` — uma sessão com três
+commits entra uma vez só em cada etapa que alcançou, nunca três. A taxa de
+conversão de uma etapa é `sessões-da-etapa / sessões-da-etapa-anterior`, e é
+`null` (não `0`, não `Infinity`) quando o denominador é zero — não há
+"conversão de" nada para medir. `calcularLeadTimes` usa `updated_at` da
+linha de `proposed_actions`, não `created_at`: é o instante em que
+`ExecuteGitActionUseCase#record` gravou o `execution_result` de verdade
+(`updateExecutionResult` bumba `updatedAt`), não quando a ação foi
+PROPOSTA — a mesma distinção que `token_usage`/preço congelado já fazem em
+outro contexto (RN-042). Merge cujo `updated_at` precede o do commit (duas
+levas na mesma sessão, ou dado incoerente) é descartado, nunca vira lead
+time negativo.
+
+- **Onde:** `apps/api/scripts/analise-funil.ts:115-160` (`calcularFunil`),
+  `:170-193` (`calcularLeadTimes`)
+- **Teste:** `apps/api/test/scripts/analise-funil.spec.ts` (describe
+  "calcularFunil", "calcularLeadTimes")
+- **ADR:** [0089](adr/0089-analytics-e-delivery-metricas-como-relatorio.md)
+
+### RN-322 — Deployment frequency real filtra merge em branch PROTEGIDA; três métricas ficam DECLARADAS ausentes, nunca aproximadas {#rn-322}
+
+`deploymentFrequencyPorDia` só conta `git_merge` `executed` cujo
+`executionResult.targetBranch` está em `PROTECTED_BRANCHES`
+(`apps/api/src/domain/actions/protected-branches.ts`) — merge numa branch de
+feature não é deploy. Cruza por REFERÊNCIA com o gate `backmerge`
+(`docs/gates.yml`): a evidência dele é CI, em `.release/gate.json`, fora do
+alcance de um script que só lê o banco, então não há junção de dado, só o
+mesmo recorte de branch que o gate observa.
+
+Três métricas saem do relatório com uma seção "Não medido, de propósito" em
+vez de um número aproximado:
+
+1. **Funil de produto completo (ideação → commit).** `sessions` não tem
+   `storyId` — [RN-230](#rn-230) já declara a lacuna na aba Criativo.
+   Fechá-la exige schema novo, fora do escopo desta frente (nenhuma
+   migration).
+2. **Evidência de adoção por feature.** Não é dado que falta coletar: o
+   Brabo não instrumenta os projetos que ele CONSTRÓI, e não há caminho
+   nenhum para essa telemetria existir hoje.
+3. **MTTR e change failure rate.** Exigem sinal de INCIDENTE de produção
+   real — a mesma dependência que `docs/fluxo.yml` já registra para
+   `secops-runtime`/`platform` (`status: proposto`/`planned`, ativação
+   sincronizada com `DEPLOY_ENABLED`).
+
+- **Onde:** `apps/api/scripts/analise-funil.ts:220-247`
+  (`deploymentFrequencyPorDia`), `:372-386` (seção "Não medido" impressa)
+- **Teste:** `apps/api/test/scripts/analise-funil.spec.ts` (describe
+  "deploymentFrequencyPorDia")
+- **ADR:** [0089](adr/0089-analytics-e-delivery-metricas-como-relatorio.md)
+
 ## Quando dá errado
 
 | situação | o que o sistema faz |

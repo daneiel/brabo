@@ -96,6 +96,16 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   conversa com o Dev Lead PAUSA: é a primeira vez que um agente
   conversacional suspende esperando aprovação humana no meio do turno
   síncrono (RN-284, ADR 0086)
+- **api**: novo script `pnpm --filter api analise:funil -- --projeto
+  <uuid> [--json]` — os papéis `analytics`/`delivery-metricas` de
+  `docs/fluxo.yml` (antes `status: proposto`) viram `active`, entregues
+  como RELATÓRIO puro (mesmo formato de `medir-execucao.ts`, sem agente,
+  sem GenServer). Mede funil real sessão → commit → PR → merge, lead time
+  real e deployment frequency real em branch protegida, todos extraídos
+  de `proposed_actions.execution_result`. Declara, de propósito, três
+  métricas sem caminho para existir hoje: funil de produto completo
+  (ideação → commit), evidência de adoção por feature e MTTR/change
+  failure rate (RN-320..322, ADR 0089)
 
 ### Correções
 
