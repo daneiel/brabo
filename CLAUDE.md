@@ -1184,6 +1184,159 @@ sozinho. Fechar isto exigiria o mesmo mecanismo de persistência do ADR
 0052; fora do escopo desta correção, que só alinha o comportamento ao que
 `docs/fluxo.yml` já declarava.
 
+## UX Designer — o quinto agente conversacional, antecipado (RN-285..287, ADR 0087)
+Não é gatilho de separação disparado — `docs/fluxo.yml` sempre declarou
+"quando o projeto GERENCIADO tiver interface própria a desenhar" como
+critério, e ele não disparou: o design system continua insumo estático.
+Decisão CONSCIENTE do dono do produto de antecipar o papel mesmo assim.
+
+`Engine.Agents.UxDesignerServer` espelha o `DevLeadServer` — GenServer por
+sessão, teto de 14 iterações, ativado por handoff `accepted` endereçado a
+"ux-designer" pelo mecanismo GENÉRICO já existente (nenhuma linha mudou em
+`ActivateAgentUseCase`). SOLO: sem área, sem subagentes. O kickoff lê a
+`artifact.product_brief` mais recente — a MESMA "necessidade de negócio"
+que o Criativo produz, sem artefato novo — e o sistema de design
+(`design/tokens.css`, `design/COMPONENTS.md`) é DESCRITO na identidade do
+agente (`Engine.Harness.Agents`), texto estático: os agentes conversacionais
+não têm ferramenta de leitura de arquivo do repositório.
+
+`propose_prototype` é a ÚNICA ferramenta (`personas`, `jornadas`,
+`prototipo` com `telas`/`anotacoes`, `resumo`). Grava
+`artifact.prototipo_navegavel` **sem caso de uso dedicado na api** —
+diferente de `choose_project_image`/`create_c4_diagram`, que precisam de um
+porque têm conteúdo DERIVADO de outro artefato ou recusa de domínio
+compartilhada; nenhum dos dois motivos vale aqui, então a validação de forma
+mora no engine (`ArtifactSchemas`) e a gravação usa o `append_event_returning`
+genérico que a api já expõe, mesmo caminho do `artifact.product_brief`. Um
+artefato só, dois handoffs sobre ele — para "po" e para "dev-lead" — nunca
+um segundo artefato para "spec-visual": o protótipo (telas + anotações) É a
+spec visual, e duplicá-lo arriscaria as duas cópias divergirem depois. Reusa
+a metade do desenho do ADR 0086 que sobrevive sem a suspensão dele:
+`propose_prototype` bem-sucedido encerra o turno, para o modelo não propor
+de novo e duplicar o artefato — sem o "aguardando_aprovacao", porque propor
+um protótipo não tem efeito externo.
+
+`apps/web/src/lib/agents.ts` ganhou a entrada (`color: var(--accent)`, o
+token semântico menos reusado do roster; `icon: PencilIcon`).
+`uxDesignerActive` entrou no roster nas DUAS fontes que a RN-090 exige em
+sincronia — o painel do time (`agent-status.ts`) e o card do dashboard
+(`projects-summary.repository.ts`, mesma consulta de `infraActive`
+ampliada, sem query nova).
+
+**Fora de alcance, declarado**: `teste-de-usabilidade` exige usuário humano
+real — nenhum agente substitui isso. `metricas-de-uso` segue lacuna mesmo
+com `analytics` `active` (ADR 0089): o relatório de funil mede
+sessão→commit→PR→merge, não adoção de feature pelos usuários FINAIS do
+projeto que o Brabo constrói — "evidência de adoção por feature" está
+DECLARADA como métrica sem caminho para existir hoje, não pendência a
+fechar na próxima rodada.
+
+## Staff — código pronto, dormente para disparo automático (RN-305/306, ADR 0088)
+Não é fase planejada: `docs/fluxo.yml` declara o Staff/Principal Engineer
+como `status: planned` desde o ADR 0085 ("contrato pronto, ativação
+decidida, aguarda gatilho"). Decisão CONSCIENTE do dono do produto:
+antecipar o CÓDIGO mesmo sabendo que o gatilho AUTOMÁTICO (a Anamnese
+notando um problema sistêmico RECORRENTE) não vai disparar — a Anamnese
+está pausada (`ANAMNESE_ENABLED=false`, decisão de 2026-08-10). Dormente
+para disparo automático, não para acionamento MANUAL.
+
+Sexto agente conversacional solo (`Engine.Agents.StaffServer`), ao lado de
+Criativo/PO/Arquiteto/Dev Lead/UX Designer, espelhando o Arquiteto (laço
+bounded teto 14) com duas diferenças: SEM `kickoff/1` (não há artefato de
+sessão para resumir — sobe e fica ocioso até a primeira `user_message`,
+que é como quem endereçou o handoff explica o problema) e ativado pelo
+caminho GENÉRICO de `canActivateAgent` (handoff `accepted` endereçado a
+"staff"), sem entrar em `USER_STARTED_AGENTS` — investigação confirmou que
+nenhuma mudança de domínio na api era necessária, porque
+`assertHandoffTargetAllowed` só recusa subagente de área e o Staff não tem
+área. A única ferramenta, `propose_rfc` (problema, opções com trade-offs,
+recomendação, PoC descartável), grava `artifact.rfc_staff` DIRETO via
+`append_event_returning` — mesmo padrão sem tabela de `emit_insight`, e
+não o de `artifact.c4_diagram` (que deriva o Container level do
+module_map na api) — e devolve o handoff ao Arquiteto no MESMO tool call,
+sem `proposed_action` (registrar um documento não é efeito externo).
+
+`staffActive` entrou na roster do painel do time e no card do dashboard
+(`ProjectCardSummary.roster`), mesmo critério de `infraActive`, para não
+abrir a divergência que o comentário de `RosterFacts` já alertava.
+**Declarado, não escondido**: `SessionPage.tsx`/`AGENTES_DE_CHAT` não
+foram tocados — mesmo padrão já aceito para `infra` (um lead REAL e ATIVO
+também fora dessa lista). O caminho ponta a ponta de uso hoje é a rota
+interna (`POST .../agent/message`, `agent: "staff"`), não a tela de
+Sessão; a UI genérica de "handoff manual a agente à escolha" segue no
+backlog.
+
+## O gate `implementavel` ativo — QA-estratégia como segundo momento do qa-lead (ADR 0090)
+Decisão consciente do dono do produto de antecipar o gatilho que
+`docs/fluxo.yml` já previa ("quando o gate implementavel ativar") — o
+gatilho AQUI é o próprio trabalho de construir o mecanismo, não um sintoma
+de uso esperando para acontecer. `docs/gates.yml`, `implementavel`:
+`status: planned` → `active` (dono `dev-lead`, `severidade: warn`
+intocada — o registro já dizia "nasce warn mesmo quando ativar").
+
+**QA-estratégia deixa de ser papel `proposto`**: é o PRÓPRIO `qa-lead`, num
+segundo MOMENTO — mesmo processo, entregável separado do veredito de PR,
+exatamente como `docs/fluxo.yml` já declarava ("pode ser o próprio qa-lead
+em segundo MOMENTO, não necessariamente agente novo: a separação é de
+entregável"). `Engine.Gates.QaLeadServer.run_design/3` é um ponto de
+entrada NOVO e ADITIVO (sem tocar `run/2`, o caminho de sempre, amarrado a
+`DevAgentState.find_by_task_id`), acionado por
+`Engine.Gates.Dispatcher.run_qa_estrategia/3` (mesma indireção trocável em
+teste que `run_qa/2`/`run_secops/2` já usam).
+
+`Engine.Gates.QaEstrategiaAgent` é módulo SEM ESTADO (não `GenServer`),
+mesma forma de `QaPerformanceSegurancaAgent` — registro sem `Terminal`
+(`ReadFile`, `SearchWorkspace`, `EmitPlanoDeTeste`) —, mas o CONTEXTO é
+outro: `Engine.Gates.QaEstrategiaContext.fetch/3` busca SÓ story (de
+`list_backlog`) e `module_map` vigente (de `get_infra_context`, reusado só
+pelo campo `moduleMap` — zero rota nova), sem `dev_state` nem
+`worktree_path`, porque o gate roda PRE-DEV: não há dev agent, worktree
+nem `task_id` ainda. Nenhuma das três ferramentas passa pelo
+`ActionPipeline` (só `terminal`/`write_file` passam), então este agente
+NUNCA suspende — `run_design/3` roda síncrono dentro do próprio
+`handle_cast`. O teto de iterações fica em 8 (conversacional), não 60
+(gate) — DE PROPÓSITO: sem `token_budget_micros` por baixo (não há task,
+PRE-DEV), a mesma razão pela qual `infra-workflows` fica em 8 mesmo usando
+ferramenta (RN-085). O entregável (`emit_plano_de_teste`: síntese,
+critérios executáveis, estratégia de automação GENÉRICA e sem framework)
+vira `artifact.plano_de_teste` no event log da sessão que chamou.
+
+`assess_implementability`, ferramenta nova do Dev Lead, lê o
+`artifact.plano_de_teste` mais recente da story no histórico da PRÓPRIA
+sessão: sem plano ainda, dispara a avaliação e devolve erro pedindo
+retentativa (erro de ferramenta é ENTRADA do laço, não fim de linha —
+RN-163); com plano, propõe o parecer (`implementavel`/`inviavel` +
+justificativa, plano embutido no payload) como `proposed_action`, MESMO
+padrão de três desfechos de `propose_execution_plan` (ADR 0086) —
+`maintainer`, DELIBERADAMENTE fora do bloco de tetos absolutos de
+`decide.ts`.
+
+**`appsec` deixa de ser `proposto`** — o segundo momento do SecOps entra na
+seção seguinte.
+
+## O appsec ganha o segundo momento do secops (RN-360/361, ADR 0090)
+`docs/fluxo.yml` (`id: appsec`, camada_seguranca) declarava por antecipação
+"mesmo padrão do QA: dois MOMENTOS, não dois agentes por ora" — decisão
+consciente do dono do produto de antecipar a ativação, sem esperar o gate
+`implementavel` (frente `qa-estrategia`, mesmo ADR conceitual 0090) que o
+próprio registro citava como gatilho.
+
+`Engine.Gates.SecOpsAgentServer.run_design/2` roda no MESMO processo do
+secops de PR (mesma chave de `Registry`), sem `Diff`/`Scanner`/
+`DevAgentState` nenhum: busca a story no backlog + o `module_map` vigente
+(`Engine.Gates.AppSecContextBuilder`, sem `dev_state`/`worktree_path`) e
+chama `Engine.Gates.AppSecAgent.run/3` — módulo SEM ESTADO (não é GenServer,
+mesma forma de `QaPerformanceSegurancaAgent`), registro de ferramentas SEM
+`Terminal`, rodando um checklist STRIDE-lite via `ToolLoop.run/1` sobre o
+DESENHO da story, nunca sobre código. Termina emitindo `artifact.threat_model`
+e criando handoff para os três leads declarados (arquiteto, dev-lead,
+`infra` — o AGENTE endereçável do id `area-infra`, RN-361).
+
+**Lacuna declarada, não bug**: `run_design/2` é ACIONÁVEL, mas nada aciona
+sozinho ainda — o gatilho natural é `assess_implementability` do Dev Lead
+(frente `qa-estrategia`), fora do escopo desta entrega, que foi mantida
+autocontida (`decide.ts`/`docs/gates.yml`/`dev_lead_tools.ex` intocados).
+
 ## `analytics`/`delivery-metricas` viram relatório (RN-320..322, ADR 0089)
 Decisão consciente do dono do produto de ANTECIPAR dois papéis do
 modelo-alvo (`docs/fluxo.yml`, `status: proposto`) sem esperar o gatilho
@@ -1397,13 +1550,16 @@ divide o mesmo banco, recuperar exige `db:migrate` E `engine:migrate`.
   event log, e o motivo NUNCA fica só em broadcast: `agent.error` é
   durável e o agente diz o que houve no fio (RN-059). Falha de UMA
   ferramenta no meio do laço segue a mesma régua (RN-163).
-- Os quatro agentes conversacionais rodam laço bounded de tool use, com
-  teto PRÓPRIO no servidor de cada um (Criativo e PO 12, Arquiteto e Dev
-  Lead 14) — não o teto do `ToolLoop` (`Engine.Harness.Iteracoes`), que é
-  dos agentes de execução e de gate. Erro de ferramenta é ENTRADA do laço,
-  não fim de linha; teto esgotado é narrado, nunca silêncio; e o agente não
-  anuncia ação que o código não vá executar — o que se promete é decidido
-  pelo teto, nunca por texto fixo (RN-163).
+- Os seis agentes conversacionais rodam laço bounded de tool use, com
+  teto PRÓPRIO no servidor de cada um (Criativo e PO 12, Arquiteto, Dev
+  Lead, UX Designer e Staff 14 — raciocínio, não conversa leve) — não o
+  teto do `ToolLoop` (`Engine.Harness.Iteracoes`), que é dos agentes de
+  execução e de gate. Erro de ferramenta é ENTRADA do laço, não fim de
+  linha; teto esgotado é narrado, nunca silêncio; e o agente não anuncia
+  ação que o código não vá executar — o que se promete é decidido pelo
+  teto, nunca por texto fixo (RN-163). O Staff é o único SEM `kickoff/1`
+  — sobe e fica ocioso até a primeira `user_message`, porque não há
+  artefato de sessão para sintetizar uma abertura (ADR 0088).
 - O turno de um agente conversacional pode SUSPENDER esperando aprovação
   humana (ADR 0086, RN-284) — hoje só o Dev Lead, no `propose_execution_plan`.
   `Engine.Agents.TurnoAssincrono` responde ao `from` síncrono na hora

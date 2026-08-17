@@ -130,6 +130,10 @@ export interface ProjectCardSummary {
     gatesEverOpened: boolean;
     delegatedSubagents: string[];
     infraActive: boolean;
+    /** ADR 0087 — mesmo critério de `infraActive`. */
+    uxDesignerActive: boolean;
+    /** Staff (docs/fluxo.yml, ADR 0088) — mesmo critério de `infraActive`. */
+    staffActive: boolean;
   };
 }
 
@@ -283,7 +287,8 @@ export type ActionType =
   | 'instruction_patch'
   | 'parallelize'
   | 'raise_max_parallel'
-  | 'propose_execution_plan';
+  | 'propose_execution_plan'
+  | 'assess_implementability';
 
 export type ActionStatus =
   | 'pending'
