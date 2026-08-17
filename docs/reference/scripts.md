@@ -76,6 +76,9 @@ Fonte: os `package.json` de cada pacote e o `Makefile` da raiz.
 | `pnpm --filter api validacao:real` | `ts-node scripts/validacao-real.ts` |
 | `pnpm --filter api validacao:gates` | `ts-node scripts/validacao-gates.ts` |
 | `pnpm --filter api medir:execucao` | `ts-node scripts/medir-execucao.ts` |
+| `pnpm --filter api analise:funil` | `ts-node scripts/analise-funil.ts` |
+| `pnpm --filter api relatorio:seguranca-runtime` | `ts-node scripts/relatorio-seguranca-runtime.ts` |
+| `pnpm --filter api relatorio:telemetria` | `ts-node scripts/relatorio-telemetria.ts` |
 | `pnpm --filter api gerar:areas` | `ts-node scripts/gerar-areas.ts` |
 | `pnpm --filter api lint:migracao` | `ts-node scripts/lint-migracao.ts` |
 | `pnpm --filter api relatorio:backup` | `ts-node scripts/relatorio-backup.ts` |
@@ -132,4 +135,4 @@ Fonte: os `package.json` de cada pacote e o `Makefile` da raiz.
 
 ---
 
-87 comandos no total. Alvo do Makefile sem anotação `## descrição` não aparece aqui — anote na fonte.
+90 comandos no total. Alvo do Makefile sem anotação `## descrição` não aparece aqui — anote na fonte.
