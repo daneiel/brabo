@@ -70,7 +70,11 @@ defmodule Engine.Agents.StaffServerTest do
     ])
 
     assert {:reply, :ok, _} =
-             sync_call(StaffServer, {:user_message, "problema sistêmico: paginação duplicada"}, state)
+             sync_call(
+               StaffServer,
+               {:user_message, "problema sistêmico: paginação duplicada"},
+               state
+             )
 
     assert_received {:event_appended, _, ^session_id,
                      %{type: "artifact.rfc_staff", payload: payload}}
@@ -141,7 +145,9 @@ defmodule Engine.Agents.StaffServerTest do
     state: state,
     session_id: session_id
   } do
-    Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("RFC pronto.", "gpt-4o-mini")])
+    Process.put(:fake_llm_turns, [
+      FakeEngineApiClient.final_response("RFC pronto.", "gpt-4o-mini")
+    ])
 
     assert {:reply, :ok, _} = sync_call(StaffServer, {:user_message, "problema sistêmico"}, state)
 
