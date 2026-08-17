@@ -1184,6 +1184,29 @@ sozinho. Fechar isto exigiria o mesmo mecanismo de persistência do ADR
 0052; fora do escopo desta correção, que só alinha o comportamento ao que
 `docs/fluxo.yml` já declarava.
 
+## O appsec ganha o segundo momento do secops (RN-360/361, ADR 0090)
+`docs/fluxo.yml` (`id: appsec`, camada_seguranca) declarava por antecipação
+"mesmo padrão do QA: dois MOMENTOS, não dois agentes por ora" — decisão
+consciente do dono do produto de antecipar a ativação, sem esperar o gate
+`implementavel` (frente `qa-estrategia`, mesmo ADR conceitual 0090) que o
+próprio registro citava como gatilho.
+
+`Engine.Gates.SecOpsAgentServer.run_design/2` roda no MESMO processo do
+secops de PR (mesma chave de `Registry`), sem `Diff`/`Scanner`/
+`DevAgentState` nenhum: busca a story no backlog + o `module_map` vigente
+(`Engine.Gates.AppSecContextBuilder`, sem `dev_state`/`worktree_path`) e
+chama `Engine.Gates.AppSecAgent.run/3` — módulo SEM ESTADO (não é GenServer,
+mesma forma de `QaPerformanceSegurancaAgent`), registro de ferramentas SEM
+`Terminal`, rodando um checklist STRIDE-lite via `ToolLoop.run/1` sobre o
+DESENHO da story, nunca sobre código. Termina emitindo `artifact.threat_model`
+e criando handoff para os três leads declarados (arquiteto, dev-lead,
+`infra` — o AGENTE endereçável do id `area-infra`, RN-361).
+
+**Lacuna declarada, não bug**: `run_design/2` é ACIONÁVEL, mas nada aciona
+sozinho ainda — o gatilho natural é `assess_implementability` do Dev Lead
+(frente `qa-estrategia`), fora do escopo desta entrega, que foi mantida
+autocontida (`decide.ts`/`docs/gates.yml`/`dev_lead_tools.ex` intocados).
+
 ## FERRAMENTA DE DESENVOLVIMENTO — `pnpm bootstrap`
 Menu de terminal em `scripts/dev/bootstrap.sh` agrupando o que se faz no
 dia a dia: Docker, K8s, Database e Test. Existe porque esses comandos moram
