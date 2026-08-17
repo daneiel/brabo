@@ -3,7 +3,7 @@ id: artifacts
 title: Artefatos
 sidebar_label: Artefatos
 sidebar_position: 4
-description: Os nove schemas de artefato validados no engine, quem pode emitir cada um, e por que a maioria não é emitível pelo modelo.
+description: Os dez schemas de artefato validados no engine, quem pode emitir cada um, e por que a maioria não é emitível pelo modelo.
 keywords: [artefato, schema, emit_artifact, qa_verdict, business_rule]
 ---
 
@@ -189,6 +189,25 @@ resultado da tool call e chama `ArtifactEmitter.emit/5`, mesmo padrão de
 `criteriosExecutaveis` vazia reprova pela mesma razão de
 `infra_delegation_files`: um plano sem nenhum critério não é plano.
 
+### `threat_model` — servidor
+
+| campo | obrigatório |
+|---|---|
+| `storyId` | ✅ |
+| `threatModel` | ✅ |
+| `requisitosDeSeguranca` | ✅ |
+
+O "segundo momento" do SecOps (RN-360, ADR 0090) — checklist STRIDE-lite
+sobre o DESENHO de uma story, antes de existir código, mesmo padrão de
+segundo-momento do `qa-estrategia`. `Engine.Gates.SecOpsAgentServer.run_design/2`
+emite depois que `Engine.Gates.AppSecAgent.run/3` (sem `Terminal`, sem
+`Diff`/`Scanner`/`DevAgentState`) termina o laço com `emit_threat_model` —
+o modelo não escolhe emitir, o servidor emite quando o laço termina.
+
+`riscos` fica de fora das obrigatórias: lista vazia é resposta válida (nem
+toda story carrega risco residual) e a ferramenta já garante que a CHAVE
+existe — não há "esquecido" pra distinguir de "nenhum".
+
 ## Artefatos que não passam por aqui
 
 Dois tipos de evento `artifact.*` existem no log sem estar neste registro,
@@ -209,7 +228,7 @@ está anotada como
 
 | erro | causa |
 |---|---|
-| `{:unknown_type, tipo}` | tipo fora dos nove |
+| `{:unknown_type, tipo}` | tipo fora dos dez |
 | `{:missing_keys, [...]}` | campos obrigatórios ausentes, todos nomeados |
 | `:origem_invalida` | `business_rule.origin` vazia ou não é lista |
 | `{:sujeito_invalido, chaves}` | parecer com os dois sujeitos, ou com nenhum |

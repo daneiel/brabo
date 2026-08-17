@@ -8138,6 +8138,102 @@ silenciosa: `agent.error` durável com origem, mesma régua da
 
 ---
 
+## O appsec ganha o segundo momento do secops (RN-360/361, ADR 0090)
+
+`docs/fluxo.yml` já declarava o `id: appsec` como `proposto`, com o critério
+de separação escrito por antecipação: "mesmo padrão do QA: dois MOMENTOS, não
+dois agentes por ora". Esta mudança constrói esse segundo momento — threat
+model de DESIGN, ANTES de existir código/PR — decisão consciente do dono do
+produto de antecipar a ativação, sem esperar o gate `implementavel` que o
+próprio registro citava como gatilho.
+
+### RN-360 — O threat model de DESIGN roda sobre story + module_map, sem worktree/task_id, no MESMO processo do secops {#rn-360}
+
+Quem roda o appsec é o MESMO `Engine.Gates.SecOpsAgentServer` que já existe
+para o veredito determinístico de PR — não um processo novo. `run_design/2`
+(`apps/engine/lib/engine/gates/secops_agent_server.ex:76`) é um `GenServer.cast`
+para a mesma chave de `Registry` (`{project_id, "secops"}`) que `run/2` já
+usa; o `handle_cast({:run_design, story_id}, state)`
+(`secops_agent_server.ex:93`) busca o contexto por
+`Engine.Gates.AppSecContextBuilder.fetch/2`
+(`apps/engine/lib/engine/gates/appsec_context_builder.ex:31`) — a story no
+backlog do projeto (`EngineApiClient.list_backlog/1`, a MESMA leitura que a
+RN-164 deu ao PO) e o `module_map` vigente da sessão que criou a story
+(`EngineApiClient.get_infra_context/2`, a MESMA leitura sem task/story que a
+área de Infra já faz) — e então chama `Engine.Gates.AppSecAgent.run/3`
+(`apps/engine/lib/engine/gates/appsec_agent.ex:47`).
+
+`AppSecAgent` é módulo SEM ESTADO (não é GenServer, mesma forma de
+`QaPerformanceSegurancaAgent`), com registro de ferramentas SEM `Terminal` —
+`[ReadFile, SearchWorkspace, EmitThreatModel]` — rodando um checklist
+STRIDE-lite (Spoofing/Tampering/Repudiation/Information disclosure/Denial of
+service/Elevation of privilege) via `Engine.Harness.ToolLoop.run/1`. A
+diferença estrutural do "segundo momento sem Terminal, sem task_id" para o
+padrão de gate anterior: nenhum `dev_state`/`worktree_path` entra no `ctx` —
+`ReadFile`/`SearchWorkspace` degradam para o fallback de
+`Engine.Actions.Workspace.workspace_dir/1` (o checkout COMPARTILHADO do
+projeto, não um worktree de agente), e `session_id` vem de
+`story["sessionId"]`, nunca de um `dev_state`. `EmitThreatModel`
+(`apps/engine/lib/engine/gates/tools/emit_threat_model.ex`) não tem veredito
+`approved`/`changes_requested` — o appsec sempre TERMINA registrando o
+threat model, nunca aprovando/reprovando nada —, e por isso não reaproveita
+`Engine.Gates.Hooks.Termination` (a forma extraída é outra): tem hook
+PRÓPRIO, `Engine.Gates.Hooks.AppSecTermination`.
+
+Terminado com sucesso, `run_appsec_design/3`
+(`secops_agent_server.ex:234`) emite `artifact.threat_model`
+(`storyId`/`threatModel`/`requisitosDeSeguranca`/`riscos`, schema em
+`apps/engine/lib/engine/harness/artifact_schemas.ex:51` — `riscos` fica de
+fora das chaves obrigatórias porque lista vazia é resposta válida). Falha
+(teto de iterações, orçamento, ou o modelo parando sem chamar
+`emit_threat_model`) vira `agent.error` durável com origem
+(`modelo`/`politica`/`infra`), mesma régua da RN-059 — nunca resposta vazia
+nem silêncio só em broadcast.
+
+**Lacuna declarada, não bug**: `run_design/2` é ACIONÁVEL, mas nada aciona
+sozinho ainda. O ponto de disparo natural é `assess_implementability` do Dev
+Lead (frente `qa-estrategia`, gate `implementavel`, mesmo ADR 0090) — fora do
+escopo desta entrega, que foi mantida autocontida (nenhum arquivo de outra
+frente tocado: `decide.ts`, `docs/gates.yml` e `dev_lead_tools.ex`
+intocados).
+
+- **Onde:** `apps/engine/lib/engine/gates/secops_agent_server.ex` (`run_design/2`,
+  `handle_cast/2`, `run_appsec_design/3`, `emit_threat_model/3`,
+  `emit_bloqueio_appsec/3`); `apps/engine/lib/engine/gates/appsec_agent.ex`;
+  `apps/engine/lib/engine/gates/appsec_context_builder.ex`;
+  `apps/engine/lib/engine/gates/tools/emit_threat_model.ex`;
+  `apps/engine/lib/engine/gates/hooks/appsec_termination.ex`;
+  `apps/engine/lib/engine/harness/artifact_schemas.ex` (schema `threat_model`)
+- **Teste:** `apps/engine/test/engine/gates/appsec_agent_test.exs`,
+  `apps/engine/test/engine/gates/appsec_context_builder_test.exs`,
+  `apps/engine/test/engine/gates/secops_agent_server_test.exs` (os três
+  testes de `run_design`)
+- **Origem:** [ADR 0090](adr/0090-qa-estrategia-e-appsec-segundo-momento.md)
+
+### RN-361 — O threat model concluído cria TRÊS handoffs, sempre endereçando o LEAD {#rn-361}
+
+`criar_handoffs_appsec/3` (`secops_agent_server.ex:266`) cria um handoff por
+alvo declarado em `docs/fluxo.yml` (`saidas` do `appsec`): arquiteto,
+dev-lead e infra — mesmo padrão de
+`OfferInfraHandoffUseCase`/`ArquitetoServer.executar_offer_infra_handoff/1`
+(chamadas SEPARADAS, uma por alvo, para uma falha de handoff não desfazer os
+outros dois já criados). O id do fluxo é `area-infra`, mas o AGENTE
+endereçável é `"infra"` (`apps/api/src/domain/agents/agent-areas.ts` —
+`lead: 'infra'`), nunca `area-infra`: handoff externo endereça só o LEAD de
+área (ADR 0038), e `CreateHandoffUseCase.assertHandoffTargetAllowed`
+recusaria um `toAgent` que não resolve a um lead/agente-sem-área. Falha de UM
+alvo vira `agent.error` narrado por alvo (RN-116) — os outros dois handoffs
+já criados não são desfeitos.
+
+- **Onde:** `apps/engine/lib/engine/gates/secops_agent_server.ex:55`
+  (`@appsec_handoff_targets`), `:266` (`criar_handoffs_appsec/3`)
+- **Teste:** `apps/engine/test/engine/gates/secops_agent_server_test.exs`
+  ("run_design: threat model concluído emite artifact.threat_model e cria
+  os TRÊS handoffs")
+- **Origem:** [ADR 0090](adr/0090-qa-estrategia-e-appsec-segundo-momento.md)
+
+---
+
 ## Quando dá errado
 
 | situação | o que o sistema faz |

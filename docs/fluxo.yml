@@ -175,16 +175,24 @@ camada_qualidade:
 camada_seguranca:
   - id: appsec
     papel_de_mercado: AppSec (segurança no DESIGN)
-    status: proposto
-    hoje_absorvido_por: secops (que só atua na PR)
-    criterio_de_separacao: >
-      Mesmo padrão do QA: dois MOMENTOS, não dois agentes por ora.
-      Threat model no design ativa quando o gate implementavel existir.
-      Agente separado só com produção real.
-    entregaveis_alvo: [threat-model, requisito-de-seguranca-por-feature,
-      politica-de-supply-chain]
-    saidas_alvo: [{ artefato: threat-model,
-                    destino: [arquiteto, dev-lead, area-infra] }]
+    status: active
+    estrutura: mesmo padrão do QA — dois MOMENTOS, não dois agentes por ora.
+      Quem roda é o MESMO processo do secops (`Engine.Gates.SecOpsAgentServer`),
+      num segundo momento — `run_design/2`, sem worktree/task_id, threat
+      model STRIDE-lite sobre a story + module_map, ANTES de existir
+      código/PR (RN-360, ADR 0090). Agente separado continua fora de
+      escopo, só com produção real.
+    entradas:
+      - { artefato: story + module_map, origem: [po, arquiteto] }
+    saidas:
+      - { artefato: threat-model, destino: [arquiteto, dev-lead, infra] }     # RN-360
+    entregaveis_alvo: [politica-de-supply-chain]   # herdado do secops hoje (SBOM/dependabot), sem mecanismo novo
+    acionamento: >
+      lacuna — SecOpsAgentServer.run_design/2 existe e é ACIONÁVEL (qualquer
+      chamador dentro do engine, por project_id+story_id), mas nada aciona
+      sozinho ainda — nenhuma rota HTTP nem tool de outro agente chama. O
+      gatilho natural é assess_implementability do Dev Lead (frente
+      qa-estrategia, gate implementavel), fora do escopo desta entrega.
 
   - id: secops
     papel_de_mercado: SecOps (veredito na PR)

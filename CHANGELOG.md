@@ -123,6 +123,14 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   momento (mesmo processo, entregável separado do veredito de PR) — sem
   worktree, sem task, PRE-DEV. O parecer nasce `proposed_action`, mesmo
   padrão do plano de execução (RN-340/341, ADR 0090)
+- **engine**: o papel `appsec` (`docs/fluxo.yml`) ganha o segundo momento do
+  secops — threat model de DESIGN (checklist STRIDE-lite) sobre a story e o
+  module_map vigente, ANTES de existir código ou PR. Roda no MESMO processo
+  do `SecOpsAgentServer` (`run_design/2`, sem worktree/task_id), termina
+  emitindo `artifact.threat_model` e criando handoff para arquiteto, dev-lead
+  e o lead de Infra. `run_design/2` já é acionável, mas nenhum caminho aciona
+  sozinho ainda — o gatilho automático fica para a frente `qa-estrategia`
+  (RN-360/361, ADR 0090)
 
 ### Correções
 

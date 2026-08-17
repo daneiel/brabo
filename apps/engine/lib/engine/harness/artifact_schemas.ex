@@ -57,7 +57,15 @@ defmodule Engine.Harness.ArtifactSchemas do
       "planoDeTeste",
       "criteriosExecutaveis",
       "estrategiaDeAutomacao"
-    ]
+    ],
+    # RN-360 (docs/fluxo.yml `id: appsec`, ADR 0090) — threat model de
+    # DESIGN, server-emitted por `Engine.Gates.SecOpsAgentServer.run_design/2`
+    # depois que `Engine.Gates.AppSecAgent` termina o laço com
+    # `emit_threat_model`. `riscos` fica de fora das obrigatórias: lista
+    # vazia é resposta válida (nem toda story carrega risco residual) e a
+    # ferramenta já garante que a CHAVE existe — não há "esquecido" pra
+    # distinguir de "nenhum".
+    "threat_model" => ["storyId", "threatModel", "requisitosDeSeguranca"]
   }
 
   # Pareceres de gate. Os vereditos possíveis são os mesmos da máquina de

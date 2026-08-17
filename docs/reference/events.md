@@ -151,6 +151,7 @@ aprender um segundo nome porque o agente conversacional não usa o `ToolLoop`.
 | `artifact.prototipo_navegavel` | `personas`, `jornadas`, `prototipo` (`telas`, `anotacoes`), `resumo` — o protótipo do UX Designer ([RN-286](../business-rules.md#rn-286), ADR 0087) |
 | `artifact.rfc_staff` | — (validado em `Engine.Agents.StaffTools`, não pelo `ArtifactSchemas` — mesmo caso de `artifact.insight`): `problema`, `opcoes` (lista de `descricao`/`tradeoffs`), `recomendacao`, `poc` (`escopo`, `descartavel: true` fixo). O RFC do Staff (ADR 0088), devolvido ao Arquiteto por handoff no mesmo tool call |
 | `artifact.plano_de_teste` | `storyId`, `planoDeTeste`, `criteriosExecutaveis`, `estrategiaDeAutomacao` — entregável da QA-estratégia (ADR 0090), PRE-DEV |
+| `artifact.threat_model` | `storyId`, `threatModel`, `requisitosDeSeguranca` — o "segundo momento" do SecOps sobre o DESENHO de uma story ([RN-360](../business-rules.md#rn-360), ADR 0090) |
 
 Os schemas são fechados: campo faltando reprova a emissão
 (`Engine.Harness.ArtifactSchemas`).
