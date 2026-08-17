@@ -16473,6 +16473,11 @@
             "type": "boolean",
             "example": false,
             "description": "Existe handoff `accepted` para `infra` na sessão mais recente."
+          },
+          "uxDesignerActive": {
+            "type": "boolean",
+            "example": false,
+            "description": "Existe handoff `accepted` para `ux-designer` na sessão mais recente (ADR 0087)."
           }
         },
         "required": [
@@ -16480,7 +16485,8 @@
           "moduleNames",
           "gatesEverOpened",
           "delegatedSubagents",
-          "infraActive"
+          "infraActive",
+          "uxDesignerActive"
         ]
       },
       "RuleCoverageResponseDto": {

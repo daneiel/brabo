@@ -9,6 +9,7 @@ import {
   HypothesisIcon,
   LayoutSidebarIcon,
   LockIcon,
+  PencilIcon,
   PermissionIcon,
   ServerIcon,
   StackIcon,
@@ -29,6 +30,7 @@ export type AgentKey =
   | 'criativo'
   | 'arquiteto'
   | 'po'
+  | 'ux-designer'
   | 'dev-lead'
   | 'dev-backend'
   | 'dev-frontend'
@@ -117,6 +119,20 @@ export const AGENTS: Record<AgentKey, AgentDef> = {
     role: 'Priorização e backlog',
     color: 'var(--violet)',
     icon: UserIcon,
+  },
+  // Quinto agente conversacional (ADR 0087, `docs/fluxo.yml` id `ux-designer`
+  // — status `active`, antecipado pelo dono do produto antes do gatilho de
+  // separação declarado ter disparado). SOLO, sem área. `--accent` é o token
+  // semântico menos reusado do roster (só o Arquiteto o usava até aqui) —
+  // nenhum dos cinco tokens semânticos de `design/tokens.css` está livre de
+  // outro agente, e a regra do design system proíbe inventar hex novo.
+  'ux-designer': {
+    key: 'ux-designer',
+    name: 'UX Designer',
+    initials: 'UX',
+    role: 'Personas, jornadas e protótipo navegável',
+    color: 'var(--accent)',
+    icon: PencilIcon,
   },
   'dev-lead': {
     key: 'dev-lead',
