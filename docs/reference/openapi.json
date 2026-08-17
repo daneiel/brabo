@@ -16476,6 +16476,16 @@
             "type": "boolean",
             "example": false,
             "description": "Existe handoff `accepted` para `infra` na sessão mais recente."
+          },
+          "uxDesignerActive": {
+            "type": "boolean",
+            "example": false,
+            "description": "Existe handoff `accepted` para `ux-designer` na sessão mais recente (ADR 0087)."
+          },
+          "staffActive": {
+            "type": "boolean",
+            "example": false,
+            "description": "Existe handoff `accepted` para `staff` na sessão mais recente (docs/fluxo.yml, ADR 0088) — dormente para disparo automático, só reflete ativação MANUAL já aceita."
           }
         },
         "required": [
@@ -16483,7 +16493,9 @@
           "moduleNames",
           "gatesEverOpened",
           "delegatedSubagents",
-          "infraActive"
+          "infraActive",
+          "uxDesignerActive",
+          "staffActive"
         ]
       },
       "RuleCoverageResponseDto": {
