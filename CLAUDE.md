@@ -1391,6 +1391,33 @@ incidente de exemplo nem inventar número (mesmo princípio dos ADRs
 janelas — CONFIGURADA e OBSERVADA — nunca deixando a segunda passar por um
 histórico maior do que é.
 
+## `platform` ganha uma primeira entrega: relatório de telemetria sob demanda (RN-385/386, ADR 0092)
+Decisão consciente do dono do produto de antecipar parte do papel `platform`
+(`docs/fluxo.yml`, `camada_plataforma`) — cujo `status` continua `planned` e
+cuja `ativacao` continua sincronizada com `DEPLOY_ENABLED`, que não existe.
+`pnpm --filter api relatorio:telemetria [--projeto <uuid>] [--json]` é um
+SCRIPT (não agente LLM, não `GenServer`) que lê, sob demanda, as MESMAS
+perguntas que o `DomainGaugesCollector` já coleta para o scrape do
+Prometheus — sessões ativas/closing por projeto, tasks bloqueadas por
+projeto, estado do último backup (sempre GLOBAL, nunca por projeto, porque o
+produto faz backup do banco inteiro) — e termina depois de imprimir. As
+consultas SQL são REPLICADAS, não importadas do coletor: os métodos dele são
+privados e terminam escrevendo num gauge Prometheus, sem metade pura de "só
+a query" para reusar sem acoplar um script de CLI ao ciclo de vida de um
+`@Injectable`.
+
+A saída sempre traz "onde ver mais" (os dashboards versionados em
+`deploy/k8s/observability/dashboards/*.json`, os alertas em
+`deploy/k8s/observability/alerts/brabo-alerts.yaml`, `docs/runbook.md
+#observabilidade`, `pnpm dev:obs` para observabilidade local) — link, nunca
+duplicação — e uma seção "não medido" que DECLARA, sem inventar: nenhum SLO
+numérico está definido no produto, postmortem depende de incidente real que
+não aconteceu, e telemetria de volta ao produto em loop fechado é o que
+tornaria `platform` `active` — o gatilho (`DEPLOY_ENABLED`) segue ausente. O
+`gate_saida: { id: operavel, status: planned }` do papel não muda;
+`docs/fluxo.yml` só ganha uma `nota` na saída `telemetria-consolidada`
+dizendo que a versão manual/sob-demanda já é real.
+
 ## FERRAMENTA DE DESENVOLVIMENTO — `pnpm bootstrap`
 Menu de terminal em `scripts/dev/bootstrap.sh` agrupando o que se faz no
 dia a dia: Docker, K8s, Database e Test. Existe porque esses comandos moram

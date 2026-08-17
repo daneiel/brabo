@@ -8372,6 +8372,70 @@ apagar na próxima limpeza.
 
 ---
 
+## `platform` ganha uma primeira entrega: relatório de telemetria sob demanda (RN-385/386, ADR 0092)
+
+### RN-385 — O papel `platform` nasce como SCRIPT de leitura pontual, sobre as mesmas fontes do `DomainGaugesCollector` {#rn-385}
+
+`docs/fluxo.yml` descreve `platform` (`camada_plataforma`) como "SRE / Platform
+— dono do loop de retorno", `status: planned`, com ativação sincronizada a
+`DEPLOY_ENABLED` — que não existe. O dono do produto decidiu antecipar a
+metade que já tem dado real por trás: `pnpm --filter api relatorio:telemetria
+[--projeto <uuid>] [--json]` lê, sob demanda, as MESMAS perguntas que o
+`DomainGaugesCollector` já responde a cada `METRICS_GAUGE_INTERVAL_MS` para o
+scrape do Prometheus — sessões ativas/closing por projeto, tasks bloqueadas
+por projeto, estado do último backup (idade, status, tamanho, sempre GLOBAL,
+nunca por projeto, porque o produto tem um backup só). Não é agente LLM nem
+`GenServer`: é leitura avulsa, sem estado, que termina depois de imprimir.
+
+As consultas SQL são REPLICADAS, não importadas do coletor — os métodos dele
+(`collectSessions`/`collectBlockedTasks`/`collectBackup`) são privados e
+terminam escrevendo num gauge Prometheus (`this.metrics.*.set(...)`); não há
+uma metade pura de "só a query" para reusar sem acoplar um script avulso ao
+ciclo de vida de um `@Injectable` do NestJS. O script também NÃO é um segundo
+coletor: não registra métrica nenhuma, não roda em `setInterval`.
+
+A saída sempre traz "onde ver mais" (os três dashboards versionados em
+`deploy/k8s/observability/dashboards/*.json`, os alertas em
+`deploy/k8s/observability/alerts/brabo-alerts.yaml`, `docs/runbook.md
+#observabilidade` e `pnpm dev:obs` para observabilidade local) — o script
+LINKA para o que já existe, nunca duplica.
+
+- **Onde:** `apps/api/scripts/relatorio-telemetria.ts`; espelha
+  `apps/api/src/infrastructure/observability/domain-gauges.collector.ts`
+- **Teste:** `apps/api/test/scripts/relatorio-telemetria.spec.ts` (funções
+  puras — `parseArgs`, `formatarIdade`, `formatarBytes` — mesmo recorte de
+  `medir-execucao.spec.ts`: a parte que fala com o banco é exercitada rodando
+  o script contra um banco real)
+- **ADR:** [0092](adr/0092-platform-relatorio-de-telemetria-sob-demanda.md)
+
+### RN-386 — O relatório de telemetria declara, sem inventar, o que NÃO mede {#rn-386}
+
+O gatilho real do papel `platform` (`DEPLOY_ENABLED`) não existe: não há
+ambiente de produção com tráfego real, não há SLO numérico definido em lugar
+nenhum do produto, e não há postmortem possível sem incidente de verdade.
+`relatorio-telemetria.ts` diz isso na PRÓPRIA saída, numa seção "não medido",
+em vez de fingir cobertura que não tem — a mesma disciplina do ADR 0042 para
+nota de modelo e do ADR 0077 para qualidade de código: sem o dado real, o
+produto DECLARA a lacuna, nunca inventa o número.
+
+Três lacunas, todas explícitas: **SLO numérico formal** (nenhum está
+definido); **postmortem** (depende de incidente real que não aconteceu); e
+**telemetria de volta ao produto em loop fechado** (o script é leitura
+pontual sob demanda — observar, decidir e agir sozinho é o que tornaria
+`platform` `active` em `docs/fluxo.yml`, e por isso o `gate_saida: { id:
+operavel, status: planned }` do papel permanece `planned`, intocado por esta
+mudança).
+
+- **Onde:** `apps/api/scripts/relatorio-telemetria.ts` (função `imprimir`,
+  seção "Não medido"); `docs/fluxo.yml` (`camada_plataforma › platform ›
+  saidas_alvo`, artefato `telemetria-consolidada`, campo `nota`)
+- **Teste:** cobertura indireta — a seção é texto fixo verificado por leitura
+  do arquivo; não há verdade condicional a testar aqui (nada a errar entre
+  "medido" e "não medido" além do texto em si)
+- **ADR:** [0092](adr/0092-platform-relatorio-de-telemetria-sob-demanda.md)
+
+---
+
 ## Quando dá errado
 
 | situação | o que o sistema faz |

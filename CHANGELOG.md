@@ -150,6 +150,16 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   segurança seguem FORA — dependem de tráfego de produção real, que não
   existe — e o relatório lista essa lacuna, sem simular incidente de
   exemplo (RN-375..377, ADR 0091)
+- **api**: o papel `platform` (`docs/fluxo.yml`, `status: planned` —
+  ativação ainda pendente de `DEPLOY_ENABLED`, que não existe) ganha uma
+  primeira entrega honesta: `pnpm --filter api relatorio:telemetria
+  [--projeto <uuid>] [--json]`, um SCRIPT (não agente) que lê sob demanda as
+  mesmas fontes do `DomainGaugesCollector` — sessões ativas/closing e tasks
+  bloqueadas por projeto, estado do último backup — e linka para os
+  dashboards/alertas/runbook já versionados, sem duplicar. A saída declara
+  explicitamente o que NÃO mede: SLO numérico (nenhum definido), postmortem
+  (sem incidente real) e telemetria automática em loop fechado
+  (RN-385/386, ADR 0092)
 
 ### Correções
 

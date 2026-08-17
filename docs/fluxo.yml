@@ -246,7 +246,11 @@ camada_plataforma:
                     { artefato: nfrs-mensuraveis, origem: arquiteto }]
     saidas_alvo:
       - { artefato: slo + dashboard + runbook, destino: gates }
-      - { artefato: telemetria-consolidada, destino: arquiteto }
+      - { artefato: telemetria-consolidada, destino: arquiteto,
+          nota: "a versão MANUAL/sob-demanda já é REAL — script
+            (relatorio:telemetria, RN-385/386, ADR 0092), lendo as mesmas
+            fontes do DomainGaugesCollector; a versão AUTOMÁTICA, em loop
+            fechado, segue pendente do gatilho (DEPLOY_ENABLED)" }
       - { artefato: postmortem, destino: [arquiteto, po] }
     gate_saida: { id: operavel, status: planned }
 
