@@ -148,6 +148,7 @@ aprender um segundo nome porque o agente conversacional não usa o `ToolLoop`.
 | `artifact.business_rule` | `title`, `description`, `origin` |
 | `artifact.module_map` | o mapa de módulos do Arquiteto |
 | `artifact.insight` | — |
+| `artifact.threat_model` | `storyId`, `threatModel`, `requisitosDeSeguranca` — o "segundo momento" do SecOps sobre o DESENHO de uma story ([RN-360](../business-rules.md#rn-360), ADR 0090) |
 
 Os schemas são fechados: campo faltando reprova a emissão
 (`Engine.Harness.ArtifactSchemas`).
