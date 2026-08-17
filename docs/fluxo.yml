@@ -203,11 +203,21 @@ camada_seguranca:
 
   - id: secops-runtime
     papel_de_mercado: detecção e resposta
-    status: proposto
-    criterio_de_separacao: produção com tráfego real (pós DEPLOY_ENABLED
-      + platform ativo)
-    entregaveis_alvo: [deteccao, resposta-a-incidente,
-      postmortem-de-seguranca]
+    status: active
+    entradas: [{ artefato: rate-limit-hits, origem: rate-limit-guard }]
+    entregaveis:
+      - { artefato: deteccao, forma: relatorio-de-abuso-sobre-rate-limit-hits,
+          via: script, status: active }   # ADR 0091, RN-375..378
+      - { artefato: resposta-a-incidente, status: lacuna,
+          motivo: exige tráfego de produção real (pós DEPLOY_ENABLED + platform ativo) }
+      - { artefato: postmortem-de-seguranca, status: lacuna,
+          motivo: exige tráfego de produção real (pós DEPLOY_ENABLED + platform ativo) }
+    saidas: [{ artefato: relatorio-de-abuso, destino: usuario, via: script }]
+    criterio_de_separacao: >
+      Detecção AUTOMÁTICA (alarme sobre tráfego contínuo), resposta a
+      incidente e postmortem continuam exigindo produção com tráfego real
+      (pós DEPLOY_ENABLED + platform ativo) — o script acima só relata,
+      sob demanda, o padrão já coletado em rate_limit_hits.
 
 camada_plataforma:
   - id: area-infra

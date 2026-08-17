@@ -62,9 +62,9 @@ já prescrevia.
 | Gatilho no produto | Papéis que ele ativa/separa |
 |---|---|
 | Gate `implementavel` criado | `qa-estrategia` + `appsec` (segundo momento dos agentes existentes) |
-| Antecipado por decisão do dono do produto (ADR 0089) | `analytics`/`delivery-metricas` viram `active` como script, antes do gatilho orgânico |
+| Antecipado por decisão do dono do produto (ADR 0089/0091) | `analytics`/`delivery-metricas` e o relatório de `secops-runtime` sobre `rate_limit_hits` viram `active` como script, antes do gatilho orgânico |
 | Métricas de produto COMPLETAS viram entrada do PO | resto de `analytics` (o que ADR 0089 não fechou) |
-| `DEPLOY_ENABLED` flipa | `platform` ativa → depois `secops-runtime` |
+| `DEPLOY_ENABLED` flipa | `platform` ativa → depois o resto de `secops-runtime` (detecção automática, resposta a incidente, postmortem) |
 | Anamnese sai do refinamento | gatilho do `staff` volta a ter dono |
 | Projeto gerenciado com UI própria | `ux-designer` separa do Criativo |
 | Volume real de dados | `dbre` separa de Dev Lead/Platform |
@@ -77,10 +77,7 @@ já prescrevia.
 | Lacuna | Onde | Referência |
 |---|---|---|
 | Gate `necessidade-validada` não existe | Criativo → PO | gate novo = ADR |
-| Plano de teste shift-left | QA → Dev Lead | proposto |
-| Threat model no design | SecOps → Dev Lead/Infra | proposto |
 | Delegação Dev Lead → dev | corte declarado | ADR 0053 item 5 |
-| Gate `implementavel` | Dev Lead | proposto |
 | Métricas de produto → PO | loop de negócio | Onda 3/H3 |
 | `deployavel`/`operavel` | Infra/Platform | planned, DEPLOY_ENABLED |
 
