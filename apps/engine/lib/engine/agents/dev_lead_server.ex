@@ -154,15 +154,25 @@ defmodule Engine.Agents.DevLeadServer do
   # `{:user_message, text}` para o pattern match casar aqui primeiro. A
   # resposta HTTP desta rota já é descartada pelo controller do engine para
   # todos os agentes, então `{:reply, :ok, state}` basta.
+  #
+  # `emit` (durável) E `broadcast` (efêmero) — mesmo par que `emit_falha/2`
+  # usa em todo o resto deste arquivo. Só `emit` deixaria quem está com a
+  # aba aberta sem sinal nenhum até o próximo poll do event log.
   @impl true
   def handle_call({:user_message, _text}, _from, %{aguardando_aprovacao: %{}} = state) do
+    origem = "politica"
+
+    mensagem =
+      "Há uma decisão de plano de execução pendente em Aprovações — a " <>
+        "conversa não segue até ela ser decidida."
+
     emit(state, "agent.error", %{
-      origem: "politica",
-      mensagem:
-        "Há uma decisão de plano de execução pendente em Aprovações — a " <>
-          "conversa não segue até ela ser decidida.",
+      origem: origem,
+      mensagem: mensagem,
       reason: "aguardando_aprovacao_de_plano"
     })
+
+    broadcast(state, "agent.error", %{origem: origem, mensagem: mensagem})
 
     {:reply, :ok, state}
   end

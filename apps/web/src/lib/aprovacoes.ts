@@ -247,7 +247,10 @@ const FRASE_DA_ACAO: Record<ActionType, (payload: Payload) => string> = {
         ? ` — ${plural(total, 'agente', 'agentes')} em ${plural(modulos, 'módulo', 'módulos')}`
         : '';
     const porque = resumo ? `: "${curto(resumo)}"` : '';
-    return `Sobe os agentes de execução do plano proposto pelo Dev Lead${quantos}${porque}.`;
+    // Aprovar aqui NÃO sobe agente nenhum — só aceita o plano. Quem sobe é
+    // uma ação separada (ativar execução), depois. Ver o comentário de
+    // `DevLeadTools.classificar/4`.
+    return `Aprova o plano de execução do Dev Lead${quantos}${porque}. Você ainda decide quando ativar a execução.`;
   },
 };
 
