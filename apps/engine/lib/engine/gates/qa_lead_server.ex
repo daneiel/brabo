@@ -21,6 +21,22 @@ defmodule Engine.Gates.QaLeadServer do
   lição do ADR 0020 um nível acima: não há achado sobre o código do dev, e
   fingir que há devolveria pro dev sem nada corrigível e ainda queimaria uma
   correção do teto (RN-015).
+
+  ## `run_design/3` — o segundo MOMENTO (ADR 0090)
+
+  `run/2` (acima) é o caminho de SEMPRE: revisão de PR, estruturalmente
+  amarrada a `DevAgentState.find_by_task_id` (dev agent + worktree já
+  existem). `run_design/3` é um ponto de entrada NOVO e ADITIVO — mesmo
+  processo (`qa-lead`), entregável SEPARADO: o plano de teste de uma STORY,
+  PRE-DEV, sem `task_id` nenhum. Chamado pela ferramenta
+  `assess_implementability` do Dev Lead
+  (`Engine.Agents.DevLeadTools.run_assessment/2`), que não espera aqui —
+  este é `cast`, mesmo estilo de `run/2`. `Engine.Gates.QaEstrategiaAgent`
+  nunca suspende (nenhuma das ferramentas dele passa pelo pipeline de
+  ações), então este caminho não precisa do mecanismo de
+  suspensão/retomada que o resto deste módulo usa — o resultado chega como
+  o evento durável `artifact.plano_de_teste`, e `assess_implementability` o
+  lê na PRÓXIMA chamada.
   """
 
   use GenServer, restart: :temporary
@@ -36,6 +52,8 @@ defmodule Engine.Gates.QaLeadServer do
     Dispatcher,
     GateState,
     QaAutomacaoAgent,
+    QaEstrategiaAgent,
+    QaEstrategiaContext,
     QaLead,
     QaPerformanceSegurancaAgent
   }
@@ -52,6 +70,13 @@ defmodule Engine.Gates.QaLeadServer do
   @doc "Dispara a revisão de QA pra `task_id`."
   def run(project_id, task_id), do: GenServer.cast(via(project_id), {:run, task_id})
 
+  @doc """
+  Dispara a avaliação de QA-estratégia (ADR 0090, segundo momento do
+  qa-lead) pra `story_id` — SEM `task_id`, sem worktree. Ver o moduledoc.
+  """
+  def run_design(project_id, session_id, story_id),
+    do: GenServer.cast(via(project_id), {:run_design, session_id, story_id})
+
   @impl true
   def init(project_id) do
     # Assina pelos SUBAGENTES, não por "qa": `task.action_settled` chega
@@ -67,6 +92,23 @@ defmodule Engine.Gates.QaLeadServer do
     case DevAgentState.find_by_task_id(state.project_id, task_id) do
       nil -> {:noreply, state}
       dev_state -> {:noreply, run_area(state, dev_state, task_id)}
+    end
+  end
+
+  # ADR 0090 — o segundo momento, aditivo: SEM `DevAgentState.find_by_task_id`,
+  # SEM `dev_state`. `QaEstrategiaAgent.run/4` nunca suspende (ver o
+  # moduledoc), então roda síncrono neste `handle_cast` e o resultado vira
+  # evento durável — nada fica "em voo" para o `GateRescuer` neste caminho.
+  @impl true
+  def handle_cast({:run_design, session_id, story_id}, state) do
+    case QaEstrategiaContext.fetch(state.project_id, session_id, story_id) do
+      {:ok, %{story: story, module_map: module_map}} ->
+        QaEstrategiaAgent.run(state.project_id, session_id, story, module_map)
+        {:noreply, state}
+
+      {:error, reason} ->
+        emit_falha_de_contexto(state.project_id, session_id, story_id, reason)
+        {:noreply, state}
     end
   end
 
@@ -449,5 +491,21 @@ defmodule Engine.Gates.QaLeadServer do
 
   defp emit(project_id, session_id, type, payload) do
     ArtifactEmitter.append(project_id, session_id, "qa-lead", type, payload)
+  end
+
+  # Falha ao montar o contexto de QA-estratégia (story inexistente, api
+  # fora) — NUNCA silenciosa (mesma régua de RN-059). `:story_not_found` é
+  # origem `modelo` (o Dev Lead pediu um `storyId` que não existe); o resto
+  # é `infra` (falha de rede/api).
+  defp emit_falha_de_contexto(project_id, session_id, story_id, reason) do
+    origem = if reason == :story_not_found, do: "modelo", else: "infra"
+
+    emit(project_id, session_id, "agent.error", %{
+      origem: origem,
+      mensagem:
+        "não consegui montar o contexto de QA-estratégia para a story #{story_id}: " <>
+          inspect(reason),
+      reason: inspect(reason)
+    })
   end
 end

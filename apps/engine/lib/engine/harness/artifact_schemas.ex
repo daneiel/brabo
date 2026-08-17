@@ -40,7 +40,32 @@ defmodule Engine.Harness.ArtifactSchemas do
     # `parecer_artifact_id` pra referenciar em `delegations` — nunca visto
     # de fora da área (o que a api vê é a PR consolidada, via
     # `open_infra_pr`).
-    "infra_delegation_files" => ["files", "summary"]
+    "infra_delegation_files" => ["files", "summary"],
+    # UX Designer (ADR 0087) — o protótipo navegável que `propose_prototype`
+    # emite. NÃO entra em `@tool_emittable`: é uma ferramenta PRÓPRIA
+    # (`Engine.Agents.UxDesignerTools`), não `emit_artifact`, e reusa este
+    # módulo só pra validação de forma — mesmo mecanismo de `product_brief`,
+    # que também é validável aqui sem ser tool-emittable por `emit_artifact`.
+    "prototipo_navegavel" => ["personas", "jornadas", "prototipo", "resumo"],
+    # ADR 0090 — o entregável da QA-estratégia (segundo MOMENTO do qa-lead,
+    # docs/fluxo.yml): o plano de teste de UMA story, ANTES do dev agent
+    # escrever código. Server-emitted, como `qa_verdict`: emitido por
+    # `Engine.Gates.QaEstrategiaAgent` depois que `emit_plano_de_teste`
+    # termina o laço, nunca por tool call direto de fora do harness.
+    "plano_de_teste" => [
+      "storyId",
+      "planoDeTeste",
+      "criteriosExecutaveis",
+      "estrategiaDeAutomacao"
+    ],
+    # RN-360 (docs/fluxo.yml `id: appsec`, ADR 0090) — threat model de
+    # DESIGN, server-emitted por `Engine.Gates.SecOpsAgentServer.run_design/2`
+    # depois que `Engine.Gates.AppSecAgent` termina o laço com
+    # `emit_threat_model`. `riscos` fica de fora das obrigatórias: lista
+    # vazia é resposta válida (nem toda story carrega risco residual) e a
+    # ferramenta já garante que a CHAVE existe — não há "esquecido" pra
+    # distinguir de "nenhum".
+    "threat_model" => ["storyId", "threatModel", "requisitosDeSeguranca"]
   }
 
   # Pareceres de gate. Os vereditos possíveis são os mesmos da máquina de
@@ -122,7 +147,37 @@ defmodule Engine.Harness.ArtifactSchemas do
     end
   end
 
+  # O protótipo do UX Designer: personas e jornadas não-vazias (mesma régua
+  # de `business_rule.origin` — um artefato sem conteúdo não vale registrar),
+  # e o `prototipo` precisa ter ao menos UMA tela, senão não há o que o PO ou
+  # o Dev Lead consultem.
+  defp check_extra("prototipo_navegavel", payload) do
+    with :ok <- lista_nao_vazia(payload, "personas"),
+         :ok <- lista_nao_vazia(payload, "jornadas") do
+      validar_telas(Map.get(payload, "prototipo"))
+    end
+  end
+
+  # Mesma lição do `infra_delegation_files`: um plano sem NENHUM critério
+  # executável não é plano — nunca deixar "vazio" passar por "concluído".
+  defp check_extra("plano_de_teste", payload) do
+    case Map.get(payload, "criteriosExecutaveis") do
+      criterios when is_list(criterios) and criterios != [] -> :ok
+      _ -> {:error, :criterios_vazios}
+    end
+  end
+
   defp check_extra(_type, _payload), do: :ok
+
+  defp lista_nao_vazia(payload, chave) do
+    case Map.get(payload, chave) do
+      lista when is_list(lista) and lista != [] -> :ok
+      _ -> {:error, {:lista_vazia, chave}}
+    end
+  end
+
+  defp validar_telas(%{"telas" => telas}) when is_list(telas) and telas != [], do: :ok
+  defp validar_telas(_), do: {:error, :prototipo_sem_telas}
 
   defp check_gate_subject(payload) do
     case Enum.filter(@gate_subject_keys, &Map.has_key?(payload, &1)) do

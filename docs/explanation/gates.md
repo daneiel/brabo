@@ -130,6 +130,28 @@ O terceiro achado veio da primeira execução do medidor: o filtro de
 o gate aparecia como "nunca passou" num banco onde ele tinha passado horas
 antes. Um registro que ninguém roda é um registro que mente.
 
+## Ativar um gate `planned` é o mesmo trabalho de qualquer outro
+
+`implementavel` (dono `dev-lead`) nasceu `planned` na FASE 14d, junto com o
+resto do organograma-alvo que `docs/gates.yml`/`docs/fluxo.yml` já
+descreviam sem código por trás. O [ADR 0090](../adr/0090-qa-estrategia-e-appsec-segundo-momento.md)
+o ativou — e o exercício vale de exemplo porque **nada no registro em si
+mudou de forma**: `status: planned → active` mais o bloco `evidencia`
+(apontando para `proposed_action.created` filtrado por
+`actionType: assess_implementability`) são as ÚNICAS duas linhas que um
+gate `warn` precisa ganhar para deixar de ser aspiração. `severidade`
+continua `warn` — o comentário no arquivo já dizia "nasce warn mesmo
+quando ativar", e ativar não é a mesma decisão que promover para `block`
+(essa exigiria medir passagens reais primeiro, mesma disciplina da FASE 15a).
+
+O trabalho de verdade fica do lado de fora do arquivo: o Dev Lead precisou
+de uma ferramenta nova (`assess_implementability`) que propõe o parecer
+como `proposed_action`, e a QA-estratégia — até então papel `proposto` em
+`docs/fluxo.yml`, com o critério de separação já escrito lá ("pode ser o
+próprio qa-lead em segundo momento") — precisou existir para alimentar o
+parecer com um plano de teste de verdade. O registro só passou a descrever
+o que o código agora faz.
+
 ## Consumo: a tela deriva, não repete
 
 A esteira de PR no painel — Dev → QA → SecOps → Você — era uma lista escrita no
