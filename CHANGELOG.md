@@ -96,6 +96,15 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   conversa com o Dev Lead PAUSA: é a primeira vez que um agente
   conversacional suspende esperando aprovação humana no meio do turno
   síncrono (RN-284, ADR 0086)
+- **api**: `pnpm --filter api relatorio:seguranca-runtime` — o papel
+  `secops-runtime` (`docs/fluxo.yml`) antecipado como SCRIPT, não agente,
+  sobre o dado que o `RateLimitGuard` já coleta hoje (`rate_limit_hits`):
+  ranking de baldes (usuário/IP) com mais hits e distribuição temporal dos
+  picos, com a janela de retenção (curta, poucos minutos) sempre declarada.
+  Detecção automática de incidente, resposta a incidente e postmortem de
+  segurança seguem FORA — dependem de tráfego de produção real, que não
+  existe — e o relatório lista essa lacuna, sem simular incidente de
+  exemplo (RN-375..377, ADR 0091)
 
 ### Correções
 

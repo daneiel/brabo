@@ -7823,6 +7823,60 @@ comportamento bater com o que `docs/fluxo.yml` já declarava.
 
 ---
 
+## `secops-runtime` — relatório de abuso sobre `rate_limit_hits` (RN-375..377, ADR 0091)
+
+Decisão consciente do dono do produto de antecipar o papel `secops-runtime`
+(`docs/fluxo.yml`, `camada_seguranca`), que nasceu `proposto` com o critério
+de separação "produção com tráfego real (pós `DEPLOY_ENABLED` + `platform`
+ativo)". Esse gatilho não disparou — não há tráfego de produção. O que existe
+hoje é `rate_limit_hits` (`RateLimitGuard`, ADR 0027): uma linha por request
+contado, gravada mesmo sob tráfego de dev/CI. `secops-runtime` entra como
+SCRIPT (`pnpm --filter api relatorio:seguranca-runtime`), não agente LLM nem
+`GenServer` — não há decisão a tomar, só dado a agregar.
+
+### RN-375 — O relatório declara a janela, nunca finge um histórico maior {#rn-375}
+
+`DomainGaugesCollector.pruneRateLimit`
+(`apps/api/src/infrastructure/observability/domain-gauges.collector.ts:177-186`)
+apaga hits mais velhos que `2 × RATE_LIMIT_WINDOW_MS` (240s com o default de
+60s), a cada `METRICS_GAUGE_INTERVAL_MS` (15s por padrão) — a tabela nunca
+guarda mais que uns poucos minutos. `relatorio-seguranca-runtime.ts` imprime
+DUAS janelas, nunca uma só: a CONFIGURADA (o teto teórico da poda) e a
+OBSERVADA (o que os dados efetivamente cobrem, do primeiro ao último
+`occurred_at` lido). Quando as duas coincidem, o relatório diz explicitamente
+que é sinal de poda — hits mais antigos podem ter existido e já foram
+apagados — nunca "não houve mais hits que isso".
+
+### RN-376 — O ranking trabalha só com o que `bucket_key` guarda: balde e quando {#rn-376}
+
+`RateLimitGuard.registrarEContar`
+(`apps/api/src/interfaces/http/shared/rate-limit.guard.ts:150-170`) grava só
+`bucket_key` (`user:<uuid>` ou `ip:<endereço>`) e `occurred_at` — NÃO há
+rota, método HTTP nem motivo do bloqueio. `rankingDeBaldes` e
+`interpretarBalde` (`apps/api/scripts/relatorio-seguranca-runtime.ts`)
+classificam por esses dois campos e só eles; um `bucket_key` fora do formato
+`user:`/`ip:` cai em `desconhecido` em vez de estourar, para o script não
+quebrar se um `RateLimitGuard` futuro gravar outro formato. Pedir "ranking de
+IP por rota" seria inventar dimensão que a tabela nunca guardou.
+
+### RN-377 — A seção "não medido" é permanente, e cita as três lacunas por nome {#rn-377}
+
+`montarRelatorio` sempre inclui `naoMedido`: detecção automática de
+incidente, resposta a incidente e postmortem de segurança. As três dependem
+do mesmo gatilho que `docs/fluxo.yml` já declarava para `secops-runtime` —
+tráfego de produção real — e nenhuma delas é simulada com incidente de
+exemplo nem número inventado (mesmo princípio dos ADRs 0041/0042/0077: sem o
+dado real, a lacuna fica visível em vez de fingida). A seção só sai da lista
+quando o produto tiver tráfego real para medir contra ela — não é um TODO a
+apagar na próxima limpeza.
+
+- **Onde:** `apps/api/scripts/relatorio-seguranca-runtime.ts`,
+  `apps/api/package.json` (`relatorio:seguranca-runtime`)
+- **Teste:** `apps/api/test/scripts/relatorio-seguranca-runtime.spec.ts`
+- **ADR:** [0091](adr/0091-secops-runtime-relatorio-de-abuso.md)
+
+---
+
 ## Quando dá errado
 
 | situação | o que o sistema faz |

@@ -55,7 +55,7 @@ se materializa quando o artefato dele já circula, nunca antes.
 |---|---|
 | Gate `implementavel` criado | `qa-estrategia` + `appsec` (segundo momento dos agentes existentes) |
 | Métricas de produto viram entrada do PO | `analytics` separa do `medicao` |
-| `DEPLOY_ENABLED` flipa | `platform` ativa → depois `secops-runtime` |
+| `DEPLOY_ENABLED` flipa | `platform` ativa → depois o resto de `secops-runtime` (detecção automática, resposta a incidente, postmortem — o relatório sobre `rate_limit_hits` já é `active`, antecipado pelo ADR 0091) |
 | Anamnese sai do refinamento | gatilho do `staff` volta a ter dono |
 | Projeto gerenciado com UI própria | `ux-designer` separa do Criativo |
 | Volume real de dados | `dbre` separa de Dev Lead/Platform |

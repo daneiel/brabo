@@ -1184,6 +1184,28 @@ sozinho. Fechar isto exigiria o mesmo mecanismo de persistência do ADR
 0052; fora do escopo desta correção, que só alinha o comportamento ao que
 `docs/fluxo.yml` já declarava.
 
+## `secops-runtime` como script de relatório (RN-375..377, ADR 0091)
+Antecipação decidida do dono do produto do papel `secops-runtime`
+(`docs/fluxo.yml`, `camada_seguranca`, antes `proposto`), sem esperar o
+gatilho declarado ("produção com tráfego real, pós `DEPLOY_ENABLED` +
+`platform` ativo"). Só o que o gatilho NÃO exige entra: `pnpm --filter api
+relatorio:seguranca-runtime` lê `rate_limit_hits` — o dado que o
+`RateLimitGuard` do ADR 0027 já grava, inclusive sob tráfego de dev/CI — e
+produz ranking de baldes (`user:<uuid>`/`ip:<endereço>`, os dois únicos
+formatos gravados; sem rota nem motivo, que a tabela nunca guardou) e
+distribuição temporal em fatias fixas. É SCRIPT, não agente LLM nem
+`GenServer`: não há decisão a tomar sobre o dado, só agregação.
+
+Detecção automática de incidente, resposta a incidente e postmortem de
+segurança continuam FORA — dependem do mesmo gatilho que não disparou — e
+o relatório os lista numa seção "não medido" PERMANENTE, sem simular
+incidente de exemplo nem inventar número (mesmo princípio dos ADRs
+0041/0042/0077). A janela retida é curta por desenho
+(`DomainGaugesCollector.pruneRateLimit` apaga hits com mais de
+`2 × RATE_LIMIT_WINDOW_MS`, 240s por padrão), e o relatório declara as duas
+janelas — CONFIGURADA e OBSERVADA — nunca deixando a segunda passar por um
+histórico maior do que é.
+
 ## FERRAMENTA DE DESENVOLVIMENTO — `pnpm bootstrap`
 Menu de terminal em `scripts/dev/bootstrap.sh` agrupando o que se faz no
 dia a dia: Docker, K8s, Database e Test. Existe porque esses comandos moram
