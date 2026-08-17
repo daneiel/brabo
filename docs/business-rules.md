@@ -7823,6 +7823,321 @@ comportamento bater com o que `docs/fluxo.yml` já declarava.
 
 ---
 
+## UX Designer — o quinto agente conversacional (RN-285..287, ADR 0087)
+
+Não é gatilho de separação disparado (`docs/fluxo.yml` sempre declarou "quando
+o projeto GERENCIADO tiver interface própria a desenhar" como critério) — é
+decisão consciente do dono do produto de antecipar o papel. `teste-de-
+usabilidade` (exige usuário humano real) fica fora de alcance; `metricas-de-
+uso` segue lacuna, porque depende do papel `analytics`, que continua
+`proposto`.
+
+### RN-285 — O UX Designer é conversacional SOLO, sem área {#rn-285}
+
+`Engine.Agents.UxDesignerServer` (`apps/engine/lib/engine/agents/ux_designer_server.ex:40`)
+espelha `Engine.Agents.ArquitetoServer`/`DevLeadServer`: GenServer por sessão,
+laço bounded de tool use próprio com teto 14 (mesmo calibre de Arquiteto/Dev
+Lead — agente de raciocínio, não conversação leve como Criativo/PO). Ativado
+por handoff `accepted` endereçado a "ux-designer" — mecanismo GENÉRICO já
+existente (`ActivateAgentUseCase`/`canActivateAgent` na api não ganharam
+linha nenhuma: qualquer agente com handoff aceito já é ativável).
+
+O kickoff (`build_kickoff/1`, `ux_designer_server.ex:222`) lê a
+`artifact.product_brief` mais recente da sessão — a MESMA "necessidade de
+negócio" que o Criativo produz, sem artefato novo. O sistema de design
+(`design/tokens.css`, `design/COMPONENTS.md`) é DESCRITO na identidade
+(`Engine.Harness.Agents`, entrada `"ux-designer"`), texto estático, porque os
+agentes conversacionais não têm ferramenta de leitura de arquivo do repo — é
+a única camada do prompt presente em TODO turno, não só no kickoff.
+
+Sem área, sem subagentes: `docs/fluxo.yml` já classificava o papel como
+`camada_produto`, ao lado de Criativo e PO, nenhum dos quais tem área.
+
+### RN-286 — `propose_prototype` grava artefato sem tabela e sem caso de uso dedicado, e oferece DOIS handoffs sobre o MESMO artefato {#rn-286}
+
+`artifact.prototipo_navegavel` segue o desenho sem tabela de
+`artifact.project_image`/`artifact.c4_diagram` ([RN-149](#rn-149)) — o event
+log é o registro —, mas por um caminho DIFERENTE do que os dois usam.
+`choose_project_image`/`create_c4_diagram` precisam de caso de uso NA API
+(`DecidirImagemDoProjetoUseCase`/`CreateC4DiagramUseCase`) porque têm
+conteúdo DERIVADO de outro artefato (o Container level vem do `module_map`
+vigente) ou recusa de domínio compartilhada por mais de um consumidor (teto
+de recursos da imagem). `propose_prototype`
+(`Engine.Agents.UxDesignerTools.run/2`,
+`apps/engine/lib/engine/agents/ux_designer_tools.ex:122`) não tem nenhum dos
+dois motivos — é conteúdo AUTOCONTIDO que só o próprio UX Designer escreve e
+só ele lê de volta —, então a validação de FORMA mora no engine
+(`Engine.Harness.ArtifactSchemas`, tipo `"prototipo_navegavel"`,
+`artifact_schemas.ex:49/135` — personas e jornadas não-vazias, ao menos uma
+tela) e a gravação usa o caminho GENÉRICO que a api já expõe para qualquer
+tipo de evento (`EngineApiClient.append_event_returning/3`), o mesmo
+mecanismo do `artifact.product_brief` do Criativo. Nenhuma rota nova na api.
+
+Depois de gravar, `gravar_e_ofertar_handoffs/2` (`ux_designer_tools.ex:149`)
+oferece DOIS handoffs sobre o MESMO artefato — `create_handoff` para "po" e
+para "dev-lead", os dois com o `artifactId` do protótipo. Nunca um segundo
+artefato para "spec-visual" (`docs/fluxo.yml`): o PO lê `resumo`/`prototipo`
+para desenhar o backlog, o Dev Lead lê as MESMAS `telas`/`anotacoes` como
+referência visual de implementação — duplicar o conteúdo arriscaria as duas
+cópias divergirem na revisão seguinte, o mesmo argumento por trás do C4 não
+redigitar o `module_map`.
+
+Falha ao ofertar UM dos dois handoffs não desfaz o artefato já gravado nem o
+outro handoff (RN-116) — o motivo volta como texto do tool-result, entrada do
+laço e não fim de linha (RN-163): o modelo lê e pode reportar ao usuário na
+resposta seguinte.
+
+Um `propose_prototype` BEM-SUCEDIDO encerra o turno
+(`ux_designer_server.ex:120`, mesma guarda de `propose_execution_plan` no Dev
+Lead) — sem isso o laço voltaria ao modelo, que poderia propor de novo e
+produzir dois protótipos com o mesmo total. Só existe UMA ferramenta aqui
+(não há um segundo tool call a encadear como no Arquiteto), então "para no
+primeiro sucesso" não perde nada.
+
+### RN-287 — `uxDesignerActive` no roster, nas DUAS fontes (RN-090) {#rn-287}
+
+Mesmo critério de `infraActive`: handoff `accepted` endereçado a
+"ux-designer" na sessão. `apps/web/src/lib/agent-status.ts`
+(`rosterFactsFromEvents`/`rosterFromFacts`) ganhou o fato e o empurra
+condicionalmente no roster como agente SOLO — sem `pushAreaMembers`
+correspondente, porque ele não é área.
+
+A RN-090 exige as DUAS fontes em sincronia (painel do time via event log; o
+card do dashboard via `ProjectCardSummary.roster`, computado na api) para que
+um agente novo não apareça num lugar e falte no outro. O fato entrou nas
+duas: `apps/api/src/infrastructure/persistence/drizzle/projects-summary.repository.ts`
+amplia a MESMA consulta de `infraActive` (um `inArray(handoffs.toAgent,
+['infra', 'ux-designer'])` no lugar do `eq` único, partido em dois `Set` por
+`toAgent`) — nenhuma consulta nova, a contagem de doze consultas constantes
+que `projects-summary.repository.spec.ts` prova não cresce.
+
+- **Onde:** `apps/engine/lib/engine/agents/ux_designer_server.ex`,
+  `ux_designer_tools.ex`, `ux_designer_supervisor.ex`;
+  `apps/engine/lib/engine/harness/agents.ex` (identidade),
+  `artifact_schemas.ex` (tipo `prototipo_navegavel`);
+  `apps/engine/lib/engine/application.ex`;
+  `apps/engine/lib/engine_web/controllers/agent_command_controller.ex`;
+  `apps/web/src/lib/agents.ts`, `agent-status.ts`;
+  `apps/api/src/application/ports/projects-summary-repository.port.ts`,
+  `apps/api/src/infrastructure/persistence/drizzle/projects-summary.repository.ts`
+- **Teste:** `apps/engine/test/engine/agents/ux_designer_server_test.exs`,
+  `ux_designer_tools_test.exs`; `apps/web/src/lib/agent-status.test.ts`;
+  `apps/api/test/infrastructure/persistence/drizzle/projects-summary.repository.spec.ts`
+  (describe com os dois `toAgent` na mesma sessão)
+- **ADR:** [0087](adr/0087-ux-designer-agente.md)
+
+---
+
+## Staff: código pronto, dormente para disparo automático (RN-305/RN-306, ADR 0088)
+Não é fase planejada: `docs/fluxo.yml` declara o Staff/Principal Engineer como
+`status: planned` desde o ADR 0085 ("contrato pronto, ativação decidida,
+aguarda gatilho"). O dono do produto decidiu antecipar o CÓDIGO mesmo sabendo
+que o gatilho automático (a Anamnese notando um problema sistêmico
+RECORRENTE) não vai disparar — a Anamnese está pausada
+(`ANAMNESE_ENABLED=false`, decisão de produto de 2026-08-10). Ver a
+pendência já documentada em RN-086: o mesmo sinal que faria a Anamnese
+propor subir o teto de paralelismo é o que faria ela propor um handoff ao
+Staff, e nenhum dos dois dispara enquanto ela estiver pausada.
+
+### RN-305 — O Staff ativa pelo caminho GENÉRICO de handoff, sem `USER_STARTED_AGENTS`, e sem `kickoff/1`
+
+`USER_STARTED_AGENTS` (`apps/api/src/domain/sessions/agent-activation.ts`) é
+a exceção do Criativo (inicia SEM handoff, por comando do usuário) — o Staff
+NÃO entra nela. Investigação confirmou que `canActivateAgent` já ativa
+qualquer agente com handoff `accepted` endereçado a ele, o mesmo caminho que
+já vale para `dev-lead`/`arquiteto`/`infra`; e `assertHandoffTargetAllowed`
+(`apps/api/src/domain/agents/agent-areas.ts`) só recusa handoff endereçado a
+SUBAGENTE de área — o Staff não tem área, então nenhuma mudança de domínio
+na api foi necessária. "Acionável manualmente" significa que a MECÂNICA de
+domínio permite (qualquer agente pode chamar
+`EngineApiClient.create_handoff(..., "staff", ...)`, e um humano aceita pela
+rota já existente), não que existe hoje uma tela dedicada para escolher
+"endereçar handoff ao Staff" — a UI genérica de handoff a agente à escolha
+segue no backlog (`docs/explanation/backlog.md`), como já estava antes desta
+mudança.
+
+`Engine.Agents.StaffServer` (`apps/engine/lib/engine/agents/staff_server.ex`)
+é o quinto agente conversacional solo (junto de Criativo, PO, Arquiteto, Dev
+Lead), espelhando o Arquiteto — `GenServer` por sessão, rehydration do event
+log, laço bounded de tool use com teto 14 (`staff_server.ex:49`) — mas **sem
+`kickoff/1`**: os outros leads sintetizam uma instrução de abertura a partir
+de um artefato anterior no event log da sessão (product_brief, module_map,
+backlog); o Staff não tem essa fonte, porque o problema sistêmico nasce de
+fora da sessão. `StaffSupervisor.start_agent/2` sobe o processo (rehidrata o
+histórico) e ele fica ocioso até a primeira `user_message`
+(`staff_server.ex:60`) — que é como quem endereçou o handoff explica o
+problema. `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:60`
+(cláusula `start/2` de `"staff"`) nunca chama `kickoff` (a função nem
+existe), ao contrário de po/arquiteto/dev-lead/infra.
+
+- **Onde:** `apps/api/src/domain/sessions/agent-activation.ts`
+  (`canActivateAgent`, `USER_STARTED_AGENTS` — intocado),
+  `apps/api/src/domain/agents/agent-areas.ts`
+  (`assertHandoffTargetAllowed` — intocado),
+  `apps/engine/lib/engine/agents/staff_server.ex`,
+  `staff_supervisor.ex`,
+  `apps/engine/lib/engine_web/controllers/agent_command_controller.ex`
+  (cláusulas `start/2`/`message/2`/`via_for/2` de `"staff"`),
+  `apps/engine/lib/engine/application.ex` (`Engine.Agents.StaffSupervisor`
+  na árvore de supervisão)
+- **Teste:** `apps/engine/test/engine/agents/staff_server_test.exs`
+  (rehydration, ausência de kickoff automático — o turno só roda por
+  `user_message`)
+- **ADR:** [0088](adr/0088-staff-agente-dormente-para-disparo-automatico.md)
+
+### RN-306 — `propose_rfc` grava o artefato DIRETO e devolve o handoff no MESMO tool call, sem `proposed_action`
+
+`Engine.Agents.StaffTools.propose_rfc`
+(`apps/engine/lib/engine/agents/staff_tools.ex:41`) é a única ferramenta do
+Staff: problema, opções com trade-offs, recomendação e o escopo de uma PoC
+DESCARTÁVEL (`descartavel: true` é FIXO — nunca escrito pelo modelo). `run/2`
+(`staff_tools.ex:89`) grava `artifact.rfc_staff` via
+`EngineApiClient.append_event_returning/3` — mesmo padrão SEM tabela e SEM
+caso de uso dedicado de `Engine.Harness.Tools.EmitInsight` (o `emit_insight`
+do Arquiteto), e não o de `artifact.c4_diagram` (ADR 0068), que tem caso de
+uso próprio na api porque DERIVA o nível Container do `module_map` vigente —
+o RFC não deriva nada do lado de lá, todo o payload vem do tool call.
+
+Depois de gravar, o MESMO `run/2` chama
+`EngineApiClient.create_handoff(..., "staff", "arquiteto", artifact_id)` —
+sem confirmação humana no meio, mesmo padrão de
+`CriativoServer.executar_confirm_readiness/1` emitindo o product_brief e
+oferecendo o handoff ao PO na mesma resposta. `propose_rfc` NÃO é
+`proposed_action`: registrar um documento de arquitetura não é efeito
+externo (não é git, terminal, nem gasto de agente) — a decisão real
+(adotar, adaptar, recusar a recomendação) é do Arquiteto, no handoff que a
+ferramenta já devolve. Falha ao criar o handoff NÃO derruba o processo nem
+perde o RFC já gravado (RN-116) — o motivo entra no tool-result, e o modelo
+sabe que precisa tentar de novo só o handoff, não reescrever o RFC.
+
+- **Onde:** `apps/engine/lib/engine/agents/staff_tools.ex`
+- **Teste:** `apps/engine/test/engine/agents/staff_server_test.exs`
+  ("propõe o RFC, grava o artefato e devolve o handoff ao arquiteto";
+  "propose_rfc com opções vazias vira tool-result de erro"; "falha ao
+  devolver o handoff ao arquiteto NÃO derruba o processo")
+- **ADR:** [0088](adr/0088-staff-agente-dormente-para-disparo-automatico.md)
+
+**Declarado, não escondido**: a roster do painel do time
+(`apps/web/src/lib/agent-status.ts`, `staffActive`) e o card do dashboard
+(`ProjectCardSummary.roster`, `apps/api/.../projects-summary.repository.ts`)
+mostram o Staff quando ativo, mesmo critério de `infraActive` — evitando a
+divergência que o comentário de `RosterFacts` já alertava. `SessionPage.tsx`
+NÃO foi tocado: `staff` fica fora de `AGENTES_DE_CHAT`, o mesmo padrão já
+aceito para `infra` (um lead REAL e ATIVO também fora dessa lista — o
+handoff para ele "nunca é aceito por AQUI", conforme o comentário do próprio
+arquivo). O caminho ponta a ponta de uso hoje é a rota interna
+(`POST .../agent/message`, `agent: "staff"`), não a tela de Sessão.
+
+---
+
+## O gate `implementavel` ativa — QA-estratégia como segundo momento do qa-lead (RN-340/341, ADR 0090)
+
+### RN-340 — O gate `implementavel` decide a story ANTES do dev agent escrever código {#rn-340}
+
+`docs/gates.yml` declarava o gate `implementavel` (dono `dev-lead`) desde a
+FASE 14d com `status: planned` — nunca ativado. O [ADR 0090](adr/0090-qa-estrategia-e-appsec-segundo-momento.md)
+ativa: a ferramenta `assess_implementability` do Dev Lead propõe o **parecer
+de implementabilidade** de uma story (`implementavel`/`inviavel` +
+justificativa) como `proposed_action`, MESMO padrão de
+`propose_execution_plan` ([RN-284](#rn-284)) — três desfechos
+(`{:ok, texto} | {:pending, action_id} | {:error, texto}`), papel mínimo
+`maintainer` em `decide.ts`, e DELIBERADAMENTE fora do bloco de tetos
+absolutos (é decisão inicial, não ultrapassagem de teto).
+
+**O parecer depende do plano de teste, que é um PRÉ-REQUISITO, não um
+argumento.** `run_assessment/2` lê o `artifact.plano_de_teste` mais recente
+da story no HISTÓRICO da própria sessão do Dev Lead (emitido pela
+QA-estratégia, [RN-341](#rn-341)):
+
+1. **Sem plano ainda** — dispara `Engine.Gates.Dispatcher.run_qa_estrategia/3`
+   (mesma indireção trocável em teste que `run_qa/2`/`run_secops/2` já usam)
+   e devolve `{:error, texto}` pedindo para tentar de novo em instantes. Erro
+   de ferramenta é ENTRADA do laço, não fim de linha ([RN-163](#rn-163)): o
+   Dev Lead tem teto de 14 iterações para tentar de novo. A janela de espera
+   é aceita e declarada — a QA-estratégia roda em processo separado
+   (`qa-lead`), e um `run/2` síncrono não pode bloquear esperando o
+   resultado sem acoplar os dois processos.
+2. **Com plano** — monta o parecer com o plano de teste EMBUTIDO no payload
+   (síntese e critérios executáveis), para o usuário decidir sem precisar
+   abrir dois eventos, e propõe a ação.
+
+- **Onde:** `apps/engine/lib/engine/agents/dev_lead_tools.ex`
+  (`run_assessment/2`, `spec_assess_implementability/0`),
+  `dev_lead_server.ex` (`run_tool/3`); `apps/engine/lib/engine/gates/dispatcher.ex`
+  (`run_qa_estrategia/3`); `apps/api/src/domain/actions/decide.ts`
+  (`assess_implementability`); `docs/gates.yml` (`implementavel`,
+  `status: active`)
+- **Teste:** `apps/engine/test/engine/agents/dev_lead_tools_test.exs`
+  (describe "assess_implementability"), `dev_lead_server_test.exs`
+  (describe "suspensão em aprovação" — os dois testes novos),
+  `apps/api/test/domain/actions/decide.spec.ts` (describe "parecer de
+  implementabilidade do Dev Lead")
+- **Origem:** [ADR 0090](adr/0090-qa-estrategia-e-appsec-segundo-momento.md)
+
+### RN-341 — A QA-estratégia é o segundo MOMENTO do qa-lead, e nunca suspende {#rn-341}
+
+`docs/fluxo.yml` declarava o papel `qa-estrategia` como `proposto`, com o
+critério de separação escrito no próprio registro: "pode ser o próprio
+qa-lead em segundo MOMENTO, não necessariamente agente novo — a separação é
+de entregável". O [ADR 0090](adr/0090-qa-estrategia-e-appsec-segundo-momento.md)
+constrói exatamente isso: `Engine.Gates.QaEstrategiaAgent` é módulo SEM
+ESTADO (não é `GenServer`), acionado por `Engine.Gates.QaLeadServer.run_design/3`
+— um ponto de entrada NOVO e ADITIVO no MESMO processo `qa-lead`, sem tocar
+`run/2` (o caminho de sempre, revisão de PR, amarrado a
+`DevAgentState.find_by_task_id`).
+
+**O contexto é LEVE, e é aí que a separação de entregável aparece.**
+`Engine.Gates.QaEstrategiaContext.fetch/3` busca SÓ story (de
+`EngineApiClient.list_backlog/1`, a árvore que o PO já lê — [RN-164](#rn-164))
+e `module_map` vigente (de `EngineApiClient.get_infra_context/2`, o MESMO
+`GetInfraContextUseCase` que o Infra Lead consome, aqui só pelo campo
+`moduleMap`) — SEM `dev_state`, SEM `worktree_path`: o gate `implementavel`
+roda PRE-DEV, antes de existir dev agent, worktree ou `task_id`. Nenhuma
+rota nova na api — as duas funções já existiam.
+
+**Nunca suspende.** O registro de ferramentas (`ReadFile`, `SearchWorkspace`,
+`EmitPlanoDeTeste`) não inclui `terminal` nem `write_file` — as DUAS únicas
+tools que `Engine.Harness.Hooks.ActionPipeline` intercepta para criar
+`proposed_action`. Sem chamada nenhuma passando pelo pipeline de ações, o
+`ToolLoop` deste agente nunca produz `:pending`, e `run_design/3` roda
+SÍNCRONO dentro do próprio `handle_cast` — sem mecanismo de
+suspensão/retomada, ao contrário do resto da área de QA.
+
+**O teto de iterações fica em 8 (conversacional), não 60 (gate) — de
+propósito, não lacuna.** Este agente roda SEM `token_budget_micros` — não há
+task nem budget de task ainda. O critério da [RN-085](#rn-085) não é "quem
+trabalha muito": é "o que segura o gasto além do teto de iterações". Sem
+budget por baixo, subir o teto multiplicaria o pior caso sem nada para
+conter — a MESMA razão pela qual `infra-workflows` fica em 8 mesmo usando
+ferramenta. `"qa-estrategia"` NÃO ganhou cláusula própria em
+`Engine.Harness.Iteracoes.tipo/1`: cair no default é a decisão certa.
+
+O entregável — `emit_plano_de_teste` (síntese, critérios executáveis
+verificáveis, estratégia de automação GENÉRICA e sem framework — decisão de
+escopo desta frente, na `spec/0` que o modelo lê, não uma validação em
+código) — vira o artefato `artifact.plano_de_teste`
+(`ArtifactEmitter.emit/5`, schema validado, `criteriosExecutaveis` não pode
+ser vazio), no event log da MESMA sessão que chamou `run_design/3` — é lá
+que `assess_implementability` ([RN-340](#rn-340)) o lê depois. Falha
+(limite de iterações, orçamento, modelo que para sem emitir) NUNCA é
+silenciosa: `agent.error` durável com origem, mesma régua da
+[RN-059](#rn-059).
+
+- **Onde:** `apps/engine/lib/engine/gates/qa_estrategia_agent.ex`,
+  `qa_estrategia_context.ex`, `qa_lead_server.ex` (`run_design/3`),
+  `tools/emit_plano_de_teste.ex`, `hooks/termination_plano_de_teste.ex`;
+  `apps/engine/lib/engine/harness/artifact_schemas.ex` (`plano_de_teste`);
+  `apps/engine/lib/engine/harness/iteracoes.ex` (SEM cláusula nova, ver
+  acima); `docs/fluxo.yml` (`qa-estrategia`, `status: active`)
+- **Teste:** `apps/engine/test/engine/gates/qa_estrategia_agent_test.exs`,
+  `qa_estrategia_context_test.exs`, `qa_lead_server_test.exs` (describe
+  "run_design"), `apps/engine/test/engine/harness/artifact_schemas_test.exs`
+  (describe "plano_de_teste"), `iteracoes_test.exs` ("qa-estrategia é
+  conversacional DE PROPÓSITO")
+- **Origem:** [ADR 0090](adr/0090-qa-estrategia-e-appsec-segundo-momento.md)
+
+---
+
 ## O appsec ganha o segundo momento do secops (RN-360/361, ADR 0090)
 
 `docs/fluxo.yml` já declarava o `id: appsec` como `proposto`, com o critério
@@ -7893,10 +8208,7 @@ intocados).
   `apps/engine/test/engine/gates/appsec_context_builder_test.exs`,
   `apps/engine/test/engine/gates/secops_agent_server_test.exs` (os três
   testes de `run_design`)
-- **ADR:** 0090 — escrito pela frente `qa-estrategia`, cobrindo os dois
-  papéis (appsec e o gate `implementavel` do QA) no mesmo documento
-  conceitual; referência de número, arquivo pode não existir ainda neste
-  branch até o merge das duas frentes convergir
+- **Origem:** [ADR 0090](adr/0090-qa-estrategia-e-appsec-segundo-momento.md)
 
 ### RN-361 — O threat model concluído cria TRÊS handoffs, sempre endereçando o LEAD {#rn-361}
 
@@ -7918,7 +8230,7 @@ já criados não são desfeitos.
 - **Teste:** `apps/engine/test/engine/gates/secops_agent_server_test.exs`
   ("run_design: threat model concluído emite artifact.threat_model e cria
   os TRÊS handoffs")
-- **ADR:** 0090 (mesma referência da RN-360)
+- **Origem:** [ADR 0090](adr/0090-qa-estrategia-e-appsec-segundo-momento.md)
 
 ---
 

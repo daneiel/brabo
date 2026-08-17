@@ -11661,7 +11661,8 @@
               "instruction_patch",
               "parallelize",
               "raise_max_parallel",
-              "propose_execution_plan"
+              "propose_execution_plan",
+              "assess_implementability"
             ],
             "example": "terminal"
           },
@@ -15158,7 +15159,8 @@
               "instruction_patch",
               "parallelize",
               "raise_max_parallel",
-              "propose_execution_plan"
+              "propose_execution_plan",
+              "assess_implementability"
             ],
             "example": "terminal",
             "description": "Tipo da ação. Cada tipo tem papel mínimo próprio: `git_push`, `git_merge` e `git_branch_protect` exigem `maintainer`, o resto `developer`."
@@ -15225,7 +15227,8 @@
               "instruction_patch",
               "parallelize",
               "raise_max_parallel",
-              "propose_execution_plan"
+              "propose_execution_plan",
+              "assess_implementability"
             ],
             "example": "terminal",
             "description": "O que a ação faria. `git_push` e `git_merge` exigem `maintainer`."
@@ -16473,6 +16476,16 @@
             "type": "boolean",
             "example": false,
             "description": "Existe handoff `accepted` para `infra` na sessão mais recente."
+          },
+          "uxDesignerActive": {
+            "type": "boolean",
+            "example": false,
+            "description": "Existe handoff `accepted` para `ux-designer` na sessão mais recente (ADR 0087)."
+          },
+          "staffActive": {
+            "type": "boolean",
+            "example": false,
+            "description": "Existe handoff `accepted` para `staff` na sessão mais recente (docs/fluxo.yml, ADR 0088) — dormente para disparo automático, só reflete ativação MANUAL já aceita."
           }
         },
         "required": [
@@ -16480,7 +16493,9 @@
           "moduleNames",
           "gatesEverOpened",
           "delegatedSubagents",
-          "infraActive"
+          "infraActive",
+          "uxDesignerActive",
+          "staffActive"
         ]
       },
       "RuleCoverageResponseDto": {
@@ -16793,6 +16808,7 @@
               "parallelize",
               "raise_max_parallel",
               "propose_execution_plan",
+              "assess_implementability",
               "*"
             ],
             "example": "terminal",

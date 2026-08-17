@@ -32,19 +32,24 @@ camada_produto:
 
   - id: ux-designer
     papel_de_mercado: UX / Product Designer
-    status: proposto
-    hoje_absorvido_por: criativo (discovery) + design/ (design system como dado)
-    criterio_de_separacao: >
-      Quando o projeto GERENCIADO tiver interface própria a desenhar —
-      hoje o design system é insumo estático. Separa quando protótipo
-      virar artefato recorrente.
-    entregaveis_alvo: [personas-e-jornadas, prototipo-navegavel,
-      spec-de-handoff-visual, teste-de-usabilidade]
-    entradas_alvo: [{ artefato: necessidade-de-negocio, origem: criativo },
-                    { artefato: metricas-de-uso, origem: analytics }]
-    saidas_alvo: [{ artefato: prototipo, destino: po },
-                  { artefato: spec-visual, destino: dev-lead }]
-    gate_alvo: { id: prototipo-validado, status: proposto }
+    status: active
+    teto: 14
+    # Ativado antes do gatilho original ter disparado (ADR 0087, decisão
+    # consciente do dono do produto) — histórico do que o papel absorvia:
+    # criativo (discovery) + design/ (design system como dado estático). O
+    # design system CONTINUA estático (sem tool de leitura de repo pros
+    # agentes conversacionais); o que mudou é o protótipo virar entregável
+    # de agente, não mais implícito na conversa do Criativo.
+    entregaveis: [personas-e-jornadas, prototipo-navegavel]
+    # teste-de-usabilidade fica FORA de alcance: exige usuário humano real,
+    # não um agente. metricas-de-uso segue lacuna — depende do papel
+    # analytics, que continua proposto.
+    entradas: [{ artefato: necessidade-de-negocio, origem: criativo },
+               { artefato: metricas-de-uso, origem: analytics, status: lacuna }]
+    saidas: [{ artefato: prototipo, destino: po },
+             { artefato: spec-visual, destino: dev-lead }]
+    ferramentas: [propose_prototype]
+    gate_saida: { id: prototipo-validado, status: proposto }
 
   - id: po
     papel_de_mercado: PO/PM
@@ -98,24 +103,30 @@ camada_decisao_tecnica:
     teto: 14
     entradas:
       - { artefato: handoff + module_map, origem: arquiteto }
-      - { artefato: plano-de-teste, origem: qa-estrategia, status: proposto }
+      - { artefato: plano-de-teste, origem: qa-estrategia }        # ADR 0090
       - { artefato: threat-model, origem: appsec, status: proposto }
       - { artefato: parecer-de-migracao, origem: dbre, status: proposto }
     saidas:
       - { artefato: plano-de-paralelismo, destino: usuario,
           via: proposed_action, regra: RN-083/154 }
+      - { artefato: parecer-implementabilidade, destino: usuario,
+          via: proposed_action, regra: RN-340 }                    # ADR 0090
       - { artefato: delegacao, destino: dev, status: lacuna }  # ADR 0053 item 5
       - { artefato: design-doc + quebra-tecnica, destino: dev,
           status: proposto }
-    gate_saida: { id: paralelismo-autorizado, status: ativo }
-    gate_futuro: { id: implementavel, status: proposto,
-      valor: story inviável morre antes de queimar token }
+    gates:
+      - { id: paralelismo-autorizado, status: ativo }
+      - { id: implementavel, status: ativo }                       # ADR 0090
 
   - id: staff
     papel_de_mercado: Staff/Principal Engineer
     status: planned
-    ativacao: problema sistêmico RECORRENTE registrado — gatilho pendente
-      enquanto anamnese estiver em refinamento
+    codigo: pronto (staff_server.ex, staff_tools.ex, staff_supervisor.ex —
+      ADR 0088) — acionável MANUALMENTE por handoff aceito endereçado a
+      "staff", mecanismo GENÉRICO (sem entrar em USER_STARTED_AGENTS)
+    ativacao: gatilho AUTOMÁTICO (problema sistêmico RECORRENTE registrado
+      pela anamnese) segue pendente enquanto ANAMNESE_ENABLED=false —
+      dormente para disparo automático, não para acionamento manual
     entregaveis_alvo: [rfc, poc-descartavel, parecer-sistemico]
     saidas_alvo: [{ artefato: rfc + poc, destino: arquiteto }]
 
@@ -136,15 +147,19 @@ camada_execucao:
 camada_qualidade:
   - id: qa-estrategia
     papel_de_mercado: QA Engineer (estratégia, shift-left)
-    status: proposto
-    hoje_absorvido_por: area-qa (que só atua DEPOIS, na PR)
-    criterio_de_separacao: >
-      Quando o gate implementavel ativar — o plano-de-teste é entrada
-      dele. Pode ser o próprio qa-lead em segundo MOMENTO, não
-      necessariamente agente novo: a separação é de entregável.
-    entregaveis_alvo: [plano-de-teste-por-story, criterio-executavel,
+    status: active                                                 # ADR 0090
+    absorvido_por: >
+      area-qa — o critério de separação PREVISTO aqui se confirmou: é o
+      próprio qa-lead (Engine.Gates.QaLeadServer.run_design/3), SEGUNDO
+      momento, mesmo processo, entregável separado do veredito de PR —
+      nunca agente novo
+    entradas:
+      - { artefato: story, origem: po }                            # via backlog
+      - { artefato: module_map, origem: arquiteto, status: opcional }
+    entregaveis: [plano-de-teste-por-story, criterio-executavel,
       estrategia-de-automacao]
-    saidas_alvo: [{ artefato: plano-de-teste, destino: [dev-lead, dev] }]
+    saidas: [{ artefato: plano-de-teste, destino: [dev-lead, dev] }]
+    gate_saida: { id: implementavel, status: ativo }
 
   - id: area-qa
     papel_de_mercado: SDET + QA de execução

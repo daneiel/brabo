@@ -89,6 +89,8 @@ function resumo(latestSeq: number): ProjectCardSummary {
       gatesEverOpened: false,
       delegatedSubagents: [],
       infraActive: false,
+      uxDesignerActive: false,
+      staffActive: false,
     },
   };
 }

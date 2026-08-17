@@ -98,17 +98,21 @@ o modelo pede uma ferramenta → a ferramenta vira `proposed_action` → políti
 decide → executa → resultado volta ao contexto. Tem teto de iterações; esgotado,
 o agente encerra com artefato de bloqueio.
 
-**Turno (agente conversacional)** — uma rodada de trabalho de um dos quatro
-agentes conversacionais session-scoped (Criativo, PO, Arquiteto, Dev Lead):
-uma chamada streamada ao LLM mais o loop de ferramentas que ela dispara.
-Desde [RN-122](business-rules.md#rn-122) roda numa `Task` supervisionada
-(`Engine.Agents.TurnoAssincrono`), não mais dentro do `handle_call` que
-recebia a mensagem — é o que permite o botão **"Parar"** do composer
-cancelar o turno DE VERDADE (mata a task, corta a conexão com a api) em vez
-de só parar de renderizar no cliente. Cada um tem teto PRÓPRIO de voltas do
-laço (Criativo e PO 12, Arquiteto e Dev Lead 14) — é constante do servidor do
-agente, não o teto do `ToolLoop` (`Engine.Harness.Iteracoes`), que vale para os
-agentes de execução e de gate. O Criativo foi o último a ganhar o laço, em
+**Turno (agente conversacional)** — uma rodada de trabalho de um dos cinco
+agentes conversacionais session-scoped (Criativo, PO, Arquiteto, Dev Lead,
+Staff — este último ADR 0088, dormente para disparo automático, mas ativável
+por handoff manual): uma chamada streamada ao LLM mais o loop de ferramentas
+que ela dispara. Desde [RN-122](business-rules.md#rn-122) roda numa `Task`
+supervisionada (`Engine.Agents.TurnoAssincrono`), não mais dentro do
+`handle_call` que recebia a mensagem — é o que permite o botão **"Parar"** do
+composer cancelar o turno DE VERDADE (mata a task, corta a conexão com a api)
+em vez de só parar de renderizar no cliente. Cada um tem teto PRÓPRIO de
+voltas do laço (Criativo e PO 12, Arquiteto, Dev Lead e Staff 14) — é
+constante do servidor do agente, não o teto do `ToolLoop`
+(`Engine.Harness.Iteracoes`), que vale para os agentes de execução e de gate.
+Staff é o único sem `kickoff/1`: fica ocioso até a primeira `user_message`,
+porque não há artefato de sessão para sintetizar uma abertura. Entre os
+quatro que existiam à época, o Criativo foi o último a ganhar o laço, em
 [RN-163](business-rules.md#rn-163): até então ele chamava o modelo uma vez por
 turno e prometia uma correção que nunca acontecia. Esse teto próprio também
 deixou de ser silencioso: esgotado, emite o MESMO `toolloop.limit_reached`
@@ -201,6 +205,17 @@ subagente herda o teto do agente base
 
 **`task_blocked`** — o artefato emitido quando uma task não avança: carrega
 `reason` e `diagnosis`. É registro de fracasso legível, não silêncio.
+
+**Gate `implementavel`** — portão PRE-DEV, antes de existir dev agent ou
+worktree: o Dev Lead avalia se uma story é implementável a partir do
+**plano de teste** que a QA-estratégia produz. `dono: dev-lead`,
+`aprovacao_humana: true`, `severidade: warn` ([ADR 0090](adr/0090-qa-estrategia-e-appsec-segundo-momento.md)).
+
+**QA-estratégia** — o `qa-lead` num segundo MOMENTO (mesmo processo,
+entregável separado do veredito de PR): produz o **plano de teste**
+(síntese, critérios executáveis, estratégia de automação) de UMA story,
+antes do dev agent escrever código. Nunca suspende — nenhuma das
+ferramentas dele passa pelo pipeline de ações.
 
 ---
 
