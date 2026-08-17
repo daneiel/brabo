@@ -115,6 +115,14 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   problema sistêmico recorrente) segue pendente enquanto
   `ANAMNESE_ENABLED=false` — dormente para disparo automático, não para
   acionamento manual (RN-305/306, ADR 0088)
+- **api,engine**: o gate `implementavel` sai de `planned` para `active` — o
+  Dev Lead ganha `assess_implementability`, o parecer de implementabilidade
+  de uma story (viável/inviável, com justificativa), a partir do plano de
+  teste que a QA-estratégia produz. A QA-estratégia deixa de ser papel
+  `proposto` em `docs/fluxo.yml`: é o próprio `qa-lead`, num SEGUNDO
+  momento (mesmo processo, entregável separado do veredito de PR) — sem
+  worktree, sem task, PRE-DEV. O parecer nasce `proposed_action`, mesmo
+  padrão do plano de execução (RN-340/341, ADR 0090)
 
 ### Correções
 

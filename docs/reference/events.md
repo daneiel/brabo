@@ -150,6 +150,7 @@ aprender um segundo nome porque o agente conversacional não usa o `ToolLoop`.
 | `artifact.insight` | — |
 | `artifact.prototipo_navegavel` | `personas`, `jornadas`, `prototipo` (`telas`, `anotacoes`), `resumo` — o protótipo do UX Designer ([RN-286](../business-rules.md#rn-286), ADR 0087) |
 | `artifact.rfc_staff` | — (validado em `Engine.Agents.StaffTools`, não pelo `ArtifactSchemas` — mesmo caso de `artifact.insight`): `problema`, `opcoes` (lista de `descricao`/`tradeoffs`), `recomendacao`, `poc` (`escopo`, `descartavel: true` fixo). O RFC do Staff (ADR 0088), devolvido ao Arquiteto por handoff no mesmo tool call |
+| `artifact.plano_de_teste` | `storyId`, `planoDeTeste`, `criteriosExecutaveis`, `estrategiaDeAutomacao` — entregável da QA-estratégia (ADR 0090), PRE-DEV |
 
 Os schemas são fechados: campo faltando reprova a emissão
 (`Engine.Harness.ArtifactSchemas`).
@@ -306,7 +307,7 @@ respeito.
 
 > ⚠️ Bloco gerado por `pnpm docs:generate`. Não edite à mão — o próximo build sobrescreve.
 
-Extraído dos pontos de emissão: **85 identificadores**, dos quais **2** não aparecem descritos acima.
+Extraído dos pontos de emissão: **86 identificadores**, dos quais **2** não aparecem descritos acima.
 
 - `action.failed` <sub>(apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts)</sub>
 - `agent.activated` <sub>(apps/api/src/application/use-cases/agents/activate-agent.use-case.ts)</sub>
@@ -325,6 +326,7 @@ Extraído dos pontos de emissão: **85 identificadores**, dos quais **2** não a
 - `artifact.business_rule` <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub>
 - `artifact.insight` <sub>(apps/engine/lib/engine/harness/tools/emit_insight.ex)</sub>
 - `artifact.module_map` <sub>(apps/api/src/application/use-cases/architecture/create-module-map.use-case.ts)</sub>
+- `artifact.plano_de_teste` <sub>(apps/engine/lib/engine/agents/dev_lead_tools.ex)</sub>
 - `artifact.product_brief` <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub>
 - `artifact.prototipo_navegavel` <sub>(apps/engine/lib/engine/agents/ux_designer_tools.ex)</sub>
 - `artifact.rfc_staff` <sub>(apps/engine/lib/engine/agents/staff_tools.ex)</sub>

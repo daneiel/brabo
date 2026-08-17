@@ -8030,6 +8030,114 @@ arquivo). O caminho ponta a ponta de uso hoje é a rota interna
 
 ---
 
+## O gate `implementavel` ativa — QA-estratégia como segundo momento do qa-lead (RN-340/341, ADR 0090)
+
+### RN-340 — O gate `implementavel` decide a story ANTES do dev agent escrever código {#rn-340}
+
+`docs/gates.yml` declarava o gate `implementavel` (dono `dev-lead`) desde a
+FASE 14d com `status: planned` — nunca ativado. O [ADR 0090](adr/0090-qa-estrategia-e-appsec-segundo-momento.md)
+ativa: a ferramenta `assess_implementability` do Dev Lead propõe o **parecer
+de implementabilidade** de uma story (`implementavel`/`inviavel` +
+justificativa) como `proposed_action`, MESMO padrão de
+`propose_execution_plan` ([RN-284](#rn-284)) — três desfechos
+(`{:ok, texto} | {:pending, action_id} | {:error, texto}`), papel mínimo
+`maintainer` em `decide.ts`, e DELIBERADAMENTE fora do bloco de tetos
+absolutos (é decisão inicial, não ultrapassagem de teto).
+
+**O parecer depende do plano de teste, que é um PRÉ-REQUISITO, não um
+argumento.** `run_assessment/2` lê o `artifact.plano_de_teste` mais recente
+da story no HISTÓRICO da própria sessão do Dev Lead (emitido pela
+QA-estratégia, [RN-341](#rn-341)):
+
+1. **Sem plano ainda** — dispara `Engine.Gates.Dispatcher.run_qa_estrategia/3`
+   (mesma indireção trocável em teste que `run_qa/2`/`run_secops/2` já usam)
+   e devolve `{:error, texto}` pedindo para tentar de novo em instantes. Erro
+   de ferramenta é ENTRADA do laço, não fim de linha ([RN-163](#rn-163)): o
+   Dev Lead tem teto de 14 iterações para tentar de novo. A janela de espera
+   é aceita e declarada — a QA-estratégia roda em processo separado
+   (`qa-lead`), e um `run/2` síncrono não pode bloquear esperando o
+   resultado sem acoplar os dois processos.
+2. **Com plano** — monta o parecer com o plano de teste EMBUTIDO no payload
+   (síntese e critérios executáveis), para o usuário decidir sem precisar
+   abrir dois eventos, e propõe a ação.
+
+- **Onde:** `apps/engine/lib/engine/agents/dev_lead_tools.ex`
+  (`run_assessment/2`, `spec_assess_implementability/0`),
+  `dev_lead_server.ex` (`run_tool/3`); `apps/engine/lib/engine/gates/dispatcher.ex`
+  (`run_qa_estrategia/3`); `apps/api/src/domain/actions/decide.ts`
+  (`assess_implementability`); `docs/gates.yml` (`implementavel`,
+  `status: active`)
+- **Teste:** `apps/engine/test/engine/agents/dev_lead_tools_test.exs`
+  (describe "assess_implementability"), `dev_lead_server_test.exs`
+  (describe "suspensão em aprovação" — os dois testes novos),
+  `apps/api/test/domain/actions/decide.spec.ts` (describe "parecer de
+  implementabilidade do Dev Lead")
+- **Origem:** [ADR 0090](adr/0090-qa-estrategia-e-appsec-segundo-momento.md)
+
+### RN-341 — A QA-estratégia é o segundo MOMENTO do qa-lead, e nunca suspende {#rn-341}
+
+`docs/fluxo.yml` declarava o papel `qa-estrategia` como `proposto`, com o
+critério de separação escrito no próprio registro: "pode ser o próprio
+qa-lead em segundo MOMENTO, não necessariamente agente novo — a separação é
+de entregável". O [ADR 0090](adr/0090-qa-estrategia-e-appsec-segundo-momento.md)
+constrói exatamente isso: `Engine.Gates.QaEstrategiaAgent` é módulo SEM
+ESTADO (não é `GenServer`), acionado por `Engine.Gates.QaLeadServer.run_design/3`
+— um ponto de entrada NOVO e ADITIVO no MESMO processo `qa-lead`, sem tocar
+`run/2` (o caminho de sempre, revisão de PR, amarrado a
+`DevAgentState.find_by_task_id`).
+
+**O contexto é LEVE, e é aí que a separação de entregável aparece.**
+`Engine.Gates.QaEstrategiaContext.fetch/3` busca SÓ story (de
+`EngineApiClient.list_backlog/1`, a árvore que o PO já lê — [RN-164](#rn-164))
+e `module_map` vigente (de `EngineApiClient.get_infra_context/2`, o MESMO
+`GetInfraContextUseCase` que o Infra Lead consome, aqui só pelo campo
+`moduleMap`) — SEM `dev_state`, SEM `worktree_path`: o gate `implementavel`
+roda PRE-DEV, antes de existir dev agent, worktree ou `task_id`. Nenhuma
+rota nova na api — as duas funções já existiam.
+
+**Nunca suspende.** O registro de ferramentas (`ReadFile`, `SearchWorkspace`,
+`EmitPlanoDeTeste`) não inclui `terminal` nem `write_file` — as DUAS únicas
+tools que `Engine.Harness.Hooks.ActionPipeline` intercepta para criar
+`proposed_action`. Sem chamada nenhuma passando pelo pipeline de ações, o
+`ToolLoop` deste agente nunca produz `:pending`, e `run_design/3` roda
+SÍNCRONO dentro do próprio `handle_cast` — sem mecanismo de
+suspensão/retomada, ao contrário do resto da área de QA.
+
+**O teto de iterações fica em 8 (conversacional), não 60 (gate) — de
+propósito, não lacuna.** Este agente roda SEM `token_budget_micros` — não há
+task nem budget de task ainda. O critério da [RN-085](#rn-085) não é "quem
+trabalha muito": é "o que segura o gasto além do teto de iterações". Sem
+budget por baixo, subir o teto multiplicaria o pior caso sem nada para
+conter — a MESMA razão pela qual `infra-workflows` fica em 8 mesmo usando
+ferramenta. `"qa-estrategia"` NÃO ganhou cláusula própria em
+`Engine.Harness.Iteracoes.tipo/1`: cair no default é a decisão certa.
+
+O entregável — `emit_plano_de_teste` (síntese, critérios executáveis
+verificáveis, estratégia de automação GENÉRICA e sem framework — decisão de
+escopo desta frente, na `spec/0` que o modelo lê, não uma validação em
+código) — vira o artefato `artifact.plano_de_teste`
+(`ArtifactEmitter.emit/5`, schema validado, `criteriosExecutaveis` não pode
+ser vazio), no event log da MESMA sessão que chamou `run_design/3` — é lá
+que `assess_implementability` ([RN-340](#rn-340)) o lê depois. Falha
+(limite de iterações, orçamento, modelo que para sem emitir) NUNCA é
+silenciosa: `agent.error` durável com origem, mesma régua da
+[RN-059](#rn-059).
+
+- **Onde:** `apps/engine/lib/engine/gates/qa_estrategia_agent.ex`,
+  `qa_estrategia_context.ex`, `qa_lead_server.ex` (`run_design/3`),
+  `tools/emit_plano_de_teste.ex`, `hooks/termination_plano_de_teste.ex`;
+  `apps/engine/lib/engine/harness/artifact_schemas.ex` (`plano_de_teste`);
+  `apps/engine/lib/engine/harness/iteracoes.ex` (SEM cláusula nova, ver
+  acima); `docs/fluxo.yml` (`qa-estrategia`, `status: active`)
+- **Teste:** `apps/engine/test/engine/gates/qa_estrategia_agent_test.exs`,
+  `qa_estrategia_context_test.exs`, `qa_lead_server_test.exs` (describe
+  "run_design"), `apps/engine/test/engine/harness/artifact_schemas_test.exs`
+  (describe "plano_de_teste"), `iteracoes_test.exs` ("qa-estrategia é
+  conversacional DE PROPÓSITO")
+- **Origem:** [ADR 0090](adr/0090-qa-estrategia-e-appsec-segundo-momento.md)
+
+---
+
 ## Quando dá errado
 
 | situação | o que o sistema faz |

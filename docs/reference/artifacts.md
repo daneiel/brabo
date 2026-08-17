@@ -3,7 +3,7 @@ id: artifacts
 title: Artefatos
 sidebar_label: Artefatos
 sidebar_position: 4
-description: Os oito schemas de artefato validados no engine, quem pode emitir cada um, e por que a maioria não é emitível pelo modelo.
+description: Os nove schemas de artefato validados no engine, quem pode emitir cada um, e por que a maioria não é emitível pelo modelo.
 keywords: [artefato, schema, emit_artifact, qa_verdict, business_rule]
 ---
 
@@ -169,6 +169,26 @@ turno (mesmo raciocínio do `propose_execution_plan`/`propose_infra_pr`) —
 sem `proposed_action`, sem suspensão: propor um protótipo não tem efeito
 externo.
 
+### `plano_de_teste` — servidor
+
+| campo | obrigatório |
+|---|---|
+| `storyId` | ✅ |
+| `planoDeTeste` | ✅ |
+| `criteriosExecutaveis` | ✅ — lista **não vazia** |
+| `estrategiaDeAutomacao` | ✅ |
+
+O entregável da QA-estratégia (ADR 0090; `docs/fluxo.yml`, papel
+`qa-estrategia`, segundo momento do `qa-lead`): o plano de teste de UMA
+story, emitido ANTES do dev agent escrever código — o gate `implementavel`
+(`docs/gates.yml`) o consome. Nasce de `emit_plano_de_teste`, mas o modelo
+não emite o artefato diretamente — `Engine.Gates.QaEstrategiaAgent` extrai o
+resultado da tool call e chama `ArtifactEmitter.emit/5`, mesmo padrão de
+`qa_verdict`/`task_blocked`.
+
+`criteriosExecutaveis` vazia reprova pela mesma razão de
+`infra_delegation_files`: um plano sem nenhum critério não é plano.
+
 ## Artefatos que não passam por aqui
 
 Dois tipos de evento `artifact.*` existem no log sem estar neste registro,
@@ -189,7 +209,7 @@ está anotada como
 
 | erro | causa |
 |---|---|
-| `{:unknown_type, tipo}` | tipo fora dos oito |
+| `{:unknown_type, tipo}` | tipo fora dos nove |
 | `{:missing_keys, [...]}` | campos obrigatórios ausentes, todos nomeados |
 | `:origem_invalida` | `business_rule.origin` vazia ou não é lista |
 | `{:sujeito_invalido, chaves}` | parecer com os dois sujeitos, ou com nenhum |

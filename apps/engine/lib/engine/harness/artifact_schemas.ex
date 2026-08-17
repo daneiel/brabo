@@ -46,7 +46,18 @@ defmodule Engine.Harness.ArtifactSchemas do
     # (`Engine.Agents.UxDesignerTools`), não `emit_artifact`, e reusa este
     # módulo só pra validação de forma — mesmo mecanismo de `product_brief`,
     # que também é validável aqui sem ser tool-emittable por `emit_artifact`.
-    "prototipo_navegavel" => ["personas", "jornadas", "prototipo", "resumo"]
+    "prototipo_navegavel" => ["personas", "jornadas", "prototipo", "resumo"],
+    # ADR 0090 — o entregável da QA-estratégia (segundo MOMENTO do qa-lead,
+    # docs/fluxo.yml): o plano de teste de UMA story, ANTES do dev agent
+    # escrever código. Server-emitted, como `qa_verdict`: emitido por
+    # `Engine.Gates.QaEstrategiaAgent` depois que `emit_plano_de_teste`
+    # termina o laço, nunca por tool call direto de fora do harness.
+    "plano_de_teste" => [
+      "storyId",
+      "planoDeTeste",
+      "criteriosExecutaveis",
+      "estrategiaDeAutomacao"
+    ]
   }
 
   # Pareceres de gate. Os vereditos possíveis são os mesmos da máquina de
@@ -136,6 +147,15 @@ defmodule Engine.Harness.ArtifactSchemas do
     with :ok <- lista_nao_vazia(payload, "personas"),
          :ok <- lista_nao_vazia(payload, "jornadas") do
       validar_telas(Map.get(payload, "prototipo"))
+    end
+  end
+
+  # Mesma lição do `infra_delegation_files`: um plano sem NENHUM critério
+  # executável não é plano — nunca deixar "vazio" passar por "concluído".
+  defp check_extra("plano_de_teste", payload) do
+    case Map.get(payload, "criteriosExecutaveis") do
+      criterios when is_list(criterios) and criterios != [] -> :ok
+      _ -> {:error, :criterios_vazios}
     end
   end
 
