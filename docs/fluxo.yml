@@ -256,15 +256,24 @@ camada_plataforma:
 
   - id: dbre
     papel_de_mercado: DBA / Database Reliability
-    status: proposto
-    hoje_absorvido_por: dev-lead (revisão de migração) + platform (tuning,
-      quando ativar) — a regra de UMA migration por onda é a versão
-      mecanizada do papel
-    criterio_de_separacao: volume real de dados no projeto gerenciado
-      (hoje o risco é de SCHEMA, não de carga)
-    entregaveis_alvo: [parecer-de-migracao, plano-de-capacidade,
-      backup-restore-testado, tuning]
-    saidas_alvo: [{ artefato: parecer-de-migracao, destino: dev-lead }]
+    status: active
+    hoje_absorvido_por: dev-lead (aprova o schema com o parecer em mãos) +
+      platform (tuning, quando ativar) — o que resta absorvido por eles é só
+      plano-de-capacidade/tuning; UMA migration por onda continua sendo a
+      trava de CONFLITO entre agentes, não o parecer de risco (esse agora é
+      mecânico, ver entregaveis)
+    criterio_de_separacao: volume real de dados no projeto gerenciado —
+      plano-de-capacidade e tuning dependem dele; o parecer de risco de
+      SCHEMA e o relatório de backup NÃO dependem, por isso já são reais
+    entregaveis:
+      - { artefato: parecer-de-migracao, status: real,
+          mecanismo: "pnpm --filter api lint:migracao" }
+      - { artefato: backup-restore-testado, status: real,
+          mecanismo: "pnpm --filter api relatorio:backup + docs/runbook.md#restore" }
+      - { artefato: plano-de-capacidade, status: lacuna,
+          motivo: exige volume real de dados }
+      - { artefato: tuning, status: lacuna, motivo: exige volume real de dados }
+    saidas: [{ artefato: parecer-de-migracao, destino: dev-lead }]
 
 camada_instrumentos:
   - id: medicao
