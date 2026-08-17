@@ -282,7 +282,8 @@ export type ActionType =
   | 'open_infra_pr'
   | 'instruction_patch'
   | 'parallelize'
-  | 'raise_max_parallel';
+  | 'raise_max_parallel'
+  | 'propose_execution_plan';
 
 export type ActionStatus =
   | 'pending'

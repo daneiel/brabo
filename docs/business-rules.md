@@ -2614,17 +2614,29 @@ só. A primeira versão repetia essa exclusão em três pontos, e a verificaçã
 mutação mostrou que nenhuma das cópias era alcançável por teste: cada uma
 sobrevivia à mutação da outra.
 
-**O plano é EVENTO, não `proposed_action`.** Propor não tem efeito externo: o
-gasto acontece quando os agentes sobem, e é lá que o teto cobra autorização.
-Transformar a proposta em ação a decidir faria você decidir duas vezes a mesma
-coisa.
+**O plano é `proposed_action` (revisado pelo [ADR 0086](adr/0086-dev-lead-plano-suspende-para-aprovacao.md), [RN-284](#rn-284)).**
+Até essa mudança o plano virava EVENTO simples, sem aprovação: o argumento era
+que propor não tem efeito externo — o gasto acontece quando os agentes sobem,
+e é lá que o teto cobra autorização; transformar a proposta em ação a decidir
+faria você decidir duas vezes a mesma coisa. Uma auditoria de
+`docs/fluxo.yml` × código encontrou que o fluxo já declarava esta saída como
+`via: proposed_action` desde o ADR 0085, e o código nunca foi ajustado para
+bater — o dono do produto decidiu que o código errava: o plano é a PRIMEIRA
+decisão real de quanto a sessão vai gastar com paralelismo, e o usuário passou
+a decidir ativar a execução tendo VISTO uma aprovação de verdade, não só lido
+uma linha no fio. A lição antiga não desapareceu — é o motivo pelo qual
+`propose_execution_plan` NÃO entrou no bloco de tetos absolutos de
+`decide.ts` (ver RN-284).
 
-**O plano BEM-SUCEDIDO encerra o turno.** Na primeira execução real o Dev Lead
-registrou **dois** `execution.plan_proposed` na mesma sessão — textos
-diferentes, mesmo total —, porque o laço voltava ao modelo e ele propunha de
-novo. O event log é imutável: ficaram duas propostas e nada dizendo qual valia.
-A instrução "use uma vez" no spec da ferramenta é pedido, não garantia; quem
-garante é o laço parar.
+**O plano BEM-SUCEDIDO encerra o turno — no caminho SEM suspensão.** Na
+primeira execução real o Dev Lead registrou **dois** `execution.plan_proposed`
+na mesma sessão — textos diferentes, mesmo total —, porque o laço voltava ao
+modelo e ele propunha de novo. O event log é imutável: ficaram duas propostas
+e nada dizendo qual valia. A instrução "use uma vez" no spec da ferramenta é
+pedido, não garantia; quem garante é o laço parar. Desde o ADR 0086, quando a
+proposta fica `pending`, quem encerra o turno é a PARADA por suspensão
+(RN-284) — o sucesso imediato (`auto_approved`/`executed`/`approved`, ver
+RN-284) continua fechando o laço do mesmo jeito de sempre.
 
 **Bem-sucedido, e não "chamou a ferramenta"**: um plano recusado (vazio, ou com
 zero agente num módulo) deixa o laço seguir, senão a recusa vira fim de turno e
@@ -2632,9 +2644,9 @@ o modelo nunca chega a corrigir. A primeira versão desta guarda olhava só o
 nome da ferramenta e tinha esse defeito — encontrado pelo teste comportamental,
 não pela leitura.
 
-Um plano vazio, ou com zero agente num módulo, é recusado **antes de gravar
-qualquer coisa** — o event log é imutável, e um plano meio gravado não teria
-como ser retratado.
+Um plano vazio, ou com zero agente num módulo, é recusado **antes de propor
+qualquer coisa** — a proposta, uma vez criada, é decisão real do usuário, e um
+plano meio proposto não teria como ser retratado.
 
 - **Onde:** `apps/engine/lib/engine/agents/dev_lead_server.ex` e
   `dev_lead_tools.ex`; a regra de endereçamento em
@@ -2646,7 +2658,8 @@ como ser retratado.
   `apps/api/test/domain/agents/agent-areas.spec.ts` (`o dev de módulo DEIXOU de
   ser endereçável`, `` `dev-lead` É endereçável, apesar do prefixo ``) e
   `test/application/use-cases/agents/offer-infra-handoff.use-case.spec.ts`
-- **Origem:** [ADR 0053](adr/0053-dev-lead-e-paralelismo-autorizado.md), FASE 14d
+- **Origem:** [ADR 0053](adr/0053-dev-lead-e-paralelismo-autorizado.md), FASE 14d;
+  o mecanismo de aprovação revisado pelo [ADR 0086](adr/0086-dev-lead-plano-suspende-para-aprovacao.md)
 
 ### RN-064 — Heartbeat não encerra sessão com trabalho pendente {#rn-064}
 
@@ -7710,6 +7723,103 @@ motivo real. Mesmo padrão do callback de conexão de git
   — cobre os desfechos de falha que o controller mapeia para o mesmo
   redirect genérico
 - **ADR:** [0084](adr/0084-login-social-github-e-gitlab.md)
+
+---
+
+## Auditoria fluxo.yml × código — o plano do Dev Lead vira aprovação de verdade (RN-284, ADR 0086)
+
+Não é fase planejada: é a correção de uma divergência que a auditoria de
+`docs/fluxo.yml` × código encontrou (`docs/explanation/auditoria-fluxo-vs-codigo.md`,
+achado A2) — o fluxo já declarava a saída `plano-de-paralelismo` do `dev-lead`
+como `via: proposed_action`, e o código nunca foi ajustado para bater.
+
+### RN-284 — O turno do agente conversacional pode SUSPENDER esperando aprovação humana {#rn-284}
+
+Primeira vez que um agente conversacional (Criativo, PO, Arquiteto, Dev Lead —
+todos rodam turno síncrono via `GenServer.call` de até 180s, mediado por
+`Engine.Agents.TurnoAssincrono`) suspende esperando uma decisão humana. O
+padrão já existia para o dev agent ([RN-073](#rn-073), ADR 0052) e os gates de
+QA/Infra (ADR 0057), mas os dois são disparados por `cast` e nunca esperavam
+resposta síncrona — é exatamente esse ponto que este mecanismo resolve, e o
+teto de paralelismo que fez o Dev Lead existir ([RN-083](#rn-083)) é a razão
+de a primeira aprovação suspensa ser a dele.
+
+**O mecanismo, em quatro peças:**
+
+1. `Engine.Agents.DevLeadTools.run/2`
+   (`apps/engine/lib/engine/agents/dev_lead_tools.ex:81-107`) chama
+   `EngineApiClient.propose_action/5` em vez de `append_event/3`, e devolve
+   `{:ok, texto}` (status `executed`/`auto_approved`/`approved` — os três
+   contam como sucesso, porque `propose_execution_plan` não tem execute-*
+   pipeline própria e a aprovação manual fica em `"approved"` para sempre),
+   `{:pending, action_id}` ou `{:error, texto}`.
+2. `Engine.Agents.DevLeadServer.run_turn/2`
+   (`apps/engine/lib/engine/agents/dev_lead_server.ex`, bloco de despacho de
+   `tool_calls`) usa `Enum.reduce_while` para PARAR no primeiro `:pending`,
+   sem processar as chamadas seguintes nem recursar — e devolve o `state` com
+   a chave `:aguardando_aprovacao` setada
+   (`%{action_id:, tool_call_id:, tool_name:, remaining:}`, o `remaining`
+   já descontando a iteração suspensa contra o teto). A mensagem `role:
+   "tool"` NÃO entra em `state.messages` nesse momento — gravar "pending" ali
+   mentiria pro modelo que o comando já respondeu isso (mesmo raciocínio do
+   dev agent, `Engine.Harness.Hooks.ActionPipeline`).
+3. `Engine.Agents.TurnoAssincrono.tratar_resultado/2`
+   (`apps/engine/lib/engine/agents/turno_assincrono.ex`) responde ao `from`
+   do mesmo jeito e na mesma hora de sempre — é o que rompe o bloqueio
+   síncrono no momento certo —, mas em vez de `finalizar/1` (que emite
+   `agent.done` e `agent.status: idle`) chama `suspender/1`: só
+   `agent.status: awaiting_approval`, sem `agent.done`, porque o turno não
+   terminou. A checagem é pelo VALOR da chave (`Map.get/2`, truthy), nunca
+   pela presença dela — o Dev Lead carrega `aguardando_aprovacao: nil` desde
+   o `init/1`, então a chave em si está sempre presente.
+4. `Engine.Sessions.LiveBroadcast.agent_status/4`
+   (`apps/engine/lib/engine/sessions/live_broadcast.ex:38-39`) ampliou a
+   guarda de `["working", "idle"]` para incluir `"awaiting_approval"` — sem
+   isto o `agent.status` do passo 3 nem seria persistido.
+
+**A retomada.** `Engine.Agents.DevLeadServer` assina
+`Engine.Dev.Wake.subscribe(project_id, "dev-lead")` no `init/1` — o MESMO
+módulo que `Engine.Gates.QaLeadServer` já reusa para os subagentes de QA,
+apesar do nome ser "dev": a entrega de `{:action_settled, ...}` é por AGENTE,
+roteada pelo `agentId` do payload (`apps/engine/lib/engine/workers/dev_agent_wake_worker.ex`),
+não por tipo de agente. Quando a decisão chega, um `handle_info` monta a
+mensagem `role: "tool"` com o resultado REAL (`texto_do_desfecho/1`, mesmo
+vocabulário do dev agent e do `QaLeadServer`), zera `aguardando_aprovacao` e
+retoma com `TurnoAssincrono.iniciar(state, nil, fn -> run_turn(state,
+pendente.remaining) end)`.
+
+**Enquanto suspenso, uma segunda `user_message` não inicia turno novo** — um
+guard em `handle_call({:user_message, _text}, _from, %{aguardando_aprovacao:
+%{}})`, testado ANTES da cláusula genérica, emite `agent.error` (origem
+`politica`) explicando que há uma decisão pendente em Aprovações, sem subir
+task nenhuma.
+
+**Lacuna aceita, declarada — restart durante a espera.** Ao contrário do dev
+agent (que reidrata `laco_pendente` via `handle_continue` no `init/1`, ADR
+0052), o Dev Lead NÃO reidrata `aguardando_aprovacao` — é só em memória. Se o
+engine reiniciar enquanto ele está suspenso, a decisão continua registrada e
+visível em Aprovações (é durável na api), mas o Dev Lead não narra o desfecho
+automaticamente: o processo que assinou o `Wake` morreu, e o próximo restart
+sobe um Dev Lead novo, sem inscrição para aquela ação. Fechar isto exigiria o
+mesmo mecanismo do ADR 0052 — fora do escopo desta mudança, que só faz o
+comportamento bater com o que `docs/fluxo.yml` já declarava.
+
+- **Onde:** `apps/engine/lib/engine/agents/dev_lead_tools.ex`,
+  `dev_lead_server.ex`; `apps/engine/lib/engine/agents/turno_assincrono.ex`
+  (compartilhado pelos quatro conversacionais); `apps/engine/lib/engine/sessions/live_broadcast.ex`;
+  `apps/api/src/domain/actions/decide.ts` (`propose_execution_plan`)
+- **Teste:** `apps/engine/test/engine/agents/dev_lead_tools_test.exs`,
+  `dev_lead_server_test.exs` (describe "suspensão em aprovação"),
+  `turno_assincrono_test.exs` (describe "resultado com :aguardando_aprovacao"),
+  `live_broadcast_test.exs`, `wake_do_outbox_ao_dev_lead_test.exs` (a
+  corrente INTEIRA — outbox → drain → worker → `Engine.Dev.Wake` → o
+  processo do Dev Lead, mesmo padrão de `Engine.Dev.WakeDoOutboxAoAgenteTest`),
+  `apps/api/test/domain/actions/decide.spec.ts` (describe "plano de
+  execução do Dev Lead")
+- **ADR:** [0086](adr/0086-dev-lead-plano-suspende-para-aprovacao.md)
+  (revisa parte do [ADR 0053](adr/0053-dev-lead-e-paralelismo-autorizado.md);
+  precedente direto: [ADR 0052](adr/0052-dev-agent-espera-aprovacao-no-meio-do-laco.md)
+  e [ADR 0057](adr/0057-o-gate-espera-a-aprovacao.md))
 
 ---
 

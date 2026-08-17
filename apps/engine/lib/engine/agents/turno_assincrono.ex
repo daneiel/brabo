@@ -35,6 +35,24 @@ defmodule Engine.Agents.TurnoAssincrono do
 
   Sem turno em curso, `cancelar/1` é NO-OP idempotente — não existe task
   para matar nem `from` pendente para responder.
+
+  ## Suspensão em aprovação (ADR 0086, RN-284)
+
+  A função de turno (`fun`, passada a `iniciar/3`) continua tendo o MESMO
+  contrato — devolve o `state` (mapa) — mas o `state` pode agora carregar,
+  com valor não-nulo, a chave `:aguardando_aprovacao` quando o turno parou
+  no meio de um tool call que virou `proposed_action` `pending` (hoje só o
+  Dev Lead faz isso, para `propose_execution_plan`). A checagem é pelo
+  VALOR (`Map.get/2`, truthy), não pela presença da chave: o Dev Lead
+  carrega `aguardando_aprovacao: nil` desde o `init/1`, então a chave em si
+  está sempre presente. `tratar_resultado/2` continua
+  respondendo ao `from` na mesma hora — é o que rompe o bloqueio síncrono de
+  até 180s do `handle_call` original —, mas em vez de `finalizar/1` (que
+  emite `agent.done` e `agent.status: idle`, dizendo que o agente terminou
+  e está livre) chama `suspender/1`: só `agent.status: awaiting_approval`,
+  sem `agent.done`. O turno NÃO terminou — está esperando
+  `{:action_settled, ...}` (a mesma entrega da `Engine.Dev.Wake`/outbox que
+  o dev agent já consome desde o ADR 0052) para retomar de onde parou.
   """
 
   require Logger
@@ -103,6 +121,14 @@ defmodule Engine.Agents.TurnoAssincrono do
 
   O CONTRATO da função de turno é devolver o `state` (um mapa). Resultado de
   outra forma vira falha narrada, nunca queda — ver a segunda cláusula.
+
+  Desde o ADR 0086 (RN-284), o `state` devolvido pode carregar a chave
+  OPCIONAL `:aguardando_aprovacao` — usada pelo Dev Lead quando um tool call
+  virou `proposed_action` e ficou `pending`: o `GenServer.reply/2` acontece
+  do MESMO jeito e na MESMA hora (é o que rompe o bloqueio de até 180s do
+  `handle_call` original), mas o turno NÃO terminou. Presente a chave, quem
+  fecha é `suspender/1` (sem `agent.done`, `agent.status` vira
+  `"awaiting_approval"`); ausente, o caminho de sempre (`finalizar/1`).
   """
   @spec tratar_resultado(term(), map()) :: {:ok, map()} | :ignorado
   def tratar_resultado(
@@ -114,7 +140,17 @@ defmodule Engine.Agents.TurnoAssincrono do
     if from, do: GenServer.reply(from, :ok)
 
     novo_state = Map.put(resultado, :turno_assincrono, nil)
-    {:ok, finalizar(novo_state)}
+
+    # `Map.get/2` (valor), não `Map.has_key?/2` (chave): o Dev Lead carrega
+    # `aguardando_aprovacao: nil` no state DESDE O INÍCIO (é o default do
+    # `init/1`), então a CHAVE está sempre presente — inclusive num turno que
+    # nunca suspendeu. Checar só a chave suspenderia TODO turno do Dev Lead,
+    # sempre.
+    if Map.get(novo_state, :aguardando_aprovacao) do
+      {:ok, suspender(novo_state)}
+    else
+      {:ok, finalizar(novo_state)}
+    end
   end
 
   # Segunda barreira, e ela existe por uma queda REAL: o ramo do erro narrado
@@ -206,6 +242,18 @@ defmodule Engine.Agents.TurnoAssincrono do
   defp finalizar(state) do
     broadcast(state, "agent.done", %{})
     broadcast(state, "agent.status", %{status: "idle"})
+    state
+  end
+
+  # O turno NÃO terminou — só está suspenso esperando a decisão de uma
+  # `proposed_action` (ADR 0086, RN-284). Sem `agent.done` e sem
+  # `agent.status: idle`: os dois diriam ao painel que o agente está livre
+  # para uma mensagem nova, e `DevLeadServer` recusa exatamente essa
+  # mensagem enquanto `aguardando_aprovacao` estiver setado no state. Só o
+  # status muda, para `"awaiting_approval"` — o mesmo vocabulário que o dev
+  # agent já usa para o laço suspenso do ADR 0052.
+  defp suspender(state) do
+    broadcast(state, "agent.status", %{status: "awaiting_approval"})
     state
   end
 

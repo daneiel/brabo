@@ -1152,6 +1152,38 @@ app OAuth da conexão de git — zero variável de ambiente nova, só
 cadastrar o segundo callback no provider é o que justifica o branch
 `breaking/`.
 
+## Auditoria fluxo.yml × código — o plano do Dev Lead vira aprovação de verdade (RN-284, ADR 0086)
+Não é fase planejada: fecha a divergência que uma auditoria só-leitura de
+`docs/fluxo.yml` × código encontrou (achado A2,
+`docs/explanation/auditoria-fluxo-vs-codigo.md`) — o fluxo já declarava a
+saída `plano-de-paralelismo` do `dev-lead` como `via: proposed_action`
+desde o ADR 0085, e o código nunca foi ajustado para bater. O dono do
+produto decidiu que o código errava.
+
+`propose_execution_plan` entrou em `decide.ts` (papel mínimo
+`maintainer`), DELIBERADAMENTE fora do bloco de tetos absolutos — pode ser
+configurado para auto-aprovar, ao contrário de
+`parallelize`/`raise_max_parallel`. O Dev Lead é o PRIMEIRO agente
+conversacional (todos rodam turno síncrono via `GenServer.call` de até
+180s) a suspender esperando uma decisão humana — o padrão já existia para
+o dev agent (ADR 0052) e os gates de QA/Infra (ADR 0057), mas os dois são
+disparados por `cast` e nunca precisaram lidar com um `from` síncrono
+pendente. `TurnoAssincrono.tratar_resultado/2` ganhou um ramo: presente a
+chave `:aguardando_aprovacao` (checada pelo VALOR, não pela presença —
+o Dev Lead a carrega `nil` desde o `init/1`), responde ao `from` do mesmo
+jeito e na mesma hora de sempre, mas emite só `agent.status:
+awaiting_approval` em vez de `agent.done` — o turno não terminou.
+`LiveBroadcast.agent_status/4` ganhou o status novo na guarda. A retomada
+usa o MESMO `Engine.Dev.Wake` que `QaLeadServer` já reusa para os
+subagentes de QA (a entrega é por AGENTE, não por tipo).
+
+**Lacuna aceita, declarada**: sem tabela de estado própria, um restart do
+engine enquanto o Dev Lead está suspenso perde a inscrição — a decisão
+continua registrada e visível em Aprovações, mas ele não narra o desfecho
+sozinho. Fechar isto exigiria o mesmo mecanismo de persistência do ADR
+0052; fora do escopo desta correção, que só alinha o comportamento ao que
+`docs/fluxo.yml` já declarava.
+
 ## FERRAMENTA DE DESENVOLVIMENTO — `pnpm bootstrap`
 Menu de terminal em `scripts/dev/bootstrap.sh` agrupando o que se faz no
 dia a dia: Docker, K8s, Database e Test. Existe porque esses comandos moram
@@ -1340,6 +1372,16 @@ divide o mesmo banco, recuperar exige `db:migrate` E `engine:migrate`.
   não fim de linha; teto esgotado é narrado, nunca silêncio; e o agente não
   anuncia ação que o código não vá executar — o que se promete é decidido
   pelo teto, nunca por texto fixo (RN-163).
+- O turno de um agente conversacional pode SUSPENDER esperando aprovação
+  humana (ADR 0086, RN-284) — hoje só o Dev Lead, no `propose_execution_plan`.
+  `Engine.Agents.TurnoAssincrono` responde ao `from` síncrono na hora
+  (rompendo o bloqueio do `GenServer.call` de até 180s), mas emite
+  `agent.status: awaiting_approval` em vez de `agent.done` quando o `state`
+  devolvido carrega `:aguardando_aprovacao` com valor não-nulo. Enquanto
+  suspenso, `user_message` não inicia turno novo — vira `agent.error`
+  explicando a pendência. Sem tabela de estado própria: restart do engine
+  durante a espera perde a inscrição no `Engine.Dev.Wake`, lacuna aceita e
+  declarada (a decisão continua registrada em Aprovações).
 - A chave de LLM que um agente gasta é a do OWNER do workspace
   (RN-058); o relatório desse gasto é do owner e só dele (RN-060). O
   membro vê o PRÓPRIO consumo por ATOR, em tokens e custo estimado, e

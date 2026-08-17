@@ -41,6 +41,7 @@ const ACTION_ICON: Record<ActionType, typeof DiffIcon> = {
   instruction_patch: DiffIcon,
   parallelize: AlertIcon,
   raise_max_parallel: AlertIcon,
+  propose_execution_plan: AlertIcon,
 };
 
 /**
