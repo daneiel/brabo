@@ -57,7 +57,11 @@ defmodule EngineWeb.AgentCommandController do
     send_resp(conn, 201, "")
   end
 
-  def start(conn, %{"sessionId" => session_id, "projectId" => project_id, "agent" => "ux-designer"}) do
+  def start(conn, %{
+        "sessionId" => session_id,
+        "projectId" => project_id,
+        "agent" => "ux-designer"
+      }) do
     # Ativado pelo handoff aceito (ADR 0087) — kickoff só num start FRESCO:
     # restart não regera o protótipo.
     {:ok, _pid, origin} = UxDesignerSupervisor.start_agent(session_id, project_id)

@@ -67,8 +67,7 @@ defmodule Engine.Agents.UxDesignerTools do
           },
           "jornadas" => %{
             "type" => "array",
-            "description" =>
-              "O passo a passo de cada persona até o objetivo. Ao menos uma.",
+            "description" => "O passo a passo de cada persona até o objetivo. Ao menos uma.",
             "items" => %{
               "type" => "object",
               "properties" => %{
@@ -80,8 +79,7 @@ defmodule Engine.Agents.UxDesignerTools do
           },
           "prototipo" => %{
             "type" => "object",
-            "description" =>
-              "O protótipo navegável: uma tela por passo relevante da jornada.",
+            "description" => "O protótipo navegável: uma tela por passo relevante da jornada.",
             "properties" => %{
               "telas" => %{
                 "type" => "array",

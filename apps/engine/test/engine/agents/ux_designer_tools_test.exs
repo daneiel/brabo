@@ -42,8 +42,9 @@ defmodule Engine.Agents.UxDesignerToolsTest do
                        %{type: "artifact.prototipo_navegavel", actorId: "ux-designer"}}
 
       assert_received {:handoff_created, "proj-1", "sess-1", "ux-designer", "po", artifact_id}
+
       assert_received {:handoff_created, "proj-1", "sess-1", "ux-designer", "dev-lead",
-                        ^artifact_id}
+                       ^artifact_id}
     end
 
     test "personas vazias são recusadas, sem gravar nada", %{ctx: ctx} do
