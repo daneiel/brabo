@@ -7823,6 +7823,99 @@ comportamento bater com o que `docs/fluxo.yml` já declarava.
 
 ---
 
+## O papel `dbre` vira dois scripts mecânicos (RN-400/401, ADR 0093)
+
+### RN-400 — O parecer de migração é análise ESTÁTICA de SQL, e ignora o padrão de risco quando ele só aparece em comentário {#rn-400}
+
+`lintarConteudo` (o núcleo puro de `lint-migracao.ts`) varre cada `.sql` de
+`apps/api/src/db/migrations/` linha a linha, sem depender de `--projeto`
+nem de banco — o risco que ele acha é de SCHEMA, não de carga, e por isso
+não depende de volume real de dados nenhum (o critério de separação que
+`docs/fluxo.yml` já declarava para o papel). Cinco padrões, cada um com a
+razão anexada ao achado: `DROP TABLE`/`TRUNCATE` (perda total,
+irreversível), `DROP COLUMN` (perda da coluna, irreversível),
+`ALTER COLUMN ... TYPE`/`SET DATA TYPE` (pode reescrever a tabela inteira)
+e `ADD COLUMN ... NOT NULL` sem `DEFAULT` (falha contra tabela não-vazia —
+o padrão que `0042_tough_captain_midlands.sql` evitou conscientemente,
+com nullable-primeiro-depois-backfill-depois-`SET NOT NULL`).
+
+Linha que começa com `--` (comentário) é ignorada de propósito: este
+repositório explica em prosa, no próprio SQL, por que um padrão foi
+EVITADO — analisar o texto do comentário acharia o padrão exatamente na
+frase que descreve por que ele não foi usado.
+
+- **Onde:** `apps/api/scripts/lint-migracao.ts` (`REGRAS`, linha 75;
+  `lintarConteudo`, linha 126)
+- **Teste:** `apps/api/test/scripts/lint-migracao.spec.ts` — cada padrão
+  individualmente, combinação de vários na mesma migration, e "ignora o
+  padrão de risco quando ele aparece só em COMENTÁRIO"
+- **ADR:** [0093](adr/0093-dbre-linter-de-migracao-e-relatorio-de-backup.md)
+
+### RN-401 — O linter não é gate de CI: varre o repositório inteiro, não o diff da PR {#rn-401}
+
+Rodar `pnpm --filter api lint:migracao` contra as migrations reais do
+repositório ACHA três ocorrências em migrations já mergeadas e aceitas
+(`0006_whole_princess_powerful.sql:22` e `0034_quick_saracen.sql:33` —
+`DROP COLUMN`; `0007_groovy_bullseye.sql:2` — `ALTER COLUMN ... SET DATA
+TYPE`). Isso não é defeito a corrigir de passagem (mesma regra do
+CLAUDE.md que protege os achados Z/AD/AE): são migrations já aceitas, e
+apagá-las apagaria a evidência de por que a decisão foi tomada. É também
+por isso que o script sai `!= 0` mas **não** está wireado em
+`.github/workflows/ci.yml` — um gate que reprova o repositório inteiro
+reprovaria toda PR para sempre, por um achado que não é dela. Virar gate
+de bloqueio de verdade exige escopar ao DIFF contra a base do PR (a mesma
+técnica de `scripts/ci/pr-police.ts`), deixado para quando `dbre` precisar
+BLOQUEAR merge — hoje ele é parecer manual, não veredito automático.
+
+- **Onde:** `apps/api/scripts/lint-migracao.ts` (`principal`, exit code no
+  fim do arquivo); decisão documentada no cabeçalho do arquivo e no ADR
+- **Teste:** não aplicável a CI (não há step); a execução manual contra o
+  repositório real está registrada no ADR 0093, seção Consequências
+- **ADR:** [0093](adr/0093-dbre-linter-de-migracao-e-relatorio-de-backup.md)
+
+### RN-402 — O relatório de backup relê exatamente a lógica de `collectBackup()`, nunca uma segunda forma de calcular {#rn-402}
+
+`relatorio-backup.ts` não é um gauge Prometheus novo — é a MESMA leitura
+de `backup_runs` que `DomainGaugesCollector.collectBackup()` já faz
+(último SUCESSO, para idade e tamanho; a ÚLTIMA execução, para pegar o
+caso de estar falhando há dias com um backup bom mais antigo), sob
+demanda. `avaliarBackup` é pura — recebe as duas linhas e o instante
+atual, devolve `status`
+(`ok`|`atrasado`|`nunca_houve`|`falha_recente_com_sucesso_antigo`). O
+limiar de "atrasado" (26h = `BACKUP_AGE_ATRASADO_SEGUNDOS`) é o MESMO do
+alerta `brabo-backup-atrasado`
+(`deploy/k8s/observability/alerts/brabo-alerts.yaml`), duplicado (não
+importado — o YAML do Grafana não é lido pelo processo Node) e sujeito a
+divergir se um lado mudar sem o outro.
+
+- **Onde:** `apps/api/scripts/relatorio-backup.ts` (`avaliarBackup`, linha
+  82; `BACKUP_AGE_ATRASADO_SEGUNDOS`, linha 54)
+- **Teste:** `apps/api/test/scripts/relatorio-backup.spec.ts` — nunca
+  houve backup, backup ok, atrasado, exatamente no limiar (não conta como
+  atrasado), falha recente com sucesso antigo, atrasado tem prioridade
+  sobre falha recente, idade nunca negativa
+- **ADR:** [0093](adr/0093-dbre-linter-de-migracao-e-relatorio-de-backup.md)
+
+### RN-403 — O relatório de backup NÃO reexecuta o restore; ele aponta para o procedimento já testado {#rn-403}
+
+O procedimento de restaurar de verdade (`make test-restore` /
+`deploy/k8s/test-restore.sh`) já foi executado e está documentado em
+`docs/runbook.md#restore`, com RTO real (~40s contra um banco de ~108 KB)
+registrado na seção "Última execução verificada" daquele documento.
+`relatorio-backup.ts` responde uma pergunta mais estreita e mais
+frequente — "o backup que esse restore usaria está saudável agora?" — e
+cita o runbook para quem precisa de fato restaurar, em vez de duplicar o
+procedimento ou reexecutá-lo.
+
+- **Onde:** `apps/api/scripts/relatorio-backup.ts` (mensagem final de
+  `imprimir`, citando `docs/runbook.md#restore`)
+- **Teste:** não aplicável (é texto estático apontando para o runbook,
+  não lógica); a existência do procedimento testado é RN de
+  `docs/runbook.md#restore` em si
+- **ADR:** [0093](adr/0093-dbre-linter-de-migracao-e-relatorio-de-backup.md)
+
+---
+
 ## Quando dá errado
 
 | situação | o que o sistema faz |

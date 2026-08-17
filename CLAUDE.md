@@ -1184,6 +1184,27 @@ sozinho. Fechar isto exigiria o mesmo mecanismo de persistência do ADR
 0052; fora do escopo desta correção, que só alinha o comportamento ao que
 `docs/fluxo.yml` já declarava.
 
+## dbre vira dois scripts mecânicos (RN-400..403, ADR 0093)
+Do papel `dbre` do fluxo.yml, só dois dos quatro entregáveis dependem de
+volume real de dados (`plano-de-capacidade`, `tuning` — seguem lacuna,
+sem prazo). Os outros dois não precisam de carga real: `parecer-de-
+migracao` é reconhecimento de padrão em texto SQL
+(`apps/api/scripts/lint-migracao.ts`, varre `apps/api/src/db/migrations/
+*.sql`, sinaliza `DROP TABLE`/`TRUNCATE`/`DROP COLUMN`/`ALTER COLUMN ...
+TYPE`/`ADD COLUMN ... NOT NULL` sem `DEFAULT`, `!= 0` se achar algo — hoje
+acha 3 ocorrências em migrations já mergeadas e aceitas, informativo, não
+corrigidas de passagem); `backup-restore-testado` já era real desde a
+Fase 5 (CronJob + `backup_runs` + `make test-restore` executado, RTO
+~40s) — faltava só um relatório sob demanda (`relatorio:backup`, mesma
+leitura do `DomainGaugesCollector.collectBackup()`). Nenhum dos dois
+entra em CI ainda: o linter varre o repositório inteiro, não o diff de
+uma PR, e viraria gate que reprova PR por achado que não é dela — ver o
+ADR 0093 para a técnica de escopo (`pr-police.ts`) quando isso mudar. A
+regra de "uma migration por onda" (`meta/_journal.json`) deixou de ser
+chamada de "versão mecanizada" deste papel: ela evita conflito de
+snapshot entre agentes em paralelo, preocupação ortogonal a "este SQL
+tem um padrão arriscado".
+
 ## FERRAMENTA DE DESENVOLVIMENTO — `pnpm bootstrap`
 Menu de terminal em `scripts/dev/bootstrap.sh` agrupando o que se faz no
 dia a dia: Docker, K8s, Database e Test. Existe porque esses comandos moram

@@ -96,6 +96,15 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   conversa com o Dev Lead PAUSA: é a primeira vez que um agente
   conversacional suspende esperando aprovação humana no meio do turno
   síncrono (RN-284, ADR 0086)
+- **api**: o papel `dbre` vira dois scripts mecânicos —
+  `lint:migracao` varre `apps/api/src/db/migrations/*.sql` e sinaliza
+  `DROP TABLE`/`TRUNCATE`/`DROP COLUMN`/`ALTER COLUMN ... TYPE`/`ADD
+  COLUMN ... NOT NULL` sem `DEFAULT` (informativo, não bloqueia CI ainda);
+  `relatorio:backup` lê `backup_runs` sob demanda com a mesma lógica do
+  `DomainGaugesCollector`, citando o procedimento de restore já testado
+  em `docs/runbook.md`. Plano de capacidade e tuning seguem declarados
+  como lacuna — exigem volume real de dados, que não existe hoje
+  (RN-400..403, ADR 0093)
 
 ### Correções
 
