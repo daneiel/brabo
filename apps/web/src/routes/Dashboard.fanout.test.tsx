@@ -73,6 +73,7 @@ function resumo(i: number): ProjectCardSummary {
     lastEvent: null,
     storiesAwaitingPromotion: 0,
     pendingApprovalsCount: 0,
+    onlineAgentCount: 0,
     roster: {
       executionActivated: true,
       moduleNames: ['api', 'web'],

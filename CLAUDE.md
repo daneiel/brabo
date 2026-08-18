@@ -1641,6 +1641,33 @@ padrão de `validateSearch` no `router.tsx`, mesma resposta única para link
 inexistente/expirado/já usado — com uma diferença: sem formulário, a
 confirmação dispara sozinha ao montar, então a tela precisa dos três
 estados da RN-088 (carregando/erro/sucesso), não só dois.
+## "N agentes online" no dashboard — status AO VIVO, nunca presença histórica (RN-409, ADR 0097)
+Item do backlog anterior fechado. Investigação prévia confirmou que não
+existia agregado de liveness nenhum, nem por projeto nem por workspace — só
+presença HISTÓRICA (`RosterFacts`, "já apareceu alguma vez") e status ao
+vivo de verdade só no cliente, derivado do event log, só quando um projeto
+está ABERTO. `ProjectCardSummary.onlineAgentCount` soma dois mecanismos pela
+MESMA régua ("não ocioso, não travado"): dev agents
+(`engine.dev_agent_states.status NOT IN ('idle', 'idle_tripped')`,
+agregado em lote no engine) e agentes conversacionais (último `agent.status`
+da sessão mais recente com `status !== 'idle'`, `payload` que só aceita
+`working`/`idle`/`awaiting_approval`). QA/SecOps nunca contam — não emitem
+`agent.status`, veredito único por invocação, sem noção de "ocioso" entre
+chamadas.
+
+A decisão de arquitetura que vale registrar: a consulta lê
+`engine.dev_agent_states` DIRETO, via SQL cru batelado por workspace, dentro
+do MESMO `Promise.all` que já soma onze consultas do read model de RN-090
+(DOZE → CATORZE, ainda CONSTANTE) — em vez de abrir uma rota HTTP interna
+nova no engine. `api` e `engine` compartilham o MESMO banco físico,
+separados só por schema Postgres, e já havia precedente
+(`apps/api/scripts/medir-execucao.ts` já lê `engine.oban_peers`); esta
+decisão eleva o padrão de script manual para código de produção TESTADO
+(fixture mínima e declarada da tabela do engine em
+`test/support/global-setup.ts`). Consequência aceita e declarada no ADR
+0097: a consulta pressupõe que quem opera o produto migra os dois lados
+juntos (`db:migrate` E `engine:migrate`), e falha alto/visível se só a api
+migrou — sem try/catch escondendo o erro.
 
 ## FERRAMENTA DE DESENVOLVIMENTO — `pnpm bootstrap`
 Menu de terminal em `scripts/dev/bootstrap.sh` agrupando o que se faz no

@@ -83,6 +83,7 @@ function resumo(latestSeq: number): ProjectCardSummary {
     lastEvent: null,
     storiesAwaitingPromotion: 0,
     pendingApprovalsCount: 0,
+    onlineAgentCount: 0,
     roster: {
       executionActivated: false,
       moduleNames: [],
