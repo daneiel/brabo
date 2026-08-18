@@ -8734,6 +8734,55 @@ lacuna nenhuma.
   [ADR 0089](adr/0089-analytics-e-delivery-metricas-como-relatorio.md) — esta RN só
   fecha o mecanismo de leitura que faltava.
 
+### RN-408 — `MAIL_TRANSPORT=smtp` deriva o boot pelo padrão da RN-114, sem o default público {#rn-408}
+
+Fecha o item de backlog "SMTP real no MailSender" ([ADR 0096](adr/0096-smtp-real-no-mailsender.md)).
+`resolverConfigSmtp()` valida `SMTP_HOST`/`SMTP_USER`/`SMTP_PASSWORD`/
+`SMTP_FROM` no MESMO formato da [RN-114](#rn-114) — em produção
+(`NODE_ENV === 'production'`), cada um derruba o boot se estiver ausente, só
+com espaços, ou (no caso de `SMTP_HOST`) igual ao literal de exemplo
+publicado (comentado) em `.env.example`. `SMTP_FROM` tem uma checagem a
+mais: precisa casar `"Nome <email@dominio>"` ou só `email@dominio`.
+`SMTP_PORT` inválida (não numérica ou fora de 1–65535) também derruba o boot
+em produção.
+
+A diferença para a RN-114 original é estrutural, não de rigor: os quatro
+segredos da RN-114 (`AUTH_JWT_SECRET` e companhia) TÊM um default de
+desenvolvimento público, e é a existência desse default que torna "não
+vazia" uma checagem insuficiente. Aqui não há default nenhum — `SMTP_HOST`
+fica em branco se ninguém setar —, então a régua inteira só é aplicada
+quando `NODE_ENV=production` E `MAIL_TRANSPORT=smtp`. Fora de produção, ou
+com o transporte em `log` (o default, inclusive em produção), nenhuma das
+cinco variáveis é exigida: enviar e-mail de verdade é opt-in do operador, e
+sem esse opt-in explícito o comportamento continua sendo o log-only de
+sempre — inclusive em produção, para quem já roda o produto hoje não
+quebrar ao atualizar.
+
+A validação roda dentro do construtor de `SmtpMailSender`, exercitado pelo
+`useFactory` de `AuthUseCasesModule` na montagem do grafo de providers do
+Nest (`NestFactory.create()`) — não por uma chamada eager em `main.ts`, como
+os quatro segredos da RN-114 original. A diferença é deliberada: aqueles
+quatro protegem caminho que QUALQUER requisição pode exercitar a qualquer
+momento, então falhar antes de subir importa. `SmtpMailSender` só é
+instanciado quando o operador optou por `smtp`, e `AuthUseCasesModule` é
+importado incondicionalmente (via `AuthHttpModule`), então a validação
+ainda acontece no boot — mesmo desenho que `CREDENTIALS_MASTER_KEY` já usa
+(validada no construtor de `EnvelopeEncryptionService`, exercitado pela
+mesma montagem de grafo).
+
+- **Onde:** `apps/api/src/infrastructure/mail/smtp-config.ts`
+  (`resolverConfigSmtp`, `resolverModoDeTransporte`),
+  `apps/api/src/infrastructure/mail/smtp-mail-sender.ts` (`SmtpMailSender`,
+  chama `resolverConfigSmtp()` no construtor),
+  `apps/api/src/application/use-cases/auth/auth-use-cases.module.ts`
+  (`useFactory` do `MailSender`)
+- **Teste:** `apps/api/test/infrastructure/mail/smtp-config.spec.ts`
+  (mesmo padrão de `auth-key-material.spec.ts`/`service-token.spec.ts`),
+  `apps/api/test/infrastructure/mail/smtp-mail-sender.spec.ts`
+- **Origem:** [ADR 0096](adr/0096-smtp-real-no-mailsender.md), estendendo o
+  padrão da [RN-114](#rn-114) (que por sua vez estende o
+  [ADR 0059](adr/0059-segredo-do-state-de-oauth-sem-default.md))
+
 ---
 
 ## Quando dá errado

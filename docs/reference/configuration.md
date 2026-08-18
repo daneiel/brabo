@@ -95,6 +95,27 @@ em [ADR 0031](../adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.md) e
 > verificação e reset em aberto. Diferente das chaves, o pepper **não** tem
 > `_PREVIOUS`. Ver o [runbook](../runbook.md).
 
+### SMTP real (MailSender)
+
+`MailSender` envia e-mail de verdade só quando `MAIL_TRANSPORT=smtp` — o
+default é `log` (link/token vão para o log da api, `AUTH_MAIL_LOG_TOKENS`
+acima), inclusive em produção: enviar e-mail é opt-in do operador. Decisão
+no [ADR 0096](../adr/0096-smtp-real-no-mailsender.md).
+
+| variável | default | o que faz |
+|---|---|---|
+| `MAIL_TRANSPORT` | `log` | `log` (default) ou `smtp`. Qualquer outro valor cai em `log` |
+| `SMTP_HOST` 🔒 | — | host do provedor SMTP. **Só quando `MAIL_TRANSPORT=smtp`**: em produção a api recusa subir ausente, só espaços ou com o valor de exemplo publicado no `.env.example` (RN-114) |
+| `SMTP_PORT` | `587` | porta do provedor — `587` é STARTTLS, `465` é TLS implícito (`SMTP_SECURE=true`) |
+| `SMTP_SECURE` | `false` | `true` liga TLS implícito na conexão (tipicamente porta 465) |
+| `SMTP_USER` 🔒 | — | usuário de autenticação SMTP. Mesma exigência de `SMTP_HOST` em produção |
+| `SMTP_PASSWORD` 🔒 | — | senha/token de autenticação SMTP. Mesma exigência de `SMTP_HOST` em produção — **nunca aparece em log** |
+| `SMTP_FROM` | — | remetente, formato `"Nome <email@dominio>"` (ou só o e-mail). Mesma exigência de `SMTP_HOST` em produção, mais validação de formato |
+
+> O corpo do e-mail é **texto puro**, sem HTML — a porta `MailSender` não
+> carrega estrutura para corpo rico, e um template engine seria superfície de
+> injeção sem ganho nenhum. O link usa `WEB_ORIGIN` (acima).
+
 ### Seed de desenvolvimento
 
 Consumidas por `pnpm --filter api seed`, não pela api em execução. Sem IdP
@@ -390,9 +411,9 @@ que uma variável nova não fique documentada em lugar nenhum sem ninguém notar
 
 > ⚠️ Bloco gerado por `pnpm docs:generate`. Não edite à mão — o próximo build sobrescreve.
 
-Inventário extraído do código: **104 variáveis** lidas em tempo de execução. Todas têm descrição nas tabelas acima.
+Inventário extraído do código: **111 variáveis** lidas em tempo de execução. Todas têm descrição nas tabelas acima.
 
-**api** — 42 variáveis
+**api** — 49 variáveis
 
 - `API_PUBLIC_URL` <sub>(apps/api/src/application/use-cases/auth/start-social-login.use-case.ts)</sub>
 - `AUTH_ACCESS_TOKEN_TTL_MS` <sub>(apps/api/src/infrastructure/security/ed25519-access-token-issuer.ts)</sub>
@@ -426,16 +447,23 @@ Inventário extraído do código: **104 variáveis** lidas em tempo de execuçã
 - `GITLAB_OAUTH_CLIENT_ID` <sub>(apps/api/src/infrastructure/git/gitlab-oauth-client.ts)</sub>
 - `GITLAB_OAUTH_CLIENT_SECRET` <sub>(apps/api/src/infrastructure/git/gitlab-oauth-client.ts)</sub>
 - `LOG_LEVEL` <sub>(apps/api/src/infrastructure/observability/logger.config.ts)</sub>
+- `MAIL_TRANSPORT` <sub>(apps/api/src/infrastructure/mail/smtp-config.ts)</sub>
 - `METRICS_GAUGE_INTERVAL_MS` <sub>(apps/api/src/infrastructure/observability/domain-gauges.collector.ts)</sub>
 - `MIGRATIONS_FOLDER` <sub>(apps/api/src/db/migrate.ts)</sub>
-- `NODE_ENV` <sub>(apps/api/src/infrastructure/observability/logger.config.ts)</sub>
+- `NODE_ENV` <sub>(apps/api/src/infrastructure/mail/smtp-config.ts)</sub>
 - `OLLAMA_HOST` <sub>(apps/api/src/infrastructure/llm/ollama-provider.ts)</sub>
 - `PROJECT_WORKSPACES_ROOT` <sub>(apps/api/src/infrastructure/filesystem/project-workspaces-root.ts)</sub>
 - `RATE_LIMIT_ENABLED` <sub>(apps/api/src/interfaces/http/shared/rate-limit.guard.ts)</sub>
 - `RATE_LIMIT_IP` <sub>(apps/api/src/interfaces/http/shared/rate-limit.guard.ts)</sub>
 - `RATE_LIMIT_USER` <sub>(apps/api/src/interfaces/http/shared/rate-limit.guard.ts)</sub>
 - `RATE_LIMIT_WINDOW_MS` <sub>(apps/api/src/infrastructure/observability/domain-gauges.collector.ts)</sub>
-- `WEB_ORIGIN` <sub>(apps/api/src/infrastructure/security/cors-origins.ts)</sub>
+- `SMTP_FROM` <sub>(apps/api/src/infrastructure/mail/smtp-config.ts)</sub>
+- `SMTP_HOST` <sub>(apps/api/src/infrastructure/mail/smtp-config.ts)</sub>
+- `SMTP_PASSWORD` <sub>(apps/api/src/infrastructure/mail/smtp-config.ts)</sub>
+- `SMTP_PORT` <sub>(apps/api/src/infrastructure/mail/smtp-config.ts)</sub>
+- `SMTP_SECURE` <sub>(apps/api/src/infrastructure/mail/smtp-config.ts)</sub>
+- `SMTP_USER` <sub>(apps/api/src/infrastructure/mail/smtp-config.ts)</sub>
+- `WEB_ORIGIN` <sub>(apps/api/src/infrastructure/mail/smtp-mail-sender.ts)</sub>
 
 **engine** — 58 variáveis
 
