@@ -8885,6 +8885,66 @@ consultas novas ficam sem número medido, só o argumento estrutural acima.
 
 ---
 
+### RN-410 — O quarto sinal de trabalho pendente: dev agents falam `dev.*`, não `agent.status` {#rn-410}
+
+Achado por USO real, não por teste: numa sessão de execução, cinco dev
+agents subiram, ficaram `idle_tripped` (o circuit breaker da
+[RN-047](#rn-047), travados esperando o usuário desbloquear uma task
+manualmente), e o heartbeat de 30 segundos
+(`Engine.Sessions.SessionServer.handle_info(:heartbeat_timeout, state)`)
+fechou a sessão por baixo enquanto o trabalho — e a espera por decisão
+humana — continuava.
+
+`GetSessionPendingWorkUseCase` já tinha um terceiro sinal
+([RN-064](#rn-064)) para o mesmo problema: agente ativado, sem `idle`
+posterior, segura a sessão. Mas esse sinal só lê `agent.status`, o
+vocabulário dos agentes CONVERSACIONAIS (Criativo/PO/Arquiteto/Dev
+Lead/UX Designer/Staff/Infra). `Engine.Dev.DevAgentServer` (via
+`Engine.Dev.AgentIo`) nunca emite `agent.status` — usa vocabulário
+PRÓPRIO no event log da sessão: `dev.started`, `dev.working`,
+`dev.awaiting_gate`, `dev.awaiting_approval`, `dev.idle`,
+`dev.idle_tripped`, `dev.blocked`, `dev.error`. Uma sessão de execução
+com dev agent trabalhando OU travado sempre devolvia `pending: false`
+pelo terceiro sinal, porque nenhum `agent.status` existe para ele.
+
+O QUARTO sinal busca o ÚLTIMO evento `dev.*` de cada `actor.id`
+(`dev-<modulo>`/`dev-<modulo>-2`, a mesma chave da
+[RN-195](#rn-195)) que já apareceu na sessão — igual ao terceiro sinal,
+mas sobre múltiplos tipos de evento em vez de um só, porque o estado do
+dev agent não é UM tipo com um `payload.status` variável, são tipos DE
+evento distintos por transição. A régua: `pending: true` quando o
+último for `dev.working`, `dev.blocked` ou `dev.idle_tripped` — os três
+significam "tem trabalho rolando ou um humano precisa agir", e travado
+esperando desbloqueio É trabalho pendente (é literalmente o que o
+usuário estava fazendo quando a sessão fechou na execução real). Só
+`dev.idle` (sem tarefa nenhuma pra pegar, drenado de verdade) não
+conta.
+
+`dev.awaiting_gate` e `dev.awaiting_approval`, como último evento, NÃO
+disparam este sinal — ficaram de fora da régua tal como decidida.
+`awaiting_approval` normalmente já é coberto pelo segundo sinal (a ação
+git de commit/push/PR nasce `pending` e seria pega por
+`ProposedActionRepository.findOldestPendingInSession`); `awaiting_gate`
+(PR aberta, gate de QA/SecOps ainda rodando, nenhuma `proposed_action`
+pendente) é uma lacuna residual CONHECIDA e não fechada aqui — diferente
+do `engine.dev_agent_states.status` que a [RN-409](#rn-409) já lê (onde
+`awaiting_gate`/`awaiting_approval` contam como "online"), este sinal
+lê o EVENT LOG, não a tabela de estado, e a régua foi decidida
+explicitamente restrita aos três tipos acima.
+
+- **Onde:** `apps/api/src/application/use-cases/sessions/get-session-pending-work.use-case.ts`
+- **Teste:** `apps/api/test/application/use-cases/sessions/get-session-pending-work.use-case.spec.ts`
+  (dev agent `dev.working`/`dev.blocked`/`dev.idle_tripped` como último
+  evento → `pending: true`; `dev.idle` → `pending: false`; sessão sem
+  evento `dev.*` preserva o comportamento anterior; só o ÚLTIMO evento de
+  cada agente importa; `dev-<modulo>-2` também segura; isolamento entre
+  sessões)
+- **Origem:** achado por uso real — sessão de execução real com cinco dev
+  agents em `idle_tripped` fechada pelo heartbeat enquanto o usuário
+  ainda desbloqueava tarefas manualmente
+
+---
+
 ## Quando dá errado
 
 | situação | o que o sistema faz |

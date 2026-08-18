@@ -210,6 +210,14 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **api**: sessão de execução não fecha mais por baixo de dev agent
+  trabalhando ou travado esperando desbloqueio — o heartbeat de 30s só
+  enxergava `agent.status` (vocabulário dos conversacionais), e dev agents
+  usam vocabulário próprio (`dev.*`). Quarto sinal em
+  `GetSessionPendingWorkUseCase`: último evento `dev.working`/`dev.blocked`/
+  `dev.idle_tripped` de qualquer `dev-<modulo>` segura a sessão; `dev.idle`
+  não. Achado numa sessão de execução real com cinco dev agents em
+  `idle_tripped` (RN-410)
 - **api**: "Confirmar arquitetura pronta" (RN-160) agora é revalidado no
   BACKEND — antes só a UI desabilitava o botão sem história promovida do
   backlog, e uma chamada HTTP direta a `POST
