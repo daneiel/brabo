@@ -1558,6 +1558,35 @@ CONSULTA a passagem deste gate antes de deixar o PO seguir, diferente dos
 código por trás. `docs/fluxo.yml` (`criativo`, `gate_saida`): `status:
 proposto` → `status: ativo, regra: RN-406`.
 
+## Auditoria fluxo.yml × código — B4 (a ÚLTIMA pendência): o PO lê métricas de produto (RN-407)
+Fecha o item B4 — a última linha da tabela "Backlog do modelo de time
+(ADR 0085)" em `docs/explanation/backlog.md`; a tabela fica VAZIA depois
+desta correção, e a auditoria fluxo.yml × código termina aqui. Sem ADR
+novo: segue o mesmo padrão já estabelecido pela RN-164 (leitura de agente
+escopada ao projeto, sem efeito externo, sem `proposed_action`), só com
+uma RN nova. `docs/fluxo.yml` (papel `po`, entrada `metricas-de-produto`):
+`status: lacuna` → `regra: RN-407`.
+
+O DADO já existia desde o ADR 0089 (`analise:funil` — funil real
+sessão → commit → PR → merge, lead time real, deployment frequency real);
+faltava só o PO conseguir LER esse relatório dentro do turno. Terceira
+ferramenta de leitura do PO, `listar_metricas_de_produto`
+(`GET .../product-metrics`), mesmo desenho exato das duas irmãs da
+RN-164 — `:direct`, sem parâmetro, escopo fechado no projeto. As funções
+de CÁLCULO puras e a query (`calcularFunil`/`calcularLeadTimes`/
+`leadTimeMedioMs`/`deploymentFrequencyPorDia`/`buscarAcoesGitDoFunil`)
+migraram de `apps/api/scripts/analise-funil.ts` para
+`apps/api/src/application/services/funil-metrics.ts` — refatoração
+MECÂNICA e necessária (`scripts/` não pode viver em `src/`, e `src/` não
+importa de `scripts/`): o script passou a REEXPORTAR dali, sem mudar
+assinatura nem comportamento, e o teste de regressão do script continua
+verde sem ser tocado. O corpo JSON não tem campo para as três ausências
+permanentes que o script já declarava só em texto (funil de produto
+completo ideação → commit, evidência de adoção por feature, MTTR/change
+failure rate) — a ferramenta do PO as cita pelo nome no TEXTO que devolve
+ao modelo, sempre, para ele nunca concluir por omissão dos números que
+não há lacuna.
+
 ## FERRAMENTA DE DESENVOLVIMENTO — `pnpm bootstrap`
 Menu de terminal em `scripts/dev/bootstrap.sh` agrupando o que se faz no
 dia a dia: Docker, K8s, Database e Test. Existe porque esses comandos moram

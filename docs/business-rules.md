@@ -8679,6 +8679,63 @@ real de código os impede de serem pulados). `docs/fluxo.yml` (papel
 
 ---
 
+### RN-407 — O PO lê o funil de entrega e DORA parcial, terceira leitura escopada ao projeto {#rn-407}
+
+O PO ganhou uma TERCEIRA ferramenta de leitura — `listar_metricas_de_produto`
+(`:direct`, sem parâmetro nenhum) — servida por
+`GET /internal/projects/:projectId/product-metrics`, mesmo desenho das duas
+irmãs da [RN-164](#rn-164): escopo fechado no projeto, sem termo de busca,
+sem paginação.
+
+`docs/fluxo.yml` (papel `po`, entrada `metricas-de-produto`) declarava
+`status: lacuna` desde o [ADR 0089](adr/0089-analytics-e-delivery-metricas-como-relatorio.md),
+que já tinha entregue o DADO — o script `pnpm --filter api analise:funil`
+mede o funil real sessão → commit → PR → merge, o lead time real e a
+deployment frequency real a partir de `proposed_actions`. O que faltava era
+só o MECANISMO: o PO nunca tinha como reler esse relatório dentro do turno.
+Fecha o item B4 da auditoria `fluxo.yml` × código
+([docs/explanation/auditoria-fluxo-vs-codigo.md](explanation/auditoria-fluxo-vs-codigo.md)) —
+a ÚLTIMA pendência da tabela "Backlog do modelo de time"
+(docs/explanation/backlog.md), que fica vazia depois desta.
+
+O CÁLCULO é o MESMO do script, nunca duplicado: as funções puras
+(`calcularFunil`/`calcularLeadTimes`/`leadTimeMedioMs`/
+`deploymentFrequencyPorDia`) e a query que monta `AcaoGit[]`
+(`buscarAcoesGitDoFunil`) foram extraídas de `apps/api/scripts/analise-funil.ts`
+para `apps/api/src/application/services/funil-metrics.ts` — um caso de uso em
+`src/` não pode importar de `scripts/`, e o script passou a REEXPORTAR dali
+em vez de definir localmente, sem mudar assinatura nem comportamento (o
+teste de regressão do script continua verde sem ser tocado).
+
+O corpo JSON que a rota devolve **não tem campo nenhum** para as três
+ausências permanentes que o script já declarava em texto ("Não medido, de
+propósito": funil de produto completo ideação → commit, evidência de adoção
+por feature, MTTR/change failure rate) — o shape do relatório nunca reservou
+espaço para elas. A ferramenta do PO cita as três pelo NOME no TEXTO que
+devolve ao modelo, sempre, e não só quando o número dá zero: sem essa
+seção o PO leria só os números do funil e concluiria por omissão que não há
+lacuna nenhuma.
+
+- **Onde:** `apps/api/src/application/services/funil-metrics.ts`;
+  `apps/api/scripts/analise-funil.ts` (reexporta);
+  `apps/api/src/application/use-cases/backlog/list-product-metrics.use-case.ts`;
+  `apps/api/src/interfaces/http/internal/internal-projects.controller.ts`;
+  `apps/api/src/interfaces/http/internal/dto/product-metrics.response.dto.ts`;
+  `apps/engine/lib/engine/harness/tools/listar_metricas_de_produto.ex`;
+  `apps/engine/lib/engine/agents/po_server.ex`;
+  `apps/engine/lib/engine/sessions/engine_api_client.ex`
+- **Teste:** `apps/api/test/application/use-cases/backlog/list-product-metrics.use-case.spec.ts`;
+  `apps/api/test/scripts/analise-funil.spec.ts` (regressão — continua
+  importando de `scripts/analise-funil.ts`, sem alteração);
+  `apps/engine/test/engine/harness/tools/listar_metricas_de_produto_test.exs`;
+  `apps/engine/test/engine/agents/po_server_test.exs`
+- **Origem:** mesmo padrão da [RN-164](#rn-164) (leitura de agente escopada
+  ao projeto, sem efeito externo, sem `proposed_action`); o dado é do
+  [ADR 0089](adr/0089-analytics-e-delivery-metricas-como-relatorio.md) — esta RN só
+  fecha o mecanismo de leitura que faltava.
+
+---
+
 ## Quando dá errado
 
 | situação | o que o sistema faz |

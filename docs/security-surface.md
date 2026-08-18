@@ -154,14 +154,16 @@ motivo na URL.
   [RN-076](business-rules.md#rn-076). Se algum dia esta rota passar a devolver
   a URL já autenticada, o token vai parar no `.git/config`, dentro da pasta
   onde o dev agent tem leitura auto-aprovada.
-- **As duas rotas de leitura do PO** — `GET /internal/projects/:projectId/business-rules`
-  e `GET /internal/projects/:projectId/backlog`
-  ([RN-164](business-rules.md#rn-164)) — não devolvem segredo nenhum e **não
-  aceitam nada além do id do projeto**: sem termo de busca, sem paginação, sem
-  filtro. É de propósito. Uma rota de leitura para agente é uma superfície que
-  o modelo escolhe chamar, e parâmetro é onde o modelo escreve o que quiser;
-  aqui não há onde escrever. O escopo é fechado no projeto pelo caminho, e o
-  custo por chamada é constante (três leituras no backlog, duas nas regras).
+- **As três rotas de leitura do PO** — `GET /internal/projects/:projectId/business-rules`,
+  `GET /internal/projects/:projectId/backlog` ([RN-164](business-rules.md#rn-164))
+  e `GET /internal/projects/:projectId/product-metrics` ([RN-407](business-rules.md#rn-407)) —
+  não devolvem segredo nenhum e **não aceitam nada além do id do projeto**:
+  sem termo de busca, sem paginação, sem filtro. É de propósito. Uma rota de
+  leitura para agente é uma superfície que o modelo escolhe chamar, e
+  parâmetro é onde o modelo escreve o que quiser; aqui não há onde escrever.
+  O escopo é fechado no projeto pelo caminho, e o custo por chamada é
+  constante (três leituras no backlog, duas nas regras, uma consulta a
+  `proposed_actions` filtrada por índice nas métricas de produto).
 - **As rotas `engine-service` não são "internas" por convenção de nome.** O que
   as protege é o `EngineServiceGuard` comparando o `X-Brabo-Service-Token` com
   o segredo compartilhado em tempo constante, mais a NetworkPolicy. O prefixo
@@ -356,6 +358,7 @@ motivo na URL.
 | GET | `/internal/projects/:projectId/git-remote` | engine-service |
 | GET | `/internal/projects/:projectId/business-rules` | engine-service |
 | GET | `/internal/projects/:projectId/backlog` | engine-service |
+| GET | `/internal/projects/:projectId/product-metrics` | engine-service |
 | GET | `/internal/sessions/:sessionId/psychologist-context` | engine-service |
 | POST | `/internal/sessions/:sessionId/stories` | engine-service |
 | POST | `/internal/sessions/:sessionId/story-modules` | engine-service |

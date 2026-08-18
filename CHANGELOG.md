@@ -185,6 +185,14 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   Criativo→PO já aconteceu antes. `docs/gates.yml` ganha o gate
   correspondente (`active`, `warn`) (RN-406, ADR 0095, auditoria
   fluxo.yml × código, item B2 — última onda do plano)
+- **api,engine**: o PO ganha a terceira ferramenta de leitura,
+  `listar_metricas_de_produto` — o mesmo relatório de funil de entrega e
+  DORA parcial do script `analise:funil` (ADR 0089), agora legível dentro
+  do turno (`GET /internal/projects/:projectId/product-metrics`). As
+  funções de cálculo puras e a query migraram para
+  `apps/api/src/application/services/funil-metrics.ts`, reexportadas pelo
+  script sem mudar comportamento. Fecha o item B4 — a ÚLTIMA pendência da
+  auditoria fluxo.yml × código (RN-407)
 
 ### Correções
 

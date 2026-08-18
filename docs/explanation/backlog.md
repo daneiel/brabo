@@ -349,19 +349,17 @@ produto adiadas — por isso sem prioridade aqui.
 | Reativar a Anamnese (`ANAMNESE_ENABLED=true`) | pausada por decisão do usuário em 2026-08-10 — "hoje ele não está trazendo dados de muito valor" ([RN-115](../business-rules.md#rn-115)). Nenhum dado apagado (hipóteses, perfis de proficiência, patches de instrução seguem intactos e visíveis); a pausa é só do CAMINHO de rodada nova, aguardando um refinamento futuro do que a Anamnese deriva antes de religar |
 | Reativar o Psicólogo (`PSYCHOLOGIST_ENABLED=true`) | pausado por decisão do usuário em 2026-08-10, mesmo motivo e mesmo padrão da Anamnese acima ([RN-117](../business-rules.md#rn-117)). Nenhum dado apagado (análises e hipóteses já emitidas seguem intactas e visíveis); a pausa é só do CAMINHO de rodada nova (automática e sob demanda) |
 
-## Backlog do modelo de time (ADR 0085)
+## Backlog do modelo de time (ADR 0085) — AUDITORIA FECHADA
 
 Saída da auditoria `fluxo.yml` × código
-([auditoria-fluxo-vs-codigo.md](auditoria-fluxo-vs-codigo.md)). São itens
+([auditoria-fluxo-vs-codigo.md](auditoria-fluxo-vs-codigo.md)). Eram itens
 declarados no modelo (`docs/fluxo.yml`) sobre papéis já **ativos** — não
-esperam nenhum papel `proposto`/`planned` ativar primeiro — e nenhum está
-em andamento; a ordem de ataque é decisão do usuário. O documento da
-auditoria tem o plano de ondas completo, com custo e critério de
-verificação por item.
-
-| item | onde está a lacuna | referência |
-|---|---|---|
-| Métricas de produto → PO | o relatório (`analise:funil`, ADR 0089) já existe; falta só o PO LER `metricas-de-produto` — `fluxo.yml` (papel `po`) ainda declara essa entrada `status: lacuna` | [auditoria, B4](auditoria-fluxo-vs-codigo.md#b-lacunas-de-papéis-ativos-trabalho-implementável-já) |
+esperavam nenhum papel `proposto`/`planned` ativar primeiro. As seis ondas
+do plano fecharam, e esta tabela fica **vazia**: o último item (B4, o PO
+ler `metricas-de-produto`) fechou com a RN-407, sem ADR novo — mesmo padrão
+já estabelecido pela RN-164 (leitura de agente escopada ao projeto, sem
+efeito externo). O documento da auditoria tem o plano de ondas completo,
+com custo e critério de verificação por item, para quem quiser o histórico.
 
 **Fechados desde a auditoria** (não removidos da referência original, só desta
 tabela de pendências): gate `implementavel` (B3, ADR 0090); `docs/gates.yml`
@@ -372,7 +370,11 @@ change failure rate) não fechou: continua declarado como lacuna PERMANENTE em
 `fluxo.yml` (papel `delivery-metricas`), não pendência de engenharia; delegação
 Dev Lead → dev (B1) e RN-160 sem revalidação no backend (A6/B6) — Onda 2 da
 auditoria, ADR 0094, RN-404/405; gate `necessidade-validada` (B2) — Onda 6
-(última) da auditoria, ADR 0095, RN-406.
+(última) da auditoria, ADR 0095, RN-406; **métricas de produto → PO (B4)** —
+o relatório (`analise:funil`, ADR 0089) já existia, faltava só o PO LER
+`metricas-de-produto`; fechado com a ferramenta `listar_metricas_de_produto`
+e as funções puras extraídas para `apps/api/src/application/services/funil-metrics.ts`
+(RN-407) — última pendência da tabela, encerrando a auditoria.
 
 ## O que esta triagem NÃO faz
 

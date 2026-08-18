@@ -252,6 +252,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/internal-projects-controller-product-metrics",
+          label: "O funil de entrega e DORA parcial do projeto, para o PO ler",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/internal-sessions-controller-create-action",
           label: "Propõe uma ação com efeito externo em nome de um agente",
           className: "api-method post",
