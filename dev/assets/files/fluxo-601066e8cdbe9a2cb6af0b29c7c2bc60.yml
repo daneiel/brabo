@@ -113,7 +113,7 @@ camada_decisao_tecnica:
           via: proposed_action, regra: RN-083/154 }
       - { artefato: parecer-implementabilidade, destino: usuario,
           via: proposed_action, regra: RN-340 }                    # ADR 0090
-      - { artefato: delegacao, destino: dev, status: lacuna }  # ADR 0053 item 5
+      - { artefato: delegacao, destino: dev, status: ativo, regra: RN-405 } # ADR 0094
       - { artefato: design-doc + quebra-tecnica, destino: dev,
           status: proposto }
     gates:
