@@ -2418,6 +2418,10 @@ depois de ler.
   `test/application/use-cases/execution/request-parallelization.use-case.spec.ts`,
   `test/application/use-cases/execution/set-area-max-parallel.use-case.spec.ts`
   e `apps/web/src/routes/ProjectSettingsTab.test.tsx` (`ParallelismSection`)
+- **Gate:** `docs/gates.yml` (`paralelismo-autorizado`) — `status: active`
+  desde a auditoria fluxo.yml × código (achado A1/B5); o mecanismo em si não
+  mudou, só o registro que ficou `planned` por engano desde a FASE 14d, ver
+  [gates.md](explanation/gates.md#um-registro-pode-envelhecer-para-o-lado-errado--desatualizado-não-inativo)
 - **Origem:** [ADR 0053](adr/0053-dev-lead-e-paralelismo-autorizado.md), FASE 14d
 
 ### RN-094 — A área de agentes nasce com o projeto {#rn-094}
