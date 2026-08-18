@@ -169,8 +169,22 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   em `docs/runbook.md`. Plano de capacidade e tuning seguem declarados
   como lacuna — exigem volume real de dados, que não existe hoje
   (RN-400..403, ADR 0093)
+- **api**: a delegação Dev Lead → `dev-<modulo>` vira DADO auditável em
+  `delegations` (`area: 'dev'`), fechando o item que o ADR 0053 (item 5)
+  tinha declarado fora de escopo. `status: 'completed'` é redefinido para
+  esta área — significa "o agente foi ativado", não "parecer emitido" como
+  em QA/Infra —, e `parecerArtifactId` aponta para o `artifact.module_map`
+  mais recente do projeto, o artefato que justificou a decisão de delegar
+  (RN-405, ADR 0094, auditoria fluxo.yml × código, item B1)
 
 ### Correções
+
+- **api**: "Confirmar arquitetura pronta" (RN-160) agora é revalidado no
+  BACKEND — antes só a UI desabilitava o botão sem história promovida do
+  backlog, e uma chamada HTTP direta a `POST
+  /agents/arquiteto/handoff-infra` ignorava a regra por completo. Recusa
+  ANTES de gravar qualquer evento ou sinalizar o engine (RN-404, ADR 0094,
+  auditoria fluxo.yml × código, item B6)
 
 - **web**: os seis colapsos ad-hoc restantes migram para o `Disclosure`
   compartilhado (`ModelCatalogSection`, `AgentTimelineTree`,

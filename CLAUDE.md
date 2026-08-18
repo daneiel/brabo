@@ -279,11 +279,13 @@ uso, aprovar a ação não executava nada, e o tipo podia ser
 auto-aprovado por permissions.json (fechado pela RN-086). Testar a peça
 não é testar o caminho até ela.
 
-**Fora do escopo, por decisão declarada** (ADR 0053 item 5, não
-implementado): o botão "Ativar execução" mudar de dono, e a delegação
-Dev Lead → `dev-<modulo>` pela tabela `delegations` com `area = "dev"`.
-As duas são reversíveis; a execução continua no caminho atual, e a
-correção pós-gate continua indo direto ao dev que abriu a PR.
+**Fora do escopo, por decisão declarada** (ADR 0053 item 5): o botão
+"Ativar execução" mudar de dono. A delegação Dev Lead → `dev-<modulo>`
+pela tabela `delegations` com `area = "dev"`, que este mesmo item também
+declarava, DEIXOU de estar fora de escopo — fechada pelo ADR 0094
+(Auditoria fluxo.yml × código, Onda 2, RN-405). O botão continua
+reversível; a execução continua no caminho atual, e a correção pós-gate
+continua indo direto ao dev que abriu a PR.
 
 ## FASE 15 — CONCLUÍDA em 2026-08-07 (gates como dado)
 Nenhum gate NOVO. A fase extrai para docs/gates.yml os gates que JÁ
@@ -1479,6 +1481,43 @@ banco com dados — fora do alcance desta correção, que é só de metadado.
 **Pendentes do mesmo plano, não desta onda**: Onda 2 (delegação Dev Lead →
 dev, RN-160 revalidada no backend) e Onda 6 (gate `necessidade-validada`,
 que exige ADR e decisão de produto antes de codar).
+
+## Auditoria fluxo.yml × código — Onda 2: RN-160 no backend e delegação Dev Lead → dev (RN-404/405, ADR 0094)
+Segunda das seis ondas do plano da auditoria (seção D), os DOIS itens de
+maior escopo depois da Onda 1 — os outros quatro (3, 4, 5 antecipadas fora
+de ordem; 6 ainda pendente, exige ADR e decisão de produto). Os dois vivem
+exclusivamente em `apps/api`; nenhuma mudança em `engine`/`web` foi
+necessária.
+
+**B6 — RN-160 revalidada no backend.** A regra ("Confirmar arquitetura
+pronta" exige ao menos 1 história promovida) só era garantida no CLIENTE
+(`SessionPage.tsx`, `hasPromotedStory`) — uma chamada HTTP direta a
+`POST /agents/arquiteto/handoff-infra` ignorava a regra por completo.
+`OfferInfraHandoffUseCase.execute` agora consulta
+`StoryRepository.findByProject` e recusa com `BadRequestException` ANTES
+de gravar o evento ou chamar o engine, quando nenhuma história tem
+`status !== 'draft'`.
+
+**B1 — a delegação Dev Lead → dev vira dado.** O ADR 0053 (item 5) já
+previa isto e declarou fora de escopo à época — CLAUDE.md listava como
+corte reversível. Fechado aqui: `AcceptParallelizationUseCase.execute`
+(lado API, cobre os caminhos direto E aprovado de graça, porque os dois já
+convergem nele) grava `delegations` com `area: 'dev'`, `leadAgent:
+'dev-lead'`, `subagent` = o id do `dev-<modulo>` recém-ativado. Diferente
+de QA/Infra (que gravam do lado ENGINE, porque é lá que o subagente produz
+um parecer), `status: 'completed'` foi REDEFINIDO para esta área: significa
+"a delegação foi EFETIVADA" (o agente subiu), não "parecer emitido" — e
+`parecerArtifactId` aponta para o `artifact.module_map` mais recente do
+projeto (via `SessionEventRepository.listByTypeForProject`, método já
+existente, sem consulta nova). Sem module_map no projeto — não deveria
+acontecer —, a delegação não é gravada com id falso: só loga o estado
+inesperado e segue, porque a ativação do dev agent já é sucesso quando essa
+gravação é tentada; falha em `RecordDelegationUseCase` também não derruba a
+ativação, pela mesma razão. Decisão registrada no ADR 0094, que também
+revoga o corte do ADR 0053 item 5.
+
+`docs/fluxo.yml` (`dev-lead`, saída `delegacao`): `status: lacuna` →
+`status: ativo, regra: RN-405`.
 
 ## FERRAMENTA DE DESENVOLVIMENTO — `pnpm bootstrap`
 Menu de terminal em `scripts/dev/bootstrap.sh` agrupando o que se faz no
