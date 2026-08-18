@@ -31,6 +31,7 @@ arquivo. Comece pela triagem.
 | a api sai no boot reclamando de `GIT_OAUTH_STATE_SECRET` | [A api recusa subir por segredo de OAuth](#segredo-de-oauth-no-boot) |
 | "Entrar com GitHub/GitLab" volta do provider com erro de `redirect_uri` | [O provider recusa o callback do login social](#callback-login-social-nao-registrado) |
 | a api ou o engine saem no boot reclamando de `AUTH_JWT_SECRET`, `BRABO_SERVICE_TOKEN`, `CREDENTIALS_MASTER_KEY` ou `SECRET_KEY_BASE` | [Os quatro segredos irmãos também não sobem com o default](#segredos-irmaos-no-boot) |
+| quero ligar SMTP real, ou a api sai no boot reclamando de `SMTP_HOST`/`SMTP_USER`/`SMTP_PASSWORD`/`SMTP_FROM` | [SMTP real no `MailSender`](#smtp-real) |
 | agente respondendo vazio, truncado ou lentíssimo | [Ambiente de inferência](#ambiente-de-inferencia) |
 | agente parando com `limite de iterações atingido` sem ter entregado | [Ambiente de inferência](#ambiente-de-inferencia) |
 | quero acrescentar um provider de LLM compatível com a OpenAI | [Adicionando um provider compatível](#adicionando-um-provider-compativel) |
@@ -455,6 +456,43 @@ tem o mesmo efeito que já era documentado em
 [Rotação da chave mestra](#rotacao-da-chave-mestra). Esta checagem de BOOT não
 muda nenhum dos dois procedimentos — ela só impede que a chave chegue à
 produção sendo o literal público deste repositório.
+
+### SMTP real no `MailSender` {#smtp-real}
+
+`MailSender` envia e-mail de verdade só quando `MAIL_TRANSPORT=smtp` — o
+default é `log` (o comportamento de sempre), **inclusive em produção**:
+enviar e-mail é opt-in do operador ([ADR 0096](adr/0096-smtp-real-no-mailsender.md)).
+Ver [Configuração](reference/configuration.md#api) para a tabela completa
+de `SMTP_*`.
+
+Sintoma de configuração incompleta: com `NODE_ENV=production` e
+`MAIL_TRANSPORT=smtp`, a api morre no start reclamando de `SMTP_HOST`,
+`SMTP_USER`, `SMTP_PASSWORD` ou `SMTP_FROM` — mesmo padrão de mensagem dos
+[quatro segredos irmãos](#segredos-irmaos-no-boot) ([RN-408](business-rules.md#rn-408)),
+mas SEM o default público que eles têm: aqui a régua só entra quando o
+operador optou por `smtp`.
+
+```bash
+export MAIL_TRANSPORT=smtp
+export SMTP_HOST=smtp.seu-provedor.com
+export SMTP_PORT=587
+export SMTP_USER=usuario-do-provedor
+export SMTP_PASSWORD="$(sua-credencial-do-provedor)"
+export SMTP_FROM="Brabo <nao-responda@seu-dominio.com>"
+```
+
+`SMTP_PASSWORD` é segredo de INFRAESTRUTURA do serviço (env var simples,
+como `AUTH_JWT_SECRET`), não segredo de USUÁRIO — não passa por envelope
+encryption, e não tem procedimento de rotação próprio além de trocar a
+variável e reiniciar (o provedor SMTP é quem decide a política de rotação
+da credencial dele). Em Kubernetes, a chave entra em `brabo-secrets` como
+qualquer outra, referenciada em
+`deploy/k8s/base/common/externalsecrets.yaml`.
+
+Se o e-mail não chega mesmo sem erro de boot: confira o log da api por
+`falha ao enviar e-mail via SMTP` (`tipo`/destinatário aparecem, o corpo e o
+token NUNCA aparecem — mesma régua do `LogMailSender`), e teste a
+credencial com o cliente SMTP do provedor antes de suspeitar do Brabo.
 
 ### k3d é o padrão mesmo com kind instalado
 
@@ -987,12 +1025,13 @@ Ele imprime uma linha por usuário — `emitido <email> — expira em <ISO>` ou
 pula quem já tem um token `set_initial_password` vivo — senão a segunda
 execução invalidaria (por supersede) os links já enviados.
 
-> **O `MailSender` é log-only, e por default NÃO imprime o token.** Log de
-> aplicação vai para o Loki e fica retido por semanas; um token de definição de
-> senha ali é credencial de takeover em texto claro. O que sai é tipo,
-> destinatário e expiração.
+> **Depende de `MAIL_TRANSPORT`** ([SMTP real no `MailSender`](#smtp-real),
+> ADR 0096). Em `log` (default, inclusive em produção) o `MailSender` NÃO
+> imprime o token por padrão. Log de aplicação vai para o Loki e fica retido
+> por semanas; um token de definição de senha ali é credencial de takeover em
+> texto claro. O que sai é tipo, destinatário e expiração.
 >
-> Sem SMTP configurado, a única forma de extrair os links é ligar
+> Com `MAIL_TRANSPORT=log`, a única forma de extrair os links é ligar
 > `AUTH_MAIL_LOG_TOKENS=true` na api, rodar o script, e **desligar em
 > seguida** — a api emite um `WARN` no boot enquanto a variável estiver ligada,
 > justamente para ela não sobreviver a um ambiente copiado:
@@ -1003,6 +1042,10 @@ execução invalidaria (por supersede) os links já enviados.
 >
 > Enquanto os links estiverem vivos, trate esse log como segredo: quem o lê
 > pode definir a senha daquelas contas.
+>
+> Com `MAIL_TRANSPORT=smtp`, o link vai direto para a caixa de entrada de cada
+> usuário migrado — nada aparece no log além de `tipo`/destinatário, e não há
+> nada a extrair.
 
 Um usuário migrado que tentar logar antes de definir a senha recebe **o mesmo
 401 de sempre**, indistinguível de senha errada ou e-mail inexistente

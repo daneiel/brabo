@@ -1612,6 +1612,36 @@ no docmap (`governanca`) cobra revisão quando `approval-ladder.ts`/
 (`politica-de-branches`) pelo mesmo motivo que `checks-e-rulesets` é separada
 dela: MECANISMO decorre do código, CRITÉRIO é decisão humana.
 
+## SMTP real no MailSender (RN-408, ADR 0096)
+Fecha o item de backlog aberto desde o corte do Keycloak (ADR 0032, "SMTP
+real continua sendo config futura"). `nodemailer` sobre transporte SMTP
+puro (protocolo de LINHA com estado/MIME/STARTTLS/AUTH, diferente das APIs
+JSON HTTP que o resto do produto integra), atrás de `MAIL_TRANSPORT` — `log`
+(default, INCLUSIVE em produção: enviar e-mail de verdade é opt-in do
+operador) ou `smtp`, selecionado por `useFactory` em `AuthUseCasesModule`
+sem tocar nenhum caso de uso (`RegisterUseCase`,
+`RequestPasswordResetUseCase`, `LoginUseCase`, o script
+`migrate-keycloak-users.ts` continuam só injetando `MailSender`).
+`SMTP_HOST`/`SMTP_USER`/`SMTP_PASSWORD`/`SMTP_FROM` seguem o padrão RN-114
+em produção quando o modo é `smtp` — mas SEM o default público que as
+quatro RN-114 originais têm, então a régua só entra quando o operador optou
+por `smtp`; a validação roda no construtor de `SmtpMailSender`, exercitado
+pelo `useFactory` na montagem do grafo de providers (mesmo desenho de
+`CREDENTIALS_MASTER_KEY`), não por chamada eager em `main.ts`. Corpo em
+TEXTO PURO, nunca HTML — a porta não carrega estrutura para corpo rico, e
+um template engine seria superfície de injeção sem ganho nenhum.
+
+Investigação achou uma lacuna real antes de codar: `email_verification` não
+tinha rota web nenhuma — `verificarEmail` existia em
+`apps/web/src/lib/auth.ts` desde a Fase 7a sem NENHUM chamador, então o
+link do e-mail de verificação levaria a lugar nenhum assim que SMTP
+passasse a mandar e-mail de verdade. `/verificar-email`
+(`VerifyEmailPage.tsx`) fecha isso, espelhando `SetPasswordPage.tsx` — mesmo
+padrão de `validateSearch` no `router.tsx`, mesma resposta única para link
+inexistente/expirado/já usado — com uma diferença: sem formulário, a
+confirmação dispara sozinha ao montar, então a tela precisa dos três
+estados da RN-088 (carregando/erro/sucesso), não só dois.
+
 ## FERRAMENTA DE DESENVOLVIMENTO — `pnpm bootstrap`
 Menu de terminal em `scripts/dev/bootstrap.sh` agrupando o que se faz no
 dia a dia: Docker, K8s, Database e Test. Existe porque esses comandos moram
@@ -1647,7 +1677,9 @@ um `DROP SCHEMA` puro faria a migração seguinte falhar, e como o engine
 divide o mesmo banco, recuperar exige `db:migrate` E `engine:migrate`.
 
 ## Stack (decidida — não proponha alternativas)
-- `apps/api`: NestJS 11 + Drizzle ORM + PostgreSQL 16 + pgvector
+- `apps/api`: NestJS 11 + Drizzle ORM + PostgreSQL 16 + pgvector;
+  `nodemailer` para SMTP real do `MailSender` (ADR 0096), atrás de
+  `MAIL_TRANSPORT` — `log` continua o default, inclusive em produção
 - `apps/engine`: Elixir/OTP + Phoenix (canais) + Oban (filas no Postgres)
 - `apps/web`: React 19 + Vite + TanStack Query/Router; `mermaid` (runtime,
   ADR 0068) para o diagrama C4 do Arquiteto, isolado atrás de

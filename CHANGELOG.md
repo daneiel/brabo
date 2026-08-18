@@ -193,6 +193,13 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `apps/api/src/application/services/funil-metrics.ts`, reexportadas pelo
   script sem mudar comportamento. Fecha o item B4 — a ÚLTIMA pendência da
   auditoria fluxo.yml × código (RN-407)
+- **api,web**: SMTP real no `MailSender`, fechando o item de backlog aberto
+  desde o corte do Keycloak. `MAIL_TRANSPORT=smtp` (default continua `log`,
+  inclusive em produção) liga o envio de verdade via `nodemailer`, com
+  `SMTP_HOST`/`SMTP_USER`/`SMTP_PASSWORD`/`SMTP_FROM` validados no boot em
+  produção pelo mesmo padrão da RN-114 (RN-408, ADR 0096). A investigação
+  achou uma lacuna real: `email_verification` não tinha rota web — nova tela
+  `/verificar-email` fecha isso, espelhando `/definir-senha`
 
 ### Correções
 

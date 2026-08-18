@@ -19,12 +19,14 @@ import { LoginPage } from './routes/LoginPage';
 import { RegisterPage } from './routes/RegisterPage';
 import { ForgotPasswordPage } from './routes/ForgotPasswordPage';
 import { SetPasswordPage } from './routes/SetPasswordPage';
+import { VerifyEmailPage } from './routes/VerifyEmailPage';
 import {
   definirSenha,
   entrar,
   pedirRedefinicao,
   registrar,
   temSessao,
+  verificarEmail,
 } from './lib/auth';
 
 /**
@@ -148,6 +150,29 @@ const setPasswordRoute = createRoute({
     const { token } = setPasswordRoute.useSearch();
     return (
       <SetPasswordPage token={token} onDefinir={definirSenha} irPara={irPara} />
+    );
+  },
+});
+
+interface VerifyEmailSearch {
+  token?: string;
+}
+
+/**
+ * Confirmação de e-mail a partir do link do `email_verification` (backlog
+ * "SMTP real no MailSender" — ver ADR 0096). Mesmo padrão de
+ * `setPasswordRoute`: token só na query string, sem estado de rota.
+ */
+const verifyEmailRoute = createRoute({
+  getParentRoute: () => authLayout,
+  path: '/verificar-email',
+  validateSearch: (search: Record<string, unknown>): VerifyEmailSearch => ({
+    token: typeof search.token === 'string' ? search.token : undefined,
+  }),
+  component: () => {
+    const { token } = verifyEmailRoute.useSearch();
+    return (
+      <VerifyEmailPage token={token} onVerificar={verificarEmail} irPara={irPara} />
     );
   },
 });
@@ -302,6 +327,7 @@ const routeTree = rootRoute.addChildren([
     registerRoute,
     forgotRoute,
     setPasswordRoute,
+    verifyEmailRoute,
   ]),
   publicLayout.addChildren([statusRoute]),
 ]);

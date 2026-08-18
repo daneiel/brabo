@@ -340,7 +340,6 @@ produto adiadas — por isso sem prioridade aqui.
 | Dev Lead e áreas via `module_map` | **saiu do backlog**: ADR 0053, implementado pela FASE 14d |
 | Handoff manual a agente à escolha | — |
 | MFA, login social, OIDC, federação | [ADR 0031](../adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.md) |
-| SMTP real no MailSender | hoje é log-only |
 | Deploy (`DEPLOY_ENABLED` + Environments) | o gate `operavel` já está declarado como `planned` |
 | Volta da `rc`/`rcfix` | [ADR 0030](../adr/0030-politica-de-branches-mecanizada.md) |
 | ~~Modo community do approval-ladder~~ | **CORRIGIDO E FECHADO.** A referência "vira mudança de `aprovacao_humana` no registro de gates" era imprecisa — vinha de uma frase especulativa do ADR 0054, não de algo que faltava. O modo `community` já está implementado e testado desde a FASE 6 (`scripts/ci/approval-ladder.ts`), só desligado por `APPROVAL_MODE=solo` (default); `aprovacao_humana` do gate `aprovacoes-da-escada` já é `true` nos dois modos, sem awareness de `APPROVAL_MODE` no schema. O que faltava de verdade era o `TODO(humano)` de `branching-policy.md` — o critério de quem entra em cada lista de aprovadores —, fechado por `GOVERNANCE.md` (raiz do repositório). Ativar o modo de fato continua sendo decisão operacional (recrutar gente real pros três papéis), não pendência de engenharia |
