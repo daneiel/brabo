@@ -200,6 +200,13 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   produção pelo mesmo padrão da RN-114 (RN-408, ADR 0096). A investigação
   achou uma lacuna real: `email_verification` não tinha rota web — nova tela
   `/verificar-email` fecha isso, espelhando `/definir-senha`
+- **api,web**: o card do dashboard mostra "N online" — quantos agentes estão
+  trabalhando ou com pendência esperando decisão AGORA, nunca tamanho de
+  equipe ou presença histórica. Soma dev agents (`engine.dev_agent_states`,
+  agregado em lote) e agentes conversacionais (último `agent.status` da
+  sessão mais recente); QA/SecOps nunca contam, porque não emitem
+  `agent.status` (veredito único por invocação). Fecha o item de backlog
+  "N agentes online" no dashboard (RN-409, ADR 0097)
 
 ### Correções
 

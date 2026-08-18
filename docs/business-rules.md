@@ -8785,6 +8785,106 @@ mesma montagem de grafo).
 
 ---
 
+## "N agentes online" no dashboard — status AO VIVO, nunca presença histórica (RN-409, ADR 0097)
+
+Item do backlog anterior. Investigação prévia (`docs/explanation/backlog.md`)
+confirmou que não existia agregado de liveness nenhum — nem por projeto, nem
+por workspace: o que existia era só presença HISTÓRICA
+(`RosterFacts` — "já apareceu na sessão alguma vez") e status ao vivo de
+VERDADE só no cliente, derivado do event log, e só quando um projeto está
+ABERTO (`deriveAgentRoster`). O card do dashboard hoje forçava
+`() => 'ocioso'` porque não desenhava status nenhum — este é o hardcode que
+a RN substitui.
+
+### RN-409 — "N online" soma dois mecanismos pela MESMA régua: não ocioso, não travado {#rn-409}
+
+`ProjectCardSummary.onlineAgentCount` (`GET /workspaces/:workspaceId/
+projects-summary`) é a contagem de agentes ONLINE agora — trabalhando ou com
+uma pendência esperando decisão —, nunca tamanho de equipe. Chamar de
+"online" um número que na verdade é "já apareceu alguma vez" seria enganoso
+(mesmo princípio dos [ADR 0041](adr/0041-llm-provider-http-base-e-capabilities.md)/
+[0042](adr/0042-catalogo-de-modelos-com-curadoria-e-preco-congelado.md)/
+[0077](adr/0077-ranking-de-modelos-sem-nota-inventada.md) contra dado
+fingido).
+
+Duas FONTES, uma régua:
+
+- **Dev agents** — `engine.dev_agent_states.status`, agregado em lote por
+  `project_id` (`status NOT IN ('idle', 'idle_tripped')`). `working`,
+  `awaiting_gate` e `awaiting_approval` contam (RN-047/ADR 0052 — os cinco
+  estados da máquina do dev); `idle`/`idle_tripped` não. `dev-<modulo>` e
+  `dev-<modulo>-2` são chaves DISTINTAS (`agent_id` na tabela), então contam
+  separado sem esforço nenhum — é a própria chave primária que já separa.
+- **Agentes conversacionais** (criativo/po/arquiteto/dev-lead/ux-designer/
+  staff/infra) — último evento `agent.status` de cada `actor_id`, na sessão
+  MAIS RECENTE do projeto (mesmo escopo de sessão que o resto de `RosterFacts`
+  usa, RN-090). `agent.status` só tem três valores possíveis
+  (`Engine.Sessions.LiveBroadcast.agent_status/4` recusa qualquer outro):
+  `working`/`awaiting_approval` contam, `idle` não.
+
+**QA/SecOps NUNCA contam** — não é filtro, é AUSÊNCIA de dado: nenhum dos
+dois emite `agent.status` (rodam veredito único por invocação, sem noção de
+"ocioso" entre chamadas — o status deles vem de `pr.gate_changed`/
+`infra.gate_changed`, um mecanismo à parte que `deriveAgentRoster` já trata
+separado). Não precisou de exclusão explícita: a consulta só soma o que tem
+o tipo de evento certo.
+
+A régua é a MESMA que `deriveAgentRoster` já aplicaria se o projeto estivesse
+aberto (`'trabalhando'`/`'aguardando'` no cliente ≅ `working`/
+`awaiting_gate`/`awaiting_approval` no backend) — os DOIS caminhos calculam
+"online" a partir do mesmo eventual estado (event log/tabela de estado
+persistida), só que por MECANISMOS diferentes (agregação SQL no backend,
+dobra sobre eventos já buscados no cliente), no mesmo espírito de
+`infraActive`/`uxDesignerActive`/`staffActive` (RN-090/RN-287: duas fontes,
+uma régua). Não há função compartilhada entre `apps/api` e `apps/web` para
+isto — os dois já divergem de linguagem/runtime para o resto de `RosterFacts`
+também, e introduzir um pacote compartilhado só para uma contagem seria
+peso maior que o problema.
+
+**Consulta nova contra schema que a api não migra.** `engine.dev_agent_states`
+é tabela do ENGINE (Ecto, schema Postgres `"engine"`), mesmo banco físico,
+mesma conexão — não uma segunda fonte de dados, um segundo NAMESPACE no
+mesmo Postgres. O precedente já existia: `apps/api/scripts/medir-execucao.ts`
+já lê `engine.oban_peers` pelo mesmo caminho (raw SQL via Drizzle), só que
+como SCRIPT manual, nunca testado. Esta RN eleva o padrão para código de
+PRODUÇÃO testado — ver o [ADR 0097](adr/0097-leitura-direta-do-schema-do-engine-para-online-agent-count.md)
+para a decisão de NÃO expor isto como rota HTTP interna no engine.
+
+**Custo medido, não fingido grátis.** As duas consultas novas levam o total
+do read model de DOZE para CATORZE (RN-090 continua valendo — catorze é
+CONSTANTE, provado por `projects-summary.repository.spec.ts` contando idas
+ao banco com 2 e com 20 projetos). Nenhuma tem `WHERE` por tempo — a de
+`agent.status` escaneia os mesmos `session_events` das sessões mais recentes
+que `lastEvents`/`marcos` já escaneiam ao lado dela, então o custo marginal é
+o de mais um filtro de `type` sobre um plano de consulta que já ia acontecer,
+não uma tabela nova sendo varrida do zero. Lacuna DECLARADA: não há execução
+real recente (dogfooding) com volume de produção para medir `ms` de verdade
+contra a régua da Fase 22 (525 mil linhas, `EXPLAIN ANALYZE`) — as duas
+consultas novas ficam sem número medido, só o argumento estrutural acima.
+
+- **Onde:** `apps/api/src/application/ports/projects-summary-repository.port.ts`,
+  `apps/api/src/infrastructure/persistence/drizzle/projects-summary.repository.ts`,
+  `apps/api/src/interfaces/http/iam/dto/iam.response.dto.ts`,
+  `apps/web/src/lib/api-types.ts`, `apps/web/src/components/ProjectCard.tsx`,
+  `apps/web/src/routes/Dashboard.tsx`
+- **Teste:** `apps/api/test/infrastructure/persistence/drizzle/projects-summary.repository.spec.ts`
+  (`describe('onlineAgentCount (RN-409)')` — dev agent working/idle/
+  idle_tripped, awaiting_gate/awaiting_approval, duas instâncias do mesmo
+  agente-base, agente conversacional working/idle/awaiting_approval, só o
+  ÚLTIMO `agent.status` conta, QA/SecOps nunca contam, soma entre as duas
+  fontes, isolamento entre projetos);
+  `apps/api/test/support/global-setup.ts` (`ensureEngineFixture` — a tabela
+  do engine criada como fixture MÍNIMA e declarada, só para o teste acima
+  poder existir);
+  `apps/web/src/components/ProjectCard.test.tsx` (badge "N online" some com
+  `0`/`undefined`, aparece com `onlineAgentCount > 0`)
+- **Origem:** `docs/explanation/backlog.md` (item herdado da FASE 13c/
+  colheita do dogfooding); decisão de produto de que o número tinha de ser
+  liveness de verdade, não presença histórica, registrada no prompt que
+  encomendou esta correção
+
+---
+
 ## Quando dá errado
 
 | situação | o que o sistema faz |

@@ -79,6 +79,29 @@ describe('ProjectCard — chips de agente', () => {
 });
 
 /**
+ * RN-409 — "N online" é status AO VIVO (trabalhando/com pendência), nunca
+ * tamanho de equipe. `0`/`undefined` não desenha nada — um "0 online"
+ * sugeriria uma equipe vazia, não ausência de trabalho agora.
+ */
+describe('ProjectCard — badge de agentes online', () => {
+  it('mostra "N online" quando onlineAgentCount > 0', () => {
+    render(<ProjectCard {...baseProps} rosterGroups={[]} onlineAgentCount={2} />);
+
+    expect(screen.getByText('2 online')).toBeInTheDocument();
+  });
+
+  it('sem agente online (0 ou undefined), não mostra o badge', () => {
+    const { rerender } = render(
+      <ProjectCard {...baseProps} rosterGroups={[]} onlineAgentCount={0} />,
+    );
+    expect(screen.queryByText(/online/)).not.toBeInTheDocument();
+
+    rerender(<ProjectCard {...baseProps} rosterGroups={[]} />);
+    expect(screen.queryByText(/online/)).not.toBeInTheDocument();
+  });
+});
+
+/**
  * Foco visível do card (frente H1, PROGRAMA 28).
  *
  * `ProjectCard.module.css` tinha `.card:hover` mas NENHUM `:focus-visible` —

@@ -124,6 +124,11 @@ export interface ProjectCardSummary {
    * (RN-151) — o que a sidebar mostra como badge do projeto.
    */
   pendingApprovalsCount: number;
+  /**
+   * Agentes ONLINE agora — trabalhando ou com pendência esperando decisão
+   * (RN-409). Nunca tamanho de equipe/presença histórica.
+   */
+  onlineAgentCount: number;
   roster: {
     executionActivated: boolean;
     moduleNames: string[];
