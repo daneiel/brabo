@@ -152,6 +152,23 @@ próprio qa-lead em segundo momento") — precisou existir para alimentar o
 parecer com um plano de teste de verdade. O registro só passou a descrever
 o que o código agora faz.
 
+## Um registro pode envelhecer para o lado errado — desatualizado, não inativo
+
+`implementavel` é o exemplo de gate que precisou de código novo pra sair de
+`planned`. `paralelismo-autorizado` é o oposto: o mecanismo (`RequestParallelizationUseCase`,
+[RN-083](../business-rules.md#rn-083)) está em produção desde a FASE 14d — foi o
+registro que ficou pra trás, declarando `planned` sobre algo que já era `active` no
+`docs/fluxo.yml` irmão e no código. A auditoria fluxo.yml × código (achado A1/B5,
+[auditoria-fluxo-vs-codigo.md](auditoria-fluxo-vs-codigo.md)) achou a divergência;
+a correção foi só as duas linhas que `implementavel` também ganhou —
+`status: active` mais `evidencia` apontando para `proposed_action.created`
+filtrado por `actionType: parallelize`.
+
+Vale registrar por que isso não mudou nada na esteira de PR do painel do time:
+`paralelismo-autorizado` é `fluxo: execucao`, e a tela só deriva etapas de gates
+`fluxo: pr` (ver "Consumo" abaixo) — um gate pode virar `active` no registro sem
+aparecer em lugar nenhum da UI, se o fluxo dele for outro.
+
 ## Consumo: a tela deriva, não repete
 
 A esteira de PR no painel — Dev → QA → SecOps → Você — era uma lista escrita no

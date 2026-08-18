@@ -83,7 +83,7 @@ camada_decisao_tecnica:
     status: active
     teto: 14
     entradas:
-      - { artefato: backlog-promovido, origem: po, pre_condicao: RN-160 }
+      - { artefato: backlog-promovido, origem: po }
       - { artefato: rfc-e-poc, origem: staff, status: planned }
       - { artefato: telemetria-consolidada, origem: platform, status: planned }
       - { artefato: threat-model, origem: appsec, status: proposto }
@@ -91,7 +91,8 @@ camada_decisao_tecnica:
       - { artefato: module_map, destino: [dev-lead, area-dev] }     # RN-159
       - { artefato: artifact.project_image, destino: aba-code }     # RN-105
       - { artefato: artifact.c4_diagram, destino: visao-geral }     # RN-149
-      - { artefato: handoff-duplo, destino: [dev-lead, area-infra] } # RN-161
+      - { artefato: handoff-duplo, destino: [dev-lead, area-infra],
+          pre_condicao: RN-160 } # "Confirmar arquitetura pronta" exige história promovida
       - { artefato: nfrs-mensuraveis, destino: [dev-lead, qa-estrategia,
           platform], status: proposto, regra: NFR sem como-medir é inválido }
     gate_saida: { id: adr-aprovado, status: proposto }
@@ -102,7 +103,8 @@ camada_decisao_tecnica:
     status: active
     teto: 14
     entradas:
-      - { artefato: handoff + module_map, origem: arquiteto }
+      - { artefato: handoff + module_map, origem: arquiteto,
+          nota: "aceitar encadeia ativação de execução quando o papel efetivo já autoriza — RN-161" }
       - { artefato: plano-de-teste, origem: qa-estrategia }        # ADR 0090
       - { artefato: threat-model, origem: appsec, status: proposto }
       - { artefato: parecer-de-migracao, origem: dbre, status: proposto }
@@ -136,13 +138,15 @@ camada_execucao:
     status: active
     tipo: execucao (teto 60, RN-085) · area dinâmica, um por módulo
     entradas: [{ artefato: tarefa, origem: backlog },
-               { artefato: worktree-por-agente, origem: harness },
+               { artefato: worktree-por-agente, origem: dev,
+                 nota: "provisionado por Engine.Dev.WorktreeManager — não é um dos 4 componentes do harness (achado A8)" },
                { artefato: design-doc, origem: dev-lead, status: proposto }]
     saidas:
       - { artefato: branch-rastreavel }                             # RN-152
       - { artefato: pr-remota, destino: [area-qa, secops], via: acao-tipada }
       - { artefato: eventos-instrumentados, destino: medicao }
-    maquina_de_estados: working|awaiting_gate|idle|idle_tripped     # RN-047
+    maquina_de_estados: working|awaiting_approval|awaiting_gate|idle|idle_tripped
+      # RN-047; awaiting_approval entrou na Fase 12e (ADR 0052) — achado A3
 
 camada_qualidade:
   - id: qa-estrategia
