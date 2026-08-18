@@ -15111,7 +15111,7 @@
           "onlineAgentCount": {
             "type": "number",
             "example": 2,
-            "description": "Quantos agentes estão ONLINE agora — trabalhando ou com pendência esperando decisão (RN-408). Nunca tamanho de equipe: dev agent `idle`/`idle_tripped` não conta, agente conversacional `idle` não conta, QA/SecOps nunca contam (veredito único por invocação)."
+            "description": "Quantos agentes estão ONLINE agora — trabalhando ou com pendência esperando decisão (RN-409). Nunca tamanho de equipe: dev agent `idle`/`idle_tripped` não conta, agente conversacional `idle` não conta, QA/SecOps nunca contam (veredito único por invocação)."
           },
           "roster": {
             "$ref": "#/components/schemas/RosterFactsResponseDto"
