@@ -1669,6 +1669,23 @@ decisão eleva o padrão de script manual para código de produção TESTADO
 juntos (`db:migrate` E `engine:migrate`), e falha alto/visível se só a api
 migrou — sem try/catch escondendo o erro.
 
+## Sessão de execução não fecha mais com dev agent pendente (RN-411)
+Correção de defeito achado numa sessão de execução REAL, não item de
+roteiro: cinco dev agents subiram, ficaram `idle_tripped` (RN-047, o
+circuit breaker) travados esperando o usuário desbloquear tarefa a
+tarefa, e o heartbeat de 30s da sessão (`Engine.Sessions.SessionServer`)
+fechou a sessão por baixo enquanto o desbloqueio manual continuava. O
+terceiro sinal de `GetSessionPendingWorkUseCase` (RN-064) só lê
+`agent.status`, vocabulário dos agentes conversacionais — dev agents
+falam `dev.*` (`Engine.Dev.AgentIo`) e nunca emitem `agent.status`, então
+nenhum dev agent jamais segurava a sessão por esse sinal. O quarto sinal
+lê o último evento `dev.*` de cada `dev-<modulo>`/`dev-<modulo>-2` na
+sessão: `dev.working`/`dev.blocked`/`dev.idle_tripped` seguram a sessão
+(travado esperando decisão humana É trabalho pendente); só `dev.idle`
+(drenado de verdade) não segura. `dev.awaiting_gate`/`dev.awaiting_approval`
+como último evento ficam FORA da régua — `awaiting_approval` já é coberto
+pelo segundo sinal (a ação git nasce `pending`), e `awaiting_gate` é
+lacuna residual conhecida, não fechada aqui.
 ## Workspace pessoal automático no cadastro (RN-410)
 Achado navegando: o botão "Novo projeto" do dashboard não fazia NADA, sem
 erro. Causa raiz: `RegisterUseCase` e `SocialLoginCallbackUseCase` (no ramo

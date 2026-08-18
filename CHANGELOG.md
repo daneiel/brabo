@@ -210,6 +210,14 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **api**: sessão de execução não fecha mais por baixo de dev agent
+  trabalhando ou travado esperando desbloqueio — o heartbeat de 30s só
+  enxergava `agent.status` (vocabulário dos conversacionais), e dev agents
+  usam vocabulário próprio (`dev.*`). Quarto sinal em
+  `GetSessionPendingWorkUseCase`: último evento `dev.working`/`dev.blocked`/
+  `dev.idle_tripped` de qualquer `dev-<modulo>` segura a sessão; `dev.idle`
+  não. Achado numa sessão de execução real com cinco dev agents em
+  `idle_tripped` (RN-411)
 - **api**: toda conta NOVA (registro por e-mail/senha ou login social)
   ganha um workspace pessoal automático, na mesma transação que cria a
   conta — antes `RegisterUseCase`/`SocialLoginCallbackUseCase` criavam
