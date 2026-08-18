@@ -176,6 +176,15 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   em QA/Infra —, e `parecerArtifactId` aponta para o `artifact.module_map`
   mais recente do projeto, o artefato que justificou a decisão de delegar
   (RN-405, ADR 0094, auditoria fluxo.yml × código, item B1)
+- **api,web**: o gate `necessidade-validada` (Criativo → PO) ganha um
+  terceiro botão dedicado, "Confirmar necessidade validada", no mesmo
+  padrão de "Confirmar arquitetura pronta" — confirmação humana SEPARADA
+  do Criativo, nunca o modelo se autovalidando. Habilita só depois de
+  `confirm_readiness` já ter consolidado o `product_brief`; grava
+  `necessity.validated` sem sinalizar o engine, porque o handoff
+  Criativo→PO já aconteceu antes. `docs/gates.yml` ganha o gate
+  correspondente (`active`, `warn`) (RN-406, ADR 0095, auditoria
+  fluxo.yml × código, item B2 — última onda do plano)
 
 ### Correções
 

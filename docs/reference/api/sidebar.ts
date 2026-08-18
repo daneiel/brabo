@@ -1032,6 +1032,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/agents-controller-validate-necessity-handoff",
+          label: "Confirma que a necessidade de negócio do Criativo foi validada",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/agents-controller-handoffs",
           label: "Lista os handoffs entre agentes da sessão",
           className: "api-method get",

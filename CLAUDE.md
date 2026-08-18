@@ -1519,6 +1519,45 @@ revoga o corte do ADR 0053 item 5.
 `docs/fluxo.yml` (`dev-lead`, saída `delegacao`): `status: lacuna` →
 `status: ativo, regra: RN-405`.
 
+## Auditoria fluxo.yml × código — Onda 6 (última): o gate `necessidade-validada` (RN-406, ADR 0095)
+Fecha a ÚLTIMA das seis ondas do plano da auditoria (seção D,
+`docs/explanation/auditoria-fluxo-vs-codigo.md`) — as seis fecharam: a 3,
+4 e 5 tinham sido antecipadas fora de ordem (analytics/DORA, gate
+`implementavel`, QA-estratégia/appsec, ADRs 0089/0090); a 1 e a 2
+fecharam nos PRs anteriores (fluxo.yml/gates.yml em dia; RN-160 no
+backend + delegação Dev Lead → dev). Esta é a 6ª: o gate
+`necessidade-validada` (Criativo → PO), declarado `proposto` desde o ADR
+0085 sem mecanismo nenhum atrás.
+
+`modelo-de-time.md` já registrava por que ele ficou parado: o Criativo (o
+modelo) decidir sozinho que a necessidade que ele mesmo produziu está
+validada seria autovalidação, não gate de verdade. A decisão do dono do
+produto foi confirmação humana SEPARADA — um terceiro botão em
+`SessionPage.tsx`, "Confirmar necessidade validada", no MESMO padrão de
+"Confirmar arquitetura pronta" (RN-160): rota dedicada
+(`POST .../agents/criativo/validate-necessity`), caso de uso dedicado
+(`ValidateNecessityUseCase`), evento próprio (`necessity.validated`).
+Nunca reaproveitou `confirm_readiness`/RN-142 (que continua sendo só o
+piso estrutural, "≥1 regra capturada") nem o aceite do handoff pelo PO
+(`AcceptHandoffUseCase`, estrutural, sem julgamento de conteúdo).
+
+O encadeamento escolhido: o botão só habilita DEPOIS que `confirm_readiness`
+já consolidou o `artifact.product_brief` (`hasProductBrief`) — não faz
+sentido "validar" um resumo que ainda não existe, e é a leitura mais
+consistente com `docs/fluxo.yml` (o gate é de SAÍDA do Criativo, o
+momento em que o trabalho dele já entregou um artefato concreto).
+Diferente de `OfferInfraHandoffUseCase`, esta confirmação NÃO sinaliza o
+engine — o handoff Criativo→PO já aconteceu dentro do próprio
+`confirm_readiness`, então o evento novo é só o registro do MÉRITO, sem
+gatilho nenhum esperando por ele.
+
+`docs/gates.yml` ganha o gate `necessidade-validada`: `active`,
+`aprovacao_humana: true`, mas `severidade: warn` — nada no produto hoje
+CONSULTA a passagem deste gate antes de deixar o PO seguir, diferente dos
+`block` de `story-promovida`/`plano-de-adocao`, que têm trava real de
+código por trás. `docs/fluxo.yml` (`criativo`, `gate_saida`): `status:
+proposto` → `status: ativo, regra: RN-406`.
+
 ## FERRAMENTA DE DESENVOLVIMENTO — `pnpm bootstrap`
 Menu de terminal em `scripts/dev/bootstrap.sh` agrupando o que se faz no
 dia a dia: Docker, K8s, Database e Test. Existe porque esses comandos moram

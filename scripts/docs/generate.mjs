@@ -284,6 +284,7 @@ const PREFIXOS_DE_EVENTO = [
   'bootstrap', 'permission', 'gate', 'budget', 'readiness', 'psychologist',
   'anamnese', 'instruction', 'execution', 'project', 'proposed_action',
   'infra', 'pr', 'architecture', 'llm', 'tool', 'event', 'delegation',
+  'necessity',
 ];
 
 

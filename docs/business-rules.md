@@ -8616,6 +8616,69 @@ gravação auxiliar.
 
 ---
 
+## Auditoria fluxo.yml × código — Onda 6 (última): o gate `necessidade-validada` (RN-406, ADR 0095)
+
+Fecha o último achado do plano da auditoria (seção D,
+`docs/explanation/auditoria-fluxo-vs-codigo.md`) — B2. As outras cinco
+ondas já tinham fechado (a 3, 4 e 5 antecipadas fora de ordem pelos ADRs
+0089/0090; a 1 e a 2 nos PRs anteriores). `docs/fluxo.yml` (papel
+`criativo`) declarava `gate_saida: { id: necessidade-validada, status:
+proposto }` desde o ADR 0085 sem mecanismo nenhum atrás — e
+`modelo-de-time.md` já registrava por que: o Criativo (o modelo) decidir
+sozinho que a necessidade que ele mesmo produziu está validada seria
+autovalidação, não gate de verdade.
+
+### RN-406 — O gate `necessidade-validada` se fecha com um clique SEPARADO do usuário, nunca com o Criativo se autovalidando {#rn-406}
+
+`SessionPage.tsx` ganha um terceiro botão de confirmação, no MESMO padrão
+interacional de "Estou pronto para produzir" (RN-142) e "Confirmar
+arquitetura pronta" ([RN-160](#rn-160)): "Confirmar necessidade validada"
+(`handleValidateNecessity`) chama `POST
+.../agents/criativo/validate-necessity`, que grava `necessity.validated`
+com `payload.productBriefId` apontando para o `artifact.product_brief`
+mais recente da sessão.
+
+O botão só habilita DEPOIS que `confirm_readiness` já consolidou o
+`product_brief` (`hasProductBrief`, `events.some(e => e.type ===
+'artifact.product_brief')`) — não faz sentido "validar" um resumo
+executivo que ainda não foi produzido, e é essa a leitura mais
+consistente com `docs/fluxo.yml`: `necessidade-validada` é gate de SAÍDA
+do Criativo, o momento em que o trabalho dele já entregou um artefato
+concreto. `ValidateNecessityUseCase` revalida a mesma pré-condição no
+BACKEND (`SessionEventRepository.listByTypeInSession(sessionId,
+'artifact.product_brief')`, pega o último por `seq`) — a UI desabilitada
+sozinha não bastaria, mesma lição da [RN-404](#rn-404).
+
+Diferente de `OfferInfraHandoffUseCase` (RN-160), esta confirmação NÃO
+sinaliza o engine: o handoff Criativo→PO já aconteceu dentro do próprio
+`confirm_readiness`
+(`CriativoServer.executar_confirm_readiness/1`), então não há agente
+nenhum esperando por este evento — ele é só o registro de que um humano
+validou o MÉRITO do que já foi entregue. `ValidateNecessityUseCase` não
+recebe `ApiToEngineClient` no construtor.
+
+`docs/gates.yml` ganha o gate `necessidade-validada`: `status: active`,
+`aprovacao_humana: true` (é literalmente um clique humano),
+`verificacao: script`, mas `severidade: warn` — nada no produto hoje
+CONSULTA a passagem deste gate antes de deixar o PO seguir (diferente de
+`story-promovida`/`plano-de-adocao`, que são `block` porque uma trava
+real de código os impede de serem pulados). `docs/fluxo.yml` (papel
+`criativo`) passa `status: proposto` → `status: ativo`.
+
+- **Onde:** `apps/api/src/application/use-cases/agents/validate-necessity.use-case.ts`;
+  `apps/api/src/interfaces/http/agents/agents.controller.ts`
+  (`validateNecessityHandoff`); `apps/web/src/routes/SessionPage.tsx`
+  (`hasProductBrief`, `necessidadeJaValidada`, `handleValidateNecessity`)
+- **Teste:** `apps/api/test/application/use-cases/agents/validate-necessity.use-case.spec.ts`
+  — sem `product_brief`, recusa ANTES de gravar qualquer evento; com um ou
+  mais, grava referenciando o MAIS RECENTE;
+  `apps/web/src/routes/SessionPage.validar-necessidade.test.tsx` — botão
+  desabilitado sem `product_brief`, habilitado com ele, some depois de
+  `necessity.validated`
+- **ADR:** [0095](adr/0095-gate-necessidade-validada.md)
+
+---
+
 ## Quando dá errado
 
 | situação | o que o sistema faz |
@@ -8639,6 +8702,7 @@ gravação auxiliar.
 | Caminho de projeto **Local** não montado no container | a criação é **recusada** (400) com a linha de compose a acrescentar — o projeto não nasce para travar depois (RN-170) |
 | Login social: e-mail do provider bate com conta existente mas NÃO verificado | recusado com 403, nenhum vínculo gravado — e-mail não verificado não é prova de identidade (RN-274) |
 | Login social: `state` inválido/expirado, ou de outro PROPÓSITO (fluxo de conexão de git) | recusado, nenhuma chamada ao provider nem escrita no banco (RN-273) |
+| Validar a necessidade sem `product_brief` nenhum na sessão | recusado (400) ANTES de gravar qualquer evento — não há o que validar ainda (RN-406) |
 
 > **TODO(humano):** as RNs acima foram extraídas do código e dos testes. Falta
 > confirmar se existe regra de negócio **não implementada** que deveria estar

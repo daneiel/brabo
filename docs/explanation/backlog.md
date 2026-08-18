@@ -361,7 +361,6 @@ verificação por item.
 
 | item | onde está a lacuna | referência |
 |---|---|---|
-| Gate `necessidade-validada` (Criativo → PO) | não existe em `gates.yml` nem em código; falta o critério objetivo e o ADR | [auditoria, B2](auditoria-fluxo-vs-codigo.md#b-lacunas-de-papéis-ativos-trabalho-implementável-já) |
 | Métricas de produto → PO | o relatório (`analise:funil`, ADR 0089) já existe; falta só o PO LER `metricas-de-produto` — `fluxo.yml` (papel `po`) ainda declara essa entrada `status: lacuna` | [auditoria, B4](auditoria-fluxo-vs-codigo.md#b-lacunas-de-papéis-ativos-trabalho-implementável-já) |
 
 **Fechados desde a auditoria** (não removidos da referência original, só desta
@@ -372,7 +371,8 @@ time reais via `analise:funil` (parte de B7, ADR 0089) — o resto de B7 (MTTR,
 change failure rate) não fechou: continua declarado como lacuna PERMANENTE em
 `fluxo.yml` (papel `delivery-metricas`), não pendência de engenharia; delegação
 Dev Lead → dev (B1) e RN-160 sem revalidação no backend (A6/B6) — Onda 2 da
-auditoria, ADR 0094, RN-404/405.
+auditoria, ADR 0094, RN-404/405; gate `necessidade-validada` (B2) — Onda 6
+(última) da auditoria, ADR 0095, RN-406.
 
 ## O que esta triagem NÃO faz
 

@@ -25,6 +25,7 @@ import {
   setSessionModelBinding,
   startAgent,
   transitionSession,
+  validateNecessity,
 } from '../lib/api-client';
 import { streamChatMessage } from '../lib/chat-stream';
 import { connectSessionHeartbeat } from '../lib/session-channel';
@@ -769,6 +770,11 @@ export function SessionPage({
   // Ativação inline da execução, a partir do card de aceite do handoff pro
   // Dev Lead (achado do problema 2) — mesmo padrão de `promovendoStoryId`.
   const [ativandoExecucao, setAtivandoExecucao] = useState(false);
+  // Gate `necessidade-validada` (RN-406) — diferente de `streaming`
+  // (`handleReadiness`/`handleArchitectureReadiness`), esta confirmação NÃO
+  // é um turno do engine: é só um POST que grava o evento, mesmo padrão de
+  // `ativandoExecucao`.
+  const [validandoNecessidade, setValidandoNecessidade] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   useEffect(() => () => abortRef.current?.abort(), []);
   // Achado 10: sentinela no fim da lista de mensagens — a sessão abre nela,
@@ -917,6 +923,16 @@ export function SessionPage({
         epic.stories.some((s) => s.status !== 'draft'),
       ),
     [backlogQuery.data],
+  );
+
+  // Gate `necessidade-validada` (Criativo → PO — auditoria fluxo.yml x
+  // código, achado B2, RN-406/ADR 0095): só faz sentido "validar" um
+  // `product_brief` que já existe — a consolidação que `confirm_readiness`
+  // já produziu. Por isso o botão de validação só habilita DEPOIS que o de
+  // "Estou pronto para produzir" já rodou, nunca antes dele.
+  const hasProductBrief = useMemo(
+    () => events.some((e) => e.type === 'artifact.product_brief'),
+    [events],
   );
 
   // O agente que recebe as mensagens do composer: o de `agent.activated`
@@ -1137,6 +1153,11 @@ export function SessionPage({
   // MESMA confirmação — a existência de QUALQUER handoff saindo do Arquiteto
   // já prova que a confirmação aconteceu.
   const arquiteturaJaDeclarada = handoffs.some((h) => h.fromAgent === 'arquiteto');
+
+  // A necessidade já foi validada? (RN-406) Diferente dos dois gates acima,
+  // esta confirmação NÃO produz handoff — é só o registro
+  // `necessity.validated` no event log, então a fonte é o próprio `events`.
+  const necessidadeJaValidada = events.some((e) => e.type === 'necessity.validated');
 
   const invalidateActions = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['session-actions', projectId, sessionId] });
@@ -2010,6 +2031,33 @@ export function SessionPage({
     }
   }
 
+  /**
+   * Gate `necessidade-validada` (RN-406, ADR 0095) — o usuário confirma que
+   * o `product_brief` que o Criativo consolidou reflete de verdade a
+   * necessidade de negócio. Diferente de `handleReadiness`/
+   * `handleArchitectureReadiness`, NÃO é um `GenServer.call` síncrono no
+   * engine (o handoff Criativo→PO já aconteceu dentro do próprio
+   * `confirm_readiness`): é só um POST que grava `necessity.validated`, sem
+   * turno pra esperar — por isso não usa `streaming`, e sim um loading
+   * próprio (`validandoNecessidade`), mesmo padrão de `handleActivateExecution`.
+   */
+  async function handleValidateNecessity() {
+    if (validandoNecessidade) return;
+    setValidandoNecessidade(true);
+    try {
+      await validateNecessity(projectId, sessionId);
+      await queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
+      showToast({ title: 'Necessidade validada', tone: 'success' });
+    } catch (erro) {
+      showToast({
+        title: mensagemDaApi(erro, 'Não foi possível validar a necessidade'),
+        tone: 'danger',
+      });
+    } finally {
+      setValidandoNecessidade(false);
+    }
+  }
+
   async function handleAcceptHandoff(handoffId: string, toAgent: string) {
     // Fixado ANTES do `await` (achado B): o kickoff do agente no engine é um
     // `GenServer.cast` assíncrono, e o `agent.status` "working" pode chegar
@@ -2763,6 +2811,30 @@ export function SessionPage({
                   }
                 >
                   Confirmar arquitetura pronta
+                </Button>
+              )}
+              {/*
+                Gate `necessidade-validada` (RN-406, ADR 0095): confirmação
+                humana SEPARADA de "Estou pronto para produzir" — este botão
+                só existe para não deixar o Criativo (o modelo) se
+                autovalidar (`modelo-de-time.md`, anti-padrão registrado).
+                Habilita só DEPOIS que o product_brief já existe (não dá pra
+                "validar" algo que ainda não foi consolidado) e some assim
+                que já foi validada.
+              */}
+              {criativoActive && !necessidadeJaValidada && (
+                <Button
+                  variant="success"
+                  loading={validandoNecessidade}
+                  onClick={handleValidateNecessity}
+                  disabled={streaming || !hasProductBrief}
+                  title={
+                    !hasProductBrief
+                      ? 'Confirme "Estou pronto para produzir" com o Criativo antes de validar a necessidade'
+                      : undefined
+                  }
+                >
+                  Confirmar necessidade validada
                 </Button>
               )}
             </div>

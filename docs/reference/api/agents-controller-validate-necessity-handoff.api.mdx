@@ -1,0 +1,69 @@
+---
+id: agents-controller-validate-necessity-handoff
+title: "Confirma que a necessidade de negócio do Criativo foi validada"
+description: "Grava `necessity.validated`. Exige que o Criativo já tenha consolidado um `product_brief` nesta sessão (RN-406) — sem ele, recusa: não há o que validar."
+sidebar_label: "Confirma que a necessidade de negócio do Criativo foi validada"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "post api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Confirma que a necessidade de negócio do Criativo foi validada"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/projects/{projectId}/sessions/{sessionId}/agents/criativo/validate-necessity"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Grava `necessity.validated`. Exige que o Criativo já tenha consolidado um `product_brief` nesta sessão (RN-406) — sem ele, recusa: não há o que validar.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./agents-controller-validate-necessity-handoff.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./agents-controller-validate-necessity-handoff.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./agents-controller-validate-necessity-handoff.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

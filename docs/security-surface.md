@@ -451,6 +451,7 @@ motivo na URL.
 | POST | `/projects/:projectId/sessions/:sessionId/agents/:agent/structured-question/:questionSetId/answer` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/agents/:agentId/rearm` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/agents/arquiteto/handoff-infra` | role:developer |
+| POST | `/projects/:projectId/sessions/:sessionId/agents/criativo/validate-necessity` | role:developer |
 | GET | `/projects/:projectId/sessions/:sessionId/budget` | role:developer |
 | PUT | `/projects/:projectId/sessions/:sessionId/budget` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/chat` | role:developer |
