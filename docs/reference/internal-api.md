@@ -405,6 +405,38 @@ CONTIDA — e uma rota sem parâmetro não tem onde o modelo escrever o que
 quiser. O custo por chamada é constante, e o texto entregue ao modelo tem teto
 de linhas, sempre declarando o total real quando trunca.
 
+### O que o PO relê: métricas de produto
+
+| método | caminho |
+|---|---|
+| GET | `/internal/projects/:projectId/product-metrics` (**não** é session-scoped) |
+
+A TERCEIRA rota de leitura do PO, mesmo desenho das duas de cima
+([RN-407](../business-rules.md#rn-407)) — fecha a última pendência da
+auditoria `fluxo.yml` × código
+([item B4](../explanation/auditoria-fluxo-vs-codigo.md#b-lacunas-de-papéis-ativos-trabalho-implementável-já)):
+`docs/fluxo.yml` (papel `po`, entrada `metricas-de-produto`) declarava
+`status: lacuna` desde o ADR 0089 — o DADO já existia (o script
+`analise:funil` mede funil sessão → commit → PR → merge, lead time real e
+deployment frequency real), só faltava o MECANISMO de leitura dentro do
+turno.
+
+O relatório é montado pelas MESMAS funções puras e a MESMA query do script —
+`calcularFunil`/`calcularLeadTimes`/`leadTimeMedioMs`/
+`deploymentFrequencyPorDia`/`buscarAcoesGitDoFunil`, extraídas para
+`apps/api/src/application/services/funil-metrics.ts` (`scripts/` não pode
+importar `src/` na direção contrária, e um caso de uso não pode importar de
+`scripts/`), para que a leitura do PO e o relatório humano nunca divirjam do
+mesmo fato. `apps/api/scripts/analise-funil.ts` passou a REEXPORTAR dali em
+vez de definir localmente — sem mudança de assinatura nem de comportamento.
+
+O corpo JSON não tem campo nenhum para as três ausências permanentes que o
+script declara ("Não medido, de propósito": funil de produto completo
+ideação → commit, evidência de adoção por feature, MTTR/change failure
+rate) — a ferramenta do PO (`listar_metricas_de_produto`) cita as três pelo
+nome no TEXTO que devolve ao modelo, nunca deixando que ele conclua por
+omissão dos números que não há lacuna.
+
 ### Onde o workspace do projeto mora — e por que isso também não virou rota
 
 O modo de workspace ([ADR 0072](../adr/0072-projeto-local-ou-container.md),

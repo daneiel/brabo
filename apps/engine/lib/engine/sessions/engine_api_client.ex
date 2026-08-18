@@ -104,18 +104,25 @@ defmodule Engine.Sessions.EngineApiClient do
               {:ok, map()} | {:error, term()}
 
   @doc """
-  Ferramentas de LEITURA do PO (RN-164) — as duas escopadas ao PROJETO, não à
-  sessão: regra de negócio e backlog atravessam as sessões, e limitar a leitura
-  à sessão corrente é justamente o que fazia o PO não enxergar o que já existia.
+  Ferramentas de LEITURA do PO (RN-164) — as três escopadas ao PROJETO, não à
+  sessão: regra de negócio, backlog e métricas de produto atravessam as
+  sessões, e limitar a leitura à sessão corrente é justamente o que fazia o
+  PO não enxergar o que já existia.
 
   `list_business_rules/1` devolve `%{"rules" => [...], "uncoveredCount" => n}`;
-  `list_backlog/1` devolve a árvore épico → história → tarefa. Nenhuma das duas
-  leva `session_id` — não há o que escopar por sessão aqui.
+  `list_backlog/1` devolve a árvore épico → história → tarefa;
+  `list_product_metrics/1` devolve o relatório de funil/DORA parcial (ADR
+  0089, RN-407) — o MESMO shape do `Relatorio` de `analise-funil.ts`, sem
+  campo para as três ausências permanentes (a ferramenta do PO as declara no
+  TEXTO, não no JSON). Nenhuma das três leva `session_id` — não há o que
+  escopar por sessão aqui.
   """
   @callback list_business_rules(project_id :: String.t()) ::
               {:ok, map()} | {:error, term()}
   @callback list_backlog(project_id :: String.t()) ::
               {:ok, [map()]} | {:error, term()}
+  @callback list_product_metrics(project_id :: String.t()) ::
+              {:ok, map()} | {:error, term()}
 
   @doc """
   Ferramentas do Arquiteto: `create_module_map` (modules validado contra ciclos
@@ -449,6 +456,8 @@ defmodule Engine.Sessions.EngineApiClient do
   def list_business_rules(project_id), do: impl().list_business_rules(project_id)
 
   def list_backlog(project_id), do: impl().list_backlog(project_id)
+
+  def list_product_metrics(project_id), do: impl().list_product_metrics(project_id)
 
   def create_module_map(project_id, session_id, modules),
     do: impl().create_module_map(project_id, session_id, modules)
@@ -882,6 +891,11 @@ defmodule Engine.Sessions.EngineApiClient.Live do
   @impl true
   def list_backlog(project_id) do
     get_json("/internal/projects/#{project_id}/backlog")
+  end
+
+  @impl true
+  def list_product_metrics(project_id) do
+    get_json("/internal/projects/#{project_id}/product-metrics")
   end
 
   # GET que devolve o corpo decodificado. Existe para as leituras do PO

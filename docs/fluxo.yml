@@ -59,7 +59,7 @@ camada_produto:
     entradas:
       - { artefato: necessidade-de-negocio, origem: criativo }
       - { artefato: regras-e-backlog, origem: leitura-escopada }   # RN-164
-      - { artefato: metricas-de-produto, origem: analytics, status: lacuna }
+      - { artefato: metricas-de-produto, origem: analytics, regra: RN-407 }
     saidas:
       - { artefato: epico, destino: backlog, obrigacao: RN-165 }
       - { artefato: historia, destino: usuario, via: proposed_ready }

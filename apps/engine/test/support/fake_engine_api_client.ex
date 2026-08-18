@@ -125,6 +125,24 @@ defmodule Engine.Sessions.FakeEngineApiClient do
   end
 
   @impl true
+  def list_product_metrics(project_id) do
+    notify({:product_metrics_listed, project_id})
+
+    reply(:fake_product_metrics, %{
+      "project" => %{"id" => project_id, "name" => "projeto"},
+      "totalActionsConsidered" => 0,
+      "funnel" => %{
+        "etapas" => [],
+        "sessoesComCommit" => [],
+        "sessoesComPr" => [],
+        "sessoesComMerge" => []
+      },
+      "leadTimes" => %{"perSession" => [], "averageMs" => nil},
+      "deploymentFrequency" => []
+    })
+  end
+
+  @impl true
   def create_module_map(_project_id, _session_id, modules) do
     notify({:module_map_created, modules})
 

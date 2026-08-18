@@ -650,6 +650,49 @@
         ]
       }
     },
+    "/internal/projects/{projectId}/product-metrics": {
+      "get": {
+        "description": "O MESMO relatório do script `analise:funil` (ADR 0089) — funil sessão → commit → PR → merge, lead time real e deployment frequency real — pelas mesmas funções puras e a mesma query (`apps/api/src/application/services/funil-metrics.ts`), para que os dois nunca divirjam do mesmo fato. Fecha `docs/fluxo.yml` (papel `po`, entrada `metricas-de-produto`, antes `status: lacuna`) (RN-407).",
+        "operationId": "InternalProjectsController_productMetrics",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductMetricsResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Service token ausente ou diferente do compartilhado."
+          },
+          "404": {
+            "description": "Projeto inexistente."
+          }
+        },
+        "security": [
+          {
+            "service-token": []
+          }
+        ],
+        "summary": "O funil de entrega e DORA parcial do projeto, para o PO ler",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
     "/internal/sessions/{sessionId}/actions": {
       "post": {
         "description": "A porta ÚNICA pela qual um agente toca git, terminal ou gasto. O `permissions.json` decide na criação, e `deny` vence qualquer autonomia concedida ao agente.",
@@ -14602,6 +14645,180 @@
           "hipotese",
           "sugestao",
           "confiancaPercent"
+        ]
+      },
+      "ProductMetricsDeploymentDayResponseDto": {
+        "type": "object",
+        "properties": {
+          "dia": {
+            "type": "string",
+            "example": "2026-08-01"
+          },
+          "merges": {
+            "type": "number",
+            "example": 2
+          }
+        },
+        "required": [
+          "dia",
+          "merges"
+        ]
+      },
+      "ProductMetricsFunnelResponseDto": {
+        "type": "object",
+        "properties": {
+          "etapas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductMetricsFunnelStageResponseDto"
+            }
+          },
+          "sessoesComCommit": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "sessoesComPr": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "sessoesComMerge": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "etapas",
+          "sessoesComCommit",
+          "sessoesComPr",
+          "sessoesComMerge"
+        ]
+      },
+      "ProductMetricsFunnelStageResponseDto": {
+        "type": "object",
+        "properties": {
+          "etapa": {
+            "type": "string",
+            "example": "sessão produziu commit"
+          },
+          "sessoes": {
+            "type": "number",
+            "example": 3
+          },
+          "taxaDaEtapaAnterior": {
+            "type": "object",
+            "example": 0.67,
+            "nullable": true,
+            "description": "`null` na primeira etapa — não há \"conversão de\" nada."
+          }
+        },
+        "required": [
+          "etapa",
+          "sessoes",
+          "taxaDaEtapaAnterior"
+        ]
+      },
+      "ProductMetricsLeadTimeResponseDto": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "example": "01JC4Z0000SESSAO000000000001"
+          },
+          "primeiroCommitEm": {
+            "type": "string",
+            "example": "2026-08-01T10:00:00.000Z"
+          },
+          "primeiroMergeEm": {
+            "type": "string",
+            "example": "2026-08-01T12:00:00.000Z"
+          },
+          "leadTimeMs": {
+            "type": "number",
+            "example": 7200000
+          }
+        },
+        "required": [
+          "sessionId",
+          "primeiroCommitEm",
+          "primeiroMergeEm",
+          "leadTimeMs"
+        ]
+      },
+      "ProductMetricsLeadTimesResponseDto": {
+        "type": "object",
+        "properties": {
+          "perSession": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductMetricsLeadTimeResponseDto"
+            }
+          },
+          "averageMs": {
+            "type": "object",
+            "example": 7200000,
+            "nullable": true,
+            "description": "Média simples em ms — `null` sem nenhuma sessão com commit E merge."
+          }
+        },
+        "required": [
+          "perSession",
+          "averageMs"
+        ]
+      },
+      "ProductMetricsProjectResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "01JC4Z0000PROJETO0000000001"
+          },
+          "name": {
+            "type": "string",
+            "example": "exp003"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      },
+      "ProductMetricsResponseDto": {
+        "type": "object",
+        "properties": {
+          "project": {
+            "$ref": "#/components/schemas/ProductMetricsProjectResponseDto"
+          },
+          "totalActionsConsidered": {
+            "type": "number",
+            "example": 18,
+            "description": "Ações git consideradas (git_commit/pr_open/git_merge, qualquer status)."
+          },
+          "funnel": {
+            "$ref": "#/components/schemas/ProductMetricsFunnelResponseDto"
+          },
+          "leadTimes": {
+            "$ref": "#/components/schemas/ProductMetricsLeadTimesResponseDto"
+          },
+          "deploymentFrequency": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductMetricsDeploymentDayResponseDto"
+            }
+          }
+        },
+        "required": [
+          "project",
+          "totalActionsConsidered",
+          "funnel",
+          "leadTimes",
+          "deploymentFrequency"
         ]
       },
       "ProficiencyDraftDto": {

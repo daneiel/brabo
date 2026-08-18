@@ -1,0 +1,69 @@
+---
+id: internal-projects-controller-product-metrics
+title: "O funil de entrega e DORA parcial do projeto, para o PO ler"
+description: "O MESMO relatório do script `analise:funil` (ADR 0089) — funil sessão → commit → PR → merge, lead time real e deployment frequency real — pelas mesmas funções puras e a mesma query (`apps/api/src/application/services/funil-metrics.ts`), para que os dois nunca divirjam do mesmo fato. Fecha `docs/fluxo.yml` (papel `po`, entrada `metricas-de-produto`, antes `status: lacuna`) (RN-407)."
+sidebar_label: "O funil de entrega e DORA parcial do projeto, para o PO ler"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "get api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"O funil de entrega e DORA parcial do projeto, para o PO ler"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/internal/projects/{projectId}/product-metrics"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+O MESMO relatório do script `analise:funil` (ADR 0089) — funil sessão → commit → PR → merge, lead time real e deployment frequency real — pelas mesmas funções puras e a mesma query (`apps/api/src/application/services/funil-metrics.ts`), para que os dois nunca divirjam do mesmo fato. Fecha `docs/fluxo.yml` (papel `po`, entrada `metricas-de-produto`, antes `status: lacuna`) (RN-407).
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./internal-projects-controller-product-metrics.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./internal-projects-controller-product-metrics.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./internal-projects-controller-product-metrics.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

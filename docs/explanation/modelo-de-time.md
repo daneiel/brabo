@@ -76,13 +76,14 @@ já prescrevia.
 
 | Lacuna | Onde | Referência |
 |---|---|---|
-| Delegação Dev Lead → dev | corte declarado | ADR 0053 item 5 |
-| Métricas de produto → PO | loop de negócio | Onda 3/H3 |
 | `deployavel`/`operavel` | Infra/Platform | planned, DEPLOY_ENABLED |
+
+O loop "métricas de produto → PO" fechou: `listar_metricas_de_produto`
+(RN-407) fez o PO conseguir ler o mesmo relatório de `analise:funil`
+(ADR 0089) dentro do turno — era a última linha desta tabela (item B4 da
+auditoria fluxo.yml × código).
 
 ## Propostas pendentes de decisão
 
-- [ ] `metricas-de-produto` como entrada obrigatória do PO após o
-      primeiro release.
 - [ ] Quem herda o gatilho do Staff e a proposta de teto enquanto a
       Anamnese estiver em refinamento — ou ambos aguardam, declarado.
