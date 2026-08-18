@@ -293,11 +293,11 @@ Para voltar: `gh variable set APPROVAL_MODE --body solo`.
 configuração, e há teste que roda a mesma entrada nos dois modos afirmando
 vereditos diferentes.
 
-> **TODO(humano):** o critério de quem entra em cada lista deveria estar
-> alinhado a um `GOVERNANCE.md`, mas **ele não existe** — foi cortado do escopo
-> da FASE DOC. Ou ele é escrito antes da migração, ou o critério mora aqui e
-> esta seção passa a ser a fonte. As duas servem; a que não serve é o critério
-> não existir em lugar nenhum quando o primeiro contribuidor externo aparecer.
+O critério de quem entra em cada lista — quem entra, quem sai, e com base em
+quê — está em `GOVERNANCE.md`, na raiz do repositório. Esta seção continua
+sendo a fonte do MECANISMO (a escada, a exigência de pessoas distintas, o
+passo a passo da troca); `GOVERNANCE.md` é a fonte do CRITÉRIO de quem ocupa
+cada papel.
 
 ## Promoção
 
