@@ -8802,9 +8802,9 @@ a RN substitui.
 projects-summary`) é a contagem de agentes ONLINE agora — trabalhando ou com
 uma pendência esperando decisão —, nunca tamanho de equipe. Chamar de
 "online" um número que na verdade é "já apareceu alguma vez" seria enganoso
-(mesmo princípio dos [ADR 0041](adr/0041-llm-provider-http-base-e-capabilities.md)/
-[0042](adr/0042-catalogo-de-modelos-com-curadoria-e-preco-congelado.md)/
-[0077](adr/0077-ranking-de-modelos-sem-nota-inventada.md) contra dado
+(mesmo princípio dos [ADR 0041](adr/0041-base-openai-compativel-e-contrato-de-llm-providers.md)/
+[0042](adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md)/
+[0077](adr/0077-ranking-de-modelos-por-capacidade-sem-nota-inventada.md) contra dado
 fingido).
 
 Duas FONTES, uma régua:
