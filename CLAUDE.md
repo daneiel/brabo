@@ -1587,6 +1587,31 @@ failure rate) — a ferramenta do PO as cita pelo nome no TEXTO que devolve
 ao modelo, sempre, para ele nunca concluir por omissão dos números que
 não há lacuna.
 
+## GOVERNANCE.md — o critério do modo `community`, não o mecanismo dele
+Item do backlog anterior ("Modo community do approval-ladder") virou correção
+de registro, não implementação: investigação confirmou que o modo `community`
+já existe em código desde a FASE 6 (`scripts/ci/approval-ladder.ts`), testado
+nos dois lados, só desligado por `APPROVAL_MODE=solo` (default). A frase do
+backlog ("vira mudança de `aprovacao_humana` no registro de gates") vinha de
+uma linha ESPECULATIVA do ADR 0054 — não editada, por regra, mas a imprecisão
+está registrada em `docs/explanation/backlog.md`: `aprovacao_humana` do gate
+`aprovacoes-da-escada` já é `true` fixo nos dois modos, sem campo nenhum no
+schema do `Gate` que reaja a `APPROVAL_MODE`.
+
+O que faltava de verdade era outro `TODO(humano)`, em
+`docs/explanation/branching-policy.md`: o critério de quem entra em cada
+lista de aprovadores (`devs`/`po`/`gestão`) — quem entra, quem sai, com base
+em quê. `GOVERNANCE.md` (raiz do repo, novo) fecha isso: MECANISMO continua
+em `branching-policy.md` (a escada, pessoas distintas, o passo a passo da
+troca de variável), CRITÉRIO passa a morar em `GOVERNANCE.md`. É proposta,
+não comitê em funcionamento — o projeto continua com um mantenedor só, e o
+documento é explícito sobre isso: a maior parte dele descreve o que passa a
+valer QUANDO houver mais gente, não uma estrutura já ativa. Regra `warn` nova
+no docmap (`governanca`) cobra revisão quando `approval-ladder.ts`/
+`branching-policy.md` mudam — separada da regra `block` existente
+(`politica-de-branches`) pelo mesmo motivo que `checks-e-rulesets` é separada
+dela: MECANISMO decorre do código, CRITÉRIO é decisão humana.
+
 ## FERRAMENTA DE DESENVOLVIMENTO — `pnpm bootstrap`
 Menu de terminal em `scripts/dev/bootstrap.sh` agrupando o que se faz no
 dia a dia: Docker, K8s, Database e Test. Existe porque esses comandos moram
