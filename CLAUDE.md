@@ -1686,6 +1686,18 @@ sessão: `dev.working`/`dev.blocked`/`dev.idle_tripped` seguram a sessão
 como último evento ficam FORA da régua — `awaiting_approval` já é coberto
 pelo segundo sinal (a ação git nasce `pending`), e `awaiting_gate` é
 lacuna residual conhecida, não fechada aqui.
+## Workspace pessoal automático no cadastro (RN-410)
+Achado navegando: o botão "Novo projeto" do dashboard não fazia NADA, sem
+erro. Causa raiz: `RegisterUseCase` e `SocialLoginCallbackUseCase` (no ramo
+que provisiona conta nova) criavam usuário e credencial mas NUNCA um
+workspace — TODO cadastro novo caía nessa parede, e só não aparecia antes
+porque `seed.ts` sempre cria um workspace junto dos dados de demonstração.
+Os dois pontos agora criam o workspace e adicionam o usuário como `owner`
+na MESMA transação que já cria a conta. Nome/slug saem de uma função pura
+única, `nomeESlugDoWorkspacePessoal` (`domain/auth/personal-workspace.ts`),
+para a regra não divergir em dois arquivos; o slug é sempre sufixado com
+`userId.slice(0, 8)` (mesmo padrão de `extraDevAgentId`) para ser único
+sem round-trip ao banco (RN-410).
 
 ## FERRAMENTA DE DESENVOLVIMENTO — `pnpm bootstrap`
 Menu de terminal em `scripts/dev/bootstrap.sh` agrupando o que se faz no
