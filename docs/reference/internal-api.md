@@ -25,9 +25,12 @@ resposta imediata, vai por HTTP.
 
 **Fora do escopo desta página**: rotas HTTP autenticadas pelo JWT normal do
 usuário (RBAC por papel, `@RequireRole`) — como
-`/projects/:projectId/agent-autonomy` ou `/projects/:projectId/container/lifecycle`
-([RN-267](../business-rules.md#rn-267)) — não são "internas" no sentido deste
-documento, mesmo quando um agente é quem efetivamente chama através delas. O
+`/projects/:projectId/agent-autonomy`, `/projects/:projectId/container/lifecycle`
+([RN-267](../business-rules.md#rn-267)) ou
+`.../agents/criativo/validate-necessity` (gate `necessidade-validada`,
+[RN-406](../business-rules.md#rn-406), ADR 0095) — não são "internas" no
+sentido deste documento, mesmo quando um agente é quem efetivamente chama
+através delas. O
 service token compartilhado NUNCA serve como credencial nessas rotas, e o JWT
 de usuário nunca serve em `/internal/*` — os dois mecanismos não se sobrepõem
 ([RN-035](../business-rules.md#rn-035)). Também fora do escopo: as rotas

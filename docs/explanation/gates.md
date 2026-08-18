@@ -169,6 +169,25 @@ Vale registrar por que isso não mudou nada na esteira de PR do painel do time:
 `fluxo: pr` (ver "Consumo" abaixo) — um gate pode virar `active` no registro sem
 aparecer em lugar nenhum da UI, se o fluxo dele for outro.
 
+## Um gate pode nascer `active` direto — quando o mecanismo e o registro chegam juntos
+
+`implementavel` e `paralelismo-autorizado` são os dois exemplos de gate que
+já existia (declarado `planned` ou desatualizado) e ganhou o registro
+DEPOIS. `necessidade-validada` ([RN-406](../business-rules.md#rn-406),
+[ADR 0095](../adr/0095-gate-necessidade-validada.md)) é o terceiro padrão:
+mecanismo e registro nasceram na MESMA mudança, porque o gate em si não
+existia em lugar nenhum — nem `planned` no arquivo, nem código atrás.
+
+A escolha de `severidade: warn` segue o mesmo raciocínio de
+`implementavel`, mas por um motivo diferente. `implementavel` é `warn`
+porque promover para `block` exigiria medir passagens reais primeiro
+(FASE 15a). `necessidade-validada` é `warn` porque NADA no produto hoje
+consulta a passagem dele antes de deixar o PO seguir — o handoff
+Criativo→PO já acontece dentro de `confirm_readiness`, antes deste gate
+sequer existir. `block` prometeria uma trava que não existe; `warn`
+descreve exatamente o que o gate é: medição de que um humano validou o
+mérito da necessidade, não um portão que impede o próximo passo.
+
 ## Consumo: a tela deriva, não repete
 
 A esteira de PR no painel — Dev → QA → SecOps → Você — era uma lista escrita no
