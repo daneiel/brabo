@@ -363,11 +363,16 @@ verificação por item.
 |---|---|---|
 | Delegação Dev Lead → dev | `dev-lead` só tem `propose_execution_plan`; `delegations` já aceita `area='dev'` mas nenhum chamador usa | ADR 0053 item 5; [auditoria, B1](auditoria-fluxo-vs-codigo.md#b-lacunas-de-papéis-ativos-trabalho-implementável-já) |
 | Gate `necessidade-validada` (Criativo → PO) | não existe em `gates.yml` nem em código; falta o critério objetivo e o ADR | [auditoria, B2](auditoria-fluxo-vs-codigo.md#b-lacunas-de-papéis-ativos-trabalho-implementável-já) |
-| Gate `implementavel` (gate_futuro do dev-lead) | `gates.yml` já declara `planned`, sem consumidor; não depende de `qa-estrategia`/`appsec` existirem | [auditoria, B3](auditoria-fluxo-vs-codigo.md#b-lacunas-de-papéis-ativos-trabalho-implementável-já) |
-| Métricas de produto → PO | `medicao` já tem `sumGroupedBy`; falta a métrica de produto e o PO lendo — sem precisar do papel `analytics` separar | [auditoria, B4](auditoria-fluxo-vs-codigo.md#b-lacunas-de-papéis-ativos-trabalho-implementável-já) |
-| `docs/gates.yml` desatualizado (`paralelismo-autorizado`) | declara `planned`; o mecanismo está ativo desde a FASE 14d (2026-08-07) | [auditoria, A1/B5](auditoria-fluxo-vs-codigo.md#a-divergências) |
+| Métricas de produto → PO | o relatório (`analise:funil`, ADR 0089) já existe; falta só o PO LER `metricas-de-produto` — `fluxo.yml` (papel `po`) ainda declara essa entrada `status: lacuna` | [auditoria, B4](auditoria-fluxo-vs-codigo.md#b-lacunas-de-papéis-ativos-trabalho-implementável-já) |
 | RN-160 sem revalidação no backend | "Confirmar arquitetura pronta" só é garantido no cliente (`SessionPage.tsx`); `OfferInfraHandoffUseCase` não revalida | [auditoria, A6/B6](auditoria-fluxo-vs-codigo.md#a-divergências) |
-| Relatório DORA via `medicao` | lead time, deployment frequency, MTTR, change failure rate — `delivery-metricas` nunca vira agente, o relatório não espera gatilho | [auditoria, B7](auditoria-fluxo-vs-codigo.md#b-lacunas-de-papéis-ativos-trabalho-implementável-já) |
+
+**Fechados desde a auditoria** (não removidos da referência original, só desta
+tabela de pendências): gate `implementavel` (B3, ADR 0090); `docs/gates.yml`
+desatualizado em `paralelismo-autorizado` (A1/B5, corrigido junto com A3–A5/A8
+— citações de RN e rótulos errados em `fluxo.yml`); deployment frequency e lead
+time reais via `analise:funil` (parte de B7, ADR 0089) — o resto de B7 (MTTR,
+change failure rate) não fechou: continua declarado como lacuna PERMANENTE em
+`fluxo.yml` (papel `delivery-metricas`), não pendência de engenharia.
 
 ## O que esta triagem NÃO faz
 

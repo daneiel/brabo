@@ -1439,6 +1439,47 @@ chamada de "versão mecanizada" deste papel: ela evita conflito de
 snapshot entre agentes em paralelo, preocupação ortogonal a "este SQL
 tem um padrão arriscado".
 
+## Auditoria fluxo.yml × código — Onda 1: fluxo.yml/gates.yml em dia
+Primeira das seis ondas do plano da auditoria (seção D,
+`docs/explanation/auditoria-fluxo-vs-codigo.md`) a fechar — as Ondas 3, 4 e
+5 já tinham sido antecipadas fora de ordem (analytics/DORA, gate
+`implementavel`, QA-estratégia/appsec); esta é só metadado, sem ADR, sem
+linha de código de produção.
+
+`docs/gates.yml` (`paralelismo-autorizado`): `status: planned` → `active`,
+com `evidencia` no MESMO formato do gate `implementavel` vizinho —
+`event_types: [proposed_action.created/approved/denied]`, `filtro: {
+actionType: parallelize }`, `onde:
+request-parallelization.use-case.ts` (achado A1/B5 — o `fluxo.yml` já
+dizia `ativo` desde o ADR 0053/FASE 14d, só o `gates.yml` ficou para trás).
+`docs/fluxo.yml` ganhou mais três correções da auditoria, todas de citação
+ou rótulo, nenhuma de comportamento: a máquina de estados do `dev` passou
+de 4 para 5 estados (`awaiting_approval` entrou, Fase 12e/ADR 0052 — A3); a
+citação de RN-160 saiu da entrada `backlog-promovido` do Arquiteto e foi
+para onde ela realmente se aplica, a saída `handoff-duplo` (o botão
+"Confirmar arquitetura pronta" que ela trava — A4); a citação de RN-161
+saiu de `handoff-duplo` e virou nota na entrada do Dev Lead (é o passo de
+ACEITAR o handoff que encadeia ativação de execução, não o duplo handoff
+em si — A5); e a origem de `worktree-por-agente` do `dev` deixou de dizer
+`harness` (`Engine.Dev.WorktreeManager` não é um dos 4 componentes do
+papel `harness` — A8). `docs/explanation/backlog.md` também foi
+atualizado: a linha do `gates.yml` desatualizado saiu da tabela de
+pendências (fechada aqui), junto com o gate `implementavel` (B3, já
+fechado pelo ADR 0090 antes desta onda, sem ninguém ter tirado da tabela)
+e a parte de B7 (deployment frequency/lead time) que o `analise:funil`
+(ADR 0089) já entrega de verdade — MTTR/change failure rate continuam de
+fora, mas como lacuna PERMANENTE já declarada em `fluxo.yml`, não
+pendência de engenharia.
+
+Verificação: `pnpm --filter api validacao:gates -- --sem-banco` (registro
+válido, sem `ativo-sem-evidencia`) e `pnpm docs:check` verdes. A fase 3 do
+script (evidência real no event log) exige `--projeto <uuid>` contra um
+banco com dados — fora do alcance desta correção, que é só de metadado.
+
+**Pendentes do mesmo plano, não desta onda**: Onda 2 (delegação Dev Lead →
+dev, RN-160 revalidada no backend) e Onda 6 (gate `necessidade-validada`,
+que exige ADR e decisão de produto antes de codar).
+
 ## FERRAMENTA DE DESENVOLVIMENTO — `pnpm bootstrap`
 Menu de terminal em `scripts/dev/bootstrap.sh` agrupando o que se faz no
 dia a dia: Docker, K8s, Database e Test. Existe porque esses comandos moram

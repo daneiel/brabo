@@ -236,7 +236,7 @@ gates:
       arquivo: scripts/ci/promotion-check.spec.ts
       onde: scripts/ci/promotion-check.ts
 
-  - id: paralelismo-autorizado # FASE 14d — entra active quando ela fechar
+  - id: paralelismo-autorizado # FASE 14d — ativo desde 2026-08-07; corrigido na auditoria fluxo.yml (A1/B5)
     fluxo: execucao
     dono: lead-de-area
     entrada: [pedido-acima-do-limite]
@@ -244,7 +244,17 @@ gates:
     verificacao: script
     severidade: block
     aprovacao_humana: true
-    status: planned
+    status: active
+    evidencia:
+      tipo: event_log
+      event_types:
+        [
+          proposed_action.created,
+          proposed_action.approved,
+          proposed_action.denied,
+        ]
+      filtro: { actionType: parallelize }
+      onde: apps/api/src/application/use-cases/execution/request-parallelization.use-case.ts
     backlog: ADR 0053
 
   - id: implementavel # Dev Lead — FASE 14d (ADR 0053); ativado pelo ADR 0090
