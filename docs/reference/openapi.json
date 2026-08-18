@@ -7090,6 +7090,63 @@
         ]
       }
     },
+    "/projects/{projectId}/sessions/{sessionId}/agents/criativo/validate-necessity": {
+      "post": {
+        "description": "Grava `necessity.validated`. Exige que o Criativo já tenha consolidado um `product_brief` nesta sessão (RN-406) — sem ele, recusa: não há o que validar.",
+        "operationId": "AgentsController_validateNecessityHandoff",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto, sessão ou handoff inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Confirma que a necessidade de negócio do Criativo foi validada",
+        "tags": [
+          "agentes"
+        ]
+      }
+    },
     "/projects/{projectId}/sessions/{sessionId}/budget": {
       "get": {
         "description": "É o que alimenta o medidor de tokens ao vivo da tela de sessão.",

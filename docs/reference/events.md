@@ -162,6 +162,7 @@ Os schemas são fechados: campo faltando reprova a emissão
 |---|---|
 | `architecture.readiness_confirmed` | — |
 | `readiness.confirmed` | — |
+| `necessity.validated` | gate `necessidade-validada` (Criativo → PO): o usuário confirma que o `product_brief` que o Criativo consolidou reflete a necessidade de negócio — clique separado de `readiness.confirmed`, nunca inferência do modelo ([RN-406](../business-rules.md#rn-406), ADR 0095). `payload.productBriefId` referencia o `artifact.product_brief` validado |
 
 ### Git e bootstrap
 
@@ -308,7 +309,7 @@ respeito.
 
 > ⚠️ Bloco gerado por `pnpm docs:generate`. Não edite à mão — o próximo build sobrescreve.
 
-Extraído dos pontos de emissão: **86 identificadores**, dos quais **2** não aparecem descritos acima.
+Extraído dos pontos de emissão: **87 identificadores**, dos quais **2** não aparecem descritos acima.
 
 - `action.failed` <sub>(apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts)</sub>
 - `agent.activated` <sub>(apps/api/src/application/use-cases/agents/activate-agent.use-case.ts)</sub>
@@ -372,6 +373,7 @@ Extraído dos pontos de emissão: **86 identificadores**, dos quais **2** não a
 - `infra.gate_changed` <sub>(apps/api/src/application/use-cases/execution/record-infra-gate-verdict.use-case.ts)</sub>
 - `instruction.rolled_back` <sub>(apps/api/src/application/use-cases/instructions/rollback-instruction.use-case.ts)</sub>
 - `llm.turn` <sub>(apps/engine/lib/engine/sessions/engine_api_client.ex)</sub>
+- `necessity.validated` <sub>(apps/api/src/application/use-cases/agents/validate-necessity.use-case.ts)</sub>
 - `permission.granted` <sub>(apps/api/src/application/use-cases/actions/approve-always-action.use-case.ts)</sub>
 - `pr.gate_changed` <sub>(apps/api/src/application/use-cases/execution/open-gate.use-case.ts)</sub>
 - `project.git_connected` <sub>(apps/api/src/application/use-cases/git/handle-git-oauth-callback.use-case.ts)</sub>

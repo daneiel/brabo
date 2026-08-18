@@ -76,7 +76,6 @@ já prescrevia.
 
 | Lacuna | Onde | Referência |
 |---|---|---|
-| Gate `necessidade-validada` não existe | Criativo → PO | gate novo = ADR |
 | Delegação Dev Lead → dev | corte declarado | ADR 0053 item 5 |
 | Métricas de produto → PO | loop de negócio | Onda 3/H3 |
 | `deployavel`/`operavel` | Infra/Platform | planned, DEPLOY_ENABLED |
@@ -85,7 +84,5 @@ já prescrevia.
 
 - [ ] `metricas-de-produto` como entrada obrigatória do PO após o
       primeiro release.
-- [ ] Anti-padrão do Criativo como validação real do gate
-      `necessidade-validada`.
 - [ ] Quem herda o gatilho do Staff e a proposta de teto enquanto a
       Anamnese estiver em refinamento — ou ambos aguardam, declarado.

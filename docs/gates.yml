@@ -42,6 +42,24 @@ gates:
         ]
       onde: apps/api/src/application/use-cases/actions/propose-action.use-case.ts
 
+  - id: necessidade-validada # Criativo → PO — auditoria fluxo.yml x código (B2), ADR 0095
+    fluxo: descoberta
+    dono: usuario
+    entrada: [product-brief]
+    entregavel: necessidade-de-negocio-validada
+    verificacao: script
+    # `warn`, não `block`: nada A JUSANTE depende de checar este gate para
+    # seguir — o handoff Criativo→PO já aconteceu dentro do próprio
+    # `confirm_readiness` (RN-142), e esta confirmação é só o registro de que
+    # um humano validou a necessidade, não um portão que bloqueia o PO.
+    severidade: warn
+    aprovacao_humana: true
+    status: active
+    evidencia:
+      tipo: event_log
+      event_types: [necessity.validated]
+      onde: apps/api/src/application/use-cases/agents/validate-necessity.use-case.ts
+
   - id: story-promovida
     fluxo: pre-dev
     dono: usuario # modo manual é o default (RN-048)

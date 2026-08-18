@@ -545,6 +545,15 @@ export const confirmArchitectureReadiness = (
   post<{ ok: true }>(
     `/projects/${projectId}/sessions/${sessionId}/agents/arquiteto/handoff-infra`,
   );
+// Gate `necessidade-validada` (RN-406, ADR 0095) — confirmação humana de
+// que o `product_brief` do Criativo reflete a necessidade de negócio.
+// Endpoint dedicado: não reaproveita `confirmReadiness` (que só exige
+// regra capturada, RN-142) nem o aceite do handoff pelo PO (estrutural,
+// sem julgar conteúdo).
+export const validateNecessity = (projectId: string, sessionId: string) =>
+  post<{ ok: true }>(
+    `/projects/${projectId}/sessions/${sessionId}/agents/criativo/validate-necessity`,
+  );
 // RN-162: submissão do formulário de `chat.structured_question` — grava
 // `chat.structured_question_answered` e reenvia as respostas ao `agent` (o
 // que fez as perguntas) pelo mesmo caminho de `sendAgentMessage`. Um
