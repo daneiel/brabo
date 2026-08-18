@@ -5638,6 +5638,9 @@ história promovida, o botão mostra a dica em `title` explicando o motivo.
 - **Origem:** pedido do usuário — o botão de handoff Arquiteto→Dev Lead
   não tinha gate nenhum
 
+Só valia no CLIENTE: uma chamada HTTP direta ignorava a regra. Fechado por
+[RN-404](#rn-404) (ADR 0094), que revalida no backend.
+
 ### RN-161 — Aceitar o handoff pro Dev Lead encadeia a ativação de execução quando o papel efetivo já autoriza {#rn-161}
 
 `handleAcceptHandoff` (`SessionPage.tsx`) encadeia `activateExecution`
@@ -8530,6 +8533,86 @@ procedimento ou reexecutá-lo.
   não lógica); a existência do procedimento testado é RN de
   `docs/runbook.md#restore` em si
 - **ADR:** [0093](adr/0093-dbre-linter-de-migracao-e-relatorio-de-backup.md)
+
+---
+
+## Auditoria fluxo.yml × código — Onda 2: RN-160 no backend e delegação Dev Lead → dev (RN-404/405, ADR 0094)
+
+Fecha os dois últimos achados da auditoria (seção D,
+`docs/explanation/auditoria-fluxo-vs-codigo.md`): B6 (RN-160 garantida só no
+cliente) e B1 (a delegação Dev Lead → `dev-<modulo>` declarada pelo ADR 0053
+item 5 e nunca implementada).
+
+### RN-404 — "Confirmar arquitetura pronta" (RN-160) é revalidada no BACKEND, não só desabilitada na UI {#rn-404}
+
+[RN-160](#rn-160) garantia a regra ("pelo menos 1 história promovida antes do
+handoff duplo Arquiteto→Dev Lead/Infra") só desabilitando o botão em
+`SessionPage.tsx` — uma chamada HTTP direta a
+`POST /agents/arquiteto/handoff-infra`, sem passar pela UI, ignorava a regra
+por completo. `OfferInfraHandoffUseCase.execute` agora consulta
+`StoryRepository.findByProject(projectId)` e recusa com `BadRequestException`
+quando NENHUMA história do projeto tem `status !== 'draft'` — a checagem vem
+ANTES de gravar `architecture.readiness_confirmed` e ANTES de qualquer
+chamada ao engine (`offerInfraHandoff`/`offerDevHandoff`): uma recusa não
+pode deixar rastro de handoff meio-ofertado no event log, que é imutável.
+`StoryRepository` foi escolhido (e não `ListBacklogUseCase`) por ser mais
+leve — não precisa montar a árvore épico→história→tarefa para responder
+"existe alguma não-draft?".
+
+- **Onde:** `apps/api/src/application/use-cases/agents/offer-infra-handoff.use-case.ts`
+  (linhas 27-34, a checagem; injeção de `StoryRepository` no construtor)
+- **Teste:** `apps/api/test/application/use-cases/agents/offer-infra-handoff.use-case.spec.ts`
+  — zero história promovida recusa com ZERO chamada ao engine e ZERO evento
+  gravado; com ao menos uma `ready`/`in_progress`/`done`, segue o fluxo normal
+- **ADR:** [0094](adr/0094-delegacao-dev-lead-vira-dado.md)
+
+### RN-405 — A delegação Dev Lead → dev vira dado em `delegations`, com `parecerArtifactId` redefinido para "o que justificou a decisão" {#rn-405}
+
+O ADR 0053 (FASE 14d) já previa a delegação Dev Lead → `dev-<modulo>` como
+"o mesmo caminho de QA e Infra" (`delegations`, `area = 'dev'`), mas
+declarou isso fora de escopo. `dev_lead_server.ex` nunca gravava a tabela —
+só QA (`qa_lead_server.ex`) e Infra (`infra_lead_server.ex`) gravavam, e os
+dois do lado ENGINE, porque é lá que o subagente produz um PARECER (veredito
+de rodada única) que justifica `parecerArtifactId`.
+
+O Dev Lead não tem esse padrão: a ativação de um `dev-<modulo>` acontece do
+lado API, em `AcceptParallelizationUseCase.execute` — chamada tanto pelo
+caminho direto (`RequestParallelizationUseCase`, abaixo do teto de sessão da
+[RN-083](#rn-083)) quanto pelo aprovado (`ExecuteParallelizationUseCase`,
+depois que o usuário aprova a `proposed_action` tipo `parallelize`). A
+gravação entrou DENTRO desse método — cobre os dois caminhos de graça,
+porque os dois já convergem ali —, com `status: 'completed'` REDEFINIDO para
+esta área: significa "a delegação foi EFETIVADA" (o agente subiu), não "o
+subagente terminou e emitiu parecer" como em QA/Infra (decisão registrada no
+[ADR 0094](adr/0094-delegacao-dev-lead-vira-dado.md)).
+
+`parecerArtifactId` aponta para o `id` do evento `artifact.module_map` mais
+recente e vigente do projeto — obtido de
+`SessionEventRepository.listByTypeForProject(projectId, 'artifact.module_map')`
+(método genérico já existente, usado por `computeCoverage` para
+`artifact.business_rule`; nenhuma consulta nova foi escrita, só uma chamada a
+mais dele — o último item da lista é o mais recente, porque a função ordena
+por `createdAt` ASC) — o artefato que justificou a decisão de delegar.
+`area: 'dev'`, `leadAgent: 'dev-lead'`, `subagent` é o id exato do agente
+ativado (`extraDevAgentId(module)`, a MESMA função que constrói o id em todo
+o resto do use case — nenhum formato novo). Sem `artifact.module_map` no
+projeto (não deveria acontecer — é entrada obrigatória do Dev Lead em
+`docs/fluxo.yml`), a delegação NÃO é gravada com um id inventado: só loga o
+estado inesperado, pela mesma lição da RN-059 (nunca falha silenciosa, mas
+também nunca finge uma justificativa que não existe). E falha de
+`RecordDelegationUseCase.execute` (ex.: banco fora do ar) é capturada e
+logada, nunca propagada — a ativação do dev agent já é sucesso quando a
+tentativa de gravar a delegação acontece, e não pode ser derrubada por uma
+gravação auxiliar.
+
+- **Onde:** `apps/api/src/application/use-cases/execution/accept-parallelization.use-case.ts`
+  (`recordDevDelegation`, chamado ao fim de `execute`)
+- **Teste:** `apps/api/test/application/use-cases/execution/accept-parallelization.use-case.spec.ts`,
+  describe "delegação Dev Lead → dev (área dev, ADR 0094)" — grava com
+  `area: 'dev'` apontando pro module_map mais recente; sem module_map não
+  grava (e não lança); `RecordDelegationUseCase` falhando não derruba a
+  ativação
+- **ADR:** [0094](adr/0094-delegacao-dev-lead-vira-dado.md)
 
 ---
 
