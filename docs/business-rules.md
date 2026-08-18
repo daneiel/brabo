@@ -8885,6 +8885,67 @@ consultas novas ficam sem número medido, só o argumento estrutural acima.
 
 ---
 
+## Workspace pessoal automático no cadastro (RN-410)
+
+Achado navegando o produto depois de um reset de banco: o botão "Novo
+projeto"/"+" do dashboard não fazia NADA, sem erro nenhum. A causa raiz
+estava em duas camadas. A visível: `Dashboard.tsx` só abre o
+`NewProjectWizard` quando `useCurrentWorkspace()` acha um workspace
+(`list[0]?.workspace` de `GET /workspaces`); sem nenhum, o clique não tem
+onde ir. A funda: `RegisterUseCase` criava usuário e credencial mas NUNCA
+um workspace, e o mesmo valia para `SocialLoginCallbackUseCase` no ramo
+que provisiona conta nova — TODO cadastro novo, por senha ou por login
+social, caía nessa parede. Só não tinha aparecido antes porque
+`db/seed.ts` sempre cria um workspace junto dos dados de demonstração, e
+nenhuma tela do produto chama `createWorkspace` (a rota, o caso de uso e
+o client HTTP existem — só não têm chamador nenhum na UI).
+
+### RN-410 — Toda conta NOVA nasce com um workspace pessoal, na MESMA transação da conta {#rn-410}
+
+`RegisterUseCase` (registro por e-mail/senha) e `SocialLoginCallbackUseCase`
+(provisionamento de conta nova via login social) criam o workspace e
+adicionam o usuário como `owner` — mesmo par `create`/`addMember` que
+`CreateWorkspaceUseCase` já usa — dentro da MESMA transação que já cria
+usuário e credencial. Não é uma segunda chamada ao use case: ele abre a
+PRÓPRIA transação, e o ponto é nunca existir usuário sem workspace se algo
+falhar no meio.
+
+Nome e slug saem de UMA função pura,
+`nomeESlugDoWorkspacePessoal(nome, email, userId)`
+(`apps/api/src/domain/auth/personal-workspace.ts`), reusada pelos dois
+pontos de criação — para a regra não divergir em dois arquivos, o mesmo
+motivo por trás de `normalizarEmail`/`exigirSenhaValida` morarem no
+domínio. O nome usa o `nome` informado (login social usa o login do
+provider), com o local-part do e-mail como fallback quando não há nome —
+nunca inventa nenhum dos dois. O slug é kebab-case do mesmo texto, SEMPRE
+sufixado com `userId.slice(0, 8)` (mesmo padrão de
+`extraDevAgentId`/`workspaceDirName`/rótulo de sessão): `workspaces.slug`
+é `UNIQUE` no banco e nada no produto faz retry-on-conflict, então dois
+cadastros com nome ou local-part iguais colidiriam sem o sufixo. Nome ou
+e-mail sem NENHUM caractere alfanumérico degradam para o literal
+`workspace-<8 chars>`, nunca para uma string vazia.
+
+- **Onde:** `apps/api/src/domain/auth/personal-workspace.ts`
+  (`nomeESlugDoWorkspacePessoal`),
+  `apps/api/src/application/use-cases/auth/register.use-case.ts`,
+  `apps/api/src/application/use-cases/auth/social-login-callback.use-case.ts`
+  (método `provisionarContaNova`)
+- **Teste:** `apps/api/test/domain/auth/personal-workspace.spec.ts` (nome
+  com/sem `nome`, fallback para o local-part do e-mail, acento/maiúscula
+  virando kebab-case ASCII, fallback `workspace-<id>` sem caractere
+  alfanumérico nenhum, slug sempre único por conta do sufixo);
+  `apps/api/test/application/use-cases/auth/register.use-case.spec.ts`
+  (conta nova ganha workspace com o usuário como `owner`, e-mail duplicado
+  não cria um segundo); `apps/api/test/application/use-cases/auth/
+  social-login-callback.use-case.spec.ts` (mesma prova no ramo que
+  provisiona conta nova via login social)
+- **ADR:** nenhum — correção de um caminho que devia ter feito isso desde
+  o início, não decisão estrutural nova
+- **Origem:** achado por uso real, navegando o produto — não item de
+  backlog planejado
+
+---
+
 ## Quando dá errado
 
 | situação | o que o sistema faz |

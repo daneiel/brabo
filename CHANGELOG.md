@@ -210,6 +210,13 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **api**: toda conta NOVA (registro por e-mail/senha ou login social)
+  ganha um workspace pessoal automático, na mesma transação que cria a
+  conta — antes `RegisterUseCase`/`SocialLoginCallbackUseCase` criavam
+  usuário e credencial mas nenhum workspace, e o botão "Novo projeto" do
+  dashboard silenciosamente não fazia nada. Nome/slug saem de uma função
+  única, `nomeESlugDoWorkspacePessoal`, e o slug leva sempre um sufixo do
+  id do usuário para ser único sem round-trip ao banco (RN-410)
 - **api**: "Confirmar arquitetura pronta" (RN-160) agora é revalidado no
   BACKEND — antes só a UI desabilitava o botão sem história promovida do
   backlog, e uma chamada HTTP direta a `POST
