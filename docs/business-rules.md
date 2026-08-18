@@ -8885,7 +8885,7 @@ consultas novas ficam sem número medido, só o argumento estrutural acima.
 
 ---
 
-### RN-410 — O quarto sinal de trabalho pendente: dev agents falam `dev.*`, não `agent.status` {#rn-410}
+### RN-411 — O quarto sinal de trabalho pendente: dev agents falam `dev.*`, não `agent.status` {#rn-411}
 
 Achado por USO real, não por teste: numa sessão de execução, cinco dev
 agents subiram, ficaram `idle_tripped` (o circuit breaker da

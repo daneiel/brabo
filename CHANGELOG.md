@@ -217,7 +217,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `GetSessionPendingWorkUseCase`: último evento `dev.working`/`dev.blocked`/
   `dev.idle_tripped` de qualquer `dev-<modulo>` segura a sessão; `dev.idle`
   não. Achado numa sessão de execução real com cinco dev agents em
-  `idle_tripped` (RN-410)
+  `idle_tripped` (RN-411)
 - **api**: "Confirmar arquitetura pronta" (RN-160) agora é revalidado no
   BACKEND — antes só a UI desabilitava o botão sem história promovida do
   backlog, e uma chamada HTTP direta a `POST

@@ -1669,7 +1669,7 @@ decisão eleva o padrão de script manual para código de produção TESTADO
 juntos (`db:migrate` E `engine:migrate`), e falha alto/visível se só a api
 migrou — sem try/catch escondendo o erro.
 
-## Sessão de execução não fecha mais com dev agent pendente (RN-410)
+## Sessão de execução não fecha mais com dev agent pendente (RN-411)
 Correção de defeito achado numa sessão de execução REAL, não item de
 roteiro: cinco dev agents subiram, ficaram `idle_tripped` (RN-047, o
 circuit breaker) travados esperando o usuário desbloquear tarefa a
