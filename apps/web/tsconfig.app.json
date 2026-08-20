@@ -7,6 +7,9 @@
     "types": ["vite/client"],
     "allowArbitraryExtensions": true,
     "skipLibCheck": true,
+    // Fundação de i18n (Onda 6a) — `lib/i18n.ts` importa os recursos de
+    // `locales/*/common.json` como módulo, para o `tsc` tipar as chaves.
+    "resolveJsonModule": true,
 
     /* Bundler mode */
     "moduleResolution": "bundler",

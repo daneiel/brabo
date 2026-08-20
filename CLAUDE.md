@@ -1924,9 +1924,18 @@ divide o mesmo banco, recuperar exige `db:migrate` E `engine:migrate`.
 Cinco ondas independentes, rodadas em paralelo por arquivo disputado, vindas
 de uso real da tela de projeto — nenhuma planejada de antemão. A sexta onda
 do mesmo programa (tradução completa de produto e documentação, i18n) é
-maior que as cinco juntas e está em andamento à parte; quando fechar, esta
-seção ganha o resumo dela e o restante do CLAUDE.md (Stack, "Documentação")
-é revisado para registrar `en` como idioma primário.
+maior que as cinco juntas; a FUNDAÇÃO dela (Onda 6a — mecanismo, sem
+tradução de conteúdo ainda) já fechou: `react-i18next`+`i18next` na web
+(`en` virou idioma default do app, `pt-BR` mantido — RN-425), coluna
+`locale` em `users` embutida no payload de login/refresh, `AccountPage`
+nova (`/account`) provando o mecanismo, e Docusaurus com
+`i18n.defaultLocale: 'en'`/`locales: ['en', 'pt-BR']` — o snapshot pt-BR
+atual de `docs/` já está preservado em
+`website/i18n/pt-BR/docusaurus-plugin-content-docs/current/`. A EXTRAÇÃO em
+massa do resto da interface e a TRADUÇÃO de `docs/` (Onda 6b, o grosso do
+volume) estão em andamento à parte; quando fechar, esta seção ganha o
+resumo final e o restante do CLAUDE.md (Stack, "Documentação") é revisado
+por completo para registrar inglês como idioma primário de verdade.
 
 - **Régua de abas agrupada**: 11 abas soltas viraram 6 no topo — Visão
   geral, **Agentes ▾** (Executores, Criativo, Chat, Insights), **Dev ▾**
@@ -1982,7 +1991,10 @@ seção ganha o resumo dela e o restante do CLAUDE.md (Stack, "Documentação")
   DERIVADA do event log, nunca fonte de verdade; pgvector CONTINUA sendo
   o índice vetorial dos chunks, o grafo não guarda embedding
 - `apps/engine`: Elixir/OTP + Phoenix (canais) + Oban (filas no Postgres)
-- `apps/web`: React 19 + Vite + TanStack Query/Router; `mermaid` (runtime,
+- `apps/web`: React 19 + Vite + TanStack Query/Router; `react-i18next`+
+  `i18next` (fundação de i18n, RN-425) atrás de `lib/i18n.ts`/`lib/idioma.ts`
+  — `en` é o idioma default, `pt-BR` mantido, servidor é a fonte de verdade
+  (`localStorage` só evita flash no primeiro paint); `mermaid` (runtime,
   ADR 0068) para o diagrama C4 do Arquiteto, isolado atrás de
   `lib/mermaid-render.ts` com `import()` dinâmico; `@xterm/xterm` +
   `@xterm/addon-fit` (ADR 0103) para o terminal interativo do runner

@@ -1,0 +1,107 @@
+/* Página de conta (fundação de i18n, Onda 6a) — layout PRÓPRIO, não
+   importado de ProjectSettingsTab.module.css: a conta não é escopo de
+   projeto, e reaproveitar aquele módulo criaria acoplamento com o arquivo
+   mais disputado do programa. As classes espelham o padrão visual de
+   `.ajusteCard`/`.section` de lá, mas vivem aqui. */
+
+.page {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 720px;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.title {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 22px;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.subtitle {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.identity {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sectionHead {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.sectionTitle {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 18px;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.sectionSubtitle {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0 0 10px;
+  max-width: 62ch;
+}
+
+.card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 16px 18px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.cardInfo {
+  flex: 1;
+  min-width: 220px;
+}
+
+.cardTitle {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.cardHint {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  max-width: 62ch;
+}
+
+.cardControl {
+  width: 220px;
+}

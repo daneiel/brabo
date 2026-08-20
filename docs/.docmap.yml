@@ -328,6 +328,27 @@ rules:
   #
   # O watch são os gatilhos que HISTORICAMENTE o desatualizam: dependência nova
   # (Stack), ADR novo (Convenções e proibições) e gate novo.
+  # Onda 6a (i18n): `docs/` na raiz virou a árvore em INGLÊS (fonte), e o
+  # snapshot pt-BR foi preservado em
+  # `website/i18n/pt-BR/docusaurus-plugin-content-docs/current/` no momento da
+  # migração. Ninguém garante que a tradução acompanha toda mudança de prosa
+  # depois disso — `warn`, não `block`, MESMO padrão não-bloqueante que a
+  # regra `governanca` acima usa: traduzir tudo de uma vez não significa que
+  # toda PR futura tenha que manter as duas árvores sincronizadas sob pena de
+  # vermelho no CI. `docs/reference/**` fica de fora do watch de propósito —
+  # é gerado (`pnpm docs:generate`) e nunca entrou na tradução (RN pendente:
+  # localizar o gerador é gap maior, fora desta entrega).
+  - id: traducao-pt-br
+    watch:
+      - "docs/*.md"
+      - "docs/adr/**"
+      - "docs/explanation/**"
+      - "docs/missions/**"
+    docs:
+      - "website/i18n/pt-BR/docusaurus-plugin-content-docs/current/"
+    severity: warn
+    note: "docs/ (inglês, fonte) mudou — confira se a tradução pt-BR em website/i18n/pt-BR/... precisa acompanhar."
+
   - id: claude-md
     watch:
       - "package.json"

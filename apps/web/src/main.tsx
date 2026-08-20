@@ -7,15 +7,18 @@ import {
   QueryClientProvider,
 } from '@tanstack/react-query';
 import { RouterProvider } from '@tanstack/react-router';
+import { I18nextProvider } from 'react-i18next';
 // As fontes vêm antes: `index.css` já as referencia por `var(--font-*)`.
 import './fonts.css';
 import './index.css';
 import { router } from './router';
-import { restaurarSessao } from './lib/auth';
+import { onMudancaDeSessao, restaurarSessao } from './lib/auth';
 import { ToastProvider } from './components/ui/ToastProvider';
 import { logger } from './lib/logger';
 import { ApiError } from './lib/api-client';
 import { deveRetentar } from './lib/query-policy';
+import i18n from './lib/i18n';
+import { sincronizarIdiomaDaSessao } from './lib/idioma';
 
 /**
  * Captura global de erro (Fase 5, item 6).
@@ -77,13 +80,23 @@ window.addEventListener('unhandledrejection', (event) =>
  * O resultado é ignorado de propósito: quem decide para onde ir é o router.
  * Aqui só se garante que a resposta já chegou.
  */
+// Sincroniza o idioma sempre que a sessão MUDA (fundação de i18n, Onda 6a) —
+// mesmo ouvinte cobre o boot (`restaurarSessao`, abaixo) e qualquer login
+// futuro, sem duplicar o gancho. Sessão que cai não troca o idioma da tela
+// (ver o docblock de `sincronizarIdiomaDaSessao`).
+onMudancaDeSessao((autenticado) => {
+  if (autenticado) sincronizarIdiomaDaSessao(i18n);
+});
+
 void restaurarSessao().finally(() => {
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
       <QueryClientProvider client={queryClient}>
-        <ToastProvider>
-          <RouterProvider router={router} />
-        </ToastProvider>
+        <I18nextProvider i18n={i18n}>
+          <ToastProvider>
+            <RouterProvider router={router} />
+          </ToastProvider>
+        </I18nextProvider>
       </QueryClientProvider>
     </StrictMode>,
   );

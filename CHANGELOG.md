@@ -6,6 +6,22 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api,web**: fundação de i18n — coluna `locale` em `users` (`'pt-BR'|'en'`,
+  default `'pt-BR'`), embutida no corpo de `/auth/login`/`/auth/refresh` (sem
+  chamada extra) via `EmitirSessaoUseCase`; `GET/PATCH /users/me/preferences`
+  como via redundante para a `AccountPage` nova (`/account`, fora do escopo
+  de projeto, link no rodapé da sidebar). `react-i18next`+`i18next` como
+  dependência nova de `apps/web`, isolada atrás de `lib/i18n.ts`/
+  `lib/idioma.ts` (mesmo desenho de `tema.ts` — servidor é a fonte de
+  verdade, `localStorage` só evita flash no primeiro paint). `en` é o idioma
+  default do app a partir de agora; `pt-BR` continua disponível. Docusaurus
+  (`website/`) ganhou `i18n.defaultLocale: 'en'`/`locales: ['en', 'pt-BR']`,
+  com o snapshot pt-BR atual de `docs/` preservado em
+  `website/i18n/pt-BR/docusaurus-plugin-content-docs/current/` antes de
+  `docs/` virar a fonte em inglês, e uma regra `warn` nova no docmap
+  (`traducao-pt-br`) cobrindo o drift entre as duas árvores. Extração em
+  massa do resto da interface e tradução de `docs/` são a próxima etapa,
+  em andamento (RN-425)
 - **web**: navegação por abas agrupadas — a régua de 11 abas do projeto vira
   6 no topo (Visão geral, Agentes ▾, Dev ▾, Documentação ▾, Gastos,
   Configurações), com `GroupedTabs` novo por cima do `Tabs` existente. Chat

@@ -69,6 +69,8 @@ import type {
   CredentialTestResult,
   UnreadCursor,
   UserCredentialMetadata,
+  UserLocale,
+  UserPreferences,
   Workspace,
   WorkspaceSummary,
   WorkspaceWithRole,
@@ -921,6 +923,15 @@ export const setAreaModelBinding = (
 ) => put<void>(`/projects/${projectId}/area-bindings/${areaKey}`, { modelId });
 export const clearAreaModelBinding = (projectId: string, areaKey: string) =>
   del<void>(`/projects/${projectId}/area-bindings/${areaKey}`);
+
+// Preferências do próprio usuário (fundação de i18n, Onda 6a). A leitura
+// aqui é redundante com `locale` no corpo de `/auth/login` e `/auth/refresh`
+// (ver `lib/auth.ts`) — de propósito: serve só para reafirmar o valor sem
+// esperar o próximo refresh, nunca como fonte primária.
+export const getMyPreferences = () =>
+  get<UserPreferences>('/users/me/preferences');
+export const updateMyPreferences = (input: { locale: UserLocale }) =>
+  patch<UserPreferences>('/users/me/preferences', input);
 
 export const listCredentials = () =>
   get<UserCredentialMetadata[]>('/users/me/credentials');

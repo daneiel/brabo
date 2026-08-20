@@ -1,0 +1,69 @@
+---
+id: user-preferences-controller-update
+title: "Grava a preferência de idioma do usuário autenticado"
+description: "Só `locale` por ora — é a única preferência que existe. Fechado à lista `pt-BR`/`en`; qualquer outro valor é 400."
+sidebar_label: "Grava a preferência de idioma do usuário autenticado"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "patch api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Grava a preferência de idioma do usuário autenticado"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"patch"}
+  path={"/users/me/preferences"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Só `locale` por ora — é a única preferência que existe. Fechado à lista `pt-BR`/`en`; qualquer outro valor é 400.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./user-preferences-controller-update.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./user-preferences-controller-update.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./user-preferences-controller-update.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

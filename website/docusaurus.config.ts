@@ -1,3 +1,4 @@
+import path from 'node:path';
 import type * as Preset from '@docusaurus/preset-classic';
 import type { Config } from '@docusaurus/types';
 import { themes as prismThemes } from 'prism-react-renderer';
@@ -81,7 +82,12 @@ const config: Config = {
   // aponta pra ele derruba o CI em vez de virar 404 em produção.
   onBrokenLinks: 'throw',
   onBrokenAnchors: 'throw',
-  onBrokenMarkdownLinks: 'throw',
+  // `onBrokenMarkdownLinks` (raiz) NÃO mora mais aqui: é a forma
+  // DEPRECIADA da opção, e o próprio Docusaurus a SOBRESCREVE por cima de
+  // `markdown.hooks.onBrokenMarkdownLinks` quando as duas estão setadas
+  // (`configValidation.js`, linha ~460) — mantê-la aqui apagaria a exceção
+  // declarada logo abaixo. A regra continua "throw", só que agora como
+  // função, para abrir UMA exceção nomeada (ver `markdown.hooks`).
 
   future: {
     v4: true,
@@ -90,9 +96,23 @@ const config: Config = {
     faster: true,
   },
 
+  // Onda 6a do PROGRAMA (i18n): `docs/` na raiz passa a ser a árvore em
+  // INGLÊS (é o `path` do plugin de docs, e o Docusaurus trata o conteúdo
+  // nesse path como pertencendo ao `defaultLocale`). O snapshot pt-BR
+  // ORIGINAL foi preservado em
+  // `website/i18n/pt-BR/docusaurus-plugin-content-docs/current/` antes de
+  // qualquer tradução acontecer — é essa cópia que o Docusaurus serve para
+  // `pt-BR`, pela convenção padrão do plugin `@docusaurus/plugin-content-docs`
+  // (id `default`, o mesmo id declarado no preset abaixo). Nenhuma UI de
+  // troca de locale nova foi construída: o tema clássico já gera o seletor
+  // de idioma no navbar sozinho quando `locales` tem mais de um item.
   i18n: {
-    defaultLocale: 'pt-BR',
-    locales: ['pt-BR'],
+    defaultLocale: 'en',
+    locales: ['en', 'pt-BR'],
+    localeConfigs: {
+      en: { label: 'English' },
+      'pt-BR': { label: 'Português (Brasil)' },
+    },
   },
 
   markdown: {
@@ -103,6 +123,78 @@ const config: Config = {
     // nenhuma página aqui usa componente React, CommonMark é o formato certo;
     // o dia que uma precisar, ela vira `.mdx`.
     format: 'detect',
+    hooks: {
+      // Onda 6a (i18n): `docs/reference/**` é GERADO e continua fora da
+      // tradução por ora (mesma exclusão do `docs/.docmap.yml`, regra
+      // `traducao-pt-br` — localizar o gerador é gap maior, fora desta
+      // entrega). Isso abre um vão de link nos DOIS sentidos só quando o
+      // Docusaurus compila o locale `pt-BR`: os arquivos de `reference/`
+      // (sem override em `website/i18n/pt-BR/...`, compilados por
+      // FALLBACK do locale default) apontam para páginas que TÊM versão
+      // pt-BR (`adr/`, `business-rules.md`, `explanation/`), e o inverso —
+      // páginas traduzidas apontam para `reference/`, que só existe na
+      // árvore em inglês. Nos dois casos o arquivo alvo EXISTE no
+      // repositório — só não existe DENTRO do locale que está compilando
+      // agora, então o link markdown relativo (resolvido por caminho de
+      // ARQUIVO) não bate com a árvore de rota do locale certo.
+      //
+      // A correção é reescrever para `pathname://`, a saída que o próprio
+      // Docusaurus recomenda no texto do erro original — ela pula o checador
+      // de link quebrado (é o escape hatch OFICIAL, não um jeito de
+      // esconder o problema) e aponta pro locale onde o alvo REALMENTE
+      // existe: `reference/**` só existe no DEFAULT (`en`, sem prefixo);
+      // tudo que não é `reference/**` só tem tradução em `pt-BR` (com
+      // prefixo). Com só DOIS locales, "não é en" implica pt-BR — quando um
+      // terceiro locale existir, esta suposição para de valer e precisa
+      // virar parâmetro de verdade. Qualquer OUTRO link quebrado (fora
+      // desta troca com `reference/**`) continua reprovando o build.
+      onBrokenMarkdownLinks: ({ sourceFilePath, url }) => {
+        // `sourceFilePath` chega relativo ao CWD do processo (`website/`),
+        // por isso `../docs/reference/...` — nunca comparar com `startsWith`
+        // supondo raiz do repo.
+        const fonteEhReferencia = sourceFilePath.includes('docs/reference/');
+        const alvoEhReferencia = url.includes('/reference/');
+        if (!fonteEhReferencia && !alvoEhReferencia) {
+          throw new Error(
+            `Markdown link quebrado: "${url}" em ${sourceFilePath}. Corrija o link ou aplique o protocolo pathname://.`,
+          );
+        }
+
+        // Separa fragmento (#rn-004) do caminho — nenhum link local do
+        // repositório usa query string, só fragmento.
+        const [caminhoRelativo, ...resto] = url.split('#');
+        const fragmento = resto.length > 0 ? `#${resto.join('#')}` : '';
+
+        // Cálculo LÓGICO (string, sem tocar o disco) — de propósito: o alvo
+        // pode não existir fisicamente na árvore da fonte (é exatamente o
+        // gap). `docs/` e `website/i18n/pt-BR/.../current/` espelham a MESMA
+        // topologia de diretório (a cópia da Onda 6a preserva estrutura),
+        // então o caminho relativo dentro de cada raiz é comparável mesmo
+        // quando as raízes físicas são outras.
+        const MARCA_I18N = 'docusaurus-plugin-content-docs/current/';
+        const origemRelativaARaiz = sourceFilePath.includes(MARCA_I18N)
+          ? sourceFilePath.slice(sourceFilePath.indexOf(MARCA_I18N) + MARCA_I18N.length)
+          : sourceFilePath.slice(sourceFilePath.indexOf('docs/') + 'docs/'.length);
+
+        const slug = path
+          .join(path.dirname(origemRelativaARaiz), caminhoRelativo)
+          .replace(/\.mdx?$/, '')
+          .split(path.sep)
+          .join('/');
+
+        // `reference/**` só existe traduzido no locale default (sem
+        // prefixo); tudo mais só existe traduzido em pt-BR (com prefixo). O
+        // slug RESOLVIDO decide, não a fonte: rulesets.md linkando pra si
+        // mesmo por engano continuaria correto.
+        const prefixoLocale = slug.startsWith('reference/') ? '' : '/pt-BR';
+        const rota = `pathname://${prefixoLocale}/${slug}${fragmento}`;
+
+        console.warn(
+          `[i18n] link reescrito por gap conhecido (docs/reference/ sem tradução pt-BR): "${url}" em ${sourceFilePath} -> "${rota}"`,
+        );
+        return rota;
+      },
+    },
   },
 
   plugins: [

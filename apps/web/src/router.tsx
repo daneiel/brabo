@@ -20,6 +20,7 @@ import { RegisterPage } from './routes/RegisterPage';
 import { ForgotPasswordPage } from './routes/ForgotPasswordPage';
 import { SetPasswordPage } from './routes/SetPasswordPage';
 import { VerifyEmailPage } from './routes/VerifyEmailPage';
+import { AccountPage } from './routes/AccountPage';
 import {
   definirSenha,
   entrar,
@@ -183,6 +184,14 @@ const indexRoute = createRoute({
   component: Dashboard,
 });
 
+// Fora do escopo de projeto de propósito (fundação de i18n, Onda 6a):
+// idioma é preferência do USUÁRIO, não de um projeto — ver AccountPage.
+const accountRoute = createRoute({
+  getParentRoute: () => appLayout,
+  path: '/account',
+  component: AccountPage,
+});
+
 // A lista de abas mora em `routes/project-tabs.ts` — aqui só se pergunta se a
 // chave existe. Enquanto a lista era copiada neste arquivo, aceitar `?tab=x`
 // e ter painel para `x` eram duas decisões independentes.
@@ -317,6 +326,7 @@ const statusRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   appLayout.addChildren([
     indexRoute,
+    accountRoute,
     projectRoute,
     sessionRoute,
     provisioningRoute,

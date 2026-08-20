@@ -9518,6 +9518,41 @@ badigar por isso seria ruído.
 
 ---
 
+### RN-425 — Preferência de idioma vem no payload de login/refresh, nunca numa chamada extra {#rn-425}
+
+Fundação de i18n da interface (Onda 6a de um programa maior — a extração em
+massa das strings do resto do app é etapa separada, em paralelo). Coluna
+`locale` em `users` (`'pt-BR' | 'en'`, default `'pt-BR'` — nunca flipa
+silenciosamente quem já tem conta). `EmitirSessaoUseCase` é o ÚNICO ponto
+que emite sessão (login, refresh, login social) — `locale` embutido no
+corpo de `/auth/login`/`/auth/refresh` a partir dele, sem round-trip
+adicional. `GET/PATCH /users/me/preferences` existe como via REDUNDANTE,
+pra `AccountPage` reafirmar o valor sem esperar o próximo refresh.
+
+`en` é o idioma DEFAULT do app a partir de agora (`react-i18next`, nova
+dependência — mesma régua de "dependência nova precisa de justificativa"
+que `mermaid`/`@xterm/xterm` já seguiram); `pt-BR` continua disponível.
+`apps/web/src/lib/idioma.ts` (mesmo desenho de `tema.ts`): o SERVIDOR é a
+fonte de verdade, `localStorage['brabo.locale']` é só cache pra evitar
+flash de idioma errado no primeiro paint. Usuário sem conta ainda usa
+`navigator.language` só como sugestão de EXIBIÇÃO, nunca persiste nada
+antes de existir conta.
+
+- **Onde:** `apps/api/src/application/use-cases/auth/emitir-sessao.use-case.ts`,
+  `apps/api/src/interfaces/http/iam/user-preferences.controller.ts`,
+  `apps/web/src/lib/idioma.ts`, `apps/web/src/lib/i18n.ts`,
+  `apps/web/src/routes/AccountPage.tsx`
+- **Teste:** `apps/web/src/lib/idioma.test.ts`,
+  `apps/web/src/routes/AccountPage.test.tsx`,
+  `apps/api/test/application/use-cases/auth/*.spec.ts`,
+  `apps/api/test/interfaces/route-surface.spec.ts`
+- **ADR:** nenhum — extensão aditiva de um choke point já existente, sem
+  mudar o formato de sessão pra ninguém que não usa o campo novo
+- **Origem:** pedido do dono do produto — interface e docs em inglês por
+  padrão, com português preservado
+
+---
+
 ## Quando dá errado
 
 | situação | o que o sistema faz |

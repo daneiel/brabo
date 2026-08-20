@@ -23,6 +23,7 @@ import { AGENTS } from '../lib/agents';
 import { agruparPorInstancia, montarArvore, type GrupoDeAgente, type RamoDeAgente } from '../lib/timeline-tree';
 import { getAgentLastSeenSeq, setAgentLastSeenSeq } from '../lib/read-state';
 import { alternarTema, observarTema, temaAtual, type Tema } from '../lib/tema';
+import { useTranslation } from 'react-i18next';
 import {
   AutoCollapseContext,
   corDoProjeto,
@@ -48,6 +49,7 @@ import {
   MoonIcon,
   PlusIcon,
   SunIcon,
+  UserIcon,
 } from '../components/ui/icons';
 import { AvatarDoAgente } from '../components/ui/AvatarDoAgente';
 import { NewProjectWizard } from './NewProjectWizard';
@@ -145,6 +147,22 @@ function BotaoDeTema({ colapsado }: { colapsado: boolean }) {
       {claro ? <SunIcon size={15} /> : <MoonIcon size={15} />}
       {!colapsado && <span>{rotulo}</span>}
     </button>
+  );
+}
+
+/**
+ * Link para a conta do rodapé (fundação de i18n, Onda 6a) — mesmo lugar do
+ * botão de tema, mesmo tratamento visual. É a única entrada da tela de
+ * `/account`, onde mora a preferência de idioma.
+ */
+function LinkDeConta({ colapsado }: { colapsado: boolean }) {
+  const { t } = useTranslation();
+  const rotulo = t('sidebar.account');
+  return (
+    <Link to="/account" className={styles.footerButton} title={rotulo} aria-label={rotulo}>
+      <UserIcon size={15} />
+      {!colapsado && <span>{rotulo}</span>}
+    </Link>
   );
 }
 
@@ -602,6 +620,7 @@ export function Shell() {
 
         <div className={styles.footer}>
           <BotaoDeTema colapsado={colapsado} />
+          <LinkDeConta colapsado={colapsado} />
           <button
             type="button"
             className={styles.footerButton}
