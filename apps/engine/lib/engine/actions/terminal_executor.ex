@@ -96,9 +96,10 @@ defmodule Engine.Actions.TerminalExecutor do
   # A saída de CADA comando fica no histórico do laço e viaja em TODO turno
   # seguinte. Sem teto, um `find` numa árvore grande basta: a execução do
   # hello-limpo morreu com `{413, "request entity too large"}` no turno 18,
-  # antes de escrever uma linha. O estouro é de BYTES da requisição, não de
-  # janela de contexto — a maior chamada bem-sucedida tinha só 28.993 tokens
-  # de entrada.
+  # antes de escrever uma linha. O estouro é de BYTES da requisição contra o
+  # limite de transporte HTTP da própria api do Brabo — não do provider de
+  # LLM, e não de janela de contexto: a maior chamada bem-sucedida tinha só
+  # 28.993 tokens de entrada.
   #
   # `raw_bytes` continua sendo o tamanho REAL produzido, não o truncado: é
   # medição, e mentir nela esconderia exatamente o comportamento que motivou

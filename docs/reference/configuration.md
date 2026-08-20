@@ -411,7 +411,7 @@ que uma variável nova não fique documentada em lugar nenhum sem ninguém notar
 
 > ⚠️ Bloco gerado por `pnpm docs:generate`. Não edite à mão — o próximo build sobrescreve.
 
-Inventário extraído do código: **111 variáveis** lidas em tempo de execução. Todas têm descrição nas tabelas acima.
+Inventário extraído do código: **112 variáveis** lidas em tempo de execução. **1** ainda não têm descrição nas tabelas acima.
 
 **api** — 49 variáveis
 
@@ -465,7 +465,7 @@ Inventário extraído do código: **111 variáveis** lidas em tempo de execuçã
 - `SMTP_USER` <sub>(apps/api/src/infrastructure/mail/smtp-config.ts)</sub>
 - `WEB_ORIGIN` <sub>(apps/api/src/infrastructure/mail/smtp-mail-sender.ts)</sub>
 
-**engine** — 58 variáveis
+**engine** — 59 variáveis
 
 - `ANAMNESE_BUDGET_MICROS` <sub>(apps/engine/config/runtime.exs)</sub>
 - `ANAMNESE_ENABLED` <sub>(apps/engine/config/runtime.exs)</sub>
@@ -524,6 +524,7 @@ Inventário extraído do código: **111 variáveis** lidas em tempo de execuçã
 - `TOOL_LOOP_MAX_ITERATIONS` <sub>(apps/engine/config/runtime.exs)</sub>
 - `TOOL_LOOP_MAX_ITERATIONS_EXECUCAO` <sub>(apps/engine/config/runtime.exs)</sub>
 - `TOOL_LOOP_MAX_ITERATIONS_GATE` <sub>(apps/engine/config/runtime.exs)</sub>
+- `TRANSPORT_MAX_BODY_BYTES` — ⚠️ **sem descrição acima** <sub>(apps/engine/config/runtime.exs)</sub>
 - `WEB_ORIGIN` <sub>(apps/engine/config/runtime.exs)</sub>
 
 **web** — 4 variáveis

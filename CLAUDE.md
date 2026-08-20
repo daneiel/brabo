@@ -1683,9 +1683,8 @@ lê o último evento `dev.*` de cada `dev-<modulo>`/`dev-<modulo>-2` na
 sessão: `dev.working`/`dev.blocked`/`dev.idle_tripped` seguram a sessão
 (travado esperando decisão humana É trabalho pendente); só `dev.idle`
 (drenado de verdade) não segura. `dev.awaiting_gate`/`dev.awaiting_approval`
-como último evento ficam FORA da régua — `awaiting_approval` já é coberto
-pelo segundo sinal (a ação git nasce `pending`), e `awaiting_gate` é
-lacuna residual conhecida, não fechada aqui.
+ENTRARAM na régua pela RN-412 — ver abaixo; a lacuna residual que este
+parágrafo descrevia foi fechada.
 ## Workspace pessoal automático no cadastro (RN-410)
 Achado navegando: o botão "Novo projeto" do dashboard não fazia NADA, sem
 erro. Causa raiz: `RegisterUseCase` e `SocialLoginCallbackUseCase` (no ramo
@@ -1698,6 +1697,64 @@ na MESMA transação que já cria a conta. Nome/slug saem de uma função pura
 para a regra não divergir em dois arquivos; o slug é sempre sufixado com
 `userId.slice(0, 8)` (mesmo padrão de `extraDevAgentId`) para ser único
 sem round-trip ao banco (RN-410).
+
+## 413 nas PRs e Executores "sem execução" — as duas pontas e o encadeamento (RN-412, ADR 0098)
+Não é fase planejada: correção pedida por USO real ("nas PRs sempre está
+estourando entity too large") mais o defeito irmão da aba Executores
+aparecer vazia com trabalho real rolando. Investigação achou os dois
+encadeados: o gate morre com `413` → devs ficam presos em
+`dev.awaiting_gate` → esse estado não segurava a sessão (lacuna da
+RN-411) → o heartbeat de 30s fecha a sessão por baixo → a aba exige
+sessão ativa e some com o roster inteiro.
+
+**A causa do 413 era da API do Brabo, não do provider de LLM** — os
+comentários que atribuíam o erro ao provider (`runtime.exs`,
+`terminal_executor.ex`, `docker-compose.yml`) estavam errados;
+`FalhaDeTurno.origem({413, _})` já classificava como `"codigo"`, e
+estava certo. `apps/api/src/main.ts` nunca configurou limite de body do
+Express — valia o default de 100 KB, muito abaixo dos 8 MB que o
+Phoenix aceita, no sentido mais pesado do transporte (engine → api,
+`POST /internal/sessions/:sessionId/llm-turn`, que reenvia o histórico
+INTEIRO a cada iteração do ToolLoop). `API_JSON_BODY_LIMIT` (default
+10 MB) fecha a ponta do transporte.
+
+A segunda ponta, sem a qual subir o limite só adiaria o estouro: o
+`ContextManager` do engine (ADR 0098) tinha DOIS defeitos que
+mantinham a compactação inalcançável antes do corpo estourar —
+`estimate/1` contava só `content`, então mensagens de `assistant`
+cheias de `toolCalls` custavam ~zero tokens na estimativa; e a janela
+de compactação usava só `context_window` (128.000 tokens nos agentes
+de gate), o que dava ~350 KB antes de compactar — bem depois de
+qualquer teto de transporte razoável. A janela EFETIVA agora é
+`min(context_window, teto_de_transporte)`, com o corte sempre em
+FRONTEIRA DE ITERAÇÃO do ToolLoop (nunca separando um `assistant` com
+`toolCalls` dos `role: "tool"` que o respondem — quebraria o protocolo
+de tool-use do provider).
+
+**RN-412** estende a RN-411: `DEV_PENDING_TYPES` ganhou
+`dev.awaiting_gate` (o argumento original — gate pode morrer e travar
+o dev agent nesse estado indefinidamente) e também
+`dev.awaiting_approval`, por um argumento novo achado na investigação:
+a decisão de aprovação grava `proposed_actions.status` de forma
+SÍNCRONA, mas a retomada do dev agent via outbox/Oban é ASSÍNCRONA —
+na janela entre as duas, nada segurava a sessão, o mesmo defeito da
+RN-411 um nível mais fundo.
+
+**A aba Executores/Visão Geral** tinham o defeito irmão do lado web:
+`executionActivated` era derivado de `events.some(...)` sobre a janela
+de só 200 eventos de `useSessionEvents` — `execution.activated` é dos
+PRIMEIROS eventos de uma sessão e saía da janela em qualquer execução
+real, apagando o roster inteiro. O valor correto já existia, agregado
+sobre TODOS os eventos, no resumo do workspace (RN-090,
+`projects-summary.repository.ts`) — as duas telas passaram a consumir
+esse valor. Achado de bônus no caminho: `ExecutionSection` (Visão
+Geral) recalculava `activated` de novo, independentemente, sobre a
+mesma janela — uma execução longa voltava a oferecer "Ativar execução"
+como se nunca tivesse começado; corrigido junto. `gatesEverOpened`
+sofre da MESMA classe de defeito e ficou DECLARADO como limitação
+conhecida, não corrigido aqui — corrigi-lo exigiria mudar a assinatura
+de `deriveAgentRoster`/`rosterFactsFromEvents`, fora do escopo desta
+correção pontual.
 
 ## FERRAMENTA DE DESENVOLVIMENTO — `pnpm bootstrap`
 Menu de terminal em `scripts/dev/bootstrap.sh` agrupando o que se faz no

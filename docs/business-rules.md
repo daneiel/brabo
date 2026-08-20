@@ -8921,16 +8921,10 @@ usuário estava fazendo quando a sessão fechou na execução real). Só
 conta.
 
 `dev.awaiting_gate` e `dev.awaiting_approval`, como último evento, NÃO
-disparam este sinal — ficaram de fora da régua tal como decidida.
-`awaiting_approval` normalmente já é coberto pelo segundo sinal (a ação
-git de commit/push/PR nasce `pending` e seria pega por
-`ProposedActionRepository.findOldestPendingInSession`); `awaiting_gate`
-(PR aberta, gate de QA/SecOps ainda rodando, nenhuma `proposed_action`
-pendente) é uma lacuna residual CONHECIDA e não fechada aqui — diferente
-do `engine.dev_agent_states.status` que a [RN-409](#rn-409) já lê (onde
-`awaiting_gate`/`awaiting_approval` contam como "online"), este sinal
-lê o EVENT LOG, não a tabela de estado, e a régua foi decidida
-explicitamente restrita aos três tipos acima.
+disparavam este sinal originalmente — ficaram de fora da régua tal como
+decidida à época. `awaiting_gate` era uma lacuna residual CONHECIDA; a
+[RN-412](#rn-412) a fechou, junto com `awaiting_approval` (por um
+argumento novo, não o original — ver RN-412).
 
 - **Onde:** `apps/api/src/application/use-cases/sessions/get-session-pending-work.use-case.ts`
 - **Teste:** `apps/api/test/application/use-cases/sessions/get-session-pending-work.use-case.spec.ts`
@@ -8942,6 +8936,90 @@ explicitamente restrita aos três tipos acima.
 - **Origem:** achado por uso real — sessão de execução real com cinco dev
   agents em `idle_tripped` fechada pelo heartbeat enquanto o usuário
   ainda desbloqueava tarefas manualmente
+
+---
+
+### RN-412 — `dev.awaiting_gate`/`dev.awaiting_approval` seguram a sessão; a janela efetiva de compactação é coerente com o transporte {#rn-412}
+
+Achado por USO real ("nas PRs sempre está estourando entity too
+large"), com dois defeitos que se encadeiam. O gate de QA/SecOps
+morria com `413 request entity too large` → o dev agent que esperava o
+veredito ficava preso em `dev.awaiting_gate` indefinidamente → esse
+estado NÃO era um dos três que a [RN-411](#rn-411) segurava → o
+heartbeat de 30s fechava a sessão por baixo → a aba Executores exigia
+sessão ativa (`findActiveExecutionSession`) e apagava o roster inteiro,
+mesmo com trabalho real pendurado.
+
+**A causa do 413 era da própria api do Brabo, nunca do provider de
+LLM** — ver [ADR 0098](adr/0098-limites-de-transporte-e-janela-efetiva-de-compactacao.md).
+Duas correções, as duas necessárias (uma sem a outra só adia o
+estouro):
+
+1. `apps/api/src/main.ts` nunca configurou limite de body do Express —
+   valia o default de 100 KB, o gargalo mais estreito no sentido
+   engine→api (o Phoenix aceita até 8 MB). `POST
+   /internal/sessions/:sessionId/llm-turn` reenvia o histórico INTEIRO
+   da conversa a cada iteração do `ToolLoop`, e 3-4 tool results de
+   32 KiB (teto individual da RN-150) já somavam mais que 100 KB.
+   `API_JSON_BODY_LIMIT` (default `10mb`) fecha essa ponta.
+2. `Engine.Harness.ContextManager.Default` tinha dois defeitos que
+   deixavam a compactação inalcançável antes do corpo estourar:
+   `estimate/1` contava só `content`, então mensagens de `assistant`
+   com `toolCalls` pesados custavam ~zero tokens na estimativa; e a
+   janela de compactação usava só `context_window` (128.000 tokens nos
+   agentes de gate — `qa_automacao_agent.ex`, `qa_performance_seguranca_agent.ex`,
+   `qa_estrategia_agent.ex`, `appsec_agent.ex`, `dev_agent_server.ex`),
+   dando ~350 KB antes de compactar (`threshold` 0.7 × janela). A
+   janela EFETIVA agora é `min(context_window, teto_de_transporte)`
+   (`transport_max_body_bytes`, config única, default 8 MiB), e o corte
+   sempre acontece em FRONTEIRA DE ITERAÇÃO do `ToolLoop`
+   (`group_by_iteration/1`) — nunca separando uma mensagem `assistant`
+   com `toolCalls` dos `role: "tool"` que a respondem, que quebraria o
+   protocolo de tool-use do provider.
+
+**A régua de trabalho pendente** (`DEV_PENDING_TYPES`,
+`get-session-pending-work.use-case.ts`) ganhou dois tipos:
+`dev.awaiting_gate` (o argumento original — o gate agora não deveria
+mais morrer, mas travar a sessão por causa dele nunca foi correto, é
+defesa em profundidade) e `dev.awaiting_approval`, por um argumento
+DIFERENTE do que a RN-411 tinha descartado: a decisão de
+aprovação/negação grava `proposed_actions.status` de forma SÍNCRONA na
+transação do `ApproveActionUseCase` (o segundo sinal já não vê mais
+`pending` ali), mas a retomada do dev agent é ASSÍNCRONA — só depois de
+`avisarQuemEsperava()` gravar `task.action_settled`/`task.pr_settled`
+na outbox é que `Engine.Outbox.Drain` enfileira o job do Oban que
+acorda `DevAgentServer`. Nessa janela, nada segurava a sessão: o mesmo
+defeito da RN-411, um nível mais fundo.
+
+**A aba Executores/Visão Geral** tinham o defeito irmão do lado web:
+`executionActivated` era derivado de `events.some((e) => e.type ===
+'execution.activated')` sobre a janela de só 200 eventos de
+`useSessionEvents` (`{ limit: 200, latest: true }`) — `execution.activated`
+é dos PRIMEIROS eventos de uma sessão de execução e saía da janela em
+qualquer sessão real. O valor correto já existia, agregado sobre TODOS
+os eventos (`bool_or(...)`, [RN-090](#rn-090)), no resumo do workspace
+(`ProjectCardSummary.roster.executionActivated`) — `ProjectExecutorsTab.tsx`
+e `ProjectOverviewTab.tsx` passaram a consumi-lo em vez de derivar da
+janela. `gatesEverOpened` sofre da MESMA classe de defeito e ficou
+DECLARADO como limitação conhecida, não corrigido aqui — corrigi-lo
+exigiria mudar a assinatura de `deriveAgentRoster`/`rosterFactsFromEvents`,
+fora do escopo desta correção.
+
+- **Onde:** `apps/api/src/main.ts`, `apps/engine/lib/engine/harness/context_manager.ex`,
+  `apps/engine/lib/engine/harness/tokenizer.ex`,
+  `apps/api/src/application/use-cases/sessions/get-session-pending-work.use-case.ts`,
+  `apps/web/src/routes/ProjectExecutorsTab.tsx`, `apps/web/src/routes/ProjectOverviewTab.tsx`
+- **Teste:** `apps/api/test/main.spec.ts` (body de 1 MB aceito; acima do
+  limite → 413); `apps/engine/test/engine/harness/context_manager_test.exs`
+  (toolCalls pesados disparam compactação; `:pinned` sobrevive; teto de
+  transporte força compactação mesmo com janela de modelo grande);
+  `get-session-pending-work.use-case.spec.ts` (último evento
+  `dev.awaiting_gate`/`dev.awaiting_approval` → `pending: true`);
+  `ProjectExecutorsTab.test.tsx`/`ProjectOverviewTab.test.tsx` (sessão
+  com >200 eventos ainda mostra o roster via resumo agregado)
+- **Origem:** achado por uso real — "nas PRs sempre está estourando
+  entity too large", investigado em conjunto com o dono do produto
+
 ## Workspace pessoal automático no cadastro (RN-410)
 
 Achado navegando o produto depois de um reset de banco: o botão "Novo

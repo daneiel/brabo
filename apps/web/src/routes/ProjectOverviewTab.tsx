@@ -3,9 +3,11 @@ import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   useArchitecture,
   useBacklog,
+  useCurrentWorkspace,
   useHandoffs,
   useLatestSession,
   usePendingActions,
+  useProjectsSummary,
   useSessionEventHistory,
   useSessionEvents,
   useSessionTokenUsage,
@@ -63,12 +65,31 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
   const handoffsQuery = useHandoffs(projectId, sessionId);
   const handoffs = handoffsQuery.data ?? [];
 
-  const executionActivated = events.some((e) => e.type === 'execution.activated');
+  // `execution.activated` é dos PRIMEIROS eventos de uma sessão de execução —
+  // `useSessionEvents` só traz os ÚLTIMOS 200 (`latest: true`), então numa
+  // sessão real ele sai da janela e `events.some(...)` volta a mentir "nunca
+  // ativou" (roster de dev agents some, e a seção Execução volta a oferecer
+  // "Ativar execução" para uma execução que já está rodando). O resumo do
+  // workspace (RN-090) agrega TODOS os eventos no backend
+  // (`projects-summary.repository.ts`), então é ele — não a janela — quem
+  // decide.
+  const { data: workspace } = useCurrentWorkspace();
+  const summaryQuery = useProjectsSummary(workspace?.id);
+  const projectSummary = summaryQuery.data?.find((s) => s.projectId === projectId);
+  const executionActivated = projectSummary?.roster.executionActivated ?? false;
   // Agentes com ação pendente de aprovação entram como `aguardando` — antes
   // esse estado era inalcançável e o contador do header ficava sempre em 0.
   const pendingActionAgentIds = new Set(
     actions.filter((a) => a.status === 'pending').map((a) => a.actor.id),
   );
+  // LIMITAÇÃO CONHECIDA, não corrigida aqui: `deriveAgentRoster` também
+  // decide QA/SecOps por `gatesEverOpened`, calculado por dentro de
+  // `rosterFactsFromEvents` direto sobre a MESMA janela de 200 eventos —
+  // sofre da classe de defeito acima. O resumo já carrega o valor agregado
+  // certo (`ProjectCardSummary.roster.gatesEverOpened`), mas corrigi-lo aqui
+  // exigiria mudar a ASSINATURA de `deriveAgentRoster`/`rosterFactsFromEvents`
+  // (aceitar um override, como já existe para `executionActivated`) — fora
+  // do escopo desta correção, que não deve tocar `lib/agent-status.ts`.
   const roster = deriveAgentRoster(
     events,
     architecture?.moduleMap,
@@ -242,6 +263,10 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
           hasModuleMap={!!architecture?.moduleMap}
           events={events}
           actions={actions}
+          executionActivated={executionActivated}
+          executionActivatedPending={summaryQuery.isPending}
+          executionActivatedError={summaryQuery.isError ? summaryQuery.error : null}
+          onRetryExecutionActivated={() => void summaryQuery.refetch()}
         />
 
         <ArchitectureSection architecture={architecture} />
@@ -285,18 +310,27 @@ function ExecutionSection({
   hasModuleMap,
   events,
   actions,
+  executionActivated,
+  executionActivatedPending,
+  executionActivatedError,
+  onRetryExecutionActivated,
 }: {
   projectId: string;
   sessionId?: string;
   hasModuleMap: boolean;
   events: SessionEvent[];
   actions: ProposedAction[];
+  /** Agregado do resumo do workspace — ver comentário no componente pai. */
+  executionActivated: boolean;
+  executionActivatedPending: boolean;
+  executionActivatedError: unknown;
+  onRetryExecutionActivated: () => void;
 }) {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const { data: epics } = useBacklog(projectId);
 
-  const activated = events.some((e) => e.type === 'execution.activated');
+  const activated = executionActivated;
 
   // Dev agents a partir do event log: módulo/branch/task (dev.started/
   // dev.working) + iteração/custo ao vivo do ÚLTIMO agent.response do agente
@@ -382,7 +416,21 @@ function ExecutionSection({
   return (
     <div className={styles.arch}>
       <div className={styles.sectionHeader}>Execução</div>
-      {!activated ? (
+      {/* Os três estados da RN-088: sem eles, "resumo ainda não chegou"
+          (`executionActivatedPending`) ficava indistinguível de "nunca
+          ativou" e oferecia "Ativar execução" de novo para uma execução que
+          já está rodando. */}
+      {executionActivatedError ? (
+        <ErroDeCarregamento
+          titulo="Não foi possível saber se a execução já foi ativada."
+          erro={executionActivatedError}
+          onTentarDeNovo={onRetryExecutionActivated}
+        />
+      ) : executionActivatedPending ? (
+        <div className={styles.sectionSub} aria-busy="true">
+          <Skeleton width={220} height={18} />
+        </div>
+      ) : !activated ? (
         <div className={styles.execIntro}>
           <div className={styles.sectionSub}>
             {hasModuleMap

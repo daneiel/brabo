@@ -86,15 +86,18 @@ config :engine,
     String.to_integer(System.get_env("TERMINAL_ACTION_TIMEOUT_MS", "15000")),
   # Teto de BYTES da saída de um comando (achado S). A saída fica no histórico
   # do laço e viaja em todo turno seguinte; sem teto, um `find` numa árvore
-  # grande derruba a execução inteira com 413 do provider. 32 KiB ≈ 8k tokens
-  # estimados por comando — folgado para leitura de arquivo, apertado o
-  # bastante para não acumular. Ver Engine.Actions.TerminalExecutor.truncate/2.
+  # grande derruba a execução inteira com 413 — a api do Brabo (não o
+  # provider de LLM) recusando o corpo de `POST .../llm-turn` por exceder o
+  # limite de transporte HTTP dela. 32 KiB ≈ 8k tokens estimados por comando —
+  # folgado para leitura de arquivo, apertado o bastante para não acumular.
+  # Ver Engine.Actions.TerminalExecutor.truncate/2.
   terminal_output_max_bytes:
     String.to_integer(System.get_env("TERMINAL_OUTPUT_MAX_BYTES", "32768")),
   # Teto de BYTES do conteúdo lido por read_file — mesmo incidente do achado
-  # S (413 do provider), pela porta do read_file em vez do terminal. Const
-  # PRÓPRIA, não a mesma var de terminal_output_max_bytes: hoje coincide em
-  # valor, não em acoplamento. Ver Engine.Harness.Tools.ReadFile.truncate/2.
+  # S (413 da api do Brabo, não do provider de LLM), pela porta do read_file
+  # em vez do terminal. Const PRÓPRIA, não a mesma var de
+  # terminal_output_max_bytes: hoje coincide em valor, não em acoplamento.
+  # Ver Engine.Harness.Tools.ReadFile.truncate/2.
   read_file_max_bytes: String.to_integer(System.get_env("READ_FILE_MAX_BYTES", "32768")),
   # Teto de BYTES do texto final devolvido por search_workspace — mesmo
   # incidente do achado S, pela porta da busca. Const PRÓPRIA, não reaproveita
@@ -135,6 +138,17 @@ config :engine,
     String.to_float(System.get_env("CONTEXT_COMPACTION_THRESHOLD", "0.7")),
   # Janela de contexto assumida quando o modelo não informa uma.
   default_context_window: String.to_integer(System.get_env("DEFAULT_CONTEXT_WINDOW", "8192")),
+  # Teto de TRANSPORTE (bytes do corpo HTTP de `POST .../llm-turn`), distinto
+  # da janela do MODELO. A compactação deve disparar ANTES do corpo estourar
+  # o limite HTTP da api — usar só `context_window` (128k tokens nos gates)
+  # dava compactação lá pelos ~350 KB de payload, muito depois do limite real
+  # de transporte (413 confirmado bem antes disso). 8 MiB fica folgado abaixo
+  # do teto da api (que sobe para ~10 MiB numa frente paralela) sem depender
+  # do valor exato dela. Convertido para tokens pela mesma heurística de
+  # bytes-por-token do tokenizer (Engine.Harness.Tokenizer.Approximate) —
+  # ver Engine.Harness.ContextManager.Default.transport_window_tokens/0.
+  transport_max_body_bytes:
+    String.to_integer(System.get_env("TRANSPORT_MAX_BODY_BYTES", "8388608")),
   # Agentes de fundo (Psicólogo via outbox, Anamnese periódica) competem por
   # turnos de LLM com os agentes de execução. Com provider local de um modelo
   # só, essa disputa derruba a conexão do dev no meio do ciclo. Desligáveis por
