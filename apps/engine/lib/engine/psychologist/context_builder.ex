@@ -17,8 +17,24 @@ defmodule Engine.Psychologist.ContextBuilder do
   cru e dimensiona o trabalho (qual tier); `analisaveis` desconta o que
   os analistas escreveram e o provisionamento de repositório, e responde
   se há trabalho (ver `Engine.SessionEvents.Event.count_analisaveis/1`).
+
+  **Relevância via RAG (onda de consumo do grafo).** `fetch/2` também
+  consulta `EngineApiClient.rag_search/4` — o GATILHO da análise (a causa
+  de término já classificada por `TerminationClassifier`, mesmo rótulo
+  que vai pro prompt) vira a query. Os trechos voltam ao lado dos eventos
+  recentes, NUNCA em substituição: "N mais recentes" continua vindo de
+  `recent_events/2`, intocado, e os trechos entram como
+  `relevant_excerpts`. A chamada é estritamente ADITIVA — qualquer
+  desfecho que não seja uma lista de hits (erro, resposta inesperada)
+  degrada pro comportamento ATUAL (`relevant_excerpts: []`), sem propagar
+  erro: a análise do Psicólogo não pode depender do RAG estar de pé.
+  `rag_degraded` tem TRÊS valores, e eles não se confundem: `nil` (RAG
+  não consultado com sucesso — indisponível ou erro), `false` (consultado
+  com embedding disponível) e `true` (consultado, mas caiu pra
+  léxico-only) — só o último precisa aparecer como aviso no prompt.
   """
 
+  alias Engine.Psychologist.{TerminationClassifier, Triage}
   alias Engine.Sessions.EngineApiClient
 
   @type t :: %{
@@ -28,13 +44,15 @@ defmodule Engine.Psychologist.ContextBuilder do
           business_rules: [map()],
           prior_hypotheses: [map()],
           event_count: non_neg_integer(),
-          analisaveis: non_neg_integer()
+          analisaveis: non_neg_integer(),
+          relevant_excerpts: [map()],
+          rag_degraded: boolean() | nil
         }
 
   @spec fetch(String.t(), String.t()) :: {:ok, t()} | {:error, term()}
   def fetch(project_id, session_id) do
     case EngineApiClient.get_psychologist_context(project_id, session_id) do
-      {:ok, ctx} -> {:ok, build(ctx, session_id)}
+      {:ok, ctx} -> {:ok, build(ctx, project_id, session_id)}
       {:error, reason} -> {:error, reason}
     end
   end
@@ -61,8 +79,8 @@ defmodule Engine.Psychologist.ContextBuilder do
     end)
   end
 
-  defp build(ctx, session_id) do
-    %{
+  defp build(ctx, project_id, session_id) do
+    base = %{
       already_analyzed: Map.get(ctx, "alreadyAnalyzed", false),
       session_status: Map.get(ctx, "sessionStatus", "closed"),
       termination_reason: Map.get(ctx, "terminationReason"),
@@ -71,5 +89,32 @@ defmodule Engine.Psychologist.ContextBuilder do
       event_count: Engine.SessionEvents.Event.count(session_id),
       analisaveis: Engine.SessionEvents.Event.count_analisaveis(session_id)
     }
+
+    Map.merge(base, fetch_relevant_excerpts(project_id, base))
   end
+
+  defp fetch_relevant_excerpts(project_id, %{
+         session_status: status,
+         termination_reason: reason
+       }) do
+    query = "sessão de agente encerrada: #{gatilho_label(reason, status)}"
+    top_k = Triage.rag_top_k()
+
+    case EngineApiClient.rag_search(project_id, query, top_k) do
+      {:ok, %{"hits" => hits} = resp} when is_list(hits) ->
+        %{
+          relevant_excerpts: Enum.take(hits, top_k),
+          rag_degraded: Map.get(resp, "degraded", false)
+        }
+
+      _falha_ou_resposta_inesperada ->
+        # ADITIVO: falha do RAG (api fora, erro de rede, resposta que não
+        # bate o contrato) nunca vira `{:error, _}` do fetch/2 — degrada
+        # pro comportamento anterior a esta onda.
+        %{relevant_excerpts: [], rag_degraded: nil}
+    end
+  end
+
+  defp gatilho_label(reason, status),
+    do: TerminationClassifier.label(TerminationClassifier.classify(reason, status))
 end

@@ -1,6 +1,6 @@
 ---
 name: psychologist-kickoff
-version: "1"
+version: "2"
 pinned: true
 ---
 
@@ -18,6 +18,9 @@ REGRAS DE NEGÓCIO DO PROJETO:
 HIPÓTESES ANTERIORES (não descartadas):
 {{prior_hypotheses}}
 
+TRECHOS RELEVANTES AO GATILHO (RAG do projeto):
+{{relevant_excerpts}}
+
 LOG DE EVENTOS DA SESSÃO:{{omission_note}}
 {{events}}
 
@@ -31,6 +34,9 @@ no mapa da mensagem — o `ContextManager` (ver
 kickoff sobrevive inteiro até o fim da análise por mais longa que ela
 fique. O campo `pinned: true` no front-matter acima documenta essa
 propriedade; não é um placeholder de conteúdo.
+
+**v2** (onda de consumo do grafo): ganhou `{{relevant_excerpts}}` — ver
+abaixo. Nenhum outro placeholder mudou de forma.
 
 - `{{cause_label}}` — rótulo textual da causa de término da sessão
   (`TerminationClassifier.label(cause)`), ex.: "encerramento normal",
@@ -51,6 +57,16 @@ propriedade; não é um placeholder de conteúdo.
   projeto (`- <título>` por linha), ou `(nenhuma)` se a lista vier vazia.
 - `{{prior_hypotheses}}` — hipóteses anteriores não descartadas,
   formatadas, ou `(nenhuma)`.
+- `{{relevant_excerpts}}` — trechos do RAG do projeto (pgvector, busca
+  híbrida) relevantes ao GATILHO da análise — a causa de término já
+  classificada (`{{cause_label}}`) vira a query de
+  `EngineApiClient.rag_search/4`. ADITIVO: RAG indisponível/erro vira
+  `(RAG indisponível nesta análise)`; consultado com sucesso mas sem
+  hit vira `(nenhum trecho relevante encontrado)`; busca `degraded`
+  (léxico-only, sem embedding) leva um aviso `[AVISO: busca degradada —
+  léxico apenas, sem similaridade semântica]` na frente — nunca
+  escondido, mesma disciplina da tool `rag_search`. Cada trecho formata
+  `- <path>: <excerpt|chunk>`.
 - `{{omission_note}}` — nota visível ao modelo quando o log foi truncado:
   " (só os N mais recentes de M; K evento(s) mais antigo(s) omitido(s) —
   cite apenas ids presentes abaixo)", ou string vazia quando nada foi

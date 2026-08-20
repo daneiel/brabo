@@ -75,6 +75,7 @@ defmodule Engine.Harness.ContextBuilder do
   end
 
   defp unit_id(%{origin: :db}), do: :db
+  defp unit_id(%{origin: :graph}), do: :graph
   defp unit_id(%{origin: :root}), do: :root
   defp unit_id(%{origin: :directory, path: path}), do: {:directory, path}
 end

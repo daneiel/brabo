@@ -3,11 +3,35 @@
 Templates de prompt de agentes, versionados como arquivos `.md`, fora do
 código Elixir que hoje os carrega. Esta é a PRIMEIRA leva de conteúdo
 extraído — quatro templates, hoje heredoc/string inline em
-`apps/engine/lib/engine/**`. A leitura por agente (o mecanismo que vai
-buscar estes arquivos em vez do texto inline nos `.ex`) é uma onda
-POSTERIOR, ainda não iniciada: **nenhum agente consome este diretório
-hoje**. Os `.ex` originais continuam sendo a fonte de verdade em
-produção até essa onda entrar.
+`apps/engine/lib/engine/**`.
+
+A leitura por agente começou nesta mesma onda, por TRÊS templates:
+
+- **Psicólogo** (`apps/engine/lib/engine/workers/psychologist_worker.ex`,
+  `render_kickoff/4`) e **Anamnese**
+  (`apps/engine/lib/engine/workers/anamnese_worker.ex`, `initial_message/1`)
+  resolvem `psychologist-kickoff`/`anamnese-kickoff` via
+  `EngineApiClient.get_prompt_template/2` quando a flag
+  `graph_templates_enabled?` está ligada (`GRAPH_TEMPLATES_ENABLED` em
+  runtime, **default DESLIGADO**, `false` — capacidade nova nasce
+  desligada até provada, mesmo critério de `psychologist_enabled?`/
+  `anamnese_enabled?`), com FALLBACK obrigatório pro texto inline em
+  qualquer falha (api fora do ar, template ainda não semeado, flag
+  desligada) — os `.ex` continuam carregando o texto original como plano
+  B, nunca removido.
+- **ux-designer** (`apps/engine/lib/engine/harness/agents.ex`,
+  `identity/1`) resolve `ux-designer-identity` via
+  `Engine.Harness.InstructionFiles.graph_template/2`, atrás de uma flag
+  PRÓPRIA, `graph_instruction_templates_enabled?`
+  (`GRAPH_INSTRUCTION_TEMPLATES_ENABLED`, também default `false`) — nome
+  separado de propósito: as duas flags colidiriam com defaults
+  CONTRÁRIOS se dividissem a mesma chave (ver o comentário em
+  `config/runtime.exs`). Mesma disciplina de fallback: falha ou flag
+  desligada cai na string inline.
+
+Só `context-manager-summarize` ainda NÃO é lido por nenhum agente — o
+`.ex` dele continua sendo a fonte de verdade em produção até a onda que
+o consumir.
 
 ## Por que separar prompt de código
 
@@ -100,9 +124,17 @@ sucesso.
 
 ## O que este diretório NÃO faz, hoje
 
-- Nenhum agente do `apps/engine` lê estes arquivos — os `.ex` continuam
-  carregando os prompts inline, como sempre.
-- Nenhuma substituição de placeholder acontece aqui — `{{variavel}}` é
+- `context-manager-summarize.md` ainda não é lido por nenhum agente — o
+  `.ex` continua carregando o prompt inline, sem consultar o grafo.
+- A substituição de placeholder de cada template consumido mora no
+  próprio agente (`Engine.Workers.PsychologistWorker`,
+  `Engine.Workers.AnamneseWorker`), reusando as MESMAS funções de
+  formatação do caminho inline — pra não divergir o texto entre os dois
+  caminhos; o `{{variavel}}` de `context-manager-summarize` segue
   documentação, não motor de template.
 - Não há mais templates além dos quatro listados acima; o resto dos
   prompts inline segue no código até a onda que migra o restante.
+- Consumo real ainda exige DUAS coisas fora deste diretório: a flag
+  correspondente ligada (default desligado nas duas) e o seeder ter
+  rodado contra a api de pé — sem isso, todo caminho degrada pro
+  inline de sempre, silenciosamente.

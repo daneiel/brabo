@@ -9121,6 +9121,95 @@ model-loader reduz a chance de a degradação acontecer em primeiro lugar.
 - **Origem:** achado durante a fundação do grafo de conhecimento — ver
   [ADR 0100](adr/0100-rag-search-e-modelos-garantidos-no-boot.md)
 
+---
+
+### RN-416 — O grafo é memória DERIVADA, reconstruível por projeção da outbox {#rn-416}
+
+A alternativa de o engine escrever no Neo4j direto foi RECUSADA — abriria
+um segundo caminho de escrita além do event log, quebrando a garantia de
+fonte única de verdade. `GraphProjector` (api) drena uma SEGUNDA linha de
+outbox, mesma transação de sempre, `aggregateType: 'graph_projection'`
+— valor que o `Engine.Outbox.Drain` do lado engine nunca casa (o filtro
+dele é `aggregate_type IN ('session', 'task')`), evitando a corrida que
+existiria se reusasse `'session'` (o engine já drena e marca esse tipo em
+~2s). Mesmo padrão de `deny-action.use-case.ts`, que já grava em dois
+`aggregateType` na mesma transação.
+
+Instrumentado em dois pontos: `AppendSessionEventUseCase` (para
+`handoff.offered`, `psychologist.hypothesis_proposed`,
+`anamnese.profile_updated` — payload só `{eventId}`, o projector RELÊ o
+envelope completo do event log na hora de projetar, nunca confia numa
+cópia potencialmente velha) e `TransitionSessionUseCase` (para
+`session.closed`/`session.closed_abnormally`, que não passam por
+`session_events`). `GraphProjector` é um poller (~2s, mesmo formato do
+`DomainGaugesCollector`) que chama os casos de uso de gravação já
+existentes da fundação anterior — a idempotência mora NELES (chave
+natural por tipo: `Hipotese.id`, `Handoff(sessionId,seq)`,
+`PerfilAnamnese(userId,dimensao)`, `Interacao.sessionId` com extensão de
+faixa). `GraphUnavailableError` no meio de um lote PARA o ciclo inteiro
+(o resto falharia pelo mesmo motivo) — a linha fica não-processada e
+tenta de novo sozinha no próximo ciclo, sem intervenção.
+
+- **Onde:** `apps/api/src/application/graph-projection/graph-projector.ts`;
+  `apps/api/src/domain/graph/graph-projection-events.ts`;
+  `apps/api/src/application/use-cases/sessions/append-session-event.use-case.ts`,
+  `transition-session.use-case.ts`
+- **Teste:** `graph-projector.spec.ts` (caminho feliz dos quatro tipos;
+  resolução evidência→seq de hipótese; `GraphUnavailableError` deixa a
+  linha sem marcar e para o ciclo; ciclo seguinte reprocessa com
+  sucesso; reprocessar a MESMA linha duas vezes não duplica no grafo);
+  testes novos em `append-session-event.use-case.spec.ts`/
+  `transition-session.use-case.spec.ts` (tipo projetável grava a segunda
+  linha; tipo não-projetável não grava nada extra)
+- **Origem:** ver [ADR 0101](adr/0101-memoria-relacional-como-projecao-do-event-log.md)
+
+---
+
+### RN-417 — Psicólogo e Anamnese consultam por relevância, com degradação declarada para recência {#rn-417}
+
+`Psychologist.ContextBuilder`/`Anamnese.ContextBuilder` continuam lendo o
+que sempre leram (eventos recentes / janela temporal), e ganham uma
+SEGUNDA fonte, `EngineApiClient.rag_search/4`, com uma query derivada do
+GATILHO da análise — a causa de término já classificada, no Psicólogo;
+competências do catálogo ainda sem `current_profile`, na Anamnese
+(NUNCA texto livre de hipótese/racional, pela proibição já estabelecida
+de a Anamnese jamais inferir saúde/personalidade/idade/gênero — a query
+só contém nomes de competência/membro/projeto). Os hits entram no
+orçamento EXISTENTE de `Triage` (`max_prompt_events`/`max_payload_chars`)
+— descontam vagas da janela de recentes, nunca somam por fora dela.
+
+A chamada ao RAG é estritamente ADITIVA: sem hit (RAG indisponível, erro,
+ou simplesmente sem resultado), o comportamento é IDÊNTICO ao de antes
+desta RN — nenhum teste pré-existente precisou mudar. `degraded: true`
+(RAG caiu pra léxico-only por falta de embedding) aparece EXPLICITAMENTE
+no contexto final, nos dois agentes — nunca escondido pelo corte de
+teto.
+
+Os kickoffs de Psicólogo (`psychologist-kickoff`) e Anamnese
+(`anamnese-kickoff`) passam a resolver como TEMPLATE do grafo
+(`EngineApiClient.get_prompt_template/2`) quando `graph_templates_enabled?`
+está ligada (`GRAPH_TEMPLATES_ENABLED`, default `false`) — com fallback
+obrigatório pro texto inline em qualquer falha (api fora, template não
+semeado, flag desligada). `:pinned => true` continua igual nos dois
+caminhos.
+
+**Consumo do restante do grafo (`query_user_context` — hipóteses com
+evidência e perfis lidos DIRETO do Neo4j) fica DECLARADO fora desta
+entrega**: ainda sem rota HTTP exposta do lado api; Psicólogo/Anamnese
+hoje só consultam o RAG (pgvector) via `rag_search`, não o grafo de
+relações em si.
+
+- **Onde:** `apps/engine/lib/engine/psychologist/context_builder.ex`,
+  `apps/engine/lib/engine/workers/psychologist_worker.ex`;
+  `apps/engine/lib/engine/anamnese/context_builder.ex`,
+  `apps/engine/lib/engine/workers/anamnese_worker.ex`
+- **Teste:** `context_builder_test.exs` dos dois agentes (hits presentes;
+  falha do RAG degrada sem erro; `degraded: true` visível; clamp de
+  `top_k`; query derivada do gatilho); `psychologist_worker_test.exs`/
+  `anamnese_worker_test.exs` (template com sucesso e com fallback;
+  `:pinned` idêntico nos dois caminhos; flag desligada nunca chama a api)
+- **Origem:** ver [ADR 0101](adr/0101-memoria-relacional-como-projecao-do-event-log.md)
+
 ## Workspace pessoal automático no cadastro (RN-410)
 
 Achado navegando o produto depois de um reset de banco: o botão "Novo

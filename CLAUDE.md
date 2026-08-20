@@ -1782,9 +1782,33 @@ nunca era puxado automaticamente e o RAG degradava pra léxico-only em
 silêncio em qualquer ambiente limpo.
 
 Primeira leva de templates extraída para `prompts/*.md` (ux-designer,
-Psicólogo, Anamnese, sumarização do `ContextManager`) — **nenhum `.ex` foi
-editado**, os GenServers continuam com o texto inline; consumir os
-templates do grafo é a próxima onda.
+Psicólogo, Anamnese, sumarização do `ContextManager`).
+
+## Consumo do grafo — templates sem tocar GenServers, relevância sem substituir recência (RN-416/417, ADR 0101)
+`InstructionFiles` ganhou fonte `:graph` (`db > graph > dir > root` —
+o `instruction_patch` do usuário continua vencendo tudo), e TRÊS agentes
+passaram a TENTAR resolver template do grafo antes do texto inline, que
+virou fallback obrigatório: ux-designer (`graph_instruction_templates_enabled?`),
+Psicólogo e Anamnese (`graph_templates_enabled?`, mesma chave pros
+dois). Duas flags, não uma — colidiriam com defaults CONTRÁRIOS entre
+frentes paralelas se dividissem a chave; os dois defaults são `false`.
+Só `context-manager-summarize` (dos quatro templates da leva) ainda não
+tem consumidor.
+
+`Psychologist.ContextBuilder`/`Anamnese.ContextBuilder` ganharam uma
+SEGUNDA fonte de contexto — `rag_search`, com query derivada do gatilho
+da análise — em COMPOSIÇÃO com a leitura de recentes/janela temporal de
+sempre, nunca em substituição: sem hit, o comportamento é idêntico ao de
+antes. Os trechos entram no orçamento EXISTENTE de `Triage`, e
+`degraded: true` do RAG é sempre visível no contexto, nunca escondido.
+
+O grafo se escreve sozinho: `GraphProjector` (api) drena uma SEGUNDA
+linha de outbox (`aggregateType: 'graph_projection'`, mesma transação,
+valor que o filtro do engine — `IN ('session', 'task')` — nunca casa,
+evitando a corrida com o `Engine.Outbox.Drain` que já drena `'session'`
+em ~2s) e chama os casos de uso de gravação já existentes. O engine
+NUNCA escreve no grafo direto — preserva o event log como única fonte de
+verdade; o grafo é reconstruível por replay.
 
 **Achado real durante a verificação, registrado porque ensina**: o teste
 de body limit da RN-412 (`apps/api/test/main.spec.ts`) tinha um bug

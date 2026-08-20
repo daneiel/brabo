@@ -6,6 +6,18 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api,engine**: consumo do grafo de conhecimento — ux-designer,
+  Psicólogo e Anamnese passam a resolver o kickoff/identidade a partir de
+  um template versionado do grafo (com fallback obrigatório pro texto
+  inline, atrás de duas flags separadas, default desligadas). Psicólogo e
+  Anamnese ganham uma segunda fonte de contexto: `rag_search` busca
+  trechos RELEVANTES ao gatilho da análise, compondo (nunca substituindo)
+  a leitura de eventos recentes/janela temporal existente, sempre dentro
+  do orçamento de tokens já declarado. O grafo passa a se escrever
+  sozinho — `GraphProjector` drena uma fila própria da outbox
+  transacional e projeta handoffs, hipóteses do Psicólogo, perfis da
+  Anamnese e fechamento de sessão, sem o engine nunca escrever no grafo
+  diretamente (RN-416/417, ADR 0101)
 - **api,engine**: fundação do grafo de conhecimento — Neo4j (`neo4j-driver`
   na api, memória DERIVADA do event log, nunca fonte de verdade) para
   templates de prompt versionados (idempotentes por hash) e memória
