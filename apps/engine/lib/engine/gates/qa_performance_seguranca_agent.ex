@@ -20,11 +20,14 @@ defmodule Engine.Gates.QaPerformanceSegurancaAgent do
 
   alias Engine.Gates.Hooks.Termination
   alias Engine.Gates.Tools.EmitPerfSegurancaVerdict
-  alias Engine.Harness.Tools.{ReadFile, SearchWorkspace}
+  alias Engine.Harness.Tools.{ReadFile, SearchWorkspace, RagSearch}
   alias Engine.Harness.{Hooks, ToolLoop}
   alias Engine.Harness.Hooks.{ActionPipeline, EventLog}
 
-  @registry [ReadFile, SearchWorkspace, EmitPerfSegurancaVerdict]
+  # RagSearch entrou aqui (frente rag_search): mesma classe de leitura de
+  # ReadFile/SearchWorkspace, só que sobre docs/ADRs indexados — útil para
+  # achar convenção de performance/segurança já registrada no projeto.
+  @registry [ReadFile, SearchWorkspace, RagSearch, EmitPerfSegurancaVerdict]
 
   @doc "Registro de ferramentas — sem `Terminal`, de propósito (ver moduledoc)."
   def tools, do: @registry
@@ -125,8 +128,9 @@ defmodule Engine.Gates.QaPerformanceSegurancaAgent do
          parece segredo hardcoded, registre em `itens`, mas o veredito de
          segurança de verdade é do SecOps, não seu.
 
-      Use `read_file`/`search_workspace` pra examinar o que for preciso, e
-      então `emit_perf_seguranca_verdict` com `veredito`
+      Use `read_file`/`search_workspace` pra examinar o que for preciso,
+      `rag_search` pra achar convenção já indexada sobre o assunto, e então
+      `emit_perf_seguranca_verdict` com `veredito`
       (`approved`/`changes_requested`), `resumo` e `itens` (o que precisa
       mudar, se houver).
 

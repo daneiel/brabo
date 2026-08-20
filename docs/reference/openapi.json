@@ -493,6 +493,108 @@
         ]
       }
     },
+    "/internal/graph/prompt-templates": {
+      "post": {
+        "description": "Se já existe uma versão com o MESMO hash para o mesmo `name`, nenhuma versão nova é criada — a existente é devolvida (o hit de idempotência não muda o status HTTP: sempre 201, por simplicidade — o corpo é idêntico ao que teria sido criado).",
+        "operationId": "InternalGraphController_upsert",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpsertPromptTemplateInternalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromptTemplateResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
+          },
+          "403": {
+            "description": "Service token ausente ou diferente do compartilhado."
+          },
+          "503": {
+            "description": "Neo4j não configurado ou fora do ar — sem fallback possível para leitura/escrita de template."
+          }
+        },
+        "security": [
+          {
+            "service-token": []
+          }
+        ],
+        "summary": "Publica uma versão de template de prompt, idempotente por hash",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
+    "/internal/graph/prompt-templates/{name}": {
+      "get": {
+        "description": "`version` específica busca por igualdade; omitida, busca a versão `active` mais recente. 404 se o template (ou a versão pedida) não existir.",
+        "operationId": "InternalGraphController_getByName",
+        "parameters": [
+          {
+            "name": "name",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "3",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromptTemplateReadResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Service token ausente ou diferente do compartilhado."
+          },
+          "404": {
+            "description": "Template inexistente, ou sem a versão pedida."
+          },
+          "503": {
+            "description": "Neo4j não configurado ou fora do ar — sem fallback possível para leitura/escrita de template."
+          }
+        },
+        "security": [
+          {
+            "service-token": []
+          }
+        ],
+        "summary": "Busca um template de prompt pelo nome",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
     "/internal/models/sync": {
       "post": {
         "description": "Nunca falha por causa de um provider: cada um responde por si no relatório, com o motivo do pulo e a origem da falha quando houve. Um provider que não respondeu é PULADO, não indisponibilizado.",
@@ -688,6 +790,50 @@
           }
         ],
         "summary": "O funil de entrega e DORA parcial do projeto, para o PO ler",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
+    "/internal/rag/search": {
+      "post": {
+        "description": "Mesmo motor de `POST /projects/:projectId/rag/search` (rota humana), projetado no formato que a tool `rag_search` do engine espera.",
+        "operationId": "InternalRagController_buscar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RagSearchInternalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RagSearchInternalResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
+          },
+          "403": {
+            "description": "Service token ausente ou diferente do compartilhado."
+          }
+        },
+        "security": [
+          {
+            "service-token": []
+          }
+        ],
+        "summary": "Busca híbrida no índice RAG do projeto, para a tool do engine",
         "tags": [
           "internal"
         ]
@@ -15418,6 +15564,65 @@
           "failed"
         ]
       },
+      "PromptTemplateReadResponseDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "dev-agent-kickoff"
+          },
+          "version": {
+            "type": "string",
+            "example": "3"
+          },
+          "body": {
+            "type": "string",
+            "example": "Você é o dev agent do módulo {{modulo}}..."
+          },
+          "hash": {
+            "type": "string",
+            "example": "sha256:9f2c..."
+          }
+        },
+        "required": [
+          "name",
+          "version",
+          "body",
+          "hash"
+        ]
+      },
+      "PromptTemplateResponseDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "dev-agent-kickoff"
+          },
+          "version": {
+            "type": "string",
+            "example": "3"
+          },
+          "body": {
+            "type": "string",
+            "example": "Você é o dev agent do módulo {{modulo}}..."
+          },
+          "hash": {
+            "type": "string",
+            "example": "sha256:9f2c..."
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Se esta é a versão vigente do template. Sempre `true` logo depois de um upsert que criou versão nova; pode voltar `false` quando o hit de idempotência (mesmo hash) aponta para uma versão que uma publicação POSTERIOR já desativou."
+          }
+        },
+        "required": [
+          "name",
+          "version",
+          "body",
+          "hash",
+          "active"
+        ]
+      },
       "ProposeActionDto": {
         "type": "object",
         "properties": {
@@ -16069,6 +16274,74 @@
           "filesInRepo",
           "filesIndexed",
           "truncated"
+        ]
+      },
+      "RagSearchInternalDto": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "query": {
+            "type": "string",
+            "example": "como o teto de paralelismo é decidido"
+          },
+          "topK": {
+            "type": "number",
+            "example": 5
+          }
+        },
+        "required": [
+          "projectId",
+          "query"
+        ]
+      },
+      "RagSearchInternalHitResponseDto": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "example": "docs/adr/0080-chat-rag-pipeline-indexacao.md",
+            "description": "Caminho do arquivo (escopos `docs`/`adr`) ou `session:<id>` (escopo `session`, sem caminho de arquivo real)."
+          },
+          "chunk": {
+            "type": "string",
+            "description": "O conteúdo completo do chunk recuperado."
+          },
+          "score": {
+            "type": "number",
+            "description": "Score combinado (vetor + léxico), já filtrado pelo limiar."
+          },
+          "excerpt": {
+            "type": "string",
+            "description": "Prévia curta do chunk, para exibição sem estourar o contexto do modelo."
+          }
+        },
+        "required": [
+          "path",
+          "chunk",
+          "score",
+          "excerpt"
+        ]
+      },
+      "RagSearchInternalResponseDto": {
+        "type": "object",
+        "properties": {
+          "hits": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RagSearchInternalHitResponseDto"
+            }
+          },
+          "degraded": {
+            "type": "boolean",
+            "description": "`true` quando o embedding da CONSULTA não estava disponível e a busca caiu para léxico-only (mesma semântica de `vectorAvailable: false` do `HybridSearchUseCase`)."
+          }
+        },
+        "required": [
+          "hits",
+          "degraded"
         ]
       },
       "RagSessionCoverageResponseDto": {
@@ -18039,6 +18312,33 @@
         "required": [
           "provider",
           "apiKey"
+        ]
+      },
+      "UpsertPromptTemplateInternalDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "dev-agent-kickoff"
+          },
+          "version": {
+            "type": "string",
+            "example": "3"
+          },
+          "body": {
+            "type": "string",
+            "example": "Você é o dev agent do módulo {{modulo}}..."
+          },
+          "hash": {
+            "type": "string",
+            "example": "sha256:9f2c..."
+          }
+        },
+        "required": [
+          "name",
+          "version",
+          "body",
+          "hash"
         ]
       },
       "UserCredentialResponseDto": {

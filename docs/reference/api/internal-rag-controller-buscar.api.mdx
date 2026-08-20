@@ -1,0 +1,69 @@
+---
+id: internal-rag-controller-buscar
+title: "Busca híbrida no índice RAG do projeto, para a tool do engine"
+description: "Mesmo motor de `POST /projects/:projectId/rag/search` (rota humana), projetado no formato que a tool `rag_search` do engine espera."
+sidebar_label: "Busca híbrida no índice RAG do projeto, para a tool do engine"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "post api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Busca híbrida no índice RAG do projeto, para a tool do engine"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/internal/rag/search"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Mesmo motor de `POST /projects/:projectId/rag/search` (rota humana), projetado no formato que a tool `rag_search` do engine espera.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./internal-rag-controller-buscar.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./internal-rag-controller-buscar.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./internal-rag-controller-buscar.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

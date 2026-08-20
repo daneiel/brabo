@@ -9020,6 +9020,107 @@ fora do escopo desta correção.
 - **Origem:** achado por uso real — "nas PRs sempre está estourando
   entity too large", investigado em conjunto com o dono do produto
 
+---
+
+### RN-413 — Templates de prompt vivem fora do código, versionados no grafo {#rn-413}
+
+Todo prompt de agente era heredoc Elixir inline até esta entrega —
+identidades (`Engine.Harness.Agents`), kickoffs de PO/Arquiteto/Dev
+Lead/UX/Infra, o prompt de sumarização do `ContextManager`. Um template
+de prompt agora pode viver como `(:PromptTemplate {name})-[:HAS_VERSION]->
+(:PromptVersion {version, body, hash, active})` no Neo4j, gravado via
+`POST /internal/graph/prompt-templates` e lido via `GET
+/internal/graph/prompt-templates/:name`. Upsert é idempotente por hash —
+gravar o MESMO conteúdo duas vezes não cria versão nova, só a versão com
+hash igual já existente é devolvida.
+
+Primeira leva extraída para `prompts/*.md` (front-matter `name`/`version`,
+placeholders documentados numa seção "Variáveis" para trechos que no
+`.ex` original eram interpolação): `ux-designer-identity`,
+`psychologist-kickoff`, `anamnese-kickoff`, `context-manager-summarize`.
+`scripts/dev/seed-prompts.ts` lê `prompts/*.md`, calcula hash sha256 do
+corpo e envia ao endpoint acima. **Nenhum `.ex` foi editado nesta
+entrega** — os quatro GenServers continuam com o texto inline; consumir
+os templates do grafo (fonte `:graph` do `InstructionFiles`, precedência
+`db > graph > dir > root`) é a Onda seguinte, declarada fora daqui.
+
+- **Onde:** `apps/api/src/application/use-cases/graph/upsert-prompt-template.use-case.ts`,
+  `get-prompt-template.use-case.ts`; `apps/api/src/interfaces/http/internal/internal-graph.controller.ts`;
+  `prompts/*.md`, `prompts/README.md`; `scripts/dev/seed-prompts.ts`
+- **Teste:** casos de uso com `GraphStore` mockado (upsert com mesmo hash
+  não duplica) + teste de integração contra Neo4j real, pulando
+  graciosamente quando indisponível; `scripts/dev/seed-prompts.spec.ts`
+  (parsing de front-matter, hash determinístico, template malformado
+  reprova com mensagem clara)
+- **Origem:** decisão do dono do produto, inspirada no repositório
+  [ErickWendel/neo4j-ai-experiments](https://github.com/ErickWendel/neo4j-ai-experiments)
+  (ver [ADR 0099](adr/0099-neo4j-grafo-de-conhecimento-e-templates.md))
+
+---
+
+### RN-414 — `rag_search`: agentes ganham a ferramenta que o produto nunca tinha exposto {#rn-414}
+
+`grep -rn "rag" apps/engine/lib` dava ZERO ocorrências antes desta
+entrega — o RAG completo (pgvector, busca híbrida) só era consumido pela
+aba web "Chat RAG". A tool nova `rag_search`
+(`apps/engine/lib/engine/harness/tools/rag_search.ex`, categoria
+`:direct`, leitura não é efeito externo) chama `POST /internal/rag/search`
+— rota nova que REUSA `HybridSearchUseCase` sem duplicar a lógica de
+busca — e devolve hits formatados com citação (`path` + trecho), sempre
+com `degraded: true` visível no INÍCIO do texto quando o embedding não
+estava disponível (nunca escondido pelo corte de teto).
+
+Tetos próprios, no espírito da RN-150: `top_k` clampado a 10 dentro da
+própria tool (não confia no que a api aceitaria), teto de 16 KiB no texto
+formatado (menor que os 32 KiB de `search_workspace`/`read_file` — cada
+hit de RAG já é chunk+excerpt inteiro). Falha de rede vira erro legível
+ao modelo, nunca crash do `ToolLoop` (RN-163).
+
+Registrada em `Engine.Harness.Tools` (PO/Arquiteto/conversacionais) e
+`Engine.Dev.Tools` (dev agent); estendida também aos gates de leitura que
+já citam ADR/convenção indexada (QA-automação, QA-estratégia, AppSec,
+QA-performance/segurança) — não a `Infra.WorkflowsAgent` nem
+Psicólogo/Anamnese, que raciocinam sobre event log, não sobre docs/código
+do projeto.
+
+- **Onde:** `apps/engine/lib/engine/harness/tools/rag_search.ex`;
+  `apps/engine/lib/engine/sessions/engine_api_client.ex` (`rag_search/4`);
+  `apps/api/src/interfaces/http/internal/internal-rag.controller.ts`
+- **Teste:** `rag_search_test.exs` (hits formatados com citação;
+  degradação visível; falha de rede sem crash; teto de bytes truncando
+  com marca clara; clamp de `top_k`); `engine_api_client_rag_test.exs`
+- **Origem:** ver [ADR 0100](adr/0100-rag-search-e-modelos-garantidos-no-boot.md)
+
+---
+
+### RN-415 — Modelos Ollama garantidos no boot, degradação do RAG declarada {#rn-415}
+
+`nomic-embed-text` (`RAG_EMBEDDING_MODEL`) nunca era puxado
+automaticamente — bug real, não só desta feature: o entrypoint do
+serviço `ollama` só puxava `llama3.2:1b`, e o RAG degradava para
+léxico-only em SILÊNCIO em qualquer ambiente limpo, sem nenhum sinal de
+que isso estava acontecendo. Serviço novo `ollama-model-loader` (one-shot,
+`docker-compose.yml` dev e prod), lendo `OLLAMA_REQUIRED_MODELS`
+(default `gemma:1b,yi-coder:1.5b,nomic-embed-text`), aditivo ao serviço
+`ollama` existente — o entrypoint dele continua intocado.
+
+A degradação deixou de ser silenciosa: `rag_search` (RN-414) e a busca
+híbrida da api já devolviam `degraded: true` quando o embedding falhava
+— o que faltava era um CONSUMIDOR que tornasse essa flag visível. Agora
+que a tool existe, o próprio modelo vê o aviso no texto formatado, e o
+model-loader reduz a chance de a degradação acontecer em primeiro lugar.
+
+- **Onde:** `docker/docker-compose.yml`, `docker/docker-compose.prod.yml`,
+  `docker/ollama/pull-models.sh`; `deploy/k8s/base/neo4j/`,
+  `deploy/k8s/base/ollama/job-model-loader.yaml` (template, NÃO wireado
+  em nenhuma kustomization — `deploy/k8s/` ainda não tem Service `ollama`
+  pra apontar, ligar isso hoje faria CrashLoopBackOff em todo deploy real)
+- **Teste:** `scripts/dev/verificar-modelos-ollama.sh`, executado de
+  ponta a ponta com um modelo pequeno real (`all-minilm`) para não pagar
+  o custo de vários GB da lista de produção numa máquina compartilhada
+- **Origem:** achado durante a fundação do grafo de conhecimento — ver
+  [ADR 0100](adr/0100-rag-search-e-modelos-garantidos-no-boot.md)
+
 ## Workspace pessoal automático no cadastro (RN-410)
 
 Achado navegando o produto depois de um reset de banco: o botão "Novo

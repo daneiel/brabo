@@ -5,9 +5,16 @@ defmodule Engine.Harness.Tools do
   lista os módulos.
   """
 
-  alias Engine.Harness.Tools.{ReadFile, SearchWorkspace, WriteFile, Terminal, EmitArtifact}
+  alias Engine.Harness.Tools.{
+    ReadFile,
+    SearchWorkspace,
+    WriteFile,
+    Terminal,
+    EmitArtifact,
+    RagSearch
+  }
 
-  @registry [ReadFile, SearchWorkspace, WriteFile, Terminal, EmitArtifact]
+  @registry [ReadFile, SearchWorkspace, WriteFile, Terminal, EmitArtifact, RagSearch]
 
   @doc "Módulos de ferramenta registrados (default — usado por EchoAgent/testes)."
   def registry, do: @registry

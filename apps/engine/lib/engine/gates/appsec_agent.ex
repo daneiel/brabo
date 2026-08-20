@@ -24,11 +24,14 @@ defmodule Engine.Gates.AppSecAgent do
 
   alias Engine.Gates.Hooks.AppSecTermination
   alias Engine.Gates.Tools.EmitThreatModel
-  alias Engine.Harness.Tools.{ReadFile, SearchWorkspace}
+  alias Engine.Harness.Tools.{ReadFile, SearchWorkspace, RagSearch}
   alias Engine.Harness.{Hooks, ToolLoop}
   alias Engine.Harness.Hooks.{ActionPipeline, EventLog}
 
-  @registry [ReadFile, SearchWorkspace, EmitThreatModel]
+  # RagSearch entrou aqui (frente rag_search): threat model se beneficia de
+  # achar ADR/regra de negócio de segurança já registrada sobre o módulo em
+  # questão, em vez de reconstruir o raciocínio do zero a cada story.
+  @registry [ReadFile, SearchWorkspace, RagSearch, EmitThreatModel]
 
   @doc "Registro de ferramentas — sem `Terminal`, de propósito (ver moduledoc)."
   def tools, do: @registry
@@ -93,7 +96,9 @@ defmodule Engine.Gates.AppSecAgent do
       não invente ameaça só para preencher.
 
       Use `read_file`/`search_workspace` se precisar examinar um ADR ou
-      código existente (opcional — o contexto acima já é a base). Termine
+      código existente (opcional — o contexto acima já é a base), ou
+      `rag_search` para achar ADR/regra de negócio de segurança já indexado
+      sobre o assunto. Termine
       SEMPRE chamando `emit_threat_model` com `threatModel` (o checklist nas
       seis categorias), `requisitosSeguranca` (o que a implementação vai ter
       que fazer por causa disto) e `riscos` (o que sobrevive mesmo assim —
