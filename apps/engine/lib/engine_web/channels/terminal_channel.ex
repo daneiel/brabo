@@ -25,6 +25,18 @@ defmodule EngineWeb.TerminalChannel do
      geral, que acordaria toda outra aba `:web` assistindo o mesmo projeto
      à toa. `pty_resize` é o único bidirecional ("qualquer lado"), e por
      isso usa os dois mecanismos dependendo de quem mandou.
+  3. **`fs_list_dir`/`fs_home_dir`** (navegação de pasta local, ADR sobre
+     navegação de pasta via o Runner) — MESMO desenho do PTY: relay puro,
+     correlacionado por `ref` que o cliente já carrega (nunca um `from`
+     rastreado no servidor). `:web` pede (`fs_list_dir`/`fs_home_dir`),
+     relay DIRETO pro pid do runner (mesmo mecanismo de `pty_input`); sem
+     runner conectado, a resposta de erro é devolvida na hora — nunca fica
+     esperando um `_reply` que nunca chega. `:runner` responde
+     (`fs_list_dir_reply`/`fs_home_dir_reply`), broadcast filtrado só pra
+     `:web` (mesmo mecanismo de `pty_data`) — o cliente já sabe filtrar
+     pelo `ref` da própria requisição, exatamente como faz com `sessionRef`
+     do PTY. Leitura pura, sem evento de auditoria: não é sessão com
+     duração (like PTY), é um request/reply único.
 
   É a `:web` quem inicia um PTY (a aba manda `pty_open`); o
   "Servidor → runner: pty_open" do contrato descreve a direção do relay
@@ -53,9 +65,16 @@ defmodule EngineWeb.TerminalChannel do
 
   # Eventos que só o :runner pode originar — vão de broadcast pro tópico e
   # só chegam a sockets :web (handle_out/3 filtra).
-  @eventos_do_runner ~w(pty_data pty_opened pty_error)
+  @eventos_do_runner ~w(pty_data pty_opened pty_error fs_list_dir_reply fs_home_dir_reply)
 
-  intercept(["pty_data", "pty_opened", "pty_error", "pty_resize"])
+  intercept([
+    "pty_data",
+    "pty_opened",
+    "pty_error",
+    "pty_resize",
+    "fs_list_dir_reply",
+    "fs_home_dir_reply"
+  ])
 
   @impl true
   def join("terminal:" <> project_id, _params, socket) do
@@ -220,6 +239,52 @@ defmodule EngineWeb.TerminalChannel do
     case socket.assigns.role do
       :web -> relay_para_runner(socket, "pty_resize", payload)
       :runner -> broadcast_from(socket, "pty_resize", payload)
+    end
+
+    {:noreply, socket}
+  end
+
+  # fs_list_dir/fs_home_dir: navegação de pasta local, sempre iniciada pela
+  # :web. Mesmo desenho de pty_open — confere runner conectado ANTES de
+  # relayar, e responde erro na hora quando não há (nunca deixa o pedido
+  # sem resposta). Leitura pura: sem evento de auditoria, diferente do PTY.
+  @impl true
+  def handle_in("fs_list_dir", %{"ref" => ref} = payload, socket) do
+    if socket.assigns.role == :web do
+      case Registry.whereis(socket.assigns.project_id) do
+        nil ->
+          push(socket, "fs_list_dir_reply", %{
+            ref: ref,
+            path: Map.get(payload, "path"),
+            entradas: [],
+            erro:
+              "Nenhum runner conectado a este projeto. Rode `brabo-runner " <>
+                "--project #{socket.assigns.project_id} --dir <pasta>` na sua máquina."
+          })
+
+        _pid ->
+          relay_para_runner(socket, "fs_list_dir", payload)
+      end
+    end
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_in("fs_home_dir", %{"ref" => ref} = payload, socket) do
+    if socket.assigns.role == :web do
+      case Registry.whereis(socket.assigns.project_id) do
+        nil ->
+          push(socket, "fs_home_dir_reply", %{
+            ref: ref,
+            erro:
+              "Nenhum runner conectado a este projeto. Rode `brabo-runner " <>
+                "--project #{socket.assigns.project_id} --dir <pasta>` na sua máquina."
+          })
+
+        _pid ->
+          relay_para_runner(socket, "fs_home_dir", payload)
+      end
     end
 
     {:noreply, socket}

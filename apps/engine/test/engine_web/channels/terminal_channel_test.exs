@@ -147,6 +147,106 @@ defmodule EngineWeb.TerminalChannelTest do
     assert mensagem =~ "Nenhum runner conectado"
   end
 
+  describe "fs_list_dir/fs_home_dir (navegação de pasta local)" do
+    test "fs_list_dir sem runner conectado devolve fs_list_dir_reply com erro, nunca fica sem resposta" do
+      project_id = Ecto.UUID.generate()
+      socket = emitir_e_conectar!(project_id, "terminal")
+
+      {:ok, _reply, joined} =
+        Phoenix.ChannelTest.subscribe_and_join(socket, "terminal:#{project_id}", %{})
+
+      refute Registry.connected?(project_id)
+
+      push(joined, "fs_list_dir", %{"ref" => "req-1", "path" => "/home/user"})
+
+      assert_push "fs_list_dir_reply", %{
+        ref: "req-1",
+        path: "/home/user",
+        entradas: [],
+        erro: mensagem
+      }
+
+      assert mensagem =~ "Nenhum runner conectado"
+    end
+
+    test "fs_home_dir sem runner conectado devolve fs_home_dir_reply com erro, nunca fica sem resposta" do
+      project_id = Ecto.UUID.generate()
+      socket = emitir_e_conectar!(project_id, "terminal")
+
+      {:ok, _reply, joined} =
+        Phoenix.ChannelTest.subscribe_and_join(socket, "terminal:#{project_id}", %{})
+
+      push(joined, "fs_home_dir", %{"ref" => "req-2"})
+
+      assert_push "fs_home_dir_reply", %{ref: "req-2", erro: mensagem}
+      assert mensagem =~ "Nenhum runner conectado"
+    end
+
+    test "fs_list_dir da web faz RELAY puro pro runner, e a resposta do runner chega só pra :web" do
+      project_id = Ecto.UUID.generate()
+
+      socket_runner = emitir_e_conectar!(project_id, "runner")
+
+      {:ok, _reply, joined_runner} =
+        Phoenix.ChannelTest.subscribe_and_join(socket_runner, "terminal:#{project_id}", %{})
+
+      socket_web = emitir_e_conectar!(project_id, "terminal")
+
+      {:ok, _reply, joined_web} =
+        Phoenix.ChannelTest.subscribe_and_join(socket_web, "terminal:#{project_id}", %{})
+
+      push(joined_web, "fs_list_dir", %{"ref" => "req-3", "path" => "/home/user/projetos"})
+
+      # relay puro: o engine nunca interpreta o path, só repassa pro runner.
+      assert_push "fs_list_dir", %{"ref" => "req-3", "path" => "/home/user/projetos"}
+
+      push(joined_runner, "fs_list_dir_reply", %{
+        "ref" => "req-3",
+        "path" => "/home/user/projetos",
+        "entradas" => [%{"nome" => "loja", "isDir" => true}]
+      })
+
+      assert_push "fs_list_dir_reply", %{
+        "ref" => "req-3",
+        "entradas" => [%{"nome" => "loja", "isDir" => true}]
+      }
+    end
+
+    test "fs_home_dir da web faz RELAY puro pro runner, e a resposta do runner chega só pra :web" do
+      project_id = Ecto.UUID.generate()
+
+      socket_runner = emitir_e_conectar!(project_id, "runner")
+
+      {:ok, _reply, joined_runner} =
+        Phoenix.ChannelTest.subscribe_and_join(socket_runner, "terminal:#{project_id}", %{})
+
+      socket_web = emitir_e_conectar!(project_id, "terminal")
+
+      {:ok, _reply, joined_web} =
+        Phoenix.ChannelTest.subscribe_and_join(socket_web, "terminal:#{project_id}", %{})
+
+      push(joined_web, "fs_home_dir", %{"ref" => "req-4"})
+
+      assert_push "fs_home_dir", %{"ref" => "req-4"}
+
+      push(joined_runner, "fs_home_dir_reply", %{"ref" => "req-4", "path" => "/home/user"})
+
+      assert_push "fs_home_dir_reply", %{"ref" => "req-4", "path" => "/home/user"}
+    end
+
+    test "fs_list_dir vindo do :runner (papel errado) é ignorado — só :web pode pedir" do
+      project_id = Ecto.UUID.generate()
+      socket = emitir_e_conectar!(project_id, "runner")
+
+      {:ok, _reply, joined} =
+        Phoenix.ChannelTest.subscribe_and_join(socket, "terminal:#{project_id}", %{})
+
+      push(joined, "fs_list_dir", %{"ref" => "req-5", "path" => "/etc"})
+
+      refute_push "fs_list_dir_reply", %{}
+    end
+  end
+
   defp wait_until(fun, tentativas \\ 50)
 
   defp wait_until(_fun, 0), do: flunk("condição não ficou verdadeira a tempo")
