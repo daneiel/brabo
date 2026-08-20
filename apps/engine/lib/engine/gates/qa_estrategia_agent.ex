@@ -38,11 +38,14 @@ defmodule Engine.Gates.QaEstrategiaAgent do
   alias Engine.Gates.Tools.EmitPlanoDeTeste
   alias Engine.Harness.Hooks.{ActionPipeline, EventLog}
   alias Engine.Gates.Hooks.TerminationPlanoDeTeste
-  alias Engine.Harness.Tools.{ReadFile, SearchWorkspace}
+  alias Engine.Harness.Tools.{ReadFile, SearchWorkspace, RagSearch}
   alias Engine.Harness.{ArtifactEmitter, Hooks, ToolLoop}
   alias Engine.Sessions.EngineApiClient
 
-  @registry [ReadFile, SearchWorkspace, EmitPlanoDeTeste]
+  # RagSearch entrou aqui (frente rag_search): o prompt já pede "padrões de
+  # teste do projeto" — é exatamente o que docs/ADRs indexados no RAG
+  # respondem melhor do que vasculhar o worktree às cegas.
+  @registry [ReadFile, SearchWorkspace, RagSearch, EmitPlanoDeTeste]
 
   @doc "Registro de ferramentas — sem Terminal, de propósito (ver moduledoc)."
   def tools, do: @registry
@@ -109,7 +112,8 @@ defmodule Engine.Gates.QaEstrategiaAgent do
       #{descrever_modulos(module_map)}
 
       Use `read_file`/`search_workspace` para entender o que já existe
-      (padrões de teste do projeto, o módulo que a story toca) e então
+      (padrões de teste do projeto, o módulo que a story toca), `rag_search`
+      para achar convenção/ADR já indexado sobre o assunto, e então
       `emit_plano_de_teste` com:
       - `planoDeTeste`: síntese do que precisa ser verificado;
       - `criteriosExecutaveis`: os critérios de aceite reescritos de forma

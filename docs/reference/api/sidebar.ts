@@ -228,6 +228,18 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/internal-graph-controller-upsert",
+          label: "Publica uma versão de template de prompt, idempotente por hash",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/internal-graph-controller-get-by-name",
+          label: "Busca um template de prompt pelo nome",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/internal-models-controller-sync",
           label: "Sincroniza o catálogo de modelos de todos os providers",
           className: "api-method post",
@@ -255,6 +267,12 @@ const sidebar: SidebarsConfig = {
           id: "docs/reference/api/internal-projects-controller-product-metrics",
           label: "O funil de entrega e DORA parcial do projeto, para o PO ler",
           className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/internal-rag-controller-buscar",
+          label: "Busca híbrida no índice RAG do projeto, para a tool do engine",
+          className: "api-method post",
         },
         {
           type: "doc",

@@ -6,6 +6,20 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api,engine**: fundação do grafo de conhecimento — Neo4j (`neo4j-driver`
+  na api, memória DERIVADA do event log, nunca fonte de verdade) para
+  templates de prompt versionados (idempotentes por hash) e memória
+  relacional (interações, hipóteses do Psicólogo, perfis da Anamnese,
+  handoffs). pgvector continua sendo o índice vetorial dos chunks — sem
+  duplicar embedding em dois bancos. Tool nova `rag_search` para os
+  agentes do engine, fechando o maior vão do RAG existente (nenhum agente
+  o consultava até agora); `ollama-model-loader` garante `gemma:1b`,
+  `yi-coder:1.5b` e `nomic-embed-text` no boot, fechando um bug real
+  separado (`nomic-embed-text` nunca era puxado automaticamente).
+  Primeira leva de templates extraída para `prompts/*.md`, sem editar
+  nenhum `.ex` ainda. Padrão inspirado no repositório
+  [ErickWendel/neo4j-ai-experiments](https://github.com/ErickWendel/neo4j-ai-experiments)
+  (RN-413/414/415, ADR 0099/0100)
 - **web,design**: o tema claro deixa de ser inalcançável — `public/theme-boot.js` aplica `data-theme` a partir de `localStorage['brabo.theme']` antes do primeiro paint (arquivo, não script inline, porque a imagem serve sob `script-src 'self'`), e `src/lib/tema.ts` é a API que o shell consome para alternar (ADR 0074, RN-182/RN-183)
 - **design**: os tokens que faltavam do handoff — escala `--fs-*`, raios `--r-xs`/`--r-sm` (mais alias para `--r-md`/`--r-lg`/`--r-pill`), métricas do shell (`--sidebar-w`, `--sidebar-w-collapsed`, `--header-h`, `--tabs-h`) e os nomes `--font-display`/`--shadow-modal` como ALIAS dos existentes
 - **design**: a paleta de realce passa a ter os oito papéis do handoff com prefixo `--syntax-*`, valor próprio por tema e 4,5:1 contra `--code-bg` nos dois — cinco dos oito valores do handoff foram recusados por medição (RN-185)

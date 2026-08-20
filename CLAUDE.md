@@ -1756,6 +1756,50 @@ conhecida, não corrigido aqui — corrigi-lo exigiria mudar a assinatura
 de `deriveAgentRoster`/`rosterFactsFromEvents`, fora do escopo desta
 correção pontual.
 
+## Neo4j como grafo de conhecimento — a fundação (RN-413/414/415, ADR 0099/0100)
+Pedido do dono do produto: Neo4j + `ollama-model-loader` (gemma:1b,
+yi-coder:1.5b, nomic-embed-text), inspirado explicitamente no repositório
+[ErickWendel/neo4j-ai-experiments](https://github.com/ErickWendel/neo4j-ai-experiments)
+— agradecimento registrado no ADR 0099 e em `prompts/README.md`, pela
+inspiração concreta do padrão "prompt como arquivo versionado, não string
+presa no código" e do grafo como memória de agentes.
+
+Duas responsabilidades, uma fundação: **templates de prompt versionados**
+(`PromptTemplate`/`PromptVersion`, idempotente por hash — RN-413) e
+**memória relacional** (interações, hipóteses do Psicólogo com evidência,
+perfis da Anamnese, handoffs — consumo real é onda futura, esta entrega
+só constrói o mecanismo). O grafo é memória DERIVADA, nunca fonte de
+verdade; pgvector continua sendo o índice vetorial dos chunks, sem
+duplicar embedding em dois bancos. Driver `neo4j-driver` na api (não no
+engine) — a api já é dona de toda persistência e do RAG, o engine
+consome por HTTP interno com service token, como sempre.
+
+`rag_search` (RN-414) fecha o maior vão do RAG existente: nenhum agente o
+consultava, só a aba web "Chat RAG". Tool nova no engine, tetos próprios
+(RN-150), degradação sempre visível no início do texto ao modelo.
+`ollama-model-loader` (RN-415) fecha um bug real separado: `nomic-embed-text`
+nunca era puxado automaticamente e o RAG degradava pra léxico-only em
+silêncio em qualquer ambiente limpo.
+
+Primeira leva de templates extraída para `prompts/*.md` (ux-designer,
+Psicólogo, Anamnese, sumarização do `ContextManager`) — **nenhum `.ex` foi
+editado**, os GenServers continuam com o texto inline; consumir os
+templates do grafo é a próxima onda.
+
+**Achado real durante a verificação, registrado porque ensina**: o teste
+de body limit da RN-412 (`apps/api/test/main.spec.ts`) tinha um bug
+LATENTE — `AppModule` importado ESTATICAMENTE no topo do arquivo avalia
+`DrizzleModule` (que cria seu pool de conexão em escopo de MÓDULO, não
+numa factory do Nest) ANTES do `beforeAll` conseguir apontar
+`DATABASE_URL` pra base de teste. Ficou mascarado enquanto a base de dev
+local também estava migrada (mesma tabela, então a query "achava" mesmo
+apontando pro lugar errado); destravou assim que a base de dev foi
+recriada vazia (pelo teste de fumaça real desta própria onda contra
+Neo4j+Postgres). Corrigido com `await import(...)` DINÂMICO dentro do
+`beforeAll`, depois do `DATABASE_URL` já setado — é o padrão a seguir
+sempre que um teste precisa redirecionar `DATABASE_URL` para um
+`AppModule` real.
+
 ## FERRAMENTA DE DESENVOLVIMENTO — `pnpm bootstrap`
 Menu de terminal em `scripts/dev/bootstrap.sh` agrupando o que se faz no
 dia a dia: Docker, K8s, Database e Test. Existe porque esses comandos moram
@@ -1793,7 +1837,10 @@ divide o mesmo banco, recuperar exige `db:migrate` E `engine:migrate`.
 ## Stack (decidida — não proponha alternativas)
 - `apps/api`: NestJS 11 + Drizzle ORM + PostgreSQL 16 + pgvector;
   `nodemailer` para SMTP real do `MailSender` (ADR 0096), atrás de
-  `MAIL_TRANSPORT` — `log` continua o default, inclusive em produção
+  `MAIL_TRANSPORT` — `log` continua o default, inclusive em produção;
+  `neo4j-driver` para o grafo de conhecimento (ADR 0099) — memória
+  DERIVADA do event log, nunca fonte de verdade; pgvector CONTINUA sendo
+  o índice vetorial dos chunks, o grafo não guarda embedding
 - `apps/engine`: Elixir/OTP + Phoenix (canais) + Oban (filas no Postgres)
 - `apps/web`: React 19 + Vite + TanStack Query/Router; `mermaid` (runtime,
   ADR 0068) para o diagrama C4 do Arquiteto, isolado atrás de

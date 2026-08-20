@@ -586,6 +586,25 @@ repositório não tinha chamador nenhum. Agora a área nasce com o projeto
 diz: chave de área inexistente. Projetos anteriores à correção são cobertos
 pela migração de backfill.
 
+### Grafo de conhecimento e RAG ([ADR 0099](../adr/0099-neo4j-grafo-de-conhecimento-e-templates.md)/[0100](../adr/0100-rag-search-e-modelos-garantidos-no-boot.md))
+
+| método | caminho |
+|---|---|
+| GET | `/internal/graph/prompt-templates/:name` |
+| POST | `/internal/graph/prompt-templates` |
+| POST | `/internal/rag/search` |
+
+Fundação sem consumidor real ainda ([RN-413](../business-rules.md#rn-413)/[RN-414](../business-rules.md#rn-414)):
+as duas rotas de template gravam/leem versão de prompt no Neo4j, idempotente
+por hash; `/internal/rag/search` é uma PROJEÇÃO fina sobre
+`HybridSearchUseCase` (a mesma busca híbrida vetor+léxico que a aba "Chat
+RAG" já usa) — service token em vez do JWT de usuário, mesmo formato de
+resposta com `degraded` explícito quando o embedding não estava disponível.
+`scripts/dev/seed-prompts.ts` é o único chamador real de hoje, populando o
+grafo a partir de `prompts/*.md`. Nenhuma das três grava no grafo a partir de
+uma ESCRITA acionada pelo engine em produção — quem escreve interação,
+hipótese, perfil e handoff é onda futura.
+
 ## api → engine
 
 Quinze rotas de comando, mais as de saúde. Sob `/internal` com `VerifyServiceToken`:

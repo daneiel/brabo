@@ -30,7 +30,7 @@ arquivo. Comece pela triagem.
 | ativar sessão não faz nada, ou `transition` responde `500` com `ECONNREFUSED` | [A sessão não sai de `created`](#sessao-nao-ativa) |
 | a api sai no boot reclamando de `GIT_OAUTH_STATE_SECRET` | [A api recusa subir por segredo de OAuth](#segredo-de-oauth-no-boot) |
 | "Entrar com GitHub/GitLab" volta do provider com erro de `redirect_uri` | [O provider recusa o callback do login social](#callback-login-social-nao-registrado) |
-| a api ou o engine saem no boot reclamando de `AUTH_JWT_SECRET`, `BRABO_SERVICE_TOKEN`, `CREDENTIALS_MASTER_KEY` ou `SECRET_KEY_BASE` | [Os quatro segredos irmãos também não sobem com o default](#segredos-irmaos-no-boot) |
+| a api ou o engine saem no boot reclamando de `AUTH_JWT_SECRET`, `BRABO_SERVICE_TOKEN`, `CREDENTIALS_MASTER_KEY`, `SECRET_KEY_BASE` ou `NEO4J_URI`/`NEO4J_USER`/`NEO4J_PASSWORD` | [Os quatro segredos irmãos também não sobem com o default](#segredos-irmaos-no-boot) |
 | quero ligar SMTP real, ou a api sai no boot reclamando de `SMTP_HOST`/`SMTP_USER`/`SMTP_PASSWORD`/`SMTP_FROM` | [SMTP real no `MailSender`](#smtp-real) |
 | agente respondendo vazio, truncado ou lentíssimo | [Ambiente de inferência](#ambiente-de-inferencia) |
 | agente parando com `limite de iterações atingido` sem ter entregado | [Ambiente de inferência](#ambiente-de-inferencia) |
@@ -448,6 +448,25 @@ export SECRET_KEY_BASE="$(openssl rand -base64 64)"
 Em Kubernetes nada muda, pelo mesmo motivo do `GIT_OAUTH_STATE_SECRET`: os
 quatro já vinham de `brabo-secrets`, pela chave de mesmo nome, em
 `deploy/k8s/base/common/externalsecrets.yaml`.
+
+**O grafo de conhecimento (`NEO4J_URI`/`NEO4J_USER`/`NEO4J_PASSWORD`,
+[ADR 0099](adr/0099-neo4j-grafo-de-conhecimento-e-templates.md)) segue a
+mesma régua, com uma diferença**: `NEO4J_URI` e `NEO4J_USER` têm default de
+desenvolvimento seguro (`bolt://neo4j:7687`, `neo4j` — não são segredo, e o
+`docker-compose.prod.yml` já os supre); só `NEO4J_PASSWORD` fica sem
+default público, pelo mesmo motivo dos quatro acima — e sem ela o boot da
+api falha em `GraphStore.onModuleInit` (`neo4j-config.ts`) ANTES mesmo de o
+próprio Neo4j recusar subir (o entrypoint da imagem oficial exige senha com
+8+ caracteres; `NEO4J_AUTH` vazio derruba o container `neo4j` primeiro).
+
+```bash
+export NEO4J_PASSWORD="$(openssl rand -base64 32)"
+```
+
+`docker/smoke.sh` já gera as cinco variáveis efêmeras acima (as quatro
+irmãs e `NEO4J_PASSWORD`) a cada execução — é assim que o job "Build, scan e
+smoke das imagens de produção" do CI sobe o `docker-compose.prod.yml` sem
+segredo nenhum commitado.
 
 Trocar `AUTH_JWT_SECRET` ou `BRABO_SERVICE_TOKEN` sem a dança do `_PREVIOUS`
 tem o mesmo efeito que já era documentado em

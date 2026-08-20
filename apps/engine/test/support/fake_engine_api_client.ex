@@ -459,6 +459,25 @@ defmodule Engine.Sessions.FakeEngineApiClient do
     end
   end
 
+  @impl true
+  def rag_search(project_id, query, top_k, _opts \\ []) do
+    notify({:rag_search, project_id, query, top_k})
+
+    # Mesmo idioma de `list_backlog`/`reply`: `Process.put(:fake_rag_search,
+    # {:error, motivo})` simula a api do RAG fora do ar, sem chave separada.
+    reply(:fake_rag_search, %{"hits" => [], "degraded" => false})
+  end
+
+  @impl true
+  def get_prompt_template(name, version \\ nil) do
+    notify({:prompt_template_fetched, name, version})
+
+    reply(
+      :fake_prompt_template,
+      %{"name" => name, "version" => version || "v1", "body" => "", "hash" => "fake"}
+    )
+  end
+
   # Um valor scriptado já em forma de `{:error, _}` passa direto — assim um
   # teste consegue simular "a api está fora" no MESMO idioma dos scripts de
   # sucesso, sem uma chave separada por endpoint.

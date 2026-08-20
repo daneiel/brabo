@@ -7,10 +7,10 @@ defmodule Engine.Dev.Tools do
   `Engine.Harness.Tools.specs/1`/`find/2`.
   """
 
-  alias Engine.Harness.Tools.{ReadFile, SearchWorkspace, WriteFile, Terminal}
+  alias Engine.Harness.Tools.{ReadFile, SearchWorkspace, WriteFile, Terminal, RagSearch}
   alias Engine.Dev.Tools.{ReportDone, ReportBlocked}
 
-  @registry [ReadFile, SearchWorkspace, WriteFile, Terminal, ReportDone, ReportBlocked]
+  @registry [ReadFile, SearchWorkspace, WriteFile, Terminal, RagSearch, ReportDone, ReportBlocked]
 
   def registry, do: @registry
 end
