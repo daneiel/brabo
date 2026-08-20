@@ -4415,6 +4415,11 @@ nunca sobrescrever a anterior.
 
 ### RN-106 — `git push`, PR e deploy não saem pelo terminal — mesmo dentro do escopo do projeto {#rn-106}
 
+**REVISADA pela [RN-418](#rn-418) (ADR 0102, decisão GLOBAL do dono do
+produto)**: o `deny` que este registro descreve virou TETO ABSOLUTO
+(`require_approval` incondicional) — o resto desta entrada é histórico,
+fiel ao que valia até a revisão.
+
 Dentro do container do projeto o agente é livre (ADR 0065): o allowlist de
 verbos do [ADR 0055](adr/0055-escopo-de-caminho-na-politica-de-terminal.md) não
 converge (achados Z e AD — verbo, forma e invocação são espaços distintos), e a
@@ -9120,6 +9125,214 @@ model-loader reduz a chance de a degradação acontecer em primeiro lugar.
   o custo de vários GB da lista de produção numa máquina compartilhada
 - **Origem:** achado durante a fundação do grafo de conhecimento — ver
   [ADR 0100](adr/0100-rag-search-e-modelos-garantidos-no-boot.md)
+
+---
+
+### RN-416 — O grafo é memória DERIVADA, reconstruível por projeção da outbox {#rn-416}
+
+A alternativa de o engine escrever no Neo4j direto foi RECUSADA — abriria
+um segundo caminho de escrita além do event log, quebrando a garantia de
+fonte única de verdade. `GraphProjector` (api) drena uma SEGUNDA linha de
+outbox, mesma transação de sempre, `aggregateType: 'graph_projection'`
+— valor que o `Engine.Outbox.Drain` do lado engine nunca casa (o filtro
+dele é `aggregate_type IN ('session', 'task')`), evitando a corrida que
+existiria se reusasse `'session'` (o engine já drena e marca esse tipo em
+~2s). Mesmo padrão de `deny-action.use-case.ts`, que já grava em dois
+`aggregateType` na mesma transação.
+
+Instrumentado em dois pontos: `AppendSessionEventUseCase` (para
+`handoff.offered`, `psychologist.hypothesis_proposed`,
+`anamnese.profile_updated` — payload só `{eventId}`, o projector RELÊ o
+envelope completo do event log na hora de projetar, nunca confia numa
+cópia potencialmente velha) e `TransitionSessionUseCase` (para
+`session.closed`/`session.closed_abnormally`, que não passam por
+`session_events`). `GraphProjector` é um poller (~2s, mesmo formato do
+`DomainGaugesCollector`) que chama os casos de uso de gravação já
+existentes da fundação anterior — a idempotência mora NELES (chave
+natural por tipo: `Hipotese.id`, `Handoff(sessionId,seq)`,
+`PerfilAnamnese(userId,dimensao)`, `Interacao.sessionId` com extensão de
+faixa). `GraphUnavailableError` no meio de um lote PARA o ciclo inteiro
+(o resto falharia pelo mesmo motivo) — a linha fica não-processada e
+tenta de novo sozinha no próximo ciclo, sem intervenção.
+
+- **Onde:** `apps/api/src/application/graph-projection/graph-projector.ts`;
+  `apps/api/src/domain/graph/graph-projection-events.ts`;
+  `apps/api/src/application/use-cases/sessions/append-session-event.use-case.ts`,
+  `transition-session.use-case.ts`
+- **Teste:** `graph-projector.spec.ts` (caminho feliz dos quatro tipos;
+  resolução evidência→seq de hipótese; `GraphUnavailableError` deixa a
+  linha sem marcar e para o ciclo; ciclo seguinte reprocessa com
+  sucesso; reprocessar a MESMA linha duas vezes não duplica no grafo);
+  testes novos em `append-session-event.use-case.spec.ts`/
+  `transition-session.use-case.spec.ts` (tipo projetável grava a segunda
+  linha; tipo não-projetável não grava nada extra)
+- **Origem:** ver [ADR 0101](adr/0101-memoria-relacional-como-projecao-do-event-log.md)
+
+---
+
+### RN-417 — Psicólogo e Anamnese consultam por relevância, com degradação declarada para recência {#rn-417}
+
+`Psychologist.ContextBuilder`/`Anamnese.ContextBuilder` continuam lendo o
+que sempre leram (eventos recentes / janela temporal), e ganham uma
+SEGUNDA fonte, `EngineApiClient.rag_search/4`, com uma query derivada do
+GATILHO da análise — a causa de término já classificada, no Psicólogo;
+competências do catálogo ainda sem `current_profile`, na Anamnese
+(NUNCA texto livre de hipótese/racional, pela proibição já estabelecida
+de a Anamnese jamais inferir saúde/personalidade/idade/gênero — a query
+só contém nomes de competência/membro/projeto). Os hits entram no
+orçamento EXISTENTE de `Triage` (`max_prompt_events`/`max_payload_chars`)
+— descontam vagas da janela de recentes, nunca somam por fora dela.
+
+A chamada ao RAG é estritamente ADITIVA: sem hit (RAG indisponível, erro,
+ou simplesmente sem resultado), o comportamento é IDÊNTICO ao de antes
+desta RN — nenhum teste pré-existente precisou mudar. `degraded: true`
+(RAG caiu pra léxico-only por falta de embedding) aparece EXPLICITAMENTE
+no contexto final, nos dois agentes — nunca escondido pelo corte de
+teto.
+
+Os kickoffs de Psicólogo (`psychologist-kickoff`) e Anamnese
+(`anamnese-kickoff`) passam a resolver como TEMPLATE do grafo
+(`EngineApiClient.get_prompt_template/2`) quando `graph_templates_enabled?`
+está ligada (`GRAPH_TEMPLATES_ENABLED`, default `false`) — com fallback
+obrigatório pro texto inline em qualquer falha (api fora, template não
+semeado, flag desligada). `:pinned => true` continua igual nos dois
+caminhos.
+
+**Consumo do restante do grafo (`query_user_context` — hipóteses com
+evidência e perfis lidos DIRETO do Neo4j) fica DECLARADO fora desta
+entrega**: ainda sem rota HTTP exposta do lado api; Psicólogo/Anamnese
+hoje só consultam o RAG (pgvector) via `rag_search`, não o grafo de
+relações em si.
+
+- **Onde:** `apps/engine/lib/engine/psychologist/context_builder.ex`,
+  `apps/engine/lib/engine/workers/psychologist_worker.ex`;
+  `apps/engine/lib/engine/anamnese/context_builder.ex`,
+  `apps/engine/lib/engine/workers/anamnese_worker.ex`
+- **Teste:** `context_builder_test.exs` dos dois agentes (hits presentes;
+  falha do RAG degrada sem erro; `degraded: true` visível; clamp de
+  `top_k`; query derivada do gatilho); `psychologist_worker_test.exs`/
+  `anamnese_worker_test.exs` (template com sucesso e com fallback;
+  `:pinned` idêntico nos dois caminhos; flag desligada nunca chama a api)
+- **Origem:** ver [ADR 0101](adr/0101-memoria-relacional-como-projecao-do-event-log.md)
+
+---
+
+### RN-418 — Efeito externo git e comando privilegiado (sudo/doas) viram teto absoluto, nunca `deny` {#rn-418}
+
+Revisa a [RN-106](#rn-106) por decisão GLOBAL e explícita do dono do
+produto: `git push`, abertura de PR, deploy (a mesma detecção por
+prefixo que a RN-106 já tinha) e `sudo`/`doas` (novo — casados por VERBO
+em `comandoPrivilegiadoNoComando`, varrendo todos os segmentos do
+comando) deixam de ser `deny` incondicional e viram TETO ABSOLUTO —
+`require_approval` incondicional, no MESMO bloco final e MESMO padrão de
+código dos outros tetos (merge protegida, `instruction_patch`,
+`parallelize`/`raise_max_parallel`, escopo de caminho):
+`current.policy === 'auto_approve'` → sobrescrito. Nunca auto-aprovável
+por `agent_autonomy` (inclusive o curinga `"*"` do modo automático) nem
+por `permissions.json`.
+
+A condição que torna isto seguro — sem a qual o teto seria decorativo —
+é a metade que fecha "sempre permitir" NA FONTE:
+`ApproveAlwaysActionUseCase`/`patternForAction` recusam gravar padrão em
+`allow` pra ação de terminal com efeito externo git ou comando
+privilegiado. A instância específica ainda pode ser aprovada pelo fluxo
+normal (`ApproveActionUseCase`); só o clique que gravaria um padrão pra
+sempre é recusado, com mensagem clara. É o mesmo argumento que a RN-106
+original usava pra justificar `deny` — resolvido na origem, não mais
+bloqueando o sintoma.
+
+Um aviso automático de segurança sinalizou esta mudança durante a
+implementação (reescrever uma regra que o produto documentava como
+`deny` absoluto merece escrutínio) — o dono do produto confirmou
+explicitamente, depois de revisar, que a decisão era essa.
+
+- **Onde:** `apps/api/src/domain/actions/decide.ts` (bloco de tetos
+  absolutos), `apps/api/src/domain/actions/external-effect.ts`
+  (`comandoPrivilegiadoNoComando`, `mensagemDeComandoPrivilegiado`),
+  `apps/api/src/application/use-cases/actions/approve-always-action.use-case.ts`
+- **Teste:** `decide.spec.ts` (`git push` com auto mode `"*"` E com
+  `allow` casando no `permissions.json` resolvem pra `require_approval`;
+  `sudo` idem; os tetos anteriores continuam intactos — regressão
+  completa); `approve-always-action.use-case.spec.ts` ("sempre permitir"
+  sobre git com efeito externo/sudo não grava padrão; comando comum
+  continua gravando normalmente — regressão); `external-effect.spec.ts`
+- **Origem:** ver [ADR 0102](adr/0102-revisao-do-adr-0065-teto-absoluto-substitui-deny.md)
+
+---
+
+### RN-419 — O runner local se autentica por ticket de uso único, escopado a projeto e papel {#rn-419}
+
+O canal `terminal:<projectId>` (socket Phoenix novo, `/runner`) recebe
+dois papéis distintos — `:runner` (o CLI na máquina do usuário, no
+máximo UM por projeto, exclusividade garantida por
+`:global.register_name/3`) e `:web` (a aba Terminal, múltiplos
+simultâneos) — e os dois entram autenticados por TICKET DE USO ÚNICO,
+mesmo padrão de segurança da RN-108 (ticket de socket de sessão), com uma
+inversão de propriedade: o ticket é EMITIDO PELO ENGINE
+(`runner_socket_tickets`, schema `"engine"`, migration Ecto própria — não
+uma extensão da tabela de ticket de sessão, que é da api), e a API o pede
+via rota HTTP interna nova (`POST /internal/projects/:projectId/runner-tickets`)
+— o inverso do fluxo de ticket de sessão, onde a api grava direto na
+própria tabela.
+
+`POST /projects/:projectId/runner-ticket` (role `developer`+, recusa se
+`workspaceMode !== 'local'`) e `POST /projects/:projectId/terminal-ticket`
+(role `viewer`+, qualquer modo) são as duas rotas públicas que emitem o
+ticket pro cliente certo — o runner pede a primeira, a web pede a
+segunda. Ticket consumido (validação + `UPDATE` condicional de uso
+único) no `join` do canal; ticket de OUTRO projeto ou reusado nunca abre
+o tópico.
+
+- **Onde:** `apps/engine/lib/engine/runners/socket_ticket.ex`,
+  `apps/engine/lib/engine/runners/registry.ex`,
+  `apps/engine/lib/engine_web/channels/{runner_socket,terminal_channel}.ex`;
+  `apps/api/src/interfaces/http/runner/runner-tickets.controller.ts`,
+  `apps/api/src/application/use-cases/runner/request-runner-ticket.use-case.ts`
+- **Teste:** `runner_socket_test.exs`/`terminal_channel_test.exs` (join
+  com ticket válido sucede; ticket reusado recusa; ticket de outro
+  projeto não abre o tópico errado; segundo `:runner` no mesmo projeto é
+  recusado; um segundo runner consegue conectar depois que o primeiro
+  cai); `request-runner-ticket.use-case.spec.ts`/
+  `runner-tickets.controller.spec.ts` (recusa pra projeto não-`local` no
+  ticket de runner; ticket de terminal funciona pra qualquer modo)
+- **Origem:** ver [ADR 0103](adr/0103-runner-local-execucao-na-maquina-do-usuario.md)
+
+---
+
+### RN-420 — Comando de agente roteado ao runner passa pelo MESMO pipeline de aprovação; PTY é ação do usuário, auditada {#rn-420}
+
+`Engine.Actions.TerminalExecutor` decide rotear um comando pro runner (em
+vez do `System.cmd` de sempre, dentro do container) **DEPOIS** que o
+pipeline normal (`decide()`/`proposed_action`) já aprovou — o roteamento
+é só uma escolha de DESTINO pro mesmo comando já autorizado, nunca um
+segundo caminho de execução que escapa da política (que continua com os
+tetos absolutos da RN-418 valendo igual, sudo/git incluídos). Condição
+pra rotear: `workspace_mode == "local"` E runner conectado
+(`Engine.Runners.Registry.connected?/1`) — sem qualquer uma das duas, o
+comportamento de sempre continua (`System.cmd` no container via
+bind-mount, ADR 0072 vira FALLBACK, nunca removido).
+
+PTY interativo é DIFERENTE: é ação do USUÁRIO autenticado digitando no
+terminal da própria máquina, não do agente — por isso NÃO passa por
+`proposed_action`. Mas precisa deixar rastro: `pty_open`/`pty_close`
+vindos da web emitem `terminal.session.started`/`terminal.session.ended`
+no event log (endereçados à sessão mais recente do projeto,
+`ProjectSession.latest_id/1`, mesmo mecanismo que a Anamnese já usa pra
+narrar algo project-scoped). Achado real na consolidação: sem runner
+conectado, a web precisa de um `pty_error` EXPLÍCITO de volta — descartar
+o pedido só com um log no servidor deixaria a aba presa em "carregando"
+pra sempre, nunca alcançando o estado "sem runner" que a tela já sabia
+mostrar.
+
+- **Onde:** `apps/engine/lib/engine/actions/terminal_executor.ex`,
+  `apps/engine/lib/engine/runners/runner_router.ex`,
+  `apps/engine/lib/engine_web/channels/terminal_channel.ex`
+- **Teste:** `terminal_executor_test.exs` (roteia pro runner com modo
+  `local` + runner conectado; `cwd` passa adiante; cai no caminho atual
+  sem runner conectado; nunca roteia em modo `container`);
+  `terminal_channel_test.exs` (`pty_open` sem runner conectado devolve
+  `pty_error` pra web, nunca fica sem resposta)
+- **Origem:** ver [ADR 0103](adr/0103-runner-local-execucao-na-maquina-do-usuario.md)
 
 ## Workspace pessoal automático no cadastro (RN-410)
 

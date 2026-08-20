@@ -64,6 +64,7 @@ import type {
   SessionKind,
   SocketTicket,
   SocketTicketScope,
+  TerminalTicket,
   CredentialProviderName,
   CredentialTestResult,
   UnreadCursor,
@@ -503,6 +504,17 @@ export const createSocketTicket = (
     `/projects/${projectId}/sessions/${sessionId}/socket-ticket`,
     { scope },
   );
+
+/**
+ * Ticket de uso único pro canal `terminal:<projectId>` — runner local +
+ * PTY interativo (a aba Terminal da FASE 26). Rota própria (`role: viewer`+),
+ * não escopada a sessão: o terminal é do PROJETO, não de uma conversa com
+ * agente. `terminal-channel.ts` chama isto antes de todo `socket.connect()`,
+ * mesmo desenho do `createSocketTicket` acima (RN-108) — ticket é de uso
+ * único, nunca reusado numa reconexão.
+ */
+export const getTerminalTicket = (projectId: string) =>
+  post<TerminalTicket>(`/projects/${projectId}/terminal-ticket`);
 
 // --- Agentes conversacionais / handoffs (Fase 3b) ---
 

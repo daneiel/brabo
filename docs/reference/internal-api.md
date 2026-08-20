@@ -586,7 +586,7 @@ repositório não tinha chamador nenhum. Agora a área nasce com o projeto
 diz: chave de área inexistente. Projetos anteriores à correção são cobertos
 pela migração de backfill.
 
-### Grafo de conhecimento e RAG ([ADR 0099](../adr/0099-neo4j-grafo-de-conhecimento-e-templates.md)/[0100](../adr/0100-rag-search-e-modelos-garantidos-no-boot.md))
+### Grafo de conhecimento e RAG ([ADR 0099](../adr/0099-neo4j-grafo-de-conhecimento-e-templates.md)/[0100](../adr/0100-rag-search-e-modelos-garantidos-no-boot.md)/[0101](../adr/0101-memoria-relacional-como-projecao-do-event-log.md))
 
 | método | caminho |
 |---|---|
@@ -594,16 +594,20 @@ pela migração de backfill.
 | POST | `/internal/graph/prompt-templates` |
 | POST | `/internal/rag/search` |
 
-Fundação sem consumidor real ainda ([RN-413](../business-rules.md#rn-413)/[RN-414](../business-rules.md#rn-414)):
-as duas rotas de template gravam/leem versão de prompt no Neo4j, idempotente
-por hash; `/internal/rag/search` é uma PROJEÇÃO fina sobre
-`HybridSearchUseCase` (a mesma busca híbrida vetor+léxico que a aba "Chat
-RAG" já usa) — service token em vez do JWT de usuário, mesmo formato de
-resposta com `degraded` explícito quando o embedding não estava disponível.
-`scripts/dev/seed-prompts.ts` é o único chamador real de hoje, populando o
-grafo a partir de `prompts/*.md`. Nenhuma das três grava no grafo a partir de
-uma ESCRITA acionada pelo engine em produção — quem escreve interação,
-hipótese, perfil e handoff é onda futura.
+As duas rotas de template gravam/leem versão de prompt no Neo4j, idempotente
+por hash — `Engine.Harness.InstructionFiles` (fonte `:graph`) e os workers do
+Psicólogo/Anamnese resolvem kickoff/identidade por aqui, sempre com fallback
+pro texto inline em qualquer falha ([RN-413](../business-rules.md#rn-413)/[RN-417](../business-rules.md#rn-417)).
+`scripts/dev/seed-prompts.ts` popula o grafo a partir de `prompts/*.md`.
+`/internal/rag/search` é uma PROJEÇÃO fina sobre `HybridSearchUseCase` (a
+mesma busca híbrida vetor+léxico que a aba "Chat RAG" já usa) — service
+token em vez do JWT de usuário, mesmo formato de resposta com `degraded`
+explícito quando o embedding não estava disponível
+([RN-414](../business-rules.md#rn-414)). **Nenhuma das três é o caminho de
+ESCRITA da memória relacional** — handoff, hipótese, perfil e fechamento de
+sessão chegam ao grafo por `GraphProjector`, do lado api, drenando uma
+segunda linha da outbox transacional; o engine nunca escreve no grafo direto
+([RN-416](../business-rules.md#rn-416)).
 
 ## api → engine
 

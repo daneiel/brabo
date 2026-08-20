@@ -29,6 +29,7 @@ PERFIS ATUAIS (revise, não duplique):
 
 {{instructions}}
 {{decisions}}
+{{relevant_snippets}}
 JANELA DO LOG ({{window_from}} → {{window_to}}){{omission_note}}:
 {{events}}
 
@@ -64,6 +65,16 @@ Anamnese). Assim como o kickoff do Psicólogo, esta mensagem nasce com
 - `{{instructions}}` / `{{decisions}}` — blocos de instruções e decisões
   formatados (funções `format_instructions`/`format_decisions` no `.ex`
   original); cada um pode ser vazio dependendo do estado do projeto.
+- `{{relevant_snippets}}` — trechos do projeto (docs/ADRs/sessões
+  indexados) trazidos por `rag_search` (ADR 0099/0100, RN-414), EM
+  COMPOSIÇÃO com a janela temporal — nunca em substituição. A query é
+  montada só com nomes de competência do catálogo ainda sem perfil
+  registrado, nunca com texto livre de hipótese (que poderia falar da
+  PESSOA). Vazio (`""`) quando a consulta não roda (catálogo sem
+  competência descoberta) ou falha (api do RAG fora do ar) — a Anamnese
+  degrada pra só a janela temporal, comportamento anterior a esta leva.
+  Quando roda e vem `degraded: true` (léxico-only, sem embedding), isso
+  aparece como aviso explícito dentro do bloco.
 - `{{window_from}}` / `{{window_to}}` — limites ISO-8601 da janela do log
   analisada nesta rodada.
 - `{{omission_note}}` — mesma lógica do kickoff do Psicólogo: nota visível

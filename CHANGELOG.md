@@ -6,6 +6,28 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api,engine,web,runner**: execução de agente na máquina do usuário —
+  `apps/runner` (workspace novo, CLI `brabo-runner`) conecta ao engine
+  por canal Phoenix com ticket de uso único, executa comando de agente
+  já aprovado no `$SHELL` do usuário e abre terminal PTY interativo na
+  aba Code. Roteamento sempre acontece depois do pipeline de aprovação
+  normal; sem runner conectado, o comportamento de sempre (container)
+  continua. Junto: `git push`/PR/deploy e `sudo`/`doas` saem de `deny`
+  incondicional e viram teto absoluto — sempre pedem aprovação humana,
+  nunca auto-aprováveis mesmo com modo automático ligado, decisão
+  global do dono do produto (RN-418/419/420, ADR 0102/0103)
+- **api,engine**: consumo do grafo de conhecimento — ux-designer,
+  Psicólogo e Anamnese passam a resolver o kickoff/identidade a partir de
+  um template versionado do grafo (com fallback obrigatório pro texto
+  inline, atrás de duas flags separadas, default desligadas). Psicólogo e
+  Anamnese ganham uma segunda fonte de contexto: `rag_search` busca
+  trechos RELEVANTES ao gatilho da análise, compondo (nunca substituindo)
+  a leitura de eventos recentes/janela temporal existente, sempre dentro
+  do orçamento de tokens já declarado. O grafo passa a se escrever
+  sozinho — `GraphProjector` drena uma fila própria da outbox
+  transacional e projeta handoffs, hipóteses do Psicólogo, perfis da
+  Anamnese e fechamento de sessão, sem o engine nunca escrever no grafo
+  diretamente (RN-416/417, ADR 0101)
 - **api,engine**: fundação do grafo de conhecimento — Neo4j (`neo4j-driver`
   na api, memória DERIVADA do event log, nunca fonte de verdade) para
   templates de prompt versionados (idempotentes por hash) e memória

@@ -5,7 +5,22 @@ defmodule Engine.Harness.Agents do
   comportamento, sem LLM); é só o conteúdo da camada `:identidade` do prompt,
   o suficiente pra a camada existir e ser testável. Agentes de produto de
   verdade são a Fase 3b.
+
+  O `ux-designer` é o primeiro consumidor real do grafo de conhecimento
+  (Onda 2, frente C1): a identidade dele resolve via
+  `Engine.Harness.InstructionFiles.graph_template/2` (template
+  `"ux-designer-identity"`, o mesmo nome de `prompts/ux-designer-identity.md`),
+  com FALLBACK pra string inline abaixo — flag desligada
+  (`GRAPH_INSTRUCTION_TEMPLATES_ENABLED`), api fora do ar ou template ainda não semeado
+  degradam pro mesmo texto de sempre, NUNCA prompt vazio. A chamada é
+  SÍNCRONA e bloqueante (mesmo padrão do resto do harness — `InstructionFiles`
+  já bloqueia em IO de banco/arquivo dentro do processo chamador), com o
+  timeout curto de `EngineApiClient` protegendo contra api pendurada.
   """
+
+  alias Engine.Harness.InstructionFiles
+
+  @ux_designer_template "ux-designer-identity"
 
   @identities %{
     "psicologo" => "Você é o Psicólogo: cuida do bem-estar e do alinhamento do time de agentes.",
@@ -74,7 +89,17 @@ defmodule Engine.Harness.Agents do
   @doc """
   Identidade textual do agente. Slug desconhecido cai num fallback genérico
   (não levanta — o harness precisa montar prompt pra qualquer slug).
+
+  `"ux-designer"` tenta o grafo primeiro (ver moduledoc); qualquer outro
+  slug usa direto o texto inline do mapa `@identities`.
   """
+  def identity("ux-designer" = agent) do
+    case InstructionFiles.graph_template(@ux_designer_template) do
+      {:ok, content} -> content
+      :none -> Map.fetch!(@identities, agent)
+    end
+  end
+
   def identity(agent) do
     Map.get(@identities, agent, "Você é o agente #{agent}.")
   end

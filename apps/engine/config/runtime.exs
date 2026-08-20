@@ -208,6 +208,25 @@ config :engine,
     String.to_integer(System.get_env("PSYCHOLOGIST_MAX_PROMPT_EVENTS_PESADA", "400")),
   psychologist_max_payload_chars:
     String.to_integer(System.get_env("PSYCHOLOGIST_MAX_PAYLOAD_CHARS", "600")),
+  # Consumo do grafo pelo Psicólogo (onda de consumo, ver
+  # Engine.Psychologist.ContextBuilder/Engine.Workers.PsychologistWorker):
+  # quantos trechos de RAG relevantes ao GATILHO entram no contexto —
+  # Engine.Psychologist.Triage.rag_top_k/0.
+  psychologist_rag_top_k: String.to_integer(System.get_env("PSYCHOLOGIST_RAG_TOP_K", "3")),
+  # Flag de ROLLOUT do consumo de templates/RAG do grafo (ADR 0099/0100 —
+  # fundação; esta variável nasce NESTA onda, sem doc anterior a conciliar
+  # contra), COMPARTILHADA por todo agente que já sabe falar com o grafo:
+  # decide se o kickoff do Psicólogo TENTA resolver `psychologist-kickoff`
+  # via `EngineApiClient.get_prompt_template/2` (ver
+  # `Engine.Workers.PsychologistWorker.render_kickoff/4`) E se o kickoff da
+  # Anamnese tenta resolver `anamnese-kickoff` (ver
+  # `Engine.Workers.AnamneseWorker.initial_message/1`) antes de cair na
+  # string inline — mesma flag pras duas, não um nome por agente. Mesmo
+  # critério de segurança de `psychologist_enabled?`/`anamnese_enabled?`:
+  # capacidade nova nasce DESLIGADA até provada — e mesmo ligada,
+  # falha/ausência do template (api fora, ainda não semeado) degrada pra
+  # inline sem erro nos dois agentes.
+  graph_templates_enabled?: System.get_env("GRAPH_TEMPLATES_ENABLED", "false") == "true",
   # Anamnese (Fase 4b) — mesma racional dos knobs do Psicólogo acima: teto de
   # custo é coisa que o operador aperta por ambiente, não constante de código.
   # O tick é global e faz fan-out por projeto (ver AnamneseSchedulerWorker).
@@ -227,7 +246,22 @@ config :engine,
   anamnese_max_prompt_events:
     String.to_integer(System.get_env("ANAMNESE_MAX_PROMPT_EVENTS", "500")),
   anamnese_max_payload_chars:
-    String.to_integer(System.get_env("ANAMNESE_MAX_PAYLOAD_CHARS", "600"))
+    String.to_integer(System.get_env("ANAMNESE_MAX_PAYLOAD_CHARS", "600")),
+  # Grafo de conhecimento (Neo4j) como fonte de INSTRUCTION_FILES/identidade
+  # (Onda 2, frente C1) — `Engine.Harness.InstructionFiles.graph_template/2`
+  # e a fonte `:graph` do merge banco > grafo > diretório > raiz. Nome
+  # PRÓPRIO (não `graph_templates_enabled?`, o nome mais genérico que a
+  # frente de consumo abaixo escolheu pra `rag_search`/`get_prompt_template`
+  # em geral) — as duas flags colidiriam com defaults CONTRÁRIOS
+  # (`false` aqui, `true` lá) se dividissem a chave, e a resolução de
+  # `config/2` com chave duplicada fica com a ÚLTIMA ocorrência, silenciando
+  # uma das duas sem erro nenhum. Default DESLIGADO: o seed
+  # (`scripts/dev/seed-prompts.ts`) ainda não populou o grafo em todo
+  # ambiente, e com a flag ligada sem seed rodado a fonte só degrada
+  # silenciosamente pro próximo nível — inofensivo, mas sem ganho nenhum até
+  # alguém rodar o seeder e ativar deliberadamente.
+  graph_instruction_templates_enabled?:
+    System.get_env("GRAPH_INSTRUCTION_TEMPLATES_ENABLED", "false") == "true"
 
 if config_env() == :prod do
   database_url =
