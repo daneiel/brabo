@@ -220,9 +220,7 @@ meio.
 flowchart TD
   A[proposed_action] --> B{papel >= mínimo?}
   B -->|não| D1[deny: IAM insuficiente]
-  B -->|sim| Z{terminal pede git push,<br/>PR ou deploy?}
-  Z -->|sim| D4[deny: fronteira do container<br/>use a ação tipada — RN-106]
-  Z -->|não| C[base: require_approval]
+  B -->|sim| C[base: require_approval]
   C --> D{agent_autonomy tem opinião?}
   D -->|deny| D2[deny]
   D -->|outra| E[adota a opinião]
@@ -235,10 +233,20 @@ flowchart TD
   G --> S{terminal toca caminho<br/>fora da pasta do projeto?}
   G2 --> S
   S -->|sim, e estava auto_approve| I2[TETO: require_approval]
-  S -->|não| H{merge em branch protegida<br/>ou instruction_patch?}
+  S -->|não| Z{terminal pede git push,<br/>PR, deploy, ou sudo/doas?}
+  Z -->|sim, e estava auto_approve| I3[TETO: require_approval — RN-418]
+  Z -->|não| H{merge em branch protegida<br/>ou instruction_patch?}
   H -->|sim, e estava auto_approve| I[TETO: require_approval]
   H -->|não| J[veredito final]
 ```
+
+**O nó `Z` mudou de lugar** ([RN-418](../business-rules.md#rn-418), revisa
+[RN-106](../business-rules.md#rn-106)): até a introdução do runner local,
+ele ficava logo após o IAM e retornava `deny` — agora é um TETO, no mesmo
+bloco final dos outros três, aplicado depois de `agent_autonomy` e
+`permissions.json` já terem opinado. Ver a seção
+["A fronteira de efeito externo e comando privilegiado"](#a-fronteira-de-efeito-externo-e-comando-privilegiado-rn-418)
+abaixo para o porquê.
 
 ### "Auto mode": a curinga de `agent_autonomy` ([RN-153](../business-rules.md#rn-153))
 
@@ -264,33 +272,58 @@ curinga gravada, o toggle passa a editar ELA em vez do tipo representativo
 de sempre, e "manual" nele é a mesma curinga regravada como
 `require_approval`.
 
-## A fronteira do container (RN-106)
+## A fronteira de efeito externo e comando privilegiado (RN-418) {#a-fronteira-de-efeito-externo-e-comando-privilegiado-rn-418}
 
-Aplicada **antes** de qualquer estágio permissivo, e não como teto no fim: `git
-push`, `git remote add`/`set-url`, `git merge`, os CLIs de provider (`gh pr
-create`, `gh pr merge`, `glab mr create`/`merge`, releases e workflow dispatch)
-e os comandos de deploy comuns (`kubectl apply`, `helm upgrade`, `terraform
-apply`, `docker push`, `npm publish`, ...) num comando `terminal` são **`deny`
-imediato**, qualquer que seja o `permissions.json` ou o `agent_autonomy`
-([ADR 0065](../adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md)).
+**Revisão do [ADR 0065](../adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md)
+pelo [ADR 0102](../adr/0102-revisao-do-adr-0065-teto-absoluto-substitui-deny.md)**
+— decisão GLOBAL e explícita do dono do produto, confirmada depois de um
+aviso automático de segurança sobre a mudança (o histórico completo está no
+ADR). O que segue descreve o comportamento ATUAL; a versão anterior
+(`deny` incondicional, aplicado antes de qualquer estágio permissivo) foi
+substituída, não afrouxada — ver por quê logo abaixo.
 
-Não é `require_approval` de propósito: existe "sempre permitir", que grava o
-padrão em `allow` — bastaria um clique para essa segunda porta ficar aberta
-para sempre. `deny` vence `allow` em qualquer estágio, e é a única forma que
-não pode ser contornada por um clique só.
+`git push`, `git remote add`/`set-url`, `git merge`, os CLIs de provider (`gh
+pr create`, `gh pr merge`, `glab mr create`/`merge`, releases e workflow
+dispatch), os comandos de deploy comuns (`kubectl apply`, `helm upgrade`,
+`terraform apply`, `docker push`, `npm publish`, ...) e agora também `sudo`/
+`doas` num comando `terminal` são um **TETO ABSOLUTO** — no mesmo bloco
+final dos outros três tetos (ver ["Os tetos"](#os-tetos) abaixo), aplicado
+depois que `agent_autonomy` e `permissions.json` já opinaram: se o veredito
+até ali era `auto_approve`, vira `require_approval` incondicional. Nem o
+curinga `"*"` de "modo automático" nem uma entrada `allow` no
+`permissions.json` conseguem promover de volta.
 
-O casamento é por **prefixo de tokens** (`apps/api/src/domain/actions/external-effect.ts`),
-ignorando flags globais no meio — `git -C /tmp push` casa `git push`. Cada
-segmento de um comando composto é verificado: `pnpm test && git push origin
-main` é barrado pelo segundo segmento, do mesmo jeito que o comando composto já
-exige que todo segmento case para virar `auto_approve`.
+**Por que `require_approval` agora é seguro, quando antes exigia `deny`.**
+A razão histórica do `deny` era concreta: "sempre permitir" grava o padrão
+em `allow`, e um clique bastaria para reabrir a porta pra sempre. Essa
+fresta foi fechada NA FONTE, não contornada: `ApproveAlwaysActionUseCase`/
+`patternForAction` (`apps/api/src/application/use-cases/actions/approve-always-action.use-case.ts`)
+RECUSAM gravar padrão em `allow` para ação de terminal com efeito externo
+git ou comando privilegiado — o usuário ainda aprova a instância específica
+pelo fluxo normal, mas "sempre permitir" nunca grava o padrão para esses
+dois casos. Sem essa recusa, o teto seria decorativo.
 
-Negar não tira poder do agente: a mensagem de erro diz qual ação **tipada**
-usar — `git_push`, `git_merge` ou `pr_open` — que nasce `proposed_action`,
-segue o pipeline normal (papel mínimo, decisão do usuário) e registra no event
-log o que foi empurrado e para onde. É o caminho que o dev agent já usa hoje
-para propor push (`agent_io.ex`); o que muda é que agora ele é o **único**
-caminho, garantido por código.
+`sudo`/`doas` ganharam categoria própria em `external-effect.ts`
+(`comandoPrivilegiadoNoComando`), casando por VERBO em qualquer segmento —
+mesmo princípio de `efeitoExternoNoComando` para git, que continua casando
+por **prefixo de tokens**, ignorando flags globais no meio (`git -C /tmp
+push` casa `git push`). Cada segmento de um comando composto é verificado:
+`pnpm test && git push origin main` é barrado pelo segundo segmento, do
+mesmo jeito que o comando composto já exige que todo segmento case para
+virar `auto_approve`.
+
+O teto não tira poder do agente: para git, a mensagem de erro continua
+apontando qual ação **tipada** usar — `git_push`, `git_merge` ou `pr_open`
+— que nasce `proposed_action`, segue o pipeline normal e registra no event
+log o que foi empurrado e para onde (é o caminho que o dev agent já usa
+hoje, `agent_io.ex`). `sudo`/`doas` não têm ação tipada equivalente — a
+mensagem só explica por que aquele comando pede decisão humana.
+
+**Onde isto importa mais agora**: o [runner local](../adr/0103-runner-local-execucao-na-maquina-do-usuario.md)
+executa comandos JÁ aprovados na máquina do próprio usuário, com os
+privilégios dele — é exatamente o cenário em que um `sudo` legítimo (ou uma
+tentativa de escapar via `sudo`) precisa de uma parada humana garantida por
+construção, não por convenção de `permissions.json`.
 
 ## Escopo de caminho
 
@@ -373,6 +406,7 @@ Aplicados **por último**, depois de todo o resto:
 | `git_merge` com destino em `dev`, `qa`, `rc` ou `main` | `auto_approve` → `require_approval` | merge em branch protegida é sempre decisão sua ([RN-006](../business-rules.md#rn-006)) |
 | `instruction_patch` | `auto_approve` → `require_approval` | você precisa ver o diff antes que um agente mude o comportamento de outro ([RN-007](../business-rules.md#rn-007)) |
 | `parallelize` e `raise_max_parallel` | `auto_approve` → `require_approval` | gastar com mais agentes é decisão sua; sem este teto o limite do lead seria decorativo, e subir o próprio teto seria o produto elevando o limite de gasto dele mesmo ([RN-086](../business-rules.md#rn-086)) |
+| `terminal` com efeito externo git (push/PR/deploy) ou `sudo`/`doas` | `auto_approve` → `require_approval` | git com efeito externo e comando privilegiado nunca são auto-aprováveis, mesmo com "modo automático" ligado ([RN-418](../business-rules.md#rn-418), revisa [RN-106](../business-rules.md#rn-106)) — ver a seção dedicada acima |
 
 Um teto rebaixa `auto_approve` para `require_approval`; ele **não** transforma
 `deny` em outra coisa, porque `deny` já teria retornado antes.

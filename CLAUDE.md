@@ -560,11 +560,15 @@ e RN-106).
     do container. A metade "dentro o agente é livre" da política de terminal
     AINDA NÃO mudou — o ADR 0055 continua valendo como está até o container
     subir de verdade.
-32. CONCLUÍDO: a fronteira de efeito externo. `git push`, PR e deploy não
-    saem pelo terminal — nem dentro do escopo do projeto —, e a regra é
-    `deny` (não `require_approval`, por causa do "sempre permitir"), com a
+32. CONCLUÍDO À ÉPOCA, REVISADO pelo runner local (ADR 0102/0103, RN-418):
+    a fronteira de efeito externo. `git push`, PR e deploy não saem pelo
+    terminal — nem dentro do escopo do projeto —, e a regra ERA `deny`
+    (não `require_approval`, por causa do "sempre permitir"), com a
     mensagem redirecionando para a ação TIPADA (`git_push`/`git_merge`/
-    `pr_open`), que nasce `proposed_action` (RN-106). Merge em protegida
+    `pr_open`), que nasce `proposed_action` (RN-106, revisada). O `deny`
+    virou TETO ABSOLUTO (`require_approval` incondicional, nunca
+    auto-aprovável) — decisão do dono do produto, "sempre permitir" fechado
+    na fonte para não virar decorativo (ver a seção do runner local). Merge em protegida
     segue manual (RN-014), intocado. Rede e gasto têm veredito próprio no
     ARTEFATO da imagem (`network: none`/`egress`, teto de cpus/memória/pids
     que recusa em vez de rebaixar em silêncio) — decidido UMA vez, não
@@ -1824,6 +1828,64 @@ Neo4j+Postgres). Corrigido com `await import(...)` DINÂMICO dentro do
 sempre que um teste precisa redirecionar `DATABASE_URL` para um
 `AppModule` real.
 
+## Runner local — execução na máquina do usuário (RN-418/419/420, ADR 0102/0103)
+Pedido do dono do produto: agente rodando na MÁQUINA DO USUÁRIO, na pasta
+local do projeto, pelo terminal padrão do usuário — mais terminal
+interativo de verdade na aba Code. Duas mudanças, uma dependendo da outra.
+
+**Política (ADR 0102 — decisão GLOBAL, confirmada explicitamente pelo dono
+do produto depois de um aviso automático de segurança sobre a mudança)**:
+`git push`/PR/deploy (RN-106) e `sudo`/`doas` (novos) saem de `deny`
+incondicional e viram TETO ABSOLUTO — `require_approval` incondicional,
+no MESMO bloco e MESMO padrão dos tetos vizinhos (`current.policy ===
+'auto_approve'`), nunca auto-aprovável por `agent_autonomy`(curinga `"*"`)
+nem por `permissions.json`. A fresta que o `deny` original tapava à força
+foi fechada na FONTE: `ApproveAlwaysActionUseCase`/`patternForAction`
+recusam gravar padrão em `allow` pra ação com efeito externo git ou
+comando privilegiado — "sempre permitir" aprova só a instância, nunca o
+padrão, pra esses dois casos. Sem essa segunda metade, o teto seria
+decorativo. `sudo`/`doas` casam por VERBO em `comandoPrivilegiadoNoComando`
+(`external-effect.ts`), varrendo todos os segmentos do comando, mesmo
+princípio de `efeitoExternoNoComando`.
+
+**Runner (`apps/runner`, novo workspace Node/TS, ADR 0103)**: CLI
+(`brabo-runner --project <id> --dir <pasta>`) que o usuário roda na
+própria máquina, conecta no ENGINE via canal Phoenix NOVO (`/runner`,
+tópico `terminal:<projectId>`) autenticado por ticket de USO ÚNICO (mesmo
+padrão RN-108, mas ticket EMITIDO PELO ENGINE — schema `"engine"`,
+migration própria — e pedido pela api via rota HTTP interna, invertendo o
+fluxo do ticket de sessão). Executa `exec` (comando de agente JÁ APROVADO
+— o roteamento em `TerminalExecutor` só acontece DEPOIS do pipeline de
+`decide()`/`proposed_action` de sempre, nunca antes) no `$SHELL` do
+usuário, e um modo PTY interativo pra aba Terminal (`pty_open`/`pty_data`/
+`pty_input`/`pty_resize`/`pty_close` — o engine faz RELAY puro, nunca
+interpreta os bytes). Só UM runner por projeto (`Engine.Runners.Registry`,
+`:global`, exclusividade de `:global.register_name/3`); modo `local` SEM
+runner conectado cai no caminho de sempre (`System.cmd` no container via
+bind-mount — ADR 0072 vira FALLBACK, não é removido). PTY é ação do
+USUÁRIO autenticado, não passa por `proposed_action`, mas audita
+(`terminal.session.started`/`ended` no event log, inclusive quando a aba
+cai sem `pty_close` explícito).
+
+A fronteira de segurança do runner NÃO é sandboxing — é autenticação
+(o CLI pede um token da CONTA do usuário) + o pipeline de aprovação de
+sempre + o consentimento de o usuário rodar o CLI na própria máquina, com
+os privilégios dele. `apps/runner/src/guard.ts` valida `cwd` dentro da
+raiz por resolução léxica, mas é declarado BEST-EFFORT, não a garantia
+real. **Achado real durante a implementação**: o produto não tem
+mecanismo de token de conta de LONGA DURAÇÃO pra automação — `account_tokens`
+é só pra links de e-mail de uso único (verificação, reset, senha inicial).
+O runner replica o fluxo de login do browser (cookie/CSRF, persistidos em
+`~/.brabo/runner-credentials.json`, 0600) até um mecanismo de token de
+automação de verdade existir — sinalizado no código como o módulo a trocar
+quando isso acontecer.
+
+`@xterm/xterm`/`@xterm/addon-fit` (web) e `phoenix`/`node-pty` (runner)
+são as quatro dependências novas — mesma régua de exceção do `mermaid`
+(ADR 0068): `import()` dinâmico, sem `eval`/`new Function` confirmado por
+grep no pacote instalado (não é garantia formal contra ofuscação, só
+evidência forte — declarado como incerteza, não afirmado como certeza).
+
 ## FERRAMENTA DE DESENVOLVIMENTO — `pnpm bootstrap`
 Menu de terminal em `scripts/dev/bootstrap.sh` agrupando o que se faz no
 dia a dia: Docker, K8s, Database e Test. Existe porque esses comandos moram
@@ -1868,7 +1930,13 @@ divide o mesmo banco, recuperar exige `db:migrate` E `engine:migrate`.
 - `apps/engine`: Elixir/OTP + Phoenix (canais) + Oban (filas no Postgres)
 - `apps/web`: React 19 + Vite + TanStack Query/Router; `mermaid` (runtime,
   ADR 0068) para o diagrama C4 do Arquiteto, isolado atrás de
-  `lib/mermaid-render.ts` com `import()` dinâmico
+  `lib/mermaid-render.ts` com `import()` dinâmico; `@xterm/xterm` +
+  `@xterm/addon-fit` (ADR 0103) para o terminal interativo do runner
+  local, isolado atrás de `lib/xterm-runtime.ts` com `import()` dinâmico
+- `apps/runner`: workspace novo, Node/TS — CLI (`brabo-runner`) que roda
+  na máquina do usuário, conectando ao engine via canal Phoenix (`phoenix`
+  npm) para executar comandos aprovados e terminal interativo
+  (`node-pty`) — ver "Runner local" (ADR 0103)
 - Monorepo pnpm (TS) com apps/engine Elixir ao lado; Docker Compose para dev
 - Auth: first-party no domínio da api (argon2id + access JWT curto +
   refresh opaco com rotação); autorização RBAC no domínio da api
@@ -1927,10 +1995,15 @@ divide o mesmo banco, recuperar exige `db:migrate` E `engine:migrate`.
   ("Modo automático") e desligada pelo mesmo toggle manual/auto do card do
   agente na Visão Geral/Executores. Regra específica sempre vence a
   curinga; a resolução mora no repositório (`findMode`), nunca em
-  `decide()`. Três tetos continuam absolutos MESMO com auto mode ligado, e
-  não têm exceção configurável em lugar nenhum — merge em branch
-  protegida, `instruction_patch` e `parallelize`/`raise_max_parallel`
-  (RN-154).
+  `decide()`. Tetos continuam absolutos MESMO com auto mode ligado, e não
+  têm exceção configurável em lugar nenhum — merge em branch protegida,
+  `instruction_patch`, `parallelize`/`raise_max_parallel` (RN-154), e o
+  teto de efeito externo/comando privilegiado — git push/PR/deploy e
+  sudo/doas — que revisou a RN-106 (RN-418, ADR 0102): antes era `deny`
+  incondicional, agora é `require_approval` incondicional, com a mesma
+  garantia de nunca ser auto-aprovável; "sempre permitir" foi fechado na
+  fonte pra esse teto não virar decorativo (`ApproveAlwaysActionUseCase`
+  recusa gravar padrão pra esses comandos).
 - O projeto escolhe ONDE o código mora, na criação (RN-169, ADR 0072):
   `container` (DEFAULT — a pasta gerenciada em `PROJECT_WORKSPACES_ROOT`, o
   comportamento de sempre) ou `local` (uma pasta do USUÁRIO, caminho absoluto
@@ -1948,8 +2021,11 @@ divide o mesmo banco, recuperar exige `db:migrate` E `engine:migrate`.
   escondida. Enquanto ele não decide, a aba Code responde 409 (RN-105) —
   exceto em projeto no modo `local` (RN-169).
   `git push`, abertura de PR e deploy NÃO saem pelo terminal — a regra é
-  `deny`, não `require_approval`, mesmo dentro do escopo do projeto e mesmo
-  com "sempre permitir" (RN-106, ADR 0065). O ciclo de vida do container tem
+  `require_approval` INCONDICIONAL (teto absoluto, revisado de `deny` pela
+  RN-418/ADR 0102 — decisão GLOBAL do dono do produto: nunca auto-aprovável,
+  mesmo dentro do escopo do projeto, mesmo com auto mode ligado, mesmo com
+  "sempre permitir", que foi fechado na fonte pra não reabrir a porta).
+  `sudo`/`doas` entram na MESMA régua. O ciclo de vida do container tem
   TABELA de estado desde a Onda 4/frente F1 do PROGRAMA 28
   (`project_containers`, ADR 0081, RN-243..248) — mas nenhuma linha dela
   chama Docker: provisionar/reciclar/limpar DE VERDADE ainda não existe,
