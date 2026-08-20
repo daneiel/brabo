@@ -203,6 +203,15 @@ a linha acima — ver [runbook](../runbook.md#projeto-no-modo-local).
 | `OLLAMA_REQUEST_TIMEOUT_MS` | `300000` | teto de **inatividade** do socket do Ollama, não de duração total. Modelo local tem outra ordem de grandeza de latência até o primeiro token, por isso env própria; ver [ambiente de inferência](../runbook.md#ambiente-de-inferencia) |
 | `LLM_REQUEST_TIMEOUT_MS` | `300000` | o mesmo teto de inatividade para os providers de API (OpenAI e compatíveis, Anthropic). Vale para "não mandou nem os headers" e para "parou de mandar chunks no meio do stream" — ver [providers de LLM](llm-providers.md#teto-de-inatividade) |
 
+### Grafo de conhecimento (ADR 0099)
+
+| variável | default | nota |
+|---|---|---|
+| `NEO4J_URI` | — | ex.: `bolt://localhost:7687`. Ausente ou parcial (junto com `NEO4J_USER`/`NEO4J_PASSWORD`) fora de produção = grafo DESLIGADO, rotas dependentes degradam (`GraphUnavailableError`/503) — ninguém precisa de Neo4j local só para rodar a suite. Em produção, ausência de qualquer uma das três derruba o boot |
+| `NEO4J_USER` | — | ver `NEO4J_URI` |
+| `NEO4J_PASSWORD` 🔒 | — | ver `NEO4J_URI`. Sem default público de propósito — não há um "valor de exemplo" plausível pra uma senha de banco |
+| `GRAPH_PROJECTOR_INTERVAL_MS` | `2000` | período do poller que drena a fila `graph_projection` da outbox e escreve handoffs/hipóteses/perfis/interações no grafo (RN-416) |
+
 ### Observabilidade
 
 | variável | default | nota |
@@ -256,6 +265,8 @@ a linha acima — ver [runbook](../runbook.md#projeto-no-modo-local).
 | `SEARCH_WORKSPACE_MAX_BYTES` | `32768` | teto de BYTES do texto final de `search_workspace` ([RN-150](../business-rules.md#rn-150)) — mesma classe de estouro da RN-074/RN-141, pela porta da busca; variável independente |
 | `SEARCH_WORKSPACE_MAX_HITS` | `500` | teto de QUANTIDADE de hits que `search_workspace` coleta antes de montar a resposta ([RN-150](../business-rules.md#rn-150)) — para de escanear/ler conteúdo assim que atinge o teto, evitando pagar I/O de uma árvore com hit demais só para depois truncar por bytes |
 | `SECOPS_SCAN_TIMEOUT_MS` | `180000` | 3 min para o scanner do SecOps |
+| `TRANSPORT_MAX_BODY_BYTES` | `8388608` (8 MiB) | teto de TRANSPORTE que a compactação de contexto respeita além da janela do modelo ([RN-412](../business-rules.md#rn-412)) — a janela efetiva é `min(context_window, este teto convertido em tokens)`, pra a compactação disparar ANTES do corpo estourar o limite HTTP da api, não só quando o modelo "esqueceria" |
+| `GRAPH_INSTRUCTION_TEMPLATES_ENABLED` | `false` | liga a fonte `:graph` de `InstructionFiles` — hoje só a identidade do ux-designer resolve template do grafo antes do texto inline (RN-413). Nome PRÓPRIO, não `GRAPH_TEMPLATES_ENABLED` abaixo — as duas colidiriam com defaults contrários se dividissem a chave |
 
 ### Psicólogo
 
@@ -267,6 +278,8 @@ a linha acima — ver [runbook](../runbook.md#projeto-no-modo-local).
 | `PSYCHOLOGIST_BUDGET_MICROS_LEVE` / `_PESADA` | `50000` / `300000` | USD 0,05 e USD 0,30 por análise |
 | `PSYCHOLOGIST_MAX_PROMPT_EVENTS_LEVE` / `_PESADA` | `50` / `400` | quantos eventos entram no prompt |
 | `PSYCHOLOGIST_MAX_PAYLOAD_CHARS` | `600` | truncagem do payload de cada evento |
+| `PSYCHOLOGIST_RAG_TOP_K` | `3` | quantos trechos relevantes de `rag_search` entram no contexto, descontados do teto de eventos recentes acima ([RN-417](../business-rules.md#rn-417)) |
+| `GRAPH_TEMPLATES_ENABLED` | `false` | liga a resolução de `psychologist-kickoff`/`anamnese-kickoff` como template do grafo — chave COMPARTILHADA entre Psicólogo e Anamnese (RN-417), não confundir com `GRAPH_INSTRUCTION_TEMPLATES_ENABLED` acima |
 
 ### Anamnese
 
@@ -411,7 +424,7 @@ que uma variável nova não fique documentada em lugar nenhum sem ninguém notar
 
 > ⚠️ Bloco gerado por `pnpm docs:generate`. Não edite à mão — o próximo build sobrescreve.
 
-Inventário extraído do código: **119 variáveis** lidas em tempo de execução. **8** ainda não têm descrição nas tabelas acima.
+Inventário extraído do código: **119 variáveis** lidas em tempo de execução. Todas têm descrição nas tabelas acima.
 
 **api** — 53 variáveis
 
@@ -446,14 +459,14 @@ Inventário extraído do código: **119 variáveis** lidas em tempo de execuçã
 - `GITHUB_OAUTH_CLIENT_SECRET` <sub>(apps/api/src/infrastructure/git/github-oauth-client.ts)</sub>
 - `GITLAB_OAUTH_CLIENT_ID` <sub>(apps/api/src/infrastructure/git/gitlab-oauth-client.ts)</sub>
 - `GITLAB_OAUTH_CLIENT_SECRET` <sub>(apps/api/src/infrastructure/git/gitlab-oauth-client.ts)</sub>
-- `GRAPH_PROJECTOR_INTERVAL_MS` — ⚠️ **sem descrição acima** <sub>(apps/api/src/application/graph-projection/graph-projector.ts)</sub>
+- `GRAPH_PROJECTOR_INTERVAL_MS` <sub>(apps/api/src/application/graph-projection/graph-projector.ts)</sub>
 - `LOG_LEVEL` <sub>(apps/api/src/infrastructure/observability/logger.config.ts)</sub>
 - `MAIL_TRANSPORT` <sub>(apps/api/src/infrastructure/mail/smtp-config.ts)</sub>
 - `METRICS_GAUGE_INTERVAL_MS` <sub>(apps/api/src/infrastructure/observability/domain-gauges.collector.ts)</sub>
 - `MIGRATIONS_FOLDER` <sub>(apps/api/src/db/migrate.ts)</sub>
-- `NEO4J_PASSWORD` — ⚠️ **sem descrição acima** <sub>(apps/api/src/infrastructure/graph/neo4j-config.ts)</sub>
-- `NEO4J_URI` — ⚠️ **sem descrição acima** <sub>(apps/api/src/infrastructure/graph/neo4j-config.ts)</sub>
-- `NEO4J_USER` — ⚠️ **sem descrição acima** <sub>(apps/api/src/infrastructure/graph/neo4j-config.ts)</sub>
+- `NEO4J_PASSWORD` <sub>(apps/api/src/infrastructure/graph/neo4j-config.ts)</sub>
+- `NEO4J_URI` <sub>(apps/api/src/infrastructure/graph/neo4j-config.ts)</sub>
+- `NEO4J_USER` <sub>(apps/api/src/infrastructure/graph/neo4j-config.ts)</sub>
 - `NODE_ENV` <sub>(apps/api/src/infrastructure/graph/neo4j-config.ts)</sub>
 - `OLLAMA_HOST` <sub>(apps/api/src/infrastructure/llm/ollama-provider.ts)</sub>
 - `PROJECT_WORKSPACES_ROOT` <sub>(apps/api/src/infrastructure/filesystem/project-workspaces-root.ts)</sub>
@@ -489,8 +502,8 @@ Inventário extraído do código: **119 variáveis** lidas em tempo de execuçã
 - `ECTO_IPV6` <sub>(apps/engine/config/runtime.exs)</sub>
 - `GATE_RESCUE_INTERVAL_SECONDS` <sub>(apps/engine/config/runtime.exs)</sub>
 - `GATE_RESCUE_STALE_AFTER_SECONDS` <sub>(apps/engine/config/runtime.exs)</sub>
-- `GRAPH_INSTRUCTION_TEMPLATES_ENABLED` — ⚠️ **sem descrição acima** <sub>(apps/engine/config/runtime.exs)</sub>
-- `GRAPH_TEMPLATES_ENABLED` — ⚠️ **sem descrição acima** <sub>(apps/engine/config/runtime.exs)</sub>
+- `GRAPH_INSTRUCTION_TEMPLATES_ENABLED` <sub>(apps/engine/config/runtime.exs)</sub>
+- `GRAPH_TEMPLATES_ENABLED` <sub>(apps/engine/config/runtime.exs)</sub>
 - `LLM_TURN_TIMEOUT_MS` <sub>(apps/engine/config/runtime.exs)</sub>
 - `MIX_TEST_PARTITION` <sub>(apps/engine/config/test.exs)</sub>
 - `MODEL_SYNC_INTERVAL_SECONDS` <sub>(apps/engine/config/runtime.exs)</sub>
@@ -511,7 +524,7 @@ Inventário extraído do código: **119 variáveis** lidas em tempo de execuçã
 - `PSYCHOLOGIST_MAX_PAYLOAD_CHARS` <sub>(apps/engine/config/runtime.exs)</sub>
 - `PSYCHOLOGIST_MAX_PROMPT_EVENTS_LEVE` <sub>(apps/engine/config/runtime.exs)</sub>
 - `PSYCHOLOGIST_MAX_PROMPT_EVENTS_PESADA` <sub>(apps/engine/config/runtime.exs)</sub>
-- `PSYCHOLOGIST_RAG_TOP_K` — ⚠️ **sem descrição acima** <sub>(apps/engine/config/runtime.exs)</sub>
+- `PSYCHOLOGIST_RAG_TOP_K` <sub>(apps/engine/config/runtime.exs)</sub>
 - `PSYCHOLOGIST_TRIAGE_THRESHOLD` <sub>(apps/engine/config/runtime.exs)</sub>
 - `READ_FILE_MAX_BYTES` <sub>(apps/engine/config/runtime.exs)</sub>
 - `SEARCH_WORKSPACE_MAX_BYTES` <sub>(apps/engine/config/runtime.exs)</sub>
@@ -531,7 +544,7 @@ Inventário extraído do código: **119 variáveis** lidas em tempo de execuçã
 - `TOOL_LOOP_MAX_ITERATIONS` <sub>(apps/engine/config/runtime.exs)</sub>
 - `TOOL_LOOP_MAX_ITERATIONS_EXECUCAO` <sub>(apps/engine/config/runtime.exs)</sub>
 - `TOOL_LOOP_MAX_ITERATIONS_GATE` <sub>(apps/engine/config/runtime.exs)</sub>
-- `TRANSPORT_MAX_BODY_BYTES` — ⚠️ **sem descrição acima** <sub>(apps/engine/config/runtime.exs)</sub>
+- `TRANSPORT_MAX_BODY_BYTES` <sub>(apps/engine/config/runtime.exs)</sub>
 - `WEB_ORIGIN` <sub>(apps/engine/config/runtime.exs)</sub>
 
 **web** — 4 variáveis
