@@ -411,9 +411,9 @@ que uma variável nova não fique documentada em lugar nenhum sem ninguém notar
 
 > ⚠️ Bloco gerado por `pnpm docs:generate`. Não edite à mão — o próximo build sobrescreve.
 
-Inventário extraído do código: **115 variáveis** lidas em tempo de execução. **4** ainda não têm descrição nas tabelas acima.
+Inventário extraído do código: **119 variáveis** lidas em tempo de execução. **8** ainda não têm descrição nas tabelas acima.
 
-**api** — 52 variáveis
+**api** — 53 variáveis
 
 - `API_PUBLIC_URL` <sub>(apps/api/src/application/use-cases/auth/start-social-login.use-case.ts)</sub>
 - `AUTH_ACCESS_TOKEN_TTL_MS` <sub>(apps/api/src/infrastructure/security/ed25519-access-token-issuer.ts)</sub>
@@ -446,6 +446,7 @@ Inventário extraído do código: **115 variáveis** lidas em tempo de execuçã
 - `GITHUB_OAUTH_CLIENT_SECRET` <sub>(apps/api/src/infrastructure/git/github-oauth-client.ts)</sub>
 - `GITLAB_OAUTH_CLIENT_ID` <sub>(apps/api/src/infrastructure/git/gitlab-oauth-client.ts)</sub>
 - `GITLAB_OAUTH_CLIENT_SECRET` <sub>(apps/api/src/infrastructure/git/gitlab-oauth-client.ts)</sub>
+- `GRAPH_PROJECTOR_INTERVAL_MS` — ⚠️ **sem descrição acima** <sub>(apps/api/src/application/graph-projection/graph-projector.ts)</sub>
 - `LOG_LEVEL` <sub>(apps/api/src/infrastructure/observability/logger.config.ts)</sub>
 - `MAIL_TRANSPORT` <sub>(apps/api/src/infrastructure/mail/smtp-config.ts)</sub>
 - `METRICS_GAUGE_INTERVAL_MS` <sub>(apps/api/src/infrastructure/observability/domain-gauges.collector.ts)</sub>
@@ -468,7 +469,7 @@ Inventário extraído do código: **115 variáveis** lidas em tempo de execuçã
 - `SMTP_USER` <sub>(apps/api/src/infrastructure/mail/smtp-config.ts)</sub>
 - `WEB_ORIGIN` <sub>(apps/api/src/infrastructure/mail/smtp-mail-sender.ts)</sub>
 
-**engine** — 59 variáveis
+**engine** — 62 variáveis
 
 - `ANAMNESE_BUDGET_MICROS` <sub>(apps/engine/config/runtime.exs)</sub>
 - `ANAMNESE_ENABLED` <sub>(apps/engine/config/runtime.exs)</sub>
@@ -488,6 +489,8 @@ Inventário extraído do código: **115 variáveis** lidas em tempo de execuçã
 - `ECTO_IPV6` <sub>(apps/engine/config/runtime.exs)</sub>
 - `GATE_RESCUE_INTERVAL_SECONDS` <sub>(apps/engine/config/runtime.exs)</sub>
 - `GATE_RESCUE_STALE_AFTER_SECONDS` <sub>(apps/engine/config/runtime.exs)</sub>
+- `GRAPH_INSTRUCTION_TEMPLATES_ENABLED` — ⚠️ **sem descrição acima** <sub>(apps/engine/config/runtime.exs)</sub>
+- `GRAPH_TEMPLATES_ENABLED` — ⚠️ **sem descrição acima** <sub>(apps/engine/config/runtime.exs)</sub>
 - `LLM_TURN_TIMEOUT_MS` <sub>(apps/engine/config/runtime.exs)</sub>
 - `MIX_TEST_PARTITION` <sub>(apps/engine/config/test.exs)</sub>
 - `MODEL_SYNC_INTERVAL_SECONDS` <sub>(apps/engine/config/runtime.exs)</sub>
@@ -508,6 +511,7 @@ Inventário extraído do código: **115 variáveis** lidas em tempo de execuçã
 - `PSYCHOLOGIST_MAX_PAYLOAD_CHARS` <sub>(apps/engine/config/runtime.exs)</sub>
 - `PSYCHOLOGIST_MAX_PROMPT_EVENTS_LEVE` <sub>(apps/engine/config/runtime.exs)</sub>
 - `PSYCHOLOGIST_MAX_PROMPT_EVENTS_PESADA` <sub>(apps/engine/config/runtime.exs)</sub>
+- `PSYCHOLOGIST_RAG_TOP_K` — ⚠️ **sem descrição acima** <sub>(apps/engine/config/runtime.exs)</sub>
 - `PSYCHOLOGIST_TRIAGE_THRESHOLD` <sub>(apps/engine/config/runtime.exs)</sub>
 - `READ_FILE_MAX_BYTES` <sub>(apps/engine/config/runtime.exs)</sub>
 - `SEARCH_WORKSPACE_MAX_BYTES` <sub>(apps/engine/config/runtime.exs)</sub>
