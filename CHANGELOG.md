@@ -6,6 +6,16 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api,engine,web,runner**: execução de agente na máquina do usuário —
+  `apps/runner` (workspace novo, CLI `brabo-runner`) conecta ao engine
+  por canal Phoenix com ticket de uso único, executa comando de agente
+  já aprovado no `$SHELL` do usuário e abre terminal PTY interativo na
+  aba Code. Roteamento sempre acontece depois do pipeline de aprovação
+  normal; sem runner conectado, o comportamento de sempre (container)
+  continua. Junto: `git push`/PR/deploy e `sudo`/`doas` saem de `deny`
+  incondicional e viram teto absoluto — sempre pedem aprovação humana,
+  nunca auto-aprováveis mesmo com modo automático ligado, decisão
+  global do dono do produto (RN-418/419/420, ADR 0102/0103)
 - **api,engine**: consumo do grafo de conhecimento — ux-designer,
   Psicólogo e Anamnese passam a resolver o kickoff/identidade a partir de
   um template versionado do grafo (com fallback obrigatório pro texto

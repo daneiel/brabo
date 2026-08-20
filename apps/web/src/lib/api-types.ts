@@ -221,6 +221,19 @@ export interface SocketTicket {
   expiresAt: string;
 }
 
+/**
+ * Ticket do canal `terminal:<projectId>` (runner local + PTY interativo,
+ * frente paralela em engine/api). Formato PRÓPRIO, diferente de
+ * `SocketTicket`: não é escopado a uma sessão, e `engineWsUrl` viaja no
+ * corpo em vez de derivado de `runtimeConfig` — o canal conecta num socket
+ * NOVO (`/runner`, distinto de `/socket`), então o cliente não presume a
+ * URL, usa a que o servidor devolveu.
+ */
+export interface TerminalTicket {
+  ticket: string;
+  engineWsUrl: string;
+}
+
 export interface Session {
   id: string;
   projectId: string;

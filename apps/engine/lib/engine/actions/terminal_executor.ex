@@ -12,10 +12,22 @@ defmodule Engine.Actions.TerminalExecutor do
   matar o lado Erlang de uma porta não manda SIGKILL pro processo OS por
   trás dela). Aceitável pra este incremento (demo-grade); resolver isso
   de verdade pediria uma lib tipo MuonTrap, não justificada ainda.
+
+  ## Roteamento pro runner local (projeto `local` + runner conectado)
+
+  O comando que chega aqui JÁ foi aprovado pelo pipeline de sempre
+  (`decide()`/`proposed_action` do lado api) — este módulo nunca decide SE
+  um comando pode rodar, só ONDE. Quando o projeto está em modo `local`
+  (ADR 0072) e há um runner conectado (`Engine.Runners.Registry`), o
+  comando é entregue a ele via canal Phoenix (`Engine.Runners.RunnerRouter`)
+  em vez de `System.cmd` local. Sem runner conectado — mesmo em modo
+  `local` — o caminho de sempre (bind-mount + `System.cmd` no container)
+  continua sendo o FALLBACK, nunca removido.
   """
 
   alias Engine.Actions.Workspace
-  alias Engine.Projects.ProjectRepository
+  alias Engine.Projects.{Project, ProjectRepository}
+  alias Engine.Runners.{Registry, RunnerRouter}
 
   @bytes_per_token 4
 
@@ -29,9 +41,59 @@ defmodule Engine.Actions.TerminalExecutor do
       Keyword.get(opts, :timeout_ms) ||
         Application.fetch_env!(:engine, :terminal_action_timeout_ms)
 
-    case Keyword.get(opts, :cwd) do
-      nil -> run_in_project_workspace(project_id, command, timeout)
-      cwd -> execute(cwd, command, timeout)
+    cwd = Keyword.get(opts, :cwd)
+
+    if roteia_para_runner?(project_id) do
+      run_via_runner(project_id, command, cwd, timeout)
+    else
+      case cwd do
+        nil -> run_in_project_workspace(project_id, command, timeout)
+        cwd -> execute(cwd, command, timeout)
+      end
+    end
+  end
+
+  # `Project.get/1` (não `ProjectRepository`, que não expõe workspace_mode)
+  # devolve `nil` pra projeto inexistente/id malformado — degrada pro
+  # caminho de sempre, nunca propaga erro daqui.
+  defp roteia_para_runner?(project_id) do
+    case Project.get(project_id) do
+      %{workspace_mode: "local"} -> Registry.connected?(project_id)
+      _ -> false
+    end
+  rescue
+    _ -> false
+  end
+
+  defp run_via_runner(project_id, command, cwd, timeout) do
+    efetivo_cwd = cwd || workspace_path_local(project_id)
+
+    case RunnerRouter.exec(project_id, command, efetivo_cwd, timeout) do
+      {:ok, payload} ->
+        build_result(
+          Map.get(payload, "output") || "",
+          Map.get(payload, "exitCode"),
+          Map.get(payload, "timedOut") || false
+        )
+
+      # Race: Registry dizia conectado no início de run/3, mas o runner
+      # caiu entre a checagem e o dispatch (ou nunca respondeu). Cai pro
+      # caminho de sempre em vez de falhar a ação inteira.
+      {:error, :not_connected} ->
+        case cwd do
+          nil -> run_in_project_workspace(project_id, command, timeout)
+          cwd -> execute(cwd, command, timeout)
+        end
+
+      {:error, :timeout} ->
+        failed_result("timeout do runner após #{timeout}ms", timed_out: true)
+    end
+  end
+
+  defp workspace_path_local(project_id) do
+    case Project.get(project_id) do
+      %{workspace_path: path} when is_binary(path) -> path
+      _ -> nil
     end
   end
 

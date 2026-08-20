@@ -9,6 +9,16 @@ vi.mock('./CodeDiffPanel', () => ({
   CodeDiffPanel: () => <div>painel de diff</div>,
 }));
 
+// `TerminalPanel` fala com `@xterm/xterm` (import dinâmico) e o canal Phoenix
+// real — testado à parte em `TerminalPanel.test.tsx`. Aqui o que importa é só
+// se `CodeBottomPanel` monta ele na aba certa, ao lado da faixa do ciclo de
+// vida do container.
+vi.mock('./TerminalPanel', () => ({
+  TerminalPanel: ({ projectId }: { projectId: string }) => (
+    <div>terminal do projeto {projectId}</div>
+  ),
+}));
+
 const getContainerLifecycle = vi.fn();
 
 vi.mock('../../lib/api-client', async () => {
@@ -35,10 +45,10 @@ beforeEach(() => {
 });
 
 describe('CodeBottomPanel', () => {
-  it('abre em Terminal, com o estado vazio honesto da FASE 25b', () => {
+  it('abre em Terminal, com o terminal interativo montado', () => {
     montar();
     expect(screen.getByRole('tab', { name: 'Terminal' })).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByText(/terminal interativo do container/)).toBeInTheDocument();
+    expect(screen.getByText('terminal do projeto p-1')).toBeInTheDocument();
   });
 
   it('as quatro abas do handoff existem: Terminal, Problemas, Diff de PR e Saída', () => {
@@ -75,7 +85,7 @@ describe('CodeBottomPanel', () => {
       getContainerLifecycle.mockResolvedValue(null);
       montar();
       expect(
-        await screen.findByText(/ainda não foi provisionado — nenhuma linha/),
+        await screen.findByText(/nunca provisionado \(RN-267\)/),
       ).toBeInTheDocument();
       expect(getContainerLifecycle).toHaveBeenCalledWith('p-1');
     });
@@ -120,7 +130,7 @@ describe('CodeBottomPanel', () => {
     it('trocar para outra aba não busca o ciclo de vida — só a Terminal pergunta', async () => {
       const user = userEvent.setup();
       montar();
-      await screen.findByText(/ainda não foi provisionado/);
+      await screen.findByText(/nunca provisionado \(RN-267\)/);
       const chamadasNaTerminal = getContainerLifecycle.mock.calls.length;
 
       await user.click(screen.getByRole('tab', { name: 'Problemas' }));

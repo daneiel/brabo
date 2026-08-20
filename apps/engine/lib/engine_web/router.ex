@@ -69,5 +69,8 @@ defmodule EngineWeb.Router do
     post "/projects/:projectId/agents/:agent/instructions/invalidate",
          InstructionCommandController,
          :invalidate
+
+    # Runner local + terminal interativo — ver EngineWeb.RunnerTicketCommandController.
+    post "/projects/:projectId/runner-tickets", RunnerTicketCommandController, :create
   end
 end

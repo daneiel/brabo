@@ -47,6 +47,7 @@ produção.
 | `NODE_ENV` | — | `production` liga as validações estritas de CORS e chave |
 | `API_PUBLIC_URL` | `http://localhost:3000` | usada nos callbacks de OAuth de git; errada = callback quebrado |
 | `ENGINE_URL` | `http://localhost:4000` no código, `http://engine:4000` no Compose | comandos síncronos api→engine falham. **Deixe-a vazia no `.env`**: definida ali, ela vence o default do Compose e a api tenta falar com `localhost:4000` de dentro do próprio container — toda ativação de sessão morre em `ECONNREFUSED` e o front não sai do lugar. Cada ambiente já tem o default certo sem a linha |
+| `ENGINE_PUBLIC_URL` | igual a `ENGINE_URL` | usada só para montar `engineWsUrl` (WebSocket) devolvido em `POST .../runner-ticket`/`.../terminal-ticket` — o runner e a web podem estar FORA do cluster, então o endereço interno (`http://engine:4000`) não serve; `ENGINE_URL` continua sendo o usado nas chamadas síncronas api→engine de sempre (RN-419) |
 | `BRABO_VERSION` | `dev` | vira `service.version` no recurso OpenTelemetry — é como se sabe qual build gerou um trace. A imagem de release injeta a tag via `ARG` do `docker-bake.hcl`; fora do release fica `dev`. **Não** aparece no `/health`, que não devolve versão de propósito (ver o `description` da rota) |
 | `MIGRATIONS_FOLDER` | `./src/db/migrations` | — |
 
@@ -424,9 +425,9 @@ que uma variável nova não fique documentada em lugar nenhum sem ninguém notar
 
 > ⚠️ Bloco gerado por `pnpm docs:generate`. Não edite à mão — o próximo build sobrescreve.
 
-Inventário extraído do código: **119 variáveis** lidas em tempo de execução. Todas têm descrição nas tabelas acima.
+Inventário extraído do código: **120 variáveis** lidas em tempo de execução. Todas têm descrição nas tabelas acima.
 
-**api** — 53 variáveis
+**api** — 54 variáveis
 
 - `API_PUBLIC_URL` <sub>(apps/api/src/application/use-cases/auth/start-social-login.use-case.ts)</sub>
 - `AUTH_ACCESS_TOKEN_TTL_MS` <sub>(apps/api/src/infrastructure/security/ed25519-access-token-issuer.ts)</sub>
@@ -452,7 +453,8 @@ Inventário extraído do código: **119 variáveis** lidas em tempo de execuçã
 - `CREDENTIALS_MASTER_KEY` <sub>(apps/api/src/infrastructure/security/envelope-encryption.service.ts)</sub>
 - `CREDENTIALS_MASTER_KEY_PREVIOUS` <sub>(apps/api/src/infrastructure/security/envelope-encryption.service.ts)</sub>
 - `DATABASE_URL` <sub>(apps/api/src/db/migrate.ts)</sub>
-- `ENGINE_URL` <sub>(apps/api/src/infrastructure/http-clients/api-to-engine-client.ts)</sub>
+- `ENGINE_PUBLIC_URL` <sub>(apps/api/src/application/use-cases/runner/request-runner-ticket.use-case.ts)</sub>
+- `ENGINE_URL` <sub>(apps/api/src/application/use-cases/runner/request-runner-ticket.use-case.ts)</sub>
 - `GIT_LOCAL_REPOS_ROOT` <sub>(apps/api/src/infrastructure/git/local-git-provider.ts)</sub>
 - `GIT_OAUTH_STATE_SECRET` <sub>(apps/api/src/infrastructure/security/oauth-state-secret.ts)</sub>
 - `GITHUB_OAUTH_CLIENT_ID` <sub>(apps/api/src/infrastructure/git/github-oauth-client.ts)</sub>

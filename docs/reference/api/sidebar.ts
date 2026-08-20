@@ -526,6 +526,18 @@ const sidebar: SidebarsConfig = {
           label: "Reescreve o permissions.json do projeto",
           className: "api-method put",
         },
+        {
+          type: "doc",
+          id: "docs/reference/api/runner-tickets-controller-runner-ticket",
+          label: "Emite um ticket de uso único para o runner local conectar",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/runner-tickets-controller-terminal-ticket",
+          label: "Emite um ticket de uso único para a aba Terminal da web",
+          className: "api-method post",
+        },
       ],
     },
     {
