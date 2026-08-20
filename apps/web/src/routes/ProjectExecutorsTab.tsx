@@ -4,8 +4,10 @@ import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   useActiveExecutionSession,
   useArchitecture,
+  useCurrentWorkspace,
   useHandoffs,
   usePendingActions,
+  useProjectsSummary,
   useSessionEvents,
   useSessionTokenUsage,
 } from '../lib/hooks';
@@ -75,10 +77,31 @@ export function ProjectExecutorsTab({ projectId }: { projectId: string }) {
   const handoffsQuery = useHandoffs(projectId, sessionId);
   const handoffs = handoffsQuery.data ?? [];
 
-  const executionActivated = events.some((e) => e.type === 'execution.activated');
+  // `execution.activated` é dos PRIMEIROS eventos de uma sessão de execução —
+  // `useSessionEvents` só traz os ÚLTIMOS 200 (`latest: true`), então numa
+  // sessão real ele sai da janela e `events.some(...)` volta a mentir
+  // "nunca ativou". O resumo do workspace (RN-090) agrega TODOS os eventos
+  // no backend (`projects-summary.repository.ts`), então é ele — não a
+  // janela — quem decide se o roster de dev agents aparece.
+  const { data: workspace } = useCurrentWorkspace();
+  const summaryQuery = useProjectsSummary(workspace?.id);
+  const projectSummary = summaryQuery.data?.find((s) => s.projectId === projectId);
+  const executionActivated = projectSummary?.roster.executionActivated ?? false;
   const pendingActionAgentIds = new Set(
     actions.filter((a) => a.status === 'pending').map((a) => a.actor.id),
   );
+  // LIMITAÇÃO CONHECIDA, não corrigida aqui: `deriveAgentRoster` também
+  // decide QA/SecOps por `gatesEverOpened`, calculado por dentro de
+  // `rosterFactsFromEvents` direto sobre a MESMA janela de 200 eventos —
+  // sofre da classe de defeito acima (`pr.gate_changed`/`infra.gate_changed`
+  // saindo da janela numa sessão longa). O resumo do workspace já carrega o
+  // valor agregado certo (`ProjectCardSummary.roster.gatesEverOpened`), mas
+  // corrigi-lo aqui exigiria mudar a ASSINATURA de `deriveAgentRoster`/
+  // `rosterFactsFromEvents` (aceitar um override, como já existe para
+  // `executionActivated`) — fora do escopo desta correção, que não deve
+  // tocar `lib/agent-status.ts`. Duplicar a regra de presença no call site em
+  // vez disso é pior: o próprio comentário de `RosterFacts` explica por que
+  // duas fontes da mesma regra divergem no primeiro agente novo.
   const roster = deriveAgentRoster(
     events,
     architecture?.moduleMap,
@@ -229,7 +252,20 @@ export function ProjectExecutorsTab({ projectId }: { projectId: string }) {
 
       {sessionId && (
         <>
-          {executorGroups.length === 0 ? (
+          {/* `executionActivated` vem do resumo agregado — os três estados
+              da RN-088 aqui: sem eles, um "nenhum dev agent" de CARREGANDO
+              (o resumo ainda não chegou) fica indistinguível do vazio real. */}
+          {summaryQuery.isError ? (
+            <ErroDeCarregamento
+              titulo="Não foi possível saber quem está executando."
+              erro={summaryQuery.error}
+              onTentarDeNovo={() => void summaryQuery.refetch()}
+            />
+          ) : summaryQuery.isPending ? (
+            <div className={styles.sectionSub} aria-busy="true">
+              <Skeleton width={220} height={18} />
+            </div>
+          ) : executorGroups.length === 0 ? (
             <div className={styles.sectionSub}>
               Nenhum dev agent ou QA entrou em ação nesta sessão ainda.
             </div>

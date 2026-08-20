@@ -210,6 +210,26 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **api,engine**: corrigido o `413 request entity too large` que estourava
+  em PRs legítimas no gate de QA/SecOps — causa era da própria api do
+  Brabo, nunca do provider de LLM. A api nunca configurava limite de body
+  do Express (valia o default de 100 KB contra os 8 MB que o Phoenix
+  aceita); `API_JSON_BODY_LIMIT` (default 10 MB) fecha essa ponta. No
+  engine, a compactação de contexto era estruturalmente inalcançável antes
+  do estouro — a estimativa de tokens não contava `toolCalls` e a janela
+  usava só a janela do modelo (128k, ~350 KB antes de compactar); a janela
+  efetiva agora é `min(context_window, teto_de_transporte)`, com corte
+  sempre em fronteira de iteração do `ToolLoop` (RN-412, ADR 0098)
+- **api,web**: a aba Executores/Visão Geral não fica mais vazia com
+  execução real rolando — `executionActivated` era derivado da janela dos
+  últimos 200 eventos, e `execution.activated` (um dos primeiros eventos
+  da sessão) saía dessa janela em qualquer execução longa, apagando o
+  roster inteiro. As duas telas passam a usar o valor agregado sobre
+  TODOS os eventos que o resumo do workspace já calculava (RN-090). A
+  régua de trabalho pendente (`DEV_PENDING_TYPES`) ganhou
+  `dev.awaiting_gate`/`dev.awaiting_approval` — o heartbeat não fecha mais
+  a sessão com dev agent esperando o gate ou uma aprovação (RN-412,
+  estende a RN-411)
 - **api**: sessão de execução não fecha mais por baixo de dev agent
   trabalhando ou travado esperando desbloqueio — o heartbeat de 30s só
   enxergava `agent.status` (vocabulário dos conversacionais), e dev agents
