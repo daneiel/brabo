@@ -94,7 +94,7 @@ describe('TerminalPanel (RN-088)', () => {
       await screen.findByText('nenhum runner conectado a este projeto'),
     ).toBeInTheDocument();
     expect(
-      screen.getByText((texto) => texto.includes('brabo-runner --project proj-1')),
+      screen.getByText((texto) => texto.includes('--project proj-1')),
     ).toBeInTheDocument();
     expect(screen.queryByText('Abrindo terminal…')).not.toBeInTheDocument();
     cleanup();

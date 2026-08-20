@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { C4DiagramView } from './C4DiagramView';
 import type { C4Diagrama } from '../lib/api-types';
 
@@ -65,5 +66,54 @@ describe('C4DiagramView', () => {
 
     expect(await screen.findAllByText('Diagrama vazio.')).toHaveLength(2);
     expect(render_).not.toHaveBeenCalled();
+  });
+
+  /**
+   * Lightbox (ONDA 3 — aba Arquitetura): o botão de ampliar só existe no
+   * estado `pronto` — RN-088, os outros dois estados não têm SVG nenhum
+   * pra mostrar maior.
+   */
+  describe('botão de ampliar (lightbox sobre o Modal)', () => {
+    it('ausente enquanto carrega', () => {
+      render_.mockReturnValue(new Promise(() => {}));
+
+      render(<C4DiagramView diagrama={diagrama()} />);
+
+      expect(screen.queryByRole('button', { name: /Ampliar diagrama/ })).not.toBeInTheDocument();
+    });
+
+    it('ausente quando o diagrama deu erro', async () => {
+      render_.mockRejectedValue(new Error('Parse error'));
+
+      render(<C4DiagramView diagrama={diagrama()} />);
+
+      await screen.findAllByText(/Não foi possível desenhar este diagrama/);
+      expect(screen.queryByRole('button', { name: /Ampliar diagrama/ })).not.toBeInTheDocument();
+    });
+
+    it('presente quando pronto, e clicar abre o SVG dentro do Modal em tamanho maior', async () => {
+      render_.mockResolvedValue({ svg: '<svg data-testid="fake-svg"></svg>' });
+      const user = userEvent.setup();
+
+      render(<C4DiagramView diagrama={diagrama()} />);
+
+      const botoes = await screen.findAllByRole('button', { name: /Ampliar diagrama/ });
+      expect(botoes).toHaveLength(2); // Contexto + Container
+
+      await user.click(botoes[0]);
+
+      // O `Modal` abre com o mesmo título do card clicado ("Contexto") e o
+      // MESMO SVG (agora em três cópias no DOM: o card original de cada um
+      // dos dois diagramas, mais a do lightbox aberto).
+      expect(screen.getAllByText('Contexto').length).toBeGreaterThanOrEqual(1);
+      expect(document.querySelectorAll('[data-testid="fake-svg"]')).toHaveLength(3);
+
+      const fechar = screen.getByRole('button', { name: 'Fechar' });
+      await user.click(fechar);
+
+      await waitFor(() => {
+        expect(document.querySelectorAll('[data-testid="fake-svg"]')).toHaveLength(2);
+      });
+    });
   });
 });

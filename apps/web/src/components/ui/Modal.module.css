@@ -23,6 +23,14 @@
   animation: bpop 0.16s ease-out;
 }
 
+/* Lightbox (ONDA 3 — aba Arquitetura): o SVG do diagrama é vetor e escala
+   sem perda, então o card cresce até quase a viewport inteira em vez do
+   teto de 520px de um diálogo comum. */
+.cardFull {
+  max-width: min(1400px, 96vw);
+  max-height: 94vh;
+}
+
 .header {
   display: flex;
   align-items: center;

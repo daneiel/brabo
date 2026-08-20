@@ -1,0 +1,105 @@
+.semProjeto {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.corpo {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  overflow-x: auto;
+}
+
+.segmentoWrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.segmento {
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  font: inherit;
+}
+
+.segmento:hover:not(:disabled) {
+  background: var(--surface-3, var(--surface-2));
+  color: var(--text-primary);
+}
+
+.segmento:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.segmento:last-child {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.lista {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 320px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 4px;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.item:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+
+.item:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+.estado {
+  padding: 12px 8px;
+  color: var(--text-muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.rodape {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

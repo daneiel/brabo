@@ -66,12 +66,48 @@ export interface PtyCloseMessage {
   sessionRef: string;
 }
 
+/**
+ * Navegação de pasta local (ADR sobre navegação de pasta via o Runner) —
+ * MESMO desenho do `exec`/PTY: correlacionado por `ref`, sempre iniciado
+ * pela `:web`. Leitura pura, nunca passa pelo `guard.ts` (que restringe
+ * `cwd` de comando já APROVADO) — o propósito aqui é o oposto: navegar
+ * LIVRE pela máquina do usuário, com os privilégios que ele já tem no SO.
+ */
+export interface FsEntrada {
+  nome: string;
+  isDir: boolean;
+}
+
+export interface FsListDirMessage {
+  ref: string;
+  path: string;
+}
+
+export interface FsListDirReplyMessage {
+  ref: string;
+  path: string;
+  entradas: FsEntrada[];
+  erro?: string;
+}
+
+export interface FsHomeDirMessage {
+  ref: string;
+}
+
+export interface FsHomeDirReplyMessage {
+  ref: string;
+  path?: string;
+  erro?: string;
+}
+
 export interface RunnerChannelHandlers {
   onExec: (msg: ExecMessage) => void;
   onPtyOpen: (msg: PtyOpenMessage) => void;
   onPtyInput: (msg: PtyDataMessage) => void;
   onPtyResize: (msg: PtyResizeMessage) => void;
   onPtyClose: (msg: PtyCloseMessage) => void;
+  onFsListDir: (msg: FsListDirMessage) => void;
+  onFsHomeDir: (msg: FsHomeDirMessage) => void;
   /** Chamado quando a conexão cai DEPOIS de já ter entrado no canal. */
   onDisconnected?: () => void;
 }
@@ -257,6 +293,20 @@ function registrarHandlers(canal: ChannelLike, handlers: RunnerChannelHandlers):
       handlers.onPtyClose({ sessionRef: msg.sessionRef });
     }
   });
+
+  canal.on('fs_list_dir', (payload: unknown) => {
+    const msg = payload as Partial<FsListDirMessage>;
+    if (typeof msg?.ref === 'string' && typeof msg.path === 'string') {
+      handlers.onFsListDir({ ref: msg.ref, path: msg.path });
+    }
+  });
+
+  canal.on('fs_home_dir', (payload: unknown) => {
+    const msg = payload as Partial<FsHomeDirMessage>;
+    if (typeof msg?.ref === 'string') {
+      handlers.onFsHomeDir({ ref: msg.ref });
+    }
+  });
 }
 
 export function enviarExecResult(canal: ChannelLike, msg: ExecResultMessage): void {
@@ -273,4 +323,12 @@ export function enviarPtyError(canal: ChannelLike, msg: PtyErrorMessage): void {
 
 export function enviarPtyData(canal: ChannelLike, msg: PtyDataMessage): void {
   canal.push('pty_data', msg);
+}
+
+export function enviarFsListDirReply(canal: ChannelLike, msg: FsListDirReplyMessage): void {
+  canal.push('fs_list_dir_reply', msg);
+}
+
+export function enviarFsHomeDirReply(canal: ChannelLike, msg: FsHomeDirReplyMessage): void {
+  canal.push('fs_home_dir_reply', msg);
 }

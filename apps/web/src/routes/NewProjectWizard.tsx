@@ -25,7 +25,8 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Alert } from '../components/ui/Alert';
 import { useToast } from '../components/ui/ToastProvider';
-import { GitHubIcon, GitLabIcon, LocalRepoIcon, PlusIcon } from '../components/ui/icons';
+import { GitHubIcon, GitLabIcon, LocalRepoIcon, PlusIcon, FolderIcon } from '../components/ui/icons';
+import { FolderBrowserModal } from '../components/FolderBrowserModal';
 import styles from './NewProjectWizard.module.css';
 
 type StepKey =
@@ -110,6 +111,10 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
   const [modoDeWorkspace, setModoDeWorkspace] =
     useState<ModoDeWorkspace>('container');
   const [caminhoLocal, setCaminhoLocal] = useState('');
+// Navegação de pasta local via o Runner (ADR sobre navegação de pasta via o
+// Runner): SEM projeto ainda nesta tela (só nasce na confirmação), o modal
+// abre no estado declarado — ver `FolderBrowserModal` sobre `projectId: null`.
+const [navegadorDePastaAberto, setNavegadorDePastaAberto] = useState(false);
   const [erroDeCriacao, setErroDeCriacao] = useState<string | null>(null);
   const [selectedCredentialId, setSelectedCredentialId] = useState<string>();
   const [registering, setRegistering] = useState(false);
@@ -260,6 +265,7 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
   }
 
   return (
+    <>
     <Modal title="Novo projeto" icon={<PlusIcon size={16} />} onClose={onClose}>
       <div className={styles.stepper}>
         {stepKeys.map((key, n) => (
@@ -448,15 +454,28 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
               <label className={styles.fieldLabel} htmlFor="workspace-path">
                 Caminho da pasta
               </label>
-              <Input
-                id="workspace-path"
-                value={caminhoLocal}
-                onChange={(e) => setCaminhoLocal(e.target.value)}
-                placeholder="/home/voce/projetos/loja"
-                autoFocus
-              />
+              <div className={styles.toggleRow}>
+                <Input
+                  id="workspace-path"
+                  value={caminhoLocal}
+                  onChange={(e) => setCaminhoLocal(e.target.value)}
+                  placeholder="/home/voce/projetos/loja"
+                  autoFocus
+                  style={{ flex: 1, minWidth: 0 }}
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setNavegadorDePastaAberto(true)}
+                >
+                  <FolderIcon size={14} />
+                  Procurar pasta...
+                </Button>
+              </div>
               <div className={styles.slugPreview}>
-                caminho absoluto, como ele aparece DENTRO do container
+                caminho absoluto, como ele aparece DENTRO do container — digitar
+                continua funcionando, "Procurar pasta..." é atalho quando o
+                Runner já está conectado (ver o painel abaixo)
               </div>
               {/* O aviso é a decisão do dono do produto declarada na tela: o
                   caminho é livre, e livre só funciona se estiver montado. Sem
@@ -571,6 +590,18 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
         </div>
       </div>
     </Modal>
+    {navegadorDePastaAberto && (
+      // `projectId={null}`: nesta tela o projeto ainda não existe (só nasce
+      // na confirmação) — ver o docblock de `FolderBrowserModal` sobre por
+      // que a navegação não tenta conectar a um runner aqui.
+      <FolderBrowserModal
+        projectId={null}
+        caminhoInicial={caminhoLocal.trim() || undefined}
+        onSelecionar={(caminho) => setCaminhoLocal(caminho)}
+        onClose={() => setNavegadorDePastaAberto(false)}
+      />
+    )}
+    </>
   );
 }
 

@@ -12,7 +12,8 @@
  * Ver o docblock de cada módulo para o desenho de cada parte:
  * `auth.ts` (autenticação + ticket), `channel.ts` (protocolo Phoenix),
  * `exec.ts` (execução não-interativa), `pty.ts` (terminal interativo),
- * `guard.ts` (barreira best-effort de `cwd`).
+ * `guard.ts` (barreira best-effort de `cwd`), `fs-browser.ts` (navegação
+ * de pasta local, sem a barreira de `guard.ts` — ver o docblock dele).
  */
 
 import { existsSync, statSync } from 'node:fs';
@@ -21,15 +22,20 @@ import { obterAccessToken, obterTicketDoRunner } from './auth.ts';
 import {
   conectarCanal,
   enviarExecResult,
+  enviarFsHomeDirReply,
+  enviarFsListDirReply,
   enviarPtyData,
   enviarPtyError,
   enviarPtyOpened,
   JoinRecusadoError,
   type ChannelLike,
   type ExecMessage,
+  type FsHomeDirMessage,
+  type FsListDirMessage,
   type PtyOpenMessage,
 } from './channel.ts';
 import { executarComando } from './exec.ts';
+import { diretorioInicial, listarDiretorio } from './fs-browser.ts';
 import { CwdForaDaRaizError, validarCwdDentroDaRaiz } from './guard.ts';
 import { GerenciadorDePty } from './pty.ts';
 
@@ -155,6 +161,25 @@ function tratarPtyOpen(estado: EstadoDoRunner, msg: PtyOpenMessage): void {
   }
 }
 
+async function tratarFsListDir(estado: EstadoDoRunner, msg: FsListDirMessage): Promise<void> {
+  const canal = estado.canalAtual;
+  if (!canal) return;
+
+  const resultado = await listarDiretorio(msg.path);
+
+  // Canal pode ter caído enquanto listava — não perde silenciosamente, só
+  // não empurra pra um canal que já não existe mais.
+  if (estado.canalAtual !== canal) return;
+  enviarFsListDirReply(canal, { ref: msg.ref, ...resultado });
+}
+
+function tratarFsHomeDir(estado: EstadoDoRunner, msg: FsHomeDirMessage): void {
+  const canal = estado.canalAtual;
+  if (!canal) return;
+
+  enviarFsHomeDirReply(canal, { ref: msg.ref, path: diretorioInicial() });
+}
+
 /**
  * Uma "rodada" de conexão: obtém token+ticket FRESCOS, entra no canal, e só
  * volta quando a conexão cai (ou lança se o join for recusado/não puder
@@ -186,6 +211,8 @@ async function conectarERodar(
       onPtyResize: (msg) =>
         estado.gerenciadorPty.redimensionar(msg.sessionRef, msg.cols, msg.rows),
       onPtyClose: (msg) => estado.gerenciadorPty.fechar(msg.sessionRef),
+      onFsListDir: (msg) => void tratarFsListDir(estado, msg),
+      onFsHomeDir: (msg) => tratarFsHomeDir(estado, msg),
       onDisconnected: () => resolverQueda(),
     },
   });

@@ -383,6 +383,7 @@ motivo na URL.
 | GET | `/projects/:projectId` | role:viewer |
 | PATCH | `/projects/:projectId` | role:maintainer |
 | GET | `/projects/:projectId/models` | role:viewer |
+| GET | `/projects/:projectId/actions` | role:developer |
 | GET | `/projects/:projectId/agent-autonomy` | role:maintainer |
 | PUT | `/projects/:projectId/agent-autonomy` | role:maintainer |
 | DELETE | `/projects/:projectId/agent-bindings/:agentSlug` | role:developer |

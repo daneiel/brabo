@@ -1920,6 +1920,60 @@ sumirem, porque o menu deve dizer o que o produto não faz; e
 um `DROP SCHEMA` puro faria a migração seguinte falhar, e como o engine
 divide o mesmo banco, recuperar exige `db:migrate` E `engine:migrate`.
 
+## Abas agrupadas, PRs project-wide, pasta local via Runner, carrossel do PO (2026-08-20)
+Cinco ondas independentes, rodadas em paralelo por arquivo disputado, vindas
+de uso real da tela de projeto — nenhuma planejada de antemão. A sexta onda
+do mesmo programa (tradução completa de produto e documentação, i18n) é
+maior que as cinco juntas e está em andamento à parte; quando fechar, esta
+seção ganha o resumo dela e o restante do CLAUDE.md (Stack, "Documentação")
+é revisado para registrar `en` como idioma primário.
+
+- **Régua de abas agrupada**: 11 abas soltas viraram 6 no topo — Visão
+  geral, **Agentes ▾** (Executores, Criativo, Chat, Insights), **Dev ▾**
+  (Código, PRs, Aprovações), **Documentação ▾** (Backlog, Arquitetura),
+  Gastos, Configurações — via `GroupedTabs` novo (`apps/web/src/components/
+  ui/GroupedTabs.tsx`), construído POR CIMA do `Tabs` genérico, que
+  continua sem grupo pras outras telas. `ChaveDeAba` continua flat — só a
+  apresentação ficou agrupada, pra não mexer no deep-link `?tab=`. Chat e
+  Chat RAG viram UMA aba (`ProjectChatShell.tsx`) com controle segmentado
+  interno ("Conversar"/"Buscar") — a distinção de negócio entre os dois
+  (RN-202: conversar ativa agente e gasta a chave do owner por turno; RAG é
+  leitura sobre índice, sem agente) não mudou, só o contêiner de UI.
+- **Aba PRs, project-wide**: `ProjectApprovalsTab` escopava "PRs em
+  revisão" à sessão mais recente — a revisão de uma PR de sessão anterior
+  sumia da tela assim que uma sessão nova propunha outra. A aba `prs` nova
+  lista direto do provider de git (nunca por sessão) e cruza com
+  `proposed_action` pendente via `findPendingByProject`, novo, ao lado do
+  método já existente escopado por sessão — decisão usa o `sessionId` da
+  PRÓPRIA ação, nunca `latestSession` (RN-423). É a primeira produtora real
+  de `git_merge` pela UI; a trava de branch protegida (RN-154) continua
+  absoluta e intocada — botão "Merge" só PROPÕE, a aprovação humana
+  continua sendo o único jeito de executar.
+- **Aba Arquitetura**: extraída da Visão Geral (module_map, diagrama C4,
+  ADRs, pendências), que fica com um resumo condensado + link. Primeiro
+  lightbox do design system — `Modal` ganhou `size="full"` — pra ampliar o
+  diagrama C4 (SVG, sem perda de qualidade) (RN-424).
+- **Navegação de pasta local via o Runner (RN-422, ADR 0104)**: revisa a
+  ADR 0072 (que tinha recusado seletor de pasta explicitamente) SEM
+  editá-la — a navegação existe, mas pelo Runner, que já roda com o
+  privilégio real do usuário na máquina dele, nunca pela api enumerando o
+  filesystem do container. Dois eventos novos no canal já existente
+  (`fs_list_dir`/`fs_home_dir`), relay puro do engine, mesmo padrão do PTY.
+  `FolderBrowserModal` funciona onde o projeto já existe; na criação
+  (`NewProjectWizard.tsx`) o projeto só nasce na confirmação, então falta
+  ticket pra conectar ali — gap DECLARADO, o campo de texto livre continua
+  sendo o único caminho na tela de criação. `RunnerOnboardingPanel` novo
+  (compartilhado com a aba Terminal) substitui o `<code>` cru de antes.
+  `apps/runner` ganhou README — publicar de verdade no npm/empacotar
+  binário assinado continua fora do escopo, declarado no README.
+- **Bug do carrossel do PO corrigido (RN-421)**: a leva de promoções
+  pendentes dependia de scan sobre os últimos 200 eventos
+  (`useSessionEvents`) — numa sessão longa, a proposta saía da janela e o
+  carrossel degradava pra card único ou sumia. Mesma classe de bug que a
+  RN-180 já tinha corrigido pra `ContextAside`; a fonte agora é
+  `useBacklog` (completo, sem janela), com fallback por história quando o
+  backlog ainda não respondeu.
+
 ## Stack (decidida — não proponha alternativas)
 - `apps/api`: NestJS 11 + Drizzle ORM + PostgreSQL 16 + pgvector;
   `nodemailer` para SMTP real do `MailSender` (ADR 0096), atrás de

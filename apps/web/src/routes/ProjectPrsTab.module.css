@@ -1,0 +1,31 @@
+.cabecalho {
+  margin-bottom: 16px;
+}
+
+.titulo {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 17px;
+  color: var(--text-primary);
+  margin: 0 0 4px;
+}
+
+.subtitulo {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* O extra por linha (Merge + gate) empilha em COLUNA, à direita — a linha da
+   lista já é apertada o bastante em largura sem forçar tudo numa fileira. */
+.extraLinha {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  max-width: 360px;
+}
+
+.decisaoInline {
+  max-width: 420px;
+}

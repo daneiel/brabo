@@ -9395,6 +9395,129 @@ e-mail sem NENHUM caractere alfanumérico degradam para o literal
 
 ---
 
+### RN-421 — Carrossel de promoção de histórias sobrevive à janela de eventos {#rn-421}
+
+`promocoesPendentes`/o carrossel de promoção do PO (RN-148) não depende mais
+de scan sobre a janela dos últimos 200 eventos de `useSessionEvents`. A fonte
+de conteúdo/contagem é `useBacklog` (`Story.proposedReady`, por sessão,
+completa e sem janela) — numa sessão longa, `backlog.story_promotion_proposed`
+sai da janela enquanto a história continua pendente de verdade, e antes disso
+o carrossel encolhia (ou sumia) silenciosamente. Mesma classe de bug que a
+RN-180 já corrigiu para `ContextAside`.
+
+Quando a story não está no backlog carregado (query ainda não respondeu),
+degrada story a story para o scan de janela de sempre. O ancoramento na
+timeline continua vindo do evento dentro da janela quando ele existir; se o
+evento que abriu a leva já saiu da janela, o carrossel ancora no TOPO do
+trecho visível em vez de sumir — nunca esconder um estado real por causa de
+corte de leitura.
+
+- **Onde:** `apps/web/src/routes/SessionPage.tsx` (`useMemo` `timeline`)
+- **Teste:** `apps/web/src/routes/SessionPage.carrossel-janela-estourada.test.tsx`
+- **ADR:** nenhum — correção de bug, mesma classe já corrigida pela RN-180
+- **Origem:** achado por uso real ("o chat falhou em mostrar o carrossel do PO")
+
+---
+
+### RN-422 — Navegação de pasta local é relay puro pelo Runner, nunca a api enumerando o container {#rn-422}
+
+O canal `terminal:<projectId>` ganha dois eventos, no MESMO desenho de relay
+do PTY: `fs_list_dir`/`fs_home_dir` (`:web` pede, engine faz relay DIRETO
+pro pid do runner registrado, erro imediato quando não há runner conectado
+— nunca fica esperando uma resposta que não vem) e
+`fs_list_dir_reply`/`fs_home_dir_reply` (`:runner` responde, broadcast
+filtrado só pra `:web`, correlacionado por `ref` gerado pelo cliente). A api
+NÃO ganha rota nova nenhuma — ela continua sem enumerar filesystem, o
+argumento que a ADR 0072 já tinha fixado contra um seletor de pasta continua
+de pé. `apps/runner/src/guard.ts` (que restringe `cwd` de comando já
+aprovado à raiz do projeto) de propósito NÃO se aplica à navegação — listar
+diretório é leitura livre pela máquina do usuário, com os privilégios que
+ele já tem, e uma entrada sem permissão é pulada, não aborta a listagem
+inteira.
+
+Gap declarado: o ticket do canal é emitido POR PROJETO já existente — na
+tela de criação de projeto (`NewProjectWizard.tsx`), o projeto só nasce na
+confirmação, então `FolderBrowserModal` recebe `projectId: null` ali e
+mostra o estado declarado em vez de tentar uma conexão impossível; o campo
+de texto livre continua sendo o caminho manual, como antes.
+
+- **Onde:** `apps/engine/lib/engine_web/channels/terminal_channel.ex`;
+  `apps/runner/src/fs-browser.ts`, `apps/runner/src/channel.ts`,
+  `apps/runner/src/index.ts`; `apps/web/src/lib/fs-browser-channel.ts`,
+  `apps/web/src/components/FolderBrowserModal.tsx`,
+  `apps/web/src/components/RunnerOnboardingPanel.tsx`,
+  `apps/web/src/routes/NewProjectWizard.tsx`,
+  `apps/web/src/routes/code/TerminalPanel.tsx`
+- **Teste:** `terminal_channel_test.exs` (relay puro web↔runner, erro
+  imediato sem runner, papel errado ignorado); `fs-browser.spec.ts`
+  (ordenação, pasta vazia/inexistente/arquivo, permissão por entrada);
+  `FolderBrowserModal.test.tsx` (projectId nulo, navegação, seleção, sem
+  runner); `NewProjectWizard.test.tsx` (botão "Procurar pasta...")
+- **ADR:** [0104](adr/0104-navegacao-de-pasta-local-via-o-runner.md), revisa
+  a [0072](adr/0072-projeto-local-ou-container.md) sem editá-la
+- **Origem:** pedido do dono do produto — "não consegui linkar com uma
+  pasta do usuário"
+
+---
+
+### RN-423 — PRs são project-wide; a decisão usa o sessionId da própria ação, nunca a mais recente {#rn-423}
+
+A aba `prs` resolve o defeito de `ProjectApprovalsTab.tsx`, que escopava a
+seção "PRs em revisão" a `usePendingActions(projectId, latestSession?.id)`
+— a revisão pendente de uma sessão anterior desaparecia assim que uma
+sessão nova nascia. A listagem vem direto do provider (`GET
+/projects/:id/code/pull-requests`, já project-wide por desenho); o
+cruzamento com a `proposed_action` correspondente (ex.: `git_merge`) usa
+`ProposedActionRepository.findPendingByProject(projectId, actionType?)`,
+novo, ao lado do já existente escopado por sessão. A decisão
+(aprovar/negar/sempre permitir) usa o `sessionId` que a própria
+`ProposedAction` carrega, nunca `latestSession` — a ação pode ter nascido
+numa sessão diferente da atual.
+
+A aba PRs é a primeira produtora real de `git_merge` pela UI (`actor.kind:
+'user'`); a trava de branch protegida em `decide.ts` (RN-154) segue
+absoluta independente de quem propõe. `git_merge` ganhou corpo próprio no
+card de aprovação em vez do despejo de JSON cru (mesmo defeito que a
+RN-096 já corrigiu para outros tipos).
+
+- **Onde:** `apps/api/src/application/ports/proposed-action-repository.port.ts`,
+  `apps/api/src/infrastructure/persistence/drizzle/proposed-action.repository.ts`,
+  `apps/api/src/application/use-cases/actions/list-project-pending-actions.use-case.ts`,
+  `apps/api/src/interfaces/http/actions/project-actions.controller.ts`
+  (`GET /projects/:projectId/actions?status=pending&actionType=`),
+  `apps/web/src/routes/ProjectPrsTab.tsx`, `apps/web/src/components/ApprovalCard.tsx`
+- **Teste:** `list-project-pending-actions.use-case.spec.ts` (ação pendente
+  de sessão antiga encontrada project-wide; filtro por actionType; nunca
+  devolve ação decidida); `propose-action.use-case.spec.ts` (git_merge com
+  payload real da aba PRs segue pending mesmo com `GitMerge()` em allow, e
+  com agent_autonomy curinga ligado); `ProjectPrsTab.test.tsx` (PRs de
+  múltiplas sessões aparecem juntas; decisão usa o sessionId da ação, não o
+  da sessão mais recente); `ApprovalCard.test.tsx` (corpo próprio de
+  `git_merge`)
+- **ADR:** nenhum — extensão de um caminho de leitura já existente, sem
+  mudar o pipeline de decisão
+- **Origem:** pedido do dono do produto — "não há maneiras de gerir PRs"
+
+---
+
+### RN-424 — O selo da aba Arquitetura conta pendência de validação, nunca "diagrama não gerado" {#rn-424}
+
+`contagens.arquiteturaPendente` (régua de abas) vem de
+`architecture.pendencies.length` (divergência de validação cruzada
+história↔módulo), não de `c4Diagram.status === 'sem_diagrama'`. As outras
+três contagens da régua (`promocoesPendentes`, `aprovacoesPendentes`,
+`hipotesesPendentes`) significam todas "algo espera SUA decisão" — gerar o
+diagrama é trabalho do Arquiteto, não fila de decisão do usuário, e
+badigar por isso seria ruído.
+
+- **Onde:** `apps/web/src/routes/ProjectPage.tsx`
+- **Teste:** `ProjectPage.test.tsx`
+- **ADR:** nenhum
+- **Origem:** decisão de design tomada ao extrair a aba Arquitetura da
+  Visão Geral
+
+---
+
 ## Quando dá errado
 
 | situação | o que o sistema faz |

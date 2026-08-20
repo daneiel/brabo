@@ -9,7 +9,7 @@ import type { GitProviderName } from './lib/api-types';
 import { Shell } from './routes/Shell';
 import { Dashboard } from './routes/Dashboard';
 import { ProjectPage } from './routes/ProjectPage';
-import { ehChaveDeAba, type ChaveDeAba } from './routes/project-tabs';
+import { resolverChaveDeAba, type ChaveDeAba } from './routes/project-tabs';
 import { SessionPage } from './routes/SessionPage';
 import { ProvisioningPage } from './routes/ProvisioningPage';
 import { AdoptionPlanPage } from './routes/AdoptionPlanPage';
@@ -196,8 +196,13 @@ const projectRoute = createRoute({
   // `tab` só existe pra deep-link (ex.: CTA "Definir orçamento" do card do
   // dashboard indo direto pra Configurações) — a navegação normal entre
   // abas continua em estado local, sem escrever na URL a cada clique.
+  //
+  // `resolverChaveDeAba` (não `ehChaveDeAba` sozinho) porque também aceita
+  // os aliases aposentados pela fusão Chat/RAG (`?tab=sessions`,
+  // `?tab=rag`) e os resolve pra `chat` — sem isso, um link antigo caía
+  // silencioso na Visão geral.
   validateSearch: (search: Record<string, unknown>): ProjectSearch => ({
-    tab: ehChaveDeAba(search.tab) ? search.tab : undefined,
+    tab: resolverChaveDeAba(search.tab),
   }),
   component: () => {
     const { projectId } = projectRoute.useParams();

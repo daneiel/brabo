@@ -287,6 +287,20 @@ export const ActivityIcon = (props: IconProps) =>
 export const LogoutIcon = (props: IconProps) =>
   base(['M9 4H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h4', 'M15 16l4-4-4-4', 'M19 12H9'], props);
 
+// Ampliar o diagrama C4 num lightbox (ONDA 3 — aba Arquitetura): primeiro
+// ícone de "expandir" do design system — quatro pontas se afastando do
+// centro, o glifo padrão de "maximizar".
+export const ExpandIcon = (props: IconProps) =>
+  base(
+    [
+      'M8 3H5a2 2 0 0 0-2 2v3',
+      'M16 3h3a2 2 0 0 1 2 2v3',
+      'M21 16v3a2 2 0 0 1-2 2h-3',
+      'M3 16v3a2 2 0 0 0 2 2h3',
+    ],
+    props,
+  );
+
 export const LogoMark = ({ size = 24, ...rest }: IconProps) => (
   <svg
     width={size}

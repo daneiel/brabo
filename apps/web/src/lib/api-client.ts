@@ -789,6 +789,20 @@ export const denyAction = (
     { reason },
   );
 
+// Ações PENDENTES do PROJETO inteiro, em qualquer sessão (Onda 2 — aba PRs).
+// Ao lado de `listActions` (escopado por SESSÃO): esta é a consulta que a
+// aba PRs usa para achar a `proposed_action` correspondente a um PR (ex.: um
+// `git_merge` pendente) sem depender de qual sessão a propôs — o bug de raiz
+// que escondia revisão de sessão antiga em `ProjectApprovalsTab`. Só
+// `status=pending` é suportado hoje.
+export const getProjectPendingActions = (
+  projectId: string,
+  opts: { actionType?: ActionType } = {},
+) =>
+  get<ProposedAction[]>(
+    `/projects/${projectId}/actions${qs({ status: 'pending', actionType: opts.actionType })}`,
+  );
+
 // --- LLM: modelos, bindings, credenciais, budgets ---
 
 // Pende do PROJETO desde o ADR 0049: a curadoria é por workspace, e o

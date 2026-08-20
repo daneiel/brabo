@@ -1,0 +1,69 @@
+---
+id: project-actions-controller-list
+title: "Lista as ações PENDENTES do projeto inteiro, em qualquer sessão"
+description: "Só `status=pending` é suportado hoje (omitir também vale como pending). `actionType` filtra por tipo — ex.: `git_merge`, para a aba PRs achar a proposta de merge de um PR sem saber qual sessão a criou."
+sidebar_label: "Lista as ações PENDENTES do projeto inteiro, em qualquer sessão"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "get api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Lista as ações PENDENTES do projeto inteiro, em qualquer sessão"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/projects/{projectId}/actions"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Só `status=pending` é suportado hoje (omitir também vale como pending). `actionType` filtra por tipo — ex.: `git_merge`, para a aba PRs achar a proposta de merge de um PR sem saber qual sessão a criou.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./project-actions-controller-list.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./project-actions-controller-list.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./project-actions-controller-list.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

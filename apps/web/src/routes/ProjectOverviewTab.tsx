@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from '@tanstack/react-router';
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   useArchitecture,
@@ -33,10 +34,9 @@ import type { AutonomyMode } from '../components/AgentCard';
 import { AgentTeamGrid } from '../components/AgentTeamGrid';
 import { AgentTimelineTree } from '../components/AgentTimelineTree';
 import { ActivityFeed } from '../components/ActivityFeed';
-import { C4DiagramView } from '../components/C4DiagramView';
 import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
 import { Skeleton } from '../components/ui/Skeleton';
-import { Badge, type BadgeTone } from '../components/ui/Badge';
+import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { useToast } from '../components/ui/ToastProvider';
 import type { AgentAutonomyActionType, Architecture, ProposedAction, SessionEvent } from '../lib/api-types';
@@ -269,7 +269,7 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
           onRetryExecutionActivated={() => void summaryQuery.refetch()}
         />
 
-        <ArchitectureSection architecture={architecture} />
+        <ArchitectureSummary projectId={projectId} architecture={architecture} />
       </div>
 
       <aside className={styles.aside}>
@@ -526,116 +526,40 @@ function ExecutionSection({
   );
 }
 
-const ADR_TONE: Record<string, BadgeTone> = {
-  pending: 'warning',
-  approved: 'accent',
-  executed: 'success',
-  failed: 'danger',
-  denied: 'muted',
-};
-
-function ArchitectureSection({ architecture }: { architecture?: Architecture }) {
-  const moduleMap = architecture?.moduleMap;
-  const adrs = architecture?.adrs ?? [];
-  const pendencies = architecture?.pendencies ?? [];
-  const c4Diagram = architecture?.c4Diagram;
-
-  const isEmpty = !moduleMap && adrs.length === 0 && pendencies.length === 0;
+/**
+ * Resumo condensado (PROGRAMA de abas agrupadas — Onda 3): a seção INTEIRA
+ * (módulos, diagrama, ADRs, pendências) virou aba própria
+ * (`ProjectArchitectureTab.tsx`, extraída 1:1 daqui) — repeti-la aqui seria
+ * duplicar o corpo inteiro, o mesmo erro que a Onda 1 já evitou para PRs.
+ * O que fica é o suficiente para decidir se vale abrir a aba: quantos
+ * módulos existem e se o diagrama já foi gerado.
+ */
+function ArchitectureSummary({
+  projectId,
+  architecture,
+}: {
+  projectId: string;
+  architecture?: Architecture;
+}) {
+  const moduleCount = architecture?.moduleMap?.modules.length ?? 0;
+  const diagramaGerado = architecture?.c4Diagram.status === 'gerado';
 
   return (
     <div className={styles.arch}>
       <div className={styles.sectionHeader}>Arquitetura</div>
-      {isEmpty ? (
-        <div className={styles.sectionSub}>
-          Sem arquitetura ainda — o Arquiteto gera o module_map e os ADRs.
-        </div>
-      ) : (
-        <>
-          <div className={styles.archLabel}>
-            Módulos {moduleMap ? `· v${moduleMap.version}` : ''}
-          </div>
-          {!moduleMap || moduleMap.modules.length === 0 ? (
-            <div className={styles.sectionSub}>Nenhum módulo ainda.</div>
-          ) : (
-            <div className={styles.moduleGrid}>
-              {moduleMap.modules.map((m) => (
-                <div key={m.name} className={styles.moduleCard}>
-                  <div className={styles.moduleName}>{m.name}</div>
-                  <div className={styles.moduleStack}>{m.stack}</div>
-                  <div className={styles.moduleResp}>{m.responsibility}</div>
-                  {m.dependsOn.length > 0 && (
-                    <div className={styles.deps}>
-                      {m.dependsOn.map((d) => (
-                        <span key={d} className={styles.depChip}>
-                          {d}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className={styles.archLabel}>
-            Diagrama C4 {c4Diagram?.status === 'gerado' ? `· v${c4Diagram.version}` : ''}
-          </div>
-          {c4Diagram?.status === 'gerado' && c4Diagram.diagrama ? (
-            <C4DiagramView diagrama={c4Diagram.diagrama} />
-          ) : (
-            <div className={styles.sectionSub}>
-              Sem diagrama ainda — o Arquiteto gera o Context + Container a partir do
-              module_map (create_c4_diagram).
-            </div>
-          )}
-
-          <div className={styles.archLabel}>ADRs</div>
-          {adrs.length === 0 ? (
-            <div className={styles.sectionSub}>Nenhum ADR proposto ainda.</div>
-          ) : (
-            <ul className={styles.adrList}>
-              {adrs.map((adr) => (
-                <li key={adr.actionId} className={styles.adrItem}>
-                  <Badge tone={ADR_TONE[adr.status] ?? 'muted'}>{adr.status}</Badge>
-                  {adr.pullRequestUrl ? (
-                    <a
-                      href={adr.pullRequestUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className={styles.adrLink}
-                    >
-                      {adr.title}
-                    </a>
-                  ) : (
-                    <span>{adr.title}</span>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-
-          {pendencies.length > 0 && (
-            <>
-              <div className={styles.archLabel}>
-                Pendências de validação cruzada
-                <Badge tone="danger">{pendencies.length}</Badge>
-              </div>
-              <ul className={styles.pendList}>
-                {pendencies.map((p) => (
-                  <li key={p.storyId} className={styles.pendItem}>
-                    <span className={styles.pendTitle}>{p.title}</span>
-                    <span className={styles.pendReason}>
-                      {p.reason === 'no_module'
-                        ? 'sem módulo vinculado'
-                        : `módulo inexistente: ${p.missing.join(', ')}`}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-        </>
-      )}
+      <div className={styles.sectionSub}>
+        {moduleCount > 0
+          ? `${moduleCount} módulo${moduleCount === 1 ? '' : 's'} mapeado${moduleCount === 1 ? '' : 's'}, diagrama C4 ${diagramaGerado ? 'gerado' : 'pendente'}.`
+          : 'Sem arquitetura ainda — o Arquiteto gera o module_map e os ADRs.'}{' '}
+        <Link
+          to="/projects/$projectId"
+          params={{ projectId }}
+          search={{ tab: 'arquitetura' }}
+          className={styles.adrLink}
+        >
+          Ver arquitetura completa →
+        </Link>
+      </div>
     </div>
   );
 }

@@ -304,6 +304,63 @@ describe('ApprovalCard', () => {
   });
 
   /**
+   * Onda 2 do programa de abas agrupadas (aba PRs) — `git_merge` tinha corpo
+   * genérico até aqui e caía no despejo de JSON cru (`COM_CORPO_PROPRIO` não
+   * o listava), o mesmo defeito que a RN-096 já tinha corrigido para
+   * `pr_open`/`instruction_patch`/etc. A aba PRs é a primeira produtora real
+   * de `git_merge` pela UI.
+   */
+  describe('git_merge (Onda 2 — aba PRs)', () => {
+    function mergeAction(payload: Record<string, unknown> = {}) {
+      return makeAction({
+        actionType: 'git_merge',
+        payload: {
+          pullRequestId: '218',
+          sourceBranch: 'feature/task-a1b2c3d4',
+          targetBranch: 'dev',
+          title: 'feat: aba de PRs',
+          ...payload,
+        },
+      });
+    }
+
+    it('mostra branches e título — não o payload cru', () => {
+      render(
+        <ApprovalCard
+          action={mergeAction()}
+          variant="queue"
+          onApprove={vi.fn()}
+          onDeny={vi.fn()}
+          onAlwaysAllow={vi.fn()}
+        />,
+      );
+
+      // Corpo próprio nasce colapsado na variante "queue" — abre para ler.
+      fireEvent.click(screen.getByRole('button', { name: 'Detalhes' }));
+
+      expect(screen.getByText('feat: aba de PRs')).toBeTruthy();
+      expect(screen.getByText('feature/task-a1b2c3d4')).toBeTruthy();
+      expect(screen.getByText('dev')).toBeTruthy();
+      expect(screen.queryByText(/"pullRequestId"/)).toBeNull();
+    });
+
+    it('sem título no payload, degrada para "Pull request #<id>"', () => {
+      render(
+        <ApprovalCard
+          action={mergeAction({ title: undefined })}
+          variant="queue"
+          onApprove={vi.fn()}
+          onDeny={vi.fn()}
+          onAlwaysAllow={vi.fn()}
+        />,
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: 'Detalhes' }));
+      expect(screen.getByText('Pull request #218')).toBeTruthy();
+    });
+  });
+
+  /**
    * A regressão que isto existe para pegar: a união `ActionType` do web era um
    * subconjunto da do backend, e `ACTION_ICON[actionType]` devolvia `undefined`
    * para o resto — o que o React trata como componente inválido e derruba a

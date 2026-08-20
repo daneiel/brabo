@@ -2793,6 +2793,76 @@
         ]
       }
     },
+    "/projects/{projectId}/actions": {
+      "get": {
+        "description": "Só `status=pending` é suportado hoje (omitir também vale como pending). `actionType` filtra por tipo — ex.: `git_merge`, para a aba PRs achar a proposta de merge de um PR sem saber qual sessão a criou.",
+        "operationId": "ProjectActionsController_list",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "pending",
+              "type": "string"
+            }
+          },
+          {
+            "name": "actionType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "git_merge",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProposedActionResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Lista as ações PENDENTES do projeto inteiro, em qualquer sessão",
+        "tags": [
+          "ações"
+        ]
+      }
+    },
     "/projects/{projectId}/agent-areas": {
       "get": {
         "description": "O projeto nasce com as três áreas (RN-094), então a lista vem cheia mesmo antes de haver `module_map`. O que a ativação de execução acrescenta são os MEMBROS da área de dev, um por módulo.",

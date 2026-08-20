@@ -1185,56 +1185,226 @@ export function SessionPage({
         }, -1)
       : -1;
 
-    // Carrossel de histórias (RN-148) — pré-passada pra saber, ANTES de
-    // decidir como cada `backlog.story_promotion_proposed` aparece, se as
-    // pendentes formam uma LEVA (2+ ao mesmo tempo). Mesmo critério de
-    // "resolvida" que o card avulso já checa por evento (`_transitioned`/
-    // `_promotion_returned` posterior com o mesmo storyId), olhado de uma
-    // vez só pra sessão inteira.
-    const promocoesPendentes = events
-      .filter((e) => e.type === 'backlog.story_promotion_proposed')
-      .map((e) => {
-        const payload = e.payload as {
-          storyId?: unknown;
-          title?: unknown;
-          description?: unknown;
-          rf?: unknown;
+    // Carrossel de histórias (RN-148) — a leva é o conjunto de histórias
+    // REALMENTE pendentes de promoção NESTA sessão, e essa verdade NÃO PODE
+    // depender de quantos eventos aconteceram desde a proposta: numa sessão
+    // longa, `backlog.story_promotion_proposed` sai da janela dos últimos
+    // 200 eventos de `useSessionEvents` (`latest: true`) enquanto a story
+    // continua pendente de verdade — a leva encolhia (ou sumia por completo)
+    // silenciosamente. É a MESMA classe de bug que a RN-180 já corrigiu para
+    // `ContextAside` trocando a fonte windowed pela completa (RN-XXX).
+    //
+    // A fonte de CONTEÚDO/CONTAGEM passa a ser `useBacklog` (`backlogQuery`,
+    // já usado acima para `hasPromotedStory` — mesma queryKey, sem
+    // round-trip novo): `Story.proposedReady` já é o dado COMPLETO e
+    // project-wide, sem janela — toda `Story` desta sessão com
+    // `proposedReady: true` é uma pendência real, exista ou não o evento de
+    // proposta ainda na janela. Quando a story ainda não existe no backlog
+    // carregado (query não respondeu, ou mockada vazia — os testes
+    // existentes de carrossel/promoção mockam `useBacklog` como `[]` de
+    // propósito), degrada story a story pro scan de janela de sempre, o que
+    // é o que mantém esses testes passando sem mudança nenhuma.
+    const backlogStoriesById = new Map(
+      (backlogQuery.data ?? [])
+        .flatMap((epic) => epic.stories)
+        .filter((s) => s.sessionId === sessionId)
+        .map((s) => [s.id, s] as const),
+    );
+
+    const resumoDeTextos = (
+      description: string | undefined,
+      rf: string[] | undefined,
+    ): string | undefined => {
+      if (description && description !== '') return description;
+      if (rf && rf.length > 0) return rf.join(' · ');
+      return undefined;
+    };
+
+    // Propostas na JANELA: enriquecem título/resumo quando o payload trouxer
+    // mais detalhe que a `Story`, dizem ONDE ancorar a leva na timeline, e
+    // são o fallback usado quando a story não está no backlog carregado.
+    const propostaNaJanelaPorStoryId = new Map<
+      string,
+      { seq: number; titulo: string; resumo: string | undefined }
+    >();
+    for (const e of events) {
+      if (e.type !== 'backlog.story_promotion_proposed') continue;
+      const payload = e.payload as {
+        storyId?: unknown;
+        title?: unknown;
+        description?: unknown;
+        rf?: unknown;
+      };
+      const storyId = typeof payload?.storyId === 'string' ? payload.storyId : undefined;
+      if (!storyId) continue;
+      const titulo = typeof payload?.title === 'string' ? payload.title : '(sem título)';
+      const description =
+        typeof payload?.description === 'string' ? payload.description : undefined;
+      const rf =
+        Array.isArray(payload?.rf) && payload.rf.every((r) => typeof r === 'string')
+          ? (payload.rf as string[])
+          : undefined;
+      propostaNaJanelaPorStoryId.set(storyId, {
+        seq: e.seq,
+        titulo,
+        resumo: resumoDeTextos(description, rf),
+      });
+    }
+
+    const windowDizResolvida = (storyId: string, propostaSeq: number) =>
+      events.some(
+        (e2) =>
+          e2.seq > propostaSeq &&
+          ((e2.type === 'backlog.story_transitioned' &&
+            (e2.payload as { storyId?: unknown })?.storyId === storyId) ||
+            (e2.type === 'backlog.story_promotion_returned' &&
+              (e2.payload as { storyId?: unknown })?.storyId === storyId)),
+      );
+
+    const idsConsiderados = new Set<string>([
+      ...propostaNaJanelaPorStoryId.keys(),
+      ...[...backlogStoriesById.values()]
+        .filter((s) => s.proposedReady)
+        .map((s) => s.id),
+    ]);
+
+    const promocoesPendentes = [...idsConsiderados]
+      .map((storyId) => {
+        const story = backlogStoriesById.get(storyId);
+        const naJanela = propostaNaJanelaPorStoryId.get(storyId);
+        const pendente = story
+          ? story.proposedReady
+          : naJanela !== undefined && !windowDizResolvida(storyId, naJanela.seq);
+        if (!pendente) return null;
+        return {
+          storyId,
+          titulo: naJanela?.titulo ?? story?.title ?? '(sem título)',
+          resumo: naJanela?.resumo ?? resumoDeTextos(story?.description, story?.rf),
+          // `undefined` quando o evento que abriu esta pendência já saiu da
+          // janela — é o sinal de que a leva precisa ancorar no topo do
+          // trecho visível em vez de sumir (requisito 2 da RN-XXX).
+          seq: naJanela?.seq,
         };
-        const storyId = typeof payload?.storyId === 'string' ? payload.storyId : undefined;
-        const titulo = typeof payload?.title === 'string' ? payload.title : '(sem título)';
-        // `resumo` degrada pro título sozinho: `CreateStoryUseCase` hoje só
-        // grava storyId/epicId/title no evento — sem descrição nem RF. Fica
-        // pronto pra quando o payload ganhar o campo, em vez de reinventado
-        // nessa hora (requisito da tarefa: "se disponível no payload").
-        const resumo =
-          typeof payload?.description === 'string' && payload.description !== ''
-            ? payload.description
-            : Array.isArray(payload?.rf) &&
-                payload.rf.length > 0 &&
-                payload.rf.every((r) => typeof r === 'string')
-              ? (payload.rf as string[]).join(' · ')
-              : undefined;
-        return { seq: e.seq, storyId, titulo, resumo };
       })
       .filter(
-        (p): p is { seq: number; storyId: string; titulo: string; resumo: string | undefined } =>
-          typeof p.storyId === 'string' &&
-          !events.some(
-            (e2) =>
-              e2.seq > p.seq &&
-              ((e2.type === 'backlog.story_transitioned' &&
-                (e2.payload as { storyId?: unknown })?.storyId === p.storyId) ||
-                (e2.type === 'backlog.story_promotion_returned' &&
-                  (e2.payload as { storyId?: unknown })?.storyId === p.storyId)),
-          ),
-      );
+        (
+          p,
+        ): p is { storyId: string; titulo: string; resumo: string | undefined; seq: number | undefined } =>
+          p !== null,
+      )
+      // Mais antiga primeiro — mesma ordem que a janela já dava; quem saiu
+      // da janela é, por definição, mais antiga que quem ficou.
+      .sort((a, b) => (a.seq ?? -1) - (b.seq ?? -1));
+
+    const pendingStoryIds = new Set(promocoesPendentes.map((p) => p.storyId));
+    const seqsDaLevaNaJanela = promocoesPendentes
+      .map((p) => p.seq)
+      .filter((seq): seq is number => seq !== undefined);
+    // `null` quando NENHUMA pendente real tem o evento que a abriu ainda na
+    // janela — a leva inteira "saiu" do log visível, mas continua pendente
+    // de verdade.
+    const primeiraDaLevaNaJanela =
+      seqsDaLevaNaJanela.length > 0 ? Math.min(...seqsDaLevaNaJanela) : null;
+
     // 1 história pendente não ganha nada virando carrossel de um slide só —
-    // o card simples de sempre já resolve (degradação decidida, requisito 4
-    // da tarefa). 0 nem chega a ser pergunta.
-    const ehLevaDeHistorias = promocoesPendentes.length >= 2;
-    const primeiraDaLeva = ehLevaDeHistorias
-      ? Math.min(...promocoesPendentes.map((p) => p.seq))
-      : -1;
+    // o card simples de sempre já resolve (RN-148); 2+ viram o carrossel.
+    // Nó ÚNICO reaproveitado nos dois pontos possíveis de ancoragem abaixo.
+    const construirNoDaLeva = (): ReactNode => {
+      if (promocoesPendentes.length === 0) return null;
+      if (promocoesPendentes.length === 1) {
+        const p = promocoesPendentes[0];
+        return (
+          <div className={styles.handoffCard} key={`leva-unica-${p.storyId}`}>
+            <span className={styles.handoffPill}>
+              <StackIcon size={13} />
+              história &quot;{p.titulo}&quot; pronta, aguardando sua promoção
+            </span>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Button
+                variant="success"
+                disabled={promovendoStoryId === p.storyId}
+                loading={promovendoStoryId === p.storyId}
+                onClick={() => handlePromoteStory(p.storyId)}
+              >
+                Promover
+              </Button>
+              <Button
+                variant="ghost"
+                disabled={promovendoStoryId === p.storyId}
+                onClick={() => {
+                  setRecusandoStory({ id: p.storyId, title: p.titulo });
+                  setMotivoRecusa('');
+                }}
+              >
+                Devolver
+              </Button>
+            </div>
+            <Link
+              to="/projects/$projectId"
+              params={{ projectId }}
+              search={{ tab: 'backlog' }}
+              className={styles.timelineLink}
+            >
+              Ver no Backlog
+              <ChevronRightIcon size={11} />
+            </Link>
+          </div>
+        );
+      }
+      const slides: CarouselSlide[] = promocoesPendentes.map((p) => ({
+        key: p.storyId,
+        label: p.titulo,
+        node: (
+          <StorySlide
+            key={p.storyId}
+            projectId={projectId}
+            titulo={p.titulo}
+            resumo={p.resumo}
+            promovendo={promovendoStoryId === p.storyId}
+            desabilitado={promovendoStoryId !== null || promovendoTodas}
+            onPromover={() => handlePromoteStory(p.storyId)}
+            onDevolver={() => {
+              setRecusandoStory({ id: p.storyId, title: p.titulo });
+              setMotivoRecusa('');
+            }}
+          />
+        ),
+      }));
+      return (
+        <Carousel
+          key="carrossel-historias"
+          ariaLabel={`${promocoesPendentes.length} histórias aguardando promoção`}
+          slides={slides}
+          headerActions={
+            <Button
+              variant="success"
+              loading={promovendoTodas}
+              disabled={promovendoStoryId !== null}
+              onClick={() => handlePromoteAll(promocoesPendentes.map((p) => p.storyId))}
+            >
+              Aprovar todas
+            </Button>
+          }
+        />
+      );
+    };
+
+    // O evento que abriu a leva já saiu da janela inteira — nenhuma pendente
+    // tem `seq` (RN-XXX). Nunca esconder um estado real por causa de corte
+    // de leitura (mesma régua da RN-180): ancora no TOPO do trecho visível
+    // em vez de sumir, com um `seq` sentinela menor que qualquer evento da
+    // janela — só a ORDEM importa aqui, `afundarDesfechos` não mexe em
+    // entrada sem `desfecho`.
+    if (promocoesPendentes.length > 0 && primeiraDaLevaNaJanela === null) {
+      const seqDeAncoragem = (events[0]?.seq ?? 1) - 1;
+      items.push({
+        seq: seqDeAncoragem,
+        autor: 'agent:po',
+        turno: turnoDoSeq(aberturas, seqDeAncoragem),
+        origem: 'eventos',
+        node: construirNoDaLeva(),
+      });
+    }
 
     for (const event of events) {
       // Todo item nascido deste evento herda o eixo (`seq`), o AUTOR e o
@@ -1449,124 +1619,37 @@ export function SessionPage({
         // Promoção inline (RN-126) — a decisão que RN-048 já resolve na aba
         // Backlog ganha um segundo lugar: o fio da própria sessão do PO, onde
         // a história nasceu. Mesmo mecanismo (`promoteStories`/`returnStory`),
-        // sem endpoint novo. O card fica ACIONÁVEL só enquanto NENHUM evento
-        // posterior já decidiu o destino desta história — promovida
-        // (`backlog.story_transitioned`, que `PromoteStoriesUseCase` emite via
-        // `TransitionStoryUseCase`) ou devolvida
-        // (`backlog.story_promotion_returned`). Sem esta checagem, promover ou
-        // devolver deixaria os mesmos dois botões plantados no fio, oferecendo
-        // a mesma decisão de novo sobre uma história que já saiu da fila.
+        // sem endpoint novo.
+        //
+        // "Pendente" não é mais decidido por scan de janela (RN-XXX): vem do
+        // `pendingStoryIds` calculado acima a partir de `useBacklog`, com
+        // fallback pra janela só quando a story não está no backlog
+        // carregado. Card e carrossel colapsam pro MESMO nó
+        // (`construirNoDaLeva`, 1 ou 2+ pendentes) — só a story ÂNCORA (a
+        // proposta pendente mais antiga ainda na janela) o materializa;
+        // qualquer outra proposta pendente na mesma leva só faz `continue`,
+        // porque já está representada dentro dele.
         const payload = event.payload as { storyId?: unknown; title?: unknown };
         const storyId = typeof payload?.storyId === 'string' ? payload.storyId : undefined;
         const titulo = typeof payload?.title === 'string' ? payload.title : '(sem título)';
-        const resolvida =
-          !storyId ||
-          events.some(
-            (e) =>
-              e.seq > event.seq &&
-              ((e.type === 'backlog.story_transitioned' &&
-                (e.payload as { storyId?: unknown })?.storyId === storyId) ||
-                (e.type === 'backlog.story_promotion_returned' &&
-                  (e.payload as { storyId?: unknown })?.storyId === storyId)),
-          );
+        const pendente = storyId ? pendingStoryIds.has(storyId) : false;
 
-        if (ehLevaDeHistorias && storyId && !resolvida) {
-          // Faz parte da LEVA (RN-148): o carrossel entra uma vez só, na
-          // posição da primeira proposta ainda pendente — as demais não
-          // viram card avulso aqui, porque já estão representadas como
-          // slide dele. `continue` em vez de `items.push`: nada nasce nesta
-          // volta do loop para as pendentes que não são a primeira.
-          if (event.seq === primeiraDaLeva) {
-            const slides: CarouselSlide[] = promocoesPendentes.map((p) => ({
-              key: p.storyId,
-              label: p.titulo,
-              node: (
-                <StorySlide
-                  key={p.storyId}
-                  projectId={projectId}
-                  titulo={p.titulo}
-                  resumo={p.resumo}
-                  promovendo={promovendoStoryId === p.storyId}
-                  desabilitado={promovendoStoryId !== null || promovendoTodas}
-                  onPromover={() => handlePromoteStory(p.storyId)}
-                  onDevolver={() => {
-                    setRecusandoStory({ id: p.storyId, title: p.titulo });
-                    setMotivoRecusa('');
-                  }}
-                />
-              ),
-            }));
-            empurrar({
-              node: (
-                <Carousel
-                  key="carrossel-historias"
-                  ariaLabel={`${promocoesPendentes.length} histórias aguardando promoção`}
-                  slides={slides}
-                  headerActions={
-                    <Button
-                      variant="success"
-                      loading={promovendoTodas}
-                      disabled={promovendoStoryId !== null}
-                      onClick={() =>
-                        handlePromoteAll(promocoesPendentes.map((p) => p.storyId))
-                      }
-                    >
-                      Aprovar todas
-                    </Button>
-                  }
-                />
-              ),
-            });
+        if (pendente) {
+          if (event.seq === primeiraDaLevaNaJanela) {
+            empurrar({ node: construirNoDaLeva() });
           }
           continue;
         }
 
         empurrar({
-          node:
-            !resolvida && storyId ? (
-              <div className={styles.handoffCard} key={event.id}>
-                <span className={styles.handoffPill}>
-                  <StackIcon size={13} />
-                  história &quot;{titulo}&quot; pronta, aguardando sua promoção
-                </span>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <Button
-                    variant="success"
-                    disabled={promovendoStoryId === storyId}
-                    loading={promovendoStoryId === storyId}
-                    onClick={() => handlePromoteStory(storyId)}
-                  >
-                    Promover
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    disabled={promovendoStoryId === storyId}
-                    onClick={() => {
-                      setRecusandoStory({ id: storyId, title: titulo });
-                      setMotivoRecusa('');
-                    }}
-                  >
-                    Devolver
-                  </Button>
-                </div>
-                <Link
-                  to="/projects/$projectId"
-                  params={{ projectId }}
-                  search={{ tab: 'backlog' }}
-                  className={styles.timelineLink}
-                >
-                  Ver no Backlog
-                  <ChevronRightIcon size={11} />
-                </Link>
-              </div>
-            ) : (
-              <div className={styles.handoffDivider} key={event.id}>
-                <span className={styles.handoffPill}>
-                  <StackIcon size={13} />
-                  história &quot;{titulo}&quot; esteve aguardando sua promoção
-                </span>
-              </div>
-            ),
+          node: (
+            <div className={styles.handoffDivider} key={event.id}>
+              <span className={styles.handoffPill}>
+                <StackIcon size={13} />
+                história &quot;{titulo}&quot; esteve aguardando sua promoção
+              </span>
+            </div>
+          ),
         });
       } else if (event.type === 'backlog.story_promotion_returned') {
         // Narração simétrica ao card acima (RN-126) — mesma frase que
@@ -1820,6 +1903,7 @@ export function SessionPage({
     podeAtivarAutoMode,
     iniciarTurnoDoAgente,
     finalizarTurnoDoAgente,
+    backlogQuery.data,
   ]);
 
   // Colapso de mensagens por agente depois que ele passa o bastão (RN-138) —

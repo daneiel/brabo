@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useQueries, useQuery } from '@tanstack/react-query';
-import { getActiveExecutionSession, getArchitecture, getCoverage, getProjectsStatus, getProjectsSummary, getSessionEvent, getWorkspaceSummary, listActions, listBacklog, listHandoffs, listHypotheses, listInfraArtifacts, listProficiency, listProjects, listPsychologistAnalyses, listSessionEvents, listSessions, listWorkspaces, getSessionTokenUsage } from './api-client';
-import type { SessionEvent } from './api-types';
+import { getActiveExecutionSession, getArchitecture, getCoverage, getProjectPendingActions, getProjectsStatus, getProjectsSummary, getSessionEvent, getWorkspaceSummary, listActions, listBacklog, listHandoffs, listHypotheses, listInfraArtifacts, listProficiency, listProjects, listPsychologistAnalyses, listSessionEvents, listSessions, listWorkspaces, getSessionTokenUsage } from './api-client';
+import type { ActionType, SessionEvent } from './api-types';
 // Todo poll deste arquivo passa por aqui: um `refetchInterval` numérico não
 // sabe parar, e a api limita 300 req/min por usuário (ver `query-policy.ts`).
 import { pollQueParaNoErro } from './query-policy';
@@ -360,6 +360,27 @@ export function usePendingActions(projectId: string | undefined, sessionId: stri
     queryKey: ['session-actions', projectId, sessionId],
     queryFn: () => listActions(projectId!, sessionId!, { limit: 200 }),
     enabled: !!projectId && !!sessionId,
+    refetchInterval: pollQueParaNoErro(intervalMs),
+  });
+}
+
+/**
+ * Ações PENDENTES do PROJETO inteiro, em qualquer sessão (Onda 2 — aba PRs).
+ *
+ * Irmã de `usePendingActions` (escopada por SESSÃO): esta é a consulta que
+ * resolve o bug de visibilidade — a aba PRs usa isto para achar a
+ * `proposed_action` correspondente a um PR (ex.: a proposta de `git_merge`
+ * do botão "Merge") sem saber de antemão qual sessão a propôs.
+ */
+export function useProjectPendingActions(
+  projectId: string | undefined,
+  actionType?: ActionType,
+  intervalMs = 3000,
+) {
+  return useQuery({
+    queryKey: ['project-pending-actions', projectId, actionType],
+    queryFn: () => getProjectPendingActions(projectId!, { actionType }),
+    enabled: !!projectId,
     refetchInterval: pollQueParaNoErro(intervalMs),
   });
 }

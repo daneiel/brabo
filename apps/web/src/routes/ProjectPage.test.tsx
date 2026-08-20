@@ -25,10 +25,12 @@ vi.mock('../lib/api-client', async () => {
 });
 
 vi.mock('../lib/hooks', () => ({
+  useArchitecture: () => ({ data: undefined }),
   useBacklog: () => ({ data: [] }),
   useHypotheses: () => ({ data: [] }),
   useLatestSession: () => ({ latest: undefined }),
   usePendingActions: () => ({ data: undefined }),
+  useProjectPendingActions: () => ({ data: undefined }),
 }));
 
 // As abas são inteiras demais para montar aqui, e nenhuma delas é o assunto:

@@ -1,8 +1,17 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, within } from '@testing-library/react';
+import type { ReactNode } from 'react';
 import { ProjectOverviewTab } from './ProjectOverviewTab';
 import { ToastProvider } from '../components/ui/ToastProvider';
+
+// `ArchitectureSummary` (Onda 3) usa `Link` de verdade — este arquivo não é
+// sobre navegação (isso é `ProjectOverviewTab.resumo-arquitetura.test.tsx`),
+// então o dublê é o mais simples possível, mesmo idioma de
+// `ProjectInsightsTab.test.tsx`.
+vi.mock('@tanstack/react-router', () => ({
+  Link: ({ children }: { children?: ReactNode }) => <a>{children}</a>,
+}));
 import type {
   Architecture,
   Handoff,

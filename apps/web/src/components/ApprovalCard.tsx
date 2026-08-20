@@ -57,6 +57,9 @@ const COM_CORPO_PROPRIO: ReadonlySet<string> = new Set<ActionType>([
   'git_commit',
   'git_push',
   'write_file',
+  // Onda 2 (aba PRs): antes caía no despejo de JSON cru — o mesmo defeito
+  // que a RN-096 já tinha corrigido pros outros tipos.
+  'git_merge',
 ]);
 
 interface DiffFile {
@@ -457,6 +460,28 @@ function ApprovalBody({ actionType, payload, executionResult, expandedFile, onTo
           <span className={styles.branchPill}>{target}</span>
         </div>
         {summary && <div className={styles.prSummary}>{summary}</div>}
+      </div>
+    );
+  }
+
+  if (actionType === 'git_merge') {
+    const pr = readString(payload, 'pullRequestId');
+    const source = readString(payload, 'sourceBranch');
+    const target = readString(payload, 'targetBranch');
+    const title = readString(payload, 'title');
+
+    return (
+      <div className={styles.body}>
+        <div className={styles.prTitle}>
+          {title ?? (pr ? `Pull request #${pr}` : 'Pull request')}
+        </div>
+        <div className={styles.prBranches}>
+          <span className={styles.branchPill}>{source ?? '?'}</span>
+          <span className={styles.arrow} aria-hidden="true">
+            →
+          </span>
+          <span className={styles.branchPill}>{target ?? '?'}</span>
+        </div>
       </div>
     );
   }

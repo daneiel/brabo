@@ -1,0 +1,14 @@
+/*
+ * A moldura das duas linhas. Cada `<Tabs>` (a de topo e a de filhos) já
+ * desenha a própria `border-bottom`/padding/rolagem (`Tabs.module.css`) —
+ * este arquivo só diferencia visualmente a segunda linha, para ficar claro
+ * que ela pertence ao grupo escolhido acima dela.
+ */
+.wrapper {
+  display: flex;
+  flex-direction: column;
+}
+
+.linhaFilhos {
+  background: var(--surface-2);
+}

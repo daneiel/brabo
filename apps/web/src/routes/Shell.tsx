@@ -552,6 +552,8 @@ export function Shell() {
                             promocoesPendentes: 0,
                             aprovacoesPendentes: pendingApprovalsCount,
                             hipotesesPendentes: 0,
+                            prsPendentes: 0,
+                            arquiteturaPendente: 0,
                           };
                           return (
                             <LinhaDeAba

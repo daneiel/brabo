@@ -2,6 +2,8 @@ import { useEffect, useId, useState } from 'react';
 import type { C4Diagrama } from '../lib/api-types';
 import { renderMermaid } from '../lib/mermaid-render';
 import { Alert } from './ui/Alert';
+import { ExpandIcon } from './ui/icons';
+import { Modal } from './ui/Modal';
 import { Skeleton } from './ui/Skeleton';
 import styles from './C4DiagramView.module.css';
 
@@ -13,9 +15,11 @@ import styles from './C4DiagramView.module.css';
  *
  * Três estados por diagrama (RN-088 — nunca `if (!svg) return null`):
  * `rendering` (Skeleton), `erro` (sintaxe inválida ou falha do Mermaid — a
- * tela explica e mostra a sintaxe crua, nunca quebra) e `pronto` (o SVG). O
- * quarto estado, "sem diagrama nenhum", é responsabilidade de quem chama este
- * componente — ver `ArchitectureSection` em `ProjectOverviewTab.tsx`.
+ * tela explica e mostra a sintaxe crua, nunca quebra) e `pronto` (o SVG,
+ * com botão de ampliar — ONDA 3 do PROGRAMA de abas agrupadas: primeiro
+ * lightbox do design system, construído sobre `ui/Modal.tsx`). O quarto
+ * estado, "sem diagrama nenhum", é responsabilidade de quem chama este
+ * componente — ver `ProjectArchitectureTab.tsx`.
  */
 
 type EstadoDeRender =
@@ -66,10 +70,27 @@ function DiagramaMermaid({
   idBase: string;
 }) {
   const estado = useMermaidRender(sintaxe, idBase);
+  // Lightbox (ONDA 3 — aba Arquitetura): só existe pergunta "ampliar?" no
+  // estado `pronto` — carregando não tem o que ampliar, erro não tem SVG
+  // nenhum (a sintaxe crua já está acessível dentro do próprio Alert).
+  const [ampliado, setAmpliado] = useState(false);
 
   return (
     <div className={styles.card}>
-      <div className={styles.cardTitulo}>{titulo}</div>
+      <div className={styles.cardHeader}>
+        <div className={styles.cardTitulo}>{titulo}</div>
+        {estado.fase === 'pronto' && (
+          <button
+            type="button"
+            className={styles.expandButton}
+            onClick={() => setAmpliado(true)}
+            aria-label={`Ampliar diagrama ${titulo}`}
+            title="Ampliar"
+          >
+            <ExpandIcon size={13} />
+          </button>
+        )}
+      </div>
       {estado.fase === 'rendering' && <Skeleton height={220} />}
       {estado.fase === 'erro' && (
         <Alert tone="danger">
@@ -90,6 +111,21 @@ function DiagramaMermaid({
           // garante que o Mermaid não emite `<script>`/handlers inline.
           dangerouslySetInnerHTML={{ __html: estado.svg }}
         />
+      )}
+      {ampliado && estado.fase === 'pronto' && (
+        <Modal
+          title={titulo}
+          icon={<ExpandIcon size={15} />}
+          onClose={() => setAmpliado(false)}
+          size="full"
+        >
+          <div
+            className={styles.svgWrapAmpliado}
+            // Mesmo SVG do card, mesma garantia de origem — ver comentário
+            // acima. Vetor: ampliar não perde qualidade.
+            dangerouslySetInnerHTML={{ __html: estado.svg }}
+          />
+        </Modal>
       )}
     </div>
   );

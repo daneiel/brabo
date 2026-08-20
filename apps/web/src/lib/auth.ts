@@ -68,6 +68,27 @@ export function emailDaSessao(): string | null {
   }
 }
 
+/**
+ * O id do usuário da sessão, lido do `sub` do access token — mesmo padrão de
+ * `emailDaSessao` e a mesma ressalva (decodificado sem verificar assinatura,
+ * quem valida é a api a cada requisição). Existe para o `actor.id` de uma
+ * `proposed_action` que o PRÓPRIO usuário propõe pela UI (Onda 2 — aba PRs,
+ * botão "Merge"): antes desta rodada nenhuma tela do web propunha ação
+ * nenhuma, só exibia/decidia as que os agentes propunham.
+ */
+export function userIdDaSessao(): string | null {
+  if (!accessToken) return null;
+  try {
+    const payload = accessToken.split('.')[1];
+    const json = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
+    const claims = JSON.parse(json) as { sub?: string };
+    return claims.sub ?? null;
+  } catch {
+    logger.debug('access token não decodificável');
+    return null;
+  }
+}
+
 function guardar(token: string | null): void {
   accessToken = token;
   anunciar();

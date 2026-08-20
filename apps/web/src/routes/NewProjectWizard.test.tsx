@@ -195,4 +195,34 @@ describe('NewProjectWizard — onde o código vai morar', () => {
     ).toBeTruthy();
     expect(screen.getByText(/docker-compose\.yml/)).toBeTruthy();
   });
+
+  /**
+   * "Procurar pasta..." (ADR sobre navegação de pasta via o Runner). Nesta
+   * tela o projeto AINDA não existe (só nasce na confirmação) — o modal
+   * mostra o estado declarado em vez de tentar conectar a um runner sem
+   * projeto para ancorar. O campo de texto livre continua sendo o caminho
+   * de verdade aqui, exatamente como antes desta entrega.
+   */
+  it('"Procurar pasta..." mostra o estado declarado (sem projeto ainda), e digitar continua funcionando', async () => {
+    await ateWorkspace();
+    fireEvent.click(screen.getByText('Local'));
+
+    fireEvent.click(screen.getByRole('button', { name: /Procurar pasta/i }));
+
+    expect(
+      await screen.findByText((t) => t.includes('depois que o projeto existir')),
+    ).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Entendi' }));
+    expect(
+      screen.queryByText((t) => t.includes('depois que o projeto existir')),
+    ).toBeNull();
+
+    fireEvent.change(screen.getByLabelText('Caminho da pasta'), {
+      target: { value: '/home/voce/projetos/loja' },
+    });
+    expect(screen.getByLabelText('Caminho da pasta')).toHaveValue(
+      '/home/voce/projetos/loja',
+    );
+  });
 });

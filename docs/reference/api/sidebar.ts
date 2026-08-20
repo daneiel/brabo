@@ -542,6 +542,60 @@ const sidebar: SidebarsConfig = {
     },
     {
       type: "category",
+      label: "ações",
+      items: [
+        {
+          type: "doc",
+          id: "docs/reference/api/project-actions-controller-list",
+          label: "Lista as ações PENDENTES do projeto inteiro, em qualquer sessão",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/agent-autonomy-controller-list",
+          label: "Lista a autonomia concedida a cada agente",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/agent-autonomy-controller-set",
+          label: "Define a autonomia de um agente para um tipo de ação",
+          className: "api-method put",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/actions-controller-list",
+          label: "Pagina as ações propostas na sessão",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/actions-controller-propose",
+          label: "Propõe uma ação com efeito externo",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/actions-controller-approve",
+          label: "Aprova a ação, uma vez",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/actions-controller-approve-always",
+          label: "Aprova a ação e grava o padrão no permissions.json",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/actions-controller-deny",
+          label: "Recusa a ação",
+          className: "api-method post",
+        },
+      ],
+    },
+    {
+      type: "category",
       label: "execução",
       items: [
         {
@@ -584,54 +638,6 @@ const sidebar: SidebarsConfig = {
           type: "doc",
           id: "docs/reference/api/execution-controller-unblock",
           label: "Destrava uma tarefa bloqueada",
-          className: "api-method post",
-        },
-      ],
-    },
-    {
-      type: "category",
-      label: "ações",
-      items: [
-        {
-          type: "doc",
-          id: "docs/reference/api/agent-autonomy-controller-list",
-          label: "Lista a autonomia concedida a cada agente",
-          className: "api-method get",
-        },
-        {
-          type: "doc",
-          id: "docs/reference/api/agent-autonomy-controller-set",
-          label: "Define a autonomia de um agente para um tipo de ação",
-          className: "api-method put",
-        },
-        {
-          type: "doc",
-          id: "docs/reference/api/actions-controller-list",
-          label: "Pagina as ações propostas na sessão",
-          className: "api-method get",
-        },
-        {
-          type: "doc",
-          id: "docs/reference/api/actions-controller-propose",
-          label: "Propõe uma ação com efeito externo",
-          className: "api-method post",
-        },
-        {
-          type: "doc",
-          id: "docs/reference/api/actions-controller-approve",
-          label: "Aprova a ação, uma vez",
-          className: "api-method post",
-        },
-        {
-          type: "doc",
-          id: "docs/reference/api/actions-controller-approve-always",
-          label: "Aprova a ação e grava o padrão no permissions.json",
-          className: "api-method post",
-        },
-        {
-          type: "doc",
-          id: "docs/reference/api/actions-controller-deny",
-          label: "Recusa a ação",
           className: "api-method post",
         },
       ],

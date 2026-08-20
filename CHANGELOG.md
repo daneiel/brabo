@@ -6,6 +6,43 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **web**: navegação por abas agrupadas — a régua de 11 abas do projeto vira
+  6 no topo (Visão geral, Agentes ▾, Dev ▾, Documentação ▾, Gastos,
+  Configurações), com `GroupedTabs` novo por cima do `Tabs` existente. Chat
+  e Chat RAG viram UMA aba com um controle segmentado interno
+  ("Conversar"/"Buscar") — a distinção de negócio entre os dois (RN-202)
+  não muda, só o contêiner de UI
+- **api,web**: aba **PRs** — listagem de pull requests do PROJETO inteiro,
+  direto do provider de git (nunca escopada a uma sessão), resolvendo o bug
+  em que a revisão de uma PR proposta numa sessão antiga sumia da tela assim
+  que uma sessão nova nascia. Novo cruzamento project-wide de ações
+  pendentes (`GET /projects/:id/actions?status=pending&actionType=`) acha a
+  proposta de merge correspondente independente de qual sessão a criou, e a
+  decisão usa o `sessionId` da própria ação. Botão "Merge" propõe
+  `git_merge` (primeira produtora real pela UI), desabilitado quando o gate
+  do dev agent bloqueou a task; a trava de branch protegida continua
+  absoluta (RN-154). `git_merge` ganhou corpo próprio no card de aprovação
+  em vez do despejo de JSON cru (RN-423)
+- **web**: aba própria **Arquitetura**, extraída da Visão Geral (module_map,
+  diagrama C4, ADRs, pendências de validação cruzada); a Visão Geral passa a
+  mostrar um resumo condensado com link "Ver arquitetura completa →".
+  Primeiro lightbox do design system: `C4DiagramView` ganha botão de
+  ampliar por diagrama, abrindo o SVG em tela cheia sobre `Modal`
+  (`size="full"`, novo) (RN-424)
+- **api,web,engine,runner**: navegação de pasta local via o Runner — dois
+  eventos novos no MESMO canal `terminal:<projectId>` (`fs_list_dir`/
+  `fs_home_dir`), relay puro do engine, exatamente como o PTY.
+  `FolderBrowserModal` (breadcrumb, subpastas, `..`, "Selecionar esta
+  pasta") integrado à criação de projeto e reaproveitável onde o projeto já
+  existe; sem runner conectado, `RunnerOnboardingPanel` (novo, compartilhado
+  com a aba Terminal) explica a instalação em vez de travar carregando. A
+  api continua sem enumerar filesystem nenhum — nenhuma rota nova (RN-422,
+  ADR 0104, revisa a ADR 0072)
+- **web**: corrigido o carrossel de promoção de histórias do PO, que
+  degradava silenciosamente para card único (ou sumia) em sessão longa —
+  a leva pendente agora vem de `useBacklog` (completo, sem janela) em vez
+  de um scan sobre os últimos 200 eventos, mesma classe de bug que a
+  RN-180 já corrigiu em `ContextAside` (RN-421)
 - **api,engine,web,runner**: execução de agente na máquina do usuário —
   `apps/runner` (workspace novo, CLI `brabo-runner`) conecta ao engine
   por canal Phoenix com ticket de uso único, executa comando de agente
