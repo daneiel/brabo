@@ -534,6 +534,24 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/personal-access-tokens-controller-list-pats",
+          label: "Lista os próprios Personal Access Tokens deste projeto",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/personal-access-tokens-controller-issue-pat",
+          label: "Emite um Personal Access Token pro runner local",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/personal-access-tokens-controller-revoke-pat",
+          label: "Revoga um Personal Access Token próprio",
+          className: "api-method delete",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/runner-tickets-controller-runner-ticket",
           label: "Emite um ticket de uso único para o runner local conectar",
           className: "api-method post",

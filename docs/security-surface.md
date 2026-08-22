@@ -180,6 +180,20 @@ motivo na URL.
   léxica da criação (`caminhoDeWorkspaceLocalValido`) — raiz de sistema e
   sobreposição com o checkout do Brabo continuam proibidas mesmo vindo do
   runner. `400` se o projeto não estiver no modo `runner`.
+- **`POST /projects/:projectId/runner-ticket` classifica `role:developer`
+  como qualquer outra rota, mas NÃO aceita JWT de sessão** (ADR 0105,
+  RN-424) — só um Personal Access Token (`brb_…`). A classificação
+  automática (`route-surface.spec.ts`) não distingue os dois mecanismos,
+  porque a EXIGÊNCIA de papel é a mesma; o que muda é só como
+  `request.user` é estabelecido. `PatAuthGuard` roda no lugar do
+  `JwtAuthGuard` nesta rota (`@RequirePatAuth()`, mesmo padrão estrutural
+  de `@ServiceRoute()`/`EngineServiceGuard` — bypass por metadado, nunca um
+  `if` que uma rota nova poderia esquecer), e é o ÚNICO lugar da api que
+  aceita esse formato de token: em qualquer outra rota um `brb_...` falha a
+  verificação de JWT normalmente. As três rotas de
+  `/projects/:projectId/personal-access-tokens` (emitir/listar/revogar o
+  PAT em si) continuam JWT de sessão normal — só a rota que o TOKEN em si
+  autentica é que muda de mecanismo.
 - **As rotas `engine-service` não são "internas" por convenção de nome.** O que
   as protege é o `EngineServiceGuard` comparando o `X-Brabo-Service-Token` com
   o segredo compartilhado em tempo constante, mais a NetworkPolicy. O prefixo
@@ -455,6 +469,9 @@ motivo na URL.
 | PUT | `/projects/:projectId/model-binding` | role:maintainer |
 | GET | `/projects/:projectId/permissions` | role:maintainer |
 | PUT | `/projects/:projectId/permissions` | role:maintainer |
+| POST | `/projects/:projectId/personal-access-tokens` | role:developer |
+| GET | `/projects/:projectId/personal-access-tokens` | role:developer |
+| DELETE | `/projects/:projectId/personal-access-tokens/:tokenId` | role:developer |
 | GET | `/projects/:projectId/proficiency` | role:viewer |
 | DELETE | `/projects/:projectId/proficiency/me` | role:viewer |
 | POST | `/projects/:projectId/proficiency/me/opt-in` | role:viewer |

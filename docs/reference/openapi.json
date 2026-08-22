@@ -5943,6 +5943,168 @@
         ]
       }
     },
+    "/projects/{projectId}/personal-access-tokens": {
+      "get": {
+        "description": "Nunca inclui o token bruto — só o que já foi emitido.",
+        "operationId": "PersonalAccessTokensController_listPats",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PersonalAccessTokenResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto não encontrado."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Lista os próprios Personal Access Tokens deste projeto",
+        "tags": [
+          "projetos"
+        ]
+      },
+      "post": {
+        "description": "O token bruto (`brb_...`) só aparece NESTA resposta — não fica recuperável depois, só o hash é guardado. Use em `--token`/`BRABO_ACCOUNT_TOKEN` do `brabo-runner`.",
+        "operationId": "PersonalAccessTokensController_issuePat",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IssuePatRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IssuePatResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto não encontrado."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Emite um Personal Access Token pro runner local",
+        "tags": [
+          "projetos"
+        ]
+      }
+    },
+    "/projects/{projectId}/personal-access-tokens/{tokenId}": {
+      "delete": {
+        "description": "Idempotente — revogar de novo não é erro.",
+        "operationId": "PersonalAccessTokensController_revokePat",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tokenId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Token revogado. Sem corpo."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto não encontrado."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Revoga um Personal Access Token próprio",
+        "tags": [
+          "projetos"
+        ]
+      }
+    },
     "/projects/{projectId}/proficiency": {
       "get": {
         "description": "O PRÓPRIO perfil por default; a visão agregada do time só para quem administra o projeto. Perfil de competência é dado sobre a pessoa, e o default menos surpreendente é ela ver o dela.",
@@ -6307,7 +6469,7 @@
     },
     "/projects/{projectId}/runner-ticket": {
       "post": {
-        "description": "Autentica `connect/3` do socket Phoenix `/runner` (tópico `terminal:<projectId>`, papel \"runner\") — NÃO é o JWT reaproveitado. TTL de 30s e uso único. Recusa com 400 se o projeto não estiver no modo \"local\" (ADR 0072): o runner não tem o que servir num projeto cujo código mora no container gerenciado.",
+        "description": "Autentica `connect/3` do socket Phoenix `/runner` (tópico `terminal:<projectId>`, papel \"runner\") — NÃO é o JWT reaproveitado, e esta rota em si só aceita um Personal Access Token no lugar do JWT de sessão (ADR 0105). TTL de 30s e uso único. Recusa com 400 se o projeto não estiver no modo \"runner\" (RN-421): o runner não tem o que servir num projeto cujo código mora no container gerenciado.",
         "operationId": "RunnerTicketsController_runnerTicket",
         "parameters": [
           {
@@ -6331,7 +6493,7 @@
             }
           },
           "400": {
-            "description": "Projeto não está no modo \"local\"."
+            "description": "Projeto não está no modo \"runner\"."
           },
           "401": {
             "description": "Sem token, token expirado ou assinatura inválida."
@@ -14073,6 +14235,78 @@
           "diff"
         ]
       },
+      "IssuePatRequestDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "laptop",
+            "description": "Nome pra você reconhecer este token depois — não é único."
+          },
+          "expiresInDays": {
+            "type": "number",
+            "example": 90,
+            "description": "Expira em N dias. Omitido = sem expiração (revogável a qualquer hora, mas nunca expira sozinho)."
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "IssuePatResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01JC4Z0000PAT000000000001"
+          },
+          "name": {
+            "type": "string",
+            "example": "laptop"
+          },
+          "projectId": {
+            "type": "string",
+            "example": "01JC4Z0000PROJETO000000001"
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-08-22T12:00:00.000Z",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "object",
+            "example": null,
+            "nullable": true,
+            "description": "Nulo = sem expiração."
+          },
+          "revokedAt": {
+            "type": "object",
+            "example": null,
+            "nullable": true
+          },
+          "lastUsedAt": {
+            "type": "object",
+            "example": null,
+            "nullable": true,
+            "description": "Nulo = nunca usado."
+          },
+          "token": {
+            "type": "string",
+            "example": "brb_9f8a...",
+            "description": "Guarde agora — não é recuperável depois. Use em --token ou BRABO_ACCOUNT_TOKEN."
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "projectId",
+          "createdAt",
+          "expiresAt",
+          "revokedAt",
+          "lastUsedAt",
+          "token"
+        ]
+      },
       "JwksResponseDto": {
         "type": "object",
         "properties": {
@@ -14972,6 +15206,54 @@
           "allow",
           "deny",
           "ask"
+        ]
+      },
+      "PersonalAccessTokenResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01JC4Z0000PAT000000000001"
+          },
+          "name": {
+            "type": "string",
+            "example": "laptop"
+          },
+          "projectId": {
+            "type": "string",
+            "example": "01JC4Z0000PROJETO000000001"
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-08-22T12:00:00.000Z",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "object",
+            "example": null,
+            "nullable": true,
+            "description": "Nulo = sem expiração."
+          },
+          "revokedAt": {
+            "type": "object",
+            "example": null,
+            "nullable": true
+          },
+          "lastUsedAt": {
+            "type": "object",
+            "example": null,
+            "nullable": true,
+            "description": "Nulo = nunca usado."
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "projectId",
+          "createdAt",
+          "expiresAt",
+          "revokedAt",
+          "lastUsedAt"
         ]
       },
       "PriorHypothesisResponseDto": {

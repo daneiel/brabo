@@ -1849,8 +1849,9 @@ decorativo. `sudo`/`doas` casam por VERBO em `comandoPrivilegiadoNoComando`
 princípio de `efeitoExternoNoComando`.
 
 **Runner (`apps/runner`, novo workspace Node/TS, ADR 0103)**: CLI
-(`brabo-runner --project <id> --dir <pasta>`) que o usuário roda na
-própria máquina, conecta no ENGINE via canal Phoenix NOVO (`/runner`,
+(`brabo-runner --project <id> --dir <pasta> --token brb_...`) que o
+usuário roda na própria máquina, conecta no ENGINE via canal Phoenix NOVO
+(`/runner`,
 tópico `terminal:<projectId>`) autenticado por ticket de USO ÚNICO (mesmo
 padrão RN-108, mas ticket EMITIDO PELO ENGINE — schema `"engine"`,
 migration própria — e pedido pela api via rota HTTP interna, invertendo o
@@ -1870,17 +1871,27 @@ USUÁRIO autenticado, não passa por `proposed_action`, mas audita
 cai sem `pty_close` explícito).
 
 A fronteira de segurança do runner NÃO é sandboxing — é autenticação
-(o CLI pede um token da CONTA do usuário) + o pipeline de aprovação de
-sempre + o consentimento de o usuário rodar o CLI na própria máquina, com
-os privilégios dele. `apps/runner/src/guard.ts` valida `cwd` dentro da
-raiz por resolução léxica, mas é declarado BEST-EFFORT, não a garantia
-real. **Achado real durante a implementação**: o produto não tem
-mecanismo de token de conta de LONGA DURAÇÃO pra automação — `account_tokens`
-é só pra links de e-mail de uso único (verificação, reset, senha inicial).
-O runner replica o fluxo de login do browser (cookie/CSRF, persistidos em
-`~/.brabo/runner-credentials.json`, 0600) até um mecanismo de token de
-automação de verdade existir — sinalizado no código como o módulo a trocar
-quando isso acontecer.
+(o CLI apresenta um Personal Access Token da CONTA do usuário) + o
+pipeline de aprovação de sempre + o consentimento de o usuário rodar o
+CLI na própria máquina, com os privilégios dele. `apps/runner/src/guard.ts`
+valida `cwd` dentro da raiz por resolução léxica, mas é declarado
+BEST-EFFORT, não a garantia real.
+
+**PAT fechou a lacuna de token de automação (ADR 0105/RN-424..426).** O
+achado real da Onda 1 — "o produto não tem mecanismo de token de conta de
+LONGA DURAÇÃO pra automação, então o runner replica o login do browser
+(cookie/CSRF persistidos em `~/.brabo/runner-credentials.json`)" — foi
+fechado na Onda 2: `personal_access_tokens` (`brb_…`, hash HMAC-SHA256+
+pepper via `hashDeToken()`, nunca argon2 — errado pra segredo de ALTA
+entropia) é emitido em Configurações do projeto, escopado a UM projeto,
+revogável, com expiração opcional. `apps/runner/src/auth.ts` perdeu por
+completo login interativo, cookies e o arquivo de credenciais — só
+valida formato e repassa `--token`/`BRABO_ACCOUNT_TOKEN`, NUNCA gravado
+em disco pelo CLI. O PAT nunca autentica fora de
+`POST .../runner-ticket`, por CONSTRUÇÃO (`IS_PAT_ROUTE_KEY`/
+`@RequirePatAuth()` + `PatAuthGuard`) — nunca um branch no `JwtAuthGuard`
+global, que deixaria `RolesGuard` autorizar o PAT pra qualquer rota do
+papel do usuário.
 
 `@xterm/xterm`/`@xterm/addon-fit` (web) e `phoenix`/`node-pty` (runner)
 são as quatro dependências novas — mesma régua de exceção do `mermaid`
@@ -1914,11 +1925,14 @@ existente "passa a ser permitida sem recriar o projeto" está INCORRETA.
 propósito — não é PATCH trivial (worktree, permissions.json e cache do
 engine apontam pro escopo antigo). A Onda 1 entregou só o campo de três
 valores na CRIAÇÃO; conversão de projeto existente é onda futura, com
-desenho próprio, ainda não planejada. Backlog do runner (Ondas 2/3 — PAT,
-distribuição npm) continua exatamente como estava: PAT antes de
-`npm publish @brabo/runner`; exclusividade por `{project_id, machine_id}`
-adiada; `guard.ts` best-effort é invariante REAFIRMADO, não lacuna. Ver
-[ADR 0104](docs/adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md).
+desenho próprio, ainda não planejada. Backlog do runner: a Onda 2 (PAT,
+ADR 0105) fechou o item que bloqueava `npm publish @brabo/runner` —
+distribuição via `tsup`/npm segue como próxima onda, agora desbloqueada,
+não mais dependente de nada. Exclusividade por `{project_id, machine_id}`
+continua adiada até segundo dev simultâneo real; `guard.ts` best-effort é
+invariante REAFIRMADO, não lacuna. Ver
+[ADR 0104](docs/adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md)/
+[ADR 0105](docs/adr/0105-personal-access-token-do-runner-escopado-por-construcao.md).
 
 ## FERRAMENTA DE DESENVOLVIMENTO — `pnpm bootstrap`
 Menu de terminal em `scripts/dev/bootstrap.sh` agrupando o que se faz no

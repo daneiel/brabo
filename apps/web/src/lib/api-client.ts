@@ -69,6 +69,8 @@ import type {
   CredentialTestResult,
   UnreadCursor,
   UserCredentialMetadata,
+  PersonalAccessTokenSummary,
+  PersonalAccessTokenIssued,
   Workspace,
   WorkspaceSummary,
   WorkspaceWithRole,
@@ -309,6 +311,20 @@ export const addProjectMember = (
 ) => post<void>(`/projects/${projectId}/members`, input);
 export const removeProjectMember = (projectId: string, userId: string) =>
   del<void>(`/projects/${projectId}/members/${userId}`);
+
+/** Personal Access Tokens do runner (`brb_…`, ADR 0105) — próprios do usuário logado. */
+export const listPersonalAccessTokens = (projectId: string) =>
+  get<PersonalAccessTokenSummary[]>(`/projects/${projectId}/personal-access-tokens`);
+export const issuePersonalAccessToken = (
+  projectId: string,
+  input: { name: string; expiresInDays?: number },
+) =>
+  post<PersonalAccessTokenIssued>(
+    `/projects/${projectId}/personal-access-tokens`,
+    input,
+  );
+export const revokePersonalAccessToken = (projectId: string, tokenId: string) =>
+  del<void>(`/projects/${projectId}/personal-access-tokens/${tokenId}`);
 
 export const getProjectPermissions = (projectId: string) =>
   get<PermissionsFile>(`/projects/${projectId}/permissions`);
