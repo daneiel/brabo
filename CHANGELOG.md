@@ -6,6 +6,19 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api,engine,web,runner**: `execution_mode` do projeto passa a ter TRÊS
+  valores — `container` (default, inalterado), `mounted` (o antigo `local`,
+  renomeado) e `runner` (novo: pasta do usuário SEM bind-mount, confirmada
+  por um `brabo-runner` conectado). Reconcilia os ADRs 0072 e 0103: antes,
+  o roteamento pro runner reusava a mesma flag do modo `local`, então
+  usar o runner de verdade exigia passar pela validação de bind-mount que
+  ele não precisa. Criação de projeto `runner` valida só o caminho
+  (léxico, sem tocar disco); o runner confirma o caminho de verdade ao
+  conectar (`POST /internal/projects/:projectId/workspace-verification`,
+  novo), sobrescrevendo o que foi digitado — ele é a fonte da verdade.
+  Comando de agente roteado a um projeto `runner` sem workspace verificado
+  ou sem runner conectado é RECUSADO explicitamente, nunca cai no
+  fallback de container (RN-421/422/423, ADR 0104)
 - **api,engine,web,runner**: execução de agente na máquina do usuário —
   `apps/runner` (workspace novo, CLI `brabo-runner`) conecta ao engine
   por canal Phoenix com ticket de uso único, executa comando de agente

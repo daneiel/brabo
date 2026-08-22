@@ -13,16 +13,22 @@ defmodule Engine.Actions.TerminalExecutor do
   trás dela). Aceitável pra este incremento (demo-grade); resolver isso
   de verdade pediria uma lib tipo MuonTrap, não justificada ainda.
 
-  ## Roteamento pro runner local (projeto `local` + runner conectado)
+  ## Roteamento pro runner local (projeto `runner`, verificado, conectado —
+  ## RN-423, ADR 0104)
 
   O comando que chega aqui JÁ foi aprovado pelo pipeline de sempre
   (`decide()`/`proposed_action` do lado api) — este módulo nunca decide SE
-  um comando pode rodar, só ONDE. Quando o projeto está em modo `local`
-  (ADR 0072) e há um runner conectado (`Engine.Runners.Registry`), o
-  comando é entregue a ele via canal Phoenix (`Engine.Runners.RunnerRouter`)
-  em vez de `System.cmd` local. Sem runner conectado — mesmo em modo
-  `local` — o caminho de sempre (bind-mount + `System.cmd` no container)
-  continua sendo o FALLBACK, nunca removido.
+  um comando pode rodar, só ONDE. Quando o projeto está em modo `runner`
+  (ADR 0072/0104), há TRÊS pré-condições, não uma: workspace VERIFICADO
+  (`workspace_verified_at` não-nulo — o runner confirmou o caminho no host
+  pelo menos uma vez) e runner CONECTADO agora (`Engine.Runners.Registry`).
+  Só com as duas o comando é entregue via canal Phoenix
+  (`Engine.Runners.RunnerRouter`) em vez de `System.cmd` local.
+
+  Faltando qualquer uma das duas, o comando é RECUSADO explicitamente — NUNCA
+  cai no `System.cmd`/bind-mount de `mounted`, que não existe pra um projeto
+  `runner`. O fallback de container só continua valendo para
+  `container`/`mounted`, que nunca tiveram essa pré-condição.
   """
 
   alias Engine.Actions.Workspace
@@ -43,26 +49,56 @@ defmodule Engine.Actions.TerminalExecutor do
 
     cwd = Keyword.get(opts, :cwd)
 
-    if roteia_para_runner?(project_id) do
-      run_via_runner(project_id, command, cwd, timeout)
-    else
-      case cwd do
-        nil -> run_in_project_workspace(project_id, command, timeout)
-        cwd -> execute(cwd, command, timeout)
-      end
+    case decisao_de_execucao(project_id) do
+      :rotear_runner ->
+        run_via_runner(project_id, command, cwd, timeout)
+
+      :recusar_nao_verificado ->
+        failed_result(
+          "projeto no modo \"runner\" ainda não teve o workspace confirmado " <>
+            "— rode `brabo-runner --project #{project_id} --dir <pasta>` na " <>
+            "sua máquina antes de tentar de novo (RN-423)."
+        )
+
+      :recusar_runner_desconectado ->
+        failed_result(
+          "workspace já confirmado, mas nenhum runner está conectado a " <>
+            "este projeto agora — rode `brabo-runner --project #{project_id} " <>
+            "--dir <pasta>` na sua máquina e tente de novo."
+        )
+
+      :caminho_de_sempre ->
+        case cwd do
+          nil -> run_in_project_workspace(project_id, command, timeout)
+          cwd -> execute(cwd, command, timeout)
+        end
     end
   end
 
-  # `Project.get/1` (não `ProjectRepository`, que não expõe workspace_mode)
+  # `Project.get/1` (não `ProjectRepository`, que não expõe execution_mode)
   # devolve `nil` pra projeto inexistente/id malformado — degrada pro
   # caminho de sempre, nunca propaga erro daqui.
-  defp roteia_para_runner?(project_id) do
+  #
+  # QUATRO saídas, não duas (RN-423, ADR 0104): um projeto `runner` NUNCA cai
+  # no fallback de container — ele não tem bind-mount nenhum, e "cair pro
+  # caminho de sempre" seria rodar às cegas numa pasta que não existe pro
+  # processo do engine. `container`/`mounted` continuam indo pro caminho de
+  # sempre, sem checagem nova nenhuma.
+  defp decisao_de_execucao(project_id) do
     case Project.get(project_id) do
-      %{workspace_mode: "local"} -> Registry.connected?(project_id)
-      _ -> false
+      %{execution_mode: "runner", workspace_verified_at: nil} ->
+        :recusar_nao_verificado
+
+      %{execution_mode: "runner"} ->
+        if Registry.connected?(project_id),
+          do: :rotear_runner,
+          else: :recusar_runner_desconectado
+
+      _ ->
+        :caminho_de_sempre
     end
   rescue
-    _ -> false
+    _ -> :caminho_de_sempre
   end
 
   defp run_via_runner(project_id, command, cwd, timeout) do
@@ -77,13 +113,15 @@ defmodule Engine.Actions.TerminalExecutor do
         )
 
       # Race: Registry dizia conectado no início de run/3, mas o runner
-      # caiu entre a checagem e o dispatch (ou nunca respondeu). Cai pro
-      # caminho de sempre em vez de falhar a ação inteira.
+      # caiu entre a checagem e o dispatch (ou nunca respondeu). NÃO cai
+      # pro container (RN-423): um projeto `runner` não tem bind-mount, e
+      # "cair pro caminho de sempre" seria a mesma execução às cegas que
+      # `:recusar_runner_desconectado` já recusa — a mesma recusa aqui.
       {:error, :not_connected} ->
-        case cwd do
-          nil -> run_in_project_workspace(project_id, command, timeout)
-          cwd -> execute(cwd, command, timeout)
-        end
+        failed_result(
+          "o runner caiu durante a execução — rode `brabo-runner --project " <>
+            "#{project_id} --dir <pasta>` na sua máquina e tente de novo."
+        )
 
       {:error, :timeout} ->
         failed_result("timeout do runner após #{timeout}ms", timed_out: true)

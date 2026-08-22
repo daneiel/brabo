@@ -355,13 +355,27 @@ já fechada) eram sempre doc-declarativo × código, nunca ADR × ADR. A forma
 da tabela é reaproveitada; o tipo de achado é novo.
 
 **A divergência, fechada pelo [ADR 0104](../adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md)
-— reconciliação ACEITA, implementação PENDENTE:**
+— reconciliação ACEITA, Onda 1 (RN-421/422/423) CONCLUÍDA:**
 
 | # | Severidade | Item | Evidência (arquivo:linha) |
 |---|---|---|---|
-| 1 | P1 | RN-170 exige bind-mount na criação; RN-420 roteia pro runner sob a mesma flag `workspace_mode == 'local'`, sem bind-mount nenhum | `apps/api/src/infrastructure/filesystem/project-workspaces-root.ts` (`validarCaminhoDeWorkspaceLocal`); `apps/engine/lib/engine/actions/terminal_executor.ex` (condição de roteamento, RN-420) |
-| 2 | P1 | Wizard só ensina bind-mount, nunca o comando do runner, mesmo ele já existindo | `apps/web/src/routes/NewProjectWizard.tsx:71,462-468` vs. `apps/web/src/routes/code/TerminalPanel.tsx` (comando `brabo-runner --project <id> --dir <pasta>` já renderizado quando não há runner conectado) |
-| 3 | P2 | Enum de 2 valores (`workspace_mode`) não expressa 3 execuções fisicamente distintas | `apps/api/src/db/schema.ts:238-240`; `apps/api/src/domain/iam/project.entity.ts` |
+| 1 | **FECHADO** (RN-423) | RN-170 exigia bind-mount na criação; RN-420 roteava pro runner sob a mesma flag `workspace_mode == 'local'`, sem bind-mount nenhum | `apps/api/src/application/use-cases/iam/confirm-project-workspace.use-case.ts` (o runner confirma e vira fonte da verdade); `apps/engine/lib/engine/actions/terminal_executor.ex` (`decisao_de_execucao/1`, quatro saídas — recusa explícita sem workspace verificado/runner conectado, nunca fallback pro container) |
+| 2 | **FECHADO** (RN-422) | Wizard só ensinava bind-mount, nunca o comando do runner, mesmo ele já existindo | `apps/web/src/routes/NewProjectWizard.tsx` — terceira entrada em `MODOS_DE_WORKSPACE` (`runner`), com o comando `brabo-runner --project <id> --dir <pasta>` no próprio passo "Onde o código vai morar", não só no Terminal |
+| 3 | **FECHADO** (RN-421) | Enum de 2 valores (`workspace_mode`) não expressava 3 execuções fisicamente distintas | `apps/api/src/db/migrations/0048_quiet_iron_fist.sql` (`project_execution_mode`, três valores); `apps/api/src/domain/iam/project.entity.ts` (`PROJECT_EXECUTION_MODES`) |
+
+**Correção registrada durante a implementação da Onda 1 — o ADR não é
+editado, a correção mora aqui**: o item 4 do ADR 0104 afirma que a
+conversão entre os três modos de um projeto EXISTENTE "passa a ser
+permitida sem recriar o projeto". Isso está **incorreto** — a Onda 1
+investigou e achou que `UpdateProjectDto` continua excluindo
+`executionMode`/`workspacePath` de propósito (worktree, `permissions.json`
+e cache do engine apontam pro escopo antigo; não é um `PATCH` trivial). A
+Onda 1 entregou só o campo de três valores na CRIAÇÃO. Conversão de
+projeto já existente fica como item de backlog NOVO, sem desenho ainda:
+
+| item | custo | critério de ativação | onde foi decidido |
+|---|---|---|---|
+| Conversão de `execution_mode` em projeto EXISTENTE, sem recriar (worktree, `permissions.json` e cache do engine precisam migrar de escopo junto) | M | nenhum — o ADR 0104 já prometia isso e a promessa está incorreta hoje; falta só o desenho | achado na Onda 1, corrigindo o ADR 0104 item 4 |
 
 **O que fica para depois — backlog priorizado pelo dono do produto, nesta
 ordem:**

@@ -13,8 +13,9 @@ const PROJECT: Project = {
   createdBy: 'user-1',
   maxConsecutiveBlocked: null,
   storyPromotion: 'manual',
-  workspaceMode: 'container',
+  executionMode: 'container',
   workspacePath: null,
+  workspaceVerifiedAt: null,
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
 };

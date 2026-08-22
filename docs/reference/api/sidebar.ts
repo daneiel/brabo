@@ -270,6 +270,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/internal-projects-controller-confirm-workspace-verification",
+          label: "O runner confirma o caminho de um projeto 'runner' (RN-423)",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/internal-rag-controller-buscar",
           label: "Busca híbrida no índice RAG do projeto, para a tool do engine",
           className: "api-method post",

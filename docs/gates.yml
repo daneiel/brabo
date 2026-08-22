@@ -93,6 +93,20 @@ gates:
       event_types: [bootstrap.plan_approved, bootstrap.adopted_as_is]
       onde: apps/api/src/application/use-cases/git/decide-bootstrap-plan.use-case.ts
 
+  - id: workspace-verificado # RN-423, ADR 0104
+    fluxo: provisionamento
+    dono: usuario # é o runner, rodado pelo usuário na própria máquina
+    entrada: [projeto-criado-modo-runner]
+    entregavel: workspace-confirmado-pelo-runner
+    verificacao: script
+    severidade: warn # quem trava de verdade é a recusa explícita do engine (RN-423); o gate é só o registro
+    aprovacao_humana: false
+    status: active
+    evidencia:
+      tipo: event_log
+      event_types: [project.workspace_verified]
+      onde: apps/api/src/application/use-cases/iam/confirm-project-workspace.use-case.ts
+
   - id: qa-verificada
     fluxo: pr
     dono: area-qa # lead consolida (ADR 0038)

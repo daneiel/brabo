@@ -42,6 +42,16 @@ defmodule EngineWeb.TerminalChannel do
   queda de rede, sem `pty_close` explícito) também fecha o rastro, em
   `terminate/2`, com o motivo marcado — nunca fica "iniciado" pra sempre no
   log.
+
+  ## `workspace_confirm` (RN-423, ADR 0104)
+
+  Só o `:runner` pode originar — logo depois do `join` resolver `ok`, ele
+  manda o `--dir` que recebeu na linha de comando. O engine repassa pra api
+  (`Engine.Sessions.EngineApiClient.confirm_workspace/4`), que revalida
+  LEXICAMENTE e SOBRESCREVE `workspacePath` (o runner é a fonte da
+  verdade). Mesmo mecanismo de sessão do PTY: sem sessão no projeto ainda,
+  a api atualiza o banco mesmo assim e só pula o evento de auditoria — o
+  `UPDATE` nunca fica bloqueado por essa lacuna.
   """
 
   use EngineWeb, :channel
@@ -147,6 +157,29 @@ defmodule EngineWeb.TerminalChannel do
         send(from, {:runner_exec_result, ref, payload})
         {:noreply, assign(socket, :pending_execs, restante)}
     end
+  end
+
+  # workspace_confirm: só o :runner pode originar — o caminho que ele
+  # recebeu por `--dir`, confirmado no HOST de verdade (RN-423). Empurrado
+  # UMA vez, logo depois do join, pelo próprio `apps/runner/src/index.ts`.
+  @impl true
+  def handle_in("workspace_confirm", %{"path" => path}, socket) do
+    if socket.assigns.role == :runner do
+      project_id = socket.assigns.project_id
+      session_id = ProjectSession.latest_id(project_id)
+
+      case EngineApiClient.confirm_workspace(project_id, session_id, path, socket.assigns.user_id) do
+        {:ok, _resp} ->
+          :ok
+
+        {:error, reason} ->
+          Logger.warning(
+            "terminal: workspace_confirm recusado (#{project_id}): " <> inspect(reason)
+          )
+      end
+    end
+
+    {:noreply, socket}
   end
 
   @impl true

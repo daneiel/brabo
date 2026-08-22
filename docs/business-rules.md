@@ -5754,6 +5754,11 @@ não ser o erro de uma volta que já foi corrigida depois.
 
 ### RN-169 — O projeto escolhe onde o código mora: Local ou Container {#rn-169}
 
+**REVISADA pela [RN-421](#rn-421) (ADR 0104)**: `workspace_mode`/`local`
+viraram `execution_mode` de TRÊS valores (`container`/`mounted`/`runner`,
+migração `0048`) — o resto desta entrada é histórico, fiel ao que valia até
+a revisão.
+
 Um projeto nasce com um **modo de workspace** (`projects.workspace_mode`,
 migração `0043`), e é ele que decide de onde a raiz de escopo é derivada:
 
@@ -5822,6 +5827,11 @@ são ortogonais.
   escolhida explicitamente)
 
 ### RN-170 — Caminho Local é validado na CRIAÇÃO, e a recusa ensina {#rn-170}
+
+**REVISADA pela [RN-422](#rn-422) (ADR 0104)**: a validação de criação passou
+a DIVERGIR por modo — `mounted` (o `local` renomeado) continua tocando disco
+como descrito aqui, `runner` valida só o LÉXICO, sem I/O — o resto desta
+entrada é histórico, fiel ao que valia até a revisão.
 
 Criar um projeto no modo `local` com um caminho que a api não alcança produz um
 projeto que **trava depois** — na primeira ferramenta do primeiro agente, longe
@@ -9262,6 +9272,11 @@ explicitamente, depois de revisar, que a decisão era essa.
 
 ### RN-419 — O runner local se autentica por ticket de uso único, escopado a projeto e papel {#rn-419}
 
+**REVISADA pela [RN-421](#rn-421) (ADR 0104)**: a condição de recusa do
+ticket citada abaixo (`workspaceMode !== 'local'`) virou `executionMode
+!== 'runner'` — mesma régua, nome novo. O resto desta entrada continua
+valendo tal como está.
+
 O canal `terminal:<projectId>` (socket Phoenix novo, `/runner`) recebe
 dois papéis distintos — `:runner` (o CLI na máquina do usuário, no
 máximo UM por projeto, exclusividade garantida por
@@ -9301,16 +9316,25 @@ o tópico.
 
 ### RN-420 — Comando de agente roteado ao runner passa pelo MESMO pipeline de aprovação; PTY é ação do usuário, auditada {#rn-420}
 
+**REVISADA pela [RN-423](#rn-423) (ADR 0104)**: a condição pra rotear deixou
+de ser binária. `workspace_mode == "local"` virou `execution_mode ==
+"runner"` **E** `workspace_verified_at` não-nulo **E** runner conectado —
+faltando qualquer uma das TRÊS, o comando é RECUSADO explicitamente, nunca
+cai no `System.cmd`/bind-mount de `mounted` (que não existe pra um projeto
+`runner`, sem bind-mount nenhum). O resto desta entrada — o pipeline de
+aprovação de sempre, PTY como ação do usuário — continua valendo tal como
+está.
+
 `Engine.Actions.TerminalExecutor` decide rotear um comando pro runner (em
 vez do `System.cmd` de sempre, dentro do container) **DEPOIS** que o
 pipeline normal (`decide()`/`proposed_action`) já aprovou — o roteamento
 é só uma escolha de DESTINO pro mesmo comando já autorizado, nunca um
 segundo caminho de execução que escapa da política (que continua com os
 tetos absolutos da RN-418 valendo igual, sudo/git incluídos). Condição
-pra rotear: `workspace_mode == "local"` E runner conectado
-(`Engine.Runners.Registry.connected?/1`) — sem qualquer uma das duas, o
-comportamento de sempre continua (`System.cmd` no container via
-bind-mount, ADR 0072 vira FALLBACK, nunca removido).
+pra rotear (histórico, ver revisão acima): `workspace_mode == "local"` E
+runner conectado (`Engine.Runners.Registry.connected?/1`) — sem qualquer
+uma das duas, o comportamento de sempre continua (`System.cmd` no
+container via bind-mount, ADR 0072 vira FALLBACK, nunca removido).
 
 PTY interativo é DIFERENTE: é ação do USUÁRIO autenticado digitando no
 terminal da própria máquina, não do agente — por isso NÃO passa por
@@ -9392,6 +9416,134 @@ e-mail sem NENHUM caractere alfanumérico degradam para o literal
   o início, não decisão estrutural nova
 - **Origem:** achado por uso real, navegando o produto — não item de
   backlog planejado
+
+## Onda 1 do ADR 0104 — `execution_mode` em três valores, workspace verificado pelo runner
+
+O ADR 0072 (RN-169/RN-170) e o ADR 0103 (RN-419/RN-420) nunca se falaram: o
+runner reusava a mesma flag `workspace_mode == 'local'` sem bind-mount
+nenhum, então usar o runner de verdade continuava exigindo passar pela
+validação de PASTA MONTADA. O ADR 0104 reconcilia os dois. Migração `0048`
+recria o enum (`project_workspace_mode` → `project_execution_mode`,
+`local` → `mounted`) numa transação só — `ALTER TYPE ... ADD VALUE` não
+pode ser referenciado na mesma transação em que foi adicionado — e soma
+`workspace_verified_at` (nullable).
+
+### RN-421 — `execution_mode` tem TRÊS valores: `container`/`mounted`/`runner` {#rn-421}
+
+`projects.workspace_mode` (dois valores) virou `projects.execution_mode`
+(três): `container` (DEFAULT, inalterado), `mounted` (o antigo `local`,
+RENOMEADO — mesmo comportamento, mesma validação de disco na criação) e
+`runner` (NOVO: uma pasta do usuário sem bind-mount, confirmada pelo CLI
+`brabo-runner`). O CHECK do banco passou a ser `(execution_mode <>
+'container') = (workspace_path IS NOT NULL)` — cobre os dois modos não-
+`container` com a MESMA condição, sem `OR` explícito por valor.
+
+`projectScopeRoot`/`Project.workspace_dir_name` (api e engine) derivam a
+raiz pela MESMA regra nos dois modos não-`container`: o caminho do usuário
+é a raiz, distinguido do nome de pasta gerenciada pela barra inicial. O que
+muda entre `mounted` e `runner` não é ONDE a raiz fica — é QUANDO/QUEM
+confirma que ela existe de verdade ([RN-422](#rn-422)/[RN-423](#rn-423)).
+
+- **Onde:** `apps/api/src/db/migrations/0048_quiet_iron_fist.sql`,
+  `apps/api/src/db/schema.ts` (`projectExecutionModeEnum`),
+  `apps/api/src/domain/iam/project.entity.ts` (`PROJECT_EXECUTION_MODES`),
+  `apps/api/src/infrastructure/filesystem/project-workspaces-root.ts`
+  (`projectScopeRoot`), `apps/engine/lib/engine/projects/project.ex`
+- **Teste:** `apps/api/test/infrastructure/filesystem/project-workspaces-root.spec.ts`
+  (describe "projectScopeRoot nos modos mounted/runner"),
+  `apps/engine/test/engine/projects/project_test.exs`
+- **Decisão arquitetural:**
+  [ADR 0104](adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md)
+- **Origem:** reconciliação pedida pelo dono do produto, entre os ADRs 0072
+  e 0103
+
+### RN-422 — A validação de criação DIVERGE por modo: `mounted` toca disco, `runner` só o léxico {#rn-422}
+
+`CreateProjectUseCase.caminhoValidado` ganhou um terceiro ramo. `mounted`
+continua exatamente como `local` era (RN-170, histórico): recusa com `400`
+o caminho que não existe, não é pasta ou não é gravável dentro do
+container, com a instrução de montagem. `runner` valida só o
+LÉXICO — mesma lista de proibições (absoluto, sem `..`, fora de raiz/pasta
+de sistema, sem sobreposição com o checkout do Brabo) — sem tocar disco:
+só o runner, rodando no HOST de verdade, tem autoridade para confirmar que
+a pasta existe. O projeto nasce com `workspace_verified_at: null`.
+
+`caminhoDeWorkspaceLocalValido` (o predicado léxico) foi EXPORTADO de
+`project-workspaces-root.ts` para ser reusado nos dois lados que precisam
+dele sem tocar disco: a criação de projeto `runner` e a confirmação do
+runner ([RN-423](#rn-423)) — a mesma função, nunca duas cópias que um dia
+divergem.
+
+- **Onde:** `apps/api/src/application/use-cases/iam/create-project.use-case.ts`
+  (`caminhoValidado`), `apps/api/src/infrastructure/filesystem/project-workspaces-root.ts`
+  (`caminhoDeWorkspaceLocalValido`, exportada), `apps/api/src/interfaces/http/iam/dto/create-project.dto.ts`
+- **Teste:** `apps/api/test/application/use-cases/iam/create-project-modo-de-workspace.spec.ts`
+  (bloco `runner`), `apps/api/test/interfaces/http/iam/project-dto-modo-de-workspace.spec.ts`,
+  `apps/web/src/lib/wizard.test.ts` (`canAdvanceFromWorkspace` para `runner`)
+- **Decisão arquitetural:**
+  [ADR 0104](adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md)
+- **Origem:** reconciliação do ADR 0104
+
+### RN-423 — O runner CONFIRMA o caminho; sem confirmação, o comando é recusado — nunca cai no container {#rn-423}
+
+O runner é a **fonte da verdade** do caminho de um projeto `runner`, não o
+que foi digitado no wizard. Logo depois do canal Phoenix conectar
+(`terminal:<projectId>`, papel `:runner`), `apps/runner/src/index.ts`
+empurra `workspace_confirm` com o `--dir` que recebeu na linha de comando.
+O engine repassa (`Engine.Sessions.EngineApiClient.confirm_workspace/4`)
+para `POST /internal/projects/:projectId/workspace-verification`
+(`ConfirmProjectWorkspaceUseCase`), que:
+
+1. Recusa com `400` se o projeto não estiver no modo `runner`;
+2. Revalida o caminho pelo MESMO predicado léxico da criação
+   ([RN-422](#rn-422)) — mesmo vindo do runner, raiz de sistema e
+   sobreposição com o Brabo continuam proibidas;
+3. **SOBRESCREVE** `workspacePath` com o caminho normalizado e grava
+   `workspaceVerifiedAt = now()` — sem exigir igualdade com o que foi
+   digitado na criação: o runner manda;
+4. É IDEMPOTENTE — reconectar reportando o MESMO caminho não regrava nada
+   (`changed: false`); um caminho DIFERENTE regrava, porque o runner
+   continua sendo a fonte da verdade a cada reconexão;
+5. Sem sessão no projeto ainda (`ProjectSession.latest_id/1` devolve
+   `nil`): o `UPDATE` acontece do mesmo jeito, só o evento
+   `project.workspace_verified` (e a evidência do gate
+   `workspace-verificado`) fica ausente — a MESMA degradação que
+   `pty_open`/`pty_close` já aceitam (RN-108/RN-420). Lacuna aceita e
+   declarada, não silenciosa.
+
+`Engine.Actions.TerminalExecutor.decisao_de_execucao/1` ganhou QUATRO
+saídas, não duas: `runner` com `workspace_verified_at: nil` recusa
+(`:recusar_nao_verificado`); `runner` verificado sem runner conectado
+recusa (`:recusar_runner_desconectado`); `runner` verificado e conectado
+roteia (`:rotear_runner`); qualquer outro modo segue o caminho de sempre
+(`:caminho_de_sempre`). As duas recusas NUNCA caem no `System.cmd` — um
+projeto `runner` não tem bind-mount, e "cair pro caminho de sempre" seria
+executar às cegas numa pasta que o processo do engine não enxerga. A
+mesma recusa vale na corrida (`Registry` dizia conectado no início de
+`run/3`, mas o runner caiu antes do dispatch responder).
+
+- **Onde:** `apps/api/src/application/use-cases/iam/confirm-project-workspace.use-case.ts`,
+  `apps/api/src/interfaces/http/internal/internal-projects.controller.ts`
+  (`POST :projectId/workspace-verification`),
+  `apps/engine/lib/engine/actions/terminal_executor.ex`
+  (`decisao_de_execucao/1`), `apps/engine/lib/engine_web/channels/terminal_channel.ex`
+  (`handle_in("workspace_confirm", ...)`), `apps/engine/lib/engine/sessions/engine_api_client.ex`
+  (`confirm_workspace/4`), `apps/runner/src/channel.ts`
+  (`enviarWorkspaceConfirm`), `apps/runner/src/index.ts`
+- **Teste:** `apps/api/test/application/use-cases/iam/confirm-project-workspace.use-case.spec.ts`,
+  `apps/engine/test/engine/actions/terminal_executor_test.exs`
+  (describe "roteamento pro runner local"),
+  `apps/engine/test/engine_web/channels/terminal_channel_test.exs`
+  (describe "workspace_confirm"), `apps/runner/src/channel.spec.ts`
+  (`enviarWorkspaceConfirm` depois do join)
+- **Borda:** o `docs/gates.yml` registra `workspace-verificado` como
+  `severidade: warn` — quem trava de verdade é a recusa explícita do
+  engine, o gate é só o registro/evidência.
+- **Decisão arquitetural:**
+  [ADR 0104](adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md)
+- **Origem:** reconciliação do ADR 0104, decisão confirmada com o dono do
+  produto (o runner é a fonte da verdade; sem sessão, o UPDATE acontece
+  mesmo assim; comando recusado explicitamente sem verificação/conexão)
 
 ---
 
