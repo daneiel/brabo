@@ -26,14 +26,26 @@ resposta imediata, vai por HTTP.
 **Fora do escopo desta página**: rotas HTTP autenticadas pelo JWT normal do
 usuário (RBAC por papel, `@RequireRole`) — como
 `/projects/:projectId/agent-autonomy`, `/projects/:projectId/container/lifecycle`
-([RN-267](../business-rules.md#rn-267)) ou
+([RN-267](../business-rules.md#rn-267)),
 `.../agents/criativo/validate-necessity` (gate `necessidade-validada`,
-[RN-406](../business-rules.md#rn-406), ADR 0095) — não são "internas" no
-sentido deste documento, mesmo quando um agente é quem efetivamente chama
-através delas. O
+[RN-406](../business-rules.md#rn-406), ADR 0095) ou o CRUD de
+`/projects/:projectId/personal-access-tokens` ([RN-426](../business-rules.md#rn-426),
+ADR 0105) — não são "internas" no sentido deste documento, mesmo quando um
+agente é quem efetivamente chama através delas. O
 service token compartilhado NUNCA serve como credencial nessas rotas, e o JWT
 de usuário nunca serve em `/internal/*` — os dois mecanismos não se sobrepõem
-([RN-035](../business-rules.md#rn-035)). Também fora do escopo: as rotas
+([RN-035](../business-rules.md#rn-035)).
+
+**Uma terceira credencial, nem service token nem JWT de usuário**:
+`POST /projects/:projectId/runner-ticket` é `role:developer` como qualquer
+rota RBAC, mas não aceita o JWT normal de sessão — só um Personal Access
+Token (`brb_…`, `PatAuthGuard`/`@RequirePatAuth()`), escopado por construção
+a essa única rota ([RN-424](../business-rules.md#rn-424), ADR 0105). Vale
+registrar aqui porque é a distinção que esta página existe pra explicar:
+"não é `/internal/*`" não significa "então é JWT de usuário" — o PAT é um
+terceiro mecanismo, sem sobreposição com os outros dois.
+
+Também fora do escopo: as rotas
 `@Public()` que são o próprio PONTO DE ENTRADA antes de qualquer sessão
 existir — `POST /auth/login`, `POST /auth/register`,
 `GET /auth/oauth/:provider/start`/`callback` (login social, ADR 0084) e as
