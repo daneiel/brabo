@@ -1886,6 +1886,23 @@ são as quatro dependências novas — mesma régua de exceção do `mermaid`
 grep no pacote instalado (não é garantia formal contra ofuscação, só
 evidência forte — declarado como incerteza, não afirmado como certeza).
 
+**ADR 0104 (documentação — implementação pendente):** os ADRs 0072 e 0103
+nunca se falaram — RN-170 exigia bind-mount na criação, e o roteamento pro
+runner (RN-420) reusava a mesma flag `workspace_mode == 'local'` sem
+bind-mount nenhum, então usar o runner de verdade continuava obrigado a
+passar pela validação de pasta montada. `workspace_mode` (2 valores) vira
+`execution_mode` (`container`/`mounted`/`runner`) — RN-170 passa a valer só
+para `mounted`; `runner` nasce com caminho declarado e estado `unverified`,
+promovido a `verified` quando um runner conecta e confirma no host.
+Qualquer conversão entre os três valores passa a ser permitida, sem
+recriar o projeto. Backlog priorizado e registrado (ver
+[backlog.md](docs/explanation/backlog.md#backlog-do-runnerexecution_mode-adr-0104)):
+distribuição do runner (`npm publish @brabo/runner`) SÓ depois de um PAT
+substituir o replay de login de `apps/runner/src/auth.ts`; exclusividade
+por `{project_id, machine_id}` adiada até segundo dev simultâneo real;
+`guard.ts` best-effort é invariante REAFIRMADO, não lacuna. Nada disto tem
+código ainda — ver [ADR 0104](docs/adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md).
+
 ## FERRAMENTA DE DESENVOLVIMENTO — `pnpm bootstrap`
 Menu de terminal em `scripts/dev/bootstrap.sh` agrupando o que se faz no
 dia a dia: Docker, K8s, Database e Test. Existe porque esses comandos moram
