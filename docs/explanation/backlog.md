@@ -336,14 +336,14 @@ produto adiadas — por isso sem prioridade aqui.
 
 | item | onde foi decidido |
 |---|---|
-| Budget por área | corte da Fase 8; **a um passo** — `agent_areas` passou a existir na FASE 14d ([ADR 0053](../adr/0053-dev-lead-e-paralelismo-autorizado.md)), a tabela que faltava |
+| Budget por área | **PRÓXIMA SESSÃO.** Corte da Fase 8; `agent_areas` passou a existir na FASE 14d ([ADR 0053](../adr/0053-dev-lead-e-paralelismo-autorizado.md)) — a tabela que faltava. O que resta é só o mecanismo de teto de gasto em si |
 | Dev Lead e áreas via `module_map` | **saiu do backlog**: ADR 0053, implementado pela FASE 14d |
-| Handoff manual a agente à escolha | — |
-| MFA, login social, OIDC, federação | [ADR 0031](../adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.md) |
+| Handoff manual a agente à escolha | Critério de ativação: quando um agente FORA do pipeline fixo de handoffs precisa ser alcançado por decisão humana — hoje é exatamente o caso do Staff (ADR 0088), endereçável só pela rota interna (`POST .../agent/message`), nunca pela tela |
+| MFA, OIDC provider, federação genérica | [ADR 0031](../adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.md) — login social (GitHub/GitLab) SAIU da proibição e está implementado (ADR 0084); o resto continua fora de escopo |
 | Deploy (`DEPLOY_ENABLED` + Environments) | o gate `operavel` já está declarado como `planned` |
 | Volta da `rc`/`rcfix` | [ADR 0030](../adr/0030-politica-de-branches-mecanizada.md) |
 | ~~Modo community do approval-ladder~~ | **CORRIGIDO E FECHADO.** A referência "vira mudança de `aprovacao_humana` no registro de gates" era imprecisa — vinha de uma frase especulativa do ADR 0054, não de algo que faltava. O modo `community` já está implementado e testado desde a FASE 6 (`scripts/ci/approval-ladder.ts`), só desligado por `APPROVAL_MODE=solo` (default); `aprovacao_humana` do gate `aprovacoes-da-escada` já é `true` nos dois modos, sem awareness de `APPROVAL_MODE` no schema. O que faltava de verdade era o `TODO(humano)` de `branching-policy.md` — o critério de quem entra em cada lista de aprovadores —, fechado por `GOVERNANCE.md` (raiz do repositório). Ativar o modo de fato continua sendo decisão operacional (recrutar gente real pros três papéis), não pendência de engenharia |
-| Preferência de moeda com taxa manual | — |
+| ~~Preferência de moeda com taxa manual~~ | **NÃO FAZER** — decisão registrada. Converter exigiria taxa de câmbio mantida manualmente, que envelhece; número errado é pior que número honesto em USD (mesmo princípio já aplicado em `formatarCustoMicros`, `ProjectSettingsTab.tsx`) |
 | Reativar a Anamnese (`ANAMNESE_ENABLED=true`) | pausada por decisão do usuário em 2026-08-10 — "hoje ele não está trazendo dados de muito valor" ([RN-115](../business-rules.md#rn-115)). Nenhum dado apagado (hipóteses, perfis de proficiência, patches de instrução seguem intactos e visíveis); a pausa é só do CAMINHO de rodada nova, aguardando um refinamento futuro do que a Anamnese deriva antes de religar |
 | Reativar o Psicólogo (`PSYCHOLOGIST_ENABLED=true`) | pausado por decisão do usuário em 2026-08-10, mesmo motivo e mesmo padrão da Anamnese acima ([RN-117](../business-rules.md#rn-117)). Nenhum dado apagado (análises e hipóteses já emitidas seguem intactas e visíveis); a pausa é só do CAMINHO de rodada nova (automática e sob demanda) |
 
@@ -377,7 +377,7 @@ projeto já existente fica como item de backlog NOVO, sem desenho ainda:
 |---|---|---|---|
 | Conversão de `execution_mode` em projeto EXISTENTE, sem recriar (worktree, `permissions.json` e cache do engine precisam migrar de escopo junto) | M | nenhum — o ADR 0104 já prometia isso e a promessa está incorreta hoje; falta só o desenho | achado na Onda 1, corrigindo o ADR 0104 item 4 |
 
-**Onda 2 — PAT, [ADR 0105](../adr/0105-personal-access-token-do-runner-escopado-por-construcao.md), CONCLUÍDA (RN-424/425/426):**
+**Onda 2 — PAT, [ADR 0105](../adr/0105-personal-access-token-do-runner-escopado-por-construcao.md), CONCLUÍDA (RN-424/425/426; RN-427 fechada depois, mesma onda de decisão):**
 
 O item "token de conta de longa duração" da tabela original tinha DOIS
 erros de texto, corrigidos na implementação em vez de seguidos cegamente
@@ -400,6 +400,7 @@ erros de texto, corrigidos na implementação em vez de seguidos cegamente
 | 1 | **FECHADO** (RN-424) | PAT precisava autenticar `runner-ticket` sem virar credencial válida pra qualquer outra rota do usuário | `apps/api/src/interfaces/http/auth/pat-route.decorator.ts` (`@RequirePatAuth()`), `apps/api/src/interfaces/http/auth/jwt-auth.guard.ts` (terceiro early-out), `apps/api/src/interfaces/http/auth/pat-auth.guard.ts` (`PatAuthGuard`, aplicado só em `runnerTicket`) |
 | 2 | **FECHADO** (RN-425) | Validação de token de alta entropia sem vazar qual dos três motivos de recusa (inexistente/revogado/expirado) se aplica; `last_used_at` sem regredir uma reconexão legítima | `apps/api/src/infrastructure/persistence/drizzle/personal-access-token.repository.ts` (`validarEUsar` — UPDATE condicional único, sem throttle no mesmo WHERE) |
 | 3 | **FECHADO** (RN-426) | Emitir/revogar/listar sem vazar token de um usuário pro outro | `apps/api/src/application/use-cases/auth/*-personal-access-token*.use-case.ts`, escopo por `userId` no WHERE da query |
+| 4 | **FECHADO** (RN-427) | `maintainer` revogar PAT de OUTRO usuário (resposta a incidente — dev desligado com token vazando), declarado fora de escopo à época | `apps/api/src/application/use-cases/auth/*-personal-access-token-as-maintainer.use-case.ts`, `apps/api/src/interfaces/http/runner/personal-access-tokens.controller.ts` (`listAllPats`/`revokePatAsMaintainer`, rotas separadas `@RequireRole('maintainer')`), escopo por `projectId` no WHERE da query |
 
 `apps/runner/src/auth.ts` perdeu por completo login interativo, cookies
 e `~/.brabo/runner-credentials.json` — só valida formato e repassa
@@ -425,7 +426,6 @@ ordem:**
 | item | custo | critério de ativação | onde foi decidido |
 |---|---|---|---|
 | Binário standalone (`pkg`/`bun build --compile`) | G | não bloqueante; sem gatilho definido, item futuro separado da distribuição via npm | ADR 0104 |
-| `maintainer` revogar PAT de OUTRO usuário (resposta a incidente — dev desligado com token vazando) | P | nenhum — declarado fora de escopo da Onda 2, não implementado | ADR 0105 |
 | Exclusividade do runner por `{project_id, machine_id}` em vez de só `project_id` (`apps/engine/lib/engine/runners/registry.ex`) | M | ADIADO — critério de ativação explícito: existir de fato um segundo dev usando o mesmo projeto simultaneamente | ADR 0104 |
 
 `apps/runner/src/guard.ts` (checagem léxica best-effort de `cwd`) **não é

@@ -1893,6 +1893,14 @@ em disco pelo CLI. O PAT nunca autentica fora de
 global, que deixaria `RolesGuard` autorizar o PAT pra qualquer rota do
 papel do usuário.
 
+**`maintainer` revoga PAT de outro usuário (RN-427)**, fechando o item
+que o ADR 0105 tinha declarado fora de escopo por ora (resposta a
+incidente — dev desligado com token vazando). Extensão do mesmo modelo,
+sem ADR novo: rotas SEPARADAS (`GET .../personal-access-tokens/all`,
+`DELETE .../personal-access-tokens/:tokenId/admin`), escopo por
+`projectId` em vez de `userId` — a autorevogação de cada usuário
+(RN-426) não muda.
+
 `@xterm/xterm`/`@xterm/addon-fit` (web) e `phoenix`/`node-pty` (runner)
 são as quatro dependências novas — mesma régua de exceção do `mermaid`
 (ADR 0068): `import()` dinâmico, sem `eval`/`new Function` confirmado por
