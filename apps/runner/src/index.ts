@@ -15,8 +15,9 @@
  * `guard.ts` (barreira best-effort de `cwd`).
  */
 
-import { existsSync, statSync } from 'node:fs';
+import { existsSync, realpathSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { obterToken, obterTicketDoRunner } from './auth.ts';
 import {
   conectarCanal,
@@ -287,10 +288,21 @@ async function main(): Promise<void> {
   }
 }
 
-// Só roda `main()` quando executado diretamente como CLI (`brabo-runner` ou
-// `node src/index.ts`) — nunca em `import` (ex.: se algum teste um dia
-// importar deste arquivo).
-if (process.argv[1]?.endsWith('index.ts') || process.argv[1]?.endsWith('brabo-runner')) {
+// Só roda `main()` quando executado diretamente como CLI — nunca em `import`
+// (ex.: se algum teste um dia importar deste arquivo). NÃO compara por nome
+// de arquivo (`.endsWith('index.ts')`) — isso quebrava exatamente no caso que
+// a publicação via npm existe para habilitar: `npm install -g` cria um
+// symlink em `node_modules/.bin/brabo-runner` apontando pro `dist/index.cjs`
+// real, e `process.argv[1]` NUNCA é resolvido por realpath pelo Node — só
+// `import.meta.url` (e o shim de `import.meta.url` que o tsup gera pro
+// build cjs, baseado em `__filename`) é. Sem o `realpathSync` aqui, a
+// comparação dava `false` sempre que o CLI rodava pelo `bin` instalado, e
+// `main()` nunca era chamado. No Windows o shim `.cmd`/`.ps1` do npm já
+// invoca `node <caminho real>` sem symlink — `realpathSync` vira no-op ali.
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href
+) {
   main().catch((erro) => {
     console.error(`falha fatal: ${mensagemDeErro(erro)}`);
     process.exit(1);

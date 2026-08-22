@@ -6,6 +6,12 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **runner**: `@brabo/runner` publicado no npm — `npm install -g
+  @brabo/runner` instala o CLI sem precisar clonar o monorepo. `tsup`
+  empacota `apps/runner` num `dist/index.cjs` único (`node-pty`
+  continua dependência separada, é binding nativo); publicação a cada
+  tag final via workflow próprio (`publish-runner.yml`), paralelo ao
+  `release.yml`. Fecha o backlog do ADR 0104 (ADR 0106)
 - **api,web,runner**: Personal Access Token (`brb_…`) pro `brabo-runner`,
   fechando o item de backlog do ADR 0104 que bloqueava
   `npm publish @brabo/runner`. `apps/runner/src/auth.ts` deixa de

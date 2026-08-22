@@ -405,12 +405,25 @@ erros de texto, corrigidos na implementação em vez de seguidos cegamente
 e `~/.brabo/runner-credentials.json` — só valida formato e repassa
 `--token`/`BRABO_ACCOUNT_TOKEN`, nunca gravado em disco pelo CLI.
 
+**Onda 3 — distribuição via npm, [ADR 0106](../adr/0106-distribuicao-do-runner-via-tsup-e-npm-publish.md), CONCLUÍDA:**
+
+| # | Severidade | Item | Evidência (arquivo:linha) |
+|---|---|---|---|
+| 1 | **FECHADO** | `apps/runner` era `"private": true`, `bin` apontando pra um `.ts` cru, só alcançável clonando o monorepo | `apps/runner/tsup.config.ts` (`format: cjs`, `external: ['node-pty']`), `apps/runner/package.json` (`bin` → `dist/index.cjs`, `publishConfig.access: public`), `.github/workflows/publish-runner.yml` (publica a cada tag final, workflow próprio, paralelo a `release.yml`) |
+
+Achado real durante a implementação, testado empiricamente antes de entrar
+no código: a correção óbvia da guarda de auto-run de `index.ts`
+(`import.meta.url === pathToFileURL(argv[1]).href`) estava QUEBRADA
+exatamente no caso que esta onda existe pra habilitar — invocação via `bin`
+instalado (`npm install -g` cria um symlink, e `process.argv[1]` nunca é
+resolvido por realpath enquanto `import.meta.url` sempre é). A correção
+final aplica `realpathSync` em `argv[1]` antes de comparar — ver ADR 0106.
+
 **O que fica para depois — backlog priorizado pelo dono do produto, nesta
 ordem:**
 
 | item | custo | critério de ativação | onde foi decidido |
 |---|---|---|---|
-| Distribuição do runner via `tsup` → `dist/index.cjs` único + `npm publish` (`@brabo/runner`) | M | DESBLOQUEADA pela Onda 2 (PAT fechado) — nenhuma dependência restante | ADR 0104/0105 |
 | Binário standalone (`pkg`/`bun build --compile`) | G | não bloqueante; sem gatilho definido, item futuro separado da distribuição via npm | ADR 0104 |
 | `maintainer` revogar PAT de OUTRO usuário (resposta a incidente — dev desligado com token vazando) | P | nenhum — declarado fora de escopo da Onda 2, não implementado | ADR 0105 |
 | Exclusividade do runner por `{project_id, machine_id}` em vez de só `project_id` (`apps/engine/lib/engine/runners/registry.ex`) | M | ADIADO — critério de ativação explícito: existir de fato um segundo dev usando o mesmo projeto simultaneamente | ADR 0104 |

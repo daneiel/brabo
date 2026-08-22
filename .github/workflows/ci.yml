@@ -216,6 +216,23 @@ jobs:
       - name: Typecheck dos scripts de CI
         run: pnpm --filter @brabo/scripts typecheck
 
+      # `apps/runner` nunca rodou aqui até o ADR 0106 — buraco pré-existente,
+      # mais grave agora que este código é publicado no npm pra terceiros.
+      - name: Testes do runner
+        run: pnpm --filter runner test
+
+      - name: Typecheck do runner
+        run: pnpm --filter runner typecheck
+
+      - name: Build do runner (tsup)
+        run: pnpm --filter runner build
+
+      # O único teste que exercita o ARTEFATO EMPACOTADO de ponta a ponta —
+      # os testes acima só chamam funções exportadas de `src/`, nunca o
+      # `dist/index.cjs` que de fato vai pro registry.
+      - name: Smoke do artefato empacotado do runner
+        run: pnpm --filter runner smoke
+
   test-engine:
     name: Testes do engine (ExUnit)
     runs-on: ubuntu-latest
