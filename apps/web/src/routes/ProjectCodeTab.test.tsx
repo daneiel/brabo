@@ -52,10 +52,11 @@ const SEM_DECISAO: EstadoDoContainer = {
 };
 
 /**
- * O projeto no modo de sempre. A aba pergunta o modo (RN-169) porque projeto
- * Local não passa pelo gate do container — ele não sobe container nenhum.
+ * O projeto no modo de sempre. A aba pergunta o modo (RN-169/RN-421) porque
+ * projeto `mounted`/`runner` não passa pelo gate do container — nenhum dos
+ * dois sobe container nenhum.
  */
-function projeto(workspaceMode: 'container' | 'local' = 'container') {
+function projeto(executionMode: 'container' | 'mounted' | 'runner' = 'container') {
   return {
     id: 'proj-1',
     workspaceId: 'ws-1',
@@ -64,8 +65,9 @@ function projeto(workspaceMode: 'container' | 'local' = 'container') {
     createdBy: 'user-1',
     maxConsecutiveBlocked: null,
     storyPromotion: 'manual' as const,
-    workspaceMode,
-    workspacePath: workspaceMode === 'local' ? '/home/voce/loja' : null,
+    executionMode,
+    workspacePath: executionMode !== 'container' ? '/home/voce/loja' : null,
+    workspaceVerifiedAt: null,
     createdAt: '2026-08-02T00:00:00.000Z',
     updatedAt: '2026-08-02T00:00:00.000Z',
   };
@@ -123,13 +125,24 @@ describe('ProjectCodeTab — o gate (RN-107)', () => {
   });
 
   /**
-   * Projeto Local (RN-169, ADR 0072): a api já libera a leitura, e a tela tem
-   * de concordar. Sem isto a aba ficaria bloqueada para sempre esperando uma
-   * decisão que ninguém vai tomar — e nem sequer há o que perguntar, por isso
-   * `getContainerState` não é chamado.
+   * Projeto mounted (RN-169/RN-421, ADR 0072/0104): a api já libera a
+   * leitura, e a tela tem de concordar. Sem isto a aba ficaria bloqueada
+   * para sempre esperando uma decisão que ninguém vai tomar — e nem sequer
+   * há o que perguntar, por isso `getContainerState` não é chamado.
    */
-  it('projeto Local: abre o shell sem sequer perguntar do container', async () => {
-    getProject.mockResolvedValue(projeto('local'));
+  it('projeto mounted: abre o shell sem sequer perguntar do container', async () => {
+    getProject.mockResolvedValue(projeto('mounted'));
+    getContainerState.mockResolvedValue(SEM_DECISAO);
+
+    montar();
+
+    expect(await screen.findByText('shell aberto para proj-1')).toBeInTheDocument();
+    expect(screen.queryByText(/ainda não está liberada/)).not.toBeInTheDocument();
+    expect(getContainerState).not.toHaveBeenCalled();
+  });
+
+  it('projeto runner: mesma régua — abre o shell sem perguntar do container', async () => {
+    getProject.mockResolvedValue(projeto('runner'));
     getContainerState.mockResolvedValue(SEM_DECISAO);
 
     montar();

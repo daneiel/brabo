@@ -24,6 +24,7 @@ import {
   enviarPtyData,
   enviarPtyError,
   enviarPtyOpened,
+  enviarWorkspaceConfirm,
   JoinRecusadoError,
   type ChannelLike,
   type ExecMessage,
@@ -192,6 +193,11 @@ async function conectarERodar(
 
   estado.canalAtual = conexao.channel;
   console.log(`conectado ao projeto ${projectId} — aguardando comandos aprovados...`);
+
+  // RN-423 (ADR 0104): confirma o `--dir` desta execução pro engine/api —
+  // é este runner quem tem autoridade sobre o disco de verdade. Uma vez
+  // por conexão (não por comando), logo que o canal está pronto.
+  enviarWorkspaceConfirm(conexao.channel, { path: estado.dir });
 
   await queda;
   estado.canalAtual = null;

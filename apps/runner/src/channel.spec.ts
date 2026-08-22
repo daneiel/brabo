@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   conectarCanal,
   enviarExecResult,
+  enviarWorkspaceConfirm,
   JoinRecusadoError,
   JoinTimeoutError,
   type ChannelLike,
@@ -164,5 +165,24 @@ describe('conectarCanal', () => {
         criarSocket: fabricaFalsa(canal),
       }),
     ).rejects.toBeInstanceOf(JoinTimeoutError);
+  });
+
+  /** RN-423 (ADR 0104) — o runner empurra o caminho logo que o canal conecta. */
+  it('enviarWorkspaceConfirm empurra o caminho depois do join', async () => {
+    const canal = new CanalFalso({ status: 'ok' });
+
+    const conectado = await conectarCanal({
+      engineWsUrl: 'ws://fake/runner/websocket',
+      ticket: 't1',
+      projectId: 'p1',
+      handlers: handlersVazios,
+      criarSocket: fabricaFalsa(canal),
+    });
+
+    enviarWorkspaceConfirm(conectado.channel, { path: '/home/voce/projetos/loja' });
+
+    expect(canal.pushes).toEqual([
+      { event: 'workspace_confirm', payload: { path: '/home/voce/projetos/loja' } },
+    ]);
   });
 });

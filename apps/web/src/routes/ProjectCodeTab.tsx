@@ -49,7 +49,12 @@ export function ProjectCodeTab({ projectId }: { projectId: string }) {
     queryKey: ['project', projectId],
     queryFn: () => getProject(projectId),
   });
-  const modoLocal = projectQuery.data?.workspaceMode === 'local';
+  // `false` enquanto `projectQuery.data` ainda não chegou — `undefined !==
+  // 'container'` seria `true` e abriria o shell ANTES de saber o modo real
+  // (bug achado pelo teste de "carregando" desta mesma tela).
+  const modoLocal = projectQuery.data
+    ? projectQuery.data.executionMode !== 'container'
+    : false;
 
   const containerQuery = useQuery({
     queryKey: ['container', projectId],

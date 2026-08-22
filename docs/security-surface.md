@@ -121,23 +121,30 @@ motivo na URL.
 
 - **`POST /workspaces/:workspaceId/projects` decide onde o agente vai escrever,
   e por isso é rota de superfície de segurança, não só de cadastro**
-  ([ADR 0072](adr/0072-projeto-local-ou-container.md),
-  [RN-169](business-rules.md#rn-169)/[RN-170](business-rules.md#rn-170)). O
-  corpo ganhou `workspaceMode` (`container` — o default e o comportamento de
-  sempre — ou `local`) e `workspacePath`. No modo `local` o caminho absoluto
-  informado vira a **raiz do escopo de terminal** do ADR 0055: o que se digita
-  aqui é o que o agente pode ler e escrever. Nenhuma rota nova, e nenhuma
-  mudança de papel (`RequireRole('maintainer')`, como já era) — o que mudou é
-  o alcance do que a rota concede.
+  ([ADR 0072](adr/0072-projeto-local-ou-container.md)/
+  [ADR 0104](adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md),
+  [RN-169](business-rules.md#rn-169)/[RN-421](business-rules.md#rn-421)/
+  [RN-422](business-rules.md#rn-422)). O corpo ganhou `executionMode`
+  (`container` — o default e o comportamento de sempre —, `mounted`, o antigo
+  `local`, renomeado, ou `runner`) e `workspacePath`. Em `mounted`/`runner` o
+  caminho absoluto informado vira a **raiz do escopo de terminal** do ADR
+  0055: o que se digita aqui é o que o agente pode ler e escrever. Nenhuma
+  rota nova, e nenhuma mudança de papel (`RequireRole('maintainer')`, como já
+  era) — o que mudou é o alcance do que a rota concede.
 
-  A validação está toda na criação (RN-170: absoluto, sem `..`, existente,
+  A validação diverge pelos DOIS modos que não são `container` (RN-422):
+  `mounted` continua tocando disco na criação (absoluto, sem `..`, existente,
   gravável de dentro do container, nunca raiz nem pasta de sistema, nunca
-  sobreposto ao checkout do Brabo nos dois sentidos) e a recusa é `400` com a
-  linha de compose que resolve. O modo é **congelado** depois: `UpdateProjectDto`
-  omite os dois campos de propósito, senão `PartialType(CreateProjectDto)` os
-  exporia num `PATCH` sem guarda nenhuma. O predicado léxico ainda roda a cada
-  derivação da raiz, porque o único jeito de burlar a criação é escrever direto
-  no banco.
+  sobreposto ao checkout do Brabo nos dois sentidos), com recusa `400` e a
+  linha de compose que resolve; `runner` valida só o LÉXICO — a mesma lista de
+  proibições, sem tocar disco — porque só o runner, rodando no host de
+  verdade, tem autoridade para confirmar que a pasta existe (RN-423, ver
+  `POST /internal/projects/:projectId/workspace-verification` abaixo). O modo é
+  **congelado** depois: `UpdateProjectDto` omite os dois campos de propósito,
+  senão `PartialType(CreateProjectDto)` os exporia num `PATCH` sem guarda
+  nenhuma. O predicado léxico ainda roda a cada derivação da raiz — na LEITURA
+  também, não só na criação —, porque o único jeito de burlar a criação é
+  escrever direto no banco.
 - **`GET /`** é o "Hello World!" do scaffold do NestJS
   (`src/app.controller.ts`). Está atrás do guard e não vaza nada, mas não serve
   a nada — candidata a remoção. Ficou registrada aqui em vez de removida por
@@ -164,6 +171,15 @@ motivo na URL.
   O escopo é fechado no projeto pelo caminho, e o custo por chamada é
   constante (três leituras no backlog, duas nas regras, uma consulta a
   `proposed_actions` filtrada por índice nas métricas de produto).
+- **`POST /internal/projects/:projectId/workspace-verification`** (RN-423,
+  ADR 0104) é chamada só pelo engine, depois de um runner conectar e mandar
+  `workspace_confirm` pelo canal — nunca diretamente pelo runner, que não
+  tem o service token. O runner é a FONTE DA VERDADE do caminho (ele
+  SOBRESCREVE `workspacePath`, sem exigir igualdade com o que foi digitado
+  na criação), mas o caminho reportado ainda passa pela MESMA checagem
+  léxica da criação (`caminhoDeWorkspaceLocalValido`) — raiz de sistema e
+  sobreposição com o checkout do Brabo continuam proibidas mesmo vindo do
+  runner. `400` se o projeto não estiver no modo `runner`.
 - **As rotas `engine-service` não são "internas" por convenção de nome.** O que
   as protege é o `EngineServiceGuard` comparando o `X-Brabo-Service-Token` com
   o segredo compartilhado em tempo constante, mais a NetworkPolicy. O prefixo
@@ -362,6 +378,7 @@ motivo na URL.
 | GET | `/internal/projects/:projectId/business-rules` | engine-service |
 | GET | `/internal/projects/:projectId/backlog` | engine-service |
 | GET | `/internal/projects/:projectId/product-metrics` | engine-service |
+| POST | `/internal/projects/:projectId/workspace-verification` | engine-service |
 | GET | `/internal/sessions/:sessionId/psychologist-context` | engine-service |
 | POST | `/internal/sessions/:sessionId/stories` | engine-service |
 | POST | `/internal/sessions/:sessionId/story-modules` | engine-service |

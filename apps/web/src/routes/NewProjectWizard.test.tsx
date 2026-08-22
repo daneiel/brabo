@@ -138,15 +138,15 @@ describe('NewProjectWizard — onde o código vai morar', () => {
     expect(createProject.mock.calls[0][1]).toEqual({
       name: 'Loja',
       slug: 'loja',
-      workspaceMode: 'container',
+      executionMode: 'container',
     });
   });
 
-  it('Local manda o caminho digitado, e só ele', async () => {
+  it('Pasta montada manda o caminho digitado, e só ele', async () => {
     createProject.mockResolvedValue({ id: 'proj-1' });
     await ateWorkspace();
 
-    fireEvent.click(screen.getByText('Local'));
+    fireEvent.click(screen.getByText('Pasta montada'));
     fireEvent.change(screen.getByLabelText('Caminho da pasta'), {
       target: { value: '/home/voce/projetos/loja' },
     });
@@ -158,15 +158,15 @@ describe('NewProjectWizard — onde o código vai morar', () => {
     expect(createProject.mock.calls[0][1]).toEqual({
       name: 'Loja',
       slug: 'loja',
-      workspaceMode: 'local',
+      executionMode: 'mounted',
       workspacePath: '/home/voce/projetos/loja',
     });
   });
 
-  it('Local sem caminho não avança — a tela não deixa mandar o que a api recusaria', async () => {
+  it('Pasta montada sem caminho não avança — a tela não deixa mandar o que a api recusaria', async () => {
     await ateWorkspace();
 
-    fireEvent.click(screen.getByText('Local'));
+    fireEvent.click(screen.getByText('Pasta montada'));
 
     expect(screen.getByRole('button', { name: 'Continuar' })).toBeDisabled();
   });
@@ -182,7 +182,7 @@ describe('NewProjectWizard — onde o código vai morar', () => {
     );
     await ateWorkspace();
 
-    fireEvent.click(screen.getByText('Local'));
+    fireEvent.click(screen.getByText('Pasta montada'));
     fireEvent.change(screen.getByLabelText('Caminho da pasta'), {
       target: { value: '/home/voce/projetos/loja' },
     });
@@ -194,5 +194,42 @@ describe('NewProjectWizard — onde o código vai morar', () => {
       await screen.findByText(/não existe do lado de dentro da api/i),
     ).toBeTruthy();
     expect(screen.getByText(/docker-compose\.yml/)).toBeTruthy();
+  });
+
+  /** RN-423 (ADR 0104): sem bind-mount, o caminho só é confirmado quando o
+   * runner conectar — nada aqui trava a criação nem promete recusa na hora. */
+  it('Runner local manda o caminho digitado e mostra o comando pra confirmar depois', async () => {
+    createProject.mockResolvedValue({ id: 'proj-1' });
+    await ateWorkspace();
+
+    fireEvent.click(screen.getByText('Runner local'));
+    fireEvent.change(screen.getByLabelText('Caminho da pasta'), {
+      target: { value: '/home/voce/projetos/loja' },
+    });
+
+    expect(screen.getByText(/brabo-runner --project/)).toBeTruthy();
+    expect(
+      screen.getByText(/runner confirma o caminho ao conectar/i),
+    ).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Provisionar' }));
+
+    await waitFor(() => expect(createProject).toHaveBeenCalled());
+    expect(createProject.mock.calls[0][1]).toEqual({
+      name: 'Loja',
+      slug: 'loja',
+      executionMode: 'runner',
+      workspacePath: '/home/voce/projetos/loja',
+    });
+  });
+
+  it('Runner local sem caminho não avança — mesma régua léxica de Pasta montada', async () => {
+    await ateWorkspace();
+
+    fireEvent.click(screen.getByText('Runner local'));
+
+    expect(screen.getByRole('button', { name: 'Continuar' })).toBeDisabled();
   });
 });

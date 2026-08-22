@@ -186,6 +186,12 @@ Os schemas são fechados: campo faltando reprova a emissão
 |---|---|
 | `budget.threshold_crossed` | 70%, 90% ou 100% — **uma vez por limiar** ([RN-018](../business-rules.md#rn-018)) |
 
+### Runner local (ADR 0103/0104)
+
+| tipo | quando |
+|---|---|
+| `project.workspace_verified` | o `brabo-runner` conectou e confirmou o caminho de um projeto `execution_mode: runner` — o runner é a fonte da verdade do caminho, sobrescrevendo o que foi digitado na criação ([RN-423](../business-rules.md#rn-423)) |
+
 ### Psicólogo
 
 | tipo | quando |
@@ -309,7 +315,7 @@ respeito.
 
 > ⚠️ Bloco gerado por `pnpm docs:generate`. Não edite à mão — o próximo build sobrescreve.
 
-Extraído dos pontos de emissão: **87 identificadores**, dos quais **2** não aparecem descritos acima.
+Extraído dos pontos de emissão: **88 identificadores**, dos quais **2** não aparecem descritos acima.
 
 - `action.failed` <sub>(apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts)</sub>
 - `agent.activated` <sub>(apps/api/src/application/use-cases/agents/activate-agent.use-case.ts)</sub>
@@ -379,6 +385,7 @@ Extraído dos pontos de emissão: **87 identificadores**, dos quais **2** não a
 - `project.git_connected` <sub>(apps/api/src/application/use-cases/git/handle-git-oauth-callback.use-case.ts)</sub>
 - `project.repository_adopted` <sub>(apps/api/src/application/use-cases/git/adopt-repository.use-case.ts)</sub>
 - `project.repository_provisioned` <sub>(apps/api/src/application/use-cases/git/provision-repository.use-case.ts)</sub>
+- `project.workspace_verified` <sub>(apps/api/src/application/use-cases/iam/confirm-project-workspace.use-case.ts)</sub>
 - `proposed_action.approved` <sub>(apps/api/src/application/use-cases/actions/approve-action.use-case.ts)</sub>
 - `proposed_action.created` <sub>(apps/api/src/application/use-cases/actions/propose-action.use-case.ts)</sub>
 - `proposed_action.denied` <sub>(apps/api/src/application/use-cases/actions/deny-action.use-case.ts)</sub>
