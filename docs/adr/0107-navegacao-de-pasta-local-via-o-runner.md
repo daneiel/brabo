@@ -1,4 +1,4 @@
-# ADR 0104 — Local folder navigation via the Runner
+# ADR 0107 — Local folder navigation via the Runner
 
 - **Status:** Accepted
 - **Date:** 2026-08-20

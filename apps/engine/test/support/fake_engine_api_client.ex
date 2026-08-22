@@ -610,6 +610,19 @@ defmodule Engine.Sessions.FakeEngineApiClient do
     {:ok, resposta}
   end
 
+  # RN-423 (ADR 0104) — scriptável via `:fake_confirm_workspace` (padrão
+  # `{:error, motivo}` pra exercitar recusa) ou `{:ok, resp}`; default aceita
+  # e devolve o path recebido, como a api faria numa confirmação bem-sucedida.
+  @impl true
+  def confirm_workspace(project_id, session_id, path, user_id) do
+    notify({:confirm_workspace, project_id, session_id, path, user_id})
+
+    case Process.get(:fake_confirm_workspace) do
+      nil -> {:ok, %{"verified" => true, "workspacePath" => path}}
+      resultado -> resultado
+    end
+  end
+
   @doc """
   Resposta que só devolve texto final, sem tool calls (encerra o loop).
 

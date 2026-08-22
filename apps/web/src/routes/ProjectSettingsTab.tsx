@@ -28,6 +28,9 @@ import {
   listAgentAreas,
   listProjectMembers,
   removeProjectMember,
+  listPersonalAccessTokens,
+  issuePersonalAccessToken,
+  revokePersonalAccessToken,
   mensagemDaApi,
   setAgentModelBinding,
   setAreaModelBinding,
@@ -44,6 +47,8 @@ import type {
   Model,
   ModelBindingScope,
   ModelComCuradoria,
+  PersonalAccessTokenIssued,
+  PersonalAccessTokenSummary,
   ResolvedBinding,
   ProficiencyLevel,
   ProficiencyProfile,
@@ -214,6 +219,7 @@ export function ProjectSettingsTab({ projectId }: ProjectSettingsTabProps) {
       <AreaModelsSection projectId={projectId} />
       <CatalogoDeModelos projectId={projectId} />
       <MembersSection projectId={projectId} />
+      <PersonalAccessTokensSection projectId={projectId} />
       <ProficiencySection projectId={projectId} />
       <InstructionVersionsSection projectId={projectId} />
       <MatrixSection />
@@ -991,6 +997,171 @@ function MembersSection({ projectId }: { projectId: string }) {
         rowKey={(m) => m.userId}
         emptyMessage={t('members.emptyMessage')}
       />
+    </div>
+  );
+}
+
+/**
+ * Personal Access Tokens do runner local (`brb_…`, ADR 0105) — cada usuário
+ * gerencia só os PRÓPRIOS tokens deste projeto (RN-426, sem admin cross-user
+ * nesta onda). O token bruto só existe no `emitido` LOCAL deste componente,
+ * nunca no cache do react-query que também alimenta a listagem — a lista
+ * nunca pode carregar o valor bruto.
+ */
+export function PersonalAccessTokensSection({ projectId }: { projectId: string }) {
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+  const { data: tokens } = useQuery({
+    queryKey: ['pats', projectId],
+    queryFn: () => listPersonalAccessTokens(projectId),
+  });
+  const [name, setName] = useState('');
+  const [expiresInDays, setExpiresInDays] = useState('');
+  const [emitido, setEmitido] = useState<PersonalAccessTokenIssued | null>(null);
+  const [copiado, setCopiado] = useState(false);
+
+  function invalidate() {
+    queryClient.invalidateQueries({ queryKey: ['pats', projectId] });
+  }
+
+  async function handleIssue() {
+    if (!name.trim()) return;
+    try {
+      const dias = expiresInDays.trim() ? Number(expiresInDays) : undefined;
+      const issued = await issuePersonalAccessToken(projectId, {
+        name: name.trim(),
+        expiresInDays: dias,
+      });
+      setName('');
+      setExpiresInDays('');
+      setCopiado(false);
+      setEmitido(issued);
+      invalidate();
+    } catch {
+      showToast({ title: 'Falha ao gerar token', message: 'Tente novamente.', tone: 'danger' });
+    }
+  }
+
+  async function handleRevoke(tokenId: string) {
+    await revokePersonalAccessToken(projectId, tokenId);
+    invalidate();
+  }
+
+  async function copiarToken() {
+    if (!emitido) return;
+    try {
+      await navigator.clipboard.writeText(emitido.token);
+      setCopiado(true);
+    } catch {
+      showToast({ title: 'Não consegui copiar', message: 'Copie o valor manualmente.', tone: 'danger' });
+    }
+  }
+
+  const columns: TableColumn<PersonalAccessTokenSummary>[] = [
+    { key: 'name', label: 'Nome', width: '2fr', render: (t) => t.name },
+    {
+      key: 'createdAt',
+      label: 'Criado',
+      width: '1fr',
+      render: (t) => new Date(t.createdAt).toLocaleDateString('pt-BR'),
+    },
+    {
+      key: 'expiresAt',
+      label: 'Expira',
+      width: '1fr',
+      render: (t) => (t.expiresAt ? new Date(t.expiresAt).toLocaleDateString('pt-BR') : 'nunca'),
+    },
+    {
+      key: 'lastUsedAt',
+      label: 'Último uso',
+      width: '1fr',
+      render: (t) =>
+        t.lastUsedAt ? new Date(t.lastUsedAt).toLocaleDateString('pt-BR') : 'nunca usado',
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      width: '120px',
+      render: (t) =>
+        t.revokedAt ? (
+          <Badge tone="danger">revogado</Badge>
+        ) : (
+          <span className={styles.status}>
+            <span className={styles.statusDot} />
+            ativo
+          </span>
+        ),
+    },
+    {
+      key: 'action',
+      label: '',
+      width: '56px',
+      render: (t) =>
+        t.revokedAt ? null : (
+          <button
+            type="button"
+            aria-label={`Revogar ${t.name}`}
+            title="Revogar"
+            className={styles.remove}
+            onClick={() => handleRevoke(t.id)}
+          >
+            <TrashIcon size={14} />
+          </button>
+        ),
+    },
+  ];
+
+  return (
+    <div className={styles.section}>
+      <div className={styles.sectionHead}>
+        <h2 className={styles.title}>Tokens de acesso</h2>
+        <span className={styles.eyebrow}>Runner local · ADR 0105</span>
+      </div>
+      <p className={styles.subtitle}>
+        Um Personal Access Token autentica o <code>brabo-runner</code> nesta máquina,
+        escopado só a este projeto — revogável a qualquer hora, e o valor bruto nunca
+        aparece de novo depois de emitido.
+      </p>
+
+      <div className={styles.inviteBar}>
+        <div className={styles.inviteInput}>
+          <Input
+            placeholder="Nome (ex.: laptop)"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+        </div>
+        <div className={styles.inviteRole}>
+          <Input
+            type="number"
+            min={1}
+            placeholder="Expira em N dias (opcional)"
+            value={expiresInDays}
+            onChange={(e) => setExpiresInDays(e.target.value)}
+          />
+        </div>
+        <Button onClick={handleIssue}>Gerar token</Button>
+      </div>
+
+      <Table
+        columns={columns}
+        rows={tokens ?? []}
+        rowKey={(t) => t.id}
+        emptyMessage="Nenhum token de acesso emitido para este projeto."
+      />
+
+      {emitido && (
+        <Modal title="Token gerado" onClose={() => setEmitido(null)}>
+          <p className={styles.subtitle}>
+            Copie agora — este token não é recuperável depois de fechar esta janela. Use em{' '}
+            <code>--token</code> ou <code>BRABO_ACCOUNT_TOKEN</code> do <code>brabo-runner</code>.
+          </p>
+          <Input mono readOnly value={emitido.token} onFocus={(e) => e.currentTarget.select()} />
+          <Button onClick={copiarToken} variant="secondary">
+            {copiado ? 'Copiado' : 'Copiar'}
+          </Button>
+        </Modal>
+      )}
     </div>
   );
 }

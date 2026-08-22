@@ -247,6 +247,58 @@ defmodule EngineWeb.TerminalChannelTest do
     end
   end
 
+  # RN-423 (ADR 0104) — só o :runner pode originar `workspace_confirm`.
+  describe "workspace_confirm" do
+    test "vindo do :runner, repassa pra api via EngineApiClient.confirm_workspace/4" do
+      project_id = Ecto.UUID.generate()
+      user_id = Ecto.UUID.generate()
+      socket = emitir_e_conectar!(project_id, "runner", user_id)
+
+      {:ok, _reply, joined} =
+        Phoenix.ChannelTest.subscribe_and_join(socket, "terminal:#{project_id}", %{})
+
+      push(joined, "workspace_confirm", %{"path" => "/home/voce/projetos/loja"})
+
+      assert_receive {:confirm_workspace, ^project_id, _session_id, "/home/voce/projetos/loja",
+                      ^user_id}
+    end
+
+    test "vindo de :web, é IGNORADO — nunca chama a api" do
+      project_id = Ecto.UUID.generate()
+      socket = emitir_e_conectar!(project_id, "terminal")
+
+      {:ok, _reply, joined} =
+        Phoenix.ChannelTest.subscribe_and_join(socket, "terminal:#{project_id}", %{})
+
+      push(joined, "workspace_confirm", %{"path" => "/home/voce/projetos/loja"})
+
+      refute_receive {:confirm_workspace, _, _, _, _}, 200
+    end
+
+    # A recusa léxica em si (caminho fora de escopo, etc.) já tem cobertura
+    # no lado api (`confirm-project-workspace.use-case.spec.ts`); aqui o que
+    # importa é só que o canal segue vivo depois de repassar — o handler
+    # não propaga o `{:error, _}` como falha do `handle_in/3` de propósito
+    # (só loga), então nenhum teste cross-processo é necessário pra provar
+    # isso: basta que o canal continue respondendo a outro evento.
+    test "depois de repassar, o canal segue vivo e responde a outros eventos" do
+      project_id = Ecto.UUID.generate()
+      socket = emitir_e_conectar!(project_id, "runner")
+
+      {:ok, _reply, joined} =
+        Phoenix.ChannelTest.subscribe_and_join(socket, "terminal:#{project_id}", %{})
+
+      push(joined, "workspace_confirm", %{"path" => "/home/voce/projetos/loja"})
+      assert_receive {:confirm_workspace, ^project_id, _session_id, _path, _user_id}
+
+      # O processo do canal não derrubou — outro `workspace_confirm` (o
+      # único evento que este papel pode originar) continua sendo tratado.
+      push(joined, "workspace_confirm", %{"path" => "/home/voce/projetos/loja"})
+      assert_receive {:confirm_workspace, ^project_id, _session_id, _path, _user_id}
+      assert Process.alive?(joined.channel_pid)
+    end
+  end
+
   defp wait_until(fun, tentativas \\ 50)
 
   defp wait_until(_fun, 0), do: flunk("condição não ficou verdadeira a tempo")

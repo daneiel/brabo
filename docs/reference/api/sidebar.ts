@@ -270,6 +270,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/internal-projects-controller-confirm-workspace-verification",
+          label: "O runner confirma o caminho de um projeto 'runner' (RN-423)",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/internal-rag-controller-buscar",
           label: "Busca híbrida no índice RAG do projeto, para a tool do engine",
           className: "api-method post",
@@ -525,6 +531,24 @@ const sidebar: SidebarsConfig = {
           id: "docs/reference/api/projects-controller-set-permissions",
           label: "Reescreve o permissions.json do projeto",
           className: "api-method put",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/personal-access-tokens-controller-list-pats",
+          label: "Lista os próprios Personal Access Tokens deste projeto",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/personal-access-tokens-controller-issue-pat",
+          label: "Emite um Personal Access Token pro runner local",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/personal-access-tokens-controller-revoke-pat",
+          label: "Revoga um Personal Access Token próprio",
+          className: "api-method delete",
         },
         {
           type: "doc",

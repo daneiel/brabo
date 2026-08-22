@@ -110,8 +110,9 @@ const PROJETO: Project = {
   createdBy: 'user-1',
   maxConsecutiveBlocked: null,
   storyPromotion: 'manual',
-  workspaceMode: 'container',
+  executionMode: 'container',
   workspacePath: null,
+  workspaceVerifiedAt: null,
   createdAt: '2026-08-01T10:00:00.000Z',
   updatedAt: '2026-08-01T10:00:00.000Z',
 };
@@ -163,7 +164,7 @@ afterAll(() => {
 describe('abas do projeto derivam de um registro só', () => {
   // `.map(aba => aba.key)`, NUNCA `.label` aqui: `it.each` avalia este array
   // na COLETA do teste, antes de qualquer `beforeEach` rodar — `.label` é
-  // getter sobre `i18n.t()` (RN-425), e capturá-lo agora prenderia o idioma
+  // getter sobre `i18n.t()` (RN-431), e capturá-lo agora prenderia o idioma
   // que o singleton tinha ANTES de `changeLanguage('pt-BR')`. O rótulo certo
   // só existe depois, dentro do corpo do teste.
   it.each(ABAS_DO_PROJETO.map((aba) => aba.key))(

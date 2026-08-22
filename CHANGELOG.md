@@ -6,6 +6,37 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **runner**: `@brabo/runner` publicado no npm — `npm install -g
+  @brabo/runner` instala o CLI sem precisar clonar o monorepo. `tsup`
+  empacota `apps/runner` num `dist/index.cjs` único (`node-pty`
+  continua dependência separada, é binding nativo); publicação a cada
+  tag final via workflow próprio (`publish-runner.yml`), paralelo ao
+  `release.yml`. Fecha o backlog do ADR 0104 (ADR 0106)
+- **api,web,runner**: Personal Access Token (`brb_…`) pro `brabo-runner`,
+  fechando o item de backlog do ADR 0104 que bloqueava
+  `npm publish @brabo/runner`. `apps/runner/src/auth.ts` deixa de
+  replicar login (e-mail/senha interativos, cookies persistidos em
+  `~/.brabo/runner-credentials.json`) — o CLI passa a receber um token
+  de longa duração via `--token`/`BRABO_ACCOUNT_TOKEN`, emitido em
+  Configurações do projeto, revogável, com expiração opcional, escopado
+  a UM projeto. O token nunca autentica fora de
+  `POST /projects/:projectId/runner-ticket`, por construção
+  (`IS_PAT_ROUTE_KEY`/`@RequirePatAuth()` + `PatAuthGuard` de rota, nunca
+  um branch no `JwtAuthGuard` global) — nem sob papel elevado, nem em
+  nenhuma outra rota (RN-424/425/426, ADR 0105)
+- **api,engine,web,runner**: `execution_mode` do projeto passa a ter TRÊS
+  valores — `container` (default, inalterado), `mounted` (o antigo `local`,
+  renomeado) e `runner` (novo: pasta do usuário SEM bind-mount, confirmada
+  por um `brabo-runner` conectado). Reconcilia os ADRs 0072 e 0103: antes,
+  o roteamento pro runner reusava a mesma flag do modo `local`, então
+  usar o runner de verdade exigia passar pela validação de bind-mount que
+  ele não precisa. Criação de projeto `runner` valida só o caminho
+  (léxico, sem tocar disco); o runner confirma o caminho de verdade ao
+  conectar (`POST /internal/projects/:projectId/workspace-verification`,
+  novo), sobrescrevendo o que foi digitado — ele é a fonte da verdade.
+  Comando de agente roteado a um projeto `runner` sem workspace verificado
+  ou sem runner conectado é RECUSADO explicitamente, nunca cai no
+  fallback de container (RN-421/422/423, ADR 0104)
 - **api,web**: fundação de i18n — coluna `locale` em `users` (`'pt-BR'|'en'`,
   default `'pt-BR'`), embutida no corpo de `/auth/login`/`/auth/refresh` (sem
   chamada extra) via `EmitirSessaoUseCase`; `GET/PATCH /users/me/preferences`
@@ -21,7 +52,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `docs/` virar a fonte em inglês, e uma regra `warn` nova no docmap
   (`traducao-pt-br`) cobrindo o drift entre as duas árvores. Extração em
   massa do resto da interface e tradução de `docs/` são a próxima etapa,
-  em andamento (RN-425)
+  em andamento (RN-431)
 - **web**: navegação por abas agrupadas — a régua de 11 abas do projeto vira
   6 no topo (Visão geral, Agentes ▾, Dev ▾, Documentação ▾, Gastos,
   Configurações), com `GroupedTabs` novo por cima do `Tabs` existente. Chat
@@ -38,13 +69,13 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `git_merge` (primeira produtora real pela UI), desabilitado quando o gate
   do dev agent bloqueou a task; a trava de branch protegida continua
   absoluta (RN-154). `git_merge` ganhou corpo próprio no card de aprovação
-  em vez do despejo de JSON cru (RN-423)
+  em vez do despejo de JSON cru (RN-429)
 - **web**: aba própria **Arquitetura**, extraída da Visão Geral (module_map,
   diagrama C4, ADRs, pendências de validação cruzada); a Visão Geral passa a
   mostrar um resumo condensado com link "Ver arquitetura completa →".
   Primeiro lightbox do design system: `C4DiagramView` ganha botão de
   ampliar por diagrama, abrindo o SVG em tela cheia sobre `Modal`
-  (`size="full"`, novo) (RN-424)
+  (`size="full"`, novo) (RN-430)
 - **api,web,engine,runner**: navegação de pasta local via o Runner — dois
   eventos novos no MESMO canal `terminal:<projectId>` (`fs_list_dir`/
   `fs_home_dir`), relay puro do engine, exatamente como o PTY.
@@ -52,13 +83,13 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   pasta") integrado à criação de projeto e reaproveitável onde o projeto já
   existe; sem runner conectado, `RunnerOnboardingPanel` (novo, compartilhado
   com a aba Terminal) explica a instalação em vez de travar carregando. A
-  api continua sem enumerar filesystem nenhum — nenhuma rota nova (RN-422,
-  ADR 0104, revisa a ADR 0072)
+  api continua sem enumerar filesystem nenhum — nenhuma rota nova (RN-428,
+  ADR 0107, revisa a ADR 0072)
 - **web**: corrigido o carrossel de promoção de histórias do PO, que
   degradava silenciosamente para card único (ou sumia) em sessão longa —
   a leva pendente agora vem de `useBacklog` (completo, sem janela) em vez
   de um scan sobre os últimos 200 eventos, mesma classe de bug que a
-  RN-180 já corrigiu em `ContextAside` (RN-421)
+  RN-180 já corrigiu em `ContextAside` (RN-427)
 - **api,engine,web,runner**: execução de agente na máquina do usuário —
   `apps/runner` (workspace novo, CLI `brabo-runner`) conecta ao engine
   por canal Phoenix com ticket de uso único, executa comando de agente

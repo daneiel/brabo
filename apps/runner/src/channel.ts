@@ -100,6 +100,11 @@ export interface FsHomeDirReplyMessage {
   erro?: string;
 }
 
+/** RN-423 (ADR 0104) — o caminho que este runner recebeu por `--dir`. */
+export interface WorkspaceConfirmMessage {
+  path: string;
+}
+
 export interface RunnerChannelHandlers {
   onExec: (msg: ExecMessage) => void;
   onPtyOpen: (msg: PtyOpenMessage) => void;
@@ -311,6 +316,19 @@ function registrarHandlers(canal: ChannelLike, handlers: RunnerChannelHandlers):
 
 export function enviarExecResult(canal: ChannelLike, msg: ExecResultMessage): void {
   canal.push('exec_result', msg);
+}
+
+/**
+ * RN-423 (ADR 0104) — empurrado UMA vez, logo depois do join resolver `ok`
+ * (ver `index.ts`). O engine repassa pra api, que revalida léxico e
+ * SOBRESCREVE `workspacePath` — este runner é a fonte da verdade do
+ * caminho, não só um aviso decorativo.
+ */
+export function enviarWorkspaceConfirm(
+  canal: ChannelLike,
+  msg: WorkspaceConfirmMessage,
+): void {
+  canal.push('workspace_confirm', msg);
 }
 
 export function enviarPtyOpened(canal: ChannelLike, msg: PtyOpenedMessage): void {

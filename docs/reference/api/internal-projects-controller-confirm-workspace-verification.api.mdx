@@ -1,0 +1,69 @@
+---
+id: internal-projects-controller-confirm-workspace-verification
+title: "O runner confirma o caminho de um projeto 'runner' (RN-423)"
+description: "Chamada só pelo engine, depois de um runner conectar e mandar `workspace_confirm` pelo canal. O runner é a FONTE DA VERDADE do caminho — a api sobrescreve `workspacePath` com o que ele reportou, depois de revalidar léxico (raiz de sistema/sobreposição com o Brabo continuam proibidas mesmo vindo do runner). Idempotente: reconectar com o MESMO caminho não regrava nada."
+sidebar_label: "O runner confirma o caminho de um projeto 'runner' (RN-423)"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "post api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"O runner confirma o caminho de um projeto 'runner' (RN-423)"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/internal/projects/{projectId}/workspace-verification"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Chamada só pelo engine, depois de um runner conectar e mandar `workspace_confirm` pelo canal. O runner é a FONTE DA VERDADE do caminho — a api sobrescreve `workspacePath` com o que ele reportou, depois de revalidar léxico (raiz de sistema/sobreposição com o Brabo continuam proibidas mesmo vindo do runner). Idempotente: reconectar com o MESMO caminho não regrava nada.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./internal-projects-controller-confirm-workspace-verification.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./internal-projects-controller-confirm-workspace-verification.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./internal-projects-controller-confirm-workspace-verification.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

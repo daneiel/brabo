@@ -131,65 +131,87 @@ reason in the URL.
 
 ## Notes
 
-- **`POST /workspaces/:workspaceId/projects` decides where the agent
-  will write, and that's why it's a security-surface route, not just a
-  registration one**
-  ([ADR 0072](adr/0072-projeto-local-ou-container.md),
-  [RN-169](business-rules.md#rn-169)/[RN-170](business-rules.md#rn-170)).
-  The body gained `workspaceMode` (`container` — the default and the
-  usual behavior — or `local`) and `workspacePath`. In `local` mode the
-  given absolute path becomes ADR 0055's **terminal-scope root**: what's
-  typed here is what the agent can read and write. No new route, and no
-  role change (`RequireRole('maintainer')`, as it already was) — what
-  changed is the reach of what the route grants.
+- **`POST /workspaces/:workspaceId/projects` decide onde o agente vai escrever,
+  e por isso é rota de superfície de segurança, não só de cadastro**
+  ([ADR 0072](adr/0072-projeto-local-ou-container.md)/
+  [ADR 0104](adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md),
+  [RN-169](business-rules.md#rn-169)/[RN-421](business-rules.md#rn-421)/
+  [RN-422](business-rules.md#rn-422)). O corpo ganhou `executionMode`
+  (`container` — o default e o comportamento de sempre —, `mounted`, o antigo
+  `local`, renomeado, ou `runner`) e `workspacePath`. Em `mounted`/`runner` o
+  caminho absoluto informado vira a **raiz do escopo de terminal** do ADR
+  0055: o que se digita aqui é o que o agente pode ler e escrever. Nenhuma
+  rota nova, e nenhuma mudança de papel (`RequireRole('maintainer')`, como já
+  era) — o que mudou é o alcance do que a rota concede.
 
-  All the validation sits at creation time (RN-170: absolute, no `..`,
-  existing, writable from inside the container, never a root or system
-  folder, never overlapping Brabo's own checkout in either direction),
-  and the refusal is `400` with the compose line that fixes it. The mode
-  is **frozen** afterward: `UpdateProjectDto` deliberately omits both
-  fields, or `PartialType(CreateProjectDto)` would expose them on a
-  `PATCH` with no guard at all. The lexical predicate still runs on every
-  root derivation, because the only way around creation is writing
-  straight to the database.
-- **`GET /`** is the NestJS scaffold's "Hello World!"
-  (`src/app.controller.ts`). It's behind the guard and leaks nothing, but
-  serves no purpose — a candidate for removal. Kept documented here
-  instead of removed because that's a product decision, out of scope for
-  this session.
-- **`GET /internal/projects/:projectId/git-remote` is the only route in
-  the product that returns a DECRYPTED secret** — the workspace owner's
-  git token ([ADR 0056](adr/0056-o-engine-trabalha-em-repositorio-remoto.md)).
-  It exists because the engine works on the filesystem and doesn't have
-  the master key; replicating it in the engine would double the blast
-  radius of the product's most sensitive secret. Two properties keep it
-  defensible: the `origin` it returns is **clean** (the credential comes
-  in a separate field, never embedded in the URL), and whoever consumes
-  it is obligated to inject it per invocation, never into a file — see
-  `Engine.Actions.GitAuth` and the reasoning in
-  [RN-076](business-rules.md#rn-076). If this route ever started
-  returning the already-authenticated URL, the token would end up in
-  `.git/config`, inside the folder where the dev agent has
-  auto-approved reads.
-- **The PO's three read routes** —
-  `GET /internal/projects/:projectId/business-rules`,
+  A validação diverge pelos DOIS modos que não são `container` (RN-422):
+  `mounted` continua tocando disco na criação (absoluto, sem `..`, existente,
+  gravável de dentro do container, nunca raiz nem pasta de sistema, nunca
+  sobreposto ao checkout do Brabo nos dois sentidos), com recusa `400` e a
+  linha de compose que resolve; `runner` valida só o LÉXICO — a mesma lista de
+  proibições, sem tocar disco — porque só o runner, rodando no host de
+  verdade, tem autoridade para confirmar que a pasta existe (RN-423, ver
+  `POST /internal/projects/:projectId/workspace-verification` abaixo). O modo é
+  **congelado** depois: `UpdateProjectDto` omite os dois campos de propósito,
+  senão `PartialType(CreateProjectDto)` os exporia num `PATCH` sem guarda
+  nenhuma. O predicado léxico ainda roda a cada derivação da raiz — na LEITURA
+  também, não só na criação —, porque o único jeito de burlar a criação é
+  escrever direto no banco.
+- **`GET /`** é o "Hello World!" do scaffold do NestJS
+  (`src/app.controller.ts`). Está atrás do guard e não vaza nada, mas não serve
+  a nada — candidata a remoção. Ficou registrada aqui em vez de removida por
+  ser decisão de produto, fora do escopo desta sessão.
+- **`GET /internal/projects/:projectId/git-remote` é a única rota do produto que
+  devolve um segredo DECIFRADO** — o token de git do owner do workspace
+  ([ADR 0056](adr/0056-o-engine-trabalha-em-repositorio-remoto.md)). Ela existe
+  porque o engine trabalha no sistema de arquivos e não tem a chave mestra;
+  replicá-la no engine dobraria o raio de explosão do segredo mais sensível do
+  produto. Duas propriedades a mantêm defensável: o `origin` que ela devolve é
+  **limpo** (a credencial vem em campo separado, e nunca embutida na URL), e
+  quem consome tem a obrigação de injetá-la por invocação, nunca em arquivo —
+  ver `Engine.Actions.GitAuth` e o porquê disso na
+  [RN-076](business-rules.md#rn-076). Se algum dia esta rota passar a devolver
+  a URL já autenticada, o token vai parar no `.git/config`, dentro da pasta
+  onde o dev agent tem leitura auto-aprovada.
+- **As três rotas de leitura do PO** — `GET /internal/projects/:projectId/business-rules`,
   `GET /internal/projects/:projectId/backlog` ([RN-164](business-rules.md#rn-164))
-  and `GET /internal/projects/:projectId/product-metrics` ([RN-407](business-rules.md#rn-407))
-  — return no secret at all and **accept nothing beyond the project
-  id**: no search term, no pagination, no filter. On purpose. A read
-  route for an agent is a surface the model chooses to call, and a
-  parameter is where the model writes whatever it wants; here there's
-  nowhere to write. The scope is closed to the project by the path, and
-  the cost per call is constant (three reads for the backlog, two for
-  the rules, one indexed query against `proposed_actions` for the
-  product metrics).
-- **`engine-service` routes aren't "internal" by naming convention.**
-  What protects them is `EngineServiceGuard` comparing
-  `X-Brabo-Service-Token` against the shared secret in constant time,
-  plus the NetworkPolicy. The `/internal` prefix is a signal for humans.
-  They sit **outside the JWT** via `@ServiceRoute()`: a user token
-  doesn't work here and a service token doesn't work on any other route
-  — the two mechanisms never overlap
+  e `GET /internal/projects/:projectId/product-metrics` ([RN-407](business-rules.md#rn-407)) —
+  não devolvem segredo nenhum e **não aceitam nada além do id do projeto**:
+  sem termo de busca, sem paginação, sem filtro. É de propósito. Uma rota de
+  leitura para agente é uma superfície que o modelo escolhe chamar, e
+  parâmetro é onde o modelo escreve o que quiser; aqui não há onde escrever.
+  O escopo é fechado no projeto pelo caminho, e o custo por chamada é
+  constante (três leituras no backlog, duas nas regras, uma consulta a
+  `proposed_actions` filtrada por índice nas métricas de produto).
+- **`POST /internal/projects/:projectId/workspace-verification`** (RN-423,
+  ADR 0104) é chamada só pelo engine, depois de um runner conectar e mandar
+  `workspace_confirm` pelo canal — nunca diretamente pelo runner, que não
+  tem o service token. O runner é a FONTE DA VERDADE do caminho (ele
+  SOBRESCREVE `workspacePath`, sem exigir igualdade com o que foi digitado
+  na criação), mas o caminho reportado ainda passa pela MESMA checagem
+  léxica da criação (`caminhoDeWorkspaceLocalValido`) — raiz de sistema e
+  sobreposição com o checkout do Brabo continuam proibidas mesmo vindo do
+  runner. `400` se o projeto não estiver no modo `runner`.
+- **`POST /projects/:projectId/runner-ticket` classifica `role:developer`
+  como qualquer outra rota, mas NÃO aceita JWT de sessão** (ADR 0105,
+  RN-424) — só um Personal Access Token (`brb_…`). A classificação
+  automática (`route-surface.spec.ts`) não distingue os dois mecanismos,
+  porque a EXIGÊNCIA de papel é a mesma; o que muda é só como
+  `request.user` é estabelecido. `PatAuthGuard` roda no lugar do
+  `JwtAuthGuard` nesta rota (`@RequirePatAuth()`, mesmo padrão estrutural
+  de `@ServiceRoute()`/`EngineServiceGuard` — bypass por metadado, nunca um
+  `if` que uma rota nova poderia esquecer), e é o ÚNICO lugar da api que
+  aceita esse formato de token: em qualquer outra rota um `brb_...` falha a
+  verificação de JWT normalmente. As três rotas de
+  `/projects/:projectId/personal-access-tokens` (emitir/listar/revogar o
+  PAT em si) continuam JWT de sessão normal — só a rota que o TOKEN em si
+  autentica é que muda de mecanismo.
+- **As rotas `engine-service` não são "internas" por convenção de nome.** O que
+  as protege é o `EngineServiceGuard` comparando o `X-Brabo-Service-Token` com
+  o segredo compartilhado em tempo constante, mais a NetworkPolicy. O prefixo
+  `/internal` é sinalização para humanos. Elas ficam **fora do JWT** por
+  `@ServiceRoute()`: o token de usuário não serve aqui e o de serviço não serve
+  em nenhuma outra rota — os dois mecanismos nunca se sobrepõem
   ([RN-035](business-rules.md#rn-035)).
 - **`/docs` and `/docs-json` are NOT in the table, and that's a known
   gap.** The Swagger UI is mounted by `SwaggerModule.setup()` at the
@@ -404,6 +426,7 @@ reason in the URL.
 | GET | `/internal/projects/:projectId/business-rules` | engine-service |
 | GET | `/internal/projects/:projectId/backlog` | engine-service |
 | GET | `/internal/projects/:projectId/product-metrics` | engine-service |
+| POST | `/internal/projects/:projectId/workspace-verification` | engine-service |
 | GET | `/internal/sessions/:sessionId/psychologist-context` | engine-service |
 | POST | `/internal/sessions/:sessionId/stories` | engine-service |
 | POST | `/internal/sessions/:sessionId/story-modules` | engine-service |
@@ -483,6 +506,9 @@ reason in the URL.
 | PUT | `/projects/:projectId/model-binding` | role:maintainer |
 | GET | `/projects/:projectId/permissions` | role:maintainer |
 | PUT | `/projects/:projectId/permissions` | role:maintainer |
+| POST | `/projects/:projectId/personal-access-tokens` | role:developer |
+| GET | `/projects/:projectId/personal-access-tokens` | role:developer |
+| DELETE | `/projects/:projectId/personal-access-tokens/:tokenId` | role:developer |
 | GET | `/projects/:projectId/proficiency` | role:viewer |
 | DELETE | `/projects/:projectId/proficiency/me` | role:viewer |
 | POST | `/projects/:projectId/proficiency/me/opt-in` | role:viewer |

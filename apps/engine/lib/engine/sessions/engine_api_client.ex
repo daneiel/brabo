@@ -451,11 +451,35 @@ defmodule Engine.Sessions.EngineApiClient do
             ) ::
               {:ok, map()} | {:error, term()}
 
+  @doc """
+  Confirma o caminho de um projeto `execution_mode: runner` (RN-423, ADR
+  0104) — o runner é a fonte da verdade: a api SOBRESCREVE `workspacePath`
+  com `path` e marca `workspaceVerifiedAt`. `session_id` é `nil` quando o
+  projeto ainda não tem sessão nenhuma (`ProjectSession.latest_id/1`) — a
+  api atualiza o projeto mesmo assim e só PULA o evento de auditoria nesse
+  caso (mesma degradação de `registrar_evento_terminal/3`). `user_id` vem
+  do ticket consumido no join (`socket.assigns.user_id`), mesmo padrão de
+  `registrar_evento_terminal/3` — é quem aparece como ator do evento.
+  Retorna `{:ok, %{"verified" => bool, "workspacePath" => path}}` ou
+  `{:error, term}` (400 quando `path` é lexicamente inválido, ou o projeto
+  não é `runner`).
+  """
+  @callback confirm_workspace(
+              project_id :: String.t(),
+              session_id :: String.t() | nil,
+              path :: String.t(),
+              user_id :: String.t()
+            ) ::
+              {:ok, map()} | {:error, term()}
+
   def llm_turn(project_id, session_id, agent, messages, tools),
     do: impl().llm_turn(project_id, session_id, agent, messages, tools)
 
   def propose_action(project_id, session_id, action_type, actor, payload),
     do: impl().propose_action(project_id, session_id, action_type, actor, payload)
+
+  def confirm_workspace(project_id, session_id, path, user_id),
+    do: impl().confirm_workspace(project_id, session_id, path, user_id)
 
   def rag_search(project_id, query, top_k, opts \\ []),
     do: impl().rag_search(project_id, query, top_k, opts)
@@ -1241,6 +1265,15 @@ defmodule Engine.Sessions.EngineApiClient.Live do
       actionType: action_type,
       actor: actor,
       payload: payload
+    })
+  end
+
+  @impl true
+  def confirm_workspace(project_id, session_id, path, user_id) do
+    post_returning("/internal/projects/#{project_id}/workspace-verification", %{
+      sessionId: session_id,
+      path: path,
+      actorId: user_id
     })
   end
 

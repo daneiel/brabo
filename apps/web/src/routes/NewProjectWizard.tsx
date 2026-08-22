@@ -52,10 +52,11 @@ const MODOS: { id: ModoDeRepositorio; label: string; desc: string }[] = [
   },
 ];
 
-// Onde o CÓDIGO deste projeto vai morar (ADR 0072). Passo próprio, e não uma
-// caixinha no passo de detalhes, porque a escolha muda quem é dono da pasta —
-// e a variante Local só funciona se o caminho estiver montado no container,
-// que é um pré-requisito do AMBIENTE, não um detalhe do projeto.
+// ONDE O COMANDO deste projeto vai EXECUTAR (ADR 0072/0104). Passo próprio,
+// e não uma caixinha no passo de detalhes, porque a escolha muda quem é
+// dono da pasta — e as variantes `mounted`/`runner` só funcionam com um
+// pré-requisito do AMBIENTE (bind-mount, ou o CLI rodando), não um detalhe
+// do projeto.
 const MODOS_DE_WORKSPACE: {
   id: ModoDeWorkspace;
   label: string;
@@ -67,9 +68,14 @@ const MODOS_DE_WORKSPACE: {
     desc: 'O Brabo gerencia a pasta, dentro do volume compartilhado com o engine. É o padrão, e não exige nada de você.',
   },
   {
-    id: 'local',
-    label: 'Local',
+    id: 'mounted',
+    label: 'Pasta montada',
     desc: 'O código mora numa pasta SUA. Ela precisa estar montada dentro dos containers da api e do engine, no mesmo caminho.',
+  },
+  {
+    id: 'runner',
+    label: 'Runner local',
+    desc: 'O código mora numa pasta SUA, sem bind-mount nenhum. Você roda o CLI brabo-runner na sua máquina, e ele confirma o caminho quando conectar.',
   },
 ];
 
@@ -220,11 +226,11 @@ const [navegadorDePastaAberto, setNavegadorDePastaAberto] = useState(false);
       const project = await createProject(workspaceId, {
         name: nomeDoProjeto,
         slug: slugify(nomeDoProjeto),
-        workspaceMode: modoDeWorkspace,
-        // Só no modo Local: mandar o campo vazio junto com `container` é 400
-        // na api, de propósito (campo descartado em silêncio vira "mas eu
-        // configurei").
-        ...(modoDeWorkspace === 'local'
+        executionMode: modoDeWorkspace,
+        // Só fora do modo Container: mandar o campo vazio junto com
+        // `container` é 400 na api, de propósito (campo descartado em
+        // silêncio vira "mas eu configurei").
+        ...(modoDeWorkspace !== 'container'
           ? { workspacePath: caminhoLocal.trim() }
           : {}),
       });
@@ -449,7 +455,7 @@ const [navegadorDePastaAberto, setNavegadorDePastaAberto] = useState(false);
             ))}
           </div>
 
-          {modoDeWorkspace === 'local' && (
+          {modoDeWorkspace !== 'container' && (
             <div className={styles.field} style={{ marginTop: 16 }}>
               <label className={styles.fieldLabel} htmlFor="workspace-path">
                 Caminho da pasta
@@ -473,23 +479,39 @@ const [navegadorDePastaAberto, setNavegadorDePastaAberto] = useState(false);
                 </Button>
               </div>
               <div className={styles.slugPreview}>
-                caminho absoluto, como ele aparece DENTRO do container — digitar
-                continua funcionando, "Procurar pasta..." é atalho quando o
-                Runner já está conectado (ver o painel abaixo)
+                {modoDeWorkspace === 'mounted'
+                  ? 'caminho absoluto, como ele aparece DENTRO do container'
+                  : 'caminho absoluto, como ele aparece na SUA máquina'}
               </div>
-              {/* O aviso é a decisão do dono do produto declarada na tela: o
-                  caminho é livre, e livre só funciona se estiver montado. Sem
-                  isto, a recusa da api (RN-170) chegaria como surpresa. */}
-              <Alert tone="warning">
-                A pasta precisa estar <strong>montada nos containers</strong> da
-                api e do engine, no <strong>mesmo caminho absoluto</strong> — os
-                dois escrevem no mesmo lugar. No{' '}
-                <code>docker/docker-compose.yml</code>, acrescente{' '}
-                <code>- {caminhoLocal.trim() || '/sua/pasta'}:{caminhoLocal.trim() || '/sua/pasta'}</code>{' '}
-                aos serviços <code>api</code> e <code>engine</code>. Se não
-                estiver, a criação é <strong>recusada</strong> aqui mesmo — o
-                projeto não nasce quebrado.
-              </Alert>
+              {modoDeWorkspace === 'mounted' ? (
+                // O aviso é a decisão do dono do produto declarada na tela: o
+                // caminho é livre, e livre só funciona se estiver montado. Sem
+                // isto, a recusa da api (RN-422) chegaria como surpresa.
+                <Alert tone="warning">
+                  A pasta precisa estar <strong>montada nos containers</strong> da
+                  api e do engine, no <strong>mesmo caminho absoluto</strong> — os
+                  dois escrevem no mesmo lugar. No{' '}
+                  <code>docker/docker-compose.yml</code>, acrescente{' '}
+                  <code>- {caminhoLocal.trim() || '/sua/pasta'}:{caminhoLocal.trim() || '/sua/pasta'}</code>{' '}
+                  aos serviços <code>api</code> e <code>engine</code>. Se não
+                  estiver, a criação é <strong>recusada</strong> aqui mesmo — o
+                  projeto não nasce quebrado.
+                </Alert>
+              ) : (
+                // `runner`: nada aqui trava a criação (RN-423) — o caminho só é
+                // confirmado quando o runner conectar, nunca "recusado na hora"
+                // como o aviso de `mounted` acima.
+                <Alert tone="accent">
+                  Depois de criar o projeto, rode na sua máquina:
+                  <br />
+                  <code>
+                    brabo-runner --project &lt;id do projeto&gt; --dir{' '}
+                    {caminhoLocal.trim() || '/sua/pasta'}
+                  </code>
+                  <br />O runner confirma o caminho ao conectar — nenhum comando
+                  roda antes disso.
+                </Alert>
+              )}
             </div>
           )}
         </div>
@@ -534,11 +556,11 @@ const [navegadorDePastaAberto, setNavegadorDePastaAberto] = useState(false);
           <SummaryRow
             label="Código em"
             value={
-              modoDeWorkspace === 'local'
+              modoDeWorkspace !== 'container'
                 ? caminhoLocal.trim()
                 : 'pasta gerenciada pelo Brabo'
             }
-            mono={modoDeWorkspace === 'local'}
+            mono={modoDeWorkspace !== 'container'}
           />
           {adotando ? (
             <>

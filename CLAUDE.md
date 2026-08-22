@@ -1849,8 +1849,9 @@ decorativo. `sudo`/`doas` casam por VERBO em `comandoPrivilegiadoNoComando`
 princípio de `efeitoExternoNoComando`.
 
 **Runner (`apps/runner`, novo workspace Node/TS, ADR 0103)**: CLI
-(`brabo-runner --project <id> --dir <pasta>`) que o usuário roda na
-própria máquina, conecta no ENGINE via canal Phoenix NOVO (`/runner`,
+(`brabo-runner --project <id> --dir <pasta> --token brb_...`) que o
+usuário roda na própria máquina, conecta no ENGINE via canal Phoenix NOVO
+(`/runner`,
 tópico `terminal:<projectId>`) autenticado por ticket de USO ÚNICO (mesmo
 padrão RN-108, mas ticket EMITIDO PELO ENGINE — schema `"engine"`,
 migration própria — e pedido pela api via rota HTTP interna, invertendo o
@@ -1860,31 +1861,89 @@ fluxo do ticket de sessão). Executa `exec` (comando de agente JÁ APROVADO
 usuário, e um modo PTY interativo pra aba Terminal (`pty_open`/`pty_data`/
 `pty_input`/`pty_resize`/`pty_close` — o engine faz RELAY puro, nunca
 interpreta os bytes). Só UM runner por projeto (`Engine.Runners.Registry`,
-`:global`, exclusividade de `:global.register_name/3`); modo `local` SEM
-runner conectado cai no caminho de sempre (`System.cmd` no container via
-bind-mount — ADR 0072 vira FALLBACK, não é removido). PTY é ação do
+`:global`, exclusividade de `:global.register_name/3`); modo `runner` SEM
+workspace verificado ou SEM runner conectado RECUSA explicitamente — nunca
+cai no `System.cmd`/bind-mount, que não existe pra um projeto `runner`
+(revisado pelo ADR 0104/RN-423, ver acima; o fallback pro caminho de
+sempre continua valendo, mas só pra `container`/`mounted`). PTY é ação do
 USUÁRIO autenticado, não passa por `proposed_action`, mas audita
 (`terminal.session.started`/`ended` no event log, inclusive quando a aba
 cai sem `pty_close` explícito).
 
 A fronteira de segurança do runner NÃO é sandboxing — é autenticação
-(o CLI pede um token da CONTA do usuário) + o pipeline de aprovação de
-sempre + o consentimento de o usuário rodar o CLI na própria máquina, com
-os privilégios dele. `apps/runner/src/guard.ts` valida `cwd` dentro da
-raiz por resolução léxica, mas é declarado BEST-EFFORT, não a garantia
-real. **Achado real durante a implementação**: o produto não tem
-mecanismo de token de conta de LONGA DURAÇÃO pra automação — `account_tokens`
-é só pra links de e-mail de uso único (verificação, reset, senha inicial).
-O runner replica o fluxo de login do browser (cookie/CSRF, persistidos em
-`~/.brabo/runner-credentials.json`, 0600) até um mecanismo de token de
-automação de verdade existir — sinalizado no código como o módulo a trocar
-quando isso acontecer.
+(o CLI apresenta um Personal Access Token da CONTA do usuário) + o
+pipeline de aprovação de sempre + o consentimento de o usuário rodar o
+CLI na própria máquina, com os privilégios dele. `apps/runner/src/guard.ts`
+valida `cwd` dentro da raiz por resolução léxica, mas é declarado
+BEST-EFFORT, não a garantia real.
+
+**PAT fechou a lacuna de token de automação (ADR 0105/RN-424..426).** O
+achado real da Onda 1 — "o produto não tem mecanismo de token de conta de
+LONGA DURAÇÃO pra automação, então o runner replica o login do browser
+(cookie/CSRF persistidos em `~/.brabo/runner-credentials.json`)" — foi
+fechado na Onda 2: `personal_access_tokens` (`brb_…`, hash HMAC-SHA256+
+pepper via `hashDeToken()`, nunca argon2 — errado pra segredo de ALTA
+entropia) é emitido em Configurações do projeto, escopado a UM projeto,
+revogável, com expiração opcional. `apps/runner/src/auth.ts` perdeu por
+completo login interativo, cookies e o arquivo de credenciais — só
+valida formato e repassa `--token`/`BRABO_ACCOUNT_TOKEN`, NUNCA gravado
+em disco pelo CLI. O PAT nunca autentica fora de
+`POST .../runner-ticket`, por CONSTRUÇÃO (`IS_PAT_ROUTE_KEY`/
+`@RequirePatAuth()` + `PatAuthGuard`) — nunca um branch no `JwtAuthGuard`
+global, que deixaria `RolesGuard` autorizar o PAT pra qualquer rota do
+papel do usuário.
 
 `@xterm/xterm`/`@xterm/addon-fit` (web) e `phoenix`/`node-pty` (runner)
 são as quatro dependências novas — mesma régua de exceção do `mermaid`
 (ADR 0068): `import()` dinâmico, sem `eval`/`new Function` confirmado por
 grep no pacote instalado (não é garantia formal contra ofuscação, só
 evidência forte — declarado como incerteza, não afirmado como certeza).
+
+**ADR 0104 — Onda 1 CONCLUÍDA (RN-421/422/423):** os ADRs 0072 e 0103
+nunca se falaram — RN-170 exigia bind-mount na criação, e o roteamento pro
+runner (RN-420) reusava a mesma flag `workspace_mode == 'local'` sem
+bind-mount nenhum, então usar o runner de verdade continuava obrigado a
+passar pela validação de pasta montada. `workspace_mode` (2 valores) virou
+`execution_mode` (`container`/`mounted`/`runner`, migração `0048`) —
+RN-170 (agora RN-422) passa a valer só para `mounted`; `runner` nasce com
+caminho validado só LEXICAMENTE (sem I/O) e `workspaceVerifiedAt: null`,
+promovido a verificado quando um runner conecta e confirma o caminho no
+HOST (`POST /internal/projects/:projectId/workspace-verification`, RN-423)
+— o runner é a FONTE DA VERDADE do caminho, sobrescrevendo o que foi
+digitado no wizard. `Engine.Actions.TerminalExecutor.decisao_de_execucao/1`
+ganhou QUATRO saídas: roteia só com workspace verificado E runner
+conectado; sem qualquer um dos dois, RECUSA explicitamente — nunca cai no
+`System.cmd`/bind-mount de `mounted`, que não existe pra um projeto
+`runner`.
+
+**Achado da implementação, corrigindo o ADR (que não é editado — a
+correção mora aqui e em
+[backlog.md](docs/explanation/backlog.md#backlog-do-runnerexecution_mode-adr-0104)):**
+a frase do ADR 0104 de que a conversão entre os três modos de projeto
+existente "passa a ser permitida sem recriar o projeto" está INCORRETA.
+`UpdateProjectDto` continua excluindo `executionMode`/`workspacePath` de
+propósito — não é PATCH trivial (worktree, permissions.json e cache do
+engine apontam pro escopo antigo). A Onda 1 entregou só o campo de três
+valores na CRIAÇÃO; conversão de projeto existente é onda futura, com
+desenho próprio, ainda não planejada. Backlog do runner: a Onda 2 (PAT,
+ADR 0105) fechou o item que bloqueava `npm publish @brabo/runner`, e a
+Onda 3 (ADR 0106) entregou a distribuição em si — `tsup` empacota
+`apps/runner` num `dist/index.cjs` único (`node-pty` como `external`
+obrigatório, binding nativo), publicado a cada tag final por um workflow
+próprio (`publish-runner.yml`), paralelo a `release.yml`. Achado real
+testado empiricamente: a guarda de auto-run de `index.ts` precisou de
+`realpathSync` em `process.argv[1]` — sem isso, `main()` nunca rodava
+quando o CLI era invocado pelo `bin` instalado via `npm install -g`
+(symlink, que `process.argv[1]` nunca resolve por realpath mas
+`import.meta.url` sempre resolve). Pendência operacional declarada: a
+publicação de verdade exige o dono do produto criar o Automation Token do
+npm e configurar o secret `NPM_TOKEN` — sem ele, o workflow avisa e pula,
+nunca falha. Exclusividade por `{project_id, machine_id}` continua adiada
+até segundo dev simultâneo real; `guard.ts` best-effort é invariante
+REAFIRMADO, não lacuna. Ver
+[ADR 0104](docs/adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md)/
+[ADR 0105](docs/adr/0105-personal-access-token-do-runner-escopado-por-construcao.md)/
+[ADR 0106](docs/adr/0106-distribuicao-do-runner-via-tsup-e-npm-publish.md).
 
 ## FERRAMENTA DE DESENVOLVIMENTO — `pnpm bootstrap`
 Menu de terminal em `scripts/dev/bootstrap.sh` agrupando o que se faz no
@@ -2000,9 +2059,11 @@ por completo para registrar inglês como idioma primário de verdade.
   `@xterm/addon-fit` (ADR 0103) para o terminal interativo do runner
   local, isolado atrás de `lib/xterm-runtime.ts` com `import()` dinâmico
 - `apps/runner`: workspace novo, Node/TS — CLI (`brabo-runner`) que roda
-  na máquina do usuário, conectando ao engine via canal Phoenix (`phoenix`
-  npm) para executar comandos aprovados e terminal interativo
-  (`node-pty`) — ver "Runner local" (ADR 0103)
+  na máquina do usuário, conectando ao engine via canal Phoenix (`phoenix`,
+  embutido no bundle) para executar comandos aprovados e terminal
+  interativo (`node-pty`, único `external` — binding nativo) — ver
+  "Runner local" (ADR 0103). Publicado como `@brabo/runner` via `tsup` +
+  `npm publish` (ADR 0106)
 - Monorepo pnpm (TS) com apps/engine Elixir ao lado; Docker Compose para dev
 - Auth: first-party no domínio da api (argon2id + access JWT curto +
   refresh opaco com rotação); autorização RBAC no domínio da api
@@ -2070,22 +2131,29 @@ por completo para registrar inglês como idioma primário de verdade.
   garantia de nunca ser auto-aprovável; "sempre permitir" foi fechado na
   fonte pra esse teto não virar decorativo (`ApproveAlwaysActionUseCase`
   recusa gravar padrão pra esses comandos).
-- O projeto escolhe ONDE o código mora, na criação (RN-169, ADR 0072):
-  `container` (DEFAULT — a pasta gerenciada em `PROJECT_WORKSPACES_ROOT`, o
-  comportamento de sempre) ou `local` (uma pasta do USUÁRIO, caminho absoluto
-  livre em `projects.workspace_path`). O par (modo, caminho) é amarrado por
-  CHECK no banco, e `projectScopeRoot` continua sendo a derivação ÚNICA da
-  raiz — não duplique validação nos chamadores. Caminho Local é validado na
-  CRIAÇÃO e RECUSADO com mensagem que ensina a montar (RN-170): absoluto, sem
-  `..`, existente, gravável de dentro do container, nunca raiz/pasta de
-  sistema nem sobreposto ao checkout do Brabo. O portão da imagem (RN-105) NÃO
-  vale para projeto `local`, que não sobe container. Consequência declarada no
-  ADR: a contenção estrutural do `join` some para esses projetos, e o vetor de
-  symlink do ADR 0055 continua aberto.
+- O projeto escolhe ONDE o código mora, na criação (RN-169/RN-421/RN-422,
+  ADR 0072/0104): `container` (DEFAULT — a pasta gerenciada em
+  `PROJECT_WORKSPACES_ROOT`, o comportamento de sempre), `mounted` (o antigo
+  `local`, renomeado — uma pasta do USUÁRIO montada por bind-mount, caminho
+  absoluto livre em `projects.workspace_path`) ou `runner` (uma pasta do
+  USUÁRIO SEM bind-mount, confirmada por um CLI — `brabo-runner` — rodando na
+  máquina dela, RN-423). O par (modo, caminho) é amarrado por CHECK no banco
+  (`execution_mode <> 'container'`), e `projectScopeRoot` continua sendo a
+  derivação ÚNICA da raiz — não duplique validação nos chamadores. Caminho
+  `mounted` é validado na CRIAÇÃO e RECUSADO com mensagem que ensina a montar
+  (RN-422/histórico RN-170): absoluto, sem `..`, existente, gravável de
+  dentro do container, nunca raiz/pasta de sistema nem sobreposto ao
+  checkout do Brabo. `runner` valida só o LÉXICO na criação (sem I/O) e
+  nasce `workspaceVerifiedAt: null` — o runner confirma o caminho de verdade
+  quando conecta, sobrescrevendo o que foi digitado. O portão da imagem
+  (RN-105) NÃO vale para projeto `mounted`/`runner`, que não sobem
+  container. Consequência declarada no ADR: a contenção estrutural do `join`
+  some para esses projetos, e o vetor de symlink do ADR 0055 continua
+  aberto.
 - A imagem de container de um projeto é ARTEFATO do ARQUITETO
   (`artifact.project_image`, versionado, sem tabela), nunca configuração
   escondida. Enquanto ele não decide, a aba Code responde 409 (RN-105) —
-  exceto em projeto no modo `local` (RN-169).
+  exceto em projeto nos modos `mounted`/`runner` (RN-169/RN-421).
   `git push`, abertura de PR e deploy NÃO saem pelo terminal — a regra é
   `require_approval` INCONDICIONAL (teto absoluto, revisado de `deny` pela
   RN-418/ADR 0102 — decisão GLOBAL do dono do produto: nunca auto-aprovável,

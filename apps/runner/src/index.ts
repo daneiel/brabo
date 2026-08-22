@@ -16,9 +16,10 @@
  * de pasta local, sem a barreira de `guard.ts` — ver o docblock dele).
  */
 
-import { existsSync, statSync } from 'node:fs';
+import { existsSync, realpathSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { obterAccessToken, obterTicketDoRunner } from './auth.ts';
+import { pathToFileURL } from 'node:url';
+import { obterToken, obterTicketDoRunner } from './auth.ts';
 import {
   conectarCanal,
   enviarExecResult,
@@ -27,6 +28,7 @@ import {
   enviarPtyData,
   enviarPtyError,
   enviarPtyOpened,
+  enviarWorkspaceConfirm,
   JoinRecusadoError,
   type ChannelLike,
   type ExecMessage,
@@ -43,15 +45,16 @@ interface Argumentos {
   projectId: string;
   dir: string;
   apiUrl: string;
+  token: string;
 }
 
 function uso(): never {
   console.error(
-    'uso: brabo-runner --project <projectId> --dir <caminho-absoluto> [--api-url <url>]',
+    'uso: brabo-runner --project <projectId> --dir <caminho-absoluto> [--api-url <url>] [--token <brb_...>]',
   );
   console.error(
-    'Autenticação: BRABO_ACCOUNT_TOKEN no ambiente, ou login interativo na primeira execução ' +
-      '(credenciais renovadas depois via ~/.brabo/runner-credentials.json).',
+    'Autenticação: --token <brb_...>, ou BRABO_ACCOUNT_TOKEN no ambiente. Gere em ' +
+      'Configurações do projeto → Tokens de acesso — nunca gravado em disco por este CLI.',
   );
   process.exit(2);
 }
@@ -67,6 +70,7 @@ function lerArgumentos(argv: string[]): Argumentos {
   const projectId = valorDe('--project');
   const dirBruto = valorDe('--dir');
   const apiUrl = valorDe('--api-url') ?? process.env.BRABO_API_URL ?? 'http://localhost:3000';
+  const tokenFlag = valorDe('--token');
 
   if (!projectId || projectId.startsWith('--')) uso();
   if (!dirBruto || dirBruto.startsWith('--')) uso();
@@ -77,7 +81,15 @@ function lerArgumentos(argv: string[]): Argumentos {
     process.exit(2);
   }
 
-  return { projectId, dir, apiUrl };
+  let token: string;
+  try {
+    token = obterToken(tokenFlag);
+  } catch (erro) {
+    console.error(erro instanceof Error ? erro.message : String(erro));
+    process.exit(2);
+  }
+
+  return { projectId, dir, apiUrl, token };
 }
 
 function mensagemDeErro(erro: unknown): string {
@@ -181,19 +193,21 @@ function tratarFsHomeDir(estado: EstadoDoRunner, msg: FsHomeDirMessage): void {
 }
 
 /**
- * Uma "rodada" de conexão: obtém token+ticket FRESCOS, entra no canal, e só
- * volta quando a conexão cai (ou lança se o join for recusado/não puder
- * conectar). O `while` de `main()` decide o que fazer com o retorno/erro —
- * este helper não decide política de retry.
+ * Uma "rodada" de conexão: pede um ticket FRESCO (o token é resolvido uma
+ * vez só, em `lerArgumentos` — PAT não expira por uso, então não há razão
+ * pra reobtê-lo a cada reconexão), entra no canal, e só volta quando a
+ * conexão cai (ou lança se o join for recusado/não puder conectar). O
+ * `while` de `main()` decide o que fazer com o retorno/erro — este helper
+ * não decide política de retry.
  */
 async function conectarERodar(
   apiUrl: string,
   projectId: string,
+  token: string,
   estado: EstadoDoRunner,
   deveParar: () => boolean,
 ): Promise<void> {
-  const accessToken = await obterAccessToken(apiUrl);
-  const ticket = await obterTicketDoRunner(apiUrl, projectId, accessToken);
+  const ticket = await obterTicketDoRunner(apiUrl, projectId, token);
 
   let resolverQueda: () => void;
   const queda = new Promise<void>((res) => {
@@ -220,6 +234,11 @@ async function conectarERodar(
   estado.canalAtual = conexao.channel;
   console.log(`conectado ao projeto ${projectId} — aguardando comandos aprovados...`);
 
+  // RN-423 (ADR 0104): confirma o `--dir` desta execução pro engine/api —
+  // é este runner quem tem autoridade sobre o disco de verdade. Uma vez
+  // por conexão (não por comando), logo que o canal está pronto.
+  enviarWorkspaceConfirm(conexao.channel, { path: estado.dir });
+
   await queda;
   estado.canalAtual = null;
   if (!deveParar()) {
@@ -228,7 +247,7 @@ async function conectarERodar(
 }
 
 async function main(): Promise<void> {
-  const { projectId, dir, apiUrl } = lerArgumentos(process.argv);
+  const { projectId, dir, apiUrl, token } = lerArgumentos(process.argv);
 
   console.log(`brabo-runner — projeto ${projectId}, raiz ${dir}, api ${apiUrl}`);
 
@@ -269,7 +288,7 @@ async function main(): Promise<void> {
 
   while (!parando) {
     try {
-      await conectarERodar(apiUrl, projectId, estado, deveParar);
+      await conectarERodar(apiUrl, projectId, token, estado, deveParar);
       tentativasSeguidas = 0; // ficou conectado por um tempo — reseta o contador de falhas
     } catch (erro) {
       if (erro instanceof JoinRecusadoError) {
@@ -296,10 +315,21 @@ async function main(): Promise<void> {
   }
 }
 
-// Só roda `main()` quando executado diretamente como CLI (`brabo-runner` ou
-// `node src/index.ts`) — nunca em `import` (ex.: se algum teste um dia
-// importar deste arquivo).
-if (process.argv[1]?.endsWith('index.ts') || process.argv[1]?.endsWith('brabo-runner')) {
+// Só roda `main()` quando executado diretamente como CLI — nunca em `import`
+// (ex.: se algum teste um dia importar deste arquivo). NÃO compara por nome
+// de arquivo (`.endsWith('index.ts')`) — isso quebrava exatamente no caso que
+// a publicação via npm existe para habilitar: `npm install -g` cria um
+// symlink em `node_modules/.bin/brabo-runner` apontando pro `dist/index.cjs`
+// real, e `process.argv[1]` NUNCA é resolvido por realpath pelo Node — só
+// `import.meta.url` (e o shim de `import.meta.url` que o tsup gera pro
+// build cjs, baseado em `__filename`) é. Sem o `realpathSync` aqui, a
+// comparação dava `false` sempre que o CLI rodava pelo `bin` instalado, e
+// `main()` nunca era chamado. No Windows o shim `.cmd`/`.ps1` do npm já
+// invoca `node <caminho real>` sem symlink — `realpathSync` vira no-op ali.
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href
+) {
   main().catch((erro) => {
     console.error(`falha fatal: ${mensagemDeErro(erro)}`);
     process.exit(1);

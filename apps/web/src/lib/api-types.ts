@@ -42,12 +42,17 @@ export interface Project {
   // de projeto novo; os projetos que existiam antes da fase ficaram em `auto`,
   // que é o comportamento anterior.
   storyPromotion: StoryPromotionMode;
-  // ONDE o código mora (RN-169 — ADR 0072). `container`: a pasta gerenciada
-  // pelo produto, que é o default e o comportamento de sempre. `local`: a
-  // pasta do usuário em `workspacePath`.
-  workspaceMode: WorkspaceMode;
-  // Caminho absoluto da pasta do usuário; `null` fora do modo `local`.
+  // ONDE o comando executa (RN-169/RN-421 — ADR 0072/0104). `container`: a
+  // pasta gerenciada pelo produto, que é o default e o comportamento de
+  // sempre. `mounted`: a pasta do usuário em `workspacePath`, montada por
+  // bind-mount. `runner`: a pasta do usuário confirmada por um runner
+  // conectado (ver `workspaceVerifiedAt`).
+  executionMode: ExecutionMode;
+  // Caminho absoluto da pasta do usuário; `null` no modo `container`.
   workspacePath: string | null;
+  // Quando o runner confirmou o caminho pela primeira vez (RN-423). `null` =
+  // não verificado — só ganha sentido em `executionMode: 'runner'`.
+  workspaceVerifiedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -55,17 +60,19 @@ export interface Project {
 export type StoryPromotionMode = 'manual' | 'auto';
 
 /**
- * ONDE o código de um projeto mora (RN-169 — ADR 0072). Espelha o enum
- * `project_workspace_mode` da api.
+ * ONDE o comando de um projeto EXECUTA (RN-169/RN-421 — ADR 0072/0104).
+ * Espelha o enum `project_execution_mode` da api.
  *
  * `container` é a pasta gerenciada pelo produto em PROJECT_WORKSPACES_ROOT —
- * o default e o comportamento de sempre. `local` é uma pasta do usuário, que
- * só funciona montada dentro dos containers da api e do engine.
+ * o default e o comportamento de sempre. `mounted` (antigo `local`) é uma
+ * pasta do usuário que só funciona montada dentro dos containers da api e do
+ * engine. `runner` é uma pasta do usuário sem bind-mount, confirmada por um
+ * CLI (`brabo-runner`) rodando na máquina dela.
  *
- * Cuidado com o homônimo: nada a ver com o `GitProviderName` `'local'`, que
- * fala de onde o REPOSITÓRIO vive.
+ * Cuidado com o homônimo: nenhum destes valores tem relação com o
+ * `GitProviderName` `'local'`, que fala de onde o REPOSITÓRIO vive.
  */
-export type WorkspaceMode = 'container' | 'local';
+export type ExecutionMode = 'container' | 'mounted' | 'runner';
 
 /** Uma área de agente e seu teto de paralelismo (FASE 14d, ADR 0053). */
 export interface AgentArea {
@@ -524,6 +531,25 @@ export interface UserCredentialMetadata {
 export interface CredentialTestResult {
   resultado: 'ok' | 'recusado' | 'nao_suportado';
   motivo?: string;
+}
+
+/**
+ * Personal Access Token do runner (`brb_…`, ADR 0105) — nunca carrega o
+ * token bruto. Escopado a um projeto e a um usuário (o dono).
+ */
+export interface PersonalAccessTokenSummary {
+  id: string;
+  name: string;
+  projectId: string;
+  createdAt: string;
+  expiresAt: string | null;
+  revokedAt: string | null;
+  lastUsedAt: string | null;
+}
+
+/** Só a resposta de EMISSÃO carrega o bruto — ela não se repete. */
+export interface PersonalAccessTokenIssued extends PersonalAccessTokenSummary {
+  token: string;
 }
 
 export type BudgetPolicy = 'block' | 'allow';

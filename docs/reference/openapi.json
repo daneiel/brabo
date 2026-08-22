@@ -795,6 +795,62 @@
         ]
       }
     },
+    "/internal/projects/{projectId}/workspace-verification": {
+      "post": {
+        "description": "Chamada só pelo engine, depois de um runner conectar e mandar `workspace_confirm` pelo canal. O runner é a FONTE DA VERDADE do caminho — a api sobrescreve `workspacePath` com o que ele reportou, depois de revalidar léxico (raiz de sistema/sobreposição com o Brabo continuam proibidas mesmo vindo do runner). Idempotente: reconectar com o MESMO caminho não regrava nada.",
+        "operationId": "InternalProjectsController_confirmWorkspaceVerification",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmProjectWorkspaceInternalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfirmProjectWorkspaceResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Caminho lexicamente inválido, ou o projeto não está no modo \"runner\"."
+          },
+          "403": {
+            "description": "Service token ausente ou diferente do compartilhado."
+          },
+          "404": {
+            "description": "Projeto inexistente."
+          }
+        },
+        "security": [
+          {
+            "service-token": []
+          }
+        ],
+        "summary": "O runner confirma o caminho de um projeto \"runner\" (RN-423)",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
     "/internal/rag/search": {
       "post": {
         "description": "Mesmo motor de `POST /projects/:projectId/rag/search` (rota humana), projetado no formato que a tool `rag_search` do engine espera.",
@@ -5957,6 +6013,168 @@
         ]
       }
     },
+    "/projects/{projectId}/personal-access-tokens": {
+      "get": {
+        "description": "Nunca inclui o token bruto — só o que já foi emitido.",
+        "operationId": "PersonalAccessTokensController_listPats",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PersonalAccessTokenResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto não encontrado."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Lista os próprios Personal Access Tokens deste projeto",
+        "tags": [
+          "projetos"
+        ]
+      },
+      "post": {
+        "description": "O token bruto (`brb_...`) só aparece NESTA resposta — não fica recuperável depois, só o hash é guardado. Use em `--token`/`BRABO_ACCOUNT_TOKEN` do `brabo-runner`.",
+        "operationId": "PersonalAccessTokensController_issuePat",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IssuePatRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IssuePatResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto não encontrado."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Emite um Personal Access Token pro runner local",
+        "tags": [
+          "projetos"
+        ]
+      }
+    },
+    "/projects/{projectId}/personal-access-tokens/{tokenId}": {
+      "delete": {
+        "description": "Idempotente — revogar de novo não é erro.",
+        "operationId": "PersonalAccessTokensController_revokePat",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tokenId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Token revogado. Sem corpo."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto não encontrado."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Revoga um Personal Access Token próprio",
+        "tags": [
+          "projetos"
+        ]
+      }
+    },
     "/projects/{projectId}/proficiency": {
       "get": {
         "description": "O PRÓPRIO perfil por default; a visão agregada do time só para quem administra o projeto. Perfil de competência é dado sobre a pessoa, e o default menos surpreendente é ela ver o dela.",
@@ -6321,7 +6539,7 @@
     },
     "/projects/{projectId}/runner-ticket": {
       "post": {
-        "description": "Autentica `connect/3` do socket Phoenix `/runner` (tópico `terminal:<projectId>`, papel \"runner\") — NÃO é o JWT reaproveitado. TTL de 30s e uso único. Recusa com 400 se o projeto não estiver no modo \"local\" (ADR 0072): o runner não tem o que servir num projeto cujo código mora no container gerenciado.",
+        "description": "Autentica `connect/3` do socket Phoenix `/runner` (tópico `terminal:<projectId>`, papel \"runner\") — NÃO é o JWT reaproveitado, e esta rota em si só aceita um Personal Access Token no lugar do JWT de sessão (ADR 0105). TTL de 30s e uso único. Recusa com 400 se o projeto não estiver no modo \"runner\" (RN-421): o runner não tem o que servir num projeto cujo código mora no container gerenciado.",
         "operationId": "RunnerTicketsController_runnerTicket",
         "parameters": [
           {
@@ -6345,7 +6563,7 @@
             }
           },
           "400": {
-            "description": "Projeto não está no modo \"local\"."
+            "description": "Projeto não está no modo \"runner\"."
           },
           "401": {
             "description": "Sem token, token expirado ou assinatura inválida."
@@ -12110,6 +12328,56 @@
           "truncated"
         ]
       },
+      "ConfirmProjectWorkspaceInternalDto": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "example": "/home/voce/projetos/loja",
+            "description": "Caminho absoluto confirmado pelo runner NO HOST — a fonte da verdade (RN-423). Revalidado LEXICAMENTE aqui antes de gravar; inválido é 400, nunca gravado."
+          },
+          "sessionId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "01JC4Z0000SESSAO00000000001",
+            "description": "A sessão mais recente do projeto (`ProjectSession.latest_id/1`), resolvida do lado engine. `null`/omitido quando o projeto ainda não tem sessão nenhuma — o projeto é atualizado mesmo assim, só o evento de auditoria é pulado (lacuna aceita, RN-423)."
+          },
+          "actorId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "01JC4Z0000USUARIO0000000001",
+            "description": "Quem pediu o ticket do runner (dono do socket que confirmou) — vira o ator do evento `project.workspace_verified`. Omitido: o evento (se houver sessão) nasce sem ator identificado."
+          }
+        },
+        "required": [
+          "path"
+        ]
+      },
+      "ConfirmProjectWorkspaceResponseDto": {
+        "type": "object",
+        "properties": {
+          "verified": {
+            "type": "boolean",
+            "example": true,
+            "description": "Sempre `true` quando a chamada não lançou — a confirmação é idempotente. `changed` diz se ALGO mudou nesta chamada."
+          },
+          "workspacePath": {
+            "type": "string",
+            "example": "/home/voce/projetos/loja",
+            "description": "O caminho GRAVADO (normalizado) — pode diferir do que a criação tinha, porque o runner é a fonte da verdade e sobrescreve."
+          },
+          "changed": {
+            "type": "boolean",
+            "example": true,
+            "description": "`true` na primeira confirmação, ou quando o caminho reportado é DIFERENTE do que já estava gravado. `false` numa reconexão que reporta o mesmo caminho de sempre — nada foi regravado."
+          }
+        },
+        "required": [
+          "verified",
+          "workspacePath",
+          "changed"
+        ]
+      },
       "CoverageReportResponseDto": {
         "type": "object",
         "properties": {
@@ -12323,19 +12591,20 @@
             "example": "manual",
             "description": "Quem promove uma story de `draft` para `ready` (Fase 12c — RN-048). `manual` (default de projeto novo): o PO propõe e VOCÊ decide, na aba Backlog. `auto`: a story completa já nasce `ready`, sem passo humano — era o comportamento até a 12c, e projetos criados antes dela ficaram nele. As validações de domínio (DoD/DoR/RF/regra/módulos) são as MESMAS nos dois modos; o modo muda só quem dispara."
           },
-          "workspaceMode": {
+          "executionMode": {
             "type": "string",
             "enum": [
               "container",
-              "local"
+              "mounted",
+              "runner"
             ],
             "example": "container",
-            "description": "ONDE o código deste projeto mora (RN-169 — ADR 0072). `container` (default): a pasta gerenciada pelo produto dentro de PROJECT_WORKSPACES_ROOT, que é o comportamento de sempre. `local`: uma pasta SUA, informada em `workspacePath`, que precisa estar montada dentro dos containers da api e do engine — a criação RECUSA (400) o caminho que não estiver, com a instrução de como montar (RN-170)."
+            "description": "ONDE o comando deste projeto EXECUTA (RN-169/RN-421 — ADR 0072/0104). `container` (default): a pasta gerenciada pelo produto dentro de PROJECT_WORKSPACES_ROOT, que é o comportamento de sempre. `mounted`: uma pasta SUA, informada em `workspacePath`, que precisa estar montada dentro dos containers da api e do engine — a criação RECUSA (400) o caminho que não estiver, com a instrução de como montar (RN-422). `runner`: uma pasta SUA que NÃO precisa de bind-mount — a criação valida só o formato do caminho e o projeto nasce \"unverified\"; rode `brabo-runner --project <id> --dir <pasta>` na sua máquina para confirmar (RN-423)."
           },
           "workspacePath": {
             "type": "string",
             "example": "/home/voce/projetos/loja",
-            "description": "Caminho ABSOLUTO da pasta, obrigatório quando `workspaceMode` é `local` e recusado quando é `container`. Validado na criação: precisa existir e ser gravável de dentro do container, e não pode ser a raiz do sistema, pasta de sistema, nem se sobrepor ao checkout do Brabo (RN-170)."
+            "description": "Caminho ABSOLUTO da pasta, obrigatório quando `executionMode` é `mounted` ou `runner`, e recusado quando é `container`. Em `mounted`, validado na criação: precisa existir e ser gravável de dentro do container, e não pode ser a raiz do sistema, pasta de sistema, nem se sobrepor ao checkout do Brabo (RN-422). Em `runner`, só o FORMATO é validado agora — a existência é confirmada depois, pelo runner (RN-423)."
           }
         },
         "required": [
@@ -14114,6 +14383,78 @@
           "diff"
         ]
       },
+      "IssuePatRequestDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "laptop",
+            "description": "Nome pra você reconhecer este token depois — não é único."
+          },
+          "expiresInDays": {
+            "type": "number",
+            "example": 90,
+            "description": "Expira em N dias. Omitido = sem expiração (revogável a qualquer hora, mas nunca expira sozinho)."
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "IssuePatResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01JC4Z0000PAT000000000001"
+          },
+          "name": {
+            "type": "string",
+            "example": "laptop"
+          },
+          "projectId": {
+            "type": "string",
+            "example": "01JC4Z0000PROJETO000000001"
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-08-22T12:00:00.000Z",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "object",
+            "example": null,
+            "nullable": true,
+            "description": "Nulo = sem expiração."
+          },
+          "revokedAt": {
+            "type": "object",
+            "example": null,
+            "nullable": true
+          },
+          "lastUsedAt": {
+            "type": "object",
+            "example": null,
+            "nullable": true,
+            "description": "Nulo = nunca usado."
+          },
+          "token": {
+            "type": "string",
+            "example": "brb_9f8a...",
+            "description": "Guarde agora — não é recuperável depois. Use em --token ou BRABO_ACCOUNT_TOKEN."
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "projectId",
+          "createdAt",
+          "expiresAt",
+          "revokedAt",
+          "lastUsedAt",
+          "token"
+        ]
+      },
       "JwksResponseDto": {
         "type": "object",
         "properties": {
@@ -15015,6 +15356,54 @@
           "ask"
         ]
       },
+      "PersonalAccessTokenResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01JC4Z0000PAT000000000001"
+          },
+          "name": {
+            "type": "string",
+            "example": "laptop"
+          },
+          "projectId": {
+            "type": "string",
+            "example": "01JC4Z0000PROJETO000000001"
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-08-22T12:00:00.000Z",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "object",
+            "example": null,
+            "nullable": true,
+            "description": "Nulo = sem expiração."
+          },
+          "revokedAt": {
+            "type": "object",
+            "example": null,
+            "nullable": true
+          },
+          "lastUsedAt": {
+            "type": "object",
+            "example": null,
+            "nullable": true,
+            "description": "Nulo = nunca usado."
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "projectId",
+          "createdAt",
+          "expiresAt",
+          "revokedAt",
+          "lastUsedAt"
+        ]
+      },
       "PriorHypothesisResponseDto": {
         "type": "object",
         "properties": {
@@ -15660,20 +16049,27 @@
             "example": "checkout-3f2b1c8e",
             "description": "Nome da pasta física do workspace deste projeto em PROJECT_WORKSPACES_ROOT (RN-109). `<slug>-<8 chars do id>` num projeto novo; o UUID puro num projeto criado antes desta coluna existir. Congelado na criação — editar `slug` depois não recalcula."
           },
-          "workspaceMode": {
+          "executionMode": {
             "type": "string",
             "enum": [
               "container",
-              "local"
+              "mounted",
+              "runner"
             ],
             "example": "container",
-            "description": "ONDE o código mora (RN-169 — ADR 0072). `container`: a pasta gerenciada em PROJECT_WORKSPACES_ROOT. `local`: a pasta do usuário em `workspacePath`."
+            "description": "ONDE o comando executa (RN-169/RN-421 — ADR 0072/0104). `container`: a pasta gerenciada em PROJECT_WORKSPACES_ROOT. `mounted`: a pasta do usuário em `workspacePath`, montada por bind-mount. `runner`: a pasta do usuário confirmada pelo runner (ver `workspaceVerifiedAt`)."
           },
           "workspacePath": {
             "type": "object",
             "example": null,
             "nullable": true,
-            "description": "Caminho absoluto da pasta do usuário — preenchido só no modo `local`, sempre `null` no modo `container`."
+            "description": "Caminho absoluto da pasta do usuário — preenchido para `mounted`/`runner`, sempre `null` no modo `container`."
+          },
+          "workspaceVerifiedAt": {
+            "type": "object",
+            "example": null,
+            "nullable": true,
+            "description": "Quando o runner confirmou o caminho pela primeira vez (RN-423). `null` = ainda não verificado — só ganha sentido em `executionMode: \"runner\"`; `container`/`mounted` nunca preenchem este campo."
           },
           "createdBy": {
             "type": "string",
@@ -15717,8 +16113,9 @@
           "name",
           "slug",
           "workspaceDirName",
-          "workspaceMode",
+          "executionMode",
           "workspacePath",
+          "workspaceVerifiedAt",
           "createdBy",
           "taskBudgetMicros",
           "maxConsecutiveBlocked",

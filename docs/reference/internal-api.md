@@ -26,14 +26,26 @@ resposta imediata, vai por HTTP.
 **Fora do escopo desta página**: rotas HTTP autenticadas pelo JWT normal do
 usuário (RBAC por papel, `@RequireRole`) — como
 `/projects/:projectId/agent-autonomy`, `/projects/:projectId/container/lifecycle`
-([RN-267](../business-rules.md#rn-267)) ou
+([RN-267](../business-rules.md#rn-267)),
 `.../agents/criativo/validate-necessity` (gate `necessidade-validada`,
-[RN-406](../business-rules.md#rn-406), ADR 0095) — não são "internas" no
-sentido deste documento, mesmo quando um agente é quem efetivamente chama
-através delas. O
+[RN-406](../business-rules.md#rn-406), ADR 0095) ou o CRUD de
+`/projects/:projectId/personal-access-tokens` ([RN-426](../business-rules.md#rn-426),
+ADR 0105) — não são "internas" no sentido deste documento, mesmo quando um
+agente é quem efetivamente chama através delas. O
 service token compartilhado NUNCA serve como credencial nessas rotas, e o JWT
 de usuário nunca serve em `/internal/*` — os dois mecanismos não se sobrepõem
-([RN-035](../business-rules.md#rn-035)). Também fora do escopo: as rotas
+([RN-035](../business-rules.md#rn-035)).
+
+**Uma terceira credencial, nem service token nem JWT de usuário**:
+`POST /projects/:projectId/runner-ticket` é `role:developer` como qualquer
+rota RBAC, mas não aceita o JWT normal de sessão — só um Personal Access
+Token (`brb_…`, `PatAuthGuard`/`@RequirePatAuth()`), escopado por construção
+a essa única rota ([RN-424](../business-rules.md#rn-424), ADR 0105). Vale
+registrar aqui porque é a distinção que esta página existe pra explicar:
+"não é `/internal/*`" não significa "então é JWT de usuário" — o PAT é um
+terceiro mecanismo, sem sobreposição com os outros dois.
+
+Também fora do escopo: as rotas
 `@Public()` que são o próprio PONTO DE ENTRADA antes de qualquer sessão
 existir — `POST /auth/login`, `POST /auth/register`,
 `GET /auth/oauth/:provider/start`/`callback` (login social, ADR 0084) e as
@@ -437,25 +449,65 @@ rate) — a ferramenta do PO (`listar_metricas_de_produto`) cita as três pelo
 nome no TEXTO que devolve ao modelo, nunca deixando que ele conclua por
 omissão dos números que não há lacuna.
 
-### Onde o workspace do projeto mora — e por que isso também não virou rota
+### Onde o workspace do projeto mora — e por que a LEITURA ainda não é rota
 
-O modo de workspace ([ADR 0072](../adr/0072-projeto-local-ou-container.md),
-[RN-169](../business-rules.md#rn-169)) segue a mesma divisão. A partir dele um
-projeto pode ser `container` (a pasta gerenciada em `PROJECT_WORKSPACES_ROOT`, o
-default) ou `local` (um caminho absoluto do usuário) — e o engine precisa saber
-qual, porque é ele quem cria worktree e roda comando ali dentro.
+O `execution_mode` do projeto ([ADR 0072](../adr/0072-projeto-local-ou-container.md)/
+[ADR 0104](../adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md),
+[RN-169](../business-rules.md#rn-169)/[RN-421](../business-rules.md#rn-421))
+segue a mesma divisão. A partir dele um projeto pode ser `container` (a pasta
+gerenciada em `PROJECT_WORKSPACES_ROOT`, o default), `mounted` (um caminho
+absoluto do usuário, montado por bind-mount) ou `runner` (um caminho absoluto
+do usuário, SEM bind-mount, confirmado por um `brabo-runner` conectado) — e o
+engine precisa saber qual, porque é ele quem cria worktree e roda comando ali
+dentro.
 
-**Nenhuma rota interna nova.** O engine resolve o localizador lendo as MESMAS
-colunas do MESMO banco (`projects.workspace_mode` e `projects.workspace_path`),
-como já fazia com `workspace_dir_name` desde o
+**A LEITURA continua sem rota interna.** O engine resolve o localizador lendo
+as MESMAS colunas do MESMO banco (`projects.execution_mode` e
+`projects.workspace_path`), como já fazia com `workspace_dir_name` desde o
 [ADR 0066](../adr/0066-nome-de-pasta-legivel-do-workspace.md). É o mesmo
 argumento de sempre: as duas derivações — api e engine — precisam concordar, e
 concordar por leitura da mesma linha é mais barato e mais difícil de divergir
 que concordar por contrato HTTP. Não há segredo envolvido, então não há motivo
-para uma rota.
+para uma rota de leitura.
 
-O engine distingue os dois casos pela **barra inicial** do localizador: nome de
-pasta no modo `container`, caminho absoluto no `local`.
+O engine distingue `container` dos outros dois pela **barra inicial** do
+localizador: nome de pasta em `container`, caminho absoluto em
+`mounted`/`runner` — os dois compartilham a MESMA derivação de raiz; o que
+muda entre eles é QUANDO/QUEM confirma que o caminho existe de verdade (ver a
+seção seguinte).
+
+### Confirmação do workspace pelo runner — a ESCRITA, que é rota nova ([RN-423](../business-rules.md#rn-423))
+
+| método | caminho |
+|---|---|
+| POST | `/internal/projects/:projectId/workspace-verification` (**não** é session-scoped) |
+
+A exceção à regra da seção anterior: ESCREVER o caminho de um projeto
+`runner` não pode ser leitura direta de coluna, porque quem tem autoridade
+sobre o caminho não é a api nem o engine — é o `brabo-runner`, rodando no
+HOST de verdade. O canal `terminal:<projectId>` recebe `workspace_confirm`
+do runner logo após o `join`; o engine repassa para esta rota
+(`Engine.Sessions.EngineApiClient.confirm_workspace/4`), que:
+
+1. Recusa com `400` se o projeto não estiver em `execution_mode: "runner"`;
+2. Revalida o caminho pelo MESMO predicado léxico da criação
+   (`caminhoDeWorkspaceLocalValido`) — raiz de sistema e sobreposição com o
+   checkout do Brabo continuam proibidas mesmo vindo do runner;
+3. **Sobrescreve** `workspacePath` e grava `workspaceVerifiedAt = now()` — o
+   runner é a fonte da verdade, sem exigir igualdade com o que foi digitado
+   no wizard;
+4. É idempotente: reconectar com o MESMO caminho não regrava nada
+   (`changed: false`);
+5. Tenta gravar `project.workspace_verified` no event log da sessão mais
+   recente do projeto — sem sessão ainda, o `UPDATE` acontece do mesmo jeito
+   e só o evento é pulado, a mesma degradação que `pty_open`/`pty_close` já
+   aceitam.
+
+`Engine.Actions.TerminalExecutor.decisao_de_execucao/1` é quem CONSOME o
+resultado: roteia pro runner só com `workspaceVerifiedAt` não-nulo **e**
+runner conectado agora; faltando qualquer um dos dois, recusa
+explicitamente — nunca cai no `System.cmd`/bind-mount de `mounted`, que não
+existe pra um projeto `runner`.
 
 ### Contexto por agente
 

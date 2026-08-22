@@ -5884,6 +5884,11 @@ não ser o erro de uma volta que já foi corrigida depois.
 
 ### RN-169 — O projeto escolhe onde o código mora: Local ou Container {#rn-169}
 
+**REVISADA pela [RN-421](#rn-421) (ADR 0104)**: `workspace_mode`/`local`
+viraram `execution_mode` de TRÊS valores (`container`/`mounted`/`runner`,
+migração `0048`) — o resto desta entrada é histórico, fiel ao que valia até
+a revisão.
+
 Um projeto nasce com um **modo de workspace** (`projects.workspace_mode`,
 migração `0043`), e é ele que decide de onde a raiz de escopo é derivada:
 
@@ -5952,6 +5957,11 @@ são ortogonais.
   escolhida explicitamente)
 
 ### RN-170 — Caminho Local é validado na CRIAÇÃO, e a recusa ensina {#rn-170}
+
+**REVISADA pela [RN-422](#rn-422) (ADR 0104)**: a validação de criação passou
+a DIVERGIR por modo — `mounted` (o `local` renomeado) continua tocando disco
+como descrito aqui, `runner` valida só o LÉXICO, sem I/O — o resto desta
+entrada é histórico, fiel ao que valia até a revisão.
 
 Criar um projeto no modo `local` com um caminho que a api não alcança produz um
 projeto que **trava depois** — na primeira ferramenta do primeiro agente, longe
@@ -9392,6 +9402,11 @@ explicitamente, depois de revisar, que a decisão era essa.
 
 ### RN-419 — O runner local se autentica por ticket de uso único, escopado a projeto e papel {#rn-419}
 
+**REVISADA pela [RN-421](#rn-421) (ADR 0104)**: a condição de recusa do
+ticket citada abaixo (`workspaceMode !== 'local'`) virou `executionMode
+!== 'runner'` — mesma régua, nome novo. O resto desta entrada continua
+valendo tal como está.
+
 O canal `terminal:<projectId>` (socket Phoenix novo, `/runner`) recebe
 dois papéis distintos — `:runner` (o CLI na máquina do usuário, no
 máximo UM por projeto, exclusividade garantida por
@@ -9431,16 +9446,25 @@ o tópico.
 
 ### RN-420 — Comando de agente roteado ao runner passa pelo MESMO pipeline de aprovação; PTY é ação do usuário, auditada {#rn-420}
 
+**REVISADA pela [RN-423](#rn-423) (ADR 0104)**: a condição pra rotear deixou
+de ser binária. `workspace_mode == "local"` virou `execution_mode ==
+"runner"` **E** `workspace_verified_at` não-nulo **E** runner conectado —
+faltando qualquer uma das TRÊS, o comando é RECUSADO explicitamente, nunca
+cai no `System.cmd`/bind-mount de `mounted` (que não existe pra um projeto
+`runner`, sem bind-mount nenhum). O resto desta entrada — o pipeline de
+aprovação de sempre, PTY como ação do usuário — continua valendo tal como
+está.
+
 `Engine.Actions.TerminalExecutor` decide rotear um comando pro runner (em
 vez do `System.cmd` de sempre, dentro do container) **DEPOIS** que o
 pipeline normal (`decide()`/`proposed_action`) já aprovou — o roteamento
 é só uma escolha de DESTINO pro mesmo comando já autorizado, nunca um
 segundo caminho de execução que escapa da política (que continua com os
 tetos absolutos da RN-418 valendo igual, sudo/git incluídos). Condição
-pra rotear: `workspace_mode == "local"` E runner conectado
-(`Engine.Runners.Registry.connected?/1`) — sem qualquer uma das duas, o
-comportamento de sempre continua (`System.cmd` no container via
-bind-mount, ADR 0072 vira FALLBACK, nunca removido).
+pra rotear (histórico, ver revisão acima): `workspace_mode == "local"` E
+runner conectado (`Engine.Runners.Registry.connected?/1`) — sem qualquer
+uma das duas, o comportamento de sempre continua (`System.cmd` no
+container via bind-mount, ADR 0072 vira FALLBACK, nunca removido).
 
 PTY interativo é DIFERENTE: é ação do USUÁRIO autenticado digitando no
 terminal da própria máquina, não do agente — por isso NÃO passa por
@@ -9523,9 +9547,244 @@ e-mail sem NENHUM caractere alfanumérico degradam para o literal
 - **Origem:** achado por uso real, navegando o produto — não item de
   backlog planejado
 
+## Onda 1 do ADR 0104 — `execution_mode` em três valores, workspace verificado pelo runner
+
+O ADR 0072 (RN-169/RN-170) e o ADR 0103 (RN-419/RN-420) nunca se falaram: o
+runner reusava a mesma flag `workspace_mode == 'local'` sem bind-mount
+nenhum, então usar o runner de verdade continuava exigindo passar pela
+validação de PASTA MONTADA. O ADR 0104 reconcilia os dois. Migração `0048`
+recria o enum (`project_workspace_mode` → `project_execution_mode`,
+`local` → `mounted`) numa transação só — `ALTER TYPE ... ADD VALUE` não
+pode ser referenciado na mesma transação em que foi adicionado — e soma
+`workspace_verified_at` (nullable).
+
+### RN-421 — `execution_mode` tem TRÊS valores: `container`/`mounted`/`runner` {#rn-421}
+
+`projects.workspace_mode` (dois valores) virou `projects.execution_mode`
+(três): `container` (DEFAULT, inalterado), `mounted` (o antigo `local`,
+RENOMEADO — mesmo comportamento, mesma validação de disco na criação) e
+`runner` (NOVO: uma pasta do usuário sem bind-mount, confirmada pelo CLI
+`brabo-runner`). O CHECK do banco passou a ser `(execution_mode <>
+'container') = (workspace_path IS NOT NULL)` — cobre os dois modos não-
+`container` com a MESMA condição, sem `OR` explícito por valor.
+
+`projectScopeRoot`/`Project.workspace_dir_name` (api e engine) derivam a
+raiz pela MESMA regra nos dois modos não-`container`: o caminho do usuário
+é a raiz, distinguido do nome de pasta gerenciada pela barra inicial. O que
+muda entre `mounted` e `runner` não é ONDE a raiz fica — é QUANDO/QUEM
+confirma que ela existe de verdade ([RN-422](#rn-422)/[RN-423](#rn-423)).
+
+- **Onde:** `apps/api/src/db/migrations/0048_quiet_iron_fist.sql`,
+  `apps/api/src/db/schema.ts` (`projectExecutionModeEnum`),
+  `apps/api/src/domain/iam/project.entity.ts` (`PROJECT_EXECUTION_MODES`),
+  `apps/api/src/infrastructure/filesystem/project-workspaces-root.ts`
+  (`projectScopeRoot`), `apps/engine/lib/engine/projects/project.ex`
+- **Teste:** `apps/api/test/infrastructure/filesystem/project-workspaces-root.spec.ts`
+  (describe "projectScopeRoot nos modos mounted/runner"),
+  `apps/engine/test/engine/projects/project_test.exs`
+- **Decisão arquitetural:**
+  [ADR 0104](adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md)
+- **Origem:** reconciliação pedida pelo dono do produto, entre os ADRs 0072
+  e 0103
+
+### RN-422 — A validação de criação DIVERGE por modo: `mounted` toca disco, `runner` só o léxico {#rn-422}
+
+`CreateProjectUseCase.caminhoValidado` ganhou um terceiro ramo. `mounted`
+continua exatamente como `local` era (RN-170, histórico): recusa com `400`
+o caminho que não existe, não é pasta ou não é gravável dentro do
+container, com a instrução de montagem. `runner` valida só o
+LÉXICO — mesma lista de proibições (absoluto, sem `..`, fora de raiz/pasta
+de sistema, sem sobreposição com o checkout do Brabo) — sem tocar disco:
+só o runner, rodando no HOST de verdade, tem autoridade para confirmar que
+a pasta existe. O projeto nasce com `workspace_verified_at: null`.
+
+`caminhoDeWorkspaceLocalValido` (o predicado léxico) foi EXPORTADO de
+`project-workspaces-root.ts` para ser reusado nos dois lados que precisam
+dele sem tocar disco: a criação de projeto `runner` e a confirmação do
+runner ([RN-423](#rn-423)) — a mesma função, nunca duas cópias que um dia
+divergem.
+
+- **Onde:** `apps/api/src/application/use-cases/iam/create-project.use-case.ts`
+  (`caminhoValidado`), `apps/api/src/infrastructure/filesystem/project-workspaces-root.ts`
+  (`caminhoDeWorkspaceLocalValido`, exportada), `apps/api/src/interfaces/http/iam/dto/create-project.dto.ts`
+- **Teste:** `apps/api/test/application/use-cases/iam/create-project-modo-de-workspace.spec.ts`
+  (bloco `runner`), `apps/api/test/interfaces/http/iam/project-dto-modo-de-workspace.spec.ts`,
+  `apps/web/src/lib/wizard.test.ts` (`canAdvanceFromWorkspace` para `runner`)
+- **Decisão arquitetural:**
+  [ADR 0104](adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md)
+- **Origem:** reconciliação do ADR 0104
+
+### RN-423 — O runner CONFIRMA o caminho; sem confirmação, o comando é recusado — nunca cai no container {#rn-423}
+
+O runner é a **fonte da verdade** do caminho de um projeto `runner`, não o
+que foi digitado no wizard. Logo depois do canal Phoenix conectar
+(`terminal:<projectId>`, papel `:runner`), `apps/runner/src/index.ts`
+empurra `workspace_confirm` com o `--dir` que recebeu na linha de comando.
+O engine repassa (`Engine.Sessions.EngineApiClient.confirm_workspace/4`)
+para `POST /internal/projects/:projectId/workspace-verification`
+(`ConfirmProjectWorkspaceUseCase`), que:
+
+1. Recusa com `400` se o projeto não estiver no modo `runner`;
+2. Revalida o caminho pelo MESMO predicado léxico da criação
+   ([RN-422](#rn-422)) — mesmo vindo do runner, raiz de sistema e
+   sobreposição com o Brabo continuam proibidas;
+3. **SOBRESCREVE** `workspacePath` com o caminho normalizado e grava
+   `workspaceVerifiedAt = now()` — sem exigir igualdade com o que foi
+   digitado na criação: o runner manda;
+4. É IDEMPOTENTE — reconectar reportando o MESMO caminho não regrava nada
+   (`changed: false`); um caminho DIFERENTE regrava, porque o runner
+   continua sendo a fonte da verdade a cada reconexão;
+5. Sem sessão no projeto ainda (`ProjectSession.latest_id/1` devolve
+   `nil`): o `UPDATE` acontece do mesmo jeito, só o evento
+   `project.workspace_verified` (e a evidência do gate
+   `workspace-verificado`) fica ausente — a MESMA degradação que
+   `pty_open`/`pty_close` já aceitam (RN-108/RN-420). Lacuna aceita e
+   declarada, não silenciosa.
+
+`Engine.Actions.TerminalExecutor.decisao_de_execucao/1` ganhou QUATRO
+saídas, não duas: `runner` com `workspace_verified_at: nil` recusa
+(`:recusar_nao_verificado`); `runner` verificado sem runner conectado
+recusa (`:recusar_runner_desconectado`); `runner` verificado e conectado
+roteia (`:rotear_runner`); qualquer outro modo segue o caminho de sempre
+(`:caminho_de_sempre`). As duas recusas NUNCA caem no `System.cmd` — um
+projeto `runner` não tem bind-mount, e "cair pro caminho de sempre" seria
+executar às cegas numa pasta que o processo do engine não enxerga. A
+mesma recusa vale na corrida (`Registry` dizia conectado no início de
+`run/3`, mas o runner caiu antes do dispatch responder).
+
+- **Onde:** `apps/api/src/application/use-cases/iam/confirm-project-workspace.use-case.ts`,
+  `apps/api/src/interfaces/http/internal/internal-projects.controller.ts`
+  (`POST :projectId/workspace-verification`),
+  `apps/engine/lib/engine/actions/terminal_executor.ex`
+  (`decisao_de_execucao/1`), `apps/engine/lib/engine_web/channels/terminal_channel.ex`
+  (`handle_in("workspace_confirm", ...)`), `apps/engine/lib/engine/sessions/engine_api_client.ex`
+  (`confirm_workspace/4`), `apps/runner/src/channel.ts`
+  (`enviarWorkspaceConfirm`), `apps/runner/src/index.ts`
+- **Teste:** `apps/api/test/application/use-cases/iam/confirm-project-workspace.use-case.spec.ts`,
+  `apps/engine/test/engine/actions/terminal_executor_test.exs`
+  (describe "roteamento pro runner local"),
+  `apps/engine/test/engine_web/channels/terminal_channel_test.exs`
+  (describe "workspace_confirm"), `apps/runner/src/channel.spec.ts`
+  (`enviarWorkspaceConfirm` depois do join)
+- **Borda:** o `docs/gates.yml` registra `workspace-verificado` como
+  `severidade: warn` — quem trava de verdade é a recusa explícita do
+  engine, o gate é só o registro/evidência.
+- **Decisão arquitetural:**
+  [ADR 0104](adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md)
+- **Origem:** reconciliação do ADR 0104, decisão confirmada com o dono do
+  produto (o runner é a fonte da verdade; sem sessão, o UPDATE acontece
+  mesmo assim; comando recusado explicitamente sem verificação/conexão)
+
 ---
 
-### RN-421 — Carrossel de promoção de histórias sobrevive à janela de eventos {#rn-421}
+### RN-424 — PAT autentica SÓ `runner-ticket`, por construção — nunca dual-auth com JWT nessa rota {#rn-424}
+
+Um Personal Access Token (`brb_…`) nunca autoriza nenhuma rota além de
+`POST /projects/:projectId/runner-ticket`. A garantia não é um `if` que
+uma rota nova poderia esquecer de checar: é estrutural. `@RequirePatAuth()`
+marca o handler com `IS_PAT_ROUTE_KEY`; `JwtAuthGuard` (o `APP_GUARD`
+global) checa esse metadado ANTES de tentar `verify()` de JWT e devolve
+`true` sem validar nada — o mesmo formato de bypass que `IS_PUBLIC_KEY` e
+`IS_SERVICE_ROUTE_KEY` já usam. `PatAuthGuard`, aplicado só nesse handler
+via `@UseGuards()`, é quem de fato autentica: extrai o bearer, recusa
+(401) qualquer valor que não comece com `brb_` sem consultar o
+repositório — nunca tenta validar como JWT nessa rota, e nenhuma outra
+rota aceita `brb_…` como bearer.
+
+Depois que o `PatAuthGuard` popula `request.user`, `RolesGuard`/
+`ResolveEffectiveRoleUseCase` continuam rodando, inalterados — cinto e
+suspensório: se o dono do PAT perder papel suficiente no projeto pela via
+normal (`ProjectMember`/workspace), o token para de autorizar mesmo sem
+ter sido revogado explicitamente.
+
+A alternativa considerada e recusada: o `JwtAuthGuard` global reconhecer
+o prefixo `brb_` e popular `request.user` direto, pra QUALQUER rota. Isso
+autorizaria o PAT a tudo que o papel do usuário permite no resto da api —
+o escopo "só pede ticket de runner" viraria decorativo.
+
+- **Onde:** `apps/api/src/interfaces/http/auth/pat-route.decorator.ts`
+  (`IS_PAT_ROUTE_KEY`/`@RequirePatAuth()`),
+  `apps/api/src/interfaces/http/auth/jwt-auth.guard.ts` (o terceiro
+  early-out), `apps/api/src/interfaces/http/auth/pat-auth.guard.ts`
+  (`PatAuthGuard`), `apps/api/src/interfaces/http/runner/runner-tickets.controller.ts`
+  (`runnerTicket`, o único handler marcado)
+- **Teste:** `apps/api/test/interfaces/pat-auth.guard.spec.ts`,
+  `apps/api/test/interfaces/jwt-auth.guard.spec.ts` (`@RequirePatAuth()`
+  passa sem tentar `verify()`), `apps/api/test/interfaces/http/runner/runner-tickets.controller.spec.ts`
+  (`runnerTicket` tem o decorator, `terminalTicket` não)
+- **Decisão arquitetural:**
+  [ADR 0105](adr/0105-personal-access-token-do-runner-escopado-por-construcao.md)
+
+### RN-425 — Validação de PAT colapsa inexistente/revogado/expirado numa resposta só; escopo errado é 403; `last_used_at` nunca throttla {#rn-425}
+
+`PersonalAccessTokenRepository.validarEUsar(hash)` é UMA query:
+`UPDATE personal_access_tokens SET last_used_at = now() WHERE token_hash
+= $1 AND revoked_at IS NULL AND (expires_at IS NULL OR expires_at >
+now()) RETURNING id, user_id, project_id`. Zero linhas devolve `null`, e
+o guard responde **401 pra "não existe", "revogado" e "expirado" com a
+MESMA mensagem** — quem apresenta um token roubado ou expirado não
+descobre qual dos três é o motivo (mesmo padrão de
+`AccountTokenRepository.consumir()`).
+
+Escopo de projeto incorreto é uma categoria DIFERENTE: se `project_id`
+devolvido pela query não bate com `:projectId` da rota, é **403**, não
+401 — o token autenticou de verdade, só não tem direito a ESTE projeto.
+
+`last_used_at` é atualizado de forma INCONDICIONAL, na MESMA query de
+validação — nunca com um throttle (ex.: "só se `last_used_at` for `NULL`
+ou tiver mais de 5 minutos") no mesmo `WHERE`. Um throttle ali é um bug
+real: um PAT reapresentado duas vezes em menos de 5 minutos cairia fora
+do `WHERE` na segunda vez (porque `last_used_at` estaria "fresco
+demais"), e a query devolveria zero linhas pra um token **válido** —
+rejeitando com 401 uma reconexão legítima. O laço de retry do runner
+reconecta em segundos, não minutos. O custo de não throttlar é um
+`UPDATE` de uma linha por índice único a cada chamada — irrelevante no
+pior caso real (até 10 tentativas seguidas, teto do runner).
+
+- **Onde:** `apps/api/src/infrastructure/persistence/drizzle/personal-access-token.repository.ts`
+  (`validarEUsar`), `apps/api/src/interfaces/http/auth/pat-auth.guard.ts`
+- **Teste:** `apps/api/test/infrastructure/persistence/personal-access-token.repository.spec.ts`
+  (inexistente/revogado/expirado → `null`; "toca `last_used_at` sempre
+  que válido, sem throttle" — regressão do bug acima),
+  `apps/api/test/interfaces/pat-auth.guard.spec.ts` (escopo errado → 403,
+  não 401)
+- **Decisão arquitetural:**
+  [ADR 0105](adr/0105-personal-access-token-do-runner-escopado-por-construcao.md)
+
+### RN-426 — Listar/revogar PAT é escopado ao PRÓPRIO usuário, no WHERE da query — sem admin cross-user nesta onda {#rn-426}
+
+`ListPersonalAccessTokensUseCase`/`RevokePersonalAccessTokenUseCase`
+filtram por `userId` dentro da consulta SQL (`WHERE user_id = $1 AND ...`),
+nunca trazendo tudo e filtrando depois em memória. Cada usuário só
+enxerga e só revoga os PRÓPRIOS tokens — inclusive dentro de um projeto
+onde ele é `maintainer`.
+
+`revogar(id, userId, motivo)` é IDEMPOTENTE: se o `UPDATE` (com o mesmo
+`WHERE user_id = $1`) não acha linha porque já estava revogado, uma
+segunda consulta de desempate devolve a linha (revogar de novo não é
+erro); se não acha porque o token não existe OU não é do usuário
+chamador, devolve `null` — a MESMA resposta (404 no controller) pros
+dois casos, pra não vazar a existência de um token alheio pelo código de
+status.
+
+**Fora desta onda, declarado**: um `maintainer` revogar o PAT de outro
+usuário — o caso de resposta a incidente (dev desligado com token
+vazando). Registrado como item de backlog, não implementado agora.
+
+- **Onde:** `apps/api/src/application/use-cases/auth/list-personal-access-tokens.use-case.ts`
+  (`ListPersonalAccessTokensUseCase`), `apps/api/src/application/use-cases/auth/revoke-personal-access-token.use-case.ts`,
+  `apps/api/src/infrastructure/persistence/drizzle/personal-access-token.repository.ts`
+  (`listarDoUsuarioNoProjeto`, `revogar`)
+- **Teste:** `apps/api/test/application/use-cases/auth/list-personal-access-tokens.use-case.spec.ts`,
+  `apps/api/test/application/use-cases/auth/revoke-personal-access-token.use-case.spec.ts`,
+  `apps/api/test/infrastructure/persistence/personal-access-token.repository.spec.ts`
+  (revogar token de outro usuário → `null`)
+- **Decisão arquitetural:**
+  [ADR 0105](adr/0105-personal-access-token-do-runner-escopado-por-construcao.md)
+
+---
+
+### RN-427 — Carrossel de promoção de histórias sobrevive à janela de eventos {#rn-427}
 
 `promocoesPendentes`/o carrossel de promoção do PO (RN-148) não depende mais
 de scan sobre a janela dos últimos 200 eventos de `useSessionEvents`. A fonte
@@ -9549,7 +9808,7 @@ corte de leitura.
 
 ---
 
-### RN-422 — Navegação de pasta local é relay puro pelo Runner, nunca a api enumerando o container {#rn-422}
+### RN-428 — Navegação de pasta local é relay puro pelo Runner, nunca a api enumerando o container {#rn-428}
 
 O canal `terminal:<projectId>` ganha dois eventos, no MESMO desenho de relay
 do PTY: `fs_list_dir`/`fs_home_dir` (`:web` pede, engine faz relay DIRETO
@@ -9583,14 +9842,14 @@ de texto livre continua sendo o caminho manual, como antes.
   (ordenação, pasta vazia/inexistente/arquivo, permissão por entrada);
   `FolderBrowserModal.test.tsx` (projectId nulo, navegação, seleção, sem
   runner); `NewProjectWizard.test.tsx` (botão "Procurar pasta...")
-- **ADR:** [0104](adr/0104-navegacao-de-pasta-local-via-o-runner.md), revisa
+- **ADR:** [0107](adr/0107-navegacao-de-pasta-local-via-o-runner.md), revisa
   a [0072](adr/0072-projeto-local-ou-container.md) sem editá-la
 - **Origem:** pedido do dono do produto — "não consegui linkar com uma
   pasta do usuário"
 
 ---
 
-### RN-423 — PRs são project-wide; a decisão usa o sessionId da própria ação, nunca a mais recente {#rn-423}
+### RN-429 — PRs são project-wide; a decisão usa o sessionId da própria ação, nunca a mais recente {#rn-429}
 
 A aba `prs` resolve o defeito de `ProjectApprovalsTab.tsx`, que escopava a
 seção "PRs em revisão" a `usePendingActions(projectId, latestSession?.id)`
@@ -9630,7 +9889,7 @@ RN-096 já corrigiu para outros tipos).
 
 ---
 
-### RN-424 — O selo da aba Arquitetura conta pendência de validação, nunca "diagrama não gerado" {#rn-424}
+### RN-430 — O selo da aba Arquitetura conta pendência de validação, nunca "diagrama não gerado" {#rn-430}
 
 `contagens.arquiteturaPendente` (régua de abas) vem de
 `architecture.pendencies.length` (divergência de validação cruzada
@@ -9648,7 +9907,7 @@ badigar por isso seria ruído.
 
 ---
 
-### RN-425 — Preferência de idioma vem no payload de login/refresh, nunca numa chamada extra {#rn-425}
+### RN-431 — Preferência de idioma vem no payload de login/refresh, nunca numa chamada extra {#rn-431}
 
 Fundação de i18n da interface (Onda 6a de um programa maior — a extração em
 massa das strings do resto do app é etapa separada, em paralelo). Coluna
