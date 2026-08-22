@@ -188,6 +188,19 @@ sequer existir. `block` prometeria uma trava que não existe; `warn`
 descreve exatamente o que o gate é: medição de que um humano validou o
 mérito da necessidade, não um portão que impede o próximo passo.
 
+`workspace-verificado` ([RN-423](../business-rules.md#rn-423),
+[ADR 0104](../adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md))
+é o quarto exemplo, e o mais claro dos quatro sobre por que `warn` não é
+"trava fraca": quem trava de verdade AQUI não é o gate, é a recusa
+explícita de `Engine.Actions.TerminalExecutor.decisao_de_execucao/1` —
+sem workspace verificado ou sem runner conectado, o comando é recusado
+incondicionalmente, código adentro, sem passar pelo registro. O gate
+existe só para dar EVIDÊNCIA de quando a confirmação aconteceu
+(`project.workspace_verified` no event log); promovê-lo a `block`
+descreveria uma trava que já existe em outro lugar, do mesmo jeito que
+`necessidade-validada` teria mentido sobre uma que não existe em lugar
+nenhum.
+
 ## Consumo: a tela deriva, não repete
 
 A esteira de PR no painel — Dev → QA → SecOps → Você — era uma lista escrita no
