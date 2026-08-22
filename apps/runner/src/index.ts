@@ -17,7 +17,7 @@
 
 import { existsSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { obterAccessToken, obterTicketDoRunner } from './auth.ts';
+import { obterToken, obterTicketDoRunner } from './auth.ts';
 import {
   conectarCanal,
   enviarExecResult,
@@ -38,15 +38,16 @@ interface Argumentos {
   projectId: string;
   dir: string;
   apiUrl: string;
+  token: string;
 }
 
 function uso(): never {
   console.error(
-    'uso: brabo-runner --project <projectId> --dir <caminho-absoluto> [--api-url <url>]',
+    'uso: brabo-runner --project <projectId> --dir <caminho-absoluto> [--api-url <url>] [--token <brb_...>]',
   );
   console.error(
-    'Autenticação: BRABO_ACCOUNT_TOKEN no ambiente, ou login interativo na primeira execução ' +
-      '(credenciais renovadas depois via ~/.brabo/runner-credentials.json).',
+    'Autenticação: --token <brb_...>, ou BRABO_ACCOUNT_TOKEN no ambiente. Gere em ' +
+      'Configurações do projeto → Tokens de acesso — nunca gravado em disco por este CLI.',
   );
   process.exit(2);
 }
@@ -62,6 +63,7 @@ function lerArgumentos(argv: string[]): Argumentos {
   const projectId = valorDe('--project');
   const dirBruto = valorDe('--dir');
   const apiUrl = valorDe('--api-url') ?? process.env.BRABO_API_URL ?? 'http://localhost:3000';
+  const tokenFlag = valorDe('--token');
 
   if (!projectId || projectId.startsWith('--')) uso();
   if (!dirBruto || dirBruto.startsWith('--')) uso();
@@ -72,7 +74,15 @@ function lerArgumentos(argv: string[]): Argumentos {
     process.exit(2);
   }
 
-  return { projectId, dir, apiUrl };
+  let token: string;
+  try {
+    token = obterToken(tokenFlag);
+  } catch (erro) {
+    console.error(erro instanceof Error ? erro.message : String(erro));
+    process.exit(2);
+  }
+
+  return { projectId, dir, apiUrl, token };
 }
 
 function mensagemDeErro(erro: unknown): string {
@@ -157,19 +167,21 @@ function tratarPtyOpen(estado: EstadoDoRunner, msg: PtyOpenMessage): void {
 }
 
 /**
- * Uma "rodada" de conexão: obtém token+ticket FRESCOS, entra no canal, e só
- * volta quando a conexão cai (ou lança se o join for recusado/não puder
- * conectar). O `while` de `main()` decide o que fazer com o retorno/erro —
- * este helper não decide política de retry.
+ * Uma "rodada" de conexão: pede um ticket FRESCO (o token é resolvido uma
+ * vez só, em `lerArgumentos` — PAT não expira por uso, então não há razão
+ * pra reobtê-lo a cada reconexão), entra no canal, e só volta quando a
+ * conexão cai (ou lança se o join for recusado/não puder conectar). O
+ * `while` de `main()` decide o que fazer com o retorno/erro — este helper
+ * não decide política de retry.
  */
 async function conectarERodar(
   apiUrl: string,
   projectId: string,
+  token: string,
   estado: EstadoDoRunner,
   deveParar: () => boolean,
 ): Promise<void> {
-  const accessToken = await obterAccessToken(apiUrl);
-  const ticket = await obterTicketDoRunner(apiUrl, projectId, accessToken);
+  const ticket = await obterTicketDoRunner(apiUrl, projectId, token);
 
   let resolverQueda: () => void;
   const queda = new Promise<void>((res) => {
@@ -207,7 +219,7 @@ async function conectarERodar(
 }
 
 async function main(): Promise<void> {
-  const { projectId, dir, apiUrl } = lerArgumentos(process.argv);
+  const { projectId, dir, apiUrl, token } = lerArgumentos(process.argv);
 
   console.log(`brabo-runner — projeto ${projectId}, raiz ${dir}, api ${apiUrl}`);
 
@@ -248,7 +260,7 @@ async function main(): Promise<void> {
 
   while (!parando) {
     try {
-      await conectarERodar(apiUrl, projectId, estado, deveParar);
+      await conectarERodar(apiUrl, projectId, token, estado, deveParar);
       tentativasSeguidas = 0; // ficou conectado por um tempo — reseta o contador de falhas
     } catch (erro) {
       if (erro instanceof JoinRecusadoError) {

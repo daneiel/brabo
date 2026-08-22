@@ -523,6 +523,25 @@ export interface CredentialTestResult {
   motivo?: string;
 }
 
+/**
+ * Personal Access Token do runner (`brb_…`, ADR 0105) — nunca carrega o
+ * token bruto. Escopado a um projeto e a um usuário (o dono).
+ */
+export interface PersonalAccessTokenSummary {
+  id: string;
+  name: string;
+  projectId: string;
+  createdAt: string;
+  expiresAt: string | null;
+  revokedAt: string | null;
+  lastUsedAt: string | null;
+}
+
+/** Só a resposta de EMISSÃO carrega o bruto — ela não se repete. */
+export interface PersonalAccessTokenIssued extends PersonalAccessTokenSummary {
+  token: string;
+}
+
 export type BudgetPolicy = 'block' | 'allow';
 
 // Custo por AGENTE numa sessão (Fase 4a — painel do time). Espelha

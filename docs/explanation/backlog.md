@@ -377,14 +377,42 @@ projeto já existente fica como item de backlog NOVO, sem desenho ainda:
 |---|---|---|---|
 | Conversão de `execution_mode` em projeto EXISTENTE, sem recriar (worktree, `permissions.json` e cache do engine precisam migrar de escopo junto) | M | nenhum — o ADR 0104 já prometia isso e a promessa está incorreta hoje; falta só o desenho | achado na Onda 1, corrigindo o ADR 0104 item 4 |
 
+**Onda 2 — PAT, [ADR 0105](../adr/0105-personal-access-token-do-runner-escopado-por-construcao.md), CONCLUÍDA (RN-424/425/426):**
+
+O item "token de conta de longa duração" da tabela original tinha DOIS
+erros de texto, corrigidos na implementação em vez de seguidos cegamente
+— registrados aqui porque a tabela abaixo os repetia:
+
+1. **"hash argon2 no banco" estava errado.** O padrão real do produto pra
+   segredo de ALTA entropia (256 bits de CSPRNG) é HMAC-SHA256 + pepper
+   via `hashDeToken()`/`TokenFactory` — o mesmo mecanismo de refresh
+   tokens e account tokens. Argon2 é pra segredo de BAIXA entropia
+   (senha), onde resistência a dicionário importa; aqui só quebraria a
+   busca indexada `WHERE token_hash = $1` sem ganhar nada.
+2. **"reaproveitando a infra de rotação de família de refresh" era
+   impreciso.** PAT é apresentado repetidamente SEM MUDAR — nunca
+   consumido-e-reemitido como um refresh token. Só a geração
+   (`TokenFactory.gerar()`) e o hashing são reaproveitados; a família/
+   rotação inteira seria inventar um comportamento que o PAT não precisa.
+
+| # | Severidade | Item | Evidência (arquivo:linha) |
+|---|---|---|---|
+| 1 | **FECHADO** (RN-424) | PAT precisava autenticar `runner-ticket` sem virar credencial válida pra qualquer outra rota do usuário | `apps/api/src/interfaces/http/auth/pat-route.decorator.ts` (`@RequirePatAuth()`), `apps/api/src/interfaces/http/auth/jwt-auth.guard.ts` (terceiro early-out), `apps/api/src/interfaces/http/auth/pat-auth.guard.ts` (`PatAuthGuard`, aplicado só em `runnerTicket`) |
+| 2 | **FECHADO** (RN-425) | Validação de token de alta entropia sem vazar qual dos três motivos de recusa (inexistente/revogado/expirado) se aplica; `last_used_at` sem regredir uma reconexão legítima | `apps/api/src/infrastructure/persistence/drizzle/personal-access-token.repository.ts` (`validarEUsar` — UPDATE condicional único, sem throttle no mesmo WHERE) |
+| 3 | **FECHADO** (RN-426) | Emitir/revogar/listar sem vazar token de um usuário pro outro | `apps/api/src/application/use-cases/auth/*-personal-access-token*.use-case.ts`, escopo por `userId` no WHERE da query |
+
+`apps/runner/src/auth.ts` perdeu por completo login interativo, cookies
+e `~/.brabo/runner-credentials.json` — só valida formato e repassa
+`--token`/`BRABO_ACCOUNT_TOKEN`, nunca gravado em disco pelo CLI.
+
 **O que fica para depois — backlog priorizado pelo dono do produto, nesta
 ordem:**
 
 | item | custo | critério de ativação | onde foi decidido |
 |---|---|---|---|
-| Distribuição do runner via `tsup` → `dist/index.cjs` único + `npm publish` (`@brabo/runner`) | M | depende do PAT (linha abaixo) estar pronto — publicar hoje distribuiria um fluxo de senha+cookie salvo em disco | ADR 0104 |
+| Distribuição do runner via `tsup` → `dist/index.cjs` único + `npm publish` (`@brabo/runner`) | M | DESBLOQUEADA pela Onda 2 (PAT fechado) — nenhuma dependência restante | ADR 0104/0105 |
 | Binário standalone (`pkg`/`bun build --compile`) | G | não bloqueante; sem gatilho definido, item futuro separado da distribuição via npm | ADR 0104 |
-| Token de conta de longa duração (PAT `brb_…`, hash argon2 no banco, escopo `runner:project:<id>`, revogável, expiração opcional), substituindo o replay de login de `apps/runner/src/auth.ts`, reaproveitando a infra de rotação de família de refresh ([RN-030](../business-rules.md#rn-030), [ADR 0031](../adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.md)) | M | nenhum — é pré-requisito da distribuição, não espera evento externo | ADR 0104 |
+| `maintainer` revogar PAT de OUTRO usuário (resposta a incidente — dev desligado com token vazando) | P | nenhum — declarado fora de escopo da Onda 2, não implementado | ADR 0105 |
 | Exclusividade do runner por `{project_id, machine_id}` em vez de só `project_id` (`apps/engine/lib/engine/runners/registry.ex`) | M | ADIADO — critério de ativação explícito: existir de fato um segundo dev usando o mesmo projeto simultaneamente | ADR 0104 |
 
 `apps/runner/src/guard.ts` (checagem léxica best-effort de `cwd`) **não é

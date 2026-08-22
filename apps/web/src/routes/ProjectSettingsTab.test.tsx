@@ -9,6 +9,7 @@ import {
   MelhoresModelosPorCapacidadeSection,
   ModelsSection,
   ParallelismSection,
+  PersonalAccessTokensSection,
   ProficiencySection,
   PromotionSection,
 } from './ProjectSettingsTab';
@@ -38,6 +39,9 @@ const listAgentAreas = vi.fn();
 const setAreaMaxParallel = vi.fn();
 const useCurrentWorkspaceWithRole = vi.fn();
 const runAnamnese = vi.fn();
+const listPersonalAccessTokens = vi.fn();
+const issuePersonalAccessToken = vi.fn();
+const revokePersonalAccessToken = vi.fn();
 
 vi.mock('../lib/hooks', () => ({
   useCurrentWorkspaceWithRole: (...args: unknown[]) =>
@@ -78,6 +82,12 @@ vi.mock('../lib/api-client', async () => {
     listAgentAreas: (...args: unknown[]) => listAgentAreas(...args),
     setAreaMaxParallel: (...args: unknown[]) => setAreaMaxParallel(...args),
     runAnamnese: (...args: unknown[]) => runAnamnese(...args),
+    listPersonalAccessTokens: (...args: unknown[]) =>
+      listPersonalAccessTokens(...args),
+    issuePersonalAccessToken: (...args: unknown[]) =>
+      issuePersonalAccessToken(...args),
+    revokePersonalAccessToken: (...args: unknown[]) =>
+      revokePersonalAccessToken(...args),
   };
 });
 
@@ -134,6 +144,9 @@ beforeEach(() => {
   setAreaMaxParallel.mockResolvedValue({});
   useCurrentWorkspaceWithRole.mockReturnValue({ data: { role: 'maintainer' } });
   runAnamnese.mockResolvedValue(undefined);
+  listPersonalAccessTokens.mockResolvedValue([]);
+  issuePersonalAccessToken.mockResolvedValue(undefined);
+  revokePersonalAccessToken.mockResolvedValue(undefined);
 });
 
 function credencial(over: Partial<UserCredentialMetadata> = {}): UserCredentialMetadata {
@@ -901,5 +914,80 @@ describe('ProficiencySection — Anamnese pausada globalmente', () => {
 
     expect(await screen.findByText('Erro')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Rodar agora' })).not.toBeDisabled();
+  });
+});
+
+/**
+ * Personal Access Tokens do runner (`brb_…`, ADR 0105). O token bruto só
+ * existe na resposta de EMISSÃO — nunca na listagem, e o modal de "mostrar
+ * uma vez" precisa exibir exatamente o que a api devolveu, sem refazer
+ * fetch nenhum pra buscá-lo de novo (ele não é recuperável).
+ */
+describe('PersonalAccessTokensSection (ADR 0105)', () => {
+  function montarTokens() {
+    return montarSecao(<PersonalAccessTokensSection projectId="proj-1" />);
+  }
+
+  function token(over: Record<string, unknown> = {}) {
+    return {
+      id: 'pat-1',
+      name: 'laptop',
+      projectId: 'proj-1',
+      createdAt: '2026-08-10T00:00:00.000Z',
+      expiresAt: null,
+      revokedAt: null,
+      lastUsedAt: null,
+      ...over,
+    };
+  }
+
+  it('lista renderiza uma linha por token', async () => {
+    listPersonalAccessTokens.mockResolvedValue([
+      token({ id: 'pat-1', name: 'laptop' }),
+      token({ id: 'pat-2', name: 'ci' }),
+    ]);
+    montarTokens();
+
+    expect(await screen.findByText('laptop')).toBeInTheDocument();
+    expect(screen.getByText('ci')).toBeInTheDocument();
+  });
+
+  it('gerar token abre o modal com o valor exato da resposta, sem refazer fetch dele', async () => {
+    issuePersonalAccessToken.mockResolvedValue({
+      ...token({ id: 'pat-novo', name: 'laptop' }),
+      token: 'brb_valorquesoexisteumavez',
+    });
+    montarTokens();
+
+    fireEvent.change(screen.getByPlaceholderText('Nome (ex.: laptop)'), {
+      target: { value: 'laptop' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Gerar token' }));
+
+    expect(
+      await screen.findByDisplayValue('brb_valorquesoexisteumavez'),
+    ).toBeInTheDocument();
+    expect(issuePersonalAccessToken).toHaveBeenCalledWith('proj-1', {
+      name: 'laptop',
+      expiresInDays: undefined,
+    });
+    // O valor só existe na resposta da emissão — a listagem não é
+    // reconsultada pra exibir o modal.
+    expect(listPersonalAccessTokens).toHaveBeenCalledTimes(1);
+  });
+
+  it('revogar chama o DELETE e invalida a listagem', async () => {
+    listPersonalAccessTokens.mockResolvedValueOnce([token({ id: 'pat-1', name: 'laptop' })]);
+    listPersonalAccessTokens.mockResolvedValueOnce([
+      token({ id: 'pat-1', name: 'laptop', revokedAt: '2026-08-11T00:00:00.000Z' }),
+    ]);
+    montarTokens();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Revogar laptop' }));
+
+    await waitFor(() =>
+      expect(revokePersonalAccessToken).toHaveBeenCalledWith('proj-1', 'pat-1'),
+    );
+    expect(listPersonalAccessTokens).toHaveBeenCalledTimes(2);
   });
 });

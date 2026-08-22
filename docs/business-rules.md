@@ -9547,6 +9547,113 @@ mesma recusa vale na corrida (`Registry` dizia conectado no início de
 
 ---
 
+### RN-424 — PAT autentica SÓ `runner-ticket`, por construção — nunca dual-auth com JWT nessa rota {#rn-424}
+
+Um Personal Access Token (`brb_…`) nunca autoriza nenhuma rota além de
+`POST /projects/:projectId/runner-ticket`. A garantia não é um `if` que
+uma rota nova poderia esquecer de checar: é estrutural. `@RequirePatAuth()`
+marca o handler com `IS_PAT_ROUTE_KEY`; `JwtAuthGuard` (o `APP_GUARD`
+global) checa esse metadado ANTES de tentar `verify()` de JWT e devolve
+`true` sem validar nada — o mesmo formato de bypass que `IS_PUBLIC_KEY` e
+`IS_SERVICE_ROUTE_KEY` já usam. `PatAuthGuard`, aplicado só nesse handler
+via `@UseGuards()`, é quem de fato autentica: extrai o bearer, recusa
+(401) qualquer valor que não comece com `brb_` sem consultar o
+repositório — nunca tenta validar como JWT nessa rota, e nenhuma outra
+rota aceita `brb_…` como bearer.
+
+Depois que o `PatAuthGuard` popula `request.user`, `RolesGuard`/
+`ResolveEffectiveRoleUseCase` continuam rodando, inalterados — cinto e
+suspensório: se o dono do PAT perder papel suficiente no projeto pela via
+normal (`ProjectMember`/workspace), o token para de autorizar mesmo sem
+ter sido revogado explicitamente.
+
+A alternativa considerada e recusada: o `JwtAuthGuard` global reconhecer
+o prefixo `brb_` e popular `request.user` direto, pra QUALQUER rota. Isso
+autorizaria o PAT a tudo que o papel do usuário permite no resto da api —
+o escopo "só pede ticket de runner" viraria decorativo.
+
+- **Onde:** `apps/api/src/interfaces/http/auth/pat-route.decorator.ts`
+  (`IS_PAT_ROUTE_KEY`/`@RequirePatAuth()`),
+  `apps/api/src/interfaces/http/auth/jwt-auth.guard.ts` (o terceiro
+  early-out), `apps/api/src/interfaces/http/auth/pat-auth.guard.ts`
+  (`PatAuthGuard`), `apps/api/src/interfaces/http/runner/runner-tickets.controller.ts`
+  (`runnerTicket`, o único handler marcado)
+- **Teste:** `apps/api/test/interfaces/pat-auth.guard.spec.ts`,
+  `apps/api/test/interfaces/jwt-auth.guard.spec.ts` (`@RequirePatAuth()`
+  passa sem tentar `verify()`), `apps/api/test/interfaces/http/runner/runner-tickets.controller.spec.ts`
+  (`runnerTicket` tem o decorator, `terminalTicket` não)
+- **Decisão arquitetural:**
+  [ADR 0105](adr/0105-personal-access-token-do-runner-escopado-por-construcao.md)
+
+### RN-425 — Validação de PAT colapsa inexistente/revogado/expirado numa resposta só; escopo errado é 403; `last_used_at` nunca throttla {#rn-425}
+
+`PersonalAccessTokenRepository.validarEUsar(hash)` é UMA query:
+`UPDATE personal_access_tokens SET last_used_at = now() WHERE token_hash
+= $1 AND revoked_at IS NULL AND (expires_at IS NULL OR expires_at >
+now()) RETURNING id, user_id, project_id`. Zero linhas devolve `null`, e
+o guard responde **401 pra "não existe", "revogado" e "expirado" com a
+MESMA mensagem** — quem apresenta um token roubado ou expirado não
+descobre qual dos três é o motivo (mesmo padrão de
+`AccountTokenRepository.consumir()`).
+
+Escopo de projeto incorreto é uma categoria DIFERENTE: se `project_id`
+devolvido pela query não bate com `:projectId` da rota, é **403**, não
+401 — o token autenticou de verdade, só não tem direito a ESTE projeto.
+
+`last_used_at` é atualizado de forma INCONDICIONAL, na MESMA query de
+validação — nunca com um throttle (ex.: "só se `last_used_at` for `NULL`
+ou tiver mais de 5 minutos") no mesmo `WHERE`. Um throttle ali é um bug
+real: um PAT reapresentado duas vezes em menos de 5 minutos cairia fora
+do `WHERE` na segunda vez (porque `last_used_at` estaria "fresco
+demais"), e a query devolveria zero linhas pra um token **válido** —
+rejeitando com 401 uma reconexão legítima. O laço de retry do runner
+reconecta em segundos, não minutos. O custo de não throttlar é um
+`UPDATE` de uma linha por índice único a cada chamada — irrelevante no
+pior caso real (até 10 tentativas seguidas, teto do runner).
+
+- **Onde:** `apps/api/src/infrastructure/persistence/drizzle/personal-access-token.repository.ts`
+  (`validarEUsar`), `apps/api/src/interfaces/http/auth/pat-auth.guard.ts`
+- **Teste:** `apps/api/test/infrastructure/persistence/personal-access-token.repository.spec.ts`
+  (inexistente/revogado/expirado → `null`; "toca `last_used_at` sempre
+  que válido, sem throttle" — regressão do bug acima),
+  `apps/api/test/interfaces/pat-auth.guard.spec.ts` (escopo errado → 403,
+  não 401)
+- **Decisão arquitetural:**
+  [ADR 0105](adr/0105-personal-access-token-do-runner-escopado-por-construcao.md)
+
+### RN-426 — Listar/revogar PAT é escopado ao PRÓPRIO usuário, no WHERE da query — sem admin cross-user nesta onda {#rn-426}
+
+`ListPersonalAccessTokensUseCase`/`RevokePersonalAccessTokenUseCase`
+filtram por `userId` dentro da consulta SQL (`WHERE user_id = $1 AND ...`),
+nunca trazendo tudo e filtrando depois em memória. Cada usuário só
+enxerga e só revoga os PRÓPRIOS tokens — inclusive dentro de um projeto
+onde ele é `maintainer`.
+
+`revogar(id, userId, motivo)` é IDEMPOTENTE: se o `UPDATE` (com o mesmo
+`WHERE user_id = $1`) não acha linha porque já estava revogado, uma
+segunda consulta de desempate devolve a linha (revogar de novo não é
+erro); se não acha porque o token não existe OU não é do usuário
+chamador, devolve `null` — a MESMA resposta (404 no controller) pros
+dois casos, pra não vazar a existência de um token alheio pelo código de
+status.
+
+**Fora desta onda, declarado**: um `maintainer` revogar o PAT de outro
+usuário — o caso de resposta a incidente (dev desligado com token
+vazando). Registrado como item de backlog, não implementado agora.
+
+- **Onde:** `apps/api/src/application/use-cases/auth/list-personal-access-tokens.use-case.ts`
+  (`ListPersonalAccessTokensUseCase`), `apps/api/src/application/use-cases/auth/revoke-personal-access-token.use-case.ts`,
+  `apps/api/src/infrastructure/persistence/drizzle/personal-access-token.repository.ts`
+  (`listarDoUsuarioNoProjeto`, `revogar`)
+- **Teste:** `apps/api/test/application/use-cases/auth/list-personal-access-tokens.use-case.spec.ts`,
+  `apps/api/test/application/use-cases/auth/revoke-personal-access-token.use-case.spec.ts`,
+  `apps/api/test/infrastructure/persistence/personal-access-token.repository.spec.ts`
+  (revogar token de outro usuário → `null`)
+- **Decisão arquitetural:**
+  [ADR 0105](adr/0105-personal-access-token-do-runner-escopado-por-construcao.md)
+
+---
+
 ## Quando dá errado
 
 | situação | o que o sistema faz |

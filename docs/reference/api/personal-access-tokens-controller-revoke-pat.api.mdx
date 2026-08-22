@@ -1,0 +1,69 @@
+---
+id: personal-access-tokens-controller-revoke-pat
+title: "Revoga um Personal Access Token próprio"
+description: "Idempotente — revogar de novo não é erro."
+sidebar_label: "Revoga um Personal Access Token próprio"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "delete api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Revoga um Personal Access Token próprio"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"delete"}
+  path={"/projects/{projectId}/personal-access-tokens/{tokenId}"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Idempotente — revogar de novo não é erro.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./personal-access-tokens-controller-revoke-pat.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./personal-access-tokens-controller-revoke-pat.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./personal-access-tokens-controller-revoke-pat.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      
