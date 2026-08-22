@@ -1,4 +1,5 @@
 import { useState, type KeyboardEvent, type MouseEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from '@tanstack/react-router';
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -44,13 +45,13 @@ import styles from './ProjectSessionsTab.module.css';
  */
 const SELO_DO_STATUS: Record<
   SessionStatus,
-  { texto: string; tone: BadgeTone; pulse?: boolean }
+  { chave: string; tone: BadgeTone; pulse?: boolean }
 > = {
-  created: { texto: 'aguardando', tone: 'warning' },
-  active: { texto: 'ativa', tone: 'success', pulse: true },
-  closing: { texto: 'encerrando', tone: 'accent', pulse: true },
-  closed: { texto: 'fechada', tone: 'muted' },
-  closed_abnormally: { texto: 'abortada', tone: 'danger' },
+  created: { chave: 'sessionsTab.status.created', tone: 'warning' },
+  active: { chave: 'sessionsTab.status.active', tone: 'success', pulse: true },
+  closing: { chave: 'sessionsTab.status.closing', tone: 'accent', pulse: true },
+  closed: { chave: 'sessionsTab.status.closed', tone: 'muted' },
+  closed_abnormally: { chave: 'sessionsTab.status.closedAbnormally', tone: 'danger' },
 };
 
 /**
@@ -65,12 +66,14 @@ const SELO_DO_STATUS: Record<
  */
 type FiltroDeStatus = 'todas' | 'ativas' | 'fechadas' | 'abortadas';
 
-const FILTROS: { chave: FiltroDeStatus; rotulo: string }[] = [
-  { chave: 'todas', rotulo: 'Todas' },
-  { chave: 'ativas', rotulo: 'Ativas' },
-  { chave: 'fechadas', rotulo: 'Fechadas' },
-  { chave: 'abortadas', rotulo: 'Abortadas' },
-];
+const ORDEM_DOS_FILTROS: FiltroDeStatus[] = ['todas', 'ativas', 'fechadas', 'abortadas'];
+
+const CHAVE_DO_FILTRO: Record<FiltroDeStatus, string> = {
+  todas: 'sessionsTab.filters.all',
+  ativas: 'sessionsTab.filters.active',
+  fechadas: 'sessionsTab.filters.closed',
+  abortadas: 'sessionsTab.filters.aborted',
+};
 
 function correspondeAoFiltro(status: SessionStatus, filtro: FiltroDeStatus): boolean {
   if (filtro === 'todas') return true;
@@ -91,25 +94,21 @@ function correspondeAoFiltro(status: SessionStatus, filtro: FiltroDeStatus): boo
  * formulário; agora ela aconteceu quando a pessoa clicou na ABA, e perguntar
  * de novo seria oferecer a chance de contradizer o lugar em que ela está.
  */
-const ABA_DO_KIND: Record<
+const CHAVE_DA_ABA: Record<
   SessionKind,
   { titulo: string; abrir: string; confirmar: string; vazio: string }
 > = {
   criativa: {
-    titulo: 'Criativo',
-    abrir: '+ Nova ideação',
-    confirmar: 'Abrir sessão criativa',
-    vazio:
-      'Nenhuma ideação ainda. Abra uma para o Criativo levantar com você as ' +
-      'regras de negócio do produto.',
+    titulo: 'sessionsTab.kindCopy.criativa.title',
+    abrir: 'sessionsTab.kindCopy.criativa.openButton',
+    confirmar: 'sessionsTab.kindCopy.criativa.confirmButton',
+    vazio: 'sessionsTab.kindCopy.criativa.empty',
   },
   consultiva: {
-    titulo: 'Chat',
-    abrir: '+ Nova conversa',
-    confirmar: 'Abrir sessão consultiva',
-    vazio:
-      'Nenhuma conversa ainda. Abra uma para perguntar e pedir contexto sem ' +
-      'ativar agente nenhum.',
+    titulo: 'sessionsTab.kindCopy.consultiva.title',
+    abrir: 'sessionsTab.kindCopy.consultiva.openButton',
+    confirmar: 'sessionsTab.kindCopy.consultiva.confirmButton',
+    vazio: 'sessionsTab.kindCopy.consultiva.empty',
   },
 };
 
@@ -132,6 +131,7 @@ interface ProjectSessionsTabProps {
  * navegação em vez de um campo escondido num passo de criação.
  */
 export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps) {
+  const { t } = useTranslation('sessions');
   const sessionsQuery = useProjectSessions(projectId);
   // A sessão de execução VIGENTE (RN-144) — só buscada na aba Criativo, que é
   // onde ela nasce (RN-097: `execution.activated` exige `kind: 'criativa'`).
@@ -147,7 +147,7 @@ export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps)
   const queryClient = useQueryClient();
   const { showToast } = useToast();
 
-  const copy = ABA_DO_KIND[kind];
+  const copy = CHAVE_DA_ABA[kind];
   const tipo = TIPOS_DE_SESSAO[kind];
 
   // Renomear DIRETO da lista, sem abrir a sessão (RN-098 já existia só dentro
@@ -170,7 +170,11 @@ export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps)
       await renameSession(projectId, sessionId, nomeNovo);
       await queryClient.invalidateQueries({ queryKey: ['sessions', projectId] });
     } catch {
-      showToast({ title: 'Erro', message: 'Não foi possível renomear a sessão', tone: 'danger' });
+      showToast({
+        title: t('sessionsTab.renameError.title'),
+        message: t('sessionsTab.renameError.message'),
+        tone: 'danger',
+      });
     }
   }
 
@@ -199,8 +203,8 @@ export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps)
         await transitionSession(projectId, session.id, 'active');
       } catch (erro) {
         showToast({
-          title: mensagemDaApi(erro, 'A sessão foi criada, mas não ativou'),
-          message: 'Abra a sessão e tente "Ativar sessão".',
+          title: mensagemDaApi(erro, t('sessionsTab.createActivationFailed.title')),
+          message: t('sessionsTab.createActivationFailed.message'),
           tone: 'danger',
         });
       }
@@ -209,7 +213,7 @@ export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps)
       navigate({ to: '/projects/$projectId/sessions/$sessionId', params: { projectId, sessionId: session.id } });
     } catch (erro) {
       showToast({
-        title: mensagemDaApi(erro, 'Não foi possível abrir a sessão'),
+        title: mensagemDaApi(erro, t('sessionsTab.createFailed.title')),
         tone: 'danger',
       });
     } finally {
@@ -265,7 +269,7 @@ export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps)
     <div>
       <div className={styles.header}>
         <div className={styles.headerTexto}>
-          <span className={styles.title}>{copy.titulo}</span>
+          <span className={styles.title}>{t(copy.titulo)}</span>
           {/* A explicação do tipo mora AQUI agora, permanente. Antes ela só
               existia dentro do rádio do formulário — visível no instante da
               escolha e nunca mais. */}
@@ -276,24 +280,24 @@ export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps)
           variant={abrindoForm ? 'ghost' : 'primary'}
           aria-expanded={abrindoForm}
         >
-          {abrindoForm ? 'Cancelar' : copy.abrir}
+          {abrindoForm ? t('sessionsTab.cancelButton') : t(copy.abrir)}
         </Button>
       </div>
 
       {abrindoForm && (
         <div className={styles.novaSessao}>
           <Input
-            label="Nome (opcional)"
+            label={t('sessionsTab.newSessionForm.nameLabel')}
             value={nome}
             onChange={(e) => setNome(e.target.value)}
             maxLength={LIMITE_DO_NOME}
-            placeholder="Checkout do carrinho"
-            hint="A hashtag do id continua aparecendo — o nome só se soma a ela."
+            placeholder={t('sessionsTab.newSessionForm.namePlaceholder')}
+            hint={t('sessionsTab.newSessionForm.nameHint')}
           />
 
           <div className={styles.novaSessaoAcoes}>
             <Button onClick={handleCreate} disabled={creating}>
-              {creating ? 'Abrindo…' : copy.confirmar}
+              {creating ? t('sessionsTab.openingButton') : t(copy.confirmar)}
             </Button>
           </div>
         </div>
@@ -307,20 +311,20 @@ export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps)
       )}
 
       {kind === 'criativa' && sessionsQuery.data && doKind.length > 0 && (
-        <div className={styles.filtros} role="group" aria-label="Filtrar sessões por status">
-          {FILTROS.map((f) => (
+        <div className={styles.filtros} role="group" aria-label={t('sessionsTab.filterGroupAriaLabel')}>
+          {ORDEM_DOS_FILTROS.map((chave) => (
             <button
-              key={f.chave}
+              key={chave}
               type="button"
               className={
-                filtro === f.chave
+                filtro === chave
                   ? `${styles.pill} ${styles.pillAtivo}`
                   : styles.pill
               }
-              aria-pressed={filtro === f.chave}
-              onClick={() => setFiltro(f.chave)}
+              aria-pressed={filtro === chave}
+              onClick={() => setFiltro(chave)}
             >
-              {f.rotulo}
+              {t(CHAVE_DO_FILTRO[chave])}
             </button>
           ))}
         </div>
@@ -328,10 +332,12 @@ export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps)
 
       {totalDaAba.total > 0 && (
         <div className={styles.subtitle}>
-          {totalDaAba.total} ação(ões) proposta(s) nestas sessões ·{' '}
-          {totalDaAba.decididasPorVoce} decidida(s) por você ·{' '}
-          {totalDaAba.autoAprovadas} auto-aprovada(s) pela política ·{' '}
-          {totalDaAba.pendentes} aguardando
+          {t('sessionsTab.summaryLine', {
+            total: totalDaAba.total,
+            decided: totalDaAba.decididasPorVoce,
+            autoApproved: totalDaAba.autoAprovadas,
+            pending: totalDaAba.pendentes,
+          })}
         </div>
       )}
 
@@ -341,7 +347,7 @@ export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps)
           mentindo — a pessoa tem sessões, o que não chegou foi a lista. */}
       {sessionsQuery.isError ? (
         <ErroDeCarregamento
-          titulo="Não foi possível carregar as sessões deste projeto."
+          titulo={t('sessionsTab.loadError')}
           erro={sessionsQuery.error}
           onTentarDeNovo={() => void sessionsQuery.refetch()}
         />
@@ -357,8 +363,8 @@ export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps)
               ainda" com sessões fechadas escondidas atrás do pill "Ativas"
               seria a mesma mentira que a RN-088 já corrigiu para erro. */}
           {kind === 'criativa' && filtro !== 'todas' && doKind.length > 0
-            ? 'Nenhuma sessão neste filtro.'
-            : copy.vazio}
+            ? t('sessionsTab.filterEmpty')
+            : t(copy.vazio)}
         </div>
       ) : (
         <div className={styles.list}>
@@ -380,8 +386,10 @@ export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps)
                     value={rascunho.valor}
                     autoFocus
                     maxLength={LIMITE_DO_NOME}
-                    aria-label="Nome da sessão"
-                    placeholder={`Sem nome — a sessão fica ${hashtagDaSessao(session.id)}`}
+                    aria-label={t('sessionsTab.renameInput.ariaLabel')}
+                    placeholder={t('sessionsTab.renameInput.placeholder', {
+                      hashtag: hashtagDaSessao(session.id),
+                    })}
                     onClick={(e: MouseEvent<HTMLInputElement>) => e.stopPropagation()}
                     onChange={(e) => setRascunho({ id: session.id, valor: e.target.value })}
                     onBlur={() => handleRenomear(session.id)}
@@ -398,7 +406,9 @@ export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps)
                   <button
                     type="button"
                     className={styles.rowId}
-                    title={`Sessão ${rotuloDaSessao(session.id, session.name)} — clique para renomear`}
+                    title={t('sessionsTab.rowTitle', {
+                      rotulo: rotuloDaSessao(session.id, session.name),
+                    })}
                     onClick={(e: MouseEvent<HTMLButtonElement>) => {
                       e.stopPropagation();
                       setRascunho({ id: session.id, valor: session.name ?? '' });
@@ -415,7 +425,7 @@ export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps)
                   dot
                   pulse={SELO_DO_STATUS[session.status].pulse}
                 >
-                  {SELO_DO_STATUS[session.status].texto}
+                  {t(SELO_DO_STATUS[session.status].chave)}
                 </Badge>
                 {resumo.total > 0 && (
                   <span
@@ -426,8 +436,14 @@ export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps)
                     }
                   >
                     {resumo.pendentes > 0
-                      ? `${resumo.pendentes} aguardando · ${resumo.decididasPorVoce} decidida(s) por você`
-                      : `${resumo.decididasPorVoce} decidida(s) por você · ${resumo.autoAprovadas} auto`}
+                      ? t('sessionsTab.approvalsPending', {
+                          pending: resumo.pendentes,
+                          decided: resumo.decididasPorVoce,
+                        })
+                      : t('sessionsTab.approvalsDecided', {
+                          decided: resumo.decididasPorVoce,
+                          auto: resumo.autoAprovadas,
+                        })}
                   </span>
                 )}
                 <span className={styles.rowDate}>{new Date(session.createdAt).toLocaleString('pt-BR')}</span>
@@ -467,6 +483,7 @@ function CriativoKpis({
   projectId: string;
   sessoes: Session[];
 }) {
+  const { t } = useTranslation('sessions');
   const ativasAgora = sessoes.filter((session) => session.status === 'active').length;
 
   // Mesma `queryKey` de `ProjectSpendTab.tsx#MeuConsumo` (`['my-spend',
@@ -481,33 +498,33 @@ function CriativoKpis({
   return (
     <div className={styles.kpis}>
       <Destaque
-        rotulo="Sessões no projeto"
+        rotulo={t('sessionsTab.kpis.sessionsInProject.label')}
         valor={String(sessoes.length)}
-        detalhe="todas as ideações, em qualquer status"
+        detalhe={t('sessionsTab.kpis.sessionsInProject.detail')}
       />
       <Destaque
-        rotulo="Ativas agora"
+        rotulo={t('sessionsTab.kpis.activeNow.label')}
         valor={String(ativasAgora)}
-        detalhe={`de ${sessoes.length} no total`}
+        detalhe={t('sessionsTab.kpis.activeNow.detail', { total: sessoes.length })}
       />
       <Destaque
-        rotulo="Taxa ideação → commit"
-        valor="—"
-        detalhe="não medido: sessão não é vinculada a commit hoje"
+        rotulo={t('sessionsTab.kpis.ideationToCommit.label')}
+        valor={t('sessionsTab.kpis.ideationToCommit.value')}
+        detalhe={t('sessionsTab.kpis.ideationToCommit.detail')}
       />
       <Destaque
-        rotulo="Custo do mês"
+        rotulo={t('sessionsTab.kpis.monthlyCost.label')}
         valor={
           custo.data
             ? formatarUsd(custo.data.totalMicros)
             : custo.isError
-              ? '—'
-              : '…'
+              ? t('sessionsTab.kpis.monthlyCost.errorValue')
+              : t('sessionsTab.kpis.monthlyCost.loadingValue')
         }
         detalhe={
           custo.isError
-            ? 'não foi possível carregar'
-            : 'seu consumo neste projeto, 30 dias'
+            ? t('sessionsTab.kpis.monthlyCost.errorDetail')
+            : t('sessionsTab.kpis.monthlyCost.detail')
         }
       />
     </div>

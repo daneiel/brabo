@@ -1,8 +1,11 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterAll } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { CodeDiffPanel } from './CodeDiffPanel';
+// Instância REAL do app — `CodeDiffPanel`/`PrListAndDiff` não têm
+// `I18nextProvider` próprio (mesmo padrão de `Dashboard.test.tsx`).
+import i18n from '../../lib/i18n';
 import type { CodeDiff, CodePullRequestList } from '../../lib/api-types';
 
 const getCodeDiff = vi.fn();
@@ -35,9 +38,14 @@ async function pedirDiffPeloId(id: string) {
 
 const listaVazia: CodePullRequestList = { items: [], truncated: false };
 
-beforeEach(() => {
+beforeEach(async () => {
+  await i18n.changeLanguage('pt-BR');
   vi.clearAllMocks();
   getCodePullRequests.mockResolvedValue(listaVazia);
+});
+
+afterAll(() => {
+  void i18n.changeLanguage('en');
 });
 
 describe('CodeDiffPanel — lista de PRs', () => {

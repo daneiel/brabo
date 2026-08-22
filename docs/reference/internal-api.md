@@ -414,7 +414,7 @@ de linhas, sempre declarando o total real quando trunca.
 A TERCEIRA rota de leitura do PO, mesmo desenho das duas de cima
 ([RN-407](../business-rules.md#rn-407)) — fecha a última pendência da
 auditoria `fluxo.yml` × código
-([item B4](../explanation/auditoria-fluxo-vs-codigo.md#b-lacunas-de-papéis-ativos-trabalho-implementável-já)):
+([item B4](../explanation/auditoria-fluxo-vs-codigo.md#b-gaps-in-active-roles-already-implementable-work)):
 `docs/fluxo.yml` (papel `po`, entrada `metricas-de-produto`) declarava
 `status: lacuna` desde o ADR 0089 — o DADO já existia (o script
 `analise:funil` mede funil sessão → commit → PR → merge, lead time real e

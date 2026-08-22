@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Button } from './ui/Button';
 import { TerminalIcon } from './ui/icons';
 import styles from './RunnerOnboardingPanel.module.css';
@@ -26,26 +27,22 @@ export function RunnerOnboardingPanel({
   retrying,
   className,
 }: RunnerOnboardingPanelProps) {
+  const { t } = useTranslation('terminal');
   return (
     <div className={[styles.painel, className].filter(Boolean).join(' ')} role="status">
       <TerminalIcon size={22} />
-      <p className={styles.mensagem}>{mensagem || 'Nenhum runner conectado a este projeto.'}</p>
+      <p className={styles.mensagem}>{mensagem || t('runnerOnboarding.defaultMessage')}</p>
       <div className={styles.instrucao}>
         <p>
-          Na sua máquina, dentro do checkout do Brabo (ver{' '}
-          <code>apps/runner/README.md</code>):
+          {t('runnerOnboarding.instructionPrefix')} <code>apps/runner/README.md</code>
+          {t('runnerOnboarding.instructionSuffix')}
         </p>
-        <code className={styles.comando}>
-          pnpm --filter runner start -- --project {projectId} --dir &lt;pasta&gt;
-        </code>
-        <p className={styles.detalhe}>
-          O runner conecta automaticamente assim que estiver rodando — nenhuma
-          ação nova precisa acontecer aqui.
-        </p>
+        <code className={styles.comando}>{t('runnerOnboarding.command', { projectId })}</code>
+        <p className={styles.detalhe}>{t('runnerOnboarding.detail')}</p>
       </div>
       {onRetry && (
         <Button type="button" variant="secondary" onClick={onRetry} loading={retrying}>
-          Já instalei, conectar
+          {t('runnerOnboarding.retryButton')}
         </Button>
       )}
     </div>

@@ -1,0 +1,55 @@
+{
+  "tab": {
+    "title": "Executores",
+    "summary": "{{count}} agentes · {{working}} trabalhando · {{waiting}} aguardando",
+    "subtitle": "Dev agent e QA — quem implementa e quem verifica. O resto do time está na Visão geral.",
+    "sessionError": {
+      "title": "Não foi possível descobrir a sessão de execução deste projeto."
+    },
+    "noActiveExecution": "Nenhuma execução ativa neste projeto no momento.",
+    "showingSession": "Mostrando",
+    "rosterError": {
+      "title": "Não foi possível saber quem está executando."
+    },
+    "noExecutors": "Nenhum dev agent ou QA entrou em ação nesta sessão ainda.",
+    "timeline": {
+      "title": "Linha do tempo",
+      "subtitle": "Os ramos de dev agent e QA, do primeiro marco ao que estão fazendo agora."
+    },
+    "toast": {
+      "autonomyError": "Não foi possível mudar a autonomia",
+      "rearmed": "Agente rearmado",
+      "rearmError": "Não foi possível rearmar o agente"
+    }
+  },
+  "agentCard": {
+    "status": {
+      "trabalhando": "trabalhando",
+      "aguardando": "aguardando",
+      "ocioso": "ocioso",
+      "falhou": "falhou",
+      "travado": "travado"
+    },
+    "autonomy": {
+      "manual": "manual",
+      "auto": "auto"
+    },
+    "rearm": "rearmar"
+  },
+  "teamGrid": {
+    "leadBadge": "Lead",
+    "subspecialty_one": "{{count}} subespecialidade",
+    "subspecialty_other": "{{count}} subespecialidades"
+  },
+  "agentStatus": {
+    "circuitBreaker": {
+      "default": "circuit breaker disparado",
+      "withCount": "circuit breaker: {{count}} tasks blocked seguidas"
+    },
+    "delegation": {
+      "completed": "concluiu a delegação",
+      "failed": "falhou — origem: {{origin}}",
+      "dispensed": "dispensada — {{justification}}"
+    }
+  }
+}

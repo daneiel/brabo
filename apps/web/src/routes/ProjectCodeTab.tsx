@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { getContainerState, getProject } from '../lib/api-client';
 import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
 import { Skeleton } from '../components/ui/Skeleton';
@@ -37,6 +38,7 @@ import styles from './ProjectCodeTab.module.css';
  * fase seguinte — vira `proposed_action`, como todo efeito externo.
  */
 export function ProjectCodeTab({ projectId }: { projectId: string }) {
+  const { t } = useTranslation('code');
   // RN-201 (PROGRAMA 28, Onda 2): a sidebar recolhe sozinha para dar largura
   // ao editor, SEM gravar a preferência do usuário. Chamado incondicionalmente
   // no topo — o `useEffect` de dentro do hook é o que registra no Shell
@@ -70,7 +72,7 @@ export function ProjectCodeTab({ projectId }: { projectId: string }) {
     return (
       <div className={styles.estadoPagina}>
         <ErroDeCarregamento
-          titulo="Não consegui carregar este projeto."
+          titulo={t('projectCodeTab.loadProjectError')}
           erro={projectQuery.error}
           onTentarDeNovo={() => void projectQuery.refetch()}
         />
@@ -82,7 +84,7 @@ export function ProjectCodeTab({ projectId }: { projectId: string }) {
     return (
       <div className={styles.estadoPagina}>
         <ErroDeCarregamento
-          titulo="Não consegui verificar se a aba Code está liberada."
+          titulo={t('projectCodeTab.checkGateError')}
           erro={containerQuery.error}
           onTentarDeNovo={() => void containerQuery.refetch()}
         />
@@ -107,17 +109,13 @@ export function ProjectCodeTab({ projectId }: { projectId: string }) {
             <LockIcon size={22} />
           </span>
           <h2 className={styles.bloqueadoTitulo}>
-            A aba Code ainda não está liberada
+            {t('projectCodeTab.blocked.title')}
           </h2>
           <p className={styles.bloqueadoTexto}>
-            O Arquiteto ainda não decidiu qual imagem de container sobe para
-            este projeto. Sem essa decisão o container não sobe, e é ele que
-            isola a execução — não há onde rodar o código que esta aba
-            mostraria.
+            {t('projectCodeTab.blocked.description')}
           </p>
           <p className={styles.bloqueadoNota}>
-            Assim que o Arquiteto emitir a decisão de imagem, esta aba libera
-            sozinha — não é preciso recarregar a página manualmente.
+            {t('projectCodeTab.blocked.note')}
           </p>
         </div>
       </div>

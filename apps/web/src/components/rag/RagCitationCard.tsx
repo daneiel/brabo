@@ -1,14 +1,15 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from '@tanstack/react-router';
 import type { RagSearchHit } from '../../lib/api-types';
 import { Badge, type BadgeTone } from '../ui/Badge';
 import { FileIcon, SessionIcon } from '../ui/icons';
 import styles from './RagCitationCard.module.css';
 
-const ROTULO_DO_ESCOPO: Record<RagSearchHit['scope'], string> = {
-  docs: 'docs',
-  adr: 'ADR',
-  session: 'sessão',
+const CHAVE_DO_ESCOPO: Record<RagSearchHit['scope'], string> = {
+  docs: 'ragCitation.scopeLabels.docs',
+  adr: 'ragCitation.scopeLabels.adr',
+  session: 'ragCitation.scopeLabels.session',
 };
 
 const TOM_DO_ESCOPO: Record<RagSearchHit['scope'], BadgeTone> = {
@@ -43,6 +44,7 @@ export function RagCitationCard({
   hit: RagSearchHit;
   projectId: string;
 }) {
+  const { t } = useTranslation('sessions');
   const [expandido, setExpandido] = useState(false);
   const navigate = useNavigate();
 
@@ -58,19 +60,22 @@ export function RagCitationCard({
   return (
     <div className={styles.card}>
       <div className={styles.cabecalho}>
-        <Badge tone={TOM_DO_ESCOPO[hit.scope]}>{ROTULO_DO_ESCOPO[hit.scope]}</Badge>
-        <span className={styles.score} title="Score combinado (0.6 vetor + 0.4 léxico)">
-          {formatarSinal(hit.score)} relevância
+        <Badge tone={TOM_DO_ESCOPO[hit.scope]}>{t(CHAVE_DO_ESCOPO[hit.scope])}</Badge>
+        <span className={styles.score} title={t('ragCitation.scoreTitle')}>
+          {t('ragCitation.relevance', { score: formatarSinal(hit.score) })}
         </span>
         <span className={styles.sinais}>
-          vetor {formatarSinal(hit.vectorScore)} · léxico {formatarSinal(hit.lexicalScore)}
+          {t('ragCitation.signals', {
+            vector: formatarSinal(hit.vectorScore),
+            lexical: formatarSinal(hit.lexicalScore),
+          })}
         </span>
       </div>
 
       <p className={expandido ? styles.conteudoExpandido : styles.conteudo}>{hit.content}</p>
       {hit.content.length > 240 && (
         <button type="button" className={styles.botaoExpandir} onClick={() => setExpandido((v) => !v)}>
-          {expandido ? 'recolher' : 'ver trecho completo'}
+          {expandido ? t('ragCitation.collapse') : t('ragCitation.expand')}
         </button>
       )}
 
@@ -89,7 +94,7 @@ export function RagCitationCard({
         ) : (
           <button type="button" className={styles.origemSessao} onClick={irParaSessao}>
             <SessionIcon size={13} />
-            {hit.origin.title ?? 'Ver na sessão'}
+            {hit.origin.title ?? t('ragCitation.viewInSession')}
           </button>
         )}
       </div>

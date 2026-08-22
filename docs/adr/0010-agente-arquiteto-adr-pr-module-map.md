@@ -1,72 +1,86 @@
-# ADR 0010 — Agente Arquiteto: ADRs via PR real, module_map e validação cruzada
+# ADR 0010 — Architect agent: ADRs via a real PR, module_map and cross-validation
 
-- Status: aceito
-- Data: 2026-07-24
-- Fase: 3b (sessão final — fecha a Fase 3)
+- Status: accepted
+- Date: 2026-07-24
+- Phase: 3b (final session — closes Phase 3)
 
-## Contexto
+## Context
 
-Fecha o ciclo Criativo → PO → **Arquiteto**. Ativado por um handoff aceito do PO, o
-Arquiteto produz: (a) **ADRs** commitados em `docs/adr/` do repo DO PROJETO via o pipeline
-git da Fase 2, em branch `feature/adr-*`, com **PR real** que o usuário aprova/mergeia;
-(b) um **module_map** validado contra ciclos de dependência. Impõe **validação cruzada**
-(story só vai a `ready` se todos os módulos que referencia existirem no module_map
-vigente) e emite **insights** de tensão regra↔arquitetura.
+Closes the Creative → PO → **Architect** cycle. Activated by an accepted
+handoff from the PO, the Architect produces: (a) **ADRs** committed to
+`docs/adr/` of the PROJECT'S repo via the Phase 2 git pipeline, on a
+`feature/adr-*` branch, with a **real PR** that the user approves/merges;
+(b) a **module_map** validated against dependency cycles. It enforces
+**cross-validation** (a story only moves to `ready` if every module it
+references exists in the current module_map) and emits **insights** about
+rule↔architecture tension.
 
-## Decisões
+## Decisions
 
-### 1. ADR = novo ActionType `open_adr_pr` com executor git
-As ações git não tinham executor pós-aprovação (`ApproveActionUseCase` só roteava
-`terminal`). Adicionamos `open_adr_pr` (efeito git, `require_approval`, min role
-maintainer). O tool `propose_adr` do Arquiteto cria a proposed_action (pipeline existente);
-ao aprovar, `ApproveActionUseCase` roteia pra `ExecuteAdrPrUseCase`, que via o
-`GitProviderContract` (Fase 2) faz `createBranch(feature/adr-<slug>)` +
-`commitFiles(docs/adr/<slug>.md)` + `openPullRequest` e grava `executionResult`
-{pullRequestUrl, …}. **Duas etapas do usuário**: aprovar a ação (abre a PR) e mergear a PR
-real no provider. O merge fica com o usuário (a app só abre a PR — como pede o aceite).
+### 1. ADR = new `open_adr_pr` ActionType with a git executor
+Git actions had no post-approval executor (`ApproveActionUseCase` only
+routed `terminal`). We added `open_adr_pr` (git effect, `require_approval`,
+min role maintainer). The Architect's `propose_adr` tool creates the
+proposed_action (existing pipeline); on approval, `ApproveActionUseCase`
+routes to `ExecuteAdrPrUseCase`, which via the `GitProviderContract` (Phase
+2) does `createBranch(feature/adr-<slug>)` +
+`commitFiles(docs/adr/<slug>.md)` + `openPullRequest` and records
+`executionResult` {pullRequestUrl, …}. **Two user steps**: approving the
+action (opens the PR) and merging the real PR on the provider. The merge
+stays with the user (the app only opens the PR — as the acceptance criterion
+requires).
 
-### 2. module_map em tabela própria, validado contra ciclos no domínio
-Tool dedicado `create_module_map` (não `emit_artifact`): precisa ser ARMAZENADO pra
-validação cruzada. Tabela `module_maps` (histórico imutável; **vigente = maior version**).
-`domain/architecture/module-graph.ts` detecta ciclos (DFS) e **recusa** o mapa (erro →
-tool-result). Também emite `artifact.module_map` no event log (narrativa).
+### 2. module_map in its own table, validated against cycles in the domain
+A dedicated tool `create_module_map` (not `emit_artifact`): it needs to be
+STORED for cross-validation. `module_maps` table (immutable history;
+**current = highest version**). `domain/architecture/module-graph.ts`
+detects cycles (DFS) and **rejects** the map (error → tool-result). It also
+emits `artifact.module_map` to the event log (narrative).
 
-### 3. Validação cruzada story↔module_map (bloqueio + revalidação)
-Stories ganham `module_ids[]` (jsonb). `TransitionStoryUseCase` (draft→ready): além da
-prontidão (DoD/DoR/RF/regra), exige que TODOS os `module_ids` existam no module_map vigente
-(`assertModulesResolved`) — moduleIds vazio passa (é pendência, não bloqueio, respeitando
-as stories da sessão anterior). Um module_map novo **revalida** as stories `ready` e
-**rebaixa a draft** as órfãs (módulo removido), com evento `backlog.story_demoted` — que é
-a notificação (surge no feed/sino via poll). O Arquiteto vincula módulos às stories com
-`assign_story_modules` (valida existência) — é como uma story passa a referenciar módulos
-válidos.
+### 3. Story↔module_map cross-validation (blocking + revalidation)
+Stories gain `module_ids[]` (jsonb). `TransitionStoryUseCase` (draft→ready):
+besides readiness (DoD/DoR/RF/rule), it requires that ALL `module_ids`
+exist in the current module_map (`assertModulesResolved`) — an empty
+moduleIds passes (it's a gap, not a blocker, respecting the stories from the
+previous session). A new module_map **revalidates** `ready` stories and
+**demotes to draft** the orphaned ones (removed module), with a
+`backlog.story_demoted` event — which is the notification (surfaces in the
+feed/bell via poll). The Architect links modules to stories with
+`assign_story_modules` (validates existence) — that's how a story comes to
+reference valid modules.
 
-### 4. Arquiteto como GenServer com tool `:pipeline`
-`ArquitetoServer` espelha o `PoServer` (streaming + loop bounded de tool use + rehydration
-+ kickoff). Tools: `create_module_map`/`assign_story_modules`/`emit_insight` (`:direct`) e
-`propose_adr` (`:pipeline` → `propose_action`). O **PO** ganhou `offer_handoff` e passa a
-oferecer um handoff ao Arquiteto ao fim do kickoff; o usuário aceita (fluxo
-`AcceptHandoffUseCase`), ativando o Arquiteto pela mesma regra de ativação da sessão 1.
+### 4. Architect as a GenServer with a `:pipeline` tool
+`ArquitetoServer` mirrors `PoServer` (streaming + bounded tool-use loop +
+rehydration + kickoff). Tools: `create_module_map`/`assign_story_modules`/
+`emit_insight` (`:direct`) and `propose_adr` (`:pipeline` → `propose_action`).
+The **PO** gained `offer_handoff` and now offers a handoff to the Architect
+at the end of its kickoff; the user accepts it (via the
+`AcceptHandoffUseCase` flow), activating the Architect through the same
+activation rule from session 1.
 
-### 5. Insights como artefato tipado
-`emit_insight` grava `artifact.insight` quando o modelo vê tensão regra↔arquitetura (ex.:
-RNF sem módulo que o atenda). Sem lógica de domínio — é julgamento do agente, narrado no
+### 5. Insights as a typed artifact
+`emit_insight` writes `artifact.insight` when the model sees tension
+between a rule and the architecture (e.g., an RNF with no module that
+addresses it). No domain logic — it's the agent's judgment, narrated in the
 feed.
 
-## Consequências
+## Consequences
 
-- A visão geral do projeto ganha a seção **Arquitetura**: module_map (módulos com
-  `depends_on` em chips), ADRs (link pra a PR + badge de status) e pendências de validação
-  cruzada em vermelho. O botão de aceitar handoff na sessão virou genérico (qualquer
-  agente), e o composer roteia pro agente ativo mais avançado.
-- Testes: domínio (`module-graph` ciclo rejeitado, `module-resolution`), use-case
-  (`CreateModuleMap` recusa ciclo + revalida/rebaixa órfã; `TransitionStory` bloqueia ready
-  com módulo faltante; `ExecuteAdrPr` com GitProvider fake abre a PR), e `arquiteto_server`
-  (kickoff encadeia module_map→assign→ADR→insight; ciclo vira tool-result de erro;
-  broadcast; rehydration).
+- The project overview gains an **Architecture** section: the module_map
+  (modules with `depends_on` as chips), ADRs (link to the PR + status
+  badge) and cross-validation gaps in red. The "accept handoff" button on
+  the session became generic (any agent), and the composer routes to the
+  most-advanced active agent.
+- Tests: domain (`module-graph` rejects a cycle, `module-resolution`),
+  use-case (`CreateModuleMap` rejects a cycle + revalidates/demotes an
+  orphan; `TransitionStory` blocks ready with a missing module;
+  `ExecuteAdrPr` with a fake GitProvider opens the PR), and
+  `arquiteto_server` (kickoff chains module_map→assign→ADR→insight; a cycle
+  becomes an error tool-result; broadcast; rehydration).
 
-## Escopo
+## Scope
 
-Última sessão da Fase 3. Não implementa agentes de execução (Fase 4). A credencial usada
-pra abrir a PR é a do aprovador (`decidedBy`), consistente com o provisionamento (Fase 2).
-Sem Bitbucket/GenericGitProvider; filas no Postgres (Oban).
+Final session of Phase 3. Does not implement execution agents (Phase 4).
+The credential used to open the PR is the approver's (`decidedBy`),
+consistent with provisioning (Phase 2). No Bitbucket/GenericGitProvider;
+queues on Postgres (Oban).

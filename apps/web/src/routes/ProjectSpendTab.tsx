@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { Trans, useTranslation } from 'react-i18next';
 import {
   getMySpend,
   getProject,
@@ -48,6 +49,7 @@ const DIAS = 30;
  * as duas por ser a única pessoa que pode ver as duas.
  */
 export function ProjectSpendTab({ projectId }: { projectId: string }) {
+  const { t } = useTranslation('spend');
   const papel = useCurrentWorkspaceWithRole();
 
   // Ramificar antes de o papel chegar não é só um piscar de tela: `comPapel`
@@ -56,20 +58,19 @@ export function ProjectSpendTab({ projectId }: { projectId: string }) {
   // fazer — e os três estados valem aqui também (RN-088).
   return (
     <div className={styles.pagina}>
-      {papel.isLoading && <div className={styles.estado}>Carregando…</div>}
+      {papel.isLoading && (
+        <div className={styles.estado}>{t('shared.loading')}</div>
+      )}
 
       {papel.isError && (
         <div className={styles.estadoErro} role="alert">
-          <span>
-            Não consegui descobrir o seu papel neste workspace, e é ele que diz
-            qual relatório mostrar.
-          </span>
+          <span>{t('role.error')}</span>
           <button
             type="button"
             className={styles.botao}
             onClick={() => papel.refetch()}
           >
-            Tentar de novo
+            {t('shared.retry')}
           </button>
         </div>
       )}
@@ -104,6 +105,7 @@ export function ProjectSpendTab({ projectId }: { projectId: string }) {
  * e por isso não vira banner: seria alarme falso pra maioria dos membros.
  */
 function OrcamentoDoProjeto({ projectId }: { projectId: string }) {
+  const { t } = useTranslation('spend');
   const budget = useQuery({
     queryKey: ['budget', projectId],
     queryFn: () => getProjectBudget(projectId),
@@ -111,12 +113,7 @@ function OrcamentoDoProjeto({ projectId }: { projectId: string }) {
 
   if (budget.isLoading || budget.isError) return null;
   if (!budget.data) {
-    return (
-      <p className={styles.nota}>
-        Nenhum orçamento definido para este projeto ainda — sem teto, este
-        bloco não tem o que mostrar.
-      </p>
-    );
+    return <p className={styles.nota}>{t('budget.notSet')}</p>;
   }
 
   const alerta = alertaDeOrcamento(budget.data);
@@ -146,6 +143,7 @@ function OrcamentoDoProjeto({ projectId }: { projectId: string }) {
 
 /** A audiência do owner. */
 function GastoDoWorkspace({ projectId }: { projectId: string }) {
+  const { t } = useTranslation('spend');
   const { data: project } = useQuery({
     queryKey: ['project', projectId],
     queryFn: () => getProject(projectId),
@@ -161,29 +159,31 @@ function GastoDoWorkspace({ projectId }: { projectId: string }) {
   return (
     <>
       <header className={styles.cabecalho}>
-        <h2 className={styles.titulo}>Gastos do workspace</h2>
+        <h2 className={styles.titulo}>{t('workspace.title')}</h2>
         <p className={styles.subtitulo}>
-          Últimos {DIAS} dias. Onde o dinheiro foi — por modelo, por provider,
-          por projeto, por agente e por pessoa. De qual <strong>chave</strong>{' '}
-          ele saiu é a seção de baixo.
+          <Trans
+            i18nKey="workspace.subtitle"
+            ns="spend"
+            values={{ dias: DIAS }}
+            components={{ strong: <strong /> }}
+          />
         </p>
       </header>
 
       {/* Os três estados, e o erro ANTES do vazio (RN-088). */}
-      {relatorio.isLoading && <div className={styles.estado}>Somando…</div>}
+      {relatorio.isLoading && (
+        <div className={styles.estado}>{t('shared.summing')}</div>
+      )}
 
       {relatorio.isError && (
         <div className={styles.estadoErro} role="alert">
-          <span>
-            Não consegui carregar o gasto agora. O consumo continua registrado —
-            isto é só a leitura.
-          </span>
+          <span>{t('workspace.error')}</span>
           <button
             type="button"
             className={styles.botao}
             onClick={() => relatorio.refetch()}
           >
-            Tentar de novo
+            {t('shared.retry')}
           </button>
         </div>
       )}
@@ -192,53 +192,63 @@ function GastoDoWorkspace({ projectId }: { projectId: string }) {
         <>
           <div className={styles.destaques}>
             <Destaque
-              rotulo={`Total em ${DIAS} dias`}
+              rotulo={t('workspace.totalLabel', { dias: DIAS })}
               valor={formatarUsd(relatorio.data.totalMicros)}
-              detalhe={`${numberFmt.format(relatorio.data.chamadas)} chamada(s)`}
+              detalhe={t('workspace.callsDetail', {
+                count: numberFmt.format(relatorio.data.chamadas),
+              })}
             />
             <Destaque
-              rotulo="Tokens"
+              rotulo={t('workspace.tokensLabel')}
               valor={numberFmt.format(
                 relatorio.data.inputTokens + relatorio.data.outputTokens,
               )}
-              detalhe={`${numberFmt.format(relatorio.data.inputTokens)} entrada · ${numberFmt.format(relatorio.data.outputTokens)} saída`}
+              detalhe={t('shared.tokensDetail', {
+                input: numberFmt.format(relatorio.data.inputTokens),
+                output: numberFmt.format(relatorio.data.outputTokens),
+              })}
             />
           </div>
 
           <div className={styles.faixa}>
             <BarrasPorDia
               serie={relatorio.data.porDia}
-              titulo="Gasto por dia"
+              titulo={t('workspace.dailySpendTitle')}
             />
           </div>
 
           <div className={styles.grade}>
             <Ranking
-              titulo="Por modelo"
-              linhas={comoRanking(relatorio.data.porModelo, (l) => l.chave)}
-              vazio="Nenhuma chamada nesta janela."
+              titulo={t('workspace.byModelTitle')}
+              linhas={comoRanking(relatorio.data.porModelo, (l) => l.chave, t)}
+              vazio={t('workspace.byModelEmpty')}
             />
             {/* O eixo que o ADR 0076 reabriu (RN-186/RN-211) — mesma peça das
                 outras três, sem cor por provider (ver `lib/spend.ts` sobre por
                 que uma paleta categórica de 9 cores não passa na validação da
                 skill de dataviz). */}
             <Ranking
-              titulo="Por provider"
-              linhas={comoRanking(relatorio.data.porProvider, rotuloDoProvider)}
-              vazio="Nenhum provider gastou nesta janela."
+              titulo={t('workspace.byProviderTitle')}
+              linhas={comoRanking(
+                relatorio.data.porProvider,
+                rotuloDoProvider,
+                t,
+              )}
+              vazio={t('workspace.byProviderEmpty')}
             />
             <Ranking
-              titulo="Por projeto"
+              titulo={t('workspace.byProjectTitle')}
               linhas={comoRanking(
                 relatorio.data.porProjeto,
                 (l) => l.rotulo ?? l.chave,
+                t,
               )}
-              vazio="Nenhum projeto gastou nesta janela."
+              vazio={t('workspace.byProjectEmpty')}
             />
             <Ranking
-              titulo="Por agente e pessoa"
-              linhas={comoRanking(relatorio.data.porAtor, rotuloDoAtor)}
-              vazio="Ninguém gastou nesta janela."
+              titulo={t('workspace.byActorTitle')}
+              linhas={comoRanking(relatorio.data.porAtor, rotuloDoAtor, t)}
+              vazio={t('workspace.byActorEmpty')}
             />
           </div>
         </>
@@ -253,6 +263,7 @@ function GastoDoWorkspace({ projectId }: { projectId: string }) {
 
 /** A audiência do membro. */
 function MeuConsumo({ projectId }: { projectId: string }) {
+  const { t } = useTranslation('spend');
   const meu = useQuery({
     queryKey: ['my-spend', projectId, DIAS],
     queryFn: () => getMySpend(projectId, DIAS),
@@ -261,28 +272,30 @@ function MeuConsumo({ projectId }: { projectId: string }) {
   return (
     <>
       <header className={styles.cabecalho}>
-        <h2 className={styles.titulo}>O meu consumo</h2>
+        <h2 className={styles.titulo}>{t('member.title')}</h2>
         <p className={styles.subtitulo}>
-          Últimos {DIAS} dias, só o que <strong>você</strong> consumiu neste
-          projeto. O custo é <strong>estimado</strong>: quem paga a chamada é a
-          chave do dono do workspace, e a fatura dela é dele.
+          <Trans
+            i18nKey="member.subtitle"
+            ns="spend"
+            values={{ dias: DIAS }}
+            components={{ strong: <strong /> }}
+          />
         </p>
       </header>
 
-      {meu.isLoading && <div className={styles.estado}>Somando…</div>}
+      {meu.isLoading && (
+        <div className={styles.estado}>{t('shared.summing')}</div>
+      )}
 
       {meu.isError && (
         <div className={styles.estadoErro} role="alert">
-          <span>
-            Não consegui carregar o seu consumo agora. O registro continua lá —
-            isto é só a leitura.
-          </span>
+          <span>{t('member.error')}</span>
           <button
             type="button"
             className={styles.botao}
             onClick={() => meu.refetch()}
           >
-            Tentar de novo
+            {t('shared.retry')}
           </button>
         </div>
       )}
@@ -291,50 +304,66 @@ function MeuConsumo({ projectId }: { projectId: string }) {
         <>
           <div className={styles.destaques}>
             <Destaque
-              rotulo={`Estimado em ${DIAS} dias`}
+              rotulo={t('member.estimatedLabel', { dias: DIAS })}
               valor={formatarUsd(meu.data.totalMicros)}
-              detalhe={`${numberFmt.format(meu.data.chamadas)} chamada(s) suas`}
+              detalhe={t('member.callsDetail', {
+                count: numberFmt.format(meu.data.chamadas),
+              })}
             />
             <Destaque
-              rotulo="Tokens seus"
+              rotulo={t('member.tokensLabel')}
               valor={numberFmt.format(
                 meu.data.inputTokens + meu.data.outputTokens,
               )}
-              detalhe={`${numberFmt.format(meu.data.inputTokens)} entrada · ${numberFmt.format(meu.data.outputTokens)} saída`}
+              detalhe={t('shared.tokensDetail', {
+                input: numberFmt.format(meu.data.inputTokens),
+                output: numberFmt.format(meu.data.outputTokens),
+              })}
             />
           </div>
 
           <div className={styles.faixa}>
-            <BarrasPorDia serie={meu.data.porDia} titulo="Seu gasto por dia" />
+            <BarrasPorDia
+              serie={meu.data.porDia}
+              titulo={t('member.dailySpendTitle')}
+            />
           </div>
 
           <Ranking
-            titulo="Por sessão"
-            linhas={comoRanking(meu.data.porSessao, (l) =>
-              hashtagDaSessao(l.chave),
+            titulo={t('member.bySessionTitle')}
+            linhas={comoRanking(
+              meu.data.porSessao,
+              (l) => hashtagDaSessao(l.chave),
+              t,
             )}
-            vazio="Você não gastou nada neste projeto nos últimos 30 dias. O que os agentes gastam sai da chave do dono do workspace, e aparece no relatório dele."
+            vazio={t('member.bySessionEmpty')}
           />
 
-          <p className={styles.nota}>
-            Aqui não há quebra por provider nem por credencial — é a conta de
-            outra pessoa, e a pergunta desta tela é o seu consumo.
-          </p>
+          <p className={styles.nota}>{t('member.note')}</p>
         </>
       )}
     </>
   );
 }
 
+/**
+ * `t` entra por parâmetro porque esta função é chamada durante o render de
+ * `GastoDoWorkspace`/`MeuConsumo`, mas não é ela própria um componente — não
+ * pode chamar `useTranslation` diretamente (regra dos hooks).
+ */
 function comoRanking(
   linhas: SpendLinha[],
   rotulo: (linha: SpendLinha) => string,
+  t: (chave: string, opcoes?: Record<string, unknown>) => string,
 ): LinhaDeRanking[] {
   return linhas.map((linha) => ({
     chave: linha.chave,
     rotulo: rotulo(linha),
     costMicros: linha.costMicros,
-    detalhe: `${numberFmt.format(tokensDe(linha))} tok · ${linha.chamadas}×`,
+    detalhe: t('shared.rankingDetail', {
+      tokens: numberFmt.format(tokensDe(linha)),
+      calls: linha.chamadas,
+    }),
   }));
 }
 

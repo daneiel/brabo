@@ -1,0 +1,65 @@
+{
+  "sidebar": {
+    "theme": {
+      "light": "Light theme",
+      "dark": "Dark theme"
+    },
+    "brand": {
+      "dashboardLink": "Go to dashboard"
+    },
+    "nav": {
+      "trilhaAriaLabel": "Projects and activity",
+      "projectsLabel": "Projects",
+      "newProject": "New project"
+    },
+    "projects": {
+      "loadError": "Could not load the projects.",
+      "retry": "try again",
+      "expand": "Expand {{name}}",
+      "collapse": "Collapse {{name}}"
+    },
+    "activities": {
+      "label": "Activity",
+      "openProjectHint": "Open a project to see agent activity.",
+      "empty": "No agent has done anything yet.",
+      "noMarksYet": "no milestones yet",
+      "instancesCount_one": "{{count}} instance",
+      "instancesCount_other": "{{count}} instances"
+    },
+    "collapseButton": {
+      "autoCollapsed": "Auto-collapsed on this tab",
+      "expand": "Expand menu",
+      "collapse": "Collapse menu"
+    },
+    "footer": {
+      "accountFallback": "account",
+      "logout": "sign out"
+    }
+  },
+  "notificationBell": {
+    "label": "Notifications",
+    "markRead": {
+      "default": "mark as read",
+      "withCount": "mark {{total}} as read"
+    },
+    "windowNote_one": "Showing the most recent per project. {{count}} older one doesn't fit here — open the project to reach it.",
+    "windowNote_other": "Showing the most recent per project. {{count}} older ones don't fit here — open the project to reach them.",
+    "empty": "No notifications here yet.",
+    "older_one": "+ {{count}} older",
+    "older_other": "+ {{count}} older"
+  },
+  "tokenMeter": {
+    "unitTokens": "tokens",
+    "live": {
+      "indicator": "live",
+      "remaining": "{{value}} left"
+    },
+    "overLimit": "{{pct}}% of the monthly limit",
+    "savingsPct": "{{pct}}% of tokens saved this cycle",
+    "noBudgetCta": "Set budget",
+    "compactFooter": {
+      "spent": "spent {{value}}",
+      "balance": "balance {{value}}"
+    }
+  }
+}

@@ -1,7 +1,14 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterAll } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import { ProjectPage } from './ProjectPage';
+// A instância REAL do app (não uma isolada): `project-tabs.ts` (não-React)
+// resolve `label` chamando `i18n.t(...)` direto no singleton global de
+// `lib/i18n.ts` (mesmo padrão de `ProjectExecutorsTab.test.tsx`), então uma
+// instância isolada aqui não alcançaria essas chamadas. As asserções abaixo
+// checam o texto ATUAL em português, que é o que já estava hardcoded antes
+// da extração.
+import i18n from '../lib/i18n';
 import {
   ABAS_DO_PROJETO,
   CHAVES_DE_ABA,
@@ -120,14 +127,22 @@ function montar(initialTab?: Parameters<typeof ProjectPage>[0]['initialTab']) {
   );
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   vi.clearAllMocks();
+  await i18n.changeLanguage('pt-BR');
   getProject.mockResolvedValue(PROJETO);
   getRepository.mockResolvedValue(null);
   getProjectBudget.mockResolvedValue(null);
   useBacklog.mockReturnValue({ data: [] });
   useHypotheses.mockReturnValue({ data: [] });
   usePendingActions.mockReturnValue({ data: undefined });
+});
+
+// Restaura o default do app depois deste arquivo — a instância é o
+// singleton REAL (`../lib/i18n`), então deixar em `pt-BR` vazaria para
+// qualquer teste seguinte que compartilhe o mesmo registro de módulos.
+afterAll(() => {
+  void i18n.changeLanguage('en');
 });
 
 /**
@@ -146,9 +161,15 @@ beforeEach(() => {
  * pontos parar de derivar do registro, um deles morre.
  */
 describe('abas do projeto derivam de um registro só', () => {
-  it.each(ABAS_DO_PROJETO.map((aba) => [aba.key, aba.label] as const))(
+  // `.map(aba => aba.key)`, NUNCA `.label` aqui: `it.each` avalia este array
+  // na COLETA do teste, antes de qualquer `beforeEach` rodar — `.label` é
+  // getter sobre `i18n.t()` (RN-425), e capturá-lo agora prenderia o idioma
+  // que o singleton tinha ANTES de `changeLanguage('pt-BR')`. O rótulo certo
+  // só existe depois, dentro do corpo do teste.
+  it.each(ABAS_DO_PROJETO.map((aba) => aba.key))(
     'a aba %s tem botão na régua (eventualmente dentro do grupo) E painel que renderiza',
-    async (key, label) => {
+    async (key) => {
+      const label = abaPorChave(key)!.label;
       montar(key as never);
 
       // Ponto 3: a régua. Se a chave é filha de um grupo, montar com essa

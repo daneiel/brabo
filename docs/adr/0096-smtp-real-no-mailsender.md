@@ -1,150 +1,158 @@
-# ADR 0096 — SMTP real no `MailSender`, atrás de um toggle explícito
+# ADR 0096 — Real SMTP in `MailSender`, behind an explicit toggle
 
-- **Status:** aceito
-- **Data:** 2026-08-18
-- **Contexto anterior:** [ADR 0031](0031-auth-first-party-argon2id-e-rotacao-de-refresh.md)
-  (o `MailSender` log-only nasceu aqui), [ADR 0032](0032-corte-do-keycloak-e-sessao-em-cookie.md)
-  (registrou "SMTP real continua sendo config futura" como consequência
-  aceita), [ADR 0059](0059-segredo-do-state-de-oauth-sem-default.md) (o padrão
-  de validação de segredo em produção que este ADR reusa)
+- **Status:** accepted
+- **Date:** 2026-08-18
+- **Prior context:** [ADR 0031](0031-auth-first-party-argon2id-e-rotacao-de-refresh.md)
+  (the log-only `MailSender` was born here), [ADR 0032](0032-corte-do-keycloak-e-sessao-em-cookie.md)
+  (recorded "real SMTP remains future config" as an accepted consequence),
+  [ADR 0059](0059-segredo-do-state-de-oauth-sem-default.md) (the pattern
+  for validating a secret in production that this ADR reuses)
 
-## Contexto
+## Context
 
-Desde a Fase 7a o `MailSender` (`apps/api/src/application/ports/mail-sender.port.ts`)
-tem uma única implementação, `LogMailSender`: verificação de e-mail, reset de
-senha, definição inicial de senha (contas migradas do Keycloak) e aviso de
-registro duplicado nunca saem da api — só vão para o log. Isso bastou para
-provar o fluxo de auth de ponta a ponta, mas deixou um item aberto desde então
-em `docs/explanation/backlog.md`: "SMTP real no MailSender".
+Since Phase 7a, `MailSender` (`apps/api/src/application/ports/mail-sender.port.ts`)
+has had a single implementation, `LogMailSender`: email verification,
+password reset, initial password setup (accounts migrated from Keycloak)
+and duplicate-registration notices never leave the api — they only go to
+the log. That was enough to prove the auth flow end to end, but it left an
+open item since then in `docs/explanation/backlog.md`: "real SMTP in
+MailSender".
 
-O item não é uma feature nova — é fechar uma lacuna já registrada, com a porta
-já pronta desde o corte do Keycloak: `MailSender.enviar(email)` não carrega
-opinião nenhuma sobre transporte, só sobre payload (`para`/`tipo`/`token?`/
-`expiraEm?`). O trabalho de verdade é a implementação SMTP e a decisão de
-COMO ligar uma sem quebrar quem já roda o produto hoje.
+The item isn't a new feature — it's closing a gap already recorded, with
+the port already ready since the Keycloak cut: `MailSender.enviar(email)`
+carries no opinion about transport, only about payload
+(`para`/`tipo`/`token?`/`expiraEm?`). The real work is the SMTP
+implementation and the decision of HOW to wire one in without breaking
+whoever already runs the product today.
 
-## Decisão
+## Decision
 
-### `nodemailer`, via transporte SMTP puro
+### `nodemailer`, over plain SMTP transport
 
-`createTransport({ host, port, secure, auth })`. Diferente das APIs JSON
-sobre HTTP que o resto do produto integra (providers de LLM, sobre
-`node:http` puro — ADR 0041), SMTP é protocolo de LINHA, com estado, MIME,
-STARTTLS e múltiplos mecanismos de AUTH. Reimplementar isso à mão seria
-reinventar uma roda sensível a segurança sem ganho nenhum. `nodemailer` é o
-padrão de fato do ecossistema Node, sem SDK de provider (SES/SendGrid/
-Mailgun) e sem árvore de dependência pesada — zero dependências próprias.
+`createTransport({ host, port, secure, auth })`. Unlike the JSON APIs over
+HTTP that the rest of the product integrates with (LLM providers, over
+plain `node:http` — ADR 0041), SMTP is a LINE protocol, with state, MIME,
+STARTTLS and multiple AUTH mechanisms. Reimplementing that by hand would
+mean reinventing a security-sensitive wheel for no gain. `nodemailer` is
+the de facto standard of the Node ecosystem, with no provider SDK
+(SES/SendGrid/Mailgun) and no heavy dependency tree — zero dependencies of
+its own.
 
-### `MAIL_TRANSPORT`: toggle explícito, nunca inferência
+### `MAIL_TRANSPORT`: explicit toggle, never inference
 
-`log` (default, **inclusive em produção**) ou `smtp`. Enviar e-mail de
-verdade é opt-in do operador — sem `MAIL_TRANSPORT=smtp` explícito o
-comportamento continua exatamente o de hoje, mesmo em produção, e quem já
-roda o produto não quebra ao atualizar. `docker-compose.prod.yml`/
-`docker-compose.yml` não têm fallback público nenhum para as cinco variáveis
-`SMTP_*`: cada uma resolve para string vazia quando ausente
-(`${SMTP_HOST:-}`), o mesmo padrão que `AUTH_JWT_SECRET`/`BRABO_SERVICE_TOKEN`
-já usam ali.
+`log` (default, **including in production**) or `smtp`. Sending real email
+is an opt-in by the operator — without an explicit `MAIL_TRANSPORT=smtp`,
+behavior stays exactly as it is today, even in production, and whoever
+already runs the product doesn't break on upgrade.
+`docker-compose.prod.yml`/`docker-compose.yml` have no public fallback for
+the five `SMTP_*` variables: each one resolves to an empty string when
+absent (`${SMTP_HOST:-}`), the same pattern
+`AUTH_JWT_SECRET`/`BRABO_SERVICE_TOKEN` already use there.
 
-### Validação no padrão da RN-114, com uma diferença
+### Validation follows the RN-114 pattern, with one difference
 
-As RN-114 originais (`AUTH_JWT_SECRET`, `BRABO_SERVICE_TOKEN`,
-`CREDENTIALS_MASTER_KEY`, `SECRET_KEY_BASE`) derrubam o boot em produção
-porque a variável TEM um default de desenvolvimento público, e "não vazia"
-não pegaria o defeito. Aqui não existe esse default: `SMTP_HOST` fica em
-branco se ninguém setar. A régua (ausente/só espaços/valor de exemplo do
-repositório/formato inválido) só é aplicada quando `NODE_ENV=production` —
-fora de produção, `MAIL_TRANSPORT=smtp` sem as variáveis não derruba o boot,
-porque é um caminho opt-in que um desenvolvedor pode estar testando contra um
-SMTP local (MailHog, por exemplo) sem valores ainda definidos.
+The original RN-114 rules (`AUTH_JWT_SECRET`, `BRABO_SERVICE_TOKEN`,
+`CREDENTIALS_MASTER_KEY`, `SECRET_KEY_BASE`) crash the boot in production
+because the variable HAS a public development default, and "not empty"
+wouldn't catch the defect. Here there's no such default: `SMTP_HOST`
+stays blank if nobody sets it. The rule (missing/whitespace-only/example
+value from the repository/invalid format) is only applied when
+`NODE_ENV=production` — outside of production, `MAIL_TRANSPORT=smtp`
+without the variables doesn't crash the boot, because it's an opt-in path
+a developer may be testing against a local SMTP server (MailHog, for
+example) without values defined yet.
 
 `apps/api/src/infrastructure/mail/smtp-config.ts` (`resolverConfigSmtp`)
-segue o mesmo formato de `apps/api/src/infrastructure/security/
+follows the same format as `apps/api/src/infrastructure/security/
 auth-key-material.ts`/`service-token.ts`: `SMTP_HOST`/`SMTP_USER`/
-`SMTP_PASSWORD`/`SMTP_FROM` são obrigatórias em produção quando o modo é
-`smtp`; `SMTP_HOST` é adicionalmente recusado se igual ao literal publicado
-(comentado) em `.env.example`; `SMTP_FROM` precisa casar
-`"Nome <email@dominio>"` ou `email@dominio`. `SMTP_PORT` (default `587`) e
-`SMTP_SECURE` (default `false`) não são segredo — têm default de PRODUTO, não
-de desenvolvimento, e não passam pela régua de "obrigatória em produção".
+`SMTP_PASSWORD`/`SMTP_FROM` are required in production when the mode is
+`smtp`; `SMTP_HOST` is additionally refused if it equals the literal
+published (commented) in `.env.example`; `SMTP_FROM` must match
+`"Name <email@domain>"` or `email@domain`. `SMTP_PORT` (default `587`) and
+`SMTP_SECURE` (default `false`) are not secrets — they have a PRODUCT
+default, not a development one, and don't go through the "required in
+production" rule.
 
-A validação roda dentro do construtor de `SmtpMailSender`, exercitada no
-`useFactory` de `AuthUseCasesModule` — não numa chamada eager em `main.ts`
-como os quatro segredos da RN-114. A diferença é deliberada: `AuthUseCasesModule`
-é importado incondicionalmente (via `AuthHttpModule`) e o `useFactory`
-resolve o `MailSender` durante `NestFactory.create()`, então a validação
-ainda acontece no BOOT — só não antes dele, porque ela só importa quando o
-operador optou por `smtp`. É o mesmo desenho que `CREDENTIALS_MASTER_KEY` já
-usa (validada no construtor de `EnvelopeEncryptionService`, exercitado pela
-montagem do grafo de providers).
+Validation runs inside `SmtpMailSender`'s constructor, exercised by
+`AuthUseCasesModule`'s `useFactory` — not an eager call in `main.ts` like
+the four RN-114 secrets. The difference is deliberate:
+`AuthUseCasesModule` is imported unconditionally (via `AuthHttpModule`)
+and the `useFactory` resolves `MailSender` during `NestFactory.create()`,
+so validation still happens at BOOT — just not before it, because it only
+matters when the operator opted into `smtp`. It's the same design
+`CREDENTIALS_MASTER_KEY` already uses (validated in
+`EnvelopeEncryptionService`'s constructor, exercised by the assembly of the
+provider graph).
 
-### Seleção via `useFactory`
+### Selection via `useFactory`
 
-`AuthUseCasesModule` troca `{ provide: MailSender, useClass: LogMailSender }`
-por um `useFactory` que lê `resolverModoDeTransporte()` e instancia
-`SmtpMailSender` ou `LogMailSender`. Nenhum caso de uso (`RegisterUseCase`,
-`RequestPasswordResetUseCase`, `LoginUseCase`, o script
-`migrate-keycloak-users.ts`) muda — todos continuam injetando `MailSender` e
-chamando `.enviar()`.
+`AuthUseCasesModule` swaps `{ provide: MailSender, useClass:
+LogMailSender }` for a `useFactory` that reads `resolverModoDeTransporte()`
+and instantiates either `SmtpMailSender` or `LogMailSender`. No use case
+(`RegisterUseCase`, `RequestPasswordResetUseCase`, `LoginUseCase`, the
+`migrate-keycloak-users.ts` script) changes — all of them keep injecting
+`MailSender` and calling `.enviar()`.
 
-### Corpo em texto puro, nunca HTML
+### Plain-text body, never HTML
 
-A porta não carrega estrutura para corpo rico, e um template engine seria
-superfície de injeção/XSS por um ganho que ninguém pediu. Cada `tipo` tem um
-texto fixo em pt-BR, com o link quando fizer sentido, montado a partir de
-`WEB_ORIGIN` (mesma leitura crua que `auth.controller.ts`/`git.controller.ts`
-já fazem para redirects) + a rota web certa + `?token=`.
+The port carries no structure for rich content, and a template engine
+would be injection/XSS surface for a gain nobody asked for. Each `tipo`
+has a fixed pt-BR text, with the link when it makes sense, built from
+`WEB_ORIGIN` (the same raw read `auth.controller.ts`/`git.controller.ts`
+already do for redirects) + the right web route + `?token=`.
 
-### O token bruto e o corpo nunca vão para o log
+### The raw token and the body never go to the log
 
-Mesma régua do `LogMailSender`: sucesso e falha de envio citam `tipo` e
-destinatário, nunca o token nem o texto do e-mail.
+Same rule as `LogMailSender`: success and failure of sending cite `tipo`
+and recipient, never the token nor the email's text.
 
-### A lacuna do link de verificação, fechada junto
+### The verification-link gap, closed along the way
 
-Investigando os call sites antes de implementar: a rota web `/definir-senha`
-já existe e atende `password_reset`/`set_initial_password`
-(`SetPasswordPage.tsx`), mas **não havia rota nem tela para
-`email_verification`** — a api já expunha `POST /auth/verify-email` e o
-cliente web (`apps/web/src/lib/auth.ts`, `verificarEmail`) já existia, mas
-sem chamador nenhum. Com `LogMailSender`, essa lacuna era invisível: o link
-nunca saía do log e ninguém clicava nele. Com SMTP real, o e-mail chegaria
-com um link morto.
+Investigating call sites before implementing: the `/definir-senha` web
+route already exists and handles `password_reset`/`set_initial_password`
+(`SetPasswordPage.tsx`), but there was **no route or screen for
+`email_verification`** — the api already exposed `POST /auth/verify-email`
+and the web client (`apps/web/src/lib/auth.ts`, `verificarEmail`) already
+existed, but with no caller. With `LogMailSender`, that gap was invisible:
+the link never left the log and nobody clicked it. With real SMTP, the
+email would arrive with a dead link.
 
-`/verificar-email?token=...` (`VerifyEmailPage.tsx`) fecha isso, espelhando
-`SetPasswordPage.tsx`/`setPasswordRoute`: mesmo padrão de `validateSearch` no
-`router.tsx`, mesma resposta única para link inexistente/expirado/já usado, e
-o mesmo desfecho de não logar ninguém — só que aqui não há formulário: a
-confirmação dispara sozinha ao montar (não há dado nenhum para o usuário
-preencher), e por isso a tela precisa dos três estados da RN-088
-(carregando/erro/sucesso), não só dois.
+`/verificar-email?token=...` (`VerifyEmailPage.tsx`) closes this,
+mirroring `SetPasswordPage.tsx`/`setPasswordRoute`: same `validateSearch`
+pattern in `router.tsx`, same single response for a
+nonexistent/expired/already-used link, and the same outcome of never
+logging anyone in — except here there's no form: confirmation fires on
+its own when the page mounts (there's no input for the user to fill in),
+and that's why the screen needs all three RN-088 states
+(loading/error/success), not just two.
 
-## Consequências
+## Consequences
 
-**Quebra deliberadamente nenhuma.** `MAIL_TRANSPORT` não setado — em
-qualquer ambiente, inclusive produção — mantém o comportamento de hoje
-(log-only). Quem quer e-mail de verdade faz um opt-in explícito e passa a ter
-as cinco variáveis validadas no boot quando roda em produção.
+**Deliberately breaks nothing.** With `MAIL_TRANSPORT` unset — in any
+environment, including production — behavior stays as it is today
+(log-only). Whoever wants real email makes an explicit opt-in and then has
+the five variables validated at boot when running in production.
 
-**Nova dependência de produção:** `nodemailer` (+ `@types/nodemailer` como
-dev dependency). Zero dependências transitivas próprias.
+**New production dependency:** `nodemailer` (+ `@types/nodemailer` as a
+dev dependency). Zero transitive dependencies of its own.
 
-**Novo segredo de infraestrutura:** `SMTP_PASSWORD` — mesma família de
-`AUTH_JWT_SECRET`/`GIT_OAUTH_STATE_SECRET` (variável de ambiente simples,
-validada no boot), não segredo de usuário (não passa por
-`EncryptionService`/envelope encryption, que é só para credencial de LLM/git
-por REGISTRO no banco).
+**New infrastructure secret:** `SMTP_PASSWORD` — same family as
+`AUTH_JWT_SECRET`/`GIT_OAUTH_STATE_SECRET` (a plain environment variable,
+validated at boot), not a user secret (it doesn't go through
+`EncryptionService`/envelope encryption, which is only for LLM/git
+credentials stored in the database).
 
-**Novo caminho de rede externo** num fluxo de autenticação sensível — RN-030
-a RN-033 (anti-enumeração) continuam intocadas: a implementação SMTP não
-muda NENHUM call site nem o payload que os casos de uso decidem mandar, só a
-entrega.
+**New external network path** in a sensitive authentication flow —
+RN-030 through RN-033 (anti-enumeration) remain untouched: the SMTP
+implementation doesn't change ANY call site nor the payload the use cases
+decide to send, only the delivery.
 
-**Fica registrado, não fechado aqui:** não existe mecanismo de retentativa
-para e-mail que falha no envio SMTP (timeout, credencial recusada pelo
-provedor). `LoginUseCase.enviarDefinicaoDeSenha` já engolia a falha de
-propósito (não muda a resposta HTTP); `RegisterUseCase`/
-`RequestPasswordResetUseCase` propagam a exceção, e um provedor SMTP fora do
-ar vira 500 na rota de auth. Isso já era verdade com qualquer implementação
-síncrona de `MailSender` e não piora com esta — outbox/fila de envio, se um
-dia for preciso, é decisão de produto separada, fora do escopo deste ADR.
+**Recorded but not closed here:** there's no retry mechanism for an
+email that fails to send via SMTP (timeout, credential rejected by the
+provider). `LoginUseCase.enviarDefinicaoDeSenha` already swallowed the
+failure on purpose (doesn't change the HTTP response);
+`RegisterUseCase`/`RequestPasswordResetUseCase` propagate the exception,
+and an SMTP provider that's down becomes a 500 on the auth route. This was
+already true with any synchronous `MailSender` implementation and doesn't
+get worse with this one — a send outbox/queue, if ever needed, is a
+separate product decision, out of this ADR's scope.

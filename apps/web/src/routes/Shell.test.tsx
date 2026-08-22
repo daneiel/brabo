@@ -1,6 +1,8 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import i18next from 'i18next';
+import { initReactI18next, I18nextProvider } from 'react-i18next';
 import { Shell } from './Shell';
 import { ApiError } from '../lib/api-client';
 import type { Project, WorkspaceWithRole } from '../lib/api-types';
@@ -8,6 +10,37 @@ import { CHAVE_COLAPSADO } from '../lib/sidebar-state';
 // Real module, não mockado — RN-196 lê a LISTA de abas dela, nunca hardcoda
 // rótulos, então o teste também lê daqui em vez de repetir uma string.
 import { ABAS_DO_PROJETO } from './project-tabs';
+import shellEn from '../locales/en/shell.json';
+import shellPtBR from '../locales/pt-BR/shell.json';
+import commonEn from '../locales/en/common.json';
+import commonPtBR from '../locales/pt-BR/common.json';
+
+/**
+ * Instância REAL de i18next, própria do teste (mesmo padrão de
+ * `AccountPage.test.tsx`) — `Shell.tsx` não importa `lib/i18n.ts` (só usa
+ * `useTranslation`), então sem isto o hook cairia no fallback interno do
+ * react-i18next (sem recursos, `t()` devolveria a própria chave). `pt-BR` é
+ * o idioma travado aqui de propósito: as asserções abaixo continuam
+ * literais em português, e forçar o idioma é o que preserva o texto que
+ * elas já verificavam antes da extração — sem isso o default do app (`en`,
+ * ver `idioma.ts#IDIOMA_PADRAO`) trocaria todo o texto sob teste.
+ */
+function novaInstanciaI18n() {
+  const instancia = i18next.createInstance();
+  void instancia.use(initReactI18next).init({
+    resources: {
+      en: { shell: shellEn, common: commonEn },
+      'pt-BR': { shell: shellPtBR, common: commonPtBR },
+    },
+    lng: 'pt-BR',
+    fallbackLng: 'en',
+    defaultNS: 'common',
+    ns: ['shell', 'common'],
+    interpolation: { escapeValue: false },
+    returnNull: false,
+  });
+  return instancia;
+}
 
 const navigate = vi.fn();
 const sair = vi.fn(() => Promise.resolve());
@@ -106,9 +139,12 @@ vi.mock('./NewProjectWizard', () => ({
 
 function renderShell() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const i18n = novaInstanciaI18n();
   return render(
     <QueryClientProvider client={client}>
-      <Shell />
+      <I18nextProvider i18n={i18n}>
+        <Shell />
+      </I18nextProvider>
     </QueryClientProvider>,
   );
 }

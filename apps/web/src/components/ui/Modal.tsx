@@ -1,4 +1,5 @@
 import type { MouseEvent, ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { XIcon } from './icons';
 import styles from './Modal.module.css';
 
@@ -18,6 +19,7 @@ interface ModalProps {
 }
 
 export function Modal({ title, icon, onClose, children, size = 'default' }: ModalProps) {
+  const { t } = useTranslation('ui');
   function handleOverlayClick(event: MouseEvent<HTMLDivElement>) {
     if (event.target === event.currentTarget) onClose();
   }
@@ -30,7 +32,7 @@ export function Modal({ title, icon, onClose, children, size = 'default' }: Moda
             {icon}
             {title}
           </div>
-          <button type="button" className={styles.close} onClick={onClose} aria-label="Fechar">
+          <button type="button" className={styles.close} onClick={onClose} aria-label={t('modal.closeLabel')}>
             <XIcon size={16} />
           </button>
         </div>

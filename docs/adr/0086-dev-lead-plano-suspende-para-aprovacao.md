@@ -1,198 +1,204 @@
-# ADR 0086 — O plano do Dev Lead suspende o turno para aprovação
+# ADR 0086 — The Dev Lead's plan suspends the turn for approval
 
-- **Status:** Aceito
-- **Data:** 2026-08-16
-- **Contexto:** auditoria `docs/fluxo.yml` × código (achado A2)
-- **Revisa parte de:** [ADR 0053](0053-dev-lead-e-paralelismo-autorizado.md)
-- **Precedente direto:** [ADR 0052](0052-dev-agent-espera-aprovacao-no-meio-do-laco.md),
+- **Status:** Accepted
+- **Date:** 2026-08-16
+- **Context:** `docs/fluxo.yml` × code audit (finding A2)
+- **Revises part of:** [ADR 0053](0053-dev-lead-e-paralelismo-autorizado.md)
+- **Direct precedent:** [ADR 0052](0052-dev-agent-espera-aprovacao-no-meio-do-laco.md),
   [ADR 0057](0057-o-gate-espera-a-aprovacao.md)
 
-## Contexto
+## Context
 
-Uma sessão de auditoria, só leitura, cruzou `docs/fluxo.yml` (o modelo-alvo
-declarado pelo ADR 0085) com o código real
-(`docs/explanation/auditoria-fluxo-vs-codigo.md`). O achado A2 encontrou uma
-divergência de severidade alta: `fluxo.yml` declara a saída
-`plano-de-paralelismo` do `dev-lead` como `via: proposed_action`, mas o
-código produzia só um evento simples (`execution.plan_proposed`), sem
-pipeline de aprovação nenhum — decisão deliberada, documentada no próprio
-comentário de `dev_lead_tools.ex` na época:
+A read-only audit session cross-checked `docs/fluxo.yml` (the target model
+declared by ADR 0085) against the real code
+(`docs/explanation/auditoria-fluxo-vs-codigo.md`). Finding A2 found a
+high-severity divergence: `fluxo.yml` declares the `dev-lead`'s
+`plano-de-paralelismo` output as `via: proposed_action`, but the code
+only produced a simple event (`execution.plan_proposed`), with no
+approval pipeline at all — a deliberate decision, documented in the
+`dev_lead_tools.ex` comment itself at the time:
 
-> O plano vira EVENTO no log, não `proposed_action`. A distinção não é
-> cosmética: propor um plano não tem efeito externo nenhum — o gasto
-> acontece quando os agentes sobem, e é lá que o teto da RN-083 cobra
-> autorização. Transformar a proposta em ação a decidir faria o usuário
-> decidir duas vezes a mesma coisa.
+> The plan becomes an EVENT in the log, not a `proposed_action`. The
+> distinction isn't cosmetic: proposing a plan has no external effect at
+> all — the spend happens when the agents come up, and that's where the
+> RN-083 cap requires authorization. Turning the proposal into an action
+> to be decided would make the user decide the same thing twice.
 
-Essa lição não estava errada em 2026-08-07 ([ADR 0053](0053-dev-lead-e-paralelismo-autorizado.md),
-FASE 14d): o `proposed_action` tipo `parallelize` que de fato existe é
-disparado por AÇÃO DO USUÁRIO na UI pedindo reforço acima do teto
-(`POST /sessions/:sessionId/execution/parallelize`), não pela saída inicial
-do plano do Dev Lead. São dois mecanismos genuinamente distintos, e
-`fluxo.yml` os fundiu numa única saída.
+That lesson wasn't wrong on 2026-08-07 ([ADR 0053](0053-dev-lead-e-paralelismo-autorizado.md),
+PHASE 14d): the `parallelize`-type `proposed_action` that does exist is
+triggered by a USER ACTION in the UI requesting reinforcement above the
+cap (`POST /sessions/:sessionId/execution/parallelize`), not by the Dev
+Lead's initial plan output. They are two genuinely distinct mechanisms,
+and `fluxo.yml` merged them into a single output.
 
-O dono do produto, diante da divergência, decidiu que o CÓDIGO erra: o
-plano do Dev Lead é a PRIMEIRA decisão real de quanto a sessão vai gastar
-com paralelismo — o usuário hoje só o lê narrado no fio e clica "Ativar
-execução" separadamente, sem uma aprovação de verdade no meio. O plano
-passa a nascer `proposed_action`, e o usuário decide olhando para ele, não
-para uma linha de log.
+Faced with the divergence, the product owner decided that the CODE is
+wrong: the Dev Lead's plan is the FIRST real decision about how much the
+session will spend on parallelism — today the user only reads it narrated
+in the feed and clicks "Activate execution" separately, with no real
+approval in between. The plan now becomes a `proposed_action`, and the
+user decides by looking at it, not at a log line.
 
-### Por que isto é estruturalmente novo
+### Why this is structurally new
 
-Os quatro agentes conversacionais (Criativo, PO, Arquiteto, Dev Lead) rodam
-turno SÍNCRONO via `GenServer.call` de até 180s, mediado por
-`Engine.Agents.TurnoAssincrono` (RN-122) — o `handle_call` fica bloqueado
-esperando a Task terminar, e quem chama (a rota HTTP do engine) espera
-junto. O padrão de suspensão em aprovação já existia duas vezes:
+The four conversational agents (Criativo, PO, Arquiteto, Dev Lead) run a
+SYNCHRONOUS turn via `GenServer.call` of up to 180s, mediated by
+`Engine.Agents.TurnoAssincrono` (RN-122) — the `handle_call` stays blocked
+waiting for the Task to finish, and the caller (the engine's HTTP route)
+waits along with it. The suspend-for-approval pattern already existed
+twice:
 
-- o dev agent ([ADR 0052](0052-dev-agent-espera-aprovacao-no-meio-do-laco.md)),
-  disparado por `cast` (`work/2`, `correct/3`);
-- os gates de QA/Infra ([ADR 0057](0057-o-gate-espera-a-aprovacao.md)),
-  também disparados por `cast` (`run/2`).
+- the dev agent ([ADR 0052](0052-dev-agent-espera-aprovacao-no-meio-do-laco.md)),
+  triggered by `cast` (`work/2`, `correct/3`);
+- the QA/Infra gates ([ADR 0057](0057-o-gate-espera-a-aprovacao.md)),
+  also triggered by `cast` (`run/2`).
 
-Nenhum dos dois precisou lidar com um `from` síncrono pendente — o `cast`
-não tem `from` nenhum para responder. O Dev Lead É `call`: alguém está
-esperando uma resposta HTTP quando o turno suspende, e essa resposta
-precisa vir NA HORA (para não travar a rota por até 180s), mesmo que o
-turno em si continue pendente por muito mais tempo que isso.
+Neither of them had to deal with a pending synchronous `from` — `cast`
+has no `from` to respond to. The Dev Lead IS `call`: someone is waiting
+for an HTTP response when the turn suspends, and that response needs to
+come RIGHT AWAY (so as not to block the route for up to 180s), even
+though the turn itself remains pending for much longer than that.
 
-## Decisão
+## Decision
 
-**O plano de execução nasce `proposed_action` (tipo `propose_execution_plan`),
-e o turno do Dev Lead SUSPENDE — sem terminar — enquanto ela está `pending`.**
+**The execution plan is born as a `proposed_action` (type
+`propose_execution_plan`), and the Dev Lead's turn SUSPENDS — without
+finishing — while it is `pending`.**
 
-### As peças
+### The pieces
 
-1. **`decide.ts` ganha o tipo `propose_execution_plan`**
-   (`apps/api/src/domain/actions/decide.ts`), papel mínimo `maintainer`
-   (mesmo calibre de `parallelize`: decisão de quanto o produto vai gastar
-   com paralelismo). Ele é DELIBERADAMENTE deixado FORA do bloco de tetos
-   absolutos (merge protegido, `instruction_patch`,
-   `parallelize`/`raise_max_parallel`) — pode ser configurado para
-   auto-aprovar, como já vale para `open_adr_pr`/`open_infra_pr`. A
-   diferença semântica importa: os tetos absolutos existem porque o produto
-   recusa deixar o usuário automatizar a PRÓPRIA decisão mesmo com "sempre
-   permitir" ligado (`parallelize` é uma ULTRAPASSAGEM de um teto já
-   autorizado, `raise_max_parallel` é o produto elevando o próprio limite).
-   O plano do Dev Lead é a PRIMEIRA decisão da sessão, não uma ultrapassagem
-   — e nada nesta feature pede um quarto absoluto.
-2. **`Engine.Agents.DevLeadTools.run/2` chama `EngineApiClient.propose_action/5`**
-   em vez de `append_event/3` (mesmo cliente que `Engine.Dev.AgentIo` já
-   usa), e devolve um contrato de três desfechos:
-   `{:ok, texto}` | `{:pending, action_id}` | `{:error, texto}`. `validar/1`
-   continua barrando plano vazio ou com módulo sem agente ANTES de qualquer
-   I/O — sem mudança.
-3. **`Engine.Agents.DevLeadServer.run_turn/2` para no primeiro `:pending`.**
-   O `Enum.reduce`/booleano de antes vira `Enum.reduce_while`, que HALTA sem
-   processar mais chamadas nem recursar. O `state` devolvido carrega a
-   chave nova `:aguardando_aprovacao` (`%{action_id:, tool_call_id:,
-   tool_name:, remaining:}`) — o `remaining` já descontado, porque a
-   iteração suspensa conta contra o teto quando retomada. A mensagem
-   `role: "tool"` NÃO entra em `state.messages` neste momento: gravar
-   "pending" ali mentiria pro modelo que o comando já respondeu isso (mesmo
-   raciocínio do dev agent).
-4. **`Engine.Agents.TurnoAssincrono.tratar_resultado/2` ganha um ramo.**
-   `GenServer.reply(from, :ok)` continua acontecendo sempre, na mesma hora —
-   é o que rompe o bloqueio síncrono no momento certo, suspensão ou não.
-   Presente `:aguardando_aprovacao` (checado pelo VALOR, `Map.get/2` truthy
-   — não pela presença da chave, porque o Dev Lead a carrega
-   `nil` desde o `init/1`), chama `suspender/1` em vez de `finalizar/1`: só
-   `agent.status: awaiting_approval`, sem `agent.done` — o turno não
-   terminou.
-5. **`Engine.Sessions.LiveBroadcast.agent_status/4` ganha o status novo**
-   na guarda (`["working", "idle", "awaiting_approval"]`) — sem isto o
-   `agent.status` do passo 4 nem seria persistido (ADR 0021: é o único
-   evento que PRECISA ser durável, não só broadcastado).
-6. **A retomada.** `DevLeadServer` assina `Engine.Dev.Wake.subscribe(project_id,
-   "dev-lead")` no `init/1` — o MESMO módulo que `Engine.Gates.QaLeadServer`
-   já reusa para os subagentes de QA, apesar do nome ser "dev": a entrega de
-   `{:action_settled, ...}` é por AGENTE, roteada pelo `agentId` do payload
-   (`DevAgentWakeWorker`), não por tipo. Ao chegar, um `handle_info` monta a
-   mensagem `role: "tool"` com o resultado REAL (`texto_do_desfecho/1`,
-   mesmo vocabulário do dev agent e do `QaLeadServer`), zera
-   `aguardando_aprovacao` e retoma com `TurnoAssincrono.iniciar(state, nil,
+1. **`decide.ts` gains the `propose_execution_plan` type**
+   (`apps/api/src/domain/actions/decide.ts`), minimum role `maintainer`
+   (same tier as `parallelize`: a decision about how much the product will
+   spend on parallelism). It is DELIBERATELY left OUTSIDE the absolute-cap
+   block (protected merge, `instruction_patch`,
+   `parallelize`/`raise_max_parallel`) — it can be configured to
+   auto-approve, as already holds for `open_adr_pr`/`open_infra_pr`. The
+   semantic difference matters: the absolute caps exist because the
+   product refuses to let the user automate the DECISION ITSELF even with
+   "always allow" on (`parallelize` is an OVERRUN of a cap already
+   authorized, `raise_max_parallel` is the product raising its own
+   limit). The Dev Lead's plan is the session's FIRST decision, not an
+   overrun — and nothing in this feature calls for a fourth absolute cap.
+2. **`Engine.Agents.DevLeadTools.run/2` calls `EngineApiClient.propose_action/5`**
+   instead of `append_event/3` (the same client `Engine.Dev.AgentIo`
+   already uses), and returns a three-outcome contract:
+   `{:ok, text}` | `{:pending, action_id}` | `{:error, text}`. `validar/1`
+   continues blocking an empty plan or one with a module lacking an agent
+   BEFORE any I/O — unchanged.
+3. **`Engine.Agents.DevLeadServer.run_turn/2` stops at the first `:pending`.**
+   The `Enum.reduce`/boolean from before becomes `Enum.reduce_while`,
+   which HALTS without processing further calls or recursing. The
+   returned `state` carries the new `:aguardando_aprovacao` key
+   (`%{action_id:, tool_call_id:, tool_name:, remaining:}`) — `remaining`
+   already decremented, because the suspended iteration counts against
+   the cap once resumed. The `role: "tool"` message is NOT added to
+   `state.messages` at this point — recording "pending" there would lie
+   to the model that the command already answered it (same reasoning as
+   the dev agent).
+4. **`Engine.Agents.TurnoAssincrono.tratar_resultado/2` gains a branch.**
+   `GenServer.reply(from, :ok)` still happens always, at the same time —
+   it's what breaks the synchronous block at the right moment, suspended
+   or not. When `:aguardando_aprovacao` is present (checked by VALUE,
+   `Map.get/2` truthy — not by key presence, because the Dev Lead carries
+   it as `nil` since `init/1`), it calls `suspender/1` instead of
+   `finalizar/1`: only `agent.status: awaiting_approval`, no
+   `agent.done` — the turn hasn't finished.
+5. **`Engine.Sessions.LiveBroadcast.agent_status/4` gains the new status**
+   in the guard (`["working", "idle", "awaiting_approval"]`) — without
+   this, step 4's `agent.status` wouldn't even be persisted (ADR 0021: it
+   is the only event that MUST be durable, not just broadcast).
+6. **The resumption.** `DevLeadServer` subscribes to `Engine.Dev.Wake.subscribe(project_id,
+   "dev-lead")` in `init/1` — the SAME module `Engine.Gates.QaLeadServer`
+   already reuses for QA subagents, despite the "dev" name: delivery of
+   `{:action_settled, ...}` is by AGENT, routed by the payload's `agentId`
+   (`DevAgentWakeWorker`), not by type. On arrival, a `handle_info` builds
+   the `role: "tool"` message with the REAL outcome (`texto_do_desfecho/1`,
+   the same vocabulary as the dev agent and `QaLeadServer`), clears
+   `aguardando_aprovacao`, and resumes with `TurnoAssincrono.iniciar(state, nil,
    fn -> run_turn(state, pendente.remaining) end)`.
-7. **Uma segunda `user_message` durante a suspensão não inicia turno novo.**
-   Guard em `handle_call({:user_message, _text}, _from,
-   %{aguardando_aprovacao: %{}})`, testado ANTES da cláusula genérica, emite
-   `agent.error` (origem `politica`) e responde `{:reply, :ok, state}` —
-   a resposta HTTP dessa rota já é descartada pelo controller do engine para
-   todos os agentes.
+7. **A second `user_message` during suspension does not start a new turn.**
+   A guard on `handle_call({:user_message, _text}, _from,
+   %{aguardando_aprovacao: %{}})`, tested BEFORE the generic clause, emits
+   `agent.error` (origin `politica`) and replies `{:reply, :ok, state}` —
+   the HTTP response for that route is already discarded by the engine
+   controller for every agent.
 
-### `propose_execution_plan` não tem execute-* pipeline própria
+### `propose_execution_plan` has no dedicated execute-* pipeline
 
-Diferente de `parallelize`/`raise_max_parallel` (que de fato SOBEM agentes
-na aprovação), aprovar o plano não tem efeito a aplicar — subir os agentes
-continua sendo um ato SEPARADO, quando o usuário clica "Ativar execução".
-Por isso a aprovação manual nunca sai de `status: "approved"` (a máquina de
-estados de `action-state-machine.ts` modela `approved -> executed | failed`
-como aberto, mas nada chama essa transição, e não deveria — não há o que
-executar). O engine trata `"executed"`, `"auto_approved"` e `"approved"`
-igualmente como sucesso.
+Unlike `parallelize`/`raise_max_parallel` (which actually DO bring agents
+up on approval), approving the plan has no effect to apply — bringing the
+agents up remains a SEPARATE act, when the user clicks "Activate
+execution." That's why manual approval never leaves `status: "approved"`
+(the `action-state-machine.ts` state machine models
+`approved -> executed | failed` as open, but nothing calls that
+transition, and it shouldn't — there's nothing to execute). The engine
+treats `"executed"`, `"auto_approved"`, and `"approved"` equally as
+success.
 
-## Consequências
+## Consequences
 
-**A favor**
+**For**
 
-- O comportamento passa a bater com o que `docs/fluxo.yml` já declarava —
-  a divergência do achado A2 fecha sem editar o fluxo.
-- O usuário decide o plano olhando para uma aprovação de verdade (frase em
-  pt-BR, verbo, payload — RN-096), não para uma linha no fio que ele podia
-  não ler.
-- O mecanismo de suspensão de `TurnoAssincrono` fica genérico o bastante
-  para o PRÓXIMO agente conversacional que precisar suspender não reinventar
-  nada — só devolver a chave `:aguardando_aprovacao`.
+- Behavior now matches what `docs/fluxo.yml` already declared — finding
+  A2's divergence closes without editing the flow.
+- The user decides the plan by looking at a real approval (phrase in
+  pt-BR, verb, payload — RN-096), not at a feed line they might not read.
+- `TurnoAssincrono`'s suspension mechanism becomes generic enough that
+  the NEXT conversational agent that needs to suspend doesn't have to
+  reinvent anything — it just returns the `:aguardando_aprovacao` key.
 
-**Contra**
+**Against**
 
-- **Lacuna aceita, declarada: restart durante a espera.** Ao contrário do
-  dev agent (que reidrata `laco_pendente` via `handle_continue` no
-  `init/1`), o Dev Lead NÃO reidrata `aguardando_aprovacao` — só em
-  memória. Se o engine reiniciar enquanto ele está suspenso, a decisão
-  continua registrada e visível em Aprovações (é durável na api), mas o Dev
-  Lead não narra o desfecho automaticamente: o processo que assinou o
-  `Wake` morreu, e o próximo restart sobe um Dev Lead novo, sem inscrição
-  para aquela ação. Fechar isto exigiria o mesmo mecanismo de persistência
-  do ADR 0052 (`dev_lead_states`, ou equivalente) — fora do escopo desta
-  mudança, que só corrige o desalinhamento entre o fluxo declarado e o
-  código.
-- Um turno a mais de espera antes de "Ativar execução" ficar disponível,
-  quando o plano não é auto-aprovado — o mesmo custo que qualquer
-  `proposed_action` já impõe, agora também aqui.
+- **Accepted, declared gap: restart during the wait.** Unlike the dev
+  agent (which rehydrates `laco_pendente` via `handle_continue` in
+  `init/1`), the Dev Lead does NOT rehydrate `aguardando_aprovacao` — only
+  in memory. If the engine restarts while it's suspended, the decision
+  remains recorded and visible in Approvals (it's durable in the api), but
+  the Dev Lead doesn't narrate the outcome automatically: the process
+  that subscribed to `Wake` died, and the next restart brings up a new
+  Dev Lead, with no subscription for that action. Closing this would
+  require the same persistence mechanism as ADR 0052
+  (`dev_lead_states`, or equivalent) — out of scope for this change,
+  which only fixes the misalignment between the declared flow and the
+  code.
+- One extra turn of waiting before "Activate execution" becomes
+  available, when the plan isn't auto-approved — the same cost any
+  `proposed_action` already imposes, now here too.
 
-## Alternativas consideradas
+## Alternatives considered
 
-**Só corrigir `docs/fluxo.yml` para bater com o código (`via: evento`).**
-Recusada por decisão explícita do dono do produto: a divergência não era
-erro de documentação, era o código ainda não tendo o pipeline que a decisão
-de produto (fazer o usuário decidir o plano de verdade) já pedia.
+**Just fix `docs/fluxo.yml` to match the code (`via: evento`).**
+Rejected by explicit decision of the product owner: the divergence wasn't
+a documentation error, it was the code not yet having the pipeline that
+the product decision (making the user really decide the plan) already
+called for.
 
-**Adicionar o tipo ao bloco de tetos absolutos de `decide.ts`.** Recusada
-— ver a seção "As peças", item 1. O plano não é uma ultrapassagem de teto
-nem o produto elevando o próprio limite; é a decisão INICIAL, e o usuário
-pode legitimamente querer configurar "sempre permitir" para ela sem que
-isso vire o mesmo furo que os três tetos absolutos existem para fechar.
+**Add the type to `decide.ts`'s absolute-cap block.** Rejected — see
+the "The pieces" section, item 1. The plan is neither a cap overrun nor
+the product raising its own limit; it's the INITIAL decision, and the
+user can legitimately want to configure "always allow" for it without
+that becoming the same hole the three absolute caps exist to close.
 
-**Não suspender — manter o evento simples, e abrir uma segunda
-`proposed_action` em paralelo (fire-and-forget).** Recusada: o `fluxo.yml`
-declara que a saída EM SI é a proposta, não um evento acompanhado de uma
-proposta órfã. E deixar o turno seguir sem esperar reintroduziria a mesma
-falha que o ADR 0052 fechou para o dev agent — o modelo "aprenderia" que o
-plano foi aceito antes de saber se foi.
+**Don't suspend — keep the simple event, and open a second
+`proposed_action` in parallel (fire-and-forget).** Rejected: `fluxo.yml`
+declares that the output ITSELF is the proposal, not an event
+accompanied by an orphan proposal. And letting the turn continue without
+waiting would reintroduce the same flaw ADR 0052 closed for the dev
+agent — the model would "learn" the plan was accepted before knowing
+whether it was.
 
-## Referências
+## References
 
-- `docs/explanation/auditoria-fluxo-vs-codigo.md` — achado A2, a origem
-  desta mudança
-- [ADR 0053](0053-dev-lead-e-paralelismo-autorizado.md) — cria o Dev Lead e
-  o teto de paralelismo (RN-083) que motiva a existência dele
-- [ADR 0052](0052-dev-agent-espera-aprovacao-no-meio-do-laco.md) — o
-  precedente: o dev agent suspende no meio do laço, via `cast`
-- [ADR 0057](0057-o-gate-espera-a-aprovacao.md) — o segundo precedente: os
-  gates de QA/Infra suspendem, também via `cast`
-- [ADR 0021](0021-fechamento-4a-infra-e-painel.md) — por que `agent.status`
-  precisa ser persistido, não só broadcastado
+- `docs/explanation/auditoria-fluxo-vs-codigo.md` — finding A2, the
+  origin of this change
+- [ADR 0053](0053-dev-lead-e-paralelismo-autorizado.md) — creates the Dev
+  Lead and the parallelism cap (RN-083) that motivates its existence
+- [ADR 0052](0052-dev-agent-espera-aprovacao-no-meio-do-laco.md) — the
+  precedent: the dev agent suspends mid-loop, via `cast`
+- [ADR 0057](0057-o-gate-espera-a-aprovacao.md) — the second precedent:
+  the QA/Infra gates suspend, also via `cast`
+- [ADR 0021](0021-fechamento-4a-infra-e-painel.md) — why `agent.status`
+  needs to be persisted, not just broadcast
 - `apps/engine/lib/engine/agents/dev_lead_tools.ex`,
   `dev_lead_server.ex`, `turno_assincrono.ex`
 - `apps/engine/lib/engine/sessions/live_broadcast.ex`

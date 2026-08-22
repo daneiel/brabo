@@ -1,9 +1,13 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterAll } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ProjectSettingsTab } from './ProjectSettingsTab';
 import { ToastProvider } from '../components/ui/ToastProvider';
 import type { ProficiencyProfile } from '../lib/api-types';
+// A instância REAL do app: `ProjectSettingsTab.tsx` usa
+// `useTranslation('settings')` sem `I18nextProvider` próprio (mesmo padrão
+// de `Dashboard.test.tsx`/`ProjectExecutorsTab.test.tsx`).
+import i18n from '../lib/i18n';
 
 /**
  * A seção de proficiência não tinha teste nenhum — e o defeito que mais
@@ -76,7 +80,8 @@ function renderTab() {
   );
 }
 
-beforeEach(() => {
+beforeEach(async () => {
+  await i18n.changeLanguage('pt-BR');
   navigate.mockClear();
   getProjectEvent.mockClear();
   deleteMyProficiency.mockClear();
@@ -85,6 +90,9 @@ beforeEach(() => {
     id: '01JEVT0000000000000000AAAA',
     sessionId: 'sessao-antiga',
   });
+});
+afterAll(() => {
+  void i18n.changeLanguage('en');
 });
 
 describe('ProficiencySection', () => {

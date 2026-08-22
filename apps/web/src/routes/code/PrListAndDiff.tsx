@@ -1,29 +1,30 @@
 import { useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { getCodeDiff, getCodePullRequests, mensagemDaApi } from '../../lib/api-client';
 import { Disclosure } from '../../components/ui/Disclosure';
 import { ArrowLeftIcon, PrIcon } from '../../components/ui/icons';
 import type { CodeDiffFile, CodePullRequestState, CodePullRequestSummary } from '../../lib/api-types';
 import styles from './CodeDiffPanel.module.css';
 
-const ROTULO_STATUS: Record<CodeDiffFile['status'], string> = {
-  added: 'novo',
-  modified: 'modificado',
-  removed: 'removido',
-  renamed: 'renomeado',
+const CHAVE_STATUS: Record<CodeDiffFile['status'], string> = {
+  added: 'diff.fileStatus.added',
+  modified: 'diff.fileStatus.modified',
+  removed: 'diff.fileStatus.removed',
+  renamed: 'diff.fileStatus.renamed',
 };
 
-const ROTULO_ESTADO_PR: Record<CodePullRequestState, string> = {
-  open: 'aberta',
-  merged: 'mesclada',
-  closed: 'fechada',
+const CHAVE_ESTADO_PR: Record<CodePullRequestState, string> = {
+  open: 'diff.prState.open',
+  merged: 'diff.prState.merged',
+  closed: 'diff.prState.closed',
 };
 
-const FILTROS: Array<{ chave: CodePullRequestState | 'all'; rotulo: string }> = [
-  { chave: 'open', rotulo: 'Abertas' },
-  { chave: 'merged', rotulo: 'Mescladas' },
-  { chave: 'closed', rotulo: 'Fechadas' },
-  { chave: 'all', rotulo: 'Todas' },
+const FILTROS: Array<{ chave: CodePullRequestState | 'all'; chaveRotulo: string }> = [
+  { chave: 'open', chaveRotulo: 'diff.filters.open' },
+  { chave: 'merged', chaveRotulo: 'diff.filters.merged' },
+  { chave: 'closed', chaveRotulo: 'diff.filters.closed' },
+  { chave: 'all', chaveRotulo: 'diff.filters.all' },
 ];
 
 export interface PrListAndDiffProps {
@@ -55,6 +56,7 @@ export interface PrListAndDiffProps {
  * aba PRs nova o consome com `renderItemExtra` para o botão de merge.
  */
 export function PrListAndDiff({ projectId, renderItemExtra }: PrListAndDiffProps) {
+  const { t } = useTranslation('code');
   const [filtro, setFiltro] = useState<CodePullRequestState | 'all'>('open');
   const [idDigitado, setIdDigitado] = useState('');
   const [selecionada, setSelecionada] = useState<CodePullRequestSummary | null>(null);
@@ -86,7 +88,7 @@ export function PrListAndDiff({ projectId, renderItemExtra }: PrListAndDiffProps
         <div className={styles.cabecalhoDiff}>
           <button type="button" className={styles.botaoVoltar} onClick={voltarParaLista}>
             <ArrowLeftIcon size={14} />
-            Voltar à lista
+            {t('diff.backToList')}
           </button>
           {selecionada && (
             <span className={styles.tituloDiff}>
@@ -100,19 +102,19 @@ export function PrListAndDiff({ projectId, renderItemExtra }: PrListAndDiffProps
           )}
         </div>
 
-        {diffQuery.isLoading && <div className={styles.estado}>Carregando diff…</div>}
+        {diffQuery.isLoading && <div className={styles.estado}>{t('diff.loadingDiff')}</div>}
 
         {diffQuery.isError && (
           <div className={styles.estadoErro} role="alert">
-            <span>{mensagemDaApi(diffQuery.error, 'Não consegui carregar o diff desta PR.')}</span>
+            <span>{mensagemDaApi(diffQuery.error, t('diff.diffErrorFallback'))}</span>
             <button type="button" className={styles.botaoTentar} onClick={() => void diffQuery.refetch()}>
-              Tentar de novo
+              {t('shared.retry')}
             </button>
           </div>
         )}
 
         {diffQuery.data && diffQuery.data.files.length === 0 && (
-          <div className={styles.estado}>Esta PR não mudou nenhum arquivo.</div>
+          <div className={styles.estado}>{t('diff.noFiles')}</div>
         )}
 
         {diffQuery.data && diffQuery.data.files.length > 0 && (
@@ -123,7 +125,7 @@ export function PrListAndDiff({ projectId, renderItemExtra }: PrListAndDiffProps
                 titulo={
                   <span className={styles.tituloArquivo}>
                     <span className={styles.caminho}>{arquivo.path}</span>
-                    <span className={styles.selo}>{ROTULO_STATUS[arquivo.status]}</span>
+                    <span className={styles.selo}>{t(CHAVE_STATUS[arquivo.status])}</span>
                   </span>
                 }
                 trailing={
@@ -137,9 +139,7 @@ export function PrListAndDiff({ projectId, renderItemExtra }: PrListAndDiffProps
               </Disclosure>
             ))}
             {diffQuery.data.truncated && (
-              <div className={styles.truncado}>
-                A lista de arquivos foi cortada no teto por PR.
-              </div>
+              <div className={styles.truncado}>{t('diff.truncatedFiles')}</div>
             )}
           </div>
         )}
@@ -159,25 +159,27 @@ export function PrListAndDiff({ projectId, renderItemExtra }: PrListAndDiffProps
             className={[styles.filtro, filtro === f.chave && styles.filtroAtivo].filter(Boolean).join(' ')}
             onClick={() => setFiltro(f.chave)}
           >
-            {f.rotulo}
+            {t(f.chaveRotulo)}
           </button>
         ))}
       </div>
 
-      {listaQuery.isLoading && <div className={styles.estado}>Carregando pull requests…</div>}
+      {listaQuery.isLoading && <div className={styles.estado}>{t('diff.loadingPrs')}</div>}
 
       {listaQuery.isError && (
         <div className={styles.estadoErro} role="alert">
-          <span>{mensagemDaApi(listaQuery.error, 'Não consegui carregar a lista de PRs.')}</span>
+          <span>{mensagemDaApi(listaQuery.error, t('diff.prListErrorFallback'))}</span>
           <button type="button" className={styles.botaoTentar} onClick={() => void listaQuery.refetch()}>
-            Tentar de novo
+            {t('shared.retry')}
           </button>
         </div>
       )}
 
       {listaQuery.data && listaQuery.data.items.length === 0 && (
         <div className={styles.estado}>
-          Nenhuma PR {filtro !== 'all' ? ROTULO_ESTADO_PR[filtro] : ''} neste repositório.
+          {filtro !== 'all'
+            ? t('diff.noPrsWithState', { state: t(CHAVE_ESTADO_PR[filtro]) })
+            : t('diff.noPrsAny')}
         </div>
       )}
 
@@ -189,7 +191,7 @@ export function PrListAndDiff({ projectId, renderItemExtra }: PrListAndDiffProps
                 <button
                   type="button"
                   className={styles.itemPr}
-                  aria-label={`Abrir PR #${pr.number}: ${pr.title}`}
+                  aria-label={t('diff.openPrAriaLabel', { number: pr.number, title: pr.title })}
                   onClick={() => setSelecionada(pr)}
                 >
                   <PrIcon size={15} className={styles[`estadoIcone_${pr.state}`]} />
@@ -198,12 +200,12 @@ export function PrListAndDiff({ projectId, renderItemExtra }: PrListAndDiffProps
                       #{pr.number} {pr.title}
                     </span>
                     <span className={styles.itemPrMeta}>
-                      {pr.author ?? 'autor desconhecido'} · {pr.sourceBranch} → {pr.targetBranch}
+                      {pr.author ?? t('diff.unknownAuthor')} · {pr.sourceBranch} → {pr.targetBranch}
                       {pr.updatedAt && ` · ${new Date(pr.updatedAt).toLocaleDateString('pt-BR')}`}
                     </span>
                   </span>
                   <span className={[styles.itemPrEstado, styles[`estadoSelo_${pr.state}`]].join(' ')}>
-                    {ROTULO_ESTADO_PR[pr.state]}
+                    {t(CHAVE_ESTADO_PR[pr.state])}
                   </span>
                 </button>
                 {renderItemExtra && (
@@ -216,7 +218,7 @@ export function PrListAndDiff({ projectId, renderItemExtra }: PrListAndDiffProps
       )}
 
       {listaQuery.data?.truncated && (
-        <div className={styles.truncado}>A lista de PRs foi cortada no teto por chamada.</div>
+        <div className={styles.truncado}>{t('diff.truncatedList')}</div>
       )}
 
       <form
@@ -227,17 +229,17 @@ export function PrListAndDiff({ projectId, renderItemExtra }: PrListAndDiffProps
         }}
       >
         <label className={styles.label} htmlFor="diff-pr-id">
-          Já sabe o id?
+          {t('diff.idLabel')}
         </label>
         <input
           id="diff-pr-id"
           className={styles.input}
           value={idDigitado}
           onChange={(e) => setIdDigitado(e.target.value)}
-          placeholder="ex.: 218, ou o id do provider"
+          placeholder={t('diff.idPlaceholder')}
         />
         <button type="submit" className={styles.botao}>
-          Ver diff
+          {t('diff.viewDiffButton')}
         </button>
       </form>
     </div>
@@ -245,14 +247,15 @@ export function PrListAndDiff({ projectId, renderItemExtra }: PrListAndDiffProps
 }
 
 function ConteudoDoPatch({ arquivo }: { arquivo: CodeDiffFile }) {
+  const { t } = useTranslation('code');
   // `null` é "o provider não entregou o texto" (binário, ou patch grande
   // demais) — distinto de `''`, que é "veio vazio" de verdade. Tratar os
   // dois igual faria a tela dizer "sem mudanças" num binário alterado.
   if (arquivo.patch === null) {
-    return <div className={styles.semTexto}>Sem texto de diff disponível para este arquivo.</div>;
+    return <div className={styles.semTexto}>{t('diff.noPatchText')}</div>;
   }
   if (arquivo.patch === '') {
-    return <div className={styles.semTexto}>Diff sem conteúdo de texto (ex.: só mudança de modo).</div>;
+    return <div className={styles.semTexto}>{t('diff.emptyPatchText')}</div>;
   }
   return (
     <pre className={styles.patch}>

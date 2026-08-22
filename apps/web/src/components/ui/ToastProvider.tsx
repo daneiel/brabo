@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { XIcon } from './icons';
 import styles from './Toast.module.css';
 
@@ -34,6 +35,7 @@ const TONE_VAR: Record<ToastTone, string> = {
 let nextId = 1;
 
 export function ToastProvider({ children }: { children: ReactNode }) {
+  const { t } = useTranslation('ui');
   const [toasts, setToasts] = useState<ToastEntry[]>([]);
 
   const dismiss = useCallback((id: number) => {
@@ -70,7 +72,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               type="button"
               className={styles.close}
               onClick={() => dismiss(toast.id)}
-              aria-label="Fechar notificação"
+              aria-label={t('toast.closeLabel')}
             >
               <XIcon size={13} />
             </button>

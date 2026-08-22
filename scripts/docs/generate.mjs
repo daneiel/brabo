@@ -581,8 +581,12 @@ function verificarContagensDeAdr() {
       oque: 'o próximo número de ADR',
     },
     {
+      // `docs/architecture.md` já foi traduzido pra inglês (Onda 6b) — a
+      // frase virou "— N of them", não mais "— N deles". `\s+` entre
+      // "of"/"them" porque o Markdown prosa dá wrap de linha aqui — "deles"
+      // era uma palavra só e nunca precisou disso.
       arquivo: 'docs/architecture.md',
-      padrao: /\[ADRs\]\([^)]*\) — (\d+) deles/,
+      padrao: /\[ADRs\]\([^)]*\) — (\d+) of\s+them/,
       esperado: total,
       oque: 'a contagem de ADRs',
     },
@@ -662,11 +666,12 @@ function verificarVersaoAnunciada() {
     },
     {
       // A primeira página do site publicado. O padrão exige a frase INTEIRA
-      // ("Fases 1 a NN concluídas**, versão **vX.Y.Z**") de propósito: as duas
-      // metades envelhecem juntas, e casar só a versão deixaria a contagem de
-      // fases mentindo do lado dela sem nada reprovar.
+      // ("Phases 1 through NN complete**, version **vX.Y.Z**") de propósito:
+      // as duas metades envelhecem juntas, e casar só a versão deixaria a
+      // contagem de fases mentindo do lado dela sem nada reprovar. Traduzido
+      // pra inglês na Onda 6b — a frase pt-BR virou a versão em inglês.
       arquivo: 'docs/intro.md',
-      padrao: /\*\*Fases 1 a \d+ concluídas\*\*, versão \*\*v(\d+\.\d+\.\d+)\*\*/,
+      padrao: /\*\*Phases 1 through \d+ complete\*\*, version \*\*v(\d+\.\d+\.\d+)\*\*/,
     },
   ];
 

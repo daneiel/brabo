@@ -1,0 +1,59 @@
+{
+  "statusLabel": {
+    "draft": "draft",
+    "ready": "ready",
+    "inProgress": "in progress",
+    "done": "done"
+  },
+  "sectionLabel": {
+    "backlog": "Backlog",
+    "traceability": "Traceability",
+    "promotionQueue": "Awaiting your promotion"
+  },
+  "empty": {
+    "epics": "No epics yet. Accept the Creative agent's handoff in a session for the PO to generate the backlog.",
+    "rules": "No business rules yet."
+  },
+  "coverage": {
+    "uncoveredBadge": "{{count}} uncovered",
+    "coveredBy": "covered by {{count}} story(ies)",
+    "uncovered": "uncovered — no story"
+  },
+  "ruleRefs": "{{count}} linked business rule(s)",
+  "promotionQueue": {
+    "hint": "The PO finished these stories and they're complete. Until you promote them, none of their tasks can be picked up by a dev agent.",
+    "selectedCount": "{{count}} selected",
+    "promoteSelected": "Promote selected",
+    "selectAria": "Select {{title}}",
+    "taskRefsSuffix": " · {{count}} task(s) become pickable",
+    "promote": "Promote",
+    "reject": "Reject",
+    "returnModalTitle": "Return \"{{title}}\" to the PO?",
+    "reasonLabel": "Reason",
+    "reasonHint": "Goes as a pinned message in the PO's session. Say what's missing — that's what they'll use to rewrite the story.",
+    "reasonPlaceholder": "E.g.: the acceptance criteria don't cover payment rejection.",
+    "returnConfirm": "Return to PO",
+    "cancel": "Cancel",
+    "toast": {
+      "promoted": "{{count}} story(ies) promoted",
+      "partial": "{{promoted}} promoted, {{failed}} rejected by the domain",
+      "promoteError": "Could not promote",
+      "returnedSuccess": "Story returned to the PO",
+      "returnError": "Could not return"
+    }
+  },
+  "epicNode": {
+    "storyCount": "{{count}} story(ies)"
+  },
+  "storyNode": {
+    "awaitingYou": "awaiting you",
+    "returned": "returned",
+    "youReturned": "You returned to the PO:"
+  },
+  "fieldLabels": {
+    "rf": "RF",
+    "rnf": "RNF",
+    "dor": "DoR",
+    "dod": "DoD"
+  }
+}

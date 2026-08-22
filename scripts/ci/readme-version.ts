@@ -36,12 +36,13 @@ const ARQUIVOS = ['README.md', 'docs/intro.md'];
  * `verificarVersaoAnunciada`: são os dois lados do mesmo contrato, e se
  * divergirem um escreve o que o outro não encontra.
  *
- * Um padrão só serve para os dois arquivos porque a frase é a mesma — o
- * `docs/intro.md` a envolve em "Fases 1 a NN concluídas", que o check exige
- * inteira, mas cuja contagem NÃO é gerável daqui: o release conhece a versão,
- * não a fase.
+ * `docs/intro.md` foi traduzido pra inglês (Onda 6b) e o README não — "versão"
+ * virou "version" só num dos dois arquivos. O grupo 1 captura qual PALAVRA
+ * casou para a troca devolver a mesma, em vez de fixar "versão" e quebrar
+ * silenciosamente o arquivo em inglês (ou vice-versa, se o README também for
+ * traduzido depois).
  */
-const PADRAO = /versão \*\*v(\d+\.\d+\.\d+)\*\*/;
+const PADRAO = /(versão|version) \*\*v(\d+\.\d+\.\d+)\*\*/;
 
 export interface Troca {
   texto: string;

@@ -1,155 +1,170 @@
-# 0048 — A decisão no event log, e a ordem do gate
+# 0048 — The decision in the event log, and the gate's ordering
 
-## Contexto
+## Context
 
-Dois achados do dogfooding que a Fase 12 tinha deixado registrados e não
-corrigidos. Revisitados juntos porque são a mesma classe de defeito: **um fato
-importante acontecia e não ficava escrito em lugar nenhum que servisse de
-memória.**
+Two dogfooding findings that Phase 12 had left recorded and unfixed.
+Revisited together because they're the same class of defect: **an
+important fact happened and wasn't written anywhere that served as
+memory.**
 
-### Achado #17 — a decisão de uma ação não existia no log
+### Finding #17 — an action's decision didn't exist in the log
 
-`proposed_action.created`, `.approved` e `.denied` iam **só para o outbox**.
-O outbox é transporte: é drenado, marcado com `processed_at` e podado. A
-decisão sobrevivia apenas em `proposed_actions.decided_at`, uma coluna que diz
-QUANDO mas não aparece na linha do tempo que a UI, o Psicólogo e a Anamnese
-leem.
+`proposed_action.created`, `.approved` and `.denied` only went **to the
+outbox**. The outbox is transport: it gets drained, marked with
+`processed_at` and pruned. The decision only survived in
+`proposed_actions.decided_at`, a column that says WHEN but doesn't show
+up in the timeline the UI, the Psychologist and the Anamnese read.
 
-Duas consequências, e a segunda só ficou visível ao escrever este ADR:
+Two consequences, and the second one only became visible while writing
+this ADR:
 
-1. **A métrica principal da Fase 10 não pôde ser colhida.** "Cliques de
-   aprovação" era a coluna central da tabela de observação do dogfooding, e não
-   havia consulta que a produzisse.
-2. **`docs/reference/events.md` documentava os três como eventos de domínio
-   desde sempre.** A doc prometia o que o código não fazia — o pior tipo de
-   erro de documentação, porque quem lê não tem como desconfiar.
+1. **Phase 10's main metric couldn't be collected.** "Approval clicks"
+   was the central column of the dogfooding observation table, and
+   there was no query that could produce it.
+2. **`docs/reference/events.md` had documented all three as domain
+   events all along.** The doc promised what the code didn't do — the
+   worst kind of documentation error, because the reader has no way to
+   suspect it.
 
-### O D5, e o defeito que estava embaixo dele
+### D5, and the defect underneath it
 
-O [ADR 0045](0045-reagendamento-por-evento-do-dev-agent.md) registrou o D5 como
-limite conhecido: com a autonomia do dev em `require_approval`, o agente
-reciclava o worktree e a aprovação pendente executava contra um caminho que não
-existia mais. Previu que a correção certa seria "worktree por task".
+[ADR 0045](0045-reagendamento-por-evento-do-dev-agent.md) recorded D5
+as a known limit: with the dev's autonomy set to `require_approval`,
+the agent recycled the worktree and the pending approval ran against a
+path that no longer existed. It predicted the right fix would be
+"worktree per task."
 
-Ao investigar para corrigir, o quadro era outro e pior:
+While investigating to fix it, the picture was different and worse:
 
-**`AgentIo.propose/3` descartava o status da ação** (`{:ok, _action} -> :ok`).
-O agente propunha commit, push e PR e chamava `open_gate` + `run_qa`
-**incondicionalmente**, sem saber se alguma coisa tinha executado. Com
-autonomia manual:
+**`AgentIo.propose/3` discarded the action's status** (`{:ok, _action} -> :ok`).
+The agent would propose commit, push and PR and call `open_gate` +
+`run_qa` **unconditionally**, with no idea whether anything had
+actually executed. With manual autonomy:
 
-1. as três ações nascem `pending`;
-2. o gate abre assim mesmo, e o QA varre o **worktree** — onde os arquivos
-   estão — e aprova;
-3. o SecOps aprova, a task vira `done`;
-4. `task.gate_resolved` libera o agente, que reivindica a próxima e apaga o
-   worktree;
-5. o usuário aprova o commit, e `git add -A` roda num diretório que sumiu.
+1. the three actions are born `pending`;
+2. the gate opens anyway, and QA scans the **worktree** — where the
+   files are — and approves;
+3. SecOps approves, the task becomes `done`;
+4. `task.gate_resolved` frees the agent, which claims the next task and
+   deletes the worktree;
+5. the user approves the commit, and `git add -A` runs in a directory
+   that's gone.
 
-O passo 5 devolve `{"", 2}` — `System.cmd` com `cd` inexistente não levanta
-exceção —, e `git/2` transforma isso em `{:error, ""}`: a ação falha com
-**diagnóstico vazio**.
+Step 5 returns `{"", 2}` — `System.cmd` with a nonexistent `cd` doesn't
+raise an exception — and `git/2` turns that into `{:error, ""}`: the
+action fails with an **empty diagnosis**.
 
-O dano real não é a aprovação falhar. É a **task fechar como concluída sem uma
-linha commitada e sem PR nenhuma**. E isso não exigia configuração exótica: o
-toggle do painel expõe `require_approval` para `dev-*`.
+The real damage isn't the approval failing. It's the **task closing as
+done with no line committed and no PR at all**. And it didn't require
+exotic configuration: the panel's toggle exposes `require_approval` for
+`dev-*`.
 
-## Decisão
+## Decision
 
-### A decisão de ação vira evento de domínio, com o ator real
+### The action's decision becomes a domain event, with the real actor
 
-`proposed_action.created` (ator = o agente que propôs), `.approved` e `.denied`
-(ator = o **usuário** que decidiu) passam a ser gravados em `session_events`,
-ao lado das linhas de outbox que já existiam. O outbox continua sendo
-transporte; o log passa a ser memória.
+`proposed_action.created` (actor = the agent that proposed it),
+`.approved` and `.denied` (actor = the **user** who decided) start
+being recorded in `session_events`, alongside the outbox lines that
+already existed. The outbox stays as transport; the log becomes memory.
 
-O payload de `.created` carrega o `status` resultante, e é isso que torna a
-auto-aprovação **auditável**: contar eventos `.approved` conta decisão HUMANA;
-a política decidindo sozinha aparece em `.created` com `status: auto_approved`
-e ator agente, e nunca é confundida com um clique. Era exatamente essa
-distinção que faltava para a métrica da Fase 10.
+The `.created` payload carries the resulting `status`, and that's what
+makes auto-approval **auditable**: counting `.approved` events counts
+HUMAN decisions; the policy deciding on its own shows up in `.created`
+with `status: auto_approved` and an agent actor, and is never confused
+with a click. That distinction was exactly what was missing for Phase
+10's metric.
 
-`approve_always` entra de graça: ele delega ao `ApproveActionUseCase`.
+`approve_always` gets it for free: it delegates to
+`ApproveActionUseCase`.
 
-Ficou de fora, deliberadamente, o `proposed_action.created` que
-`provision-repository` e `bootstrap-runner` emitem direto no outbox: aquelas
-ações são mutações do bootstrap, já narradas por `bootstrap.step_*` na mesma
-sessão, e duplicá-las contaria o mesmo fato duas vezes numa métrica de
-aprovação.
+Left out, deliberately, is the `proposed_action.created` that
+`provision-repository` and `bootstrap-runner` emit directly to the
+outbox: those actions are bootstrap mutations, already narrated by
+`bootstrap.step_*` in the same session, and duplicating them would
+count the same fact twice in an approval metric.
 
-### O gate só abre depois que a PR abre
+### The gate only opens after the PR opens
 
-`AgentIo.propose/3` passa a devolver `:executed | :pending | :refused`. O
-agente lê os três desfechos e:
+`AgentIo.propose/3` now returns `:executed | :pending | :refused`. The
+agent reads the three outcomes and:
 
-- **todos executados** (autonomia `auto_approve`, o default que a ativação
-  semeia) — abre o gate, como sempre;
-- **algum pendente** — entra em `:awaiting_approval`, **retendo o worktree**, e
-  não abre gate nenhum. Sem PR não há o que julgar.
+- **everything executed** (`auto_approve` autonomy, the default
+  activation seeds) — opens the gate, as always;
+- **something pending** — enters `:awaiting_approval`, **retaining the
+  worktree**, and opens no gate. With no PR, there's nothing to judge.
 
-Quem solta o agente é `task.pr_settled`, emitido pela api quando o `pr_open`
-tem desfecho — executado, negado ou falho. `opened: true` abre o gate, tarde e
-correto; `opened: false` devolve a task com diagnóstico em vez de deixar o
-agente esperando para sempre por um gate que ninguém vai abrir.
+What releases the agent is `task.pr_settled`, emitted by the api when
+`pr_open` reaches an outcome — executed, denied or failed. `opened:
+true` opens the gate, late but correct; `opened: false` returns the
+task with a diagnosis instead of leaving the agent waiting forever for
+a gate nobody is going to open.
 
-Três coisas tornaram isso barato:
+Three things made this cheap:
 
-- **`propose_pr` já carregava `storyTaskId` no payload**, então a api sabe
-  exatamente qual task a PR abriu, sem tabela nova nem join.
-- **`aggregateType: 'task'` já é drenado** pelo `Engine.Outbox.Drain` desde a
-  Fase 12b — nenhum tipo novo de agregado, nenhum worker novo, só uma cláusula
-  no `DevAgentWakeWorker`.
-- **`dev_agent_states.status` é `:string`**, não enum — o estado novo não pediu
-  migração.
+- **`propose_pr` already carried `storyTaskId` in its payload**, so the
+  api knows exactly which task the PR opened for, with no new table or
+  join.
+- **`aggregateType: 'task'` is already drained** by
+  `Engine.Outbox.Drain` since Phase 12b — no new aggregate type, no new
+  worker, just one more clause in `DevAgentWakeWorker`.
+- **`dev_agent_states.status` is a `:string`**, not an enum — the new
+  state didn't require a migration.
 
-Uma PR negada **não conta para o circuit breaker**. A decisão foi do usuário; o
-agente não queimou teto nenhum. É o mesmo princípio que já valia para a
-recuperação de restart (RN-047).
+A denied PR **doesn't count against the circuit breaker.** The decision
+was the user's; the agent didn't burn any cap. It's the same principle
+that already applied to restart recovery (RN-047).
 
-### Por que NÃO worktree por task
+### Why NOT worktree per task
 
-O ADR 0045 previu worktree-por-task como a correção do D5. A previsão **não foi
-cumprida, e o motivo é que ela consertava o sintoma errado**: worktree por task
-impede o diretório de sumir, mas o gate continuaria julgando uma PR que não
-existe, e a task continuaria fechando sem commit. O defeito não era o
-apagamento — era o gate abrir cedo demais.
+ADR 0045 predicted worktree-per-task as D5's fix. That prediction
+**wasn't fulfilled, and the reason is it was treating the wrong
+symptom**: worktree per task keeps the directory from disappearing, but
+the gate would still be judging a PR that doesn't exist, and the task
+would still close with no commit. The defect wasn't the deletion — it
+was the gate opening too early.
 
-Com a ordem corrigida, o D5 morre por consequência: o worktree só é reciclado
-em `gate_resolved`, o gate só abre depois que a PR abriu, e a PR só abre depois
-que commit e push executaram. **Nenhuma ação pendente sobrevive ao próprio
-worktree**, sem mexer na estrutura de diretórios, sem crescimento de disco e
-sem política de limpeza nova.
+With the order fixed, D5 dies as a consequence: the worktree is only
+recycled on `gate_resolved`, the gate only opens after the PR has
+opened, and the PR only opens after commit and push have executed.
+**No pending action outlives its own worktree**, with no change to the
+directory structure, no disk growth and no new cleanup policy.
 
-## Consequências
+## Consequences
 
-`docs/reference/events.md` deixa de mentir sobre três tipos de evento — e o
-gerador, que compara a prosa com os pontos de emissão, agora encontra os três
-de verdade.
+`docs/reference/events.md` stops lying about three event types — and
+the generator, which compares the prose against the emission points,
+now actually finds all three.
 
-A métrica que a Fase 10 perdeu passa a existir. Um próximo dogfooding consegue
-responder "quantas vezes o humano decidiu" com uma consulta, e não com
-anotação ao vivo — que foi exatamente o que se perdeu por não ter sido feita
-(ver [a colheita](../explanation/primeiro-dogfooding.md)).
+The metric Phase 10 lost now exists. A future dogfooding can answer
+"how many times did the human decide" with a query, instead of live
+note-taking — which is exactly what got lost by not being done (see
+[the harvest](../explanation/primeiro-dogfooding.md)).
 
-O volume de `session_events` cresce: toda ação proposta gera um evento a mais.
-São ações que já eram narradas em execução (`action.executed`/`action.failed`);
-o que faltava era o começo e a decisão.
+`session_events` volume grows: every proposed action generates one more
+event. These are actions that were already narrated during execution
+(`action.executed`/`action.failed`); what was missing was the beginning
+and the decision.
 
-O default do fake de teste do engine mudou de `pending` para `auto_approved`.
-Não fazia diferença enquanto o status era descartado; a partir daqui faz, e
-`auto_approved` é o que a realidade produz — `ActivateExecutionUseCase` semeia
-`auto_approve` para as ações git de todo dev agent. Um default diferente do de
-produção mandaria a suite inteira pelo caminho da aprovação manual.
+The engine test fake's default changed from `pending` to
+`auto_approved`. It made no difference while the status was discarded;
+from here on it does, and `auto_approved` is what reality produces —
+`ActivateExecutionUseCase` seeds `auto_approve` for every dev agent's
+git actions. A default different from production would send the whole
+suite down the manual-approval path.
 
-Fica para depois, como backlog:
+Left for later, as backlog:
 
-- **Worktree por task**, se um dia aparecer um caso em que a aprovação demora o
-  bastante para o worktree incomodar por outro motivo. Deixou de ser correção
-  de defeito e passou a ser escolha de arquitetura.
-- **`git/2` com diagnóstico vazio.** `System.cmd` com `cd` inexistente devolve
-  `{"", 2}`, e isso vira `{:error, ""}` em qualquer falha de diretório, não só
-  nesta. A causa raiz desta ficou fechada, então a mensagem vazia deixou de ter
-  gatilho conhecido — mas o buraco de diagnóstico continua lá.
-- **Ações pendentes de tipos que não são `pr_open`.** O interlock cobre o
-  caminho do dev agent, que é onde o dano era concreto. Um `terminal` pendente
-  ainda não bloqueia nada, e não precisava.
+- **Worktree per task**, if a case ever shows up where the approval
+  takes long enough for the worktree to become a problem for another
+  reason. It stopped being a defect fix and became an architecture
+  choice.
+- **`git/2` with an empty diagnosis.** `System.cmd` with a nonexistent
+  `cd` returns `{"", 2}`, and that turns into `{:error, ""}` on any
+  directory failure, not just this one. This one's root cause is now
+  closed, so the empty message no longer has a known trigger — but the
+  diagnosis gap is still there.
+- **Pending actions of types other than `pr_open`.** The interlock
+  covers the dev agent's path, which is where the damage was concrete.
+  A pending `terminal` still doesn't block anything, and it didn't need
+  to.

@@ -1,0 +1,65 @@
+{
+  "sidebar": {
+    "theme": {
+      "light": "Tema claro",
+      "dark": "Tema escuro"
+    },
+    "brand": {
+      "dashboardLink": "Ir para o dashboard"
+    },
+    "nav": {
+      "trilhaAriaLabel": "Projetos e atividades",
+      "projectsLabel": "Projetos",
+      "newProject": "Novo projeto"
+    },
+    "projects": {
+      "loadError": "Não foi possível carregar os projetos.",
+      "retry": "tentar de novo",
+      "expand": "Expandir {{name}}",
+      "collapse": "Recolher {{name}}"
+    },
+    "activities": {
+      "label": "Atividades",
+      "openProjectHint": "Abra um projeto para ver as atividades dos agentes.",
+      "empty": "Nenhum agente entrou em ação ainda.",
+      "noMarksYet": "sem marcos ainda",
+      "instancesCount_one": "{{count}} instância",
+      "instancesCount_other": "{{count}} instâncias"
+    },
+    "collapseButton": {
+      "autoCollapsed": "Recolhida automaticamente nesta aba",
+      "expand": "Expandir menu",
+      "collapse": "Recolher menu"
+    },
+    "footer": {
+      "accountFallback": "conta",
+      "logout": "sair"
+    }
+  },
+  "notificationBell": {
+    "label": "Notificações",
+    "markRead": {
+      "default": "marcar lidas",
+      "withCount": "marcar as {{total}} como lidas"
+    },
+    "windowNote_one": "Mostrando os mais recentes de cada projeto. {{count}} mais antigo não cabe aqui — abrir o projeto é o caminho para eles.",
+    "windowNote_other": "Mostrando os mais recentes de cada projeto. {{count}} mais antigos não cabem aqui — abrir o projeto é o caminho para eles.",
+    "empty": "Nenhuma notificação por aqui ainda.",
+    "older_one": "+ {{count}} mais antigo",
+    "older_other": "+ {{count}} mais antigos"
+  },
+  "tokenMeter": {
+    "unitTokens": "tokens",
+    "live": {
+      "indicator": "ao vivo",
+      "remaining": "falta {{value}}"
+    },
+    "overLimit": "{{pct}}% do limite mensal",
+    "savingsPct": "{{pct}}% de tokens poupados este ciclo",
+    "noBudgetCta": "Definir orçamento",
+    "compactFooter": {
+      "spent": "gasto {{value}}",
+      "balance": "saldo {{value}}"
+    }
+  }
+}

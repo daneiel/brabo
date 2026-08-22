@@ -1,9 +1,12 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterAll } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import type { PromoteStoriesResult, Session } from '../lib/api-types';
 import { historicoFalso } from '../test/historico-de-eventos';
+// Instância REAL do app: as asserções abaixo esperam texto em pt-BR, e `en`
+// é o idioma DEFAULT (mesmo padrão de ProjectExecutorsTab.test.tsx).
+import i18n from '../lib/i18n';
 
 /**
  * Carrossel de histórias no fio do PO (RN-148).
@@ -137,10 +140,15 @@ const TRES_PROPOSTAS = [
   proposta(3, 'story-3', 'Checkout com cartão'),
 ];
 
-beforeEach(() => {
+beforeEach(async () => {
   vi.clearAllMocks();
+  await i18n.changeLanguage('pt-BR');
   eventos.mockReturnValue({ items: [] });
   getSession.mockResolvedValue(sessao());
+});
+
+afterAll(() => {
+  void i18n.changeLanguage('en');
 });
 
 describe('SessionPage — carrossel de histórias (RN-148)', () => {

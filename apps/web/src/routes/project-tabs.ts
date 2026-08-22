@@ -1,4 +1,5 @@
 import type { ComponentType } from 'react';
+import i18n from '../lib/i18n';
 import { ProjectOverviewTab } from './ProjectOverviewTab';
 import { ProjectCriativoTab } from './ProjectSessionsTab';
 import { ProjectChatShell } from './ProjectChatShell';
@@ -82,6 +83,14 @@ export interface ContagensDeAba {
 export interface AbaDoProjeto {
   /** O valor que aparece em `?tab=` e o que a régua usa como identidade. */
   key: string;
+  /**
+   * `REGISTRO`, abaixo, preenche isto com um GETTER (`get label()`), não um
+   * valor fixo — módulo não-React só é reavaliado uma vez, no import; um
+   * valor fixo congelaria a tradução no idioma vigente no boot. O getter
+   * resolve via `i18n.t()` a cada ACESSO (mesmo padrão de
+   * `lib/session-kind.ts`), então o consumidor acompanha a troca de idioma
+   * sem precisar de `useTranslation` aqui, que não é componente React.
+   */
   label: string;
   /** O painel. Toda aba recebe o mesmo e único prop. */
   component: ComponentType<{ projectId: string }>;
@@ -129,7 +138,9 @@ export interface AbaDoProjeto {
 const REGISTRO = [
   {
     key: 'overview',
-    label: 'Visão geral',
+    get label() {
+      return i18n.t('tabs.overview.label', { ns: 'nav' });
+    },
     component: ProjectOverviewTab,
     semRespiro: true,
     ordem: 10,
@@ -140,19 +151,35 @@ const REGISTRO = [
   // ver `ProjectChatShell.tsx`) e as hipóteses do Psicólogo (Insights).
   {
     key: 'executores',
-    label: 'Executores',
+    get label() {
+      return i18n.t('tabs.executors.label', { ns: 'nav' });
+    },
     component: ProjectExecutorsTab,
     ordem: 21,
-    grupo: { chave: 'agentes', label: 'Agentes', ordem: 20 },
+    grupo: {
+      chave: 'agentes',
+      get label() {
+        return i18n.t('groups.agentes.label', { ns: 'nav' });
+      },
+      ordem: 20,
+    },
   },
   // Criativo vem antes de Chat pelo mesmo motivo que `KIND_PRE_SELECIONADO` é
   // `criativa`: é o caminho que produz, e o outro é o de tirar dúvidas.
   {
     key: 'criativo',
-    label: 'Criativo',
+    get label() {
+      return i18n.t('tabs.criativo.label', { ns: 'nav' });
+    },
     component: ProjectCriativoTab,
     ordem: 22,
-    grupo: { chave: 'agentes', label: 'Agentes', ordem: 20 },
+    grupo: {
+      chave: 'agentes',
+      get label() {
+        return i18n.t('groups.agentes.label', { ns: 'nav' });
+      },
+      ordem: 20,
+    },
   },
   {
     // A CHAVE virou `chat` nesta onda — antes era `sessions` (o rótulo já
@@ -171,18 +198,34 @@ const REGISTRO = [
     // "?tab= só vale como deep-link inicial" que o resto do registro já
     // segue).
     key: 'chat',
-    label: 'Chat',
+    get label() {
+      return i18n.t('tabs.chat.label', { ns: 'nav' });
+    },
     component: ProjectChatShell,
     ordem: 23,
-    grupo: { chave: 'agentes', label: 'Agentes', ordem: 20 },
+    grupo: {
+      chave: 'agentes',
+      get label() {
+        return i18n.t('groups.agentes.label', { ns: 'nav' });
+      },
+      ordem: 20,
+    },
   },
   {
     key: 'insights',
-    label: 'Insights',
+    get label() {
+      return i18n.t('tabs.insights.label', { ns: 'nav' });
+    },
     component: ProjectInsightsTab,
     count: (c: ContagensDeAba) => c.hipotesesPendentes || undefined,
     ordem: 24,
-    grupo: { chave: 'agentes', label: 'Agentes', ordem: 20 },
+    grupo: {
+      chave: 'agentes',
+      get label() {
+        return i18n.t('groups.agentes.label', { ns: 'nav' });
+      },
+      ordem: 20,
+    },
   },
   // Grupo "Dev" — o que sai do trabalho de desenvolvimento: código
   // (só leitura, FASE 26), PRs (Onda 2 — listagem project-wide + merge) e as
@@ -192,30 +235,54 @@ const REGISTRO = [
     // "Código", e nenhum outro ponto compara pela STRING do rótulo — a chave
     // de deep-link e de registro continua `code` (ADR 0078).
     key: 'code',
-    label: 'Código',
+    get label() {
+      return i18n.t('tabs.code.label', { ns: 'nav' });
+    },
     component: ProjectCodeTab,
     semRespiro: true,
     ordem: 31,
-    grupo: { chave: 'dev', label: 'Dev', ordem: 30 },
+    grupo: {
+      chave: 'dev',
+      get label() {
+        return i18n.t('groups.dev.label', { ns: 'nav' });
+      },
+      ordem: 30,
+    },
   },
   {
     // Onda 2 do programa de abas agrupadas: listagem de PRs do PROJETO
     // inteiro (direto do provider de git, não escopada a sessão nenhuma —
     // ver `ProjectPrsTab.tsx`) com merge propondo `git_merge` inline.
     key: 'prs',
-    label: 'PRs',
+    get label() {
+      return i18n.t('tabs.prs.label', { ns: 'nav' });
+    },
     component: ProjectPrsTab,
     count: (c: ContagensDeAba) => c.prsPendentes || undefined,
     ordem: 32,
-    grupo: { chave: 'dev', label: 'Dev', ordem: 30 },
+    grupo: {
+      chave: 'dev',
+      get label() {
+        return i18n.t('groups.dev.label', { ns: 'nav' });
+      },
+      ordem: 30,
+    },
   },
   {
     key: 'approvals',
-    label: 'Aprovações',
+    get label() {
+      return i18n.t('tabs.approvals.label', { ns: 'nav' });
+    },
     component: ProjectApprovalsTab,
     count: (c: ContagensDeAba) => c.aprovacoesPendentes || undefined,
     ordem: 33,
-    grupo: { chave: 'dev', label: 'Dev', ordem: 30 },
+    grupo: {
+      chave: 'dev',
+      get label() {
+        return i18n.t('groups.dev.label', { ns: 'nav' });
+      },
+      ordem: 30,
+    },
   },
   // Grupo "Documentação" — o que registra intenção e conhecimento do
   // produto: Backlog (histórias/épicos) e Arquitetura (Onda 3 — hoje
@@ -223,21 +290,37 @@ const REGISTRO = [
   // aterrissar, hoje espalhados pela Visão geral).
   {
     key: 'backlog',
-    label: 'Backlog',
+    get label() {
+      return i18n.t('tabs.backlog.label', { ns: 'nav' });
+    },
     component: ProjectBacklogTab,
     count: (c: ContagensDeAba) => c.promocoesPendentes || undefined,
     ordem: 41,
-    grupo: { chave: 'documentacao', label: 'Documentação', ordem: 40 },
+    grupo: {
+      chave: 'documentacao',
+      get label() {
+        return i18n.t('groups.documentacao.label', { ns: 'nav' });
+      },
+      ordem: 40,
+    },
   },
   {
     // Placeholder da Onda 1 — ver comentário de `prs` acima; mesma razão.
     // TODO: substituído pela Onda 3 do programa (abas agrupadas).
     key: 'arquitetura',
-    label: 'Arquitetura',
+    get label() {
+      return i18n.t('tabs.architecture.label', { ns: 'nav' });
+    },
     component: ProjectArchitectureTab,
     count: (c: ContagensDeAba) => c.arquiteturaPendente || undefined,
     ordem: 42,
-    grupo: { chave: 'documentacao', label: 'Documentação', ordem: 40 },
+    grupo: {
+      chave: 'documentacao',
+      get label() {
+        return i18n.t('groups.documentacao.label', { ns: 'nav' });
+      },
+      ordem: 40,
+    },
   },
   // FASE 22 — o mesmo gasto para duas audiências (ADR 0063): o owner vê a
   // conta do workspace, o membro vê o que ele consumiu. Antes de Configurações
@@ -245,13 +328,17 @@ const REGISTRO = [
   // documentação, e não vale abrir grupo de uma aba só.
   {
     key: 'spend',
-    label: 'Gastos',
+    get label() {
+      return i18n.t('tabs.spend.label', { ns: 'nav' });
+    },
     component: ProjectSpendTab,
     ordem: 55,
   },
   {
     key: 'settings',
-    label: 'Configurações',
+    get label() {
+      return i18n.t('tabs.settings.label', { ns: 'nav' });
+    },
     component: ProjectSettingsTab,
     ordem: 60,
   },
@@ -355,7 +442,7 @@ function agruparRegistro(
 ): readonly ItemDaReguaDoProjeto[] {
   const grupos = new Map<
     string,
-    { label: string; ordem: number; abas: AbaDoProjeto[] }
+    { grupo: NonNullable<AbaDoProjeto['grupo']>; abas: AbaDoProjeto[] }
   >();
   const soltas: AbaDoProjeto[] = [];
 
@@ -368,20 +455,23 @@ function agruparRegistro(
     if (existente) {
       existente.abas.push(aba);
     } else {
-      grupos.set(aba.grupo.chave, {
-        label: aba.grupo.label,
-        ordem: aba.grupo.ordem,
-        abas: [aba],
-      });
+      grupos.set(aba.grupo.chave, { grupo: aba.grupo, abas: [aba] });
     }
   }
 
+  // `label` continua GETTER até aqui — copiar `g.grupo.label` pra um campo
+  // fixo congelaria a tradução no idioma vigente na única vez em que
+  // `GRUPOS_DO_PROJETO` é avaliado (módulo não-React, import único). Manter
+  // a referência a `g.grupo` (o mesmo objeto de `REGISTRO`) é o que faz o
+  // grupo acompanhar troca de idioma, igual toda aba já fazia.
   const itensDeGrupo: ItemDaReguaDoProjeto[] = [...grupos.entries()].map(
     ([chave, g]) => ({
       tipo: 'grupo',
       chave,
-      label: g.label,
-      ordem: g.ordem,
+      get label() {
+        return g.grupo.label;
+      },
+      ordem: g.grupo.ordem,
       abas: [...g.abas].sort((a, b) => a.ordem - b.ordem),
     }),
   );

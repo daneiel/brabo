@@ -1,82 +1,85 @@
-# ADR 0102 — Revisão do ADR 0065: a fronteira de efeito externo deixa de ser `deny` e vira teto absoluto
+# ADR 0102 — Revision of ADR 0065: the external-effect boundary stops being `deny` and becomes an absolute ceiling
 
-- **Status:** Aceito
-- **Data:** 2026-08-20
-- **Contexto:** decisão GLOBAL do dono do produto sobre a política de
-  git/sudo, RN-418 (revisa RN-106)
-- **Revisa:** [ADR 0065](0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md)
+- **Status:** Accepted
+- **Date:** 2026-08-20
+- **Context:** GLOBAL decision by the product owner on git/sudo
+  policy, RN-418 (revises RN-106)
+- **Revises:** [ADR 0065](0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md)
 
-## Contexto
+## Context
 
-O [ADR 0065](0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md) decidiu, à época, que
-`git push`, abertura de PR e deploy nunca saem pelo terminal — a regra
-era `deny` incondicional, aplicada ANTES de qualquer estágio permissivo
-em `decide()`, com a mensagem redirecionando pra ação TIPADA
-(`git_push`/`git_merge`/`pr_open`). A razão declarada do `deny` (em vez
-de `require_approval`) era concreta: existia "sempre permitir", e um
-clique gravaria o padrão em `allow` no `permissions.json`, abrindo a
-porta pra sempre — negar de saída era a única forma de garantir que a
-porta nunca abrisse.
+[ADR 0065](0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md) decided, at the time, that
+`git push`, opening a PR, and deploy never go through the terminal —
+the rule was unconditional `deny`, applied BEFORE any permissive stage
+in `decide()`, with the message redirecting to the TYPED action
+(`git_push`/`git_merge`/`pr_open`). The declared reason for `deny`
+(instead of `require_approval`) was concrete: "always allow" existed,
+and one click would write the pattern to `allow` in
+`permissions.json`, opening the door for good — denying outright was
+the only way to guarantee the door never opened.
 
-O dono do produto pediu, de forma EXPLÍCITA e GLOBAL, uma mudança de
-semântica: `sudo`/`doas` e comando de terminal com efeito externo git
-devem SEMPRE pedir autorização humana — nunca auto-aprováveis, mesmo com
-"modo automático" ligado — e qualquer OUTRO comando deve auto-aprovar
-quando o modo automático estiver ligado. Isso é diferente de `deny`: é
-"sempre vira `proposed_action` pendente, decidida caso a caso", não
-"sempre recusado sem virar nada".
+The product owner asked, EXPLICITLY and GLOBALLY, for a semantic
+change: `sudo`/`doas` and terminal commands with a git external effect
+must ALWAYS request human authorization — never auto-approvable, even
+with "automatic mode" on — and any OTHER command should auto-approve
+when automatic mode is on. That's different from `deny`: it's "always
+becomes a pending `proposed_action`, decided case by case," not
+"always refused without becoming anything."
 
-Um sistema automático de segurança sinalizou esta mudança durante a
-implementação (a alteração de uma regra que o próprio CLAUDE.md descrevia
-como `deny` absoluto merece escrutínio redobrado) — o dono do produto
-confirmou explicitamente, depois de revisar a mudança, que a decisão era
-essa mesmo.
+An automated security system flagged this change during implementation
+(altering a rule that CLAUDE.md itself described as an absolute
+`deny` deserves extra scrutiny) — the product owner explicitly
+confirmed, after reviewing the change, that this was indeed the
+intended decision.
 
-## Decisão
+## Decision
 
-`git push`/abertura de PR/deploy (RN-106, revisada) e `sudo`/`doas`
-(novo) saem do bloco de fronteira (que ficava logo após o IAM,
-retornando `deny`) e viram TETO ABSOLUTO — no MESMO bloco final onde já
-vivem os outros tetos (merge protegida, `instruction_patch`,
-`parallelize`/`raise_max_parallel`, escopo de caminho), no MESMO padrão
-de código (`current.policy === 'auto_approve'` → sobrescreve pra
-`require_approval`). Por construção, o teto vale mesmo que
-`agent_autonomy` diga `auto_approve` pro curinga `"*"`, e mesmo que
-`permissions.json` tenha uma entrada `allow` que casaria.
+`git push`/opening a PR/deploy (RN-106, revised) and `sudo`/`doas`
+(new) leave the boundary block (which used to sit right after IAM,
+returning `deny`) and become an ABSOLUTE CEILING — in the SAME final
+block where the other ceilings already live (protected-branch merge,
+`instruction_patch`, `parallelize`/`raise_max_parallel`, path scope),
+in the SAME code pattern (`current.policy === 'auto_approve'` →
+overridden to `require_approval`). By construction, the ceiling holds
+even if `agent_autonomy` says `auto_approve` for the wildcard `"*"`,
+and even if `permissions.json` has an `allow` entry that would match.
 
-**A fresta do "sempre permitir" foi fechada NA FONTE**, condição
-necessária pra este ADR ser seguro: `ApproveAlwaysActionUseCase`/
-`patternForAction` RECUSAM gravar padrão em `allow` pra ação de terminal
-com efeito externo git ou comando privilegiado. O usuário ainda pode
-aprovar a INSTÂNCIA específica pelo fluxo normal de aprovação — só o
-"sempre permitir" (que gravaria pra sempre) é recusado, com mensagem
-clara explicando por quê. Sem essa segunda metade, o teto absoluto vira
-decorativo — um clique bastaria pra reabrir a porta que ele diz fechar.
-É exatamente o argumento original do ADR 0065 pro `deny`, só que resolvido
-na origem em vez de bloqueando o sintoma.
+**The "always allow" gap was closed AT THE SOURCE**, a necessary
+condition for this ADR to be safe: `ApproveAlwaysActionUseCase`/
+`patternForAction` REFUSE to write an `allow` pattern for a terminal
+action with a git external effect or a privileged command. The user
+can still approve the specific INSTANCE through the normal approval
+flow — only "always allow" (which would write forever) is refused,
+with a clear message explaining why. Without this second half, the
+absolute ceiling becomes decorative — one click would be enough to
+reopen the door it claims to close. It's exactly ADR 0065's original
+argument for `deny`, just resolved at the origin instead of blocking
+the symptom.
 
-`sudo`/`doas` ganham categoria própria em `external-effect.ts`
-(`comandoPrivilegiadoNoComando`), casando por VERBO em qualquer segmento
-do comando (mesmo princípio de `efeitoExternoNoComando` pra git). Não têm
-ação tipada equivalente pra redirecionar — a mensagem só explica por que
-aquele comando pede decisão humana.
+`sudo`/`doas` get their own category in `external-effect.ts`
+(`comandoPrivilegiadoNoComando`), matching by VERB in any segment of
+the command (the same principle as `efeitoExternoNoComando` for git).
+They have no equivalent typed action to redirect to — the message just
+explains why that command asks for a human decision.
 
-## Consequências
+## Consequences
 
-- `require_approval` aqui não é "mais fraco" que `deny` no sentido de
-  "o agente consegue fazer sozinho" — em NENHUM dos dois estados o
-  comando executa sem uma decisão humana explícita. A diferença é
-  puramente de MECANISMO: antes, o caminho de terminal para git era
-  bloqueado e só a ação tipada (que já sempre exigia aprovação) existia;
-  agora, o próprio caminho de terminal também pode virar `proposed_action`
-  pendente, auditável no event log, decidida caso a caso — coerente com o
-  resto do produto, que prefere ação pendente e rastreável a recusa muda.
-- Esta é a QUARTA/QUINTA linha da régua de tetos absolutos que `decide()`
-  aplica incondicionalmente — CLAUDE.md e a documentação de convenções
-  precisam contar este teto junto dos demais a partir de agora.
-- O motor do runner local (ADR 0103) é o consumidor mais direto desta
-  mudança: sem ela, um `sudo` legítimo na máquina do usuário cairia no
-  `require_approval` genérico (sem garantia de nunca virar auto-aprovável
-  se `permissions.json`/auto mode um dia cobrissem esse verbo por
-  descuido) — o teto absoluto fecha esse risco por construção, não por
-  convenção.
+- `require_approval` here isn't "weaker" than `deny` in the sense of
+  "the agent can do it alone" — in NEITHER state does the command
+  execute without an explicit human decision. The difference is purely
+  one of MECHANISM: before, the terminal path to git was blocked and
+  only the typed action (which already always required approval)
+  existed; now, the terminal path itself can also become a pending
+  `proposed_action`, auditable in the event log, decided case by
+  case — consistent with the rest of the product, which prefers a
+  pending, traceable action over a silent refusal.
+- This is the FOURTH/FIFTH line of the absolute-ceiling ruler that
+  `decide()` applies unconditionally — CLAUDE.md and the conventions
+  documentation need to count this ceiling alongside the others from
+  now on.
+- The local runner's engine (ADR 0103) is the most direct consumer of
+  this change: without it, a legitimate `sudo` on the user's own
+  machine would fall into the generic `require_approval` (with no
+  guarantee of never becoming auto-approvable if `permissions.json`/
+  auto mode ever covered that verb by accident) — the absolute ceiling
+  closes that risk by construction, not by convention.

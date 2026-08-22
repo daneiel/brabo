@@ -1,75 +1,77 @@
-# ADR 0100 — `rag_search` para agentes e modelos Ollama garantidos no boot
+# ADR 0100 — `rag_search` for agents and Ollama models guaranteed at boot
 
-- **Status:** Aceito
-- **Data:** 2026-08-20
-- **Contexto:** fundação do grafo de conhecimento (RN-413/414/415),
-  companheira do [ADR 0099](0099-neo4j-grafo-de-conhecimento-e-templates.md)
+- **Status:** Accepted
+- **Date:** 2026-08-20
+- **Context:** foundation of the knowledge graph (RN-413/414/415),
+  companion to [ADR 0099](0099-neo4j-grafo-de-conhecimento-e-templates.md)
 
-## Contexto
+## Context
 
-O RAG (pgvector, busca híbrida vetor+léxico, ADR 0079/0080/0082) existe
-por completo na api desde a Onda 4/frente G2 do Programa 28 — mas
-`grep -rn "rag" apps/engine/lib` dava ZERO ocorrências até esta entrega.
-**Nenhum agente jamais consultou o RAG do próprio projeto.** É o maior
-vão do desenho atual: o produto constrói um índice e só a aba web "Chat
-RAG" o lê.
+The RAG (pgvector, hybrid vector+lexical search, ADR 0079/0080/0082)
+has existed in full in the api since Program 28's Wave 4/front G2 —
+but `grep -rn "rag" apps/engine/lib` returned ZERO hits before this
+delivery. **No agent had ever queried its own project's RAG.** It's
+the biggest gap in the current design: the product builds an index and
+only the "Chat RAG" web tab reads it.
 
-Segundo achado, também real e não desta feature: `nomic-embed-text`
-(`RAG_EMBEDDING_MODEL` em `rag-search-limits.ts`) **nunca é puxado
-automaticamente**. O entrypoint do serviço `ollama` no `docker-compose.yml`
-só puxa `llama3.2:1b`. Em qualquer ambiente limpo, o RAG degrada
-silenciosamente para busca léxico-only até alguém rodar
-`ollama pull nomic-embed-text` manualmente — ninguém tinha notado porque
-o produto nunca tinha, até agora, um consumidor programático da busca que
-tornasse a degradação visível cedo.
+Second finding, also real and unrelated to this feature:
+`nomic-embed-text` (`RAG_EMBEDDING_MODEL` in `rag-search-limits.ts`)
+**is never pulled automatically**. The `ollama` service entrypoint in
+`docker-compose.yml` only pulls `llama3.2:1b`. In any clean
+environment, the RAG silently degrades to lexical-only search until
+someone runs `ollama pull nomic-embed-text` by hand — nobody had
+noticed because the product never had, until now, a programmatic
+consumer of search that would make the degradation visible early.
 
-## Decisão
+## Decision
 
-**Tool nova `rag_search`** (`apps/engine/lib/engine/harness/tools/rag_search.ex`),
-categoria `:direct` (leitura, não passa por `ActionPipeline`/
-`proposed_action` — ler não é efeito externo, regra já estabelecida).
-Chama `POST /internal/rag/search` (rota nova da api, reusando
-`HybridSearchUseCase` sem duplicar lógica de busca) e formata os hits com
-CITAÇÃO explícita (`path` + trecho), para o modelo poder referenciar a
-origem do que leu. Quando a resposta vem `degraded: true` (embedding
-indisponível, busca caiu para léxico-only), isso aparece **no início** do
-texto devolvido ao modelo — nunca escondido no rodapé, onde um corte por
-teto de bytes poderia apagar o aviso.
+**New tool `rag_search`** (`apps/engine/lib/engine/harness/tools/rag_search.ex`),
+category `:direct` (read, doesn't go through `ActionPipeline`/
+`proposed_action` — reading isn't an external effect, an already
+established rule). Calls `POST /internal/rag/search` (a new api
+route, reusing `HybridSearchUseCase` without duplicating search
+logic) and formats hits with an explicit CITATION (`path` + excerpt),
+so the model can reference the source of what it read. When the
+response comes back `degraded: true` (embedding unavailable, search
+fell back to lexical-only), that appears **at the start** of the text
+returned to the model — never hidden at the bottom, where a byte-cap
+truncation could erase the warning.
 
-**Tetos próprios**, no espírito da RN-150 (cada ferramenta de leitura que
-pode estourar tem sua PRÓPRIA variável, nunca reaproveitada de outra):
-`top_k` clampado a um máximo (10) dentro da própria tool, e um teto de
-BYTES do texto formatado (16 KiB, menor que os 32 KiB de
-`search_workspace`/`read_file` — cada hit de RAG já é chunk+excerpt
-inteiro, acumula bytes mais rápido por item).
+**Its own caps**, in the spirit of RN-150 (every read tool that can
+overflow gets its OWN variable, never reused from another): `top_k`
+clamped to a maximum (10) inside the tool itself, and a BYTE cap on
+the formatted text (16 KiB, smaller than `search_workspace`'s/
+`read_file`'s 32 KiB — each RAG hit is already a whole chunk+excerpt,
+it accumulates bytes faster per item).
 
-Registrada no registry default (`Engine.Harness.Tools`, serve
-PO/Arquiteto/conversacionais) e no registry do dev agent
-(`Engine.Dev.Tools`). Estendida também aos gates de leitura que já citam
-ADR/convenção indexada (`QaTools`, `QaEstrategiaAgent`, `AppSecAgent`,
-`QaPerformanceSegurancaAgent`) — não a `Infra.WorkflowsAgent` (deliberadamente
-estreito, sem `ReadFile`/`SearchWorkspace` hoje) nem a
-Psicólogo/Anamnese (raciocinam sobre event log, não sobre docs/código do
-projeto).
+Registered in the default registry (`Engine.Harness.Tools`, serving
+PO/Architect/conversational agents) and in the dev agent registry
+(`Engine.Dev.Tools`). Also extended to the reading gates that already
+cite an indexed ADR/convention (`QaTools`, `QaEstrategiaAgent`,
+`AppSecAgent`, `QaPerformanceSegurancaAgent`) — but not
+`Infra.WorkflowsAgent` (deliberately narrow, with no
+`ReadFile`/`SearchWorkspace` today) nor Psychologist/Anamnese (they
+reason over the event log, not the project's docs/code).
 
-**`ollama-model-loader`**: serviço one-shot novo no `docker-compose.yml`
-(dev e prod), que puxa `gemma:1b`, `yi-coder:1.5b` e `nomic-embed-text`
-via `OLLAMA_REQUIRED_MODELS` — aditivo ao serviço `ollama` existente
-(cujo entrypoint continua puxando `llama3.2:1b` para o próprio uso do
-engine, intocado). Fecha o bug real de `nomic-embed-text` nunca chegar
-sozinho, não só a necessidade desta feature.
+**`ollama-model-loader`**: a new one-shot service in
+`docker-compose.yml` (dev and prod) that pulls `gemma:1b`,
+`yi-coder:1.5b`, and `nomic-embed-text` via `OLLAMA_REQUIRED_MODELS` —
+additive to the existing `ollama` service (whose entrypoint keeps
+pulling `llama3.2:1b` for the engine's own use, untouched). Closes the
+real bug of `nomic-embed-text` never arriving on its own, not just
+this feature's need.
 
-## Consequências
+## Consequences
 
-- A capability do RAG para agentes é declarada só quando exercitada — o
-  roundtrip real contra `POST /internal/rag/search` depende da rota da
-  api estar de pé; a tool degrada com erro legível ao modelo (nunca
-  crasha o `ToolLoop`, RN-163) quando a api está fora do ar.
-- `deploy/k8s/` ganha manifests mínimos para Neo4j e o model-loader,
-  DECLARADOS como não validados contra um cluster real (a mesma
-  disciplina do resto do `deploy/k8s/`: capability só é declarada quando
-  provada).
-- O custo de embedding de `rag_search` não passa pelo metering ainda —
-  mesma lacuna já declarada no ADR 0075 para o RAG em geral
-  (`token_usage.session_id` é `NOT NULL`, indexar não acontece dentro de
-  sessão).
+- The RAG capability for agents is declared only when exercised — the
+  real roundtrip against `POST /internal/rag/search` depends on the
+  api's route being up; the tool degrades with a legible error to the
+  model (never crashes the `ToolLoop`, RN-163) when the api is down.
+- `deploy/k8s/` gains minimal manifests for Neo4j and the model
+  loader, DECLARED as unvalidated against a real cluster (the same
+  discipline as the rest of `deploy/k8s/`: capability is only declared
+  when proven).
+- The embedding cost of `rag_search` still doesn't go through
+  metering — the same gap already declared in ADR 0075 for RAG in
+  general (`token_usage.session_id` is `NOT NULL`, and indexing
+  doesn't happen inside a session).

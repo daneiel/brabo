@@ -132,10 +132,11 @@ function NavStatusDot({
 
 /** Botão de tema do rodapé (RN-199) — funcional recolhido ou expandido. */
 function BotaoDeTema({ colapsado }: { colapsado: boolean }) {
+  const { t } = useTranslation('shell');
   const [tema, setTema] = useState<Tema>(temaAtual);
   useEffect(() => observarTema(setTema), []);
   const claro = tema === 'light';
-  const rotulo = claro ? 'Tema claro' : 'Tema escuro';
+  const rotulo = claro ? t('sidebar.theme.light') : t('sidebar.theme.dark');
   return (
     <button
       type="button"
@@ -211,6 +212,7 @@ function InstanciaDeAgente({
   aberta: boolean;
   onAlternar: () => void;
 }) {
+  const { t } = useTranslation('shell');
   const naoVistos = aberta
     ? 0
     : ramo.marcos.filter((m) => m.seq > getAgentLastSeenSeq(projectId, ramo.agente)).length;
@@ -237,7 +239,9 @@ function InstanciaDeAgente({
       </button>
       {aberta && (
         <ol className={styles.marcos}>
-          {ramo.marcos.length === 0 && <li className={styles.marcoVazio}>sem marcos ainda</li>}
+          {ramo.marcos.length === 0 && (
+            <li className={styles.marcoVazio}>{t('sidebar.activities.noMarksYet')}</li>
+          )}
           {ramo.marcos.map((m) => (
             <li key={m.eventId} className={styles.marco}>
               <span className={styles.bolinha} />
@@ -263,6 +267,7 @@ function GrupoDeAtividade({
   agentesAbertos: Set<string>;
   onAlternar: (chave: string) => void;
 }) {
+  const { t } = useTranslation('shell');
   const multiplasInstancias = grupo.instancias.length > 1;
   const abertoNoGrupo = agentesAbertos.has(grupo.agenteBase);
   const totalInteracoes = grupo.instancias.reduce((soma, r) => soma + r.marcos.length, 0);
@@ -289,7 +294,11 @@ function GrupoDeAtividade({
         <AvatarDoAgente id={grupo.agenteBase} />
         <span className={styles.grupoNome}>{rotuloDoAgente(grupo.agenteBase)}</span>
         {multiplasInstancias && (
-          <Badge tone="muted" square title={`${grupo.instancias.length} instâncias`}>
+          <Badge
+            tone="muted"
+            square
+            title={t('sidebar.activities.instancesCount', { count: grupo.instancias.length })}
+          >
             {grupo.instancias.length}×
           </Badge>
         )}
@@ -330,6 +339,7 @@ function GrupoDeAtividade({
 }
 
 export function Shell() {
+  const { t } = useTranslation('shell');
   const navigate = useNavigate();
   const { data: workspace } = useCurrentWorkspace();
   const { data: workspaceWithRole } = useCurrentWorkspaceWithRole();
@@ -424,7 +434,7 @@ export function Shell() {
             o `BrandIcon`, um cubo isométrico sem parentesco nenhum com ela: o
             app tinha duas marcas, e quem entrava pelo login via a segunda
             trocar pela primeira. */}
-        <Link to="/" className={styles.brand} aria-label="Ir para o dashboard">
+        <Link to="/" className={styles.brand} aria-label={t('sidebar.brand.dashboardLink')}>
           <span className={styles.brandTile} aria-hidden="true">
             <LogoMark size={18} />
           </span>
@@ -432,7 +442,7 @@ export function Shell() {
         </Link>
 
         {colapsado ? (
-          <nav className={styles.trilha} aria-label="Projetos e atividades">
+          <nav className={styles.trilha} aria-label={t('sidebar.nav.trilhaAriaLabel')}>
             {(projects ?? []).map((project) => (
               <button
                 key={project.id}
@@ -455,8 +465,8 @@ export function Shell() {
             <button
               type="button"
               className={styles.trilhaItemAtividades}
-              title="Atividades"
-              aria-label="Atividades"
+              title={t('sidebar.activities.label')}
+              aria-label={t('sidebar.activities.label')}
               onClick={() => {
                 setColapsadoManual(false);
                 gravarColapsado(false);
@@ -468,13 +478,13 @@ export function Shell() {
         ) : (
           <div className={styles.corpo}>
             <div className={styles.navLabelRow}>
-              <span className={styles.navLabel}>Projetos</span>
+              <span className={styles.navLabel}>{t('sidebar.nav.projectsLabel')}</span>
               <button
                 type="button"
                 className={styles.newProjectButton}
                 onClick={() => setWizardOpen(true)}
-                title="Novo projeto"
-                aria-label="Novo projeto"
+                title={t('sidebar.nav.newProject')}
+                aria-label={t('sidebar.nav.newProject')}
               >
                 <PlusIcon size={16} />
               </button>
@@ -486,13 +496,13 @@ export function Shell() {
                   essencial: o que houve e como tentar de novo. */}
               {projectsQuery.isError && (
                 <div className={styles.navErro} role="alert">
-                  <span>{mensagemDaApi(projectsQuery.error, 'Não foi possível carregar os projetos.')}</span>
+                  <span>{mensagemDaApi(projectsQuery.error, t('sidebar.projects.loadError'))}</span>
                   <button
                     type="button"
                     className={styles.navErroBotao}
                     onClick={() => void projectsQuery.refetch()}
                   >
-                    tentar de novo
+                    {t('sidebar.projects.retry')}
                   </button>
                 </div>
               )}
@@ -521,7 +531,11 @@ export function Shell() {
                         type="button"
                         className={styles.chevronBotao}
                         aria-expanded={aberto}
-                        aria-label={aberto ? `Recolher ${project.name}` : `Expandir ${project.name}`}
+                        aria-label={
+                          aberto
+                            ? t('sidebar.projects.collapse', { name: project.name })
+                            : t('sidebar.projects.expand', { name: project.name })
+                        }
                         onClick={() => alternarProjeto(project.id)}
                       >
                         {aberto ? <ChevronDownIcon size={13} /> : <ChevronRightIcon size={13} />}
@@ -596,13 +610,13 @@ export function Shell() {
 
             <div className={styles.atividadesSecao}>
               <div className={styles.navLabelRow}>
-                <span className={styles.navLabel}>Atividades</span>
+                <span className={styles.navLabel}>{t('sidebar.activities.label')}</span>
               </div>
               {!currentProject && (
-                <p className={styles.atividadesVazio}>Abra um projeto para ver as atividades dos agentes.</p>
+                <p className={styles.atividadesVazio}>{t('sidebar.activities.openProjectHint')}</p>
               )}
               {currentProject && grupos.length === 0 && (
-                <p className={styles.atividadesVazio}>Nenhum agente entrou em ação ainda.</p>
+                <p className={styles.atividadesVazio}>{t('sidebar.activities.empty')}</p>
               )}
               {currentProject &&
                 grupos.map((grupo) => (
@@ -633,29 +647,29 @@ export function Shell() {
             disabled={autoColapsado}
             title={
               autoColapsado
-                ? 'Recolhida automaticamente nesta aba'
+                ? t('sidebar.collapseButton.autoCollapsed')
                 : colapsado
-                  ? 'Expandir menu'
-                  : 'Recolher menu'
+                  ? t('sidebar.collapseButton.expand')
+                  : t('sidebar.collapseButton.collapse')
             }
             aria-label={
               autoColapsado
-                ? 'Recolhida automaticamente nesta aba'
+                ? t('sidebar.collapseButton.autoCollapsed')
                 : colapsado
-                  ? 'Expandir menu'
-                  : 'Recolher menu'
+                  ? t('sidebar.collapseButton.expand')
+                  : t('sidebar.collapseButton.collapse')
             }
             onClick={alternarColapso}
           >
             {colapsado ? <ChevronRightIcon size={15} /> : <ChevronLeftIcon size={15} />}
-            {!colapsado && <span>Recolher menu</span>}
+            {!colapsado && <span>{t('sidebar.collapseButton.collapse')}</span>}
           </button>
 
           <div className={styles.userCard}>
             <span className={styles.avatar}>{email ? iniciaisDoEmail(email) : '?'}</span>
             {!colapsado && (
               <div className={styles.userInfo}>
-                <span className={styles.userName}>{email ?? 'conta'}</span>
+                <span className={styles.userName}>{email ?? t('sidebar.footer.accountFallback')}</span>
                 {workspaceWithRole && (
                   <span className={styles.userRole}>{ROLE_LABEL[workspaceWithRole.role]}</span>
                 )}
@@ -665,12 +679,12 @@ export function Shell() {
           <button
             type="button"
             className={styles.logout}
-            title="sair"
-            aria-label="sair"
+            title={t('sidebar.footer.logout')}
+            aria-label={t('sidebar.footer.logout')}
             onClick={() => void sair().then(() => navigate({ to: '/login' }))}
           >
             <LogoutIcon size={14} />
-            {!colapsado && <span>sair</span>}
+            {!colapsado && <span>{t('sidebar.footer.logout')}</span>}
           </button>
         </div>
       </aside>

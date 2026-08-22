@@ -1,8 +1,16 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ProjectCard, ProjectCardSkeleton } from './ProjectCard';
 import { groupRosterByArea, type RosterEntry } from '../lib/agent-status';
 import { AGENTS } from '../lib/agents';
+// A instância REAL do app: `ProjectCard.tsx` usa `useTranslation('dashboard')`
+// sem `I18nextProvider` próprio — `changeLanguage('pt-BR')` mantém as
+// asserções abaixo (ex.: "Repositório local") no texto de sempre.
+import i18n from '../lib/i18n';
+
+beforeEach(async () => {
+  await i18n.changeLanguage('pt-BR');
+});
 
 function entry(id: keyof typeof AGENTS): RosterEntry {
   return { id, def: AGENTS[id], status: 'ocioso' };

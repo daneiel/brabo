@@ -3,6 +3,10 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Dashboard } from './Dashboard';
 import { ApiError } from '../lib/api-client';
+// A instância REAL do app: `Dashboard.tsx` usa `useTranslation('dashboard')`
+// sem `I18nextProvider` próprio (mesmo padrão de `ProjectExecutorsTab.test.tsx`)
+// — `changeLanguage('pt-BR')` mantém as asserções abaixo no texto de sempre.
+import i18n from '../lib/i18n';
 import type { Project, WorkspaceSummary } from '../lib/api-types';
 
 const PROJECT: Project = {
@@ -71,7 +75,8 @@ function renderDashboard() {
   );
 }
 
-beforeEach(() => {
+beforeEach(async () => {
+  await i18n.changeLanguage('pt-BR');
   useProjectsMock.mockReset();
   useWorkspaceSummaryMock.mockReset();
   useWorkspaceSummaryMock.mockReturnValue({ data: SUMMARY, isError: false });

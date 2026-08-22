@@ -1,97 +1,101 @@
-# 0007 — ToolLoop, ferramentas, ContextManager (harness com LLM)
+# 0007 — ToolLoop, tools, ContextManager (harness with LLM)
 
-## Contexto
+## Context
 
-Segunda sessão da Fase 3a: ligar o harness determinístico (ADR 0006) ao LLM.
-Um `ToolLoop` que roda turnos de LLM, ferramentas registradas (read_file,
-search_workspace, write_file, terminal, emit_artifact), um `ContextManager`
-que compacta acima de um limite, o wiring dos hooks ao pipeline de ações, e um
-`EchoAgent` de validação. Regra dura do CLAUDE.md: o engine NUNCA fala com
-provider de LLM direto — toda chamada passa pela api (metering + budget).
+Second session of Phase 3a: wiring the deterministic harness (ADR 0006) to the
+LLM. A `ToolLoop` that runs LLM turns, registered tools (read_file,
+search_workspace, write_file, terminal, emit_artifact), a `ContextManager`
+that compacts above a threshold, the hooks wired into the action pipeline, and
+a validation `EchoAgent`. Hard rule from CLAUDE.md: the engine NEVER talks to
+an LLM provider directly — every call goes through the api (metering +
+budget).
 
-Descoberta que moldou o trabalho: não existia endpoint de LLM interno
-(engine→api) com tool-calling nem metering — só o `/chat` web-facing (SSE,
-usuário humano, sem tools), e o provider Ollama não mandava `tools` nem
-parseava `tool_calls`. Então esta sessão teve trabalho substancial na api
-(TypeScript) além do engine (Elixir).
+Discovery that shaped the work: there was no internal LLM endpoint
+(engine→api) with tool-calling or metering — only the web-facing `/chat` (SSE,
+human user, no tools) — and the Ollama provider didn't send `tools` or parse
+`tool_calls`. So this session involved substantial work in the api
+(TypeScript) besides the engine (Elixir).
 
-## Decisões
+## Decisions
 
-### Endpoint de LLM interno turn-result (não streamado pro engine)
+### Internal turn-result LLM endpoint (not streamed to the engine)
 
 `POST /internal/sessions/:id/llm-turn` (EngineServiceGuard) → `RunLlmTurnUseCase`.
-Consome o stream do provider INTERNAMENTE na api (como o `/chat`) e devolve o
-turno COMPLETO (mensagem do assistente + `toolCalls` + uso) como um JSON. O
-ToolLoop é turno-a-turno; o "streaming" acontece na camada provider→api.
-Rejeitado streamar NDJSON até o engine: num tool loop o engine precisa da
-mensagem completa (com tool_calls) antes de despachar ferramentas, então
-streaming só adicionaria deltas ao vivo — não muda os critérios de aceite
-(cada tool call, context.compacted, custo) e custaria consumo de stream em
-Elixir. Confirmado com o usuário.
+Consumes the provider's stream INTERNALLY in the api (like `/chat`) and
+returns the COMPLETE turn (assistant message + `toolCalls` + usage) as a
+single JSON. The ToolLoop is turn-by-turn; the "streaming" happens at the
+provider→api layer. Streaming NDJSON all the way to the engine was rejected:
+in a tool loop the engine needs the complete message (with tool_calls) before
+dispatching tools, so streaming would only add live deltas — it doesn't
+change the acceptance criteria (each tool call, context.compacted, cost) and
+would cost stream consumption in Elixir. Confirmed with the user.
 
-O endpoint grava `token_usage` (metering OBRIGATÓRIO via `RecordLlmUsageUseCase`,
-exige `sessionId`) mas NÃO grava `session_events`: o engine é dono da narrativa
-no event log (`agent.response`, `tool.call`, `tool.result`,
-`toolloop.limit_reached`) — evita log duplicado. Tool-calling: `ChatMessage`/
-`ChatOptions`/`ChatStreamChunk` ganharam campos de tool (packages/shared), e o
-provider Ollama passou a mandar `tools` e parsear `message.tool_calls`.
+The endpoint writes `token_usage` (metering MANDATORY via
+`RecordLlmUsageUseCase`, requires `sessionId`) but does NOT write
+`session_events`: the engine owns the narrative in the event log
+(`agent.response`, `tool.call`, `tool.result`, `toolloop.limit_reached`) —
+avoids duplicate logging. Tool-calling: `ChatMessage`/`ChatOptions`/
+`ChatStreamChunk` gained tool fields (packages/shared), and the Ollama
+provider started sending `tools` and parsing `message.tool_calls`.
 
-### Ferramentas: diretas vs pipeline
+### Tools: direct vs. pipeline
 
-- Diretas (executam em processo no engine): `read_file`, `search_workspace`,
-  `write_file` dentro da whitelist do agente, `emit_artifact`. Todo acesso a
-  arquivo passa por `WorkspaceFiles.safe_path/2` — **path traversal bloqueado**
-  (nada escapa de `<PROJECT_WORKSPACES_ROOT>/<project_id>`).
-- Pipeline (via proposed_action na api): `terminal` (SEMPRE), e `write_file`
-  FORA da whitelist. O hook `:pre_tool_use` cria o `proposed_action` (decide/
-  permissions da api); terminal `auto_approved` é auto-executado (branch
-  existente) e o resultado vira o resultado da ferramenta; write_file fora da
-  whitelist fica `pending` (execução pós-aprovação é fase futura). Novo
-  `ActionType` `write_file` (developer). O engine NÃO cria proposed_actions
-  direto — passa por um novo endpoint interno `POST /internal/sessions/:id/actions`.
+- Direct (execute in-process in the engine): `read_file`, `search_workspace`,
+  `write_file` within the agent's whitelist, `emit_artifact`. All file access
+  goes through `WorkspaceFiles.safe_path/2` — **path traversal blocked**
+  (nothing escapes `<PROJECT_WORKSPACES_ROOT>/<project_id>`).
+- Pipeline (via proposed_action in the api): `terminal` (ALWAYS), and
+  `write_file` OUTSIDE the whitelist. The `:pre_tool_use` hook creates the
+  `proposed_action` (api's decide/permissions); `auto_approved` terminal is
+  auto-executed (existing branch) and the result becomes the tool's result;
+  write_file outside the whitelist stays `pending` (post-approval execution
+  is a future phase). New `ActionType` `write_file` (developer). The engine
+  does NOT create proposed_actions directly — it goes through a new internal
+  endpoint `POST /internal/sessions/:id/actions`.
 
-### emit_artifact = session_event tipado (sem tabela)
+### emit_artifact = typed session_event (no table)
 
-Não há tabela de artefatos nem validação por tipo na api. Um artefato é um
-`session_event` `"artifact.<tipo>"` com payload validado NO ENGINE
-(`ArtifactSchemas`, chaves obrigatórias por tipo; só `"note"` por ora — os
-tipos de produto são 3b), emitido via `append_event`. Rejeitado criar tabela
-de artefatos agora (seria escopo de 3b).
+There is no artifact table nor per-type validation in the api. An artifact is
+a `session_event` `"artifact.<type>"` with payload validated IN THE ENGINE
+(`ArtifactSchemas`, required keys per type; only `"note"` for now — the
+product types come in 3b), emitted via `append_event`. Creating an artifact
+table now was rejected (would be 3b scope).
 
-### Hooks ligados (item 4)
+### Hooks wired (item 4)
 
-`:pre_tool_use` = onde a consulta ao pipeline acontece (`ActionPipeline`);
-`:post_tool_use` = grava `tool.result` no event log (`EventLog`). Registro
-default do ToolLoop, mas trocável (é um valor de Hooks). Base pro pipeline de
-ações plugar mais fundo depois.
+`:pre_tool_use` = where the pipeline check happens (`ActionPipeline`);
+`:post_tool_use` = writes `tool.result` to the event log (`EventLog`).
+Default registration for the ToolLoop, but swappable (it's a value on
+Hooks). Foundation for the action pipeline to plug in deeper later.
 
-### ContextManager: compactação preservando pinned
+### ContextManager: compaction preserving pinned entries
 
-Quando os tokens estimados passam de `threshold * janela do modelo`, sumariza
-os turnos mais antigos NÃO-pinned via o binding `agent`/"context-manager"
-(modelo barato — sem schema novo, é slug livre), substitui-os por um resumo,
-preserva os pinned (system prompt + tarefa) e os `keep_recent` mais recentes,
-e emite `context.compacted` com `tokensBefore`/`tokensAfter`. Fallback
-determinístico se o sumarizador falhar (nunca perde o fio). Mensagens internas
-são maps chave-string (formato de fio) + `:pinned` (removido antes de enviar).
+When estimated tokens exceed `threshold * model window`, summarizes the
+oldest NON-pinned turns via the `agent`/"context-manager" binding (a cheap
+model — no new schema, it's a free-form slug), replaces them with a summary,
+preserves the pinned entries (system prompt + task) and the `keep_recent`
+most recent ones, and emits `context.compacted` with
+`tokensBefore`/`tokensAfter`. Deterministic fallback if the summarizer fails
+(never loses the thread). Internal messages are string-keyed maps (thread
+format) + `:pinned` (removed before sending).
 
-### Onde o ToolLoop roda
+### Where the ToolLoop runs
 
-O `EchoAgent.run/2` roda o `ToolLoop` de forma síncrona (observável no IEx pro
-critério de aceite). Em produção, um driver por-sessão (Task sob
-`Engine.TaskSupervisor`, coordenado pelo SessionServer) evita bloquear o
-GenServer de heartbeat — refinamento de sessão futura; nesta sessão o gatilho
-é IEx (sem precedente de Mix.Task, igual `Debug.print`).
+`EchoAgent.run/2` runs the `ToolLoop` synchronously (observable in IEx for
+the acceptance criterion). In production, a per-session driver (a Task under
+`Engine.TaskSupervisor`, coordinated by the SessionServer) avoids blocking
+the heartbeat GenServer — a future session refinement; in this session the
+trigger is IEx (no Mix.Task precedent, same as `Debug.print`).
 
-## Consequências
+## Consequences
 
-- Todo behaviour novo (`ToolLoop`, `ContextManager`) segue o padrão
-  behaviour + impl trocável via `Application.get_env`, sem Mox; testes
-  determinísticos usam um fake de `EngineApiClient` que scripta `llm_turn`/
-  `propose_action` pelo dicionário de processo (o loop roda síncrono no
-  processo de teste) e `send`a eventos pro `:test_pid`.
-- O critério de aceite (EchoAgent numa sessão real com Ollama) precisa de um
-  modelo tool-capable no Ollama e dos bindings (sessão + "context-manager").
-  Os testes automatizados usam o fake (Ollama real é a demo manual).
-- `OpenAIProvider` ganhou um cast pra continuar compilando com o `ChatRole`
-  ampliado (tool calling nele é fora de escopo desta fase — só Ollama).
+- Every new behaviour (`ToolLoop`, `ContextManager`) follows the
+  behaviour + swappable impl pattern via `Application.get_env`, no Mox;
+  deterministic tests use a fake `EngineApiClient` that scripts `llm_turn`/
+  `propose_action` through the process dictionary (the loop runs
+  synchronously in the test process) and `send`s events to `:test_pid`.
+- The acceptance criterion (EchoAgent in a real session with Ollama) needs a
+  tool-capable model in Ollama and the bindings (session + "context-manager").
+  Automated tests use the fake (real Ollama is the manual demo).
+- `OpenAIProvider` got a cast to keep compiling with the widened `ChatRole`
+  (tool calling on it is out of scope for this phase — Ollama only).

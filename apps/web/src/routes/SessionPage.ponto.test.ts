@@ -33,7 +33,7 @@ describe('ponto de estado da sessão', () => {
   });
 
   it('todo estado da máquina tem aparência e rótulo próprios', () => {
-    const rotulos = ESTADOS.map((e) => pontoDaSessao(e).rotulo);
+    const rotulos = ESTADOS.map((e) => pontoDaSessao(e).rotuloKey);
     expect(new Set(rotulos).size).toBe(ESTADOS.length);
     for (const rotulo of rotulos) expect(rotulo).not.toBe('');
   });
@@ -41,6 +41,6 @@ describe('ponto de estado da sessão', () => {
   /** Sem sessão carregada não é "encerrada" — é desconhecido, e o ponto apaga. */
   it('sessão que ainda não chegou não finge estado nenhum', () => {
     expect(pontoDaSessao(undefined).classe).toBe('statusDotParado');
-    expect(pontoDaSessao(undefined).rotulo).toBe('carregando');
+    expect(pontoDaSessao(undefined).rotuloKey).toBe('status.loading');
   });
 });

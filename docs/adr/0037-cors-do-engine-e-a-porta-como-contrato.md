@@ -1,34 +1,35 @@
-# 0037 — O CORS que o engine não tinha, e a porta como parte do contrato
+# 0037 — The CORS the engine didn't have, and the port as part of the contract
 
-## Contexto
+## Context
 
-Um relato de "problema de CORS entre o web e a api" levou a uma verificação dos
-**três pares** de comunicação do sistema. O resultado foi um par quebrado, um
-par que nunca esteve em risco, e uma causa raiz que não estava em CORS nenhum.
+A report of "CORS problem between web and api" led to a check of the
+system's **three communication pairs**. The result was one broken pair, one
+pair that was never at risk, and a root cause that wasn't CORS at all.
 
-Tudo abaixo foi medido, com `curl -H "Origin: …"` e com Chrome headless lendo o
-console — não deduzido da leitura do código.
+Everything below was measured, with `curl -H "Origin: …"` and with headless
+Chrome reading the console — not deduced from reading the code.
 
-### O que está certo
+### What's correct
 
-| par | mecanismo | veredito |
+| pair | mechanism | verdict |
 |---|---|---|
-| web → api (HTTP) | CORS do Nest, `WEB_ORIGIN` | **ok** — preflight devolve `allow-origin`, `allow-headers` com os quatro cabeçalhos, `allow-credentials` |
-| web → engine (WebSocket) | `check_origin` do Phoenix | **ok** — handshake responde `101`; WebSocket não passa por CORS, e o `check_origin` já lia `WEB_ORIGIN` desde a Fase 4a |
-| api → engine (`/internal/*`) | service token (RN-035) | **ok, e CORS não se aplica** — `401` sem token, `400` de validação com token, e resposta IDÊNTICA com e sem `Origin` |
-| engine → api (`/internal/*`) | service token | **ok, e CORS não se aplica** — `403` sem token, `400` com token, idem `Origin` |
+| web → api (HTTP) | Nest's CORS, `WEB_ORIGIN` | **ok** — preflight returns `allow-origin`, `allow-headers` with the four headers, `allow-credentials` |
+| web → engine (WebSocket) | Phoenix's `check_origin` | **ok** — handshake responds `101`; WebSocket doesn't go through CORS, and `check_origin` had already read `WEB_ORIGIN` since Phase 4a |
+| api → engine (`/internal/*`) | service token (RN-035) | **ok, and CORS doesn't apply** — `401` without token, `400` for validation with token, and IDENTICAL response with and without `Origin` |
+| engine → api (`/internal/*`) | service token | **ok, and CORS doesn't apply** — `403` without token, `400` with token, same for `Origin` |
 
-Os dois últimos merecem ser ditos por extenso, porque a pergunta é natural e a
-resposta é estrutural: **CORS é um mecanismo de navegador.** Quem chama nesses
-dois sentidos é um cliente HTTP de servidor (o `fetch` do Node na api, o Finch no
-engine), que não implementa a same-origin policy e ignora esses cabeçalhos por
-completo. Não há o que configurar, e configurar seria pior — ver a decisão 2.
+The last two deserve to be spelled out, because the question is natural and
+the answer is structural: **CORS is a browser mechanism.** Whoever calls in
+those two directions is a server-side HTTP client (Node's `fetch` in the api,
+Finch in the engine), which doesn't implement the same-origin policy and
+ignores those headers entirely. There's nothing to configure, and configuring
+it would be worse — see decision 2.
 
-### O que está quebrado: web → engine por HTTP
+### What's broken: web → engine over HTTP
 
-O endpoint do engine **não tinha CORS nenhum**. `GET /health` respondia `200`
-com o corpo correto e sem um único cabeçalho `Access-Control-*`, então o
-navegador descartava a resposta:
+The engine's endpoint **had no CORS at all**. `GET /health` responded `200`
+with the correct body and without a single `Access-Control-*` header, so the
+browser discarded the response:
 
 ```
 Access to fetch at 'http://localhost:4000/health' from origin
@@ -36,22 +37,23 @@ Access to fetch at 'http://localhost:4000/health' from origin
 'Access-Control-Allow-Origin' header is present on the requested resource.
 ```
 
-O efeito visível: a `StatusPage` mostrava **`engine: error`** com o engine
-perfeitamente saudável. Nenhum teste pegava isso, e não por descuido — do lado do
-servidor a resposta estava correta. O que faltava era um cabeçalho, e teste de
-controller não afirma cabeçalho de CORS.
+The visible effect: `StatusPage` showed **`engine: error`** while the engine
+was perfectly healthy. No test caught this, and not out of carelessness — on
+the server side the response was correct. What was missing was a header, and
+a controller test doesn't assert a CORS header.
 
-O defeito é anterior a esta sessão, mas ficou mais visível agora: o
-[ADR 0036](0036-telas-de-auth-fieis-ao-design-e-fontes-auto-hospedadas.md) tornou
-`/status` pública e a ligou no rodapé das telas de auth, então a linha errada
-passou a ser alcançável antes do login.
+The defect predates this session, but became more visible now:
+[ADR 0036](0036-telas-de-auth-fieis-ao-design-e-fontes-auto-hospedadas.md) made
+`/status` public and linked it in the footer of the auth screens, so the
+broken line became reachable before login.
 
-### A causa raiz do relato original, que não era CORS
+### The root cause of the original report, which wasn't CORS
 
-O `vite.config.ts` fixava `port: 5173` **sem `strictPort`**. Com 5173 ocupada — um
-`pnpm dev` esquecido em outro terminal, o compose de dev no mesmo host — o Vite
-sobe em **5174** e avisa numa linha do log de boot. A api aceita exatamente
-`http://localhost:5173`, então a aplicação abre normal e **tudo** é barrado:
+`vite.config.ts` fixed `port: 5173` **without `strictPort`**. With 5173 taken
+— a forgotten `pnpm dev` in another terminal, the dev compose on the same
+host — Vite comes up on **5174** and warns in a single line of the boot log.
+The api accepts exactly `http://localhost:5173`, so the app opens normally
+and **everything** gets blocked:
 
 ```
 blocked by CORS policy: … 'http://localhost:3000/health'      (origin 5174)
@@ -59,127 +61,135 @@ blocked by CORS policy: … 'http://localhost:3000/auth/refresh' (origin 5174)
 blocked by CORS policy: … 'http://localhost:4000/health'      (origin 5174)
 ```
 
-O `/auth/refresh` bloqueado é o que faz a tela parecer deslogada. E a mensagem
-fala de CORS, não de porta — então o tempo vai todo para o lugar errado. Pior: a
-"correção" natural é afrouxar o CORS da api, o que conserta 5174 e quebra 5173.
+The blocked `/auth/refresh` is what makes the screen look logged out. And the
+message talks about CORS, not port — so all the time goes to the wrong place.
+Worse: the natural "fix" is to loosen the api's CORS, which fixes 5174 and
+breaks 5173.
 
-## Decisão
+## Decision
 
-### 1. Um plug de CORS próprio no engine, em vez do Corsica
+### 1. A CORS plug of our own in the engine, instead of Corsica
 
-`EngineWeb.Plugs.Cors`, ~40 linhas de lógica. O `Corsica` é a escolha óbvia e
-resolve muito mais do que se precisa: este plug atende `GET`/`HEAD`, sem
-credencial, em três caminhos fixos, com dois cabeçalhos na lista. O `CLAUDE.md`
-pede justificativa para lib nova, e "40 linhas" é a justificativa.
+`EngineWeb.Plugs.Cors`, ~40 lines of logic. `Corsica` is the obvious choice
+and solves much more than is needed here: this plug serves `GET`/`HEAD`, with
+no credential, on three fixed paths, with two headers in the list.
+`CLAUDE.md` requires justification for a new lib, and "40 lines" is the
+justification.
 
-Se um dia o engine expuser API de navegador de verdade — `POST`, cookie,
-cabeçalho próprio — a troca por Corsica passa a se pagar. O moduledoc registra
-isso, para a próxima pessoa saber que a alternativa foi considerada.
+If one day the engine exposes a real browser-facing API — `POST`, cookie, a
+custom header — switching to Corsica pays for itself. The moduledoc records
+this, so the next person knows the alternative was considered.
 
-### 2. O plug fica no ENDPOINT, e filtra por caminho
+### 2. The plug lives at the ENDPOINT, and filters by path
 
-Não num pipeline do router, e a razão é mensurável: pipeline de router só roda
-depois de uma rota casar. Não existe rota `OPTIONS`, então um preflight morre com
-`404` antes de qualquer plug do pipeline — verificado antes da correção
-(`OPTIONS /health` → `404`). Um plug de CORS que não vê preflight é meio plug, e
-a metade que falta é a que quebra no dia em que a web acrescentar um cabeçalho.
+Not in a router pipeline, and the reason is measurable: a router pipeline
+only runs after a route matches. There's no `OPTIONS` route, so a preflight
+dies with `404` before any pipeline plug — verified before the fix
+(`OPTIONS /health` → `404`). A CORS plug that never sees a preflight is half a
+plug, and the missing half is the one that breaks the day the web adds a
+header.
 
-No endpoint ele vê tudo, e o preço é dizer explicitamente onde se aplica. É o
-mesmo desenho do `EngineWeb.Plugs.AccessLog`, que também filtra por prefixo de
-caminho por não poder depender do router.
+At the endpoint it sees everything, and the price is stating explicitly where
+it applies. It's the same design as `EngineWeb.Plugs.AccessLog`, which also
+filters by path prefix because it can't depend on the router.
 
-**A allowlist é `/health`, `/live` e `/ready`.** Duas exclusões deliberadas, e as
-duas são de segurança:
+**The allowlist is `/health`, `/live` and `/ready`.** Two deliberate
+exclusions, and both are about security:
 
-- **`/internal/*`** — as 13 rotas por onde a api comanda o engine. Como
-  estabelecido no contexto, CORS não habilitaria nada ali; o que ele faria é
-  **anunciar a um navegador que ele é um cliente esperado daquele canal**. É
-  informação que não queremos dar, sobre uma superfície que não queremos que
-  ninguém tente alcançar do browser.
-- **`/metrics`** — scrape do Prometheus. Métrica interna não tem por que ser
-  legível por JavaScript de página nenhuma.
+- **`/internal/*`** — the 13 routes through which the api commands the
+  engine. As established in the context, CORS wouldn't enable anything
+  there; what it WOULD do is **announce to a browser that it's an expected
+  client of that channel**. That's information we don't want to give, about
+  a surface we don't want anyone trying to reach from the browser.
+- **`/metrics`** — Prometheus scrape. An internal metric has no reason to be
+  readable by JavaScript from any page.
 
-### 3. Origem desconhecida recebe resposta, não `403`
+### 3. An unknown origin gets a response, not `403`
 
-O pedido é atendido normalmente e sai **sem** o cabeçalho; quem barra a leitura é
-o navegador, que é de quem essa decisão é. Responder `403` transformaria toda
-requisição legítima sem `Origin` — probe do kubelet, `curl`, o `docker/smoke.sh` —
-num modo de falha novo, criado por acidente ao consertar outra coisa.
+The request is served normally and goes out **without** the header; the one
+who blocks reading it is the browser, and that's whose decision it is.
+Responding `403` would turn every legitimate request without `Origin` —
+kubelet probes, `curl`, `docker/smoke.sh` — into a new failure mode, created
+by accident while fixing something else.
 
-`vary: origin` acompanha o `allow-origin`. Não é enfeite: sem ele, um proxy que
-guarde a resposta de uma origem pode entregá-la a outra com o cabeçalho errado
-dentro.
+`vary: origin` accompanies `allow-origin`. It's not decoration: without it, a
+proxy that caches the response from one origin could serve it to another with
+the wrong header inside.
 
-### 4. `WEB_ORIGIN` é lido UMA vez, e alimenta os dois consumidores
+### 4. `WEB_ORIGIN` is read ONCE, feeding both consumers
 
-O `check_origin` do socket já lia a variável; o plug novo precisava da mesma
-lista. A leitura duplicada é **como o furo apareceu**: o socket tinha origem
-configurada há duas fases, e o HTTP não tinha nada, porque nada obrigava os dois
-a andarem juntos.
+The socket's `check_origin` already read the variable; the new plug needed
+the same list. The duplicated reading is **how the gap appeared**: the socket
+had its origin configured two phases ago, and HTTP had nothing, because
+nothing forced the two to stay in sync.
 
-Agora `runtime.exs` calcula `:web_origins` uma vez, no topo, e o `check_origin`
-passa a derivar dela.
+Now `runtime.exs` computes `:web_origins` once, at the top, and `check_origin`
+now derives from it.
 
-**Em produção não há default de desenvolvimento.** A api levanta exceção no boot
-quando `WEB_ORIGIN` falta (`cors-origins.ts`); o engine deixa a lista **vazia**, o
-que fecha o acesso de navegador sem derrubar o processo. A assimetria é
-deliberada: CORS é a razão de existir daquele trecho da api, mas no engine é
-periférico — filas do Oban e canais Phoenix seguem funcionando. Um engine que não
-sobe por causa de um painel de status troca um problema pequeno por um grande.
+**In production there's no development default.** The api raises an
+exception at boot when `WEB_ORIGIN` is missing (`cors-origins.ts`); the
+engine leaves the list **empty**, which closes browser access without
+bringing the process down. The asymmetry is deliberate: CORS is the whole
+reason that part of the api exists, but in the engine it's peripheral — Oban
+queues and Phoenix channels keep working. An engine that refuses to boot
+because of a status panel trades a small problem for a big one.
 
-Lista vazia também **não** vira `check_origin: []`, que o Phoenix leria como
-"nenhuma origem confere" e derrubaria o painel do time ao vivo. Nesse caso vale o
-default estrito do Phoenix (`true`, comparando com `PHX_HOST`).
+An empty list also does **not** become `check_origin: []`, which Phoenix
+would read as "no origin matches" and would bring down the team's live
+panel. In that case, Phoenix's strict default applies (`true`, comparing
+against `PHX_HOST`).
 
-### 5. `strictPort: true` no Vite
+### 5. `strictPort: true` in Vite
 
-A porta faz parte do contrato de CORS, então ela não pode ser escolhida em
-silêncio. Com `strictPort`, o Vite recusa subir e diz `Port 5173 is already in
-use` — que é a informação verdadeira, em vez de três erros de CORS que apontam
-para o lugar errado.
+The port is part of the CORS contract, so it can't be chosen silently. With
+`strictPort`, Vite refuses to start and says `Port 5173 is already in use` —
+which is the true information, instead of three CORS errors pointing to the
+wrong place.
 
-O custo é real e aceito: quem quiser dois servidores de dev ao mesmo tempo passa
-a precisar de `--port` explícito. Escolher explicitamente é exatamente o que se
-quer, porque a outra porta precisa entrar em `WEB_ORIGIN` de qualquer forma.
+The cost is real and accepted: whoever wants two dev servers running at once
+now needs an explicit `--port`. Choosing explicitly is exactly what's wanted,
+because the other port needs to go into `WEB_ORIGIN` anyway.
 
-### 6. `maxAge` no CORS da api e do engine
+### 6. `maxAge` on the api's and the engine's CORS
 
-**Toda** chamada da web à api é preflighted: o `api-client` manda `Authorization`
-e `traceparent`, que não são safelisted. Sem cache de preflight, cada requisição
-são duas viagens. O cache do navegador é por URL+método, e com o
-`refetchInterval` do TanStack Query batendo na mesma URL de novo e de novo, é
-justamente aí que ele paga.
+**Every** call from the web to the api is preflighted: `api-client` sends
+`Authorization` and `traceparent`, which aren't safelisted. Without preflight
+caching, each request is two round trips. The browser's cache is keyed by
+URL+method, and with TanStack Query's `refetchInterval` hitting the same URL
+over and over, that's exactly where it pays off.
 
-10 minutos nos dois. Curto o bastante para uma mudança em `allowedHeaders` não
-ficar presa no cache de quem estava com a aba aberta.
+10 minutes on both. Short enough that a change to `allowedHeaders` doesn't
+get stuck in the cache of someone with the tab already open.
 
-## Consequências
+## Consequences
 
-- **A `StatusPage` passa a dizer a verdade.** Antes: `api: ok`, `engine: error`
-  com o engine no ar. Depois: os dois `ok`, e zero erro de CORS no console.
-- **Colisão de porta deixa de se disfarçar de problema de CORS.** É a troca de um
-  modo de falha silencioso e enganoso por um barulhento e correto.
-- **`/internal/*` continua sem CORS, e agora há teste afirmando isso.** A
-  fronteira passou a ser uma asserção — inclusive uma sobre a lista de caminhos
-  ter exatamente três entradas, para que mover a fronteira apareça no diff.
-- **Uma dependência de menos do que a solução óbvia**, e um moduledoc explicando
-  quando reverter a decisão.
-- **O engine ganhou seu primeiro teste de cabeçalho HTTP.** Os 15 casos cobrem o
-  que teste de controller estruturalmente não cobre: a resposta estava certa e o
-  cabeçalho faltava.
+- **`StatusPage` now tells the truth.** Before: `api: ok`, `engine: error`
+  with the engine up and running. After: both `ok`, and zero CORS errors in
+  the console.
+- **Port collision stops disguising itself as a CORS problem.** It's trading
+  a silent, misleading failure mode for a loud, correct one.
+- **`/internal/*` still has no CORS, and now there's a test asserting that.**
+  The boundary became an assertion — including one about the path list
+  having exactly three entries, so that moving the boundary shows up in the
+  diff.
+- **One fewer dependency than the obvious solution**, and a moduledoc
+  explaining when to reverse the decision.
+- **The engine got its first HTTP header test.** The 15 cases cover what a
+  controller test structurally can't: the response was correct and the
+  header was missing.
 
-### O que fica pendente
+### What remains pending
 
-- **`exposedHeaders` não foi configurado em nenhum dos dois.** Hoje a web não lê
-  cabeçalho de resposta nenhum — o `trace_id` do `ApiError` vem da trace que o
-  próprio cliente gerou, não do servidor. Configurar agora seria habilitar uma
-  capacidade sem uso.
-- **O engine não tem CORS para `POST`**, de propósito: nada no navegador faz
-  `POST` nele. Quando fizer, a lista de métodos e a de cabeçalhos precisam crescer
-  junto — o teste de preflight é o lugar onde isso será notado.
-- **`EngineWeb.RouteSurfaceTest` está vermelho em `origin/dev`** desde antes desta
-  mudança (`ActionClauseError` em `SessionCommandController.create/2`, por corpo
-  vazio no teste que afirma que as rotas internas aceitam o token válido).
-  Verificado que falha igual sem nenhuma alteração desta entrega, e nenhum commit
-  daqui toca `apps/engine` além do que está descrito acima. Fica registrado, não
-  corrigido: é outro assunto.
+- **`exposedHeaders` wasn't configured on either side.** Today the web
+  doesn't read any response header — the `trace_id` in `ApiError` comes from
+  the trace the client itself generated, not from the server. Configuring it
+  now would enable a capability with no use.
+- **The engine has no CORS for `POST`**, on purpose: nothing in the browser
+  makes a `POST` to it. When it does, the method list and header list need
+  to grow together — the preflight test is where that will be noticed.
+- **`EngineWeb.RouteSurfaceTest` is failing on `origin/dev`** since before
+  this change (`ActionClauseError` in `SessionCommandController.create/2`,
+  due to an empty body in the test that asserts the internal routes accept a
+  valid token). Verified to fail the same way with no change from this
+  delivery, and no commit here touches `apps/engine` beyond what's described
+  above. Recorded here, not fixed: it's a different matter.

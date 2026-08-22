@@ -1,7 +1,18 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterAll } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { CredentialStep } from './CredentialStep';
+// A instância REAL do app: o componente usa `useTranslation('models')` sem
+// `I18nextProvider` próprio — mesmo padrão de `ProjectExecutorsTab.test.tsx`.
+import i18n from '../../lib/i18n';
 import type { UserCredentialMetadata } from '../../lib/api-types';
+
+beforeEach(async () => {
+  await i18n.changeLanguage('pt-BR');
+});
+
+afterAll(() => {
+  void i18n.changeLanguage('en');
+});
 
 function makeCred(
   overrides: Partial<UserCredentialMetadata> = {},

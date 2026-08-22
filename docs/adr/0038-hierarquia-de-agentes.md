@@ -1,260 +1,278 @@
-# 0038 — Hierarquia de agentes: áreas, leads e delegação
+# 0038 — Agent hierarchy: areas, leads and delegation
 
-## Contexto
+## Context
 
-Desde a Fase 3b, um handoff endereça qualquer agente do roster diretamente:
-`CreateHandoffUseCase` recebe `toAgent` e cria o registro sem validar quem pode
-ser alvo — `Handoff { fromAgent, toAgent, artifactId, status }`, com
-`toAgent` livre (`apps/api/src/domain/sessions/handoff.entity.ts`). A única regra
-de ativação hoje é `canActivateAgent` (`domain/sessions/agent-activation.ts`):
-um agente só entra em cena com um handoff `accepted` endereçado a ele, exceto o
-Criativo, que inicia por comando do usuário.
+Since Phase 3b, a handoff can address any agent in the roster directly:
+`CreateHandoffUseCase` receives `toAgent` and creates the record without
+validating who can be a target — `Handoff { fromAgent, toAgent, artifactId,
+status }`, with `toAgent` free
+(`apps/api/src/domain/sessions/handoff.entity.ts`). The only activation rule
+today is `canActivateAgent` (`domain/sessions/agent-activation.ts`): an agent
+only comes on stage with an `accepted` handoff addressed to it, except the
+Creative agent, which starts on the user's command.
 
-Isso funcionou até a Fase 4 porque cada agente era uma unidade só: um handoff,
-um agente, um parecer. A Fase 8 introduz **subespecialidade dentro de área** — a
-primeira instância é o QA (8b), que passa a ter QA de Automação e QA de
-Performance/Segurança —, e nesse desenho um handoff endereçando diretamente uma
-subespecialidade quebraria a premissa que todo o resto do sistema assume: **um
-handoff, uma resposta**. Se o Arquiteto pudesse endereçar `qa-performance`
-diretamente, quem consolida o parecer com o de `qa-automacao`? A resposta não
-pode ser "ninguém" — o gate espera UM veredito por área
-(`pr-gate-state-machine.ts:nextGateStatus`, que recebe um `GateVerdict` só).
+That worked through Phase 4 because each agent was a single unit: one
+handoff, one agent, one verdict. Phase 8 introduces **sub-specialization
+within an area** — the first instance is QA (8b), which comes to have QA
+Automation and QA Performance/Security —, and in that design a handoff
+addressing a sub-specialization directly would break the premise the whole
+rest of the system assumes: **one handoff, one response**. If the Architect
+could address `qa-performance` directly, who consolidates the verdict with
+`qa-automacao`'s? The answer can't be "no one" — the gate expects ONE
+verdict per area (`pr-gate-state-machine.ts:nextGateStatus`, which receives
+a single `GateVerdict`).
 
-Este ADR fixa o modelo genérico — área, lead, delegação, consolidação,
-orçamento, falha — **antes** de qualquer subespecialidade existir. QA (8b) e o
-subagente de Workflows no Infra (8c) são instâncias do mesmo modelo, não
-desenhos próprios.
+This ADR fixes the generic model — area, lead, delegation, consolidation,
+budget, failure — **before** any sub-specialization exists. QA (8b) and the
+Workflows subagent within Infra (8c) are instances of the same model, not
+designs of their own.
 
-### Por que a ORIGEM da falha precisa ser tipada agora
+### Why the ORIGIN of the failure needs a type now
 
-O CLAUDE.md exige desde o ADR 0020 que todo desfecho de falha registre origem —
-`infra | modelo | código | política` — e proíbe diagnóstico por eliminação. Na
-prática, a origem é hoje **texto livre** dentro de `reason`/`diagnosis`: em
-`qa_agent_server.ex:176-183`, `falha_do_qa({:limit_reached, _})` devolve a frase
-*"limite de iterações atingido sem emit_qa_verdict"* — correta, mas não é um
-valor que outro código possa ramificar sobre.
+CLAUDE.md has required, since ADR 0020, that every failure outcome record
+its origin — `infra | modelo | código | política` — and forbids diagnosis by
+elimination. In practice, the origin today is **free text** inside
+`reason`/`diagnosis`: in `qa_agent_server.ex:176-183`,
+`falha_do_qa({:limit_reached, _})` returns the phrase *"iteration limit
+reached without emit_qa_verdict"* — correct, but not a value another piece
+of code can branch on.
 
-O item 4 desta fase exige que **o lead decida com base na origem**
-(redistribuir | consolidar parcial | bloquear), e decisão automática não pode
-ramificar sobre prosa. Portanto este ADR tipa `failure_origin` e **retrofita** os
-pontos que já classificam falha informalmente — `task_blocked`, `dev.error`, os
-pareceres de QA e SecOps — em vez de introduzir o tipo só para as delegações e
-deixar o resto do sistema com dois vocabulários de falha coexistindo.
+Item 4 of this phase requires **the lead to decide based on the origin**
+(redistribute | consolidate partial | block), and an automated decision
+can't branch on prose. So this ADR types `failure_origin` and **retrofits**
+the points that already informally classify failure — `task_blocked`,
+`dev.error`, the QA and SecOps verdicts — rather than introducing the type
+only for delegations and leaving the rest of the system with two
+coexisting failure vocabularies.
 
-## Decisão
+## Decision
 
-### 1. Área é de projeto, e tem exatamente um lead
+### 1. An area belongs to a project, and has exactly one lead
 
-`agent_areas` (uma linha por área, por projeto) e `agent_area_members` (quem
-pertence, com um booleano `is_lead`). Duas invariantes garantidas **no banco**,
-não só em aplicação — este repo trata constraint como regra de negócio
-(`docs/.docmap.yml`, regra `schema-e-migrations`):
+`agent_areas` (one row per area, per project) and `agent_area_members` (who
+belongs, with an `is_lead` boolean). Two invariants guaranteed **in the
+database**, not just in the application — this repo treats a constraint as
+a business rule (`docs/.docmap.yml`, `schema-e-migrations` rule):
 
-- `unique(project_id, agent)` em `agent_area_members` — um agente pertence a
-  **no máximo uma** área, e o lead está sujeito à mesma regra: ele não pode ser
-  também membro comum de outra área.
-- `unique(area_id) where is_lead` — **no máximo um** lead por área. A
-  *existência* de um lead (pelo menos um) é invariante de criação, validada no
-  domínio quando a área é montada, não constraint de banco — uma área sendo
-  composta membro a membro passaria por um estado transitório sem lead que o
-  banco não tem como distinguir de um erro.
+- `unique(project_id, agent)` on `agent_area_members` — an agent belongs to
+  **at most one** area, and the lead is subject to the same rule: it can't
+  also be a plain member of another area.
+- `unique(area_id) where is_lead` — **at most one** lead per area. The
+  *existence* of a lead (at least one) is a creation invariant, validated in
+  the domain when the area is assembled, not a database constraint — an
+  area being composed member by member would pass through a transient
+  leadless state the database has no way to distinguish from an error.
 
-Agentes sem área — Criativo, PO, Arquiteto, Psicólogo, Anamnese — não entram em
-`agent_area_members` e continuam exatamente como hoje: endereçáveis por handoff
-direto. Este ADR não muda o fluxo deles.
+Agents without an area — Creative, PO, Architect, Psychologist, Anamnesis —
+don't enter `agent_area_members` and stay exactly as they are today:
+addressable by direct handoff. This ADR doesn't change their flow.
 
-**Dev fica de fora nesta fase.** `dev-<modulo>` é instanciado dinamicamente
-por módulo (ADR da Fase 4) e não vira área — não há "Dev Lead" ainda. Registrado
-como extensão futura, não implementado (ver Consequências).
+**Dev stays out of scope for this phase.** `dev-<modulo>` is instantiated
+dynamically per module (Phase 4 ADR) and doesn't become an area — there's no
+"Dev Lead" yet. Recorded as future extension, not implemented (see
+Consequences).
 
-### 2. Handoff externo só endereça lead ou agente sem área
+### 2. An external handoff can only address a lead or an area-less agent
 
-`CreateHandoffUseCase` — o único lugar do sistema que hoje grava `toAgent` sem
-validação — passa a chamar `assertHandoffTargetAllowed(toAgent, membrosDaÁrea)`
-antes de criar o registro. Alvo que é subagente de uma área (membro, não lead)
-é rejeitado com um erro tipado (`HandoffToSubagentError`, com o agente e a área
-no erro), não filtrado em silêncio nem promovido ao lead por engano.
+`CreateHandoffUseCase` — the only place in the system that today writes
+`toAgent` with no validation — now calls
+`assertHandoffTargetAllowed(toAgent, areaMembers)` before creating the
+record. A target that's an area subagent (a member, not the lead) is
+rejected with a typed error (`HandoffToSubagentError`, carrying the agent
+and the area), never silently filtered nor promoted to the lead by mistake.
 
-`OfferInfraHandoffUseCase` (a confirmação de prontidão que sinaliza o engine a
-oferecer o handoff ao InfraAgent) **não** grava `toAgent` — ele só dispara o
-engine, que é quem chama `CreateHandoffUseCase` depois. A validação mora num
-lugar só, no ponto que efetivamente decide o alvo.
+`OfferInfraHandoffUseCase` (the readiness confirmation that signals the
+engine to offer the handoff to the InfraAgent) does **not** write `toAgent`
+— it only triggers the engine, which is what calls `CreateHandoffUseCase`
+afterward. The validation lives in one place, at the point that actually
+decides the target.
 
-Isso é o precedente de `agent-activation.ts` estendido: aquele arquivo decide
-"quem pode ATIVAR"; este decide "quem pode ser ALVO de handoff **externo**" — a
-segunda pergunta não existia porque, até agora, todo agente era externo por
-definição.
+This is the `agent-activation.ts` precedent extended: that file decides "who
+can ACTIVATE"; this one decides "who can be the TARGET of an **external**
+handoff" — the second question didn't exist because, until now, every agent
+was external by definition.
 
-### 3. Delegação é o mecanismo interno, e é privado da área
+### 3. Delegation is the internal mechanism, and it's private to the area
 
-`delegations`: um lead delega uma tarefa a um subagente da MESMA área.
-`assertDelegationAllowed(lead, subagent, membros)` rejeita quem não é lead da
-área e quem delega para fora dela. Delegação **nunca** aparece como handoff —
-são tabelas e ciclos de vida diferentes, e a distinção é o que preserva a
-propriedade "o lead é o único contato externo": nada fora da área observa uma
-delegação individual, só o resultado consolidado.
+`delegations`: a lead delegates a task to a subagent in the SAME area.
+`assertDelegationAllowed(lead, subagent, members)` rejects whoever isn't the
+area's lead and whoever delegates outside it. Delegation **never** appears
+as a handoff — they're different tables and lifecycles, and the distinction
+is what preserves the property "the lead is the only external contact":
+nothing outside the area observes an individual delegation, only the
+consolidated result.
 
-### 4. Consolidação: um artefato só, contrato externo intocado
+### 4. Consolidation: a single artifact, external contract untouched
 
-O lead fecha o handoff que recebeu com **um** artefato
-`consolidated_verdict` — tipo novo em `ArtifactSchemas` (engine),
-**server-emitted** como `task_blocked` e os `*_verdict` já são: nenhum dos três
-é algo que o modelo escolhe emitir por tool call, são o registro de um desfecho
-que o servidor determina. Payload: `área`, `veredito`, `resumo`, e
-`delegações` — a lista dos pareceres internos referenciados por id, não
-copiados (rastreabilidade sem duplicar conteúdo).
+The lead closes the handoff it received with **one**
+`consolidated_verdict` artifact — a new type in `ArtifactSchemas` (engine),
+**server-emitted** like `task_blocked` and the `*_verdict` types already
+are: none of the three is something the model chooses to emit via tool
+call, they're the record of an outcome the server determines. Payload:
+`área` (area), `veredito` (verdict), `resumo` (summary), and `delegações`
+(delegations) — the list of internal verdicts referenced by id, not copied
+(traceability without duplicating content).
 
-`ArtifactSchemas` valida a FORMA (toda delegação `completed` tem
-`parecerArtifactId`; toda `failed` tem `failureOrigin`) — é a mesma pergunta que
-`check_extra/2` já responde para `qa_verdict`/`secops_verdict` hoje. O domínio
-da api valida a REGRA — só é possível consolidar com **todas** as delegações
-resolvidas (`assertConsolidatable`, rejeitando com a lista do que falta) —
-porque só a api tem a lista completa de delegações da área; o engine, no
-momento de emitir o artefato, só sabe do que já recebeu.
+`ArtifactSchemas` validates the SHAPE (every `completed` delegation has a
+`parecerArtifactId`; every `failed` one has a `failureOrigin`) — it's the
+same question `check_extra/2` already answers for `qa_verdict`/
+`secops_verdict` today. The api's domain validates the RULE — consolidation
+is only possible once **all** delegations are resolved
+(`assertConsolidatable`, rejecting with the list of what's missing) —
+because only the api has the full list of the area's delegations; the
+engine, at the moment it emits the artifact, only knows what it has
+received so far.
 
-**O contrato externo dos gates não muda.** `nextGateStatus` continua recebendo
-um `GateVerdict` (`approved | changes_requested`) por gate — o `consolidated_verdict`
-é o que o QA Lead **usa para decidir** aquele veredito único; quem chama o gate
-nunca vê uma delegação. Esta é a garantia central deste ADR: a hierarquia é
-invisível de fora da área.
+**The gates' external contract doesn't change.** `nextGateStatus` still
+receives one `GateVerdict` (`approved | changes_requested`) per gate — the
+`consolidated_verdict` is what the QA Lead **uses to decide** that single
+verdict; whoever calls the gate never sees a delegation. This is the
+central guarantee of this ADR: the hierarchy is invisible from outside the
+area.
 
-### 5. Orçamento em cascata, falha com origem obrigatória
+### 5. Cascading budget, failure with mandatory origin
 
-Teto na área (`agent_areas.budget_micros`), sub-teto por delegação
-(`delegations.budget_micros`, opcional — nem toda delegação precisa de um).
-Estouro do sub-teto vira `failed` com `failure_origin = politica` — é a mesma
-classificação que orçamento de sessão/projeto já usa em
-`budget-threshold.ts`, estendida à delegação.
+A cap on the area (`agent_areas.budget_micros`), a sub-cap per delegation
+(`delegations.budget_micros`, optional — not every delegation needs one).
+Exceeding the sub-cap becomes `failed` with `failure_origin = politica` —
+the same classification session/project budgets already use in
+`budget-threshold.ts`, extended to the delegation.
 
-**O `budgets` da Fase 1 não é tocado.** Ele tem `budgets_scope_check` fechado
-para exatamente dois escopos (`project` XOR `session`); acomodar um terceiro
-escopo ali alteraria uma tabela central por uma necessidade local da área. O
-teto de área e o sub-teto de delegação vivem nas tabelas novas.
+**The Phase 1 `budgets` table isn't touched.** It has `budgets_scope_check`
+locked down to exactly two scopes (`project` XOR `session`); accommodating
+a third scope there would alter a central table for an area's local need.
+The area cap and the delegation sub-cap live in new tables.
 
-Toda falha de subagente — estouro, `task_blocked` equivalente, o que for —
-chega ao lead com `failure_origin` preenchido. O lead decide um de três
-desfechos, e a decisão **é** um evento (`area.decision`), nunca um efeito
-colateral silencioso:
+Every subagent failure — a budget overrun, an equivalent `task_blocked`,
+whatever it is — reaches the lead with `failure_origin` filled in. The lead
+decides one of three outcomes, and the decision **is** an event
+(`area.decision`), never a silent side effect:
 
-- **redistribuir**: nova delegação nasce, cobrindo o que a falha deixou
-  pendente;
-- **consolidar parcial**: o `consolidated_verdict` fecha com o que há, citando
-  a delegação `failed` e sua origem — o consumidor externo vê um veredito
-  completo, mesmo que internamente uma parte tenha falhado;
-- **bloquear**: a área inteira fica bloqueada com a origem real propagada —
-  nunca `changes_requested` genérico como o Fase 4a já corrigiu para o caso do
-  QA sem parecer (ver o comentário em `qa_agent_server.ex:148-153`, que este
-  ADR generaliza).
+- **redistribute**: a new delegation is born, covering what the failure
+  left pending;
+- **consolidate partial**: the `consolidated_verdict` closes with what
+  there is, citing the `failed` delegation and its origin — the external
+  consumer sees a complete verdict, even if internally a part failed;
+- **block**: the whole area gets blocked with the real origin propagated —
+  never a generic `changes_requested` like Phase 4a already fixed for the
+  case of QA without a verdict (see the comment in
+  `qa_agent_server.ex:148-153`, which this ADR generalizes).
 
-### 6. Origem da falha: tipo novo, retrofit em todo o sistema que já classifica falha
+### 6. Failure origin: new type, retrofitted across the whole system that already classifies failure
 
-`failure_origin`: `infra | modelo | codigo | politica` (enum Postgres, sem
-acento como os demais enums de `schema.ts`). Retrofit — decisão explícita, não
-compromisso do modelo com delegação apenas:
+`failure_origin`: `infra | modelo | codigo | politica` (Postgres enum,
+without accents like the other `schema.ts` enums). Retrofit — an explicit
+decision, not a model committed to delegation alone:
 
-- `tasks.blocked_origin` e `stories.blocked_origin` (colunas novas, ao lado de
-  `blocked`/`blocked_reason` existentes — **campo novo, não substituição**);
-- `Engine.Dev.AgentIo.block_task/3` ganha um 4º argumento; os ~18 pontos de
-  chamada em `dev_agent_server.ex`/`noop_dev_agent_server.ex` são classificados
-  um a um (worktree falhando é `infra`; contexto malformado é `codigo`; limite
-  de iterações é `modelo`; orçamento é `politica`);
-- `falha_do_qa/1` (`qa_agent_server.ex`) e o equivalente do SecOps passam a
-  devolver origem junto de `reason`/`diagnosis`;
-- `task_blocked` em `ArtifactSchemas` ganha `origin` nas chaves obrigatórias.
+- `tasks.blocked_origin` and `stories.blocked_origin` (new columns,
+  alongside the existing `blocked`/`blocked_reason` — **new field, not a
+  replacement**);
+- `Engine.Dev.AgentIo.block_task/3` gains a 4th argument; the ~18 call
+  sites in `dev_agent_server.ex`/`noop_dev_agent_server.ex` are classified
+  one by one (a failing worktree is `infra`; malformed context is
+  `codigo`; iteration limit is `modelo`; budget is `politica`);
+- `falha_do_qa/1` (`qa_agent_server.ex`) and the SecOps equivalent now
+  return an origin alongside `reason`/`diagnosis`;
+- `task_blocked` in `ArtifactSchemas` gains `origin` among its required
+  keys.
 
-Nenhuma mensagem existente é removida ou reescrita — a origem é um campo NOVO
-ao lado do texto livre, que continua existindo para o humano ler.
+No existing message is removed or rewritten — the origin is a NEW field
+alongside the free text, which keeps existing for humans to read.
 
-## Consequências
+## Consequences
 
-### O que fica disponível
+### What becomes available
 
-- Handoff a subagente é erro em tempo de criação, não um bug latente que só
-  apareceria quando alguém tentasse.
-- O gate de QA (8b) e o subagente de Workflows no Infra (8c) têm o mecanismo
-  pronto — nenhum dos dois precisa reinventar delegação ou consolidação.
-- Toda decisão de falha parcial vira evento auditável (`area.decision`),
-  fechando a lacuna que o CLAUDE.md já proibia em teoria e não tinha como
-  impedir na prática — origem era texto, e texto não impede um `if` de
-  adivinhar.
+- Addressing a handoff to a subagent is a creation-time error, not a latent
+  bug that would only show up when someone tried.
+- The QA gate (8b) and the Workflows subagent within Infra (8c) have the
+  mechanism ready — neither needs to reinvent delegation or consolidation.
+- Every partial-failure decision becomes an auditable event
+  (`area.decision`), closing the gap that CLAUDE.md already forbade in
+  theory and had no way to enforce in practice — the origin was text, and
+  text doesn't stop an `if` from guessing.
 
-### O que fica registrado como extensão futura, não implementado
+### What's recorded as a future extension, not implemented
 
-- **Dev Lead.** `dev-<modulo>` continua instanciado dinamicamente por módulo,
-  sem lead. Se um dia precisar de área, o modelo já serve — área não pressupõe
-  quantidade fixa de membros nem instrução fixa por subagente.
-- **Áreas propostas pelo Arquiteto via `module_map`.** Hoje área é criada
-  implicitamente pelo escopo de cada fase (QA em 8b, Infra em 8c); a ideia de o
-  Arquiteto propor área nova dinamicamente, a partir do mapa de módulos que ele
-  já produz, fica fora do escopo — exigiria um fluxo de aprovação próprio.
+- **Dev Lead.** `dev-<modulo>` continues to be instantiated dynamically per
+  module, with no lead. If it ever needs an area, the model is already
+  ready — an area doesn't presuppose a fixed number of members nor a fixed
+  instruction per subagent.
+- **Areas proposed by the Architect via `module_map`.** Today an area is
+  created implicitly by each phase's scope (QA in 8b, Infra in 8c); the
+  idea of the Architect dynamically proposing a new area, from the module
+  map it already produces, is out of scope — it would require its own
+  approval flow.
 
-### Riscos assumidos
+### Risks accepted
 
-- **O retrofit da origem toca código da Fase 4 validado por execução real**
-  (ADR 0020). Cada um dos ~18 pontos é classificado individualmente e nenhuma
-  mensagem existente muda — o risco é de esquecer um ponto, não de quebrar um
-  que já funciona; os testes cobrem os pontos, não uma amostra.
-- **`delegation_status` nasce com um valor sem uso** (`dispensed`, reservado
-  para o 8b — "sem RNF de performance, delegação dispensada"). Alterar um enum
-  Postgres depois de escrito é migration com trava de tabela; nasce agora para
-  não pagar esse custo duas vezes.
-- **Sem varredura de delegação órfã.** Se o engine morrer entre iniciar uma
-  delegação e reportar o resultado, ela fica `pending` para sempre nesta fase —
-  o lead não consolida (comportamento correto: não fecha parecer incompleto em
-  silêncio), mas também não há alarme automático. Fica para quando houver um
-  caso real, não hipotético.
+- **The origin retrofit touches Phase 4 code validated by real execution**
+  (ADR 0020). Each of the ~18 points is classified individually and no
+  existing message changes — the risk is forgetting a point, not breaking
+  one that already works; the tests cover the points, not a sample.
+- **`delegation_status` is born with a value that has no use yet**
+  (`dispensed`, reserved for 8b — "no performance NFR, delegation
+  dismissed"). Changing a Postgres enum after it's written means a
+  migration with a table lock; it's born now so as not to pay that cost
+  twice.
+- **No sweep for orphan delegations.** If the engine dies between starting
+  a delegation and reporting the result, it stays `pending` forever in this
+  phase — the lead doesn't consolidate (correct behavior: it doesn't close
+  an incomplete verdict silently), but there's also no automatic alarm.
+  Left for when there's a real case, not a hypothetical one.
 
-## Fechamento (Fase 8d)
+## Closure (Phase 8d)
 
-As duas instâncias previstas neste ADR foram construídas — QA (8b) e o
-subagente de Workflows no Infra (8c) — mais o lado de apresentação (8d:
-painel do time agrupado por área, timeline de PR expandindo pareceres
-internos, Insights agrupados por área, feed narrando delegação). Fechando o
-que ficou decidido versus o que ficou pendente:
+The two instances anticipated by this ADR were built — QA (8b) and the
+Workflows subagent within Infra (8c) — plus the presentation side (8d:
+team panel grouped by area, PR timeline expanding internal verdicts,
+Insights grouped by area, feed narrating delegation). Closing out what was
+decided versus what stayed pending:
 
-### `consolidated_verdict` não foi implementado — decisão validada na prática
+### `consolidated_verdict` wasn't implemented — the decision validated in practice
 
-A decisão #4 acima desenhou um artefato genérico `consolidated_verdict`. Nem
-QA nem Infra o usam: os dois já tinham um contrato PRÓPRIO e ANTERIOR ao
-ADR — `qa_verdict` (QA) e `open_infra_pr` (Infra) — e mudar esse contrato
-quebraria `RecordGateVerdictUseCase`/`ExecuteInfraPrUseCase` e os demos que
-já provavam o caminho feliz sem a hierarquia. `Engine.Gates.QaLead.
-consolidar/1` produz exatamente a forma de `qa_verdict`;
-`Engine.Infra.InfraLead.consolidar/2` produz a união de arquivos que
-`open_infra_pr` já esperava. Quem consome nunca soube que existia mais de
-um agente por trás — a garantia central do ADR (linha 118 acima) se provou
-sem precisar do artefato genérico.
+Decision #4 above designed a generic `consolidated_verdict` artifact.
+Neither QA nor Infra uses it: both already had a contract of their OWN,
+predating the ADR — `qa_verdict` (QA) and `open_infra_pr` (Infra) — and
+changing that contract would have broken `RecordGateVerdictUseCase`/
+`ExecuteInfraPrUseCase` and the demos that already proved the happy path
+without the hierarchy. `Engine.Gates.QaLead.consolidar/1` produces exactly
+the shape of `qa_verdict`; `Engine.Infra.InfraLead.consolidar/2` produces
+the union of files `open_infra_pr` already expected. Whoever consumes it
+never knew there was more than one agent behind it — the ADR's central
+guarantee (line 118 above) held up without needing the generic artifact.
 
-`consolidated_verdict` continua disponível em `ArtifactSchemas` como
-DESENHO, não como código — uma área futura sem um artefato próprio pra
-reaproveitar (ao contrário de QA/Infra, que já tinham um antes de virar
-área) é o candidato natural a implementá-lo de verdade. Até lá, o padrão
-estabelecido é: **prefira reaproveitar o artefato que a área já emitia
-antes de virar área**; só implemente o genérico se não houver um.
+`consolidated_verdict` remains available in `ArtifactSchemas` as a DESIGN,
+not as code — a future area with no artifact of its own to reuse (unlike
+QA/Infra, which already had one before becoming an area) is the natural
+candidate to implement it for real. Until then, the established pattern is:
+**prefer reusing the artifact the area already emitted before becoming an
+area**; only implement the generic one if there isn't one.
 
-### Dev Lead e áreas dinâmicas — ainda não implementados, e a semente registrada
+### Dev Lead and dynamic areas — still not implemented, and the seed recorded
 
-Os dois itens que a seção "extensão futura" já registrava continuam de
-fora, confirmados após três instâncias reais do modelo (QA, Infra, e a UI
-que os expõe). Registrando a semente da segunda, como pedido:
+The two items the "future extension" section already recorded remain
+outside scope, confirmed after three real instances of the model (QA,
+Infra, and the UI that exposes them). Recording the seed of the second,
+as requested:
 
-**O `module_map` já dita QUANTOS dev agents existem** — um por módulo
-(`devAgentId`/`Engine.Dev.*` derivam disso hoje, sem tabela própria: a
-existência do dev é uma FUNÇÃO do module_map, não um registro paralelo). O
-passo natural — não implementado aqui — é o Arquiteto propor não só os
-módulos mas o AGRUPAMENTO deles em área: por exemplo, `payments-api` e
-`payments-worker` sob uma área "payments", com um dos dois (ou um lead
-dedicado) como contato externo. Isso viraria a mesma dinâmica de "área
-existe porque o module_map diz que existe" que hoje só vale pra dev
-individual — área deixaria de ser um catálogo fixo (QA, Infra) e passaria a
-ser uma PROPOSTA do Arquiteto, com aprovação do usuário, como module_map já
-é.
+**The `module_map` already dictates HOW MANY dev agents exist** — one per
+module (`devAgentId`/`Engine.Dev.*` derive from that today, without a
+table of their own: a dev's existence is a FUNCTION of the module_map, not
+a parallel record). The natural next step — not implemented here — is for
+the Architect to propose not just the modules but their GROUPING into an
+area: for example, `payments-api` and `payments-worker` under a "payments"
+area, with one of the two (or a dedicated lead) as the external contact.
+This would become the same "the area exists because the module_map says
+it does" dynamic that today only applies to individual devs — an area
+would stop being a fixed catalog (QA, Infra) and become a PROPOSAL from
+the Architect, with user approval, the way the module_map already is.
 
-Pré-requisitos pra isso virar código, não só ideia: `agent_areas`/
-`agent_area_members` de verdade (o aparato que 8b/8c cortaram de escopo
-deliberadamente — hoje `area`/`subagent`/`leadAgent` em `delegations` são
-TEXT, sem tabela de associação, porque só existiam duas áreas fixas
-conhecidas de antemão); um fluxo de aprovação pra criação de área (mesmo
-padrão de handoff/module_map, usuário decide); e uma resposta pra "quem
-vira lead" quando a área nasce de proposta, não de um catálogo fixo — Dev
-Lead e área dinâmica são o MESMO problema em aberto, não dois.
+Prerequisites for this to become code, not just an idea: real
+`agent_areas`/`agent_area_members` (the apparatus 8b/8c deliberately cut
+from scope — today `area`/`subagent`/`leadAgent` in `delegations` are
+TEXT, with no association table, because only two fixed areas were known
+in advance); an approval flow for creating an area (same pattern as
+handoff/module_map, user decides); and an answer to "who becomes lead"
+when an area is born from a proposal instead of a fixed catalog — Dev
+Lead and dynamic area are the SAME open problem, not two.

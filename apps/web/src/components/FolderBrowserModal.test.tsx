@@ -1,6 +1,10 @@
+import type { ReactElement } from 'react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, cleanup, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import i18next from 'i18next';
+import { initReactI18next, I18nextProvider } from 'react-i18next';
+import terminalPtBR from '../locales/pt-BR/terminal.json';
 import { FolderBrowserModal } from './FolderBrowserModal';
 import type { FsBrowserChannel } from '../lib/fs-browser-channel';
 
@@ -11,7 +15,29 @@ import type { FsBrowserChannel } from '../lib/fs-browser-channel';
  * runner / pronto), não o protocolo Phoenix em si (coberto em
  * `fs-browser-channel` indiretamente pelo `terminal-channel.test.ts`
  * irmão, e no engine por `terminal_channel_test.exs`).
+ *
+ * Instância própria de i18next (mesmo padrão de `AccountPage.test.tsx`), só
+ * com o namespace `terminal` e `lng: 'pt-BR'` — mantém as asserções em
+ * português que este teste já fazia antes da extração.
  */
+
+function novaInstanciaI18n() {
+  const instancia = i18next.createInstance();
+  void instancia.use(initReactI18next).init({
+    resources: { 'pt-BR': { terminal: terminalPtBR } },
+    lng: 'pt-BR',
+    fallbackLng: 'pt-BR',
+    defaultNS: 'terminal',
+    ns: ['terminal'],
+    interpolation: { escapeValue: false },
+    returnNull: false,
+  });
+  return instancia;
+}
+
+function renderComI18n(ui: ReactElement) {
+  return render(<I18nextProvider i18n={novaInstanciaI18n()}>{ui}</I18nextProvider>);
+}
 
 const { connectFsBrowserChannelMock, fakeChannel } = vi.hoisted(() => {
   const fakeChannel: {
@@ -38,7 +64,7 @@ beforeEach(() => {
 describe('FolderBrowserModal', () => {
   it('projectId nulo: não conecta e mostra o estado declarado (sem projeto ainda)', () => {
     const onClose = vi.fn();
-    render(
+    renderComI18n(
       <FolderBrowserModal projectId={null} onSelecionar={vi.fn()} onClose={onClose} />,
     );
 
@@ -69,7 +95,7 @@ describe('FolderBrowserModal', () => {
 
     const onSelecionar = vi.fn();
     const onClose = vi.fn();
-    render(
+    renderComI18n(
       <FolderBrowserModal projectId="proj-1" onSelecionar={onSelecionar} onClose={onClose} />,
     );
 
@@ -95,7 +121,7 @@ describe('FolderBrowserModal', () => {
       entradas: [],
     }));
 
-    render(<FolderBrowserModal projectId="proj-1" onSelecionar={vi.fn()} onClose={vi.fn()} />);
+    renderComI18n(<FolderBrowserModal projectId="proj-1" onSelecionar={vi.fn()} onClose={vi.fn()} />);
 
     await waitFor(() =>
       expect(fakeChannel.listarDiretorio).toHaveBeenCalledWith('/home/user/projetos'),
@@ -111,7 +137,7 @@ describe('FolderBrowserModal', () => {
       erro: 'Nenhum runner conectado a este projeto. Rode `brabo-runner --project proj-1 --dir <pasta>`.',
     });
 
-    render(<FolderBrowserModal projectId="proj-1" onSelecionar={vi.fn()} onClose={vi.fn()} />);
+    renderComI18n(<FolderBrowserModal projectId="proj-1" onSelecionar={vi.fn()} onClose={vi.fn()} />);
 
     expect(
       await screen.findByText((t) => t.includes('Nenhum runner conectado')),
@@ -130,7 +156,7 @@ describe('FolderBrowserModal', () => {
     fakeChannel.diretorioInicial.mockResolvedValue({ path: '/home/user' });
     fakeChannel.listarDiretorio.mockResolvedValue({ path: '/home/user', entradas: [] });
 
-    const { unmount } = render(
+    const { unmount } = renderComI18n(
       <FolderBrowserModal projectId="proj-1" onSelecionar={vi.fn()} onClose={vi.fn()} />,
     );
     await waitFor(() => expect(connectFsBrowserChannelMock).toHaveBeenCalled());

@@ -1,144 +1,149 @@
-# 0056 — O engine trabalha em repositório remoto
+# 0056 — The engine works on a remote repository
 
 ## Status
 
-Aceito — implementado e provado por teste na Fase B do backlog
+Accepted — implemented and proven by test in Phase B of the backlog
 ([RN-076](../business-rules.md#rn-076)).
 
-Uma descoberta da implementação, registrada porque muda o tamanho do problema:
-**dois dos quatro consumidores nunca precisaram de credencial**.
-`Engine.Gates.Diff` e `Engine.Harness.ProjectContext` só usam o NOME da branch
-default — eles paravam em provider remoto por dano colateral de uma função que
-devolvia mais do que eles pediam. Separar `default_branch/1` de
-`remoto_de_trabalho/1` destravou os dois sem token nenhum.
+An implementation discovery, recorded because it changes the size of the
+problem: **two of the four consumers never needed a credential**.
+`Engine.Gates.Diff` and `Engine.Harness.ProjectContext` only use the default
+branch's NAME — they were stalling on a remote provider as collateral damage
+from a function that returned more than they asked for. Splitting
+`default_branch/1` from `remoto_de_trabalho/1` unblocked both without a
+single token.
 
-## Contexto
+## Context
 
-`Engine.Projects.ProjectRepository.get_local_repo_path/1` devolve
-`{:error, {:unsupported_provider, "github"}}` para tudo que não é `local`.
-Quatro consumidores dependem dele, e todos param junto:
+`Engine.Projects.ProjectRepository.get_local_repo_path/1` returns
+`{:error, {:unsupported_provider, "github"}}` for anything that isn't
+`local`. Four consumers depend on it, and they all stall together:
 
-| consumidor | o que deixa de funcionar |
+| consumer | what stops working |
 |---|---|
-| `Engine.Dev.WorktreeManager` | o dev agent não tem worktree — não escreve código |
-| `Engine.Actions.TerminalExecutor` | sem workspace, todo comando falha |
-| `Engine.Gates.Diff` | QA e SecOps não têm o diff que julgam |
-| `Engine.Harness.ProjectContext` | o agente monta contexto sem o repositório |
+| `Engine.Dev.WorktreeManager` | the dev agent has no worktree — it does not write code |
+| `Engine.Actions.TerminalExecutor` | with no workspace, every command fails |
+| `Engine.Gates.Diff` | QA and SecOps have no diff to judge |
+| `Engine.Harness.ProjectContext` | the agent builds context without the repository |
 
-A assimetria é a raiz: a **api** fala com o GitHub por **HTTP** — criou o
-repositório, commitou os arquivos do bootstrap, criou as branches — enquanto o
-**engine** trabalha no **sistema de arquivos** e só conhece bare repo local.
-Um projeto no GitHub faz a metade conversacional e o bootstrap, e para na
-metade de construção.
+The asymmetry is the root cause: the **api** talks to GitHub over **HTTP** —
+it created the repository, committed the bootstrap files, created the
+branches — while the **engine** works on the **filesystem** and only knows a
+local bare repo. A project on GitHub does the conversational half and the
+bootstrap, and stops halfway through construction.
 
-É o que hoje impede a FASE 13b de existir como escrita: ela pede uma execução
-medida num projeto ADOTADO do fork via GithubProvider remoto, e essa execução
-não tem como chegar ao primeiro comando.
+This is what currently prevents PHASE 13b from being written as-is: it calls
+for a measured execution on a project ADOPTED from the fork via the remote
+GithubProvider, and that execution has no way to reach the first command.
 
-### O que já está pronto e não precisa mudar
+### What is already ready and doesn't need to change
 
-`Engine.Actions.Workspace.init_from_bare!/3` faz `git init` + `remote add
-origin <origem>` + `fetch` + `checkout`. **Isto já é genérico**: `<origem>`
-ser um caminho local é acidente do provider `local`, não do desenho. Trocar a
-origem por uma URL resolve o caminho inteiro sem reescrevê-lo.
+`Engine.Actions.Workspace.init_from_bare!/3` does `git init` + `remote add
+origin <origin>` + `fetch` + `checkout`. **This is already generic**: the
+`<origin>` being a local path is an accident of the `local` provider, not of
+the design. Swapping the origin for a URL resolves the whole path without
+rewriting it.
 
-O que falta, então, não é encanamento de git — é **credencial**.
+So what is missing is not git plumbing — it is a **credential**.
 
-## Decisão
+## Decision
 
-### 1. O engine pede um remoto de trabalho à api, e nunca guarda credencial
+### 1. The engine asks the api for a working remote, and never stores a credential
 
-O token vive cifrado em `user_credentials`, com envelope encryption, e a chave
-mestra é da api. O engine **não** recebe a chave mestra e **não** persiste
-token: ele pede à api, pelo canal `/internal/*` que já existe com service
-token, o **remoto de trabalho** de um projeto, no momento em que precisa
-buscar ou empurrar.
+The token lives encrypted in `user_credentials`, with envelope encryption,
+and the master key belongs to the api. The engine does **not** receive the
+master key and does **not** persist a token: it asks the api, over the
+`/internal/*` channel that already exists with a service token, for a
+project's **working remote**, at the moment it needs to fetch or push.
 
-Dar a chave mestra ao engine seria alargar o raio de explosão do segredo mais
-sensível do produto para ganhar uma chamada HTTP a menos.
+Giving the master key to the engine would widen the blast radius of the
+product's most sensitive secret to save one HTTP call.
 
-### 2. O token NUNCA entra no `.git/config`
+### 2. The token NEVER enters `.git/config`
 
-Esta é a decisão que mais importa, e ela é consequência direta do
+This is the decision that matters most, and it is a direct consequence of
 [ADR 0055](0055-escopo-de-caminho-na-politica-de-terminal.md).
 
-O caminho óbvio — `remote add origin https://x-access-token:TOKEN@github.com/…`
-— grava a credencial **em texto puro dentro da pasta do projeto**. E a
-[RN-075](../business-rules.md#rn-075) acabou de dar ao dev agent leitura
-**auto-aprovada** dentro dessa pasta: um `cat .git/config` devolveria o token
-sem passar por aprovação nenhuma, e ele viajaria para o provider de LLM no
-turno seguinte, dentro do histórico do laço.
+The obvious path — `remote add origin
+https://x-access-token:TOKEN@github.com/…` — writes the credential **in
+plain text inside the project folder**. And
+[RN-075](../business-rules.md#rn-075) just gave the dev agent
+**auto-approved** reading inside that folder: a `cat .git/config` would
+return the token with no approval whatsoever, and it would travel to the LLM
+provider on the very next turn, inside the loop's history.
 
-O escopo de caminho protege contra o agente ler para **fora** do projeto. Ele
-não protege — e não tem como proteger — contra um segredo que o próprio
-produto colocou **dentro**.
+Path scope protects against the agent reading **outward** from the project.
+It does not — and cannot — protect against a secret that the product itself
+placed **inside**.
 
-Então: `origin` guarda a URL **limpa**, e a autenticação é injetada por
-invocação, viva só durante o processo de git que a usa. Nada de credencial em
-arquivo, nem no `.git/config`, nem em helper persistido.
+So: `origin` holds the **clean** URL, and authentication is injected per
+invocation, alive only for the duration of the git process that uses it.
+No credential in a file, not in `.git/config`, not in a persisted helper.
 
-### 3. A credencial é a do OWNER do workspace
+### 3. The credential is the workspace OWNER's
 
-Mesma regra que a [RN-058](../business-rules.md#rn-058) já estabeleceu para
-chave de LLM, pelo mesmo motivo: quem paga e quem autoriza é o dono do
-workspace, não o agente nem quem abriu a sessão.
+Same rule that [RN-058](../business-rules.md#rn-058) already established for
+the LLM key, for the same reason: who pays and who authorizes is the
+workspace owner, not the agent nor whoever opened the session.
 
-### 4. `provider: local` continua igual
+### 4. `provider: local` stays the same
 
-Não é compatibilidade retroativa por educação: o provider local é o que os
-testes de contrato usam e o que faz o `pnpm dev` funcionar sem credencial
-nenhuma. O remoto de trabalho de um projeto local é o caminho do bare repo, e
-o resto do caminho não sabe a diferença.
+It is not backward compatibility out of courtesy: the local provider is what
+the contract test suite uses and what makes `pnpm dev` work with no
+credential at all. A local project's working remote is the bare repo's path,
+and the rest of the path does not know the difference.
 
-### 5. Falha de credencial é `infra`, e é dita
+### 5. Credential failure is `infra`, and it is said
 
-Token ausente, expirado ou sem permissão no repositório reprova com origem
-`infra` — não `modelo`, não `código`. É a regra do CLAUDE.md sobre origem de
-falha, e o achado T desta rodada mostra que ela é violada justamente nos
-caminhos de erro que ninguém exercita.
+Missing, expired, or under-permissioned token on the repository fails with
+origin `infra` — not `model`, not `code`. It is the CLAUDE.md rule about
+failure origin, and this round's finding T shows it is violated precisely in
+the error paths that nobody exercises.
 
-## Consequências
+## Consequences
 
-**O que destrava.** Projeto em provider remoto passa a ter worktree, terminal,
-diff de gate e contexto — isto é, a metade de construção. É a precondição da
-FASE 13b: sem isso não existe execução medida em repositório remoto.
+**What it unblocks.** A project on a remote provider gains a worktree,
+terminal, gate diff, and context — that is, the construction half. It is the
+precondition for PHASE 13b: without this there is no measured execution on a
+remote repository.
 
-**O que fica mais caro.** O engine passa a depender da api para trabalhar no
-sistema de arquivos. Um `fetch` agora pode falhar por rede, por token expirado
-ou por a api estar fora — três modos de falha que o bare repo local não tinha.
-Daí o ponto 5 ser decisão e não detalhe.
+**What gets more expensive.** The engine starts depending on the api to work
+on the filesystem. A `fetch` can now fail because of the network, an expired
+token, or the api being down — three failure modes the local bare repo did
+not have. Hence point 5 being a decision and not a detail.
 
-**O que este ADR NÃO resolve.** Isolamento continua sendo o problema em aberto
-do [ADR 0055](0055-escopo-de-caminho-na-politica-de-terminal.md): o token não
-está mais no disco, mas o agente segue rodando no mesmo container que o
-monorepo do Brabo. Um `env` do processo de git durante a janela em que ele
-roda é uma superfície menor que um arquivo permanente, e não é zero.
+**What this ADR does NOT resolve.** Isolation remains the open problem from
+[ADR 0055](0055-escopo-de-caminho-na-politica-de-terminal.md): the token is
+no longer on disk, but the agent still runs in the same container as the
+Brabo monorepo. An `env` var on the git process during the window it runs is
+a smaller surface than a permanent file, and it is not zero.
 
-## Alternativas consideradas
+## Alternatives considered
 
-**Dar a chave mestra ao engine.** Elimina a chamada HTTP e multiplica por dois
-os lugares de onde todo segredo do produto pode vazar. Recusada.
+**Give the master key to the engine.** Removes the HTTP call and doubles the
+places from which every secret in the product could leak. Rejected.
 
-**Token na URL do `origin`.** É o que quase todo tutorial faz, e é exatamente o
-que o ADR 0055 tornou perigoso: escrever o segredo no lugar onde o agente tem
-leitura auto-aprovada. Recusada — e registrada aqui porque a tentação de
-"simplificar" para isso vai voltar.
+**Token in the `origin` URL.** It is what almost every tutorial does, and is
+exactly what ADR 0055 made dangerous: writing the secret in the place where
+the agent has auto-approved reading. Rejected — and recorded here because
+the temptation to "simplify" back to this will come up again.
 
-**Espelhar o remoto num bare local e sincronizar.** Manteria o engine igual,
-mas cria uma segunda fonte de verdade do repositório, com divergência
-silenciosa quando alguém empurra direto no provider. Recusada.
+**Mirror the remote into a local bare repo and sync.** Would keep the engine
+unchanged, but creates a second source of truth for the repository, with
+silent divergence whenever someone pushes directly to the provider.
+Rejected.
 
-**Manter só `local` e adiar.** É o estado atual, e é o que impede a FASE 13b.
+**Keep only `local` and defer.** This is the current state, and it is what
+blocks PHASE 13b.
 
-## Referências
+## References
 
-- Achado N de
-  [achados-execucao-real.md](../explanation/achados-execucao-real.md), Fase B
-  do [backlog](../explanation/backlog.md).
-- [ADR 0055](0055-escopo-de-caminho-na-politica-de-terminal.md) — o escopo que
-  torna a decisão 2 obrigatória.
-- [RN-058](../business-rules.md#rn-058) — de quem é a credencial que o agente
-  gasta.
+- Finding N from
+  [achados-execucao-real.md](../explanation/achados-execucao-real.md), Phase B
+  of the [backlog](../explanation/backlog.md).
+- [ADR 0055](0055-escopo-de-caminho-na-politica-de-terminal.md) — the scope
+  that makes decision 2 mandatory.
+- [RN-058](../business-rules.md#rn-058) — whose credential the agent spends.
 - `apps/engine/lib/engine/projects/project_repository.ex`,
   `apps/engine/lib/engine/actions/workspace.ex`,
   `apps/engine/lib/engine/actions/git_executor.ex`.

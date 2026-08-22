@@ -1,184 +1,191 @@
-# ADR 0067 — O gate sobrevive ao restart
+# ADR 0067 — The gate survives a restart
 
-- **Status:** aceito
-- **Data:** 2026-08-12
-- **Contexto:** achado recorrente em revisão — "PR em revisão de Dev nunca conclui"
-- **Estende:** [ADR 0057](0057-o-gate-espera-a-aprovacao.md), na mesma relação
-  que aquele tem com o [ADR 0052](0052-dev-agent-espera-aprovacao-no-meio-do-laco.md)
+- **Status:** accepted
+- **Date:** 2026-08-12
+- **Context:** recurring finding during review — "PR under Dev review never
+  finishes"
+- **Extends:** [ADR 0057](0057-o-gate-espera-a-aprovacao.md), in the same
+  relationship that one has with [ADR 0052](0052-dev-agent-espera-aprovacao-no-meio-do-laco.md)
 
-## Contexto
+## Context
 
-O [ADR 0057](0057-o-gate-espera-a-aprovacao.md) resolveu, para os agentes de
-gate, o problema que o 0052 já tinha resolvido para o dev agent: suspender no
-meio do laço em vez de morrer com `origin: infra` mentiroso. Ele mesmo já
-declarava, na seção "O que isto NÃO resolve": **"restart no meio da espera
-perde o laço"** — o `pendente`/`em_voo` do `QaLeadServer` vive só na memória
-do processo, que é `restart: :temporary` (mesmo do `SecOpsAgentServer`), e
-criar a tabela durável equivalente a `dev_agent_states` (Fase 12b) tinha sido
-declarado escopo próprio.
+[ADR 0057](0057-o-gate-espera-a-aprovacao.md) solved, for the gate agents,
+the problem 0052 had already solved for the dev agent: suspending
+mid-loop instead of dying with a misleading `origin: infra`. It already
+declared, in the "What this does NOT resolve" section:
+**"a restart mid-wait loses the loop"** — the `QaLeadServer`'s
+`pendente`/`em_voo` (pending/in-flight) lives only in the process's memory,
+which is `restart: :temporary` (same as `SecOpsAgentServer`), and creating
+the durable table equivalent to `dev_agent_states` (Phase 12b) had been
+declared its own scope.
 
-Esse escopo próprio é este ADR — mas ele cobre MAIS do que a frase original
-sugere. Investigar de novo o código (`qa_lead_server.ex`, `secops_agent_server.ex`,
-`dispatcher.ex`) achou uma SEGUNDA janela de perda, distinta da suspensão em
-`{:awaiting, ...}`: as transições intermediárias do gate —
-`DevAgentServer.correct/3` (devolve ao dev) e `Dispatcher.run_secops/2`
-(QA aprovou, chama SecOps) — são chamada DIRETA em memória, feitas DEPOIS de
-`record_gate_verdict` já ter avançado o `gate_status` da task, de forma
-DURÁVEL, na api. Se o processo cai exatamente entre as duas (veredito já
-gravado, chamada em processo ainda não feita), a api acha que o próximo gate
-está rodando e o engine nunca chama ninguém — a PR fica presa em
-`awaiting_secops` (ou `awaiting_qa` esperando uma correção que nunca chega)
-para sempre, e nenhum restart do engine conserta, porque nada nunca sabia que
-aquele passo estava pendente.
+That own scope is this ADR — but it covers MORE than the original sentence
+suggests. Investigating the code again (`qa_lead_server.ex`,
+`secops_agent_server.ex`, `dispatcher.ex`) found a SECOND loss window,
+distinct from suspension in `{:awaiting, ...}`: the gate's intermediate
+transitions — `DevAgentServer.correct/3` (hands back to the dev agent) and
+`Dispatcher.run_secops/2` (QA approved, calls SecOps) — are DIRECT
+in-memory calls, made AFTER `record_gate_verdict` has already durably
+advanced the task's `gate_status` on the api. If the process dies exactly
+between the two (verdict already recorded, in-process call not yet made),
+the api thinks the next gate is running and the engine never calls
+anyone — the PR gets stuck in `awaiting_secops` (or `awaiting_qa` waiting
+for a correction that never arrives) forever, and no engine restart fixes
+it, because nothing ever knew that step was pending.
 
-Duas janelas, então, não uma:
+Two windows, then, not one:
 
-1. **`in_progress`** — o processo caiu ANTES de qualquer veredito ser
-   gravado (no início do ciclo, ou no meio de um subagente suspenso
-   esperando aprovação, o caso que o 0057 já cobria).
-2. **`dispatch_pending`** — o veredito JÁ foi gravado (durável, na api), e
-   só a chamada em processo que aplica o próximo passo (`correct` ou
-   `run_secops`) se perdeu.
+1. **`in_progress`** — the process died BEFORE any verdict was recorded (at
+   the start of a cycle, or in the middle of a subagent suspended waiting
+   for approval, the case 0057 already covered).
+2. **`dispatch_pending`** — the verdict was ALREADY recorded (durably, in
+   the api), and only the in-process call that applies the next step
+   (`correct` or `run_secops`) got lost.
 
-A primeira o 0057 documentou; a segunda não tinha sido percebida — e é, na
-prática, a mais fácil de acontecer: é exatamente o intervalo entre uma
-resposta HTTP voltar e a linha seguinte de código rodar.
+The first one 0057 documented; the second hadn't been noticed — and in
+practice it's the easier one to hit: it's exactly the gap between an HTTP
+response coming back and the next line of code running.
 
-## Decisão
+## Decision
 
-**O gate ganha estado durável, no mesmo idioma de `dev_agent_states`
-(ADR 0045), e um resgatador que retoma o que ficou pendente — sem
-intervenção manual.**
+**The gate gains durable state, in the same idiom as `dev_agent_states`
+(ADR 0045), and a rescuer that resumes whatever was left pending — without
+manual intervention.**
 
-### A tabela: `gate_states` (schema `engine`)
+### The table: `gate_states` (schema `engine`)
 
-Chave composta `{project_id, task_id, gate}`. Cada linha representa um ciclo
-de gate EM VOO, com um `step`:
+Composite key `{project_id, task_id, gate}`. Each row represents a gate
+cycle IN FLIGHT, with a `step`:
 
-- `"in_progress"` — nenhum veredito gravado nesta tentativa. `subagent`
-  (opcional) é só diagnóstico de qual subespecialidade estava suspensa —
-  o `ctx` do ToolLoop NÃO é persistido (mesma escolha do `laço_pendente` do
-  dev agent: não sobrevive a um restart, e fingir que sobrevive seria pior
-  que não tentar).
-- `"dispatch_pending"` — o veredito já foi gravado; `next_action`
-  (`"correct"` | `"run_secops"`) e, quando é `"correct"`,
-  `correction_reason`/`correction_diagnosis` guardam o que
-  `DevAgentServer.correct/3` precisa pra ser rechamado sem reler a api.
+- `"in_progress"` — no verdict recorded in this attempt. `subagent`
+  (optional) is purely diagnostic — which sub-specialty was suspended —
+  the ToolLoop's `ctx` is NOT persisted (same choice as the dev agent's
+  `laço_pendente`: it doesn't survive a restart, and pretending it does
+  would be worse than not trying).
+- `"dispatch_pending"` — the verdict was already recorded; `next_action`
+  (`"correct"` | `"run_secops"`) and, when it's `"correct"`,
+  `correction_reason`/`correction_diagnosis` hold what
+  `DevAgentServer.correct/3` needs to be re-called without re-reading the
+  api.
 
-Escrita e apagada nos MESMOS pontos onde `qa_lead_server.ex`/
-`secops_agent_server.ex` já fazem as transições — não existe caminho
-paralelo. `run_area`/`run_secops` gravam `in_progress` antes de qualquer
-subagente/scanner rodar; `apply_gate_result`/`apply_verdict` gravam
-`dispatch_pending` IMEDIATAMENTE depois de `record_gate_verdict` voltar
-`correct`/`run_secops` e ANTES de fazer a chamada em processo; a linha é
-apagada logo depois da chamada (ou em qualquer outro desfecho terminal —
-`done`, bloqueio, ou erro).
+Written and deleted at the SAME points where `qa_lead_server.ex`/
+`secops_agent_server.ex` already make the transitions — there's no
+parallel path. `run_area`/`run_secops` write `in_progress` before any
+subagent/scanner runs; `apply_gate_result`/`apply_verdict` write
+`dispatch_pending` IMMEDIATELY after `record_gate_verdict` returns
+`correct`/`run_secops` and BEFORE making the in-process call; the row is
+deleted right after the call (or on any other terminal outcome — `done`,
+a block, or an error).
 
-### O resgatador: `Engine.Gates.GateRescuer`
+### The rescuer: `Engine.Gates.GateRescuer`
 
-Varre `gate_states` por linhas paradas há mais de
-`gate_rescue_stale_after_seconds` (default 900s — **generoso de propósito**:
-o ToolLoop de um subagente de QA pode rodar legitimamente até
-`TOOL_LOOP_MAX_ITERATIONS_GATE` (60) iterações, e um limiar curto resgataria
-— e duplicaria — um ciclo que só está lento). Pra cada linha:
+Sweeps `gate_states` for rows stuck longer than
+`gate_rescue_stale_after_seconds` (default 900s — **deliberately
+generous**: a QA subagent's ToolLoop can legitimately run up to
+`TOOL_LOOP_MAX_ITERATIONS_GATE` (60) iterations, and a short threshold
+would rescue — and duplicate — a cycle that's merely slow). For each row:
 
-- `in_progress` → reinicia a ÁREA inteira (`Dispatcher.run_qa`/`run_secops`
-  de novo). Não há retomada CIRÚRGICA possível (o `ctx` não sobreviveu), mas
-  é SEGURO: a api só aceita `record_gate_verdict` pro gate que ainda é DONO
-  do `gate_status` atual (`nextGateStatus`, `pr-gate-state-machine.ts:67-69`)
-  — se este ciclo já tinha terminado por outra via, a segunda tentativa
-  recebe erro (hoje um 500 não mapeado — ver "Consequências") e não
-  corrompe nada.
-- `dispatch_pending` → reenvia exatamente a chamada que faltou
+- `in_progress` → restarts the whole AREA (`Dispatcher.run_qa`/`run_secops`
+  again). There's no possible SURGICAL resumption (the `ctx` didn't
+  survive), but it's SAFE: the api only accepts `record_gate_verdict` for
+  the gate that's still the OWNER of the current `gate_status`
+  (`nextGateStatus`, `pr-gate-state-machine.ts:67-69`) — if this cycle had
+  already finished through another path, the second attempt gets an error
+  (today an unmapped 500 — see "Consequences") and corrupts nothing.
+- `dispatch_pending` → resends exactly the call that was missing
   (`Dispatcher.run_secops`/`DevAgentServer.correct`).
 
-Chamado de dois lugares, mesmo par que `Engine.Dev.DevRehydrator` usa: uma
-vez no boot (`Engine.Application`, depois dos dois supervisors de gate) e
-periodicamente via `Engine.Workers.GateRescueSchedulerWorker` — um tick
-Oban auto-reagendado (5 min de default), mesmo idioma do
-`ModelSyncSchedulerWorker`/`AnamneseSchedulerWorker`. Reusar o Oban em vez
-de inventar outro mecanismo de agendamento é decisão deliberada: o engine já
-usa filas do Postgres pra isso, e um segundo mecanismo só pra gates seria
-duplicar o que já existe pelo motivo errado.
+Called from two places, the same pair `Engine.Dev.DevRehydrator` uses: once
+at boot (`Engine.Application`, after the two gate supervisors) and
+periodically via `Engine.Workers.GateRescueSchedulerWorker` — a
+self-rescheduling Oban tick (5-minute default), the same idiom as
+`ModelSyncSchedulerWorker`/`AnamneseSchedulerWorker`. Reusing Oban instead
+of inventing another scheduling mechanism is a deliberate decision: the
+engine already uses Postgres queues for this, and a second mechanism just
+for gates would be duplicating what already exists for the wrong reason.
 
-### Duas guardas contra duplicar trabalho
+### Two guards against duplicating work
 
-Ciclo de gate rodando de novo é caro (LLM) e, no limite, pode gerar dois
-vereditos concorrentes pro mesmo passo. Duas guardas, nenhuma perfeita
-sozinha, juntas suficientes:
+A gate cycle running again is expensive (LLM) and, at the limit, can
+produce two competing verdicts for the same step. Two guards, neither
+perfect alone, together sufficient:
 
-1. **`Registry.lookup` antes de qualquer resgate.** Um processo vivo NESTE
-   nó nunca é perturbado — se ele ainda está rodando (mesmo que devagar), o
-   resgate não age. Isso NÃO cobre outra réplica: `Engine.Gates.Registry` é
-   local ao nó, mesma ressalva que `Engine.Dev.Wake` já assume desde o
-   ADR 0045 (entrega PubSub at-most-once por causa disso).
-2. **O limiar de staleness** é a segunda linha de defesa justamente pro caso
-   que a guarda 1 não cobre — generoso o bastante pra dar tempo de uma
-   réplica remota terminar um ciclo real antes de outra tentar de novo.
+1. **`Registry.lookup` before any rescue.** A process alive on THIS node is
+   never disturbed — if it's still running (even if slowly), the rescue
+   doesn't act. This does NOT cover another replica: `Engine.Gates.Registry`
+   is local to the node, the same caveat `Engine.Dev.Wake` already assumes
+   since ADR 0045 (at-most-once PubSub delivery because of it).
+2. **The staleness threshold** is the second line of defense precisely for
+   the case guard 1 doesn't cover — generous enough to give a remote
+   replica time to finish a real cycle before another one tries again.
 
-O pior desfecho de uma corrida residual (as duas guardas falharem ao mesmo
-tempo) é trabalho DUPLICADO e BARATO — SecOps re-varre (determinístico, sem
-LLM); QA re-roda e o segundo `record_gate_verdict` é rejeitado pela api sem
-gravar nada — nunca dado inconsistente. `DevAgentServer.correct/3` já era
-idempotente-por-guarda de estado desde o ADR 0052
-(`handle_cast({:correct, _}, state)` só age se `status == :awaiting_gate`);
-um segundo `correct` chegando depois do primeiro já ter avançado o agente é
-NO-OP, de graça.
+The worst outcome of a residual race (both guards failing at the same
+time) is DUPLICATED and CHEAP work — SecOps re-scans (deterministic, no
+LLM); QA re-runs and the second `record_gate_verdict` is rejected by the
+api without writing anything — never inconsistent data.
+`DevAgentServer.correct/3` was already idempotent-by-state-guard since
+ADR 0052 (`handle_cast({:correct, _}, state)` only acts if
+`status == :awaiting_gate`); a second `correct` arriving after the first
+already advanced the agent is a free NO-OP.
 
-## Consequências
+## Consequences
 
-**O achado do ADR 0057 fecha, e vai além do que ele declarava.** As duas
-janelas (`in_progress` e `dispatch_pending`) estão cobertas; a segunda nem
-tinha sido nomeada até esta investigação.
+**ADR 0057's finding closes, and goes beyond what it declared.** Both
+windows (`in_progress` and `dispatch_pending`) are covered; the second one
+hadn't even been named until this investigation.
 
-**`InvalidGateActionError` continua sem filtro mapeado.** Investigar a api
-pra este ADR achou que uma segunda chamada de `record_gate_verdict` pro gate
-que já não é mais o dono do `gate_status` vaza como 500 genérico do Nest,
-não um 4xx semântico — `DomainTransitionErrorFilter` só captura
-`InvalidSessionTransitionError`/`InvalidActionTransitionError`. O resgate
-de `in_progress` depende dessa rejeição para não corromper nada numa corrida
-residual, e ela FUNCIONA (a exceção interrompe antes de qualquer
-`UPDATE`/`INSERT` — `record-gate-verdict.use-case.ts:82-88`, antes da
-transação), mas o log fica mais feio do que precisava. Mapear o filtro é
-melhoria de observabilidade, não correção de bug, e fica de fora deste ADR —
-registrado no backlog.
+**`InvalidGateActionError` still has no mapped filter.** Investigating the
+api for this ADR found that a second call to `record_gate_verdict` for a
+gate that's no longer the owner of `gate_status` leaks as a generic Nest
+500, not a semantic 4xx — `DomainTransitionErrorFilter` only catches
+`InvalidSessionTransitionError`/`InvalidActionTransitionError`. The
+`in_progress` rescue depends on that rejection to avoid corrupting
+anything in a residual race, and it DOES WORK (the exception stops
+execution before any `UPDATE`/`INSERT` —
+`record-gate-verdict.use-case.ts:82-88`, before the transaction), but the
+log ends up uglier than it needed to be. Mapping the filter is an
+observability improvement, not a bug fix, and stays out of this ADR —
+recorded in the backlog.
 
-**A janela residual entre `record_gate_verdict` voltar e o `upsert!` local
-de `dispatch_pending` COMMITAR não é fechada — é aceita, pelo mesmo raciocínio
-que o ADR 0045 já aceitou pro `Engine.Dev.Wake`.** As duas escritas (o
-`UPDATE` na api, remoto; o `INSERT` local, no engine) não podem ser
-transacionais entre si sem 2PC — fora de escopo. A chamada em processo entre
-elas é local e instantânea (sem I/O de rede), então a janela é da ordem de
-microssegundos, não segundos; o limiar de staleness generoso faz o sweeper
-nunca realisticamente colidir com ela.
+**The residual window between `record_gate_verdict` returning and the
+local `upsert!` of `dispatch_pending` COMMITTING isn't closed — it's
+accepted, by the same reasoning ADR 0045 already accepted for
+`Engine.Dev.Wake`.** The two writes (the `UPDATE` on the api, remote; the
+local `INSERT`, in the engine) can't be transactional with each other
+without 2PC — out of scope. The in-process call between them is local and
+instantaneous (no network I/O), so the window is on the order of
+microseconds, not seconds; the generous staleness threshold means the
+sweeper never realistically collides with it.
 
-**Multi-réplica continua sendo o limite já conhecido.** `Registry` local ao
-nó, `Engine.Dev.Wake` at-most-once — este ADR não muda nenhum dos dois, só
-usa o mesmo padrão que já existia (a guarda 1 acima). Fechar isso de vez
-(registro `:global`) segue sendo o follow-up do ADR 0045, não deste.
+**Multi-replica remains the already-known limit.** `Registry` local to the
+node, `Engine.Dev.Wake` at-most-once — this ADR doesn't change either one,
+it just uses the same pattern that already existed (guard 1 above).
+Closing that for good (a `:global` registry) remains ADR 0045's follow-up,
+not this one's.
 
-**O achado X/Z/AD (allowlist de verbo não converge) continua fora de
-escopo** — nenhuma mudança na política do ToolLoop, nenhuma mudança no
-allowlist. Este ADR é só sobre o gate SOBREVIVER a um restart no meio do
-ciclo, não sobre o que ele faz dentro dele.
+**Finding X/Z/AD (the verb allowlist doesn't converge) stays out of
+scope** — no change to the ToolLoop's policy, no change to the allowlist.
+This ADR is only about the gate SURVIVING a restart mid-cycle, not about
+what it does inside the cycle.
 
-## Alternativas consideradas
+## Alternatives considered
 
-**Retomar CIRURGICAMENTE o `ctx` suspenso, persistindo-o.** Recusada, pelo
-mesmo motivo que o dev agent já não faz isso pro `working` reidratado: o
-histórico de mensagens de um ToolLoop é grande, muda de formato com o
-harness, e persistir um formato que só é lido uma vez no resgate é dívida
-que nasce pronta pra apodrecer. Reiniciar a área do zero é mais barato de
-manter e, pelo argumento da checagem de estado da api, igualmente seguro.
+**Resuming the suspended `ctx` SURGICALLY, by persisting it.** Rejected,
+for the same reason the dev agent already doesn't do that for a rehydrated
+`working`: a ToolLoop's message history is large, changes shape with the
+harness, and persisting a format that's only ever read once, at rescue
+time, is debt born ready to rot. Restarting the area from scratch is
+cheaper to maintain and, by the api's state-check argument, equally safe.
 
-**Um segundo mecanismo de agendamento só pra gates**, em vez de Oban.
-Recusada: o engine já usa filas do Postgres pra tudo (outbox drain, wake do
-dev agent, Anamnese, sync de catálogo) — inventar outro mecanismo só pra
-isto duplicaria infraestrutura pelo motivo errado.
+**A second scheduling mechanism just for gates**, instead of Oban.
+Rejected: the engine already uses Postgres queues for everything (outbox
+drain, dev agent wake, Anamnese, catalog sync) — inventing another
+mechanism just for this would duplicate infrastructure for the wrong
+reason.
 
-**Rebaixar o limiar de staleness pra segundos, pra resgate mais rápido.**
-Recusada: um subagente de QA legitimamente rodando 40 das 60 iterações
-permitidas seria resgatado NO MEIO, duplicando o trabalho que estava prestes
-a terminar sozinho. O custo de esperar até 15 minutos por um resgate
-genuíno é menor que o custo de resgatar cedo demais um ciclo que só estava
-ocupado.
+**Lowering the staleness threshold to seconds, for a faster rescue.**
+Rejected: a QA subagent legitimately running 40 of the 60 allowed
+iterations would get rescued MID-WAY, duplicating work that was about to
+finish on its own. The cost of waiting up to 15 minutes for a genuine
+rescue is smaller than the cost of rescuing too early a cycle that was
+merely busy.

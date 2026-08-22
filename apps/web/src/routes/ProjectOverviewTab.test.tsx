@@ -2,8 +2,28 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
+import i18next from 'i18next';
+import { initReactI18next, I18nextProvider } from 'react-i18next';
+import overviewPtBR from '../locales/pt-BR/overview.json';
 import { ProjectOverviewTab } from './ProjectOverviewTab';
 import { ToastProvider } from '../components/ui/ToastProvider';
+
+// Instância isolada de i18next em pt-BR (mesmo padrão de
+// `AccountPage.test.tsx`): as asserções abaixo já existiam em pt-BR antes da
+// extração pra `useTranslation('overview')`.
+function novaInstanciaI18n() {
+  const instancia = i18next.createInstance();
+  void instancia.use(initReactI18next).init({
+    resources: { 'pt-BR': { overview: overviewPtBR } },
+    lng: 'pt-BR',
+    fallbackLng: 'pt-BR',
+    defaultNS: 'overview',
+    ns: ['overview'],
+    interpolation: { escapeValue: false },
+    returnNull: false,
+  });
+  return instancia;
+}
 
 // `ArchitectureSummary` (Onda 3) usa `Link` de verdade — este arquivo não é
 // sobre navegação (isso é `ProjectOverviewTab.resumo-arquitetura.test.tsx`),
@@ -180,12 +200,15 @@ function resumo(over: Partial<ProjectCardSummary['roster']> = {}): ProjectCardSu
 
 function montar() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const i18n = novaInstanciaI18n();
   return render(
-    <QueryClientProvider client={client}>
-      <ToastProvider>
-        <ProjectOverviewTab projectId="proj-1" />
-      </ToastProvider>
-    </QueryClientProvider>,
+    <I18nextProvider i18n={i18n}>
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <ProjectOverviewTab projectId="proj-1" />
+        </ToastProvider>
+      </QueryClientProvider>
+    </I18nextProvider>,
   );
 }
 

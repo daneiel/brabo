@@ -1,113 +1,120 @@
-# 0006 — Harness de agentes: montagem determinística de contexto
+# 0006 — Agent harness: deterministic context assembly
 
-## Contexto
+## Context
 
-A Fase 3a monta o harness de agentes no `apps/engine` (Elixir/OTP) ANTES de
-qualquer agente de produto. O CLAUDE.md lista 5 behaviours; esta primeira
-sessão é explicitamente **sem LLM** — só a montagem determinística de
-contexto — e implementa 3 deles: **PromptAssembler**, **InstructionFiles** e
-**Hooks**. ToolLoop e ContextManager (que tocam LLM via api) ficam para
-sessões seguintes.
+Phase 3a assembles the agent harness in `apps/engine` (Elixir/OTP) BEFORE
+any product agent. CLAUDE.md lists 5 behaviours; this first session is
+explicitly **LLM-free** — just deterministic context assembly — and
+implements 3 of them: **PromptAssembler**, **InstructionFiles**, and
+**Hooks**. ToolLoop and ContextManager (which touch the LLM via the api)
+are left for future sessions.
 
-O engine não tinha nada de prompt/agente/instruções: sem tabela, sem leitor
-de arquivos do workspace, sem tokenizer, sem estrutura de hooks. Este ADR
-registra as decisões de forma dessa fundação.
+The engine had nothing prompt/agent/instruction-related: no table, no
+workspace file reader, no tokenizer, no hooks structure. This ADR
+records the shape decisions for that foundation.
 
-## Decisões
+## Decisions
 
-### Modelo de camadas + corte determinístico (PromptAssembler)
+### Layer model + deterministic trimming (PromptAssembler)
 
-O prompt é montado em 5 camadas ORDENADAS (identidade → instruction_files →
-contexto_projeto → regras_negocio → estado_tarefa), cada uma com um orçamento
-de tokens. O `PromptAssembler` é uma função PURA e agnóstica à fonte de dados
-(quem coleta é o `ContextBuilder`) — isso mantém o algoritmo, o coração do
-critério de aceite, testável isoladamente.
+The prompt is assembled in 5 ORDERED layers (identity →
+instruction_files → project_context → business_rules → task_state),
+each with a token budget. `PromptAssembler` is a PURE function agnostic
+to the data source (the `ContextBuilder` is what collects it) — this
+keeps the algorithm, the heart of the acceptance criteria, testable in
+isolation.
 
-Cada camada declara uma estratégia de corte, aplicada quando estoura o
-orçamento — sempre DETERMINÍSTICA e documentada:
+Each layer declares a trimming strategy, applied when the budget is
+exceeded — always DETERMINISTIC and documented:
 
-- `:drop_whole_units` (camadas de unidades, ex.: regras de negócio) — descarta
-  unidades INTEIRAS da cabeça da lista até caber. **Nunca trunca no meio de
-  uma unidade.** A lista vem em ordem de descarte: regras de negócio, mais
-  antigas primeiro; instruction files, menor precedência primeiro. Uma unidade
-  sozinha maior que o orçamento é descartada inteira (camada pode ficar vazia),
-  nunca partida.
-- `:truncate_tail` (blob, ex.: contexto do projeto) — mantém um prefixo
-  dimensionado ao orçamento (respeitando UTF-8) + marcador `[… truncado …]`.
-- `:keep_or_drop` (blob, ex.: identidade) — tudo-ou-nada: cabe mantém, não
-  cabe descarta a camada inteira (meia identidade é inútil).
+- `:drop_whole_units` (unit-based layers, e.g. business rules) —
+  discards WHOLE units from the head of the list until it fits. **Never
+  truncates in the middle of a unit.** The list arrives in discard
+  order: business rules, oldest first; instruction files, lowest
+  precedence first. A single unit larger than the budget is discarded
+  whole (the layer can end up empty), never split.
+- `:truncate_tail` (blob, e.g. project context) — keeps a prefix sized
+  to the budget (respecting UTF-8) + a `[… truncated …]` marker.
+- `:keep_or_drop` (blob, e.g. identity) — all-or-nothing: if it fits,
+  keep it; if not, drop the whole layer (half an identity is useless).
 
-Rejeitado: truncar por caractere qualquer camada (perderia a garantia de
-"nunca partir uma regra de negócio"). Rejeitado também: um único modo de corte
-global — camadas têm naturezas diferentes (lista vs blob vs identidade) e
-merecem estratégias diferentes, todas explícitas.
+Rejected: truncating any layer by raw character count (it would lose
+the "never split a business rule" guarantee). Also rejected: a single
+global trimming mode — layers have different natures (list vs. blob vs.
+identity) and deserve different strategies, all explicit.
 
-### Estimativa de tokens (Tokenizer)
+### Token estimation (Tokenizer)
 
-Sem LLM e sem lib nova (respeita "não instalar libs sem justificar"): a
-contagem é uma ESTIMATIVA local por `bytes/4` com teto — a mesma heurística
-já usada em `Engine.Actions.TerminalExecutor` (`@bytes_per_token 4`). Todo
-resultado é marcado `estimated: true` nas camadas e no relatório. O
-`Engine.Harness.Tokenizer` é um behaviour trocável via
-`Application.get_env(:engine, :tokenizer, ...Approximate)` — um tokenizer real
-pode ser plugado depois sem tocar no assembler.
+With no LLM and no new lib (respecting "don't install libs without
+justification"): the count is a local ESTIMATE via `bytes/4` with a
+cap — the same heuristic already used in
+`Engine.Actions.TerminalExecutor` (`@bytes_per_token 4`). Every result
+is marked `estimated: true` in the layers and in the report.
+`Engine.Harness.Tokenizer` is a swappable behaviour via
+`Application.get_env(:engine, :tokenizer, ...Approximate)` — a real
+tokenizer can be plugged in later without touching the assembler.
 
-### InstructionFiles: precedência e cache
+### InstructionFiles: precedence and cache
 
-Fontes: `AGENTS.md` da raiz do workspace do projeto + `AGENTS.md` de cada
-subdiretório (walk recursivo, pula `.git`) + o arquivo do agente no banco
-(`agent_instructions`). **Precedência documentada: banco > diretório > raiz**
-— e, entre diretórios, o mais profundo (mais específico) vence a raiz. As
-fontes são retornadas em ordem CRESCENTE de precedência (raiz primeiro, banco
-por último): o banco é lido por último e vence em conflito ("last wins"), e é
-essa mesma ordem que o corte usa (descarta o menos autoritativo, a raiz,
-primeiro).
+Sources: the project workspace root's `AGENTS.md` + each subdirectory's
+`AGENTS.md` (recursive walk, skipping `.git`) + the agent's file in the
+database (`agent_instructions`). **Documented precedence: database >
+directory > root** — and, among directories, the deepest (most
+specific) wins over the root. Sources are returned in ASCENDING
+precedence order (root first, database last): the database is read last
+and wins on conflict ("last wins"), and it's this same order that
+trimming uses (discarding the least authoritative, the root, first).
 
-Recarga por **invalidação simples, sem watch de fs** (por ora). Cache em ETS:
-um processo supervisionado mínimo (`InstructionFiles.Cache`) só cria e detém a
-tabela nomeada pública; o IO de fs+banco acontece no processo CHAMADOR de
-`load/2` — assim o cache não toca no banco e não colide com o sandbox Ecto nos
-testes. `invalidate/2` = `:ets.delete`. É o **primeiro uso de ETS no engine**:
-justificado por ser o primitivo padrão de cache do Elixir e por evitar a dor
-de um GenServer lendo o banco sob sandbox.
+Reload via **simple invalidation, no fs watch** (for now). Cache in
+ETS: a minimal supervised process (`InstructionFiles.Cache`) only
+creates and holds the named public table; the fs+database I/O happens
+in the CALLING process of `load/2` — this way the cache never touches
+the database and doesn't collide with the Ecto sandbox in tests. It's
+the **first use of ETS in the engine**: justified as Elixir's standard
+cache primitive, and to avoid the pain of a GenServer reading the
+database under sandbox.
 
-### Hooks: registro funcional puro
+### Hooks: pure functional registry
 
-`Engine.Harness.Hooks` é um VALOR (map de fase → lista de handlers em ordem de
-registro), não um processo — determinístico, testável sem estado global
-mutável, casando com o gosto do codebase (sem registries globais além do de
-identidade de processo). Fases: `pre_tool_use`, `post_tool_use`,
-`session_start`, `session_end`. `run/3` roda os handlers na ordem de registro
-(`reduce_while`); um handler que retorna `{:halt, reason}` interrompe a cadeia.
-É a base para o pipeline de ações e o executor de terminal plugarem como
-handlers numa sessão futura — cada um construindo e rodando o valor de hooks
-por invocação.
+`Engine.Harness.Hooks` is a VALUE (a map from phase to a list of
+handlers in registration order), not a process — deterministic,
+testable with no mutable global state, matching the codebase's taste
+(no global registries beyond process identity). Phases: `pre_tool_use`,
+`post_tool_use`, `session_start`, `session_end`. `run/3` runs the
+handlers in registration order (`reduce_while`); a handler that returns
+`{:halt, reason}` interrupts the chain. It's the base that the action
+pipeline and the terminal executor will plug into as handlers in a
+future session — each one building and running the hooks value per
+invocation.
 
-### Ownership de `agent_instructions`
+### Ownership of `agent_instructions`
 
-A tabela referencia `projects` (dado de domínio da api) → é criada por
-**migration Drizzle no apps/api** (schema `public`), e o engine só LÊ via um
-Ecto schema `@schema_prefix "public"` (`Engine.AgentInstructions.Instruction`),
-nunca uma migration própria — migrations do engine vivem só no schema
-`engine`. Mesmo padrão de `Engine.Projects.ProjectRepository`/`SessionEvents`.
-Nos testes do engine (banco `engine_test`, isolado do banco da api), a tabela
-existe via um fixture raw em `test_helper.exs`, igual `outbox_events`/
-`session_events`/`project_repositories`.
+The table references `projects` (domain data of the api) → it's created
+by a **Drizzle migration in apps/api** (`public` schema), and the engine
+only READS via an Ecto schema `@schema_prefix "public"`
+(`Engine.AgentInstructions.Instruction`), never a migration of its own —
+engine migrations only live in the `engine` schema. Same pattern as
+`Engine.Projects.ProjectRepository`/`SessionEvents`. In the engine's
+tests (`engine_test` database, isolated from the api's database), the
+table exists via a raw fixture in `test_helper.exs`, just like
+`outbox_events`/`session_events`/`project_repositories`.
 
-## Consequências
+## Consequences
 
-- As camadas `:regras_negocio` e `:estado_tarefa` saem VAZIAS nesta sessão —
-  não há fonte ainda (business_rule é emitido pelo Criativo na Fase 3b; o
-  estado da tarefa vem do ToolLoop/agentes). O algoritmo de corte já as trata
-  (vazio = 0 tokens) e é exercitado nos testes com unidades sintéticas.
-  Inventar tabelas pra elas seria escopo de 3b.
-- A identidade do agente é um mapa estático mínimo (`Engine.Harness.Agents`),
-  uma linha por slug do roster — não é "implementar um agente" (sem
-  comportamento, sem LLM), só conteúdo pra a camada existir.
-- Critério de aceite atendido por `Engine.Harness.Debug.print/2` (função de
-  debug chamável do IEx, sem Mix.Task — não há precedente no engine), que
-  imprime cada camada com sua contagem de tokens (estimada) e o prompt montado.
-- Os orçamentos por camada são constantes de módulo com defaults razoáveis,
-  sobrescrevíveis via `opts[:budgets]`. Sem LLM ainda, servem pra exercitar o
-  corte e dar visibilidade no debug; serão calibrados quando o ToolLoop
-  entrar.
+- The `:business_rules` and `:task_state` layers come out EMPTY in this
+  session — there's no source yet (business_rule is emitted by the
+  Creative agent in Phase 3b; task state comes from the ToolLoop/agents).
+  The trimming algorithm already handles them (empty = 0 tokens) and is
+  exercised in tests with synthetic units. Inventing tables for them
+  would be Phase 3b scope.
+- The agent's identity is a minimal static map (`Engine.Harness.Agents`),
+  one line per roster slug — not "implementing an agent" (no behavior,
+  no LLM), just content for the layer to exist.
+- Acceptance criteria satisfied by `Engine.Harness.Debug.print/2` (a
+  debug function callable from IEx, no Mix.Task — no precedent in the
+  engine for that), which prints each layer with its (estimated) token
+  count and the assembled prompt.
+- Per-layer budgets are module constants with reasonable defaults,
+  overridable via `opts[:budgets]`. Without an LLM yet, they serve to
+  exercise trimming and give visibility in debug; they'll be calibrated
+  once the ToolLoop lands.

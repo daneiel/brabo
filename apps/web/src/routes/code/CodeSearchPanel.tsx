@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { mensagemDaApi, searchCode } from '../../lib/api-client';
 import styles from './CodeSearchPanel.module.css';
 
@@ -16,6 +17,7 @@ interface CodeSearchPanelProps {
  * orçamento da busca a cada caractere digitado.
  */
 export function CodeSearchPanel({ projectId, gitRef, onOpenFile }: CodeSearchPanelProps) {
+  const { t } = useTranslation('code');
   const [termo, setTermo] = useState('');
   const [buscado, setBuscado] = useState<string | null>(null);
 
@@ -33,37 +35,39 @@ export function CodeSearchPanel({ projectId, gitRef, onOpenFile }: CodeSearchPan
 
   return (
     <div className={styles.busca}>
-      <div className={styles.cabecalho}>Buscar</div>
+      <div className={styles.cabecalho}>{t('search.title')}</div>
 
       <form className={styles.formulario} onSubmit={submeter}>
         <input
           className={styles.input}
           value={termo}
           onChange={(e) => setTermo(e.target.value)}
-          placeholder="Termo (mín. 2 caracteres)"
-          aria-label="Termo de busca"
+          placeholder={t('search.placeholder')}
+          aria-label={t('search.ariaLabel')}
         />
         <button type="submit" className={styles.botao} disabled={!gitRef}>
-          Buscar
+          {t('search.button')}
         </button>
       </form>
 
       <div className={styles.resultados}>
-        {!buscado && <div className={styles.estado}>Digite um termo e busque no conteúdo da ref atual.</div>}
+        {!buscado && <div className={styles.estado}>{t('search.initial')}</div>}
 
-        {buscado && searchQuery.isLoading && <div className={styles.estado}>Buscando…</div>}
+        {buscado && searchQuery.isLoading && <div className={styles.estado}>{t('search.searching')}</div>}
 
         {buscado && searchQuery.isError && (
           <div className={styles.estadoErro} role="alert">
-            <span>{mensagemDaApi(searchQuery.error, 'Não consegui buscar agora.')}</span>
+            <span>{mensagemDaApi(searchQuery.error, t('search.errorFallback'))}</span>
             <button type="button" className={styles.botaoTentar} onClick={() => void searchQuery.refetch()}>
-              Tentar de novo
+              {t('shared.retry')}
             </button>
           </div>
         )}
 
         {buscado && searchQuery.data && searchQuery.data.matches.length === 0 && (
-          <div className={styles.estado}>Nenhum resultado para “{searchQuery.data.query}”.</div>
+          <div className={styles.estado}>
+            {t('search.noResults', { query: searchQuery.data.query })}
+          </div>
         )}
 
         {buscado && searchQuery.data && searchQuery.data.matches.length > 0 && (
@@ -87,8 +91,8 @@ export function CodeSearchPanel({ projectId, gitRef, onOpenFile }: CodeSearchPan
               ))}
             </ul>
             <div className={styles.rodape}>
-              {searchQuery.data.filesScanned} arquivo(s) verificado(s)
-              {searchQuery.data.truncated && ' · busca cortada pelo orçamento — refine o termo ou o caminho'}
+              {t('search.filesScanned', { count: searchQuery.data.filesScanned })}
+              {searchQuery.data.truncated && t('search.truncatedSuffix')}
             </div>
           </>
         )}

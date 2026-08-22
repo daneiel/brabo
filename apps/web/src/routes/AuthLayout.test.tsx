@@ -1,5 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import i18next from 'i18next';
+import { initReactI18next, I18nextProvider } from 'react-i18next';
+import authEn from '../locales/en/auth.json';
+import authPtBR from '../locales/pt-BR/auth.json';
 import { AuthLayout } from './AuthLayout';
 
 /**
@@ -18,19 +22,41 @@ import { AuthLayout } from './AuthLayout';
  *    rodapé diz `dev` — não "desenvolvimento", não nada. Se um dia isso virar
  *    texto enfeitado, a informação de qual build está no ar se perde.
  */
+// Instância REAL de i18next, com os recursos do namespace "auth" — mesmo
+// padrão de AccountPage.test.tsx: o que se prova aqui é o texto que a tela
+// mostra, não a mecânica de i18next em si.
+function novaInstanciaI18n() {
+  const instancia = i18next.createInstance();
+  void instancia.use(initReactI18next).init({
+    resources: {
+      en: { auth: authEn },
+      'pt-BR': { auth: authPtBR },
+    },
+    lng: 'pt-BR',
+    fallbackLng: 'pt-BR',
+    defaultNS: 'auth',
+    ns: ['auth'],
+    interpolation: { escapeValue: false },
+    returnNull: false,
+  });
+  return instancia;
+}
+
 function montar(props: Partial<Parameters<typeof AuthLayout>[0]> = {}) {
   const irPara = vi.fn();
   render(
-    <AuthLayout
-      titulo="Entrar"
-      subtitulo="Acesse seu workspace."
-      irPara={irPara}
-      {...props}
-    >
-      <form>
-        <button type="submit">Entrar</button>
-      </form>
-    </AuthLayout>,
+    <I18nextProvider i18n={novaInstanciaI18n()}>
+      <AuthLayout
+        titulo="Entrar"
+        subtitulo="Acesse seu workspace."
+        irPara={irPara}
+        {...props}
+      >
+        <form>
+          <button type="submit">Entrar</button>
+        </form>
+      </AuthLayout>
+    </I18nextProvider>,
   );
   return { irPara };
 }
@@ -79,9 +105,11 @@ describe('AuthLayout', () => {
 
   it('as duas camadas decorativas são invisíveis para o leitor de tela', () => {
     const { container } = render(
-      <AuthLayout titulo="t" subtitulo="s" irPara={vi.fn()}>
-        <div />
-      </AuthLayout>,
+      <I18nextProvider i18n={novaInstanciaI18n()}>
+        <AuthLayout titulo="t" subtitulo="s" irPara={vi.fn()}>
+          <div />
+        </AuthLayout>
+      </I18nextProvider>,
     );
 
     // Grade, brilho e o selo do logo — três nós puramente visuais.
@@ -90,9 +118,11 @@ describe('AuthLayout', () => {
 
   it('rodapé do card e bloco de baixo só aparecem quando entregues', () => {
     const { container } = render(
-      <AuthLayout titulo="t" subtitulo="s" irPara={vi.fn()}>
-        <div />
-      </AuthLayout>,
+      <I18nextProvider i18n={novaInstanciaI18n()}>
+        <AuthLayout titulo="t" subtitulo="s" irPara={vi.fn()}>
+          <div />
+        </AuthLayout>
+      </I18nextProvider>,
     );
     expect(screen.queryByText('Criar uma conta')).toBeNull();
 

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert } from '../components/ui/Alert';
 import { Button } from '../components/ui/Button';
 import { AuthLayout } from './AuthLayout';
@@ -30,9 +31,10 @@ export function VerifyEmailPage({
   onVerificar,
   irPara,
 }: VerifyEmailPageProps) {
+  const { t } = useTranslation('auth');
   const [estado, setEstado] = useState<Estado>(token ? 'carregando' : 'erro');
   const [mensagemDeErro, setMensagemDeErro] = useState<string>(
-    token ? '' : 'Link inválido: falta o código.',
+    token ? '' : t('verifyEmailPage.errors.missingToken'),
   );
 
   useEffect(() => {
@@ -49,11 +51,11 @@ export function VerifyEmailPage({
         }
         // A api não distingue link inexistente, expirado e já usado — os
         // três têm a mesma resposta, mesmo motivo do SetPasswordPage.
-        setMensagemDeErro('Link inválido, expirado ou já usado.');
+        setMensagemDeErro(t('verifyEmailPage.errors.invalidToken'));
         setEstado('erro');
       } catch {
         if (cancelado) return;
-        setMensagemDeErro('Não foi possível falar com o servidor. Tente de novo.');
+        setMensagemDeErro(t('verifyEmailPage.errors.network'));
         setEstado('erro');
       }
     })();
@@ -61,20 +63,20 @@ export function VerifyEmailPage({
     return () => {
       cancelado = true;
     };
-  }, [token, onVerificar]);
+  }, [token, onVerificar, t]);
 
   if (estado === 'sucesso') {
     return (
       <AuthLayout
-        titulo="E-mail verificado"
-        subtitulo="Já pode entrar com a sua conta."
+        titulo={t('verifyEmailPage.success.title')}
+        subtitulo={t('verifyEmailPage.success.subtitle')}
         irPara={irPara}
       >
         <Alert tone="success" role="status">
-          Pronto. Seu e-mail foi confirmado.
+          {t('verifyEmailPage.success.message')}
         </Alert>
         <Button fullWidth onClick={() => irPara('/login')}>
-          Ir para o login
+          {t('verifyEmailPage.success.goToLogin')}
         </Button>
       </AuthLayout>
     );
@@ -83,15 +85,15 @@ export function VerifyEmailPage({
   if (estado === 'erro') {
     return (
       <AuthLayout
-        titulo="Confirmar e-mail"
-        subtitulo="Não foi possível confirmar o e-mail por este link."
+        titulo={t('verifyEmailPage.error.title')}
+        subtitulo={t('verifyEmailPage.error.subtitle')}
         irPara={irPara}
       >
         <Alert tone="danger" role="alert">
           {mensagemDeErro}
         </Alert>
         <Button fullWidth onClick={() => irPara('/login')}>
-          Ir para o login
+          {t('verifyEmailPage.error.goToLogin')}
         </Button>
       </AuthLayout>
     );
@@ -99,11 +101,11 @@ export function VerifyEmailPage({
 
   return (
     <AuthLayout
-      titulo="Confirmar e-mail"
-      subtitulo="Só um instante."
+      titulo={t('verifyEmailPage.loading.title')}
+      subtitulo={t('verifyEmailPage.loading.subtitle')}
       irPara={irPara}
     >
-      <p role="status">Verificando…</p>
+      <p role="status">{t('verifyEmailPage.loading.message')}</p>
     </AuthLayout>
   );
 }

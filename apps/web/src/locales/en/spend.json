@@ -1,0 +1,54 @@
+{
+  "shared": {
+    "loading": "Loading…",
+    "summing": "Adding up…",
+    "retry": "Try again",
+    "tokensDetail": "{{input}} in · {{output}} out",
+    "rankingDetail": "{{tokens}} tok · {{calls}}×"
+  },
+  "role": {
+    "error": "I couldn't find out your role in this workspace, and that's what decides which report to show."
+  },
+  "budget": {
+    "notSet": "No budget set for this project yet — with no cap, this block has nothing to show."
+  },
+  "workspace": {
+    "title": "Workspace spend",
+    "subtitle": "Last {{dias}} days. Where the money went — by model, provider, project, agent, and person. Which <strong>key</strong> it came from is the section below.",
+    "error": "I couldn't load the spend right now. The usage is still recorded — this is just the reading.",
+    "totalLabel": "Total in {{dias}} days",
+    "callsDetail": "{{count}} call(s)",
+    "tokensLabel": "Tokens",
+    "dailySpendTitle": "Spend by day",
+    "byModelTitle": "By model",
+    "byModelEmpty": "No calls in this window.",
+    "byProviderTitle": "By provider",
+    "byProviderEmpty": "No provider spent in this window.",
+    "byProjectTitle": "By project",
+    "byProjectEmpty": "No project spent in this window.",
+    "byActorTitle": "By agent and person",
+    "byActorEmpty": "No one spent in this window."
+  },
+  "member": {
+    "title": "My consumption",
+    "subtitle": "Last {{dias}} days, only what <strong>you</strong> consumed on this project. The cost is <strong>estimated</strong>: whoever pays for the call is the workspace owner's key, and the invoice is theirs.",
+    "error": "I couldn't load your consumption right now. The record is still there — this is just the reading.",
+    "estimatedLabel": "Estimated in {{dias}} days",
+    "callsDetail": "{{count}} call(s) of yours",
+    "tokensLabel": "Your tokens",
+    "dailySpendTitle": "Your spend by day",
+    "bySessionTitle": "By session",
+    "bySessionEmpty": "You haven't spent anything on this project in the last 30 days. What agents spend comes out of the workspace owner's key, and shows up in their report.",
+    "note": "There's no breakdown by provider or credential here — it's someone else's bill, and this screen's question is your own consumption."
+  },
+  "charts": {
+    "noSpendInWindow": "No spend in this window."
+  },
+  "libSpend": {
+    "callTitle_one": "{{dia}} · {{custo}} · {{count}} call",
+    "callTitle_other": "{{dia}} · {{custo}} · {{count}} calls",
+    "actorPerson": "{{id}} (person)",
+    "budgetBlocked": "This project reached {{pct}}% of its budget — new LLM calls are BLOCKED until the cap goes up.",
+    "budgetWarning": "This project has already passed {{pct}}% of its defined budget."
+  }
+}

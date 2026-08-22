@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useArchitecture } from '../lib/hooks';
 import { C4DiagramView } from '../components/C4DiagramView';
 import { Badge, type BadgeTone } from '../components/ui/Badge';
@@ -35,6 +36,7 @@ const ADR_TONE: Record<string, BadgeTone> = {
 };
 
 function ArchitectureContent({ architecture }: { architecture?: Architecture }) {
+  const { t } = useTranslation('overview');
   const moduleMap = architecture?.moduleMap;
   const adrs = architecture?.adrs ?? [];
   const pendencies = architecture?.pendencies ?? [];
@@ -44,18 +46,18 @@ function ArchitectureContent({ architecture }: { architecture?: Architecture }) 
 
   return (
     <div className={styles.arch}>
-      <div className={styles.sectionHeader}>Arquitetura</div>
+      <div className={styles.sectionHeader}>{t('architectureTab.title')}</div>
       {isEmpty ? (
-        <div className={styles.sectionSub}>
-          Sem arquitetura ainda — o Arquiteto gera o module_map e os ADRs.
-        </div>
+        <div className={styles.sectionSub}>{t('architectureTab.emptyState')}</div>
       ) : (
         <>
           <div className={styles.archLabel}>
-            Módulos {moduleMap ? `· v${moduleMap.version}` : ''}
+            {moduleMap
+              ? t('architectureTab.modulesLabelVersioned', { version: moduleMap.version })
+              : t('architectureTab.modulesLabel')}
           </div>
           {!moduleMap || moduleMap.modules.length === 0 ? (
-            <div className={styles.sectionSub}>Nenhum módulo ainda.</div>
+            <div className={styles.sectionSub}>{t('architectureTab.noModules')}</div>
           ) : (
             <div className={styles.moduleGrid}>
               {moduleMap.modules.map((m) => (
@@ -78,20 +80,19 @@ function ArchitectureContent({ architecture }: { architecture?: Architecture }) 
           )}
 
           <div className={styles.archLabel}>
-            Diagrama C4 {c4Diagram?.status === 'gerado' ? `· v${c4Diagram.version}` : ''}
+            {c4Diagram?.status === 'gerado'
+              ? t('architectureTab.c4LabelVersioned', { version: c4Diagram.version })
+              : t('architectureTab.c4Label')}
           </div>
           {c4Diagram?.status === 'gerado' && c4Diagram.diagrama ? (
             <C4DiagramView diagrama={c4Diagram.diagrama} />
           ) : (
-            <div className={styles.sectionSub}>
-              Sem diagrama ainda — o Arquiteto gera o Context + Container a partir do
-              module_map (create_c4_diagram).
-            </div>
+            <div className={styles.sectionSub}>{t('architectureTab.c4Empty')}</div>
           )}
 
-          <div className={styles.archLabel}>ADRs</div>
+          <div className={styles.archLabel}>{t('architectureTab.adrsLabel')}</div>
           {adrs.length === 0 ? (
-            <div className={styles.sectionSub}>Nenhum ADR proposto ainda.</div>
+            <div className={styles.sectionSub}>{t('architectureTab.noAdrs')}</div>
           ) : (
             <ul className={styles.adrList}>
               {adrs.map((adr) => (
@@ -117,7 +118,7 @@ function ArchitectureContent({ architecture }: { architecture?: Architecture }) 
           {pendencies.length > 0 && (
             <>
               <div className={styles.archLabel}>
-                Pendências de validação cruzada
+                {t('architectureTab.pendenciesLabel')}
                 <Badge tone="danger">{pendencies.length}</Badge>
               </div>
               <ul className={styles.pendList}>
@@ -126,8 +127,8 @@ function ArchitectureContent({ architecture }: { architecture?: Architecture }) 
                     <span className={styles.pendTitle}>{p.title}</span>
                     <span className={styles.pendReason}>
                       {p.reason === 'no_module'
-                        ? 'sem módulo vinculado'
-                        : `módulo inexistente: ${p.missing.join(', ')}`}
+                        ? t('architectureTab.reasonNoModule')
+                        : t('architectureTab.reasonMissingModule', { missing: p.missing.join(', ') })}
                     </span>
                   </li>
                 ))}

@@ -1,14 +1,17 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ProjectChatTab } from './ProjectSessionsTab';
 import { ProjectRagTab } from './ProjectRagTab';
 import styles from './ProjectChatShell.module.css';
 
 type SegmentoDeChat = 'conversar' | 'buscar';
 
-const SEGMENTOS: { chave: SegmentoDeChat; rotulo: string }[] = [
-  { chave: 'conversar', rotulo: 'Conversar' },
-  { chave: 'buscar', rotulo: 'Buscar' },
-];
+const CHAVE_DO_SEGMENTO: Record<SegmentoDeChat, string> = {
+  conversar: 'chatShell.segments.chat',
+  buscar: 'chatShell.segments.search',
+};
+
+const ORDEM_DOS_SEGMENTOS: SegmentoDeChat[] = ['conversar', 'buscar'];
 
 /**
  * O segmento inicial, lido da URL UMA vez, no mount — mesmo contrato de
@@ -46,6 +49,7 @@ function segmentoInicial(): SegmentoDeChat {
  * clique, mesma regra do resto da régua de abas.
  */
 export function ProjectChatShell({ projectId }: { projectId: string }) {
+  const { t } = useTranslation('sessions');
   const [segmento, setSegmento] = useState<SegmentoDeChat>(segmentoInicial);
 
   return (
@@ -53,21 +57,21 @@ export function ProjectChatShell({ projectId }: { projectId: string }) {
       <div
         className={styles.segmentado}
         role="group"
-        aria-label="Modo do Chat"
+        aria-label={t('chatShell.ariaLabel')}
       >
-        {SEGMENTOS.map((s) => (
+        {ORDEM_DOS_SEGMENTOS.map((chave) => (
           <button
-            key={s.chave}
+            key={chave}
             type="button"
             className={
-              segmento === s.chave
+              segmento === chave
                 ? `${styles.pill} ${styles.pillAtivo}`
                 : styles.pill
             }
-            aria-pressed={segmento === s.chave}
-            onClick={() => setSegmento(s.chave)}
+            aria-pressed={segmento === chave}
+            onClick={() => setSegmento(chave)}
           >
-            {s.rotulo}
+            {t(CHAVE_DO_SEGMENTO[chave])}
           </button>
         ))}
       </div>

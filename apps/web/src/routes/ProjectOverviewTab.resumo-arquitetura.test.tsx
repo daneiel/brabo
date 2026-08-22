@@ -2,8 +2,27 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
+import i18next from 'i18next';
+import { initReactI18next, I18nextProvider } from 'react-i18next';
+import overviewPtBR from '../locales/pt-BR/overview.json';
 import { ProjectOverviewTab } from './ProjectOverviewTab';
 import { ToastProvider } from '../components/ui/ToastProvider';
+
+// Instância isolada de i18next em pt-BR — mesmo padrão de
+// `AccountPage.test.tsx`/`ProjectOverviewTab.test.tsx`.
+function novaInstanciaI18n() {
+  const instancia = i18next.createInstance();
+  void instancia.use(initReactI18next).init({
+    resources: { 'pt-BR': { overview: overviewPtBR } },
+    lng: 'pt-BR',
+    fallbackLng: 'pt-BR',
+    defaultNS: 'overview',
+    ns: ['overview'],
+    interpolation: { escapeValue: false },
+    returnNull: false,
+  });
+  return instancia;
+}
 import type {
   Architecture,
   ProjectCardSummary,
@@ -124,12 +143,15 @@ function resumo(): ProjectCardSummary {
 
 function montar() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const i18n = novaInstanciaI18n();
   return render(
-    <QueryClientProvider client={client}>
-      <ToastProvider>
-        <ProjectOverviewTab projectId="proj-1" />
-      </ToastProvider>
-    </QueryClientProvider>,
+    <I18nextProvider i18n={i18n}>
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <ProjectOverviewTab projectId="proj-1" />
+        </ToastProvider>
+      </QueryClientProvider>
+    </I18nextProvider>,
   );
 }
 

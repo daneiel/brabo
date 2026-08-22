@@ -1,89 +1,93 @@
-# Modelo de time e fluxo de entregáveis
+# Team model and deliverable flow
 
-> Contexto consolidado da sessão de desenho do modelo de time
-> (ago/2026), auditado contra o estado real do produto. A especificação
-> formal vive em [`docs/fluxo.yml`](../fluxo.yml); este documento
-> explica as decisões. Decisão estrutural: ADR 0085. Peças irmãs:
-> `docs/gates.yml` (ADR 0054) e `agent-areas.ts` (catálogo, FASE 18).
+> Context consolidated from the team-model design session
+> (Aug/2026), audited against the product's real state. The formal
+> specification lives in [`docs/fluxo.yml`](../fluxo.yml); this document
+> explains the decisions. Structural decision: ADR 0085. Sibling
+> pieces: `docs/gates.yml` (ADR 0054) and `agent-areas.ts` (catalog,
+> PHASE 18).
 
-## Origem
+## Origin
 
-O modelo traduz o mapa de profissões de um time de entrega de alta
-performance (Arquiteto, Tech Lead, PO/PM, Staff, SRE/Platform,
-DevOps/Infra, QA/SDET, AppSec, Data/Analytics Engineer, UX, Delivery,
-DBA) para agentes do Brabo, sob dois critérios:
+The model translates the profession map of a high-performance delivery
+team (Architect, Tech Lead, PO/PM, Staff, SRE/Platform, DevOps/Infra,
+QA/SDET, AppSec, Data/Analytics Engineer, UX, Delivery, DBA) into Brabo
+agents, under two criteria:
 
-1. Só existe papel separado quando existe entregável distinto E gate
-   distinto. Quebrar por organograma gera handoff sem ganho.
-2. Toda transição entre papéis é um gate declarado, com verificação
-   por script — nunca anotação manual (lição da Fase 10/13).
+1. A separate role only exists when there's a distinct deliverable AND
+   a distinct gate. Splitting by org chart produces handoff with no
+   gain.
+2. Every transition between roles is a declared gate, verified by
+   script — never manual annotation (lesson from Phase 10/13).
 
-O princípio que emergiu da segregação: **quase toda separação é
-primeiro de ENTREGÁVEL e MOMENTO, e só depois (talvez) de agente** —
-QA e AppSec ganham o momento de design mantendo um agente só;
-analytics nasceu como saída nova do medicao antes de ser papel. O papel
-se materializa quando o artefato dele já circula, nunca antes — exceto
-quando o dono do produto decide ANTECIPAR a construção sem esperar o
-gatilho orgânico, como fez para `analytics`/`delivery-metricas`
-(ADR 0089): os dois viraram `status: active` como SCRIPT de relatório
-(`analise:funil`), nunca agente — a forma que o critério de separação
-já prescrevia.
+The principle that emerged from the segregation: **almost every split
+is first about DELIVERABLE and MOMENT, and only afterward (maybe)
+about agent** — QA and AppSec gain a design moment while keeping a
+single agent; analytics was born as a new output of `medicao` before
+becoming a role. A role materializes once its artifact is already
+circulating, never before — except when the product owner decides to
+ANTICIPATE the build without waiting for the organic trigger, as was
+done for `analytics`/`delivery-metricas` (ADR 0089): both became
+`status: active` as a report SCRIPT (`analise:funil`), never an agent —
+the shape the separation criterion already prescribed.
 
-## Decisões do dono do produto
+## Product owner's decisions
 
-- **Engineering Manager: removido.** Não há gestão de pessoas entre
-  agentes.
-- **Criativo é a porta de entrada** — transforma conversa livre em
-  necessidade de negócio. Absorve o discovery do UX.
-- **Psicólogo e Anamnese: em-refinamento.** Código ativo, fora do
-  fluxo formal até redefinição dos entregáveis. Pendências criadas:
-  a proposta de subir `max_parallel` (RN-086) fica sem autor, e o
-  gatilho de ativação do Staff fica órfão.
-- **Delivery absorvido** pelo Harness (orquestração) + medição (DORA
-  PARCIAL entregue como relatório — funil real, lead time real,
-  deployment frequency real; MTTR e change failure rate seguem
-  `status: lacuna`, dependentes de sinal de incidente real —
-  ADR 0089); **DBA absorvido** por Dev Lead (migração) e Platform
-  (tuning).
+- **Engineering Manager: removed.** There's no people management
+  between agents.
+- **The Creative is the entry point** — turns free-form conversation
+  into a business need. Absorbs UX discovery.
+- **Psychologist and Anamnese: under refinement.** Code active, outside
+  the formal flow until the deliverables are redefined. Pending
+  consequences: the proposal to raise `max_parallel` (RN-086) is left
+  without an author, and the Staff's activation trigger is left
+  orphaned.
+- **Delivery absorbed** by the Harness (orchestration) + measurement
+  (PARTIAL DORA delivered as a report — real funnel, real lead time,
+  real deployment frequency; MTTR and change failure rate remain
+  `status: lacuna`, dependent on a real incident signal — ADR 0089);
+  **DBA absorbed** by Dev Lead (migration) and Platform (tuning).
 
-## Invariantes do fluxo
+## Flow invariants
 
-1. Nenhum artefato sem destinatário declarado.
-2. Nenhum papel inicia sem entradas completas — falta gera devolução
-   com motivo, nunca suposição silenciosa.
-3. Toda transição é gate do registro declarativo (ADR 0054).
-4. O loop de retorno é obrigatório: telemetria → Arquiteto e métricas
-   de produto → PO são artefatos com destinatário.
-5. Fronteira Arquiteto × Dev Lead: decisão que cabe num PR revertível
-   é do Dev Lead; decisão irreversível é do Arquiteto.
+1. No artifact without a declared recipient.
+2. No role starts without complete inputs — a gap produces a return
+   with a reason, never silent assumption.
+3. Every transition is a gate from the declarative registry (ADR 0054).
+4. The feedback loop is mandatory: telemetry → Architect and product
+   metrics → PO are artifacts with a recipient.
+5. Architect × Dev Lead boundary: a decision that fits within a
+   revertible PR belongs to the Dev Lead; an irreversible decision
+   belongs to the Architect.
 
-## Tabela de gatilhos de ativação
+## Activation trigger table
 
-| Gatilho no produto | Papéis que ele ativa/separa |
+| Trigger in the product | Roles it activates/separates |
 |---|---|
-| Gate `implementavel` criado | `qa-estrategia` + `appsec` (segundo momento dos agentes existentes) |
-| Antecipado por decisão do dono do produto (ADR 0089/0091) | `analytics`/`delivery-metricas` e o relatório de `secops-runtime` sobre `rate_limit_hits` viram `active` como script, antes do gatilho orgânico |
-| Métricas de produto COMPLETAS viram entrada do PO | resto de `analytics` (o que ADR 0089 não fechou) |
-| `DEPLOY_ENABLED` flipa | `platform` ativa → depois o resto de `secops-runtime` (detecção automática, resposta a incidente, postmortem) |
-| Anamnese sai do refinamento | gatilho do `staff` volta a ter dono |
-| Projeto gerenciado com UI própria | `ux-designer` separa do Criativo |
-| Volume real de dados | `dbre` separa de Dev Lead/Platform |
-| — (nunca) | `delivery-metricas` vira relatório, não agente (ADR 0089, já entregue) |
+| Gate `implementavel` created | `qa-estrategia` + `appsec` (second moment of existing agents) |
+| Anticipated by product owner decision (ADR 0089/0091) | `analytics`/`delivery-metricas` and the `secops-runtime` report over `rate_limit_hits` become `active` as a script, ahead of the organic trigger |
+| COMPLETE product metrics become PO input | the rest of `analytics` (what ADR 0089 didn't close) |
+| `DEPLOY_ENABLED` flips | `platform` activates → then the rest of `secops-runtime` (automatic detection, incident response, postmortem) |
+| Anamnese leaves refinement | the `staff` trigger has an owner again |
+| Managed project with its own UI | `ux-designer` splits off from the Creative |
+| Real data volume | `dbre` splits off from Dev Lead/Platform |
+| — (never) | `delivery-metricas` becomes a report, not an agent (ADR 0089, already delivered) |
 
-## Estado da malha (auditado)
+## Mesh state (audited)
 
-**A descida está quase completa; a subida é o que falta.** Lacunas:
+**The downstream flow is nearly complete; what's missing is the
+upstream one.** Gaps:
 
-| Lacuna | Onde | Referência |
+| Gap | Where | Reference |
 |---|---|---|
 | `deployavel`/`operavel` | Infra/Platform | planned, DEPLOY_ENABLED |
 
-O loop "métricas de produto → PO" fechou: `listar_metricas_de_produto`
-(RN-407) fez o PO conseguir ler o mesmo relatório de `analise:funil`
-(ADR 0089) dentro do turno — era a última linha desta tabela (item B4 da
-auditoria fluxo.yml × código).
+The "product metrics → PO" loop closed: `listar_metricas_de_produto`
+(RN-407) let the PO read the same `analise:funil` report (ADR 0089)
+within its turn — it was the last line of this table (item B4 of the
+fluxo.yml × code audit).
 
-## Propostas pendentes de decisão
+## Proposals pending decision
 
-- [ ] Quem herda o gatilho do Staff e a proposta de teto enquanto a
-      Anamnese estiver em refinamento — ou ambos aguardam, declarado.
+- [ ] Who inherits the Staff's trigger and the cap-raise proposal while
+      the Anamnese is under refinement — or both wait, declared as such.

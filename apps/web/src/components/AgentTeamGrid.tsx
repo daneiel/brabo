@@ -1,4 +1,5 @@
 import type { UseQueryResult } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import {
   autonomyActionTypeFor,
   breakerReasonFor,
@@ -64,6 +65,8 @@ export function AgentTeamGrid({
   onAutonomyChange,
   onRearm,
 }: AgentTeamGridProps) {
+  const { t } = useTranslation('executors');
+
   // Card do LEAD (ou de um agente solo) — com toggle de autonomia (é quem
   // propõe ação/tem policy).
   function renderLeadCard(index: number, badge?: string) {
@@ -99,7 +102,11 @@ export function AgentTeamGrid({
         onRearm={r.status === 'travado' ? () => onRearm(r.id) : undefined}
         activity={
           r.status === 'travado'
-            ? { label: breakerReasonFor(events, r.id) ?? 'circuit breaker disparado' }
+            ? {
+                label:
+                  breakerReasonFor(events, r.id) ??
+                  t('agentStatus.circuitBreaker.default'),
+              }
             : progress?.taskTitle
               ? { label: progress.taskTitle, branch: progress.branch }
               : undefined
@@ -143,7 +150,7 @@ export function AgentTeamGrid({
         const collapsed = collapsedAreas.has(group.areaKey);
         return (
           <div key={group.areaKey} className={styles.areaGroup}>
-            {renderLeadCard(roster.indexOf(group.lead), 'Lead')}
+            {renderLeadCard(roster.indexOf(group.lead), t('teamGrid.leadBadge'))}
             {group.members.length > 0 && (
               <div className={styles.areaMembers}>
                 <button
@@ -152,8 +159,7 @@ export function AgentTeamGrid({
                   onClick={() => onToggleArea(group.areaKey)}
                 >
                   {collapsed ? <ChevronRightIcon size={13} /> : <ChevronDownIcon size={13} />}
-                  {area.label} · {group.members.length} subespecialidade
-                  {group.members.length > 1 ? 's' : ''}
+                  {area.label} · {t('teamGrid.subspecialty', { count: group.members.length })}
                 </button>
                 {!collapsed && (
                   <div className={styles.areaMembersList}>

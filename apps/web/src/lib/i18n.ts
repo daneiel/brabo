@@ -8,26 +8,50 @@
  * `apps/web/src/lib/idioma.ts#sincronizarIdiomaDaSessao` troca para o valor
  * do SERVIDOR assim que ele chega.
  *
- * Só o namespace `common` existe por ora, com as strings que a `AccountPage`
- * usa — a extração do resto da interface é etapa SEPARADA, em paralelo,
- * depois desta fundação (ver o programa maior). Namespace novo entra aqui,
- * nos `resources`, sem mexer no resto deste arquivo.
+ * Os namespaces são DESCOBERTOS, não registrados à mão: todo arquivo em
+ * `locales/{en,pt-BR}/<namespace>.json` vira um namespace automaticamente
+ * via `import.meta.glob` (Vite). Isso existe porque a extração de strings do
+ * resto da interface roda em DEZENAS de agentes em paralelo (Onda 6b) — se
+ * cada um precisasse editar este arquivo pra registrar seu próprio
+ * namespace, seria um arquivo compartilhado colidindo dezenas de vezes.
+ * Namespace novo é só criar os dois arquivos JSON; nada aqui muda.
  */
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import commonEn from '../locales/en/common.json';
-import commonPtBR from '../locales/pt-BR/common.json';
 import { idiomaInicial } from './idioma';
+
+type RecursoDeNamespace = Record<string, unknown>;
+type ModuloJson = { default: RecursoDeNamespace };
+
+function nomeDoNamespace(caminho: string): string {
+  return (caminho.split('/').pop() ?? '').replace(/\.json$/, '');
+}
+
+function recursosPorNamespace(
+  modulos: Record<string, ModuloJson>,
+): Record<string, RecursoDeNamespace> {
+  const recursos: Record<string, RecursoDeNamespace> = {};
+  for (const [caminho, modulo] of Object.entries(modulos)) {
+    recursos[nomeDoNamespace(caminho)] = modulo.default;
+  }
+  return recursos;
+}
+
+const modulosEn = import.meta.glob<ModuloJson>('../locales/en/*.json', { eager: true });
+const modulosPtBR = import.meta.glob<ModuloJson>('../locales/pt-BR/*.json', { eager: true });
+
+const recursosEn = recursosPorNamespace(modulosEn);
+const recursosPtBR = recursosPorNamespace(modulosPtBR);
 
 void i18n.use(initReactI18next).init({
   resources: {
-    en: { common: commonEn },
-    'pt-BR': { common: commonPtBR },
+    en: recursosEn,
+    'pt-BR': recursosPtBR,
   },
   lng: idiomaInicial(),
   fallbackLng: 'en',
   defaultNS: 'common',
-  ns: ['common'],
+  ns: Object.keys(recursosEn),
   interpolation: { escapeValue: false }, // React já escapa.
   returnNull: false,
 });

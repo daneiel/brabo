@@ -1,8 +1,13 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterAll } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { NewProjectWizard } from './NewProjectWizard';
 import { ToastProvider } from '../components/ui/ToastProvider';
+// A instância REAL do app: `FolderBrowserModal`/`Modal` usam
+// `useTranslation('terminal'|'ui')` sem `I18nextProvider` próprio (mesmo
+// padrão de `Dashboard.test.tsx`) — `NewProjectWizard.tsx` em si ainda não
+// foi migrado, então só o modal de pasta depende disto.
+import i18n from '../lib/i18n';
 
 const createProject = vi.fn();
 const listCredentials = vi.fn();
@@ -61,7 +66,8 @@ async function ateVisibilidade(provider: 'GitHub' | 'Local') {
   }
 }
 
-beforeEach(() => {
+beforeEach(async () => {
+  await i18n.changeLanguage('pt-BR');
   vi.clearAllMocks();
   listCredentials.mockResolvedValue([
     {
@@ -71,6 +77,9 @@ beforeEach(() => {
       updatedAt: '2026-08-01T00:00:00.000Z',
     },
   ]);
+});
+afterAll(() => {
+  void i18n.changeLanguage('en');
 });
 
 /**

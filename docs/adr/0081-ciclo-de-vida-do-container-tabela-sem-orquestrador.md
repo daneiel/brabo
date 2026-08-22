@@ -1,198 +1,197 @@
-# 0081 — Ciclo de vida do container: tabela de estado, sem orquestrador
+# 0081 — Container lifecycle: state table, no orchestrator
 
 ## Status
 
-Aceito, **com o mesmo tipo de corte que o [ADR 0065](0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md)
-já declarou para esta fatia**: a tabela e a máquina de estados existem; o
-que comanda um container Docker de verdade não existe, e não é este
-documento que decide como ele vai existir.
+Accepted, **with the same kind of cut the [ADR 0065](0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md)
+already declared for this slice**: the table and the state machine exist;
+what commands a real Docker container doesn't exist, and this document
+doesn't decide how it will exist.
 
-Este ADR **revisa o [ADR 0065](0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md)**,
-fechando a metade que a seção "O que este ADR NÃO faz" dele declarava —
-"estado de container precisa de tabela… o slot único de migration desta
-onda pertence a outra fase" — e toca o terreno do
-[ADR 0055](0055-escopo-de-caminho-na-politica-de-terminal.md), que
-permanece aceito e não é editado por nenhum dos dois.
+This ADR **revises [ADR 0065](0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md)**,
+closing the half its "What this ADR does NOT do" section declared —
+"container state needs a table… this wave's single migration slot belongs
+to another phase" — and touches the ground of
+[ADR 0055](0055-escopo-de-caminho-na-politica-de-terminal.md), which
+remains accepted and is not edited by either of the two.
 
-## Contexto
+## Context
 
-O ADR 0065 entregou a metade que não precisava de banco: a decisão de
-imagem do Arquiteto (`artifact.project_image`, no event log) e o portão que
-ela abre para a aba Code (RN-105). Ele foi explícito sobre o que faltava:
+ADR 0065 delivered the half that didn't need a database: the Architect's
+image decision (`artifact.project_image`, in the event log) and the gate it
+opens for the Code tab (RN-105). It was explicit about what was missing:
 
-> **O ciclo de vida do container (25b).** Provisionar, parar, reciclar,
-> limpar; o que acontece quando a imagem muda; o que sobrevive a restart; o
-> worktree do agente passando a viver dentro do container.
+> **Container lifecycle (25b).** Provisioning, stopping, recycling,
+> cleanup; what happens when the image changes; what survives a restart;
+> the agent's worktree moving to live inside the container.
 >
-> O motivo é concreto e não é falta de desenho: **estado de container
-> precisa de tabela**. Id do container, status, imagem em uso, quando
-> subiu, a qual versão do artefato corresponde — nada disso é evento, é
-> estado mutável, e forçá-lo no event log seria usar a ferramenta errada
-> porque a certa estava ocupada. O slot único de migration desta onda
-> pertence a outra fase.
+> The reason is concrete and not a lack of design: **container state needs
+> a table**. Container id, status, image in use, when it came up, which
+> version of the artifact it corresponds to — none of that is an event,
+> it's mutable state, and forcing it into the event log would be using the
+> wrong tool because the right one was busy. This wave's single migration
+> slot belongs to another phase.
 >
-> Entregar meio provisionamento seria pior que não entregar: **um
-> container que sobe e não recicla é pior que nenhum**.
+> Delivering half a provisioning system would be worse than not delivering
+> at all: **a container that comes up and never recycles is worse than
+> none**.
 > — ADR 0065
 
-O PROGRAMA 28 chegou à onda com o slot de migration livre para esta tabela.
-Antes de escrever uma linha de código, uma pergunta teve de ser respondida
-com uma investigação, não com suposição: **algum serviço do produto já
-consegue comandar um container Docker?**
+PROGRAM 28 reached the wave with the migration slot free for this table.
+Before writing a line of code, one question had to be answered by
+investigation, not assumption: **can any product service already command a
+Docker container?**
 
-A resposta, verificada linha por linha em `docker/docker-compose.yml`: não.
-Nenhum serviço (`api`, `engine`, nem os de desenvolvimento) monta
-`/var/run/docker.sock`, e nenhum roda `privileged: true`. Isso não é uma
-omissão a corrigir de passagem — é a ausência de uma decisão de segurança
-real, e decisão de segurança real não nasce como efeito colateral de uma
-tabela. Montar o socket do Docker num container é um vetor conhecido de
-escalação para root no host; conceder isso sem que o usuário o autorize
-explicitamente, com as consequências na mesa, seria o mesmo erro que o
-ADR 0065 já registrou não cometer com rede e recursos: "decidido UMA vez,
-não comando a comando" — e "decidido uma vez" pressupõe alguém decidindo,
-não um ADR de infraestrutura escolhendo por conveniência.
+The answer, verified line by line in `docker/docker-compose.yml`: no. No
+service (`api`, `engine`, nor the dev-only ones) mounts
+`/var/run/docker.sock`, and none runs `privileged: true`. This is not an
+oversight to fix in passing — it's the absence of a real security decision,
+and a real security decision doesn't get born as the side effect of a
+table. Mounting the Docker socket into a container is a known escalation
+vector to root on the host; granting that without the user explicitly
+authorizing it, with the consequences on the table, would be the same
+mistake ADR 0065 already recorded not making with network and resources:
+"decided ONCE, not command by command" — and "decided once" presupposes
+someone deciding, not an infrastructure ADR choosing out of convenience.
 
-## Decisão
+## Decision
 
-### A tabela é o CONTRATO de um orquestrador que ainda não existe
+### The table is the CONTRACT of an orchestrator that doesn't exist yet
 
-`project_containers` (migration `0046`) grava o ESTADO mutável do
-container de um projeto: `status` (máquina de estados explícita, abaixo),
-`image_version` (a versão de `artifact.project_image` que esta linha
-corresponde — nunca uma cópia de `image`/`rationale`/`network`, que
-continuam vivendo só no event log), `container_id` (o id real no daemon
-Docker, `NULL` sempre até um orquestrador existir), o teto de recursos
-DECLARADO (`cpus`/`memory_mb`/`pids_limit`, espelhando
-`RecursosDoContainer` do artefato vigente no momento em que a linha
-nasceu) e `failure_reason`.
+`project_containers` (migration `0046`) records the mutable STATE of a
+project's container: `status` (explicit state machine, below),
+`image_version` (the version of `artifact.project_image` this row
+corresponds to — never a copy of `image`/`rationale`/`network`, which
+continue to live only in the event log), `container_id` (the real id in
+the Docker daemon, always `NULL` until an orchestrator exists), the
+DECLARED resource cap (`cpus`/`memory_mb`/`pids_limit`, mirroring
+`RecursosDoContainer` from the artifact in effect at the moment the row
+was born) and `failure_reason`.
 
-Uma linha por PROJETO (`project_id` único) — o mesmo desenho de
-`dev_agent_states` no engine (ADR 0045): só existe um container vigente
-por vez, e reprovisionar depois de remover reusa a mesma linha em vez de
-acumular histórico nela. Histórico imutável já tem lugar — o event log —,
-e esta tabela não tenta ser as duas coisas.
+One row per PROJECT (`project_id` unique) — the same design as
+`dev_agent_states` in the engine (ADR 0045): only one container is current
+at a time, and reprovisioning after removal reuses the same row instead of
+accumulating history in it. Immutable history already has a place — the
+event log — and this table doesn't try to be both things.
 
-### A máquina de estados
+### The state machine
 
-`provisioning → running ⇄ stopped`, com `failed` alcançável de
-`provisioning`/`running`/`stopped` e `removed` como o único estado do qual
-só se sai reprovisionando (`removed → provisioning`). Nenhum estado é
-terminal de verdade: mesmo `removed` permite subir de novo, porque um
-projeto pode reprovisionar com uma imagem revisada pelo Arquiteto.
-Validada em `apps/api/src/domain/containers/container-lifecycle.ts`, no
-MESMO formato de `session-state-machine.ts` e `pr-gate-state-machine.ts`
-— tabela de transições permitidas, função pura, erro tipado
-(`InvalidContainerTransitionError`) que o caso de uso traduz para 409.
+`provisioning → running ⇄ stopped`, with `failed` reachable from
+`provisioning`/`running`/`stopped` and `removed` as the only state you can
+only leave by reprovisioning (`removed → provisioning`). No state is truly
+terminal: even `removed` allows coming up again, because a project may
+reprovision with an image revised by the Architect. Validated in
+`apps/api/src/domain/containers/container-lifecycle.ts`, in the SAME
+format as `session-state-machine.ts` and `pr-gate-state-machine.ts` —
+allowed-transition table, pure function, typed error
+(`InvalidContainerTransitionError`) that the use case translates into 409.
 
-A PRIMEIRA transição é especial: não existe linha até a primeira chamada
-com `to: 'provisioning'`, e ela só é aceita se o Arquiteto já tiver
-decidido a imagem (RN-105) — o mesmo portão que já protege a aba Code,
-aplicado aqui na origem em vez de duplicado. A versão e os recursos da
-decisão vigente naquele instante são CONGELADOS na linha nova; uma
-revisão posterior do artefato não muda retroativamente o que uma
-instância já provisionada promete — reprovisionar é que lê o artefato de
-novo.
+The FIRST transition is special: no row exists until the first call with
+`to: 'provisioning'`, and it's only accepted if the Architect has already
+decided the image (RN-105) — the same gate that already protects the Code
+tab, applied here at the source instead of duplicated. The version and
+resources of the decision in effect at that instant are FROZEN into the
+new row; a later revision of the artifact doesn't retroactively change what
+an already-provisioned instance promises — reprovisioning is what reads the
+artifact again.
 
-### Nenhuma chamada a Docker — em nenhum dos dois casos de uso
+### No Docker call — in either of the two use cases
 
-`RegistrarTransicaoDeContainerUseCase` e
-`ObterCicloDeVidaDoContainerUseCase` fazem exatamente o que os nomes
-dizem: gravam e leem. Nenhum dos dois invoca `docker run`, `docker stop`,
-a Docker Engine API ou qualquer client Docker — não existe um client
-Docker no código do produto. Um orquestrador real, quando existir, é quem
-CONSOME esta tabela: age primeiro contra o daemon, e só então chama
-`RegistrarTransicaoDeContainerUseCase` para registrar o que aconteceu —
-nunca o contrário, pela mesma razão que `TransitionSessionUseCase.activate`
-chama o engine ANTES de escrever `active`: a tabela não deve dizer que
-algo está rodando quando não está.
+`RegistrarTransicaoDeContainerUseCase` and
+`ObterCicloDeVidaDoContainerUseCase` do exactly what their names say: they
+write and read. Neither invokes `docker run`, `docker stop`, the Docker
+Engine API, or any Docker client — there is no Docker client in the
+product's code. A real orchestrator, when it exists, is what CONSUMES this
+table: it acts against the daemon first, and only then calls
+`RegistrarTransicaoDeContainerUseCase` to record what happened — never the
+other way around, for the same reason `TransitionSessionUseCase.activate`
+calls the engine BEFORE writing `active`: the table must not say something
+is running when it isn't.
 
-### Coerência com o modo do workspace (ADR 0072)
+### Coherence with workspace mode (ADR 0072)
 
-Um projeto em `workspace_mode: 'local'` não sobe container — ele roda no
-container do AGENTE de sempre, só a pasta mudou (RN-169). Pedir uma
-transição para um projeto `local` é recusado com 400 antes de tocar a
-tabela: a coerência não é "a tabela permite qualquer estado para qualquer
-projeto e a UI filtra depois", é o caso de uso recusando na origem.
+A project with `workspace_mode: 'local'` does not spin up a container — it
+runs in the AGENT's usual container, only the folder changed (RN-169).
+Requesting a transition for a `local` project is rejected with 400 before
+touching the table: coherence isn't "the table allows any state for any
+project and the UI filters afterward," it's the use case refusing at the
+source.
 
-### Nenhuma rota HTTP nova
+### No new HTTP route
 
-Nada na Onda 4 consome esta tabela por HTTP ainda — o terminal
-interativo (25b/Onda 5) é o candidato óbvio, e decidir a forma da rota
-antes de saber exatamente o que ele precisa ler seria adivinhar um
-contrato. Os dois casos de uso ficam expostos ao módulo de containers,
-prontos para uma rota quando houver consumidor real.
+Nothing in Wave 4 consumes this table over HTTP yet — the interactive
+terminal (25b/Wave 5) is the obvious candidate, and deciding the route's
+shape before knowing exactly what it needs to read would be guessing a
+contract. Both use cases are exposed to the containers module, ready for a
+route when there's a real consumer.
 
-## Consequências
+## Consequences
 
-**O que passa a existir.** Um lugar único e testado para responder "em
-que estado está o container deste projeto" e para registrar uma
-transição validada — pré-requisito de QUALQUER orquestrador futuro, sem
-o qual ele teria que inventar o próprio armazenamento de estado ou
-reabrir esta decisão.
+**What comes to exist.** A single, tested place to answer "what state is
+this project's container in" and to record a validated transition —
+a prerequisite for ANY future orchestrator, without which it would have to
+invent its own state storage or reopen this decision.
 
-**O que continua exatamente como estava — sem atenuar.** A metade "dentro
-o agente é livre" da política de terminal, que o ADR 0065 já dizia não
-ter mudado, CONTINUA não tendo mudado. O ADR 0055 (escopo de caminho,
-allowlist estreito) segue valendo palavra por palavra. Um container
-`running` nesta tabela não muda o que o terminal permite executar, porque
-nenhum comando de terminal hoje é roteado para dentro de um container
-gerido por ela — a tabela e a execução de comandos são dois sistemas que
-ainda não se tocam. Os achados Z e AD (allowlist de verbo não converge)
-continuam abertos pelo motivo de sempre: fechar exige a parede física
-(um orquestrador real isolando execução), não uma tabela que descreve a
-intenção de uma parede.
+**What stays exactly as it was — without softening.** The "inside, the
+agent is free" half of terminal policy, which ADR 0065 already said hadn't
+changed, CONTINUES not having changed. ADR 0055 (path scope, narrow
+allowlist) remains valid word for word. A `running` container in this table
+doesn't change what the terminal allows to execute, because no terminal
+command today is routed into a container managed by it — the table and
+command execution are two systems that still don't touch. Findings Z and
+AD (verb allowlist doesn't converge) remain open for the usual reason:
+closing them requires the physical wall (a real orchestrator isolating
+execution), not a table describing the intent of a wall.
 
-**O que fica declarado, não escondido.** Não existe hoje nenhum processo
-que transicione esta tabela sozinho — toda transição é, por enquanto,
-externa (teste, ou uma chamada manual). Isso é o esperado: a tabela nasce
-antes do consumidor, não depois. O dia em que um orquestrador real for
-desenhado — sidecar com privilégio restrito, daemon separado, ou outro
-formato — é uma decisão de segurança própria, com o usuário informado do
-que está sendo concedido, exatamente como o ADR 0065 já exige para rede e
-recursos. Este documento não a antecipa nem a atalha.
+**What stays declared, not hidden.** No process today transitions this
+table on its own — every transition is, for now, external (a test, or a
+manual call). This is expected: the table is born before its consumer, not
+after. The day a real orchestrator is designed — restricted-privilege
+sidecar, separate daemon, or another shape — is its own security decision,
+with the user informed of what's being granted, exactly as ADR 0065 already
+requires for network and resources. This document does not anticipate or
+shortcut it.
 
-## Alternativas consideradas
+## Alternatives considered
 
-**Montar `/var/run/docker.sock` na api ou no engine para "fazer funcionar
-de verdade" já nesta fatia.** Recusada com o argumento mais direto que
-existe: é uma decisão de segurança (vetor conhecido de escalação a root
-no host) que ninguém pediu nesta fatia, e tomá-la de passagem para fazer
-uma tabela "parecer completa" é exatamente o erro que a FASE 13 já
-nomeou — não é afrouxar allowlist de verbo, mas é a mesma classe de
-atalho: ganhar funcionalidade trocando garantia por conveniência.
+**Mounting `/var/run/docker.sock` in the api or the engine to "actually
+make it work" already in this slice.** Rejected with the most direct
+argument there is: it's a security decision (a known escalation vector to
+root on the host) nobody asked for in this slice, and making it in passing
+to make a table "look complete" is exactly the mistake PHASE 13 already
+named — it's not loosening a verb allowlist, but it's the same class of
+shortcut: gaining functionality by trading a guarantee for convenience.
 
-**Não criar a tabela agora, esperar o orquestrador estar desenhado.**
-Recusada pelo motivo que o próprio ADR 0065 já deu: o slot de migration
-é escasso (uma por onda) e a tabela é pré-requisito, não acessório, de
-qualquer desenho de orquestrador — desenhá-lo sem ter onde gravar estado
-produziria a mesma tabela depois, sob pressão de um consumidor real
-esperando.
+**Not creating the table now, waiting for the orchestrator to be
+designed.** Rejected for the reason ADR 0065 itself already gave: the
+migration slot is scarce (one per wave) and the table is a prerequisite,
+not an accessory, for any orchestrator design — designing it without
+somewhere to write state would produce the same table later, under
+pressure from a real consumer waiting.
 
-**Guardar o estado como um segundo tipo de evento no event log
-(`container.status_changed`), em vez de tabela.** Recusada pelo mesmo
-argumento que a distingue de `artifact.project_image`: isto é ESTADO
-(um valor por vez), não FATO histórico. Projetar "o estado atual" a
-partir de eventos a cada leitura reimplementaria uma tabela em cima do
-event log, pagando o custo de indireção sem ganhar nada — a mesma
-conclusão que "Alternativas consideradas" do ADR 0065 já registrou ao
-adiar esta tabela.
+**Storing state as a second event type in the event log
+(`container.status_changed`), instead of a table.** Rejected by the same
+argument that distinguishes it from `artifact.project_image`: this is
+STATE (one value at a time), not historical FACT. Projecting "the current
+state" from events on every read would reimplement a table on top of the
+event log, paying the indirection cost without gaining anything — the same
+conclusion ADR 0065's "Alternatives considered" already recorded when it
+deferred this table.
 
-## Referências
+## References
 
 - [ADR 0065](0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md) —
-  a decisão de imagem e o portão que este documento não repete, só referencia.
-- [ADR 0055](0055-escopo-de-caminho-na-politica-de-terminal.md) — a política
-  de terminal que CONTINUA valendo como está; nenhuma linha muda aqui.
-- [ADR 0072](0072-projeto-local-ou-container.md) — `workspace_mode`, que
-  decide se um projeto tem ciclo de vida de container ou não.
-- [ADR 0045](0045-reagendamento-por-evento-do-dev-agent.md) — a máquina de
-  estados persistida (`dev_agent_states`) cujo desenho (uma linha por
-  agente, `status` validado fora da coluna) esta tabela espelha para
-  container.
+  the image decision and the gate this document doesn't repeat, only references.
+- [ADR 0055](0055-escopo-de-caminho-na-politica-de-terminal.md) — the terminal
+  policy that CONTINUES to hold exactly as it is; no line changes here.
+- [ADR 0072](0072-projeto-local-ou-container.md) — `workspace_mode`, which
+  decides whether a project has a container lifecycle or not.
+- [ADR 0045](0045-reagendamento-por-evento-do-dev-agent.md) — the persisted
+  state machine (`dev_agent_states`) whose design (one row per agent,
+  `status` validated outside the column) this table mirrors for containers.
 - [RN-105](../business-rules.md#rn-105), [RN-169](../business-rules.md#rn-169),
   [RN-243](../business-rules.md#rn-243)–[RN-248](../business-rules.md#rn-248).
-- `docs/explanation/achados-execucao-real.md` — os achados Z e AD, que
-  este documento explicitamente NÃO fecha.
+- `docs/explanation/achados-execucao-real.md` — findings Z and AD, which
+  this document explicitly does NOT close.
 - `apps/api/src/domain/containers/container-lifecycle.ts`,
   `apps/api/src/application/use-cases/containers/registrar-transicao-de-container.use-case.ts`,
   `apps/api/src/application/use-cases/containers/obter-ciclo-de-vida-do-container.use-case.ts`,

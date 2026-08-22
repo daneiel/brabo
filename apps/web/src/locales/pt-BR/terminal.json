@@ -1,0 +1,26 @@
+{
+  "terminalPanel": {
+    "loading": "Abrindo terminal…",
+    "connectionLost": "A conexão com o runner caiu. Feche e reabra esta aba para tentar de novo."
+  },
+  "folderBrowserModal": {
+    "title": "Escolher pasta",
+    "noProjectMessage": "A navegação por pasta fica disponível depois que o projeto existir — o runner se conecta a um projeto já criado. Por enquanto, digite o caminho manualmente no campo desta tela.",
+    "understood": "Entendi",
+    "breadcrumbLabel": "Caminho atual",
+    "subfoldersLabel": "Subpastas",
+    "loading": "Carregando…",
+    "empty": "Nenhuma subpasta aqui.",
+    "cancel": "Cancelar",
+    "select": "Selecionar esta pasta",
+    "initialDirError": "Não consegui obter a pasta inicial do runner."
+  },
+  "runnerOnboarding": {
+    "defaultMessage": "Nenhum runner conectado a este projeto.",
+    "instructionPrefix": "Na sua máquina, dentro do checkout do Brabo (ver",
+    "instructionSuffix": "):",
+    "command": "pnpm --filter runner start -- --project {{projectId}} --dir <pasta>",
+    "detail": "O runner conecta automaticamente assim que estiver rodando — nenhuma ação nova precisa acontecer aqui.",
+    "retryButton": "Já instalei, conectar"
+  }
+}

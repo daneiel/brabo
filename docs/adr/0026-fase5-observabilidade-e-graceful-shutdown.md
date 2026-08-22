@@ -1,256 +1,277 @@
-# ADR 0026 — Fase 5 (sessão 3): graceful shutdown, OpenTelemetry, métricas, logs e dashboards
+# ADR 0026 — Phase 5 (session 3): graceful shutdown, OpenTelemetry, metrics, logs and dashboards
 
-- Status: aceito
-- Data: 2026-07-26
-- Fase: 5 (sessão 3 — itens 4 e 5 do escopo)
-- Sucede: [ADR 0025](0025-fase5-deploy-kubernetes-kustomize.md), cuja limitação
-  1 ("não há drenagem de sessões no shutdown") é resolvida aqui.
+- Status: accepted
+- Date: 2026-07-26
+- Phase: 5 (session 3 — items 4 and 5 of the scope)
+- Supersedes: [ADR 0025](0025-fase5-deploy-kubernetes-kustomize.md), whose
+  limitation 1 ("there's no session draining on shutdown") is resolved here.
 
-## Contexto
+## Context
 
-As sessões 1 e 2 entregaram imagens de produção, CI e o deploy Kubernetes com
-HPA do engine por profundidade de fila. Ficaram para depois, explicitamente, o
-graceful shutdown e a observabilidade.
+Sessions 1 and 2 delivered production images, CI and the Kubernetes deploy
+with an HPA driven by queue depth. Graceful shutdown and observability were
+explicitly left for later.
 
-Esta sessão entrega os dois. O critério de aceite era duplo e executável: um
-rollout com sessões ativas sem nenhuma órfã, e no Grafana local seguir uma
-sessão da trace raiz até um tool call específico, vendo o custo dela no
-dashboard.
+This session delivers both. The acceptance criterion was twofold and
+executable: a rollout with active sessions leaving none orphaned, and, in
+the local Grafana, following a session from the root trace down to a
+specific tool call, seeing its cost in the dashboard.
 
-**O trabalho grande não foi escrever instrumentação — foi descobrir que escalar
-o engine estava quebrado desde a sessão passada.** Seis defeitos apareceram, e
-nenhum deles quebrava teste: cinco eram silenciosos por construção.
+**The big work wasn't writing instrumentation — it was discovering that
+scaling the engine had been broken since the previous session.** Six
+defects surfaced, and none of them broke a test: five were silent by
+construction.
 
-## Decisões
+## Decisions
 
-### 1. Uma sessão tem UM dono no cluster: registro `:global`
+### 1. A session has ONE owner in the cluster: `:global` registration
 
-`Engine.Sessions.SessionServer` era registrado num `Registry` **local ao nó**, e
-`Engine.Sessions.Rehydrator` recria no boot um processo para toda linha de
-`engine.session_states` — que é tabela global. Com N réplicas cada sessão
-passava a existir N vezes; o websocket do browser chega em UMA (o Service
-balanceia) e as outras N−1 cópias, sem receber `ping`, estouravam o heartbeat de
-30s e mandavam a api encerrar **uma sessão viva em outro pod**.
+`Engine.Sessions.SessionServer` was registered in a `Registry` **local to
+the node**, and `Engine.Sessions.Rehydrator` recreates, on boot, one process
+per row of `engine.session_states` — which is a global table. With N
+replicas, each session started existing N times; the browser's websocket
+lands on ONE of them (the Service load-balances), and the other N−1 copies,
+never receiving a `ping`, would time out the 30s heartbeat and tell the api
+to end **a session that was alive on another pod**.
 
-Ou seja: escalar o engine matava as sessões dos usuários em 30 segundos, e o
-`make hpa-test` aprovado na sessão 2 escala para 3.
+In other words: scaling the engine was killing users' sessions within 30
+seconds, and `make hpa-test`, approved in session 2, scales to 3.
 
-O nome passou para `:global`. Isso deduplica entre nós e, de quebra, faz
-`heartbeat/1` alcançar o dono onde ele estiver — antes o `join` do canal falhava
-quando o websocket caía no pod "errado". O `Registry` permanece na árvore
-porque os servers de agente (`po:`, `criativo:`, `arquiteto:`, `infra:`) o usam
-com chaves prefixadas.
+The name was moved to `:global`. This deduplicates across nodes and, as a
+bonus, makes `heartbeat/1` reach the owner wherever it is — before, the
+channel's `join` would fail when the websocket landed on the "wrong" pod.
+The `Registry` stays in the tree because the agent servers (`po:`,
+`criativo:`, `arquiteto:`, `infra:`) use it with prefixed keys.
 
-### 2. `:global` resolve conflito de nome MATANDO um processo — e isso explicava tudo
+### 2. `:global` resolves a name conflict by KILLING a process — and that explained everything
 
-Este foi o defeito mais difícil da sessão, e vale registrar o método porque a
-evidência apontava para o lugar errado por várias rodadas.
+This was the hardest defect of the session, and the method is worth
+recording because the evidence pointed at the wrong place for several
+rounds.
 
-Sintoma: o drain funcionava perfeitamente quando chamado à mão (`5 sessões, 5
-com node_shutdown`) e **não drenava nada durante um rollout de verdade** — o
-`preStop` reportava `total: 0` e a api registrava as sessões como `killed`.
+Symptom: the drain worked perfectly when called by hand (`5 sessions, 5
+with node_shutdown`) and **drained nothing during a real rollout** — the
+`preStop` reported `total: 0` and the api recorded the sessions as
+`killed`.
 
-Causa: num rollout (`maxSurge: 1`) o pod novo sobe enquanto o antigo ainda
-hospeda as sessões. Ele reidratava antes de o `:global` ter **sincronizado as
-tabelas de nomes**, `whereis_name` devolvia `:undefined` para nomes que existiam
-no outro nó, e ele criava uma segunda cópia de cada sessão. Quando a
-sincronização terminava, o `:global` resolvia o conflito com o resolvedor
-default `random_exit_name`, que **mata um dos dois processos com
-`exit(pid, :kill)`**. O sorteio matava a cópia do pod antigo, que chegava no
-`preStop` sem nada local para drenar.
+Cause: during a rollout (`maxSurge: 1`) the new pod comes up while the old
+one still hosts the sessions. It would rehydrate before `:global` had
+**synchronized the name tables**, `whereis_name` would return `:undefined`
+for names that existed on the other node, and it would create a second copy
+of every session. When synchronization finished, `:global` resolved the
+conflict with the default resolver `random_exit_name`, which **kills one of
+the two processes with `exit(pid, :kill)`**. The coin flip was killing the
+old pod's copy, which reached `preStop` with nothing local to drain.
 
-`Node.list()` não-vazio diz **conectado**, não "tabelas trocadas". Falta
-`:global.sync()`, e é ele que fecha a janela. O `Rehydrator` passou a esperar o
-cluster e sincronizar antes de reidratar — e só quando há sessão para reidratar,
-para não penalizar boot com a tabela vazia.
+`Node.list()` being non-empty says **connected**, not "tables exchanged".
+What's missing is `:global.sync()`, and that's what closes the window. The
+`Rehydrator` now waits for the cluster and synchronizes before rehydrating —
+and only when there's a session to rehydrate, so as not to penalize boot
+when the table is empty.
 
-### 3. Drain proativo no `preStop`, não `terminate/2`
+### 3. Proactive drain in `preStop`, not `terminate/2`
 
-Quando o supervisor desce, cada `SessionServer` recebe `exit(:shutdown)` e morre
-instantaneamente — não trapa exits, não tem `terminate/2`. Acrescentar
-`trap_exit` resolveria pela metade: o supervisor concede 5s por filho, e o drain
-precisa de rede (evento na api, handoff para outro nó).
+When the supervisor comes down, each `SessionServer` receives
+`exit(:shutdown)` and dies instantly — it doesn't trap exits, doesn't have
+a `terminate/2`. Adding `trap_exit` would only solve half the problem: the
+supervisor gives each child 5s, and the drain needs the network (an event
+to the api, a handoff to another node).
 
-Então o `preStop` chama `Engine.Shutdown.drain()` com o BEAM inteiro ainda de pé.
-Para cada sessão local: emite `session.draining`, solta o nome global, e oferece
-a sessão a um par por `:erpc`. As **não adotadas** viram `active → closing`
-(causa `node_shutdown`) e depois `closed_abnormally`.
+So `preStop` calls `Engine.Shutdown.drain()` with the whole BEAM still up.
+For each local session: it emits `session.draining`, releases the global
+name, and offers the session to a peer via `:erpc`. The **unadopted** ones
+become `active → closing` (cause `node_shutdown`) and then
+`closed_abnormally`.
 
-Sessão adotada continua `active` e nunca vira `closing` — a máquina de estados
-não permite voltar de `closing` para `active`, então anunciar `closing` para
-tudo tornaria a adoção impossível. É a resposta ao "closing/node_shutdown **OU**
-reidratadas" do enunciado: as duas metades, decididas por sessão.
+An adopted session stays `active` and never becomes `closing` — the state
+machine doesn't allow going back from `closing` to `active`, so announcing
+`closing` for everything would make adoption impossible. This is the
+answer to the assignment's "closing/node_shutdown **OR** rehydrated": both
+halves, decided per session.
 
-`drain/0` devolve um resumo (`%{total:, adopted:, terminated:}`) em vez de `:ok`
-porque o stdout do hook é o único registro que sobra depois que o pod some — foi
-esse resumo que permitiu diagnosticar a decisão 2.
+`drain/0` returns a summary (`%{total:, adopted:, terminated:}`) instead of
+`:ok` because the hook's stdout is the only record left once the pod is
+gone — that summary is what made diagnosing decision 2 possible.
 
-`Engine.Sessions.Adopter` cobre o que o `preStop` não alcança: `kill -9`,
-OOMKill, nó evictado. Sem ele, "zero órfãs" só valeria para o desligamento
-educado.
+`Engine.Sessions.Adopter` covers what `preStop` can't reach: `kill -9`,
+OOMKill, an evicted node. Without it, "zero orphans" would only hold for
+the graceful shutdown path.
 
-### 4. Quatro bloqueios na fronteira api↔engine
+### 4. Four blockers at the api↔engine boundary
 
-- O DTO interno rejeitava `to: "closing"` (`@IsIn(['closed','closed_abnormally'])`);
-  a única rota que aceitava `closing` era a humana, atrás de RBAC de usuário.
-- `termination_reason` só era persistido em estado terminal, então a causa
-  `node_shutdown` seria descartada exatamente onde o `TerminationClassifier` do
-  Psicólogo vai lê-la.
-- O classificador não conhecia `node_shutdown`. Entrou **antes** do catch-all de
-  `closed_abnormally`, senão o drain apareceria como `:crash` e o Psicólogo
-  levantaria hipótese sobre um defeito que não existe.
-- O DTO de hipóteses rejeitaria a causa nova, e o modo de falha é ruim: o 400
-  volta ao modelo como resultado de tool e o ToolLoop gira até estourar
-  `max_iterations`, gastando orçamento sem registrar nada.
+- The internal DTO rejected `to: "closing"`
+  (`@IsIn(['closed','closed_abnormally'])`); the only route that accepted
+  `closing` was the human one, behind user RBAC.
+- `termination_reason` was only persisted in a terminal state, so the
+  `node_shutdown` cause would be dropped exactly where the Psychologist's
+  `TerminationClassifier` is going to read it.
+- The classifier didn't know about `node_shutdown`. It was added **before**
+  the `closed_abnormally` catch-all, or the drain would show up as `:crash`
+  and the Psychologist would raise a hypothesis about a defect that doesn't
+  exist.
+- The hypothesis DTO would reject the new cause, and the failure mode is
+  bad: the 400 comes back to the model as a tool result and the ToolLoop
+  spins until `max_iterations` is hit, spending budget without recording
+  anything.
 
-### 5. `force_ssl` respondia 301 em todo `/internal/*`
+### 5. `force_ssl` was answering 301 on every `/internal/*`
 
-A exclusão do `Plug.SSL` casa **caminho exato** (`conn.path_info in paths`),
-então `paths: ["/health", ...]` nunca cobriria as mais de vinte rotas de
-`/internal`. A api não manda `x-forwarded-proto: https`, e o engine não tem
-listener HTTPS — TLS termina no ingress. Resultado: **api→engine estava quebrado
-desde a sessão 2**.
+`Plug.SSL`'s exclusion matches the **exact path**
+(`conn.path_info in paths`), so `paths: ["/health", ...]` would never cover
+the twenty-plus `/internal` routes. The api doesn't send
+`x-forwarded-proto: https`, and the engine has no HTTPS listener — TLS
+terminates at the ingress. Result: **api→engine had been broken since
+session 2**.
 
-E nenhum smoke via, porque **criar sessão não chama o engine — ativá-la é que
-chama**. Os dois smokes passaram a ativar, e o comentário que afirmava provar
-esse caminho deixou de ser falso. A decisão de exclusão virou uma função
-(`EngineWeb.ForceSslExclusions`), porque uma lista de caminhos exatos se
-desatualiza no primeiro endpoint novo.
+And no smoke caught it, because **creating a session doesn't call the
+engine — activating it does**. Both smokes were changed to activate, and
+the comment claiming to prove that path stopped being false. The exclusion
+decision became a function (`EngineWeb.ForceSslExclusions`), because a list
+of exact paths goes stale at the first new endpoint.
 
-### 6. Modelo de trace: a sessão é a raiz, persistida
+### 6. Trace model: the session is the root, persisted
 
-Uma sessão dura minutos ou horas, e uma span OTel só chega ao backend quando
-**termina**: uma raiz aberta esse tempo todo seria invisível no Tempo justamente
-enquanto a sessão acontece, e desapareceria de vez se a sessão nunca encerrasse
-direito — que é o caso que o item 4 trata.
+A session lasts minutes or hours, and an OTel span only reaches the backend
+once it **ends**: a root open that whole time would be invisible in Tempo
+precisely while the session is happening, and would disappear entirely if
+the session never ended cleanly — which is the case item 4 addresses.
 
-Então a raiz é curta (`session.create`) e o `traceparent` dela é persistido em
-`sessions.trace_parent`. Todo trabalho posterior o usa como **parent remoto**,
-compartilha o `trace_id`, e a sessão inteira é recuperável por um id só.
+So the root is short (`session.create`) and its `traceparent` is persisted
+in `sessions.trace_parent`. All later work uses it as a **remote parent**,
+shares the `trace_id`, and the whole session is recoverable from a single
+id.
 
-Propagação em três caminhos, cada um num ponto único:
+Propagation across three paths, each at a single point:
 
-| caminho | ponto de injeção |
+| path | injection point |
 |---|---|
-| api → engine | `buildHeaders()` — antes eram quatro blocos idênticos inline |
-| engine → api | `post_returning/3`, funil de todo POST do engine |
-| outbox → Oban | `DrizzleOutboxRepository.append()` lê o contexto ativo; os **18 call-sites não mudaram** |
+| api → engine | `buildHeaders()` — before this, four identical inline blocks |
+| engine → api | `post_returning/3`, the funnel for every POST from the engine |
+| outbox → Oban | `DrizzleOutboxRepository.append()` reads the active context; the **18 call sites didn't change** |
 
-`outbox_events` ganhou coluna `metadata jsonb`, não uma chave no `payload`: o
-engine desserializa payload por tipo de evento, e misturar transporte com
-domínio envenenaria todos os produtores. O engine guarda sua própria cópia do
-traceparent em `engine.session_states` — cópia e não join, porque ler a tabela
-da api a cada turno de agente para buscar um valor imutável troca uma escrita
-por N leituras.
+`outbox_events` got a `metadata jsonb` column, not a key inside `payload`:
+the engine deserializes the payload by event type, and mixing transport
+with domain would poison every producer. The engine keeps its own copy of
+the traceparent in `engine.session_states` — a copy, not a join, because
+reading the api's table on every agent turn just to fetch an immutable
+value would trade one write for N reads.
 
-O contexto do OTel vive no dicionário do processo, e o engine dispara trabalho
-por `cast` e `Task`. `Span.capture/0` e `Span.attach/1` levam o contexto na mão —
-sem esse par, a trace se parte exatamente nos pontos mais interessantes.
+The OTel context lives in the process dictionary, and the engine dispatches
+work via `cast` and `Task`. `Span.capture/0` and `Span.attach/1` carry the
+context by hand — without that pair, the trace breaks exactly at the most
+interesting points.
 
-### 7. Contador para taxa, gauge para estado
+### 7. Counter for rate, gauge for state
 
-- "tokens/min" e "custo/hora" são **taxas**: contador monotônico com `rate()`
-  derivando a janela. O dashboard pede por minuto, o alerta por hora, e nenhum
-  precisa de métrica própria; `rate()` também trata reinício de processo.
-- "sessões ativas" e "tasks bloqueadas" são **estado**: não há evento de "deixou
-  de estar ativa" que sobreviva a restart. Consulta periódica ao banco, com
-  `reset()` antes de reescrever — sem o reset a série fica grudada e o painel
-  mostra trabalho que já acabou.
+- "tokens/min" and "cost/hour" are **rates**: a monotonic counter with
+  `rate()` deriving the window. The dashboard asks per minute, the alert
+  per hour, and neither needs its own metric; `rate()` also handles process
+  restarts.
+- "active sessions" and "blocked tasks" are **state**: there's no "stopped
+  being active" event that survives a restart. A periodic query to the
+  database, with `reset()` before rewriting — without the reset the series
+  gets stuck and the panel shows work that already finished.
 
-Dois detalhes do domínio que mudariam a query: "tasks blocked" é a coluna
-**booleana** `tasks.blocked` (uma task bloqueada volta para `todo`), e `tasks`
-não tem `project_id` — o caminho é `story_id → stories`. Taxa de aprovação é
-contador na decisão, não `count(status='approved')`: uma ação aprovada que
-executa vira `executed`.
+Two domain details that would change the query: "blocked tasks" is the
+**boolean** column `tasks.blocked` (a blocked task goes back to `todo`),
+and `tasks` has no `project_id` — the path is `task_id → stories`. Approval
+rate is a counter on the decision, not `count(status='approved')`: an
+approved action that executes becomes `executed`.
 
-`/metrics` da api precisa de `@Public()`: o `JwtAuthGuard` é global, e sem isso o
-scrape recebe 401 com o sintoma sendo um target `down` e todo o resto verde.
+The api's `/metrics` needs `@Public()`: `JwtAuthGuard` is global, and
+without this the scrape gets a 401, with the symptom being a `down` target
+and everything else green.
 
-### 8. Logs JSON: `trace_id` por `mixin`, e o nome é contrato
+### 8. JSON logs: `trace_id` via `mixin`, and the name is a contract
 
-Na api, o `mixin` do pino é avaliado a cada linha, lendo o contexto ativo
-naquele instante — é o que faz uma linha emitida dentro de um tool call carregar
-o trace daquele tool call, sem que nenhum ponto de log passe id.
+On the api, pino's `mixin` is evaluated on every line, reading the active
+context at that instant — that's what makes a line emitted inside a tool
+call carry that tool call's trace, without any log call site passing an id.
 
-O campo é `trace_id` com underscore nos **três** serviços, porque é o que o
-`stage.json` do Alloy extrai e o `derivedFields` do Loki procura. Renomear
-compila, passa na suite, e destrói a correlação clicável.
+The field is `trace_id` with an underscore across all **three** services,
+because that's what Alloy's `stage.json` extracts and Loki's
+`derivedFields` looks for. Renaming it compiles, passes the suite, and
+destroys the clickable correlation.
 
-No engine, formatter escrito à mão (~30 linhas) em vez de biblioteca: as opções
-trazem formatadores para três nuvens e um esquema de configuração próprio, e
-nenhuma injeta o contexto do OTel sem cola de todo jeito. Ele **nunca levanta** —
-uma exceção ali aconteceria dentro do logger, perdendo a linha e podendo entrar
-em recursão ao tentar logar a falha.
+On the engine, a hand-written formatter (~30 lines) instead of a library:
+the options bring formatters for three clouds and their own configuration
+scheme, and none of them injects the OTel context without duct tape either
+way. It **never raises** — an exception there would happen inside the
+logger, losing the line and possibly recursing while trying to log the
+failure.
 
-Na web, sem SDK de browser: `@opentelemetry/sdk-trace-web` custa ~90 kB e exige
-CORS no coletor e entrada no CSP. A web **gera** um `traceparent` por
-requisição, que a api adota como parent (é o propagador padrão), e loga com o
-mesmo `trace_id`. São ~20 linhas, e trocar pelo SDK depois é substituir uma
-função. O `ApiError` passou a carregar o `traceId`, então "deu erro" virou relato
-acionável.
+On the web, with no browser SDK: `@opentelemetry/sdk-trace-web` costs
+~90 kB and requires CORS on the collector plus an entry in the CSP. The web
+**generates** a `traceparent` per request, which the api adopts as parent
+(that's the default propagator), and logs with the same `trace_id`. It's
+~20 lines, and swapping in the SDK later is just replacing a function.
+`ApiError` now carries the `traceId`, so "it errored" became an actionable
+report.
 
-Ganchos globais que não existiam: `QueryCache`/`MutationCache` `onError` e
-`window.error`/`unhandledrejection` — sem eles, exceção de render era tela em
-branco sem registro.
+Global hooks that didn't exist: `QueryCache`/`MutationCache` `onError` and
+`window.error`/`unhandledrejection` — without them, a render exception was
+a blank screen with no record.
 
-### 9. Collector no meio, e o que NÃO passa por ele
+### 9. Collector in the middle, and what does NOT go through it
 
-`OTEL_EXPORTER_OTLP_ENDPOINT` aponta para o OpenTelemetry Collector, não para o
-Tempo: as três apps conhecem um endpoint só, e trocar backend, amostrar ou
-filtrar atributo vira mudança de pipeline.
+`OTEL_EXPORTER_OTLP_ENDPOINT` points at the OpenTelemetry Collector, not at
+Tempo: the three apps know a single endpoint, and swapping backends,
+sampling or filtering an attribute becomes a pipeline change.
 
-Métricas e logs **não** passam por ele: métrica é scrape (modelo pull, sobrevive
-a reinício do coletor) e log é lido do stdout dos pods pelo Alloy. Mandar as três
-coisas pelo mesmo caminho faria do coletor ponto único de falha da
-observabilidade inteira.
+Metrics and logs **don't** go through it: a metric is scraped (pull model,
+survives a collector restart) and a log is read from the pods' stdout by
+Alloy. Sending all three through the same path would make the collector a
+single point of failure for observability as a whole.
 
-**A NetworkPolicy `allow-otlp-egress` é obrigatória**: o `default-deny` de egress
-do namespace `brabo` (ADR 0025) bloqueia OTLP para `monitoring`, e o modo de
-falha é o pior possível — as apps sobem, os spans são criados, o envio falha, e
-todo o resto fica verde com o Tempo vazio.
+**The `allow-otlp-egress` NetworkPolicy is mandatory**: the `brabo`
+namespace's egress `default-deny` (ADR 0025) blocks OTLP to `monitoring`,
+and the failure mode is the worst possible — the apps come up, spans are
+created, sending fails, and everything else stays green with Tempo empty.
 
-### 10. Alertas do Grafana, não do Prometheus — desvio registrado
+### 10. Grafana alerts, not Prometheus — a recorded deviation
 
-O enunciado pede "alertas Prometheus". Estão implementados como **regras
-unificadas do Grafana**, provisionadas como código, por escolha explícita do
-usuário. A contrapartida aceita: deixam de ser avaliados se o Grafana cair, o
-que não aconteceria com regras carregadas pelo Prometheus. Não há Alertmanager
-nem receiver — rotear é decisão de operação.
+The assignment asks for "Prometheus alerts." They're implemented as
+**unified Grafana rules**, provisioned as code, by the user's explicit
+choice. The accepted trade-off: they stop being evaluated if Grafana goes
+down, which wouldn't happen with rules loaded by Prometheus. There's no
+Alertmanager and no receiver — routing is an operational decision.
 
-## Consequências
+## Consequences
 
-- O engine suporta mais de uma réplica **de fato**, e um rollout preserva as
-  sessões dos usuários em vez de matá-las.
-- Uma sessão é rastreável ponta a ponta: `session.create` na api, `agent.turn`,
-  `tool.call`, `llm.turn` e `gate.scanner` no engine, tudo num `trace_id`.
-- Os logs dos três serviços são JSON com o mesmo `trace_id`, clicável do Tempo
-  para o Loki e de volta.
-- `pnpm-workspace.yaml` passou a declarar `protobufjs: false`: ele entra como
-  dependência transitiva do exporter OTLP e o exporter que usamos é HTTP/JSON —
-  não rodar postinstall de dependência transitiva é a mesma disciplina de pin e
-  checksum do resto da fase.
+- The engine supports more than one replica **for real**, and a rollout
+  preserves users' sessions instead of killing them.
+- A session is traceable end to end: `session.create` on the api,
+  `agent.turn`, `tool.call`, `llm.turn` and `gate.scanner` on the engine,
+  all under one `trace_id`.
+- The logs of all three services are JSON with the same `trace_id`,
+  clickable from Tempo to Loki and back.
+- `pnpm-workspace.yaml` now declares `protobufjs: false`: it comes in as a
+  transitive dependency of the OTLP exporter and the exporter we use is
+  HTTP/JSON — not running a transitive dependency's postinstall is the same
+  discipline as the rest of the phase's pinning and checksumming.
 
-## Limitações conhecidas (registradas, não resolvidas)
+## Known limitations (recorded, not resolved)
 
-1. **Os servers de agente continuam node-local.** `po:`, `criativo:`,
-   `arquiteto:` e `infra:` seguem num `Registry` local, com a mesma forma do
-   defeito da decisão 1: um comando de agente que caia no pod "errado" não
-   encontra o processo. Não apareceu no critério de aceite desta sessão, mas é a
-   próxima peça a migrar para `:global`.
-2. **O `Adopter` tem janela de partição.** Ele sincroniza o `:global` antes de
-   adotar, mas com 1 réplica `Node.list()` é legitimamente vazio e não há como
-   distinguir "sozinho porque é réplica única" de "sozinho porque particionado".
-   Numa partição real, dois lados poderiam adotar a mesma sessão.
-3. **`tool.call` de agente real não foi exercitado ponta a ponta.** A verificação
-   usou o mecanismo de span diretamente (`Span.with_session` via `rpc`), porque
-   rodar um agente de verdade exige LLM — Ollama ou chave de API — e não havia
-   nenhum disponível no ambiente. O caminho de código é o mesmo; o que não foi
-   observado é um turno real de agente produzindo a árvore.
-4. **O chart `grafana/grafana` está marcado como deprecado** no repositório
-   upstream, e o único substituto é o `grafana-operator` (CRDs, modelo de
-   provisionamento diferente).
-5. **Itens 6 e 7 da Fase 5 seguem abertos**: backup/restore com `pg_dump`
-   agendado e runbook testado; rate limit, headers de segurança, CORS estrito e
-   auditoria de dependências no CI.
-6. **Publicação das imagens em registry** continua pendente desde a sessão 2, e
-   é pré-requisito dos overlays de staging/prod.
+1. **The agent servers remain node-local.** `po:`, `criativo:`,
+   `arquiteto:` and `infra:` still sit in a local `Registry`, with the same
+   shape of defect as decision 1: an agent command that lands on the
+   "wrong" pod won't find the process. This wasn't part of this session's
+   acceptance criterion, but it's the next piece to migrate to `:global`.
+2. **The `Adopter` has a partition window.** It syncs `:global` before
+   adopting, but with 1 replica `Node.list()` is legitimately empty and
+   there's no way to distinguish "alone because it's a single replica" from
+   "alone because it's partitioned". In a real partition, both sides could
+   adopt the same session.
+3. **A real agent's `tool.call` wasn't exercised end to end.** Verification
+   used the span mechanism directly (`Span.with_session` via `rpc`),
+   because running a real agent requires an LLM — Ollama or an API key —
+   and none was available in the environment. The code path is the same;
+   what wasn't observed is a real agent turn producing the tree.
+4. **The `grafana/grafana` chart is marked deprecated** in the upstream
+   repository, and the only replacement is the `grafana-operator` (CRDs, a
+   different provisioning model).
+5. **Items 6 and 7 of Phase 5 remain open**: scheduled `pg_dump`
+   backup/restore with a tested runbook; rate limiting, security headers,
+   strict CORS and dependency auditing in CI.
+6. **Publishing the images to a registry** remains pending from session 2,
+   and is a prerequisite for the staging/prod overlays.

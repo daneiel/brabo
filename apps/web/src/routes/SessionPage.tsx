@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import {
   acceptHandoff,
   activateExecution,
@@ -248,19 +249,25 @@ export function afundarDesfechos(entradas: TimelineEntry[]): TimelineEntry[] {
  */
 const PONTO_DA_SESSAO: Record<
   SessionStatus,
-  { classe: 'pulsing' | 'statusDotParado' | 'statusDotFalha'; rotulo: string }
+  { classe: 'pulsing' | 'statusDotParado' | 'statusDotFalha'; rotuloKey: string }
 > = {
-  created: { classe: 'statusDotParado', rotulo: 'ainda não ativada' },
-  active: { classe: 'pulsing', rotulo: 'ativa' },
-  closing: { classe: 'statusDotParado', rotulo: 'encerrando' },
-  closed: { classe: 'statusDotParado', rotulo: 'encerrada' },
-  closed_abnormally: { classe: 'statusDotFalha', rotulo: 'encerrada anormalmente' },
+  created: { classe: 'statusDotParado', rotuloKey: 'status.created' },
+  active: { classe: 'pulsing', rotuloKey: 'status.active' },
+  closing: { classe: 'statusDotParado', rotuloKey: 'status.closing' },
+  closed: { classe: 'statusDotParado', rotuloKey: 'status.closed' },
+  closed_abnormally: { classe: 'statusDotFalha', rotuloKey: 'status.closedAbnormally' },
 };
 
+/**
+ * `rotuloKey` é a CHAVE de tradução (namespace `sessionPage`), não o texto —
+ * quem chama resolve com `t()`. Manter a função pura (sem depender do hook
+ * `useTranslation`) é o que permite `SessionPage.ponto.test.ts` testá-la sem
+ * precisar montar um `I18nextProvider`.
+ */
 export function pontoDaSessao(status: SessionStatus | undefined) {
   // Sem sessão carregada ainda não é "encerrada": é desconhecido, e o ponto
   // fica apagado até o dado chegar.
-  return status ? PONTO_DA_SESSAO[status] : { classe: 'statusDotParado' as const, rotulo: 'carregando' };
+  return status ? PONTO_DA_SESSAO[status] : { classe: 'statusDotParado' as const, rotuloKey: 'status.loading' };
 }
 
 /**
@@ -392,11 +399,12 @@ function StorySlide({
   onPromover: () => void;
   onDevolver: () => void;
 }) {
+  const { t } = useTranslation('sessionPage');
   return (
     <div className={styles.storySlide}>
       <span className={styles.handoffPill}>
         <StackIcon size={13} />
-        história &quot;{titulo}&quot; pronta, aguardando sua promoção
+        {t('historia.pendente', { titulo })}
       </span>
       {resumo && <p className={styles.storySlideResumo}>{resumo}</p>}
       <div style={{ display: 'flex', gap: 8 }}>
@@ -406,10 +414,10 @@ function StorySlide({
           loading={promovendo}
           onClick={onPromover}
         >
-          Promover
+          {t('historia.promover')}
         </Button>
         <Button variant="ghost" disabled={desabilitado} onClick={onDevolver}>
-          Devolver
+          {t('historia.devolver')}
         </Button>
       </div>
       <Link
@@ -418,7 +426,7 @@ function StorySlide({
         search={{ tab: 'backlog' }}
         className={styles.timelineLink}
       >
-        Ver no Backlog
+        {t('compartilhado.verNoBacklog')}
         <ChevronRightIcon size={11} />
       </Link>
     </div>
@@ -505,6 +513,7 @@ function StructuredQuestionCard({
   onTurnoIniciado: () => void;
   onTurnoTerminado: () => void;
 }) {
+  const { t } = useTranslation('sessionPage');
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const [respostas, setRespostas] = useState<Record<string, string>>({});
@@ -524,7 +533,7 @@ function StructuredQuestionCard({
           <AvatarDoAgente id={agent} />
           <span className={styles.handoffPill}>
             <ChatIcon size={13} />
-            perguntas do {nomeDoAgente(agent)} — respondidas
+            {t('perguntas.respondidas', { agente: nomeDoAgente(agent) })}
           </span>
         </span>
         <dl className={styles.structuredQuestionAnswers}>
@@ -556,10 +565,10 @@ function StructuredQuestionCard({
     try {
       await answerStructuredQuestion(projectId, sessionId, agent, questionSetId, respostas);
       await queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
-      showToast({ title: 'Respostas enviadas', tone: 'success' });
+      showToast({ title: t('perguntas.respostasEnviadas'), tone: 'success' });
     } catch (erro) {
       showToast({
-        title: mensagemDaApi(erro, 'Não foi possível enviar as respostas'),
+        title: mensagemDaApi(erro, t('perguntas.erroEnviar')),
         tone: 'danger',
       });
     } finally {
@@ -577,7 +586,7 @@ function StructuredQuestionCard({
         <AvatarDoAgente id={agent} />
         <span className={styles.handoffPill}>
           <ChatIcon size={13} />
-          perguntas do {nomeDoAgente(agent)}
+          {t('perguntas.titulo', { agente: nomeDoAgente(agent) })}
         </span>
       </span>
       <div className={styles.structuredQuestionForm}>
@@ -628,7 +637,7 @@ function StructuredQuestionCard({
                   }}
                 >
                   <option value="" disabled>
-                    Selecione
+                    {t('perguntas.selecione')}
                   </option>
                   {q.options.map((opcao) => (
                     <option key={opcao} value={opcao}>
@@ -639,7 +648,7 @@ function StructuredQuestionCard({
                       só existe quando a pergunta a permite (default do
                       engine: sim, para `select`). */}
                   {permiteOutra(q) && (
-                    <option value={OUTRA_RESPOSTA}>Outra (escrever)</option>
+                    <option value={OUTRA_RESPOSTA}>{t('perguntas.outraEscrever')}</option>
                   )}
                 </Select>
                 {emOutra && (
@@ -647,7 +656,7 @@ function StructuredQuestionCard({
                   // `select` abertos teria dois campos chamados "Sua
                   // resposta" — indistinguíveis para quem usa leitor de tela.
                   <Input
-                    label={`Sua resposta — ${q.label}`}
+                    label={t('perguntas.suaResposta', { pergunta: q.label })}
                     value={value}
                     disabled={enviando}
                     autoFocus
@@ -675,7 +684,7 @@ function StructuredQuestionCard({
         disabled={!completo || enviando}
         onClick={handleSubmit}
       >
-        Enviar respostas
+        {t('perguntas.enviarRespostas')}
       </Button>
     </div>
   );
@@ -686,6 +695,7 @@ export function SessionPage({
   sessionId,
   highlightEvent,
 }: SessionPageProps) {
+  const { t } = useTranslation('sessionPage');
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   // O access token carrega o e-mail; o nome não vem mais em claim nenhuma
@@ -1237,7 +1247,7 @@ export function SessionPage({
       };
       const storyId = typeof payload?.storyId === 'string' ? payload.storyId : undefined;
       if (!storyId) continue;
-      const titulo = typeof payload?.title === 'string' ? payload.title : '(sem título)';
+      const titulo = typeof payload?.title === 'string' ? payload.title : t('compartilhado.semTitulo');
       const description =
         typeof payload?.description === 'string' ? payload.description : undefined;
       const rf =
@@ -1278,7 +1288,7 @@ export function SessionPage({
         if (!pendente) return null;
         return {
           storyId,
-          titulo: naJanela?.titulo ?? story?.title ?? '(sem título)',
+          titulo: naJanela?.titulo ?? story?.title ?? t('compartilhado.semTitulo'),
           resumo: naJanela?.resumo ?? resumoDeTextos(story?.description, story?.rf),
           // `undefined` quando o evento que abriu esta pendência já saiu da
           // janela — é o sinal de que a leva precisa ancorar no topo do
@@ -1317,7 +1327,7 @@ export function SessionPage({
           <div className={styles.handoffCard} key={`leva-unica-${p.storyId}`}>
             <span className={styles.handoffPill}>
               <StackIcon size={13} />
-              história &quot;{p.titulo}&quot; pronta, aguardando sua promoção
+              {t('historia.pendente', { titulo: p.titulo })}
             </span>
             <div style={{ display: 'flex', gap: 8 }}>
               <Button
@@ -1326,7 +1336,7 @@ export function SessionPage({
                 loading={promovendoStoryId === p.storyId}
                 onClick={() => handlePromoteStory(p.storyId)}
               >
-                Promover
+                {t('historia.promover')}
               </Button>
               <Button
                 variant="ghost"
@@ -1336,7 +1346,7 @@ export function SessionPage({
                   setMotivoRecusa('');
                 }}
               >
-                Devolver
+                {t('historia.devolver')}
               </Button>
             </div>
             <Link
@@ -1345,7 +1355,7 @@ export function SessionPage({
               search={{ tab: 'backlog' }}
               className={styles.timelineLink}
             >
-              Ver no Backlog
+              {t('compartilhado.verNoBacklog')}
               <ChevronRightIcon size={11} />
             </Link>
           </div>
@@ -1373,7 +1383,7 @@ export function SessionPage({
       return (
         <Carousel
           key="carrossel-historias"
-          ariaLabel={`${promocoesPendentes.length} histórias aguardando promoção`}
+          ariaLabel={t('historia.aguardandoPromocao', { count: promocoesPendentes.length })}
           slides={slides}
           headerActions={
             <Button
@@ -1382,7 +1392,7 @@ export function SessionPage({
               disabled={promovendoStoryId !== null}
               onClick={() => handlePromoteAll(promocoesPendentes.map((p) => p.storyId))}
             >
-              Aprovar todas
+              {t('historia.aprovarTodas')}
             </Button>
           }
         />
@@ -1441,7 +1451,7 @@ export function SessionPage({
               </span>
               <div className={styles.messageBody}>
                 <div className={styles.messageHeader}>
-                  <span className={styles.messageName}>{user.name ?? 'Você'}</span>
+                  <span className={styles.messageName}>{user.name ?? t('compartilhado.voce')}</span>
                 </div>
                 <div className={styles.bubble}>{text}</div>
               </div>
@@ -1516,7 +1526,7 @@ export function SessionPage({
                   {nomeDoAgente(event.actor.id)}
                 </span>
                 <ChevronRightIcon size={13} />
-                passou o bastão ao
+                {t('handoff.passouOBastaoAo')}
                 <span className={styles.handoffAgent} style={corDoAgente(toAgent)}>
                   {nomeDoAgente(toAgent)}
                 </span>
@@ -1525,7 +1535,7 @@ export function SessionPage({
                 variant="success"
                 onClick={() => handleAcceptHandoff(offeredHandoff!.id, offeredHandoff!.toAgent)}
               >
-                Aceitar handoff e iniciar {offeredHandoff!.toAgent}
+                {t('handoff.aceitarEIniciar', { agente: offeredHandoff!.toAgent })}
               </Button>
               {/* Handoff pro Dev Lead é o início da EXECUÇÃO — quem aceita
                   precisa saber onde acompanhar depois (RN-125). As outras
@@ -1541,7 +1551,7 @@ export function SessionPage({
                     loading={ativandoExecucao}
                     onClick={handleActivateExecution}
                   >
-                    Ativar execução
+                    {t('handoff.ativarExecucao')}
                   </Button>
                   <Link
                     to="/projects/$projectId"
@@ -1549,7 +1559,7 @@ export function SessionPage({
                     search={{ tab: 'executores' }}
                     className={styles.timelineLink}
                   >
-                    Acompanhe a execução em Executores
+                    {t('handoff.acompanheExecucao')}
                     <ChevronRightIcon size={11} />
                   </Link>
                 </>
@@ -1562,7 +1572,7 @@ export function SessionPage({
                   {nomeDoAgente(event.actor.id)}
                 </span>
                 <ChevronRightIcon size={13} />
-                passou o bastão ao
+                {t('handoff.passouOBastaoAo')}
                 <span className={styles.handoffAgent} style={corDoAgente(toAgent)}>
                   {nomeDoAgente(toAgent)}
                 </span>
@@ -1589,9 +1599,9 @@ export function SessionPage({
         // do PO dentro do próprio turno dele, e segue elegível ao colapso
         // por agente (RN-138).
         const payload = event.payload as { title?: unknown };
-        const titulo = typeof payload?.title === 'string' ? payload.title : '(sem título)';
-        const verbo =
-          event.type === 'backlog.epic_created' ? 'criou o épico' : 'criou a história';
+        const titulo = typeof payload?.title === 'string' ? payload.title : t('compartilhado.semTitulo');
+        const verboKey =
+          event.type === 'backlog.epic_created' ? 'backlog.criouEpico' : 'backlog.criouHistoria';
         empurrar({
           agentId: event.actor.kind === 'agent' ? event.actor.id : undefined,
           node: (
@@ -1601,7 +1611,7 @@ export function SessionPage({
                 <span className={styles.handoffAgent} style={corDoAgente(event.actor.id)}>
                   {nomeDoAgente(event.actor.id)}
                 </span>
-                {verbo} &quot;{titulo}&quot;
+                {t(verboKey)} &quot;{titulo}&quot;
               </span>
               <Link
                 to="/projects/$projectId"
@@ -1609,7 +1619,7 @@ export function SessionPage({
                 search={{ tab: 'backlog' }}
                 className={styles.timelineLink}
               >
-                Ver no Backlog
+                {t('compartilhado.verNoBacklog')}
                 <ChevronRightIcon size={11} />
               </Link>
             </div>
@@ -1631,7 +1641,7 @@ export function SessionPage({
         // porque já está representada dentro dele.
         const payload = event.payload as { storyId?: unknown; title?: unknown };
         const storyId = typeof payload?.storyId === 'string' ? payload.storyId : undefined;
-        const titulo = typeof payload?.title === 'string' ? payload.title : '(sem título)';
+        const titulo = typeof payload?.title === 'string' ? payload.title : t('compartilhado.semTitulo');
         const pendente = storyId ? pendingStoryIds.has(storyId) : false;
 
         if (pendente) {
@@ -1646,7 +1656,7 @@ export function SessionPage({
             <div className={styles.handoffDivider} key={event.id}>
               <span className={styles.handoffPill}>
                 <StackIcon size={13} />
-                história &quot;{titulo}&quot; esteve aguardando sua promoção
+                {t('historia.estevePendente', { titulo })}
               </span>
             </div>
           ),
@@ -1656,8 +1666,8 @@ export function SessionPage({
         // `activity.ts` já usa no log colapsado da sidebar, reaproveitada
         // aqui em vez de reinventada.
         const payload = event.payload as { title?: unknown; reason?: unknown };
-        const titulo = typeof payload?.title === 'string' ? payload.title : 'uma história';
-        const motivo = typeof payload?.reason === 'string' ? payload.reason : 'sem motivo';
+        const titulo = typeof payload?.title === 'string' ? payload.title : t('historia.tituloFallback');
+        const motivo = typeof payload?.reason === 'string' ? payload.reason : t('historia.semMotivo');
         empurrar({
           node: (
             <div
@@ -1670,8 +1680,8 @@ export function SessionPage({
               </span>
               <div className={styles.messageBody}>
                 <div className={styles.messageHeader}>
-                  <span className={styles.messageName}>{user.name ?? 'Você'}</span>
-                  <span className={styles.messageMeta}>devolveu ao PO</span>
+                  <span className={styles.messageName}>{user.name ?? t('compartilhado.voce')}</span>
+                  <span className={styles.messageMeta}>{t('historia.devolveuAoPo')}</span>
                 </div>
                 <div className={styles.bubble}>
                   &quot;{titulo}&quot;: {motivo}
@@ -1726,12 +1736,12 @@ export function SessionPage({
                       .join(' ')}
                     title={
                       modelName
-                        ? `Modelo que gerou esta resposta: ${modelName}`
-                        : 'Esta resposta foi gravada sem o nome do modelo'
+                        ? t('mensagens.modeloGerador', { modelName })
+                        : t('mensagens.modeloNaoGravado')
                     }
                   >
                     <ModelIcon size={11} />
-                    {modelName ?? 'modelo não registrado'}
+                    {modelName ?? t('mensagens.modeloNaoRegistrado')}
                   </span>
                 </div>
                 {/* Resposta vazia é evento ANTIGO: até a RN-059, falha de
@@ -1741,9 +1751,7 @@ export function SessionPage({
                     se apagam, então a tela os NOMEIA. */}
                 {text === '' ? (
                   <div className={[styles.bubble, styles.bubbleVazio].join(' ')}>
-                    Resposta vazia — evento anterior à RN-059, quando falha de
-                    turno era gravada como resposta em branco. O motivo real
-                    não foi registrado.
+                    {t('mensagens.respostaVazia')}
                   </div>
                 ) : (
                   // RN-158: Markdown leve (negrito, cabeçalho, lista, fence de
@@ -1779,7 +1787,7 @@ export function SessionPage({
                   <span className={styles.messageName}>{nomeDoAgente(event.actor.id)}</span>
                   {/* A ORIGEM fica visível: é ela que diz se o próximo passo é
                       trocar a chave, esperar o provider ou abrir um bug. */}
-                  <span className={styles.messageMeta}>falha · origem {origem}</span>
+                  <span className={styles.messageMeta}>{t('mensagens.falhaOrigem', { origem })}</span>
                 </div>
                 <div className={[styles.bubble, styles.bubbleFalha].join(' ')}>
                   {mensagem}
@@ -2516,7 +2524,7 @@ export function SessionPage({
             .filter(Boolean)
             .join(' ')}
           role="status"
-          aria-label={`Sessão ${pontoDaSessao(session?.status).rotulo}`}
+          aria-label={t('status.ariaLabel', { status: t(pontoDaSessao(session?.status).rotuloKey) })}
         />
         {/* Título e metadados em UMA linha cada, como o desenho — e por isso
             com reticências quando a barra aperta. `title` porque texto
@@ -2764,7 +2772,7 @@ export function SessionPage({
                   </span>
                   <div className={styles.messageBody}>
                     <div className={styles.messageHeader}>
-                      <span className={styles.messageName}>{user.name ?? 'Você'}</span>
+                      <span className={styles.messageName}>{user.name ?? t('compartilhado.voce')}</span>
                     </div>
                     <div className={styles.bubble}>{optimisticUser}</div>
                   </div>
@@ -3034,15 +3042,22 @@ function urlDaPr(action: ProposedAction): string | null {
 interface NoDeBacklog {
   id: string;
   evento: SessionEvent;
-  titulo: string;
-  /** Como se chama o que está PENDURADO nele, quando há. */
-  rotuloDosFilhos: string;
+  /**
+   * `null` quando o evento não trouxe título (fallback de exibição) — a
+   * função é pura e não tem acesso ao `t()` do React, então quem RESOLVE o
+   * texto de fallback é o componente que consome a árvore
+   * ({@link ItemDeBacklog}), com a chave `compartilhado.semTitulo`.
+   */
+  titulo: string | null;
+  /** A CHAVE de tradução (namespace `sessionPage`) do que está PENDURADO
+   *  nele, quando há — `ItemDeBacklog` resolve com `t()`. */
+  rotuloDosFilhosKey: string;
   filhos: NoDeBacklog[];
 }
 
 const ROTULO_DOS_FILHOS: Record<string, string> = {
-  'backlog.epic_created': 'histórias',
-  'backlog.story_created': 'tarefas',
+  'backlog.epic_created': 'artefatos.historias',
+  'backlog.story_created': 'artefatos.tarefas',
   'backlog.task_created': '',
 };
 
@@ -3081,8 +3096,8 @@ export function montarArvoreDeBacklog(events: SessionEvent[]): NoDeBacklog[] {
     const no: NoDeBacklog = {
       id,
       evento: e,
-      titulo: typeof payload?.title === 'string' ? payload.title : '(sem título)',
-      rotuloDosFilhos: ROTULO_DOS_FILHOS[e.type],
+      titulo: typeof payload?.title === 'string' ? payload.title : null,
+      rotuloDosFilhosKey: ROTULO_DOS_FILHOS[e.type],
       filhos: [],
     };
     porId.set(id, no);
@@ -3121,6 +3136,7 @@ function ItemDeBacklog({
   projectId: string;
   no: NoDeBacklog;
 }) {
+  const { t } = useTranslation('sessionPage');
   return (
     <div className={styles.artefatoNo}>
       <Link
@@ -3130,11 +3146,13 @@ function ItemDeBacklog({
         className={[styles.artefatoItem, styles.artefatoItemLink].join(' ')}
       >
         <StackIcon size={13} className={styles.artefatoItemIcone} />
-        <span className={styles.artefatoItemTitulo}>{no.titulo}</span>
+        <span className={styles.artefatoItemTitulo}>
+          {no.titulo ?? t('compartilhado.semTitulo')}
+        </span>
       </Link>
       {no.filhos.length > 0 && (
         <Disclosure
-          titulo={no.rotuloDosFilhos || 'itens'}
+          titulo={no.rotuloDosFilhosKey ? t(no.rotuloDosFilhosKey) : t('artefatos.itens')}
           trailing={no.filhos.length}
           classNameCabecalho={styles.artefatoFilhosCabecalho}
         >

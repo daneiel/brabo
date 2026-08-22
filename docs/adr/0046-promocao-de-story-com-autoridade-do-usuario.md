@@ -1,133 +1,149 @@
-# 0046 — Promoção de história com autoridade do usuário
+# 0046 — Story promotion with user authority
 
-## Contexto
+## Context
 
-O achado #13 do dogfooding, verbatim de
+Dogfooding finding #13, verbatim from
 `docs/missions/dogfooding-mission.md:669`:
 
-> Não existe "promover a ready": a promoção é automática na criação.
-> `TransitionStoryUseCase` valida e emite `backlog.story_transitioned`, mas
-> **não está ligado a rota nenhuma** — é código morto. A aba Backlog é
-> somente leitura.
+> There's no "promote to ready": promotion is automatic on creation.
+> `TransitionStoryUseCase` validates and emits `backlog.story_transitioned`,
+> but **it isn't wired to any route** — it's dead code. The Backlog tab
+> is read-only.
 
-Ele nasceu classificado **P2** e virou um dos três P1 que a Fase 12 mata, por
-uma razão que só ficou clara depois da corrida: dos três achados, este é o
-único que não é sobre conveniência. Adoção e reagendamento eram atrito — o
-humano fazia à mão o que a máquina deveria fazer. Aqui é o contrário: a máquina
-fazia sozinha o que o humano deveria decidir, e `CLAUDE.md` diz, na primeira
-linha do que o produto é, que a autoridade final é do usuário. Uma história
-virando `ready` na criação significa que o PO — um agente de LLM — decide
-sozinho o que entra na fila de trabalho dos dev agents.
+It was born classified as **P2** and became one of the three P1s Phase
+12 kills, for a reason that only became clear after the run: of the
+three findings, this is the only one that isn't about convenience.
+Adoption and rescheduling were friction — the human doing by hand what
+the machine should do. Here it's the opposite: the machine did on its
+own what the human should decide, and `CLAUDE.md` says, in the very
+first line of what the product is, that final authority belongs to the
+user. A story turning `ready` at creation means the PO — an LLM agent
+— decides alone what enters the dev agents' work queue.
 
-Três fatos verificados no código, ANTES de desenhar, moldaram a decisão:
+Three facts verified in the code, BEFORE designing, shaped the
+decision:
 
-1. **`story.status` é o portão do claim.** `TaskRepository.claimNext` filtra por
-   `s.status = 'ready' AND s.module_ids ? module AND t.status = 'todo' AND
-   t.blocked = false`. Nada além do status da história separa "trabalho
-   proposto" de "trabalho pegável".
-2. **A validação estava duplicada e assimétrica.** A criação chamava
-   `canBecomeReady`; a transição chamava `assertReady` + `assertModulesResolved`.
-   Duas portas para o mesmo estado, com fechaduras diferentes.
-3. **`TransitionStoryUseCase` já fazia tudo** — validava, emitia o evento e,
-   desde a Fase 12b, escrevia uma linha de outbox `task.became_claimable` por
-   tarefa liberada. Faltava um chamador.
+1. **`story.status` is the claim's gate.** `TaskRepository.claimNext`
+   filters by `s.status = 'ready' AND s.module_ids ? module AND
+   t.status = 'todo' AND t.blocked = false`. Nothing beyond the
+   story's status separates "proposed work" from "claimable work."
+2. **Validation was duplicated and asymmetric.** Creation called
+   `canBecomeReady`; the transition called `assertReady` +
+   `assertModulesResolved`. Two doors for the same state, with
+   different locks.
+3. **`TransitionStoryUseCase` already did everything** — it validated,
+   emitted the event and, since Phase 12b, wrote a `task.became_claimable`
+   outbox line per freed task. What was missing was a caller.
 
-## Decisão
+## Decision
 
-**`proposed_ready` é um booleano, não um valor novo no enum de status.**
-Foi a primeira tentativa descartada. Um `story_status = 'proposed'` seria mais
-expressivo, mas o enum é literalmente o portão do claim (fato 1): acrescentar
-um valor obrigaria a revisitar toda consulta que compara status, e um ponto
-esquecido não daria erro — daria uma história pegável cedo demais, em silêncio.
-O booleano diz o que a coisa é: uma PROPOSTA sobre uma história que continua
-`draft`. O estado da máquina não muda porque nada mudou de fato; o que existe é
-uma pendência endereçada ao usuário.
+**`proposed_ready` is a boolean, not a new value in the status enum.**
+It was the first attempt, discarded. A `story_status = 'proposed'`
+would be more expressive, but the enum is literally the claim's gate
+(fact 1): adding a value would force revisiting every query that
+compares status, and a forgotten spot wouldn't error out — it would
+produce a claimable story too early, silently. The boolean says what
+the thing is: a PROPOSAL about a story that stays `draft`. The state
+machine doesn't change because nothing actually changed; what exists
+is a pending item addressed to the user.
 
-**Promover reusa `TransitionStoryUseCase`; não se escreveu transição nova.**
-O código morto do achado #13 volta a ser chamado, e com ele vem de graça o
-reagendamento da 12b: promover escreve as linhas de outbox que acordam os dev
-agents ociosos do módulo. Uma promoção "própria" teria que reimplementar isso —
-e a primeira versão que esquecesse deixaria o lote de tarefas pegável sem
-ninguém avisado, com o agente descobrindo por acaso no próximo evento não
-relacionado.
+**Promoting reuses `TransitionStoryUseCase`; no new transition was
+written.** Finding #13's dead code gets called again, and with it
+comes 12b's rescheduling for free: promoting writes the outbox lines
+that wake up idle dev agents in the module. A "custom" promotion would
+have had to reimplement this — and the first version that forgot to
+would leave the batch of tasks claimable with nobody notified, the
+agent finding out by chance on the next unrelated event.
 
-`execute` ganhou um parâmetro `actor` opcional. O evento `backlog.story_transitioned`
-é imutável e é o que a auditoria lê; gravar `agent/po` numa promoção que foi
-decisão do usuário apagaria justamente o passo humano que esta fase devolve.
+`execute` gained an optional `actor` parameter. The
+`backlog.story_transitioned` event is immutable and is what the audit
+reads; recording `agent/po` on a promotion that was the user's decision
+would erase exactly the human step this phase gives back.
 
-**A validação foi unificada em `assertPromotable` ANTES de tornar o gatilho
-configurável**, e essa ordem não é detalhe. Enquanto os dois caminhos tivessem
-fechaduras diferentes, "promover pela UI" e "promover na criação" seriam regras
-distintas com o mesmo nome, e o modo `manual` seria mais rigoroso ou mais frouxo
-que o `auto` por acidente de implementação. O teste de simetria em
-`story-promotion.spec.ts` é o que mantém a propriedade: **o modo muda QUEM
-dispara, nunca O QUE é validado.**
+**Validation was unified into `assertPromotable` BEFORE making the
+trigger configurable**, and that order isn't a detail. As long as the
+two paths had different locks, "promoting via the UI" and "promoting
+at creation" would be distinct rules with the same name, and the
+`manual` mode would be more strict or more lenient than `auto` by
+implementation accident. The symmetry test in
+`story-promotion.spec.ts` is what maintains the property: **the mode
+changes WHO triggers it, never WHAT gets validated.**
 
-Detalhe que quase quebrou o modo `auto` em silêncio: `moduleIds` vazio PASSA na
-validação, e tem de passar. Na criação a história ainda não tem módulos — quem
-os atribui é o Arquiteto, depois. Ligar `assertPromotable` ao caminho de criação
-sem preservar isso faria o modo `auto` nunca mais promover nada, sem erro
-nenhum.
+A detail that almost silently broke `auto` mode: an empty `moduleIds`
+PASSES validation, and it has to. At creation the story doesn't have
+modules yet — the Architect is the one who assigns them, later. Wiring
+`assertPromotable` to the creation path without preserving this would
+make `auto` mode never promote anything again, with no error at all.
 
-**O backfill é dirigido, não cego.** A coluna nasce `manual` (o default novo) e
-a mesma migração move todos os projetos existentes para `auto`. É o oposto do
-backfill da RN-046, que pôde ser cego porque adoção não existia antes dele.
-Aqui o comportamento existia e estava em uso: um projeto em andamento não pode
-parar de produzir por causa de um deploy. O default novo vale para quem vier
-depois.
+**The backfill is directed, not blind.** The column is born `manual`
+(the new default) and the same migration moves all existing projects
+to `auto`. It's the opposite of RN-046's backfill, which could be
+blind because adoption didn't exist before it. Here the behavior
+already existed and was in use: a project in progress can't stop
+producing because of a deploy. The new default applies to whoever comes
+after.
 
-**A recusa espelha a devolução de gate ao dev, e inverte a ordem do rearm.**
-O motivo vira mensagem FIXADA na sessão do PO — o primeiro `pinned` fora do
-system prompt num agente conversacional —, com a mesma frase de precedência que
-o `correction_message/1` do dev agent carrega desde o ADR 0020. Fixada porque a
-recusa é pendência, não fala: compactada pelo `ContextManager`, o PO reproporia
-a mesma história com o mesmo defeito.
+**The refusal mirrors returning a gate to the dev, and inverts the
+rearm's order.** The reason becomes a message PINNED in the PO's
+session — the first `pinned` message outside the system prompt in a
+conversational agent — with the same precedence phrasing that the dev
+agent's `correction_message/1` has carried since ADR 0020. Pinned
+because the refusal is a pending item, not chat: compacted by the
+`ContextManager`, the PO would repropose the same story with the same
+flaw.
 
-A gravação vem ANTES da chamada ao engine, ao contrário do `RearmDevAgentUseCase`.
-Lá o evento (`dev.rearmed`) afirma algo SOBRE O ENGINE, e gravá-lo antes seria
-mentira no log se o engine recusasse. Aqui o evento afirma algo sobre o
-USUÁRIO — ele recusou, e isso é verdade tenha ou não um PO de pé para ouvir.
-Perder a decisão porque o processo do agente morreu num restart devolveria o
-usuário ao começo sem razão. Por isso o engine é best-effort, e a rota interna
-responde **404** com o PO morto em vez de estourar `:noproc`.
+The write happens BEFORE the call to the engine, unlike
+`RearmDevAgentUseCase`. There, the event (`dev.rearmed`) asserts
+something ABOUT THE ENGINE, and writing it beforehand would be a lie
+in the log if the engine refused. Here the event asserts something
+about the USER — they refused, and that's true whether or not a PO
+process is standing there to hear it. Losing the decision because the
+agent's process died in a restart would send the user back to square
+one for no reason. That's why the engine call is best-effort, and the
+internal route responds with **404** when the PO is dead instead of
+throwing `:noproc`.
 
-**A mensagem de devolução diz o que o PO PODE fazer, e isso é uma limitação
-assumida.** Não existe ferramenta de editar história — só `create_story`. A
-mensagem manda criar a versão corrigida, ou perguntar ao usuário se o motivo não
-estiver claro. Mandar "corrija a história" seria pedir o impossível, e um modelo
-diante de instrução impossível inventa ferramenta ou repete a chamada até
-esgotar o loop — foi assim que o dev agent queimou três correções seguidas no
-aceite do ADR 0020.
+**The return message says what the PO CAN do, and that's an accepted
+limitation.** There's no story-editing tool — only `create_story`. The
+message instructs it to create a corrected version, or ask the user if
+the reason isn't clear. Telling it to "fix the story" would be asking
+the impossible, and a model facing an impossible instruction either
+invents a tool or repeats the call until it exhausts the loop — that's
+how the dev agent burned three corrections in a row during ADR 0020's
+acceptance.
 
-**Promover em lote não é all-or-nothing.** Cada história é sua própria
-transação; a que falhar volta em `failed` com o motivo, num 201. O caso real é
-concreto: entre a proposta do PO e a decisão do usuário, um módulo pode ter
-saído do `module_map`. Abortar o lote inteiro por causa disso desfaria a revisão
-que o usuário acabou de fazer nas outras.
+**Batch promotion isn't all-or-nothing.** Each story is its own
+transaction; whichever one fails goes back to `failed` with the
+reason, in a 201. The real case is concrete: between the PO's proposal
+and the user's decision, a module may have dropped out of the
+`module_map`. Aborting the whole batch because of that would undo the
+review the user just did on the others.
 
-## Consequências
+## Consequences
 
-O default mudou, e isso é **quebra de comportamento** para quem cria projeto
-novo: o backlog não anda sozinho até alguém promover. Está no CHANGELOG como
-incompatível. Projeto existente não sente nada.
+The default changed, and that's a **behavior break** for anyone
+creating a new project: the backlog doesn't move forward on its own
+until someone promotes it. It's in the CHANGELOG as breaking. Existing
+projects feel nothing.
 
-A UI do Backlog deixou de ser somente leitura. São as duas únicas escritas de
-backlog que pertencem ao usuário e não a um agente — todo o resto continua
-entrando pelas rotas `/internal/*`.
+The Backlog UI stopped being read-only. These are the only two backlog
+writes that belong to the user and not to an agent — everything else
+still comes in through `/internal/*` routes.
 
-`POST /internal/sessions/:id/agent/revise` é o primeiro caminho api→engine que
-devolve trabalho a um agente CONVERSACIONAL. Até aqui as devoluções (gate → dev)
-eram internas ao engine, em processo. A rota herdou do `rearm` o formato e a
-checagem de existência antes de chamar.
+`POST /internal/sessions/:id/agent/revise` is the first api→engine path
+that gives work back to a CONVERSATIONAL agent. Until now, returns
+(gate → dev) were internal to the engine, in-process. The route
+inherited its shape and existence check from `rearm`.
 
-Fica para depois, como backlog e não como dívida escondida:
+Left for later, as backlog and not as hidden debt:
 
-- **Ferramenta de editar história.** Enquanto não existir, o loop de recusa
-  fecha por recriação, e a história recusada permanece em `draft` com o motivo
-  gravado. É auditável, mas deixa lixo no backlog.
-- **Promoção por lote com revisão lado a lado.** Hoje o lote é seleção múltipla
-  com as histórias expandidas na própria fila; uma tela de revisão dedicada faz
-  sentido quando o volume crescer.
-- **Rebaixar uma história promovida por engano.** `assertTransition` permite
-  `ready → draft` (é como o `story_demoted` da RN-012 opera), mas não há rota do
-  usuário para isso. O caminho hoje é a recusa ANTES de promover.
+- **Story-editing tool.** While it doesn't exist, the refusal loop
+  closes via recreation, and the refused story stays in `draft` with
+  the reason recorded. It's auditable, but leaves litter in the
+  backlog.
+- **Batch promotion with side-by-side review.** Today the batch is a
+  multi-select with the stories expanded in the queue itself; a
+  dedicated review screen makes sense once volume grows.
+- **Demoting a promoted story by mistake.** `assertTransition` allows
+  `ready → draft` (it works like RN-012's `story_demoted`), but there's
+  no user route for it. Today the path is refusing BEFORE promoting.

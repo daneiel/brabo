@@ -1,0 +1,80 @@
+{
+  "architectureTab": {
+    "title": "Architecture",
+    "emptyState": "No architecture yet — the Architect generates the module_map and ADRs.",
+    "modulesLabel": "Modules",
+    "modulesLabelVersioned": "Modules · v{{version}}",
+    "noModules": "No modules yet.",
+    "c4Label": "C4 diagram",
+    "c4LabelVersioned": "C4 diagram · v{{version}}",
+    "c4Empty": "No diagram yet — the Architect generates Context + Container from the module_map (create_c4_diagram).",
+    "adrsLabel": "ADRs",
+    "noAdrs": "No ADR proposed yet.",
+    "pendenciesLabel": "Cross-validation pendencies",
+    "reasonNoModule": "no module linked",
+    "reasonMissingModule": "missing module: {{missing}}"
+  },
+  "c4": {
+    "titleContext": "Context",
+    "titleContainer": "Container",
+    "expandLabel": "Expand {{titulo}} diagram",
+    "expandTitle": "Expand",
+    "renderErrorTitle": "Could not render this diagram.",
+    "viewRawSyntax": "View Mermaid syntax",
+    "emptyDiagram": "Empty diagram.",
+    "invalidSyntax": "Invalid Mermaid syntax."
+  },
+  "team": {
+    "title": "Agent team",
+    "summary": "{{count}} agents · {{working}} working · {{waiting}} waiting",
+    "autonomyErrorTitle": "Could not change autonomy",
+    "rearmSuccess": "Agent rearmed",
+    "rearmErrorTitle": "Could not rearm the agent"
+  },
+  "timeline": {
+    "title": "Team timeline",
+    "description": "One branch per agent, from the first milestone to what it's doing right now. Whoever is active, or among the 5 most recent, opens on its own — the rest is one click away, with a count of new milestones in the header."
+  },
+  "activity": {
+    "title": "Activity",
+    "count": "{{count}} events",
+    "loadErrorTitle": "Could not load the activity."
+  },
+  "executionSection": {
+    "title": "Execution",
+    "activationErrorTitle": "Could not tell if execution was already activated.",
+    "introReady": "Activate execution for the dev agents to implement the backlog in parallel.",
+    "introNeedsModuleMap": "Define the module_map (Architect) before activating execution.",
+    "activate": "Activate execution",
+    "devAgentsLabel": "Dev agents",
+    "spinningUp": "Spinning up the agents…",
+    "devAgentModule": "module: {{module}}",
+    "devAgentTask": "task: {{task}}",
+    "devAgentProgress": "iteration {{iteration}} · cost {{cost}}",
+    "blockedTasksLabel": "Blocked tasks",
+    "noDiagnosis": "no diagnosis",
+    "unblock": "Unblock",
+    "suggestionBefore": "There are independent tasks in ",
+    "suggestionAfter": " — spin up an extra dev?",
+    "accept": "Accept",
+    "pullRequestsLabel": "Pull requests",
+    "noPullRequests": "No PR open yet.",
+    "pullRequestFallback": "PR",
+    "errorTitle": "Error",
+    "activateError": "Could not activate execution",
+    "unblockError": "Could not unblock the task",
+    "authorizationNeededTitle": "Needs your authorization",
+    "authorizationNeededMessage": "The session already has {{count}} agent(s), the lead's cap is {{max}}. The request is in Approvals.",
+    "requestDeniedTitle": "Request denied",
+    "requestError": "Could not request"
+  },
+  "architectureSummary": {
+    "title": "Architecture",
+    "emptyState": "No architecture yet — the Architect generates the module_map and ADRs.",
+    "summary_one": "{{count}} module mapped, C4 diagram {{status}}.",
+    "summary_other": "{{count}} modules mapped, C4 diagram {{status}}.",
+    "statusGenerated": "generated",
+    "statusPending": "pending",
+    "link": "View full architecture →"
+  }
+}

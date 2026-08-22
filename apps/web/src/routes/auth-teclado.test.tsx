@@ -1,6 +1,13 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import i18next from 'i18next';
+import { initReactI18next, I18nextProvider } from 'react-i18next';
+import type { ReactElement } from 'react';
+import authEn from '../locales/en/auth.json';
+import authPtBR from '../locales/pt-BR/auth.json';
+import uiEn from '../locales/en/ui.json';
+import uiPtBR from '../locales/pt-BR/ui.json';
 import { LoginPage } from './LoginPage';
 import { ForgotPasswordPage } from './ForgotPasswordPage';
 import { SetPasswordPage } from './SetPasswordPage';
@@ -28,6 +35,29 @@ import { SetPasswordPage } from './SetPasswordPage';
  * Nada de `tabIndex` positivo em lugar nenhum: ele reordena a página inteira, não
  * só o vizinho. A ordem correta se obtém escrevendo o DOM na ordem certa.
  */
+// Instância REAL de i18next — mesmo padrão de LoginPage.test.tsx. `ui` entra
+// porque `Input.tsx` (o botão de revelar senha) usa esse namespace.
+function novaInstanciaI18n() {
+  const instancia = i18next.createInstance();
+  void instancia.use(initReactI18next).init({
+    resources: {
+      en: { auth: authEn, ui: uiEn },
+      'pt-BR': { auth: authPtBR, ui: uiPtBR },
+    },
+    lng: 'pt-BR',
+    fallbackLng: 'pt-BR',
+    defaultNS: 'auth',
+    ns: ['auth', 'ui'],
+    interpolation: { escapeValue: false },
+    returnNull: false,
+  });
+  return instancia;
+}
+
+function renderar(no: ReactElement) {
+  return render(<I18nextProvider i18n={novaInstanciaI18n()}>{no}</I18nextProvider>);
+}
+
 function focado() {
   const el = document.activeElement;
   if (!el || el === document.body) return null;
@@ -41,7 +71,7 @@ function focado() {
 describe('navegação por teclado nas telas de auth', () => {
   it('no login, o Tab percorre o formulário na ordem em que se preenche', async () => {
     const u = userEvent.setup();
-    render(<LoginPage onEntrar={vi.fn()} irPara={vi.fn()} />);
+    renderar(<LoginPage onEntrar={vi.fn()} irPara={vi.fn()} />);
 
     await u.tab();
     expect(screen.getByLabelText('E-mail')).toHaveFocus();
@@ -83,7 +113,7 @@ describe('navegação por teclado nas telas de auth', () => {
   it('Shift-Tab volta pela mesma ordem, invertida', async () => {
     // Ordem reversa quebrada é sintoma de `tabIndex` positivo em algum lugar.
     const u = userEvent.setup();
-    render(<LoginPage onEntrar={vi.fn()} irPara={vi.fn()} />);
+    renderar(<LoginPage onEntrar={vi.fn()} irPara={vi.fn()} />);
 
     screen.getByRole('link', { name: /Continuar com GitLab/ }).focus();
 
@@ -111,7 +141,7 @@ describe('navegação por teclado nas telas de auth', () => {
     // nenhum, o que é o pior modo de falha possível numa tela de login.
     const u = userEvent.setup();
     const onEntrar = vi.fn().mockResolvedValue({ ok: true });
-    render(<LoginPage onEntrar={onEntrar} irPara={vi.fn()} />);
+    renderar(<LoginPage onEntrar={onEntrar} irPara={vi.fn()} />);
 
     await u.click(screen.getByLabelText('E-mail'));
     await u.keyboard('fulano@brabo.dev');
@@ -129,7 +159,7 @@ describe('navegação por teclado nas telas de auth', () => {
     // com o formulário pela metade.
     const u = userEvent.setup();
     const onEntrar = vi.fn();
-    render(<LoginPage onEntrar={onEntrar} irPara={vi.fn()} />);
+    renderar(<LoginPage onEntrar={onEntrar} irPara={vi.fn()} />);
 
     const toggle = screen.getByRole('button', { name: 'Mostrar senha' });
     toggle.focus();
@@ -147,7 +177,7 @@ describe('navegação por teclado nas telas de auth', () => {
     const irPara = vi.fn();
 
     // 1. No login, chegar em "Esqueci minha senha" e acioná-lo.
-    const login = render(<LoginPage onEntrar={vi.fn()} irPara={irPara} />);
+    const login = renderar(<LoginPage onEntrar={vi.fn()} irPara={irPara} />);
     await u.tab();
     await u.tab();
     await u.keyboard('{Enter}');
@@ -156,7 +186,7 @@ describe('navegação por teclado nas telas de auth', () => {
 
     // 2. Pedir o link, com Enter no campo de e-mail.
     const onPedir = vi.fn().mockResolvedValue({ ok: true });
-    const esqueci = render(
+    const esqueci = renderar(
       <ForgotPasswordPage onPedir={onPedir} irPara={irPara} />,
     );
     await u.tab();
@@ -168,7 +198,7 @@ describe('navegação por teclado nas telas de auth', () => {
 
     // 3. Definir a senha nova nos dois campos, submetendo com Enter.
     const onDefinir = vi.fn().mockResolvedValue({ ok: true, status: 200 });
-    render(
+    renderar(
       <SetPasswordPage token="tok" onDefinir={onDefinir} irPara={irPara} />,
     );
     await u.tab();

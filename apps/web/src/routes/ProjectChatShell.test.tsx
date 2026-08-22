@@ -1,7 +1,28 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import i18next from 'i18next';
+import { initReactI18next, I18nextProvider } from 'react-i18next';
+import sessionsPtBR from '../locales/pt-BR/sessions.json';
 import { ProjectChatShell } from './ProjectChatShell';
+
+// Instância isolada de i18next, mesmo padrão de `AccountPage.test.tsx`: o
+// componente usa `useTranslation('sessions')` e as asserções abaixo já
+// existiam em pt-BR, então a instância de teste fica em pt-BR (o inglês é
+// coberto pelos próprios JSON de recurso, não por este teste).
+function novaInstanciaI18n() {
+  const instancia = i18next.createInstance();
+  void instancia.use(initReactI18next).init({
+    resources: { 'pt-BR': { sessions: sessionsPtBR } },
+    lng: 'pt-BR',
+    fallbackLng: 'pt-BR',
+    defaultNS: 'sessions',
+    ns: ['sessions'],
+    interpolation: { escapeValue: false },
+    returnNull: false,
+  });
+  return instancia;
+}
 
 // Os dois caminhos de dados de verdade não são o assunto deste teste — já
 // têm suite própria (`ProjectSessionsTab.test.tsx`, `ProjectRagTab.test.tsx`)
@@ -20,7 +41,12 @@ vi.mock('./ProjectRagTab', () => ({
 
 function montarComUrl(busca: string) {
   window.history.pushState({}, '', `/projects/proj-1${busca}`);
-  return render(<ProjectChatShell projectId="proj-1" />);
+  const i18n = novaInstanciaI18n();
+  return render(
+    <I18nextProvider i18n={i18n}>
+      <ProjectChatShell projectId="proj-1" />
+    </I18nextProvider>,
+  );
 }
 
 beforeEach(() => {

@@ -1,6 +1,7 @@
 import { useState, type CSSProperties } from 'react';
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
+import { useTranslation } from 'react-i18next';
 import {
   addProjectMember,
   ApiError,
@@ -96,12 +97,14 @@ const USO_TONE: Record<UsoDeModelo, BadgeTone> = {
   conversa: 'muted',
 };
 
-const MATRIX_ROWS: { label: string; minRole: Role }[] = [
-  { label: 'Merge / abrir PR', minRole: 'maintainer' },
-  { label: 'Deploy em produção', minRole: 'maintainer' },
-  { label: 'Comando privilegiado', minRole: 'developer' },
-  { label: 'Alterar schema/migração', minRole: 'developer' },
-  { label: 'Editar permissions.json', minRole: 'maintainer' },
+// `key` resolve para `matrix.rows.<key>` — a tradução é resolvida por quem
+// consome (`MatrixSection`), como o padrão pede para dado não-React.
+const MATRIX_ROWS: { key: string; minRole: Role }[] = [
+  { key: 'mergeOpenPr', minRole: 'maintainer' },
+  { key: 'deployProduction', minRole: 'maintainer' },
+  { key: 'privilegedCommand', minRole: 'developer' },
+  { key: 'schemaMigration', minRole: 'developer' },
+  { key: 'editPermissions', minRole: 'maintainer' },
 ];
 
 /** Duas letras a partir do nome (ou do e-mail, quando não há nome). */
@@ -280,6 +283,7 @@ export function MelhoresModelosPorCapacidadeSection({
 }: {
   projectId: string;
 }) {
+  const { t } = useTranslation('settings');
   const { data: project } = useQuery({
     queryKey: ['project', projectId],
     queryFn: () => getProject(projectId),
@@ -340,7 +344,7 @@ export function MelhoresModelosPorCapacidadeSection({
   const columns: TableColumn<LinhaDeRanking>[] = [
     {
       key: 'capacidade',
-      label: 'Capacidade',
+      label: t('bestModels.columns.capability'),
       width: '1.15fr',
       render: (linha) => (
         <Badge tone={USO_TONE[linha.uso]}>{ROTULO_DO_USO[linha.uso]}</Badge>
@@ -348,7 +352,7 @@ export function MelhoresModelosPorCapacidadeSection({
     },
     {
       key: 'recomendado',
-      label: 'Recomendado',
+      label: t('bestModels.columns.recommended'),
       width: '1.5fr',
       render: (linha) =>
         linha.recomendado ? (
@@ -359,12 +363,12 @@ export function MelhoresModelosPorCapacidadeSection({
             <span className={styles.rankDetalhe}>{formatarPreco(linha.recomendado)}</span>
           </span>
         ) : (
-          <span className={styles.dash}>sem cobertura curada</span>
+          <span className={styles.dash}>{t('bestModels.noCuratedCoverage')}</span>
         ),
     },
     {
       key: 'alternativa',
-      label: 'Alternativa',
+      label: t('bestModels.columns.alternative'),
       width: '1.35fr',
       render: (linha) =>
         linha.alternativa ? (
@@ -380,7 +384,7 @@ export function MelhoresModelosPorCapacidadeSection({
     },
     {
       key: 'usadoPor',
-      label: 'Usado por',
+      label: t('bestModels.columns.usedBy'),
       width: '1.5fr',
       render: (linha) => {
         const n = linha.recomendado
@@ -388,10 +392,10 @@ export function MelhoresModelosPorCapacidadeSection({
           : 0;
         return n > 0 ? (
           <span className={styles.fallback}>
-            {n} agente{n > 1 ? 's' : ''} deste projeto
+            {t('bestModels.usedByCount', { count: n })}
           </span>
         ) : (
-          <span className={styles.dash}>nenhum agente ainda</span>
+          <span className={styles.dash}>{t('bestModels.noAgentYet')}</span>
         );
       },
     },
@@ -400,21 +404,19 @@ export function MelhoresModelosPorCapacidadeSection({
   return (
     <div className={styles.section}>
       <div className={styles.sectionHead}>
-        <h2 className={styles.title}>Melhores modelos por capacidade</h2>
-        <span className={styles.eyebrow}>curadoria · uso real · custo</span>
+        <h2 className={styles.title}>{t('bestModels.title')}</h2>
+        <span className={styles.eyebrow}>{t('bestModels.eyebrow')}</span>
       </div>
       <p className={styles.subtitle}>
-        "Recomendado" é o modelo que mais agentes deste projeto já usam, entre
-        os que a curadoria deste workspace marcou para a capacidade — custo
-        desempata. Nenhuma nota de qualidade é calculada (ADR 0042: curadoria
-        é sempre manual); marque os usos no <em>Catálogo de modelos</em>,
-        mais abaixo.
+        {t('bestModels.subtitle.before')}
+        <em>{t('bestModels.subtitle.link')}</em>
+        {t('bestModels.subtitle.after')}
       </p>
       <Table
         columns={columns}
         rows={linhas}
         rowKey={(l) => l.uso}
-        emptyMessage="Nenhuma capacidade cadastrada."
+        emptyMessage={t('bestModels.emptyMessage')}
       />
     </div>
   );
@@ -430,6 +432,7 @@ export function MelhoresModelosPorCapacidadeSection({
  */
 // Exportada para o teste, como as demais seções.
 export function ModelsSection({ projectId }: { projectId: string }) {
+  const { t } = useTranslation('settings');
   const queryClient = useQueryClient();
   const { data: project } = useQuery({
     queryKey: ['project', projectId],
@@ -555,7 +558,7 @@ export function ModelsSection({ projectId }: { projectId: string }) {
       // "Agente", e não "Agente · capacidades" como no desenho: as capacidades
       // exigidas por agente não existem no domínio, e prometer uma coluna que
       // não tem conteúdo é pior que não prometer.
-      label: 'Agente',
+      label: t('modelsSection.columns.agent'),
       width: '1.4fr',
       render: (agent) => (
         <span className={styles.agentCell}>
@@ -573,7 +576,7 @@ export function ModelsSection({ projectId }: { projectId: string }) {
     },
     {
       key: 'model',
-      label: 'Modelo vigente',
+      label: t('modelsSection.columns.model'),
       width: '1.9fr',
       render: (agent) => {
         const index = AGENT_LIST.indexOf(agent);
@@ -590,7 +593,7 @@ export function ModelsSection({ projectId }: { projectId: string }) {
     },
     {
       key: 'origin',
-      label: 'Origem',
+      label: t('modelsSection.columns.origin'),
       width: '0.8fr',
       render: (agent) => {
         const index = AGENT_LIST.indexOf(agent);
@@ -612,7 +615,7 @@ export function ModelsSection({ projectId }: { projectId: string }) {
               tone={ORIGIN_TONE[resolved.origin]}
               title={
                 resolved.origin === 'area' && areaDoAgente
-                  ? `Padrão da área ${areaDoAgente.label}.`
+                  ? t('modelsSection.areaOriginTitle', { area: areaDoAgente.label })
                   : undefined
               }
             >
@@ -623,11 +626,17 @@ export function ModelsSection({ projectId }: { projectId: string }) {
                 tone="warning"
                 title={
                   pulado.reason === 'unavailable'
-                    ? `O modelo de ${pulado.scope} sumiu do provider — a cascata caiu para ${resolved.origin}.`
-                    : `O modelo de ${pulado.scope} não faz tool calling e não serve a um agente — a cascata caiu para ${resolved.origin}.`
+                    ? t('modelsSection.skippedTitleUnavailable', {
+                        scope: pulado.scope,
+                        origin: resolved.origin,
+                      })
+                    : t('modelsSection.skippedTitleNoToolCalling', {
+                        scope: pulado.scope,
+                        origin: resolved.origin,
+                      })
                 }
               >
-                {pulado.scope} pulado
+                {t('modelsSection.skippedBadge', { scope: pulado.scope })}
               </Badge>
             )}
             {divergiu && (
@@ -637,11 +646,13 @@ export function ModelsSection({ projectId }: { projectId: string }) {
                 onClick={() => handleClearAgentBinding(agent.key)}
                 title={
                   areaDoAgente
-                    ? `Apaga o modelo próprio deste agente — ele volta a usar o padrão da área ${areaDoAgente.label}.`
-                    : 'Apaga o modelo próprio deste agente — ele volta a herdar do projeto ou do workspace.'
+                    ? t('modelsSection.backToInheritTitleWithArea', {
+                        area: areaDoAgente.label,
+                      })
+                    : t('modelsSection.backToInheritTitleNoArea')
                 }
               >
-                voltar a herdar
+                {t('modelsSection.backToInherit')}
               </button>
             )}
           </span>
@@ -650,7 +661,7 @@ export function ModelsSection({ projectId }: { projectId: string }) {
     },
     {
       key: 'fallback',
-      label: 'Fallback',
+      label: t('modelsSection.columns.fallback'),
       width: '1.4fr',
       render: (agent) => {
         const index = AGENT_LIST.indexOf(agent);
@@ -664,7 +675,7 @@ export function ModelsSection({ projectId }: { projectId: string }) {
     },
     {
       key: 'estimate',
-      label: 'Est. mês',
+      label: t('modelsSection.columns.estimate'),
       width: '0.9fr',
       render: (agent) => {
         const micros = custoPorAgente.get(agent.key);
@@ -682,34 +693,43 @@ export function ModelsSection({ projectId }: { projectId: string }) {
   return (
     <div className={styles.section}>
       <div className={styles.sectionHead}>
-        <h2 className={styles.title}>Modelos por agente</h2>
-        <span className={styles.eyebrow}>binding vigente por cascata</span>
+        <h2 className={styles.title}>{t('modelsSection.title')}</h2>
+        <span className={styles.eyebrow}>{t('modelsSection.eyebrow')}</span>
       </div>
       <p className={styles.subtitle}>
-        A origem indica onde o valor é resolvido:{' '}
+        {t('modelsSection.subtitle.intro')}{' '}
         <span className={`${styles.nivel} ${styles.nivelWorkspace}`}>workspace</span> →{' '}
         <span className={`${styles.nivel} ${styles.nivelProject}`}>project</span> →{' '}
         <span className={`${styles.nivel} ${styles.nivelArea}`}>area</span> →{' '}
         <span className={`${styles.nivel} ${styles.nivelAgent}`}>agent</span> →{' '}
-        <span className={`${styles.nivel} ${styles.nivelAgent}`}>session</span>. O mais
-        específico vence. <strong>área</strong> é o padrão que o lead e os
-        subagentes compartilham (RN-102) — configure em{' '}
-        <em>Modelo por área</em>, logo abaixo.
+        <span className={`${styles.nivel} ${styles.nivelAgent}`}>session</span>.{' '}
+        {t('modelsSection.subtitle.mostSpecificWins')}{' '}
+        <strong>{t('modelsSection.subtitle.areaWord')}</strong>{' '}
+        {t('modelsSection.subtitle.areaExplain')}{' '}
+        <em>{t('modelsSection.subtitle.areaLink')}</em>
+        {t('modelsSection.subtitle.below')}
       </p>
 
       <div className={styles.custoCard}>
         <ClockIcon size={15} className={styles.custoIcone} />
         <span className={styles.custoTexto}>
-          Custo estimado mensal do time{' '}
-          <span className={styles.custoDetalhe}>· com base no histórico de 30 dias</span>
+          {t('modelsSection.costCard.label')}{' '}
+          <span className={styles.custoDetalhe}>{t('modelsSection.costCard.detail')}</span>
         </span>
         <span className={styles.custoValor}>
           {custos === undefined ? '—' : formatarCustoMicros(custoTotalMicros)}
         </span>
       </div>
 
-      <Table columns={columns} rows={AGENT_LIST} rowKey={(a) => a.key} emptyMessage="Nenhum agente configurado." />
-      {allModels.length === 0 && <div className={styles.subtitle}>Nenhum modelo disponível ainda.</div>}
+      <Table
+        columns={columns}
+        rows={AGENT_LIST}
+        rowKey={(a) => a.key}
+        emptyMessage={t('modelsSection.emptyMessage')}
+      />
+      {allModels.length === 0 && (
+        <div className={styles.subtitle}>{t('modelsSection.noModelsAvailable')}</div>
+      )}
     </div>
   );
 }
@@ -724,6 +744,7 @@ export function ModelsSection({ projectId }: { projectId: string }) {
  * paralelismo (`ParallelismSection`, RN-083).
  */
 export function AreaModelsSection({ projectId }: { projectId: string }) {
+  const { t } = useTranslation('settings');
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const { data: comPapel } = useCurrentWorkspaceWithRole();
@@ -754,7 +775,10 @@ export function AreaModelsSection({ projectId }: { projectId: string }) {
       await setAreaModelBinding(projectId, areaKey, model.id);
       invalidate(areaKey);
     } catch (erro) {
-      showToast({ title: mensagemDaApi(erro, 'Não foi possível salvar'), tone: 'danger' });
+      showToast({
+        title: mensagemDaApi(erro, t('areaModels.toast.saveError')),
+        tone: 'danger',
+      });
     }
   }
 
@@ -762,24 +786,27 @@ export function AreaModelsSection({ projectId }: { projectId: string }) {
     try {
       await clearAreaModelBinding(projectId, areaKey);
       invalidate(areaKey);
-      showToast({ title: `Área ${areaKey} voltou a herdar`, tone: 'success' });
+      showToast({
+        title: t('areaModels.toast.reverted', { area: areaKey }),
+        tone: 'success',
+      });
     } catch (erro) {
-      showToast({ title: mensagemDaApi(erro, 'Não foi possível salvar'), tone: 'danger' });
+      showToast({
+        title: mensagemDaApi(erro, t('areaModels.toast.saveError')),
+        tone: 'danger',
+      });
     }
   }
 
   return (
     <div className={styles.section}>
       <div className={styles.sectionHead}>
-        <h2 className={styles.title}>Modelo por área</h2>
-        <span className={styles.eyebrow}>padrão herdável · lead + subagentes</span>
+        <h2 className={styles.title}>{t('areaModels.title')}</h2>
+        <span className={styles.eyebrow}>{t('areaModels.eyebrow')}</span>
       </div>
       <p className={styles.subtitle}>
-        O modelo que vale para o lead e para todo subagente da área que não
-        tenha divergido — divergir é escolher outro modelo NA LINHA do agente,
-        acima. "Voltar a herdar" apaga o padrão da área; não muda o que cada
-        agente já divergiu.
-        {!podeEditar && ' Exige papel maintainer para alterar.'}
+        {t('areaModels.subtitle.main')}
+        {!podeEditar && t('areaModels.subtitle.needsMaintainer')}
       </p>
 
       {areaKeys.map((key, index) => {
@@ -791,16 +818,16 @@ export function AreaModelsSection({ projectId }: { projectId: string }) {
           <div key={key} className={styles.ajusteCard}>
             <div className={styles.ajusteInfo}>
               <div className={styles.ajusteTitulo}>
-                <span>Área {area.label}</span>
+                <span>{t('areaModels.card.title', { area: area.label })}</span>
                 <Badge tone={resolved ? ORIGIN_TONE[resolved.origin] : 'muted'}>
                   {resolved?.origin ?? '—'}
                 </Badge>
               </div>
               <div className={styles.ajusteHint}>
-                Lead: {area.lead}
+                {t('areaModels.card.lead', { lead: area.lead })}
                 {area.members.length > 0
-                  ? ` — subagentes: ${area.members.join(', ')}`
-                  : ' — subagentes dinâmicos (por módulo)'}
+                  ? t('areaModels.card.subagents', { list: area.members.join(', ') })
+                  : t('areaModels.card.subagentsDynamic')}
               </div>
             </div>
 
@@ -822,7 +849,7 @@ export function AreaModelsSection({ projectId }: { projectId: string }) {
                 disabled={!podeEditar}
                 onClick={() => handleClear(key)}
               >
-                Voltar a herdar
+                {t('areaModels.card.backToInherit')}
               </Button>
             )}
           </div>
@@ -833,6 +860,7 @@ export function AreaModelsSection({ projectId }: { projectId: string }) {
 }
 
 function MembersSection({ projectId }: { projectId: string }) {
+  const { t } = useTranslation('settings');
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const { data: members } = useQuery({ queryKey: ['members', projectId], queryFn: () => listProjectMembers(projectId) });
@@ -850,7 +878,11 @@ function MembersSection({ projectId }: { projectId: string }) {
       setInviteUserId('');
       invalidate();
     } catch {
-      showToast({ title: 'Falha ao adicionar membro', message: 'Verifique se o ID do usuário existe', tone: 'danger' });
+      showToast({
+        title: t('members.toast.inviteErrorTitle'),
+        message: t('members.toast.inviteErrorMessage'),
+        tone: 'danger',
+      });
     }
   }
 
@@ -867,7 +899,7 @@ function MembersSection({ projectId }: { projectId: string }) {
   const columns: TableColumn<NonNullable<typeof members>[number]>[] = [
     {
       key: 'member',
-      label: 'Membro',
+      label: t('members.table.member'),
       width: '2fr',
       render: (member) => (
         <span className={styles.membroCell}>
@@ -883,7 +915,7 @@ function MembersSection({ projectId }: { projectId: string }) {
     },
     {
       key: 'role',
-      label: 'Papel no projeto',
+      label: t('members.table.role'),
       width: '160px',
       render: (member) => (
         <Select value={member.role} onChange={(e) => handleRoleChange(member.userId, e.target.value as Role)}>
@@ -897,12 +929,12 @@ function MembersSection({ projectId }: { projectId: string }) {
     },
     {
       key: 'status',
-      label: 'Status',
+      label: t('members.table.status'),
       width: '1fr',
       render: () => (
         <span className={styles.status}>
           <span className={styles.statusDot} />
-          ativo
+          {t('members.table.active')}
         </span>
       ),
     },
@@ -913,8 +945,8 @@ function MembersSection({ projectId }: { projectId: string }) {
       render: (member) => (
         <button
           type="button"
-          aria-label={`Remover ${member.name ?? member.email}`}
-          title="Remover"
+          aria-label={t('members.table.removeAria', { name: member.name ?? member.email })}
+          title={t('members.table.removeTitle')}
           className={styles.remove}
           onClick={() => handleRemove(member.userId)}
         >
@@ -927,16 +959,19 @@ function MembersSection({ projectId }: { projectId: string }) {
   return (
     <div className={styles.section}>
       <div className={styles.sectionHead}>
-        <h2 className={styles.title}>Membros e papéis</h2>
-        <span className={styles.eyebrow}>IAM · por projeto</span>
+        <h2 className={styles.title}>{t('members.title')}</h2>
+        <span className={styles.eyebrow}>{t('members.eyebrow')}</span>
       </div>
-      <p className={styles.subtitle}>
-        Papéis definem quem pode aprovar quais ações dos agentes neste projeto.
-      </p>
+      <p className={styles.subtitle}>{t('members.subtitle')}</p>
 
       <div className={styles.inviteBar}>
         <div className={styles.inviteInput}>
-          <Input mono placeholder="ID do usuário (UUID)" value={inviteUserId} onChange={(e) => setInviteUserId(e.target.value)} />
+          <Input
+            mono
+            placeholder={t('members.invite.placeholder')}
+            value={inviteUserId}
+            onChange={(e) => setInviteUserId(e.target.value)}
+          />
         </div>
         <div className={styles.inviteRole}>
           <Select value={inviteRole} onChange={(e) => setInviteRole(e.target.value as Role)}>
@@ -947,10 +982,15 @@ function MembersSection({ projectId }: { projectId: string }) {
             ))}
           </Select>
         </div>
-        <Button onClick={handleInvite}>Convidar</Button>
+        <Button onClick={handleInvite}>{t('members.invite.button')}</Button>
       </div>
 
-      <Table columns={columns} rows={members ?? []} rowKey={(m) => m.userId} emptyMessage="Nenhum membro além do dono do projeto." />
+      <Table
+        columns={columns}
+        rows={members ?? []}
+        rowKey={(m) => m.userId}
+        emptyMessage={t('members.emptyMessage')}
+      />
     </div>
   );
 }
@@ -966,6 +1006,7 @@ function MembersSection({ projectId }: { projectId: string }) {
  * maintainer vem quando decide agir.
  */
 function RepositorySection({ projectId }: { projectId: string }) {
+  const { t } = useTranslation('settings');
   const { data: repository } = useQuery({
     queryKey: ['repository', projectId],
     queryFn: () => getRepository(projectId),
@@ -983,13 +1024,13 @@ function RepositorySection({ projectId }: { projectId: string }) {
   return (
     <div className={styles.section}>
       <div className={styles.sectionHead}>
-        <h2 className={styles.title}>Repositório</h2>
-        <span className={styles.eyebrow}>git · provider e política</span>
+        <h2 className={styles.title}>{t('repository.title')}</h2>
+        <span className={styles.eyebrow}>{t('repository.eyebrow')}</span>
       </div>
       <div className={styles.subtitle}>
         {repository.origin === 'adopted'
-          ? 'Adotado — já existia antes do projeto, e a política de branches é dele.'
-          : 'Criado pelo Brabo, com o bootstrap de Gitflow aplicado.'}
+          ? t('repository.adopted')
+          : t('repository.created')}
       </div>
 
       {/* Faixa do repositório como no handoff (seção 7, item 1): ícone, caminho
@@ -1007,14 +1048,15 @@ function RepositorySection({ projectId }: { projectId: string }) {
 
       {planoEstado?.decision === 'as_is' && (
         <Alert tone="accent">
-          O bootstrap foi <strong>dispensado</strong> na adoção: nenhuma branch
-          ou proteção foi alterada por nós.
+          {t('repository.dismissed.before')}
+          <strong>{t('repository.dismissed.strong')}</strong>
+          {t('repository.dismissed.after')}
         </Alert>
       )}
 
       {avisos.length > 0 && (
         <Alert tone="accent">
-          <div>Este repositório diverge do template:</div>
+          <div>{t('repository.divergesTitle')}</div>
           <ul>
             {avisos.map((a) => (
               <li key={a}>{a}</li>
@@ -1038,6 +1080,7 @@ const DEFAULT_MAX_CONSECUTIVE_BLOCKED = 3;
  * (`null` na api), então digitar por cima e salvar já cobre os dois casos.
  */
 export function ExecutionSection({ projectId }: { projectId: string }) {
+  const { t } = useTranslation('settings');
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const { data: project } = useQuery({
@@ -1059,9 +1102,9 @@ export function ExecutionSection({ projectId }: { projectId: string }) {
       await updateProject(projectId, { maxConsecutiveBlocked: numero });
       await queryClient.invalidateQueries({ queryKey: ['project', projectId] });
       setDraft(null);
-      showToast({ title: 'Teto do circuit breaker salvo', tone: 'success' });
+      showToast({ title: t('execution.toast.success'), tone: 'success' });
     } catch {
-      showToast({ title: 'Não foi possível salvar', tone: 'danger' });
+      showToast({ title: t('execution.toast.error'), tone: 'danger' });
     } finally {
       setSaving(false);
     }
@@ -1072,23 +1115,20 @@ export function ExecutionSection({ projectId }: { projectId: string }) {
   return (
     <div className={styles.section}>
       <div className={styles.sectionHead}>
-        <h2 className={styles.title}>Execução</h2>
-        <span className={styles.eyebrow}>circuit breaker do dev agent</span>
+        <h2 className={styles.title}>{t('execution.title')}</h2>
+        <span className={styles.eyebrow}>{t('execution.eyebrow')}</span>
       </div>
-      <div className={styles.subtitle}>
-        Circuit breaker dos dev agents — vale a partir da próxima ativação da
-        execução, não afeta agentes já rodando.
-      </div>
+      <div className={styles.subtitle}>{t('execution.subtitle')}</div>
 
       <div className={styles.ajusteCard}>
         <div className={styles.ajusteInfo}>
-          <div className={styles.ajusteTitulo}>
-            Tasks blocked seguidas até parar
-          </div>
+          <div className={styles.ajusteTitulo}>{t('execution.card.title')}</div>
           <div className={styles.ajusteHint}>
             {project.maxConsecutiveBlocked === null
-              ? `Sem valor próprio — usa o default (${DEFAULT_MAX_CONSECUTIVE_BLOCKED})`
-              : 'Configurado para este projeto'}
+              ? t('execution.card.hintDefault', {
+                  default: DEFAULT_MAX_CONSECUTIVE_BLOCKED,
+                })
+              : t('execution.card.hintConfigured')}
           </div>
         </div>
         <div className={styles.ajusteNumero}>
@@ -1101,7 +1141,7 @@ export function ExecutionSection({ projectId }: { projectId: string }) {
           />
         </div>
         <Button onClick={handleSave} disabled={!valido || saving}>
-          {saving ? 'Salvando…' : 'Salvar'}
+          {saving ? t('execution.saving') : t('execution.save')}
         </Button>
       </div>
     </div>
@@ -1122,6 +1162,7 @@ export function ExecutionSection({ projectId }: { projectId: string }) {
  * `module_map`) não é adivinhável.
  */
 export function ParallelismSection({ projectId }: { projectId: string }) {
+  const { t } = useTranslation('settings');
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const { data: areas } = useQuery({
@@ -1142,9 +1183,12 @@ export function ParallelismSection({ projectId }: { projectId: string }) {
         const { [key]: _, ...resto } = d;
         return resto;
       });
-      showToast({ title: `Teto da área ${key} salvo`, tone: 'success' });
+      showToast({ title: t('parallelism.toast.success', { area: key }), tone: 'success' });
     } catch (erro) {
-      showToast({ title: mensagemDaApi(erro, 'Não foi possível salvar'), tone: 'danger' });
+      showToast({
+        title: mensagemDaApi(erro, t('parallelism.toast.error')),
+        tone: 'danger',
+      });
     } finally {
       setSaving(null);
     }
@@ -1153,21 +1197,20 @@ export function ParallelismSection({ projectId }: { projectId: string }) {
   return (
     <div className={styles.section}>
       <div className={styles.sectionHead}>
-        <h2 className={styles.title}>Paralelismo por área</h2>
-        <span className={styles.eyebrow}>quantos agentes sem perguntar</span>
+        <h2 className={styles.title}>{t('parallelism.title')}</h2>
+        <span className={styles.eyebrow}>{t('parallelism.eyebrow')}</span>
       </div>
       <div className={styles.subtitle}>
-        Quantos agentes o lead de cada área pode ter <strong>na sessão</strong>{' '}
-        sem pedir sua autorização. Acima do teto ele não sobe nada: o pedido
-        vira uma ação em Aprovações, com o motivo, e espera você. O teto é da
-        sessão inteira e não de cada módulo — contar por módulo deixaria muitos
-        agentes subirem sem autorização nenhuma.
+        {t('parallelism.subtitle.before')}
+        <strong>{t('parallelism.subtitle.strong')}</strong>
+        {t('parallelism.subtitle.after')}
       </div>
 
       {!areas || areas.length === 0 ? (
         <div className={styles.subtitle}>
-          Nenhuma área ainda. Elas nascem quando você ativa a execução, porque
-          os membros da área de dev vêm do <code>module_map</code> do Arquiteto.
+          {t('parallelism.empty.before')}
+          <code>{t('parallelism.empty.code')}</code>
+          {t('parallelism.empty.after')}
         </div>
       ) : (
         areas.map((area) => {
@@ -1178,12 +1221,14 @@ export function ParallelismSection({ projectId }: { projectId: string }) {
           return (
             <div key={area.key} className={styles.ajusteCard}>
               <div className={styles.ajusteInfo}>
-                <div className={styles.ajusteTitulo}>Área {area.key}</div>
+                <div className={styles.ajusteTitulo}>
+                  {t('parallelism.card.title', { area: area.key })}
+                </div>
                 <div className={styles.ajusteHint}>
-                  Lead: {area.leadAgentId}
+                  {t('parallelism.card.lead', { lead: area.leadAgentId })}
                   {area.members.length > 0
-                    ? ` — ${area.members.length} membro(s)`
-                    : ' — sem membros ainda'}
+                    ? t('parallelism.card.membersCount', { count: area.members.length })
+                    : t('parallelism.card.noMembersYet')}
                 </div>
               </div>
               <div className={styles.ajusteNumero}>
@@ -1191,7 +1236,7 @@ export function ParallelismSection({ projectId }: { projectId: string }) {
                   mono
                   type="number"
                   min={1}
-                  aria-label={`Teto de agentes da área ${area.key}`}
+                  aria-label={t('parallelism.card.capAria', { area: area.key })}
                   value={exibido}
                   onChange={(e) =>
                     setDrafts((d) => ({ ...d, [area.key]: e.target.value }))
@@ -1202,7 +1247,7 @@ export function ParallelismSection({ projectId }: { projectId: string }) {
                 onClick={() => handleSave(area.key, numero)}
                 disabled={!valido || saving === area.key}
               >
-                {saving === area.key ? 'Salvando…' : 'Salvar'}
+                {saving === area.key ? t('parallelism.saving') : t('parallelism.save')}
               </Button>
             </div>
           );
@@ -1220,6 +1265,7 @@ export function ParallelismSection({ projectId }: { projectId: string }) {
  * de confirmação.
  */
 export function PromotionSection({ projectId }: { projectId: string }) {
+  const { t } = useTranslation('settings');
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const { data: project } = useQuery({
@@ -1236,12 +1282,12 @@ export function PromotionSection({ projectId }: { projectId: string }) {
       showToast({
         title:
           modo === 'manual'
-            ? 'Promoção manual: você decide o que fica pronto'
-            : 'Promoção automática: o PO promove sozinho',
+            ? t('promotion.toast.manual')
+            : t('promotion.toast.auto'),
         tone: 'success',
       });
     } catch {
-      showToast({ title: 'Não foi possível salvar', tone: 'danger' });
+      showToast({ title: t('promotion.toast.error'), tone: 'danger' });
     } finally {
       setSaving(false);
     }
@@ -1252,36 +1298,35 @@ export function PromotionSection({ projectId }: { projectId: string }) {
   return (
     <div className={styles.section}>
       <div className={styles.sectionHead}>
-        <h2 className={styles.title}>Promoção de histórias</h2>
-        <span className={styles.eyebrow}>quem dá o passo</span>
+        <h2 className={styles.title}>{t('promotion.title')}</h2>
+        <span className={styles.eyebrow}>{t('promotion.eyebrow')}</span>
       </div>
       <div className={styles.subtitle}>
-        Uma história só vira trabalho pegável quando está <em>pronta</em>. Isto
-        define quem dá esse passo. As validações são as MESMAS nos dois modos —
-        o que muda é quem dispara, nunca o que é exigido. Vale para as próximas
-        histórias; as que já estão propostas continuam esperando você.
+        {t('promotion.subtitle.before')}
+        <em>{t('promotion.subtitle.em')}</em>
+        {t('promotion.subtitle.after')}
       </div>
 
       <div className={styles.ajusteCard}>
         <div className={styles.ajusteInfo}>
-          <div className={styles.ajusteTitulo}>Quem promove</div>
+          <div className={styles.ajusteTitulo}>{t('promotion.card.title')}</div>
           <div className={styles.ajusteHint}>
             {project.storyPromotion === 'manual'
-              ? 'O PO deixa a história completa e ela aguarda você no Backlog. Nenhuma tarefa dela é pegável até lá.'
-              : 'O PO promove sozinho ao terminar uma história completa — era o comportamento anterior à Fase 12c, mantido como opção.'}
+              ? t('promotion.card.hintManual')
+              : t('promotion.card.hintAuto')}
           </div>
         </div>
         <div className={styles.ajusteControle}>
           <Select
             value={project.storyPromotion}
             disabled={saving}
-            aria-label="Quem promove histórias"
+            aria-label={t('promotion.selectAria')}
             onChange={(e) =>
               handleChange(e.target.value as StoryPromotionMode)
             }
           >
-            <option value="manual">Manual — eu promovo</option>
-            <option value="auto">Automática — o PO promove</option>
+            <option value="manual">{t('promotion.optionManual')}</option>
+            <option value="auto">{t('promotion.optionAuto')}</option>
           </Select>
         </div>
       </div>
@@ -1290,21 +1335,19 @@ export function PromotionSection({ projectId }: { projectId: string }) {
 }
 
 function MatrixSection() {
+  const { t } = useTranslation('settings');
   return (
     <div className={styles.section}>
       <div className={styles.sectionHead}>
-        <h2 className={styles.title}>Quem pode aprovar o quê</h2>
-        <span className={styles.eyebrow}>matriz resumida</span>
+        <h2 className={styles.title}>{t('matrix.title')}</h2>
+        <span className={styles.eyebrow}>{t('matrix.eyebrow')}</span>
       </div>
-      <p className={styles.subtitle}>
-        Tabela informativa — reflete os papéis mínimos por tipo de ação hoje aplicados no backend; algumas linhas ainda não têm checagem
-        granular própria e usam a aproximação mais próxima.
-      </p>
+      <p className={styles.subtitle}>{t('matrix.subtitle')}</p>
       <div className={styles.matrixWrap}>
         <table className={styles.matrixTable}>
           <thead>
             <tr>
-              <th>Ação</th>
+              <th>{t('matrix.columns.action')}</th>
               <th>owner</th>
               <th>maintainer</th>
               <th>developer</th>
@@ -1313,8 +1356,8 @@ function MatrixSection() {
           </thead>
           <tbody>
             {MATRIX_ROWS.map((row) => (
-              <tr key={row.label}>
-                <td>{row.label}</td>
+              <tr key={row.key}>
+                <td>{t(`matrix.rows.${row.key}`)}</td>
                 {(['owner', 'maintainer', 'developer', 'viewer'] as Role[]).map((role) => (
                   <td key={role}>
                     {ROLE_ORDER.indexOf(role) >= ROLE_ORDER.indexOf(row.minRole) ? (
@@ -1332,10 +1375,10 @@ function MatrixSection() {
       {/* A legenda do desenho: sem ela, ✓ e — são dois símbolos sem contrato. */}
       <div className={styles.matrixLegenda}>
         <span className={styles.matrixLegendaItem}>
-          <span className={styles.check}>✓</span> pode aprovar
+          <span className={styles.check}>✓</span> {t('matrix.legend.canApprove')}
         </span>
         <span className={styles.matrixLegendaItem}>
-          <span className={styles.dash}>—</span> sem permissão
+          <span className={styles.dash}>—</span> {t('matrix.legend.noPermission')}
         </span>
       </div>
     </div>
@@ -1344,6 +1387,7 @@ function MatrixSection() {
 
 // Exportada para o teste, como ExecutionSection e PromotionSection.
 export function CredentialsSection() {
+  const { t } = useTranslation('settings');
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const { data: credentials } = useQuery({ queryKey: ['credentials'], queryFn: listCredentials });
@@ -1368,10 +1412,10 @@ export function CredentialsSection() {
       await upsertCredential({ provider, apiKey });
       setDrafts((d) => ({ ...d, [provider]: '' }));
       queryClient.invalidateQueries({ queryKey: ['credentials'] });
-      showToast({ title: 'Credencial salva', tone: 'success' });
+      showToast({ title: t('credentials.toast.saved'), tone: 'success' });
     } catch (erro) {
       showToast({
-        title: 'Não deu para salvar',
+        title: t('credentials.toast.saveErrorTitle'),
         message: mensagemDaApi(erro),
         tone: 'danger',
       });
@@ -1391,18 +1435,22 @@ export function CredentialsSection() {
     try {
       const { resultado, motivo } = await testCredential(provider);
       if (resultado === 'ok') {
-        showToast({ title: 'O provider aceitou a chave', tone: 'success' });
+        showToast({ title: t('credentials.toast.testOk'), tone: 'success' });
       } else if (resultado === 'recusado') {
-        showToast({ title: 'O provider recusou a chave', message: motivo, tone: 'danger' });
+        showToast({ title: t('credentials.toast.testRefused'), message: motivo, tone: 'danger' });
       } else {
         showToast({
-          title: 'Sem verificação para este provider',
-          message: 'A chave continua salva — este provider não tem endpoint de teste.',
+          title: t('credentials.toast.testUnsupportedTitle'),
+          message: t('credentials.toast.testUnsupportedMessage'),
           tone: 'warning',
         });
       }
     } catch (erro) {
-      showToast({ title: 'Não deu para testar', message: mensagemDaApi(erro), tone: 'danger' });
+      showToast({
+        title: t('credentials.toast.testErrorTitle'),
+        message: mensagemDaApi(erro),
+        tone: 'danger',
+      });
     } finally {
       setEmVoo(null);
     }
@@ -1413,10 +1461,10 @@ export function CredentialsSection() {
     try {
       await deleteCredential(provider);
       queryClient.invalidateQueries({ queryKey: ['credentials'] });
-      showToast({ title: 'Credencial removida', tone: 'success' });
+      showToast({ title: t('credentials.toast.removed'), tone: 'success' });
     } catch (erro) {
       showToast({
-        title: 'Não deu para remover',
+        title: t('credentials.toast.removeErrorTitle'),
         message: mensagemDaApi(erro),
         tone: 'danger',
       });
@@ -1428,14 +1476,15 @@ export function CredentialsSection() {
   return (
     <div className={styles.section}>
       <div className={styles.sectionHead}>
-        <h2 className={styles.title}>Credenciais de provider</h2>
-        <span className={styles.eyebrow}>write-only · por usuário</span>
+        <h2 className={styles.title}>{t('credentials.title')}</h2>
+        <span className={styles.eyebrow}>{t('credentials.eyebrow')}</span>
       </div>
       <div className={styles.subtitle}>
-        Chaves write-only — nunca reexibidas após salvas. Como não há como
-        conferir o que está guardado, o que se oferece é <strong>trocar</strong>{' '}
-        e <strong>testar</strong>: o teste roda no servidor sobre a chave
-        cifrada e devolve só o veredito.
+        {t('credentials.subtitle.before')}
+        <strong>{t('credentials.subtitle.swap')}</strong>
+        {t('credentials.subtitle.middle')}
+        <strong>{t('credentials.subtitle.test')}</strong>
+        {t('credentials.subtitle.after')}
       </div>
 
       {/* Grid de conectores do handoff (seção 7, item 4): um card por
@@ -1462,7 +1511,9 @@ export function CredentialsSection() {
                   <div className={styles.conectorTipo}>
                     {/* Um hub roteia para provedores de terceiros: o custo e a
                         disponibilidade dependem de quem serve por baixo. */}
-                    {kind === 'hub' ? 'hub de providers' : 'credencial de provider'}
+                    {kind === 'hub'
+                      ? t('credentials.connector.hub')
+                      : t('credentials.connector.provider')}
                   </div>
                 </div>
                 <span
@@ -1471,7 +1522,9 @@ export function CredentialsSection() {
                     .join(' ')}
                 >
                   <span className={styles.conectorPonto} />
-                  {existing ? 'configurada' : 'sem chave'}
+                  {existing
+                    ? t('credentials.connector.configured')
+                    : t('credentials.connector.missing')}
                 </span>
               </div>
 
@@ -1480,8 +1533,10 @@ export function CredentialsSection() {
                   Mostrar `sk-••••` seria inventar um prefixo que ninguém leu. */}
               <div className={styles.conectorNota}>
                 {existing
-                  ? `Configurada em ${new Date(existing.updatedAt).toLocaleDateString('pt-BR')} · nunca reexibida`
-                  : 'Nenhuma credencial salva'}
+                  ? t('credentials.connector.configuredNote', {
+                      date: new Date(existing.updatedAt).toLocaleDateString('pt-BR'),
+                    })
+                  : t('credentials.connector.noneSaved')}
               </div>
 
               {/* O input fica SEMPRE visível: com credencial salva ele é o
@@ -1489,8 +1544,16 @@ export function CredentialsSection() {
               <Input
                 mono
                 type="password"
-                aria-label={existing ? `Nova chave de ${label}` : `API key de ${label}`}
-                placeholder={existing ? 'Trocar chave' : 'API key'}
+                aria-label={
+                  existing
+                    ? t('credentials.connector.newKeyAria', { label })
+                    : t('credentials.connector.apiKeyAria', { label })
+                }
+                placeholder={
+                  existing
+                    ? t('credentials.connector.swapPlaceholder')
+                    : t('credentials.connector.apiKeyPlaceholder')
+                }
                 value={drafts[id] ?? ''}
                 onChange={(e) => setDrafts((d) => ({ ...d, [id]: e.target.value }))}
               />
@@ -1499,29 +1562,33 @@ export function CredentialsSection() {
                 {/* Nome acessível com o provider: são oito cards com botões de
                     texto idêntico, e "Salvar" sozinho não diz salvar o quê. */}
                 <Button
-                  aria-label={`${existing ? 'Trocar' : 'Salvar'} chave de ${label}`}
+                  aria-label={
+                    existing
+                      ? t('credentials.connector.swapKeyAria', { label })
+                      : t('credentials.connector.saveKeyAria', { label })
+                  }
                   disabled={ocupado || rascunho.length === 0}
                   onClick={() => handleSave(id)}
                 >
-                  {existing ? 'Trocar' : 'Salvar'}
+                  {existing ? t('credentials.connector.swap') : t('credentials.connector.save')}
                 </Button>
                 {existing && (
                   <>
                     <Button
                       variant="secondary"
-                      aria-label={`Testar chave de ${label}`}
+                      aria-label={t('credentials.connector.testKeyAria', { label })}
                       disabled={ocupado}
                       onClick={() => handleTest(id)}
                     >
-                      Testar
+                      {t('credentials.connector.test')}
                     </Button>
                     <Button
                       variant="danger"
-                      aria-label={`Remover chave de ${label}`}
+                      aria-label={t('credentials.connector.removeKeyAria', { label })}
                       disabled={ocupado}
                       onClick={() => handleRemove(id)}
                     >
-                      Remover
+                      {t('credentials.connector.remove')}
                     </Button>
                   </>
                 )}
@@ -1542,6 +1609,7 @@ export function CredentialsSection() {
  */
 // Exportada para o teste, como ExecutionSection e PromotionSection.
 export function ProficiencySection({ projectId }: { projectId: string }) {
+  const { t } = useTranslation('settings');
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const navigate = useNavigate();
@@ -1570,12 +1638,16 @@ export function ProficiencySection({ projectId }: { projectId: string }) {
       await deleteMyProficiency(projectId);
       await queryClient.invalidateQueries({ queryKey: ['proficiency', projectId] });
       showToast({
-        title: 'Perfil apagado',
-        message: 'A Anamnese não vai mais te perfilar até você reativar.',
+        title: t('proficiency.toast.deleted'),
+        message: t('proficiency.toast.deletedMessage'),
         tone: 'success',
       });
     } catch {
-      showToast({ title: 'Erro', message: 'Não foi possível apagar o perfil', tone: 'danger' });
+      showToast({
+        title: t('proficiency.toast.deleteErrorTitle'),
+        message: t('proficiency.toast.deleteErrorMessage'),
+        tone: 'danger',
+      });
     } finally {
       setEmVoo(false);
     }
@@ -1587,9 +1659,17 @@ export function ProficiencySection({ projectId }: { projectId: string }) {
       await optInProficiency(projectId);
       // Sem invalidar, a lista só voltava a aparecer no poll seguinte.
       await queryClient.invalidateQueries({ queryKey: ['proficiency', projectId] });
-      showToast({ title: 'Reativado', message: 'A Anamnese voltará a perfilar você.', tone: 'success' });
+      showToast({
+        title: t('proficiency.toast.reactivated'),
+        message: t('proficiency.toast.reactivatedMessage'),
+        tone: 'success',
+      });
     } catch {
-      showToast({ title: 'Erro', message: 'Não foi possível reativar', tone: 'danger' });
+      showToast({
+        title: t('proficiency.toast.reactivateErrorTitle'),
+        message: t('proficiency.toast.reactivateErrorMessage'),
+        tone: 'danger',
+      });
     } finally {
       setEmVoo(false);
     }
@@ -1600,8 +1680,8 @@ export function ProficiencySection({ projectId }: { projectId: string }) {
     try {
       await runAnamnese(projectId);
       showToast({
-        title: 'Rodada enfileirada',
-        message: 'A Anamnese vai analisar a janela agora.',
+        title: t('proficiency.toast.queued'),
+        message: t('proficiency.toast.queuedMessage'),
         tone: 'success',
       });
     } catch (erro) {
@@ -1611,14 +1691,14 @@ export function ProficiencySection({ projectId }: { projectId: string }) {
         // RunAnamneseUseCase).
         setAnamneseDesativada(true);
         showToast({
-          title: 'Anamnese pausada',
-          message: mensagemDaApi(erro, 'A Anamnese está desativada globalmente.'),
+          title: t('proficiency.toast.pausedTitle'),
+          message: mensagemDaApi(erro, t('proficiency.toast.pausedFallback')),
           tone: 'warning',
         });
       } else {
         showToast({
-          title: 'Erro',
-          message: 'Não foi possível enfileirar a rodada',
+          title: t('proficiency.toast.genericErrorTitle'),
+          message: t('proficiency.toast.genericErrorMessage'),
           tone: 'danger',
         });
       }
@@ -1640,8 +1720,8 @@ export function ProficiencySection({ projectId }: { projectId: string }) {
       });
     } catch {
       showToast({
-        title: 'Evidência indisponível',
-        message: 'O evento citado não foi encontrado neste projeto.',
+        title: t('proficiency.toast.evidenceUnavailableTitle'),
+        message: t('proficiency.toast.evidenceUnavailableMessage'),
         tone: 'danger',
       });
     }
@@ -1650,18 +1730,15 @@ export function ProficiencySection({ projectId }: { projectId: string }) {
   return (
     <div className={styles.section}>
       <div className={styles.sectionHead}>
-        <h2 className={styles.title}>Perfil de proficiência</h2>
-        <span className={styles.eyebrow}>anamnese · derivado</span>
+        <h2 className={styles.title}>{t('proficiency.title')}</h2>
+        <span className={styles.eyebrow}>{t('proficiency.eyebrow')}</span>
       </div>
       <div className={styles.subtitle} style={{ marginBottom: 12 }}>
-        Derivado pela Anamnese a partir das suas interações. Só competências
-        técnicas e de processo — nunca características pessoais.
+        {t('proficiency.subtitle')}
       </div>
 
       {all.length === 0 ? (
-        <div className={styles.subtitle}>
-          Nada ainda — a Anamnese roda periodicamente sobre o log do projeto.
-        </div>
+        <div className={styles.subtitle}>{t('proficiency.emptyMessage')}</div>
       ) : (
         [...byUser.entries()].map(([userId, group]) => (
           <div key={userId} className={styles.profileGroup}>
@@ -1701,18 +1778,18 @@ export function ProficiencySection({ projectId }: { projectId: string }) {
           disabled={emVoo}
           onClick={() => setConfirmandoDelete(true)}
         >
-          Apagar meu perfil
+          {t('proficiency.deleteButton')}
         </Button>
         <Button variant="ghost" disabled={emVoo} onClick={handleOptIn}>
-          Voltar a ser perfilado
+          {t('proficiency.reactivateButton')}
         </Button>
         <Button
           variant="secondary"
           disabled={emVoo || anamneseDesativada}
           onClick={handleRunNow}
-          title={anamneseDesativada ? 'A Anamnese está pausada globalmente' : undefined}
+          title={anamneseDesativada ? t('proficiency.runNowDisabledTitle') : undefined}
         >
-          Rodar agora
+          {t('proficiency.runNowButton')}
         </Button>
       </div>
 
@@ -1721,8 +1798,7 @@ export function ProficiencySection({ projectId }: { projectId: string }) {
           de propósito, não só um toast que some (RN-088). */}
       {anamneseDesativada && (
         <div className={styles.subtitle} style={{ marginTop: 8 }}>
-          A Anamnese está pausada globalmente por decisão do time — sem
-          rodada nova por enquanto. O que já foi derivado continua aqui.
+          {t('proficiency.pausedNotice')}
         </div>
       )}
 
@@ -1730,19 +1806,16 @@ export function ProficiencySection({ projectId }: { projectId: string }) {
           para uma ação que não tem como desfazer o que foi apagado. */}
       {confirmandoDelete && (
         <Modal
-          title="Apagar meu perfil de proficiência?"
+          title={t('proficiency.modal.title')}
           onClose={() => setConfirmandoDelete(false)}
         >
-          <div className={styles.subtitle}>
-            As linhas do seu perfil são apagadas de verdade, e a Anamnese para
-            de te perfilar até você reativar. O que já foi apagado não volta.
-          </div>
+          <div className={styles.subtitle}>{t('proficiency.modal.body')}</div>
           <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
             <Button variant="danger" onClick={handleDelete}>
-              Apagar
+              {t('proficiency.modal.confirm')}
             </Button>
             <Button variant="ghost" onClick={() => setConfirmandoDelete(false)}>
-              Cancelar
+              {t('proficiency.modal.cancel')}
             </Button>
           </div>
         </Modal>
@@ -1757,6 +1830,7 @@ export function ProficiencySection({ projectId }: { projectId: string }) {
  * PRA FRENTE: grava uma versão nova com o conteúdo antigo.
  */
 function InstructionVersionsSection({ projectId }: { projectId: string }) {
+  const { t } = useTranslation('settings');
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -1782,12 +1856,16 @@ function InstructionVersionsSection({ projectId }: { projectId: string }) {
         queryKey: ['instruction-versions', projectId],
       });
       showToast({
-        title: 'Revertido',
-        message: `${agent} voltou ao conteúdo da v${version}.`,
+        title: t('instructionVersions.toast.revertedTitle'),
+        message: t('instructionVersions.toast.revertedMessage', { agent, version }),
         tone: 'success',
       });
     } catch {
-      showToast({ title: 'Erro', message: 'Não foi possível reverter', tone: 'danger' });
+      showToast({
+        title: t('instructionVersions.toast.errorTitle'),
+        message: t('instructionVersions.toast.errorMessage'),
+        tone: 'danger',
+      });
     } finally {
       setRevertendo(null);
     }
@@ -1806,18 +1884,15 @@ function InstructionVersionsSection({ projectId }: { projectId: string }) {
   return (
     <div className={styles.section}>
       <div className={styles.sectionHead}>
-        <h2 className={styles.title}>Histórico de instruções</h2>
-        <span className={styles.eyebrow}>versionamento por agente</span>
+        <h2 className={styles.title}>{t('instructionVersions.title')}</h2>
+        <span className={styles.eyebrow}>{t('instructionVersions.eyebrow')}</span>
       </div>
       <div className={styles.subtitle} style={{ marginBottom: 12 }}>
-        Cada patch aprovado vira uma versão. Reverter grava uma versão nova
-        com o conteúdo antigo — nada é apagado.
+        {t('instructionVersions.subtitle')}
       </div>
 
       {withHistory.length === 0 ? (
-        <div className={styles.subtitle}>
-          Nenhum agente teve a instrução alterada ainda.
-        </div>
+        <div className={styles.subtitle}>{t('instructionVersions.emptyMessage')}</div>
       ) : (
         withHistory.map(({ agent, versions }) => (
           <div key={agent.key} className={styles.agentBlock}>
@@ -1829,10 +1904,14 @@ function InstructionVersionsSection({ projectId }: { projectId: string }) {
                 <div key={version.id}>
                   <div className={styles.versionRow}>
                     <span className={styles.versionNo}>v{version.version}</span>
-                    {version.isCurrent && <Badge tone="success">atual</Badge>}
+                    {version.isCurrent && (
+                      <Badge tone="success">{t('instructionVersions.current')}</Badge>
+                    )}
                     {version.sourceHypothesisId && (
                       <Badge tone="accent">
-                        hipótese {version.sourceHypothesisId.slice(-8)}
+                        {t('instructionVersions.hypothesis', {
+                          id: version.sourceHypothesisId.slice(-8),
+                        })}
                       </Badge>
                     )}
                     <span className={styles.versionNote}>
@@ -1843,7 +1922,12 @@ function InstructionVersionsSection({ projectId }: { projectId: string }) {
                       className={styles.evidenceChip}
                       onClick={() => setExpanded(open ? null : key)}
                     >
-                      {open ? 'ocultar diff' : `diff +${version.diff.additions} −${version.diff.deletions}`}
+                      {open
+                        ? t('instructionVersions.hideDiff')
+                        : t('instructionVersions.showDiff', {
+                            additions: version.diff.additions,
+                            deletions: version.diff.deletions,
+                          })}
                     </button>
                     {!version.isCurrent && (
                       <Button
@@ -1852,8 +1936,8 @@ function InstructionVersionsSection({ projectId }: { projectId: string }) {
                         onClick={() => handleRollback(agent.key, version.version)}
                       >
                         {revertendo === `${agent.key}:${version.version}`
-                          ? 'Revertendo…'
-                          : 'Reverter'}
+                          ? t('instructionVersions.reverting')
+                          : t('instructionVersions.revert')}
                       </Button>
                     )}
                   </div>

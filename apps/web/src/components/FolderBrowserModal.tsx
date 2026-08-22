@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';
 import { RunnerOnboardingPanel } from './RunnerOnboardingPanel';
@@ -64,6 +65,7 @@ export function FolderBrowserModal({
   onSelecionar,
   onClose,
 }: FolderBrowserModalProps) {
+  const { t } = useTranslation('terminal');
   const canalRef = useRef<FsBrowserChannel | null>(null);
   const [path, setPath] = useState<string>(caminhoInicial ?? '');
   const [entradas, setEntradas] = useState<FsEntrada[] | null>(null);
@@ -97,12 +99,12 @@ export function FolderBrowserModal({
       const inicial = await canal.diretorioInicial();
       if (inicial.erro || !inicial.path) {
         setCarregando(false);
-        setErro(inicial.erro ?? 'Não consegui obter a pasta inicial do runner.');
+        setErro(inicial.erro ?? t('folderBrowserModal.initialDirError'));
         return;
       }
       aplicar(await canal.listarDiretorio(inicial.path));
     },
-    [aplicar],
+    [aplicar, t],
   );
 
   useEffect(() => {
@@ -123,17 +125,13 @@ export function FolderBrowserModal({
   const semRunner = erro?.includes('Nenhum runner conectado') ?? false;
 
   return (
-    <Modal title="Escolher pasta" icon={<FolderIcon size={16} />} onClose={onClose}>
+    <Modal title={t('folderBrowserModal.title')} icon={<FolderIcon size={16} />} onClose={onClose}>
       {!projectId && (
         <div className={styles.semProjeto}>
-          <Alert tone="accent">
-            A navegação por pasta fica disponível depois que o projeto
-            existir — o runner se conecta a um projeto já criado. Por
-            enquanto, digite o caminho manualmente no campo desta tela.
-          </Alert>
+          <Alert tone="accent">{t('folderBrowserModal.noProjectMessage')}</Alert>
           <div className={styles.rodape}>
             <Button type="button" variant="secondary" onClick={onClose}>
-              Entendi
+              {t('folderBrowserModal.understood')}
             </Button>
           </div>
         </div>
@@ -150,7 +148,7 @@ export function FolderBrowserModal({
 
       {projectId && !semRunner && (
         <div className={styles.corpo}>
-          <div className={styles.breadcrumb} aria-label="Caminho atual">
+          <div className={styles.breadcrumb} aria-label={t('folderBrowserModal.breadcrumbLabel')}>
             {segmentosDoPath(path || '/').map((seg, indice, lista) => (
               <span key={seg.caminho} className={styles.segmentoWrapper}>
                 <button
@@ -172,8 +170,8 @@ export function FolderBrowserModal({
             </Alert>
           )}
 
-          <div className={styles.lista} role="listbox" aria-label="Subpastas">
-            {carregando && <div className={styles.estado}>Carregando…</div>}
+          <div className={styles.lista} role="listbox" aria-label={t('folderBrowserModal.subfoldersLabel')}>
+            {carregando && <div className={styles.estado}>{t('folderBrowserModal.loading')}</div>}
 
             {!carregando && (
               <button
@@ -205,13 +203,13 @@ export function FolderBrowserModal({
                 ))}
 
             {!carregando && entradas && entradas.filter((e) => e.isDir).length === 0 && (
-              <div className={styles.estado}>Nenhuma subpasta aqui.</div>
+              <div className={styles.estado}>{t('folderBrowserModal.empty')}</div>
             )}
           </div>
 
           <div className={styles.rodape}>
             <Button type="button" variant="ghost" onClick={onClose}>
-              Cancelar
+              {t('folderBrowserModal.cancel')}
             </Button>
             <Button
               type="button"
@@ -222,7 +220,7 @@ export function FolderBrowserModal({
                 onClose();
               }}
             >
-              Selecionar esta pasta
+              {t('folderBrowserModal.select')}
             </Button>
           </div>
         </div>

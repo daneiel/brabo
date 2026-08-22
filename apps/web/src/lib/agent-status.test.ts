@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import {
   breakerReasonFor,
   deriveAgentRoster,
@@ -10,7 +10,20 @@ import {
   type RosterEntry,
 } from './agent-status';
 import { AGENTS } from './agents';
+// Funções não-React deste módulo resolvem texto pelo singleton REAL de
+// `lib/i18n.ts` (`i18n.t(chave, {ns: 'executors'})`) — as asserções abaixo
+// checam o texto ATUAL em português, então o idioma precisa ser fixado
+// antes de qualquer chamada.
+import i18n from './i18n';
 import type { Handoff, ModuleMap, SessionEvent } from './api-types';
+
+beforeAll(async () => {
+  await i18n.changeLanguage('pt-BR');
+});
+
+afterAll(() => {
+  void i18n.changeLanguage('en');
+});
 
 let seq = 0;
 function ev(

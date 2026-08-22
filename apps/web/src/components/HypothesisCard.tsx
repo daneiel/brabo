@@ -1,4 +1,5 @@
 import { useNavigate } from '@tanstack/react-router';
+import { useTranslation } from 'react-i18next';
 import type { PsychologistHypothesis } from '../lib/api-types';
 import { AGENTS } from '../lib/agents';
 import { descreverHipotese } from '../lib/aprovacoes';
@@ -34,6 +35,7 @@ export function HypothesisCard({
   onAccept,
   onDismiss,
 }: HypothesisCardProps) {
+  const { t } = useTranslation('insights');
   const navigate = useNavigate();
   const decided = hypothesis.status !== 'proposed';
   const { frase } = descreverHipotese(hypothesis);
@@ -54,10 +56,12 @@ export function HypothesisCard({
         </span>
         {decided ? (
           <Badge tone={hypothesis.status === 'accepted' ? 'success' : 'muted'}>
-            {hypothesis.status === 'accepted' ? 'aceita' : 'descartada'}
+            {hypothesis.status === 'accepted'
+              ? t('hypothesisCard.status.accepted')
+              : t('hypothesisCard.status.dismissed')}
           </Badge>
         ) : (
-          <Badge tone="accent">proposta</Badge>
+          <Badge tone="accent">{t('hypothesisCard.status.proposed')}</Badge>
         )}
         {/* Alvo ESPECÍFICO da hipótese — sempre visível no card, mesmo
             quando `InsightsSection` agrupa por ÁREA (Fase 8d): sem isto,
@@ -65,7 +69,7 @@ export function HypothesisCard({
             Performance/Segurança. */}
         <Badge tone="muted">{AGENTS[hypothesis.agenteAlvo as keyof typeof AGENTS]?.name ?? hypothesis.agenteAlvo}</Badge>
         <span className={styles.confidence}>
-          {hypothesis.confiancaPercent}% de confiança
+          {t('hypothesisCard.confidence', { percent: hypothesis.confiancaPercent })}
         </span>
       </div>
 
@@ -76,37 +80,43 @@ export function HypothesisCard({
       <p className={styles.frase}>{frase}</p>
 
       <Disclosure
-        titulo="No que o Psicólogo se baseou"
+        titulo={t('hypothesisCard.disclosureTitle')}
         padraoAberto={!decided}
         className={styles.detalhes}
-        trailing={`${hypothesis.evidenceEventIds.length} evidência(s)`}
+        trailing={t('hypothesisCard.disclosureTrailing', {
+          count: hypothesis.evidenceEventIds.length,
+        })}
       >
         <div>
-          <div className={styles.label}>Observação</div>
+          <div className={styles.label}>{t('hypothesisCard.observationLabel')}</div>
           <div className={styles.body}>{hypothesis.observacao}</div>
         </div>
 
         <div>
-          <div className={styles.label}>Sugestão</div>
+          <div className={styles.label}>{t('hypothesisCard.suggestionLabel')}</div>
           <div className={styles.body}>{hypothesis.sugestao}</div>
         </div>
 
         {hypothesis.terminationAnalysis && (
           <div className={styles.termination}>
             <div className={styles.label}>
-              Término anormal · {hypothesis.terminationAnalysis.causa}
+              {t('hypothesisCard.terminationLabel', {
+                cause: hypothesis.terminationAnalysis.causa,
+              })}
             </div>
             <div className={styles.body}>
               {hypothesis.terminationAnalysis.analise}
             </div>
             <div className={styles.body}>
-              Estado no momento: {hypothesis.terminationAnalysis.estadoDaSessao}
+              {t('hypothesisCard.terminationState', {
+                state: hypothesis.terminationAnalysis.estadoDaSessao,
+              })}
             </div>
           </div>
         )}
 
         <div>
-          <div className={styles.label}>Evidências</div>
+          <div className={styles.label}>{t('hypothesisCard.evidenceLabel')}</div>
           <div className={styles.evidence}>
             {hypothesis.evidenceEventIds.map((eventId) => (
               <button
@@ -125,10 +135,10 @@ export function HypothesisCard({
       {!decided && (
         <div className={styles.actions}>
           <Button variant="success" onClick={onAccept}>
-            Aceitar
+            {t('hypothesisCard.acceptButton')}
           </Button>
           <Button variant="secondary" onClick={onDismiss}>
-            Descartar
+            {t('hypothesisCard.dismissButton')}
           </Button>
         </div>
       )}

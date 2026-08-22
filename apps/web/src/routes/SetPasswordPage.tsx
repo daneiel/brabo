@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert } from '../components/ui/Alert';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -42,6 +43,7 @@ export function SetPasswordPage({
   onDefinir,
   irPara,
 }: SetPasswordPageProps) {
+  const { t } = useTranslation('auth');
   const [senha, setSenha] = useState('');
   const [confirmacao, setConfirmacao] = useState('');
   const [erro, setErro] = useState<string | null>(null);
@@ -59,17 +61,17 @@ export function SetPasswordPage({
     setErroDeConfirmacao(null);
 
     if (!token) {
-      setErro('Link inválido: falta o código. Peça um novo.');
+      setErro(t('setPasswordPage.errors.missingToken'));
       return;
     }
     if (senha.length < MINIMO_DE_SENHA) {
       setErroDeSenha(
-        `A senha precisa de pelo menos ${MINIMO_DE_SENHA} caracteres.`,
+        t('setPasswordPage.errors.passwordTooShort', { minimo: MINIMO_DE_SENHA }),
       );
       return;
     }
     if (senha !== confirmacao) {
-      setErroDeConfirmacao('As duas senhas não são iguais.');
+      setErroDeConfirmacao(t('setPasswordPage.errors.passwordMismatch'));
       return;
     }
 
@@ -83,11 +85,9 @@ export function SetPasswordPage({
       // A api não distingue link inexistente, expirado e já usado — os três
       // têm a mesma resposta, para não contar a um ladrão de token se a vítima
       // chegou primeiro.
-      setErro(
-        'Link inválido, expirado ou já usado. Peça um novo em “Esqueci minha senha”.',
-      );
+      setErro(t('setPasswordPage.errors.invalidToken'));
     } catch {
-      setErro('Não foi possível falar com o servidor. Tente de novo.');
+      setErro(t('setPasswordPage.errors.network'));
     } finally {
       setEnviando(false);
     }
@@ -96,16 +96,15 @@ export function SetPasswordPage({
   if (pronto) {
     return (
       <AuthLayout
-        titulo="Senha definida"
-        subtitulo="Já pode entrar com a senha nova."
+        titulo={t('setPasswordPage.success.title')}
+        subtitulo={t('setPasswordPage.success.subtitle')}
         irPara={irPara}
       >
         <Alert tone="success" role="status">
-          Pronto. Todas as sessões anteriores foram encerradas — entre de novo com
-          a senha nova.
+          {t('setPasswordPage.success.message')}
         </Alert>
         <Button fullWidth onClick={() => irPara('/login')}>
-          Ir para o login
+          {t('setPasswordPage.success.goToLogin')}
         </Button>
       </AuthLayout>
     );
@@ -113,18 +112,18 @@ export function SetPasswordPage({
 
   return (
     <AuthLayout
-      titulo="Definir senha"
-      subtitulo="Escolha a senha da conta. As sessões abertas serão encerradas."
+      titulo={t('setPasswordPage.form.title')}
+      subtitulo={t('setPasswordPage.form.subtitle')}
       irPara={irPara}
       rodapeDoCartao={
         <>
-          O link expirou?{' '}
+          {t('setPasswordPage.form.expiredPrompt')}{' '}
           <button
             type="button"
             className={styles.link}
             onClick={() => irPara('/esqueci-senha')}
           >
-            Pedir outro
+            {t('setPasswordPage.form.requestAnother')}
           </button>
         </>
       }
@@ -137,7 +136,7 @@ export function SetPasswordPage({
 
       <form className={styles.form} onSubmit={submeter}>
         <Input
-          label="Senha nova"
+          label={t('setPasswordPage.form.newPasswordLabel')}
           type="password"
           autoComplete="new-password"
           required
@@ -147,10 +146,10 @@ export function SetPasswordPage({
           value={senha}
           onChange={(e) => setSenha(e.target.value)}
           error={erroDeSenha}
-          hint={`Pelo menos ${MINIMO_DE_SENHA} caracteres. Uma frase longa vale mais que símbolos.`}
+          hint={t('setPasswordPage.form.passwordHint', { minimo: MINIMO_DE_SENHA })}
         />
         <Input
-          label="Repita a senha"
+          label={t('setPasswordPage.form.confirmPasswordLabel')}
           type="password"
           autoComplete="new-password"
           required
@@ -163,7 +162,7 @@ export function SetPasswordPage({
         />
         <div className={styles.acoes}>
           <Button type="submit" fullWidth size="lg" loading={enviando}>
-            {enviando ? 'Definindo…' : 'Definir senha'}
+            {enviando ? t('setPasswordPage.form.submitting') : t('setPasswordPage.form.submit')}
           </Button>
         </div>
       </form>

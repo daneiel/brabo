@@ -1,171 +1,186 @@
-# 0030 — Política de branches mecanizada
+# 0030 — Mechanized branch policy
 
-## Contexto
+## Context
 
-A política de branches do Brabo existia como apresentação e como convenção no
-`CLAUDE.md`: esteira `dev → qa → main`, taxonomia de branches, promoção só entre
-degraus vizinhos, versão calculada, hotfix voltando por retropropagação.
+Brabo's branch policy existed as a presentation and as a convention in
+`CLAUDE.md`: the `dev → qa → main` pipeline, branch taxonomy, promotion
+only between neighboring rungs, calculated version, hotfix flowing back via
+backmerge.
 
-Convenção escrita não é mecanismo. Enquanto a regra mora só no documento, ela
-depende de todo mundo lembrar dela na hora errada — e a hora errada é sempre a
-de incidente, às 3h da manhã, quando lembrar é justamente o que não acontece.
-Pior: uma regra que ninguém verifica não tem como ser violada *visivelmente*.
-Ela é violada em silêncio, e o sintoma aparece meses depois, longe da causa.
+A written convention isn't a mechanism. As long as the rule lives only in
+the document, it depends on everyone remembering it at the wrong moment —
+and the wrong moment is always the incident, at 3am, when remembering is
+precisely what doesn't happen. Worse: a rule nobody checks has no way of
+being violated *visibly*. It gets violated silently, and the symptom
+appears months later, far from the cause.
 
-A FASE 6 mecanizou a política inteira no próprio repositório do Brabo. Este ADR
-fecha a fase: mapeia **regra → mecanismo**, registra o que foi cortado com o
-custo de reintroduzir cada corte, e separa o que disso vira template para o
-bootstrap de Gitflow do produto — que é fase futura, não código agora.
+PHASE 6 mechanized the entire policy in Brabo's own repository. This ADR
+closes the phase: it maps **rule → mechanism**, records what was cut along
+with the cost of reintroducing each cut, and separates what of this becomes
+a template for the product's Gitflow bootstrap — which is a future phase,
+not code now.
 
-Duas restrições moldaram tudo. A primeira: **este é um repositório de usuário,
-não de organização.** Times do GitHub não existem aqui, e o `GITHUB_TOKEN` não
-lê membership de time nem em organização. A segunda: **o produto não pode ser
-tocado nesta fase.** A FASE 6 é CI/CD do repositório; o que ela ensina ao
-produto vira este ADR, não código.
+Two constraints shaped everything. The first: **this is a user repository,
+not an organization's.** GitHub Teams don't exist here, and the
+`GITHUB_TOKEN` doesn't read team membership, not even within an
+organization. The second: **the product cannot be touched in this phase.**
+PHASE 6 is the Brabo repository's own CI/CD; whatever it teaches the
+product becomes this ADR, not code.
 
-## Decisão
+## Decision
 
-### Regra → mecanismo
+### Rule → mechanism
 
-| regra da política | mecanismo | onde a lógica vive |
+| policy rule | mechanism | where the logic lives |
 |---|---|---|
-| nome `funcao/descritivo`, regex `^.{0,15}/\S{0,32}$` | check `pr-police` | `scripts/ci/pr-police.ts` |
-| prefixo na lista fechada de 9 funções | `pr-police` | idem |
-| trabalho nasce de `dev`, `hotfix` de `main` | `pr-police`, por **contaminação** | idem |
-| destino coerente com a função | `pr-police` | idem |
-| promoção só entre degraus vizinhos | `pr-police` + `promote` | `pr-police.ts`, `version.ts` |
-| label de família em todo PR | `pr-police` | idem |
-| aprovação exigida por destino | check `approval-ladder` | `scripts/ci/approval-ladder.ts` |
-| dois modos de aprovação por variável | `approval-ladder` | idem |
-| pessoas distintas em `main` | emparelhamento por backtracking | idem |
-| versão pelo maior impacto do ciclo | `promote` + `tag-release` | `scripts/ci/version.ts` |
-| `N` incrementa por reprovação | contagem das tags existentes | idem |
-| final ancorada na última `-qa.N` | `tag-release`, por **árvore + pai** | idem |
-| hotfix gera PATCH sem âncora | `tag-release`, pelo **segundo pai** | idem |
-| push direto bloqueado | rulesets | `docs/reference/rulesets.md` |
-| retropropagação obrigatória e ordenada | check `backmerge-gate` | `scripts/ci/gate.ts` |
-| merge em permanente é sempre manual | ausência de mecanismo, por decisão | — |
+| name `function/description`, regex `^.{0,15}/\S{0,32}$` | `pr-police` check | `scripts/ci/pr-police.ts` |
+| prefix from the closed list of 9 functions | `pr-police` | same |
+| work is born from `dev`, `hotfix` from `main` | `pr-police`, by **contamination** | same |
+| destination coherent with the function | `pr-police` | same |
+| promotion only between neighboring rungs | `pr-police` + `promote` | `pr-police.ts`, `version.ts` |
+| family label on every PR | `pr-police` | same |
+| approval required by destination | `approval-ladder` check | `scripts/ci/approval-ladder.ts` |
+| two approval modes by variable | `approval-ladder` | same |
+| distinct people on `main` | pairing by backtracking | same |
+| version by the cycle's biggest impact | `promote` + `tag-release` | `scripts/ci/version.ts` |
+| `N` increments on rejection | count of existing tags | same |
+| final anchored to the last `-qa.N` | `tag-release`, by **tree + parent** | same |
+| hotfix produces a PATCH with no anchor | `tag-release`, via the **second parent** | same |
+| direct push blocked | rulesets | `docs/reference/rulesets.md` |
+| backmerge mandatory and ordered | `backmerge-gate` check | `scripts/ci/gate.ts` |
+| merge into a permanent branch is always manual | absence of mechanism, by decision | — |
 
-Toda lógica é **script testável**; workflow é casca fina que lê ambiente e
-chama o script. São 149 testes cobrindo caminho felizes e casos de falha.
+All the logic is a **testable script**; the workflow is a thin shell that
+reads the environment and calls the script. There are 149 tests covering
+happy paths and failure cases.
 
-### As sete lições que valeram mais que o código
+### The seven lessons that mattered more than the code
 
-Elas estão aqui porque cada uma custou uma descoberta empírica, e nenhuma está
-óbvia em documentação de terceiros.
+They're recorded here because each one cost an empirical discovery, and
+none of them is obvious from third-party documentation.
 
-**1. Cada família de gatilho lê o workflow de um lugar diferente.**
-`pull_request` e `push` leem da branch do evento; `pull_request_target` e
-`workflow_dispatch`, da branch **padrão**. Com `pull_request_target` o
-`pr-police` teve **zero execuções** — a `main` estava 65 commits atrás. É
-ovo-e-galinha: o check que faz a esteira andar precisa já estar na `main` para
-poder rodar.
+**1. Each trigger family reads the workflow from a different place.**
+`pull_request` and `push` read from the event's branch; `pull_request_target`
+and `workflow_dispatch`, from the **default** branch. With
+`pull_request_target`, `pr-police` had **zero executions** — `main` was 65
+commits behind. It's a chicken-and-egg problem: the check that makes the
+pipeline move needs to already be on `main` to be able to run.
 
-**2. Tag e PR criados com o `GITHUB_TOKEN` não disparam workflow.** Regra contra
-recursão. A Release da `v0.2.0` nunca publicou por isso, e um PR de
-retropropagação sem check nunca ficaria verde — a cadeia travaria para sempre.
-Daí o `BRABO_BOT_TOKEN`.
+**2. A tag or PR created with the `GITHUB_TOKEN` doesn't trigger a
+workflow.** A rule against recursion. The `v0.2.0` release never published
+because of this, and a backmerge PR with no check would never go green —
+the chain would be stuck forever. Hence `BRABO_BOT_TOKEN`.
 
-**3. "Não consegui verificar" nunca pode virar "está tudo bem".** O
-`promotion-check` lia a configuração de merge com `gh api --jq` e comparava com
-`'true'`. Quando o token não tem permissão, o comando **tem sucesso devolvendo
-vazio** — e vazio não é `'true'`, então a verificação passava a reprovar por
-motivo errado, ou pior, a aprovar. Hoje há três estados, e a impossibilidade
-vira aviso enquanto a garantia real olha o fato consumado: o commit tem dois
-pais.
+**3. "Couldn't verify" can never become "everything's fine".** The
+`promotion-check` read the merge configuration with `gh api --jq` and
+compared it against `'true'`. When the token lacks permission, the command
+**succeeds and returns empty** — and empty isn't `'true'`, so the check
+started failing for the wrong reason, or worse, approving. Today there are
+three states, and the impossibility becomes a warning while the real
+guarantee looks at the fact on the ground: the commit has two parents.
 
-**4. Igualdade de árvore é mais forte que igualdade de commit.** A âncora
-comparava shas — impossível de satisfazer, porque `--no-ff` cria um commit novo.
-Comparar **árvore** e exigir que a `-qa.N` seja **pai** é mais forte: se o outro
-lado do merge tivesse trazido um arquivo, a árvore mudaria.
+**4. Tree equality is stronger than commit equality.** The anchor used to
+compare shas — impossible to satisfy, because `--no-ff` creates a new
+commit. Comparing the **tree** and requiring `-qa.N` to be a **parent** is
+stronger: if the other side of the merge had brought in a file, the tree
+would have changed.
 
-**5. Contaminação, não origem.** Descobrir de onde uma branch nasceu é
-indecidível a posteriori: com `P ⊆ Q ⊆ head`, o argmin de distância escolhe a
-permanente mais avançada contida, não a de origem. A pergunta certa é outra —
-"esta branch carrega o topo de uma permanente mais avançada que a que ela
-declara?" — e essa tem resposta.
+**5. Contamination, not origin.** Figuring out where a branch was born from
+is undecidable after the fact: with `P ⊆ Q ⊆ head`, the distance argmin
+picks the most advanced permanent branch contained in it, not the one it
+originated from. The right question is different — "does this branch carry
+the tip of a more advanced permanent branch than the one it claims?" — and
+that one has an answer.
 
-**6. Isenção por autor, nunca por prefixo.** Isentar branches que começam com
-`dependabot/` seria uma brecha aberta: qualquer um nomeia uma branch assim.
+**6. Exemption by author, never by prefix.** Exempting branches that start
+with `dependabot/` would be an open door: anyone can name a branch that
+way.
 
-**7. Estado declarado tem que ser conferível.** O `.release/gate.json` viaja nos
-PRs de retropropagação para `qa` e `dev`; uma promoção pode subir aquela cópia
-velha de volta e ressuscitar uma trava sem hotfix por trás — travando o
-repositório para sempre, porque não há retropropagação pendente que a resolva. O
-check pergunta ao git se o hotfix já desceu e deixa cair travas satisfeitas.
-`locked` é o registro da intenção; a contenção é a verdade.
+**7. Declared state has to be checkable.** `.release/gate.json` travels
+along in the backmerge PRs to `qa` and `dev`; a promotion could push that
+stale copy back up and resurrect a lock with no hotfix behind it — locking
+the repository forever, because there'd be no pending backmerge to resolve
+it. The check asks git whether the hotfix has already come down and lets
+satisfied locks fall away. `locked` is the record of intent; containment is
+the truth.
 
-### O que foi cortado, e o custo de voltar
+### What was cut, and the cost of bringing it back
 
-| cortado | por quê | o que custa reintroduzir |
+| cut | why | what reintroducing it costs |
 |---|---|---|
-| degrau `rc` / UAT | sem ambiente e sem gente para exercê-lo, seria degrau cerimonial | criar a branch, uma linha em `ESCADA`, uma em `ESTAGIO_POR_BRANCH`, uma na escada de aprovação, e a ordem do gate ganha um degrau — a cadeia do hotfix passa a ser quatro PRs |
-| taxonomia com `rcfix` | morreu com o degrau `rc` | entrada em `FUNCOES_DE_CORRECAO_ALTA` mais os testes de origem e destino |
-| times do GitHub para papéis | repo de usuário não tem times, e o `GITHUB_TOKEN` não lê membership nem em org | papéis são listas de handles em variáveis; migrar para times exigiria a org e um token com `read:org` |
-| deploy | passo que nunca roda apodrece: ninguém o testa, e no dia de ligar estará errado | workflow **próprio** disparado pela tag, mais os Environments — nada a religar aqui |
-| GitHub Environments | idem | criar quando houver ambiente |
-| `GOVERNANCE.md` | cortado na FASE DOC; o critério mora no `branching-policy.md` | escrever o arquivo e mover a seção de papéis para lá |
+| `rc` / UAT rung | no environment and no people to exercise it, it would be a ceremonial rung | creating the branch, one line in `ESCADA`, one in `ESTAGIO_POR_BRANCH`, one in the approval ladder, and the gate's ordering gains a rung — the hotfix chain becomes four PRs |
+| `rcfix` taxonomy | died with the `rc` rung | an entry in `FUNCOES_DE_CORRECAO_ALTA` plus the origin and destination tests |
+| GitHub Teams for roles | a user repo has no teams, and the `GITHUB_TOKEN` doesn't read membership even within an org | roles are lists of handles in variables; migrating to teams would require the org and a token with `read:org` |
+| deploy | a step that never runs rots: nobody tests it, and on the day it's turned on it'll be wrong | its OWN workflow triggered by the tag, plus the Environments — nothing here to reconnect |
+| GitHub Environments | same | create them when there's an environment |
+| `GOVERNANCE.md` | cut in the DOC PHASE; the criterion lives in `branching-policy.md` | write the file and move the roles section there |
 
-A escada de aprovação em modo `community` **não** foi cortada: está
-implementada, testada e desligada por configuração. A diferença é deliberada —
-código desligado por variável, com teste dos dois lados, é demonstrável hoje;
-passo de pipeline desligado por variável não é.
+The `community` mode approval ladder was **not** cut: it's implemented,
+tested and turned off by configuration. The difference is deliberate: code
+disabled by a variable, with tests for both sides, is demonstrable today; a
+pipeline step disabled by a variable is not.
 
-### O que vira template do bootstrap do produto
+### What becomes a template for the product's bootstrap
 
-O produto provisiona repositórios com Gitflow (FASE 2). O que a FASE 6 aprendeu
-e que deve entrar nesse template, em fase futura:
+The product provisions repositories with Gitflow (PHASE 2). What PHASE 6
+learned that should go into that template, in a future phase:
 
-| entra no template | não entra |
+| goes into the template | doesn't |
 |---|---|
-| a esteira e a taxonomia como **dados**, não código — o produto tem projetos com escadas diferentes | os workflows do Brabo copiados literalmente |
-| o gate de retropropagação: é a regra que mais custa quando falta | o `BRABO_BOT_TOKEN` — cada repo precisa da sua credencial |
-| versão calculada da tag, sem PR de bump | as listas de aprovadores deste repo |
-| "não consegui verificar" como terceiro estado explícito nos gates | — |
-| isenção de bot por autor | — |
+| the pipeline and taxonomy as **data**, not code — the product has projects with different ladders | Brabo's workflows copied literally |
+| the backmerge gate: it's the rule that costs the most when missing | `BRABO_BOT_TOKEN` — each repo needs its own credential |
+| version calculated from the tag, with no bump PR | this repo's lists of approvers |
+| "couldn't verify" as an explicit third state in the gates | — |
+| bot exemption by author | — |
 
-O `GitProvider` já expõe `capabilities`, e o ADR 0028 registra que proteção de
-branch **divirge entre providers**. O template terá de degradar: onde não houver
-ruleset, a regra vira check e a mensagem diz o que não pôde ser garantido — em
-vez de fingir garantia.
+`GitProvider` already exposes `capabilities`, and ADR 0028 records that
+branch protection **diverges between providers**. The template will have
+to degrade gracefully: where there's no ruleset, the rule becomes a check
+and the message says what couldn't be guaranteed — instead of faking a
+guarantee.
 
-## Consequências
+## Consequences
 
-**A política deixou de depender de memória.** Nome errado de branch, promoção
-pulando degrau, hotfix sem retropropagação e tag final desancorada são agora
-falhas de check com mensagem que ensina, não descobertas tardias.
+**The policy stopped depending on memory.** A wrong branch name, a
+promotion skipping a rung, a hotfix with no backmerge and an unanchored
+final tag are now check failures with a message that teaches, not
+late-discovered surprises.
 
-**A esteira foi exercitada de ponta a ponta, não só testada em unidade.**
-`v0.1.0 → v0.2.0-dev.1..4 → -qa.1..3 → v0.2.0`, com uma reprovação encenada
-entre os carimbos de `qa` para provar que o `N` conta sozinho. A final ancorou
-na `-qa.3` com árvore idêntica.
+**The pipeline was exercised end to end, not just unit tested.**
+`v0.1.0 → v0.2.0-dev.1..4 → -qa.1..3 → v0.2.0`, with one staged rejection
+between `qa` stamps to prove `N` counts on its own. The final tag anchored
+on `-qa.3` with an identical tree.
 
-**Um check required que nunca roda trava o PR para sempre.** É a consequência
-mais incômoda: a lista de checks obrigatórios é agora um acoplamento entre o
-ruleset (aplicado à mão) e os workflows (versionados). Job novo no CI ou entra
-na lista de `rulesets.md`, ou fica de fora de propósito e alguém escreve por quê.
-É por isso que o `backmerge-gate` não tem `if:` no job: veredito velho colado a
-um sha que não rodou liberaria merge durante trava.
+**A required check that never runs locks the PR forever.** This is the
+most uncomfortable consequence: the list of required checks is now a
+coupling between the ruleset (applied by hand) and the workflows
+(versioned). A new CI job either goes into `rulesets.md`'s list, or stays
+out on purpose and someone writes down why. That's why `backmerge-gate` has
+no `if:` on its job: an old verdict attached to a sha that never ran would
+release a merge during a lock.
 
-**O bypass do gate é do ator, não do caminho.** Rulesets do GitHub não
-restringem bypass por path. Quem pode escrever `.release/gate.json` pode,
-tecnicamente, escrever qualquer coisa em `main`. O que limita de fato é o
-workflow e o histórico. Fica registrado como limitação da ferramenta.
+**The gate's bypass belongs to the actor, not the path.** GitHub rulesets
+don't restrict bypass by path. Whoever can write `.release/gate.json` can,
+technically, write anything to `main`. What actually limits this is the
+workflow and the history. Recorded as a tool limitation.
 
-**Aplicação de ruleset continua manual.** O repositório versiona a fonte
-(`docs/reference/rulesets.md`); aplicar é ato do owner. Automatizar exigiria um
-token com poder de mudar as próprias proteções — o que anularia o ponto delas.
+**Applying the ruleset remains manual.** The repository versions the
+source (`docs/reference/rulesets.md`); applying it is the owner's act.
+Automating it would require a token with the power to change its own
+protections — which would defeat their purpose.
 
-**A concentração de papéis no owner está escrita, não subentendida.**
-Responsável de release e plantão de hotfix são o owner enquanto
-`APPROVAL_MODE=solo`. As duas atribuições reabrem na migração para `community`,
-onde o fallback de plantão terá de ser exceção documentada, nunca burla.
+**The concentration of roles in the owner is written down, not implied.**
+Release owner and hotfix on-call are the owner while `APPROVAL_MODE=solo`.
+Both assignments reopen with the migration to `community`, where the
+on-call fallback will have to be a documented exception, never a
+workaround.
 
-**Nada do produto mudou.** Nenhuma linha de `apps/` foi tocada. O que a fase
-ensinou ao produto está na tabela de template acima, e virou plano, não código.
+**Nothing in the product changed.** Not a single line under `apps/` was
+touched. What the phase taught the product is in the template table above,
+and became a plan, not code.
 
-Referências: ADR [0028](0028-protecao-de-branch-divergencia-entre-providers.md)
-(divergência de proteção entre providers),
-[0029](0029-sincronizacao-continua-da-documentacao.md) (o mecanismo de docs que
-esta fase usa), e a política completa em
+References: ADR [0028](0028-protecao-de-branch-divergencia-entre-providers.md)
+(protection divergence between providers),
+[0029](0029-sincronizacao-continua-da-documentacao.md) (the documentation
+mechanism this phase uses), and the full policy in
 [branching-policy](../explanation/branching-policy.md).

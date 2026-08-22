@@ -1136,6 +1136,24 @@ const sidebar: SidebarsConfig = {
     },
     {
       type: "category",
+      label: "usuários",
+      items: [
+        {
+          type: "doc",
+          id: "docs/reference/api/user-preferences-controller-get",
+          label: "Lê a preferência de idioma do usuário autenticado",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/user-preferences-controller-update",
+          label: "Grava a preferência de idioma do usuário autenticado",
+          className: "api-method patch",
+        },
+      ],
+    },
+    {
+      type: "category",
       label: "workspaces",
       items: [
         {

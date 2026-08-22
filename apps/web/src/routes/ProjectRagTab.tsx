@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getRagCoverage, mensagemDaApi, reindexRag, searchRag } from '../lib/api-client';
 import { useCurrentWorkspaceWithRole } from '../lib/hooks';
@@ -11,11 +12,13 @@ import { useToast } from '../components/ui/ToastProvider';
 import { AlertIcon, SearchIcon } from '../components/ui/icons';
 import styles from './ProjectRagTab.module.css';
 
-const ESCOPOS: { chave: RagChunkScope; rotulo: string }[] = [
-  { chave: 'docs', rotulo: 'Docs' },
-  { chave: 'adr', rotulo: 'ADR' },
-  { chave: 'session', rotulo: 'Sessões' },
-];
+const ORDEM_DOS_ESCOPOS: RagChunkScope[] = ['docs', 'adr', 'session'];
+
+const CHAVE_DO_ESCOPO: Record<RagChunkScope, string> = {
+  docs: 'rag.scopes.docs',
+  adr: 'rag.scopes.adr',
+  session: 'rag.scopes.session',
+};
 
 /**
  * A tela do Chat RAG (PROGRAMA 28, Onda 5, frente G3) — busca híbrida sobre o
@@ -38,6 +41,7 @@ const ESCOPOS: { chave: RagChunkScope; rotulo: string }[] = [
  * (RN-202/ADR 0078 continuam valendo para a outra aba).
  */
 export function ProjectRagTab({ projectId }: { projectId: string }) {
+  const { t } = useTranslation('sessions');
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const { data: comPapel } = useCurrentWorkspaceWithRole();
@@ -68,15 +72,22 @@ export function ProjectRagTab({ projectId }: { projectId: string }) {
       void queryClient.invalidateQueries({ queryKey: ['rag-coverage', projectId] });
       void queryClient.invalidateQueries({ queryKey: ['rag-search', projectId] });
       showToast({
-        title: 'Reindexação concluída',
-        message: `${relatorio.docs.docsChunks + relatorio.docs.adrChunks} chunk(s) de docs/ADR · ${relatorio.sessions.indexed} de ${relatorio.sessions.total} sessão(ões)${relatorio.embeddingAvailable ? '' : ' · embedding indisponível, indexado só com o sinal léxico'}`,
+        title: t('rag.reindexSuccessTitle'),
+        message: t('rag.reindexSuccessMessage', {
+          docsAdrChunks: relatorio.docs.docsChunks + relatorio.docs.adrChunks,
+          indexed: relatorio.sessions.indexed,
+          total: relatorio.sessions.total,
+          embeddingSuffix: relatorio.embeddingAvailable
+            ? ''
+            : t('rag.embeddingUnavailableSuffix'),
+        }),
         tone: relatorio.embeddingAvailable ? 'success' : 'warning',
       });
     },
     onError: (erro) =>
       showToast({
-        title: 'Reindexação falhou',
-        message: mensagemDaApi(erro, 'A api não respondeu. O índice não foi alterado.'),
+        title: t('rag.reindexErrorTitle'),
+        message: mensagemDaApi(erro, t('rag.reindexErrorDefaultMessage')),
         tone: 'danger',
       }),
   });
@@ -99,12 +110,8 @@ export function ProjectRagTab({ projectId }: { projectId: string }) {
     <div className={styles.pagina}>
       <div className={styles.cabecalho}>
         <div>
-          <h2 className={styles.titulo}>Chat RAG</h2>
-          <p className={styles.subtitulo}>
-            Busca híbrida (vetor + léxico) sobre docs/ADR do repositório e as
-            conversas registradas neste projeto — nunca código-fonte, nunca
-            Pull Request.
-          </p>
+          <h2 className={styles.titulo}>{t('rag.title')}</h2>
+          <p className={styles.subtitulo}>{t('rag.subtitle')}</p>
         </div>
         {podeReindexar && (
           <Button
@@ -112,19 +119,19 @@ export function ProjectRagTab({ projectId }: { projectId: string }) {
             onClick={() => reindexMutation.mutate()}
             loading={reindexMutation.isPending}
           >
-            {reindexMutation.isPending ? 'Reindexando…' : 'Reindexar agora'}
+            {reindexMutation.isPending ? t('rag.reindexButton.loading') : t('rag.reindexButton.idle')}
           </Button>
         )}
       </div>
 
       {coverageQuery.isError && (
         <ErroDeCarregamento
-          titulo="Não consegui carregar a cobertura do índice."
+          titulo={t('rag.coverageError')}
           erro={coverageQuery.error}
           onTentarDeNovo={() => void coverageQuery.refetch()}
         />
       )}
-      {coverageQuery.isLoading && <div className={styles.estado}>Carregando cobertura…</div>}
+      {coverageQuery.isLoading && <div className={styles.estado}>{t('rag.loadingCoverage')}</div>}
       {coverageQuery.data && <RagCoveragePanel coverage={coverageQuery.data} />}
 
       <form className={styles.formulario} onSubmit={submeter}>
@@ -133,39 +140,41 @@ export function ProjectRagTab({ projectId }: { projectId: string }) {
             className={styles.input}
             value={termo}
             onChange={(e) => setTermo(e.target.value)}
-            placeholder="Buscar no índice (mín. 2 caracteres)"
-            aria-label="Termo de busca"
+            placeholder={t('rag.searchPlaceholder')}
+            aria-label={t('rag.searchAriaLabel')}
           />
           <Button type="submit" disabled={termo.trim().length < 2}>
-            <SearchIcon size={14} /> Buscar
+            <SearchIcon size={14} /> {t('rag.searchButton')}
           </Button>
         </div>
-        <div className={styles.escoposFiltro} role="group" aria-label="Filtrar por escopo">
-          {ESCOPOS.map((e) => (
+        <div className={styles.escoposFiltro} role="group" aria-label={t('rag.scopeFilterAriaLabel')}>
+          {ORDEM_DOS_ESCOPOS.map((chave) => (
             <button
-              key={e.chave}
+              key={chave}
               type="button"
-              className={escopos.has(e.chave) ? `${styles.pill} ${styles.pillAtivo}` : styles.pill}
-              aria-pressed={escopos.has(e.chave)}
-              onClick={() => alternarEscopo(e.chave)}
+              className={escopos.has(chave) ? `${styles.pill} ${styles.pillAtivo}` : styles.pill}
+              aria-pressed={escopos.has(chave)}
+              onClick={() => alternarEscopo(chave)}
             >
-              {e.rotulo}
+              {t(CHAVE_DO_ESCOPO[chave])}
             </button>
           ))}
           <span className={styles.escoposNota}>
-            {escopos.size === 0 ? 'todos os escopos' : `${escopos.size} escopo(s) marcado(s)`}
+            {escopos.size === 0
+              ? t('rag.allScopes')
+              : t('rag.scopesMarked', { count: escopos.size })}
           </span>
         </div>
       </form>
 
       <div className={styles.resultados}>
-        {!buscado && <div className={styles.estado}>Digite um termo e busque no índice do projeto.</div>}
+        {!buscado && <div className={styles.estado}>{t('rag.emptyPrompt')}</div>}
 
-        {buscado && searchQuery.isLoading && <div className={styles.estado}>Buscando…</div>}
+        {buscado && searchQuery.isLoading && <div className={styles.estado}>{t('rag.searching')}</div>}
 
         {buscado && searchQuery.isError && (
           <ErroDeCarregamento
-            titulo="Não consegui buscar agora."
+            titulo={t('rag.searchError')}
             erro={searchQuery.error}
             onTentarDeNovo={() => void searchQuery.refetch()}
           />
@@ -176,13 +185,13 @@ export function ProjectRagTab({ projectId }: { projectId: string }) {
             {!searchQuery.data.vectorAvailable && (
               <div className={styles.avisoVetor} role="status">
                 <AlertIcon size={14} />
-                Busca só por palavra-chave — embedding indisponível
+                {t('rag.vectorUnavailable')}
                 {searchQuery.data.vectorUnavailableReason && `: ${searchQuery.data.vectorUnavailableReason}`}
               </div>
             )}
 
             {searchQuery.data.hits.length === 0 ? (
-              <div className={styles.estado}>Nenhum resultado para “{searchQuery.data.query}”.</div>
+              <div className={styles.estado}>{t('rag.noResults', { query: searchQuery.data.query })}</div>
             ) : (
               <div className={styles.listaResultados}>
                 {searchQuery.data.hits.map((hit) => (

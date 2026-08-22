@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Terminal as XTermTerminal } from '@xterm/xterm';
 import type { FitAddon as XTermFitAddon } from '@xterm/addon-fit';
 import { connectTerminalChannel, type TerminalChannel } from '../../lib/terminal-channel';
@@ -58,6 +59,7 @@ function temaDoXterm() {
 }
 
 export function TerminalPanel({ projectId }: { projectId: string }) {
+  const { t } = useTranslation('terminal');
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [estado, setEstado] = useState<EstadoDoTerminal>({ tipo: 'carregando' });
   // Reconsulta a conexão sem fechar/reabrir a aba — o botão "Já instalei,
@@ -120,8 +122,7 @@ export function TerminalPanel({ projectId }: { projectId: string }) {
           if (cancelado) return;
           setEstado({
             tipo: 'erro',
-            mensagem:
-              'A conexão com o runner caiu. Feche e reabra esta aba para tentar de novo.',
+            mensagem: t('terminalPanel.connectionLost'),
           });
         },
       });
@@ -151,14 +152,14 @@ export function TerminalPanel({ projectId }: { projectId: string }) {
       canal?.fechar();
       term?.dispose();
     };
-  }, [projectId, tentativa]);
+  }, [projectId, tentativa, t]);
 
   return (
     <div className={styles.wrapper}>
       {estado.tipo === 'carregando' && (
         <div className={styles.overlay}>
           <Skeleton width={220} height={20} radius={999} />
-          <p className={styles.overlayTexto}>Abrindo terminal…</p>
+          <p className={styles.overlayTexto}>{t('terminalPanel.loading')}</p>
         </div>
       )}
 

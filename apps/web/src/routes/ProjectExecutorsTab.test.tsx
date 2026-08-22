@@ -1,9 +1,17 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterAll } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
 import { ProjectExecutorsTab } from './ProjectExecutorsTab';
 import { ToastProvider } from '../components/ui/ToastProvider';
 import { ApiError } from '../lib/api-client';
+// A instância REAL do app (não uma isolada como `AccountPage.test.tsx`
+// usa): `agent-status.ts` (não-React) resolve `breakerReasonFor`/
+// `subagentOutcomeLabel` chamando `i18n.t(...)` direto no singleton
+// global de `lib/i18n.ts` — uma instância isolada só neste teste não
+// alcançaria essas duas chamadas, que ficariam sempre no idioma default
+// real do app. `changeLanguage('pt-BR')` cobre os dois caminhos (hook e
+// chamada direta) de uma vez, porque são a MESMA instância.
+import i18n from '../lib/i18n';
 import type {
   Architecture,
   Handoff,
@@ -184,8 +192,9 @@ function montar() {
   );
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   vi.clearAllMocks();
+  await i18n.changeLanguage('pt-BR');
   getActiveExecutionSession.mockResolvedValue(SESSAO);
   listSessionEvents.mockResolvedValue({ items: EVENTOS, nextCursor: null });
   listHandoffs.mockResolvedValue([HANDOFF_INFRA]);
@@ -209,6 +218,13 @@ beforeEach(() => {
     },
   ]);
   getProjectsSummary.mockResolvedValue([resumo()]);
+});
+
+// Restaura o default do app depois deste arquivo — a instância é o
+// singleton REAL (`../lib/i18n`), então deixar em `pt-BR` vazaria para
+// qualquer teste seguinte que compartilhe o mesmo registro de módulos.
+afterAll(() => {
+  void i18n.changeLanguage('en');
 });
 
 describe('ProjectExecutorsTab (FASE 27 — RN-121)', () => {

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link } from '@tanstack/react-router';
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -47,6 +48,7 @@ interface ProjectOverviewTabProps {
 }
 
 export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
+  const { t } = useTranslation('overview');
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const { latest: latestSession } = useLatestSession(projectId);
@@ -176,7 +178,7 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
       await queryClient.invalidateQueries({ queryKey: ['agent-autonomy', projectId] });
     } catch {
       showToast({
-        title: 'Não foi possível mudar a autonomia',
+        title: t('team.autonomyErrorTitle'),
         message: `${agentId} · ${actionType}`,
         tone: 'danger',
       });
@@ -193,9 +195,9 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
       await queryClient.invalidateQueries({
         queryKey: ['session-events', projectId, sessionId],
       });
-      showToast({ title: 'Agente rearmado', tone: 'success' });
+      showToast({ title: t('team.rearmSuccess'), tone: 'success' });
     } catch {
-      showToast({ title: 'Não foi possível rearmar o agente', message: agentId, tone: 'danger' });
+      showToast({ title: t('team.rearmErrorTitle'), message: agentId, tone: 'danger' });
     }
   }
 
@@ -221,9 +223,13 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
     <div className={styles.layout}>
       <div className={styles.main}>
         <div className={styles.sectionRow}>
-          <h2 className={styles.sectionHeader}>Time de agentes</h2>
+          <h2 className={styles.sectionHeader}>{t('team.title')}</h2>
           <span className={styles.sectionCount}>
-            {overviewRoster.length} agentes · {workingCount} trabalhando · {waitingCount} aguardando
+            {t('team.summary', {
+              count: overviewRoster.length,
+              working: workingCount,
+              waiting: waitingCount,
+            })}
           </span>
         </div>
         <AgentTeamGrid
@@ -249,12 +255,8 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
             Os eventos vão FILTRADOS (sem dev/QA — RN-121): a aba Executores
             tem a própria árvore, e mostrar os mesmos ramos nas duas telas
             era duplicar a mesma pergunta sem ganhar nada. */}
-        <h2 className={styles.sectionHeader}>Linha do tempo do time</h2>
-        <div className={styles.sectionSub}>
-          Um ramo por agente, do primeiro marco ao que ele está fazendo agora.
-          Quem está ativo, ou entre os 5 mais recentes, abre sozinho — o resto
-          fica a um clique, com a contagem de marcos novos no cabeçalho.
-        </div>
+        <h2 className={styles.sectionHeader}>{t('timeline.title')}</h2>
+        <div className={styles.sectionSub}>{t('timeline.description')}</div>
         <AgentTimelineTree events={overviewEvents} projectId={projectId} />
 
         <ExecutionSection
@@ -274,9 +276,9 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
 
       <aside className={styles.aside}>
         <div className={styles.sectionRow}>
-          <h2 className={styles.sectionHeader}>Atividade</h2>
+          <h2 className={styles.sectionHeader}>{t('activity.title')}</h2>
           <span className={styles.sectionCount}>
-            {historico.carregados} eventos
+            {t('activity.count', { count: historico.carregados })}
           </span>
         </div>
         {/* Os três estados, e o ERRO antes do vazio (RN-088): `!dados` é
@@ -284,7 +286,7 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
             "nenhuma atividade" quando na verdade a api tinha recusado. */}
         {historico.isError ? (
           <ErroDeCarregamento
-            titulo="Não foi possível carregar a atividade."
+            titulo={t('activity.loadErrorTitle')}
             erro={historico.error}
             onTentarDeNovo={historico.refetch}
           />
@@ -326,6 +328,7 @@ function ExecutionSection({
   executionActivatedError: unknown;
   onRetryExecutionActivated: () => void;
 }) {
+  const { t } = useTranslation('overview');
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const { data: epics } = useBacklog(projectId);
@@ -371,7 +374,11 @@ function ExecutionSection({
       await activateExecution(projectId);
       await queryClient.invalidateQueries({ queryKey: ['sessions', projectId] });
     } catch {
-      showToast({ title: 'Erro', message: 'Não foi possível ativar a execução', tone: 'danger' });
+      showToast({
+        title: t('executionSection.errorTitle'),
+        message: t('executionSection.activateError'),
+        tone: 'danger',
+      });
     }
   }
 
@@ -382,8 +389,8 @@ function ExecutionSection({
       await queryClient.invalidateQueries({ queryKey: ['backlog', projectId] });
     } catch {
       showToast({
-        title: 'Erro',
-        message: 'Não foi possível desbloquear a task',
+        title: t('executionSection.errorTitle'),
+        message: t('executionSection.unblockError'),
         tone: 'danger',
       });
     }
@@ -401,28 +408,39 @@ function ExecutionSection({
       // aprovação existe para tornar visível.
       if (r.estado === 'aguardando_autorizacao') {
         showToast({
-          title: 'Precisa da sua autorização',
-          message: `A sessão já tem ${r.ativosNaSessao} agente(s), o teto do lead é ${r.maxParallel}. O pedido está em Aprovações.`,
+          title: t('executionSection.authorizationNeededTitle'),
+          message: t('executionSection.authorizationNeededMessage', {
+            count: r.ativosNaSessao,
+            max: r.maxParallel,
+          }),
           tone: 'warning',
         });
       } else if (r.estado === 'recusado') {
-        showToast({ title: 'Pedido recusado', message: r.motivo, tone: 'danger' });
+        showToast({
+          title: t('executionSection.requestDeniedTitle'),
+          message: r.motivo,
+          tone: 'danger',
+        });
       }
     } catch {
-      showToast({ title: 'Erro', message: 'Não foi possível pedir', tone: 'danger' });
+      showToast({
+        title: t('executionSection.errorTitle'),
+        message: t('executionSection.requestError'),
+        tone: 'danger',
+      });
     }
   }
 
   return (
     <div className={styles.arch}>
-      <div className={styles.sectionHeader}>Execução</div>
+      <div className={styles.sectionHeader}>{t('executionSection.title')}</div>
       {/* Os três estados da RN-088: sem eles, "resumo ainda não chegou"
           (`executionActivatedPending`) ficava indistinguível de "nunca
           ativou" e oferecia "Ativar execução" de novo para uma execução que
           já está rodando. */}
       {executionActivatedError ? (
         <ErroDeCarregamento
-          titulo="Não foi possível saber se a execução já foi ativada."
+          titulo={t('executionSection.activationErrorTitle')}
           erro={executionActivatedError}
           onTentarDeNovo={onRetryExecutionActivated}
         />
@@ -434,31 +452,38 @@ function ExecutionSection({
         <div className={styles.execIntro}>
           <div className={styles.sectionSub}>
             {hasModuleMap
-              ? 'Ative a execução para os dev agents implementarem o backlog em paralelo.'
-              : 'Defina o module_map (Arquiteto) antes de ativar a execução.'}
+              ? t('executionSection.introReady')
+              : t('executionSection.introNeedsModuleMap')}
           </div>
           <Button variant="primary" onClick={handleActivate} disabled={!hasModuleMap}>
-            Ativar execução
+            {t('executionSection.activate')}
           </Button>
         </div>
       ) : (
         <>
-          <div className={styles.archLabel}>Dev agents</div>
+          <div className={styles.archLabel}>{t('executionSection.devAgentsLabel')}</div>
           {agents.size === 0 ? (
-            <div className={styles.sectionSub}>Subindo os agentes…</div>
+            <div className={styles.sectionSub}>{t('executionSection.spinningUp')}</div>
           ) : (
             <div className={styles.moduleGrid}>
               {[...agents.entries()].map(([agentId, a]) => (
                 <div key={agentId} className={styles.moduleCard}>
                   <div className={styles.moduleName}>{agentId}</div>
-                  <div className={styles.moduleStack}>módulo: {a.module}</div>
+                  <div className={styles.moduleStack}>
+                    {t('executionSection.devAgentModule', { module: a.module })}
+                  </div>
                   {a.taskTitle && (
-                    <div className={styles.moduleResp}>task: {a.taskTitle}</div>
+                    <div className={styles.moduleResp}>
+                      {t('executionSection.devAgentTask', { task: a.taskTitle })}
+                    </div>
                   )}
                   {a.branch && <div className={styles.depChip}>{a.branch}</div>}
                   {a.iteration !== undefined && (
                     <div className={styles.moduleResp}>
-                      iteração {a.iteration} · custo {formatMicros(a.tokensSpentMicros ?? 0)}
+                      {t('executionSection.devAgentProgress', {
+                        iteration: a.iteration,
+                        cost: formatMicros(a.tokensSpentMicros ?? 0),
+                      })}
                     </div>
                   )}
                 </div>
@@ -469,20 +494,20 @@ function ExecutionSection({
           {blockedTasks.length > 0 && (
             <>
               <div className={styles.archLabel}>
-                Tasks bloqueadas
+                {t('executionSection.blockedTasksLabel')}
                 <Badge tone="danger">{blockedTasks.length}</Badge>
               </div>
               <ul className={styles.pendList}>
-                {blockedTasks.map((t) => (
-                  <li key={t.id} className={styles.pendItem}>
+                {blockedTasks.map((t2) => (
+                  <li key={t2.id} className={styles.pendItem}>
                     <span className={styles.pendTitle}>
-                      {t.title} <span className={styles.moduleStack}>({t.storyTitle})</span>
+                      {t2.title} <span className={styles.moduleStack}>({t2.storyTitle})</span>
                     </span>
                     <span className={styles.pendReason}>
-                      {t.blockedReason ?? 'sem diagnóstico'}
+                      {t2.blockedReason ?? t('executionSection.noDiagnosis')}
                     </span>
-                    <Button variant="secondary" onClick={() => handleUnblock(t.id)}>
-                      Desbloquear
+                    <Button variant="secondary" onClick={() => handleUnblock(t2.id)}>
+                      {t('executionSection.unblock')}
                     </Button>
                   </li>
                 ))}
@@ -493,17 +518,19 @@ function ExecutionSection({
           {suggestions.map((module) => (
             <div key={module} className={styles.suggestion}>
               <span>
-                Há tarefas independentes em <strong>{module}</strong> — subir um dev extra?
+                {t('executionSection.suggestionBefore')}
+                <strong>{module}</strong>
+                {t('executionSection.suggestionAfter')}
               </span>
               <Button variant="secondary" onClick={() => handleAccept(module)}>
-                Aceitar
+                {t('executionSection.accept')}
               </Button>
             </div>
           ))}
 
-          <div className={styles.archLabel}>Pull requests</div>
+          <div className={styles.archLabel}>{t('executionSection.pullRequestsLabel')}</div>
           {prs.length === 0 ? (
-            <div className={styles.sectionSub}>Nenhuma PR aberta ainda.</div>
+            <div className={styles.sectionSub}>{t('executionSection.noPullRequests')}</div>
           ) : (
             <ul className={styles.adrList}>
               {prs.map((pr) => (
@@ -514,7 +541,7 @@ function ExecutionSection({
                       {pr.url}
                     </a>
                   ) : (
-                    <span>PR</span>
+                    <span>{t('executionSection.pullRequestFallback')}</span>
                   )}
                 </li>
               ))}
@@ -541,23 +568,29 @@ function ArchitectureSummary({
   projectId: string;
   architecture?: Architecture;
 }) {
+  const { t } = useTranslation('overview');
   const moduleCount = architecture?.moduleMap?.modules.length ?? 0;
   const diagramaGerado = architecture?.c4Diagram.status === 'gerado';
 
   return (
     <div className={styles.arch}>
-      <div className={styles.sectionHeader}>Arquitetura</div>
+      <div className={styles.sectionHeader}>{t('architectureSummary.title')}</div>
       <div className={styles.sectionSub}>
         {moduleCount > 0
-          ? `${moduleCount} módulo${moduleCount === 1 ? '' : 's'} mapeado${moduleCount === 1 ? '' : 's'}, diagrama C4 ${diagramaGerado ? 'gerado' : 'pendente'}.`
-          : 'Sem arquitetura ainda — o Arquiteto gera o module_map e os ADRs.'}{' '}
+          ? t('architectureSummary.summary', {
+              count: moduleCount,
+              status: diagramaGerado
+                ? t('architectureSummary.statusGenerated')
+                : t('architectureSummary.statusPending'),
+            })
+          : t('architectureSummary.emptyState')}{' '}
         <Link
           to="/projects/$projectId"
           params={{ projectId }}
           search={{ tab: 'arquitetura' }}
           className={styles.adrLink}
         >
-          Ver arquitetura completa →
+          {t('architectureSummary.link')}
         </Link>
       </div>
     </div>

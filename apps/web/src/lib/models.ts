@@ -5,6 +5,7 @@ import type {
   ModelCategory,
   UsoDeModelo,
 } from './api-types';
+import i18n from './i18n';
 
 /**
  * Como o modelo CHEGA até a chamada (Fase 9c) — outra pergunta que a categoria
@@ -31,10 +32,22 @@ export function providerKind(provider: LLMProviderName | string): ProviderKind {
   return HUBS.includes(provider) ? 'hub' : 'direct';
 }
 
+/**
+ * Getters, não valores fixados na criação do objeto (mesmo padrão de
+ * `TIPOS_DE_SESSAO` em `session-kind.ts`): módulo não-React só é reavaliado
+ * uma vez, no import — um valor fixo congelaria a tradução no idioma vigente
+ * no boot. O getter resolve via `i18n.t()` a cada ACESSO.
+ */
 export const ROTULO_DO_GRUPO: Record<ProviderKind, string> = {
-  local: 'Local',
-  direct: 'APIs diretas',
-  hub: 'Hubs',
+  get local() {
+    return i18n.t('groupLabel.local', { ns: 'models' });
+  },
+  get direct() {
+    return i18n.t('groupLabel.direct', { ns: 'models' });
+  },
+  get hub() {
+    return i18n.t('groupLabel.hub', { ns: 'models' });
+  },
 };
 
 /** A ordem em que os grupos aparecem: do mais barato ao mais indireto. */
@@ -111,7 +124,9 @@ const ROTULO_DO_UPSTREAM: Record<string, string> = {
   'nvidia': 'NVIDIA',
   'moonshotai': 'Moonshot',
   'perplexity': 'Perplexity',
-  'outros': 'Sem fabricante declarado',
+  get outros() {
+    return i18n.t('upstreamLabel.outros', { ns: 'models' });
+  },
 };
 
 export function rotuloDoUpstream(upstream: string): string {
@@ -139,26 +154,42 @@ export const FACETAS: readonly {
 }[] = [
   {
     id: 'toolCalling',
-    rotulo: 'tool calling',
-    ajuda: 'Só os que um agente consegue usar (RN-040).',
+    get rotulo() {
+      return i18n.t('facets.toolCalling.label', { ns: 'models' });
+    },
+    get ajuda() {
+      return i18n.t('facets.toolCalling.help', { ns: 'models' });
+    },
     aceita: (m) => m.supportsToolCalling,
   },
   {
     id: 'vision',
-    rotulo: 'lê imagem',
-    ajuda: 'Aceita imagem na ENTRADA — print, diagrama, PDF renderizado.',
+    get rotulo() {
+      return i18n.t('facets.vision.label', { ns: 'models' });
+    },
+    get ajuda() {
+      return i18n.t('facets.vision.help', { ns: 'models' });
+    },
     aceita: (m) => m.supportsVision === true,
   },
   {
     id: 'reasoning',
-    rotulo: 'thinking',
-    ajuda: 'Expõe raciocínio explícito antes da resposta.',
+    get rotulo() {
+      return i18n.t('facets.reasoning.label', { ns: 'models' });
+    },
+    get ajuda() {
+      return i18n.t('facets.reasoning.help', { ns: 'models' });
+    },
     aceita: (m) => m.supportsReasoning === true,
   },
   {
     id: 'imagem',
-    rotulo: 'gera imagem',
-    ajuda: 'PRODUZ imagem — eixo diferente de saber lê-la.',
+    get rotulo() {
+      return i18n.t('facets.imagem.label', { ns: 'models' });
+    },
+    get ajuda() {
+      return i18n.t('facets.imagem.help', { ns: 'models' });
+    },
     aceita: (m) => m.generatesImage === true,
   },
 ];
@@ -168,11 +199,21 @@ export const FACETAS: readonly {
  * typecheck aqui até ganhar tradução, em vez de aparecer na tela pelo slug.
  */
 export const ROTULO_DO_USO: Record<UsoDeModelo, string> = {
-  codigo: 'código',
-  documentacao: 'documentação',
-  analise: 'análise',
-  imagem: 'imagem',
-  conversa: 'conversa',
+  get codigo() {
+    return i18n.t('uses.codigo', { ns: 'models' });
+  },
+  get documentacao() {
+    return i18n.t('uses.documentacao', { ns: 'models' });
+  },
+  get analise() {
+    return i18n.t('uses.analise', { ns: 'models' });
+  },
+  get imagem() {
+    return i18n.t('uses.imagem', { ns: 'models' });
+  },
+  get conversa() {
+    return i18n.t('uses.conversa', { ns: 'models' });
+  },
 };
 
 export const USOS_DE_MODELO = Object.keys(ROTULO_DO_USO) as UsoDeModelo[];
@@ -245,15 +286,33 @@ export function agruparModelos<M extends Model>(
  * aqui até ganhar rótulo, em vez de aparecer na tela pelo slug.
  */
 export const ROTULO_DO_PROVIDER: Record<LLMProviderName, string> = {
-  ollama: 'Ollama (local)',
-  anthropic: 'Anthropic',
-  openai: 'OpenAI',
-  openrouter: 'OpenRouter',
-  'nvidia-nim': 'NVIDIA NIM',
-  together: 'Together AI',
-  deepinfra: 'DeepInfra',
-  bitdeer: 'Bitdeer',
-  vultr: 'Vultr',
+  get ollama() {
+    return i18n.t('providerLabel.ollama', { ns: 'models' });
+  },
+  get anthropic() {
+    return i18n.t('providerLabel.anthropic', { ns: 'models' });
+  },
+  get openai() {
+    return i18n.t('providerLabel.openai', { ns: 'models' });
+  },
+  get openrouter() {
+    return i18n.t('providerLabel.openrouter', { ns: 'models' });
+  },
+  get 'nvidia-nim'() {
+    return i18n.t('providerLabel.nvidia-nim', { ns: 'models' });
+  },
+  get together() {
+    return i18n.t('providerLabel.together', { ns: 'models' });
+  },
+  get deepinfra() {
+    return i18n.t('providerLabel.deepinfra', { ns: 'models' });
+  },
+  get bitdeer() {
+    return i18n.t('providerLabel.bitdeer', { ns: 'models' });
+  },
+  get vultr() {
+    return i18n.t('providerLabel.vultr', { ns: 'models' });
+  },
 };
 
 /** Provider que exige chave: todos menos os locais, que rodam na máquina. */
@@ -290,17 +349,21 @@ const usd = new Intl.NumberFormat('en-US', {
  * que consome muito mais entrada que saída, não sai desse número.
  */
 export function formatarPreco(model: Model): string {
-  if (model.provider === 'ollama') return 'grátis';
+  if (model.provider === 'ollama') return i18n.t('price.free', { ns: 'models' });
   const entrada = usd.format(model.inputPricePerMillionMicros / 1_000_000);
   const saida = usd.format(model.outputPricePerMillionMicros / 1_000_000);
-  return `${entrada} / ${saida} por 1M`;
+  const per1m = i18n.t('price.per1m', { ns: 'models' });
+  return `${entrada} / ${saida} ${per1m}`;
 }
 
 export function formatarJanela(model: Model): string | null {
   if (!model.contextWindow) return null;
   return model.contextWindow >= 1000
-    ? `${Math.round(model.contextWindow / 1000)}k ctx`
-    : `${model.contextWindow} ctx`;
+    ? i18n.t('contextWindow.thousands', {
+        ns: 'models',
+        value: Math.round(model.contextWindow / 1000),
+      })
+    : i18n.t('contextWindow.exact', { ns: 'models', value: model.contextWindow });
 }
 
 /**

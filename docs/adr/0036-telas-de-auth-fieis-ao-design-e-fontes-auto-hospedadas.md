@@ -1,268 +1,293 @@
-# 0036 — Telas de auth fiéis ao design, e as três fontes que não carregavam
+# 0036 — Auth screens faithful to the design, and the three fonts that weren't loading
 
-## Contexto
+## Context
 
-As quatro telas de auth — `/login`, `/registrar`, `/esqueci-senha`,
-`/definir-senha` — nasceram no [ADR 0032](0032-corte-do-keycloak-e-sessao-em-cookie.md),
-junto com o corte do Keycloak. Nasceram **funcionais**: autenticam, tratam erro,
-navegam, e as propriedades de anti-enumeração do
-[ADR 0031](0031-auth-first-party-argon2id-e-rotacao-de-refresh.md) estão todas
-lá. O que nunca existiu foi design.
+The four auth screens — `/login`, `/registrar`, `/esqueci-senha`,
+`/definir-senha` — were born in [ADR 0032](0032-corte-do-keycloak-e-sessao-em-cookie.md),
+alongside the Keycloak cut. They were born **functional**: they
+authenticate, handle errors, navigate, and all of the anti-enumeration
+properties from [ADR 0031](0031-auth-first-party-argon2id-e-rotacao-de-refresh.md)
+are there. What never existed was design.
 
-O motivo está escrito no próprio código que elas substituíram: o Keycloak servia
-essa superfície, então ela nunca foi desenhada. `design/SCREENS.md`, a curadoria
-de telas do design system, **não tem seção de login** — a lacuna é anterior às
-telas. Elas foram compostas a partir dos specs de base do `design/COMPONENTS.md`
-e dos tokens semânticos, que é o melhor que se podia fazer sem mock, e o
-resultado é um card cinza sem marca, com o aviso de migração como prosa solta no
-rodapé e sem rodapé de página.
+The reason is written into the very code they replaced: Keycloak served
+that surface, so it was never designed. `design/SCREENS.md`, the design
+system's screen catalog, **has no login section** — the gap predates the
+screens. They were assembled from the base specs in
+`design/COMPONENTS.md` and from the semantic tokens, which is the best
+that could be done without a mock, and the result was a gray card with no
+branding, the migration notice as loose prose in the footer, and no page
+footer at all.
 
-Duas descobertas mudaram o enquadramento desta sessão.
+Two discoveries reshaped this session.
 
-### 1. O mock existe, mas não no repositório
+### 1. The mock exists, but not in the repository
 
-Um mock de login foi criado no projeto de design externo **depois** da curadoria
-de 2026-07-23 que gerou `design/tokens.css` e `design/COMPONENTS.md`:
+A login mock was created in the external design project **after** the
+2026-07-23 curation that produced `design/tokens.css` and
+`design/COMPONENTS.md`:
 
-- projeto `1c960ca8-5e00-4558-8ced-80dfbdf01027`, arquivo `Brabo Login.dc.html`.
+- project `1c960ca8-5e00-4558-8ced-80dfbdf01027`, file `Brabo Login.dc.html`.
 
-É a especificação autoritativa deste trabalho, e ela vive fora do controle de
-versão. Quem revisar isto depois não tem como reconferir sem acesso ao projeto de
-design — daí a obrigação, registrada na decisão 9, de a tela entrar em
-`design/SCREENS.md`.
+It's the authoritative spec for this work, and it lives outside version
+control. Whoever reviews this later has no way to double-check it without
+access to the design project — hence the obligation, recorded in decision
+9, that the screen enter `design/SCREENS.md`.
 
-### 2. As três fontes do design system não carregavam em produção
+### 2. The design system's three fonts weren't loading in production
 
-`apps/web/index.html` puxava Space Grotesk, Archivo e IBM Plex Mono do Google
-Fonts por `<link>`. A CSP da imagem de produção, em `docker/web/nginx.conf`, é:
+`apps/web/index.html` pulled Space Grotesk, Archivo and IBM Plex Mono from
+Google Fonts via `<link>`. The production image's CSP, in
+`docker/web/nginx.conf`, is:
 
 ```
 style-src 'self' 'unsafe-inline'; font-src 'self' data:
 ```
 
-Ela **bloqueia a folha de estilo e os arquivos de fonte**. Nenhum `.woff2` estava
-versionado. Então, no contêiner nginx, as três famílias caíam em fonte de
-sistema — e como `--font-heading` e `--font-body` compartilham o fallback
-`sans-serif`, **a distinção tipográfica entre título e corpo simplesmente
-desaparecia**. `index.css` tem `font-synthesis: none`, então o navegador não
-sintetizava nem o peso 700.
+It **blocks both the stylesheet and the font files**. No `.woff2` was
+checked in. So, in the nginx container, all three families fell back to
+the system font — and since `--font-heading` and `--font-body` share the
+`sans-serif` fallback, **the typographic distinction between heading and
+body simply disappeared**. `index.css` has `font-synthesis: none`, so the
+browser wasn't even synthesizing weight 700.
 
-Era invisível em `pnpm dev`, onde não há nginx nem CSP. E o comentário no topo de
-`design/tokens.css` afirmava que a carga acontecia "via `<link>` no `<head>` do
-HTML que consome este arquivo" — descrevendo com precisão um mecanismo que a
-própria imagem de produção proibia.
+This was invisible in `pnpm dev`, where there's no nginx and no CSP. And
+the comment at the top of `design/tokens.css` claimed loading happened
+"via `<link>` in the `<head>` of the HTML that consumes this file" —
+accurately describing a mechanism that the production image itself
+forbade.
 
-Isto não é hipótese nem dívida futura: era defeito em produção, na tipografia,
-que é a primeira coisa que o design system especifica.
+This isn't a hypothesis or future debt: it was a production defect, in
+typography, which is the very first thing the design system specifies.
 
-## Decisão
+## Decision
 
-### 1. Auto-hospedar as três famílias
+### 1. Self-host all three families
 
-Oito arquivos `.woff2` em `apps/web/public/fonts/`, com `@font-face` em
-`apps/web/src/index.css` e `font-display: swap`. O `<link>` do Google sai.
-Satisfaz a CSP atual **sem afrouxá-la** — a alternativa era acrescentar
-`fonts.googleapis.com` e `fonts.gstatic.com` a `style-src` e `font-src`, o que
-troca um defeito por duas dependências de terceiro no caminho crítico de render.
+Eight `.woff2` files in `apps/web/public/fonts/`, with `@font-face` in
+`apps/web/src/index.css` and `font-display: swap`. Google's `<link>` goes
+away. This satisfies the current CSP **without loosening it** — the
+alternative was adding `fonts.googleapis.com` and `fonts.gstatic.com` to
+`style-src` and `font-src`, which trades one defect for two third-party
+dependencies on the critical render path.
 
-O `@font-face` fica em `index.css` e **não** em `design/tokens.css`: a carga é
-responsabilidade de quem consome os tokens, e o comentário daquele arquivo passa a
-dizer isso em vez do que dizia.
+`@font-face` lives in `index.css` and **not** in `design/tokens.css`:
+loading is the responsibility of whoever consumes the tokens, and that
+file's comment now says exactly that instead of what it used to say.
 
-Space Grotesk e Archivo são fontes **variáveis** e entram com intervalo de peso
-(`font-weight: 500 700` e `400 600`); IBM Plex Mono é estática e entra com um
-`@font-face` por peso. A distinção foi verificada decodificando o diretório de
-tabelas de cada `.woff2` e procurando a tabela `fvar` — declarar intervalo numa
-fonte estática faz o navegador sintetizar o peso que falta, que é exatamente o que
-`font-synthesis: none` existe para impedir.
+Space Grotesk and Archivo are **variable** fonts and go in with a weight
+range (`font-weight: 500 700` and `400 600`); IBM Plex Mono is static and
+goes in with one `@font-face` per weight. The distinction was verified by
+decoding each `.woff2`'s table directory and looking for the `fvar` table
+— declaring a range on a static font makes the browser synthesize the
+missing weight, which is exactly what `font-synthesis: none` exists to
+prevent.
 
-**Obrigação de licença.** As três são OFL 1.1, que exige distribuir o aviso de
-copyright junto do binário. `apps/web/public/fonts/LICENSE.txt` traz a licença e
-os três avisos, e `THIRD_PARTY_NOTICES.md` deixou de dizer "carregadas por CDN,
-não embutidas" — porque agora são embutidas, e a obrigação passou a existir.
+**Licensing obligation.** All three are OFL 1.1, which requires
+distributing the copyright notice alongside the binary.
+`apps/web/public/fonts/LICENSE.txt` carries the license and the three
+notices, and `THIRD_PARTY_NOTICES.md` no longer says "loaded via CDN, not
+bundled" — because now they're bundled, and the obligation now applies.
 
-### 2. Verificação em duas camadas, porque uma não alcança
+### 2. Two-layer verification, because one layer isn't enough
 
-- **Teste** (`apps/web/test/fontes.test.ts`): todo `url()` de `@font-face` no
-  `index.css` resolve para arquivo existente, com assinatura `wOF2`; todo bloco
-  tem `font-display: swap` e `unicode-range`; o intervalo de peso corresponde a
-  variável-ou-estática; e `index.html` **não** menciona `fonts.googleapis.com`.
-- **Gate no `docker/web/Dockerfile.prod`**: o diretório existe, tem os oito
-  arquivos, e o `index.html` publicado não referencia o CDN.
+- **Test** (`apps/web/test/fontes.test.ts`): every `@font-face` `url()` in
+  `index.css` resolves to an existing file with a `wOF2` signature; every
+  block has `font-display: swap` and `unicode-range`; the weight range
+  matches variable-vs-static; and `index.html` does **not** mention
+  `fonts.googleapis.com`.
+- **Gate in `docker/web/Dockerfile.prod`**: the directory exists, has the
+  eight files, and the published `index.html` doesn't reference the CDN.
 
-Nenhum dos dois prova fonte **renderizada**. jsdom não aplica CSS Module nem
-resolve `var()` de `@import`, e `getComputedStyle` devolve o que foi escrito, não
-o que foi resolvido. A prova de renderização é conferência manual no contêiner, e
-está registrada como tal.
+Neither one proves the font is actually **rendered**. jsdom doesn't apply
+CSS Modules or resolve `var()` from `@import`, and `getComputedStyle`
+returns what was written, not what was resolved. Proof of rendering is
+manual verification in the container, and it's recorded as such.
 
-### 3. `AuthLayout` passa a ser a moldura inteira
+### 3. `AuthLayout` becomes the whole frame
 
-Era o card e mais nada. O mock acrescenta duas peças que valem para as quatro
-telas igualmente — cabeçalho de marca acima do card e rodapé de página abaixo — e
-elas moram na moldura, não na tela. Cada tela preenche quatro pontos: `titulo`,
-`subtitulo`, `rodapeDoCartao` e `abaixoDoCartao`.
+It used to be just the card and nothing else. The mock adds two pieces
+that apply equally to all four screens — a brand header above the card
+and a page footer below — and they live in the frame, not the screen.
+Each screen fills four slots: `titulo`, `subtitulo`, `rodapeDoCartao` and
+`abaixoDoCartao`.
 
-O título do card é o único `<h1>`; "Brabo" é um `<span>`. Promover a marca a
-cabeçalho daria dois `<h1>` e faria a lista de cabeçalhos do leitor de tela
-começar pela marca em toda tela, em vez de dizer o que se faz ali.
+The card's title is the only `<h1>`; "Brabo" is a `<span>`. Promoting the
+brand to a heading would produce two `<h1>`s and would make a screen
+reader's heading list start with the brand on every screen, instead of
+saying what that screen is for.
 
-### 4. Quatro componentes do design system, e o critério de onde cada coisa mora
+### 4. Four design-system components, and the criterion for where each thing lives
 
-| peça | onde ficou | por quê |
+| piece | where it landed | why |
 |---|---|---|
-| `Alert` | componente novo em `components/ui/` | precisa em quatro tons e nas quatro telas; antes cada tela tinha a própria classe `.aviso`/`.banner`, copiada com espaçamento ligeiramente diferente |
-| `loading` no `Button` | prop no DS | cada tela trocava o label à mão; para quem usa leitor de tela o botão só ficava desabilitado, sem dizer que havia trabalho em curso |
-| campo preenchido | prop `preenchido` no `Input`, opt-in | o `Input` é usado por cinco telas fora de auth; trocar o default restilizaria as cinco em silêncio |
-| revelar senha | prop `revelavel` no `Input` | é anatomia de campo, não de tela: o botão se posiciona dentro da caixa e alterna o `type`. As duas telas com senha herdam |
-| cabeçalho de marca | local, no `AuthLayout` | é moldura de tela, não componente de biblioteca |
-| `LogoMark` | ícone novo | o `BrandIcon` existente é outro desenho (cubo isométrico); o do mock é barra + dois chevrons |
+| `Alert` | new component in `components/ui/` | needed in four tones across all four screens; before, each screen had its own `.aviso`/`.banner` class, copied with slightly different spacing |
+| `loading` on `Button` | prop on the DS | each screen was swapping the label by hand; for a screen reader user the button just went disabled, with no indication that work was in progress |
+| filled field | `preenchido` prop on `Input`, opt-in | `Input` is used by five screens outside auth; changing the default would silently restyle all five |
+| reveal password | `revelavel` prop on `Input` | it's field anatomy, not screen anatomy: the button sits inside the box and toggles `type`. Both password screens inherit it |
+| brand header | local, inside `AuthLayout` | it's screen framing, not a library component |
+| `LogoMark` | new icon | the existing `BrandIcon` is a different drawing (isometric cube); the mock's is a bar plus two chevrons |
 
-**`role` do `Alert` é prop, e não é derivado do tom.** `role="alert"` é live region
-assertiva: o leitor de tela interrompe o que estiver falando. Isso é certo para o
-resultado de uma ação que o usuário acabou de disparar e errado para texto que já
-estava na tela quando ela abriu. Se o tom decidisse o papel, o aviso de migração
-(tom `warning`) entraria na mesma live region do erro de credencial — e o anúncio
-de "e-mail ou senha incorretos" passaria a incluir "a senha antiga não foi
-migrada", que é precisamente a insinuação sobre a conta que o 401 uniforme do ADR
-0031 existe para evitar.
+**The `Alert`'s `role` is a prop, and it's not derived from the tone.**
+`role="alert"` is an assertive live region: the screen reader interrupts
+whatever it's saying. That's right for the result of an action the user
+just triggered, and wrong for text that was already on screen when it
+opened. If tone decided the role, the migration notice (`warning` tone)
+would land in the same live region as the credential error — and the
+"email or password incorrect" announcement would end up including "the
+old password wasn't migrated," precisely the hint about the account that
+ADR 0031's uniform 401 exists to prevent.
 
-**`fullWidth` do `Button` era quebrado.** A regra era `flex: 1`, que só faz efeito
-se o pai for flex ou grid — e nenhum dos containers que usam a prop é. Ela era
-passada em sete lugares, todos nas telas de auth, e não esticava nada: "botão
-full-width" aparecia como requisito de design enquanto o botão tinha a largura do
-texto. Virou `width: 100%`.
+**`Button`'s `fullWidth` was broken.** The rule was `flex: 1`, which only
+has an effect if the parent is flex or grid — and none of the containers
+using the prop are. It was passed in seven places, all in the auth
+screens, and stretched nothing: "full-width button" showed up as a design
+requirement while the button had the width of its text. It became
+`width: 100%`.
 
-### 5. Onde cada erro aparece
+### 5. Where each error shows up
 
-O erro de credencial sai do campo Senha e vira alerta no topo do card. Erro de
-formulário e erro de campo passam a ser coisas distintas nas quatro telas:
+The credential error moves off the Password field and becomes an alert at
+the top of the card. Form error and field error become distinct things
+across the four screens:
 
-- **do campo** (senha curta, confirmação diferente): sob o campo, com
-  `aria-invalid`, porque é ali que se conserta;
-- **do formulário** (credencial recusada, link inválido, falha de rede): no
-  alerta do topo, porque não aponta para campo nenhum.
+- **field-level** (short password, mismatched confirmation): under the
+  field, with `aria-invalid`, because that's where it gets fixed;
+- **form-level** (rejected credential, invalid link, network failure): in
+  the top alert, because it doesn't point at any particular field.
 
-Credencial recusada não recebe `aria-invalid` em campo nenhum: nem o e-mail nem a
-senha estão individualmente malformados, e a api não diz qual dos dois errou.
-Marcar os dois afirmaria mais do que se sabe.
+A rejected credential gets no `aria-invalid` on either field: neither the
+email nor the password is individually malformed, and the api doesn't say
+which one was wrong. Marking both would claim more than is actually
+known.
 
-A cópia muda de `E-mail ou senha inválidos.` para `E-mail ou senha incorretos.`.
-O caso 403 (`Confirme seu e-mail…`) segue distinto, como o ADR 0032 e a
-[RN-032](../business-rules.md#rn-032) exigem: a uniformidade é entre "não existe",
-"senha errada" e "conta bloqueada" — não com "e-mail não verificado", que só é
-alcançável **depois** de a senha ser provada.
+The copy changes from `E-mail ou senha inválidos.` to `E-mail ou senha
+incorretos.`. The 403 case (`Confirme seu e-mail…`) stays distinct, as ADR
+0032 and [RN-032](../business-rules.md#rn-032) require: the uniformity is
+between "doesn't exist," "wrong password" and "account locked" — not with
+"email not verified," which is only reachable **after** the password has
+been proven correct.
 
-### 6. A versão real no rodapé, e a cadeia que não existia
+### 6. The real version in the footer, and the chain that didn't exist
 
-O rodapé mostra a versão do artefato. Descobriu-se, ao ligá-la, que
-`BRABO_VERSION` **nunca era definida em lugar nenhum do repositório**: a api a
-lia para o `service.version` do recurso OpenTelemetry e sempre recebia o fallback
-`dev`, então todo span de todo ambiente dizia `dev` e o atributo era inútil
-justamente para o que ele serve. E `docs/reference/configuration.md` afirmava que
-"a imagem de release injeta a tag" e que ela "aparece no `/health`" — as duas
-falsas.
+The footer shows the artifact's version. While wiring it up, it turned
+out that `BRABO_VERSION` was **never defined anywhere in the
+repository**: the api read it for the OpenTelemetry resource's
+`service.version` and always got the `dev` fallback, so every span in
+every environment said `dev` and the attribute was useless for exactly
+the purpose it serves. And `docs/reference/configuration.md` claimed that
+"the release image injects the tag" and that it "shows up in `/health`" —
+both false.
 
-A cadeia agora existe, e é uma só para os dois serviços: `release.yml` calcula
-`versao=${TAG#v}` → passa `VERSION` ao `docker buildx bake` → o bakefile a
-converte em `BRABO_VERSION` (alvo `api`) e `VITE_BRABO_VERSION` (alvo `web`) →
-cada `Dockerfile.prod` a declara como `ARG` com default `dev` → o Vite inlina →
-`runtime-config.ts` lê → `AuthLayout` mostra.
+The chain now exists, and it's a single one for both services:
+`release.yml` computes `versao=${TAG#v}` → passes `VERSION` to `docker
+buildx bake` → the bakefile converts it into `BRABO_VERSION` (`api`
+target) and `VITE_BRABO_VERSION` (`web` target) → each `Dockerfile.prod`
+declares it as an `ARG` with default `dev` → Vite inlines it →
+`runtime-config.ts` reads it → `AuthLayout` shows it.
 
-**Build-time, apesar de o [ADR 0024](0024-fase5-imagens-producao-ci.md) ter
-escolhido runtime para as URLs.** A razão lá era promover a MESMA imagem entre
-ambientes, e URL é propriedade do ambiente. Versão é propriedade do **artefato**:
-`brabo-web:1.1.2` não deve poder reportar outra coisa, ou o rodapé passa a ser um
-campo editável em vez de uma identidade.
+**Build-time, even though [ADR 0024](0024-fase5-imagens-producao-ci.md)
+chose runtime for URLs.** The reason there was to promote the SAME image
+across environments, and a URL is a property of the environment. Version
+is a property of the **artifact**: `brabo-web:1.1.2` shouldn't be able to
+report anything else, or the footer becomes an editable field instead of
+an identity.
 
-`VERSION` é separada de `TAG` no bakefile porque o `ci.yml` usa `TAG=prod`, e
-"prod" não é versão de nada.
+`VERSION` is kept separate from `TAG` in the bakefile because `ci.yml`
+uses `TAG=prod`, and "prod" isn't a version of anything.
 
-### 7. `/status` deixa de exigir sessão
+### 7. `/status` no longer requires a session
 
-O rodapé aponta para `/status`, e ela estava atrás do guard de sessão: clicar em
-"Status" na tela de login redirecionava de volta para a tela de login — o único
-destino que ela não pode ter. Passou para um `publicLayout` novo, irmão do de
-auth. É seguro: a página só consulta os `/health` da api e do engine, que já eram
-públicos porque é o kubelet que os chama, antes de qualquer token existir.
+The footer links to `/status`, and it sat behind the session guard:
+clicking "Status" on the login screen redirected back to the login screen
+— the one destination it can never have. It moved to a new
+`publicLayout`, sibling to the auth one. It's safe: the page only queries
+the api's and engine's `/health` endpoints, which were already public
+because it's the kubelet that calls them, before any token exists.
 
-### 8. Contraste calculado dos tokens, não medido pelo axe
+### 8. Contrast computed from the tokens, not measured by axe
 
-O axe roda nas quatro telas, nos estados vazio, de erro e de sucesso — mas com a
-regra `color-contrast` **explicitamente desligada**. Ela precisa de layout e de
-cor resolvida, e jsdom não tem nem um nem outro: rodá-la ali produziria "passou"
-sem ter olhado nada, que é pior que teste ausente porque parece cobertura.
+axe runs on all four screens, in the empty, error and success states —
+but with the `color-contrast` rule **explicitly turned off**. It needs
+layout and resolved color, and jsdom has neither: running it there would
+produce a "pass" without having looked at anything, which is worse than
+no test at all because it looks like coverage.
 
-O contraste é verificado por cálculo direto sobre `design/tokens.css`, com a
-fórmula de luminância do WCAG 2.1, para os pares que as telas realmente usam.
-Quatro reprovavam o 4.5:1. Três foram corrigidos com tokens que já existiam:
+Contrast is verified by direct computation over `design/tokens.css`, using
+WCAG 2.1's luminance formula, for the pairs the screens actually use.
+Four failed 4.5:1. Three were fixed with tokens that already existed:
 
-| par | era | virou | razão |
+| pair | was | became | reason |
 |---|---|---|---|
-| `.hint` do `Input` | `--text-muted` (3.89) | `--text-secondary` (8.00) | valia para as cinco telas fora de auth também |
-| `.link` de auth | `--accent` (3.88) | `--accent-hover` (4.90) | mesmo matiz, um degrau mais claro |
-| placeholder do campo preenchido | `--text-muted` (3.10) | `--text-secondary` (6.37) | placeholder é texto |
+| `Input`'s `.hint` | `--text-muted` (3.89) | `--text-secondary` (8.00) | applied to the five non-auth screens too |
+| auth's `.link` | `--accent` (3.88) | `--accent-hover` (4.90) | same hue, one shade lighter |
+| filled field's placeholder | `--text-muted` (3.10) | `--text-secondary` (6.37) | placeholder is text |
 
-O quarto **não** foi corrigido, e é o mais visível: `--on-accent` sobre `--accent`
-dá **3.20:1** no botão primário, que exige 4.5 (texto de 14px/600). É o par
-terracota do design system, usado em todo botão primário da aplicação; consertar
-exige escurecer `--accent` até `--terracota-500` (5.27:1), o que muda a cor da
-marca em toda a UI. Isso é decisão de design, não de implementação, e fica
-registrado como pendência com o número travado em teste, para não poder piorar
-sem ninguém ver.
+The fourth was **not** fixed, and it's the most visible one: `--on-accent`
+over `--accent` yields **3.20:1** on the primary button, which requires
+4.5 (14px/600 text). It's the design system's terracotta pair, used on
+every primary button in the app; fixing it requires darkening `--accent`
+down to `--terracota-500` (5.27:1), which changes the brand color across
+the whole UI. That's a design decision, not an implementation one, and it
+stays recorded as a pending item with the number locked in a test, so it
+can't get worse without anyone noticing.
 
-### 9. A tela entra no `design/`
+### 9. The screen enters `design/`
 
-`design/` é a fonte de verdade da UI e não tinha spec de alerta, de loading de
-botão nem de campo preenchido — as três coisas que este trabalho cria. As três
-anatomias entram em `design/COMPONENTS.md`, e `design/SCREENS.md` ganha a seção de
-login que nunca existiu. É o que fecha a lacuna que originou o problema, e é a
-única forma de a fidelidade ser reconferível por quem não tem o mock.
+`design/` is the source of truth for the UI and had no spec for alert,
+button loading, or filled field — the three things this work creates. All
+three anatomies go into `design/COMPONENTS.md`, and `design/SCREENS.md`
+gains the login section that never existed. That's what closes the gap
+that caused the problem in the first place, and it's the only way
+fidelity can be re-checked by someone without access to the mock.
 
-## Consequências
+## Consequences
 
-### As divergências deliberadas em relação ao mock
+### Deliberate divergences from the mock
 
-| # | divergência | razão |
+| # | divergence | reason |
 |---|---|---|
-| 1 | sem "Continuar com GitHub" | login social é backlog consciente da Fase 7, já registrado no ADR 0031 e reafirmado no 0032. Nada de novo aqui — só a constatação de que o mock desenhou algo que a fase decidiu não ter |
-| 2 | sem "N agentes online" | dado dinâmico pré-autenticação amplia a superfície sem necessidade: exigiria uma rota pública contando agentes. É candidato a painel interno, não a tela de login |
-| 3 | campo em `--surface-2`, não `--code-bg` | escolha explícita: campo elevado em vez de afundado. Sobre um card `--surface-1`, o fundo default do campo é o MESMO do card |
-| 4 | `.link` em `--accent-hover` | contraste — ver decisão 8 |
-| 5 | `--shadow` dos tokens, não a redefinição do mock | o mock é um arquivo solto e sobrescreveu o token no próprio `:root`. A fonte de verdade do token é o design system |
-| 6 | "Esqueci minha senha" é irmão do `<label>`, não filho | clique em qualquer lugar de um `<label>` ativa o campo associado; dentro do rótulo, o clique no link também focaria o campo de senha |
+| 1 | no "Continue with GitHub" | social login is conscious Phase 7 backlog, already recorded in ADR 0031 and reaffirmed in 0032. Nothing new here — just the observation that the mock designed something the phase decided not to have |
+| 2 | no "N agents online" | dynamic pre-authentication data widens the surface unnecessarily: it would require a public route counting agents. It's a candidate for an internal panel, not the login screen |
+| 3 | field in `--surface-2`, not `--code-bg` | explicit choice: raised field instead of a recessed one. Over a `--surface-1` card, the field's default background is the SAME as the card |
+| 4 | `.link` in `--accent-hover` | contrast — see decision 8 |
+| 5 | `--shadow` from the tokens, not the mock's redefinition | the mock is a standalone file that overrode the token on its own `:root`. The token's source of truth is the design system |
+| 6 | "Forgot my password" is a sibling of the `<label>`, not a child | clicking anywhere inside a `<label>` activates its associated field; inside the label, clicking the link would also focus the password field |
 
-**Consequência derivada da nº 1**: o divisor "ou" do mock existe **só** para
-separar os dois botões. Sem o segundo, ele sai também — manter um "ou" apontando
-para nada seria pior que a assimetria.
+**Consequence derived from #1**: the mock's "or" divider exists **only**
+to separate the two buttons. Without the second one, it goes too —
+keeping an "or" pointing at nothing would be worse than the asymmetry.
 
-**Consequência da nº 2**: o rodapé do card fica com um item, então o
-`justify-content: space-between` do mock vira alinhamento à esquerda, explícito.
+**Consequence of #2**: the card's footer is left with one item, so the
+mock's `justify-content: space-between` becomes explicit left alignment.
 
-### O que fica pendente, e por quê
+### What remains pending, and why
 
-- **O contraste do botão primário** (3.20:1). Precisa de decisão sobre a cor da
-  marca. É a única reprovação de AA que sobra nas telas.
-- **O mesmo problema de campo nas outras cinco telas**: `Input` default é
-  `--surface-1` sobre card `--surface-1`, separados por 1px de borda. A variante é
-  opt-in, então nada mudou lá — e nada foi consertado.
-- **`data-theme="light"` continua não exercitado.** Existe nos tokens e nada o
-  define. As telas usam só token semântico, então herdam o tema claro se alguém o
-  ligar, mas três pares dele reprovam o AA — afirmado como registro no teste de
-  contraste, não como garantia.
-- **A fidelidade é contra um arquivo não versionado.** Mitigado pela decisão 9,
-  não eliminado.
-- **Nenhum teste prova fonte renderizada.** Ver decisão 2.
+- **The primary button's contrast** (3.20:1). Needs a decision about the
+  brand color. It's the only AA failure left across the screens.
+- **The same field problem on the other five screens**: `Input`'s default
+  is `--surface-1` over a `--surface-1` card, separated by a 1px border.
+  The variant is opt-in, so nothing changed there — and nothing was
+  fixed.
+- **`data-theme="light"` remains unexercised.** It exists in the tokens
+  and nothing sets it. The screens use only semantic tokens, so they
+  inherit the light theme if someone turns it on, but three of its pairs
+  fail AA — stated as a record in the contrast test, not as a guarantee.
+- **Fidelity is checked against an unversioned file.** Mitigated by
+  decision 9, not eliminated.
+- **No test proves the font actually renders.** See decision 2.
 
-### Duas dependências novas, as duas de desenvolvimento
+### Two new dependencies, both dev-only
 
-`@testing-library/user-event` (ordem de foco) e `axe-core` (a11y estrutural).
-Nenhuma de runtime — o bundle não muda.
+`@testing-library/user-event` (focus order) and `axe-core` (structural
+a11y). Neither is a runtime one — the bundle doesn't change.
 
-`axe-core` direto, e não o wrapper `vitest-axe` que seria o caminho óbvio: o
-wrapper acrescenta um matcher e uma dependência para economizar seis linhas, e com
-a chamada direta a lista de regras desligadas fica visível no arquivo de teste,
-onde quem desligar a próxima terá que escrever por quê.
+`axe-core` directly, and not the `vitest-axe` wrapper that would be the
+obvious path: the wrapper adds a matcher and a dependency to save six
+lines, and with the direct call the list of disabled rules stays visible
+in the test file, where whoever disables the next one will have to write
+down why.
 
-O harness foi conferido contra violação real — input sem `<label>` e botão sem
-nome acessível — antes de se confiar no verde. Teste de a11y que passa por não
-estar olhando é o modo de falha padrão dessa ferramenta em jsdom.
+The harness was checked against a real violation — an input with no
+`<label>` and a button with no accessible name — before trusting the
+green run. An a11y test that passes by not actually looking is this
+tool's default failure mode in jsdom.

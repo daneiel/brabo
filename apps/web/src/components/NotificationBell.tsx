@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import type { SessionEvent } from '../lib/api-types';
 import { EventItem } from './EventItem';
 import { BellIcon } from './ui/icons';
@@ -43,6 +44,7 @@ export function NotificationBell({
   onOpenChange,
   onMarkRead,
 }: NotificationBellProps) {
+  const { t } = useTranslation('shell');
   // O que o botão "marcar lidas" REALMENTE faz, dito antes de ele ser clicado.
   //
   // O corte de leitura é UM `seq` por projeto no `localStorage`, e não existe
@@ -64,7 +66,7 @@ export function NotificationBell({
         type="button"
         className={styles.button}
         onClick={() => onOpenChange(!open)}
-        aria-label="Notificações"
+        aria-label={t('notificationBell.label')}
       >
         <BellIcon size={17} />
         {unreadCount > 0 && <span className={styles.badge}>{unreadCount > 99 ? '99+' : unreadCount}</span>}
@@ -73,23 +75,23 @@ export function NotificationBell({
       {open && (
         <div className={styles.dropdown}>
           <div className={styles.header}>
-            <span className={styles.headerTitle}>Notificações</span>
+            <span className={styles.headerTitle}>{t('notificationBell.label')}</span>
             <button type="button" className={styles.markRead} onClick={onMarkRead}>
               {ocultos > 0
-                ? `marcar as ${totalNaGaveta} como lidas`
-                : 'marcar lidas'}
+                ? t('notificationBell.markRead.withCount', { total: totalNaGaveta })
+                : t('notificationBell.markRead.default')}
             </button>
           </div>
 
           {ocultos > 0 && (
             <div className={styles.windowNote}>
-              Mostrando os mais recentes de cada projeto. {ocultos} mais
-              {ocultos === 1 ? ' antigo' : ' antigos'} não {ocultos === 1 ? 'cabe' : 'cabem'} aqui
-              — abrir o projeto é o caminho para eles.
+              {t('notificationBell.windowNote', { count: ocultos })}
             </div>
           )}
 
-          {groups.length === 0 && <div className={styles.empty}>Nenhuma notificação por aqui ainda.</div>}
+          {groups.length === 0 && (
+            <div className={styles.empty}>{t('notificationBell.empty')}</div>
+          )}
 
           {groups.map((group) => (
             <div key={group.projectId} className={styles.group}>
@@ -105,7 +107,7 @@ export function NotificationBell({
               </div>
               {group.olderCount > 0 && (
                 <div className={styles.older}>
-                  + {group.olderCount} mais {group.olderCount === 1 ? 'antigo' : 'antigos'}
+                  {t('notificationBell.older', { count: group.olderCount })}
                 </div>
               )}
             </div>

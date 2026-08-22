@@ -1,0 +1,58 @@
+{
+  "topbar": {
+    "title": "Projects",
+    "searchPlaceholder": "Search projects…",
+    "newProject": "New project"
+  },
+  "summary": {
+    "unavailable": "summary unavailable",
+    "line": "{{projects}} · {{agents}} · {{spent}} this month"
+  },
+  "empty": {
+    "loadError": "Could not load your projects.",
+    "noProjectsYet": "No projects here yet.",
+    "createProject": "Create project",
+    "noSearchResults": "No projects found for \"{{search}}\"."
+  },
+  "activity": {
+    "none": "No activity yet"
+  },
+  "gitError": {
+    "title": "Could not provision the repository",
+    "bodyWithProvider": "The project was created, but provisioning the repository via {{provider}} failed. Check the provider credentials in Settings and try provisioning again.",
+    "bodyWithoutProvider": "The project was created, but provisioning the repository failed. Check the provider credentials in Settings and try provisioning again.",
+    "backToProjects": "Back to projects"
+  },
+  "status": {
+    "heading": "Brabo — platform status",
+    "columns": {
+      "service": "Service",
+      "status": "Status",
+      "lastCheck": "Last check"
+    },
+    "services": {
+      "api": "api (NestJS)",
+      "engine": "engine (Elixir/Phoenix)"
+    },
+    "back": "Back"
+  },
+  "projectCard": {
+    "provider": {
+      "github": "GitHub",
+      "gitlab": "GitLab",
+      "local": "Local repository"
+    },
+    "provisioning": {
+      "provisioning": "Provisioning",
+      "failed": "Failed",
+      "awaitingPlanDecision": "Awaiting your decision"
+    },
+    "online": "{{count}} online"
+  },
+  "projectStatus": {
+    "saudavel": "active",
+    "atencao": "budget ≥70%",
+    "risco": "needs attention",
+    "inativo": "no recent activity"
+  }
+}
