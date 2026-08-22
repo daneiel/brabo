@@ -160,7 +160,7 @@ defmodule EngineWeb.TerminalChannelTest do
       push(joined, "workspace_confirm", %{"path" => "/home/voce/projetos/loja"})
 
       assert_receive {:confirm_workspace, ^project_id, _session_id, "/home/voce/projetos/loja",
-                       ^user_id}
+                      ^user_id}
     end
 
     test "vindo de :web, é IGNORADO — nunca chama a api" do
