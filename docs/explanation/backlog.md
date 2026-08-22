@@ -347,6 +347,38 @@ produto adiadas — por isso sem prioridade aqui.
 | Reativar a Anamnese (`ANAMNESE_ENABLED=true`) | pausada por decisão do usuário em 2026-08-10 — "hoje ele não está trazendo dados de muito valor" ([RN-115](../business-rules.md#rn-115)). Nenhum dado apagado (hipóteses, perfis de proficiência, patches de instrução seguem intactos e visíveis); a pausa é só do CAMINHO de rodada nova, aguardando um refinamento futuro do que a Anamnese deriva antes de religar |
 | Reativar o Psicólogo (`PSYCHOLOGIST_ENABLED=true`) | pausado por decisão do usuário em 2026-08-10, mesmo motivo e mesmo padrão da Anamnese acima ([RN-117](../business-rules.md#rn-117)). Nenhum dado apagado (análises e hipóteses já emitidas seguem intactas e visíveis); a pausa é só do CAMINHO de rodada nova (automática e sob demanda) |
 
+## Backlog do runner/execution_mode (ADR 0104)
+
+Primeiro achado do tipo "dois ADRs divergentes entre si" registrado neste
+documento — os precedentes de tabela abaixo (a auditoria `fluxo.yml`×código,
+já fechada) eram sempre doc-declarativo × código, nunca ADR × ADR. A forma
+da tabela é reaproveitada; o tipo de achado é novo.
+
+**A divergência, fechada pelo [ADR 0104](../adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md)
+— reconciliação ACEITA, implementação PENDENTE:**
+
+| # | Severidade | Item | Evidência (arquivo:linha) |
+|---|---|---|---|
+| 1 | P1 | RN-170 exige bind-mount na criação; RN-420 roteia pro runner sob a mesma flag `workspace_mode == 'local'`, sem bind-mount nenhum | `apps/api/src/infrastructure/filesystem/project-workspaces-root.ts` (`validarCaminhoDeWorkspaceLocal`); `apps/engine/lib/engine/actions/terminal_executor.ex` (condição de roteamento, RN-420) |
+| 2 | P1 | Wizard só ensina bind-mount, nunca o comando do runner, mesmo ele já existindo | `apps/web/src/routes/NewProjectWizard.tsx:71,462-468` vs. `apps/web/src/routes/code/TerminalPanel.tsx` (comando `brabo-runner --project <id> --dir <pasta>` já renderizado quando não há runner conectado) |
+| 3 | P2 | Enum de 2 valores (`workspace_mode`) não expressa 3 execuções fisicamente distintas | `apps/api/src/db/schema.ts:238-240`; `apps/api/src/domain/iam/project.entity.ts` |
+
+**O que fica para depois — backlog priorizado pelo dono do produto, nesta
+ordem:**
+
+| item | custo | critério de ativação | onde foi decidido |
+|---|---|---|---|
+| Distribuição do runner via `tsup` → `dist/index.cjs` único + `npm publish` (`@brabo/runner`) | M | depende do PAT (linha abaixo) estar pronto — publicar hoje distribuiria um fluxo de senha+cookie salvo em disco | ADR 0104 |
+| Binário standalone (`pkg`/`bun build --compile`) | G | não bloqueante; sem gatilho definido, item futuro separado da distribuição via npm | ADR 0104 |
+| Token de conta de longa duração (PAT `brb_…`, hash argon2 no banco, escopo `runner:project:<id>`, revogável, expiração opcional), substituindo o replay de login de `apps/runner/src/auth.ts`, reaproveitando a infra de rotação de família de refresh ([RN-030](../business-rules.md#rn-030), [ADR 0031](../adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.md)) | M | nenhum — é pré-requisito da distribuição, não espera evento externo | ADR 0104 |
+| Exclusividade do runner por `{project_id, machine_id}` em vez de só `project_id` (`apps/engine/lib/engine/runners/registry.ex`) | M | ADIADO — critério de ativação explícito: existir de fato um segundo dev usando o mesmo projeto simultaneamente | ADR 0104 |
+
+`apps/runner/src/guard.ts` (checagem léxica best-effort de `cwd`) **não é
+item de backlog** — é invariante declarado desde o ADR 0103 e REAFIRMADO
+pelo ADR 0104: a fronteira de segurança real do runner é autenticação +
+pipeline de aprovação de sempre + consentimento do usuário, nunca
+sandboxing.
+
 ## Backlog do modelo de time (ADR 0085) — AUDITORIA FECHADA
 
 Saída da auditoria `fluxo.yml` × código
