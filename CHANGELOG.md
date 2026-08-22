@@ -6,6 +6,18 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api,web,runner**: Personal Access Token (`brb_…`) pro `brabo-runner`,
+  fechando o item de backlog do ADR 0104 que bloqueava
+  `npm publish @brabo/runner`. `apps/runner/src/auth.ts` deixa de
+  replicar login (e-mail/senha interativos, cookies persistidos em
+  `~/.brabo/runner-credentials.json`) — o CLI passa a receber um token
+  de longa duração via `--token`/`BRABO_ACCOUNT_TOKEN`, emitido em
+  Configurações do projeto, revogável, com expiração opcional, escopado
+  a UM projeto. O token nunca autentica fora de
+  `POST /projects/:projectId/runner-ticket`, por construção
+  (`IS_PAT_ROUTE_KEY`/`@RequirePatAuth()` + `PatAuthGuard` de rota, nunca
+  um branch no `JwtAuthGuard` global) — nem sob papel elevado, nem em
+  nenhuma outra rota (RN-424/425/426, ADR 0105)
 - **api,engine,web,runner**: `execution_mode` do projeto passa a ter TRÊS
   valores — `container` (default, inalterado), `mounted` (o antigo `local`,
   renomeado) e `runner` (novo: pasta do usuário SEM bind-mount, confirmada
