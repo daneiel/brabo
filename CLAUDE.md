@@ -1926,13 +1926,24 @@ propósito — não é PATCH trivial (worktree, permissions.json e cache do
 engine apontam pro escopo antigo). A Onda 1 entregou só o campo de três
 valores na CRIAÇÃO; conversão de projeto existente é onda futura, com
 desenho próprio, ainda não planejada. Backlog do runner: a Onda 2 (PAT,
-ADR 0105) fechou o item que bloqueava `npm publish @brabo/runner` —
-distribuição via `tsup`/npm segue como próxima onda, agora desbloqueada,
-não mais dependente de nada. Exclusividade por `{project_id, machine_id}`
-continua adiada até segundo dev simultâneo real; `guard.ts` best-effort é
-invariante REAFIRMADO, não lacuna. Ver
+ADR 0105) fechou o item que bloqueava `npm publish @brabo/runner`, e a
+Onda 3 (ADR 0106) entregou a distribuição em si — `tsup` empacota
+`apps/runner` num `dist/index.cjs` único (`node-pty` como `external`
+obrigatório, binding nativo), publicado a cada tag final por um workflow
+próprio (`publish-runner.yml`), paralelo a `release.yml`. Achado real
+testado empiricamente: a guarda de auto-run de `index.ts` precisou de
+`realpathSync` em `process.argv[1]` — sem isso, `main()` nunca rodava
+quando o CLI era invocado pelo `bin` instalado via `npm install -g`
+(symlink, que `process.argv[1]` nunca resolve por realpath mas
+`import.meta.url` sempre resolve). Pendência operacional declarada: a
+publicação de verdade exige o dono do produto criar o Automation Token do
+npm e configurar o secret `NPM_TOKEN` — sem ele, o workflow avisa e pula,
+nunca falha. Exclusividade por `{project_id, machine_id}` continua adiada
+até segundo dev simultâneo real; `guard.ts` best-effort é invariante
+REAFIRMADO, não lacuna. Ver
 [ADR 0104](docs/adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md)/
-[ADR 0105](docs/adr/0105-personal-access-token-do-runner-escopado-por-construcao.md).
+[ADR 0105](docs/adr/0105-personal-access-token-do-runner-escopado-por-construcao.md)/
+[ADR 0106](docs/adr/0106-distribuicao-do-runner-via-tsup-e-npm-publish.md).
 
 ## FERRAMENTA DE DESENVOLVIMENTO — `pnpm bootstrap`
 Menu de terminal em `scripts/dev/bootstrap.sh` agrupando o que se faz no
@@ -1982,9 +1993,11 @@ divide o mesmo banco, recuperar exige `db:migrate` E `engine:migrate`.
   `@xterm/addon-fit` (ADR 0103) para o terminal interativo do runner
   local, isolado atrás de `lib/xterm-runtime.ts` com `import()` dinâmico
 - `apps/runner`: workspace novo, Node/TS — CLI (`brabo-runner`) que roda
-  na máquina do usuário, conectando ao engine via canal Phoenix (`phoenix`
-  npm) para executar comandos aprovados e terminal interativo
-  (`node-pty`) — ver "Runner local" (ADR 0103)
+  na máquina do usuário, conectando ao engine via canal Phoenix (`phoenix`,
+  embutido no bundle) para executar comandos aprovados e terminal
+  interativo (`node-pty`, único `external` — binding nativo) — ver
+  "Runner local" (ADR 0103). Publicado como `@brabo/runner` via `tsup` +
+  `npm publish` (ADR 0106)
 - Monorepo pnpm (TS) com apps/engine Elixir ao lado; Docker Compose para dev
 - Auth: first-party no domínio da api (argon2id + access JWT curto +
   refresh opaco com rotação); autorização RBAC no domínio da api

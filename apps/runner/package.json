@@ -3,22 +3,38 @@
   "version": "0.1.0",
   "license": "MIT",
   "description": "CLI que executa, na máquina do próprio usuário, os comandos que os agentes propõem e o pipeline de aprovação já aprovou — conectado ao engine por canal Phoenix autenticado por ticket de uso único.",
-  "private": true,
+  "keywords": ["brabo", "cli", "runner", "agents"],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/daneiel/brabo.git",
+    "directory": "apps/runner"
+  },
+  "homepage": "https://github.com/daneiel/brabo/tree/main/apps/runner#readme",
   "type": "module",
   "bin": {
-    "brabo-runner": "./src/index.ts"
+    "brabo-runner": "./dist/index.cjs"
+  },
+  "files": ["dist"],
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=18"
   },
   "scripts": {
+    "build": "tsup",
+    "smoke": "node scripts/smoke-dist.mjs",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "node-pty": "^1.1.0",
-    "phoenix": "^1.8.9"
+    "node-pty": "^1.1.0"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
     "@types/phoenix": "^1.6.7",
+    "phoenix": "^1.8.9",
+    "tsup": "^8.5.1",
     "typescript": "^5.7.3",
     "vitest": "^4.1.10"
   }
