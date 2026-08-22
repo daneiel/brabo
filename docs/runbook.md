@@ -460,12 +460,20 @@ próprio Neo4j recusar subir (o entrypoint da imagem oficial exige senha com
 8+ caracteres; `NEO4J_AUTH` vazio derruba o container `neo4j` primeiro).
 
 ```bash
-export NEO4J_PASSWORD="$(openssl rand -base64 32)"
+export NEO4J_PASSWORD="$(openssl rand -hex 24)"
 ```
 
+**HEX, não base64.** O entrypoint do Neo4j lê `NEO4J_AUTH` como
+`usuario/senha` e divide na PRIMEIRA barra — uma senha em base64 pode conter
+`/` (o alfabeto tem `/` e `+`), e isso quebra esse parse com
+`Invalid value for NEO4J_AUTH`, derrubando o container `neo4j` num loop de
+reinício. Já aconteceu de verdade: o smoke do CI reprovou assim depois de um
+merge que reintroduziu o `-base64` por engano. Hex não tem `/`, `+` nem `=`.
+
 `docker/smoke.sh` já gera as cinco variáveis efêmeras acima (as quatro
-irmãs e `NEO4J_PASSWORD`) a cada execução — é assim que o job "Build, scan e
-smoke das imagens de produção" do CI sobe o `docker-compose.prod.yml` sem
+irmãs e `NEO4J_PASSWORD`, esta em hex) a cada execução — é assim que o job
+"Build, scan e smoke das imagens de produção" do CI sobe o
+`docker-compose.prod.yml` sem
 segredo nenhum commitado.
 
 Trocar `AUTH_JWT_SECRET` ou `BRABO_SERVICE_TOKEN` sem a dança do `_PREVIOUS`
