@@ -41,6 +41,8 @@ const ACTION_ICON: Record<ActionType, typeof DiffIcon> = {
   instruction_patch: DiffIcon,
   parallelize: AlertIcon,
   raise_max_parallel: AlertIcon,
+  propose_execution_plan: AlertIcon,
+  assess_implementability: AlertIcon,
 };
 
 /**
@@ -509,6 +511,19 @@ function ApprovalBody({ actionType, payload, executionResult, expandedFile, onTo
         <div className={styles.body}>
           {files.map((file) => {
             const open = expandedFile === file.path;
+            // Não migrado para o `Disclosure` do design system, de propósito
+            // (Onda 4/frente H4): esta faixa gira o chevron com
+            // `transform: rotate(90deg)` + transição (`.chevron.open`,
+            // ApprovalCard.module.css) — o `Disclosure` genérico TROCA o
+            // ícone (Right→Down), sem animação nenhuma. Forçar a migração
+            // aqui apagaria a micro-interação sem ganho nenhum, já que a
+            // exclusividade (só um arquivo aberto por vez) já vem de fora
+            // (`expandedFile`), a mesma coisa que o `Disclosure` controlado
+            // faria. O que ESTAVA faltando, e que não é peculiaridade
+            // nenhuma — é o mesmo defeito que o `Disclosure` existe para
+            // fechar —, era `aria-controls`/região nomeada: corrigido aqui
+            // sem trocar de componente (RN-250).
+            const idDiff = `arquivo-diff-${encodeURIComponent(file.path)}`;
             return (
               <div key={file.path}>
                 {/* `<button>` e não `<div onClick>`: a faixa abre e fecha o
@@ -518,6 +533,7 @@ function ApprovalBody({ actionType, payload, executionResult, expandedFile, onTo
                   type="button"
                   className={styles.fileRow}
                   aria-expanded={open}
+                  aria-controls={idDiff}
                   onClick={() => onToggleFile(file.path)}
                 >
                   <span className={[styles.chevron, open && styles.open].filter(Boolean).join(' ')}>
@@ -529,7 +545,12 @@ function ApprovalBody({ actionType, payload, executionResult, expandedFile, onTo
                     <span className={styles.diffDel}>−{file.deletions}</span>
                   </span>
                 </button>
-                {open && file.lines && <DiffLines lines={file.lines} />}
+                {/* A região existe mesmo fechada — mesma razão do
+                    `Disclosure`: `aria-controls` apontando para um id morto
+                    é pior que não ter o atributo. */}
+                <div id={idDiff} role="region" aria-label={file.path} hidden={!open}>
+                  {open && file.lines && <DiffLines lines={file.lines} />}
+                </div>
               </div>
             );
           })}

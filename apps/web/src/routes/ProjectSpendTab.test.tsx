@@ -7,6 +7,7 @@ import type { MySpend, WorkspaceSpendReport } from '../lib/spend';
 const getMySpend = vi.fn();
 const getWorkspaceSpendReport = vi.fn();
 const getProject = vi.fn();
+const getProjectBudget = vi.fn();
 const getCredentialSpend = vi.fn();
 const listWorkspaces = vi.fn();
 
@@ -14,6 +15,7 @@ vi.mock('../lib/api-client', () => ({
   getMySpend: (...a: unknown[]) => getMySpend(...a),
   getWorkspaceSpendReport: (...a: unknown[]) => getWorkspaceSpendReport(...a),
   getProject: (...a: unknown[]) => getProject(...a),
+  getProjectBudget: (...a: unknown[]) => getProjectBudget(...a),
   getCredentialSpend: (...a: unknown[]) => getCredentialSpend(...a),
   listWorkspaces: (...a: unknown[]) => listWorkspaces(...a),
 }));
@@ -56,6 +58,17 @@ const doWorkspace: WorkspaceSpendReport = {
       chamadas: 42,
     },
   ],
+  porProvider: [
+    {
+      chave: 'anthropic',
+      rotulo: null,
+      actorKind: null,
+      costMicros: 2_500_000,
+      inputTokens: 1_000,
+      outputTokens: 400,
+      chamadas: 42,
+    },
+  ],
   porAtor: [
     {
       chave: 'criativo',
@@ -74,6 +87,28 @@ const doWorkspace: WorkspaceSpendReport = {
       inputTokens: 200,
       outputTokens: 100,
       chamadas: 12,
+    },
+  ],
+  porOwner: [
+    {
+      chave: 'a1b2c3d4-0000-0000-0000-000000000000',
+      rotulo: null,
+      actorKind: 'user',
+      costMicros: 500_000,
+      inputTokens: 200,
+      outputTokens: 100,
+      chamadas: 12,
+    },
+  ],
+  porAgente: [
+    {
+      chave: 'criativo',
+      rotulo: null,
+      actorKind: 'agent',
+      costMicros: 2_000_000,
+      inputTokens: 800,
+      outputTokens: 300,
+      chamadas: 30,
     },
   ],
   porDia: serie(5),
@@ -117,6 +152,9 @@ beforeEach(() => {
   getProject.mockResolvedValue({ id: 'p-1', workspaceId: 'ws-1' });
   getWorkspaceSpendReport.mockResolvedValue(doWorkspace);
   getMySpend.mockResolvedValue(meu);
+  // Sem orçamento por padrão: a maioria dos testes não é sobre o bloco
+  // "por projeto" — cada teste dele sobrescreve.
+  getProjectBudget.mockResolvedValue(null);
   getCredentialSpend.mockResolvedValue({
     workspaceId: 'ws-1',
     ownerId: 'u-dono',
@@ -145,6 +183,9 @@ describe('ProjectSpendTab — enquanto o papel é desconhecido', () => {
     expect(await screen.findByText('Carregando…')).toBeInTheDocument();
     expect(getMySpend).not.toHaveBeenCalled();
     expect(getWorkspaceSpendReport).not.toHaveBeenCalled();
+    // O orçamento é de PROJETO, mas só entra depois do papel resolver — senão
+    // pediria antes de saber se há algo mais pra mostrar ao lado dele.
+    expect(getProjectBudget).not.toHaveBeenCalled();
 
     liberar([{ id: 'ws-1', role: 'developer' }]);
     expect(await screen.findByText('O meu consumo')).toBeInTheDocument();
@@ -168,16 +209,19 @@ describe('ProjectSpendTab — a audiência do owner', () => {
     listWorkspaces.mockResolvedValue([{ id: 'ws-1', role: 'owner' }]);
   });
 
-  it('mostra os quatro recortes do workspace', async () => {
+  it('mostra os cinco recortes do workspace, incluindo provider', async () => {
     montar();
 
     expect(await screen.findByText('Gastos do workspace')).toBeInTheDocument();
     expect(await screen.findByText('Por modelo')).toBeInTheDocument();
+    expect(screen.getByText('Por provider')).toBeInTheDocument();
     expect(screen.getByText('Por projeto')).toBeInTheDocument();
     expect(screen.getByText('Por agente e pessoa')).toBeInTheDocument();
     expect(screen.getByText('Gasto por dia')).toBeInTheDocument();
 
     expect(screen.getByText('caro/modelo')).toBeInTheDocument();
+    // RN-211: o rótulo humano do provider, não o slug cru.
+    expect(screen.getByText('Anthropic')).toBeInTheDocument();
     expect(screen.getByText('Loja')).toBeInTheDocument();
     expect(screen.getByText('criativo')).toBeInTheDocument();
     expect(screen.getByText('a1b2c3d4 (pessoa)')).toBeInTheDocument();
@@ -258,5 +302,90 @@ describe('ProjectSpendTab — a audiência do membro', () => {
     expect(
       await screen.findByText(/sai da chave do dono do workspace/i),
     ).toBeInTheDocument();
+  });
+});
+
+/**
+ * O bloco "por projeto" (RN-212) e o alerta de custo (RN-213). É de PROJETO,
+ * não de audiência — os testes cobrem só a audiência do owner (papel mais
+ * simples de montar), mas o bloco é o MESMO componente para as duas.
+ */
+describe('ProjectSpendTab — o orçamento do projeto', () => {
+  beforeEach(() => {
+    listWorkspaces.mockResolvedValue([{ id: 'ws-1', role: 'owner' }]);
+  });
+
+  it('sem orçamento definido, mostra a nota em vez do medidor', async () => {
+    getProjectBudget.mockResolvedValue(null);
+    montar();
+
+    expect(
+      await screen.findByText(/Nenhum orçamento definido para este projeto/i),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId('token-meter')).not.toBeInTheDocument();
+  });
+
+  it('com orçamento abaixo de 70%, mostra o medidor sem alerta', async () => {
+    getProjectBudget.mockResolvedValue({
+      id: 'b-1',
+      projectId: 'p-1',
+      sessionId: null,
+      limitMicros: 10_000_000,
+      spentMicros: 2_000_000,
+      policy: 'allow',
+      lastThresholdNotified: 0,
+    });
+    montar();
+
+    expect(await screen.findByTestId('token-meter')).toBeInTheDocument();
+    expect(
+      screen.queryByText(/já passou de/i),
+    ).not.toBeInTheDocument();
+  });
+
+  /** RN-213: leitura pura de `lastThresholdNotified`, nunca recalculado aqui. */
+  it('cruzou 90%, mostra o alerta de nível danger', async () => {
+    getProjectBudget.mockResolvedValue({
+      id: 'b-1',
+      projectId: 'p-1',
+      sessionId: null,
+      limitMicros: 10_000_000,
+      spentMicros: 9_200_000,
+      policy: 'allow',
+      lastThresholdNotified: 90,
+    });
+    montar();
+
+    const alerta = await screen.findByText(/já passou de 90%/i);
+    expect(alerta.closest('[role="alert"]')).not.toBeNull();
+  });
+
+  it('política block e teto atingido, avisa que novas chamadas estão bloqueadas', async () => {
+    getProjectBudget.mockResolvedValue({
+      id: 'b-1',
+      projectId: 'p-1',
+      sessionId: null,
+      limitMicros: 10_000_000,
+      spentMicros: 10_000_000,
+      policy: 'block',
+      lastThresholdNotified: 100,
+    });
+    montar();
+
+    expect(
+      await screen.findByText(/estão BLOQUEADAS até o teto subir/i),
+    ).toBeInTheDocument();
+  });
+
+  /** 403 (quem não é maintainer no projeto) fica silencioso — nunca banner. */
+  it('erro ao ler o orçamento não vira banner nenhum', async () => {
+    getProjectBudget.mockRejectedValue(new Error('403'));
+    montar();
+
+    await screen.findByText('Gastos do workspace');
+    expect(
+      screen.queryByText(/Nenhum orçamento definido/i),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByTestId('token-meter')).not.toBeInTheDocument();
   });
 });

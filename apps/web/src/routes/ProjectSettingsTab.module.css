@@ -145,6 +145,33 @@
   text-align: right;
 }
 
+/*
+ * "Melhores modelos por capacidade" — recomendado/alternativa empilham nome
+ * e o detalhe real (preço) em duas linhas, no mesmo peso das outras colunas
+ * de dado desta tabela (`.fallback`, `.estimativa`).
+ */
+.rankModelo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.rankNome {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rankDetalhe {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
 .inviteBar {
   display: flex;
   align-items: center;
@@ -239,10 +266,12 @@
   background: currentColor;
 }
 
-/* Remover é um botão QUADRADO só de ícone no desenho, não um botão com texto. */
+/* Remover é um botão QUADRADO só de ícone no desenho, não um botão com texto.
+   32px é o piso de alvo de toque para ícone de ação primária (PROGRAMA 28,
+   Onda 5/H5; era 28px), o mesmo piso do `.close` de `Modal`. */
 .remove {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border-radius: 7px;
   background: transparent;
   border: 1px solid var(--border);

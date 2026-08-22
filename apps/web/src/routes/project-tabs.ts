@@ -2,6 +2,7 @@ import type { ComponentType } from 'react';
 import { ProjectOverviewTab } from './ProjectOverviewTab';
 import { ProjectChatTab, ProjectCriativoTab } from './ProjectSessionsTab';
 import { ProjectCodeTab } from './ProjectCodeTab';
+import { ProjectRagTab } from './ProjectRagTab';
 import { ProjectExecutorsTab } from './ProjectExecutorsTab';
 import { ProjectBacklogTab } from './ProjectBacklogTab';
 import { ProjectApprovalsTab } from './ProjectApprovalsTab';
@@ -28,6 +29,18 @@ import { ProjectSettingsTab } from './ProjectSettingsTab';
  *
  * O que NÃO muda: `?tab=` continua sendo só deep-link inicial, e a aba
  * continua estado local da página. Este arquivo é o registro, não roteamento.
+ *
+ * PROGRAMA 28 — moldura de tela (ADR 0078): o handoff de design prevê 7 abas
+ * (Visão geral, Criativo, Código, Chat, Gastos, Aprovações, Configurações);
+ * este registro tem 11. As 3 a mais de antes — `executores`, `backlog`,
+ * `insights` — nasceram DEPOIS do handoff, com dado real e RN própria
+ * (RN-121, RN-048, e as hipóteses do Psicólogo), e FICAM: o handoff é
+ * referência de fidelidade visual, não teto de produto (RN-203). A 4ª a
+ * mais é `rag` (Onda 5, frente G3): a promessa que RN-202 declarou adiada
+ * ("Chat RAG" é OUTRA tela, que depende do pipeline de RAG) chegou como
+ * aba PRÓPRIA em vez de renomear `sessions` — `sessions` segue rotulada
+ * "Chat", porque continua sendo conversa com agente ativado, e RAG é busca
+ * sobre o índice sem agente nenhum no meio.
  */
 
 /**
@@ -125,6 +138,13 @@ const REGISTRO = [
     //
     // Chat é a aba consultiva: uma entrada por tipo, e nenhuma terceira
     // listando os dois de novo.
+    //
+    // O handoff do PROGRAMA 28 chama esta aba de "Chat RAG" — mas continua
+    // NÃO sendo o rótulo dela (RN-202, ADR 0078): "Chat RAG" virou a aba
+    // `rag`, própria, logo abaixo — consulta por busca híbrida sobre o
+    // índice, sem agente ativado no meio. `sessions` é a outra pergunta:
+    // conversa com um agente. Renomear esta pra "Chat RAG" continuaria
+    // descrevendo a coisa errada.
     key: 'sessions',
     label: 'Chat',
     component: ProjectChatTab,
@@ -135,11 +155,26 @@ const REGISTRO = [
   // e o "quarto estado" (RN-107, bloqueado por decisão pendente do Arquiteto)
   // mora dentro do próprio painel — não no registro.
   {
+    // O rótulo era "Code" (inglês, sobrado da FASE 26); o handoff pede
+    // "Código", e nenhum outro ponto compara pela STRING do rótulo — a chave
+    // de deep-link e de registro continua `code` (ADR 0078).
     key: 'code',
-    label: 'Code',
+    label: 'Código',
     component: ProjectCodeTab,
     semRespiro: true,
     ordem: 27,
+  },
+  // PROGRAMA 28, Onda 5, frente G3 — o Chat RAG que RN-202 tinha adiado: a
+  // Onda 4 (frente G2) deixou o pipeline de indexação e a busca híbrida
+  // prontos (RN-231..238, ADR 0080), e esta é a tela que os consome. Logo
+  // depois de Código, antes do Backlog — é leitura sobre o que já foi
+  // produzido/indexado, na mesma vizinhança de "olhar o que existe" que
+  // Código já ocupa.
+  {
+    key: 'rag',
+    label: 'Chat RAG',
+    component: ProjectRagTab,
+    ordem: 28,
   },
   {
     key: 'backlog',

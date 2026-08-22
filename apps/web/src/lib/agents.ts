@@ -5,10 +5,12 @@ import {
   ClockIcon,
   CodeIcon,
   DeployIcon,
+  FileIcon,
   GaugeIcon,
   HypothesisIcon,
   LayoutSidebarIcon,
   LockIcon,
+  PencilIcon,
   PermissionIcon,
   ServerIcon,
   StackIcon,
@@ -29,6 +31,8 @@ export type AgentKey =
   | 'criativo'
   | 'arquiteto'
   | 'po'
+  | 'ux-designer'
+  | 'staff'
   | 'dev-lead'
   | 'dev-backend'
   | 'dev-frontend'
@@ -50,6 +54,18 @@ export interface AgentDef {
    */
   initials: string;
   role: string;
+  /**
+   * Cor do agente, sempre um `var(--token)` quando existe token para ela.
+   *
+   * Três valores AINDA são hex solto, e são declarados aqui em vez de
+   * convertidos: `#B9A5E8` (Psicólogo leve), `#5EBEB1` (Dev Frontend) e
+   * `#8AA6AE` (SecOps) não têm contraparte semântica em `design/tokens.css`, e
+   * inventar um token para cada um seria abrir três cores novas no design
+   * system de passagem. A consequência é conhecida e está no ADR 0074: esses
+   * três não mudam com o tema — foram escolhidos contra o fundo escuro e no
+   * tema claro ficam mais lavados que os outros. Token de cor de agente é
+   * decisão de produto, não correção de caminho.
+   */
   color: string;
   icon: ComponentType<{ size?: number; className?: string }>;
 }
@@ -60,7 +76,7 @@ export const AGENTS: Record<AgentKey, AgentDef> = {
     name: 'Psicólogo',
     initials: 'PS',
     role: 'Anamnese emocional do time',
-    color: '#9C7BE0',
+    color: 'var(--violet)',
     icon: HypothesisIcon,
   },
   // Tier barato da triagem do Psicólogo (Fase 4b) — entra no roster pra
@@ -103,8 +119,36 @@ export const AGENTS: Record<AgentKey, AgentDef> = {
     name: 'PO',
     initials: 'PO',
     role: 'Priorização e backlog',
-    color: '#9C7BE0',
+    color: 'var(--violet)',
     icon: UserIcon,
+  },
+  // Quinto agente conversacional (ADR 0087, `docs/fluxo.yml` id `ux-designer`
+  // — status `active`, antecipado pelo dono do produto antes do gatilho de
+  // separação declarado ter disparado). SOLO, sem área. `--accent` é o token
+  // semântico menos reusado do roster (só o Arquiteto o usava até aqui) —
+  // nenhum dos cinco tokens semânticos de `design/tokens.css` está livre de
+  // outro agente, e a regra do design system proíbe inventar hex novo.
+  'ux-designer': {
+    key: 'ux-designer',
+    name: 'UX Designer',
+    initials: 'UX',
+    role: 'Personas, jornadas e protótipo navegável',
+    color: 'var(--accent)',
+    icon: PencilIcon,
+  },
+  // Staff/Principal Engineer (docs/fluxo.yml, camada_decisao_tecnica, ADR
+  // 0088) — RFC + PoC descartável para problema sistêmico RECORRENTE,
+  // devolvido ao Arquiteto por handoff. Dormente para disparo AUTOMÁTICO
+  // (a Anamnese, que o dispararia, está pausada — ANAMNESE_ENABLED=false);
+  // acionável MANUALMENTE por handoff aceito, mesmo mecanismo genérico dos
+  // demais leads (sem entrar em USER_STARTED_AGENTS).
+  staff: {
+    key: 'staff',
+    name: 'Staff',
+    initials: 'ST',
+    role: 'Parecer sistêmico e RFC',
+    color: 'var(--violet)',
+    icon: FileIcon,
   },
   'dev-lead': {
     key: 'dev-lead',

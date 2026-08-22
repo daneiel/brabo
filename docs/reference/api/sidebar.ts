@@ -30,6 +30,18 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/auth-controller-oauth-callback",
+          label: "Recebe o retorno do OAuth de login social",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/auth-controller-oauth-start",
+          label: "Redireciona para o provider OAuth para login social",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/auth-controller-refresh",
           label: "Rotaciona o refresh e emite um par novo",
           className: "api-method post",
@@ -216,6 +228,18 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/internal-graph-controller-upsert",
+          label: "Publica uma versão de template de prompt, idempotente por hash",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/internal-graph-controller-get-by-name",
+          label: "Busca um template de prompt pelo nome",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/internal-models-controller-sync",
           label: "Sincroniza o catálogo de modelos de todos os providers",
           className: "api-method post",
@@ -237,6 +261,24 @@ const sidebar: SidebarsConfig = {
           id: "docs/reference/api/internal-projects-controller-git-remote",
           label: "O remoto de trabalho do projeto, para buscar e empurrar",
           className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/internal-projects-controller-product-metrics",
+          label: "O funil de entrega e DORA parcial do projeto, para o PO ler",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/internal-projects-controller-confirm-workspace-verification",
+          label: "O runner confirma o caminho de um projeto 'runner' (RN-423)",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/internal-rag-controller-buscar",
+          label: "Busca híbrida no índice RAG do projeto, para a tool do engine",
+          className: "api-method post",
         },
         {
           type: "doc",
@@ -456,6 +498,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/containers-controller-ciclo-de-vida",
+          label: "Ciclo de vida do container do projeto (estado registrado)",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/projects-controller-list-members",
           label: "Lista os membros do projeto com o papel efetivo",
           className: "api-method get",
@@ -483,6 +531,36 @@ const sidebar: SidebarsConfig = {
           id: "docs/reference/api/projects-controller-set-permissions",
           label: "Reescreve o permissions.json do projeto",
           className: "api-method put",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/personal-access-tokens-controller-list-pats",
+          label: "Lista os próprios Personal Access Tokens deste projeto",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/personal-access-tokens-controller-issue-pat",
+          label: "Emite um Personal Access Token pro runner local",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/personal-access-tokens-controller-revoke-pat",
+          label: "Revoga um Personal Access Token próprio",
+          className: "api-method delete",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/runner-tickets-controller-runner-ticket",
+          label: "Emite um ticket de uso único para o runner local conectar",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/runner-tickets-controller-terminal-ticket",
+          label: "Emite um ticket de uso único para a aba Terminal da web",
+          className: "api-method post",
         },
       ],
     },
@@ -757,7 +835,7 @@ const sidebar: SidebarsConfig = {
         {
           type: "doc",
           id: "docs/reference/api/spend-controller-get-workspace-spend-report",
-          label: "Quebra o gasto do workspace por modelo, projeto, ator e dia",
+          label: "Quebra o gasto do workspace por modelo, provider, projeto, ator e dia",
           className: "api-method get",
         },
       ],
@@ -896,6 +974,30 @@ const sidebar: SidebarsConfig = {
     },
     {
       type: "category",
+      label: "rag",
+      items: [
+        {
+          type: "doc",
+          id: "docs/reference/api/rag-controller-obter-cobertura",
+          label: "Cobertura do índice: arquivos/sessões indexados contra o total real",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/rag-controller-reindexar",
+          label: "Reindexa docs/ADR/sessões do projeto (full rebuild idempotente)",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/rag-controller-buscar",
+          label: "Busca híbrida (vetor + léxico) nos chunks indexados do projeto",
+          className: "api-method post",
+        },
+      ],
+    },
+    {
+      type: "category",
       label: "sessões",
       items: [
         {
@@ -986,6 +1088,12 @@ const sidebar: SidebarsConfig = {
           type: "doc",
           id: "docs/reference/api/agents-controller-handoff-infra",
           label: "Confirma que a arquitetura está pronta e oferece o handoff ao Infra",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/agents-controller-validate-necessity-handoff",
+          label: "Confirma que a necessidade de negócio do Criativo foi validada",
           className: "api-method post",
         },
         {

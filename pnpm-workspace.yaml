@@ -1,5 +1,6 @@
 packages:
   - apps/api
+  - apps/runner
   - apps/web
   - packages/*
   - website
@@ -136,6 +137,11 @@ allowBuilds:
   # ignorado que ninguém decidiu.
   core-js: false
   unrs-resolver: true
+  # `node-pty` (apps/runner) é binding NATIVO de verdade — compila C++ com
+  # node-gyp no postinstall para abrir PTY de verdade (o mesmo binding que o
+  # VS Code usa). Diferente dos `false` abaixo, este build faz algo que o
+  # produto precisa: sem ele, o modo terminal interativo do runner não existe.
+  'node-pty': true
   # false pelo mesmo critério dos dois acima: o @scarf/scarf entra como
   # transitiva do @nestjs/swagger (Fase 7) e o postinstall dele só reporta
   # telemetria de instalação para um servidor de terceiros. Não gera nem

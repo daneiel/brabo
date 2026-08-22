@@ -340,14 +340,126 @@ produto adiadas — por isso sem prioridade aqui.
 | Dev Lead e áreas via `module_map` | **saiu do backlog**: ADR 0053, implementado pela FASE 14d |
 | Handoff manual a agente à escolha | — |
 | MFA, login social, OIDC, federação | [ADR 0031](../adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.md) |
-| SMTP real no MailSender | hoje é log-only |
 | Deploy (`DEPLOY_ENABLED` + Environments) | o gate `operavel` já está declarado como `planned` |
 | Volta da `rc`/`rcfix` | [ADR 0030](../adr/0030-politica-de-branches-mecanizada.md) |
-| Modo community do approval-ladder | vira mudança de `aprovacao_humana` no registro de gates (ADR 0054, PR #145) |
-| "N agentes online" no dashboard | — |
+| ~~Modo community do approval-ladder~~ | **CORRIGIDO E FECHADO.** A referência "vira mudança de `aprovacao_humana` no registro de gates" era imprecisa — vinha de uma frase especulativa do ADR 0054, não de algo que faltava. O modo `community` já está implementado e testado desde a FASE 6 (`scripts/ci/approval-ladder.ts`), só desligado por `APPROVAL_MODE=solo` (default); `aprovacao_humana` do gate `aprovacoes-da-escada` já é `true` nos dois modos, sem awareness de `APPROVAL_MODE` no schema. O que faltava de verdade era o `TODO(humano)` de `branching-policy.md` — o critério de quem entra em cada lista de aprovadores —, fechado por `GOVERNANCE.md` (raiz do repositório). Ativar o modo de fato continua sendo decisão operacional (recrutar gente real pros três papéis), não pendência de engenharia |
 | Preferência de moeda com taxa manual | — |
 | Reativar a Anamnese (`ANAMNESE_ENABLED=true`) | pausada por decisão do usuário em 2026-08-10 — "hoje ele não está trazendo dados de muito valor" ([RN-115](../business-rules.md#rn-115)). Nenhum dado apagado (hipóteses, perfis de proficiência, patches de instrução seguem intactos e visíveis); a pausa é só do CAMINHO de rodada nova, aguardando um refinamento futuro do que a Anamnese deriva antes de religar |
 | Reativar o Psicólogo (`PSYCHOLOGIST_ENABLED=true`) | pausado por decisão do usuário em 2026-08-10, mesmo motivo e mesmo padrão da Anamnese acima ([RN-117](../business-rules.md#rn-117)). Nenhum dado apagado (análises e hipóteses já emitidas seguem intactas e visíveis); a pausa é só do CAMINHO de rodada nova (automática e sob demanda) |
+
+## Backlog do runner/execution_mode (ADR 0104)
+
+Primeiro achado do tipo "dois ADRs divergentes entre si" registrado neste
+documento — os precedentes de tabela abaixo (a auditoria `fluxo.yml`×código,
+já fechada) eram sempre doc-declarativo × código, nunca ADR × ADR. A forma
+da tabela é reaproveitada; o tipo de achado é novo.
+
+**A divergência, fechada pelo [ADR 0104](../adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md)
+— reconciliação ACEITA, Onda 1 (RN-421/422/423) CONCLUÍDA:**
+
+| # | Severidade | Item | Evidência (arquivo:linha) |
+|---|---|---|---|
+| 1 | **FECHADO** (RN-423) | RN-170 exigia bind-mount na criação; RN-420 roteava pro runner sob a mesma flag `workspace_mode == 'local'`, sem bind-mount nenhum | `apps/api/src/application/use-cases/iam/confirm-project-workspace.use-case.ts` (o runner confirma e vira fonte da verdade); `apps/engine/lib/engine/actions/terminal_executor.ex` (`decisao_de_execucao/1`, quatro saídas — recusa explícita sem workspace verificado/runner conectado, nunca fallback pro container) |
+| 2 | **FECHADO** (RN-422) | Wizard só ensinava bind-mount, nunca o comando do runner, mesmo ele já existindo | `apps/web/src/routes/NewProjectWizard.tsx` — terceira entrada em `MODOS_DE_WORKSPACE` (`runner`), com o comando `brabo-runner --project <id> --dir <pasta>` no próprio passo "Onde o código vai morar", não só no Terminal |
+| 3 | **FECHADO** (RN-421) | Enum de 2 valores (`workspace_mode`) não expressava 3 execuções fisicamente distintas | `apps/api/src/db/migrations/0048_quiet_iron_fist.sql` (`project_execution_mode`, três valores); `apps/api/src/domain/iam/project.entity.ts` (`PROJECT_EXECUTION_MODES`) |
+
+**Correção registrada durante a implementação da Onda 1 — o ADR não é
+editado, a correção mora aqui**: o item 4 do ADR 0104 afirma que a
+conversão entre os três modos de um projeto EXISTENTE "passa a ser
+permitida sem recriar o projeto". Isso está **incorreto** — a Onda 1
+investigou e achou que `UpdateProjectDto` continua excluindo
+`executionMode`/`workspacePath` de propósito (worktree, `permissions.json`
+e cache do engine apontam pro escopo antigo; não é um `PATCH` trivial). A
+Onda 1 entregou só o campo de três valores na CRIAÇÃO. Conversão de
+projeto já existente fica como item de backlog NOVO, sem desenho ainda:
+
+| item | custo | critério de ativação | onde foi decidido |
+|---|---|---|---|
+| Conversão de `execution_mode` em projeto EXISTENTE, sem recriar (worktree, `permissions.json` e cache do engine precisam migrar de escopo junto) | M | nenhum — o ADR 0104 já prometia isso e a promessa está incorreta hoje; falta só o desenho | achado na Onda 1, corrigindo o ADR 0104 item 4 |
+
+**Onda 2 — PAT, [ADR 0105](../adr/0105-personal-access-token-do-runner-escopado-por-construcao.md), CONCLUÍDA (RN-424/425/426):**
+
+O item "token de conta de longa duração" da tabela original tinha DOIS
+erros de texto, corrigidos na implementação em vez de seguidos cegamente
+— registrados aqui porque a tabela abaixo os repetia:
+
+1. **"hash argon2 no banco" estava errado.** O padrão real do produto pra
+   segredo de ALTA entropia (256 bits de CSPRNG) é HMAC-SHA256 + pepper
+   via `hashDeToken()`/`TokenFactory` — o mesmo mecanismo de refresh
+   tokens e account tokens. Argon2 é pra segredo de BAIXA entropia
+   (senha), onde resistência a dicionário importa; aqui só quebraria a
+   busca indexada `WHERE token_hash = $1` sem ganhar nada.
+2. **"reaproveitando a infra de rotação de família de refresh" era
+   impreciso.** PAT é apresentado repetidamente SEM MUDAR — nunca
+   consumido-e-reemitido como um refresh token. Só a geração
+   (`TokenFactory.gerar()`) e o hashing são reaproveitados; a família/
+   rotação inteira seria inventar um comportamento que o PAT não precisa.
+
+| # | Severidade | Item | Evidência (arquivo:linha) |
+|---|---|---|---|
+| 1 | **FECHADO** (RN-424) | PAT precisava autenticar `runner-ticket` sem virar credencial válida pra qualquer outra rota do usuário | `apps/api/src/interfaces/http/auth/pat-route.decorator.ts` (`@RequirePatAuth()`), `apps/api/src/interfaces/http/auth/jwt-auth.guard.ts` (terceiro early-out), `apps/api/src/interfaces/http/auth/pat-auth.guard.ts` (`PatAuthGuard`, aplicado só em `runnerTicket`) |
+| 2 | **FECHADO** (RN-425) | Validação de token de alta entropia sem vazar qual dos três motivos de recusa (inexistente/revogado/expirado) se aplica; `last_used_at` sem regredir uma reconexão legítima | `apps/api/src/infrastructure/persistence/drizzle/personal-access-token.repository.ts` (`validarEUsar` — UPDATE condicional único, sem throttle no mesmo WHERE) |
+| 3 | **FECHADO** (RN-426) | Emitir/revogar/listar sem vazar token de um usuário pro outro | `apps/api/src/application/use-cases/auth/*-personal-access-token*.use-case.ts`, escopo por `userId` no WHERE da query |
+
+`apps/runner/src/auth.ts` perdeu por completo login interativo, cookies
+e `~/.brabo/runner-credentials.json` — só valida formato e repassa
+`--token`/`BRABO_ACCOUNT_TOKEN`, nunca gravado em disco pelo CLI.
+
+**Onda 3 — distribuição via npm, [ADR 0106](../adr/0106-distribuicao-do-runner-via-tsup-e-npm-publish.md), CONCLUÍDA:**
+
+| # | Severidade | Item | Evidência (arquivo:linha) |
+|---|---|---|---|
+| 1 | **FECHADO** | `apps/runner` era `"private": true`, `bin` apontando pra um `.ts` cru, só alcançável clonando o monorepo | `apps/runner/tsup.config.ts` (`format: cjs`, `external: ['node-pty']`), `apps/runner/package.json` (`bin` → `dist/index.cjs`, `publishConfig.access: public`), `.github/workflows/publish-runner.yml` (publica a cada tag final, workflow próprio, paralelo a `release.yml`) |
+
+Achado real durante a implementação, testado empiricamente antes de entrar
+no código: a correção óbvia da guarda de auto-run de `index.ts`
+(`import.meta.url === pathToFileURL(argv[1]).href`) estava QUEBRADA
+exatamente no caso que esta onda existe pra habilitar — invocação via `bin`
+instalado (`npm install -g` cria um symlink, e `process.argv[1]` nunca é
+resolvido por realpath enquanto `import.meta.url` sempre é). A correção
+final aplica `realpathSync` em `argv[1]` antes de comparar — ver ADR 0106.
+
+**O que fica para depois — backlog priorizado pelo dono do produto, nesta
+ordem:**
+
+| item | custo | critério de ativação | onde foi decidido |
+|---|---|---|---|
+| Binário standalone (`pkg`/`bun build --compile`) | G | não bloqueante; sem gatilho definido, item futuro separado da distribuição via npm | ADR 0104 |
+| `maintainer` revogar PAT de OUTRO usuário (resposta a incidente — dev desligado com token vazando) | P | nenhum — declarado fora de escopo da Onda 2, não implementado | ADR 0105 |
+| Exclusividade do runner por `{project_id, machine_id}` em vez de só `project_id` (`apps/engine/lib/engine/runners/registry.ex`) | M | ADIADO — critério de ativação explícito: existir de fato um segundo dev usando o mesmo projeto simultaneamente | ADR 0104 |
+
+`apps/runner/src/guard.ts` (checagem léxica best-effort de `cwd`) **não é
+item de backlog** — é invariante declarado desde o ADR 0103 e REAFIRMADO
+pelo ADR 0104: a fronteira de segurança real do runner é autenticação +
+pipeline de aprovação de sempre + consentimento do usuário, nunca
+sandboxing.
+
+## Backlog do modelo de time (ADR 0085) — AUDITORIA FECHADA
+
+Saída da auditoria `fluxo.yml` × código
+([auditoria-fluxo-vs-codigo.md](auditoria-fluxo-vs-codigo.md)). Eram itens
+declarados no modelo (`docs/fluxo.yml`) sobre papéis já **ativos** — não
+esperavam nenhum papel `proposto`/`planned` ativar primeiro. As seis ondas
+do plano fecharam, e esta tabela fica **vazia**: o último item (B4, o PO
+ler `metricas-de-produto`) fechou com a RN-407, sem ADR novo — mesmo padrão
+já estabelecido pela RN-164 (leitura de agente escopada ao projeto, sem
+efeito externo). O documento da auditoria tem o plano de ondas completo,
+com custo e critério de verificação por item, para quem quiser o histórico.
+
+**Fechados desde a auditoria** (não removidos da referência original, só desta
+tabela de pendências): gate `implementavel` (B3, ADR 0090); `docs/gates.yml`
+desatualizado em `paralelismo-autorizado` (A1/B5, corrigido junto com A3–A5/A8
+— citações de RN e rótulos errados em `fluxo.yml`); deployment frequency e lead
+time reais via `analise:funil` (parte de B7, ADR 0089) — o resto de B7 (MTTR,
+change failure rate) não fechou: continua declarado como lacuna PERMANENTE em
+`fluxo.yml` (papel `delivery-metricas`), não pendência de engenharia; delegação
+Dev Lead → dev (B1) e RN-160 sem revalidação no backend (A6/B6) — Onda 2 da
+auditoria, ADR 0094, RN-404/405; gate `necessidade-validada` (B2) — Onda 6
+(última) da auditoria, ADR 0095, RN-406; **métricas de produto → PO (B4)** —
+o relatório (`analise:funil`, ADR 0089) já existia, faltava só o PO LER
+`metricas-de-produto`; fechado com a ferramenta `listar_metricas_de_produto`
+e as funções puras extraídas para `apps/api/src/application/services/funil-metrics.ts`
+(RN-407) — última pendência da tabela, encerrando a auditoria.
 
 ## O que esta triagem NÃO faz
 

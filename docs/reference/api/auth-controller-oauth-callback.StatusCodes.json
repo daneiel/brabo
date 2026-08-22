@@ -1,0 +1,1 @@
+{"responses":{"302":{"description":"Redireciona para a web.","headers":{"Location":{"description":"Destino na web.","schema":{"type":"string","example":"http://localhost:5173/"}}}}}}

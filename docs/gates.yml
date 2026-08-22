@@ -42,6 +42,24 @@ gates:
         ]
       onde: apps/api/src/application/use-cases/actions/propose-action.use-case.ts
 
+  - id: necessidade-validada # Criativo → PO — auditoria fluxo.yml x código (B2), ADR 0095
+    fluxo: descoberta
+    dono: usuario
+    entrada: [product-brief]
+    entregavel: necessidade-de-negocio-validada
+    verificacao: script
+    # `warn`, não `block`: nada A JUSANTE depende de checar este gate para
+    # seguir — o handoff Criativo→PO já aconteceu dentro do próprio
+    # `confirm_readiness` (RN-142), e esta confirmação é só o registro de que
+    # um humano validou a necessidade, não um portão que bloqueia o PO.
+    severidade: warn
+    aprovacao_humana: true
+    status: active
+    evidencia:
+      tipo: event_log
+      event_types: [necessity.validated]
+      onde: apps/api/src/application/use-cases/agents/validate-necessity.use-case.ts
+
   - id: story-promovida
     fluxo: pre-dev
     dono: usuario # modo manual é o default (RN-048)
@@ -74,6 +92,20 @@ gates:
       tipo: event_log
       event_types: [bootstrap.plan_approved, bootstrap.adopted_as_is]
       onde: apps/api/src/application/use-cases/git/decide-bootstrap-plan.use-case.ts
+
+  - id: workspace-verificado # RN-423, ADR 0104
+    fluxo: provisionamento
+    dono: usuario # é o runner, rodado pelo usuário na própria máquina
+    entrada: [projeto-criado-modo-runner]
+    entregavel: workspace-confirmado-pelo-runner
+    verificacao: script
+    severidade: warn # quem trava de verdade é a recusa explícita do engine (RN-423); o gate é só o registro
+    aprovacao_humana: false
+    status: active
+    evidencia:
+      tipo: event_log
+      event_types: [project.workspace_verified]
+      onde: apps/api/src/application/use-cases/iam/confirm-project-workspace.use-case.ts
 
   - id: qa-verificada
     fluxo: pr
@@ -236,7 +268,7 @@ gates:
       arquivo: scripts/ci/promotion-check.spec.ts
       onde: scripts/ci/promotion-check.ts
 
-  - id: paralelismo-autorizado # FASE 14d — entra active quando ela fechar
+  - id: paralelismo-autorizado # FASE 14d — ativo desde 2026-08-07; corrigido na auditoria fluxo.yml (A1/B5)
     fluxo: execucao
     dono: lead-de-area
     entrada: [pedido-acima-do-limite]
@@ -244,10 +276,20 @@ gates:
     verificacao: script
     severidade: block
     aprovacao_humana: true
-    status: planned
+    status: active
+    evidencia:
+      tipo: event_log
+      event_types:
+        [
+          proposed_action.created,
+          proposed_action.approved,
+          proposed_action.denied,
+        ]
+      filtro: { actionType: parallelize }
+      onde: apps/api/src/application/use-cases/execution/request-parallelization.use-case.ts
     backlog: ADR 0053
 
-  - id: implementavel # Dev Lead — FASE 14d (ADR 0053)
+  - id: implementavel # Dev Lead — FASE 14d (ADR 0053); ativado pelo ADR 0090
     fluxo: pre-dev
     dono: dev-lead
     entrada: [story-ready, plano-de-teste]
@@ -255,8 +297,17 @@ gates:
     verificacao: script
     severidade: warn # nasce warn mesmo quando ativar
     aprovacao_humana: true
-    status: planned
-    backlog: ADR 0053
+    status: active
+    evidencia:
+      tipo: event_log
+      event_types:
+        [
+          proposed_action.created,
+          proposed_action.approved,
+          proposed_action.denied,
+        ]
+      filtro: { actionType: assess_implementability }
+      onde: apps/engine/lib/engine/agents/dev_lead_tools.ex
 
   - id: operavel # Platform/SRE — sincronizado com DEPLOY_ENABLED
     fluxo: pre-deploy

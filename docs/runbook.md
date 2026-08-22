@@ -27,8 +27,11 @@ arquivo. Comece pela triagem.
 | painel vazio, sem trace, sem log | [Observabilidade](#observabilidade) |
 | não sei que versão está rodando | [Que versão está no ar](#que-versao-esta-no-ar) |
 | `blocked by CORS policy` no console do navegador | [Erro de CORS](#erro-de-cors) |
+| ativar sessão não faz nada, ou `transition` responde `500` com `ECONNREFUSED` | [A sessão não sai de `created`](#sessao-nao-ativa) |
 | a api sai no boot reclamando de `GIT_OAUTH_STATE_SECRET` | [A api recusa subir por segredo de OAuth](#segredo-de-oauth-no-boot) |
-| a api ou o engine saem no boot reclamando de `AUTH_JWT_SECRET`, `BRABO_SERVICE_TOKEN`, `CREDENTIALS_MASTER_KEY` ou `SECRET_KEY_BASE` | [Os quatro segredos irmãos também não sobem com o default](#segredos-irmaos-no-boot) |
+| "Entrar com GitHub/GitLab" volta do provider com erro de `redirect_uri` | [O provider recusa o callback do login social](#callback-login-social-nao-registrado) |
+| a api ou o engine saem no boot reclamando de `AUTH_JWT_SECRET`, `BRABO_SERVICE_TOKEN`, `CREDENTIALS_MASTER_KEY`, `SECRET_KEY_BASE` ou `NEO4J_URI`/`NEO4J_USER`/`NEO4J_PASSWORD` | [Os quatro segredos irmãos também não sobem com o default](#segredos-irmaos-no-boot) |
+| quero ligar SMTP real, ou a api sai no boot reclamando de `SMTP_HOST`/`SMTP_USER`/`SMTP_PASSWORD`/`SMTP_FROM` | [SMTP real no `MailSender`](#smtp-real) |
 | agente respondendo vazio, truncado ou lentíssimo | [Ambiente de inferência](#ambiente-de-inferencia) |
 | agente parando com `limite de iterações atingido` sem ter entregado | [Ambiente de inferência](#ambiente-de-inferencia) |
 | quero acrescentar um provider de LLM compatível com a OpenAI | [Adicionando um provider compatível](#adicionando-um-provider-compativel) |
@@ -297,12 +300,71 @@ Três coisas que **não** são problema de CORS, por mais que pareçam:
 
 - **api ↔ engine**. CORS é mecanismo de navegador; ali quem chama é cliente HTTP
   de servidor, que ignora esses cabeçalhos. Falha nesse caminho é service token
-  (`401`/`403`) — ver [rotação](#rotacao-das-chaves-do-auth).
+  (`401`/`403` — ver [rotação](#rotacao-das-chaves-do-auth)) ou endereço errado
+  (`ECONNREFUSED` — ver [a sessão não sai de `created`](#sessao-nao-ativa)).
 - **O canal Phoenix ficar mudo.** WebSocket não passa por CORS. Quem recusa é o
   `check_origin` do endpoint, também alimentado por `WEB_ORIGIN`, e a recusa
   aparece no log do engine — não no console do navegador como erro de CORS.
 - **`/metrics` do engine bloqueado no navegador.** É deliberado: métrica interna
   não é legível por JavaScript de página. Use `curl`.
+
+### A sessão não sai de `created` {#sessao-nao-ativa}
+
+Sintoma: ativar sessão não faz nada. "Abrir sessão criativa" cria a sessão e a
+tela não muda de lugar; "Ativar sessão" também não. No log da api,
+`POST /projects/:id/sessions/:id/transition` responde `500`:
+
+```
+TransitionSessionUseCase.activate ✗ TypeError
+  ↳ HttpApiToEngineClient.startSession ✗ TypeError: fetch failed
+      caused by: AggregateError [ECONNREFUSED]
+```
+
+Ativar sessão é o primeiro passo que **atravessa** para o engine (a api pede a
+sessão supervisionada por HTTP interno), então é aqui que um `ENGINE_URL` errado
+aparece — e não antes, porque nada mais no caminho de criação sai da api.
+
+Confirme de **dentro** do container, que é onde o endereço vale:
+
+```bash
+docker exec brabo-api-1 node -e '
+for (const u of ["http://engine:4000/health", "http://localhost:4000/health"]) {
+  fetch(u, { signal: AbortSignal.timeout(5000) })
+    .then((r) => console.log(u, "->", r.status))
+    .catch((e) => console.log(u, "-> FALHOU:", e.cause?.code ?? e.message));
+}'
+docker exec brabo-api-1 sh -c 'echo $ENGINE_URL'
+```
+
+`engine:4000` respondendo `200` enquanto `localhost:4000` dá `ECONNREFUSED`, com
+`ENGINE_URL=http://localhost:4000`, é o diagnóstico fechado: **dentro do
+container, `localhost` é a própria api**.
+
+A causa costuma ser o `.env`, não o compose. O `pnpm dev` passa o `.env` como
+`--env-file`, e um valor ali **vence** o `${ENGINE_URL:-http://engine:4000}` do
+compose. Correção: remover (ou comentar) a linha `ENGINE_URL` do seu `.env` e
+recriar a api —
+
+```bash
+docker compose -f docker/docker-compose.yml --env-file .env up -d api
+```
+
+— porque cada ambiente já traz o default certo sem ela: o compose aponta para o
+serviço `engine`, e a api rodando no host cai no `http://localhost:4000` do
+próprio código. Preencher a variável só faz sentido para apontar para um engine
+que não é nenhum dos dois. Vale para o compose de **produção** também, que usa a
+mesma interpolação; em Kubernetes o valor vem do ConfigMap e sempre foi
+`http://engine:4000`.
+
+Duas checagens antes de culpar o endereço, se o `ENGINE_URL` estiver correto:
+
+- **O engine está de pé?** `docker compose ps engine` e
+  `curl -sI http://localhost:4000/health`. `ECONNREFUSED` com endereço certo é
+  serviço fora do ar, não configuração.
+- **Sessão que ativa e fecha sozinha ~30s depois** não é este problema. Olhe
+  `termination_reason`: `heartbeat_timeout` significa que a ativação funcionou e
+  ninguém entrou no canal Phoenix — comportamento esperado quando se ativa por
+  fora da interface (`SESSION_HEARTBEAT_TIMEOUT_MS`).
 
 ### A api recusa subir por segredo de OAuth {#segredo-de-oauth-no-boot}
 
@@ -331,6 +393,28 @@ Trocar a chave **invalida os `state` em voo**: quem estiver no meio de um
 `state` é de 10 minutos, a janela é essa — não há migração a fazer, e nenhuma
 conexão **já estabelecida** é afetada (o token guardado não depende desta
 chave).
+
+### O provider recusa o callback do login social {#callback-login-social-nao-registrado}
+
+Sintoma: clicar em "Entrar com GitHub"/"Entrar com GitLab" na tela de login
+leva ao provider e volta com um erro do TIPO DELE (`redirect_uri_mismatch` no
+GitHub, "The redirect URI included is not valid" no GitLab) — nunca chega a
+`/auth/oauth/:provider/callback`.
+
+**Não é bug do produto — é registro faltando no lado do provider.** O login
+social ([ADR 0084](adr/0084-login-social-github-e-gitlab.md)) reusa o MESMO
+OAuth App que a conexão de git já usa (`GITHUB_OAUTH_CLIENT_ID`/
+`GITLAB_OAUTH_CLIENT_ID`, sem variável nova), mas cada FLUXO tem seu próprio
+`redirect_uri`, e o provider exige que TODOS os que a api pode pedir estejam
+cadastrados de antemão:
+
+- Conexão de git (já existia): `${API_PUBLIC_URL}/git/oauth/<provider>/callback`
+- Login social (novo): `${API_PUBLIC_URL}/auth/oauth/<provider>/callback`
+
+Cadastre o segundo na configuração do OAuth App (GitHub: Settings → Developer
+settings → OAuth Apps; GitLab: Settings → Applications) — GitHub aceita várias
+callback URLs no mesmo App, GitLab também. Não precisa de App separado nem de
+client id/secret novo.
 
 ### Os quatro segredos irmãos também não sobem com o default {#segredos-irmaos-no-boot}
 
@@ -365,6 +449,33 @@ Em Kubernetes nada muda, pelo mesmo motivo do `GIT_OAUTH_STATE_SECRET`: os
 quatro já vinham de `brabo-secrets`, pela chave de mesmo nome, em
 `deploy/k8s/base/common/externalsecrets.yaml`.
 
+**O grafo de conhecimento (`NEO4J_URI`/`NEO4J_USER`/`NEO4J_PASSWORD`,
+[ADR 0099](adr/0099-neo4j-grafo-de-conhecimento-e-templates.md)) segue a
+mesma régua, com uma diferença**: `NEO4J_URI` e `NEO4J_USER` têm default de
+desenvolvimento seguro (`bolt://neo4j:7687`, `neo4j` — não são segredo, e o
+`docker-compose.prod.yml` já os supre); só `NEO4J_PASSWORD` fica sem
+default público, pelo mesmo motivo dos quatro acima — e sem ela o boot da
+api falha em `GraphStore.onModuleInit` (`neo4j-config.ts`) ANTES mesmo de o
+próprio Neo4j recusar subir (o entrypoint da imagem oficial exige senha com
+8+ caracteres; `NEO4J_AUTH` vazio derruba o container `neo4j` primeiro).
+
+```bash
+export NEO4J_PASSWORD="$(openssl rand -hex 24)"
+```
+
+**HEX, não base64.** O entrypoint do Neo4j lê `NEO4J_AUTH` como
+`usuario/senha` e divide na PRIMEIRA barra — uma senha em base64 pode conter
+`/` (o alfabeto tem `/` e `+`), e isso quebra esse parse com
+`Invalid value for NEO4J_AUTH`, derrubando o container `neo4j` num loop de
+reinício. Já aconteceu de verdade: o smoke do CI reprovou assim depois de um
+merge que reintroduziu o `-base64` por engano. Hex não tem `/`, `+` nem `=`.
+
+`docker/smoke.sh` já gera as cinco variáveis efêmeras acima (as quatro
+irmãs e `NEO4J_PASSWORD`, esta em hex) a cada execução — é assim que o job
+"Build, scan e smoke das imagens de produção" do CI sobe o
+`docker-compose.prod.yml` sem
+segredo nenhum commitado.
+
 Trocar `AUTH_JWT_SECRET` ou `BRABO_SERVICE_TOKEN` sem a dança do `_PREVIOUS`
 tem o mesmo efeito que já era documentado em
 [Rotação das chaves do auth](#rotacao-das-chaves-do-auth); trocar
@@ -372,6 +483,43 @@ tem o mesmo efeito que já era documentado em
 [Rotação da chave mestra](#rotacao-da-chave-mestra). Esta checagem de BOOT não
 muda nenhum dos dois procedimentos — ela só impede que a chave chegue à
 produção sendo o literal público deste repositório.
+
+### SMTP real no `MailSender` {#smtp-real}
+
+`MailSender` envia e-mail de verdade só quando `MAIL_TRANSPORT=smtp` — o
+default é `log` (o comportamento de sempre), **inclusive em produção**:
+enviar e-mail é opt-in do operador ([ADR 0096](adr/0096-smtp-real-no-mailsender.md)).
+Ver [Configuração](reference/configuration.md#api) para a tabela completa
+de `SMTP_*`.
+
+Sintoma de configuração incompleta: com `NODE_ENV=production` e
+`MAIL_TRANSPORT=smtp`, a api morre no start reclamando de `SMTP_HOST`,
+`SMTP_USER`, `SMTP_PASSWORD` ou `SMTP_FROM` — mesmo padrão de mensagem dos
+[quatro segredos irmãos](#segredos-irmaos-no-boot) ([RN-408](business-rules.md#rn-408)),
+mas SEM o default público que eles têm: aqui a régua só entra quando o
+operador optou por `smtp`.
+
+```bash
+export MAIL_TRANSPORT=smtp
+export SMTP_HOST=smtp.seu-provedor.com
+export SMTP_PORT=587
+export SMTP_USER=usuario-do-provedor
+export SMTP_PASSWORD="$(sua-credencial-do-provedor)"
+export SMTP_FROM="Brabo <nao-responda@seu-dominio.com>"
+```
+
+`SMTP_PASSWORD` é segredo de INFRAESTRUTURA do serviço (env var simples,
+como `AUTH_JWT_SECRET`), não segredo de USUÁRIO — não passa por envelope
+encryption, e não tem procedimento de rotação próprio além de trocar a
+variável e reiniciar (o provedor SMTP é quem decide a política de rotação
+da credencial dele). Em Kubernetes, a chave entra em `brabo-secrets` como
+qualquer outra, referenciada em
+`deploy/k8s/base/common/externalsecrets.yaml`.
+
+Se o e-mail não chega mesmo sem erro de boot: confira o log da api por
+`falha ao enviar e-mail via SMTP` (`tipo`/destinatário aparecem, o corpo e o
+token NUNCA aparecem — mesma régua do `LogMailSender`), e teste a
+credencial com o cliente SMTP do provedor antes de suspeitar do Brabo.
 
 ### k3d é o padrão mesmo com kind instalado
 
@@ -904,12 +1052,13 @@ Ele imprime uma linha por usuário — `emitido <email> — expira em <ISO>` ou
 pula quem já tem um token `set_initial_password` vivo — senão a segunda
 execução invalidaria (por supersede) os links já enviados.
 
-> **O `MailSender` é log-only, e por default NÃO imprime o token.** Log de
-> aplicação vai para o Loki e fica retido por semanas; um token de definição de
-> senha ali é credencial de takeover em texto claro. O que sai é tipo,
-> destinatário e expiração.
+> **Depende de `MAIL_TRANSPORT`** ([SMTP real no `MailSender`](#smtp-real),
+> ADR 0096). Em `log` (default, inclusive em produção) o `MailSender` NÃO
+> imprime o token por padrão. Log de aplicação vai para o Loki e fica retido
+> por semanas; um token de definição de senha ali é credencial de takeover em
+> texto claro. O que sai é tipo, destinatário e expiração.
 >
-> Sem SMTP configurado, a única forma de extrair os links é ligar
+> Com `MAIL_TRANSPORT=log`, a única forma de extrair os links é ligar
 > `AUTH_MAIL_LOG_TOKENS=true` na api, rodar o script, e **desligar em
 > seguida** — a api emite um `WARN` no boot enquanto a variável estiver ligada,
 > justamente para ela não sobreviver a um ambiente copiado:
@@ -920,6 +1069,10 @@ execução invalidaria (por supersede) os links já enviados.
 >
 > Enquanto os links estiverem vivos, trate esse log como segredo: quem o lê
 > pode definir a senha daquelas contas.
+>
+> Com `MAIL_TRANSPORT=smtp`, o link vai direto para a caixa de entrada de cada
+> usuário migrado — nada aparece no log além de `tipo`/destinatário, e não há
+> nada a extrair.
 
 Um usuário migrado que tentar logar antes de definir a senha recebe **o mesmo
 401 de sempre**, indistinguível de senha errada ou e-mail inexistente
@@ -1463,7 +1616,8 @@ expostas no `docker-compose.yml`.
 | `OLLAMA_REQUEST_TIMEOUT_MS` | timeout curto demais para um modelo grande num prompt longo |
 | `START_OUTBOX_DRAIN` / `START_ANAMNESE` | Psicólogo e Anamnese consomem turnos de LLM em paralelo com os agentes de execução e derrubam a conexão do dev no meio do ciclo |
 | `TOOL_LOOP_MAX_ITERATIONS*` | teto BAIXO demais e o agente para sem entregar, com `limite de iterações atingido` e origem `modelo` — que engana, porque o modelo não errou julgamento nenhum, ele não chegou a julgar. O teto é por TIPO ([RN-085](business-rules.md#rn-085)): `8` para quem conversa, `60` para dev agent e QA. Antes de subir, confira se o agente TEM `token_budget_micros`; sem ele o teto é a única trava de custo que existe |
-| `TERMINAL_OUTPUT_MAX_BYTES` | subir demais traz de volta o modo de falha que o teto existe para impedir: a saída de cada comando fica no histórico do laço e viaja em TODO turno seguinte, até o provider recusar a requisição com **HTTP 413** (`request entity too large`). O sintoma engana — parece o modelo travando, e é o corpo da requisição estourando. Não é janela de contexto: a maior chamada bem-sucedida da execução que morreu assim tinha só 28.993 tokens de entrada ([RN-074](business-rules.md#rn-074)) |
+| `TERMINAL_OUTPUT_MAX_BYTES` | subir demais traz de volta o modo de falha que o teto existe para impedir: a saída de cada comando fica no histórico do laço e viaja em TODO turno seguinte. Não é janela de contexto: a maior chamada bem-sucedida da execução que primeiro revelou isso tinha só 28.993 tokens de entrada ([RN-074](business-rules.md#rn-074)) |
+| `API_JSON_BODY_LIMIT` (api) / `TRANSPORT_MAX_BODY_BYTES` (engine) | o `413 request entity too large` no gate de QA/SecOps tinha causa na própria api do Brabo, nunca no provider — o Express nunca configurou limite de body e valia o default de 100 KB, contra os 8 MB que o Phoenix aceita no sentido engine→api mais pesado (`POST .../llm-turn`, que reenvia o histórico inteiro a cada iteração). `API_JSON_BODY_LIMIT` (default 10 MB) fecha essa ponta; `TRANSPORT_MAX_BODY_BYTES` (default 8 MiB) é o teto que a compactação de contexto do engine respeita ALÉM da janela do modelo, pra disparar antes do corpo estourar o limite HTTP ([RN-412](business-rules.md#rn-412), [ADR 0098](adr/0098-limites-de-transporte-e-janela-efetiva-de-compactacao.md)) |
 
 > **Atenção — o guard não limpa a fila.** `START_ANAMNESE=false` impede
 > **novos** enfileiramentos, não os antigos. Chegou a haver 20 `AnamneseWorker`

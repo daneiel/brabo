@@ -30,6 +30,46 @@ body {
     color 0.2s;
 }
 
+/*
+ * Scrollbar do handoff — `--border-strong`, raio 6px e uma borda de 2px na cor
+ * da superfície, que é o que dá o efeito de polegar "flutuando" em vez de
+ * encostar nas paredes da calha.
+ *
+ * Vale nos DOIS temas sem `[data-theme]` nenhum, porque as duas cores saem de
+ * token: no claro `--border-strong` e `--surface-0` viram os valores de papel
+ * sozinhos. `color-scheme: dark light` acima continua servindo o Firefox e
+ * qualquer navegador sem `::-webkit-scrollbar`; `scrollbar-color` cobre o
+ * Firefox com as mesmas duas cores.
+ */
+html {
+  /* `scrollbar-color` é herdado — declarar na raiz cobre todo elemento rolável
+     sem um seletor universal a mais. */
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border: 2px solid var(--surface-0);
+  border-radius: 6px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 a {
   color: var(--accent);
   text-decoration: none;

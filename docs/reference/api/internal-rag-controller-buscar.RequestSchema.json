@@ -1,0 +1,1 @@
+{"title":"Body","body":{"required":true,"content":{"application/json":{"schema":{"type":"object","properties":{"projectId":{"type":"string","format":"uuid"},"query":{"type":"string","example":"como o teto de paralelismo é decidido"},"topK":{"type":"number","example":5}},"required":["projectId","query"],"title":"RagSearchInternalDto"}}}}}

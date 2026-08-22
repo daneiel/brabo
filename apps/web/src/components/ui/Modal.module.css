@@ -46,8 +46,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   border-radius: var(--radius-md);
   border: none;
   background: transparent;
@@ -61,6 +61,25 @@
 .close:hover {
   background: var(--surface-2);
   color: var(--text-primary);
+}
+
+/*
+ * `:focus-visible` com `outline` transparente (ADR 0036) — mesmo tratamento de
+ * `Input.module.css`, sem a linha de `border-color` porque este botão não tem
+ * borda própria. `outline` transparente reserva o espaço que `forced-colors`
+ * (alto contraste do sistema) pinta; sem ele o botão focado ficava sem
+ * indicador NENHUM naquele modo, porque `box-shadow` é descartado ali.
+ */
+.close:focus-visible {
+  outline: 2px solid transparent;
+  outline-offset: 0;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+@media (forced-colors: active) {
+  .close:focus-visible {
+    outline-color: Highlight;
+  }
 }
 
 .body {

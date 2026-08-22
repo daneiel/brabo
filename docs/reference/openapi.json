@@ -82,6 +82,101 @@
         ]
       }
     },
+    "/auth/oauth/{provider}/callback": {
+      "get": {
+        "description": "Sucesso vai para `WEB_ORIGIN/` já com os cookies de sessão gravados; falha vai para `WEB_ORIGIN/login?oauth_error=1`, sem detalhar o motivo.",
+        "operationId": "AuthController_oauthCallback",
+        "parameters": [
+          {
+            "name": "provider",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "enum": [
+                "github",
+                "gitlab"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "code",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Redireciona para a web.",
+            "headers": {
+              "Location": {
+                "description": "Destino na web.",
+                "schema": {
+                  "type": "string",
+                  "example": "http://localhost:5173/"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Recebe o retorno do OAuth de login social",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/oauth/{provider}/start": {
+      "get": {
+        "description": "O `state` vai assinado por HMAC com propósito PRÓPRIO — nunca o do fluxo de conexão de git a um projeto (ver ADR 0084).",
+        "operationId": "AuthController_oauthStart",
+        "parameters": [
+          {
+            "name": "provider",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "enum": [
+                "github",
+                "gitlab"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Redireciona para o provider.",
+            "headers": {
+              "Location": {
+                "description": "URL de autorização do provider.",
+                "schema": {
+                  "type": "string",
+                  "example": "https://github.com/login/oauth/authorize?…"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Provider fora de `github`/`gitlab`."
+          }
+        },
+        "summary": "Redireciona para o provider OAuth para login social",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/auth/refresh": {
       "post": {
         "description": "O refresh apresentado é consumido. Reapresentar um token já rotacionado revoga a FAMÍLIA inteira e registra evento de segurança — inclusive quando a causa foi um duplo-submit do cliente.",
@@ -398,6 +493,108 @@
         ]
       }
     },
+    "/internal/graph/prompt-templates": {
+      "post": {
+        "description": "Se já existe uma versão com o MESMO hash para o mesmo `name`, nenhuma versão nova é criada — a existente é devolvida (o hit de idempotência não muda o status HTTP: sempre 201, por simplicidade — o corpo é idêntico ao que teria sido criado).",
+        "operationId": "InternalGraphController_upsert",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpsertPromptTemplateInternalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromptTemplateResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
+          },
+          "403": {
+            "description": "Service token ausente ou diferente do compartilhado."
+          },
+          "503": {
+            "description": "Neo4j não configurado ou fora do ar — sem fallback possível para leitura/escrita de template."
+          }
+        },
+        "security": [
+          {
+            "service-token": []
+          }
+        ],
+        "summary": "Publica uma versão de template de prompt, idempotente por hash",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
+    "/internal/graph/prompt-templates/{name}": {
+      "get": {
+        "description": "`version` específica busca por igualdade; omitida, busca a versão `active` mais recente. 404 se o template (ou a versão pedida) não existir.",
+        "operationId": "InternalGraphController_getByName",
+        "parameters": [
+          {
+            "name": "name",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "3",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromptTemplateReadResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Service token ausente ou diferente do compartilhado."
+          },
+          "404": {
+            "description": "Template inexistente, ou sem a versão pedida."
+          },
+          "503": {
+            "description": "Neo4j não configurado ou fora do ar — sem fallback possível para leitura/escrita de template."
+          }
+        },
+        "security": [
+          {
+            "service-token": []
+          }
+        ],
+        "summary": "Busca um template de prompt pelo nome",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
     "/internal/models/sync": {
       "post": {
         "description": "Nunca falha por causa de um provider: cada um responde por si no relatório, com o motivo do pulo e a origem da falha quando houve. Um provider que não respondeu é PULADO, não indisponibilizado.",
@@ -550,6 +747,149 @@
           }
         ],
         "summary": "O remoto de trabalho do projeto, para buscar e empurrar",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
+    "/internal/projects/{projectId}/product-metrics": {
+      "get": {
+        "description": "O MESMO relatório do script `analise:funil` (ADR 0089) — funil sessão → commit → PR → merge, lead time real e deployment frequency real — pelas mesmas funções puras e a mesma query (`apps/api/src/application/services/funil-metrics.ts`), para que os dois nunca divirjam do mesmo fato. Fecha `docs/fluxo.yml` (papel `po`, entrada `metricas-de-produto`, antes `status: lacuna`) (RN-407).",
+        "operationId": "InternalProjectsController_productMetrics",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductMetricsResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Service token ausente ou diferente do compartilhado."
+          },
+          "404": {
+            "description": "Projeto inexistente."
+          }
+        },
+        "security": [
+          {
+            "service-token": []
+          }
+        ],
+        "summary": "O funil de entrega e DORA parcial do projeto, para o PO ler",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
+    "/internal/projects/{projectId}/workspace-verification": {
+      "post": {
+        "description": "Chamada só pelo engine, depois de um runner conectar e mandar `workspace_confirm` pelo canal. O runner é a FONTE DA VERDADE do caminho — a api sobrescreve `workspacePath` com o que ele reportou, depois de revalidar léxico (raiz de sistema/sobreposição com o Brabo continuam proibidas mesmo vindo do runner). Idempotente: reconectar com o MESMO caminho não regrava nada.",
+        "operationId": "InternalProjectsController_confirmWorkspaceVerification",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmProjectWorkspaceInternalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfirmProjectWorkspaceResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Caminho lexicamente inválido, ou o projeto não está no modo \"runner\"."
+          },
+          "403": {
+            "description": "Service token ausente ou diferente do compartilhado."
+          },
+          "404": {
+            "description": "Projeto inexistente."
+          }
+        },
+        "security": [
+          {
+            "service-token": []
+          }
+        ],
+        "summary": "O runner confirma o caminho de um projeto \"runner\" (RN-423)",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
+    "/internal/rag/search": {
+      "post": {
+        "description": "Mesmo motor de `POST /projects/:projectId/rag/search` (rota humana), projetado no formato que a tool `rag_search` do engine espera.",
+        "operationId": "InternalRagController_buscar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RagSearchInternalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RagSearchInternalResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
+          },
+          "403": {
+            "description": "Service token ausente ou diferente do compartilhado."
+          }
+        },
+        "security": [
+          {
+            "service-token": []
+          }
+        ],
+        "summary": "Busca híbrida no índice RAG do projeto, para a tool do engine",
         "tags": [
           "internal"
         ]
@@ -4068,6 +4408,52 @@
         ]
       }
     },
+    "/projects/{projectId}/container/lifecycle": {
+      "get": {
+        "description": "`null` quando o projeto nunca foi provisionado — hoje o caso comum, porque nenhum orquestrador real transiciona esta tabela ainda (RN-243/RN-267). O estado devolvido é o que foi REGISTRADO, nunca confirmado contra um daemon Docker: não existe cliente Docker no produto.",
+        "operationId": "ContainersController_cicloDeVida",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "O ciclo de vida registrado, ou `null` (nunca provisionado).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CicloDeVidaDoContainerResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Ciclo de vida do container do projeto (estado registrado)",
+        "tags": [
+          "projetos"
+        ]
+      }
+    },
     "/projects/{projectId}/coverage": {
       "get": {
         "description": "Cruza as regras do projeto com o `businessRuleIds` das histórias. Regra sem história nenhuma é uma DESCOBERTA — pendência do PO, não erro.",
@@ -5557,6 +5943,168 @@
         ]
       }
     },
+    "/projects/{projectId}/personal-access-tokens": {
+      "get": {
+        "description": "Nunca inclui o token bruto — só o que já foi emitido.",
+        "operationId": "PersonalAccessTokensController_listPats",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PersonalAccessTokenResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto não encontrado."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Lista os próprios Personal Access Tokens deste projeto",
+        "tags": [
+          "projetos"
+        ]
+      },
+      "post": {
+        "description": "O token bruto (`brb_...`) só aparece NESTA resposta — não fica recuperável depois, só o hash é guardado. Use em `--token`/`BRABO_ACCOUNT_TOKEN` do `brabo-runner`.",
+        "operationId": "PersonalAccessTokensController_issuePat",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IssuePatRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IssuePatResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto não encontrado."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Emite um Personal Access Token pro runner local",
+        "tags": [
+          "projetos"
+        ]
+      }
+    },
+    "/projects/{projectId}/personal-access-tokens/{tokenId}": {
+      "delete": {
+        "description": "Idempotente — revogar de novo não é erro.",
+        "operationId": "PersonalAccessTokensController_revokePat",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tokenId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Token revogado. Sem corpo."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto não encontrado."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Revoga um Personal Access Token próprio",
+        "tags": [
+          "projetos"
+        ]
+      }
+    },
     "/projects/{projectId}/proficiency": {
       "get": {
         "description": "O PRÓPRIO perfil por default; a visão agregada do time só para quem administra o projeto. Perfil de competência é dado sobre a pessoa, e o default menos surpreendente é ela ver o dela.",
@@ -5756,6 +6304,218 @@
         "summary": "Lista as rodadas de análise com tier e custo real",
         "tags": [
           "psicólogo"
+        ]
+      }
+    },
+    "/projects/{projectId}/rag/coverage": {
+      "get": {
+        "description": "Contagem real (nunca estimada) de arquivos `.md` de `docs`/`docs/adr` no repositório do projeto contra quantos têm chunk, e sessões do projeto contra quantas têm chunk. Não inclui \"há N minutos\" — não há coluna de timestamp de indexação por escopo, e um número chutado mentiria (mesma régua do ADR 0042 para nota de modelo).",
+        "operationId": "RagController_obterCobertura",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RagCoverageResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cobertura do índice: arquivos/sessões indexados contra o total real",
+        "tags": [
+          "rag"
+        ]
+      }
+    },
+    "/projects/{projectId}/rag/reindex": {
+      "post": {
+        "description": "\"Reindexar agora\" do painel do Chat RAG. Apaga e recria os chunks dos três escopos honestos (RN-219) a partir do estado ATUAL — não há watcher automático por push/fechamento de sessão (decisão registrada no ADR 0079/0080). Pode demorar em projetos com muitas sessões: roda uma indexação por sessão, cada uma podendo chamar o provider de embedding em lote.",
+        "operationId": "RagController_reindexar",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReindexProjectResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reindexa docs/ADR/sessões do projeto (full rebuild idempotente)",
+        "tags": [
+          "rag"
+        ]
+      }
+    },
+    "/projects/{projectId}/rag/search": {
+      "post": {
+        "description": "Combina similaridade de cosseno (pgvector) com `ts_rank` léxico (tsvector), cada um por uma consulta independente, fundidas por soma ponderada e cortadas pelo limiar (ADR 0080). `vectorAvailable: false` avisa quando o provider de embedding não respondeu e a busca rodou só com o sinal léxico — nunca finge ter rodado o híbrido completo.",
+        "operationId": "RagController_buscar",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HybridSearchRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HybridSearchResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Busca híbrida (vetor + léxico) nos chunks indexados do projeto",
+        "tags": [
+          "rag"
+        ]
+      }
+    },
+    "/projects/{projectId}/runner-ticket": {
+      "post": {
+        "description": "Autentica `connect/3` do socket Phoenix `/runner` (tópico `terminal:<projectId>`, papel \"runner\") — NÃO é o JWT reaproveitado, e esta rota em si só aceita um Personal Access Token no lugar do JWT de sessão (ADR 0105). TTL de 30s e uso único. Recusa com 400 se o projeto não estiver no modo \"runner\" (RN-421): o runner não tem o que servir num projeto cujo código mora no container gerenciado.",
+        "operationId": "RunnerTicketsController_runnerTicket",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunnerTicketResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Projeto não está no modo \"runner\"."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto não encontrado."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Emite um ticket de uso único para o runner local conectar",
+        "tags": [
+          "projetos"
         ]
       }
     },
@@ -6784,6 +7544,63 @@
           }
         ],
         "summary": "Confirma que a arquitetura está pronta e oferece o handoff ao Infra",
+        "tags": [
+          "agentes"
+        ]
+      }
+    },
+    "/projects/{projectId}/sessions/{sessionId}/agents/criativo/validate-necessity": {
+      "post": {
+        "description": "Grava `necessity.validated`. Exige que o Criativo já tenha consolidado um `product_brief` nesta sessão (RN-406) — sem ele, recusa: não há o que validar.",
+        "operationId": "AgentsController_validateNecessityHandoff",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto, sessão ou handoff inexistente."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Confirma que a necessidade de negócio do Criativo foi validada",
         "tags": [
           "agentes"
         ]
@@ -7897,7 +8714,7 @@
     },
     "/projects/{projectId}/spend/me": {
       "get": {
-        "description": "A audiência do MEMBRO. Só as linhas de quem chama — o ator sai do token autenticado e não há parâmetro para trocá-lo. Em tokens e custo ESTIMADO, sem quebrar por provider nem por credencial: a chave que rodou é a do owner (RN-058) e a fatura dela é dele (RN-060). Agente não entra: `token_usage` registra quem gastou, não quem mandou gastar.",
+        "description": "A audiência do MEMBRO. Só as linhas de quem chama — o ator sai do token autenticado e não há parâmetro para trocá-lo. Em tokens e custo ESTIMADO, sem quebrar por provider nem por credencial: a chave que rodou é a do owner (RN-058) e a fatura dela é dele (RN-060). O eixo de provider passou a existir no relatório do owner (ADR 0076) e continua inalcançável daqui — não há parâmetro de dimensão nesta rota, e o tipo do repositório recusa a combinação (RN-187). Agente não entra: `token_usage` registra quem gastou, não quem mandou gastar.",
         "operationId": "SpendController_getMySpend",
         "parameters": [
           {
@@ -8079,6 +8896,55 @@
         "summary": "Promove a `ready` as histórias que o PO propôs",
         "tags": [
           "backlog"
+        ]
+      }
+    },
+    "/projects/{projectId}/terminal-ticket": {
+      "post": {
+        "description": "Mesmo socket `/runner`, mesmo tópico, papel \"terminal\" — quem VÊ o terminal (o comando em si só roda de verdade se houver um runner conectado). Vale para qualquer modo de projeto.",
+        "operationId": "RunnerTicketsController_terminalTicket",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunnerTicketResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto não encontrado."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Emite um ticket de uso único para a aba Terminal da web",
+        "tags": [
+          "projetos"
         ]
       }
     },
@@ -9356,7 +10222,7 @@
     },
     "/workspaces/{workspaceId}/spend-report": {
       "get": {
-        "description": "A audiência do OWNER. Complementa `credential-spend`, que responde a pergunta da FATURA (por provider, que é a unidade da credencial) e continua exclusiva dele pela RN-060. Aqui não há eixo de provider: quebrar por provider é quebrar por credencial. Janela deslizante em dias, e a série diária vem DENSA — dia sem gasto entra com zero, senão a sparkline mente sobre o ritmo.",
+        "description": "A audiência do OWNER. O eixo de PROVIDER voltou (ADR 0076, RN-186) e está aqui, e não na rota do membro, porque quebrar por provider é quebrar por CREDENCIAL — e credencial é assunto de quem paga (RN-060). Complementa `credential-spend`, que segue respondendo a pergunta da FATURA (por mês, com o vínculo à chave que existe hoje). Pessoa e agente também vêm em blocos separados, por `actor_kind`. Janela deslizante em dias, e a série diária vem DENSA — dia sem gasto entra com zero, senão a sparkline mente sobre o ritmo.",
         "operationId": "SpendController_getWorkspaceSpendReport",
         "parameters": [
           {
@@ -9403,7 +10269,7 @@
             "bearer": []
           }
         ],
-        "summary": "Quebra o gasto do workspace por modelo, projeto, ator e dia",
+        "summary": "Quebra o gasto do workspace por modelo, provider, projeto, ator e dia",
         "tags": [
           "llm"
         ]
@@ -10735,6 +11601,58 @@
           "type"
         ]
       },
+      "CicloDeVidaDoContainerResponseDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "provisioning",
+              "running",
+              "stopped",
+              "failed",
+              "removed"
+            ],
+            "example": "provisioning",
+            "description": "O que foi REGISTRADO, não o que um daemon Docker confirma — nenhum orquestrador real transiciona esta tabela hoje (RN-243)."
+          },
+          "imageVersion": {
+            "type": "number",
+            "example": 1,
+            "description": "Versão de `artifact.project_image` CONGELADA na primeira transição (RN-245) — não é reaplicada a cada leitura."
+          },
+          "resources": {
+            "description": "Teto DECLARADO no provisionamento — não aplicado (RN-248).",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RecursosDoContainerResponseDto"
+              }
+            ]
+          },
+          "failureReason": {
+            "type": "object",
+            "nullable": true,
+            "example": null,
+            "description": "Só populado numa transição para `failed`."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "statusChangedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "status",
+          "imageVersion",
+          "resources",
+          "failureReason",
+          "createdAt",
+          "statusChangedAt"
+        ]
+      },
       "ClaimTaskInternalDto": {
         "type": "object",
         "properties": {
@@ -11262,6 +12180,56 @@
           "truncated"
         ]
       },
+      "ConfirmProjectWorkspaceInternalDto": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "example": "/home/voce/projetos/loja",
+            "description": "Caminho absoluto confirmado pelo runner NO HOST — a fonte da verdade (RN-423). Revalidado LEXICAMENTE aqui antes de gravar; inválido é 400, nunca gravado."
+          },
+          "sessionId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "01JC4Z0000SESSAO00000000001",
+            "description": "A sessão mais recente do projeto (`ProjectSession.latest_id/1`), resolvida do lado engine. `null`/omitido quando o projeto ainda não tem sessão nenhuma — o projeto é atualizado mesmo assim, só o evento de auditoria é pulado (lacuna aceita, RN-423)."
+          },
+          "actorId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "01JC4Z0000USUARIO0000000001",
+            "description": "Quem pediu o ticket do runner (dono do socket que confirmou) — vira o ator do evento `project.workspace_verified`. Omitido: o evento (se houver sessão) nasce sem ator identificado."
+          }
+        },
+        "required": [
+          "path"
+        ]
+      },
+      "ConfirmProjectWorkspaceResponseDto": {
+        "type": "object",
+        "properties": {
+          "verified": {
+            "type": "boolean",
+            "example": true,
+            "description": "Sempre `true` quando a chamada não lançou — a confirmação é idempotente. `changed` diz se ALGO mudou nesta chamada."
+          },
+          "workspacePath": {
+            "type": "string",
+            "example": "/home/voce/projetos/loja",
+            "description": "O caminho GRAVADO (normalizado) — pode diferir do que a criação tinha, porque o runner é a fonte da verdade e sobrescreve."
+          },
+          "changed": {
+            "type": "boolean",
+            "example": true,
+            "description": "`true` na primeira confirmação, ou quando o caminho reportado é DIFERENTE do que já estava gravado. `false` numa reconexão que reporta o mesmo caminho de sempre — nada foi regravado."
+          }
+        },
+        "required": [
+          "verified",
+          "workspacePath",
+          "changed"
+        ]
+      },
       "CoverageReportResponseDto": {
         "type": "object",
         "properties": {
@@ -11307,7 +12275,9 @@
               "open_infra_pr",
               "instruction_patch",
               "parallelize",
-              "raise_max_parallel"
+              "raise_max_parallel",
+              "propose_execution_plan",
+              "assess_implementability"
             ],
             "example": "terminal"
           },
@@ -11473,19 +12443,20 @@
             "example": "manual",
             "description": "Quem promove uma story de `draft` para `ready` (Fase 12c — RN-048). `manual` (default de projeto novo): o PO propõe e VOCÊ decide, na aba Backlog. `auto`: a story completa já nasce `ready`, sem passo humano — era o comportamento até a 12c, e projetos criados antes dela ficaram nele. As validações de domínio (DoD/DoR/RF/regra/módulos) são as MESMAS nos dois modos; o modo muda só quem dispara."
           },
-          "workspaceMode": {
+          "executionMode": {
             "type": "string",
             "enum": [
               "container",
-              "local"
+              "mounted",
+              "runner"
             ],
             "example": "container",
-            "description": "ONDE o código deste projeto mora (RN-169 — ADR 0072). `container` (default): a pasta gerenciada pelo produto dentro de PROJECT_WORKSPACES_ROOT, que é o comportamento de sempre. `local`: uma pasta SUA, informada em `workspacePath`, que precisa estar montada dentro dos containers da api e do engine — a criação RECUSA (400) o caminho que não estiver, com a instrução de como montar (RN-170)."
+            "description": "ONDE o comando deste projeto EXECUTA (RN-169/RN-421 — ADR 0072/0104). `container` (default): a pasta gerenciada pelo produto dentro de PROJECT_WORKSPACES_ROOT, que é o comportamento de sempre. `mounted`: uma pasta SUA, informada em `workspacePath`, que precisa estar montada dentro dos containers da api e do engine — a criação RECUSA (400) o caminho que não estiver, com a instrução de como montar (RN-422). `runner`: uma pasta SUA que NÃO precisa de bind-mount — a criação valida só o formato do caminho e o projeto nasce \"unverified\"; rode `brabo-runner --project <id> --dir <pasta>` na sua máquina para confirmar (RN-423)."
           },
           "workspacePath": {
             "type": "string",
             "example": "/home/voce/projetos/loja",
-            "description": "Caminho ABSOLUTO da pasta, obrigatório quando `workspaceMode` é `local` e recusado quando é `container`. Validado na criação: precisa existir e ser gravável de dentro do container, e não pode ser a raiz do sistema, pasta de sistema, nem se sobrepor ao checkout do Brabo (RN-170)."
+            "description": "Caminho ABSOLUTO da pasta, obrigatório quando `executionMode` é `mounted` ou `runner`, e recusado quando é `container`. Em `mounted`, validado na criação: precisa existir e ser gravável de dentro do container, e não pode ser a raiz do sistema, pasta de sistema, nem se sobrepor ao checkout do Brabo (RN-422). Em `runner`, só o FORMATO é validado agora — a existência é confirmada depois, pelo runner (RN-423)."
           }
         },
         "required": [
@@ -12652,6 +13623,109 @@
           "timestamp"
         ]
       },
+      "HybridSearchHitResponseDto": {
+        "type": "object",
+        "properties": {
+          "chunkId": {
+            "type": "string"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "docs",
+              "adr",
+              "session"
+            ]
+          },
+          "content": {
+            "type": "string"
+          },
+          "score": {
+            "type": "number",
+            "description": "Combinado (RAG_SEARCH_WEIGHT_VECTOR*vetor + RAG_SEARCH_WEIGHT_LEXICAL*léxico), já filtrado pelo limiar — todo hit devolvido passou dele."
+          },
+          "vectorScore": {
+            "type": "number",
+            "nullable": true,
+            "description": "Similaridade de cosseno, 0..1. `null` quando este chunk não tinha vetor."
+          },
+          "lexicalScore": {
+            "type": "number",
+            "nullable": true,
+            "description": "`ts_rank` normalizado, 0..1. `null` quando o termo não casou neste chunk."
+          },
+          "origin": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "União discriminada por `kind`: \"file\" (`sourcePath`/`headingPath`) ou \"session\" (`sessionId`/`eventId`). Ver `domain/rag/rag-citation.ts`."
+          }
+        },
+        "required": [
+          "chunkId",
+          "scope",
+          "content",
+          "score",
+          "vectorScore",
+          "lexicalScore",
+          "origin"
+        ]
+      },
+      "HybridSearchRequestDto": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "example": "como funciona o gate de PR",
+            "description": "Entre 2 e 500 caracteres — mesma régua da busca da aba Code."
+          },
+          "scopes": {
+            "type": "array",
+            "description": "Ausente busca nos três escopos (RN-219).",
+            "items": {
+              "type": "string",
+              "enum": [
+                "docs",
+                "adr",
+                "session"
+              ]
+            }
+          },
+          "limit": {
+            "type": "number",
+            "example": 10,
+            "description": "1 a 10 — ausente usa o teto."
+          }
+        },
+        "required": [
+          "query"
+        ]
+      },
+      "HybridSearchResponseDto": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string"
+          },
+          "hits": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HybridSearchHitResponseDto"
+            }
+          },
+          "vectorAvailable": {
+            "type": "boolean",
+            "description": "`false` quando o provider de embedding não respondeu — a busca rodou só com o sinal léxico (RN-233)."
+          },
+          "vectorUnavailableReason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "query",
+          "hits",
+          "vectorAvailable"
+        ]
+      },
       "HypothesisDraftDto": {
         "type": "object",
         "properties": {
@@ -12857,6 +13931,55 @@
         "required": [
           "decisao",
           "version"
+        ]
+      },
+      "IndexDocsReportResponseDto": {
+        "type": "object",
+        "properties": {
+          "filesScanned": {
+            "type": "number"
+          },
+          "docsChunks": {
+            "type": "number"
+          },
+          "adrChunks": {
+            "type": "number"
+          },
+          "truncated": {
+            "type": "boolean"
+          },
+          "embedding": {
+            "$ref": "#/components/schemas/IndexEmbeddingResponseDto"
+          }
+        },
+        "required": [
+          "filesScanned",
+          "docsChunks",
+          "adrChunks",
+          "truncated",
+          "embedding"
+        ]
+      },
+      "IndexEmbeddingResponseDto": {
+        "type": "object",
+        "properties": {
+          "available": {
+            "type": "boolean"
+          },
+          "embedded": {
+            "type": "number"
+          },
+          "skipped": {
+            "type": "number"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "available",
+          "embedded",
+          "skipped"
         ]
       },
       "InfraArtifactResponseDto": {
@@ -13110,6 +14233,78 @@
           "createdAt",
           "isCurrent",
           "diff"
+        ]
+      },
+      "IssuePatRequestDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "laptop",
+            "description": "Nome pra você reconhecer este token depois — não é único."
+          },
+          "expiresInDays": {
+            "type": "number",
+            "example": 90,
+            "description": "Expira em N dias. Omitido = sem expiração (revogável a qualquer hora, mas nunca expira sozinho)."
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "IssuePatResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01JC4Z0000PAT000000000001"
+          },
+          "name": {
+            "type": "string",
+            "example": "laptop"
+          },
+          "projectId": {
+            "type": "string",
+            "example": "01JC4Z0000PROJETO000000001"
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-08-22T12:00:00.000Z",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "object",
+            "example": null,
+            "nullable": true,
+            "description": "Nulo = sem expiração."
+          },
+          "revokedAt": {
+            "type": "object",
+            "example": null,
+            "nullable": true
+          },
+          "lastUsedAt": {
+            "type": "object",
+            "example": null,
+            "nullable": true,
+            "description": "Nulo = nunca usado."
+          },
+          "token": {
+            "type": "string",
+            "example": "brb_9f8a...",
+            "description": "Guarde agora — não é recuperável depois. Use em --token ou BRABO_ACCOUNT_TOKEN."
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "projectId",
+          "createdAt",
+          "expiresAt",
+          "revokedAt",
+          "lastUsedAt",
+          "token"
         ]
       },
       "JwksResponseDto": {
@@ -14013,6 +15208,54 @@
           "ask"
         ]
       },
+      "PersonalAccessTokenResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01JC4Z0000PAT000000000001"
+          },
+          "name": {
+            "type": "string",
+            "example": "laptop"
+          },
+          "projectId": {
+            "type": "string",
+            "example": "01JC4Z0000PROJETO000000001"
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-08-22T12:00:00.000Z",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "object",
+            "example": null,
+            "nullable": true,
+            "description": "Nulo = sem expiração."
+          },
+          "revokedAt": {
+            "type": "object",
+            "example": null,
+            "nullable": true
+          },
+          "lastUsedAt": {
+            "type": "object",
+            "example": null,
+            "nullable": true,
+            "description": "Nulo = nunca usado."
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "projectId",
+          "createdAt",
+          "expiresAt",
+          "revokedAt",
+          "lastUsedAt"
+        ]
+      },
       "PriorHypothesisResponseDto": {
         "type": "object",
         "properties": {
@@ -14038,6 +15281,180 @@
           "hipotese",
           "sugestao",
           "confiancaPercent"
+        ]
+      },
+      "ProductMetricsDeploymentDayResponseDto": {
+        "type": "object",
+        "properties": {
+          "dia": {
+            "type": "string",
+            "example": "2026-08-01"
+          },
+          "merges": {
+            "type": "number",
+            "example": 2
+          }
+        },
+        "required": [
+          "dia",
+          "merges"
+        ]
+      },
+      "ProductMetricsFunnelResponseDto": {
+        "type": "object",
+        "properties": {
+          "etapas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductMetricsFunnelStageResponseDto"
+            }
+          },
+          "sessoesComCommit": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "sessoesComPr": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "sessoesComMerge": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "etapas",
+          "sessoesComCommit",
+          "sessoesComPr",
+          "sessoesComMerge"
+        ]
+      },
+      "ProductMetricsFunnelStageResponseDto": {
+        "type": "object",
+        "properties": {
+          "etapa": {
+            "type": "string",
+            "example": "sessão produziu commit"
+          },
+          "sessoes": {
+            "type": "number",
+            "example": 3
+          },
+          "taxaDaEtapaAnterior": {
+            "type": "object",
+            "example": 0.67,
+            "nullable": true,
+            "description": "`null` na primeira etapa — não há \"conversão de\" nada."
+          }
+        },
+        "required": [
+          "etapa",
+          "sessoes",
+          "taxaDaEtapaAnterior"
+        ]
+      },
+      "ProductMetricsLeadTimeResponseDto": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "example": "01JC4Z0000SESSAO000000000001"
+          },
+          "primeiroCommitEm": {
+            "type": "string",
+            "example": "2026-08-01T10:00:00.000Z"
+          },
+          "primeiroMergeEm": {
+            "type": "string",
+            "example": "2026-08-01T12:00:00.000Z"
+          },
+          "leadTimeMs": {
+            "type": "number",
+            "example": 7200000
+          }
+        },
+        "required": [
+          "sessionId",
+          "primeiroCommitEm",
+          "primeiroMergeEm",
+          "leadTimeMs"
+        ]
+      },
+      "ProductMetricsLeadTimesResponseDto": {
+        "type": "object",
+        "properties": {
+          "perSession": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductMetricsLeadTimeResponseDto"
+            }
+          },
+          "averageMs": {
+            "type": "object",
+            "example": 7200000,
+            "nullable": true,
+            "description": "Média simples em ms — `null` sem nenhuma sessão com commit E merge."
+          }
+        },
+        "required": [
+          "perSession",
+          "averageMs"
+        ]
+      },
+      "ProductMetricsProjectResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "01JC4Z0000PROJETO0000000001"
+          },
+          "name": {
+            "type": "string",
+            "example": "exp003"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      },
+      "ProductMetricsResponseDto": {
+        "type": "object",
+        "properties": {
+          "project": {
+            "$ref": "#/components/schemas/ProductMetricsProjectResponseDto"
+          },
+          "totalActionsConsidered": {
+            "type": "number",
+            "example": 18,
+            "description": "Ações git consideradas (git_commit/pr_open/git_merge, qualquer status)."
+          },
+          "funnel": {
+            "$ref": "#/components/schemas/ProductMetricsFunnelResponseDto"
+          },
+          "leadTimes": {
+            "$ref": "#/components/schemas/ProductMetricsLeadTimesResponseDto"
+          },
+          "deploymentFrequency": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductMetricsDeploymentDayResponseDto"
+            }
+          }
+        },
+        "required": [
+          "project",
+          "totalActionsConsidered",
+          "funnel",
+          "leadTimes",
+          "deploymentFrequency"
         ]
       },
       "ProficiencyDraftDto": {
@@ -14327,6 +15744,11 @@
             "example": 8,
             "description": "`proposed_actions` com `status = pending` no projeto INTEIRO, todas as sessões — não só a mais recente. É o que a sidebar mostra como badge do projeto (RN-151)."
           },
+          "onlineAgentCount": {
+            "type": "number",
+            "example": 2,
+            "description": "Quantos agentes estão ONLINE agora — trabalhando ou com pendência esperando decisão (RN-409). Nunca tamanho de equipe: dev agent `idle`/`idle_tripped` não conta, agente conversacional `idle` não conta, QA/SecOps nunca contam (veredito único por invocação)."
+          },
           "roster": {
             "$ref": "#/components/schemas/RosterFactsResponseDto"
           }
@@ -14341,6 +15763,7 @@
           "lastEvent",
           "storiesAwaitingPromotion",
           "pendingApprovalsCount",
+          "onlineAgentCount",
           "roster"
         ]
       },
@@ -14478,20 +15901,27 @@
             "example": "checkout-3f2b1c8e",
             "description": "Nome da pasta física do workspace deste projeto em PROJECT_WORKSPACES_ROOT (RN-109). `<slug>-<8 chars do id>` num projeto novo; o UUID puro num projeto criado antes desta coluna existir. Congelado na criação — editar `slug` depois não recalcula."
           },
-          "workspaceMode": {
+          "executionMode": {
             "type": "string",
             "enum": [
               "container",
-              "local"
+              "mounted",
+              "runner"
             ],
             "example": "container",
-            "description": "ONDE o código mora (RN-169 — ADR 0072). `container`: a pasta gerenciada em PROJECT_WORKSPACES_ROOT. `local`: a pasta do usuário em `workspacePath`."
+            "description": "ONDE o comando executa (RN-169/RN-421 — ADR 0072/0104). `container`: a pasta gerenciada em PROJECT_WORKSPACES_ROOT. `mounted`: a pasta do usuário em `workspacePath`, montada por bind-mount. `runner`: a pasta do usuário confirmada pelo runner (ver `workspaceVerifiedAt`)."
           },
           "workspacePath": {
             "type": "object",
             "example": null,
             "nullable": true,
-            "description": "Caminho absoluto da pasta do usuário — preenchido só no modo `local`, sempre `null` no modo `container`."
+            "description": "Caminho absoluto da pasta do usuário — preenchido para `mounted`/`runner`, sempre `null` no modo `container`."
+          },
+          "workspaceVerifiedAt": {
+            "type": "object",
+            "example": null,
+            "nullable": true,
+            "description": "Quando o runner confirmou o caminho pela primeira vez (RN-423). `null` = ainda não verificado — só ganha sentido em `executionMode: \"runner\"`; `container`/`mounted` nunca preenchem este campo."
           },
           "createdBy": {
             "type": "string",
@@ -14535,8 +15965,9 @@
           "name",
           "slug",
           "workspaceDirName",
-          "workspaceMode",
+          "executionMode",
           "workspacePath",
+          "workspaceVerifiedAt",
           "createdBy",
           "taskBudgetMicros",
           "maxConsecutiveBlocked",
@@ -14631,6 +16062,65 @@
           "failed"
         ]
       },
+      "PromptTemplateReadResponseDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "dev-agent-kickoff"
+          },
+          "version": {
+            "type": "string",
+            "example": "3"
+          },
+          "body": {
+            "type": "string",
+            "example": "Você é o dev agent do módulo {{modulo}}..."
+          },
+          "hash": {
+            "type": "string",
+            "example": "sha256:9f2c..."
+          }
+        },
+        "required": [
+          "name",
+          "version",
+          "body",
+          "hash"
+        ]
+      },
+      "PromptTemplateResponseDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "dev-agent-kickoff"
+          },
+          "version": {
+            "type": "string",
+            "example": "3"
+          },
+          "body": {
+            "type": "string",
+            "example": "Você é o dev agent do módulo {{modulo}}..."
+          },
+          "hash": {
+            "type": "string",
+            "example": "sha256:9f2c..."
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Se esta é a versão vigente do template. Sempre `true` logo depois de um upsert que criou versão nova; pode voltar `false` quando o hit de idempotência (mesmo hash) aponta para uma versão que uma publicação POSTERIOR já desativou."
+          }
+        },
+        "required": [
+          "name",
+          "version",
+          "body",
+          "hash",
+          "active"
+        ]
+      },
       "ProposeActionDto": {
         "type": "object",
         "properties": {
@@ -14651,7 +16141,9 @@
               "open_infra_pr",
               "instruction_patch",
               "parallelize",
-              "raise_max_parallel"
+              "raise_max_parallel",
+              "propose_execution_plan",
+              "assess_implementability"
             ],
             "example": "terminal",
             "description": "Tipo da ação. Cada tipo tem papel mínimo próprio: `git_push`, `git_merge` e `git_branch_protect` exigem `maintainer`, o resto `developer`."
@@ -14717,7 +16209,9 @@
               "open_infra_pr",
               "instruction_patch",
               "parallelize",
-              "raise_max_parallel"
+              "raise_max_parallel",
+              "propose_execution_plan",
+              "assess_implementability"
             ],
             "example": "terminal",
             "description": "O que a ação faria. `git_push` e `git_merge` exigem `maintainer`."
@@ -15234,6 +16728,135 @@
           "priorHypotheses"
         ]
       },
+      "RagCoverageResponseDto": {
+        "type": "object",
+        "properties": {
+          "docs": {
+            "$ref": "#/components/schemas/RagFileCoverageResponseDto"
+          },
+          "adr": {
+            "$ref": "#/components/schemas/RagFileCoverageResponseDto"
+          },
+          "session": {
+            "$ref": "#/components/schemas/RagSessionCoverageResponseDto"
+          },
+          "chunksTotal": {
+            "type": "number"
+          },
+          "chunksWithoutVector": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "docs",
+          "adr",
+          "session",
+          "chunksTotal",
+          "chunksWithoutVector"
+        ]
+      },
+      "RagFileCoverageResponseDto": {
+        "type": "object",
+        "properties": {
+          "filesInRepo": {
+            "type": "number"
+          },
+          "filesIndexed": {
+            "type": "number"
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "filesInRepo",
+          "filesIndexed",
+          "truncated"
+        ]
+      },
+      "RagSearchInternalDto": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "query": {
+            "type": "string",
+            "example": "como o teto de paralelismo é decidido"
+          },
+          "topK": {
+            "type": "number",
+            "example": 5
+          }
+        },
+        "required": [
+          "projectId",
+          "query"
+        ]
+      },
+      "RagSearchInternalHitResponseDto": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "example": "docs/adr/0080-chat-rag-pipeline-indexacao.md",
+            "description": "Caminho do arquivo (escopos `docs`/`adr`) ou `session:<id>` (escopo `session`, sem caminho de arquivo real)."
+          },
+          "chunk": {
+            "type": "string",
+            "description": "O conteúdo completo do chunk recuperado."
+          },
+          "score": {
+            "type": "number",
+            "description": "Score combinado (vetor + léxico), já filtrado pelo limiar."
+          },
+          "excerpt": {
+            "type": "string",
+            "description": "Prévia curta do chunk, para exibição sem estourar o contexto do modelo."
+          }
+        },
+        "required": [
+          "path",
+          "chunk",
+          "score",
+          "excerpt"
+        ]
+      },
+      "RagSearchInternalResponseDto": {
+        "type": "object",
+        "properties": {
+          "hits": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RagSearchInternalHitResponseDto"
+            }
+          },
+          "degraded": {
+            "type": "boolean",
+            "description": "`true` quando o embedding da CONSULTA não estava disponível e a busca caiu para léxico-only (mesma semântica de `vectorAvailable: false` do `HybridSearchUseCase`)."
+          }
+        },
+        "required": [
+          "hits",
+          "degraded"
+        ]
+      },
+      "RagSessionCoverageResponseDto": {
+        "type": "object",
+        "properties": {
+          "sessionsInProject": {
+            "type": "number"
+          },
+          "sessionsIndexed": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "sessionsInProject",
+          "sessionsIndexed"
+        ]
+      },
       "ReconhecerFalhaDeProtecaoResponseDto": {
         "type": "object",
         "properties": {
@@ -15560,6 +17183,47 @@
           "token"
         ]
       },
+      "ReindexProjectResponseDto": {
+        "type": "object",
+        "properties": {
+          "docs": {
+            "$ref": "#/components/schemas/IndexDocsReportResponseDto"
+          },
+          "sessions": {
+            "$ref": "#/components/schemas/ReindexSessionsResponseDto"
+          },
+          "embeddingAvailable": {
+            "type": "boolean"
+          },
+          "embeddingReason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "docs",
+          "sessions",
+          "embeddingAvailable"
+        ]
+      },
+      "ReindexSessionsResponseDto": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number"
+          },
+          "indexed": {
+            "type": "number"
+          },
+          "chunksCreated": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "total",
+          "indexed",
+          "chunksCreated"
+        ]
+      },
       "RenameSessionDto": {
         "type": "object",
         "properties": {
@@ -15863,6 +17527,16 @@
             "type": "boolean",
             "example": false,
             "description": "Existe handoff `accepted` para `infra` na sessão mais recente."
+          },
+          "uxDesignerActive": {
+            "type": "boolean",
+            "example": false,
+            "description": "Existe handoff `accepted` para `ux-designer` na sessão mais recente (ADR 0087)."
+          },
+          "staffActive": {
+            "type": "boolean",
+            "example": false,
+            "description": "Existe handoff `accepted` para `staff` na sessão mais recente (docs/fluxo.yml, ADR 0088) — dormente para disparo automático, só reflete ativação MANUAL já aceita."
           }
         },
         "required": [
@@ -15870,7 +17544,9 @@
           "moduleNames",
           "gatesEverOpened",
           "delegatedSubagents",
-          "infraActive"
+          "infraActive",
+          "uxDesignerActive",
+          "staffActive"
         ]
       },
       "RuleCoverageResponseDto": {
@@ -15944,6 +17620,30 @@
         "required": [
           "projectId",
           "messages"
+        ]
+      },
+      "RunnerTicketResponseDto": {
+        "type": "object",
+        "properties": {
+          "ticket": {
+            "type": "string",
+            "description": "Token opaco de uso único, base64url. TTL de 30s: some depois do primeiro `connect/3` bem-sucedido no socket `/runner`, ou quando expira."
+          },
+          "expiresAt": {
+            "type": "string",
+            "example": "2026-08-09T12:00:30.000Z",
+            "description": "Quando o ticket expira (ISO 8601)."
+          },
+          "engineWsUrl": {
+            "type": "string",
+            "example": "ws://localhost:4000/runner",
+            "description": "URL pública do socket Phoenix `/runner`, já em ws(s):// — pronta para o cliente (runner CLI ou web) abrir a conexão com `{ticket}` nos params."
+          }
+        },
+        "required": [
+          "ticket",
+          "expiresAt",
+          "engineWsUrl"
         ]
       },
       "SendAgentMessageDto": {
@@ -16182,6 +17882,8 @@
               "instruction_patch",
               "parallelize",
               "raise_max_parallel",
+              "propose_execution_plan",
+              "assess_implementability",
               "*"
             ],
             "example": "terminal",
@@ -16395,7 +18097,7 @@
           "chave": {
             "type": "string",
             "example": "anthropic/claude-sonnet-4",
-            "description": "A chave do agrupamento: nome do modelo, id do projeto, id do ator ou id da sessão, conforme a lista em que a linha aparece."
+            "description": "A chave do agrupamento: nome do modelo, nome do provider, id do projeto, id do ator ou id da sessão, conforme a lista em que a linha aparece."
           },
           "rotulo": {
             "type": "object",
@@ -16407,7 +18109,7 @@
             "type": "object",
             "example": "agent",
             "nullable": true,
-            "description": "Só a lista `porAtor` preenche; nas outras é `null`."
+            "description": "Só as listas por ator preenchem (`porAtor`, `porOwner`, `porAgente`); nas outras é `null`."
           },
           "costMicros": {
             "type": "number",
@@ -17134,6 +18836,33 @@
           "apiKey"
         ]
       },
+      "UpsertPromptTemplateInternalDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "dev-agent-kickoff"
+          },
+          "version": {
+            "type": "string",
+            "example": "3"
+          },
+          "body": {
+            "type": "string",
+            "example": "Você é o dev agent do módulo {{modulo}}..."
+          },
+          "hash": {
+            "type": "string",
+            "example": "sha256:9f2c..."
+          }
+        },
+        "required": [
+          "name",
+          "version",
+          "body",
+          "hash"
+        ]
+      },
       "UserCredentialResponseDto": {
         "type": "object",
         "properties": {
@@ -17316,6 +19045,13 @@
               "$ref": "#/components/schemas/SpendLinhaResponseDto"
             }
           },
+          "porProvider": {
+            "description": "Por PROVIDER (ADR 0076, RN-186). Este eixo fala de CREDENCIAL e por isso só existe aqui, numa rota que exige `owner` (RN-060) — a resposta do membro não o tem, e não é um filtro que o esconde: é a assinatura do repositório que não o aceita com escopo de ator (RN-187).",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SpendLinhaResponseDto"
+            }
+          },
           "porProjeto": {
             "description": "Por PROJETO dentro do workspace.",
             "type": "array",
@@ -17325,6 +19061,20 @@
           },
           "porAtor": {
             "description": "Por ATOR — agente e pessoa na mesma lista, distintos por `actorKind`.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SpendLinhaResponseDto"
+            }
+          },
+          "porOwner": {
+            "description": "As linhas de PESSOA (`actor_kind = \"user\"`) — o bloco que o handoff chama de \"Por owner\", porque pela RN-058 é a chave do owner que todas elas gastam. Quem é o dono está em `ownerId`. Partição de `porAtor`, sem consulta a mais (RN-188).",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SpendLinhaResponseDto"
+            }
+          },
+          "porAgente": {
+            "description": "As linhas de AGENTE (`actor_kind = \"agent\"`). A outra metade de `porAtor`.",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/SpendLinhaResponseDto"
@@ -17346,8 +19096,11 @@
           "outputTokens",
           "chamadas",
           "porModelo",
+          "porProvider",
           "porProjeto",
           "porAtor",
+          "porOwner",
+          "porAgente",
           "porDia"
         ]
       },

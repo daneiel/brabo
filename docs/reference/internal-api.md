@@ -25,12 +25,36 @@ resposta imediata, vai por HTTP.
 
 **Fora do escopo desta página**: rotas HTTP autenticadas pelo JWT normal do
 usuário (RBAC por papel, `@RequireRole`) — como
-`/projects/:projectId/agent-autonomy` — não são "internas" no sentido deste
-documento, mesmo quando um agente é quem efetivamente chama através delas. O
+`/projects/:projectId/agent-autonomy`, `/projects/:projectId/container/lifecycle`
+([RN-267](../business-rules.md#rn-267)),
+`.../agents/criativo/validate-necessity` (gate `necessidade-validada`,
+[RN-406](../business-rules.md#rn-406), ADR 0095) ou o CRUD de
+`/projects/:projectId/personal-access-tokens` ([RN-426](../business-rules.md#rn-426),
+ADR 0105) — não são "internas" no sentido deste documento, mesmo quando um
+agente é quem efetivamente chama através delas. O
 service token compartilhado NUNCA serve como credencial nessas rotas, e o JWT
 de usuário nunca serve em `/internal/*` — os dois mecanismos não se sobrepõem
-([RN-035](../business-rules.md#rn-035)). A classificação de exposição de toda
-rota HTTP, interna ou não, está em [docs/security-surface.md](../security-surface.md).
+([RN-035](../business-rules.md#rn-035)).
+
+**Uma terceira credencial, nem service token nem JWT de usuário**:
+`POST /projects/:projectId/runner-ticket` é `role:developer` como qualquer
+rota RBAC, mas não aceita o JWT normal de sessão — só um Personal Access
+Token (`brb_…`, `PatAuthGuard`/`@RequirePatAuth()`), escopado por construção
+a essa única rota ([RN-424](../business-rules.md#rn-424), ADR 0105). Vale
+registrar aqui porque é a distinção que esta página existe pra explicar:
+"não é `/internal/*`" não significa "então é JWT de usuário" — o PAT é um
+terceiro mecanismo, sem sobreposição com os outros dois.
+
+Também fora do escopo: as rotas
+`@Public()` que são o próprio PONTO DE ENTRADA antes de qualquer sessão
+existir — `POST /auth/login`, `POST /auth/register`,
+`GET /auth/oauth/:provider/start`/`callback` (login social, ADR 0084) e as
+demais de `auth.controller.ts`. Nenhuma delas usa o service token nem o JWT
+de usuário (é o que ELAS emitem, não o que exigem), então a distinção
+service-token-vs-JWT que esta página existe para explicar não se aplica —
+elas simplesmente não têm credencial nenhuma na entrada. A classificação de
+exposição de toda rota HTTP, interna ou não, está em
+[docs/security-surface.md](../security-surface.md).
 
 ## Autenticação
 
@@ -182,6 +206,17 @@ distinguir as audiências ou receber o id do ator como parâmetro — que é
 exatamente o que o [ADR 0063](../adr/0063-duas-audiencias-para-o-mesmo-gasto.md)
 recusa. O engine escreve o gasto; quem o lê é gente.
 
+O [ADR 0076](../adr/0076-provider-volta-a-ser-dimensao-de-gasto.md) revisou o
+0063 e reabriu a quebra por **provider**, que é quebra por CREDENCIAL. Nem a
+rota nem o papel mudaram — as duas continuam classificadas como estão acima —,
+mas o que a rota do owner DEVOLVE mudou, e por isso a fronteira vale ser dita
+aqui: `porProvider` existe só no relatório do workspace (`owner`), e o consumo
+do membro segue sem provider e sem credencial. O que mudou de verdade é o modo
+de garantir: a dimensão pedida com escopo de ator **não compila**
+([RN-187](../business-rules.md#rn-187)), em vez de depender de a rota não
+oferecer o parâmetro. O argumento do parágrafo acima continua de pé — é ele que
+explica por que essa leitura nunca desce para cá.
+
 ### Ciclo de vida da sessão
 
 | método | caminho |
@@ -325,6 +360,20 @@ atravessando processo, e por isso nada nesse caminho abre rota interna.
 A consequência prática é a que importa: a única rota do produto que devolve
 segredo decifrado continua sendo UMA. Ler código não a multiplicou.
 
+#### A indexação do Chat RAG (Onda 4/G2) também não abre rota interna
+
+`docs`/`adr` são indexados via `ReadProjectCodeUseCase` — a MESMA
+superfície da aba Code, mesma credencial do owner, mesmo portão de
+container (RN-105) — pela razão de cima: nada nesse caminho decifra
+segredo num processo separado. `session` lê `chat.message`/`agent.response`
+direto do event log, sem sair da api. O embedding (`RagEmbeddingService`)
+não passa pelo resolvedor de credencial da RN-058 nenhuma vez: ele pede o
+provider FIXO `ollama` direto ao `LLMProviderRegistry`, o mesmo caminho que
+a RN-058 já descreve como "a busca é pulada" para esse provider — não há
+segredo de usuário para decifrar aqui, e por isso também não há rota
+interna a abrir ([RN-232](../business-rules.md#rn-232),
+[ADR 0080](../adr/0080-busca-hibrida-pesos-limiar-e-citacao.md)).
+
 ### O que o PO relê: regras de negócio e backlog
 
 | método | caminho |
@@ -368,25 +417,97 @@ CONTIDA — e uma rota sem parâmetro não tem onde o modelo escrever o que
 quiser. O custo por chamada é constante, e o texto entregue ao modelo tem teto
 de linhas, sempre declarando o total real quando trunca.
 
-### Onde o workspace do projeto mora — e por que isso também não virou rota
+### O que o PO relê: métricas de produto
 
-O modo de workspace ([ADR 0072](../adr/0072-projeto-local-ou-container.md),
-[RN-169](../business-rules.md#rn-169)) segue a mesma divisão. A partir dele um
-projeto pode ser `container` (a pasta gerenciada em `PROJECT_WORKSPACES_ROOT`, o
-default) ou `local` (um caminho absoluto do usuário) — e o engine precisa saber
-qual, porque é ele quem cria worktree e roda comando ali dentro.
+| método | caminho |
+|---|---|
+| GET | `/internal/projects/:projectId/product-metrics` (**não** é session-scoped) |
 
-**Nenhuma rota interna nova.** O engine resolve o localizador lendo as MESMAS
-colunas do MESMO banco (`projects.workspace_mode` e `projects.workspace_path`),
-como já fazia com `workspace_dir_name` desde o
+A TERCEIRA rota de leitura do PO, mesmo desenho das duas de cima
+([RN-407](../business-rules.md#rn-407)) — fecha a última pendência da
+auditoria `fluxo.yml` × código
+([item B4](../explanation/auditoria-fluxo-vs-codigo.md#b-lacunas-de-papéis-ativos-trabalho-implementável-já)):
+`docs/fluxo.yml` (papel `po`, entrada `metricas-de-produto`) declarava
+`status: lacuna` desde o ADR 0089 — o DADO já existia (o script
+`analise:funil` mede funil sessão → commit → PR → merge, lead time real e
+deployment frequency real), só faltava o MECANISMO de leitura dentro do
+turno.
+
+O relatório é montado pelas MESMAS funções puras e a MESMA query do script —
+`calcularFunil`/`calcularLeadTimes`/`leadTimeMedioMs`/
+`deploymentFrequencyPorDia`/`buscarAcoesGitDoFunil`, extraídas para
+`apps/api/src/application/services/funil-metrics.ts` (`scripts/` não pode
+importar `src/` na direção contrária, e um caso de uso não pode importar de
+`scripts/`), para que a leitura do PO e o relatório humano nunca divirjam do
+mesmo fato. `apps/api/scripts/analise-funil.ts` passou a REEXPORTAR dali em
+vez de definir localmente — sem mudança de assinatura nem de comportamento.
+
+O corpo JSON não tem campo nenhum para as três ausências permanentes que o
+script declara ("Não medido, de propósito": funil de produto completo
+ideação → commit, evidência de adoção por feature, MTTR/change failure
+rate) — a ferramenta do PO (`listar_metricas_de_produto`) cita as três pelo
+nome no TEXTO que devolve ao modelo, nunca deixando que ele conclua por
+omissão dos números que não há lacuna.
+
+### Onde o workspace do projeto mora — e por que a LEITURA ainda não é rota
+
+O `execution_mode` do projeto ([ADR 0072](../adr/0072-projeto-local-ou-container.md)/
+[ADR 0104](../adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md),
+[RN-169](../business-rules.md#rn-169)/[RN-421](../business-rules.md#rn-421))
+segue a mesma divisão. A partir dele um projeto pode ser `container` (a pasta
+gerenciada em `PROJECT_WORKSPACES_ROOT`, o default), `mounted` (um caminho
+absoluto do usuário, montado por bind-mount) ou `runner` (um caminho absoluto
+do usuário, SEM bind-mount, confirmado por um `brabo-runner` conectado) — e o
+engine precisa saber qual, porque é ele quem cria worktree e roda comando ali
+dentro.
+
+**A LEITURA continua sem rota interna.** O engine resolve o localizador lendo
+as MESMAS colunas do MESMO banco (`projects.execution_mode` e
+`projects.workspace_path`), como já fazia com `workspace_dir_name` desde o
 [ADR 0066](../adr/0066-nome-de-pasta-legivel-do-workspace.md). É o mesmo
 argumento de sempre: as duas derivações — api e engine — precisam concordar, e
 concordar por leitura da mesma linha é mais barato e mais difícil de divergir
 que concordar por contrato HTTP. Não há segredo envolvido, então não há motivo
-para uma rota.
+para uma rota de leitura.
 
-O engine distingue os dois casos pela **barra inicial** do localizador: nome de
-pasta no modo `container`, caminho absoluto no `local`.
+O engine distingue `container` dos outros dois pela **barra inicial** do
+localizador: nome de pasta em `container`, caminho absoluto em
+`mounted`/`runner` — os dois compartilham a MESMA derivação de raiz; o que
+muda entre eles é QUANDO/QUEM confirma que o caminho existe de verdade (ver a
+seção seguinte).
+
+### Confirmação do workspace pelo runner — a ESCRITA, que é rota nova ([RN-423](../business-rules.md#rn-423))
+
+| método | caminho |
+|---|---|
+| POST | `/internal/projects/:projectId/workspace-verification` (**não** é session-scoped) |
+
+A exceção à regra da seção anterior: ESCREVER o caminho de um projeto
+`runner` não pode ser leitura direta de coluna, porque quem tem autoridade
+sobre o caminho não é a api nem o engine — é o `brabo-runner`, rodando no
+HOST de verdade. O canal `terminal:<projectId>` recebe `workspace_confirm`
+do runner logo após o `join`; o engine repassa para esta rota
+(`Engine.Sessions.EngineApiClient.confirm_workspace/4`), que:
+
+1. Recusa com `400` se o projeto não estiver em `execution_mode: "runner"`;
+2. Revalida o caminho pelo MESMO predicado léxico da criação
+   (`caminhoDeWorkspaceLocalValido`) — raiz de sistema e sobreposição com o
+   checkout do Brabo continuam proibidas mesmo vindo do runner;
+3. **Sobrescreve** `workspacePath` e grava `workspaceVerifiedAt = now()` — o
+   runner é a fonte da verdade, sem exigir igualdade com o que foi digitado
+   no wizard;
+4. É idempotente: reconectar com o MESMO caminho não regrava nada
+   (`changed: false`);
+5. Tenta gravar `project.workspace_verified` no event log da sessão mais
+   recente do projeto — sem sessão ainda, o `UPDATE` acontece do mesmo jeito
+   e só o evento é pulado, a mesma degradação que `pty_open`/`pty_close` já
+   aceitam.
+
+`Engine.Actions.TerminalExecutor.decisao_de_execucao/1` é quem CONSOME o
+resultado: roteia pro runner só com `workspaceVerifiedAt` não-nulo **e**
+runner conectado agora; faltando qualquer um dos dois, recusa
+explicitamente — nunca cai no `System.cmd`/bind-mount de `mounted`, que não
+existe pra um projeto `runner`.
 
 ### Contexto por agente
 
@@ -516,6 +637,29 @@ repositório não tinha chamador nenhum. Agora a área nasce com o projeto
 ([RN-094](../business-rules.md#rn-094)) e a recusa volta a significar o que
 diz: chave de área inexistente. Projetos anteriores à correção são cobertos
 pela migração de backfill.
+
+### Grafo de conhecimento e RAG ([ADR 0099](../adr/0099-neo4j-grafo-de-conhecimento-e-templates.md)/[0100](../adr/0100-rag-search-e-modelos-garantidos-no-boot.md)/[0101](../adr/0101-memoria-relacional-como-projecao-do-event-log.md))
+
+| método | caminho |
+|---|---|
+| GET | `/internal/graph/prompt-templates/:name` |
+| POST | `/internal/graph/prompt-templates` |
+| POST | `/internal/rag/search` |
+
+As duas rotas de template gravam/leem versão de prompt no Neo4j, idempotente
+por hash — `Engine.Harness.InstructionFiles` (fonte `:graph`) e os workers do
+Psicólogo/Anamnese resolvem kickoff/identidade por aqui, sempre com fallback
+pro texto inline em qualquer falha ([RN-413](../business-rules.md#rn-413)/[RN-417](../business-rules.md#rn-417)).
+`scripts/dev/seed-prompts.ts` popula o grafo a partir de `prompts/*.md`.
+`/internal/rag/search` é uma PROJEÇÃO fina sobre `HybridSearchUseCase` (a
+mesma busca híbrida vetor+léxico que a aba "Chat RAG" já usa) — service
+token em vez do JWT de usuário, mesmo formato de resposta com `degraded`
+explícito quando o embedding não estava disponível
+([RN-414](../business-rules.md#rn-414)). **Nenhuma das três é o caminho de
+ESCRITA da memória relacional** — handoff, hipótese, perfil e fechamento de
+sessão chegam ao grafo por `GraphProjector`, do lado api, drenando uma
+segunda linha da outbox transacional; o engine nunca escreve no grafo direto
+([RN-416](../business-rules.md#rn-416)).
 
 ## api → engine
 

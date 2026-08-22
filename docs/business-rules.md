@@ -957,6 +957,98 @@ a auditar, o seed reusando o próprio `UpdateModelPricingUseCase`.
   `test/application/use-cases/llm/sync-model-catalog.use-case.spec.ts`
 - **Origem:** [ADR 0042](adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md)
 
+### RN-189 — Embedding devolve um vetor por entrada, ou erro {#rn-189}
+
+`embed` é operação de LOTE: recebe N textos e devolve N vetores, **na mesma
+ordem**. A ordem é o único vínculo entre entrada e vetor, e por isso uma
+resposta mais curta não é aproveitável — o i-ésimo vetor passaria a ser de
+outra frase, e o índice ficaria errado em silêncio, com o sintoma aparecendo na
+BUSCA, semanas depois e longe da causa.
+
+Então o contrato recusa, em vez de degradar, três coisas: lote incompleto,
+vetor vazio e dimensões diferentes na mesma resposta. Lista de entradas vazia
+também é recusada antes de sair pela rede — responder `[]` a ela faria quem
+chama gravar um índice vazio achando que indexou.
+
+O resultado carrega quatro campos, e cada um responde a uma pergunta que já
+custou caro em outro lugar do produto: `dimensions` é conferido contra o que
+VEIO (nunca copiado do catálogo); `model` é o que o provider **disse** ter
+usado, porque um alias resolve para uma versão datada e é esse nome que vai ao
+metering, pelo mesmo motivo do preço congelado ([RN-044](#rn-044)); e
+`inputTokens` vem com `estimated`, preservando a distinção "o provider disse
+zero" × "o provider não disse nada" da [RN-041](#rn-041).
+
+O erro **lança** normalizado por `code`, em vez de virar chunk como no `chat`.
+A razão do chunk é preservar o gasto de um turno em andamento; aqui não há nada
+a preservar — ou o provider devolveu os vetores e cobrou, ou não devolveu e não
+cobrou. É a mesma escolha de `listModels`, e a taxonomia é a mesma: nenhum
+`LLMErrorCode` novo.
+
+- **Onde:** `apps/api/src/application/ports/llm-provider.port.ts:61`,
+  `apps/api/src/infrastructure/llm/embedding-result.ts:26`
+- **Teste:** `test/contract/llm-provider.contract.ts` (cinco casos, rodados
+  contra todo provider que declara a capability)
+- **Origem:** [ADR 0075](adr/0075-embeddings-no-contrato-de-llm-provider.md)
+
+### RN-190 — Embedding tem capability em duas camadas, e a de modelo é exclusão {#rn-190}
+
+Como em tool calling ([RN-040](#rn-040)), a capability tem duas camadas: o
+PROVIDER (`capabilities.embeddings`, o teto) e o MODELO
+(`supportsEmbeddings` na linha de catálogo). A diferença entre os dois casos é
+o que a regra existe para dizer:
+
+- **tool calling é gradiente** — um modelo que não pede ferramentas ainda
+  conversa, e por isso só o binding de agente é recusado;
+- **embedding é exclusão** — `nomic-embed-text` não responde uma pergunta e
+  `llama3.2` não devolve vetor. São conjuntos disjuntos, e o daemon do Ollama
+  prova isso respondendo **`501`** ("This server does not support embeddings")
+  a um pedido de embedding com modelo de chat.
+
+`assertCanEmbed` confere as duas na ordem em que falham melhor: o provider
+primeiro, porque trocar de modelo não resolve provider que não embeda. Modelo
+**sem declaração** também é recusado, com mensagem diferente — ausência é "o
+provider não disse" ([ADR 0041](adr/0041-base-openai-compativel-e-contrato-de-llm-providers.md)),
+nunca permissão, e a ação de quem lê é sincronizar o catálogo em vez de trocar
+de modelo. Deduzir a capability do NOME do modelo é proibido: seria palpite
+vestido de dado.
+
+- **Onde:** `apps/api/src/domain/llm/embedding-capability.ts:64`,
+  `apps/api/src/infrastructure/llm/ollama-provider.ts:319`
+- **Teste:** `test/domain/llm/embedding-capability.spec.ts`,
+  `test/infrastructure/llm/ollama-provider.spec.ts`
+- **Origem:** [ADR 0075](adr/0075-embeddings-no-contrato-de-llm-provider.md)
+
+### RN-191 — `embeddings: true` exige execução, não documentação {#rn-191}
+
+A regra da casa ([ADR 0041](adr/0041-base-openai-compativel-e-contrato-de-llm-providers.md)/[ADR 0043](adr/0043-seis-providers-de-llm-e-o-fechamento-da-fase-9b.md))
+aplicada à capability nova: **só o `ollama` declara `true`**, e a prova é o
+`POST /api/embed` rodado contra o daemon 0.32.1 com `nomic-embed-text` — duas
+entradas, dois vetores de 768, `prompt_eval_count: 10`.
+
+Os outros oito declaram `false`, por dois motivos distintos:
+
+- **falta de prova** (sete): não há chave deles no ambiente, e o único smoke
+  pago que já rodou ([aceite](explanation/aceite-providers.md)) foi de CHAT —
+  num hub, embedding roteia para provedores diferentes dos de chat, e a prova
+  de um endpoint não é a do outro;
+- **ausência da operação** (Anthropic): não há endpoint de embedding próprio, e
+  a doc dela aponta para um terceiro, que é outro provider com outra chave e
+  outro dialeto.
+
+O DIALETO da base OpenAI-compatível é provado à parte, com a suite de contrato
+rodando uma segunda vez sobre ela com a capability ligada. É isso que torna
+barato virar um provider para `true` no dia em que a chave existir: muda uma
+linha do literal, e o parsing já está exercitado. Provider que declara `false`
+e ainda assim expõe o método **recusa a chamada** antes de tocar a rede.
+
+- **Onde:** `apps/api/src/infrastructure/llm/ollama-provider.ts:73`,
+  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:302`
+- **Teste:** `test/contract/llm-provider.contract.ts`,
+  `test/infrastructure/llm/openai-compatible-provider.contract.spec.ts`,
+  `test/infrastructure/llm/ollama-provider.embeddings.smoke.spec.ts` (manual,
+  contra o daemon real)
+- **Origem:** [ADR 0075](adr/0075-embeddings-no-contrato-de-llm-provider.md)
+
 ### RN-045 — Repositório adotado só é alterado por plano aprovado {#rn-045}
 
 Adotar um repositório existente **diagnostica sem agir**. A adoção valida o
@@ -2326,6 +2418,10 @@ depois de ler.
   `test/application/use-cases/execution/request-parallelization.use-case.spec.ts`,
   `test/application/use-cases/execution/set-area-max-parallel.use-case.spec.ts`
   e `apps/web/src/routes/ProjectSettingsTab.test.tsx` (`ParallelismSection`)
+- **Gate:** `docs/gates.yml` (`paralelismo-autorizado`) — `status: active`
+  desde a auditoria fluxo.yml × código (achado A1/B5); o mecanismo em si não
+  mudou, só o registro que ficou `planned` por engano desde a FASE 14d, ver
+  [gates.md](explanation/gates.md#um-registro-pode-envelhecer-para-o-lado-errado--desatualizado-não-inativo)
 - **Origem:** [ADR 0053](adr/0053-dev-lead-e-paralelismo-autorizado.md), FASE 14d
 
 ### RN-094 — A área de agentes nasce com o projeto {#rn-094}
@@ -2522,17 +2618,29 @@ só. A primeira versão repetia essa exclusão em três pontos, e a verificaçã
 mutação mostrou que nenhuma das cópias era alcançável por teste: cada uma
 sobrevivia à mutação da outra.
 
-**O plano é EVENTO, não `proposed_action`.** Propor não tem efeito externo: o
-gasto acontece quando os agentes sobem, e é lá que o teto cobra autorização.
-Transformar a proposta em ação a decidir faria você decidir duas vezes a mesma
-coisa.
+**O plano é `proposed_action` (revisado pelo [ADR 0086](adr/0086-dev-lead-plano-suspende-para-aprovacao.md), [RN-284](#rn-284)).**
+Até essa mudança o plano virava EVENTO simples, sem aprovação: o argumento era
+que propor não tem efeito externo — o gasto acontece quando os agentes sobem,
+e é lá que o teto cobra autorização; transformar a proposta em ação a decidir
+faria você decidir duas vezes a mesma coisa. Uma auditoria de
+`docs/fluxo.yml` × código encontrou que o fluxo já declarava esta saída como
+`via: proposed_action` desde o ADR 0085, e o código nunca foi ajustado para
+bater — o dono do produto decidiu que o código errava: o plano é a PRIMEIRA
+decisão real de quanto a sessão vai gastar com paralelismo, e o usuário passou
+a decidir ativar a execução tendo VISTO uma aprovação de verdade, não só lido
+uma linha no fio. A lição antiga não desapareceu — é o motivo pelo qual
+`propose_execution_plan` NÃO entrou no bloco de tetos absolutos de
+`decide.ts` (ver RN-284).
 
-**O plano BEM-SUCEDIDO encerra o turno.** Na primeira execução real o Dev Lead
-registrou **dois** `execution.plan_proposed` na mesma sessão — textos
-diferentes, mesmo total —, porque o laço voltava ao modelo e ele propunha de
-novo. O event log é imutável: ficaram duas propostas e nada dizendo qual valia.
-A instrução "use uma vez" no spec da ferramenta é pedido, não garantia; quem
-garante é o laço parar.
+**O plano BEM-SUCEDIDO encerra o turno — no caminho SEM suspensão.** Na
+primeira execução real o Dev Lead registrou **dois** `execution.plan_proposed`
+na mesma sessão — textos diferentes, mesmo total —, porque o laço voltava ao
+modelo e ele propunha de novo. O event log é imutável: ficaram duas propostas
+e nada dizendo qual valia. A instrução "use uma vez" no spec da ferramenta é
+pedido, não garantia; quem garante é o laço parar. Desde o ADR 0086, quando a
+proposta fica `pending`, quem encerra o turno é a PARADA por suspensão
+(RN-284) — o sucesso imediato (`auto_approved`/`executed`/`approved`, ver
+RN-284) continua fechando o laço do mesmo jeito de sempre.
 
 **Bem-sucedido, e não "chamou a ferramenta"**: um plano recusado (vazio, ou com
 zero agente num módulo) deixa o laço seguir, senão a recusa vira fim de turno e
@@ -2540,9 +2648,9 @@ o modelo nunca chega a corrigir. A primeira versão desta guarda olhava só o
 nome da ferramenta e tinha esse defeito — encontrado pelo teste comportamental,
 não pela leitura.
 
-Um plano vazio, ou com zero agente num módulo, é recusado **antes de gravar
-qualquer coisa** — o event log é imutável, e um plano meio gravado não teria
-como ser retratado.
+Um plano vazio, ou com zero agente num módulo, é recusado **antes de propor
+qualquer coisa** — a proposta, uma vez criada, é decisão real do usuário, e um
+plano meio proposto não teria como ser retratado.
 
 - **Onde:** `apps/engine/lib/engine/agents/dev_lead_server.ex` e
   `dev_lead_tools.ex`; a regra de endereçamento em
@@ -2554,7 +2662,8 @@ como ser retratado.
   `apps/api/test/domain/agents/agent-areas.spec.ts` (`o dev de módulo DEIXOU de
   ser endereçável`, `` `dev-lead` É endereçável, apesar do prefixo ``) e
   `test/application/use-cases/agents/offer-infra-handoff.use-case.spec.ts`
-- **Origem:** [ADR 0053](adr/0053-dev-lead-e-paralelismo-autorizado.md), FASE 14d
+- **Origem:** [ADR 0053](adr/0053-dev-lead-e-paralelismo-autorizado.md), FASE 14d;
+  o mecanismo de aprovação revisado pelo [ADR 0086](adr/0086-dev-lead-plano-suspende-para-aprovacao.md)
 
 ### RN-064 — Heartbeat não encerra sessão com trabalho pendente {#rn-064}
 
@@ -2734,8 +2843,9 @@ O produto responde **duas perguntas diferentes** sobre `token_usage`, e nenhuma
 **A do owner é por CREDENCIAL.** `GET /workspaces/:id/credential-spend` continua
 como a [RN-060](#rn-060) o deixou — por provider, exigindo `owner`, respondendo
 "quanto saiu da minha chave". Junto dele, `GET /workspaces/:id/spend-report`
-(também `owner`) quebra o workspace por **modelo, projeto, ator e dia**. O owner
-vê os dois porque é a única pessoa que pode ver os dois.
+(também `owner`) quebra o workspace por **modelo, provider, projeto, ator e
+dia** — o eixo de provider entrou pela [RN-186](#rn-186). O owner vê os dois
+porque é a única pessoa que pode ver os dois.
 
 **A do membro é por ATOR.** `GET /projects/:id/spend/me` (papel `viewer`)
 devolve, em tokens e custo **estimado**, o que **quem chamou** consumiu naquele
@@ -2753,11 +2863,14 @@ quem mandou gastar; atribuir o agente a quem o iniciou seria inventar um dado
 que a tabela não tem. Gasto de agente aparece no relatório do owner, de quem é a
 chave.
 
-**A agregação nova não tem eixo de `provider`.** As cinco dimensões de
-`sumGroupedBy` são `model`, `project`, `actor`, `session` e `day` — e só. A
-ausência é o que impede a visão do membro de ganhar esse eixo por descuido: não
-há argumento a passar. Pelo mesmo motivo, dois providers servindo o mesmo nome
-de modelo caem numa linha só.
+**O eixo de `provider` existe, e o membro não o alcança.** Até o
+[ADR 0076](adr/0076-provider-volta-a-ser-dimensao-de-gasto.md) ele simplesmente
+não existia na agregação, e era a ausência que continha a visão do membro. Hoje
+`sumGroupedBy` tem seis dimensões (`model`, `provider`, `project`, `actor`,
+`session`, `day`) e a contenção mudou de forma, não de força: quem contém é o
+TIPO — ver [RN-186](#rn-186) e [RN-187](#rn-187). O que não mudou é que dois
+providers servindo o mesmo nome de modelo continuam caindo numa linha só na
+dimensão `model`.
 
 - **Onde:**
   `apps/api/src/application/use-cases/llm/get-my-spend.use-case.ts`,
@@ -2769,7 +2882,97 @@ de modelo caem numa linha só.
   (o membro não enxerga linha de outro ator, nem de agente, nem do owner; o
   filtro é pelo par `(kind, id)`; a resposta não carrega provider);
   `apps/web/src/routes/ProjectSpendTab.test.tsx`
-- **Origem:** [ADR 0063](adr/0063-duas-audiencias-para-o-mesmo-gasto.md) (FASE 22)
+- **Origem:** [ADR 0063](adr/0063-duas-audiencias-para-o-mesmo-gasto.md) (FASE 22),
+  revisto pelo [ADR 0076](adr/0076-provider-volta-a-ser-dimensao-de-gasto.md)
+
+### RN-186 — `provider` é dimensão do relatório do owner, e só dele {#rn-186}
+
+`sumGroupedBy` aceita `provider` como dimensão, e
+`GET /workspaces/:id/spend-report` devolve a lista `porProvider` ao lado de
+modelo, projeto, ator e dia. O [ADR 0063](adr/0063-duas-audiencias-para-o-mesmo-gasto.md)
+tinha deixado o eixo de fora; o [ADR 0076](adr/0076-provider-volta-a-ser-dimensao-de-gasto.md)
+o devolveu **sem revogar o argumento**: quebrar gasto por provider continua
+sendo quebrar por CREDENCIAL, e por isso o eixo mora numa rota que já exige
+`owner` ([RN-060](#rn-060)) — a mesma régua de `credential-spend`, que segue
+respondendo a pergunta da FATURA (por mês, com o vínculo à chave que existe
+hoje).
+
+`GET /projects/:id/spend/me` **não ganhou nada**. A assimetria é o desenho: as
+duas respostas continuam não sendo recorte uma da outra ([RN-101](#rn-101)).
+
+A dimensão `model` **não mudou**: dois providers servindo o mesmo nome de modelo
+continuam numa linha só. Quem quer a quebra por credencial tem a lista própria,
+e cruzar as duas dimensões multiplicaria as linhas do ranking sem responder
+pergunta que as duas listas separadas já não respondam.
+
+- **Onde:** `apps/api/src/application/ports/token-usage-repository.port.ts:123`
+  (`SpendDimension`),
+  `apps/api/src/infrastructure/persistence/drizzle/token-usage.repository.ts:245`
+  (o `GROUP BY`), `apps/api/src/application/use-cases/llm/get-workspace-spend-report.use-case.ts:112`,
+  `apps/api/src/interfaces/http/llm/spend.controller.ts:56`
+- **Teste:** `apps/api/test/application/use-cases/llm/spend-audiencias.use-case.spec.ts`
+  ("quebra por PROVIDER, e o mesmo nome de modelo em dois providers segue UMA
+  linha")
+- **Origem:** [ADR 0076](adr/0076-provider-volta-a-ser-dimensao-de-gasto.md)
+
+### RN-187 — A visão do membro não alcança `provider`, e quem garante é o TIPO {#rn-187}
+
+Enquanto o eixo não existia, o que continha a visão do membro era a **ausência**
+de argumento a passar. Com o eixo de volta, a contenção passou a ser da
+assinatura: `sumGroupedBy` tem **duas sobrecargas**, e a que aceita um escopo com
+`actor` — o da audiência do membro, e o único que ele tem — só recebe
+`SpendDimensionDoAtor`, que é `Exclude<SpendDimension, 'provider'>`.
+`sumGroupedBy('provider', escopoComAtor)` **não compila**.
+
+Nem o repositório nem o caso de uso têm `if` sobre essa combinação, de
+propósito: uma checagem em tempo de execução daria a impressão de que a garantia
+é dinâmica, quando quem a sustenta é o compilador — e um `if` é o tipo de coisa
+que a próxima refatoração remove sem que nenhum teste fique vermelho.
+
+A barreira é dupla e as duas metades são independentes: a rota do membro
+**também não tem parâmetro de dimensão** (só `projectId` e `dias`), então uma
+query inventada como `?dimensao=provider` é descartada pelo Nest antes de
+chegar ao handler.
+
+`Exclude` em vez de uma segunda lista escrita à mão é deliberado: dimensão nova
+nasce alcançável pelas duas audiências, e tirá-la do alcance do membro vira ato
+explícito **neste ponto** — nunca um esquecimento em outro arquivo.
+
+- **Onde:** `apps/api/src/application/ports/token-usage-repository.port.ts:107`
+  (as duas sobrecargas), `:138` (`SpendDimensionDoAtor`), `:154`/`:164` (os dois
+  escopos), `apps/api/src/application/use-cases/llm/get-my-spend.use-case.ts:73`,
+  `apps/api/src/interfaces/http/llm/spend.controller.ts:98`
+- **Teste:** `apps/api/test/application/use-cases/llm/spend-audiencias.use-case.spec.ts`
+  ("não compila pedir `provider` com escopo de ator" — um `@ts-expect-error` que
+  o `tsc` reprova como diretiva NÃO USADA se a barreira cair; e "só pede as
+  dimensões `session` e `day`"),
+  `apps/api/test/interfaces/spend.controller.spec.ts` (a rota do membro aceita
+  `dias` e mais nada)
+- **Origem:** [ADR 0076](adr/0076-provider-volta-a-ser-dimensao-de-gasto.md)
+
+### RN-188 — Pessoa e agente são partição da lista por ator, sem consulta a mais {#rn-188}
+
+O relatório do owner traz `porOwner` (linhas de `actor_kind = 'user'`) e
+`porAgente` (`actor_kind = 'agent'`) além de `porAtor`, que continua inteira.
+Os dois blocos são **derivados** de `porAtor` no caso de uso — `actorKind` já
+vem na linha desde a FASE 22 —, e não duas consultas com `where actor_kind`.
+O motivo é medido: o [ADR 0063](adr/0063-duas-audiencias-para-o-mesmo-gasto.md)
+mostrou que o custo destas consultas cresce com o tamanho de `token_usage` e
+não com o do pedido, então varrer a janela duas vezes a mais para separar o que
+já está separado em memória seria caro pelo motivo errado.
+
+`actor_kind` que não seja pessoa nem agente (hoje, `system`) **não entra em
+nenhum dos dois blocos** e continua visível em `porAtor` e no total. Abrir um
+terceiro bloco para ele diria que o produto tem uma audiência que ele não tem.
+
+O rótulo "Por owner" é do handoff de design e vale pela [RN-058](#rn-058) — é a
+chave do owner que todas essas linhas gastam. Quem é o dono do workspace
+continua sendo o campo `ownerId`, não o `actorKind` de cada linha.
+
+- **Onde:** `apps/api/src/application/use-cases/llm/get-workspace-spend-report.use-case.ts:120`
+- **Teste:** `apps/api/test/application/use-cases/llm/spend-audiencias.use-case.spec.ts`
+  ("separa PESSOA de AGENTE em dois blocos, sem perder a lista por ator")
+- **Origem:** [ADR 0076](adr/0076-provider-volta-a-ser-dimensao-de-gasto.md)
 
 ### RN-102 — O modelo da área é padrão herdável; divergir é decisão do agente, e voltar a herdar apaga a decisão {#rn-102}
 
@@ -4212,6 +4415,11 @@ nunca sobrescrever a anterior.
 
 ### RN-106 — `git push`, PR e deploy não saem pelo terminal — mesmo dentro do escopo do projeto {#rn-106}
 
+**REVISADA pela [RN-418](#rn-418) (ADR 0102, decisão GLOBAL do dono do
+produto)**: o `deny` que este registro descreve virou TETO ABSOLUTO
+(`require_approval` incondicional) — o resto desta entrada é histórico,
+fiel ao que valia até a revisão.
+
 Dentro do container do projeto o agente é livre (ADR 0065): o allowlist de
 verbos do [ADR 0055](adr/0055-escopo-de-caminho-na-politica-de-terminal.md) não
 converge (achados Z e AD — verbo, forma e invocação são espaços distintos), e a
@@ -5435,6 +5643,9 @@ história promovida, o botão mostra a dica em `title` explicando o motivo.
 - **Origem:** pedido do usuário — o botão de handoff Arquiteto→Dev Lead
   não tinha gate nenhum
 
+Só valia no CLIENTE: uma chamada HTTP direta ignorava a regra. Fechado por
+[RN-404](#rn-404) (ADR 0094), que revalida no backend.
+
 ### RN-161 — Aceitar o handoff pro Dev Lead encadeia a ativação de execução quando o papel efetivo já autoriza {#rn-161}
 
 `handleAcceptHandoff` (`SessionPage.tsx`) encadeia `activateExecution`
@@ -5543,6 +5754,11 @@ não ser o erro de uma volta que já foi corrigida depois.
 
 ### RN-169 — O projeto escolhe onde o código mora: Local ou Container {#rn-169}
 
+**REVISADA pela [RN-421](#rn-421) (ADR 0104)**: `workspace_mode`/`local`
+viraram `execution_mode` de TRÊS valores (`container`/`mounted`/`runner`,
+migração `0048`) — o resto desta entrada é histórico, fiel ao que valia até
+a revisão.
+
 Um projeto nasce com um **modo de workspace** (`projects.workspace_mode`,
 migração `0043`), e é ele que decide de onde a raiz de escopo é derivada:
 
@@ -5611,6 +5827,11 @@ são ortogonais.
   escolhida explicitamente)
 
 ### RN-170 — Caminho Local é validado na CRIAÇÃO, e a recusa ensina {#rn-170}
+
+**REVISADA pela [RN-422](#rn-422) (ADR 0104)**: a validação de criação passou
+a DIVERGIR por modo — `mounted` (o `local` renomeado) continua tocando disco
+como descrito aqui, `runner` valida só o LÉXICO, sem I/O — o resto desta
+entrada é histórico, fiel ao que valia até a revisão.
 
 Criar um projeto no modo `local` com um caminho que a api não alcança produz um
 projeto que **trava depois** — na primeira ferramenta do primeiro agente, longe
@@ -6197,6 +6418,3240 @@ se o próximo passo é trocar a chave, esperar o provider ou abrir um bug.
 - **Origem:** uso real no `exp001` — "quando houver uma nova tentativa e
   consolidação de algum agente deve apresentar no chat"
 
+### RN-182 — O tema é escolhido, persistido e aplicado antes do primeiro paint {#rn-182}
+
+O tema claro existe em `design/tokens.css` desde o começo, sob
+`[data-theme='light']`, e **nada em `apps/web` escrevia esse atributo**: o
+único jeito de ver o tema claro era digitar o atributo no DevTools. Ele passa a
+ser alcançável.
+
+A preferência mora em `localStorage['brabo.theme']`, aceita **só** `'dark'` ou
+`'light'`, e o default é `dark` — o tema primário do design system. Quem aplica
+é `apps/web/public/theme-boot.js`, **síncrono no `<head>` e antes do bundle**:
+`data-theme` decide as cores de todo o `tokens.css`, e aplicá-lo depois da
+hidratação faria o usuário do tema claro ver um flash escuro a cada carga.
+
+É **arquivo, não script inline**, e a razão é a mesma que fez as fontes serem
+auto-hospedadas (ADR 0036): a imagem de produção serve sob `script-src 'self'`
+(`docker/web/nginx.conf`), sem `'unsafe-inline'` e sem nonce. Inline
+funcionaria em `pnpm dev:web` e seria **bloqueado na imagem publicada** — o
+pior modo de falha possível, porque só aparece depois do deploy.
+
+O caminho inteiro degrada em vez de quebrar: `localStorage` pode lançar (modo
+privado, storage bloqueado em iframe) e tema é preferência, não função; valor
+desconhecido cai no default em vez de virar um `data-theme` que o CSS não
+conhece e que renderizaria sem tema nenhum.
+
+- **Onde:** `apps/web/public/theme-boot.js:41`,
+  `apps/web/index.html:53`
+- **Teste:** `apps/web/src/lib/tema.test.ts` (describe "contrato com o script
+  de boot")
+- **ADR:** [0074](adr/0074-tema-alcancavel-e-o-boot-sob-csp.md)
+
+### RN-183 — A preferência de tema tem uma fonte, e o atributo do `<html>` é a verdade {#rn-183}
+
+Ler, gravar, alternar e observar o tema é `apps/web/src/lib/tema.ts` — o botão
+mora no shell e consome essa API, nunca escreve `data-theme` por conta própria.
+
+Três decisões dentro dela:
+
+1. **`temaAtual()` lê o ATRIBUTO primeiro**, e só depois o `localStorage` e o
+   default. É o atributo que a tela está mostrando; cair na preferência gravada
+   antes dele faria a UI afirmar um tema diferente do que se vê, no exato caso
+   em que o boot falhou.
+2. **`lerTemaSalvo()` devolve `null`, não o default**, quando não há preferência
+   gravada. Quem nunca escolheu pode um dia seguir o sistema operacional
+   (`prefers-color-scheme`), e apagar essa distinção aqui tiraria a informação
+   de quem decidir isso depois.
+3. **`observarTema()` cobre o evento `storage`**, que o navegador dispara nas
+   OUTRAS abas do mesmo origin. Sem isso dois separadores abertos ficariam em
+   temas diferentes até o próximo reload.
+
+A chave e o default são repetidos em `public/theme-boot.js` porque ele roda
+antes do bundle e não pode importar nada. É a única duplicação possível de
+divergir em silêncio, e por isso o teste lê o arquivo de boot e reprova se os
+dois deixarem de bater.
+
+- **Onde:** `apps/web/src/lib/tema.ts:73`
+- **Teste:** `apps/web/src/lib/tema.test.ts`
+- **ADR:** [0074](adr/0074-tema-alcancavel-e-o-boot-sob-csp.md)
+
+### RN-184 — Contraste é medido nos DOIS temas {#rn-184}
+
+Enquanto o tema claro era inalcançável ([RN-182](#rn-182)), medir só o escuro
+era honesto: medir uma tela que ninguém pode abrir é medir uma intenção. Com o
+botão de tema, deixar de medir o claro passaria a esconder metade da superfície
+visível do produto — então os pares passam a ser cobrados nos dois temas, com o
+mesmo piso (4,5:1 para texto, 3:1 para elemento de interface).
+
+Para isso, **seis tokens do tema claro mudaram de valor**. O fundo mais
+exigente do claro é o `--code-bg` (papel, `#efe4d2`, a um passo das
+superfícies), e quem fecha contra ele fecha contra o resto: `--accent`
+3,56 → 4,81, `--warning` 3,15 → 4,98, `--success` 3,89 → 5,12, `--violet`
+4,16 → 4,95, `--text-muted` 2,76 → 5,17, e `--accent-hover` seguiu o accent um
+degrau abaixo. O tema escuro **não mudou um valor**, e a dívida conhecida dele
+segue travada pelos mesmos cinco números (3,89 / 3,10 / 3,88 / 3,88 / 4,41).
+
+O `--text-muted` do claro não era dívida: a 2,40:1 sobre `--surface-2` ele
+reprovava até o piso de **elemento de interface**, que é o mais baixo que
+existe. Era defeito, e o tema claro não tem por que ser pior que o primário.
+
+- **Onde:** `design/tokens.css:208`
+- **Teste:** `apps/web/src/lib/contraste.test.ts`,
+  `apps/web/src/design-contraste.test.ts`,
+  `apps/web/test/design-contraste.test.ts`
+- **ADR:** [0074](adr/0074-tema-alcancavel-e-o-boot-sob-csp.md)
+
+### RN-185 — Os oito papéis de sintaxe, e o valor do handoff só entra medido {#rn-185}
+
+A paleta de realce era três tokens próprios (`--syntax-function`,
+`--syntax-comment`, `--syntax-operator`) e cinco reusos de semântico
+(`--accent`, `--warning`, `--violet`, `--success`, `--text-primary`). É esse
+reuso que fazia a paleta ser medida só no escuro: no claro os semânticos
+reprovavam contra o `--code-bg` de papel.
+
+Passa a ter os **oito papéis** do handoff, com o prefixo `--syntax-*` que o
+repositório já usa, e cada um com valor próprio por tema. Nomear os oito é o
+que permite o realce divergir do semântico no dia em que precisar.
+
+**Valor do handoff só entra quando a medição aprova.** Contra o próprio
+`--code-bg` do handoff, cinco dos oito reprovam os 4,5:1 que texto de código
+exige — `--syn-cm` 4,09:1 no escuro e 2,32:1 no claro, `--syn-kw` 4,34:1,
+`--syn-str` 4,20:1, `--syn-fn` 4,14:1, `--syn-op` 4,00:1. Onde o handoff
+reprova, vale o número medido: é a mesma régua do ADR 0036 — a intenção do
+handoff vale, o mecanismo (ou o número) que quebra o produto, não.
+
+Os cinco semânticos continuam sendo quem pinta (`SyntaxTokens.module.css` não
+mudou nesta entrega) e por isso vão **medidos ao lado** dos oito: enquanto
+forem o pixel de verdade, é deles que o piso é cobrado. No tema claro cada
+papel tem hoje o MESMO número do semântico que o pinta, de propósito — duas
+fontes com números diferentes para o mesmo pixel divergiriam na primeira
+correção feita de um lado só.
+
+- **Onde:** `design/tokens.css:111`
+- **Teste:** `apps/web/src/lib/contraste.test.ts` (describe "contraste — paleta
+  de sintaxe sobre --code-bg")
+- **ADR:** [0074](adr/0074-tema-alcancavel-e-o-boot-sob-csp.md)
+
+### RN-195 — A sidebar recolhe para uma trilha de ícones, com a preferência persistida {#rn-195}
+
+`Shell.tsx` tinha largura fixa (248px) e nenhum jeito de encolher. Passa a
+alternar entre `--sidebar-w` (264px) e `--sidebar-w-collapsed` (62px) — os
+dois tokens que a Onda 1/frente A já tinha criado em `design/tokens.css` —
+com `transition: width .18s ease`. Recolhida, vira uma trilha vertical: um
+quadrado de iniciais por projeto (borda na cor de identidade,
+[RN-197](#rn-197)) mais um ícone de Atividades; clicar num projeto na
+trilha reexpande a barra, abre aquele projeto e navega para ele.
+
+A preferência é do usuário e sobrevive a reload: `brabo.sidebar.collapsed`
+(`'1'`/`'0'`) em `apps/web/src/lib/sidebar-state.ts`. Ela é **manual**
+(`colapsadoManual`) e se soma por OR a um segundo estado, **automático**
+(`autoColapsado`, [RN-201](#rn-201)) — o colapso visível é a união dos dois,
+mas só o manual é gravado.
+
+- **Onde:** `apps/web/src/routes/Shell.tsx:340-351` (estado e toggle),
+  `apps/web/src/routes/Shell.module.css` (`.sidebar`, `.colapsado .sidebar`,
+  `.trilha*`), `apps/web/src/lib/sidebar-state.ts`
+  (`lerColapsado`/`gravarColapsado`)
+- **Teste:** `apps/web/src/lib/sidebar-state.test.ts` (describe "colapso"),
+  `apps/web/src/routes/Shell.test.tsx`
+- **Origem:** PROGRAMA 28, Onda 2, frente B —
+  `design_handoff_brabo/README.md` seção "Navigation shell"
+
+### RN-196 — Projetos expansíveis revelam as abas do projeto, N ao mesmo tempo {#rn-196}
+
+Cada projeto na sidebar ganha um chevron: clicar nele expande a linha e
+revela a lista de abas daquele projeto (Visão geral, Executores, Criativo,
+Chat, Code, Backlog, Aprovações, Insights, Gastos, Configurações), cada uma
+um link para `/projects/$projectId?tab=<chave>`. Vários projetos podem ficar
+abertos ao mesmo tempo — o estado é um `Set<string>` de ids, persistido em
+`brabo.sidebar.open`.
+
+A lista de abas e os rótulos vêm de `ABAS_DO_PROJETO`
+(`apps/web/src/routes/project-tabs.ts`, dono da frente C, rodando em
+paralelo nesta mesma onda) — a sidebar só **lê** o array exportado, nunca
+reescreve nomes de aba. **Suposição de shape**, para conferir contra o que a
+frente C entregou: `AbaDoProjeto` tem `key: string`, `label: string` e
+`count?: (contagens: ContagensDeAba) => number | undefined`, com
+`ContagensDeAba = { promocoesPendentes, aprovacoesPendentes,
+hipotesesPendentes }`. A sidebar só consegue preencher
+`aprovacoesPendentes` de graça (`pendingApprovalsCount` já vem no resumo do
+dashboard, [RN-151](#rn-151)); `promocoesPendentes`/`hipotesesPendentes`
+entram como `0` — calculá-los exigiria uma consulta nova POR PROJETO
+ABERTO na sidebar, a mesma classe de N+1 que a RN-090/091 fechou no
+dashboard. Os dois selos continuam corretos dentro da régua da própria
+`ProjectPage`; só o preview na sidebar é parcial, e é uma omissão
+deliberada, não um bug.
+
+O projeto da rota ATUAL sempre aparece expandido (`projetosAbertosEfetivo`),
+mesmo sem estar no `Set` persistido — abrir "de graça" pela rota não grava
+nada; só o clique explícito no chevron entra em `brabo.sidebar.open`.
+
+- **Onde:** `apps/web/src/routes/Shell.tsx:353-374` (estado e o efetivo),
+  `apps/web/src/routes/Shell.tsx` (`LinhaDeAba`), `apps/web/src/lib/sidebar-state.ts`
+  (`lerProjetosAbertos`/`gravarProjetosAbertos`)
+- **Teste:** `apps/web/src/lib/sidebar-state.test.ts` (describe "conjuntos"),
+  `apps/web/src/routes/Shell.test.tsx`
+- **Origem:** PROGRAMA 28, Onda 2, frente B
+
+### RN-197 — Duas cores de projeto, dois propósitos: identidade não é status {#rn-197}
+
+O handoff pede um "ponto de cor do projeto" na linha expandida e o mesmo
+princípio de cor na trilha recolhida. O produto já tinha um dot ali —
+`NavStatusDot` — mas ele é **status** (orçamento/atividade recente,
+derivado sem consulta própria de `useProjectsSummary`/`useProjectsStatus`,
+RN-039), não identidade: a cor dele MUDA com o tempo.
+
+Decisão, documentada em vez de resolvida: a linha expandida continua
+mostrando só `NavStatusDot` (é informação acionável; duplicar um segundo
+dot ao lado seria ruído). A cor de IDENTIDADE — estável por projeto, hash
+determinístico do id sobre uma paleta fixa de tokens (`corDoProjeto`,
+sem tabela nova, mesma ideia de `AGENTS[key].color`) — aparece só na
+trilha recolhida, como borda do quadrado de iniciais, que é onde não há
+espaço para os dois dots e onde a identidade (não o status) é o que ajuda a
+achar o projeto certo entre vários quadrados parecidos.
+
+Do mesmo jeito, o handoff pede "badge com o total de últimas iterações" no
+projeto; o produto usa `pendingApprovalsCount` desde a RN-151, que é
+posterior ao handoff e resolve um defeito real (um número que não
+correspondia a nada acionável ao clicar). Este badge **não muda** — RN-151
+continua valendo, e é o handoff que diverge aqui.
+
+- **Onde:** `apps/web/src/lib/sidebar-state.ts` (`corDoProjeto`),
+  `apps/web/src/routes/Shell.tsx` (`NavStatusDot`, comentário da divergência)
+- **Teste:** `apps/web/src/lib/sidebar-state.test.ts` (describe "corDoProjeto")
+- **Origem:** PROGRAMA 28, Onda 2, frente B — divergência entre
+  `design_handoff_brabo/CHECKLIST-CONFRONTO.md` e RN-151
+
+### RN-198 — Atividades agrupa por agente-base/instância REAL, nunca por contador inventado {#rn-198}
+
+A seção Atividades da sidebar é a mesma lógica de agrupamento de
+`AgentTimelineTree.tsx`/`timeline-tree.ts` (já usada na Visão geral do
+projeto), movida para um lugar novo — não reescrita. `montarArvore` já
+agrupa por `evento.actor.id`; a novidade é `agruparPorInstancia`
+(`apps/web/src/lib/timeline-tree.ts`), que decide quais ramos formam um
+grupo visual de dois níveis.
+
+A "instância" não é um contador renumerado (`-01`/`-02`) — é o `agent_id`
+REAL que o produto já escreve: `devAgentId`/`extraDevAgentId`
+(`apps/api/src/application/use-cases/execution/activate-execution.use-case.ts:27-38`)
+produzem `dev-<modulo>` e `dev-<modulo>-2` (sufixo sempre exatamente `-2`,
+porque o teto é DOIS por módulo, [RN-154](#rn-154)). Um ramo só vira
+"instância extra" de outro se o agente-base (sem o sufixo) TAMBÉM tiver um
+ramo na mesma lista — senão ele é o próprio agente. Agente com uma instância
+abre direto nos eventos; com duas, revela um segundo nível, uma linha por
+instância, cada uma com sua própria contagem — reaproveitando
+`getAgentLastSeenSeq`/`setAgentLastSeenSeq` (`read-state.ts`) que já existia
+para o contador de novidade da árvore.
+
+Escopo: só o projeto da ROTA ATUAL (`pathname`), não todos os projetos do
+workspace — agregar todos exigiria uma consulta de eventos POR projeto, a
+mesma classe de N+1 que a RN-090/091 fechou no dashboard. Reusa o MESMO par
+de hooks que `AgentTimelineTree`/`SessionPage` já usam
+(`useActiveExecutionSession` + `useSessionEvents`, mesma `queryKey`) — zero
+requisição nova quando as duas telas estão montadas juntas.
+
+O que abre/fecha é persistido em `brabo.sidebar.agents`, com o formato do
+handoff adaptado aos ids reais: `agenteBase` (grupo aberto, ex.:
+`dev-backend`) ou `${agenteBase}/${instancia}` (uma instância específica
+aberta, ex.: `dev-backend/dev-backend-2`).
+
+- **Onde:** `apps/web/src/lib/timeline-tree.ts` (`agruparPorInstancia`,
+  `GrupoDeAgente`), `apps/web/src/routes/Shell.tsx:237-311`
+  (`GrupoDeAtividade`, `InstanciaDeAgente`), `apps/web/src/routes/Shell.tsx:376-399`
+  (escopo e persistência)
+- **Teste:** `apps/web/src/lib/timeline-tree.test.ts` (describe
+  "agruparPorInstancia"), `apps/web/src/lib/sidebar-state.test.ts`
+- **Origem:** PROGRAMA 28, Onda 1/frente B0 (achado, sem código) e Onda
+  2/frente B (implementação)
+
+### RN-199 — Botão de tema no rodapé, funcional recolhido {#rn-199}
+
+O rodapé da sidebar ganha um botão sol/lua que consome a API de
+`apps/web/src/lib/tema.ts` da Onda 1/frente A (`temaAtual`,
+`alternarTema`, `observarTema`) sem reimplementar nada — só o BOTÃO é novo.
+Funciona recolhido (62px): o rótulo textual some, mas `aria-label`/`title`
+continuam descrevendo o tema atual e o clique continua alternando.
+
+- **Onde:** `apps/web/src/routes/Shell.tsx:130-148` (`BotaoDeTema`)
+- **Teste:** `apps/web/src/lib/tema.test.ts` (a API, inalterada por esta RN)
+  — `Shell.test.tsx` não duplica a suite do tema, só monta o Shell
+- **Origem:** PROGRAMA 28, Onda 2, frente B
+
+### RN-200 — Só Projetos e Atividades como itens globais {#rn-200}
+
+Os dois itens sem rota do rodapé da nav ("Chat global"/"Configurações",
+`title="em breve"`) saem. O handoff é explícito: só Projetos e Atividades
+são itens GLOBAIS — tudo o mais é escopado a um projeto. "Configurações"
+continua existindo, como ABA de projeto ([RN-196](#rn-196)) dentro da linha
+expandida — o que sai é o item solto sem destino.
+
+- **Onde:** `apps/web/src/routes/Shell.tsx` (o bloco `.globalNav`/
+  `.inertNavItem` da FASE 17a foi removido, sem substituto global)
+- **Teste:** `apps/web/src/routes/Shell.test.tsx` (describe "sem itens
+  globais inertes")
+- **Origem:** PROGRAMA 28, Onda 2, frente B —
+  `design_handoff_brabo/README.md` seção "Navigation shell"
+
+### RN-201 — Projeto/aba ativos persistem entre páginas; a aba Código recolhe sem gravar preferência {#rn-201}
+
+Duas chaves finais do handoff: `brabo.project` (o projeto ativo) e
+`brabo.tab` (a aba ativa) — gravadas quando o usuário clica um link de aba
+NA SIDEBAR (`LinhaDeAba`/o link de nome do projeto). `?tab=` na URL só vale
+como deep-link INICIAL (`project-tabs.ts`, FASE 24) — trocar de aba dentro
+de `ProjectPage.tsx` é estado local e não escreve na URL depois do
+primeiro load, então estas chaves são o único jeito de a preferência
+sobreviver entre uma navegação e outra.
+
+**Auto-collapse do Código, sem gravar preferência.** A rota de Código
+(`ProjectCodeTab.tsx`) não é uma URL própria — é uma ABA dentro de
+`ProjectPage.tsx`, montada/desmontada por troca de `tab` (React desmonta o
+componente anterior ao trocar o `component` da aba ativa). Isso descarta a
+alternativa óbvia ("observar a URL no Shell"): a URL não muda ao trocar de
+aba, só no load inicial. A solução é um `Context` — `AutoCollapseContext`
+(`apps/web/src/lib/sidebar-state.ts`) —, porque `Shell.tsx` fica ACIMA de
+`<Outlet />` na árvore e não há como uma aba passar uma prop pra cima sem
+um canal explícito. `useAutoCollapseSidebar()` chama `registrar(true)` no
+`useEffect` de montagem e `registrar(false)` na limpeza; o Shell soma esse
+sinal (`autoColapsado`) por OR ao colapso manual, e só o manual é
+persistido — por isso o estado anterior volta sozinho ao sair do Código.
+
+- **Onde:** `apps/web/src/lib/sidebar-state.ts` (`AutoCollapseContext`,
+  `useAutoCollapseSidebar`, `lerProjetoAtivo`/`gravarProjetoAtivo`,
+  `lerAbaAtiva`/`gravarAbaAtiva`), `apps/web/src/routes/Shell.tsx`
+  (`autoCollapseValue`, o `Provider` em torno de `<Outlet />`),
+  `apps/web/src/routes/ProjectCodeTab.tsx` (a única chamadora hoje)
+- **Teste:** `apps/web/src/lib/sidebar-state.test.ts` (describe
+  "useAutoCollapseSidebar", "projeto e aba ativos")
+- **Origem:** PROGRAMA 28, Onda 2, frente B —
+  `design_handoff_brabo/CHECKLIST-CONFRONTO.md` seção 1, "Auto-collapse"
+### RN-202 — A aba `sessions` continua "Chat", nunca "Chat RAG" {#rn-202}
+
+O handoff de design mais recente do PROGRAMA 28 chama a aba consultiva de
+"Chat RAG" (`designs/Brabo Chat.dc.html`), mas o produto não tem essa
+funcionalidade: não há pipeline de indexação por projeto, não há índice
+vetorial, não há UI de citação de fonte. O ADR 0075 pôs `embed` no contrato de
+`LLMProvider` — a operação existe e é PROVADA no Ollama —, mas nada ainda a
+CONSOME. A aba `sessions` de hoje é o Chat consultivo comum da
+[RN-104](#rn-104): um agente respondendo com o contexto da sessão, sem
+produzir backlog, sem RAG nenhum por trás.
+
+Rotular a aba "Chat RAG" hoje anunciaria uma capacidade que não existe — o
+mesmo erro que o [ADR 0042](adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md)
+já recusa para modelo de catálogo ("não ativar modelo descoberto
+automaticamente"). O rótulo muda no dia em que a funcionalidade chegar, junto
+com o dado por trás dele — nunca antes.
+
+- **Onde:** `apps/web/src/routes/project-tabs.ts:144` (entrada `key:
+  'sessions'`)
+- **Teste:** `apps/web/src/routes/project-tabs.test.tsx` (describe "abas do
+  projeto derivam de um registro só", `'RN-202 — a aba \`sessions\` continua
+  "Chat", nunca "Chat RAG"'`)
+- **ADR:** [0078](adr/0078-moldura-de-tela-e-o-registro-de-abas-diverge-do-handoff.md)
+
+### RN-203 — O handoff é referência visual, não teto de quantas abas o produto tem {#rn-203}
+
+O handoff de design lista 7 abas de projeto (Visão geral, Criativo, Código,
+Chat RAG, Gastos, Aprovações, Configurações); o registro
+(`apps/web/src/routes/project-tabs.ts`) tem 10. As três a mais —
+`executores` ([RN-121](#rn-121)), `backlog` ([RN-048](#rn-048)) e
+`insights` (hipóteses do Psicólogo aguardando decisão) — nasceram DEPOIS do
+handoff ser desenhado, todas com dado real, contador derivado de consulta e
+pelo menos uma RN própria com teste.
+
+O handoff fixa como cada tela deve se PARECER — cores, tipografia,
+espaçamento, o desenho da moldura —, e essa parte foi seguida à risca nesta
+mesma mudança (header, régua, rolagem, largura do conteúdo). Ele não congela o
+inventário de abas no dia em que foi escrito. Apagar as três para "bater" com
+o handoff destruiria informação que o produto já sabia mostrar, pelo motivo
+errado.
+
+- **Onde:** `apps/web/src/routes/project-tabs.ts:91` (o `REGISTRO`)
+- **Teste:** `apps/web/src/routes/project-tabs.test.tsx` (describe "abas do
+  projeto derivam de um registro só", `'RN-203 — as 3 abas que o handoff não
+  previu continuam no registro'`)
+- **ADR:** [0078](adr/0078-moldura-de-tela-e-o-registro-de-abas-diverge-do-handoff.md)
+### RN-210 — "Recomendado" é uso real e custo, nunca nota calculada {#rn-210}
+
+O bloco "Melhores modelos por capacidade" (Configurações) não tem coluna de
+score. O handoff mostra uma nota por capacidade (código 9.4, imagem 9.1…), mas
+é dado FICTÍCIO do mock — nenhum provider publica "qualidade de código" e o
+produto não mede isso em lugar nenhum. Calcular um número aqui seria o mesmo
+"palpite vestido de dado" que o [ADR 0041](adr/0041-base-openai-compativel-e-contrato-de-llm-providers.md)
+proíbe para capability de MODELO, agora sobre qualidade.
+
+Em vez disso, "recomendado"/"alternativa" saem de dois sinais reais, entre os
+modelos que a curadoria DESTE workspace marcou para aquela capacidade (`uses`,
+[RN-057](#rn-057)): primeiro os mais usados por agentes DESTE projeto — a
+mesma cascata que resolve o binding vigente de cada agente —, custo (do
+catálogo, ascendente) como desempate. "O que o time já escolheu" é o sinal
+mais honesto disponível sem inventar nota. Capacidade sem nenhum modelo curado
+mostra "sem cobertura curada" — nunca esconde a linha, mesmo padrão que a
+coluna Origem de `ModelsSection` já usa para o binding pulado.
+
+- **Onde:** `apps/web/src/routes/ProjectSettingsTab.tsx`
+  (`MelhoresModelosPorCapacidadeSection`)
+- **Teste:** `apps/web/src/routes/ProjectSettingsTab.test.tsx`
+  (describe "MelhoresModelosPorCapacidadeSection")
+- **ADR:** [0077](adr/0077-ranking-de-modelos-por-capacidade-sem-nota-inventada.md)
+
+### RN-211 — Gasto por provider na tela é Ranking, não paleta categórica inventada {#rn-211}
+
+O handoff pede barras diárias empilhadas por provider e uma quebra por
+provider. A skill de dataviz do repositório manda validar paleta
+categórica por script antes de usar, nunca por olho: `validate_palette.js`
+reprova toda combinação de 3+ tokens de `design/tokens.css` contra pelo
+menos um dos dois temas — `--accent`+`--violet` é o único par que passa
+nos dois (vários `--syntax-*` são literalmente o mesmo hex de
+`--warning`/`--violet`/`--success`, medido). Com 9 providers (ADR 0043) e
+2 cores validadas, ciclar a paleta é o anti-padrão que a própria skill
+nomeia ("a 9th series is never a generated hue"), e inventar hex novo
+violaria a instrução desta frente. A quebra por provider vira `Ranking` —
+a mesma peça de "Por modelo"/"Por projeto"/"Por agente e pessoa", sem
+identidade por cor. A série DIÁRIA por provider não é entregue:
+`sumGroupedBy` (ADR 0076) agrupa por uma dimensão de cada vez, e não existe
+agregação cruzada dia×provider no backend desta onda.
+
+- **Onde:** `apps/web/src/lib/spend.ts` (bloco "Gasto por PROVIDER na
+  tela"), `apps/web/src/routes/ProjectSpendTab.tsx` (`GastoDoWorkspace`)
+- **Teste:** `apps/web/src/routes/ProjectSpendTab.test.tsx` (describe "a
+  audiência do owner" — `'mostra os cinco recortes do workspace,
+  incluindo provider'`)
+- **ADR:** [0076](adr/0076-provider-volta-a-ser-dimensao-de-gasto.md)
+
+### RN-212 — Bloco "por projeto" é o TokenMeter plugado ao orçamento real {#rn-212}
+
+A aba de Gastos ganha um bloco por PROJETO (não por audiência):
+`OrcamentoDoProjeto` lê `GET /projects/:id/budget` e planta o resultado
+direto no `TokenMeter` existente, que já implementa os limiares 70/90
+(`tokenThreshold`) — nenhum componente novo. Três leituras: carregando
+(silencioso, evita piscar antes do papel resolver a audiência de baixo),
+sem orçamento definido (nota em texto, sem CTA) e erro (silencioso — na
+prática quase sempre 403 de quem tem papel de WORKSPACE mas não é
+`maintainer` no PROJETO, e mostrar banner de propósito seria alarme falso
+para a maioria dos membros, o mesmo padrão já usado pelo `TokenMeter`
+compacto de `ProjectPage.tsx`).
+
+- **Onde:** `apps/web/src/routes/ProjectSpendTab.tsx`
+  (`OrcamentoDoProjeto`)
+- **Teste:** `apps/web/src/routes/ProjectSpendTab.test.tsx` (describe "o
+  orçamento do projeto")
+
+### RN-213 — Alerta de custo é leitura de `lastThresholdNotified`, nunca recálculo {#rn-213}
+
+`alertaDeOrcamento` não reimplementa `crossedThresholds`
+(`apps/api/src/domain/llm/budget-threshold.ts`): lê o campo que o backend
+já grava no momento em que uma chamada real cruza 70/90/100%, e só decide
+a cor (`warning` abaixo de 90, `danger` a partir de 90) e se o texto deve
+avisar bloqueio ativo (`policy === 'block' && spentMicros >=
+limitMicros`). Nenhuma regra de negócio nova — puramente apresentação de
+um dado que já existe.
+
+- **Onde:** `apps/web/src/lib/spend.ts` (`alertaDeOrcamento`)
+- **Teste:** `apps/web/src/lib/spend.test.ts` (describe "alertaDeOrcamento
+  (RN-213)"); `apps/web/src/routes/ProjectSpendTab.test.tsx` (describe "o
+  orçamento do projeto")
+
+### RN-214 — KPI de economia com modelo local fica de fora por falta de preço contrafactual {#rn-214}
+
+`TokenMeter` já tem `savingsBRL`/`savingsPct` prontos para receber o
+número, e permanecem não alimentados de propósito. O card exigiria um
+preço CONTRAFACTUAL — quanto a mesma chamada teria custado num modelo
+pago — que não existe em lugar nenhum do produto: o catálogo (ADR 0042)
+só congela o preço do modelo REALMENTE usado (RN-044), e não há
+mapeamento declarado "modelo local X ~ modelo pago Y". Inventá-lo aqui
+seria a mesma classe de "nota vestida de dado" que a RN-210 já recusou
+para ranking de capacidade. Pendência registrada no backlog para quando
+existir um preço contrafactual defensável e versionado.
+
+- **Onde:** `apps/web/src/routes/ProjectSpendTab.tsx` (comentário "KPI de
+  economia com modelos locais — CORTE DECLARADO", fim do arquivo)
+
+### RN-215 — Aba Problemas nasce com estado vazio honesto {#rn-215}
+
+Não há lint nem teste integrado sobre o código do projeto gerido; a aba
+Problemas do painel inferior (handoff `design_handoff_brabo`) diz isso
+explicitamente em vez de mostrar contagem inventada (o mock do handoff traz
+badge "3"). Mesmo padrão já usado pelo Terminal (FASE 25b) e pelo item
+"Testes" desabilitado do rail.
+
+- **Onde:** `apps/web/src/routes/code/CodeBottomPanel.tsx`
+- **Teste:** `apps/web/src/routes/code/CodeBottomPanel.test.tsx` —
+  "Problemas diz honestamente que não há lint/teste integrado, sem
+  contagem inventada"
+
+### RN-216 — Aba Saída nasce com estado vazio honesto {#rn-216}
+
+Não há stream de comando de build/deploy nesta aba — ele dependeria do
+terminal interativo (FASE 25b), que não existe. A aba explica isso e lembra
+que `git push`/PR/deploy não saem pelo terminal de qualquer forma (RN-106).
+
+- **Onde:** `apps/web/src/routes/code/CodeBottomPanel.tsx`
+- **Teste:** `apps/web/src/routes/code/CodeBottomPanel.test.tsx` — "Saída
+  diz honestamente que não há stream de comando, sem simular execução"
+
+### RN-217 — Status bar da aba Código só mostra dado real {#rn-217}
+
+A status bar de 24px (`CodeShell.tsx`) mostra `↑N ↓M` de commits da branch
+atual (via `getCodeBranches`, mesma `queryKey` de `CodeBranchPicker` —
+dedup, zero requisição extra, RN-090/091) e a linguagem do arquivo ativo
+(`linguagemPorCaminho`). Posição do cursor e contagem de erros/testes do
+mock do handoff ficaram de fora: `CodeEditor` não expõe seleção/caret
+rastreável e não há lint/teste integrado (mesma decisão da RN-215).
+
+- **Onde:** `apps/web/src/routes/code/CodeShell.tsx`
+- **Teste:** `apps/web/src/routes/code/CodeShell.test.tsx` — "a status bar
+  mostra ↑/↓ real da branch atual" e "sem ahead/behind (branch em dia), a
+  status bar não mostra o par vazio"
+
+### RN-218 — Foco visível nas abas próprias do painel inferior {#rn-218}
+
+As abas de `CodeBottomPanel.tsx` são implementação própria (não o `Tabs` do
+design system) e não herdavam o `:focus-visible` calibrado que
+`Tabs.module.css` ganhou na Onda 2/frente C. Corrigido com o mesmo padrão de
+`Input.module.css` (ADR 0036), incluindo `forced-colors`.
+
+- **Onde:** `apps/web/src/routes/code/CodeBottomPanel.module.css`
+
+### RN-219 — Os três escopos do índice de chunks são honestos, e mutuamente exclusivos por CHECK {#rn-219}
+
+O índice do Chat RAG cobre só três fontes de texto que o produto já sabe de
+onde vieram: `docs`, `adr` e `session`. Código-fonte e Pull Requests ficam
+de fora de propósito — indexá-los sem um watcher de reindexação a cada
+`push` faria o índice mentir sobre cobertura, a mesma classe de erro que o
+ADR 0042 já recusa para capability de modelo. `session_id`/`source_path`
+são mutuamente exclusivos por CHECK, não por convenção de aplicação, mesmo
+padrão de `projects.workspace_mode`/`workspace_path` (ADR 0072): `scope =
+'session'` exige `session_id` e recusa `source_path`; `docs`/`adr` exigem
+`source_path` e recusam `session_id`. A trava fica no banco porque quem vai
+escrever esta tabela é um pipeline (Onda 4) que não necessariamente passa
+pelo mesmo caso de uso toda vez.
+
+- **Onde:** `apps/api/src/db/schema.ts` (`chunkScopeEnum` e os dois CHECK
+  da tabela `chunks`)
+- **Teste:** `apps/api/test/infrastructure/persistence/chunk.repository.spec.ts`
+  ("recusa chunk de docs sem source_path — o CHECK da migração 0045, não
+  validação de aplicação")
+- **ADR:** [0079](adr/0079-tabela-de-chunks-vetor-e-tsvector-juntos.md)
+
+### RN-220 — Vetor e busca léxica vivem na mesma linha, nunca em tabelas separadas {#rn-220}
+
+`chunks.embedding` (pgvector) e `chunks.search_vector` (tsvector) são
+colunas irmãs da MESMA tabela, não duas tabelas ligadas por `chunk_id`.
+Separar exigiria um JOIN em toda busca híbrida (Onda 4) e abriria espaço
+para as duas divergirem — um trecho com vetor mas sem entrada léxica, ou
+vice-versa — sem nenhum mecanismo do banco impedindo. Uma linha, uma fonte
+de verdade para as duas metades da busca.
+
+- **Onde:** `apps/api/src/db/schema.ts` (tabela `chunks`)
+- **Teste:** `apps/api/test/infrastructure/persistence/chunk.repository.spec.ts`
+  (as três specs escrevem e leem as duas colunas na mesma linha)
+- **ADR:** [0079](adr/0079-tabela-de-chunks-vetor-e-tsvector-juntos.md)
+
+### RN-221 — `search_vector` nunca é escrita pela aplicação — é coluna GENERATED {#rn-221}
+
+`search_vector` é `GENERATED ALWAYS AS (to_tsvector('portuguese', content))
+STORED`. Nenhum caso de uso, repositório ou script escreve nela — o
+Postgres a mantém coerente com `content` por construção, pronta na mesma
+transação do `INSERT`, sem depender de nenhum provider de LLM responder
+(diferente de `embedding`, que só chega quando um pipeline de indexação
+existir).
+
+- **Onde:** `apps/api/src/db/schema.ts` (coluna `search_vector`)
+- **Teste:** `apps/api/test/infrastructure/persistence/chunk.repository.spec.ts`
+  ("grava um chunk de docs com vetor e devolve o search_vector gerado pela
+  GENERATED ALWAYS AS")
+- **ADR:** [0079](adr/0079-tabela-de-chunks-vetor-e-tsvector-juntos.md)
+
+### RN-222 — A dimensão do vetor é documentada, não adivinhada, e `embedding` chega depois do chunk {#rn-222}
+
+`chunks.embedding` é `vector(768)` — a dimensão real do `nomic-embed-text`
+do Ollama, o único provider que hoje declara `capabilities.embeddings:
+true` (RN-191, ADR 0075). Um índice vetorial tem dimensão FIXA: trocar de
+modelo de embedding no futuro é migração nova, nunca parâmetro de runtime.
+A coluna é NULLABLE: esta tabela guarda o CHUNK (texto recortado), e o
+VETOR pode chegar depois via um pipeline de indexação assíncrono que ainda
+não existe (Onda 4) — sem isso, chunking teria que esperar embedding,
+misturando duas falhas de natureza diferente (parsing de documento contra
+chamada de rede a um provider) numa escrita atômica só.
+
+- **Onde:** `apps/api/src/db/schema.ts` (coluna `embedding`)
+- **Teste:** `apps/api/test/infrastructure/persistence/chunk.repository.spec.ts`
+  ("grava um chunk de docs com vetor..." grava com `embedding` preenchido;
+  as outras duas specs gravam sem ele, confirmando a nulabilidade)
+- **ADR:** [0079](adr/0079-tabela-de-chunks-vetor-e-tsvector-juntos.md); [RN-191](#rn-191)
+
+### RN-223 — O índice vetorial é HNSW, não IVFFlat, porque a tabela nasce vazia {#rn-223}
+
+IVFFlat precisa de linhas já carregadas para treinar as listas (`lists`) e
+fica ruim se construído sobre tabela vazia — que é exatamente o estado
+desta tabela ao nascer, sem pipeline de indexação ainda (Onda 4). HNSW
+constrói o grafo incrementalmente, inserção por inserção, sem etapa de
+treino — bom desde a primeira linha. `vector_cosine_ops` porque é a
+métrica que embeddings de texto geralmente esperam (o ranking de
+similaridade não deveria mudar com a magnitude do vetor).
+
+- **Onde:** `apps/api/src/db/migrations/0045_shallow_randall.sql`
+  (`chunks_embedding_idx`)
+- **ADR:** [0079](adr/0079-tabela-de-chunks-vetor-e-tsvector-juntos.md)
+
+### RN-224 — A migração cria a extensão pgvector sozinha, de forma idempotente {#rn-224}
+
+A migration `0045` executa `CREATE EXTENSION IF NOT EXISTS vector` antes de
+criar a tabela, em vez de assumir que `docker/postgres/init.sql` já rodou —
+esse arquivo só executa na PRIMEIRA inicialização do volume Postgres, e um
+ambiente com volume antigo pode não ter a extensão. `IF NOT EXISTS` é
+idempotente: local (onde a extensão já estava instalada) e um ambiente
+novo passam pela mesma linha sem diferença de comportamento.
+
+- **Onde:** `apps/api/src/db/migrations/0045_shallow_randall.sql`
+- **ADR:** [0079](adr/0079-tabela-de-chunks-vetor-e-tsvector-juntos.md)
+
+### RN-225 — Migração que pode exigir privilégio de operador nasce em `breaking/` {#rn-225}
+
+Criar uma extensão exige que o role da aplicação tenha `CREATEDB` (ou que a
+extensão esteja marcada "trusted" pelo DBA). Localmente o role é
+superusuário, mas nada garante isso em produção — gerenciadores de
+Postgres administrado frequentemente não dão superusuário à aplicação. Se
+a migration falhar aí, é ação do OPERADOR antes do deploy (rodar `CREATE
+EXTENSION vector;` uma vez, como superusuário), não bug do produto — o
+critério do CLAUDE.md para nascer em `breaking/` em vez de
+`feature/`/`bugfix/`.
+
+- **Onde:** branch `breaking/tabela-de-chunks`,
+  `apps/api/src/db/migrations/0045_shallow_randall.sql` (comentário que
+  documenta a decisão dentro da própria migration)
+- **ADR:** [0079](adr/0079-tabela-de-chunks-vetor-e-tsvector-juntos.md)
+
+### RN-226 — `ChunkRepository` cobre só escrita/leitura básica; `createMany` é operação de lote {#rn-226}
+
+O port só tem `create`, `createMany`, `findById` e `listByProject` — busca
+híbrida (vetor + léxico, pesos, limiar) é da Onda 4 (G2) e deliberadamente
+NÃO entra aqui: o port guarda dado, o caso de uso decide o que fazer com
+ele. `createMany` existe porque uma indexação recorta N trechos de um
+documento/sessão de uma vez, evitando N round-trips por documento
+indexado.
+
+- **Onde:** `apps/api/src/application/ports/chunk-repository.port.ts`,
+  `apps/api/src/infrastructure/persistence/drizzle/chunk.repository.ts`
+- **Teste:** `apps/api/test/infrastructure/persistence/chunk.repository.spec.ts`
+  ("createMany grava um lote e listByProject filtra por escopo, sem
+  misturar docs e session")
+- **ADR:** [0079](adr/0079-tabela-de-chunks-vetor-e-tsvector-juntos.md)
+
+### RN-227 — Selo de status da sessão cobre os 5 estados reais, não os 4 do handoff {#rn-227}
+
+O handoff pede 4 selos (ativa/aguardando/fechada/abortada) para os 5
+estados reais da máquina (`created/active/closing/closed/closed_abnormally`).
+`closed_abnormally`→abortada e `created`→aguardando são diretos. `closing`
+NÃO é fundido com "fechada": ganha selo próprio ("encerrando", tom
+`accent`, pulsante), porque em `closing` o desfecho (`closed` ou
+`closed_abnormally`) ainda não é conhecido — chamá-la de "fechada"
+mentiria sobre isso.
+
+- **Onde:** `apps/web/src/routes/ProjectSessionsTab.tsx` (`SELO_DO_STATUS`)
+- **Teste:** `apps/web/src/routes/ProjectSessionsTab.test.tsx` — describe
+  "ProjectSessionsTab — selo de status (RN-227)"
+
+### RN-228 — Filtro pill agrupa os 2 estados sem pill própria por TRAJETÓRIA {#rn-228}
+
+Os filtros pill do handoff (todas/ativas/fechadas/abortadas) só cobrem 4
+dos 5 estados. `created` (aguardando) entra no pill "Ativas" — ainda não
+chegou a lugar nenhum, é "sessão em jogo". `closing` entra no pill
+"Fechadas" — já está a caminho de fechar sem erro. O SELO de cada linha
+(RN-227) nunca é reescrito pelo filtro; o pill só agrupa.
+
+- **Onde:** `apps/web/src/routes/ProjectSessionsTab.tsx`
+  (`correspondeAoFiltro`)
+- **Teste:** `apps/web/src/routes/ProjectSessionsTab.test.tsx` — describe
+  "filtro pill agrupa os 2 estados sem pill própria (RN-228)"
+
+### RN-229 — KPI "custo do mês" da aba Criativo é o consumo do ATOR, não o total do projeto {#rn-229}
+
+Reaproveita `getMySpend(projectId, 30)` — a MESMA queryKey que
+`ProjectSpendTab.tsx#MeuConsumo` usa para a visão do membro (RN-101, ADR
+0063), sem agregação nova. NUNCA mostra o total do projeto somando todo
+mundo (`porProjeto` em `getWorkspaceSpendReport`), porque esse dado é
+owner-only e a aba Criativo é vista por qualquer membro do projeto —
+mostrar o total geral vazaria gasto alheio para quem a RN-060/101 não
+autoriza a ver.
+
+- **Onde:** `apps/web/src/routes/ProjectSessionsTab.tsx` (`CriativoKpis`)
+- **Teste:** `apps/web/src/routes/ProjectSessionsTab.test.tsx` — describe
+  "KPIs da aba Criativo", casos "caminho feliz" e "CASO DE FALHA"
+
+### RN-230 — KPI "taxa ideação → commit" é declarado ausente, nunca calculado {#rn-230}
+
+Não existe, em lugar nenhum do produto, vínculo entre uma sessão criativa e
+o commit que ela produziu. A aba Criativo mostra "—" com a frase "não
+medido: sessão não é vinculada a commit hoje" em vez de inventar um
+cálculo — mesma classe de erro que o ADR 0042 já recusa para nota de
+modelo.
+
+- **Onde:** `apps/web/src/routes/ProjectSessionsTab.tsx` (`CriativoKpis`)
+- **Teste:** `apps/web/src/routes/ProjectSessionsTab.test.tsx` — "'Taxa
+  ideação → commit' é DECLARADA ausente — nunca um número calculado"
+
+## PROGRAMA 28 — Onda 4, frente G2: pipeline de indexação e busca híbrida do Chat RAG (RN-231..238, ADR 0080)
+
+### RN-231 — `ChunkRepository` ganha DELETE e as duas metades da busca híbrida {#rn-231}
+
+O port da Onda 3 (RN-226) só cobria escrita/leitura básica. A Onda 4
+acrescentou `deleteByScope`/`deleteBySession` (para reindexação idempotente
+por full rebuild — apagar e recriar, nunca UPDATE) e
+`searchByVector`/`searchByLexicalQuery` (as duas metades da busca híbrida,
+cada uma uma consulta independente, aproveitando o índice feito para ela —
+HNSW ou GIN). `deleteByScope` é tipado `Exclude<ChunkScope, 'session'>`:
+apagar `session` por projeto inteiro apagaria sessões que não estão sendo
+reindexadas agora, então sessão só apaga por `deleteBySession`.
+
+- **Onde:** `apps/api/src/application/ports/chunk-repository.port.ts`
+  (linhas 105-146), `apps/api/src/infrastructure/persistence/drizzle/chunk.repository.ts`
+- **Teste:** `apps/api/test/infrastructure/persistence/chunk.repository.spec.ts`
+  — describes "Onda 4 (G2)" (delete por escopo/sessão, busca por
+  vetor/léxico, caso feliz e vazio de cada um)
+- **ADR:** [0080](adr/0080-busca-hibrida-pesos-limiar-e-citacao.md)
+
+### RN-232 — Origem do texto indexado: `docs`/`adr` do repositório do PRÓPRIO projeto, `session` só de `chat.message`/`agent.response` {#rn-232}
+
+`docs`/`adr` são indexados via `ReadProjectCodeUseCase` — a mesma superfície
+da aba Code, com a mesma credencial do owner, o mesmo portão de container
+(RN-105) e a mesma checagem de caminho (RN-095) — nunca a documentação do
+Brabo enquanto produto. `session` indexa só dois tipos de evento
+(`chat.message`, `agent.response`); o resto do event log (`tool.call`,
+`agent.status`, `agent.error`...) é mecanismo/falha, não conhecimento
+citável.
+
+- **Onde:** `apps/api/src/application/use-cases/rag/index-project-docs.use-case.ts`
+  (linhas 16-17, 64), `apps/api/src/application/use-cases/rag/index-session.use-case.ts`
+  (linha 29, 45)
+- **Teste:** `apps/api/test/application/use-cases/rag/index-project-docs.use-case.spec.ts`,
+  `apps/api/test/application/use-cases/rag/index-session.use-case.spec.ts`
+  (casos felizes + "projeto sem docs/" + "evento sem payload.text é
+  ignorado")
+- **ADR:** [0080](adr/0080-busca-hibrida-pesos-limiar-e-citacao.md)
+
+### RN-233 — Provider de embedding indisponível: grava sem vetor e declara a lacuna, nunca finge indexação completa {#rn-233}
+
+Quando `ollama`/`nomic-embed-text` não responde, `RagEmbeddingService.embedMany`
+não lança — devolve `available: false` e `null` por entrada pedida. O
+pipeline grava os chunks mesmo assim (`embedding: null`; `search_vector` é
+`GENERATED ALWAYS AS` e não depende de provider nenhum), e o relatório de
+indexação declara a lacuna (`embedding: { available, embedded, skipped,
+reason }`). A mesma degradação vale na busca: `HybridSearchUseCase` roda só
+com o sinal léxico e `vectorAvailable: false` avisa.
+
+- **Onde:** `apps/api/src/application/use-cases/rag/rag-embedding.service.ts`
+  (linhas 53-58)
+- **Teste:** `apps/api/test/application/use-cases/rag/rag-embedding.service.spec.ts`
+  — "CASO DE FALHA: provider sem a capability..." e "CASO DE FALHA: provider
+  que lança no meio do lote..."; `index-project-docs.use-case.spec.ts`/
+  `index-session.use-case.spec.ts` — "CASO DE FALHA: provider de embedding
+  indisponível grava os chunks SEM vetor..."; `hybrid-search.use-case.spec.ts`
+  — "quando o embedding está indisponível, degrada para busca só léxica"
+- **ADR:** [0080](adr/0080-busca-hibrida-pesos-limiar-e-citacao.md)
+
+### RN-234 — Busca híbrida: duas consultas independentes, fusão por peso (0.6/0.4), limiar 0.2, e o contrato de citação {#rn-234}
+
+`searchByVector`/`searchByLexicalQuery` são consultas SEPARADAS (nunca um
+JOIN), fundidas em `HybridSearchUseCase` por soma ponderada
+(`RAG_SEARCH_WEIGHT_VECTOR = 0.6`, `RAG_SEARCH_WEIGHT_LEXICAL = 0.4` — as
+escalas de cosseno e `ts_rank` normalizado não são comparáveis por
+natureza) e cortadas em `RAG_SEARCH_SCORE_THRESHOLD = 0.2`. Nenhum dos
+quatro números vem de calibração com dado real — são ponto de partida
+documentado. A citação (`HybridSearchHit`) expõe
+`chunkId`/`content`/scores separados (`null`, não zero, quando o sinal não
+achou o chunk)/`origin` como união discriminada por `kind` (`file` com
+`sourcePath`/`headingPath`, `session` com `sessionId`/`eventId`).
+
+- **Onde:** `apps/api/src/application/use-cases/rag/hybrid-search.use-case.ts`
+  (linhas 44-113), `apps/api/src/domain/rag/rag-search-limits.ts`
+  (linhas 60-93), `apps/api/src/domain/rag/rag-citation.ts` (linhas 12-71)
+- **Teste:** `apps/api/test/application/use-cases/rag/hybrid-search.use-case.spec.ts`
+  (fusão/ordenação/limiar, query fora da faixa, degradação léxico-only,
+  origin de sessão) e `apps/api/test/infrastructure/persistence/chunk.repository.spec.ts`
+  (as consultas SQL de fato, contra pgvector/tsvector real)
+- **ADR:** [0080](adr/0080-busca-hibrida-pesos-limiar-e-citacao.md)
+
+### RN-235 — Chunking: 1200 caracteres, 150 de sobreposição, por parágrafo/heading {#rn-235}
+
+`CHUNK_TARGET_CHARS = 1200` (~300 tokens em português),
+`CHUNK_OVERLAP_CHARS = 150` (12,5%), com corte preferindo quebra de
+parágrafo, depois de palavra, dentro de uma janela de 200 caracteres.
+Markdown (`docs`/`adr`) é dividido por HEADING antes de ser recortado por
+tamanho, preservando `headingPath`. Números documentados como ponto de
+partida ajustável, não calibrados contra dado real de qualidade de
+recuperação (não existe, ainda, um corpo de perguntas reais rodado contra
+este índice).
+
+- **Onde:** `apps/api/src/domain/rag/chunking.ts` (linhas 30-31, 53 em
+  diante)
+- **Teste:** `apps/api/test/domain/rag/chunking.spec.ts` (texto que
+  cabe/não cabe, texto vazio, sobreposição real, texto patológico sem
+  espaço, headings aninhados, markdown sem heading)
+- **ADR:** [0080](adr/0080-busca-hibrida-pesos-limiar-e-citacao.md)
+
+### RN-236 — Reindexação é sempre MANUAL, full rebuild idempotente {#rn-236}
+
+Não há watcher por push nem por fechamento de sessão. `ReindexProjectUseCase`
+roda `docs`/`adr` uma vez e uma `IndexSessionUseCase` por sessão do projeto,
+cada indexação apagando o escopo/sessão antes de recriar — rodar duas vezes
+seguidas não duplica. Disparado por `POST /projects/:projectId/rag/reindex`,
+`role:maintainer`.
+
+- **Onde:** `apps/api/src/application/use-cases/rag/reindex-project.use-case.ts`
+  (linha 36)
+- **Teste:** `apps/api/test/application/use-cases/rag/reindex-project.use-case.spec.ts`
+  (agrega docs+sessões, embeddingAvailable falso quando qualquer rodada
+  falha, projeto inexistente)
+- **ADR:** [0080](adr/0080-busca-hibrida-pesos-limiar-e-citacao.md)
+
+### RN-237 — Cobertura do índice é contagem REAL, nunca "há N minutos" inventado {#rn-237}
+
+`GetRagCoverageUseCase` conta arquivos `.md` reais no repositório do
+projeto contra quantos têm chunk, e sessões do projeto contra quantas têm
+chunk. Não existe coluna de timestamp de indexação por escopo, e a
+resposta não inclui nenhum "reindexado há Xmin" — um número chutado
+mentiria (mesma régua do ADR 0042 para nota de modelo).
+
+- **Onde:** `apps/api/src/application/use-cases/rag/get-rag-coverage.use-case.ts`
+  (linha 47)
+- **Teste:** `apps/api/test/application/use-cases/rag/get-rag-coverage.use-case.spec.ts`
+- **ADR:** [0080](adr/0080-busca-hibrida-pesos-limiar-e-citacao.md)
+
+### RN-238 — As três rotas HTTP do RAG dividem papel por quem MUDA o que o produto gasta {#rn-238}
+
+`POST .../rag/search` e `GET .../rag/coverage` são `role:viewer` (leitura
+pura); `POST .../rag/reindex` é `role:maintainer`, porque dispara N
+chamadas ao repositório do projeto e ao provider de embedding — mesma
+régua "muda o que o produto gasta sem perguntar" do teto de paralelismo de
+área (RN-083).
+
+- **Onde:** `apps/api/src/interfaces/http/rag/rag.controller.ts` (linhas
+  50, 57, 81, 98), `docs/security-surface.md`
+- **Teste:** `apps/api/test/interfaces/route-surface.spec.ts`
+  (classificação de papel, tags fechadas, metadados OpenAPI das três
+  rotas)
+- **ADR:** [0080](adr/0080-busca-hibrida-pesos-limiar-e-citacao.md)
+
+## PROGRAMA 28 — Onda 4, frente E2: virtualização de linha e minimapa na aba Code (RN-239..242)
+
+### RN-239 — Virtualização de linha: só a janela visível vira nó de DOM {#rn-239}
+
+`CodeEditor.tsx` renderiza só as linhas dentro da janela visível (mais
+`OVERSCAN = 20` de margem) como `[data-line-row]`; o resto vira dois
+espaçadores que reservam a altura sem existir como nó. A decisão de NÃO
+usar `react-window`/`react-virtual`: a altura de linha é FIXA
+(`ALTURA_LINHA = 21`, monoespaçado), o que reduz "qual linha está visível"
+a uma divisão inteira sobre `scrollTop` — o problema que essas libs
+resolvem de verdade é altura VARIÁVEL por item, que não é o caso da aba
+Code.
+
+- **Onde:** `apps/web/src/routes/code/CodeEditor.tsx` (linhas 38-96, 45,
+  48)
+- **Teste:** `apps/web/src/routes/code/CodeEditor.test.tsx` — describe
+  "CodeEditor — virtualização", "caminho feliz: arquivo de 5.000 linhas
+  renderiza uma janela pequena de nós, não o arquivo inteiro" (`< 150` nós
+  `[data-line-row]`) e "rolar para o meio do arquivo troca a janela —
+  linha 1 some, linhas do meio aparecem"
+
+### RN-240 — Sem medição de altura, degrada para janela padrão generosa, nunca renderiza tudo {#rn-240}
+
+Quando `containerHeight` ainda não foi medido (1º render, ou jsdom sem
+`ResizeObserver` em teste), a janela cai para `LINHAS_SEM_MEDICAO = 40` —
+generosa o bastante para não truncar os arquivos pequenos que os testes
+usam, pequena o bastante para nunca virar "renderiza tudo" num arquivo
+grande de verdade.
+
+- **Onde:** `apps/web/src/routes/code/CodeEditor.tsx` (linha 57)
+- **Teste:** `apps/web/src/routes/code/CodeEditor.test.tsx` — "falha/borda:
+  sem medição de altura (jsdom sem ResizeObserver, clientHeight 0),
+  degrada para uma janela padrão em vez de não renderizar nada"
+
+### RN-241 — Minimapa reusa a MESMA tokenização da virtualização — zero segundo passe sobre o arquivo {#rn-241}
+
+`minimap.ts` não tokeniza nada: ele resume a saída que `highlight.ts` já
+produziu (`HighlightToken[][]` de `highlightFile`, chamada uma vez só) —
+a MESMA que a virtualização usa para colorir as linhas visíveis.
+Tokenizar de novo só para o minimapa pagaria o custo de leitura do
+arquivo pela segunda vez, e por isso o minimapa só entra depois de a
+virtualização estar de pé, nunca antes.
+
+- **Onde:** `apps/web/src/routes/code/minimap.ts` (linhas 1-18, 39)
+- **Teste:** `apps/web/src/routes/code/minimap.test.ts`
+
+### RN-242 — Minimapa é CANVAS, um nó de DOM só, nunca um `<div>` por linha {#rn-242}
+
+O desenho é em `<canvas>` (`desenharMinimapa`), não em elemento por
+linha: um minimapa com um nó por linha dobraria de novo a contagem que a
+virtualização (RN-239) acabou de cortar. Sem contexto de canvas 2D
+disponível (jsdom sem o pacote `canvas`), o overlay clicável continua
+funcionando — só o desenho é pulado, nunca a interação.
+
+- **Onde:** `apps/web/src/routes/code/minimap.ts` (linhas 14-16, 91)
+- **Teste:** `apps/web/src/routes/code/CodeEditor.test.tsx` — describe
+  "CodeEditor — minimapa", "caminho feliz: clicar no minimapa rola o
+  editor e troca a janela renderizada" e "falha: sem contexto de canvas
+  2D (jsdom sem o pacote `canvas`), o overlay continua clicável e nada
+  quebra"
+
+### RN-243 — O ciclo de vida do container é TABELA, e nenhuma linha dela chama Docker {#rn-243}
+
+`project_containers` (migração `0046`) grava o ESTADO mutável do container
+de um projeto — distinto de `artifact.project_image` no event log (ADR
+0065), que é a DECISÃO imutável do Arquiteto. Nem
+`RegistrarTransicaoDeContainerUseCase` nem
+`ObterCicloDeVidaDoContainerUseCase` chamam um daemon Docker: nenhum
+serviço do produto monta `/var/run/docker.sock` nem roda `privileged`
+hoje, e conceder isso é decisão de segurança fora do escopo desta regra.
+Um orquestrador real, quando existir, CONSOME esta tabela depois de agir
+de verdade — nunca o contrário.
+
+- **Onde:** `apps/api/src/domain/containers/container-lifecycle.ts`,
+  `apps/api/src/application/use-cases/containers/registrar-transicao-de-container.use-case.ts`
+- **Teste:** `apps/api/test/application/use-cases/containers/ciclo-de-vida-do-container.use-case.spec.ts`
+- **ADR:** [0081](adr/0081-ciclo-de-vida-do-container-tabela-sem-orquestrador.md)
+
+### RN-244 — A máquina de estados do container: só `removed` sai reprovisionando {#rn-244}
+
+`provisioning → running ⇄ stopped`, com `failed` alcançável de
+`provisioning`/`running`/`stopped`, e `removed → provisioning` como a
+ÚNICA saída de `removed` — nenhum estado é terminal de verdade, porque um
+projeto pode reprovisionar com uma imagem revisada pelo Arquiteto.
+Transição fora da tabela lança `InvalidContainerTransitionError`, que o
+caso de uso traduz para 409 — mesmo formato de `session-state-machine.ts`
+e `pr-gate-state-machine.ts`.
+
+- **Onde:** `apps/api/src/domain/containers/container-lifecycle.ts`
+  (`ALLOWED_TRANSITIONS`)
+- **Teste:** `apps/api/test/domain/containers/container-lifecycle.spec.ts`
+- **ADR:** [0081](adr/0081-ciclo-de-vida-do-container-tabela-sem-orquestrador.md)
+
+### RN-245 — A primeira transição exige a imagem já decidida, e CONGELA versão e recursos {#rn-245}
+
+Não existe linha até a primeira chamada com `to: 'provisioning'`, e ela só
+é aceita se o Arquiteto já tiver decidido a imagem do projeto (RN-105) —
+o mesmo portão que já protege a aba Code, aplicado na origem em vez de
+duplicado. A versão de `artifact.project_image` e os recursos declarados
+naquele instante são CONGELADOS na linha nova (`image_version`, `cpus`,
+`memory_mb`, `pids_limit`): uma revisão posterior do artefato não muda
+retroativamente o que uma instância já provisionada promete.
+
+- **Onde:** `apps/api/src/application/use-cases/containers/registrar-transicao-de-container.use-case.ts`
+- **Teste:** `apps/api/test/application/use-cases/containers/ciclo-de-vida-do-container.use-case.spec.ts`
+  — "a primeira transição (provisioning) cria a linha…" e "sem decisão de
+  imagem do Arquiteto, não há o que provisionar"
+- **ADR:** [0081](adr/0081-ciclo-de-vida-do-container-tabela-sem-orquestrador.md)
+
+### RN-246 — Projeto em modo `local` não tem ciclo de vida de container {#rn-246}
+
+Um projeto com `workspace_mode: 'local'` (ADR 0072, RN-169) roda no
+container do AGENTE de sempre — não sobe container próprio. Pedir
+qualquer transição para um projeto `local` é recusado com 400 ANTES de
+tocar a tabela, na origem, não filtrado depois na UI.
+
+- **Onde:** `apps/api/src/application/use-cases/containers/registrar-transicao-de-container.use-case.ts`
+- **Teste:** `apps/api/test/application/use-cases/containers/ciclo-de-vida-do-container.use-case.spec.ts`
+  — "projeto em modo `local` não tem ciclo de vida de container (ADR 0072)"
+- **ADR:** [0081](adr/0081-ciclo-de-vida-do-container-tabela-sem-orquestrador.md)
+
+### RN-247 — Uma linha por projeto: `project_id` é único {#rn-247}
+
+Só existe UM container vigente por projeto de cada vez — o mesmo desenho
+de `dev_agent_states` no engine (ADR 0045). A constraint única mora no
+BANCO (`project_containers_project_id_unique`), não só no caso de uso:
+`create` chamado duas vezes para o mesmo projeto falha na escrita, nunca
+produz uma segunda linha silenciosa.
+
+- **Onde:** `apps/api/src/db/migrations/0046_chilly_forgotten_one.sql`
+- **Teste:** `apps/api/test/infrastructure/persistence/drizzle/container.repository.spec.ts`
+  — "só uma linha por projeto — create duplicado viola a constraint única"
+- **ADR:** [0081](adr/0081-ciclo-de-vida-do-container-tabela-sem-orquestrador.md)
+
+### RN-248 — Teto de recursos DECLARADO, não aplicado — o campo existe para quando houver orquestrador {#rn-248}
+
+`cpus`/`memory_mb`/`pids_limit` gravam o que o artefato do Arquiteto
+prometia no momento do provisionamento, mas nenhum processo hoje faz o
+kernel respeitar esse teto — não há orquestrador chamando `docker run
+--cpus … --memory … --pids-limit …`. O campo nasce mesmo assim porque
+adiar a coluna para quando o orquestrador existir obrigaria uma migration
+de correção no dia em que ele chegasse; declarar sem aplicar é honesto
+enquanto a tabela não mentir sobre APLICAR (nenhuma tela ou resposta de
+API hoje afirma "o container está limitado a X" — só "a intenção
+registrada era X").
+
+- **Onde:** `apps/api/src/db/schema.ts` (`projectContainers`)
+- **Teste:** `apps/api/test/infrastructure/persistence/drizzle/container.repository.spec.ts`
+  — "create nasce em `provisioning`, com a versão e os recursos passados"
+- **ADR:** [0081](adr/0081-ciclo-de-vida-do-container-tabela-sem-orquestrador.md)
+
+## PROGRAMA 28 — Onda 4, frente H4: os colapsos ad-hoc restantes migram para o `Disclosure` (RN-249..251)
+
+### RN-249 — Alvo de clique do marco com detalhe sobe de 20px para o piso de 24px do `Disclosure` {#rn-249}
+
+O marco COM detalhe de `AgentTimelineTree` tinha `min-height: 20px` no
+cabeçalho clicável — abaixo do WCAG 2.2 AA 2.5.8 (Target Size, mínimo
+24px) que um comentário anterior já prometia sem cumprir. A migração
+para o `Disclosure` compartilhado corrige isso de graça: o componente
+genérico já nasce em 24px, e não é preciso lembrar de setar a régua em
+cada novo consumidor.
+
+- **Onde:** `apps/web/src/components/AgentTimelineTree.module.css`
+  (linhas 135-155, `.marcoLinha`)
+- **Teste:** `apps/web/src/components/AgentTimelineTree.test.tsx`
+- **ADR:** nenhum — correção pontual de a11y, mesmo padrão do ADR 0036
+
+### RN-250 — Faixa de arquivo do diff em `ApprovalCard` NÃO migra para o `Disclosure` — a animação própria é a razão {#rn-250}
+
+A faixa de arquivo do diff em `ApprovalCard` gira o chevron por
+`transform: rotate(90deg)` com transição própria
+(`.chevron.open`/`ApprovalCard.module.css`); o `Disclosure` genérico
+TROCA o ícone (seta direita → seta baixo) sem animação nenhuma. Forçar a
+migração apagaria a micro-interação sem ganho — a exclusividade (só um
+arquivo aberto por vez) já vem de fora (`expandedFile`), o mesmo que o
+`Disclosure` controlado faria. O que faltava, e não era peculiaridade —
+é o mesmo defeito que o `Disclosure` existe para fechar —, era
+`aria-controls` apontando para uma região nomeada: corrigido diretamente,
+sem trocar de componente.
+
+- **Onde:** `apps/web/src/components/ApprovalCard.tsx` (linhas 511-539)
+- **Teste:** `apps/web/src/components/ApprovalCard.test.tsx`
+
+### RN-251 — Cinco call sites migram para o `Disclosure` compartilhado; o componente ganha `testId` como único hook novo {#rn-251}
+
+`ModelCatalogSection` (a referência original que gerou o componente na
+FASE 16), `AgentTimelineTree` (ramo + marco), `code/CodeExplorer.tsx`
+(pasta da árvore) e `code/CodeShell.tsx` (painel inferior) passam a usar
+o `Disclosure` compartilhado — nenhuma das seis implementações ad-hoc que
+sobreviveram à FASE 16 fica de fora, exceto a exceção declarada da
+RN-250. `testId` é o único prop novo que um consumidor precisou (`data-
+testid` no cabeçalho, para os testes existentes continuarem
+selecionando o botão certo sem reescrever a suíte inteira). A região
+controlada existe no DOM mesmo fechada — só `hidden` e sem os filhos
+montados —, porque `aria-controls` apontando para um id que não resolve
+é pior que não ter o atributo (leitor de tela anunciaria controle de
+algo inexistente); é essa mesma propriedade que permite colapsar listas
+caras (o catálogo do OpenRouter tem 338 modelos) sem montar o que
+ninguém está vendo.
+
+- **Onde:** `apps/web/src/components/ui/Disclosure.tsx` (linhas 33-71),
+  `apps/web/src/components/ModelCatalogSection.tsx`,
+  `apps/web/src/components/AgentTimelineTree.tsx`,
+  `apps/web/src/routes/code/CodeExplorer.tsx`,
+  `apps/web/src/routes/code/CodeShell.tsx`
+- **Teste:** `apps/web/src/components/ui/Disclosure.test.tsx`,
+  `apps/web/src/routes/code/CodeExplorer.test.tsx`,
+  `apps/web/src/routes/code/CodeShell.test.tsx`
+
+## PROGRAMA 28 — Onda 5, frente G3: a tela do Chat RAG (RN-252..254, ADR 0082)
+
+### RN-252 — A tela do Chat RAG mostra as duas degradações honestas que o backend já declara, nunca as esconde {#rn-252}
+
+`HybridSearchUseCase` já devolve `vectorAvailable: false` quando o provider
+de embedding não respondeu (RN-233) e `GetRagCoverageUseCase` já nunca
+inclui timestamp de indexação (RN-237) — mas um contrato honesto no
+backend não garante uma tela honesta se ela decidir não ler os dois
+campos. `ProjectRagTab` mostra um aviso acima dos resultados quando
+`vectorAvailable` é `false` (com `vectorUnavailableReason`, quando
+existe), e `RagCoveragePanel` só renderiza contagem REAL (`filesIndexed`/
+`filesInRepo`, `sessionsIndexed`/`sessionsInProject`) — nenhum texto do
+tipo "reindexado há Xmin" nasce nesta tela, porque a resposta não carrega
+esse dado e inventá-lo mentiria (mesma régua do ADR 0042 para nota de
+modelo).
+
+- **Onde:** `apps/web/src/routes/ProjectRagTab.tsx` (linhas 27-31, 176-182),
+  `apps/web/src/components/rag/RagCoveragePanel.tsx` (linhas 27-34)
+- **Teste:** `apps/web/src/routes/ProjectRagTab.test.tsx` — "CASO DE FALHA
+  (degradação honesta): vectorAvailable false avisa..."; `apps/web/src/components/rag/RagCoveragePanel.test.tsx`
+  — "CASO DE FALHA (degradação honesta): nunca escreve..."
+- **ADR:** [0082](adr/0082-chat-rag-aba-de-busca-hibrida.md)
+
+### RN-253 — Citação de origem `session` navega até o EVENTO exato, reusando o mecanismo do Psicólogo {#rn-253}
+
+`RagCitationCard` não inventa um segundo caminho de navegação: origem
+`{ kind: 'session', sessionId, eventId }` chama `useNavigate` para
+`/projects/:projectId/sessions/:sessionId` com `search: { highlightEvent:
+eventId }` — a MESMA rota e o MESMO parâmetro que os chips de evidência
+do Psicólogo já usam (`HypothesisCard.tsx`, Fase 4b) para rolar o fio até
+o evento e destacá-lo. Origem `{ kind: 'file' }` mostra caminho e
+`headingPath` como texto, sem link: a aba Código não tem hoje deep-link
+por caminho, e construir essa navegação está fora do escopo desta
+frente.
+
+- **Onde:** `apps/web/src/components/rag/RagCitationCard.tsx` (linhas
+  32-38, 49-56)
+- **Teste:** `apps/web/src/components/rag/RagCitationCard.test.tsx` —
+  "caminho feliz: origem de sessão navega até o evento exato ao clicar"
+- **ADR:** [0082](adr/0082-chat-rag-aba-de-busca-hibrida.md)
+
+### RN-254 — O botão de reindexar é maintainer/owner na TELA, espelhando a régua da rota {#rn-254}
+
+`POST .../rag/reindex` já exige `role:maintainer` (RN-238) — quem
+garante é a api. `ProjectRagTab` espelha a régua no CLIENTE pelo mesmo
+padrão que `ProjectSettingsTab`/`ProjectApprovalsTab` já usam para outros
+gates de `maintainer` (`useCurrentWorkspaceWithRole`, já que não existe
+hoje um papel de PROJETO no cliente, só o de workspace que a listagem
+devolve): o botão "Reindexar agora" nem aparece para quem não é
+`owner`/`maintainer`, em vez de aparecer desabilitado — reindexar dispara
+N chamadas ao repositório do projeto e ao provider de embedding (mesma
+régua "muda o que o produto gasta sem perguntar" do teto de paralelismo,
+RN-083), e um botão visível mas sempre recusado só ensinaria a
+ignorar o 403.
+
+- **Onde:** `apps/web/src/routes/ProjectRagTab.tsx` (linhas 43-44, 109)
+- **Teste:** `apps/web/src/routes/ProjectRagTab.test.tsx` — "botão de
+  reindexar só aparece para maintainer/owner..."; "maintainer vê e pode
+  disparar a reindexação"
+- **ADR:** [0082](adr/0082-chat-rag-aba-de-busca-hibrida.md)
+
+### RN-267 — `GET /projects/:projectId/container/lifecycle` é a primeira exposição HTTP do ciclo de vida do container {#rn-267}
+
+O ADR 0081 criou `ObterCicloDeVidaDoContainerUseCase` sem rota, de propósito
+("expor uma seria adivinhar contrato" antes de existir um consumidor real).
+A Onda 5/F2 é esse consumidor (RN-268), e a rota nasce como espelho fiel do
+caso de uso: `null` quando o projeto nunca foi provisionado — o resultado
+esperado hoje, porque nenhum orquestrador real transiciona
+`project_containers` em produção (`RegistrarTransicaoDeContainerUseCase` não
+tem chamador nenhum fora de teste) — ou o estado registrado
+(`status`/`imageVersion`/`resources`/`failureReason`/`statusChangedAt`), NUNCA
+confirmado contra um daemon Docker, porque não existe cliente Docker no
+produto (RN-243). Mesma permissão da rota irmã (`GET
+/projects/:projectId/container`): `viewer`, GET, sem `@Post` — quem
+transicionaria o ciclo de vida é um orquestrador que ainda não existe.
+
+- **Onde:** `apps/api/src/interfaces/http/containers/containers.controller.ts`
+  (`cicloDeVida`), `apps/api/src/interfaces/http/containers/dto/containers.response.dto.ts`
+  (`CicloDeVidaDoContainerResponseDto`)
+- **Teste:** `apps/api/test/interfaces/http/containers/containers.controller.spec.ts`
+- **Borda:** `id`/`projectId`/`containerId` da linha interna NÃO vazam na
+  resposta — o contrato HTTP não é a mesma forma que a linha do banco.
+- **ADR:** [0083](adr/0083-terminal-mostra-estado-real-do-container.md)
+  (revisa o [0081](adr/0081-ciclo-de-vida-do-container-tabela-sem-orquestrador.md))
+
+### RN-268 — A aba Terminal mostra o estado REAL do container, nunca finge um terminal que não existe {#rn-268}
+
+O plano original desta frente era o terminal interativo completo, mas a
+investigação confirmou que a FASE 25b continua cortada: nenhum serviço monta
+`/var/run/docker.sock`, e mesmo depois do ADR 0081 (Onda 4) nada transiciona
+`project_containers` em produção. Implementar um terminal que finge executar
+comandos — ou que roda no mesmo container do monorepo do Brabo, a dívida que
+o ADR 0055 já descreve como política e não isolamento — seria inventar
+capacidade, o mesmo erro que os ADRs 0041/0042 já recusam para provider de
+LLM e modelo de catálogo.
+
+O que a aba GANHA é honesto: sob o texto explicativo que já existia (FASE
+26b), `CodeBottomPanel` busca `GET .../container/lifecycle` (RN-267) só
+enquanto a aba Terminal está aberta (`enabled: aba === 'terminal'` — sem
+polling em segundo plano, a mesma disciplina de tráfego da RN-107) e mostra
+o status com um `Badge` (`provisioning`/`running`/`stopped`/`failed`/
+`removed`, em pt-BR), há quanto tempo, e o `failureReason` quando o estado é
+`failed`. Projeto nunca provisionado — o caso comum hoje — mostra a frase
+"ainda não foi provisionado", nunca um badge inventado.
+
+- **Onde:** `apps/web/src/routes/code/CodeBottomPanel.tsx`,
+  `apps/web/src/routes/code/CodeBottomPanel.module.css`,
+  `apps/web/src/lib/api-client.ts` (`getContainerLifecycle`),
+  `apps/web/src/lib/api-types.ts` (`CicloDeVidaDoContainer`)
+- **Teste:** `apps/web/src/routes/code/CodeBottomPanel.test.tsx`
+  (describe "Terminal — o estado REAL do ciclo de vida do container")
+- **Borda:** o terminal interativo em si NÃO nasce aqui — é FASE 25b, que
+  segue cortada e depende da parede física do container (o worktree do
+  agente vivendo lá dentro), não desta rota de leitura.
+- **ADR:** [0083](adr/0083-terminal-mostra-estado-real-do-container.md)
+
+### RN-272 — O callback do login social decide em ORDEM: identidade conhecida, depois vínculo por e-mail, depois conta nova {#rn-272}
+
+`SocialLoginCallbackUseCase` resolve a identidade do provider em três
+passos, nesta ordem, e nunca fora dela: `(provider, providerUserId)`
+já vinculada → login direto; sem vínculo mas o e-mail bate com uma conta
+existente → decide por [RN-274](#rn-274)/[RN-275](#rn-275); nenhuma das
+duas → provisiona conta nova ([RN-278](#rn-278)). A chave de busca do
+primeiro passo é sempre `providerUserId`, nunca e-mail — evita que trocar
+o e-mail no provider "perca" o vínculo.
+
+- **Onde:** `apps/api/src/application/use-cases/auth/social-login-callback.use-case.ts`
+- **Teste:** `apps/api/test/application/use-cases/auth/social-login-callback.use-case.spec.ts`
+  — os sete casos de `SocialLoginCallbackUseCase`
+- **ADR:** [0084](adr/0084-login-social-github-e-gitlab.md)
+
+### RN-273 — O `state` do login social tem propósito PRÓPRIO, mesmo assinado pela mesma chave do fluxo de conexão de git {#rn-273}
+
+`domain/auth/social-oauth-state.ts` assina com `GIT_OAUTH_STATE_SECRET` —
+a MESMA chave HMAC do `state` de "conectar git ao projeto X"
+(`domain/git/oauth-state.ts`) — mas o payload carrega
+`purpose: 'social_login'`, checado ANTES de qualquer outro campo. Um
+`state` do fluxo de conexão de git, mesmo com assinatura válida, é
+recusado aqui: sem o discriminante, aceitá-lo equivaleria a logar como o
+`userId` de quem iniciou aquela conexão — escalação de privilégio.
+
+- **Onde:** `apps/api/src/domain/auth/social-oauth-state.ts`
+- **Teste:** `apps/api/test/domain/auth/social-oauth-state.spec.ts`
+  — "RN-273: rejeita um state do fluxo de CONEXÃO de git, mesma chave"
+- **ADR:** [0084](adr/0084-login-social-github-e-gitlab.md)
+
+### RN-274 — Vincular identidade social a conta existente exige e-mail VERIFICADO pelo provider {#rn-274}
+
+Quando o e-mail devolvido pelo provider bate com uma conta já cadastrada,
+o vínculo só acontece se o provider marca aquele e-mail como verificado
+(`emailVerified: true`) — GitHub via `GET /user/emails`, GitLab via
+`confirmed_at`. Um e-mail digitado mas não verificado não é prova de
+identidade: qualquer um pode registrar um e-mail alheio num provider
+OAuth. Aceitar o vínculo sem essa checagem abriria account takeover —
+quem já tem `alguem@empresa.com` na Brabo não pediu para um GitHub
+alheio, com aquele endereço só DIGITADO, herdar a conta. A recusa é
+`403`, e nenhum vínculo é gravado.
+
+- **Onde:** `apps/api/src/application/use-cases/auth/social-login-callback.use-case.ts`
+  (`vincularAContaExistente`)
+- **Teste:** `apps/api/test/application/use-cases/auth/social-login-callback.use-case.spec.ts`
+  — "RECUSA vincular quando o e-mail bate mas NÃO está verificado pelo provider"
+- **ADR:** [0084](adr/0084-login-social-github-e-gitlab.md)
+
+### RN-275 — Provisionar conta NOVA não exige e-mail verificado — só vincular a uma existente exige {#rn-275}
+
+A verificação de e-mail da RN-274 protege uma conta que já existe; quando
+não há conta correspondente, não há nada a proteger, só uma conta nova a
+nascer. Exigir e-mail verificado nesse caso encareceria o caminho comum
+(a maioria dos usuários de GitHub tem e-mail verificado, mas nem todos, e
+recusar o login por isso seria atrito sem ganho de segurança
+correspondente) sem reduzir risco nenhum — o pior caso é uma conta nova
+com um e-mail não comprovado, o mesmo risco que o registro por senha já
+aceita implicitamente até o clique no link de verificação.
+
+- **Onde:** `apps/api/src/application/use-cases/auth/social-login-callback.use-case.ts`
+  (`provisionarContaNova`)
+- **Teste:** `apps/api/test/application/use-cases/auth/social-login-callback.use-case.spec.ts`
+  — "provisiona conta nova mesmo com e-mail NÃO verificado"
+- **ADR:** [0084](adr/0084-login-social-github-e-gitlab.md)
+
+### RN-276 — `providerUserId`, nunca e-mail ou login, é a chave de identidade social {#rn-276}
+
+`social_identities` tem índice único em `(provider, provider_user_id)` —
+o id NUMÉRICO e estável do provider. E-mail e login (username) podem
+mudar de dono ou de valor no provider sem aviso; usá-los como chave
+faria uma troca de e-mail no GitHub "perder" o vínculo de quem já tinha
+conta, ou pior, herdar silenciosamente o vínculo de outra pessoa que
+reusou aquele endereço depois.
+
+- **Onde:** `apps/api/src/db/migrations/0047_complete_hannibal_king.sql`,
+  `apps/api/src/application/ports/social-identity-repository.port.ts`
+- **Teste:** `apps/api/test/application/use-cases/auth/social-login-callback.use-case.spec.ts`
+  — "identidade já conhecida: login direto, sem criar segunda linha"
+- **ADR:** [0084](adr/0084-login-social-github-e-gitlab.md)
+
+### RN-277 — Login social pede escopo MÍNIMO, nunca o de conexão de repositório {#rn-277}
+
+`buildLoginAuthorizeUrl` pede `read:user user:email` (GitHub) e
+`read_user` (GitLab) — nunca o `repo`/`api` que o fluxo de CONEXÃO de git
+pede. Entrar na conta não deveria conceder acesso a repositório nenhum;
+os dois fluxos reusam o MESMO app OAuth (RN-281) mas pedem autorizações
+diferentes, decididas na hora da autorização, não na configuração do app.
+
+- **Onde:** `apps/api/src/infrastructure/git/github-oauth-client.ts`,
+  `apps/api/src/infrastructure/git/gitlab-oauth-client.ts`
+  (`buildLoginAuthorizeUrl`)
+- **Teste:** `apps/api/test/application/use-cases/auth/social-login-callback.use-case.spec.ts`
+  — "StartSocialLoginUseCase › caminho feliz"
+- **ADR:** [0084](adr/0084-login-social-github-e-gitlab.md)
+
+### RN-278 — Conta provisionada por login social nasce SEM senha — mesmo estado "pendente" da migração do Keycloak {#rn-278}
+
+Provisionar por login social grava uma linha em `users` e NENHUMA em
+`auth_credentials` — o mesmo par que a migração do Keycloak já deixava
+para "conta sem senha ainda" (ver RN-032 e `migracao-keycloak.spec.ts`).
+`LoginUseCase` e `ResetPasswordUseCase` já tratam esse estado; não foi
+necessário um segundo mecanismo de "senha pendente" para o login social.
+
+- **Onde:** `apps/api/src/application/ports/auth-credential-repository.port.ts`
+  (`criarUsuarioSemCredencial`),
+  `apps/api/src/infrastructure/persistence/drizzle/auth-credential.repository.ts`
+- **Teste:** `apps/api/test/application/use-cases/auth/social-login-callback.use-case.spec.ts`
+  — "caminho feliz: provisiona um usuário NOVO, sem senha (RN-278)"
+- **ADR:** [0084](adr/0084-login-social-github-e-gitlab.md)
+
+### RN-279 — Vincular por e-mail verificado também verifica o e-mail da conta existente {#rn-279}
+
+Quando uma conta registrada por senha (e nunca verificada) é vinculada a
+uma identidade social cujo e-mail o provider marca como verificado, a
+conta ganha `emailVerifiedAt` preenchido como efeito colateral. O
+provider acabou de provar, por um caminho independente, exatamente o que
+o clique no link de verificação provaria — não faz sentido a conta
+continuar bloqueada do login por senha (RN-032) depois de provar posse
+do e-mail por outro caminho igualmente forte.
+
+- **Onde:** `apps/api/src/application/use-cases/auth/social-login-callback.use-case.ts`
+  (`vincularAContaExistente`)
+- **Teste:** `apps/api/test/application/use-cases/auth/social-login-callback.use-case.spec.ts`
+  — "vincula a conta existente (…) e marca o e-mail dela como verificado (RN-274/279)"
+- **ADR:** [0084](adr/0084-login-social-github-e-gitlab.md)
+
+### RN-280 — Login social recusa conta DESABILITADA, mesma régua do login por senha {#rn-280}
+
+Identidade social vinculada a uma conta com `auth_credentials.disabled_at`
+preenchido é recusada com `403`, tanto no login direto (identidade já
+conhecida) quanto na tentativa de vincular. Desabilitar uma conta não
+pode ser contornado trocando de método de entrada.
+
+- **Onde:** `apps/api/src/application/use-cases/auth/social-login-callback.use-case.ts`
+  (`entrarComIdentidadeConhecida`, `vincularAContaExistente`)
+- **Teste:** `apps/api/test/application/use-cases/auth/social-login-callback.use-case.spec.ts`
+  — "recusa login de identidade vinculada a conta DESABILITADA"
+- **ADR:** [0084](adr/0084-login-social-github-e-gitlab.md)
+
+### RN-281 — O login social reusa o MESMO app OAuth da conexão de git — sem variável de ambiente nova {#rn-281}
+
+`GITHUB_OAUTH_CLIENT_ID`/`_SECRET` e `GITLAB_OAUTH_CLIENT_ID`/`_SECRET`
+continuam sendo os únicos client id/secret cadastrados. O que muda por
+fluxo é o `redirect_uri` (`/auth/oauth/<provider>/callback` contra
+`/git/oauth/<provider>/callback`) e o `scope` (RN-277) — os dois
+decididos em tempo de requisição. Ação do OPERADOR continua necessária
+(cadastrar o segundo callback URL no app de cada provider), documentada
+em `.env.example` — é essa exigência, não uma env var nova, que justifica
+o branch nascer `breaking/`.
+
+- **Onde:** `.env.example`,
+  `apps/api/src/application/use-cases/auth/start-social-login.use-case.ts`
+- **Teste:** manual (cadastro no app OAuth) — não há como testar
+  automaticamente uma configuração externa ao produto
+- **ADR:** [0084](adr/0084-login-social-github-e-gitlab.md)
+
+### RN-282 — O access token do login social nunca viaja na URL nem no corpo do callback {#rn-282}
+
+`GET /auth/oauth/:provider/callback` grava os cookies de sessão
+(`definirCookiesDeSessao`, a MESMA função do login por senha) e
+redireciona para `WEB_ORIGIN/`. O boot da web (`restaurarSessao()`,
+chamado em toda carga de página) troca o refresh recém-gravado por um
+access token — nenhum código novo do lado do cliente além dos botões e o
+alias de rota de erro.
+
+- **Onde:** `apps/api/src/interfaces/http/auth/auth.controller.ts`
+  (`oauthCallback`)
+- **Teste:** `apps/api/test/interfaces/route-surface.spec.ts` — cobre a
+  classificação pública e os metadados OpenAPI da rota; o fluxo completo
+  de cookie→boot é E2E, fora do escopo de teste de unidade
+- **ADR:** [0084](adr/0084-login-social-github-e-gitlab.md)
+
+### RN-283 — Falha do callback de login social não vaza o motivo na URL {#rn-283}
+
+Qualquer falha (`state` inválido, code rejeitado pelo provider, conta
+desabilitada, e-mail não verificado) redireciona para
+`WEB_ORIGIN/login?oauth_error=1` — um único sinal genérico, nunca o
+motivo real. Mesmo padrão do callback de conexão de git
+(`WEB_ORIGIN/git-error`).
+
+- **Onde:** `apps/api/src/interfaces/http/auth/auth.controller.ts`
+  (`oauthCallback`, bloco `catch`)
+- **Teste:** `apps/api/test/application/use-cases/auth/social-login-callback.use-case.spec.ts`
+  — cobre os desfechos de falha que o controller mapeia para o mesmo
+  redirect genérico
+- **ADR:** [0084](adr/0084-login-social-github-e-gitlab.md)
+
+---
+
+## Auditoria fluxo.yml × código — o plano do Dev Lead vira aprovação de verdade (RN-284, ADR 0086)
+
+Não é fase planejada: é a correção de uma divergência que a auditoria de
+`docs/fluxo.yml` × código encontrou (`docs/explanation/auditoria-fluxo-vs-codigo.md`,
+achado A2) — o fluxo já declarava a saída `plano-de-paralelismo` do `dev-lead`
+como `via: proposed_action`, e o código nunca foi ajustado para bater.
+
+### RN-284 — O turno do agente conversacional pode SUSPENDER esperando aprovação humana {#rn-284}
+
+Primeira vez que um agente conversacional (Criativo, PO, Arquiteto, Dev Lead —
+todos rodam turno síncrono via `GenServer.call` de até 180s, mediado por
+`Engine.Agents.TurnoAssincrono`) suspende esperando uma decisão humana. O
+padrão já existia para o dev agent ([RN-073](#rn-073), ADR 0052) e os gates de
+QA/Infra (ADR 0057), mas os dois são disparados por `cast` e nunca esperavam
+resposta síncrona — é exatamente esse ponto que este mecanismo resolve, e o
+teto de paralelismo que fez o Dev Lead existir ([RN-083](#rn-083)) é a razão
+de a primeira aprovação suspensa ser a dele.
+
+**O mecanismo, em quatro peças:**
+
+1. `Engine.Agents.DevLeadTools.run/2`
+   (`apps/engine/lib/engine/agents/dev_lead_tools.ex:81-107`) chama
+   `EngineApiClient.propose_action/5` em vez de `append_event/3`, e devolve
+   `{:ok, texto}` (status `executed`/`auto_approved`/`approved` — os três
+   contam como sucesso, porque `propose_execution_plan` não tem execute-*
+   pipeline própria e a aprovação manual fica em `"approved"` para sempre),
+   `{:pending, action_id}` ou `{:error, texto}`.
+2. `Engine.Agents.DevLeadServer.run_turn/2`
+   (`apps/engine/lib/engine/agents/dev_lead_server.ex`, bloco de despacho de
+   `tool_calls`) usa `Enum.reduce_while` para PARAR no primeiro `:pending`,
+   sem processar as chamadas seguintes nem recursar — e devolve o `state` com
+   a chave `:aguardando_aprovacao` setada
+   (`%{action_id:, tool_call_id:, tool_name:, remaining:}`, o `remaining`
+   já descontando a iteração suspensa contra o teto). A mensagem `role:
+   "tool"` NÃO entra em `state.messages` nesse momento — gravar "pending" ali
+   mentiria pro modelo que o comando já respondeu isso (mesmo raciocínio do
+   dev agent, `Engine.Harness.Hooks.ActionPipeline`).
+3. `Engine.Agents.TurnoAssincrono.tratar_resultado/2`
+   (`apps/engine/lib/engine/agents/turno_assincrono.ex`) responde ao `from`
+   do mesmo jeito e na mesma hora de sempre — é o que rompe o bloqueio
+   síncrono no momento certo —, mas em vez de `finalizar/1` (que emite
+   `agent.done` e `agent.status: idle`) chama `suspender/1`: só
+   `agent.status: awaiting_approval`, sem `agent.done`, porque o turno não
+   terminou. A checagem é pelo VALOR da chave (`Map.get/2`, truthy), nunca
+   pela presença dela — o Dev Lead carrega `aguardando_aprovacao: nil` desde
+   o `init/1`, então a chave em si está sempre presente.
+4. `Engine.Sessions.LiveBroadcast.agent_status/4`
+   (`apps/engine/lib/engine/sessions/live_broadcast.ex:38-39`) ampliou a
+   guarda de `["working", "idle"]` para incluir `"awaiting_approval"` — sem
+   isto o `agent.status` do passo 3 nem seria persistido.
+
+**A retomada.** `Engine.Agents.DevLeadServer` assina
+`Engine.Dev.Wake.subscribe(project_id, "dev-lead")` no `init/1` — o MESMO
+módulo que `Engine.Gates.QaLeadServer` já reusa para os subagentes de QA,
+apesar do nome ser "dev": a entrega de `{:action_settled, ...}` é por AGENTE,
+roteada pelo `agentId` do payload (`apps/engine/lib/engine/workers/dev_agent_wake_worker.ex`),
+não por tipo de agente. Quando a decisão chega, um `handle_info` monta a
+mensagem `role: "tool"` com o resultado REAL (`texto_do_desfecho/1`, mesmo
+vocabulário do dev agent e do `QaLeadServer`), zera `aguardando_aprovacao` e
+retoma com `TurnoAssincrono.iniciar(state, nil, fn -> run_turn(state,
+pendente.remaining) end)`.
+
+**Enquanto suspenso, uma segunda `user_message` não inicia turno novo** — um
+guard em `handle_call({:user_message, _text}, _from, %{aguardando_aprovacao:
+%{}})`, testado ANTES da cláusula genérica, emite `agent.error` (origem
+`politica`) explicando que há uma decisão pendente em Aprovações, sem subir
+task nenhuma.
+
+**Lacuna aceita, declarada — restart durante a espera.** Ao contrário do dev
+agent (que reidrata `laco_pendente` via `handle_continue` no `init/1`, ADR
+0052), o Dev Lead NÃO reidrata `aguardando_aprovacao` — é só em memória. Se o
+engine reiniciar enquanto ele está suspenso, a decisão continua registrada e
+visível em Aprovações (é durável na api), mas o Dev Lead não narra o desfecho
+automaticamente: o processo que assinou o `Wake` morreu, e o próximo restart
+sobe um Dev Lead novo, sem inscrição para aquela ação. Fechar isto exigiria o
+mesmo mecanismo do ADR 0052 — fora do escopo desta mudança, que só faz o
+comportamento bater com o que `docs/fluxo.yml` já declarava.
+
+- **Onde:** `apps/engine/lib/engine/agents/dev_lead_tools.ex`,
+  `dev_lead_server.ex`; `apps/engine/lib/engine/agents/turno_assincrono.ex`
+  (compartilhado pelos quatro conversacionais); `apps/engine/lib/engine/sessions/live_broadcast.ex`;
+  `apps/api/src/domain/actions/decide.ts` (`propose_execution_plan`)
+- **Teste:** `apps/engine/test/engine/agents/dev_lead_tools_test.exs`,
+  `dev_lead_server_test.exs` (describe "suspensão em aprovação"),
+  `turno_assincrono_test.exs` (describe "resultado com :aguardando_aprovacao"),
+  `live_broadcast_test.exs`, `wake_do_outbox_ao_dev_lead_test.exs` (a
+  corrente INTEIRA — outbox → drain → worker → `Engine.Dev.Wake` → o
+  processo do Dev Lead, mesmo padrão de `Engine.Dev.WakeDoOutboxAoAgenteTest`),
+  `apps/api/test/domain/actions/decide.spec.ts` (describe "plano de
+  execução do Dev Lead")
+- **ADR:** [0086](adr/0086-dev-lead-plano-suspende-para-aprovacao.md)
+  (revisa parte do [ADR 0053](adr/0053-dev-lead-e-paralelismo-autorizado.md);
+  precedente direto: [ADR 0052](adr/0052-dev-agent-espera-aprovacao-no-meio-do-laco.md)
+  e [ADR 0057](adr/0057-o-gate-espera-a-aprovacao.md))
+
+---
+
+## UX Designer — o quinto agente conversacional (RN-285..287, ADR 0087)
+
+Não é gatilho de separação disparado (`docs/fluxo.yml` sempre declarou "quando
+o projeto GERENCIADO tiver interface própria a desenhar" como critério) — é
+decisão consciente do dono do produto de antecipar o papel. `teste-de-
+usabilidade` (exige usuário humano real) fica fora de alcance; `metricas-de-
+uso` segue lacuna, porque depende do papel `analytics`, que continua
+`proposto`.
+
+### RN-285 — O UX Designer é conversacional SOLO, sem área {#rn-285}
+
+`Engine.Agents.UxDesignerServer` (`apps/engine/lib/engine/agents/ux_designer_server.ex:40`)
+espelha `Engine.Agents.ArquitetoServer`/`DevLeadServer`: GenServer por sessão,
+laço bounded de tool use próprio com teto 14 (mesmo calibre de Arquiteto/Dev
+Lead — agente de raciocínio, não conversação leve como Criativo/PO). Ativado
+por handoff `accepted` endereçado a "ux-designer" — mecanismo GENÉRICO já
+existente (`ActivateAgentUseCase`/`canActivateAgent` na api não ganharam
+linha nenhuma: qualquer agente com handoff aceito já é ativável).
+
+O kickoff (`build_kickoff/1`, `ux_designer_server.ex:222`) lê a
+`artifact.product_brief` mais recente da sessão — a MESMA "necessidade de
+negócio" que o Criativo produz, sem artefato novo. O sistema de design
+(`design/tokens.css`, `design/COMPONENTS.md`) é DESCRITO na identidade
+(`Engine.Harness.Agents`, entrada `"ux-designer"`), texto estático, porque os
+agentes conversacionais não têm ferramenta de leitura de arquivo do repo — é
+a única camada do prompt presente em TODO turno, não só no kickoff.
+
+Sem área, sem subagentes: `docs/fluxo.yml` já classificava o papel como
+`camada_produto`, ao lado de Criativo e PO, nenhum dos quais tem área.
+
+### RN-286 — `propose_prototype` grava artefato sem tabela e sem caso de uso dedicado, e oferece DOIS handoffs sobre o MESMO artefato {#rn-286}
+
+`artifact.prototipo_navegavel` segue o desenho sem tabela de
+`artifact.project_image`/`artifact.c4_diagram` ([RN-149](#rn-149)) — o event
+log é o registro —, mas por um caminho DIFERENTE do que os dois usam.
+`choose_project_image`/`create_c4_diagram` precisam de caso de uso NA API
+(`DecidirImagemDoProjetoUseCase`/`CreateC4DiagramUseCase`) porque têm
+conteúdo DERIVADO de outro artefato (o Container level vem do `module_map`
+vigente) ou recusa de domínio compartilhada por mais de um consumidor (teto
+de recursos da imagem). `propose_prototype`
+(`Engine.Agents.UxDesignerTools.run/2`,
+`apps/engine/lib/engine/agents/ux_designer_tools.ex:122`) não tem nenhum dos
+dois motivos — é conteúdo AUTOCONTIDO que só o próprio UX Designer escreve e
+só ele lê de volta —, então a validação de FORMA mora no engine
+(`Engine.Harness.ArtifactSchemas`, tipo `"prototipo_navegavel"`,
+`artifact_schemas.ex:49/135` — personas e jornadas não-vazias, ao menos uma
+tela) e a gravação usa o caminho GENÉRICO que a api já expõe para qualquer
+tipo de evento (`EngineApiClient.append_event_returning/3`), o mesmo
+mecanismo do `artifact.product_brief` do Criativo. Nenhuma rota nova na api.
+
+Depois de gravar, `gravar_e_ofertar_handoffs/2` (`ux_designer_tools.ex:149`)
+oferece DOIS handoffs sobre o MESMO artefato — `create_handoff` para "po" e
+para "dev-lead", os dois com o `artifactId` do protótipo. Nunca um segundo
+artefato para "spec-visual" (`docs/fluxo.yml`): o PO lê `resumo`/`prototipo`
+para desenhar o backlog, o Dev Lead lê as MESMAS `telas`/`anotacoes` como
+referência visual de implementação — duplicar o conteúdo arriscaria as duas
+cópias divergirem na revisão seguinte, o mesmo argumento por trás do C4 não
+redigitar o `module_map`.
+
+Falha ao ofertar UM dos dois handoffs não desfaz o artefato já gravado nem o
+outro handoff (RN-116) — o motivo volta como texto do tool-result, entrada do
+laço e não fim de linha (RN-163): o modelo lê e pode reportar ao usuário na
+resposta seguinte.
+
+Um `propose_prototype` BEM-SUCEDIDO encerra o turno
+(`ux_designer_server.ex:120`, mesma guarda de `propose_execution_plan` no Dev
+Lead) — sem isso o laço voltaria ao modelo, que poderia propor de novo e
+produzir dois protótipos com o mesmo total. Só existe UMA ferramenta aqui
+(não há um segundo tool call a encadear como no Arquiteto), então "para no
+primeiro sucesso" não perde nada.
+
+### RN-287 — `uxDesignerActive` no roster, nas DUAS fontes (RN-090) {#rn-287}
+
+Mesmo critério de `infraActive`: handoff `accepted` endereçado a
+"ux-designer" na sessão. `apps/web/src/lib/agent-status.ts`
+(`rosterFactsFromEvents`/`rosterFromFacts`) ganhou o fato e o empurra
+condicionalmente no roster como agente SOLO — sem `pushAreaMembers`
+correspondente, porque ele não é área.
+
+A RN-090 exige as DUAS fontes em sincronia (painel do time via event log; o
+card do dashboard via `ProjectCardSummary.roster`, computado na api) para que
+um agente novo não apareça num lugar e falte no outro. O fato entrou nas
+duas: `apps/api/src/infrastructure/persistence/drizzle/projects-summary.repository.ts`
+amplia a MESMA consulta de `infraActive` (um `inArray(handoffs.toAgent,
+['infra', 'ux-designer'])` no lugar do `eq` único, partido em dois `Set` por
+`toAgent`) — nenhuma consulta nova, a contagem de doze consultas constantes
+que `projects-summary.repository.spec.ts` prova não cresce.
+
+- **Onde:** `apps/engine/lib/engine/agents/ux_designer_server.ex`,
+  `ux_designer_tools.ex`, `ux_designer_supervisor.ex`;
+  `apps/engine/lib/engine/harness/agents.ex` (identidade),
+  `artifact_schemas.ex` (tipo `prototipo_navegavel`);
+  `apps/engine/lib/engine/application.ex`;
+  `apps/engine/lib/engine_web/controllers/agent_command_controller.ex`;
+  `apps/web/src/lib/agents.ts`, `agent-status.ts`;
+  `apps/api/src/application/ports/projects-summary-repository.port.ts`,
+  `apps/api/src/infrastructure/persistence/drizzle/projects-summary.repository.ts`
+- **Teste:** `apps/engine/test/engine/agents/ux_designer_server_test.exs`,
+  `ux_designer_tools_test.exs`; `apps/web/src/lib/agent-status.test.ts`;
+  `apps/api/test/infrastructure/persistence/drizzle/projects-summary.repository.spec.ts`
+  (describe com os dois `toAgent` na mesma sessão)
+- **ADR:** [0087](adr/0087-ux-designer-agente.md)
+
+---
+
+## Staff: código pronto, dormente para disparo automático (RN-305/RN-306, ADR 0088)
+Não é fase planejada: `docs/fluxo.yml` declara o Staff/Principal Engineer como
+`status: planned` desde o ADR 0085 ("contrato pronto, ativação decidida,
+aguarda gatilho"). O dono do produto decidiu antecipar o CÓDIGO mesmo sabendo
+que o gatilho automático (a Anamnese notando um problema sistêmico
+RECORRENTE) não vai disparar — a Anamnese está pausada
+(`ANAMNESE_ENABLED=false`, decisão de produto de 2026-08-10). Ver a
+pendência já documentada em RN-086: o mesmo sinal que faria a Anamnese
+propor subir o teto de paralelismo é o que faria ela propor um handoff ao
+Staff, e nenhum dos dois dispara enquanto ela estiver pausada.
+
+### RN-305 — O Staff ativa pelo caminho GENÉRICO de handoff, sem `USER_STARTED_AGENTS`, e sem `kickoff/1`
+
+`USER_STARTED_AGENTS` (`apps/api/src/domain/sessions/agent-activation.ts`) é
+a exceção do Criativo (inicia SEM handoff, por comando do usuário) — o Staff
+NÃO entra nela. Investigação confirmou que `canActivateAgent` já ativa
+qualquer agente com handoff `accepted` endereçado a ele, o mesmo caminho que
+já vale para `dev-lead`/`arquiteto`/`infra`; e `assertHandoffTargetAllowed`
+(`apps/api/src/domain/agents/agent-areas.ts`) só recusa handoff endereçado a
+SUBAGENTE de área — o Staff não tem área, então nenhuma mudança de domínio
+na api foi necessária. "Acionável manualmente" significa que a MECÂNICA de
+domínio permite (qualquer agente pode chamar
+`EngineApiClient.create_handoff(..., "staff", ...)`, e um humano aceita pela
+rota já existente), não que existe hoje uma tela dedicada para escolher
+"endereçar handoff ao Staff" — a UI genérica de handoff a agente à escolha
+segue no backlog (`docs/explanation/backlog.md`), como já estava antes desta
+mudança.
+
+`Engine.Agents.StaffServer` (`apps/engine/lib/engine/agents/staff_server.ex`)
+é o quinto agente conversacional solo (junto de Criativo, PO, Arquiteto, Dev
+Lead), espelhando o Arquiteto — `GenServer` por sessão, rehydration do event
+log, laço bounded de tool use com teto 14 (`staff_server.ex:49`) — mas **sem
+`kickoff/1`**: os outros leads sintetizam uma instrução de abertura a partir
+de um artefato anterior no event log da sessão (product_brief, module_map,
+backlog); o Staff não tem essa fonte, porque o problema sistêmico nasce de
+fora da sessão. `StaffSupervisor.start_agent/2` sobe o processo (rehidrata o
+histórico) e ele fica ocioso até a primeira `user_message`
+(`staff_server.ex:60`) — que é como quem endereçou o handoff explica o
+problema. `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:60`
+(cláusula `start/2` de `"staff"`) nunca chama `kickoff` (a função nem
+existe), ao contrário de po/arquiteto/dev-lead/infra.
+
+- **Onde:** `apps/api/src/domain/sessions/agent-activation.ts`
+  (`canActivateAgent`, `USER_STARTED_AGENTS` — intocado),
+  `apps/api/src/domain/agents/agent-areas.ts`
+  (`assertHandoffTargetAllowed` — intocado),
+  `apps/engine/lib/engine/agents/staff_server.ex`,
+  `staff_supervisor.ex`,
+  `apps/engine/lib/engine_web/controllers/agent_command_controller.ex`
+  (cláusulas `start/2`/`message/2`/`via_for/2` de `"staff"`),
+  `apps/engine/lib/engine/application.ex` (`Engine.Agents.StaffSupervisor`
+  na árvore de supervisão)
+- **Teste:** `apps/engine/test/engine/agents/staff_server_test.exs`
+  (rehydration, ausência de kickoff automático — o turno só roda por
+  `user_message`)
+- **ADR:** [0088](adr/0088-staff-agente-dormente-para-disparo-automatico.md)
+
+### RN-306 — `propose_rfc` grava o artefato DIRETO e devolve o handoff no MESMO tool call, sem `proposed_action`
+
+`Engine.Agents.StaffTools.propose_rfc`
+(`apps/engine/lib/engine/agents/staff_tools.ex:41`) é a única ferramenta do
+Staff: problema, opções com trade-offs, recomendação e o escopo de uma PoC
+DESCARTÁVEL (`descartavel: true` é FIXO — nunca escrito pelo modelo). `run/2`
+(`staff_tools.ex:89`) grava `artifact.rfc_staff` via
+`EngineApiClient.append_event_returning/3` — mesmo padrão SEM tabela e SEM
+caso de uso dedicado de `Engine.Harness.Tools.EmitInsight` (o `emit_insight`
+do Arquiteto), e não o de `artifact.c4_diagram` (ADR 0068), que tem caso de
+uso próprio na api porque DERIVA o nível Container do `module_map` vigente —
+o RFC não deriva nada do lado de lá, todo o payload vem do tool call.
+
+Depois de gravar, o MESMO `run/2` chama
+`EngineApiClient.create_handoff(..., "staff", "arquiteto", artifact_id)` —
+sem confirmação humana no meio, mesmo padrão de
+`CriativoServer.executar_confirm_readiness/1` emitindo o product_brief e
+oferecendo o handoff ao PO na mesma resposta. `propose_rfc` NÃO é
+`proposed_action`: registrar um documento de arquitetura não é efeito
+externo (não é git, terminal, nem gasto de agente) — a decisão real
+(adotar, adaptar, recusar a recomendação) é do Arquiteto, no handoff que a
+ferramenta já devolve. Falha ao criar o handoff NÃO derruba o processo nem
+perde o RFC já gravado (RN-116) — o motivo entra no tool-result, e o modelo
+sabe que precisa tentar de novo só o handoff, não reescrever o RFC.
+
+- **Onde:** `apps/engine/lib/engine/agents/staff_tools.ex`
+- **Teste:** `apps/engine/test/engine/agents/staff_server_test.exs`
+  ("propõe o RFC, grava o artefato e devolve o handoff ao arquiteto";
+  "propose_rfc com opções vazias vira tool-result de erro"; "falha ao
+  devolver o handoff ao arquiteto NÃO derruba o processo")
+- **ADR:** [0088](adr/0088-staff-agente-dormente-para-disparo-automatico.md)
+
+**Declarado, não escondido**: a roster do painel do time
+(`apps/web/src/lib/agent-status.ts`, `staffActive`) e o card do dashboard
+(`ProjectCardSummary.roster`, `apps/api/.../projects-summary.repository.ts`)
+mostram o Staff quando ativo, mesmo critério de `infraActive` — evitando a
+divergência que o comentário de `RosterFacts` já alertava. `SessionPage.tsx`
+NÃO foi tocado: `staff` fica fora de `AGENTES_DE_CHAT`, o mesmo padrão já
+aceito para `infra` (um lead REAL e ATIVO também fora dessa lista — o
+handoff para ele "nunca é aceito por AQUI", conforme o comentário do próprio
+arquivo). O caminho ponta a ponta de uso hoje é a rota interna
+(`POST .../agent/message`, `agent: "staff"`), não a tela de Sessão.
+
+---
+
+## O gate `implementavel` ativa — QA-estratégia como segundo momento do qa-lead (RN-340/341, ADR 0090)
+
+### RN-340 — O gate `implementavel` decide a story ANTES do dev agent escrever código {#rn-340}
+
+`docs/gates.yml` declarava o gate `implementavel` (dono `dev-lead`) desde a
+FASE 14d com `status: planned` — nunca ativado. O [ADR 0090](adr/0090-qa-estrategia-e-appsec-segundo-momento.md)
+ativa: a ferramenta `assess_implementability` do Dev Lead propõe o **parecer
+de implementabilidade** de uma story (`implementavel`/`inviavel` +
+justificativa) como `proposed_action`, MESMO padrão de
+`propose_execution_plan` ([RN-284](#rn-284)) — três desfechos
+(`{:ok, texto} | {:pending, action_id} | {:error, texto}`), papel mínimo
+`maintainer` em `decide.ts`, e DELIBERADAMENTE fora do bloco de tetos
+absolutos (é decisão inicial, não ultrapassagem de teto).
+
+**O parecer depende do plano de teste, que é um PRÉ-REQUISITO, não um
+argumento.** `run_assessment/2` lê o `artifact.plano_de_teste` mais recente
+da story no HISTÓRICO da própria sessão do Dev Lead (emitido pela
+QA-estratégia, [RN-341](#rn-341)):
+
+1. **Sem plano ainda** — dispara `Engine.Gates.Dispatcher.run_qa_estrategia/3`
+   (mesma indireção trocável em teste que `run_qa/2`/`run_secops/2` já usam)
+   e devolve `{:error, texto}` pedindo para tentar de novo em instantes. Erro
+   de ferramenta é ENTRADA do laço, não fim de linha ([RN-163](#rn-163)): o
+   Dev Lead tem teto de 14 iterações para tentar de novo. A janela de espera
+   é aceita e declarada — a QA-estratégia roda em processo separado
+   (`qa-lead`), e um `run/2` síncrono não pode bloquear esperando o
+   resultado sem acoplar os dois processos.
+2. **Com plano** — monta o parecer com o plano de teste EMBUTIDO no payload
+   (síntese e critérios executáveis), para o usuário decidir sem precisar
+   abrir dois eventos, e propõe a ação.
+
+- **Onde:** `apps/engine/lib/engine/agents/dev_lead_tools.ex`
+  (`run_assessment/2`, `spec_assess_implementability/0`),
+  `dev_lead_server.ex` (`run_tool/3`); `apps/engine/lib/engine/gates/dispatcher.ex`
+  (`run_qa_estrategia/3`); `apps/api/src/domain/actions/decide.ts`
+  (`assess_implementability`); `docs/gates.yml` (`implementavel`,
+  `status: active`)
+- **Teste:** `apps/engine/test/engine/agents/dev_lead_tools_test.exs`
+  (describe "assess_implementability"), `dev_lead_server_test.exs`
+  (describe "suspensão em aprovação" — os dois testes novos),
+  `apps/api/test/domain/actions/decide.spec.ts` (describe "parecer de
+  implementabilidade do Dev Lead")
+- **Origem:** [ADR 0090](adr/0090-qa-estrategia-e-appsec-segundo-momento.md)
+
+### RN-341 — A QA-estratégia é o segundo MOMENTO do qa-lead, e nunca suspende {#rn-341}
+
+`docs/fluxo.yml` declarava o papel `qa-estrategia` como `proposto`, com o
+critério de separação escrito no próprio registro: "pode ser o próprio
+qa-lead em segundo MOMENTO, não necessariamente agente novo — a separação é
+de entregável". O [ADR 0090](adr/0090-qa-estrategia-e-appsec-segundo-momento.md)
+constrói exatamente isso: `Engine.Gates.QaEstrategiaAgent` é módulo SEM
+ESTADO (não é `GenServer`), acionado por `Engine.Gates.QaLeadServer.run_design/3`
+— um ponto de entrada NOVO e ADITIVO no MESMO processo `qa-lead`, sem tocar
+`run/2` (o caminho de sempre, revisão de PR, amarrado a
+`DevAgentState.find_by_task_id`).
+
+**O contexto é LEVE, e é aí que a separação de entregável aparece.**
+`Engine.Gates.QaEstrategiaContext.fetch/3` busca SÓ story (de
+`EngineApiClient.list_backlog/1`, a árvore que o PO já lê — [RN-164](#rn-164))
+e `module_map` vigente (de `EngineApiClient.get_infra_context/2`, o MESMO
+`GetInfraContextUseCase` que o Infra Lead consome, aqui só pelo campo
+`moduleMap`) — SEM `dev_state`, SEM `worktree_path`: o gate `implementavel`
+roda PRE-DEV, antes de existir dev agent, worktree ou `task_id`. Nenhuma
+rota nova na api — as duas funções já existiam.
+
+**Nunca suspende.** O registro de ferramentas (`ReadFile`, `SearchWorkspace`,
+`EmitPlanoDeTeste`) não inclui `terminal` nem `write_file` — as DUAS únicas
+tools que `Engine.Harness.Hooks.ActionPipeline` intercepta para criar
+`proposed_action`. Sem chamada nenhuma passando pelo pipeline de ações, o
+`ToolLoop` deste agente nunca produz `:pending`, e `run_design/3` roda
+SÍNCRONO dentro do próprio `handle_cast` — sem mecanismo de
+suspensão/retomada, ao contrário do resto da área de QA.
+
+**O teto de iterações fica em 8 (conversacional), não 60 (gate) — de
+propósito, não lacuna.** Este agente roda SEM `token_budget_micros` — não há
+task nem budget de task ainda. O critério da [RN-085](#rn-085) não é "quem
+trabalha muito": é "o que segura o gasto além do teto de iterações". Sem
+budget por baixo, subir o teto multiplicaria o pior caso sem nada para
+conter — a MESMA razão pela qual `infra-workflows` fica em 8 mesmo usando
+ferramenta. `"qa-estrategia"` NÃO ganhou cláusula própria em
+`Engine.Harness.Iteracoes.tipo/1`: cair no default é a decisão certa.
+
+O entregável — `emit_plano_de_teste` (síntese, critérios executáveis
+verificáveis, estratégia de automação GENÉRICA e sem framework — decisão de
+escopo desta frente, na `spec/0` que o modelo lê, não uma validação em
+código) — vira o artefato `artifact.plano_de_teste`
+(`ArtifactEmitter.emit/5`, schema validado, `criteriosExecutaveis` não pode
+ser vazio), no event log da MESMA sessão que chamou `run_design/3` — é lá
+que `assess_implementability` ([RN-340](#rn-340)) o lê depois. Falha
+(limite de iterações, orçamento, modelo que para sem emitir) NUNCA é
+silenciosa: `agent.error` durável com origem, mesma régua da
+[RN-059](#rn-059).
+
+- **Onde:** `apps/engine/lib/engine/gates/qa_estrategia_agent.ex`,
+  `qa_estrategia_context.ex`, `qa_lead_server.ex` (`run_design/3`),
+  `tools/emit_plano_de_teste.ex`, `hooks/termination_plano_de_teste.ex`;
+  `apps/engine/lib/engine/harness/artifact_schemas.ex` (`plano_de_teste`);
+  `apps/engine/lib/engine/harness/iteracoes.ex` (SEM cláusula nova, ver
+  acima); `docs/fluxo.yml` (`qa-estrategia`, `status: active`)
+- **Teste:** `apps/engine/test/engine/gates/qa_estrategia_agent_test.exs`,
+  `qa_estrategia_context_test.exs`, `qa_lead_server_test.exs` (describe
+  "run_design"), `apps/engine/test/engine/harness/artifact_schemas_test.exs`
+  (describe "plano_de_teste"), `iteracoes_test.exs` ("qa-estrategia é
+  conversacional DE PROPÓSITO")
+- **Origem:** [ADR 0090](adr/0090-qa-estrategia-e-appsec-segundo-momento.md)
+
+---
+
+## O appsec ganha o segundo momento do secops (RN-360/361, ADR 0090)
+
+`docs/fluxo.yml` já declarava o `id: appsec` como `proposto`, com o critério
+de separação escrito por antecipação: "mesmo padrão do QA: dois MOMENTOS, não
+dois agentes por ora". Esta mudança constrói esse segundo momento — threat
+model de DESIGN, ANTES de existir código/PR — decisão consciente do dono do
+produto de antecipar a ativação, sem esperar o gate `implementavel` que o
+próprio registro citava como gatilho.
+
+### RN-360 — O threat model de DESIGN roda sobre story + module_map, sem worktree/task_id, no MESMO processo do secops {#rn-360}
+
+Quem roda o appsec é o MESMO `Engine.Gates.SecOpsAgentServer` que já existe
+para o veredito determinístico de PR — não um processo novo. `run_design/2`
+(`apps/engine/lib/engine/gates/secops_agent_server.ex:76`) é um `GenServer.cast`
+para a mesma chave de `Registry` (`{project_id, "secops"}`) que `run/2` já
+usa; o `handle_cast({:run_design, story_id}, state)`
+(`secops_agent_server.ex:93`) busca o contexto por
+`Engine.Gates.AppSecContextBuilder.fetch/2`
+(`apps/engine/lib/engine/gates/appsec_context_builder.ex:31`) — a story no
+backlog do projeto (`EngineApiClient.list_backlog/1`, a MESMA leitura que a
+RN-164 deu ao PO) e o `module_map` vigente da sessão que criou a story
+(`EngineApiClient.get_infra_context/2`, a MESMA leitura sem task/story que a
+área de Infra já faz) — e então chama `Engine.Gates.AppSecAgent.run/3`
+(`apps/engine/lib/engine/gates/appsec_agent.ex:47`).
+
+`AppSecAgent` é módulo SEM ESTADO (não é GenServer, mesma forma de
+`QaPerformanceSegurancaAgent`), com registro de ferramentas SEM `Terminal` —
+`[ReadFile, SearchWorkspace, EmitThreatModel]` — rodando um checklist
+STRIDE-lite (Spoofing/Tampering/Repudiation/Information disclosure/Denial of
+service/Elevation of privilege) via `Engine.Harness.ToolLoop.run/1`. A
+diferença estrutural do "segundo momento sem Terminal, sem task_id" para o
+padrão de gate anterior: nenhum `dev_state`/`worktree_path` entra no `ctx` —
+`ReadFile`/`SearchWorkspace` degradam para o fallback de
+`Engine.Actions.Workspace.workspace_dir/1` (o checkout COMPARTILHADO do
+projeto, não um worktree de agente), e `session_id` vem de
+`story["sessionId"]`, nunca de um `dev_state`. `EmitThreatModel`
+(`apps/engine/lib/engine/gates/tools/emit_threat_model.ex`) não tem veredito
+`approved`/`changes_requested` — o appsec sempre TERMINA registrando o
+threat model, nunca aprovando/reprovando nada —, e por isso não reaproveita
+`Engine.Gates.Hooks.Termination` (a forma extraída é outra): tem hook
+PRÓPRIO, `Engine.Gates.Hooks.AppSecTermination`.
+
+Terminado com sucesso, `run_appsec_design/3`
+(`secops_agent_server.ex:234`) emite `artifact.threat_model`
+(`storyId`/`threatModel`/`requisitosDeSeguranca`/`riscos`, schema em
+`apps/engine/lib/engine/harness/artifact_schemas.ex:51` — `riscos` fica de
+fora das chaves obrigatórias porque lista vazia é resposta válida). Falha
+(teto de iterações, orçamento, ou o modelo parando sem chamar
+`emit_threat_model`) vira `agent.error` durável com origem
+(`modelo`/`politica`/`infra`), mesma régua da RN-059 — nunca resposta vazia
+nem silêncio só em broadcast.
+
+**Lacuna declarada, não bug**: `run_design/2` é ACIONÁVEL, mas nada aciona
+sozinho ainda. O ponto de disparo natural é `assess_implementability` do Dev
+Lead (frente `qa-estrategia`, gate `implementavel`, mesmo ADR 0090) — fora do
+escopo desta entrega, que foi mantida autocontida (nenhum arquivo de outra
+frente tocado: `decide.ts`, `docs/gates.yml` e `dev_lead_tools.ex`
+intocados).
+
+- **Onde:** `apps/engine/lib/engine/gates/secops_agent_server.ex` (`run_design/2`,
+  `handle_cast/2`, `run_appsec_design/3`, `emit_threat_model/3`,
+  `emit_bloqueio_appsec/3`); `apps/engine/lib/engine/gates/appsec_agent.ex`;
+  `apps/engine/lib/engine/gates/appsec_context_builder.ex`;
+  `apps/engine/lib/engine/gates/tools/emit_threat_model.ex`;
+  `apps/engine/lib/engine/gates/hooks/appsec_termination.ex`;
+  `apps/engine/lib/engine/harness/artifact_schemas.ex` (schema `threat_model`)
+- **Teste:** `apps/engine/test/engine/gates/appsec_agent_test.exs`,
+  `apps/engine/test/engine/gates/appsec_context_builder_test.exs`,
+  `apps/engine/test/engine/gates/secops_agent_server_test.exs` (os três
+  testes de `run_design`)
+- **Origem:** [ADR 0090](adr/0090-qa-estrategia-e-appsec-segundo-momento.md)
+
+### RN-361 — O threat model concluído cria TRÊS handoffs, sempre endereçando o LEAD {#rn-361}
+
+`criar_handoffs_appsec/3` (`secops_agent_server.ex:266`) cria um handoff por
+alvo declarado em `docs/fluxo.yml` (`saidas` do `appsec`): arquiteto,
+dev-lead e infra — mesmo padrão de
+`OfferInfraHandoffUseCase`/`ArquitetoServer.executar_offer_infra_handoff/1`
+(chamadas SEPARADAS, uma por alvo, para uma falha de handoff não desfazer os
+outros dois já criados). O id do fluxo é `area-infra`, mas o AGENTE
+endereçável é `"infra"` (`apps/api/src/domain/agents/agent-areas.ts` —
+`lead: 'infra'`), nunca `area-infra`: handoff externo endereça só o LEAD de
+área (ADR 0038), e `CreateHandoffUseCase.assertHandoffTargetAllowed`
+recusaria um `toAgent` que não resolve a um lead/agente-sem-área. Falha de UM
+alvo vira `agent.error` narrado por alvo (RN-116) — os outros dois handoffs
+já criados não são desfeitos.
+
+- **Onde:** `apps/engine/lib/engine/gates/secops_agent_server.ex:55`
+  (`@appsec_handoff_targets`), `:266` (`criar_handoffs_appsec/3`)
+- **Teste:** `apps/engine/test/engine/gates/secops_agent_server_test.exs`
+  ("run_design: threat model concluído emite artifact.threat_model e cria
+  os TRÊS handoffs")
+- **Origem:** [ADR 0090](adr/0090-qa-estrategia-e-appsec-segundo-momento.md)
+
+---
+
+## Analytics e delivery-metricas: os dois papéis viram RELATÓRIO (RN-320..322, ADR 0089)
+
+Decisão consciente do dono do produto de ANTECIPAR a construção dos papéis
+`analytics` e `delivery-metricas` (`docs/fluxo.yml`, `status: proposto`) sem
+esperar o gatilho orgânico que cada um já declarava. Os dois viram um SCRIPT
+só — `apps/api/scripts/analise-funil.ts` — no mesmo formato de
+`medir-execucao.ts` (Fase 13b): `NestFactory.createApplicationContext`,
+`--projeto <uuid>` obrigatório, leitura pura via Drizzle, sem escrita
+nenhuma. A forma é a que o próprio fluxo já prescrevia: `analytics` é
+"absorvido por `medicao`" e `delivery-metricas` "nunca vira agente" —
+nenhum GenServer, nenhum agente de LLM.
+
+### RN-320 — `analise-funil.ts` é script, nunca agente — mesmo esqueleto de `medir-execucao.ts` {#rn-320}
+
+O comando é `pnpm --filter api analise:funil -- --projeto <uuid> [--json]`.
+Só lê `proposed_actions` (filtrado por `actionType IN (git_commit, pr_open,
+git_merge)`) e `projects`, nunca escreve. A guarda
+`if (process.argv[1]?.endsWith('analise-funil.ts')) void main();` no fim do
+arquivo é a mesma de `medir-execucao.ts`: sem ela, importar o módulo no
+teste subiria o Nest inteiro e derrubaria o processo no `process.exit` do
+parser de argumentos.
+
+- **Onde:** `apps/api/scripts/analise-funil.ts:64-73` (`lerOpcoes`),
+  `:256-319` (`main`), `:390` (guarda de execução)
+- **Teste:** `apps/api/test/scripts/analise-funil.spec.ts` (só as funções
+  puras — a parte que fala com o banco é exercitada por execução real,
+  mesmo padrão de `medir-execucao.spec.ts`)
+- **ADR:** [0089](adr/0089-analytics-e-delivery-metricas-como-relatorio.md)
+
+### RN-321 — O funil conta SESSÃO por etapa, só ação `executed`, e o lead time usa `updated_at` da execução {#rn-321}
+
+`calcularFunil` conta quantas sessões produziram pelo menos um `git_commit`,
+`pr_open` e `git_merge` com `status: 'executed'` — uma sessão com três
+commits entra uma vez só em cada etapa que alcançou, nunca três. A taxa de
+conversão de uma etapa é `sessões-da-etapa / sessões-da-etapa-anterior`, e é
+`null` (não `0`, não `Infinity`) quando o denominador é zero — não há
+"conversão de" nada para medir. `calcularLeadTimes` usa `updated_at` da
+linha de `proposed_actions`, não `created_at`: é o instante em que
+`ExecuteGitActionUseCase#record` gravou o `execution_result` de verdade
+(`updateExecutionResult` bumba `updatedAt`), não quando a ação foi
+PROPOSTA — a mesma distinção que `token_usage`/preço congelado já fazem em
+outro contexto (RN-042). Merge cujo `updated_at` precede o do commit (duas
+levas na mesma sessão, ou dado incoerente) é descartado, nunca vira lead
+time negativo.
+
+- **Onde:** `apps/api/scripts/analise-funil.ts:115-160` (`calcularFunil`),
+  `:170-193` (`calcularLeadTimes`)
+- **Teste:** `apps/api/test/scripts/analise-funil.spec.ts` (describe
+  "calcularFunil", "calcularLeadTimes")
+- **ADR:** [0089](adr/0089-analytics-e-delivery-metricas-como-relatorio.md)
+
+### RN-322 — Deployment frequency real filtra merge em branch PROTEGIDA; três métricas ficam DECLARADAS ausentes, nunca aproximadas {#rn-322}
+
+`deploymentFrequencyPorDia` só conta `git_merge` `executed` cujo
+`executionResult.targetBranch` está em `PROTECTED_BRANCHES`
+(`apps/api/src/domain/actions/protected-branches.ts`) — merge numa branch de
+feature não é deploy. Cruza por REFERÊNCIA com o gate `backmerge`
+(`docs/gates.yml`): a evidência dele é CI, em `.release/gate.json`, fora do
+alcance de um script que só lê o banco, então não há junção de dado, só o
+mesmo recorte de branch que o gate observa.
+
+Três métricas saem do relatório com uma seção "Não medido, de propósito" em
+vez de um número aproximado:
+
+1. **Funil de produto completo (ideação → commit).** `sessions` não tem
+   `storyId` — [RN-230](#rn-230) já declara a lacuna na aba Criativo.
+   Fechá-la exige schema novo, fora do escopo desta frente (nenhuma
+   migration).
+2. **Evidência de adoção por feature.** Não é dado que falta coletar: o
+   Brabo não instrumenta os projetos que ele CONSTRÓI, e não há caminho
+   nenhum para essa telemetria existir hoje.
+3. **MTTR e change failure rate.** Exigem sinal de INCIDENTE de produção
+   real — a mesma dependência que `docs/fluxo.yml` já registra para
+   `secops-runtime`/`platform` (`status: proposto`/`planned`, ativação
+   sincronizada com `DEPLOY_ENABLED`).
+
+- **Onde:** `apps/api/scripts/analise-funil.ts:220-247`
+  (`deploymentFrequencyPorDia`), `:372-386` (seção "Não medido" impressa)
+- **Teste:** `apps/api/test/scripts/analise-funil.spec.ts` (describe
+  "deploymentFrequencyPorDia")
+- **ADR:** [0089](adr/0089-analytics-e-delivery-metricas-como-relatorio.md)
+
+---
+
+## `secops-runtime` — relatório de abuso sobre `rate_limit_hits` (RN-375..377, ADR 0091)
+
+Decisão consciente do dono do produto de antecipar o papel `secops-runtime`
+(`docs/fluxo.yml`, `camada_seguranca`), que nasceu `proposto` com o critério
+de separação "produção com tráfego real (pós `DEPLOY_ENABLED` + `platform`
+ativo)". Esse gatilho não disparou — não há tráfego de produção. O que existe
+hoje é `rate_limit_hits` (`RateLimitGuard`, ADR 0027): uma linha por request
+contado, gravada mesmo sob tráfego de dev/CI. `secops-runtime` entra como
+SCRIPT (`pnpm --filter api relatorio:seguranca-runtime`), não agente LLM nem
+`GenServer` — não há decisão a tomar, só dado a agregar.
+
+### RN-375 — O relatório declara a janela, nunca finge um histórico maior {#rn-375}
+
+`DomainGaugesCollector.pruneRateLimit`
+(`apps/api/src/infrastructure/observability/domain-gauges.collector.ts:177-186`)
+apaga hits mais velhos que `2 × RATE_LIMIT_WINDOW_MS` (240s com o default de
+60s), a cada `METRICS_GAUGE_INTERVAL_MS` (15s por padrão) — a tabela nunca
+guarda mais que uns poucos minutos. `relatorio-seguranca-runtime.ts` imprime
+DUAS janelas, nunca uma só: a CONFIGURADA (o teto teórico da poda) e a
+OBSERVADA (o que os dados efetivamente cobrem, do primeiro ao último
+`occurred_at` lido). Quando as duas coincidem, o relatório diz explicitamente
+que é sinal de poda — hits mais antigos podem ter existido e já foram
+apagados — nunca "não houve mais hits que isso".
+
+### RN-376 — O ranking trabalha só com o que `bucket_key` guarda: balde e quando {#rn-376}
+
+`RateLimitGuard.registrarEContar`
+(`apps/api/src/interfaces/http/shared/rate-limit.guard.ts:150-170`) grava só
+`bucket_key` (`user:<uuid>` ou `ip:<endereço>`) e `occurred_at` — NÃO há
+rota, método HTTP nem motivo do bloqueio. `rankingDeBaldes` e
+`interpretarBalde` (`apps/api/scripts/relatorio-seguranca-runtime.ts`)
+classificam por esses dois campos e só eles; um `bucket_key` fora do formato
+`user:`/`ip:` cai em `desconhecido` em vez de estourar, para o script não
+quebrar se um `RateLimitGuard` futuro gravar outro formato. Pedir "ranking de
+IP por rota" seria inventar dimensão que a tabela nunca guardou.
+
+### RN-377 — A seção "não medido" é permanente, e cita as três lacunas por nome {#rn-377}
+
+`montarRelatorio` sempre inclui `naoMedido`: detecção automática de
+incidente, resposta a incidente e postmortem de segurança. As três dependem
+do mesmo gatilho que `docs/fluxo.yml` já declarava para `secops-runtime` —
+tráfego de produção real — e nenhuma delas é simulada com incidente de
+exemplo nem número inventado (mesmo princípio dos ADRs 0041/0042/0077: sem o
+dado real, a lacuna fica visível em vez de fingida). A seção só sai da lista
+quando o produto tiver tráfego real para medir contra ela — não é um TODO a
+apagar na próxima limpeza.
+
+- **Onde:** `apps/api/scripts/relatorio-seguranca-runtime.ts`,
+  `apps/api/package.json` (`relatorio:seguranca-runtime`)
+- **Teste:** `apps/api/test/scripts/relatorio-seguranca-runtime.spec.ts`
+- **ADR:** [0091](adr/0091-secops-runtime-relatorio-de-abuso.md)
+
+---
+
+## `platform` ganha uma primeira entrega: relatório de telemetria sob demanda (RN-385/386, ADR 0092)
+
+### RN-385 — O papel `platform` nasce como SCRIPT de leitura pontual, sobre as mesmas fontes do `DomainGaugesCollector` {#rn-385}
+
+`docs/fluxo.yml` descreve `platform` (`camada_plataforma`) como "SRE / Platform
+— dono do loop de retorno", `status: planned`, com ativação sincronizada a
+`DEPLOY_ENABLED` — que não existe. O dono do produto decidiu antecipar a
+metade que já tem dado real por trás: `pnpm --filter api relatorio:telemetria
+[--projeto <uuid>] [--json]` lê, sob demanda, as MESMAS perguntas que o
+`DomainGaugesCollector` já responde a cada `METRICS_GAUGE_INTERVAL_MS` para o
+scrape do Prometheus — sessões ativas/closing por projeto, tasks bloqueadas
+por projeto, estado do último backup (idade, status, tamanho, sempre GLOBAL,
+nunca por projeto, porque o produto tem um backup só). Não é agente LLM nem
+`GenServer`: é leitura avulsa, sem estado, que termina depois de imprimir.
+
+As consultas SQL são REPLICADAS, não importadas do coletor — os métodos dele
+(`collectSessions`/`collectBlockedTasks`/`collectBackup`) são privados e
+terminam escrevendo num gauge Prometheus (`this.metrics.*.set(...)`); não há
+uma metade pura de "só a query" para reusar sem acoplar um script avulso ao
+ciclo de vida de um `@Injectable` do NestJS. O script também NÃO é um segundo
+coletor: não registra métrica nenhuma, não roda em `setInterval`.
+
+A saída sempre traz "onde ver mais" (os três dashboards versionados em
+`deploy/k8s/observability/dashboards/*.json`, os alertas em
+`deploy/k8s/observability/alerts/brabo-alerts.yaml`, `docs/runbook.md
+#observabilidade` e `pnpm dev:obs` para observabilidade local) — o script
+LINKA para o que já existe, nunca duplica.
+
+- **Onde:** `apps/api/scripts/relatorio-telemetria.ts`; espelha
+  `apps/api/src/infrastructure/observability/domain-gauges.collector.ts`
+- **Teste:** `apps/api/test/scripts/relatorio-telemetria.spec.ts` (funções
+  puras — `parseArgs`, `formatarIdade`, `formatarBytes` — mesmo recorte de
+  `medir-execucao.spec.ts`: a parte que fala com o banco é exercitada rodando
+  o script contra um banco real)
+- **ADR:** [0092](adr/0092-platform-relatorio-de-telemetria-sob-demanda.md)
+
+### RN-386 — O relatório de telemetria declara, sem inventar, o que NÃO mede {#rn-386}
+
+O gatilho real do papel `platform` (`DEPLOY_ENABLED`) não existe: não há
+ambiente de produção com tráfego real, não há SLO numérico definido em lugar
+nenhum do produto, e não há postmortem possível sem incidente de verdade.
+`relatorio-telemetria.ts` diz isso na PRÓPRIA saída, numa seção "não medido",
+em vez de fingir cobertura que não tem — a mesma disciplina do ADR 0042 para
+nota de modelo e do ADR 0077 para qualidade de código: sem o dado real, o
+produto DECLARA a lacuna, nunca inventa o número.
+
+Três lacunas, todas explícitas: **SLO numérico formal** (nenhum está
+definido); **postmortem** (depende de incidente real que não aconteceu); e
+**telemetria de volta ao produto em loop fechado** (o script é leitura
+pontual sob demanda — observar, decidir e agir sozinho é o que tornaria
+`platform` `active` em `docs/fluxo.yml`, e por isso o `gate_saida: { id:
+operavel, status: planned }` do papel permanece `planned`, intocado por esta
+mudança).
+
+- **Onde:** `apps/api/scripts/relatorio-telemetria.ts` (função `imprimir`,
+  seção "Não medido"); `docs/fluxo.yml` (`camada_plataforma › platform ›
+  saidas_alvo`, artefato `telemetria-consolidada`, campo `nota`)
+- **Teste:** cobertura indireta — a seção é texto fixo verificado por leitura
+  do arquivo; não há verdade condicional a testar aqui (nada a errar entre
+  "medido" e "não medido" além do texto em si)
+- **ADR:** [0092](adr/0092-platform-relatorio-de-telemetria-sob-demanda.md)
+
+---
+
+## O papel `dbre` vira dois scripts mecânicos (RN-400..403, ADR 0093)
+
+### RN-400 — O parecer de migração é análise ESTÁTICA de SQL, e ignora o padrão de risco quando ele só aparece em comentário {#rn-400}
+
+`lintarConteudo` (o núcleo puro de `lint-migracao.ts`) varre cada `.sql` de
+`apps/api/src/db/migrations/` linha a linha, sem depender de `--projeto`
+nem de banco — o risco que ele acha é de SCHEMA, não de carga, e por isso
+não depende de volume real de dados nenhum (o critério de separação que
+`docs/fluxo.yml` já declarava para o papel). Cinco padrões, cada um com a
+razão anexada ao achado: `DROP TABLE`/`TRUNCATE` (perda total,
+irreversível), `DROP COLUMN` (perda da coluna, irreversível),
+`ALTER COLUMN ... TYPE`/`SET DATA TYPE` (pode reescrever a tabela inteira)
+e `ADD COLUMN ... NOT NULL` sem `DEFAULT` (falha contra tabela não-vazia —
+o padrão que `0042_tough_captain_midlands.sql` evitou conscientemente,
+com nullable-primeiro-depois-backfill-depois-`SET NOT NULL`).
+
+Linha que começa com `--` (comentário) é ignorada de propósito: este
+repositório explica em prosa, no próprio SQL, por que um padrão foi
+EVITADO — analisar o texto do comentário acharia o padrão exatamente na
+frase que descreve por que ele não foi usado.
+
+- **Onde:** `apps/api/scripts/lint-migracao.ts` (`REGRAS`, linha 75;
+  `lintarConteudo`, linha 126)
+- **Teste:** `apps/api/test/scripts/lint-migracao.spec.ts` — cada padrão
+  individualmente, combinação de vários na mesma migration, e "ignora o
+  padrão de risco quando ele aparece só em COMENTÁRIO"
+- **ADR:** [0093](adr/0093-dbre-linter-de-migracao-e-relatorio-de-backup.md)
+
+### RN-401 — O linter não é gate de CI: varre o repositório inteiro, não o diff da PR {#rn-401}
+
+Rodar `pnpm --filter api lint:migracao` contra as migrations reais do
+repositório ACHA três ocorrências em migrations já mergeadas e aceitas
+(`0006_whole_princess_powerful.sql:22` e `0034_quick_saracen.sql:33` —
+`DROP COLUMN`; `0007_groovy_bullseye.sql:2` — `ALTER COLUMN ... SET DATA
+TYPE`). Isso não é defeito a corrigir de passagem (mesma regra do
+CLAUDE.md que protege os achados Z/AD/AE): são migrations já aceitas, e
+apagá-las apagaria a evidência de por que a decisão foi tomada. É também
+por isso que o script sai `!= 0` mas **não** está wireado em
+`.github/workflows/ci.yml` — um gate que reprova o repositório inteiro
+reprovaria toda PR para sempre, por um achado que não é dela. Virar gate
+de bloqueio de verdade exige escopar ao DIFF contra a base do PR (a mesma
+técnica de `scripts/ci/pr-police.ts`), deixado para quando `dbre` precisar
+BLOQUEAR merge — hoje ele é parecer manual, não veredito automático.
+
+- **Onde:** `apps/api/scripts/lint-migracao.ts` (`principal`, exit code no
+  fim do arquivo); decisão documentada no cabeçalho do arquivo e no ADR
+- **Teste:** não aplicável a CI (não há step); a execução manual contra o
+  repositório real está registrada no ADR 0093, seção Consequências
+- **ADR:** [0093](adr/0093-dbre-linter-de-migracao-e-relatorio-de-backup.md)
+
+### RN-402 — O relatório de backup relê exatamente a lógica de `collectBackup()`, nunca uma segunda forma de calcular {#rn-402}
+
+`relatorio-backup.ts` não é um gauge Prometheus novo — é a MESMA leitura
+de `backup_runs` que `DomainGaugesCollector.collectBackup()` já faz
+(último SUCESSO, para idade e tamanho; a ÚLTIMA execução, para pegar o
+caso de estar falhando há dias com um backup bom mais antigo), sob
+demanda. `avaliarBackup` é pura — recebe as duas linhas e o instante
+atual, devolve `status`
+(`ok`|`atrasado`|`nunca_houve`|`falha_recente_com_sucesso_antigo`). O
+limiar de "atrasado" (26h = `BACKUP_AGE_ATRASADO_SEGUNDOS`) é o MESMO do
+alerta `brabo-backup-atrasado`
+(`deploy/k8s/observability/alerts/brabo-alerts.yaml`), duplicado (não
+importado — o YAML do Grafana não é lido pelo processo Node) e sujeito a
+divergir se um lado mudar sem o outro.
+
+- **Onde:** `apps/api/scripts/relatorio-backup.ts` (`avaliarBackup`, linha
+  82; `BACKUP_AGE_ATRASADO_SEGUNDOS`, linha 54)
+- **Teste:** `apps/api/test/scripts/relatorio-backup.spec.ts` — nunca
+  houve backup, backup ok, atrasado, exatamente no limiar (não conta como
+  atrasado), falha recente com sucesso antigo, atrasado tem prioridade
+  sobre falha recente, idade nunca negativa
+- **ADR:** [0093](adr/0093-dbre-linter-de-migracao-e-relatorio-de-backup.md)
+
+### RN-403 — O relatório de backup NÃO reexecuta o restore; ele aponta para o procedimento já testado {#rn-403}
+
+O procedimento de restaurar de verdade (`make test-restore` /
+`deploy/k8s/test-restore.sh`) já foi executado e está documentado em
+`docs/runbook.md#restore`, com RTO real (~40s contra um banco de ~108 KB)
+registrado na seção "Última execução verificada" daquele documento.
+`relatorio-backup.ts` responde uma pergunta mais estreita e mais
+frequente — "o backup que esse restore usaria está saudável agora?" — e
+cita o runbook para quem precisa de fato restaurar, em vez de duplicar o
+procedimento ou reexecutá-lo.
+
+- **Onde:** `apps/api/scripts/relatorio-backup.ts` (mensagem final de
+  `imprimir`, citando `docs/runbook.md#restore`)
+- **Teste:** não aplicável (é texto estático apontando para o runbook,
+  não lógica); a existência do procedimento testado é RN de
+  `docs/runbook.md#restore` em si
+- **ADR:** [0093](adr/0093-dbre-linter-de-migracao-e-relatorio-de-backup.md)
+
+---
+
+## Auditoria fluxo.yml × código — Onda 2: RN-160 no backend e delegação Dev Lead → dev (RN-404/405, ADR 0094)
+
+Fecha os dois últimos achados da auditoria (seção D,
+`docs/explanation/auditoria-fluxo-vs-codigo.md`): B6 (RN-160 garantida só no
+cliente) e B1 (a delegação Dev Lead → `dev-<modulo>` declarada pelo ADR 0053
+item 5 e nunca implementada).
+
+### RN-404 — "Confirmar arquitetura pronta" (RN-160) é revalidada no BACKEND, não só desabilitada na UI {#rn-404}
+
+[RN-160](#rn-160) garantia a regra ("pelo menos 1 história promovida antes do
+handoff duplo Arquiteto→Dev Lead/Infra") só desabilitando o botão em
+`SessionPage.tsx` — uma chamada HTTP direta a
+`POST /agents/arquiteto/handoff-infra`, sem passar pela UI, ignorava a regra
+por completo. `OfferInfraHandoffUseCase.execute` agora consulta
+`StoryRepository.findByProject(projectId)` e recusa com `BadRequestException`
+quando NENHUMA história do projeto tem `status !== 'draft'` — a checagem vem
+ANTES de gravar `architecture.readiness_confirmed` e ANTES de qualquer
+chamada ao engine (`offerInfraHandoff`/`offerDevHandoff`): uma recusa não
+pode deixar rastro de handoff meio-ofertado no event log, que é imutável.
+`StoryRepository` foi escolhido (e não `ListBacklogUseCase`) por ser mais
+leve — não precisa montar a árvore épico→história→tarefa para responder
+"existe alguma não-draft?".
+
+- **Onde:** `apps/api/src/application/use-cases/agents/offer-infra-handoff.use-case.ts`
+  (linhas 27-34, a checagem; injeção de `StoryRepository` no construtor)
+- **Teste:** `apps/api/test/application/use-cases/agents/offer-infra-handoff.use-case.spec.ts`
+  — zero história promovida recusa com ZERO chamada ao engine e ZERO evento
+  gravado; com ao menos uma `ready`/`in_progress`/`done`, segue o fluxo normal
+- **ADR:** [0094](adr/0094-delegacao-dev-lead-vira-dado.md)
+
+### RN-405 — A delegação Dev Lead → dev vira dado em `delegations`, com `parecerArtifactId` redefinido para "o que justificou a decisão" {#rn-405}
+
+O ADR 0053 (FASE 14d) já previa a delegação Dev Lead → `dev-<modulo>` como
+"o mesmo caminho de QA e Infra" (`delegations`, `area = 'dev'`), mas
+declarou isso fora de escopo. `dev_lead_server.ex` nunca gravava a tabela —
+só QA (`qa_lead_server.ex`) e Infra (`infra_lead_server.ex`) gravavam, e os
+dois do lado ENGINE, porque é lá que o subagente produz um PARECER (veredito
+de rodada única) que justifica `parecerArtifactId`.
+
+O Dev Lead não tem esse padrão: a ativação de um `dev-<modulo>` acontece do
+lado API, em `AcceptParallelizationUseCase.execute` — chamada tanto pelo
+caminho direto (`RequestParallelizationUseCase`, abaixo do teto de sessão da
+[RN-083](#rn-083)) quanto pelo aprovado (`ExecuteParallelizationUseCase`,
+depois que o usuário aprova a `proposed_action` tipo `parallelize`). A
+gravação entrou DENTRO desse método — cobre os dois caminhos de graça,
+porque os dois já convergem ali —, com `status: 'completed'` REDEFINIDO para
+esta área: significa "a delegação foi EFETIVADA" (o agente subiu), não "o
+subagente terminou e emitiu parecer" como em QA/Infra (decisão registrada no
+[ADR 0094](adr/0094-delegacao-dev-lead-vira-dado.md)).
+
+`parecerArtifactId` aponta para o `id` do evento `artifact.module_map` mais
+recente e vigente do projeto — obtido de
+`SessionEventRepository.listByTypeForProject(projectId, 'artifact.module_map')`
+(método genérico já existente, usado por `computeCoverage` para
+`artifact.business_rule`; nenhuma consulta nova foi escrita, só uma chamada a
+mais dele — o último item da lista é o mais recente, porque a função ordena
+por `createdAt` ASC) — o artefato que justificou a decisão de delegar.
+`area: 'dev'`, `leadAgent: 'dev-lead'`, `subagent` é o id exato do agente
+ativado (`extraDevAgentId(module)`, a MESMA função que constrói o id em todo
+o resto do use case — nenhum formato novo). Sem `artifact.module_map` no
+projeto (não deveria acontecer — é entrada obrigatória do Dev Lead em
+`docs/fluxo.yml`), a delegação NÃO é gravada com um id inventado: só loga o
+estado inesperado, pela mesma lição da RN-059 (nunca falha silenciosa, mas
+também nunca finge uma justificativa que não existe). E falha de
+`RecordDelegationUseCase.execute` (ex.: banco fora do ar) é capturada e
+logada, nunca propagada — a ativação do dev agent já é sucesso quando a
+tentativa de gravar a delegação acontece, e não pode ser derrubada por uma
+gravação auxiliar.
+
+- **Onde:** `apps/api/src/application/use-cases/execution/accept-parallelization.use-case.ts`
+  (`recordDevDelegation`, chamado ao fim de `execute`)
+- **Teste:** `apps/api/test/application/use-cases/execution/accept-parallelization.use-case.spec.ts`,
+  describe "delegação Dev Lead → dev (área dev, ADR 0094)" — grava com
+  `area: 'dev'` apontando pro module_map mais recente; sem module_map não
+  grava (e não lança); `RecordDelegationUseCase` falhando não derruba a
+  ativação
+- **ADR:** [0094](adr/0094-delegacao-dev-lead-vira-dado.md)
+
+---
+
+## Auditoria fluxo.yml × código — Onda 6 (última): o gate `necessidade-validada` (RN-406, ADR 0095)
+
+Fecha o último achado do plano da auditoria (seção D,
+`docs/explanation/auditoria-fluxo-vs-codigo.md`) — B2. As outras cinco
+ondas já tinham fechado (a 3, 4 e 5 antecipadas fora de ordem pelos ADRs
+0089/0090; a 1 e a 2 nos PRs anteriores). `docs/fluxo.yml` (papel
+`criativo`) declarava `gate_saida: { id: necessidade-validada, status:
+proposto }` desde o ADR 0085 sem mecanismo nenhum atrás — e
+`modelo-de-time.md` já registrava por que: o Criativo (o modelo) decidir
+sozinho que a necessidade que ele mesmo produziu está validada seria
+autovalidação, não gate de verdade.
+
+### RN-406 — O gate `necessidade-validada` se fecha com um clique SEPARADO do usuário, nunca com o Criativo se autovalidando {#rn-406}
+
+`SessionPage.tsx` ganha um terceiro botão de confirmação, no MESMO padrão
+interacional de "Estou pronto para produzir" (RN-142) e "Confirmar
+arquitetura pronta" ([RN-160](#rn-160)): "Confirmar necessidade validada"
+(`handleValidateNecessity`) chama `POST
+.../agents/criativo/validate-necessity`, que grava `necessity.validated`
+com `payload.productBriefId` apontando para o `artifact.product_brief`
+mais recente da sessão.
+
+O botão só habilita DEPOIS que `confirm_readiness` já consolidou o
+`product_brief` (`hasProductBrief`, `events.some(e => e.type ===
+'artifact.product_brief')`) — não faz sentido "validar" um resumo
+executivo que ainda não foi produzido, e é essa a leitura mais
+consistente com `docs/fluxo.yml`: `necessidade-validada` é gate de SAÍDA
+do Criativo, o momento em que o trabalho dele já entregou um artefato
+concreto. `ValidateNecessityUseCase` revalida a mesma pré-condição no
+BACKEND (`SessionEventRepository.listByTypeInSession(sessionId,
+'artifact.product_brief')`, pega o último por `seq`) — a UI desabilitada
+sozinha não bastaria, mesma lição da [RN-404](#rn-404).
+
+Diferente de `OfferInfraHandoffUseCase` (RN-160), esta confirmação NÃO
+sinaliza o engine: o handoff Criativo→PO já aconteceu dentro do próprio
+`confirm_readiness`
+(`CriativoServer.executar_confirm_readiness/1`), então não há agente
+nenhum esperando por este evento — ele é só o registro de que um humano
+validou o MÉRITO do que já foi entregue. `ValidateNecessityUseCase` não
+recebe `ApiToEngineClient` no construtor.
+
+`docs/gates.yml` ganha o gate `necessidade-validada`: `status: active`,
+`aprovacao_humana: true` (é literalmente um clique humano),
+`verificacao: script`, mas `severidade: warn` — nada no produto hoje
+CONSULTA a passagem deste gate antes de deixar o PO seguir (diferente de
+`story-promovida`/`plano-de-adocao`, que são `block` porque uma trava
+real de código os impede de serem pulados). `docs/fluxo.yml` (papel
+`criativo`) passa `status: proposto` → `status: ativo`.
+
+- **Onde:** `apps/api/src/application/use-cases/agents/validate-necessity.use-case.ts`;
+  `apps/api/src/interfaces/http/agents/agents.controller.ts`
+  (`validateNecessityHandoff`); `apps/web/src/routes/SessionPage.tsx`
+  (`hasProductBrief`, `necessidadeJaValidada`, `handleValidateNecessity`)
+- **Teste:** `apps/api/test/application/use-cases/agents/validate-necessity.use-case.spec.ts`
+  — sem `product_brief`, recusa ANTES de gravar qualquer evento; com um ou
+  mais, grava referenciando o MAIS RECENTE;
+  `apps/web/src/routes/SessionPage.validar-necessidade.test.tsx` — botão
+  desabilitado sem `product_brief`, habilitado com ele, some depois de
+  `necessity.validated`
+- **ADR:** [0095](adr/0095-gate-necessidade-validada.md)
+
+---
+
+### RN-407 — O PO lê o funil de entrega e DORA parcial, terceira leitura escopada ao projeto {#rn-407}
+
+O PO ganhou uma TERCEIRA ferramenta de leitura — `listar_metricas_de_produto`
+(`:direct`, sem parâmetro nenhum) — servida por
+`GET /internal/projects/:projectId/product-metrics`, mesmo desenho das duas
+irmãs da [RN-164](#rn-164): escopo fechado no projeto, sem termo de busca,
+sem paginação.
+
+`docs/fluxo.yml` (papel `po`, entrada `metricas-de-produto`) declarava
+`status: lacuna` desde o [ADR 0089](adr/0089-analytics-e-delivery-metricas-como-relatorio.md),
+que já tinha entregue o DADO — o script `pnpm --filter api analise:funil`
+mede o funil real sessão → commit → PR → merge, o lead time real e a
+deployment frequency real a partir de `proposed_actions`. O que faltava era
+só o MECANISMO: o PO nunca tinha como reler esse relatório dentro do turno.
+Fecha o item B4 da auditoria `fluxo.yml` × código
+([docs/explanation/auditoria-fluxo-vs-codigo.md](explanation/auditoria-fluxo-vs-codigo.md)) —
+a ÚLTIMA pendência da tabela "Backlog do modelo de time"
+(docs/explanation/backlog.md), que fica vazia depois desta.
+
+O CÁLCULO é o MESMO do script, nunca duplicado: as funções puras
+(`calcularFunil`/`calcularLeadTimes`/`leadTimeMedioMs`/
+`deploymentFrequencyPorDia`) e a query que monta `AcaoGit[]`
+(`buscarAcoesGitDoFunil`) foram extraídas de `apps/api/scripts/analise-funil.ts`
+para `apps/api/src/application/services/funil-metrics.ts` — um caso de uso em
+`src/` não pode importar de `scripts/`, e o script passou a REEXPORTAR dali
+em vez de definir localmente, sem mudar assinatura nem comportamento (o
+teste de regressão do script continua verde sem ser tocado).
+
+O corpo JSON que a rota devolve **não tem campo nenhum** para as três
+ausências permanentes que o script já declarava em texto ("Não medido, de
+propósito": funil de produto completo ideação → commit, evidência de adoção
+por feature, MTTR/change failure rate) — o shape do relatório nunca reservou
+espaço para elas. A ferramenta do PO cita as três pelo NOME no TEXTO que
+devolve ao modelo, sempre, e não só quando o número dá zero: sem essa
+seção o PO leria só os números do funil e concluiria por omissão que não há
+lacuna nenhuma.
+
+- **Onde:** `apps/api/src/application/services/funil-metrics.ts`;
+  `apps/api/scripts/analise-funil.ts` (reexporta);
+  `apps/api/src/application/use-cases/backlog/list-product-metrics.use-case.ts`;
+  `apps/api/src/interfaces/http/internal/internal-projects.controller.ts`;
+  `apps/api/src/interfaces/http/internal/dto/product-metrics.response.dto.ts`;
+  `apps/engine/lib/engine/harness/tools/listar_metricas_de_produto.ex`;
+  `apps/engine/lib/engine/agents/po_server.ex`;
+  `apps/engine/lib/engine/sessions/engine_api_client.ex`
+- **Teste:** `apps/api/test/application/use-cases/backlog/list-product-metrics.use-case.spec.ts`;
+  `apps/api/test/scripts/analise-funil.spec.ts` (regressão — continua
+  importando de `scripts/analise-funil.ts`, sem alteração);
+  `apps/engine/test/engine/harness/tools/listar_metricas_de_produto_test.exs`;
+  `apps/engine/test/engine/agents/po_server_test.exs`
+- **Origem:** mesmo padrão da [RN-164](#rn-164) (leitura de agente escopada
+  ao projeto, sem efeito externo, sem `proposed_action`); o dado é do
+  [ADR 0089](adr/0089-analytics-e-delivery-metricas-como-relatorio.md) — esta RN só
+  fecha o mecanismo de leitura que faltava.
+
+### RN-408 — `MAIL_TRANSPORT=smtp` deriva o boot pelo padrão da RN-114, sem o default público {#rn-408}
+
+Fecha o item de backlog "SMTP real no MailSender" ([ADR 0096](adr/0096-smtp-real-no-mailsender.md)).
+`resolverConfigSmtp()` valida `SMTP_HOST`/`SMTP_USER`/`SMTP_PASSWORD`/
+`SMTP_FROM` no MESMO formato da [RN-114](#rn-114) — em produção
+(`NODE_ENV === 'production'`), cada um derruba o boot se estiver ausente, só
+com espaços, ou (no caso de `SMTP_HOST`) igual ao literal de exemplo
+publicado (comentado) em `.env.example`. `SMTP_FROM` tem uma checagem a
+mais: precisa casar `"Nome <email@dominio>"` ou só `email@dominio`.
+`SMTP_PORT` inválida (não numérica ou fora de 1–65535) também derruba o boot
+em produção.
+
+A diferença para a RN-114 original é estrutural, não de rigor: os quatro
+segredos da RN-114 (`AUTH_JWT_SECRET` e companhia) TÊM um default de
+desenvolvimento público, e é a existência desse default que torna "não
+vazia" uma checagem insuficiente. Aqui não há default nenhum — `SMTP_HOST`
+fica em branco se ninguém setar —, então a régua inteira só é aplicada
+quando `NODE_ENV=production` E `MAIL_TRANSPORT=smtp`. Fora de produção, ou
+com o transporte em `log` (o default, inclusive em produção), nenhuma das
+cinco variáveis é exigida: enviar e-mail de verdade é opt-in do operador, e
+sem esse opt-in explícito o comportamento continua sendo o log-only de
+sempre — inclusive em produção, para quem já roda o produto hoje não
+quebrar ao atualizar.
+
+A validação roda dentro do construtor de `SmtpMailSender`, exercitado pelo
+`useFactory` de `AuthUseCasesModule` na montagem do grafo de providers do
+Nest (`NestFactory.create()`) — não por uma chamada eager em `main.ts`, como
+os quatro segredos da RN-114 original. A diferença é deliberada: aqueles
+quatro protegem caminho que QUALQUER requisição pode exercitar a qualquer
+momento, então falhar antes de subir importa. `SmtpMailSender` só é
+instanciado quando o operador optou por `smtp`, e `AuthUseCasesModule` é
+importado incondicionalmente (via `AuthHttpModule`), então a validação
+ainda acontece no boot — mesmo desenho que `CREDENTIALS_MASTER_KEY` já usa
+(validada no construtor de `EnvelopeEncryptionService`, exercitado pela
+mesma montagem de grafo).
+
+- **Onde:** `apps/api/src/infrastructure/mail/smtp-config.ts`
+  (`resolverConfigSmtp`, `resolverModoDeTransporte`),
+  `apps/api/src/infrastructure/mail/smtp-mail-sender.ts` (`SmtpMailSender`,
+  chama `resolverConfigSmtp()` no construtor),
+  `apps/api/src/application/use-cases/auth/auth-use-cases.module.ts`
+  (`useFactory` do `MailSender`)
+- **Teste:** `apps/api/test/infrastructure/mail/smtp-config.spec.ts`
+  (mesmo padrão de `auth-key-material.spec.ts`/`service-token.spec.ts`),
+  `apps/api/test/infrastructure/mail/smtp-mail-sender.spec.ts`
+- **Origem:** [ADR 0096](adr/0096-smtp-real-no-mailsender.md), estendendo o
+  padrão da [RN-114](#rn-114) (que por sua vez estende o
+  [ADR 0059](adr/0059-segredo-do-state-de-oauth-sem-default.md))
+
+---
+
+## "N agentes online" no dashboard — status AO VIVO, nunca presença histórica (RN-409, ADR 0097)
+
+Item do backlog anterior. Investigação prévia (`docs/explanation/backlog.md`)
+confirmou que não existia agregado de liveness nenhum — nem por projeto, nem
+por workspace: o que existia era só presença HISTÓRICA
+(`RosterFacts` — "já apareceu na sessão alguma vez") e status ao vivo de
+VERDADE só no cliente, derivado do event log, e só quando um projeto está
+ABERTO (`deriveAgentRoster`). O card do dashboard hoje forçava
+`() => 'ocioso'` porque não desenhava status nenhum — este é o hardcode que
+a RN substitui.
+
+### RN-409 — "N online" soma dois mecanismos pela MESMA régua: não ocioso, não travado {#rn-409}
+
+`ProjectCardSummary.onlineAgentCount` (`GET /workspaces/:workspaceId/
+projects-summary`) é a contagem de agentes ONLINE agora — trabalhando ou com
+uma pendência esperando decisão —, nunca tamanho de equipe. Chamar de
+"online" um número que na verdade é "já apareceu alguma vez" seria enganoso
+(mesmo princípio dos [ADR 0041](adr/0041-base-openai-compativel-e-contrato-de-llm-providers.md)/
+[0042](adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md)/
+[0077](adr/0077-ranking-de-modelos-por-capacidade-sem-nota-inventada.md) contra dado
+fingido).
+
+Duas FONTES, uma régua:
+
+- **Dev agents** — `engine.dev_agent_states.status`, agregado em lote por
+  `project_id` (`status NOT IN ('idle', 'idle_tripped')`). `working`,
+  `awaiting_gate` e `awaiting_approval` contam (RN-047/ADR 0052 — os cinco
+  estados da máquina do dev); `idle`/`idle_tripped` não. `dev-<modulo>` e
+  `dev-<modulo>-2` são chaves DISTINTAS (`agent_id` na tabela), então contam
+  separado sem esforço nenhum — é a própria chave primária que já separa.
+- **Agentes conversacionais** (criativo/po/arquiteto/dev-lead/ux-designer/
+  staff/infra) — último evento `agent.status` de cada `actor_id`, na sessão
+  MAIS RECENTE do projeto (mesmo escopo de sessão que o resto de `RosterFacts`
+  usa, RN-090). `agent.status` só tem três valores possíveis
+  (`Engine.Sessions.LiveBroadcast.agent_status/4` recusa qualquer outro):
+  `working`/`awaiting_approval` contam, `idle` não.
+
+**QA/SecOps NUNCA contam** — não é filtro, é AUSÊNCIA de dado: nenhum dos
+dois emite `agent.status` (rodam veredito único por invocação, sem noção de
+"ocioso" entre chamadas — o status deles vem de `pr.gate_changed`/
+`infra.gate_changed`, um mecanismo à parte que `deriveAgentRoster` já trata
+separado). Não precisou de exclusão explícita: a consulta só soma o que tem
+o tipo de evento certo.
+
+A régua é a MESMA que `deriveAgentRoster` já aplicaria se o projeto estivesse
+aberto (`'trabalhando'`/`'aguardando'` no cliente ≅ `working`/
+`awaiting_gate`/`awaiting_approval` no backend) — os DOIS caminhos calculam
+"online" a partir do mesmo eventual estado (event log/tabela de estado
+persistida), só que por MECANISMOS diferentes (agregação SQL no backend,
+dobra sobre eventos já buscados no cliente), no mesmo espírito de
+`infraActive`/`uxDesignerActive`/`staffActive` (RN-090/RN-287: duas fontes,
+uma régua). Não há função compartilhada entre `apps/api` e `apps/web` para
+isto — os dois já divergem de linguagem/runtime para o resto de `RosterFacts`
+também, e introduzir um pacote compartilhado só para uma contagem seria
+peso maior que o problema.
+
+**Consulta nova contra schema que a api não migra.** `engine.dev_agent_states`
+é tabela do ENGINE (Ecto, schema Postgres `"engine"`), mesmo banco físico,
+mesma conexão — não uma segunda fonte de dados, um segundo NAMESPACE no
+mesmo Postgres. O precedente já existia: `apps/api/scripts/medir-execucao.ts`
+já lê `engine.oban_peers` pelo mesmo caminho (raw SQL via Drizzle), só que
+como SCRIPT manual, nunca testado. Esta RN eleva o padrão para código de
+PRODUÇÃO testado — ver o [ADR 0097](adr/0097-leitura-direta-do-schema-do-engine-para-online-agent-count.md)
+para a decisão de NÃO expor isto como rota HTTP interna no engine.
+
+**Custo medido, não fingido grátis.** As duas consultas novas levam o total
+do read model de DOZE para CATORZE (RN-090 continua valendo — catorze é
+CONSTANTE, provado por `projects-summary.repository.spec.ts` contando idas
+ao banco com 2 e com 20 projetos). Nenhuma tem `WHERE` por tempo — a de
+`agent.status` escaneia os mesmos `session_events` das sessões mais recentes
+que `lastEvents`/`marcos` já escaneiam ao lado dela, então o custo marginal é
+o de mais um filtro de `type` sobre um plano de consulta que já ia acontecer,
+não uma tabela nova sendo varrida do zero. Lacuna DECLARADA: não há execução
+real recente (dogfooding) com volume de produção para medir `ms` de verdade
+contra a régua da Fase 22 (525 mil linhas, `EXPLAIN ANALYZE`) — as duas
+consultas novas ficam sem número medido, só o argumento estrutural acima.
+
+- **Onde:** `apps/api/src/application/ports/projects-summary-repository.port.ts`,
+  `apps/api/src/infrastructure/persistence/drizzle/projects-summary.repository.ts`,
+  `apps/api/src/interfaces/http/iam/dto/iam.response.dto.ts`,
+  `apps/web/src/lib/api-types.ts`, `apps/web/src/components/ProjectCard.tsx`,
+  `apps/web/src/routes/Dashboard.tsx`
+- **Teste:** `apps/api/test/infrastructure/persistence/drizzle/projects-summary.repository.spec.ts`
+  (`describe('onlineAgentCount (RN-409)')` — dev agent working/idle/
+  idle_tripped, awaiting_gate/awaiting_approval, duas instâncias do mesmo
+  agente-base, agente conversacional working/idle/awaiting_approval, só o
+  ÚLTIMO `agent.status` conta, QA/SecOps nunca contam, soma entre as duas
+  fontes, isolamento entre projetos);
+  `apps/api/test/support/global-setup.ts` (`ensureEngineFixture` — a tabela
+  do engine criada como fixture MÍNIMA e declarada, só para o teste acima
+  poder existir);
+  `apps/web/src/components/ProjectCard.test.tsx` (badge "N online" some com
+  `0`/`undefined`, aparece com `onlineAgentCount > 0`)
+- **Origem:** `docs/explanation/backlog.md` (item herdado da FASE 13c/
+  colheita do dogfooding); decisão de produto de que o número tinha de ser
+  liveness de verdade, não presença histórica, registrada no prompt que
+  encomendou esta correção
+
+---
+
+### RN-411 — O quarto sinal de trabalho pendente: dev agents falam `dev.*`, não `agent.status` {#rn-411}
+
+Achado por USO real, não por teste: numa sessão de execução, cinco dev
+agents subiram, ficaram `idle_tripped` (o circuit breaker da
+[RN-047](#rn-047), travados esperando o usuário desbloquear uma task
+manualmente), e o heartbeat de 30 segundos
+(`Engine.Sessions.SessionServer.handle_info(:heartbeat_timeout, state)`)
+fechou a sessão por baixo enquanto o trabalho — e a espera por decisão
+humana — continuava.
+
+`GetSessionPendingWorkUseCase` já tinha um terceiro sinal
+([RN-064](#rn-064)) para o mesmo problema: agente ativado, sem `idle`
+posterior, segura a sessão. Mas esse sinal só lê `agent.status`, o
+vocabulário dos agentes CONVERSACIONAIS (Criativo/PO/Arquiteto/Dev
+Lead/UX Designer/Staff/Infra). `Engine.Dev.DevAgentServer` (via
+`Engine.Dev.AgentIo`) nunca emite `agent.status` — usa vocabulário
+PRÓPRIO no event log da sessão: `dev.started`, `dev.working`,
+`dev.awaiting_gate`, `dev.awaiting_approval`, `dev.idle`,
+`dev.idle_tripped`, `dev.blocked`, `dev.error`. Uma sessão de execução
+com dev agent trabalhando OU travado sempre devolvia `pending: false`
+pelo terceiro sinal, porque nenhum `agent.status` existe para ele.
+
+O QUARTO sinal busca o ÚLTIMO evento `dev.*` de cada `actor.id`
+(`dev-<modulo>`/`dev-<modulo>-2`, a mesma chave da
+[RN-195](#rn-195)) que já apareceu na sessão — igual ao terceiro sinal,
+mas sobre múltiplos tipos de evento em vez de um só, porque o estado do
+dev agent não é UM tipo com um `payload.status` variável, são tipos DE
+evento distintos por transição. A régua: `pending: true` quando o
+último for `dev.working`, `dev.blocked` ou `dev.idle_tripped` — os três
+significam "tem trabalho rolando ou um humano precisa agir", e travado
+esperando desbloqueio É trabalho pendente (é literalmente o que o
+usuário estava fazendo quando a sessão fechou na execução real). Só
+`dev.idle` (sem tarefa nenhuma pra pegar, drenado de verdade) não
+conta.
+
+`dev.awaiting_gate` e `dev.awaiting_approval`, como último evento, NÃO
+disparavam este sinal originalmente — ficaram de fora da régua tal como
+decidida à época. `awaiting_gate` era uma lacuna residual CONHECIDA; a
+[RN-412](#rn-412) a fechou, junto com `awaiting_approval` (por um
+argumento novo, não o original — ver RN-412).
+
+- **Onde:** `apps/api/src/application/use-cases/sessions/get-session-pending-work.use-case.ts`
+- **Teste:** `apps/api/test/application/use-cases/sessions/get-session-pending-work.use-case.spec.ts`
+  (dev agent `dev.working`/`dev.blocked`/`dev.idle_tripped` como último
+  evento → `pending: true`; `dev.idle` → `pending: false`; sessão sem
+  evento `dev.*` preserva o comportamento anterior; só o ÚLTIMO evento de
+  cada agente importa; `dev-<modulo>-2` também segura; isolamento entre
+  sessões)
+- **Origem:** achado por uso real — sessão de execução real com cinco dev
+  agents em `idle_tripped` fechada pelo heartbeat enquanto o usuário
+  ainda desbloqueava tarefas manualmente
+
+---
+
+### RN-412 — `dev.awaiting_gate`/`dev.awaiting_approval` seguram a sessão; a janela efetiva de compactação é coerente com o transporte {#rn-412}
+
+Achado por USO real ("nas PRs sempre está estourando entity too
+large"), com dois defeitos que se encadeiam. O gate de QA/SecOps
+morria com `413 request entity too large` → o dev agent que esperava o
+veredito ficava preso em `dev.awaiting_gate` indefinidamente → esse
+estado NÃO era um dos três que a [RN-411](#rn-411) segurava → o
+heartbeat de 30s fechava a sessão por baixo → a aba Executores exigia
+sessão ativa (`findActiveExecutionSession`) e apagava o roster inteiro,
+mesmo com trabalho real pendurado.
+
+**A causa do 413 era da própria api do Brabo, nunca do provider de
+LLM** — ver [ADR 0098](adr/0098-limites-de-transporte-e-janela-efetiva-de-compactacao.md).
+Duas correções, as duas necessárias (uma sem a outra só adia o
+estouro):
+
+1. `apps/api/src/main.ts` nunca configurou limite de body do Express —
+   valia o default de 100 KB, o gargalo mais estreito no sentido
+   engine→api (o Phoenix aceita até 8 MB). `POST
+   /internal/sessions/:sessionId/llm-turn` reenvia o histórico INTEIRO
+   da conversa a cada iteração do `ToolLoop`, e 3-4 tool results de
+   32 KiB (teto individual da RN-150) já somavam mais que 100 KB.
+   `API_JSON_BODY_LIMIT` (default `10mb`) fecha essa ponta.
+2. `Engine.Harness.ContextManager.Default` tinha dois defeitos que
+   deixavam a compactação inalcançável antes do corpo estourar:
+   `estimate/1` contava só `content`, então mensagens de `assistant`
+   com `toolCalls` pesados custavam ~zero tokens na estimativa; e a
+   janela de compactação usava só `context_window` (128.000 tokens nos
+   agentes de gate — `qa_automacao_agent.ex`, `qa_performance_seguranca_agent.ex`,
+   `qa_estrategia_agent.ex`, `appsec_agent.ex`, `dev_agent_server.ex`),
+   dando ~350 KB antes de compactar (`threshold` 0.7 × janela). A
+   janela EFETIVA agora é `min(context_window, teto_de_transporte)`
+   (`transport_max_body_bytes`, config única, default 8 MiB), e o corte
+   sempre acontece em FRONTEIRA DE ITERAÇÃO do `ToolLoop`
+   (`group_by_iteration/1`) — nunca separando uma mensagem `assistant`
+   com `toolCalls` dos `role: "tool"` que a respondem, que quebraria o
+   protocolo de tool-use do provider.
+
+**A régua de trabalho pendente** (`DEV_PENDING_TYPES`,
+`get-session-pending-work.use-case.ts`) ganhou dois tipos:
+`dev.awaiting_gate` (o argumento original — o gate agora não deveria
+mais morrer, mas travar a sessão por causa dele nunca foi correto, é
+defesa em profundidade) e `dev.awaiting_approval`, por um argumento
+DIFERENTE do que a RN-411 tinha descartado: a decisão de
+aprovação/negação grava `proposed_actions.status` de forma SÍNCRONA na
+transação do `ApproveActionUseCase` (o segundo sinal já não vê mais
+`pending` ali), mas a retomada do dev agent é ASSÍNCRONA — só depois de
+`avisarQuemEsperava()` gravar `task.action_settled`/`task.pr_settled`
+na outbox é que `Engine.Outbox.Drain` enfileira o job do Oban que
+acorda `DevAgentServer`. Nessa janela, nada segurava a sessão: o mesmo
+defeito da RN-411, um nível mais fundo.
+
+**A aba Executores/Visão Geral** tinham o defeito irmão do lado web:
+`executionActivated` era derivado de `events.some((e) => e.type ===
+'execution.activated')` sobre a janela de só 200 eventos de
+`useSessionEvents` (`{ limit: 200, latest: true }`) — `execution.activated`
+é dos PRIMEIROS eventos de uma sessão de execução e saía da janela em
+qualquer sessão real. O valor correto já existia, agregado sobre TODOS
+os eventos (`bool_or(...)`, [RN-090](#rn-090)), no resumo do workspace
+(`ProjectCardSummary.roster.executionActivated`) — `ProjectExecutorsTab.tsx`
+e `ProjectOverviewTab.tsx` passaram a consumi-lo em vez de derivar da
+janela. `gatesEverOpened` sofre da MESMA classe de defeito e ficou
+DECLARADO como limitação conhecida, não corrigido aqui — corrigi-lo
+exigiria mudar a assinatura de `deriveAgentRoster`/`rosterFactsFromEvents`,
+fora do escopo desta correção.
+
+- **Onde:** `apps/api/src/main.ts`, `apps/engine/lib/engine/harness/context_manager.ex`,
+  `apps/engine/lib/engine/harness/tokenizer.ex`,
+  `apps/api/src/application/use-cases/sessions/get-session-pending-work.use-case.ts`,
+  `apps/web/src/routes/ProjectExecutorsTab.tsx`, `apps/web/src/routes/ProjectOverviewTab.tsx`
+- **Teste:** `apps/api/test/main.spec.ts` (body de 1 MB aceito; acima do
+  limite → 413); `apps/engine/test/engine/harness/context_manager_test.exs`
+  (toolCalls pesados disparam compactação; `:pinned` sobrevive; teto de
+  transporte força compactação mesmo com janela de modelo grande);
+  `get-session-pending-work.use-case.spec.ts` (último evento
+  `dev.awaiting_gate`/`dev.awaiting_approval` → `pending: true`);
+  `ProjectExecutorsTab.test.tsx`/`ProjectOverviewTab.test.tsx` (sessão
+  com >200 eventos ainda mostra o roster via resumo agregado)
+- **Origem:** achado por uso real — "nas PRs sempre está estourando
+  entity too large", investigado em conjunto com o dono do produto
+
+---
+
+### RN-413 — Templates de prompt vivem fora do código, versionados no grafo {#rn-413}
+
+Todo prompt de agente era heredoc Elixir inline até esta entrega —
+identidades (`Engine.Harness.Agents`), kickoffs de PO/Arquiteto/Dev
+Lead/UX/Infra, o prompt de sumarização do `ContextManager`. Um template
+de prompt agora pode viver como `(:PromptTemplate {name})-[:HAS_VERSION]->
+(:PromptVersion {version, body, hash, active})` no Neo4j, gravado via
+`POST /internal/graph/prompt-templates` e lido via `GET
+/internal/graph/prompt-templates/:name`. Upsert é idempotente por hash —
+gravar o MESMO conteúdo duas vezes não cria versão nova, só a versão com
+hash igual já existente é devolvida.
+
+Primeira leva extraída para `prompts/*.md` (front-matter `name`/`version`,
+placeholders documentados numa seção "Variáveis" para trechos que no
+`.ex` original eram interpolação): `ux-designer-identity`,
+`psychologist-kickoff`, `anamnese-kickoff`, `context-manager-summarize`.
+`scripts/dev/seed-prompts.ts` lê `prompts/*.md`, calcula hash sha256 do
+corpo e envia ao endpoint acima. **Nenhum `.ex` foi editado nesta
+entrega** — os quatro GenServers continuam com o texto inline; consumir
+os templates do grafo (fonte `:graph` do `InstructionFiles`, precedência
+`db > graph > dir > root`) é a Onda seguinte, declarada fora daqui.
+
+- **Onde:** `apps/api/src/application/use-cases/graph/upsert-prompt-template.use-case.ts`,
+  `get-prompt-template.use-case.ts`; `apps/api/src/interfaces/http/internal/internal-graph.controller.ts`;
+  `prompts/*.md`, `prompts/README.md`; `scripts/dev/seed-prompts.ts`
+- **Teste:** casos de uso com `GraphStore` mockado (upsert com mesmo hash
+  não duplica) + teste de integração contra Neo4j real, pulando
+  graciosamente quando indisponível; `scripts/dev/seed-prompts.spec.ts`
+  (parsing de front-matter, hash determinístico, template malformado
+  reprova com mensagem clara)
+- **Origem:** decisão do dono do produto, inspirada no repositório
+  [ErickWendel/neo4j-ai-experiments](https://github.com/ErickWendel/neo4j-ai-experiments)
+  (ver [ADR 0099](adr/0099-neo4j-grafo-de-conhecimento-e-templates.md))
+
+---
+
+### RN-414 — `rag_search`: agentes ganham a ferramenta que o produto nunca tinha exposto {#rn-414}
+
+`grep -rn "rag" apps/engine/lib` dava ZERO ocorrências antes desta
+entrega — o RAG completo (pgvector, busca híbrida) só era consumido pela
+aba web "Chat RAG". A tool nova `rag_search`
+(`apps/engine/lib/engine/harness/tools/rag_search.ex`, categoria
+`:direct`, leitura não é efeito externo) chama `POST /internal/rag/search`
+— rota nova que REUSA `HybridSearchUseCase` sem duplicar a lógica de
+busca — e devolve hits formatados com citação (`path` + trecho), sempre
+com `degraded: true` visível no INÍCIO do texto quando o embedding não
+estava disponível (nunca escondido pelo corte de teto).
+
+Tetos próprios, no espírito da RN-150: `top_k` clampado a 10 dentro da
+própria tool (não confia no que a api aceitaria), teto de 16 KiB no texto
+formatado (menor que os 32 KiB de `search_workspace`/`read_file` — cada
+hit de RAG já é chunk+excerpt inteiro). Falha de rede vira erro legível
+ao modelo, nunca crash do `ToolLoop` (RN-163).
+
+Registrada em `Engine.Harness.Tools` (PO/Arquiteto/conversacionais) e
+`Engine.Dev.Tools` (dev agent); estendida também aos gates de leitura que
+já citam ADR/convenção indexada (QA-automação, QA-estratégia, AppSec,
+QA-performance/segurança) — não a `Infra.WorkflowsAgent` nem
+Psicólogo/Anamnese, que raciocinam sobre event log, não sobre docs/código
+do projeto.
+
+- **Onde:** `apps/engine/lib/engine/harness/tools/rag_search.ex`;
+  `apps/engine/lib/engine/sessions/engine_api_client.ex` (`rag_search/4`);
+  `apps/api/src/interfaces/http/internal/internal-rag.controller.ts`
+- **Teste:** `rag_search_test.exs` (hits formatados com citação;
+  degradação visível; falha de rede sem crash; teto de bytes truncando
+  com marca clara; clamp de `top_k`); `engine_api_client_rag_test.exs`
+- **Origem:** ver [ADR 0100](adr/0100-rag-search-e-modelos-garantidos-no-boot.md)
+
+---
+
+### RN-415 — Modelos Ollama garantidos no boot, degradação do RAG declarada {#rn-415}
+
+`nomic-embed-text` (`RAG_EMBEDDING_MODEL`) nunca era puxado
+automaticamente — bug real, não só desta feature: o entrypoint do
+serviço `ollama` só puxava `llama3.2:1b`, e o RAG degradava para
+léxico-only em SILÊNCIO em qualquer ambiente limpo, sem nenhum sinal de
+que isso estava acontecendo. Serviço novo `ollama-model-loader` (one-shot,
+`docker-compose.yml` dev e prod), lendo `OLLAMA_REQUIRED_MODELS`
+(default `gemma:1b,yi-coder:1.5b,nomic-embed-text`), aditivo ao serviço
+`ollama` existente — o entrypoint dele continua intocado.
+
+A degradação deixou de ser silenciosa: `rag_search` (RN-414) e a busca
+híbrida da api já devolviam `degraded: true` quando o embedding falhava
+— o que faltava era um CONSUMIDOR que tornasse essa flag visível. Agora
+que a tool existe, o próprio modelo vê o aviso no texto formatado, e o
+model-loader reduz a chance de a degradação acontecer em primeiro lugar.
+
+- **Onde:** `docker/docker-compose.yml`, `docker/docker-compose.prod.yml`,
+  `docker/ollama/pull-models.sh`; `deploy/k8s/base/neo4j/`,
+  `deploy/k8s/base/ollama/job-model-loader.yaml` (template, NÃO wireado
+  em nenhuma kustomization — `deploy/k8s/` ainda não tem Service `ollama`
+  pra apontar, ligar isso hoje faria CrashLoopBackOff em todo deploy real)
+- **Teste:** `scripts/dev/verificar-modelos-ollama.sh`, executado de
+  ponta a ponta com um modelo pequeno real (`all-minilm`) para não pagar
+  o custo de vários GB da lista de produção numa máquina compartilhada
+- **Origem:** achado durante a fundação do grafo de conhecimento — ver
+  [ADR 0100](adr/0100-rag-search-e-modelos-garantidos-no-boot.md)
+
+---
+
+### RN-416 — O grafo é memória DERIVADA, reconstruível por projeção da outbox {#rn-416}
+
+A alternativa de o engine escrever no Neo4j direto foi RECUSADA — abriria
+um segundo caminho de escrita além do event log, quebrando a garantia de
+fonte única de verdade. `GraphProjector` (api) drena uma SEGUNDA linha de
+outbox, mesma transação de sempre, `aggregateType: 'graph_projection'`
+— valor que o `Engine.Outbox.Drain` do lado engine nunca casa (o filtro
+dele é `aggregate_type IN ('session', 'task')`), evitando a corrida que
+existiria se reusasse `'session'` (o engine já drena e marca esse tipo em
+~2s). Mesmo padrão de `deny-action.use-case.ts`, que já grava em dois
+`aggregateType` na mesma transação.
+
+Instrumentado em dois pontos: `AppendSessionEventUseCase` (para
+`handoff.offered`, `psychologist.hypothesis_proposed`,
+`anamnese.profile_updated` — payload só `{eventId}`, o projector RELÊ o
+envelope completo do event log na hora de projetar, nunca confia numa
+cópia potencialmente velha) e `TransitionSessionUseCase` (para
+`session.closed`/`session.closed_abnormally`, que não passam por
+`session_events`). `GraphProjector` é um poller (~2s, mesmo formato do
+`DomainGaugesCollector`) que chama os casos de uso de gravação já
+existentes da fundação anterior — a idempotência mora NELES (chave
+natural por tipo: `Hipotese.id`, `Handoff(sessionId,seq)`,
+`PerfilAnamnese(userId,dimensao)`, `Interacao.sessionId` com extensão de
+faixa). `GraphUnavailableError` no meio de um lote PARA o ciclo inteiro
+(o resto falharia pelo mesmo motivo) — a linha fica não-processada e
+tenta de novo sozinha no próximo ciclo, sem intervenção.
+
+- **Onde:** `apps/api/src/application/graph-projection/graph-projector.ts`;
+  `apps/api/src/domain/graph/graph-projection-events.ts`;
+  `apps/api/src/application/use-cases/sessions/append-session-event.use-case.ts`,
+  `transition-session.use-case.ts`
+- **Teste:** `graph-projector.spec.ts` (caminho feliz dos quatro tipos;
+  resolução evidência→seq de hipótese; `GraphUnavailableError` deixa a
+  linha sem marcar e para o ciclo; ciclo seguinte reprocessa com
+  sucesso; reprocessar a MESMA linha duas vezes não duplica no grafo);
+  testes novos em `append-session-event.use-case.spec.ts`/
+  `transition-session.use-case.spec.ts` (tipo projetável grava a segunda
+  linha; tipo não-projetável não grava nada extra)
+- **Origem:** ver [ADR 0101](adr/0101-memoria-relacional-como-projecao-do-event-log.md)
+
+---
+
+### RN-417 — Psicólogo e Anamnese consultam por relevância, com degradação declarada para recência {#rn-417}
+
+`Psychologist.ContextBuilder`/`Anamnese.ContextBuilder` continuam lendo o
+que sempre leram (eventos recentes / janela temporal), e ganham uma
+SEGUNDA fonte, `EngineApiClient.rag_search/4`, com uma query derivada do
+GATILHO da análise — a causa de término já classificada, no Psicólogo;
+competências do catálogo ainda sem `current_profile`, na Anamnese
+(NUNCA texto livre de hipótese/racional, pela proibição já estabelecida
+de a Anamnese jamais inferir saúde/personalidade/idade/gênero — a query
+só contém nomes de competência/membro/projeto). Os hits entram no
+orçamento EXISTENTE de `Triage` (`max_prompt_events`/`max_payload_chars`)
+— descontam vagas da janela de recentes, nunca somam por fora dela.
+
+A chamada ao RAG é estritamente ADITIVA: sem hit (RAG indisponível, erro,
+ou simplesmente sem resultado), o comportamento é IDÊNTICO ao de antes
+desta RN — nenhum teste pré-existente precisou mudar. `degraded: true`
+(RAG caiu pra léxico-only por falta de embedding) aparece EXPLICITAMENTE
+no contexto final, nos dois agentes — nunca escondido pelo corte de
+teto.
+
+Os kickoffs de Psicólogo (`psychologist-kickoff`) e Anamnese
+(`anamnese-kickoff`) passam a resolver como TEMPLATE do grafo
+(`EngineApiClient.get_prompt_template/2`) quando `graph_templates_enabled?`
+está ligada (`GRAPH_TEMPLATES_ENABLED`, default `false`) — com fallback
+obrigatório pro texto inline em qualquer falha (api fora, template não
+semeado, flag desligada). `:pinned => true` continua igual nos dois
+caminhos.
+
+**Consumo do restante do grafo (`query_user_context` — hipóteses com
+evidência e perfis lidos DIRETO do Neo4j) fica DECLARADO fora desta
+entrega**: ainda sem rota HTTP exposta do lado api; Psicólogo/Anamnese
+hoje só consultam o RAG (pgvector) via `rag_search`, não o grafo de
+relações em si.
+
+- **Onde:** `apps/engine/lib/engine/psychologist/context_builder.ex`,
+  `apps/engine/lib/engine/workers/psychologist_worker.ex`;
+  `apps/engine/lib/engine/anamnese/context_builder.ex`,
+  `apps/engine/lib/engine/workers/anamnese_worker.ex`
+- **Teste:** `context_builder_test.exs` dos dois agentes (hits presentes;
+  falha do RAG degrada sem erro; `degraded: true` visível; clamp de
+  `top_k`; query derivada do gatilho); `psychologist_worker_test.exs`/
+  `anamnese_worker_test.exs` (template com sucesso e com fallback;
+  `:pinned` idêntico nos dois caminhos; flag desligada nunca chama a api)
+- **Origem:** ver [ADR 0101](adr/0101-memoria-relacional-como-projecao-do-event-log.md)
+
+---
+
+### RN-418 — Efeito externo git e comando privilegiado (sudo/doas) viram teto absoluto, nunca `deny` {#rn-418}
+
+Revisa a [RN-106](#rn-106) por decisão GLOBAL e explícita do dono do
+produto: `git push`, abertura de PR, deploy (a mesma detecção por
+prefixo que a RN-106 já tinha) e `sudo`/`doas` (novo — casados por VERBO
+em `comandoPrivilegiadoNoComando`, varrendo todos os segmentos do
+comando) deixam de ser `deny` incondicional e viram TETO ABSOLUTO —
+`require_approval` incondicional, no MESMO bloco final e MESMO padrão de
+código dos outros tetos (merge protegida, `instruction_patch`,
+`parallelize`/`raise_max_parallel`, escopo de caminho):
+`current.policy === 'auto_approve'` → sobrescrito. Nunca auto-aprovável
+por `agent_autonomy` (inclusive o curinga `"*"` do modo automático) nem
+por `permissions.json`.
+
+A condição que torna isto seguro — sem a qual o teto seria decorativo —
+é a metade que fecha "sempre permitir" NA FONTE:
+`ApproveAlwaysActionUseCase`/`patternForAction` recusam gravar padrão em
+`allow` pra ação de terminal com efeito externo git ou comando
+privilegiado. A instância específica ainda pode ser aprovada pelo fluxo
+normal (`ApproveActionUseCase`); só o clique que gravaria um padrão pra
+sempre é recusado, com mensagem clara. É o mesmo argumento que a RN-106
+original usava pra justificar `deny` — resolvido na origem, não mais
+bloqueando o sintoma.
+
+Um aviso automático de segurança sinalizou esta mudança durante a
+implementação (reescrever uma regra que o produto documentava como
+`deny` absoluto merece escrutínio) — o dono do produto confirmou
+explicitamente, depois de revisar, que a decisão era essa.
+
+- **Onde:** `apps/api/src/domain/actions/decide.ts` (bloco de tetos
+  absolutos), `apps/api/src/domain/actions/external-effect.ts`
+  (`comandoPrivilegiadoNoComando`, `mensagemDeComandoPrivilegiado`),
+  `apps/api/src/application/use-cases/actions/approve-always-action.use-case.ts`
+- **Teste:** `decide.spec.ts` (`git push` com auto mode `"*"` E com
+  `allow` casando no `permissions.json` resolvem pra `require_approval`;
+  `sudo` idem; os tetos anteriores continuam intactos — regressão
+  completa); `approve-always-action.use-case.spec.ts` ("sempre permitir"
+  sobre git com efeito externo/sudo não grava padrão; comando comum
+  continua gravando normalmente — regressão); `external-effect.spec.ts`
+- **Origem:** ver [ADR 0102](adr/0102-revisao-do-adr-0065-teto-absoluto-substitui-deny.md)
+
+---
+
+### RN-419 — O runner local se autentica por ticket de uso único, escopado a projeto e papel {#rn-419}
+
+**REVISADA pela [RN-421](#rn-421) (ADR 0104)**: a condição de recusa do
+ticket citada abaixo (`workspaceMode !== 'local'`) virou `executionMode
+!== 'runner'` — mesma régua, nome novo. O resto desta entrada continua
+valendo tal como está.
+
+O canal `terminal:<projectId>` (socket Phoenix novo, `/runner`) recebe
+dois papéis distintos — `:runner` (o CLI na máquina do usuário, no
+máximo UM por projeto, exclusividade garantida por
+`:global.register_name/3`) e `:web` (a aba Terminal, múltiplos
+simultâneos) — e os dois entram autenticados por TICKET DE USO ÚNICO,
+mesmo padrão de segurança da RN-108 (ticket de socket de sessão), com uma
+inversão de propriedade: o ticket é EMITIDO PELO ENGINE
+(`runner_socket_tickets`, schema `"engine"`, migration Ecto própria — não
+uma extensão da tabela de ticket de sessão, que é da api), e a API o pede
+via rota HTTP interna nova (`POST /internal/projects/:projectId/runner-tickets`)
+— o inverso do fluxo de ticket de sessão, onde a api grava direto na
+própria tabela.
+
+`POST /projects/:projectId/runner-ticket` (role `developer`+, recusa se
+`workspaceMode !== 'local'`) e `POST /projects/:projectId/terminal-ticket`
+(role `viewer`+, qualquer modo) são as duas rotas públicas que emitem o
+ticket pro cliente certo — o runner pede a primeira, a web pede a
+segunda. Ticket consumido (validação + `UPDATE` condicional de uso
+único) no `join` do canal; ticket de OUTRO projeto ou reusado nunca abre
+o tópico.
+
+- **Onde:** `apps/engine/lib/engine/runners/socket_ticket.ex`,
+  `apps/engine/lib/engine/runners/registry.ex`,
+  `apps/engine/lib/engine_web/channels/{runner_socket,terminal_channel}.ex`;
+  `apps/api/src/interfaces/http/runner/runner-tickets.controller.ts`,
+  `apps/api/src/application/use-cases/runner/request-runner-ticket.use-case.ts`
+- **Teste:** `runner_socket_test.exs`/`terminal_channel_test.exs` (join
+  com ticket válido sucede; ticket reusado recusa; ticket de outro
+  projeto não abre o tópico errado; segundo `:runner` no mesmo projeto é
+  recusado; um segundo runner consegue conectar depois que o primeiro
+  cai); `request-runner-ticket.use-case.spec.ts`/
+  `runner-tickets.controller.spec.ts` (recusa pra projeto não-`local` no
+  ticket de runner; ticket de terminal funciona pra qualquer modo)
+- **Origem:** ver [ADR 0103](adr/0103-runner-local-execucao-na-maquina-do-usuario.md)
+
+---
+
+### RN-420 — Comando de agente roteado ao runner passa pelo MESMO pipeline de aprovação; PTY é ação do usuário, auditada {#rn-420}
+
+**REVISADA pela [RN-423](#rn-423) (ADR 0104)**: a condição pra rotear deixou
+de ser binária. `workspace_mode == "local"` virou `execution_mode ==
+"runner"` **E** `workspace_verified_at` não-nulo **E** runner conectado —
+faltando qualquer uma das TRÊS, o comando é RECUSADO explicitamente, nunca
+cai no `System.cmd`/bind-mount de `mounted` (que não existe pra um projeto
+`runner`, sem bind-mount nenhum). O resto desta entrada — o pipeline de
+aprovação de sempre, PTY como ação do usuário — continua valendo tal como
+está.
+
+`Engine.Actions.TerminalExecutor` decide rotear um comando pro runner (em
+vez do `System.cmd` de sempre, dentro do container) **DEPOIS** que o
+pipeline normal (`decide()`/`proposed_action`) já aprovou — o roteamento
+é só uma escolha de DESTINO pro mesmo comando já autorizado, nunca um
+segundo caminho de execução que escapa da política (que continua com os
+tetos absolutos da RN-418 valendo igual, sudo/git incluídos). Condição
+pra rotear (histórico, ver revisão acima): `workspace_mode == "local"` E
+runner conectado (`Engine.Runners.Registry.connected?/1`) — sem qualquer
+uma das duas, o comportamento de sempre continua (`System.cmd` no
+container via bind-mount, ADR 0072 vira FALLBACK, nunca removido).
+
+PTY interativo é DIFERENTE: é ação do USUÁRIO autenticado digitando no
+terminal da própria máquina, não do agente — por isso NÃO passa por
+`proposed_action`. Mas precisa deixar rastro: `pty_open`/`pty_close`
+vindos da web emitem `terminal.session.started`/`terminal.session.ended`
+no event log (endereçados à sessão mais recente do projeto,
+`ProjectSession.latest_id/1`, mesmo mecanismo que a Anamnese já usa pra
+narrar algo project-scoped). Achado real na consolidação: sem runner
+conectado, a web precisa de um `pty_error` EXPLÍCITO de volta — descartar
+o pedido só com um log no servidor deixaria a aba presa em "carregando"
+pra sempre, nunca alcançando o estado "sem runner" que a tela já sabia
+mostrar.
+
+- **Onde:** `apps/engine/lib/engine/actions/terminal_executor.ex`,
+  `apps/engine/lib/engine/runners/runner_router.ex`,
+  `apps/engine/lib/engine_web/channels/terminal_channel.ex`
+- **Teste:** `terminal_executor_test.exs` (roteia pro runner com modo
+  `local` + runner conectado; `cwd` passa adiante; cai no caminho atual
+  sem runner conectado; nunca roteia em modo `container`);
+  `terminal_channel_test.exs` (`pty_open` sem runner conectado devolve
+  `pty_error` pra web, nunca fica sem resposta)
+- **Origem:** ver [ADR 0103](adr/0103-runner-local-execucao-na-maquina-do-usuario.md)
+
+## Workspace pessoal automático no cadastro (RN-410)
+
+Achado navegando o produto depois de um reset de banco: o botão "Novo
+projeto"/"+" do dashboard não fazia NADA, sem erro nenhum. A causa raiz
+estava em duas camadas. A visível: `Dashboard.tsx` só abre o
+`NewProjectWizard` quando `useCurrentWorkspace()` acha um workspace
+(`list[0]?.workspace` de `GET /workspaces`); sem nenhum, o clique não tem
+onde ir. A funda: `RegisterUseCase` criava usuário e credencial mas NUNCA
+um workspace, e o mesmo valia para `SocialLoginCallbackUseCase` no ramo
+que provisiona conta nova — TODO cadastro novo, por senha ou por login
+social, caía nessa parede. Só não tinha aparecido antes porque
+`db/seed.ts` sempre cria um workspace junto dos dados de demonstração, e
+nenhuma tela do produto chama `createWorkspace` (a rota, o caso de uso e
+o client HTTP existem — só não têm chamador nenhum na UI).
+
+### RN-410 — Toda conta NOVA nasce com um workspace pessoal, na MESMA transação da conta {#rn-410}
+
+`RegisterUseCase` (registro por e-mail/senha) e `SocialLoginCallbackUseCase`
+(provisionamento de conta nova via login social) criam o workspace e
+adicionam o usuário como `owner` — mesmo par `create`/`addMember` que
+`CreateWorkspaceUseCase` já usa — dentro da MESMA transação que já cria
+usuário e credencial. Não é uma segunda chamada ao use case: ele abre a
+PRÓPRIA transação, e o ponto é nunca existir usuário sem workspace se algo
+falhar no meio.
+
+Nome e slug saem de UMA função pura,
+`nomeESlugDoWorkspacePessoal(nome, email, userId)`
+(`apps/api/src/domain/auth/personal-workspace.ts`), reusada pelos dois
+pontos de criação — para a regra não divergir em dois arquivos, o mesmo
+motivo por trás de `normalizarEmail`/`exigirSenhaValida` morarem no
+domínio. O nome usa o `nome` informado (login social usa o login do
+provider), com o local-part do e-mail como fallback quando não há nome —
+nunca inventa nenhum dos dois. O slug é kebab-case do mesmo texto, SEMPRE
+sufixado com `userId.slice(0, 8)` (mesmo padrão de
+`extraDevAgentId`/`workspaceDirName`/rótulo de sessão): `workspaces.slug`
+é `UNIQUE` no banco e nada no produto faz retry-on-conflict, então dois
+cadastros com nome ou local-part iguais colidiriam sem o sufixo. Nome ou
+e-mail sem NENHUM caractere alfanumérico degradam para o literal
+`workspace-<8 chars>`, nunca para uma string vazia.
+
+- **Onde:** `apps/api/src/domain/auth/personal-workspace.ts`
+  (`nomeESlugDoWorkspacePessoal`),
+  `apps/api/src/application/use-cases/auth/register.use-case.ts`,
+  `apps/api/src/application/use-cases/auth/social-login-callback.use-case.ts`
+  (método `provisionarContaNova`)
+- **Teste:** `apps/api/test/domain/auth/personal-workspace.spec.ts` (nome
+  com/sem `nome`, fallback para o local-part do e-mail, acento/maiúscula
+  virando kebab-case ASCII, fallback `workspace-<id>` sem caractere
+  alfanumérico nenhum, slug sempre único por conta do sufixo);
+  `apps/api/test/application/use-cases/auth/register.use-case.spec.ts`
+  (conta nova ganha workspace com o usuário como `owner`, e-mail duplicado
+  não cria um segundo); `apps/api/test/application/use-cases/auth/
+  social-login-callback.use-case.spec.ts` (mesma prova no ramo que
+  provisiona conta nova via login social)
+- **ADR:** nenhum — correção de um caminho que devia ter feito isso desde
+  o início, não decisão estrutural nova
+- **Origem:** achado por uso real, navegando o produto — não item de
+  backlog planejado
+
+## Onda 1 do ADR 0104 — `execution_mode` em três valores, workspace verificado pelo runner
+
+O ADR 0072 (RN-169/RN-170) e o ADR 0103 (RN-419/RN-420) nunca se falaram: o
+runner reusava a mesma flag `workspace_mode == 'local'` sem bind-mount
+nenhum, então usar o runner de verdade continuava exigindo passar pela
+validação de PASTA MONTADA. O ADR 0104 reconcilia os dois. Migração `0048`
+recria o enum (`project_workspace_mode` → `project_execution_mode`,
+`local` → `mounted`) numa transação só — `ALTER TYPE ... ADD VALUE` não
+pode ser referenciado na mesma transação em que foi adicionado — e soma
+`workspace_verified_at` (nullable).
+
+### RN-421 — `execution_mode` tem TRÊS valores: `container`/`mounted`/`runner` {#rn-421}
+
+`projects.workspace_mode` (dois valores) virou `projects.execution_mode`
+(três): `container` (DEFAULT, inalterado), `mounted` (o antigo `local`,
+RENOMEADO — mesmo comportamento, mesma validação de disco na criação) e
+`runner` (NOVO: uma pasta do usuário sem bind-mount, confirmada pelo CLI
+`brabo-runner`). O CHECK do banco passou a ser `(execution_mode <>
+'container') = (workspace_path IS NOT NULL)` — cobre os dois modos não-
+`container` com a MESMA condição, sem `OR` explícito por valor.
+
+`projectScopeRoot`/`Project.workspace_dir_name` (api e engine) derivam a
+raiz pela MESMA regra nos dois modos não-`container`: o caminho do usuário
+é a raiz, distinguido do nome de pasta gerenciada pela barra inicial. O que
+muda entre `mounted` e `runner` não é ONDE a raiz fica — é QUANDO/QUEM
+confirma que ela existe de verdade ([RN-422](#rn-422)/[RN-423](#rn-423)).
+
+- **Onde:** `apps/api/src/db/migrations/0048_quiet_iron_fist.sql`,
+  `apps/api/src/db/schema.ts` (`projectExecutionModeEnum`),
+  `apps/api/src/domain/iam/project.entity.ts` (`PROJECT_EXECUTION_MODES`),
+  `apps/api/src/infrastructure/filesystem/project-workspaces-root.ts`
+  (`projectScopeRoot`), `apps/engine/lib/engine/projects/project.ex`
+- **Teste:** `apps/api/test/infrastructure/filesystem/project-workspaces-root.spec.ts`
+  (describe "projectScopeRoot nos modos mounted/runner"),
+  `apps/engine/test/engine/projects/project_test.exs`
+- **Decisão arquitetural:**
+  [ADR 0104](adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md)
+- **Origem:** reconciliação pedida pelo dono do produto, entre os ADRs 0072
+  e 0103
+
+### RN-422 — A validação de criação DIVERGE por modo: `mounted` toca disco, `runner` só o léxico {#rn-422}
+
+`CreateProjectUseCase.caminhoValidado` ganhou um terceiro ramo. `mounted`
+continua exatamente como `local` era (RN-170, histórico): recusa com `400`
+o caminho que não existe, não é pasta ou não é gravável dentro do
+container, com a instrução de montagem. `runner` valida só o
+LÉXICO — mesma lista de proibições (absoluto, sem `..`, fora de raiz/pasta
+de sistema, sem sobreposição com o checkout do Brabo) — sem tocar disco:
+só o runner, rodando no HOST de verdade, tem autoridade para confirmar que
+a pasta existe. O projeto nasce com `workspace_verified_at: null`.
+
+`caminhoDeWorkspaceLocalValido` (o predicado léxico) foi EXPORTADO de
+`project-workspaces-root.ts` para ser reusado nos dois lados que precisam
+dele sem tocar disco: a criação de projeto `runner` e a confirmação do
+runner ([RN-423](#rn-423)) — a mesma função, nunca duas cópias que um dia
+divergem.
+
+- **Onde:** `apps/api/src/application/use-cases/iam/create-project.use-case.ts`
+  (`caminhoValidado`), `apps/api/src/infrastructure/filesystem/project-workspaces-root.ts`
+  (`caminhoDeWorkspaceLocalValido`, exportada), `apps/api/src/interfaces/http/iam/dto/create-project.dto.ts`
+- **Teste:** `apps/api/test/application/use-cases/iam/create-project-modo-de-workspace.spec.ts`
+  (bloco `runner`), `apps/api/test/interfaces/http/iam/project-dto-modo-de-workspace.spec.ts`,
+  `apps/web/src/lib/wizard.test.ts` (`canAdvanceFromWorkspace` para `runner`)
+- **Decisão arquitetural:**
+  [ADR 0104](adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md)
+- **Origem:** reconciliação do ADR 0104
+
+### RN-423 — O runner CONFIRMA o caminho; sem confirmação, o comando é recusado — nunca cai no container {#rn-423}
+
+O runner é a **fonte da verdade** do caminho de um projeto `runner`, não o
+que foi digitado no wizard. Logo depois do canal Phoenix conectar
+(`terminal:<projectId>`, papel `:runner`), `apps/runner/src/index.ts`
+empurra `workspace_confirm` com o `--dir` que recebeu na linha de comando.
+O engine repassa (`Engine.Sessions.EngineApiClient.confirm_workspace/4`)
+para `POST /internal/projects/:projectId/workspace-verification`
+(`ConfirmProjectWorkspaceUseCase`), que:
+
+1. Recusa com `400` se o projeto não estiver no modo `runner`;
+2. Revalida o caminho pelo MESMO predicado léxico da criação
+   ([RN-422](#rn-422)) — mesmo vindo do runner, raiz de sistema e
+   sobreposição com o Brabo continuam proibidas;
+3. **SOBRESCREVE** `workspacePath` com o caminho normalizado e grava
+   `workspaceVerifiedAt = now()` — sem exigir igualdade com o que foi
+   digitado na criação: o runner manda;
+4. É IDEMPOTENTE — reconectar reportando o MESMO caminho não regrava nada
+   (`changed: false`); um caminho DIFERENTE regrava, porque o runner
+   continua sendo a fonte da verdade a cada reconexão;
+5. Sem sessão no projeto ainda (`ProjectSession.latest_id/1` devolve
+   `nil`): o `UPDATE` acontece do mesmo jeito, só o evento
+   `project.workspace_verified` (e a evidência do gate
+   `workspace-verificado`) fica ausente — a MESMA degradação que
+   `pty_open`/`pty_close` já aceitam (RN-108/RN-420). Lacuna aceita e
+   declarada, não silenciosa.
+
+`Engine.Actions.TerminalExecutor.decisao_de_execucao/1` ganhou QUATRO
+saídas, não duas: `runner` com `workspace_verified_at: nil` recusa
+(`:recusar_nao_verificado`); `runner` verificado sem runner conectado
+recusa (`:recusar_runner_desconectado`); `runner` verificado e conectado
+roteia (`:rotear_runner`); qualquer outro modo segue o caminho de sempre
+(`:caminho_de_sempre`). As duas recusas NUNCA caem no `System.cmd` — um
+projeto `runner` não tem bind-mount, e "cair pro caminho de sempre" seria
+executar às cegas numa pasta que o processo do engine não enxerga. A
+mesma recusa vale na corrida (`Registry` dizia conectado no início de
+`run/3`, mas o runner caiu antes do dispatch responder).
+
+- **Onde:** `apps/api/src/application/use-cases/iam/confirm-project-workspace.use-case.ts`,
+  `apps/api/src/interfaces/http/internal/internal-projects.controller.ts`
+  (`POST :projectId/workspace-verification`),
+  `apps/engine/lib/engine/actions/terminal_executor.ex`
+  (`decisao_de_execucao/1`), `apps/engine/lib/engine_web/channels/terminal_channel.ex`
+  (`handle_in("workspace_confirm", ...)`), `apps/engine/lib/engine/sessions/engine_api_client.ex`
+  (`confirm_workspace/4`), `apps/runner/src/channel.ts`
+  (`enviarWorkspaceConfirm`), `apps/runner/src/index.ts`
+- **Teste:** `apps/api/test/application/use-cases/iam/confirm-project-workspace.use-case.spec.ts`,
+  `apps/engine/test/engine/actions/terminal_executor_test.exs`
+  (describe "roteamento pro runner local"),
+  `apps/engine/test/engine_web/channels/terminal_channel_test.exs`
+  (describe "workspace_confirm"), `apps/runner/src/channel.spec.ts`
+  (`enviarWorkspaceConfirm` depois do join)
+- **Borda:** o `docs/gates.yml` registra `workspace-verificado` como
+  `severidade: warn` — quem trava de verdade é a recusa explícita do
+  engine, o gate é só o registro/evidência.
+- **Decisão arquitetural:**
+  [ADR 0104](adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md)
+- **Origem:** reconciliação do ADR 0104, decisão confirmada com o dono do
+  produto (o runner é a fonte da verdade; sem sessão, o UPDATE acontece
+  mesmo assim; comando recusado explicitamente sem verificação/conexão)
+
+---
+
+### RN-424 — PAT autentica SÓ `runner-ticket`, por construção — nunca dual-auth com JWT nessa rota {#rn-424}
+
+Um Personal Access Token (`brb_…`) nunca autoriza nenhuma rota além de
+`POST /projects/:projectId/runner-ticket`. A garantia não é um `if` que
+uma rota nova poderia esquecer de checar: é estrutural. `@RequirePatAuth()`
+marca o handler com `IS_PAT_ROUTE_KEY`; `JwtAuthGuard` (o `APP_GUARD`
+global) checa esse metadado ANTES de tentar `verify()` de JWT e devolve
+`true` sem validar nada — o mesmo formato de bypass que `IS_PUBLIC_KEY` e
+`IS_SERVICE_ROUTE_KEY` já usam. `PatAuthGuard`, aplicado só nesse handler
+via `@UseGuards()`, é quem de fato autentica: extrai o bearer, recusa
+(401) qualquer valor que não comece com `brb_` sem consultar o
+repositório — nunca tenta validar como JWT nessa rota, e nenhuma outra
+rota aceita `brb_…` como bearer.
+
+Depois que o `PatAuthGuard` popula `request.user`, `RolesGuard`/
+`ResolveEffectiveRoleUseCase` continuam rodando, inalterados — cinto e
+suspensório: se o dono do PAT perder papel suficiente no projeto pela via
+normal (`ProjectMember`/workspace), o token para de autorizar mesmo sem
+ter sido revogado explicitamente.
+
+A alternativa considerada e recusada: o `JwtAuthGuard` global reconhecer
+o prefixo `brb_` e popular `request.user` direto, pra QUALQUER rota. Isso
+autorizaria o PAT a tudo que o papel do usuário permite no resto da api —
+o escopo "só pede ticket de runner" viraria decorativo.
+
+- **Onde:** `apps/api/src/interfaces/http/auth/pat-route.decorator.ts`
+  (`IS_PAT_ROUTE_KEY`/`@RequirePatAuth()`),
+  `apps/api/src/interfaces/http/auth/jwt-auth.guard.ts` (o terceiro
+  early-out), `apps/api/src/interfaces/http/auth/pat-auth.guard.ts`
+  (`PatAuthGuard`), `apps/api/src/interfaces/http/runner/runner-tickets.controller.ts`
+  (`runnerTicket`, o único handler marcado)
+- **Teste:** `apps/api/test/interfaces/pat-auth.guard.spec.ts`,
+  `apps/api/test/interfaces/jwt-auth.guard.spec.ts` (`@RequirePatAuth()`
+  passa sem tentar `verify()`), `apps/api/test/interfaces/http/runner/runner-tickets.controller.spec.ts`
+  (`runnerTicket` tem o decorator, `terminalTicket` não)
+- **Decisão arquitetural:**
+  [ADR 0105](adr/0105-personal-access-token-do-runner-escopado-por-construcao.md)
+
+### RN-425 — Validação de PAT colapsa inexistente/revogado/expirado numa resposta só; escopo errado é 403; `last_used_at` nunca throttla {#rn-425}
+
+`PersonalAccessTokenRepository.validarEUsar(hash)` é UMA query:
+`UPDATE personal_access_tokens SET last_used_at = now() WHERE token_hash
+= $1 AND revoked_at IS NULL AND (expires_at IS NULL OR expires_at >
+now()) RETURNING id, user_id, project_id`. Zero linhas devolve `null`, e
+o guard responde **401 pra "não existe", "revogado" e "expirado" com a
+MESMA mensagem** — quem apresenta um token roubado ou expirado não
+descobre qual dos três é o motivo (mesmo padrão de
+`AccountTokenRepository.consumir()`).
+
+Escopo de projeto incorreto é uma categoria DIFERENTE: se `project_id`
+devolvido pela query não bate com `:projectId` da rota, é **403**, não
+401 — o token autenticou de verdade, só não tem direito a ESTE projeto.
+
+`last_used_at` é atualizado de forma INCONDICIONAL, na MESMA query de
+validação — nunca com um throttle (ex.: "só se `last_used_at` for `NULL`
+ou tiver mais de 5 minutos") no mesmo `WHERE`. Um throttle ali é um bug
+real: um PAT reapresentado duas vezes em menos de 5 minutos cairia fora
+do `WHERE` na segunda vez (porque `last_used_at` estaria "fresco
+demais"), e a query devolveria zero linhas pra um token **válido** —
+rejeitando com 401 uma reconexão legítima. O laço de retry do runner
+reconecta em segundos, não minutos. O custo de não throttlar é um
+`UPDATE` de uma linha por índice único a cada chamada — irrelevante no
+pior caso real (até 10 tentativas seguidas, teto do runner).
+
+- **Onde:** `apps/api/src/infrastructure/persistence/drizzle/personal-access-token.repository.ts`
+  (`validarEUsar`), `apps/api/src/interfaces/http/auth/pat-auth.guard.ts`
+- **Teste:** `apps/api/test/infrastructure/persistence/personal-access-token.repository.spec.ts`
+  (inexistente/revogado/expirado → `null`; "toca `last_used_at` sempre
+  que válido, sem throttle" — regressão do bug acima),
+  `apps/api/test/interfaces/pat-auth.guard.spec.ts` (escopo errado → 403,
+  não 401)
+- **Decisão arquitetural:**
+  [ADR 0105](adr/0105-personal-access-token-do-runner-escopado-por-construcao.md)
+
+### RN-426 — Listar/revogar PAT é escopado ao PRÓPRIO usuário, no WHERE da query — sem admin cross-user nesta onda {#rn-426}
+
+`ListPersonalAccessTokensUseCase`/`RevokePersonalAccessTokenUseCase`
+filtram por `userId` dentro da consulta SQL (`WHERE user_id = $1 AND ...`),
+nunca trazendo tudo e filtrando depois em memória. Cada usuário só
+enxerga e só revoga os PRÓPRIOS tokens — inclusive dentro de um projeto
+onde ele é `maintainer`.
+
+`revogar(id, userId, motivo)` é IDEMPOTENTE: se o `UPDATE` (com o mesmo
+`WHERE user_id = $1`) não acha linha porque já estava revogado, uma
+segunda consulta de desempate devolve a linha (revogar de novo não é
+erro); se não acha porque o token não existe OU não é do usuário
+chamador, devolve `null` — a MESMA resposta (404 no controller) pros
+dois casos, pra não vazar a existência de um token alheio pelo código de
+status.
+
+**Fora desta onda, declarado**: um `maintainer` revogar o PAT de outro
+usuário — o caso de resposta a incidente (dev desligado com token
+vazando). Registrado como item de backlog, não implementado agora.
+
+- **Onde:** `apps/api/src/application/use-cases/auth/list-personal-access-tokens.use-case.ts`
+  (`ListPersonalAccessTokensUseCase`), `apps/api/src/application/use-cases/auth/revoke-personal-access-token.use-case.ts`,
+  `apps/api/src/infrastructure/persistence/drizzle/personal-access-token.repository.ts`
+  (`listarDoUsuarioNoProjeto`, `revogar`)
+- **Teste:** `apps/api/test/application/use-cases/auth/list-personal-access-tokens.use-case.spec.ts`,
+  `apps/api/test/application/use-cases/auth/revoke-personal-access-token.use-case.spec.ts`,
+  `apps/api/test/infrastructure/persistence/personal-access-token.repository.spec.ts`
+  (revogar token de outro usuário → `null`)
+- **Decisão arquitetural:**
+  [ADR 0105](adr/0105-personal-access-token-do-runner-escopado-por-construcao.md)
+
 ---
 
 ## Quando dá errado
@@ -6220,6 +9675,9 @@ se o próximo passo é trocar a chave, esperar o provider ou abrir um bug.
 | Preço do modelo muda | vale daqui em diante; o custo gravado e o preço que o produziu ficam intocados (RN-042) |
 | Criar o handoff falha (Criativo→PO, Arquiteto→Infra/Dev Lead) | `agent.error` durável, o processo do agente CONTINUA vivo; o que já foi gravado antes (product_brief, regras) não se perde (RN-116) |
 | Caminho de projeto **Local** não montado no container | a criação é **recusada** (400) com a linha de compose a acrescentar — o projeto não nasce para travar depois (RN-170) |
+| Login social: e-mail do provider bate com conta existente mas NÃO verificado | recusado com 403, nenhum vínculo gravado — e-mail não verificado não é prova de identidade (RN-274) |
+| Login social: `state` inválido/expirado, ou de outro PROPÓSITO (fluxo de conexão de git) | recusado, nenhuma chamada ao provider nem escrita no banco (RN-273) |
+| Validar a necessidade sem `product_brief` nenhum na sessão | recusado (400) ANTES de gravar qualquer evento — não há o que validar ainda (RN-406) |
 
 > **TODO(humano):** as RNs acima foram extraídas do código e dos testes. Falta
 > confirmar se existe regra de negócio **não implementada** que deveria estar

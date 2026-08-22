@@ -1,0 +1,1 @@
+{"responses":{"302":{"description":"Redireciona para o provider.","headers":{"Location":{"description":"URL de autorização do provider.","schema":{"type":"string","example":"https://github.com/login/oauth/authorize?…"}}}},"400":{"description":"Provider fora de `github`/`gitlab`."}}}

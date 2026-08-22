@@ -180,6 +180,21 @@ rules:
     docs: ["docs/explanation/gates.md", "docs/business-rules.md"]
     severity: block
 
+  # O fluxo (ADR 0085) declara as RELAÇÕES entre papéis — quem entrega o
+  # quê a quem — a terceira peça ao lado do catálogo (agent-areas.ts) e do
+  # controle (gates.yml, ADR 0054). `warn`, não `block`: ainda não existe
+  # teste de cruzamento fluxo.yml × gates.yml × agent-areas.ts que prove
+  # que uma mudança no catálogo ou no registro de gates quebrou uma
+  # relação declarada — promover para `block` fica para quando esse teste
+  # existir (backlog).
+  - id: modelo-de-time
+    watch:
+      - "apps/api/src/domain/agents/**"
+      - "docs/gates.yml"
+    docs: ["docs/fluxo.yml", "docs/explanation/modelo-de-time.md"]
+    severity: warn
+    note: "Fluxo declara as relações entre papéis; catálogo (agent-areas.ts) ou controle (gates.yml) mudando pode desalinhar docs/fluxo.yml."
+
   # -------------------------------------------------------- infra e operação
 
   - id: boot-e-supervisao
@@ -259,6 +274,20 @@ rules:
       - "docs/explanation/branching-policy.md"
     severity: block
     note: "Regra nova no mecanismo exige a regra escrita na política."
+
+  # SEPARADA da regra acima de propósito, mesmo motivo de checks-e-rulesets
+  # logo abaixo: `politica-de-branches` cobre o MECANISMO da escada
+  # (approval-ladder.ts muda → branching-policy.md muda); esta cobre o
+  # CRITÉRIO de quem ocupa cada papel dela, que é decisão humana, não
+  # decorre do código — daí `warn`, não `block`.
+  - id: governanca
+    watch:
+      - "scripts/ci/approval-ladder.ts"
+      - "docs/explanation/branching-policy.md"
+    docs:
+      - "GOVERNANCE.md"
+    severity: warn
+    note: "Papel novo na escada ou mudança na exigência por destino pode exigir revisão do critério de quem entra em cada lista."
 
   # SEPARADA da regra acima de propósito. O rulesets.md documenta a
   # configuração do GitHub e a lista de checks required — ele fica velho quando

@@ -130,6 +130,77 @@ O terceiro achado veio da primeira execução do medidor: o filtro de
 o gate aparecia como "nunca passou" num banco onde ele tinha passado horas
 antes. Um registro que ninguém roda é um registro que mente.
 
+## Ativar um gate `planned` é o mesmo trabalho de qualquer outro
+
+`implementavel` (dono `dev-lead`) nasceu `planned` na FASE 14d, junto com o
+resto do organograma-alvo que `docs/gates.yml`/`docs/fluxo.yml` já
+descreviam sem código por trás. O [ADR 0090](../adr/0090-qa-estrategia-e-appsec-segundo-momento.md)
+o ativou — e o exercício vale de exemplo porque **nada no registro em si
+mudou de forma**: `status: planned → active` mais o bloco `evidencia`
+(apontando para `proposed_action.created` filtrado por
+`actionType: assess_implementability`) são as ÚNICAS duas linhas que um
+gate `warn` precisa ganhar para deixar de ser aspiração. `severidade`
+continua `warn` — o comentário no arquivo já dizia "nasce warn mesmo
+quando ativar", e ativar não é a mesma decisão que promover para `block`
+(essa exigiria medir passagens reais primeiro, mesma disciplina da FASE 15a).
+
+O trabalho de verdade fica do lado de fora do arquivo: o Dev Lead precisou
+de uma ferramenta nova (`assess_implementability`) que propõe o parecer
+como `proposed_action`, e a QA-estratégia — até então papel `proposto` em
+`docs/fluxo.yml`, com o critério de separação já escrito lá ("pode ser o
+próprio qa-lead em segundo momento") — precisou existir para alimentar o
+parecer com um plano de teste de verdade. O registro só passou a descrever
+o que o código agora faz.
+
+## Um registro pode envelhecer para o lado errado — desatualizado, não inativo
+
+`implementavel` é o exemplo de gate que precisou de código novo pra sair de
+`planned`. `paralelismo-autorizado` é o oposto: o mecanismo (`RequestParallelizationUseCase`,
+[RN-083](../business-rules.md#rn-083)) está em produção desde a FASE 14d — foi o
+registro que ficou pra trás, declarando `planned` sobre algo que já era `active` no
+`docs/fluxo.yml` irmão e no código. A auditoria fluxo.yml × código (achado A1/B5,
+[auditoria-fluxo-vs-codigo.md](auditoria-fluxo-vs-codigo.md)) achou a divergência;
+a correção foi só as duas linhas que `implementavel` também ganhou —
+`status: active` mais `evidencia` apontando para `proposed_action.created`
+filtrado por `actionType: parallelize`.
+
+Vale registrar por que isso não mudou nada na esteira de PR do painel do time:
+`paralelismo-autorizado` é `fluxo: execucao`, e a tela só deriva etapas de gates
+`fluxo: pr` (ver "Consumo" abaixo) — um gate pode virar `active` no registro sem
+aparecer em lugar nenhum da UI, se o fluxo dele for outro.
+
+## Um gate pode nascer `active` direto — quando o mecanismo e o registro chegam juntos
+
+`implementavel` e `paralelismo-autorizado` são os dois exemplos de gate que
+já existia (declarado `planned` ou desatualizado) e ganhou o registro
+DEPOIS. `necessidade-validada` ([RN-406](../business-rules.md#rn-406),
+[ADR 0095](../adr/0095-gate-necessidade-validada.md)) é o terceiro padrão:
+mecanismo e registro nasceram na MESMA mudança, porque o gate em si não
+existia em lugar nenhum — nem `planned` no arquivo, nem código atrás.
+
+A escolha de `severidade: warn` segue o mesmo raciocínio de
+`implementavel`, mas por um motivo diferente. `implementavel` é `warn`
+porque promover para `block` exigiria medir passagens reais primeiro
+(FASE 15a). `necessidade-validada` é `warn` porque NADA no produto hoje
+consulta a passagem dele antes de deixar o PO seguir — o handoff
+Criativo→PO já acontece dentro de `confirm_readiness`, antes deste gate
+sequer existir. `block` prometeria uma trava que não existe; `warn`
+descreve exatamente o que o gate é: medição de que um humano validou o
+mérito da necessidade, não um portão que impede o próximo passo.
+
+`workspace-verificado` ([RN-423](../business-rules.md#rn-423),
+[ADR 0104](../adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md))
+é o quarto exemplo, e o mais claro dos quatro sobre por que `warn` não é
+"trava fraca": quem trava de verdade AQUI não é o gate, é a recusa
+explícita de `Engine.Actions.TerminalExecutor.decisao_de_execucao/1` —
+sem workspace verificado ou sem runner conectado, o comando é recusado
+incondicionalmente, código adentro, sem passar pelo registro. O gate
+existe só para dar EVIDÊNCIA de quando a confirmação aconteceu
+(`project.workspace_verified` no event log); promovê-lo a `block`
+descreveria uma trava que já existe em outro lugar, do mesmo jeito que
+`necessidade-validada` teria mentido sobre uma que não existe em lugar
+nenhum.
+
 ## Consumo: a tela deriva, não repete
 
 A esteira de PR no painel — Dev → QA → SecOps → Você — era uma lista escrita no

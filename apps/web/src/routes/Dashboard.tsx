@@ -91,6 +91,11 @@ function ProjectCardContainer({
       // (nenhum chamador o passava); agora carrega o número certo em vez de
       // continuar morto.
       pendingApprovalsCount={summary?.pendingApprovalsCount}
+      // RN-409 — agentes ONLINE agora (trabalhando/com pendência), nunca
+      // tamanho de equipe. Mesmo dado que o painel do time mostraria se o
+      // projeto estivesse aberto — a diferença é o MECANISMO (aqui vem
+      // agregado do backend; lá, do event log da sessão aberta).
+      onlineAgentCount={summary?.onlineAgentCount}
       onClick={() =>
         provisioningStatus === 'provision_failed'
           ? navigate({

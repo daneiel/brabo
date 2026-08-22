@@ -153,9 +153,20 @@ defmodule Engine.Workers.PsychologistWorker do
     event_count = context.event_count
     tier = Triage.decide(event_count)
 
+    # Orçamento: os trechos de RAG entram no MESMO teto da janela de
+    # eventos, não por fora dele — cada trecho relevante que voltou
+    # (já capado por `Triage.rag_top_k/0`) desconta uma vaga da janela de
+    # eventos recentes. Sem hit nenhum (RAG fora do ar, sem resultado, ou
+    # degradado sem achar nada — o caso da imensa maioria dos testes e do
+    # comportamento anterior a esta onda), a janela fica do tamanho de
+    # sempre: é o que preserva o prompt de hoje byte a byte quando o RAG
+    # não tem nada a acrescentar.
+    reserved_for_rag = length(context.relevant_excerpts)
+    events_limit = max(Triage.max_prompt_events(tier) - reserved_for_rag, 1)
+
     # O tier decide o teto, então os eventos só são lidos DEPOIS da
     # triagem — ver ContextBuilder.
-    events = ContextBuilder.recent_events(session_id, Triage.max_prompt_events(tier))
+    events = ContextBuilder.recent_events(session_id, events_limit)
 
     cause =
       TerminationClassifier.classify(
@@ -240,26 +251,72 @@ defmodule Engine.Workers.PsychologistWorker do
   defp initial_message(cause, context, events, event_count) do
     %{
       "role" => "user",
-      "content" => """
-      A sessão abaixo foi encerrada (#{TerminationClassifier.label(cause)}).
-      Analise o comportamento dos agentes e produza hipóteses estruturadas.
-
-      Cada hipótese PRECISA de evidência apontando para ids de eventos REAIS
-      do log abaixo — hipótese sem evidência válida é rejeitada e você terá
-      que corrigi-la. Registre tudo numa única chamada de `emit_hypotheses`.
-      #{termination_instruction(cause)}
-
-      REGRAS DE NEGÓCIO DO PROJETO:
-      #{format_business_rules(context.business_rules)}
-
-      HIPÓTESES ANTERIORES (não descartadas):
-      #{format_prior_hypotheses(context.prior_hypotheses)}
-
-      LOG DE EVENTOS DA SESSÃO:#{omission_note(events, event_count)}
-      #{format_events(events)}
-      """,
+      "content" => render_kickoff(cause, context, events, event_count),
       :pinned => true
     }
+  end
+
+  # Resolve o texto do kickoff — template versionado do grafo primeiro
+  # (quando a flag de rollout está ligada), string inline como FALLBACK
+  # sempre disponível. Nunca deleta a lógica de montagem inline: ela é o
+  # que garante o Psicólogo funcionar com a api do grafo fora do ar, o
+  # template ainda não semeado, ou a flag desligada (default).
+  defp render_kickoff(cause, context, events, event_count) do
+    if graph_templates_enabled?() do
+      case EngineApiClient.get_prompt_template("psychologist-kickoff") do
+        {:ok, %{"body" => body}} when is_binary(body) and body != "" ->
+          render_template(body, cause, context, events, event_count)
+
+        _falha_ou_ainda_nao_semeado ->
+          render_inline(cause, context, events, event_count)
+      end
+    else
+      render_inline(cause, context, events, event_count)
+    end
+  end
+
+  # Flag de ROLLOUT (não confundir com `PsychologistWorker.enabled?/0`, que
+  # pausa RODADA NOVA por completo): decide se o kickoff tenta resolver o
+  # template do grafo antes de cair na string inline. Nasceu nesta onda —
+  # sem doc anterior publicando o nome pra conciliar contra — mesmo
+  # critério de segurança de `psychologist_enabled?`/`anamnese_enabled?`:
+  # capacidade nova nasce DESLIGADA até provada.
+  defp graph_templates_enabled?,
+    do: Application.get_env(:engine, :graph_templates_enabled?, false)
+
+  defp render_template(body, cause, context, events, event_count) do
+    body
+    |> String.replace("{{cause_label}}", TerminationClassifier.label(cause))
+    |> String.replace("{{termination_instruction}}", termination_instruction(cause))
+    |> String.replace("{{business_rules}}", format_business_rules(context.business_rules))
+    |> String.replace("{{prior_hypotheses}}", format_prior_hypotheses(context.prior_hypotheses))
+    |> String.replace("{{relevant_excerpts}}", format_relevant_excerpts(context))
+    |> String.replace("{{omission_note}}", omission_note(events, event_count))
+    |> String.replace("{{events}}", format_events(events))
+  end
+
+  defp render_inline(cause, context, events, event_count) do
+    """
+    A sessão abaixo foi encerrada (#{TerminationClassifier.label(cause)}).
+    Analise o comportamento dos agentes e produza hipóteses estruturadas.
+
+    Cada hipótese PRECISA de evidência apontando para ids de eventos REAIS
+    do log abaixo — hipótese sem evidência válida é rejeitada e você terá
+    que corrigi-la. Registre tudo numa única chamada de `emit_hypotheses`.
+    #{termination_instruction(cause)}
+
+    REGRAS DE NEGÓCIO DO PROJETO:
+    #{format_business_rules(context.business_rules)}
+
+    HIPÓTESES ANTERIORES (não descartadas):
+    #{format_prior_hypotheses(context.prior_hypotheses)}
+
+    TRECHOS RELEVANTES AO GATILHO (RAG do projeto):
+    #{format_relevant_excerpts(context)}
+
+    LOG DE EVENTOS DA SESSÃO:#{omission_note(events, event_count)}
+    #{format_events(events)}
+    """
   end
 
   # O corte tem que ser VISÍVEL pro modelo: ele só pode citar ids que vê, e
@@ -298,6 +355,40 @@ defmodule Engine.Workers.PsychologistWorker do
       "- [#{Map.get(h, "agenteAlvo")}] #{Map.get(h, "hipotese")} " <>
         "(confiança #{Map.get(h, "confiancaPercent")}%)"
     end)
+  end
+
+  # Degradação NUNCA escondida (mesma disciplina da tool `rag_search`,
+  # RN-150): `rag_degraded: true` sempre entra como aviso explícito, ainda
+  # que sem hit nenhum. `nil` (RAG não consultado com sucesso — fora do ar,
+  # erro, resposta inesperada) é distinto de `false` (consultado, com
+  # embedding disponível) — só o primeiro par de casos diz "indisponível"
+  # em vez de "sem resultado".
+  defp format_relevant_excerpts(%{relevant_excerpts: [], rag_degraded: nil}),
+    do: "(RAG indisponível nesta análise)"
+
+  defp format_relevant_excerpts(%{relevant_excerpts: [], rag_degraded: false}),
+    do: "(nenhum trecho relevante encontrado)"
+
+  defp format_relevant_excerpts(%{relevant_excerpts: [], rag_degraded: true}),
+    do:
+      "[AVISO: busca degradada — léxico apenas, sem similaridade semântica] " <>
+        "(nenhum trecho relevante encontrado)"
+
+  defp format_relevant_excerpts(%{relevant_excerpts: hits, rag_degraded: degraded?}) do
+    aviso =
+      if degraded? do
+        "[AVISO: busca degradada — léxico apenas, sem similaridade semântica]\n"
+      else
+        ""
+      end
+
+    aviso <> Enum.map_join(hits, "\n", &format_excerpt/1)
+  end
+
+  defp format_excerpt(hit) do
+    path = Map.get(hit, "path", "?")
+    trecho = Map.get(hit, "excerpt") || Map.get(hit, "chunk") || ""
+    "- #{path}: #{trecho}"
   end
 
   defp format_events([]), do: "(nenhum evento)"

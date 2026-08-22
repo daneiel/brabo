@@ -20,12 +20,13 @@ que ficam abertas. Decisões em
 | `role:<papel>` | autenticada e restrita pelo RBAC do domínio (`@RequireRole`) |
 | `jwt` | autenticada, sem papel exigido na rota — o escopo vem do próprio recurso |
 
-## As doze rotas públicas
+## As catorze rotas públicas
 
 Eram quatro até a Fase 6. A Fase 7a acrescentou oito de uma vez — o auth
-first-party — e cada uma está justificada abaixo. Abrir mais alguma continua
-exigindo mexer na asserção de `route-surface.spec.ts`, que lista as públicas
-literalmente para forçar a conversa.
+first-party — e o ADR 0084 acrescentou mais duas, o login social. Cada uma
+está justificada abaixo. Abrir mais alguma continua exigindo mexer na
+asserção de `route-surface.spec.ts`, que lista as públicas literalmente para
+forçar a conversa.
 
 ### Infraestrutura
 
@@ -97,27 +98,53 @@ token, e exigir um seria pedir credencial para poder validar credencial.
 Publicar chave pública é o propósito do formato — o que não pode sair daqui é
 o componente `d` da JWK, travado por teste.
 
+### Login social (ADR 0084)
+
+**`GET /auth/oauth/:provider/start`** — redireciona direto para o provider
+(GitHub/GitLab). Pública pela mesma razão estrutural das outras sete: é o
+próprio ponto de entrada, antes de qualquer sessão existir. O `state` que ela
+gera é assinado por HMAC com propósito PRÓPRIO
+(`signSocialOauthState`/[RN-273](business-rules.md#rn-273)) — nunca o mesmo
+`state` do `GET /git/oauth/:provider/callback` acima, mesmo as duas rotas
+assinando com a MESMA chave `GIT_OAUTH_STATE_SECRET`. O campo `purpose` no
+payload é o que impede um `state` de um fluxo ser aceito no verificador do
+outro.
+
+**`GET /auth/oauth/:provider/callback`** — recebe o retorno do provider.
+Mesmo raciocínio do callback de conexão de git: o browser chega sem sessão, o
+`state` é verificado por HMAC, e a rota nunca responde JSON — sempre
+redireciona, para `WEB_ORIGIN/` no sucesso (com os cookies de sessão já
+gravados) e para `WEB_ORIGIN/login?oauth_error=1` na falha, sem detalhar o
+motivo na URL.
+
 ## Notas
 
 - **`POST /workspaces/:workspaceId/projects` decide onde o agente vai escrever,
   e por isso é rota de superfície de segurança, não só de cadastro**
-  ([ADR 0072](adr/0072-projeto-local-ou-container.md),
-  [RN-169](business-rules.md#rn-169)/[RN-170](business-rules.md#rn-170)). O
-  corpo ganhou `workspaceMode` (`container` — o default e o comportamento de
-  sempre — ou `local`) e `workspacePath`. No modo `local` o caminho absoluto
-  informado vira a **raiz do escopo de terminal** do ADR 0055: o que se digita
-  aqui é o que o agente pode ler e escrever. Nenhuma rota nova, e nenhuma
-  mudança de papel (`RequireRole('maintainer')`, como já era) — o que mudou é
-  o alcance do que a rota concede.
+  ([ADR 0072](adr/0072-projeto-local-ou-container.md)/
+  [ADR 0104](adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md),
+  [RN-169](business-rules.md#rn-169)/[RN-421](business-rules.md#rn-421)/
+  [RN-422](business-rules.md#rn-422)). O corpo ganhou `executionMode`
+  (`container` — o default e o comportamento de sempre —, `mounted`, o antigo
+  `local`, renomeado, ou `runner`) e `workspacePath`. Em `mounted`/`runner` o
+  caminho absoluto informado vira a **raiz do escopo de terminal** do ADR
+  0055: o que se digita aqui é o que o agente pode ler e escrever. Nenhuma
+  rota nova, e nenhuma mudança de papel (`RequireRole('maintainer')`, como já
+  era) — o que mudou é o alcance do que a rota concede.
 
-  A validação está toda na criação (RN-170: absoluto, sem `..`, existente,
+  A validação diverge pelos DOIS modos que não são `container` (RN-422):
+  `mounted` continua tocando disco na criação (absoluto, sem `..`, existente,
   gravável de dentro do container, nunca raiz nem pasta de sistema, nunca
-  sobreposto ao checkout do Brabo nos dois sentidos) e a recusa é `400` com a
-  linha de compose que resolve. O modo é **congelado** depois: `UpdateProjectDto`
-  omite os dois campos de propósito, senão `PartialType(CreateProjectDto)` os
-  exporia num `PATCH` sem guarda nenhuma. O predicado léxico ainda roda a cada
-  derivação da raiz, porque o único jeito de burlar a criação é escrever direto
-  no banco.
+  sobreposto ao checkout do Brabo nos dois sentidos), com recusa `400` e a
+  linha de compose que resolve; `runner` valida só o LÉXICO — a mesma lista de
+  proibições, sem tocar disco — porque só o runner, rodando no host de
+  verdade, tem autoridade para confirmar que a pasta existe (RN-423, ver
+  `POST /internal/projects/:projectId/workspace-verification` abaixo). O modo é
+  **congelado** depois: `UpdateProjectDto` omite os dois campos de propósito,
+  senão `PartialType(CreateProjectDto)` os exporia num `PATCH` sem guarda
+  nenhuma. O predicado léxico ainda roda a cada derivação da raiz — na LEITURA
+  também, não só na criação —, porque o único jeito de burlar a criação é
+  escrever direto no banco.
 - **`GET /`** é o "Hello World!" do scaffold do NestJS
   (`src/app.controller.ts`). Está atrás do guard e não vaza nada, mas não serve
   a nada — candidata a remoção. Ficou registrada aqui em vez de removida por
@@ -134,14 +161,39 @@ o componente `d` da JWK, travado por teste.
   [RN-076](business-rules.md#rn-076). Se algum dia esta rota passar a devolver
   a URL já autenticada, o token vai parar no `.git/config`, dentro da pasta
   onde o dev agent tem leitura auto-aprovada.
-- **As duas rotas de leitura do PO** — `GET /internal/projects/:projectId/business-rules`
-  e `GET /internal/projects/:projectId/backlog`
-  ([RN-164](business-rules.md#rn-164)) — não devolvem segredo nenhum e **não
-  aceitam nada além do id do projeto**: sem termo de busca, sem paginação, sem
-  filtro. É de propósito. Uma rota de leitura para agente é uma superfície que
-  o modelo escolhe chamar, e parâmetro é onde o modelo escreve o que quiser;
-  aqui não há onde escrever. O escopo é fechado no projeto pelo caminho, e o
-  custo por chamada é constante (três leituras no backlog, duas nas regras).
+- **As três rotas de leitura do PO** — `GET /internal/projects/:projectId/business-rules`,
+  `GET /internal/projects/:projectId/backlog` ([RN-164](business-rules.md#rn-164))
+  e `GET /internal/projects/:projectId/product-metrics` ([RN-407](business-rules.md#rn-407)) —
+  não devolvem segredo nenhum e **não aceitam nada além do id do projeto**:
+  sem termo de busca, sem paginação, sem filtro. É de propósito. Uma rota de
+  leitura para agente é uma superfície que o modelo escolhe chamar, e
+  parâmetro é onde o modelo escreve o que quiser; aqui não há onde escrever.
+  O escopo é fechado no projeto pelo caminho, e o custo por chamada é
+  constante (três leituras no backlog, duas nas regras, uma consulta a
+  `proposed_actions` filtrada por índice nas métricas de produto).
+- **`POST /internal/projects/:projectId/workspace-verification`** (RN-423,
+  ADR 0104) é chamada só pelo engine, depois de um runner conectar e mandar
+  `workspace_confirm` pelo canal — nunca diretamente pelo runner, que não
+  tem o service token. O runner é a FONTE DA VERDADE do caminho (ele
+  SOBRESCREVE `workspacePath`, sem exigir igualdade com o que foi digitado
+  na criação), mas o caminho reportado ainda passa pela MESMA checagem
+  léxica da criação (`caminhoDeWorkspaceLocalValido`) — raiz de sistema e
+  sobreposição com o checkout do Brabo continuam proibidas mesmo vindo do
+  runner. `400` se o projeto não estiver no modo `runner`.
+- **`POST /projects/:projectId/runner-ticket` classifica `role:developer`
+  como qualquer outra rota, mas NÃO aceita JWT de sessão** (ADR 0105,
+  RN-424) — só um Personal Access Token (`brb_…`). A classificação
+  automática (`route-surface.spec.ts`) não distingue os dois mecanismos,
+  porque a EXIGÊNCIA de papel é a mesma; o que muda é só como
+  `request.user` é estabelecido. `PatAuthGuard` roda no lugar do
+  `JwtAuthGuard` nesta rota (`@RequirePatAuth()`, mesmo padrão estrutural
+  de `@ServiceRoute()`/`EngineServiceGuard` — bypass por metadado, nunca um
+  `if` que uma rota nova poderia esquecer), e é o ÚNICO lugar da api que
+  aceita esse formato de token: em qualquer outra rota um `brb_...` falha a
+  verificação de JWT normalmente. As três rotas de
+  `/projects/:projectId/personal-access-tokens` (emitir/listar/revogar o
+  PAT em si) continuam JWT de sessão normal — só a rota que o TOKEN em si
+  autentica é que muda de mecanismo.
 - **As rotas `engine-service` não são "internas" por convenção de nome.** O que
   as protege é o `EngineServiceGuard` comparando o `X-Brabo-Service-Token` com
   o segredo compartilhado em tempo constante, mais a NetworkPolicy. O prefixo
@@ -165,6 +217,13 @@ o componente `d` da JWK, travado por teste.
   volta a ser o que a FASE 14d quis: **ler** o teto é trabalho de quem executa;
   **mudá-lo** é decidir quanto o produto gasta sem perguntar, e por isso exige
   o mesmo papel de ativar a execução.
+- **As três rotas `/projects/:projectId/rag/*` dividem o papel pelo mesmo
+  critério do teto de paralelismo de área (RN-083)** (PROGRAMA 28, Onda 4 —
+  RN-231..234, ADR 0080): `search` e `coverage` são `role:viewer` (leitura
+  pura sobre o que já está indexado), e `reindex` é `role:maintainer` — ele
+  dispara N chamadas ao repositório do projeto e ao provider de embedding, o
+  mesmo "muda o que o produto gasta sem perguntar" que já justifica o papel
+  mais alto em outras rotas de disparo caro.
 - **As quatro rotas `/projects/:projectId/code/*` são `role:viewer` e SÓ
   LEITURA** (FASE 26b). Ver o código do projeto é a mesma permissão que ver o
   projeto — o mesmo corte de `GET /projects/:id/git/repository`. Três coisas
@@ -181,6 +240,20 @@ o componente `d` da JWK, travado por teste.
     ([RN-058](business-rules.md#rn-058)/[RN-082](business-rules.md#rn-082)),
     como na escrita. Ler custa rate limit do provider, e é por isso que a busca
     tem orçamento: sem teto, um `viewer` pagaria a conta do owner à vontade.
+- **`GET /workspaces/:workspaceId/spend-report` passou a devolver a quebra por
+  provider, que é quebra por CREDENCIAL** ([ADR
+  0076](adr/0076-provider-volta-a-ser-dimensao-de-gasto.md),
+  [RN-186](business-rules.md#rn-186)/[RN-187](business-rules.md#rn-187)). Nenhuma
+  rota nova e nenhuma mudança de papel — continua `role:owner`, como já era —,
+  mas o que ela CONCEDE mudou, e é por isso que a nota existe. O ADR
+  [0063](adr/0063-duas-audiencias-para-o-mesmo-gasto.md) tinha recusado o eixo
+  justamente por isso; o 0076 o revisa por decisão do dono do produto. O que
+  segura a fronteira agora são DUAS barreiras independentes: `GET
+  /projects/:projectId/spend/me` (`role:viewer`) não tem parâmetro de dimensão
+  nenhum, e o TIPO recusa a combinação — escopo com `actor` só aceita
+  `Exclude<SpendDimension, 'provider'>`, então pedir provider na visão do membro
+  não compila. A segunda é mais fraca que a garantia anterior ("a dimensão não
+  existia"), e é por isso que são duas.
 - **`POST /projects/:projectId/sessions/:sessionId/socket-ticket` é
   `role:viewer` na tabela, mas isso é o PISO, não o teto** (RN-108). O
   `@RequireRole('viewer')` cobre `scope: "heartbeat"` — o socket de
@@ -276,6 +349,8 @@ o componente `d` da JWK, travado por teste.
 | GET | `/.well-known/jwks.json` | public |
 | POST | `/auth/login` | public |
 | POST | `/auth/logout` | public |
+| GET | `/auth/oauth/:provider/callback` | public |
+| GET | `/auth/oauth/:provider/start` | public |
 | POST | `/auth/refresh` | public |
 | POST | `/auth/register` | public |
 | POST | `/auth/request-password-reset` | public |
@@ -309,10 +384,15 @@ o componente `d` da JWK, travado por teste.
 | POST | `/internal/sessions/:sessionId/project-image` | engine-service |
 | POST | `/internal/sessions/:sessionId/proficiency` | engine-service |
 | POST | `/internal/models/sync` | engine-service |
+| GET | `/internal/graph/prompt-templates/:name` | engine-service |
+| POST | `/internal/graph/prompt-templates` | engine-service |
+| POST | `/internal/rag/search` | engine-service |
 | GET | `/internal/gates` | engine-service |
 | GET | `/internal/projects/:projectId/git-remote` | engine-service |
 | GET | `/internal/projects/:projectId/business-rules` | engine-service |
 | GET | `/internal/projects/:projectId/backlog` | engine-service |
+| GET | `/internal/projects/:projectId/product-metrics` | engine-service |
+| POST | `/internal/projects/:projectId/workspace-verification` | engine-service |
 | GET | `/internal/sessions/:sessionId/psychologist-context` | engine-service |
 | POST | `/internal/sessions/:sessionId/stories` | engine-service |
 | POST | `/internal/sessions/:sessionId/story-modules` | engine-service |
@@ -359,7 +439,11 @@ o componente `d` da JWK, travado por teste.
 | GET | `/projects/:projectId/code/pull-requests/:pullRequestId/diff` | role:viewer |
 | GET | `/projects/:projectId/code/search` | role:viewer |
 | GET | `/projects/:projectId/code/tree` | role:viewer |
+| POST | `/projects/:projectId/rag/search` | role:viewer |
+| POST | `/projects/:projectId/rag/reindex` | role:maintainer |
+| GET | `/projects/:projectId/rag/coverage` | role:viewer |
 | GET | `/projects/:projectId/container` | role:viewer |
+| GET | `/projects/:projectId/container/lifecycle` | role:viewer |
 | GET | `/projects/:projectId/coverage` | role:viewer |
 | GET | `/projects/:projectId/events/:eventId` | role:viewer |
 | POST | `/projects/:projectId/execution/activate` | role:maintainer |
@@ -385,10 +469,15 @@ o componente `d` da JWK, travado por teste.
 | PUT | `/projects/:projectId/model-binding` | role:maintainer |
 | GET | `/projects/:projectId/permissions` | role:maintainer |
 | PUT | `/projects/:projectId/permissions` | role:maintainer |
+| POST | `/projects/:projectId/personal-access-tokens` | role:developer |
+| GET | `/projects/:projectId/personal-access-tokens` | role:developer |
+| DELETE | `/projects/:projectId/personal-access-tokens/:tokenId` | role:developer |
 | GET | `/projects/:projectId/proficiency` | role:viewer |
 | DELETE | `/projects/:projectId/proficiency/me` | role:viewer |
 | POST | `/projects/:projectId/proficiency/me/opt-in` | role:viewer |
 | GET | `/projects/:projectId/psychologist/analyses` | role:viewer |
+| POST | `/projects/:projectId/runner-ticket` | role:developer |
+| POST | `/projects/:projectId/terminal-ticket` | role:viewer |
 | GET | `/projects/:projectId/sessions` | role:viewer |
 | POST | `/projects/:projectId/sessions` | role:developer |
 | GET | `/projects/:projectId/sessions/:sessionId` | role:viewer |
@@ -404,6 +493,7 @@ o componente `d` da JWK, travado por teste.
 | POST | `/projects/:projectId/sessions/:sessionId/agents/:agent/structured-question/:questionSetId/answer` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/agents/:agentId/rearm` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/agents/arquiteto/handoff-infra` | role:developer |
+| POST | `/projects/:projectId/sessions/:sessionId/agents/criativo/validate-necessity` | role:developer |
 | GET | `/projects/:projectId/sessions/:sessionId/budget` | role:developer |
 | PUT | `/projects/:projectId/sessions/:sessionId/budget` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/chat` | role:developer |

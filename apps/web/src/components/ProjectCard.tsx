@@ -54,6 +54,12 @@ interface ProjectCardProps {
   lastActivityText: string;
   /** Aprovações pendentes do projeto (RN-151) — mesmo número do badge da sidebar. */
   pendingApprovalsCount?: number;
+  /**
+   * Agentes ONLINE agora — trabalhando ou com pendência esperando decisão
+   * (RN-409). Nunca tamanho de equipe: `0`/`undefined` não desenha nada,
+   * não um "0 online" que sugeriria equipe vazia.
+   */
+  onlineAgentCount?: number;
   onClick: () => void;
 }
 
@@ -70,6 +76,7 @@ export function ProjectCard({
   onDefineBudget,
   lastActivityText,
   pendingApprovalsCount,
+  onlineAgentCount,
   onClick,
 }: ProjectCardProps) {
   const ProviderIcon = PROVIDER_ICON[provider];
@@ -101,6 +108,13 @@ export function ProjectCard({
         {!!pendingApprovalsCount && (
           <Badge tone="accent" className={styles.unreadBadge}>
             {pendingApprovalsCount}
+          </Badge>
+        )}
+        {/* RN-409 — só desenha com pelo menos 1: "0 online" sugeriria uma
+            equipe (vazia), não a AUSÊNCIA de trabalho ao vivo agora. */}
+        {!!onlineAgentCount && (
+          <Badge tone="success" dot className={styles.unreadBadge}>
+            {onlineAgentCount} online
           </Badge>
         )}
       </div>

@@ -55,8 +55,9 @@ function projeto(i: number): Project {
     createdBy: 'user-1',
     maxConsecutiveBlocked: null,
     storyPromotion: 'manual',
-  workspaceMode: 'container',
+  executionMode: 'container',
   workspacePath: null,
+  workspaceVerifiedAt: null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -73,12 +74,15 @@ function resumo(i: number): ProjectCardSummary {
     lastEvent: null,
     storiesAwaitingPromotion: 0,
     pendingApprovalsCount: 0,
+    onlineAgentCount: 0,
     roster: {
       executionActivated: true,
       moduleNames: ['api', 'web'],
       gatesEverOpened: true,
       delegatedSubagents: ['qa-automacao'],
       infraActive: false,
+      uxDesignerActive: false,
+      staffActive: false,
     },
   };
 }

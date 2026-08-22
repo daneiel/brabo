@@ -58,7 +58,7 @@ Uma linha em `session_events`, append-only, com `seq` densa por sessão
 | `chat.structured_question` | o Criativo pediu VÁRIAS respostas de uma vez, num formulário — ferramenta `ask_structured_questions` (RN-162). Cada pergunta traz `id`, `label`, `type`, `options` e `allowOther` — este último é a saída por texto livre do `select`, e vale `true` quando o modelo não declara nada ([RN-171](../business-rules.md#rn-171)) |
 | `chat.structured_question_answered` | o usuário respondeu o formulário; as respostas também voltam como `chat.message` para o agente ler |
 | `agent.activated` | um agente assumiu trabalho na sessão |
-| `agent.response` | resposta completa do agente, já consolidada. `modelName` diz QUAL modelo a gerou, nos três produtores (os quatro conversacionais, o `ToolLoop` de todo agente de execução/gate e o chat sem agente ativo na api) — `null` quando o turno falhou antes de resolver o binding, e ausente em evento gravado antes da regra ([RN-175](../business-rules.md#rn-175)) |
+| `agent.response` | resposta completa do agente, já consolidada. `modelName` diz QUAL modelo a gerou, nos três produtores (os cinco conversacionais, o `ToolLoop` de todo agente de execução/gate e o chat sem agente ativo na api) — `null` quando o turno falhou antes de resolver o binding, e ausente em evento gravado antes da regra ([RN-175](../business-rules.md#rn-175)) |
 | `agent.error` | falha do agente, com `origem` (`infra`/`modelo`/`codigo`/`politica`) e a `mensagem` que ele diz no fio ([RN-059](../business-rules.md#rn-059)). Cobre o turno inteiro e também a falha de UMA ferramenta no meio do laço, com `tool` e `retentativa` no payload ([RN-163](../business-rules.md#rn-163)) |
 | `tool.result` | resultado de uma execução de ferramenta, gravado pelo hook `Engine.Harness.Hooks.EventLog` |
 | `handoff.offered` | um agente ofereceu o trabalho a outro |
@@ -98,7 +98,7 @@ Uma linha em `session_events`, append-only, com `seq` densa por sessão
 
 | tipo | quando |
 |---|---|
-| `execution.plan_proposed` | o Dev Lead propôs o plano: quantos agentes por módulo e por quê (FASE 14d) |
+| `execution.plan_proposed` | **DESCONTINUADO desde o ADR 0086** ([RN-284](../business-rules.md#rn-284)) — sessões antigas podem ainda ter este tipo no log; sessões novas usam `proposed_action` do tipo `propose_execution_plan` (ver `docs/reference/permissions.md`), porque o plano do Dev Lead passou a ser uma decisão real, aprovada ou recusada em Aprovações, não mais um evento simples |
 | `execution.activated` | a fase de execução começou. **Só entra em sessão `criativa`** — numa `consultiva` o append responde 409 ([RN-097](../business-rules.md#rn-097)). Continua sendo ele, e não a coluna `sessions.kind`, quem diz que uma sessão ESTÁ executando |
 | `execution.parallelization_suggested` | o sistema propôs paralelizar |
 | `execution.parallelization_accepted` | aceita — o subagente herda o teto do agente base |
@@ -148,6 +148,10 @@ aprender um segundo nome porque o agente conversacional não usa o `ToolLoop`.
 | `artifact.business_rule` | `title`, `description`, `origin` |
 | `artifact.module_map` | o mapa de módulos do Arquiteto |
 | `artifact.insight` | — |
+| `artifact.prototipo_navegavel` | `personas`, `jornadas`, `prototipo` (`telas`, `anotacoes`), `resumo` — o protótipo do UX Designer ([RN-286](../business-rules.md#rn-286), ADR 0087) |
+| `artifact.rfc_staff` | — (validado em `Engine.Agents.StaffTools`, não pelo `ArtifactSchemas` — mesmo caso de `artifact.insight`): `problema`, `opcoes` (lista de `descricao`/`tradeoffs`), `recomendacao`, `poc` (`escopo`, `descartavel: true` fixo). O RFC do Staff (ADR 0088), devolvido ao Arquiteto por handoff no mesmo tool call |
+| `artifact.plano_de_teste` | `storyId`, `planoDeTeste`, `criteriosExecutaveis`, `estrategiaDeAutomacao` — entregável da QA-estratégia (ADR 0090), PRE-DEV |
+| `artifact.threat_model` | `storyId`, `threatModel`, `requisitosDeSeguranca` — o "segundo momento" do SecOps sobre o DESENHO de uma story ([RN-360](../business-rules.md#rn-360), ADR 0090) |
 
 Os schemas são fechados: campo faltando reprova a emissão
 (`Engine.Harness.ArtifactSchemas`).
@@ -158,6 +162,7 @@ Os schemas são fechados: campo faltando reprova a emissão
 |---|---|
 | `architecture.readiness_confirmed` | — |
 | `readiness.confirmed` | — |
+| `necessity.validated` | gate `necessidade-validada` (Criativo → PO): o usuário confirma que o `product_brief` que o Criativo consolidou reflete a necessidade de negócio — clique separado de `readiness.confirmed`, nunca inferência do modelo ([RN-406](../business-rules.md#rn-406), ADR 0095). `payload.productBriefId` referencia o `artifact.product_brief` validado |
 
 ### Git e bootstrap
 
@@ -180,6 +185,12 @@ Os schemas são fechados: campo faltando reprova a emissão
 | tipo | quando |
 |---|---|
 | `budget.threshold_crossed` | 70%, 90% ou 100% — **uma vez por limiar** ([RN-018](../business-rules.md#rn-018)) |
+
+### Runner local (ADR 0103/0104)
+
+| tipo | quando |
+|---|---|
+| `project.workspace_verified` | o `brabo-runner` conectou e confirmou o caminho de um projeto `execution_mode: runner` — o runner é a fonte da verdade do caminho, sobrescrevendo o que foi digitado na criação ([RN-423](../business-rules.md#rn-423)) |
 
 ### Psicólogo
 
@@ -304,7 +315,7 @@ respeito.
 
 > ⚠️ Bloco gerado por `pnpm docs:generate`. Não edite à mão — o próximo build sobrescreve.
 
-Extraído dos pontos de emissão: **84 identificadores**, dos quais **2** não aparecem descritos acima.
+Extraído dos pontos de emissão: **88 identificadores**, dos quais **2** não aparecem descritos acima.
 
 - `action.failed` <sub>(apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts)</sub>
 - `agent.activated` <sub>(apps/api/src/application/use-cases/agents/activate-agent.use-case.ts)</sub>
@@ -323,7 +334,10 @@ Extraído dos pontos de emissão: **84 identificadores**, dos quais **2** não a
 - `artifact.business_rule` <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub>
 - `artifact.insight` <sub>(apps/engine/lib/engine/harness/tools/emit_insight.ex)</sub>
 - `artifact.module_map` <sub>(apps/api/src/application/use-cases/architecture/create-module-map.use-case.ts)</sub>
+- `artifact.plano_de_teste` <sub>(apps/engine/lib/engine/agents/dev_lead_tools.ex)</sub>
 - `artifact.product_brief` <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub>
+- `artifact.prototipo_navegavel` <sub>(apps/engine/lib/engine/agents/ux_designer_tools.ex)</sub>
+- `artifact.rfc_staff` <sub>(apps/engine/lib/engine/agents/staff_tools.ex)</sub>
 - `backlog.epic_created` <sub>(apps/api/src/application/use-cases/backlog/create-epic.use-case.ts)</sub>
 - `backlog.epic_without_story` <sub>(apps/engine/lib/engine/agents/po_server.ex)</sub>
 - `backlog.story_created` <sub>(apps/api/src/application/use-cases/backlog/create-story.use-case.ts)</sub>
@@ -358,7 +372,6 @@ Extraído dos pontos de emissão: **84 identificadores**, dos quais **2** não a
 - `execution.activated` <sub>(apps/api/src/application/use-cases/execution/activate-execution.use-case.ts)</sub>
 - `execution.parallelization_accepted` <sub>(apps/api/src/application/use-cases/execution/accept-parallelization.use-case.ts)</sub>
 - `execution.parallelization_suggested` <sub>(apps/api/src/application/use-cases/execution/activate-execution.use-case.ts)</sub>
-- `execution.plan_proposed` <sub>(apps/engine/lib/engine/agents/dev_lead_tools.ex)</sub>
 - `gate.scanner` <sub>(apps/engine/lib/engine/gates/scanner.ex)</sub>
 - `handoff.accepted` <sub>(apps/api/src/application/use-cases/agents/accept-handoff.use-case.ts)</sub>
 - `handoff.offered` <sub>(apps/api/src/application/use-cases/agents/create-handoff.use-case.ts)</sub>
@@ -366,11 +379,13 @@ Extraído dos pontos de emissão: **84 identificadores**, dos quais **2** não a
 - `infra.gate_changed` <sub>(apps/api/src/application/use-cases/execution/record-infra-gate-verdict.use-case.ts)</sub>
 - `instruction.rolled_back` <sub>(apps/api/src/application/use-cases/instructions/rollback-instruction.use-case.ts)</sub>
 - `llm.turn` <sub>(apps/engine/lib/engine/sessions/engine_api_client.ex)</sub>
+- `necessity.validated` <sub>(apps/api/src/application/use-cases/agents/validate-necessity.use-case.ts)</sub>
 - `permission.granted` <sub>(apps/api/src/application/use-cases/actions/approve-always-action.use-case.ts)</sub>
 - `pr.gate_changed` <sub>(apps/api/src/application/use-cases/execution/open-gate.use-case.ts)</sub>
 - `project.git_connected` <sub>(apps/api/src/application/use-cases/git/handle-git-oauth-callback.use-case.ts)</sub>
 - `project.repository_adopted` <sub>(apps/api/src/application/use-cases/git/adopt-repository.use-case.ts)</sub>
 - `project.repository_provisioned` <sub>(apps/api/src/application/use-cases/git/provision-repository.use-case.ts)</sub>
+- `project.workspace_verified` <sub>(apps/api/src/application/use-cases/iam/confirm-project-workspace.use-case.ts)</sub>
 - `proposed_action.approved` <sub>(apps/api/src/application/use-cases/actions/approve-action.use-case.ts)</sub>
 - `proposed_action.created` <sub>(apps/api/src/application/use-cases/actions/propose-action.use-case.ts)</sub>
 - `proposed_action.denied` <sub>(apps/api/src/application/use-cases/actions/deny-action.use-case.ts)</sub>

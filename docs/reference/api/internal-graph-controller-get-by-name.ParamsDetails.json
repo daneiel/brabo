@@ -1,0 +1,1 @@
+{"parameters":[{"name":"name","required":true,"in":"path","schema":{"type":"string"}},{"name":"version","required":false,"in":"query","schema":{"example":"3","type":"string"}}]}

@@ -6,11 +6,13 @@ defmodule Engine.Agents.PoServer do
   ferramentas create_epic/create_story/create_task (nunca SQL direto).
 
   Ele também **relê** o que já existe — `listar_regras_de_negocio` e
-  `listar_backlog`, escopadas ao PROJETO (RN-164) — e **pergunta** quando falta
+  `listar_backlog`, escopadas ao PROJETO (RN-164), mais `listar_metricas_de_produto`
+  (o funil/DORA parcial do projeto — RN-407) — e **pergunta** quando falta
   informação, com o mesmo `ask_structured_questions` do Criativo (RN-165). As
-  três nasceram do mesmo defeito de uso real: até então as quatro ferramentas
-  do PO eram de ESCRITA, o contexto era lido uma única vez no kickoff, e um
-  backlog com épico e nenhuma história travava a execução em silêncio.
+  três primeiras nasceram do mesmo defeito de uso real: até então as quatro
+  ferramentas do PO eram de ESCRITA, o contexto era lido uma única vez no
+  kickoff, e um backlog com épico e nenhuma história travava a execução em
+  silêncio.
 
   Igual ao CriativoServer: GenServer por sessão, estado + rehydration +
   streaming pelo canal Phoenix. **Diferença:** cada turno roda um LOOP bounded
@@ -25,6 +27,7 @@ defmodule Engine.Agents.PoServer do
   alias Engine.Agents.{FalhaDeTurno, TurnoAssincrono}
   alias Engine.Harness.Tools.{CreateEpic, CreateStory, CreateTask, OfferHandoff}
   alias Engine.Harness.Tools.{AskStructuredQuestions, ListarBacklog, ListarRegrasDeNegocio}
+  alias Engine.Harness.Tools.ListarMetricasDeProduto
   alias Engine.Sessions.EngineApiClient
 
   @agent "po"
@@ -89,6 +92,7 @@ defmodule Engine.Agents.PoServer do
          # kickoff. A ordem da lista é o que o modelo vê primeiro.
          ListarRegrasDeNegocio.spec(),
          ListarBacklog.spec(),
+         ListarMetricasDeProduto.spec(),
          CreateEpic.spec(),
          CreateStory.spec(),
          CreateTask.spec(),
@@ -246,6 +250,10 @@ defmodule Engine.Agents.PoServer do
     do: ListarRegrasDeNegocio.run(args, state)
 
   defp run_tool("listar_backlog", args, state), do: ListarBacklog.run(args, state)
+
+  defp run_tool("listar_metricas_de_produto", args, state),
+    do: ListarMetricasDeProduto.run(args, state)
+
   defp run_tool("create_epic", args, state), do: CreateEpic.run(args, state)
   defp run_tool("create_story", args, state), do: CreateStory.run(args, state)
   defp run_tool("create_task", args, state), do: CreateTask.run(args, state)

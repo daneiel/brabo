@@ -23,14 +23,36 @@ defmodule Engine.Gates.SecOpsAgentServer do
   registro de ferramentas, então estruturalmente não consegue rodar
   gitleaks/semgrep nem substituir este gate. Este continua sendo o ÚNICO
   veredito de segurança que conta pra aprovar a PR.
+
+  ## O appsec (RN-360, ADR 0090) é este MESMO processo, num segundo momento
+
+  `run_design/2` (`docs/fluxo.yml` `id: appsec`) roda o `Engine.Gates.AppSecAgent`
+  — threat model STRIDE-lite sobre a STORY + `module_map`, ANTES de existir
+  código/PR — no mesmo GenServer, mesma chave de `Registry`. Não é um
+  processo novo: "mesmo padrão do QA, dois momentos, não dois agentes por
+  ora" (docs/fluxo.yml). `run/2` (acima) segue determinístico sobre diff
+  real; `run_design/2` não toca `Diff`/`Scanner`/`DevAgentState` nenhum —
+  sem worktree, sem task_id, o contexto vem de
+  `Engine.Gates.AppSecContextBuilder.fetch/2`.
   """
 
   use GenServer, restart: :temporary
 
+  require Logger
+
   alias Engine.Dev.{ContextBuilder, DevAgentServer, DevAgentState}
-  alias Engine.Gates.{Diff, GateState, Scanner}
+  alias Engine.Gates.{AppSecAgent, AppSecContextBuilder, Diff, GateState, Scanner}
   alias Engine.Harness.ArtifactEmitter
   alias Engine.Sessions.EngineApiClient
+
+  # A entrega do threat model (RN-360): arquiteto (recebe todo threat model
+  # do projeto, mesmo endereço que já recebe module_map/C4), dev-lead
+  # (entrada declarada em docs/fluxo.yml — informa o plano de paralelismo) e
+  # o LEAD da área de Infra. O id do fluxo é `area-infra`; o AGENTE endereçável
+  # é `"infra"` (`apps/api/src/domain/agents/agent-areas.ts`, mesmo valor que
+  # `Engine.Agents.ArquitetoServer.executar_offer_infra_handoff/1` já usa) —
+  # handoff externo endereça só o LEAD da área (ADR 0038), nunca `area-infra`.
+  @appsec_handoff_targets ["arquiteto", "dev-lead", "infra"]
 
   defp semgrep,
     do: Application.get_env(:engine, :semgrep_detector, Engine.Actions.SemgrepDetector.Live)
@@ -47,6 +69,13 @@ defmodule Engine.Gates.SecOpsAgentServer do
   @doc "Dispara a checagem de SecOps pra `task_id`."
   def run(project_id, task_id), do: GenServer.cast(via(project_id), {:run, task_id})
 
+  @doc """
+  Dispara o threat model de DESIGN (appsec, RN-360) pra `story_id` —
+  segundo momento do secops, ANTES de existir código/PR. Ver moduledoc.
+  """
+  def run_design(project_id, story_id),
+    do: GenServer.cast(via(project_id), {:run_design, story_id})
+
   @impl true
   def init(project_id), do: {:ok, %{project_id: project_id}}
 
@@ -55,6 +84,24 @@ defmodule Engine.Gates.SecOpsAgentServer do
     case DevAgentState.find_by_task_id(state.project_id, task_id) do
       nil -> :ok
       dev_state -> run_secops(state.project_id, dev_state, task_id)
+    end
+
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_cast({:run_design, story_id}, state) do
+    case AppSecContextBuilder.fetch(state.project_id, story_id) do
+      {:ok, %{story: story, module_map: module_map}} ->
+        run_appsec_design(state.project_id, story, module_map)
+
+      {:error, reason} ->
+        # Sem story (ou sem sessão por trás dela) não há ONDE narrar a
+        # falha — nenhum `session_id` pra registrar evento. Loga e para,
+        # mesmo raciocínio de `find_by_task_id` devolvendo `nil` acima.
+        Logger.warning(
+          "appsec: contexto de design indisponível pra story #{story_id}: #{inspect(reason)}"
+        )
     end
 
     {:noreply, state}
@@ -180,5 +227,70 @@ defmodule Engine.Gates.SecOpsAgentServer do
         # dispatch pendente (mesmo raciocínio do QaLeadServer).
         GateState.delete(project_id, task_id, "secops")
     end
+  end
+
+  # --- appsec (RN-360): segundo momento, de design ---
+
+  defp run_appsec_design(project_id, story, module_map) do
+    case AppSecAgent.run(project_id, story, module_map) do
+      {:ok, resultado} -> emit_threat_model(project_id, story, resultado)
+      {:blocked, info} -> emit_bloqueio_appsec(project_id, story, info)
+    end
+  end
+
+  defp emit_threat_model(project_id, story, resultado) do
+    session_id = Map.get(story, "sessionId")
+    story_id = Map.get(story, "id")
+
+    payload = %{
+      storyId: story_id,
+      threatModel: resultado.threat_model,
+      requisitosDeSeguranca: resultado.requisitos_de_seguranca,
+      riscos: resultado.riscos
+    }
+
+    case ArtifactEmitter.emit_returning(project_id, session_id, "appsec", "threat_model", payload) do
+      {:ok, %{"id" => artifact_id}} ->
+        criar_handoffs_appsec(project_id, session_id, artifact_id)
+
+      {:error, _reason} ->
+        # Payload inválido já vira `appsec.error` dentro do próprio
+        # `emit_returning/5` (ArtifactSchemas) — nada mais a fazer aqui: sem
+        # id de artefato não há como criar o handoff (ele referencia o
+        # threat model), e inventar um handoff sem artefato mentiria sobre a
+        # origem do parecer.
+        :ok
+    end
+  end
+
+  defp criar_handoffs_appsec(project_id, session_id, artifact_id) do
+    Enum.each(@appsec_handoff_targets, fn to_agent ->
+      case EngineApiClient.create_handoff(project_id, session_id, "appsec", to_agent, artifact_id) do
+        {:ok, _handoff} ->
+          :ok
+
+        {:error, reason} ->
+          # RN-116: falha de handoff nunca fica silenciosa — narra a origem
+          # no fio, um evento por alvo (o handoff é a árvore inteira; um
+          # alvo falhar não deve esconder que os outros dois deram certo).
+          ArtifactEmitter.append(project_id, session_id, "appsec", "agent.error", %{
+            origem: "infra",
+            mensagem: "Não consegui oferecer o threat model ao #{to_agent}: #{inspect(reason)}.",
+            reason: inspect(reason)
+          })
+      end
+    end)
+  end
+
+  defp emit_bloqueio_appsec(project_id, story, %{
+         reason: reason,
+         diagnosis: diagnosis,
+         origin: origin
+       }) do
+    ArtifactEmitter.append(project_id, Map.get(story, "sessionId"), "appsec", "agent.error", %{
+      origem: origin,
+      mensagem: "#{reason} (story #{Map.get(story, "id")}): #{diagnosis}",
+      reason: diagnosis
+    })
   end
 end

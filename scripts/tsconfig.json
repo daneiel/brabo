@@ -22,5 +22,8 @@
     "noEmit": true,
     "skipLibCheck": true
   },
-  "include": ["ci/**/*.ts", "*.config.ts"]
+  // "dev/seed-prompts*.ts" nomeados explicitamente, não "dev/**/*.ts": o
+  // diretório já tinha bootstrap.spec.ts fora do typecheck, e ampliar o
+  // glob varreria esse arquivo de passagem — fora do escopo desta frente.
+  "include": ["ci/**/*.ts", "dev/seed-prompts.ts", "dev/seed-prompts.spec.ts", "*.config.ts"]
 }

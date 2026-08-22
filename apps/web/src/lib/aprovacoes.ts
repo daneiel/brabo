@@ -59,6 +59,8 @@ export const VERBO_DA_ACAO: Record<ActionType, string> = {
   instruction_patch: 'propõe ajustar a instrução de um agente',
   parallelize: 'quer mais um agente em paralelo',
   raise_max_parallel: 'propõe subir o teto de paralelismo',
+  propose_execution_plan: 'propõe o plano de execução',
+  assess_implementability: 'avalia a implementabilidade de uma story',
 };
 
 type Payload = Record<string, unknown>;
@@ -235,6 +237,32 @@ const FRASE_DA_ACAO: Record<ActionType, (payload: Payload) => string> = {
     const qual = area ? ` da área ${area}` : '';
     const salto = atual !== undefined && proposto !== undefined ? ` de ${atual} para ${proposto}` : '';
     return `Sobe o teto de agentes em paralelo${qual}${salto} — muda quanto o produto gasta sem perguntar.`;
+  },
+
+  propose_execution_plan: (p) => {
+    const total = numero(p, 'totalAgentes');
+    const modulos = quantidade(p, 'modulos');
+    const resumo = texto(p, 'resumo');
+    const quantos =
+      total !== undefined && modulos !== undefined
+        ? ` — ${plural(total, 'agente', 'agentes')} em ${plural(modulos, 'módulo', 'módulos')}`
+        : '';
+    const porque = resumo ? `: "${curto(resumo)}"` : '';
+    // Aprovar aqui NÃO sobe agente nenhum — só aceita o plano. Quem sobe é
+    // uma ação separada (ativar execução), depois. Ver o comentário de
+    // `DevLeadTools.classificar/4`.
+    return `Aprova o plano de execução do Dev Lead${quantos}${porque}. Você ainda decide quando ativar a execução.`;
+  },
+
+  assess_implementability: (p) => {
+    const parecer = texto(p, 'parecer');
+    const justificativa = texto(p, 'justificativa');
+    const rotulo = parecer === 'inviavel' ? 'INVIÁVEL' : 'implementável';
+    const porque = justificativa ? `: "${curto(justificativa)}"` : '';
+    // Gate `implementavel` (docs/gates.yml, ADR 0090) — o parecer do Dev
+    // Lead, a partir do plano de teste da QA-estratégia. Aprovar registra o
+    // parecer; não sobe agente nenhum.
+    return `Registra a story como ${rotulo}${porque}.`;
   },
 };
 

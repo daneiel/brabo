@@ -1,0 +1,69 @@
+---
+id: runner-tickets-controller-runner-ticket
+title: "Emite um ticket de uso único para o runner local conectar"
+description: "Autentica `connect/3` do socket Phoenix `/runner` (tópico `terminal:<projectId>`, papel 'runner') — NÃO é o JWT reaproveitado, e esta rota em si só aceita um Personal Access Token no lugar do JWT de sessão (ADR 0105). TTL de 30s e uso único. Recusa com 400 se o projeto não estiver no modo 'runner' (RN-421): o runner não tem o que servir num projeto cujo código mora no container gerenciado."
+sidebar_label: "Emite um ticket de uso único para o runner local conectar"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "post api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Emite um ticket de uso único para o runner local conectar"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/projects/{projectId}/runner-ticket"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Autentica `connect/3` do socket Phoenix `/runner` (tópico `terminal:<projectId>`, papel "runner") — NÃO é o JWT reaproveitado, e esta rota em si só aceita um Personal Access Token no lugar do JWT de sessão (ADR 0105). TTL de 30s e uso único. Recusa com 400 se o projeto não estiver no modo "runner" (RN-421): o runner não tem o que servir num projeto cujo código mora no container gerenciado.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./runner-tickets-controller-runner-ticket.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./runner-tickets-controller-runner-ticket.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./runner-tickets-controller-runner-ticket.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

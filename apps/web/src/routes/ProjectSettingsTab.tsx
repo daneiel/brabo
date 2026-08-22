@@ -23,9 +23,13 @@ import {
   getWorkspaceModelBinding,
   listCredentials,
   listModels,
+  listModelCatalog,
   listAgentAreas,
   listProjectMembers,
   removeProjectMember,
+  listPersonalAccessTokens,
+  issuePersonalAccessToken,
+  revokePersonalAccessToken,
   mensagemDaApi,
   setAgentModelBinding,
   setAreaModelBinding,
@@ -41,14 +45,21 @@ import { ROLE_LABEL, ROLE_ORDER } from '../lib/roles';
 import type {
   Model,
   ModelBindingScope,
+  ModelComCuradoria,
+  PersonalAccessTokenIssued,
+  PersonalAccessTokenSummary,
   ResolvedBinding,
   ProficiencyLevel,
   ProficiencyProfile,
   Role,
   StoryPromotionMode,
+  UsoDeModelo,
 } from '../lib/api-types';
 import {
   CREDENCIAIS_DE_LLM,
+  formatarPreco,
+  ROTULO_DO_USO,
+  USOS_DE_MODELO,
   type LlmCredentialProvider,
 } from '../lib/models';
 import { divergencias } from '../lib/adoption';
@@ -74,6 +85,20 @@ const ORIGIN_TONE: Record<ModelBindingScope, BadgeTone> = {
   area: 'accent',
   agent: 'success',
   session: 'success',
+};
+
+/**
+ * Cor de cada uso na tabela de "melhores modelos por capacidade" — só
+ * distinção visual entre chips, como `ORIGIN_TONE`/`LEVEL_TONE` já fazem para
+ * outros enums neste arquivo. Não é capability nem curadoria; é mapeamento
+ * cosmético 1:1 sobre os cinco tons que `Badge` tem.
+ */
+const USO_TONE: Record<UsoDeModelo, BadgeTone> = {
+  codigo: 'accent',
+  documentacao: 'warning',
+  analise: 'danger',
+  imagem: 'success',
+  conversa: 'muted',
 };
 
 const MATRIX_ROWS: { label: string; minRole: Role }[] = [
@@ -186,10 +211,12 @@ export function ProjectSettingsTab({ projectId }: ProjectSettingsTabProps) {
       <ExecutionSection projectId={projectId} />
       <ParallelismSection projectId={projectId} />
       <PromotionSection projectId={projectId} />
+      <MelhoresModelosPorCapacidadeSection projectId={projectId} />
       <ModelsSection projectId={projectId} />
       <AreaModelsSection projectId={projectId} />
       <CatalogoDeModelos projectId={projectId} />
       <MembersSection projectId={projectId} />
+      <PersonalAccessTokensSection projectId={projectId} />
       <ProficiencySection projectId={projectId} />
       <InstructionVersionsSection projectId={projectId} />
       <MatrixSection />
@@ -229,6 +256,174 @@ function GastoDasChaves({ projectId }: { projectId: string }) {
 
   if (!project || comPapel?.role !== 'owner') return null;
   return <CredentialSpendSection workspaceId={project.workspaceId} />;
+}
+
+/**
+ * "Melhores modelos por capacidade" (handoff, Configurações item 5).
+ *
+ * O handoff mostra uma NOTA por capacidade (código 9.4, imagem 9.1…) —
+ * `design_handoff_brabo/README.md`, "Ranking por capacidade". É dado
+ * FICTÍCIO do mock: nenhum provider publica "qualidade de código" e o
+ * produto não mede isso em lugar nenhum. Calcular um número aqui seria o
+ * mesmo "palpite vestido de dado" que o ADR 0041 proíbe para capability de
+ * MODELO, agora sobre qualidade — e por isso esta tabela não tem coluna de
+ * nota. O que ela mostra são dois sinais REAIS:
+ *
+ * - **Recomendado/alternativa**: entre os modelos que a curadoria DESTE
+ *   workspace marcou para aquele uso (`uses`, ADR 0051 — nunca calculado,
+ *   sempre marcado à mão no catálogo abaixo), o mais usado pelos agentes
+ *   deste projeto primeiro, custo como desempate. Uso sem modelo curado
+ *   mostra "sem cobertura curada" — nunca esconde a linha.
+ * - **Usado por**: contagem real de agentes DESTE projeto cujo binding
+ *   vigente (mesma cascata da tabela abaixo) resolve para aquele modelo.
+ *
+ * A curadoria pende de `:workspaceId` e exige `maintainer` (ADR 0042) — esta
+ * seção herda a mesma visibilidade de `CatalogoDeModelos`, mais abaixo, e não
+ * é mostrada a quem só tem `viewer`/`developer`. Ver ADR 0077.
+ */
+export function MelhoresModelosPorCapacidadeSection({
+  projectId,
+}: {
+  projectId: string;
+}) {
+  const { data: project } = useQuery({
+    queryKey: ['project', projectId],
+    queryFn: () => getProject(projectId),
+  });
+  const { data: catalogo } = useQuery({
+    queryKey: ['model-catalog', project?.workspaceId],
+    queryFn: () => listModelCatalog(project!.workspaceId),
+    enabled: Boolean(project?.workspaceId),
+  });
+  // MESMA queryKey que `ModelsSection` usa para o binding de cada agente —
+  // o react-query deduplica, então as duas seções montadas juntas custam UMA
+  // rodada de requisições, não duas.
+  const bindingQueries = useQueries({
+    queries: AGENT_LIST.map((agent) => ({
+      queryKey: ['agent-binding', projectId, agent.key],
+      queryFn: () => getAgentModelBinding(projectId, agent.key),
+    })),
+  });
+
+  if (!catalogo) return null;
+
+  const todosOsModelos: ModelComCuradoria[] = [
+    ...Object.values(catalogo.local).flat(),
+    ...Object.values(catalogo.cloud).flat(),
+  ];
+
+  const usadoPorContagem = new Map<string, number>();
+  for (const query of bindingQueries) {
+    const modelId = query.data?.modelId;
+    if (modelId) {
+      usadoPorContagem.set(modelId, (usadoPorContagem.get(modelId) ?? 0) + 1);
+    }
+  }
+
+  interface LinhaDeRanking {
+    uso: UsoDeModelo;
+    recomendado: ModelComCuradoria | undefined;
+    alternativa: ModelComCuradoria | undefined;
+  }
+
+  const linhas: LinhaDeRanking[] = USOS_DE_MODELO.map((uso) => {
+    const candidatos = todosOsModelos
+      .filter((m) => m.isActive && m.uses.includes(uso))
+      .sort((a, b) => {
+        const usoA = usadoPorContagem.get(a.id) ?? 0;
+        const usoB = usadoPorContagem.get(b.id) ?? 0;
+        // Mais usado pelo TIME primeiro — o sinal mais honesto que existe de
+        // "serve bem" sem inventar nota; custo desempata, do mais barato ao
+        // mais caro (grátis/local vence naturalmente).
+        return (
+          usoB - usoA ||
+          a.inputPricePerMillionMicros - b.inputPricePerMillionMicros
+        );
+      });
+    return { uso, recomendado: candidatos[0], alternativa: candidatos[1] };
+  });
+
+  const columns: TableColumn<LinhaDeRanking>[] = [
+    {
+      key: 'capacidade',
+      label: 'Capacidade',
+      width: '1.15fr',
+      render: (linha) => (
+        <Badge tone={USO_TONE[linha.uso]}>{ROTULO_DO_USO[linha.uso]}</Badge>
+      ),
+    },
+    {
+      key: 'recomendado',
+      label: 'Recomendado',
+      width: '1.5fr',
+      render: (linha) =>
+        linha.recomendado ? (
+          <span className={styles.rankModelo}>
+            <span className={styles.rankNome} title={linha.recomendado.displayName}>
+              {linha.recomendado.displayName}
+            </span>
+            <span className={styles.rankDetalhe}>{formatarPreco(linha.recomendado)}</span>
+          </span>
+        ) : (
+          <span className={styles.dash}>sem cobertura curada</span>
+        ),
+    },
+    {
+      key: 'alternativa',
+      label: 'Alternativa',
+      width: '1.35fr',
+      render: (linha) =>
+        linha.alternativa ? (
+          <span className={styles.rankModelo}>
+            <span className={styles.rankNome} title={linha.alternativa.displayName}>
+              {linha.alternativa.displayName}
+            </span>
+            <span className={styles.rankDetalhe}>{formatarPreco(linha.alternativa)}</span>
+          </span>
+        ) : (
+          <span className={styles.dash}>—</span>
+        ),
+    },
+    {
+      key: 'usadoPor',
+      label: 'Usado por',
+      width: '1.5fr',
+      render: (linha) => {
+        const n = linha.recomendado
+          ? usadoPorContagem.get(linha.recomendado.id) ?? 0
+          : 0;
+        return n > 0 ? (
+          <span className={styles.fallback}>
+            {n} agente{n > 1 ? 's' : ''} deste projeto
+          </span>
+        ) : (
+          <span className={styles.dash}>nenhum agente ainda</span>
+        );
+      },
+    },
+  ];
+
+  return (
+    <div className={styles.section}>
+      <div className={styles.sectionHead}>
+        <h2 className={styles.title}>Melhores modelos por capacidade</h2>
+        <span className={styles.eyebrow}>curadoria · uso real · custo</span>
+      </div>
+      <p className={styles.subtitle}>
+        "Recomendado" é o modelo que mais agentes deste projeto já usam, entre
+        os que a curadoria deste workspace marcou para a capacidade — custo
+        desempata. Nenhuma nota de qualidade é calculada (ADR 0042: curadoria
+        é sempre manual); marque os usos no <em>Catálogo de modelos</em>,
+        mais abaixo.
+      </p>
+      <Table
+        columns={columns}
+        rows={linhas}
+        rowKey={(l) => l.uso}
+        emptyMessage="Nenhuma capacidade cadastrada."
+      />
+    </div>
+  );
 }
 
 /**
@@ -762,6 +957,171 @@ function MembersSection({ projectId }: { projectId: string }) {
       </div>
 
       <Table columns={columns} rows={members ?? []} rowKey={(m) => m.userId} emptyMessage="Nenhum membro além do dono do projeto." />
+    </div>
+  );
+}
+
+/**
+ * Personal Access Tokens do runner local (`brb_…`, ADR 0105) — cada usuário
+ * gerencia só os PRÓPRIOS tokens deste projeto (RN-426, sem admin cross-user
+ * nesta onda). O token bruto só existe no `emitido` LOCAL deste componente,
+ * nunca no cache do react-query que também alimenta a listagem — a lista
+ * nunca pode carregar o valor bruto.
+ */
+export function PersonalAccessTokensSection({ projectId }: { projectId: string }) {
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+  const { data: tokens } = useQuery({
+    queryKey: ['pats', projectId],
+    queryFn: () => listPersonalAccessTokens(projectId),
+  });
+  const [name, setName] = useState('');
+  const [expiresInDays, setExpiresInDays] = useState('');
+  const [emitido, setEmitido] = useState<PersonalAccessTokenIssued | null>(null);
+  const [copiado, setCopiado] = useState(false);
+
+  function invalidate() {
+    queryClient.invalidateQueries({ queryKey: ['pats', projectId] });
+  }
+
+  async function handleIssue() {
+    if (!name.trim()) return;
+    try {
+      const dias = expiresInDays.trim() ? Number(expiresInDays) : undefined;
+      const issued = await issuePersonalAccessToken(projectId, {
+        name: name.trim(),
+        expiresInDays: dias,
+      });
+      setName('');
+      setExpiresInDays('');
+      setCopiado(false);
+      setEmitido(issued);
+      invalidate();
+    } catch {
+      showToast({ title: 'Falha ao gerar token', message: 'Tente novamente.', tone: 'danger' });
+    }
+  }
+
+  async function handleRevoke(tokenId: string) {
+    await revokePersonalAccessToken(projectId, tokenId);
+    invalidate();
+  }
+
+  async function copiarToken() {
+    if (!emitido) return;
+    try {
+      await navigator.clipboard.writeText(emitido.token);
+      setCopiado(true);
+    } catch {
+      showToast({ title: 'Não consegui copiar', message: 'Copie o valor manualmente.', tone: 'danger' });
+    }
+  }
+
+  const columns: TableColumn<PersonalAccessTokenSummary>[] = [
+    { key: 'name', label: 'Nome', width: '2fr', render: (t) => t.name },
+    {
+      key: 'createdAt',
+      label: 'Criado',
+      width: '1fr',
+      render: (t) => new Date(t.createdAt).toLocaleDateString('pt-BR'),
+    },
+    {
+      key: 'expiresAt',
+      label: 'Expira',
+      width: '1fr',
+      render: (t) => (t.expiresAt ? new Date(t.expiresAt).toLocaleDateString('pt-BR') : 'nunca'),
+    },
+    {
+      key: 'lastUsedAt',
+      label: 'Último uso',
+      width: '1fr',
+      render: (t) =>
+        t.lastUsedAt ? new Date(t.lastUsedAt).toLocaleDateString('pt-BR') : 'nunca usado',
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      width: '120px',
+      render: (t) =>
+        t.revokedAt ? (
+          <Badge tone="danger">revogado</Badge>
+        ) : (
+          <span className={styles.status}>
+            <span className={styles.statusDot} />
+            ativo
+          </span>
+        ),
+    },
+    {
+      key: 'action',
+      label: '',
+      width: '56px',
+      render: (t) =>
+        t.revokedAt ? null : (
+          <button
+            type="button"
+            aria-label={`Revogar ${t.name}`}
+            title="Revogar"
+            className={styles.remove}
+            onClick={() => handleRevoke(t.id)}
+          >
+            <TrashIcon size={14} />
+          </button>
+        ),
+    },
+  ];
+
+  return (
+    <div className={styles.section}>
+      <div className={styles.sectionHead}>
+        <h2 className={styles.title}>Tokens de acesso</h2>
+        <span className={styles.eyebrow}>Runner local · ADR 0105</span>
+      </div>
+      <p className={styles.subtitle}>
+        Um Personal Access Token autentica o <code>brabo-runner</code> nesta máquina,
+        escopado só a este projeto — revogável a qualquer hora, e o valor bruto nunca
+        aparece de novo depois de emitido.
+      </p>
+
+      <div className={styles.inviteBar}>
+        <div className={styles.inviteInput}>
+          <Input
+            placeholder="Nome (ex.: laptop)"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+        </div>
+        <div className={styles.inviteRole}>
+          <Input
+            type="number"
+            min={1}
+            placeholder="Expira em N dias (opcional)"
+            value={expiresInDays}
+            onChange={(e) => setExpiresInDays(e.target.value)}
+          />
+        </div>
+        <Button onClick={handleIssue}>Gerar token</Button>
+      </div>
+
+      <Table
+        columns={columns}
+        rows={tokens ?? []}
+        rowKey={(t) => t.id}
+        emptyMessage="Nenhum token de acesso emitido para este projeto."
+      />
+
+      {emitido && (
+        <Modal title="Token gerado" onClose={() => setEmitido(null)}>
+          <p className={styles.subtitle}>
+            Copie agora — este token não é recuperável depois de fechar esta janela. Use em{' '}
+            <code>--token</code> ou <code>BRABO_ACCOUNT_TOKEN</code> do <code>brabo-runner</code>.
+          </p>
+          <Input mono readOnly value={emitido.token} onFocus={(e) => e.currentTarget.select()} />
+          <Button onClick={copiarToken} variant="secondary">
+            {copiado ? 'Copiado' : 'Copiar'}
+          </Button>
+        </Modal>
+      )}
     </div>
   );
 }

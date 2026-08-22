@@ -18,12 +18,22 @@ end
 
 defmodule Engine.Harness.ContextManager.Default do
   @moduledoc """
-  Compactação: estima os tokens das mensagens; se acima de `threshold *
-  janela do modelo` E houver mensagens não-pinned além das `keep_recent` mais
-  recentes, sumariza as mais antigas não-pinned via `llm_turn` (agent
-  "context-manager", modelo barato), substitui-as por uma mensagem de resumo,
-  preserva as pinned + as recentes, e emite `context.compacted`
-  (`tokensBefore`/`tokensAfter`). Determinístico dado o resumo do modelo.
+  Compactação: estima os tokens das mensagens (`content` + os `toolCalls` de
+  mensagens `assistant`, serializados — os argumentos de tool call ocupam
+  bytes reais no corpo HTTP e ficavam invisíveis à estimativa antiga); se
+  acima de `threshold * janela efetiva` E houver mensagens não-pinned além
+  das `keep_recent` iterações mais recentes, sumariza as mais antigas
+  não-pinned via `llm_turn` (agent "context-manager", modelo barato),
+  substitui-as por uma mensagem de resumo, preserva as pinned + as recentes,
+  e emite `context.compacted` (`tokensBefore`/`tokensAfter`). Determinístico
+  dado o resumo do modelo.
+
+  A janela EFETIVA é `min(context_window, teto_de_transporte)` — ver
+  `window/1`. O corte em `older`/`recent` acontece por FRONTEIRA DE ITERAÇÃO
+  do ToolLoop (`group_by_iteration/1`), nunca por mensagem crua: uma mensagem
+  `assistant` com `toolCalls` e os `role: "tool"` que a respondem viajam
+  juntos para o mesmo lado do corte, ou o protocolo de tool-use do provider
+  quebra (mensagem de resultado sem a chamada correspondente no histórico).
   """
 
   @behaviour Engine.Harness.ContextManager
@@ -40,8 +50,9 @@ defmodule Engine.Harness.ContextManager.Default do
     {pinned, non_pinned} = Enum.split_with(ctx.messages, & &1[:pinned])
     keep = keep_recent(ctx)
 
-    older = Enum.drop(non_pinned, -keep)
-    recent = Enum.take(non_pinned, -keep)
+    groups = group_by_iteration(non_pinned)
+    older = groups |> Enum.drop(-keep) |> List.flatten()
+    recent = groups |> Enum.take(-keep) |> List.flatten()
 
     if tokens > limit and older != [] do
       compact(ctx, tokens, pinned, older, recent)
@@ -49,6 +60,45 @@ defmodule Engine.Harness.ContextManager.Default do
       {:ok, ctx}
     end
   end
+
+  # Agrupa mensagens não-pinned em iterações do ToolLoop: uma mensagem
+  # `assistant` com `toolCalls` "puxa" para o mesmo grupo todo `role: "tool"`
+  # que vem logo em seguida (o resultado de CADA tool call daquela iteração —
+  # `ToolLoop.Default` anexa um por vez, na ordem de despacho, antes de
+  # recursar para a próxima iteração). Mensagem sem toolCalls (ou tool "solto",
+  # sem assistant precedente no grupo corrente) forma grupo de 1 — mesmo
+  # comportamento de antes, mensagem a mensagem.
+  defp group_by_iteration(messages) do
+    Enum.chunk_while(
+      messages,
+      [],
+      fn msg, acc ->
+        cond do
+          acc == [] ->
+            {:cont, [msg]}
+
+          Map.get(msg, "role") == "tool" and assistant_with_tool_calls?(hd(acc)) ->
+            {:cont, acc ++ [msg]}
+
+          true ->
+            {:cont, acc, [msg]}
+        end
+      end,
+      fn
+        [] -> {:cont, []}
+        acc -> {:cont, acc, []}
+      end
+    )
+  end
+
+  defp assistant_with_tool_calls?(%{"role" => "assistant"} = msg) do
+    case Map.get(msg, "toolCalls") do
+      list when is_list(list) and list != [] -> true
+      _ -> false
+    end
+  end
+
+  defp assistant_with_tool_calls?(_), do: false
 
   defp compact(ctx, tokens_before, pinned, older, recent) do
     summary = summarize(ctx, older)
@@ -92,10 +142,29 @@ defmodule Engine.Harness.ContextManager.Default do
     end
   end
 
+  # Conta `content` de TODA mensagem (inclui `role: "tool"`, cujo resultado
+  # já viajava por este campo) MAIS a serialização JSON de `toolCalls` de
+  # mensagens `assistant` — os argumentos de uma tool call são bytes reais no
+  # corpo HTTP de `POST .../llm-turn` e antes ficavam de fora: uma mensagem
+  # só de tool calls tem `content` vazio e passava pela estimativa como se
+  # não custasse nada.
   defp estimate(messages) do
     messages
-    |> Enum.map(fn m -> Tokenizer.estimate(Map.get(m, "content", "")) end)
+    |> Enum.map(fn m ->
+      Tokenizer.estimate(Map.get(m, "content", "")) + Tokenizer.estimate(tool_calls_json(m))
+    end)
     |> Enum.sum()
+  end
+
+  defp tool_calls_json(msg) do
+    if assistant_with_tool_calls?(msg) do
+      case Jason.encode(Map.get(msg, "toolCalls")) do
+        {:ok, json} -> json
+        {:error, _} -> ""
+      end
+    else
+      ""
+    end
   end
 
   defp threshold(ctx),
@@ -103,9 +172,29 @@ defmodule Engine.Harness.ContextManager.Default do
       Map.get(ctx, :compaction_threshold) ||
         Application.get_env(:engine, :context_compaction_threshold, 0.7)
 
-  defp window(ctx),
-    do:
-      Map.get(ctx, :context_window) || Application.get_env(:engine, :default_context_window, 8192)
+  # Janela EFETIVA de compactação: a menor entre a janela do MODELO
+  # (`context_window`, o que os agentes de gate/dev declaram como 128_000 —
+  # descreve o modelo, não muda aqui) e o teto de TRANSPORTE
+  # (`transport_window_tokens/0`, derivado do limite de bytes do corpo HTTP
+  # da api). Usar só a janela do modelo compactava tarde demais: 70% de 128k
+  # tokens é ~350 KB de payload estimado, bem depois do limite de transporte
+  # real (confirmado: 413 muito antes disso). A compactação deve disparar
+  # ANTES do corpo estourar o limite HTTP, não antes do modelo "esquecer".
+  defp window(ctx) do
+    model_window =
+      Map.get(ctx, :context_window) ||
+        Application.get_env(:engine, :default_context_window, 8192)
+
+    min(model_window, transport_window_tokens())
+  end
+
+  # Teto de transporte convertido de bytes pra tokens pela MESMA heurística
+  # do tokenizer aproximado (`Engine.Harness.Tokenizer.bytes_per_token/0`) —
+  # a constante mora só lá, não duplicada aqui.
+  defp transport_window_tokens do
+    max_bytes = Application.get_env(:engine, :transport_max_body_bytes, 8_388_608)
+    div(max_bytes, Tokenizer.bytes_per_token())
+  end
 
   defp keep_recent(ctx),
     do: Map.get(ctx, :compaction_keep_recent, 2)

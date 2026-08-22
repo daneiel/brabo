@@ -39,9 +39,15 @@
   background: var(--surface-2);
 }
 
-.chevron {
+/* Avatar + nome + "agora" viajam juntos como o `titulo` do `Disclosure`
+   (migração da Onda 4/frente H4) — o botão em si só sabe de chevron,
+   título e trailing; quem organiza avatar/nome/status é este wrapper. */
+.tituloRamo {
   display: flex;
-  color: var(--text-muted);
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
 }
 
 .nome {
@@ -126,12 +132,19 @@
   gap: 6px;
 }
 
+/*
+ * Migrado para o `Disclosure` do design system na Onda 4/frente H4. O
+ * `min-height` era 20px, abaixo do WCAG 2.2 AA 2.5.8 que o comentário
+ * ACIMA já prometia (≥ 24px) sem cumprir — o `Disclosure` genérico já
+ * nasce em 24px, e a correção real é esta linha, não só a migração
+ * (RN-249).
+ */
 .marcoLinha {
   display: flex;
   align-items: baseline;
   gap: 8px;
   width: 100%;
-  min-height: 20px;
+  min-height: 24px;
   padding: 0;
   border: 0;
   background: transparent;
@@ -145,10 +158,11 @@
   color: var(--accent);
 }
 
-.marcoChevron {
-  display: flex;
-  flex: 0 0 auto;
-  color: var(--text-muted);
+/* Substitui o `gap: 6px` que antes vinha do `<li>` flex-column com DOIS
+   filhos diretos (botão + região) — agora os dois moram dentro do
+   wrapper do `Disclosure`, que não declara gap nenhum por padrão. */
+.marcoBloco {
+  gap: 6px;
 }
 
 /* Divisor entre iterações do ToolLoop — a fronteira que faltava entre

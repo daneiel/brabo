@@ -78,6 +78,8 @@ qualquer push, e `GitPush(algo)` não casa nada.
 | `instruction_patch` | `InstructionPatch` | maintainer |
 | `parallelize` | `Parallelize` | maintainer |
 | `raise_max_parallel` | `RaiseMaxParallel` | maintainer |
+| `propose_execution_plan` | `ProposeExecutionPlan` | maintainer |
+| `assess_implementability` | `AssessImplementability` | maintainer |
 | `spend` | `Spend` | **owner** |
 
 O papel mínimo é verificado **antes** do arquivo. Sem ele, `deny` — o
@@ -89,6 +91,22 @@ repositório: ela pede mais AGENTES. Está em `maintainer` pelo mesmo motivo de
 do teto do lead; dentro dele não há ação, porque não há o que decidir
 ([RN-083](../business-rules.md#rn-083))
 ([RN-005](../business-rules.md#rn-005)).
+
+`propose_execution_plan` (ADR 0086, [RN-284](../business-rules.md#rn-284)) é o
+plano do Dev Lead — quantos agentes por módulo e por quê, antes de qualquer um
+subir. Mesmo calibre de `parallelize`: decisão de QUANTO o produto vai gastar
+com paralelismo, só que na largada em vez de numa ultrapassagem de teto. Ao
+contrário de `parallelize`/`raise_max_parallel`, ela NÃO está no bloco de
+tetos absolutos — pode ser configurada para `auto_approve`, como
+`open_adr_pr`/`open_infra_pr` — e enquanto ela está `pending`, o turno do Dev
+Lead fica SUSPENSO esperando a decisão, não só a conversa parada.
+
+`assess_implementability` (ADR 0090, [RN-340](../business-rules.md#rn-340)) é
+o parecer de implementabilidade de uma story (gate `implementavel`,
+`docs/gates.yml`) — MESMO calibre e MESMO raciocínio de
+`propose_execution_plan`: decisão inicial da sessão, não ultrapassagem de
+teto, e por isso também fora do bloco de tetos absolutos. Suspende o turno
+do Dev Lead do mesmo jeito enquanto `pending`.
 
 ## Como um padrão casa com um comando
 
@@ -202,9 +220,7 @@ meio.
 flowchart TD
   A[proposed_action] --> B{papel >= mínimo?}
   B -->|não| D1[deny: IAM insuficiente]
-  B -->|sim| Z{terminal pede git push,<br/>PR ou deploy?}
-  Z -->|sim| D4[deny: fronteira do container<br/>use a ação tipada — RN-106]
-  Z -->|não| C[base: require_approval]
+  B -->|sim| C[base: require_approval]
   C --> D{agent_autonomy tem opinião?}
   D -->|deny| D2[deny]
   D -->|outra| E[adota a opinião]
@@ -217,10 +233,20 @@ flowchart TD
   G --> S{terminal toca caminho<br/>fora da pasta do projeto?}
   G2 --> S
   S -->|sim, e estava auto_approve| I2[TETO: require_approval]
-  S -->|não| H{merge em branch protegida<br/>ou instruction_patch?}
+  S -->|não| Z{terminal pede git push,<br/>PR, deploy, ou sudo/doas?}
+  Z -->|sim, e estava auto_approve| I3[TETO: require_approval — RN-418]
+  Z -->|não| H{merge em branch protegida<br/>ou instruction_patch?}
   H -->|sim, e estava auto_approve| I[TETO: require_approval]
   H -->|não| J[veredito final]
 ```
+
+**O nó `Z` mudou de lugar** ([RN-418](../business-rules.md#rn-418), revisa
+[RN-106](../business-rules.md#rn-106)): até a introdução do runner local,
+ele ficava logo após o IAM e retornava `deny` — agora é um TETO, no mesmo
+bloco final dos outros três, aplicado depois de `agent_autonomy` e
+`permissions.json` já terem opinado. Ver a seção
+["A fronteira de efeito externo e comando privilegiado"](#a-fronteira-de-efeito-externo-e-comando-privilegiado-rn-418)
+abaixo para o porquê.
 
 ### "Auto mode": a curinga de `agent_autonomy` ([RN-153](../business-rules.md#rn-153))
 
@@ -246,33 +272,58 @@ curinga gravada, o toggle passa a editar ELA em vez do tipo representativo
 de sempre, e "manual" nele é a mesma curinga regravada como
 `require_approval`.
 
-## A fronteira do container (RN-106)
+## A fronteira de efeito externo e comando privilegiado (RN-418) {#a-fronteira-de-efeito-externo-e-comando-privilegiado-rn-418}
 
-Aplicada **antes** de qualquer estágio permissivo, e não como teto no fim: `git
-push`, `git remote add`/`set-url`, `git merge`, os CLIs de provider (`gh pr
-create`, `gh pr merge`, `glab mr create`/`merge`, releases e workflow dispatch)
-e os comandos de deploy comuns (`kubectl apply`, `helm upgrade`, `terraform
-apply`, `docker push`, `npm publish`, ...) num comando `terminal` são **`deny`
-imediato**, qualquer que seja o `permissions.json` ou o `agent_autonomy`
-([ADR 0065](../adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md)).
+**Revisão do [ADR 0065](../adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md)
+pelo [ADR 0102](../adr/0102-revisao-do-adr-0065-teto-absoluto-substitui-deny.md)**
+— decisão GLOBAL e explícita do dono do produto, confirmada depois de um
+aviso automático de segurança sobre a mudança (o histórico completo está no
+ADR). O que segue descreve o comportamento ATUAL; a versão anterior
+(`deny` incondicional, aplicado antes de qualquer estágio permissivo) foi
+substituída, não afrouxada — ver por quê logo abaixo.
 
-Não é `require_approval` de propósito: existe "sempre permitir", que grava o
-padrão em `allow` — bastaria um clique para essa segunda porta ficar aberta
-para sempre. `deny` vence `allow` em qualquer estágio, e é a única forma que
-não pode ser contornada por um clique só.
+`git push`, `git remote add`/`set-url`, `git merge`, os CLIs de provider (`gh
+pr create`, `gh pr merge`, `glab mr create`/`merge`, releases e workflow
+dispatch), os comandos de deploy comuns (`kubectl apply`, `helm upgrade`,
+`terraform apply`, `docker push`, `npm publish`, ...) e agora também `sudo`/
+`doas` num comando `terminal` são um **TETO ABSOLUTO** — no mesmo bloco
+final dos outros três tetos (ver ["Os tetos"](#os-tetos) abaixo), aplicado
+depois que `agent_autonomy` e `permissions.json` já opinaram: se o veredito
+até ali era `auto_approve`, vira `require_approval` incondicional. Nem o
+curinga `"*"` de "modo automático" nem uma entrada `allow` no
+`permissions.json` conseguem promover de volta.
 
-O casamento é por **prefixo de tokens** (`apps/api/src/domain/actions/external-effect.ts`),
-ignorando flags globais no meio — `git -C /tmp push` casa `git push`. Cada
-segmento de um comando composto é verificado: `pnpm test && git push origin
-main` é barrado pelo segundo segmento, do mesmo jeito que o comando composto já
-exige que todo segmento case para virar `auto_approve`.
+**Por que `require_approval` agora é seguro, quando antes exigia `deny`.**
+A razão histórica do `deny` era concreta: "sempre permitir" grava o padrão
+em `allow`, e um clique bastaria para reabrir a porta pra sempre. Essa
+fresta foi fechada NA FONTE, não contornada: `ApproveAlwaysActionUseCase`/
+`patternForAction` (`apps/api/src/application/use-cases/actions/approve-always-action.use-case.ts`)
+RECUSAM gravar padrão em `allow` para ação de terminal com efeito externo
+git ou comando privilegiado — o usuário ainda aprova a instância específica
+pelo fluxo normal, mas "sempre permitir" nunca grava o padrão para esses
+dois casos. Sem essa recusa, o teto seria decorativo.
 
-Negar não tira poder do agente: a mensagem de erro diz qual ação **tipada**
-usar — `git_push`, `git_merge` ou `pr_open` — que nasce `proposed_action`,
-segue o pipeline normal (papel mínimo, decisão do usuário) e registra no event
-log o que foi empurrado e para onde. É o caminho que o dev agent já usa hoje
-para propor push (`agent_io.ex`); o que muda é que agora ele é o **único**
-caminho, garantido por código.
+`sudo`/`doas` ganharam categoria própria em `external-effect.ts`
+(`comandoPrivilegiadoNoComando`), casando por VERBO em qualquer segmento —
+mesmo princípio de `efeitoExternoNoComando` para git, que continua casando
+por **prefixo de tokens**, ignorando flags globais no meio (`git -C /tmp
+push` casa `git push`). Cada segmento de um comando composto é verificado:
+`pnpm test && git push origin main` é barrado pelo segundo segmento, do
+mesmo jeito que o comando composto já exige que todo segmento case para
+virar `auto_approve`.
+
+O teto não tira poder do agente: para git, a mensagem de erro continua
+apontando qual ação **tipada** usar — `git_push`, `git_merge` ou `pr_open`
+— que nasce `proposed_action`, segue o pipeline normal e registra no event
+log o que foi empurrado e para onde (é o caminho que o dev agent já usa
+hoje, `agent_io.ex`). `sudo`/`doas` não têm ação tipada equivalente — a
+mensagem só explica por que aquele comando pede decisão humana.
+
+**Onde isto importa mais agora**: o [runner local](../adr/0103-runner-local-execucao-na-maquina-do-usuario.md)
+executa comandos JÁ aprovados na máquina do próprio usuário, com os
+privilégios dele — é exatamente o cenário em que um `sudo` legítimo (ou uma
+tentativa de escapar via `sudo`) precisa de uma parada humana garantida por
+construção, não por convenção de `permissions.json`.
 
 ## Escopo de caminho
 
@@ -355,6 +406,7 @@ Aplicados **por último**, depois de todo o resto:
 | `git_merge` com destino em `dev`, `qa`, `rc` ou `main` | `auto_approve` → `require_approval` | merge em branch protegida é sempre decisão sua ([RN-006](../business-rules.md#rn-006)) |
 | `instruction_patch` | `auto_approve` → `require_approval` | você precisa ver o diff antes que um agente mude o comportamento de outro ([RN-007](../business-rules.md#rn-007)) |
 | `parallelize` e `raise_max_parallel` | `auto_approve` → `require_approval` | gastar com mais agentes é decisão sua; sem este teto o limite do lead seria decorativo, e subir o próprio teto seria o produto elevando o limite de gasto dele mesmo ([RN-086](../business-rules.md#rn-086)) |
+| `terminal` com efeito externo git (push/PR/deploy) ou `sudo`/`doas` | `auto_approve` → `require_approval` | git com efeito externo e comando privilegiado nunca são auto-aprováveis, mesmo com "modo automático" ligado ([RN-418](../business-rules.md#rn-418), revisa [RN-106](../business-rules.md#rn-106)) — ver a seção dedicada acima |
 
 Um teto rebaixa `auto_approve` para `require_approval`; ele **não** transforma
 `deny` em outra coisa, porque `deny` já teria retornado antes.
@@ -412,6 +464,16 @@ aconteceu, é esse o primeiro lugar para olhar.
 
 A auto-aprovação não passa por aqui: ela executa na proposta e o resultado volta
 no mesmo turno — que é justamente o valor de ter os padrões da seção anterior.
+
+**O Dev Lead suspende do mesmo jeito, com uma diferença no reinício** (ADR
+0086, [RN-284](../business-rules.md#rn-284)). Ele é conversacional, não tem
+worktree nem task — o que suspende é o `handle_call` síncrono do turno, via
+`agent.status: awaiting_approval`. Ao contrário do dev agent, ele NÃO tem
+fila para onde voltar num reinício do engine: a decisão continua registrada e
+visível em Aprovações, mas o Dev Lead não narra o desfecho sozinho — o
+processo que estava esperando morreu, e o próximo restart sobe um Dev Lead
+novo, sem inscrição para aquela ação. Lacuna aceita e declarada, não
+disfarçada.
 
 ## O que fica escrito de cada decisão
 

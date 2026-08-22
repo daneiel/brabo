@@ -77,6 +77,10 @@ export const TerminalIcon = (props: IconProps) =>
 export const DiffIcon = (props: IconProps) =>
   base(['M12 5v14M5 8h6M5 12h6M16 12h3M17.5 10.5v3'], props);
 
+/** Saída de comando/build — linhas de log, para distinguir do prompt do TerminalIcon. */
+export const OutputIcon = (props: IconProps) =>
+  base(['M4 6h16M4 12h10M4 18h13'], props);
+
 export const ModelIcon = (props: IconProps) =>
   base(['M21 16V8l-9-5-9 5v8l9 5 9-5z', 'M3.5 7.5 12 12l8.5-4.5M12 12v9.5'], props);
 
@@ -259,6 +263,30 @@ export const EyeOffIcon = (props: IconProps) =>
  * execução) — é isso que dá a sensação de profundidade. Um `stroke-width` único
  * achataria o desenho.
  */
+// Botão de tema do rodapé da sidebar (PROGRAMA 28, Onda 2 — RN-199).
+export const SunIcon = (props: IconProps) =>
+  base(
+    [
+      'M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10z',
+      'M12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4',
+    ],
+    props,
+  );
+
+export const MoonIcon = (props: IconProps) =>
+  base(['M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z'], props);
+
+// Seção "Atividades" da sidebar (PROGRAMA 28, Onda 2 — RN-198): o mesmo
+// glifo de pulso/atividade nos dois lugares (item da barra e ícone da
+// trilha recolhida).
+export const ActivityIcon = (props: IconProps) =>
+  base(['M3 12h4l2.5-7 4 14 2.5-7H21'], props);
+
+// Botão "sair" no rodapé recolhido (PROGRAMA 28, Onda 2) — o texto some sob
+// 62px, mas o botão continua acessível por `aria-label`/`title`.
+export const LogoutIcon = (props: IconProps) =>
+  base(['M9 4H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h4', 'M15 16l4-4-4-4', 'M19 12H9'], props);
+
 export const LogoMark = ({ size = 24, ...rest }: IconProps) => (
   <svg
     width={size}

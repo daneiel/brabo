@@ -9,6 +9,11 @@
  * Dark é o tema primário (valores em :root). [data-theme="light"] no
  * <html> (ou em qualquer ancestral) troca para o tema claro.
  *
+ * Quem ESCREVE esse atributo é `apps/web/public/theme-boot.js`, síncrono no
+ * <head>, a partir de `localStorage['brabo.theme']` — ver o ADR 0074 e a
+ * RN-182. Até ele existir o tema claro estava aqui e era inalcançável: nenhum
+ * caminho do produto escrevia `data-theme`.
+ *
  * Sempre referencie os tokens semânticos (--surface-*, --text-*,
  * --accent etc.) na UI — nunca a paleta bruta (--terracota-*,
  * --teal-*, --petroleo-*, --areia-*) diretamente.
@@ -92,17 +97,27 @@
      histórico de versões inventou cor de texto no lugar. */
   --diff-add: #0e2e24;
   --diff-del: #331a16;
-  /* Realce de sintaxe da aba Code (FASE 26). Keyword/string/número/tipo
-     REUSAM tokens semânticos que já existem (accent/warning/violet/success) —
-     só função, comentário e operador precisavam de valor próprio, porque
-     nenhum token existente cobria aquele tom sem colidir com outro papel.
-     Os três são calibrados para 4,5:1 contra --code-bg NOS DOIS temas (medido
-     em apps/web/src/lib/contraste.test.ts) — os quatro reusados só têm essa
-     garantia no tema escuro, o mesmo status que --violet já tinha antes desta
-     fase. */
+  /* Realce de sintaxe da aba Code e do Markdown do chat.
+     Os OITO papéis do handoff (`design_handoff_brabo/tokens.css`, bloco
+     `--syn-*`), cada um com token próprio e valor próprio por tema — RN-185.
+     Antes eram três: função, comentário e operador. Os outros cinco reusavam
+     `--accent`/`--warning`/`--violet`/`--success`/`--text-primary`, e o reuso
+     era a razão de a paleta ser medida SÓ no escuro: no claro os semânticos
+     reprovavam contra o `--code-bg` de papel.
+     Todos os oito são calibrados para 4,5:1 contra --code-bg NOS DOIS temas
+     (medido em apps/web/src/lib/contraste.test.ts). Onde o valor do handoff
+     não fecha a medição, ele NÃO é adotado — mesma régua do ADR 0036: a
+     intenção do handoff vale, o número que reprova não. Ver o ADR 0074. */
+  --syntax-keyword: #d6633a;
   --syntax-function: #5ebeb1;
+  --syntax-string: #e0982f;
+  --syntax-number: #9c7be0;
+  /* Handoff: #5c7a85 — 4,09:1 contra --code-bg, reprova. Mantido o valor da
+     FASE 26, que mede 6,31:1. */
   --syntax-comment: #7f9aa4;
+  --syntax-type: #37b3a4;
   --syntax-operator: #8fb0ba;
+  --syntax-text: #dce9ed;
   /* Os dois valores do handoff, literais. O `--shadow` estava mais raso
      (8px/24px a .35) que a sombra padrão especificada, e a sombra grande do
      login não existia em lugar nenhum — cada tela que precisasse dela ia
@@ -111,11 +126,27 @@
     0 1px 2px rgba(0, 0, 0, 0.4),
     0 12px 32px rgba(0, 0, 0, 0.45);
   --shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.55);
+  /* Nome do handoff para a sombra grande. ALIAS, não renomeação: `--shadow-lg`
+     é consumido em dezenas de arquivos e trocar o nome seria um rename cego
+     por um sinônimo. Vale o mesmo para `--font-display`, abaixo. */
+  --shadow-modal: var(--shadow-lg);
 
   /* Tipografia */
   --font-heading: 'Space Grotesk', sans-serif;
   --font-body: 'Archivo', sans-serif;
   --font-mono: 'IBM Plex Mono', monospace;
+  --font-display: var(--font-heading);
+
+  /* Escala de texto do handoff. Os pesos e o letter-spacing de cada degrau
+     ficam em quem usa — aqui é só o tamanho, que é o que se repetia solto. */
+  --fs-h1: 22px; /* peso 700, letter-spacing -.02em */
+  --fs-title: 18px; /* peso 600, letter-spacing -.01em — título de tela */
+  --fs-h2: 15px; /* peso 600 — título de card */
+  --fs-body: 13px;
+  --fs-sm: 12px;
+  --fs-mono: 12.5px;
+  --fs-meta: 11px;
+  --fs-label: 10px; /* peso 600, letter-spacing .08–.1em, uppercase */
 
   /* Espaçamento — escala base 8px, meio-passo 4px */
   --space-1: 4px;
@@ -130,37 +161,81 @@
   --radius-md: 8px;
   --radius-lg: 12px;
   --radius-full: 9999px;
+
+  /* A família `--r-*` do handoff. `--r-xs` e `--r-sm` são NOVOS (o repo não
+     tinha 5px nem 7px); os três de baixo são alias dos que já existem, para
+     que a família do handoff esteja inteira e ninguém escreva `var(--r-md)`
+     esperando 8px e receba nada. Os `--radius-*` FICAM: são o que dezenas de
+     módulos CSS consomem hoje.
+     Atenção ao degrau: `--r-sm` é 7px e `--radius-sm` é 4px — não são
+     sinônimos. O 4px do repo corresponde ao `--r-xs` (5px) do handoff em
+     PAPEL, não em valor, e nenhum call site foi migrado nesta mudança. */
+  --r-xs: 5px; /* badge mono */
+  --r-sm: 7px; /* botão de ícone, item de sub-nav */
+  --r-md: var(--radius-md); /* botão, input, item de menu */
+  --r-lg: var(--radius-lg); /* card, tabela */
+  --r-pill: var(--radius-full);
+
+  /* Métricas do shell (handoff). Estavam soltas em cada módulo CSS que
+     desenha a sidebar, o header e a régua de abas. */
+  --sidebar-w: 264px;
+  --sidebar-w-collapsed: 62px;
+  --header-h: 60px;
+  --tabs-h: 42px;
 }
 
+/*
+ * Tema claro.
+ *
+ * Os acentos daqui são MAIS ESCUROS que os do handoff, e a razão é estrutural:
+ * no tema escuro o `--code-bg` é quase preto (#03141b) e qualquer acento vivo
+ * ganha 5:1 de graça; no claro ele é papel (#efe4d2), a um passo das
+ * superfícies, e o mesmo acento cai para 3,1–3,9:1 — abaixo do piso de TEXTO,
+ * que é o papel que eles exercem no realce de sintaxe. Os números de antes e
+ * depois de cada um estão no ADR 0074. RN-184.
+ */
 [data-theme='light'] {
   --surface-0: var(--areia-050);
   --surface-1: #fcf8f1;
   --surface-2: #ecddc7;
   --text-primary: var(--petroleo-600);
   --text-secondary: #3c5a66;
-  --text-muted: #80939a;
-  --accent: #c4552d;
-  --accent-hover: #a5451f;
+  /* Era #80939a: 2,76:1 sobre --surface-0 e 2,40:1 sobre --surface-2 — abaixo
+     até do piso de ELEMENTO de interface (3:1), então não era dívida, era
+     defeito. O valor novo mede 5,17 / 5,68 / 4,50 nas três superfícies, acima
+     dos 4,81 que o escuro já entregava sobre --surface-0: metadado e label são
+     TEXTO, e o claro não tem por que ser pior que o tema primário. */
+  --text-muted: #526670;
+  --accent: var(--terracota-500);
+  --accent-hover: var(--terracota-600);
   --on-accent: #f7eee2;
-  --success: #217e73;
-  --warning: #b5701c;
+  --success: #136a60;
+  --warning: #8a5410;
   --danger: #b33a26;
-  /* O handoff só especifica o tema escuro; este valor é DERIVADO, escurecendo
-     o `#9c7be0` como o claro já escurece accent/success/danger. Fica em
-     4,50:1 sobre `--surface-0`, a mesma vizinhança dos outros acentos. */
-  --violet: #7b56c9;
+  /* Valor do handoff (`design_handoff_brabo/tokens.css`, tema claro), que
+     desde a versão nova ESPECIFICA o violeta claro — antes era derivado aqui
+     por não haver referência. */
+  --violet: #6b4fb0;
   --border: #dec9aa;
   --border-strong: #c6af8c;
   --code-bg: #efe4d2;
   /* Mesma função no tema claro (o par do spec é calibrado pro escuro). */
   --diff-add: #d6ead9;
   --diff-del: #f4d9d2;
-  /* Mesma função no tema claro — valor próprio, e não um `color-mix` do
-     escuro: --code-bg vira claro neste tema, e um teal/azul calibrado pro
-     fundo quase preto do escuro reprova 4,5:1 aqui (medido). */
+  /* Os oito papéis de sintaxe, com valor próprio no claro — não um
+     `color-mix` do escuro, que reprova contra o fundo de papel (medido).
+     Onde o papel é o mesmo de um semântico, o valor é o MESMO número: quem
+     pinta hoje é `SyntaxTokens.module.css`, que ainda referencia o semântico,
+     e duas fontes com números diferentes para o mesmo pixel divergiriam na
+     primeira correção feita de um lado só. */
+  --syntax-keyword: #a5451f;
   --syntax-function: #186158;
+  --syntax-string: #8a5410;
+  --syntax-number: #6b4fb0;
   --syntax-comment: #4a6873;
+  --syntax-type: #136a60;
   --syntax-operator: #456570;
+  --syntax-text: #12262e;
   --shadow:
     0 1px 2px rgba(10, 46, 61, 0.08),
     0 12px 32px rgba(10, 46, 61, 0.12);

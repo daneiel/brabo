@@ -46,7 +46,8 @@ produção.
 | `PORT` | `3000` | — |
 | `NODE_ENV` | — | `production` liga as validações estritas de CORS e chave |
 | `API_PUBLIC_URL` | `http://localhost:3000` | usada nos callbacks de OAuth de git; errada = callback quebrado |
-| `ENGINE_URL` | `http://localhost:4000` | comandos síncronos api→engine falham |
+| `ENGINE_URL` | `http://localhost:4000` no código, `http://engine:4000` no Compose | comandos síncronos api→engine falham. **Deixe-a vazia no `.env`**: definida ali, ela vence o default do Compose e a api tenta falar com `localhost:4000` de dentro do próprio container — toda ativação de sessão morre em `ECONNREFUSED` e o front não sai do lugar. Cada ambiente já tem o default certo sem a linha |
+| `ENGINE_PUBLIC_URL` | igual a `ENGINE_URL` | usada só para montar `engineWsUrl` (WebSocket) devolvido em `POST .../runner-ticket`/`.../terminal-ticket` — o runner e a web podem estar FORA do cluster, então o endereço interno (`http://engine:4000`) não serve; `ENGINE_URL` continua sendo o usado nas chamadas síncronas api→engine de sempre (RN-419) |
 | `BRABO_VERSION` | `dev` | vira `service.version` no recurso OpenTelemetry — é como se sabe qual build gerou um trace. A imagem de release injeta a tag via `ARG` do `docker-bake.hcl`; fora do release fica `dev`. **Não** aparece no `/health`, que não devolve versão de propósito (ver o `description` da rota) |
 | `MIGRATIONS_FOLDER` | `./src/db/migrations` | — |
 
@@ -94,6 +95,27 @@ em [ADR 0031](../adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.md) e
 > **Rotacionar `AUTH_TOKEN_PEPPER` desloga todo mundo** e invalida os tokens de
 > verificação e reset em aberto. Diferente das chaves, o pepper **não** tem
 > `_PREVIOUS`. Ver o [runbook](../runbook.md).
+
+### SMTP real (MailSender)
+
+`MailSender` envia e-mail de verdade só quando `MAIL_TRANSPORT=smtp` — o
+default é `log` (link/token vão para o log da api, `AUTH_MAIL_LOG_TOKENS`
+acima), inclusive em produção: enviar e-mail é opt-in do operador. Decisão
+no [ADR 0096](../adr/0096-smtp-real-no-mailsender.md).
+
+| variável | default | o que faz |
+|---|---|---|
+| `MAIL_TRANSPORT` | `log` | `log` (default) ou `smtp`. Qualquer outro valor cai em `log` |
+| `SMTP_HOST` 🔒 | — | host do provedor SMTP. **Só quando `MAIL_TRANSPORT=smtp`**: em produção a api recusa subir ausente, só espaços ou com o valor de exemplo publicado no `.env.example` (RN-114) |
+| `SMTP_PORT` | `587` | porta do provedor — `587` é STARTTLS, `465` é TLS implícito (`SMTP_SECURE=true`) |
+| `SMTP_SECURE` | `false` | `true` liga TLS implícito na conexão (tipicamente porta 465) |
+| `SMTP_USER` 🔒 | — | usuário de autenticação SMTP. Mesma exigência de `SMTP_HOST` em produção |
+| `SMTP_PASSWORD` 🔒 | — | senha/token de autenticação SMTP. Mesma exigência de `SMTP_HOST` em produção — **nunca aparece em log** |
+| `SMTP_FROM` | — | remetente, formato `"Nome <email@dominio>"` (ou só o e-mail). Mesma exigência de `SMTP_HOST` em produção, mais validação de formato |
+
+> O corpo do e-mail é **texto puro**, sem HTML — a porta `MailSender` não
+> carrega estrutura para corpo rico, e um template engine seria superfície de
+> injeção sem ganho nenhum. O link usa `WEB_ORIGIN` (acima).
 
 ### Seed de desenvolvimento
 
@@ -182,6 +204,15 @@ a linha acima — ver [runbook](../runbook.md#projeto-no-modo-local).
 | `OLLAMA_REQUEST_TIMEOUT_MS` | `300000` | teto de **inatividade** do socket do Ollama, não de duração total. Modelo local tem outra ordem de grandeza de latência até o primeiro token, por isso env própria; ver [ambiente de inferência](../runbook.md#ambiente-de-inferencia) |
 | `LLM_REQUEST_TIMEOUT_MS` | `300000` | o mesmo teto de inatividade para os providers de API (OpenAI e compatíveis, Anthropic). Vale para "não mandou nem os headers" e para "parou de mandar chunks no meio do stream" — ver [providers de LLM](llm-providers.md#teto-de-inatividade) |
 
+### Grafo de conhecimento (ADR 0099)
+
+| variável | default | nota |
+|---|---|---|
+| `NEO4J_URI` | — | ex.: `bolt://localhost:7687`. Ausente ou parcial (junto com `NEO4J_USER`/`NEO4J_PASSWORD`) fora de produção = grafo DESLIGADO, rotas dependentes degradam (`GraphUnavailableError`/503) — ninguém precisa de Neo4j local só para rodar a suite. Em produção, ausência de qualquer uma das três derruba o boot |
+| `NEO4J_USER` | — | ver `NEO4J_URI` |
+| `NEO4J_PASSWORD` 🔒 | — | ver `NEO4J_URI`. Sem default público de propósito — não há um "valor de exemplo" plausível pra uma senha de banco |
+| `GRAPH_PROJECTOR_INTERVAL_MS` | `2000` | período do poller que drena a fila `graph_projection` da outbox e escreve handoffs/hipóteses/perfis/interações no grafo (RN-416) |
+
 ### Observabilidade
 
 | variável | default | nota |
@@ -235,6 +266,8 @@ a linha acima — ver [runbook](../runbook.md#projeto-no-modo-local).
 | `SEARCH_WORKSPACE_MAX_BYTES` | `32768` | teto de BYTES do texto final de `search_workspace` ([RN-150](../business-rules.md#rn-150)) — mesma classe de estouro da RN-074/RN-141, pela porta da busca; variável independente |
 | `SEARCH_WORKSPACE_MAX_HITS` | `500` | teto de QUANTIDADE de hits que `search_workspace` coleta antes de montar a resposta ([RN-150](../business-rules.md#rn-150)) — para de escanear/ler conteúdo assim que atinge o teto, evitando pagar I/O de uma árvore com hit demais só para depois truncar por bytes |
 | `SECOPS_SCAN_TIMEOUT_MS` | `180000` | 3 min para o scanner do SecOps |
+| `TRANSPORT_MAX_BODY_BYTES` | `8388608` (8 MiB) | teto de TRANSPORTE que a compactação de contexto respeita além da janela do modelo ([RN-412](../business-rules.md#rn-412)) — a janela efetiva é `min(context_window, este teto convertido em tokens)`, pra a compactação disparar ANTES do corpo estourar o limite HTTP da api, não só quando o modelo "esqueceria" |
+| `GRAPH_INSTRUCTION_TEMPLATES_ENABLED` | `false` | liga a fonte `:graph` de `InstructionFiles` — hoje só a identidade do ux-designer resolve template do grafo antes do texto inline (RN-413). Nome PRÓPRIO, não `GRAPH_TEMPLATES_ENABLED` abaixo — as duas colidiriam com defaults contrários se dividissem a chave |
 
 ### Psicólogo
 
@@ -246,6 +279,8 @@ a linha acima — ver [runbook](../runbook.md#projeto-no-modo-local).
 | `PSYCHOLOGIST_BUDGET_MICROS_LEVE` / `_PESADA` | `50000` / `300000` | USD 0,05 e USD 0,30 por análise |
 | `PSYCHOLOGIST_MAX_PROMPT_EVENTS_LEVE` / `_PESADA` | `50` / `400` | quantos eventos entram no prompt |
 | `PSYCHOLOGIST_MAX_PAYLOAD_CHARS` | `600` | truncagem do payload de cada evento |
+| `PSYCHOLOGIST_RAG_TOP_K` | `3` | quantos trechos relevantes de `rag_search` entram no contexto, descontados do teto de eventos recentes acima ([RN-417](../business-rules.md#rn-417)) |
+| `GRAPH_TEMPLATES_ENABLED` | `false` | liga a resolução de `psychologist-kickoff`/`anamnese-kickoff` como template do grafo — chave COMPARTILHADA entre Psicólogo e Anamnese (RN-417), não confundir com `GRAPH_INSTRUCTION_TEMPLATES_ENABLED` acima |
 
 ### Anamnese
 
@@ -390,11 +425,11 @@ que uma variável nova não fique documentada em lugar nenhum sem ninguém notar
 
 > ⚠️ Bloco gerado por `pnpm docs:generate`. Não edite à mão — o próximo build sobrescreve.
 
-Inventário extraído do código: **104 variáveis** lidas em tempo de execução. Todas têm descrição nas tabelas acima.
+Inventário extraído do código: **120 variáveis** lidas em tempo de execução. Todas têm descrição nas tabelas acima.
 
-**api** — 42 variáveis
+**api** — 54 variáveis
 
-- `API_PUBLIC_URL` <sub>(apps/api/src/application/use-cases/git/start-git-oauth.use-case.ts)</sub>
+- `API_PUBLIC_URL` <sub>(apps/api/src/application/use-cases/auth/start-social-login.use-case.ts)</sub>
 - `AUTH_ACCESS_TOKEN_TTL_MS` <sub>(apps/api/src/infrastructure/security/ed25519-access-token-issuer.ts)</sub>
 - `AUTH_EMAIL_TOKEN_TTL_MS` <sub>(apps/api/src/application/use-cases/auth/auth-config.ts)</sub>
 - `AUTH_IP_ATTEMPT_THRESHOLD` <sub>(apps/api/src/application/use-cases/auth/auth-config.ts)</sub>
@@ -418,26 +453,38 @@ Inventário extraído do código: **104 variáveis** lidas em tempo de execuçã
 - `CREDENTIALS_MASTER_KEY` <sub>(apps/api/src/infrastructure/security/envelope-encryption.service.ts)</sub>
 - `CREDENTIALS_MASTER_KEY_PREVIOUS` <sub>(apps/api/src/infrastructure/security/envelope-encryption.service.ts)</sub>
 - `DATABASE_URL` <sub>(apps/api/src/db/migrate.ts)</sub>
-- `ENGINE_URL` <sub>(apps/api/src/infrastructure/http-clients/api-to-engine-client.ts)</sub>
+- `ENGINE_PUBLIC_URL` <sub>(apps/api/src/application/use-cases/runner/request-runner-ticket.use-case.ts)</sub>
+- `ENGINE_URL` <sub>(apps/api/src/application/use-cases/runner/request-runner-ticket.use-case.ts)</sub>
 - `GIT_LOCAL_REPOS_ROOT` <sub>(apps/api/src/infrastructure/git/local-git-provider.ts)</sub>
 - `GIT_OAUTH_STATE_SECRET` <sub>(apps/api/src/infrastructure/security/oauth-state-secret.ts)</sub>
 - `GITHUB_OAUTH_CLIENT_ID` <sub>(apps/api/src/infrastructure/git/github-oauth-client.ts)</sub>
 - `GITHUB_OAUTH_CLIENT_SECRET` <sub>(apps/api/src/infrastructure/git/github-oauth-client.ts)</sub>
 - `GITLAB_OAUTH_CLIENT_ID` <sub>(apps/api/src/infrastructure/git/gitlab-oauth-client.ts)</sub>
 - `GITLAB_OAUTH_CLIENT_SECRET` <sub>(apps/api/src/infrastructure/git/gitlab-oauth-client.ts)</sub>
+- `GRAPH_PROJECTOR_INTERVAL_MS` <sub>(apps/api/src/application/graph-projection/graph-projector.ts)</sub>
 - `LOG_LEVEL` <sub>(apps/api/src/infrastructure/observability/logger.config.ts)</sub>
+- `MAIL_TRANSPORT` <sub>(apps/api/src/infrastructure/mail/smtp-config.ts)</sub>
 - `METRICS_GAUGE_INTERVAL_MS` <sub>(apps/api/src/infrastructure/observability/domain-gauges.collector.ts)</sub>
 - `MIGRATIONS_FOLDER` <sub>(apps/api/src/db/migrate.ts)</sub>
-- `NODE_ENV` <sub>(apps/api/src/infrastructure/observability/logger.config.ts)</sub>
+- `NEO4J_PASSWORD` <sub>(apps/api/src/infrastructure/graph/neo4j-config.ts)</sub>
+- `NEO4J_URI` <sub>(apps/api/src/infrastructure/graph/neo4j-config.ts)</sub>
+- `NEO4J_USER` <sub>(apps/api/src/infrastructure/graph/neo4j-config.ts)</sub>
+- `NODE_ENV` <sub>(apps/api/src/infrastructure/graph/neo4j-config.ts)</sub>
 - `OLLAMA_HOST` <sub>(apps/api/src/infrastructure/llm/ollama-provider.ts)</sub>
 - `PROJECT_WORKSPACES_ROOT` <sub>(apps/api/src/infrastructure/filesystem/project-workspaces-root.ts)</sub>
 - `RATE_LIMIT_ENABLED` <sub>(apps/api/src/interfaces/http/shared/rate-limit.guard.ts)</sub>
 - `RATE_LIMIT_IP` <sub>(apps/api/src/interfaces/http/shared/rate-limit.guard.ts)</sub>
 - `RATE_LIMIT_USER` <sub>(apps/api/src/interfaces/http/shared/rate-limit.guard.ts)</sub>
 - `RATE_LIMIT_WINDOW_MS` <sub>(apps/api/src/infrastructure/observability/domain-gauges.collector.ts)</sub>
-- `WEB_ORIGIN` <sub>(apps/api/src/infrastructure/security/cors-origins.ts)</sub>
+- `SMTP_FROM` <sub>(apps/api/src/infrastructure/mail/smtp-config.ts)</sub>
+- `SMTP_HOST` <sub>(apps/api/src/infrastructure/mail/smtp-config.ts)</sub>
+- `SMTP_PASSWORD` <sub>(apps/api/src/infrastructure/mail/smtp-config.ts)</sub>
+- `SMTP_PORT` <sub>(apps/api/src/infrastructure/mail/smtp-config.ts)</sub>
+- `SMTP_SECURE` <sub>(apps/api/src/infrastructure/mail/smtp-config.ts)</sub>
+- `SMTP_USER` <sub>(apps/api/src/infrastructure/mail/smtp-config.ts)</sub>
+- `WEB_ORIGIN` <sub>(apps/api/src/infrastructure/mail/smtp-mail-sender.ts)</sub>
 
-**engine** — 58 variáveis
+**engine** — 62 variáveis
 
 - `ANAMNESE_BUDGET_MICROS` <sub>(apps/engine/config/runtime.exs)</sub>
 - `ANAMNESE_ENABLED` <sub>(apps/engine/config/runtime.exs)</sub>
@@ -457,6 +504,8 @@ Inventário extraído do código: **104 variáveis** lidas em tempo de execuçã
 - `ECTO_IPV6` <sub>(apps/engine/config/runtime.exs)</sub>
 - `GATE_RESCUE_INTERVAL_SECONDS` <sub>(apps/engine/config/runtime.exs)</sub>
 - `GATE_RESCUE_STALE_AFTER_SECONDS` <sub>(apps/engine/config/runtime.exs)</sub>
+- `GRAPH_INSTRUCTION_TEMPLATES_ENABLED` <sub>(apps/engine/config/runtime.exs)</sub>
+- `GRAPH_TEMPLATES_ENABLED` <sub>(apps/engine/config/runtime.exs)</sub>
 - `LLM_TURN_TIMEOUT_MS` <sub>(apps/engine/config/runtime.exs)</sub>
 - `MIX_TEST_PARTITION` <sub>(apps/engine/config/test.exs)</sub>
 - `MODEL_SYNC_INTERVAL_SECONDS` <sub>(apps/engine/config/runtime.exs)</sub>
@@ -477,6 +526,7 @@ Inventário extraído do código: **104 variáveis** lidas em tempo de execuçã
 - `PSYCHOLOGIST_MAX_PAYLOAD_CHARS` <sub>(apps/engine/config/runtime.exs)</sub>
 - `PSYCHOLOGIST_MAX_PROMPT_EVENTS_LEVE` <sub>(apps/engine/config/runtime.exs)</sub>
 - `PSYCHOLOGIST_MAX_PROMPT_EVENTS_PESADA` <sub>(apps/engine/config/runtime.exs)</sub>
+- `PSYCHOLOGIST_RAG_TOP_K` <sub>(apps/engine/config/runtime.exs)</sub>
 - `PSYCHOLOGIST_TRIAGE_THRESHOLD` <sub>(apps/engine/config/runtime.exs)</sub>
 - `READ_FILE_MAX_BYTES` <sub>(apps/engine/config/runtime.exs)</sub>
 - `SEARCH_WORKSPACE_MAX_BYTES` <sub>(apps/engine/config/runtime.exs)</sub>
@@ -496,6 +546,7 @@ Inventário extraído do código: **104 variáveis** lidas em tempo de execuçã
 - `TOOL_LOOP_MAX_ITERATIONS` <sub>(apps/engine/config/runtime.exs)</sub>
 - `TOOL_LOOP_MAX_ITERATIONS_EXECUCAO` <sub>(apps/engine/config/runtime.exs)</sub>
 - `TOOL_LOOP_MAX_ITERATIONS_GATE` <sub>(apps/engine/config/runtime.exs)</sub>
+- `TRANSPORT_MAX_BODY_BYTES` <sub>(apps/engine/config/runtime.exs)</sub>
 - `WEB_ORIGIN` <sub>(apps/engine/config/runtime.exs)</sub>
 
 **web** — 4 variáveis

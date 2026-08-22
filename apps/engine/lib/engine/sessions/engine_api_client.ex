@@ -104,18 +104,25 @@ defmodule Engine.Sessions.EngineApiClient do
               {:ok, map()} | {:error, term()}
 
   @doc """
-  Ferramentas de LEITURA do PO (RN-164) — as duas escopadas ao PROJETO, não à
-  sessão: regra de negócio e backlog atravessam as sessões, e limitar a leitura
-  à sessão corrente é justamente o que fazia o PO não enxergar o que já existia.
+  Ferramentas de LEITURA do PO (RN-164) — as três escopadas ao PROJETO, não à
+  sessão: regra de negócio, backlog e métricas de produto atravessam as
+  sessões, e limitar a leitura à sessão corrente é justamente o que fazia o
+  PO não enxergar o que já existia.
 
   `list_business_rules/1` devolve `%{"rules" => [...], "uncoveredCount" => n}`;
-  `list_backlog/1` devolve a árvore épico → história → tarefa. Nenhuma das duas
-  leva `session_id` — não há o que escopar por sessão aqui.
+  `list_backlog/1` devolve a árvore épico → história → tarefa;
+  `list_product_metrics/1` devolve o relatório de funil/DORA parcial (ADR
+  0089, RN-407) — o MESMO shape do `Relatorio` de `analise-funil.ts`, sem
+  campo para as três ausências permanentes (a ferramenta do PO as declara no
+  TEXTO, não no JSON). Nenhuma das três leva `session_id` — não há o que
+  escopar por sessão aqui.
   """
   @callback list_business_rules(project_id :: String.t()) ::
               {:ok, map()} | {:error, term()}
   @callback list_backlog(project_id :: String.t()) ::
               {:ok, [map()]} | {:error, term()}
+  @callback list_product_metrics(project_id :: String.t()) ::
+              {:ok, map()} | {:error, term()}
 
   @doc """
   Ferramentas do Arquiteto: `create_module_map` (modules validado contra ciclos
@@ -395,6 +402,41 @@ defmodule Engine.Sessions.EngineApiClient do
               {:ok, map()} | {:error, term()}
 
   @doc """
+  Busca no RAG do projeto (pgvector, busca híbrida vetor+léxico — ADR
+  0080/0082) — `POST /internal/rag/search`. Rota fechada por uma frente
+  PARALELA em `apps/api` (N2): o contrato é `{projectId, query, topK}` →
+  `{hits: [...], degraded}`, mas o roundtrip real depende dela terminar.
+
+  `top_k` é o teto que a CHAMADORA (a ferramenta `rag_search`, RN-150) já
+  clampou — este client não impõe teto próprio, só encaminha. `opts` é
+  repassado ao `Req` (ex.: `receive_timeout` num teste), vazio no caminho
+  normal.
+
+  Retorna `{:ok, %{"hits" => [%{"path"=>, "chunk"=>, "score"=>, "excerpt"=>},
+  ...], "degraded" => bool}}` (corpo cru da api, chaves string) ou
+  `{:error, motivo}`.
+  """
+  @callback rag_search(
+              project_id :: String.t(),
+              query :: String.t(),
+              top_k :: integer(),
+              opts :: keyword()
+            ) :: {:ok, map()} | {:error, term()}
+
+  @doc """
+  Lê um prompt template versionado do grafo de prompts (ADR pendente da
+  frente N2) — `GET /internal/graph/prompt-templates/:name`, com
+  `?version=` quando `version` não é `nil` (sem parâmetro busca a versão
+  vigente). Rota fechada pela mesma frente PARALELA de `rag_search/4`.
+
+  Retorna `{:ok, %{"name"=>, "version"=>, "body"=>, "hash"=>}}`,
+  `{:error, :not_found}` se a api responder 404, ou `{:error, motivo}` para
+  qualquer outra falha.
+  """
+  @callback get_prompt_template(name :: String.t(), version :: String.t() | nil) ::
+              {:ok, map()} | {:error, :not_found} | {:error, term()}
+
+  @doc """
   Cria uma proposed_action a partir de uma ferramenta do agente (terminal,
   write_file fora da whitelist) — passa pelo decide/permissions da api.
   Retorna `{:ok, action_map}` (com `"status"`, `"executionResult"` etc.) ou
@@ -409,11 +451,41 @@ defmodule Engine.Sessions.EngineApiClient do
             ) ::
               {:ok, map()} | {:error, term()}
 
+  @doc """
+  Confirma o caminho de um projeto `execution_mode: runner` (RN-423, ADR
+  0104) — o runner é a fonte da verdade: a api SOBRESCREVE `workspacePath`
+  com `path` e marca `workspaceVerifiedAt`. `session_id` é `nil` quando o
+  projeto ainda não tem sessão nenhuma (`ProjectSession.latest_id/1`) — a
+  api atualiza o projeto mesmo assim e só PULA o evento de auditoria nesse
+  caso (mesma degradação de `registrar_evento_terminal/3`). `user_id` vem
+  do ticket consumido no join (`socket.assigns.user_id`), mesmo padrão de
+  `registrar_evento_terminal/3` — é quem aparece como ator do evento.
+  Retorna `{:ok, %{"verified" => bool, "workspacePath" => path}}` ou
+  `{:error, term}` (400 quando `path` é lexicamente inválido, ou o projeto
+  não é `runner`).
+  """
+  @callback confirm_workspace(
+              project_id :: String.t(),
+              session_id :: String.t() | nil,
+              path :: String.t(),
+              user_id :: String.t()
+            ) ::
+              {:ok, map()} | {:error, term()}
+
   def llm_turn(project_id, session_id, agent, messages, tools),
     do: impl().llm_turn(project_id, session_id, agent, messages, tools)
 
   def propose_action(project_id, session_id, action_type, actor, payload),
     do: impl().propose_action(project_id, session_id, action_type, actor, payload)
+
+  def confirm_workspace(project_id, session_id, path, user_id),
+    do: impl().confirm_workspace(project_id, session_id, path, user_id)
+
+  def rag_search(project_id, query, top_k, opts \\ []),
+    do: impl().rag_search(project_id, query, top_k, opts)
+
+  def get_prompt_template(name, version \\ nil),
+    do: impl().get_prompt_template(name, version)
 
   def report_termination(project_id, session_id, reason, to),
     do: impl().report_termination(project_id, session_id, reason, to)
@@ -449,6 +521,8 @@ defmodule Engine.Sessions.EngineApiClient do
   def list_business_rules(project_id), do: impl().list_business_rules(project_id)
 
   def list_backlog(project_id), do: impl().list_backlog(project_id)
+
+  def list_product_metrics(project_id), do: impl().list_product_metrics(project_id)
 
   def create_module_map(project_id, session_id, modules),
     do: impl().create_module_map(project_id, session_id, modules)
@@ -884,6 +958,11 @@ defmodule Engine.Sessions.EngineApiClient.Live do
     get_json("/internal/projects/#{project_id}/backlog")
   end
 
+  @impl true
+  def list_product_metrics(project_id) do
+    get_json("/internal/projects/#{project_id}/product-metrics")
+  end
+
   # GET que devolve o corpo decodificado. Existe para as leituras do PO
   # (RN-164) e NÃO foi retrofitado nos seis GETs anteriores de propósito:
   # cada um deles normaliza o corpo do seu jeito (o `get_git_remote` recasa
@@ -1187,6 +1266,47 @@ defmodule Engine.Sessions.EngineApiClient.Live do
       actor: actor,
       payload: payload
     })
+  end
+
+  @impl true
+  def confirm_workspace(project_id, session_id, path, user_id) do
+    post_returning("/internal/projects/#{project_id}/workspace-verification", %{
+      sessionId: session_id,
+      path: path,
+      actorId: user_id
+    })
+  end
+
+  @impl true
+  def rag_search(project_id, query, top_k, opts \\ []) do
+    post_returning(
+      "/internal/rag/search",
+      %{projectId: project_id, query: query, topK: top_k},
+      opts
+    )
+  end
+
+  @impl true
+  def get_prompt_template(name, version \\ nil) do
+    query_part = if version, do: "?version=#{URI.encode_www_form(version)}", else: ""
+
+    url =
+      api_url() <>
+        "/internal/graph/prompt-templates/#{URI.encode_www_form(name)}" <> query_part
+
+    case Req.get(url, headers: headers()) do
+      {:ok, %Req.Response{status: 404}} ->
+        {:error, :not_found}
+
+      {:ok, %Req.Response{status: status, body: body}} when status in 200..299 ->
+        {:ok, body}
+
+      {:ok, %Req.Response{status: status, body: resp}} ->
+        {:error, {status, resp}}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
   end
 
   # O funil ÚNICO de headers de toda chamada engine -> api (ADR 0035).

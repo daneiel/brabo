@@ -253,4 +253,177 @@ defmodule Engine.Actions.TerminalExecutorTest do
       assert result.raw_bytes == 2000
     end
   end
+
+  # Roteamento pro runner local (execution_mode "runner", workspace
+  # VERIFICADO e runner conectado — RN-423, ADR 0104. Ver o moduledoc do
+  # módulo). O comando já chega aqui APROVADO; este módulo só decide ONDE
+  # rodar.
+  describe "roteamento pro runner local" do
+    setup do
+      on_exit(fn -> Application.delete_env(:engine, :engine_api_client) end)
+      :ok
+    end
+
+    defp insert_runner_project!(project_id, workspace_path, opts \\ []) do
+      verificado_em = if Keyword.get(opts, :verified, true), do: "now()", else: "NULL"
+
+      Repo.query!(
+        "INSERT INTO public.projects " <>
+          "(id, name, slug, execution_mode, workspace_path, workspace_verified_at) " <>
+          "VALUES ($1, 'proj', 'proj', 'runner', $2, #{verificado_em})",
+        [Ecto.UUID.dump!(project_id), workspace_path]
+      )
+    end
+
+    # Modo `mounted` (ADR 0072/0104): sempre `:caminho_de_sempre` — nunca
+    # checa runner conectado, porque não HÁ roteamento pra ele nesse modo.
+    defp insert_mounted_project!(project_id, workspace_path) do
+      Repo.query!(
+        "INSERT INTO public.projects (id, name, slug, execution_mode, workspace_path) " <>
+          "VALUES ($1, 'proj', 'proj', 'mounted', $2)",
+        [Ecto.UUID.dump!(project_id), workspace_path]
+      )
+    end
+
+    # Spawna um processo que age como o runner: registra a presença e
+    # responde ao "exec" recebido com um exec_result fixo. Roda num processo
+    # PRÓPRIO (não no processo de teste) porque `TerminalExecutor.run/3`
+    # bloqueia em `receive` esperando a resposta — o mesmo processo não pode
+    # esperar por si mesmo.
+    defp start_fake_runner!(project_id, responder) do
+      parent = self()
+
+      pid =
+        spawn(fn ->
+          Ecto.Adapters.SQL.Sandbox.allow(Engine.Repo, parent, self())
+          :ok = Engine.Runners.Registry.register(project_id, self())
+          send(parent, :fake_runner_ready)
+
+          receive do
+            {:dispatch_exec, ref, command, cwd, from, _timeout_ms} ->
+              send(from, {:runner_exec_result, ref, responder.(command, cwd)})
+          end
+        end)
+
+      assert_receive :fake_runner_ready, 1_000
+      on_exit(fn -> Process.exit(pid, :kill) end)
+      pid
+    end
+
+    test "com workspace VERIFICADO e runner conectado, o comando é roteado pro canal" do
+      project_id = unique_project_id()
+      insert_runner_project!(project_id, "/pasta/do/usuario", verified: true)
+
+      start_fake_runner!(project_id, fn command, cwd ->
+        %{
+          "ref" => "qualquer",
+          "exitCode" => 0,
+          "output" => "rodei #{command} em #{cwd}",
+          "timedOut" => false
+        }
+      end)
+
+      result = TerminalExecutor.run(project_id, "echo oi")
+
+      assert result.exit_code == 0
+      assert result.stdout == "rodei echo oi em /pasta/do/usuario"
+      assert result.timed_out == false
+    end
+
+    test "cwd explícito (worktree) é repassado ao runner tal como veio" do
+      project_id = unique_project_id()
+      insert_runner_project!(project_id, "/pasta/do/usuario", verified: true)
+
+      start_fake_runner!(project_id, fn command, cwd ->
+        %{"ref" => "x", "exitCode" => 0, "output" => "#{command}|#{cwd}", "timedOut" => false}
+      end)
+
+      result = TerminalExecutor.run(project_id, "pwd", cwd: "/pasta/do/usuario/worktree-x")
+
+      assert result.stdout == "pwd|/pasta/do/usuario/worktree-x"
+    end
+
+    # RN-423 (ADR 0104): projeto `runner` cujo workspace NUNCA foi
+    # confirmado recusa explicitamente — nunca roteia (nem HÁ runner
+    # conectado aqui) e nunca cai no `System.cmd`, que rodaria numa pasta
+    # que o processo do engine não enxerga.
+    test "runner NÃO verificado: recusa explicitamente, sem executar nada" do
+      project_id = unique_project_id()
+      insert_runner_project!(project_id, "/pasta/do/usuario", verified: false)
+
+      result = TerminalExecutor.run(project_id, "echo oi")
+
+      assert result.exit_code == nil
+      assert result.stdout == ""
+      assert result.stderr =~ "ainda não teve o workspace confirmado"
+      assert result.stderr =~ "brabo-runner"
+    end
+
+    # RN-423: workspace JÁ verificado, mas nenhum runner está conectado
+    # AGORA — recusa do mesmo jeito, nunca cai no `System.cmd` (que não
+    # tem pra onde rodar: um projeto `runner` não tem bind-mount).
+    test "runner verificado mas SEM runner conectado: recusa explicitamente, sem cair no caminho de sempre" do
+      project_id = unique_project_id()
+      insert_runner_project!(project_id, "/pasta/do/usuario", verified: true)
+
+      refute Engine.Runners.Registry.connected?(project_id)
+
+      result = TerminalExecutor.run(project_id, "echo oi")
+
+      assert result.exit_code == nil
+      assert result.stdout == ""
+      assert result.stderr =~ "nenhum runner está conectado"
+    end
+
+    test "SEM runner nenhum envolvido, projeto mounted cai no caminho de sempre (System.cmd)" do
+      force_rtk_unavailable!()
+      bare = create_bare_repo_with_commit!()
+      project_id = unique_project_id()
+      insert_project_repository!(project_id, bare)
+
+      # workspace_path PRECISA ser uma pasta real e gravável — em modo
+      # `mounted`, `Engine.Actions.Workspace.workspace_dir/1` resolve
+      # DIRETO pra esse caminho (RN-421), então o `git init`/checkout do
+      # caminho de sempre roda ali de verdade. Diferente de `runner`,
+      # `mounted` NUNCA checa runner conectado — não há decisão de
+      # roteamento pra esse modo.
+      workspace_path =
+        Path.join(System.tmp_dir!(), "brabo-mounted-ws-#{System.unique_integer([:positive])}")
+
+      on_exit(fn -> File.rm_rf!(workspace_path) end)
+      insert_mounted_project!(project_id, workspace_path)
+
+      result = TerminalExecutor.run(project_id, "echo oi")
+
+      assert result.exit_code == 0
+      assert result.stdout =~ "oi"
+    end
+
+    test "projeto em modo container (default) nunca roteia pro runner, mesmo se um estivesse conectado" do
+      force_rtk_unavailable!()
+      bare = create_bare_repo_with_commit!()
+      project_id = unique_project_id()
+      insert_project_repository!(project_id, bare)
+      # execution_mode nulo == "container" (comportamento de sempre).
+
+      test_pid = self()
+
+      start_fake_runner!(project_id, fn command, cwd ->
+        send(test_pid, {:runner_foi_chamado, command, cwd})
+
+        %{
+          "ref" => "x",
+          "exitCode" => 0,
+          "output" => "não deveria chegar aqui",
+          "timedOut" => false
+        }
+      end)
+
+      result = TerminalExecutor.run(project_id, "echo oi")
+
+      assert result.exit_code == 0
+      assert result.stdout =~ "oi"
+      refute_receive {:runner_foi_chamado, _, _}, 200
+    end
+  end
 end

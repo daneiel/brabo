@@ -27,8 +27,11 @@
  * O padding vertical da página é 32px (`--space-5`), não os 40px do handoff —
  * 40 não é token, e a diferença só aparece em viewport curta.
  *
- * As outras divergências (sem botão do GitHub, sem "N agentes online") estão no
- * ADR 0036 e seguem valendo: as duas são COMPORTAMENTO, não pintura.
+ * A divergência "sem botão do GitHub" do ADR 0036 FECHOU com o login social
+ * (ADR 0084) — `.divisor`/`.botaoSocial` abaixo seguem o mock (`Brabo
+ * Login.dc.html`), com GitLab somado ao lado do GitHub que o mock desenhava
+ * sozinho. "Sem 'N agentes online'" segue valendo: continua sendo dado
+ * dinâmico pré-autenticação que exigiria rota pública própria.
  */
 
 .tela {
@@ -191,6 +194,76 @@
 }
 
 /*
+ * Divisor "ou" entre o submit e os botões de login social (ADR 0084) —
+ * existe só enquanto houver um botão social depois dele; a lição do ADR 0036
+ * (item "consequência derivada da nº 1") era o inverso: sem botão nenhum, o
+ * divisor saía junto, porque um "ou" apontando para nada é pior que a
+ * assimetria.
+ */
+.divisor {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 2px 0;
+}
+
+.linhaDivisor {
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.textoDivisor {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.botoesSociais {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/*
+ * `<a>`, não `<button>`: é navegação de página inteira para
+ * `GET /auth/oauth/:provider/start`, que redireciona 302 direto pro
+ * provider — sem `fetch`, sem estado de carregamento (o próprio browser
+ * mostra o progresso da navegação).
+ */
+.botaoSocial {
+  height: 42px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 13.5px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  text-decoration: none;
+  transition:
+    border-color 0.12s,
+    background 0.12s;
+}
+
+.botaoSocial:hover {
+  background: var(--border);
+  border-color: var(--text-muted);
+}
+
+.botaoSocial:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/*
  * Faixa inferior do card, em `--surface-0`: é um degrau ABAIXO do card, o que a
  * separa do formulário sem precisar de mais uma linha.
  *
@@ -230,6 +303,14 @@
   color: var(--text-muted);
 }
 
+/*
+ * Alvo abaixo de 24px por design (PROGRAMA 28, Onda 5/H5, auditado): a linha
+ * "vX.Y.Z · Status · Documentação" é texto corrido com separadores de gap
+ * uniforme (ver comentário de `.rodapePagina`) — cai na exceção "constrained
+ * by the line-height of non-target text" da WCAG 2.2 2.5.8, o mesmo motivo
+ * que isenta um link dentro de frase. Impor 24px quebraria o alinhamento dos
+ * "·" com o texto ao redor.
+ */
 .linkRodape {
   color: var(--text-muted);
   text-decoration: none;
@@ -268,6 +349,13 @@
  * qualquer forma, porque não depende de enxergar cor. Ver
  * `design-contraste.test.ts`.
  */
+/*
+ * "Criar uma conta" mede 19px de altura (PROGRAMA 28, Onda 5/H5, auditado) —
+ * abaixo do piso de 24px, mas ISENTO: é link DENTRO de frase ("Não tem
+ * acesso? Criar uma conta"), a exceção "target is in a sentence" da WCAG 2.2
+ * 2.5.8. Mesmo raciocínio isenta `.linkPequeno` abaixo — lá o texto vizinho é
+ * o rótulo do campo, não uma frase, mas a régua de baseline é a mesma.
+ */
 .link {
   color: var(--accent-hover);
   text-decoration: none;
@@ -286,7 +374,12 @@
 
 /*
  * Variante menor do `.link`, para a ação que acompanha um rótulo de campo. Vai
- * SOMADA a `.link` no `className`, não no lugar dele.
+ * SOMADA a `.link` no `className`, não no lugar dele. 17px de altura, abaixo
+ * do piso de 24px — ISENTO (WCAG 2.2 2.5.8, "constrained by the line-height
+ * of non-target text"): `.linhaLabel` de `Input.module.css` alinha este link
+ * pelo `baseline` com o rótulo do campo DE PROPÓSITO ("alinhar pelo centro
+ * deixaria as duas linhas de base desencontradas"), então dar `min-height`
+ * aqui quebraria exatamente o alinhamento que aquele comentário defende.
  */
 .linkPequeno {
   font-size: 11.5px;

@@ -1,0 +1,69 @@
+---
+id: internal-graph-controller-upsert
+title: "Publica uma versão de template de prompt, idempotente por hash"
+description: "Se já existe uma versão com o MESMO hash para o mesmo `name`, nenhuma versão nova é criada — a existente é devolvida (o hit de idempotência não muda o status HTTP: sempre 201, por simplicidade — o corpo é idêntico ao que teria sido criado)."
+sidebar_label: "Publica uma versão de template de prompt, idempotente por hash"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "post api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Publica uma versão de template de prompt, idempotente por hash"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/internal/graph/prompt-templates"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Se já existe uma versão com o MESMO hash para o mesmo `name`, nenhuma versão nova é criada — a existente é devolvida (o hit de idempotência não muda o status HTTP: sempre 201, por simplicidade — o corpo é idêntico ao que teria sido criado).
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./internal-graph-controller-upsert.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./internal-graph-controller-upsert.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./internal-graph-controller-upsert.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      
