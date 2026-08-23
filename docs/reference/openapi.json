@@ -2971,6 +2971,76 @@
         ]
       }
     },
+    "/projects/{projectId}/agent-areas/{key}/budget": {
+      "put": {
+        "description": "Requires `maintainer`, same reason as the parallelism cap: this is an INDEPENDENT, additive check next to the project and session budgets (ADR 0110) — not a cascade, and not a replacement for either. The limit comes in as DOLLARS and is converted to micro-USD server-side, same convention as `BudgetsController`. `null` clears the cap.",
+        "operationId": "ExecutionController_setBudget",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "key",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetAreaBudgetDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AreaDeAgentesResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`limitUsd` is neither `null` nor a number >= 0."
+          },
+          "401": {
+            "description": "No token, expired token, or invalid signature."
+          },
+          "403": {
+            "description": "Insufficient role on the project."
+          },
+          "404": {
+            "description": "Project, session, or task not found."
+          },
+          "429": {
+            "description": "Rate limit per user or per IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Sets (or clears) an area's spend cap",
+        "tags": [
+          "execution"
+        ]
+      }
+    },
     "/projects/{projectId}/agent-areas/{key}/max-parallel": {
       "patch": {
         "description": "Requires `maintainer`, not `developer`, for the same reason as activating execution: raising the cap is deciding how much the product can spend without asking. Applies to the NEXT requests — whatever is already awaiting your decision keeps waiting.",
@@ -11472,6 +11542,17 @@
             "example": 2,
             "description": "How many agents the lead can have in the SESSION without requesting authorization. Above that, a `proposed_action`. The cap is per session, not per module: counting per module would allow N modules × N agents with no authorization at all."
           },
+          "budgetMicros": {
+            "type": "object",
+            "example": 20000000,
+            "nullable": true,
+            "description": "The area's spend cap, in micro-USD (ADR 0110, RN-443). `null` means no cap — an independent, ADDITIVE check next to the project and session budgets, not a cascade: whichever of the three hits its cap first blocks the call."
+          },
+          "spentMicros": {
+            "type": "number",
+            "example": 4300000,
+            "description": "The area's accumulated spend, in micro-USD. Increments whenever an agent that belongs to this area spends, WITH OR WITHOUT a cap set."
+          },
           "members": {
             "example": [
               "dev-api",
@@ -11490,6 +11571,8 @@
           "key",
           "leadAgentId",
           "maxParallel",
+          "budgetMicros",
+          "spentMicros",
           "members"
         ]
       },
@@ -18303,6 +18386,21 @@
           "agentId",
           "actionType",
           "mode"
+        ]
+      },
+      "SetAreaBudgetDto": {
+        "type": "object",
+        "properties": {
+          "limitUsd": {
+            "type": "object",
+            "example": 20,
+            "minimum": 0,
+            "nullable": true,
+            "description": "Cap in DOLLARS for the area — same dollar-in, micro-USD-out convention as the project/session budgets (`BudgetsController`). `null` CLEARS the cap: the area goes back to unlimited, which is also the default for an area that never had one set."
+          }
+        },
+        "required": [
+          "limitUsd"
         ]
       },
       "SetMaxParallelDto": {

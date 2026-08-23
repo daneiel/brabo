@@ -167,6 +167,32 @@
       "error": "Não foi possível salvar"
     }
   },
+  "budget": {
+    "title": "Teto de gasto por área",
+    "eyebrow": "teto opcional",
+    "subtitle": {
+      "before": "Um teto de gasto opcional para cada área, ",
+      "strong": "aditivo",
+      "after": " aos budgets de projeto e sessão — qualquer um dos três que atingir o limite primeiro bloqueia a chamada. Deixe em branco para sem teto, que também é o padrão."
+    },
+    "empty": {
+      "before": "Nenhuma área ainda. Elas nascem quando você ativa a execução, porque os membros da área de dev vêm do ",
+      "code": "module_map",
+      "after": " do Arquiteto."
+    },
+    "card": {
+      "title": "Área {{area}}",
+      "spent": "Gasto: {{amount}}",
+      "capAria": "Teto de gasto da área {{area}}, em dólares"
+    },
+    "placeholder": "Sem teto",
+    "save": "Salvar",
+    "saving": "Salvando…",
+    "toast": {
+      "success": "Teto de gasto da área {{area}} salvo",
+      "error": "Não foi possível salvar"
+    }
+  },
   "promotion": {
     "title": "Promoção de histórias",
     "eyebrow": "quem dá o passo",

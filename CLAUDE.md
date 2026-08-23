@@ -2086,6 +2086,21 @@ nem cláusula de `message`). Declarado, não escondido: o mirror de
 NÃO é cruzado por teste com o da api — divergir produz, no pior caso, uma
 opção velha no seletor que o backend ainda recusa com 400.
 
+## Budget por área — fecha o corte do ADR 0038 (RN-443, ADR 0110)
+Item aprovado do backlog ("Older backlog", `docs/explanation/backlog.md`).
+`agent_areas` ganha `budget_micros`/`spent_micros`, espelhando exatamente
+`max_parallel` — mesma linha, mesmo dono da decisão (`maintainer`), sem
+tabela nova. É um TERCEIRO teto ADITIVO ao lado de projeto e sessão
+(`CheckBudgetGateUseCase` checa os três em paralelo, qualquer um bloqueado
+já recusa), **não** a cascata de binding de modelo do ADR 0064 (`sessão >
+agente > área > projeto > workspace`, "o mais específico vence") — os dois
+mecanismos compartilham a palavra "área" e mais nada; não confundir os
+dois é o ponto central do ADR 0110, do mesmo jeito que RN-101/ADR 0063 já
+separa a visão do owner da visão do membro no relatório de gasto.
+`spent_micros` soma SEMPRE que o ator pertence a uma área (lead ou
+membro, via `areaDo` — função pura, sem tocar banco pra ator sem área),
+com ou sem `budget_micros` configurado (`null` é o default, sem teto).
+
 ## Stack (decidida — não proponha alternativas)
 - `apps/api`: NestJS 11 + Drizzle ORM + PostgreSQL 16 + pgvector;
   `nodemailer` para SMTP real do `MailSender` (ADR 0096), atrás de

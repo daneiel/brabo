@@ -360,7 +360,7 @@ are deferred product decisions — hence no priority here.
 
 | item | where it was decided |
 |---|---|
-| Budget per area | cut from Phase 8; **one step away** — `agent_areas` came to exist in FASE 14d ([ADR 0053](../adr/0053-dev-lead-e-paralelismo-autorizado.md)), the missing table |
+| ~~Budget per area~~ | **FIXED AND CLOSED.** `agent_areas` gained `budget_micros`/`spent_micros` — a THIRD independent ceiling next to project/session, additive (not the ADR 0064 cascade), mirroring `max_parallel`'s pattern on the same row ([RN-443](../business-rules.md#rn-440), [ADR 0110](../adr/0110-budget-por-area-aditivo-nao-cascata.md)) |
 | Dev Lead and `module_map`-based areas | **left the backlog**: ADR 0053, implemented by FASE 14d |
 | ~~Manual handoff to an agent of choice~~ | **CLOSED** — [ADR 0109](../adr/0109-handoff-manual-a-agente-a-escolha.md)/[RN-440](../business-rules.md#rn-440)/[RN-441](../business-rules.md#rn-441). `SessionPage.tsx` gained a picker over `addressableAgents()` (leads ∪ solo agents) POSTing to `POST .../sessions/:sessionId/handoffs` — the SAME `CreateHandoffUseCase` an agent's own `offer_handoff` uses, with `actor: {kind:'user'}` recording who decided. The Staff (ADR 0088) and `ux-designer` (ADR 0087), both found reachable only via the internal route, entered `AGENTES_DE_CHAT` in the same change |
 | MFA, social login, OIDC, federation | [ADR 0031](../adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.md) — social login (GitHub/GitLab) LEFT the ban and is implemented (ADR 0084); the rest stays out of scope |
