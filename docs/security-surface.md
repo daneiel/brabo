@@ -547,6 +547,7 @@ reason in the URL.
 | GET | `/projects/:projectId/sessions/:sessionId/events/:eventId` | role:viewer |
 | POST | `/projects/:projectId/sessions/:sessionId/execution/parallelize` | role:developer |
 | GET | `/projects/:projectId/sessions/:sessionId/handoffs` | role:viewer |
+| POST | `/projects/:projectId/sessions/:sessionId/handoffs` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/handoffs/:handoffId/accept` | role:developer |
 | GET | `/projects/:projectId/sessions/:sessionId/model-binding` | role:viewer |
 | PUT | `/projects/:projectId/sessions/:sessionId/model-binding` | role:developer |

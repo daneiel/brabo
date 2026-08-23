@@ -82,7 +82,10 @@
     "passouOBastaoAo": "passou o bastão ao",
     "aceitarEIniciar": "Aceitar handoff e iniciar {{agente}}",
     "ativarExecucao": "Ativar execução",
-    "acompanheExecucao": "Acompanhe a execução em Executores"
+    "acompanheExecucao": "Acompanhe a execução em Executores",
+    "manualLabel": "Endereçar handoff a outro agente",
+    "manualPlaceholder": "Escolher agente...",
+    "manualBotao": "Endereçar handoff"
   },
   "backlog": {
     "criouEpico": "criou o épico",
@@ -108,6 +111,8 @@
     "necessidadeValidada": "Necessidade validada",
     "erroValidarNecessidade": "Não foi possível validar a necessidade",
     "erroAceitarHandoff": "Não foi possível aceitar o handoff",
+    "handoffManualEnviado": "Handoff enviado",
+    "erroHandoffManual": "Não foi possível enviar o handoff",
     "execucaoAtivada": "Execução ativada",
     "erroAtivarExecucao": "Não foi possível ativar a execução",
     "modoAutomaticoLigado": "Modo automático ligado",

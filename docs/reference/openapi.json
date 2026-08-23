@@ -8303,6 +8303,74 @@
         "tags": [
           "agents"
         ]
+      },
+      "post": {
+        "description": "Born as `offered`, exactly like an agent's own `offer_handoff` — the only difference is who decided. `toAgent` has to be in the addressable catalog (area lead or area-less agent); a subagent or an unknown slug is refused with 400.",
+        "operationId": "AgentsController_requestManual",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestManualHandoffDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandoffResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body. The `ValidationPipe` runs with `whitelist` and `forbidNonWhitelisted`, so an unknown field also fails."
+          },
+          "401": {
+            "description": "No token, expired token, or invalid signature."
+          },
+          "403": {
+            "description": "Insufficient role on the project."
+          },
+          "404": {
+            "description": "Project, session, or handoff not found."
+          },
+          "429": {
+            "description": "Rate limit per user or per IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Manually offers a handoff to a chosen agent",
+        "tags": [
+          "agents"
+        ]
       }
     },
     "/projects/{projectId}/sessions/{sessionId}/handoffs/{handoffId}/accept": {
@@ -17627,6 +17695,19 @@
         "required": [
           "projectId",
           "to"
+        ]
+      },
+      "RequestManualHandoffDto": {
+        "type": "object",
+        "properties": {
+          "toAgent": {
+            "type": "string",
+            "example": "staff",
+            "description": "Slug of the target agent. Must be a lead or an area-less agent — never a subagent."
+          }
+        },
+        "required": [
+          "toAgent"
         ]
       },
       "RequestPasswordResetDto": {

@@ -20,6 +20,7 @@ import {
   mensagemDaApi,
   promoteStories,
   renameSession,
+  requestManualHandoff,
   returnStory,
   sendAgentMessage,
   setAgentAutonomy,
@@ -41,7 +42,7 @@ import {
 } from '../lib/hooks';
 import { pollQueParaNoErro } from '../lib/query-policy';
 import { emailDaSessao } from '../lib/auth';
-import { AGENTS } from '../lib/agents';
+import { AGENTS, addressableAgents } from '../lib/agents';
 import {
   agruparPorOrigem,
   classifyEvent,
@@ -275,14 +276,28 @@ export function pontoDaSessao(status: SessionStatus | undefined) {
  * quem tem rota de `message` wireada no engine, não só `start`.
  *
  * Conferido em `agent_command_controller.ex`: há cláusula própria pra
- * po/dev-lead/arquiteto, e a última cláusula (sem guarda de agente) trata
- * qualquer outro valor — incluindo `"infra"` — como se fosse o Criativo.
- * Infra Lead nunca teve `message` wireada, só `start`; incluí-lo aqui faria
- * o composer mandar mensagens que o engine rotearia em silêncio pro agente
- * errado. Ele é propositivo (CLAUDE.md Fase 4), não conversacional pelo
- * composer.
+ * po/dev-lead/arquiteto/ux-designer/staff, e a última cláusula (sem guarda
+ * de agente) trata qualquer outro valor — incluindo `"infra"` — como se
+ * fosse o Criativo. Infra Lead nunca teve `message` wireada, só `start`;
+ * incluí-lo aqui faria o composer mandar mensagens que o engine rotearia em
+ * silêncio pro agente errado. Ele é propositivo (CLAUDE.md Fase 4), não
+ * conversacional pelo composer.
+ *
+ * `ux-designer` e `staff` entraram aqui pelo handoff manual (ADR 0109/
+ * RN-440): as duas cláusulas já existiam no engine (ADR 0087/0088) sem
+ * NENHUM jeito de um humano chegar até elas pela tela — só pela rota
+ * interna. `infra`/`qa` continuam de fora: são leads de ÁREA sem
+ * `kickoff/1` nem cláusula de `message`, o mesmo padrão já documentado
+ * acima para Infra.
  */
-const AGENTES_DE_CHAT = ['criativo', 'po', 'arquiteto', 'dev-lead'] as const;
+const AGENTES_DE_CHAT = [
+  'criativo',
+  'po',
+  'arquiteto',
+  'dev-lead',
+  'ux-designer',
+  'staff',
+] as const;
 
 /**
  * Quantas entradas do fio ficam ABERTAS antes de o resto virar histórico
@@ -785,6 +800,11 @@ export function SessionPage({
   // é um turno do engine: é só um POST que grava o evento, mesmo padrão de
   // `ativandoExecucao`.
   const [validandoNecessidade, setValidandoNecessidade] = useState(false);
+  // Handoff manual a agente à escolha (ADR 0109/RN-440) — o seletor some
+  // depois do envio (some junto com `offeredHandoff` ao ser aceito), então
+  // não precisa lembrar a escolha entre um handoff e outro.
+  const [manualHandoffTarget, setManualHandoffTarget] = useState('');
+  const [enviandoHandoffManual, setEnviandoHandoffManual] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   useEffect(() => () => abortRef.current?.abort(), []);
   // Achado 10: sentinela no fim da lista de mensagens — a sessão abre nela,
@@ -2150,6 +2170,33 @@ export function SessionPage({
     }
   }
 
+  // Handoff manual a agente à escolha (ADR 0109/RN-440): não é um turno do
+  // engine (mesmo padrão de `handleValidateNecessity`, não de `handleSend`),
+  // então não liga `streaming`/`iniciarTurnoDoAgente`. O card de aceite
+  // existente (`offeredHandoff`) pega o handoff novo sozinho no próximo poll
+  // de `useHandoffs` (3s) — sem isso a invalidação já cobriria o mesmo
+  // resultado mais rápido, mas o handoff em si só passa a existir depois
+  // deste POST responder.
+  async function handleRequestManualHandoff() {
+    if (!manualHandoffTarget || enviandoHandoffManual) return;
+    setEnviandoHandoffManual(true);
+    try {
+      await requestManualHandoff(projectId, sessionId, manualHandoffTarget);
+      await queryClient.invalidateQueries({
+        queryKey: ['session-handoffs', projectId, sessionId],
+      });
+      setManualHandoffTarget('');
+      showToast({ title: t('toasts.handoffManualEnviado'), tone: 'success' });
+    } catch (erro) {
+      showToast({
+        title: mensagemDaApi(erro, t('toasts.erroHandoffManual')),
+        tone: 'danger',
+      });
+    } finally {
+      setEnviandoHandoffManual(false);
+    }
+  }
+
   async function handleAcceptHandoff(handoffId: string, toAgent: string) {
     // Fixado ANTES do `await` (achado B): o kickoff do agente no engine é um
     // `GenServer.cast` assíncrono, e o `agent.status` "working" pode chegar
@@ -2845,6 +2892,46 @@ export function SessionPage({
               <div ref={messagesEndRef} />
             </div>
           </div>
+
+          {/*
+            Handoff manual a agente à escolha (ADR 0109/RN-440): a cadeia
+            fixa (Criativo→PO→Arquiteto→Dev Lead…) continua sendo o caminho
+            normal — este seletor existe para o caso que ela não cobre, o
+            Staff (ADR 0088) e agora também `ux-designer` sendo o exemplo
+            real: agentes com código pronto no engine, sem NENHUM jeito de
+            um humano chegar até eles pela tela. Fica FORA do `.composer`
+            de propósito — não é uma ação de conversa, é redirecionamento.
+            `activeFor` (não `AGENTES_DE_CHAT`) filtra quem já entrou nesta
+            sessão alguma vez, pro mesmo agente não ser oferecido duas
+            vezes.
+          */}
+          {isActive && (
+            <div className={styles.manualHandoffRow}>
+              <Select
+                aria-label={t('handoff.manualLabel')}
+                value={manualHandoffTarget}
+                disabled={enviandoHandoffManual}
+                onChange={(e) => setManualHandoffTarget(e.target.value)}
+              >
+                <option value="">{t('handoff.manualPlaceholder')}</option>
+                {addressableAgents()
+                  .filter((agente) => !activeFor(agente))
+                  .map((agente) => (
+                    <option key={agente} value={agente}>
+                      {nomeDoAgente(agente)}
+                    </option>
+                  ))}
+              </Select>
+              <Button
+                variant="secondary"
+                loading={enviandoHandoffManual}
+                disabled={!manualHandoffTarget}
+                onClick={handleRequestManualHandoff}
+              >
+                {t('handoff.manualBotao')}
+              </Button>
+            </div>
+          )}
 
           {session?.status === 'active' ? (
             <div className={styles.composer}>

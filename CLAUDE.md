@@ -2062,6 +2062,30 @@ primário de verdade.
   `useBacklog` (completo, sem janela), com fallback por história quando o
   backlog ainda não respondeu.
 
+## Handoff manual a agente à escolha (RN-440/441, ADR 0109)
+Fecha o item de backlog aberto desde a FASE 13c. `CreateHandoffUseCase`
+continua sendo o ÚNICO lugar que grava `toAgent` (ADR 0038) — ganhou só um
+`actor?: Actor` opcional, default `{kind:'agent', id: fromAgent}` de
+sempre. `RequestManualHandoffUseCase` (rota nova, `POST
+.../sessions/:sessionId/handoffs`, papel `developer`) valida `toAgent`
+contra `addressableAgents()` — catálogo FECHADO (leads de área ∪
+`SOLO_CONVERSATIONAL_AGENTS`), mais estrito que `assertHandoffTargetAllowed`
+(que só recusa subagente) — resolve `fromAgent` pelo `agent.activated`
+mais recente da sessão (sentinela `"usuario"` sem nenhum), e grava
+`actor: {kind:'user'}`. O handoff nasce `offered` igual a um automático:
+o card de aceite já existente (`SessionPage.tsx`) o pega sozinho, zero
+mudança no caminho de aceite.
+
+Investigação ANTES de codar achou `ux-designer` (ADR 0087) na MESMA
+situação do Staff (ADR 0088) que motivou o item: cláusula de `message/2`
+pronta em `agent_command_controller.ex`, nenhum caminho humano até ela.
+Os dois entraram em `AGENTES_DE_CHAT` na mesma mudança — `infra`/`qa`
+continuam de fora, mesmo padrão já documentado ali (leads sem `kickoff/1`
+nem cláusula de `message`). Declarado, não escondido: o mirror de
+`SOLO_CONVERSATIONAL_AGENTS` do lado web (`apps/web/src/lib/agents.ts`)
+NÃO é cruzado por teste com o da api — divergir produz, no pior caso, uma
+opção velha no seletor que o backend ainda recusa com 400.
+
 ## Stack (decidida — não proponha alternativas)
 - `apps/api`: NestJS 11 + Drizzle ORM + PostgreSQL 16 + pgvector;
   `nodemailer` para SMTP real do `MailSender` (ADR 0096), atrás de

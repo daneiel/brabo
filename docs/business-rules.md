@@ -10359,6 +10359,82 @@ se manifestar — corrigir só o primeiro teria trocado um 403 sempre por um
 
 ---
 
+### RN-440 — `addressableAgents()` é o catálogo FECHADO do handoff manual, mais estrito que `assertHandoffTargetAllowed` {#rn-440}
+
+Handoff manual a agente à escolha (backlog, ADR 0109): `assertHandoffTargetAllowed`
+(ADR 0038) só recusa um SUBAGENTE de área — um agente citando "abc" como
+alvo passaria por ela sem erro, porque uma AGENTE só cita alvos que ele já
+conhece pela própria instrução. Isso deixa de ser verdade quando quem
+escolhe é um HUMANO, num `<select>` alimentado por um cliente que pode
+divergir do backend. `addressableAgents()` (`apps/api/src/domain/agents/agent-areas.ts`)
+é o catálogo FECHADO — leads de área (`AGENT_AREAS.map(a => a.lead)`) ∪
+`SOLO_CONVERSATIONAL_AGENTS` (`criativo`, `po`, `arquiteto`, `ux-designer`,
+`staff`) — e `RequestManualHandoffUseCase` recusa com 400 qualquer
+`toAgent` fora dele, ANTES de chamar `CreateHandoffUseCase`.
+
+`SOLO_CONVERSATIONAL_AGENTS` é uma lista PRÓPRIA, não derivada do roster
+`apps/web/src/lib/agents.ts` (que também lista agentes de gate e o
+Psicólogo/Anamnese, nenhum endereçável por handoff) nem do gerador
+`gerar:areas` (Fase 18, que só cobre `AGENT_AREAS`). O mirror manual do
+lado web (`apps/web/src/lib/agents.ts`, mesma constante) não é cruzado por
+teste automático com o do lado api — divergir produz, no pior caso, uma
+opção velha no seletor que o backend ainda recusa com 400, nunca uma
+escrita indevida.
+
+- **Onde:** `apps/api/src/domain/agents/agent-areas.ts` (`addressableAgents`,
+  `SOLO_CONVERSATIONAL_AGENTS`); `apps/api/src/application/use-cases/agents/request-manual-handoff.use-case.ts`;
+  `apps/web/src/lib/agents.ts` (mirror manual)
+- **Teste:** `apps/api/test/domain/agents/agent-areas.spec.ts`
+  (`describe('addressableAgents (ADR 0109)')`); `apps/api/test/application/use-cases/agents/request-manual-handoff.use-case.spec.ts`
+  (recusa subagente E recusa agente desconhecido); `apps/web/src/lib/agents.test.ts`
+- **ADR:** [0109](adr/0109-handoff-manual-a-agente-a-escolha.md)
+- **Origem:** backlog do modelo de time — item aberto desde a FASE 13c,
+  fechado pelo caso real do Staff (ADR 0088) e do UX Designer (ADR 0087),
+  os dois com plumbing de engine pronto e nenhum caminho humano até eles
+
+---
+
+### RN-441 — `POST .../sessions/:sessionId/handoffs` exige `developer`; handoff manual nasce `offered`, sem estado novo {#rn-441}
+
+O único caminho para gravar `toAgent` continua sendo `CreateHandoffUseCase`
+(ADR 0038) — não um segundo mecanismo. `RequestManualHandoffUseCase`
+resolve `fromAgent` sozinho (o `agent.activated` mais RECENTE da sessão,
+via `SessionEventRepository.listByTypeInSession` — mesmo critério de
+`activeAgent` em `SessionPage.tsx`, achado 9-fix; sessão sem nenhum agente
+ativado ainda cai no sentinela `"usuario"`, nunca um nome adivinhado) e
+chama `CreateHandoffUseCase.execute` passando `actor: {kind: 'user', id:
+userId}` — `CreateHandoffInput` ganhou o campo opcional `actor?: Actor`
+para isso, com default `{kind:'agent', id: fromAgent}` preservando o
+comportamento de sempre para o chamador interno (o engine). O handoff
+nasce `offered`, do MESMO jeito que um automático, e o card de aceite
+já existente (`offeredHandoff`/`handleAcceptHandoff` em `SessionPage.tsx`)
+o pega sozinho no próximo poll de `useHandoffs` — sem NENHUMA mudança no
+caminho de aceite.
+
+A rota (`POST projects/:projectId/sessions/:sessionId/handoffs`) exige
+papel `developer`, o mesmo de `handoffs/:handoffId/accept` (RN-136: quem
+CONVERSA nesta tela). `ux-designer` e `staff` entraram em `AGENTES_DE_CHAT`
+(`SessionPage.tsx`) na mesma mudança — as duas cláusulas de `message/2` já
+existiam em `agent_command_controller.ex` (ADR 0087/0088), verificado por
+leitura ANTES de escrever qualquer linha de web, e nenhuma delas tinha
+caminho humano até si.
+
+- **Onde:** `apps/api/src/interfaces/http/agents/agents.controller.ts`
+  (`requestManual`); `apps/api/src/interfaces/http/agents/dto/request-manual-handoff.dto.ts`;
+  `apps/api/src/application/use-cases/agents/create-handoff.use-case.ts`
+  (`actor?: Actor`); `apps/web/src/routes/SessionPage.tsx`
+  (`AGENTES_DE_CHAT`, `.manualHandoffRow`, `handleRequestManualHandoff`);
+  `apps/web/src/lib/api-client.ts` (`requestManualHandoff`)
+- **Teste:** `apps/api/test/interfaces/http/agents/agents.controller.spec.ts`
+  (papel exigido); `apps/api/test/application/use-cases/agents/request-manual-handoff.use-case.spec.ts`
+  (`fromAgent` derivado, sentinela `"usuario"`, `actor: user`);
+  `docs/security-surface.md` + `apps/api/test/interfaces/route-surface.spec.ts`
+  (classificação `role:developer` em runtime)
+- **ADR:** [0109](adr/0109-handoff-manual-a-agente-a-escolha.md)
+- **Origem:** backlog do modelo de time (ver RN-440)
+
+---
+
 ## Quando dá errado
 
 | situação | o que o sistema faz |
